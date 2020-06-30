@@ -1,0 +1,34 @@
+#ifndef SWOW_{{FILE_NAME}}_H
+#define SWOW_{{FILE_NAME}}_H
+
+#include "swow.h"
+
+#include "cat_{{file_name}}.h"
+
+extern SWOW_API zend_class_entry *swow_{{type_name}}_ce;
+extern SWOW_API zend_object_handlers swow_{{type_name}}_handlers;
+
+typedef struct
+{
+    cat_{{type_name}}_t {{cat_var_name}};
+    zend_object std;
+} swow_{{type_name}}_t;
+
+/* loader */
+
+int swow_{{module_name}}_module_init(INIT_FUNC_ARGS);
+
+/* helper*/
+
+static cat_always_inline swow_{{type_name}}_t* swow_{{type_name}}_get_from_handle(cat_{{type_name}}_t *{{cat_var_name}})
+{
+    CAT_STATIC_ASSERT(offsetof(swow_{{type_name}}_t, {{cat_var_name}}) == 0);
+    return (swow_{{type_name}}_t *) {{cat_var_name}};
+}
+
+static cat_always_inline swow_{{type_name}}_t* swow_{{type_name}}_get_from_object(zend_object *object)
+{
+    return (swow_{{type_name}}_t *) ((char *) object - swow_{{type_name}}_handlers.offset);
+}
+
+#endif	/* SWOW_{{FILE_NAME}}_H */
