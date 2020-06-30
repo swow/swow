@@ -1,0 +1,7 @@
+ARG_ENABLE('swow', 'swow support', 'no');
+
+if (SWOW != 'no') {
+	AC_DEFINE('HAVE_SWOW', 1, 'swow support enabled');
+
+	EXTENSION('swow', 'swow.c', null, '/DZEND_ENABLE_STATIC_TSRMLS_CACHE=1');
+}

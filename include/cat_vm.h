@@ -1,0 +1,72 @@
+/*
+  +--------------------------------------------------------------------------+
+  | Swow                                                                     |
+  +--------------------------------------------------------------------------+
+  | Licensed under the Apache License, Version 2.0 (the "License");          |
+  | you may not use this file except in compliance with the License.         |
+  | You may obtain a copy of the License at                                  |
+  | http://www.apache.org/licenses/LICENSE-2.0                               |
+  | Unless required by applicable law or agreed to in writing, software      |
+  | distributed under the License is distributed on an "AS IS" BASIS,        |
+  | WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. |
+  | See the License for the specific language governing permissions and      |
+  | limitations under the License. See accompanying LICENSE file.            |
+  +--------------------------------------------------------------------------+
+  | Author: Twosee <twose@qq.com>                                            |
+  +--------------------------------------------------------------------------+
+ */
+
+#ifdef HAVE_CONFIG_H
+#ifndef COMPILE_DL_SWOW
+#include "config.h"
+#endif
+#endif
+
+#include "zend.h"
+#include "zend_API.h"
+
+/* memory */
+#define cat_malloc     emalloc
+#define cat_calloc     ecalloc
+#define cat_realloc    erealloc
+#define cat_free       efree
+#define cat_strdup     estrdup
+#define cat_strndup    estrndup
+
+/* thread safe */
+
+#ifdef ZTS
+#define CAT_THREAD_SAFE 1
+
+typedef struct
+{
+    ts_rsrc_id id;
+#ifdef TSRMG_FAST
+    size_t offset;
+#endif
+} cat_globals_info_t;
+
+#define CAT_GLOBALS_INFO(name)                    name##_globals_info
+#define CAT_GLOBALS_DECLARE(name)                 cat_globals_info_t CAT_GLOBALS_INFO(name);
+
+#ifdef TSRMG_FAST
+#if ZEND_ENABLE_STATIC_TSRMLS_CACHE
+#define CAT_GLOBALS_BULK(name)                    TSRMG_FAST_BULK_STATIC(CAT_GLOBALS_INFO(name).offset, CAT_GLOBALS_TYPE(name) *)
+#else
+#define CAT_GLOBALS_BULK(name)                    TSRMG_FAST_BULK(CAT_GLOBALS_INFO(name).offset, CAT_GLOBALS_TYPE(name) *)
+#endif
+#define CAT_GLOBALS_GET(name, value)              (CAT_GLOBALS_BULK(name)->value)
+#define CAT_GLOBALS_REGISTER(name, ctor, dtor)    ts_allocate_fast_id(&CAT_GLOBALS_INFO(name).id, &CAT_GLOBALS_INFO(name).offset, sizeof(CAT_GLOBALS_TYPE(name)), (ts_allocate_ctor) ctor, (ts_allocate_dtor) dtor);
+
+#else
+
+#if ZEND_ENABLE_STATIC_TSRMLS_CACHE
+#define CAT_GLOBALS_BULK(name)                    TSRMG_BULK_STATIC(CAT_GLOBALS_INFO(name).id, CAT_GLOBALS_TYPE(name) *)
+#else
+#define CAT_GLOBALS_BULK(name)                    TSRMG_BULK(CAT_GLOBALS_INFO(name).id, CAT_GLOBALS_TYPE(name) *)
+#endif
+#define CAT_GLOBALS_GET(name, value)              (CAT_GLOBALS_BULK(name)->value)
+#define CAT_GLOBALS_REGISTER(name, ctor, dtor)    ts_allocate_id(&CAT_GLOBALS_INFO(name).id, sizeof(CAT_GLOBALS_TYPE(name)), (ts_allocate_ctor) ctor, (ts_allocate_dtor) dtor);
+#endif /* TSRMG_FAST */
+
+#endif /* CAT_THREAD_SAFE */
