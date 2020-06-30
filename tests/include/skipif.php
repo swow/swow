@@ -1,0 +1,111 @@
+<?php
+if (!extension_loaded('swow')) {
+    exit('skip swow extension is required');
+}
+
+define('SWOW_COLOR_RED', 1);
+define('SWOW_COLOR_GREEN', 2);
+define('SWOW_COLOR_YELLOW', 3);
+define('SWOW_COLOR_BLUE', 4);
+define('SWOW_COLOR_MAGENTA', 5);
+define('SWOW_COLOR_CYAN', 6);
+define('SWOW_COLOR_WHITE', 7);
+
+function swow_color(string $content, int $color): string
+{
+    return "\033[3{$color}m{$content}\033[0m";
+}
+
+function skip(string $reason, bool $is_skip = true, int $color = SWOW_COLOR_YELLOW): void
+{
+    if ($is_skip) {
+        exit('skip ' . swow_color($reason, $color));
+    }
+}
+
+function skip_if_php_version_lower_than($require_version = '7.0'): void
+{
+    if (version_compare(PHP_VERSION, $require_version, '<')) {
+        skip('need php version >= ' . $require_version);
+    }
+}
+
+function skip_if_php_version_between($a, $b): void
+{
+    if (version_compare(PHP_VERSION, $a, '>=') && version_compare(PHP_VERSION, $b, '<=')) {
+        skip("unsupported php version between {$a} and {$b}");
+    }
+}
+
+function skip_if_ini_bool_equal_to(string $name, bool $value): void
+{
+    if (((bool)ini_get($name)) === $value) {
+        $value = $value ? 'enable' : 'disable';
+        skip("{$name} is {$value}");
+    }
+}
+
+function skip_if_constant_not_defined(string $constant_name): void
+{
+    skip("{$constant_name} is not defined", !defined($constant_name));
+}
+
+function skip_if_function_not_exist(string $function_name): void
+{
+    skip("{$function_name} not exist", !function_exists($function_name));
+}
+
+function skip_if_class_not_exist(string $class_name): void
+{
+    skip("{$class_name} not exist", !class_exists($class_name, false));
+}
+
+function skip_if_extension_not_exist(string $extension_name): void
+{
+    skip("{$extension_name} not exist", !extension_loaded($extension_name));
+}
+
+function skip_if_file_not_exist(string $filename): void
+{
+    skip("file {$filename} is not exist", !file_exists($filename));
+}
+
+function skip_linux_only(): void
+{
+    skip('Linux only', stripos(PHP_OS, 'Linux') === false);
+}
+
+function skip_if_win(): void
+{
+    skip('Not support on Windows', stripos(PHP_OS, 'WIN') !== false);
+}
+
+function skip_if_darwin(): void
+{
+    skip('Not support on Darwin', stripos(PHP_OS, 'Darwin') !== false);
+}
+
+function skip_if_musl_libc(): void
+{
+    skip('Not support when use musl libc', !empty(`ldd 2>&1 | grep -i musl`));
+}
+
+function skip_if_in_valgrind(string $reason = 'valgrind is too slow'): void
+{
+    skip($reason, getenv('USE_ZEND_ALLOC') === '0');
+}
+
+function skip_if_in_travis(string $reason = 'not support in travis'): void
+{
+    skip($reason, file_exists('/.travisenv'));
+}
+
+function skip_if_in_docker(string $reason = 'not support in docker'): void
+{
+    skip($reason, file_exists('/.dockerenv'));
+}
+
+function skip_unsupported(string $message = ''): void
+{
+    skip($message ?: 'the test cannot continue to work for some implementation reasons');
+}
