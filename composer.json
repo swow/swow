@@ -21,7 +21,7 @@
         }
     ],
     "support": {
-        "issues": "https://github.com/s-wow/swow"
+        "issues": "https://github.com/swow/swow"
     },
     "require": {
         "php": ">=7.2",

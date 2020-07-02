@@ -2,7 +2,7 @@
 /**
  * This file is part of Swow
  *
- * @link     https://github.com/s-wow/swow
+ * @link     https://github.com/swow/swow
  * @contact  twosee <twose@qq.com>
  *
  * For the full copyright and license information,
