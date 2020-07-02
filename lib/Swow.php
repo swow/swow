@@ -1,7 +1,8 @@
 <?php
 /** @noinspection PhpUnused, PhpInconsistentReturnPointsInspection, PhpMissingParentConstructorInspection */
 
-namespace Swow {
+namespace Swow
+{
     const E2BIG = -7;
     const EACCES = -13;
     const EADDRINUSE = -98;
@@ -91,11 +92,13 @@ namespace Swow {
     const ESSL = -9770;
 }
 
-namespace  {
+namespace 
+{
     const E_NONE = 0;
 }
 
-namespace Swow\WebSocket {
+namespace Swow\WebSocket
+{
     const VERSION = 13;
     const SECRET_KEY_LENGTH = 16;
     const SECRET_KEY_ENCODED_LENGTH = 24;
@@ -110,25 +113,22 @@ namespace Swow\WebSocket {
     const HEADER_BUFFER_SIZE = 128;
 }
 
-namespace {
-
-    class Swow
-    {
-
-    }
-
+namespace
+{
+    class Swow { }
 }
 
-namespace {
+namespace
+{
     /**
      * @param int $milli_seconds [required]
      * @return mixed
      */
-    function msleep(int $milli_seconds) { }
+     function msleep(int $milli_seconds) { }
 }
 
-namespace Swow {
-
+namespace Swow
+{
     class Module
     {
         public const TYPE_CORE = 1;
@@ -156,11 +156,10 @@ namespace Swow {
         public const TYPES_USR = -16777216;
         public const TYPES_ALL = -4192257;
     }
-
 }
 
-namespace Swow {
-
+namespace Swow
+{
     class Log
     {
         public const TYPE_DEBUG = 1;
@@ -196,29 +195,20 @@ namespace Swow {
          */
         public static function setModuleTypes(int $module_types): void { }
     }
-
 }
 
-namespace Swow {
-
-    interface Uncatchable
-    {
-
-    }
-
+namespace Swow
+{
+    interface Uncatchable { }
 }
 
-namespace Swow {
-
-    class Exception extends \RuntimeException implements \Throwable, \Stringable
-    {
-
-    }
-
+namespace Swow
+{
+    class Exception extends \RuntimeException implements \Throwable, \Stringable { }
 }
 
-namespace Swow {
-
+namespace Swow
+{
     class CallException extends \Swow\Exception implements \Stringable, \Throwable
     {
         protected $returnValue;
@@ -228,22 +218,18 @@ namespace Swow {
          */
         final function getReturnValue() { }
     }
-
 }
 
-namespace Swow {
-
+namespace Swow
+{
     final class Defer
     {
-        /**
-         */
         public function __construct() { }
     }
-
 }
 
-namespace Swow {
-
+namespace Swow
+{
     class Coroutine
     {
         public const STATE_INIT = 0;
@@ -259,7 +245,7 @@ namespace Swow {
          * @param int $stack_page_size [optional]
          * @param int $c_stack_size [optional]
          */
-        public function __construct(callable $callable, int $stack_page_size = /* 0 */ null, int $c_stack_size = /* 0 */ null) { }
+        public function __construct(callable $callable, int $stack_page_size, int $c_stack_size) { }
 
         /**
          * @param callable $callable [required]
@@ -278,7 +264,7 @@ namespace Swow {
          * @param mixed $data [optional]
          * @return mixed
          */
-        public static function yield($data = /* null */ null) { }
+        public static function yield($data) { }
 
         /**
          * @return int
@@ -330,21 +316,21 @@ namespace Swow {
          * @param int $limit [optional]
          * @return array
          */
-        public function getTrace(int $options = /* 1 */ null, int $limit = /* 0 */ null): array { }
+        public function getTrace(int $options, int $limit): array { }
 
         /**
          * @param int $options [optional]
          * @param int $limit [optional]
          * @return string
          */
-        public function getTraceAsString(int $options = /* 1 */ null, int $limit = /* 0 */ null): string { }
+        public function getTraceAsString(int $options, int $limit): string { }
 
         /**
          * @param int $options [optional]
          * @param int $limit [optional]
          * @return array
          */
-        public function getTraceAsList(int $options = /* 1 */ null, int $limit = /* 0 */ null): array { }
+        public function getTraceAsList(int $options, int $limit): array { }
 
         /**
          * @param \Throwable $throwable [required]
@@ -357,14 +343,14 @@ namespace Swow {
          * @param int $code [optional]
          * @return mixed
          */
-        public function term(string $message = null, int $code = /* null */ null) { }
+        public function term(string $message, int $code) { }
 
         /**
          * @param string $message [optional]
          * @param int $code [optional]
          * @return mixed
          */
-        public function kill(string $message = null, int $code = /* null */ null) { }
+        public function kill(string $message, int $code) { }
 
         /**
          * @return int
@@ -381,30 +367,29 @@ namespace Swow {
          */
         public function __debugInfo(): array { }
     }
-
 }
 
-namespace Swow {
-
+namespace Swow
+{
     class Channel
     {
         /**
          * @param int $capacity [optional]
          */
-        public function __construct(int $capacity = /* 0 */ null) { }
+        public function __construct(int $capacity) { }
 
         /**
          * @param mixed $data [required]
          * @param int $timeout [optional]
          * @return $this
          */
-        public function push($data, int $timeout = /* -1 */ null): self { }
+        public function push($data, int $timeout): self { }
 
         /**
          * @param int $timeout [optional]
          * @return mixed
          */
-        public function pop(int $timeout = /* -1 */ null) { }
+        public function pop(int $timeout) { }
 
         /**
          * @return mixed
@@ -446,11 +431,10 @@ namespace Swow {
          */
         public function __debugInfo(): array { }
     }
-
 }
 
-namespace Swow {
-
+namespace Swow
+{
     class Event
     {
         /**
@@ -458,11 +442,10 @@ namespace Swow {
          */
         public static function wait(): void { }
     }
-
 }
 
-namespace Swow {
-
+namespace Swow
+{
     class Buffer
     {
         public const PAGE_SIZE = 4096;
@@ -473,18 +456,18 @@ namespace Swow {
          * @param int $alignment [optional]
          * @return int
          */
-        public static function alignSize(int $size = /* 0 */ null, int $alignment = /* 0 */ null): int { }
+        public static function alignSize(int $size, int $alignment): int { }
 
         /**
          * @param int $size [optional]
          */
-        public function __construct(int $size = /* 8192 */ null) { }
+        public function __construct(int $size) { }
 
         /**
          * @param int $size [optional]
          * @return $this
          */
-        public function alloc(int $size = /* 8192 */ null): self { }
+        public function alloc(int $size): self { }
 
         /**
          * @return int
@@ -545,13 +528,13 @@ namespace Swow {
          * @param int $new_size [optional]
          * @return $this
          */
-        public function realloc(int $new_size = /* 0 */ null): self { }
+        public function realloc(int $new_size): self { }
 
         /**
-         * @param int $recommend_size [optional]
+         * @param int $recommend_size [optional] = $this->getSize() * 2
          * @return $this
          */
-        public function extend(int $recommend_size = /* $this->getSize() * 2 */ null): self { }
+        public function extend(int $recommend_size = null): self { }
 
         /**
          * @return $this
@@ -578,26 +561,26 @@ namespace Swow {
          * @param mixed $whence [optional]
          * @return $this
          */
-        public function seek($offset, $whence = /* 0 */ null): self { }
+        public function seek($offset, $whence): self { }
 
         /**
          * @param mixed $length [optional]
          * @return string
          */
-        public function read($length = /* 0 */ null): string { }
+        public function read($length): string { }
 
         /**
          * @param mixed $length [optional]
          * @return string
          */
-        public function peek($length = /* 0 */ null): string { }
+        public function peek($length): string { }
 
         /**
-         * @param int $offset [optional]
+         * @param int $offset [optional] = $this->getOffset()
          * @param int $length [optional]
          * @return string
          */
-        public function peekFrom(int $offset = /* $this->getOffset() */ null, int $length = /* 0 */ null): string { }
+        public function peekFrom(int $offset = null, int $length): string { }
 
         /**
          * @return string
@@ -610,14 +593,14 @@ namespace Swow {
          * @param int $length [optional]
          * @return $this
          */
-        public function write($string, int $offset = /* 0 */ null, int $length = /* 0 */ null): self { }
+        public function write($string, int $offset, int $length): self { }
 
         /**
-         * @param int $start [optional]
+         * @param int $start [optional] = $this->getOffset()
          * @param int $length [optional]
          * @return $this
          */
-        public function truncate(int $start = /* $this->getOffset() */ null, int $length = /* 0 */ null): self { }
+        public function truncate(int $start = null, int $length): self { }
 
         /**
          * @return $this
@@ -654,11 +637,10 @@ namespace Swow {
          */
         public function __debugInfo(): array { }
     }
-
 }
 
-namespace Swow {
-
+namespace Swow
+{
     class Socket
     {
         public const INVALID_FD = -1;
@@ -705,7 +687,7 @@ namespace Swow {
          * @param int $type [optional]
          * @param int $fd [optional]
          */
-        public function __construct(int $type = /* 16777233 */ null, int $fd = /* -1 */ null) { }
+        public function __construct(int $type = \Swow\Socket::TYPE_TCP, int $fd) { }
 
         /**
          * @return int
@@ -783,28 +765,28 @@ namespace Swow {
          * @param int $flags [optional]
          * @return $this
          */
-        public function bind(string $name, int $port = /* 0 */ null, int $flags = /* 0 */ null): self { }
+        public function bind(string $name, int $port, int $flags = \Swow\Socket::BIND_FLAG_NONE): self { }
 
         /**
          * @param int $backlog [optional]
          * @return $this
          */
-        public function listen(int $backlog = /* 128 */ null): self { }
+        public function listen(int $backlog): self { }
 
         /**
-         * @param null|\Swow\Socket $object [optional]
-         * @param null|int $timeout [optional]
+         * @param null|\Swow\Socket $object [optional] = $this
+         * @param null|int $timeout [optional] = $this->getAcceptTimeout()
          * @return $this
          */
-        public function accept(?\Swow\Socket $object = /* $this */ null, ?int $timeout = /* $this->getAcceptTimeout() */ null): self { }
+        public function accept(?\Swow\Socket $object = null, ?int $timeout = null): self { }
 
         /**
          * @param string $name [required]
          * @param int $port [optional]
-         * @param null|int $timeout [optional]
+         * @param null|int $timeout [optional] = $this->getConnectTimeout()
          * @return $this
          */
-        public function connect(string $name, int $port = /* 0 */ null, ?int $timeout = /* $this->getConnectTimeout() */ null): self { }
+        public function connect(string $name, int $port, ?int $timeout = null): self { }
 
         /**
          * @return string
@@ -828,170 +810,170 @@ namespace Swow {
 
         /**
          * @param \Swow\Buffer $buffer [required]
-         * @param null|int $length [optional]
-         * @param null|int $timeout [optional]
+         * @param null|int $length [optional] = $this->getWritableSize()
+         * @param null|int $timeout [optional] = $this->getReadTimeout()
          * @return int
          */
-        public function read(\Swow\Buffer $buffer, ?int $length = /* $this->getWritableSize() */ null, ?int $timeout = /* $this->getReadTimeout() */ null): int { }
+        public function read(\Swow\Buffer $buffer, ?int $length = null, ?int $timeout = null): int { }
 
         /**
          * @param \Swow\Buffer $buffer [required]
-         * @param null|int $size [optional]
-         * @param null|int $timeout [optional]
+         * @param null|int $size [optional] = $this->getWritableSize()
+         * @param null|int $timeout [optional] = $this->getReadTimeout()
          * @return int
          */
-        public function recv(\Swow\Buffer $buffer, ?int $size = /* $this->getWritableSize() */ null, ?int $timeout = /* $this->getReadTimeout() */ null): int { }
+        public function recv(\Swow\Buffer $buffer, ?int $size = null, ?int $timeout = null): int { }
 
         /**
          * @param \Swow\Buffer $buffer [required]
-         * @param null|int $size [optional]
-         * @param null|int $timeout [optional]
+         * @param null|int $size [optional] = $this->getWritableSize()
+         * @param null|int $timeout [optional] = $this->getReadTimeout()
          * @return int
          */
-        public function recvData(\Swow\Buffer $buffer, ?int $size = /* $this->getWritableSize() */ null, ?int $timeout = /* $this->getReadTimeout() */ null): int { }
+        public function recvData(\Swow\Buffer $buffer, ?int $size = null, ?int $timeout = null): int { }
 
         /**
          * @param \Swow\Buffer $buffer [required]
-         * @param null|int $size [optional]
+         * @param null|int $size [optional] = $this->getWritableSize()
          * @param mixed $address [optional]
          * @param mixed $port [optional]
-         * @param null|int $timeout [optional]
+         * @param null|int $timeout [optional] = $this->getReadTimeout()
          * @return int
          */
-        public function recvFrom(\Swow\Buffer $buffer, ?int $size = /* $this->getWritableSize() */ null, &$address = /* null */ null, &$port = /* null */ null, ?int $timeout = /* $this->getReadTimeout() */ null): int { }
+        public function recvFrom(\Swow\Buffer $buffer, ?int $size = null, &$address, &$port, ?int $timeout = null): int { }
 
         /**
          * @param \Swow\Buffer $buffer [required]
-         * @param null|int $size [optional]
+         * @param null|int $size [optional] = $this->getWritableSize()
          * @param mixed $address [optional]
          * @param mixed $port [optional]
-         * @param null|int $timeout [optional]
+         * @param null|int $timeout [optional] = $this->getReadTimeout()
          * @return int
          */
-        public function recvDataFrom(\Swow\Buffer $buffer, ?int $size = /* $this->getWritableSize() */ null, &$address = /* null */ null, &$port = /* null */ null, ?int $timeout = /* $this->getReadTimeout() */ null): int { }
+        public function recvDataFrom(\Swow\Buffer $buffer, ?int $size = null, &$address, &$port, ?int $timeout = null): int { }
 
         /**
          * @param \Swow\Buffer $buffer [required]
-         * @param null|int $size [optional]
+         * @param null|int $size [optional] = $this->getWritableSize()
          * @return int
          */
-        public function peek(\Swow\Buffer $buffer, ?int $size = /* $this->getWritableSize() */ null): int { }
+        public function peek(\Swow\Buffer $buffer, ?int $size = null): int { }
 
         /**
          * @param \Swow\Buffer $buffer [required]
-         * @param null|int $size [optional]
+         * @param null|int $size [optional] = $this->getWritableSize()
          * @param mixed $address [optional]
          * @param mixed $port [optional]
          * @return int
          */
-        public function peekFrom(\Swow\Buffer $buffer, ?int $size = /* $this->getWritableSize() */ null, &$address = /* null */ null, &$port = /* null */ null): int { }
+        public function peekFrom(\Swow\Buffer $buffer, ?int $size = null, &$address, &$port): int { }
 
         /**
-         * @param null|int $length [required]
-         * @param null|int $timeout [optional]
+         * @param null|int $length [required] = $this->getWritableSize()
+         * @param null|int $timeout [optional] = $this->getReadTimeout()
          * @return string
          */
-        public function readString(?int $length = /* $this->getWritableSize() */ null, ?int $timeout = /* $this->getReadTimeout() */ null): string { }
+        public function readString(?int $length = null, ?int $timeout = null): string { }
 
         /**
-         * @param null|int $size [optional]
-         * @param null|int $timeout [optional]
+         * @param null|int $size [optional] = $this->getWritableSize()
+         * @param null|int $timeout [optional] = $this->getReadTimeout()
          * @return string
          */
-        public function recvString(?int $size = /* $this->getWritableSize() */ null, ?int $timeout = /* $this->getReadTimeout() */ null): string { }
+        public function recvString(?int $size = null, ?int $timeout = null): string { }
 
         /**
-         * @param null|int $size [optional]
-         * @param null|int $timeout [optional]
+         * @param null|int $size [optional] = $this->getWritableSize()
+         * @param null|int $timeout [optional] = $this->getReadTimeout()
          * @return string
          */
-        public function recvStringData(?int $size = /* $this->getWritableSize() */ null, ?int $timeout = /* $this->getReadTimeout() */ null): string { }
+        public function recvStringData(?int $size = null, ?int $timeout = null): string { }
 
         /**
-         * @param null|int $size [optional]
+         * @param null|int $size [optional] = $this->getWritableSize()
          * @param mixed $address [optional]
          * @param mixed $port [optional]
-         * @param null|int $timeout [optional]
+         * @param null|int $timeout [optional] = $this->getReadTimeout()
          * @return string
          */
-        public function recvStringFrom(?int $size = /* $this->getWritableSize() */ null, &$address = /* null */ null, &$port = /* null */ null, ?int $timeout = /* $this->getReadTimeout() */ null): string { }
+        public function recvStringFrom(?int $size = null, &$address, &$port, ?int $timeout = null): string { }
 
         /**
-         * @param null|int $size [optional]
+         * @param null|int $size [optional] = $this->getWritableSize()
          * @param mixed $address [optional]
          * @param mixed $port [optional]
-         * @param null|int $timeout [optional]
+         * @param null|int $timeout [optional] = $this->getReadTimeout()
          * @return string
          */
-        public function recvStringDataFrom(?int $size = /* $this->getWritableSize() */ null, &$address = /* null */ null, &$port = /* null */ null, ?int $timeout = /* $this->getReadTimeout() */ null): string { }
+        public function recvStringDataFrom(?int $size = null, &$address, &$port, ?int $timeout = null): string { }
 
         /**
-         * @param null|int $size [optional]
+         * @param null|int $size [optional] = $this->getWritableSize()
          * @return string
          */
-        public function peekString(?int $size = /* $this->getWritableSize() */ null): string { }
+        public function peekString(?int $size = null): string { }
 
         /**
-         * @param null|int $size [optional]
+         * @param null|int $size [optional] = $this->getWritableSize()
          * @param mixed $address [optional]
          * @param mixed $port [optional]
          * @return string
          */
-        public function peekStringFrom(?int $size = /* $this->getWritableSize() */ null, &$address = /* null */ null, &$port = /* null */ null): string { }
+        public function peekStringFrom(?int $size = null, &$address, &$port): string { }
 
         /**
          * @param array $vectors [required]
-         * @param null|int $timeout [optional]
+         * @param null|int $timeout [optional] = $this->getWriteTimeout()
          * @return $this
          */
-        public function write(array $vectors, ?int $timeout = /* $this->getWriteTimeout() */ null): self { }
+        public function write(array $vectors, ?int $timeout = null): self { }
 
         /**
          * @param array $vectors [required]
          * @param mixed $address [optional]
          * @param mixed $port [optional]
-         * @param null|int $timeout [optional]
+         * @param null|int $timeout [optional] = $this->getWriteTimeout()
          * @return $this
          */
-        public function writeTo(array $vectors, $address = /* null */ null, $port = /* null */ null, ?int $timeout = /* $this->getWriteTimeout() */ null): self { }
+        public function writeTo(array $vectors, $address, $port, ?int $timeout = null): self { }
 
         /**
          * @param \Swow\Buffer $buffer [required]
-         * @param null|int $length [optional]
-         * @param null|int $timeout [optional]
+         * @param null|int $length [optional] = $this->getReadableLength()
+         * @param null|int $timeout [optional] = $this->getWriteTimeout()
          * @return $this
          */
-        public function send(\Swow\Buffer $buffer, ?int $length = /* $this->getReadableLength() */ null, ?int $timeout = /* $this->getWriteTimeout() */ null): self { }
+        public function send(\Swow\Buffer $buffer, ?int $length = null, ?int $timeout = null): self { }
 
         /**
          * @param \Swow\Buffer $buffer [required]
-         * @param null|int $length [optional]
+         * @param null|int $length [optional] = $this->getReadableLength()
          * @param mixed $address [optional]
          * @param mixed $port [optional]
-         * @param null|int $timeout [optional]
+         * @param null|int $timeout [optional] = $this->getWriteTimeout()
          * @return $this
          */
-        public function sendTo(\Swow\Buffer $buffer, ?int $length = /* $this->getReadableLength() */ null, $address = /* null */ null, $port = /* null */ null, ?int $timeout = /* $this->getWriteTimeout() */ null): self { }
+        public function sendTo(\Swow\Buffer $buffer, ?int $length = null, $address, $port, ?int $timeout = null): self { }
 
         /**
          * @param string $string [required]
-         * @param null|int $timeout [optional]
+         * @param null|int $timeout [optional] = $this->getWriteTimeout()
          * @param int $offset [optional]
          * @param int $length [optional]
          * @return $this
          */
-        public function sendString(string $string, ?int $timeout = /* $this->getWriteTimeout() */ null, int $offset = /* 0 */ null, int $length = /* 0 */ null): self { }
+        public function sendString(string $string, ?int $timeout = null, int $offset, int $length): self { }
 
         /**
          * @param string $string [required]
          * @param mixed $address [optional]
          * @param mixed $port [optional]
-         * @param null|int $timeout [optional]
+         * @param null|int $timeout [optional] = $this->getWriteTimeout()
          * @param int $offset [optional]
          * @param int $length [optional]
          * @return $this
          */
-        public function sendStringTo(string $string, $address = /* null */ null, $port = /* null */ null, ?int $timeout = /* $this->getWriteTimeout() */ null, int $offset = /* 0 */ null, int $length = /* 0 */ null): self { }
+        public function sendStringTo(string $string, $address, $port, ?int $timeout = null, int $offset, int $length): self { }
 
         /**
          * @return bool
@@ -1052,36 +1034,33 @@ namespace Swow {
          */
         public function __debugInfo(): array { }
     }
-
 }
 
-namespace Swow {
+namespace Swow
+{
     /**
      * @param int $error [optional]
      * @return string
      */
-    function strerror(int $error): string { }
+     function strerror(int $error): string { }
 }
 
-namespace Swow {
+namespace Swow
+{
     /**
      * @param callable $tasks [optional]
      * @return void
      */
-    function defer(callable $tasks): void { }
+     function defer(callable $tasks): void { }
 }
 
-namespace Swow\Coroutine {
-
-    class Exception extends \Swow\Exception implements \Stringable, \Throwable
-    {
-
-    }
-
+namespace Swow\Coroutine
+{
+    class Exception extends \Swow\Exception implements \Stringable, \Throwable { }
 }
 
-namespace Swow\Coroutine {
-
+namespace Swow\Coroutine
+{
     class CrossException extends \Swow\Coroutine\Exception implements \Throwable, \Stringable
     {
         protected $coroutine;
@@ -1091,38 +1070,25 @@ namespace Swow\Coroutine {
          */
         final function getCoroutine(): \Swow\Coroutine { }
     }
-
 }
 
-namespace Swow\Coroutine {
-
-    class TermException extends \Swow\Coroutine\CrossException implements \Stringable, \Throwable
-    {
-
-    }
-
+namespace Swow\Coroutine
+{
+    class TermException extends \Swow\Coroutine\CrossException implements \Stringable, \Throwable { }
 }
 
-namespace Swow\Coroutine {
-
-    class KillException extends \Swow\Coroutine\CrossException implements \Stringable, \Throwable, \Swow\Uncatchable
-    {
-
-    }
-
+namespace Swow\Coroutine
+{
+    class KillException extends \Swow\Coroutine\CrossException implements \Stringable, \Throwable, \Swow\Uncatchable { }
 }
 
-namespace Swow\Channel {
-
-    class Exception extends \Swow\Exception implements \Stringable, \Throwable
-    {
-
-    }
-
+namespace Swow\Channel
+{
+    class Exception extends \Swow\Exception implements \Stringable, \Throwable { }
 }
 
-namespace Swow\Sync {
-
+namespace Swow\Sync
+{
     class WaitReference
     {
         /**
@@ -1135,17 +1101,14 @@ namespace Swow\Sync {
          * @param int $timeout [optional]
          * @return void
          */
-        public static function wait(\Swow\Sync\WaitReference &$waitReference, int $timeout = /* -1 */ null): void { }
+        public static function wait(\Swow\Sync\WaitReference &$waitReference, int $timeout): void { }
 
-        /**
-         */
         public function __destruct() { }
     }
-
 }
 
-namespace Swow\Sync {
-
+namespace Swow\Sync
+{
     class WaitGroup
     {
         /**
@@ -1157,7 +1120,7 @@ namespace Swow\Sync {
          * @param int $delta [optional]
          * @return void
          */
-        public function add(int $delta = /* 1 */ null): void { }
+        public function add(int $delta): void { }
 
         /**
          * @param int $timeout [optional]
@@ -1170,20 +1133,15 @@ namespace Swow\Sync {
          */
         public function done(): void { }
     }
-
 }
 
-namespace Swow\Sync {
-
-    class Exception extends \Swow\Exception implements \Stringable, \Throwable
-    {
-
-    }
-
+namespace Swow\Sync
+{
+    class Exception extends \Swow\Exception implements \Stringable, \Throwable { }
 }
 
-namespace Swow\Event {
-
+namespace Swow\Event
+{
     class Scheduler
     {
         /**
@@ -1191,29 +1149,20 @@ namespace Swow\Event {
          */
         public static function run(): void { }
     }
-
 }
 
-namespace Swow\Buffer {
-
-    class Exception extends \Swow\Exception implements \Stringable, \Throwable
-    {
-
-    }
-
+namespace Swow\Buffer
+{
+    class Exception extends \Swow\Exception implements \Stringable, \Throwable { }
 }
 
-namespace Swow\Socket {
-
-    class Exception extends \Swow\CallException implements \Throwable, \Stringable
-    {
-
-    }
-
+namespace Swow\Socket
+{
+    class Exception extends \Swow\CallException implements \Throwable, \Stringable { }
 }
 
-namespace Swow\Http {
-
+namespace Swow\Http
+{
     class Status
     {
         public const CONTINUE = 100;
@@ -1283,11 +1232,10 @@ namespace Swow\Http {
          */
         public static function getReasonPhrase(int $statusCode): string { }
     }
-
 }
 
-namespace Swow\Http {
-
+namespace Swow\Http
+{
     class Parser
     {
         public const TYPE_BOTH = 0;
@@ -1337,7 +1285,7 @@ namespace Swow\Http {
          * @param mixed $data [optional]
          * @return int
          */
-        public function execute(\Swow\Buffer $buffer, &$data = /* null */ null): int { }
+        public function execute(\Swow\Buffer $buffer, &$data): int { }
 
         /**
          * @return int
@@ -1424,19 +1372,20 @@ namespace Swow\Http {
          */
         public function reset(): self { }
     }
-
 }
 
-namespace Swow\Http {
+namespace Swow\Http
+{
     /**
      * @param array $headers [optional]
      * @param string $body [optional]
      * @return string
      */
-    function packMessage(array $headers = /* [] */ null, string $body = ''): string { }
+     function packMessage(array $headers, string $body): string { }
 }
 
-namespace Swow\Http {
+namespace Swow\Http
+{
     /**
      * @param string $method [optional]
      * @param string $url [optional]
@@ -1445,10 +1394,17 @@ namespace Swow\Http {
      * @param string $protocol_version [optional]
      * @return string
      */
-    function packRequest(string $method = '', string $url = '', array $headers = /* [] */ null, string $body = '', string $protocol_version = ''): string { }
+     function packRequest(
+        string $method,
+        string $url,
+        array $headers,
+        string $body,
+        string $protocol_version
+    ): string { }
 }
 
-namespace Swow\Http {
+namespace Swow\Http
+{
     /**
      * @param int $status_code [optional]
      * @param array $headers [optional]
@@ -1457,20 +1413,22 @@ namespace Swow\Http {
      * @param string $protocol_version [optional]
      * @return string
      */
-    function packResponse(int $status_code = /* 0 */ null, array $headers = /* [] */ null, string $body = '', string $reason_phrase = '', string $protocol_version = ''): string { }
+     function packResponse(
+        int $status_code,
+        array $headers,
+        string $body,
+        string $reason_phrase,
+        string $protocol_version
+    ): string { }
 }
 
-namespace Swow\Http\Parser {
-
-    class Exception extends \Swow\Exception implements \Stringable, \Throwable
-    {
-
-    }
-
+namespace Swow\Http\Parser
+{
+    class Exception extends \Swow\Exception implements \Stringable, \Throwable { }
 }
 
-namespace Swow\WebSocket {
-
+namespace Swow\WebSocket
+{
     class Opcode
     {
         public const CONTINUATION = 0;
@@ -1486,11 +1444,10 @@ namespace Swow\WebSocket {
          */
         public static function getName(int $opcode): int { }
     }
-
 }
 
-namespace Swow\WebSocket {
-
+namespace Swow\WebSocket
+{
     class Status
     {
         public const NORMAL_CLOSURE = 1000;
@@ -1515,11 +1472,10 @@ namespace Swow\WebSocket {
          */
         public static function getDescription(int $code): int { }
     }
-
 }
 
-namespace Swow\WebSocket {
-
+namespace Swow\WebSocket
+{
     class Frame
     {
         public const PING = '27890027';
@@ -1659,7 +1615,7 @@ namespace Swow\WebSocket {
          * @param bool $header_only [optional]
          * @return string
          */
-        public function toString(bool $header_only = /* false */ null): string { }
+        public function toString(bool $header_only): string { }
 
         /**
          * @return string
@@ -1671,5 +1627,4 @@ namespace Swow\WebSocket {
          */
         public function __debugInfo(): array { }
     }
-
 }

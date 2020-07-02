@@ -25,8 +25,6 @@ class ExtensionGenerator
 {
     protected const INDENT = '    ';
 
-    protected const PPP_MASK = ReflectionProperty::IS_PUBLIC | ReflectionProperty::IS_PROTECTED | ReflectionProperty::IS_PRIVATE;
-
     protected const MODIFIERS_MAP = [
         ReflectionProperty::IS_PUBLIC => 'public',
         ReflectionProperty::IS_PUBLIC | ReflectionProperty::IS_STATIC => 'public static',
@@ -117,7 +115,7 @@ class ExtensionGenerator
             $constantMap[$namespaceName][$constantName] = $constantValue;
         }
         foreach ($constantMap as $namespaceName => $constantArray) {
-            $declaration = "namespace {$namespaceName} {\n";
+            $declaration = "namespace {$namespaceName}\n{\n";
             foreach ($constantArray as $constantName => $constantValue) {
                 $declaration .= "    const {$constantName} = {$this::convertValueToString($constantValue)};\n";
             }
@@ -130,6 +128,7 @@ class ExtensionGenerator
 
     /**
      * @param ReflectionFunction|ReflectionMethod|ReflectionProperty|Reflector $reflector
+     * @return string
      */
     protected function getDeclarationPrefix(Reflector $reflector, bool $withSpace = false): string
     {
@@ -176,28 +175,33 @@ class ExtensionGenerator
                 $paramType = '\\' . $paramType;
             }
             $nullTypeHint = $paramType !== 'mixed' && $param->allowsNull();
-            $comment .= sprintf(
-                " * @param %s%s %s\$%s%s\n",
-                $nullTypeHint ? 'null|' : '',
-                $paramType,
-                $variadic,
-                $param->getName(),
-                !$variadic ? ($param->isOptional() ? ' [optional]' : ' [required]') : ''
-            );
+            $defaultParamValueTip = '';
             try {
                 $defaultParamValue = $param->getDefaultValue();
-                $defaultParamValue = $this::convertValueToString($defaultParamValue);
+                $defaultParamConstantName = $param->getDefaultValueConstantName();
+                $defaultParamValueString = $this::convertValueToString($defaultParamValue);
                 if (is_string($defaultParamValue) && $paramType !== 'string') {
-                    $defaultParamValue = trim($defaultParamValue, '\'');
-                    $showParamValue = " = /* {$defaultParamValue} */ null";
-                } elseif ($defaultParamValue) {
-                    $showParamValue = " = {$defaultParamValue}";
+                    $defaultParamValueTip = trim($defaultParamValueString, '\'');
+                    $showParamValue = " = null";
+                } elseif (strlen($defaultParamConstantName) > 0) {
+                    $showParamValue = " = \\{$defaultParamConstantName}";
+                } elseif (strlen($defaultParamValueString) > 0) {
+                    $showParamValue = " = {$defaultParamValueString}";
                 } else {
                     $showParamValue = '';
                 }
             } catch (\Throwable $throwable) {
                 $showParamValue = '';
             }
+            $comment .= sprintf(
+                " * @param %s%s %s\$%s%s%s\n",
+                $nullTypeHint ? 'null|' : '',
+                $paramType,
+                $variadic,
+                $param->getName(),
+                !$variadic ? ($param->isOptional() ? ' [optional]' : ' [required]') : '',
+                strlen($defaultParamValueTip) > 0 ? " = {$defaultParamValueTip}" : ''
+            );
             $paramsDeclarations[] = sprintf(
                 '%s%s%s%s$%s%s',
                 $nullTypeHint ? '?' : '',
@@ -208,6 +212,14 @@ class ExtensionGenerator
                 $showParamValue
             );
         }
+        $paramsDeclaration = implode(', ', $paramsDeclarations);
+        if (strlen($paramsDeclaration) > 80) {
+            $paramsDeclaration = $this::indent(
+                "\n" . implode(",\n", $paramsDeclarations) . "\n",
+                1
+            );
+        }
+
         if ($function->hasReturnType()) {
             $returnType = $function->getReturnType();
             $returnTypeAllowNull = $returnType->allowsNull();
@@ -261,21 +273,20 @@ class ExtensionGenerator
         }*/
         $body = ' ';
 
-        $comment = "/**\n{$comment} */";
         $declaration = sprintf(
-            'function %s(%s)%s {%s}',
+            '%s%s function %s(%s)%s {%s}',
+            $comment ? $comment = "/**\n{$comment} */\n" : '',
+            $this->getDeclarationPrefix($function, false),
             $name,
-            implode(', ', $paramsDeclarations),
+            $paramsDeclaration,
             ($isCtorOrDtor || !$returnTypeName || $returnTypeName === 'mixed') ? '' : (': ' . ($returnTypeAllowNull ? '?' : '') . $returnTypeName),
             $body
         );
 
-        $declaration = "{$comment}\n{$this->getDeclarationPrefix($function, true)}{$declaration}";
-
         if (!method_exists($function, 'getDeclaringClass')) {
             $namespace = $isInNamespace ? "namespace {$function->getNamespaceName()}" : 'namespace';
             $declaration = $this::indent($declaration, 1);
-            $declaration = "{$namespace} {\n{$declaration}\n}";
+            $declaration = "{$namespace}\n{\n{$declaration}\n}";
         }
 
         return $declaration;
@@ -337,15 +348,20 @@ class ExtensionGenerator
         $namespaceName = $namespaceName ? "namespace {$namespaceName}" : 'namespace';
 
         if (!empty($body)) {
-            $body = "        {$body}";
+            $body =
+                "\n" .
+                "    {\n" .
+                "        {$body}\n" .
+                "    }\n";
+        } else {
+            $body =
+                " { }\n";
         }
 
         return
-            "{$namespaceName} {\n\n" .
-            "    {$prefix}{$type} {$shortName}{$extends}{$implements}\n" .
-            "    {\n" .
-            "{$body}\n" .
-            "    }\n\n" .
+            "{$namespaceName}\n" .
+            "{\n" .
+            "    {$prefix}{$type} {$shortName}{$extends}{$implements}{$body}" .
             '}';
     }
 
