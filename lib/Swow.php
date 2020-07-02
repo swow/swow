@@ -190,10 +190,10 @@ namespace Swow
         public static function getModuleTypes(): int { }
 
         /**
-         * @param int $module_types [required]
+         * @param int $moduleTypes [required]
          * @return void
          */
-        public static function setModuleTypes(int $module_types): void { }
+        public static function setModuleTypes(int $moduleTypes): void { }
     }
 }
 
@@ -242,10 +242,10 @@ namespace Swow
 
         /**
          * @param callable $callable [required]
-         * @param int $stack_page_size [optional]
-         * @param int $c_stack_size [optional]
+         * @param int $stackPageSize [optional]
+         * @param int $stackSize [optional]
          */
-        public function __construct(callable $callable, int $stack_page_size, int $c_stack_size) { }
+        public function __construct(callable $callable, int $stackPageSize, int $stackSize) { }
 
         /**
          * @param callable $callable [required]
@@ -525,16 +525,16 @@ namespace Swow
         public function isFull(): bool { }
 
         /**
-         * @param int $new_size [optional]
+         * @param int $newSize [optional]
          * @return $this
          */
-        public function realloc(int $new_size): self { }
+        public function realloc(int $newSize): self { }
 
         /**
-         * @param int $recommend_size [optional] = $this->getSize() * 2
+         * @param int $recommendSize [optional] = $this->getSize() * 2
          * @return $this
          */
-        public function extend(int $recommend_size = null): self { }
+        public function extend(int $recommendSize = null): self { }
 
         /**
          * @return $this
@@ -1391,7 +1391,7 @@ namespace Swow\Http
      * @param string $url [optional]
      * @param array $headers [optional]
      * @param string $body [optional]
-     * @param string $protocol_version [optional]
+     * @param string $protocolVersion [optional]
      * @return string
      */
      function packRequest(
@@ -1399,26 +1399,26 @@ namespace Swow\Http
         string $url,
         array $headers,
         string $body,
-        string $protocol_version
+        string $protocolVersion
     ): string { }
 }
 
 namespace Swow\Http
 {
     /**
-     * @param int $status_code [optional]
+     * @param int $statusCode [optional]
      * @param array $headers [optional]
      * @param string $body [optional]
-     * @param string $reason_phrase [optional]
-     * @param string $protocol_version [optional]
+     * @param string $reasonPhrase [optional]
+     * @param string $protocolVersion [optional]
      * @return string
      */
      function packResponse(
-        int $status_code,
+        int $statusCode,
         array $headers,
         string $body,
-        string $reason_phrase,
-        string $protocol_version
+        string $reasonPhrase,
+        string $protocolVersion
     ): string { }
 }
 
@@ -1558,10 +1558,10 @@ namespace Swow\WebSocket
         public function getPayloadLength(): int { }
 
         /**
-         * @param int $payload_length [required]
+         * @param int $payloadLength [required]
          * @return $this
          */
-        public function setPayloadLength(int $payload_length): self { }
+        public function setPayloadLength(int $payloadLength): self { }
 
         /**
          * @return int
@@ -1580,10 +1580,10 @@ namespace Swow\WebSocket
         public function getMaskKey(): string { }
 
         /**
-         * @param string $mask_key [required]
+         * @param string $maskKey [required]
          * @return $this
          */
-        public function setMaskKey(string $mask_key): self { }
+        public function setMaskKey(string $maskKey): self { }
 
         /**
          * @return int
@@ -1612,10 +1612,10 @@ namespace Swow\WebSocket
         public function unmaskPayloadData(): self { }
 
         /**
-         * @param bool $header_only [optional]
+         * @param bool $headerOnly [optional]
          * @return string
          */
-        public function toString(bool $header_only): string { }
+        public function toString(bool $headerOnly): string { }
 
         /**
          * @return string

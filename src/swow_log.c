@@ -146,7 +146,7 @@ static PHP_METHOD(swow_log, getModuleTypes)
 }
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_swow_log_setModuleTypes, ZEND_RETURN_VALUE, 1, IS_VOID, 0)
-    ZEND_ARG_TYPE_INFO(0, module_types, IS_LONG, 0)
+    ZEND_ARG_TYPE_INFO(0, moduleTypes, IS_LONG, 0)
 ZEND_END_ARG_INFO()
 
 static PHP_METHOD(swow_log, setModuleTypes)

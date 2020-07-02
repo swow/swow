@@ -1040,8 +1040,8 @@ SWOW_API cat_bool_t swow_coroutine_kill(swow_coroutine_t *scoroutine, const char
 
 ZEND_BEGIN_ARG_INFO_EX(arginfo_swow_coroutine___construct, 0, ZEND_RETURN_VALUE, 1)
     ZEND_ARG_CALLABLE_INFO(0, callable, 0)
-    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, stack_page_size, IS_LONG, 0, "0")
-    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, c_stack_size, IS_LONG, 0, "0")
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, stackPageSize, IS_LONG, 0, "0")
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, stackSize, IS_LONG, 0, "0")
 ZEND_END_ARG_INFO()
 
 static PHP_METHOD(swow_coroutine, __construct)

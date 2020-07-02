@@ -306,7 +306,7 @@ static PHP_METHOD(swow_websocket_frame, getPayloadLength)
 }
 
 ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_swow_websocket_frame_setPayloadLength, ZEND_RETURN_VALUE, 1, Swow\\WebSocket\\Frame, 0)
-    ZEND_ARG_TYPE_INFO(0, payload_length, IS_LONG, 0)
+    ZEND_ARG_TYPE_INFO(0, payloadLength, IS_LONG, 0)
 ZEND_END_ARG_INFO()
 
 static PHP_METHOD(swow_websocket_frame, setPayloadLength)
@@ -371,7 +371,7 @@ static PHP_METHOD(swow_websocket_frame, getMaskKey)
 }
 
 ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_swow_websocket_frame_setMaskKey, ZEND_RETURN_VALUE, 1, Swow\\WebSocket\\Frame, 0)
-    ZEND_ARG_TYPE_INFO(0, mask_key, IS_STRING, 0)
+    ZEND_ARG_TYPE_INFO(0, maskKey, IS_STRING, 0)
 ZEND_END_ARG_INFO()
 
 static PHP_METHOD(swow_websocket_frame, setMaskKey)
@@ -499,7 +499,7 @@ static PHP_METHOD(swow_websocket_frame, unmaskPayloadData)
 }
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_swow_websocket_frame_toString, ZEND_RETURN_VALUE, 0, IS_STRING, 0)
-    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, header_only, _IS_BOOL, 0, "false")
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, headerOnly, _IS_BOOL, 0, "false")
 ZEND_END_ARG_INFO()
 
 static PHP_METHOD(swow_websocket_frame, toString)

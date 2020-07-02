@@ -400,7 +400,7 @@ static PHP_METHOD(swow_buffer, isFull)
 }
 
 ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_swow_buffer_realloc, ZEND_RETURN_VALUE, 0, Swow\\Buffer, 0)
-    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, new_size, IS_LONG, 0, "0")
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, newSize, IS_LONG, 0, "0")
 ZEND_END_ARG_INFO()
 
 static PHP_METHOD(swow_buffer, realloc)
@@ -439,7 +439,7 @@ static PHP_METHOD(swow_buffer, realloc)
 }
 
 ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_swow_buffer_extend, ZEND_RETURN_VALUE, 0, Swow\\Buffer, 0)
-    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, recommend_size, IS_LONG, 0, "\'$this->getSize() * 2\'")
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, recommendSize, IS_LONG, 0, "\'$this->getSize() * 2\'")
 ZEND_END_ARG_INFO()
 
 static PHP_METHOD(swow_buffer, extend)
