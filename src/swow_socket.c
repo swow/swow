@@ -55,7 +55,7 @@ static void swow_socket_dtor_object(zend_object *object)
 
 ZEND_BEGIN_ARG_INFO_EX(arginfo_swow_socket___construct, 0, ZEND_RETURN_VALUE, 0)
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, type, IS_LONG, 0, "Swow\\Socket::TYPE_TCP")
-    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, fd, IS_LONG, 0, CAT_TO_STR(CAT_SOCKET_INVALID_FD))
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, fd, IS_LONG, 0, "Swow\\Socket::INVALID_FD")
 ZEND_END_ARG_INFO()
 
 static PHP_METHOD(swow_socket, __construct)
@@ -201,7 +201,7 @@ static PHP_METHOD(swow_socket, bind)
 }
 
 ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_swow_socket_listen, ZEND_RETURN_VALUE, 0, Swow\\Socket, 0)
-    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, backlog, IS_LONG, 0, CAT_TO_STR(CAT_SOCKET_DEFAULT_BACKLOG))
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, backlog, IS_LONG, 0, "Swow\\Socket::DEFAULT_BACKLOG")
 ZEND_END_ARG_INFO()
 
 static PHP_METHOD(swow_socket, listen)
@@ -1403,6 +1403,7 @@ int swow_socket_module_init(INIT_FUNC_ARGS)
     swow_socket_handlers.dtor_obj = swow_socket_dtor_object;
     /* constants */
     zend_declare_class_constant_long(swow_socket_ce, ZEND_STRL("INVALID_FD"), CAT_SOCKET_INVALID_FD);
+    zend_declare_class_constant_long(swow_socket_ce, ZEND_STRL("DEFAULT_BACKLOG"), CAT_SOCKET_DEFAULT_BACKLOG);
 #define SWOW_SOCKET_TYPE_FLAG_GEN(name, value) \
     zend_declare_class_constant_long(swow_socket_ce, ZEND_STRL("TYPE_FLAG_" #name), (value));
     CAT_SOCKET_TYPE_FLAG_MAP(SWOW_SOCKET_TYPE_FLAG_GEN)

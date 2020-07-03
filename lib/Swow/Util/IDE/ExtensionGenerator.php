@@ -174,23 +174,25 @@ class ExtensionGenerator
                 $paramType = '\\' . $paramType;
             }
             $nullTypeHint = $paramType !== 'mixed' && $param->allowsNull();
-            $defaultParamValueTip = '';
             try {
                 $defaultParamValue = $param->getDefaultValue();
                 $defaultParamConstantName = $param->getDefaultValueConstantName();
                 $defaultParamValueString = $this::convertValueToString($defaultParamValue);
-                if (is_string($defaultParamValue) && $paramType !== 'string') {
-                    $defaultParamValueTip = trim($defaultParamValueString, '\'');
-                    $showParamValue = " = null";
-                } elseif (is_string($defaultParamConstantName) && strlen($defaultParamConstantName) > 0) {
-                    $showParamValue = " = \\{$defaultParamConstantName}";
-                } elseif (strlen($defaultParamValueString) > 0) {
-                    $showParamValue = " = {$defaultParamValueString}";
+                if (is_string($defaultParamValue) && ($paramType !== 'string' || preg_match('/[^\w]/', $defaultParamValue) > 0)) {
+                    $defaultParamValueTip = 'null';
+                    $defaultParamValueTipOnDoc = trim($defaultParamValueString, '\'');
                 } else {
-                    $showParamValue = '';
+                    if (is_string($defaultParamConstantName) && strlen($defaultParamConstantName) > 0) {
+                        $defaultParamValueTip = "\\{$defaultParamConstantName}";
+                    } elseif (strlen($defaultParamValueString) > 0) {
+                        $defaultParamValueTip = "{$defaultParamValueString}";
+                    } else {
+                        $defaultParamValueTip = $defaultParamValueTipOnDoc = '';
+                    }
+                    $defaultParamValueTipOnDoc = $defaultParamValueTip;
                 }
             } catch (\Throwable $throwable) {
-                $showParamValue = '';
+                $defaultParamValueTip = $defaultParamValueTipOnDoc = '';
             }
             $comment .= sprintf(
                 " * @param %s%s %s\$%s%s%s\n",
@@ -199,7 +201,7 @@ class ExtensionGenerator
                 $variadic,
                 $param->getName(),
                 !$variadic ? ($param->isOptional() ? ' [optional]' : ' [required]') : '',
-                strlen($defaultParamValueTip) > 0 ? " = {$defaultParamValueTip}" : ''
+                strlen($defaultParamValueTipOnDoc) > 0 ? " = {$defaultParamValueTipOnDoc}" : ''
             );
             $paramsDeclarations[] = sprintf(
                 '%s%s%s%s$%s%s',
@@ -208,16 +210,17 @@ class ExtensionGenerator
                 $variadic,
                 $param->isPassedByReference() ? '&' : '',
                 $param->getName(),
-                $showParamValue
+                strlen($defaultParamValueTip) > 0 ? " = {$defaultParamValueTip}" : ''
             );
         }
         $paramsDeclaration = implode(', ', $paramsDeclarations);
-        if (strlen($paramsDeclaration) > 80) {
-            $paramsDeclaration = $this::indent(
-                "\n" . implode(",\n", $paramsDeclarations) . "\n",
-                1
-            );
-        }
+        // we can show more info on comment doc
+        // if (strlen($paramsDeclaration) > 80) {
+        //     $paramsDeclaration = $this::indent(
+        //         "\n" . implode(",\n", $paramsDeclarations) . "\n",
+        //         1
+        //     );
+        // }
 
         if ($function->hasReturnType()) {
             $returnType = $function->getReturnType();
