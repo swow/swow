@@ -93,7 +93,6 @@ class ExtensionGenerator
                 if (!ctype_print($value)) {
                     $value = bin2hex($value);
                 }
-
                 return "'{$value}'";
             case is_array($value):
                 return '[]';
@@ -183,7 +182,7 @@ class ExtensionGenerator
                 if (is_string($defaultParamValue) && $paramType !== 'string') {
                     $defaultParamValueTip = trim($defaultParamValueString, '\'');
                     $showParamValue = " = null";
-                } elseif (strlen($defaultParamConstantName) > 0) {
+                } elseif (is_string($defaultParamConstantName) && strlen($defaultParamConstantName) > 0) {
                     $showParamValue = " = \\{$defaultParamConstantName}";
                 } elseif (strlen($defaultParamValueString) > 0) {
                     $showParamValue = " = {$defaultParamValueString}";
