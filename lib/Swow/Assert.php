@@ -1,12 +1,24 @@
 <?php
+/**
+ * This file is part of Swow
+ *
+ * @link     https://github.com/swow/swow
+ * @contact  twosee <twose@qq.com>
+ *
+ * For the full copyright and license information,
+ * please view the LICENSE file that was distributed with this source code
+ */
+
+declare(strict_types=1);
+
+namespace Swow;
+
+use Closure;
+
 /*
- * This file is part of the swow/assert package
- * forked from the repository webmozart/assert.
+ * Forked from the repository webmozart/assert
  *
  * (c) Bernhard Schussek <bschussek@gmail.com>
- *
- * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
  */
 
 /**
@@ -172,12 +184,11 @@
  * @method static bool allThrows($expressions, $class = 'Exception', $message = '')
  *
  * @since  2.0
- *
- * @author Bernhard Schussek <bschussek@gmail.com>
  */
 class Assert
 {
     protected static $throwException = true;
+
     protected static $maxStringLength = 64;
 
     public static function setThrowException(bool $b)
@@ -189,8 +200,10 @@ class Assert
     {
         if (!$value) {
             static::reportInvalidArgument($message);
+
             return false;
         }
+
         return true;
     }
 
@@ -201,8 +214,10 @@ class Assert
                 $message ?: 'Expected a string. Got: %s',
                 static::typeToString($value)
             ));
+
             return false;
         }
+
         return true;
     }
 
@@ -218,20 +233,24 @@ class Assert
                 $message ?: 'Expected an integer. Got: %s',
                 static::typeToString($value)
             ));
+
             return false;
         }
+
         return true;
     }
 
     public static function integerish($value, $message = ''): bool
     {
-        if (!is_numeric($value) || $value != (int)$value) {
+        if (!is_numeric($value) || $value != (int) $value) {
             static::reportInvalidArgument(sprintf(
                 $message ?: 'Expected an integerish value. Got: %s',
                 static::typeToString($value)
             ));
+
             return false;
         }
+
         return true;
     }
 
@@ -242,8 +261,10 @@ class Assert
                 $message ?: 'Expected a float. Got: %s',
                 static::typeToString($value)
             ));
+
             return false;
         }
+
         return true;
     }
 
@@ -254,8 +275,10 @@ class Assert
                 $message ?: 'Expected a numeric. Got: %s',
                 static::typeToString($value)
             ));
+
             return false;
         }
+
         return true;
     }
 
@@ -266,8 +289,10 @@ class Assert
                 $message ?: 'Expected a non-negative integer. Got %s',
                 static::valueToString($value)
             ));
+
             return false;
         }
+
         return true;
     }
 
@@ -278,8 +303,10 @@ class Assert
                 $message ?: 'Expected a boolean. Got: %s',
                 static::typeToString($value)
             ));
+
             return false;
         }
+
         return true;
     }
 
@@ -290,8 +317,10 @@ class Assert
                 $message ?: 'Expected a scalar. Got: %s',
                 static::typeToString($value)
             ));
+
             return false;
         }
+
         return true;
     }
 
@@ -302,8 +331,10 @@ class Assert
                 $message ?: 'Expected an object. Got: %s',
                 static::typeToString($value)
             ));
+
             return false;
         }
+
         return true;
     }
 
@@ -314,6 +345,7 @@ class Assert
                 $message ?: 'Expected a resource. Got: %s',
                 static::typeToString($value)
             ));
+
             return false;
         }
         if ($type && $type !== get_resource_type($value)) {
@@ -322,8 +354,10 @@ class Assert
                 static::typeToString($value),
                 $type
             ));
+
             return false;
         }
+
         return true;
     }
 
@@ -334,8 +368,10 @@ class Assert
                 $message ?: 'Expected a callable. Got: %s',
                 static::typeToString($value)
             ));
+
             return false;
         }
+
         return true;
     }
 
@@ -346,8 +382,10 @@ class Assert
                 $message ?: 'Expected an array. Got: %s',
                 static::typeToString($value)
             ));
+
             return false;
         }
+
         return true;
     }
 
@@ -358,8 +396,10 @@ class Assert
                 $message ?: 'Expected an array accessible. Got: %s',
                 static::typeToString($value)
             ));
+
             return false;
         }
+
         return true;
     }
 
@@ -370,8 +410,10 @@ class Assert
                 $message ?: 'Expected a countable. Got: %s',
                 static::typeToString($value)
             ));
+
             return false;
         }
+
         return true;
     }
 
@@ -382,8 +424,10 @@ class Assert
                 $message ?: 'Expected an iterable. Got: %s',
                 static::typeToString($value)
             ));
+
             return false;
         }
+
         return true;
     }
 
@@ -395,8 +439,10 @@ class Assert
                 static::typeToString($value),
                 $class
             ));
+
             return false;
         }
+
         return true;
     }
 
@@ -408,8 +454,10 @@ class Assert
                 static::typeToString($value),
                 $class
             ));
+
             return false;
         }
+
         return true;
     }
 
@@ -425,6 +473,7 @@ class Assert
             static::typeToString($value),
             implode(', ', array_map(['static', 'valueToString'], $classes))
         ));
+
         return false;
     }
 
@@ -435,8 +484,10 @@ class Assert
                 $message ?: 'Expected an empty value. Got: %s',
                 static::valueToString($value)
             ));
+
             return false;
         }
+
         return true;
     }
 
@@ -447,91 +498,107 @@ class Assert
                 $message ?: 'Expected a non-empty value. Got: %s',
                 static::valueToString($value)
             ));
+
             return false;
         }
+
         return true;
     }
 
     public static function null($value, $message = ''): bool
     {
-        if (null !== $value) {
+        if ($value !== null) {
             static::reportInvalidArgument(sprintf(
                 $message ?: 'Expected null. Got: %s',
                 static::valueToString($value)
             ));
+
             return false;
         }
+
         return true;
     }
 
     public static function notNull($value, $message = ''): bool
     {
-        if (null === $value) {
+        if ($value === null) {
             static::reportInvalidArgument(
                 $message ?: 'Expected a value other than null.'
             );
+
             return false;
         }
+
         return true;
     }
 
     public static function true($value, $message = ''): bool
     {
-        if (true !== $value) {
+        if ($value !== true) {
             static::reportInvalidArgument(sprintf(
                 $message ?: 'Expected a value to be true. Got: %s',
                 static::valueToString($value)
             ));
+
             return false;
         }
+
         return true;
     }
 
     public static function false($value, $message = ''): bool
     {
-        if (false !== $value) {
+        if ($value !== false) {
             static::reportInvalidArgument(sprintf(
                 $message ?: 'Expected a value to be false. Got: %s',
                 static::valueToString($value)
             ));
+
             return false;
         }
+
         return true;
     }
 
     public static function ip($value, $message = ''): bool
     {
-        if (false === filter_var($value, FILTER_VALIDATE_IP)) {
+        if (filter_var($value, FILTER_VALIDATE_IP) === false) {
             static::reportInvalidArgument(sprintf(
                 $message ?: 'Expected a value to be an IP. Got: %s',
                 static::valueToString($value)
             ));
+
             return false;
         }
+
         return true;
     }
 
     public static function ipv4($value, $message = ''): bool
     {
-        if (false === filter_var($value, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
+        if (filter_var($value, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) === false) {
             static::reportInvalidArgument(sprintf(
                 $message ?: 'Expected a value to be an IPv4. Got: %s',
                 static::valueToString($value)
             ));
+
             return false;
         }
+
         return true;
     }
 
     public static function ipv6($value, $message = ''): bool
     {
-        if (false === filter_var($value, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6)) {
+        if (filter_var($value, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6) === false) {
             static::reportInvalidArgument(sprintf(
                 $message ?: 'Expected a value to be an IPv6. Got %s',
                 static::valueToString($value)
             ));
+
             return false;
         }
+
         return true;
     }
 
@@ -544,10 +611,12 @@ class Assert
             static::reportInvalidArgument(sprintf(
                 $message ?: 'Expected an array of unique values, but %s of them %s duplicated',
                 $difference,
-                (1 === $difference ? 'is' : 'are')
+                ($difference === 1 ? 'is' : 'are')
             ));
+
             return false;
         }
+
         return true;
     }
 
@@ -559,8 +628,10 @@ class Assert
                 static::valueToString($value),
                 static::valueToString($expect)
             ));
+
             return false;
         }
+
         return true;
     }
 
@@ -571,8 +642,10 @@ class Assert
                 $message ?: 'Expected a different value than %s.',
                 static::valueToString($expect)
             ));
+
             return false;
         }
+
         return true;
     }
 
@@ -584,8 +657,10 @@ class Assert
                 static::valueToString($value),
                 static::valueToString($expect)
             ));
+
             return false;
         }
+
         return true;
     }
 
@@ -596,8 +671,10 @@ class Assert
                 $message ?: 'Expected a value not identical to %s.',
                 static::valueToString($expect)
             ));
+
             return false;
         }
+
         return true;
     }
 
@@ -609,8 +686,10 @@ class Assert
                 static::valueToString($value),
                 static::valueToString($limit)
             ));
+
             return false;
         }
+
         return true;
     }
 
@@ -622,8 +701,10 @@ class Assert
                 static::valueToString($value),
                 static::valueToString($limit)
             ));
+
             return false;
         }
+
         return true;
     }
 
@@ -635,8 +716,10 @@ class Assert
                 static::valueToString($value),
                 static::valueToString($limit)
             ));
+
             return false;
         }
+
         return true;
     }
 
@@ -648,8 +731,10 @@ class Assert
                 static::valueToString($value),
                 static::valueToString($limit)
             ));
+
             return false;
         }
+
         return true;
     }
 
@@ -662,8 +747,10 @@ class Assert
                 static::valueToString($min),
                 static::valueToString($max)
             ));
+
             return false;
         }
+
         return true;
     }
 
@@ -675,6 +762,7 @@ class Assert
                 "Expected a value approximate {$value}, but got {$actual}\n"
             );
         }
+
         return $ret;
     }
 
@@ -686,34 +774,40 @@ class Assert
                 static::valueToString($value),
                 implode(', ', array_map(['static', 'valueToString'], $values))
             ));
+
             return false;
         }
+
         return true;
     }
 
     public static function contains($value, $subString, $message = ''): bool
     {
-        if (false === strpos($value, $subString)) {
+        if (strpos($value, $subString) === false) {
             static::reportInvalidArgument(sprintf(
                 $message ?: 'Expected a value to contain %2$s. Got: %s',
                 static::valueToString($value),
                 static::valueToString($subString)
             ));
+
             return false;
         }
+
         return true;
     }
 
     public static function notContains($value, $subString, $message = ''): bool
     {
-        if (false !== strpos($value, $subString)) {
+        if (strpos($value, $subString) !== false) {
             static::reportInvalidArgument(sprintf(
                 $message ?: '%2$s was not expected to be contained in a value. Got: %s',
                 static::valueToString($value),
                 static::valueToString($subString)
             ));
+
             return false;
         }
+
         return true;
     }
 
@@ -724,21 +818,25 @@ class Assert
                 $message ?: 'Expected a non-whitespace string. Got: %s',
                 static::valueToString($value)
             ));
+
             return false;
         }
+
         return true;
     }
 
     public static function startsWith($value, $prefix, $message = ''): bool
     {
-        if (0 !== strpos($value, $prefix)) {
+        if (strpos($value, $prefix) !== 0) {
             static::reportInvalidArgument(sprintf(
                 $message ?: 'Expected a value to start with %2$s. Got: %s',
                 static::valueToString($value),
                 static::valueToString($prefix)
             ));
+
             return false;
         }
+
         return true;
     }
 
@@ -758,8 +856,10 @@ class Assert
                 $message ?: 'Expected a value to start with a letter. Got: %s',
                 static::valueToString($value)
             ));
+
             return false;
         }
+
         return true;
     }
 
@@ -771,8 +871,10 @@ class Assert
                 static::valueToString($value),
                 static::valueToString($suffix)
             ));
+
             return false;
         }
+
         return true;
     }
 
@@ -783,8 +885,10 @@ class Assert
                 $message ?: 'The value %s does not match the expected pattern.',
                 static::valueToString($value)
             ));
+
             return false;
         }
+
         return true;
     }
 
@@ -797,8 +901,10 @@ class Assert
                 static::valueToString($pattern),
                 $matches[0][1]
             ));
+
             return false;
         }
+
         return true;
     }
 
@@ -814,8 +920,10 @@ class Assert
                 $message ?: 'Expected a value to contain only letters. Got: %s',
                 static::valueToString($value)
             ));
+
             return false;
         }
+
         return true;
     }
 
@@ -831,8 +939,10 @@ class Assert
                 $message ?: 'Expected a value to contain digits only. Got: %s',
                 static::valueToString($value)
             ));
+
             return false;
         }
+
         return true;
     }
 
@@ -848,8 +958,10 @@ class Assert
                 $message ?: 'Expected a value to contain letters and digits only. Got: %s',
                 static::valueToString($value)
             ));
+
             return false;
         }
+
         return true;
     }
 
@@ -865,8 +977,10 @@ class Assert
                 $message ?: 'Expected a value to contain lowercase characters only. Got: %s',
                 static::valueToString($value)
             ));
+
             return false;
         }
+
         return true;
     }
 
@@ -882,8 +996,10 @@ class Assert
                 $message ?: 'Expected a value to contain uppercase characters only. Got: %s',
                 static::valueToString($value)
             ));
+
             return false;
         }
+
         return true;
     }
 
@@ -895,8 +1011,10 @@ class Assert
                 static::valueToString($value),
                 $length
             ));
+
             return false;
         }
+
         return true;
     }
 
@@ -908,8 +1026,10 @@ class Assert
                 static::valueToString($value),
                 $min
             ));
+
             return false;
         }
+
         return true;
     }
 
@@ -921,8 +1041,10 @@ class Assert
                 static::valueToString($value),
                 $max
             ));
+
             return false;
         }
+
         return true;
     }
 
@@ -937,8 +1059,10 @@ class Assert
                 $min,
                 $max
             ));
+
             return false;
         }
+
         return true;
     }
 
@@ -951,8 +1075,10 @@ class Assert
                 $message ?: 'The file %s does not exist.',
                 static::valueToString($value)
             ));
+
             return false;
         }
+
         return true;
     }
 
@@ -965,8 +1091,10 @@ class Assert
                 $message ?: 'The path %s is not a file.',
                 static::valueToString($value)
             ));
+
             return false;
         }
+
         return true;
     }
 
@@ -979,8 +1107,10 @@ class Assert
                 $message ?: 'The path %s is no directory.',
                 static::valueToString($value)
             ));
+
             return false;
         }
+
         return true;
     }
 
@@ -991,8 +1121,10 @@ class Assert
                 $message ?: 'The path %s is not readable.',
                 static::valueToString($value)
             ));
+
             return false;
         }
+
         return true;
     }
 
@@ -1003,8 +1135,10 @@ class Assert
                 $message ?: 'The path %s is not writable.',
                 static::valueToString($value)
             ));
+
             return false;
         }
+
         return true;
     }
 
@@ -1015,8 +1149,10 @@ class Assert
                 $message ?: 'Expected an existing class name. Got: %s',
                 static::valueToString($value)
             ));
+
             return false;
         }
+
         return true;
     }
 
@@ -1028,8 +1164,10 @@ class Assert
                 static::valueToString($value),
                 static::valueToString($class)
             ));
+
             return false;
         }
+
         return true;
     }
 
@@ -1040,8 +1178,10 @@ class Assert
                 $message ?: 'Expected an existing interface name. got %s',
                 static::valueToString($value)
             ));
+
             return false;
         }
+
         return true;
     }
 
@@ -1053,8 +1193,10 @@ class Assert
                 static::valueToString($value),
                 static::valueToString($interface)
             ));
+
             return false;
         }
+
         return true;
     }
 
@@ -1065,8 +1207,10 @@ class Assert
                 $message ?: 'Expected the property %s to exist.',
                 static::valueToString($property)
             ));
+
             return false;
         }
+
         return true;
     }
 
@@ -1077,8 +1221,10 @@ class Assert
                 $message ?: 'Expected the property %s to not exist.',
                 static::valueToString($property)
             ));
+
             return false;
         }
+
         return true;
     }
 
@@ -1089,8 +1235,10 @@ class Assert
                 $message ?: 'Expected the method %s to exist.',
                 static::valueToString($method)
             ));
+
             return false;
         }
+
         return true;
     }
 
@@ -1101,8 +1249,10 @@ class Assert
                 $message ?: 'Expected the method %s to not exist.',
                 static::valueToString($method)
             ));
+
             return false;
         }
+
         return true;
     }
 
@@ -1113,8 +1263,10 @@ class Assert
                 $message ?: 'Expected the key %s to exist.',
                 static::valueToString($key)
             ));
+
             return false;
         }
+
         return true;
     }
 
@@ -1125,8 +1277,10 @@ class Assert
                 $message ?: 'Expected the key %s to not exist.',
                 static::valueToString($key)
             ));
+
             return false;
         }
+
         return true;
     }
 
@@ -1147,8 +1301,10 @@ class Assert
                 count($array),
                 $min
             ));
+
             return false;
         }
+
         return true;
     }
 
@@ -1160,8 +1316,10 @@ class Assert
                 count($array),
                 $max
             ));
+
             return false;
         }
+
         return true;
     }
 
@@ -1176,8 +1334,10 @@ class Assert
                 $min,
                 $max
             ));
+
             return false;
         }
+
         return true;
     }
 
@@ -1187,8 +1347,10 @@ class Assert
             static::reportInvalidArgument(
                 $message ?: 'Expected list - non-associative array.'
             );
+
             return false;
         }
+
         return true;
     }
 
@@ -1204,8 +1366,10 @@ class Assert
             static::reportInvalidArgument(
                 $message ?: 'Expected map - associative array with string keys.'
             );
+
             return false;
         }
+
         return true;
     }
 
@@ -1215,7 +1379,7 @@ class Assert
 
         // The nil UUID is special form of UUID that is specified to have all
         // 128 bits set to zero.
-        if ('00000000-0000-0000-0000-000000000000' === $value) {
+        if ($value === '00000000-0000-0000-0000-000000000000') {
             return true;
         }
 
@@ -1224,8 +1388,10 @@ class Assert
                 $message ?: 'Value %s is not a valid UUID.',
                 static::valueToString($value)
             ));
+
             return false;
         }
+
         return true;
     }
 
@@ -1254,13 +1420,14 @@ class Assert
             $class,
             $actual
         ));
+
         return false;
     }
 
     public static function __callStatic($name, $arguments): bool
     {
-        if ('nullOr' === substr($name, 0, 6)) {
-            if (null !== $arguments[0]) {
+        if (substr($name, 0, 6) === 'nullOr') {
+            if ($arguments[0] !== null) {
                 $method = lcfirst(substr($name, 6));
                 if (!call_user_func_array(['static', $method], $arguments)) {
                     return false;
@@ -1270,7 +1437,7 @@ class Assert
             return true;
         }
 
-        if ('all' === substr($name, 0, 3)) {
+        if (substr($name, 0, 3) === 'all') {
             if (!static::isIterable($arguments[0])) {
                 return false;
             }
@@ -1293,15 +1460,15 @@ class Assert
 
     protected static function valueToString($value): string
     {
-        if (null === $value) {
+        if ($value === null) {
             return 'null';
         }
 
-        if (true === $value) {
+        if ($value === true) {
             return 'true';
         }
 
-        if (false === $value) {
+        if ($value === false) {
             return 'false';
         }
 
@@ -1313,6 +1480,7 @@ class Assert
             if (method_exists($value, '__toString')) {
                 return get_class($value) . ': ' . self::valueToString($value->__toString());
             }
+
             return get_class($value);
         }
 
@@ -1325,10 +1493,11 @@ class Assert
             if ($length > static::$maxStringLength) {
                 $value = substr($value, 0, static::$maxStringLength) . '...';
             }
+
             return 'string(' . $length . ') "' . $value . '"';
         }
 
-        return (string)$value;
+        return (string) $value;
     }
 
     protected static function typeToString($value): string
@@ -1351,31 +1520,17 @@ class Assert
 
     protected static function reportInvalidArgument(string $message = '')
     {
+        $exception = new AssertException($message);
         if (static::$throwException) {
-            throw new AssertException($message);
+            throw $exception;
         } else {
-            // TODO
+            $exception = str_replace('AssertException', 'Assert failed', (string) $exception);
+            trigger_error($exception, E_USER_WARNING);
         }
     }
 
-    private function __construct() { }
-}
-
-class AssertException extends Exception
-{
-    public function __toString()
+    private function __construct()
     {
-        $file = $this->getFile();
-        $line = $this->getLine();
-        $msg = $this->getMessage();
-        $trace = $this->getTraceAsString();
-        foreach ($this->getTrace() as $call) {
-            $file = $call['file'] ?? 'Unknown';
-            $line = $call['line'] ?? 0;
-            if ($file !== __FILE__) {
-                break;
-            }
-        }
-        return "AssertException: " . (empty($msg) ? '' : "{$msg} ") . "in {$file} on line {$line}\nStack trace: \n{$trace}";
+        // never here
     }
 }
