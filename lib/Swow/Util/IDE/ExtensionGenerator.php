@@ -90,10 +90,7 @@ class ExtensionGenerator
             case is_bool($value):
                 return $value ? 'true' : 'false';
             case is_string($value):
-                if (!ctype_print($value)) {
-                    $value = bin2hex($value);
-                }
-                return "'{$value}'";
+                return ctype_print($value) ? "'{$value}'" : bin2hex($value);
             case is_array($value):
                 return '[]';
             default:
@@ -125,10 +122,7 @@ class ExtensionGenerator
         return $result;
     }
 
-    /**
-     * @param ReflectionFunction|ReflectionMethod|ReflectionProperty|Reflector $reflector
-     * @return string
-     */
+    /** @param ReflectionFunction|ReflectionMethod|ReflectionProperty|Reflector $reflector */
     protected function getDeclarationPrefix(Reflector $reflector, bool $withSpace = false): string
     {
         $prefix = '';

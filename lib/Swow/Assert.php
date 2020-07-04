@@ -1521,12 +1521,15 @@ class Assert
     protected static function reportInvalidArgument(string $message = '')
     {
         $exception = new AssertException($message);
-        if (static::$throwException) {
-            throw $exception;
-        } else {
+
+        if (!static::$throwException) {
             $exception = str_replace('AssertException', 'Assert failed', (string) $exception);
             trigger_error($exception, E_USER_WARNING);
+
+            return;
         }
+
+        throw $exception;
     }
 
     private function __construct()
