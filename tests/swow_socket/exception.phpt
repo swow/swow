@@ -14,7 +14,7 @@ use Swow\Sync\WaitReference;
 use const Swow\ECANCELED;
 use const Swow\ECONNRESET;
 
-$random = getRandomBytes(MAX_LENGTH_LOW);
+$random = getRandomBytes(TEST_MAX_LENGTH_LOW);
 
 $server = new Socket(Socket::TYPE_TCP);
 Coroutine::run(function () use ($server, $random) {
@@ -23,7 +23,7 @@ Coroutine::run(function () use ($server, $random) {
         $client = $server->accept();
         Coroutine::run(function () use ($client, $random) {
             try {
-                $client->readString(MAX_LENGTH_LOW + 1);
+                $client->readString(TEST_MAX_LENGTH_LOW + 1);
                 Assert::assert(0 && 'never here');
             } catch (Socket\Exception $exception) {
                 Assert::same($exception->getCode(), ECONNRESET);

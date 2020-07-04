@@ -3,23 +3,10 @@ if (!extension_loaded('swow')) {
     exit('skip swow extension is required');
 }
 
-define('SWOW_COLOR_RED', 1);
-define('SWOW_COLOR_GREEN', 2);
-define('SWOW_COLOR_YELLOW', 3);
-define('SWOW_COLOR_BLUE', 4);
-define('SWOW_COLOR_MAGENTA', 5);
-define('SWOW_COLOR_CYAN', 6);
-define('SWOW_COLOR_WHITE', 7);
-
-function swow_color(string $content, int $color): string
+function skip(string $reason, bool $condition = true): void
 {
-    return "\033[3{$color}m{$content}\033[0m";
-}
-
-function skip(string $reason, bool $is_skip = true, int $color = SWOW_COLOR_YELLOW): void
-{
-    if ($is_skip) {
-        exit('skip ' . swow_color($reason, $color));
+    if ($condition) {
+        exit("skip {$reason}");
     }
 }
 

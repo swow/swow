@@ -33,7 +33,7 @@ foreach ([false, true] as $useConnect) {
         $server->bind(SERVER_SOCK);
         try {
             while (true) {
-                $message = $server->recvStringFrom(MAX_LENGTH, $address);
+                $message = $server->recvStringFrom(TEST_MAX_LENGTH, $address);
                 if (!$message) {
                     break;
                 }
@@ -51,19 +51,19 @@ foreach ([false, true] as $useConnect) {
         if ($useConnect) {
             $client->connect($server->getSockAddress());
         }
-        $randoms = getRandomBytesArray(MAX_REQUESTS, MAX_LENGTH);
-        for ($n = 0; $n < MAX_REQUESTS; $n++) {
+        $randoms = getRandomBytesArray(TEST_MAX_REQUESTS, TEST_MAX_LENGTH);
+        for ($n = 0; $n < TEST_MAX_REQUESTS; $n++) {
             if ($useConnect) {
                 $client->sendString($randoms[$n]);
             } else {
                 $client->sendStringTo($randoms[$n], $server->getSockAddress());
             }
         }
-        for ($n = 0; $n < MAX_REQUESTS; $n++) {
+        for ($n = 0; $n < TEST_MAX_REQUESTS; $n++) {
             if ($useConnect) {
-                $packet = $client->recvString(MAX_LENGTH);
+                $packet = $client->recvString(TEST_MAX_LENGTH);
             } else {
-                $packet = $client->recvStringFrom(MAX_LENGTH, $address);
+                $packet = $client->recvStringFrom(TEST_MAX_LENGTH, $address);
                 Assert::same($address, $server->getSockAddress());
             }
             Assert::same($packet, $randoms[$n]);

@@ -18,7 +18,7 @@ foreach ([false, true] as $sleep) {
             if ($sleep) {
                 sleep(0);
             }
-            for ($n = MAX_LOOPS; $n--;) {
+            for ($n = TEST_MAX_LOOPS; $n--;) {
                 $channel->push(true);
             }
             $channel->push(false);

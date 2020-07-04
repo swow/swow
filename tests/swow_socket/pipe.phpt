@@ -31,7 +31,7 @@ Coroutine::run(function () use ($server) {
             Coroutine::run(function () use ($client) {
                 try {
                     while (true) {
-                        $client->sendString($client->readString(MAX_LENGTH));
+                        $client->sendString($client->readString(TEST_MAX_LENGTH));
                     }
                 } catch (Socket\Exception $exception) {
                     Assert::same($exception->getCode(), ECONNRESET);
@@ -44,19 +44,19 @@ Coroutine::run(function () use ($server) {
 });
 
 $wr = WaitReference::make();
-for ($c = 0; $c < MAX_CONCURRENCY_LOW; $c++) {
+for ($c = 0; $c < TEST_MAX_CONCURRENCY_LOW; $c++) {
     Coroutine::run(function () use ($server, $wr) {
         $client = new Socket(Socket::TYPE_PIPE);
-        if (MAX_CONCURRENCY_LOW === 1) {
+        if (TEST_MAX_CONCURRENCY_LOW === 1) {
             $client->bind(CLIENT_SOCK);
         }
         $client->connect($server->getSockAddress());
-        $randoms = getRandomBytesArray(MAX_REQUESTS, MAX_LENGTH);
-        for ($n = 0; $n < MAX_REQUESTS; $n++) {
+        $randoms = getRandomBytesArray(TEST_MAX_REQUESTS, TEST_MAX_LENGTH);
+        for ($n = 0; $n < TEST_MAX_REQUESTS; $n++) {
             $client->sendString($randoms[$n]);
         }
-        for ($n = 0; $n < MAX_REQUESTS; $n++) {
-            $packet = $client->readString(MAX_LENGTH);
+        for ($n = 0; $n < TEST_MAX_REQUESTS; $n++) {
+            $packet = $client->readString(TEST_MAX_LENGTH);
             Assert::same($packet, $randoms[$n]);
         }
         $client->close();

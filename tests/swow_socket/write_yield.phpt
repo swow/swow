@@ -23,7 +23,7 @@ Coroutine::run(function () use ($server) {
             Coroutine::run(function () use ($client) {
                 try {
                     while (true) {
-                        $client->sendString($client->readString(MAX_LENGTH_HIGH));
+                        $client->sendString($client->readString(TEST_MAX_LENGTH_HIGH));
                     }
                 } catch (Socket\Exception $exception) {
                     Assert::same($exception->getCode(), ECONNRESET);
@@ -37,12 +37,12 @@ Coroutine::run(function () use ($server) {
 
 $client = new Socket(Socket::TYPE_TCP);
 $client->connect($server->getSockAddress(), $server->getSockPort());
-$randoms = getRandomBytesArray(MAX_REQUESTS_LOW, MAX_LENGTH_HIGH);
-for ($n = 0; $n < MAX_REQUESTS_LOW; $n++) {
+$randoms = getRandomBytesArray(TEST_MAX_REQUESTS_LOW, TEST_MAX_LENGTH_HIGH);
+for ($n = 0; $n < TEST_MAX_REQUESTS_LOW; $n++) {
     $client->sendString($randoms[$n]);
 }
-for ($n = 0; $n < MAX_REQUESTS_LOW; $n++) {
-    $packet = $client->readString(MAX_LENGTH_HIGH);
+for ($n = 0; $n < TEST_MAX_REQUESTS_LOW; $n++) {
+    $packet = $client->readString(TEST_MAX_LENGTH_HIGH);
     Assert::same($packet, $randoms[$n]);
 }
 $client->close();
