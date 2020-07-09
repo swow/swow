@@ -2,7 +2,7 @@
 
 require __DIR__ . '/../../vendor/autoload.php';
 
-use function Swow\Util\scanDir;
+use function Swow\Util\FileSystem\scan;
 
 (function () {
     $replacement = [
@@ -19,7 +19,7 @@ use function Swow\Util\scanDir;
     }
 
     $result = '';
-    $templatesFiles = scanDir(__DIR__, function (string $filename) {
+    $templatesFiles = scan(__DIR__, function (string $filename) {
         return pathinfo($filename, PATHINFO_EXTENSION) === 'template';
     });
     foreach ($templatesFiles as $filename) {
