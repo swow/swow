@@ -182,7 +182,9 @@ static zval *swow_coroutine_function(zval *zdata)
         fci.param_count = fci_ptr->param_count;
         fci.params = fci_ptr->params;
     }
+#if PHP_VERSION_ID < 80000
     fci.no_separation = 0;
+#endif
     fci.retval = &retval;
 
     /* call function */

@@ -79,7 +79,9 @@ SWOW_API void swow_defer_do_tasks(swow_defer_t *sdefer)
         ZVAL_UNDEF(&fci.function_name);
         fci.object = NULL;
         fci.param_count = 0;
+#if PHP_VERSION_ID < 80000
         fci.no_separation = 0;
+#endif
         fci.retval = &retval;
         (void) zend_call_function(&fci, &task->fcc);
         zval_ptr_dtor(&retval);
