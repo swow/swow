@@ -963,6 +963,7 @@ SWOW_API cat_bool_t swow_coroutine_throw(swow_coroutine_t *scoroutine, zend_obje
         ZVAL_OBJ(&zexception, exception);
         GC_ADDREF(exception);
         zend_throw_exception_internal(&zexception);
+        ZVAL_NULL(retval);
     } else {
         scoroutine->executor->cross_exception = exception;
         if (UNEXPECTED(!swow_coroutine_resume(scoroutine, SWOW_COROUTINE_DATA_NULL, retval))) {
