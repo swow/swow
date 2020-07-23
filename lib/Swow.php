@@ -302,6 +302,11 @@ namespace Swow
         public function getElapsed(): int { }
 
         /**
+         * @return int
+         */
+        public function getExitStatus(): int { }
+
+        /**
          * @return bool
          */
         public function isAvailable(): bool { }

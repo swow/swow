@@ -90,7 +90,7 @@ class ExtensionGenerator
             case is_bool($value):
                 return $value ? 'true' : 'false';
             case is_string($value):
-                return ctype_print($value) ? "'{$value}'" : bin2hex($value);
+                return '\'' . (ctype_print($value) ? $value : bin2hex($value)) . '\'';
             case is_array($value):
                 return '[]';
             default:
