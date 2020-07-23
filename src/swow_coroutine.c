@@ -100,31 +100,33 @@ static void swow_coroutine_free_object(zend_object *object)
     zend_object_std_dtor(&scoroutine->std);
 }
 
-static void swow_coroutine_function_handle_exception(void)
+static CAT_COLD cat_bool_t swow_coroutine_exception_should_be_silent(zend_object *exception)
+{
+    if (instanceof_function(exception->ce, swow_coroutine_term_exception_ce)) {
+        zval zexception, *zcode, ztmp;
+        ZVAL_OBJ(&zexception, exception);
+        zcode = zend_read_property_ex(exception->ce, &zexception, ZSTR_KNOWN(ZEND_STR_CODE), 1, &ztmp);
+        if (zval_get_long(zcode) == 0) {
+            return cat_true;
+        }
+    } else if (instanceof_function(exception->ce, swow_coroutine_kill_exception_ce)) {
+        return cat_true;
+    }
+    return cat_false;
+}
+
+static CAT_COLD void swow_coroutine_function_handle_exception(void)
 {
     CAT_ASSERT(EG(exception) != NULL);
 
     zend_exception_restore();
 
     /* keep slient for killer and term(0) */
-    do {
-        zend_bool exit_normally = 0;
-        if (instanceof_function(EG(exception)->ce, swow_coroutine_term_exception_ce)) {
-            zval zexception, *zcode, ztmp;
-            ZVAL_OBJ(&zexception, EG(exception));
-            zcode = zend_read_property_ex(EG(exception)->ce, &zexception, ZSTR_KNOWN(ZEND_STR_CODE), 1, &ztmp);
-            if (zval_get_long(zcode) == 0) {
-                exit_normally = 1;
-            }
-        } else if (instanceof_function(EG(exception)->ce, swow_coroutine_kill_exception_ce)) {
-            exit_normally = 1;
-        }
-        if (exit_normally) {
-            OBJ_RELEASE(EG(exception));
-            EG(exception) = NULL;
-            return;
-        }
-    } while (0);
+    if (swow_coroutine_exception_should_be_silent(EG(exception))) {
+        OBJ_RELEASE(EG(exception));
+        EG(exception) = NULL;
+        return;
+    }
 
     if (Z_TYPE(EG(user_exception_handler)) != IS_UNDEF) {
         zval origin_user_exception_handler;
@@ -360,6 +362,7 @@ static cat_bool_t swow_coroutine_construct(swow_coroutine_t *scoroutine, zval *z
     } while (0);
     /* executor ok */
     scoroutine->executor = executor;
+    scoroutine->exit_status = 0;
 
     return cat_true;
 }
@@ -1016,7 +1019,6 @@ SWOW_API cat_bool_t swow_coroutine_kill(swow_coroutine_t *scoroutine, const char
     swow_exception_set_properties(exception, message, code);
 #ifndef SWOW_COROUTINE_USE_RATED
     success = swow_coroutine_throw(scoroutine, exception, &retval);
-    CAT_ASSERT(!SWOW_COROUTINE_G(kill_main));
     OBJ_RELEASE(exception);
     if (!success) {
         return cat_false;
@@ -1282,6 +1284,15 @@ static PHP_METHOD(swow_coroutine, getElapsed)
     RETURN_LONG(cat_coroutine_get_elapsed(&getThisCoroutine()->coroutine));
 }
 
+#define arginfo_swow_coroutine_getExitStatus arginfo_swow_coroutine_getLong
+
+static PHP_METHOD(swow_coroutine, getExitStatus)
+{
+    ZEND_PARSE_PARAMETERS_NONE();
+
+    RETURN_LONG(getThisCoroutine()->exit_status);
+}
+
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_swow_coroutine_getBool, ZEND_RETURN_VALUE, 0, _IS_BOOL, 0)
 ZEND_END_ARG_INFO()
 
@@ -1519,6 +1530,7 @@ static const zend_function_entry swow_coroutine_methods[] = {
     PHP_ME(swow_coroutine, getState,            arginfo_swow_coroutine_getState,            ZEND_ACC_PUBLIC)
     PHP_ME(swow_coroutine, getStateName,        arginfo_swow_coroutine_getStateName,        ZEND_ACC_PUBLIC)
     PHP_ME(swow_coroutine, getElapsed,          arginfo_swow_coroutine_getElapsed,          ZEND_ACC_PUBLIC)
+    PHP_ME(swow_coroutine, getExitStatus,       arginfo_swow_coroutine_getExitStatus,       ZEND_ACC_PUBLIC)
     PHP_ME(swow_coroutine, isAvailable,         arginfo_swow_coroutine_isAvailable,         ZEND_ACC_PUBLIC)
     PHP_ME(swow_coroutine, isAlive,             arginfo_swow_coroutine_isAlive,             ZEND_ACC_PUBLIC)
     PHP_ME(swow_coroutine, getTrace,            arginfo_swow_coroutine_getTrace,            ZEND_ACC_PUBLIC)
@@ -1602,7 +1614,7 @@ static void swow_call_original_zend_error_cb(int type, const char *error_filenam
         zend_try {
             original_zend_error_cb(type, error_filename, error_lineno, ZEND_ERROR_CB_LAST_ARG_RELAY);
         } zend_catch {
-            exit(255);
+            exit(EG(exit_status));
         } zend_end_try();
     }
 }
@@ -1620,9 +1632,9 @@ static void swow_coroutine_error_cb(int type, const char *error_filename, const 
         if (strncmp(format, ZEND_STRL("Uncaught ")) == 0) {
             /* hack hook for error in main */
             if (swow_coroutine_get_current() == swow_coroutine_get_main()) {
-                /* keep slient for killer */
-                if (SWOW_COROUTINE_G(kill_main)) {
-                    SWOW_COROUTINE_G(kill_main) = cat_false;
+                /* keep slient for kill/term(0) */
+                if (SWOW_COROUTINE_G(silent_exception_in_main)) {
+                    SWOW_COROUTINE_G(silent_exception_in_main) = cat_false;
                     return;
                 } else {
                     zend_long severity = SWOW_COROUTINE_G(exception_error_severity);
@@ -1685,8 +1697,8 @@ static void (*original_zend_throw_exception_hook)(zval *zexception);
 static void swow_zend_throw_exception_hook(zval *zexception)
 {
     if (swow_coroutine_get_current() == swow_coroutine_get_main()) {
-        if (instanceof_function(Z_OBJCE_P(zexception), swow_coroutine_kill_exception_ce)) {
-            SWOW_COROUTINE_G(kill_main) = cat_true;
+        if (swow_coroutine_exception_should_be_silent(Z_OBJ_P(zexception))) {
+            SWOW_COROUTINE_G(silent_exception_in_main) = cat_true;
         }
     }
     if (original_zend_throw_exception_hook != NULL) {
@@ -1700,8 +1712,10 @@ static user_opcode_handler_t original_zend_exit_handler;
 
 static int swow_coroutine_exit_handler(zend_execute_data *execute_data)
 {
+    swow_coroutine_t *scoroutine = swow_coroutine_get_current();
     const zend_op *opline = EX(opline);
     zval *zstatus = NULL;
+    zend_long status;
 
     if (opline->op1_type != IS_UNUSED) {
         if (opline->op1_type == IS_CONST) {
@@ -1717,27 +1731,35 @@ static int swow_coroutine_exit_handler(zend_execute_data *execute_data)
         if (Z_ISREF_P(zstatus)) {
             zstatus = Z_REFVAL_P(zstatus);
         }
-    }
-    if (zstatus != NULL && Z_TYPE_P(zstatus) == IS_LONG && Z_LVAL_P(zstatus) != 0) {
-        /* exit abnormally */
-        zend_long status = Z_LVAL_P(zstatus);
-        zend_throw_exception_ex(swow_coroutine_term_exception_ce, status, "Exited with code " ZEND_LONG_FMT, status);
-        if (swow_coroutine_get_current() == swow_coroutine_get_main()) {
-            EG(exit_status) = status;
+        if (zstatus != NULL && Z_TYPE_P(zstatus) == IS_LONG && Z_LVAL_P(zstatus) != 0) {
+            /* exit abnormally */
+            status = Z_LVAL_P(zstatus);
+        } else {
+            /* exit normally */
+            if (zstatus != NULL && Z_TYPE_P(zstatus) != IS_LONG) {
+                zend_print_zval(zstatus, 0);
+            }
+            status = 0;
+        }
+        if ((opline->op1_type) & (IS_TMP_VAR | IS_VAR)) {
+            zval_ptr_dtor_nogc(zstatus);
         }
     } else {
-        /* exit normally */
-        if (zstatus != NULL && Z_TYPE_P(zstatus) != IS_LONG) {
-            zend_print_zval(zstatus, 0);
-        }
-        zend_throw_exception(swow_coroutine_kill_exception_ce, NULL, 0);
+        status = 0;
     }
-    /* dtor */
-    if ((opline->op1_type) & (IS_TMP_VAR | IS_VAR)) {
-        zval_ptr_dtor(zstatus);
+    if (EG(exception) == NULL) {
+#if PHP_VERSION_ID < 80000
+        zend_throw_exception(swow_coroutine_kill_exception_ce, NULL, 0);
+#else
+        zend_throw_unwind_exit();
+#endif
+    }
+    scoroutine->exit_status = status;
+    if (scoroutine == swow_coroutine_get_main()) {
+        EG(exit_status) = status;
     }
 
-    return ZEND_USER_OPCODE_DISPATCH;
+    return ZEND_USER_OPCODE_RETURN;
 }
 
 /* hook silence */

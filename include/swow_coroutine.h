@@ -101,6 +101,7 @@ typedef struct
 {
     cat_coroutine_t coroutine;
     /* php things... */
+    int exit_status;
     swow_coroutine_exector_t *executor;
     zend_object std;
 } swow_coroutine_t;
@@ -139,7 +140,7 @@ CAT_GLOBALS_STRUCT_BEGIN(swow_coroutine)
 #endif
     /* internal special */
     cat_coroutine_t *original_main;
-    cat_bool_t kill_main; /* used to ignore kill exception in main */
+    cat_bool_t silent_exception_in_main; /* used to ignore some exceptions in main */
     swow_coroutine_readonly_t readonly;
 #ifdef SWOW_COROUTINE_USE_RATED
     swow_coroutine_rated_t rated;

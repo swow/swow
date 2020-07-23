@@ -8,15 +8,15 @@ require __DIR__ . '/../include/skipif.php';
 <?php
 require __DIR__ . '/../include/bootstrap.php';
 
-$coroutine = new Swow\Coroutine(function () {
+$coroutine = Swow\Coroutine::run(function () {
     try {
         Swow\Coroutine::yield();
+        return 'Never here';
     } catch (Throwable $throwable) {
-        var_dump(get_class($throwable));
+        return get_class($throwable);
     }
 });
-$coroutine->resume();
-$coroutine->throw(new Exception);
+var_dump($coroutine->throw(new Exception));
 
 ?>
 --EXPECT--

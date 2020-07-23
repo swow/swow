@@ -1,5 +1,5 @@
 --TEST--
-swow_coroutine: kill main by self
+swow_coroutine: term(0) main
 --SKIPIF--
 <?php
 require __DIR__ . '/../include/skipif.php';
@@ -8,9 +8,7 @@ require __DIR__ . '/../include/skipif.php';
 <?php
 require __DIR__ . '/../include/bootstrap.php';
 
-Swow\Coroutine::getCurrent()->kill();
-
-echo 'Never here and keep silent' . PHP_LF;
+Swow\Coroutine::getCurrent()->term();
 
 ?>
 --EXPECT--
