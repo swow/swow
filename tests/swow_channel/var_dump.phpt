@@ -19,13 +19,13 @@ var_dump($channel);
 
 ?>
 --EXPECTF--
-object(Swow\Channel)#%d (2) {
+object(Swow\Channel)#%d (%d) {
   ["capacity"]=>
   int(0)
   ["length"]=>
   int(0)
 }
-object(Swow\Channel)#%d (2) {
+object(Swow\Channel)#%d (%d) {
   ["capacity"]=>
   int(100)
   ["length"]=>

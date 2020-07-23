@@ -40,7 +40,7 @@ Assert::lessThan($memoryUsages[2] - $memoryUsages[1], $buffer::PAGE_SIZE / 2); /
 
 ?>
 --EXPECTF--
-object(Swow\Buffer)#2 (4) {
+object(Swow\Buffer)#%d (%d) {
   ["value"]=>
   string(0) ""
   ["size"]=>
@@ -50,7 +50,7 @@ object(Swow\Buffer)#2 (4) {
   ["offset"]=>
   int(0)
 }
-object(Swow\Buffer)#2 (5) {
+object(Swow\Buffer)#%d (%d) {
   ["value"]=>
   string(13) "{"foo":"bar"}"
   ["size"]=>
@@ -62,7 +62,7 @@ object(Swow\Buffer)#2 (5) {
   ["shared"]=>
   bool(true)
 }
-object(Swow\Buffer)#2 (4) {
+object(Swow\Buffer)#%d (%d) {
   ["value"]=>
   string(13) "{"cha":"bar"}"
   ["size"]=>

@@ -41,7 +41,7 @@ int(9)
 foo
 bar
 car
-object(Swow\Buffer)#%d (4) {
+object(Swow\Buffer)#%d (%d) {
   ["value"]=>
   string(9) "foobarcar"
   ["size"]=>
