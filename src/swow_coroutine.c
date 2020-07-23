@@ -1833,35 +1833,6 @@ int swow_coroutine_module_init(INIT_FUNC_ARGS)
     return SUCCESS;
 }
 
-#ifdef SWOW_COROUTINE_HOOK_ZEND_EXUECTE_EX
-static void swow_execute_ex(zend_execute_data *execute_data)
-{
-    if (PG(modules_activated) && EG(current_execute_data) && EG(current_execute_data)->prev_execute_data == NULL) {
-        zval retval;
-        /* revert to original (just hook the main) */
-        zend_execute_ex = SWOW_COROUTINE_G(original_zend_execute_ex);
-        /* set return_value */
-        execute_data->return_value = &retval;
-        /* execute code of main */
-        zend_execute_ex(execute_data);
-        /* as same as coroutine finished */
-        if (UNEXPECTED(EG(exception) != NULL)) {
-            swow_coroutine_function_handle_exception();
-        }
-    #if SWOW_COROUTINE_SWAP_OUTPUT_GLOBALS
-        if (UNEXPECTED(OG(handlers).elements != NULL)) {
-            swow_coroutine_output_globals_end();
-        }
-    #endif
-        zval_ptr_dtor(&retval);
-        cat_coroutine_lock();
-    } else {
-        SWOW_COROUTINE_G(original_zend_execute_ex)(execute_data);
-        return;
-    }
-}
-#endif
-
 int swow_coroutine_runtime_init(INIT_FUNC_ARGS)
 {
     if (!cat_coroutine_runtime_init()) {
@@ -1906,17 +1877,6 @@ int swow_coroutine_runtime_init(INIT_FUNC_ARGS)
             /* GC_ADDREF(&scoroutine->std); // we have 1 ref by create*/
         } while (0);
     } while (0);
-
-#ifdef SWOW_COROUTINE_HOOK_ZEND_EXUECTE_EX
-#if ZTS
-#error "unsupported"
-#endif
-    /* hook zend_execute_ex */
-    do {
-        SWOW_COROUTINE_G(original_zend_execute_ex) = zend_execute_ex;
-        zend_execute_ex = swow_execute_ex;
-    } while (0);
-#endif
 
     return SUCCESS;
 }

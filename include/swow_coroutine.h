@@ -144,9 +144,6 @@ CAT_GLOBALS_STRUCT_BEGIN(swow_coroutine)
 #ifdef SWOW_COROUTINE_USE_RATED
     swow_coroutine_rated_t rated;
 #endif
-#ifdef SWOW_COROUTINE_HOOK_ZEND_EXUECTE_EX
-    void (*)(zend_execute_data *) original_zend_execute_ex;
-#endif
 CAT_GLOBALS_STRUCT_END(swow_coroutine)
 
 typedef zval *(*swow_coroutine_resume_t)(swow_coroutine_t *scoroutine, zval *zdata);
