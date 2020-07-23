@@ -106,12 +106,25 @@ static void swow_coroutine_function_handle_exception(void)
 
     zend_exception_restore();
 
-    /* keep slient for killer */
-    if (instanceof_function(EG(exception)->ce, swow_coroutine_kill_exception_ce)) {
-        OBJ_RELEASE(EG(exception));
-        EG(exception) = NULL;
-        return;
-    }
+    /* keep slient for killer and term(0) */
+    do {
+        zend_bool exit_normally = 0;
+        if (instanceof_function(EG(exception)->ce, swow_coroutine_term_exception_ce)) {
+            zval zexception, *zcode, ztmp;
+            ZVAL_OBJ(&zexception, EG(exception));
+            zcode = zend_read_property_ex(EG(exception)->ce, &zexception, ZSTR_KNOWN(ZEND_STR_CODE), 1, &ztmp);
+            if (zval_get_long(zcode) == 0) {
+                exit_normally = 1;
+            }
+        } else if (instanceof_function(EG(exception)->ce, swow_coroutine_kill_exception_ce)) {
+            exit_normally = 1;
+        }
+        if (exit_normally) {
+            OBJ_RELEASE(EG(exception));
+            EG(exception) = NULL;
+            return;
+        }
+    } while (0);
 
     if (Z_TYPE(EG(user_exception_handler)) != IS_UNDEF) {
         zval origin_user_exception_handler;
