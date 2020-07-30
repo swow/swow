@@ -13,11 +13,7 @@ namespace Swow\Tools;
 
 require __DIR__ . '/../vendor/autoload.php';
 
-const EMOJI_SUCCESS = '🚀';
-const EMOJI_OK = '✅';
-const EMOJI_WARN = '⚠️';
-const EMOJI_ERROR = '❌';
-
+const COLOR_NONE = 0;
 const COLOR_RED = 1;
 const COLOR_GREEN = 2;
 const COLOR_YELLOW = 3;
@@ -28,22 +24,24 @@ const COLOR_WHITE = 7;
 
 function dye(string $string, int $color): string
 {
-    return ($color ? "\033[3{$color}m{$string}\033[0m" : $string);
+    return ($color !== COLOR_NONE ? "\033[3{$color}m{$string}\033[0m" : $string);
 }
 
-function log(string $message, int $color = 0): void
+function log(string $message, int $color = COLOR_NONE): void
 {
     echo dye($message, $color) . PHP_EOL;
 }
 
-function check(bool $is_ok, string $message): void
+function br(): void
 {
-    if ($is_ok) {
-        ok("{$message} OK!");
-    } else {
-        error("{$message} Failed!");
-    }
+    echo PHP_EOL;
 }
+
+const EMOJI_WARN = '⚠️';
+const EMOJI_ERROR = '❌';
+const EMOJI_NOTICE = '💬';
+const EMOJI_OK = '✅';
+const EMOJI_SUCCESS = '🚀';
 
 function warn(string $message): void
 {
@@ -56,6 +54,11 @@ function error(string $message): void
     exit(255);
 }
 
+function notice(string $message): void
+{
+    log(EMOJI_NOTICE . " {$message}", COLOR_CYAN);
+}
+
 function ok(string $message): void
 {
     log(EMOJI_OK . " {$message}", COLOR_GREEN);
@@ -63,9 +66,18 @@ function ok(string $message): void
 
 function success(string $content): void
 {
-    $em =  str_repeat(EMOJI_SUCCESS, 3);
+    $em = str_repeat(EMOJI_SUCCESS, 3);
     log("{$em}{$content}{$em}", COLOR_CYAN);
     exit(0);
+}
+
+function check(bool $is_ok, string $message): void
+{
+    if ($is_ok) {
+        ok("{$message} OK!");
+    } else {
+        error("{$message} Failed!");
+    }
 }
 
 function spaces(int $length): string

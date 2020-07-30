@@ -41,6 +41,7 @@
     "scripts": {
         "cs-check": "/usr/bin/env php ./vendor/bin/php-cs-fixer fix --dry-run",
         "cs-fix": "/usr/bin/env php ./vendor/bin/php-cs-fixer fix",
-        "ide-help": "/usr/bin/env php -n -d extension=swow ./tools/ide-helper/generator.php swow ./lib/Swow.php"
+        "ide-help": "/usr/bin/env php -n -d extension=swow ./tools/ide-helper/generator.php swow ./lib/Swow.php",
+        "build-extension": "/usr/bin/env php ./tools/builder/extension.php"
     }
 }
