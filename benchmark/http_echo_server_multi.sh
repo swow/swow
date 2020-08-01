@@ -11,7 +11,7 @@ export SERVER_MULTI=1
 
 i=0
 while [ ${i} -le 7 ]; do
-  /usr/bin/env php -dextension=swow -dmemory_limit=1G "${__DIR__}/../examples/http_echo_server/main.php" &
+  /usr/bin/env php -dextension=swow -dmemory_limit=1G "${__DIR__}/../http_server/echo.php" &
   processes[i]=$!;
   i=$((i+1));
 done

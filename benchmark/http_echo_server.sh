@@ -6,7 +6,7 @@ ulimit -n 8192
 export SERVER_HOST=127.0.0.1
 export SERVER_PORT=9764
 export SERVER_BACKLOG=8192
-/usr/bin/env php -dextension=swow "${__DIR__}/../examples/http_echo_server/main.php" &
+/usr/bin/env php -dextension=swow "${__DIR__}/../examples/http_server/echo.php" &
 pid=$!
 
 sleep 1

@@ -19,9 +19,9 @@ use Swow\Socket;
 use Swow\Socket\Exception as SocketException;
 
 $host = getenv('SERVER_HOST') ?: '127.0.0.1';
-$port = getenv('SERVER_PORT') ?: 9764;
-$backlog = getenv('SERVER_BACKLOG') ?: 8192;
-$multi = getenv('SERVER_MULTI') ?: false;
+$port = (int) (getenv('SERVER_PORT') ?: 9764);
+$backlog = (int) (getenv('SERVER_BACKLOG') ?: 8192);
+$multi = (bool) (getenv('SERVER_MULTI') ?: false);
 $bindFlag = Socket::BIND_FLAG_NONE;
 
 $server = new Socket(Socket::TYPE_TCP);

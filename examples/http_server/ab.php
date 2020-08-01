@@ -25,7 +25,7 @@ while (true) {
                 }
                 $offset = 0;
                 while (true) {
-                    $eof = strpos($buffer, "\r\n\r\n", $offset);
+                    $eof = strpos($buffer->toString(), "\r\n\r\n", $offset);
                     if ($eof === false) {
                         break;
                     }
