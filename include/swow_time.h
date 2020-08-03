@@ -25,4 +25,4 @@
 
 int swow_time_module_init(INIT_FUNC_ARGS);
 
-#endif	/* SWOW_TIME_H */
+#endif    /* SWOW_TIME_H */

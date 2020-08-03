@@ -43,4 +43,4 @@ int swow_event_runtime_init(INIT_FUNC_ARGS);
 int swow_event_runtime_shutdown(SHUTDOWN_FUNC_ARGS);
 int swow_event_delay_runtime_shutdown(void);
 
-#endif	/* SWOW_EVENT_H */
+#endif    /* SWOW_EVENT_H */

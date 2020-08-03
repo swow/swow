@@ -74,4 +74,4 @@ int swow_module_shutdown(INIT_FUNC_ARGS);
 int swow_runtime_init(INIT_FUNC_ARGS);
 int swow_runtime_shutdown(INIT_FUNC_ARGS);
 
-#endif	/* SWOW_H */
+#endif    /* SWOW_H */

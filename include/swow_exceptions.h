@@ -73,4 +73,4 @@ SWOW_API CAT_COLD void swow_call_exception_set_return_value(zend_object *excepti
 
 SWOW_API const char *swow_strerrortype(int type); SWOW_INTERNAL
 
-#endif	/* SWOW_EXCEPTION_H */
+#endif    /* SWOW_EXCEPTION_H */

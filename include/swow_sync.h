@@ -61,4 +61,4 @@ static cat_always_inline swow_sync_wait_group_t *swow_sync_wait_group_get_from_o
     return (swow_sync_wait_group_t *) ((char *) object - swow_sync_wait_group_handlers.offset);
 }
 
-#endif	/* SWOW_SYNC_H */
+#endif    /* SWOW_SYNC_H */

@@ -26,4 +26,4 @@ extern SWOW_API zend_object_handlers swow_log_handlers;
 
 int swow_log_module_init(INIT_FUNC_ARGS);
 
-#endif	/* SWOW_LOG_H */
+#endif    /* SWOW_LOG_H */

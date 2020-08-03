@@ -40,32 +40,32 @@ SWOW_API void swow_wrapper_shutdown(void) { }
 #if PHP_VERSION_ID < 80000
 ZEND_API const char *get_active_function_arg_name(uint32_t arg_num) /* {{{ */
 {
-	zend_function *func;
+    zend_function *func;
 
-	if (!zend_is_executing()) {
-		return NULL;
-	}
+    if (!zend_is_executing()) {
+        return NULL;
+    }
 
-	func = EG(current_execute_data)->func;
+    func = EG(current_execute_data)->func;
 
-	return get_function_arg_name(func, arg_num);
+    return get_function_arg_name(func, arg_num);
 }
 /* }}} */
 
 ZEND_API const char *get_function_arg_name(const zend_function *func, uint32_t arg_num) /* {{{ */
 {
-	if (!func || func->common.num_args < arg_num) {
-		return NULL;
-	}
+    if (!func || func->common.num_args < arg_num) {
+        return NULL;
+    }
 
-	switch (func->type) {
-		case ZEND_USER_FUNCTION:
-			return ZSTR_VAL(func->common.arg_info[arg_num - 1].name);
-		case ZEND_INTERNAL_FUNCTION:
-			return ((zend_internal_arg_info*) func->common.arg_info)[arg_num - 1].name;
-		default:
-			return NULL;
-	}
+    switch (func->type) {
+        case ZEND_USER_FUNCTION:
+            return ZSTR_VAL(func->common.arg_info[arg_num - 1].name);
+        case ZEND_INTERNAL_FUNCTION:
+            return ((zend_internal_arg_info*) func->common.arg_info)[arg_num - 1].name;
+        default:
+            return NULL;
+    }
 }
 /* }}} */
 

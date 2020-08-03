@@ -51,4 +51,4 @@ static cat_always_inline swow_channel_t *swow_channel_get_from_object(zend_objec
     return (swow_channel_t *) ((char *) object - swow_channel_handlers.offset);
 }
 
-#endif	/* SWOW_CHANNEL_H */
+#endif    /* SWOW_CHANNEL_H */

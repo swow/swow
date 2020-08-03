@@ -56,4 +56,4 @@ static cat_always_inline swow_defer_t *swow_defer_get_from_object(zend_object *o
     return (swow_defer_t *) ((char *) object - swow_defer_handlers.offset);
 }
 
-#endif	/* SWOW_DEFER_H */
+#endif    /* SWOW_DEFER_H */

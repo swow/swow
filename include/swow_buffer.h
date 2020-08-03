@@ -129,4 +129,4 @@ SWOW_INTERNAL
     (sbuffer)->locked = cat_false; \
 } while (0)
 
-#endif	/* SWOW_BUFFER_H */
+#endif    /* SWOW_BUFFER_H */

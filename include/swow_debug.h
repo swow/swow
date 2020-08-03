@@ -26,4 +26,4 @@ SWOW_API smart_str *swow_get_trace_to_string(smart_str *str, zend_long options, 
 SWOW_API zend_string *swow_get_trace_as_string(zend_long options, zend_long limit);
 SWOW_API HashTable *swow_get_trace_as_list(zend_long options, zend_long limit);
 
-#endif	/* SWOW_DEBUG_H */
+#endif    /* SWOW_DEBUG_H */

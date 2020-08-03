@@ -92,8 +92,8 @@ static cat_always_inline HashTable *zend_new_array(size_t size)
 
 #ifndef ZEND_PARSE_PARAMETERS_NONE
 #define ZEND_PARSE_PARAMETERS_NONE() \
-	    ZEND_PARSE_PARAMETERS_START(0, 0) \
-	    ZEND_PARSE_PARAMETERS_END()
+        ZEND_PARSE_PARAMETERS_START(0, 0) \
+        ZEND_PARSE_PARAMETERS_END()
 #endif
 /* }}} */
 
@@ -162,16 +162,16 @@ static cat_always_inline HashTable *zend_new_array(size_t size)
 #if ZEND_PARSE_PARAMS_THROW != 0
 #undef ZEND_PARSE_PARAMETERS_START
 #define ZEND_PARSE_PARAMETERS_START(min_num_args, max_num_args) \
-	    ZEND_PARSE_PARAMETERS_START_EX(ZEND_PARSE_PARAMS_THROW, min_num_args, max_num_args)
+        ZEND_PARSE_PARAMETERS_START_EX(ZEND_PARSE_PARAMS_THROW, min_num_args, max_num_args)
 #endif
 
 #ifndef Z_PARAM_LONG_OR_NULL
 #define Z_PARAM_LONG_OR_NULL(dest, is_null) \
-		Z_PARAM_LONG_EX(dest, is_null, 1, 0)
+        Z_PARAM_LONG_EX(dest, is_null, 1, 0)
 
 static zend_always_inline int zend8_parse_arg_long(zval *arg, zend_long *dest, zend_bool *is_null, int check_null)
 {
-	return zend_parse_arg_long(arg, dest, is_null, check_null, 0);
+    return zend_parse_arg_long(arg, dest, is_null, check_null, 0);
 }
 
 #define zend_parse_arg_long(arg, dest, is_null, check_null, ...) zend8_parse_arg_long(arg, dest, is_null, check_null)
@@ -558,4 +558,4 @@ SWOW_API cat_bool_t swow_function_internal_access_only_check(INTERNAL_FUNCTION_P
 
 SWOW_API void swow_output_globals_end(void);
 
-#endif	/* SWOW_H */
+#endif    /* SWOW_H */
