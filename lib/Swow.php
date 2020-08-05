@@ -141,7 +141,10 @@ namespace Swow
         public const TYPE_DNS = 128;
         public const TYPE_WORK = 256;
         public const TYPE_BUFFER = 512;
-        public const TYPE_HTTP = 1024;
+        public const TYPE_FS = 1024;
+        public const TYPE_SIGNAL = 2048;
+        public const TYPE_PROCESS = 4096;
+        public const TYPE_PROTOCOL = 262144;
         public const TYPE_SSL = 4194304;
         public const TYPE_TEST = 8388608;
         public const TYPE_USR1 = 16777216;
@@ -152,9 +155,9 @@ namespace Swow
         public const TYPE_USR6 = 536870912;
         public const TYPE_USR7 = 1073741824;
         public const TYPE_USR8 = -2147483648;
-        public const TYPES_BUILTIN = 12584959;
+        public const TYPES_BUILTIN = 12853247;
         public const TYPES_USR = -16777216;
-        public const TYPES_ALL = -4192257;
+        public const TYPES_ALL = -3923969;
     }
 }
 
@@ -363,7 +366,7 @@ namespace Swow
         public static function count(): int { }
 
         /**
-         * @return array
+         * @return \Swow\Coroutine[]
          */
         public static function getAll(): array { }
 
@@ -672,6 +675,9 @@ namespace Swow
         public const TYPE_TCP6 = 16777297;
         public const TYPE_PIPE = 33554561;
         public const TYPE_TTY = 67108865;
+        public const TYPE_STDIN = 67109889;
+        public const TYPE_STDOUT = 67110913;
+        public const TYPE_STDERR = 67112961;
         public const TYPE_UDP = 134217746;
         public const TYPE_UDP4 = 134217778;
         public const TYPE_UDP6 = 134217810;

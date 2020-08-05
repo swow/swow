@@ -2,6 +2,7 @@
 
 require __DIR__ . '/../../vendor/autoload.php';
 
+use Swow\Coroutine;
 use Swow\Util\IDE\ExtensionGenerator;
 
 (function () {
@@ -11,5 +12,18 @@ use Swow\Util\IDE\ExtensionGenerator;
     }
     $n = $argv[1];
     $g = new ExtensionGenerator($n);
+    $g->setFunctionFormatHandler(function (ReflectionFunctionAbstract $function, string &$comment, string $prefix, string $name, string $params, string $returnType, string $body) {
+        if ($function instanceof ReflectionMethod) {
+            if ($function->getDeclaringClass()->getName() === Coroutine::class) {
+                if ($name === 'getAll') {
+                    $comment = str_replace(
+                        '@return array',
+                        '@return ' . '\\' . Coroutine::class . '[]',
+                        $comment
+                    );
+                }
+            }
+        }
+    });
     $g->generate($argv[2] ?? STDOUT);
 })();

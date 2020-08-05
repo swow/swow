@@ -37,9 +37,19 @@ class ExtensionGenerator
     /** @var string */
     protected $extension;
 
+    /** @var callable */
+    protected $functionFormatHandler;
+
     public function __construct(string $extensionName)
     {
         $this->extension = new ReflectionExtension($extensionName);
+    }
+
+    public function setFunctionFormatHandler(callable $formatter): self
+    {
+        $this->functionFormatHandler = $formatter;
+
+        return $this;
     }
 
     public function generate($output = null): void
@@ -147,6 +157,19 @@ class ExtensionGenerator
         }
 
         return $prefix;
+    }
+
+    protected function formatFunction(ReflectionFunctionAbstract $function, string $comment, string $prefix, string $name, string $params, string $returnType, string $body): string
+    {
+        $handler = $this->functionFormatHandler;
+        if ($handler) {
+            $result = $handler($function, $comment, $prefix, $name, $params, $returnType, $body);
+            if ($result) {
+                return $result;
+            }
+        }
+
+        return sprintf('%s%s function %s(%s)%s {%s}', $comment, $prefix, $name, $params, $returnType, $body);
     }
 
     /**
@@ -269,8 +292,8 @@ class ExtensionGenerator
         }*/
         $body = ' ';
 
-        $declaration = sprintf(
-            '%s%s function %s(%s)%s {%s}',
+        $declaration = $this->formatFunction(
+            $function,
             $comment ? $comment = "/**\n{$comment} */\n" : '',
             $this->getDeclarationPrefix($function, false),
             $name,
