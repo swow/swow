@@ -35,5 +35,7 @@ extern SWOW_API const php_stream_ops swow_stream_udg_socket_ops;
 #endif
 
 int swow_stream_module_init(INIT_FUNC_ARGS);
+int swow_stream_runtime_init(INIT_FUNC_ARGS);
+int swow_stream_runtime_shutdown(INIT_FUNC_ARGS);
 
 #endif    /* SWOW_STREAM_H */

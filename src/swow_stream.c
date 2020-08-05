@@ -833,6 +833,7 @@ SWOW_API const php_stream_ops swow_stream_unix_socket_ops = {
     swow_stream_stat,
     swow_stream_set_tcp_option,
 };
+
 SWOW_API const php_stream_ops swow_stream_udg_socket_ops = {
     swow_stream_write, swow_stream_read,
     swow_stream_close, swow_stream_flush,
@@ -843,6 +844,103 @@ SWOW_API const php_stream_ops swow_stream_udg_socket_ops = {
     swow_stream_set_tcp_option,
 };
 #endif
+
+/* $Id: 547d98b81d674c48f04eab5c24aa065eba4838cc $ */
+
+#define IS_TTY(fd) ((fd) == STDIN_FILENO || (fd) == STDOUT_FILENO || (fd) == STDERR_FILENO)
+
+/* beginning of struct, see main/streams/plain_wrapper.c line 111 */
+typedef struct {
+    FILE *file;
+    int fd;
+} php_stdio_stream_data;
+
+static php_stream_ops swow_stream_stdio_raw_ops;
+static cat_socket_t *swow_stream_tty_sockets[3];
+
+#define SWOW_STREAM_STDIO_INIT(call) \
+    php_stdio_stream_data *data = (php_stdio_stream_data *) stream->abstract; \
+    cat_socket_fd_t fd = data->fd >= 0 ? data->fd : fileno(data->file); \
+    cat_socket_t *socket; \
+    \
+    do { \
+        if (!IS_TTY(fd)) { \
+            return swow_stream_stdio_raw_ops.call; \
+        } \
+        \
+        socket = swow_stream_tty_sockets[fd]; \
+        if (unlikely(socket == NULL)) { \
+            socket = cat_socket_create_ex(NULL, CAT_SOCKET_TYPE_TTY, fd); \
+            if (unlikely(socket == NULL)) { \
+                stream->eof = 1; \
+                return -1; \
+            } \
+            swow_stream_tty_sockets[fd] = socket; \
+        } \
+    } while (0)
+
+static bytes_t swow_stream_stdio_read(php_stream *stream, char *buffer, size_t size)
+{
+    SWOW_STREAM_STDIO_INIT(read(stream, buffer, size));
+
+    return cat_socket_recv(socket, buffer, size);
+}
+
+static bytes_t swow_stream_stdio_write(php_stream *stream, const char *buffer, size_t length)
+{
+    SWOW_STREAM_STDIO_INIT(write(stream, buffer, length));
+    cat_bool_t ret;
+
+    ret = cat_socket_send(socket, buffer, length);
+
+    if (unlikely(!ret)) {
+        return -1;
+    }
+
+    return length;
+}
+
+static int swow_stream_stdio_close(php_stream *stream, int close_handle)
+{
+    return swow_stream_stdio_raw_ops.close(stream, close_handle);
+}
+
+static int swow_stream_stdio_flush(php_stream *stream)
+{
+    return swow_stream_stdio_raw_ops.flush(stream);
+}
+
+static int swow_stream_stdiop_seek(php_stream *stream, zend_off_t offset, int whence, zend_off_t *newoffset)
+{
+    return swow_stream_stdio_raw_ops.seek(stream, offset, whence, newoffset);
+}
+
+static int swow_stream_stdio_cast(php_stream *stream, int castas, void **ret)
+{
+    return swow_stream_stdio_raw_ops.cast(stream, castas, ret);
+}
+
+static int swow_stream_stdio_stat(php_stream *stream, php_stream_statbuf *ssb)
+{
+    return swow_stream_stdio_raw_ops.stat(stream, ssb);
+}
+
+static int swow_stream_stdio_set_option(php_stream *stream, int option, int value, void *ptrparam)
+{
+    return swow_stream_stdio_raw_ops.set_option(stream, option, value, ptrparam);
+}
+
+SWOW_API const php_stream_ops swow_stream_stdio_ops = {
+    swow_stream_stdio_write, swow_stream_stdio_read,
+    swow_stream_stdio_close, swow_stream_stdio_flush,
+    "STDIO",
+    swow_stream_stdiop_seek,
+    swow_stream_stdio_cast,
+    swow_stream_stdio_stat,
+    swow_stream_stdio_set_option,
+};
+
+#undef IS_TTY
 
 /* {{{ proto int|false stream_socket_sendto(resource stream, string data [, int flags [, string target_addr]])
    Send data to a socket stream.  If target_addr is specified it must be in dotted quad (or [ipv6]) format */
@@ -922,8 +1020,32 @@ int swow_stream_module_init(INIT_FUNC_ARGS)
     if (php_stream_xport_register("udg", swow_stream_socket_factory) != SUCCESS) {
         return FAILURE;
     }
+    if ("tty") {
+        memcpy(&swow_stream_stdio_raw_ops, &php_stream_stdio_ops, sizeof(php_stream_stdio_ops));
+        memcpy(&php_stream_stdio_ops, &swow_stream_stdio_ops, sizeof(php_stream_stdio_ops));
+    }
     if (!swow_hook_internal_functions(swow_stream_functions)) {
         return FAILURE;
+    }
+
+    return SUCCESS;
+}
+
+int swow_stream_runtime_init(INIT_FUNC_ARGS)
+{
+    memset(swow_stream_tty_sockets, 0, sizeof(swow_stream_tty_sockets));
+
+    return SUCCESS;
+}
+
+int swow_stream_runtime_shutdown(INIT_FUNC_ARGS)
+{
+    size_t i = 0;
+    for (; i < CAT_ARRAY_SIZE(swow_stream_tty_sockets); i++) {
+        cat_socket_t *socket = swow_stream_tty_sockets[i];
+        if (socket != NULL) {
+            cat_socket_close(socket);
+        }
     }
 
     return SUCCESS;

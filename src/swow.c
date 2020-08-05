@@ -162,6 +162,7 @@ PHP_RINIT_FUNCTION(swow)
         swow_coroutine_runtime_init,
         swow_event_runtime_init,
         swow_socket_runtime_init,
+        swow_stream_runtime_init,
     };
 
     if (CG(compiler_options) & ZEND_COMPILE_PRELOAD) {
@@ -184,6 +185,7 @@ PHP_RINIT_FUNCTION(swow)
 PHP_RSHUTDOWN_FUNCTION(swow)
 {
     static const zend_loader_t rshutdown_callbacks[] = {
+        swow_stream_runtime_shutdown,
         swow_event_runtime_shutdown,
         swow_coroutine_runtime_shutdown,
         swow_runtime_shutdown,
