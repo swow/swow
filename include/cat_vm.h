@@ -26,10 +26,17 @@
 #include "zend_API.h"
 
 /* memory */
+
 #define cat_malloc     emalloc
 #define cat_calloc     ecalloc
 #define cat_realloc    erealloc
-#define cat_free       efree
+#define cat_free(ptr)  do { \
+    void *__ptr = ptr; \
+    if (__ptr != NULL) { \
+        efree(__ptr); \
+    } \
+} while (0)
+
 #define cat_strdup     estrdup
 #define cat_strndup    estrndup
 
