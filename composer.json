@@ -38,6 +38,9 @@
             "lib/Swow/Util/FileSystem/functions.php"
         ]
     },
+    "config": {
+        "process-timeout": 0
+    },
     "scripts": {
         "cs-check": "/usr/bin/env php ./vendor/bin/php-cs-fixer fix --dry-run",
         "cs-fix": "/usr/bin/env php ./vendor/bin/php-cs-fixer fix",
