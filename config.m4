@@ -137,6 +137,7 @@ if test "${SWOW}" != "no"; then
         ${LIBCAT_DIR}/src/cat/cat_error.c
         ${LIBCAT_DIR}/src/cat/cat_module.c
         ${LIBCAT_DIR}/src/cat/cat_log.c
+        ${LIBCAT_DIR}/src/cat/cat_env.c
         ${LIBCAT_DIR}/src/cat.c
         ${LIBCAT_DIR}/src/cat_api.c
         ${LIBCAT_DIR}/src/cat_coroutine.c
@@ -149,6 +150,7 @@ if test "${SWOW}" != "no"; then
         ${LIBCAT_DIR}/src/cat_work.c
         ${LIBCAT_DIR}/src/cat_buffer.c
         ${LIBCAT_DIR}/src/cat_fs.c
+        ${LIBCAT_DIR}/src/cat_signal.c
         ${LIBCAT_DIR}/src/cat_http.c
         ${LIBCAT_DIR}/src/cat_websocket.c
       "
