@@ -305,6 +305,11 @@ namespace Swow
         public function getElapsed(): int { }
 
         /**
+         * @return string
+         */
+        public function getElapsedAsString(): string { }
+
+        /**
          * @return int
          */
         public function getExitStatus(): int { }
@@ -364,6 +369,12 @@ namespace Swow
          * @return int
          */
         public static function count(): int { }
+
+        /**
+         * @param int $id [optional]
+         * @return null|$this
+         */
+        public static function get(int $id): ?self { }
 
         /**
          * @return \Swow\Coroutine[]

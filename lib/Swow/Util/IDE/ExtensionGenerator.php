@@ -273,6 +273,9 @@ class ExtensionGenerator
         $isCtorOrDtor = $function instanceof ReflectionMethod && ($function->isConstructor() || $function->isDestructor());
         if (!$isCtorOrDtor) {
             $returnTypeNameInComment = $returnTypeName === 'self' ? '$this' : $returnTypeName;
+            if ($returnTypeAllowNull) {
+                $returnTypeNameInComment = "null|{$returnTypeNameInComment}";
+            }
             $comment .= " * @return {$returnTypeNameInComment}\n";
             /*if ($returnTypeName !== 'void') {
                 $body = " return \$GLOBALS[\"\\0fakeVariable\\0\"]; ";

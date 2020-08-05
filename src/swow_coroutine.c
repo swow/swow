@@ -1285,6 +1285,21 @@ static PHP_METHOD(swow_coroutine, getElapsed)
     RETURN_LONG(cat_coroutine_get_elapsed(&getThisCoroutine()->coroutine));
 }
 
+#define arginfo_swow_coroutine_getElapsedAsString arginfo_swow_coroutine_getString
+
+static PHP_METHOD(swow_coroutine, getElapsedAsString)
+{
+    char *elapsed;
+
+    ZEND_PARSE_PARAMETERS_NONE();
+
+    elapsed = cat_coroutine_get_elapsed_as_string(&getThisCoroutine()->coroutine);
+
+    RETVAL_STRING(elapsed);
+
+    cat_free(elapsed);
+}
+
 #define arginfo_swow_coroutine_getExitStatus arginfo_swow_coroutine_getLong
 
 static PHP_METHOD(swow_coroutine, getExitStatus)
@@ -1428,6 +1443,28 @@ static PHP_METHOD(swow_coroutine, count)
     RETURN_LONG(zend_hash_num_elements(SWOW_COROUTINE_G(map)));
 }
 
+ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_swow_coroutine_get, ZEND_RETURN_VALUE, 0, Swow\\Coroutine, 1)
+    ZEND_ARG_TYPE_INFO(0, id, IS_LONG, 0)
+ZEND_END_ARG_INFO()
+
+static PHP_METHOD(swow_coroutine, get)
+{
+    zval *zcoroutine;
+    zend_long id;
+
+    ZEND_PARSE_PARAMETERS_START(1, 1)
+        Z_PARAM_LONG(id)
+    ZEND_PARSE_PARAMETERS_END();
+
+    zcoroutine = zend_hash_index_find(SWOW_COROUTINE_G(map), id);
+
+    if (UNEXPECTED(zcoroutine == NULL)) {
+        RETURN_NULL();
+    }
+
+    RETURN_ZVAL(zcoroutine, 1, 0);
+}
+
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_swow_coroutine_getAll, ZEND_RETURN_VALUE, 0, IS_ARRAY, 0)
 ZEND_END_ARG_INFO()
 
@@ -1502,7 +1539,7 @@ static PHP_METHOD(swow_coroutine, __debugInfo)
     array_init(&zdebug_info);
     add_assoc_long(&zdebug_info, "id", coroutine->id);
     add_assoc_string(&zdebug_info, "state", cat_coroutine_get_state_name(coroutine));
-    tmp = cat_time_format_msec(cat_coroutine_get_elapsed(coroutine));
+    tmp = cat_coroutine_get_elapsed_as_string(coroutine);
     add_assoc_string(&zdebug_info, "elapsed", tmp);
     cat_free(tmp);
     if (swow_coroutine_is_alive(scoroutine)) {
@@ -1531,6 +1568,7 @@ static const zend_function_entry swow_coroutine_methods[] = {
     PHP_ME(swow_coroutine, getState,            arginfo_swow_coroutine_getState,            ZEND_ACC_PUBLIC)
     PHP_ME(swow_coroutine, getStateName,        arginfo_swow_coroutine_getStateName,        ZEND_ACC_PUBLIC)
     PHP_ME(swow_coroutine, getElapsed,          arginfo_swow_coroutine_getElapsed,          ZEND_ACC_PUBLIC)
+    PHP_ME(swow_coroutine, getElapsedAsString,  arginfo_swow_coroutine_getElapsedAsString,  ZEND_ACC_PUBLIC)
     PHP_ME(swow_coroutine, getExitStatus,       arginfo_swow_coroutine_getExitStatus,       ZEND_ACC_PUBLIC)
     PHP_ME(swow_coroutine, isAvailable,         arginfo_swow_coroutine_isAvailable,         ZEND_ACC_PUBLIC)
     PHP_ME(swow_coroutine, isAlive,             arginfo_swow_coroutine_isAlive,             ZEND_ACC_PUBLIC)
@@ -1541,6 +1579,7 @@ static const zend_function_entry swow_coroutine_methods[] = {
     PHP_ME(swow_coroutine, term,                arginfo_swow_coroutine_term,                ZEND_ACC_PUBLIC)
     PHP_ME(swow_coroutine, kill,                arginfo_swow_coroutine_kill,                ZEND_ACC_PUBLIC)
     PHP_ME(swow_coroutine, count,               arginfo_swow_coroutine_count,               ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    PHP_ME(swow_coroutine, get,                 arginfo_swow_coroutine_get,                 ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
     PHP_ME(swow_coroutine, getAll,              arginfo_swow_coroutine_getAll,              ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 #ifdef SWOW_COROUTINE_ENABLE_CUSTOM_ENTRY
     PHP_ME(swow_coroutine, extends,             arginfo_swow_coroutine_extends,             ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
