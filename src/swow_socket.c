@@ -877,7 +877,7 @@ static PHP_METHOD_EX(swow_socket, _write, zend_bool single, zend_bool may_addres
                     if (EXPECTED(string != NULL)) {
                         SWOW_BUFFER_CHECK_STRING_SCOPE_EX(string, offset, length, goto _error);
                         if (length == 0) {
-                            break;
+                            continue;
                         }
                         ptr = ZSTR_VAL(string) + offset;
                     } else {
@@ -891,7 +891,7 @@ static PHP_METHOD_EX(swow_socket, _write, zend_bool single, zend_bool may_addres
                             goto _error;
                         }
                         if (length == 0) {
-                            break;
+                            continue;
                         }
                         if (UNEXPECTED((size_t) length > readable_length)) {
                             swow_throw_exception(swow_socket_exception_ce, CAT_ENOBUFS, "No enough readable buffer space on vectors[%u]", vector_count);
@@ -943,12 +943,14 @@ static PHP_METHOD_EX(swow_socket, _write, zend_bool single, zend_bool may_addres
         sbuffers[buffer_count++] = sbuffer;
         vectors[0].base = ptr;
         vectors[0].length = length;
+    } else if (UNEXPECTED(vector_count == 0)) {
+        zend_argument_value_error(1, "can not be empty");
+        goto _error;
     }
     if (timeout_is_null) {
         timeout = cat_socket_get_timeout(socket, read);
     }
 
-    // FIXME: protect buffer
     /* write */
     if (!may_address || address == NULL || ZSTR_LEN(address) == 0) {
         ret = cat_socket_write_ex(socket, vectors, vector_count, timeout);
