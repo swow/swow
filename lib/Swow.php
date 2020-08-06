@@ -302,6 +302,16 @@ namespace Swow
         /**
          * @return int
          */
+        public function getRound(): int { }
+
+        /**
+         * @return int
+         */
+        public function getCurrentRound(): int { }
+
+        /**
+         * @return int
+         */
         public function getElapsed(): int { }
 
         /**

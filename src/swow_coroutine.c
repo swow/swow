@@ -1289,6 +1289,24 @@ static PHP_METHOD(swow_coroutine, getStateName)
     RETURN_STRING(cat_coroutine_get_state_name(&getThisCoroutine()->coroutine));
 }
 
+#define arginfo_swow_coroutine_getRound arginfo_swow_coroutine_getLong
+
+static PHP_METHOD(swow_coroutine, getRound)
+{
+    ZEND_PARSE_PARAMETERS_NONE();
+
+    RETURN_LONG(getThisCoroutine()->coroutine.round);
+}
+
+#define arginfo_swow_coroutine_getCurrentRound arginfo_swow_coroutine_getLong
+
+static PHP_METHOD(swow_coroutine, getCurrentRound)
+{
+    ZEND_PARSE_PARAMETERS_NONE();
+
+    RETURN_LONG(CAT_COROUTINE_G(round));
+}
+
 #define arginfo_swow_coroutine_getElapsed arginfo_swow_coroutine_getLong
 
 static PHP_METHOD(swow_coroutine, getElapsed)
@@ -1642,6 +1660,7 @@ static PHP_METHOD(swow_coroutine, __debugInfo)
     add_assoc_long(&zdebug_info, "id", coroutine->id);
     add_assoc_string(&zdebug_info, "state", cat_coroutine_get_state_name(coroutine));
     tmp = cat_coroutine_get_elapsed_as_string(coroutine);
+    add_assoc_long(&zdebug_info, "round", coroutine->round);
     add_assoc_string(&zdebug_info, "elapsed", tmp);
     cat_free(tmp);
     if (swow_coroutine_is_alive(scoroutine)) {
@@ -1669,6 +1688,8 @@ static const zend_function_entry swow_coroutine_methods[] = {
     PHP_ME(swow_coroutine, getPrevious,         arginfo_swow_coroutine_getPrevious,         ZEND_ACC_PUBLIC)
     PHP_ME(swow_coroutine, getState,            arginfo_swow_coroutine_getState,            ZEND_ACC_PUBLIC)
     PHP_ME(swow_coroutine, getStateName,        arginfo_swow_coroutine_getStateName,        ZEND_ACC_PUBLIC)
+    PHP_ME(swow_coroutine, getRound,            arginfo_swow_coroutine_getRound,            ZEND_ACC_PUBLIC)
+    PHP_ME(swow_coroutine, getCurrentRound,     arginfo_swow_coroutine_getCurrentRound,     ZEND_ACC_PUBLIC)
     PHP_ME(swow_coroutine, getElapsed,          arginfo_swow_coroutine_getElapsed,          ZEND_ACC_PUBLIC)
     PHP_ME(swow_coroutine, getElapsedAsString,  arginfo_swow_coroutine_getElapsedAsString,  ZEND_ACC_PUBLIC)
     PHP_ME(swow_coroutine, getExitStatus,       arginfo_swow_coroutine_getExitStatus,       ZEND_ACC_PUBLIC)
