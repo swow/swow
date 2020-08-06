@@ -102,16 +102,29 @@ static void swow_coroutine_free_object(zend_object *object)
 
 static CAT_COLD cat_bool_t swow_coroutine_exception_should_be_silent(zend_object *exception)
 {
-    if (instanceof_function(exception->ce, swow_coroutine_term_exception_ce)) {
-        zval zexception, *zcode, ztmp;
-        ZVAL_OBJ(&zexception, exception);
-        zcode = zend_read_property_ex(exception->ce, &zexception, ZSTR_KNOWN(ZEND_STR_CODE), 1, &ztmp);
-        if (zval_get_long(zcode) == 0) {
+    zval zexception, *zprevious_exception, ztmp;
+
+    while (1) {
+        if (instanceof_function(exception->ce, swow_coroutine_term_exception_ce)) {
+            zval zexception, *zcode, ztmp;
+            ZVAL_OBJ(&zexception, exception);
+            zcode = zend_read_property_ex(exception->ce, &zexception, ZSTR_KNOWN(ZEND_STR_CODE), 1, &ztmp);
+            if (zval_get_long(zcode) == 0) {
+                return cat_true;
+            }
+            return cat_false;
+        } else if (instanceof_function(exception->ce, swow_coroutine_kill_exception_ce)) {
             return cat_true;
         }
-    } else if (instanceof_function(exception->ce, swow_coroutine_kill_exception_ce)) {
-        return cat_true;
+        ZVAL_OBJ(&zexception, exception);
+        zprevious_exception = zend_read_property_ex(zend_get_exception_base(&zexception), &zexception, ZSTR_KNOWN(ZEND_STR_PREVIOUS), 1, &ztmp);
+        if (Z_TYPE_P(zprevious_exception) == IS_OBJECT) {
+            exception = Z_OBJ_P(zprevious_exception);
+            continue;
+        }
+        break;
     }
+
     return cat_false;
 }
 
