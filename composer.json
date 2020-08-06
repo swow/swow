@@ -35,6 +35,7 @@
             "Swow\\": "lib/Swow"
         },
         "files": [
+            "lib/Swow/Util/functions.php",
             "lib/Swow/Util/FileSystem/functions.php"
         ]
     },
