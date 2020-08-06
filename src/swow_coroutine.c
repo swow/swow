@@ -1337,7 +1337,7 @@ static PHP_METHOD(swow_coroutine, isAlive)
         Z_PARAM_OPTIONAL \
         Z_PARAM_LONG(options) \
         Z_PARAM_LONG(limit) \
-    ZEND_PARSE_PARAMETERS_END_EX(RETURN_FALSE);
+    ZEND_PARSE_PARAMETERS_END();
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_swow_coroutine_getTrace, ZEND_RETURN_VALUE, 0, IS_ARRAY, 0)
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, options, IS_LONG, 0, "DEBUG_BACKTRACE_PROVIDE_OBJECT")
@@ -1373,6 +1373,95 @@ static PHP_METHOD(swow_coroutine, getTraceAsList)
 }
 
 #undef SWOW_COROUTINE_GET_TRACE_PARAMETERS_PARSER
+
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_swow_coroutine_getDefinedVars, ZEND_RETURN_VALUE, 0, IS_ARRAY, 0)
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, level, IS_LONG, 0, "0")
+ZEND_END_ARG_INFO()
+
+static PHP_METHOD(swow_coroutine, getDefinedVars)
+{
+    zend_array *symbol_table;
+    zend_long level = 0;
+
+    ZEND_PARSE_PARAMETERS_START(0, 1)
+        Z_PARAM_OPTIONAL
+        Z_PARAM_LONG(level)
+    ZEND_PARSE_PARAMETERS_END();
+
+    if (UNEXPECTED(level < 0)) {
+        zend_argument_value_error(1, "can not be negative");
+        RETURN_THROWS();
+    }
+    if (zend_forbid_dynamic_call("getDefinedVars()") != SUCCESS) {
+        RETURN_THROWS();
+    }
+
+    SWOW_COROUTINE_DO_SOMETHING_START(getThisCoroutine()) {
+        zend_execute_data *exeute_data;
+        zend_long i = level;
+
+        exeute_data = EG(current_execute_data);
+        /* Search for last called user function */
+        i++;
+        while (i) {
+            exeute_data = exeute_data->prev_execute_data;
+            if (!exeute_data) {
+                RETURN_EMPTY_ARRAY();
+            }
+            if (!exeute_data->func || !ZEND_USER_CODE(exeute_data->func->common.type)) {
+                continue;
+            }
+            i--;
+        }
+        EG(current_execute_data) = exeute_data;
+
+        symbol_table = zend_rebuild_symbol_table();
+
+        if (UNEXPECTED(symbol_table == NULL)) {
+            RETURN_EMPTY_ARRAY();
+        }
+        // unnecessary recover
+        // EG(current_execute_data) = orignal_exeute_data;
+    } SWOW_COROUTINE_DO_SOMETHING_END();
+
+    RETURN_ARR(zend_array_dup(symbol_table));
+}
+
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_swow_coroutine_execute, ZEND_RETURN_VALUE, 0, IS_MIXED, 0)
+    ZEND_ARG_TYPE_INFO(0, callable, IS_CALLABLE, 0)
+ZEND_END_ARG_INFO()
+
+static PHP_METHOD(swow_coroutine, execute)
+{
+    zend_fcall_info fci;
+    zend_fcall_info_cache fcc;
+
+    ZEND_PARSE_PARAMETERS_START(1, 1)
+        Z_PARAM_FUNC(fci, fcc)
+    ZEND_PARSE_PARAMETERS_END();
+
+    fci.size = sizeof(fci);
+    ZVAL_UNDEF(&fci.function_name);
+    fci.object = NULL;
+    fci.param_count = 0;
+#if PHP_VERSION_ID < 80000
+    fci.no_separation = 0;
+#endif
+    fci.retval = return_value;
+
+    swow_coroutine_set_readonly(cat_true);
+
+    SWOW_COROUTINE_DO_SOMETHING_START(getThisCoroutine()) {
+        zend_call_function(&fci, &fcc);
+        if (UNEXPECTED(EG(exception) != NULL)) {
+            /* just ignore it */
+            OBJ_RELEASE(EG(exception));
+            EG(exception) = NULL;
+        }
+    } SWOW_COROUTINE_DO_SOMETHING_END();
+
+    swow_coroutine_set_readonly(cat_false);
+}
 
 ZEND_BEGIN_ARG_INFO_EX(arginfo_swow_coroutine_throw, 0, ZEND_RETURN_VALUE, 1)
     ZEND_ARG_OBJ_INFO(0, throwable, Throwable, 0)
@@ -1575,6 +1664,8 @@ static const zend_function_entry swow_coroutine_methods[] = {
     PHP_ME(swow_coroutine, getTrace,            arginfo_swow_coroutine_getTrace,            ZEND_ACC_PUBLIC)
     PHP_ME(swow_coroutine, getTraceAsString,    arginfo_swow_coroutine_getTraceAsString,    ZEND_ACC_PUBLIC)
     PHP_ME(swow_coroutine, getTraceAsList,      arginfo_swow_coroutine_getTraceAsList,      ZEND_ACC_PUBLIC)
+    PHP_ME(swow_coroutine, getDefinedVars,      arginfo_swow_coroutine_getDefinedVars,      ZEND_ACC_PUBLIC)
+    PHP_ME(swow_coroutine, execute,             arginfo_swow_coroutine_execute,             ZEND_ACC_PUBLIC)
     PHP_ME(swow_coroutine, throw,               arginfo_swow_coroutine_throw,               ZEND_ACC_PUBLIC)
     PHP_ME(swow_coroutine, term,                arginfo_swow_coroutine_term,                ZEND_ACC_PUBLIC)
     PHP_ME(swow_coroutine, kill,                arginfo_swow_coroutine_kill,                ZEND_ACC_PUBLIC)

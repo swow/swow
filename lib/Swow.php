@@ -346,6 +346,18 @@ namespace Swow
         public function getTraceAsList(int $options = \DEBUG_BACKTRACE_PROVIDE_OBJECT, int $limit = 0): array { }
 
         /**
+         * @param int $level [optional] = 0
+         * @return array
+         */
+        public function getDefinedVars(int $level = 0): array { }
+
+        /**
+         * @param callable $callable [optional]
+         * @return null|mixed
+         */
+        public function execute(callable $callable) { }
+
+        /**
          * @param \Throwable $throwable [required]
          * @return mixed
          */

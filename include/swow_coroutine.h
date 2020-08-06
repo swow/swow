@@ -192,15 +192,16 @@ SWOW_API cat_bool_t swow_coroutine_yield_ez(void);
 
 SWOW_UNSAFE
 #define SWOW_COROUTINE_DO_SOMETHING_START(scoroutine) do { \
-    zend_execute_data *current_execute_data = NULL; \
-    if (EXPECTED(scoroutine != swow_coroutine_get_current())) { \
-        current_execute_data = EG(current_execute_data); \
-        EG(current_execute_data) = (scoroutine)->executor->current_execute_data; \
+    const swow_coroutine_t *_scoroutine = scoroutine; \
+    zend_execute_data *_current_execute_data = NULL; \
+    if (EXPECTED(_scoroutine != swow_coroutine_get_current())) { \
+        _current_execute_data = EG(current_execute_data); \
+        EG(current_execute_data) = _scoroutine->executor->current_execute_data; \
     }
 SWOW_UNSAFE
 #define SWOW_COROUTINE_DO_SOMETHING_END() \
-    if (current_execute_data) { \
-        EG(current_execute_data) = current_execute_data; \
+    if (_current_execute_data) { \
+        EG(current_execute_data) = _current_execute_data; \
     } \
 } while (0)
 
