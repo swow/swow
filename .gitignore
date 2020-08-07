@@ -32,12 +32,12 @@ vendor
 composer.lock
 
 # tests
-tests/*/*
-tests/*/*/*
-!tests/*/*/
-!tests/*/*.phpt
-!tests/*/*/*.phpt
-!tests/include/*
+/tests/*/*
+/tests/*/*/*
+!/tests/*/*/
+!/tests/*/*.phpt
+!/tests/*/*/*.phpt
+!/tests/include/*
 run-tests.php
 
 # config
