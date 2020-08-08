@@ -844,7 +844,7 @@ SWOW_API HashTable *swow_coroutine_get_trace(const swow_coroutine_t *scoroutine,
             trace = swow_get_trace(options, limit);
         } SWOW_COROUTINE_EXECUTE_END();
     } else {
-        trace = (HashTable *) &zend_empty_array;
+        trace = NULL;
     }
 
     return trace;
@@ -885,7 +885,7 @@ SWOW_API HashTable *swow_coroutine_get_trace_as_list(const swow_coroutine_t *sco
             trace = swow_get_trace_as_list(options, limit);
         } SWOW_COROUTINE_EXECUTE_END();
     } else {
-        trace = (HashTable *) &zend_empty_array;
+        trace = NULL;
     }
 
     return trace;
@@ -1377,9 +1377,17 @@ ZEND_END_ARG_INFO()
 
 static PHP_METHOD(swow_coroutine, getTrace)
 {
+    HashTable *trace;
+
     SWOW_COROUTINE_GET_TRACE_PARAMETERS_PARSER();
 
-    RETURN_ARR(swow_coroutine_get_trace(getThisCoroutine(), options, limit));
+    trace = swow_coroutine_get_trace(getThisCoroutine(), options, limit);
+
+    if (UNEXPECTED(trace == NULL)) {
+        RETURN_EMPTY_ARRAY();
+    }
+
+    RETURN_ARR(trace);
 }
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_swow_coroutine_getTraceAsString, ZEND_RETURN_VALUE, 0, IS_STRING, 0)
@@ -1398,9 +1406,17 @@ static PHP_METHOD(swow_coroutine, getTraceAsString)
 
 static PHP_METHOD(swow_coroutine, getTraceAsList)
 {
+    HashTable *trace;
+
     SWOW_COROUTINE_GET_TRACE_PARAMETERS_PARSER();
 
-    RETURN_ARR(swow_coroutine_get_trace_as_list(getThisCoroutine(), options, limit));
+    trace = swow_coroutine_get_trace_as_list(getThisCoroutine(), options, limit);
+
+    if (UNEXPECTED(trace == NULL)) {
+        RETURN_EMPTY_ARRAY();
+    }
+
+    RETURN_ARR(trace);
 }
 
 #undef SWOW_COROUTINE_GET_TRACE_PARAMETERS_PARSER
