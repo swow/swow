@@ -1464,11 +1464,6 @@ static PHP_METHOD(swow_coroutine, execute)
 
     SWOW_COROUTINE_EXECUTE_START(getThisCoroutine()) {
         zend_call_function(&fci, &fcc);
-        if (UNEXPECTED(EG(exception) != NULL)) {
-            /* just ignore it */
-            OBJ_RELEASE(EG(exception));
-            EG(exception) = NULL;
-        }
     } SWOW_COROUTINE_EXECUTE_END();
 
     swow_coroutine_set_readonly(cat_false);
