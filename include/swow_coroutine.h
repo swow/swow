@@ -202,6 +202,32 @@ SWOW_UNSAFE
     EG(current_execute_data) = _current_execute_data; \
 } while (0)
 
+SWOW_UNSAFE
+#define SWOW_COROUTINE_PREV_EXECUTE_START(scoroutine, level) do { \
+    SWOW_COROUTINE_EXECUTE_START(scoroutine) { \
+        zend_execute_data *_exeute_data; \
+        zend_long _level = level; \
+        \
+        _exeute_data = EG(current_execute_data); \
+        /* Search for last called user function */ \
+        _level++; \
+        while (_level) { \
+            _exeute_data = _exeute_data->prev_execute_data; \
+            if (!_exeute_data) { \
+                break; \
+            } \
+            if (!_exeute_data->func || !ZEND_USER_CODE(_exeute_data->func->common.type)) { \
+                continue; \
+            } \
+            _level--; \
+        } \
+        EG(current_execute_data) = _exeute_data;
+
+SWOW_UNSAFE
+#define SWOW_COROUTINE_PREV_EXECUTE_END() \
+    } SWOW_COROUTINE_EXECUTE_END(); \
+} while (0)
+
 /* basic info */
 SWOW_API cat_bool_t swow_coroutine_is_available(const swow_coroutine_t *scoroutine);
 SWOW_API cat_bool_t swow_coroutine_is_alive(const swow_coroutine_t *scoroutine);

@@ -1427,33 +1427,13 @@ static PHP_METHOD(swow_coroutine, getDefinedVars)
         RETURN_THROWS();
     }
 
-    SWOW_COROUTINE_EXECUTE_START(getThisCoroutine()) {
-        zend_execute_data *exeute_data;
-        zend_long i = level;
-
-        exeute_data = EG(current_execute_data);
-        /* Search for last called user function */
-        i++;
-        while (i) {
-            exeute_data = exeute_data->prev_execute_data;
-            if (!exeute_data) {
-                RETURN_EMPTY_ARRAY();
-            }
-            if (!exeute_data->func || !ZEND_USER_CODE(exeute_data->func->common.type)) {
-                continue;
-            }
-            i--;
-        }
-        EG(current_execute_data) = exeute_data;
-
+    SWOW_COROUTINE_PREV_EXECUTE_START(getThisCoroutine(), level) {
         symbol_table = zend_rebuild_symbol_table();
 
         if (UNEXPECTED(symbol_table == NULL)) {
-            RETURN_EMPTY_ARRAY();
+            symbol_table = (zend_array *) &zend_empty_array;
         }
-        // unnecessary recover
-        // EG(current_execute_data) = orignal_exeute_data;
-    } SWOW_COROUTINE_EXECUTE_END();
+    } SWOW_COROUTINE_PREV_EXECUTE_END();
 
     RETURN_ARR(zend_array_dup(symbol_table));
 }
