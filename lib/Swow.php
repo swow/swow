@@ -371,10 +371,17 @@ namespace Swow
         public function setLocalVar(string $name, $value, int $level = 0, bool $force = true): ?self { }
 
         /**
+         * @param string $string [optional]
+         * @param int $level [optional] = 0
+         * @return null|mixed
+         */
+        public function eval(string $string, int $level = 0) { }
+
+        /**
          * @param callable $callable [optional]
          * @return null|mixed
          */
-        public function execute(callable $callable) { }
+        public function call(callable $callable) { }
 
         /**
          * @param \Throwable $throwable [required]

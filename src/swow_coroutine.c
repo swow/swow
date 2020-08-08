@@ -1499,11 +1499,42 @@ static PHP_METHOD(swow_coroutine, setLocalVar)
     RETURN_THIS();
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_swow_coroutine_execute, ZEND_RETURN_VALUE, 0, IS_MIXED, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_swow_coroutine_eval, ZEND_RETURN_VALUE, 0, IS_MIXED, 0)
+    ZEND_ARG_TYPE_INFO(0, string, IS_STRING, 0)
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, level, IS_LONG, 0, "0")
+ZEND_END_ARG_INFO()
+
+static PHP_METHOD(swow_coroutine, eval)
+{
+    zend_string *string;
+    zend_long level = 0;
+    int error;
+
+    ZEND_PARSE_PARAMETERS_START(1, 2)
+        Z_PARAM_STR(string)
+        Z_PARAM_OPTIONAL
+        Z_PARAM_LONG(level)
+    ZEND_PARSE_PARAMETERS_END();
+
+    swow_coroutine_set_readonly(cat_true);
+
+    SWOW_COROUTINE_PREV_EXECUTE_START(getThisCoroutine(), level) {
+        error = zend_eval_stringl(ZSTR_VAL(string), ZSTR_LEN(string), return_value, "Coroutine::eval()");
+    } SWOW_COROUTINE_PREV_EXECUTE_END();
+
+    swow_coroutine_set_readonly(cat_false);
+
+    if (UNEXPECTED(error != SUCCESS)) {
+        swow_throw_exception(swow_coroutine_exception_ce, CAT_EINVAL, "Eval failed by unknown reason");
+        RETURN_THROWS();
+    }
+}
+
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_swow_coroutine_call, ZEND_RETURN_VALUE, 0, IS_MIXED, 0)
     ZEND_ARG_TYPE_INFO(0, callable, IS_CALLABLE, 0)
 ZEND_END_ARG_INFO()
 
-static PHP_METHOD(swow_coroutine, execute)
+static PHP_METHOD(swow_coroutine, call)
 {
     zend_fcall_info fci;
     zend_fcall_info_cache fcc;
@@ -1736,7 +1767,8 @@ static const zend_function_entry swow_coroutine_methods[] = {
     PHP_ME(swow_coroutine, getTraceAsList,      arginfo_swow_coroutine_getTraceAsList,      ZEND_ACC_PUBLIC)
     PHP_ME(swow_coroutine, getDefinedVars,      arginfo_swow_coroutine_getDefinedVars,      ZEND_ACC_PUBLIC)
     PHP_ME(swow_coroutine, setLocalVar,         arginfo_swow_coroutine_setLocalVar,         ZEND_ACC_PUBLIC)
-    PHP_ME(swow_coroutine, execute,             arginfo_swow_coroutine_execute,             ZEND_ACC_PUBLIC)
+    PHP_ME(swow_coroutine, eval,                arginfo_swow_coroutine_eval,                ZEND_ACC_PUBLIC)
+    PHP_ME(swow_coroutine, call,                arginfo_swow_coroutine_call,                ZEND_ACC_PUBLIC)
     PHP_ME(swow_coroutine, throw,               arginfo_swow_coroutine_throw,               ZEND_ACC_PUBLIC)
     PHP_ME(swow_coroutine, term,                arginfo_swow_coroutine_term,                ZEND_ACC_PUBLIC)
     PHP_ME(swow_coroutine, kill,                arginfo_swow_coroutine_kill,                ZEND_ACC_PUBLIC)
