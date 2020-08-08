@@ -1448,10 +1448,12 @@ static PHP_METHOD(swow_coroutine, getDefinedVars)
 
         if (UNEXPECTED(symbol_table == NULL)) {
             symbol_table = (zend_array *) &zend_empty_array;
+        } else {
+            symbol_table = zend_array_dup(symbol_table);
         }
     } SWOW_COROUTINE_PREV_EXECUTE_END();
 
-    RETURN_ARR(zend_array_dup(symbol_table));
+    RETURN_ARR(symbol_table);
 }
 
 ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_swow_coroutine_setLocalVar, ZEND_RETURN_VALUE, 0, Swow\\Coroutine, 1)
