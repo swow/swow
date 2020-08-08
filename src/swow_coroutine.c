@@ -755,9 +755,9 @@ SWOW_API size_t swow_coroutine_set_default_c_stack_size(size_t size)
 
 static cat_data_t *swow_coroutine_resume_deny(cat_coroutine_t *coroutine, cat_data_t *data)
 {
-    cat_core_error(COROUTINE, "Unexpected coroutine switching");
-    /* for compiler */
-    return CAT_COROUTINE_DATA_NULL;
+    cat_update_last_error(CAT_EMISUSE, "Unexpected coroutine switching");
+
+    return CAT_COROUTINE_DATA_ERROR;
 }
 
 SWOW_API void swow_coroutine_set_readonly(cat_bool_t enable)
