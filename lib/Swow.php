@@ -362,6 +362,15 @@ namespace Swow
         public function getDefinedVars(int $level = 0): array { }
 
         /**
+         * @param string $name [optional]
+         * @param mixed $value [optional]
+         * @param int $level [optional] = 0
+         * @param bool $force [optional] = true
+         * @return null|$this
+         */
+        public function setLocalVar(string $name, $value, int $level = 0, bool $force = true): ?self { }
+
+        /**
          * @param callable $callable [optional]
          * @return null|mixed
          */

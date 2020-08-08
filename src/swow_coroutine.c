@@ -1438,6 +1438,49 @@ static PHP_METHOD(swow_coroutine, getDefinedVars)
     RETURN_ARR(zend_array_dup(symbol_table));
 }
 
+ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_swow_coroutine_setLocalVar, ZEND_RETURN_VALUE, 0, Swow\\Coroutine, 1)
+    ZEND_ARG_TYPE_INFO(0, name, IS_STRING, 0)
+    ZEND_ARG_TYPE_INFO(0, value, IS_MIXED, 0)
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, level, IS_LONG, 0, "0")
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, force, _IS_BOOL, 0, "true")
+ZEND_END_ARG_INFO()
+
+static PHP_METHOD(swow_coroutine, setLocalVar)
+{
+    zend_string *name;
+    zval *value;
+    zend_long level = 0;
+    zend_bool force = 1;
+    int error;
+
+    ZEND_PARSE_PARAMETERS_START(2, 4)
+        Z_PARAM_STR(name)
+        Z_PARAM_ZVAL(value)
+        Z_PARAM_OPTIONAL
+        Z_PARAM_LONG(level)
+        Z_PARAM_BOOL(force)
+    ZEND_PARSE_PARAMETERS_END();
+
+    if (UNEXPECTED(level < 0)) {
+        zend_argument_value_error(1, "can not be negative");
+        RETURN_THROWS();
+    }
+    if (zend_forbid_dynamic_call("setLocalVar()") != SUCCESS) {
+        RETURN_THROWS();
+    }
+
+    SWOW_COROUTINE_PREV_EXECUTE_START(getThisCoroutine(), level) {
+        error = zend_set_local_var(name, value, force);
+    } SWOW_COROUTINE_PREV_EXECUTE_END();
+
+    if (UNEXPECTED(error != SUCCESS)) {
+        swow_throw_exception(swow_coroutine_exception_ce, CAT_EINVAL, "Set var '%.*s' failed by unknown reason", (int) ZSTR_LEN(name), ZSTR_VAL(name));
+        RETURN_THROWS();
+    }
+
+    RETURN_THIS();
+}
+
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_swow_coroutine_execute, ZEND_RETURN_VALUE, 0, IS_MIXED, 0)
     ZEND_ARG_TYPE_INFO(0, callable, IS_CALLABLE, 0)
 ZEND_END_ARG_INFO()
@@ -1674,6 +1717,7 @@ static const zend_function_entry swow_coroutine_methods[] = {
     PHP_ME(swow_coroutine, getTraceAsString,    arginfo_swow_coroutine_getTraceAsString,    ZEND_ACC_PUBLIC)
     PHP_ME(swow_coroutine, getTraceAsList,      arginfo_swow_coroutine_getTraceAsList,      ZEND_ACC_PUBLIC)
     PHP_ME(swow_coroutine, getDefinedVars,      arginfo_swow_coroutine_getDefinedVars,      ZEND_ACC_PUBLIC)
+    PHP_ME(swow_coroutine, setLocalVar,         arginfo_swow_coroutine_setLocalVar,         ZEND_ACC_PUBLIC)
     PHP_ME(swow_coroutine, execute,             arginfo_swow_coroutine_execute,             ZEND_ACC_PUBLIC)
     PHP_ME(swow_coroutine, throw,               arginfo_swow_coroutine_throw,               ZEND_ACC_PUBLIC)
     PHP_ME(swow_coroutine, term,                arginfo_swow_coroutine_term,                ZEND_ACC_PUBLIC)
