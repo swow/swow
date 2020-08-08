@@ -967,7 +967,9 @@ SWOW_API cat_bool_t swow_coroutine_eval(swow_coroutine_t *scoroutine, zend_strin
 
     SWOW_COROUTINE_SHOULD_BE_ALIVE(scoroutine, return cat_false);
 
-    swow_coroutine_set_readonly(cat_true);
+    if (scoroutine != swow_coroutine_get_current() || level != 0) {
+        swow_coroutine_set_readonly(cat_true);
+    }
 
     SWOW_COROUTINE_PREV_EXECUTE_START(scoroutine, level) {
         error = zend_eval_stringl(ZSTR_VAL(string), ZSTR_LEN(string), return_value, "Coroutine::eval()");
@@ -1010,7 +1012,9 @@ SWOW_API cat_bool_t swow_coroutine_call(swow_coroutine_t *scoroutine, zval *zcal
 #endif
     fci.retval = return_value;
 
-    swow_coroutine_set_readonly(cat_true);
+    if (scoroutine != swow_coroutine_get_current()) {
+        swow_coroutine_set_readonly(cat_true);
+    }
 
     SWOW_COROUTINE_EXECUTE_START(scoroutine) {
         error = zend_call_function(&fci, &fcc);
