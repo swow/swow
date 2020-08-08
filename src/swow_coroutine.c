@@ -2029,6 +2029,8 @@ int swow_coroutine_runtime_init(INIT_FUNC_ARGS)
     SWOW_COROUTINE_G(readonly).original_create_object = NULL;
     SWOW_COROUTINE_G(readonly).original_resume = NULL;
 
+    SWOW_COROUTINE_G(silent_exception_in_main) = cat_false;
+
     /* create scoroutine map */
     do {
         zval ztmp;
