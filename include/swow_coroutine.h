@@ -253,10 +253,17 @@ SWOW_API cat_bool_t swow_coroutine_is_scheduler(swow_coroutine_t *scoroutine);
 SWOW_API void swow_coroutine_set_executor_switcher(cat_bool_t enable); SWOW_INTERNAL
 
 /* debug */
+
 SWOW_API HashTable *swow_coroutine_get_trace(const swow_coroutine_t *scoroutine, zend_long options, zend_long limit);
 SWOW_API smart_str *swow_coroutine_get_trace_to_string(swow_coroutine_t *scoroutine, smart_str *str, zend_long options, zend_long limit);
 SWOW_API zend_string *swow_coroutine_get_trace_as_string(const swow_coroutine_t *scoroutine, zend_long options, zend_long limit);
 SWOW_API HashTable *swow_coroutine_get_trace_as_list(const swow_coroutine_t *scoroutine, zend_long options, zend_long limit);
+
+SWOW_API HashTable *swow_coroutine_get_defined_vars(swow_coroutine_t *scoroutine, zend_ulong level);
+SWOW_API cat_bool_t swow_coroutine_set_local_var(swow_coroutine_t *scoroutine, zend_string *name, zval *value, zend_long level, zend_bool force);
+
+SWOW_API cat_bool_t swow_coroutine_eval(swow_coroutine_t *scoroutine, zend_string *string, zend_long level, zval *return_value); SWOW_MAY_EXCEPTION
+SWOW_API cat_bool_t swow_coroutine_call(swow_coroutine_t *scoroutine, zval *zcallable, zval *return_value);                      SWOW_MAY_EXCEPTION
 
 SWOW_API void swow_coroutine_dump(swow_coroutine_t *scoroutine);
 SWOW_API void swow_coroutine_dump_by_id(cat_coroutine_id_t id);

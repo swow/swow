@@ -36,6 +36,13 @@ SWOW_API CAT_GLOBALS_DECLARE(swow_coroutine)
 
 CAT_GLOBALS_CTOR_DECLARE_SZ(swow_coroutine)
 
+#define SWOW_COROUTINE_SHOULD_BE_ALIVE(scoroutine, failure) do { \
+    if (UNEXPECTED(!swow_coroutine_is_alive(scoroutine))) { \
+        cat_update_last_error(CAT_ESRCH, "Coroutine is not alive"); \
+        failure; \
+    } \
+} while (0)
+
 /* pre declare */
 static cat_bool_t swow_coroutine_construct(swow_coroutine_t *scoroutine, zval *zcallable, size_t stack_page_size, size_t c_stack_size);
 static void swow_coroutine_close(swow_coroutine_t *scoroutine);
@@ -839,24 +846,26 @@ SWOW_API HashTable *swow_coroutine_get_trace(const swow_coroutine_t *scoroutine,
 {
     HashTable *trace;
 
-    if (EXPECTED(swow_coroutine_is_alive(scoroutine))) {
-        SWOW_COROUTINE_EXECUTE_START(scoroutine) {
-            trace = swow_get_trace(options, limit);
-        } SWOW_COROUTINE_EXECUTE_END();
-    } else {
-        trace = NULL;
+    if (UNEXPECTED(!swow_coroutine_is_alive(scoroutine))) {
+        return NULL;
     }
+
+    SWOW_COROUTINE_EXECUTE_START(scoroutine) {
+        trace = swow_get_trace(options, limit);
+    } SWOW_COROUTINE_EXECUTE_END();
 
     return trace;
 }
 
 SWOW_API smart_str *swow_coroutine_get_trace_to_string(swow_coroutine_t *scoroutine, smart_str *str, zend_long options, zend_long limit)
 {
-    if (EXPECTED(swow_coroutine_is_alive(scoroutine))) {
-        SWOW_COROUTINE_EXECUTE_START(scoroutine) {
-            str = swow_get_trace_to_string(str, options, limit);
-        } SWOW_COROUTINE_EXECUTE_END();
+    if (UNEXPECTED(!swow_coroutine_is_alive(scoroutine))) {
+        return NULL;
     }
+
+    SWOW_COROUTINE_EXECUTE_START(scoroutine) {
+        str = swow_get_trace_to_string(str, options, limit);
+    } SWOW_COROUTINE_EXECUTE_END();
 
     return str;
 }
@@ -865,13 +874,13 @@ SWOW_API zend_string *swow_coroutine_get_trace_as_string(const swow_coroutine_t 
 {
     zend_string *trace;
 
-    if (EXPECTED(swow_coroutine_is_alive(scoroutine))) {
-        SWOW_COROUTINE_EXECUTE_START(scoroutine) {
-            trace = swow_get_trace_as_string(options, limit);
-        } SWOW_COROUTINE_EXECUTE_END();
-    } else {
-        trace = zend_empty_string;
+    if (UNEXPECTED(!swow_coroutine_is_alive(scoroutine))) {
+        return NULL;
     }
+
+    SWOW_COROUTINE_EXECUTE_START(scoroutine) {
+        trace = swow_get_trace_as_string(options, limit);
+    } SWOW_COROUTINE_EXECUTE_END();
 
     return trace;
 }
@@ -880,15 +889,141 @@ SWOW_API HashTable *swow_coroutine_get_trace_as_list(const swow_coroutine_t *sco
 {
     HashTable *trace;
 
-    if (EXPECTED(swow_coroutine_is_alive(scoroutine))) {
-        SWOW_COROUTINE_EXECUTE_START(scoroutine) {
-            trace = swow_get_trace_as_list(options, limit);
-        } SWOW_COROUTINE_EXECUTE_END();
-    } else {
-        trace = NULL;
+    if (UNEXPECTED(!swow_coroutine_is_alive(scoroutine))) {
+        return NULL;
     }
 
+    SWOW_COROUTINE_EXECUTE_START(scoroutine) {
+        trace = swow_get_trace_as_list(options, limit);
+    } SWOW_COROUTINE_EXECUTE_END();
+
     return trace;
+}
+
+#define SWOW_COROUTINE_CHECK_CALL_INFO(failure) do { \
+    if (UNEXPECTED(ZEND_CALL_INFO(EG(current_execute_data)) & ZEND_CALL_DYNAMIC)) { \
+        cat_update_last_error(CAT_EPERM, "Coroutine executor is dynamic"); \
+        failure; \
+    } \
+} while (0)
+
+SWOW_API HashTable *swow_coroutine_get_defined_vars(swow_coroutine_t *scoroutine, zend_ulong level)
+{
+    HashTable *symbol_table;
+
+    if (UNEXPECTED(!swow_coroutine_is_alive(scoroutine))) {
+        cat_update_last_error(CAT_ESRCH, "Coroutine is not alive");
+        return NULL;
+    }
+
+    SWOW_COROUTINE_PREV_EXECUTE_START(scoroutine, level) {
+        SWOW_COROUTINE_CHECK_CALL_INFO(goto _error);
+
+        symbol_table = zend_rebuild_symbol_table();
+
+        if (EXPECTED(symbol_table != NULL)) {
+            symbol_table = zend_array_dup(symbol_table);
+        }
+
+        if (0) {
+            _error:
+            symbol_table = NULL;
+        }
+    } SWOW_COROUTINE_PREV_EXECUTE_END();
+
+    return symbol_table;
+}
+
+SWOW_API cat_bool_t swow_coroutine_set_local_var(swow_coroutine_t *scoroutine, zend_string *name, zval *value, zend_long level, zend_bool force)
+{
+    cat_bool_t ret;
+
+    SWOW_COROUTINE_SHOULD_BE_ALIVE(scoroutine, return cat_false);
+
+    SWOW_COROUTINE_PREV_EXECUTE_START(scoroutine, level) {
+        int error;
+
+        SWOW_COROUTINE_CHECK_CALL_INFO(goto _error);
+
+        error = zend_set_local_var(name, value, force);
+
+        if (UNEXPECTED(error != SUCCESS)) {
+            cat_update_last_error(CAT_EINVAL, "Set var '%.*s' failed by unknown reason", (int) ZSTR_LEN(name), ZSTR_VAL(name));
+            _error:
+            ret = cat_false;
+        } else {
+            ret = cat_true;
+        }
+    } SWOW_COROUTINE_PREV_EXECUTE_END();
+
+    return ret;
+}
+
+#undef SWOW_COROUTINE_CHECK_CALL_INFO
+
+SWOW_API cat_bool_t swow_coroutine_eval(swow_coroutine_t *scoroutine, zend_string *string, zend_long level, zval *return_value)
+{
+    int error;
+
+    SWOW_COROUTINE_SHOULD_BE_ALIVE(scoroutine, return cat_false);
+
+    swow_coroutine_set_readonly(cat_true);
+
+    SWOW_COROUTINE_PREV_EXECUTE_START(scoroutine, level) {
+        error = zend_eval_stringl(ZSTR_VAL(string), ZSTR_LEN(string), return_value, "Coroutine::eval()");
+    } SWOW_COROUTINE_PREV_EXECUTE_END();
+
+    swow_coroutine_set_readonly(cat_false);
+
+    if (UNEXPECTED(error != SUCCESS)) {
+        cat_update_last_error(CAT_UNKNOWN, "Eval failed by unknown reason");
+        return cat_false;
+    }
+
+    return cat_true;
+}
+
+SWOW_API cat_bool_t swow_coroutine_call(swow_coroutine_t *scoroutine, zval *zcallable, zval *return_value)
+{
+    zend_fcall_info fci;
+    zend_fcall_info_cache fcc;
+    int error;
+
+    SWOW_COROUTINE_SHOULD_BE_ALIVE(scoroutine, return cat_false);
+
+    do {
+        char *error;
+        if (!zend_is_callable_ex(zcallable, NULL, 0, NULL, &fcc, &error)) {
+            cat_update_last_error(CAT_EMISUSE, "Coroutine::call() only accept callable parameter, %s", error);
+            efree(error);
+            return cat_false;
+        }
+        efree(error);
+    } while (0);
+
+    fci.size = sizeof(fci);
+    ZVAL_UNDEF(&fci.function_name);
+    fci.object = NULL;
+    fci.param_count = 0;
+#if PHP_VERSION_ID < 80000
+    fci.no_separation = 0;
+#endif
+    fci.retval = return_value;
+
+    swow_coroutine_set_readonly(cat_true);
+
+    SWOW_COROUTINE_EXECUTE_START(scoroutine) {
+        error = zend_call_function(&fci, &fcc);
+    } SWOW_COROUTINE_EXECUTE_END();
+
+    swow_coroutine_set_readonly(cat_false);
+
+    if (UNEXPECTED(error != SUCCESS)) {
+        cat_update_last_error(CAT_UNKNOWN, "Call function failed by unknown reason");
+        return cat_false;
+    }
+
+    return cat_true;
 }
 
 SWOW_API void swow_coroutine_dump(swow_coroutine_t *scoroutine)
@@ -1397,9 +1532,17 @@ ZEND_END_ARG_INFO()
 
 static PHP_METHOD(swow_coroutine, getTraceAsString)
 {
+    zend_string *trace;
+
     SWOW_COROUTINE_GET_TRACE_PARAMETERS_PARSER();
 
-    RETURN_STR(swow_coroutine_get_trace_as_string(getThisCoroutine(), options, limit));
+    trace = swow_coroutine_get_trace_as_string(getThisCoroutine(), options, limit);
+
+    if (UNEXPECTED(trace == NULL)) {
+        RETURN_EMPTY_STRING();
+    }
+
+    RETURN_STR(trace);
 }
 
 #define arginfo_swow_coroutine_getTraceAsList arginfo_swow_coroutine_getTrace
@@ -1427,6 +1570,7 @@ ZEND_END_ARG_INFO()
 
 static PHP_METHOD(swow_coroutine, getDefinedVars)
 {
+    swow_coroutine_t *scoroutine = getThisCoroutine();
     zend_array *symbol_table;
     zend_long level = 0;
 
@@ -1439,19 +1583,12 @@ static PHP_METHOD(swow_coroutine, getDefinedVars)
         zend_argument_value_error(1, "can not be negative");
         RETURN_THROWS();
     }
-    if (zend_forbid_dynamic_call("getDefinedVars()") != SUCCESS) {
-        RETURN_THROWS();
+
+    symbol_table = swow_coroutine_get_defined_vars(scoroutine, level);
+
+    if (UNEXPECTED(symbol_table == NULL)) {
+        RETURN_EMPTY_ARRAY();
     }
-
-    SWOW_COROUTINE_PREV_EXECUTE_START(getThisCoroutine(), level) {
-        symbol_table = zend_rebuild_symbol_table();
-
-        if (UNEXPECTED(symbol_table == NULL)) {
-            symbol_table = (zend_array *) &zend_empty_array;
-        } else {
-            symbol_table = zend_array_dup(symbol_table);
-        }
-    } SWOW_COROUTINE_PREV_EXECUTE_END();
 
     RETURN_ARR(symbol_table);
 }
@@ -1465,11 +1602,12 @@ ZEND_END_ARG_INFO()
 
 static PHP_METHOD(swow_coroutine, setLocalVar)
 {
+    swow_coroutine_t *scoroutine = getThisCoroutine();
     zend_string *name;
     zval *value;
     zend_long level = 0;
     zend_bool force = 1;
-    int error;
+    cat_bool_t ret;
 
     ZEND_PARSE_PARAMETERS_START(2, 4)
         Z_PARAM_STR(name)
@@ -1483,16 +1621,11 @@ static PHP_METHOD(swow_coroutine, setLocalVar)
         zend_argument_value_error(1, "can not be negative");
         RETURN_THROWS();
     }
-    if (zend_forbid_dynamic_call("setLocalVar()") != SUCCESS) {
-        RETURN_THROWS();
-    }
 
-    SWOW_COROUTINE_PREV_EXECUTE_START(getThisCoroutine(), level) {
-        error = zend_set_local_var(name, value, force);
-    } SWOW_COROUTINE_PREV_EXECUTE_END();
+    ret = swow_coroutine_set_local_var(scoroutine, name, value, level, force);
 
-    if (UNEXPECTED(error != SUCCESS)) {
-        swow_throw_exception(swow_coroutine_exception_ce, CAT_EINVAL, "Set var '%.*s' failed by unknown reason", (int) ZSTR_LEN(name), ZSTR_VAL(name));
+    if (UNEXPECTED(!ret)) {
+        swow_throw_exception_with_last(swow_coroutine_exception_ce);
         RETURN_THROWS();
     }
 
@@ -1506,9 +1639,10 @@ ZEND_END_ARG_INFO()
 
 static PHP_METHOD(swow_coroutine, eval)
 {
+    swow_coroutine_t *scoroutine = getThisCoroutine();
     zend_string *string;
     zend_long level = 0;
-    int error;
+    cat_bool_t ret;
 
     ZEND_PARSE_PARAMETERS_START(1, 2)
         Z_PARAM_STR(string)
@@ -1516,16 +1650,15 @@ static PHP_METHOD(swow_coroutine, eval)
         Z_PARAM_LONG(level)
     ZEND_PARSE_PARAMETERS_END();
 
-    swow_coroutine_set_readonly(cat_true);
+    if (UNEXPECTED(!swow_coroutine_is_alive(scoroutine))) {
+        swow_throw_exception(swow_coroutine_exception_ce, CAT_ESRCH, "Coroutine is not alive");
+        RETURN_THROWS();
+    }
 
-    SWOW_COROUTINE_PREV_EXECUTE_START(getThisCoroutine(), level) {
-        error = zend_eval_stringl(ZSTR_VAL(string), ZSTR_LEN(string), return_value, "Coroutine::eval()");
-    } SWOW_COROUTINE_PREV_EXECUTE_END();
+    ret = swow_coroutine_eval(scoroutine, string, level, return_value);
 
-    swow_coroutine_set_readonly(cat_false);
-
-    if (UNEXPECTED(error != SUCCESS)) {
-        swow_throw_exception(swow_coroutine_exception_ce, CAT_EINVAL, "Eval failed by unknown reason");
+    if (UNEXPECTED(!ret)) {
+        swow_throw_exception_with_last(swow_coroutine_exception_ce);
         RETURN_THROWS();
     }
 }
@@ -1536,29 +1669,20 @@ ZEND_END_ARG_INFO()
 
 static PHP_METHOD(swow_coroutine, call)
 {
-    zend_fcall_info fci;
-    zend_fcall_info_cache fcc;
+    swow_coroutine_t *scoroutine = getThisCoroutine();
+    zval *zcallable;
+    cat_bool_t ret;
 
     ZEND_PARSE_PARAMETERS_START(1, 1)
-        Z_PARAM_FUNC(fci, fcc)
+        Z_PARAM_ZVAL(zcallable)
     ZEND_PARSE_PARAMETERS_END();
 
-    fci.size = sizeof(fci);
-    ZVAL_UNDEF(&fci.function_name);
-    fci.object = NULL;
-    fci.param_count = 0;
-#if PHP_VERSION_ID < 80000
-    fci.no_separation = 0;
-#endif
-    fci.retval = return_value;
+    ret = swow_coroutine_call(scoroutine, zcallable, return_value);
 
-    swow_coroutine_set_readonly(cat_true);
-
-    SWOW_COROUTINE_EXECUTE_START(getThisCoroutine()) {
-        zend_call_function(&fci, &fcc);
-    } SWOW_COROUTINE_EXECUTE_END();
-
-    swow_coroutine_set_readonly(cat_false);
+    if (UNEXPECTED(!ret)) {
+        swow_throw_exception_with_last(swow_coroutine_exception_ce);
+        RETURN_THROWS();
+    }
 }
 
 ZEND_BEGIN_ARG_INFO_EX(arginfo_swow_coroutine_throw, 0, ZEND_RETURN_VALUE, 1)

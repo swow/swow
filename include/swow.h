@@ -35,6 +35,7 @@
 #define SWOW_API           CAT_API
 #define SWOW_INTERNAL      CAT_INTERNAL
 #define SWOW_UNSAFE        CAT_UNSAFE
+#define SWOW_MAY_EXCEPTION
 
 #include "swow_wrapper.h"
 #include "swow_exceptions.h"
