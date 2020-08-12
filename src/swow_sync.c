@@ -33,7 +33,6 @@ static zend_object *swow_sync_wait_reference_create_object(zend_class_entry *ce)
     swow_sync_wait_reference_t *swr = swow_object_alloc(swow_sync_wait_reference_t, ce, swow_sync_wait_reference_handlers);
 
     swr->scoroutine = NULL;
-    swr->waiting = cat_false;
 
     return &swr->std;
 }
@@ -77,7 +76,7 @@ static PHP_METHOD(swow_sync_wait_reference, wait)
     wr = Z_OBJ_P(zwf);
     swr = swow_sync_wait_reference_get_from_object(wr);
     if (UNEXPECTED(swr->scoroutine != NULL)) {
-        zend_throw_error(NULL, "WaitReference is reused before previous wait has returned");
+        zend_throw_error(NULL, "WaitReference can not be reused before previous wait has returned");
         RETURN_THROWS();
     }
     swr->scoroutine = swow_coroutine_get_current();
