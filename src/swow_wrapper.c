@@ -280,8 +280,14 @@ SWOW_API cat_bool_t swow_function_internal_access_only_check(INTERNAL_FUNCTION_P
 }
 
 /* output globals */
+
+#include "SAPI.h"
+
 SWOW_API void swow_output_globals_end(void)
 {
+    zend_bool no_headers = SG(request_info).no_headers;
+
+    SG(request_info).no_headers = 1;
     if (OG(active)) {
         if (UNEXPECTED(SWOW_IS_OUT_OF_MEMORY())) {
             php_output_discard_all();
@@ -291,4 +297,5 @@ SWOW_API void swow_output_globals_end(void)
     }
     php_output_deactivate();
     php_output_activate();
+    SG(request_info).no_headers = no_headers;
 }
