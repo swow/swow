@@ -109,13 +109,13 @@ static void swow_coroutine_free_object(zend_object *object)
 
 static CAT_COLD cat_bool_t swow_coroutine_exception_should_be_silent(zend_object *exception)
 {
-    zval zexception, *zprevious_exception, ztmp;
+    zval *zprevious_exception, ztmp;
 
     while (1) {
+        ZVAL7_ALLOC_OBJECT(exception);
         if (instanceof_function(exception->ce, swow_coroutine_term_exception_ce)) {
-            zval zexception, *zcode, ztmp;
-            ZVAL_OBJ(&zexception, exception);
-            zcode = zend_read_property_ex(exception->ce, &zexception, ZSTR_KNOWN(ZEND_STR_CODE), 1, &ztmp);
+            zval *zcode, ztmp;
+            zcode = zend_read_property_ex(exception->ce, ZVAL7_OBJECT(exception), ZSTR_KNOWN(ZEND_STR_CODE), 1, &ztmp);
             if (zval_get_long(zcode) == 0) {
                 return cat_true;
             }
@@ -123,8 +123,7 @@ static CAT_COLD cat_bool_t swow_coroutine_exception_should_be_silent(zend_object
         } else if (instanceof_function(exception->ce, swow_coroutine_kill_exception_ce)) {
             return cat_true;
         }
-        ZVAL_OBJ(&zexception, exception);
-        zprevious_exception = zend_read_property_ex(zend_get_exception_base(&zexception), &zexception, ZSTR_KNOWN(ZEND_STR_PREVIOUS), 1, &ztmp);
+        zprevious_exception = zend_read_property_ex(zend_get_exception_base(ZVAL7_OBJECT(exception)), ZVAL7_OBJECT(exception), ZSTR_KNOWN(ZEND_STR_PREVIOUS), 1, &ztmp);
         if (Z_TYPE_P(zprevious_exception) == IS_OBJECT) {
             exception = Z_OBJ_P(zprevious_exception);
             continue;
@@ -1063,35 +1062,36 @@ static void swow_coroutine_handle_cross_exception(zend_object *cross_exception)
 {
     zend_object *exception;
     zend_class_entry *ce = cross_exception->ce;
-    zval zexception, zprevious_exception, ztmp;
+    zval ztmp;
 
     /* for throw method success */
     GC_ADDREF(cross_exception);
 
     if (UNEXPECTED(EG(exception) != NULL)) {
+        // FIXME: why?
         if (instanceof_function(ce, swow_coroutine_kill_exception_ce)) {
             OBJ_RELEASE(EG(exception));
             EG(exception) = NULL;
         }
     }
     exception = swow_object_create(ce);
-    ZVAL_OBJ(&zexception, exception);
-    ZVAL_OBJ(&zprevious_exception, cross_exception);
+    ZVAL7_ALLOC_OBJECT(exception);
+    ZVAL7_ALLOC_OBJECT(cross_exception);
     zend_update_property_ex(
-        ce, &zexception, ZSTR_KNOWN(ZEND_STR_MESSAGE),
-        zend_read_property_ex(ce, &zprevious_exception, ZSTR_KNOWN(ZEND_STR_MESSAGE), 1, &ztmp)
+        ce, ZVAL7_OBJECT(exception), ZSTR_KNOWN(ZEND_STR_MESSAGE),
+        zend_read_property_ex(ce, ZVAL7_OBJECT(cross_exception), ZSTR_KNOWN(ZEND_STR_MESSAGE), 1, &ztmp)
     );
     zend_update_property_ex(
-        ce, &zexception, ZSTR_KNOWN(ZEND_STR_CODE),
-        zend_read_property_ex(ce, &zprevious_exception, ZSTR_KNOWN(ZEND_STR_CODE), 1, &ztmp)
+        ce, ZVAL7_OBJECT(exception), ZSTR_KNOWN(ZEND_STR_CODE),
+        zend_read_property_ex(ce, ZVAL7_OBJECT(cross_exception), ZSTR_KNOWN(ZEND_STR_CODE), 1, &ztmp)
     );
     if (UNEXPECTED(EG(exception) != NULL)) {
-        zend_throw_exception_internal(&zprevious_exception);
-        zend_throw_exception_internal(&zexception);
+        zend_throw_exception_internal(ZVAL7_OBJECT(cross_exception));
+        zend_throw_exception_internal(ZVAL7_OBJECT(exception));
     } else {
         zend_exception_set_previous(exception, cross_exception);
         if (EG(exception) == NULL) {
-            zend_throw_exception_internal(&zexception);
+            zend_throw_exception_internal(ZVAL7_OBJECT(exception));
         }
     }
 }
@@ -1111,10 +1111,9 @@ SWOW_API cat_bool_t swow_coroutine_throw(swow_coroutine_t *scoroutine, zend_obje
         return cat_false;
     }
     if (UNEXPECTED(scoroutine == swow_coroutine_get_current())) {
-        zval zexception;
-        ZVAL_OBJ(&zexception, exception);
+        ZVAL7_ALLOC_OBJECT(exception);
         GC_ADDREF(exception);
-        zend_throw_exception_internal(&zexception);
+        zend_throw_exception_internal(ZVAL7_OBJECT(exception));
         ZVAL_NULL(retval);
     } else {
         scoroutine->executor->cross_exception = exception;
@@ -1915,7 +1914,7 @@ static const zend_function_entry swow_coroutine_methods[] = {
 
 static HashTable *swow_coroutine_get_gc(zend7_object *object, zval **gc_data, int *gc_count)
 {
-    swow_coroutine_t *scoroutine = swow_coroutine_get_from_object(Z7_OBJ(object));
+    swow_coroutine_t *scoroutine = swow_coroutine_get_from_object(Z7_OBJ_P(object));
     zval *zcallable = scoroutine->executor ? &scoroutine->executor->zcallable : NULL;
 
     if (zcallable && !ZVAL_IS_NULL(zcallable)) {
@@ -1948,12 +1947,12 @@ static const zend_function_entry swow_coroutine_exception_methods[] = {
 static zend_object *swow_coroutine_cross_exception_create_object(zend_class_entry *ce)
 {
     zend_object *object;
-    zval zobject, zcoroutine;
+    zval zcoroutine;
 
     object = swow_exception_create_object(ce);
-    ZVAL_OBJ(&zobject, object);
+    ZVAL7_ALLOC_OBJECT(object);
     ZVAL_OBJ(&zcoroutine, &swow_coroutine_get_current()->std);
-    zend_update_property(ce, &zobject, ZEND_STRL("coroutine"), &zcoroutine);
+    zend_update_property(ce, ZVAL7_OBJECT(object), ZEND_STRL("coroutine"), &zcoroutine);
 
     return object;
 }
@@ -2054,17 +2053,17 @@ static void swow_coroutine_error_cb(int type, const char *error_filename, const 
 
 /* hook exception */
 
-static void (*original_zend_throw_exception_hook)(zval *zexception);
+static void (*original_zend_throw_exception_hook)(zend7_object *exception);
 
-static void swow_zend_throw_exception_hook(zval *zexception)
+static void swow_zend_throw_exception_hook(zend7_object *exception)
 {
     if (swow_coroutine_get_current() == swow_coroutine_get_main()) {
-        if (swow_coroutine_exception_should_be_silent(Z_OBJ_P(zexception))) {
+        if (swow_coroutine_exception_should_be_silent(Z7_OBJ_P(exception))) {
             SWOW_COROUTINE_G(silent_exception_in_main) = cat_true;
         }
     }
     if (original_zend_throw_exception_hook != NULL) {
-        original_zend_throw_exception_hook(zexception);
+        original_zend_throw_exception_hook(exception);
     }
 }
 

@@ -229,7 +229,7 @@ SWOW_API zend_object *swow_create_object_deny(zend_class_entry *ce)
 
 SWOW_API zend_object *swow_custom_object_clone(zend7_object *object)
 {
-    zend_object *old_object = Z7_OBJ(object), *new_object;
+    zend_object *old_object = Z7_OBJ_P(object), *new_object;
     zend_class_entry *ce = old_object->ce;
     int offset = old_object->handlers->offset;
 

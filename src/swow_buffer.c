@@ -920,7 +920,7 @@ static zend_object *swow_buffer_clone_object(zend7_object *object)
     swow_buffer_t *sbuffer, *new_sbuffer;
     zend_string *string, *new_string;
 
-    sbuffer = swow_buffer_get_from_object(Z7_OBJ(object));
+    sbuffer = swow_buffer_get_from_object(Z7_OBJ_P(object));
     string = swow_buffer_fetch_string(sbuffer);
     new_sbuffer = swow_buffer_get_from_object(swow_object_create(sbuffer->std.ce));
     memcpy(new_sbuffer, sbuffer, offsetof(swow_buffer_t, std));
@@ -931,7 +931,7 @@ static zend_object *swow_buffer_clone_object(zend7_object *object)
         new_sbuffer->buffer.value = ZSTR_VAL(new_string);
     }
 
-    zend_objects_clone_members(&new_sbuffer->std, Z7_OBJ(object));
+    zend_objects_clone_members(&new_sbuffer->std, Z7_OBJ_P(object));
 
     return &new_sbuffer->std;
 }

@@ -113,15 +113,26 @@ static cat_always_inline HashTable *zend_new_array(size_t size)
 
 /* PHP 8 compatibility macro {{{*/
 #if PHP_VERSION_ID < 80000
+/* type is zval in PHP7, is object in PHP8 */
 #define zend7_object      zval
-#define Z7_OBJ(object)    Z_OBJ_P(object)
-#define Z7_OBJ_P(zobject) zobject
+/* zval to object only in PHP7 */
+#define Z7_OBJ_P(zobject) Z_OBJ_P(zobject)
+/* zval to object only in PHP8 */
+#define Z8_OBJ_P(zobject) zobject
+/* get this as zval in PHP7, as object in PHP8 */
 #define ZEND7_THIS        ZEND_THIS
+/* create zval in PHP7, do nothing in PHP8 */
+#define ZVAL7_ALLOC_OBJECT(object) \
+        zval z##object; ZVAL_OBJ(&z##object, object)
+/* use zval in PHP7, object in PHP8 */
+#define ZVAL7_OBJECT(object) &z##object
 #else
 #define zend7_object      zend_object
-#define Z7_OBJ(object)    object
-#define Z7_OBJ_P(zobject) Z_OBJ_P(zobject)
+#define Z7_OBJ_P(object)  object
+#define Z8_OBJ_P(zobject) Z_OBJ_P(zobject)
 #define ZEND7_THIS        Z_OBJ_P(ZEND_THIS)
+#define ZVAL7_ALLOC_OBJECT(object)
+#define ZVAL7_OBJECT(object) object
 #endif
 
 #ifndef ZEND_ARG_INFO_WITH_DEFAULT_VALUE
@@ -501,7 +512,7 @@ static cat_always_inline zend_object* swow_object_create(zend_class_entry *ce)
 
 #define RETVAL_THIS_PROPERTY(name) do { \
     zval *zproperty, zretval; \
-    zproperty = zend_read_property(Z_OBJCE_P(ZEND_THIS), ZEND_THIS, ZEND_STRL(name), 1, &zretval); \
+    zproperty = zend_read_property(Z_OBJCE_P(ZEND_THIS), Z8_OBJ_P(ZEND_THIS), ZEND_STRL(name), 1, &zretval); \
     ZVAL_DEREF(zproperty); \
     ZVAL_COPY(return_value, zproperty); \
 } while (0)

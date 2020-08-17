@@ -285,7 +285,7 @@ static const zend_function_entry swow_channel_methods[] = {
 
 static HashTable *swow_channel_get_gc(zend7_object *object, zval **gc_data, int *gc_count)
 {
-    SWOW_CHANNEL_GETTER_INTERNAL(Z7_OBJ(object), schannel, channel);
+    SWOW_CHANNEL_GETTER_INTERNAL(Z7_OBJ_P(object), schannel, channel);
     cat_queue_t *storage = &channel->storage;
 
     ZEND_GET_GC_BUFFER_CREATE(schannel, zqueue, channel->length);
