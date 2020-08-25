@@ -28,8 +28,8 @@
 #define SWOW_COROUTINE_DEFAULT_STACK_PAGE_SIZE (4 * 1024)
 #define SWOW_COROUTINE_MAX_STACK_PAGE_SIZE     (256 * 1024)
 
-#ifndef SWOW_COROUTINE_SWAP_INTERNAL_CONTEXT
-#define SWOW_COROUTINE_SWAP_INTERNAL_CONTEXT   1
+#ifndef SWOW_COROUTINE_SWAP_ERROR_HANDING
+#define SWOW_COROUTINE_SWAP_ERROR_HANDING   1
 #endif
 #ifndef SWOW_COROUTINE_SWAP_BASIC_GLOBALS
 #define SWOW_COROUTINE_SWAP_BASIC_GLOBALS      1
@@ -81,9 +81,10 @@ typedef struct
     size_t vm_stack_page_size;
     zend_execute_data *current_execute_data;
     zend_object *exception;
-#if SWOW_COROUTINE_SWAP_INTERNAL_CONTEXT
-    /* for PDO non-reentrancy */
+#if SWOW_COROUTINE_SWAP_ERROR_HANDING
+    /* for hack practice of php-kernel (convert warning to exception) */
     zend_error_handling_t error_handling;
+    zend_class_entry *exception_class;
 #endif
 #if SWOW_COROUTINE_SWAP_BASIC_GLOBALS
     /* for array_walk non-reentrancy */

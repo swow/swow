@@ -359,8 +359,9 @@ static cat_bool_t swow_coroutine_construct(swow_coroutine_t *scoroutine, zval *z
 #endif
         executor->current_execute_data = NULL;
         executor->exception = NULL;
-#if SWOW_COROUTINE_SWAP_INTERNAL_CONTEXT
+#if SWOW_COROUTINE_SWAP_ERROR_HANDING
         executor->error_handling = EH_NORMAL;
+        executor->exception_class = NULL;
 #endif
 #if SWOW_COROUTINE_SWAP_BASIC_GLOBALS
         executor->array_walk_context = NULL;
@@ -442,8 +443,9 @@ SWOW_API void swow_coroutine_executor_save(swow_coroutine_exector_t *executor)
 #endif
     executor->current_execute_data = eg->current_execute_data;
     executor->exception = eg->exception;
-#if SWOW_COROUTINE_SWAP_INTERNAL_CONTEXT
+#if SWOW_COROUTINE_SWAP_ERROR_HANDING
     executor->error_handling = eg->error_handling;
+    executor->exception_class = eg->exception_class;
 #endif
 #if SWOW_COROUTINE_SWAP_BASIC_GLOBALS
     do {
@@ -492,8 +494,9 @@ SWOW_API void swow_coroutine_executor_recover(swow_coroutine_exector_t *executor
 #endif
     eg->current_execute_data = executor->current_execute_data;
     eg->exception = executor->exception;
-#if SWOW_COROUTINE_SWAP_INTERNAL_CONTEXT
+#if SWOW_COROUTINE_SWAP_ERROR_HANDING
     eg->error_handling = executor->error_handling;
+    eg->exception_class = executor->exception_class;
 #endif
 #if SWOW_COROUTINE_SWAP_BASIC_GLOBALS
     do {
