@@ -216,7 +216,9 @@ static zval *swow_coroutine_function(zval *zdata)
         fci.param_count = fci_ptr->param_count;
         fci.params = fci_ptr->params;
     }
-#if PHP_VERSION_ID < 80000
+#if PHP_VERSION_ID >= 80000
+    fci.named_params = NULL;
+#else
     fci.no_separation = 0;
 #endif
     fci.retval = &retval;
@@ -1009,7 +1011,9 @@ SWOW_API cat_bool_t swow_coroutine_call(swow_coroutine_t *scoroutine, zval *zcal
     ZVAL_UNDEF(&fci.function_name);
     fci.object = NULL;
     fci.param_count = 0;
-#if PHP_VERSION_ID < 80000
+#if PHP_VERSION_ID >= 80000
+    fci.named_params = NULL;
+#else
     fci.no_separation = 0;
 #endif
     fci.retval = return_value;
