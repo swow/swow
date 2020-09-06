@@ -28,7 +28,7 @@ extern SWOW_API zend_object_handlers swow_defer_handlers;
 
 typedef struct
 {
-    cat_queue_t node;
+    cat_queue_node_t node;
     zval zcallable;
     zend_fcall_info_cache fcc;
 } swow_defer_task_t;
