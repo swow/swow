@@ -18,10 +18,15 @@ use function Swow\Tools\log;
 use function Swow\Tools\notice;
 use function Swow\Tools\ok;
 
-$syncFromGithub = function (string $orgName, string $repoName, string $sourceDir, string $targetDir): array {
+$syncFromGit = function (string $orgName, string $repoName, string $sourceDir, string $targetDir): array {
     $fullName = "{$orgName}/{$repoName}";
     log("Sync {$fullName}...");
-    $url = "git@github.com:{$fullName}.git";
+    $path = dirname(__DIR__, 2) . '/' . $repoName;
+    if (!file_exists("{$path}/.git")) {
+        $url = "git@github.com:{$fullName}.git";
+    } else {
+        $url = "file://{$path}";
+    }
     $version = DependencyManager::sync($repoName, $url, $sourceDir, $targetDir);
     ok("Sync {$fullName} to {$version}");
     return [$repoName => "* {$fullName}@{$version}\n"];
@@ -29,7 +34,7 @@ $syncFromGithub = function (string $orgName, string $repoName, string $sourceDir
 
 try {
     $deps = [];
-    $deps += $syncFromGithub(
+    $deps += $syncFromGit(
         'libcat', 'libcat',
         'libcat', __DIR__ . '/libcat'
     );
