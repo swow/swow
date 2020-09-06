@@ -17,9 +17,9 @@ try {
 
 class TestCoroutine extends Swow\Coroutine
 {
-    public function __sleep(): string
+    public function __sleep(): array
     {
-        return '';
+        return [];
     }
 }
 

@@ -31,6 +31,8 @@ object(Swow\Coroutine)#%d (%d) {
   int(2)
   ["state"]=>
   string(7) "running"
+  ["round"]=>
+  int(%d)
   ["elapsed"]=>
   string(%d) "%s"
   ["trace"]=>
@@ -47,6 +49,8 @@ object(Swow\Coroutine)#%d (%d) {
   int(2)
   ["state"]=>
   string(7) "waiting"
+  ["round"]=>
+  int(%d)
   ["elapsed"]=>
   string(%d) "%s"
   ["trace"]=>
@@ -62,6 +66,8 @@ object(Swow\Coroutine)#%d (%d) {
   int(2)
   ["state"]=>
   string(4) "dead"
+  ["round"]=>
+  int(%d)
   ["elapsed"]=>
   string(%d) "%s"
 }
