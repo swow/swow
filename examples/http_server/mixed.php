@@ -19,6 +19,7 @@ use Swow\Coroutine;
 use Swow\Coroutine\Exception as CoroutineException;
 use Swow\Http\Exception as HttpException;
 use Swow\Http\Server as HttpServer;
+use Swow\Http\Server\WebSocketFrame;
 use Swow\Http\Status as HttpStatus;
 use Swow\Socket\Exception as SocketException;
 use Swow\WebSocket\Opcode as WebSocketOpcode;
@@ -62,6 +63,9 @@ while (true) {
                                             $frame = $session->recvWebSocketFrame();
                                             $opcode = $frame->getOpcode();
                                             switch ($opcode) {
+                                                case WebSocketOpcode::PING:
+                                                    $session->sendString(WebSocketFrame::PONG);
+                                                    break;
                                                 case WebSocketOpcode::PONG:
                                                     break;
                                                 case WebSocketOpcode::CLOSE:
