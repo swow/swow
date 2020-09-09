@@ -430,6 +430,9 @@ namespace Swow
 {
     class Channel
     {
+        public const OPCODE_PUSH = 0;
+        public const OPCODE_POP = 1;
+
         /**
          * @param int $capacity [optional] = 0
          */
@@ -466,12 +469,7 @@ namespace Swow
         /**
          * @return bool
          */
-        public function isEmpty(): bool { }
-
-        /**
-         * @return bool
-         */
-        public function isFull(): bool { }
+        public function isAvailable(): bool { }
 
         /**
          * @return bool
@@ -482,6 +480,31 @@ namespace Swow
          * @return bool
          */
         public function hasConsumers(): bool { }
+
+        /**
+         * @return bool
+         */
+        public function isEmpty(): bool { }
+
+        /**
+         * @return bool
+         */
+        public function isFull(): bool { }
+
+        /**
+         * @return bool
+         */
+        public function isReadable(): bool { }
+
+        /**
+         * @return bool
+         */
+        public function isWritable(): bool { }
+
+        /**
+         * @return bool
+         */
+        public function isClosing(): bool { }
 
         /**
          * @return array
@@ -1146,6 +1169,46 @@ namespace Swow\Coroutine
 namespace Swow\Channel
 {
     class Exception extends \Swow\Exception implements \Stringable, \Throwable { }
+}
+
+namespace Swow\Channel
+{
+    class Selector
+    {
+        /**
+         * @param \Swow\Channel $channel [required]
+         * @param mixed $data [required]
+         * @return $this
+         */
+        public function push(\Swow\Channel $channel, $data): self { }
+
+        /**
+         * @param \Swow\Channel $channel [required]
+         * @return $this
+         */
+        public function pop(\Swow\Channel $channel): self { }
+
+        /**
+         * @param int $timeout [optional] = -1
+         * @return \Swow\Channel
+         */
+        public function do(int $timeout = -1): \Swow\Channel { }
+
+        /**
+         * @return mixed
+         */
+        public function fetch() { }
+
+        /**
+         * @return int
+         */
+        public function getLastOpcode(): int { }
+    }
+}
+
+namespace Swow\Channel\Selector
+{
+    class Exception extends \Swow\CallException implements \Throwable, \Stringable { }
 }
 
 namespace Swow\Sync

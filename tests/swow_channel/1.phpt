@@ -11,7 +11,7 @@ require __DIR__ . '/../include/bootstrap.php';
 use Swow\Channel;
 use Swow\Coroutine;
 
-$channel = new Channel(1);
+$channel = new Channel();
 Coroutine::run(function () use ($channel) {
     $channel->push('Hello Swow');
 });

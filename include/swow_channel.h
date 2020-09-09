@@ -26,14 +26,34 @@
 extern SWOW_API zend_class_entry *swow_channel_ce;
 extern SWOW_API zend_object_handlers swow_channel_handlers;
 
+extern SWOW_API zend_class_entry *swow_channel_selector_ce;
+extern SWOW_API zend_object_handlers swow_channel_selector_handlers;
+
 extern SWOW_API zend_class_entry *swow_channel_exception_ce;
+extern SWOW_API zend_class_entry *swow_channel_selector_exception_ce;
 
 typedef struct
 {
     cat_channel_t channel;
-    ZEND_GET_GC_BUFFER_DECLARE(zqueue);
+    ZEND_GET_GC_BUFFER_DECLARE(zgc_buffer);
     zend_object std;
 } swow_channel_t;
+
+typedef struct
+{
+    /* requests */
+    uint32_t size;
+    uint32_t count;
+    cat_channel_select_request_t *requests;
+    cat_channel_select_request_t _requests[4];
+    /* response */
+    cat_channel_opcode_t last_opcode;
+    zval zdata;
+    /* internal */
+    zval zstorage[4];
+    ZEND_GET_GC_BUFFER_DECLARE(zgc_buffer);
+    zend_object std;
+} swow_channel_selector_t;
 
 /* loader */
 
@@ -49,6 +69,11 @@ static cat_always_inline swow_channel_t *swow_channel_get_from_handle(cat_channe
 static cat_always_inline swow_channel_t *swow_channel_get_from_object(zend_object *object)
 {
     return (swow_channel_t *) ((char *) object - swow_channel_handlers.offset);
+}
+
+static cat_always_inline swow_channel_selector_t *swow_channel_selector_get_from_object(zend_object *object)
+{
+    return (swow_channel_selector_t *) ((char *) object - swow_channel_selector_handlers.offset);
 }
 
 #endif    /* SWOW_CHANNEL_H */
