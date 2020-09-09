@@ -125,10 +125,6 @@ int swow_exceptions_module_init(INIT_FUNC_ARGS)
     /* fast call */
     swow_exception_create_object = zend_ce_exception->create_object;
 
-    SWOW_ERROR_CONTROL_START(E_NONE) {
-        REGISTER_LONG_CONSTANT("E_NONE", E_NONE, CONST_CS | CONST_PERSISTENT);
-    } SWOW_ERROR_CONTROL_END();
-
     return SUCCESS;
 }
 
