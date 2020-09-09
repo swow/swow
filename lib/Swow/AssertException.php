@@ -15,20 +15,29 @@ namespace Swow;
 
 class AssertException extends Exception
 {
+    protected $sourcePositionHook;
+
+    public function setSourcePositionHook(callable $closure): self
+    {
+        $this->sourcePositionHook = $closure;
+
+        return $this;
+    }
+
     public function __toString()
     {
+        $message = $this->getMessage();
         $file = $this->getFile();
         $line = $this->getLine();
-        $msg = $this->getMessage();
-        $trace = $this->getTraceAsString();
-        foreach ($this->getTrace() as $frame) {
-            $file = $frame['file'] ?? 'Unknown';
-            $line = $frame['line'] ?? 0;
-            if ($file !== __FILE__) {
-                break;
-            }
+
+        $hook = $this->sourcePositionHook;
+        if ($hook !== null) {
+            $hook($this, $file, $line);
         }
 
-        return 'AssertException: ' . (empty($msg) ? '' : "{$msg} ") . "in {$file} on line {$line}\nStack trace: \n{$trace}";
+        return 'AssertException: ' .
+            "{$message}" . ($message ? ' ' : '') .
+            "in {$file} on line {$line}\n" .
+            "Stack trace: \n{$this->getTraceAsString()}";
     }
 }
