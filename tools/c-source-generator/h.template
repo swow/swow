@@ -31,4 +31,4 @@ static cat_always_inline swow_{{type_name}}_t* swow_{{type_name}}_get_from_objec
     return (swow_{{type_name}}_t *) ((char *) object - swow_{{type_name}}_handlers.offset);
 }
 
-#endif	/* SWOW_{{FILE_NAME}}_H */
+#endif /* SWOW_{{FILE_NAME}}_H */

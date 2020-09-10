@@ -12,7 +12,7 @@ use function Swow\Util\FileSystem\scan;
         'cat_var_name' => $argv[4] ?? 'foo',
         'class_name' => $argv[5] ?? 'Foo'
     ];
-    $replacement['php_var_name'] = "s{$replacement['swow_var_name']}";
+    $replacement['php_var_name'] = "s{$replacement['cat_var_name']}";
     $replacement['class_name'] = addcslashes($replacement['class_name'], '\\');
     foreach ($replacement as $name => $value) {
         $replacement[strtoupper($name)] = strtoupper($value);

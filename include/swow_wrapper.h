@@ -18,6 +18,9 @@
 
 #ifndef SWOW_WRAPPER_H
 #define SWOW_WRAPPER_H
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #if defined(HAVE_CONFIG_H) && !defined(COMPILE_DL_SWOW)
 #include "config.h"
@@ -569,4 +572,7 @@ SWOW_API cat_bool_t swow_function_internal_access_only_check(INTERNAL_FUNCTION_P
 
 SWOW_API void swow_output_globals_end(void);
 
-#endif    /* SWOW_H */
+#ifdef __cplusplus
+}
+#endif
+#endif /* SWOW_H */

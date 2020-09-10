@@ -18,7 +18,6 @@
 
 #ifndef SWOW_API_H
 #define SWOW_API_H
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -36,5 +35,4 @@ extern "C" {
 #ifdef __cplusplus
 }
 #endif
-
-#endif  /* SWOW_API_H */
+#endif /* SWOW_API_H */

@@ -18,6 +18,9 @@
 
 #ifndef SWOW_BUFFER_H
 #define SWOW_BUFFER_H
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #include "swow.h"
 
@@ -129,4 +132,7 @@ SWOW_INTERNAL
     (sbuffer)->locked = cat_false; \
 } while (0)
 
-#endif    /* SWOW_BUFFER_H */
+#ifdef __cplusplus
+}
+#endif
+#endif /* SWOW_BUFFER_H */

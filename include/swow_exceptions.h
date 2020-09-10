@@ -18,6 +18,9 @@
 
 #ifndef SWOW_EXCEPTION_H
 #define SWOW_EXCEPTION_H
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #include "swow.h"
 
@@ -73,4 +76,7 @@ SWOW_API CAT_COLD void swow_call_exception_set_return_value(zend_object *excepti
 
 SWOW_API const char *swow_strerrortype(int type); SWOW_INTERNAL
 
-#endif    /* SWOW_EXCEPTION_H */
+#ifdef __cplusplus
+}
+#endif
+#endif /* SWOW_EXCEPTION_H */

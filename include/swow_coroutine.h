@@ -18,6 +18,9 @@
 
 #ifndef SWOW_COROUTINE_H
 #define SWOW_COROUTINE_H
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #include "swow.h"
 
@@ -275,4 +278,7 @@ SWOW_API cat_bool_t swow_coroutine_throw(swow_coroutine_t *scoroutine, zend_obje
 SWOW_API cat_bool_t swow_coroutine_term(swow_coroutine_t *scoroutine, const char *message, zend_long code, zval *retval);
 SWOW_API cat_bool_t swow_coroutine_kill(swow_coroutine_t *scoroutine, const char *message, zend_long code);
 
-#endif    /* SWOW_COROUTINE_H */
+#ifdef __cplusplus
+}
+#endif
+#endif /* SWOW_COROUTINE_H */

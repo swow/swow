@@ -18,6 +18,9 @@
 
 #ifndef SWOW_WEBSOCKET_H
 #define SWOW_WEBSOCKET_H
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #include "swow.h"
 #include "swow_buffer.h"
@@ -49,4 +52,7 @@ static cat_always_inline swow_websocket_frame_t* swow_websocket_frame_get_from_o
     return cat_container_of(object, swow_websocket_frame_t, std);
 }
 
-#endif  /* SWOW_WEBSOCKET_H */
+#ifdef __cplusplus
+}
+#endif
+#endif /* SWOW_WEBSOCKET_H */

@@ -18,6 +18,9 @@
 
 #ifndef SWOW_TIME_H
 #define SWOW_TIME_H
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #include "swow.h"
 
@@ -25,4 +28,7 @@
 
 int swow_time_module_init(INIT_FUNC_ARGS);
 
-#endif    /* SWOW_TIME_H */
+#ifdef __cplusplus
+}
+#endif
+#endif /* SWOW_TIME_H */

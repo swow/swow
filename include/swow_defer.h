@@ -18,6 +18,9 @@
 
 #ifndef SWOW_DEFER_H
 #define SWOW_DEFER_H
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #include "swow.h"
 
@@ -56,4 +59,7 @@ static cat_always_inline swow_defer_t *swow_defer_get_from_object(zend_object *o
     return cat_container_of(object, swow_defer_t, std);
 }
 
-#endif    /* SWOW_DEFER_H */
+#ifdef __cplusplus
+}
+#endif
+#endif /* SWOW_DEFER_H */

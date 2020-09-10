@@ -18,6 +18,9 @@
 
 #ifndef SWOW_CHANNEL_H
 #define SWOW_CHANNEL_H
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #include "swow.h"
 
@@ -76,4 +79,7 @@ static cat_always_inline swow_channel_selector_t *swow_channel_selector_get_from
     return cat_container_of(object, swow_channel_selector_t, std);
 }
 
-#endif    /* SWOW_CHANNEL_H */
+#ifdef __cplusplus
+}
+#endif
+#endif /* SWOW_CHANNEL_H */

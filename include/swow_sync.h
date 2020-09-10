@@ -18,6 +18,9 @@
 
 #ifndef SWOW_SYNC_H
 #define SWOW_SYNC_H
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #include "swow.h"
 #include "swow_coroutine.h"
@@ -60,4 +63,7 @@ static cat_always_inline swow_sync_wait_group_t *swow_sync_wait_group_get_from_o
     return cat_container_of(object, swow_sync_wait_group_t, std);
 }
 
-#endif    /* SWOW_SYNC_H */
+#ifdef __cplusplus
+}
+#endif
+#endif /* SWOW_SYNC_H */

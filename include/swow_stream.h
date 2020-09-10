@@ -18,6 +18,9 @@
 
 #ifndef SWOW_STREAM_H
 #define SWOW_STREAM_H
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #include "swow.h"
 
@@ -38,4 +41,7 @@ int swow_stream_module_init(INIT_FUNC_ARGS);
 int swow_stream_runtime_init(INIT_FUNC_ARGS);
 int swow_stream_runtime_shutdown(INIT_FUNC_ARGS);
 
-#endif    /* SWOW_STREAM_H */
+#ifdef __cplusplus
+}
+#endif
+#endif /* SWOW_STREAM_H */

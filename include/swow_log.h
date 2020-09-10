@@ -18,6 +18,9 @@
 
 #ifndef SWOW_LOG_H
 #define SWOW_LOG_H
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #include "swow.h"
 
@@ -26,4 +29,7 @@ extern SWOW_API zend_object_handlers swow_log_handlers;
 
 int swow_log_module_init(INIT_FUNC_ARGS);
 
-#endif    /* SWOW_LOG_H */
+#ifdef __cplusplus
+}
+#endif
+#endif /* SWOW_LOG_H */

@@ -18,6 +18,9 @@
 
 #ifndef SWOW_EVENT_H
 #define SWOW_EVENT_H
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #include "swow.h"
 #include "swow_coroutine.h"
@@ -43,4 +46,7 @@ int swow_event_runtime_init(INIT_FUNC_ARGS);
 int swow_event_runtime_shutdown(SHUTDOWN_FUNC_ARGS);
 int swow_event_delay_runtime_shutdown(void);
 
-#endif    /* SWOW_EVENT_H */
+#ifdef __cplusplus
+}
+#endif
+#endif /* SWOW_EVENT_H */

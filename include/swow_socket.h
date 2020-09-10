@@ -18,6 +18,9 @@
 
 #ifndef SWOW_SOCKET_H
 #define SWOW_SOCKET_H
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #include "swow.h"
 
@@ -51,4 +54,7 @@ static cat_always_inline swow_socket_t *swow_socket_get_from_object(zend_object 
     return cat_container_of(object, swow_socket_t, std);
 }
 
-#endif  /* SWOW_SOCKET_H */
+#ifdef __cplusplus
+}
+#endif
+#endif /* SWOW_SOCKET_H */

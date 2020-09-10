@@ -18,10 +18,16 @@
 
 #ifndef SWOW_HOOK_H
 #define SWOW_HOOK_H
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #include "swow.h"
 
 SWOW_API cat_bool_t swow_hook_internal_function(const zend_function_entry *fe);
 SWOW_API cat_bool_t swow_hook_internal_functions(const zend_function_entry *fes);
 
-#endif  /* SWOW_HOOK_H */
+#ifdef __cplusplus
+}
+#endif
+#endif /* SWOW_HOOK_H */
