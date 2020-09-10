@@ -1202,11 +1202,6 @@ namespace Swow\Sync
     class WaitReference
     {
         /**
-         * @return $this
-         */
-        public static function make(): self { }
-
-        /**
          * @param \Swow\Sync\WaitReference $waitReference [required]
          * @param int $timeout [optional] = -1
          * @return void
@@ -1221,11 +1216,6 @@ namespace Swow\Sync
 {
     class WaitGroup
     {
-        /**
-         * @return $this
-         */
-        public static function make(): self { }
-
         /**
          * @param int $delta [optional] = 1
          * @return void

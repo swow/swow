@@ -43,7 +43,7 @@ Coroutine::run(function () use ($server) {
     }
 });
 
-$wr = WaitReference::make();
+$wr = new WaitReference();
 for ($c = 0; $c < TEST_MAX_CONCURRENCY_LOW; $c++) {
     Coroutine::run(function () use ($server, $wr) {
         $client = new Socket(Socket::TYPE_PIPE);

@@ -46,14 +46,6 @@ static zend_object *swow_sync_wait_group_create_object(zend_class_entry *ce)
     return &swg->std;
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_swow_sync_wait_reference_make, ZEND_RETURN_VALUE, 0, Swow\\Sync\\WaitReference, 0)
-ZEND_END_ARG_INFO()
-
-static PHP_METHOD(swow_sync_wait_reference, make)
-{
-    RETURN_STATIC();
-}
-
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_swow_sync_wait_reference_wait, ZEND_RETURN_VALUE, 1, IS_VOID, 0)
     ZEND_ARG_OBJ_INFO(1, waitReference, Swow\\Sync\\WaitReference, 0)
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, timeout, IS_LONG, 0, "-1")
@@ -107,19 +99,10 @@ static PHP_METHOD(swow_sync_wait_reference, __destruct)
 }
 
 static const zend_function_entry swow_sync_wait_reference_methods[] = {
-    PHP_ME(swow_sync_wait_reference, make,       arginfo_swow_sync_wait_reference_make,       ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
     PHP_ME(swow_sync_wait_reference, wait,       arginfo_swow_sync_wait_reference_wait,       ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
     PHP_ME(swow_sync_wait_reference, __destruct, arginfo_swow_sync_wait_reference___destruct, ZEND_ACC_PUBLIC)
     PHP_FE_END
 };
-
-ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_swow_sync_wait_group_make, ZEND_RETURN_VALUE, 0, Swow\\Sync\\WaitGroup, 0)
-ZEND_END_ARG_INFO()
-
-static PHP_METHOD(swow_sync_wait_group, make)
-{
-    RETURN_STATIC();
-}
 
 #define getThisWG() (swow_sync_wait_group_get_from_object(Z_OBJ_P(ZEND_THIS)))
 
@@ -188,7 +171,6 @@ static PHP_METHOD(swow_sync_wait_group, done)
 }
 
 static const zend_function_entry swow_sync_wait_group_methods[] = {
-    PHP_ME(swow_sync_wait_group, make,       arginfo_swow_sync_wait_group_make,       ZEND_ACC_STATIC | ZEND_ACC_PUBLIC)
     PHP_ME(swow_sync_wait_group, add,        arginfo_swow_sync_wait_group_add,                          ZEND_ACC_PUBLIC)
     PHP_ME(swow_sync_wait_group, wait,       arginfo_swow_sync_wait_group_wait,                         ZEND_ACC_PUBLIC)
     PHP_ME(swow_sync_wait_group, done,       arginfo_swow_sync_wait_group_done,                         ZEND_ACC_PUBLIC)

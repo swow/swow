@@ -12,6 +12,7 @@ require __DIR__ . '/../include/bootstrap.php';
 use Swow\Coroutine;
 use Swow\Socket;
 use Swow\Sync\WaitReference;
+use const Swow\Errno\ECANCELED;
 
 if (stripos(PHP_OS, 'Linux') !== false) {
     /* linux abstract name */
@@ -40,11 +41,11 @@ foreach ([false, true] as $useConnect) {
                 $server->sendStringTo($message, $address);
             }
         } catch (Socket\Exception $exception) {
-            Assert::same($exception->getCode(), SWOW\ECANCELED);
+            Assert::same($exception->getCode(), ECANCELED);
         }
     });
 
-    $wr = WaitReference::make();
+    $wr = new WaitReference();
     Coroutine::run(function () use ($server, $useConnect, $wr) {
         $client = new Socket(Socket::TYPE_UDG);
         $client->bind(CLIENT_SOCK);

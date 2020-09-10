@@ -35,7 +35,7 @@ Coroutine::run(function () use ($server, $random) {
     }
 });
 
-$wr = WaitReference::make();
+$wr = new WaitReference();
 Coroutine::run(function () use ($server, $random, $wr) {
     $client = new Socket(Socket::TYPE_TCP);
     $client->connect($server->getSockAddress(), $server->getSockPort());

@@ -11,7 +11,7 @@ require __DIR__ . '/../../include/bootstrap.php';
 use Swow\Sync\WaitGroup;
 use Swow\Coroutine;
 
-$wg = WaitGroup::make();
+$wg = new WaitGroup();
 $wg->add($n = 10);
 while ($n--) {
     Coroutine::run(function () use ($wg, $n) {

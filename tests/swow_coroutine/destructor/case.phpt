@@ -11,7 +11,7 @@ require __DIR__ . '/../../include/bootstrap.php';
 use Swow\Coroutine;
 use Swow\Sync\WaitReference;
 
-$wr = WaitReference::make();
+$wr = new WaitReference();
 $o1 = new class {
     public function __destruct()
     {

@@ -10,7 +10,7 @@ require __DIR__ . '/../../include/bootstrap.php';
 
 use Swow\Sync\WaitReference;
 
-$wr = WaitReference::make();
+$wr = new WaitReference();
 
 Swow\Coroutine::run(function () use ($wr) {
     echo 'coroutine[1] start' . PHP_LF;
