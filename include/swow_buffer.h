@@ -60,7 +60,7 @@ static cat_always_inline swow_buffer_t *swow_buffer_get_from_handle(cat_buffer_t
 
 static cat_always_inline swow_buffer_t *swow_buffer_get_from_object(zend_object *object)
 {
-    return (swow_buffer_t *) ((char *) object - swow_buffer_handlers.offset);
+    return cat_container_of(object, swow_buffer_t, std);
 }
 
 /* internal use */

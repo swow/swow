@@ -52,12 +52,12 @@ int swow_sync_module_init(INIT_FUNC_ARGS);
 
 static cat_always_inline swow_sync_wait_reference_t *swow_sync_wait_reference_get_from_object(zend_object *object)
 {
-    return (swow_sync_wait_reference_t *) ((char *) object - swow_sync_wait_reference_handlers.offset);
+    return cat_container_of(object, swow_sync_wait_reference_t, std);
 }
 
 static cat_always_inline swow_sync_wait_group_t *swow_sync_wait_group_get_from_object(zend_object *object)
 {
-    return (swow_sync_wait_group_t *) ((char *) object - swow_sync_wait_group_handlers.offset);
+    return cat_container_of(object, swow_sync_wait_group_t, std);
 }
 
 #endif    /* SWOW_SYNC_H */

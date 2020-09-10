@@ -68,12 +68,12 @@ static cat_always_inline swow_channel_t *swow_channel_get_from_handle(cat_channe
 
 static cat_always_inline swow_channel_t *swow_channel_get_from_object(zend_object *object)
 {
-    return (swow_channel_t *) ((char *) object - swow_channel_handlers.offset);
+    return cat_container_of(object, swow_channel_t, std);
 }
 
 static cat_always_inline swow_channel_selector_t *swow_channel_selector_get_from_object(zend_object *object)
 {
-    return (swow_channel_selector_t *) ((char *) object - swow_channel_selector_handlers.offset);
+    return cat_container_of(object, swow_channel_selector_t, std);
 }
 
 #endif    /* SWOW_CHANNEL_H */

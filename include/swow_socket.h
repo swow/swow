@@ -48,7 +48,7 @@ static cat_always_inline swow_socket_t *swow_socket_get_from_handle(cat_socket_t
 
 static cat_always_inline swow_socket_t *swow_socket_get_from_object(zend_object *object)
 {
-    return (swow_socket_t *) ((char *) object - swow_socket_handlers.offset);
+    return cat_container_of(object, swow_socket_t, std);
 }
 
 #endif  /* SWOW_SOCKET_H */

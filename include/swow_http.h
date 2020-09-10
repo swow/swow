@@ -50,7 +50,7 @@ static cat_always_inline swow_http_parser_t *swow_http_parser_get_from_handle(ca
 
 static cat_always_inline swow_http_parser_t *swow_http_parser_get_from_object(zend_object *object)
 {
-    return (swow_http_parser_t *) ((char *) object - swow_http_parser_handlers.offset);
+    return cat_container_of(object, swow_http_parser_t, std);
 }
 
 #endif  /* SWOW_HTTP_H */

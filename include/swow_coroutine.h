@@ -172,7 +172,7 @@ static cat_always_inline swow_coroutine_t *swow_coroutine_get_from_handle(cat_co
 
 static cat_always_inline swow_coroutine_t *swow_coroutine_get_from_object(zend_object *object)
 {
-    return (swow_coroutine_t *) ((char *) object - swow_coroutine_handlers.offset);
+    return cat_container_of(object, swow_coroutine_t, std);
 }
 
 /* create */

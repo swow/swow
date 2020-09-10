@@ -46,7 +46,7 @@ int swow_websocket_module_init(INIT_FUNC_ARGS);
 
 static cat_always_inline swow_websocket_frame_t* swow_websocket_frame_get_from_object(zend_object *object)
 {
-    return (swow_websocket_frame_t *) ((char *) object - swow_websocket_frame_handlers.offset);
+    return cat_container_of(object, swow_websocket_frame_t, std);
 }
 
 #endif  /* SWOW_WEBSOCKET_H */
