@@ -12,7 +12,7 @@
   | See the License for the specific language governing permissions and      |
   | limitations under the License. See accompanying LICENSE file.            |
   +--------------------------------------------------------------------------+
-  | Author: Twosee <twose@qq.com>                                            |
+  | Author: Twosee <twosee@php.net>                                          |
   +--------------------------------------------------------------------------+
  */
 
@@ -246,7 +246,7 @@ PHP_MINFO_FUNCTION(swow)
 
     php_info_print_table_start();
     php_info_print_table_header(2, "Status", "enabled");
-    php_info_print_table_header(2, "Author", "twosee <twose@qq.com>");
+    php_info_print_table_header(2, "Author", "twosee <twosee@php.net>");
     php_info_print_table_header(2, "Version", SWOW_VERSION " ( " SWOW_VERSION_SUFFIX SWOW_VERSION_SUFFIX_EXT " )");
     php_info_print_table_header(2, "Context", SWOW_COROUTINE_CONTEXT_TYPE);
     php_info_print_table_header(2, "Scheduler", "libuv-event");
