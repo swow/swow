@@ -1,7 +1,7 @@
 <?php
 /** @noinspection PhpUnused, PhpInconsistentReturnPointsInspection, PhpMissingParentConstructorInspection */
 
-namespace Swow
+namespace Swow\Errno
 {
     const E2BIG = -7;
     const EACCES = -13;
@@ -83,18 +83,13 @@ namespace Swow
     const ENOTTY = -25;
     const EFTYPE = -4028;
     const EILSEQ = -84;
-    const EUNKNOWN = -9764;
-    const EABNORMAL = -9765;
-    const EMISUSE = -9766;
-    const EVALUE = -9767;
-    const ELOCKED = -9768;
-    const EPREV = -9769;
-    const ESSL = -9770;
-}
-
-namespace 
-{
-    const E_NONE = 0;
+    const UNCODED = -9763;
+    const EPREV = -9762;
+    const EMISUSE = -9761;
+    const EVALUE = -9760;
+    const ELOCKED = -9759;
+    const EDEADLK = -9758;
+    const ESSL = -9757;
 }
 
 namespace Swow\WebSocket
@@ -1123,15 +1118,6 @@ namespace Swow
 namespace Swow
 {
     /**
-     * @param int $error [optional]
-     * @return string
-     */
-     function strerror(int $error): string { }
-}
-
-namespace Swow
-{
-    /**
      * @param callable $tasks [optional]
      * @return void
      */
@@ -1739,4 +1725,13 @@ namespace Swow\WebSocket
          */
         public function __debugInfo(): array { }
     }
+}
+
+namespace Swow\Errno
+{
+    /**
+     * @param int $error [optional]
+     * @return string
+     */
+     function strerror(int $error): string { }
 }

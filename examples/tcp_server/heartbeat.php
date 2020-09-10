@@ -29,7 +29,7 @@ while (true) {
             }
             echo "No.{$client->getFd()} closed" . PHP_EOL;
         } catch (Swow\Socket\Exception $exception) {
-            if ($exception->getCode() === Swow\ETIMEDOUT) {
+            if ($exception->getCode() === Swow\Errno\ETIMEDOUT) {
                 $client->sendString("Server has kicked you out\r\n");
             }
             echo "No.{$client->getFd()} goaway! {$exception->getMessage()}" . PHP_EOL;

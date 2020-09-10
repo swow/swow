@@ -11,8 +11,8 @@ require __DIR__ . '/../include/bootstrap.php';
 use Swow\Coroutine;
 use Swow\Socket;
 use Swow\Sync\WaitReference;
-use const Swow\ECANCELED;
-use const Swow\ECONNRESET;
+use const Swow\Errno\ECANCELED;
+use const Swow\Errno\ECONNRESET;
 
 $random = getRandomBytes(TEST_MAX_LENGTH_LOW);
 

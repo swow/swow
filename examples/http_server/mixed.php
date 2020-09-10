@@ -23,8 +23,8 @@ use Swow\Http\Server\WebSocketFrame;
 use Swow\Http\Status as HttpStatus;
 use Swow\Socket\Exception as SocketException;
 use Swow\WebSocket\Opcode as WebSocketOpcode;
-use const Swow\EMFILE;
-use const Swow\ENFILE;
+use const Swow\Errno\EMFILE;
+use const Swow\Errno\ENFILE;
 
 $server = new HttpServer();
 $server->bind('0.0.0.0', 9764)->listen();

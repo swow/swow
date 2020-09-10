@@ -254,11 +254,11 @@ PHP_MINFO_FUNCTION(swow)
 }
 /* }}} */
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_swow_strerror, ZEND_RETURN_VALUE, 0, IS_STRING, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_swow_errno_strerror, ZEND_RETURN_VALUE, 0, IS_STRING, 0)
     ZEND_ARG_TYPE_INFO(0, error, IS_LONG, 0)
 ZEND_END_ARG_INFO()
 
-static PHP_FUNCTION(swow_strerror)
+static PHP_FUNCTION(swow_errno_strerror)
 {
     zend_long error;
 
@@ -270,7 +270,7 @@ static PHP_FUNCTION(swow_strerror)
 }
 
 static const zend_function_entry swow_functions[] = {
-    PHP_FENTRY(Swow\\strerror, PHP_FN(swow_strerror), arginfo_swow_strerror, 0)
+    PHP_FENTRY(Swow\\Errno\\strerror, PHP_FN(swow_errno_strerror), arginfo_swow_errno_strerror, 0)
     PHP_FE_END
 };
 
@@ -305,7 +305,7 @@ int swow_module_init(INIT_FUNC_ARGS)
     );
 
     /* Errno constants */
-#define SWOW_ERRNO_GEN(name, message) REGISTER_LONG_CONSTANT("Swow\\" #name, CAT_##name, CONST_CS | CONST_PERSISTENT);
+#define SWOW_ERRNO_GEN(name, message) REGISTER_LONG_CONSTANT("Swow\\Errno\\" #name, CAT_##name, CONST_CS | CONST_PERSISTENT);
     CAT_ERRNO_MAP(SWOW_ERRNO_GEN)
 #undef SWOW_ERRNO_GEN
 
