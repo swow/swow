@@ -171,9 +171,9 @@ static PHP_METHOD(swow_sync_wait_group, done)
 }
 
 static const zend_function_entry swow_sync_wait_group_methods[] = {
-    PHP_ME(swow_sync_wait_group, add,        arginfo_swow_sync_wait_group_add,                          ZEND_ACC_PUBLIC)
-    PHP_ME(swow_sync_wait_group, wait,       arginfo_swow_sync_wait_group_wait,                         ZEND_ACC_PUBLIC)
-    PHP_ME(swow_sync_wait_group, done,       arginfo_swow_sync_wait_group_done,                         ZEND_ACC_PUBLIC)
+    PHP_ME(swow_sync_wait_group, add,  arginfo_swow_sync_wait_group_add,  ZEND_ACC_PUBLIC)
+    PHP_ME(swow_sync_wait_group, wait, arginfo_swow_sync_wait_group_wait, ZEND_ACC_PUBLIC)
+    PHP_ME(swow_sync_wait_group, done, arginfo_swow_sync_wait_group_done, ZEND_ACC_PUBLIC)
     PHP_FE_END
 };
 
