@@ -1193,7 +1193,77 @@ static PHP_METHOD(swow_socket, getIoStateNaming)
     RETURN_STRING(cat_socket_get_io_state_naming(socket));
 }
 
+#define arginfo_swow_socket_getRecvBufferSize arginfo_swow_socket_getLong
+
+static PHP_METHOD(swow_socket, getRecvBufferSize)
+{
+    SWOW_SOCKET_GETTER(ssocket, socket);
+
+    ZEND_PARSE_PARAMETERS_NONE();
+
+    RETURN_LONG(cat_socket_get_recv_buffer_size(socket));
+}
+
+#define arginfo_swow_socket_getSendBufferSize arginfo_swow_socket_getLong
+
+static PHP_METHOD(swow_socket, getSendBufferSize)
+{
+    SWOW_SOCKET_GETTER(ssocket, socket);
+
+    ZEND_PARSE_PARAMETERS_NONE();
+
+    RETURN_LONG(cat_socket_get_send_buffer_size(socket));
+}
+
 /* setter */
+
+ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_swow_socket_setSize, ZEND_RETURN_VALUE, 1, Swow\\Socket, 0)
+    ZEND_ARG_TYPE_INFO(0, size, IS_LONG, 0)
+ZEND_END_ARG_INFO()
+
+#define arginfo_swow_socket_setRecvBufferSize arginfo_swow_socket_setSize
+
+static PHP_METHOD(swow_socket, setRecvBufferSize)
+{
+    SWOW_SOCKET_GETTER(ssocket, socket);
+    zend_long size;
+    int error;
+
+    ZEND_PARSE_PARAMETERS_START(0, 1)
+        Z_PARAM_LONG(size)
+    ZEND_PARSE_PARAMETERS_END();
+
+    error = cat_socket_set_recv_buffer_size(socket, size);
+
+    if (UNEXPECTED(error < 0)) {
+        swow_throw_exception_with_last(swow_socket_exception_ce);
+        RETURN_THROWS();
+    }
+
+    RETURN_THIS();
+}
+
+#define arginfo_swow_socket_setSendBufferSize arginfo_swow_socket_setSize
+
+static PHP_METHOD(swow_socket, setSendBufferSize)
+{
+    SWOW_SOCKET_GETTER(ssocket, socket);
+    zend_long size;
+    int error;
+
+    ZEND_PARSE_PARAMETERS_START(0, 1)
+        Z_PARAM_LONG(size)
+    ZEND_PARSE_PARAMETERS_END();
+
+    error = cat_socket_set_send_buffer_size(socket, size);
+
+    if (UNEXPECTED(error < 0)) {
+        swow_throw_exception_with_last(swow_socket_exception_ce);
+        RETURN_THROWS();
+    }
+
+    RETURN_THIS();
+}
 
 ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_swow_socket_setBool, ZEND_RETURN_VALUE, 0, Swow\\Socket, 0)
     ZEND_ARG_TYPE_INFO(0, enable, _IS_BOOL, 0)
@@ -1380,7 +1450,11 @@ static const zend_function_entry swow_socket_methods[] = {
     PHP_ME(swow_socket, getIoState,            arginfo_swow_socket_getIoState,          ZEND_ACC_PUBLIC)
     PHP_ME(swow_socket, getIoStateName,        arginfo_swow_socket_getIoStateName,      ZEND_ACC_PUBLIC)
     PHP_ME(swow_socket, getIoStateNaming,      arginfo_swow_socket_getIoStateNaming,    ZEND_ACC_PUBLIC)
+    PHP_ME(swow_socket, getRecvBufferSize,     arginfo_swow_socket_getRecvBufferSize,   ZEND_ACC_PUBLIC)
+    PHP_ME(swow_socket, getSendBufferSize,     arginfo_swow_socket_getSendBufferSize,   ZEND_ACC_PUBLIC)
     /* setter */
+    PHP_ME(swow_socket, setRecvBufferSize,     arginfo_swow_socket_setRecvBufferSize,   ZEND_ACC_PUBLIC)
+    PHP_ME(swow_socket, setSendBufferSize,     arginfo_swow_socket_setSendBufferSize,   ZEND_ACC_PUBLIC)
     PHP_ME(swow_socket, setTcpNodelay,         arginfo_swow_socket_setTcpNodelay,       ZEND_ACC_PUBLIC)
     PHP_ME(swow_socket, setTcpKeepAlive,       arginfo_swow_socket_setTcpKeepAlive,     ZEND_ACC_PUBLIC)
     PHP_ME(swow_socket, setTcpAcceptBalance,   arginfo_swow_socket_setTcpAcceptBalance, ZEND_ACC_PUBLIC)

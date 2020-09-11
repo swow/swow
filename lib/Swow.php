@@ -1090,6 +1090,28 @@ namespace Swow
         public function getIoStateNaming(): string { }
 
         /**
+         * @return int
+         */
+        public function getRecvBufferSize(): int { }
+
+        /**
+         * @return int
+         */
+        public function getSendBufferSize(): int { }
+
+        /**
+         * @param int $size [required]
+         * @return $this
+         */
+        public function setRecvBufferSize(int $size): self { }
+
+        /**
+         * @param int $size [required]
+         * @return $this
+         */
+        public function setSendBufferSize(int $size): self { }
+
+        /**
          * @param bool $enable [optional]
          * @return $this
          */
