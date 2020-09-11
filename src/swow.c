@@ -27,6 +27,7 @@
 #include "swow_buffer.h"
 #include "swow_socket.h"
 #include "swow_stream.h"
+#include "swow_signal.h"
 #include "swow_http.h"
 #include "swow_websocket.h"
 
@@ -75,6 +76,7 @@ PHP_MINIT_FUNCTION(swow)
         swow_buffer_module_init,
         swow_socket_module_init,
         swow_stream_module_init,
+        swow_signal_module_init,
         swow_http_module_init,
         swow_websocket_module_init,
     };

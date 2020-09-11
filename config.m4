@@ -94,6 +94,7 @@ if test "${SWOW}" != "no"; then
     ${SWOW_SRC_DIR}/swow_buffer.c
     ${SWOW_SRC_DIR}/swow_socket.c
     ${SWOW_SRC_DIR}/swow_stream.c
+    ${SWOW_SRC_DIR}/swow_signal.c
     ${SWOW_SRC_DIR}/swow_http.c
     ${SWOW_SRC_DIR}/swow_websocket.c
   "
