@@ -37,12 +37,20 @@ class ExtensionGenerator
     /** @var string */
     protected $extension;
 
+    /** @var array */
+    protected $constantMap;
+
     /** @var callable */
     protected $functionFormatHandler;
 
     public function __construct(string $extensionName)
     {
         $this->extension = new ReflectionExtension($extensionName);
+    }
+
+    public function getExtensionName(): string
+    {
+        return $this->extension->getName();
     }
 
     public function setFunctionFormatHandler(callable $formatter): self
@@ -54,15 +62,18 @@ class ExtensionGenerator
 
     public function generate($output = null): void
     {
-        $declarations = $this->generateConstantDeclarations();
+        $declarations = [];
 
-        $functionAndClasses = [];
+        $namespacedGroups = [];
         foreach (($this->extension->getClasses() + $this->extension->getFunctions()) as $functionOrClass) {
-            $functionAndClasses[$functionOrClass->getNamespaceName()][] = $functionOrClass;
+            $namespacedGroups[$functionOrClass->getNamespaceName()][] = $functionOrClass;
         }
 
-        foreach ($functionAndClasses as $namespaceScope) {
-            foreach ($namespaceScope as $functionOrClass) {
+        foreach ($namespacedGroups as $namespaceName => $namespacedGroup) {
+            if ($this->hasConstantsInNamespace($namespaceName)) {
+                $declarations[] = $this->generateConstantDeclarationOfNamespace($namespaceName);
+            }
+            foreach ($namespacedGroup as $functionOrClass) {
                 if ($functionOrClass instanceof ReflectionFunction) {
                     $declarations[] = $this->generateFunctionDeclaration($functionOrClass);
                 } elseif ($functionOrClass instanceof ReflectionClass) {
@@ -108,28 +119,49 @@ class ExtensionGenerator
         }
     }
 
-    protected function generateConstantDeclarations(): array
+    protected function getConstantMap(): array
     {
-        $result = [];
+        if ($this->constantMap !== null) {
+            return $this->constantMap;
+        }
 
         $constantMap = [];
-        $constantArray = $this->extension->getConstants();
-        foreach ($constantArray as $constantName => $constantValue) {
+
+        foreach ($this->extension->getConstants() as $constantName => $constantValue) {
             $namespaceName = explode('\\', $constantName);
             $constantName = array_pop($namespaceName);
             $namespaceName = implode('\\', $namespaceName);
             $constantMap[$namespaceName][$constantName] = $constantValue;
         }
-        foreach ($constantMap as $namespaceName => $constantArray) {
-            $declaration = "namespace {$namespaceName}\n{\n";
-            foreach ($constantArray as $constantName => $constantValue) {
-                $declaration .= "    const {$constantName} = {$this::convertValueToString($constantValue)};\n";
-            }
-            $declaration .= '}';
-            $result[] = $declaration;
+
+        return $this->constantMap = $constantMap;
+    }
+
+    protected function hasConstantsInNamespace(string $namespacedName): bool
+    {
+        return !empty($this->getConstantsOfNamespace($namespacedName));
+    }
+
+    protected function getConstantsOfNamespace(string $namespacedName): array
+    {
+        return $this->getConstantMap()[$namespacedName] ?? [];
+    }
+
+    protected function generateConstantDeclarationOfNamespace(string $namespaceName): string
+    {
+        $constantsOfNamespace = $this->getConstantsOfNamespace($namespaceName);
+
+        if (empty($constantsOfNamespace)) {
+            throw new \RuntimeException("No constant in {$namespaceName}");
         }
 
-        return $result;
+        $declaration = "namespace {$namespaceName}\n{\n";
+        foreach ($constantsOfNamespace as $constantName => $constantValue) {
+            $declaration .= "    const {$constantName} = {$this::convertValueToString($constantValue)};\n";
+        }
+        $declaration .= '}';
+
+        return $declaration;
     }
 
     /** @param ReflectionFunction|ReflectionMethod|ReflectionProperty|Reflector $reflector */
