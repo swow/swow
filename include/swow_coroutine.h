@@ -259,7 +259,7 @@ SWOW_API void swow_coroutine_set_executor_switcher(cat_bool_t enable); SWOW_INTE
 /* debug */
 
 SWOW_API HashTable *swow_coroutine_get_trace(const swow_coroutine_t *scoroutine, zend_long options, zend_long limit);
-SWOW_API smart_str *swow_coroutine_get_trace_to_string(swow_coroutine_t *scoroutine, smart_str *str, zend_long options, zend_long limit);
+SWOW_API smart_str *swow_coroutine_get_trace_as_smart_str(swow_coroutine_t *scoroutine, smart_str *str, zend_long options, zend_long limit);
 SWOW_API zend_string *swow_coroutine_get_trace_as_string(const swow_coroutine_t *scoroutine, zend_long options, zend_long limit);
 SWOW_API HashTable *swow_coroutine_get_trace_as_list(const swow_coroutine_t *scoroutine, zend_long options, zend_long limit);
 

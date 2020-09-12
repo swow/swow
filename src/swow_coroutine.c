@@ -861,7 +861,7 @@ SWOW_API HashTable *swow_coroutine_get_trace(const swow_coroutine_t *scoroutine,
     return trace;
 }
 
-SWOW_API smart_str *swow_coroutine_get_trace_to_string(swow_coroutine_t *scoroutine, smart_str *str, zend_long options, zend_long limit)
+SWOW_API smart_str *swow_coroutine_get_trace_as_smart_str(swow_coroutine_t *scoroutine, smart_str *str, zend_long options, zend_long limit)
 {
     if (UNEXPECTED(!swow_coroutine_is_alive(scoroutine))) {
         return NULL;
@@ -1869,7 +1869,7 @@ static PHP_METHOD(swow_coroutine, __debugInfo)
         const zend_long limit = 0;
         smart_str str = { 0 };
         smart_str_appendc(&str, '\n');
-        swow_coroutine_get_trace_to_string(scoroutine, &str, options, limit);
+        swow_coroutine_get_trace_as_smart_str(scoroutine, &str, options, limit);
         smart_str_appendc(&str, '\n');
         smart_str_0(&str);
         add_assoc_str(&zdebug_info, "trace", str.s);

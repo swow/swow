@@ -28,7 +28,7 @@
 #include "swow_socket.h"
 #include "swow_stream.h"
 #include "swow_signal.h"
-#include "swow_debug.h";
+#include "swow_debug.h"
 #include "swow_http.h"
 #include "swow_websocket.h"
 
