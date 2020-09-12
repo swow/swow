@@ -13,13 +13,15 @@ declare(strict_types=1);
 
 namespace Swow;
 
+use function Swow\Debug\buildTraceAsString;
+
 class AssertException extends Exception
 {
-    protected $sourcePositionHook;
+    protected $traceToStringHandler;
 
-    public function setSourcePositionHook(callable $closure): self
+    public function setTraceToStringHandler(callable $handler): self
     {
-        $this->sourcePositionHook = $closure;
+        $this->traceToStringHandler = $handler;
 
         return $this;
     }
@@ -27,17 +29,19 @@ class AssertException extends Exception
     public function __toString()
     {
         $message = $this->getMessage();
-        $file = $this->getFile();
-        $line = $this->getLine();
+        $trace = $this->getTrace();
 
-        $hook = $this->sourcePositionHook;
-        if ($hook !== null) {
-            $hook($this, $file, $line);
+        $handler = $this->traceToStringHandler;
+        if ($handler !== null) {
+            $trace = $handler($trace);
         }
+        $file = $trace[0]['file'] ?? 'Unknown';
+        $line = $trace[0]['line'] ?? 0;
+        $traceString = buildTraceAsString($trace);
 
         return 'AssertException: ' .
             "{$message}" . ($message ? ' ' : '') .
             "in {$file} on line {$line}\n" .
-            "Stack trace: \n{$this->getTraceAsString()}";
+            "Stack trace: \n{$traceString}";
     }
 }

@@ -1520,14 +1520,16 @@ class Assert
 
     protected static function reportInvalidArgument(string $message = '')
     {
-        $exception = (new AssertException($message))->setSourcePositionHook(function (AssertException $exception, string &$file, int &$line): void {
-            foreach ($exception->getTrace() as $frame) {
+        $exception = new AssertException($message);
+        $exception->setTraceToStringHandler(function (array $trace): array {
+            foreach ($trace as $index => $frame) {
                 $file = $frame['file'] ?? 'Unknown';
-                $line = $frame['line'] ?? 0;
                 if ($file !== __FILE__) {
                     break;
                 }
             }
+
+            return array_slice($trace, $index ?? 0);
         });
 
         if (!static::$throwException) {
