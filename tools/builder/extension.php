@@ -43,7 +43,7 @@ if (!file_exists("{$workSpace}/config.log")) {
     $commandArray[] = './configure --enable-debug';
 }
 // TODO: option --silent
-$commandArray[] = "make -j{$cpuCount}";
+$commandArray[] = "make -j{$cpuCount} > /dev/null";
 $command = implode(" && \\\n", $commandArray);
 
 passthru($command, $status);
