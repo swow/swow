@@ -1798,3 +1798,12 @@ namespace Swow\Errno
      */
      function strerror(int $error): string { }
 }
+
+namespace Swow\Debug
+{
+    /**
+     * @param array $trace [optional]
+     * @return string
+     */
+     function buildTraceAsString(array $trace): string { }
+}

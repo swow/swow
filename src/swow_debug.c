@@ -151,21 +151,12 @@ static void swow_build_trace_string(smart_str *str, HashTable *ht, uint32_t num,
 
 #undef TRACE_APPEND_KEY
 
-SWOW_API HashTable *swow_get_trace(zend_long options, zend_long limit)
+SWOW_API smart_str *swow_build_trace_as_smart_str(smart_str *str, HashTable *trace)
 {
-    zval retval;
-    zend_fetch_debug_backtrace(&retval, 0, options, limit);
-    return Z_ARRVAL(retval);
-}
-
-SWOW_API smart_str *swow_get_trace_to_string(smart_str *str, zend_long options, zend_long limit)
-{
-    HashTable *trace;
     zend_ulong index;
     zval *zframe;
     uint32_t num = 0;
 
-    trace = swow_get_trace(options, limit);
     ZEND_HASH_FOREACH_NUM_KEY_VAL(trace, index, zframe) {
         if (Z_TYPE_P(zframe) != IS_ARRAY) {
             zend_error(E_WARNING, "Expected array for frame " ZEND_ULONG_FMT, index);
@@ -182,11 +173,38 @@ SWOW_API smart_str *swow_get_trace_to_string(smart_str *str, zend_long options, 
     return str;
 }
 
+SWOW_API zend_string *swow_build_trace_as_string(HashTable *trace)
+{
+    smart_str str = {};
+
+    swow_build_trace_as_smart_str(&str, trace);
+
+    smart_str_0(&str);
+
+    return str.s;
+}
+
+SWOW_API HashTable *swow_get_trace(zend_long options, zend_long limit)
+{
+    zval retval;
+    zend_fetch_debug_backtrace(&retval, 0, options, limit);
+    return Z_ARRVAL(retval);
+}
+
+SWOW_API smart_str *swow_get_trace_as_smart_str(smart_str *str, zend_long options, zend_long limit)
+{
+    HashTable *trace;
+
+    trace = swow_get_trace(options, limit);
+
+    return swow_build_trace_as_smart_str(str, trace);
+}
+
 SWOW_API zend_string *swow_get_trace_as_string(zend_long options, zend_long limit)
 {
-    smart_str str = {0};
+    smart_str str = {};
 
-    swow_get_trace_to_string(&str, options, limit);
+    swow_get_trace_as_smart_str(&str, options, limit);
     smart_str_0(&str);
 
     return str.s;
@@ -218,4 +236,33 @@ SWOW_API HashTable *swow_get_trace_as_list(zend_long options, zend_long limit)
     zend_hash_next_index_insert(list, &zline);
 
     return list;
+}
+
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_swow_debug_buildTraceAsString, ZEND_RETURN_VALUE, 0, IS_STRING, 0)
+    ZEND_ARG_TYPE_INFO(0, trace, IS_ARRAY, 0)
+ZEND_END_ARG_INFO()
+
+static PHP_FUNCTION(swow_debug_buildTraceAsString)
+{
+    HashTable *trace;
+
+    ZEND_PARSE_PARAMETERS_START(1, 1)
+        Z_PARAM_ARRAY(trace)
+    ZEND_PARSE_PARAMETERS_END();
+
+    RETURN_STRING(swow_build_trace_as_string(trace));
+}
+
+static const zend_function_entry swow_debug_functions[] = {
+    PHP_FENTRY(Swow\\Debug\\buildTraceAsString, PHP_FN(swow_debug_buildTraceAsString), arginfo_swow_debug_buildTraceAsString, 0)
+    PHP_FE_END
+};
+
+int swow_debug_module_init(INIT_FUNC_ARGS)
+{
+    if (zend_register_functions(NULL, swow_debug_functions, NULL, MODULE_PERSISTENT) != SUCCESS) {
+        return FAILURE;
+    }
+
+    return SUCCESS;
 }

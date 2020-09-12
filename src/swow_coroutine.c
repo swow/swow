@@ -868,7 +868,7 @@ SWOW_API smart_str *swow_coroutine_get_trace_to_string(swow_coroutine_t *scorout
     }
 
     SWOW_COROUTINE_EXECUTE_START(scoroutine) {
-        str = swow_get_trace_to_string(str, options, limit);
+        str = swow_get_trace_as_smart_str(str, options, limit);
     } SWOW_COROUTINE_EXECUTE_END();
 
     return str;
