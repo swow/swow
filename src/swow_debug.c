@@ -164,7 +164,6 @@ SWOW_API smart_str *swow_debug_build_trace_as_smart_str(smart_str *str, HashTabl
         }
         swow_debug_build_trace_string(str, Z_ARRVAL_P(zframe), num++, 0);
     } ZEND_HASH_FOREACH_END();
-    zend_array_destroy(trace);
 
     smart_str_appendc(str, '#');
     smart_str_append_long(str, num);
@@ -197,7 +196,11 @@ SWOW_API smart_str *swow_debug_get_trace_as_smart_str(smart_str *str, zend_long 
 
     trace = swow_debug_get_trace(options, limit);
 
-    return swow_debug_build_trace_as_smart_str(str, trace);
+    str = swow_debug_build_trace_as_smart_str(str, trace);
+
+    zend_array_destroy(trace);
+
+    return str;
 }
 
 SWOW_API zend_string *swow_debug_get_trace_as_string(zend_long options, zend_long limit)
@@ -247,10 +250,10 @@ static PHP_FUNCTION(swow_debug_buildTraceAsString)
     HashTable *trace;
 
     ZEND_PARSE_PARAMETERS_START(1, 1)
-        Z_PARAM_ARRAY(trace)
+        Z_PARAM_ARRAY_HT(trace)
     ZEND_PARSE_PARAMETERS_END();
 
-    RETURN_STRING(swow_debug_build_trace_as_string(trace));
+    RETURN_STR(swow_debug_build_trace_as_string(trace));
 }
 
 static const zend_function_entry swow_debug_functions[] = {
