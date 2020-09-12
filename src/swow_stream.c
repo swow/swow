@@ -848,6 +848,7 @@ SWOW_API const php_stream_ops swow_stream_udg_socket_ops = {
 /* $Id: 547d98b81d674c48f04eab5c24aa065eba4838cc $ */
 
 #define IS_TTY(fd) ((fd) == STDIN_FILENO || (fd) == STDOUT_FILENO || (fd) == STDERR_FILENO)
+#define INVALID_TTY_SOCKET ((cat_socket_t *) -1)
 
 /* beginning of struct, see main/streams/plain_wrapper.c line 111 */
 typedef struct {
@@ -865,15 +866,17 @@ static cat_socket_t *swow_stream_tty_sockets[3];
     \
     do { \
         if (!IS_TTY(fd)) { \
+            _raw: \
             return swow_stream_stdio_raw_ops.call; \
         } \
-        \
         socket = swow_stream_tty_sockets[fd]; \
-        if (unlikely(socket == NULL)) { \
+        if (unlikely(socket == INVALID_TTY_SOCKET)) { \
+            goto _raw; \
+        } else if (unlikely(socket == NULL)) { \
             socket = cat_socket_create_ex(NULL, CAT_SOCKET_TYPE_TTY, fd); \
             if (unlikely(socket == NULL)) { \
-                stream->eof = 1; \
-                return -1; \
+                swow_stream_tty_sockets[fd] = INVALID_TTY_SOCKET; \
+                goto _raw; \
             } \
             swow_stream_tty_sockets[fd] = socket; \
         } \
@@ -940,6 +943,7 @@ SWOW_API const php_stream_ops swow_stream_stdio_ops = {
     swow_stream_stdio_set_option,
 };
 
+#undef INVALID_TTY_SOCKET
 #undef IS_TTY
 
 /* {{{ proto int|false stream_socket_sendto(resource stream, string data [, int flags [, string target_addr]])
