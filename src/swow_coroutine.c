@@ -855,7 +855,7 @@ SWOW_API HashTable *swow_coroutine_get_trace(const swow_coroutine_t *scoroutine,
     }
 
     SWOW_COROUTINE_EXECUTE_START(scoroutine) {
-        trace = swow_get_trace(options, limit);
+        trace = swow_debug_get_trace(options, limit);
     } SWOW_COROUTINE_EXECUTE_END();
 
     return trace;
@@ -868,7 +868,7 @@ SWOW_API smart_str *swow_coroutine_get_trace_to_string(swow_coroutine_t *scorout
     }
 
     SWOW_COROUTINE_EXECUTE_START(scoroutine) {
-        str = swow_get_trace_as_smart_str(str, options, limit);
+        str = swow_debug_get_trace_as_smart_str(str, options, limit);
     } SWOW_COROUTINE_EXECUTE_END();
 
     return str;
@@ -883,7 +883,7 @@ SWOW_API zend_string *swow_coroutine_get_trace_as_string(const swow_coroutine_t 
     }
 
     SWOW_COROUTINE_EXECUTE_START(scoroutine) {
-        trace = swow_get_trace_as_string(options, limit);
+        trace = swow_debug_get_trace_as_string(options, limit);
     } SWOW_COROUTINE_EXECUTE_END();
 
     return trace;
@@ -898,7 +898,7 @@ SWOW_API HashTable *swow_coroutine_get_trace_as_list(const swow_coroutine_t *sco
     }
 
     SWOW_COROUTINE_EXECUTE_START(scoroutine) {
-        trace = swow_get_trace_as_list(options, limit);
+        trace = swow_debug_get_trace_as_list(options, limit);
     } SWOW_COROUTINE_EXECUTE_END();
 
     return trace;
@@ -2019,7 +2019,7 @@ static void swow_coroutine_error_cb(int type, const char *error_filename, const 
             }
         } else {
             if (EG(current_execute_data) != NULL) {
-                trace = swow_get_trace_as_string(DEBUG_BACKTRACE_PROVIDE_OBJECT, 0);
+                trace = swow_debug_get_trace_as_string(DEBUG_BACKTRACE_PROVIDE_OBJECT, 0);
             }
         }
         do {
