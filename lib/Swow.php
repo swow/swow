@@ -95,12 +95,12 @@ namespace Swow
 
 namespace Swow
 {
-    class Exception extends \RuntimeException implements \Throwable, \Stringable { }
+    class Exception extends \RuntimeException { }
 }
 
 namespace Swow
 {
-    class CallException extends \Swow\Exception implements \Stringable, \Throwable
+    class CallException extends \Swow\Exception
     {
         protected $returnValue;
 
@@ -1087,12 +1087,12 @@ namespace Swow
 
 namespace Swow\Coroutine
 {
-    class Exception extends \Swow\Exception implements \Stringable, \Throwable { }
+    class Exception extends \Swow\Exception { }
 }
 
 namespace Swow\Coroutine
 {
-    class CrossException extends \Swow\Coroutine\Exception implements \Throwable, \Stringable
+    class CrossException extends \Swow\Coroutine\Exception
     {
         protected $coroutine;
 
@@ -1105,17 +1105,17 @@ namespace Swow\Coroutine
 
 namespace Swow\Coroutine
 {
-    class TermException extends \Swow\Coroutine\CrossException implements \Stringable, \Throwable { }
+    class TermException extends \Swow\Coroutine\CrossException { }
 }
 
 namespace Swow\Coroutine
 {
-    class KillException extends \Swow\Coroutine\CrossException implements \Stringable, \Throwable, \Swow\Uncatchable { }
+    class KillException extends \Swow\Coroutine\CrossException implements \Swow\Uncatchable { }
 }
 
 namespace Swow\Channel
 {
-    class Exception extends \Swow\Exception implements \Stringable, \Throwable { }
+    class Exception extends \Swow\Exception { }
 }
 
 namespace Swow\Channel
@@ -1155,7 +1155,7 @@ namespace Swow\Channel
 
 namespace Swow\Channel\Selector
 {
-    class Exception extends \Swow\CallException implements \Throwable, \Stringable { }
+    class Exception extends \Swow\CallException { }
 }
 
 namespace Swow\Sync
@@ -1198,7 +1198,7 @@ namespace Swow\Sync
 
 namespace Swow\Sync
 {
-    class Exception extends \Swow\Exception implements \Stringable, \Throwable { }
+    class Exception extends \Swow\Exception { }
 }
 
 namespace Swow\Event
@@ -1214,17 +1214,17 @@ namespace Swow\Event
 
 namespace Swow\Buffer
 {
-    class Exception extends \Swow\Exception implements \Stringable, \Throwable { }
+    class Exception extends \Swow\Exception { }
 }
 
 namespace Swow\Socket
 {
-    class Exception extends \Swow\CallException implements \Throwable, \Stringable { }
+    class Exception extends \Swow\CallException { }
 }
 
 namespace Swow\Signal
 {
-    class Exception extends \Swow\Exception implements \Stringable, \Throwable { }
+    class Exception extends \Swow\Exception { }
 }
 
 namespace Swow\Http
@@ -1478,7 +1478,7 @@ namespace Swow\Http
 
 namespace Swow\Http\Parser
 {
-    class Exception extends \Swow\Exception implements \Stringable, \Throwable { }
+    class Exception extends \Swow\Exception { }
 }
 
 namespace Swow\WebSocket
