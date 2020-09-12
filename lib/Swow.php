@@ -1,113 +1,6 @@
 <?php
 /** @noinspection PhpUnused, PhpInconsistentReturnPointsInspection, PhpMissingParentConstructorInspection */
 
-namespace Swow\Errno
-{
-    const E2BIG = -7;
-    const EACCES = -13;
-    const EADDRINUSE = -98;
-    const EADDRNOTAVAIL = -99;
-    const EAFNOSUPPORT = -97;
-    const EAGAIN = -11;
-    const EAI_ADDRFAMILY = -3000;
-    const EAI_AGAIN = -3001;
-    const EAI_BADFLAGS = -3002;
-    const EAI_BADHINTS = -3013;
-    const EAI_CANCELED = -3003;
-    const EAI_FAIL = -3004;
-    const EAI_FAMILY = -3005;
-    const EAI_MEMORY = -3006;
-    const EAI_NODATA = -3007;
-    const EAI_NONAME = -3008;
-    const EAI_OVERFLOW = -3009;
-    const EAI_PROTOCOL = -3014;
-    const EAI_SERVICE = -3010;
-    const EAI_SOCKTYPE = -3011;
-    const EALREADY = -114;
-    const EBADF = -9;
-    const EBUSY = -16;
-    const ECANCELED = -125;
-    const ECHARSET = -4080;
-    const ECONNABORTED = -103;
-    const ECONNREFUSED = -111;
-    const ECONNRESET = -104;
-    const EDESTADDRREQ = -89;
-    const EEXIST = -17;
-    const EFAULT = -14;
-    const EFBIG = -27;
-    const EHOSTUNREACH = -113;
-    const EINTR = -4;
-    const EINVAL = -22;
-    const EIO = -5;
-    const EISCONN = -106;
-    const EISDIR = -21;
-    const ELOOP = -40;
-    const EMFILE = -24;
-    const EMSGSIZE = -90;
-    const ENAMETOOLONG = -36;
-    const ENETDOWN = -100;
-    const ENETUNREACH = -101;
-    const ENFILE = -23;
-    const ENOBUFS = -105;
-    const ENODEV = -19;
-    const ENOENT = -2;
-    const ENOMEM = -12;
-    const ENONET = -64;
-    const ENOPROTOOPT = -92;
-    const ENOSPC = -28;
-    const ENOSYS = -38;
-    const ENOTCONN = -107;
-    const ENOTDIR = -20;
-    const ENOTEMPTY = -39;
-    const ENOTSOCK = -88;
-    const ENOTSUP = -95;
-    const EPERM = -1;
-    const EPIPE = -32;
-    const EPROTO = -71;
-    const EPROTONOSUPPORT = -93;
-    const EPROTOTYPE = -91;
-    const ERANGE = -34;
-    const EROFS = -30;
-    const ESHUTDOWN = -108;
-    const ESPIPE = -29;
-    const ESRCH = -3;
-    const ETIMEDOUT = -110;
-    const ETXTBSY = -26;
-    const EXDEV = -18;
-    const UNKNOWN = -4094;
-    const EOF = -4095;
-    const ENXIO = -6;
-    const EMLINK = -31;
-    const EHOSTDOWN = -112;
-    const EREMOTEIO = -121;
-    const ENOTTY = -25;
-    const EFTYPE = -4028;
-    const EILSEQ = -84;
-    const UNCODED = -9763;
-    const EPREV = -9762;
-    const EMISUSE = -9761;
-    const EVALUE = -9760;
-    const ELOCKED = -9759;
-    const EDEADLK = -9758;
-    const ESSL = -9757;
-}
-
-namespace Swow\WebSocket
-{
-    const VERSION = 13;
-    const SECRET_KEY_LENGTH = 16;
-    const SECRET_KEY_ENCODED_LENGTH = 24;
-    const GUID = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11';
-    const HEADER_LENGTH = 2;
-    const EXT16_LENGTH = 126;
-    const EXT64_LENGTH = 127;
-    const EXT8_MAX_LENGTH = 125;
-    const EXT16_MAX_LENGTH = 65535;
-    const MASK_KEY_LENGTH = 4;
-    const EMPTY_MASK_KEY = '';
-    const HEADER_BUFFER_SIZE = 128;
-}
-
 namespace
 {
     class Swow { }
@@ -1590,6 +1483,22 @@ namespace Swow\Http\Parser
 
 namespace Swow\WebSocket
 {
+    const VERSION = 13;
+    const SECRET_KEY_LENGTH = 16;
+    const SECRET_KEY_ENCODED_LENGTH = 24;
+    const GUID = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11';
+    const HEADER_LENGTH = 2;
+    const EXT16_LENGTH = 126;
+    const EXT64_LENGTH = 127;
+    const EXT8_MAX_LENGTH = 125;
+    const EXT16_MAX_LENGTH = 65535;
+    const MASK_KEY_LENGTH = 4;
+    const EMPTY_MASK_KEY = '';
+    const HEADER_BUFFER_SIZE = 128;
+}
+
+namespace Swow\WebSocket
+{
     class Opcode
     {
         public const CONTINUATION = 0;
@@ -1788,6 +1697,97 @@ namespace Swow\WebSocket
          */
         public function __debugInfo(): array { }
     }
+}
+
+namespace Swow\Errno
+{
+    const E2BIG = -7;
+    const EACCES = -13;
+    const EADDRINUSE = -98;
+    const EADDRNOTAVAIL = -99;
+    const EAFNOSUPPORT = -97;
+    const EAGAIN = -11;
+    const EAI_ADDRFAMILY = -3000;
+    const EAI_AGAIN = -3001;
+    const EAI_BADFLAGS = -3002;
+    const EAI_BADHINTS = -3013;
+    const EAI_CANCELED = -3003;
+    const EAI_FAIL = -3004;
+    const EAI_FAMILY = -3005;
+    const EAI_MEMORY = -3006;
+    const EAI_NODATA = -3007;
+    const EAI_NONAME = -3008;
+    const EAI_OVERFLOW = -3009;
+    const EAI_PROTOCOL = -3014;
+    const EAI_SERVICE = -3010;
+    const EAI_SOCKTYPE = -3011;
+    const EALREADY = -114;
+    const EBADF = -9;
+    const EBUSY = -16;
+    const ECANCELED = -125;
+    const ECHARSET = -4080;
+    const ECONNABORTED = -103;
+    const ECONNREFUSED = -111;
+    const ECONNRESET = -104;
+    const EDESTADDRREQ = -89;
+    const EEXIST = -17;
+    const EFAULT = -14;
+    const EFBIG = -27;
+    const EHOSTUNREACH = -113;
+    const EINTR = -4;
+    const EINVAL = -22;
+    const EIO = -5;
+    const EISCONN = -106;
+    const EISDIR = -21;
+    const ELOOP = -40;
+    const EMFILE = -24;
+    const EMSGSIZE = -90;
+    const ENAMETOOLONG = -36;
+    const ENETDOWN = -100;
+    const ENETUNREACH = -101;
+    const ENFILE = -23;
+    const ENOBUFS = -105;
+    const ENODEV = -19;
+    const ENOENT = -2;
+    const ENOMEM = -12;
+    const ENONET = -64;
+    const ENOPROTOOPT = -92;
+    const ENOSPC = -28;
+    const ENOSYS = -38;
+    const ENOTCONN = -107;
+    const ENOTDIR = -20;
+    const ENOTEMPTY = -39;
+    const ENOTSOCK = -88;
+    const ENOTSUP = -95;
+    const EPERM = -1;
+    const EPIPE = -32;
+    const EPROTO = -71;
+    const EPROTONOSUPPORT = -93;
+    const EPROTOTYPE = -91;
+    const ERANGE = -34;
+    const EROFS = -30;
+    const ESHUTDOWN = -108;
+    const ESPIPE = -29;
+    const ESRCH = -3;
+    const ETIMEDOUT = -110;
+    const ETXTBSY = -26;
+    const EXDEV = -18;
+    const UNKNOWN = -4094;
+    const EOF = -4095;
+    const ENXIO = -6;
+    const EMLINK = -31;
+    const EHOSTDOWN = -112;
+    const EREMOTEIO = -121;
+    const ENOTTY = -25;
+    const EFTYPE = -4028;
+    const EILSEQ = -84;
+    const UNCODED = -9763;
+    const EPREV = -9762;
+    const EMISUSE = -9761;
+    const EVALUE = -9760;
+    const ELOCKED = -9759;
+    const EDEADLK = -9758;
+    const ESSL = -9757;
 }
 
 namespace Swow\Errno
