@@ -234,6 +234,9 @@ ZEND_API ZEND_COLD void zend_value_error(const char *format, ...) ZEND_ATTRIBUTE
 #define RETURN_THROWS()  do { RETURN_THROWS_ASSERTION(); return; } while (0)
 
 #if PHP_VERSION_ID < 80000
+ZEND_API zend_string *zend_create_member_string(zend_string *class_name, zend_string *member_name);
+ZEND_API zend_string *get_active_function_or_method_name();
+ZEND_API zend_string *get_function_or_method_name(const zend_function *func);
 ZEND_API const char *get_active_function_arg_name(uint32_t arg_num);
 ZEND_API const char *get_function_arg_name(const zend_function *func, uint32_t arg_num);
 

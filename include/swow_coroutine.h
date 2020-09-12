@@ -55,6 +55,11 @@ extern SWOW_API zend_class_entry *swow_coroutine_kill_exception_ce;
 
 typedef enum
 {
+    SWOW_COROUTINE_FLAG_DEBUGGING = CAT_COROUTINE_FLAG_USR1,
+} swow_coroutine_flag_t;
+
+typedef enum
+{
     SWOW_COROUTINE_OPCODE_ACCEPT_ZDATA = CAT_COROUTINE_OPCODE_USR1,
 } swow_coroutine_opcode_t;
 
@@ -196,6 +201,9 @@ SWOW_UNSAFE
         zend_long _level = level; \
         \
         _exeute_data = EG(current_execute_data); \
+        if (_level < 0) { \
+            _level = 0; \
+        } \
         /* Search for last called function */ \
         if (is_user) { \
             _level++; \
@@ -251,6 +259,10 @@ SWOW_API swow_coroutine_t *swow_coroutine_get_main(void);
 SWOW_API swow_coroutine_t *swow_coroutine_get_scheduler(void);
 
 /* debug */
+SWOW_API zend_string *swow_coroutine_get_executed_filename(const swow_coroutine_t *scoroutine, zend_long level);
+SWOW_API uint32_t swow_coroutine_get_executed_lineno(const swow_coroutine_t *scoroutine, zend_long level);
+SWOW_API zend_string *swow_coroutine_get_executed_function_name(const swow_coroutine_t *scoroutine, zend_long level);
+
 SWOW_API HashTable *swow_coroutine_get_trace(const swow_coroutine_t *scoroutine, zend_long level, zend_long limit, zend_long options);
 SWOW_API smart_str *swow_coroutine_get_trace_as_smart_str(swow_coroutine_t *scoroutine, smart_str *str, zend_long level, zend_long limit, zend_long options);
 SWOW_API zend_string *swow_coroutine_get_trace_as_string(const swow_coroutine_t *scoroutine, zend_long level, zend_long limit, zend_long options);

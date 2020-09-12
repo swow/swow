@@ -26,6 +26,32 @@ ZEND_API HashTable zend_empty_array;
 
 /* PHP 8 compatibility macro {{{*/
 #if PHP_VERSION_ID < 80000
+ZEND_API zend_string *zend_create_member_string(zend_string *class_name, zend_string *member_name)
+{
+    return zend_string_concat3(
+        ZSTR_VAL(class_name), ZSTR_LEN(class_name),
+        "::", sizeof("::") - 1,
+        ZSTR_VAL(member_name), ZSTR_LEN(member_name));
+}
+
+ZEND_API zend_string *get_active_function_or_method_name(void) /* {{{ */
+{
+    ZEND_ASSERT(zend_is_executing());
+
+    return get_function_or_method_name(EG(current_execute_data)->func);
+}
+/* }}} */
+
+ZEND_API zend_string *get_function_or_method_name(const zend_function *func) /* {{{ */
+{
+    if (func->common.scope) {
+        return zend_create_member_string(func->common.scope->name, func->common.function_name);
+    }
+
+    return func->common.function_name ? zend_string_copy(func->common.function_name) : zend_string_init("main", sizeof("main") - 1, 0);
+}
+/* }}} */
+
 ZEND_API const char *get_active_function_arg_name(uint32_t arg_num) /* {{{ */
 {
     zend_function *func;

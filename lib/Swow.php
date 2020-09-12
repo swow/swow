@@ -225,6 +225,24 @@ namespace Swow
 
         /**
          * @param int $level [optional] = 0
+         * @return string
+         */
+        public function getExecutedFilename(int $level = 0): string { }
+
+        /**
+         * @param int $level [optional] = 0
+         * @return int
+         */
+        public function getExecutedLineno(int $level = 0): int { }
+
+        /**
+         * @param int $level [optional] = 0
+         * @return string
+         */
+        public function getExecutedFunctionName(int $level = 0): string { }
+
+        /**
+         * @param int $level [optional] = 0
          * @param int $limit [optional] = 0
          * @param int $options [optional] = \DEBUG_BACKTRACE_PROVIDE_OBJECT
          * @return array
@@ -1891,8 +1909,17 @@ namespace Swow\Errno
 namespace Swow\Debug
 {
     /**
-     * @param array $trace [optional]
+     * @param array $trace [required]
      * @return string
      */
      function buildTraceAsString(array $trace): string { }
+}
+
+namespace Swow\Debug
+{
+    /**
+     * @param null|callable $handler [required]
+     * @return null|callable
+     */
+     function registerExtendedStatementHandler(?callable $handler): ?callable { }
 }
