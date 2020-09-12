@@ -850,50 +850,50 @@ SWOW_API swow_coroutine_t *swow_coroutine_get_scheduler(void)
 
 /* trace */
 
-SWOW_API HashTable *swow_coroutine_get_trace(const swow_coroutine_t *scoroutine, zend_long options, zend_long limit)
+SWOW_API HashTable *swow_coroutine_get_trace(const swow_coroutine_t *scoroutine, zend_long level, zend_long limit, zend_long options)
 {
     HashTable *trace;
 
     SWOW_COROUTINE_SHOULD_BE_IN_EXECUTING(scoroutine, cat_false, return NULL);
 
-    SWOW_COROUTINE_EXECUTE_START(scoroutine) {
+    SWOW_COROUTINE_EXECUTE_START(scoroutine, level) {
         trace = swow_debug_get_trace(options, limit);
     } SWOW_COROUTINE_EXECUTE_END();
 
     return trace;
 }
 
-SWOW_API smart_str *swow_coroutine_get_trace_as_smart_str(swow_coroutine_t *scoroutine, smart_str *str, zend_long options, zend_long limit)
+SWOW_API smart_str *swow_coroutine_get_trace_as_smart_str(swow_coroutine_t *scoroutine, smart_str *str, zend_long level, zend_long limit, zend_long options)
 {
     SWOW_COROUTINE_SHOULD_BE_IN_EXECUTING(scoroutine, cat_false, return NULL);
 
-    SWOW_COROUTINE_EXECUTE_START(scoroutine) {
+    SWOW_COROUTINE_EXECUTE_START(scoroutine, level) {
         str = swow_debug_get_trace_as_smart_str(str, options, limit);
     } SWOW_COROUTINE_EXECUTE_END();
 
     return str;
 }
 
-SWOW_API zend_string *swow_coroutine_get_trace_as_string(const swow_coroutine_t *scoroutine, zend_long options, zend_long limit)
+SWOW_API zend_string *swow_coroutine_get_trace_as_string(const swow_coroutine_t *scoroutine, zend_long level, zend_long limit, zend_long options)
 {
     zend_string *trace;
 
     SWOW_COROUTINE_SHOULD_BE_IN_EXECUTING(scoroutine, cat_false, return NULL);
 
-    SWOW_COROUTINE_EXECUTE_START(scoroutine) {
+    SWOW_COROUTINE_EXECUTE_START(scoroutine, level) {
         trace = swow_debug_get_trace_as_string(options, limit);
     } SWOW_COROUTINE_EXECUTE_END();
 
     return trace;
 }
 
-SWOW_API HashTable *swow_coroutine_get_trace_as_list(const swow_coroutine_t *scoroutine, zend_long options, zend_long limit)
+SWOW_API HashTable *swow_coroutine_get_trace_as_list(const swow_coroutine_t *scoroutine, zend_long level, zend_long limit, zend_long options)
 {
     HashTable *trace;
 
     SWOW_COROUTINE_SHOULD_BE_IN_EXECUTING(scoroutine, cat_false, return NULL);
 
-    SWOW_COROUTINE_EXECUTE_START(scoroutine) {
+    SWOW_COROUTINE_EXECUTE_START(scoroutine, level) {
         trace = swow_debug_get_trace_as_list(options, limit);
     } SWOW_COROUTINE_EXECUTE_END();
 
@@ -913,7 +913,7 @@ SWOW_API HashTable *swow_coroutine_get_defined_vars(swow_coroutine_t *scoroutine
 
     SWOW_COROUTINE_SHOULD_BE_IN_EXECUTING(scoroutine, cat_true, return NULL);
 
-    SWOW_COROUTINE_PREV_EXECUTE_START(scoroutine, level) {
+    SWOW_COROUTINE_USER_EXECUTE_START(scoroutine, level) {
         SWOW_COROUTINE_CHECK_CALL_INFO(goto _error);
 
         symbol_table = zend_rebuild_symbol_table();
@@ -926,7 +926,7 @@ SWOW_API HashTable *swow_coroutine_get_defined_vars(swow_coroutine_t *scoroutine
             _error:
             symbol_table = NULL;
         }
-    } SWOW_COROUTINE_PREV_EXECUTE_END();
+    } SWOW_COROUTINE_USER_EXECUTE_END();
 
     return symbol_table;
 }
@@ -937,7 +937,7 @@ SWOW_API cat_bool_t swow_coroutine_set_local_var(swow_coroutine_t *scoroutine, z
 
     SWOW_COROUTINE_SHOULD_BE_IN_EXECUTING(scoroutine, cat_true, return cat_false);
 
-    SWOW_COROUTINE_PREV_EXECUTE_START(scoroutine, level) {
+    SWOW_COROUTINE_USER_EXECUTE_START(scoroutine, level) {
         int error;
 
         SWOW_COROUTINE_CHECK_CALL_INFO(goto _error);
@@ -951,7 +951,7 @@ SWOW_API cat_bool_t swow_coroutine_set_local_var(swow_coroutine_t *scoroutine, z
         } else {
             ret = cat_true;
         }
-    } SWOW_COROUTINE_PREV_EXECUTE_END();
+    } SWOW_COROUTINE_USER_EXECUTE_END();
 
     return ret;
 }
@@ -968,9 +968,9 @@ SWOW_API cat_bool_t swow_coroutine_eval(swow_coroutine_t *scoroutine, zend_strin
         swow_coroutine_set_readonly(cat_true);
     }
 
-    SWOW_COROUTINE_PREV_EXECUTE_START(scoroutine, level) {
+    SWOW_COROUTINE_USER_EXECUTE_START(scoroutine, level) {
         error = zend_eval_stringl(ZSTR_VAL(string), ZSTR_LEN(string), return_value, "Coroutine::eval()");
-    } SWOW_COROUTINE_PREV_EXECUTE_END();
+    } SWOW_COROUTINE_USER_EXECUTE_END();
 
     swow_coroutine_set_readonly(cat_false);
 
@@ -1015,7 +1015,7 @@ SWOW_API cat_bool_t swow_coroutine_call(swow_coroutine_t *scoroutine, zval *zcal
         swow_coroutine_set_readonly(cat_true);
     }
 
-    SWOW_COROUTINE_EXECUTE_START(scoroutine) {
+    SWOW_COROUTINE_EXECUTE_START(scoroutine, 0) {
         error = zend_call_function(&fci, &fcc);
     } SWOW_COROUTINE_EXECUTE_END();
 
@@ -1514,17 +1514,20 @@ static PHP_METHOD(swow_coroutine, isAlive)
 }
 
 #define SWOW_COROUTINE_GET_TRACE_PARAMETERS_PARSER() \
-    zend_long options = DEBUG_BACKTRACE_PROVIDE_OBJECT; \
+    zend_long level = 0; \
     zend_long limit = 0; \
+    zend_long options = DEBUG_BACKTRACE_PROVIDE_OBJECT; \
     ZEND_PARSE_PARAMETERS_START(0, 2) \
         Z_PARAM_OPTIONAL \
-        Z_PARAM_LONG(options) \
+        Z_PARAM_LONG(level) \
         Z_PARAM_LONG(limit) \
+        Z_PARAM_LONG(options) \
     ZEND_PARSE_PARAMETERS_END();
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_swow_coroutine_getTrace, ZEND_RETURN_VALUE, 0, IS_ARRAY, 0)
+ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, level, IS_LONG, 0, "0")
+ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, limit, IS_LONG, 0, "0")
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, options, IS_LONG, 0, "DEBUG_BACKTRACE_PROVIDE_OBJECT")
-    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, limit, IS_LONG, 0, "0")
 ZEND_END_ARG_INFO()
 
 static PHP_METHOD(swow_coroutine, getTrace)
@@ -1533,7 +1536,7 @@ static PHP_METHOD(swow_coroutine, getTrace)
 
     SWOW_COROUTINE_GET_TRACE_PARAMETERS_PARSER();
 
-    trace = swow_coroutine_get_trace(getThisCoroutine(), options, limit);
+    trace = swow_coroutine_get_trace(getThisCoroutine(), level, limit, options);
 
     if (UNEXPECTED(trace == NULL)) {
         RETURN_EMPTY_ARRAY();
@@ -1543,8 +1546,9 @@ static PHP_METHOD(swow_coroutine, getTrace)
 }
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_swow_coroutine_getTraceAsString, ZEND_RETURN_VALUE, 0, IS_STRING, 0)
-    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, options, IS_LONG, 0, "DEBUG_BACKTRACE_PROVIDE_OBJECT")
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, level, IS_LONG, 0, "0")
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, limit, IS_LONG, 0, "0")
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, options, IS_LONG, 0, "DEBUG_BACKTRACE_PROVIDE_OBJECT")
 ZEND_END_ARG_INFO()
 
 static PHP_METHOD(swow_coroutine, getTraceAsString)
@@ -1553,7 +1557,7 @@ static PHP_METHOD(swow_coroutine, getTraceAsString)
 
     SWOW_COROUTINE_GET_TRACE_PARAMETERS_PARSER();
 
-    trace = swow_coroutine_get_trace_as_string(getThisCoroutine(), options, limit);
+    trace = swow_coroutine_get_trace_as_string(getThisCoroutine(), level, limit, options);
 
     if (UNEXPECTED(trace == NULL)) {
         RETURN_EMPTY_STRING();
@@ -1570,7 +1574,7 @@ static PHP_METHOD(swow_coroutine, getTraceAsList)
 
     SWOW_COROUTINE_GET_TRACE_PARAMETERS_PARSER();
 
-    trace = swow_coroutine_get_trace_as_list(getThisCoroutine(), options, limit);
+    trace = swow_coroutine_get_trace_as_list(getThisCoroutine(), level, limit, options);
 
     if (UNEXPECTED(trace == NULL)) {
         RETURN_EMPTY_ARRAY();
@@ -1873,11 +1877,12 @@ static PHP_METHOD(swow_coroutine, __debugInfo)
     add_assoc_string(&zdebug_info, "elapsed", tmp);
     cat_free(tmp);
     if (swow_coroutine_is_alive(scoroutine)) {
-        const zend_long options = DEBUG_BACKTRACE_PROVIDE_OBJECT;
+        const zend_long level = 0;
         const zend_long limit = 0;
+        const zend_long options = DEBUG_BACKTRACE_PROVIDE_OBJECT;
         smart_str str = { 0 };
         smart_str_appendc(&str, '\n');
-        swow_coroutine_get_trace_as_smart_str(scoroutine, &str, options, limit);
+        swow_coroutine_get_trace_as_smart_str(scoroutine, &str, level, limit, options);
         smart_str_appendc(&str, '\n');
         smart_str_0(&str);
         add_assoc_str(&zdebug_info, "trace", str.s);

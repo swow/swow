@@ -224,25 +224,28 @@ namespace Swow
         public function isAlive(): bool { }
 
         /**
-         * @param int $options [optional] = \DEBUG_BACKTRACE_PROVIDE_OBJECT
+         * @param int $level [optional] = 0
          * @param int $limit [optional] = 0
+         * @param int $options [optional] = \DEBUG_BACKTRACE_PROVIDE_OBJECT
          * @return array
          */
-        public function getTrace(int $options = \DEBUG_BACKTRACE_PROVIDE_OBJECT, int $limit = 0): array { }
+        public function getTrace(int $level = 0, int $limit = 0, int $options = \DEBUG_BACKTRACE_PROVIDE_OBJECT): array { }
 
         /**
-         * @param int $options [optional] = \DEBUG_BACKTRACE_PROVIDE_OBJECT
+         * @param int $level [optional] = 0
          * @param int $limit [optional] = 0
+         * @param int $options [optional] = \DEBUG_BACKTRACE_PROVIDE_OBJECT
          * @return string
          */
-        public function getTraceAsString(int $options = \DEBUG_BACKTRACE_PROVIDE_OBJECT, int $limit = 0): string { }
+        public function getTraceAsString(int $level = 0, int $limit = 0, int $options = \DEBUG_BACKTRACE_PROVIDE_OBJECT): string { }
 
         /**
-         * @param int $options [optional] = \DEBUG_BACKTRACE_PROVIDE_OBJECT
+         * @param int $level [optional] = 0
          * @param int $limit [optional] = 0
+         * @param int $options [optional] = \DEBUG_BACKTRACE_PROVIDE_OBJECT
          * @return array
          */
-        public function getTraceAsList(int $options = \DEBUG_BACKTRACE_PROVIDE_OBJECT, int $limit = 0): array { }
+        public function getTraceAsList(int $level = 0, int $limit = 0, int $options = \DEBUG_BACKTRACE_PROVIDE_OBJECT): array { }
 
         /**
          * @param int $level [optional] = 0
