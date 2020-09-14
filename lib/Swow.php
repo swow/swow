@@ -1126,9 +1126,10 @@ namespace Swow
 
         /**
          * @param int $num [required]
+         * @param int $timeout [optional]
          * @return void
          */
-        public static function wait(int $num): void { }
+        public static function wait(int $num, int $timeout): void { }
     }
 }
 

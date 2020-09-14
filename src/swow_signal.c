@@ -25,6 +25,7 @@ SWOW_API zend_class_entry *swow_signal_exception_ce;
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_swow_signal_wait, ZEND_RETURN_VALUE, 1, IS_VOID, 0)
     ZEND_ARG_TYPE_INFO(0, num, IS_LONG, 0)
+    ZEND_ARG_TYPE_INFO(0, timeout, IS_LONG, 0)
 ZEND_END_ARG_INFO()
 
 static PHP_METHOD(swow_signal, wait)
