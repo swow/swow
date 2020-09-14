@@ -24,7 +24,18 @@ extern "C" {
 
 #include "swow.h"
 
+CAT_GLOBALS_STRUCT_BEGIN(swow_debug)
+    zend_fcall_info_cache extended_statement_handler;
+    zval zextended_statement_handler;
+CAT_GLOBALS_STRUCT_END(swow_debug)
+
+extern SWOW_API CAT_GLOBALS_DECLARE(swow_debug)
+
+#define SWOW_DEBUG_G(x) CAT_GLOBALS_GET(swow_debug, x)
+
 int swow_debug_module_init(INIT_FUNC_ARGS);
+int swow_debug_runtime_init(INIT_FUNC_ARGS);
+int swow_debug_runtime_shutdown(INIT_FUNC_ARGS);
 
 SWOW_API smart_str *swow_debug_build_trace_as_smart_str(smart_str *str, HashTable *trace); SWOW_INTERNAL
 SWOW_API zend_string *swow_debug_build_trace_as_string(HashTable *trace);

@@ -46,4 +46,4 @@ config*
 !config.w32
 
 # others
-debug
+/debug
