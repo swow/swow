@@ -23,14 +23,18 @@ extern "C" {
 #endif
 
 #include "swow.h"
+#include "swow_log.h"
+#include "swow_defer.h"
 #include "swow_coroutine.h"
-#include "swow_event.h"
 #include "swow_channel.h"
-#include "swow_time.h"
 #include "swow_sync.h"
+#include "swow_event.h"
+#include "swow_time.h"
 #include "swow_buffer.h"
 #include "swow_socket.h"
 #include "swow_stream.h"
+#include "swow_signal.h"
+#include "swow_debug.h"
 
 #ifdef __cplusplus
 }
