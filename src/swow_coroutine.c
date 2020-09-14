@@ -1997,7 +1997,8 @@ static void swow_coroutine_error_cb(int type, const char *error_filename, const 
     if (!SWOW_COROUTINE_G(classic_error_handler)) {
         const char *orginal_type_string = swow_strerrortype(type);
         zend_string *trace = NULL;
-        if (strncmp(format, ZEND_STRL("Uncaught ")) == 0) {
+        /* strncmp maybe macro if compiler is Virtual Pascal? */
+        if (strncmp(format, "Uncaught ", sizeof("Uncaught ") - 1) == 0) {
             /* hack hook for error in main */
             if (swow_coroutine_get_current() == swow_coroutine_get_main()) {
                 /* keep slient for kill/term(0) */
