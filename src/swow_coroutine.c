@@ -140,7 +140,7 @@ static CAT_COLD void swow_coroutine_function_handle_exception(void)
 
     zend_exception_restore();
 
-    /* keep slient for killer and term(0) */
+    /* keep silent for killer and term(0) */
     if (swow_coroutine_exception_should_be_silent(EG(exception))) {
         OBJ_RELEASE(EG(exception));
         EG(exception) = NULL;
@@ -1995,13 +1995,13 @@ static void swow_coroutine_error_cb(int type, const char *error_filename, const 
     zend_string *new_message = NULL;
 
     if (!SWOW_COROUTINE_G(classic_error_handler)) {
-        const char *orginal_type_string = swow_strerrortype(type);
+        const char *original_type_string = swow_strerrortype(type);
         zend_string *trace = NULL;
         /* strncmp maybe macro if compiler is Virtual Pascal? */
         if (strncmp(format, "Uncaught ", sizeof("Uncaught ") - 1) == 0) {
             /* hack hook for error in main */
             if (swow_coroutine_get_current() == swow_coroutine_get_main()) {
-                /* keep slient for kill/term(0) */
+                /* keep silent for kill/term(0) */
                 if (SWOW_COROUTINE_G(silent_exception_in_main)) {
                     SWOW_COROUTINE_G(silent_exception_in_main) = cat_false;
                     return;
@@ -2011,7 +2011,7 @@ static void swow_coroutine_error_cb(int type, const char *error_filename, const 
                         return;
                     }
                     type = severity;
-                    orginal_type_string = swow_strerrortype(type);
+                    original_type_string = swow_strerrortype(type);
                 }
             }
             /* the exception of the coroutines will never cause the process to exit */
@@ -2030,7 +2030,7 @@ static void swow_coroutine_error_cb(int type, const char *error_filename, const 
 
             new_message = zend_strpprintf(0,
                 "[%s in R" CAT_COROUTINE_ID_FMT "] %s%s%s%s",
-                orginal_type_string,
+                original_type_string,
                 id,
                 format,
                 trace != NULL ? "\nStack trace:\n" : "",
