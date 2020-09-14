@@ -169,9 +169,11 @@ PHP_RINIT_FUNCTION(swow)
         swow_stream_runtime_init,
     };
 
+#ifdef ZEND_COMPILE_PRELOAD
     if (CG(compiler_options) & ZEND_COMPILE_PRELOAD) {
         return SUCCESS;
     }
+#endif
 
     size_t i = 0;
     for (; i < CAT_ARRAY_SIZE(rinit_callbacks); i++) {
@@ -195,9 +197,11 @@ PHP_RSHUTDOWN_FUNCTION(swow)
         swow_runtime_shutdown,
     };
 
+#ifdef ZEND_COMPILE_PRELOAD
     if (CG(compiler_options) & ZEND_COMPILE_PRELOAD) {
         return SUCCESS;
     }
+#endif
 
     size_t i = 0;
     for (; i < CAT_ARRAY_SIZE(rshutdown_callbacks); i++) {

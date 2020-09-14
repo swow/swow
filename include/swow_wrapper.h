@@ -72,6 +72,23 @@ SWOW_API void swow_wrapper_shutdown(void);
 #if PHP_VERSION_ID < 70300
 #define zend_string_release_ex(s, persistent) zend_string_release(s)
 
+static zend_always_inline zend_string *zval_get_tmp_string(zval *op, zend_string **tmp)
+{
+    if (EXPECTED(Z_TYPE_P(op) == IS_STRING)) {
+        *tmp = NULL;
+        return Z_STR_P(op);
+    } else {
+        return *tmp = _zval_get_string_func(op);
+    }
+}
+
+static zend_always_inline void zend_tmp_string_release(zend_string *tmp)
+{
+    if (UNEXPECTED(tmp)) {
+        zend_string_release_ex(tmp, 0);
+    }
+}
+
 #define ZVAL_EMPTY_ARRAY(zval)    (array_init((zval)))
 #define RETVAL_EMPTY_ARRAY()      ZVAL_EMPTY_ARRAY(return_value)
 #define RETURN_EMPTY_ARRAY()      do { RETVAL_EMPTY_ARRAY(); return; } while (0)
@@ -136,6 +153,10 @@ static cat_always_inline HashTable *zend_new_array(size_t size)
 #define ZEND7_THIS        Z_OBJ_P(ZEND_THIS)
 #define ZVAL7_ALLOC_OBJECT(object)
 #define ZVAL7_OBJECT(object) object
+#endif
+
+#ifndef IS_MIXED
+#define IS_MIXED 0 /* TODO: it works, but... */
 #endif
 
 #ifndef ZEND_ARG_INFO_WITH_DEFAULT_VALUE

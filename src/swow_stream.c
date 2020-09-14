@@ -108,8 +108,8 @@ SWOW_API php_stream *swow_stream_socket_factory(
         CAT_NEVER_HERE(SOCKET, "Unknown protocol");
     }
 
-    /* alloc php_stream */
-    stream = php_stream_alloc_rel(ops, sock, persistent_id, "r+");
+    /* alloc php_stream (php_stream_ops * is not const on PHP-7.x) */
+    stream = php_stream_alloc_rel((php_stream_ops *) ops, sock, persistent_id, "r+");
     if (UNEXPECTED(stream == NULL)) {
         pefree(swow_sock, persistent_id ? 1 : 0);
         return NULL;
