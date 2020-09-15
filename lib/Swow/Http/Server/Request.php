@@ -20,7 +20,7 @@ class Request extends \Swow\Http\ServerRequest
     protected $query = '';
 
     /**
-     * @var array|null
+     * @var null|array
      */
     protected $queryParams;
 
@@ -30,7 +30,7 @@ class Request extends \Swow\Http\ServerRequest
     protected $upgrade;
 
     /**
-     * @var int|null
+     * @var null|int
      */
     protected $contentLength;
 
