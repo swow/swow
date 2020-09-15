@@ -20,12 +20,12 @@ class DependencyManager
 {
     protected const TMP_DIR = '/tmp';
 
-    public static function sync(string $name, string $url, string $sourceDir, string $targetDir): string
+    public static function sync(string $name, string $url, string $sourceDir, string $targetDir, array $requires = []): string
     {
         if (PHP_OS_FAMILY === 'Windows') {
             throw new RuntimeException('Linux only');
         }
-        if (!`cd {$targetDir} && git rev-parse HEAD`) {
+        if (file_exists($targetDir) && !`cd {$targetDir} && git rev-parse HEAD`) {
             throw new RuntimeException("Unable to find git repo in {$targetDir}");
         }
         $tmpBackupDir = static::TMP_DIR . '/swow_deps_backup_' . date('YmdHis');
@@ -62,8 +62,27 @@ class DependencyManager
                 throw new RuntimeException("Backup from '{$targetDir}' to '{$tmpBackupDir}' failed");
             }
         }
-        if (!rename($tmpSourceDir, $targetDir)) {
-            throw new RuntimeException("Update dep files from '{$tmpSourceDir}' to {$targetDir} failed");
+        if (count($requires) > 0) {
+            if (!mkdir($targetDir, 0777, true)) {
+                throw new RuntimeException("Unable to create target source dir '{$targetDir}'");
+            }
+            foreach ($requires as $require) {
+                $tmpSourceFile = "{$tmpSourceDir}/{$require}";
+                $targetFile = "{$targetDir}/{$require}";
+                if (!rename($tmpSourceFile, $targetFile)) {
+                    throw new RuntimeException("Update dep files from '{$tmpSourceFile}' to {$targetFile} failed");
+                }
+            }
+        } else {
+            $targetParentDir = dirname($targetDir);
+            if (!is_dir($targetParentDir)) {
+                if (!mkdir($targetParentDir, 0777, true)) {
+                    throw new RuntimeException("Unable to create target parent dir '{$targetParentDir}'");
+                }
+            }
+            if (!rename($tmpSourceDir, $targetDir)) {
+                throw new RuntimeException("Update dep files from '{$tmpSourceDir}' to {$targetDir} failed");
+            }
         }
         `cd {$targetDir} && git add --ignore-errors -A`;
 

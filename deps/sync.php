@@ -18,7 +18,7 @@ use function Swow\Tools\log;
 use function Swow\Tools\notice;
 use function Swow\Tools\ok;
 
-$syncFromGit = function (string $orgName, string $repoName, string $sourceDir, string $targetDir): array {
+$syncFromGit = function (string $orgName, string $repoName, string $sourceDir, string $targetDir, array $requires = []): array {
     $fullName = "{$orgName}/{$repoName}";
     log("Sync {$fullName}...");
     $path = dirname(__DIR__, 2) . '/' . $repoName;
@@ -27,7 +27,7 @@ $syncFromGit = function (string $orgName, string $repoName, string $sourceDir, s
     } else {
         $url = "file://{$path}";
     }
-    $version = DependencyManager::sync($repoName, $url, $sourceDir, $targetDir);
+    $version = DependencyManager::sync($repoName, $url, $sourceDir, $targetDir, $requires);
     ok("Sync {$fullName} to {$version}");
     return [$repoName => "* {$fullName}@{$version}\n"];
 };
@@ -36,7 +36,8 @@ try {
     $deps = [];
     $deps += $syncFromGit(
         'libcat', 'libcat',
-        'libcat', __DIR__ . '/libcat'
+        'libcat', __DIR__ . '/libcat',
+        ['include', 'src', 'deps', 'tools', 'clean.sh', 'LICENSE']
     );
 } catch (Exception $exception) {
     error($exception->getMessage());
