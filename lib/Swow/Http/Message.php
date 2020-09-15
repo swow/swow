@@ -20,16 +20,29 @@ class Message implements MessageInterface
 {
     public const DEFAULT_PROTOCOL_VERSION = '1.1';
 
+    /**
+     * @var string
+     */
     protected $protocolVersion = self::DEFAULT_PROTOCOL_VERSION;
 
+    /**
+     * @var array
+     */
     protected $headers = [];
 
-    /* @var null|array */
+    /**
+     * @var null|array
+     */
     protected $headerNames;
 
+    /**
+     * @var bool
+     */
     protected $keepAlive = true;
 
-    /* @var Buffer */
+    /**
+     * @var Buffer
+     */
     protected $body;
 
     /**

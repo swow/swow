@@ -15,6 +15,9 @@ namespace Swow\Http\Server;
 
 class Response extends \Swow\Http\Response
 {
+    /**
+     * @var array
+     */
     protected $headers = ['Server' => 'swow'];
 
     public function error(int $statusCode, string $reasonPhrase = ''): self

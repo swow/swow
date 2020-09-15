@@ -19,10 +19,19 @@ class Request extends \Swow\Http\ServerRequest
 
     protected $query = '';
 
+    /**
+     * @var array|null
+     */
     protected $queryParams;
 
+    /**
+     * @var bool
+     */
     protected $upgrade;
 
+    /**
+     * @var int|null
+     */
     protected $contentLength;
 
     /** @noinspection PhpMissingParentConstructorInspection */

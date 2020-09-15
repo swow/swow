@@ -20,11 +20,19 @@ use Swow\Socket\Exception as SocketException;
 
 class Server extends Socket
 {
-    /* @var Session[] */
+    /**
+     * @var Session[]
+     */
     protected $sessions = [];
 
+    /**
+     * @var int
+     */
     protected $maxHeaderLength = 8192;
 
+    /**
+     * @var int
+     */
     protected $maxContentLength = 8 * 1024 * 1024;
 
     public function __construct()
