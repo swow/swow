@@ -101,6 +101,7 @@ class Request extends \Swow\Http\ServerRequest
         $this->query = $uriParts[1] ?? '';
         $this->protocolVersion = $protocolVersion;
         $this->headers = $headers;
+        $this->generateHeaderNames();
         $this->keepAlive = $keepAlive;
         $this->contentLength = $contentLength;
         $this->upgrade = $upgrade;
