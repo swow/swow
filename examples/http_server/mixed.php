@@ -53,6 +53,10 @@ while (true) {
                                 $session->respond($request->getBodyAsString());
                                 break;
                             }
+                            case '/header':{
+                                $session->sendHttpResponse(new HttpServer\Response(200, ['X-Token' => [uniqid(), uniqid()]]));
+                                break;
+                            }
                             case '/chat':
                             {
                                 if ($upgrade = $request->getUpgrade()) {

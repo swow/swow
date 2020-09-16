@@ -463,15 +463,24 @@ static cat_always_inline size_t swow_http_get_message_length(HashTable *headers,
 {
     zend_string *header_name, *header_value, *tmp_header_value;
     zval *zheader_value;
+    zval *value;
     size_t size = 0;
 
     ZEND_HASH_FOREACH_STR_KEY_VAL(headers, header_name, zheader_value) {
         if (UNEXPECTED(header_name == NULL)) {
             continue;
         }
-        header_value = zval_get_tmp_string(zheader_value, &tmp_header_value);
-        size += (ZSTR_LEN(header_name) + CAT_STRLEN(": ") + ZSTR_LEN(header_value) + CAT_STRLEN("\r\n"));
-        zend_tmp_string_release(tmp_header_value);
+        if (Z_TYPE_P(zheader_value) != IS_ARRAY) {
+            header_value = zval_get_tmp_string(zheader_value, &tmp_header_value);
+            size += (ZSTR_LEN(header_name) + CAT_STRLEN(": ") + ZSTR_LEN(header_value) + CAT_STRLEN("\r\n"));
+            zend_tmp_string_release(tmp_header_value);
+        }else{
+            ZEND_HASH_FOREACH_VAL(zheader_value, value) {
+                header_value = zval_get_tmp_string(value, &tmp_header_value);
+                size += (ZSTR_LEN(header_name) + CAT_STRLEN(": ") + ZSTR_LEN(header_value) + CAT_STRLEN("\r\n"));
+                zend_tmp_string_release(tmp_header_value);
+            } ZEND_HASH_FOREACH_END();
+        }
     } ZEND_HASH_FOREACH_END();
 
     size += CAT_STRLEN("\r\n");
