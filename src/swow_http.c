@@ -465,7 +465,7 @@ static cat_always_inline size_t swow_http_get_header_length(zend_string *header_
     size_t size;
 
     header_value = zval_get_tmp_string(zheader_value, &tmp_header_value);
-    size = (ZSTR_LEN(header_name) + CAT_STRLEN(": ") + ZSTR_LEN(header_value) + CAT_STRLEN("\r\n"));
+    size = ZSTR_LEN(header_name) + CAT_STRLEN(": ") + ZSTR_LEN(header_value) + CAT_STRLEN("\r\n");
     zend_tmp_string_release(tmp_header_value);
 
     return size;
