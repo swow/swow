@@ -26,25 +26,39 @@ class ServerRequest extends Request implements ServerRequestInterface
 
     public const UPGRADE_UNKNOWN = 1 << 31;
 
-    /* @var bool Keep the Host header (The server may verifies its legitimacy) */
+    /**
+     * @var bool Keep the Host header (The server may verifies its legitimacy)
+     */
     protected const PRESERVE_HOST = true;
 
-    /** @var array */
+    /**
+     * @var array
+     */
     protected $serverParams;
 
-    /** @var array */
+    /**
+     * @var array
+     */
     protected $cookieParams = [];
 
-    /** @var array */
+    /**
+     * @var array
+     */
     protected $queryParams = [];
 
-    /** @var null|array|object */
+    /**
+     * @var null|array|object
+     */
     protected $parsedBody;
 
-    /** @var UploadedFileInterface[] */
+    /**
+     * @var UploadedFileInterface[]
+     */
     protected $uploadedFiles = [];
 
-    /** @var array */
+    /**
+     * @var array
+     */
     protected $attributes = [];
 
     public function getServerParams(): array

@@ -22,25 +22,39 @@ class Uri implements UriInterface
 {
     protected const SCHEMES = ['http' => 80, 'https' => 443];
 
-    /** @var string Uri scheme. */
+    /**
+     * @var string uri scheme
+     */
     protected $scheme = '';
 
-    /** @var string Uri user info. */
+    /**
+     * @var string uri user info
+     */
     protected $userInfo = '';
 
-    /** @var string Uri host. */
+    /**
+     * @var string uri host
+     */
     protected $host = '';
 
-    /** @var null|int Uri port. */
+    /**
+     * @var null|int uri port
+     */
     protected $port;
 
-    /** @var string Uri path. */
+    /**
+     * @var string uri path
+     */
     protected $path = '';
 
-    /** @var string Uri query string. */
+    /**
+     * @var string uri query string
+     */
     protected $query = '';
 
-    /** @var string Uri fragment. */
+    /**
+     * @var string uri fragment
+     */
     protected $fragment = '';
 
     public function __construct(string $uri = '')

@@ -18,7 +18,9 @@ use Swow\WebSocket;
 
 class WebSocketFrame extends WebSocket\Frame
 {
-    /* @return Buffer */
+    /**
+     * @return Buffer
+     */
     public function getPayloadData(): \Swow\Buffer
     {
         if (!$this->hasPayloadData()) {

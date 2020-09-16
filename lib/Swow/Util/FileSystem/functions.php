@@ -29,7 +29,7 @@ function remove(string $path): void
         } else {
             $it = new \RecursiveDirectoryIterator($path, \RecursiveDirectoryIterator::SKIP_DOTS);
             $files = new \RecursiveIteratorIterator($it, \RecursiveIteratorIterator::CHILD_FIRST);
-            /* @var $file \SplFileInfo */
+            /** @var \SplFileInfo $file */
             foreach ($files as $file) {
                 remove($file->getRealPath());
             }

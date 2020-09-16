@@ -20,14 +20,24 @@ class Request extends Message implements RequestInterface
 {
     protected const PRESERVE_HOST = false;
 
+    /**
+     * @var string
+     */
     protected $method = 'UNKNOWN';
 
-    /* @var Uri */
+    /**
+     * @var Uri
+     */
     protected $uri;
 
+    /**
+     * @var string
+     */
     protected $uriString = '';
 
-    /** @var null|string */
+    /**
+     * @var null|string
+     */
     protected $requestTarget;
 
     /**

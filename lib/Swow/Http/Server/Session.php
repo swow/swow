@@ -43,21 +43,34 @@ class Session extends Socket
 
     /* TODO: support chunk transfer encoding */
 
-    /* @var Server */
+    /**
+     * @var Server
+     */
     protected $server;
 
+    /**
+     * @var int
+     */
     protected $type = self::TYPE_HTTP;
 
-    /* @var null|bool */
+    /**
+     * @var null|bool
+     */
     protected $keepAlive = false;
 
-    /* @var Buffer */
+    /**
+     * @var Buffer
+     */
     protected $buffer;
 
-    /* @var HttpParser */
+    /**
+     * @var HttpParser
+     */
     protected $httpParser;
 
-    /** @noinspection PhpMissingParentConstructorInspection */
+    /**
+     * @noinspection PhpMissingParentConstructorInspection
+     */
     public function __construct()
     {
         /* It will be constructed by accept */
