@@ -474,18 +474,17 @@ static cat_always_inline size_t swow_http_get_header_length(zend_string *header_
 static cat_always_inline size_t swow_http_get_message_length(HashTable *headers, zend_string *body)
 {
     zend_string *header_name;
-    zval *zheader_values;
+    zval *zheader_value;
     size_t size = 0;
 
-    ZEND_HASH_FOREACH_STR_KEY_VAL(headers, header_name, zheader_values) {
+    ZEND_HASH_FOREACH_STR_KEY_VAL(headers, header_name, zheader_value) {
         if (UNEXPECTED(header_name == NULL)) {
             continue;
         }
-        if (Z_TYPE_P(zheader_values) != IS_ARRAY) {
-            size += swow_http_get_header_length(header_name, zheader_values);
+        if (Z_TYPE_P(zheader_value) != IS_ARRAY) {
+            size += swow_http_get_header_length(header_name, zheader_value);
         } else {
-            zval *zheader_value;
-            ZEND_HASH_FOREACH_VAL(Z_ARR_P(zheader_values), zheader_value) {
+            ZEND_HASH_FOREACH_VAL(Z_ARR_P(zheader_value), zheader_value) {
                 size += swow_http_get_header_length(header_name, zheader_value);
             } ZEND_HASH_FOREACH_END();
         }
@@ -515,16 +514,16 @@ static cat_always_inline char *swow_http_pack_header(char *p, zend_string *heade
 static cat_always_inline char *swow_http_pack_headers(char *p, HashTable *headers)
 {
     zend_string *header_name;
-    zval *zheader_value, *zheader_values;
+    zval *zheader_value;
 
-    ZEND_HASH_FOREACH_STR_KEY_VAL(headers, header_name, zheader_values) {
+    ZEND_HASH_FOREACH_STR_KEY_VAL(headers, header_name, zheader_value) {
         if (UNEXPECTED(header_name == NULL)) {
             continue;
         }
-        if (Z_TYPE_P(zheader_values) != IS_ARRAY) {
-            p = swow_http_pack_header(p, header_name, zheader_values);
+        if (Z_TYPE_P(zheader_value) != IS_ARRAY) {
+            p = swow_http_pack_header(p, header_name, zheader_value);
         } else {
-            ZEND_HASH_FOREACH_VAL(Z_ARR_P(zheader_values), zheader_value) {
+            ZEND_HASH_FOREACH_VAL(Z_ARR_P(zheader_value), zheader_value) {
                 p = swow_http_pack_header(p, header_name, zheader_value);
             } ZEND_HASH_FOREACH_END();
         }
