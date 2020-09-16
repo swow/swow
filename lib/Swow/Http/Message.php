@@ -87,29 +87,16 @@ class Message implements MessageInterface
         return $new;
     }
 
-    protected function generateHeaderNames(): void
-    {
-        $this->headerNames = [];
-        foreach ($this->headers as $name => $value) {
-            $this->headerNames[strtolower($name)] = $name;
-            $this->headers[$name] = (array) $value;
-        }
-    }
-
     public function hasHeader($name): bool
     {
-        if ($this->headerNames === null) {
-            $this->generateHeaderNames();
-        }
+        $this->generateHeaderNames();
 
         return isset($this->headerNames[strtolower($name)]);
     }
 
     public function getHeader($name): array
     {
-        if ($this->headerNames === null) {
-            $this->generateHeaderNames();
-        }
+        $this->generateHeaderNames();
 
         $name = $this->getHeaderName($name);
 
@@ -126,9 +113,8 @@ class Message implements MessageInterface
      */
     public function setHeader(string $name, $value): self
     {
-        if ($this->headerNames === null) {
-            $this->generateHeaderNames();
-        }
+        $this->generateHeaderNames();
+
         $lowerCaseName = strtolower($name);
         $rawName = $this->headerNames[$lowerCaseName] ?? null;
         if ($rawName !== null) {
@@ -146,6 +132,8 @@ class Message implements MessageInterface
 
     public function getHeaders(): array
     {
+        $this->generateHeaderNames();
+
         return $this->headers;
     }
 
@@ -284,6 +272,17 @@ class Message implements MessageInterface
     public function __toString()
     {
         return $this->toString();
+    }
+
+    protected function generateHeaderNames(): void
+    {
+        if ($this->headerNames === null) {
+            $this->headerNames = [];
+            foreach ($this->headers as $name => $value) {
+                $this->headerNames[strtolower($name)] = $name;
+                $this->headers[$name] = (array) $value;
+            }
+        }
     }
 
     protected function getHeaderName(string $name): ?string
