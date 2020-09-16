@@ -462,21 +462,21 @@ static const zend_function_entry swow_http_parser_methods[] = {
 static cat_always_inline size_t swow_http_get_message_length(HashTable *headers, zend_string *body)
 {
     zend_string *header_name, *header_value, *tmp_header_value;
-    zval *zheader_value;
-    zval *value;
+    zval *zheader_value, *zheader_values;
     size_t size = 0;
 
-    ZEND_HASH_FOREACH_STR_KEY_VAL(headers, header_name, zheader_value) {
+    ZEND_HASH_FOREACH_STR_KEY_VAL(headers, header_name, zheader_values) {
         if (UNEXPECTED(header_name == NULL)) {
             continue;
         }
-        if (Z_TYPE_P(zheader_value) != IS_ARRAY) {
-            header_value = zval_get_tmp_string(zheader_value, &tmp_header_value);
+        if (Z_TYPE_P(zheader_values) != IS_ARRAY) {
+            header_value = zval_get_tmp_string(zheader_values, &tmp_header_value);
             size += (ZSTR_LEN(header_name) + CAT_STRLEN(": ") + ZSTR_LEN(header_value) + CAT_STRLEN("\r\n"));
             zend_tmp_string_release(tmp_header_value);
-        }else{
-            ZEND_HASH_FOREACH_VAL(zheader_value, value) {
-                header_value = zval_get_tmp_string(value, &tmp_header_value);
+        }
+        else {
+            ZEND_HASH_FOREACH_VAL(Z_ARR_P(zheader_values), zheader_value) {
+                header_value = zval_get_tmp_string(zheader_value, &tmp_header_value);
                 size += (ZSTR_LEN(header_name) + CAT_STRLEN(": ") + ZSTR_LEN(header_value) + CAT_STRLEN("\r\n"));
                 zend_tmp_string_release(tmp_header_value);
             } ZEND_HASH_FOREACH_END();
@@ -507,16 +507,18 @@ static cat_always_inline char *swow_http_pack_header(char *p, zend_string *heade
 static cat_always_inline char *swow_http_pack_headers(char *p, HashTable *headers)
 {
     zend_string *header_name;
-    zval *zheader_value;
+    zval *zheader_value, *zheader_values;
 
-    ZEND_HASH_FOREACH_STR_KEY_VAL(headers, header_name, zheader_value) {
+    ZEND_HASH_FOREACH_STR_KEY_VAL(headers, header_name, zheader_values) {
         if (UNEXPECTED(header_name == NULL)) {
             continue;
         }
-        if (Z_TYPE_P(zheader_value) != IS_ARRAY) {
-            p = swow_http_pack_header(p, header_name, zheader_value);
+        if (Z_TYPE_P(zheader_values) != IS_ARRAY) {
+            p = swow_http_pack_header(p, header_name, zheader_values);
         } else {
-            p = swow_http_pack_headers(p, Z_ARR_P(zheader_value));
+            ZEND_HASH_FOREACH_VAL(Z_ARR_P(zheader_values), zheader_value) {
+                p = swow_http_pack_header(p, header_name, zheader_value);
+            } ZEND_HASH_FOREACH_END();
         }
     } ZEND_HASH_FOREACH_END();
 
