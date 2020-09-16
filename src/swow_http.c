@@ -481,22 +481,42 @@ static cat_always_inline size_t swow_http_get_message_length(HashTable *headers,
     return size;
 }
 
-static cat_always_inline char* swow_http_pack_message(char *p, HashTable *headers, zend_string *body)
+static cat_always_inline char *swow_http_pack_header(char *p, zend_string *header_name, zval *zheader_value)
 {
-    zend_string *header_name, *header_value, *tmp_header_value;
+    zend_string *header_value, *tmp_header_value;
+
+    header_value = zval_get_tmp_string(zheader_value, &tmp_header_value);
+    p = cat_memcpy(p, ZSTR_VAL(header_name), ZSTR_LEN(header_name));
+    p = cat_memcpy(p, CAT_STRL(": "));
+    p = cat_memcpy(p, ZSTR_VAL(header_value), ZSTR_LEN(header_value));
+    p = cat_memcpy(p, CAT_STRL("\r\n"));
+    zend_tmp_string_release(tmp_header_value);
+
+    return p;
+}
+
+static cat_always_inline char *swow_http_pack_headers(char *p, HashTable *headers)
+{
+    zend_string *header_name;
     zval *zheader_value;
 
     ZEND_HASH_FOREACH_STR_KEY_VAL(headers, header_name, zheader_value) {
         if (UNEXPECTED(header_name == NULL)) {
             continue;
         }
-        header_value = zval_get_tmp_string(zheader_value, &tmp_header_value);
-        p = cat_memcpy(p, ZSTR_VAL(header_name), ZSTR_LEN(header_name));
-        p = cat_memcpy(p, CAT_STRL(": "));
-        p = cat_memcpy(p, ZSTR_VAL(header_value), ZSTR_LEN(header_value));
-        p = cat_memcpy(p, CAT_STRL("\r\n"));
-        zend_tmp_string_release(tmp_header_value);
+        if (Z_TYPE_P(zheader_value) != IS_ARRAY) {
+            p = swow_http_pack_header(p, header_name, zheader_value);
+        } else {
+            p = swow_http_pack_headers(p, Z_ARR_P(zheader_value));
+        }
     } ZEND_HASH_FOREACH_END();
+
+    return p;
+}
+
+static cat_always_inline char* swow_http_pack_message(char *p, HashTable *headers, zend_string *body)
+{
+    p = swow_http_pack_headers(p, headers);
 
     p = cat_memcpy(p, CAT_STRL("\r\n"));
 
