@@ -459,9 +459,21 @@ static const zend_function_entry swow_http_parser_methods[] = {
     PHP_FE_END
 };
 
+static cat_always_inline size_t swow_http_get_header_length(zend_string *header_name, zval *zheader_value)
+{
+    zend_string *header_value, *tmp_header_value;
+    size_t size;
+
+    header_value = zval_get_tmp_string(zheader_value, &tmp_header_value);
+    size = ZSTR_LEN(header_name) + CAT_STRLEN(": ") + ZSTR_LEN(header_value) + CAT_STRLEN("\r\n");
+    zend_tmp_string_release(tmp_header_value);
+
+    return size;
+}
+
 static cat_always_inline size_t swow_http_get_message_length(HashTable *headers, zend_string *body)
 {
-    zend_string *header_name, *header_value, *tmp_header_value;
+    zend_string *header_name;
     zval *zheader_value;
     size_t size = 0;
 
@@ -469,9 +481,13 @@ static cat_always_inline size_t swow_http_get_message_length(HashTable *headers,
         if (UNEXPECTED(header_name == NULL)) {
             continue;
         }
-        header_value = zval_get_tmp_string(zheader_value, &tmp_header_value);
-        size += (ZSTR_LEN(header_name) + CAT_STRLEN(": ") + ZSTR_LEN(header_value) + CAT_STRLEN("\r\n"));
-        zend_tmp_string_release(tmp_header_value);
+        if (Z_TYPE_P(zheader_value) != IS_ARRAY) {
+            size += swow_http_get_header_length(header_name, zheader_value);
+        } else {
+            ZEND_HASH_FOREACH_VAL(Z_ARR_P(zheader_value), zheader_value) {
+                size += swow_http_get_header_length(header_name, zheader_value);
+            } ZEND_HASH_FOREACH_END();
+        }
     } ZEND_HASH_FOREACH_END();
 
     size += CAT_STRLEN("\r\n");
@@ -507,7 +523,9 @@ static cat_always_inline char *swow_http_pack_headers(char *p, HashTable *header
         if (Z_TYPE_P(zheader_value) != IS_ARRAY) {
             p = swow_http_pack_header(p, header_name, zheader_value);
         } else {
-            p = swow_http_pack_headers(p, Z_ARR_P(zheader_value));
+            ZEND_HASH_FOREACH_VAL(Z_ARR_P(zheader_value), zheader_value) {
+                p = swow_http_pack_header(p, header_name, zheader_value);
+            } ZEND_HASH_FOREACH_END();
         }
     } ZEND_HASH_FOREACH_END();
 
