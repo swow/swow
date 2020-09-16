@@ -459,10 +459,22 @@ static const zend_function_entry swow_http_parser_methods[] = {
     PHP_FE_END
 };
 
+static cat_always_inline size_t swow_http_get_header_length(zend_string *header_name, zval *zheader_value)
+{
+    zend_string *header_value, *tmp_header_value;
+    size_t size;
+
+    header_value = zval_get_tmp_string(zheader_value, &tmp_header_value);
+    size = (ZSTR_LEN(header_name) + CAT_STRLEN(": ") + ZSTR_LEN(header_value) + CAT_STRLEN("\r\n"));
+    zend_tmp_string_release(tmp_header_value);
+
+    return size;
+}
+
 static cat_always_inline size_t swow_http_get_message_length(HashTable *headers, zend_string *body)
 {
-    zend_string *header_name, *header_value, *tmp_header_value;
-    zval *zheader_value, *zheader_values;
+    zend_string *header_name;
+    zval *zheader_values;
     size_t size = 0;
 
     ZEND_HASH_FOREACH_STR_KEY_VAL(headers, header_name, zheader_values) {
@@ -470,15 +482,11 @@ static cat_always_inline size_t swow_http_get_message_length(HashTable *headers,
             continue;
         }
         if (Z_TYPE_P(zheader_values) != IS_ARRAY) {
-            header_value = zval_get_tmp_string(zheader_values, &tmp_header_value);
-            size += (ZSTR_LEN(header_name) + CAT_STRLEN(": ") + ZSTR_LEN(header_value) + CAT_STRLEN("\r\n"));
-            zend_tmp_string_release(tmp_header_value);
-        }
-        else {
+            size += swow_http_get_header_length(header_name, zheader_values);
+        } else {
+            zval *zheader_value;
             ZEND_HASH_FOREACH_VAL(Z_ARR_P(zheader_values), zheader_value) {
-                header_value = zval_get_tmp_string(zheader_value, &tmp_header_value);
-                size += (ZSTR_LEN(header_name) + CAT_STRLEN(": ") + ZSTR_LEN(header_value) + CAT_STRLEN("\r\n"));
-                zend_tmp_string_release(tmp_header_value);
+                size += swow_http_get_header_length(header_name, zheader_value);
             } ZEND_HASH_FOREACH_END();
         }
     } ZEND_HASH_FOREACH_END();
