@@ -108,8 +108,8 @@ class Request extends Message implements RequestInterface
         }
         // Ensure Host is the first header.
         // See: http://tools.ietf.org/html/rfc7230#section-5.4
-        $this->headers = ['Host' => $host] + $this->headers;
-        $this->headerNames['host'] = $host;
+        $this->headers = ['Host' => [$host]] + $this->headers;
+        $this->headerNames['host'] = 'Host';
     }
 
     public function getUri(): UriInterface

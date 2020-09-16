@@ -163,7 +163,7 @@ class Session extends Socket
                             }
                             case HttpParser::EVENT_HEADER_VALUE:
                             {
-                                $headers[$headerName] = $data;
+                                $headers[$headerName][] = $data;
                                 break;
                             }
                             case HttpParser::EVENT_URL:

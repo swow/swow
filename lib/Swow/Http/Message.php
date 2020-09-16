@@ -92,6 +92,7 @@ class Message implements MessageInterface
         $this->headerNames = [];
         foreach ($this->headers as $name => $value) {
             $this->headerNames[strtolower($name)] = $name;
+            $this->headers[$name] = (array) $value;
         }
     }
 
@@ -106,24 +107,24 @@ class Message implements MessageInterface
 
     public function getHeader($name): array
     {
-        return explode(', ', $this->getHeaderLine($name));
-    }
-
-    public function getHeaderLine($name): string
-    {
         if ($this->headerNames === null) {
             $this->generateHeaderNames();
         }
 
-        $name = $this->headerNames[strtolower($name)] ?? null;
-        if ($name === null) {
-            return '';
-        }
+        $name = $this->getHeaderName($name);
 
-        return $this->headers[$name];
+        return $this->headers[$name] ?? [];
     }
 
-    public function setHeader(string $name, ?string $value): self
+    public function getHeaderLine($name): string
+    {
+        return implode(', ', $this->getHeader($name));
+    }
+
+    /**
+     * @param null|array|string $value
+     */
+    public function setHeader(string $name, $value): self
     {
         if ($this->headerNames === null) {
             $this->generateHeaderNames();
@@ -134,7 +135,7 @@ class Message implements MessageInterface
             unset($this->headers[$rawName]);
         }
         if ($value !== null) {
-            $this->headers[$name] = $value;
+            $this->headers[$name] = (array) $value;
             $this->headerNames[$lowerCaseName] = $name;
         } else {
             unset($this->headerNames[$lowerCaseName]);
@@ -283,5 +284,10 @@ class Message implements MessageInterface
     public function __toString()
     {
         return $this->toString();
+    }
+
+    protected function getHeaderName(string $name): ?string
+    {
+        return $this->headerNames[strtolower($name)] ?? null;
     }
 }
