@@ -87,14 +87,6 @@ class Message implements MessageInterface
         return $new;
     }
 
-    protected function generateHeaderNames(): void
-    {
-        $this->headerNames = [];
-        foreach ($this->headers as $name => $value) {
-            $this->headerNames[strtolower($name)] = $name;
-        }
-    }
-
     public function hasHeader($name): bool
     {
         return isset($this->headerNames[strtolower($name)]);
