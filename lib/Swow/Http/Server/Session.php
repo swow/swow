@@ -111,6 +111,7 @@ class Session extends Socket
         $uri = '';
         $headerName = '';
         $headers = [];
+        $headerNames = [];
         $shouldKeepAlive = false;
         $contentLength = 0;
         $headerLength = 0;
@@ -164,6 +165,7 @@ class Session extends Socket
                             case HttpParser::EVENT_HEADER_VALUE:
                             {
                                 $headers[$headerName] = $data;
+                                $headerNames[strtolower($headerName)] = $headerName;
                                 break;
                             }
                             case HttpParser::EVENT_URL:
@@ -222,6 +224,7 @@ class Session extends Socket
                     $uri,
                     $parser->getProtocolVersion(),
                     $headers,
+                    $headerNames,
                     $shouldKeepAlive,
                     $contentLength,
                     $parser->isUpgrade()
