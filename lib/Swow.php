@@ -1027,6 +1027,61 @@ namespace Swow
          * @return array
          */
         public function __debugInfo(): array { }
+
+        /**
+         * @return int
+         */
+        public static function getGlobalDnsTimeout(): int { }
+
+        /**
+         * @return int
+         */
+        public static function getGlobalAcceptTimeout(): int { }
+
+        /**
+         * @return int
+         */
+        public static function getGlobalConnectTimeout(): int { }
+
+        /**
+         * @return int
+         */
+        public static function getGlobalReadTimeout(): int { }
+
+        /**
+         * @return int
+         */
+        public static function getGlobalWriteTimeout(): int { }
+
+        /**
+         * @param int $timeout [required]
+         * @return mixed
+         */
+        public static function setGlobalDnsTimeout(int $timeout) { }
+
+        /**
+         * @param int $timeout [required]
+         * @return mixed
+         */
+        public static function setGlobalAcceptTimeout(int $timeout) { }
+
+        /**
+         * @param int $timeout [required]
+         * @return mixed
+         */
+        public static function setGlobalConnectTimeout(int $timeout) { }
+
+        /**
+         * @param int $timeout [required]
+         * @return mixed
+         */
+        public static function setGlobalReadTimeout(int $timeout) { }
+
+        /**
+         * @param int $timeout [required]
+         * @return mixed
+         */
+        public static function setGlobalWriteTimeout(int $timeout) { }
     }
 }
 
