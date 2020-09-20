@@ -1235,7 +1235,7 @@ static PHP_METHOD(swow_coroutine, __construct)
     ZEND_PARSE_PARAMETERS_START(1, 3)
         Z_PARAM_ZVAL(zcallable)
         Z_PARAM_OPTIONAL
-        /* TODO: options */
+        /* TODO: options & ulong */
         Z_PARAM_LONG(stack_page_size)
         Z_PARAM_LONG(c_stack_size)
     ZEND_PARSE_PARAMETERS_END();
