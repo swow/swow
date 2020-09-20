@@ -2327,8 +2327,8 @@ int swow_coroutine_runtime_shutdown(SHUTDOWN_FUNC_ARGS)
             cat_core_error_with_last(COROUTINE, "Scheduler is still running");
         }
 
-        if (CAT_COROUTINE_G(active_count) != 1) {
-            cat_core_error(COROUTINE, "Unexpected number of coroutines (%u)", CAT_COROUTINE_G(active_count));
+        if (CAT_COROUTINE_G(count) != 1) {
+            cat_core_error(COROUTINE, "Unexpected number of coroutines (%u)", CAT_COROUTINE_G(count));
         }
 
         /* coroutine switching should no longer occur */
