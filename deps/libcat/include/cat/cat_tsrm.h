@@ -16,7 +16,7 @@
   +--------------------------------------------------------------------------+
  */
 
-#define CAT_GLOBALS_STRUCT(name)                        _##name##_globals_t
+#define CAT_GLOBALS_STRUCT(name)                        name##_globals_s
 #define CAT_GLOBALS_TYPE(name)                          name##_globals_t
 #define CAT_GLOBALS(name)                               name##_globals
 

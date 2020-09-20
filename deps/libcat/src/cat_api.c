@@ -27,13 +27,15 @@ CAT_API cat_bool_t cat_init_all(void)
           cat_coroutine_module_init() &&
           cat_event_module_init() &&
           cat_socket_module_init() &&
-          cat_buffer_module_init();
+          cat_buffer_module_init() &&
+          cat_watch_dog_module_init();
 
     ret = ret &&
           cat_runtime_init() &&
           cat_coroutine_runtime_init() &&
           cat_event_runtime_init() &&
-          cat_socket_runtime_init();
+          cat_socket_runtime_init() &&
+          cat_watch_dog_runtime_init();
 
     return ret;
 }
@@ -43,6 +45,7 @@ CAT_API cat_bool_t cat_shutdown_all(void)
     cat_bool_t ret = cat_true;
 
     ret = ret &&
+          cat_watch_dog_runtime_shutdown() &&
           cat_event_runtime_shutdown() &&
           cat_runtime_shutdown();
 
