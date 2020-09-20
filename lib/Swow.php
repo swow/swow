@@ -32,6 +32,7 @@ namespace Swow
         public const TYPE_FS = 1024;
         public const TYPE_SIGNAL = 2048;
         public const TYPE_PROCESS = 4096;
+        public const TYPE_WATCH_DOG = 131072;
         public const TYPE_PROTOCOL = 262144;
         public const TYPE_SSL = 4194304;
         public const TYPE_TEST = 8388608;
@@ -43,9 +44,9 @@ namespace Swow
         public const TYPE_USR6 = 536870912;
         public const TYPE_USR7 = 1073741824;
         public const TYPE_USR8 = -2147483648;
-        public const TYPES_BUILTIN = 12853247;
+        public const TYPES_BUILTIN = 12984319;
         public const TYPES_USR = -16777216;
-        public const TYPES_ALL = -3923969;
+        public const TYPES_ALL = -3792897;
     }
 }
 
@@ -1133,6 +1134,30 @@ namespace Swow
 
 namespace Swow
 {
+    class WatchDog
+    {
+        /**
+         * @param int $quantum [optional] = 0
+         * @param int $threshold [optional] = 0
+         * @param callable|int|float|null $alerter [optional] = null
+         * @return void
+         */
+        public static function run(int $quantum = 0, int $threshold = 0, $alerter = null): void { }
+
+        /**
+         * @return void
+         */
+        public static function stop(): void { }
+
+        /**
+         * @return bool
+         */
+        public static function isRunning(): bool { }
+    }
+}
+
+namespace Swow
+{
     /**
      * @param callable $tasks [optional]
      * @return void
@@ -1278,6 +1303,11 @@ namespace Swow\Socket
 }
 
 namespace Swow\Signal
+{
+    class Exception extends \Swow\Exception { }
+}
+
+namespace Swow\WatchDog
 {
     class Exception extends \Swow\Exception { }
 }
