@@ -1036,6 +1036,31 @@ SWOW_API cat_bool_t swow_coroutine_call(swow_coroutine_t *scoroutine, zval *zcal
     return cat_true;
 }
 
+SWOW_API swow_coroutine_t *swow_coroutine_get_by_id(cat_coroutine_id_t id)
+{
+    zval *zscoroutine = zend_hash_index_find(SWOW_COROUTINE_G(map), id);
+    swow_coroutine_t *scoroutine;
+
+    if (zscoroutine != NULL) {
+        scoroutine = swow_coroutine_get_from_object(Z_OBJ_P(zscoroutine));
+    } else {
+        scoroutine = NULL;
+    }
+
+    return scoroutine;
+}
+
+SWOW_API zval *swow_coroutine_get_zval_by_id(cat_coroutine_id_t id)
+{
+    zval *zscoroutine = zend_hash_index_find(SWOW_COROUTINE_G(map), id);
+
+    if (zscoroutine == NULL) {
+        zscoroutine = CAT_COROUTINE_DATA_NULL;
+    }
+
+    return zscoroutine;
+}
+
 SWOW_API void swow_coroutine_dump(swow_coroutine_t *scoroutine)
 {
     zval zscoroutine;
@@ -1044,15 +1069,9 @@ SWOW_API void swow_coroutine_dump(swow_coroutine_t *scoroutine)
     php_var_dump(&zscoroutine, 0);
 }
 
-
 SWOW_API void swow_coroutine_dump_by_id(cat_coroutine_id_t id)
 {
-    zval *zscoroutine = zend_hash_index_find(SWOW_COROUTINE_G(map), id);
-
-    if (zscoroutine == NULL) {
-        zscoroutine = CAT_COROUTINE_DATA_NULL;
-    }
-    php_var_dump(zscoroutine, 0);
+    php_var_dump(swow_coroutine_get_zval_by_id(id), 0);
 }
 
 SWOW_API void swow_coroutine_dump_all(void)

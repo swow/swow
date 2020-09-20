@@ -269,6 +269,9 @@ SWOW_API cat_bool_t swow_coroutine_set_local_var(swow_coroutine_t *scoroutine, z
 SWOW_API cat_bool_t swow_coroutine_eval(swow_coroutine_t *scoroutine, zend_string *string, zend_long level, zval *return_value); SWOW_MAY_EXCEPTION
 SWOW_API cat_bool_t swow_coroutine_call(swow_coroutine_t *scoroutine, zval *zcallable, zval *return_value);                      SWOW_MAY_EXCEPTION
 
+SWOW_API swow_coroutine_t *swow_coroutine_get_by_id(cat_coroutine_id_t id);
+SWOW_API zval *swow_coroutine_get_zval_by_id(cat_coroutine_id_t id);
+
 SWOW_API void swow_coroutine_dump(swow_coroutine_t *scoroutine);
 SWOW_API void swow_coroutine_dump_by_id(cat_coroutine_id_t id);
 SWOW_API void swow_coroutine_dump_all(void);
