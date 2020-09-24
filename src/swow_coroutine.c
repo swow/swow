@@ -317,9 +317,19 @@ SWOW_API swow_coroutine_t *swow_coroutine_create_ex(zval *zcallable, size_t stac
 
 static cat_bool_t swow_coroutine_construct(swow_coroutine_t *scoroutine, zval *zcallable, size_t stack_page_size, size_t c_stack_size)
 {
-    /* check arguments */
+    swow_coroutine_exector_t *executor;
     zend_fcall_info_cache fcc;
-    do {
+    zend_vm_stack vm_stack;
+    cat_coroutine_t *coroutine;
+    cat_coroutine_function_t function;
+    cat_bool_t is_c_function;
+
+    /* check arguments */
+    is_c_function = Z_TYPE_P(zcallable) == IS_PTR;
+
+    if (UNEXPECTED(is_c_function)) {
+        function = (cat_coroutine_function_t) Z_PTR_P(zcallable);
+    } else {
         char *error;
         if (!zend_is_callable_ex(zcallable, NULL, 0, NULL, &fcc, &error)) {
             cat_update_last_error(CAT_EMISUSE, "Coroutine function must be callable, %s", error);
@@ -327,28 +337,28 @@ static cat_bool_t swow_coroutine_construct(swow_coroutine_t *scoroutine, zval *z
             return cat_false;
         }
         efree(error);
-    } while (0);
+        function = (cat_coroutine_function_t) swow_coroutine_function;
+    }
 
     /* create C coroutine */
-    cat_coroutine_t *coroutine = cat_coroutine_create_ex(
-        &scoroutine->coroutine,
-        (cat_coroutine_function_t) swow_coroutine_function,
-        c_stack_size
-    );
+    coroutine = &scoroutine->coroutine;
+    coroutine = cat_coroutine_create_ex(coroutine, function, c_stack_size);
     if (UNEXPECTED(coroutine == NULL)) {
         return cat_false;
     }
-    coroutine->opcodes |= SWOW_COROUTINE_OPCODE_ACCEPT_ZDATA;
 
-    /* align stack page size */
-    stack_page_size = swow_coroutine_align_stack_page_size(stack_page_size);
-    /* alloc vm stack memory */
-    zend_vm_stack vm_stack = (zend_vm_stack) emalloc(stack_page_size);
-    /* assign the end to executor */
-    swow_coroutine_exector_t *executor = (swow_coroutine_exector_t *) ZEND_VM_STACK_ELEMENTS(vm_stack);
-    /* init executor */
-    do {
-        /* init exector */
+    if (UNEXPECTED(is_c_function)) {
+        executor = (swow_coroutine_exector_t *) ecalloc(1, sizeof(*executor));
+        ZVAL_NULL(&executor->zcallable);
+    } else {
+        coroutine->opcodes |= SWOW_COROUTINE_OPCODE_ACCEPT_ZDATA;
+        /* align stack page size */
+        stack_page_size = swow_coroutine_align_stack_page_size(stack_page_size);
+        /* alloc vm stack memory */
+        vm_stack = (zend_vm_stack) emalloc(stack_page_size);
+        /* assign the end to executor */
+        executor = (swow_coroutine_exector_t *) ZEND_VM_STACK_ELEMENTS(vm_stack);
+        /* init executor */
         executor->bailout = NULL;
         executor->vm_stack = vm_stack;
         executor->vm_stack->top = (zval *) (((char *) executor) + CAT_MEMORY_ALIGNED_SIZE_EX(sizeof(*executor), sizeof(zval)));
@@ -377,11 +387,11 @@ static cat_bool_t swow_coroutine_construct(swow_coroutine_t *scoroutine, zval *z
         /* save function cache */
         ZVAL_COPY(&executor->zcallable, zcallable);
         executor->fcc = fcc;
-
         /* it's unnecessary to init the zdata */
         /* ZVAL_UNDEF(&executor->zdata); */
         executor->cross_exception = NULL;
-    } while (0);
+    }
+
     /* executor ok */
     scoroutine->executor = executor;
     scoroutine->exit_status = 0;
@@ -2289,7 +2299,7 @@ int swow_coroutine_runtime_init(INIT_FUNC_ARGS)
     /* create main scoroutine */
     do {
         swow_coroutine_t *scoroutine = swow_coroutine_get_from_object(swow_object_create(swow_coroutine_ce));
-        /* construct (make sure the follow-up logic works) */
+        /* construct (we can not use construct function because we do not need C stack here) */
         scoroutine->executor = (swow_coroutine_exector_t *) ecalloc(1, sizeof(*scoroutine->executor));
         ZVAL_NULL(&scoroutine->executor->zcallable);
         /* register first (sync coroutine info) */
