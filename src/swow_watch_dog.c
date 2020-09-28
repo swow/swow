@@ -134,7 +134,6 @@ SWOW_API cat_bool_t swow_watch_dog_run(cat_usec_t quantum, cat_nsec_t threshold,
         return cat_false;
     }
 
-
     return cat_true;
 }
 

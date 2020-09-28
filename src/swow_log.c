@@ -105,7 +105,7 @@ static void swow_log_standard(CAT_LOG_PARAMATERS)
                 break;
             }
             default:
-                CAT_NEVER_HERE(CORE, "Unknown log type");
+                CAT_NEVER_HERE("Unknown log type");
         }
     }
 }

@@ -1171,7 +1171,6 @@ static PHP_METHOD(swow_socket, isEstablished)
     RETURN_BOOL(cat_socket_is_established(socket));
 }
 
-
 ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_swow_socket_checkLiveness, ZEND_RETURN_VALUE, 0, Swow\\Socket, 0)
 ZEND_END_ARG_INFO()
 
