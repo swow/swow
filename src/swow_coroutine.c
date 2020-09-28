@@ -47,8 +47,8 @@ CAT_GLOBALS_CTOR_DECLARE_SZ(swow_coroutine)
 static cat_bool_t swow_coroutine_construct(swow_coroutine_t *scoroutine, zval *zcallable, size_t stack_page_size, size_t c_stack_size);
 static void swow_coroutine_close(swow_coroutine_t *scoroutine);
 static void swow_coroutine_handle_cross_exception(zend_object *cross_exception);
-static void swow_coroutine_handle_not_null_zdata(swow_coroutine_t *sscoroutine, swow_coroutine_t *rscoroutine, zval **zdata_ptr, const cat_bool_t handle_ref);
-static cat_data_t *swow_coroutine_resume_deny(cat_coroutine_t *coroutine, cat_data_t *data);
+static void swow_coroutine_handle_not_null_zdata(swow_coroutine_t *scoroutine, swow_coroutine_t *current_scoroutine, zval **zdata_ptr, cat_bool_t handle_ref);
+static cat_bool_t swow_coroutine_resume_deny(cat_coroutine_t *coroutine, cat_data_t *data, cat_data_t **retval);
 
 static cat_always_inline size_t swow_coroutine_align_stack_page_size(size_t size)
 {
@@ -205,7 +205,7 @@ static zval *swow_coroutine_function(zval *zdata)
     ZVAL_UNDEF(&fci.function_name);
     fci.object = NULL;
     /* params will be copied by zend_call_function */
-    if (likely(zdata == SWOW_COROUTINE_DATA_NULL)) {
+    if (likely(zdata == NULL)) {
         fci.param_count = 0;
     } else if (Z_TYPE_P(zdata) != IS_PTR) {
         Z_TRY_DELREF_P(zdata);
@@ -255,7 +255,7 @@ static zval *swow_coroutine_function(zval *zdata)
     swow_coroutine_executor_switch(previous_scoroutine);
     /* solve retval */
     if (Z_TYPE_P(fci.retval) == IS_UNDEF || Z_TYPE_P(fci.retval) == IS_NULL) {
-        return SWOW_COROUTINE_DATA_NULL;
+        return NULL;
     } else {
         scoroutine->coroutine.opcodes |= SWOW_COROUTINE_OPCODE_ACCEPT_ZDATA;
         swow_coroutine_handle_not_null_zdata(scoroutine, previous_scoroutine, &fci.retval, cat_true);
@@ -299,11 +299,6 @@ SWOW_API swow_coroutine_t *swow_coroutine_create_ex(zval *zcallable, size_t stac
 {
     swow_coroutine_t *scoroutine;
 
-#ifdef SWOW_COROUTINE_ENABLE_CUSTOM_ENTRY
-    if (UNEXPECTED(SWOW_COROUTINE_G(custom_entry) != NULL)) {
-        return swow_coroutine_create_custom_object(zcallable);
-    }
-#endif
     scoroutine = swow_coroutine_get_from_object(
         swow_object_create(swow_coroutine_ce)
     );
@@ -541,58 +536,47 @@ SWOW_API void swow_coroutine_executor_recover(swow_coroutine_exector_t *executor
 #endif
 }
 
-static void swow_coroutine_handle_not_null_zdata(swow_coroutine_t *sscoroutine, swow_coroutine_t *rscoroutine, zval **zdata_ptr, const cat_bool_t handle_ref)
+static void swow_coroutine_handle_not_null_zdata(swow_coroutine_t *scoroutine, swow_coroutine_t *current_scoroutine, zval **zdata_ptr, cat_bool_t handle_ref)
 {
-    if (!(sscoroutine->coroutine.opcodes & SWOW_COROUTINE_OPCODE_ACCEPT_ZDATA)) {
-        if (UNEXPECTED(rscoroutine->coroutine.opcodes & SWOW_COROUTINE_OPCODE_ACCEPT_ZDATA)) {
+    if (!(current_scoroutine->coroutine.opcodes & SWOW_COROUTINE_OPCODE_ACCEPT_ZDATA)) {
+        if (UNEXPECTED(scoroutine->coroutine.opcodes & SWOW_COROUTINE_OPCODE_ACCEPT_ZDATA)) {
             cat_core_error(COROUTINE, "Internal logic error: sent unrecognized data to PHP layer");
         } else {
             /* internal raw data to internal operation coroutine */
         }
     } else {
         zval *zdata = *zdata_ptr;
-        if (!(rscoroutine->coroutine.opcodes & SWOW_COROUTINE_OPCODE_ACCEPT_ZDATA)) {
+        if (!(scoroutine->coroutine.opcodes & SWOW_COROUTINE_OPCODE_ACCEPT_ZDATA)) {
             CAT_ASSERT(Z_TYPE_P(zdata) != IS_PTR);
             /* the PHP layer can not send data to the internal-controlled coroutine */
             if (handle_ref) {
                 zval_ptr_dtor(zdata);
             }
-            *zdata_ptr = SWOW_COROUTINE_DATA_NULL;
+            *zdata_ptr = NULL;
             return;
         } else {
-            CAT_ASSERT(rscoroutine->executor != NULL);
+            CAT_ASSERT(scoroutine->executor != NULL);
             if (UNEXPECTED(Z_TYPE_P(zdata) == IS_PTR)) {
                 /* params will be copied by zend_call_function */
                 return;
             } else {
-#ifdef CAT_DO_NOT_OPTIMIZE
-                /* make sure the memory space of zdata is safe */
-                zval *safe_zdata = &rscoroutine->executor->zdata;
-                if (!handle_ref) {
-                    ZVAL_COPY(safe_zdata, zdata);
-                } else {
-                    ZVAL_COPY_VALUE(safe_zdata, zdata);
-                }
-                *zdata_ptr = safe_zdata;
-#else
                 if (!handle_ref) {
                     /* send without copy value */
                     Z_TRY_ADDREF_P(zdata);
                 } else {
                     /* make sure the memory space of zdata is safe */
-                    zval *safe_zdata = &rscoroutine->executor->zdata;
+                    zval *safe_zdata = &scoroutine->executor->zdata;
                     ZVAL_COPY_VALUE(safe_zdata, zdata);
                     *zdata_ptr = safe_zdata;
                 }
-#endif
             }
         }
     }
 }
 
-SWOW_API cat_bool_t swow_coroutine_jump_precheck(swow_coroutine_t *scoroutine, const zval *zdata)
+SWOW_API cat_bool_t swow_coroutine_jump_precheck(const swow_coroutine_t *scoroutine)
 {
-    return cat_coroutine_jump_precheck(&scoroutine->coroutine, zdata);
+    return cat_coroutine_jump_precheck(&scoroutine->coroutine);
 }
 
 SWOW_API zval *swow_coroutine_jump(swow_coroutine_t *scoroutine, zval *zdata)
@@ -623,11 +607,7 @@ SWOW_API zval *swow_coroutine_jump(swow_coroutine_t *scoroutine, zval *zdata)
         swow_coroutine_executor_switch(scoroutine);
     }
 
-    /* must be SWOW_COROUTINE_DATA_NULL or else non-void value */
-    CAT_ASSERT(zdata != NULL);
-
-    /* we can not use ZVAL_IS_NULL because the zdata maybe a C ptr */
-    if (UNEXPECTED(zdata != SWOW_COROUTINE_DATA_NULL)) {
+    if (UNEXPECTED(zdata != NULL)) {
         swow_coroutine_handle_not_null_zdata(scoroutine, swow_coroutine_get_current(), &zdata, cat_false);
     }
 
@@ -655,81 +635,88 @@ SWOW_API zval *swow_coroutine_jump(swow_coroutine_t *scoroutine, zval *zdata)
     return zdata;
 }
 
-SWOW_API cat_data_t *swow_coroutine_resume_standard(cat_coroutine_t *coroutine, cat_data_t *data)
+SWOW_API cat_bool_t swow_coroutine_resume_standard(cat_coroutine_t *coroutine, cat_data_t *data, cat_data_t **retval)
 {
     swow_coroutine_t *scoroutine = swow_coroutine_get_from_handle(coroutine);
-    zval *zdata = (zval *) data;
 
     if (EXPECTED(!(scoroutine->coroutine.opcodes & CAT_COROUTINE_OPCODE_CHECKED))) {
-        if (UNEXPECTED(!swow_coroutine_jump_precheck(scoroutine, zdata))) {
-            return SWOW_COROUTINE_DATA_ERROR;
+        if (UNEXPECTED(!swow_coroutine_jump_precheck(scoroutine))) {
+            return cat_false;
         }
     }
 
-    return swow_coroutine_jump(scoroutine, zdata);
+    data = (cat_data_t *) swow_coroutine_jump(scoroutine, (zval *) data);
+
+    if (retval != NULL) {
+        *retval = data;
+    } else {
+        CAT_ASSERT(data == NULL && "Unexpected non-empty data, resource may leak");
+    }
+
+    return cat_true;
 }
 
-#define SWOW_COROUTINE_JUMP_WITH_ZDATA(operation) do { \
-    CAT_COROUTINE_G(current)->opcodes |= SWOW_COROUTINE_OPCODE_ACCEPT_ZDATA; \
-    zdata = (operation); \
-    if (UNEXPECTED(zdata == SWOW_COROUTINE_DATA_ERROR)) { \
-        CAT_COROUTINE_G(current)->opcodes &= ~SWOW_COROUTINE_OPCODE_ACCEPT_ZDATA; \
-        if (retval != NULL) { \
-            ZVAL_NULL(retval); \
+#define SWOW_COROUTINE_JUMP_INIT(retval) \
+    cat_coroutine_t *current_coroutine = CAT_COROUTINE_G(current); do { \
+    \
+    if (retval != NULL) { \
+        ZVAL_NULL(retval); \
+    } \
+    \
+    current_coroutine->opcodes |= SWOW_COROUTINE_OPCODE_ACCEPT_ZDATA; \
+} while (0)
+
+#define SWOW_COROUTINE_JUMP_HANDLE_FAILURE() do { \
+    current_coroutine->opcodes ^= SWOW_COROUTINE_OPCODE_ACCEPT_ZDATA; \
+} while (0);
+
+#define SWOW_COROUTINE_JUMP_HANDLE_RETVAL(zdata, retval) do { \
+    if (UNEXPECTED(zdata != NULL)) { \
+        if (retval == NULL) { \
+            zval_ptr_dtor(zdata); \
+        } else { \
+            ZVAL_COPY_VALUE(retval, zdata); \
         } \
-        return cat_false; \
     } \
-    if (UNEXPECTED(retval == NULL)) { \
-        zval_ptr_dtor(zdata); \
-    } else { \
-        ZVAL_COPY_VALUE(retval, zdata); \
-    } \
-    return cat_true; \
 } while (0)
 
 SWOW_API cat_bool_t swow_coroutine_resume(swow_coroutine_t *scoroutine, zval *zdata, zval *retval)
 {
-    SWOW_COROUTINE_JUMP_WITH_ZDATA(((zval *) cat_coroutine_resume(&scoroutine->coroutine, zdata)));
+    SWOW_COROUTINE_JUMP_INIT(retval);
+    cat_bool_t ret;
+
+    ret = cat_coroutine_resume(&scoroutine->coroutine, zdata, (cat_data_t **) &zdata);
+
+    if (UNEXPECTED(!ret)) {
+        SWOW_COROUTINE_JUMP_HANDLE_FAILURE();
+        return cat_false;
+    }
+
+    SWOW_COROUTINE_JUMP_HANDLE_RETVAL(zdata, retval);
+
+    return cat_true;
 }
 
 SWOW_API cat_bool_t swow_coroutine_yield(zval *zdata, zval *retval)
 {
-    SWOW_COROUTINE_JUMP_WITH_ZDATA(((zval *) cat_coroutine_yield(zdata)));
-}
+    SWOW_COROUTINE_JUMP_INIT(retval);
+    cat_bool_t ret;
 
-#ifdef SWOW_COROUTINE_ENABLE_CUSTOM_ENTRY
-static cat_bool_t swow_coroutine_resume_hardlink(swow_coroutine_t *scoroutine, zval *zdata, zval *retval)
-{
-    if (UNEXPECTED(SWOW_COROUTINE_G(readonly.enable))) {
-        swow_coroutine_resume_deny(NULL, CAT_COROUTINE_DATA_NULL);
-        CAT_NEVER_HERE(COROUTINE, "Abort in deny");
-    }
-    SWOW_COROUTINE_JUMP_WITH_ZDATA(swow_coroutine_resume_standard(&scoroutine->coroutine, zdata));
-}
+    ret = cat_coroutine_yield(zdata, (cat_data_t **) &zdata);
 
-static cat_bool_t swow_coroutine_yield_hardlink(zval *zdata, zval *retval)
-{
-    swow_coroutine_t *scoroutine = swow_coroutine_get_previous(swow_coroutine_get_current());
-
-    if (unlikely(scoroutine == NULL)) {
-        cat_update_last_error_ez("Coroutine has nowhere to go");
+    if (UNEXPECTED(!ret)) {
+        SWOW_COROUTINE_JUMP_HANDLE_FAILURE();
         return cat_false;
     }
-    return swow_coroutine_resume_hardlink(scoroutine, zdata, retval);
-}
-#endif
 
-#undef SWOW_COROUTINE_JUMP_WITH_ZDATA
+    SWOW_COROUTINE_JUMP_HANDLE_RETVAL(zdata, retval);
 
-SWOW_API cat_bool_t swow_coroutine_resume_ez(swow_coroutine_t *scoroutine)
-{
-    return cat_coroutine_resume_ez(&scoroutine->coroutine);
+    return cat_true;
 }
 
-SWOW_API cat_bool_t swow_coroutine_yield_ez(void)
-{
-    return cat_coroutine_yield_ez();
-}
+#undef SWOW_COROUTINE_JUMP_HANDLE_FAILURE
+#undef SWOW_COROUTINE_JUMP_HANDLE_RETVAL
+#undef SWOW_COROUTINE_JUMP_INIT
 
 /* basic info */
 
@@ -767,11 +754,11 @@ SWOW_API size_t swow_coroutine_set_default_c_stack_size(size_t size)
     return cat_coroutine_set_default_stack_size(size);
 }
 
-static cat_data_t *swow_coroutine_resume_deny(cat_coroutine_t *coroutine, cat_data_t *data)
+static cat_bool_t swow_coroutine_resume_deny(cat_coroutine_t *coroutine, cat_data_t *data, cat_data_t **retval)
 {
     cat_update_last_error(CAT_EMISUSE, "Unexpected coroutine switching");
 
-    return CAT_COROUTINE_DATA_ERROR;
+    return cat_false;
 }
 
 SWOW_API void swow_coroutine_set_readonly(cat_bool_t enable)
@@ -1063,9 +1050,11 @@ SWOW_API swow_coroutine_t *swow_coroutine_get_by_id(cat_coroutine_id_t id)
 SWOW_API zval *swow_coroutine_get_zval_by_id(cat_coroutine_id_t id)
 {
     zval *zscoroutine = zend_hash_index_find(SWOW_COROUTINE_G(map), id);
+    static zval ztmp;
 
     if (zscoroutine == NULL) {
-        zscoroutine = CAT_COROUTINE_DATA_NULL;
+        ZVAL_NULL(&ztmp);
+        zscoroutine = &ztmp;
     }
 
     return zscoroutine;
@@ -1153,7 +1142,7 @@ SWOW_API cat_bool_t swow_coroutine_throw(swow_coroutine_t *scoroutine, zend_obje
         ZVAL_NULL(retval);
     } else {
         scoroutine->executor->cross_exception = exception;
-        if (UNEXPECTED(!swow_coroutine_resume(scoroutine, SWOW_COROUTINE_DATA_NULL, retval))) {
+        if (UNEXPECTED(!swow_coroutine_resume(scoroutine, NULL, retval))) {
             scoroutine->executor->cross_exception = NULL;
             return cat_false;
         }
@@ -1277,12 +1266,14 @@ static PHP_METHOD(swow_coroutine, __construct)
 
 #define SWOW_COROUTINE_DECLARE_RESUME_TRANSFER(zdata) \
     zend_fcall_info fci = empty_fcall_info; \
-    zval *zdata = SWOW_COROUTINE_DATA_NULL, _##zdata
+    zval *zdata, _##zdata
 
 #define SWOW_COROUTINE_HANDLE_RESUME_TRANSFER(zdata) \
-    if (fci.param_count == 1) { \
+    if (EXPECTED(fci.param_count == 0)) { \
+        zdata = NULL; \
+    } else if (EXPECTED(fci.param_count == 1)) { \
         zdata = fci.params; \
-    } else if (fci.param_count > 1) { \
+    } else /* if (fci.param_count > 1) */ { \
         if (UNEXPECTED(scoroutine->coroutine.state != CAT_COROUTINE_STATE_READY)) { \
             zend_throw_error(NULL, "Only one argument allowed when resuming an coroutine which is alive"); \
             RETURN_THROWS(); \
@@ -1338,12 +1329,7 @@ static PHP_METHOD(swow_coroutine, resume)
 
     SWOW_COROUTINE_HANDLE_RESUME_TRANSFER(zdata);
 
-#ifdef SWOW_COROUTINE_ENABLE_CUSTOM_ENTRY
-    if (UNEXPECTED(SWOW_COROUTINE_G(custom_entry) != NULL)) {
-        ret = swow_coroutine_resume_hardlink(scoroutine, zdata, return_value);
-    } else
-#endif
-     ret = swow_coroutine_resume(scoroutine, zdata, return_value);
+    ret = swow_coroutine_resume(scoroutine, zdata, return_value);
 
     if (UNEXPECTED(!ret)) {
         swow_throw_exception_with_last(swow_coroutine_exception_ce);
@@ -1360,7 +1346,7 @@ ZEND_END_ARG_INFO()
 
 static PHP_METHOD(swow_coroutine, yield)
 {
-    zval *zdata = SWOW_COROUTINE_DATA_NULL;
+    zval *zdata = NULL;
     cat_bool_t ret;
 
     ZEND_PARSE_PARAMETERS_START(0, 1)
@@ -1368,11 +1354,6 @@ static PHP_METHOD(swow_coroutine, yield)
         Z_PARAM_ZVAL(zdata)
     ZEND_PARSE_PARAMETERS_END();
 
-#ifdef SWOW_COROUTINE_ENABLE_CUSTOM_ENTRY
-    if (UNEXPECTED(SWOW_COROUTINE_G(custom_entry) != NULL)) {
-        ret = swow_coroutine_yield_hardlink(zdata, return_value);
-    } else
-#endif
     ret = swow_coroutine_yield(zdata, return_value);
 
     if (UNEXPECTED(!ret)) {
@@ -1871,6 +1852,7 @@ static PHP_METHOD(swow_coroutine, extends)
     }
     SWOW_COROUTINE_G(custom_entry) = ce;
     cat_coroutine_register_resume(swow_coroutine_custom_resume);
+    // TODO: replace self::resume function_handler
 }
 #endif
 
@@ -2209,7 +2191,7 @@ int swow_coroutine_module_init(INIT_FUNC_ARGS)
     swow_coroutine_handlers.get_gc = swow_coroutine_get_gc;
     swow_coroutine_handlers.dtor_obj = swow_coroutine_dtor_object;
     /* constants */
-#define SWOW_COROUTINE_STATE_GEN(name, value) \
+#define SWOW_COROUTINE_STATE_GEN(name, value, unused) \
     zend_declare_class_constant_long(swow_coroutine_ce, ZEND_STRL("STATE_" #name), (value));
     CAT_COROUTINE_STATE_MAP(SWOW_COROUTINE_STATE_GEN)
 #undef SWOW_COROUTINE_STATE_GEN
@@ -2272,10 +2254,8 @@ int swow_coroutine_runtime_init(INIT_FUNC_ARGS)
         return FAILURE;
     }
 
-    cat_coroutine_register_common_wrappers(
-        swow_coroutine_resume_standard,
-        &swow_coroutine_data_null,
-        &swow_coroutine_data_error
+    cat_coroutine_register_resume(
+        swow_coroutine_resume_standard
     );
 
     SWOW_COROUTINE_G(default_stack_page_size) = SWOW_COROUTINE_DEFAULT_STACK_PAGE_SIZE; /* TODO: get php.ini */
@@ -2284,8 +2264,8 @@ int swow_coroutine_runtime_init(INIT_FUNC_ARGS)
 
     SWOW_COROUTINE_G(runtime_state) = SWOW_COROUTINE_RUNTIME_STATE_RUNNING;
 
-    SWOW_COROUTINE_G(readonly).original_create_object = NULL;
-    SWOW_COROUTINE_G(readonly).original_resume = NULL;
+    SWOW_COROUTINE_G(readonly.original_create_object) = NULL;
+    SWOW_COROUTINE_G(readonly.original_resume) = NULL;
 
     SWOW_COROUTINE_G(silent_exception_in_main) = cat_false;
 

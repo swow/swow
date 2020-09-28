@@ -92,7 +92,7 @@ static PHP_METHOD(swow_sync_wait_reference, __destruct)
     swow_sync_wait_reference_t *swr = getThisWR();
 
     if (swr->scoroutine) {
-        if (UNEXPECTED(!swow_coroutine_resume_ez(swr->scoroutine))) {
+        if (UNEXPECTED(!swow_coroutine_resume(swr->scoroutine, NULL, NULL))) {
             cat_core_error(SYNC, "Resume waiting coroutine failed, reason: %s", cat_get_last_error_message());
         }
     }

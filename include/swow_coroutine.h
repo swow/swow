@@ -157,8 +157,6 @@ typedef zval *(*swow_coroutine_yield_t)(zval *zdata);
 extern SWOW_API CAT_GLOBALS_DECLARE(swow_coroutine)
 
 #define SWOW_COROUTINE_G(x)       CAT_GLOBALS_GET(swow_coroutine, x)
-#define SWOW_COROUTINE_DATA_NULL  ((zval *) CAT_COROUTINE_DATA_NULL)
-#define SWOW_COROUTINE_DATA_ERROR ((zval *) CAT_COROUTINE_DATA_ERROR)
 
 /* loaders */
 
@@ -186,13 +184,11 @@ SWOW_API swow_coroutine_t *swow_coroutine_create_ex(zval *zcallable, size_t stac
 SWOW_API void swow_coroutine_executor_switch(swow_coroutine_t *scoroutine);
 SWOW_API void swow_coroutine_executor_save(swow_coroutine_exector_t *executor);    SWOW_INTERNAL
 SWOW_API void swow_coroutine_executor_recover(swow_coroutine_exector_t *executor); SWOW_INTERNAL
-SWOW_API cat_bool_t swow_coroutine_jump_precheck(swow_coroutine_t *scoroutine, const zval *zdata);
+SWOW_API cat_bool_t swow_coroutine_jump_precheck(const swow_coroutine_t *scoroutine);
 SWOW_API zval *swow_coroutine_jump(swow_coroutine_t *scoroutine, zval *zdata);
-SWOW_API cat_data_t *swow_coroutine_resume_standard(cat_coroutine_t *coroutine, cat_data_t *data); SWOW_INTERNAL
+SWOW_API cat_bool_t swow_coroutine_resume_standard(cat_coroutine_t *coroutine, cat_data_t *data, cat_data_t **retval); SWOW_INTERNAL
 SWOW_API cat_bool_t swow_coroutine_resume(swow_coroutine_t *scoroutine, zval *zdata, zval *retval);
 SWOW_API cat_bool_t swow_coroutine_yield(zval *zdata, zval *retval);
-SWOW_API cat_bool_t swow_coroutine_resume_ez(swow_coroutine_t *scoroutine);
-SWOW_API cat_bool_t swow_coroutine_yield_ez(void);
 
 SWOW_UNSAFE
 #define SWOW_COROUTINE_EXECUTE_START(scoroutine) do { \
