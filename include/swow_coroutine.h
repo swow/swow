@@ -97,7 +97,7 @@ typedef struct
     zend_output_globals *output_globals;
 #endif
 #if SWOW_COROUTINE_SWAP_SILENCE_CONTEXT
-    int error_reporting_for_silence;
+    int error_reporting;
 #endif
 } swow_coroutine_exector_t;
 

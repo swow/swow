@@ -21,7 +21,7 @@
 #include "swow_debug.h"
 
 #if SWOW_COROUTINE_SWAP_SILENCE_CONTEXT
-#define E_SILENCE_MAGIC (1 << 31)
+#define E_MAGIC (1 << 31)
 #endif
 
 SWOW_API zend_class_entry *swow_coroutine_ce;
@@ -377,7 +377,7 @@ static cat_bool_t swow_coroutine_construct(swow_coroutine_t *scoroutine, zval *z
         executor->output_globals = NULL;
 #endif
 #if SWOW_COROUTINE_SWAP_SILENCE_CONTEXT
-        executor->error_reporting_for_silence = E_SILENCE_MAGIC;
+        executor->error_reporting = 0;
 #endif
         /* save function cache */
         ZVAL_COPY(&executor->zcallable, zcallable);
@@ -480,10 +480,11 @@ SWOW_API void swow_coroutine_executor_save(swow_coroutine_exector_t *executor)
 #endif
 #if SWOW_COROUTINE_SWAP_SILENCE_CONTEXT
     do {
-        if (UNEXPECTED(executor->error_reporting_for_silence != E_SILENCE_MAGIC)) {
-            int error_reporting = EG(error_reporting);
-            executor->error_reporting_for_silence = EG(error_reporting);
-            EG(error_reporting) = error_reporting;
+        if (UNEXPECTED(executor->error_reporting != 0)) {
+            CAT_ASSERT(executor->error_reporting & E_MAGIC);
+            int error_reporting = executor->error_reporting;
+            executor->error_reporting = eg->error_reporting | E_MAGIC;
+            eg->error_reporting = error_reporting ^ E_MAGIC;
         }
     } while (0);
 #endif
@@ -527,10 +528,11 @@ SWOW_API void swow_coroutine_executor_recover(swow_coroutine_exector_t *executor
 #endif
 #if SWOW_COROUTINE_SWAP_SILENCE_CONTEXT
     do {
-        if (UNEXPECTED(executor->error_reporting_for_silence != E_SILENCE_MAGIC)) {
-            int error_reporting = EG(error_reporting);
-            EG(error_reporting) = executor->error_reporting_for_silence;
-            executor->error_reporting_for_silence = error_reporting;
+        if (UNEXPECTED(executor->error_reporting != 0)) {
+            CAT_ASSERT(executor->error_reporting & E_MAGIC);
+            int error_reporting = eg->error_reporting;
+            eg->error_reporting = executor->error_reporting ^ E_MAGIC;
+            executor->error_reporting = error_reporting | E_MAGIC;
         }
     } while (0);
 #endif
@@ -2151,14 +2153,14 @@ static user_opcode_handler_t original_zend_end_silence_handler;
 static int swow_coroutine_begin_silence_handler(zend_execute_data *execute_data)
 {
     swow_coroutine_t *scoroutine = swow_coroutine_get_current();
-    scoroutine->executor->error_reporting_for_silence = EG(error_reporting);
+    scoroutine->executor->error_reporting = EG(error_reporting) | E_MAGIC;
     return ZEND_USER_OPCODE_DISPATCH;
 }
 
 static int swow_coroutine_end_silence_handler(zend_execute_data *execute_data)
 {
     swow_coroutine_t *scoroutine = swow_coroutine_get_current();
-    scoroutine->executor->error_reporting_for_silence = E_SILENCE_MAGIC;
+    scoroutine->executor->error_reporting = 0;
     return ZEND_USER_OPCODE_DISPATCH;
 }
 #endif
