@@ -120,7 +120,6 @@ class Session extends Socket
         try {
             while (true) {
                 if ($expectMore) {
-                    $expectMore = false;
                     $this->recvData($buffer);
                 }
                 while (true) {
