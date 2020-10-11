@@ -82,11 +82,6 @@ static void swow_coroutine_dtor_object(zend_object *object)
     /* force kill the coroutine */
     swow_coroutine_t *scoroutine = swow_coroutine_get_from_object(object);
 
-    /* we should never kill the main coroutine */
-    if (UNEXPECTED(scoroutine == swow_coroutine_get_main())) {
-        return;
-    }
-
     while (UNEXPECTED(swow_coroutine_is_alive(scoroutine))) {
         /* not finished, should be discard */
         if (UNEXPECTED(!swow_coroutine_kill(scoroutine, NULL, ~0))) {
@@ -432,10 +427,48 @@ static void swow_coroutine_close(swow_coroutine_t *scoroutine)
     scoroutine->executor = NULL;
 }
 
-SWOW_API void swow_coroutine_executor_switch(swow_coroutine_t *scoroutine)
+static void swow_coroutine_main_create(void)
 {
-    swow_coroutine_executor_save(swow_coroutine_get_current()->executor);
-    swow_coroutine_executor_recover(scoroutine->executor);
+    swow_coroutine_t *scoroutine;
+
+    scoroutine = swow_coroutine_get_from_object(
+        swow_object_create(swow_coroutine_ce)
+    );
+
+    /* register first (sync coroutine info) */
+    SWOW_COROUTINE_G(original_main) = cat_coroutine_register_main(&scoroutine->coroutine);
+
+    scoroutine->executor = ecalloc(1, sizeof(*scoroutine->executor));
+    ZVAL_NULL(&scoroutine->executor->zcallable);
+    scoroutine->exit_status = 0;
+
+    /* add main scoroutine to the map */
+    do {
+        zval zscoroutine;
+        ZVAL_OBJ(&zscoroutine, &scoroutine->std);
+        zend_hash_index_update(SWOW_COROUTINE_G(map), scoroutine->coroutine.id, &zscoroutine);
+        /* GC_ADDREF(&scoroutine->std); // we have 1 ref by create */
+    } while (0);
+
+    /* do not destruct main scoroutine */
+    GC_ADD_FLAGS(&scoroutine->std, IS_OBJ_DESTRUCTOR_CALLED);
+}
+
+static void swow_coroutine_main_close(void)
+{
+    swow_coroutine_t *scoroutine;
+
+    scoroutine = swow_coroutine_get_main();
+
+    /* revert globals main */
+    cat_coroutine_register_main(SWOW_COROUTINE_G(original_main));
+
+    /* hack way to close the main */
+    scoroutine->coroutine.state = CAT_COROUTINE_STATE_READY;
+    scoroutine->executor->vm_stack = NULL;
+
+    /* release main scoroutine */
+    zend_hash_index_del(SWOW_COROUTINE_G(map), scoroutine->coroutine.id);
 }
 
 SWOW_API void swow_coroutine_executor_save(swow_coroutine_exector_t *executor)
@@ -2165,10 +2198,6 @@ static int swow_coroutine_end_silence_handler(zend_execute_data *execute_data)
 }
 #endif
 
-/* readonly */
-static zval swow_coroutine_data_null;
-static zval swow_coroutine_data_error;
-
 int swow_coroutine_module_init(INIT_FUNC_ARGS)
 {
     if (!cat_coroutine_module_init()) {
@@ -2176,9 +2205,6 @@ int swow_coroutine_module_init(INIT_FUNC_ARGS)
     }
 
     CAT_GLOBALS_REGISTER(swow_coroutine, CAT_GLOBALS_CTOR(swow_coroutine), NULL);
-
-    ZVAL_NULL(&swow_coroutine_data_null);
-    ZVAL_ERROR(&swow_coroutine_data_error);
 
     SWOW_COROUTINE_G(runtime_state) = SWOW_COROUTINE_RUNTIME_STATE_NONE;
 
@@ -2279,21 +2305,7 @@ int swow_coroutine_runtime_init(INIT_FUNC_ARGS)
     } while (0);
 
     /* create main scoroutine */
-    do {
-        swow_coroutine_t *scoroutine = swow_coroutine_get_from_object(swow_object_create(swow_coroutine_ce));
-        /* construct (we can not use construct function because we do not need C stack here) */
-        scoroutine->executor = (swow_coroutine_exector_t *) ecalloc(1, sizeof(*scoroutine->executor));
-        ZVAL_NULL(&scoroutine->executor->zcallable);
-        /* register first (sync coroutine info) */
-        SWOW_COROUTINE_G(original_main) = cat_coroutine_register_main(&scoroutine->coroutine);
-        /* add main scoroutine to the map */
-        do {
-            zval zscoroutine;
-            ZVAL_OBJ(&zscoroutine, &scoroutine->std);
-            zend_hash_index_update(SWOW_COROUTINE_G(map), scoroutine->coroutine.id, &zscoroutine);
-            /* GC_ADDREF(&scoroutine->std); // we have 1 ref by create*/
-        } while (0);
-    } while (0);
+    swow_coroutine_main_create();
 
     return SUCCESS;
 }
@@ -2315,49 +2327,31 @@ int swow_coroutine_runtime_shutdown(SHUTDOWN_FUNC_ARGS)
 {
     SWOW_COROUTINE_G(runtime_state) = SWOW_COROUTINE_RUNTIME_STATE_IN_SHUTDOWN;
 
-    do {
-        swow_coroutine_t *main_scoroutine = swow_coroutine_get_main();
-
 #ifdef CAT_DO_NOT_OPTIMIZE /* the optimization deps on event scheduler */
-        /* destruct scoroutines and map (except main) */
-        do {
-            HashTable *internal_map = SWOW_COROUTINE_G(map);
-            do {
-                /* kill first (for memory safety) */
-                HashTable *map = zend_array_dup(internal_map);
-                /* kill all coroutines */
-                zend_hash_index_del(map, main_scoroutine->coroutine.id);
-                map->pDestructor = swow_coroutines_kill_destructor;
-                zend_array_destroy(map);
-            } while (zend_hash_num_elements(internal_map) != 1);
-        } while (0);
+    /* destruct active scoroutines */
+    HashTable *map = SWOW_COROUTINE_G(map);
+    do {
+        /* kill first (for memory safety) */
+        HashTable *map_copy = zend_array_dup(map);
+        /* kill all coroutines */
+        zend_hash_index_del(map_copy, swow_coroutine_get_main()->coroutine.id);
+        map_copy->pDestructor = swow_coroutines_kill_destructor;
+        zend_array_destroy(map_copy);
+    } while (zend_hash_num_elements(map) != 1);
 #endif
 
-        /* check scheduler */
-        if (swow_coroutine_get_scheduler() != NULL) {
-            cat_core_error_with_last(COROUTINE, "Scheduler is still running");
-        }
+    CAT_ASSERT(swow_coroutine_get_scheduler() == NULL && "Scheduler should have been stopped");
+    CAT_ASSERT(CAT_COROUTINE_G(count) == 1 && "Count of coroutines should be 1");
 
-        if (CAT_COROUTINE_G(count) != 1) {
-            cat_core_error(COROUTINE, "Unexpected number of coroutines (%u)", CAT_COROUTINE_G(count));
-        }
+    /* coroutine switching should no longer occur */
+    swow_coroutine_set_readonly(cat_true);
 
-        /* coroutine switching should no longer occur */
-        swow_coroutine_set_readonly(cat_true);
+    /* close main scoroutine */
+    swow_coroutine_main_close();
 
-        /* revert globals main */
-        cat_coroutine_register_main(SWOW_COROUTINE_G(original_main));
-        /* hack way to close the main */
-#define SWOW_COROUTINE_PRE_CLOSE_MAIN(main_scoroutine) do { \
-        (main_scoroutine)->coroutine.state = CAT_COROUTINE_STATE_READY; \
-        (main_scoroutine)->executor->vm_stack = NULL; \
-} while (0)
-        SWOW_COROUTINE_PRE_CLOSE_MAIN(main_scoroutine);
-#undef  SWOW_COROUTINE_PRE_CLOSE_MAIN
-        /* destroy all (include main) */
-        zend_array_destroy(SWOW_COROUTINE_G(map));
-        SWOW_COROUTINE_G(map) = NULL;
-    } while (0);
+    /* destroy map */
+    zend_array_destroy(SWOW_COROUTINE_G(map));
+    SWOW_COROUTINE_G(map) = NULL;
 
     SWOW_COROUTINE_G(runtime_state) = SWOW_COROUTINE_RUNTIME_STATE_NONE;
 
