@@ -27,19 +27,8 @@ extern "C" {
 
 #include "cat_event.h"
 
-CAT_GLOBALS_STRUCT_BEGIN(swow_event)
-    zval reserve;
-CAT_GLOBALS_STRUCT_END(swow_event)
-
-extern SWOW_API CAT_GLOBALS_DECLARE(swow_event)
-
-#define SWOW_EVENT_G(x) CAT_GLOBALS_GET(swow_event, x)
-
 extern SWOW_API zend_class_entry *swow_event_ce;
 extern SWOW_API zend_object_handlers swow_event_handlers;
-
-extern SWOW_API zend_class_entry *swow_event_scheduler_ce;
-extern SWOW_API zend_object_handlers swow_event_scheduler_handlers;
 
 int swow_event_module_init(INIT_FUNC_ARGS);
 int swow_event_runtime_init(INIT_FUNC_ARGS);
