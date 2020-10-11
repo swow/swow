@@ -133,11 +133,23 @@ int swow_event_runtime_init(INIT_FUNC_ARGS)
 
     do {
         php_shutdown_function_entry shutdown_function_entry;
-        shutdown_function_entry.arg_count = 2;
-        shutdown_function_entry.arguments = (zval *) safe_emalloc(sizeof(zval), 2, 0);
-        ZVAL_STRING(&shutdown_function_entry.arguments[0], "Swow\\Event::wait");
-        ZVAL_PTR(&shutdown_function_entry.arguments[1], &swow_internal_callable_key);
-        register_user_shutdown_function((char *) ZEND_STRL("Swow\\Event::wait"), &shutdown_function_entry);
+        zval *zfunction_name;
+        int arg_count;
+#if PHP_VERSION_ID >= 80000
+        arg_count = 1;
+#else
+        arg_count = 2;
+#endif
+        shutdown_function_entry.arg_count = arg_count;
+        shutdown_function_entry.arguments = (zval *) safe_emalloc(sizeof(zval), arg_count, 0);
+#if PHP_VERSION_ID >= 80000
+        zfunction_name = &shutdown_function_entry.function_name;
+#else
+        zfunction_name = &shutdown_function_entry.arguments[0];
+#endif
+        ZVAL_STRING(zfunction_name, "Swow\\Event::wait");
+        ZVAL_PTR(&shutdown_function_entry.arguments[arg_count - 1], &swow_internal_callable_key);
+        register_user_shutdown_function(Z_STRVAL_P(zfunction_name), Z_STRLEN_P(zfunction_name), &shutdown_function_entry);
     } while (0);
 
     return SUCCESS;
