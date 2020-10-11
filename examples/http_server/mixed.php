@@ -25,6 +25,7 @@ use Swow\Socket\Exception as SocketException;
 use Swow\WebSocket\Opcode as WebSocketOpcode;
 use const Swow\Errno\EMFILE;
 use const Swow\Errno\ENFILE;
+use const Swow\Errno\ENOMEM;
 
 $server = new HttpServer();
 $server->bind('0.0.0.0', 9764)->listen();
@@ -100,10 +101,8 @@ while (true) {
                 $session->close();
             }
         });
-    } catch (SocketException $exception) {
-        break;
-    } catch (CoroutineException $exception) {
-        if (in_array($exception->getCode(), [EMFILE, ENFILE], true)) {
+    } catch (SocketException | CoroutineException $exception) {
+        if (in_array($exception->getCode(), [EMFILE, ENFILE, ENOMEM], true)) {
             sleep(1);
         } else {
             break;
