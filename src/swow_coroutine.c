@@ -1526,9 +1526,15 @@ static PHP_METHOD(swow_coroutine, getElapsedAsString)
 
 static PHP_METHOD(swow_coroutine, getExitStatus)
 {
+    swow_coroutine_t *scoroutine = getThisCoroutine();
+
     ZEND_PARSE_PARAMETERS_NONE();
 
-    RETURN_LONG(getThisCoroutine()->exit_status);
+    if (UNEXPECTED(scoroutine == swow_coroutine_get_main())) {
+        RETURN_LONG(EG(exit_status));
+    }
+
+    RETURN_LONG(scoroutine->exit_status);
 }
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_swow_coroutine_getBool, ZEND_RETURN_VALUE, 0, _IS_BOOL, 0)
@@ -2170,8 +2176,9 @@ static int swow_coroutine_exit_handler(zend_execute_data *execute_data)
         zend_throw_unwind_exit();
 #endif
     }
-    scoroutine->exit_status = status;
-    if (scoroutine == swow_coroutine_get_main()) {
+    if (scoroutine != swow_coroutine_get_main()) {
+        scoroutine->exit_status = status;
+    } else {
         EG(exit_status) = status;
     }
 
