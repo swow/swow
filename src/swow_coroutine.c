@@ -70,6 +70,9 @@ static zend_object *swow_coroutine_create_object(zend_class_entry *ce)
 
     cat_coroutine_init(&scoroutine->coroutine);
 
+    scoroutine->executor = NULL;
+    scoroutine->exit_status = 0;
+
     return &scoroutine->std;
 }
 
@@ -280,41 +283,14 @@ static swow_coroutine_t *swow_coroutine_create_custom_object(zval *zcallable)
 }
 #endif
 
-SWOW_API swow_coroutine_t *swow_coroutine_create(zval *zcallable)
-{
-    return swow_coroutine_create_ex(zcallable, 0, 0);
-}
-
-SWOW_API swow_coroutine_t *swow_coroutine_create_ex(zval *zcallable, size_t stack_page_size, size_t c_stack_size)
-{
-    swow_coroutine_t *scoroutine;
-
-    scoroutine = swow_coroutine_get_from_object(
-        swow_object_create(swow_coroutine_ce)
-    );
-    if (UNEXPECTED(!swow_coroutine_construct(scoroutine, zcallable, stack_page_size, c_stack_size))) {
-        zend_object_release(&scoroutine->std);
-        return NULL;
-    }
-
-    return scoroutine;
-}
-
 static cat_bool_t swow_coroutine_construct(swow_coroutine_t *scoroutine, zval *zcallable, size_t stack_page_size, size_t c_stack_size)
 {
     swow_coroutine_exector_t *executor;
     zend_fcall_info_cache fcc;
-    zend_vm_stack vm_stack;
     cat_coroutine_t *coroutine;
-    cat_coroutine_function_t function;
-    cat_bool_t is_c_function;
 
     /* check arguments */
-    is_c_function = Z_TYPE_P(zcallable) == IS_PTR;
-
-    if (UNEXPECTED(is_c_function)) {
-        function = (cat_coroutine_function_t) Z_PTR_P(zcallable);
-    } else {
+    do {
         char *error;
         if (!zend_is_callable_ex(zcallable, NULL, 0, NULL, &fcc, &error)) {
             cat_update_last_error(CAT_EMISUSE, "Coroutine function must be callable, %s", error);
@@ -322,20 +298,23 @@ static cat_bool_t swow_coroutine_construct(swow_coroutine_t *scoroutine, zval *z
             return cat_false;
         }
         efree(error);
-        function = (cat_coroutine_function_t) swow_coroutine_function;
-    }
+    } while (0);
 
-    /* create C coroutine */
-    coroutine = &scoroutine->coroutine;
-    coroutine = cat_coroutine_create_ex(coroutine, function, c_stack_size);
+    /* create C coroutine only if function is not NULL
+     * (e.g. main coroutine is running so we do not need to re-create it,
+     * or we want to create/run it by ourself later) */
+    coroutine = cat_coroutine_create_ex(
+        &scoroutine->coroutine,
+        (cat_coroutine_function_t) swow_coroutine_function,
+        c_stack_size
+    );
     if (UNEXPECTED(coroutine == NULL)) {
         return cat_false;
     }
 
-    if (UNEXPECTED(is_c_function)) {
-        executor = (swow_coroutine_exector_t *) ecalloc(1, sizeof(*executor));
-        ZVAL_NULL(&executor->zcallable);
-    } else {
+    /* init executor */
+    do {
+        zend_vm_stack vm_stack;
         coroutine->opcodes |= SWOW_COROUTINE_OPCODE_ACCEPT_ZDATA;
         /* align stack page size */
         stack_page_size = swow_coroutine_align_stack_page_size(stack_page_size);
@@ -375,9 +354,8 @@ static cat_bool_t swow_coroutine_construct(swow_coroutine_t *scoroutine, zval *z
         /* it's unnecessary to init the zdata */
         /* ZVAL_UNDEF(&executor->zdata); */
         executor->cross_exception = NULL;
-    }
+    } while (0);
 
-    /* executor ok */
     scoroutine->executor = executor;
     scoroutine->exit_status = 0;
 
@@ -388,7 +366,9 @@ static void swow_coroutine_shutdown(swow_coroutine_t *scoroutine)
 {
     swow_coroutine_exector_t *executor = scoroutine->executor;
 
-    CAT_ASSERT(executor != NULL);
+    if (executor == NULL) {
+        return;
+    }
 
     /* we release the context resources here which are created during the runtime  */
 #if SWOW_COROUTINE_SWAP_OUTPUT_GLOBALS
@@ -490,6 +470,19 @@ SWOW_API swow_coroutine_t *swow_coroutine_create_ex(zval *zcallable, size_t stac
 SWOW_API void swow_coroutine_close(swow_coroutine_t *scoroutine)
 {
     zend_object_release(&scoroutine->std);
+}
+
+SWOW_API void swow_coroutine_executor_switch(swow_coroutine_exector_t *current_executor, swow_coroutine_exector_t *target_executor)
+{
+    // TODO: it's not optimal
+    if (current_executor != NULL) {
+        swow_coroutine_executor_save(current_executor);
+    }
+    if (target_executor != NULL) {
+        swow_coroutine_executor_recover(target_executor);
+    } else {
+        EG(current_execute_data) = NULL; /* make the log stack trace empty */
+    }
 }
 
 SWOW_API void swow_coroutine_executor_save(swow_coroutine_exector_t *executor)
@@ -647,14 +640,7 @@ SWOW_API zval *swow_coroutine_jump(swow_coroutine_t *scoroutine, zval *zdata)
     } while (0);
 
     /* switch executor */
-    if (scoroutine->coroutine.flags & SWOW_COROUTINE_FLAG_NO_STACK) {
-        swow_coroutine_executor_save(current_scoroutine->executor);
-        EG(current_execute_data) = NULL; /* make the log stack strace empty */
-    } else if (current_scoroutine->coroutine.flags & SWOW_COROUTINE_FLAG_NO_STACK) {
-        swow_coroutine_executor_recover(scoroutine->executor);
-    } else {
-        swow_coroutine_executor_switch(scoroutine);
-    }
+    swow_coroutine_executor_switch(current_scoroutine->executor, scoroutine->executor);
 
     if (UNEXPECTED(zdata != NULL)) {
         swow_coroutine_handle_not_null_zdata(scoroutine, swow_coroutine_get_current(), &zdata);
@@ -673,11 +659,12 @@ SWOW_API zval *swow_coroutine_jump(swow_coroutine_t *scoroutine, zval *zdata)
         zend_hash_index_del(SWOW_COROUTINE_G(map), scoroutine->coroutine.id);
     } else {
         swow_coroutine_exector_t *executor = current_scoroutine->executor;
-        CAT_ASSERT(executor != NULL);
-        /* handle cross exception */
-        if (UNEXPECTED(executor->cross_exception != NULL)) {
-            swow_coroutine_handle_cross_exception(executor->cross_exception);
-            executor->cross_exception = NULL;
+        if (executor != NULL) {
+            /* handle cross exception */
+            if (UNEXPECTED(executor->cross_exception != NULL)) {
+                swow_coroutine_handle_cross_exception(executor->cross_exception);
+                executor->cross_exception = NULL;
+            }
         }
     }
 

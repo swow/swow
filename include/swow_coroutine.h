@@ -183,7 +183,7 @@ SWOW_API swow_coroutine_t *swow_coroutine_create_ex(zval *zcallable, size_t stac
 SWOW_API void swow_coroutine_close(swow_coroutine_t *scoroutine);
 
 /* switch */
-SWOW_API void swow_coroutine_executor_switch(swow_coroutine_t *scoroutine);
+SWOW_API void swow_coroutine_executor_switch(swow_coroutine_exector_t *current_executor, swow_coroutine_exector_t *target_executor); SWOW_INTERNAL
 SWOW_API void swow_coroutine_executor_save(swow_coroutine_exector_t *executor);    SWOW_INTERNAL
 SWOW_API void swow_coroutine_executor_recover(swow_coroutine_exector_t *executor); SWOW_INTERNAL
 SWOW_API cat_bool_t swow_coroutine_jump_precheck(const swow_coroutine_t *scoroutine);
