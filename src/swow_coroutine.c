@@ -224,7 +224,6 @@ static zval *swow_coroutine_function(zval *zdata)
     EG(current_execute_data) = (zend_execute_data *) &dummy_execute_data;
     (void) zend_call_function(&fci, &executor->fcc);
     EG(current_execute_data) = NULL;
-    scoroutine->coroutine.flags |= SWOW_COROUTINE_FLAG_MAIN_FINISHED;
     if (UNEXPECTED(EG(exception) != NULL)) {
         swow_coroutine_function_handle_exception();
     }
@@ -237,7 +236,6 @@ static zval *swow_coroutine_function(zval *zdata)
     if (UNEXPECTED(EG(exception) != NULL)) {
         swow_coroutine_function_handle_exception();
     }
-    scoroutine->coroutine.flags |= SWOW_COROUTINE_FLAG_ALL_FINISHED;
 
     /* ob end clean */
 #if SWOW_COROUTINE_SWAP_OUTPUT_GLOBALS
@@ -837,46 +835,6 @@ SWOW_API swow_coroutine_t *swow_coroutine_get_scheduler(void)
     return swow_coroutine_get_from_handle(CAT_COROUTINE_G(scheduler));
 }
 
-/* scheduler */
-
-SWOW_API cat_bool_t swow_coroutine_scheduler_run(swow_coroutine_t *scheduler)
-{
-    if (!cat_coroutine_scheduler_run(&scheduler->coroutine)) {
-        return cat_false;
-    }
-    /* gain full control */
-    zend_hash_index_del(SWOW_COROUTINE_G(map), scheduler->coroutine.id);
-    /* solve refcount (being disturbed by exchange) */
-    GC_DELREF(&swow_coroutine_get_current()->std);
-    GC_DELREF(&scheduler->std);
-
-    return cat_true;
-}
-
-SWOW_API swow_coroutine_t *swow_coroutine_scheduler_stop(void)
-{
-    return swow_coroutine_get_from_handle(cat_coroutine_scheduler_stop());
-}
-
-SWOW_API cat_bool_t swow_coroutine_is_scheduler(swow_coroutine_t *scoroutine)
-{
-    return !!(scoroutine->coroutine.flags & CAT_COROUTINE_FLAG_SCHEDULER);
-}
-
-/* executor switcher */
-
-SWOW_API void swow_coroutine_set_executor_switcher(cat_bool_t enable)
-{
-    swow_coroutine_t *scoroutine = swow_coroutine_get_current();
-    if (!enable) {
-        swow_coroutine_executor_save(scoroutine->executor);
-        scoroutine->coroutine.flags |= SWOW_COROUTINE_FLAG_NO_STACK;
-    } else {
-        scoroutine->coroutine.flags &= ~SWOW_COROUTINE_FLAG_NO_STACK;
-        swow_coroutine_executor_recover(scoroutine->executor);
-    }
-}
-
 /* trace */
 
 SWOW_API HashTable *swow_coroutine_get_trace(const swow_coroutine_t *scoroutine, zend_long options, zend_long limit)
@@ -1163,14 +1121,7 @@ SWOW_API cat_bool_t swow_coroutine_throw(swow_coroutine_t *scoroutine, zend_obje
         cat_update_last_error(CAT_EMISUSE, "Instance of %s is not throwable", ZSTR_VAL(exception->ce->name));
         return cat_false;
     }
-    if (UNEXPECTED(!swow_coroutine_is_alive(scoroutine))) {
-        cat_update_last_error(CAT_ESRCH, "Coroutine is not alive");
-        return cat_false;
-    }
-    if (UNEXPECTED(swow_coroutine_is_scheduler(scoroutine))) {
-        cat_update_last_error(CAT_EMISUSE, "Break scheduler coroutine is not allowed");
-        return cat_false;
-    }
+
     if (UNEXPECTED(scoroutine == swow_coroutine_get_current())) {
         ZVAL7_ALLOC_OBJECT(exception);
         GC_ADDREF(exception);

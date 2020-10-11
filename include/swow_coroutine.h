@@ -55,13 +55,6 @@ extern SWOW_API zend_class_entry *swow_coroutine_kill_exception_ce;
 
 typedef enum
 {
-    SWOW_COROUTINE_FLAG_NO_STACK      = CAT_COROUTINE_FLAG_USR1, /* no PHP stack */
-    SWOW_COROUTINE_FLAG_MAIN_FINISHED = CAT_COROUTINE_FLAG_USR2,
-    SWOW_COROUTINE_FLAG_ALL_FINISHED  = CAT_COROUTINE_FLAG_USR3,
-} swow_coroutine_flag_t;
-
-typedef enum
-{
     SWOW_COROUTINE_OPCODE_ACCEPT_ZDATA = CAT_COROUTINE_OPCODE_USR1,
 } swow_coroutine_opcode_t;
 
@@ -74,7 +67,6 @@ typedef struct
     /* coroutine info */
     zval zcallable;
     zend_fcall_info_cache fcc;
-    zval zdata;
     zend_object *cross_exception;
     /* zend things */
     JMP_BUF *bailout;
@@ -246,16 +238,7 @@ SWOW_API swow_coroutine_t *swow_coroutine_get_current(void);
 SWOW_API swow_coroutine_t *swow_coroutine_get_main(void);
 SWOW_API swow_coroutine_t *swow_coroutine_get_scheduler(void);
 
-/* scheduler */
-SWOW_API cat_bool_t swow_coroutine_scheduler_run(swow_coroutine_t *scheduler); SWOW_INTERNAL
-SWOW_API swow_coroutine_t *swow_coroutine_scheduler_stop(void);                SWOW_INTERNAL
-SWOW_API cat_bool_t swow_coroutine_is_scheduler(swow_coroutine_t *scoroutine);
-
-/* executor switcher */
-SWOW_API void swow_coroutine_set_executor_switcher(cat_bool_t enable); SWOW_INTERNAL
-
 /* debug */
-
 SWOW_API HashTable *swow_coroutine_get_trace(const swow_coroutine_t *scoroutine, zend_long options, zend_long limit);
 SWOW_API smart_str *swow_coroutine_get_trace_as_smart_str(swow_coroutine_t *scoroutine, smart_str *str, zend_long options, zend_long limit);
 SWOW_API zend_string *swow_coroutine_get_trace_as_string(const swow_coroutine_t *scoroutine, zend_long options, zend_long limit);
