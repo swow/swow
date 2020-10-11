@@ -45,7 +45,7 @@ CAT_GLOBALS_CTOR_DECLARE_SZ(swow_coroutine)
 
 /* pre declare */
 static cat_bool_t swow_coroutine_construct(swow_coroutine_t *scoroutine, zval *zcallable, size_t stack_page_size, size_t c_stack_size);
-static void swow_coroutine_close(swow_coroutine_t *scoroutine);
+static void swow_coroutine_shutdown(swow_coroutine_t *scoroutine);
 static void swow_coroutine_handle_cross_exception(zend_object *cross_exception);
 static void swow_coroutine_handle_not_null_zdata(swow_coroutine_t *scoroutine, swow_coroutine_t *current_scoroutine, zval **zdata_ptr, cat_bool_t handle_ref);
 static cat_bool_t swow_coroutine_resume_deny(cat_coroutine_t *coroutine, cat_data_t *data, cat_data_t **retval);
@@ -96,7 +96,7 @@ static void swow_coroutine_free_object(zend_object *object)
 
     if (UNEXPECTED(swow_coroutine_is_available(scoroutine))) {
         /* created but never run (or it is main coroutine) */
-        swow_coroutine_close(scoroutine);
+        swow_coroutine_shutdown(scoroutine);
     }
 
     zend_object_std_dtor(&scoroutine->std);
@@ -277,7 +277,7 @@ static swow_coroutine_t *swow_coroutine_create_custom_object(zval *zcallable)
     );
     if (UNEXPECTED(EG(exception))) {
         cat_update_last_error_ez("Exception occurred during construction");
-        zend_object_release(&scoroutine->std);
+        swow_coroutine_close(scoroutine);
         return NULL;
     }
 
@@ -389,7 +389,7 @@ static cat_bool_t swow_coroutine_construct(swow_coroutine_t *scoroutine, zval *z
     return cat_true;
 }
 
-static void swow_coroutine_close(swow_coroutine_t *scoroutine)
+static void swow_coroutine_shutdown(swow_coroutine_t *scoroutine)
 {
     swow_coroutine_exector_t *executor = scoroutine->executor;
 
@@ -469,6 +469,32 @@ static void swow_coroutine_main_close(void)
 
     /* release main scoroutine */
     zend_hash_index_del(SWOW_COROUTINE_G(map), scoroutine->coroutine.id);
+}
+
+SWOW_API swow_coroutine_t *swow_coroutine_create(zval *zcallable)
+{
+    return swow_coroutine_create_ex(zcallable, 0, 0);
+}
+
+SWOW_API swow_coroutine_t *swow_coroutine_create_ex(zval *zcallable, size_t stack_page_size, size_t c_stack_size)
+{
+    swow_coroutine_t *scoroutine;
+
+    scoroutine = swow_coroutine_get_from_object(
+        swow_object_create(swow_coroutine_ce)
+    );
+
+    if (UNEXPECTED(!swow_coroutine_construct(scoroutine, zcallable, stack_page_size, c_stack_size))) {
+        swow_coroutine_close(scoroutine);
+        return NULL;
+    }
+
+    return scoroutine;
+}
+
+SWOW_API void swow_coroutine_close(swow_coroutine_t *scoroutine)
+{
+    zend_object_release(&scoroutine->std);
 }
 
 SWOW_API void swow_coroutine_executor_save(swow_coroutine_exector_t *executor)
@@ -652,10 +678,10 @@ SWOW_API zval *swow_coroutine_jump(swow_coroutine_t *scoroutine, zval *zdata)
     /* get from scoroutine */
     scoroutine = swow_coroutine_get_from(current_scoroutine);
 
-    if (UNEXPECTED(scoroutine->coroutine.state == CAT_COROUTINE_STATE_DEAD)) {
-        /* release executor resources after coroutine is dead */
-        swow_coroutine_close(scoroutine);
-        /* delete from global map */
+    if (UNEXPECTED(scoroutine->coroutine.state == CAT_COROUTINE_STATE_FINISHED)) {
+        swow_coroutine_shutdown(scoroutine);
+        /* delete it from global map
+         * (we can not delete it in coroutine_function, object maybe released during deletion) */
         zend_hash_index_del(SWOW_COROUTINE_G(map), scoroutine->coroutine.id);
     } else {
         swow_coroutine_exector_t *executor = current_scoroutine->executor;
@@ -1342,7 +1368,7 @@ static PHP_METHOD(swow_coroutine, run)
     if (UNEXPECTED(!swow_coroutine_resume(scoroutine, zdata, NULL))) {
         /* impossible? */
         swow_throw_exception_with_last(swow_coroutine_exception_ce);
-        zend_object_release(&scoroutine->std);
+        swow_coroutine_close(scoroutine);
         RETURN_THROWS();
     }
     RETURN_OBJ(&scoroutine->std);
@@ -2319,7 +2345,7 @@ static void swow_coroutines_kill_destructor(zval *zscoroutine)
     if (UNEXPECTED(!swow_coroutine_kill(scoroutine, "Coroutine is forced to kill when the runtime shutdown", ~0))) {
         cat_core_error(COROUTINE, "Execute kill destructor failed, reason: %s", cat_get_last_error_message());
     }
-    zend_object_release(&scoroutine->std);
+    swow_coroutine_close(scoroutine);
 }
 #endif
 
