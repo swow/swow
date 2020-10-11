@@ -47,7 +47,6 @@ CAT_GLOBALS_CTOR_DECLARE_SZ(swow_coroutine)
 static cat_bool_t swow_coroutine_construct(swow_coroutine_t *scoroutine, zval *zcallable, size_t stack_page_size, size_t c_stack_size);
 static void swow_coroutine_shutdown(swow_coroutine_t *scoroutine);
 static void swow_coroutine_handle_cross_exception(zend_object *cross_exception);
-static void swow_coroutine_handle_not_null_zdata(swow_coroutine_t *scoroutine, swow_coroutine_t *current_scoroutine, zval **zdata_ptr, cat_bool_t handle_ref);
 static cat_bool_t swow_coroutine_resume_deny(cat_coroutine_t *coroutine, cat_data_t *data, cat_data_t **retval);
 
 static cat_always_inline size_t swow_coroutine_align_stack_page_size(size_t size)
@@ -242,20 +241,16 @@ static zval *swow_coroutine_function(zval *zdata)
     swow_output_globals_fast_end();
 #endif
 
-    swow_coroutine_t *previous_scoroutine = swow_coroutine_get_previous(scoroutine);
-    CAT_ASSERT(previous_scoroutine != NULL);
-    /* break releation with origin */
-    GC_DELREF(&previous_scoroutine->std);
-    /* swap to origin */
-    swow_coroutine_executor_switch(previous_scoroutine);
     /* solve retval */
-    if (Z_TYPE_P(fci.retval) == IS_UNDEF || Z_TYPE_P(fci.retval) == IS_NULL) {
-        return NULL;
-    } else {
+    if (UNEXPECTED(Z_TYPE_P(fci.retval) != IS_UNDEF && Z_TYPE_P(fci.retval) != IS_NULL)) {
         scoroutine->coroutine.opcodes |= SWOW_COROUTINE_OPCODE_ACCEPT_ZDATA;
-        swow_coroutine_handle_not_null_zdata(scoroutine, previous_scoroutine, &fci.retval, cat_true);
-        return fci.retval;
+        /* make sure the memory space of zdata is safe */
+        zval *ztransfer_data = &SWOW_COROUTINE_G(ztransfer_data);
+        ZVAL_COPY_VALUE(ztransfer_data, fci.retval);
+        return ztransfer_data;
     }
+
+    return NULL;
 }
 
 #ifdef SWOW_COROUTINE_ENABLE_CUSTOM_ENTRY
@@ -597,7 +592,7 @@ SWOW_API void swow_coroutine_executor_recover(swow_coroutine_exector_t *executor
 #endif
 }
 
-static void swow_coroutine_handle_not_null_zdata(swow_coroutine_t *scoroutine, swow_coroutine_t *current_scoroutine, zval **zdata_ptr, cat_bool_t handle_ref)
+static void swow_coroutine_handle_not_null_zdata(swow_coroutine_t *scoroutine, swow_coroutine_t *current_scoroutine, zval **zdata_ptr)
 {
     if (!(current_scoroutine->coroutine.opcodes & SWOW_COROUTINE_OPCODE_ACCEPT_ZDATA)) {
         if (UNEXPECTED(scoroutine->coroutine.opcodes & SWOW_COROUTINE_OPCODE_ACCEPT_ZDATA)) {
@@ -607,6 +602,7 @@ static void swow_coroutine_handle_not_null_zdata(swow_coroutine_t *scoroutine, s
         }
     } else {
         zval *zdata = *zdata_ptr;
+        zend_bool handle_ref = current_scoroutine->coroutine.state == CAT_COROUTINE_STATE_FINISHED;
         if (!(scoroutine->coroutine.opcodes & SWOW_COROUTINE_OPCODE_ACCEPT_ZDATA)) {
             CAT_ASSERT(Z_TYPE_P(zdata) != IS_PTR);
             /* the PHP layer can not send data to the internal-controlled coroutine */
@@ -614,22 +610,14 @@ static void swow_coroutine_handle_not_null_zdata(swow_coroutine_t *scoroutine, s
                 zval_ptr_dtor(zdata);
             }
             *zdata_ptr = NULL;
-            return;
         } else {
-            CAT_ASSERT(scoroutine->executor != NULL);
             if (UNEXPECTED(Z_TYPE_P(zdata) == IS_PTR)) {
                 /* params will be copied by zend_call_function */
                 return;
-            } else {
-                if (!handle_ref) {
-                    /* send without copy value */
-                    Z_TRY_ADDREF_P(zdata);
-                } else {
-                    /* make sure the memory space of zdata is safe */
-                    zval *safe_zdata = &scoroutine->executor->zdata;
-                    ZVAL_COPY_VALUE(safe_zdata, zdata);
-                    *zdata_ptr = safe_zdata;
-                }
+            }
+            if (!handle_ref) {
+                /* send without copy value */
+                Z_TRY_ADDREF_P(zdata);
             }
         }
     }
@@ -669,7 +657,7 @@ SWOW_API zval *swow_coroutine_jump(swow_coroutine_t *scoroutine, zval *zdata)
     }
 
     if (UNEXPECTED(zdata != NULL)) {
-        swow_coroutine_handle_not_null_zdata(scoroutine, swow_coroutine_get_current(), &zdata, cat_false);
+        swow_coroutine_handle_not_null_zdata(scoroutine, swow_coroutine_get_current(), &zdata);
     }
 
     /* resume C coroutine */
@@ -678,7 +666,7 @@ SWOW_API zval *swow_coroutine_jump(swow_coroutine_t *scoroutine, zval *zdata)
     /* get from scoroutine */
     scoroutine = swow_coroutine_get_from(current_scoroutine);
 
-    if (UNEXPECTED(scoroutine->coroutine.state == CAT_COROUTINE_STATE_FINISHED)) {
+    if (UNEXPECTED(scoroutine->coroutine.state == CAT_COROUTINE_STATE_DEAD)) {
         swow_coroutine_shutdown(scoroutine);
         /* delete it from global map
          * (we can not delete it in coroutine_function, object maybe released during deletion) */

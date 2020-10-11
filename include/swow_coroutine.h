@@ -149,6 +149,7 @@ CAT_GLOBALS_STRUCT_BEGIN(swow_coroutine)
 #ifdef SWOW_COROUTINE_USE_RATED
     swow_coroutine_rated_t rated;
 #endif
+    zval ztransfer_data;
 CAT_GLOBALS_STRUCT_END(swow_coroutine)
 
 typedef zval *(*swow_coroutine_resume_t)(swow_coroutine_t *scoroutine, zval *zdata);
