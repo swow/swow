@@ -18,23 +18,11 @@
 
 #include "swow.h"
 
-/* initialization */
-
-SWOW_API void swow_wrapper_init(void)
-{
-#ifdef ZEND_NO_VALUE_ERROR
-    do {
-        zend_class_entry ce;
-        INIT_CLASS_ENTRY(ce, "ValueError", NULL);
-        zend_ce_value_error = zend_register_internal_class_ex(&ce, zend_ce_error);
-        zend_ce_value_error->create_object = zend_ce_error->create_object;
-    } while (0);
+/* PHP 7.3 compatibility macro {{{*/
+#if PHP_VERSION_ID < 70300
+ZEND_API HashTable zend_empty_array;
 #endif
-
-    ZVAL_PTR(&swow_internal_callable_key, &swow_internal_callable_key);
-}
-
-SWOW_API void swow_wrapper_shutdown(void) { }
+/* }}} */
 
 /* PHP 8 compatibility macro {{{*/
 #if PHP_VERSION_ID < 80000
@@ -298,4 +286,31 @@ SWOW_API void swow_output_globals_end(void)
     php_output_deactivate();
     php_output_activate();
     SG(request_info).no_headers = no_headers;
+}
+
+/* wrapper init/shutdown */
+
+void swow_wrapper_init(void)
+{
+#if PHP_VERSION_ID < 70300
+    zend_hash_init(&zend_empty_array, 0, NULL, NULL, 1);
+#endif
+
+#ifdef ZEND_NO_VALUE_ERROR
+    do {
+        zend_class_entry ce;
+        INIT_CLASS_ENTRY(ce, "ValueError", NULL);
+        zend_ce_value_error = zend_register_internal_class_ex(&ce, zend_ce_error);
+        zend_ce_value_error->create_object = zend_ce_error->create_object;
+    } while (0);
+#endif
+
+    ZVAL_PTR(&swow_internal_callable_key, &swow_internal_callable_key);
+}
+
+void swow_wrapper_shutdown(void)
+{
+#if PHP_VERSION_ID < 70300
+    zend_hash_destroy(&zend_empty_array);
+#endif
 }

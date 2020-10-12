@@ -41,12 +41,24 @@ extern "C" {
 #include "ext/standard/php_var.h"
 #include "ext/standard/php_array.h"
 
-SWOW_API void swow_wrapper_init(void);
-SWOW_API void swow_wrapper_shutdown(void);
+void swow_wrapper_init(void);
+void swow_wrapper_shutdown(void);
 
 /* PHP 7.3 compatibility macro {{{*/
+#ifndef GC_ADD_FLAGS
+#define GC_ADD_FLAGS(p, flags) do { \
+    GC_FLAGS(p) |= (flags); \
+} while (0)
+#endif
+
+#ifndef GC_DEL_FLAGS
+#define GC_DEL_FLAGS(p, flags) do { \
+    GC_FLAGS(p) &= ~(flags); \
+} while (0)
+#endif
+
 #ifndef GC_SET_REFCOUNT
-# define GC_SET_REFCOUNT(p, rc) do { \
+#define GC_SET_REFCOUNT(p, rc) do { \
     GC_REFCOUNT(p) = rc; \
 } while (0)
 #endif
@@ -89,6 +101,8 @@ static zend_always_inline void zend_tmp_string_release(zend_string *tmp)
     }
 }
 
+ZEND_API HashTable zend_empty_array;
+
 #define ZVAL_EMPTY_ARRAY(zval)    (array_init((zval)))
 #define RETVAL_EMPTY_ARRAY()      ZVAL_EMPTY_ARRAY(return_value)
 #define RETURN_EMPTY_ARRAY()      do { RETVAL_EMPTY_ARRAY(); return; } while (0)
@@ -102,8 +116,6 @@ static zend_always_inline HashTable *zend_new_array(size_t size)
 
     return ht;
 }
-
-#define zend_empty_array (*((const HashTable *) zend_new_array(0)))
 #endif
 
 #if PHP_VERSION_ID < 70300
