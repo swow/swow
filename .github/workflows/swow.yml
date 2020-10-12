@@ -1,0 +1,39 @@
+name: swow
+
+on: [push, pull_request]
+
+jobs:
+  ci:
+    name: PHP ${{ matrix.php-versions }} Test on ${{ matrix.os }}
+    runs-on: "${{ matrix.os }}"
+    strategy:
+      matrix:
+        # os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [ubuntu-latest]
+        php-versions: ['7.2', '7.3', '7.4', '8.0']
+      max-parallel: 4
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v1
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php-versions }}
+          tools: phpize
+          # ini-values: pcov.directory=lib
+          # coverage: pcov
+          coverage: none
+
+      - name: Build Swow
+        run:
+          composer install --ignore-platform-reqs &&
+          composer build-extension
+
+      - name: Run tests
+        run:
+          ./run-tests.sh ./tests
+          --show-diff
+          --show-slow 1000
+          --set-timeout 30
+          -j"$(./deps/libcat/tools/cpu_count.sh)"
