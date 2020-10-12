@@ -225,6 +225,7 @@ SWOW_UNSAFE
 /* basic info */
 SWOW_API cat_bool_t swow_coroutine_is_available(const swow_coroutine_t *scoroutine);
 SWOW_API cat_bool_t swow_coroutine_is_alive(const swow_coroutine_t *scoroutine);
+SWOW_API cat_bool_t swow_coroutine_is_executing(const swow_coroutine_t *scoroutine);
 SWOW_API swow_coroutine_t *swow_coroutine_get_from(const swow_coroutine_t *scoroutine); SWOW_UNSAFE
 SWOW_API swow_coroutine_t *swow_coroutine_get_previous(const swow_coroutine_t *scoroutine);
 

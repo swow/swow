@@ -36,9 +36,11 @@ SWOW_API CAT_GLOBALS_DECLARE(swow_coroutine)
 
 CAT_GLOBALS_CTOR_DECLARE_SZ(swow_coroutine)
 
-#define SWOW_COROUTINE_SHOULD_BE_ALIVE(scoroutine, failure) do { \
-    if (UNEXPECTED(!swow_coroutine_is_alive(scoroutine))) { \
-        cat_update_last_error(CAT_ESRCH, "Coroutine is not alive"); \
+#define SWOW_COROUTINE_SHOULD_BE_IN_EXECUTING(scoroutine, update_last_error, failure) do { \
+    if (UNEXPECTED(!swow_coroutine_is_executing(scoroutine))) { \
+        if (update_last_error) { \
+            cat_update_last_error(CAT_ESRCH, "Coroutine is not in executing"); \
+        } \
         failure; \
     } \
 } while (0)
@@ -764,6 +766,17 @@ SWOW_API cat_bool_t swow_coroutine_is_alive(const swow_coroutine_t *scoroutine)
      return cat_coroutine_is_alive(&scoroutine->coroutine);
 }
 
+SWOW_API cat_bool_t swow_coroutine_is_executing(const swow_coroutine_t *scoroutine)
+{
+    if (scoroutine == swow_coroutine_get_current()) {
+        return EG(current_execute_data) != NULL;
+    }
+
+    return swow_coroutine_is_alive(scoroutine) &&
+            scoroutine->executor != NULL &&
+            scoroutine->executor->current_execute_data != NULL;
+}
+
 SWOW_API swow_coroutine_t *swow_coroutine_get_from(const swow_coroutine_t *scoroutine)
 {
     return swow_coroutine_get_from_handle(scoroutine->coroutine.from);
@@ -841,9 +854,7 @@ SWOW_API HashTable *swow_coroutine_get_trace(const swow_coroutine_t *scoroutine,
 {
     HashTable *trace;
 
-    if (UNEXPECTED(!swow_coroutine_is_alive(scoroutine))) {
-        return NULL;
-    }
+    SWOW_COROUTINE_SHOULD_BE_IN_EXECUTING(scoroutine, cat_false, return NULL);
 
     SWOW_COROUTINE_EXECUTE_START(scoroutine) {
         trace = swow_debug_get_trace(options, limit);
@@ -854,9 +865,7 @@ SWOW_API HashTable *swow_coroutine_get_trace(const swow_coroutine_t *scoroutine,
 
 SWOW_API smart_str *swow_coroutine_get_trace_as_smart_str(swow_coroutine_t *scoroutine, smart_str *str, zend_long options, zend_long limit)
 {
-    if (UNEXPECTED(!swow_coroutine_is_alive(scoroutine))) {
-        return NULL;
-    }
+    SWOW_COROUTINE_SHOULD_BE_IN_EXECUTING(scoroutine, cat_false, return NULL);
 
     SWOW_COROUTINE_EXECUTE_START(scoroutine) {
         str = swow_debug_get_trace_as_smart_str(str, options, limit);
@@ -869,9 +878,7 @@ SWOW_API zend_string *swow_coroutine_get_trace_as_string(const swow_coroutine_t 
 {
     zend_string *trace;
 
-    if (UNEXPECTED(!swow_coroutine_is_alive(scoroutine))) {
-        return NULL;
-    }
+    SWOW_COROUTINE_SHOULD_BE_IN_EXECUTING(scoroutine, cat_false, return NULL);
 
     SWOW_COROUTINE_EXECUTE_START(scoroutine) {
         trace = swow_debug_get_trace_as_string(options, limit);
@@ -884,9 +891,7 @@ SWOW_API HashTable *swow_coroutine_get_trace_as_list(const swow_coroutine_t *sco
 {
     HashTable *trace;
 
-    if (UNEXPECTED(!swow_coroutine_is_alive(scoroutine))) {
-        return NULL;
-    }
+    SWOW_COROUTINE_SHOULD_BE_IN_EXECUTING(scoroutine, cat_false, return NULL);
 
     SWOW_COROUTINE_EXECUTE_START(scoroutine) {
         trace = swow_debug_get_trace_as_list(options, limit);
@@ -906,10 +911,7 @@ SWOW_API HashTable *swow_coroutine_get_defined_vars(swow_coroutine_t *scoroutine
 {
     HashTable *symbol_table;
 
-    if (UNEXPECTED(!swow_coroutine_is_alive(scoroutine))) {
-        cat_update_last_error(CAT_ESRCH, "Coroutine is not alive");
-        return NULL;
-    }
+    SWOW_COROUTINE_SHOULD_BE_IN_EXECUTING(scoroutine, cat_true, return NULL);
 
     SWOW_COROUTINE_PREV_EXECUTE_START(scoroutine, level) {
         SWOW_COROUTINE_CHECK_CALL_INFO(goto _error);
@@ -933,7 +935,7 @@ SWOW_API cat_bool_t swow_coroutine_set_local_var(swow_coroutine_t *scoroutine, z
 {
     cat_bool_t ret;
 
-    SWOW_COROUTINE_SHOULD_BE_ALIVE(scoroutine, return cat_false);
+    SWOW_COROUTINE_SHOULD_BE_IN_EXECUTING(scoroutine, cat_true, return cat_false);
 
     SWOW_COROUTINE_PREV_EXECUTE_START(scoroutine, level) {
         int error;
@@ -960,7 +962,7 @@ SWOW_API cat_bool_t swow_coroutine_eval(swow_coroutine_t *scoroutine, zend_strin
 {
     int error;
 
-    SWOW_COROUTINE_SHOULD_BE_ALIVE(scoroutine, return cat_false);
+    SWOW_COROUTINE_SHOULD_BE_IN_EXECUTING(scoroutine, cat_true, return cat_false);
 
     if (scoroutine != swow_coroutine_get_current() || level != 0) {
         swow_coroutine_set_readonly(cat_true);
@@ -986,7 +988,7 @@ SWOW_API cat_bool_t swow_coroutine_call(swow_coroutine_t *scoroutine, zval *zcal
     zend_fcall_info_cache fcc;
     int error;
 
-    SWOW_COROUTINE_SHOULD_BE_ALIVE(scoroutine, return cat_false);
+    SWOW_COROUTINE_SHOULD_BE_IN_EXECUTING(scoroutine, cat_true, return cat_false);
 
     do {
         char *error;
@@ -1128,6 +1130,8 @@ SWOW_API cat_bool_t swow_coroutine_throw(swow_coroutine_t *scoroutine, zend_obje
         zend_throw_exception_internal(ZVAL7_OBJECT(exception));
         ZVAL_NULL(retval);
     } else {
+        SWOW_COROUTINE_SHOULD_BE_IN_EXECUTING(scoroutine, cat_true, return cat_false);
+        // TODO: split check & resume
         scoroutine->executor->cross_exception = exception;
         if (UNEXPECTED(!swow_coroutine_resume(scoroutine, NULL, retval))) {
             scoroutine->executor->cross_exception = NULL;
