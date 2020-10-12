@@ -614,11 +614,6 @@ static void swow_coroutine_handle_not_null_zdata(swow_coroutine_t *scoroutine, s
     }
 }
 
-SWOW_API cat_bool_t swow_coroutine_jump_precheck(const swow_coroutine_t *scoroutine)
-{
-    return cat_coroutine_jump_precheck(&scoroutine->coroutine);
-}
-
 SWOW_API zval *swow_coroutine_jump(swow_coroutine_t *scoroutine, zval *zdata)
 {
     swow_coroutine_t *current_scoroutine = swow_coroutine_get_current();
@@ -669,12 +664,17 @@ SWOW_API zval *swow_coroutine_jump(swow_coroutine_t *scoroutine, zval *zdata)
     return zdata;
 }
 
+SWOW_API cat_bool_t swow_coroutine_is_resumable(const swow_coroutine_t *scoroutine)
+{
+    return cat_coroutine_is_resumable(&scoroutine->coroutine);
+}
+
 SWOW_API cat_bool_t swow_coroutine_resume_standard(cat_coroutine_t *coroutine, cat_data_t *data, cat_data_t **retval)
 {
     swow_coroutine_t *scoroutine = swow_coroutine_get_from_handle(coroutine);
 
     if (EXPECTED(!(scoroutine->coroutine.opcodes & CAT_COROUTINE_OPCODE_CHECKED))) {
-        if (UNEXPECTED(!swow_coroutine_jump_precheck(scoroutine))) {
+        if (UNEXPECTED(!swow_coroutine_is_resumable(scoroutine))) {
             return cat_false;
         }
     }

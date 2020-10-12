@@ -178,8 +178,8 @@ SWOW_API void swow_coroutine_close(swow_coroutine_t *scoroutine);
 SWOW_API void swow_coroutine_executor_switch(swow_coroutine_exector_t *current_executor, swow_coroutine_exector_t *target_executor); SWOW_INTERNAL
 SWOW_API void swow_coroutine_executor_save(swow_coroutine_exector_t *executor);    SWOW_INTERNAL
 SWOW_API void swow_coroutine_executor_recover(swow_coroutine_exector_t *executor); SWOW_INTERNAL
-SWOW_API cat_bool_t swow_coroutine_jump_precheck(const swow_coroutine_t *scoroutine);
 SWOW_API zval *swow_coroutine_jump(swow_coroutine_t *scoroutine, zval *zdata);
+SWOW_API cat_bool_t swow_coroutine_is_resumable(const swow_coroutine_t *scoroutine);
 SWOW_API cat_bool_t swow_coroutine_resume_standard(cat_coroutine_t *coroutine, cat_data_t *data, cat_data_t **retval); SWOW_INTERNAL
 SWOW_API cat_bool_t swow_coroutine_resume(swow_coroutine_t *scoroutine, zval *zdata, zval *retval);
 SWOW_API cat_bool_t swow_coroutine_yield(zval *zdata, zval *retval);
