@@ -23,7 +23,7 @@ extern "C" {
 #endif
 
 #include "cat.h"
-#include "cat_queue.h"
+#include "cat_coroutine.h"
 
 typedef struct
 {
@@ -33,13 +33,13 @@ typedef struct
 } cat_event_task_t;
 
 CAT_GLOBALS_STRUCT_BEGIN(cat_event)
-    cat_bool_t running;
     uv_loop_t *loop;
-    uv_loop_t _loop;
     uv_timer_t *dead_lock;
-    uv_timer_t _dead_lock;
     cat_queue_t defer_tasks;
-    size_t defer_tasks_count;
+    size_t defer_task_count;
+    /* --- */
+    uv_loop_t _loop;
+    uv_timer_t _dead_lock;
 CAT_GLOBALS_STRUCT_END(cat_event)
 
 extern CAT_API CAT_GLOBALS_DECLARE(cat_event)
@@ -52,14 +52,16 @@ CAT_API cat_bool_t cat_event_module_init(void);
 CAT_API cat_bool_t cat_event_runtime_init(void);
 CAT_API cat_bool_t cat_event_runtime_shutdown(void);
 
-CAT_API cat_bool_t cat_event_is_running(void);
+CAT_API void cat_event_schedule(void)  CAT_INTERNAL;
+CAT_API void cat_event_dead_lock(void) CAT_INTERNAL;
 
-CAT_API cat_data_t *cat_event_scheduler_function(cat_data_t *data);
-CAT_API cat_bool_t cat_event_scheduler_run(void);
-CAT_API cat_bool_t cat_event_scheduler_stop(void);
-CAT_API void cat_event_wait(void);
+CAT_API cat_coroutine_t *cat_event_scheduler_run(cat_coroutine_t *coroutine);
+CAT_API cat_coroutine_t *cat_event_scheduler_close(void);
 
 CAT_API cat_bool_t cat_event_defer(cat_data_callback_t callback, cat_data_t *data);
+CAT_API cat_bool_t cat_event_do_defer_tasks(void);
+
+CAT_API cat_bool_t cat_event_wait(void);
 
 #ifdef __cplusplus
 }

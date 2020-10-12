@@ -111,7 +111,7 @@ CAT_API void *cat_getpageof(const void *p)
     return (void *) (((uintptr_t) p) & ~(cat_getpagesize() - 1));
 }
 
-CAT_API unsigned int cat_bit_count(size_t num)
+CAT_API unsigned int cat_bit_count(uintmax_t num)
 {
     uint8_t count = 0;
 
@@ -123,7 +123,7 @@ CAT_API unsigned int cat_bit_count(size_t num)
     return count;
 }
 
-CAT_API int cat_bit_pos(size_t num)
+CAT_API int cat_bit_pos(uintmax_t num)
 {
     int pos = -1;
 

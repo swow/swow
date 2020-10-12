@@ -17,18 +17,18 @@
  */
 
 #include "cat_event.h"
-#include "cat_coroutine.h"
 
 CAT_API CAT_GLOBALS_DECLARE(cat_event)
 
 CAT_GLOBALS_CTOR_DECLARE_SZ(cat_event)
 
-static void cat_event_run(uv_loop_t *loop);
-static cat_bool_t cat_event_do_defer_tasks(void);
-
 CAT_API cat_bool_t cat_event_module_init(void)
 {
     CAT_GLOBALS_REGISTER(cat_event, CAT_GLOBALS_CTOR(cat_event), NULL);
+
+    CAT_EVENT_G(loop) = &CAT_EVENT_G(_loop);
+    CAT_EVENT_G(dead_lock) = &CAT_EVENT_G(_dead_lock);
+
     return cat_true;
 }
 
@@ -36,21 +36,15 @@ CAT_API cat_bool_t cat_event_runtime_init(void)
 {
     int error;
 
-    CAT_EVENT_G(running) = cat_false;
-    CAT_EVENT_G(loop) = &CAT_EVENT_G(_loop);
-    CAT_EVENT_G(dead_lock) = &CAT_EVENT_G(_dead_lock);
+    error = uv_loop_init(CAT_EVENT_G(loop));
 
-    do {
-        uv_loop_t *loop = CAT_EVENT_G(loop);
-
-        error = uv_loop_init(loop);
-
-        if (unlikely(error != 0)) {
-            cat_core_error_with_reason(EVENT, error, "Event loop init failed");
-        }
-    } while (0);
+    if (error != 0) {
+        cat_warn_with_reason(EVENT, error, "Event loop init failed");
+        return cat_false;
+    }
 
     cat_queue_init(&CAT_EVENT_G(defer_tasks));
+    CAT_EVENT_G(defer_task_count) = 0;
 
     return cat_true;
 }
@@ -59,63 +53,64 @@ CAT_API cat_bool_t cat_event_runtime_shutdown(void)
 {
     int error;
 
-    do {
-        uv_loop_t *loop = CAT_EVENT_G(loop);
+    /* we must call run to close all handles and clear defer tasks */
+    cat_event_schedule();
 
-        if (unlikely(loop == NULL)) {
-            break;
-        }
+    error = uv_loop_close(CAT_EVENT_G(loop));
 
-        /* we must call run to close all handles and clear defer tasks */
-        cat_event_run(loop);
+    if (unlikely(error != 0)) {
+        cat_warn_with_reason(EVENT, error, "Event loop close failed");
+        return cat_false;
+    }
 
-        error = uv_loop_close(loop);
-        if (unlikely(error != 0)) {
-            cat_warn_with_reason(EVENT, error, "Event loop close failed");
-        }
-    } while (0);
+    CAT_ASSERT(cat_queue_empty(&CAT_EVENT_G(defer_tasks)));
+    CAT_ASSERT(CAT_EVENT_G(defer_task_count) == 0);
 
     return cat_true;
 }
 
-CAT_API cat_bool_t cat_event_is_running(void)
+static void cat_event_dead_lock_unlock(uv_timer_t *dead_lock)
 {
-    return CAT_EVENT_G(running);
+    uv_timer_stop(dead_lock);
+    uv_close((uv_handle_t *) dead_lock, NULL);
 }
 
-static void cat_event_dead_lock_callback(cat_data_t *data)
+static void cat_event_dead_lock_unlock_callback(cat_data_t *data)
 {
-    uv_timer_stop((uv_timer_t *) data);
-    uv_close((uv_handle_t *) data, NULL);
+    cat_event_dead_lock_unlock((uv_timer_t *) data);
 }
 
-static void cat_event_forever_timer_callback(uv_timer_t *forever_timer)
+static void cat_event_dead_lock_callback(uv_timer_t *dead_lock)
 {
-    uv_timer_again(forever_timer);
+    uv_timer_again(dead_lock);
 }
 
-static cat_never_inline void cat_event_dead_lock(void)
+CAT_API void cat_event_dead_lock(void)
 {
     uv_timer_t *dead_lock = CAT_EVENT_G(dead_lock);
     int error;
 
-    cat_warn_ex(EVENT, CAT_EDEADLK, "Dead lock: all coroutines are asleep");
-
     error = uv_timer_init(cat_event_loop, dead_lock);
+
     if (unlikely(error != 0)) {
         cat_core_error_with_reason(EVENT, error, "Dead-Lock init failed");
     }
-    error = uv_timer_start(dead_lock, cat_event_forever_timer_callback, UINT64_MAX, UINT64_MAX);
+
+    error = uv_timer_start(dead_lock, cat_event_dead_lock_callback, UINT64_MAX, UINT64_MAX);
+
     if (unlikely(error != 0)) {
         cat_core_error_with_reason(EVENT, error, "Dead-Lock start failed");
     }
-    if (!cat_event_defer(cat_event_dead_lock_callback, dead_lock)) {
+
+    if (!cat_event_defer(cat_event_dead_lock_unlock_callback, dead_lock)) {
         cat_core_error_with_last(EVENT, "Dead-Lock defer failed");
     }
 }
 
-static void cat_event_run(uv_loop_t *loop)
+CAT_API void cat_event_schedule(void)
 {
+    uv_loop_t *loop = CAT_EVENT_G(loop);
+
     while (1) {
         cat_bool_t alive;
 
@@ -130,97 +125,19 @@ static void cat_event_run(uv_loop_t *loop)
     }
 }
 
-CAT_API cat_data_t *cat_event_scheduler_function(cat_data_t *data)
+CAT_API cat_coroutine_t *cat_event_scheduler_run(cat_coroutine_t *coroutine)
 {
-    uv_loop_t *loop = CAT_EVENT_G(loop);
-    cat_coroutine_t *coroutine = NULL;
+    const cat_coroutine_scheduler_t scheduler = {
+        cat_event_schedule,
+        cat_event_dead_lock
+    };
 
-    if (CAT_EVENT_G(running)) {
-        cat_update_last_error(CAT_EMISUSE, "Event loop is running");
-        return CAT_COROUTINE_DATA_ERROR;
-    }
-    if (loop == NULL) {
-        cat_core_error(EVENT, "Event loop is not available");
-    }
-
-    CAT_EVENT_G(running) = cat_true;
-
-    /* exchange */
-    coroutine = cat_coroutine_exchange_with_previous();
-    /* run event loop */
-    do {
-        cat_event_run(loop);
-        if (unlikely(!cat_coroutine_is_locked(coroutine))) {
-            cat_event_dead_lock();
-        } else {
-            if (unlikely(!cat_coroutine_unlock(coroutine))) {
-                cat_core_error_with_last(EVENT, "Unlock previous coroutine failed");
-            }
-        }
-    } while (CAT_COROUTINE_G(current)->previous == NULL); /* is_root */
-
-    CAT_EVENT_G(running) = cat_false;
-
-    return CAT_COROUTINE_DATA_NULL;
+    return cat_coroutine_scheduler_run(coroutine, &scheduler);
 }
 
-CAT_API cat_bool_t cat_event_scheduler_run(void)
+CAT_API cat_coroutine_t *cat_event_scheduler_close(void)
 {
-   cat_coroutine_t *scheduler;
-
-    do {
-        cat_coroutine_id_t last_id = CAT_COROUTINE_G(last_id);
-        CAT_COROUTINE_G(last_id) = 0;
-        scheduler = cat_coroutine_create(NULL, cat_event_scheduler_function);
-        CAT_COROUTINE_G(last_id) = last_id;
-    } while (0);
-    if (scheduler == NULL) {
-        cat_update_last_error_with_previous("Create event scheduler failed");
-        return cat_false;
-    }
-    if (!cat_coroutine_scheduler_run(scheduler)) {
-        return cat_false;
-    }
-
-    return cat_true;
-}
-
-CAT_API cat_bool_t cat_event_scheduler_stop(void)
-{
-    return cat_coroutine_scheduler_stop() != NULL;
-}
-
-CAT_API void cat_event_wait(void)
-{
-    /* usually, it will be unlocked by event scheduler */
-    cat_coroutine_lock();
-
-    /* we expect everything is over,
-     * but there are still coroutines that have not finished
-     * so we try to trigger the dead lock
-    */
-    while (unlikely(CAT_COROUTINE_G(active_count) != 2 /* scheduler + main */)) {
-        cat_coroutine_lock();
-    }
-    /* dead lock was broken by some magic ways (we use while loop to fix it now, but we do not know if it is right) */
-}
-
-static cat_bool_t cat_event_do_defer_tasks(void)
-{
-    cat_queue_t *tasks = &CAT_EVENT_G(defer_tasks);
-    cat_event_task_t *task;
-    /* only tasks of the current round will be called */
-    size_t count = CAT_EVENT_G(defer_tasks_count);
-
-    while (count--) {
-        task = cat_queue_front_data(tasks, cat_event_task_t, node);
-        cat_queue_remove(&task->node);
-        CAT_EVENT_G(defer_tasks_count)--;
-        task->callback(task->data);
-        cat_free(task);
-    }
-
-    return CAT_EVENT_G(defer_tasks_count) > 0;
+    return cat_coroutine_scheduler_close();
 }
 
 CAT_API cat_bool_t cat_event_defer(cat_data_callback_t callback, cat_data_t *data)
@@ -234,7 +151,30 @@ CAT_API cat_bool_t cat_event_defer(cat_data_callback_t callback, cat_data_t *dat
     task->callback = callback;
     task->data = data;
     cat_queue_push_back(&CAT_EVENT_G(defer_tasks), &task->node);
-    CAT_EVENT_G(defer_tasks_count)++;
+    CAT_EVENT_G(defer_task_count)++;
 
     return cat_true;
+}
+
+CAT_API cat_bool_t cat_event_do_defer_tasks(void)
+{
+    cat_queue_t *tasks = &CAT_EVENT_G(defer_tasks);
+    cat_event_task_t *task;
+    /* only tasks of the current round will be called */
+    size_t count = CAT_EVENT_G(defer_task_count);
+
+    while (count--) {
+        task = cat_queue_front_data(tasks, cat_event_task_t, node);
+        cat_queue_remove(&task->node);
+        CAT_EVENT_G(defer_task_count)--;
+        task->callback(task->data);
+        cat_free(task);
+    }
+
+    return CAT_EVENT_G(defer_task_count) > 0;
+}
+
+CAT_API cat_bool_t cat_event_wait(void)
+{
+    return cat_coroutine_wait();
 }

@@ -492,7 +492,7 @@ static cat_bool_t cat_socket_getaddrbyname(cat_socket_t *socket, cat_sockaddr_in
                     address_info->length = sizeof(cat_sockaddr_in6_t);
                     break;
                 default:
-                    CAT_NEVER_HERE(SOCKET, "Must be INET");
+                    CAT_NEVER_HERE("Must be INET");
             }
         }
         switch (address->common.sa_family) {
@@ -503,7 +503,7 @@ static cat_bool_t cat_socket_getaddrbyname(cat_socket_t *socket, cat_sockaddr_in
                 socket->type |= CAT_SOCKET_TYPE_FLAG_IPV6;
                 break;
             default:
-                CAT_NEVER_HERE(SOCKET, "Unknown destination family");
+                CAT_NEVER_HERE("Unknown destination family");
         }
 
         return cat_true;
@@ -1010,7 +1010,7 @@ static void cat_socket_accept_connection_callback(uv_stream_t *stream, int statu
         cat_coroutine_t *coroutine = iserver->context.accept.coroutine;
         CAT_ASSERT(coroutine != NULL);
         iserver->context.accept.data.status = status;
-        if (unlikely(!cat_coroutine_resume_ez(coroutine))) {
+        if (unlikely(!cat_coroutine_resume(coroutine, NULL, NULL))) {
             cat_core_error_with_last(SOCKET, "Connect schedule failed");
         }
     }
@@ -1102,7 +1102,7 @@ static void cat_socket_connect_callback(uv_connect_t* request, int status)
         cat_coroutine_t *coroutine = isocket->context.connect.coroutine;
         CAT_ASSERT(coroutine != NULL);
         isocket->context.connect.data.status = status;
-        if (unlikely(!cat_coroutine_resume_ez(coroutine))) {
+        if (unlikely(!cat_coroutine_resume(coroutine, NULL, NULL))) {
             cat_core_error_with_last(SOCKET, "Connect schedule failed");
         }
     }
@@ -1427,7 +1427,7 @@ static void cat_socket_read_callback(uv_stream_t *stream, ssize_t nread, const u
     if (context->once || context->nread == context->size || context->error != 0) {
         cat_coroutine_t *coroutine = isocket->context.io.read.coroutine;
         CAT_ASSERT(coroutine != NULL);
-        if (unlikely(!cat_coroutine_resume_ez(coroutine))) {
+        if (unlikely(!cat_coroutine_resume(coroutine, NULL, NULL))) {
             cat_core_error_with_last(SOCKET, "Stream read schedule failed");
         }
     }
@@ -1477,7 +1477,7 @@ static void cat_socket_udp_recv_callback(uv_udp_t *udp, ssize_t nread, const uv_
     do {
         cat_coroutine_t *coroutine = isocket->context.io.read.coroutine;
         CAT_ASSERT(coroutine != NULL);
-        if (unlikely(!cat_coroutine_resume_ez(coroutine))) {
+        if (unlikely(!cat_coroutine_resume(coroutine, NULL, NULL))) {
             cat_core_error_with_last(SOCKET, "UDP recv schedule failed");
         }
     } while (0);
@@ -1662,7 +1662,7 @@ static cat_always_inline void cat_socket_internal_write_callback(cat_socket_inte
         CAT_ASSERT(isocket->io_flags & CAT_SOCKET_IO_FLAG_WRITE);
         request->error = status;
         /* just resume and it will retry to send on while loop */
-        if (unlikely(!cat_coroutine_resume_ez(coroutine))) {
+        if (unlikely(!cat_coroutine_resume(coroutine, NULL, NULL))) {
             cat_core_error_with_last(SOCKET, "UDP send schedule failed");
         }
     }
@@ -2073,7 +2073,7 @@ static cat_always_inline void cat_socket_cancel_io(cat_coroutine_t *coroutine, c
 {
     if (coroutine != NULL) {
         /* interrupt the operation */
-        if (unlikely(!cat_coroutine_resume_ez(coroutine))) {
+        if (unlikely(!cat_coroutine_resume(coroutine, NULL, NULL))) {
             cat_core_error_with_last(SOCKET, "Cancel %s failed when closing", type_name);
         }
     }
@@ -2280,7 +2280,7 @@ CAT_API const char *cat_socket_io_state_name(cat_socket_io_flags_t io_state)
         case CAT_SOCKET_IO_FLAG_NONE:
             return "idle";
     }
-    CAT_NEVER_HERE(SOCKET, "Unknown IO flags");
+    CAT_NEVER_HERE("Unknown IO flags");
 }
 
 CAT_API const char *cat_socket_io_state_naming(cat_socket_io_flags_t io_state)
@@ -2305,7 +2305,7 @@ CAT_API const char *cat_socket_io_state_naming(cat_socket_io_flags_t io_state)
         case CAT_SOCKET_IO_FLAG_NONE:
             return "idle";
     }
-    CAT_NEVER_HERE(SOCKET, "Unknown IO flags");
+    CAT_NEVER_HERE("Unknown IO flags");
 }
 
 CAT_API cat_socket_io_flags_t cat_socket_get_io_state(const cat_socket_t *socket)

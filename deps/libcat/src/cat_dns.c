@@ -38,7 +38,7 @@ static void cat_dns_getaddrinfo_callback(uv_getaddrinfo_t* request, int status, 
     if (likely(context->request.coroutine != NULL)) {
         context->status = status;
         context->response = response;
-        if (unlikely(!cat_coroutine_resume_ez(context->request.coroutine))) {
+        if (unlikely(!cat_coroutine_resume(context->request.coroutine, NULL, NULL))) {
             cat_core_error_with_last(DNS, "DNS resolver schedule failed");
         }
     } else if (response != NULL) {

@@ -33,7 +33,6 @@ CAT_API char *cat_hexprint(const char *data, size_t length); CAT_FREE
 CAT_API char *cat_srand(char *buffer, size_t count);  CAT_MAY_FREE
 CAT_API char *cat_snrand(char *buffer, size_t count); CAT_MAY_FREE
 
-
 typedef struct {
     size_t length;
     const char *data;

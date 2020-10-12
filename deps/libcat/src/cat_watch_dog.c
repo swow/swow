@@ -61,7 +61,7 @@ static void cat_watch_dog_loop(void* arg)
          * In other words, there is a certain probability of false alert. */
         if (watch_dog->globals->round == watch_dog->last_round &&
             watch_dog->globals->current != watch_dog->globals->scheduler &&
-            watch_dog->globals->active_count > 2 // FIXME: scheduler + main ?
+            watch_dog->globals->count > 1
         ) {
             watch_dog->alert_count++;
             watch_dog->alerter(watch_dog);
@@ -118,6 +118,8 @@ CAT_API cat_bool_t cat_watch_dog_run(cat_watch_dog_t *watch_dog, cat_nsec_t quan
             return cat_false;
         }
         watch_dog->allocated = cat_true;
+    } else {
+        watch_dog->allocated = cat_false;
     }
 
     watch_dog->quantum = cat_watch_dog_align_quantum(quantum);

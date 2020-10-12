@@ -44,7 +44,7 @@ static void cat_work_after_done(uv_work_t *request, int status)
 
     if (likely(context->request.coroutine != NULL)) {
         context->status = status;
-        if (unlikely(!cat_coroutine_resume_ez(context->request.coroutine))) {
+        if (unlikely(!cat_coroutine_resume(context->request.coroutine, NULL, NULL))) {
             cat_core_error_with_last(WORK, "Work schedule failed");
         }
     }

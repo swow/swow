@@ -95,8 +95,8 @@ CAT_API char *cat_strndup_function(const char *string, size_t length);
 CAT_API size_t cat_getpagesize(void);
 CAT_API void *cat_getpageof(const void *p);
 
-CAT_API unsigned int cat_bit_count(size_t num);
-CAT_API int cat_bit_pos(size_t num);
+CAT_API unsigned int cat_bit_count(uintmax_t num);
+CAT_API int cat_bit_pos(uintmax_t num);
 
 CAT_API uint64_t cat_hton64(uint64_t host);
 CAT_API uint64_t cat_ntoh64(uint64_t network);

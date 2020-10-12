@@ -44,13 +44,12 @@ CAT_API cat_bool_t cat_shutdown_all(void)
 {
     cat_bool_t ret = cat_true;
 
-    ret = ret &&
-          cat_watch_dog_runtime_shutdown() &&
-          cat_event_runtime_shutdown() &&
-          cat_runtime_shutdown();
+    ret = cat_watch_dog_runtime_shutdown() && ret;
+    ret = cat_event_runtime_shutdown() && ret;
+    ret = cat_coroutine_runtime_shutdown() && ret;
+    ret = cat_runtime_shutdown() && ret;
 
-    ret = ret &&
-          cat_module_shutdown();
+    ret = cat_module_shutdown();
 
     return ret;
 }
@@ -59,18 +58,17 @@ CAT_API cat_bool_t cat_run(cat_run_mode run_mode)
 {
     switch (run_mode) {
         case CAT_RUN_EASY: {
-            return cat_event_scheduler_run();
+            return cat_event_scheduler_run(NULL) != NULL;
         }
     }
-    CAT_NEVER_HERE(CORE, "Unknown run mode");
+    CAT_NEVER_HERE("Unknown run mode");
 }
 
 CAT_API void cat_stop(void)
 {
     cat_bool_t ret;
 
-    cat_event_wait();
-    ret = cat_event_scheduler_stop();
+    ret = cat_event_scheduler_close() != NULL;
 
     if (unlikely(!ret)) {
         cat_core_error_with_last(CORE, "Runtime Stop failed");

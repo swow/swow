@@ -108,7 +108,7 @@ static cat_always_inline cat_bool_t cat_channel_resume_waiter(cat_coroutine_t *c
         CAT_ASSERT(coroutine != NULL);
     }
 
-    return cat_coroutine_resume_ez(coroutine);
+    return cat_coroutine_resume(coroutine, NULL, NULL);
 }
 
 static cat_always_inline cat_bool_t cat_channel_wait(cat_queue_t *queue, cat_timeout_t timeout)
