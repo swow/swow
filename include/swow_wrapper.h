@@ -93,7 +93,7 @@ static zend_always_inline void zend_tmp_string_release(zend_string *tmp)
 #define RETVAL_EMPTY_ARRAY()      ZVAL_EMPTY_ARRAY(return_value)
 #define RETURN_EMPTY_ARRAY()      do { RETVAL_EMPTY_ARRAY(); return; } while (0)
 
-static cat_always_inline HashTable *zend_new_array(size_t size)
+static zend_always_inline HashTable *zend_new_array(size_t size)
 {
     HashTable *ht;
 
@@ -375,14 +375,14 @@ static zend_always_inline zend_string *zend_string_init_fast(const char *str, si
 /* array */
 
 #ifndef add_assoc_string_fast
-static cat_always_inline void add_next_index_string_fast(zval *arg, const char *str)
+static zend_always_inline void add_next_index_string_fast(zval *arg, const char *str)
 {
     zval tmp;
     ZVAL_STRING_FAST(&tmp, str);
     add_next_index_zval(arg, &tmp);
 }
 
-static cat_always_inline void add_next_index_stringl_fast(zval *arg, const char *str, size_t length)
+static zend_always_inline void add_next_index_stringl_fast(zval *arg, const char *str, size_t length)
 {
     zval tmp;
     ZVAL_STRINGL_FAST(&tmp, str, length);
@@ -391,7 +391,7 @@ static cat_always_inline void add_next_index_stringl_fast(zval *arg, const char 
 
 #define add_assoc_string_fast(arg, key, str) add_assoc_string_fast_ex(arg, key, strlen(key), str)
 
-static cat_always_inline void add_assoc_string_fast_ex(zval *arg, const char *key, size_t key_len, const char *str)
+static zend_always_inline void add_assoc_string_fast_ex(zval *arg, const char *key, size_t key_len, const char *str)
 {
     zval tmp;
     ZVAL_STRING_FAST(&tmp, str);
@@ -400,7 +400,7 @@ static cat_always_inline void add_assoc_string_fast_ex(zval *arg, const char *ke
 
 #define add_assoc_stringl_fast(arg, key, str, length) add_assoc_stringl_ex(arg, key, strlen(key), str, length)
 
-static cat_always_inline void add_assoc_stringl_fast_ex(zval *arg, const char *key, size_t key_len, const char *str, size_t length)
+static zend_always_inline void add_assoc_stringl_fast_ex(zval *arg, const char *key, size_t key_len, const char *str, size_t length)
 {
     zval tmp;
     ZVAL_STRINGL_FAST(&tmp, str, length);
@@ -409,7 +409,7 @@ static cat_always_inline void add_assoc_stringl_fast_ex(zval *arg, const char *k
 #endif
 
 #ifndef add_assoc_array
-static cat_always_inline void add_next_index_array(zval *arg, zend_array *array)
+static zend_always_inline void add_next_index_array(zval *arg, zend_array *array)
 {
     zval tmp;
     ZVAL_ARR(&tmp, array);
@@ -418,7 +418,7 @@ static cat_always_inline void add_next_index_array(zval *arg, zend_array *array)
 
 #define add_assoc_array(arg, key, array) add_assoc_array_ex(arg, key, strlen(key), array)
 
-static cat_always_inline void add_assoc_array_ex(zval *arg, const char *key, size_t key_len, zend_array *array)
+static zend_always_inline void add_assoc_array_ex(zval *arg, const char *key, size_t key_len, zend_array *array)
 {
     zval tmp;
     ZVAL_ARR(&tmp, array);
@@ -427,7 +427,7 @@ static cat_always_inline void add_assoc_array_ex(zval *arg, const char *key, siz
 #endif /* add_assoc_array */
 
 #ifndef add_assoc_object
-static cat_always_inline void add_next_index_object(zval *arg, zend_object *object)
+static zend_always_inline void add_next_index_object(zval *arg, zend_object *object)
 {
     zval tmp;
     ZVAL_OBJ(&tmp, object);
@@ -436,7 +436,7 @@ static cat_always_inline void add_next_index_object(zval *arg, zend_object *obje
 
 #define add_assoc_object(arg, key, object) add_assoc_object_ex(arg, key, strlen(key), object)
 
-static cat_always_inline void add_assoc_object_ex(zval *arg, const char *key, size_t key_len, zend_object *object)
+static zend_always_inline void add_assoc_object_ex(zval *arg, const char *key, size_t key_len, zend_object *object)
 {
     zval tmp;
     ZVAL_OBJ(&tmp, object);
@@ -471,7 +471,7 @@ SWOW_API zend_object *swow_custom_object_clone(zend7_object *object);
 
 #define swow_object_alloc(type, ce, handlers) ((type *) swow_object_alloc_ex(sizeof(type), ce, &handlers))
 
-static cat_always_inline void* swow_object_alloc_ex(size_t size, zend_class_entry *ce, zend_object_handlers *handlers)
+static zend_always_inline void* swow_object_alloc_ex(size_t size, zend_class_entry *ce, zend_object_handlers *handlers)
 {
     void *ptr = emalloc(size + zend_object_properties_size(ce));
     zend_object *object = (zend_object *) (((char *) ptr) + handlers->offset);
@@ -486,7 +486,7 @@ static cat_always_inline void* swow_object_alloc_ex(size_t size, zend_class_entr
     return ptr;
 }
 
-static cat_always_inline zend_object* swow_object_create(zend_class_entry *ce)
+static zend_always_inline zend_object* swow_object_create(zend_class_entry *ce)
 {
     return ce->create_object(ce);
 }
