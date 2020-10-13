@@ -13,15 +13,16 @@ declare(strict_types=1);
 
 use Swow\Coroutine;
 
-$coroutine = Coroutine::run(function() {
+$coroutine = Coroutine::run(function () {
     while (true) {
         try {
+            // output: int(999)
             var_dump(sleep(999));
         } catch (Exception $e) {
-            // 忽略
+            // skip
         }
     }
 });
-$coroutine->resume(); // 强制唤醒中断睡眠
-$coroutine->throw(new Exception); // 向协程抛出异常
-$coroutine->kill(); // 杀死协程
+$coroutine->resume(); // resume the coroutine to cancel the sleep
+$coroutine->throw(new Exception()); // throw exception to the coroutine
+$coroutine->kill(); // kill the coroutine (just like SIGKILL)
