@@ -25,9 +25,17 @@ jobs:
           # coverage: pcov
           coverage: none
 
+      - name: Setup Deps
+        run:
+          composer install --ignore-platform-reqs
+
+      - name: Coding Standards Check
+        if: ${{ matrix.php-versions != '8.0' }}
+        run:
+          composer cs-check
+
       - name: Build Swow
         run:
-          composer install --ignore-platform-reqs &&
           composer build-extension
 
       - name: Run tests

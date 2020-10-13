@@ -9,7 +9,7 @@
  * please view the LICENSE file that was distributed with this source code
  */
 
-/** @noinspection PhpUnusedLocalVariableInspection */
+/* @noinspection PhpUnusedLocalVariableInspection */
 
 declare(strict_types=1);
 
