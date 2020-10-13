@@ -36,7 +36,7 @@ jobs:
 
       - name: Build Swow
         run:
-          composer build-extension
+          composer build-extension -- --debug
 
       - name: Run tests
         run:
