@@ -1,3 +1,4 @@
+#!/usr/bin/env php
 <?php
 /**
  * This file is part of Swow
@@ -25,19 +26,28 @@ if (PHP_OS_FAMILY === 'Windows') {
 $workSpace = realpath(__DIR__ . '/../../');
 $swowSo = "{$workSpace}/.libs/swow.so";
 
+$options = getopt('', ['rebuild', 'show-log', 'debug', 'enable::']);
+
+$configureOptions = isset($options['debug']) ? '--enable-debug ' : '';
+$configureOptions = isset($options['enable']) ? $configureOptions . $options['enable'] : $configureOptions;
+
 $commandArray = ["cd {$workSpace}"];
-// TODO: option --rebuild
-if (!file_exists("{$workSpace}/configure")) {
+
+if (isset($options['rebuild'])) {
+    $commandArray[] = 'make clean';
+    $commandArray[] = 'phpize --clean';
+}
+if (!file_exists("{$workSpace}/configure") or isset($options['rebuild'])) {
     $commandArray[] = 'phpize';
 }
-if (!file_exists("{$workSpace}/config.log")) {
-    $commandArray[] = './configure --enable-debug';
+if (!file_exists("{$workSpace}/config.log") or isset($options['rebuild'])) {
+    $commandArray[] = "./configure {$configureOptions}";
 }
+
 // TODO: use Swow\Cpu module
 $cpuCount = (int) shell_exec(__DIR__ . '/../../deps/libcat/tools/cpu_count.sh');
-// TODO: option --silent
-// TODO: CFLAGS/CXXFLAGS Werror
-$commandArray[] = "make -j{$cpuCount} > /dev/null";
+$commandArray[] = isset($options['show-log']) ? "make -j{$cpuCount}" : "make -j{$cpuCount} > /dev/null";
+
 $command = implode(" && \\\n", $commandArray);
 
 passthru($command, $status);
