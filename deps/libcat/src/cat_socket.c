@@ -2139,6 +2139,9 @@ CAT_API cat_bool_t cat_socket_close(cat_socket_t *socket)
     cat_socket_internal_t *isocket = socket->internal;
 
     if (isocket == NULL) {
+        /* we do not update the last error here
+         * because the only reason for close failure is
+         * it has been closed */
         return cat_false;
     }
 

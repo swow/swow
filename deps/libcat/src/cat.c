@@ -41,30 +41,11 @@ CAT_API cat_bool_t cat_module_init(void)
 
     CAT_GLOBALS_REGISTER(cat, CAT_GLOBALS_CTOR(cat), NULL);
 
-    do {
-        char *env;
-        env = cat_env_get("CAT_TPS");
-        if (env == NULL) {
-             env = cat_env_get("UV_THREADPOOL_SIZE");
-             if (env == NULL) {
-                 // TODO: default to cpu_num * 2
-                 // cat_env_set("UV_THREADPOOL_SIZE", "4");
-                 break;
-             }
-        } else {
-            cat_env_set("UV_THREADPOOL_SIZE", env);
-        }
-        cat_free(env);
-    } while (0);
-
     return cat_true;
 }
 
 CAT_API cat_bool_t cat_module_shutdown(void)
 {
-    /* errors may occurred outside of runtime */
-    cat_clear_last_error();
-
     return cat_true;
 }
 
@@ -80,8 +61,6 @@ CAT_API cat_bool_t cat_runtime_init(void)
 #ifdef CAT_DEBUG
     CAT_G(show_last_error) = cat_false;
 #endif
-    /* errors may occured outside of runtime */
-    cat_clear_last_error();
     memset(&CAT_G(last_error), 0, sizeof(CAT_G(last_error)));
 
 #ifdef CAT_DEBUG

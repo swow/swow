@@ -85,14 +85,14 @@ CAT_API uint8_t cat_websocket_header_pack(cat_websocket_header_t *header, char *
             return 0;
         }
         header->len = CAT_WEBSOCKET_EXT16_LENGTH;
-        *((uint16_t * ) p) = htons(header->payload_length);
+        *((uint16_t *) p) = htons(header->payload_length);
         p += sizeof(uint16_t);
     } else {
         if (unlikely(p + sizeof(uint64_t) > pe)) {
             return 0;
         }
         header->len = CAT_WEBSOCKET_EXT64_LENGTH;
-        *((uint64_t * ) p) = cat_hton64(header->payload_length);
+        *((uint64_t *) p) = cat_hton64(header->payload_length);
         p += sizeof(uint64_t);
     }
     memcpy(buffer, header, CAT_WEBSOCKET_HEADER_LENGTH);
@@ -125,7 +125,7 @@ CAT_API uint8_t cat_websocket_header_unpack(cat_websocket_header_t *header, cons
         if (unlikely(p + sizeof(uint16_t) > pe)) {
             return 0;
         }
-        header->payload_length = ntohs(*((uint16_t * ) p));
+        header->payload_length = ntohs(*((uint16_t *) p));
         p += sizeof(uint16_t);
     } else {
         if (unlikely(p + sizeof(uint64_t) > pe)) {
