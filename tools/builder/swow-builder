@@ -1,4 +1,4 @@
-#!/usr/bin/env php
+#!/usr/bin/env php -n
 <?php
 /**
  * This file is part of Swow
@@ -34,13 +34,13 @@ $configureOptions = isset($options['enable']) ? $configureOptions . $options['en
 $commandArray = ["cd {$workSpace}"];
 
 if (isset($options['rebuild'])) {
-    $commandArray[] = 'make clean';
+    !file_exists("{$workSpace}/Makefile") ?? $commandArray[] = 'make clean';
     $commandArray[] = 'phpize --clean';
 }
-if (!file_exists("{$workSpace}/configure") or isset($options['rebuild'])) {
+if (!file_exists("{$workSpace}/configure") || isset($options['rebuild'])) {
     $commandArray[] = 'phpize';
 }
-if (!file_exists("{$workSpace}/config.log") or isset($options['rebuild'])) {
+if (!file_exists("{$workSpace}/config.log") || isset($options['rebuild'])) {
     $commandArray[] = "./configure {$configureOptions}";
 }
 
