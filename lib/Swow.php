@@ -128,8 +128,8 @@ namespace Swow
         public const STATE_READY = 1;
         public const STATE_RUNNING = 2;
         public const STATE_WAITING = 3;
-        public const STATE_FINISHED = 4;
-        public const STATE_LOCKED = 5;
+        public const STATE_LOCKED = 4;
+        public const STATE_FINISHED = 5;
         public const STATE_DEAD = 6;
 
         /**
@@ -410,11 +410,6 @@ namespace Swow
          * @return bool
          */
         public function isWritable(): bool { }
-
-        /**
-         * @return bool
-         */
-        public function isClosing(): bool { }
 
         /**
          * @return array
@@ -1303,17 +1298,6 @@ namespace Swow\Sync
     class Exception extends \Swow\Exception { }
 }
 
-namespace Swow\Event
-{
-    class Scheduler
-    {
-        /**
-         * @return void
-         */
-        public static function run(): void { }
-    }
-}
-
 namespace Swow\Buffer
 {
     class Exception extends \Swow\Exception { }
@@ -1893,8 +1877,10 @@ namespace Swow\Errno
     const EMISUSE = -9761;
     const EVALUE = -9760;
     const ELOCKED = -9759;
-    const EDEADLK = -9758;
-    const ESSL = -9757;
+    const ECLOSING = -9758;
+    const ECLOSED = -9757;
+    const EDEADLK = -9756;
+    const ESSL = -9755;
 }
 
 namespace Swow\Errno
