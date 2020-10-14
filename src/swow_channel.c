@@ -288,17 +288,6 @@ static PHP_METHOD(swow_channel, isWritable)
     RETURN_BOOL(cat_channel_is_writable(channel));
 }
 
-#define arginfo_swow_channel_isClosing arginfo_swow_channel_getBool
-
-static PHP_METHOD(swow_channel, isClosing)
-{
-    SWOW_CHANNEL_GETTER_CONSTRUCTED(schannel, channel);
-
-    ZEND_PARSE_PARAMETERS_NONE();
-
-    RETURN_BOOL(cat_channel_is_closing(channel));
-}
-
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_swow_channel___debugInfo, ZEND_RETURN_VALUE, 0, IS_ARRAY, 0)
 ZEND_END_ARG_INFO()
 
@@ -330,16 +319,15 @@ static const zend_function_entry swow_channel_methods[] = {
     /* status */
     PHP_ME(swow_channel, getCapacity,  arginfo_swow_channel_getCapacity,  ZEND_ACC_PUBLIC)
     PHP_ME(swow_channel, getLength,    arginfo_swow_channel_getLength,    ZEND_ACC_PUBLIC)
-    PHP_ME(swow_channel, isAvailable,  arginfo_swow_channel_isAvailable, ZEND_ACC_PUBLIC)
+    PHP_ME(swow_channel, isAvailable,  arginfo_swow_channel_isAvailable,  ZEND_ACC_PUBLIC)
     PHP_ME(swow_channel, hasProducers, arginfo_swow_channel_hasProducers, ZEND_ACC_PUBLIC)
     PHP_ME(swow_channel, hasConsumers, arginfo_swow_channel_hasConsumers, ZEND_ACC_PUBLIC)
     PHP_ME(swow_channel, isEmpty,      arginfo_swow_channel_isEmpty,      ZEND_ACC_PUBLIC)
     PHP_ME(swow_channel, isFull,       arginfo_swow_channel_isFull,       ZEND_ACC_PUBLIC)
     PHP_ME(swow_channel, isReadable,   arginfo_swow_channel_isReadable,   ZEND_ACC_PUBLIC)
     PHP_ME(swow_channel, isWritable,   arginfo_swow_channel_isWritable,   ZEND_ACC_PUBLIC)
-    PHP_ME(swow_channel, isClosing,    arginfo_swow_channel_isClosing,    ZEND_ACC_PUBLIC)
     /* magic */
-    PHP_ME(swow_channel, __debugInfo,  arginfo_swow_channel___debugInfo, ZEND_ACC_PUBLIC)
+    PHP_ME(swow_channel, __debugInfo,  arginfo_swow_channel___debugInfo,  ZEND_ACC_PUBLIC)
     PHP_FE_END
 };
 
