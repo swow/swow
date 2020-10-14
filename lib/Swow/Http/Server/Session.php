@@ -97,6 +97,11 @@ class Session extends Socket
         return $this->type;
     }
 
+    public function isKeepAlive(): ?bool
+    {
+        return $this->keepAlive;
+    }
+
     public function recvHttpRequest(Request $request = null): Request
     {
         $parser = $this->httpParser;
