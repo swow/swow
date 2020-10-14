@@ -887,16 +887,21 @@ TEXT;
                                 }
                                 throw new DebuggerException('Not in debugging');
                             }
-                            if ($command === 'n') {
-                                $coroutine->resume();
-                                $this->waitStoppedCoroutine($coroutine);
-                                $in = 'f 0';
-                                goto _next;
-                            }  /* if ($command === 'c') */
-                                unset($coroutine->__stop);
-                                $this->out("Coroutine#{$coroutine->getId()} continue to run...");
-                                $coroutine->resume();
-                                break;
+                            switch ($command) {
+                                case 'n':
+                                    $coroutine->resume();
+                                    $this->waitStoppedCoroutine($coroutine);
+                                    $in = 'f 0';
+                                    goto _next;
+                                case 'c':
+                                    unset($coroutine->__stop);
+                                    $this->out("Coroutine#{$coroutine->getId()} continue to run...");
+                                    $coroutine->resume();
+                                    break;
+                                default:
+                                    assert(0 && 'never here');
+                            }
+                            break;
                         case 'l':
                             $lineCount = $arguments[0] ?? null;
                             if ($lineCount === null || !is_numeric($lineCount)) {
@@ -995,11 +1000,11 @@ TEXT;
                             break;
                         case 'q':
                             $this->clear();
-                            if (static::isAlone() || strlen($keyword) === 0) {
-                                goto _quit;
-                            }
+                            if (strlen($keyword) !== 0 && !static::isAlone()) {
+                                /* we can input keyword to call out the debugger */
                                 goto _restart;
-
+                            }
+                            goto _quit;
                         case 'r':
                             $args = func_get_args();
                             Coroutine::run(function () use ($args) {
