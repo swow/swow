@@ -97,7 +97,7 @@ class Session extends Socket
         return $this->type;
     }
 
-    public function isKeepAlive(): ?bool
+    public function getKeepAlive(): ?bool
     {
         return $this->keepAlive;
     }
