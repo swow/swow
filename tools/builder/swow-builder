@@ -28,19 +28,20 @@ $swowSo = "{$workSpace}/.libs/swow.so";
 
 $options = getopt('', ['rebuild', 'show-log', 'debug', 'enable::']);
 
-$configureOptions = isset($options['debug']) ? '--enable-debug ' : '';
-$configureOptions = isset($options['enable']) ? $configureOptions . $options['enable'] : $configureOptions;
-
 $commandArray = ["cd {$workSpace}"];
 
 if (isset($options['rebuild'])) {
-    !file_exists("{$workSpace}/Makefile") ?? $commandArray[] = 'make clean';
+    if (file_exists("{$workSpace}/Makefile")) {
+        $commandArray[] = 'make clean';
+    }
     $commandArray[] = 'phpize --clean';
 }
 if (!file_exists("{$workSpace}/configure") || isset($options['rebuild'])) {
     $commandArray[] = 'phpize';
 }
 if (!file_exists("{$workSpace}/config.log") || isset($options['rebuild'])) {
+    $configureOptions = isset($options['debug']) ? '--enable-debug ' : '';
+    $configureOptions = isset($options['enable']) ? $configureOptions . $options['enable'] : $configureOptions;
     $commandArray[] = "./configure {$configureOptions}";
 }
 
