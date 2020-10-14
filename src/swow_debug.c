@@ -241,7 +241,7 @@ SWOW_API HashTable *swow_debug_get_trace_as_list(zend_long options, zend_long li
     return list;
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_swow_debug_buildTraceAsString, ZEND_RETURN_VALUE, 0, IS_STRING, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_swow_debug_buildTraceAsString, ZEND_RETURN_VALUE, 1, IS_STRING, 0)
     ZEND_ARG_TYPE_INFO(0, trace, IS_ARRAY, 0)
 ZEND_END_ARG_INFO()
 
