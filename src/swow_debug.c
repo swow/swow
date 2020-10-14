@@ -268,14 +268,14 @@ static PHP_FUNCTION(swow_debug_registerExtendedStatementHandler)
     zend_fcall_info_cache fcc;
     zval *zcallable;
 
-    if (!(CG(compiler_options) & ZEND_COMPILE_EXTENDED_STMT)) {
-        zend_throw_error(NULL, "Please re-run your program with \"-e\" option");
-        RETURN_THROWS();
-    }
-
     ZEND_PARSE_PARAMETERS_START(1, 1)
         Z_PARAM_FUNC_EX(fci, fcc, 1, 0)
     ZEND_PARSE_PARAMETERS_END();
+
+    if (fci.size > 0 && !(CG(compiler_options) & ZEND_COMPILE_EXTENDED_STMT)) {
+        zend_throw_error(NULL, "Please re-run your program with \"-e\" option");
+        RETURN_THROWS();
+    }
 
     RETVAL_ZVAL(&SWOW_DEBUG_G(zextended_statement_handler), 0, 0);
 
@@ -351,6 +351,8 @@ int swow_debug_module_init(INIT_FUNC_ARGS)
 
 int swow_debug_runtime_init(INIT_FUNC_ARGS)
 {
+    ZVAL_NULL(&SWOW_DEBUG_G(zextended_statement_handler));
+
     return SUCCESS;
 }
 
