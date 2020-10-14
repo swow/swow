@@ -130,6 +130,10 @@ static zend_always_inline HashTable *zend_new_array(size_t size)
 /* }}} */
 
 /* PHP 7.4 compatibility macro {{{*/
+#ifndef ZEND_COMPILE_EXTENDED_STMT
+#define ZEND_COMPILE_EXTENDED_STMT ZEND_COMPILE_EXTENDED_INFO
+#endif
+
 #ifndef ZEND_THIS
 #define ZEND_THIS (&EX(This))
 #endif
@@ -234,6 +238,13 @@ ZEND_API ZEND_COLD void zend_value_error(const char *format, ...) ZEND_ATTRIBUTE
 #define RETURN_THROWS()  do { RETURN_THROWS_ASSERTION(); return; } while (0)
 
 #if PHP_VERSION_ID < 80000
+ZEND_API zend_string *zend_string_concat2(
+    const char *str1, size_t str1_len,
+    const char *str2, size_t str2_len);
+ZEND_API zend_string *zend_string_concat3(
+    const char *str1, size_t str1_len,
+    const char *str2, size_t str2_len,
+    const char *str3, size_t str3_len);
 ZEND_API zend_string *zend_create_member_string(zend_string *class_name, zend_string *member_name);
 ZEND_API zend_string *get_active_function_or_method_name();
 ZEND_API zend_string *get_function_or_method_name(const zend_function *func);

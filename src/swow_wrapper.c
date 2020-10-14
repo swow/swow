@@ -26,6 +26,36 @@ ZEND_API HashTable zend_empty_array;
 
 /* PHP 8 compatibility macro {{{*/
 #if PHP_VERSION_ID < 80000
+ZEND_API zend_string *zend_string_concat2(
+        const char *str1, size_t str1_len,
+        const char *str2, size_t str2_len)
+{
+    size_t len = str1_len + str2_len;
+    zend_string *res = zend_string_alloc(len, 0);
+
+    memcpy(ZSTR_VAL(res), str1, str1_len);
+    memcpy(ZSTR_VAL(res) + str1_len, str2, str2_len);
+    ZSTR_VAL(res)[len] = '\0';
+
+    return res;
+}
+
+ZEND_API zend_string *zend_string_concat3(
+        const char *str1, size_t str1_len,
+        const char *str2, size_t str2_len,
+        const char *str3, size_t str3_len)
+{
+    size_t len = str1_len + str2_len + str3_len;
+    zend_string *res = zend_string_alloc(len, 0);
+
+    memcpy(ZSTR_VAL(res), str1, str1_len);
+    memcpy(ZSTR_VAL(res) + str1_len, str2, str2_len);
+    memcpy(ZSTR_VAL(res) + str1_len + str2_len, str3, str3_len);
+    ZSTR_VAL(res)[len] = '\0';
+
+    return res;
+}
+
 ZEND_API zend_string *zend_create_member_string(zend_string *class_name, zend_string *member_name)
 {
     return zend_string_concat3(

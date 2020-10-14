@@ -1,0 +1,4 @@
+{
+    "/path/to/virtual_machine": "/path/to/host_machine",
+    "/path/to/docker": "/path/to/host_machine"
+}
