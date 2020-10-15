@@ -246,7 +246,7 @@ ZEND_API zend_string *zend_string_concat3(
     const char *str2, size_t str2_len,
     const char *str3, size_t str3_len);
 ZEND_API zend_string *zend_create_member_string(zend_string *class_name, zend_string *member_name);
-ZEND_API zend_string *get_active_function_or_method_name();
+ZEND_API zend_string *get_active_function_or_method_name(void);
 ZEND_API zend_string *get_function_or_method_name(const zend_function *func);
 ZEND_API const char *get_active_function_arg_name(uint32_t arg_num);
 ZEND_API const char *get_function_arg_name(const zend_function *func, uint32_t arg_num);
