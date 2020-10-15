@@ -302,16 +302,15 @@ ZEND_API ZEND_COLD void ZEND_FASTCALL zend_argument_value_error(uint32_t arg_num
 #ifdef ZTS
 #ifdef TSRMG_FAST
 #ifdef ZEND_ENABLE_STATIC_TSRMLS_CACHE
-#define SWOW_TSRMG_BULK TSRMG_FAST_BULK_STATIC
+#define SWOW_TSRMG_FAST_BULK TSRMG_FAST_BULK_STATIC
 #else
-#define SWOW_TSRMG_BULK TSRMG_FAST_BULK
+#define SWOW_TSRMG_FAST_BULK TSRMG_FAST_BULK
 #endif
-#else
+#endif
 #ifdef ZEND_ENABLE_STATIC_TSRMLS_CACHE
 #define SWOW_TSRMG_BULK TSRMG_BULK_STATIC
 #else
 #define SWOW_TSRMG_BULK TSRMG_BULK
-#endif
 #endif
 #endif
 
@@ -320,7 +319,7 @@ ZEND_API ZEND_COLD void ZEND_FASTCALL zend_argument_value_error(uint32_t arg_num
 #ifdef ZTS
 #define SWOW_GLOBALS_PTR(name)         SWOW_TSRMG_BULK(name##_id, zend_##name *)
 #ifdef TSRMG_FAST
-#define SWOW_GLOBALS_FAST_PTR(name)    SWOW_TSRMG_BULK(name##_offset, zend_##name *)
+#define SWOW_GLOBALS_FAST_PTR(name)    SWOW_TSRMG_FAST_BULK(name##_offset, zend_##name *)
 #else
 #define SWOW_GLOBALS_FAST_PTR(name)    SWOW_GLOBALS_PTR(name)
 #endif
