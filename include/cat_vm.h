@@ -45,6 +45,12 @@
 #ifdef ZTS
 #define CAT_THREAD_SAFE 1
 
+#ifdef TSRMG_FAST
+/* we can not use fast allocate for now,
+ * see the way of php_reserve_tsrm_memory() */
+// #define CAT_TSRMG_FAST 1
+#endif
+
 typedef struct
 {
     ts_rsrc_id id;
@@ -56,7 +62,7 @@ typedef struct
 #define CAT_GLOBALS_INFO(name)                    name##_globals_info
 #define CAT_GLOBALS_DECLARE(name)                 cat_globals_info_t CAT_GLOBALS_INFO(name);
 
-#ifdef TSRMG_FAST
+#ifdef CAT_TSRMG_FAST
 #if ZEND_ENABLE_STATIC_TSRMLS_CACHE
 #define CAT_GLOBALS_BULK(name)                    TSRMG_FAST_BULK_STATIC(CAT_GLOBALS_INFO(name).offset, CAT_GLOBALS_TYPE(name) *)
 #else
@@ -74,6 +80,6 @@ typedef struct
 #endif
 #define CAT_GLOBALS_GET(name, value)              (CAT_GLOBALS_BULK(name)->value)
 #define CAT_GLOBALS_REGISTER(name, ctor, dtor)    ts_allocate_id(&CAT_GLOBALS_INFO(name).id, sizeof(CAT_GLOBALS_TYPE(name)), (ts_allocate_ctor) ctor, (ts_allocate_dtor) dtor);
-#endif /* TSRMG_FAST */
+#endif /* CAT_TSRMG_FAST */
 
 #endif /* CAT_THREAD_SAFE */
