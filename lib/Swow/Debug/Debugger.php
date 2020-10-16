@@ -600,14 +600,17 @@ TEXT;
 
     public function showSourceFileContentByTrace(array $trace, int $frameIndex, bool $following = false): self
     {
-        $file = $this->currentSourceFile;
-        $line = $this->currentSourceFileLine;
+        $file = $this->getCurrentSourceFile();
+        $line = $this->getCurrentSourceFileLine();
         try {
             $contentTable = $this::getSourceFileContentByTrace($trace, $frameIndex, $file, $line);
         } catch (DebuggerException $exception) {
             $this->lf();
             throw $exception;
         }
+        $this
+            ->setCurrentSourceFile($file)
+            ->setCurrentSourceFileLine($line);
         if (!$contentTable) {
             $this->lf();
 
