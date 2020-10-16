@@ -35,11 +35,6 @@ class Server extends Socket
      */
     protected $maxContentLength = 8 * 1024 * 1024;
 
-    public function __construct()
-    {
-        parent::__construct(static::TYPE_TCP);
-    }
-
     public function acceptSession(int $timeout = null): Session
     {
         if ($timeout === null) {
