@@ -69,7 +69,7 @@ class BodyParser
     {
         $rawContentType = $request->getHeaderLine('Content-Type');
         if (($pos = strpos($rawContentType, ';')) !== false) {
-            // e.g. text/html; charset=UTF-8
+            // e.g. application/json; charset=UTF-8
             $contentType = strtolower(substr($rawContentType, 0, $pos));
         } else {
             $contentType = strtolower($rawContentType);
