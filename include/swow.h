@@ -50,6 +50,7 @@ extern "C" {
 /* globals */
 
 extern SWOW_API zend_module_entry swow_module_entry;
+#define phpext_swow_ptr &swow_module_entry
 
 #if defined(ZTS) && defined(COMPILE_DL_SWOW)
 ZEND_TSRMLS_CACHE_EXTERN()
