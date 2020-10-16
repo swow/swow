@@ -80,10 +80,7 @@ static zend_object *swow_coroutine_create_object(zend_class_entry *ce)
 
 static void swow_coroutine_dtor_object(zend_object *object)
 {
-    /* try to call __destruct first */
-    zend_objects_destroy_object(object);
-
-    /* force kill the coroutine */
+    /* force kill the coroutine if it is still alive */
     swow_coroutine_t *scoroutine = swow_coroutine_get_from_object(object);
 
     while (UNEXPECTED(swow_coroutine_is_alive(scoroutine))) {
@@ -229,6 +226,18 @@ static zval *swow_coroutine_function(zval *zdata)
     if (UNEXPECTED(EG(exception) != NULL)) {
         swow_coroutine_function_handle_exception();
     }
+
+    /* call __destruct() first here (prevent destructing in scheduler) */
+    if (scoroutine->std.ce->destructor != NULL) {
+        EG(current_execute_data) = (zend_execute_data *) &dummy_execute_data;
+        zend_objects_destroy_object(&scoroutine->std);
+        EG(current_execute_data) = NULL;
+        if (UNEXPECTED(EG(exception) != NULL)) {
+            swow_coroutine_function_handle_exception();
+        }
+    }
+    /* do not call __destruct() anymore  */
+    GC_ADD_FLAGS(&scoroutine->std, IS_OBJ_DESTRUCTOR_CALLED);
 
     /* discard all possible resources (varibles by "use" in zend_closure) */
     EG(current_execute_data) = (zend_execute_data *) &dummy_execute_data;
@@ -428,7 +437,7 @@ static void swow_coroutine_main_create(void)
         /* GC_ADDREF(&scoroutine->std); // we have 1 ref by create */
     } while (0);
 
-    /* do not destruct main scoroutine */
+    /* do not call __destruct() on main scoroutine */
     GC_ADD_FLAGS(&scoroutine->std, IS_OBJ_DESTRUCTOR_CALLED);
 }
 
