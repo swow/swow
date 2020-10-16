@@ -24,6 +24,7 @@ class BodyParser
         $contentType = static::getContentType($request);
         $contents = $request->getBody()->getContents();
         if ($contents) {
+            // TODO: use constants
             switch ($contentType) {
                 case 'text/json':
                 case 'application/json':
