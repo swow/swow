@@ -103,10 +103,6 @@ static zend_always_inline void zend_tmp_string_release(zend_string *tmp)
 
 ZEND_API HashTable zend_empty_array;
 
-#define ZVAL_EMPTY_ARRAY(zval)    (array_init((zval)))
-#define RETVAL_EMPTY_ARRAY()      ZVAL_EMPTY_ARRAY(return_value)
-#define RETURN_EMPTY_ARRAY()      do { RETVAL_EMPTY_ARRAY(); return; } while (0)
-
 static zend_always_inline HashTable *zend_new_array(size_t size)
 {
     HashTable *ht;
@@ -132,6 +128,16 @@ static zend_always_inline HashTable *zend_new_array(size_t size)
 /* PHP 7.4 compatibility macro {{{*/
 #ifndef ZEND_COMPILE_EXTENDED_STMT
 #define ZEND_COMPILE_EXTENDED_STMT ZEND_COMPILE_EXTENDED_INFO
+#endif
+
+#ifndef ZVAL_EMPTY_ARRAY
+#define ZVAL_EMPTY_ARRAY(zval) (array_init((zval)))
+#endif
+#ifndef RETVAL_EMPTY_ARRAY
+#define RETVAL_EMPTY_ARRAY()   ZVAL_EMPTY_ARRAY(return_value)
+#endif
+#ifndef RETURN_EMPTY_ARRAY
+#define RETURN_EMPTY_ARRAY()   do { RETVAL_EMPTY_ARRAY(); return; } while (0)
 #endif
 
 #ifndef ZEND_THIS
