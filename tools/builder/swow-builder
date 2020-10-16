@@ -47,6 +47,7 @@ if (!file_exists("{$workSpace}/config.log") || isset($options['rebuild'])) {
 
 // TODO: use Swow\Cpu module
 $cpuCount = (int) shell_exec(__DIR__ . '/../../deps/libcat/tools/cpu_count.sh');
+// TODO: CFLAGS/CXXFLAGS Werror
 $commandArray[] = isset($options['show-log']) ? "make -j{$cpuCount}" : "make -j{$cpuCount} > /dev/null";
 
 $command = implode(" && \\\n", $commandArray);
