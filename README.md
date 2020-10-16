@@ -1,3 +1,5 @@
+English | [中文](./README-CN.md)
+
 # Swow
 
 [![license][license-badge]][license-link]
