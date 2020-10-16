@@ -52,7 +52,7 @@ while (true) {
                         if ($body === null) {
                             $body = new Buffer();
                         }
-                        $body->write($buffer, $parser->getDataOffset(), $parser->getDataLength());
+                        $body->write($buffer->toString(), $parser->getDataOffset(), $parser->getDataLength());
                     }
                     if ($parser->isCompleted()) {
                         $response = sprintf(
