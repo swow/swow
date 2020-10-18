@@ -24,8 +24,8 @@ while (true) {
                 if ($length === 0) {
                     break;
                 }
-                echo "No.{$client->getFd()} say: \"" . addcslashes($buffer, "\r\n") . '"' . PHP_EOL;
-                $client->send($buffer);
+                echo "No.{$client->getFd()} say: \"" . addcslashes($buffer->getContents(), "\r\n") . '"' . PHP_EOL;
+                $client->send($buffer->rewind());
             }
             echo "No.{$client->getFd()} closed" . PHP_EOL;
         } catch (Swow\Socket\Exception $exception) {
