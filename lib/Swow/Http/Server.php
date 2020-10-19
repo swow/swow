@@ -112,7 +112,10 @@ class Server extends Socket
         return $this->maxHeaderLength;
     }
 
-    public function setMaxHeaderLength(int $maxHeaderLength): self
+    /**
+     * @return $this
+     */
+    public function setMaxHeaderLength(int $maxHeaderLength)
     {
         $this->maxHeaderLength = $maxHeaderLength;
 
@@ -124,7 +127,10 @@ class Server extends Socket
         return $this->maxContentLength;
     }
 
-    public function setMaxContentLength(int $maxContentLength): self
+    /**
+     * @return $this
+     */
+    public function setMaxContentLength(int $maxContentLength)
     {
         $this->maxContentLength = $maxContentLength;
 

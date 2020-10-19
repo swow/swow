@@ -19,7 +19,10 @@ class AssertException extends Exception
 {
     protected $traceToStringHandler;
 
-    public function setTraceToStringHandler(callable $handler): self
+    /**
+     * @return $this
+     */
+    public function setTraceToStringHandler(callable $handler)
     {
         $this->traceToStringHandler = $handler;
 

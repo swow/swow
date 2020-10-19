@@ -21,14 +21,20 @@ class CallbackSelector extends Selector
 
     protected $popCallbacks = [];
 
-    public function casePush(Channel $channel, $data, callable $callback): self
+    /**
+     * @return $this
+     */
+    public function casePush(Channel $channel, $data, callable $callback)
     {
         $this->pushCallbacks[spl_object_id($channel)] = $callback;
 
         return $this->push($channel, $data);
     }
 
-    public function casePop(Channel $channel, callable $callback): self
+    /**
+     * @return $this
+     */
+    public function casePop(Channel $channel, callable $callback)
     {
         $this->popCallbacks[spl_object_id($channel)] = $callback;
 

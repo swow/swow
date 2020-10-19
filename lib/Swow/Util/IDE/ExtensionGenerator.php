@@ -53,7 +53,10 @@ class ExtensionGenerator
         return $this->extension->getName();
     }
 
-    public function setFunctionFormatHandler(callable $formatter): self
+    /**
+     * @return $this
+     */
+    public function setFunctionFormatHandler(callable $formatter)
     {
         $this->functionFormatHandler = $formatter;
 
