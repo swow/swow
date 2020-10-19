@@ -7,7 +7,7 @@ English | [中文](./README-CN.md)
 [![codecov][codecov-badge]][codecov-link]
 [![release][release-badge]][release-link]
 
-The next generation of Swoole
+Coroutine-based concurrency library for PHP
 
 [license-badge]: https://img.shields.io/badge/license-apache2-blue.svg
 [license-link]: LICENSE
