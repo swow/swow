@@ -154,7 +154,7 @@ class Request extends Message implements RequestInterface
     public function getUriAsString(): string
     {
         if ($this->uri !== null) {
-            return $this->uri->toString();
+            return $this->uri->__toString();
         }
 
         return $this->uriString;

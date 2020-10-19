@@ -381,13 +381,8 @@ class Uri implements UriInterface
         return $uri;
     }
 
-    public function toString(): string
-    {
-        return static::build($this->scheme, $this->getAuthority(), $this->path, $this->query, $this->fragment);
-    }
-
     public function __toString(): string
     {
-        return $this->toString();
+        return static::build($this->scheme, $this->getAuthority(), $this->path, $this->query, $this->fragment);
     }
 }
