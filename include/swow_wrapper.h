@@ -101,7 +101,7 @@ static zend_always_inline void zend_tmp_string_release(zend_string *tmp)
     }
 }
 
-ZEND_API HashTable zend_empty_array;
+extern ZEND_API HashTable zend_empty_array;
 
 static zend_always_inline HashTable *zend_new_array(size_t size)
 {
