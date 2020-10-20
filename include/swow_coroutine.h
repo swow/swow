@@ -31,29 +31,15 @@ extern "C" {
 #define SWOW_COROUTINE_DEFAULT_STACK_PAGE_SIZE (4 * 1024)
 #define SWOW_COROUTINE_MAX_STACK_PAGE_SIZE     (256 * 1024)
 
-#ifndef SWOW_COROUTINE_SWAP_JIT_GLOBALS
+#if PHP_VERSION_ID >= 80000
 #define SWOW_COROUTINE_SWAP_JIT_GLOBALS     1
 #endif
-#if PHP_VERSION_ID < 80000
-#undef SWOW_COROUTINE_SWAP_JIT_GLOBALS
-#define SWOW_COROUTINE_SWAP_JIT_GLOBALS 0
-#endif
-#ifndef SWOW_COROUTINE_SWAP_ERROR_HANDING
 #define SWOW_COROUTINE_SWAP_ERROR_HANDING   1
-#endif
-#ifndef SWOW_COROUTINE_SWAP_BASIC_GLOBALS
+#if PHP_VERSION_ID < 80100
 #define SWOW_COROUTINE_SWAP_BASIC_GLOBALS   1
 #endif
-#if PHP_VERSION_ID >= 80100
-#undef SWOW_COROUTINE_SWAP_BASIC_GLOBALS
-#define SWOW_COROUTINE_SWAP_BASIC_GLOBALS 0
-#endif
-#ifndef SWOW_COROUTINE_SWAP_OUTPUT_GLOBALS
 #define SWOW_COROUTINE_SWAP_OUTPUT_GLOBALS  1
-#endif
-#ifndef SWOW_COROUTINE_SWAP_SILENCE_CONTEXT
 #define SWOW_COROUTINE_SWAP_SILENCE_CONTEXT 1
-#endif
 
 extern SWOW_API zend_class_entry *swow_coroutine_ce;
 extern SWOW_API zend_object_handlers swow_coroutine_handlers;
@@ -92,22 +78,22 @@ typedef struct
     size_t vm_stack_page_size;
     zend_execute_data *current_execute_data;
     zend_object *exception;
-#if SWOW_COROUTINE_SWAP_ERROR_HANDING
+#ifdef SWOW_COROUTINE_SWAP_ERROR_HANDING
     /* for hack practice of php-kernel (convert warning to exception) */
     zend_error_handling_t error_handling;
     zend_class_entry *exception_class;
 #endif
-#if SWOW_COROUTINE_SWAP_BASIC_GLOBALS
+#ifdef SWOW_COROUTINE_SWAP_BASIC_GLOBALS
     /* for array_walk non-reentrancy */
     swow_fcall_t *array_walk_context;
 #endif
-#if SWOW_COROUTINE_SWAP_OUTPUT_GLOBALS
+#ifdef SWOW_COROUTINE_SWAP_OUTPUT_GLOBALS
     zend_output_globals *output_globals;
 #endif
-#if SWOW_COROUTINE_SWAP_SILENCE_CONTEXT
+#ifdef SWOW_COROUTINE_SWAP_SILENCE_CONTEXT
     int error_reporting;
 #endif
-#if SWOW_COROUTINE_SWAP_JIT_GLOBALS
+#ifdef SWOW_COROUTINE_SWAP_JIT_GLOBALS
     uint32_t jit_trace_num;
 #endif
 } swow_coroutine_exector_t;

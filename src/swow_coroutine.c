@@ -20,7 +20,7 @@
 
 #include "swow_debug.h"
 
-#if SWOW_COROUTINE_SWAP_SILENCE_CONTEXT
+#ifdef SWOW_COROUTINE_SWAP_SILENCE_CONTEXT
 #define E_MAGIC (1 << 31)
 #endif
 
@@ -249,7 +249,7 @@ static zval *swow_coroutine_function(zval *zdata)
     }
 
     /* ob end clean */
-#if SWOW_COROUTINE_SWAP_OUTPUT_GLOBALS
+#ifdef SWOW_COROUTINE_SWAP_OUTPUT_GLOBALS
     swow_output_globals_fast_end();
 #endif
 
@@ -344,20 +344,20 @@ static cat_bool_t swow_coroutine_construct(swow_coroutine_t *scoroutine, zval *z
 #endif
         executor->current_execute_data = NULL;
         executor->exception = NULL;
-#if SWOW_COROUTINE_SWAP_ERROR_HANDING
+#ifdef SWOW_COROUTINE_SWAP_ERROR_HANDING
         executor->error_handling = EH_NORMAL;
         executor->exception_class = NULL;
 #endif
-#if SWOW_COROUTINE_SWAP_JIT_GLOBALS
+#ifdef SWOW_COROUTINE_SWAP_JIT_GLOBALS
         executor->jit_trace_num = 0;
 #endif
-#if SWOW_COROUTINE_SWAP_BASIC_GLOBALS
+#ifdef SWOW_COROUTINE_SWAP_BASIC_GLOBALS
         executor->array_walk_context = NULL;
 #endif
-#if SWOW_COROUTINE_SWAP_OUTPUT_GLOBALS
+#ifdef SWOW_COROUTINE_SWAP_OUTPUT_GLOBALS
         executor->output_globals = NULL;
 #endif
-#if SWOW_COROUTINE_SWAP_SILENCE_CONTEXT
+#ifdef SWOW_COROUTINE_SWAP_SILENCE_CONTEXT
         executor->error_reporting = 0;
 #endif
         /* save function cache */
@@ -383,12 +383,12 @@ static void swow_coroutine_shutdown(swow_coroutine_t *scoroutine)
     }
 
     /* we release the context resources here which are created during the runtime  */
-#if SWOW_COROUTINE_SWAP_OUTPUT_GLOBALS
+#ifdef SWOW_COROUTINE_SWAP_OUTPUT_GLOBALS
     if (UNEXPECTED(executor->output_globals != NULL)) {
         efree(executor->output_globals);
     }
 #endif
-#if SWOW_COROUTINE_SWAP_BASIC_GLOBALS
+#ifdef SWOW_COROUTINE_SWAP_BASIC_GLOBALS
     if (UNEXPECTED(executor->array_walk_context != NULL)) {
         efree(executor->array_walk_context);
     }
@@ -509,14 +509,14 @@ SWOW_API void swow_coroutine_executor_save(swow_coroutine_exector_t *executor)
 #endif
     executor->current_execute_data = eg->current_execute_data;
     executor->exception = eg->exception;
-#if SWOW_COROUTINE_SWAP_ERROR_HANDING
+#ifdef SWOW_COROUTINE_SWAP_ERROR_HANDING
     executor->error_handling = eg->error_handling;
     executor->exception_class = eg->exception_class;
 #endif
-#if SWOW_COROUTINE_SWAP_JIT_GLOBALS
+#ifdef SWOW_COROUTINE_SWAP_JIT_GLOBALS
     executor->jit_trace_num = eg->jit_trace_num;
 #endif
-#if SWOW_COROUTINE_SWAP_BASIC_GLOBALS
+#ifdef SWOW_COROUTINE_SWAP_BASIC_GLOBALS
     do {
         swow_fcall_t *fcall = (swow_fcall_t *) &BG(array_walk_fci);
         if (UNEXPECTED(fcall->info.size != 0)) {
@@ -528,7 +528,7 @@ SWOW_API void swow_coroutine_executor_save(swow_coroutine_exector_t *executor)
         }
     } while (0);
 #endif
-#if SWOW_COROUTINE_SWAP_OUTPUT_GLOBALS
+#ifdef SWOW_COROUTINE_SWAP_OUTPUT_GLOBALS
     do {
         zend_output_globals *og = SWOW_GLOBALS_PTR(output_globals);
         if (UNEXPECTED(og->handlers.elements != NULL)) {
@@ -540,7 +540,7 @@ SWOW_API void swow_coroutine_executor_save(swow_coroutine_exector_t *executor)
         }
     } while (0);
 #endif
-#if SWOW_COROUTINE_SWAP_SILENCE_CONTEXT
+#ifdef SWOW_COROUTINE_SWAP_SILENCE_CONTEXT
     do {
         if (UNEXPECTED(executor->error_reporting != 0)) {
             CAT_ASSERT(executor->error_reporting & E_MAGIC);
@@ -564,14 +564,14 @@ SWOW_API void swow_coroutine_executor_recover(swow_coroutine_exector_t *executor
 #endif
     eg->current_execute_data = executor->current_execute_data;
     eg->exception = executor->exception;
-#if SWOW_COROUTINE_SWAP_ERROR_HANDING
+#ifdef SWOW_COROUTINE_SWAP_ERROR_HANDING
     eg->error_handling = executor->error_handling;
     eg->exception_class = executor->exception_class;
 #endif
-#if SWOW_COROUTINE_SWAP_JIT_GLOBALS
+#ifdef SWOW_COROUTINE_SWAP_JIT_GLOBALS
     eg->jit_trace_num = executor->jit_trace_num;
 #endif
-#if SWOW_COROUTINE_SWAP_BASIC_GLOBALS
+#ifdef SWOW_COROUTINE_SWAP_BASIC_GLOBALS
     do {
         swow_fcall_t *fcall = executor->array_walk_context;
         if (UNEXPECTED(fcall != NULL && fcall->info.size != 0)) {
@@ -580,7 +580,7 @@ SWOW_API void swow_coroutine_executor_recover(swow_coroutine_exector_t *executor
         }
     } while (0);
 #endif
-#if SWOW_COROUTINE_SWAP_OUTPUT_GLOBALS
+#ifdef SWOW_COROUTINE_SWAP_OUTPUT_GLOBALS
     do {
         zend_output_globals *og = executor->output_globals;
         if (UNEXPECTED(og != NULL)) {
@@ -591,7 +591,7 @@ SWOW_API void swow_coroutine_executor_recover(swow_coroutine_exector_t *executor
         }
     } while (0);
 #endif
-#if SWOW_COROUTINE_SWAP_SILENCE_CONTEXT
+#ifdef SWOW_COROUTINE_SWAP_SILENCE_CONTEXT
     do {
         if (UNEXPECTED(executor->error_reporting != 0)) {
             CAT_ASSERT(executor->error_reporting & E_MAGIC);
@@ -2265,7 +2265,7 @@ static int swow_coroutine_exit_handler(zend_execute_data *execute_data)
 
 /* hook silence */
 
-#if SWOW_COROUTINE_SWAP_SILENCE_CONTEXT
+#ifdef SWOW_COROUTINE_SWAP_SILENCE_CONTEXT
 static user_opcode_handler_t original_zend_begin_silence_handler;
 static user_opcode_handler_t original_zend_end_silence_handler;
 
@@ -2349,7 +2349,7 @@ int swow_coroutine_module_init(INIT_FUNC_ARGS)
         zend_set_user_opcode_handler(ZEND_EXIT, swow_coroutine_exit_handler);
     } while (0);
 
-#if SWOW_COROUTINE_SWAP_SILENCE_CONTEXT
+#ifdef SWOW_COROUTINE_SWAP_SILENCE_CONTEXT
     /* hook silence */
     do {
         original_zend_begin_silence_handler = zend_get_user_opcode_handler(ZEND_BEGIN_SILENCE);

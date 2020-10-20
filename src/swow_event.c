@@ -44,7 +44,7 @@ static PHP_METHOD(swow_event, wait)
 
     /* user space (we simulate main exit here) */
     swow_defer_do_main_tasks();
-#if SWOW_COROUTINE_SWAP_OUTPUT_GLOBALS
+#ifdef SWOW_COROUTINE_SWAP_OUTPUT_GLOBALS
     swow_output_globals_fast_end();
 #endif
 
