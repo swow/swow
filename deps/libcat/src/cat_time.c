@@ -91,7 +91,7 @@ static void cat_sleep_timer_callback(uv_timer_t* handle)
 
     timer->coroutine = NULL;
 
-    if (unlikely(!cat_coroutine_resume_ez(coroutine))) {
+    if (unlikely(!cat_coroutine_resume(coroutine, NULL, NULL))) {
         cat_core_error_with_last(TIME, "Timer schedule failed");
     }
 }
@@ -120,7 +120,7 @@ static cat_timer_t *cat_timer_wait(cat_msec_t msec)
 
     timer->coroutine = CAT_COROUTINE_G(current);
 
-    ret = cat_coroutine_yield_ez();
+    ret = cat_coroutine_yield(NULL, NULL);
 
     uv_close(&timer->handle, (uv_close_cb) cat_free_function);
 
@@ -135,7 +135,7 @@ static cat_timer_t *cat_timer_wait(cat_msec_t msec)
 CAT_API cat_bool_t cat_time_wait(cat_timeout_t timeout)
 {
     if (timeout < 0) {
-        return cat_coroutine_yield_ez();
+        return cat_coroutine_yield(NULL, NULL);
     } else {
         cat_timer_t *timer;
 

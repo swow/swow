@@ -19,14 +19,19 @@
 #include "cat_channel.h"
 #include "cat_coroutine.h"
 
-#define CAT_CHANNEL_CHECK_STATE_EX(channel, code, failure) \
-    if (unlikely(cat_channel__is_closing(channel))) { \
-        cat_update_last_error(code, "Channel is closing"); \
+#define CAT_CHANNEL_CHECK_STATE_EX(channel, update_last_error, failure) \
+    if (unlikely(!cat_channel__is_available(channel))) { \
+        if (update_last_error) { \
+            cat_channel__update_last_error(channel); \
+        } \
         failure; \
     }
 
 #define CAT_CHANNEL_CHECK_STATE(channel, failure) \
-        CAT_CHANNEL_CHECK_STATE_EX(channel, CAT_EINVAL, failure)
+        CAT_CHANNEL_CHECK_STATE_EX(channel, cat_true, failure)
+
+#define CAT_CHANNEL_CHECK_STATE_WITHOUT_ERROR(channel, failure) \
+        CAT_CHANNEL_CHECK_STATE_EX(channel, cat_false, failure)
 
 /* for select()
  * head must be consistent with coroutine */
@@ -39,22 +44,33 @@ typedef struct {
 CAT_STATIC_ASSERT(cat_offsize_of(cat_channel_dummy_coroutine_t, id) == cat_offsize_of(cat_coroutine_t, id));
 CAT_STATIC_ASSERT(cat_offsize_of(cat_channel_dummy_coroutine_t, waiter) == cat_offsize_of(cat_coroutine_t, waiter));
 
+static cat_always_inline cat_bool_t cat_channel__is_available(const cat_channel_t *channel)
+{
+    return !(channel->flags & (CAT_CHANNEL_FLAG_CLOSING | CAT_CHANNEL_FLAG_CLOSED));
+}
+
+static cat_never_inline void cat_channel__update_last_error(const cat_channel_t *channel)
+{
+    if (channel->flags & CAT_CHANNEL_FLAG_CLOSING) {
+        cat_update_last_error(CAT_ECLOSING, "Channel is closing");
+    } else if (channel->flags & CAT_CHANNEL_FLAG_CLOSED) {
+        cat_update_last_error(CAT_ECLOSED, "Channel has been closed");
+    } else {
+        CAT_NEVER_HERE("unknown state");
+    }
+}
+
 static cat_always_inline cat_bool_t cat_channel__is_unbuffered(const cat_channel_t *channel)
 {
     return channel->capacity == 0;
 }
 
-static cat_always_inline cat_bool_t cat_channel__is_available(const cat_channel_t * channel)
-{
-    return !channel->closing;
-}
-
-static cat_always_inline cat_bool_t cat_channel__has_producers(const cat_channel_t * channel)
+static cat_always_inline cat_bool_t cat_channel__has_producers(const cat_channel_t *channel)
 {
     return !cat_queue_empty(&channel->producers);
 }
 
-static cat_always_inline cat_bool_t cat_channel__has_consumers(const cat_channel_t * channel)
+static cat_always_inline cat_bool_t cat_channel__has_consumers(const cat_channel_t *channel)
 {
     return !cat_queue_empty(&channel->consumers);
 }
@@ -89,11 +105,6 @@ static cat_always_inline cat_bool_t cat_channel__is_writable(const cat_channel_t
     );
 }
 
-static cat_always_inline cat_bool_t cat_channel__is_closing(const cat_channel_t *channel)
-{
-    return channel->closing;
-}
-
 static cat_always_inline cat_bool_t cat_channel_waiter_is_dummy(const cat_coroutine_t *coroutine)
 {
     return coroutine->id == CAT_COROUTINE_MAX_ID;
@@ -108,7 +119,7 @@ static cat_always_inline cat_bool_t cat_channel_resume_waiter(cat_coroutine_t *c
         CAT_ASSERT(coroutine != NULL);
     }
 
-    return cat_coroutine_resume_ez(coroutine);
+    return cat_coroutine_resume(coroutine, NULL, NULL);
 }
 
 static cat_always_inline cat_bool_t cat_channel_wait(cat_queue_t *queue, cat_timeout_t timeout)
@@ -384,7 +395,7 @@ CAT_API cat_channel_t *cat_channel_create(cat_channel_t *channel, cat_channel_si
     channel->capacity = capacity;
     channel->data_size = data_size;
     channel->length = 0;
-    channel->closing = cat_false;
+    channel->flags = CAT_CHANNEL_FLAG_NONE;
     channel->dtor = dtor;
     cat_queue_init(&channel->producers);
     cat_queue_init(&channel->consumers);
@@ -422,10 +433,10 @@ CAT_API cat_bool_t cat_channel_pop(cat_channel_t *channel, cat_data_t *data, cat
 
 CAT_API void cat_channel_close(cat_channel_t *channel)
 {
-    CAT_CHANNEL_CHECK_STATE(channel, return);
+    CAT_CHANNEL_CHECK_STATE_WITHOUT_ERROR(channel, return);
 
     /* prevent from channel operations during closing */
-    channel->closing = cat_true;
+    channel->flags |= CAT_CHANNEL_FLAG_CLOSING;
 
     /* notify all waiters */
     cat_coroutine_t *waiter;
@@ -462,7 +473,10 @@ CAT_API void cat_channel_close(cat_channel_t *channel)
     CAT_ASSERT(cat_channel__is_empty(channel));
 
     /* revert and we can reuse this channel (if necessary...) */
-    channel->closing = cat_false;
+    channel->flags ^= CAT_CHANNEL_FLAG_CLOSING;
+    if (!(channel->flags & CAT_CHANNEL_FLAG_REUSE)) {
+        channel->flags |= CAT_CHANNEL_FLAG_CLOSED;
+    }
 }
 
 /* select */
@@ -531,9 +545,9 @@ CAT_API cat_channel_select_response_t *cat_channel_select(cat_channel_select_req
         if (dummy_coroutine->coroutine == NULL) {
             response = &requests[i];
             channel = response->channel;
-            CAT_CHANNEL_CHECK_STATE_EX(
+            CAT_CHANNEL_CHECK_STATE(
                 channel,
-                CAT_ECANCELED,
+                cat_set_last_error_code(CAT_ECANCELED);
                 response->error = cat_true;
                 continue;
             );
@@ -573,62 +587,69 @@ CAT_API cat_channel_select_response_t *cat_channel_select(cat_channel_select_req
 
 /* status */
 
-CAT_API cat_channel_size_t cat_channel_get_capacity(const cat_channel_t * channel)
+CAT_API cat_channel_size_t cat_channel_get_capacity(const cat_channel_t *channel)
 {
     return channel->capacity;
 }
 
-CAT_API cat_channel_size_t cat_channel_get_length(const cat_channel_t * channel)
+CAT_API cat_channel_size_t cat_channel_get_length(const cat_channel_t *channel)
 {
     return channel->length;
 }
 
-CAT_API cat_bool_t cat_channel_is_available(const cat_channel_t * channel)
+CAT_API cat_bool_t cat_channel_is_available(const cat_channel_t *channel)
 {
     return cat_channel__is_available(channel);
 }
 
-CAT_API cat_bool_t cat_channel_has_producers(const cat_channel_t * channel)
+CAT_API cat_bool_t cat_channel_has_producers(const cat_channel_t *channel)
 {
     return cat_channel__has_producers(channel);
 }
 
-CAT_API cat_bool_t cat_channel_has_consumers(const cat_channel_t * channel)
+CAT_API cat_bool_t cat_channel_has_consumers(const cat_channel_t *channel)
 {
     return cat_channel__has_consumers(channel);
 }
 
-CAT_API cat_bool_t cat_channel_is_empty(const cat_channel_t * channel)
+CAT_API cat_bool_t cat_channel_is_empty(const cat_channel_t *channel)
 {
     return cat_channel__is_empty(channel);
 }
 
-CAT_API cat_bool_t cat_channel_is_full(const cat_channel_t * channel)
+CAT_API cat_bool_t cat_channel_is_full(const cat_channel_t *channel)
 {
     return cat_channel__is_full(channel);
 }
 
-CAT_API cat_bool_t cat_channel_is_readable(const cat_channel_t * channel)
+CAT_API cat_bool_t cat_channel_is_readable(const cat_channel_t *channel)
 {
     return cat_channel__is_readable(channel);
 }
 
-CAT_API cat_bool_t cat_channel_is_writable(const cat_channel_t * channel)
+CAT_API cat_bool_t cat_channel_is_writable(const cat_channel_t *channel)
 {
     return cat_channel__is_writable(channel);
 }
 
-CAT_API cat_bool_t cat_channel_is_closing(const cat_channel_t * channel)
+/* special */
+
+CAT_API cat_channel_flags_t cat_channel_get_flags(const cat_channel_t *channel)
 {
-    return cat_channel__is_closing(channel);
+    return channel->flags;
 }
 
-CAT_API cat_channel_data_dtor_t cat_channel_get_dtor(const cat_channel_t * channel)
+CAT_API void cat_channel_enable_reuse(cat_channel_t *channel)
+{
+    channel->flags |= CAT_CHANNEL_FLAG_REUSE;
+}
+
+CAT_API cat_channel_data_dtor_t cat_channel_get_dtor(const cat_channel_t *channel)
 {
     return channel->dtor;
 }
 
-CAT_API cat_channel_data_dtor_t cat_channel_set_dtor(cat_channel_t * channel, cat_channel_data_dtor_t dtor)
+CAT_API cat_channel_data_dtor_t cat_channel_set_dtor(cat_channel_t *channel, cat_channel_data_dtor_t dtor)
 {
     cat_channel_data_dtor_t old_dtor = channel->dtor;
 
@@ -639,7 +660,7 @@ CAT_API cat_channel_data_dtor_t cat_channel_set_dtor(cat_channel_t * channel, ca
 
 /* ext */
 
-CAT_API cat_queue_t *cat_channel_get_storage(cat_channel_t * channel)
+CAT_API cat_queue_t *cat_channel_get_storage(cat_channel_t *channel)
 {
     if (unlikely(cat_channel__is_unbuffered(channel))) {
         return NULL;

@@ -31,17 +31,23 @@ extern "C" {
 #define SWOW_COROUTINE_DEFAULT_STACK_PAGE_SIZE (4 * 1024)
 #define SWOW_COROUTINE_MAX_STACK_PAGE_SIZE     (256 * 1024)
 
+#ifndef SWOW_COROUTINE_SWAP_JIT_GLOBALS
+#define SWOW_COROUTINE_SWAP_JIT_GLOBALS     1
+#endif
+#if PHP_VERSION_ID < 80000
+#undef SWOW_COROUTINE_SWAP_JIT_GLOBALS
+#endif
 #ifndef SWOW_COROUTINE_SWAP_ERROR_HANDING
 #define SWOW_COROUTINE_SWAP_ERROR_HANDING   1
 #endif
 #ifndef SWOW_COROUTINE_SWAP_BASIC_GLOBALS
-#define SWOW_COROUTINE_SWAP_BASIC_GLOBALS      1
+#define SWOW_COROUTINE_SWAP_BASIC_GLOBALS   1
 #endif
 #ifndef SWOW_COROUTINE_SWAP_OUTPUT_GLOBALS
-#define SWOW_COROUTINE_SWAP_OUTPUT_GLOBALS     1
+#define SWOW_COROUTINE_SWAP_OUTPUT_GLOBALS  1
 #endif
 #ifndef SWOW_COROUTINE_SWAP_SILENCE_CONTEXT
-#define SWOW_COROUTINE_SWAP_SILENCE_CONTEXT     1
+#define SWOW_COROUTINE_SWAP_SILENCE_CONTEXT 1
 #endif
 
 extern SWOW_API zend_class_entry *swow_coroutine_ce;
@@ -55,9 +61,7 @@ extern SWOW_API zend_class_entry *swow_coroutine_kill_exception_ce;
 
 typedef enum
 {
-    SWOW_COROUTINE_FLAG_NO_STACK      = CAT_COROUTINE_FLAG_USR1, /* no PHP stack */
-    SWOW_COROUTINE_FLAG_MAIN_FINISHED = CAT_COROUTINE_FLAG_USR2,
-    SWOW_COROUTINE_FLAG_ALL_FINISHED  = CAT_COROUTINE_FLAG_USR3,
+    SWOW_COROUTINE_FLAG_DEBUGGING = CAT_COROUTINE_FLAG_USR1,
 } swow_coroutine_flag_t;
 
 typedef enum
@@ -74,7 +78,6 @@ typedef struct
     /* coroutine info */
     zval zcallable;
     zend_fcall_info_cache fcc;
-    zval zdata;
     zend_object *cross_exception;
     /* zend things */
     JMP_BUF *bailout;
@@ -97,7 +100,10 @@ typedef struct
     zend_output_globals *output_globals;
 #endif
 #if SWOW_COROUTINE_SWAP_SILENCE_CONTEXT
-    int error_reporting_for_silence;
+    int error_reporting;
+#endif
+#if SWOW_COROUTINE_SWAP_JIT_GLOBALS
+    uint32_t jit_trace_num;
 #endif
 } swow_coroutine_exector_t;
 
@@ -149,6 +155,7 @@ CAT_GLOBALS_STRUCT_BEGIN(swow_coroutine)
 #ifdef SWOW_COROUTINE_USE_RATED
     swow_coroutine_rated_t rated;
 #endif
+    zval ztransfer_data;
 CAT_GLOBALS_STRUCT_END(swow_coroutine)
 
 typedef zval *(*swow_coroutine_resume_t)(swow_coroutine_t *scoroutine, zval *zdata);
@@ -157,8 +164,6 @@ typedef zval *(*swow_coroutine_yield_t)(zval *zdata);
 extern SWOW_API CAT_GLOBALS_DECLARE(swow_coroutine)
 
 #define SWOW_COROUTINE_G(x)       CAT_GLOBALS_GET(swow_coroutine, x)
-#define SWOW_COROUTINE_DATA_NULL  ((zval *) CAT_COROUTINE_DATA_NULL)
-#define SWOW_COROUTINE_DATA_ERROR ((zval *) CAT_COROUTINE_DATA_ERROR)
 
 /* loaders */
 
@@ -181,60 +186,74 @@ static cat_always_inline swow_coroutine_t *swow_coroutine_get_from_object(zend_o
 /* create */
 SWOW_API swow_coroutine_t *swow_coroutine_create(zval *zcallable);
 SWOW_API swow_coroutine_t *swow_coroutine_create_ex(zval *zcallable, size_t stack_page_size, size_t c_stack_size);
+SWOW_API void swow_coroutine_close(swow_coroutine_t *scoroutine);
 
 /* switch */
-SWOW_API void swow_coroutine_executor_switch(swow_coroutine_t *scoroutine);
+SWOW_API void swow_coroutine_executor_switch(swow_coroutine_exector_t *current_executor, swow_coroutine_exector_t *target_executor); SWOW_INTERNAL
 SWOW_API void swow_coroutine_executor_save(swow_coroutine_exector_t *executor);    SWOW_INTERNAL
 SWOW_API void swow_coroutine_executor_recover(swow_coroutine_exector_t *executor); SWOW_INTERNAL
-SWOW_API cat_bool_t swow_coroutine_jump_precheck(swow_coroutine_t *scoroutine, const zval *zdata);
 SWOW_API zval *swow_coroutine_jump(swow_coroutine_t *scoroutine, zval *zdata);
-SWOW_API cat_data_t *swow_coroutine_resume_standard(cat_coroutine_t *coroutine, cat_data_t *data); SWOW_INTERNAL
+SWOW_API cat_bool_t swow_coroutine_is_resumable(const swow_coroutine_t *scoroutine);
+SWOW_API cat_bool_t swow_coroutine_resume_standard(cat_coroutine_t *coroutine, cat_data_t *data, cat_data_t **retval); SWOW_INTERNAL
 SWOW_API cat_bool_t swow_coroutine_resume(swow_coroutine_t *scoroutine, zval *zdata, zval *retval);
 SWOW_API cat_bool_t swow_coroutine_yield(zval *zdata, zval *retval);
-SWOW_API cat_bool_t swow_coroutine_resume_ez(swow_coroutine_t *scoroutine);
-SWOW_API cat_bool_t swow_coroutine_yield_ez(void);
 
 SWOW_UNSAFE
-#define SWOW_COROUTINE_EXECUTE_START(scoroutine) do { \
+#define SWOW_COROUTINE_EXECUTE_START_EX(scoroutine, level, is_user) do { \
     const swow_coroutine_t *_scoroutine = scoroutine; \
     zend_execute_data *_current_execute_data = EG(current_execute_data); \
     if (EXPECTED(_scoroutine != swow_coroutine_get_current())) { \
         EG(current_execute_data) = _scoroutine->executor->current_execute_data; \
-    }
-SWOW_UNSAFE
-#define SWOW_COROUTINE_EXECUTE_END() \
-    EG(current_execute_data) = _current_execute_data; \
-} while (0)
-
-SWOW_UNSAFE
-#define SWOW_COROUTINE_PREV_EXECUTE_START(scoroutine, level) do { \
-    SWOW_COROUTINE_EXECUTE_START(scoroutine) { \
+    } \
+    do { \
         zend_execute_data *_exeute_data; \
         zend_long _level = level; \
         \
         _exeute_data = EG(current_execute_data); \
-        /* Search for last called user function */ \
-        _level++; \
+        if (_level < 0) { \
+            _level = 0; \
+        } \
+        /* Search for last called function */ \
+        if (is_user) { \
+            _level++; \
+        } \
         while (_level) { \
             _exeute_data = _exeute_data->prev_execute_data; \
             if (!_exeute_data) { \
                 break; \
             } \
-            if (!_exeute_data->func || !ZEND_USER_CODE(_exeute_data->func->common.type)) { \
+            if (!_exeute_data->func || (is_user && !ZEND_USER_CODE(_exeute_data->func->common.type))) { \
                 continue; \
             } \
             _level--; \
         } \
         EG(current_execute_data) = _exeute_data;
 
-SWOW_UNSAFE
-#define SWOW_COROUTINE_PREV_EXECUTE_END() \
-    } SWOW_COROUTINE_EXECUTE_END(); \
+#define SWOW_COROUTINE_EXECUTE_END_EX() \
+    } while (0); \
+    EG(current_execute_data) = _current_execute_data; \
 } while (0)
+
+SWOW_UNSAFE
+#define SWOW_COROUTINE_EXECUTE_START(scoroutine, level) \
+        SWOW_COROUTINE_EXECUTE_START_EX(scoroutine, level, 0)
+
+SWOW_UNSAFE
+#define SWOW_COROUTINE_EXECUTE_END \
+        SWOW_COROUTINE_EXECUTE_END_EX
+
+SWOW_UNSAFE
+#define SWOW_COROUTINE_USER_EXECUTE_START(scoroutine, level) \
+        SWOW_COROUTINE_EXECUTE_START_EX(scoroutine, level, 1)
+
+SWOW_UNSAFE
+#define SWOW_COROUTINE_USER_EXECUTE_END \
+        SWOW_COROUTINE_EXECUTE_END_EX
 
 /* basic info */
 SWOW_API cat_bool_t swow_coroutine_is_available(const swow_coroutine_t *scoroutine);
 SWOW_API cat_bool_t swow_coroutine_is_alive(const swow_coroutine_t *scoroutine);
+SWOW_API cat_bool_t swow_coroutine_is_executing(const swow_coroutine_t *scoroutine);
 SWOW_API swow_coroutine_t *swow_coroutine_get_from(const swow_coroutine_t *scoroutine); SWOW_UNSAFE
 SWOW_API swow_coroutine_t *swow_coroutine_get_previous(const swow_coroutine_t *scoroutine);
 
@@ -248,26 +267,24 @@ SWOW_API swow_coroutine_t *swow_coroutine_get_current(void);
 SWOW_API swow_coroutine_t *swow_coroutine_get_main(void);
 SWOW_API swow_coroutine_t *swow_coroutine_get_scheduler(void);
 
-/* scheduler */
-SWOW_API cat_bool_t swow_coroutine_scheduler_run(swow_coroutine_t *scheduler); SWOW_INTERNAL
-SWOW_API swow_coroutine_t *swow_coroutine_scheduler_stop(void);                SWOW_INTERNAL
-SWOW_API cat_bool_t swow_coroutine_is_scheduler(swow_coroutine_t *scoroutine);
-
-/* executor switcher */
-SWOW_API void swow_coroutine_set_executor_switcher(cat_bool_t enable); SWOW_INTERNAL
-
 /* debug */
+SWOW_API zend_string *swow_coroutine_get_executed_filename(const swow_coroutine_t *scoroutine, zend_long level);
+SWOW_API uint32_t swow_coroutine_get_executed_lineno(const swow_coroutine_t *scoroutine, zend_long level);
+SWOW_API zend_string *swow_coroutine_get_executed_function_name(const swow_coroutine_t *scoroutine, zend_long level);
 
-SWOW_API HashTable *swow_coroutine_get_trace(const swow_coroutine_t *scoroutine, zend_long options, zend_long limit);
-SWOW_API smart_str *swow_coroutine_get_trace_as_smart_str(swow_coroutine_t *scoroutine, smart_str *str, zend_long options, zend_long limit);
-SWOW_API zend_string *swow_coroutine_get_trace_as_string(const swow_coroutine_t *scoroutine, zend_long options, zend_long limit);
-SWOW_API HashTable *swow_coroutine_get_trace_as_list(const swow_coroutine_t *scoroutine, zend_long options, zend_long limit);
+SWOW_API HashTable *swow_coroutine_get_trace(const swow_coroutine_t *scoroutine, zend_long level, zend_long limit, zend_long options);
+SWOW_API smart_str *swow_coroutine_get_trace_as_smart_str(swow_coroutine_t *scoroutine, smart_str *str, zend_long level, zend_long limit, zend_long options);
+SWOW_API zend_string *swow_coroutine_get_trace_as_string(const swow_coroutine_t *scoroutine, zend_long level, zend_long limit, zend_long options);
+SWOW_API HashTable *swow_coroutine_get_trace_as_list(const swow_coroutine_t *scoroutine, zend_long level, zend_long limit, zend_long options);
 
 SWOW_API HashTable *swow_coroutine_get_defined_vars(swow_coroutine_t *scoroutine, zend_ulong level);
 SWOW_API cat_bool_t swow_coroutine_set_local_var(swow_coroutine_t *scoroutine, zend_string *name, zval *value, zend_long level, zend_bool force);
 
 SWOW_API cat_bool_t swow_coroutine_eval(swow_coroutine_t *scoroutine, zend_string *string, zend_long level, zval *return_value); SWOW_MAY_EXCEPTION
 SWOW_API cat_bool_t swow_coroutine_call(swow_coroutine_t *scoroutine, zval *zcallable, zval *return_value);                      SWOW_MAY_EXCEPTION
+
+SWOW_API swow_coroutine_t *swow_coroutine_get_by_id(cat_coroutine_id_t id);
+SWOW_API zval *swow_coroutine_get_zval_by_id(cat_coroutine_id_t id);
 
 SWOW_API void swow_coroutine_dump(swow_coroutine_t *scoroutine);
 SWOW_API void swow_coroutine_dump_by_id(cat_coroutine_id_t id);

@@ -95,6 +95,7 @@ if test "${SWOW}" != "no"; then
     ${SWOW_SRC_DIR}/swow_socket.c
     ${SWOW_SRC_DIR}/swow_stream.c
     ${SWOW_SRC_DIR}/swow_signal.c
+    ${SWOW_SRC_DIR}/swow_watch_dog.c
     ${SWOW_SRC_DIR}/swow_http.c
     ${SWOW_SRC_DIR}/swow_websocket.c
   "
@@ -152,6 +153,7 @@ if test "${SWOW}" != "no"; then
         ${LIBCAT_DIR}/src/cat_buffer.c
         ${LIBCAT_DIR}/src/cat_fs.c
         ${LIBCAT_DIR}/src/cat_signal.c
+        ${LIBCAT_DIR}/src/cat_watch_dog.c
         ${LIBCAT_DIR}/src/cat_http.c
         ${LIBCAT_DIR}/src/cat_websocket.c
       "

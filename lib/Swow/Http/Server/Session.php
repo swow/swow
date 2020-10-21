@@ -97,6 +97,11 @@ class Session extends Socket
         return $this->type;
     }
 
+    public function getKeepAlive(): ?bool
+    {
+        return $this->keepAlive;
+    }
+
     public function recvHttpRequest(Request $request = null): Request
     {
         $parser = $this->httpParser;
@@ -121,7 +126,6 @@ class Session extends Socket
         try {
             while (true) {
                 if ($expectMore) {
-                    $expectMore = false;
                     $this->recvData($buffer);
                 }
                 while (true) {

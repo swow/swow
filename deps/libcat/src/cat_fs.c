@@ -92,7 +92,7 @@ static void cat_fs_callback(uv_fs_t *fs)
     if (context->coroutine != NULL) {
         cat_coroutine_t *coroutine = context->coroutine;
         context->coroutine = NULL;
-        if (unlikely(!cat_coroutine_resume_ez(coroutine))) {
+        if (unlikely(!cat_coroutine_resume(coroutine, NULL, NULL))) {
             cat_core_error_with_last(DNS, "File-System schedule failed");
         }
     }

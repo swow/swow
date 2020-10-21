@@ -38,7 +38,7 @@ composer.lock
 !/tests/*/*.phpt
 !/tests/*/*/*.phpt
 !/tests/include/*
-run-tests.php
+/run-tests.php
 
 # config
 config*
@@ -46,4 +46,4 @@ config*
 !config.w32
 
 # others
-debug
+/debug

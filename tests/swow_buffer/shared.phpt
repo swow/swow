@@ -17,6 +17,10 @@ $buffer->seek(2)->write('cha');
 var_dump($buffer);
 var_dump($json);
 
+if (memory_get_usage(true) === 0) {
+    return;
+}
+
 $memoryUsages = [0, 0, 0];
 $buffer->close();
 $bigString = str_repeat('X', $buffer::PAGE_SIZE);

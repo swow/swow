@@ -181,7 +181,7 @@ static void swow_buffer_separate_by_handle(cat_buffer_t *buffer)
 
 #ifdef CAT_DEBUG
 #define SWOW_BUFFER_UNSHARED_START(sbuffer, buffer) do { \
-    const char *__old_value = (buffer)->value;
+    const char *__old_value = (buffer)->value; (void) __old_value;
 #else
 #define SWOW_BUFFER_UNSHARED_START(_sbuffer, _buffer)
 #endif

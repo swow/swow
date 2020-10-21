@@ -33,6 +33,7 @@ SWOW_API cat_bool_t swow_defer(zval *zcallable)
         if (!zend_is_callable_ex(zcallable, NULL, 0, NULL, &task->fcc, &error)) {
             cat_update_last_error(CAT_EMISUSE, "Defer task must be callable, %s", error);
             efree(error);
+            efree(task);
             return cat_false;
         }
         efree(error);

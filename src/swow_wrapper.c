@@ -18,26 +18,70 @@
 
 #include "swow.h"
 
-/* initialization */
-
-SWOW_API void swow_wrapper_init(void)
-{
-#ifdef ZEND_NO_VALUE_ERROR
-    do {
-        zend_class_entry ce;
-        INIT_CLASS_ENTRY(ce, "ValueError", NULL);
-        zend_ce_value_error = zend_register_internal_class_ex(&ce, zend_ce_error);
-        zend_ce_value_error->create_object = zend_ce_error->create_object;
-    } while (0);
+/* PHP 7.3 compatibility macro {{{*/
+#if PHP_VERSION_ID < 70300
+ZEND_API HashTable zend_empty_array;
 #endif
-
-    ZVAL_PTR(&swow_internal_callable_key, &swow_internal_callable_key);
-}
-
-SWOW_API void swow_wrapper_shutdown(void) { }
+/* }}} */
 
 /* PHP 8 compatibility macro {{{*/
 #if PHP_VERSION_ID < 80000
+ZEND_API zend_string *zend_string_concat2(
+        const char *str1, size_t str1_len,
+        const char *str2, size_t str2_len)
+{
+    size_t len = str1_len + str2_len;
+    zend_string *res = zend_string_alloc(len, 0);
+
+    memcpy(ZSTR_VAL(res), str1, str1_len);
+    memcpy(ZSTR_VAL(res) + str1_len, str2, str2_len);
+    ZSTR_VAL(res)[len] = '\0';
+
+    return res;
+}
+
+ZEND_API zend_string *zend_string_concat3(
+        const char *str1, size_t str1_len,
+        const char *str2, size_t str2_len,
+        const char *str3, size_t str3_len)
+{
+    size_t len = str1_len + str2_len + str3_len;
+    zend_string *res = zend_string_alloc(len, 0);
+
+    memcpy(ZSTR_VAL(res), str1, str1_len);
+    memcpy(ZSTR_VAL(res) + str1_len, str2, str2_len);
+    memcpy(ZSTR_VAL(res) + str1_len + str2_len, str3, str3_len);
+    ZSTR_VAL(res)[len] = '\0';
+
+    return res;
+}
+
+ZEND_API zend_string *zend_create_member_string(zend_string *class_name, zend_string *member_name)
+{
+    return zend_string_concat3(
+        ZSTR_VAL(class_name), ZSTR_LEN(class_name),
+        "::", sizeof("::") - 1,
+        ZSTR_VAL(member_name), ZSTR_LEN(member_name));
+}
+
+ZEND_API zend_string *get_active_function_or_method_name(void) /* {{{ */
+{
+    ZEND_ASSERT(zend_is_executing());
+
+    return get_function_or_method_name(EG(current_execute_data)->func);
+}
+/* }}} */
+
+ZEND_API zend_string *get_function_or_method_name(const zend_function *func) /* {{{ */
+{
+    if (func->common.scope) {
+        return zend_create_member_string(func->common.scope->name, func->common.function_name);
+    }
+
+    return func->common.function_name ? zend_string_copy(func->common.function_name) : zend_string_init("main", sizeof("main") - 1, 0);
+}
+/* }}} */
+
 ZEND_API const char *get_active_function_arg_name(uint32_t arg_num) /* {{{ */
 {
     zend_function *func;
@@ -298,4 +342,31 @@ SWOW_API void swow_output_globals_end(void)
     php_output_deactivate();
     php_output_activate();
     SG(request_info).no_headers = no_headers;
+}
+
+/* wrapper init/shutdown */
+
+void swow_wrapper_init(void)
+{
+#if PHP_VERSION_ID < 70300
+    zend_hash_init(&zend_empty_array, 0, NULL, NULL, 1);
+#endif
+
+#ifdef ZEND_NO_VALUE_ERROR
+    do {
+        zend_class_entry ce;
+        INIT_CLASS_ENTRY(ce, "ValueError", NULL);
+        zend_ce_value_error = zend_register_internal_class_ex(&ce, zend_ce_error);
+        zend_ce_value_error->create_object = zend_ce_error->create_object;
+    } while (0);
+#endif
+
+    ZVAL_PTR(&swow_internal_callable_key, &swow_internal_callable_key);
+}
+
+void swow_wrapper_shutdown(void)
+{
+#if PHP_VERSION_ID < 70300
+    zend_hash_destroy(&zend_empty_array);
+#endif
 }

@@ -41,12 +41,24 @@ extern "C" {
 #include "ext/standard/php_var.h"
 #include "ext/standard/php_array.h"
 
-SWOW_API void swow_wrapper_init(void);
-SWOW_API void swow_wrapper_shutdown(void);
+void swow_wrapper_init(void);
+void swow_wrapper_shutdown(void);
 
 /* PHP 7.3 compatibility macro {{{*/
+#ifndef GC_ADD_FLAGS
+#define GC_ADD_FLAGS(p, flags) do { \
+    GC_FLAGS(p) |= (flags); \
+} while (0)
+#endif
+
+#ifndef GC_DEL_FLAGS
+#define GC_DEL_FLAGS(p, flags) do { \
+    GC_FLAGS(p) &= ~(flags); \
+} while (0)
+#endif
+
 #ifndef GC_SET_REFCOUNT
-# define GC_SET_REFCOUNT(p, rc) do { \
+#define GC_SET_REFCOUNT(p, rc) do { \
     GC_REFCOUNT(p) = rc; \
 } while (0)
 #endif
@@ -89,11 +101,9 @@ static zend_always_inline void zend_tmp_string_release(zend_string *tmp)
     }
 }
 
-#define ZVAL_EMPTY_ARRAY(zval)    (array_init((zval)))
-#define RETVAL_EMPTY_ARRAY()      ZVAL_EMPTY_ARRAY(return_value)
-#define RETURN_EMPTY_ARRAY()      do { RETVAL_EMPTY_ARRAY(); return; } while (0)
+extern ZEND_API HashTable zend_empty_array;
 
-static cat_always_inline HashTable *zend_new_array(size_t size)
+static zend_always_inline HashTable *zend_new_array(size_t size)
 {
     HashTable *ht;
 
@@ -102,8 +112,6 @@ static cat_always_inline HashTable *zend_new_array(size_t size)
 
     return ht;
 }
-
-#define zend_empty_array (*((const HashTable *) zend_new_array(0)))
 #endif
 
 #if PHP_VERSION_ID < 70300
@@ -118,6 +126,20 @@ static cat_always_inline HashTable *zend_new_array(size_t size)
 /* }}} */
 
 /* PHP 7.4 compatibility macro {{{*/
+#ifndef ZEND_COMPILE_EXTENDED_STMT
+#define ZEND_COMPILE_EXTENDED_STMT ZEND_COMPILE_EXTENDED_INFO
+#endif
+
+#ifndef ZVAL_EMPTY_ARRAY
+#define ZVAL_EMPTY_ARRAY(zval) (array_init((zval)))
+#endif
+#ifndef RETVAL_EMPTY_ARRAY
+#define RETVAL_EMPTY_ARRAY()   ZVAL_EMPTY_ARRAY(return_value)
+#endif
+#ifndef RETURN_EMPTY_ARRAY
+#define RETURN_EMPTY_ARRAY()   do { RETVAL_EMPTY_ARRAY(); return; } while (0)
+#endif
+
 #ifndef ZEND_THIS
 #define ZEND_THIS (&EX(This))
 #endif
@@ -222,6 +244,16 @@ ZEND_API ZEND_COLD void zend_value_error(const char *format, ...) ZEND_ATTRIBUTE
 #define RETURN_THROWS()  do { RETURN_THROWS_ASSERTION(); return; } while (0)
 
 #if PHP_VERSION_ID < 80000
+ZEND_API zend_string *zend_string_concat2(
+    const char *str1, size_t str1_len,
+    const char *str2, size_t str2_len);
+ZEND_API zend_string *zend_string_concat3(
+    const char *str1, size_t str1_len,
+    const char *str2, size_t str2_len,
+    const char *str3, size_t str3_len);
+ZEND_API zend_string *zend_create_member_string(zend_string *class_name, zend_string *member_name);
+ZEND_API zend_string *get_active_function_or_method_name(void);
+ZEND_API zend_string *get_function_or_method_name(const zend_function *func);
 ZEND_API const char *get_active_function_arg_name(uint32_t arg_num);
 ZEND_API const char *get_function_arg_name(const zend_function *func, uint32_t arg_num);
 
@@ -276,16 +308,15 @@ ZEND_API ZEND_COLD void ZEND_FASTCALL zend_argument_value_error(uint32_t arg_num
 #ifdef ZTS
 #ifdef TSRMG_FAST
 #ifdef ZEND_ENABLE_STATIC_TSRMLS_CACHE
-#define SWOW_TSRMG_BULK TSRMG_FAST_BULK_STATIC
+#define SWOW_TSRMG_FAST_BULK TSRMG_FAST_BULK_STATIC
 #else
-#define SWOW_TSRMG_BULK TSRMG_FAST_BULK
+#define SWOW_TSRMG_FAST_BULK TSRMG_FAST_BULK
 #endif
-#else
+#endif
 #ifdef ZEND_ENABLE_STATIC_TSRMLS_CACHE
 #define SWOW_TSRMG_BULK TSRMG_BULK_STATIC
 #else
 #define SWOW_TSRMG_BULK TSRMG_BULK
-#endif
 #endif
 #endif
 
@@ -294,7 +325,7 @@ ZEND_API ZEND_COLD void ZEND_FASTCALL zend_argument_value_error(uint32_t arg_num
 #ifdef ZTS
 #define SWOW_GLOBALS_PTR(name)         SWOW_TSRMG_BULK(name##_id, zend_##name *)
 #ifdef TSRMG_FAST
-#define SWOW_GLOBALS_FAST_PTR(name)    SWOW_TSRMG_BULK(name##_offset, zend_##name *)
+#define SWOW_GLOBALS_FAST_PTR(name)    SWOW_TSRMG_FAST_BULK(name##_offset, zend_##name *)
 #else
 #define SWOW_GLOBALS_FAST_PTR(name)    SWOW_GLOBALS_PTR(name)
 #endif
@@ -375,14 +406,14 @@ static zend_always_inline zend_string *zend_string_init_fast(const char *str, si
 /* array */
 
 #ifndef add_assoc_string_fast
-static cat_always_inline void add_next_index_string_fast(zval *arg, const char *str)
+static zend_always_inline void add_next_index_string_fast(zval *arg, const char *str)
 {
     zval tmp;
     ZVAL_STRING_FAST(&tmp, str);
     add_next_index_zval(arg, &tmp);
 }
 
-static cat_always_inline void add_next_index_stringl_fast(zval *arg, const char *str, size_t length)
+static zend_always_inline void add_next_index_stringl_fast(zval *arg, const char *str, size_t length)
 {
     zval tmp;
     ZVAL_STRINGL_FAST(&tmp, str, length);
@@ -391,7 +422,7 @@ static cat_always_inline void add_next_index_stringl_fast(zval *arg, const char 
 
 #define add_assoc_string_fast(arg, key, str) add_assoc_string_fast_ex(arg, key, strlen(key), str)
 
-static cat_always_inline void add_assoc_string_fast_ex(zval *arg, const char *key, size_t key_len, const char *str)
+static zend_always_inline void add_assoc_string_fast_ex(zval *arg, const char *key, size_t key_len, const char *str)
 {
     zval tmp;
     ZVAL_STRING_FAST(&tmp, str);
@@ -400,7 +431,7 @@ static cat_always_inline void add_assoc_string_fast_ex(zval *arg, const char *ke
 
 #define add_assoc_stringl_fast(arg, key, str, length) add_assoc_stringl_ex(arg, key, strlen(key), str, length)
 
-static cat_always_inline void add_assoc_stringl_fast_ex(zval *arg, const char *key, size_t key_len, const char *str, size_t length)
+static zend_always_inline void add_assoc_stringl_fast_ex(zval *arg, const char *key, size_t key_len, const char *str, size_t length)
 {
     zval tmp;
     ZVAL_STRINGL_FAST(&tmp, str, length);
@@ -409,7 +440,7 @@ static cat_always_inline void add_assoc_stringl_fast_ex(zval *arg, const char *k
 #endif
 
 #ifndef add_assoc_array
-static cat_always_inline void add_next_index_array(zval *arg, zend_array *array)
+static zend_always_inline void add_next_index_array(zval *arg, zend_array *array)
 {
     zval tmp;
     ZVAL_ARR(&tmp, array);
@@ -418,7 +449,7 @@ static cat_always_inline void add_next_index_array(zval *arg, zend_array *array)
 
 #define add_assoc_array(arg, key, array) add_assoc_array_ex(arg, key, strlen(key), array)
 
-static cat_always_inline void add_assoc_array_ex(zval *arg, const char *key, size_t key_len, zend_array *array)
+static zend_always_inline void add_assoc_array_ex(zval *arg, const char *key, size_t key_len, zend_array *array)
 {
     zval tmp;
     ZVAL_ARR(&tmp, array);
@@ -427,7 +458,7 @@ static cat_always_inline void add_assoc_array_ex(zval *arg, const char *key, siz
 #endif /* add_assoc_array */
 
 #ifndef add_assoc_object
-static cat_always_inline void add_next_index_object(zval *arg, zend_object *object)
+static zend_always_inline void add_next_index_object(zval *arg, zend_object *object)
 {
     zval tmp;
     ZVAL_OBJ(&tmp, object);
@@ -436,7 +467,7 @@ static cat_always_inline void add_next_index_object(zval *arg, zend_object *obje
 
 #define add_assoc_object(arg, key, object) add_assoc_object_ex(arg, key, strlen(key), object)
 
-static cat_always_inline void add_assoc_object_ex(zval *arg, const char *key, size_t key_len, zend_object *object)
+static zend_always_inline void add_assoc_object_ex(zval *arg, const char *key, size_t key_len, zend_object *object)
 {
     zval tmp;
     ZVAL_OBJ(&tmp, object);
@@ -471,7 +502,7 @@ SWOW_API zend_object *swow_custom_object_clone(zend7_object *object);
 
 #define swow_object_alloc(type, ce, handlers) ((type *) swow_object_alloc_ex(sizeof(type), ce, &handlers))
 
-static cat_always_inline void* swow_object_alloc_ex(size_t size, zend_class_entry *ce, zend_object_handlers *handlers)
+static zend_always_inline void* swow_object_alloc_ex(size_t size, zend_class_entry *ce, zend_object_handlers *handlers)
 {
     void *ptr = emalloc(size + zend_object_properties_size(ce));
     zend_object *object = (zend_object *) (((char *) ptr) + handlers->offset);
@@ -486,7 +517,7 @@ static cat_always_inline void* swow_object_alloc_ex(size_t size, zend_class_entr
     return ptr;
 }
 
-static cat_always_inline zend_object* swow_object_create(zend_class_entry *ce)
+static zend_always_inline zend_object* swow_object_create(zend_class_entry *ce)
 {
     return ce->create_object(ce);
 }

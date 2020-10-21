@@ -26,6 +26,16 @@ extern "C" {
 #include "cat_queue.h"
 #include "cat_time.h"
 
+typedef enum
+{
+    CAT_CHANNEL_FLAG_NONE    = 0,
+    CAT_CHANNEL_FLAG_CLOSING = 1 << 0,
+    CAT_CHANNEL_FLAG_CLOSED  = 1 << 1,
+    CAT_CHANNEL_FLAG_REUSE   = 1 << 2,
+} cat_channel_flag_t;
+
+typedef uint8_t cat_channel_flags_t;
+
 typedef uint32_t cat_channel_size_t;
 #define CAT_CHANNEL_SIZE_FMT "%u"
 
@@ -43,8 +53,8 @@ typedef struct
 
 typedef struct
 {
+    cat_channel_flags_t flags;
     cat_channel_data_size_t data_size;
-    cat_bool_t closing;
     cat_channel_data_dtor_t dtor;
     cat_channel_size_t capacity;
     cat_channel_size_t length;
@@ -104,22 +114,26 @@ CAT_API cat_channel_select_response_t *cat_channel_select(cat_channel_select_req
 
 /* status */
 
-CAT_API cat_channel_size_t cat_channel_get_capacity(const cat_channel_t * channel);
-CAT_API cat_channel_size_t cat_channel_get_length(const cat_channel_t * channel);
-CAT_API cat_bool_t cat_channel_is_available(const cat_channel_t * channel);
-CAT_API cat_bool_t cat_channel_has_producers(const cat_channel_t * channel);
-CAT_API cat_bool_t cat_channel_has_consumers(const cat_channel_t * channel);
-CAT_API cat_bool_t cat_channel_is_empty(const cat_channel_t * channel);
-CAT_API cat_bool_t cat_channel_is_full(const cat_channel_t * channel);
-CAT_API cat_bool_t cat_channel_is_readable(const cat_channel_t * channel);
-CAT_API cat_bool_t cat_channel_is_writable(const cat_channel_t * channel);
-CAT_API cat_bool_t cat_channel_is_closing(const cat_channel_t * channel);
-CAT_API cat_channel_data_dtor_t cat_channel_get_dtor(const cat_channel_t * channel);
-CAT_API cat_channel_data_dtor_t cat_channel_set_dtor(cat_channel_t * channel, cat_channel_data_dtor_t dtor);
+CAT_API cat_channel_size_t cat_channel_get_capacity(const cat_channel_t *channel);
+CAT_API cat_channel_size_t cat_channel_get_length(const cat_channel_t *channel);
+CAT_API cat_bool_t cat_channel_is_available(const cat_channel_t *channel);
+CAT_API cat_bool_t cat_channel_has_producers(const cat_channel_t *channel);
+CAT_API cat_bool_t cat_channel_has_consumers(const cat_channel_t *channel);
+CAT_API cat_bool_t cat_channel_is_empty(const cat_channel_t *channel);
+CAT_API cat_bool_t cat_channel_is_full(const cat_channel_t *channel);
+CAT_API cat_bool_t cat_channel_is_readable(const cat_channel_t *channel);
+CAT_API cat_bool_t cat_channel_is_writable(const cat_channel_t *channel);
+
+/* special */
+
+CAT_API cat_channel_flags_t cat_channel_get_flags(const cat_channel_t *channel);
+CAT_API void cat_channel_enable_reuse(cat_channel_t *channel);
+CAT_API cat_channel_data_dtor_t cat_channel_get_dtor(const cat_channel_t *channel);
+CAT_API cat_channel_data_dtor_t cat_channel_set_dtor(cat_channel_t *channel, cat_channel_data_dtor_t dtor);
 
 /* ext */
 
-CAT_API cat_queue_t *cat_channel_get_storage(cat_channel_t * channel); CAT_INTERNAL
+CAT_API cat_queue_t *cat_channel_get_storage(cat_channel_t *channel); CAT_INTERNAL
 
 #ifdef __cplusplus
 }

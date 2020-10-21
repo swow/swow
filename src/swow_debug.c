@@ -18,6 +18,8 @@
 
 #include "swow_debug.h"
 
+#include "swow_coroutine.h"
+
 #define TRACE_APPEND_KEY(key) do {                                          \
         tmp = zend_hash_find(ht, key);                                      \
         if (tmp) {                                                          \
@@ -241,7 +243,7 @@ SWOW_API HashTable *swow_debug_get_trace_as_list(zend_long options, zend_long li
     return list;
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_swow_debug_buildTraceAsString, ZEND_RETURN_VALUE, 0, IS_STRING, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_swow_debug_buildTraceAsString, ZEND_RETURN_VALUE, 1, IS_STRING, 0)
     ZEND_ARG_TYPE_INFO(0, trace, IS_ARRAY, 0)
 ZEND_END_ARG_INFO()
 
@@ -256,16 +258,108 @@ static PHP_FUNCTION(swow_debug_buildTraceAsString)
     RETURN_STR(swow_debug_build_trace_as_string(trace));
 }
 
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_swow_debug_registerExtendedStatementHandler, ZEND_RETURN_VALUE, 1, IS_CALLABLE, 1)
+    ZEND_ARG_TYPE_INFO(0, handler, IS_CALLABLE, 1)
+ZEND_END_ARG_INFO()
+
+static PHP_FUNCTION(swow_debug_registerExtendedStatementHandler)
+{
+    zend_fcall_info fci;
+    zend_fcall_info_cache fcc;
+    zval *zcallable;
+
+    ZEND_PARSE_PARAMETERS_START(1, 1)
+        Z_PARAM_FUNC_EX(fci, fcc, 1, 0)
+    ZEND_PARSE_PARAMETERS_END();
+
+    if (fci.size > 0 && !(CG(compiler_options) & ZEND_COMPILE_EXTENDED_STMT)) {
+        zend_throw_error(NULL, "Please re-run your program with \"-e\" option");
+        RETURN_THROWS();
+    }
+
+    RETVAL_ZVAL(&SWOW_DEBUG_G(zextended_statement_handler), 0, 0);
+
+    SWOW_DEBUG_G(extended_statement_handler) = fcc;
+    zcallable = ZEND_CALL_ARG(execute_data, 1);
+    ZVAL_COPY(&SWOW_DEBUG_G(zextended_statement_handler), zcallable);
+}
+
 static const zend_function_entry swow_debug_functions[] = {
     PHP_FENTRY(Swow\\Debug\\buildTraceAsString, PHP_FN(swow_debug_buildTraceAsString), arginfo_swow_debug_buildTraceAsString, 0)
+    /* for breakpoint debugging  */
+    PHP_FENTRY(Swow\\Debug\\registerExtendedStatementHandler, PHP_FN(swow_debug_registerExtendedStatementHandler), arginfo_swow_debug_registerExtendedStatementHandler, 0)
     PHP_FE_END
 };
 
+SWOW_API CAT_GLOBALS_DECLARE(swow_debug)
+
+CAT_GLOBALS_CTOR_DECLARE_SZ(swow_debug)
+
+static user_opcode_handler_t original_zend_ext_stmt_handler;
+
+static int swow_debug_ext_stmt_handler(zend_execute_data *execute_data)
+{
+    swow_coroutine_t *scoroutine = swow_coroutine_get_current();
+
+    if (!ZVAL_IS_NULL(&SWOW_DEBUG_G(zextended_statement_handler)) &&
+        !(scoroutine->coroutine.flags & SWOW_COROUTINE_FLAG_DEBUGGING)) {
+        zend_fcall_info fci;
+        zval retval;
+
+        fci.size = sizeof(fci);
+        ZVAL_UNDEF(&fci.function_name);
+        fci.object = NULL;
+        fci.param_count = 0;
+#if PHP_VERSION_ID >= 80000
+        fci.named_params = NULL;
+#else
+        fci.no_separation = 0;
+#endif
+        fci.retval = &retval;
+
+        scoroutine->coroutine.flags |= SWOW_COROUTINE_FLAG_DEBUGGING;
+
+        (void) zend_call_function(&fci, &SWOW_DEBUG_G(extended_statement_handler));
+
+        scoroutine->coroutine.flags ^= SWOW_COROUTINE_FLAG_DEBUGGING;
+
+        zval_ptr_dtor(&retval);
+    }
+
+    if (original_zend_ext_stmt_handler != NULL) {
+        return original_zend_ext_stmt_handler(execute_data);
+    }
+
+    return ZEND_USER_OPCODE_DISPATCH;
+}
+
 int swow_debug_module_init(INIT_FUNC_ARGS)
 {
+    CAT_GLOBALS_REGISTER(swow_debug, CAT_GLOBALS_CTOR(swow_debug), NULL);
+
     if (zend_register_functions(NULL, swow_debug_functions, NULL, MODULE_PERSISTENT) != SUCCESS) {
         return FAILURE;
     }
+
+    original_zend_ext_stmt_handler = zend_get_user_opcode_handler(ZEND_EXT_STMT);
+    zend_set_user_opcode_handler(ZEND_EXT_STMT, swow_debug_ext_stmt_handler);
+
+    ZVAL_NULL(&SWOW_DEBUG_G(zextended_statement_handler));
+
+    return SUCCESS;
+}
+
+int swow_debug_runtime_init(INIT_FUNC_ARGS)
+{
+    ZVAL_NULL(&SWOW_DEBUG_G(zextended_statement_handler));
+
+    return SUCCESS;
+}
+
+int swow_debug_runtime_shutdown(INIT_FUNC_ARGS)
+{
+    zval_ptr_dtor(&SWOW_DEBUG_G(zextended_statement_handler));
+    ZVAL_NULL(&SWOW_DEBUG_G(zextended_statement_handler));
 
     return SUCCESS;
 }

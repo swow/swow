@@ -28,6 +28,7 @@
 #include "swow_socket.h"
 #include "swow_stream.h"
 #include "swow_signal.h"
+#include "swow_watch_dog.h"
 #include "swow_debug.h"
 #include "swow_http.h"
 #include "swow_websocket.h"
@@ -78,6 +79,7 @@ PHP_MINIT_FUNCTION(swow)
         swow_socket_module_init,
         swow_stream_module_init,
         swow_signal_module_init,
+        swow_watch_dog_module_init,
         swow_debug_module_init,
         swow_http_module_init,
         swow_websocket_module_init,
@@ -167,6 +169,8 @@ PHP_RINIT_FUNCTION(swow)
         swow_event_runtime_init,
         swow_socket_runtime_init,
         swow_stream_runtime_init,
+        swow_watch_dog_runtime_init,
+        swow_debug_runtime_init,
     };
 
 #ifdef ZEND_COMPILE_PRELOAD
@@ -191,6 +195,8 @@ PHP_RINIT_FUNCTION(swow)
 PHP_RSHUTDOWN_FUNCTION(swow)
 {
     static const zend_loader_t rshutdown_callbacks[] = {
+        swow_debug_runtime_shutdown,
+        swow_watch_dog_runtime_shudtown,
         swow_stream_runtime_shutdown,
         swow_event_runtime_shutdown,
         swow_coroutine_runtime_shutdown,

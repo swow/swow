@@ -38,7 +38,7 @@ static void cat_dns_getaddrinfo_callback(uv_getaddrinfo_t* request, int status, 
     if (likely(context->request.coroutine != NULL)) {
         context->status = status;
         context->response = response;
-        if (unlikely(!cat_coroutine_resume_ez(context->request.coroutine))) {
+        if (unlikely(!cat_coroutine_resume(context->request.coroutine, NULL, NULL))) {
             cat_core_error_with_last(DNS, "DNS resolver schedule failed");
         }
     } else if (response != NULL) {
@@ -50,7 +50,7 @@ static void cat_dns_getaddrinfo_callback(uv_getaddrinfo_t* request, int status, 
 
 CAT_API struct addrinfo *cat_dns_getaddrinfo(const char *hostname, const char *service, const struct addrinfo *hints)
 {
-    return cat_dns_getaddrinfo_ex(hostname, service, hints, cat_socket_get_global_timeout(dns));
+    return cat_dns_getaddrinfo_ex(hostname, service, hints, cat_socket_get_global_dns_timeout());
 }
 
 CAT_API struct addrinfo *cat_dns_getaddrinfo_ex(const char *hostname, const char *service, const struct addrinfo *hints, cat_timeout_t timeout)
@@ -98,7 +98,7 @@ CAT_API void cat_dns_freeaddrinfo(struct addrinfo *response)
 
 CAT_API cat_bool_t cat_dns_get_ip(char *buffer, size_t buffer_size, const char *name, int af)
 {
-    return cat_dns_get_ip_ex(buffer, buffer_size, name, af, cat_socket_get_global_timeout(dns));
+    return cat_dns_get_ip_ex(buffer, buffer_size, name, af, cat_socket_get_global_dns_timeout());
 }
 
 CAT_API cat_bool_t cat_dns_get_ip_ex(char *buffer, size_t buffer_size, const char *name, int af, cat_timeout_t timeout)

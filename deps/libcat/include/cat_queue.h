@@ -95,9 +95,9 @@ typedef void *cat_queue_node_t[2];
     type *name; \
     CAT_QUEUE_FOREACH(queue, _node) { \
         name = cat_queue_data(_node, type, field); \
-    } CAT_QUEUE_FOREACH_END();
 
 #define CAT_QUEUE_FOREACH_DATA_END() \
+    } CAT_QUEUE_FOREACH_END(); \
 } while (0)
 
 #endif /* CAT_QUEUE_H_ */

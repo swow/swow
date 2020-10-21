@@ -33,6 +33,8 @@ typedef enum
     UV_EMISUSE,     /* must fix your code to prevent from this error */
     UV_EVALUE,      /* illegal value (e.g. pass negative value to unsigned interface) */
     UV_ELOCKED,     /* it's different from EBUSY, it always caused by misuse */
+    UV_ECLOSING,    /* resource is closing (similar to locked) */
+    UV_ECLOSED,     /* resource has been closed */
     UV_EDEADLK,     /* dead lock */
     UV_ESSL,        /* any error about ssl */
 } uv_errno_ext_t;
@@ -44,6 +46,8 @@ typedef enum
     XX(EMISUSE, "misuse error") \
     XX(EVALUE, "value error") \
     XX(ELOCKED, "resource locked") \
+    XX(ECLOSING, "resource is closing") \
+    XX(ECLOSED, "resource has been closed") \
     XX(EDEADLK, "dead lock") \
     XX(ESSL, "SSL error") \
 
@@ -65,6 +69,7 @@ CAT_API cat_errno_t cat_get_last_error_code(void);
 CAT_API const char *cat_get_last_error_message(void);
 CAT_API void cat_clear_last_error(void);
 CAT_API void cat_update_last_error(cat_errno_t code, const char *format, ...) CAT_ATTRIBUTE_FORMAT(printf, 2, 3);
+CAT_API void cat_set_last_error_code(cat_errno_t code);
 CAT_API void cat_set_last_error(cat_errno_t code, char *message); CAT_INTERNAL
 #ifdef CAT_DEBUG
 CAT_API void cat_show_last_error(void);

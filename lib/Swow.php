@@ -32,6 +32,7 @@ namespace Swow
         public const TYPE_FS = 1024;
         public const TYPE_SIGNAL = 2048;
         public const TYPE_PROCESS = 4096;
+        public const TYPE_WATCH_DOG = 131072;
         public const TYPE_PROTOCOL = 262144;
         public const TYPE_SSL = 4194304;
         public const TYPE_TEST = 8388608;
@@ -43,9 +44,9 @@ namespace Swow
         public const TYPE_USR6 = 536870912;
         public const TYPE_USR7 = 1073741824;
         public const TYPE_USR8 = -2147483648;
-        public const TYPES_BUILTIN = 12853247;
+        public const TYPES_BUILTIN = 12984319;
         public const TYPES_USR = -16777216;
-        public const TYPES_ALL = -3923969;
+        public const TYPES_ALL = -3792897;
     }
 }
 
@@ -127,8 +128,8 @@ namespace Swow
         public const STATE_READY = 1;
         public const STATE_RUNNING = 2;
         public const STATE_WAITING = 3;
-        public const STATE_FINISHED = 4;
-        public const STATE_LOCKED = 5;
+        public const STATE_LOCKED = 4;
+        public const STATE_FINISHED = 5;
         public const STATE_DEAD = 6;
 
         /**
@@ -223,25 +224,46 @@ namespace Swow
         public function isAlive(): bool { }
 
         /**
-         * @param int $options [optional] = \DEBUG_BACKTRACE_PROVIDE_OBJECT
-         * @param int $limit [optional] = 0
-         * @return array
-         */
-        public function getTrace(int $options = \DEBUG_BACKTRACE_PROVIDE_OBJECT, int $limit = 0): array { }
-
-        /**
-         * @param int $options [optional] = \DEBUG_BACKTRACE_PROVIDE_OBJECT
-         * @param int $limit [optional] = 0
+         * @param int $level [optional] = 0
          * @return string
          */
-        public function getTraceAsString(int $options = \DEBUG_BACKTRACE_PROVIDE_OBJECT, int $limit = 0): string { }
+        public function getExecutedFilename(int $level = 0): string { }
 
         /**
-         * @param int $options [optional] = \DEBUG_BACKTRACE_PROVIDE_OBJECT
+         * @param int $level [optional] = 0
+         * @return int
+         */
+        public function getExecutedLineno(int $level = 0): int { }
+
+        /**
+         * @param int $level [optional] = 0
+         * @return string
+         */
+        public function getExecutedFunctionName(int $level = 0): string { }
+
+        /**
+         * @param int $level [optional] = 0
          * @param int $limit [optional] = 0
+         * @param int $options [optional] = \DEBUG_BACKTRACE_PROVIDE_OBJECT
          * @return array
          */
-        public function getTraceAsList(int $options = \DEBUG_BACKTRACE_PROVIDE_OBJECT, int $limit = 0): array { }
+        public function getTrace(int $level = 0, int $limit = 0, int $options = \DEBUG_BACKTRACE_PROVIDE_OBJECT): array { }
+
+        /**
+         * @param int $level [optional] = 0
+         * @param int $limit [optional] = 0
+         * @param int $options [optional] = \DEBUG_BACKTRACE_PROVIDE_OBJECT
+         * @return string
+         */
+        public function getTraceAsString(int $level = 0, int $limit = 0, int $options = \DEBUG_BACKTRACE_PROVIDE_OBJECT): string { }
+
+        /**
+         * @param int $level [optional] = 0
+         * @param int $limit [optional] = 0
+         * @param int $options [optional] = \DEBUG_BACKTRACE_PROVIDE_OBJECT
+         * @return array
+         */
+        public function getTraceAsList(int $level = 0, int $limit = 0, int $options = \DEBUG_BACKTRACE_PROVIDE_OBJECT): array { }
 
         /**
          * @param int $level [optional] = 0
@@ -388,11 +410,6 @@ namespace Swow
          * @return bool
          */
         public function isWritable(): bool { }
-
-        /**
-         * @return bool
-         */
-        public function isClosing(): bool { }
 
         /**
          * @return array
@@ -1027,6 +1044,61 @@ namespace Swow
          * @return array
          */
         public function __debugInfo(): array { }
+
+        /**
+         * @return int
+         */
+        public static function getGlobalDnsTimeout(): int { }
+
+        /**
+         * @return int
+         */
+        public static function getGlobalAcceptTimeout(): int { }
+
+        /**
+         * @return int
+         */
+        public static function getGlobalConnectTimeout(): int { }
+
+        /**
+         * @return int
+         */
+        public static function getGlobalReadTimeout(): int { }
+
+        /**
+         * @return int
+         */
+        public static function getGlobalWriteTimeout(): int { }
+
+        /**
+         * @param int $timeout [required]
+         * @return mixed
+         */
+        public static function setGlobalDnsTimeout(int $timeout) { }
+
+        /**
+         * @param int $timeout [required]
+         * @return mixed
+         */
+        public static function setGlobalAcceptTimeout(int $timeout) { }
+
+        /**
+         * @param int $timeout [required]
+         * @return mixed
+         */
+        public static function setGlobalConnectTimeout(int $timeout) { }
+
+        /**
+         * @param int $timeout [required]
+         * @return mixed
+         */
+        public static function setGlobalReadTimeout(int $timeout) { }
+
+        /**
+         * @param int $timeout [required]
+         * @return mixed
+         */
+        public static function setGlobalWriteTimeout(int $timeout) { }
     }
 }
 
@@ -1070,9 +1142,34 @@ namespace Swow
 
         /**
          * @param int $num [required]
+         * @param int $timeout [optional]
          * @return void
          */
-        public static function wait(int $num): void { }
+        public static function wait(int $num, int $timeout): void { }
+    }
+}
+
+namespace Swow
+{
+    class WatchDog
+    {
+        /**
+         * @param int $quantum [optional] = 0
+         * @param int $threshold [optional] = 0
+         * @param callable|int|float|null $alerter [optional] = null
+         * @return void
+         */
+        public static function run(int $quantum = 0, int $threshold = 0, $alerter = null): void { }
+
+        /**
+         * @return void
+         */
+        public static function stop(): void { }
+
+        /**
+         * @return bool
+         */
+        public static function isRunning(): bool { }
     }
 }
 
@@ -1201,17 +1298,6 @@ namespace Swow\Sync
     class Exception extends \Swow\Exception { }
 }
 
-namespace Swow\Event
-{
-    class Scheduler
-    {
-        /**
-         * @return void
-         */
-        public static function run(): void { }
-    }
-}
-
 namespace Swow\Buffer
 {
     class Exception extends \Swow\Exception { }
@@ -1223,6 +1309,11 @@ namespace Swow\Socket
 }
 
 namespace Swow\Signal
+{
+    class Exception extends \Swow\Exception { }
+}
+
+namespace Swow\WatchDog
 {
     class Exception extends \Swow\Exception { }
 }
@@ -1786,8 +1877,10 @@ namespace Swow\Errno
     const EMISUSE = -9761;
     const EVALUE = -9760;
     const ELOCKED = -9759;
-    const EDEADLK = -9758;
-    const ESSL = -9757;
+    const ECLOSING = -9758;
+    const ECLOSED = -9757;
+    const EDEADLK = -9756;
+    const ESSL = -9755;
 }
 
 namespace Swow\Errno
@@ -1802,8 +1895,17 @@ namespace Swow\Errno
 namespace Swow\Debug
 {
     /**
-     * @param array $trace [optional]
+     * @param array $trace [required]
      * @return string
      */
      function buildTraceAsString(array $trace): string { }
+}
+
+namespace Swow\Debug
+{
+    /**
+     * @param null|callable $handler [required]
+     * @return null|callable
+     */
+     function registerExtendedStatementHandler(?callable $handler): ?callable { }
 }

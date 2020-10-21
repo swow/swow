@@ -126,6 +126,7 @@ CAT_API cat_bool_t cat_sockaddr_check(const cat_sockaddr_t *address, cat_socklen
 
 /* socket fd */
 
+#define CAT_SOCKET_FD_FMT "%d"
 typedef uv_os_fd_t cat_socket_fd_t;
 
 #ifndef CAT_OS_WIN
@@ -330,10 +331,7 @@ typedef int32_t cat_socket_timeout_storage_t;
 #define CAT_SOCKET_TIMEOUT_STORAGE_FMT     "%d"
 #define CAT_SOCKET_TIMEOUT_STORAGE_MIN     CAT_TIMEOUT_FOREVER
 #define CAT_SOCKET_TIMEOUT_STORAGE_MAX     INT32_MAX
-#define CAT_SOCKET_TIMEOUT_STORAGE_INVALID -INT32_MAX
 #define CAT_SOCKET_TIMEOUT_STORAGE_DEFAULT -CAT_MAGIC_NUMBER
-#define CAT_SOCKET_ALIGN_TIMEOUT(timeout) \
-    (unlikely(((timeout) < CAT_SOCKET_TIMEOUT_STORAGE_MIN && (timeout) != CAT_SOCKET_TIMEOUT_STORAGE_DEFAULT) || (timeout) > CAT_SOCKET_TIMEOUT_STORAGE_MAX) ? -1 : (timeout))
 
 typedef struct
 {
@@ -428,19 +426,13 @@ extern CAT_API CAT_GLOBALS_DECLARE(cat_socket)
 
 #define CAT_SOCKET_G(x) CAT_GLOBALS_GET(cat_socket, x)
 
-#define cat_socket_get_global_timeout(type) CAT_SOCKET_G(options.timeout.type)
-
-#define cat_socket_set_global_timeout(type, value) do { \
-   cat_timeout_t timeout = value; \
-   CAT_SOCKET_G(options.timeout.type) = CAT_SOCKET_ALIGN_TIMEOUT(timeout); \
-} while (0)
-
 /* module initialization */
 
 CAT_API cat_bool_t cat_socket_module_init(void);
 CAT_API cat_bool_t cat_socket_runtime_init(void);
 
 /* common methods */
+/* tip: functions of fast version will never change the last error */
 
 CAT_API void cat_socket_init(cat_socket_t *socket);
 CAT_API cat_socket_t *cat_socket_create(cat_socket_t *socket, cat_socket_type_t type);
@@ -453,22 +445,29 @@ CAT_API cat_sa_family_t cat_socket_get_af(const cat_socket_t *socket);
 CAT_API cat_socket_fd_t cat_socket_get_fd_fast(const cat_socket_t *socket);
 CAT_API cat_socket_fd_t cat_socket_get_fd(const cat_socket_t *socket);
 
-#define cat_socket_get_timeout(socket, type) \
-    (likely((socket)->internal != NULL) ? \
-        (((socket)->internal->options.timeout.type == CAT_SOCKET_TIMEOUT_STORAGE_DEFAULT) ? \
-            cat_socket_get_global_timeout(type) : \
-            (socket)->internal->options.timeout.type \
-        ) : \
-        CAT_SOCKET_TIMEOUT_STORAGE_INVALID \
-    )
+CAT_API cat_timeout_t cat_socket_get_global_dns_timeout(void);
+CAT_API cat_timeout_t cat_socket_get_global_accept_timeout(void);
+CAT_API cat_timeout_t cat_socket_get_global_connect_timeout(void);
+CAT_API cat_timeout_t cat_socket_get_global_read_timeout(void);
+CAT_API cat_timeout_t cat_socket_get_global_write_timeout(void);
 
-#define cat_socket_set_timeout(socket, type, value) do { \
-   cat_socket_internal_t *isocket = (socket)->internal; \
-   if (likely(isocket != NULL)) { \
-       cat_timeout_t _timeout = value; \
-       isocket->options.timeout.type = CAT_SOCKET_ALIGN_TIMEOUT(_timeout); \
-   } \
-} while (0)
+CAT_API void cat_socket_set_global_dns_timeout(cat_timeout_t timeout);
+CAT_API void cat_socket_set_global_accept_timeout(cat_timeout_t timeout);
+CAT_API void cat_socket_set_global_connect_timeout(cat_timeout_t timeout);
+CAT_API void cat_socket_set_global_read_timeout(cat_timeout_t timeout);
+CAT_API void cat_socket_set_global_write_timeout(cat_timeout_t timeout);
+
+CAT_API cat_timeout_t cat_socket_get_dns_timeout(const cat_socket_t *socket);
+CAT_API cat_timeout_t cat_socket_get_accept_timeout(const cat_socket_t *socket);
+CAT_API cat_timeout_t cat_socket_get_connect_timeout(const cat_socket_t *socket);
+CAT_API cat_timeout_t cat_socket_get_read_timeout(const cat_socket_t *socket);
+CAT_API cat_timeout_t cat_socket_get_write_timeout(const cat_socket_t *socket);
+
+CAT_API cat_bool_t cat_socket_set_dns_timeout(cat_socket_t *socket, cat_timeout_t timeout);
+CAT_API cat_bool_t cat_socket_set_accept_timeout(cat_socket_t *socket, cat_timeout_t timeout);
+CAT_API cat_bool_t cat_socket_set_connect_timeout(cat_socket_t *socket, cat_timeout_t timeout);
+CAT_API cat_bool_t cat_socket_set_read_timeout(cat_socket_t *socket, cat_timeout_t timeout);
+CAT_API cat_bool_t cat_socket_set_write_timeout(cat_socket_t *socket, cat_timeout_t timeout);
 
 CAT_API cat_bool_t cat_socket_bind(cat_socket_t *socket, const char *name, size_t name_length, int port);
 CAT_API cat_bool_t cat_socket_bind_ex(cat_socket_t *socket, const char *name, size_t name_length, int port, cat_socket_bind_flags_t flags);
@@ -565,6 +564,7 @@ CAT_API cat_bool_t cat_socket_set_tcp_accept_balance(cat_socket_t *socket, cat_b
 /* helper */
 
 CAT_API int cat_socket_get_local_free_port(void);
+CAT_API void cat_socket_dump_all(void);
 
 #ifdef __cplusplus
 }

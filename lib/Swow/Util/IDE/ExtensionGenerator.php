@@ -222,7 +222,8 @@ class ExtensionGenerator
             if (class_exists($paramType) || interface_exists($paramType)) {
                 $paramType = '\\' . $paramType;
             }
-            $nullTypeHint = $paramType !== 'mixed' && $param->allowsNull();
+            $paramIsUnion = strpos($paramType, '|') !== false;
+            $nullTypeHint = $paramType !== 'mixed' && !$paramIsUnion && $param->allowsNull();
             try {
                 $defaultParamValue = $param->getDefaultValue();
                 $defaultParamConstantName = $param->getDefaultValueConstantName();
@@ -255,7 +256,7 @@ class ExtensionGenerator
             $paramsDeclarations[] = sprintf(
                 '%s%s%s%s$%s%s',
                 $nullTypeHint ? '?' : '',
-                $paramType === 'mixed' ? '' : "{$paramType} ",
+                ($paramType === 'mixed' || $paramIsUnion) ? '' : "{$paramType} ",
                 $variadic,
                 $param->isPassedByReference() ? '&' : '',
                 $param->getName(),

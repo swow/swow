@@ -36,20 +36,22 @@ typedef enum
     CAT_LOG_TYPES_UNFILTERABLE    = CAT_LOG_TYPE_ERROR | CAT_LOG_TYPE_CORE_ERROR,
 } cat_log_union_types_t;
 
-#define cat_log_helper(type, module_type, code, format, ...) do { \
-    if ( \
-        ((CAT_LOG_TYPE_##type & CAT_LOG_TYPES_UNFILTERABLE) == CAT_LOG_TYPE_##type) || \
-        ( \
-            ((CAT_LOG_TYPE_##type & CAT_G(log_types)) == CAT_LOG_TYPE_##type) && \
+#define cat_log_with_type(type, module_type, code, format, ...) do { \
+    if (( \
+            (((type) & CAT_G(log_types)) == (type)) && \
             ((CAT_MODULE_TYPE_##module_type & CAT_G(log_module_types)) == CAT_MODULE_TYPE_##module_type) \
-        ) \
+        ) || \
+        unlikely(((type) & CAT_LOG_TYPES_UNFILTERABLE) == (type)) \
     ) { \
         cat_log( \
-            CAT_LOG_TYPE_##type, CAT_MODULE_TYPE_##module_type, #module_type \
+            (type), CAT_MODULE_TYPE_##module_type, #module_type \
             CAT_SOURCE_POSITION_CC, code, format, ##__VA_ARGS__ \
         ); \
     } \
 } while (0)
+
+#define cat_log_helper(type, module_type, code, format, ...) \
+        cat_log_with_type(CAT_LOG_TYPE_##type, module_type, code, format, ##__VA_ARGS__)
 
 /* make MSVC happy */
 #define cat_log_helper_with_reason(type, module_type, code, reason, format, ...) \
@@ -86,22 +88,13 @@ typedef enum
 #define cat_core_error_with_last(module_type, format, ...)            cat_log_helper_with_reason(CORE_ERROR, module_type, cat_get_last_error_code(), cat_get_last_error_message(), format, ##__VA_ARGS__); abort() /* make IDE happy */
 #define cat_core_error_with_reason(module_type, code, format, ...)    cat_log_helper_with_reason(CORE_ERROR, module_type, code, cat_strerror(code), format, ##__VA_ARGS__); abort() /* make IDE happy */
 
-#define CAT_WARN_ASSERT(x) do { \
-    if (!(x)) { \
-        cat_warn(CORE, "Assertion \"" CAT_TO_STR(x) "\" failed"); \
-    } \
-} while (0)
-
-#define CAT_NEVER_HERE(module_type, reason, ...) \
-       cat_core_error(module_type, reason, ##__VA_ARGS__)
-
 #define cat_syscall_failure(type, module_type, format, ...) do { \
-       cat_errno_t _error = cat_translate_sys_error(cat_sys_errno); \
-       cat_log_helper(type, module_type, _error, format " (syscall failure " CAT_ERRNO_FMT ": %s)", ##__VA_ARGS__, _error, cat_strerror(_error)); \
+    cat_errno_t _error = cat_translate_sys_error(cat_sys_errno); \
+    cat_log_helper(type, module_type, _error, format " (syscall failure " CAT_ERRNO_FMT ": %s)", ##__VA_ARGS__, _error, cat_strerror(_error)); \
 } while (0)
 
 #define CAT_LOG_PARAMATERS \
-    const cat_log_type_t type, const cat_module_type_t module_type, const char *module_name \
+    cat_log_type_t type, const cat_module_type_t module_type, const char *module_name \
     CAT_SOURCE_POSITION_DC, int code, const char *format, ...
 
 #ifdef CAT_SOURCE_POSITION

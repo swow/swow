@@ -44,21 +44,21 @@ CAT_API void cat_update_last_error(cat_errno_t code, const char *format, ...)
     va_list args;
     char *message;
 
-    if (CAT_G(runtime)) {
-        /* Notice: new message maybe relying on the previous message */
-        va_start(args, format);
-        message = cat_vsprintf(format, args);
-        if (unlikely(message == NULL)) {
-            fprintf(stderr, "Sprintf last error message failed" CAT_EOL);
-            return;
-        }
-        va_end(args);
-    } else {
-        /* do not generate error message, memory allocator maybe unavailable */
-        message = NULL;
+    /* Notice: new message maybe relying on the previous message */
+    va_start(args, format);
+    message = cat_vsprintf(format, args);
+    if (unlikely(message == NULL)) {
+        fprintf(stderr, "Sprintf last error message failed" CAT_EOL);
+        return;
     }
+    va_end(args);
 
     cat_set_last_error(code, message);
+}
+
+CAT_API void cat_set_last_error_code(cat_errno_t code)
+{
+    CAT_G(last_error).code = code;
 }
 
 CAT_API void cat_set_last_error(cat_errno_t code, char *message)

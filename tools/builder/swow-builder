@@ -1,3 +1,4 @@
+#!/usr/bin/env php -n
 <?php
 /**
  * This file is part of Swow
@@ -16,6 +17,7 @@ use function Swow\Tools\error;
 use function Swow\Tools\notice;
 use function Swow\Tools\log;
 use function Swow\Tools\ok;
+use function Swow\Tools\warn;
 
 if (PHP_OS_FAMILY === 'Windows') {
     error('Not supported on Windows temporarily');
@@ -24,26 +26,30 @@ if (PHP_OS_FAMILY === 'Windows') {
 $workSpace = realpath(__DIR__ . '/../../');
 $swowSo = "{$workSpace}/.libs/swow.so";
 
-// TODO: use Swow\Cpu module
-if (PHP_OS_FAMILY === 'Darwin') {
-    $cpuCount = (int) `echo $(sysctl -n machdep.cpu.core_count)`;
-} elseif (PHP_OS_FAMILY === 'Linux') {
-    $cpuCount = (int) `echo $(/usr/bin/nproc)`;
-}
-if (($cpuCount ?? 0) <= 0) {
-    $cpuCount = 1;
-}
+$options = getopt('', ['rebuild', 'show-log', 'debug', 'enable::']);
 
 $commandArray = ["cd {$workSpace}"];
-// TODO: option --rebuild
-if (!file_exists("{$workSpace}/configure")) {
+
+if (isset($options['rebuild'])) {
+    if (file_exists("{$workSpace}/Makefile")) {
+        $commandArray[] = 'make clean';
+    }
+    $commandArray[] = 'phpize --clean';
+}
+if (!file_exists("{$workSpace}/configure") || isset($options['rebuild'])) {
     $commandArray[] = 'phpize';
 }
-if (!file_exists("{$workSpace}/config.log")) {
-    $commandArray[] = './configure --enable-debug';
+if (!file_exists("{$workSpace}/config.log") || isset($options['rebuild'])) {
+    $configureOptions = isset($options['debug']) ? '--enable-debug ' : '';
+    $configureOptions = isset($options['enable']) ? $configureOptions . $options['enable'] : $configureOptions;
+    $commandArray[] = "./configure {$configureOptions}";
 }
-// TODO: option --silent
-$commandArray[] = "make -j{$cpuCount} > /dev/null";
+
+// TODO: use Swow\Cpu module
+$cpuCount = (int) shell_exec(__DIR__ . '/../../deps/libcat/tools/cpu_count.sh');
+// TODO: CFLAGS/CXXFLAGS Werror
+$commandArray[] = isset($options['show-log']) ? "make -j{$cpuCount}" : "make -j{$cpuCount} > /dev/null";
+
 $command = implode(" && \\\n", $commandArray);
 
 passthru($command, $status);
@@ -55,13 +61,13 @@ br();
 
 $checkCommand = "/usr/bin/env php -n -d extension={$swowSo} --ri swow";
 ob_start();
-passthru($checkCommand);
+passthru($checkCommand, $status);
 $swowInfo = ob_get_clean();
-if (trim($swowInfo)) {
+if ($status === 0) {
     log("> {$checkCommand}");
     log($swowInfo);
 } else {
-    notice("You can run `{$checkCommand}` to check if Swow is available");
+    warn("Get extension info failed, you can run `{$checkCommand}` to confirm it");
 }
 
 notice('Install the extension to your system requires root privileges');

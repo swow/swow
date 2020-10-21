@@ -71,11 +71,23 @@ static PHP_METHOD(swow_sync_wait_reference, wait)
         zend_throw_error(NULL, "WaitReference can not be reused before previous wait has returned");
         RETURN_THROWS();
     }
-    swr->scoroutine = swow_coroutine_get_current();
-    zend_object_release(wr);
+
+    /* check the refcount (if we should do wait) */
+    ret = GC_REFCOUNT(wr) != 1;
+
+    /* eq to unset() */
     ZVAL_NULL(zwf);
+    zend_object_release(wr);
+
+    /* if object has been released, just return */
+    if (UNEXPECTED(!ret)) {
+        return;
+    }
+
+    swr->scoroutine = swow_coroutine_get_current();
     ret = cat_time_wait(timeout);
     swr->scoroutine = NULL;
+
     if (UNEXPECTED(!ret)) {
         swow_throw_exception_with_last_as_reason(swow_sync_exception_ce, "WaiReference waiting for completion failed");
         RETURN_THROWS();
@@ -92,7 +104,7 @@ static PHP_METHOD(swow_sync_wait_reference, __destruct)
     swow_sync_wait_reference_t *swr = getThisWR();
 
     if (swr->scoroutine) {
-        if (UNEXPECTED(!swow_coroutine_resume_ez(swr->scoroutine))) {
+        if (UNEXPECTED(!swow_coroutine_resume(swr->scoroutine, NULL, NULL))) {
             cat_core_error(SYNC, "Resume waiting coroutine failed, reason: %s", cat_get_last_error_message());
         }
     }

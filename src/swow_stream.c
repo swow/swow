@@ -104,8 +104,8 @@ SWOW_API php_stream *swow_stream_socket_factory(
     }
 #endif
     else {
-        /* should never happen */
-        CAT_NEVER_HERE(SOCKET, "Unknown protocol");
+        ops = NULL;
+        CAT_NEVER_HERE("Unknown protocol");
     }
 
     /* alloc php_stream (php_stream_ops * is not const on PHP-7.x) */
