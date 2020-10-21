@@ -79,6 +79,7 @@ class Message implements MessageInterface
     }
 
     /**
+     * @param string $protocolVersion
      * @return $this
      */
     public function withProtocolVersion($protocolVersion)
@@ -200,6 +201,8 @@ class Message implements MessageInterface
     }
 
     /**
+     * @param string $name
+     * @param null|string $value
      * @return $this
      */
     public function withHeader($name, $value)
@@ -211,6 +214,8 @@ class Message implements MessageInterface
     }
 
     /**
+     * @param string $name
+     * @param null|string $value
      * @return $this
      */
     public function withAddedHeader($name, $value)
@@ -226,6 +231,7 @@ class Message implements MessageInterface
     }
 
     /**
+     * @param string $name
      * @return $this
      */
     public function withoutHeader($name)

@@ -145,6 +145,7 @@ class ServerRequest extends Request implements ServerRequestInterface
     }
 
     /**
+     * @param array|object $data
      * @return $this
      */
     public function setParsedBody($data)
@@ -155,6 +156,7 @@ class ServerRequest extends Request implements ServerRequestInterface
     }
 
     /**
+     * @param array|object $data
      * @return $this
      */
     public function withParsedBody($data)
@@ -200,6 +202,8 @@ class ServerRequest extends Request implements ServerRequestInterface
     }
 
     /**
+     * @param mixed $attribute
+     * @param mixed $value
      * @return $this
      */
     public function setAttribute($attribute, $value)
@@ -210,6 +214,7 @@ class ServerRequest extends Request implements ServerRequestInterface
     }
 
     /**
+     * @param string $attribute
      * @return $this
      */
     public function unsetAttribute($attribute)
@@ -220,6 +225,8 @@ class ServerRequest extends Request implements ServerRequestInterface
     }
 
     /**
+     * @param string $attribute
+     * @param mixed $value
      * @return $this
      */
     public function withAttribute($attribute, $value)
@@ -231,6 +238,7 @@ class ServerRequest extends Request implements ServerRequestInterface
     }
 
     /**
+     * @param string $attribute
      * @return $this
      */
     public function withoutAttribute($attribute)

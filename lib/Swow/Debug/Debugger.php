@@ -574,8 +574,8 @@ TEXT;
         return $this;
     }
 
-    /** @param Coroutine[] $coroutines */
     /**
+     * @param Coroutine[] $coroutines
      * @return $this
      */
     public function showCoroutines(array $coroutines)

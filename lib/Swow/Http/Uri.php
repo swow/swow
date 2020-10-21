@@ -121,6 +121,7 @@ class Uri implements UriInterface
     }
 
     /**
+     * @param string $scheme
      * @return $this
      */
     public function withScheme($scheme)
@@ -175,6 +176,8 @@ class Uri implements UriInterface
     }
 
     /**
+     * @param string $user
+     * @param null|string $password
      * @return $this
      */
     public function withUserInfo($user, $password = '')
@@ -211,6 +214,7 @@ class Uri implements UriInterface
     }
 
     /**
+     * @param mixed $host
      * @return $this
      */
     public function withHost($host)
@@ -260,6 +264,7 @@ class Uri implements UriInterface
     }
 
     /**
+     * @param int $port
      * @return $this
      */
     public function withPort($port)
@@ -302,6 +307,7 @@ class Uri implements UriInterface
     }
 
     /**
+     * @param string $path
      * @return $this
      */
     public function withPath($path)
@@ -344,6 +350,7 @@ class Uri implements UriInterface
     }
 
     /**
+     * @param string $query
      * @return $this
      */
     public function withQuery($query)
@@ -375,6 +382,7 @@ class Uri implements UriInterface
     }
 
     /**
+     * @param string $fragment
      * @return $this
      */
     public function withFragment($fragment)

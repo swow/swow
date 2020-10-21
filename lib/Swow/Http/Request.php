@@ -77,6 +77,7 @@ class Request extends Message implements RequestInterface
     }
 
     /**
+     * @param string $method
      * @return $this
      */
     public function withMethod($method)
@@ -209,6 +210,7 @@ class Request extends Message implements RequestInterface
     }
 
     /**
+     * @param mixed $requestTarget
      * @return $this
      */
     public function withRequestTarget($requestTarget)

@@ -65,6 +65,8 @@ class Response extends Message implements ResponseInterface
     }
 
     /**
+     * @param int $code
+     * @param string $reasonPhrase
      * @return $this
      */
     public function withStatus($code, $reasonPhrase = '')

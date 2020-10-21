@@ -22,6 +22,7 @@ class CallbackSelector extends Selector
     protected $popCallbacks = [];
 
     /**
+     * @param mixed $data
      * @return $this
      */
     public function casePush(Channel $channel, $data, callable $callback)
