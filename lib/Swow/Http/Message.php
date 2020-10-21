@@ -26,7 +26,7 @@ class Message implements MessageInterface
     protected $protocolVersion = self::DEFAULT_PROTOCOL_VERSION;
 
     /**
-     * @var array
+     * @var string[][]
      */
     protected $headers = [];
 
@@ -120,10 +120,10 @@ class Message implements MessageInterface
             return '';
         }
 
-        return $this->headers[$name];
+        return implode(',', $this->headers[$name] ?? []);
     }
 
-    public function setHeader(string $name, ?string $value): self
+    public function setHeader(string $name, $value): self
     {
         if ($this->headerNames === null) {
             $this->generateHeaderNames();
@@ -133,12 +133,19 @@ class Message implements MessageInterface
         if ($rawName !== null) {
             unset($this->headers[$rawName]);
         }
-        if ($value !== null) {
-            $this->headers[$name] = $value;
-            $this->headerNames[$lowerCaseName] = $name;
-        } else {
+
+        if ($value === null) {
             unset($this->headerNames[$lowerCaseName]);
+
+            return $this;
         }
+
+        if (!is_array($value)) {
+            $value = [$value];
+        }
+
+        $this->headers[$name] = $value;
+        $this->headerNames[$lowerCaseName] = $name;
 
         return $this;
     }
@@ -152,10 +159,10 @@ class Message implements MessageInterface
     {
         $headers = $this->getHeaders();
         if (!$this->hasHeader('connection')) {
-            $headers['Connection'] = $this->getKeepAlive() ? 'Keep-Alive' : 'Closed';
+            $headers['Connection'] = [$this->getKeepAlive() ? 'Keep-Alive' : 'Closed'];
         }
         if (!$this->hasHeader('content-length')) {
-            $headers['Content-Length'] = (string) $this->getContentLength();
+            $headers['Content-Length'] = [(string) $this->getContentLength()];
         }
 
         return $headers;
