@@ -49,7 +49,8 @@
         "cs-fix": "/usr/bin/env php ./vendor/bin/php-cs-fixer fix",
         "ide-help": "/usr/bin/env php -n -d extension=swow ./tools/ide-helper/generator.php swow ./lib/Swow.php",
         "build-extension": "/usr/bin/env php -n ./tools/builder/swow-builder",
-        "rebuild-extension": "/usr/bin/env php -n ./tools/builder/swow-builder --rebuild"
+        "rebuild-extension": "/usr/bin/env php -n ./tools/builder/swow-builder --rebuild",
+        "test-extension": "cd ./ext && NO_INTERACTION=1 /usr/bin/env php -n ./run-tests.php -P -d extension=swow $@"
     },
     "bin": [
         "tools/builder/swow-builder"

@@ -23,7 +23,7 @@
    +----------------------------------------------------------------------+
  */
 
-/* $Id: 761ef949fe931c97333c90b3095ed31d4b0bea92 $ */
+/* $Id: 011885c678e931d91d329292022f662b1b9f92fd $ */
 
 /* Let there be no top-level code beyond this point:
  * Only functions and classes, thanks!
@@ -608,10 +608,14 @@ function main(): void
                     $shuffle = true;
                     break;
                 case '--asan':
+                case '--msan':
                     $environment['USE_ZEND_ALLOC'] = 0;
                     $environment['USE_TRACKED_ALLOC'] = 1;
                     $environment['SKIP_ASAN'] = 1;
                     $environment['SKIP_PERF_SENSITIVE'] = 1;
+                    if ($switch === '--msan') {
+                        $environment['SKIP_MSAN'] = 1;
+                    }
 
                     $lsanSuppressions = __DIR__ . '/azure/lsan-suppressions.txt';
                     if (file_exists($lsanSuppressions)) {
@@ -628,7 +632,7 @@ function main(): void
                     }
                     break;
                 case '--version':
-                    echo '$Id: 761ef949fe931c97333c90b3095ed31d4b0bea92 $' . "\n";
+                    echo '$Id: 011885c678e931d91d329292022f662b1b9f92fd $' . "\n";
                     exit(1);
 
                 default:

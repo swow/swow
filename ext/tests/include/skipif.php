@@ -1,6 +1,12 @@
 <?php
 if (!extension_loaded('swow')) {
-    exit('skip swow extension is required');
+    skip('Swow extension is required');
+}
+
+require __DIR__ . '/autoload.php';
+
+if (!class_exists(\Swow\Assert::class)) {
+    skip('Swow library is required');
 }
 
 function skip(string $reason, bool $condition = true): void
