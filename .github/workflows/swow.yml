@@ -38,9 +38,9 @@ jobs:
         run:
           composer build-extension -- --debug
 
-      - name: Run tests
+      - name: Run extension tests
         run:
-          ./run-tests.sh ./tests
+          ./ext/run-tests.sh ./ext/tests
           --show-diff
           --show-slow 1000
           --set-timeout 30

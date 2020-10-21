@@ -80,6 +80,14 @@ function check(bool $is_ok, string $message): void
     }
 }
 
+function passthru(string $command): int
+{
+    log("> {$command}");
+    \passthru($command, $status);
+
+    return $status;
+}
+
 function spaces(int $length): string
 {
     return str_repeat(' ', $length);

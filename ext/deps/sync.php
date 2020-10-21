@@ -10,7 +10,7 @@
  * please view the LICENSE file that was distributed with this source code
  */
 
-require __DIR__ . '/../tools/dm.php';
+require __DIR__ . '/../../tools/dm.php';
 
 use Swow\Tools\DependencyManager;
 use function Swow\Tools\error;
@@ -21,11 +21,16 @@ use function Swow\Tools\ok;
 $syncFromGit = function (string $orgName, string $repoName, string $sourceDir, string $targetDir, array $requires = []): array {
     $fullName = "{$orgName}/{$repoName}";
     log("Sync {$fullName}...");
-    $path = dirname(__DIR__, 2) . '/' . $repoName;
-    if (!file_exists("{$path}/.git")) {
+    $url = null;
+    for ($level = 2; $level < 5; $level++) {
+        $path = dirname(__DIR__, $level) . '/' . $repoName;
+        if (file_exists("{$path}/.git")) {
+            $url = "file://{$path}";
+            break;
+        }
+    }
+    if ($url === null) {
         $url = "git@github.com:{$fullName}.git";
-    } else {
-        $url = "file://{$path}";
     }
     $version = DependencyManager::sync($repoName, $url, $sourceDir, $targetDir, $requires);
     ok("Sync {$fullName} to {$version}");

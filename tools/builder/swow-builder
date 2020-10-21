@@ -18,12 +18,13 @@ use function Swow\Tools\notice;
 use function Swow\Tools\log;
 use function Swow\Tools\ok;
 use function Swow\Tools\warn;
+use function Swow\Tools\passthru;
 
 if (PHP_OS_FAMILY === 'Windows') {
     error('Not supported on Windows temporarily');
 }
 
-$workSpace = realpath(__DIR__ . '/../../');
+$workSpace = realpath(__DIR__ . '/../../ext');
 $swowSo = "{$workSpace}/.libs/swow.so";
 
 $options = getopt('', ['rebuild', 'show-log', 'debug', 'enable::']);
@@ -32,27 +33,27 @@ $commandArray = ["cd {$workSpace}"];
 
 if (isset($options['rebuild'])) {
     if (file_exists("{$workSpace}/Makefile")) {
-        $commandArray[] = 'make clean';
+        $commandArray[] = './clean.sh';
     }
     $commandArray[] = 'phpize --clean';
 }
 if (!file_exists("{$workSpace}/configure") || isset($options['rebuild'])) {
     $commandArray[] = 'phpize';
 }
-if (!file_exists("{$workSpace}/config.log") || isset($options['rebuild'])) {
+if (!file_exists("{$workSpace}/Makefile") || isset($options['rebuild'])) {
     $configureOptions = isset($options['debug']) ? '--enable-debug ' : '';
     $configureOptions = isset($options['enable']) ? $configureOptions . $options['enable'] : $configureOptions;
     $commandArray[] = "./configure {$configureOptions}";
 }
 
 // TODO: use Swow\Cpu module
-$cpuCount = (int) shell_exec(__DIR__ . '/../../deps/libcat/tools/cpu_count.sh');
+$cpuCount = (int) shell_exec("{$workSpace}/deps/libcat/tools/cpu_count.sh");
 // TODO: CFLAGS/CXXFLAGS Werror
 $commandArray[] = isset($options['show-log']) ? "make -j{$cpuCount}" : "make -j{$cpuCount} > /dev/null";
 
 $command = implode(" && \\\n", $commandArray);
 
-passthru($command, $status);
+$status = passthru($command);
 if ($status !== 0) {
     error('Make failed');
 }
@@ -61,17 +62,16 @@ br();
 
 $checkCommand = "/usr/bin/env php -n -d extension={$swowSo} --ri swow";
 ob_start();
-passthru($checkCommand, $status);
+$status = passthru($checkCommand);
 $swowInfo = ob_get_clean();
 if ($status === 0) {
-    log("> {$checkCommand}");
     log($swowInfo);
 } else {
-    warn("Get extension info failed, you can run `{$checkCommand}` to confirm it");
+    warn("Get extension info failed");
 }
 
 notice('Install the extension to your system requires root privileges');
-passthru('sudo make install');
+passthru("cd {$workSpace} && sudo make install");
 
 br();
 ok('Do\'not forget to add \'extension=swow\' to your PHP ini');
