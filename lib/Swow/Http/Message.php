@@ -106,7 +106,12 @@ class Message implements MessageInterface
 
     public function getHeader($name): array
     {
-        return explode(', ', $this->getHeaderLine($name));
+        $name = $this->headerNames[strtolower($name)] ?? null;
+        if (is_null($name)) {
+            return [];
+        }
+
+        return $this->headers[$name] ?? [];
     }
 
     public function getHeaderLine($name): string
@@ -115,12 +120,7 @@ class Message implements MessageInterface
             $this->generateHeaderNames();
         }
 
-        $name = $this->headerNames[strtolower($name)] ?? null;
-        if ($name === null) {
-            return '';
-        }
-
-        return implode(',', $this->headers[$name] ?? []);
+        return implode(',', $this->getHeader($name));
     }
 
     public function setHeader(string $name, $value): self
