@@ -105,5 +105,7 @@ class Request extends \Swow\Http\ServerRequest
         $this->keepAlive = $keepAlive;
         $this->contentLength = $contentLength;
         $this->upgrade = $upgrade;
+
+        return $this;
     }
 }
