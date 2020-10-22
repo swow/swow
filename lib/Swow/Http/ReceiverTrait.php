@@ -117,7 +117,7 @@ trait ReceiverTrait
                             }
                             case HttpParser::EVENT_HEADER_VALUE:
                             {
-                                $headers[$headerName] = $data;
+                                $headers[$headerName][] = $data;
                                 $headerNames[strtolower($headerName)] = $headerName;
                                 break;
                             }
