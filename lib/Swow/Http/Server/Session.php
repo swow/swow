@@ -61,11 +61,6 @@ class Session extends Socket
     protected $keepAlive = false;
 
     /**
-     * @var Buffer
-     */
-    protected $buffer;
-
-    /**
      * @noinspection PhpMissingParentConstructorInspection
      */
     public function __construct()
@@ -112,10 +107,9 @@ class Session extends Socket
             $shouldKeepAlive,
             $isUpgrade,
         ] = $this->parse(
-            $this->buffer,
-            static::MAX_BUFFER_SIZE,
             $this->server->getMaxHeaderLength(),
-            $this->server->getMaxContentLength()
+            $this->server->getMaxContentLength(),
+            static::MAX_BUFFER_SIZE
         );
 
         $request = $request ?? new Request();

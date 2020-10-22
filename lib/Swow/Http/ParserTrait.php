@@ -26,13 +26,20 @@ use Swow\Socket;
 trait ParserTrait
 {
     /**
+     * @var Buffer
+     */
+    protected $buffer;
+
+    /**
      * @var HttpParser
      */
     protected $httpParser;
 
-    public function parse(Buffer $buffer, int $maxBufferSize, int $maxHeaderLength, int $maxContentLength): array
+    public function parse(int $maxHeaderLength, int $maxContentLength, int $maxBufferSize): array
     {
         $parser = $this->httpParser;
+        $buffer = $this->buffer;
+
         $expectMore = $buffer->eof();
         if ($expectMore) {
             /* all data has been parsed, clear them */
