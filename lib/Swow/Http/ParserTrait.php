@@ -52,7 +52,7 @@ trait ParserTrait
     /**
      * TODO: The options must be managed in a unified way
      */
-    public function parse(int $maxHeaderLength, int $maxContentLength): array
+    public function execute(int $maxHeaderLength, int $maxContentLength): array
     {
         $parser = $this->httpParser;
         $buffer = $this->buffer;

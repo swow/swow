@@ -101,7 +101,7 @@ class Session extends Socket
             $protocolVersion,
             $shouldKeepAlive,
             $isUpgrade,
-        ] = $this->parse(
+        ] = $this->execute(
             $this->server->getMaxHeaderLength(),
             $this->server->getMaxContentLength()
         );
