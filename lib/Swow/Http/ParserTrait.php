@@ -30,7 +30,7 @@ trait ParserTrait
      */
     protected $httpParser;
 
-    public function parse(Buffer $buffer, int $maxHeaderLength, int $maxContentLength, int $maxBufferSize): array
+    public function parse(Buffer $buffer, int $maxBufferSize, int $maxHeaderLength, int $maxContentLength): array
     {
         $parser = $this->httpParser;
         $expectMore = $buffer->eof();

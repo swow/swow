@@ -113,9 +113,9 @@ class Session extends Socket
             $isUpgrade,
         ] = $this->parse(
             $this->buffer,
+            static::MAX_BUFFER_SIZE,
             $this->server->getMaxHeaderLength(),
-            $this->server->getMaxContentLength(),
-            static::MAX_BUFFER_SIZE
+            $this->server->getMaxContentLength()
         );
 
         $request = $request ?? new Request();
