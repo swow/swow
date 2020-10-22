@@ -40,7 +40,7 @@ trait ReceiverTrait
      */
     protected $maxBufferSize;
 
-    public function __construct(int $type, int $events, int $maxBufferSize = Buffer::DEFAULT_SIZE)
+    protected function __construct(int $type, int $events, int $maxBufferSize = Buffer::DEFAULT_SIZE)
     {
         $this->buffer = new Buffer();
         $this->httpParser = (new HttpParser())
