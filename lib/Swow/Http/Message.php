@@ -95,11 +95,8 @@ class Message implements MessageInterface
     public function getHeader($name): array
     {
         $name = $this->headerNames[strtolower($name)] ?? null;
-        if ($name === null) {
-            return [];
-        }
 
-        return $this->headers[$name] ?? [];
+        return $name !== null ? $this->headers[$name] : [];
     }
 
     public function getHeaderLine($name): string
@@ -115,11 +112,11 @@ class Message implements MessageInterface
             unset($this->headers[$rawName]);
         }
 
-        if ($value === null) {
-            unset($this->headerNames[$lowerCaseName]);
-        } else {
+        if ($value !== null) {
             $this->headers[$name] = is_array($value) ? $value : [$value];
             $this->headerNames[$lowerCaseName] = $name;
+        } else {
+            unset($this->headerNames[$lowerCaseName]);
         }
 
         return $this;
