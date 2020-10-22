@@ -14,8 +14,8 @@ declare(strict_types=1);
 namespace Swow\Http\Server;
 
 use Swow\Http\Exception as HttpException;
-use Swow\Http\HandlerTrait;
 use Swow\Http\Parser as HttpParser;
+use Swow\Http\ReceiverTrait;
 use Swow\Http\Server;
 use Swow\Http\Status as HttpStatus;
 use Swow\Socket;
@@ -24,8 +24,8 @@ use function Swow\Http\packResponse;
 
 class Session extends Socket
 {
-    use HandlerTrait {
-        __construct as parserConstruct;
+    use ReceiverTrait {
+        __construct as receiverConstruct;
     }
 
     public const TYPE_HTTP = 1 << 0;
@@ -64,7 +64,7 @@ class Session extends Socket
      */
     public function __construct()
     {
-        $this->parserConstruct(HttpParser::TYPE_REQUEST, static::DEFAULT_HTTP_PARSER_EVENTS);
+        $this->receiverConstruct(HttpParser::TYPE_REQUEST, static::DEFAULT_HTTP_PARSER_EVENTS);
     }
 
     public function getServer(): Server

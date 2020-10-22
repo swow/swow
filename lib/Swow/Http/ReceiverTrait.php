@@ -23,7 +23,7 @@ use Swow\Socket;
 /**
  * @mixin Socket
  */
-trait HandlerTrait
+trait ReceiverTrait
 {
     /**
      * @var Buffer
