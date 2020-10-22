@@ -14,8 +14,8 @@ declare(strict_types=1);
 namespace Swow\Http\Server;
 
 use Swow\Http\Exception as HttpException;
+use Swow\Http\HandlerTrait;
 use Swow\Http\Parser as HttpParser;
-use Swow\Http\ParserTrait;
 use Swow\Http\Server;
 use Swow\Http\Status as HttpStatus;
 use Swow\Socket;
@@ -24,7 +24,7 @@ use function Swow\Http\packResponse;
 
 class Session extends Socket
 {
-    use ParserTrait {
+    use HandlerTrait {
         __construct as parserConstruct;
     }
 
