@@ -35,15 +35,21 @@ trait ParserTrait
      */
     protected $httpParser;
 
-    public function __construct(int $type, int $events)
+    /**
+     * @var int
+     */
+    protected $maxBufferSize;
+
+    public function __construct(int $type, int $events, int $maxBufferSize = Buffer::DEFAULT_SIZE)
     {
         $this->buffer = new Buffer();
         $this->httpParser = (new HttpParser())
             ->setType($type)
             ->setEvents($events);
+        $this->maxBufferSize = $maxBufferSize;
     }
 
-    public function parse(int $maxHeaderLength, int $maxContentLength, int $maxBufferSize): array
+    public function parse(int $maxHeaderLength, int $maxContentLength): array
     {
         $parser = $this->httpParser;
         $buffer = $this->buffer;
@@ -86,7 +92,7 @@ trait ParserTrait
                             if ($buffer->isFull()) {
                                 $newSize = $buffer->getSize() * 2;
                                 /* we need bigger buffer to handle the large filed (or throw error) */
-                                if ($newSize > $maxBufferSize) {
+                                if ($newSize > $this->maxBufferSize) {
                                     throw new HttpException(!isset($uri) ? HttpStatus::REQUEST_URI_TOO_LARGE : HttpStatus::REQUEST_HEADER_FIELDS_TOO_LARGE);
                                 }
                                 $buffer->realloc($newSize);

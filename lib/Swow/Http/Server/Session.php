@@ -13,7 +13,6 @@ declare(strict_types=1);
 
 namespace Swow\Http\Server;
 
-use Swow\Http\Buffer;
 use Swow\Http\Exception as HttpException;
 use Swow\Http\Parser as HttpParser;
 use Swow\Http\ParserTrait;
@@ -34,8 +33,6 @@ class Session extends Socket
     public const TYPE_WEBSOCKET = 1 << 1;
 
     public const TYPE_HTTP2 = 1 << 2;
-
-    public const MAX_BUFFER_SIZE = Buffer::DEFAULT_SIZE;
 
     public const DEFAULT_HTTP_PARSER_EVENTS =
         HttpParser::EVENT_URL |
@@ -106,8 +103,7 @@ class Session extends Socket
             $isUpgrade,
         ] = $this->parse(
             $this->server->getMaxHeaderLength(),
-            $this->server->getMaxContentLength(),
-            static::MAX_BUFFER_SIZE
+            $this->server->getMaxContentLength()
         );
 
         $request = $request ?? new Request();
