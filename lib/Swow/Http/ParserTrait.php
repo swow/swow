@@ -49,6 +49,9 @@ trait ParserTrait
         $this->maxBufferSize = $maxBufferSize;
     }
 
+    /**
+     * TODO: The options must be managed in a unified way
+     */
     public function parse(int $maxHeaderLength, int $maxContentLength): array
     {
         $parser = $this->httpParser;
