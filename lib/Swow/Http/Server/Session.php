@@ -26,6 +26,7 @@ class Session extends Socket
 {
     use ReceiverTrait {
         __construct as receiverConstruct;
+        execute as receiverExecute;
     }
 
     public const TYPE_HTTP = 1 << 0;
@@ -101,7 +102,7 @@ class Session extends Socket
             $protocolVersion,
             $shouldKeepAlive,
             $isUpgrade,
-        ] = $this->execute(
+        ] = $this->receiverExecute(
             $this->server->getMaxHeaderLength(),
             $this->server->getMaxContentLength()
         );
