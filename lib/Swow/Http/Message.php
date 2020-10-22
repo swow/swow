@@ -87,20 +87,8 @@ class Message implements MessageInterface
         return $new;
     }
 
-    protected function generateHeaderNames(): void
-    {
-        $this->headerNames = [];
-        foreach ($this->headers as $name => $value) {
-            $this->headerNames[strtolower($name)] = $name;
-        }
-    }
-
     public function hasHeader($name): bool
     {
-        if ($this->headerNames === null) {
-            $this->generateHeaderNames();
-        }
-
         return isset($this->headerNames[strtolower($name)]);
     }
 
@@ -111,10 +99,6 @@ class Message implements MessageInterface
 
     public function getHeaderLine($name): string
     {
-        if ($this->headerNames === null) {
-            $this->generateHeaderNames();
-        }
-
         $name = $this->headerNames[strtolower($name)] ?? null;
         if ($name === null) {
             return '';
@@ -125,9 +109,6 @@ class Message implements MessageInterface
 
     public function setHeader(string $name, ?string $value): self
     {
-        if ($this->headerNames === null) {
-            $this->generateHeaderNames();
-        }
         $lowerCaseName = strtolower($name);
         $rawName = $this->headerNames[$lowerCaseName] ?? null;
         if ($rawName !== null) {
@@ -163,14 +144,8 @@ class Message implements MessageInterface
 
     public function setHeaders(array $headers): self
     {
-        if ($this->headerNames === null) {
-            foreach ($headers as $name => $value) {
-                $this->headers[$name] = $value;
-            }
-        } else {
-            foreach ($headers as $name => $value) {
-                $this->setHeader($name, $value);
-            }
+        foreach ($headers as $name => $value) {
+            $this->setHeader($name, $value);
         }
 
         return $this;
