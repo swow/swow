@@ -35,6 +35,14 @@ trait ParserTrait
      */
     protected $httpParser;
 
+    public function __construct(int $type, int $events)
+    {
+        $this->buffer = new Buffer();
+        $this->httpParser = (new HttpParser())
+            ->setType($type)
+            ->setEvents($events);
+    }
+
     public function parse(int $maxHeaderLength, int $maxContentLength, int $maxBufferSize): array
     {
         $parser = $this->httpParser;

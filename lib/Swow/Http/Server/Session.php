@@ -25,7 +25,9 @@ use function Swow\Http\packResponse;
 
 class Session extends Socket
 {
-    use ParserTrait;
+    use ParserTrait {
+        __construct as parserConstruct;
+    }
 
     public const TYPE_HTTP = 1 << 0;
 
@@ -65,11 +67,7 @@ class Session extends Socket
      */
     public function __construct()
     {
-        /* It will be constructed by accept */
-        $this->buffer = new Buffer();
-        $this->httpParser = (new HttpParser())
-            ->setType(HttpParser::TYPE_REQUEST)
-            ->setEvents(static::DEFAULT_HTTP_PARSER_EVENTS);
+        $this->parserConstruct(HttpParser::TYPE_REQUEST, static::DEFAULT_HTTP_PARSER_EVENTS);
     }
 
     public function getServer(): Server
