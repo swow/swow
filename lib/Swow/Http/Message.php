@@ -104,12 +104,7 @@ class Message implements MessageInterface
 
     public function getHeaderLine($name): string
     {
-        $name = $this->headerNames[strtolower($name)] ?? null;
-        if ($name === null) {
-            return '';
-        }
-
-        return $this->headers[$name];
+        return implode(',', $this->getHeader($name));
     }
 
     public function setHeader(string $name, $value): self
