@@ -95,7 +95,7 @@ class Message implements MessageInterface
     public function getHeader($name): array
     {
         $name = $this->headerNames[strtolower($name)] ?? null;
-        if (is_null($name)) {
+        if ($name === null) {
             return [];
         }
 
@@ -122,16 +122,10 @@ class Message implements MessageInterface
 
         if ($value === null) {
             unset($this->headerNames[$lowerCaseName]);
-
-            return $this;
+        } else {
+            $this->headers[$name] = is_array($value) ? $value : [$value];
+            $this->headerNames[$lowerCaseName] = $name;
         }
-
-        if (!is_array($value)) {
-            $value = [$value];
-        }
-
-        $this->headers[$name] = $value;
-        $this->headerNames[$lowerCaseName] = $name;
 
         return $this;
     }
