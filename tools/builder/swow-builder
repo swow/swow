@@ -32,7 +32,7 @@ $commandArray = ["cd {$workSpace}"];
 
 if (isset($options['rebuild'])) {
     if (file_exists("{$workSpace}/Makefile")) {
-        $commandArray[] = 'make clean';
+        $commandArray[] = './clean.sh';
     }
     $commandArray[] = 'phpize --clean';
 }

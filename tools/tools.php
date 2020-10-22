@@ -11,7 +11,12 @@
 
 namespace Swow\Tools;
 
-require __DIR__ . '/../vendor/autoload.php';
+foreach ([__DIR__ . '/vendor/autoload.php', __DIR__ . '/../autoload.php', __DIR__. '/../../autoload.php'] as $file) {
+    if (file_exists($file)) {
+        require $file;
+        break;
+    }
+}
 
 const COLOR_NONE = 0;
 const COLOR_RED = 1;
