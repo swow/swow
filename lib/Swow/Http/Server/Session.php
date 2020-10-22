@@ -111,9 +111,16 @@ class Session extends Socket
         );
 
         $request = $request ?? new Request();
-        $request
-            ->setHead($method, $uri, $protocolVersion, $headers, $headerNames, $shouldKeepAlive, $contentLength, $isUpgrade)
-            ->setBody($body);
+        $request->setHead(
+            $method,
+            $uri,
+            $protocolVersion,
+            $headers,
+            $headerNames,
+            $shouldKeepAlive,
+            $contentLength,
+            $isUpgrade
+        )->setBody($body);
 
         return $request;
     }
