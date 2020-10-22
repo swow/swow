@@ -42,6 +42,7 @@ trait ParserTrait
         $uri = '';
         $headerName = '';
         $headers = [];
+        $headerNames = [];
         $shouldKeepAlive = false;
         $contentLength = 0;
         $headerLength = 0;
@@ -93,6 +94,7 @@ trait ParserTrait
                             case HttpParser::EVENT_HEADER_VALUE:
                             {
                                 $headers[$headerName] = $data;
+                                $headerNames[strtolower($headerName)] = $headerName;
                                 break;
                             }
                             case HttpParser::EVENT_URL:
@@ -156,6 +158,7 @@ trait ParserTrait
             $uri,
             $method,
             $headers,
+            $headerNames,
             $body,
             $contentLength,
             $protocolVersion,

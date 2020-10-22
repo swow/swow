@@ -15,8 +15,8 @@ namespace Swow\Http\Server;
 
 use Swow\Http\Buffer;
 use Swow\Http\Exception as HttpException;
-use Swow\Http\ParserTrait;
 use Swow\Http\Parser as HttpParser;
+use Swow\Http\ParserTrait;
 use Swow\Http\Server;
 use Swow\Http\Status as HttpStatus;
 use Swow\Socket;
@@ -105,6 +105,7 @@ class Session extends Socket
             $uri,
             $method,
             $headers,
+            $headerNames,
             $body,
             $contentLength,
             $protocolVersion,
@@ -118,8 +119,7 @@ class Session extends Socket
         );
 
         $request = $request ?? new Request();
-        $request->setHead($method, $uri, $protocolVersion, $headers, $shouldKeepAlive, $contentLength, $isUpgrade);
-        $request->setBody($body);
+        $request->setBody($body)->setHead($method, $uri, $protocolVersion, $headers, $headerNames, $shouldKeepAlive, $contentLength, $isUpgrade);
 
         return $request;
     }
