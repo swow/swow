@@ -52,7 +52,7 @@ trait ReceiverTrait
     /**
      * TODO: The options must be managed in a unified way
      */
-    public function execute(int $maxHeaderLength, int $maxContentLength): array
+    protected function execute(int $maxHeaderLength, int $maxContentLength): array
     {
         $parser = $this->httpParser;
         $buffer = $this->buffer;
