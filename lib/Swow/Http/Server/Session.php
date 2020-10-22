@@ -15,7 +15,7 @@ namespace Swow\Http\Server;
 
 use Swow\Http\Buffer;
 use Swow\Http\Exception as HttpException;
-use Swow\Http\HasHttpParser;
+use Swow\Http\ParserTrait;
 use Swow\Http\Parser as HttpParser;
 use Swow\Http\Server;
 use Swow\Http\Status as HttpStatus;
@@ -25,7 +25,7 @@ use function Swow\Http\packResponse;
 
 class Session extends Socket
 {
-    use HasHttpParser;
+    use ParserTrait;
 
     public const TYPE_HTTP = 1 << 0;
 

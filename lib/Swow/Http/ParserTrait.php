@@ -23,7 +23,7 @@ use Swow\Socket;
 /**
  * @mixin Socket
  */
-trait HasHttpParser
+trait ParserTrait
 {
     /**
      * @var HttpParser
