@@ -63,7 +63,7 @@ trait ReceiverTrait
             $buffer->clear();
         }
         $data = '';
-        $uri = '';
+        $uriOrReasonPhrase = '';
         $headerName = '';
         $headers = [];
         $headerNames = [];
@@ -96,7 +96,7 @@ trait ReceiverTrait
                                 $newSize = $buffer->getSize() * 2;
                                 /* we need bigger buffer to handle the large filed (or throw error) */
                                 if ($newSize > $this->maxBufferSize) {
-                                    throw new HttpException(!isset($uri) ? HttpStatus::REQUEST_URI_TOO_LARGE : HttpStatus::REQUEST_HEADER_FIELDS_TOO_LARGE);
+                                    throw new HttpException(empty($uriOrReasonPhrase) ? HttpStatus::REQUEST_URI_TOO_LARGE : HttpStatus::REQUEST_HEADER_FIELDS_TOO_LARGE);
                                 }
                                 $buffer->realloc($newSize);
                             }
@@ -121,9 +121,12 @@ trait ReceiverTrait
                                 $headerNames[strtolower($headerName)] = $headerName;
                                 break;
                             }
+                            case HttpParser::EVENT_STATUS:
+                                $uriOrReasonPhrase = $data;
+                                break;
                             case HttpParser::EVENT_URL:
                             {
-                                $uri = $data;
+                                $uriOrReasonPhrase = $data;
                                 break;
                             }
                             case HttpParser::EVENT_HEADERS_COMPLETE:
@@ -168,9 +171,13 @@ trait ReceiverTrait
                 }
             }
 
-            $method = $parser->getMethod();
             $protocolVersion = $parser->getProtocolVersion();
             $isUpgrade = $parser->isUpgrade();
+            if ($parser->getType() === Parser::TYPE_REQUEST) {
+                $methodOrStatusCode = $parser->getMethod();
+            } else {
+                $methodOrStatusCode = $parser->getStatusCode();
+            }
         } catch (HttpParserException $exception) {
             /* TODO: get bad request */
             throw new HttpException(HttpStatus::BAD_REQUEST, 'Protocol Parsing Error');
@@ -179,8 +186,8 @@ trait ReceiverTrait
         }
 
         return [
-            $uri,
-            $method,
+            $uriOrReasonPhrase,
+            $methodOrStatusCode,
             $headers,
             $headerNames,
             $body,
