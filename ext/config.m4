@@ -105,7 +105,7 @@ if test "${SWOW}" != "no"; then
       SWOW_DEFINE([HAVE_LIBCAT], 1)
 
       dnl Use ZendVM, e.g. malloc to emalloc
-      SWOW_DEFINE([CAT_VM], [\\\"zend\\\"])
+      SWOW_DEFINE([CAT_VM], 1)
 
       AC_MSG_CHECKING([if debug is enabled])
       if test "${PHP_DEBUG}" = "${enableval}"; then
