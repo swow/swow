@@ -20,20 +20,12 @@ use Swow\Socket\Exception as SocketException;
 
 class Server extends Socket
 {
+    use ConfigTrait;
+
     /**
      * @var Session[]
      */
     protected $sessions = [];
-
-    /**
-     * @var int
-     */
-    protected $maxHeaderLength = 8192;
-
-    /**
-     * @var int
-     */
-    protected $maxContentLength = 8 * 1024 * 1024;
 
     public function __construct()
     {
@@ -103,31 +95,5 @@ class Server extends Socket
     public function __destruct()
     {
         $this->closeSessions();
-    }
-
-    /* configs */
-
-    public function getMaxHeaderLength(): int
-    {
-        return $this->maxHeaderLength;
-    }
-
-    public function setMaxHeaderLength(int $maxHeaderLength): self
-    {
-        $this->maxHeaderLength = $maxHeaderLength;
-
-        return $this;
-    }
-
-    public function getMaxContentLength(): int
-    {
-        return $this->maxContentLength;
-    }
-
-    public function setMaxContentLength(int $maxContentLength): self
-    {
-        $this->maxContentLength = $maxContentLength;
-
-        return $this;
     }
 }
