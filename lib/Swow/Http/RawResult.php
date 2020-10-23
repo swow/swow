@@ -13,37 +13,17 @@ declare(strict_types=1);
 
 namespace Swow\Http;
 
-final class RawResult
+class RawResult
 {
-    /**
-     * @var string
-     */
-    public $uri = '';
-
-    /**
-     * @var string
-     */
-    public $method = '';
-
-    /**
-     * @var int
-     */
-    public $statusCode = 0;
-
-    /**
-     * @var string
-     */
-    public $reasonPhrase = '';
-
     /**
      * @var string[][]
      */
     public $headers = [];
 
     /**
-     * @var string
+     * @var Buffer
      */
-    public $body = '';
+    public $body;
 
     /**
      * @var string

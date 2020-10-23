@@ -16,7 +16,6 @@ namespace Swow\Http;
 use Swow\Http\Exception as HttpException;
 use Swow\Http\Parser as HttpParser;
 use Swow\Http\Parser\Exception as HttpParserException;
-use Swow\Http\Server\Request;
 use Swow\Http\Status as HttpStatus;
 use Swow\Socket;
 
@@ -51,12 +50,14 @@ trait ReceiverTrait
 
     /**
      * TODO: The options must be managed in a unified way
+     * @return RawRequest|RawResponse|RawResult
      */
     protected function execute(int $maxHeaderLength, int $maxContentLength): RawResult
     {
         $parser = $this->httpParser;
         $buffer = $this->buffer;
-        $result = new RawResult();
+        $isRequest = $parser->getType() === Parser::TYPE_REQUEST;
+        $result = $isRequest ? new RawRequest() : new RawResponse();
 
         $expectMore = $buffer->eof();
         if ($expectMore) {
@@ -170,20 +171,20 @@ trait ReceiverTrait
                 }
             }
 
-            $result->body = $body;
-            $result->contentLength = $contentLength;
-            $result->shouldKeepAlive = $shouldKeepAlive;
-            $result->headerNames = $headerNames;
-            $result->headers = $headers;
-            $result->protocolVersion = $parser->getProtocolVersion();
-            $result->isUpgrade = $parser->isUpgrade();
-            if ($parser->getType() === Parser::TYPE_REQUEST) {
+            if ($isRequest) {
                 $result->method = $parser->getMethod();
                 $result->uri = $uriOrReasonPhrase;
             } else {
                 $result->statusCode = $parser->getStatusCode();
                 $result->reasonPhrase = $uriOrReasonPhrase;
             }
+            $result->headers = $headers;
+            $result->body = $body;
+            $result->protocolVersion = $parser->getProtocolVersion();
+            $result->headerNames = $headerNames;
+            $result->contentLength = $contentLength;
+            $result->shouldKeepAlive = $shouldKeepAlive;
+            $result->isUpgrade = $parser->isUpgrade();
         } catch (HttpParserException $exception) {
             /* TODO: get bad request */
             throw new HttpException(HttpStatus::BAD_REQUEST, 'Protocol Parsing Error');

@@ -65,7 +65,7 @@ class Client extends Socket implements ClientInterface
         ]);
     }
 
-    public function recvRaw(): RawResult
+    public function recvRaw(): RawResponse
     {
         return $this->receiverExecute(
             $this->maxHeaderLength,
