@@ -1,4 +1,3 @@
-#!/usr/bin/env php -n
 <?php
 /**
  * This file is part of Swow

@@ -1,4 +1,3 @@
-#!/usr/bin/env php -n
 <?php
 
 require __DIR__ . '/../tools.php';
