@@ -17,10 +17,11 @@ use Psr\Http\Client\ClientExceptionInterface;
 use Psr\Http\Client\ClientInterface;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
-use Swow\Http\Client\ClientException;
 use Swow\Http\Client\NetworkException;
-use Swow\Http\Parser as HttpParser;
+use Swow\Http\Client\RequestException;
+use Swow\Http\Parser\Exception as ParserException;
 use Swow\Socket;
+use Swow\Socket\Exception as SocketException;
 
 class Client extends Socket implements ClientInterface
 {
@@ -28,21 +29,6 @@ class Client extends Socket implements ClientInterface
         __construct as receiverConstruct;
         execute as receiverExecute;
     }
-
-    /**
-     * @var string
-     */
-    protected $name;
-
-    /**
-     * @var int
-     */
-    protected $port;
-
-    /**
-     * @var int
-     */
-    protected $timeout;
 
     /**
      * @var int
@@ -54,34 +40,32 @@ class Client extends Socket implements ClientInterface
      */
     protected $maxContentLength = 8 * 1024 * 1024;
 
-    public function __construct(string $name, int $port = 0, int $timeout = null)
+    public function __construct(int $type = Socket::TYPE_TCP)
     {
-        parent::__construct(Socket::TYPE_TCP);
-        $this->name = $name;
-        $this->port = $port;
-        $this->timeout = $timeout ?? $this->getConnectTimeout();
-
-        $this->receiverConstruct(HttpParser::TYPE_RESPONSE, HttpParser::EVENTS_ALL);
+        parent::__construct($type);
+        $this->receiverConstruct(Parser::TYPE_RESPONSE, Parser::EVENTS_ALL);
     }
 
-    public function sendRawData(string $method = 'GET', string $path = '/', array $headers = [], string $conotents = '', string $version = '1.1')
-    {
-        try {
-            $this->checkLiveness();
-        } catch (Socket\Exception $exception) {
-            $this->connect($this->name, $this->port, $this->timeout);
-        }
-
-        $this->write([packRequest(
-            $method,
-            $path,
-            $headers,
-            $conotents,
-            $version
-        )]);
+    public function sendRaw(
+        string $method = 'GET',
+        string $path = '/',
+        array $headers = [],
+        string $body = '',
+        string $protocolVersion = '1.1'
+    ) {
+        $this->write([
+            packRequest(
+                $method,
+                $path,
+                $headers,
+                '',
+                $protocolVersion
+            ),
+            $body,
+        ]);
     }
 
-    public function recvRawData(): RawResult
+    public function recvRaw(): RawResult
     {
         return $this->receiverExecute(
             $this->maxHeaderLength,
@@ -92,28 +76,34 @@ class Client extends Socket implements ClientInterface
     public function sendRequest(RequestInterface $request): ResponseInterface
     {
         try {
-            $this->sendRawData(
+            $this->sendRaw(
                 $request->getMethod(),
-                $request->getUri()->getPath(),
+                $request->getRequestTarget(),
                 $request->getHeaders(),
                 (string) $request->getBody(),
                 $request->getProtocolVersion()
             );
 
-            $result = $this->recvRawData();
+            $result = $this->recvRaw();
 
-            return new Response($result->statusCode, $result->headers, $result->body, $result->reasonPhrase, $result->protocolVersion);
-        } catch (\Exception $exception) {
-            $this->throwClientException($exception, $request);
+            return new Response(
+                $result->statusCode,
+                $result->headers,
+                $result->body,
+                $result->reasonPhrase,
+                $result->protocolVersion
+            );
+        } catch (SocketException | ParserException | Exception  $exception) {
+            throw $this->convertToClientException($exception, $request);
         }
     }
 
-    protected function throwClientException(\Exception $exception, RequestInterface $request): ClientExceptionInterface
+    protected function convertToClientException(\Exception $exception, RequestInterface $request): ClientExceptionInterface
     {
-        if ($exception instanceof Socket\Exception) {
-            throw new NetworkException($request, $exception->getMessage(), $exception->getCode());
+        if ($exception instanceof SocketException) {
+            return new NetworkException($request, $exception->getMessage(), $exception->getCode());
         }
 
-        throw new ClientException($exception->getMessage(), $exception->getCode());
+        return new RequestException($request, $exception->getMessage(), $exception->getCode());
     }
 }
