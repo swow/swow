@@ -81,7 +81,7 @@ class Client extends Socket implements ClientInterface
         )]);
     }
 
-    public function recvRawData()
+    public function recvRawData(): RawResult
     {
         return $this->receiverExecute(
             $this->maxHeaderLength,
@@ -96,23 +96,13 @@ class Client extends Socket implements ClientInterface
                 $request->getMethod(),
                 $request->getUri()->getPath(),
                 $request->getHeaders(),
-                $request->getBody()->getContents(),
+                (string) $request->getBody(),
                 $request->getProtocolVersion()
             );
 
-            [
-                $reasonPhrase,
-                $statusCode,
-                $headers,
-                $headerNames,
-                $body,
-                $contentLength,
-                $protocolVersion,
-                $shouldKeepAlive,
-                $isUpgrade,
-            ] = $this->recvRawData();
+            $result = $this->recvRawData();
 
-            return new Response($statusCode, $headers, $body, $reasonPhrase, $protocolVersion);
+            return new Response($result->statusCode, $result->headers, $result->body, $result->reasonPhrase, $result->protocolVersion);
         } catch (\Exception $exception) {
             $this->throwClientException($exception, $request);
         }

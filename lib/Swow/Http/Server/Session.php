@@ -92,32 +92,22 @@ class Session extends Socket
 
     public function recvHttpRequest(Request $request = null): Request
     {
-        [
-            $uri,
-            $method,
-            $headers,
-            $headerNames,
-            $body,
-            $contentLength,
-            $protocolVersion,
-            $shouldKeepAlive,
-            $isUpgrade,
-        ] = $this->receiverExecute(
+        $result = $this->receiverExecute(
             $this->server->getMaxHeaderLength(),
             $this->server->getMaxContentLength()
         );
 
         $request = $request ?? new Request();
         $request->setHead(
-            $method,
-            $uri,
-            $protocolVersion,
-            $headers,
-            $headerNames,
-            $shouldKeepAlive,
-            $contentLength,
-            $isUpgrade
-        )->setBody($body);
+            $result->method,
+            $result->uri,
+            $result->protocolVersion,
+            $result->headers,
+            $result->headerNames,
+            $result->shouldKeepAlive,
+            $result->contentLength,
+            $result->isUpgrade
+        )->setBody($result->body);
 
         return $request;
     }
