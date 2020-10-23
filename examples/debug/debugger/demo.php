@@ -11,7 +11,7 @@
 
 declare(strict_types=1);
 
-require __DIR__ . '/../../../vendor/autoload.php';
+require __DIR__ . '/../../../tools/autoload.php';
 
 use Swow\Channel;
 use Swow\Coroutine;

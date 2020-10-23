@@ -11,7 +11,7 @@
 
 namespace Swow\Tools;
 
-require __DIR__ . '/../vendor/autoload.php';
+require __DIR__ . '/autoload.php';
 
 const COLOR_NONE = 0;
 const COLOR_RED = 1;

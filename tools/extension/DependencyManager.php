@@ -14,8 +14,6 @@ namespace Swow\Tools;
 use RuntimeException;
 use function Swow\Util\FileSystem\remove;
 
-require_once __DIR__ . '/tools.php';
-
 class DependencyManager
 {
     protected const TMP_DIR = '/tmp';

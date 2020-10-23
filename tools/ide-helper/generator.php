@@ -1,6 +1,6 @@
 <?php
 
-require __DIR__ . '/../../vendor/autoload.php';
+require __DIR__ . '/../autoload.php';
 
 use Swow\Coroutine;
 use Swow\Util\IDE\ExtensionGenerator;

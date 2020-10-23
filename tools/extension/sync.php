@@ -10,13 +10,16 @@
  * please view the LICENSE file that was distributed with this source code
  */
 
-require __DIR__ . '/../../tools/dm.php';
+require __DIR__ . '/../tools.php';
+require __DIR__ . '/DependencyManager.php';
 
 use Swow\Tools\DependencyManager;
 use function Swow\Tools\error;
 use function Swow\Tools\log;
 use function Swow\Tools\notice;
 use function Swow\Tools\ok;
+
+$workSpace = __DIR__ . '/../../ext/deps';
 
 $syncFromGit = function (string $orgName, string $repoName, string $sourceDir, string $targetDir, array $requires = []): array {
     $fullName = "{$orgName}/{$repoName}";
@@ -41,7 +44,7 @@ try {
     $deps = [];
     $deps += $syncFromGit(
         'libcat', 'libcat',
-        'libcat', __DIR__ . '/libcat',
+        'libcat', "{$workSpace}/libcat",
         ['include', 'src', 'deps', 'tools', 'clean.sh', 'LICENSE']
     );
 } catch (Exception $exception) {

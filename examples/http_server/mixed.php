@@ -13,7 +13,7 @@ declare(strict_types=1);
 
 ini_set('memory_limit', '1G');
 
-require __DIR__ . '/../../vendor/autoload.php';
+require __DIR__ . '/../../tools/autoload.php';
 
 use Swow\Coroutine;
 use Swow\Coroutine\Exception as CoroutineException;
