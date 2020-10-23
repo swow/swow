@@ -25,6 +25,7 @@
     },
     "require": {
         "php": ">=7.2",
+        "psr/http-client": "^1.0",
         "psr/http-message": "^1.0"
     },
     "require-dev": {
@@ -40,7 +41,8 @@
         ]
     },
     "config": {
-        "process-timeout": 0
+        "process-timeout": 0,
+        "sort-packages": true
     },
     "scripts": {
         "cs-check": "/usr/bin/env php ./vendor/bin/php-cs-fixer fix --dry-run",

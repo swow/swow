@@ -98,7 +98,7 @@ class Request extends \Swow\Http\ServerRequest
         return $this;
     }
 
-    public function setHead(string $method, string $uri, string $protocolVersion, array $headers, bool $keepAlive, int $contentLength, bool $upgrade)
+    public function setHead(string $method, string $uri, string $protocolVersion, array $headers, array $headerNames, bool $keepAlive, int $contentLength, bool $upgrade)
     {
         $this->method = $method;
         $this->uriString = $uri;
@@ -107,8 +107,11 @@ class Request extends \Swow\Http\ServerRequest
         $this->query = $uriParts[1] ?? '';
         $this->protocolVersion = $protocolVersion;
         $this->headers = $headers;
+        $this->headerNames = $headerNames;
         $this->keepAlive = $keepAlive;
         $this->contentLength = $contentLength;
         $this->upgrade = $upgrade;
+
+        return $this;
     }
 }

@@ -13,10 +13,9 @@ declare(strict_types=1);
 
 namespace Swow\Http\Server;
 
-use Swow\Http\Buffer;
 use Swow\Http\Exception as HttpException;
 use Swow\Http\Parser as HttpParser;
-use Swow\Http\Parser\Exception as HttpParserException;
+use Swow\Http\ReceiverTrait;
 use Swow\Http\Server;
 use Swow\Http\Status as HttpStatus;
 use Swow\Socket;
@@ -25,13 +24,16 @@ use function Swow\Http\packResponse;
 
 class Session extends Socket
 {
+    use ReceiverTrait {
+        __construct as receiverConstruct;
+        execute as receiverExecute;
+    }
+
     public const TYPE_HTTP = 1 << 0;
 
     public const TYPE_WEBSOCKET = 1 << 1;
 
     public const TYPE_HTTP2 = 1 << 2;
-
-    public const MAX_BUFFER_SIZE = Buffer::DEFAULT_SIZE;
 
     public const DEFAULT_HTTP_PARSER_EVENTS =
         HttpParser::EVENT_URL |
@@ -59,25 +61,11 @@ class Session extends Socket
     protected $keepAlive = false;
 
     /**
-     * @var Buffer
-     */
-    protected $buffer;
-
-    /**
-     * @var HttpParser
-     */
-    protected $httpParser;
-
-    /**
      * @noinspection PhpMissingParentConstructorInspection
      */
     public function __construct()
     {
-        /* It will be constructed by accept */
-        $this->buffer = new Buffer();
-        $this->httpParser = (new HttpParser())
-            ->setType(HttpParser::TYPE_REQUEST)
-            ->setEvents(static::DEFAULT_HTTP_PARSER_EVENTS);
+        $this->receiverConstruct(HttpParser::TYPE_REQUEST, static::DEFAULT_HTTP_PARSER_EVENTS);
     }
 
     public function getServer(): Server
@@ -107,135 +95,22 @@ class Session extends Socket
 
     public function recvHttpRequest(Request $request = null): Request
     {
-        $parser = $this->httpParser;
-        $buffer = $this->buffer;
-        $expectMore = $buffer->eof();
-        if ($expectMore) {
-            /* all data has been parsed, clear them */
-            $buffer->clear();
-        }
-        $data = '';
+        $result = $this->receiverExecute(
+            $this->server->getMaxHeaderLength(),
+            $this->server->getMaxContentLength()
+        );
+
         $request = $request ?? new Request();
-        $uri = '';
-        $headerName = '';
-        $headers = [];
-        $shouldKeepAlive = false;
-        $contentLength = 0;
-        $headerLength = 0;
-        $headersComplete = false;
-        $maxHeaderLength = $this->server->getMaxHeaderLength();
-        $body = null;
-        try {
-            while (true) {
-                if ($expectMore) {
-                    $this->recvData($buffer);
-                }
-                while (true) {
-                    if (!$headersComplete) {
-                        $event = $parser->execute($buffer, $data);
-                        $headerLength += $parser->getParsedLength();
-                        if ($headerLength > $maxHeaderLength) {
-                            throw new HttpException(HttpStatus::REQUEST_HEADER_FIELDS_TOO_LARGE);
-                        }
-                    } else {
-                        $event = $parser->execute($buffer);
-                    }
-                    if ($event === HttpParser::EVENT_NONE) {
-                        $expectMore = true;
-                        if (!$buffer->eof()) {
-                            /* make sure we have moved the left data to the head */
-                            $buffer->truncate();
-                            if ($buffer->isFull()) {
-                                $newSize = $buffer->getSize() * 2;
-                                /* we need bigger buffer to handle the large filed (or throw error) */
-                                if ($newSize > static::MAX_BUFFER_SIZE) {
-                                    throw new HttpException(!isset($uri) ? HttpStatus::REQUEST_URI_TOO_LARGE : HttpStatus::REQUEST_HEADER_FIELDS_TOO_LARGE);
-                                }
-                                $buffer->realloc($newSize);
-                            }
-                        } else {
-                            $buffer->clear();
-                        }
-                        break;
-                    }
-                    if ($event === HttpParser::EVENT_MESSAGE_COMPLETE) {
-                        break 2;
-                    }
-                    if (!$headersComplete) {
-                        switch ($event) {
-                            case HttpParser::EVENT_HEADER_FIELD:
-                            {
-                                $headerName = $data;
-                                break;
-                            }
-                            case HttpParser::EVENT_HEADER_VALUE:
-                            {
-                                $headers[$headerName] = $data;
-                                break;
-                            }
-                            case HttpParser::EVENT_URL:
-                            {
-                                $uri = $data;
-                                break;
-                            }
-                            case HttpParser::EVENT_HEADERS_COMPLETE:
-                            {
-                                $defaultKeepAlive = $parser->getMajorVersion() !== 1 || $parser->getMinorVersion() !== 0;
-                                $shouldKeepAlive = $parser->shouldKeepAlive();
-                                $this->keepAlive = $shouldKeepAlive !== $defaultKeepAlive ? $shouldKeepAlive : null;
-                                $contentLength = $parser->getContentLength();
-                                if ($contentLength > $this->server->getMaxContentLength()) {
-                                    throw new HttpException(HttpStatus::REQUEST_ENTITY_TOO_LARGE);
-                                }
-                                $headersComplete = true;
-                                break;
-                            }
-                        }
-                    } else {
-                        switch ($event) {
-                            case HttpParser::EVENT_BODY:
-                            {
-                                $body = $request->getBody();
-                                $writableSize = $body->getWritableSize();
-                                if ($writableSize < $contentLength) {
-                                    $body->realloc($body->tell() + $writableSize);
-                                }
-                                $body->write($buffer->toString(), $parser->getDataOffset(), $parser->getDataLength());
-                                $neededLength = $contentLength - $body->getLength();
-                                if ($neededLength > 0) {
-                                    $this->read($body, $neededLength);
-                                }
-                                $event = $parser->execute($body);
-                                if ($event === HttpParser::EVENT_BODY) {
-                                    $event = $parser->execute($body);
-                                }
-                                $body->rewind();
-                                if ($event !== HttpParser::EVENT_MESSAGE_COMPLETE) {
-                                    throw new HttpParserException('Unexpected body eof');
-                                }
-                                break 3; /* end */
-                            }
-                        }
-                    }
-                }
-            }
-        } catch (HttpParserException $exception) {
-            /* TODO: get bad request */
-            throw new HttpException(HttpStatus::BAD_REQUEST, 'Protocol Parsing Error');
-        } finally {
-            if ($headerLength > 0) {
-                $request->setHead(
-                    $parser->getMethod(),
-                    $uri,
-                    $parser->getProtocolVersion(),
-                    $headers,
-                    $shouldKeepAlive,
-                    $contentLength,
-                    $parser->isUpgrade()
-                );
-            }
-            $parser->reset();
-        }
+        $request->setHead(
+            $result->method,
+            $result->uri,
+            $result->protocolVersion,
+            $result->headers,
+            $result->headerNames,
+            $result->shouldKeepAlive,
+            $result->contentLength,
+            $result->isUpgrade
+        )->setBody($result->body);
 
         return $request;
     }
