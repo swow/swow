@@ -52,10 +52,11 @@ trait ReceiverTrait
     /**
      * TODO: The options must be managed in a unified way
      */
-    protected function execute(int $maxHeaderLength, int $maxContentLength): array
+    protected function execute(int $maxHeaderLength, int $maxContentLength): RawResult
     {
         $parser = $this->httpParser;
         $buffer = $this->buffer;
+        $result = new RawResult();
 
         $expectMore = $buffer->eof();
         if ($expectMore) {
@@ -121,10 +122,8 @@ trait ReceiverTrait
                                 $headerNames[strtolower($headerName)] = $headerName;
                                 break;
                             }
-                            case HttpParser::EVENT_STATUS:
-                                $uriOrReasonPhrase = $data;
-                                break;
                             case HttpParser::EVENT_URL:
+                            case HttpParser::EVENT_STATUS:
                             {
                                 $uriOrReasonPhrase = $data;
                                 break;
@@ -171,12 +170,19 @@ trait ReceiverTrait
                 }
             }
 
-            $protocolVersion = $parser->getProtocolVersion();
-            $isUpgrade = $parser->isUpgrade();
+            $result->body = $body;
+            $result->contentLength = $contentLength;
+            $result->shouldKeepAlive = $shouldKeepAlive;
+            $result->headerNames = $headerNames;
+            $result->headers = $headers;
+            $result->protocolVersion = $parser->getProtocolVersion();
+            $result->isUpgrade = $parser->isUpgrade();
             if ($parser->getType() === Parser::TYPE_REQUEST) {
-                $methodOrStatusCode = $parser->getMethod();
+                $result->method = $parser->getMethod();
+                $result->uri = $uriOrReasonPhrase;
             } else {
-                $methodOrStatusCode = $parser->getStatusCode();
+                $result->statusCode = $parser->getStatusCode();
+                $result->reasonPhrase = $uriOrReasonPhrase;
             }
         } catch (HttpParserException $exception) {
             /* TODO: get bad request */
@@ -185,16 +191,6 @@ trait ReceiverTrait
             $parser->reset();
         }
 
-        return [
-            $uriOrReasonPhrase,
-            $methodOrStatusCode,
-            $headers,
-            $headerNames,
-            $body,
-            $contentLength,
-            $protocolVersion,
-            $shouldKeepAlive,
-            $isUpgrade,
-        ];
+        return $result;
     }
 }
