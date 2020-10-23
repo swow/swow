@@ -47,10 +47,11 @@
     "scripts": {
         "cs-check": "/usr/bin/env php ./vendor/bin/php-cs-fixer fix --dry-run",
         "cs-fix": "/usr/bin/env php ./vendor/bin/php-cs-fixer fix",
-        "ide-help": "/usr/bin/env php -n -d extension=swow ./tools/ide-helper/generator.php swow ./lib/Swow.php",
-        "build-extension": "/usr/bin/env php -n ./tools/builder/swow-builder",
-        "rebuild-extension": "/usr/bin/env php -n ./tools/builder/swow-builder --rebuild",
-        "test-extension": "cd ./ext && NO_INTERACTION=1 /usr/bin/env php -n ./run-tests.php -P -d extension=swow $@"
+        "sync-extension": "/usr/bin/env php -n ./tools/extension/sync.php",
+        "build-extension": "./tools/builder/swow-builder",
+        "rebuild-extension": "./tools/builder/swow-builder --rebuild",
+        "test-extension": "cd ./ext && NO_INTERACTION=1 /usr/bin/env php -n ./run-tests.php -P -d extension=swow $@",
+        "ide-help": "/usr/bin/env php -n -d extension=swow ./tools/ide-helper/generator.php swow ./lib/Swow.php"
     },
     "bin": [
         "tools/builder/swow-builder"
