@@ -32,10 +32,19 @@ class Client extends Socket implements ClientInterface
         execute as receiverExecute;
     }
 
+    protected $host;
+
     public function __construct(int $type = Socket::TYPE_TCP)
     {
         parent::__construct($type);
         $this->receiverConstruct(Parser::TYPE_RESPONSE, Parser::EVENTS_ALL);
+    }
+
+    public function connect(string $name, int $port = 0, ?int $timeout = null): Socket
+    {
+        $this->host = $name;
+
+        return parent::connect($name, $port, $timeout);
     }
 
     public function sendRaw(
@@ -65,14 +74,29 @@ class Client extends Socket implements ClientInterface
         );
     }
 
+    /**
+     * @return Response|ResponseInterface
+     */
     public function sendRequest(RequestInterface $request): ResponseInterface
     {
         try {
+            $headers = $request->getHeaders();
+            $body = (string) $request->getBody();
+            if (!$request->hasHeader('host')) {
+                $headers['Host'] = $this->host;
+            }
+            if (!$request->hasHeader('content-length')) {
+                $headers['Content-Length'] = strlen($body);
+            }
+            if (!$request->hasHeader('connection')) {
+                $headers['Connection'] = 'Keep-Alive';
+            }
+
             $this->sendRaw(
                 $request->getMethod(),
                 $request->getRequestTarget(),
-                $request->getHeaders(),
-                (string) $request->getBody(),
+                $headers,
+                $body,
                 $request->getProtocolVersion()
             );
 
