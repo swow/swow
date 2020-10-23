@@ -23,7 +23,7 @@ class Request extends Message implements RequestInterface
     /**
      * @var string
      */
-    protected $method = 'UNKNOWN';
+    protected $method = 'GET';
 
     /**
      * @var Uri
