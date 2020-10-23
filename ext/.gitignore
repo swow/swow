@@ -34,6 +34,7 @@ tmp-php.ini
 !/tests/*/*.phpt
 !/tests/*/*/*.phpt
 !/tests/include/*
+!/tests/include/lib/*
 
 # config
 config*

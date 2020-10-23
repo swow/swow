@@ -1,12 +1,23 @@
 <?php
+/**
+ * This file is part of Swow
+ *
+ * @link     https://github.com/swow/swow
+ * @contact  twosee <twosee@php.net>
+ *
+ * For the full copyright and license information,
+ * please view the LICENSE file that was distributed with this source code
+ */
+
+declare(strict_types=1);
 
 require __DIR__ . '/autoload.php';
 
 # PHP ini
 
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-ini_set('report_memleaks', 1);
+ini_set('display_errors', '1');
+ini_set('display_startup_errors', '1');
+ini_set('report_memleaks', '1');
 ini_set('memory_limit', '64M');
 
 error_reporting(E_ALL);
@@ -42,7 +53,7 @@ define('TEST_MAX_PROCESSES', [1, 1, 2, 4, 8][TEST_PRESSURE_LEVEL]);
 # ini
 
 // TODO: remove it
-ini_set('swow.better_error_info', true);
+ini_set('swow.better_error_info', '1');
 
 # functions
 
@@ -95,11 +106,4 @@ function phpt_var_dump(...$args): void
         return;
     }
     var_dump(...$args);
-}
-
-# components
-
-class Assert extends Swow\Assert
-{
-    // nothing, equal to alias
 }

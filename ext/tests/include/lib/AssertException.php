@@ -11,8 +11,6 @@
 
 declare(strict_types=1);
 
-namespace Swow;
-
 use function Swow\Debug\buildTraceAsString;
 
 class AssertException extends Exception

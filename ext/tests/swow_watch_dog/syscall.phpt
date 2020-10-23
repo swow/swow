@@ -13,8 +13,8 @@ require __DIR__ . '/../include/bootstrap.php';
 use Swow\Coroutine;
 use Swow\WatchDog;
 
-// 0.5ms quantum + 1ms threshold
-WatchDog::run(500 * 1000, 1 * 1000 * 1000);
+// 0.1ms quantum + 1ms threshold
+WatchDog::run(100 * 1000, 1 * 1000 * 1000);
 
 Coroutine::run(function () {
     sleep(0);
@@ -25,8 +25,8 @@ $ffi = FFI::cdef(<<<C
 int usleep(unsigned int usec);
 C
 );
-// syscall blocking 10ms
-$ffi->usleep(10 * 1000);
+// syscall blocking 100ms
+$ffi->usleep(100 * 1000);
 
 ?>
 --EXPECTREGEX--
