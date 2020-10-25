@@ -1,0 +1,47 @@
+{
+    "name": "swow/swow-lib",
+    "description": "Coroutine-based concurrency library for PHP",
+    "keywords": [
+        "swow",
+        "coroutine",
+        "async",
+        "event",
+        "server",
+        "http",
+        "websocket",
+        "libcat",
+        "swoole",
+        "libuv"
+    ],
+    "license": "Apache-2.0",
+    "authors": [
+        {
+            "name": "twose",
+            "email": "twosee@php.net"
+        }
+    ],
+    "support": {
+        "issues": "https://github.com/swow/swow"
+    },
+    "require": {
+        "php": ">=7.2",
+        "psr/http-client": "^1.0",
+        "psr/http-message": "^1.0"
+    },
+    "require-dev": {
+        "friendsofphp/php-cs-fixer": "^2.16"
+    },
+    "autoload": {
+        "psr-4": {
+            "Swow\\": "Swow/"
+        },
+        "files": [
+            "Swow/Util/functions.php",
+            "Swow/Util/FileSystem/functions.php"
+        ]
+    },
+    "config": {
+        "process-timeout": 0,
+        "sort-packages": true
+    }
+}
