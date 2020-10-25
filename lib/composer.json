@@ -20,6 +20,11 @@
         "psr/http-client": "^1.0",
         "psr/http-message": "^1.0"
     },
+    "autoload-dev": {
+        "psr-4": {
+            "SwowTest\\": "tests/"
+        }
+    },
     "suggest": {
         "ext-swow": "*"
     },
@@ -28,6 +33,7 @@
             "Swow\\": "src/Swow/"
         },
         "files": [
+            "src/Swow/functions.php",
             "src/Swow/Util/functions.php",
             "src/Swow/Util/FileSystem/functions.php"
         ]

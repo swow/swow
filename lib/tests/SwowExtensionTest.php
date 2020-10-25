@@ -25,4 +25,10 @@ class SwowExtensionTest extends TestCase
     {
         $this->assertTrue(extension_loaded('swow'));
     }
+
+    public function testSwowLibrary()
+    {
+        $this->assertTrue(defined('SWOW_LIBRARY'));
+        $this->assertTrue(SWOW_LIBRARY);
+    }
 }
