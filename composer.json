@@ -34,11 +34,11 @@
     },
     "autoload": {
         "psr-4": {
-            "Swow\\": "lib/Swow"
+            "Swow\\": "lib/src/Swow/"
         },
         "files": [
-            "lib/Swow/Util/functions.php",
-            "lib/Swow/Util/FileSystem/functions.php"
+            "lib/src/Swow/Util/functions.php",
+            "lib/src/Swow/Util/FileSystem/functions.php"
         ]
     },
     "autoload-dev": {
@@ -57,8 +57,8 @@
         "build-extension": "./tools/builder/swow-builder",
         "rebuild-extension": "./tools/builder/swow-builder --rebuild",
         "test-extension": "cd ./ext && NO_INTERACTION=1 /usr/bin/env php -n ./run-tests.php -P -d extension=swow $@",
-        "test-lib": "/usr/bin/env php -dextension=swow vendor/bin/phpunit $@",
-        "ide-help": "/usr/bin/env php -n -d extension=swow ./tools/ide-helper/generator.php swow ./lib/Swow.php"
+        "test-library": "/usr/bin/env php -dextension=swow vendor/bin/phpunit $@",
+        "ide-help": "/usr/bin/env php -n -d extension=swow ./tools/ide-helper/generator.php swow /lib/src/Swow.php"
     },
     "bin": [
         "tools/builder/swow-builder"

@@ -1,5 +1,5 @@
 {
-    "name": "swow/swow-lib",
+    "name": "swow/swow-library",
     "description": "Coroutine-based concurrency library for PHP",
     "keywords": [
         "swow",
@@ -33,11 +33,11 @@
     },
     "autoload": {
         "psr-4": {
-            "Swow\\": "Swow/"
+            "Swow\\": "src/Swow/"
         },
         "files": [
-            "Swow/Util/functions.php",
-            "Swow/Util/FileSystem/functions.php"
+            "src/Swow/Util/functions.php",
+            "src/Swow/Util/FileSystem/functions.php"
         ]
     },
     "config": {
