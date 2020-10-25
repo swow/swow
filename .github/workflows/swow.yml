@@ -49,4 +49,4 @@ jobs:
           -j"$(./deps/libcat/tools/cpu_count.sh)"
 
       - name: Run library tests
-        run: composer test-lib
+        run: composer test-library

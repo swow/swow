@@ -107,7 +107,11 @@ return PhpCsFixer\Config::create()
             ->in([
                 __DIR__ . '/benchmark',
                 __DIR__ . '/examples',
-                __DIR__ . '/lib/Swow',
+                __DIR__ . '/lib/src',
+                __DIR__ . '/lib/tests',
+            ])
+            ->notName([
+                'Swow.php',
             ])
             ->append([
                 __FILE__,
