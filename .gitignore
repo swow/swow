@@ -10,3 +10,4 @@ composer.lock
 
 # others
 /debug
+*.cache
