@@ -3,15 +3,7 @@
     "description": "Coroutine-based concurrency library for PHP",
     "keywords": [
         "swow",
-        "coroutine",
-        "async",
-        "event",
-        "server",
-        "http",
-        "websocket",
-        "libcat",
-        "swoole",
-        "libuv"
+        "library"
     ],
     "license": "Apache-2.0",
     "authors": [
@@ -28,8 +20,8 @@
         "psr/http-client": "^1.0",
         "psr/http-message": "^1.0"
     },
-    "require-dev": {
-        "friendsofphp/php-cs-fixer": "^2.16"
+    "suggest": {
+        "ext-swow": "*"
     },
     "autoload": {
         "psr-4": {
@@ -41,7 +33,6 @@
         ]
     },
     "config": {
-        "process-timeout": 0,
         "sort-packages": true
     }
 }
