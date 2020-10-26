@@ -964,7 +964,7 @@ PHP_FUNCTION(swow_stream_socket_sendto)
     size_t datalen, target_addr_len = 0;
     int port;
     cat_sockaddr_union_t sa;
-    cat_socklen_t sl;
+    cat_socklen_t sl = 0;
 
     ZEND_PARSE_PARAMETERS_START(2, 4)
         Z_PARAM_RESOURCE(zstream)
