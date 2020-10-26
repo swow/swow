@@ -3,6 +3,7 @@
 .project
 .cproject
 .settings
+.vscode
 
 # composer
 vendor
