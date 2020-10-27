@@ -24,10 +24,16 @@ $syncFromGit = function (string $orgName, string $repoName, string $sourceDir, s
     $fullName = "{$orgName}/{$repoName}";
     log("Sync {$fullName}...");
     $url = null;
-    for ($level = 2; $level < 5; $level++) {
-        $path = dirname(__DIR__, $level) . '/' . $repoName;
+    for ($baseLevel = 1; $baseLevel < 10; $baseLevel++) {
+        $path = dirname(__DIR__, $baseLevel);
         if (file_exists("{$path}/.git")) {
-            $url = "file://{$path}";
+            for ($level = $baseLevel + 1; $level < $baseLevel + 3; $level++) {
+                $path = dirname(__DIR__, $level) . '/' . $repoName;
+                if (file_exists("{$path}/.git")) {
+                    $url = "file://{$path}";
+                    break;
+                }
+            }
             break;
         }
     }
