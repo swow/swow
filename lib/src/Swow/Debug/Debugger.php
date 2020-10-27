@@ -610,9 +610,7 @@ TEXT;
             ->setCurrentSourceFile($file)
             ->setCurrentSourceFileLine($line);
         if (!$contentTable) {
-            $this->lf();
-
-            return $this;
+            return $this->lf();
         }
         if ($following) {
             $this->cr();
