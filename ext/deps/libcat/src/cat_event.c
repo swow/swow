@@ -36,28 +36,6 @@ CAT_API cat_bool_t cat_event_runtime_init(void)
 {
     int error;
 
-    /* check config of async thread pool */
-    do {
-        static cat_bool_t checked = cat_false;
-        char *env;
-        if (checked) {
-            break;
-        }
-        env = cat_env_get("CAT_TPS");
-        if (env == NULL) {
-             env = cat_env_get("UV_THREADPOOL_SIZE");
-             if (env == NULL) {
-                 // TODO: default to cpu_num * 2
-                 // cat_env_set("UV_THREADPOOL_SIZE", "4");
-                 break;
-             }
-        } else {
-            cat_env_set("UV_THREADPOOL_SIZE", env);
-        }
-        cat_free(env);
-        checked = cat_true;
-    } while (0);
-
     error = uv_loop_init(CAT_EVENT_G(loop));
 
     if (error != 0) {

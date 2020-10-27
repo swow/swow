@@ -1340,7 +1340,7 @@ CAT_API const cat_sockaddr_info_t *cat_socket_getname_fast(cat_socket_t *socket,
     tmp.length = sizeof(tmp.address);
     ret = cat_socket_getname(socket, &tmp.address.common, &tmp.length, is_peer);
     if (unlikely(!ret && cat_get_last_error_code() != CAT_ENOSPC)) {
-        return cat_false;
+        return NULL;
     }
     size = offsetof(cat_sockaddr_info_t, address) + tmp.length;
     cache = (cat_sockaddr_info_t *) cat_malloc(size);

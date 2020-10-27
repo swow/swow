@@ -112,17 +112,27 @@
 #  endif
 #endif /* CAT_DEBUG */
 
+#if defined(CAT_SHARED_BUILD) && defined(CAT_SHARED_USE)
+#error "Define either CAT_SHARED_BUILD or CAT_SHARED_USE, not both"
+#endif
+
 #ifndef CAT_OS_WIN
 #  if defined(__GNUC__) && __GNUC__ >= 4
 #    define CAT_API __attribute__ ((visibility("default")))
-#else
+#  else
 #    define CAT_API
 #  endif
 #else
-#  ifdef CAT_EXPORTS
+   /* Windows - set up dll import/export decorators */
+#  if defined(CAT_SHARED_BUILD)
+     /* Building shared library */
 #    define CAT_API __declspec(dllexport)
-#else
+#  elif defined(CAT_SHARED_USE)
+     /* Using shared library */
 #    define CAT_API __declspec(dllimport)
+#  else
+     /* Building static library */
+#    define CAT_API /* nothing */
 #  endif
 #endif
 

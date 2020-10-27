@@ -16,26 +16,5 @@
   +--------------------------------------------------------------------------+
  */
 
-#include "cat.h"
-
-#define CAT_STRLEN(str)    (sizeof(str) - 1)
-#define CAT_STRS(str)      (str), (sizeof(str))
-#define CAT_STRL(str)      (str), (sizeof(str) - 1)
-
-#define CAT_TO_STR_NAKED(str)    #str
-#define CAT_TO_STR(str)          CAT_TO_STR_NAKED(str)
-
-CAT_API char *cat_vsprintf(const char *format, va_list args); CAT_FREE
-CAT_API char *cat_sprintf(const char *format, ...)            CAT_FREE CAT_ATTRIBUTE_FORMAT(printf, 1, 2);
-
-CAT_API char *cat_hexprint(const char *data, size_t length); CAT_FREE
-
-CAT_API char *cat_srand(char *buffer, size_t count);  CAT_MAY_FREE
-CAT_API char *cat_snrand(char *buffer, size_t count); CAT_MAY_FREE
-
-typedef struct {
-    size_t length;
-    const char *data;
-} cat_const_string_t;
-
-#define cat_const_string(str) { sizeof(str) - 1, str }
+/* built-in strong dependency */
+#include "uv.h"

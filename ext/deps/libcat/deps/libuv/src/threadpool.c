@@ -191,6 +191,10 @@ static void init_threads(void) {
   uv_sem_t sem;
 
   nthreads = ARRAY_SIZE(default_threads);
+#ifdef HAVE_LIBCAT
+  val = getenv("CAT_TPS");
+  if (val == NULL)
+#endif
   val = getenv("UV_THREADPOOL_SIZE");
   if (val != NULL)
     nthreads = atoi(val);

@@ -23,11 +23,13 @@ extern "C" {
 #endif
 
 #ifdef CAT_VM
+/* virtual machine
+ * (we can predefine something here) */
 #include "cat_vm.h"
 #endif
 
-/* built-in strong dependency */
-#include "uv.h"
+/* kernel driver */
+#include "cat_driver.h"
 
 /* version */
 #include "cat_version.h"
