@@ -261,7 +261,7 @@ TEXT;
         return $this->currentSourceFile;
     }
 
-    public function setCurrentSourceFile(SplFileObject $currentSourceFile): self
+    public function setCurrentSourceFile(?SplFileObject $currentSourceFile): self
     {
         $this->currentSourceFile = $currentSourceFile;
 
@@ -600,8 +600,6 @@ TEXT;
 
     public function showSourceFileContentByTrace(array $trace, int $frameIndex, bool $following = false): self
     {
-        $file = $this->getCurrentSourceFile();
-        $line = $this->getCurrentSourceFileLine();
         try {
             $contentTable = $this::getSourceFileContentByTrace($trace, $frameIndex, $file, $line);
         } catch (DebuggerException $exception) {
@@ -612,9 +610,7 @@ TEXT;
             ->setCurrentSourceFile($file)
             ->setCurrentSourceFileLine($line);
         if (!$contentTable) {
-            $this->lf();
-
-            return $this;
+            return $this->lf();
         }
         if ($following) {
             $this->cr();
