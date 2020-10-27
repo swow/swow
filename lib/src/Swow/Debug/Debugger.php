@@ -261,7 +261,7 @@ TEXT;
         return $this->currentSourceFile;
     }
 
-    public function setCurrentSourceFile(SplFileObject $currentSourceFile): self
+    public function setCurrentSourceFile(?SplFileObject $currentSourceFile): self
     {
         $this->currentSourceFile = $currentSourceFile;
 
