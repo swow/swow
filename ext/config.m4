@@ -70,6 +70,8 @@ if test "${SWOW}" != "no"; then
     [PHP_DEBUG=0]
   )
 
+  dnl TODO: AddressSanitizer (ASan)
+
   SWOW_INCLUDE_DIR="include"
   SWOW_SRC_DIR="src"
   SWOW_DEPS_DIR="deps"
@@ -101,6 +103,7 @@ if test "${SWOW}" != "no"; then
   "
 
   if test "libcat" != ""; then
+      dnl $Id: bddeea6baf539277b4f15f85f38de8cf3b4f7fa1 $
 
       SWOW_DEFINE([HAVE_LIBCAT], 1)
 
@@ -130,16 +133,15 @@ if test "${SWOW}" != "no"; then
       LIBCAT_DIR="${SWOW_DEPS_DIR}/libcat"
 
       PHP_ADD_INCLUDE(${LIBCAT_DIR}/include)
-      PHP_ADD_INCLUDE(${LIBCAT_DIR}/include/cat)
 
       CAT_SOURCE_FILES="
-        ${LIBCAT_DIR}/src/cat/cat_cp.c
-        ${LIBCAT_DIR}/src/cat/cat_memory.c
-        ${LIBCAT_DIR}/src/cat/cat_string.c
-        ${LIBCAT_DIR}/src/cat/cat_error.c
-        ${LIBCAT_DIR}/src/cat/cat_module.c
-        ${LIBCAT_DIR}/src/cat/cat_log.c
-        ${LIBCAT_DIR}/src/cat/cat_env.c
+        ${LIBCAT_DIR}/src/cat_cp.c
+        ${LIBCAT_DIR}/src/cat_memory.c
+        ${LIBCAT_DIR}/src/cat_string.c
+        ${LIBCAT_DIR}/src/cat_error.c
+        ${LIBCAT_DIR}/src/cat_module.c
+        ${LIBCAT_DIR}/src/cat_log.c
+        ${LIBCAT_DIR}/src/cat_env.c
         ${LIBCAT_DIR}/src/cat.c
         ${LIBCAT_DIR}/src/cat_api.c
         ${LIBCAT_DIR}/src/cat_coroutine.c
@@ -231,7 +233,7 @@ if test "${SWOW}" != "no"; then
       SWOW_DEFINE(_FILE_OFFSET_BITS, 64, [_FILE_OFFSET_BITS])
       SWOW_DEFINE(_LARGEFILE_SOURCE, , [_LARGEFILE_SOURCE])
 
-      dnl  if(NOT CMAKE_SYSTEM_NAME STREQUAL "Android|OS390")
+      dnl  if(NOT CMAKE_SYSTEM_NAME STREQUAL "Android|OS390|QNX")
       dnl    # Android has pthread as part of its c library, not as a separate
       dnl    # libpthread.so.
              PHP_ADD_LIBRARY(pthread)
@@ -273,6 +275,7 @@ if test "${SWOW}" != "no"; then
       dnl endif()
 
       dnl if(CMAKE_SYSTEM_NAME STREQUAL "Android")
+      dnl   list(APPEND uv_defines _GNU_SOURCE)
       dnl   list(APPEND uv_libraries dl)
       dnl   list(APPEND uv_sources
       dnl        ${uv_dir}/src/unix/android-ifaddrs.c
@@ -353,11 +356,11 @@ if test "${SWOW}" != "no"; then
       fi
 
       dnl if(CMAKE_SYSTEM_NAME STREQUAL "NetBSD")
-      dnl   list(APPEND ${uv_dir}/uv_sources src/unix/netbsd.c)
+      dnl   list(APPEND uv_sources src/unix/netbsd.c)
       dnl endif()
 
       dnl if(CMAKE_SYSTEM_NAME STREQUAL "OpenBSD")
-      dnl   list(APPEND ${uv_dir}/uv_sources src/unix/openbsd.c)
+      dnl   list(APPEND uv_sources src/unix/openbsd.c)
       dnl endif()
 
       dnl if(CMAKE_SYSTEM_NAME STREQUAL "OS390")
@@ -398,9 +401,21 @@ if test "${SWOW}" != "no"; then
       dnl endif()
 
       dnl if(CMAKE_SYSTEM_NAME STREQUAL "SunOS")
-      dnl   list(APPEND ${uv_dir}/uv_defines __EXTENSIONS__ _XOPEN_SOURCE=500)
-      dnl   list(APPEND ${uv_dir}/uv_libraries kstat nsl sendfile socket)
-      dnl   list(APPEND ${uv_dir}/uv_sources src/unix/no-proctitle.c src/unix/sunos.c)
+      dnl   list(APPEND uv_defines __EXTENSIONS__ _XOPEN_SOURCE=500)
+      dnl   list(APPEND uv_libraries kstat nsl sendfile socket)
+      dnl   list(APPEND uv_sources ${uv_dir}/src/unix/no-proctitle.c ${uv_dir}/src/unix/sunos.c)
+      dnl endif()
+
+      dnl if(CMAKE_SYSTEM_NAME STREQUAL "Haiku")
+      dnl   list(APPEND uv_defines _BSD_SOURCE)
+      dnl   list(APPEND uv_libraries bsd network)
+      dnl   list(APPEND uv_sources
+      dnl       ${uv_dir}/src/unix/haiku.c
+      dnl       ${uv_dir}/src/unix/bsd-ifaddrs.c
+      dnl       ${uv_dir}/src/unix/no-fsevents.c
+      dnl       ${uv_dir}/src/unix/no-proctitle.c
+      dnl       ${uv_dir}/src/unix/posix-hrtime.c
+      dnl       ${uv_dir}/src/unix/posix-poll.c)
       dnl endif()
 
       CAT_SOURCE_FILES="${CAT_SOURCE_FILES} ${UV_SOURCE_FILES}"
