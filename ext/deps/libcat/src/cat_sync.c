@@ -80,10 +80,6 @@ CAT_API cat_bool_t cat_sync_wait_group_done(cat_sync_wait_group_t *wg)
 {
     ssize_t count;
 
-    if (unlikely(wg->coroutine != NULL)) {
-        cat_update_last_error(CAT_EMISUSE, "WaitGroup misuse: add called concurrently with wait");
-        return cat_false;
-    }
     count = wg->count - 1;
     if (unlikely(count < 0)) {
         cat_update_last_error(CAT_EMISUSE, "WaitGroup counter can not be negative");
