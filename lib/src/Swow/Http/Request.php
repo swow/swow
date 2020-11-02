@@ -179,11 +179,11 @@ class Request extends Message implements RequestInterface
             return $this->requestTarget;
         }
 
-        if (($target = $this->uri->getPath()) === '') {
+        if (($target = $this->getUri()->getPath()) === '') {
             $target = '/';
         }
-        if ($this->uri->getQuery() !== '') {
-            $target .= '?' . $this->uri->getQuery();
+        if ($this->getUri()->getQuery() !== '') {
+            $target .= '?' . $this->getUri()->getQuery();
         }
 
         return $target;
