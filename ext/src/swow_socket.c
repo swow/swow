@@ -128,11 +128,42 @@ ZEND_BEGIN_ARG_INFO_EX(arginfo_swow_socket_setGlobalTimeout, 0, ZEND_RETURN_VALU
     ZEND_ARG_TYPE_INFO(0, timeout, IS_LONG, 0)
 ZEND_END_ARG_INFO()
 
+static PHP_METHOD(swow_socket, setGlobalTimeout)
+{
+    zend_long timeout;
+
+    ZEND_PARSE_PARAMETERS_START(1, 1)
+        Z_PARAM_LONG(timeout)
+    ZEND_PARSE_PARAMETERS_END();
+
+    cat_socket_set_global_timeout(timeout);
+}
+
 #define arginfo_swow_socket_getTimeout arginfo_swow_socket_getLong
 
 ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_swow_socket_setTimeout, ZEND_RETURN_VALUE, 1, Swow\\Socket, 0)
     ZEND_ARG_TYPE_INFO(0, timeout, IS_LONG, 0)
 ZEND_END_ARG_INFO()
+
+static PHP_METHOD(swow_socket, setTimeout)
+{
+    SWOW_SOCKET_GETTER(ssocket, socket);
+    zend_long timeout;
+    cat_bool_t ret;
+
+    ZEND_PARSE_PARAMETERS_START(1, 1)
+        Z_PARAM_LONG(timeout)
+    ZEND_PARSE_PARAMETERS_END();
+
+    ret = cat_socket_set_timeout(socket, timeout);
+
+    if (UNEXPECTED(!ret)) {
+        swow_throw_exception_with_last(swow_socket_exception_ce);
+        RETURN_THROWS();
+    }
+
+    RETURN_THIS();
+}
 
 #define SWOW_SOCKET_TIMEOUT_API_GEN(Type, type) \
 \
@@ -191,11 +222,12 @@ static PHP_METHOD(swow_socket, set##Type##Timeout) \
     RETURN_THIS(); \
 }
 
-SWOW_SOCKET_TIMEOUT_API_GEN(Dns,         dns);
-SWOW_SOCKET_TIMEOUT_API_GEN(Accept,   accept);
-SWOW_SOCKET_TIMEOUT_API_GEN(Connect, connect);
-SWOW_SOCKET_TIMEOUT_API_GEN(Read,       read);
-SWOW_SOCKET_TIMEOUT_API_GEN(Write,     write);
+SWOW_SOCKET_TIMEOUT_API_GEN(Dns,             dns);
+SWOW_SOCKET_TIMEOUT_API_GEN(Accept,       accept);
+SWOW_SOCKET_TIMEOUT_API_GEN(Connect,     connect);
+SWOW_SOCKET_TIMEOUT_API_GEN(Handshake, handshake);
+SWOW_SOCKET_TIMEOUT_API_GEN(Read,           read);
+SWOW_SOCKET_TIMEOUT_API_GEN(Write,         write);
 
 #undef SWOW_SOCKET_TIMEOUT_API_GEN
 
@@ -1433,77 +1465,83 @@ static PHP_METHOD(swow_socket, __debugInfo)
 }
 
 static const zend_function_entry swow_socket_methods[] = {
-    PHP_ME(swow_socket, __construct,             arginfo_swow_socket___construct,         ZEND_ACC_PUBLIC)
-    PHP_ME(swow_socket, getType,                 arginfo_swow_socket_getType,             ZEND_ACC_PUBLIC)
-    PHP_ME(swow_socket, getTypeName,             arginfo_swow_socket_getTypeName,         ZEND_ACC_PUBLIC)
-    PHP_ME(swow_socket, getFd,                   arginfo_swow_socket_getFd,               ZEND_ACC_PUBLIC)
-    PHP_ME(swow_socket, getDnsTimeout,           arginfo_swow_socket_getTimeout,          ZEND_ACC_PUBLIC)
-    PHP_ME(swow_socket, getAcceptTimeout,        arginfo_swow_socket_getTimeout,          ZEND_ACC_PUBLIC)
-    PHP_ME(swow_socket, getConnectTimeout,       arginfo_swow_socket_getTimeout,          ZEND_ACC_PUBLIC)
-    PHP_ME(swow_socket, getReadTimeout,          arginfo_swow_socket_getTimeout,          ZEND_ACC_PUBLIC)
-    PHP_ME(swow_socket, getWriteTimeout,         arginfo_swow_socket_getTimeout,          ZEND_ACC_PUBLIC)
-    PHP_ME(swow_socket, setDnsTimeout,           arginfo_swow_socket_setTimeout,          ZEND_ACC_PUBLIC)
-    PHP_ME(swow_socket, setAcceptTimeout,        arginfo_swow_socket_setTimeout,          ZEND_ACC_PUBLIC)
-    PHP_ME(swow_socket, setConnectTimeout,       arginfo_swow_socket_setTimeout,          ZEND_ACC_PUBLIC)
-    PHP_ME(swow_socket, setReadTimeout,          arginfo_swow_socket_setTimeout,          ZEND_ACC_PUBLIC)
-    PHP_ME(swow_socket, setWriteTimeout,         arginfo_swow_socket_setTimeout,          ZEND_ACC_PUBLIC)
-    PHP_ME(swow_socket, bind,                    arginfo_swow_socket_bind,                ZEND_ACC_PUBLIC)
-    PHP_ME(swow_socket, listen,                  arginfo_swow_socket_listen,              ZEND_ACC_PUBLIC)
-    PHP_ME(swow_socket, accept,                  arginfo_swow_socket_accept,              ZEND_ACC_PUBLIC)
-    PHP_ME(swow_socket, connect,                 arginfo_swow_socket_connect,             ZEND_ACC_PUBLIC)
-    PHP_ME(swow_socket, getSockAddress,          arginfo_swow_socket_getAddress,          ZEND_ACC_PUBLIC)
-    PHP_ME(swow_socket, getSockPort,             arginfo_swow_socket_getPort,             ZEND_ACC_PUBLIC)
-    PHP_ME(swow_socket, getPeerAddress,          arginfo_swow_socket_getAddress,          ZEND_ACC_PUBLIC)
-    PHP_ME(swow_socket, getPeerPort,             arginfo_swow_socket_getPort,             ZEND_ACC_PUBLIC)
-    PHP_ME(swow_socket, read,                    arginfo_swow_socket_read,                ZEND_ACC_PUBLIC)
-    PHP_ME(swow_socket, recv,                    arginfo_swow_socket_recv,                ZEND_ACC_PUBLIC)
-    PHP_ME(swow_socket, recvData,                arginfo_swow_socket_recvData,            ZEND_ACC_PUBLIC)
-    PHP_ME(swow_socket, recvFrom,                arginfo_swow_socket_recvFrom,            ZEND_ACC_PUBLIC)
-    PHP_ME(swow_socket, recvDataFrom,            arginfo_swow_socket_recvDataFrom,        ZEND_ACC_PUBLIC)
-    PHP_ME(swow_socket, peek,                    arginfo_swow_socket_peek,                ZEND_ACC_PUBLIC)
-    PHP_ME(swow_socket, peekFrom,                arginfo_swow_socket_peekFrom,            ZEND_ACC_PUBLIC)
-    PHP_ME(swow_socket, readString,              arginfo_swow_socket_readString,          ZEND_ACC_PUBLIC)
-    PHP_ME(swow_socket, recvString,              arginfo_swow_socket_recvString,          ZEND_ACC_PUBLIC)
-    PHP_ME(swow_socket, recvStringData,          arginfo_swow_socket_recvStringData,      ZEND_ACC_PUBLIC)
-    PHP_ME(swow_socket, recvStringFrom,          arginfo_swow_socket_recvStringFrom,      ZEND_ACC_PUBLIC)
-    PHP_ME(swow_socket, recvStringDataFrom,      arginfo_swow_socket_recvStringDataFrom,  ZEND_ACC_PUBLIC)
-    PHP_ME(swow_socket, peekString,              arginfo_swow_socket_peekString,          ZEND_ACC_PUBLIC)
-    PHP_ME(swow_socket, peekStringFrom,          arginfo_swow_socket_peekStringFrom,      ZEND_ACC_PUBLIC)
-    PHP_ME(swow_socket, write,                   arginfo_swow_socket_write,               ZEND_ACC_PUBLIC)
-    PHP_ME(swow_socket, writeTo,                 arginfo_swow_socket_writeTo,             ZEND_ACC_PUBLIC)
-    PHP_ME(swow_socket, send,                    arginfo_swow_socket_send,                ZEND_ACC_PUBLIC)
-    PHP_ME(swow_socket, sendTo,                  arginfo_swow_socket_sendTo,              ZEND_ACC_PUBLIC)
-    PHP_ME(swow_socket, sendString,              arginfo_swow_socket_sendString,          ZEND_ACC_PUBLIC)
-    PHP_ME(swow_socket, sendStringTo,            arginfo_swow_socket_sendStringTo,        ZEND_ACC_PUBLIC)
-    PHP_ME(swow_socket, close,                   arginfo_swow_socket_close,               ZEND_ACC_PUBLIC)
+    PHP_ME(swow_socket, __construct,               arginfo_swow_socket___construct,         ZEND_ACC_PUBLIC)
+    PHP_ME(swow_socket, getType,                   arginfo_swow_socket_getType,             ZEND_ACC_PUBLIC)
+    PHP_ME(swow_socket, getTypeName,               arginfo_swow_socket_getTypeName,         ZEND_ACC_PUBLIC)
+    PHP_ME(swow_socket, getFd,                     arginfo_swow_socket_getFd,               ZEND_ACC_PUBLIC)
+    PHP_ME(swow_socket, getDnsTimeout,             arginfo_swow_socket_getTimeout,          ZEND_ACC_PUBLIC)
+    PHP_ME(swow_socket, getAcceptTimeout,          arginfo_swow_socket_getTimeout,          ZEND_ACC_PUBLIC)
+    PHP_ME(swow_socket, getConnectTimeout,         arginfo_swow_socket_getTimeout,          ZEND_ACC_PUBLIC)
+    PHP_ME(swow_socket, getHandshakeTimeout,       arginfo_swow_socket_getTimeout,          ZEND_ACC_PUBLIC)
+    PHP_ME(swow_socket, getReadTimeout,            arginfo_swow_socket_getTimeout,          ZEND_ACC_PUBLIC)
+    PHP_ME(swow_socket, getWriteTimeout,           arginfo_swow_socket_getTimeout,          ZEND_ACC_PUBLIC)
+    PHP_ME(swow_socket, setTimeout,                arginfo_swow_socket_setTimeout,          ZEND_ACC_PUBLIC)
+    PHP_ME(swow_socket, setDnsTimeout,             arginfo_swow_socket_setTimeout,          ZEND_ACC_PUBLIC)
+    PHP_ME(swow_socket, setAcceptTimeout,          arginfo_swow_socket_setTimeout,          ZEND_ACC_PUBLIC)
+    PHP_ME(swow_socket, setConnectTimeout,         arginfo_swow_socket_setTimeout,          ZEND_ACC_PUBLIC)
+    PHP_ME(swow_socket, setHandshakeTimeout,       arginfo_swow_socket_setTimeout,          ZEND_ACC_PUBLIC)
+    PHP_ME(swow_socket, setReadTimeout,            arginfo_swow_socket_setTimeout,          ZEND_ACC_PUBLIC)
+    PHP_ME(swow_socket, setWriteTimeout,           arginfo_swow_socket_setTimeout,          ZEND_ACC_PUBLIC)
+    PHP_ME(swow_socket, bind,                      arginfo_swow_socket_bind,                ZEND_ACC_PUBLIC)
+    PHP_ME(swow_socket, listen,                    arginfo_swow_socket_listen,              ZEND_ACC_PUBLIC)
+    PHP_ME(swow_socket, accept,                    arginfo_swow_socket_accept,              ZEND_ACC_PUBLIC)
+    PHP_ME(swow_socket, connect,                   arginfo_swow_socket_connect,             ZEND_ACC_PUBLIC)
+    PHP_ME(swow_socket, getSockAddress,            arginfo_swow_socket_getAddress,          ZEND_ACC_PUBLIC)
+    PHP_ME(swow_socket, getSockPort,               arginfo_swow_socket_getPort,             ZEND_ACC_PUBLIC)
+    PHP_ME(swow_socket, getPeerAddress,            arginfo_swow_socket_getAddress,          ZEND_ACC_PUBLIC)
+    PHP_ME(swow_socket, getPeerPort,               arginfo_swow_socket_getPort,             ZEND_ACC_PUBLIC)
+    PHP_ME(swow_socket, read,                      arginfo_swow_socket_read,                ZEND_ACC_PUBLIC)
+    PHP_ME(swow_socket, recv,                      arginfo_swow_socket_recv,                ZEND_ACC_PUBLIC)
+    PHP_ME(swow_socket, recvData,                  arginfo_swow_socket_recvData,            ZEND_ACC_PUBLIC)
+    PHP_ME(swow_socket, recvFrom,                  arginfo_swow_socket_recvFrom,            ZEND_ACC_PUBLIC)
+    PHP_ME(swow_socket, recvDataFrom,              arginfo_swow_socket_recvDataFrom,        ZEND_ACC_PUBLIC)
+    PHP_ME(swow_socket, peek,                      arginfo_swow_socket_peek,                ZEND_ACC_PUBLIC)
+    PHP_ME(swow_socket, peekFrom,                  arginfo_swow_socket_peekFrom,            ZEND_ACC_PUBLIC)
+    PHP_ME(swow_socket, readString,                arginfo_swow_socket_readString,          ZEND_ACC_PUBLIC)
+    PHP_ME(swow_socket, recvString,                arginfo_swow_socket_recvString,          ZEND_ACC_PUBLIC)
+    PHP_ME(swow_socket, recvStringData,            arginfo_swow_socket_recvStringData,      ZEND_ACC_PUBLIC)
+    PHP_ME(swow_socket, recvStringFrom,            arginfo_swow_socket_recvStringFrom,      ZEND_ACC_PUBLIC)
+    PHP_ME(swow_socket, recvStringDataFrom,        arginfo_swow_socket_recvStringDataFrom,  ZEND_ACC_PUBLIC)
+    PHP_ME(swow_socket, peekString,                arginfo_swow_socket_peekString,          ZEND_ACC_PUBLIC)
+    PHP_ME(swow_socket, peekStringFrom,            arginfo_swow_socket_peekStringFrom,      ZEND_ACC_PUBLIC)
+    PHP_ME(swow_socket, write,                     arginfo_swow_socket_write,               ZEND_ACC_PUBLIC)
+    PHP_ME(swow_socket, writeTo,                   arginfo_swow_socket_writeTo,             ZEND_ACC_PUBLIC)
+    PHP_ME(swow_socket, send,                      arginfo_swow_socket_send,                ZEND_ACC_PUBLIC)
+    PHP_ME(swow_socket, sendTo,                    arginfo_swow_socket_sendTo,              ZEND_ACC_PUBLIC)
+    PHP_ME(swow_socket, sendString,                arginfo_swow_socket_sendString,          ZEND_ACC_PUBLIC)
+    PHP_ME(swow_socket, sendStringTo,              arginfo_swow_socket_sendStringTo,        ZEND_ACC_PUBLIC)
+    PHP_ME(swow_socket, close,                     arginfo_swow_socket_close,               ZEND_ACC_PUBLIC)
     /* status */
-    PHP_ME(swow_socket, isAvailable,             arginfo_swow_socket_isAvailable,         ZEND_ACC_PUBLIC)
-    PHP_ME(swow_socket, isEstablished,           arginfo_swow_socket_isEstablished,       ZEND_ACC_PUBLIC)
-    PHP_ME(swow_socket, checkLiveness,           arginfo_swow_socket_checkLiveness,       ZEND_ACC_PUBLIC)
-    PHP_ME(swow_socket, getIoState,              arginfo_swow_socket_getIoState,          ZEND_ACC_PUBLIC)
-    PHP_ME(swow_socket, getIoStateName,          arginfo_swow_socket_getIoStateName,      ZEND_ACC_PUBLIC)
-    PHP_ME(swow_socket, getIoStateNaming,        arginfo_swow_socket_getIoStateNaming,    ZEND_ACC_PUBLIC)
-    PHP_ME(swow_socket, getRecvBufferSize,       arginfo_swow_socket_getRecvBufferSize,   ZEND_ACC_PUBLIC)
-    PHP_ME(swow_socket, getSendBufferSize,       arginfo_swow_socket_getSendBufferSize,   ZEND_ACC_PUBLIC)
+    PHP_ME(swow_socket, isAvailable,               arginfo_swow_socket_isAvailable,         ZEND_ACC_PUBLIC)
+    PHP_ME(swow_socket, isEstablished,             arginfo_swow_socket_isEstablished,       ZEND_ACC_PUBLIC)
+    PHP_ME(swow_socket, checkLiveness,             arginfo_swow_socket_checkLiveness,       ZEND_ACC_PUBLIC)
+    PHP_ME(swow_socket, getIoState,                arginfo_swow_socket_getIoState,          ZEND_ACC_PUBLIC)
+    PHP_ME(swow_socket, getIoStateName,            arginfo_swow_socket_getIoStateName,      ZEND_ACC_PUBLIC)
+    PHP_ME(swow_socket, getIoStateNaming,          arginfo_swow_socket_getIoStateNaming,    ZEND_ACC_PUBLIC)
+    PHP_ME(swow_socket, getRecvBufferSize,         arginfo_swow_socket_getRecvBufferSize,   ZEND_ACC_PUBLIC)
+    PHP_ME(swow_socket, getSendBufferSize,         arginfo_swow_socket_getSendBufferSize,   ZEND_ACC_PUBLIC)
     /* setter */
-    PHP_ME(swow_socket, setRecvBufferSize,       arginfo_swow_socket_setRecvBufferSize,   ZEND_ACC_PUBLIC)
-    PHP_ME(swow_socket, setSendBufferSize,       arginfo_swow_socket_setSendBufferSize,   ZEND_ACC_PUBLIC)
-    PHP_ME(swow_socket, setTcpNodelay,           arginfo_swow_socket_setTcpNodelay,       ZEND_ACC_PUBLIC)
-    PHP_ME(swow_socket, setTcpKeepAlive,         arginfo_swow_socket_setTcpKeepAlive,     ZEND_ACC_PUBLIC)
-    PHP_ME(swow_socket, setTcpAcceptBalance,     arginfo_swow_socket_setTcpAcceptBalance, ZEND_ACC_PUBLIC)
+    PHP_ME(swow_socket, setRecvBufferSize,         arginfo_swow_socket_setRecvBufferSize,   ZEND_ACC_PUBLIC)
+    PHP_ME(swow_socket, setSendBufferSize,         arginfo_swow_socket_setSendBufferSize,   ZEND_ACC_PUBLIC)
+    PHP_ME(swow_socket, setTcpNodelay,             arginfo_swow_socket_setTcpNodelay,       ZEND_ACC_PUBLIC)
+    PHP_ME(swow_socket, setTcpKeepAlive,           arginfo_swow_socket_setTcpKeepAlive,     ZEND_ACC_PUBLIC)
+    PHP_ME(swow_socket, setTcpAcceptBalance,       arginfo_swow_socket_setTcpAcceptBalance, ZEND_ACC_PUBLIC)
     /* magic */
-    PHP_ME(swow_socket, __debugInfo,             arginfo_swow_socket___debugInfo,         ZEND_ACC_PUBLIC)
+    PHP_ME(swow_socket, __debugInfo,               arginfo_swow_socket___debugInfo,         ZEND_ACC_PUBLIC)
     /* globals */
-    PHP_ME(swow_socket, getGlobalDnsTimeout,     arginfo_swow_socket_getGlobalTimeout,    ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-    PHP_ME(swow_socket, getGlobalAcceptTimeout,  arginfo_swow_socket_getGlobalTimeout,    ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-    PHP_ME(swow_socket, getGlobalConnectTimeout, arginfo_swow_socket_getGlobalTimeout,    ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-    PHP_ME(swow_socket, getGlobalReadTimeout,    arginfo_swow_socket_getGlobalTimeout,    ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-    PHP_ME(swow_socket, getGlobalWriteTimeout,   arginfo_swow_socket_getGlobalTimeout,    ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-    PHP_ME(swow_socket, setGlobalDnsTimeout,     arginfo_swow_socket_setGlobalTimeout,    ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-    PHP_ME(swow_socket, setGlobalAcceptTimeout,  arginfo_swow_socket_setGlobalTimeout,    ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-    PHP_ME(swow_socket, setGlobalConnectTimeout, arginfo_swow_socket_setGlobalTimeout,    ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-    PHP_ME(swow_socket, setGlobalReadTimeout,    arginfo_swow_socket_setGlobalTimeout,    ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-    PHP_ME(swow_socket, setGlobalWriteTimeout,   arginfo_swow_socket_setGlobalTimeout,    ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    PHP_ME(swow_socket, setGlobalTimeout,          arginfo_swow_socket_setGlobalTimeout,    ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    PHP_ME(swow_socket, getGlobalDnsTimeout,       arginfo_swow_socket_getGlobalTimeout,    ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    PHP_ME(swow_socket, getGlobalAcceptTimeout,    arginfo_swow_socket_getGlobalTimeout,    ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    PHP_ME(swow_socket, getGlobalConnectTimeout,   arginfo_swow_socket_getGlobalTimeout,    ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    PHP_ME(swow_socket, getGlobalHandshakeTimeout, arginfo_swow_socket_getGlobalTimeout,    ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    PHP_ME(swow_socket, getGlobalReadTimeout,      arginfo_swow_socket_getGlobalTimeout,    ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    PHP_ME(swow_socket, getGlobalWriteTimeout,     arginfo_swow_socket_getGlobalTimeout,    ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    PHP_ME(swow_socket, setGlobalDnsTimeout,       arginfo_swow_socket_setGlobalTimeout,    ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    PHP_ME(swow_socket, setGlobalAcceptTimeout,    arginfo_swow_socket_setGlobalTimeout,    ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    PHP_ME(swow_socket, setGlobalConnectTimeout,   arginfo_swow_socket_setGlobalTimeout,    ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    PHP_ME(swow_socket, setGlobalHandshakeTimeout, arginfo_swow_socket_setGlobalTimeout,    ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    PHP_ME(swow_socket, setGlobalReadTimeout,      arginfo_swow_socket_setGlobalTimeout,    ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    PHP_ME(swow_socket, setGlobalWriteTimeout,     arginfo_swow_socket_setGlobalTimeout,    ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
     PHP_FE_END
 };
 
