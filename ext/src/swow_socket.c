@@ -812,7 +812,7 @@ static PHP_METHOD_EX(swow_socket, _write, zend_bool single, zend_bool may_addres
     swow_buffer_t *sbuffer;
     const char *ptr;
     size_t readable_length;
-    cat_socket_write_vector_t *vectors, *hvectors = NULL, svectors[8];
+    cat_socket_write_vector_t *vector, *hvector = NULL, svector[8];
     uint32_t vector_count = 0;
     swow_buffer_t **sbuffers, **hsbuffers = NULL, *ssbuffers[8]; /* lock/unlock buffers */
     uint32_t buffer_count = 0;
@@ -826,27 +826,27 @@ static PHP_METHOD_EX(swow_socket, _write, zend_bool single, zend_bool may_addres
         max_num_args += 2;
     }
 
-    vectors = svectors;
+    vector = svector;
     sbuffers = ssbuffers;
     ZEND_PARSE_PARAMETERS_START(1, max_num_args)
         if (!single) {
-            HashTable *vectors_array;
-            uint32_t vectors_array_count;
-            Z_PARAM_ARRAY_HT(vectors_array)
-            vectors_array_count = zend_hash_num_elements(vectors_array);
-            if (UNEXPECTED(vectors_array_count == 0)) {
+            HashTable *vector_array;
+            uint32_t vector_array_count;
+            Z_PARAM_ARRAY_HT(vector_array)
+            vector_array_count = zend_hash_num_elements(vector_array);
+            if (UNEXPECTED(vector_array_count == 0)) {
                 zend_argument_value_error(1, "can not be empty");
                 goto _error;
             }
-            if (UNEXPECTED(vectors_array_count > CAT_ARRAY_SIZE(svectors))) {
-                vectors = hvectors = emalloc(vectors_array_count * sizeof(*vectors));
+            if (UNEXPECTED(vector_array_count > CAT_ARRAY_SIZE(svector))) {
+                vector = hvector = emalloc(vector_array_count * sizeof(*vector));
             }
-            if (UNEXPECTED(vectors_array_count > CAT_ARRAY_SIZE(ssbuffers))) {
-                sbuffers = hsbuffers = emalloc(vectors_array_count * sizeof(*sbuffers));
+            if (UNEXPECTED(vector_array_count > CAT_ARRAY_SIZE(ssbuffers))) {
+                sbuffers = hsbuffers = emalloc(vector_array_count * sizeof(*sbuffers));
             }
             do {
                 zval *ztmp;
-                ZEND_HASH_FOREACH_VAL(vectors_array, ztmp) {
+                ZEND_HASH_FOREACH_VAL(vector_array, ztmp) {
                     /* the last one can be null */
                     if (ZVAL_IS_NULL(ztmp)) {
                         break;
@@ -956,14 +956,14 @@ static PHP_METHOD_EX(swow_socket, _write, zend_bool single, zend_bool may_addres
                             continue;
                         }
                         if (UNEXPECTED((size_t) length > readable_length)) {
-                            swow_throw_exception(swow_socket_exception_ce, CAT_ENOBUFS, "No enough readable buffer space on vectors[%u]", vector_count);
+                            swow_throw_exception(swow_socket_exception_ce, CAT_ENOBUFS, "No enough readable buffer space on vector[%u]", vector_count);
                             goto _error;
                         }
                         SWOW_BUFFER_LOCK_EX(sbuffer, goto _error);
                         sbuffers[buffer_count++] = sbuffer;
                     }
-                    vectors[vector_count].base = ptr;
-                    vectors[vector_count].length = length;
+                    vector[vector_count].base = ptr;
+                    vector[vector_count].length = length;
                     vector_count++;
                     /* reset arguments */
                     zbuffer = NULL;
@@ -1003,8 +1003,8 @@ static PHP_METHOD_EX(swow_socket, _write, zend_bool single, zend_bool may_addres
         }
         SWOW_BUFFER_LOCK_EX(sbuffer, goto _error);
         sbuffers[buffer_count++] = sbuffer;
-        vectors[0].base = ptr;
-        vectors[0].length = length;
+        vector[0].base = ptr;
+        vector[0].length = length;
     } else if (UNEXPECTED(vector_count == 0)) {
         zend_argument_value_error(1, "can not be empty");
         goto _error;
@@ -1015,9 +1015,9 @@ static PHP_METHOD_EX(swow_socket, _write, zend_bool single, zend_bool may_addres
 
     /* write */
     if (!may_address || address == NULL || ZSTR_LEN(address) == 0) {
-        ret = cat_socket_write_ex(socket, vectors, vector_count, timeout);
+        ret = cat_socket_write_ex(socket, vector, vector_count, timeout);
     } else {
-        ret = cat_socket_write_to_ex(socket, vectors, vector_count, ZSTR_VAL(address), ZSTR_LEN(address), port, timeout);
+        ret = cat_socket_write_to_ex(socket, vector, vector_count, ZSTR_VAL(address), ZSTR_LEN(address), port, timeout);
     }
 
     /* we won't update buffer offset */
@@ -1038,13 +1038,13 @@ static PHP_METHOD_EX(swow_socket, _write, zend_bool single, zend_bool may_addres
     if (UNEXPECTED(hsbuffers != NULL)) {
         efree(hsbuffers);
     }
-    if (UNEXPECTED(hvectors != NULL)) {
-        efree(hvectors);
+    if (UNEXPECTED(hvector != NULL)) {
+        efree(hvector);
     }
 }
 
 ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_swow_socket_write, ZEND_RETURN_VALUE, 1, Swow\\Socket, 0)
-    ZEND_ARG_TYPE_INFO(0, vectors, IS_ARRAY, 0)
+    ZEND_ARG_TYPE_INFO(0, vector, IS_ARRAY, 0)
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, timeout, IS_LONG, 1, "\'$this->getWriteTimeout()\'")
 ZEND_END_ARG_INFO()
 
@@ -1054,7 +1054,7 @@ static PHP_METHOD(swow_socket, write)
 }
 
 ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_swow_socket_writeTo, ZEND_RETURN_VALUE, 1, Swow\\Socket, 0)
-    ZEND_ARG_TYPE_INFO(0, vectors, IS_ARRAY, 0)
+    ZEND_ARG_TYPE_INFO(0, vector, IS_ARRAY, 0)
     ZEND_ARG_INFO_WITH_DEFAULT_VALUE(0, address, "null")
     ZEND_ARG_INFO_WITH_DEFAULT_VALUE(0, port, "null")
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, timeout, IS_LONG, 1, "\'$this->getWriteTimeout()\'")
