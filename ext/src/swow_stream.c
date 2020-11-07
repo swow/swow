@@ -859,40 +859,53 @@ typedef struct {
 static php_stream_ops swow_stream_stdio_raw_ops;
 static cat_socket_t *swow_stream_tty_sockets[3];
 
-#define SWOW_STREAM_STDIO_INIT(call) \
-    php_stdio_stream_data *data = (php_stdio_stream_data *) stream->abstract; \
-    cat_socket_fd_t fd = data->fd >= 0 ? data->fd : fileno(data->file); \
-    cat_socket_t *socket; \
-    \
-    do { \
-        if (!IS_TTY(fd)) { \
-            _raw: \
-            return swow_stream_stdio_raw_ops.call; \
-        } \
-        socket = swow_stream_tty_sockets[fd]; \
-        if (unlikely(socket == INVALID_TTY_SOCKET)) { \
-            goto _raw; \
-        } else if (unlikely(socket == NULL)) { \
-            socket = cat_socket_create_ex(NULL, CAT_SOCKET_TYPE_TTY, fd); \
-            if (unlikely(socket == NULL)) { \
-                swow_stream_tty_sockets[fd] = INVALID_TTY_SOCKET; \
-                goto _raw; \
-            } \
-            swow_stream_tty_sockets[fd] = socket; \
-        } \
-    } while (0)
+static cat_socket_t *swow_stream_stdio_init(php_stream *stream)
+{
+    php_stdio_stream_data *data = (php_stdio_stream_data *) stream->abstract;
+    cat_socket_fd_t fd = data->fd >= 0 ? data->fd : fileno(data->file);
+    cat_socket_t *socket;
+
+    if (!IS_TTY(fd)) {
+        return NULL;
+    }
+
+    socket = swow_stream_tty_sockets[fd];
+
+    if (unlikely(socket == INVALID_TTY_SOCKET)) {
+        return NULL;
+    }
+
+    if (unlikely(socket == NULL)) {
+        socket = cat_socket_create_ex(NULL, CAT_SOCKET_TYPE_TTY, fd);
+        if (unlikely(socket == NULL)) {
+            swow_stream_tty_sockets[fd] = INVALID_TTY_SOCKET;
+            return NULL;
+        }
+        swow_stream_tty_sockets[fd] = socket;
+    }
+
+    return socket;
+}
 
 static bytes_t swow_stream_stdio_read(php_stream *stream, char *buffer, size_t size)
 {
-    SWOW_STREAM_STDIO_INIT(read(stream, buffer, size));
+    cat_socket_t *socket = swow_stream_stdio_init(stream);
+
+    if (socket == NULL) {
+        return swow_stream_stdio_raw_ops.read(stream, buffer, size);
+    }
 
     return cat_socket_recv(socket, buffer, size);
 }
 
 static bytes_t swow_stream_stdio_write(php_stream *stream, const char *buffer, size_t length)
 {
-    SWOW_STREAM_STDIO_INIT(write(stream, buffer, length));
+    cat_socket_t *socket = swow_stream_stdio_init(stream);
     cat_bool_t ret;
+
+    if (socket == NULL) {
+        return swow_stream_stdio_raw_ops.write(stream, buffer, length);
+    }
 
     ret = cat_socket_send(socket, buffer, length);
 
