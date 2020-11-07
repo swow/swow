@@ -44,6 +44,11 @@
 #endif
 #endif
 
+#if (defined(HAVE_PCRE) || defined(HAVE_BUNDLED_PCRE)) && !defined(COMPILE_DL_PCRE) && \
+     defined(__MACH__) && !defined(CAT_DEBUG)
+#include "ext/pcre/php_pcre.h"
+#endif
+
 SWOW_API zend_class_entry *swow_ce;
 SWOW_API zend_object_handlers swow_handlers;
 
@@ -310,6 +315,11 @@ int swow_module_init(INIT_FUNC_ARGS)
 #ifdef ZEND_SIGNALS
     /* disable warning even in ZEND_DEBUG because we may register our own signal handlers  */
     SIGG(check) = 0;
+#endif
+
+#if defined(PHP_PCRE_VERSION) && defined(HAVE_PCRE_JIT_SUPPORT)
+    /* enable pcre.jit with coroutine on MacOS will lead to segment fault, disable it temporarily */
+    PCRE_G(jit) = 0;
 #endif
 
     cat_module_init();
