@@ -34,10 +34,11 @@
 /* $Id: f078bca729f4ab1bc2d60370e83bfa561f86b88d $ */
 
 #if PHP_VERSION_ID < 70400
-#define USE_UNSIGNED_BYTES_TYPE 1
 #define bytes_t size_t
+#define PHP_STREAM_SOCKET_RETURN_ERR 0
 #else
 #define bytes_t ssize_t
+#define PHP_STREAM_SOCKET_RETURN_ERR -1
 #endif
 
 typedef struct
@@ -669,9 +670,7 @@ static bytes_t swow_stream_read(php_stream *stream, char *buffer, size_t size)
         cat_errno_t error =  cat_get_last_error_code();
         stream->eof = cat_socket_is_eof_error(error);
         sock->timeout_event = (error == CAT_ETIMEDOUT);
-#ifdef USE_UNSIGNED_BYTES_TYPE
-        nr_bytes = 0;
-#endif
+        nr_bytes = PHP_STREAM_SOCKET_RETURN_ERR;
     } else {
         stream->eof = 1;
     }
@@ -693,11 +692,7 @@ static bytes_t swow_stream_write(php_stream *stream, const char *buffer, size_t 
             (zend_long) length, error, cat_get_last_error_message()
         );
         sock->timeout_event = (error == CAT_ETIMEDOUT);
-#ifdef USE_UNSIGNED_BYTES_TYPE
-        return 0;
-#else
-        return -1;
-#endif
+        return PHP_STREAM_SOCKET_RETURN_ERR;
     }
 
     php_stream_notify_progress_increment(PHP_STREAM_CONTEXT(stream), length, 0);
