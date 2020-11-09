@@ -33,6 +33,8 @@
 #include "swow_http.h"
 #include "swow_websocket.h"
 
+#include "cat_api.h"
+
 #include "SAPI.h"
 
 #include "ext/standard/info.h"
@@ -58,7 +60,6 @@ SWOW_API zend_object_handlers swow_module_handlers;
 ZEND_DECLARE_MODULE_GLOBALS(swow)
 
 typedef int (*zend_loader_t)(INIT_FUNC_ARGS);
-typedef int (*zend_delay_loader_t)(void);
 
 #ifdef ZEND_ACC_HAS_TYPE_HINTS_DENY
 HashTable swow_type_hint_functions;
@@ -222,24 +223,31 @@ PHP_RSHUTDOWN_FUNCTION(swow)
         }
     }
 
+    /* Notice: some PHP objects still has not been released
+     * (e.g. static vars or set global vars on __destruct or circular references)
+     * so we must re-create C coroutine env to finish them */
+
+    if (!cat_runtime_init_all()) {
+        return FAILURE;
+    }
+
+    if (!cat_run(CAT_RUN_EASY)) {
+        return FAILURE;
+    }
+
     return SUCCESS;
 }
 /* }}} */
 
 static int swow_delay_runtime_shutdown(void)
 {
-    static const zend_delay_loader_t rshutdown_callbacks[] = {
-        swow_event_delay_runtime_shutdown,
-    };
+    cat_bool_t ret;
 
-    size_t i = 0;
-    for (; i < CAT_ARRAY_SIZE(rshutdown_callbacks); i++) {
-        if (rshutdown_callbacks[i]() != SUCCESS) {
-            return FAILURE;
-        }
-    }
+    ret = cat_stop();
 
-    return SUCCESS;
+    ret = cat_runtime_shutdown_all() && ret;
+
+    return ret ? SUCCESS : FAILURE;
 }
 
 /* {{{ PHP_MINFO_FUNCTION
