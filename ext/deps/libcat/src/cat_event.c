@@ -24,17 +24,12 @@ CAT_GLOBALS_CTOR_DECLARE_SZ(cat_event)
 
 CAT_API cat_bool_t cat_event_module_init(void)
 {
+    int error;
+
     CAT_GLOBALS_REGISTER(cat_event, CAT_GLOBALS_CTOR(cat_event), NULL);
 
     CAT_EVENT_G(loop) = &CAT_EVENT_G(_loop);
     CAT_EVENT_G(dead_lock) = &CAT_EVENT_G(_dead_lock);
-
-    return cat_true;
-}
-
-CAT_API cat_bool_t cat_event_runtime_init(void)
-{
-    int error;
 
     error = uv_loop_init(CAT_EVENT_G(loop));
 
@@ -49,12 +44,9 @@ CAT_API cat_bool_t cat_event_runtime_init(void)
     return cat_true;
 }
 
-CAT_API cat_bool_t cat_event_runtime_shutdown(void)
+CAT_API cat_bool_t cat_event_module_shutdown(void)
 {
     int error;
-
-    /* we must call run to close all handles and clear defer tasks */
-    cat_event_schedule();
 
     error = uv_loop_close(CAT_EVENT_G(loop));
 
@@ -62,6 +54,19 @@ CAT_API cat_bool_t cat_event_runtime_shutdown(void)
         cat_warn_with_reason(EVENT, error, "Event loop close failed");
         return cat_false;
     }
+
+    return cat_true;
+}
+
+CAT_API cat_bool_t cat_event_runtime_init(void)
+{
+    return cat_true;
+}
+
+CAT_API cat_bool_t cat_event_runtime_shutdown(void)
+{
+    /* we must call run to close all handles and clear defer tasks */
+    cat_event_schedule();
 
     CAT_ASSERT(cat_queue_empty(&CAT_EVENT_G(defer_tasks)));
     CAT_ASSERT(CAT_EVENT_G(defer_task_count) == 0);

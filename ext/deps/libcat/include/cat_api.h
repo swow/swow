@@ -44,8 +44,15 @@ typedef enum
 
 CAT_API cat_bool_t cat_init_all(void);
 CAT_API cat_bool_t cat_shutdown_all(void);
+
+CAT_API cat_bool_t cat_module_init_all(void);
+CAT_API cat_bool_t cat_module_shutdown_all(void);
+
+CAT_API cat_bool_t cat_runtime_init_all(void);
+CAT_API cat_bool_t cat_runtime_shutdown_all(void);
+
 CAT_API cat_bool_t cat_run(cat_run_mode run_mode);
-CAT_API void cat_stop(void);
+CAT_API cat_bool_t cat_stop(void);
 
 #ifdef CAT_DEBUG
 CAT_API void cat_enable_debug_mode(void);

@@ -20,27 +20,50 @@
 
 CAT_API cat_bool_t cat_init_all(void)
 {
+    return cat_module_init_all() &&
+           cat_runtime_init_all();
+}
+
+CAT_API cat_bool_t cat_shutdown_all(void)
+{
     cat_bool_t ret = cat_true;
 
-    ret = ret &&
-          cat_module_init() &&
-          cat_coroutine_module_init() &&
-          cat_event_module_init() &&
-          cat_socket_module_init() &&
-          cat_buffer_module_init() &&
-          cat_watch_dog_module_init();
+    ret = cat_runtime_shutdown_all();
+    ret = cat_module_shutdown_all() && ret;
 
-    ret = ret &&
-          cat_runtime_init() &&
-          cat_coroutine_runtime_init() &&
-          cat_event_runtime_init() &&
-          cat_socket_runtime_init() &&
-          cat_watch_dog_runtime_init();
+    return  ret;
+}
+
+CAT_API cat_bool_t cat_module_init_all(void)
+{
+    return cat_module_init() &&
+           cat_coroutine_module_init() &&
+           cat_event_module_init() &&
+           cat_socket_module_init() &&
+           cat_buffer_module_init() &&
+           cat_watch_dog_module_init();
+}
+
+CAT_API cat_bool_t cat_module_shutdown_all(void)
+{
+    cat_bool_t ret = cat_true;
+
+    ret = cat_event_module_shutdown() && ret;
+    ret = cat_module_shutdown() && ret;
 
     return ret;
 }
 
-CAT_API cat_bool_t cat_shutdown_all(void)
+CAT_API cat_bool_t cat_runtime_init_all(void)
+{
+    return cat_runtime_init() &&
+           cat_coroutine_runtime_init() &&
+           cat_event_runtime_init() &&
+           cat_socket_runtime_init() &&
+           cat_watch_dog_runtime_init();
+}
+
+CAT_API cat_bool_t cat_runtime_shutdown_all(void)
 {
     cat_bool_t ret = cat_true;
 
@@ -48,8 +71,6 @@ CAT_API cat_bool_t cat_shutdown_all(void)
     ret = cat_event_runtime_shutdown() && ret;
     ret = cat_coroutine_runtime_shutdown() && ret;
     ret = cat_runtime_shutdown() && ret;
-
-    ret = cat_module_shutdown();
 
     return ret;
 }
@@ -64,15 +85,9 @@ CAT_API cat_bool_t cat_run(cat_run_mode run_mode)
     CAT_NEVER_HERE("Unknown run mode");
 }
 
-CAT_API void cat_stop(void)
+CAT_API cat_bool_t cat_stop(void)
 {
-    cat_bool_t ret;
-
-    ret = cat_event_scheduler_close() != NULL;
-
-    if (unlikely(!ret)) {
-        cat_core_error_with_last(CORE, "Runtime Stop failed");
-    }
+    return cat_event_scheduler_close() != NULL;
 }
 
 #ifdef CAT_DEBUG

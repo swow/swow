@@ -109,7 +109,9 @@ CAT_API cat_bool_t cat_coroutine_runtime_init(void)
 
 CAT_API cat_bool_t cat_coroutine_runtime_shutdown(void)
 {
-    CAT_ASSERT(cat_queue_empty(&CAT_COROUTINE_G(waiters)));
+    CAT_ASSERT(cat_queue_empty(&CAT_COROUTINE_G(waiters)) && "Coroutine waiter should be empty");
+    CAT_ASSERT(cat_coroutine_get_scheduler() == NULL && "Coroutine scheduler should have been stopped");
+    CAT_ASSERT(CAT_COROUTINE_G(count) == 1 && "Coroutine count should be 1");
 
     return cat_true;
 }

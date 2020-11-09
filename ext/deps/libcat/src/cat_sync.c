@@ -20,13 +20,6 @@
 
 CAT_API cat_sync_wait_group_t *cat_sync_wait_group_create(cat_sync_wait_group_t *wg)
 {
-    if (wg == NULL) {
-        wg = (cat_sync_wait_group_t *) cat_malloc(sizeof(*wg));
-        if (unlikely(wg == NULL)) {
-            cat_update_last_error_of_syscall("Malloc for wait group failed");
-            return NULL;
-        }
-    }
     wg->coroutine = NULL;
     wg->count = 0;
 
@@ -37,7 +30,7 @@ CAT_API cat_bool_t cat_sync_wait_group_add(cat_sync_wait_group_t *wg, ssize_t de
 {
     ssize_t count;
 
-    if (unlikely(wg->coroutine)) {
+    if (unlikely(wg->coroutine != NULL)) {
         cat_update_last_error(CAT_EMISUSE, "WaitGroup add called concurrently with wait");
         return cat_false;
     }
@@ -80,17 +73,13 @@ CAT_API cat_bool_t cat_sync_wait_group_done(cat_sync_wait_group_t *wg)
 {
     ssize_t count;
 
-    if (unlikely(wg->coroutine != NULL)) {
-        cat_update_last_error(CAT_EMISUSE, "WaitGroup misuse: add called concurrently with wait");
-        return cat_false;
-    }
     count = wg->count - 1;
     if (unlikely(count < 0)) {
         cat_update_last_error(CAT_EMISUSE, "WaitGroup counter can not be negative");
         return cat_false;
     }
     wg->count = count;
-    if (count == 0 && wg->coroutine) {
+    if (count == 0 && wg->coroutine != NULL) {
         if (unlikely(!cat_coroutine_resume(wg->coroutine, NULL, NULL))) {
             cat_core_error_with_last(SYNC, "WaitGroup resume waiter failed");
         }
