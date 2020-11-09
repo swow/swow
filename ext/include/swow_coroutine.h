@@ -140,6 +140,7 @@ CAT_GLOBALS_STRUCT_BEGIN(swow_coroutine)
     zend_class_entry *custom_entry; /* we can resolve resume now */
 #endif
     /* internal special */
+    cat_coroutine_resume_t original_resume;
     cat_coroutine_t *original_main;
     cat_bool_t silent_exception_in_main; /* used to ignore some exceptions in main */
     swow_coroutine_readonly_t readonly;

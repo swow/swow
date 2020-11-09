@@ -434,7 +434,8 @@ static void swow_coroutine_main_create(void)
         zval zscoroutine;
         ZVAL_OBJ(&zscoroutine, &scoroutine->std);
         zend_hash_index_update(SWOW_COROUTINE_G(map), scoroutine->coroutine.id, &zscoroutine);
-        /* GC_ADDREF(&scoroutine->std); // we have 1 ref by create */
+        /* Notice: we have 1 ref by create */
+        GC_ADDREF(&scoroutine->std);
     } while (0);
 
     /* do not call __destruct() on main scoroutine */
@@ -455,7 +456,7 @@ static void swow_coroutine_main_close(void)
     scoroutine->executor->vm_stack = NULL;
 
     /* release main scoroutine */
-    zend_hash_index_del(SWOW_COROUTINE_G(map), scoroutine->coroutine.id);
+    zend_object_release(&scoroutine->std);
 }
 
 SWOW_API swow_coroutine_t *swow_coroutine_create(zval *zcallable)
@@ -2368,7 +2369,7 @@ int swow_coroutine_runtime_init(INIT_FUNC_ARGS)
         return FAILURE;
     }
 
-    cat_coroutine_register_resume(
+    SWOW_COROUTINE_G(original_resume) = cat_coroutine_register_resume(
         swow_coroutine_resume_standard
     );
 
@@ -2426,18 +2427,21 @@ int swow_coroutine_runtime_shutdown(SHUTDOWN_FUNC_ARGS)
     } while (zend_hash_num_elements(map) != 1);
 #endif
 
-    CAT_ASSERT(swow_coroutine_get_scheduler() == NULL && "Scheduler should have been stopped");
-    CAT_ASSERT(CAT_COROUTINE_G(count) == 1 && "Count of coroutines should be 1");
-
-    /* coroutine switching should no longer occur */
-    swow_coroutine_set_readonly(cat_true);
-
     /* close main scoroutine */
     swow_coroutine_main_close();
 
     /* destroy map */
     zend_array_destroy(SWOW_COROUTINE_G(map));
     SWOW_COROUTINE_G(map) = NULL;
+
+    /* recover resume */
+    cat_coroutine_register_resume(
+        SWOW_COROUTINE_G(original_resume)
+    );
+
+    if (!cat_coroutine_runtime_shutdown()) {
+        return FAILURE;
+    }
 
     SWOW_COROUTINE_G(runtime_state) = SWOW_COROUTINE_RUNTIME_STATE_NONE;
 
