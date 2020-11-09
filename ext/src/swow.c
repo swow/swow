@@ -146,6 +146,7 @@ PHP_MSHUTDOWN_FUNCTION(swow)
 #endif
 
     static const zend_loader_t mshutdown_callbacks[] = {
+        swow_event_module_shutdown,
         swow_module_shutdown,
     };
 

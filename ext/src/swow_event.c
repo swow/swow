@@ -64,22 +64,6 @@ static const zend_function_entry swow_event_methods[] = {
     PHP_FE_END
 };
 
-int swow_event_module_init(INIT_FUNC_ARGS)
-{
-    if (!cat_event_module_init()) {
-        return FAILURE;
-    }
-
-    swow_event_ce = swow_register_internal_class(
-        "Swow\\Event", NULL, swow_event_methods,
-        &swow_event_handlers, NULL,
-        cat_false, cat_false, cat_false,
-        swow_create_object_deny, NULL, 0
-    );
-
-    return SUCCESS;
-}
-
 static cat_bool_t swow_event_scheduler_run(void)
 {
     swow_coroutine_t *scoroutine;
@@ -119,6 +103,31 @@ static cat_bool_t swow_event_scheduler_close(void)
     swow_coroutine_close(scoroutine);
 
     return cat_true;
+}
+
+int swow_event_module_init(INIT_FUNC_ARGS)
+{
+    if (!cat_event_module_init()) {
+        return FAILURE;
+    }
+
+    swow_event_ce = swow_register_internal_class(
+        "Swow\\Event", NULL, swow_event_methods,
+        &swow_event_handlers, NULL,
+        cat_false, cat_false, cat_false,
+        swow_create_object_deny, NULL, 0
+    );
+
+    return SUCCESS;
+}
+
+int swow_event_module_shutdown(INIT_FUNC_ARGS)
+{
+    if (!cat_event_module_shutdown()) {
+        return FAILURE;
+    }
+
+    return SUCCESS;
 }
 
 int swow_event_runtime_init(INIT_FUNC_ARGS)
@@ -164,15 +173,6 @@ int swow_event_runtime_shutdown(SHUTDOWN_FUNC_ARGS)
         return FAILURE;
     }
 
-    /* Notice: some PHP objects still has not been released
-     * (e.g. static vars or set global vars on __destruct)
-     * so we must close the loop on sapi_runtime_shutdown */
-
-    return SUCCESS;
-}
-
-int swow_event_delay_runtime_shutdown(void)
-{
     if (!cat_event_runtime_shutdown()) {
         return FAILURE;
     }
