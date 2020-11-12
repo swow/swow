@@ -711,12 +711,23 @@ namespace Swow
         /**
          * @return int
          */
+        public function getHandshakeTimeout(): int { }
+
+        /**
+         * @return int
+         */
         public function getReadTimeout(): int { }
 
         /**
          * @return int
          */
         public function getWriteTimeout(): int { }
+
+        /**
+         * @param int $timeout [required]
+         * @return $this
+         */
+        public function setTimeout(int $timeout): self { }
 
         /**
          * @param int $timeout [required]
@@ -735,6 +746,12 @@ namespace Swow
          * @return $this
          */
         public function setConnectTimeout(int $timeout): self { }
+
+        /**
+         * @param int $timeout [required]
+         * @return $this
+         */
+        public function setHandshakeTimeout(int $timeout): self { }
 
         /**
          * @param int $timeout [required]
@@ -911,20 +928,20 @@ namespace Swow
         public function peekStringFrom(?int $size = null, &$address = null, &$port = null): string { }
 
         /**
-         * @param array $vectors [required]
+         * @param array $vector [required]
          * @param null|int $timeout [optional] = $this->getWriteTimeout()
          * @return $this
          */
-        public function write(array $vectors, ?int $timeout = null): self { }
+        public function write(array $vector, ?int $timeout = null): self { }
 
         /**
-         * @param array $vectors [required]
+         * @param array $vector [required]
          * @param mixed $address [optional] = null
          * @param mixed $port [optional] = null
          * @param null|int $timeout [optional] = $this->getWriteTimeout()
          * @return $this
          */
-        public function writeTo(array $vectors, $address = null, $port = null, ?int $timeout = null): self { }
+        public function writeTo(array $vector, $address = null, $port = null, ?int $timeout = null): self { }
 
         /**
          * @param \Swow\Buffer $buffer [required]
@@ -1046,6 +1063,12 @@ namespace Swow
         public function __debugInfo(): array { }
 
         /**
+         * @param int $timeout [required]
+         * @return mixed
+         */
+        public static function setGlobalTimeout(int $timeout) { }
+
+        /**
          * @return int
          */
         public static function getGlobalDnsTimeout(): int { }
@@ -1059,6 +1082,11 @@ namespace Swow
          * @return int
          */
         public static function getGlobalConnectTimeout(): int { }
+
+        /**
+         * @return int
+         */
+        public static function getGlobalHandshakeTimeout(): int { }
 
         /**
          * @return int
@@ -1087,6 +1115,12 @@ namespace Swow
          * @return mixed
          */
         public static function setGlobalConnectTimeout(int $timeout) { }
+
+        /**
+         * @param int $timeout [required]
+         * @return mixed
+         */
+        public static function setGlobalHandshakeTimeout(int $timeout) { }
 
         /**
          * @param int $timeout [required]
