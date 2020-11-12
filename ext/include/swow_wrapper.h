@@ -181,6 +181,13 @@ static zend_always_inline HashTable *zend_new_array(size_t size)
 #define IS_MIXED 0 /* TODO: it works, but... */
 #endif
 
+/* TODO: maybe one day we can return static here (require PHP >= 8.0) */
+#define ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO_EX(name, required_num_args) \
+        ZEND_BEGIN_ARG_INFO_EX(name, 0, ZEND_RETURN_VALUE, required_num_args)
+
+#define ZEND_BEGIN_ARG_WITH_RETURN_THIS_OR_NULL_INFO_EX(name, required_num_args) \
+        ZEND_BEGIN_ARG_INFO_EX(name, 0, ZEND_RETURN_VALUE, required_num_args)
+
 #ifndef ZEND_ARG_INFO_WITH_DEFAULT_VALUE
 #define ZEND_ARG_INFO_WITH_DEFAULT_VALUE(pass_by_ref, name, default_value) \
         ZEND_ARG_INFO(pass_by_ref, name)

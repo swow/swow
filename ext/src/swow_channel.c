@@ -117,7 +117,7 @@ static PHP_METHOD(swow_channel, __construct)
     }
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_swow_channel_push, ZEND_RETURN_VALUE, 1, Swow\\Channel, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO_EX(arginfo_swow_channel_push, 1)
     ZEND_ARG_TYPE_INFO(0, data, IS_MIXED, 0)
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, timeout, IS_LONG, 0, "-1")
 ZEND_END_ARG_INFO()
@@ -458,7 +458,7 @@ static PHP_METHOD_EX(swow_channel_selector, add, zval *zchannel, zval *zdata)
     RETURN_THIS();
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_swow_channel_selector_push, ZEND_RETURN_VALUE, 2, Swow\\Channel\\Selector, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO_EX(arginfo_swow_channel_selector_push, 2)
     ZEND_ARG_OBJ_INFO(0, channel, Swow\\Channel, 0)
     ZEND_ARG_TYPE_INFO(0, data, IS_MIXED, 0)
 ZEND_END_ARG_INFO()
@@ -475,7 +475,7 @@ static PHP_METHOD(swow_channel_selector, push)
     PHP_METHOD_CALL(swow_channel_selector, add, zchannel, zdata);
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_swow_channel_selector_pop, ZEND_RETURN_VALUE, 1, Swow\\Channel\\Selector, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO_EX(arginfo_swow_channel_selector_pop, 1)
     ZEND_ARG_OBJ_INFO(0, channel, Swow\\Channel, 0)
 ZEND_END_ARG_INFO()
 
@@ -490,7 +490,7 @@ static PHP_METHOD(swow_channel_selector, pop)
     PHP_METHOD_CALL(swow_channel_selector, add, zchannel, NULL);
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_swow_channel_selector_do, ZEND_RETURN_VALUE, 0, Swow\\Channel, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO_EX(arginfo_swow_channel_selector_do, 0)
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, timeout, IS_LONG, 0, "-1")
 ZEND_END_ARG_INFO()
 

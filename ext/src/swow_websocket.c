@@ -113,7 +113,7 @@ static PHP_METHOD(swow_websocket_frame, unpackHeader)
     RETURN_LONG(length);
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_swow_websocket_frame_resetHeader, ZEND_RETURN_VALUE, 0, Swow\\WebSocket\\Frame, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO_EX(arginfo_swow_websocket_frame_resetHeader, 0)
 ZEND_END_ARG_INFO()
 
 static PHP_METHOD(swow_websocket_frame, resetHeader)
@@ -141,7 +141,7 @@ static PHP_METHOD(swow_websocket_frame, getOpcode)
     RETURN_LONG(header->opcode);
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_swow_websocket_frame_setOpcode, ZEND_RETURN_VALUE, 1, Swow\\WebSocket\\Frame, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO_EX(arginfo_swow_websocket_frame_setOpcode, 1)
     ZEND_ARG_TYPE_INFO(0, opcode, IS_LONG, 0)
 ZEND_END_ARG_INFO()
 
@@ -170,7 +170,7 @@ static PHP_METHOD(swow_websocket_frame, getFin)
     RETURN_BOOL(header->fin);
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_swow_websocket_frame_setFin, ZEND_RETURN_VALUE, 1, Swow\\WebSocket\\Frame, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO_EX(arginfo_swow_websocket_frame_setFin, 1)
     ZEND_ARG_TYPE_INFO(0, fin, IS_LONG, 0)
 ZEND_END_ARG_INFO()
 
@@ -202,7 +202,7 @@ static PHP_METHOD(swow_websocket_frame, getRSV1)
     RETURN_BOOL(header->rsv1);
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_swow_websocket_frame_setRSV1, ZEND_RETURN_VALUE, 1, Swow\\WebSocket\\Frame, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO_EX(arginfo_swow_websocket_frame_setRSV1, 1)
     ZEND_ARG_TYPE_INFO(0, rsv1, IS_LONG, 0)
 ZEND_END_ARG_INFO()
 
@@ -231,7 +231,7 @@ static PHP_METHOD(swow_websocket_frame, getRSV2)
     RETURN_BOOL(header->rsv2);
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_swow_websocket_frame_setRSV2, ZEND_RETURN_VALUE, 1, Swow\\WebSocket\\Frame, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO_EX(arginfo_swow_websocket_frame_setRSV2, 1)
     ZEND_ARG_TYPE_INFO(0, rsv2, IS_LONG, 0)
 ZEND_END_ARG_INFO()
 
@@ -260,7 +260,7 @@ static PHP_METHOD(swow_websocket_frame, getRSV3)
     RETURN_BOOL(header->rsv3);
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_swow_websocket_frame_setRSV3, ZEND_RETURN_VALUE, 1, Swow\\WebSocket\\Frame, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO_EX(arginfo_swow_websocket_frame_setRSV3, 1)
     ZEND_ARG_TYPE_INFO(0, rsv3, IS_LONG, 0)
 ZEND_END_ARG_INFO()
 
@@ -305,7 +305,7 @@ static PHP_METHOD(swow_websocket_frame, getPayloadLength)
     RETURN_LONG(header->payload_length);
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_swow_websocket_frame_setPayloadLength, ZEND_RETURN_VALUE, 1, Swow\\WebSocket\\Frame, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO_EX(arginfo_swow_websocket_frame_setPayloadLength, 1)
     ZEND_ARG_TYPE_INFO(0, payloadLength, IS_LONG, 0)
 ZEND_END_ARG_INFO()
 
@@ -334,7 +334,7 @@ static PHP_METHOD(swow_websocket_frame, getMask)
     RETURN_BOOL(header->mask);
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_swow_websocket_frame_setMask, ZEND_RETURN_VALUE, 1, Swow\\WebSocket\\Frame, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO_EX(arginfo_swow_websocket_frame_setMask, 1)
     ZEND_ARG_TYPE_INFO(0, mask, _IS_BOOL, 0)
 ZEND_END_ARG_INFO()
 
@@ -370,7 +370,7 @@ static PHP_METHOD(swow_websocket_frame, getMaskKey)
     RETURN_STRINGL(header->mask_key, sizeof(header->mask_key));
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_swow_websocket_frame_setMaskKey, ZEND_RETURN_VALUE, 1, Swow\\WebSocket\\Frame, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO_EX(arginfo_swow_websocket_frame_setMaskKey, 1)
     ZEND_ARG_TYPE_INFO(0, maskKey, IS_STRING, 0)
 ZEND_END_ARG_INFO()
 
@@ -407,7 +407,7 @@ static PHP_METHOD(swow_websocket_frame, hasPayloadData)
     RETURN_BOOL(sframe->payload_data != NULL);
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_swow_websocket_frame_getPayloadData, ZEND_RETURN_VALUE, 0, Swow\\Buffer, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO_EX(arginfo_swow_websocket_frame_getPayloadData, 0)
 ZEND_END_ARG_INFO()
 
 static PHP_METHOD(swow_websocket_frame, getPayloadData)
@@ -443,7 +443,7 @@ static PHP_METHOD(swow_websocket_frame, getPayloadDataAsString)
     RETURN_STR(payload_data);
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_swow_websocket_frame_setPayloadData, ZEND_RETURN_VALUE, 1, Swow\\WebSocket\\Frame, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO_EX(arginfo_swow_websocket_frame_setPayloadData, 1)
     ZEND_ARG_OBJ_INFO(0, buffer, Swow\\Buffer, 1)
 ZEND_END_ARG_INFO()
 
@@ -470,7 +470,7 @@ static PHP_METHOD(swow_websocket_frame, setPayloadData)
     RETURN_THIS();
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_swow_websocket_frame_unmaskPayloadData, ZEND_RETURN_VALUE, 0, Swow\\WebSocket\\Frame, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO_EX(arginfo_swow_websocket_frame_unmaskPayloadData, 0)
 ZEND_END_ARG_INFO()
 
 static PHP_METHOD(swow_websocket_frame, unmaskPayloadData)

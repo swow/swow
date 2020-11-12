@@ -142,9 +142,9 @@ namespace Swow
         /**
          * @param callable $callable [required]
          * @param mixed ...$data
-         * @return $this
+         * @return mixed
          */
-        public static function run(callable $callable, ...$data): self { }
+        public static function run(callable $callable, ...$data) { }
 
         /**
          * @param mixed ...$data
@@ -164,19 +164,19 @@ namespace Swow
         public function getId(): int { }
 
         /**
-         * @return $this
+         * @return mixed
          */
-        public static function getCurrent(): self { }
+        public static function getCurrent() { }
 
         /**
-         * @return $this
+         * @return mixed
          */
-        public static function getMain(): self { }
+        public static function getMain() { }
 
         /**
-         * @return $this
+         * @return mixed
          */
-        public function getPrevious(): self { }
+        public function getPrevious() { }
 
         /**
          * @return int
@@ -276,9 +276,9 @@ namespace Swow
          * @param mixed $value [optional]
          * @param int $level [optional] = 0
          * @param bool $force [optional] = true
-         * @return null|$this
+         * @return mixed
          */
-        public function setLocalVar(string $name, $value, int $level = 0, bool $force = true): ?self { }
+        public function setLocalVar(string $name, $value, int $level = 0, bool $force = true) { }
 
         /**
          * @param string $string [optional]
@@ -320,9 +320,9 @@ namespace Swow
 
         /**
          * @param int $id [optional]
-         * @return null|$this
+         * @return mixed
          */
-        public static function get(int $id): ?self { }
+        public static function get(int $id) { }
 
         /**
          * @return \Swow\Coroutine[]
@@ -351,9 +351,9 @@ namespace Swow
         /**
          * @param mixed $data [required]
          * @param int $timeout [optional] = -1
-         * @return $this
+         * @return mixed
          */
-        public function push($data, int $timeout = -1): self { }
+        public function push($data, int $timeout = -1) { }
 
         /**
          * @param int $timeout [optional] = -1
@@ -450,9 +450,9 @@ namespace Swow
 
         /**
          * @param int $size [optional] = \Swow\Buffer::DEFAULT_SIZE
-         * @return $this
+         * @return mixed
          */
-        public function alloc(int $size = \Swow\Buffer::DEFAULT_SIZE): self { }
+        public function alloc(int $size = \Swow\Buffer::DEFAULT_SIZE) { }
 
         /**
          * @return int
@@ -511,20 +511,20 @@ namespace Swow
 
         /**
          * @param int $newSize [optional] = 0
-         * @return $this
+         * @return mixed
          */
-        public function realloc(int $newSize = 0): self { }
+        public function realloc(int $newSize = 0) { }
 
         /**
          * @param int $recommendSize [optional] = $this->getSize() * 2
-         * @return $this
+         * @return mixed
          */
-        public function extend(int $recommendSize = null): self { }
+        public function extend(int $recommendSize = null) { }
 
         /**
-         * @return $this
+         * @return mixed
          */
-        public function mallocTrim(): self { }
+        public function mallocTrim() { }
 
         /**
          * @return int
@@ -532,9 +532,9 @@ namespace Swow
         public function tell(): int { }
 
         /**
-         * @return $this
+         * @return mixed
          */
-        public function rewind(): self { }
+        public function rewind() { }
 
         /**
          * @return bool
@@ -544,9 +544,9 @@ namespace Swow
         /**
          * @param mixed $offset [required]
          * @param mixed $whence [optional] = \SEEK_SET
-         * @return $this
+         * @return mixed
          */
-        public function seek($offset, $whence = \SEEK_SET): self { }
+        public function seek($offset, $whence = \SEEK_SET) { }
 
         /**
          * @param mixed $length [optional] = 0
@@ -576,21 +576,21 @@ namespace Swow
          * @param mixed $string [required]
          * @param int $offset [optional] = 0
          * @param int $length [optional] = 0
-         * @return $this
+         * @return mixed
          */
-        public function write($string, int $offset = 0, int $length = 0): self { }
+        public function write($string, int $offset = 0, int $length = 0) { }
 
         /**
          * @param int $start [optional] = $this->getOffset()
          * @param int $length [optional] = 0
-         * @return $this
+         * @return mixed
          */
-        public function truncate(int $start = null, int $length = 0): self { }
+        public function truncate(int $start = null, int $length = 0) { }
 
         /**
-         * @return $this
+         * @return mixed
          */
-        public function clear(): self { }
+        public function clear() { }
 
         /**
          * @return string
@@ -646,6 +646,7 @@ namespace Swow
         public const TYPE_FLAG_STDERR = 4096;
         public const TYPE_FLAG_SERVER = 1048576;
         public const TYPE_FLAG_CLIENT = 2097152;
+        public const TYPE_FLAG_SESSION = 4194304;
         public const TYPE_ANY = 0;
         public const TYPE_TCP = 16777233;
         public const TYPE_TCP4 = 16777265;
@@ -725,74 +726,74 @@ namespace Swow
 
         /**
          * @param int $timeout [required]
-         * @return $this
+         * @return mixed
          */
-        public function setTimeout(int $timeout): self { }
+        public function setTimeout(int $timeout) { }
 
         /**
          * @param int $timeout [required]
-         * @return $this
+         * @return mixed
          */
-        public function setDnsTimeout(int $timeout): self { }
+        public function setDnsTimeout(int $timeout) { }
 
         /**
          * @param int $timeout [required]
-         * @return $this
+         * @return mixed
          */
-        public function setAcceptTimeout(int $timeout): self { }
+        public function setAcceptTimeout(int $timeout) { }
 
         /**
          * @param int $timeout [required]
-         * @return $this
+         * @return mixed
          */
-        public function setConnectTimeout(int $timeout): self { }
+        public function setConnectTimeout(int $timeout) { }
 
         /**
          * @param int $timeout [required]
-         * @return $this
+         * @return mixed
          */
-        public function setHandshakeTimeout(int $timeout): self { }
+        public function setHandshakeTimeout(int $timeout) { }
 
         /**
          * @param int $timeout [required]
-         * @return $this
+         * @return mixed
          */
-        public function setReadTimeout(int $timeout): self { }
+        public function setReadTimeout(int $timeout) { }
 
         /**
          * @param int $timeout [required]
-         * @return $this
+         * @return mixed
          */
-        public function setWriteTimeout(int $timeout): self { }
+        public function setWriteTimeout(int $timeout) { }
 
         /**
          * @param string $name [required]
          * @param int $port [optional] = 0
          * @param int $flags [optional] = \Swow\Socket::BIND_FLAG_NONE
-         * @return $this
+         * @return mixed
          */
-        public function bind(string $name, int $port = 0, int $flags = \Swow\Socket::BIND_FLAG_NONE): self { }
+        public function bind(string $name, int $port = 0, int $flags = \Swow\Socket::BIND_FLAG_NONE) { }
 
         /**
          * @param int $backlog [optional] = \Swow\Socket::DEFAULT_BACKLOG
-         * @return $this
+         * @return mixed
          */
-        public function listen(int $backlog = \Swow\Socket::DEFAULT_BACKLOG): self { }
+        public function listen(int $backlog = \Swow\Socket::DEFAULT_BACKLOG) { }
 
         /**
          * @param null|\Swow\Socket $object [optional] = $this
          * @param null|int $timeout [optional] = $this->getAcceptTimeout()
-         * @return $this
+         * @return mixed
          */
-        public function accept(?\Swow\Socket $object = null, ?int $timeout = null): self { }
+        public function accept(?\Swow\Socket $object = null, ?int $timeout = null) { }
 
         /**
          * @param string $name [required]
          * @param int $port [optional] = 0
          * @param null|int $timeout [optional] = $this->getConnectTimeout()
-         * @return $this
+         * @return mixed
          */
-        public function connect(string $name, int $port = 0, ?int $timeout = null): self { }
+        public function connect(string $name, int $port = 0, ?int $timeout = null) { }
 
         /**
          * @return string
@@ -930,26 +931,26 @@ namespace Swow
         /**
          * @param array $vector [required]
          * @param null|int $timeout [optional] = $this->getWriteTimeout()
-         * @return $this
+         * @return mixed
          */
-        public function write(array $vector, ?int $timeout = null): self { }
+        public function write(array $vector, ?int $timeout = null) { }
 
         /**
          * @param array $vector [required]
          * @param mixed $address [optional] = null
          * @param mixed $port [optional] = null
          * @param null|int $timeout [optional] = $this->getWriteTimeout()
-         * @return $this
+         * @return mixed
          */
-        public function writeTo(array $vector, $address = null, $port = null, ?int $timeout = null): self { }
+        public function writeTo(array $vector, $address = null, $port = null, ?int $timeout = null) { }
 
         /**
          * @param \Swow\Buffer $buffer [required]
          * @param null|int $length [optional] = $this->getReadableLength()
          * @param null|int $timeout [optional] = $this->getWriteTimeout()
-         * @return $this
+         * @return mixed
          */
-        public function send(\Swow\Buffer $buffer, ?int $length = null, ?int $timeout = null): self { }
+        public function send(\Swow\Buffer $buffer, ?int $length = null, ?int $timeout = null) { }
 
         /**
          * @param \Swow\Buffer $buffer [required]
@@ -957,18 +958,18 @@ namespace Swow
          * @param mixed $address [optional] = null
          * @param mixed $port [optional] = null
          * @param null|int $timeout [optional] = $this->getWriteTimeout()
-         * @return $this
+         * @return mixed
          */
-        public function sendTo(\Swow\Buffer $buffer, ?int $length = null, $address = null, $port = null, ?int $timeout = null): self { }
+        public function sendTo(\Swow\Buffer $buffer, ?int $length = null, $address = null, $port = null, ?int $timeout = null) { }
 
         /**
          * @param string $string [required]
          * @param null|int $timeout [optional] = $this->getWriteTimeout()
          * @param int $offset [optional] = 0
          * @param int $length [optional] = 0
-         * @return $this
+         * @return mixed
          */
-        public function sendString(string $string, ?int $timeout = null, int $offset = 0, int $length = 0): self { }
+        public function sendString(string $string, ?int $timeout = null, int $offset = 0, int $length = 0) { }
 
         /**
          * @param string $string [required]
@@ -977,9 +978,9 @@ namespace Swow
          * @param null|int $timeout [optional] = $this->getWriteTimeout()
          * @param int $offset [optional] = 0
          * @param int $length [optional] = 0
-         * @return $this
+         * @return mixed
          */
-        public function sendStringTo(string $string, $address = null, $port = null, ?int $timeout = null, int $offset = 0, int $length = 0): self { }
+        public function sendStringTo(string $string, $address = null, $port = null, ?int $timeout = null, int $offset = 0, int $length = 0) { }
 
         /**
          * @return bool
@@ -997,9 +998,9 @@ namespace Swow
         public function isEstablished(): bool { }
 
         /**
-         * @return $this
+         * @return mixed
          */
-        public function checkLiveness(): self { }
+        public function checkLiveness() { }
 
         /**
          * @return int
@@ -1028,34 +1029,34 @@ namespace Swow
 
         /**
          * @param int $size [required]
-         * @return $this
+         * @return mixed
          */
-        public function setRecvBufferSize(int $size): self { }
+        public function setRecvBufferSize(int $size) { }
 
         /**
          * @param int $size [required]
-         * @return $this
+         * @return mixed
          */
-        public function setSendBufferSize(int $size): self { }
+        public function setSendBufferSize(int $size) { }
 
         /**
          * @param bool $enable [optional]
-         * @return $this
+         * @return mixed
          */
-        public function setTcpNodelay(bool $enable): self { }
+        public function setTcpNodelay(bool $enable) { }
 
         /**
          * @param bool $enable [optional]
          * @param int $delay [optional]
-         * @return $this
+         * @return mixed
          */
-        public function setTcpKeepAlive(bool $enable, int $delay): self { }
+        public function setTcpKeepAlive(bool $enable, int $delay) { }
 
         /**
          * @param bool $enable [optional]
-         * @return $this
+         * @return mixed
          */
-        public function setTcpAcceptBalance(bool $enable): self { }
+        public function setTcpAcceptBalance(bool $enable) { }
 
         /**
          * @return array
@@ -1228,9 +1229,9 @@ namespace Swow\Coroutine
         protected $coroutine;
 
         /**
-         * @return \Swow\Coroutine
+         * @return mixed
          */
-        final function getCoroutine(): \Swow\Coroutine { }
+        final function getCoroutine() { }
     }
 }
 
@@ -1256,21 +1257,21 @@ namespace Swow\Channel
         /**
          * @param \Swow\Channel $channel [required]
          * @param mixed $data [required]
-         * @return $this
+         * @return mixed
          */
-        public function push(\Swow\Channel $channel, $data): self { }
+        public function push(\Swow\Channel $channel, $data) { }
 
         /**
          * @param \Swow\Channel $channel [required]
-         * @return $this
+         * @return mixed
          */
-        public function pop(\Swow\Channel $channel): self { }
+        public function pop(\Swow\Channel $channel) { }
 
         /**
          * @param int $timeout [optional] = -1
-         * @return \Swow\Channel
+         * @return mixed
          */
-        public function do(int $timeout = -1): \Swow\Channel { }
+        public function do(int $timeout = -1) { }
 
         /**
          * @return mixed
@@ -1456,9 +1457,9 @@ namespace Swow\Http
 
         /**
          * @param int $type [required]
-         * @return $this
+         * @return mixed
          */
-        public function setType(int $type): self { }
+        public function setType(int $type) { }
 
         /**
          * @return int
@@ -1467,9 +1468,9 @@ namespace Swow\Http
 
         /**
          * @param int $events [required]
-         * @return $this
+         * @return mixed
          */
-        public function setEvents(int $events): self { }
+        public function setEvents(int $events) { }
 
         /**
          * @param \Swow\Buffer $buffer [required]
@@ -1554,14 +1555,14 @@ namespace Swow\Http
         public function isUpgrade(): bool { }
 
         /**
-         * @return $this
+         * @return mixed
          */
-        public function finish(): self { }
+        public function finish() { }
 
         /**
-         * @return $this
+         * @return mixed
          */
-        public function reset(): self { }
+        public function reset() { }
     }
 }
 
@@ -1683,9 +1684,9 @@ namespace Swow\WebSocket
         public function unpackHeader(\Swow\Buffer $buffer): int { }
 
         /**
-         * @return $this
+         * @return mixed
          */
-        public function resetHeader(): self { }
+        public function resetHeader() { }
 
         /**
          * @return int
@@ -1694,9 +1695,9 @@ namespace Swow\WebSocket
 
         /**
          * @param int $opcode [required]
-         * @return $this
+         * @return mixed
          */
-        public function setOpcode(int $opcode): self { }
+        public function setOpcode(int $opcode) { }
 
         /**
          * @return int
@@ -1705,9 +1706,9 @@ namespace Swow\WebSocket
 
         /**
          * @param int $fin [required]
-         * @return $this
+         * @return mixed
          */
-        public function setFin(int $fin): self { }
+        public function setFin(int $fin) { }
 
         /**
          * @return int
@@ -1716,9 +1717,9 @@ namespace Swow\WebSocket
 
         /**
          * @param int $rsv1 [required]
-         * @return $this
+         * @return mixed
          */
-        public function setRSV1(int $rsv1): self { }
+        public function setRSV1(int $rsv1) { }
 
         /**
          * @return int
@@ -1727,9 +1728,9 @@ namespace Swow\WebSocket
 
         /**
          * @param int $rsv2 [required]
-         * @return $this
+         * @return mixed
          */
-        public function setRSV2(int $rsv2): self { }
+        public function setRSV2(int $rsv2) { }
 
         /**
          * @return int
@@ -1738,9 +1739,9 @@ namespace Swow\WebSocket
 
         /**
          * @param int $rsv3 [required]
-         * @return $this
+         * @return mixed
          */
-        public function setRSV3(int $rsv3): self { }
+        public function setRSV3(int $rsv3) { }
 
         /**
          * @return int
@@ -1754,9 +1755,9 @@ namespace Swow\WebSocket
 
         /**
          * @param int $payloadLength [required]
-         * @return $this
+         * @return mixed
          */
-        public function setPayloadLength(int $payloadLength): self { }
+        public function setPayloadLength(int $payloadLength) { }
 
         /**
          * @return int
@@ -1765,9 +1766,9 @@ namespace Swow\WebSocket
 
         /**
          * @param bool $mask [required]
-         * @return $this
+         * @return mixed
          */
-        public function setMask(bool $mask): self { }
+        public function setMask(bool $mask) { }
 
         /**
          * @return string
@@ -1776,9 +1777,9 @@ namespace Swow\WebSocket
 
         /**
          * @param string $maskKey [required]
-         * @return $this
+         * @return mixed
          */
-        public function setMaskKey(string $maskKey): self { }
+        public function setMaskKey(string $maskKey) { }
 
         /**
          * @return int
@@ -1786,9 +1787,9 @@ namespace Swow\WebSocket
         public function hasPayloadData(): int { }
 
         /**
-         * @return \Swow\Buffer
+         * @return mixed
          */
-        public function getPayloadData(): \Swow\Buffer { }
+        public function getPayloadData() { }
 
         /**
          * @return string
@@ -1797,14 +1798,14 @@ namespace Swow\WebSocket
 
         /**
          * @param null|\Swow\Buffer $buffer [required]
-         * @return $this
+         * @return mixed
          */
-        public function setPayloadData(?\Swow\Buffer $buffer): self { }
+        public function setPayloadData(?\Swow\Buffer $buffer) { }
 
         /**
-         * @return $this
+         * @return mixed
          */
-        public function unmaskPayloadData(): self { }
+        public function unmaskPayloadData() { }
 
         /**
          * @param bool $headerOnly [optional] = false
