@@ -243,11 +243,11 @@ SWOW_API HashTable *swow_debug_get_trace_as_list(zend_long options, zend_long li
     return list;
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_swow_debug_buildTraceAsString, ZEND_RETURN_VALUE, 1, IS_STRING, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_Swow_Debug_buildTraceAsString, ZEND_RETURN_VALUE, 1, IS_STRING, 0)
     ZEND_ARG_TYPE_INFO(0, trace, IS_ARRAY, 0)
 ZEND_END_ARG_INFO()
 
-static PHP_FUNCTION(swow_debug_buildTraceAsString)
+static PHP_FUNCTION(Swow_Debug_buildTraceAsString)
 {
     HashTable *trace;
 
@@ -258,11 +258,11 @@ static PHP_FUNCTION(swow_debug_buildTraceAsString)
     RETURN_STR(swow_debug_build_trace_as_string(trace));
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_swow_debug_registerExtendedStatementHandler, ZEND_RETURN_VALUE, 1, IS_CALLABLE, 1)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_Swow_Debug_registerExtendedStatementHandler, ZEND_RETURN_VALUE, 1, IS_CALLABLE, 1)
     ZEND_ARG_TYPE_INFO(0, handler, IS_CALLABLE, 1)
 ZEND_END_ARG_INFO()
 
-static PHP_FUNCTION(swow_debug_registerExtendedStatementHandler)
+static PHP_FUNCTION(Swow_Debug_registerExtendedStatementHandler)
 {
     zend_fcall_info fci;
     zend_fcall_info_cache fcc;
@@ -285,9 +285,9 @@ static PHP_FUNCTION(swow_debug_registerExtendedStatementHandler)
 }
 
 static const zend_function_entry swow_debug_functions[] = {
-    PHP_FENTRY(Swow\\Debug\\buildTraceAsString, PHP_FN(swow_debug_buildTraceAsString), arginfo_swow_debug_buildTraceAsString, 0)
+    PHP_FENTRY(Swow\\Debug\\buildTraceAsString, PHP_FN(Swow_Debug_buildTraceAsString), arginfo_Swow_Debug_buildTraceAsString, 0)
     /* for breakpoint debugging  */
-    PHP_FENTRY(Swow\\Debug\\registerExtendedStatementHandler, PHP_FN(swow_debug_registerExtendedStatementHandler), arginfo_swow_debug_registerExtendedStatementHandler, 0)
+    PHP_FENTRY(Swow\\Debug\\registerExtendedStatementHandler, PHP_FN(Swow_Debug_registerExtendedStatementHandler), arginfo_Swow_Debug_registerExtendedStatementHandler, 0)
     PHP_FE_END
 };
 

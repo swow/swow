@@ -28,11 +28,11 @@ SWOW_API zend_class_entry *swow_http_parser_exception_ce;
 
 /* Status */
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_swow_http_status_getReasonPhrase, ZEND_RETURN_VALUE, 1, IS_STRING, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Http_Status_getReasonPhrase, ZEND_RETURN_VALUE, 1, IS_STRING, 0)
     ZEND_ARG_TYPE_INFO(0, statusCode, IS_LONG, 0)
 ZEND_END_ARG_INFO()
 
-static PHP_METHOD(swow_http_status, getReasonPhrase)
+static PHP_METHOD(Swow_Http_Status, getReasonPhrase)
 {
     zend_long status_code;
 
@@ -44,7 +44,7 @@ static PHP_METHOD(swow_http_status, getReasonPhrase)
 }
 
 static const zend_function_entry swow_http_status_methods[] = {
-    PHP_ME(swow_http_status, getReasonPhrase, arginfo_swow_http_status_getReasonPhrase, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    PHP_ME(Swow_Http_Status, getReasonPhrase, arginfo_class_Swow_Http_Status_getReasonPhrase, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
     PHP_FE_END
 };
 
@@ -66,12 +66,12 @@ static zend_object *swow_http_parser_create_object(zend_class_entry *ce)
     swow_http_parser_t *_sparser = getThisParser(); \
     cat_http_parser_t *_parser = &_sparser->parser
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_swow_http_parser_getLong, ZEND_RETURN_VALUE, 0, IS_LONG, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Http_Parser_getLong, ZEND_RETURN_VALUE, 0, IS_LONG, 0)
 ZEND_END_ARG_INFO()
 
-#define arginfo_swow_http_parser_getType arginfo_swow_http_parser_getLong
+#define arginfo_class_Swow_Http_Parser_getType arginfo_class_Swow_Http_Parser_getLong
 
-static PHP_METHOD(swow_http_parser, getType)
+static PHP_METHOD(Swow_Http_Parser, getType)
 {
     SWOW_HTTP_PARSER_GETTER(sparser, parser);
 
@@ -80,11 +80,11 @@ static PHP_METHOD(swow_http_parser, getType)
     RETURN_LONG(cat_http_parser_get_type(parser));
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO_EX(arginfo_swow_http_parser_setType, 1)
+ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO_EX(arginfo_class_Swow_Http_Parser_setType, 1)
     ZEND_ARG_TYPE_INFO(0, type, IS_LONG, 0)
 ZEND_END_ARG_INFO()
 
-static PHP_METHOD(swow_http_parser, setType)
+static PHP_METHOD(Swow_Http_Parser, setType)
 {
     SWOW_HTTP_PARSER_GETTER(sparser, parser);
     zend_long ptype;
@@ -114,9 +114,9 @@ static PHP_METHOD(swow_http_parser, setType)
     RETURN_THIS();
 }
 
-#define arginfo_swow_http_parser_getEvents arginfo_swow_http_parser_getLong
+#define arginfo_class_Swow_Http_Parser_getEvents arginfo_class_Swow_Http_Parser_getLong
 
-static PHP_METHOD(swow_http_parser, getEvents)
+static PHP_METHOD(Swow_Http_Parser, getEvents)
 {
     SWOW_HTTP_PARSER_GETTER(sparser, parser);
 
@@ -125,11 +125,11 @@ static PHP_METHOD(swow_http_parser, getEvents)
     RETURN_LONG(cat_http_parser_get_events(parser));
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO_EX(arginfo_swow_http_parser_setEvents, 1)
+ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO_EX(arginfo_class_Swow_Http_Parser_setEvents, 1)
     ZEND_ARG_TYPE_INFO(0, events, IS_LONG, 0)
 ZEND_END_ARG_INFO()
 
-static PHP_METHOD(swow_http_parser, setEvents)
+static PHP_METHOD(Swow_Http_Parser, setEvents)
 {
     SWOW_HTTP_PARSER_GETTER(sparser, parser);
     zend_long events;
@@ -143,12 +143,12 @@ static PHP_METHOD(swow_http_parser, setEvents)
     RETURN_THIS();
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_swow_http_parser_execute, ZEND_RETURN_VALUE, 1, IS_LONG, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Http_Parser_execute, ZEND_RETURN_VALUE, 1, IS_LONG, 0)
     ZEND_ARG_OBJ_INFO(0, buffer, Swow\\Buffer, 0)
     ZEND_ARG_INFO_WITH_DEFAULT_VALUE(1, data, "null")
 ZEND_END_ARG_INFO()
 
-static PHP_METHOD(swow_http_parser, execute)
+static PHP_METHOD(Swow_Http_Parser, execute)
 {
     SWOW_HTTP_PARSER_GETTER(sparser, parser);
     zval *zbuffer;
@@ -189,13 +189,13 @@ static PHP_METHOD(swow_http_parser, execute)
 }
 
 #if 0
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_swow_http_parser_executeString, ZEND_RETURN_VALUE, 1, IS_LONG, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Http_Parser_executeString, ZEND_RETURN_VALUE, 1, IS_LONG, 0)
     ZEND_ARG_TYPE_INFO(0, string, IS_STRING, 0)
     ZEND_ARG_TYPE_INFO(0, string_offset, IS_LONG, 0)
     ZEND_ARG_TYPE_INFO(0, string_length, IS_LONG, 0)
 ZEND_END_ARG_INFO()
 
-static PHP_METHOD(swow_http_parser, executeString)
+static PHP_METHOD(Swow_Http_Parser, executeString)
 {
     SWOW_HTTP_PARSER_GETTER(sparser, parser);
     zend_string *string;
@@ -230,9 +230,9 @@ static PHP_METHOD(swow_http_parser, executeString)
 }
 #endif
 
-#define arginfo_swow_http_parser_getEvent arginfo_swow_http_parser_getLong
+#define arginfo_class_Swow_Http_Parser_getEvent arginfo_class_Swow_Http_Parser_getLong
 
-static PHP_METHOD(swow_http_parser, getEvent)
+static PHP_METHOD(Swow_Http_Parser, getEvent)
 {
     SWOW_HTTP_PARSER_GETTER(sparser, parser);
 
@@ -241,12 +241,12 @@ static PHP_METHOD(swow_http_parser, getEvent)
     RETURN_LONG(parser->event);
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_swow_http_parser_getString, ZEND_RETURN_VALUE, 0, IS_STRING, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Http_Parser_getString, ZEND_RETURN_VALUE, 0, IS_STRING, 0)
 ZEND_END_ARG_INFO()
 
-#define arginfo_swow_http_parser_getEventName arginfo_swow_http_parser_getString
+#define arginfo_class_Swow_Http_Parser_getEventName arginfo_class_Swow_Http_Parser_getString
 
-static PHP_METHOD(swow_http_parser, getEventName)
+static PHP_METHOD(Swow_Http_Parser, getEventName)
 {
     SWOW_HTTP_PARSER_GETTER(sparser, parser);
 
@@ -255,18 +255,18 @@ static PHP_METHOD(swow_http_parser, getEventName)
     RETURN_STRING(cat_http_parser_get_event_name(parser));
 }
 
-#define arginfo_swow_http_parser_getDataOffset arginfo_swow_http_parser_getLong
+#define arginfo_class_Swow_Http_Parser_getDataOffset arginfo_class_Swow_Http_Parser_getLong
 
-static PHP_METHOD(swow_http_parser, getDataOffset)
+static PHP_METHOD(Swow_Http_Parser, getDataOffset)
 {
     ZEND_PARSE_PARAMETERS_NONE();
 
     RETURN_LONG(getThisParser()->data_offset);
 }
 
-#define arginfo_swow_http_parser_getDataLength arginfo_swow_http_parser_getLong
+#define arginfo_class_Swow_Http_Parser_getDataLength arginfo_class_Swow_Http_Parser_getLong
 
-static PHP_METHOD(swow_http_parser, getDataLength)
+static PHP_METHOD(Swow_Http_Parser, getDataLength)
 {
     SWOW_HTTP_PARSER_GETTER(sparser, parser);
 
@@ -275,21 +275,21 @@ static PHP_METHOD(swow_http_parser, getDataLength)
     RETURN_LONG(parser->data_length);
 }
 
-#define arginfo_swow_http_parser_getParsedLength arginfo_swow_http_parser_getLong
+#define arginfo_class_Swow_Http_Parser_getParsedLength arginfo_class_Swow_Http_Parser_getLong
 
-static PHP_METHOD(swow_http_parser, getParsedLength)
+static PHP_METHOD(Swow_Http_Parser, getParsedLength)
 {
     ZEND_PARSE_PARAMETERS_NONE();
 
     RETURN_LONG(getThisParser()->parsed_length);
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_swow_http_parser_getBool, ZEND_RETURN_VALUE, 0, _IS_BOOL, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Http_Parser_getBool, ZEND_RETURN_VALUE, 0, _IS_BOOL, 0)
 ZEND_END_ARG_INFO()
 
-#define arginfo_swow_http_parser_isCompleted arginfo_swow_http_parser_getBool
+#define arginfo_class_Swow_Http_Parser_isCompleted arginfo_class_Swow_Http_Parser_getBool
 
-static PHP_METHOD(swow_http_parser, isCompleted)
+static PHP_METHOD(Swow_Http_Parser, isCompleted)
 {
     SWOW_HTTP_PARSER_GETTER(sparser, parser);
 
@@ -298,9 +298,9 @@ static PHP_METHOD(swow_http_parser, isCompleted)
     RETURN_BOOL(cat_http_parser_is_completed(parser));
 }
 
-#define arginfo_swow_http_parser_shouldKeepAlive arginfo_swow_http_parser_getBool
+#define arginfo_class_Swow_Http_Parser_shouldKeepAlive arginfo_class_Swow_Http_Parser_getBool
 
-static PHP_METHOD(swow_http_parser, shouldKeepAlive)
+static PHP_METHOD(Swow_Http_Parser, shouldKeepAlive)
 {
     SWOW_HTTP_PARSER_GETTER(sparser, parser);
 
@@ -309,9 +309,9 @@ static PHP_METHOD(swow_http_parser, shouldKeepAlive)
     RETURN_BOOL(parser->keep_alive);
 }
 
-#define arginfo_swow_http_parser_getMethod arginfo_swow_http_parser_getString
+#define arginfo_class_Swow_Http_Parser_getMethod arginfo_class_Swow_Http_Parser_getString
 
-static PHP_METHOD(swow_http_parser, getMethod)
+static PHP_METHOD(Swow_Http_Parser, getMethod)
 {
     SWOW_HTTP_PARSER_GETTER(sparser, parser);
 
@@ -320,9 +320,9 @@ static PHP_METHOD(swow_http_parser, getMethod)
     RETURN_STRING(cat_http_parser_get_method_name(parser));
 }
 
-#define arginfo_swow_http_parser_getMajorVersion arginfo_swow_http_parser_getLong
+#define arginfo_class_Swow_Http_Parser_getMajorVersion arginfo_class_Swow_Http_Parser_getLong
 
-static PHP_METHOD(swow_http_parser, getMajorVersion)
+static PHP_METHOD(Swow_Http_Parser, getMajorVersion)
 {
     SWOW_HTTP_PARSER_GETTER(sparser, parser);
 
@@ -331,9 +331,9 @@ static PHP_METHOD(swow_http_parser, getMajorVersion)
     RETURN_LONG(cat_http_parser_get_major_version(parser));
 }
 
-#define arginfo_swow_http_parser_getMinorVersion arginfo_swow_http_parser_getLong
+#define arginfo_class_Swow_Http_Parser_getMinorVersion arginfo_class_Swow_Http_Parser_getLong
 
-static PHP_METHOD(swow_http_parser, getMinorVersion)
+static PHP_METHOD(Swow_Http_Parser, getMinorVersion)
 {
     SWOW_HTTP_PARSER_GETTER(sparser, parser);
 
@@ -342,9 +342,9 @@ static PHP_METHOD(swow_http_parser, getMinorVersion)
     RETURN_LONG(cat_http_parser_get_minor_version(parser));
 }
 
-#define arginfo_swow_http_parser_getProtocolVersion arginfo_swow_http_parser_getString
+#define arginfo_class_Swow_Http_Parser_getProtocolVersion arginfo_class_Swow_Http_Parser_getString
 
-static PHP_METHOD(swow_http_parser, getProtocolVersion)
+static PHP_METHOD(Swow_Http_Parser, getProtocolVersion)
 {
     SWOW_HTTP_PARSER_GETTER(sparser, parser);
 
@@ -353,9 +353,9 @@ static PHP_METHOD(swow_http_parser, getProtocolVersion)
     RETURN_STRING(cat_http_parser_get_protocol_version(parser));
 }
 
-#define arginfo_swow_http_parser_getStatusCode arginfo_swow_http_parser_getLong
+#define arginfo_class_Swow_Http_Parser_getStatusCode arginfo_class_Swow_Http_Parser_getLong
 
-static PHP_METHOD(swow_http_parser, getStatusCode)
+static PHP_METHOD(Swow_Http_Parser, getStatusCode)
 {
     SWOW_HTTP_PARSER_GETTER(sparser, parser);
 
@@ -364,9 +364,9 @@ static PHP_METHOD(swow_http_parser, getStatusCode)
     RETURN_LONG(cat_http_parser_get_status_code(parser));
 }
 
-#define arginfo_swow_http_parser_getReasonPhrase arginfo_swow_http_parser_getString
+#define arginfo_class_Swow_Http_Parser_getReasonPhrase arginfo_class_Swow_Http_Parser_getString
 
-static PHP_METHOD(swow_http_parser, getReasonPhrase)
+static PHP_METHOD(Swow_Http_Parser, getReasonPhrase)
 {
     SWOW_HTTP_PARSER_GETTER(sparser, parser);
 
@@ -375,9 +375,9 @@ static PHP_METHOD(swow_http_parser, getReasonPhrase)
     RETURN_STRING(cat_http_parser_get_reason_phrase(parser));
 }
 
-#define arginfo_swow_http_parser_getContentLength arginfo_swow_http_parser_getLong
+#define arginfo_class_Swow_Http_Parser_getContentLength arginfo_class_Swow_Http_Parser_getLong
 
-static PHP_METHOD(swow_http_parser, getContentLength)
+static PHP_METHOD(Swow_Http_Parser, getContentLength)
 {
     SWOW_HTTP_PARSER_GETTER(sparser, parser);
 
@@ -386,9 +386,9 @@ static PHP_METHOD(swow_http_parser, getContentLength)
     RETURN_LONG(cat_http_parser_get_content_length(parser));
 }
 
-#define arginfo_swow_http_parser_isUpgrade arginfo_swow_http_parser_getBool
+#define arginfo_class_Swow_Http_Parser_isUpgrade arginfo_class_Swow_Http_Parser_getBool
 
-static PHP_METHOD(swow_http_parser, isUpgrade)
+static PHP_METHOD(Swow_Http_Parser, isUpgrade)
 {
     SWOW_HTTP_PARSER_GETTER(sparser, parser);
 
@@ -397,10 +397,10 @@ static PHP_METHOD(swow_http_parser, isUpgrade)
     RETURN_BOOL(cat_http_parser_is_upgrade(parser));
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO_EX(arginfo_swow_http_parser_finish, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO_EX(arginfo_class_Swow_Http_Parser_finish, 0)
 ZEND_END_ARG_INFO()
 
-static PHP_METHOD(swow_http_parser, finish)
+static PHP_METHOD(Swow_Http_Parser, finish)
 {
     SWOW_HTTP_PARSER_GETTER(sparser, parser);
     cat_bool_t ret;
@@ -417,10 +417,10 @@ static PHP_METHOD(swow_http_parser, finish)
     RETURN_THIS();
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO_EX(arginfo_swow_http_parser_reset, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO_EX(arginfo_class_Swow_Http_Parser_reset, 0)
 ZEND_END_ARG_INFO()
 
-static PHP_METHOD(swow_http_parser, reset)
+static PHP_METHOD(Swow_Http_Parser, reset)
 {
     SWOW_HTTP_PARSER_GETTER(sparser, parser);
 
@@ -434,28 +434,28 @@ static PHP_METHOD(swow_http_parser, reset)
 }
 
 static const zend_function_entry swow_http_parser_methods[] = {
-    PHP_ME(swow_http_parser, getType,            arginfo_swow_http_parser_getType,            ZEND_ACC_PUBLIC)
-    PHP_ME(swow_http_parser, setType,            arginfo_swow_http_parser_setType,            ZEND_ACC_PUBLIC)
-    PHP_ME(swow_http_parser, getEvents,          arginfo_swow_http_parser_getEvents,          ZEND_ACC_PUBLIC)
-    PHP_ME(swow_http_parser, setEvents,          arginfo_swow_http_parser_setEvents,          ZEND_ACC_PUBLIC)
-    PHP_ME(swow_http_parser, execute,            arginfo_swow_http_parser_execute,            ZEND_ACC_PUBLIC)
-    PHP_ME(swow_http_parser, getEvent,           arginfo_swow_http_parser_getEvent,           ZEND_ACC_PUBLIC)
-    PHP_ME(swow_http_parser, getEventName,       arginfo_swow_http_parser_getEventName,       ZEND_ACC_PUBLIC)
-    PHP_ME(swow_http_parser, getDataOffset,      arginfo_swow_http_parser_getDataOffset,      ZEND_ACC_PUBLIC)
-    PHP_ME(swow_http_parser, getDataLength,      arginfo_swow_http_parser_getDataLength,      ZEND_ACC_PUBLIC)
-    PHP_ME(swow_http_parser, getParsedLength,    arginfo_swow_http_parser_getParsedLength,    ZEND_ACC_PUBLIC)
-    PHP_ME(swow_http_parser, isCompleted,        arginfo_swow_http_parser_isCompleted,        ZEND_ACC_PUBLIC)
-    PHP_ME(swow_http_parser, shouldKeepAlive,    arginfo_swow_http_parser_shouldKeepAlive,    ZEND_ACC_PUBLIC)
-    PHP_ME(swow_http_parser, getMethod,          arginfo_swow_http_parser_getMethod,          ZEND_ACC_PUBLIC)
-    PHP_ME(swow_http_parser, getMajorVersion,    arginfo_swow_http_parser_getMajorVersion,    ZEND_ACC_PUBLIC)
-    PHP_ME(swow_http_parser, getMinorVersion,    arginfo_swow_http_parser_getMinorVersion,    ZEND_ACC_PUBLIC)
-    PHP_ME(swow_http_parser, getProtocolVersion, arginfo_swow_http_parser_getProtocolVersion, ZEND_ACC_PUBLIC)
-    PHP_ME(swow_http_parser, getStatusCode,      arginfo_swow_http_parser_getStatusCode,      ZEND_ACC_PUBLIC)
-    PHP_ME(swow_http_parser, getReasonPhrase,    arginfo_swow_http_parser_getReasonPhrase,    ZEND_ACC_PUBLIC)
-    PHP_ME(swow_http_parser, getContentLength,   arginfo_swow_http_parser_getContentLength,   ZEND_ACC_PUBLIC)
-    PHP_ME(swow_http_parser, isUpgrade,          arginfo_swow_http_parser_isUpgrade,          ZEND_ACC_PUBLIC)
-    PHP_ME(swow_http_parser, finish,             arginfo_swow_http_parser_finish,             ZEND_ACC_PUBLIC)
-    PHP_ME(swow_http_parser, reset,              arginfo_swow_http_parser_reset,              ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Http_Parser, getType,            arginfo_class_Swow_Http_Parser_getType,            ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Http_Parser, setType,            arginfo_class_Swow_Http_Parser_setType,            ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Http_Parser, getEvents,          arginfo_class_Swow_Http_Parser_getEvents,          ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Http_Parser, setEvents,          arginfo_class_Swow_Http_Parser_setEvents,          ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Http_Parser, execute,            arginfo_class_Swow_Http_Parser_execute,            ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Http_Parser, getEvent,           arginfo_class_Swow_Http_Parser_getEvent,           ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Http_Parser, getEventName,       arginfo_class_Swow_Http_Parser_getEventName,       ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Http_Parser, getDataOffset,      arginfo_class_Swow_Http_Parser_getDataOffset,      ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Http_Parser, getDataLength,      arginfo_class_Swow_Http_Parser_getDataLength,      ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Http_Parser, getParsedLength,    arginfo_class_Swow_Http_Parser_getParsedLength,    ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Http_Parser, isCompleted,        arginfo_class_Swow_Http_Parser_isCompleted,        ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Http_Parser, shouldKeepAlive,    arginfo_class_Swow_Http_Parser_shouldKeepAlive,    ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Http_Parser, getMethod,          arginfo_class_Swow_Http_Parser_getMethod,          ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Http_Parser, getMajorVersion,    arginfo_class_Swow_Http_Parser_getMajorVersion,    ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Http_Parser, getMinorVersion,    arginfo_class_Swow_Http_Parser_getMinorVersion,    ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Http_Parser, getProtocolVersion, arginfo_class_Swow_Http_Parser_getProtocolVersion, ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Http_Parser, getStatusCode,      arginfo_class_Swow_Http_Parser_getStatusCode,      ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Http_Parser, getReasonPhrase,    arginfo_class_Swow_Http_Parser_getReasonPhrase,    ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Http_Parser, getContentLength,   arginfo_class_Swow_Http_Parser_getContentLength,   ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Http_Parser, isUpgrade,          arginfo_class_Swow_Http_Parser_isUpgrade,          ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Http_Parser, finish,             arginfo_class_Swow_Http_Parser_finish,             ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Http_Parser, reset,              arginfo_class_Swow_Http_Parser_reset,              ZEND_ACC_PUBLIC)
     PHP_FE_END
 };
 
@@ -547,12 +547,12 @@ static cat_always_inline char* swow_http_pack_message(char *p, HashTable *header
     return p;
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_swow_http_packMessage, ZEND_RETURN_VALUE, 0, IS_STRING, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_Swow_Http_packMessage, ZEND_RETURN_VALUE, 0, IS_STRING, 0)
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, headers, IS_ARRAY, 0, "[]")
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, body, IS_STRING, 0, "\"\"")
 ZEND_END_ARG_INFO()
 
-static PHP_FUNCTION(swow_http_packMessage)
+static PHP_FUNCTION(Swow_Http_packMessage)
 {
     zend_string *message = zend_empty_string;
     /* arguments */
@@ -584,7 +584,7 @@ static PHP_FUNCTION(swow_http_packMessage)
     RETURN_STR(message);
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_swow_http_packRequest, ZEND_RETURN_VALUE, 0, IS_STRING, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_Swow_Http_packRequest, ZEND_RETURN_VALUE, 0, IS_STRING, 0)
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, method, IS_STRING, 0, "\"\"")
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, url, IS_STRING, 0, "\"\"")
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, headers, IS_ARRAY, 0, "[]")
@@ -592,7 +592,7 @@ ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_swow_http_packRequest, ZEND_RETU
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, protocolVersion, IS_STRING, 0, "\"\"")
 ZEND_END_ARG_INFO()
 
-static PHP_FUNCTION(swow_http_packRequest)
+static PHP_FUNCTION(Swow_Http_packRequest)
 {
     zend_string *request;
     /* arguments */
@@ -636,7 +636,7 @@ static PHP_FUNCTION(swow_http_packRequest)
     RETURN_STR(request);
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_swow_http_packResponse, ZEND_RETURN_VALUE, 0, IS_STRING, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_Swow_Http_packResponse, ZEND_RETURN_VALUE, 0, IS_STRING, 0)
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, statusCode, IS_LONG, 0, "0")
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, headers, IS_ARRAY, 0, "[]")
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, body, IS_STRING, 0, "\"\"")
@@ -644,7 +644,7 @@ ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_swow_http_packResponse, ZEND_RET
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, protocolVersion, IS_STRING, 0, "\"\"")
 ZEND_END_ARG_INFO()
 
-static PHP_FUNCTION(swow_http_packResponse)
+static PHP_FUNCTION(Swow_Http_packResponse)
 {
     zend_string *response;
     /* arguments */
@@ -702,9 +702,9 @@ static PHP_FUNCTION(swow_http_packResponse)
 }
 
 static const zend_function_entry swow_http_functions[] = {
-    PHP_FENTRY(Swow\\Http\\packMessage,  PHP_FN(swow_http_packMessage),  arginfo_swow_http_packMessage,  0)
-    PHP_FENTRY(Swow\\Http\\packRequest,  PHP_FN(swow_http_packRequest),  arginfo_swow_http_packRequest,  0)
-    PHP_FENTRY(Swow\\Http\\packResponse, PHP_FN(swow_http_packResponse), arginfo_swow_http_packResponse, 0)
+    PHP_FENTRY(Swow\\Http\\packMessage,  PHP_FN(Swow_Http_packMessage),  arginfo_Swow_Http_packMessage,  0)
+    PHP_FENTRY(Swow\\Http\\packRequest,  PHP_FN(Swow_Http_packRequest),  arginfo_Swow_Http_packRequest,  0)
+    PHP_FENTRY(Swow\\Http\\packResponse, PHP_FN(Swow_Http_packResponse), arginfo_Swow_Http_packResponse, 0)
     PHP_FE_END
 };
 

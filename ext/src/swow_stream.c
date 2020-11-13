@@ -956,7 +956,7 @@ SWOW_API const php_stream_ops swow_stream_stdio_ops = {
 
 /* {{{ proto int|false stream_socket_sendto(resource stream, string data [, int flags [, string target_addr]])
    Send data to a socket stream.  If target_addr is specified it must be in dotted quad (or [ipv6]) format */
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_MASK_EX(arginfo_swow_stream_socket_sendto, 0, 2, MAY_BE_LONG|MAY_BE_FALSE)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_MASK_EX(arginfo_swow_stream_socket_sendto, 0, 2, MAY_BE_LONG | MAY_BE_FALSE)
     ZEND_ARG_INFO(0, socket)
     ZEND_ARG_TYPE_INFO(0, data, IS_STRING, 0)
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, flags, IS_LONG, 0, "0")

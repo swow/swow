@@ -110,19 +110,19 @@ static void swow_log_standard(CAT_LOG_PARAMATERS)
     }
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_swow_log_getTypes, ZEND_RETURN_VALUE, 0, IS_LONG, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Log_getTypes, ZEND_RETURN_VALUE, 0, IS_LONG, 0)
 ZEND_END_ARG_INFO()
 
-static PHP_METHOD(swow_log, getTypes)
+static PHP_METHOD(Swow_Log, getTypes)
 {
     RETURN_LONG(CAT_G(log_types));
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_swow_log_setTypes, ZEND_RETURN_VALUE, 1, IS_VOID, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Log_setTypes, ZEND_RETURN_VALUE, 1, IS_VOID, 0)
     ZEND_ARG_TYPE_INFO(0, types, IS_LONG, 0)
 ZEND_END_ARG_INFO()
 
-static PHP_METHOD(swow_log, setTypes)
+static PHP_METHOD(Swow_Log, setTypes)
 {
     zend_long types;
 
@@ -137,19 +137,19 @@ static PHP_METHOD(swow_log, setTypes)
     CAT_G(log_types) = types;
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_swow_log_getModuleTypes, ZEND_RETURN_VALUE, 0, IS_LONG, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Log_getModuleTypes, ZEND_RETURN_VALUE, 0, IS_LONG, 0)
 ZEND_END_ARG_INFO()
 
-static PHP_METHOD(swow_log, getModuleTypes)
+static PHP_METHOD(Swow_Log, getModuleTypes)
 {
     RETURN_LONG(CAT_G(log_module_types));
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_swow_log_setModuleTypes, ZEND_RETURN_VALUE, 1, IS_VOID, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Log_setModuleTypes, ZEND_RETURN_VALUE, 1, IS_VOID, 0)
     ZEND_ARG_TYPE_INFO(0, moduleTypes, IS_LONG, 0)
 ZEND_END_ARG_INFO()
 
-static PHP_METHOD(swow_log, setModuleTypes)
+static PHP_METHOD(Swow_Log, setModuleTypes)
 {
     zend_long module_types;
 
@@ -165,10 +165,10 @@ static PHP_METHOD(swow_log, setModuleTypes)
 }
 
 static const zend_function_entry swow_log_methods[] = {
-    PHP_ME(swow_log, getTypes,       arginfo_swow_log_getTypes,       ZEND_ACC_STATIC | ZEND_ACC_PUBLIC)
-    PHP_ME(swow_log, setTypes,       arginfo_swow_log_setTypes,       ZEND_ACC_STATIC | ZEND_ACC_PUBLIC)
-    PHP_ME(swow_log, getModuleTypes, arginfo_swow_log_getModuleTypes, ZEND_ACC_STATIC | ZEND_ACC_PUBLIC)
-    PHP_ME(swow_log, setModuleTypes, arginfo_swow_log_setModuleTypes, ZEND_ACC_STATIC | ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Log, getTypes,       arginfo_class_Swow_Log_getTypes,       ZEND_ACC_STATIC | ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Log, setTypes,       arginfo_class_Swow_Log_setTypes,       ZEND_ACC_STATIC | ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Log, getModuleTypes, arginfo_class_Swow_Log_getModuleTypes, ZEND_ACC_STATIC | ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Log, setModuleTypes, arginfo_class_Swow_Log_setModuleTypes, ZEND_ACC_STATIC | ZEND_ACC_PUBLIC)
     PHP_FE_END
 };
 

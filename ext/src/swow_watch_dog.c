@@ -154,13 +154,13 @@ SWOW_API cat_bool_t swow_watch_dog_stop(void)
     return cat_true;
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_swow_watch_dog_run, ZEND_RETURN_VALUE, 0, IS_VOID, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_WatchDog_run, ZEND_RETURN_VALUE, 0, IS_VOID, 0)
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, quantum, IS_LONG, 0, "0")
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, threshold, IS_LONG, 0, "0")
     ZEND_ARG_TYPE_MASK(0, alerter, MAY_BE_NULL | MAY_BE_LONG | MAY_BE_DOUBLE | MAY_BE_CALLABLE, "null")
 ZEND_END_ARG_INFO()
 
-static PHP_METHOD(swow_watch_dog, run)
+static PHP_METHOD(Swow_WatchDog, run)
 {
     zend_long quantum = 0;
     zend_long threshold = 0;
@@ -182,10 +182,10 @@ static PHP_METHOD(swow_watch_dog, run)
     }
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_swow_watch_dog_stop, ZEND_RETURN_VALUE, 0, IS_VOID, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_WatchDog_stop, ZEND_RETURN_VALUE, 0, IS_VOID, 0)
 ZEND_END_ARG_INFO()
 
-static PHP_METHOD(swow_watch_dog, stop)
+static PHP_METHOD(Swow_WatchDog, stop)
 {
     cat_bool_t ret;
 
@@ -199,10 +199,10 @@ static PHP_METHOD(swow_watch_dog, stop)
     }
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_swow_watch_dog_isRunning, ZEND_RETURN_VALUE, 0, _IS_BOOL, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_WatchDog_isRunning, ZEND_RETURN_VALUE, 0, _IS_BOOL, 0)
 ZEND_END_ARG_INFO()
 
-static PHP_METHOD(swow_watch_dog, isRunning)
+static PHP_METHOD(Swow_WatchDog, isRunning)
 {
     ZEND_PARSE_PARAMETERS_NONE();
 
@@ -210,9 +210,9 @@ static PHP_METHOD(swow_watch_dog, isRunning)
 }
 
 static const zend_function_entry swow_watch_dog_methods[] = {
-    PHP_ME(swow_watch_dog, run,       arginfo_swow_watch_dog_run,       ZEND_ACC_STATIC | ZEND_ACC_PUBLIC)
-    PHP_ME(swow_watch_dog, stop,      arginfo_swow_watch_dog_stop,      ZEND_ACC_STATIC | ZEND_ACC_PUBLIC)
-    PHP_ME(swow_watch_dog, isRunning, arginfo_swow_watch_dog_isRunning, ZEND_ACC_STATIC | ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_WatchDog, run,       arginfo_class_Swow_WatchDog_run,       ZEND_ACC_STATIC | ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_WatchDog, stop,      arginfo_class_Swow_WatchDog_stop,      ZEND_ACC_STATIC | ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_WatchDog, isRunning, arginfo_class_Swow_WatchDog_isRunning, ZEND_ACC_STATIC | ZEND_ACC_PUBLIC)
     PHP_FE_END
 };
 

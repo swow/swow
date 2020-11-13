@@ -20,13 +20,13 @@
 
 #include "swow_hook.h"
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_swow_time_sleep, 0 , ZEND_RETURN_VALUE, 1)
+ZEND_BEGIN_ARG_INFO_EX(arginfo_swow_sleep, 0 , ZEND_RETURN_VALUE, 1)
     ZEND_ARG_TYPE_INFO(0, seconds, IS_LONG, 0)
 ZEND_END_ARG_INFO()
 
 /* {{{ proto void sleep(int seconds)
    Delay for a given number of seconds */
-static PHP_FUNCTION(swow_time_sleep)
+static PHP_FUNCTION(swow_sleep)
 {
     zend_long seconds;
 
@@ -44,13 +44,13 @@ static PHP_FUNCTION(swow_time_sleep)
 }
 /* }}} */
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_swow_time_msleep, 0 , ZEND_RETURN_VALUE, 1)
+ZEND_BEGIN_ARG_INFO_EX(arginfo_swow_msleep, 0 , ZEND_RETURN_VALUE, 1)
     ZEND_ARG_TYPE_INFO(0, milli_seconds, IS_LONG, 0)
 ZEND_END_ARG_INFO()
 
 /* {{{ proto void usleep(int milliseconds)
    Delay for a given number of micro seconds */
-static PHP_FUNCTION(swow_time_msleep)
+static PHP_FUNCTION(swow_msleep)
 {
     zend_long milli_seconds;
 
@@ -67,13 +67,13 @@ static PHP_FUNCTION(swow_time_msleep)
 }
 /* }}} */
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_swow_time_usleep, ZEND_RETURN_VALUE, 1, IS_VOID, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_swow_usleep, ZEND_RETURN_VALUE, 1, IS_VOID, 0)
     ZEND_ARG_TYPE_INFO(0, micro_seconds, IS_LONG, 0)
 ZEND_END_ARG_INFO()
 
 /* {{{ proto void usleep(int micro_seconds)
    Delay for a given number of micro seconds */
-static PHP_FUNCTION(swow_time_usleep)
+static PHP_FUNCTION(swow_usleep)
 {
     zend_long micro_seconds;
 
@@ -90,14 +90,14 @@ static PHP_FUNCTION(swow_time_usleep)
 }
 /* }}} */
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_MASK_EX(arginfo_swow_time_nanosleep, ZEND_RETURN_VALUE, 2, MAY_BE_ARRAY|MAY_BE_BOOL)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_MASK_EX(arginfo_swow_nanosleep, ZEND_RETURN_VALUE, 2, MAY_BE_ARRAY|MAY_BE_BOOL)
     ZEND_ARG_TYPE_INFO(0, seconds, IS_LONG, 0)
     ZEND_ARG_TYPE_INFO(0, nanoseconds, IS_LONG, 0)
 ZEND_END_ARG_INFO()
 
 /* {{{ proto mixed time_nanosleep(int seconds, int nanoseconds)
    Delay for a number of seconds and nano seconds */
-static PHP_FUNCTION(swow_time_nanosleep)
+static PHP_FUNCTION(swow_nanosleep)
 {
     zend_long tv_sec, tv_nsec;
     struct timespec php_req, php_rem;
@@ -131,13 +131,13 @@ static PHP_FUNCTION(swow_time_nanosleep)
 }
 /* }}} */
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_swow_time_sleep_until, ZEND_RETURN_VALUE, 1, _IS_BOOL, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_swow_sleep_until, ZEND_RETURN_VALUE, 1, _IS_BOOL, 0)
     ZEND_ARG_TYPE_INFO(0, timestamp, IS_LONG, 0)
 ZEND_END_ARG_INFO()
 
 /* {{{ proto bool time_sleep_until(float timestamp)
    Make the script sleep until the specified time */
-static PHP_FUNCTION(swow_time_sleep_until)
+static PHP_FUNCTION(swow_sleep_until)
 {
     double target_secs;
     struct timeval tm;
@@ -169,11 +169,11 @@ static PHP_FUNCTION(swow_time_sleep_until)
 /* }}} */
 
 static const zend_function_entry swow_time_functions[] = {
-    PHP_FENTRY(sleep,            PHP_FN(swow_time_sleep),       arginfo_swow_time_sleep,       0)
-    PHP_FENTRY(msleep,           PHP_FN(swow_time_msleep),      arginfo_swow_time_msleep,      0)
-    PHP_FENTRY(usleep,           PHP_FN(swow_time_usleep),      arginfo_swow_time_usleep,      0)
-    PHP_FENTRY(time_nanosleep,   PHP_FN(swow_time_nanosleep),   arginfo_swow_time_nanosleep,   0)
-    PHP_FENTRY(time_sleep_until, PHP_FN(swow_time_sleep_until), arginfo_swow_time_sleep_until, 0)
+    PHP_FENTRY(sleep,            PHP_FN(swow_sleep),       arginfo_swow_sleep,       0)
+    PHP_FENTRY(msleep,           PHP_FN(swow_msleep),      arginfo_swow_msleep,      0)
+    PHP_FENTRY(usleep,           PHP_FN(swow_usleep),      arginfo_swow_usleep,      0)
+    PHP_FENTRY(time_nanosleep,   PHP_FN(swow_nanosleep),   arginfo_swow_nanosleep,   0)
+    PHP_FENTRY(time_sleep_until, PHP_FN(swow_sleep_until), arginfo_swow_sleep_until, 0)
     PHP_FE_END
 };
 

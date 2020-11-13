@@ -85,11 +85,11 @@ static void swow_channel_free_object(zend_object *object)
         SWOW_CHANNEL_GETTER(schannel, channel); \
         SWOW_CHANNEL_CHECK(channel)
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_swow_channel___construct, 0, ZEND_RETURN_VALUE, 0)
+ZEND_BEGIN_ARG_INFO_EX(arginfo_class_Swow_Channel___construct, 0, ZEND_RETURN_VALUE, 0)
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, capacity, IS_LONG, 0, "0")
 ZEND_END_ARG_INFO()
 
-static PHP_METHOD(swow_channel, __construct)
+static PHP_METHOD(Swow_Channel, __construct)
 {
     SWOW_CHANNEL_GETTER(schannel, channel);
     zend_long capacity = 0;
@@ -117,12 +117,12 @@ static PHP_METHOD(swow_channel, __construct)
     }
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO_EX(arginfo_swow_channel_push, 1)
+ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO_EX(arginfo_class_Swow_Channel_push, 1)
     ZEND_ARG_TYPE_INFO(0, data, IS_MIXED, 0)
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, timeout, IS_LONG, 0, "-1")
 ZEND_END_ARG_INFO()
 
-static PHP_METHOD(swow_channel, push)
+static PHP_METHOD(Swow_Channel, push)
 {
     SWOW_CHANNEL_GETTER_CONSTRUCTED(schannel, channel);
     zval *zdata;
@@ -146,11 +146,11 @@ static PHP_METHOD(swow_channel, push)
     RETURN_THIS();
 }
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_swow_channel_pop, 0, ZEND_RETURN_VALUE, 0)
+ZEND_BEGIN_ARG_INFO_EX(arginfo_class_Swow_Channel_pop, 0, ZEND_RETURN_VALUE, 0)
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, timeout, IS_LONG, 0, "-1")
 ZEND_END_ARG_INFO()
 
-static PHP_METHOD(swow_channel, pop)
+static PHP_METHOD(Swow_Channel, pop)
 {
     SWOW_CHANNEL_GETTER_CONSTRUCTED(schannel, channel);
     zend_long timeout = -1;
@@ -169,10 +169,10 @@ static PHP_METHOD(swow_channel, pop)
     }
 }
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_swow_channel_close, 0, ZEND_RETURN_VALUE, 0)
+ZEND_BEGIN_ARG_INFO_EX(arginfo_class_Swow_Channel_close, 0, ZEND_RETURN_VALUE, 0)
 ZEND_END_ARG_INFO()
 
-static PHP_METHOD(swow_channel, close)
+static PHP_METHOD(Swow_Channel, close)
 {
     SWOW_CHANNEL_GETTER_CONSTRUCTED(schannel, channel);
 
@@ -183,12 +183,12 @@ static PHP_METHOD(swow_channel, close)
 
 /* status */
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_swow_channel_getLong, ZEND_RETURN_VALUE, 0, IS_LONG, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Channel_getLong, ZEND_RETURN_VALUE, 0, IS_LONG, 0)
 ZEND_END_ARG_INFO()
 
-#define arginfo_swow_channel_getCapacity arginfo_swow_channel_getLong
+#define arginfo_class_Swow_Channel_getCapacity arginfo_class_Swow_Channel_getLong
 
-static PHP_METHOD(swow_channel, getCapacity)
+static PHP_METHOD(Swow_Channel, getCapacity)
 {
     SWOW_CHANNEL_GETTER_CONSTRUCTED(schannel, channel);
 
@@ -197,9 +197,9 @@ static PHP_METHOD(swow_channel, getCapacity)
     RETURN_LONG(channel->capacity);
 }
 
-#define arginfo_swow_channel_getLength arginfo_swow_channel_getLong
+#define arginfo_class_Swow_Channel_getLength arginfo_class_Swow_Channel_getLong
 
-static PHP_METHOD(swow_channel, getLength)
+static PHP_METHOD(Swow_Channel, getLength)
 {
     SWOW_CHANNEL_GETTER_CONSTRUCTED(schannel, channel);
 
@@ -208,9 +208,9 @@ static PHP_METHOD(swow_channel, getLength)
     RETURN_LONG(channel->length);
 }
 
-#define arginfo_swow_channel_isAvailable arginfo_swow_channel_getBool
+#define arginfo_class_Swow_Channel_isAvailable arginfo_class_Swow_Channel_getBool
 
-static PHP_METHOD(swow_channel, isAvailable)
+static PHP_METHOD(Swow_Channel, isAvailable)
 {
     SWOW_CHANNEL_GETTER_CONSTRUCTED(schannel, channel);
 
@@ -219,9 +219,9 @@ static PHP_METHOD(swow_channel, isAvailable)
     RETURN_BOOL(cat_channel_is_available(channel));
 }
 
-#define arginfo_swow_channel_hasProducers arginfo_swow_channel_getBool
+#define arginfo_class_Swow_Channel_hasProducers arginfo_class_Swow_Channel_getBool
 
-static PHP_METHOD(swow_channel, hasProducers)
+static PHP_METHOD(Swow_Channel, hasProducers)
 {
     SWOW_CHANNEL_GETTER_CONSTRUCTED(schannel, channel);
 
@@ -230,9 +230,9 @@ static PHP_METHOD(swow_channel, hasProducers)
     RETURN_BOOL(cat_channel_has_producers(channel));
 }
 
-#define arginfo_swow_channel_hasConsumers arginfo_swow_channel_getBool
+#define arginfo_class_Swow_Channel_hasConsumers arginfo_class_Swow_Channel_getBool
 
-static PHP_METHOD(swow_channel, hasConsumers)
+static PHP_METHOD(Swow_Channel, hasConsumers)
 {
     SWOW_CHANNEL_GETTER_CONSTRUCTED(schannel, channel);
 
@@ -241,12 +241,12 @@ static PHP_METHOD(swow_channel, hasConsumers)
     RETURN_BOOL(cat_channel_has_consumers(channel));
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_swow_channel_getBool, ZEND_RETURN_VALUE, 0, _IS_BOOL, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Channel_getBool, ZEND_RETURN_VALUE, 0, _IS_BOOL, 0)
 ZEND_END_ARG_INFO()
 
-#define arginfo_swow_channel_isEmpty arginfo_swow_channel_getBool
+#define arginfo_class_Swow_Channel_isEmpty arginfo_class_Swow_Channel_getBool
 
-static PHP_METHOD(swow_channel, isEmpty)
+static PHP_METHOD(Swow_Channel, isEmpty)
 {
     SWOW_CHANNEL_GETTER_CONSTRUCTED(schannel, channel);
 
@@ -255,9 +255,9 @@ static PHP_METHOD(swow_channel, isEmpty)
     RETURN_BOOL(cat_channel_is_empty(channel));
 }
 
-#define arginfo_swow_channel_isFull arginfo_swow_channel_getBool
+#define arginfo_class_Swow_Channel_isFull arginfo_class_Swow_Channel_getBool
 
-static PHP_METHOD(swow_channel, isFull)
+static PHP_METHOD(Swow_Channel, isFull)
 {
     SWOW_CHANNEL_GETTER_CONSTRUCTED(schannel, channel);
 
@@ -266,9 +266,9 @@ static PHP_METHOD(swow_channel, isFull)
     RETURN_BOOL(cat_channel_is_full(channel));
 }
 
-#define arginfo_swow_channel_isReadable arginfo_swow_channel_getBool
+#define arginfo_class_Swow_Channel_isReadable arginfo_class_Swow_Channel_getBool
 
-static PHP_METHOD(swow_channel, isReadable)
+static PHP_METHOD(Swow_Channel, isReadable)
 {
     SWOW_CHANNEL_GETTER_CONSTRUCTED(schannel, channel);
 
@@ -277,9 +277,9 @@ static PHP_METHOD(swow_channel, isReadable)
     RETURN_BOOL(cat_channel_is_readable(channel));
 }
 
-#define arginfo_swow_channel_isWritable arginfo_swow_channel_getBool
+#define arginfo_class_Swow_Channel_isWritable arginfo_class_Swow_Channel_getBool
 
-static PHP_METHOD(swow_channel, isWritable)
+static PHP_METHOD(Swow_Channel, isWritable)
 {
     SWOW_CHANNEL_GETTER_CONSTRUCTED(schannel, channel);
 
@@ -288,10 +288,10 @@ static PHP_METHOD(swow_channel, isWritable)
     RETURN_BOOL(cat_channel_is_writable(channel));
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_swow_channel___debugInfo, ZEND_RETURN_VALUE, 0, IS_ARRAY, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Channel___debugInfo, ZEND_RETURN_VALUE, 0, IS_ARRAY, 0)
 ZEND_END_ARG_INFO()
 
-static PHP_METHOD(swow_channel, __debugInfo)
+static PHP_METHOD(Swow_Channel, __debugInfo)
 {
     SWOW_CHANNEL_GETTER(schannel, channel);
     zval zdebug_info;
@@ -312,22 +312,22 @@ static PHP_METHOD(swow_channel, __debugInfo)
 }
 
 static const zend_function_entry swow_channel_methods[] = {
-    PHP_ME(swow_channel, __construct,  arginfo_swow_channel___construct,  ZEND_ACC_PUBLIC)
-    PHP_ME(swow_channel, push,         arginfo_swow_channel_push,         ZEND_ACC_PUBLIC)
-    PHP_ME(swow_channel, pop,          arginfo_swow_channel_pop,          ZEND_ACC_PUBLIC)
-    PHP_ME(swow_channel, close,        arginfo_swow_channel_close,        ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Channel, __construct,  arginfo_class_Swow_Channel___construct,  ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Channel, push,         arginfo_class_Swow_Channel_push,         ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Channel, pop,          arginfo_class_Swow_Channel_pop,          ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Channel, close,        arginfo_class_Swow_Channel_close,        ZEND_ACC_PUBLIC)
     /* status */
-    PHP_ME(swow_channel, getCapacity,  arginfo_swow_channel_getCapacity,  ZEND_ACC_PUBLIC)
-    PHP_ME(swow_channel, getLength,    arginfo_swow_channel_getLength,    ZEND_ACC_PUBLIC)
-    PHP_ME(swow_channel, isAvailable,  arginfo_swow_channel_isAvailable,  ZEND_ACC_PUBLIC)
-    PHP_ME(swow_channel, hasProducers, arginfo_swow_channel_hasProducers, ZEND_ACC_PUBLIC)
-    PHP_ME(swow_channel, hasConsumers, arginfo_swow_channel_hasConsumers, ZEND_ACC_PUBLIC)
-    PHP_ME(swow_channel, isEmpty,      arginfo_swow_channel_isEmpty,      ZEND_ACC_PUBLIC)
-    PHP_ME(swow_channel, isFull,       arginfo_swow_channel_isFull,       ZEND_ACC_PUBLIC)
-    PHP_ME(swow_channel, isReadable,   arginfo_swow_channel_isReadable,   ZEND_ACC_PUBLIC)
-    PHP_ME(swow_channel, isWritable,   arginfo_swow_channel_isWritable,   ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Channel, getCapacity,  arginfo_class_Swow_Channel_getCapacity,  ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Channel, getLength,    arginfo_class_Swow_Channel_getLength,    ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Channel, isAvailable,  arginfo_class_Swow_Channel_isAvailable,  ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Channel, hasProducers, arginfo_class_Swow_Channel_hasProducers, ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Channel, hasConsumers, arginfo_class_Swow_Channel_hasConsumers, ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Channel, isEmpty,      arginfo_class_Swow_Channel_isEmpty,      ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Channel, isFull,       arginfo_class_Swow_Channel_isFull,       ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Channel, isReadable,   arginfo_class_Swow_Channel_isReadable,   ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Channel, isWritable,   arginfo_class_Swow_Channel_isWritable,   ZEND_ACC_PUBLIC)
     /* magic */
-    PHP_ME(swow_channel, __debugInfo,  arginfo_swow_channel___debugInfo,  ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Channel, __debugInfo,  arginfo_class_Swow_Channel___debugInfo,  ZEND_ACC_PUBLIC)
     PHP_FE_END
 };
 
@@ -403,7 +403,7 @@ static void swow_channel_selector_free_object(zend_object *object)
 
 #define getThisSelector() swow_channel_selector_get_from_object(Z_OBJ_P(ZEND_THIS))
 
-static PHP_METHOD_EX(swow_channel_selector, add, zval *zchannel, zval *zdata)
+static PHP_METHOD_EX(Swow_Channel_Selector, add, zval *zchannel, zval *zdata)
 {
     swow_channel_selector_t *selector = getThisSelector();
     swow_channel_t *schannel = swow_channel_get_from_object(Z_OBJ_P(zchannel));
@@ -458,12 +458,12 @@ static PHP_METHOD_EX(swow_channel_selector, add, zval *zchannel, zval *zdata)
     RETURN_THIS();
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO_EX(arginfo_swow_channel_selector_push, 2)
+ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO_EX(arginfo_class_Swow_Channel_Selector_push, 2)
     ZEND_ARG_OBJ_INFO(0, channel, Swow\\Channel, 0)
     ZEND_ARG_TYPE_INFO(0, data, IS_MIXED, 0)
 ZEND_END_ARG_INFO()
 
-static PHP_METHOD(swow_channel_selector, push)
+static PHP_METHOD(Swow_Channel_Selector, push)
 {
     zval *zchannel, *zdata;
 
@@ -472,14 +472,14 @@ static PHP_METHOD(swow_channel_selector, push)
         Z_PARAM_ZVAL(zdata)
     ZEND_PARSE_PARAMETERS_END();
 
-    PHP_METHOD_CALL(swow_channel_selector, add, zchannel, zdata);
+    PHP_METHOD_CALL(Swow_Channel_Selector, add, zchannel, zdata);
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO_EX(arginfo_swow_channel_selector_pop, 1)
+ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO_EX(arginfo_class_Swow_Channel_Selector_pop, 1)
     ZEND_ARG_OBJ_INFO(0, channel, Swow\\Channel, 0)
 ZEND_END_ARG_INFO()
 
-static PHP_METHOD(swow_channel_selector, pop)
+static PHP_METHOD(Swow_Channel_Selector, pop)
 {
     zval *zchannel;
 
@@ -487,14 +487,14 @@ static PHP_METHOD(swow_channel_selector, pop)
         Z_PARAM_OBJECT_OF_CLASS(zchannel, swow_channel_ce)
     ZEND_PARSE_PARAMETERS_END();
 
-    PHP_METHOD_CALL(swow_channel_selector, add, zchannel, NULL);
+    PHP_METHOD_CALL(Swow_Channel_Selector, add, zchannel, NULL);
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO_EX(arginfo_swow_channel_selector_do, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_class_Swow_Channel_Selector_do, ZEND_RETURN_VALUE, 0, Swow\\Channel, 0)
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, timeout, IS_LONG, 0, "-1")
 ZEND_END_ARG_INFO()
 
-static PHP_METHOD(swow_channel_selector, do)
+static PHP_METHOD(Swow_Channel_Selector, do)
 {
     swow_channel_selector_t *selector = getThisSelector();
     zend_long timeout = -1;
@@ -538,10 +538,10 @@ static PHP_METHOD(swow_channel_selector, do)
     }
 }
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_swow_channel_selector_fetch, 0, ZEND_RETURN_VALUE, 0)
+ZEND_BEGIN_ARG_INFO_EX(arginfo_class_Swow_Channel_Selector_fetch, 0, ZEND_RETURN_VALUE, 0)
 ZEND_END_ARG_INFO()
 
-static PHP_METHOD(swow_channel_selector, fetch)
+static PHP_METHOD(Swow_Channel_Selector, fetch)
 {
     swow_channel_selector_t *selector = getThisSelector();
     zval *zdata = &selector->zdata;
@@ -558,9 +558,9 @@ static PHP_METHOD(swow_channel_selector, fetch)
     ZVAL_UNDEF(zdata);
 }
 
-#define arginfo_swow_channel_selector_getLastOpcode arginfo_swow_channel_getLong
+#define arginfo_class_Swow_Channel_Selector_getLastOpcode arginfo_class_Swow_Channel_getLong
 
-static PHP_METHOD(swow_channel_selector, getLastOpcode)
+static PHP_METHOD(Swow_Channel_Selector, getLastOpcode)
 {
     swow_channel_selector_t *selector = getThisSelector();
 
@@ -570,11 +570,11 @@ static PHP_METHOD(swow_channel_selector, getLastOpcode)
 }
 
 static const zend_function_entry swow_channel_selector_methods[] = {
-    PHP_ME(swow_channel_selector, push,          arginfo_swow_channel_selector_push,          ZEND_ACC_PUBLIC)
-    PHP_ME(swow_channel_selector, pop,           arginfo_swow_channel_selector_pop,           ZEND_ACC_PUBLIC)
-    PHP_ME(swow_channel_selector, do,            arginfo_swow_channel_selector_do,            ZEND_ACC_PUBLIC)
-    PHP_ME(swow_channel_selector, fetch,         arginfo_swow_channel_selector_fetch,         ZEND_ACC_PUBLIC)
-    PHP_ME(swow_channel_selector, getLastOpcode, arginfo_swow_channel_selector_getLastOpcode, ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Channel_Selector, push,          arginfo_class_Swow_Channel_Selector_push,          ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Channel_Selector, pop,           arginfo_class_Swow_Channel_Selector_pop,           ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Channel_Selector, do,            arginfo_class_Swow_Channel_Selector_do,            ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Channel_Selector, fetch,         arginfo_class_Swow_Channel_Selector_fetch,         ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Channel_Selector, getLastOpcode, arginfo_class_Swow_Channel_Selector_getLastOpcode, ZEND_ACC_PUBLIC)
     PHP_FE_END
 };
 

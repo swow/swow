@@ -119,24 +119,24 @@ static void swow_defer_dtor_object(zend_object *object)
     swow_defer_do_tasks(sdefer);
 }
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_swow_defer___construct, 0, ZEND_RETURN_VALUE, 0)
+ZEND_BEGIN_ARG_INFO_EX(arginfo_class_Swow_Defer___construct, 0, ZEND_RETURN_VALUE, 0)
 ZEND_END_ARG_INFO()
 
-static PHP_METHOD(swow_defer, __construct)
+static PHP_METHOD(Swow_Defer, __construct)
 {
     zend_throw_error(NULL, "%s can not be construct for security reasons", ZEND_THIS_NAME);
 }
 
 static const zend_function_entry swow_defer_methods[] = {
-    PHP_ME(swow_defer, __construct, arginfo_swow_defer___construct, ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Defer, __construct, arginfo_class_Swow_Defer___construct, ZEND_ACC_PUBLIC)
     PHP_FE_END
 };
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_swow_defer, ZEND_RETURN_VALUE, 0, IS_VOID, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_Swow_Defer, ZEND_RETURN_VALUE, 0, IS_VOID, 0)
     ZEND_ARG_CALLABLE_INFO(0, tasks, 0)
 ZEND_END_ARG_INFO()
 
-static PHP_FUNCTION(swow_defer)
+static PHP_FUNCTION(Swow_Defer)
 {
     zval *ztask;
     cat_bool_t ret;
@@ -158,7 +158,7 @@ static PHP_FUNCTION(swow_defer)
 }
 
 static const zend_function_entry swow_defer_functions[] = {
-    PHP_FENTRY(Swow\\defer, PHP_FN(swow_defer), arginfo_swow_defer, 0)
+    PHP_FENTRY(Swow\\defer, PHP_FN(Swow_Defer), arginfo_Swow_Defer, 0)
     PHP_FE_END
 };
 

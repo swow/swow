@@ -1289,13 +1289,13 @@ SWOW_API cat_bool_t swow_coroutine_kill(swow_coroutine_t *scoroutine, const char
 
 #define getThisCoroutine() (swow_coroutine_get_from_object(Z_OBJ_P(ZEND_THIS)))
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_swow_coroutine___construct, 0, ZEND_RETURN_VALUE, 1)
+ZEND_BEGIN_ARG_INFO_EX(arginfo_class_Swow_Coroutine___construct, 0, ZEND_RETURN_VALUE, 1)
     ZEND_ARG_CALLABLE_INFO(0, callable, 0)
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, stackPageSize, IS_LONG, 0, "0")
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, stackSize, IS_LONG, 0, "0")
 ZEND_END_ARG_INFO()
 
-static PHP_METHOD(swow_coroutine, __construct)
+static PHP_METHOD(Swow_Coroutine, __construct)
 {
     swow_coroutine_t *scoroutine = getThisCoroutine();
     zval *zcallable;
@@ -1339,12 +1339,12 @@ static PHP_METHOD(swow_coroutine, __construct)
         ZVAL_PTR(zdata, &fci); \
     }
 
-ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO_EX(arginfo_swow_coroutine_run, 1)
+ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO_EX(arginfo_class_Swow_Coroutine_run, 1)
     ZEND_ARG_CALLABLE_INFO(0, callable, 0)
     ZEND_ARG_VARIADIC_INFO(0, data)
 ZEND_END_ARG_INFO()
 
-static PHP_METHOD(swow_coroutine, run)
+static PHP_METHOD(Swow_Coroutine, run)
 {
     zval *zcallable;
     SWOW_COROUTINE_DECLARE_RESUME_TRANSFER(zdata);
@@ -1370,11 +1370,11 @@ static PHP_METHOD(swow_coroutine, run)
     RETURN_OBJ(&scoroutine->std);
 }
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_swow_coroutine_resume, 0, ZEND_RETURN_VALUE, 0)
+ZEND_BEGIN_ARG_INFO_EX(arginfo_class_Swow_Coroutine_resume, 0, ZEND_RETURN_VALUE, 0)
     ZEND_ARG_VARIADIC_INFO(0, data)
 ZEND_END_ARG_INFO()
 
-static PHP_METHOD(swow_coroutine, resume)
+static PHP_METHOD(Swow_Coroutine, resume)
 {
     swow_coroutine_t *scoroutine = getThisCoroutine();
     SWOW_COROUTINE_DECLARE_RESUME_TRANSFER(zdata);
@@ -1397,11 +1397,11 @@ static PHP_METHOD(swow_coroutine, resume)
 #undef SWOW_COROUTINE_DECLARE_RESUME_TRANSFER
 #undef SWOW_COROUTINE_HANDLE_RESUME_TRANSFER
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_swow_coroutine_yield, 0, ZEND_RETURN_VALUE, 0)
+ZEND_BEGIN_ARG_INFO_EX(arginfo_class_Swow_Coroutine_yield, 0, ZEND_RETURN_VALUE, 0)
     ZEND_ARG_INFO_WITH_DEFAULT_VALUE(0, data, "null")
 ZEND_END_ARG_INFO()
 
-static PHP_METHOD(swow_coroutine, yield)
+static PHP_METHOD(Swow_Coroutine, yield)
 {
     zval *zdata = NULL;
     cat_bool_t ret;
@@ -1419,10 +1419,10 @@ static PHP_METHOD(swow_coroutine, yield)
     }
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_swow_coroutine_getId, ZEND_RETURN_VALUE, 0, IS_LONG, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Coroutine_getId, ZEND_RETURN_VALUE, 0, IS_LONG, 0)
 ZEND_END_ARG_INFO()
 
-static PHP_METHOD(swow_coroutine, getId)
+static PHP_METHOD(Swow_Coroutine, getId)
 {
     ZEND_PARSE_PARAMETERS_NONE();
 
@@ -1439,10 +1439,10 @@ static PHP_METHOD(swow_coroutine, getId)
     RETURN_OBJ(&scoroutine->std); \
 } while (0)
 
-ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO_EX(arginfo_swow_coroutine_getCoroutine, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO_EX(arginfo_class_Swow_Coroutine_getCoroutine, 0)
 ZEND_END_ARG_INFO()
 
-static PHP_METHOD_EX(swow_coroutine, getCoroutine, swow_coroutine_t *scoroutine)
+static PHP_METHOD_EX(Swow_Coroutine, getCoroutine, swow_coroutine_t *scoroutine)
 {
     ZEND_PARSE_PARAMETERS_NONE();
 
@@ -1454,83 +1454,83 @@ static PHP_METHOD_EX(swow_coroutine, getCoroutine, swow_coroutine_t *scoroutine)
     RETURN_OBJ(&scoroutine->std);
 }
 
-#define arginfo_swow_coroutine_getCurrent arginfo_swow_coroutine_getCoroutine
+#define arginfo_class_Swow_Coroutine_getCurrent arginfo_class_Swow_Coroutine_getCoroutine
 
-static PHP_METHOD(swow_coroutine, getCurrent)
+static PHP_METHOD(Swow_Coroutine, getCurrent)
 {
-    PHP_METHOD_CALL(swow_coroutine, getCoroutine, swow_coroutine_get_current());
+    PHP_METHOD_CALL(Swow_Coroutine, getCoroutine, swow_coroutine_get_current());
 }
 
-#define arginfo_swow_coroutine_getMain arginfo_swow_coroutine_getCoroutine
+#define arginfo_class_Swow_Coroutine_getMain arginfo_class_Swow_Coroutine_getCoroutine
 
-static PHP_METHOD(swow_coroutine, getMain)
+static PHP_METHOD(Swow_Coroutine, getMain)
 {
-    PHP_METHOD_CALL(swow_coroutine, getCoroutine, swow_coroutine_get_main());
+    PHP_METHOD_CALL(Swow_Coroutine, getCoroutine, swow_coroutine_get_main());
 }
 
-#define arginfo_swow_coroutine_getPrevious arginfo_swow_coroutine_getCoroutine
+#define arginfo_class_Swow_Coroutine_getPrevious arginfo_class_Swow_Coroutine_getCoroutine
 
-static PHP_METHOD(swow_coroutine, getPrevious)
+static PHP_METHOD(Swow_Coroutine, getPrevious)
 {
-    PHP_METHOD_CALL(swow_coroutine, getCoroutine, swow_coroutine_get_previous(getThisCoroutine()));
+    PHP_METHOD_CALL(Swow_Coroutine, getCoroutine, swow_coroutine_get_previous(getThisCoroutine()));
 }
 
 #undef SWOW_COROUTINE_GETTER
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_swow_coroutine_getLong, ZEND_RETURN_VALUE, 0, IS_LONG, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Coroutine_getLong, ZEND_RETURN_VALUE, 0, IS_LONG, 0)
 ZEND_END_ARG_INFO()
 
-#define arginfo_swow_coroutine_getState arginfo_swow_coroutine_getLong
+#define arginfo_class_Swow_Coroutine_getState arginfo_class_Swow_Coroutine_getLong
 
-static PHP_METHOD(swow_coroutine, getState)
+static PHP_METHOD(Swow_Coroutine, getState)
 {
     ZEND_PARSE_PARAMETERS_NONE();
 
     RETURN_LONG(getThisCoroutine()->coroutine.state);
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_swow_coroutine_getString, ZEND_RETURN_VALUE, 0, IS_STRING, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Coroutine_getString, ZEND_RETURN_VALUE, 0, IS_STRING, 0)
 ZEND_END_ARG_INFO()
 
-#define arginfo_swow_coroutine_getStateName arginfo_swow_coroutine_getString
+#define arginfo_class_Swow_Coroutine_getStateName arginfo_class_Swow_Coroutine_getString
 
-static PHP_METHOD(swow_coroutine, getStateName)
+static PHP_METHOD(Swow_Coroutine, getStateName)
 {
     ZEND_PARSE_PARAMETERS_NONE();
 
     RETURN_STRING(cat_coroutine_get_state_name(&getThisCoroutine()->coroutine));
 }
 
-#define arginfo_swow_coroutine_getRound arginfo_swow_coroutine_getLong
+#define arginfo_class_Swow_Coroutine_getRound arginfo_class_Swow_Coroutine_getLong
 
-static PHP_METHOD(swow_coroutine, getRound)
+static PHP_METHOD(Swow_Coroutine, getRound)
 {
     ZEND_PARSE_PARAMETERS_NONE();
 
     RETURN_LONG(getThisCoroutine()->coroutine.round);
 }
 
-#define arginfo_swow_coroutine_getCurrentRound arginfo_swow_coroutine_getLong
+#define arginfo_class_Swow_Coroutine_getCurrentRound arginfo_class_Swow_Coroutine_getLong
 
-static PHP_METHOD(swow_coroutine, getCurrentRound)
+static PHP_METHOD(Swow_Coroutine, getCurrentRound)
 {
     ZEND_PARSE_PARAMETERS_NONE();
 
     RETURN_LONG(CAT_COROUTINE_G(round));
 }
 
-#define arginfo_swow_coroutine_getElapsed arginfo_swow_coroutine_getLong
+#define arginfo_class_Swow_Coroutine_getElapsed arginfo_class_Swow_Coroutine_getLong
 
-static PHP_METHOD(swow_coroutine, getElapsed)
+static PHP_METHOD(Swow_Coroutine, getElapsed)
 {
     ZEND_PARSE_PARAMETERS_NONE();
 
     RETURN_LONG(cat_coroutine_get_elapsed(&getThisCoroutine()->coroutine));
 }
 
-#define arginfo_swow_coroutine_getElapsedAsString arginfo_swow_coroutine_getString
+#define arginfo_class_Swow_Coroutine_getElapsedAsString arginfo_class_Swow_Coroutine_getString
 
-static PHP_METHOD(swow_coroutine, getElapsedAsString)
+static PHP_METHOD(Swow_Coroutine, getElapsedAsString)
 {
     char *elapsed;
 
@@ -1543,9 +1543,9 @@ static PHP_METHOD(swow_coroutine, getElapsedAsString)
     cat_free(elapsed);
 }
 
-#define arginfo_swow_coroutine_getExitStatus arginfo_swow_coroutine_getLong
+#define arginfo_class_Swow_Coroutine_getExitStatus arginfo_class_Swow_Coroutine_getLong
 
-static PHP_METHOD(swow_coroutine, getExitStatus)
+static PHP_METHOD(Swow_Coroutine, getExitStatus)
 {
     swow_coroutine_t *scoroutine = getThisCoroutine();
 
@@ -1558,21 +1558,21 @@ static PHP_METHOD(swow_coroutine, getExitStatus)
     RETURN_LONG(scoroutine->exit_status);
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_swow_coroutine_getBool, ZEND_RETURN_VALUE, 0, _IS_BOOL, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Coroutine_getBool, ZEND_RETURN_VALUE, 0, _IS_BOOL, 0)
 ZEND_END_ARG_INFO()
 
-#define arginfo_swow_coroutine_isAvailable arginfo_swow_coroutine_getBool
+#define arginfo_class_Swow_Coroutine_isAvailable arginfo_class_Swow_Coroutine_getBool
 
-static PHP_METHOD(swow_coroutine, isAvailable)
+static PHP_METHOD(Swow_Coroutine, isAvailable)
 {
     ZEND_PARSE_PARAMETERS_NONE();
 
     RETURN_BOOL(swow_coroutine_is_available(getThisCoroutine()));
 }
 
-#define arginfo_swow_coroutine_isAlive arginfo_swow_coroutine_getBool
+#define arginfo_class_Swow_Coroutine_isAlive arginfo_class_Swow_Coroutine_getBool
 
-static PHP_METHOD(swow_coroutine, isAlive)
+static PHP_METHOD(Swow_Coroutine, isAlive)
 {
     ZEND_PARSE_PARAMETERS_NONE();
 
@@ -1586,11 +1586,11 @@ static PHP_METHOD(swow_coroutine, isAlive)
         Z_PARAM_LONG(level) \
     ZEND_PARSE_PARAMETERS_END();
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_swow_coroutine_getExecutedFilename, ZEND_RETURN_VALUE, 0, IS_STRING, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Coroutine_getExecutedFilename, ZEND_RETURN_VALUE, 0, IS_STRING, 0)
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, level, IS_LONG, 0, "0")
 ZEND_END_ARG_INFO()
 
-static PHP_METHOD(swow_coroutine, getExecutedFilename)
+static PHP_METHOD(Swow_Coroutine, getExecutedFilename)
 {
     zend_string *filename;
 
@@ -1601,11 +1601,11 @@ static PHP_METHOD(swow_coroutine, getExecutedFilename)
     RETURN_STR(filename);
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_swow_coroutine_getExecutedLineno, ZEND_RETURN_VALUE, 0, IS_LONG, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Coroutine_getExecutedLineno, ZEND_RETURN_VALUE, 0, IS_LONG, 0)
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, level, IS_LONG, 0, "0")
 ZEND_END_ARG_INFO()
 
-static PHP_METHOD(swow_coroutine, getExecutedLineno)
+static PHP_METHOD(Swow_Coroutine, getExecutedLineno)
 {
     zend_long lineno;
 
@@ -1616,9 +1616,9 @@ static PHP_METHOD(swow_coroutine, getExecutedLineno)
     RETURN_LONG(lineno);
 }
 
-#define arginfo_swow_coroutine_getExecutedFunctionName arginfo_swow_coroutine_getExecutedFilename
+#define arginfo_class_Swow_Coroutine_getExecutedFunctionName arginfo_class_Swow_Coroutine_getExecutedFilename
 
-static PHP_METHOD(swow_coroutine, getExecutedFunctionName)
+static PHP_METHOD(Swow_Coroutine, getExecutedFunctionName)
 {
     zend_string *function_name;
 
@@ -1640,13 +1640,13 @@ static PHP_METHOD(swow_coroutine, getExecutedFunctionName)
         Z_PARAM_LONG(options) \
     ZEND_PARSE_PARAMETERS_END()
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_swow_coroutine_getTrace, ZEND_RETURN_VALUE, 0, IS_ARRAY, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Coroutine_getTrace, ZEND_RETURN_VALUE, 0, IS_ARRAY, 0)
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, level, IS_LONG, 0, "0")
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, limit, IS_LONG, 0, "0")
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, options, IS_LONG, 0, "DEBUG_BACKTRACE_PROVIDE_OBJECT")
 ZEND_END_ARG_INFO()
 
-static PHP_METHOD(swow_coroutine, getTrace)
+static PHP_METHOD(Swow_Coroutine, getTrace)
 {
     HashTable *trace;
 
@@ -1661,13 +1661,13 @@ static PHP_METHOD(swow_coroutine, getTrace)
     RETURN_ARR(trace);
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_swow_coroutine_getTraceAsString, ZEND_RETURN_VALUE, 0, IS_STRING, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Coroutine_getTraceAsString, ZEND_RETURN_VALUE, 0, IS_STRING, 0)
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, level, IS_LONG, 0, "0")
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, limit, IS_LONG, 0, "0")
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, options, IS_LONG, 0, "DEBUG_BACKTRACE_PROVIDE_OBJECT")
 ZEND_END_ARG_INFO()
 
-static PHP_METHOD(swow_coroutine, getTraceAsString)
+static PHP_METHOD(Swow_Coroutine, getTraceAsString)
 {
     zend_string *trace;
 
@@ -1682,9 +1682,9 @@ static PHP_METHOD(swow_coroutine, getTraceAsString)
     RETURN_STR(trace);
 }
 
-#define arginfo_swow_coroutine_getTraceAsList arginfo_swow_coroutine_getTrace
+#define arginfo_class_Swow_Coroutine_getTraceAsList arginfo_class_Swow_Coroutine_getTrace
 
-static PHP_METHOD(swow_coroutine, getTraceAsList)
+static PHP_METHOD(Swow_Coroutine, getTraceAsList)
 {
     HashTable *trace;
 
@@ -1701,11 +1701,11 @@ static PHP_METHOD(swow_coroutine, getTraceAsList)
 
 #undef SWOW_COROUTINE_GET_TRACE_PARAMETERS_PARSER
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_swow_coroutine_getDefinedVars, ZEND_RETURN_VALUE, 0, IS_ARRAY, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Coroutine_getDefinedVars, ZEND_RETURN_VALUE, 0, IS_ARRAY, 0)
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, level, IS_LONG, 0, "0")
 ZEND_END_ARG_INFO()
 
-static PHP_METHOD(swow_coroutine, getDefinedVars)
+static PHP_METHOD(Swow_Coroutine, getDefinedVars)
 {
     swow_coroutine_t *scoroutine = getThisCoroutine();
     zend_array *symbol_table;
@@ -1730,14 +1730,14 @@ static PHP_METHOD(swow_coroutine, getDefinedVars)
     RETURN_ARR(symbol_table);
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO_EX(arginfo_swow_coroutine_setLocalVar, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO_EX(arginfo_class_Swow_Coroutine_setLocalVar, 0)
     ZEND_ARG_TYPE_INFO(0, name, IS_STRING, 0)
     ZEND_ARG_TYPE_INFO(0, value, IS_MIXED, 0)
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, level, IS_LONG, 0, "0")
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, force, _IS_BOOL, 0, "true")
 ZEND_END_ARG_INFO()
 
-static PHP_METHOD(swow_coroutine, setLocalVar)
+static PHP_METHOD(Swow_Coroutine, setLocalVar)
 {
     swow_coroutine_t *scoroutine = getThisCoroutine();
     zend_string *name;
@@ -1769,12 +1769,12 @@ static PHP_METHOD(swow_coroutine, setLocalVar)
     RETURN_THIS();
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_swow_coroutine_eval, ZEND_RETURN_VALUE, 0, IS_MIXED, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Coroutine_eval, ZEND_RETURN_VALUE, 0, IS_MIXED, 0)
     ZEND_ARG_TYPE_INFO(0, string, IS_STRING, 0)
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, level, IS_LONG, 0, "0")
 ZEND_END_ARG_INFO()
 
-static PHP_METHOD(swow_coroutine, eval)
+static PHP_METHOD(Swow_Coroutine, eval)
 {
     swow_coroutine_t *scoroutine = getThisCoroutine();
     zend_string *string;
@@ -1800,11 +1800,11 @@ static PHP_METHOD(swow_coroutine, eval)
     }
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_swow_coroutine_call, ZEND_RETURN_VALUE, 0, IS_MIXED, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Coroutine_call, ZEND_RETURN_VALUE, 0, IS_MIXED, 0)
     ZEND_ARG_TYPE_INFO(0, callable, IS_CALLABLE, 0)
 ZEND_END_ARG_INFO()
 
-static PHP_METHOD(swow_coroutine, call)
+static PHP_METHOD(Swow_Coroutine, call)
 {
     swow_coroutine_t *scoroutine = getThisCoroutine();
     zval *zcallable;
@@ -1822,11 +1822,11 @@ static PHP_METHOD(swow_coroutine, call)
     }
 }
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_swow_coroutine_throw, 0, ZEND_RETURN_VALUE, 1)
+ZEND_BEGIN_ARG_INFO_EX(arginfo_class_Swow_Coroutine_throw, 0, ZEND_RETURN_VALUE, 1)
     ZEND_ARG_OBJ_INFO(0, throwable, Throwable, 0)
 ZEND_END_ARG_INFO()
 
-static PHP_METHOD(swow_coroutine, throw)
+static PHP_METHOD(Swow_Coroutine, throw)
 {
     zval *zexception;
 
@@ -1850,14 +1850,14 @@ static PHP_METHOD(swow_coroutine, throw)
         Z_PARAM_LONG(code) \
     ZEND_PARSE_PARAMETERS_END(); \
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_swow_coroutine_throwCrossException, 0, ZEND_RETURN_VALUE, 0)
+ZEND_BEGIN_ARG_INFO_EX(arginfo_class_Swow_Coroutine_throwCrossException, 0, ZEND_RETURN_VALUE, 0)
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, message, IS_STRING, 0, "null")
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, code, IS_LONG, 0, "null")
 ZEND_END_ARG_INFO()
 
-#define arginfo_swow_coroutine_term arginfo_swow_coroutine_throwCrossException
+#define arginfo_class_Swow_Coroutine_term arginfo_class_Swow_Coroutine_throwCrossException
 
-static PHP_METHOD(swow_coroutine, term)
+static PHP_METHOD(Swow_Coroutine, term)
 {
     SWOW_COROUTINE_MESSAGE_AND_CODE_PARAMETERS_PARSER();
 
@@ -1867,9 +1867,9 @@ static PHP_METHOD(swow_coroutine, term)
     }
 }
 
-#define arginfo_swow_coroutine_kill arginfo_swow_coroutine_throwCrossException
+#define arginfo_class_Swow_Coroutine_kill arginfo_class_Swow_Coroutine_throwCrossException
 
-static PHP_METHOD(swow_coroutine, kill)
+static PHP_METHOD(Swow_Coroutine, kill)
 {
     SWOW_COROUTINE_MESSAGE_AND_CODE_PARAMETERS_PARSER();
 
@@ -1881,21 +1881,21 @@ static PHP_METHOD(swow_coroutine, kill)
 
 #undef SWOW_COROUTINE_MESSAGE_AND_CODE_PARAMETERS_PARSER
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_swow_coroutine_count, ZEND_RETURN_VALUE, 0, IS_LONG, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Coroutine_count, ZEND_RETURN_VALUE, 0, IS_LONG, 0)
 ZEND_END_ARG_INFO()
 
-static PHP_METHOD(swow_coroutine, count)
+static PHP_METHOD(Swow_Coroutine, count)
 {
     ZEND_PARSE_PARAMETERS_NONE();
 
     RETURN_LONG(zend_hash_num_elements(SWOW_COROUTINE_G(map)));
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO_EX(arginfo_swow_coroutine_get, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_THIS_OR_NULL_INFO_EX(arginfo_class_Swow_Coroutine_get, 0)
     ZEND_ARG_TYPE_INFO(0, id, IS_LONG, 0)
 ZEND_END_ARG_INFO()
 
-static PHP_METHOD(swow_coroutine, get)
+static PHP_METHOD(Swow_Coroutine, get)
 {
     zval *zcoroutine;
     zend_long id;
@@ -1913,10 +1913,10 @@ static PHP_METHOD(swow_coroutine, get)
     RETURN_ZVAL(zcoroutine, 1, 0);
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_swow_coroutine_getAll, ZEND_RETURN_VALUE, 0, IS_ARRAY, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Coroutine_getAll, ZEND_RETURN_VALUE, 0, IS_ARRAY, 0)
 ZEND_END_ARG_INFO()
 
-static PHP_METHOD(swow_coroutine, getAll)
+static PHP_METHOD(Swow_Coroutine, getAll)
 {
     HashTable *map = SWOW_COROUTINE_G(map);
 
@@ -1926,7 +1926,7 @@ static PHP_METHOD(swow_coroutine, getAll)
 }
 
 #ifdef SWOW_COROUTINE_ENABLE_CUSTOM_ENTRY
-ZEND_BEGIN_ARG_INFO_EX(arginfo_swow_coroutine_extends, 0, ZEND_RETURN_VALUE, 1)
+ZEND_BEGIN_ARG_INFO_EX(arginfo_class_Swow_Coroutine_extends, 0, ZEND_RETURN_VALUE, 1)
     ZEND_ARG_TYPE_INFO(0, class, IS_STRING, 0)
 ZEND_END_ARG_INFO()
 
@@ -1944,7 +1944,7 @@ static cat_data_t swow_coroutine_custom_resume(cat_coroutine_t *coroutine, cat_d
     return retval;
 }
 
-static PHP_METHOD(swow_coroutine, extends)
+static PHP_METHOD(Swow_Coroutine, extends)
 {
     zend_string *name;
     zend_class_entry *ce;
@@ -1973,10 +1973,10 @@ static PHP_METHOD(swow_coroutine, extends)
 }
 #endif
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_swow_coroutine___debugInfo, ZEND_RETURN_VALUE, 0, IS_ARRAY, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Coroutine___debugInfo, ZEND_RETURN_VALUE, 0, IS_ARRAY, 0)
 ZEND_END_ARG_INFO()
 
-static PHP_METHOD(swow_coroutine, __debugInfo)
+static PHP_METHOD(Swow_Coroutine, __debugInfo)
 {
     swow_coroutine_t *scoroutine = getThisCoroutine();
     cat_coroutine_t *coroutine = &scoroutine->coroutine;
@@ -2008,44 +2008,44 @@ static PHP_METHOD(swow_coroutine, __debugInfo)
 }
 
 static const zend_function_entry swow_coroutine_methods[] = {
-    PHP_ME(swow_coroutine, __construct,             arginfo_swow_coroutine___construct,             ZEND_ACC_PUBLIC)
-    PHP_ME(swow_coroutine, run,                     arginfo_swow_coroutine_run,                     ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-    PHP_ME(swow_coroutine, resume,                  arginfo_swow_coroutine_resume,                  ZEND_ACC_PUBLIC)
-    PHP_ME(swow_coroutine, yield,                   arginfo_swow_coroutine_yield,                   ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-    PHP_ME(swow_coroutine, getId,                   arginfo_swow_coroutine_getId,                   ZEND_ACC_PUBLIC)
-    PHP_ME(swow_coroutine, getCurrent,              arginfo_swow_coroutine_getCurrent,              ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-    PHP_ME(swow_coroutine, getMain,                 arginfo_swow_coroutine_getMain,                 ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-    PHP_ME(swow_coroutine, getPrevious,             arginfo_swow_coroutine_getPrevious,             ZEND_ACC_PUBLIC)
-    PHP_ME(swow_coroutine, getState,                arginfo_swow_coroutine_getState,                ZEND_ACC_PUBLIC)
-    PHP_ME(swow_coroutine, getStateName,            arginfo_swow_coroutine_getStateName,            ZEND_ACC_PUBLIC)
-    PHP_ME(swow_coroutine, getRound,                arginfo_swow_coroutine_getRound,                ZEND_ACC_PUBLIC)
-    PHP_ME(swow_coroutine, getCurrentRound,         arginfo_swow_coroutine_getCurrentRound,         ZEND_ACC_PUBLIC)
-    PHP_ME(swow_coroutine, getElapsed,              arginfo_swow_coroutine_getElapsed,              ZEND_ACC_PUBLIC)
-    PHP_ME(swow_coroutine, getElapsedAsString,      arginfo_swow_coroutine_getElapsedAsString,      ZEND_ACC_PUBLIC)
-    PHP_ME(swow_coroutine, getExitStatus,           arginfo_swow_coroutine_getExitStatus,           ZEND_ACC_PUBLIC)
-    PHP_ME(swow_coroutine, isAvailable,             arginfo_swow_coroutine_isAvailable,             ZEND_ACC_PUBLIC)
-    PHP_ME(swow_coroutine, isAlive,                 arginfo_swow_coroutine_isAlive,                 ZEND_ACC_PUBLIC)
-    PHP_ME(swow_coroutine, getExecutedFilename,     arginfo_swow_coroutine_getExecutedFilename,     ZEND_ACC_PUBLIC)
-    PHP_ME(swow_coroutine, getExecutedLineno,       arginfo_swow_coroutine_getExecutedLineno,       ZEND_ACC_PUBLIC)
-    PHP_ME(swow_coroutine, getExecutedFunctionName, arginfo_swow_coroutine_getExecutedFunctionName, ZEND_ACC_PUBLIC)
-    PHP_ME(swow_coroutine, getTrace,                arginfo_swow_coroutine_getTrace,                ZEND_ACC_PUBLIC)
-    PHP_ME(swow_coroutine, getTraceAsString,        arginfo_swow_coroutine_getTraceAsString,        ZEND_ACC_PUBLIC)
-    PHP_ME(swow_coroutine, getTraceAsList,          arginfo_swow_coroutine_getTraceAsList,          ZEND_ACC_PUBLIC)
-    PHP_ME(swow_coroutine, getDefinedVars,          arginfo_swow_coroutine_getDefinedVars,          ZEND_ACC_PUBLIC)
-    PHP_ME(swow_coroutine, setLocalVar,             arginfo_swow_coroutine_setLocalVar,             ZEND_ACC_PUBLIC)
-    PHP_ME(swow_coroutine, eval,                    arginfo_swow_coroutine_eval,                    ZEND_ACC_PUBLIC)
-    PHP_ME(swow_coroutine, call,                    arginfo_swow_coroutine_call,                    ZEND_ACC_PUBLIC)
-    PHP_ME(swow_coroutine, throw,                   arginfo_swow_coroutine_throw,                   ZEND_ACC_PUBLIC)
-    PHP_ME(swow_coroutine, term,                    arginfo_swow_coroutine_term,                    ZEND_ACC_PUBLIC)
-    PHP_ME(swow_coroutine, kill,                    arginfo_swow_coroutine_kill,                    ZEND_ACC_PUBLIC)
-    PHP_ME(swow_coroutine, count,                   arginfo_swow_coroutine_count,                   ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-    PHP_ME(swow_coroutine, get,                     arginfo_swow_coroutine_get,                     ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-    PHP_ME(swow_coroutine, getAll,                  arginfo_swow_coroutine_getAll,                  ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    PHP_ME(Swow_Coroutine, __construct,             arginfo_class_Swow_Coroutine___construct,             ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Coroutine, run,                     arginfo_class_Swow_Coroutine_run,                     ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    PHP_ME(Swow_Coroutine, resume,                  arginfo_class_Swow_Coroutine_resume,                  ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Coroutine, yield,                   arginfo_class_Swow_Coroutine_yield,                   ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    PHP_ME(Swow_Coroutine, getId,                   arginfo_class_Swow_Coroutine_getId,                   ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Coroutine, getCurrent,              arginfo_class_Swow_Coroutine_getCurrent,              ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    PHP_ME(Swow_Coroutine, getMain,                 arginfo_class_Swow_Coroutine_getMain,                 ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    PHP_ME(Swow_Coroutine, getPrevious,             arginfo_class_Swow_Coroutine_getPrevious,             ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Coroutine, getState,                arginfo_class_Swow_Coroutine_getState,                ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Coroutine, getStateName,            arginfo_class_Swow_Coroutine_getStateName,            ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Coroutine, getRound,                arginfo_class_Swow_Coroutine_getRound,                ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Coroutine, getCurrentRound,         arginfo_class_Swow_Coroutine_getCurrentRound,         ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Coroutine, getElapsed,              arginfo_class_Swow_Coroutine_getElapsed,              ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Coroutine, getElapsedAsString,      arginfo_class_Swow_Coroutine_getElapsedAsString,      ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Coroutine, getExitStatus,           arginfo_class_Swow_Coroutine_getExitStatus,           ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Coroutine, isAvailable,             arginfo_class_Swow_Coroutine_isAvailable,             ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Coroutine, isAlive,                 arginfo_class_Swow_Coroutine_isAlive,                 ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Coroutine, getExecutedFilename,     arginfo_class_Swow_Coroutine_getExecutedFilename,     ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Coroutine, getExecutedLineno,       arginfo_class_Swow_Coroutine_getExecutedLineno,       ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Coroutine, getExecutedFunctionName, arginfo_class_Swow_Coroutine_getExecutedFunctionName, ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Coroutine, getTrace,                arginfo_class_Swow_Coroutine_getTrace,                ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Coroutine, getTraceAsString,        arginfo_class_Swow_Coroutine_getTraceAsString,        ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Coroutine, getTraceAsList,          arginfo_class_Swow_Coroutine_getTraceAsList,          ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Coroutine, getDefinedVars,          arginfo_class_Swow_Coroutine_getDefinedVars,          ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Coroutine, setLocalVar,             arginfo_class_Swow_Coroutine_setLocalVar,             ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Coroutine, eval,                    arginfo_class_Swow_Coroutine_eval,                    ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Coroutine, call,                    arginfo_class_Swow_Coroutine_call,                    ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Coroutine, throw,                   arginfo_class_Swow_Coroutine_throw,                   ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Coroutine, term,                    arginfo_class_Swow_Coroutine_term,                    ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Coroutine, kill,                    arginfo_class_Swow_Coroutine_kill,                    ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Coroutine, count,                   arginfo_class_Swow_Coroutine_count,                   ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    PHP_ME(Swow_Coroutine, get,                     arginfo_class_Swow_Coroutine_get,                     ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    PHP_ME(Swow_Coroutine, getAll,                  arginfo_class_Swow_Coroutine_getAll,                  ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 #ifdef SWOW_COROUTINE_ENABLE_CUSTOM_ENTRY
-    PHP_ME(swow_coroutine, extends,                 arginfo_swow_coroutine_extends,                 ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    PHP_ME(Swow_Coroutine, extends,                 arginfo_class_Swow_Coroutine_extends,                 ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 #endif
     /* magic */
-    PHP_ME(swow_coroutine, __debugInfo,             arginfo_swow_coroutine___debugInfo,             ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Coroutine, __debugInfo,             arginfo_class_Swow_Coroutine___debugInfo,             ZEND_ACC_PUBLIC)
     PHP_FE_END
 };
 
@@ -2069,20 +2069,6 @@ static HashTable *swow_coroutine_get_gc(zend7_object *object, zval **gc_data, in
 
 /* exception/error */
 
-#define arginfo_swow_coroutine_exception_getCoroutine arginfo_swow_coroutine_getCoroutine
-
-static PHP_METHOD(swow_coroutine_exception, getCoroutine)
-{
-    ZEND_PARSE_PARAMETERS_NONE();
-
-    RETURN_THIS_PROPERTY("coroutine");
-}
-
-static const zend_function_entry swow_coroutine_exception_methods[] = {
-    PHP_ME(swow_coroutine_exception, getCoroutine, arginfo_swow_coroutine_exception_getCoroutine, ZEND_ACC_FINAL | ZEND_ACC_PUBLIC)
-    PHP_FE_END
-};
-
 static zend_object *swow_coroutine_cross_exception_create_object(zend_class_entry *ce)
 {
     zend_object *object;
@@ -2095,6 +2081,20 @@ static zend_object *swow_coroutine_cross_exception_create_object(zend_class_entr
 
     return object;
 }
+
+#define arginfo_class_Swow_Coroutine_Cross_Exception_getCoroutine arginfo_class_Swow_Coroutine_getCoroutine
+
+static PHP_METHOD(Swow_Coroutine_Cross_Exception, getCoroutine)
+{
+    ZEND_PARSE_PARAMETERS_NONE();
+
+    RETURN_THIS_PROPERTY("coroutine");
+}
+
+static const zend_function_entry swow_coroutine_cross_exception_methods[] = {
+    PHP_ME(Swow_Coroutine_Cross_Exception, getCoroutine, arginfo_class_Swow_Coroutine_Cross_Exception_getCoroutine, ZEND_ACC_FINAL | ZEND_ACC_PUBLIC)
+    PHP_FE_END
+};
 
 /* hack error hook */
 
@@ -2318,7 +2318,7 @@ int swow_coroutine_module_init(INIT_FUNC_ARGS)
 
     /* Exceptions for cross throw */
     swow_coroutine_cross_exception_ce = swow_register_internal_class(
-        "Swow\\Coroutine\\CrossException", swow_coroutine_exception_ce, swow_coroutine_exception_methods, NULL, NULL, cat_true, cat_true, cat_true,
+        "Swow\\Coroutine\\CrossException", swow_coroutine_exception_ce, swow_coroutine_cross_exception_methods, NULL, NULL, cat_true, cat_true, cat_true,
         swow_coroutine_cross_exception_create_object, NULL, 0
     );
     zend_declare_property_null(swow_coroutine_cross_exception_ce, ZEND_STRL("coroutine"), ZEND_ACC_PROTECTED);

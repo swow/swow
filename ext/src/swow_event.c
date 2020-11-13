@@ -24,10 +24,10 @@
 SWOW_API zend_class_entry *swow_event_ce;
 SWOW_API zend_object_handlers swow_event_handlers;
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_swow_event_wait, ZEND_RETURN_VALUE, 0, IS_VOID, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Event_wait, ZEND_RETURN_VALUE, 0, IS_VOID, 0)
 ZEND_END_ARG_INFO()
 
-static PHP_METHOD(swow_event, wait)
+static PHP_METHOD(Swow_Event, wait)
 {
     if (!swow_function_is_internal_accessor(INTERNAL_FUNCTION_PARAM_PASSTHRU)) {
         /* called by user */
@@ -60,7 +60,7 @@ static PHP_METHOD(swow_event, wait)
 }
 
 static const zend_function_entry swow_event_methods[] = {
-    PHP_ME(swow_event, wait, arginfo_swow_event_wait, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    PHP_ME(Swow_Event, wait, arginfo_class_Swow_Event_wait, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
     PHP_FE_END
 };
 

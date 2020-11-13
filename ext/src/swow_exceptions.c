@@ -89,10 +89,10 @@ SWOW_API CAT_COLD void swow_call_exception_set_return_value(zend_object *excepti
     zend_update_property(exception->ce, ZVAL7_OBJECT(exception), ZEND_STRL("returnValue"), return_value);
 }
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_swow_call_exception_getReturnValue, 0, ZEND_RETURN_VALUE, 0)
+ZEND_BEGIN_ARG_INFO_EX(arginfo_class_Swow_Call_Exception_getReturnValue, 0, ZEND_RETURN_VALUE, 0)
 ZEND_END_ARG_INFO()
 
-static PHP_METHOD(swow_call_exception, getReturnValue)
+static PHP_METHOD(Swow_Call_Exception, getReturnValue)
 {
     ZEND_PARSE_PARAMETERS_NONE();
 
@@ -100,7 +100,7 @@ static PHP_METHOD(swow_call_exception, getReturnValue)
 }
 
 static const zend_function_entry swow_call_exception_methods[] = {
-    PHP_ME(swow_call_exception, getReturnValue, arginfo_swow_call_exception_getReturnValue, ZEND_ACC_FINAL | ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Call_Exception, getReturnValue, arginfo_class_Swow_Call_Exception_getReturnValue, ZEND_ACC_FINAL | ZEND_ACC_PUBLIC)
     PHP_FE_END
 };
 

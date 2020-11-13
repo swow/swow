@@ -46,12 +46,12 @@ static zend_object *swow_sync_wait_group_create_object(zend_class_entry *ce)
     return &swg->std;
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_swow_sync_wait_reference_wait, ZEND_RETURN_VALUE, 1, IS_VOID, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Sync_WaitReference_wait, ZEND_RETURN_VALUE, 1, IS_VOID, 0)
     ZEND_ARG_OBJ_INFO(1, waitReference, Swow\\Sync\\WaitReference, 0)
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, timeout, IS_LONG, 0, "-1")
 ZEND_END_ARG_INFO()
 
-static PHP_METHOD(swow_sync_wait_reference, wait)
+static PHP_METHOD(Swow_Sync_WaitReference, wait)
 {
     swow_sync_wait_reference_t *swr;
     zval *zwf;
@@ -96,10 +96,10 @@ static PHP_METHOD(swow_sync_wait_reference, wait)
 
 #define getThisWR() (swow_sync_wait_reference_get_from_object(Z_OBJ_P(ZEND_THIS)))
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_swow_sync_wait_reference___destruct, 0, ZEND_RETURN_VALUE, 0)
+ZEND_BEGIN_ARG_INFO_EX(arginfo_class_Swow_Sync_WaitReference___destruct, 0, ZEND_RETURN_VALUE, 0)
 ZEND_END_ARG_INFO()
 
-static PHP_METHOD(swow_sync_wait_reference, __destruct)
+static PHP_METHOD(Swow_Sync_WaitReference, __destruct)
 {
     swow_sync_wait_reference_t *swr = getThisWR();
 
@@ -111,18 +111,18 @@ static PHP_METHOD(swow_sync_wait_reference, __destruct)
 }
 
 static const zend_function_entry swow_sync_wait_reference_methods[] = {
-    PHP_ME(swow_sync_wait_reference, wait,       arginfo_swow_sync_wait_reference_wait,       ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-    PHP_ME(swow_sync_wait_reference, __destruct, arginfo_swow_sync_wait_reference___destruct, ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Sync_WaitReference, wait,       arginfo_class_Swow_Sync_WaitReference_wait,       ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    PHP_ME(Swow_Sync_WaitReference, __destruct, arginfo_class_Swow_Sync_WaitReference___destruct, ZEND_ACC_PUBLIC)
     PHP_FE_END
 };
 
 #define getThisWG() (swow_sync_wait_group_get_from_object(Z_OBJ_P(ZEND_THIS)))
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_swow_sync_wait_group_add, ZEND_RETURN_VALUE, 0, IS_VOID, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Sync_WaitGroup_add, ZEND_RETURN_VALUE, 0, IS_VOID, 0)
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, delta, IS_LONG, 0, "1")
 ZEND_END_ARG_INFO()
 
-static PHP_METHOD(swow_sync_wait_group, add)
+static PHP_METHOD(Swow_Sync_WaitGroup, add)
 {
     swow_sync_wait_group_t *swg = getThisWG();
     zend_long delta = 1;
@@ -141,11 +141,11 @@ static PHP_METHOD(swow_sync_wait_group, add)
     }
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_swow_sync_wait_group_wait, ZEND_RETURN_VALUE, 0, IS_VOID, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Sync_WaitGroup_wait, ZEND_RETURN_VALUE, 0, IS_VOID, 0)
     ZEND_ARG_TYPE_INFO(0, timeout, IS_LONG, 0)
 ZEND_END_ARG_INFO()
 
-static PHP_METHOD(swow_sync_wait_group, wait)
+static PHP_METHOD(Swow_Sync_WaitGroup, wait)
 {
     swow_sync_wait_group_t *swg = getThisWG();
     zend_long timeout = -1;
@@ -164,10 +164,10 @@ static PHP_METHOD(swow_sync_wait_group, wait)
     }
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_swow_sync_wait_group_done, ZEND_RETURN_VALUE, 0, IS_VOID, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Sync_WaitGroup_done, ZEND_RETURN_VALUE, 0, IS_VOID, 0)
 ZEND_END_ARG_INFO()
 
-static PHP_METHOD(swow_sync_wait_group, done)
+static PHP_METHOD(Swow_Sync_WaitGroup, done)
 {
     swow_sync_wait_group_t *swg = getThisWG();
     cat_bool_t ret;
@@ -183,9 +183,9 @@ static PHP_METHOD(swow_sync_wait_group, done)
 }
 
 static const zend_function_entry swow_sync_wait_group_methods[] = {
-    PHP_ME(swow_sync_wait_group, add,  arginfo_swow_sync_wait_group_add,  ZEND_ACC_PUBLIC)
-    PHP_ME(swow_sync_wait_group, wait, arginfo_swow_sync_wait_group_wait, ZEND_ACC_PUBLIC)
-    PHP_ME(swow_sync_wait_group, done, arginfo_swow_sync_wait_group_done, ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Sync_WaitGroup, add,  arginfo_class_Swow_Sync_WaitGroup_add,  ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Sync_WaitGroup, wait, arginfo_class_Swow_Sync_WaitGroup_wait, ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Sync_WaitGroup, done, arginfo_class_Swow_Sync_WaitGroup_done, ZEND_ACC_PUBLIC)
     PHP_FE_END
 };
 
