@@ -73,7 +73,10 @@ class Session extends Socket
         return $this->server;
     }
 
-    public function setServer(Server $server): self
+    /**
+     * @return $this
+     */
+    public function setServer(Server $server)
     {
         $this->server = $server;
 
@@ -112,7 +115,10 @@ class Session extends Socket
         return $request;
     }
 
-    public function sendHttpResponse(Response $response): self
+    /**
+     * @return $this
+     */
+    public function sendHttpResponse(Response $response)
     {
         $this->write([
             $response->toString(true),
@@ -194,7 +200,10 @@ class Session extends Socket
         // }
     }
 
-    public function upgradeToWebSocket(Request $request, Response $response = null): self
+    /**
+     * @return $this
+     */
+    public function upgradeToWebSocket(Request $request, Response $response = null)
     {
         $secWebSocketKey = $request->getHeaderLine('sec-websocket-key');
         if (strlen($secWebSocketKey) !== WebSocket\SECRET_KEY_ENCODED_LENGTH) {

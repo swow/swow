@@ -20,7 +20,10 @@ class Response extends \Swow\Http\Response
      */
     protected $headers = ['Server' => 'swow'];
 
-    public function error(int $statusCode, string $reasonPhrase = ''): self
+    /**
+     * @return $this
+     */
+    public function error(int $statusCode, string $reasonPhrase = '')
     {
         $this
             ->setStatus($statusCode, $reasonPhrase)

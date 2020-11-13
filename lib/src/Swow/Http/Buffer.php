@@ -17,9 +17,13 @@ use Psr\Http\Message\StreamInterface;
 
 class Buffer extends \Swow\Buffer implements StreamInterface
 {
-    public static function create($body = ''): self
+    /**
+     * @param mixed $body
+     * @return $this
+     */
+    public static function for($body = '')
     {
-        if ($body instanceof self) {
+        if ($body instanceof static) {
             return $body;
         }
 

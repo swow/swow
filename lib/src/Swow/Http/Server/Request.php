@@ -68,7 +68,10 @@ class Request extends \Swow\Http\ServerRequest
         return parent::getUpgrade();
     }
 
-    public function setUpgrade(bool $upgrade): self
+    /**
+     * @return $this
+     */
+    public function setUpgrade(bool $upgrade)
     {
         $this->upgrade = $upgrade;
 
@@ -85,7 +88,10 @@ class Request extends \Swow\Http\ServerRequest
         return parent::getContentLength();
     }
 
-    public function setContentLength(int $contentLength): self
+    /**
+     * @return $this
+     */
+    public function setContentLength(int $contentLength)
     {
         $this->contentLength = $contentLength;
 

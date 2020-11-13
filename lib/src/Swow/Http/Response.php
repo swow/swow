@@ -53,7 +53,10 @@ class Response extends Message implements ResponseInterface
         return $this->reasonPhrase;
     }
 
-    public function setStatus(int $statusCode, string $reasonPhrase = ''): self
+    /**
+     * @return $this
+     */
+    public function setStatus(int $statusCode, string $reasonPhrase = '')
     {
         $this->statusCode = $statusCode;
         $this->reasonPhrase = $reasonPhrase ?: Status::getReasonPhrase($statusCode);
@@ -61,7 +64,12 @@ class Response extends Message implements ResponseInterface
         return $this;
     }
 
-    public function withStatus($code, $reasonPhrase = ''): self
+    /**
+     * @param int $code
+     * @param string $reasonPhrase
+     * @return $this
+     */
+    public function withStatus($code, $reasonPhrase = '')
     {
         if ($reasonPhrase === '' && $code === $this->statusCode) {
             return $this;

@@ -66,7 +66,10 @@ class ServerRequest extends Request implements ServerRequestInterface
         return $this->serverParams;
     }
 
-    public function setServerParams(array $serverParams): self
+    /**
+     * @return $this
+     */
+    public function setServerParams(array $serverParams)
     {
         $this->serverParams = $serverParams;
 
@@ -78,7 +81,10 @@ class ServerRequest extends Request implements ServerRequestInterface
         return $this->queryParams;
     }
 
-    public function setQueryParams(array $query): self
+    /**
+     * @return $this
+     */
+    public function setQueryParams(array $query)
     {
         $this->queryParams = $query;
 
@@ -138,14 +144,22 @@ class ServerRequest extends Request implements ServerRequestInterface
         return $this->parsedBody = BodyParser::parse($this);
     }
 
-    public function setParsedBody($data): self
+    /**
+     * @param array|object $data
+     * @return $this
+     */
+    public function setParsedBody($data)
     {
         $this->parsedBody = $data;
 
         return $this;
     }
 
-    public function withParsedBody($data): self
+    /**
+     * @param array|object $data
+     * @return $this
+     */
+    public function withParsedBody($data)
     {
         $new = clone $this;
         $new->parsedBody = $data;
@@ -187,21 +201,35 @@ class ServerRequest extends Request implements ServerRequestInterface
         return $this->attributes[$attribute];
     }
 
-    public function setAttribute($attribute, $value): self
+    /**
+     * @param mixed $attribute
+     * @param mixed $value
+     * @return $this
+     */
+    public function setAttribute($attribute, $value)
     {
         $this->attributes[$attribute] = $value;
 
         return $this;
     }
 
-    public function unsetAttribute($attribute): self
+    /**
+     * @param string $attribute
+     * @return $this
+     */
+    public function unsetAttribute($attribute)
     {
         unset($this->attributes[$attribute]);
 
         return $this;
     }
 
-    public function withAttribute($attribute, $value): self
+    /**
+     * @param string $attribute
+     * @param mixed $value
+     * @return $this
+     */
+    public function withAttribute($attribute, $value)
     {
         $new = clone $this;
         $new->attributes[$attribute] = $value;
@@ -209,7 +237,11 @@ class ServerRequest extends Request implements ServerRequestInterface
         return $new;
     }
 
-    public function withoutAttribute($attribute): self
+    /**
+     * @param string $attribute
+     * @return $this
+     */
+    public function withoutAttribute($attribute)
     {
         if (\array_key_exists($attribute, $this->attributes) === false) {
             return $this;
