@@ -77,8 +77,21 @@ static zend_object *swow_websocket_frame_create_object(zend_class_entry *ce)
 
     (void) cat_websocket_header_init(&sframe->header);
     sframe->payload_data = NULL;
+    ZEND_GET_GC_BUFFER_INIT(sframe, zgc_buffer);
 
     return &sframe->std;
+}
+
+static void swow_websocket_frame_free_object(zend_object *object)
+{
+    swow_websocket_frame_t *sframe = swow_websocket_frame_get_from_object(object);
+
+    if (sframe->payload_data != NULL) {
+        zend_object_release(sframe->payload_data);
+    }
+
+    ZEND_GET_GC_BUFFER_FREE(sframe, zgc_buffer);
+    zend_object_std_dtor(&sframe->std);
 }
 
 #define getThisFrame() (swow_websocket_frame_get_from_object(Z_OBJ_P(ZEND_THIS)))
@@ -457,7 +470,7 @@ static PHP_METHOD(Swow_WebSocket_Frame, setPayloadData)
     ZEND_PARSE_PARAMETERS_END();
 
     if (UNEXPECTED(sframe->payload_data != NULL)) {
-        OBJ_RELEASE(sframe->payload_data);
+        zend_object_release(sframe->payload_data);
     }
 
     if (zbuffer) {
@@ -629,6 +642,24 @@ static const zend_function_entry swow_websocket_frame_methods[] = {
     PHP_FE_END
 };
 
+static HashTable *swow_websocket_frame_get_gc(zend7_object *object, zval **gc_data, int *gc_count)
+{
+    swow_websocket_frame_t *sframe = swow_websocket_frame_get_from_object(Z7_OBJ_P(object));
+    zend_object *payload_data = sframe->payload_data;
+    zval ztmp;
+
+    if (payload_data == NULL) {
+        *gc_data = NULL;
+        *gc_count = 0;
+        return zend_std_get_properties(object);
+    }
+
+    ZEND_GET_GC_BUFFER_CREATE(sframe, zgc_buffer, 1);
+    ZVAL_OBJ(&ztmp, payload_data);
+    ZEND_GET_GC_BUFFER_ADD(zgc_buffer, &ztmp);
+    ZEND_GET_GC_BUFFER_DONE(zgc_buffer, gc_data, gc_count);
+}
+
 int swow_websocket_module_init(INIT_FUNC_ARGS)
 {
 #define SWOW_WEBSOCKET_REGISTER_LONG_CONSTANT(name) \
@@ -672,9 +703,11 @@ int swow_websocket_module_init(INIT_FUNC_ARGS)
         "Swow\\WebSocket\\Frame", NULL, swow_websocket_frame_methods,
         &swow_websocket_frame_handlers, NULL,
         cat_true, cat_false, cat_false,
-        swow_websocket_frame_create_object, NULL,
+        swow_websocket_frame_create_object,
+        swow_websocket_frame_free_object,
         XtOffsetOf(swow_websocket_frame_t, std)
     );
+    swow_websocket_frame_handlers.get_gc = swow_websocket_frame_get_gc;
     do {
         cat_websocket_header_t frame = {};
         frame.fin = 1;

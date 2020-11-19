@@ -38,6 +38,7 @@ typedef struct
 {
     cat_websocket_header_t header;
     zend_object *payload_data;
+    ZEND_GET_GC_BUFFER_DECLARE(zgc_buffer);
     zend_object std;
 } swow_websocket_frame_t;
 
