@@ -38,7 +38,7 @@ static zend_object *swow_channel_create_object(zend_class_entry *ce)
     swow_channel_t *schannel = swow_object_alloc(swow_channel_t, ce, swow_channel_handlers);
 
     schannel->channel.dtor = NULL;
-    ZEND_GET_GC_BUFFER_INIT(schannel, zgc_buffer);
+    ZEND_GET_GC_BUFFER_INIT(schannel);
 
     return &schannel->std;
 }
@@ -66,7 +66,7 @@ static void swow_channel_free_object(zend_object *object)
         cat_channel_close(channel);
     }
 
-    ZEND_GET_GC_BUFFER_FREE(schannel, zgc_buffer);
+    ZEND_GET_GC_BUFFER_FREE(schannel);
 
     zend_object_std_dtor(&schannel->std);
 }
@@ -331,23 +331,21 @@ static const zend_function_entry swow_channel_methods[] = {
     PHP_FE_END
 };
 
-static HashTable *swow_channel_get_gc(zend7_object *object, zval **gc_data, int *gc_count)
+static HashTable *swow_channel_get_gc(ZEND_GET_GC_PARAMATERS)
 {
     SWOW_CHANNEL_GETTER_INTERNAL(Z7_OBJ_P(object), schannel, channel);
 
     if (channel->length == 0) {
-        *gc_data = NULL;
-        *gc_count = 0;
-        return zend_std_get_properties(object);
+        ZEND_GET_GC_RETURN_EMPTY();
     }
 
-    ZEND_GET_GC_BUFFER_CREATE(schannel, zgc_buffer, channel->length);
+    ZEND_GET_GC_BUFFER_CREATE(schannel, channel->length);
 
     CAT_QUEUE_FOREACH_DATA_START(&channel->u.buffered.storage, cat_channel_bucket_t, node, bucket) {
-        ZEND_GET_GC_BUFFER_ADD(zgc_buffer, (zval *) bucket->data);
+        ZEND_GET_GC_BUFFER_ADD((zval *) bucket->data);
     } CAT_QUEUE_FOREACH_DATA_END();
 
-    ZEND_GET_GC_BUFFER_DONE(zgc_buffer, gc_data, gc_count);
+    ZEND_GET_GC_BUFFER_DONE();
 }
 
 /* select */
@@ -381,7 +379,7 @@ static zend_object *swow_channel_selector_create_object(zend_class_entry *ce)
     selector->size = CAT_ARRAY_SIZE(selector->_requests);
     selector->last_opcode = CAT_CHANNEL_OPCODE_PUSH;
     ZVAL_NULL(&selector->zdata);
-    ZEND_GET_GC_BUFFER_INIT(selector, zgc_buffer);
+    ZEND_GET_GC_BUFFER_INIT(selector);
 
     return &selector->std;
 }
@@ -396,7 +394,7 @@ static void swow_channel_selector_free_object(zend_object *object)
     }
     swow_channel_selector_release_response(selector);
 
-    ZEND_GET_GC_BUFFER_FREE(selector, zgc_buffer);
+    ZEND_GET_GC_BUFFER_FREE(selector);
 
     zend_object_std_dtor(&selector->std);
 }
@@ -578,30 +576,28 @@ static const zend_function_entry swow_channel_selector_methods[] = {
     PHP_FE_END
 };
 
-static HashTable *swow_channel_selector_get_gc(zend7_object *object, zval **gc_data, int *gc_count)
+static HashTable *swow_channel_selector_get_gc(ZEND_GET_GC_PARAMATERS)
 {
     swow_channel_selector_t *selector = swow_channel_selector_get_from_object(Z7_OBJ_P(object));
     cat_channel_select_request_t *request;
     uint32_t n;
 
     if (selector->count == 0 && !Z_REFCOUNTED_P(&selector->zdata)) {
-        *gc_data = NULL;
-        *gc_count = 0;
-        return zend_std_get_properties(object);
+        ZEND_GET_GC_RETURN_EMPTY();
     }
 
-    ZEND_GET_GC_BUFFER_CREATE(selector, zgc_buffer, selector->count + 1);
+    ZEND_GET_GC_BUFFER_CREATE(selector, selector->count + 1);
 
     /* request */
     for (n = 0, request = selector->requests; n < selector->count; n++, request++) {
         if (request->opcode == CAT_CHANNEL_OPCODE_PUSH) {
-            ZEND_GET_GC_BUFFER_ADD(zgc_buffer, (zval *) request->data.common);
+            ZEND_GET_GC_BUFFER_ADD((zval *) request->data.common);
         }
     }
     /* response */
-    ZEND_GET_GC_BUFFER_ADD(zgc_buffer, &selector->zdata);
+    ZEND_GET_GC_BUFFER_ADD(&selector->zdata);
 
-    ZEND_GET_GC_BUFFER_DONE(zgc_buffer, gc_data, gc_count);
+    ZEND_GET_GC_BUFFER_DONE();
 }
 
 int swow_channel_module_init(INIT_FUNC_ARGS)

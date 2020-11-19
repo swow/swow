@@ -2051,20 +2051,16 @@ static const zend_function_entry swow_coroutine_methods[] = {
 
 /* handlers */
 
-static HashTable *swow_coroutine_get_gc(zend7_object *object, zval **gc_data, int *gc_count)
+static HashTable *swow_coroutine_get_gc(ZEND_GET_GC_PARAMATERS)
 {
     swow_coroutine_t *scoroutine = swow_coroutine_get_from_object(Z7_OBJ_P(object));
     zval *zcallable = scoroutine->executor ? &scoroutine->executor->zcallable : NULL;
 
-    if (zcallable && !ZVAL_IS_NULL(zcallable)) {
-        *gc_data = zcallable;
-        *gc_count = 1;
-    } else {
-        *gc_data = NULL;
-        *gc_count = 0;
+    if (zcallable == NULL || ZVAL_IS_NULL(zcallable)) {
+        ZEND_GET_GC_RETURN_EMPTY();
     }
 
-    return zend_std_get_properties(object);
+    ZEND_GET_GC_RETURN_ZVAL(zcallable);
 }
 
 /* exception/error */

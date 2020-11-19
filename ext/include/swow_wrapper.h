@@ -289,24 +289,27 @@ ZEND_API ZEND_COLD void ZEND_FASTCALL zend_argument_value_error(uint32_t arg_num
 #endif
 #endif
 
+#define ZEND_GET_GC_PARAMATERS                      zend7_object *object, zval **gc_data, int *gc_count
+#define ZEND_GET_GC_RETURN_ZVAL(_zdata)             do { *gc_data = _zdata; *gc_count = 1; return zend_std_get_properties(object); } while (0)
+#define ZEND_GET_GC_RETURN_EMPTY()                  do { *gc_data = NULL; *gc_count = 0; return zend_std_get_properties(object); } while (0)
 #if PHP_VERSION_ID < 80000 || defined(CAT_IDE_HELPER)
 #define ZEND_NO_GC_BUFFER 1
 #endif
 #ifdef ZEND_NO_GC_BUFFER
-#define ZEND_GET_GC_BUFFER_DECLARE(_name)                   zval *_name
-#define ZEND_GET_GC_BUFFER_INIT(_object, _name)             (_object)->_name = NULL
-#define ZEND_GET_GC_BUFFER_CREATE(_object, _name, _length)  zval *_name = (_object)->_name; size_t _##_name##_index = 0; \
-                                                            (_object)->_name = _name = safe_erealloc(_name, _length, sizeof(zval), 0)
-#define ZEND_GET_GC_BUFFER_ADD(_name, _zv)                  ZVAL_COPY_VALUE(&_name[_##_name##_index++], _zv)
-#define ZEND_GET_GC_BUFFER_DONE(_name, _gc_data, _gc_count) do { *_gc_data = _name; *_gc_count = _##_name##_index; return zend_std_get_properties(object); } while (0)
-#define ZEND_GET_GC_BUFFER_FREE(_object, _name)             do { if ((_object)->_name != NULL) { efree((_object)->_name); } } while (0)
+#define ZEND_GET_GC_BUFFER_DECLARE                  zval *zgc_buffer;
+#define ZEND_GET_GC_BUFFER_INIT(_object)            (_object)->zgc_buffer = NULL
+#define ZEND_GET_GC_BUFFER_CREATE(_object, _length) zval *zgc_buffer = (_object)->zgc_buffer; size_t _##zgc_buffer##_index = 0; \
+                                                    (_object)->zgc_buffer = zgc_buffer = safe_erealloc(zgc_buffer, _length, sizeof(zval), 0)
+#define ZEND_GET_GC_BUFFER_ADD(_zv)                 ZVAL_COPY_VALUE(&zgc_buffer[_##zgc_buffer##_index++], _zv)
+#define ZEND_GET_GC_BUFFER_DONE()                   do { *gc_data = zgc_buffer; *gc_count = _##zgc_buffer##_index; return zend_std_get_properties(object); } while (0)
+#define ZEND_GET_GC_BUFFER_FREE(_object)            do { if ((_object)->zgc_buffer != NULL) { efree((_object)->zgc_buffer); } } while (0)
 #else
-#define ZEND_GET_GC_BUFFER_DECLARE(_name)
-#define ZEND_GET_GC_BUFFER_INIT(_object, _name)
-#define ZEND_GET_GC_BUFFER_CREATE(_object, _name, _length)  zend_get_gc_buffer *_name = zend_get_gc_buffer_create()
-#define ZEND_GET_GC_BUFFER_ADD(_name, _zv)                  zend_get_gc_buffer_add_zval(_name, _zv)
-#define ZEND_GET_GC_BUFFER_DONE(_name, _gc_data, _gc_count) do { zend_get_gc_buffer_use(_name, _gc_data, _gc_count); return zend_std_get_properties(object); } while (0)
-#define ZEND_GET_GC_BUFFER_FREE(_object, _name)
+#define ZEND_GET_GC_BUFFER_DECLARE
+#define ZEND_GET_GC_BUFFER_INIT(_object)
+#define ZEND_GET_GC_BUFFER_CREATE(_object, _length) zend_get_gc_buffer *zgc_buffer = zend_get_gc_buffer_create()
+#define ZEND_GET_GC_BUFFER_ADD(_zv)                 zend_get_gc_buffer_add_zval(zgc_buffer, _zv)
+#define ZEND_GET_GC_BUFFER_DONE()                   do { zend_get_gc_buffer_use(zgc_buffer, gc_data, gc_count); return zend_std_get_properties(object); } while (0)
+#define ZEND_GET_GC_BUFFER_FREE(_object)
 #endif
 /* }}} */
 

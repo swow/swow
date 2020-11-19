@@ -38,7 +38,7 @@ extern SWOW_API zend_class_entry *swow_channel_selector_exception_ce;
 typedef struct
 {
     cat_channel_t channel;
-    ZEND_GET_GC_BUFFER_DECLARE(zgc_buffer);
+    ZEND_GET_GC_BUFFER_DECLARE
     zend_object std;
 } swow_channel_t;
 
@@ -54,7 +54,7 @@ typedef struct
     zval zdata;
     /* internal */
     zval zstorage[4];
-    ZEND_GET_GC_BUFFER_DECLARE(zgc_buffer);
+    ZEND_GET_GC_BUFFER_DECLARE
     zend_object std;
 } swow_channel_selector_t;
 
