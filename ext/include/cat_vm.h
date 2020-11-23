@@ -16,12 +16,6 @@
   +--------------------------------------------------------------------------+
  */
 
-#ifdef HAVE_CONFIG_H
-#ifndef COMPILE_DL_SWOW
-#include "config.h"
-#endif
-#endif
-
 #include "zend.h"
 #include "zend_API.h"
 

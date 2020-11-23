@@ -22,10 +22,6 @@
 extern "C" {
 #endif
 
-#if defined(HAVE_CONFIG_H) && !defined(COMPILE_DL_SWOW)
-#include "config.h"
-#endif
-
 /* disable PHP warning */
 #define php_std_error_handling() php_std_error_handling(void)
 
