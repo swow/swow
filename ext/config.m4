@@ -173,50 +173,50 @@ if test "${SWOW}" != "no"; then
 
       CAT_CONTEXT_FILE_SUFFIX=""
       if test "${SWOW_OS}" = "DARWIN"; then
-          if test "${SWOW_CPU_ARCH}" = "arm"; then
-              CAT_CONTEXT_FILE_SUFFIX="arm_aapcs_macho_gas.S"
-          elif test "${SWOW_CPU_ARCH}" = "arm64"; then
-              CAT_CONTEXT_FILE_SUFFIX="arm64_aapcs_macho_gas.S"
-          else
-              CAT_CONTEXT_FILE_SUFFIX="combined_sysv_macho_gas.S"
-          fi
+        if test "${SWOW_CPU_ARCH}" = "arm"; then
+          CAT_CONTEXT_FILE_SUFFIX="arm_aapcs_macho_gas.S"
+        elif test "${SWOW_CPU_ARCH}" = "arm64"; then
+          CAT_CONTEXT_FILE_SUFFIX="arm64_aapcs_macho_gas.S"
+        else
+          CAT_CONTEXT_FILE_SUFFIX="combined_sysv_macho_gas.S"
+        fi
       elif test "${SWOW_CPU_ARCH}" = "x86_64"; then
-          if test "${SWOW_OS}" = "LINUX"; then
-              CAT_CONTEXT_FILE_SUFFIX="x86_64_sysv_elf_gas.S"
-          fi
+        if test "${SWOW_OS}" = "LINUX"; then
+          CAT_CONTEXT_FILE_SUFFIX="x86_64_sysv_elf_gas.S"
+        fi
       elif test "${SWOW_CPU_ARCH}" = "x86"; then
-          if test "${SWOW_OS}" = "LINUX"; then
-              CAT_CONTEXT_FILE_SUFFIX="i386_sysv_elf_gas.S"
-          fi
+        if test "${SWOW_OS}" = "LINUX"; then
+          CAT_CONTEXT_FILE_SUFFIX="i386_sysv_elf_gas.S"
+        fi
       elif test "${SWOW_CPU_ARCH}" = "arm"; then
-          if test "${SWOW_OS}" = "LINUX"; then
-              CAT_CONTEXT_FILE_SUFFIX="arm_aapcs_elf_gas.S"
-          fi
+        if test "${SWOW_OS}" = "LINUX"; then
+          CAT_CONTEXT_FILE_SUFFIX="arm_aapcs_elf_gas.S"
+        fi
       elif test "${SWOW_CPU_ARCH}" = "arm64"; then
-          if test "${SWOW_OS}" = "LINUX"; then
-              CAT_CONTEXT_FILE_SUFFIX="arm64_aapcs_elf_gas.S"
-          fi
-       elif test "${SWOW_CPU_ARCH}" = "ppc32"; then
-          if test "${SWOW_OS}" = "LINUX"; then
-              CAT_CONTEXT_FILE_SUFFIX="ppc32_sysv_elf_gas.S"
-          fi
+        if test "${SWOW_OS}" = "LINUX"; then
+          CAT_CONTEXT_FILE_SUFFIX="arm64_aapcs_elf_gas.S"
+        fi
+      elif test "${SWOW_CPU_ARCH}" = "ppc32"; then
+        if test "${SWOW_OS}" = "LINUX"; then
+          CAT_CONTEXT_FILE_SUFFIX="ppc32_sysv_elf_gas.S"
+        fi
       elif test "${SWOW_CPU_ARCH}" = "ppc64"; then
-          if test "${SWOW_OS}" = "LINUX"; then
-              CAT_CONTEXT_FILE_SUFFIX="ppc64_sysv_elf_gas.S"
-          fi
+        if test "${SWOW_OS}" = "LINUX"; then
+          CAT_CONTEXT_FILE_SUFFIX="ppc64_sysv_elf_gas.S"
+        fi
       elif test "${SWOW_CPU_ARCH}" = "mips32"; then
-          if test "${SWOW_OS}" = "LINUX"; then
-             CAT_CONTEXT_FILE_SUFFIX="mips32_o32_elf_gas.S"
-          fi
+        if test "${SWOW_OS}" = "LINUX"; then
+          CAT_CONTEXT_FILE_SUFFIX="mips32_o32_elf_gas.S"
+        fi
       fi
       if test "${CAT_CONTEXT_FILE_SUFFIX}" = ""; then
-          AC_DEFINE(CAT_COROUTINE_USE_UCONTEXT, 1, [ Cat Coroutine use ucontxt ])
+        AC_DEFINE(CAT_COROUTINE_USE_UCONTEXT, 1, [ Cat Coroutine use ucontxt ])
       else
-          CAT_SOURCE_FILES="
-            ${CAT_SOURCE_FILES}
-            ${CAT_DIR}/deps/context/asm/make_${CAT_CONTEXT_FILE_SUFFIX}
-            ${CAT_DIR}/deps/context/asm/jump_${CAT_CONTEXT_FILE_SUFFIX}
-          "
+        CAT_SOURCE_FILES="
+          ${CAT_SOURCE_FILES}
+          ${CAT_DIR}/deps/context/asm/make_${CAT_CONTEXT_FILE_SUFFIX}
+          ${CAT_DIR}/deps/context/asm/jump_${CAT_CONTEXT_FILE_SUFFIX}
+        "
       fi
 
       dnl ====== Check libuv dependency ======
