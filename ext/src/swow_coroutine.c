@@ -1035,7 +1035,7 @@ SWOW_API cat_bool_t swow_coroutine_eval(swow_coroutine_t *scoroutine, zend_strin
     }
 
     SWOW_COROUTINE_USER_EXECUTE_START(scoroutine, level) {
-        error = zend_eval_stringl(ZSTR_VAL(string), ZSTR_LEN(string), return_value, "Coroutine::eval()");
+        error = zend_eval_stringl(ZSTR_VAL(string), ZSTR_LEN(string), return_value, (char *) "Coroutine::eval()");
     } SWOW_COROUTINE_USER_EXECUTE_END();
 
     swow_coroutine_set_readonly(cat_false);
