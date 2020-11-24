@@ -1,76 +1,37 @@
 dnl config.m4 for extension swow
 
-dnl Comments in this file start with the string 'dnl'.
-dnl Remove where necessary.
-
-dnl If your extension references something external, use 'with':
-
-dnl PHP_ARG_WITH([swow],
-dnl   [for swow support],
-dnl   [AS_HELP_STRING([--with-swow],
-dnl     [Include swow support])])
-
-dnl Otherwise use 'enable':
-
-PHP_ARG_ENABLE(
-  [swow],
-  [whether to enable swow support],
-  [AS_HELP_STRING([--enable-swow], [Enable swow support])],
+PHP_ARG_ENABLE([swow],
+  [whether to enable Swow support],
+  [AS_HELP_STRING([--enable-swow], [Enable Swow support])],
   [no]
+)
+
+PHP_ARG_ENABLE([swow-debug],
+  [whether to enable Swow debug build flags],
+  [AS_HELP_STRING([--enable-swow-debug], [Enable Swow debug build flags])],
+  [no], [no]
+)
+
+PHP_ARG_ENABLE([swow-valgrind],
+  [whether to enable Swow valgrind support],
+  [AS_HELP_STRING([--enable-swow-valgrind], [Enable Swow valgrind support])],
+  [$PHP_SWOW_DEBUG], [$PHP_SWOW_DEBUG]
 )
 
 if test "${SWOW}" != "no"; then
 
-  AC_DEFUN([SWOW_DEFINE],[
-    if test "$2" = ""; then
-      CFLAGS="${CFLAGS} -D$1"
-    else
-      CFLAGS="${CFLAGS} -D$1=$2"
-    fi
-  ])
+  AC_DEFINE([HAVE_SWOW], 1, [Have Swow])
 
-  AS_CASE([$host_os],
-    [darwin*], [SWOW_OS="DARWIN"],
-    [cygwin*], [SWOW_OS="CYGWIN"],
-    [mingw*],  [SWOW_OS="MINGW"],
-    [linux*],  [SWOW_OS="LINUX"],
-               [SWOW_OS="UNKNOWN"]
-  )
+  SWOW_CFLAGS=""
+  SWOW_STD_CFLAGS=""
+  SWOW_STD_CFLAGS="${SWOW_STD_CFLAGS} -fvisibility=hidden -std=gnu90"
+  SWOW_STD_CFLAGS="${SWOW_STD_CFLAGS} -Wall -Wextra -Wstrict-prototypes"
+  SWOW_STD_CFLAGS="${SWOW_STD_CFLAGS} -Wno-unused-parameter"
+  SWOW_STD_CFLAGS="${SWOW_STD_CFLAGS} -g"
 
-  AS_CASE([$host_cpu],
-    [x86_64*],  [SWOW_CPU_ARCH="x86_64"],
-    [x86*],     [SWOW_CPU_ARCH="x86"],
-    [i?86*],    [SWOW_CPU_ARCH="x86"],
-    [arm*],     [SWOW_CPU_ARCH="arm"],
-    [aarch64*], [SWOW_CPU_ARCH="arm64"],
-    [arm64*],   [SWOW_CPU_ARCH="arm64"],
-    [mips*],    [SWOW_CPU_ARCH="mips32"],
-                [SWOW_CPU_ARCH="unsupported"]
-  )
-
-  AC_MSG_CHECKING([if compiling with clang])
-  AC_COMPILE_IFELSE([
-    AC_LANG_PROGRAM([], [[
-        #ifndef __clang__
-            not clang
-        #endif
-    ]])],
-    [CLANG=yes], [CLANG=no]
-  )
-  AC_MSG_RESULT([$CLANG])
-
-  CFLAGS="${CFLAGS} -fvisibility=hidden -std=gnu90"
-  CFLAGS="${CFLAGS} -Wall -Wextra -Wstrict-prototypes"
-  CFLAGS="${CFLAGS} -Wno-unused-parameter"
-  CFLAGS="${CFLAGS} -g"
-
-  AC_ARG_ENABLE(debug,
-    [  --enable-debug, compile with debug symbols],
-    [PHP_DEBUG=${enableval}],
-    [PHP_DEBUG=0]
-  )
-
-  dnl TODO: AddressSanitizer (ASan)
+  if test "${PHP_SWOW_DEBUG}" = "yes"; then
+    SWOW_STD_CFLAGS="${SWOW_STD_CFLAGS} -O0"
+  fi
 
   SWOW_INCLUDE_DIR="include"
   SWOW_SRC_DIR="src"
@@ -105,62 +66,80 @@ if test "${SWOW}" != "no"; then
   if test "libcat" != ""; then
       dnl $Id: bddeea6baf539277b4f15f85f38de8cf3b4f7fa1 $
 
-      SWOW_DEFINE([HAVE_LIBCAT], 1)
+      AC_DEFINE([HAVE_LIBCAT], 1, [Have libcat])
 
-      dnl Use ZendVM, e.g. malloc to emalloc
-      SWOW_DEFINE([CAT_VM], 1)
+      dnl Use Zend VM, e.g. define malloc to emalloc
+      AC_DEFINE([CAT_VM], 1, [Use libcat in Zend VM])
 
-      AC_MSG_CHECKING([if debug is enabled])
-      if test "${PHP_DEBUG}" = "${enableval}"; then
-        SWOW_DEFINE([CAT_DEBUG], 1)
+      if test "${PHP_SWOW_DEBUG}" = "yes"; then
+        AC_DEFINE([CAT_DEBUG], 1, [Debug build])
       fi
-      AC_MSG_RESULT([${PHP_DEBUG}])
 
-      AC_DEFUN([CAT_CHECK_VALGRIND], [
-          AC_MSG_CHECKING([for valgrind])
-          AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
-              #include <valgrind/valgrind.h>
-          ]], [[
-          ]])],[
-              SWOW_DEFINE([HAVE_VALGRIND], 1, [Have Valgrind])
-              AC_MSG_RESULT([yes])
-          ],[
-              AC_MSG_RESULT([no])
-          ])
-      ])
-      CAT_CHECK_VALGRIND
-
-      LIBCAT_DIR="${SWOW_DEPS_DIR}/libcat"
-
-      PHP_ADD_INCLUDE(${LIBCAT_DIR}/include)
-
+      CAT_CFLAGS=""
+      CAT_DIR="${SWOW_DEPS_DIR}/libcat"
       CAT_SOURCE_FILES="
-        ${LIBCAT_DIR}/src/cat_cp.c
-        ${LIBCAT_DIR}/src/cat_memory.c
-        ${LIBCAT_DIR}/src/cat_string.c
-        ${LIBCAT_DIR}/src/cat_error.c
-        ${LIBCAT_DIR}/src/cat_module.c
-        ${LIBCAT_DIR}/src/cat_log.c
-        ${LIBCAT_DIR}/src/cat_env.c
-        ${LIBCAT_DIR}/src/cat.c
-        ${LIBCAT_DIR}/src/cat_api.c
-        ${LIBCAT_DIR}/src/cat_coroutine.c
-        ${LIBCAT_DIR}/src/cat_channel.c
-        ${LIBCAT_DIR}/src/cat_sync.c
-        ${LIBCAT_DIR}/src/cat_event.c
-        ${LIBCAT_DIR}/src/cat_time.c
-        ${LIBCAT_DIR}/src/cat_socket.c
-        ${LIBCAT_DIR}/src/cat_dns.c
-        ${LIBCAT_DIR}/src/cat_work.c
-        ${LIBCAT_DIR}/src/cat_buffer.c
-        ${LIBCAT_DIR}/src/cat_fs.c
-        ${LIBCAT_DIR}/src/cat_signal.c
-        ${LIBCAT_DIR}/src/cat_watch_dog.c
-        ${LIBCAT_DIR}/src/cat_http.c
-        ${LIBCAT_DIR}/src/cat_websocket.c
+        ${CAT_DIR}/src/cat_cp.c
+        ${CAT_DIR}/src/cat_memory.c
+        ${CAT_DIR}/src/cat_string.c
+        ${CAT_DIR}/src/cat_error.c
+        ${CAT_DIR}/src/cat_module.c
+        ${CAT_DIR}/src/cat_log.c
+        ${CAT_DIR}/src/cat_env.c
+        ${CAT_DIR}/src/cat.c
+        ${CAT_DIR}/src/cat_api.c
+        ${CAT_DIR}/src/cat_coroutine.c
+        ${CAT_DIR}/src/cat_channel.c
+        ${CAT_DIR}/src/cat_sync.c
+        ${CAT_DIR}/src/cat_event.c
+        ${CAT_DIR}/src/cat_time.c
+        ${CAT_DIR}/src/cat_socket.c
+        ${CAT_DIR}/src/cat_dns.c
+        ${CAT_DIR}/src/cat_work.c
+        ${CAT_DIR}/src/cat_buffer.c
+        ${CAT_DIR}/src/cat_fs.c
+        ${CAT_DIR}/src/cat_signal.c
+        ${CAT_DIR}/src/cat_watch_dog.c
+        ${CAT_DIR}/src/cat_http.c
+        ${CAT_DIR}/src/cat_websocket.c
       "
 
+      PHP_ADD_INCLUDE(${CAT_DIR}/include)
+
+      dnl ====== Check valgrind ======
+
+      if test "${PHP_VALGRIND}" = "yes" || test "${PHP_SWOW_VALGRIND}" = "yes"; then
+        AC_MSG_CHECKING([for valgrind])
+        AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
+            #include <valgrind/valgrind.h>
+        ]], [[
+        ]])],[
+            AC_DEFINE([HAVE_VALGRIND], 1, [Have Valgrind])
+            AC_MSG_RESULT([yes])
+        ],[
+            AC_MSG_RESULT([no])
+        ])
+      fi
+
       dnl ====== Check boost context dependency ======
+
+      AS_CASE([$host_os],
+        [darwin*], [SWOW_OS="DARWIN"],
+        [cygwin*], [SWOW_OS="CYGWIN"],
+        [mingw*],  [SWOW_OS="MINGW"],
+        [linux*],  [SWOW_OS="LINUX"],
+                   [SWOW_OS="UNKNOWN"]
+      )
+
+      AS_CASE([$host_cpu],
+        [x86_64*],  [SWOW_CPU_ARCH="x86_64"],
+        [x86*],     [SWOW_CPU_ARCH="x86"],
+        [i?86*],    [SWOW_CPU_ARCH="x86"],
+        [arm*],     [SWOW_CPU_ARCH="arm"],
+        [aarch64*], [SWOW_CPU_ARCH="arm64"],
+        [arm64*],   [SWOW_CPU_ARCH="arm64"],
+        [mips*],    [SWOW_CPU_ARCH="mips32"],
+                    [SWOW_CPU_ARCH="unsupported"]
+      )
 
       CAT_CONTEXT_FILE_SUFFIX=""
       if test "${SWOW_OS}" = "DARWIN"; then
@@ -201,18 +180,27 @@ if test "${SWOW}" != "no"; then
           fi
       fi
       if test "${CAT_CONTEXT_FILE_SUFFIX}" = ""; then
-          SWOW_DEFINE(CAT_COROUTINE_USE_UCONTEXT, 1, [ Cat Coroutine use ucontxt ])
+          AC_DEFINE(CAT_COROUTINE_USE_UCONTEXT, 1, [ Cat Coroutine use ucontxt ])
       else
           CAT_SOURCE_FILES="
             ${CAT_SOURCE_FILES}
-            ${LIBCAT_DIR}/deps/context/asm/make_${CAT_CONTEXT_FILE_SUFFIX}
-            ${LIBCAT_DIR}/deps/context/asm/jump_${CAT_CONTEXT_FILE_SUFFIX}
+            ${CAT_DIR}/deps/context/asm/make_${CAT_CONTEXT_FILE_SUFFIX}
+            ${CAT_DIR}/deps/context/asm/jump_${CAT_CONTEXT_FILE_SUFFIX}
           "
       fi
 
       dnl ====== Check libuv dependency ======
 
-      UV_DIR="${LIBCAT_DIR}/deps/libuv"
+      AC_DEFUN([UV_DEFINE],[
+        if test "$2" = ""; then
+          UV_CFLAGS="${UV_CFLAGS} -D$1"
+        else
+          UV_CFLAGS="${UV_CFLAGS} -D$1=$2"
+        fi
+      ])
+
+      UV_CFLAGS=""
+      UV_DIR="${CAT_DIR}/deps/libuv"
 
       UV_SOURCE_FILES="
         ${UV_DIR}/src/fs-poll.c
@@ -227,8 +215,8 @@ if test "${SWOW}" != "no"; then
         ${UV_DIR}/src/version.c
       "
 
-      SWOW_DEFINE(_FILE_OFFSET_BITS, 64, [_FILE_OFFSET_BITS])
-      SWOW_DEFINE(_LARGEFILE_SOURCE, , [_LARGEFILE_SOURCE])
+      UV_DEFINE(_FILE_OFFSET_BITS, 64, [_FILE_OFFSET_BITS])
+      UV_DEFINE(_LARGEFILE_SOURCE, , [_LARGEFILE_SOURCE])
 
       dnl  if(NOT CMAKE_SYSTEM_NAME STREQUAL "Android|OS390|QNX")
       dnl    # Android has pthread as part of its c library, not as a separate
@@ -317,7 +305,7 @@ if test "${SWOW}" != "no"; then
       dnl endif()
 
       AC_CHECK_LIB(c, kqueue, [
-        SWOW_DEFINE(HAVE_KQUEUE, 1, [Have Kqueue])
+        UV_DEFINE(HAVE_KQUEUE, 1, [Have Kqueue])
         UV_SOURCE_FILES="
           ${UV_SOURCE_FILES}
           ${UV_DIR}/src/unix/bsd-ifaddrs.c
@@ -326,8 +314,8 @@ if test "${SWOW}" != "no"; then
       ])
 
       if test "${SWOW_OS}" = "DARWIN"; then
-        SWOW_DEFINE(_DARWIN_UNLIMITED_SELECT, 1, [_DARWIN_UNLIMITED_SELECT])
-        SWOW_DEFINE(_DARWIN_USE_64_BIT_INODE, 1, [_DARWIN_USE_64_BIT_INODE])
+        UV_DEFINE(_DARWIN_UNLIMITED_SELECT, 1, [_DARWIN_UNLIMITED_SELECT])
+        UV_DEFINE(_DARWIN_USE_64_BIT_INODE, 1, [_DARWIN_USE_64_BIT_INODE])
         UV_SOURCE_FILES="
           ${UV_SOURCE_FILES}
           ${UV_DIR}/src/unix/darwin-proctitle.c
@@ -337,8 +325,8 @@ if test "${SWOW}" != "no"; then
       fi
 
       if test "${SWOW_OS}" = "LINUX"; then
-        SWOW_DEFINE(_GNU_SOURCE, , [_GNU_SOURCE])
-        SWOW_DEFINE(_POSIX_C_SOURCE, 200112, [_POSIX_C_SOURCE])
+        UV_DEFINE(_GNU_SOURCE, , [_GNU_SOURCE])
+        UV_DEFINE(_POSIX_C_SOURCE, 200112, [_POSIX_C_SOURCE])
         PHP_ADD_LIBRARY(dl)
         PHP_ADD_LIBRARY(rt)
         UV_SOURCE_FILES="
@@ -415,13 +403,14 @@ if test "${SWOW}" != "no"; then
       dnl       ${uv_dir}/src/unix/posix-poll.c)
       dnl endif()
 
+      CAT_CFLAGS="${CAT_CFLAGS} ${UV_CFLAGS}"
       CAT_SOURCE_FILES="${CAT_SOURCE_FILES} ${UV_SOURCE_FILES}"
       PHP_ADD_INCLUDE("${UV_DIR}/include")
       PHP_ADD_INCLUDE("${UV_DIR}/src")
 
       dnl ====== Check llhttp dependency ======
 
-      LLHTTP_DIR="${LIBCAT_DIR}/deps/llhttp"
+      LLHTTP_DIR="${CAT_DIR}/deps/llhttp"
       LLHTTP_SOURCE_FILES="
         ${LLHTTP_DIR}/src/api.c
         ${LLHTTP_DIR}/src/http.c
@@ -432,7 +421,8 @@ if test "${SWOW}" != "no"; then
       PHP_ADD_INCLUDE("${LLHTTP_DIR}/include")
   fi
 
+  SWOW_CFLAGS="${SWOW_CFLAGS} ${SWOW_STD_CFLAGS} ${CAT_CFLAGS}"
   SWOW_SOURCE_FILES="${SWOW_SOURCE_FILES} ${CAT_SOURCE_FILES}"
 
-  PHP_NEW_EXTENSION(swow, $SWOW_SOURCE_FILES, $ext_shared)
+  PHP_NEW_EXTENSION(swow, $SWOW_SOURCE_FILES, $ext_shared,,$SWOW_CFLAGS)
 fi

@@ -41,7 +41,7 @@ if (!file_exists("{$workSpace}/configure") || isset($options['rebuild'])) {
     $commandArray[] = 'phpize';
 }
 if (!file_exists("{$workSpace}/Makefile") || isset($options['rebuild'])) {
-    $configureOptions = isset($options['debug']) ? '--enable-debug ' : '';
+    $configureOptions = isset($options['debug']) ? '--enable-swow-debug ' : '';
     $configureOptions = isset($options['enable']) ? $configureOptions . $options['enable'] : $configureOptions;
     $commandArray[] = "./configure {$configureOptions}";
 }
