@@ -81,3 +81,22 @@ CAT_API unsigned int sleep(unsigned int seconds);
 CAT_API int usleep(unsigned int useconds);
 CAT_API int nanosleep(const struct timespec *rqtp, struct timespec *rmtp);
 #endif
+
+#ifndef CAT_OS_WIN
+/* Note: May be cast to struct iovec. See writev(2). */
+typedef struct
+{
+    char *base;
+    size_t length;
+} cat_io_vector_t;
+#else
+/* Note: May be cast to WSABUF[]
+ * see http://msdn.microsoft.com/en-us/library/ms741542(v=vs.85).aspx */
+typedef struct
+{
+    ULONG length;
+    char* base;
+} cat_io_vector_t;
+#endif
+
+CAT_API size_t cat_io_vector_length(const cat_io_vector_t *vector, unsigned int vector_count);

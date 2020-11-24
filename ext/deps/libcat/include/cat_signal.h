@@ -23,7 +23,6 @@ extern "C" {
 #endif
 
 #include "cat.h"
-#include "cat_time.h"
 
 CAT_API cat_bool_t cat_kill(int pid, int signum);
 CAT_API cat_bool_t cat_signal_wait(int signum, cat_timeout_t timeout);

@@ -89,3 +89,14 @@ CAT_API int nanosleep(const struct timespec *rqtp, struct timespec *rmtp)
     return usleep(rqtp->tv_sec * 1000000 + rqtp->tv_nsec / 1000);
 }
 #endif
+
+CAT_API size_t cat_io_vector_length(const cat_io_vector_t *vector, unsigned int vector_count)
+{
+    size_t nbytes = 0;
+
+    while (vector_count--) {
+        nbytes += (vector++)->length;
+    }
+
+    return nbytes;
+}

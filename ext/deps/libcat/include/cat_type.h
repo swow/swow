@@ -44,3 +44,19 @@ typedef void (*cat_data_dtor_t)(cat_data_t *data);
 #ifndef PRIx64
 #define PRIx64 "llx"
 #endif
+
+/* time */
+
+typedef int64_t cat_nsec_t;
+#define CAT_NSEC_FMT "%" PRIu64
+
+typedef int64_t cat_usec_t;
+#define CAT_USEC_FMT "%" PRIu64
+
+typedef int64_t cat_msec_t;
+#define CAT_MSEC_FMT "%" PRIu64
+
+typedef cat_msec_t cat_timeout_t;
+#define CAT_TIMEOUT_FMT     CAT_MSEC_FMT
+#define CAT_TIMEOUT_FOREVER -1
+#define CAT_TIMEOUT_INVALID INT64_MIN

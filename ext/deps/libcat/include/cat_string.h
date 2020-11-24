@@ -23,6 +23,56 @@
 #define CAT_TO_STR_NAKED(str)    #str
 #define CAT_TO_STR(str)          CAT_TO_STR_NAKED(str)
 
+typedef struct {
+    const char *data;
+    size_t length;
+} cat_const_string_t;
+
+#define cat_const_string(str) { str, sizeof(str) - 1 }
+
+static cat_always_inline void cat_const_string_init(cat_const_string_t *string)
+{
+    string->data = NULL;
+    string->length = 0;
+}
+
+static cat_always_inline void cat_const_string_create(cat_const_string_t *string, const char *data, size_t length)
+{
+    string->data = data;
+    string->length = length;
+}
+
+typedef struct {
+    char *value;
+    size_t length;
+} cat_string_t;
+
+static cat_always_inline void cat_string_init(cat_string_t *string)
+{
+    string->value = NULL;
+    string->length = 0;
+}
+
+static cat_always_inline cat_bool_t cat_string_create(cat_string_t *string, const char *value, size_t length)
+{
+    char *new_value = (char *) cat_strndup(value, length);
+    if (unlikely(new_value == NULL)) {
+        return cat_false;
+    }
+    string->value = new_value;
+    string->length = length;
+    return cat_true;
+}
+
+static cat_always_inline void cat_string_close(cat_string_t *string)
+{
+    if (string->value != NULL) {
+        cat_free(string->value);
+    }
+}
+
+CAT_API const unsigned char *cat_strlchr(const unsigned char *p, const unsigned char *last, unsigned char c);
+
 CAT_API char *cat_vsprintf(const char *format, va_list args); CAT_FREE
 CAT_API char *cat_sprintf(const char *format, ...)            CAT_FREE CAT_ATTRIBUTE_FORMAT(printf, 1, 2);
 
@@ -30,10 +80,3 @@ CAT_API char *cat_hexprint(const char *data, size_t length); CAT_FREE
 
 CAT_API char *cat_srand(char *buffer, size_t count);  CAT_MAY_FREE
 CAT_API char *cat_snrand(char *buffer, size_t count); CAT_MAY_FREE
-
-typedef struct {
-    size_t length;
-    const char *data;
-} cat_const_string_t;
-
-#define cat_const_string(str) { sizeof(str) - 1, str }

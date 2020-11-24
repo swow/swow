@@ -27,6 +27,12 @@
 extern "C" {
 #endif
 
+#if defined(HAVE_CONFIG_H) && !defined(HAVE_LIBCAT)
+/* autotools style config header file support
+ * (it must define HAVE_LIBCAT in config.h) */
+#include "config.h"
+#endif
+
 #ifdef HAVE_LIBCAT
 #ifdef CAT_SHARED_BUILD
 #define BUILDING_UV_SHARED 1

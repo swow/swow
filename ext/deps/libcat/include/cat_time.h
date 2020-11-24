@@ -24,27 +24,25 @@ extern "C" {
 
 #include "cat.h"
 
-typedef int64_t cat_nsec_t;
-#define CAT_NSEC_FMT "%" PRIu64
-
-typedef int64_t cat_usec_t;
-#define CAT_USEC_FMT "%" PRIu64
-
-typedef int64_t cat_msec_t;
-#define CAT_MSEC_FMT "%" PRIu64
-
-typedef cat_msec_t cat_timeout_t;
-#define CAT_TIMEOUT_FMT     CAT_MSEC_FMT
-#define CAT_TIMEOUT_FOREVER -1
-#define CAT_TIMEOUT_INVALID INT64_MIN
-
 CAT_API cat_nsec_t cat_time_nsec(void);
 CAT_API cat_msec_t cat_time_msec(void);
+CAT_API cat_msec_t cat_time_msec_cached(void);
 
 CAT_API char *cat_time_format_msec(cat_msec_t msec);
 
 /* cat_false: yield failed or sleep failed or timeout, cat_true: cancelled */
 CAT_API cat_bool_t cat_time_wait(cat_timeout_t timeout);
+
+#define CAT_TIME_WAIT_START() do { \
+    cat_msec_t __time_cached = cat_time_msec_cached(); \
+
+#define CAT_TIME_WAIT_END(timeout) \
+    timeout -= (cat_time_msec_cached() - __time_cached); \
+    if (unlikely(timeout < 0)) { \
+        timeout = 0; \
+    } \
+} while (0)
+
 CAT_API unsigned int cat_time_sleep(unsigned int seconds);
 /* -1: failed, 0: success, >0: left time (cancelled) */
 CAT_API cat_msec_t cat_time_msleep(cat_msec_t msec);

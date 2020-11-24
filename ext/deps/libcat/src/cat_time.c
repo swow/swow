@@ -42,6 +42,11 @@ CAT_API cat_msec_t cat_time_msec(void)
 #endif
 }
 
+CAT_API cat_msec_t cat_time_msec_cached(void)
+{
+    return cat_event_loop->time;
+}
+
 CAT_API char *cat_time_format_msec(cat_msec_t msec)
 {
 #define DAY    (24 * HOUR)

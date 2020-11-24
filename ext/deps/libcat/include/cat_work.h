@@ -23,7 +23,6 @@ extern "C" {
 #endif
 
 #include "cat.h"
-#include "cat_time.h"
 
 typedef cat_data_callback_t cat_work_function_t;
 

@@ -23,7 +23,6 @@ extern "C" {
 #endif
 
 #include "cat.h"
-#include "cat_time.h"
 #include "cat_socket.h"
 
 /* Notice: this module is a part of Socket */

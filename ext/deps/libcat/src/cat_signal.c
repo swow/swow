@@ -19,6 +19,7 @@
 #include "cat_signal.h"
 #include "cat_coroutine.h"
 #include "cat_event.h"
+#include "cat_time.h"
 
 CAT_API cat_bool_t cat_kill(int pid, int signum)
 {
@@ -79,7 +80,7 @@ CAT_API cat_bool_t cat_signal_wait(int signum, cat_timeout_t timeout)
     ret = cat_time_wait(timeout);
     uv_close(&signal->handle, (uv_close_cb) cat_free_function);
     if (unlikely(!ret)) {
-        cat_update_last_error_with_previous("Wait for signal(%d) failed", signum);
+        cat_update_last_error_with_previous("Signal(%d) wait failed", signum);
         return cat_false;
     }
     if (signal->coroutine != NULL) {

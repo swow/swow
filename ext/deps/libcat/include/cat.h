@@ -22,14 +22,14 @@
 extern "C" {
 #endif
 
+/* core driver */
+#include "cat_driver.h"
+
 #ifdef CAT_VM
 /* virtual machine
  * (we can predefine something here) */
 #include "cat_vm.h"
 #endif
-
-/* kernel driver */
-#include "cat_driver.h"
 
 /* version */
 #include "cat_version.h"

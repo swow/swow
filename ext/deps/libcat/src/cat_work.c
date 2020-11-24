@@ -19,6 +19,7 @@
 #include "cat_work.h"
 #include "cat_coroutine.h"
 #include "cat_event.h"
+#include "cat_time.h"
 
 typedef struct
 {
@@ -74,7 +75,7 @@ CAT_API cat_bool_t cat_work(cat_work_function_t function, cat_data_t *data, cat_
     ret = cat_time_wait(timeout);
     context->request.coroutine = NULL;
     if (unlikely(!ret)) {
-        cat_update_last_error_with_previous("Wait for work done failed");
+        cat_update_last_error_with_previous("Work wait failed");
         (void) uv_cancel(&context->request.req);
         return cat_false;
     }
@@ -83,7 +84,7 @@ CAT_API cat_bool_t cat_work(cat_work_function_t function, cat_data_t *data, cat_
             cat_update_last_error(CAT_ECANCELED, "Work has been canceled");
             (void) uv_cancel(&context->request.req);
         } else {
-            cat_update_last_error_with_reason(context->status, "Work do failed");
+            cat_update_last_error_with_reason(context->status, "Work failed");
         }
         return cat_false;
     }

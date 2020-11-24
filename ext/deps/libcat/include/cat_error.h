@@ -25,31 +25,41 @@ typedef struct
     char *message;
 } cat_error_t;
 
-typedef enum
-{
-    UV_EXT = -9764,
-    UV_UNCODED,     /* the error has no specific code, we should check the message of error  */
-    UV_EPREV,       /* we should check the previous error */
-    UV_EMISUSE,     /* must fix your code to prevent from this error */
-    UV_EVALUE,      /* illegal value (e.g. pass negative value to unsigned interface) */
-    UV_ELOCKED,     /* it's different from EBUSY, it always caused by misuse */
-    UV_ECLOSING,    /* resource is closing (similar to locked) */
-    UV_ECLOSED,     /* resource has been closed */
-    UV_EDEADLK,     /* dead lock */
-    UV_ESSL,        /* any error about ssl */
-} uv_errno_ext_t;
-
 #define CAT_ERRNO_MAP(XX) \
     UV_ERRNO_MAP(XX) \
+    CAT_ERRNO_EXT_MAP(XX) \
+
+#define CAT_ERRNO_EXT_MAP(XX) \
+    /* the error has no specific code, we should check the message of error  */ \
     XX(UNCODED, "please check the error message") \
+    /* we should check the previous error */ \
     XX(EPREV, "please check the previous error") \
+    /* must fix your code to prevent from this error */ \
     XX(EMISUSE, "misuse error") \
+    /* illegal value (e.g. pass negative value to unsigned interface) */ \
     XX(EVALUE, "value error") \
+    /* it's different from EBUSY, it always caused by misuse */ \
     XX(ELOCKED, "resource locked") \
+    /* resource is closing (similar to locked) */ \
     XX(ECLOSING, "resource is closing") \
+    /* resource has been closed */ \
     XX(ECLOSED, "resource has been closed") \
+    /* dead lock */ \
     XX(EDEADLK, "dead lock") \
+    /* generic error about ssl */ \
     XX(ESSL, "SSL error") \
+    /* no certificate */ \
+    XX(ENOCERT, "Certificate not found") \
+    /* certificate verify error */ \
+    XX(ECERT, "Certificate verify error") \
+
+typedef enum
+{
+    UV__EEXT = -9764,
+#define CAT_ERRNO_EXT_GEN(code, unused) UV_ ## code,
+    CAT_ERRNO_EXT_MAP(CAT_ERRNO_EXT_GEN)
+#undef CAT_ERRNO_EXT_GEN
+} uv_errno_ext_t;
 
 typedef enum
 {

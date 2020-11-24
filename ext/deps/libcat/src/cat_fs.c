@@ -19,6 +19,7 @@
 #include "cat_fs.h"
 #include "cat_coroutine.h"
 #include "cat_event.h"
+#include "cat_time.h"
 
 #include <fcntl.h>
 
@@ -59,7 +60,7 @@ typedef union
     done = context->coroutine == NULL; \
     context->coroutine = NULL; \
     if (unlikely(!ret)) { \
-        cat_update_last_error_with_previous("Wait for file-system " #operation " completion failed"); \
+        cat_update_last_error_with_previous("File-System " #operation " wait failed"); \
         (void) uv_cancel(&context->req); \
         return -1; \
     } \

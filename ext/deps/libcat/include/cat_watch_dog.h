@@ -24,7 +24,6 @@ extern "C" {
 
 #include "cat.h"
 #include "cat_coroutine.h"
-#include "cat_time.h"
 
 #define CAT_WATCH_DOG_DEFAULT_QUANTUM    (5 * 1000 * 1000)
 #define CAT_WATCH_DOG_DEFAULT_THRESHOLD  (10 * 1000 * 1000)

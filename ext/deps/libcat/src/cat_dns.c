@@ -19,6 +19,7 @@
 #include "cat_dns.h"
 #include "cat_coroutine.h"
 #include "cat_event.h"
+#include "cat_time.h"
 
 typedef struct
 {
@@ -74,7 +75,7 @@ CAT_API struct addrinfo *cat_dns_getaddrinfo_ex(const char *hostname, const char
     ret = cat_time_wait(timeout);
     context->request.coroutine = NULL;
     if (unlikely(!ret)) {
-        cat_update_last_error_with_previous("Wait for DNS getaddrinfo completion failed");
+        cat_update_last_error_with_previous("DNS getaddrinfo wait failed");
         (void) uv_cancel(&context->request.req);
         return NULL;
     }

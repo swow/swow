@@ -24,7 +24,6 @@ extern "C" {
 
 #include "cat.h"
 #include "cat_queue.h"
-#include "cat_time.h"
 
 #define CAT_COROUTINE_STACK_ALIGNED_SIZE        (4 * 1024)
 #define CAT_COROUTINE_MIN_STACK_SIZE            (128 * 1024)
@@ -37,43 +36,16 @@ extern "C" {
 
 typedef void cat_coroutine_stack_t;
 
-#ifdef CAT_COROUTINE_USE_UCONTEXT
-#include <ucontext.h>
-
-typedef ucontext_t cat_coroutine_context_t;
-
-typedef struct
-{
-    cat_data_t *data;
-} cat_coroutine_transfer_t;
-
-#define cat_coroutine_context_make(ucontext, function, argc, ...) \
-        makecontext(ucontext, function, argc, ##__VA_ARGS__)
-
-#define cat_coroutine_context_jump(current_ucontext, ucontext)    do { \
-    if (unlikely(swapcontext(current_ucontext, ucontext) != 0)) { \
-        cat_core_error(COROUTINE, "Ucontext swapcontext failed"); \
-    } \
-} while (0)
-
+#ifndef CAT_COROUTINE_USE_UCONTEXT
+typedef void *cat_coroutine_context_t;
 #else
-
-typedef void* cat_coroutine_context_t;
-
-typedef struct
-{
-    cat_coroutine_context_t from_context;
-    cat_data_t *data;
-} cat_coroutine_transfer_t;
-
-typedef void (*cat_coroutine_context_function_t)(cat_coroutine_transfer_t transfer);
-
-cat_coroutine_context_t cat_coroutine_context_make(cat_coroutine_stack_t *stack, size_t stack_size, cat_coroutine_context_function_t function);
-cat_coroutine_transfer_t cat_coroutine_context_jump(cat_coroutine_context_t const target_context, cat_data_t *transfer_data);
+#define _XOPEN_SOURCE 700 /* for APPLE */
+#include <ucontext.h>
+typedef ucontext_t cat_coroutine_context_t;
 #endif
 
-#define CAT_COROUTINE_ID_FMT    "%" PRIu64
 typedef uint64_t cat_coroutine_id_t;
+#define CAT_COROUTINE_ID_FMT "%" PRIu64
 
 typedef enum
 {
@@ -132,11 +104,11 @@ typedef enum
 
 typedef uint16_t cat_coroutine_opcodes_t;
 
-#define CAT_COROUTINE_ROUND_FMT "%" PRIu64
 typedef uint64_t cat_coroutine_round_t;
+#define CAT_COROUTINE_ROUND_FMT "%" PRIu64
 
-#define CAT_COROUTINE_STACK_SIZE_FMT "%u"
 typedef uint32_t cat_coroutine_stack_size_t;
+#define CAT_COROUTINE_STACK_SIZE_FMT "%u"
 
 typedef cat_data_t *(*cat_coroutine_function_t)(cat_data_t *data);
 
@@ -144,14 +116,12 @@ typedef struct cat_coroutine_s cat_coroutine_t;
 
 struct cat_coroutine_s
 {
-    /* id is always the first member (readonly, invariant) */
-    cat_coroutine_id_t id;
-    /* for queue (internal) */
     union {
         cat_coroutine_t *coroutine;
         cat_queue_node_t node;
     } waiter;
     /* invariant info (readonly) */
+    cat_coroutine_id_t id;
     cat_msec_t start_time;
     cat_coroutine_flags_t flags;
     /* runtime info (readonly) */
@@ -163,8 +133,8 @@ struct cat_coroutine_s
     /* internal properties (readonly) */
     cat_coroutine_stack_t *stack;
     cat_coroutine_stack_size_t stack_size;
-    cat_coroutine_context_t context;
     cat_coroutine_function_t function;
+    cat_coroutine_context_t context;
 #ifdef CAT_COROUTINE_USE_UCONTEXT
     cat_data_t *transfer_data;
 #endif
@@ -176,8 +146,8 @@ struct cat_coroutine_s
 
 typedef cat_bool_t (*cat_coroutine_resume_t)(cat_coroutine_t *coroutine, cat_data_t *data, cat_data_t **retval);
 
-#define CAT_COROUTINE_COUNT_FMT "%u"
 typedef uint32_t cat_coroutine_count_t;
+#define CAT_COROUTINE_COUNT_FMT "%u"
 
 CAT_GLOBALS_STRUCT_BEGIN(cat_coroutine)
     /* options */

@@ -39,8 +39,11 @@ CAT_API cat_bool_t cat_module_init_all(void)
     return cat_module_init() &&
            cat_coroutine_module_init() &&
            cat_event_module_init() &&
-           cat_socket_module_init() &&
            cat_buffer_module_init() &&
+#ifdef CAT_SSL
+           cat_ssl_module_init() &&
+#endif
+           cat_socket_module_init() &&
            cat_watch_dog_module_init();
 }
 

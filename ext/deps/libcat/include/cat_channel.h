@@ -24,7 +24,6 @@ extern "C" {
 
 #include "cat.h"
 #include "cat_queue.h"
-#include "cat_time.h"
 
 typedef enum
 {

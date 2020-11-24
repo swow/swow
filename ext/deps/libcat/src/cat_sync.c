@@ -17,6 +17,7 @@
  */
 
 #include "cat_sync.h"
+#include "cat_time.h"
 
 CAT_API cat_sync_wait_group_t *cat_sync_wait_group_create(cat_sync_wait_group_t *wg)
 {
