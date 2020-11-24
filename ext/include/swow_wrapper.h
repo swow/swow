@@ -22,9 +22,10 @@
 extern "C" {
 #endif
 
-/* suppress PHP warning */
-#define php_std_error_handling() php_std_error_handling(void)
-
+#ifndef __cplusplus
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstrict-prototypes"
+#endif
 #include "php.h"
 
 #include "zend_API.h"
@@ -36,6 +37,9 @@ extern "C" {
 
 #include "ext/standard/php_var.h"
 #include "ext/standard/php_array.h"
+#ifndef __cplusplus
+#pragma GCC diagnostic pop
+#endif
 
 void swow_wrapper_init(void);
 void swow_wrapper_shutdown(void);

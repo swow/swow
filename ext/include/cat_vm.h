@@ -16,11 +16,15 @@
   +--------------------------------------------------------------------------+
  */
 
-/* suppress Zend warning */
-#define zend_try_exception_handler() zend_try_exception_handler(void)
-
+#ifndef __cplusplus
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstrict-prototypes"
+#endif
 #include "zend.h"
 #include "zend_API.h"
+#ifndef __cplusplus
+#pragma GCC diagnostic pop
+#endif
 
 /* memory */
 
