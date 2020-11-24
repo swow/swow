@@ -22,7 +22,7 @@
 extern "C" {
 #endif
 
-/* disable PHP warning */
+/* suppress PHP warning */
 #define php_std_error_handling() php_std_error_handling(void)
 
 #include "php.h"

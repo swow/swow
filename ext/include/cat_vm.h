@@ -16,6 +16,9 @@
   +--------------------------------------------------------------------------+
  */
 
+/* suppress Zend warning */
+#define zend_try_exception_handler() zend_try_exception_handler(void)
+
 #include "zend.h"
 #include "zend_API.h"
 
