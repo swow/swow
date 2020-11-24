@@ -31,6 +31,36 @@ if test "${SWOW}" != "no"; then
 
   if test "${PHP_SWOW_DEBUG}" = "yes"; then
     SWOW_STD_CFLAGS="${SWOW_STD_CFLAGS} -O0"
+
+    AX_CHECK_COMPILE_FLAG(-Wextra,                         SWOW_MAINTAINER_CFLAGS="${SWOW_MAINTAINER_CFLAGS} -Wextra")
+    AX_CHECK_COMPILE_FLAG(-Wbool-conversion,               SWOW_MAINTAINER_CFLAGS="${SWOW_MAINTAINER_CFLAGS} -Wbool-conversion")
+    AX_CHECK_COMPILE_FLAG(-Wignored-qualifiers,            SWOW_MAINTAINER_CFLAGS="${SWOW_MAINTAINER_CFLAGS} -Wignored-qualifiers")
+    AX_CHECK_COMPILE_FLAG(-Wduplicate-enum,                SWOW_MAINTAINER_CFLAGS="${SWOW_MAINTAINER_CFLAGS} -Wduplicate-enum")
+    AX_CHECK_COMPILE_FLAG(-Wempty-body,                    SWOW_MAINTAINER_CFLAGS="${SWOW_MAINTAINER_CFLAGS} -Wempty-body")
+    AX_CHECK_COMPILE_FLAG(-Wenum-compare,                  SWOW_MAINTAINER_CFLAGS="${SWOW_MAINTAINER_CFLAGS} -Wenum-compare")
+    AX_CHECK_COMPILE_FLAG(-Wformat-security,               SWOW_MAINTAINER_CFLAGS="${SWOW_MAINTAINER_CFLAGS} -Wformat-security")
+    AX_CHECK_COMPILE_FLAG(-Wheader-guard,                  SWOW_MAINTAINER_CFLAGS="${SWOW_MAINTAINER_CFLAGS} -Wheader-guard")
+    AX_CHECK_COMPILE_FLAG(-Wincompatible-pointer-types-discards-qualifiers,
+                                                           SWOW_MAINTAINER_CFLAGS="${SWOW_MAINTAINER_CFLAGS} -Wincompatible-pointer-types-discards-qualifiers")
+    AX_CHECK_COMPILE_FLAG(-Winit-self,                     SWOW_MAINTAINER_CFLAGS="${SWOW_MAINTAINER_CFLAGS} -Winit-self")
+    AX_CHECK_COMPILE_FLAG(-Wlogical-not-parentheses,       SWOW_MAINTAINER_CFLAGS="${SWOW_MAINTAINER_CFLAGS} -Wlogical-not-parentheses")
+    AX_CHECK_COMPILE_FLAG(-Wlogical-op-parentheses,        SWOW_MAINTAINER_CFLAGS="${SWOW_MAINTAINER_CFLAGS} -Wlogical-op-parentheses")
+    AX_CHECK_COMPILE_FLAG(-Wloop-analysis,                 SWOW_MAINTAINER_CFLAGS="${SWOW_MAINTAINER_CFLAGS} -Wloop-analysis")
+    AX_CHECK_COMPILE_FLAG(-Wuninitialized,                 SWOW_MAINTAINER_CFLAGS="${SWOW_MAINTAINER_CFLAGS} -Wuninitialized")
+    AX_CHECK_COMPILE_FLAG(-Wno-missing-field-initializers, SWOW_MAINTAINER_CFLAGS="${SWOW_MAINTAINER_CFLAGS} -Wno-missing-field-initializers")
+    AX_CHECK_COMPILE_FLAG(-Wno-sign-compare,               SWOW_MAINTAINER_CFLAGS="${SWOW_MAINTAINER_CFLAGS} -Wno-sign-compare")
+    AX_CHECK_COMPILE_FLAG(-Wno-unused-const-variable,      SWOW_MAINTAINER_CFLAGS="${SWOW_MAINTAINER_CFLAGS} -Wno-unused-const-variable")
+    AX_CHECK_COMPILE_FLAG(-Wno-unused-parameter,           SWOW_MAINTAINER_CFLAGS="${SWOW_MAINTAINER_CFLAGS} -Wno-unused-parameter")
+    AX_CHECK_COMPILE_FLAG(-Wno-variadic-macros,            SWOW_MAINTAINER_CFLAGS="${SWOW_MAINTAINER_CFLAGS} -Wno-variadic-macros")
+    AX_CHECK_COMPILE_FLAG(-Wparentheses,                   SWOW_MAINTAINER_CFLAGS="${SWOW_MAINTAINER_CFLAGS} -Wparentheses")
+    AX_CHECK_COMPILE_FLAG(-Wpointer-bool-conversion,       SWOW_MAINTAINER_CFLAGS="${SWOW_MAINTAINER_CFLAGS} -Wpointer-bool-conversion")
+    AX_CHECK_COMPILE_FLAG(-Wsizeof-array-argument,         SWOW_MAINTAINER_CFLAGS="${SWOW_MAINTAINER_CFLAGS} -Wsizeof-array-argument")
+    AX_CHECK_COMPILE_FLAG(-Wwrite-strings,                 SWOW_MAINTAINER_CFLAGS="${SWOW_MAINTAINER_CFLAGS} -Wwrite-strings")
+    AX_CHECK_COMPILE_FLAG(-fdiagnostics-show-option,       SWOW_MAINTAINER_CFLAGS="${SWOW_MAINTAINER_CFLAGS} -fdiagnostics-show-option")
+    AX_CHECK_COMPILE_FLAG(-fno-omit-frame-pointer,         SWOW_MAINTAINER_CFLAGS="${SWOW_MAINTAINER_CFLAGS} -fno-omit-frame-pointer")
+    AX_CHECK_COMPILE_FLAG(-fno-optimize-sibling-calls,     SWOW_MAINTAINER_CFLAGS="${SWOW_MAINTAINER_CFLAGS} -fno-optimize-sibling-calls")
+    AX_CHECK_COMPILE_FLAG(-fsanitize-address,              SWOW_MAINTAINER_CFLAGS="${SWOW_MAINTAINER_CFLAGS} -fsanitize-address")
+    AX_CHECK_COMPILE_FLAG(-fstack-protector,               SWOW_MAINTAINER_CFLAGS="${SWOW_MAINTAINER_CFLAGS} -fstack-protector")
   fi
 
   SWOW_INCLUDE_DIR="include"
@@ -421,7 +451,7 @@ if test "${SWOW}" != "no"; then
       PHP_ADD_INCLUDE("${LLHTTP_DIR}/include")
   fi
 
-  SWOW_CFLAGS="${SWOW_CFLAGS} ${SWOW_STD_CFLAGS} ${CAT_CFLAGS}"
+  SWOW_CFLAGS="${SWOW_CFLAGS} ${SWOW_STD_CFLAGS} ${SWOW_MAINTAINER_CFLAGS} ${CAT_CFLAGS}"
   SWOW_SOURCE_FILES="${SWOW_SOURCE_FILES} ${CAT_SOURCE_FILES}"
 
   PHP_NEW_EXTENSION(swow, $SWOW_SOURCE_FILES, $ext_shared,,$SWOW_CFLAGS)
