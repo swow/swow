@@ -6,21 +6,21 @@ PHP_ARG_ENABLE([swow],
   [no]
 )
 
-PHP_ARG_ENABLE([swow-debug],
-  [whether to enable Swow debug build flags],
-  [AS_HELP_STRING([--enable-swow-debug], [Enable Swow debug build flags])],
-  [no], [no]
-)
-
-PHP_ARG_ENABLE([swow-valgrind],
-  [whether to enable Swow valgrind support],
-  [AS_HELP_STRING([--enable-swow-valgrind], [Enable Swow valgrind support])],
-  [$PHP_SWOW_DEBUG], [$PHP_SWOW_DEBUG]
-)
-
 if test "${SWOW}" != "no"; then
 
   AC_DEFINE([HAVE_SWOW], 1, [Have Swow])
+
+  PHP_ARG_ENABLE([swow-debug],
+    [whether to enable Swow debug build flags],
+    [AS_HELP_STRING([--enable-swow-debug], [Enable Swow debug build flags])],
+    [no], [no]
+  )
+
+  PHP_ARG_ENABLE([swow-valgrind],
+    [whether to enable Swow valgrind support],
+    [AS_HELP_STRING([--enable-swow-valgrind], [Enable Swow valgrind support])],
+    [$PHP_SWOW_DEBUG], [$PHP_SWOW_DEBUG]
+  )
 
   SWOW_CFLAGS=""
   SWOW_STD_CFLAGS=""
