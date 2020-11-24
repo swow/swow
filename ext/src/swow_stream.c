@@ -21,6 +21,7 @@
 #include "swow_hook.h"
 
 #include "cat_socket.h"
+#include "cat_time.h" /* for time_tv2to() */
 
 #include "php.h"
 #include "ext/standard/file.h"

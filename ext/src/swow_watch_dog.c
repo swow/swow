@@ -18,6 +18,8 @@
 
 #include "swow_watch_dog.h"
 
+#include "cat_time.h" /* for time_wait() */
+
 SWOW_API zend_class_entry *swow_watch_dog_ce;
 SWOW_API zend_object_handlers swow_watch_dog_handlers;
 

@@ -598,7 +598,7 @@ static PHP_FUNCTION(Swow_Http_packRequest)
     /* arguments */
     zend_string *method = zend_empty_string;
     zend_string *url = zend_empty_string;
-    char *protocol_version = "1.1";
+    char *protocol_version = (char *) "1.1";
     size_t protocol_version_length = CAT_STRLEN("1.1");
     HashTable *headers = (HashTable *) &zend_empty_array;
     zend_string *body = zend_empty_string;
@@ -648,7 +648,7 @@ static PHP_FUNCTION(Swow_Http_packResponse)
 {
     zend_string *response;
     /* arguments */
-    char *protocol_version = "1.1";
+    char *protocol_version = (char *) "1.1";
     size_t protocol_version_length = CAT_STRLEN("1.1");
     zend_long status_code = CAT_HTTP_STATUS_OK;
     char status_code_buffer[MAX_LENGTH_OF_LONG + 1];
