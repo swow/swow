@@ -202,9 +202,6 @@ if test "${SWOW}" != "no"; then
       fi
       if test "${CAT_CONTEXT_FILE_SUFFIX}" = ""; then
           SWOW_DEFINE(CAT_COROUTINE_USE_UCONTEXT, 1, [ Cat Coroutine use ucontxt ])
-          if test "${SWOW_OS}" = "DARWIN"; then
-            SWOW_DEFINE(_XOPEN_SOURCE, 700, [ OSX ucontxt compatibility ])
-          fi
       else
           CAT_SOURCE_FILES="
             ${CAT_SOURCE_FILES}
