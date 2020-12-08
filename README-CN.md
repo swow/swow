@@ -130,7 +130,7 @@ composer require swow/swow:dev-develop
 
 使用此方式安装时，最后一步程序会提示输入密码以使用root权限安装到系统，你可以选择不输入，安装程序仍会提供类似于以下的运行命令：
 
-`/usr/bin/env php -n -d extension=/path/to/vendor/swow/swow/ext/.libs/swow.so --ri swow`
+`/usr/bin/env php -n -d extension=/path/to/vendor/swow/swow/ext/modules/swow.so --ri swow`
 
 即扩展的so文件输出到了你项目的vendor目录下，相当于扩展也拥有了版本控制，你可以为你的每个项目指定不同版本的Swow，而无需全局使用同一个扩展so。
 
