@@ -181,7 +181,7 @@ static zval *swow_coroutine_function(zval *zdata)
 {
     static const zend_execute_data dummy_execute_data;
     swow_coroutine_t *scoroutine = swow_coroutine_get_current();
-    swow_coroutine_exector_t *executor = scoroutine->executor;
+    swow_coroutine_executor_t *executor = scoroutine->executor;
     zval zcallable = executor->zcallable;
     zend_fcall_info fci;
     zval retval;
@@ -294,7 +294,7 @@ static swow_coroutine_t *swow_coroutine_create_custom_object(zval *zcallable)
 
 static cat_bool_t swow_coroutine_construct(swow_coroutine_t *scoroutine, zval *zcallable, size_t stack_page_size, size_t c_stack_size)
 {
-    swow_coroutine_exector_t *executor;
+    swow_coroutine_executor_t *executor;
     zend_fcall_info_cache fcc;
     cat_coroutine_t *coroutine;
 
@@ -330,7 +330,7 @@ static cat_bool_t swow_coroutine_construct(swow_coroutine_t *scoroutine, zval *z
         /* alloc vm stack memory */
         vm_stack = (zend_vm_stack) emalloc(stack_page_size);
         /* assign the end to executor */
-        executor = (swow_coroutine_exector_t *) ZEND_VM_STACK_ELEMENTS(vm_stack);
+        executor = (swow_coroutine_executor_t *) ZEND_VM_STACK_ELEMENTS(vm_stack);
         /* init executor */
         executor->bailout = NULL;
         executor->vm_stack = vm_stack;
@@ -376,7 +376,7 @@ static cat_bool_t swow_coroutine_construct(swow_coroutine_t *scoroutine, zval *z
 
 static void swow_coroutine_shutdown(swow_coroutine_t *scoroutine)
 {
-    swow_coroutine_exector_t *executor = scoroutine->executor;
+    swow_coroutine_executor_t *executor = scoroutine->executor;
 
     if (executor == NULL) {
         return;
@@ -485,7 +485,7 @@ SWOW_API void swow_coroutine_close(swow_coroutine_t *scoroutine)
     zend_object_release(&scoroutine->std);
 }
 
-SWOW_API void swow_coroutine_executor_switch(swow_coroutine_exector_t *current_executor, swow_coroutine_exector_t *target_executor)
+SWOW_API void swow_coroutine_executor_switch(swow_coroutine_executor_t *current_executor, swow_coroutine_executor_t *target_executor)
 {
     // TODO: it's not optimal
     if (current_executor != NULL) {
@@ -498,7 +498,7 @@ SWOW_API void swow_coroutine_executor_switch(swow_coroutine_exector_t *current_e
     }
 }
 
-SWOW_API void swow_coroutine_executor_save(swow_coroutine_exector_t *executor)
+SWOW_API void swow_coroutine_executor_save(swow_coroutine_executor_t *executor)
 {
     zend_executor_globals *eg = SWOW_GLOBALS_FAST_PTR(executor_globals);
     executor->bailout = eg->bailout;
@@ -553,7 +553,7 @@ SWOW_API void swow_coroutine_executor_save(swow_coroutine_exector_t *executor)
 #endif
 }
 
-SWOW_API void swow_coroutine_executor_recover(swow_coroutine_exector_t *executor)
+SWOW_API void swow_coroutine_executor_recover(swow_coroutine_executor_t *executor)
 {
     zend_executor_globals *eg = SWOW_GLOBALS_FAST_PTR(executor_globals);
     eg->bailout = executor->bailout;
@@ -672,7 +672,7 @@ SWOW_API zval *swow_coroutine_jump(swow_coroutine_t *scoroutine, zval *zdata)
          * (we can not delete it in coroutine_function, object maybe released during deletion) */
         zend_hash_index_del(SWOW_COROUTINE_G(map), scoroutine->coroutine.id);
     } else {
-        swow_coroutine_exector_t *executor = current_scoroutine->executor;
+        swow_coroutine_executor_t *executor = current_scoroutine->executor;
         if (executor != NULL) {
             /* handle cross exception */
             if (UNEXPECTED(executor->cross_exception != NULL)) {

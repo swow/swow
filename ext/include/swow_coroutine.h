@@ -96,14 +96,14 @@ typedef struct
 #ifdef SWOW_COROUTINE_SWAP_JIT_GLOBALS
     uint32_t jit_trace_num;
 #endif
-} swow_coroutine_exector_t;
+} swow_coroutine_executor_t;
 
 typedef struct
 {
     cat_coroutine_t coroutine;
     /* php things... */
     int exit_status;
-    swow_coroutine_exector_t *executor;
+    swow_coroutine_executor_t *executor;
     zend_object std;
 } swow_coroutine_t;
 
@@ -181,9 +181,9 @@ SWOW_API swow_coroutine_t *swow_coroutine_create_ex(zval *zcallable, size_t stac
 SWOW_API void swow_coroutine_close(swow_coroutine_t *scoroutine);
 
 /* switch */
-SWOW_API void swow_coroutine_executor_switch(swow_coroutine_exector_t *current_executor, swow_coroutine_exector_t *target_executor); SWOW_INTERNAL
-SWOW_API void swow_coroutine_executor_save(swow_coroutine_exector_t *executor);    SWOW_INTERNAL
-SWOW_API void swow_coroutine_executor_recover(swow_coroutine_exector_t *executor); SWOW_INTERNAL
+SWOW_API void swow_coroutine_executor_switch(swow_coroutine_executor_t *current_executor, swow_coroutine_executor_t *target_executor); SWOW_INTERNAL
+SWOW_API void swow_coroutine_executor_save(swow_coroutine_executor_t *executor);    SWOW_INTERNAL
+SWOW_API void swow_coroutine_executor_recover(swow_coroutine_executor_t *executor); SWOW_INTERNAL
 SWOW_API zval *swow_coroutine_jump(swow_coroutine_t *scoroutine, zval *zdata);
 SWOW_API cat_bool_t swow_coroutine_is_resumable(const swow_coroutine_t *scoroutine);
 SWOW_API cat_bool_t swow_coroutine_resume_standard(cat_coroutine_t *coroutine, cat_data_t *data, cat_data_t **retval); SWOW_INTERNAL
