@@ -22,7 +22,7 @@
 extern "C" {
 #endif
 
-#ifndef __cplusplus
+#if !defined(__cplusplus) && !defined(_MSC_VER)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wstrict-prototypes"
 #endif
@@ -37,7 +37,7 @@ extern "C" {
 
 #include "ext/standard/php_var.h"
 #include "ext/standard/php_array.h"
-#ifndef __cplusplus
+#if !defined(__cplusplus) && !defined(_MSC_VER)
 #pragma GCC diagnostic pop
 #endif
 
