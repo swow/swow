@@ -81,7 +81,7 @@ if test "${SWOW}" != "no"; then
   PHP_ADD_INCLUDE(${SWOW_INCLUDE_DIR})
 
   SWOW_SOURCE_FILES="
-    ${SWOW_SRC_DIR}/swow.c
+    ${SWOW_SRC_DIR}/../swow.c
     ${SWOW_SRC_DIR}/swow_wrapper.c
     ${SWOW_SRC_DIR}/swow_log.c
     ${SWOW_SRC_DIR}/swow_exceptions.c
