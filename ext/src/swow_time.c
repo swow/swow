@@ -86,7 +86,7 @@ static PHP_FUNCTION(swow_usleep)
         RETURN_THROWS();
     }
 
-    (void) cat_time_usleep((useconds_t) micro_seconds);
+    (void) cat_time_usleep((unsigned int) micro_seconds);
 }
 /* }}} */
 
