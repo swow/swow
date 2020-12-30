@@ -16,13 +16,13 @@
   +--------------------------------------------------------------------------+
  */
 
-#ifndef __cplusplus
+#if !defined(__cplusplus) && !defined(_MSC_VER)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wstrict-prototypes"
 #endif
 #include "zend.h"
 #include "zend_API.h"
-#ifndef __cplusplus
+#if !defined(__cplusplus) && !defined(_MSC_VER)
 #pragma GCC diagnostic pop
 #endif
 
