@@ -296,7 +296,7 @@ SWOW_API cat_bool_t swow_function_is_internal_accessor(INTERNAL_FUNCTION_PARAMET
     ZEND_PARSE_PARAMETERS_START_EX(ZEND_PARSE_PARAMS_QUIET, 0, 1)
         Z_PARAM_OPTIONAL
         Z_PARAM_ZVAL(zdata)
-    ZEND_PARSE_PARAMETERS_END_EX(/* do nothing */);
+    ZEND_PARSE_PARAMETERS_END_EX(;/* do nothing */);
 
     if (!zdata || Z_TYPE_P(zdata) != IS_PTR || Z_PTR_P(zdata) != &swow_internal_callable_key) {
         return cat_false;
