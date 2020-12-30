@@ -127,10 +127,12 @@ static cat_socket_type_t swow_stream_parse_socket_type(const php_stream_ops *ops
         return CAT_SOCKET_TYPE_TCP;
     } else if (ops == &swow_stream_udp_socket_ops) {
         return CAT_SOCKET_TYPE_UDP;
+#ifndef PHP_WIN32
     } else if (ops == &swow_stream_unix_socket_ops) {
         return CAT_SOCKET_TYPE_UNIX;
     } else if (ops == &swow_stream_udg_socket_ops) {
         return CAT_SOCKET_TYPE_UDG;
+#endif //PHP_WIN32
     } else /* swow_stream_generic_socket_ops */{
         return CAT_SOCKET_TYPE_TCP;
     }
