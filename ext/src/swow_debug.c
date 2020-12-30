@@ -176,7 +176,7 @@ SWOW_API smart_str *swow_debug_build_trace_as_smart_str(smart_str *str, HashTabl
 
 SWOW_API zend_string *swow_debug_build_trace_as_string(HashTable *trace)
 {
-    smart_str str = {};
+    smart_str str = { 0 };
 
     swow_debug_build_trace_as_smart_str(&str, trace);
 
@@ -207,7 +207,7 @@ SWOW_API smart_str *swow_debug_get_trace_as_smart_str(smart_str *str, zend_long 
 
 SWOW_API zend_string *swow_debug_get_trace_as_string(zend_long options, zend_long limit)
 {
-    smart_str str = {};
+    smart_str str = { 0 };
 
     swow_debug_get_trace_as_smart_str(&str, options, limit);
     smart_str_0(&str);

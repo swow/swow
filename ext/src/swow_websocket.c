@@ -707,7 +707,7 @@ int swow_websocket_module_init(INIT_FUNC_ARGS)
     );
     swow_websocket_frame_handlers.get_gc = swow_websocket_frame_get_gc;
     do {
-        cat_websocket_header_t frame = {};
+        cat_websocket_header_t frame = { 0 };
         frame.fin = 1;
         frame.opcode = CAT_WEBSOCKET_OPCODE_PING;
         zend_declare_class_constant_stringl(swow_websocket_frame_ce, ZEND_STRL("PING"), (const char *) &frame, CAT_WEBSOCKET_HEADER_LENGTH);
