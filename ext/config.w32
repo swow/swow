@@ -1,10 +1,11 @@
 
 // vim:ft=javascript
-ARG_ENABLE('swow', 'swow support', 'no');
+ARG_ENABLE('swow', 'Enable Swow support', 'no');
+ARG_ENABLE('swow-debug', 'Enable Swow debug build flags', 'no');
 
 if (PHP_SWOW != 'no') (function(){
 
-	// todo: arch specified
+	// TODO: arch specified
 	var SWOW_ASSEMBLER = PATH_PROG('ML64');
 	function swow_map(arr, func){
 		var ret = [];
@@ -35,33 +36,37 @@ if (PHP_SWOW != 'no') (function(){
 
 	// definations
 	AC_DEFINE('HAVE_SWOW', 1, 'swow support enabled');
-	ADD_FLAG("CFLAGS", '/DHAVE_LIBCAT');
-	AC_DEFINE('CAT_VM', '"zend"', 'libcat use zend vm');
-	//ADD_FLAG("CFLAGS", "/DHAVE_LIBCAT /DHAVE_SWOW");
+	AC_DEFINE('HAVE_LIBCAT', 1, 'have libcat');
+    AC_DEFINE('CAT_VM', 1, 'Use libcat in Zend VM');
+    if ("yes" == PHP_SWOW_DEBUG){
+        AC_DEFINE('CAT_DEBUG', 1, 'Debug build');
+    }
 
+    // TODO: valgrind (if windows version)
+    
 	// add cflags for swow
-	//ADD_FLAG("SWOW_CFLAGS", "/wd4005 /wd4244");
-	ADD_FLAG("SWOW_CFLAGS", "/W3");
+	ADD_FLAG("CFLAGS_SWOW", "/W3 /wd4244");
 	// string formating warings like -Wformat
-	ADD_FLAG("SWOW_CFLAGS", "/w14473 /w14774 /w14775 /w14775 /w14776 /w14777 /w14778");
+	ADD_FLAG("CFLAGS_SWOW", "/w14473 /w14774 /w14775 /w14775 /w14776 /w14777 /w14778");
 	// -Wincompatible-pointer-types-discards-qualifiers like
-	ADD_FLAG("SWOW_CFLAGS", "/w14090");
+	ADD_FLAG("CFLAGS_SWOW", "/w14090");
 	// -Wuninitialized or -Winit-self like
-	ADD_FLAG("SWOW_CFLAGS", "/w14700");
+	ADD_FLAG("CFLAGS_SWOW", "/w14700");
 	// -Wno-sign-compare like
-	ADD_FLAG("SWOW_CFLAGS", "/wd4018");
+	ADD_FLAG("CFLAGS_SWOW", "/wd4018");
 	// -Wno-unused-parameter like
-	ADD_FLAG("SWOW_CFLAGS", "/wd4100");
+	ADD_FLAG("CFLAGS_SWOW", "/wd4100");
 
-	//todo: debug
-	//todo: valgrind (if windows version)
+	// libcat and uv donot consume php generated config.h, so use c flags to define HAVE_LIBCAT
+	// fixme: we should modify header including order to let uv consume php generated config.h (include php.h before any uv.h)
+	ADD_FLAG("CFLAGS_SWOW", "/D HAVE_LIBCAT");
+
 
 	// swow sources
 	var SWOW_SRC_DIR='src';
 	//CHECK_HEADER_ADD_INCLUDE('cat.h', 'CFLAGS_SWOW', configure_module_dirname + '\\include')
 	ADD_FLAG('CFLAGS_SWOW', '/I "' + configure_module_dirname +'\\include"');
 	var SWOW_SOURCE_FILENAMES = [
-		//"swow.c", // src/swow.c will be generated as swow.obj
 		'swow_wrapper.c',
 		'swow_log.c',
 		'swow_exceptions.c',
@@ -91,37 +96,34 @@ if (PHP_SWOW != 'no') (function(){
 	ADD_FLAG('CFLAGS_SWOW', '/I "' + configure_module_dirname +'\\' + LIBCAT_DIR + '\\include"');
 	ADD_FLAG('CFLAGS_SWOW', '/I "' + configure_module_dirname +'\\' + LIBCAT_DIR + '\\include\\cat"');
 	var CAT_SOURCE_FILENAMES = [
-		'cat.c',
-		'cat_api.c',
-		'cat_coroutine.c',
-		'cat_channel.c',
-		'cat_sync.c',
-		'cat_event.c',
-		'cat_time.c',
-		'cat_socket.c',
-		'cat_dns.c',
-		'cat_work.c',
-		'cat_buffer.c',
-		'cat_fs.c',
-		'cat_signal.c',
-		'cat_watch_dog.c',
-		'cat_http.c',
-		'cat_websocket.c'
+		'cat_cp.c',
+        'cat_memory.c',
+        'cat_string.c',
+        'cat_error.c',
+        'cat_module.c',
+        'cat_log.c',
+        'cat_env.c',
+        'cat.c',
+        'cat_api.c',
+        'cat_coroutine.c',
+        'cat_channel.c',
+        'cat_sync.c',
+        'cat_event.c',
+        'cat_time.c',
+        'cat_socket.c',
+        'cat_dns.c',
+        'cat_work.c',
+        'cat_buffer.c',
+        'cat_fs.c',
+        'cat_signal.c',
+        'cat_watch_dog.c',
+        'cat_http.c',
+        'cat_websocket.c'
 	];
 	ADD_SOURCES(configure_module_dirname + '\\' + LIBCAT_DIR + '\\src', CAT_SOURCE_FILENAMES.join(' '), 'swow');
-	var CAT_CAT_SOURCE_FILENAMES = [
-		'cat_cp.c',
-		'cat_memory.c',
-		'cat_string.c',
-		'cat_error.c',
-		'cat_module.c',
-		'cat_log.c',
-		'cat_env.c'
-	];
-	ADD_SOURCES(configure_module_dirname + '\\' + LIBCAT_DIR + '\\src\\cat', CAT_CAT_SOURCE_FILENAMES.join(' '), 'swow');
 
 	// boost context asm files
-	//todo: arch specified
+	// TODO: arch specified
 	DEFINE('SWOW_ASSEMBLER', SWOW_ASSEMBLER);
 	var CAT_CONTEXT_ASM_DIR = LIBCAT_DIR + '\\deps\\context\\asm';
 	var CAT_CONTEXT_FILENAMES = ['jump_x86_64_ms_pe_masm.asm', 'make_x86_64_ms_pe_masm.asm'];
@@ -143,8 +145,6 @@ if (PHP_SWOW != 'no') (function(){
 		MFO.WriteLine('    @$(SWOW_ASSEMBLER) /nologo ' + '/Fo' + obj + ' /c ' + src); // dont know why /Fo broken
 	});
 	
-
-
 	// libuv sources
 	var UV_DIR = LIBCAT_DIR + "/deps/libuv";
 	ADD_FLAG('CFLAGS_SWOW', '/I "' + configure_module_dirname +'/' + UV_DIR + '/include"');
@@ -196,13 +196,14 @@ if (PHP_SWOW != 'no') (function(){
 	// ?: SWOW_DEFINE(_FILE_OFFSET_BITS, 64, [_FILE_OFFSET_BITS])
 	// ?: SWOW_DEFINE(_LARGEFILE_SOURCE, , [_LARGEFILE_SOURCE])
 
-	// llhttp sources
-	var LLHTTP_DIR = LIBCAT_DIR + "/deps/llhttp";
+    // llhttp sources
+    var LLHTTP_DIR = LIBCAT_DIR + "/deps/llhttp";
+    ADD_FLAG('CFLAGS_SWOW', '/I "' + configure_module_dirname +'/' + LLHTTP_DIR + '/include"');
 	var LLHTTP_SOURCE_FILENAMES=[
 		"api.c",
 		"http.c",
 		"llhttp.c"
-	];
+    ];
 	ADD_SOURCES(configure_module_dirname + '/' + LLHTTP_DIR + '/src', LLHTTP_SOURCE_FILENAMES.join(" "), "swow");
 
 	//var mp_src = "multipart_parser.c";
