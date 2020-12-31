@@ -118,9 +118,6 @@ CAT_API int cat_fs_open(const char *path, int flags, ...)
 
 CAT_API off_t cat_lseek(int fd, off_t offset, int whence)
 {
-#ifdef CAT_OS_WIN
-#define lseek _lseek64
-#endif
     return lseek(fd, offset, whence);
 }
 

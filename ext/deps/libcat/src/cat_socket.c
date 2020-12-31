@@ -1283,6 +1283,7 @@ CAT_API cat_bool_t cat_socket_connect_ex(cat_socket_t *socket, const char *name,
     cat_sockaddr_info_t address_info;
     cat_sockaddr_t *address;
     cat_socklen_t address_length;
+    cat_bool_t is_host_name;
     cat_bool_t ret;
 
     /* resolve address (DNS query may be triggered) */
@@ -1291,7 +1292,7 @@ CAT_API cat_bool_t cat_socket_connect_ex(cat_socket_t *socket, const char *name,
         cat_bool_t ret;
         isocket->context.connect.coroutine = CAT_COROUTINE_G(current);
         isocket->io_flags = CAT_SOCKET_IO_FLAG_CONNECT;
-        ret  = cat_socket_getaddrbyname(socket, &address_info, name, name_length, port);
+        ret  = cat_socket_getaddrbyname_ex(socket, &address_info, name, name_length, port, &is_host_name);
         isocket->io_flags = CAT_SOCKET_IO_FLAG_NONE;
         isocket->context.connect.coroutine = NULL;
         if (unlikely(!ret)) {
@@ -1308,7 +1309,7 @@ CAT_API cat_bool_t cat_socket_connect_ex(cat_socket_t *socket, const char *name,
     ret = cat_socket__connect(socket, isocket, address, address_length, timeout);
 
 #ifdef CAT_SSL
-    if (ret) {
+    if (ret && is_host_name) {
         isocket->ssl_peer_name = cat_strndup(name, name_length);
     }
 #endif
