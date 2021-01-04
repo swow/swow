@@ -19,7 +19,7 @@ use Swow\WatchDog;
 WatchDog::run(0, 0, function () { exit; });
 
 $wf = new WaitReference();
-Coroutine::run(function () use ($wf) {
+Coroutine::run(function () {
     $count = 0;
     while (true) {
         $count++;

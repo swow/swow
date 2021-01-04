@@ -42,7 +42,7 @@ Content-Length: 45
     public function testUnexpectedBodyEof()
     {
         $this->expectException(Exception::class);
-        $this->expectErrorMessageMatches('/^Protocol Parsing Error, The received data is /');
+        $this->expectErrorMessageMatches('/^Protocol Parsing Error, The received data is HTTP\/1.1 400 Bad Request/');
 
         $this->getClient([$this->badContent])->publicExecute();
     }
