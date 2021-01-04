@@ -187,7 +187,7 @@ trait ReceiverTrait
             $result->isUpgrade = $parser->isUpgrade();
         } catch (HttpParserException $exception) {
             /* TODO: get bad request */
-            throw new HttpException(HttpStatus::BAD_REQUEST, 'Protocol Parsing Error');
+            throw new HttpException(HttpStatus::BAD_REQUEST, 'Protocol Parsing Error, The received data is ' . (string) $buffer);
         } finally {
             $parser->reset();
         }
