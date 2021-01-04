@@ -57,8 +57,6 @@ trait ReceiverTrait
         $parser = $this->httpParser;
         $buffer = $this->buffer;
         $isRequest = $parser->getType() === Parser::TYPE_REQUEST;
-        $result = $isRequest ? new RawRequest() : new RawResponse();
-
         $expectMore = $buffer->eof();
         if ($expectMore) {
             /* all data has been parsed, clear them */
@@ -171,26 +169,38 @@ trait ReceiverTrait
                 }
             }
 
-            if ($isRequest) {
-                $result->method = $parser->getMethod();
-                $result->uri = $uriOrReasonPhrase;
-            } else {
-                $result->statusCode = $parser->getStatusCode();
-                $result->reasonPhrase = $uriOrReasonPhrase;
-            }
-            $result->headers = $headers;
-            $result->body = $body;
-            $result->protocolVersion = $parser->getProtocolVersion();
-            $result->headerNames = $headerNames;
-            $result->contentLength = $contentLength;
-            $result->shouldKeepAlive = $shouldKeepAlive;
-            $result->isUpgrade = $parser->isUpgrade();
+            $result = $this->getRawData($isRequest, $parser, $uriOrReasonPhrase, $headers, $body, $headerNames, $contentLength, $shouldKeepAlive);
         } catch (HttpParserException $exception) {
-            /* TODO: get bad request */
-            throw new HttpException(HttpStatus::BAD_REQUEST, 'Protocol Parsing Error, The received data is ' . (string) $buffer);
+            $result = $this->getRawData($isRequest, $parser, $uriOrReasonPhrase, $headers, $body, $headerNames, $contentLength, $shouldKeepAlive);
+            throw (new HttpException(HttpStatus::BAD_REQUEST, 'Protocol Parsing Error'))->setRawData($result);
         } finally {
             $parser->reset();
         }
+
+        return $result;
+    }
+
+    /**
+     * @return RawRequest|RawResponse
+     */
+    protected function getRawData(bool $isRequest, HttpParser $parser, string $uriOrReasonPhrase, array $headers, ?Buffer $body, array $headerNames, int $contentLength, bool $shouldKeepAlive)
+    {
+        if ($isRequest) {
+            $result = new RawRequest();
+            $result->method = $parser->getMethod();
+            $result->uri = $uriOrReasonPhrase;
+        } else {
+            $result = new RawResponse();
+            $result->statusCode = $parser->getStatusCode();
+            $result->reasonPhrase = $uriOrReasonPhrase;
+        }
+        $result->headers = $headers;
+        $result->body = $body;
+        $result->protocolVersion = $parser->getProtocolVersion();
+        $result->headerNames = $headerNames;
+        $result->contentLength = $contentLength;
+        $result->shouldKeepAlive = $shouldKeepAlive;
+        $result->isUpgrade = $parser->isUpgrade();
 
         return $result;
     }

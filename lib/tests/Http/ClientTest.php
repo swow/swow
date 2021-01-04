@@ -39,12 +39,51 @@ Content-Length: 45
 
 400 Bad Request: missing required Host header';
 
+    protected $content200 = 'HTTP/1.1 200 OK
+Content-Type: text/plain; charset=utf-8
+Content-Length: 12
+
+Hello World.';
+
+    protected $content200Close = 'HTTP/1.1 200 OK
+Content-Type: text/plain; charset=utf-8
+Connection: close
+Content-Length: 12
+
+Hello World.';
+
+    public function testExecute()
+    {
+        $client = $this->getClient([$this->content200, $this->content200Close]);
+        $raw = $client->publicExecute();
+        $this->assertSame(200, $raw->statusCode);
+        $this->assertSame('OK', $raw->reasonPhrase);
+        $this->assertSame(['Content-Type' => ['text/plain; charset=utf-8'], 'Content-Length' => ['12']], $raw->headers);
+        $this->assertSame(['content-type' => 'Content-Type', 'content-length' => 'Content-Length'], $raw->headerNames);
+        $this->assertSame('1.1', $raw->protocolVersion);
+        $this->assertSame('Hello World.', (string) $raw->body);
+        $this->assertInstanceOf(Buffer::class, $raw->body);
+        $this->assertSame(12, $raw->contentLength);
+        $this->assertTrue($raw->shouldKeepAlive);
+        $this->assertFalse($raw->isUpgrade);
+
+        $raw = $client->publicExecute();
+        $this->assertFalse($raw->shouldKeepAlive);
+    }
+
     public function testUnexpectedBodyEof()
     {
-        $this->expectException(Exception::class);
-        $this->expectErrorMessageMatches('/^Protocol Parsing Error, The received data is HTTP\/1.1 400 Bad Request/');
-
-        $this->getClient([$this->badContent])->publicExecute();
+        try {
+            $this->getClient([$this->badContent])->publicExecute();
+        } catch (Exception $exception) {
+            $this->assertSame(400, $exception->getCode());
+            $this->assertSame('Protocol Parsing Error', $exception->getMessage());
+            $rawData = $exception->getRawData();
+            $this->assertSame(400, $rawData->statusCode);
+            $this->assertSame(['text/plain; charset=utf-8'], $rawData->headers['Content-Type']);
+            $this->assertSame('400 Bad Request: missing required Host header', (string) $rawData->body);
+            $this->assertSame('Bad Request: missing required Host header', $rawData->reasonPhrase);
+        }
     }
 
     public function testRecvAgainWhenParseError()
