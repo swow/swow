@@ -81,6 +81,9 @@ return PhpCsFixer\Config::create()
         'multiline_whitespace_before_semicolons' => [
             'strategy' => 'no_multi_line',
         ],
+        'operator_linebreak' => [
+            'position' => 'end',
+        ],
         'class_attributes_separation' => true,
         'combine_consecutive_unsets' => true,
         'declare_strict_types' => true,
