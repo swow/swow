@@ -770,10 +770,10 @@ TEXT;
             $breakPoints = $debugger->breakPoints;
             foreach ($breakPoints as $breakPoint) {
                 if (
-                    $breakPoint === $basePosition ||
-                    $breakPoint === $baseFunction ||
-                    $breakPoint === $function ||
-                    $breakPoint === $fullPosition
+                    $breakPoint === $basePosition
+                    || $breakPoint === $baseFunction
+                    || $breakPoint === $function
+                    || $breakPoint === $fullPosition
                 ) {
                     $debugger->out("Hit breakpoint <{$breakPoint}> on Coroutine#{$coroutine->getId()}");
                     $hit = true;

@@ -21,7 +21,7 @@ class RawResult
     public $headers = [];
 
     /**
-     * @var Buffer
+     * @var null|Buffer
      */
     public $body;
 
