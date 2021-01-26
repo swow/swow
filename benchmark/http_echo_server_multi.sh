@@ -10,8 +10,9 @@ export SERVER_BACKLOG=8192
 export SERVER_MULTI=1
 
 i=0
-while [ ${i} -le 7 ]; do
-  /usr/bin/env php -dextension=swow -dmemory_limit=1G "${__DIR__}/../http_server/echo.php" &
+p=7
+while [ ${i} -le ${p} ]; do
+  /usr/bin/env php -dextension=swow -dmemory_limit=1G "${__DIR__}/../examples/http_server/echo.php" &
   processes[i]=$!;
   i=$((i+1));
 done
@@ -20,7 +21,7 @@ sleep 1
 ab -c 8192 -n 1000000 -k "http://${SERVER_HOST}:${SERVER_PORT}/"
 
 i=0
-while [ ${i} -le 7 ]; do
+while [ ${i} -le ${p} ]; do
   pid=${processes[i]}
   kill ${pid}
   wait ${pid}
