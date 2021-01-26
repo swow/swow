@@ -60,7 +60,7 @@ static PHP_METHOD(Swow_Sync_WaitReference, wait)
     cat_bool_t ret;
 
     ZEND_PARSE_PARAMETERS_START(1, 2)
-        Z_PARAM_OBJECT_OF_CLASS_EX2(zwf, swow_sync_wait_reference_ce, 0, 1, 0)
+        Z_PARAM_OBJECT_OF_CLASS_EX(zwf, swow_sync_wait_reference_ce, 0, 1)
         Z_PARAM_OPTIONAL
         Z_PARAM_LONG(timeout)
     ZEND_PARSE_PARAMETERS_END();
