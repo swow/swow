@@ -70,12 +70,13 @@ if ($status === 0) {
     warn("Get extension info failed");
 }
 
-if (get_current_user() != 'root') {
+if (getmyuid() !== 0) {
     notice('Install the extension to your system requires root privileges');
-    passthru("cd {$workSpace} && sudo make install");
+    $sudo = 'sudo';
 } else {
-    passthru("cd {$workSpace} && make install");
+    $sudo = '';
 }
+passthru("cd {$workSpace} && {$sudo} make install");
 
 br();
 ok('Do\'not forget to add \'extension=swow\' to your PHP ini');
