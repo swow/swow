@@ -26,7 +26,6 @@ use Swow\Socket\Exception as SocketException;
 class Client extends Socket implements ClientInterface
 {
     use ConfigTrait;
-
     use ReceiverTrait {
         __construct as receiverConstruct;
         execute as receiverExecute;
