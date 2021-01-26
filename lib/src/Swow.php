@@ -1271,7 +1271,7 @@ namespace Swow\Channel
          * @param int $timeout [optional] = -1
          * @return \Swow\Channel
          */
-        public function do(int $timeout = -1): \Swow\Channel { }
+        public function commit(int $timeout = -1): \Swow\Channel { }
 
         /**
          * @return mixed

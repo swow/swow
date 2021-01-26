@@ -488,11 +488,11 @@ static PHP_METHOD(Swow_Channel_Selector, pop)
     PHP_METHOD_CALL(Swow_Channel_Selector, add, zchannel, NULL);
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_class_Swow_Channel_Selector_do, ZEND_RETURN_VALUE, 0, Swow\\Channel, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_class_Swow_Channel_Selector_commit, ZEND_RETURN_VALUE, 0, Swow\\Channel, 0)
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, timeout, IS_LONG, 0, "-1")
 ZEND_END_ARG_INFO()
 
-static PHP_METHOD(Swow_Channel_Selector, do)
+static PHP_METHOD(Swow_Channel_Selector, commit)
 {
     swow_channel_selector_t *selector = getThisSelector();
     zend_long timeout = -1;
@@ -570,7 +570,7 @@ static PHP_METHOD(Swow_Channel_Selector, getLastOpcode)
 static const zend_function_entry swow_channel_selector_methods[] = {
     PHP_ME(Swow_Channel_Selector, push,          arginfo_class_Swow_Channel_Selector_push,          ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Channel_Selector, pop,           arginfo_class_Swow_Channel_Selector_pop,           ZEND_ACC_PUBLIC)
-    PHP_ME(Swow_Channel_Selector, do,            arginfo_class_Swow_Channel_Selector_do,            ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Channel_Selector, commit,        arginfo_class_Swow_Channel_Selector_commit,        ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Channel_Selector, fetch,         arginfo_class_Swow_Channel_Selector_fetch,         ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Channel_Selector, getLastOpcode, arginfo_class_Swow_Channel_Selector_getLastOpcode, ZEND_ACC_PUBLIC)
     PHP_FE_END
