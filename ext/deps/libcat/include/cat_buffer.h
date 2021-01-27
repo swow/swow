@@ -40,10 +40,10 @@ typedef void (*cat_buffer_free_function_t)(char *value);
 
 typedef struct
 {
-    cat_buffer_alloc_function_t alloc;
-    cat_buffer_realloc_function_t realloc;
-    cat_buffer_update_function_t update;
-    cat_buffer_free_function_t free;
+    cat_buffer_alloc_function_t alloc_function;
+    cat_buffer_realloc_function_t realloc_function;
+    cat_buffer_update_function_t update_function;
+    cat_buffer_free_function_t free_function;
 } cat_buffer_allocator_t;
 
 extern CAT_API cat_buffer_allocator_t cat_buffer_allocator;

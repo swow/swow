@@ -342,11 +342,11 @@ CAT_API cat_coroutine_t *cat_coroutine_create_ex(cat_coroutine_t *coroutine, cat
 #ifdef CAT_COROUTINE_USE_UCONTEXT
     if (unlikely(getcontext(&context) == -1)) {
         cat_sys_free(stack);
-        cat_update_last_error_ez("Ucontext getcontext failed");
+        cat_update_last_error_of_syscall("Ucontext getcontext failed");
         return NULL;
     }
     context.uc_stack.ss_sp = stack;
-    context.uc_stack.ss_size = available_size;
+    context.uc_stack.ss_size = real_stack_size;
     context.uc_stack.ss_flags = 0;
     context.uc_link = NULL;
     cat_coroutine_context_make(&context, (void (*)(void)) &cat_coroutine_context_function, 1, NULL);

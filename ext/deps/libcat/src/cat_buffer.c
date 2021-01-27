@@ -75,9 +75,9 @@ CAT_API cat_bool_t cat_buffer_module_init(void)
 CAT_API cat_bool_t cat_buffer_register_allocator(const cat_buffer_allocator_t *allocator)
 {
     if (
-        allocator->alloc == NULL ||
-        allocator->realloc == NULL ||
-        allocator->free == NULL
+        allocator->alloc_function == NULL ||
+        allocator->realloc_function == NULL ||
+        allocator->free_function == NULL
     ) {
         cat_update_last_error(CAT_EINVAL, "Allocator must be filled (except update)");
         return cat_false;
@@ -103,7 +103,7 @@ static cat_always_inline cat_bool_t cat_buffer__alloc(cat_buffer_t *buffer, size
         return cat_true;
     }
 
-    value = cat_buffer_allocator.alloc(size);
+    value = cat_buffer_allocator.alloc_function(size);
 
     if (unlikely(value == NULL)) {
         return cat_false;
@@ -118,8 +118,8 @@ static cat_always_inline cat_bool_t cat_buffer__alloc(cat_buffer_t *buffer, size
 static cat_always_inline void cat_buffer__update(cat_buffer_t *buffer, size_t new_length)
 {
     buffer->length = new_length;
-    if (cat_buffer_allocator.update != NULL) {
-        cat_buffer_allocator.update(buffer->value, new_length);
+    if (cat_buffer_allocator.update_function != NULL) {
+        cat_buffer_allocator.update_function(buffer->value, new_length);
     }
 }
 
@@ -170,7 +170,7 @@ CAT_API cat_bool_t cat_buffer_realloc(cat_buffer_t *buffer, size_t new_size)
         return cat_true;
     }
 
-    new_value = cat_buffer_allocator.realloc(buffer->value, buffer->length, new_size);
+    new_value = cat_buffer_allocator.realloc_function(buffer->value, buffer->length, new_size);
 
     if (unlikely(new_value == NULL)) {
         return cat_false;
@@ -309,7 +309,7 @@ CAT_API void cat_buffer_close(cat_buffer_t *buffer)
     if (buffer->value == NULL) {
         return;
     }
-    cat_buffer_allocator.free(buffer->value);
+    cat_buffer_allocator.free_function(buffer->value);
     cat_buffer__init(buffer);
 }
 
