@@ -1,0 +1,47 @@
+name: 'Windows PHP Extension Build'
+description: 'Build windows extension via php offical devpack according to php varient.'
+inputs:
+  max-try:
+    description: 'max retry for downloading things'
+    required: false
+    default: 3
+  tools-path:
+    description: 'downloaded file path'
+    required: true
+    default: 'C:\tools\phpdev'
+  ext-path:
+    description: 'extension path'
+    required: false
+    default: .
+  conf-args:
+    description: 'configure options'
+    required: false
+    default: ""
+runs:
+  using: 'composite'
+  steps:
+    - shell: cmd
+      run: |
+        IF NOT EXIST ${{ inputs.tools-path }} MKDIR ${{ inputs.tools-path }} && ^
+        git clone https://github.com/Microsoft/php-sdk-binary-tools ${{ inputs.tools-path }}\php-sdk-binary-tools --single-branch
+    - shell: powershell
+      env:
+        MAX_TRY : ${{ inputs.max-try }}
+        TOOLS_PATH: ${{ inputs.tools-path }}
+      run: |
+        ./.github/workflows/winext/devpack.ps1
+    - shell: cmd /c %TOOLS_PATH%\env.bat {0}
+      env:
+        TOOLS_PATH: ${{ inputs.tools-path }}
+      run: |
+        @ECHO OFF
+        CD ${{ inputs.ext-path }} && ^
+        ECHO Start building php extension
+        ECHO Phpize it && ^
+        phpize.bat && ^
+        ECHO Configure it with arg ${{ inputs.conf-args }} && ^
+        configure.bat ${{ inputs.conf-args }} && ^
+        ECHO Start nmake && ^
+        nmake  && ^
+        DIR && ^
+        EXIT 1
