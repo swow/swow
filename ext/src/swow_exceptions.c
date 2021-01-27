@@ -107,9 +107,8 @@ static const zend_function_entry swow_call_exception_methods[] = {
 int swow_exceptions_module_init(INIT_FUNC_ARGS)
 {
     swow_uncatchable_ce = swow_register_internal_interface("Swow\\Uncatchable", NULL, NULL);
-    /* Uncatchable hook */
-    original_zend_catch_handler = zend_get_user_opcode_handler(ZEND_CATCH);
-    zend_set_user_opcode_handler(ZEND_CATCH, swow_catch_handler);
+    /* hook opcode catch (pre) */
+    original_zend_catch_handler = (user_opcode_handler_t) -1;
 
     /* Exception for user */
     swow_exception_ce = swow_register_internal_class(
@@ -124,6 +123,17 @@ int swow_exceptions_module_init(INIT_FUNC_ARGS)
 
     /* fast call */
     swow_exception_create_object = zend_ce_exception->create_object;
+
+    return SUCCESS;
+}
+
+int swow_exceptions_runtime_init(INIT_FUNC_ARGS)
+{
+    /* hook opcode catch */
+    if (original_zend_catch_handler == (user_opcode_handler_t) -1) {
+        original_zend_catch_handler = zend_get_user_opcode_handler(ZEND_CATCH);
+        zend_set_user_opcode_handler(ZEND_CATCH, swow_catch_handler);
+    }
 
     return SUCCESS;
 }

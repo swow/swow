@@ -2340,19 +2340,16 @@ int swow_coroutine_module_init(INIT_FUNC_ARGS)
         zend_throw_exception_hook = swow_zend_throw_exception_hook;
     } while (0);
 
-    /* hook exit */
+    /* hook opcode exit (pre) */
     do {
-        original_zend_exit_handler = zend_get_user_opcode_handler(ZEND_EXIT);
-        zend_set_user_opcode_handler(ZEND_EXIT, swow_coroutine_exit_handler);
+        original_zend_exit_handler = (user_opcode_handler_t) -1;
     } while (0);
 
 #ifdef SWOW_COROUTINE_SWAP_SILENCE_CONTEXT
-    /* hook silence */
+    /* hook opcode silence (pre) */
     do {
-        original_zend_begin_silence_handler = zend_get_user_opcode_handler(ZEND_BEGIN_SILENCE);
-        zend_set_user_opcode_handler(ZEND_BEGIN_SILENCE, swow_coroutine_begin_silence_handler);
-        original_zend_end_silence_handler = zend_get_user_opcode_handler(ZEND_END_SILENCE);
-        zend_set_user_opcode_handler(ZEND_END_SILENCE, swow_coroutine_end_silence_handler);
+        original_zend_begin_silence_handler = (user_opcode_handler_t) -1;
+        original_zend_end_silence_handler = (user_opcode_handler_t) -1;
     } while (0);
 #endif
 
@@ -2364,6 +2361,24 @@ int swow_coroutine_runtime_init(INIT_FUNC_ARGS)
     if (!cat_coroutine_runtime_init()) {
         return FAILURE;
     }
+
+    /* hook opcode exit */
+    if (original_zend_exit_handler == (user_opcode_handler_t) -1) {
+        original_zend_exit_handler = zend_get_user_opcode_handler(ZEND_EXIT);
+        zend_set_user_opcode_handler(ZEND_EXIT, swow_coroutine_exit_handler);
+    }
+
+#ifdef SWOW_COROUTINE_SWAP_SILENCE_CONTEXT
+    /* hook opcode silence */
+    if (original_zend_begin_silence_handler == (user_opcode_handler_t) -1) {
+        original_zend_begin_silence_handler = zend_get_user_opcode_handler(ZEND_BEGIN_SILENCE);
+        zend_set_user_opcode_handler(ZEND_BEGIN_SILENCE, swow_coroutine_begin_silence_handler);
+    }
+    if (original_zend_end_silence_handler == (user_opcode_handler_t) -1) {
+        original_zend_end_silence_handler = zend_get_user_opcode_handler(ZEND_END_SILENCE);
+        zend_set_user_opcode_handler(ZEND_END_SILENCE, swow_coroutine_end_silence_handler);
+    }
+#endif
 
     SWOW_COROUTINE_G(original_resume) = cat_coroutine_register_resume(
         swow_coroutine_resume_standard

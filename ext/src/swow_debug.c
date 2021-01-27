@@ -341,8 +341,8 @@ int swow_debug_module_init(INIT_FUNC_ARGS)
         return FAILURE;
     }
 
-    original_zend_ext_stmt_handler = zend_get_user_opcode_handler(ZEND_EXT_STMT);
-    zend_set_user_opcode_handler(ZEND_EXT_STMT, swow_debug_ext_stmt_handler);
+    /* hook opcode ext_stmt (pre) */
+    original_zend_ext_stmt_handler = (user_opcode_handler_t) -1;
 
     ZVAL_NULL(&SWOW_DEBUG_G(zextended_statement_handler));
 
@@ -351,6 +351,12 @@ int swow_debug_module_init(INIT_FUNC_ARGS)
 
 int swow_debug_runtime_init(INIT_FUNC_ARGS)
 {
+    /* hook opcode ext_stmt */
+    if (original_zend_ext_stmt_handler == (user_opcode_handler_t) -1) {
+        original_zend_ext_stmt_handler = zend_get_user_opcode_handler(ZEND_EXT_STMT);
+        zend_set_user_opcode_handler(ZEND_EXT_STMT, swow_debug_ext_stmt_handler);
+    }
+
     ZVAL_NULL(&SWOW_DEBUG_G(zextended_statement_handler));
 
     return SUCCESS;
