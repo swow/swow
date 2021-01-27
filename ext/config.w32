@@ -35,23 +35,25 @@ if (PHP_SWOW != 'no') (function(){
 	//ADD_MAKEFILE_FRAGMENT()
 
 	// definations
-	AC_DEFINE('HAVE_SWOW', 1, 'swow support enabled');
-	AC_DEFINE('HAVE_LIBCAT', 1, 'have libcat');
-    AC_DEFINE('CAT_VM', 1, 'Use libcat in Zend VM');
+	//AC_DEFINE('HAVE_SWOW', 1, 'swow support enabled');
+	//AC_DEFINE('HAVE_LIBCAT', 1, 'have libcat');
+    //AC_DEFINE('CAT_VM', 1, 'Use libcat in Zend VM');
     if ("yes" == PHP_SWOW_DEBUG){
         AC_DEFINE('CAT_DEBUG', 1, 'Debug build');
     }
 
-    // TODO: valgrind (if windows version)
-    
-	// add cflags for swow
-	ADD_FLAG("CFLAGS_SWOW", "/W3 /wd4244");
-	// string formating warings like -Wformat
-	ADD_FLAG("CFLAGS_SWOW", "/w14473 /w14774 /w14775 /w14775 /w14776 /w14777 /w14778");
-	// -Wincompatible-pointer-types-discards-qualifiers like
-	ADD_FLAG("CFLAGS_SWOW", "/w14090");
-	// -Wuninitialized or -Winit-self like
-	ADD_FLAG("CFLAGS_SWOW", "/w14700");
+    if (PHP_SWOW_DEBUG != 'no'){
+		// TODO: valgrind (if windows version)
+		// add (warning) cflags for swow
+		ADD_FLAG("CFLAGS_SWOW", "/W3");
+		// string formating warings like -Wformat
+		ADD_FLAG("CFLAGS_SWOW", "/w14473 /w14774 /w14775 /w14775 /w14776 /w14777 /w14778");
+		// -Wincompatible-pointer-types-discards-qualifiers like
+		ADD_FLAG("CFLAGS_SWOW", "/w14090");
+		// -Wuninitialized or -Winit-self like
+		ADD_FLAG("CFLAGS_SWOW", "/w14700");
+	}
+	ADD_FLAG("CFLAGS_SWOW", "/wd4244");
 	// -Wno-sign-compare like
 	ADD_FLAG("CFLAGS_SWOW", "/wd4018");
 	// -Wno-unused-parameter like
@@ -59,7 +61,10 @@ if (PHP_SWOW != 'no') (function(){
 
 	// libcat and uv donot consume php generated config.h, so use c flags to define HAVE_LIBCAT
 	// fixme: we should modify header including order to let uv consume php generated config.h (include php.h before any uv.h)
+	//ADD_FLAG("CFLAGS_SWOW", "/D HAVE_CONFIG_H");
+	ADD_FLAG("CFLAGS_SWOW", "/D HAVE_SWOW");
 	ADD_FLAG("CFLAGS_SWOW", "/D HAVE_LIBCAT");
+	ADD_FLAG("CFLAGS_SWOW", "/D CAT_VM");
 
 
 	// swow sources
@@ -141,7 +146,8 @@ if (PHP_SWOW != 'no') (function(){
 		//ADD_SOURCES(configure_module_dirname + "\\" + CAT_CONTEXT_ASM_DIR, e.replace(/.asm$/, '.obj'));
 		// instant write rule
 		MFO.WriteLine(obj + ': ' + src);
-		//MFO.WriteLine('    @MKDIR ' + obj.replace(/\\[^\\]+$/, ' >NUL;'));
+		var objdir = obj.replace(/\\[^\\]+$/, "");
+		MFO.WriteLine('    @IF NOT EXIST ' + objdir + ' MKDIR ' + objdir);
 		MFO.WriteLine('    @$(SWOW_ASSEMBLER) /nologo ' + '/Fo' + obj + ' /c ' + src); // dont know why /Fo broken
 	});
 	
