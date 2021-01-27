@@ -24,7 +24,7 @@ extern "C" {
 
 #include "cat.h"
 
-#ifdef HAVE_OPENSSL
+#ifdef CAT_HAVE_OPENSSL
 #define CAT_SSL 1
 
 #include "cat_buffer.h"
@@ -189,7 +189,7 @@ CAT_API cat_bool_t cat_ssl_decrypt(cat_ssl_t *ssl, char *out, size_t *out_length
 CAT_API char *cat_ssl_get_error_reason(void);
 CAT_API void cat_ssl_update_last_error(cat_errno_t code, char *format, ...);
 
-#endif /* HAVE_OPENSSL */
+#endif /* CAT_HAVE_OPENSSL */
 #ifdef __cplusplus
 }
 #endif

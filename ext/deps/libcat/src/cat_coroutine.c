@@ -26,7 +26,7 @@
 #endif
 #endif
 
-#ifdef HAVE_VALGRIND
+#ifdef CAT_HAVE_VALGRIND
 #include <valgrind/valgrind.h>
 #endif
 
@@ -121,7 +121,7 @@ CAT_API cat_bool_t cat_coroutine_runtime_init(void)
 #ifdef CAT_COROUTINE_USE_UCONTEXT
         main_coroutine->transfer_data = NULL;
 #endif
-#ifdef HAVE_VALGRIND
+#ifdef CAT_HAVE_VALGRIND
         main_coroutine->valgrind_stack_id = UINT32_MAX;
 #endif
         CAT_COROUTINE_G(main) = main_coroutine;
@@ -375,7 +375,7 @@ CAT_API cat_coroutine_t *cat_coroutine_create_ex(cat_coroutine_t *coroutine, cat
 #ifdef CAT_COROUTINE_USE_UCONTEXT
     coroutine->transfer_data = NULL;
 #endif
-#ifdef HAVE_VALGRIND
+#ifdef CAT_HAVE_VALGRIND
     coroutine->valgrind_stack_id = VALGRIND_STACK_REGISTER(stack_end, stack);
 #endif
     cat_debug(COROUTINE, "Create R" CAT_COROUTINE_ID_FMT " with stack = %p, stack_size = %zu, function = %p on the %s",
@@ -391,7 +391,7 @@ CAT_API void cat_coroutine_close(cat_coroutine_t *coroutine)
     CAT_ASSERT(stack != NULL && "Coroutine is unready or closed");
     CAT_ASSERT(!cat_coroutine_is_alive(coroutine) && "Coroutine should not be active");
 
-#ifdef HAVE_VALGRIND
+#ifdef CAT_HAVE_VALGRIND
     VALGRIND_STACK_DEREGISTER(coroutine->valgrind_stack_id);
 #endif
 #ifdef CAT_COROUTINE_USE_MPEOTECT

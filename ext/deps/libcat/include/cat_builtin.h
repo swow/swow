@@ -154,10 +154,10 @@
 #endif
 
 #if (defined(__GNUC__) && __GNUC__ >= 3 && !defined(__INTEL_COMPILER) && !defined(DARWIN) && !defined(__hpux) && !defined(_AIX) && !defined(__osf__)) || __has_attribute(noreturn)
-#define HAVE_NORETURN
+#define CAT_HAVE_NORETURN
 #define CAT_NORETURN __attribute__((noreturn))
 #elif defined(CAT_WIN32)
-#define HAVE_NORETURN
+#define CAT_HAVE_NORETURN
 #define CAT_NORETURN __declspec(noreturn)
 #else
 #define CAT_NORETURN

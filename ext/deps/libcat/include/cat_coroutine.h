@@ -139,7 +139,7 @@ struct cat_coroutine_s
     cat_data_t *transfer_data;
 #endif
     /* ext info */
-#ifdef HAVE_VALGRIND
+#ifdef CAT_HAVE_VALGRIND
     uint32_t valgrind_stack_id;
 #endif
 };
