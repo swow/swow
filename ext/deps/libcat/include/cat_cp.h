@@ -28,16 +28,24 @@ typedef int gid_t;
 typedef char* caddr_t;
 typedef int pid_t;
 
-#define off_t          _off_t
-
-#define getpid         _getpid
-
-#ifndef getcwd
-#define getcwd(a, b)  _getcwd(a, b)
+#ifndef off_t
+#define off_t _off_t
 #endif
 
+#ifndef getpid
+#define getpid _getpid
+#endif
+
+#ifndef getcwd
+#define getcwd(a, b) _getcwd(a, b)
+#endif
+
+#ifndef strcasecmp
 #define strcasecmp _stricmp
+#endif
+#ifndef strncasecmp
 #define strncasecmp _strnicmp
+#endif
 #if (_MSC_VER >= 1310)
 #ifndef strdup
 #define strdup _strdup
