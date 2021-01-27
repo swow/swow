@@ -3,12 +3,12 @@ name: swow
 on: [push, pull_request]
 
 jobs:
-  ci:
+  unix-ci:
     name: PHP ${{ matrix.php-versions }} Test on ${{ matrix.os }}
     runs-on: "${{ matrix.os }}"
     strategy:
       matrix:
-        # os: [ubuntu-latest, macos-latest, windows-latest]
+        # os: [ubuntu-latest, macos-latest]
         os: [ubuntu-latest]
         php-versions: ['7.2', '7.3', '7.4', '8.0']
       max-parallel: 4
@@ -35,9 +35,8 @@ jobs:
           composer update -o
           composer cs-check
 
-      - name: Build Swow
-        run:
-          composer build-extension -- --debug
+      - name: Build Swow extension
+        run: composer build-extension -- --debug
 
       - name: Run extension tests
         run:
@@ -48,5 +47,35 @@ jobs:
           --set-timeout 30
           -j"$(/usr/bin/nproc)"
 
-      - name: Run library tests
-        run: composer test-library
+  windows-ci:
+    name: PHP ${{ matrix.php-versions }} Test on Windows
+    runs-on: "${{ matrix.os }}"
+    strategy:
+      matrix:
+        os: [windows-latest]
+        # note: gh actions only provide VS 2019
+        # that meaning only 8.0 will be supported
+        php-versions: ['8.0']
+      max-parallel: 4
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v1
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@master
+        with:
+          php-version: ${{ matrix.php-versions }}
+          # ini-values: pcov.directory=lib
+          # coverage: pcov
+          coverage: none
+
+      - name: Build Swow extension
+        uses: ./.github/workflows/winext
+        with:
+          ext-path: ./ext
+          tools-path: C:\tools\phpdev
+          conf-args: --enable-swow --enable-swow-debug
+
+      - name: Run extension tests (Windows)
+        run:
+          exit
