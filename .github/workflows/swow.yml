@@ -42,7 +42,7 @@ jobs:
       - name: Run extension tests
         run:
           composer test-extension --
-          ./ext/tests
+          ./tests
           --show-diff
           --show-slow 1000
           --set-timeout 30
