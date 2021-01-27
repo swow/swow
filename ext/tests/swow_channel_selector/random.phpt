@@ -37,7 +37,7 @@ for ($n = TEST_MAX_REQUESTS; $n--;) {
             $s->pop($channel);
         }
     }
-    $channel = $s->do();
+    $channel = $s->commit();
     Assert::same($channel, $targetChannel);
     Assert::same($s->getLastOpcode(), $opcode);
     if ($opcode === Channel::OPCODE_POP) {

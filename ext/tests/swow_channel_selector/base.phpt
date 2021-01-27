@@ -35,7 +35,7 @@ for ($n = 3; $n--;) {
         ->pop($channel1)
         ->pop($channel2)
         ->pop($channel3)
-        ->do();
+        ->commit();
     $data = $s->fetch();
     echo $data . PHP_LF;
     if ($channel === $channel1) {
