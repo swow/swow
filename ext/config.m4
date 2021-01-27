@@ -152,7 +152,7 @@ if test "${SWOW}" != "no"; then
             #include <valgrind/valgrind.h>
         ]], [[
         ]])],[
-            AC_DEFINE([HAVE_VALGRIND], 1, [Have Valgrind])
+            AC_DEFINE([CAT_HAVE_VALGRIND], 1, [Have Valgrind])
             AC_MSG_RESULT([yes])
         ],[
             AC_MSG_RESULT([no])
