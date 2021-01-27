@@ -28,6 +28,7 @@ Makefile*
 tmp-php.ini
 
 # tests
+run-tests.php
 /tests/*/*
 /tests/*/*/*
 !/tests/*/*/
@@ -35,6 +36,7 @@ tmp-php.ini
 !/tests/*/*/*.phpt
 !/tests/include/*
 !/tests/include/lib/*
+!/tests/runner/*
 
 # config
 config*
