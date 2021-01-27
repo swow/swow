@@ -239,7 +239,7 @@ PHP_RSHUTDOWN_FUNCTION(swow)
 }
 /* }}} */
 
-static int swow_delay_runtime_shutdown(void)
+static zend_result swow_delay_runtime_shutdown(void)
 {
     cat_bool_t ret;
 

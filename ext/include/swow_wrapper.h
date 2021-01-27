@@ -251,6 +251,11 @@ ZEND_API ZEND_COLD void zend_value_error(const char *format, ...) ZEND_ATTRIBUTE
 #define RETURN_THROWS()  do { RETURN_THROWS_ASSERTION(); return; } while (0)
 
 #if PHP_VERSION_ID < 80000
+/* see: https://github.com/php/php-src/pull/6002 */
+typedef ZEND_RESULT_CODE zend_result;
+#endif
+
+#if PHP_VERSION_ID < 80000
 ZEND_API zend_string *zend_string_concat2(
     const char *str1, size_t str1_len,
     const char *str2, size_t str2_len);
