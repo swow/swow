@@ -26,11 +26,10 @@ jobs:
           coverage: none
 
       - name: Setup Deps
-        run:
-          composer update -o --ignore-platform-reqs
+        run: composer update -o --ignore-platform-reqs
 
       - name: Coding Standards Check
-        if: ${{ matrix.php-versions != '8.0' }}
+        continue-on-error: true
         run: |
           composer update -o
           composer cs-check
@@ -39,6 +38,8 @@ jobs:
         run: composer build-extension -- --debug
 
       - name: Run extension tests
+        id: ext-test
+        continue-on-error: true
         run:
           composer test-extension --
           ./tests
@@ -46,6 +47,13 @@ jobs:
           --show-slow 1000
           --set-timeout 30
           -j"$(/usr/bin/nproc)"
+
+      - name: Run library tests
+        run: composer test-library
+      
+      - name: Fail if anything failed
+        if: steps.ext-test.outcome != 'success'
+        run: exit 1
 
   windows-ci:
     name: PHP ${{ matrix.php-versions }} Test on Windows
@@ -61,6 +69,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v1
 
+      # TODO: windows varient of setup-php seems to be so slow
+      #       shell we add caches?
       - name: Setup PHP
         uses: shivammathur/setup-php@master
         with:
@@ -68,14 +78,51 @@ jobs:
           # ini-values: pcov.directory=lib
           # coverage: pcov
           coverage: none
+      
+      - name: Setup Deps
+        run: composer update -o --ignore-platform-reqs
+
+      - name: Coding Standards Check
+        continue-on-error: true
+        run: |
+          composer update -o
+          composer cs-check
 
       - name: Build Swow extension
         uses: ./.github/workflows/winext
         with:
           ext-path: ./ext
           tools-path: C:\tools\phpdev
-          conf-args: --enable-swow --enable-swow-debug
+          conf-args: --enable-swow-debug
+          ext-name: swow
+          deps: openssl
 
-      - name: Run extension tests (Windows)
-        run:
-          exit
+      # shell we move these commands into some bats or composer.json?
+      - name: Run extension tests
+        shell: cmd
+        id: ext-test
+        continue-on-error: true
+        run: |
+          ECHO Check if we can load Swow first. && ^
+          php --ri swow && ^
+          ECHO Start run-tests && ^
+          FOR /F "USEBACKQ" %%I IN (`WHERE PHP`) DO SET TEST_PHP_EXECUTABLE=%%I && ^
+          SET NO_INTERACTION=1 && ^
+          php ext\run-tests.php ^
+            --show-diff ^
+            --show-slow 1000 ^
+            --set-timeout 30 ^
+            ext\tests
+          
+        # seems not work yet: -j%NUMBER_OF_PROCESSORS% ^
+
+      - name: Run library tests
+        shell: cmd
+        run: |
+          CD lib && ^
+          ..\vendor\bin\phpunit.bat
+
+      - name: Fail if anything failed
+        if: steps.ext-test.outcome != 'success'
+        run: exit 1
+
