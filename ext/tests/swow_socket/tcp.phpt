@@ -12,6 +12,7 @@ use Swow\Coroutine;
 use Swow\Socket;
 use Swow\Sync\WaitReference;
 use const Swow\Errno\ECANCELED;
+use const Swow\Errno\ECONNREFUSED;
 use const Swow\Errno\ECONNRESET;
 
 $server = new Socket(Socket::TYPE_TCP);
@@ -40,7 +41,18 @@ $randoms = getRandomBytesArray(TEST_MAX_REQUESTS, TEST_MAX_LENGTH);
 for ($c = 0; $c < TEST_MAX_CONCURRENCY; $c++) {
     Coroutine::run(function () use ($server, $wr, $randoms) {
         $client = new Socket(Socket::TYPE_TCP);
-        $client->connect($server->getSockAddress(), $server->getSockPort());
+        for ($r = TEST_MAX_REQUESTS; $r--;) {
+            try {
+                $client->connect($server->getSockAddress(), $server->getSockPort());
+                break;
+            } catch (Socket\Exception $exception) {
+                /* Connection limitation on Windows latest */
+                if ($exception->getCode() !== ECONNREFUSED) {
+                    throw $exception;
+                }
+                usleep(1000);
+            }
+        }
         for ($n = 0; $n < TEST_MAX_REQUESTS; $n++) {
             $client->sendString($randoms[$n]);
         }

@@ -12,7 +12,10 @@ use Swow\Coroutine;
 use Swow\Socket;
 use Swow\Sync\WaitReference;
 use const Swow\Errno\ECANCELED;
+use const Swow\Errno\ECONNREFUSED;
 use const Swow\Errno\ECONNRESET;
+use const Swow\Errno\ENFILE;
+use const Swow\Errno\ENOENT;
 
 if (stripos(PHP_OS, 'WIN') === false) {
     define('SERVER_SOCK', '/tmp/swow_server_' . getRandomBytes(8) . '.sock');
@@ -50,7 +53,18 @@ for ($c = 0; $c < TEST_MAX_CONCURRENCY_LOW; $c++) {
         if (TEST_MAX_CONCURRENCY_LOW === 1) {
             $client->bind(CLIENT_SOCK);
         }
-        $client->connect($server->getSockAddress());
+        for ($r = TEST_MAX_REQUESTS; $r--;) {
+            try {
+                $client->connect($server->getSockAddress());
+                break;
+            } catch (Socket\Exception $exception) {
+                /* Connection limitation on Windows */
+                if ($exception->getCode() !== ENOENT) {
+                    throw $exception;
+                }
+                usleep(1000);
+            }
+        }
         $randoms = getRandomBytesArray(TEST_MAX_REQUESTS, TEST_MAX_LENGTH);
         for ($n = 0; $n < TEST_MAX_REQUESTS; $n++) {
             $client->sendString($randoms[$n]);
