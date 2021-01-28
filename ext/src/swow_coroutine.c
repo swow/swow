@@ -2257,7 +2257,7 @@ static int swow_coroutine_exit_handler(zend_execute_data *execute_data)
         EG(exit_status) = status;
     }
 
-    return ZEND_USER_OPCODE_RETURN;
+    return ZEND_USER_OPCODE_CONTINUE;
 }
 
 /* hook silence */
