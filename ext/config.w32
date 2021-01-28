@@ -1,6 +1,6 @@
 
 // vim:ft=javascript
-ARG_ENABLE('swow', 'Enable Swow support', 'no');
+ARG_ENABLE('swow', 'Enable Swow support', 'yes');
 ARG_ENABLE('swow-debug', 'Enable Swow debug build flags', 'no');
 
 if (PHP_SWOW != 'no') (function(){
