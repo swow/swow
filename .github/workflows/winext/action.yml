@@ -17,20 +17,36 @@ inputs:
     description: 'configure options'
     required: false
     default: ""
+  ext-name:
+    description: 'extension name'
+    required: true
+    default: ""
+  deps:
+    description: 'deps'
+    required: false
+    default: ""
 runs:
   using: 'composite'
   steps:
-    - shell: cmd
+    - name: Prepare php-sdk-binary-tools
+      shell: cmd
       run: |
         IF NOT EXIST ${{ inputs.tools-path }} MKDIR ${{ inputs.tools-path }} && ^
         git clone https://github.com/Microsoft/php-sdk-binary-tools ${{ inputs.tools-path }}\php-sdk-binary-tools --single-branch
-    - shell: powershell
+
+    - name: Prepare PHP devel-pack and deps
+      shell: powershell
       env:
         MAX_TRY : ${{ inputs.max-try }}
         TOOLS_PATH: ${{ inputs.tools-path }}
+        DLLDEPS: ${{ inputs.deps }}
+      id: devpack-prepare
       run: |
+        ./.github/workflows/winext/deps.ps1
         ./.github/workflows/winext/devpack.ps1
-    - shell: cmd /c %TOOLS_PATH%\env.bat {0}
+
+    - name: Build and install extension
+      shell: cmd /c %TOOLS_PATH%\env.bat {0}
       env:
         TOOLS_PATH: ${{ inputs.tools-path }}
       run: |
@@ -40,8 +56,19 @@ runs:
         ECHO Phpize it && ^
         phpize.bat && ^
         ECHO Configure it with arg ${{ inputs.conf-args }} && ^
-        configure.bat ${{ inputs.conf-args }} && ^
+        configure.bat --with-php-build=%TOOLS_PATH\deps --enable-${{ inputs.ext-name }} ${{ inputs.conf-args }} && ^
         ECHO Start nmake && ^
-        nmake  && ^
-        DIR && ^
-        EXIT 1
+        nmake
+    - name: Install extension
+      shell: cmd /c %TOOLS_PATH%\env.bat {0}
+      env:
+        TOOLS_PATH: ${{ inputs.tools-path }}
+      run: |
+        CD ${{ inputs.ext-path }}
+        FOR /F "USEBACKQ" %%I IN (`WHERE PHP`) DO SET INI_FILE=%%~dpI\php.ini
+        ECHO Install dll %BUILD_DIR%\php_${{ inputs.ext-name }}.dll to php dir
+        FOR /F "USEBACKQ" %%I IN (`WHERE PHP`) DO COPY %BUILD_DIR%\php_${{ inputs.ext-name }}.dll %%~dpI\ext
+        ECHO >> %INI_FILE%
+        ECHO extension=${{ inputs.ext-name }} >> %INI_FILE%
+
+    

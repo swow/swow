@@ -1,7 +1,9 @@
 # php dev-pack downloader
+
+# Should we add some emojis to make hints more particular?
 function provedir(){
     if (-Not (Test-Path -Path $env:TOOLS_PATH -PathType Container)){
-        New-Item -Path $env:TOOLS_PATH -ItemType Container
+        New-Item -Path $env:TOOLS_PATH -ItemType Container | Out-Null
     }
 }
 
@@ -55,7 +57,7 @@ function fetchdevpack(){
         
         provedir
         $ret = dlwithhash -Uri ("https://windows.php.net/downloads/releases/" + ($latest.path)) -Dest $dest -Hash $hash -Hashmethod $hashmethod
-        if ("ok" -Eq $ret){
+        if ("ok".Equals($ret)){
             $global:zipdest = $dest
             return
         }
@@ -64,7 +66,7 @@ function fetchdevpack(){
         $fn = php -r "echo 'php-devel-pack-' . PHP_VERSION . '-' . (PHP_ZTS?'nts-':'') . 'Win32-$global:phpvcver-$global:phparch.zip' . PHP_EOL;"
         provedir
         $ret = dlwithhash -Uri "https://windows.php.net/downloads/releases/archives/$fn" -Dest "$env:TOOLS_PATH\$fn"
-        if ("ok" -Eq $ret){
+        if ("ok".Equals($ret)){
             $global:zipdest = "$env:TOOLS_PATH\$fn"
             return
         }
@@ -99,7 +101,7 @@ if (-Not $global:zipdest){
 Write-Host "Done downloading devpack, unzip it."
 
 try{
-    # if possible should we use -PassThru to get file list?
+    # if possible, should we use -PassThru to get file list?
     Expand-Archive $global:zipdest -Destination $env:TOOLS_PATH -Force
 }catch {
     Write-Warning "Cannot unzip downloaded zip $global:zipdest to $env:TOOLS_PATH, that's strange."
@@ -110,8 +112,12 @@ $dirname = ($sa.NameSpace($global:zipdest).Items() | Select-Object -Index 0).Nam
 
 Write-Host "Done unzipping devpack, generate env.bat."
 
+# Since setup-php only provides Release version PHP, yet we only support Release
+# Maybe sometimes we can build PHP by ourself?
+$phpts = php -r "echo PHP_ZTS?'TS':'';"
 $content="@ECHO OFF
 SET PATH=$env:TOOLS_PATH\$dirname;%PATH%
+SET BUILD_DIR=$global:phparch\Release$phpts
 $env:TOOLS_PATH\php-sdk-binary-tools\phpsdk-starter.bat -c $global:phpvcver -a $global:phparch -t %*
 "
 $content | Out-File -Encoding UTF8 -FilePath $env:TOOLS_PATH\env.bat
