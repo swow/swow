@@ -256,22 +256,22 @@ typedef ZEND_RESULT_CODE zend_result;
 #endif
 
 #if PHP_VERSION_ID < 80000
-ZEND_API zend_string *zend_string_concat2(
+SWOW_API zend_string *zend_string_concat2(
     const char *str1, size_t str1_len,
     const char *str2, size_t str2_len);
-ZEND_API zend_string *zend_string_concat3(
+SWOW_API zend_string *zend_string_concat3(
     const char *str1, size_t str1_len,
     const char *str2, size_t str2_len,
     const char *str3, size_t str3_len);
-ZEND_API zend_string *zend_create_member_string(zend_string *class_name, zend_string *member_name);
-ZEND_API zend_string *get_active_function_or_method_name(void);
-ZEND_API zend_string *get_function_or_method_name(const zend_function *func);
-ZEND_API const char *get_active_function_arg_name(uint32_t arg_num);
-ZEND_API const char *get_function_arg_name(const zend_function *func, uint32_t arg_num);
+SWOW_API zend_string *zend_create_member_string(zend_string *class_name, zend_string *member_name);
+SWOW_API zend_string *get_active_function_or_method_name(void);
+SWOW_API zend_string *get_function_or_method_name(const zend_function *func);
+SWOW_API const char *get_active_function_arg_name(uint32_t arg_num);
+SWOW_API const char *get_function_arg_name(const zend_function *func, uint32_t arg_num);
 
-ZEND_API ZEND_COLD void ZEND_FASTCALL zend_argument_error(zend_class_entry *error_ce, uint32_t arg_num, const char *format, ...);
-ZEND_API ZEND_COLD void ZEND_FASTCALL zend_argument_type_error(uint32_t arg_num, const char *format, ...);
-ZEND_API ZEND_COLD void ZEND_FASTCALL zend_argument_value_error(uint32_t arg_num, const char *format, ...);
+SWOW_API ZEND_COLD void ZEND_FASTCALL zend_argument_error(zend_class_entry *error_ce, uint32_t arg_num, const char *format, ...);
+SWOW_API ZEND_COLD void ZEND_FASTCALL zend_argument_type_error(uint32_t arg_num, const char *format, ...);
+SWOW_API ZEND_COLD void ZEND_FASTCALL zend_argument_value_error(uint32_t arg_num, const char *format, ...);
 #endif
 
 /* see: https://github.com/php/php-src/commit/57670c6769039a2e7b6379a68f04ecc9cb127101 */
