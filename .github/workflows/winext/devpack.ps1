@@ -1,9 +1,41 @@
 # php dev-pack downloader
 
-# Should we add some emojis to make hints more particular?
-function provedir(){
-    if (-Not (Test-Path -Path $env:TOOLS_PATH -PathType Container)){
-        New-Item -Path $env:TOOLS_PATH -ItemType Container | Out-Null
+param (
+    [int]$MaxTry = 3,
+    [string]$ToolsPath = "C:\tools\phpdev",
+    [string]$PhpBin = "php"
+)
+
+$scriptPath = Split-Path -parent $MyInvocation.MyCommand.Definition
+. "$scriptPath\logger.ps1" -ToolName "devpack"
+
+# things we used later
+try{
+    $phpver = & $PhpBin -r "echo PHP_MAJOR_VERSION . '.' . PHP_MINOR_VERSION . PHP_EOL;"
+    $phpinfo = & $PhpBin -i
+    $phpvcver = ($phpinfo | Select-String -Pattern 'PHP Extension Build => .+,(.+)' -CaseSensitive -List).Matches.Groups[1]
+    $phparch = ($phpinfo | Select-String -Pattern 'Architecture => (.+)' -CaseSensitive -List).Matches.Groups[1]
+    $phpvar = & $PhpBin -r "echo (PHP_ZTS?:'n') . 'ts-$phpvcver-$phparch' . PHP_EOL;"
+}finally{
+    if(
+        !$phpver -Or
+        !$phpvcver -Or
+        !$phparch -Or
+        !$phpvar
+    ){
+        err "Cannot determine php attributes, do you have php in PATH?"
+        warn "phpver: $phpver"
+        warn "phpvcver: $phpvcver"
+        warn "phparchver: $phparchver"
+        warn "phpvar: $phpvar"
+        exit 1
+    }
+}
+
+function provedir {
+    if (-Not (Test-Path -Path $ToolsPath -PathType Container)){
+        info "Creating dir" $ToolsPath
+        New-Item -Path $ToolsPath -ItemType Container | Out-Null
     }
 }
 
@@ -12,30 +44,33 @@ function dlwithhash{
         $Uri, $Dest, $Hash, $Hashmethod
     )
 
-    for ($i=0; $i -lt $env:MAX_TRY; $i++){
+    for ($i=0; $i -lt $MaxTry; $i++){
         try{
-            Invoke-WebRequest -Uri $Uri -OutFile $Dest
+            info "Try to download ${uri}"
+            Invoke-WebRequest -Uri $Uri -OutFile $Dest | Out-Null
         }catch [System.Net.WebException],[System.IO.IOException]{
-            Write-Warning "Failed download ${uri}, try again."
+            warn "Failed download ${uri}."
+            Write-Host $_
             continue
         }
         
         if($Hashmethod -And -Not $Hash -Eq (Get-FileHash $Dest -Algorithm $Hashmethod).Hash ){
-            Write-Warning "Bad checksum, try again."
+            warn "Bad checksum, remove file $Dest."
+            Remove-Item $Dest | Out-Null
             continue
         }
         break
     }
     if ($hashmethod -And -Not $hash -Eq (Get-FileHash $dest -Algorithm $Hashmethod).Hash ){
-        Write-Warning "Cannot download ${uri}: bad checksum."
+        warn "Cannot download ${uri}: bad checksum."
         return "failed"
     }
     return "ok"
 }
 function fetchdevpack(){
-    if ($info.$global:phpver.$global:phpvar) {
-        Write-Host "Found target version on releases, try using latest devpack."
-        $latest = $info.$global:phpver.$global:phpvar."devel_pack"
+    if ($info.$phpver.$phpvar) {
+        info "Found target version on releases, try using latest devpack."
+        $latest = $info.$phpver.$phpvar."devel_pack"
         if($latest.sha1){
             $hash = $latest.sha1
             $hashmethod = "SHA1"
@@ -43,45 +78,45 @@ function fetchdevpack(){
             $hash = $latest.sha256
             $hashmethod = "SHA256"
         }else{
-            Write-Warning "No hash for this file provided or not supported."
+            warn "No hash for this file provided or not supported."
         }
-        $dest = "$env:TOOLS_PATH\" + ($latest.path)
+        $dest = "$ToolsPath\" + ($latest.path)
 
         if($hashmethod -And (Test-Path $dest -PathType Leaf)){
             if($hashmethod -And $hash -Eq (Get-FileHash $dest -Algorithm $Hashmethod).Hash){
-                Write-Host "$dest is already provided, skipping downloading."
-                $global:zipdest = $dest
-                return
+                warn "$dest is already provided, skipping downloading."
+                return $dest
             }
         }
         
         provedir
-        $ret = dlwithhash -Uri ("https://windows.php.net/downloads/releases/" + ($latest.path)) -Dest $dest -Hash $hash -Hashmethod $hashmethod
+        $ret = dlwithhash `
+            -Uri ("https://windows.php.net/downloads/releases/" + ($latest.path)) `
+            -Dest $dest `
+            -Hash $hash `
+            -Hashmethod $hashmethod
         if ("ok".Equals($ret)){
-            $global:zipdest = $dest
-            return
+            return $dest
         }
     } else {
-        Write-Host "Target version is not active release or failed to download releases info, try fetch instantly."
-        $fn = php -r "echo 'php-devel-pack-' . PHP_VERSION . '-' . (PHP_ZTS?'nts-':'') . 'Win32-$global:phpvcver-$global:phparch.zip' . PHP_EOL;"
+        info "Target version is not active release or failed to download releases info, try fetch instantly."
+        $fn = & $PhpBin -r "echo 'php-devel-pack-' . PHP_VERSION . '-' . (PHP_ZTS?'nts-':'') . 'Win32-$phpvcver-$phparch.zip' . PHP_EOL;"
         provedir
-        $ret = dlwithhash -Uri "https://windows.php.net/downloads/releases/archives/$fn" -Dest "$env:TOOLS_PATH\$fn"
+        $ret = dlwithhash -Uri "https://windows.php.net/downloads/releases/archives/$fn" -Dest "$ToolsPath\$fn"
         if ("ok".Equals($ret)){
-            $global:zipdest = "$env:TOOLS_PATH\$fn"
-            return
+            return "$ToolsPath\$fn"
         }
     }
 }
 
-$global:phpver = php -r "echo PHP_MAJOR_VERSION . '.' . PHP_MINOR_VERSION . PHP_EOL;"
-$global:phpvcver = (php -i | Select-String -Pattern 'PHP Extension Build => .+,(.+)' -CaseSensitive -List).Matches.Groups[1]
-$global:phparch = (php -i | Select-String -Pattern 'Architecture => (.+)' -CaseSensitive -List).Matches.Groups[1]
-$global:phpvar = php -r "echo (PHP_ZTS?:'n') . 'ts-$global:phpvcver-$global:phparch' . PHP_EOL;"
-for ($i=0; $i -lt $env:MAX_TRY; $i++){
+info "Finding devpack for PHP $phpver $phpvar"
+
+for ($i=0; $i -lt $MaxTry; $i++){
     try{
         $info = Invoke-WebRequest -Uri "https://windows.php.net/downloads/releases/releases.json" | ConvertFrom-Json
     }catch [System.Net.WebException],[System.IO.IOException]{
-        Write-Warning "Failed to fetch php releases info from windows.php.net, try again."
+        warn "Failed to fetch php releases info from windows.php.net, try again."
+        Write-Host $_
         continue
     }
     #$info = Invoke-WebRequest -Uri "https://on" | ConvertFrom-Json
@@ -90,36 +125,38 @@ for ($i=0; $i -lt $env:MAX_TRY; $i++){
     }
 }
 if(!$info){
-    Write-Warning "Cannot fetch php releases info from windows.php.net."
+    warn "Cannot fetch php releases info from windows.php.net."
 }
-fetchdevpack
-if (-Not $global:zipdest){
-    Write-Warning "Failed download devpack zip."
+$zipdest = fetchdevpack
+if (-Not $zipdest){
+    err "Failed download devpack zip."
     exit 1
 }
 
-Write-Host "Done downloading devpack, unzip it."
+info "Done downloading devpack, unzip it."
 
 try{
     # if possible, should we use -PassThru to get file list?
-    Expand-Archive $global:zipdest -Destination $env:TOOLS_PATH -Force
+    Expand-Archive $zipdest -Destination $ToolsPath -Force | Out-Host
 }catch {
-    Write-Warning "Cannot unzip downloaded zip $global:zipdest to $env:TOOLS_PATH, that's strange."
+    err "Cannot unzip downloaded zip $zipdest to $ToolsPath, that's strange."
+    Write-Host $_
     exit 1
 }
 $sa = New-Object -ComObject Shell.Application
-$dirname = ($sa.NameSpace($global:zipdest).Items() | Select-Object -Index 0).Name
+$dirname = ($sa.NameSpace($zipdest).Items() | Select-Object -Index 0).Name
 
-Write-Host "Done unzipping devpack, generate env.bat."
+info "Done unzipping devpack, generate env.bat."
 
 # Since setup-php only provides Release version PHP, yet we only support Release
 # Maybe sometimes we can build PHP by ourself?
-$phpts = php -r "echo PHP_ZTS?'TS':'';"
-$content="@ECHO OFF
-SET PATH=$env:TOOLS_PATH\$dirname;%PATH%
-SET BUILD_DIR=$global:phparch\Release$phpts
-$env:TOOLS_PATH\php-sdk-binary-tools\phpsdk-starter.bat -c $global:phpvcver -a $global:phparch -t %*
+$phpts = & $PhpBin -r "echo PHP_ZTS?'TS':'';"
+$content="
+@ECHO OFF
+SET BUILD_DIR=$phparch\Release$phpts
+SET PATH=$ToolsPath\$dirname;%PATH%
+$ToolsPath\php-sdk-binary-tools\phpsdk-starter.bat -c $phpvcver -a $phparch -t %*
 "
-$content | Out-File -Encoding UTF8 -FilePath $env:TOOLS_PATH\env.bat
+$content | Out-File -Encoding UTF8 -FilePath $ToolsPath\env.bat
 
-Write-Host "Done."
+info "Done preparing dev-pack"

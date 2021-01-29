@@ -26,6 +26,8 @@ modules
 *.log
 Makefile*
 tmp-php.ini
+x64/**
+x86/**
 
 # tests
 run-tests.php
