@@ -150,7 +150,7 @@ info "Done unzipping devpack, generate env.bat."
 
 # Since setup-php only provides Release version PHP, yet we only support Release
 # Maybe sometimes we can build PHP by ourself?
-$phpts = & $PhpBin -r "echo PHP_ZTS?'TS':'';"
+$phpts = & $PhpBin -r "echo PHP_ZTS?'_TS':'';"
 $content="
 @ECHO OFF
 SET BUILD_DIR=$phparch\Release$phpts
