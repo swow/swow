@@ -20,13 +20,13 @@
 
 /* PHP 7.3 compatibility macro {{{*/
 #if PHP_VERSION_ID < 70300
-ZEND_API HashTable zend_empty_array;
+SWOW_API HashTable zend_empty_array;
 #endif
 /* }}} */
 
 /* PHP 8 compatibility macro {{{*/
 #if PHP_VERSION_ID < 80000
-ZEND_API zend_string *zend_string_concat2(
+SWOW_API zend_string *zend_string_concat2(
         const char *str1, size_t str1_len,
         const char *str2, size_t str2_len)
 {
@@ -40,7 +40,7 @@ ZEND_API zend_string *zend_string_concat2(
     return res;
 }
 
-ZEND_API zend_string *zend_string_concat3(
+SWOW_API zend_string *zend_string_concat3(
         const char *str1, size_t str1_len,
         const char *str2, size_t str2_len,
         const char *str3, size_t str3_len)
@@ -56,7 +56,7 @@ ZEND_API zend_string *zend_string_concat3(
     return res;
 }
 
-ZEND_API zend_string *zend_create_member_string(zend_string *class_name, zend_string *member_name)
+SWOW_API zend_string *zend_create_member_string(zend_string *class_name, zend_string *member_name)
 {
     return zend_string_concat3(
         ZSTR_VAL(class_name), ZSTR_LEN(class_name),
@@ -64,7 +64,7 @@ ZEND_API zend_string *zend_create_member_string(zend_string *class_name, zend_st
         ZSTR_VAL(member_name), ZSTR_LEN(member_name));
 }
 
-ZEND_API zend_string *get_active_function_or_method_name(void) /* {{{ */
+SWOW_API zend_string *get_active_function_or_method_name(void) /* {{{ */
 {
     ZEND_ASSERT(zend_is_executing());
 
@@ -72,7 +72,7 @@ ZEND_API zend_string *get_active_function_or_method_name(void) /* {{{ */
 }
 /* }}} */
 
-ZEND_API zend_string *get_function_or_method_name(const zend_function *func) /* {{{ */
+SWOW_API zend_string *get_function_or_method_name(const zend_function *func) /* {{{ */
 {
     if (func->common.scope) {
         return zend_create_member_string(func->common.scope->name, func->common.function_name);
@@ -82,7 +82,7 @@ ZEND_API zend_string *get_function_or_method_name(const zend_function *func) /* 
 }
 /* }}} */
 
-ZEND_API const char *get_active_function_arg_name(uint32_t arg_num) /* {{{ */
+SWOW_API const char *get_active_function_arg_name(uint32_t arg_num) /* {{{ */
 {
     zend_function *func;
 
@@ -96,7 +96,7 @@ ZEND_API const char *get_active_function_arg_name(uint32_t arg_num) /* {{{ */
 }
 /* }}} */
 
-ZEND_API const char *get_function_arg_name(const zend_function *func, uint32_t arg_num) /* {{{ */
+SWOW_API const char *get_function_arg_name(const zend_function *func, uint32_t arg_num) /* {{{ */
 {
     if (!func || func->common.num_args < arg_num) {
         return NULL;
@@ -113,9 +113,9 @@ ZEND_API const char *get_function_arg_name(const zend_function *func, uint32_t a
 }
 /* }}} */
 
-ZEND_API zend_class_entry *zend_ce_value_error;
+SWOW_API zend_class_entry *zend_ce_value_error;
 
-ZEND_API ZEND_COLD void zend_value_error(const char *format, ...) /* {{{ */
+SWOW_API ZEND_COLD void zend_value_error(const char *format, ...) /* {{{ */
 {
     va_list va;
     char *message = NULL;
@@ -149,7 +149,7 @@ static ZEND_COLD void ZEND_FASTCALL zend_argument_error_variadic(zend_class_entr
 }
 /* }}} */
 
-ZEND_API ZEND_COLD void ZEND_FASTCALL zend_argument_error(zend_class_entry *error_ce, uint32_t arg_num, const char *format, ...) /* {{{ */
+SWOW_API ZEND_COLD void ZEND_FASTCALL zend_argument_error(zend_class_entry *error_ce, uint32_t arg_num, const char *format, ...) /* {{{ */
 {
     va_list va;
 
@@ -159,7 +159,7 @@ ZEND_API ZEND_COLD void ZEND_FASTCALL zend_argument_error(zend_class_entry *erro
 }
 /* }}} */
 
-ZEND_API ZEND_COLD void ZEND_FASTCALL zend_argument_type_error(uint32_t arg_num, const char *format, ...) /* {{{ */
+SWOW_API ZEND_COLD void ZEND_FASTCALL zend_argument_type_error(uint32_t arg_num, const char *format, ...) /* {{{ */
 {
     va_list va;
 
@@ -169,7 +169,7 @@ ZEND_API ZEND_COLD void ZEND_FASTCALL zend_argument_type_error(uint32_t arg_num,
 }
 /* }}} */
 
-ZEND_API ZEND_COLD void ZEND_FASTCALL zend_argument_value_error(uint32_t arg_num, const char *format, ...) /* {{{ */
+SWOW_API ZEND_COLD void ZEND_FASTCALL zend_argument_value_error(uint32_t arg_num, const char *format, ...) /* {{{ */
 {
     va_list va;
 

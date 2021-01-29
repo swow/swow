@@ -4,13 +4,14 @@ on: [push, pull_request]
 
 jobs:
   unix-ci:
-    name: PHP ${{ matrix.php-versions }} Test on ${{ matrix.os }}
+    name: PHP ${{ matrix.php-version }} Test on ${{ matrix.os }}
     runs-on: "${{ matrix.os }}"
     strategy:
+      fail-fast: false
       matrix:
         # os: [ubuntu-latest, macos-latest]
         os: [ubuntu-latest]
-        php-versions: ['7.2', '7.3', '7.4', '8.0']
+        php-version: ['8.0', '7.4', '7.3', '7.2']
       max-parallel: 4
     steps:
       - name: Checkout
@@ -19,7 +20,7 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: ${{ matrix.php-versions }}
+          php-version: ${{ matrix.php-version }}
           tools: phpize
           # ini-values: pcov.directory=lib
           # coverage: pcov
@@ -56,14 +57,20 @@ jobs:
         run: exit 1
 
   windows-ci:
-    name: PHP ${{ matrix.php-versions }} Test on Windows
+    name: PHP ${{ matrix.php-version }} Test on ${{ matrix.os }}
     runs-on: "${{ matrix.os }}"
     strategy:
+      fail-fast: false
       matrix:
-        os: [windows-latest]
-        # note: gh actions only provide VS 2019
-        # that meaning only 8.0 will be supported
-        php-versions: ['8.0']
+        include:
+          - os: windows-latest
+            php-version: "8.0"
+          - os: windows-2016
+            php-version: "7.4"
+          - os: windows-2016
+            php-version: "7.3"
+          - os: windows-2016
+            php-version: "7.2"
       max-parallel: 4
     steps:
       - name: Checkout
@@ -74,7 +81,7 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@master
         with:
-          php-version: ${{ matrix.php-versions }}
+          php-version: ${{ matrix.php-version }}
           # ini-values: pcov.directory=lib
           # coverage: pcov
           coverage: none
@@ -101,14 +108,14 @@ jobs:
       - name: Run extension tests
         shell: cmd
         id: ext-test
+        env:
+          UNIX_COLOR: "1"
         continue-on-error: true
         run: |
-          ECHO Check if we can load Swow first. && ^
-          php --ri swow && ^
           ECHO Start run-tests && ^
           FOR /F "USEBACKQ" %%I IN (`WHERE PHP`) DO SET TEST_PHP_EXECUTABLE=%%I && ^
           SET NO_INTERACTION=1 && ^
-          php ext\run-tests.php ^
+          php ext\tests\runner\run-tests.php ^
             --show-diff ^
             --show-slow 1000 ^
             --set-timeout 30 ^
