@@ -35,9 +35,10 @@ if (PHP_SWOW != 'no') (function(){
 	//ADD_MAKEFILE_FRAGMENT()
 
 	// definations
-	//AC_DEFINE('HAVE_SWOW', 1, 'swow support enabled');
-	//AC_DEFINE('HAVE_LIBCAT', 1, 'have libcat');
-    //AC_DEFINE('CAT_VM', 1, 'Use libcat in Zend VM');
+	ADD_FLAG("CFLAGS_SWOW", "/D HAVE_CONFIG_H");
+	AC_DEFINE('HAVE_SWOW', 1, 'swow support enabled');
+	AC_DEFINE('HAVE_LIBCAT', 1, 'have libcat');
+    AC_DEFINE('CAT_VM', 1, 'Use libcat in Zend VM');
     if ("yes" == PHP_SWOW_DEBUG){
         AC_DEFINE('CAT_DEBUG', 1, 'Debug build');
     }
@@ -58,14 +59,6 @@ if (PHP_SWOW != 'no') (function(){
 	ADD_FLAG("CFLAGS_SWOW", "/wd4018");
 	// -Wno-unused-parameter like
 	ADD_FLAG("CFLAGS_SWOW", "/wd4100");
-
-	// libcat and uv donot consume php generated config.h, so use c flags to define HAVE_LIBCAT
-	// fixme: we should modify header including order to let uv consume php generated config.h (include php.h before any uv.h)
-	//ADD_FLAG("CFLAGS_SWOW", "/D HAVE_CONFIG_H");
-	ADD_FLAG("CFLAGS_SWOW", "/D HAVE_SWOW");
-	ADD_FLAG("CFLAGS_SWOW", "/D HAVE_LIBCAT");
-	ADD_FLAG("CFLAGS_SWOW", "/D CAT_VM");
-
 
 	// swow sources
 	var SWOW_SRC_DIR='src';
