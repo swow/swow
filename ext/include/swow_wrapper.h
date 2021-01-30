@@ -81,43 +81,6 @@ void swow_wrapper_shutdown(void);
 #define ZEND_CLOSURE_OBJECT(func) ((zend_object *) func->op_array.prototype)
 #endif
 
-#if PHP_VERSION_ID < 70300
-#define zend_string_release_ex(s, persistent) zend_string_release(s)
-
-static zend_always_inline zend_string *zval_get_tmp_string(zval *op, zend_string **tmp)
-{
-    if (EXPECTED(Z_TYPE_P(op) == IS_STRING)) {
-        *tmp = NULL;
-        return Z_STR_P(op);
-    } else {
-        return *tmp = _zval_get_string_func(op);
-    }
-}
-
-static zend_always_inline void zend_tmp_string_release(zend_string *tmp)
-{
-    if (UNEXPECTED(tmp)) {
-        zend_string_release_ex(tmp, 0);
-    }
-}
-
-extern ZEND_API HashTable zend_empty_array;
-
-static zend_always_inline HashTable *zend_new_array(size_t size)
-{
-    HashTable *ht;
-
-    ALLOC_HASHTABLE(ht);
-    zend_hash_init(ht, size, NULL, ZVAL_PTR_DTOR, 0);
-
-    return ht;
-}
-#endif
-
-#if PHP_VERSION_ID < 70300
-#define zend_hash_find_ex(ht, key, known_hash)    zend_hash_find(ht, key)
-#endif
-
 #ifndef ZEND_PARSE_PARAMETERS_NONE
 #define ZEND_PARSE_PARAMETERS_NONE() \
         ZEND_PARSE_PARAMETERS_START(0, 0) \

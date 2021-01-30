@@ -18,12 +18,6 @@
 
 #include "swow.h"
 
-/* PHP 7.3 compatibility macro {{{*/
-#if PHP_VERSION_ID < 70300
-SWOW_API HashTable zend_empty_array;
-#endif
-/* }}} */
-
 /* PHP 8 compatibility macro {{{*/
 #if PHP_VERSION_ID < 80000
 SWOW_API zend_string *zend_string_concat2(
@@ -348,10 +342,6 @@ SWOW_API void swow_output_globals_end(void)
 
 void swow_wrapper_init(void)
 {
-#if PHP_VERSION_ID < 70300
-    zend_hash_init(&zend_empty_array, 0, NULL, NULL, 1);
-#endif
-
 #ifdef ZEND_NO_VALUE_ERROR
     do {
         zend_class_entry ce;
@@ -366,7 +356,5 @@ void swow_wrapper_init(void)
 
 void swow_wrapper_shutdown(void)
 {
-#if PHP_VERSION_ID < 70300
-    zend_hash_destroy(&zend_empty_array);
-#endif
+    /* reserved */
 }
