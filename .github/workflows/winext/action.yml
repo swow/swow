@@ -66,5 +66,3 @@ runs:
         powershell .github\workflows\winext\install.ps1 ^
           -ExtPath ${{ inputs.ext-path }} ^
           -ExtName swow
-
-    
