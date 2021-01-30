@@ -43,8 +43,8 @@ extern "C" {
 #include "swow_wrapper.h"
 #include "swow_exceptions.h"
 
-#if PHP_VERSION_ID < 70200
-#error "require PHP version 7.2 or later"
+#if PHP_VERSION_ID < 70300
+#error "require PHP version 7.3 or later"
 #endif
 
 /* globals */

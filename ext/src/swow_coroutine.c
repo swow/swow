@@ -339,9 +339,7 @@ static cat_bool_t swow_coroutine_construct(swow_coroutine_t *scoroutine, zval *z
         executor->vm_stack->prev = NULL;
         executor->vm_stack_top = executor->vm_stack->top;
         executor->vm_stack_end = executor->vm_stack->end;
-#if PHP_VERSION_ID >= 70300
         executor->vm_stack_page_size = stack_page_size;
-#endif
         executor->current_execute_data = NULL;
         executor->exception = NULL;
 #ifdef SWOW_COROUTINE_SWAP_ERROR_HANDING
@@ -505,9 +503,7 @@ SWOW_API void swow_coroutine_executor_save(swow_coroutine_executor_t *executor)
     executor->vm_stack_top = eg->vm_stack_top;
     executor->vm_stack_end = eg->vm_stack_end;
     executor->vm_stack = eg->vm_stack;
-#if PHP_VERSION_ID >= 70300
     executor->vm_stack_page_size = eg->vm_stack_page_size;
-#endif
     executor->current_execute_data = eg->current_execute_data;
     executor->exception = eg->exception;
 #ifdef SWOW_COROUTINE_SWAP_ERROR_HANDING
@@ -560,9 +556,7 @@ SWOW_API void swow_coroutine_executor_recover(swow_coroutine_executor_t *executo
     eg->vm_stack_top = executor->vm_stack_top;
     eg->vm_stack_end = executor->vm_stack_end;
     eg->vm_stack = executor->vm_stack;
-#if PHP_VERSION_ID >= 70300
     eg->vm_stack_page_size = executor->vm_stack_page_size;
-#endif
     eg->current_execute_data = executor->current_execute_data;
     eg->exception = executor->exception;
 #ifdef SWOW_COROUTINE_SWAP_ERROR_HANDING

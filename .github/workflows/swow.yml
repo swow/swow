@@ -11,8 +11,8 @@ jobs:
       matrix:
         # os: [ubuntu-latest, macos-latest]
         os: [ubuntu-latest]
-        php-version: ['8.0', '7.4', '7.3', '7.2']
-      max-parallel: 4
+        php-version: ['8.0', '7.4', '7.3']
+      max-parallel: 3
     steps:
       - name: Checkout
         uses: actions/checkout@v1
@@ -69,9 +69,7 @@ jobs:
             php-version: "7.4"
           - os: windows-2016
             php-version: "7.3"
-          - os: windows-2016
-            php-version: "7.2"
-      max-parallel: 4
+      max-parallel: 3
     steps:
       - name: Checkout
         uses: actions/checkout@v1

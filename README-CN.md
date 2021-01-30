@@ -110,7 +110,7 @@ PHP异步网络编程技术的奠基者Swoole早期就尝试了异步回调模�
 ### 编译需求
 
   - Linux、 Windows、macOS、Android等主流操作系统（与[libuv](https://github.com/libuv/libuv/blob/v1.x/SUPPORTED_PLATFORMS.md)一致）
-  - PHP 7.2.0 或以上版本，推荐使用PHP 8.0 (版本越高性能越好)
+  - PHP 7.3.0 或以上版本，推荐使用PHP 8.0 (版本越高性能越好)
 
 #### Composer安装
 
