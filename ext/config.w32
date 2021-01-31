@@ -39,12 +39,9 @@ if (PHP_SWOW != 'no') (function(){
 	AC_DEFINE('HAVE_SWOW', 1, 'swow support enabled');
 	AC_DEFINE('HAVE_LIBCAT', 1, 'have libcat');
     AC_DEFINE('CAT_VM', 1, 'Use libcat in Zend VM');
-    if ("yes" == PHP_SWOW_DEBUG){
-        AC_DEFINE('CAT_DEBUG', 1, 'Debug build');
-    }
 
     if (PHP_SWOW_DEBUG != 'no'){
-		// TODO: valgrind (if windows version)
+		ADD_FLAG("CFLAGS_SWOW", "CAT_DEBUG");
 		// add (warning) cflags for swow
 		ADD_FLAG("CFLAGS_SWOW", "/W3");
 		// string formating warings like -Wformat
