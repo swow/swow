@@ -1,0 +1,105 @@
+name: releases
+
+on: [create]
+
+jobs:
+  isatag:
+    name: Check if this a create-tag event
+    runs-on: "ubuntu-latest"
+    outputs:
+      isatag: ${{ steps.check.outputs.isatag }}
+    steps:
+      - name: Check if this a create-tag event
+        id: check
+        run: |
+          if [ x"" = x`echo $GITHUB_REF | grep '^refs/tags/'` ]
+          then
+            echo "::set-output name=isatag::0"
+          else
+            echo "::set-output name=isatag::1"
+          fi
+
+  builddlls:
+    name: Build dll for PHP-${{ matrix.phpver }}-${{ matrix.arch }}-${{ (matrix.ts == '0') && 'N' || '' }}TS-${{ (matrix.os == 'windows-latest') && 'VS16' || 'VC15' }}
+    needs: isatag
+    if: needs.isatag.outputs.isatag == 1
+    runs-on: "${{ matrix.os }}"
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, windows-2016]
+        phpver: ["8.0","7.4","7.3"]
+        arch: ["x64"]
+        ts: ["1", "0"]
+        exclude:
+          - os: windows-latest
+            phpver: "7.4"
+          - os: windows-latest
+            phpver: "7.3"
+          - os: windows-2016
+            phpver: "8.0"
+      max-parallel: 1
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Build Swow extension
+        id: ext-build
+        uses: ./.github/workflows/winext
+        with:
+          ext-path: ./ext
+          tools-path: C:\tools\phpdev
+          ext-name: swow
+          deps: openssl
+          phpver: ${{ matrix.phpver }}
+          phpts: ${{ matrix.ts }}
+          phparch: ${{ matrix.arch }}
+          install: "0"
+
+      - name: Prepare php for test
+        id: php-inst
+        continue-on-error: true
+        shell: powershell
+        env:
+          UNIX_COLOR: "1"
+        run: |
+          Write-Host "::group::Fetching php from windows.php.net"
+          .\.github\workflows\winext\getphp.ps1 `
+            -PhpVer "${{ matrix.phpver }}" `
+            -PhpVCVer "${{ steps.ext-build.outputs.vcver }}" `
+            -PhpTs ${{ matrix.ts }}
+          $ret = $lastexitcode
+          Write-Host "::endgroup::"
+          if( 0 -Ne $ret ){
+              exit 1
+          }
+          Write-Host "::group::Installing swow"
+          .\.github\workflows\winext\install.ps1 `
+            -ExtName "swow" `
+            -ExtPath "ext"
+          $ret = $lastexitcode
+          Write-Host "::endgroup::"
+          exit $ret
+          
+
+      # shell we move these commands into some bats or composer.json?
+      - name: Run extension tests
+        shell: cmd
+        id: ext-test
+        continue-on-error: true
+        if: steps.php-inst.outcome == 'success'
+        env:
+          UNIX_COLOR: "1"
+        run: |
+          ECHO Start run-tests && ^
+          SET NO_INTERACTION=1 && ^
+          SET TEST_PHP_EXECUTABLE=C:\tools\phpdev\php\php.exe && ^
+          C:\tools\phpdev\php\php.exe ext\tests\runner\run-tests.php ^
+            --show-diff ^
+            --show-slow 1000 ^
+            --set-timeout 30 ^
+            ext\tests
+      
+      - name: Deploy binaries
+        shell: cmd
+        run: echo not implemented

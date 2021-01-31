@@ -22,17 +22,39 @@ inputs:
     required: true
     default: ""
   deps:
-    description: 'deps'
+    description: 'deps, comma splited'
     required: false
     default: ""
+  install:
+    description: 'if we install it, 0 for not install, 1 for install'
+    required: false
+    default: "1"
+  phpver:
+    description: 'php version that we used in format like "8.0", or "php" for auto-detect using php in %PATH%'
+    required: false
+    default: "php"
+  phpts:
+    description: 'php zend ts enabled, 0 for nts, 1 for ts'
+    required: false
+    default: "0"
+  phparch:
+    description: 'php arch we used, now there are x64 and x86'
+    required: false
+    default: "x64"
+outputs:
+  vcver:
+    description: 'max retry for downloading things'
+    value: "${{ steps.devpack-prepare.outputs.vcver }}"
 runs:
   using: 'composite'
   steps:
     - name: Prepare php-sdk-binary-tools
       shell: cmd
       run: |
+        ECHO ::group::Fetching php-sdk-binary-tools from Github && ^
         IF NOT EXIST ${{ inputs.tools-path }} MKDIR ${{ inputs.tools-path }} && ^
         git clone https://github.com/Microsoft/php-sdk-binary-tools ${{ inputs.tools-path }}\php-sdk-binary-tools --single-branch
+        ECHO ::endgroup::
 
     - name: Prepare PHP devel-pack and deps
       shell: powershell
@@ -40,20 +62,50 @@ runs:
       env:
         UNIX_COLOR: "1"
       run: |
+        if ("${{ inputs.phpver }}".Equals("php")){
+          $PhpBin = "php"
+          $PhpVer = ""
+        } else {
+          $PhpBin = ""
+          $PhpVer = "${{ inputs.phpver }}"
+        }
+        $os = "${{ matrix.os }}"
+        if($os.Equals("windows-latest") -Or $os.Equals("windows-2019")){
+          $PhpVCVer = "VS16"
+        }elseif($os.Equals("windows-2016")){
+          $PhpVCVer = "VC15"
+        }
+        Write-Host "::set-output name=vcver::$PhpVCVer"
+        Write-Host "::group::Fetching deps from windows.php.net"
         ./.github/workflows/winext/deps.ps1 `
           ${{ inputs.deps }} `
           -MaxTry ${{ inputs.max-try }} `
-          -ToolsPath ${{ inputs.tools-path }}
-        if( 0 -Ne $lastexitcode ){
+          -ToolsPath ${{ inputs.tools-path }} `
+          -PhpBin $PhpBin `
+          -PhpVer $PhpVer `
+          -PhpTs ${{ inputs.phpts }} `
+          -PhpArch ${{ inputs.phparch }} `
+          -PhpVCVer $PhpVCVer
+        $ret = $lastexitcode
+        Write-Host "::endgroup::"
+        if( 0 -Ne $ret ){
             exit 1
         }
+        Write-Host "::group::Fetching devel-pack from windows.php.net"
         ./.github/workflows/winext/devpack.ps1 `
           -MaxTry ${{ inputs.max-try }} `
-          -ToolsPath ${{ inputs.tools-path }}
-        exit $lastexitcode
+          -ToolsPath ${{ inputs.tools-path }} `
+          -PhpBin $PhpBin `
+          -PhpVer $PhpVer `
+          -PhpTs ${{ inputs.phpts }} `
+          -PhpArch ${{ inputs.phparch }} `
+          -PhpVCVer $PhpVCVer
+        $ret = $lastexitcode
+        Write-Host "::endgroup::"
+        exit $ret
 
-    - name: Build and install extension
-      shell: cmd /c %TOOLS_PATH%\env.bat {0}
+    - name: Build extension
+      shell: cmd /c ECHO ::group::Start build extension && %TOOLS_PATH%\env.bat {0}
       env:
         TOOLS_PATH: ${{ inputs.tools-path }}
         UNIX_COLOR: "1"
@@ -62,7 +114,16 @@ runs:
           ${{ inputs.conf-args }} ^
           -ExtPath ${{ inputs.ext-path }} ^
           -ExtName swow ^
-          -ToolsPath ${{ inputs.tools-path }} && ^
-        powershell .github\workflows\winext\install.ps1 ^
+          -ToolsPath ${{ inputs.tools-path }}
+        ECHO ::endgroup::
+
+    - name: Install extension
+      shell: cmd /c ECHO ::group::Start install extension && %TOOLS_PATH%\env.bat {0}
+      env:
+        TOOLS_PATH: ${{ inputs.tools-path }}
+        UNIX_COLOR: "1"
+      run: |
+        IF 1==${{ inputs.install }} powershell .github\workflows\winext\install.ps1 ^
           -ExtPath ${{ inputs.ext-path }} ^
           -ExtName swow
+        ECHO ::endgroup::
