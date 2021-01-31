@@ -1,9 +1,9 @@
-name: swow
+name: swow-tests
 
 on: [push, pull_request]
 
 jobs:
-  unix-ci:
+  unix-tests:
     name: PHP ${{ matrix.php-version }} Test on ${{ matrix.os }}
     runs-on: "${{ matrix.os }}"
     strategy:
@@ -57,7 +57,7 @@ jobs:
         if: steps.ext-test.outcome != 'success'
         run: exit 1
 
-  windows-ci:
+  windows-tests:
     name: PHP ${{ matrix.php-version }} Test on ${{ matrix.os }}
     runs-on: "${{ matrix.os }}"
     strategy:
