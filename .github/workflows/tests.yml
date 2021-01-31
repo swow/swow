@@ -1,5 +1,6 @@
 name: swow-tests
 
+#on: [gollum]
 on: [push, pull_request]
 
 jobs:

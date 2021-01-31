@@ -8,7 +8,7 @@ param (
 )
 
 $scriptPath = Split-Path -parent $MyInvocation.MyCommand.Definition
-. "$scriptPath\logger.ps1" -ToolName "build"
+. "$scriptPath\utils.ps1" -ToolName "build" -MaxTry $MaxTry
 
 info "Start building php extension"
 $origwd = (Get-Location).Path
@@ -44,3 +44,5 @@ if (0 -Ne $lastexitcode){
     exit 1
 }
 Set-Location $origwd
+
+exit 0
