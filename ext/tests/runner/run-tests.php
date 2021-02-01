@@ -341,10 +341,10 @@ function main(): void
         $colorize = false;
     }
     // force use unix color if env UNIX_COLOR set at windows
-    if (array_key_exists('UNIX_COLOR', $_ENV)){
+    if (array_key_exists('UNIX_COLOR', $environment)){
         $colorize = true;
     }
-    if (array_key_exists('NO_COLOR', $_ENV)) {
+    if (array_key_exists('NO_COLOR', $environment)) {
         $colorize = false;
     }
     $selected_tests = false;
@@ -1450,7 +1450,7 @@ function run_all_tests_parallel(array $test_files, array $env, $redir_tested): v
             [], // Inherit our stdin, stdout and stderr
             $pipes,
             null,
-            $_ENV + [
+            $GLOBALS['environment'] + [
                 "TEST_PHP_WORKER" => $i,
                 "TEST_PHP_URI" => $sockUri,
             ],
