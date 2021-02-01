@@ -47,6 +47,7 @@ jobs:
           --show-diff
           --show-slow 1000
           --set-timeout 30
+          --color
           -j"$(/usr/bin/nproc)"
 
       - name: Run library tests
@@ -106,8 +107,6 @@ jobs:
       - name: Run extension tests
         shell: cmd
         id: ext-test
-        env:
-          UNIX_COLOR: "1"
         continue-on-error: true
         run: |
           ECHO Start run-tests && ^
@@ -117,6 +116,7 @@ jobs:
             --show-diff ^
             --show-slow 1000 ^
             --set-timeout 30 ^
+            --color ^
             ext\tests
           
         # seems not work yet: -j%NUMBER_OF_PROCESSORS% ^

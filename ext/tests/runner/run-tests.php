@@ -340,10 +340,6 @@ function main(): void
     if (function_exists('sapi_windows_vt100_support') && !sapi_windows_vt100_support(STDOUT, true)) {
         $colorize = false;
     }
-    // force use unix color if env UNIX_COLOR set at windows
-    if (array_key_exists('UNIX_COLOR', $environment)){
-        $colorize = true;
-    }
     if (array_key_exists('NO_COLOR', $environment)) {
         $colorize = false;
     }
