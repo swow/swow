@@ -1,28 +1,33 @@
 name: releases
 
-on: [create]
+on:
+  push:
+    tags:
+    - 'v*'
 
 jobs:
-  isatag:
-    name: Check if this a create-tag event
+  createrel:
+    name: Create draft release
     runs-on: "ubuntu-latest"
     outputs:
-      isatag: ${{ steps.check.outputs.isatag }}
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+      id: ${{ steps.create_release.outputs.id }}
     steps:
-      - name: Check if this a create-tag event
-        id: check
-        run: |
-          if [ x"" = x`echo $GITHUB_REF | grep '^refs/tags/'` ]
-          then
-            echo "::set-output name=isatag::0"
-          else
-            echo "::set-output name=isatag::1"
-          fi
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          draft: true
+          prerelease: false
 
   builddlls:
+    # this name is used after, change it with cautious
     name: Build dll for PHP-${{ matrix.phpver }}-${{ matrix.arch }}-${{ (matrix.ts == '0') && 'N' || '' }}TS-${{ (matrix.os == 'windows-latest') && 'VS16' || 'VC15' }}
-    needs: isatag
-    if: needs.isatag.outputs.isatag == 1
+    needs: createrel
     runs-on: "${{ matrix.os }}"
     strategy:
       fail-fast: false
@@ -30,7 +35,7 @@ jobs:
         os: [windows-latest, windows-2016]
         phpver: ["8.0","7.4","7.3"]
         arch: ["x64"]
-        ts: ["1", "0"]
+        ts: ["0", "1"]
         exclude:
           - os: windows-latest
             phpver: "7.4"
@@ -38,6 +43,9 @@ jobs:
             phpver: "7.3"
           - os: windows-2016
             phpver: "8.0"
+      # we used not-atomic github apis after, so make it 1 only
+      # we may use per-matrix outputs to solve this
+      # as mentioned in https://github.community/t/bug-jobs-output-should-return-a-list-for-a-matrix-job/128626
       max-parallel: 1
     steps:
       - name: Checkout
@@ -91,7 +99,6 @@ jobs:
         env:
           UNIX_COLOR: "1"
         run: |
-          ECHO Start run-tests && ^
           SET NO_INTERACTION=1 && ^
           SET TEST_PHP_EXECUTABLE=C:\tools\phpdev\php\php.exe && ^
           C:\tools\phpdev\php\php.exe ext\tests\runner\run-tests.php ^
@@ -101,6 +108,83 @@ jobs:
             --color ^
             ext\tests
       
-      - name: Deploy binaries
-        shell: cmd
-        run: echo not implemented
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.createrel.outputs.upload_url }}
+          asset_path: ./ext/${{ matrix.arch }}/Release${{ (matrix.ts == '1') && '_TS' || ''}}/php_swow.dll
+          asset_name: php_swow-php${{ matrix.phpver }}-${{ matrix.arch }}-${{ (matrix.ts == '0') && 'n' || '' }}ts-${{ (matrix.os == 'windows-latest') && 'VS16' || 'VC15' }}.dll
+          asset_content_type: application/zip
+
+      - name: Note about the built dll
+        shell: powershell
+        run: |
+          Write-Host "::group::Patching original notes"
+          function finduri{
+            param($RunID, $Repo, $Name, $Headers)
+            $ret = Invoke-WebRequest `
+              -Headers $headers `
+              -Uri "https://api.github.com/repos/$Repo/actions/runs/$RunID/jobs" | ConvertFrom-Json
+            Write-Host $ret.jobs
+            foreach($job in $ret.jobs) {
+                Write-Host $job.name
+                Write-Host $job.html_url
+                if($job.name.ToString().Contains($Name)){
+                    return $job.html_url
+                }
+            }
+          }
+          function update{
+            param($RelID, $RunID, $Name, $OrigFileName, $FileName, $Result, $Repo, $Token)
+            
+            $headers = @{
+              "accept"="application/vnd.github.v3+json";
+              "content-type"="application/json";
+              "authorization"="Bearer ${Token}";
+            }
+            $orig = Invoke-WebRequest `
+              -Uri "https://api.github.com/repos/$Repo/releases/$RelID" `
+              -Headers $headers | ConvertFrom-JSON
+            if(!$orig){
+              Write-Host "Failed fetch original release note"
+              return 1
+            }
+            $note = $orig.body
+            $note = "$note"
+            $mark = '<!-- mark for notes -->'
+            if(!($note | Select-String $mark).Matches.Success){
+                Write-Host "Add hashes markdown tag and init it's content"
+                $note += "`n## Hashes and notes`n`n" + `
+                    "| File name | Size (in bytes) | SHA256 sum | Build log | Tests result |`n" + `
+                    "| - | - | - | - | - |`n" + `
+                    "${mark}`n"
+            }
+            $filesize = (Get-Item $OrigFileName).Length
+            $filehash = (Get-FileHash -Algorithm SHA256 $OrigFileName).Hash
+            $link = finduri -Headers $headers -RunID $RunID -Repo $Repo -Name $Name
+            $note = $note.Replace($mark, "| ${FileName} | ${filesize} | ${filehash} | [link](${link}) | ${Result} |`n" + $mark)
+
+            $patch = @{
+              "body"="$note";
+            } | ConvertTo-Json -Compress
+            $ret = Invoke-WebRequest `
+              -Body $patch `
+              -Method "PATCH" `
+              -Uri "https://api.github.com/repos/$Repo/releases/$RelID" `
+              -Headers $headers | ConvertFrom-JSON
+            if(!$ret){
+              return 1
+            }
+          }
+          update `
+            -RelID "${{ needs.createrel.outputs.id }}" `
+            -RunID "${{ github.run_id }}" `
+            -Name "PHP-${{ matrix.phpver }}-${{ matrix.arch }}-${{ (matrix.ts == '0') && 'N' || '' }}TS-${{ (matrix.os == 'windows-latest') && 'VS16' || 'VC15' }}" `
+            -OrigFileName "ext\${{ matrix.arch }}\Release${{ (matrix.ts == '1') && '_TS' || ''}}\php_swow.dll" `
+            -Filename "php_swow-php${{ matrix.phpver }}-${{ matrix.arch }}-${{ (matrix.ts == '0') && 'n' || '' }}ts-${{ (matrix.os == 'windows-latest') && 'VS16' || 'VC15' }}.dll" `
+            -Repo "${{ github.repository }}" `
+            -Token "${{ secrets.GITHUB_TOKEN }}" `
+            -Result "${{ steps.ext-test.outcome }}"
+          exit $lastexitcode
