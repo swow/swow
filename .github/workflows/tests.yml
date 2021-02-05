@@ -10,10 +10,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # os: [ubuntu-latest, macos-latest]
-        os: [ubuntu-latest]
+        os: [ubuntu-latest, macos-latest]
+        # os: [ubuntu-latest]
         php-version: ['8.0', '7.4', '7.3']
-      max-parallel: 3
+      max-parallel: 6
     steps:
       - name: Checkout
         uses: actions/checkout@v1
@@ -42,14 +42,22 @@ jobs:
       - name: Run extension tests
         id: ext-test
         continue-on-error: true
-        run:
-          composer test-extension --
-          ./tests
-          --show-diff
-          --show-slow 1000
-          --set-timeout 30
-          --color
-          -j"$(/usr/bin/nproc)"
+        run: |
+          if type nproc >/tmp/nonce 2>/tmp/nonce
+          then
+            # common linux with coreutils
+            PROCNUM=`nproc`
+          else
+            # for macos
+            PROCNUM=`sysctl -n hw.logicalcpu`
+          fi
+          composer test-extension -- \
+            ./tests \
+            --show-diff \
+            --show-slow 1000 \
+            --set-timeout 30 \
+            --color \
+            -j${PROCNUM}
 
       - name: Run library tests
         run: composer test-library
