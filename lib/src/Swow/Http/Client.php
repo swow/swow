@@ -88,7 +88,7 @@ class Client extends Socket implements ClientInterface
                 $headers['Content-Length'] = strlen($body);
             }
             if (!$request->hasHeader('connection')) {
-                $headers['Connection'] = 'Keep-Alive';
+                $headers['Connection'] = 'keep-alive';
             }
 
             $this->sendRaw(

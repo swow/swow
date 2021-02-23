@@ -142,7 +142,7 @@ class Message implements MessageInterface
     {
         $headers = $this->getHeaders();
         if (!$this->hasHeader('connection')) {
-            $headers['Connection'] = [$this->getKeepAlive() ? 'Keep-Alive' : 'Closed'];
+            $headers['Connection'] = [$this->getKeepAlive() ? 'keep-alive' : 'close'];
         }
         if (!$this->hasHeader('content-length')) {
             $headers['Content-Length'] = [(string) $this->getContentLength()];

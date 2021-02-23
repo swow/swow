@@ -133,7 +133,7 @@ class Session extends Socket
         $headers = [];
         $headers['Server'] = 'swow';
         if ($this->keepAlive !== null) {
-            $headers['Connection'] = $this->keepAlive ? 'Keep-Alive' : 'Closed';
+            $headers['Connection'] = $this->keepAlive ? 'keep-alive' : 'close';
         }
         $headers['Content-Length'] = strlen($body);
 
