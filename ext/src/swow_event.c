@@ -105,6 +105,15 @@ static cat_bool_t swow_event_scheduler_close(void)
     return cat_true;
 }
 
+static zif_handler original_pcntl_fork;
+
+static PHP_FUNCTION(swow_pcntl_fork)
+{
+    /* TODO: kill all coroutines?  */
+    uv_loop_fork(cat_event_loop);
+    original_pcntl_fork(INTERNAL_FUNCTION_PARAM_PASSTHRU);
+}
+
 int swow_event_module_init(INIT_FUNC_ARGS)
 {
     if (!cat_event_module_init()) {
@@ -117,6 +126,15 @@ int swow_event_module_init(INIT_FUNC_ARGS)
         cat_false, cat_false, cat_false,
         swow_create_object_deny, NULL, 0
     );
+
+    do {
+        zend_function *pcntl_fork_function = (zend_function *) zend_hash_str_find_ptr(CG(function_table), ZEND_STRL("pcntl_fork"));
+        if (pcntl_fork_function == NULL) {
+            break;
+        }
+        original_pcntl_fork = pcntl_fork_function->internal_function.handler;
+        pcntl_fork_function->internal_function.handler = zif_swow_pcntl_fork;
+    } while (0);
 
     return SUCCESS;
 }
