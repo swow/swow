@@ -78,7 +78,7 @@ static int cat_http_parser_on_##name(llhttp_t *llhttp) \
     } \
 }
 
-#define CAT_HTTP_PASRER_ON_EVENT(name, NAME) \
+#define CAT_HTTP_PARSER_ON_EVENT(name, NAME) \
 CAT_HTTP_PARSER_ON_EVENT_BEGIN(name, NAME) \
 CAT_HTTP_PARSER_ON_EVENT_END()
 
@@ -107,15 +107,15 @@ CAT_HTTP_PARSER_ON_EVENT_BEGIN(name, NAME) \
     return HPE_OK; \
 }
 
-CAT_HTTP_PASRER_ON_EVENT(message_begin,    MESSAGE_BEGIN   )
+CAT_HTTP_PARSER_ON_EVENT(message_begin,    MESSAGE_BEGIN   )
 CAT_HTTP_PARSER_ON_DATA (url,              URL             )
 CAT_HTTP_PARSER_ON_DATA (status,           STATUS          )
 CAT_HTTP_PARSER_ON_DATA (header_field,     HEADER_FIELD    )
 CAT_HTTP_PARSER_ON_DATA (header_value,     HEADER_VALUE    )
 CAT_HTTP_PARSER_ON_HDONE(headers_complete, HEADERS_COMPLETE)
 CAT_HTTP_PARSER_ON_DATA (body,             BODY            )
-CAT_HTTP_PASRER_ON_EVENT(chunk_header,     CHUNK_HEADER    )
-CAT_HTTP_PASRER_ON_EVENT(chunk_complete,   CHUNK_COMPLETE  )
+CAT_HTTP_PARSER_ON_EVENT(chunk_header,     CHUNK_HEADER    )
+CAT_HTTP_PARSER_ON_EVENT(chunk_complete,   CHUNK_COMPLETE  )
 CAT_HTTP_PARSER_ON_DONE (message_complete, MESSAGE_COMPLETE)
 
 const llhttp_settings_t cat_http_parser_settings = {

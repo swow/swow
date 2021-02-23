@@ -24,7 +24,7 @@
 
 #ifdef CAT_OS_UNIX_LIKE
 /* For EINTR */
-#include <sys/errno.h>
+#include <errno.h>
 /* For syscall recv */
 #include <sys/types.h>
 #include <sys/socket.h>
