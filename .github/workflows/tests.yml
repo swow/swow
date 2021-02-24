@@ -1,4 +1,4 @@
-name: swow-tests
+name: tests
 
 #on: [gollum]
 on: [push, pull_request]
