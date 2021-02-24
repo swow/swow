@@ -105,7 +105,7 @@ static cat_bool_t swow_event_scheduler_close(void)
     return cat_true;
 }
 
-static zif_handler original_pcntl_fork;
+static zif_handler original_pcntl_fork = (zif_handler) -1;
 
 static PHP_FUNCTION(swow_pcntl_fork)
 {
@@ -126,15 +126,6 @@ int swow_event_module_init(INIT_FUNC_ARGS)
         cat_false, cat_false, cat_false,
         swow_create_object_deny, NULL, 0
     );
-
-    do {
-        zend_function *pcntl_fork_function = (zend_function *) zend_hash_str_find_ptr(CG(function_table), ZEND_STRL("pcntl_fork"));
-        if (pcntl_fork_function == NULL) {
-            break;
-        }
-        original_pcntl_fork = pcntl_fork_function->internal_function.handler;
-        pcntl_fork_function->internal_function.handler = zif_swow_pcntl_fork;
-    } while (0);
 
     return SUCCESS;
 }
@@ -178,6 +169,14 @@ int swow_event_runtime_init(INIT_FUNC_ARGS)
         ZVAL_PTR(&shutdown_function_entry.arguments[arg_count - 1], &swow_internal_callable_key);
         register_user_shutdown_function(Z_STRVAL_P(zfunction_name), Z_STRLEN_P(zfunction_name), &shutdown_function_entry);
     } while (0);
+
+    if (original_pcntl_fork == (zif_handler) -1) {
+        zend_function *pcntl_fork_function = (zend_function *) zend_hash_str_find_ptr(CG(function_table), ZEND_STRL("pcntl_fork"));
+        if (pcntl_fork_function != NULL && pcntl_fork_function->type == ZEND_INTERNAL_FUNCTION) {
+            original_pcntl_fork = pcntl_fork_function->internal_function.handler;
+            pcntl_fork_function->internal_function.handler = zif_swow_pcntl_fork;
+        }
+    }
 
     return SUCCESS;
 }
