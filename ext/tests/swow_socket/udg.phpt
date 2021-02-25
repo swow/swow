@@ -46,20 +46,13 @@ foreach ([false, true] as $useConnect) {
     });
 
     $wr = new WaitReference();
-    Coroutine::run(function () use ($server, $useConnect, $wr) {
-        $client = new Socket(Socket::TYPE_UDG);
-        $client->bind(CLIENT_SOCK);
-        if ($useConnect) {
-            $client->connect($server->getSockAddress());
-        }
-        $randoms = getRandomBytesArray(TEST_MAX_REQUESTS, TEST_MAX_LENGTH);
-        for ($n = 0; $n < TEST_MAX_REQUESTS; $n++) {
-            if ($useConnect) {
-                $client->sendString($randoms[$n]);
-            } else {
-                $client->sendStringTo($randoms[$n], $server->getSockAddress());
-            }
-        }
+    $client = new Socket(Socket::TYPE_UDG);
+    $client->bind(CLIENT_SOCK);
+    if ($useConnect) {
+        $client->connect($server->getSockAddress());
+    }
+    $randoms = getRandomBytesArray(TEST_MAX_REQUESTS, TEST_MAX_LENGTH);
+    Coroutine::run(function () use ($server, $client, $randoms, $useConnect, $wr) {
         for ($n = 0; $n < TEST_MAX_REQUESTS; $n++) {
             if ($useConnect) {
                 $packet = $client->recvString(TEST_MAX_LENGTH);
@@ -69,9 +62,17 @@ foreach ([false, true] as $useConnect) {
             }
             Assert::same($packet, $randoms[$n]);
         }
-        $client->close();
     });
+    for ($n = 0; $n < TEST_MAX_REQUESTS; $n++) {
+        if ($useConnect) {
+            $client->sendString($randoms[$n]);
+        } else {
+            $client->sendStringTo($randoms[$n], $server->getSockAddress());
+        }
+    }
+
     WaitReference::wait($wr);
+    $client->close();
     $server->close();
 }
 

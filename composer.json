@@ -60,7 +60,7 @@
         "sync-extension": "/usr/bin/env php -n tools/extension/sync.php",
         "build-extension": "tools/builder/swow-builder",
         "rebuild-extension": "tools/builder/swow-builder --rebuild",
-        "test-extension": "cd ext && NO_INTERACTION=1 /usr/bin/env php -n ./tests/runner/run-tests.php -P -d extension=swow $@",
+        "test-extension": "cd ext && ulimit -n 8192 && NO_INTERACTION=1 /usr/bin/env php -n ./tests/runner/run-tests.php -P -d extension=swow $@",
         "test-library": "cd lib && /usr/bin/env php -dextension=swow ../vendor/bin/phpunit $@",
         "ide-help": "/usr/bin/env php -n -d extension=swow tools/ide-helper/generator.php swow lib/src/Swow.php"
     },

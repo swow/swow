@@ -10,6 +10,7 @@ require __DIR__ . '/../include/bootstrap.php';
 
 use Swow\Coroutine;
 use Swow\Socket;
+use Swow\Sync\WaitReference;
 use const Swow\Errno\ECANCELED;
 use const Swow\Errno\ECONNRESET;
 
@@ -34,17 +35,21 @@ Coroutine::run(function () use ($server) {
     }
 });
 
+$wr = new WaitReference();
 $client = new Socket(Socket::TYPE_TCP);
 $client->connect($server->getSockAddress(), $server->getSockPort());
 $randoms = getRandomBytesArray(TEST_MAX_REQUESTS_LOW, TEST_MAX_LENGTH_HIGH);
+Coroutine::run(function () use ($server, $client, $randoms, $wr) {
+    for ($n = 0; $n < TEST_MAX_REQUESTS_LOW; $n++) {
+        $packet = $client->readString(TEST_MAX_LENGTH_HIGH);
+        Assert::same($packet, $randoms[$n]);
+    }
+    $client->close();
+});
 for ($n = 0; $n < TEST_MAX_REQUESTS_LOW; $n++) {
     $client->sendString($randoms[$n]);
 }
-for ($n = 0; $n < TEST_MAX_REQUESTS_LOW; $n++) {
-    $packet = $client->readString(TEST_MAX_LENGTH_HIGH);
-    Assert::same($packet, $randoms[$n]);
-}
-$client->close();
+WaitReference::wait($wr);
 $server->close();
 
 echo 'Done' . PHP_LF;
