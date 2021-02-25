@@ -64,6 +64,8 @@ CAT_API cat_bool_t cat_event_do_defer_tasks(void);
 
 CAT_API cat_bool_t cat_event_wait(void);
 
+CAT_API void cat_event_fork(void);
+
 #ifdef __cplusplus
 }
 #endif

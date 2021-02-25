@@ -136,6 +136,12 @@
 #  endif
 #endif
 
+#if CAT_GCC_VERSION >= 4003 || __has_attribute(unused)
+#  define CAT_ATTRIBUTE_UNUSED __attribute__((unused))
+# else
+#  define CAT_ATTRIBUTE_UNUSED
+# endif
+
 #if defined(__GNUC__) && CAT_GCC_VERSION >= 4003
 #define CAT_COLD __attribute__((cold))
 #define CAT_HOT __attribute__((hot))

@@ -183,3 +183,12 @@ CAT_API cat_bool_t cat_event_wait(void)
 {
     return cat_coroutine_wait();
 }
+
+CAT_API void cat_event_fork(void)
+{
+    int error = uv_loop_fork(cat_event_loop);
+
+    if (error != 0) {
+        cat_core_error_with_reason(EVENT, error, "Event loop fork failed");
+    }
+}
