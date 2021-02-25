@@ -64,14 +64,16 @@ for ($c = 0; $c < TEST_MAX_CONCURRENCY_LOW; $c++) {
             }
         }
         $randoms = getRandomBytesArray(TEST_MAX_REQUESTS, TEST_MAX_LENGTH);
+        Coroutine::run(function () use ($client, $randoms) {
+            for ($n = 0; $n < TEST_MAX_REQUESTS; $n++) {
+                $packet = $client->readString(TEST_MAX_LENGTH);
+                Assert::same($packet, $randoms[$n]);
+            }
+            $client->close();
+        });
         for ($n = 0; $n < TEST_MAX_REQUESTS; $n++) {
             $client->sendString($randoms[$n]);
         }
-        for ($n = 0; $n < TEST_MAX_REQUESTS; $n++) {
-            $packet = $client->readString(TEST_MAX_LENGTH);
-            Assert::same($packet, $randoms[$n]);
-        }
-        $client->close();
     });
 }
 WaitReference::wait($wr);
