@@ -92,12 +92,12 @@ function isInTest(): bool
     return !(substr($argv[0], -5) === '.phpt');
 }
 
-function phpt_sprintf(...$args): void
+function phpt_sprint(...$args): void
 {
     if (isInTest()) {
         return;
     }
-    sprintf(...$args);
+    echo sprintf(...$args);
 }
 
 function phpt_var_dump(...$args): void
