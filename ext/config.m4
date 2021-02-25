@@ -39,11 +39,9 @@ if test "${SWOW}" != "no"; then
     AC_MSG_RESULT([supported ($PHP_VERSION)])
   fi
 
-
   AC_DEFINE([HAVE_SWOW], 1, [Have Swow])
 
   SWOW_STD_CFLAGS="${SWOW_STD_CFLAGS} -DHAVE_CONFIG_H"
-
 
   dnl start build SWOW_CFLAGS
   SWOW_STD_CFLAGS="${SWOW_STD_CFLAGS} -fvisibility=hidden -std=gnu90"
@@ -108,7 +106,8 @@ EOF
   ])
 
   SWOW_INCLUDES="-I${ext_srcdir}/include"
-  SWOW_ADD_SOURCES(src, swow_wrapper.c \
+  SWOW_ADD_SOURCES(src,
+    swow_wrapper.c \
     swow_log.c \
     swow_exceptions.c \
     swow_debug.c \
@@ -127,7 +126,7 @@ EOF
     swow_http.c \
     swow_websocket.c, SWOW_CFLAGS)
 
-  dnl TODO: may use seprate libcat
+  dnl TODO: may use separate libcat
   if test "libcat" != ""; then
     
     AC_DEFINE([HAVE_LIBCAT], 1, [Have libcat])
@@ -185,66 +184,54 @@ EOF
 
     AS_CASE([$host_os],
       [darwin*], [SWOW_OS="DARWIN"],
-      [linux*],  [SWOW_OS="LINUX"],
-      [openbsd*],[SWOW_OS="OPENBSD"],
-                 [SWOW_OS="UNKNOWN"]
+      [linux*], [SWOW_OS="LINUX"],
+      [openbsd*], [SWOW_OS="OPENBSD"],
+      [SWOW_OS="UNKNOWN"]
     )
 
     AS_CASE([$host_cpu],
-      [x86_64*],  [SWOW_CPU_ARCH="x86_64"],
-      [x86*],     [SWOW_CPU_ARCH="x86"],
-      [i?86*],    [SWOW_CPU_ARCH="x86"],
-      [arm*],     [SWOW_CPU_ARCH="arm"],
-      [aarch64*], [SWOW_CPU_ARCH="arm64"],
-      [arm64*],   [SWOW_CPU_ARCH="arm64"],
-      [mips*],    [SWOW_CPU_ARCH="mips32"],
-                  [SWOW_CPU_ARCH="unsupported"]
+      [x86_64*|amd64*], [SWOW_CPU_ARCH="x86_64"],
+      [x86*|i?86*|amd*|pentium], [SWOW_CPU_ARCH="x86"],
+      [aarch64*|arm64*], [SWOW_CPU_ARCH="arm64"],
+      [arm*], [SWOW_CPU_ARCH="arm"],
+      [arm64*], [SWOW_CPU_ARCH="arm64"],
+      [ppc64*], [SWOW_CPU_ARCH="ppc64"],
+      [powerpc*], [SWOW_CPU_ARCH="ppc"],
+      [mips64*], [SWOW_CPU_ARCH="mips64"],
+      [mips*], [SWOW_CPU_ARCH="mips32"],
+      [SWOW_CPU_ARCH="unsupported"]
+    )
+
+    AS_CASE([$SWOW_CPU_ARCH],
+      [x86_64], [CAT_CONTEXT_FILE_PREFIX="x86_64_sysv"],
+      [x86], [CAT_CONTEXT_FILE_PREFIX="x86_sysv"],
+      [arm64], [CAT_CONTEXT_FILE_PREFIX="arm64_aapcs"],
+      [arm], [CAT_CONTEXT_FILE_PREFIX="arm_aapcs"],
+      [ppc64], [CAT_CONTEXT_FILE_PREFIX="ppc64_sysv"],
+      [ppc], [CAT_CONTEXT_FILE_PREFIX="ppc_sysv"],
+      [mips64], [CAT_CONTEXT_FILE_PREFIX="mips64_n64"],
+      [mips32], [CAT_CONTEXT_FILE_PREFIX="mips32_o32"],
+      [CAT_CONTEXT_FILE_PREFIX="combined_sysv"]
     )
 
     CAT_CONTEXT_FILE_SUFFIX=""
-    if test "${SWOW_OS}" = "DARWIN"; then
-      if test "${SWOW_CPU_ARCH}" = "arm"; then
-        CAT_CONTEXT_FILE_SUFFIX="arm_aapcs_macho_gas.S"
-      elif test "${SWOW_CPU_ARCH}" = "arm64"; then
-        CAT_CONTEXT_FILE_SUFFIX="arm64_aapcs_macho_gas.S"
-      else
-        CAT_CONTEXT_FILE_SUFFIX="combined_sysv_macho_gas.S"
-      fi
-    elif test "${SWOW_CPU_ARCH}" = "x86_64"; then
-      if test "${SWOW_OS}" = "LINUX"; then
-        CAT_CONTEXT_FILE_SUFFIX="x86_64_sysv_elf_gas.S"
-      fi
-    elif test "${SWOW_CPU_ARCH}" = "x86"; then
-      if test "${SWOW_OS}" = "LINUX"; then
-        CAT_CONTEXT_FILE_SUFFIX="i386_sysv_elf_gas.S"
-      fi
-    elif test "${SWOW_CPU_ARCH}" = "arm"; then
-      if test "${SWOW_OS}" = "LINUX"; then
-        CAT_CONTEXT_FILE_SUFFIX="arm_aapcs_elf_gas.S"
-      fi
-    elif test "${SWOW_CPU_ARCH}" = "arm64"; then
-      if test "${SWOW_OS}" = "LINUX"; then
-        CAT_CONTEXT_FILE_SUFFIX="arm64_aapcs_elf_gas.S"
-      fi
-    elif test "${SWOW_CPU_ARCH}" = "ppc32"; then
-      if test "${SWOW_OS}" = "LINUX"; then
-        CAT_CONTEXT_FILE_SUFFIX="ppc32_sysv_elf_gas.S"
-      fi
-    elif test "${SWOW_CPU_ARCH}" = "ppc64"; then
-      if test "${SWOW_OS}" = "LINUX"; then
-        CAT_CONTEXT_FILE_SUFFIX="ppc64_sysv_elf_gas.S"
-      fi
-    elif test "${SWOW_CPU_ARCH}" = "mips32"; then
-      if test "${SWOW_OS}" = "LINUX"; then
-        CAT_CONTEXT_FILE_SUFFIX="mips32_o32_elf_gas.S"
-      fi
+    if test "x${SWOW_OS}" = 'xDARWIN'; then
+      CAT_CONTEXT_FILE_PREFIX="combined_sysv"
+      CAT_CONTEXT_FILE_SUFFIX="macho_gas.S"
+    elif test "x${SWOW_OS}" != 'xUNKNOWN'; then
+      CAT_CONTEXT_FILE_SUFFIX="elf_gas.S"
     fi
-    if test "${CAT_CONTEXT_FILE_SUFFIX}" = ""; then
-      AC_DEFINE(CAT_COROUTINE_USE_UCONTEXT, 1, [ Cat Coroutine use ucontxt ])
-    else
+
+    if test "${CAT_CONTEXT_FILE_SUFFIX}" != ''; then
       SWOW_CAT_ASM_FLAGS=""
       PHP_SUBST(SWOW_CAT_ASM_FLAGS)
-      SWOW_ADD_SOURCES(deps/libcat/deps/context/asm, make_${CAT_CONTEXT_FILE_SUFFIX} jump_${CAT_CONTEXT_FILE_SUFFIX}, SWOW_CAT_ASM_FLAGS)
+      SWOW_ADD_SOURCES(deps/libcat/deps/context/asm,
+        make_${CAT_CONTEXT_FILE_PREFIX}_${CAT_CONTEXT_FILE_SUFFIX} \
+        jump_${CAT_CONTEXT_FILE_PREFIX}_${CAT_CONTEXT_FILE_SUFFIX}, SWOW_CAT_ASM_FLAGS)
+    else
+      AC_CHECK_HEADER(ucontext.h,
+        [AC_DEFINE(CAT_COROUTINE_USE_UCONTEXT, 1, [ Cat Coroutine use ucontext ])],
+        [AC_MSG_ERROR([Unsupported platform])])
     fi
 
     dnl prepare uv sources
@@ -253,7 +240,8 @@ EOF
       SWOW_UV_CFLAGS="${SWOW_UV_CFLAGS} ${SWOW_STD_CFLAGS}"
       SWOW_UV_INCLUDES="${SWOW_UV_INCLUDES} -I${ext_srcdir}/deps/libcat/deps/libuv/src"
       SWOW_UV_INCLUDES="${SWOW_UV_INCLUDES} -I${ext_srcdir}/deps/libcat/deps/libuv/include"
-      SWOW_ADD_SOURCES(deps/libcat/deps/libuv/src, fs-poll.c \
+      SWOW_ADD_SOURCES(deps/libcat/deps/libuv/src,
+        fs-poll.c \
         idna.c \
         inet.c \
         random.c \
@@ -266,7 +254,8 @@ EOF
 
       PHP_ADD_LIBRARY(pthread)
 
-      SWOW_ADD_SOURCES(deps/libcat/deps/libuv/src/unix, async.c \
+      SWOW_ADD_SOURCES(deps/libcat/deps/libuv/src/unix,
+        async.c \
         core.c \
         dl.c \
         fs.c \
@@ -331,7 +320,10 @@ EOF
       if test "x${SWOW_OS}" = "xDARWIN"; then
         SWOW_UV_CFLAGS="${SWOW_UV_CFLAGS} -D_DARWIN_UNLIMITED_SELECT"
         SWOW_UV_CFLAGS="${SWOW_UV_CFLAGS} -D_DARWIN_USE_64_BIT_INODE"
-        SWOW_ADD_SOURCES(deps/libcat/deps/libuv/src/unix, darwin-proctitle.c darwin.c fsevents.c, SWOW_UV_CFLAGS)
+        SWOW_ADD_SOURCES(deps/libcat/deps/libuv/src/unix,
+          darwin-proctitle.c \
+          darwin.c \
+          fsevents.c, SWOW_UV_CFLAGS)
       fi
 
       if test "x${SWOW_OS}" = "xLINUX"; then
@@ -339,7 +331,8 @@ EOF
         SWOW_UV_CFLAGS="${SWOW_UV_CFLAGS} -D_POSIX_C_SOURCE=200112"
         PHP_ADD_LIBRARY(dl)
         PHP_ADD_LIBRARY(rt)
-        SWOW_ADD_SOURCES(deps/libcat/deps/libuv/src/unix, linux-core.c \
+        SWOW_ADD_SOURCES(deps/libcat/deps/libuv/src/unix,
+          linux-core.c \
           linux-inotify.c \
           linux-syscalls.c \
           procfs-exepath.c \
@@ -420,7 +413,10 @@ EOF
     SWOW_CAT_INCLUDES="${SWOW_CAT_INCLUDES} ${SWOW_LLHTTP_INCLUDES}"
     SWOW_LLHTTP_CFLAGS="${SWOW_LLHTTP_CFLAGS} ${SWOW_STD_CFLAGS} ${SWOW_LLHTTP_INCLUDES}"
     PHP_SUBST(SWOW_LLHTTP_CFLAGS)
-    SWOW_ADD_SOURCES(deps/libcat/deps/llhttp/src, api.c http.c llhttp.c, SWOW_LLHTTP_CFLAGS)
+    SWOW_ADD_SOURCES(deps/libcat/deps/llhttp/src,
+      api.c \
+      http.c \
+      llhttp.c, SWOW_LLHTTP_CFLAGS)
 
     SWOW_CAT_CFLAGS="${SWOW_CAT_CFLAGS} ${SWOW_CAT_INCLUDES}"
     PHP_SUBST(SWOW_CAT_CFLAGS)
