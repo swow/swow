@@ -320,7 +320,7 @@ EOF
       dnl endif()
 
       if test "x${SWOW_OS}" = "xOPENBSD" || test "x${SWOW_OS}" = "xDARWIN" ; then
-        SWOW_ADD_SOURCES(deps/libcat/deps/libuv/src/unix, random-getentropy.c, SWOW_UV_CFLAG)
+        SWOW_ADD_SOURCES(deps/libcat/deps/libuv/src/unix, random-getentropy.c, SWOW_UV_CFLAGS)
       fi
 
       AC_CHECK_LIB(c, kqueue, [
