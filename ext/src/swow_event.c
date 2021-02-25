@@ -109,9 +109,12 @@ static zif_handler original_pcntl_fork = (zif_handler) -1;
 
 static PHP_FUNCTION(swow_pcntl_fork)
 {
-    /* TODO: kill all coroutines?  */
-    cat_event_fork();
     original_pcntl_fork(INTERNAL_FUNCTION_PARAM_PASSTHRU);
+    if (Z_TYPE_P(return_value) == IS_LONG || Z_LVAL_P(return_value) == 0) {
+        /* Fork event loop in child process
+         * TODO: kill all coroutines?  */
+        cat_event_fork();
+    }
 }
 
 int swow_event_module_init(INIT_FUNC_ARGS)
