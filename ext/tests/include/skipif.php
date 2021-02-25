@@ -71,17 +71,17 @@ function skip_if_file_not_exist(string $filename): void
 
 function skip_linux_only(): void
 {
-    skip('Linux only', stripos(PHP_OS, 'Linux') === false);
+    skip('Linux only', PHP_OS_FAMILY !== 'Linux');
 }
 
 function skip_if_win(): void
 {
-    skip('Not support on Windows', stripos(PHP_OS, 'WIN') !== false);
+    skip('Not support on Windows', PHP_OS_FAMILY === 'Windows');
 }
 
 function skip_if_darwin(): void
 {
-    skip('Not support on Darwin', stripos(PHP_OS, 'Darwin') !== false);
+    skip('Not support on Darwin', PHP_OS_FAMILY === 'Darwin');
 }
 
 function skip_if_musl_libc(): void

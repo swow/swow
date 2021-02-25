@@ -14,7 +14,7 @@ use Swow\Socket;
 use Swow\Sync\WaitReference;
 use const Swow\Errno\ECANCELED;
 
-if (stripos(PHP_OS, 'Linux') !== false) {
+if (PHP_OS_FAMILY === 'Linux') {
     /* linux abstract name */
     if (mt_rand(0, 1)) {
         define('SERVER_SOCK', '');

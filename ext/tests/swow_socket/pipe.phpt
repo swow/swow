@@ -12,12 +12,10 @@ use Swow\Coroutine;
 use Swow\Socket;
 use Swow\Sync\WaitReference;
 use const Swow\Errno\ECANCELED;
-use const Swow\Errno\ECONNREFUSED;
 use const Swow\Errno\ECONNRESET;
-use const Swow\Errno\ENFILE;
 use const Swow\Errno\ENOENT;
 
-if (stripos(PHP_OS, 'WIN') === false) {
+if (PHP_OS_FAMILY !== 'Windows') {
     define('SERVER_SOCK', '/tmp/swow_server_' . getRandomBytes(8) . '.sock');
     define('CLIENT_SOCK', '/tmp/swow_client_' . getRandomBytes(8) . '.sock');
 } else {
