@@ -366,16 +366,16 @@ int swow_module_init(INIT_FUNC_ARGS)
     CAT_MODULE_UNION_TYPE_MAP(SWOW_MODULE_UNION_TYPE_GEN)
 #undef SWOW_MODULE_UNION_TYPE_GEN
 
-    /* Version constants */
+    /* Version constants (TODO: remove type cast if we no longger support PHP 7.x) */
 #define SWOW_VERSION_MAP(XX) \
-    XX(MAJOR_VERSION, LONG) \
-    XX(MINOR_VERSION, LONG) \
-    XX(RELEASE_VERSION, LONG) \
-    XX(EXTRA_VERSION, STRING) \
-    XX(VERSION, STRING) \
-    XX(VERSION_ID, LONG)
+    XX(MAJOR_VERSION, LONG, zend_long) \
+    XX(MINOR_VERSION, LONG, zend_long) \
+    XX(RELEASE_VERSION, LONG, zend_long) \
+    XX(EXTRA_VERSION, STRING, char *) \
+    XX(VERSION, STRING, char *) \
+    XX(VERSION_ID, LONG, zend_long)
 
-#define SWOW_VERSION_GEN(name, type) REGISTER_##type##_CONSTANT("Swow\\" #name, SWOW_##name, CONST_CS | CONST_PERSISTENT);
+#define SWOW_VERSION_GEN(name, type, cast) REGISTER_##type##_CONSTANT("Swow\\" #name, (cast) SWOW_##name, CONST_CS | CONST_PERSISTENT);
     SWOW_VERSION_MAP(SWOW_VERSION_GEN)
 #undef SWOW_VERSION_GEN
 
