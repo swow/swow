@@ -103,20 +103,35 @@ CAT_HTTP_PARSER_ON_DATA_BEGIN(name, NAME) \
 CAT_HTTP_PARSER_ON_DATA_END()
 
 #define CAT_HTTP_PARSER_ON_DONE(name, NAME) \
-CAT_HTTP_PARSER_ON_EVENT_BEGIN(name, NAME) \
+static int cat_http_parser_on_##name(llhttp_t *llhttp) \
+{ \
+    cat_http_parser_t *parser = cat_http_parser_get_from_handle(llhttp); \
+    \
+    if (parser->event != CAT_HTTP_PARSER_EVENT_##NAME) { \
+        /* first execute, may paused */ \
+        parser->event = CAT_HTTP_PARSER_EVENT_##NAME; \
+        if ((parser->events & parser->event) == parser->event) { \
+            return HPE_PAUSED; \
+        } \
+    } \
+    \
     return HPE_OK; \
 }
 
-CAT_HTTP_PARSER_ON_EVENT(message_begin,    MESSAGE_BEGIN   )
-CAT_HTTP_PARSER_ON_DATA (url,              URL             )
-CAT_HTTP_PARSER_ON_DATA (status,           STATUS          )
-CAT_HTTP_PARSER_ON_DATA (header_field,     HEADER_FIELD    )
-CAT_HTTP_PARSER_ON_DATA (header_value,     HEADER_VALUE    )
-CAT_HTTP_PARSER_ON_HDONE(headers_complete, HEADERS_COMPLETE)
-CAT_HTTP_PARSER_ON_DATA (body,             BODY            )
-CAT_HTTP_PARSER_ON_EVENT(chunk_header,     CHUNK_HEADER    )
-CAT_HTTP_PARSER_ON_EVENT(chunk_complete,   CHUNK_COMPLETE  )
-CAT_HTTP_PARSER_ON_DONE (message_complete, MESSAGE_COMPLETE)
+CAT_HTTP_PARSER_ON_EVENT(message_begin,         MESSAGE_BEGIN        )
+CAT_HTTP_PARSER_ON_DATA (url,                   URL                  )
+CAT_HTTP_PARSER_ON_EVENT(url_complete,          URL_COMPLETE         )
+CAT_HTTP_PARSER_ON_DATA (status,                STATUS               )
+CAT_HTTP_PARSER_ON_EVENT(status_complete,       STATUS_COMPLETE      )
+CAT_HTTP_PARSER_ON_DATA (header_field,          HEADER_FIELD         )
+CAT_HTTP_PARSER_ON_DATA (header_value,          HEADER_VALUE         )
+CAT_HTTP_PARSER_ON_EVENT(header_field_complete, HEADER_FIELD_COMPLETE)
+CAT_HTTP_PARSER_ON_EVENT(header_value_complete, HEADER_VALUE_COMPLETE)
+CAT_HTTP_PARSER_ON_HDONE(headers_complete,      HEADERS_COMPLETE     )
+CAT_HTTP_PARSER_ON_DATA (body,                  BODY                 )
+CAT_HTTP_PARSER_ON_EVENT(chunk_header,          CHUNK_HEADER         )
+CAT_HTTP_PARSER_ON_EVENT(chunk_complete,        CHUNK_COMPLETE       )
+CAT_HTTP_PARSER_ON_DONE (message_complete,      MESSAGE_COMPLETE     )
 
 const llhttp_settings_t cat_http_parser_settings = {
     cat_http_parser_on_message_begin,
@@ -128,12 +143,15 @@ const llhttp_settings_t cat_http_parser_settings = {
     cat_http_parser_on_body,
     cat_http_parser_on_message_complete,
     cat_http_parser_on_chunk_header,
-    cat_http_parser_on_chunk_complete
+    cat_http_parser_on_chunk_complete, 
+    cat_http_parser_on_url_complete,
+    cat_http_parser_on_status_complete,
+    cat_http_parser_on_header_field_complete,
+    cat_http_parser_on_header_value_complete,
 };
 
-static cat_always_inline void cat_http_parser__init(cat_http_parser_t *parser, uint8_t type)
+static cat_always_inline void cat_http_parser__init(cat_http_parser_t *parser)
 {
-    llhttp_init(&parser->llhttp, type, &cat_http_parser_settings);
     parser->llhttp.method = CAT_HTTP_METHOD_UNKNOWN;
     parser->data = NULL;
     parser->data_length = 0;
@@ -142,14 +160,16 @@ static cat_always_inline void cat_http_parser__init(cat_http_parser_t *parser, u
 
 CAT_API void cat_http_parser_init(cat_http_parser_t *parser)
 {
-    cat_http_parser__init(parser, HTTP_BOTH);
+    llhttp_init(&parser->llhttp, HTTP_BOTH, &cat_http_parser_settings);
+    cat_http_parser__init(parser);
     parser->events = CAT_HTTP_PARSER_EVENTS_NONE;
     parser->event = CAT_HTTP_PARSER_EVENT_NONE;
 }
 
 CAT_API void cat_http_parser_reset(cat_http_parser_t *parser)
 {
-    cat_http_parser__init(parser, parser->llhttp.type);
+    llhttp_reset(&parser->llhttp);
+    cat_http_parser__init(parser);
 }
 
 CAT_API cat_http_parser_t *cat_http_parser_create(cat_http_parser_t *parser)
@@ -199,12 +219,25 @@ CAT_API cat_bool_t cat_http_parser_execute(cat_http_parser_t *parser, const char
     parser->event = CAT_HTTP_PARSER_EVENT_NONE;
     llhttp_resume(&parser->llhttp);
     error = llhttp_execute(&parser->llhttp, data, length);
-    if (unlikely(error != 0 && error != HPE_PAUSED && error != HPE_PAUSED_UPGRADE)) {
-        cat_update_last_error(error, "HTTP-Parser execute failed: %s", llhttp_errno_name(error));
-        return cat_false;
+    if (unlikely(error != HPE_OK)) {
+        if (unlikely(error != HPE_PAUSED)) {
+            if (unlikely(error != HPE_PAUSED_UPGRADE)) {
+                goto _error;
+            }
+        } else if (unlikely(parser->event == CAT_HTTP_PARSER_EVENT_MESSAGE_COMPLETE)) {
+            llhttp_resume(&parser->llhttp);
+            error = llhttp_execute(&parser->llhttp, NULL, 0);
+            if (unlikely(error != HPE_OK && error != HPE_PAUSED_UPGRADE)) {
+                goto _error;
+            }
+        }
     }
 
     return cat_true;
+
+    _error:
+    cat_update_last_error(error, "HTTP-Parser execute failed: %s", llhttp_errno_name(error));
+    return cat_false;
 }
 
 CAT_API const char *cat_http_parser_event_name(cat_http_parser_event_t event)

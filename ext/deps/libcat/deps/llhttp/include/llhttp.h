@@ -1,9 +1,9 @@
 #ifndef INCLUDE_LLHTTP_H_
 #define INCLUDE_LLHTTP_H_
 
-#define LLHTTP_VERSION_MAJOR 2
-#define LLHTTP_VERSION_MINOR 1
-#define LLHTTP_VERSION_PATCH 1
+#define LLHTTP_VERSION_MAJOR 4
+#define LLHTTP_VERSION_MINOR 0
+#define LLHTTP_VERSION_PATCH 0
 
 #ifndef LLHTTP_STRICT_MODE
 # define LLHTTP_STRICT_MODE 0
@@ -33,10 +33,11 @@ struct llhttp__internal_s {
   uint8_t http_major;
   uint8_t http_minor;
   uint8_t header_state;
-  uint16_t flags;
+  uint8_t lenient_flags;
   uint8_t upgrade;
-  uint16_t status_code;
   uint8_t finish;
+  uint16_t flags;
+  uint16_t status_code;
   void* settings;
 };
 
@@ -91,10 +92,15 @@ enum llhttp_flags {
   F_CONTENT_LENGTH = 0x20,
   F_SKIPBODY = 0x40,
   F_TRAILING = 0x80,
-  F_LENIENT = 0x100,
   F_TRANSFER_ENCODING = 0x200
 };
 typedef enum llhttp_flags llhttp_flags_t;
+
+enum llhttp_lenient_flags {
+  LENIENT_HEADERS = 0x1,
+  LENIENT_CHUNKED_LENGTH = 0x2
+};
+typedef enum llhttp_lenient_flags llhttp_lenient_flags_t;
 
 enum llhttp_type {
   HTTP_BOTH = 0,
@@ -145,7 +151,18 @@ enum llhttp_method {
   HTTP_LINK = 31,
   HTTP_UNLINK = 32,
   HTTP_SOURCE = 33,
-  HTTP_PRI = 34
+  HTTP_PRI = 34,
+  HTTP_DESCRIBE = 35,
+  HTTP_ANNOUNCE = 36,
+  HTTP_SETUP = 37,
+  HTTP_PLAY = 38,
+  HTTP_PAUSE = 39,
+  HTTP_TEARDOWN = 40,
+  HTTP_GET_PARAMETER = 41,
+  HTTP_SET_PARAMETER = 42,
+  HTTP_REDIRECT = 43,
+  HTTP_RECORD = 44,
+  HTTP_FLUSH = 45
 };
 typedef enum llhttp_method llhttp_method_t;
 
@@ -212,6 +229,17 @@ typedef enum llhttp_method llhttp_method_t;
   XX(32, UNLINK, UNLINK) \
   XX(33, SOURCE, SOURCE) \
   XX(34, PRI, PRI) \
+  XX(35, DESCRIBE, DESCRIBE) \
+  XX(36, ANNOUNCE, ANNOUNCE) \
+  XX(37, SETUP, SETUP) \
+  XX(38, PLAY, PLAY) \
+  XX(39, PAUSE, PAUSE) \
+  XX(40, TEARDOWN, TEARDOWN) \
+  XX(41, GET_PARAMETER, GET_PARAMETER) \
+  XX(42, SET_PARAMETER, SET_PARAMETER) \
+  XX(43, REDIRECT, REDIRECT) \
+  XX(44, RECORD, RECORD) \
+  XX(45, FLUSH, FLUSH) \
 
 
 
@@ -264,11 +292,26 @@ struct llhttp_settings_s {
    */
   llhttp_cb      on_chunk_header;
   llhttp_cb      on_chunk_complete;
+
+  llhttp_cb      on_url_complete;
+  llhttp_cb      on_status_complete;
+  llhttp_cb      on_header_field_complete;
+  llhttp_cb      on_header_value_complete;
 };
 
-/* Initialize the parser with specific type and user settings */
+/* Initialize the parser with specific type and user settings.
+ *
+ * NOTE: lifetime of `settings` has to be at least the same as the lifetime of
+ * the `parser` here. In practice, `settings` has to be either a static
+ * variable or be allocated with `malloc`, `new`, etc.
+ */
 void llhttp_init(llhttp_t* parser, llhttp_type_t type,
                  const llhttp_settings_t* settings);
+
+/* Reset an already initialized parser back to the start state, preserving the
+ * existing parser type, callback settings, user data, and lenient flags.
+ */
+void llhttp_reset(llhttp_t* parser);
 
 /* Initialize the settings object */
 void llhttp_settings_init(llhttp_settings_t* settings);
@@ -373,7 +416,20 @@ const char* llhttp_method_name(llhttp_method_t method);
  *
  * **(USE AT YOUR OWN RISK)**
  */
-void llhttp_set_lenient(llhttp_t* parser, int enabled);
+void llhttp_set_lenient_headers(llhttp_t* parser, int enabled);
+
+
+/* Enables/disables lenient handling of conflicting `Transfer-Encoding` and
+ * `Content-Length` headers (disabled by default).
+ *
+ * Normally `llhttp` would error when `Transfer-Encoding` is present in
+ * conjunction with `Content-Length`. This error is important to prevent HTTP
+ * request smuggling, but may be less desirable for small number of cases
+ * involving legacy servers.
+ *
+ * **(USE AT YOUR OWN RISK)**
+ */
+void llhttp_set_lenient_chunked_length(llhttp_t* parser, int enabled);
 
 #ifdef __cplusplus
 }  /* extern "C" */

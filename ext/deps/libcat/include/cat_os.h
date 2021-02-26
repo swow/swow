@@ -25,12 +25,12 @@
 /* UNIX {{{ */
 #include <unistd.h>
 #define CAT_OS_UNIX_LIKE 1
-#if defined(BSD) || defined(__DragonFly__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
-#define CAT_OS_FAMILY    "BSD"
-#define CAT_OS_BSD       1
-#elif defined(__APPLE__) || defined(__MACH__)
+#if defined(__APPLE__) || defined(__MACH__)
 #define CAT_OS_FAMILY    "Darwin"
 #define CAT_OS_DARWIN    1
+#elif defined(BSD) || defined(__DragonFly__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
+#define CAT_OS_FAMILY    "BSD"
+#define CAT_OS_BSD       1
 #elif defined(__sun__)
 #define CAT_OS_FAMILY    "Solaris"
 #define CAT_OS_SOLARIS   1

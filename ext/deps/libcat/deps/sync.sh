@@ -3,13 +3,13 @@ __DIR__=$(cd "$(dirname "$0")" || exit 1; pwd); [ -z "${__DIR__}" ] && exit 1
 
 BOOST_CONTEXT_VERSION="develop"
 LIBUV_VERSION="develop"
-LLHTTP_VERSION="v2.1.1"
+LLHTTP_VERSION="v4.0.0"
 
 sync(){ "${__DIR__}/../tools/dm.sh" "${__DIR__}/../" "$@"; }
 
 # ====== boost-context ======
 
-context_dir="${__DIR__}/context/asm"
+context_dir="${__DIR__}/context"
 
 sync_boost_context()
 {
@@ -19,10 +19,10 @@ sync_boost_context()
   "https://github.com/boostorg/context.git" \
   "${BOOST_CONTEXT_VERSION}" \
   "context/src/asm" \
-  "${context_dir}"
+  "${context_dir}/asm"
 }
 
-if sync_boost_context  && cd "${context_dir}"; then
+if sync_boost_context  && cd "${context_dir}/asm"; then
   ALL_FILES=()
   while IFS='' read -r line; do ALL_FILES+=("$line"); done < <(ls ./*.asm ./*.S)
 
@@ -37,6 +37,9 @@ if sync_boost_context  && cd "${context_dir}"; then
   perl -p -i -e 's;\bBOOST_USE_TSX\b;CAT_USE_TSX;g' "${ALL_FILES[@]}";
 
   find . \( -name \*.cpp \) -print0 | xargs -0 rm -f
+
+  wget -x -O "${context_dir}/LICENSE" \
+  "https://raw.githubusercontent.com/boostorg/boost/master/LICENSE_1_0.txt"
 fi
 
 # ====== libuv ======

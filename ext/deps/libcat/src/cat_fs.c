@@ -83,7 +83,7 @@ typedef union
 #define CAT_FS_DO_RESULT(operation, ...) do { \
         CAT_FS_PREPARE(return -1) \
         CAT_FS_CALL(operation, ##__VA_ARGS__) \
-        CAT_FS_HANDLE_RESULT() \
+        CAT_FS_HANDLE_RESULT(operation) \
 } while (0)
 
 static void cat_fs_callback(uv_fs_t *fs)
