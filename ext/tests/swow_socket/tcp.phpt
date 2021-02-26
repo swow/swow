@@ -40,27 +40,31 @@ $wr = new WaitReference();
 $randoms = getRandomBytesArray(TEST_MAX_REQUESTS, TEST_MAX_LENGTH);
 for ($c = 0; $c < TEST_MAX_CONCURRENCY; $c++) {
     Coroutine::run(function () use ($server, $randoms, $wr) {
-        $client = new Socket(Socket::TYPE_TCP);
+        /* @var $client Socket */
         for ($r = TEST_MAX_REQUESTS; $r--;) {
             try {
+                $client = new Socket(Socket::TYPE_TCP);
                 $client->connect($server->getSockAddress(), $server->getSockPort());
                 break;
             } catch (Socket\Exception $exception) {
-                /* Connection limitation on Windows latest */
-                if ($exception->getCode() !== ECONNREFUSED) {
+                /* Connection limitation on Windows latest and MacOS */
+                if ($exception->getCode() !== ECONNREFUSED &&
+                    $exception->getCode() !== ECONNRESET ||
+                    $r === 0) {
                     throw $exception;
                 }
                 usleep(1000);
             }
         }
-        Coroutine::run(function () use ($client, $randoms) {
+        Coroutine::run(function () use ($client, $randoms, $wr) {
             for ($n = 0; $n < TEST_MAX_REQUESTS; $n++) {
-                $client->sendString($randoms[$n]);
+                $packet = $client->readString(TEST_MAX_LENGTH);
+                Assert::same($packet, $randoms[$n]);
             }
+            $client->close();
         });
         for ($n = 0; $n < TEST_MAX_REQUESTS; $n++) {
-            $packet = $client->readString(TEST_MAX_LENGTH);
-            Assert::same($packet, $randoms[$n]);
+            $client->sendString($randoms[$n]);
         }
     });
 }
