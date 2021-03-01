@@ -205,8 +205,8 @@ static zend_always_inline int zend8_parse_arg_long(zval *arg, zend_long *dest, z
 #endif
 
 #ifndef RETURN_THROWS
-extern ZEND_API zend_class_entry *zend_ce_value_error;
-ZEND_API ZEND_COLD void zend_value_error(const char *format, ...) ZEND_ATTRIBUTE_FORMAT(printf, 1, 2);
+extern SWOW_API zend_class_entry *zend_ce_value_error;
+SWOW_API ZEND_COLD void zend_value_error(const char *format, ...) ZEND_ATTRIBUTE_FORMAT(printf, 1, 2);
 #else
 #undef RETURN_THROWS
 #endif
