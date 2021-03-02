@@ -860,7 +860,7 @@ static cat_socket_t *swow_stream_tty_sockets[3];
 static cat_socket_t *swow_stream_stdio_init(php_stream *stream)
 {
     php_stdio_stream_data *data = (php_stdio_stream_data *) stream->abstract;
-    cat_socket_fd_t fd = data->fd >= 0 ? data->fd : fileno(data->file);
+    int fd = data->fd >= 0 ? data->fd : fileno(data->file);
     cat_socket_t *socket;
 
     if (!IS_TTY(fd)) {
