@@ -23,7 +23,7 @@ Support millions of context switches in every single second. Since Swow supports
 
 ### 💫High controllability💫
 
-Now, a coroutine can make the PHP virtual machine works like a mini operating system. Coroutines, which are executing in it, are more like processes and threads in the operating system. Developers can manipulate these coroutines within ultra-fine granularity ways. For instance, viewing the running status of all the coroutines, attaching into the coroutine, single-step debugging and tracking, viewing the coroutine stack and even each stack frame, viewing or modifying the variables in the coroutine, interrupting or killing the coroutine, etc.
+Now, coroutine can make the PHP virtual machine works like a mini operating system. Coroutines, which are executing in it, are more like processes and threads in the operating system. Developers can manipulate these coroutines within ultra-fine granularity ways. For instance, viewing the running status of all the coroutines, attaching into the coroutine, single-step debugging and tracking, viewing the coroutine stack and even each stack frame, viewing or modifying the variables in the coroutine, interrupting or killing the coroutine, etc.
 
 Based on this controllability, developers can also use the WatchDog component to alert, interrupt, suspend or even kill the coroutines that are trapped in an infinite loop or blocked by IO, so as to prevent individual coroutines from affecting the overall stability of the program.
 
