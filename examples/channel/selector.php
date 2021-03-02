@@ -38,7 +38,7 @@ for ($n = 3; $n--;) {
         ->pop($channel1)
         ->pop($channel2)
         ->pop($channel3)
-        ->do();
+        ->commit();
     if ($channel === $channel1) {
         echo "Receive {$s->fetch()} from channel-1\n";
     } elseif ($channel === $channel2) {
