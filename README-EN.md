@@ -1,4 +1,4 @@
-[English](./README.md) | English
+English | [中文](./README.md)
 
 # Swow
 
