@@ -44,6 +44,9 @@ TEXT;
     /* @var $this */
     protected static $instance;
 
+    /* @var bool */
+    protected static $useMbString;
+
     /* @var Socket */
     protected $input;
 
@@ -328,12 +331,39 @@ TEXT;
         return $this;
     }
 
+    protected static function hasMbString(): bool
+    {
+        if (static::$useMbString === null) {
+            static::$useMbString = extension_loaded('mbstring');
+        }
+
+        return static::$useMbString;
+    }
+
+    protected static function strlen(string $string): int
+    {
+        if (!static::hasMbString()) {
+            return strlen($string);
+        }
+
+        return mb_strlen($string);
+    }
+
+    protected static function substr($string, $offset, $length = null)
+    {
+        if (!static::hasMbString()) {
+            return substr($string, $offset, $length);
+        }
+
+        return mb_substr($string, $offset, $length);
+    }
+
     protected static function getMaxLengthOfStringLine(string $string): int
     {
         $maxLength = 0;
         $lines = explode("\n", $string);
         foreach ($lines as $line) {
-            $maxLength = max($maxLength, strlen($line));
+            $maxLength = max($maxLength, static::strlen($line));
         }
 
         return $maxLength;
@@ -394,10 +424,13 @@ TEXT;
                 return $value ? 'true' : 'false';
             case is_string($value):
             {
-                $value = (ctype_print($value) ? $value : bin2hex($value));
+                // TODO: how to display binary content?
+                // if (!ctype_print($value)) {
+                //     $value = bin2hex($value);
+                // }
                 $maxLength = $forArgs ? 8 : 512;
-                if (strlen($value) > $maxLength) {
-                    $value = substr($value, 0, $maxLength) . '...';
+                if (static::strlen($value) > $maxLength) {
+                    $value = static::substr($value, 0, $maxLength) . '...';
                 }
                 if ($forArgs) {
                     $value = "'{$value}'";
@@ -631,7 +664,10 @@ TEXT;
 
     protected static function getSourceFileContentByTrace(array $trace, int $frameIndex, SplFileObject &$sourceFile = null, int &$sourceFileLine = null): array
     {
+        /* init */
         $sourceFile = null;
+        $sourceFileLine = 0;
+        /* get frame info */
         $frame = $trace[$frameIndex] ?? null;
         if (!$frame || empty($frame['file']) || !isset($frame['line'])) {
             return [];
