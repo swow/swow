@@ -43,21 +43,13 @@ jobs:
         id: ext-test
         continue-on-error: true
         run: |
-          if type nproc >/tmp/nonce 2>/tmp/nonce
-          then
-            # common linux with coreutils
-            PROCNUM=`nproc`
-          else
-            # for macos
-            PROCNUM=`sysctl -n hw.logicalcpu`
-          fi
           composer test-extension -- \
             ./tests \
             --show-diff \
             --show-slow 1000 \
             --set-timeout 30 \
             --color \
-            -j${PROCNUM}
+            -j`${{ runner.os == 'Linux' && 'nproc' || 'sysctl -n hw.logicalcpu' }}`
 
       - name: Run library tests
         run: composer test-library
