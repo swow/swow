@@ -16,7 +16,7 @@
   +--------------------------------------------------------------------------+
  */
 
-#define CAT_MEMORY_DEFAULT_ALIGNED_SIZE                sizeof(long)
+#define CAT_MEMORY_DEFAULT_ALIGNED_SIZE                sizeof(void *)
 #define CAT_MEMORY_ALIGNED_SIZE(size)                  CAT_MEMORY_ALIGNED_SIZE_EX(size, CAT_MEMORY_DEFAULT_ALIGNED_SIZE)
 #define CAT_MEMORY_ALIGNED_SIZE_EX(size, alignment)    (((size) + ((alignment) - 1LL)) & ~((alignment) - 1LL))
 
@@ -92,7 +92,7 @@ CAT_API void cat_freep_function(void *ptr); /* free(ptr->ptr) */
 CAT_API char *cat_strdup_function(const char *string);
 CAT_API char *cat_strndup_function(const char *string, size_t length);
 
-CAT_API size_t cat_getpagesize(void);
+CAT_API int cat_getpagesize(void);
 CAT_API void *cat_getpageof(const void *p);
 
 CAT_API unsigned int cat_bit_count(uintmax_t num);

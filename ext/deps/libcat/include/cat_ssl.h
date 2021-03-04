@@ -24,6 +24,9 @@ extern "C" {
 
 #include "cat.h"
 
+/* Notice: it returns null if SSL module is not available */
+CAT_API const char *cat_ssl_version(void);
+
 #ifdef CAT_HAVE_OPENSSL
 #define CAT_SSL 1
 
@@ -60,11 +63,7 @@ extern "C" {
 #endif
 #endif
 
-#if (OPENSSL_VERSION_NUMBER >= 0x10100001L)
-#define cat_ssl_version()       OpenSSL_version(OPENSSL_VERSION)
-#else
-#define cat_ssl_version()       SSLeay_version(SSLEAY_VERSION)
-#endif
+#define OPENSSL_DEFAULT_STREAM_VERIFY_DEPTH 9
 
 typedef enum
 {
@@ -126,11 +125,13 @@ typedef BIO     cat_ssl_bio_t;
 typedef struct
 {
     cat_ssl_flags_t flags;
+    cat_ssl_context_t *context;
     cat_ssl_connection_t *connection;
     cat_ssl_bio_t *nbio;
     cat_buffer_t read_buffer;
     cat_buffer_t write_buffer;
     /* options */
+    cat_bool_t allow_self_signed;
     cat_string_t passphrase;
 } cat_ssl_t;
 
@@ -149,6 +150,9 @@ CAT_API cat_bool_t cat_ssl_context_set_default_verify_paths(cat_ssl_context_t *c
 CAT_API cat_bool_t cat_ssl_context_set_ca_file(cat_ssl_context_t *context, const char *ca_file);
 CAT_API cat_bool_t cat_ssl_context_set_ca_path(cat_ssl_context_t *context, const char *ca_path);
 CAT_API void cat_ssl_context_set_verify_depth(cat_ssl_context_t *context, int depth);
+#ifdef CAT_OS_WIN
+CAT_API void cat_ssl_context_configure_verify(cat_ssl_context_t *context);
+#endif
 
 /* connection */
 CAT_API cat_ssl_t *cat_ssl_create(cat_ssl_t *ssl, cat_ssl_context_t *context);

@@ -193,7 +193,7 @@ static int cat_sockaddr__getbyname(cat_sockaddr_t *address, cat_socklen_t *addre
         }
         real_length += offsetof(cat_sockaddr_t, sa_data);
         if (unlikely(real_length > length)) {
-            *address_length = real_length;
+            *address_length = (cat_socklen_t) real_length;
             return CAT_ENOSPC;
         }
         if (name_length > 0) {
@@ -202,7 +202,7 @@ static int cat_sockaddr__getbyname(cat_sockaddr_t *address, cat_socklen_t *addre
         if (!cat_sockaddr_is_linux_abstract_name(name)) {
             address->sa_data[name_length++] = '\0';
         }
-        *address_length = offsetof(cat_sockaddr_local_t, sl_path) + name_length;
+        *address_length = (cat_socklen_t) (offsetof(cat_sockaddr_local_t, sl_path) + name_length);
 
         return 0;
     }
@@ -705,7 +705,7 @@ CAT_API cat_socket_t *cat_socket_create_ex(cat_socket_t *socket, cat_socket_type
         } else if (fd == STDERR_FILENO) {
             type |= CAT_SOCKET_TYPE_FLAG_STDERR;
         }
-        error = uv_tty_init(cat_event_loop, &isocket->u.tty, fd, 0);
+        error = uv_tty_init(cat_event_loop, &isocket->u.tty, (uv_file) fd, 0);
     }
     if (unlikely(error != 0)) {
         goto _error;
@@ -716,7 +716,7 @@ CAT_API cat_socket_t *cat_socket_create_ex(cat_socket_t *socket, cat_socket_type
         } else if ((type & CAT_SOCKET_TYPE_UDP) == CAT_SOCKET_TYPE_UDP) {
             error = uv_udp_open(&isocket->u.udp, fd);
         } else if (type & CAT_SOCKET_TYPE_FLAG_LOCAL) {
-            error = uv_pipe_open(&isocket->u.pipe, fd);
+            error = uv_pipe_open(&isocket->u.pipe, (uv_file) fd);
         } else if ((type & CAT_SOCKET_TYPE_TTY) == CAT_SOCKET_TYPE_TTY) {
             error = 0;
         } else {
@@ -843,11 +843,11 @@ CAT_API cat_sa_family_t cat_socket_get_af(const cat_socket_t *socket)
 
 static cat_socket_fd_t cat_socket_internal_get_fd_fast(const cat_socket_internal_t *isocket)
 {
-    uv_os_fd_t fd = CAT_SOCKET_INVALID_FD;
+    uv_os_fd_t fd = (uv_os_fd_t) CAT_SOCKET_INVALID_FD;
 
     (void) uv_fileno(&isocket->u.handle, &fd);
 
-    return fd;
+    return (cat_socket_fd_t) fd;
 }
 
 CAT_API cat_socket_fd_t cat_socket_get_fd_fast(const cat_socket_t *socket)
@@ -859,7 +859,7 @@ CAT_API cat_socket_fd_t cat_socket_get_fd_fast(const cat_socket_t *socket)
 
 static cat_socket_fd_t cat_socket_internal_get_fd(const cat_socket_internal_t *isocket)
 {
-    uv_os_fd_t fd = CAT_SOCKET_INVALID_FD;
+    uv_os_fd_t fd = (uv_os_fd_t) CAT_SOCKET_INVALID_FD;
     int error;
 
     error = uv_fileno(&isocket->u.handle, &fd);
@@ -867,7 +867,7 @@ static cat_socket_fd_t cat_socket_internal_get_fd(const cat_socket_internal_t *i
         cat_update_last_error_with_reason(error, "Socket get fd failed");
     }
 
-    return fd;
+    return (cat_socket_fd_t) fd;
 }
 
 CAT_API cat_socket_fd_t cat_socket_get_fd(const cat_socket_t *socket)
@@ -877,16 +877,16 @@ CAT_API cat_socket_fd_t cat_socket_get_fd(const cat_socket_t *socket)
     return cat_socket_internal_get_fd(isocket);
 }
 
-static cat_always_inline cat_timeout_t cat_socket_align_global_timeout(cat_timeout_t timeout)
+static cat_always_inline cat_socket_timeout_storage_t cat_socket_align_global_timeout(cat_timeout_t timeout)
 {
     if (unlikely(timeout < CAT_SOCKET_TIMEOUT_STORAGE_MIN || timeout > CAT_SOCKET_TIMEOUT_STORAGE_MAX)) {
         return -1;
     }
 
-    return timeout;
+    return (cat_socket_timeout_storage_t) timeout;
 }
 
-static cat_always_inline cat_timeout_t cat_socket_align_timeout(cat_timeout_t timeout)
+static cat_always_inline cat_socket_timeout_storage_t cat_socket_align_timeout(cat_timeout_t timeout)
 {
     if (unlikely(
         (timeout < CAT_SOCKET_TIMEOUT_STORAGE_MIN && timeout != CAT_SOCKET_TIMEOUT_STORAGE_DEFAULT) ||
@@ -894,20 +894,20 @@ static cat_always_inline cat_timeout_t cat_socket_align_timeout(cat_timeout_t ti
         return -1;
     }
 
-    return timeout;
+    return (cat_socket_timeout_storage_t) timeout;
 }
 
 static void cat_socket_set_timeout_to_options(cat_socket_timeout_options_t *options, cat_timeout_t timeout)
 {
-    timeout = cat_socket_align_timeout(timeout);
+    cat_socket_timeout_storage_t timeout_storage = cat_socket_align_timeout(timeout);
 
-    options->dns = timeout;
+    options->dns = timeout_storage;
     /* do not set accept timeout, we usually expect it is -1 */
-    /* options->accept = timeout; */
-    options->connect = timeout;
-    options->handshake = timeout;
-    options->read = timeout;
-    options->write = timeout;
+    /* options->accept = timeout_storage; */
+    options->connect = timeout_storage;
+    options->handshake = timeout_storage;
+    options->read = timeout_storage;
+    options->write = timeout_storage;
 }
 
 CAT_API void cat_socket_set_global_timeout(cat_timeout_t timeout)
@@ -1402,10 +1402,14 @@ CAT_API cat_bool_t cat_socket_enable_crypto_ex(cat_socket_t *socket, cat_socket_
         }
     }
 
+#ifndef CAT_OS_WIN
     /* check context related options */
     if (is_client && ioptions.verify_peer) {
         (void) cat_ssl_context_set_default_verify_paths(context);
     }
+#else
+    cat_ssl_context_configure_verify(context);
+#endif
 
     /* create ssl connection */
     ssl = cat_ssl_create(NULL, context);
@@ -1433,6 +1437,7 @@ CAT_API cat_bool_t cat_socket_enable_crypto_ex(cat_socket_t *socket, cat_socket_
         CAT_ASSERT(ioptions.peer_name.data[ioptions.peer_name.length] == '\0');
         cat_ssl_set_sni_server_name(ssl, ioptions.peer_name.data);
     }
+    ssl->allow_self_signed = ioptions.allow_self_signed;
     if (ioptions.passphrase.length > 0) {
         if (unlikely(!cat_ssl_set_passphrase(ssl, ioptions.passphrase.data, ioptions.passphrase.length))) {
             goto _set_options_error;
@@ -1566,7 +1571,7 @@ CAT_API cat_bool_t cat_socket_getname(const cat_socket_t *socket, cat_sockaddr_t
             if (error == 0 && !cat_sockaddr_is_linux_abstract_name(buffer)) {
                 length += 1;
             }
-            *address_length = length;
+            *address_length = (cat_socklen_t) length;
         }
     }
     if (unlikely(error != 0)) {
@@ -1658,7 +1663,7 @@ static void cat_socket_read_alloc_callback(uv_handle_t *handle, size_t suggested
     cat_socket_read_context_t *context = (cat_socket_read_context_t *) isocket->context.io.read.data.ptr;
 
     buf->base = context->buffer + context->nread;
-    buf->len = context->size - context->nread;
+    buf->len =  (cat_socket_vector_length_t) (context->size - context->nread);
 }
 
 static void cat_socket_read_callback(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf)
@@ -1889,7 +1894,7 @@ static ssize_t cat_socket_internal_read_raw(
     if (error == CAT_ECANCELED) {
         cat_update_last_error(CAT_ECANCELED, "Socket read has been canceled");
     } else {
-        cat_update_last_error_with_reason(error, "Socket read %s", nread != 0 ? "incompleted" : "failed");
+        cat_update_last_error_with_reason((cat_errno_t) error, "Socket read %s", nread != 0 ? "incompleted" : "failed");
     }
     _wait_error:
     if (nread != 0) {
@@ -2167,7 +2172,7 @@ static cat_bool_t cat_socket_internal_write_raw(
         if (error == CAT_ECANCELED) {
             cat_update_last_error(CAT_ECANCELED, "Socket write has been canceled");
         } else {
-            cat_update_last_error_with_reason(error, "Socket write failed");
+            cat_update_last_error_with_reason((cat_errno_t) error, "Socket write failed");
         }
     }
 
@@ -2249,7 +2254,7 @@ static cat_always_inline cat_bool_t cat_socket__write(cat_socket_t *socket, cons
 
 static cat_always_inline cat_bool_t cat_socket__send(cat_socket_t *socket, const char *buffer, size_t length, const cat_sockaddr_t *address, cat_socklen_t address_length, cat_timeout_t timeout)
 {
-    cat_socket_write_vector_t vector = cat_socket_write_vector_init(buffer, length);
+    cat_socket_write_vector_t vector = cat_socket_write_vector_init(buffer, (cat_socket_vector_length_t) length);
     return cat_socket__write(socket, &vector, 1, address, address_length, timeout);
 }
 
@@ -2323,7 +2328,7 @@ static cat_bool_t cat_socket__write_to(cat_socket_t *socket, const cat_socket_wr
 
 static cat_always_inline cat_bool_t cat_socket__send_to(cat_socket_t *socket, const char *buffer, size_t length, const char *name, size_t name_length, int port, cat_timeout_t timeout)
 {
-    cat_socket_write_vector_t vector = cat_socket_write_vector_init(buffer, length);
+    cat_socket_write_vector_t vector = cat_socket_write_vector_init(buffer, (cat_socket_vector_length_t) length);
     return cat_socket__write_to(socket, &vector, 1, name, name_length, port, timeout);
 }
 
@@ -2439,7 +2444,12 @@ static ssize_t cat_socket_internal_peekfrom(
 #ifdef CAT_OS_UNIX_LIKE
     do {
 #endif
-        nread = recvfrom(fd, buffer, size, MSG_PEEK, address, address_length);
+        nread = recvfrom(
+            fd,
+            buffer, (cat_socket_recv_length_t) size, 
+            MSG_PEEK,
+            address, address_length
+        );
 #ifdef CAT_OS_UNIX_LIKE
     } while (unlikely(nread < 0 && errno == EINTR));
 #endif
@@ -2638,7 +2648,7 @@ CAT_API cat_bool_t cat_socket_check_liveness(const cat_socket_t *socket)
     }
     if (unlikely(error != 0 && error != CAT_EAGAIN && error != CAT_EMSGSIZE)) {
         /* there was an unrecoverable error */
-        cat_update_last_error(error, "Socket connection is unavailable");
+        cat_update_last_error((cat_errno_t) error, "Socket connection is unavailable");
         return cat_false;
     }
 
@@ -2771,7 +2781,7 @@ static cat_always_inline int cat_socket_align_buffer_size(int size)
 static int cat_socket_buffer_size(const cat_socket_t *socket, cat_bool_t is_send, size_t size)
 {
     CAT_SOCKET_INTERNAL_GETTER(socket, isocket, return -1);
-    int value = size, error;
+    int value = (int) size, error;
 
     if (size == 0) {
         /* try to get cache */
@@ -2974,7 +2984,7 @@ static void cat_socket_dump_callback(uv_handle_t* handle, void* arg)
     }
 
     cat_info(SOCKET, "%-4s fd: %-6d io: %-12s role: %-7s addr: %s:%d, peer: %s:%d",
-                     type_name, fd, io_state_naming, role, sock_addr, sock_port, peer_addr, peer_port);
+                     type_name, (int) fd, io_state_naming, role, sock_addr, sock_port, peer_addr, peer_port);
 }
 
 CAT_API void cat_socket_dump_all(void)

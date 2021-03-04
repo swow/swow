@@ -67,7 +67,7 @@ cat_coroutine_context_ontop:
     sd  $ra, 144($sp) # save RA
     sd  $ra, 152($sp) # save RA as PC
 
-
+#if defined(__mips_hard_float)
     s.d  $f24, 0($sp)   # save F24
     s.d  $f25, 8($sp)   # save F25
     s.d  $f26, 16($sp)  # save F26
@@ -76,6 +76,7 @@ cat_coroutine_context_ontop:
     s.d  $f29, 40($sp)  # save F29
     s.d  $f30, 48($sp)  # save F30
     s.d  $f31, 56($sp)  # save F31
+#endif
 
     # store SP (pointing to context-data) in t0
     move  $t0, $sp
@@ -83,6 +84,7 @@ cat_coroutine_context_ontop:
     # restore SP (pointing to context-data) from a0
     move  $sp, $a0
 
+#if defined(__mips_hard_float)
     l.d  $f24, 0($sp)   # restore F24
     l.d  $f25, 8($sp)   # restore F25
     l.d  $f26, 16($sp)  # restore F26
@@ -91,6 +93,7 @@ cat_coroutine_context_ontop:
     l.d  $f29, 40($sp)  # restore F29
     l.d  $f30, 48($sp)  # restore F30
     l.d  $f31, 56($sp)  # restore F31
+#endif
 
     ld  $s0, 64($sp)  # restore S0
     ld  $s1, 72($sp)  # restore S1

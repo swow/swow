@@ -126,7 +126,7 @@ CAT_API cat_bool_t cat_sockaddr_check(const cat_sockaddr_t *address, cat_socklen
 /* socket fd */
 
 #define CAT_SOCKET_FD_FMT "%d"
-typedef int cat_socket_fd_t;
+typedef uv_os_sock_t cat_socket_fd_t;
 
 #ifndef CAT_OS_WIN
 #define CAT_SOCKET_INVALID_FD -1
@@ -135,24 +135,22 @@ typedef int cat_socket_fd_t;
 #endif
 
 #ifndef STDIN_FILENO
-#define STDIN_FILENO     0 /* standard input file descriptor */
+#define STDIN_FILENO  ((cat_socket_fd_t) 0) /* standard input file descriptor */
 #endif
 #ifndef STDOUT_FILENO
-#define STDOUT_FILENO    1 /* standard output file descriptor */
+#define STDOUT_FILENO ((cat_socket_fd_t) 1) /* standard output file descriptor */
 #endif
 #ifndef STDERR_FILENO
-#define STDERR_FILENO    2 /* standard error file descriptor */
+#define STDERR_FILENO ((cat_socket_fd_t) 2) /* standard error file descriptor */
 #endif
 
-typedef union
-{
-    cat_socket_fd_t fd;
-    uv_os_sock_t socket;
-    uv_os_sock_t tcp;
-    uv_os_sock_t udp;
-    uv_file pipe;
-    uv_file tty;
-} cat_socket_fd_union_t;
+/* socket length */
+
+#ifndef CAT_OS_WIN
+typedef size_t cat_socket_recv_length_t;
+#else
+typedef int cat_socket_recv_length_t;
+#endif
 
 /* socket vector */
 

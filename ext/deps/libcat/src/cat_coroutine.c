@@ -75,7 +75,7 @@ static cat_coroutine_stack_size_t cat_coroutine_align_stack_size(size_t size)
         size = CAT_MEMORY_ALIGNED_SIZE_EX(size, CAT_COROUTINE_STACK_ALIGNED_SIZE);
     }
 
-    return size;
+    return (cat_coroutine_stack_size_t) size;
 }
 
 CAT_API CAT_GLOBALS_DECLARE(cat_coroutine)
@@ -369,7 +369,7 @@ CAT_API cat_coroutine_t *cat_coroutine_create_ex(cat_coroutine_t *coroutine, cat
     coroutine->previous = NULL;
     coroutine->start_time = 0;
     coroutine->stack = stack;
-    coroutine->stack_size = stack_size;
+    coroutine->stack_size = (cat_coroutine_stack_size_t) stack_size;
     coroutine->context = context;
     coroutine->function = function;
 #ifdef CAT_COROUTINE_USE_UCONTEXT
@@ -675,7 +675,7 @@ CAT_API cat_coroutine_t *cat_coroutine_scheduler_run(cat_coroutine_t *coroutine,
     do {
         cat_coroutine_id_t last_id = CAT_COROUTINE_G(last_id);
         CAT_COROUTINE_G(last_id) = 0;
-        coroutine = cat_coroutine_create(coroutine, (cat_data_t *) scheduler);
+        coroutine = cat_coroutine_create(coroutine, (void *) scheduler);
         CAT_COROUTINE_G(last_id) = last_id;
     } while (0);
 
@@ -688,7 +688,7 @@ CAT_API cat_coroutine_t *cat_coroutine_scheduler_run(cat_coroutine_t *coroutine,
     do {
         cat_coroutine_function_t function = coroutine->function;
         coroutine->function = cat_coroutine_scheduler_function;
-        (void) cat_coroutine_resume(coroutine, function, NULL);
+        (void) cat_coroutine_resume(coroutine, (void *) function, NULL);
         CAT_ASSERT(cat_coroutine_is_alive(coroutine));
     } while (0);
 

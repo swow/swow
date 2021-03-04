@@ -81,7 +81,7 @@ CAT_API char *cat_strndup_function(const char *string, size_t length)
     return cat_strndup(string ,length);
 }
 
-CAT_API size_t cat_getpagesize(void)
+CAT_API int cat_getpagesize(void)
 {
     static int pagesize = 0;
 
@@ -103,7 +103,7 @@ CAT_API size_t cat_getpagesize(void)
         }
     }
 
-    return (size_t) pagesize;
+    return (int) pagesize;
 }
 
 CAT_API void *cat_getpageof(const void *p)

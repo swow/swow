@@ -71,19 +71,19 @@ typedef union
     } \
 } while (0)
 
-#define CAT_FS_HANDLE_RESULT(operation) \
+#define CAT_FS_HANDLE_RESULT(operation, return_type) \
     CAT_FS_HANDLE_ERROR(operation); \
     if (unlikely(context->fs.result < 0)) { \
-        cat_update_last_error_with_reason(context->fs.result, "File-System open failed"); \
+        cat_update_last_error_with_reason((cat_errno_t) context->fs.result, "File-System open failed"); \
         return -1; \
     } \
-    return context->fs.result; \
+    return (return_type) context->fs.result; \
 } while (0);
 
-#define CAT_FS_DO_RESULT(operation, ...) do { \
+#define CAT_FS_DO_RESULT(return_type, operation, ...) do { \
         CAT_FS_PREPARE(return -1) \
         CAT_FS_CALL(operation, ##__VA_ARGS__) \
-        CAT_FS_HANDLE_RESULT(operation) \
+        CAT_FS_HANDLE_RESULT(operation, return_type) \
 } while (0)
 
 static void cat_fs_callback(uv_fs_t *fs)
@@ -113,7 +113,7 @@ CAT_API int cat_fs_open(const char *path, int flags, ...)
         va_end(args);
     }
 
-    CAT_FS_DO_RESULT(open, path, flags, mode);
+    CAT_FS_DO_RESULT(int, open, path, flags, mode);
 }
 
 CAT_API off_t cat_lseek(int fd, off_t offset, int whence)
@@ -123,44 +123,44 @@ CAT_API off_t cat_lseek(int fd, off_t offset, int whence)
 
 CAT_API ssize_t cat_fs_read(int fd, void *buffer, size_t size)
 {
-    uv_buf_t buf = uv_buf_init(buffer, size);
+    uv_buf_t buf = uv_buf_init((char *) buffer, (unsigned int) size);
 
-    CAT_FS_DO_RESULT(read, fd, &buf, 1, 0);
+    CAT_FS_DO_RESULT(ssize_t, read, fd, &buf, 1, 0);
 }
 
 CAT_API ssize_t cat_fs_write(int fd, const void *buffer, size_t length)
 {
-    uv_buf_t buf = uv_buf_init((char *) buffer, length);
+    uv_buf_t buf = uv_buf_init((char *) buffer, (unsigned int) length);
 
-    CAT_FS_DO_RESULT(write, fd, &buf, 1, 0);
+    CAT_FS_DO_RESULT(ssize_t, write, fd, &buf, 1, 0);
 }
 
 CAT_API int cat_fs_close(int fd)
 {
-    CAT_FS_DO_RESULT(close, fd);
+    CAT_FS_DO_RESULT(int, close, fd);
 }
 
 CAT_API int cat_fs_access(const char *path, int mode)
 {
-    CAT_FS_DO_RESULT(access, path, mode);
+    CAT_FS_DO_RESULT(int, access, path, mode);
 }
 
 CAT_API int cat_fs_mkdir(const char *path, int mode)
 {
-    CAT_FS_DO_RESULT(mkdir, path, mode);
+    CAT_FS_DO_RESULT(int, mkdir, path, mode);
 }
 
 CAT_API int cat_fs_rmdir(const char *path)
 {
-    CAT_FS_DO_RESULT(rmdir, path);
+    CAT_FS_DO_RESULT(int, rmdir, path);
 }
 
 CAT_API int cat_fs_rename(const char *path, const char *new_path)
 {
-    CAT_FS_DO_RESULT(rename, path, new_path);
+    CAT_FS_DO_RESULT(int, rename, path, new_path);
 }
 
 CAT_API int cat_fs_unlink(const char *path)
 {
-    CAT_FS_DO_RESULT(unlink, path);
+    CAT_FS_DO_RESULT(int, unlink, path);
 }

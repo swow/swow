@@ -69,7 +69,7 @@
 #define CAT_STATIC_ASSERT(expression) int static_assert_failed[1 - 2 * !(expression)]
 #endif
 
-#ifndef CAT_IDE_HELPER
+#if !defined(CAT_OS_WIN) && !defined(CAT_IDE_HELPER)
 #define CAT_NEVER_HERE(reason) CAT_ASSERT(0 && reason)
 #else
 #define CAT_NEVER_HERE(reason) abort()

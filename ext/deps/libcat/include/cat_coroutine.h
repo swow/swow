@@ -25,14 +25,14 @@ extern "C" {
 #include "cat.h"
 #include "cat_queue.h"
 
-#define CAT_COROUTINE_STACK_ALIGNED_SIZE        (4 * 1024)
-#define CAT_COROUTINE_MIN_STACK_SIZE            (128 * 1024)
-#define CAT_COROUTINE_RECOMMENDED_STACK_SIZE    (256 * 1024)
-#define CAT_COROUTINE_MAX_STACK_SIZE            (16 * 1024 * 1024)
+#define CAT_COROUTINE_STACK_ALIGNED_SIZE        (4UL * 1024UL)
+#define CAT_COROUTINE_MIN_STACK_SIZE            (128UL * 1024UL)
+#define CAT_COROUTINE_RECOMMENDED_STACK_SIZE    (256UL * 1024UL)
+#define CAT_COROUTINE_MAX_STACK_SIZE            (16UL * 1024UL * 1024UL)
 
-#define CAT_COROUTINE_MIN_ID                    0
+#define CAT_COROUTINE_MIN_ID                    0ULL
 #define CAT_COROUTINE_MAX_ID                    UINT64_MAX
-#define CAT_COROUTINE_MAIN_ID                   1
+#define CAT_COROUTINE_MAIN_ID                   1ULL
 
 typedef void cat_coroutine_stack_t;
 

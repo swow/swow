@@ -51,7 +51,7 @@ CAT_API cat_bool_t cat_module_shutdown(void)
 
 CAT_API cat_bool_t cat_runtime_init(void)
 {
-    srand(time(NULL));
+    srand((unsigned int) time(NULL));
 
     CAT_G(log_types) = CAT_LOG_TYPES_DEFAULT;
     CAT_G(log_module_types) = CAT_MODULE_TYPES_ALL;

@@ -79,13 +79,13 @@ CAT_API uint8_t cat_websocket_header_pack(cat_websocket_header_t *header, char *
     pe = buffer + size;
 
     if (likely(header->payload_length <= CAT_WEBSOCKET_EXT8_MAX_LENGTH)) {
-        header->len = header->payload_length;
+        header->len = (unsigned int) header->payload_length;
     } else if (likely(header->payload_length <= CAT_WEBSOCKET_EXT16_MAX_LENGTH)) {
         if (unlikely(p + sizeof(uint16_t) > pe)) {
             return 0;
         }
         header->len = CAT_WEBSOCKET_EXT16_LENGTH;
-        *((uint16_t *) p) = htons(header->payload_length);
+        *((uint16_t *) p) = (uint16_t) htons((uint16_t) header->payload_length);
         p += sizeof(uint16_t);
     } else {
         if (unlikely(p + sizeof(uint64_t) > pe)) {
@@ -105,7 +105,7 @@ CAT_API uint8_t cat_websocket_header_pack(cat_websocket_header_t *header, char *
         p += CAT_WEBSOCKET_MASK_KEY_LENGTH;
     }
 
-    return p - buffer;
+    return (uint8_t) (p - buffer);
 }
 
 CAT_API uint8_t cat_websocket_header_unpack(cat_websocket_header_t *header, const char *data, size_t length)
@@ -143,7 +143,7 @@ CAT_API uint8_t cat_websocket_header_unpack(cat_websocket_header_t *header, cons
         p += CAT_WEBSOCKET_MASK_KEY_LENGTH;
     }
 
-    return p - data;
+    return (uint8_t) (p - data);
 }
 
 CAT_API void cat_websocket_mask(char *to, char *from, uint64_t length, const char *mask_key)

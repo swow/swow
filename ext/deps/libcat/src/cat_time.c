@@ -56,13 +56,13 @@ CAT_API char *cat_time_format_msec(cat_msec_t msec)
     cat_msec_t rmsec = msec;
     int day, hour, minute, second;
 
-    day = msec / DAY;
+    day = (int) (msec / DAY);
     rmsec -= (day * DAY);
-    hour = rmsec / HOUR;
+    hour = (int) (rmsec / HOUR);
     rmsec -= (hour * HOUR);
-    minute = rmsec / MINUTE;
+    minute = (int) (rmsec / MINUTE);
     rmsec -= (minute * MINUTE);
-    second = rmsec / SECOND;
+    second = (int) (rmsec / SECOND);
     rmsec -= (second * SECOND);
 
     if (day > 0) {
@@ -194,7 +194,7 @@ CAT_API cat_msec_t cat_time_msleep(cat_msec_t msec)
 
 CAT_API int cat_time_usleep(uint64_t microseconds)
 {
-    cat_msec_t msec = ((double) microseconds) / 1000;
+    cat_msec_t msec = (cat_msec_t) (((double) microseconds) / 1000);
     return likely(cat_time_msleep(msec) == 0) ? 0 : -1;
 }
 
@@ -204,7 +204,7 @@ CAT_API int cat_time_nanosleep(const struct timespec *rqtp, struct timespec *rmt
         cat_update_last_error(CAT_EINVAL, "The value in the tv_nsec field was not in the range 0 to 999999999 or tv_sec was negative");
         return -1;
     } else {
-        uint64_t msec = rqtp->tv_sec * 1000 + (((double) rqtp->tv_nsec) / (1000 * 1000));
+        uint64_t msec = (uint64_t) (rqtp->tv_sec * 1000 + (((double) rqtp->tv_nsec) / (1000 * 1000)));
         if (unlikely(msec > INT64_MAX)) {
             msec = INT64_MAX;
         }

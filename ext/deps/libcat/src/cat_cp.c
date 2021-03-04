@@ -47,7 +47,10 @@ CAT_API int gettimeofday(struct timeval *time_info, struct timezone *timezone_in
 
     /* Get the time, if they want it */
     if (time_info != NULL) {
-        error = uv_gettimeofday(time_info);
+        uv_timeval64_t _time_info;
+        error = uv_gettimeofday(&_time_info);
+        time_info->tv_sec = (long) _time_info.tv_sec;
+        time_info->tv_usec = (long) _time_info.tv_usec;
     }
     /* Get the timezone, if they want it */
     if (timezone_info != NULL) {
@@ -86,7 +89,7 @@ CAT_API int nanosleep(const struct timespec *rqtp, struct timespec *rmtp)
         cat_set_sys_errno(WSAEINVAL);
         return -1;
     }
-    return usleep(rqtp->tv_sec * 1000000 + rqtp->tv_nsec / 1000);
+    return usleep((unsigned int) (rqtp->tv_sec * 1000000 + rqtp->tv_nsec / 1000));
 }
 #endif
 
