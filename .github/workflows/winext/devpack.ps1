@@ -7,7 +7,8 @@ param (
     [string]$PhpVer = "",
     [string]$PhpVCVer = "",
     [string]$PhpArch = "x64",
-    [bool]$PhpTs = $false
+    [bool]$PhpTs = $false,
+    [bool]$DryRun = $false
 )
 
 $scriptPath = Split-Path -parent $MyInvocation.MyCommand.Definition
@@ -55,6 +56,14 @@ function fetchdevpack(){
     if ($info.$PhpVer.$phpvar) {
         info "Found target version on releases, try using latest devpack."
         $latest = $info.$PhpVer.$phpvar."devel_pack"
+        # if we are in github workflows, set ver as output
+        if(${env:CI} -Eq "true"){
+            Write-Host ('::set-output name=devpackver::' + $info.$PhpVer."version")
+        }
+        if($DryRun){
+            return
+        }
+        
         if($latest.sha1){
             $hash = $latest.sha1
             $hashmethod = "SHA1"
@@ -85,7 +94,7 @@ function fetchdevpack(){
     } else {
         info "Target version is not active release or failed to download releases info, try search in file list."
         try{
-            $page = fetchinfo "https://windows.php.net/downloads/releases/archives/"
+            $page = fetchpage "https://windows.php.net/downloads/releases/archives/"
             $groups = ($page | Select-String `
                 -List `
                 -AllMatches `
@@ -98,10 +107,21 @@ function fetchdevpack(){
                 }
             }
             $fn = 'php-devel-pack-' + $PhpVer + '.' + $used + $dashnts +'-Win32-' + $PhpVCVer + '-' + $PhpArch + '.zip'
+            # if we are in github workflows, set ver as output
+            if(${env:CI} -Eq "true"){
+                Write-Host "::set-output name=devpackver::$PhpVer.$used"
+            }
         }catch [System.Net.WebException],[System.IO.IOException]{
             warn "Cannot fetch archives list, use oldest instead"
             Write-Host $_
             $fn = 'php-devel-pack-' + $PhpVer + '.0' + $dashnts +'-Win32-' + $PhpVCVer + '-' + $PhpArch + '.zip'
+            # if we are in github workflows, set ver as output
+            if(${env:CI} -Eq "true"){
+                Write-Host "::set-output name=devpackver::$PhpVer.0"
+            }
+        }
+        if($DryRun){
+            return
         }
         #Write-Host $fn
         provedir $ToolsPath
@@ -113,11 +133,14 @@ function fetchdevpack(){
 }
 
 info "Finding devpack for PHP $PhpVer $phpvar"
-$info = fetchinfo -Uri "https://windows.php.net/downloads/releases/releases.json" | ConvertFrom-Json
+$info = fetchjson -Uri "https://windows.php.net/downloads/releases/releases.json"
 if(!$info){
     warn "Cannot fetch php releases info from windows.php.net."
 }
 $zipdest = fetchdevpack
+if($DryRun){
+    return
+}
 if (-Not $zipdest){
     err "Failed download devpack zip."
     exit 1

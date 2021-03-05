@@ -8,21 +8,21 @@ on:
 jobs:
   createrel:
     name: Create draft release
-    runs-on: "ubuntu-latest"
+    runs-on: "windows-latest"
     outputs:
-      upload_url: ${{ steps.create_release.outputs.upload_url }}
       id: ${{ steps.create_release.outputs.id }}
     steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
       - name: Create Release
         id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
-          draft: true
-          prerelease: false
+        run: |
+          .\.github\workflows\winext\release.ps1 `
+            -Repo "${{ github.repository }}" `
+            -Token "${{ secrets.GITHUB_TOKEN }}" `
+            -TagName "${{ github.ref }}".Split("/")[-1] `
+            -prerelease $true
 
   builddlls:
     # this name is used after, change it with cautious
@@ -47,18 +47,75 @@ jobs:
       # we may use per-matrix outputs to solve this
       # as mentioned in https://github.community/t/bug-jobs-output-should-return-a-list-for-a-matrix-job/128626
       max-parallel: 1
+    env:
+      deps: openssl
+      tools_path: C:\tools\phpdev
     steps:
       - name: Checkout
         uses: actions/checkout@v2
+      
+      - name: Prepare caches
+        id: cacheprepare
+        env:
+          UNIX_COLOR: 1
+        run: |
+          . "./.github/workflows/winext/utils.ps1" -ToolName "cacheprepare" -MaxTry 3
+          $os = "${{ matrix.os }}"
+          if($os.Equals("windows-latest") -Or $os.Equals("windows-2019")){
+            $PhpVCVer = "VS16"
+          }elseif($os.Equals("windows-2016")){
+            $PhpVCVer = "VC15"
+          }
+          function phpsdkver{
+            $headers = @{
+              "accept"="application/vnd.github.v3+json";
+              "content-type"="application/json";
+              "authorization"="Bearer ${{ secrets.GITHUB_TOKEN }}";
+            }
+            $info = fetchjson -Uri "https://api.github.com/repos/microsoft/php-sdk-binary-tools/git/ref/heads/master" -Headers $headers
+            if(!$info){
+              warn "Cannot fetch php-sdk-binary-tools info from api.github.com"
+            }else{
+              $ver = $info."object"."sha"
+              Write-Host "::set-output name=phpsdkver::$ver"
+            }
+          }
+          info "Using $PhpVCVer"
+          $ret = 1
+          phpsdkver
+          ./.github/workflows/winext/getphp.ps1 `
+            -PhpVer ${{ matrix.phpver }} `
+            -PhpArch ${{ matrix.arch }} `
+            -PhpVCVer $PhpVCVer `
+            -PhpTs ${{ matrix.ts }} `
+            -DryRun 1 &&
+          ./.github/workflows/winext/devpack.ps1 `
+            -PhpVer ${{ matrix.phpver }} `
+            -PhpArch ${{ matrix.arch }} `
+            -PhpVCVer $PhpVCVer `
+            -PhpTs ${{ matrix.ts }} `
+            -DryRun 1 &&
+          ./.github/workflows/winext/deps.ps1 `
+            ${{ env.deps }} `
+            -DryRun 1 &&
+          ($ret = 0 | Out-Null)
+          exit $ret
+
+      - name: Cache build environments
+        uses: actions/cache@v2
+        with:
+          path: |
+            ${{ env.tools_path }}
+          key: buildenv-v1-${{ matrix.arch }}-${{ matrix.ts }}-${{ steps.cacheprepare.outputs.phpver }}-${{ steps.cacheprepare.outputs.devpackver }}-${{ steps.cacheprepare.outputs.downloadeddeps }}-${{ steps.cacheprepare.outputs.phpsdkver }}
 
       - name: Build Swow extension
         id: ext-build
         uses: ./.github/workflows/winext
         with:
           ext-path: ./ext
-          tools-path: C:\tools\phpdev
+          tools-path: ${{ env.tools_path }}
           ext-name: swow
-          deps: openssl
+          deps: ${{ env.deps }}
           phpver: ${{ matrix.phpver }}
           phpts: ${{ matrix.ts }}
           phparch: ${{ matrix.arch }}
@@ -107,84 +164,18 @@ jobs:
             --set-timeout 30 ^
             --color ^
             ext\tests
-      
-      - name: Upload Release Asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ needs.createrel.outputs.upload_url }}
-          asset_path: ./ext/${{ matrix.arch }}/Release${{ (matrix.ts == '1') && '_TS' || ''}}/php_swow.dll
-          asset_name: php_swow-php${{ matrix.phpver }}-${{ matrix.arch }}-${{ (matrix.ts == '0') && 'n' || '' }}ts-${{ (matrix.os == 'windows-latest') && 'VS16' || 'VC15' }}.dll
-          asset_content_type: application/zip
 
       - name: Note about the built dll
         shell: powershell
+        env:
+          UNIX_COLOR: "1"
         run: |
-          Write-Host "::group::Patching original notes"
-          function finduri{
-            param($RunID, $Repo, $Name, $Headers)
-            $ret = Invoke-WebRequest `
-              -Headers $headers `
-              -Uri "https://api.github.com/repos/$Repo/actions/runs/$RunID/jobs" | ConvertFrom-Json
-            Write-Host $ret.jobs
-            foreach($job in $ret.jobs) {
-                Write-Host $job.name
-                Write-Host $job.html_url
-                if($job.name.ToString().Contains($Name)){
-                    return $job.html_url
-                }
-            }
-          }
-          function update{
-            param($RelID, $RunID, $Name, $OrigFileName, $FileName, $Result, $Repo, $Token)
-            
-            $headers = @{
-              "accept"="application/vnd.github.v3+json";
-              "content-type"="application/json";
-              "authorization"="Bearer ${Token}";
-            }
-            $orig = Invoke-WebRequest `
-              -Uri "https://api.github.com/repos/$Repo/releases/$RelID" `
-              -Headers $headers | ConvertFrom-JSON
-            if(!$orig){
-              Write-Host "Failed fetch original release note"
-              return 1
-            }
-            $note = $orig.body
-            $note = "$note"
-            $mark = '<!-- mark for notes -->'
-            if(!($note | Select-String $mark).Matches.Success){
-                Write-Host "Add hashes markdown tag and init it's content"
-                $note += "`n## Hashes and notes`n`n" + `
-                    "| File name | Size (in bytes) | SHA256 sum | Build log | Tests result |`n" + `
-                    "| - | - | - | - | - |`n" + `
-                    "${mark}`n"
-            }
-            $filesize = (Get-Item $OrigFileName).Length
-            $filehash = (Get-FileHash -Algorithm SHA256 $OrigFileName).Hash
-            $link = finduri -Headers $headers -RunID $RunID -Repo $Repo -Name $Name
-            $note = $note.Replace($mark, "| ${FileName} | ${filesize} | ${filehash} | [link](${link}) | ${Result} |`n" + $mark)
-
-            $patch = @{
-              "body"="$note";
-            } | ConvertTo-Json -Compress
-            $ret = Invoke-WebRequest `
-              -Body $patch `
-              -Method "PATCH" `
-              -Uri "https://api.github.com/repos/$Repo/releases/$RelID" `
-              -Headers $headers | ConvertFrom-JSON
-            if(!$ret){
-              return 1
-            }
-          }
-          update `
+          .\.github\workflows\winext\uploader.ps1 `
             -RelID "${{ needs.createrel.outputs.id }}" `
             -RunID "${{ github.run_id }}" `
-            -Name "PHP-${{ matrix.phpver }}-${{ matrix.arch }}-${{ (matrix.ts == '0') && 'N' || '' }}TS-${{ (matrix.os == 'windows-latest') && 'VS16' || 'VC15' }}" `
-            -OrigFileName "ext\${{ matrix.arch }}\Release${{ (matrix.ts == '1') && '_TS' || ''}}\php_swow.dll" `
-            -Filename "php_swow-php${{ matrix.phpver }}-${{ matrix.arch }}-${{ (matrix.ts == '0') && 'n' || '' }}ts-${{ (matrix.os == 'windows-latest') && 'VS16' || 'VC15' }}.dll" `
+            -RunName "PHP-${{ matrix.phpver }}-${{ matrix.arch }}-${{ (matrix.ts == '0') && 'N' || '' }}TS-${{ (matrix.os == 'windows-latest') && 'VS16' || 'VC15' }}" `
+            -fn "ext\${{ matrix.arch }}\Release${{ (matrix.ts == '1') && '_TS' || ''}}\php_swow.dll" `
+            -Name "php_swow-php${{ matrix.phpver }}-${{ matrix.arch }}-${{ (matrix.ts == '0') && 'n' || '' }}ts-${{ (matrix.os == 'windows-latest') && 'VS16' || 'VC15' }}.dll" `
             -Repo "${{ github.repository }}" `
             -Token "${{ secrets.GITHUB_TOKEN }}" `
-            -Result "${{ steps.ext-test.outcome }}"
-          exit $lastexitcode
+            -TestResult "${{ steps.ext-test.outcome }}"

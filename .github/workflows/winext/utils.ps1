@@ -42,22 +42,33 @@ function provedir {
     }
 }
 
-function fetchinfo {
-    param ($Uri)
+function fetchpage {
+    param ($Uri, $Headers=$null, $Method="GET", $Body=$null)
     for ($i=0; $i -lt $MaxTry; $i++){
         try{
-            $ret = Invoke-WebRequest -Uri $Uri
+            $ret = Invoke-WebRequest -Uri $Uri -UseBasicParsing -Headers $Headers -Method $Method -Body $Body
+            return $ret
         }catch [System.Net.WebException],[System.IO.IOException]{
             warn "Failed to fetch php releases info from windows.php.net, try again."
             Write-Host $_
             continue
         }
-        #$info = Invoke-WebRequest -Uri "https://on" | ConvertFrom-Json
-        if($info){
-            break
+    }
+    return $null
+}
+
+function fetchjson {
+    param ($Uri, $Headers, $Method="GET", $Body)
+    $page = fetchpage -Uri $Uri -Headers $Headers -Method $Method -Body $Body
+    if($page){
+        try{
+            return ($page | ConvertFrom-Json)
+        }catch{
+            warn "Failed parse page as json."
+            Write-Host $_
         }
     }
-    return $ret
+    return $null
 }
 
 function dlwithhash{
@@ -68,7 +79,7 @@ function dlwithhash{
     for ($i=0; $i -lt $MaxTry; $i++){
         try{
             info "Try to download ${uri}"
-            Invoke-WebRequest -Uri $Uri -OutFile $Dest | Out-Null
+            Invoke-WebRequest -Uri $Uri -OutFile $Dest -UseBasicParsing | Out-Null
         }catch [System.Net.WebException],[System.IO.IOException]{
             warn "Failed download ${uri}."
             Write-Host $_
@@ -165,5 +176,5 @@ function searchfile{
         }
     }
 
-    return $used['fn'].ToString()
+    return @($used['fn'].ToString(), $used['ver'].ToString())
 }

@@ -50,11 +50,15 @@ runs:
   steps:
     - name: Prepare php-sdk-binary-tools
       shell: cmd
+      id: phpsdk-prepare
       run: |
-        ECHO ::group::Fetching php-sdk-binary-tools from Github && ^
-        IF NOT EXIST ${{ inputs.tools-path }} MKDIR ${{ inputs.tools-path }} && ^
-        git clone https://github.com/Microsoft/php-sdk-binary-tools ${{ inputs.tools-path }}\php-sdk-binary-tools --single-branch
-        ECHO ::endgroup::
+        IF NOT EXIST ${{ inputs.tools-path }} ( MKDIR ${{ inputs.tools-path }} )
+        IF NOT EXIST ${{ inputs.tools-path }}\php-sdk-binary-tools (
+          ECHO ::group::Fetching php-sdk-binary-tools from Github
+          git clone --single-branch --depth=1 https://github.com/Microsoft/php-sdk-binary-tools ${{ inputs.tools-path }}\php-sdk-binary-tools || EXIT /B 1
+          ECHO ::endgroup::
+        )
+        git --git-dir=${{ inputs.tools-path }}\php-sdk-binary-tools\.git --work-tree=${{ inputs.tools-path }}\php-sdk-binary-tools pull || EXIT /B 1
 
     - name: Prepare PHP devel-pack and deps
       shell: powershell

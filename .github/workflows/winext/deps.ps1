@@ -8,7 +8,8 @@ param (
     [string]$PhpVer = "",
     [string]$PhpVCVer = "",
     [string]$PhpArch = "x64",
-    [bool]$PhpTs = $false
+    [bool]$PhpTs = $false,
+    [bool]$DryRun = $false
 )
 
 $scriptPath = Split-Path -parent $MyInvocation.MyCommand.Definition
@@ -42,16 +43,17 @@ if ("".Equals($PhpVer)){
 }
 
 info "Try to fetch deps series list from windows.php.net"
-$series = (fetchinfo "https://windows.php.net/downloads/php-sdk/deps/series/packages-$PhpVer-$PhpVCVer-$PhpArch-staging.txt").Content
+$series = (fetchpage "https://windows.php.net/downloads/php-sdk/deps/series/packages-$PhpVer-$PhpVCVer-$PhpArch-staging.txt").Content
 if(!$series){
     warn "Cannot get series information from windows.php.net, try file list instead"
-    $filelist = (fetchinfo ("https://windows.php.net/downloads/php-sdk/deps/" + $PhpVCVer.ToLower() + "/$PhpArch/")).Content
+    $filelist = (fetchpage ("https://windows.php.net/downloads/php-sdk/deps/" + $PhpVCVer.ToLower() + "/$PhpArch/")).Content
     if(!$filelist){
         err "Neither series file nor file list can be got, aborting"
         exit 1
     }
 }
 
+$downloadeddeps = [System.Collections.ArrayList]@()
 foreach ($depname in $DllDeps) {
     $depfile = $null
     if($series){
@@ -63,13 +65,19 @@ foreach ($depname in $DllDeps) {
             }
         }
     }else{
-        $depfile = searchfile $filelist -Pattern ("$depname-:-" + $PhpVCVer.ToLower() + "-$PhpArch.zip")
+        $fnver = searchfile $filelist -Pattern ("$depname-:-" + $PhpVCVer.ToLower() + "-$PhpArch.zip")
+        $depfile = $fnver[0]
     }
     
     if(!$depfile){
         err "Cannot find dep file for $depname"
         exit 1
     }
+    $downloadeddeps.Add($depfile) | Out-Null
+    if($DryRun){
+        continue
+    }
+
     info "Downloading $filename from windows.php.net"
     provedir "$ToolsPath"
     provedir "$ToolsPath\deps"
@@ -87,6 +95,12 @@ foreach ($depname in $DllDeps) {
     info "Unzipping $dest to $ToolsPath\deps\"
     
     Expand-Archive $dest -Destination "$ToolsPath\deps\" -Force
+}
+
+# if we are in github workflows, set downloaded as output
+if(${env:CI} -Eq "true"){
+    $s = ( $downloadeddeps | Sort-Object ) -Join ","
+    Write-Host "::set-output name=downloadeddeps::$s"
 }
 
 info "Done."

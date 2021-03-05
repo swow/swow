@@ -6,7 +6,8 @@ param (
     [string]$PhpVer = "",
     [string]$PhpVCVer = "",
     [string]$PhpArch = "x64",
-    [bool]$PhpTs = $false
+    [bool]$PhpTs = $false,
+    [bool]$DryRun = $false
 )
 
 $scriptPath = Split-Path -parent $MyInvocation.MyCommand.Definition
@@ -46,7 +47,7 @@ if($PhpTs){
 }
 
 info "Fetching releases list for PHP $PhpVer $phpvar"
-$info = fetchinfo -Uri "https://windows.php.net/downloads/releases/releases.json" | ConvertFrom-Json
+$info = fetchjson -Uri "https://windows.php.net/downloads/releases/releases.json"
 if(!$info){
     warn "Cannot fetch php releases info from windows.php.net."
 }
@@ -55,6 +56,13 @@ $dest = $null
 if($info.$PhpVer.$phpvar){
     info "Found in releases, use it"
     $latest = $info.$PhpVer.$phpvar."zip"
+    # if we are in github workflows, set ver as output
+    if(${env:CI} -Eq "true"){
+        Write-Host ('::set-output name=phpver::' + $info.$PhpVer."version")
+    }
+    if($DryRun){
+        return
+    }
     if($latest.sha1){
         $hash = $latest.sha1
         $hashmethod = "SHA1"
@@ -80,12 +88,23 @@ if($info.$PhpVer.$phpvar){
         -Hashmethod $hashmethod
 }else{
     info "Cannot find in releases, fetching php list from windows.php.net"
-    $page = fetchinfo "https://windows.php.net/downloads/releases/archives/"
-    $fn = searchfile $page -Pattern ('php-(?<ver>' + $PhpVer + '[^-]+?)' + $dashnts +'-Win32-' + $PhpVCVer + '-' + $PhpArch + '.zip')
-    if(!$fn){
+    $page = fetchpage "https://windows.php.net/downloads/releases/archives/"
+    $fnver = searchfile $page -Pattern ('php-(?<ver>' + $PhpVer + '[^-]+?)' + $dashnts +'-Win32-' + $PhpVCVer + '-' + $PhpArch + '.zip')
+    if(!$fnver){
         warn "Cannot fetch archives list, use oldest instead"
         Write-Host $_
         $fn = 'php-' + $PhpVer + '.0' + $dashnts +'-Win32-' + $PhpVCVer + '-' + $PhpArch + '.zip'
+        $ver = $PhpVer + '.0'
+    }else{
+        $fn = $fnver[0]
+        $ver = $fnver[1]
+    }
+    # if we are in github workflows, set ver as output
+    if(${env:CI} -Eq "true"){
+        Write-Host "::set-output name=phpver::$ver"
+    }
+    if($DryRun){
+        return
     }
     $dest = "$ToolsPath\$fn"
     $ret = dlwithhash -Uri "https://windows.php.net/downloads/releases/archives/$fn" -Dest $dest
