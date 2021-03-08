@@ -5,7 +5,7 @@ on: [push, pull_request]
 
 jobs:
   unix-tests:
-    name: PHP ${{ matrix.php-version }} Test on ${{ matrix.os }}
+    name: PHP ${{ matrix.php-version }} ${{ matrix.ts }} Test on ${{ matrix.os }}
     runs-on: "${{ matrix.os }}"
     strategy:
       fail-fast: false
@@ -13,7 +13,8 @@ jobs:
         os: [ubuntu-latest, macos-latest]
         # os: [ubuntu-latest]
         php-version: ['8.0', '7.4', '7.3']
-      max-parallel: 6
+        ts: ['nts', 'ts']
+      max-parallel: 12
     steps:
       - name: Checkout
         uses: actions/checkout@v1
@@ -26,6 +27,8 @@ jobs:
           # ini-values: pcov.directory=lib
           # coverage: pcov
           coverage: none
+        env:
+          phpts: ${{ matrix.ts }}
 
       - name: Setup Deps
         run: composer update -o --ignore-platform-reqs
@@ -59,19 +62,22 @@ jobs:
         run: exit 1
 
   windows-tests:
-    name: PHP ${{ matrix.php-version }} Test on ${{ matrix.os }}
+    name: PHP ${{ matrix.php-version }} ${{ matrix.ts }} Test on ${{ matrix.os }}
     runs-on: "${{ matrix.os }}"
     strategy:
       fail-fast: false
       matrix:
-        include:
+        os: ['windows-latest', 'windows-2016']
+        php-version: ['8.0', '7.4', '7.3']
+        ts: [ 'nts', 'ts' ]
+        exclude:
           - os: windows-latest
-            php-version: "8.0"
-          - os: windows-2016
             php-version: "7.4"
-          - os: windows-2016
+          - os: windows-latest
             php-version: "7.3"
-      max-parallel: 3
+          - os: windows-2016
+            php-version: "8.0"
+      max-parallel: 6
     steps:
       - name: Checkout
         uses: actions/checkout@v1
@@ -85,6 +91,8 @@ jobs:
           # ini-values: pcov.directory=lib
           # coverage: pcov
           coverage: none
+        env:
+          phpts: ${{ matrix.ts }}
       
       - name: Setup Deps
         run: composer update -o --ignore-platform-reqs
