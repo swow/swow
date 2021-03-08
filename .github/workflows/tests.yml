@@ -13,7 +13,7 @@ jobs:
         os: [ubuntu-latest, macos-latest]
         # os: [ubuntu-latest]
         php-version: ['8.0', '7.4', '7.3']
-        ts: ['nts', 'ts']
+        #ts: ['nts', 'ts']
       max-parallel: 12
     steps:
       - name: Checkout
@@ -27,8 +27,8 @@ jobs:
           # ini-values: pcov.directory=lib
           # coverage: pcov
           coverage: none
-        env:
-          phpts: ${{ matrix.ts }}
+        #env:
+          #phpts: ${{ matrix.ts }}
 
       - name: Setup Deps
         run: composer update -o --ignore-platform-reqs
