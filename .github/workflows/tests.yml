@@ -47,11 +47,6 @@ jobs:
         continue-on-error: true
         run: |
           composer test-extension -- \
-            ./tests \
-            --show-diff \
-            --show-slow 1000 \
-            --set-timeout 30 \
-            --color \
             -j`${{ runner.os == 'Linux' && 'nproc' || 'sysctl -n hw.logicalcpu' }}`
 
       - name: Run library tests
@@ -112,23 +107,12 @@ jobs:
           ext-name: swow
           deps: openssl
 
-      # shell we move these commands into some bats or composer.json?
       - name: Run extension tests
         shell: cmd
         id: ext-test
         continue-on-error: true
         run: |
-          ECHO Start run-tests && ^
-          FOR /F "USEBACKQ" %%I IN (`WHERE PHP`) DO SET TEST_PHP_EXECUTABLE=%%I && ^
-          SET NO_INTERACTION=1 && ^
-          php ext\tests\runner\run-tests.php ^
-            --show-diff ^
-            --show-slow 1000 ^
-            --set-timeout 30 ^
-            --color ^
-            ext\tests
-          
-        # seems not work yet: -j%NUMBER_OF_PROCESSORS% ^
+          composer test-extension
 
       - name: Run library tests
         shell: cmd

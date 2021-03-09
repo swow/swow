@@ -1,0 +1,42 @@
+<?php
+# vi: ft=php
+
+$NOLIMIT = 8192;
+
+chdir(__DIR__ . "/../../ext");
+
+if("Windows" === PHP_OS_FAMILY){
+    echo("No need to set nolimit on Windows" . PHP_EOL);
+    $shell = "CMD /C";
+    $cmd = PHP_BINARY;
+}else{
+    echo("Setting nolimit to ${NOLIMIT}" . PHP_EOL);
+    $shell = "sh -c";
+    $cmd = "{ ulimit -n ${NOLIMIT} || echo 'Cannot set nolimit to ${NOLIMIT}, some tests may fail.' ; } && " . PHP_BINARY;
+}
+
+$retval = NULL;
+if(!extension_loaded("Swow")){
+    $enable_swow = "-d extension=swow";
+    $check = "-dextension=swow --ri swow";
+    echo("Checking if we have swow built" . PHP_EOL);
+    #echo("${shell} \"${cmd} ${check}\"" . PHP_EOL);
+    passthru("${shell} \"${cmd} ${check}\"", $retval);
+    if(0 !== $retval){
+        echo("Failed load swow extension, have you installed swow (i.e. run composer build-ext)?" . PHP_EOL);
+        die($retval);
+    }
+}else{
+    $enable_swow = "";
+}
+$test = "-n ./tests/runner/run-tests.php -P ${enable_swow} --show-diff --show-slow 1000 --set-timeout 30 --color ";
+
+$myargs = array_map("escapeshellarg", $argv);
+array_shift($myargs);
+$myargs = escapeshellarg(implode(" ", $myargs));
+
+echo("Start testing swow" . PHP_EOL);
+#echo("${shell} \"${cmd} ${test}\"${myargs}" . PHP_EOL);
+passthru("${shell} \"${cmd} ${test}\"${myargs}", $retval);
+die($retval);
+
