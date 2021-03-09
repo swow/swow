@@ -4,6 +4,23 @@ name: tests
 on: [push, pull_request]
 
 jobs:
+  cs-check:
+    name: Library coding style check
+    runs-on: "ubuntu-latest"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v1
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: 7.4 # should be update to latest when cs-fixer supports 8.0
+
+      - name: Coding Standards Check
+        run: |
+          composer update -o --ignore-platform-reqs
+          composer update -o
+          composer cs-check
+
   unix-tests:
     name: PHP ${{ matrix.php-version }} ${{ matrix.ts }} Test on ${{ matrix.os }}
     runs-on: "${{ matrix.os }}"
@@ -32,12 +49,6 @@ jobs:
 
       - name: Setup Deps
         run: composer update -o --ignore-platform-reqs
-
-      - name: Coding Standards Check
-        continue-on-error: true
-        run: |
-          composer update -o
-          composer cs-check
 
       - name: Build Swow extension
         run: composer build-extension -- --debug
@@ -91,12 +102,6 @@ jobs:
       
       - name: Setup Deps
         run: composer update -o --ignore-platform-reqs
-
-      - name: Coding Standards Check
-        continue-on-error: true
-        run: |
-          composer update -o
-          composer cs-check
 
       - name: Build Swow extension
         uses: ./.github/workflows/winext
