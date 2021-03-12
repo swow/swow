@@ -887,6 +887,11 @@ static PHP_METHOD_EX(Swow_Socket, _write, zend_bool single, zend_bool may_addres
             ztmp = NULL; \
         } \
 } while (0)
+#if PHP_VERSION_ID < 80100
+#define _ARG_POS(x)
+#else
+#define _ARG_POS(x) , x
+#endif
                         _CURRENT_ZVAL_(bucket, bucket_end, ztmp);
                         CAT_ASSERT(ztmp != NULL);
                         if (EXPECTED(Z_TYPE_P(ztmp) == IS_STRING)) {
@@ -895,18 +900,18 @@ static PHP_METHOD_EX(Swow_Socket, _write, zend_bool single, zend_bool may_addres
                                 string = Z_STR_P(ztmp);
                             } else {
                                 _maybe_stringable_object:
-                                if (UNEXPECTED(!zend_parse_arg_str(ztmp, &string, 0))) {
+                                if (UNEXPECTED(!zend_parse_arg_str(ztmp, &string, 0 _ARG_POS(1)))) {
                                     zend_argument_value_error(1, "[%u][string] must be type of string, %s given", vector_count, zend_zval_type_name(ztmp));
                                     goto _error;
                                 }
                             }
                             _NEXT_ZVAL_(bucket, bucket_end, ztmp);
-                            if (UNEXPECTED(ztmp!= NULL && !zend_parse_arg_long(ztmp, &offset, NULL, 0))) {
+                            if (UNEXPECTED(ztmp!= NULL && !zend_parse_arg_long(ztmp, &offset, NULL, 0 _ARG_POS(1)))) {
                                 zend_argument_value_error(1, "[%u][offset] must be type of long", vector_count);
                                 goto _error;
                             }
                             _NEXT_ZVAL_(bucket, bucket_end, ztmp);
-                            if (UNEXPECTED(ztmp != NULL && !zend_parse_arg_long(ztmp, &length, NULL, 0))) {
+                            if (UNEXPECTED(ztmp != NULL && !zend_parse_arg_long(ztmp, &length, NULL, 0 _ARG_POS(1)))) {
                                 zend_argument_value_error(1, "[%u][length] must be type of long", vector_count);
                                 goto _error;
                             }
@@ -920,7 +925,7 @@ static PHP_METHOD_EX(Swow_Socket, _write, zend_bool single, zend_bool may_addres
                                 goto _error;
                             }
                             _NEXT_ZVAL_(bucket, bucket_end, ztmp);
-                            if (UNEXPECTED(ztmp != NULL && !zend_parse_arg_long(ztmp, &length, &length_is_null, 1))) {
+                            if (UNEXPECTED(ztmp != NULL && !zend_parse_arg_long(ztmp, &length, &length_is_null, 1 _ARG_POS(1)))) {
                                 zend_argument_value_error(1, "[%u][length] must be type of long or null, %s given", vector_count, zend_zval_type_name(ztmp));
                                 goto _error;
                             }
@@ -931,11 +936,12 @@ static PHP_METHOD_EX(Swow_Socket, _write, zend_bool single, zend_bool may_addres
                         /* buffer object (do othing) */
                     } else {
                         /* stringable object  */
-                        if (UNEXPECTED(!zend_parse_arg_str_slow(ztmp, &string))) {
+                        if (UNEXPECTED(!zend_parse_arg_str_slow(ztmp, &string _ARG_POS(1)))) {
                             zend_argument_value_error(1, "[%u] must be type of string, array or %s, %s given", vector_count, ZSTR_VAL(swow_buffer_ce->name), zend_zval_type_name(ztmp));
                             goto _error;
                         }
                     }
+#undef _ARG_POS
                     if (EXPECTED(string != NULL)) {
                         SWOW_BUFFER_CHECK_STRING_SCOPE_EX(string, offset, length, goto _error);
                         if (length == 0) {
