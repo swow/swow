@@ -48,6 +48,9 @@ if (!file_exists("{$workSpace}/Makefile") || isset($options['rebuild'])) {
 
 // TODO: use Swow\Cpu module
 $cpuCount = (int) shell_exec("{$workSpace}/deps/libcat/tools/cpu_count.sh");
+if ($cpuCount <= 0) {
+    $cpuCount = 4;
+}
 // TODO: CFLAGS/CXXFLAGS Werror
 $commandArray[] = isset($options['show-log']) ? "make -j{$cpuCount}" : "make -j{$cpuCount} > /dev/null";
 
