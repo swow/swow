@@ -509,8 +509,9 @@ static int swow_stream_set_option(php_stream *stream, int option, int value, voi
             return PHP_STREAM_OPTION_RETURN_OK;
         }
         case PHP_STREAM_OPTION_BLOCKING: {
-            /* always blocked */
-            return PHP_STREAM_OPTION_RETURN_OK;
+			int oldmode = sock->is_blocked;
+            sock->is_blocked = value;
+            return oldmode;
         }
         case PHP_STREAM_OPTION_READ_TIMEOUT: {
             sock->timeout = *(struct timeval *) ptrparam;
