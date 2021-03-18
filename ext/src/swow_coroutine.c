@@ -2100,21 +2100,39 @@ static void (*original_zend_error_cb)(int type, const char *error_filename, cons
 
 static void swow_call_original_zend_error_cb(int type, const char *error_filename, const uint32_t error_lineno, ZEND_ERROR_CB_LAST_ARG_D)
 {
-    if (EXPECTED(original_zend_error_cb != NULL)) {
-        zend_try {
-            original_zend_error_cb(type, error_filename, error_lineno, ZEND_ERROR_CB_LAST_ARG_RELAY);
-        } zend_catch {
-            exit(EG(exit_status));
-        } zend_end_try();
-    }
+    original_zend_error_cb(type, error_filename, error_lineno, ZEND_ERROR_CB_LAST_ARG_RELAY);
+}
+
+static void swow_call_original_zend_error_cb_safe(int type, const char *error_filename, const uint32_t error_lineno, ZEND_ERROR_CB_LAST_ARG_D)
+{
+    zend_try {
+        original_zend_error_cb(type, error_filename, error_lineno, ZEND_ERROR_CB_LAST_ARG_RELAY);
+    } zend_catch {
+        exit(EG(exit_status));
+    } zend_end_try();
 }
 
 static void swow_coroutine_error_cb(int type, const char *error_filename, const uint32_t error_lineno, ZEND_ERROR_CB_LAST_ARG_D)
 {
+    swow_coroutine_t *current_scoroutine = swow_coroutine_get_current();
+    swow_coroutine_t *main_scoroutine = swow_coroutine_get_main();
 #if PHP_VERSION_ID >= 80000
     const char *format = ZSTR_VAL(message);
 #endif
     zend_string *new_message = NULL;
+
+    if (current_scoroutine == main_scoroutine) {
+        /* keep silent for kill/term(0) */
+        if (SWOW_COROUTINE_G(silent_exception_in_main)) {
+            SWOW_COROUTINE_G(silent_exception_in_main) = cat_false;
+            return;
+        }
+        /* only main coroutine, keep error behaviour as normal */
+        if (CAT_COROUTINE_G(count) == 1) {
+            swow_call_original_zend_error_cb(type, error_filename, error_lineno, ZEND_ERROR_CB_LAST_ARG_RELAY);
+            return;
+        }
+    }
 
     if (!SWOW_COROUTINE_G(classic_error_handler)) {
         const char *original_type_string = swow_strerrortype(type);
@@ -2122,19 +2140,13 @@ static void swow_coroutine_error_cb(int type, const char *error_filename, const 
         /* strncmp maybe macro if compiler is Virtual Pascal? */
         if (strncmp(format, "Uncaught ", sizeof("Uncaught ") - 1) == 0) {
             /* hack hook for error in main */
-            if (swow_coroutine_get_current() == swow_coroutine_get_main()) {
-                /* keep silent for kill/term(0) */
-                if (SWOW_COROUTINE_G(silent_exception_in_main)) {
-                    SWOW_COROUTINE_G(silent_exception_in_main) = cat_false;
+            if (current_scoroutine == main_scoroutine) {
+                zend_long severity = SWOW_COROUTINE_G(exception_error_severity);
+                if (severity == E_NONE) {
                     return;
-                } else {
-                    zend_long severity = SWOW_COROUTINE_G(exception_error_severity);
-                    if (severity == E_NONE) {
-                        return;
-                    }
-                    type = severity;
-                    original_type_string = swow_strerrortype(type);
                 }
+                type = severity;
+                original_type_string = swow_strerrortype(type);
             }
             /* the exception of the coroutines will never cause the process to exit */
             if (type & E_FATAL_ERRORS) {
@@ -2147,8 +2159,10 @@ static void swow_coroutine_error_cb(int type, const char *error_filename, const 
         }
         do {
             /* Notice: current coroutine is NULL before RINIT */
-            swow_coroutine_t *scoroutine = swow_coroutine_get_current();
-            cat_coroutine_id_t id = scoroutine != NULL ? scoroutine->coroutine.id : CAT_COROUTINE_MAIN_ID;
+            cat_coroutine_id_t id =
+                current_scoroutine != NULL ?
+                current_scoroutine->coroutine.id :
+                CAT_COROUTINE_MAIN_ID;
 
             new_message = zend_strpprintf(0,
                 "[%s in R" CAT_COROUTINE_ID_FMT "] %s%s%s%s",
@@ -2175,7 +2189,7 @@ static void swow_coroutine_error_cb(int type, const char *error_filename, const 
             swow_coroutine_executor_save(swow_coroutine_get_current()->executor);
         }
     }
-    swow_call_original_zend_error_cb(type, error_filename, error_lineno, ZEND_ERROR_CB_LAST_ARG_RELAY);
+    swow_call_original_zend_error_cb_safe(type, error_filename, error_lineno, ZEND_ERROR_CB_LAST_ARG_RELAY);
     if (new_message != NULL) {
         zend_string_release(new_message);
     }
