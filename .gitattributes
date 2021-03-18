@@ -1,4 +1,6 @@
 /.github export-ignore
 /benchmark export-ignore
 /examples export-ignore
-/tests export-ignore
+/ext/tests export-ignore
+/lib/tests export-ignore
+/tools/extension export-ignore

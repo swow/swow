@@ -21,6 +21,7 @@ modules
 *loT
 *.a
 *.o
+*.dep
 *.deps
 *.libs
 *.log
