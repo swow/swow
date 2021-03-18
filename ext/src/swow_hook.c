@@ -18,6 +18,19 @@
 
 #include "swow_hook.h"
 
+SWOW_API cat_bool_t swow_hook_internal_function_handler(const char *name, size_t name_length, zif_handler handler)
+{
+    zend_function *function = (zend_function *) zend_hash_str_find_ptr(CG(function_table), name, name_length);
+
+    if (UNEXPECTED(function == NULL)) {
+        return cat_false;
+    }
+
+    function->internal_function.handler = handler;
+
+    return cat_true;
+}
+
 SWOW_API cat_bool_t swow_hook_internal_function(const zend_function_entry *fe)
 {
     zend_function *function = (zend_function *) zend_hash_str_find_ptr(CG(function_table), fe->fname, strlen(fe->fname));
