@@ -690,10 +690,15 @@ static bytes_t swow_stream_write(php_stream *stream, const char *buffer, size_t 
 
     if (UNEXPECTED(!ret)) {
         cat_errno_t error =  cat_get_last_error_code();
-        php_error_docref(
-            NULL, E_NOTICE, "Send of " ZEND_LONG_FMT " bytes failed with errno=%d %s",
-            (zend_long) length, error, cat_get_last_error_message()
-        );
+#ifdef PHP_STREAM_FLAG_SUPPRESS_ERRORS
+		if (!(stream->flags & PHP_STREAM_FLAG_SUPPRESS_ERRORS))
+#endif
+        {
+            php_error_docref(
+                NULL, E_NOTICE, "Send of " ZEND_LONG_FMT " bytes failed with errno=%d %s",
+                (zend_long) length, error, cat_get_last_error_message()
+            );
+        }
         sock->timeout_event = (error == CAT_ETIMEDOUT);
         return PHP_STREAM_SOCKET_RETURN_ERR;
     }
