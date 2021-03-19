@@ -18,19 +18,6 @@
 
 #include "cat_ssl.h"
 
-CAT_API const char *cat_ssl_version(void)
-{
-#ifdef CAT_SSL
-#if (OPENSSL_VERSION_NUMBER >= 0x10100001L)
-    return OpenSSL_version(OPENSSL_VERSION);
-#else
-    return SSLeay_version(SSLEAY_VERSION);
-#endif
-#else
-    return NULL;
-#endif
-}
-
 #ifdef CAT_SSL
 
 #ifdef CAT_OS_WIN

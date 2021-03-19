@@ -44,7 +44,8 @@ CAT_API cat_bool_t cat_module_init_all(void)
            cat_ssl_module_init() &&
 #endif
            cat_socket_module_init() &&
-           cat_watch_dog_module_init();
+           cat_watch_dog_module_init() &&
+           cat_true;
 }
 
 CAT_API cat_bool_t cat_module_shutdown_all(void)
@@ -63,7 +64,8 @@ CAT_API cat_bool_t cat_runtime_init_all(void)
            cat_coroutine_runtime_init() &&
            cat_event_runtime_init() &&
            cat_socket_runtime_init() &&
-           cat_watch_dog_runtime_init();
+           cat_watch_dog_runtime_init() &&
+           cat_true;
 }
 
 CAT_API cat_bool_t cat_runtime_shutdown_all(void)

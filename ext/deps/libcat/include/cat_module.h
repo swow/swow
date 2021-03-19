@@ -34,7 +34,8 @@
     XX(WATCH_DOG, 1 << 17) \
     XX(PROTOCOL,  1 << 18) \
     /* optional (19 ~ 22) */ \
-    XX(SSL,       1 << 22) \
+    XX(SSL,       1 << 21) \
+    XX(EXT,       1 << 22) \
     /* test */ \
     XX(TEST,      1 << 23)
 

@@ -272,7 +272,7 @@ typedef enum
         CAT_SOCKET_TYPE_FLAG_SERVER |
         CAT_SOCKET_TYPE_FLAG_CLIENT |
         CAT_SOCKET_TYPE_FLAG_SESSION,
-} cat_socket_union_type_flas_t;
+} cat_socket_union_type_flags_t;
 
 typedef uint32_t cat_socket_type_t;
 
