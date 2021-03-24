@@ -378,7 +378,7 @@ def_tmp:
 }
 
 // todo: hijack TEMP stream implementation
-static php_stream *_swow_php_stream_fopen_temporary_file(const char *dir, const char *pfx, zend_string **opened_path_ptr STREAMS_DC)
+SWOW_API php_stream *_swow_php_stream_fopen_temporary_file(const char *dir, const char *pfx, zend_string **opened_path_ptr STREAMS_DC)
 {
     zend_string *opened_path = NULL;
     int fd;
@@ -447,7 +447,7 @@ static php_stream *_swow_php_stream_fopen_from_fd(int fd, const char *mode, cons
             stream->flags |= PHP_STREAM_FLAG_NO_SEEK;
             stream->position = -1;
         } else {
-            stream->position = zend_lseek(self->fd, 0, SEEK_CUR);
+            stream->position = cat_fs_lseek(self->fd, 0, SEEK_CUR);
 #ifdef ESPIPE
             /* FIXME: Is this code still needed? */
             if (stream->position == (zend_off_t)-1 && errno == ESPIPE) {
@@ -461,7 +461,7 @@ static php_stream *_swow_php_stream_fopen_from_fd(int fd, const char *mode, cons
     return stream;
 }
 
-static php_stream *_swow_php_stream_fopen_from_file(FILE *file, const char *mode STREAMS_DC)
+SWOW_API php_stream *_swow_php_stream_fopen_from_file(FILE *file, const char *mode STREAMS_DC)
 {
     php_stream *stream = swow_php_stream_fopen_from_file_int_rel(file, mode);
 
@@ -480,7 +480,7 @@ static php_stream *_swow_php_stream_fopen_from_file(FILE *file, const char *mode
     return stream;
 }
 
-static php_stream *_swow_php_stream_fopen_from_pipe(FILE *file, const char *mode STREAMS_DC)
+SWOW_API php_stream *_swow_php_stream_fopen_from_pipe(FILE *file, const char *mode STREAMS_DC)
 {
     swow_php_stdio_stream_data *self;
     php_stream *stream;
@@ -686,8 +686,7 @@ static int swow_php_stdiop_seek(php_stream *stream, zend_off_t offset, int whenc
     if (data->fd >= 0) {
         zend_off_t result;
 
-        // todo: cat_work
-        result = zend_lseek(data->fd, offset, whence);
+        result = cat_fs_lseek(data->fd, offset, whence);
         if (result == (zend_off_t)-1)
             return -1;
 
@@ -1141,7 +1140,7 @@ static php_stream *swow_php_plain_files_dir_opener(php_stream_wrapper *wrapper, 
 /* }}} */
 
 /* {{{ php_stream_fopen */
-static php_stream *_swow_php_stream_fopen(const char *filename, const char *mode, zend_string **opened_path, int options STREAMS_DC)
+SWOW_API  php_stream *_swow_php_stream_fopen(const char *filename, const char *mode, zend_string **opened_path, int options STREAMS_DC)
 {
     if (options & STREAM_OPEN_FOR_INCLUDE) {
         return php_stream_fopen(filename, mode, opened_path);
@@ -1627,7 +1626,7 @@ SWOW_API php_stream_wrapper swow_php_plain_files_wrapper = {
 };
 
 /* {{{ php_stream_fopen_with_path */
-static php_stream *_swow_php_stream_fopen_with_path(const char *filename, const char *mode, const char *path, zend_string **opened_path, int options STREAMS_DC)
+SWOW_API php_stream *_swow_php_stream_fopen_with_path(const char *filename, const char *mode, const char *path, zend_string **opened_path, int options STREAMS_DC)
 {
     /* code ripped off from fopen_wrappers.c */
     char *pathbuf, *end;
