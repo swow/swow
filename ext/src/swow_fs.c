@@ -1019,15 +1019,10 @@ const php_stream_ops    swow_php_stream_stdio_ops = {
 };
 /* }}} */
 
-typedef struct swow_dir_s {
-    cat_dir_t * dir;
-    const char* path;
-} swow_dir_data_t;
-
 /* {{{ plain files opendir/readdir implementation */
 static ssize_t swow_php_plain_files_dirstream_read(php_stream *stream, char *buf, size_t count)
 {
-    swow_dir_data_t *data = (swow_dir_data_t*)stream->abstract;
+    cat_dir_t *dir = (cat_dir_t *)stream->abstract;
     cat_dirent_t *result;
     php_stream_dirent *ent = (php_stream_dirent*)buf;
 
@@ -1035,7 +1030,7 @@ static ssize_t swow_php_plain_files_dirstream_read(php_stream *stream, char *buf
     if (count != sizeof(php_stream_dirent))
         return -1;
 
-    result = cat_fs_readdir(data->dir);
+    result = cat_fs_readdir(dir);
     if (result) {
         PHP_STRLCPY(ent->d_name, result->name, sizeof(ent->d_name), strlen(result->name));
         free((void*)result->name);
@@ -1047,16 +1042,13 @@ static ssize_t swow_php_plain_files_dirstream_read(php_stream *stream, char *buf
 
 static int swow_php_plain_files_dirstream_close(php_stream *stream, int close_handle)
 {
-    int ret = cat_fs_closedir(((swow_dir_data_t *)stream->abstract)->dir);
-    efree((char*)((swow_dir_data_t *)stream->abstract)->path);
-    efree(stream->abstract);
+    int ret = cat_fs_closedir((cat_dir_t*)stream->abstract);
     return ret;
 }
 
 static int swow_php_plain_files_dirstream_rewind(php_stream *stream, zend_off_t offset, int whence, zend_off_t *newoffs)
 {
-    swow_dir_data_t *data = (swow_dir_data_t*)stream->abstract;
-    cat_fs_rewinddir(data->dir);
+    cat_fs_rewinddir((cat_dir_t*)stream->abstract);
     return 0;
 }
 
@@ -1073,8 +1065,6 @@ static const php_stream_ops swow_php_plain_files_dirstream_ops = {
 static php_stream *swow_php_plain_files_dir_opener(php_stream_wrapper *wrapper, const char *path, const char *mode,
     int options, zend_string **opened_path, php_stream_context *context STREAMS_DC)
 {
-    // fixme: use rewinddir then recover this implemention
-    swow_dir_data_t *data = emalloc(sizeof(*data));
     php_stream *stream = NULL;
 
 #ifdef HAVE_GLOB
@@ -1087,13 +1077,12 @@ static php_stream *swow_php_plain_files_dir_opener(php_stream_wrapper *wrapper, 
         return NULL;
     }
 
-    data->dir = cat_fs_opendir(path);
-    if (data->dir) {
-        stream = php_stream_alloc(&swow_php_plain_files_dirstream_ops, data, 0, mode);
+    cat_dir_t * dir = cat_fs_opendir(path);
+    if (dir) {
+        stream = php_stream_alloc(&swow_php_plain_files_dirstream_ops, dir, 0, mode);
         if (stream == NULL){
-            cat_fs_closedir(data->dir);
+            cat_fs_closedir(dir);
         }
-        data->path = estrdup(path);
     }
 
     return stream;
