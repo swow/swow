@@ -107,6 +107,7 @@ EOF
 
   SWOW_INCLUDES="-I${ext_srcdir}/include"
   SWOW_ADD_SOURCES(src,
+    swow_fs.c \
     swow_wrapper.c \
     swow_log.c \
     swow_exceptions.c \
