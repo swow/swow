@@ -177,6 +177,22 @@ static char *swow_stream_parse_ip_address_ex(const char *str, size_t str_len, in
     return host;
 }
 
+#ifdef AF_UNIX
+// from main/streams/xp_socket.c:parse_unix_address @ 3e01f5afb1b52fe26a956190296de0192eedeec1
+// should we remove this in the future?
+static inline void remove_me(size_t* len){
+    const size_t max_path = sizeof(struct sockaddr_un) - offsetof(struct sockaddr_un, sun_path);
+    if (*len >= max_path) {
+        *len = max_path - 1;
+        php_error_docref(NULL, E_NOTICE,
+            "socket path exceeded the maximum allowed length of %lu bytes "
+            "and was truncated", max_path);
+    }
+}
+#else
+#define remove_me(...)
+#endif
+
 static char *swow_stream_parse_ip_address(php_stream_xport_param *xparam, int *portno)
 {
     return swow_stream_parse_ip_address_ex(xparam->inputs.name, xparam->inputs.namelen, portno, xparam->want_errortext, &xparam->outputs.error_text);
@@ -234,6 +250,7 @@ static inline int swow_stream_bind(php_stream *stream, swow_netstream_data_t *sw
         }
 #endif
     } else {
+        remove_me(&xparam->inputs.namelen);
         host = xparam->inputs.name;
         host_len = xparam->inputs.namelen;
     }
@@ -358,6 +375,8 @@ static int swow_stream_connect(php_stream *stream, swow_netstream_data_t *swow_s
         if (UNEXPECTED(socket == NULL)) {
             goto _error;
         }
+
+        remove_me(&xparam->inputs.namelen);
 
         ret = cat_socket_connect_ex(socket, xparam->inputs.name, xparam->inputs.namelen, 0, cat_time_tv2to(xparam->inputs.timeout)) ? 0 : -1;
 
