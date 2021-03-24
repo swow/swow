@@ -1,6 +1,10 @@
 name: git mirrors
 
-on: [ push, delete, create ]
+on:
+  push:
+    branches: develop
+  delete:
+  create:
 
 jobs:
   gitee:
