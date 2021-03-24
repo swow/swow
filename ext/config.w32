@@ -75,6 +75,7 @@ if (PHP_SWOW != 'no') (function(){
         'swow_time.c',
         'swow_buffer.c',
         'swow_socket.c',
+        'swow_fs.c',
         'swow_stream.c',
         'swow_signal.c',
         'swow_watch_dog.c',

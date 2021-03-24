@@ -30,7 +30,6 @@
   +--------------------------------------------------------------------------+
  */
 
-
 #include "swow.h"
 #include "cat_fs.h"
 
@@ -55,6 +54,11 @@
 # include <sys/mman.h>
 #endif
 #include "SAPI.h"
+
+// compatiable with PHP7
+#ifndef PHP_STREAM_FLAG_SUPPRESS_ERRORS
+#define PHP_STREAM_FLAG_SUPPRESS_ERRORS 0
+#endif
 
 #if SWOW_DEBUG
 
@@ -95,7 +99,8 @@
 # endif
 # define EMSGSIZE WSAEMSGSIZE
 # include "win32/winutil.h"
-# include "win32/time.h"
+// we use swow's shim
+//# include "win32/time.h"
 # include "win32/ioutil.h"
 # include "win32/readdir.h"
 #endif
@@ -115,6 +120,67 @@ extern int php_get_gid_by_name(const char *name, gid_t *gid);
 #else
 # define PLAIN_WRAP_BUF_SIZE(st) (st)
 #endif
+
+// from win32/winutils.c @ a08a2b48b489572db89940027206020ee714afa5
+#ifdef PHP_WIN32
+static int swow_php_win32_check_trailing_space(const char * path, const size_t path_len)
+{
+	if (path_len > MAXPATHLEN - 1) {
+		return 1;
+	}
+	if (path) {
+		if (path[0] == ' ' || path[path_len - 1] == ' ') {
+			return 0;
+		} else {
+			return 1;
+		}
+	} else {
+		return 0;
+	}
+}
+#endif
+
+// from main/streams/cast.c @ b0d139456aad9921d30ba8dfd32fc6cac79dedf9
+static void swow_php_stream_mode_sanitize_fdopen_fopencookie(php_stream *stream, char *result)
+{
+	/* replace modes not supported by fdopen and fopencookie, but supported
+	 * by PHP's fread(), so that their calls won't fail */
+	const char *cur_mode = stream->mode;
+	int         has_plus = 0,
+		        has_bin  = 0,
+				i,
+				res_curs = 0;
+
+	if (cur_mode[0] == 'r' || cur_mode[0] == 'w' || cur_mode[0] == 'a') {
+		result[res_curs++] = cur_mode[0];
+	} else {
+		/* assume cur_mode[0] is 'c' or 'x'; substitute by 'w', which should not
+		 * truncate anything in fdopen/fopencookie */
+		result[res_curs++] = 'w';
+
+		/* x is allowed (at least by glibc & compat), but not as the 1st mode
+		 * as in PHP and in any case is (at best) ignored by fdopen and fopencookie */
+	}
+
+	/* assume current mode has at most length 4 (e.g. wbn+) */
+	for (i = 1; i < 4 && cur_mode[i] != '\0'; i++) {
+		if (cur_mode[i] == 'b') {
+			has_bin = 1;
+		} else if (cur_mode[i] == '+') {
+			has_plus = 1;
+		}
+		/* ignore 'n', 't' or other stuff */
+	}
+
+	if (has_bin) {
+		result[res_curs++] = 'b';
+	}
+	if (has_plus) {
+		result[res_curs++] = '+';
+	}
+
+	result[res_curs] = '\0';
+}
 
 /* {{{ ------- plain file stream implementation -------*/
 
@@ -165,18 +231,11 @@ static int do_fstat(swow_php_stdio_stream_data *d, int force)
         COPY_MEMBER(st_gid);
         COPY_MEMBER(st_rdev);
         COPY_MEMBER(st_size);
-#ifdef PHP_WIN32
-        d->sb.st_atime = st_atim.tv_sec;
-        d->sb.st_ctime = st_ctim.tv_sec;
-        d->sb.st_mtime = st_mtim.tv_sec;
-#else
-        COPY_MEMBER(st_atim.tv_sec);
-        COPY_MEMBER(st_atim.tv_nsec);
-        COPY_MEMBER(st_mtim.tv_sec);
-        COPY_MEMBER(st_mtim.tv_nsec);
-        COPY_MEMBER(st_ctim.tv_sec);
-        COPY_MEMBER(st_ctim.tv_nsec);
 
+        d->sb.st_atime = statbuf.st_atim.tv_sec;
+        d->sb.st_ctime = statbuf.st_ctim.tv_sec;
+        d->sb.st_mtime = statbuf.st_mtim.tv_sec;
+#ifndef PHP_WIN32
         COPY_MEMBER(st_blksize);
         COPY_MEMBER(st_blocks);
 #endif
@@ -243,7 +302,7 @@ static int swow_php_do_open_temporary_file(const char *path, const char *pfx, ze
     
 
 #ifdef PHP_WIN32
-    if (!php_win32_check_trailing_space(pfx, strlen(pfx))) {
+    if (!swow_php_win32_check_trailing_space(pfx, strlen(pfx))) {
         cat_update_last_error(EINVAL, "Bad file name"); // fixme: check this!
         return -1;
     }
@@ -272,7 +331,7 @@ static int swow_php_do_open_temporary_file(const char *path, const char *pfx, ze
         return -1;
     }
 
-    fd = mkstemp(opened_path);
+    fd = cat_fs_mkstemp(opened_path);
 
     if (fd != -1 && opened_path_p) {
         *opened_path_p = zend_string_init(opened_path, strlen(opened_path), 0);
@@ -283,7 +342,7 @@ static int swow_php_do_open_temporary_file(const char *path, const char *pfx, ze
 }
 
 // from main/php_open_temporary_file.c
-static int swow_php_open_temporary_fd_ex(const char *dir, const char *pfx, zend_string **opened_path_p, uint32_t flags)
+static int swow_php_open_temporary_fd(const char *dir, const char *pfx, zend_string **opened_path_p)
 {
     int fd;
     const char *temp_dir;
@@ -301,36 +360,30 @@ def_tmp:
 
         if (temp_dir &&
             *temp_dir != '\0' &&
-            (!(flags & PHP_TMP_FILE_OPEN_BASEDIR_CHECK_ON_FALLBACK) || !php_check_open_basedir(temp_dir))) {
+            (!php_check_open_basedir(temp_dir))) {
             return swow_php_do_open_temporary_file(temp_dir, pfx, opened_path_p);
         } else {
             return -1;
         }
     }
 
-    if ((flags & PHP_TMP_FILE_OPEN_BASEDIR_CHECK_ON_EXPLICIT_DIR) && php_check_open_basedir(dir)) {
-        return -1;
-    }
-
     /* Try the directory given as parameter. */
     fd = swow_php_do_open_temporary_file(dir, pfx, opened_path_p);
     if (fd == -1) {
         /* Use default temporary directory. */
-        if (!(flags & PHP_TMP_FILE_SILENT)) {
-            php_error_docref(NULL, E_NOTICE, "file created in the system's temporary directory");
-        }
+        php_error_docref(NULL, E_NOTICE, "file created in the system's temporary directory");
         goto def_tmp;
     }
     return fd;
 }
 
 // todo: hijack TEMP stream implementation
-PHPAPI php_stream *_swow_php_stream_fopen_temporary_file(const char *dir, const char *pfx, zend_string **opened_path_ptr STREAMS_DC)
+static php_stream *_swow_php_stream_fopen_temporary_file(const char *dir, const char *pfx, zend_string **opened_path_ptr STREAMS_DC)
 {
     zend_string *opened_path = NULL;
     int fd;
 
-    fd = swow_php_open_temporary_fd_ex(dir, pfx, &opened_path, PHP_TMP_FILE_DEFAULT);
+    fd = swow_php_open_temporary_fd(dir, pfx, &opened_path);
     if (fd != -1)    {
         php_stream *stream;
 
@@ -382,7 +435,7 @@ static void detect_is_seekable(swow_php_stdio_stream_data *self) {
 #endif
 }
 
-PHPAPI php_stream *_swow_php_stream_fopen_from_fd(int fd, const char *mode, const char *persistent_id STREAMS_DC)
+static php_stream *_swow_php_stream_fopen_from_fd(int fd, const char *mode, const char *persistent_id STREAMS_DC)
 {
     php_stream *stream = swow_php_stream_fopen_from_fd_int_rel(fd, mode, persistent_id);
 
@@ -408,7 +461,7 @@ PHPAPI php_stream *_swow_php_stream_fopen_from_fd(int fd, const char *mode, cons
     return stream;
 }
 
-PHPAPI php_stream *_swow_php_stream_fopen_from_file(FILE *file, const char *mode STREAMS_DC)
+static php_stream *_swow_php_stream_fopen_from_file(FILE *file, const char *mode STREAMS_DC)
 {
     php_stream *stream = swow_php_stream_fopen_from_file_int_rel(file, mode);
 
@@ -427,7 +480,7 @@ PHPAPI php_stream *_swow_php_stream_fopen_from_file(FILE *file, const char *mode
     return stream;
 }
 
-PHPAPI php_stream *_swow_php_stream_fopen_from_pipe(FILE *file, const char *mode STREAMS_DC)
+static php_stream *_swow_php_stream_fopen_from_pipe(FILE *file, const char *mode STREAMS_DC)
 {
     swow_php_stdio_stream_data *self;
     php_stream *stream;
@@ -650,8 +703,6 @@ static int swow_php_stdiop_seek(php_stream *stream, zend_off_t offset, int whenc
     }
 }
 
-// todo: shim
-void php_stream_mode_sanitize_fdopen_fopencookie(php_stream *stream, char *result);
 static int swow_php_stdiop_cast(php_stream *stream, int castas, void **ret)
 {
     php_socket_t fd;
@@ -670,7 +721,7 @@ static int swow_php_stdiop_cast(php_stream *stream, int castas, void **ret)
                     /* we were opened as a plain file descriptor, so we
                      * need fdopen now */
                     char fixed_mode[5];
-                    php_stream_mode_sanitize_fdopen_fopencookie(stream, fixed_mode);
+                    swow_php_stream_mode_sanitize_fdopen_fopencookie(stream, fixed_mode);
                     data->file = fdopen(data->fd, fixed_mode);
                     if (data->file == NULL) {
                         return FAILURE;
@@ -1255,11 +1306,11 @@ static int swow_php_plain_files_rename(php_stream_wrapper *wrapper, const char *
     }
 
 #ifdef PHP_WIN32
-    if (!php_win32_check_trailing_space(url_from, strlen(url_from))) {
+    if (!swow_php_win32_check_trailing_space(url_from, strlen(url_from))) {
         php_win32_docref2_from_error(ERROR_INVALID_NAME, url_from, url_to);
         return 0;
     }
-    if (!php_win32_check_trailing_space(url_to, strlen(url_to))) {
+    if (!swow_php_win32_check_trailing_space(url_to, strlen(url_to))) {
         php_win32_docref2_from_error(ERROR_INVALID_NAME, url_from, url_to);
         return 0;
     }
@@ -1457,7 +1508,7 @@ static int swow_php_plain_files_rmdir(php_stream_wrapper *wrapper, const char *u
     }
 
 #ifdef PHP_WIN32
-    if (!php_win32_check_trailing_space(url, strlen(url))) {
+    if (!swow_php_win32_check_trailing_space(url, strlen(url))) {
         php_error_docref1(NULL, url, E_WARNING, "%s", strerror(ENOENT));
         return 0;
     }
@@ -1485,7 +1536,7 @@ static int swow_php_plain_files_metadata(php_stream_wrapper *wrapper, const char
     int ret = 0;
 
 #ifdef PHP_WIN32
-    if (!php_win32_check_trailing_space(url, strlen(url))) {
+    if (!swow_php_win32_check_trailing_space(url, strlen(url))) {
         php_error_docref1(NULL, url, E_WARNING, "%s", strerror(ENOENT));
         return 0;
     }
@@ -1576,7 +1627,7 @@ SWOW_API php_stream_wrapper swow_php_plain_files_wrapper = {
 };
 
 /* {{{ php_stream_fopen_with_path */
-PHPAPI php_stream *_swow_php_stream_fopen_with_path(const char *filename, const char *mode, const char *path, zend_string **opened_path, int options STREAMS_DC)
+static php_stream *_swow_php_stream_fopen_with_path(const char *filename, const char *mode, const char *path, zend_string **opened_path, int options STREAMS_DC)
 {
     /* code ripped off from fopen_wrappers.c */
     char *pathbuf, *end;
