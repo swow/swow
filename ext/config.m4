@@ -1,5 +1,19 @@
 dnl config.m4 for extension swow
 
+dnl check if this php version we support
+AC_MSG_CHECKING([Check for supported PHP versions])
+if test -z "$PHP_VERSION"; then
+  if test -z "$PHP_CONFIG"; then
+    AC_MSG_ERROR([php-config not found])
+  fi
+  PHP_VERSION=`$PHP_CONFIG --version`
+fi
+
+if test -z "$PHP_VERSION"; then
+  AC_MSG_ERROR([failed to detect PHP version, please report])
+fi
+PHP_VERSION_ID=`echo "${PHP_VERSION}" | $AWK 'BEGIN { FS = "."; } { printf "%d", ([$]1 * 100 + [$]2) * 100 + [$]3;}'`
+
 PHP_ARG_ENABLE([swow],
   [whether to enable Swow support],
   [AS_HELP_STRING([--enable-swow], [Enable Swow support])],
@@ -18,11 +32,21 @@ PHP_ARG_ENABLE([swow-valgrind],
   [$PHP_SWOW_DEBUG], [no]
 )
 
+dnl php73's PHP_SETUP_OPENSSL will error out when openssl not found
+dnl so we make it not enabled default
+if test "${PHP_VERSION_ID}" -lt "70400" ; then
+PHP_ARG_ENABLE([swow-ssl],
+  [whether to enable Swow OpenSSL support],
+  [AS_HELP_STRING([--enable-swow-ssl], [Enable Swow OpenSSL support])],
+  [no], [no]
+)
+else
 PHP_ARG_ENABLE([swow-ssl],
   [whether to enable Swow OpenSSL support],
   [AS_HELP_STRING([--enable-swow-ssl], [Enable Swow OpenSSL support])],
   [yes], [no]
 )
+fi
 
 PHP_ARG_ENABLE([swow-curl],
   [whether to enable Swow cURL support],
@@ -32,19 +56,6 @@ PHP_ARG_ENABLE([swow-curl],
 
 if test "${SWOW}" != "no"; then
 
-  dnl check if this php version we support
-  AC_MSG_CHECKING([Check for supported PHP versions])
-  if test -z "$PHP_VERSION"; then
-    if test -z "$PHP_CONFIG"; then
-      AC_MSG_ERROR([php-config not found])
-    fi
-    PHP_VERSION=`$PHP_CONFIG --version`
-  fi
-
-  if test -z "$PHP_VERSION"; then
-    AC_MSG_ERROR([failed to detect PHP version, please report])
-  fi
-  PHP_VERSION_ID=`echo "${PHP_VERSION}" | $AWK 'BEGIN { FS = "."; } { printf "%d", ([$]1 * 100 + [$]2) * 100 + [$]3;}'`
   if test "${PHP_VERSION_ID}" -lt "70300" || test "${PHP_VERSION_ID}" -ge "80200"; then
     AC_MSG_ERROR([not supported. Need a PHP version >= 7.3.0 and < 8.2.0 (found $PHP_VERSION)])
   else
