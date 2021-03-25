@@ -52,11 +52,10 @@ if (PHP_SWOW != 'no') (function(){
             SETUP_OPENSSL("swow", PHP_SWOW) > 0 &&
             CHECK_LIB("winmm.lib", "swow", PHP_SWOW) &&
             CHECK_LIB("wldap32.lib", "swow", PHP_SWOW) &&
-            (((PHP_ZLIB=="no") && (CHECK_LIB("zlib_a.lib;zlib.lib", "swow", PHP_SWOW))) ||
-                (PHP_ZLIB_SHARED && CHECK_LIB("zlib.lib", "swow", PHP_SWOW)) || (PHP_ZLIB == "yes" && (!PHP_ZLIB_SHARED))) &&
-                CHECK_LIB("normaliz.lib", "swow", PHP_CURL) &&
-                CHECK_LIB("libssh2.lib", "swow", PHP_CURL) &&
-                CHECK_LIB("nghttp2.lib", "swow", PHP_CURL))
+            CHECK_LIB("zlib_a.lib;zlib.lib", "swow", PHP_SWOW) &&
+            CHECK_LIB("normaliz.lib", "swow", PHP_SWOW) &&
+            CHECK_LIB("libssh2.lib", "swow", PHP_SWOW) &&
+            CHECK_LIB("nghttp2.lib", "swow", PHP_SWOW))
             {
             AC_DEFINE('CAT_HAVE_CURL', 1, 'libcat uses cURL library');
             ADD_FLAG("CFLAGS_SWOW", "/D CURL_STATICLIB");
@@ -64,6 +63,10 @@ if (PHP_SWOW != 'no') (function(){
             use_curl = 1;
         } else {
             WARNING("Swow cURL support not enabled; libraries and headers not found");
+            WARNING("To enable Swow cURL support using offical pre-built deps and dlls,\r\n"+
+                "you need deps curl,openssl,zlib,libssh2,nghttp2.\r\n"+
+                "You may also want build curl yourself and add it into search path using --with-php-build=\r\n"+
+                "See PHP offical documents for Windows build for detail.");
         }
     }
 
