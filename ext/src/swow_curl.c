@@ -60,6 +60,9 @@ typedef struct {
 typedef struct {
     zval                  func_name;
     zend_fcall_info_cache fci_cache;
+#if PHP_VERSION_ID < 80100
+    int                    method;
+#endif
 } php_curl_callback;
 
 typedef struct {
@@ -83,10 +86,15 @@ struct _php_curl_send_headers {
 };
 
 struct _php_curl_free {
+#if PHP_VERSION_ID < 80100
+	zend_llist str;
+#endif
     zend_llist post;
     zend_llist stream;
+#if PHP_VERSION_ID >= 80100
 #if LIBCURL_VERSION_NUM < 0x073800 /* 7.56.0 */
     zend_llist buffers;
+#endif
 #endif
     HashTable *slist;
 };
@@ -145,6 +153,9 @@ typedef struct {
 } php_curlm;
 #else
 typedef struct {
+#if PHP_VERSION_ID < 80100
+    int         still_running;
+#endif
     CURLM      *multi;
     zend_llist  easyh;
 #if PHP_VERSION_ID < 80100
@@ -343,6 +354,11 @@ static void swow_curl_multi_free_obj(zend_object *object)
         zval_ptr_dtor(&CURLM_HANDLERS_GET(mh, server_push->func_name));
         efree(CURLM_HANDLERS_GET(mh, server_push));
     }
+#if PHP_VERSION_ID < 80100
+	if (mh->handlers) {
+		efree(mh->handlers);
+	}
+#endif
 
     zend_object_std_dtor(&mh->std);
 }
@@ -429,6 +445,9 @@ static PHP_FUNCTION(swow_curl_multi_init)
     object_init_ex(return_value, curl_multi_ce);
     mh = Z_CURL_MULTI_P(return_value);
     mh->multi = cat_curl_multi_init();
+#if PHP_VERSION_ID < 80100
+	mh->handlers = ecalloc(1, sizeof(php_curlm_handlers));
+#endif
     ((zend_object_handlers *) mh->std.handlers)->free_obj = swow_curl_multi_free_obj;
 #endif
 
