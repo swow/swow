@@ -119,8 +119,10 @@ typedef struct {
 	bool                          in_callback;
 	uint32_t*                     clone;
 	zval                          postfields;
+#if PHP_VERSION_ID >= 80100
 	/* For CURLOPT_PRIVATE */
 	zval private_data;
+#endif
 	/* CurlShareHandle object set using CURLOPT_SHARE. */
 	struct _php_curlsh           *share;
 	zend_object                   std;
@@ -461,7 +463,6 @@ static PHP_FUNCTION(swow_curl_multi_exec)
 #else
 	mh = Z_CURL_MULTI_P(z_mh);
 #endif
-	
 
 	{
 		zend_llist_position pos;
