@@ -93,7 +93,7 @@ CAT_API CAT_NORETURN void cat_abort(void)
     exit(233);
 }
 
-/* sys error */
+/* sys error (uv style) */
 
 CAT_API const char *cat_strerror(cat_errno_t error)
 {
@@ -106,4 +106,99 @@ CAT_API const char *cat_strerror(cat_errno_t error)
     }
 #undef CAT_STRERROR_GEN
     return "unknown error";
+}
+
+#define ORIG_ERRNO_MAP(E) \
+    E(E2BIG, 7)\
+    E(EACCES, 13)\
+    E(EADDRINUSE, 98)\
+    E(EADDRNOTAVAIL, 99)\
+    E(EAFNOSUPPORT, 97)\
+    E(EAGAIN, 11)\
+    E(EALREADY, 114)\
+    E(EBADF, 9)\
+    E(EBUSY, 16)\
+    E(ECANCELED, 125)\
+    E(ECHARSET, 84)\
+    E(ECONNABORTED, 103)\
+    E(ECONNREFUSED, 111)\
+    E(ECONNRESET, 104)\
+    E(EDESTADDRREQ, 89)\
+    E(EEXIST, 17)\
+    E(EFAULT, 14)\
+    E(EFBIG, 27)\
+    E(EHOSTUNREACH, 113)\
+    E(EINTR, 4)\
+    E(EINVAL, 22)\
+    E(EIO, 5)\
+    E(EISCONN, 106)\
+    E(EISDIR, 21)\
+    E(ELOOP, 40)\
+    E(EMFILE, 24)\
+    E(EMSGSIZE, 90)\
+    E(ENAMETOOLONG, 36)\
+    E(ENETDOWN, 100)\
+    E(ENETUNREACH, 101)\
+    E(ENFILE, 23)\
+    E(ENOBUFS, 105)\
+    E(ENODEV, 19)\
+    E(ENOENT, 2)\
+    E(ENOMEM, 12)\
+    E(ENONET, 64)\
+    E(ENOPROTOOPT, 92)\
+    E(ENOSPC, 28)\
+    E(ENOSYS, 38)\
+    E(ENOTCONN, 107)\
+    E(ENOTDIR, 20)\
+    E(ENOTEMPTY, 39)\
+    E(ENOTSOCK, 88)\
+    E(ENOTSUP, 95)\
+    E(EPERM, 1)\
+    E(EPIPE, 32)\
+    E(EPROTO, 71)\
+    E(EPROTONOSUPPORT, 93)\
+    E(EPROTOTYPE, 91)\
+    E(ERANGE, 34)\
+    E(EROFS, 30)\
+    E(ESHUTDOWN, 108)\
+    E(ESPIPE, 29)\
+    E(ESRCH, 3)\
+    E(ETIMEDOUT, 110)\
+    E(ETXTBSY, 26)\
+    E(EXDEV, 18)\
+    E(ENXIO, 6)\
+    E(EMLINK, 31)\
+    E(EHOSTDOWN, 112)\
+    E(EREMOTEIO, 121)\
+    E(ENOTTY, 25)\
+    E(EILSEQ, 84)
+
+/* return original errno from uv errno */
+CAT_API int cat_orig_errno(cat_errno_t error)
+{
+#define CAT_STRERROR_GEN(name, code) \
+    case UV_ ## name:\
+        return code;
+
+    switch (error) {
+        ORIG_ERRNO_MAP(CAT_STRERROR_GEN)
+    }
+#undef CAT_STRERROR_GEN
+
+    return -1;
+}
+
+/* return original error messsage like libc */
+CAT_API const char *cat_orig_strerror(cat_errno_t error)
+{
+#define CAT_STRERROR_GEN(name, code) \
+    case UV_ ## name:\
+        return strerror(code);
+
+    switch (error) {
+        ORIG_ERRNO_MAP(CAT_STRERROR_GEN)
+    }
+#undef CAT_STRERROR_GEN
+
+    return strerror(error);
 }
