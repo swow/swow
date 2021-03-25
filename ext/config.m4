@@ -15,7 +15,19 @@ PHP_ARG_ENABLE([swow-debug],
 PHP_ARG_ENABLE([swow-valgrind],
   [whether to enable Swow valgrind support],
   [AS_HELP_STRING([--enable-swow-valgrind], [Enable Swow valgrind support])],
-  [$PHP_SWOW_DEBUG], [$PHP_SWOW_DEBUG]
+  [$PHP_SWOW_DEBUG], [no]
+)
+
+PHP_ARG_ENABLE([swow-ssl],
+  [whether to enable Swow OpenSSL support],
+  [AS_HELP_STRING([--enable-swow-ssl], [Enable Swow OpenSSL support])],
+  [yes], [no]
+)
+
+PHP_ARG_ENABLE([swow-curl],
+  [whether to enable Swow cURL support],
+  [AS_HELP_STRING([--enable-swow-curl], [Enable Swow cURL support])],
+  [yes], [no]
 )
 
 if test "${SWOW}" != "no"; then
@@ -420,84 +432,51 @@ EOF
       http.c \
       llhttp.c, SWOW_LLHTTP_CFLAGS)
 
-    dnl add curl sources
+    dnl add ssl sources
+    if test "x${PHP_SWOW_SSL}" != "xno" ; then
+      AC_CHECK_FUNCS([RAND_egd])
 
-    PKG_CHECK_MODULES([CURL], [libcurl >= 7.29.0])
-    PKG_CHECK_VAR([CURL_FEATURES], [libcurl], [supported_features])
-    PHP_EVAL_LIBLINE($CURL_LIBS, CURL_SHARED_LIBADD)
-    PHP_EVAL_INCLINE($CURL_CFLAGS)
-    AC_MSG_CHECKING([for SSL support in libcurl])
-      case "$CURL_FEATURES" in
-        *SSL*)
-          CURL_SSL=yes
-          AC_MSG_RESULT([yes])
-          ;;
-        *)
-          CURL_SSL=no
-          AC_MSG_RESULT([no])
-          ;;
-      esac
-      if test "$CURL_SSL" = yes; then
-        save_LDFLAGS="$LDFLAGS"
-        LDFLAGS="$LDFLAGS $CURL_LIBS"
-        AC_MSG_CHECKING([for libcurl linked against old openssl])
-        AC_RUN_IFELSE([AC_LANG_SOURCE([[
-          #include <strings.h>
-          #include <curl/curl.h>
-
-          int main(int argc, char *argv[])
-          {
-            curl_version_info_data *data = curl_version_info(CURLVERSION_NOW);
-
-            if (data && data->ssl_version && *data->ssl_version) {
-              const char *ptr = data->ssl_version;
-
-              while(*ptr == ' ') ++ptr;
-              if (strncasecmp(ptr, "OpenSSL/1.1", sizeof("OpenSSL/1.1")-1) == 0) {
-                /* New OpenSSL version */
-                return 3;
-              }
-              if (strncasecmp(ptr, "OpenSSL", sizeof("OpenSSL")-1) == 0) {
-                /* Old OpenSSL version */
-                return 0;
-              }
-              /* Different SSL library */
-              return 2;
-            }
-            /* No SSL support */
-            return 1;
-          }
-        ]])],[
-          AC_MSG_RESULT([yes])
-          AC_DEFINE([HAVE_CURL_OLD_OPENSSL], [1], [Have cURL with old OpenSSL])
-          PKG_CHECK_MODULES([OPENSSL], [openssl], [
-            PHP_EVAL_LIBLINE($OPENSSL_LIBS, CURL_SHARED_LIBADD)
-            PHP_EVAL_INCLINE($OPENSSL_CFLAGS)
-            AC_CHECK_HEADERS([openssl/crypto.h])
-          ], [])
-        ], [
-          AC_MSG_RESULT([no])
-        ], [
-          AC_MSG_RESULT([no])
-        ])
-      LDFLAGS="$save_LDFLAGS"
-    else
-      AC_MSG_RESULT([no])
+      PHP_SETUP_OPENSSL(SWOW_OPENSSL_SHARED_LIBADD,
+      [
+        SWOW_USE_SSL=1
+      ], [
+        AC_MSG_WARN(["Swow OpenSSL support not enabled: OpenSSL not found"])
+        SWOW_USE_SSL=0
+      ])
     fi
-    PHP_CHECK_LIBRARY(curl,curl_easy_perform,
-    [
-      AC_DEFINE(HAVE_CURL,1,[ Have cURL ])
+    if test "x${SWOW_USE_SSL}" = "x1" ; then
+      AC_DEFINE([CAT_HAVE_SSL], 1, [Enable libcat ssl])
+      dnl make changes
+      SWOW_ADD_SOURCES(deps/libcat/src, cat_ssl.c, SWOW_CAT_CFLAGS)
+      dnl SWOW_ADD_SOURCES(src, swow_curl.c, SWOW_CFLAGS)
+    fi
+
+    dnl add curl sources
+    if test "x${PHP_SWOW_CURL}" != "xno" ; then
+      PKG_CHECK_MODULES([CURL], [libcurl >= 7.29.0], [SWOW_USE_CURL=1], [
+        AC_MSG_WARN(["Swow cURL support not enabled: libcurl not found"])
+        SWOW_USE_CURL=0
+      ])
+      PHP_CHECK_LIBRARY(curl,curl_easy_perform, [SWOW_USE_CURL=1], [
+        AC_MSG_RESULT([no])
+        AC_MSG_WARN(["Swow cURL support not enabled: libcurl not found"])
+        SWOW_USE_CURL=0
+      ],[
+        $CURL_LIBS
+      ])
+      if test "x${PHP_CURL}" = "xno" ; then
+        AC_MSG_WARN(["Swow cURL support is enabled, but cURL PHP extension is not enabled"])
+      fi
+    fi
+    if test "x${SWOW_USE_CURL}" = "x1" ; then
+      dnl AC_DEFINE(HAVE_CURL,1,[ Have cURL ])
       AC_DEFINE([CAT_HAVE_CURL], 1, [Enable libcat cURL])
-    ],[
-      AC_MSG_RESULT([no])
-    ],[
-      $CURL_LIBS
-    ])
-    SWOW_CURL_CFLAGS="${SWOW_CAT_CFLAGS} ${SWOW_CAT_INCLUDES}"
-    PHP_SUBST(SWOW_CURL_CFLAGS)
-    PHP_SUBST(CURL_SHARED_LIBADD)
-    SWOW_ADD_SOURCES(deps/libcat/src, cat_curl.c, SWOW_CURL_CFLAGS)
-    SWOW_ADD_SOURCES(src, swow_curl.c, SWOW_CURL_CFLAGS)
+      PHP_EVAL_LIBLINE($CURL_LIBS, CURL_SHARED_LIBADD)
+      PHP_EVAL_INCLINE($CURL_CFLAGS)
+      dnl make changes
+      SWOW_ADD_SOURCES(deps/libcat/src, cat_curl.c, SWOW_CAT_CFLAGS)
+      SWOW_ADD_SOURCES(src, swow_curl.c, SWOW_CFLAGS)
+    fi
 
     SWOW_CAT_CFLAGS="${SWOW_CAT_CFLAGS} ${SWOW_CAT_INCLUDES}"
     PHP_SUBST(SWOW_CAT_CFLAGS)
