@@ -2,6 +2,8 @@
 // vim:ft=javascript
 ARG_ENABLE('swow', 'Enable Swow support', 'yes');
 ARG_ENABLE('swow-debug', 'Enable Swow debug build flags', 'no');
+ARG_ENABLE('swow-ssl', 'Enable Swow OpenSSL support', 'yes');
+ARG_ENABLE('swow-curl', 'Enable Swow cURL support', 'yes');
 
 if (PHP_SWOW != 'no') (function(){
 
@@ -22,14 +24,47 @@ if (PHP_SWOW != 'no') (function(){
         !CHECK_LIB('Iphlpapi.lib', 'swow', PHP_SWOW) ||
         !CHECK_LIB('Userenv.lib', 'swow', PHP_SWOW) 
     ){
-        WARNING('swow not enabled; libraries not found');
+        WARNING('Swow not enabled; libraries not found');
         return;
     }
 
     // check 
     if(!SWOW_ASSEMBLER){
-        WARNING('swow not enabled; assembler(ML64.exe) not found');
+        WARNING('Swow not enabled; assembler(ML64.exe) not found');
         return;
+    }
+
+    var use_ssl = 0;
+    if('no' !== PHP_SWOW_SSL){
+        if (0 < SETUP_OPENSSL("swow", PHP_SWOW)) {
+            //AC_DEFINE("HAVE_OPENSSL", 1);
+            AC_DEFINE("CAT_HAVE_SSL", 1);
+            use_ssl = 1;
+        } else {
+            WARNING("Swow OpenSSL support not enabled; libraries and headers not found");
+        }
+    }
+
+    var use_curl = 0;
+    if('no' !== PHP_SWOW_CURL){
+        if (CHECK_LIB("libcurl_a.lib;libcurl.lib", "swow", PHP_SWOW) &&
+            //CHECK_HEADER_ADD_INCLUDE("curl/easy.h", "CFLAGS_SWOW") &&
+            SETUP_OPENSSL("swow", PHP_SWOW) > 0 &&
+            CHECK_LIB("winmm.lib", "swow", PHP_SWOW) &&
+            CHECK_LIB("wldap32.lib", "swow", PHP_SWOW) &&
+            (((PHP_ZLIB=="no") && (CHECK_LIB("zlib_a.lib;zlib.lib", "swow", PHP_SWOW))) ||
+                (PHP_ZLIB_SHARED && CHECK_LIB("zlib.lib", "swow", PHP_SWOW)) || (PHP_ZLIB == "yes" && (!PHP_ZLIB_SHARED))) &&
+                CHECK_LIB("normaliz.lib", "swow", PHP_CURL) &&
+                CHECK_LIB("libssh2.lib", "swow", PHP_CURL) &&
+                CHECK_LIB("nghttp2.lib", "swow", PHP_CURL))
+            {
+            AC_DEFINE('CAT_HAVE_CURL', 1, 'libcat uses cURL library');
+            ADD_FLAG("CFLAGS_SWOW", "/D CURL_STATICLIB");
+            // TODO: check for curl_version_info
+            use_curl = 1;
+        } else {
+            WARNING("Swow cURL support not enabled; libraries and headers not found");
+        }
     }
 
     //ADD_MAKEFILE_FRAGMENT()
@@ -82,6 +117,14 @@ if (PHP_SWOW != 'no') (function(){
         'swow_http.c',
         'swow_websocket.c' // <-- wsh donot support comma here!
     ];
+    /* not implemented
+    if(use_ssl){
+        SWOW_SOURCE_FILENAMES.push('swow_ssl.c');
+    }
+    */
+    if(use_curl){
+        SWOW_SOURCE_FILENAMES.push('swow_curl.c');
+    }
     ADD_SOURCES(configure_module_dirname + '\\' + SWOW_SRC_DIR, SWOW_SOURCE_FILENAMES.join(' '), 'swow');
 
     // dependecies
@@ -105,6 +148,7 @@ if (PHP_SWOW != 'no') (function(){
         'cat_channel.c',
         'cat_sync.c',
         'cat_event.c',
+        'cat_poll.c' ,
         'cat_time.c',
         'cat_socket.c',
         'cat_dns.c',
@@ -116,6 +160,12 @@ if (PHP_SWOW != 'no') (function(){
         'cat_http.c',
         'cat_websocket.c'
     ];
+    if(use_ssl){
+        CAT_SOURCE_FILENAMES.push('cat_ssl.c');
+    }
+    if(use_curl){
+        CAT_SOURCE_FILENAMES.push('cat_curl.c');
+    }
     ADD_SOURCES(configure_module_dirname + '\\' + LIBCAT_DIR + '\\src', CAT_SOURCE_FILENAMES.join(' '), 'swow');
 
     // boost context asm files
