@@ -1143,7 +1143,7 @@ static php_stream *swow_php_plain_files_dir_opener(php_stream_wrapper *wrapper, 
 SWOW_API  php_stream *_swow_php_stream_fopen(const char *filename, const char *mode, zend_string **opened_path, int options STREAMS_DC)
 {
     if (options & STREAM_OPEN_FOR_INCLUDE) {
-        return php_stream_fopen(filename, mode, opened_path);
+        return _php_stream_fopen(filename, mode, opened_path, options STREAMS_REL_CC);
     } 
     char realpath[MAXPATHLEN];
     int open_flags;
