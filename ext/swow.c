@@ -32,6 +32,7 @@
 #include "swow_debug.h"
 #include "swow_http.h"
 #include "swow_websocket.h"
+#include "swow_curl.h"
 
 #include "cat_api.h"
 
@@ -89,6 +90,9 @@ PHP_MINIT_FUNCTION(swow)
         swow_debug_module_init,
         swow_http_module_init,
         swow_websocket_module_init,
+#ifdef CAT_HAVE_CURL
+        swow_curl_module_init,
+#endif
     };
 
     size_t i = 0;
@@ -147,6 +151,9 @@ PHP_MSHUTDOWN_FUNCTION(swow)
 #endif
 
     static const zend_loader_t mshutdown_callbacks[] = {
+#ifdef CAT_HAVE_CURL
+        swow_curl_module_shutdown,
+#endif
         swow_event_module_shutdown,
         swow_module_shutdown,
     };
