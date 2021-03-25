@@ -548,7 +548,7 @@ static ssize_t swow_php_stdiop_read(php_stream *stream, char *buf, size_t count)
     if (data->fd >= 0) {
         ret = cat_fs_read(data->fd, buf,  PLAIN_WRAP_BUF_SIZE(count));
 
-        if (ret == (size_t) -1 && cat_get_last_error_code() == CAT_EINTR) {
+        if (ret == -1 && cat_get_last_error_code() == CAT_EINTR) {
             /* Read was interrupted, retry once,
                If read still fails, giveup with feof==0
                so script can retry if desired */
@@ -861,7 +861,7 @@ static int swow_php_stdiop_set_option(php_stream *stream, int option, int value,
                         if (do_fstat(data, 1) != 0) {
                             return PHP_STREAM_OPTION_RETURN_ERR;
                         }
-                        if (range->offset > data->sb.st_size) {
+                        if (range->offset > (size_t) data->sb.st_size) {
                             range->offset = data->sb.st_size;
                         }
                         if (range->length == 0 ||
