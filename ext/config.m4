@@ -1,19 +1,5 @@
 dnl config.m4 for extension swow
 
-dnl check if this php version we support
-AC_MSG_CHECKING([Check for supported PHP versions])
-if test -z "$PHP_VERSION"; then
-  if test -z "$PHP_CONFIG"; then
-    AC_MSG_ERROR([php-config not found])
-  fi
-  PHP_VERSION=`$PHP_CONFIG --version`
-fi
-
-if test -z "$PHP_VERSION"; then
-  AC_MSG_ERROR([failed to detect PHP version, please report])
-fi
-PHP_VERSION_ID=`echo "${PHP_VERSION}" | $AWK 'BEGIN { FS = "."; } { printf "%d", ([$]1 * 100 + [$]2) * 100 + [$]3;}'`
-
 PHP_ARG_ENABLE([swow],
   [whether to enable Swow support],
   [AS_HELP_STRING([--enable-swow], [Enable Swow support])],
@@ -32,21 +18,11 @@ PHP_ARG_ENABLE([swow-valgrind],
   [$PHP_SWOW_DEBUG], [no]
 )
 
-dnl php73's PHP_SETUP_OPENSSL will error out when openssl not found
-dnl so we make it not enabled default
-if test "${PHP_VERSION_ID}" -lt "70400" ; then
-PHP_ARG_ENABLE([swow-ssl],
-  [whether to enable Swow OpenSSL support],
-  [AS_HELP_STRING([--enable-swow-ssl], [Enable Swow OpenSSL support])],
-  [no], [no]
-)
-else
 PHP_ARG_ENABLE([swow-ssl],
   [whether to enable Swow OpenSSL support],
   [AS_HELP_STRING([--enable-swow-ssl], [Enable Swow OpenSSL support])],
   [yes], [no]
 )
-fi
 
 PHP_ARG_ENABLE([swow-curl],
   [whether to enable Swow cURL support],
@@ -55,6 +31,19 @@ PHP_ARG_ENABLE([swow-curl],
 )
 
 if test "${SWOW}" != "no"; then
+  dnl check if this php version we support
+  AC_MSG_CHECKING([Check for supported PHP versions])
+  if test -z "$PHP_VERSION"; then
+    if test -z "$PHP_CONFIG"; then
+      AC_MSG_ERROR([php-config not found])
+    fi
+    PHP_VERSION=`$PHP_CONFIG --version`
+  fi
+
+  if test -z "$PHP_VERSION"; then
+    AC_MSG_ERROR([failed to detect PHP version, please report])
+  fi
+  PHP_VERSION_ID=`echo "${PHP_VERSION}" | $AWK 'BEGIN { FS = "."; } { printf "%d", ([$]1 * 100 + [$]2) * 100 + [$]3;}'`
 
   if test "${PHP_VERSION_ID}" -lt "70300" || test "${PHP_VERSION_ID}" -ge "80200"; then
     AC_MSG_ERROR([not supported. Need a PHP version >= 7.3.0 and < 8.2.0 (found $PHP_VERSION)])
@@ -443,50 +432,62 @@ EOF
       http.c \
       llhttp.c, SWOW_LLHTTP_CFLAGS)
 
+    dnl prepare pkg-config
+    if test -z "$PKG_CONFIG"; then
+      AC_PATH_PROG(PKG_CONFIG, pkg-config, no)
+    fi
+    dnl SWOW_PKG_CHECK_MODULES($varname, $libname, $ver, $search_path, $if_found, $if_not_found)
+    AC_DEFUN([SWOW_PKG_CHECK_MODULES],[
+      dnl find pkg using pkg-config cli tool
+      if test ! -x "$PKG_CONFIG" ; then
+        AC_MSG_WARN([Cannot find package $2: pkg-config not found])
+      fi
+      SWOW_PKG_FIND_PATH=${$4}
+      if test "xyes" = "x${$4}" ; then
+        SWOW_PKG_FIND_PATH=
+      fi
+      AC_MSG_CHECKING(for $2 $3 or greater)
+      dnl shall we find env first?
+      if env PKG_CONFIG_PATH=${SWOW_PKG_FIND_PATH}/lib/pkgconfig $PKG_CONFIG --atleast-version $3 $2; then
+        $2_version_full=`env PKG_CONFIG_PATH=${SWOW_PKG_FIND_PATH}/lib/pkgconfig $PKG_CONFIG --modversion $2`
+        AC_MSG_RESULT(${$2_version_full})
+        $1_LIBS=`env PKG_CONFIG_PATH=${SWOW_PKG_FIND_PATH}/lib/pkgconfig $PKG_CONFIG --libs   $2`
+        $1_INCL=`env PKG_CONFIG_PATH=${SWOW_PKG_FIND_PATH}/lib/pkgconfig $PKG_CONFIG --cflags $2`
+        $5
+      else
+        AC_MSG_RESULT(no)
+        $6
+      fi
+    ])
     dnl add ssl sources
     if test "x${PHP_SWOW_SSL}" != "xno" ; then
-      AC_CHECK_FUNCS([RAND_egd])
-
-      PHP_SETUP_OPENSSL(SWOW_OPENSSL_SHARED_LIBADD,
-      [
-        SWOW_USE_SSL=1
-      ], [
-        AC_MSG_WARN(["Swow OpenSSL support not enabled: OpenSSL not found"])
-        SWOW_USE_SSL=0
+      SWOW_PKG_CHECK_MODULES([OPENSSL], openssl, 1.0.1, [PHP_SWOW_SSL], [
+        dnl make changes
+        AC_DEFINE([CAT_HAVE_SSL], 1, [Enable libcat ssl])
+        PHP_EVAL_LIBLINE($OPENSSL_LIBS, SWOW_SHARED_LIBADD)
+        PHP_EVAL_INCLINE($OPENSSL_CFLAGS)
+        SWOW_ADD_SOURCES(deps/libcat/src, cat_ssl.c, SWOW_CAT_CFLAGS)
+        dnl SWOW_ADD_SOURCES(src, swow_curl.c, SWOW_CFLAGS)
+      ],[
+        AC_MSG_WARN([Swow OpenSSL support not enabled: OpenSSL not found])
       ])
-    fi
-    if test "x${SWOW_USE_SSL}" = "x1" ; then
-      AC_DEFINE([CAT_HAVE_SSL], 1, [Enable libcat ssl])
-      dnl make changes
-      SWOW_ADD_SOURCES(deps/libcat/src, cat_ssl.c, SWOW_CAT_CFLAGS)
-      dnl SWOW_ADD_SOURCES(src, swow_curl.c, SWOW_CFLAGS)
     fi
 
     dnl add curl sources
     if test "x${PHP_SWOW_CURL}" != "xno" ; then
-      PKG_CHECK_MODULES([CURL], [libcurl >= 7.29.0], [SWOW_USE_CURL=1], [
-        AC_MSG_WARN(["Swow cURL support not enabled: libcurl not found"])
-        SWOW_USE_CURL=0
-      ])
-      PHP_CHECK_LIBRARY(curl,curl_easy_perform, [SWOW_USE_CURL=1], [
-        AC_MSG_RESULT([no])
-        AC_MSG_WARN(["Swow cURL support not enabled: libcurl not found"])
-        SWOW_USE_CURL=0
+      SWOW_PKG_CHECK_MODULES([CURL], libcurl, 7.25.2, [PHP_SWOW_CURL], [
+        if test "x${PHP_CURL}" = "xno" ; then
+          AC_MSG_WARN([Swow cURL support is enabled but cURL PHP extension is not enabled])
+        fi
+        dnl make changes
+        AC_DEFINE([CAT_HAVE_CURL], 1, [Enable libcat cURL])
+        PHP_EVAL_LIBLINE($CURL_LIBS, SWOW_SHARED_LIBADD)
+        PHP_EVAL_INCLINE($CURL_CFLAGS)
+        SWOW_ADD_SOURCES(deps/libcat/src, cat_curl.c, SWOW_CAT_CFLAGS)
+        SWOW_ADD_SOURCES(src, swow_curl.c, SWOW_CFLAGS)
       ],[
-        $CURL_LIBS
+        AC_MSG_WARN([Swow cURL support not enabled: libcurl not found])
       ])
-      if test "x${PHP_CURL}" = "xno" ; then
-        AC_MSG_WARN(["Swow cURL support is enabled, but cURL PHP extension is not enabled"])
-      fi
-    fi
-    if test "x${SWOW_USE_CURL}" = "x1" ; then
-      dnl AC_DEFINE(HAVE_CURL,1,[ Have cURL ])
-      AC_DEFINE([CAT_HAVE_CURL], 1, [Enable libcat cURL])
-      PHP_EVAL_LIBLINE($CURL_LIBS, CURL_SHARED_LIBADD)
-      PHP_EVAL_INCLINE($CURL_CFLAGS)
-      dnl make changes
-      SWOW_ADD_SOURCES(deps/libcat/src, cat_curl.c, SWOW_CAT_CFLAGS)
-      SWOW_ADD_SOURCES(src, swow_curl.c, SWOW_CFLAGS)
     fi
 
     SWOW_CAT_CFLAGS="${SWOW_CAT_CFLAGS} ${SWOW_CAT_INCLUDES}"
@@ -495,4 +496,5 @@ EOF
 
   SWOW_CFLAGS="${SWOW_CFLAGS} ${SWOW_INCLUDES} ${SWOW_CAT_INCLUDES}"
   PHP_SUBST(SWOW_CFLAGS)
+  PHP_SUBST(SWOW_SHARED_LIBADD)
 fi
