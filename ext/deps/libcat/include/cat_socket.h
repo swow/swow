@@ -50,12 +50,14 @@ extern "C" {
 #ifdef CAT_OS_UNIX_LIKE
 #define CAT_SOCKADDR_MAX_PATH (sizeof(((struct sockaddr_un *) 0)->sun_path))
 #define CAT_SOCKLEN_FMT "%u"
+#define CAT_SOCKLEN_FMT_SPEC "u"
 typedef socklen_t cat_socklen_t; /* Notice: it's unsigned on drawin */
 typedef sa_family_t cat_sa_family_t;
 typedef in_port_t cat_in_port_t;
 #else
 #define CAT_SOCKADDR_MAX_PATH 260
 #define CAT_SOCKLEN_FMT "%d"
+#define CAT_SOCKLEN_FMT_SPEC "d"
 typedef int cat_socklen_t;
 typedef short cat_sa_family_t;
 typedef unsigned short cat_in_port_t;
@@ -125,23 +127,21 @@ CAT_API cat_bool_t cat_sockaddr_check(const cat_sockaddr_t *address, cat_socklen
 
 /* socket fd */
 
-#define CAT_SOCKET_FD_FMT "%d"
-typedef uv_os_sock_t cat_socket_fd_t;
+typedef cat_os_socket_t cat_socket_fd_t;
+#define CAT_SOCKET_FD_FMT CAT_OS_SOCKET_FMT
+#define CAT_SOCKET_FD_FMT_SPEC CAT_OS_SOCKET_FMT_SPEC
+#define CAT_SOCKET_INVALID_FD CAT_OS_INVALID_SOCKET
 
-#ifndef CAT_OS_WIN
-#define CAT_SOCKET_INVALID_FD -1
-#else
-#define CAT_SOCKET_INVALID_FD INVALID_SOCKET
-#endif
+/* stdio os fd */
 
 #ifndef STDIN_FILENO
-#define STDIN_FILENO  ((cat_socket_fd_t) 0) /* standard input file descriptor */
+#define STDIN_FILENO  0 /* standard input file descriptor */
 #endif
 #ifndef STDOUT_FILENO
-#define STDOUT_FILENO ((cat_socket_fd_t) 1) /* standard output file descriptor */
+#define STDOUT_FILENO 1 /* standard output file descriptor */
 #endif
 #ifndef STDERR_FILENO
-#define STDERR_FILENO ((cat_socket_fd_t) 2) /* standard error file descriptor */
+#define STDERR_FILENO 2 /* standard error file descriptor */
 #endif
 
 /* socket length */
@@ -323,10 +323,11 @@ typedef enum
 } cat_socket_bind_union_flags_t;
 
 typedef int32_t cat_socket_timeout_storage_t;
-#define CAT_SOCKET_TIMEOUT_STORAGE_FMT     "%d"
-#define CAT_SOCKET_TIMEOUT_STORAGE_MIN     CAT_TIMEOUT_FOREVER
-#define CAT_SOCKET_TIMEOUT_STORAGE_MAX     INT32_MAX
-#define CAT_SOCKET_TIMEOUT_STORAGE_DEFAULT -CAT_MAGIC_NUMBER
+#define CAT_SOCKET_TIMEOUT_STORAGE_FMT      "%d"
+#define CAT_SOCKET_TIMEOUT_STORAGE_FMT_SPEC "d"
+#define CAT_SOCKET_TIMEOUT_STORAGE_MIN      CAT_TIMEOUT_FOREVER
+#define CAT_SOCKET_TIMEOUT_STORAGE_MAX      INT32_MAX
+#define CAT_SOCKET_TIMEOUT_STORAGE_DEFAULT  -CAT_MAGIC_NUMBER
 
 typedef struct
 {

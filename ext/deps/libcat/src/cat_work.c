@@ -53,7 +53,7 @@ static void cat_work_after_done(uv_work_t *request, int status)
     cat_free(context);
 }
 
-CAT_API cat_bool_t cat_work(cat_work_function_t function, cat_data_t *data, cat_timeout_t timeout)
+CAT_API cat_bool_t cat_work(cat_work_kind_t kind, cat_work_function_t function, cat_data_t *data, cat_timeout_t timeout)
 {
     cat_work_context_t *context = (cat_work_context_t *) cat_malloc(sizeof(*context));
     int error;
@@ -65,7 +65,7 @@ CAT_API cat_bool_t cat_work(cat_work_function_t function, cat_data_t *data, cat_
     }
     context->function = function;
     context->data = data;
-    error = uv_queue_work(cat_event_loop, &context->request.work, cat_work_callback, cat_work_after_done);
+    error = uv_queue_work_ex(cat_event_loop, &context->request.work, (uv_work_kind) kind, cat_work_callback, cat_work_after_done);
     if (unlikely(error != 0)) {
         cat_update_last_error_with_reason(error, "Work queue failed");
         return cat_false;

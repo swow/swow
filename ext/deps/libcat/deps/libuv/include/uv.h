@@ -1129,10 +1129,26 @@ struct uv_work_s {
   UV_WORK_PRIVATE_FIELDS
 };
 
+#ifdef HAVE_LIBCAT
+typedef enum uv__work_kind {
+  UV_WORK_CPU,
+  UV_WORK_FAST_IO,
+  UV_WORK_SLOW_IO
+} uv_work_kind;
+#endif
+
 UV_EXTERN int uv_queue_work(uv_loop_t* loop,
                             uv_work_t* req,
                             uv_work_cb work_cb,
                             uv_after_work_cb after_work_cb);
+
+#ifdef HAVE_LIBCAT
+UV_EXTERN int uv_queue_work_ex(uv_loop_t* loop,
+                            uv_work_t* req,
+                            uv_work_kind kind,
+                            uv_work_cb work_cb,
+                            uv_after_work_cb after_work_cb);
+#endif
 
 UV_EXTERN int uv_cancel(uv_req_t* req);
 

@@ -46,6 +46,7 @@ typedef ucontext_t cat_coroutine_context_t;
 
 typedef uint64_t cat_coroutine_id_t;
 #define CAT_COROUTINE_ID_FMT "%" PRIu64
+#define CAT_COROUTINE_ID_FMT_SPEC PRIu64
 
 typedef enum
 {
@@ -106,9 +107,11 @@ typedef uint16_t cat_coroutine_opcodes_t;
 
 typedef uint64_t cat_coroutine_round_t;
 #define CAT_COROUTINE_ROUND_FMT "%" PRIu64
+#define CAT_COROUTINE_ROUND_FMT_SPEC PRIu64
 
 typedef uint32_t cat_coroutine_stack_size_t;
 #define CAT_COROUTINE_STACK_SIZE_FMT "%u"
+#define CAT_COROUTINE_STACK_SIZE_FMT_SPEC "u"
 
 typedef cat_data_t *(*cat_coroutine_function_t)(cat_data_t *data);
 
@@ -148,6 +151,7 @@ typedef cat_bool_t (*cat_coroutine_resume_t)(cat_coroutine_t *coroutine, cat_dat
 
 typedef uint32_t cat_coroutine_count_t;
 #define CAT_COROUTINE_COUNT_FMT "%u"
+#define CAT_COROUTINE_COUNT_FMT_SPEC "u"
 
 CAT_GLOBALS_STRUCT_BEGIN(cat_coroutine)
     /* options */

@@ -158,6 +158,26 @@ CAT_API cat_bool_t cat_time_wait(cat_timeout_t timeout)
     return cat_true;
 }
 
+CAT_API cat_ret_t cat_time_delay(cat_timeout_t timeout)
+{
+    if (timeout < 0) {
+        return cat_coroutine_yield(NULL, NULL) ? CAT_RET_OK : CAT_RET_ERROR;
+    } else {
+        cat_timer_t *timer;
+
+        timer = cat_timer_wait(timeout);
+
+        if (unlikely(timer == NULL)) {
+            return CAT_RET_ERROR;
+        }
+        if (timer->coroutine == NULL) {
+            return CAT_RET_OK;
+        }
+
+        return CAT_RET_NONE;
+    }
+}
+
 CAT_API unsigned int cat_time_sleep(unsigned int seconds)
 {
     cat_msec_t ret = cat_time_msleep((cat_msec_t) (seconds * 1000)) / 1000;

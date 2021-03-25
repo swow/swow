@@ -60,6 +60,7 @@ CAT_API cat_coroutine_t *cat_event_scheduler_run(cat_coroutine_t *coroutine);
 CAT_API cat_coroutine_t *cat_event_scheduler_close(void);
 
 CAT_API cat_bool_t cat_event_defer(cat_data_callback_t callback, cat_data_t *data);
+CAT_API cat_bool_t cat_event_defer_ex(cat_data_callback_t callback, cat_data_t *data, cat_bool_t high_priority);
 CAT_API cat_bool_t cat_event_do_defer_tasks(void);
 
 CAT_API cat_bool_t cat_event_wait(void);

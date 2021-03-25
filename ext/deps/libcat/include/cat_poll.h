@@ -16,52 +16,44 @@
   +--------------------------------------------------------------------------+
  */
 
-#ifndef CAT_API_H
-#define CAT_API_H
+#ifndef CAT_POLL_H
+#define CAT_POLL_H
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 #include "cat.h"
-#include "cat_coroutine.h"
-#include "cat_channel.h"
-#include "cat_sync.h"
-#include "cat_event.h"
-#include "cat_poll.h"
-#include "cat_time.h"
-#include "cat_socket.h"
-#include "cat_dns.h"
-#include "cat_work.h"
-#include "cat_buffer.h"
-#include "cat_fs.h"
-#include "cat_signal.h"
-#include "cat_watch_dog.h"
-#include "cat_ssl.h"
 
-typedef enum
-{
-    CAT_RUN_EASY = 0,
-} cat_run_mode;
-
-CAT_API cat_bool_t cat_init_all(void);
-CAT_API cat_bool_t cat_shutdown_all(void);
-
-CAT_API cat_bool_t cat_module_init_all(void);
-CAT_API cat_bool_t cat_module_shutdown_all(void);
-
-CAT_API cat_bool_t cat_runtime_init_all(void);
-CAT_API cat_bool_t cat_runtime_shutdown_all(void);
-
-CAT_API cat_bool_t cat_run(cat_run_mode run_mode);
-CAT_API cat_bool_t cat_stop(void);
-
-#ifdef CAT_DEBUG
-CAT_API void cat_enable_debug_mode(void);
-#else
-#define cat_enable_debug_mode()
+#ifdef CAT_OS_UNIX_LIKE
+#include <sys/types.h>
+#include <poll.h>
 #endif
+
+#ifndef CAT_OS_WIN
+typedef struct pollfd cat_pollfd_t;
+typedef nfds_t cat_nfds_t;
+#else
+typedef WSAPOLLFD cat_pollfd_t;
+typedef ULONG cat_nfds_t;
+#endif
+
+#ifndef POLLNONE
+#define POLLNONE 0
+#endif
+#ifndef POLLIN
+# define POLLIN      0x0001    /* There is data to read */
+# define POLLPRI     0x0002    /* There is urgent data to read */
+# define POLLOUT     0x0004    /* Writing now will not block */
+# define POLLERR     0x0008    /* Error condition */
+# define POLLHUP     0x0010    /* Hung up */
+# define POLLNVAL    0x0020    /* Invalid request: fd not open */
+#endif
+
+CAT_API cat_ret_t cat_poll_one(cat_os_socket_t fd, int events, int *revents, cat_timeout_t timeout);
+
+CAT_API int cat_poll(cat_pollfd_t *fds, cat_nfds_t nfds, cat_timeout_t timeout);
 
 #ifdef __cplusplus
 }
 #endif
-#endif /* CAT_API_H */
+#endif /* CAT_POLL_H */

@@ -37,9 +37,11 @@ typedef uint8_t cat_channel_flags_t;
 
 typedef uint32_t cat_channel_size_t;
 #define CAT_CHANNEL_SIZE_FMT "%u"
+#define CAT_CHANNEL_SIZE_FMT_SPEC "u"
 
 typedef uint8_t cat_channel_data_size_t;
 #define CAT_CHANNEL_DATA_SIZE_FMT "%u"
+#define CAT_CHANNEL_DATA_SIZE_FMT_SPEC "u"
 #define CAT_CHANNEL_DATA_SIZE_MAX UINT8_MAX
 
 typedef void (*cat_channel_data_dtor_t)(const cat_data_t *data);

@@ -273,7 +273,7 @@ CAT_API void cat_ssl_context_set_verify_depth(cat_ssl_context_t *context, int de
 }
 
 #ifdef CAT_OS_WIN
-static cat_bool_t cat_ssl_win_cert_verify_callback(X509_STORE_CTX *x509_store_ctx, void *data) /* {{{ */
+static int cat_ssl_win_cert_verify_callback(X509_STORE_CTX *x509_store_ctx, void *data) /* {{{ */
 {
 	PCCERT_CONTEXT cert_ctx = NULL;
 	PCCERT_CHAIN_CONTEXT cert_chain_ctx = NULL;
@@ -440,7 +440,7 @@ static cat_bool_t cat_ssl_win_cert_verify_callback(X509_STORE_CTX *x509_store_ct
 		}
 	}
 
-	return 1;
+	return cat_true;
 }
 
 static int cat_ssl_verify_callback(int preverify_ok, X509_STORE_CTX *ctx) /* {{{ */
@@ -881,7 +881,7 @@ CAT_API int cat_ssl_read_encrypted_bytes(cat_ssl_t *ssl, char *buffer, size_t si
 
     cat_ssl_clear_error();
 
-    n = BIO_read(ssl->nbio, buffer, size);
+    n = BIO_read(ssl->nbio, buffer, (int) size);
     cat_debug(SSL, "BIO_read(%zu) = %d", size, n);
     if (unlikely(n <= 0)) {
         if (unlikely(!BIO_should_retry(ssl->nbio))) {
@@ -889,7 +889,7 @@ CAT_API int cat_ssl_read_encrypted_bytes(cat_ssl_t *ssl, char *buffer, size_t si
             return CAT_RET_ERROR;
         }
         cat_debug(SSL, "BIO_read() should retry");
-        return CAT_RET_AGAIN;
+        return CAT_RET_NONE;
     }
 
     return n;
@@ -901,7 +901,7 @@ CAT_API int cat_ssl_write_encrypted_bytes(cat_ssl_t *ssl, const char *buffer, si
 
     cat_ssl_clear_error();
 
-    n = BIO_write(ssl->nbio, buffer, length);
+    n = BIO_write(ssl->nbio, buffer, (int) length);
     cat_debug(SSL, "BIO_write(%zu) = %d", length, n);
     if (unlikely(n <= 0)) {
         if (unlikely(!BIO_should_retry(ssl->nbio))) {
@@ -909,7 +909,7 @@ CAT_API int cat_ssl_write_encrypted_bytes(cat_ssl_t *ssl, const char *buffer, si
             return CAT_RET_ERROR;
         }
         cat_debug(SSL, "BIO_write() should retry");
-        return CAT_RET_AGAIN;
+        return CAT_RET_NONE;
     }
 
     return n;
@@ -920,7 +920,7 @@ CAT_API size_t cat_ssl_encrypted_size(size_t length)
     return CAT_MEMORY_ALIGNED_SIZE_EX(length, CAT_SSL_MAX_BLOCK_LENGTH) + (CAT_SSL_BUFFER_SIZE - CAT_SSL_MAX_PLAIN_LENGTH);
 }
 
-static size_t cat_ssl_encrypt_buffered(cat_ssl_t *ssl, const char *in, size_t *in_length, char *out, size_t *out_length)
+static cat_bool_t cat_ssl_encrypt_buffered(cat_ssl_t *ssl, const char *in, size_t *in_length, char *out, size_t *out_length)
 {
     cat_ssl_connection_t *connection = ssl->connection;
     size_t nread = 0, nwritten = 0;
@@ -932,7 +932,7 @@ static size_t cat_ssl_encrypt_buffered(cat_ssl_t *ssl, const char *in, size_t *i
     *out_length = 0;
 
     if (unlikely(in_size == 0)) {
-        return 0;
+        return cat_false;
     }
 
     while (1) {
@@ -947,7 +947,7 @@ static size_t cat_ssl_encrypt_buffered(cat_ssl_t *ssl, const char *in, size_t *i
 
         if (n > 0) {
             nread += n;
-        } else if (n == CAT_RET_AGAIN) {
+        } else if (n == CAT_RET_NONE) {
             // continue to SSL_write()
         } else {
             cat_update_last_error_with_previous("SSL_write() error");
@@ -962,7 +962,7 @@ static size_t cat_ssl_encrypt_buffered(cat_ssl_t *ssl, const char *in, size_t *i
 
         cat_ssl_clear_error();
 
-        n = SSL_write(connection, in + nwritten, in_size - nwritten);
+        n = SSL_write(connection, in + nwritten, (int) (in_size - nwritten));
 
         cat_debug(SSL, "SSL_write(%zu) = %d", in_size - nwritten, n);
 
@@ -1029,7 +1029,7 @@ CAT_API cat_bool_t cat_ssl_encrypt(
         if (unlikely(!ret)) {
             /* save current */
             vout->base = buffer;
-            vout->length = length;
+            vout->length = (cat_io_vector_length_t) length;
             vout_counted++;
             if (cat_get_last_error_code() == CAT_ENOBUFS) {
                 CAT_ASSERT(length == size);
@@ -1055,7 +1055,7 @@ CAT_API cat_bool_t cat_ssl_encrypt(
     }
 
     vout->base = buffer;
-    vout->length = length;
+    vout->length = (cat_io_vector_length_t) length;
     *vout_count = vout_counted + 1;
 
     return cat_true;
@@ -1099,7 +1099,7 @@ CAT_API cat_bool_t cat_ssl_decrypt(cat_ssl_t *ssl, char *out, size_t *out_length
 
         cat_ssl_clear_error();
 
-        n = SSL_read(connection, out + nread, out_size - nread);
+        n = SSL_read(connection, out + nread, (int) (out_size - nread));
 
         cat_debug(SSL, "SSL_read(%zu) = %d", out_size - nread, n);
 
@@ -1131,7 +1131,7 @@ CAT_API cat_bool_t cat_ssl_decrypt(cat_ssl_t *ssl, char *out, size_t *out_length
 
         if (n > 0) {
             nwritten += n;
-        } else if (n == CAT_RET_AGAIN) {
+        } else if (n == CAT_RET_NONE) {
             // continue to SSL_read()
         } else {
             cat_update_last_error_with_previous("SSL_write() error");

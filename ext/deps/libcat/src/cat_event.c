@@ -147,6 +147,11 @@ CAT_API cat_coroutine_t *cat_event_scheduler_close(void)
 
 CAT_API cat_bool_t cat_event_defer(cat_data_callback_t callback, cat_data_t *data)
 {
+    return cat_event_defer_ex(callback, data, cat_false);
+}
+
+CAT_API cat_bool_t cat_event_defer_ex(cat_data_callback_t callback, cat_data_t *data, cat_bool_t high_priority)
+{
     cat_event_task_t *task = (cat_event_task_t *) cat_malloc(sizeof(*task));
 
     if (unlikely(task == NULL)) {
@@ -155,7 +160,11 @@ CAT_API cat_bool_t cat_event_defer(cat_data_callback_t callback, cat_data_t *dat
     }
     task->callback = callback;
     task->data = data;
-    cat_queue_push_back(&CAT_EVENT_G(defer_tasks), &task->node);
+    if (unlikely(high_priority)) {
+        cat_queue_push_front(&CAT_EVENT_G(defer_tasks), &task->node);
+    } else {
+        cat_queue_push_back(&CAT_EVENT_G(defer_tasks), &task->node);
+    }
     CAT_EVENT_G(defer_task_count)++;
 
     return cat_true;

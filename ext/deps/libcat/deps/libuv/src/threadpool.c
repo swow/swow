@@ -359,6 +359,29 @@ int uv_queue_work(uv_loop_t* loop,
 }
 
 
+#ifdef HAVE_LIBCAT
+int uv_queue_work_ex(uv_loop_t* loop,
+                     uv_work_t* req,
+                     uv_work_kind kind,
+                     uv_work_cb work_cb,
+                     uv_after_work_cb after_work_cb) {
+  if (work_cb == NULL)
+    return UV_EINVAL;
+
+  uv__req_init(loop, req, UV_WORK);
+  req->loop = loop;
+  req->work_cb = work_cb;
+  req->after_work_cb = after_work_cb;
+  uv__work_submit(loop,
+                  &req->work_req,
+                  kind,
+                  uv__queue_work,
+                  uv__queue_done);
+  return 0;
+}
+#endif
+
+
 int uv_cancel(uv_req_t* req) {
   struct uv__work* wreq;
   uv_loop_t* loop;

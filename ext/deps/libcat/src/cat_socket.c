@@ -688,24 +688,26 @@ CAT_API cat_socket_t *cat_socket_create_ex(cat_socket_t *socket, cat_socket_type
         }
         error = uv_pipe_init(cat_event_loop, &isocket->u.pipe, !!(type & CAT_SOCKET_TYPE_FLAG_IPC));
     } else if ((type & CAT_SOCKET_TYPE_TTY) == CAT_SOCKET_TYPE_TTY) {
+        /* convert SOCKET to int on Windows */
+        cat_os_fd_t os_fd = (cat_os_fd_t) fd;
         if (fd == CAT_SOCKET_INVALID_FD) {
             if (type & CAT_SOCKET_TYPE_FLAG_STDIN) {
-                fd = STDIN_FILENO;
+                os_fd = STDIN_FILENO;
             } else if (type & CAT_SOCKET_TYPE_FLAG_STDOUT) {
-                fd = STDOUT_FILENO;
+                os_fd = STDOUT_FILENO;
             } else if (type & CAT_SOCKET_TYPE_FLAG_STDERR) {
-                fd = STDERR_FILENO;
+                os_fd = STDERR_FILENO;
             }
         }
         type &= ~(CAT_SOCKET_TYPE_FLAG_STDIN | CAT_SOCKET_TYPE_FLAG_STDOUT | CAT_SOCKET_TYPE_FLAG_STDERR);
-        if (fd == STDIN_FILENO) {
+        if (os_fd == STDIN_FILENO) {
             type |= CAT_SOCKET_TYPE_FLAG_STDIN;
-        } else if (fd == STDOUT_FILENO) {
+        } else if (os_fd == STDOUT_FILENO) {
             type |= CAT_SOCKET_TYPE_FLAG_STDOUT;
-        } else if (fd == STDERR_FILENO) {
+        } else if (os_fd == STDERR_FILENO) {
             type |= CAT_SOCKET_TYPE_FLAG_STDERR;
         }
-        error = uv_tty_init(cat_event_loop, &isocket->u.tty, (uv_file) fd, 0);
+        error = uv_tty_init(cat_event_loop, &isocket->u.tty, os_fd, 0);
     }
     if (unlikely(error != 0)) {
         goto _error;
@@ -716,7 +718,8 @@ CAT_API cat_socket_t *cat_socket_create_ex(cat_socket_t *socket, cat_socket_type
         } else if ((type & CAT_SOCKET_TYPE_UDP) == CAT_SOCKET_TYPE_UDP) {
             error = uv_udp_open(&isocket->u.udp, fd);
         } else if (type & CAT_SOCKET_TYPE_FLAG_LOCAL) {
-            error = uv_pipe_open(&isocket->u.pipe, (uv_file) fd);
+            /* convert SOCKET to int on Windows */
+            error = uv_pipe_open(&isocket->u.pipe, (cat_os_fd_t) fd);
         } else if ((type & CAT_SOCKET_TYPE_TTY) == CAT_SOCKET_TYPE_TTY) {
             error = 0;
         } else {
@@ -843,7 +846,7 @@ CAT_API cat_sa_family_t cat_socket_get_af(const cat_socket_t *socket)
 
 static cat_socket_fd_t cat_socket_internal_get_fd_fast(const cat_socket_internal_t *isocket)
 {
-    uv_os_fd_t fd = (uv_os_fd_t) CAT_SOCKET_INVALID_FD;
+    cat_os_handle_t fd = CAT_OS_INVALID_HANDLE;
 
     (void) uv_fileno(&isocket->u.handle, &fd);
 
@@ -859,7 +862,7 @@ CAT_API cat_socket_fd_t cat_socket_get_fd_fast(const cat_socket_t *socket)
 
 static cat_socket_fd_t cat_socket_internal_get_fd(const cat_socket_internal_t *isocket)
 {
-    uv_os_fd_t fd = (uv_os_fd_t) CAT_SOCKET_INVALID_FD;
+    cat_os_handle_t fd = CAT_OS_INVALID_HANDLE;
     int error;
 
     error = uv_fileno(&isocket->u.handle, &fd);
@@ -872,7 +875,7 @@ static cat_socket_fd_t cat_socket_internal_get_fd(const cat_socket_internal_t *i
 
 CAT_API cat_socket_fd_t cat_socket_get_fd(const cat_socket_t *socket)
 {
-    CAT_SOCKET_INTERNAL_GETTER(socket, isocket, return -1);
+    CAT_SOCKET_INTERNAL_GETTER(socket, isocket, return CAT_SOCKET_INVALID_FD);
 
     return cat_socket_internal_get_fd(isocket);
 }
@@ -1473,7 +1476,7 @@ CAT_API cat_bool_t cat_socket_enable_crypto_ex(cat_socket_t *socket, cat_socket_
             ret = cat_true;
             break;
         }
-        CAT_ASSERT(n == CAT_RET_AGAIN); {
+        CAT_ASSERT(n == CAT_RET_NONE); {
             ssize_t nread, nwritten;
             CAT_TIME_WAIT_START() {
                 nread = cat_socket_recv_ex(socket, buffer->value, buffer->size, timeout);
@@ -2446,7 +2449,7 @@ static ssize_t cat_socket_internal_peekfrom(
 #endif
         nread = recvfrom(
             fd,
-            buffer, (cat_socket_recv_length_t) size, 
+            buffer, (cat_socket_recv_length_t) size,
             MSG_PEEK,
             address, address_length
         );

@@ -43,6 +43,9 @@ CAT_API cat_bool_t cat_time_wait(cat_timeout_t timeout);
     } \
 } while (0)
 
+/* OK: timeout, NONE: cancelled, ERROR: error occured */
+CAT_API cat_ret_t cat_time_delay(cat_timeout_t timeout);
+
 CAT_API unsigned int cat_time_sleep(unsigned int seconds);
 /* -1: failed, 0: success, >0: left time (cancelled) */
 CAT_API cat_msec_t cat_time_msleep(cat_msec_t msec);

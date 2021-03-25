@@ -54,3 +54,39 @@
 #define CAT_DIR_SEPARATOR '/'
 #define CAT_EOL "\n"
 #endif
+
+/* fd & socket */
+typedef int cat_os_fd_t;
+#define CAT_OS_FD_FMT "%d"
+#define CAT_OS_FD_FMT_SPEC "d"
+#define CAT_OS_INVALID_FD -1
+
+/* on UNIX is init, on Windows is SOCKET */
+typedef uv_os_sock_t cat_os_socket_t;
+#ifndef CAT_OS_WIN
+#define CAT_OS_SOCKET_FMT "%d"
+#define CAT_OS_SOCKET_FMT_SPEC "d"
+#else
+#define CAT_OS_SOCKET_FMT "%p"
+#define CAT_OS_SOCKET_FMT_SPEC "p"
+#endif
+#ifndef CAT_OS_WIN
+#define CAT_OS_INVALID_SOCKET -1
+#else
+#define CAT_OS_INVALID_SOCKET INVALID_SOCKET
+#endif
+
+/* on UNIX is int, on Windows is HANDLE */
+typedef uv_os_fd_t cat_os_handle_t;
+#ifndef CAT_OS_WIN
+#define CAT_OS_HANDLE_FMT "%d"
+#define CAT_OS_HANDLE_FMT_SPEC "d"
+#else
+#define CAT_OS_HANDLE_FMT "%p"
+#define CAT_OS_HANDLE_FMT_SPEC "p"
+#endif
+#ifndef CAT_OS_WIN
+#define CAT_OS_INVALID_HANDLE -1
+#else
+#define CAT_OS_INVALID_HANDLE INVALID_HANDLE_VALUE
+#endif

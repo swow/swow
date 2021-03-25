@@ -91,6 +91,12 @@ CAT_API int nanosleep(const struct timespec *rqtp, struct timespec *rmtp);
 #endif
 
 #ifndef CAT_OS_WIN
+typedef size_t cat_io_vector_length_t;
+#else
+typedef ULONG cat_io_vector_length_t;
+#endif
+
+#ifndef CAT_OS_WIN
 /* Note: May be cast to struct iovec. See writev(2). */
 typedef struct
 {

@@ -26,7 +26,13 @@ extern "C" {
 
 typedef cat_data_callback_t cat_work_function_t;
 
-CAT_API cat_bool_t cat_work(cat_work_function_t function, cat_data_t *data, cat_timeout_t timeout);
+typedef enum {
+  CAT_WORK_KIND_CPU = UV_WORK_CPU,
+  CAT_WORK_KIND_FAST_IO = UV_WORK_FAST_IO,
+  CAT_WORK_KIND_SLOW_IO = UV_WORK_SLOW_IO,
+} cat_work_kind_t;
+
+CAT_API cat_bool_t cat_work(cat_work_kind_t kind, cat_work_function_t function, cat_data_t *data, cat_timeout_t timeout);
 
 #ifdef __cplusplus
 }

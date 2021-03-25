@@ -192,11 +192,17 @@ void uv__fs_poll_close(uv_fs_poll_t* handle);
 
 int uv__getaddrinfo_translate_error(int sys_err);    /* EAI_* error. */
 
+#ifndef HAVE_LIBCAT
 enum uv__work_kind {
   UV__WORK_CPU,
   UV__WORK_FAST_IO,
   UV__WORK_SLOW_IO
 };
+#else
+#define UV__WORK_CPU UV_WORK_CPU
+#define UV__WORK_FAST_IO UV_WORK_FAST_IO
+#define UV__WORK_SLOW_IO UV_WORK_SLOW_IO
+#endif
 
 void uv__work_submit(uv_loop_t* loop,
                      struct uv__work *w,

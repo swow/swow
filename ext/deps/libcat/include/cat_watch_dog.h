@@ -36,6 +36,7 @@ extern "C" {
 #endif
 
 #define CAT_ALERT_COUNT_FMT "%" PRIu64
+#define CAT_ALERT_COUNT_FMT_SPEC PRIu64
 typedef uint64_t cat_alert_count_t;
 
 typedef struct cat_watch_dog_s cat_watch_dog_t;

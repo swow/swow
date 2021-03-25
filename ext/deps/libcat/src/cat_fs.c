@@ -389,93 +389,114 @@ CAT_API int cat_fs_statfs(const char* path, cat_statfs_t* buf){
 }
 
 // cat_work wrapped fs functions
-#define CAT_FS_WORK_STRUCT3(name, tr, ta, tb, tc) \
+typedef struct cat_fs_ret_s{
+    union {
+        signed long long int num;
+        void * ptr;
+    }ret;
+    int error; // original errno / GetLastError()
+    const char * msg; // cat error message, will be cat_free'd
+} cat_fs_ret_t;
+
+#define CAT_FS_WORK_STRUCT1(name, ta) \
     struct cat_fs_ ##name ##_s { \
-        tr ret; \
+        cat_fs_ret_t ret; \
+        ta a; \
+    };
+#define CAT_FS_WORK_STRUCT3(name, ta, tb, tc) \
+    struct cat_fs_ ##name ##_s { \
+        cat_fs_ret_t ret; \
         ta a; \
         tb b; \
         tc c; \
     };
-#define CAT_FS_WORK_CALL(name, ...) \
-    ()
+#define CAT_FS_WORK_STRUCT_INIT(name, valname, ...) struct cat_fs_##name##_s valname = {{0}, __VA_ARGS__}
 #define CAT_FS_WORK_CB(name) static void _cat_fs_##name##_cb(struct cat_fs_##name##_s* data)
 #define CAT_FS_WORK_CB_CALL(name) ((void(*)(void*))_cat_fs_##name##_cb)
+#define _CAT_FS_WORK_CB_MKERR(valname, fmt, errmsg, freemsg) if(0 != valname.ret.error){\
+    const char* msg = NULL;\
+    cat_update_last_error(cat_translate_sys_error(valname.ret.error), fmt, (NULL != valname.ret.msg) ? valname.ret.msg : (msg=(errmsg))); \
+    {freemsg} \
+    if(valname.ret.msg){cat_free((void*)valname.ret.msg);} \
+}
+#define CAT_FS_WORK_CB_MKERR_UNIX(a,b)  _CAT_FS_WORK_CB_MKERR(a,b, strerror(a.ret.error), {})
 
-CAT_FS_WORK_STRUCT3(read, ssize_t, int, void*, size_t)
+CAT_FS_WORK_STRUCT3(read, int, void*, size_t)
 CAT_FS_WORK_CB(read){
-    data->ret = read(data->a, data->b,
+    data->ret.ret.num = read(data->a, data->b,
 #ifdef CAT_OS_WIN
     (unsigned int)
 #endif
     data->c);
-    if(0 > data->ret){
-        cat_update_last_error(uv_translate_sys_error(errno), "Read failed: %s", strerror(errno));
+    if(0 > data->ret.ret.num){
+        data->ret.error = errno;
+        return;
     }
 }
 CAT_API ssize_t cat_fs_read(cat_file_t fd, void* buf, size_t size){
-    struct cat_fs_read_s data = {-1, fd, buf, size};
-    if(cat_work(CAT_FS_WORK_CB_CALL(read), &data, CAT_TIMEOUT_FOREVER)){
-        return data.ret;
+    CAT_FS_WORK_STRUCT_INIT(read, data, fd, buf, size);
+    if(cat_work(CAT_WORK_KIND_FAST_IO, CAT_FS_WORK_CB_CALL(read), &data, CAT_TIMEOUT_FOREVER)){
+        CAT_FS_WORK_CB_MKERR_UNIX(data, "Read failed: %s");
+        return data.ret.ret.num;
     }
     return -1;
 }
 
-CAT_FS_WORK_STRUCT3(write, ssize_t, int, const void*, size_t)
+CAT_FS_WORK_STRUCT3(write, int, const void*, size_t)
 CAT_FS_WORK_CB(write){
-    data->ret = (ssize_t)write(data->a, data->b,
+    data->ret.ret.num = (ssize_t)write(data->a, data->b,
 #ifdef CAT_OS_WIN
     (unsigned int)
 #endif
     data->c);
-    if(0 > data->ret){
-        cat_update_last_error(uv_translate_sys_error(errno), "Write failed: %s", strerror(errno));
+    if (0 > data->ret.ret.num) {
+        data->ret.error = errno;
+        return;
     }
 }
 CAT_API ssize_t cat_fs_write(cat_file_t fd, const void* buf, size_t length){
-    struct cat_fs_write_s data = {-1, fd, buf,length};
-    if(cat_work(CAT_FS_WORK_CB_CALL(write), &data, CAT_TIMEOUT_FOREVER)){
-        return data.ret;
+    CAT_FS_WORK_STRUCT_INIT(write, data, fd, buf, length);
+    if (cat_work(CAT_WORK_KIND_FAST_IO, CAT_FS_WORK_CB_CALL(write), &data, CAT_TIMEOUT_FOREVER)) {
+        CAT_FS_WORK_CB_MKERR_UNIX(data, "Write failed: %s");
+        return (ssize_t)data.ret.ret.num;
     }
     return -1;
 }
 
-CAT_FS_WORK_STRUCT3(lseek, ssize_t, int, off_t, int)
+CAT_FS_WORK_STRUCT3(lseek, int, off_t, int)
 CAT_FS_WORK_CB(lseek){
-    data->ret = (ssize_t)lseek(data->a, data->b, data->c);
-    if(0 > data->ret){
-        cat_update_last_error(uv_translate_sys_error(errno), "Calling lseek failed: %s", strerror(errno));
+    data->ret.ret.num = (ssize_t)lseek(data->a, data->b, data->c);
+    if (0 > data->ret.ret.num) {
+        data->ret.error = errno;
+        return;
     }
 }
 CAT_API off_t cat_fs_lseek(cat_file_t fd, off_t offset, int whence){
-    struct cat_fs_lseek_s data = {-1, fd, offset, whence};
-    if(cat_work(CAT_FS_WORK_CB_CALL(lseek), &data, CAT_TIMEOUT_FOREVER)){
-        return (off_t) data.ret;
+    CAT_FS_WORK_STRUCT_INIT(lseek, data, fd, offset, whence);
+    if (cat_work(CAT_WORK_KIND_FAST_IO, CAT_FS_WORK_CB_CALL(lseek), &data, CAT_TIMEOUT_FOREVER)) {
+        CAT_FS_WORK_CB_MKERR_UNIX(data, "Calling lseek failed: %s");
+        return (off_t)data.ret.ret.num;
     }
     return -1;
 }
 
 #ifndef CAT_OS_WIN
-struct cat_fs_readdir_s {
-    cat_dirent_t* ret;
-    DIR* a;
-};
-CAT_FS_WORK_CB(readdir){
-    struct dirent * pdirent = readdir(data->a);
+CAT_FS_WORK_STRUCT1(readdir, uv_dir_t*)
+CAT_FS_WORK_CB(readdir) {
+    struct dirent * pdirent = readdir(data->a->dir);
     if(NULL == pdirent){
-        data->ret = NULL;
-        cat_update_last_error_of_syscall("Failed readdir");
+        data->ret.error = errno;
         return;
     }
-    data->ret = malloc(sizeof(*data->ret));
-    if(NULL == data->ret){
-        cat_update_last_error(CAT_ENOMEM, "Cannot allocate memory");
+    cat_dirent_t * pret = malloc(sizeof(*pret));
+    if(NULL == pret){
+        data->ret.error = errno;
         return;
     }
-    data->ret->name = strdup(pdirent->d_name);
-    if(NULL == data->ret->name){
-        cat_update_last_error(CAT_ENOMEM, "Cannot allocate memory");
-        free(data->ret);
-        data->ret = NULL;
+    pret->name = strdup(pdirent->d_name);
+    if(NULL == pret->name){
+        free(pret);
+        data->ret.error = errno;
         return;
     }
 
@@ -507,20 +528,21 @@ CAT_FS_WORK_CB(readdir){
     default:
         type = UV_DIRENT_UNKNOWN;
     }
-    data->ret->type = type;
+    pret->type = type;
 #else
-    data->ret->type = UV_DIRENT_UNKNOWN;
+    pret->type = UV_DIRENT_UNKNOWN;
 #endif
+    data->ret.ret.ptr = pret;
 }
 /*
 * cat_fs_readdir: like readdir(3), but return cat_dirent_t
 * Note: you should do both free(retval->name) and free(retval)
 */
 CAT_API cat_dirent_t* cat_fs_readdir(cat_dir_t* dir){
-    uv_dir_t * uv_dir = (uv_dir_t*)dir;
-    struct cat_fs_readdir_s data = {NULL, uv_dir->dir};
-    if(cat_work(CAT_FS_WORK_CB_CALL(readdir), &data, CAT_TIMEOUT_FOREVER)){
-        return data.ret;
+    CAT_FS_WORK_STRUCT_INIT(readdir, data, dir);
+    if (cat_work(CAT_WORK_KIND_FAST_IO, CAT_FS_WORK_CB_CALL(readdir), &data, CAT_TIMEOUT_FOREVER)) {
+        CAT_FS_WORK_CB_MKERR_UNIX(data, "Readdir failed: %s");
+        return data.ret.ret.ptr;
     }
     return NULL;
 }
@@ -534,7 +556,7 @@ CAT_FS_WORK_CB(rewinddir){
 CAT_API void cat_fs_rewinddir(cat_dir_t * dir){
     uv_dir_t * uv_dir = (uv_dir_t*)dir;
     struct cat_fs_rewinddir_s data = {uv_dir->dir};
-    cat_work(CAT_FS_WORK_CB_CALL(rewinddir), &data, CAT_TIMEOUT_FOREVER);
+    cat_work(CAT_WORK_KIND_FAST_IO, CAT_FS_WORK_CB_CALL(rewinddir), &data, CAT_TIMEOUT_FOREVER);
 }
 #else
 // use NtQueryDirectoryFile to mock readdir,rewinddir behavior.
@@ -599,7 +621,7 @@ static const char* cat_fs_wcs2mbs(LPCWSTR wcs){
     return (const char *)mbs;
 }
 
-static void cat_fs_win_convert_error(int error, const char* reason){
+static const char* cat_fs_win_strerror(int error) {
     LPVOID temp_msg;
     DWORD len_msg = FormatMessageW(
         FORMAT_MESSAGE_ALLOCATE_BUFFER |
@@ -612,19 +634,12 @@ static void cat_fs_win_convert_error(int error, const char* reason){
         0, // bufsiz: 0
         NULL // va_args
     );
-    const char * msg = cat_fs_wcs2mbs((LPWSTR)temp_msg);
+    const char* msg = cat_fs_wcs2mbs((LPWSTR)temp_msg);
     LocalFree(temp_msg);
-    cat_update_last_error(cat_translate_sys_error(error), reason, msg?msg:"");
-    HeapFree(GetProcessHeap(), 0, (LPVOID)msg);
-}
-
-static void cat_fs_win_make_error(const char* reason){
-    int error = GetLastError();
-    cat_fs_win_convert_error(error, reason);
+    return msg;
 }
 
 static HANDLE hntdll = NULL;
-
 static void cat_fs_proventdll(){
     if (NULL != hntdll){
         return;
@@ -635,44 +650,44 @@ static void cat_fs_proventdll(){
     }
 }
 
-static void cat_fs_nt_make_error(NTSTATUS status, const char* reason){
-    //printf("NTSTATUS 0x%08x\n", status);
-    static ULONG (*pRtlNtStatusToDosError) (NTSTATUS) = NULL;
-    if(NULL == pRtlNtStatusToDosError){
-        if(NULL == hntdll){
+static ULONG(*pRtlNtStatusToDosError) (NTSTATUS) = NULL;
+static const char * cat_fs_proventRtlNtStatusToDosError() {
+    if (NULL == pRtlNtStatusToDosError) {
+        if (NULL == hntdll) {
             cat_fs_proventdll();
-            if(NULL == hntdll){
-                const char* msg = cat_sprintf("Cannot open ntdll.dll on processing NTSTATUS 0x%08x", status);
-                cat_update_last_error(CAT_UNCODED, reason, msg);
-                cat_free((LPVOID)msg);
-                return;
+            if (NULL == hntdll) {
+                return "Cannot open ntdll.dll";
             }
         }
         pRtlNtStatusToDosError = (LPVOID)GetProcAddress(hntdll, "RtlNtStatusToDosError");
-        if(NULL == pRtlNtStatusToDosError){
-            const char* msg = cat_sprintf("Cannot resolve RtlNtStatusToDosError on processing NTSTATUS 0x%08x", status);
-            cat_update_last_error(CAT_UNCODED, reason, msg);
-            cat_free((LPVOID)msg);
-            return;
+        if (NULL == pRtlNtStatusToDosError) {
+            return "Cannot resolve RtlNtStatusToDosError";
         }
     }
-    //printf("HRESULT 0x%08x\n", pRtlNtStatusToDosError(status));
-    cat_fs_win_convert_error(pRtlNtStatusToDosError(status), reason);
+    return NULL;
 }
-
-struct cat_fs_opendir_s {
-    cat_dir_int_t* ret;
-    const char * path; // path encoded in UTF-8
-};
-CAT_FS_WORK_CB(opendir){
-    assert(NULL != data->path);
-    LPCWSTR pathw = cat_fs_mbs2wcs(data->path);
-    if(NULL == pathw){
-        // failed alloc heap memory
-        data->ret = NULL;
-        cat_update_last_error(CAT_ENOMEM, "Cannot allocate memory");
-        return;
+/*
+static const char * cat_fs_nt_strerror(NTSTATUS status){
+    //printf("NTSTATUS 0x%08x\n", status);
+    const char* _msg;
+    if (NULL != (_msg = cat_fs_proventRtlNtStatusToDosError())) {
+        const char* msg = cat_sprintf("%s on processing NTSTATUS %08x", msg, status);
+        cat_free(_msg);
+        return _msg;
     }
+    //printf("HRESULT 0x%08x\n", pRtlNtStatusToDosError(status));
+    return cat_fs_win_strerror(pRtlNtStatusToDosError(status));
+}
+*/
+
+#ifdef CAT_OS_WIN
+#define CAT_FS_WORK_CB_MKERR_WIN(a,b)  _CAT_FS_WORK_CB_MKERR(a,b, cat_fs_win_strerror(a.ret.error),{if(NULL!=msg)HeapFree(GetProcessHeap(), 0, (LPVOID)msg);})
+#endif
+
+CAT_FS_WORK_STRUCT1(opendir, const char*)
+CAT_FS_WORK_CB(opendir){
+    assert(NULL != data->a);
+    LPCWSTR pathw = cat_fs_mbs2wcs(data->a);
 
     HANDLE dir_handle = CreateFileW(
         pathw, // filename
@@ -686,44 +701,43 @@ CAT_FS_WORK_CB(opendir){
     HeapFree(GetProcessHeap(), 0, (LPVOID)pathw);
 
     if (INVALID_HANDLE_VALUE == dir_handle){
-        cat_fs_win_make_error("Cannot open directory: %s");
-        data->ret = NULL;
+        data->ret.error = GetLastError();
         return;
     }
-    data->ret = malloc(sizeof(cat_dir_int_t));
-    if(NULL == data->ret){
-        cat_update_last_error(CAT_ENOMEM, "Cannot allocate memory");
+    cat_dir_int_t *pdir = malloc(sizeof(cat_dir_int_t));
+    if(NULL == pdir){
+        data->ret.error = ERROR_NOT_ENOUGH_MEMORY;
         return;
     }
-    data->ret->dir = dir_handle;
-    data->ret->rewind = cat_true;
+    pdir->dir = dir_handle;
+    pdir->rewind = cat_true;
+    data->ret.ret.ptr = pdir;
 }
 CAT_API cat_dir_t *cat_fs_opendir(const char* path){
-    struct cat_fs_opendir_s data = {NULL, path};
-    if(cat_work(CAT_FS_WORK_CB_CALL(opendir), &data, CAT_TIMEOUT_FOREVER)){
-        return (cat_dir_t*)data.ret;
+    CAT_FS_WORK_STRUCT_INIT(opendir, data, path);
+    if (cat_work(CAT_WORK_KIND_FAST_IO, CAT_FS_WORK_CB_CALL(opendir), &data, CAT_TIMEOUT_FOREVER)) {
+        CAT_FS_WORK_CB_MKERR_WIN(data, "Opendir failed: %s");
+        return data.ret.ret.ptr;
     }
     return NULL;
 }
 
-struct cat_fs_closedir_s {
-    int ret;
-    cat_dir_int_t* dir;
-};
+CAT_FS_WORK_STRUCT1(closedir, cat_dir_int_t*)
 CAT_FS_WORK_CB(closedir){
-    BOOL ret = CloseHandle(data->dir->dir);
+    BOOL ret = CloseHandle(data->a->dir);
     if(FALSE == ret){
-        cat_fs_win_make_error("Cannot close directory: %s");
-        data->ret = -1;
+        data->ret.ret.num = -1;
+        data->ret.error = GetLastError();
         return ;
     }
-    data->ret = 0;
+    data->ret.ret.num = 0;
     return;
 }
 CAT_API int cat_fs_closedir(cat_dir_t* dir){
-    struct cat_fs_closedir_s data = {-1, (cat_dir_int_t *)dir};
-    if(cat_work(CAT_FS_WORK_CB_CALL(closedir), &data, CAT_TIMEOUT_FOREVER)){
-        return data.ret;
+    CAT_FS_WORK_STRUCT_INIT(closedir, data, dir);
+    if (cat_work(CAT_WORK_KIND_FAST_IO, CAT_FS_WORK_CB_CALL(closedir), &data, CAT_TIMEOUT_FOREVER)) {
+        CAT_FS_WORK_CB_MKERR_WIN(data, "Closedir failed: %s");
+        return (int)data.ret.ret.num;
     }
     return -1;
 }
@@ -742,10 +756,7 @@ typedef struct _CAT_FILE_DIRECTORY_INFORMATION {
   WCHAR         FileName[1];
 } CAT_FILE_DIRECTORY_INFORMATION, *CAT_PFILE_DIRECTORY_INFORMATION;
 
-struct cat_fs_readdir_s {
-    cat_dirent_t* ret;
-    cat_dir_int_t* dir;
-};
+CAT_FS_WORK_STRUCT1(readdir, cat_dir_int_t*)
 CAT_FS_WORK_CB(readdir){
     static __kernel_entry NTSTATUS (*pNtQueryDirectoryFile)(HANDLE,
         HANDLE, PVOID, PVOID, PVOID, PVOID, ULONG, FILE_INFORMATION_CLASS,
@@ -754,15 +765,15 @@ CAT_FS_WORK_CB(readdir){
         if(NULL == hntdll){
             cat_fs_proventdll();
             if(NULL == hntdll){
-                const char* msg = cat_sprintf("Cannot open ntdll.dll on finding NtQueryDirectoryFile in readdir");
-                cat_update_last_error(CAT_UNCODED, msg);
-                cat_free((LPVOID)msg);
+                data->ret.msg = "Cannot open ntdll.dll on finding NtQueryDirectoryFile in readdir";
+                data->ret.error = GetLastError();
                 return;
             }
         }
         pNtQueryDirectoryFile = (LPVOID)GetProcAddress(hntdll, "NtQueryDirectoryFile");
         if(NULL == pNtQueryDirectoryFile){
-            cat_fs_win_make_error("Cannot read directory: cannot find NtQueryDirectoryFile: %s");
+            data->ret.msg = "Cannot find NtQueryDirectoryFile in readdir";
+            data->ret.error = GetLastError();
             return;
         }
     }
@@ -776,7 +787,7 @@ CAT_FS_WORK_CB(readdir){
 #endif
         char buffer[8192];
     status = pNtQueryDirectoryFile(
-        data->dir->dir, // file handle
+        data->a->dir, // file handle
         NULL, // whatever
         NULL, // whatever
         NULL, // whatever
@@ -786,22 +797,30 @@ CAT_FS_WORK_CB(readdir){
         FileDirectoryInformation,
         TRUE, // if we get only 1 entry
         NULL, // wildcard filename
-        data->dir->rewind // from first
+        data->a->rewind // from first
     );
     
     if(!NT_SUCCESS(status)){
-        cat_fs_nt_make_error(status, "Cannot readdir: %s");
-        data->ret = NULL;
-        return;
+        const char* _msg;
+        if (NULL != (_msg = cat_fs_proventRtlNtStatusToDosError())) {
+            data->ret.msg = cat_sprintf("%s on processing NTSTATUS %08x", _msg, status);
+            cat_free((void*)_msg);
+            data->ret.error = CAT_UNCODED;
+            return;
+        }
+        else {
+            data->ret.error = pRtlNtStatusToDosError(status);
+            return;
+        }
     }
 
-    if (data->dir->rewind) {
-        data->dir->rewind = cat_false;
+    if (data->a->rewind) {
+        data->a->rewind = cat_false;
     }
 
-    data->ret = malloc(sizeof(*data->ret));
-    if (NULL == data->ret) {
-        cat_update_last_error(CAT_ENOMEM, "Failed allocate memory for retval");
+    cat_dirent_t* pdirent = malloc(sizeof(cat_dirent_t));
+    if (NULL == pdirent) {
+        data->ret.error = ERROR_NOT_ENOUGH_MEMORY;
         return;
     }
 
@@ -819,23 +838,25 @@ CAT_FS_WORK_CB(readdir){
         FALSE // use default char
     );
     fn_buf[r] = 0;
-    data->ret->name = strdup(fn_buf);
+    pdirent->name = strdup(fn_buf);
 
     // from uv
     if (pfdi->FileAttributes & FILE_ATTRIBUTE_DEVICE){
-        data->ret->type = UV_DIRENT_CHAR;
+        pdirent->type = UV_DIRENT_CHAR;
     }else if (pfdi->FileAttributes & FILE_ATTRIBUTE_REPARSE_POINT){
-        data->ret->type = UV_DIRENT_LINK;
+        pdirent->type = UV_DIRENT_LINK;
     }else if (pfdi->FileAttributes & FILE_ATTRIBUTE_DIRECTORY){
-        data->ret->type = UV_DIRENT_DIR;
+        pdirent->type = UV_DIRENT_DIR;
     }else{
-        data->ret->type = UV_DIRENT_FILE;
+        pdirent->type = UV_DIRENT_FILE;
     }
+    data->ret.ret.ptr = pdirent;
 }
 CAT_API uv_dirent_t* cat_fs_readdir(cat_dir_t* dir){
-    struct cat_fs_readdir_s data = {NULL, (cat_dir_int_t*)dir};
-    if(cat_work(CAT_FS_WORK_CB_CALL(readdir), &data, CAT_TIMEOUT_FOREVER)){
-        return data.ret;
+    CAT_FS_WORK_STRUCT_INIT(readdir, data, dir);
+    if (cat_work(CAT_WORK_KIND_FAST_IO, CAT_FS_WORK_CB_CALL(readdir), &data, CAT_TIMEOUT_FOREVER)) {
+        CAT_FS_WORK_CB_MKERR_WIN(data, "Readdir failed: %s");
+        return data.ret.ret.ptr;
     }
     return NULL;
 }

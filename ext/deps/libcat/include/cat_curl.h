@@ -31,11 +31,12 @@ extern "C" {
 
 CAT_API cat_bool_t cat_curl_module_init(void);
 CAT_API cat_bool_t cat_curl_module_shutdown(void);
-CAT_API cat_bool_t cat_curl_runtime_init(void);
-CAT_API cat_bool_t cat_curl_runtime_shutdown(void);
 
 CAT_API CURLcode cat_curl_easy_perform(CURL *ch);
 
+CAT_API CURLM *cat_curl_multi_init(void);
+CAT_API CURLMcode cat_curl_multi_cleanup(CURLM *multi);
+CAT_API CURLMcode cat_curl_multi_perform(CURLM *multi, int *running_handles);
 CAT_API CURLMcode cat_curl_multi_wait(CURLM *multi, struct curl_waitfd *extra_fds, unsigned int extra_nfds, int timeout_ms, int *numfds);
 
 #endif /* CAT_HAVE_CURL */
