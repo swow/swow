@@ -450,7 +450,14 @@ PHP_FUNCTION(swow_curl_multi_exec)
 		Z_PARAM_ZVAL(z_still_running)
 	ZEND_PARSE_PARAMETERS_END();
 
+#if PHP_VERSION_ID < 80000
+	if ((mh = (php_curlm *)zend_fetch_resource(Z_RES_P(z_mh), le_curl_multi_handle_name, le_curl_multi_handle)) == NULL) {
+		RETURN_FALSE;
+	}
+#else
 	mh = Z_CURL_MULTI_P(z_mh);
+#endif
+	
 
 	{
 		zend_llist_position pos;
@@ -459,8 +466,13 @@ PHP_FUNCTION(swow_curl_multi_exec)
 
 		for (pz_ch = (zval *)zend_llist_get_first_ex(&mh->easyh, &pos); pz_ch;
 			pz_ch = (zval *)zend_llist_get_next_ex(&mh->easyh, &pos)) {
+#if PHP_VERSION_ID < 80000
+			if ((ch = (php_curl *)zend_fetch_resource(Z_RES_P(pz_ch), le_curl_name, le_curl)) == NULL) {
+				RETURN_FALSE;
+			}
+#else
 			ch = Z_CURL_P(pz_ch);
-
+#endif
 			_php_curl_verify_handlers(ch, 1);
 		}
 	}
