@@ -520,7 +520,7 @@ static ssize_t swow_php_stdiop_write(php_stream *stream, const char *buf, size_t
                 return bytes_written;
             }
             if (!(stream->flags & PHP_STREAM_FLAG_SUPPRESS_ERRORS)) {
-                int myerrno = -cat_get_last_error_code();
+                int myerrno = cat_orig_errno(cat_get_last_error_code());
                 php_error_docref(NULL, E_NOTICE, "Write of %zu bytes failed with errno=%d %s", count, myerrno, strerror(myerrno));
             }
         }
@@ -563,7 +563,7 @@ static ssize_t swow_php_stdiop_read(php_stream *stream, char *buf, size_t count)
                 /* TODO: Should this be treated as a proper error or not? */
             } else {
                 if (!(stream->flags & PHP_STREAM_FLAG_SUPPRESS_ERRORS)) {
-                    int myerrno = -cat_get_last_error_code();
+                    int myerrno = cat_orig_errno(cat_get_last_error_code());
                     php_error_docref(NULL, E_NOTICE, "Read of %zu bytes failed with errno=%d %s", count, myerrno, strerror(myerrno));
                 }
 
@@ -1224,8 +1224,9 @@ SWOW_API  php_stream *_swow_php_stream_fopen(const char *filename, const char *m
 
             return ret;
         }
-        close(fd);
+        cat_fs_close(fd);
     }
+    errno = cat_orig_errno(cat_get_last_error_code());
     if (persistent_id) {
         efree(persistent_id);
     }
@@ -1289,7 +1290,7 @@ static int swow_php_plain_files_unlink(php_stream_wrapper *wrapper, const char *
     ret = cat_fs_unlink(url);
     if (ret == -1) {
         if (options & REPORT_ERRORS) {
-            php_error_docref1(NULL, url, E_WARNING, "%s", cat_get_last_error_message());
+            php_error_docref1(NULL, url, E_WARNING, "%s", cat_orig_strerror(cat_get_last_error_code()));
         }
         return 0;
     }
@@ -1355,7 +1356,7 @@ static int swow_php_plain_files_rename(php_stream_wrapper *wrapper, const char *
                      * access to the file in the meantime.
                      */
                     if (cat_fs_chown(url_to, sb.st_uid, sb.st_gid)) {
-                        php_error_docref2(NULL, url_from, url_to, E_WARNING, "%s", cat_get_last_error_message());
+                        php_error_docref2(NULL, url_from, url_to, E_WARNING, "%s", cat_orig_strerror(cat_get_last_error_code()));
                         if (errno != EPERM) {
                             success = 0;
                         }
@@ -1363,7 +1364,7 @@ static int swow_php_plain_files_rename(php_stream_wrapper *wrapper, const char *
 
                     if (success) {
                         if (cat_fs_chmod(url_to, sb.st_mode)) {
-                            php_error_docref2(NULL, url_from, url_to, E_WARNING, "%s", cat_get_last_error_message());
+                            php_error_docref2(NULL, url_from, url_to, E_WARNING, "%s", cat_orig_strerror(cat_get_last_error_code()));
                             if (errno != EPERM) {
                                 success = 0;
                             }
@@ -1409,7 +1410,7 @@ static int swow_php_mkdir_ex(const char *dir, zend_long mode, int options){
 	}
 
 	if ((ret = cat_fs_mkdir(dir, (mode_t)mode)) < 0 && (options & REPORT_ERRORS)) {
-		php_error_docref(NULL, E_WARNING, "%s", cat_get_last_error_message());
+		php_error_docref(NULL, E_WARNING, "%s", cat_orig_strerror(cat_get_last_error_code()));
 	}
 
 	return ret;
@@ -1483,7 +1484,7 @@ static int swow_php_plain_files_mkdir(php_stream_wrapper *wrapper, const char *d
                     if ((*(p+1) != '\0') &&
                         (ret = cat_fs_mkdir(buf, (mode_t)mode)) < 0) {
                         if (options & REPORT_ERRORS) {
-                            php_error_docref(NULL, E_WARNING, "%s", cat_get_last_error_message());
+                            php_error_docref(NULL, E_WARNING, "%s", cat_orig_strerror(cat_get_last_error_code()));
                         }
                         break;
                     }
@@ -1518,7 +1519,7 @@ static int swow_php_plain_files_rmdir(php_stream_wrapper *wrapper, const char *u
 #endif
 
     if (cat_fs_rmdir(url) < 0) {
-        php_error_docref1(NULL, url, E_WARNING, "%s", cat_get_last_error_message());
+        php_error_docref1(NULL, url, E_WARNING, "%s", cat_orig_strerror(cat_get_last_error_code()));
         return 0;
     }
 
@@ -1559,7 +1560,7 @@ static int swow_php_plain_files_metadata(php_stream_wrapper *wrapper, const char
             if (cat_fs_access(url, F_OK) != 0) {
                 int fd = cat_fs_open(url,  O_TRUNC | O_CREAT);
                 if (fd < 0) {
-                    php_error_docref1(NULL, url, E_WARNING, "Unable to create file %s because %s", url, cat_get_last_error_message());
+                    php_error_docref1(NULL, url, E_WARNING, "Unable to create file %s because %s", url, cat_orig_strerror(cat_get_last_error_code()));
                     return 0;
                 }
                 cat_fs_close(fd);
@@ -1602,7 +1603,7 @@ static int swow_php_plain_files_metadata(php_stream_wrapper *wrapper, const char
             return 0;
     }
     if (ret == -1) {
-        php_error_docref1(NULL, url, E_WARNING, "Operation failed: %s", cat_get_last_error_message());
+        php_error_docref1(NULL, url, E_WARNING, "Operation failed: %s", cat_orig_strerror(cat_get_last_error_code()));
         return 0;
     }
     php_clear_stat_cache(0, NULL, 0);
