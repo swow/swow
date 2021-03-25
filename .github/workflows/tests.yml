@@ -28,11 +28,13 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
-        # os: [ubuntu-latest]
+        #os: [macos-latest]
         php-version: ['8.0', '7.4', '7.3']
+        #php-version: ['8.0']
         #ts: ['nts', 'ts']
       max-parallel: 12
     steps:
+
       - name: Checkout
         uses: actions/checkout@v1
 
@@ -44,14 +46,31 @@ jobs:
           # ini-values: pcov.directory=lib
           # coverage: pcov
           coverage: none
+          extensions: curl,openssl
         #env:
           #phpts: ${{ matrix.ts }}
 
       - name: Setup Deps
-        run: composer update -o --ignore-platform-reqs
+        run: |
+          composer update -o --ignore-platform-reqs
+          ${{ runner.os == 'Linux' && 'sudo apt-get install -yqq libssl-dev libcurl4-openssl-dev' || '' }}
 
       - name: Build Swow extension
-        run: composer build-extension -- --debug
+        run: |
+          cd ext
+          printf "\033[1mRun phpize\033[0m\n"
+          phpize
+          printf "\033[1mStart configure\033[0m\n"
+          ./configure --enable-swow\
+            --enable-swow-debug \
+            --enable-swow-ssl=${{ runner.os == 'Linux' && 'yes' || '/usr/local/opt/openssl' }} \
+            --enable-swow-curl=${{ runner.os == 'Linux' && 'yes' || '/usr/local/opt/curl' }}
+          printf "\033[1mStart build Swow\033[0m\n"
+          make -j`${{ runner.os == 'Linux' && 'nproc' || 'sysctl -n hw.logicalcpu' }}`
+          printf "\033[1mDone build Swow\033[0m\n"
+          php -n -d extension=.libs/swow.so --ri swow
+          printf "\033[1mInstall Swow\033[0m\n"
+          ${{ runner.os == 'Linux' && 'sudo' || ''}} make install-modules
 
       - name: Run extension tests
         id: ext-test
@@ -97,6 +116,7 @@ jobs:
           # ini-values: pcov.directory=lib
           # coverage: pcov
           coverage: none
+          extensions: curl,openssl
         env:
           phpts: ${{ matrix.ts }}
       
@@ -108,9 +128,9 @@ jobs:
         with:
           ext-path: ./ext
           tools-path: C:\tools\phpdev
-          conf-args: --enable-swow-debug
+          conf-args: --enable-swow-debug --enable-swow-ssl --enable-swow-curl
           ext-name: swow
-          deps: openssl
+          deps: openssl,libcurl,libssh2,zlib,nghttp2
 
       - name: Run extension tests
         shell: cmd
