@@ -1391,7 +1391,7 @@ static int swow_php_plain_files_rename(php_stream_wrapper *wrapper, const char *
 #ifdef PHP_WIN32
         php_win32_docref2_from_error(GetLastError(), url_from, url_to);
 #else
-        php_error_docref2(NULL, url_from, url_to, E_WARNING, "%s", strerror(errno));
+        php_error_docref2(NULL, url_from, url_to, E_WARNING, "%s", cat_orig_strerror(cat_get_last_error_code()));
 #endif
         return 0;
     }
