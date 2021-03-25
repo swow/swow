@@ -206,8 +206,11 @@ if (PHP_SWOW != 'no') (function(){
     //var mp_src = "multipart_parser.c";
     //ADD_SOURCES("ext/swow/deps/libcat/deps/multipart_parser",  mp_src, "swow");
 
-
-    EXTENSION('swow', 'swow.c', PHP_SWOW, "", "php_swow.dll");
+    var shared = PHP_SWOW;
+    if(PHP_SWOW.replace(/static/,"") != PHP_SWOW){
+        shared = null;
+    }
+    EXTENSION('swow', 'swow.c', shared, "", "php_swow.dll");
     //ADD_FLAG("PHP_SWOW_SWOW", "asmobjs");
 
     //PHP_INSTALL_HEADERS("ext/swow", "include/cat_vm.h include/swow.h include/swow_api.h include/swow_buffer.h include/swow_channel.h include/swow_coroutine.h include/swow_debug.h include/swow_defer.h include/swow_event.h include/swow_exceptions.h include/swow_hook.h include/swow_http.h include/swow_log.h include/swow_signal.h include/swow_socket.h include/swow_stream.h include/swow_sync.h include/swow_time.h include/swow_watch_dog.h include/swow_websocket.h include/swow_wrapper.h")
