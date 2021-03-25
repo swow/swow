@@ -194,7 +194,7 @@ static inline php_curlm *curl_multi_from_obj(zend_object *obj) {
 #endif
 #define CURLM_HANDLERS_GET(mh, name) CURL_HANDLERS_GET(mh, name)
 
-void _php_curl_verify_handlers(php_curl *ch, int reporterror) /* {{{ */
+static void _php_curl_verify_handlers(php_curl *ch, int reporterror) /* {{{ */
 {
 	php_stream *stream;
 
@@ -260,7 +260,7 @@ void _php_curl_verify_handlers(php_curl *ch, int reporterror) /* {{{ */
 
 /* {{{ _php_curl_cleanup_handle(ch)
    Cleanup an execution phase */
-void _php_curl_cleanup_handle(php_curl *ch)
+static void _php_curl_cleanup_handle(php_curl *ch)
 {
 	smart_str_free(&CURL_HANDLERS_GET(ch, write)->buf);
 	if (ch->header.str) {
@@ -273,7 +273,7 @@ void _php_curl_cleanup_handle(php_curl *ch)
 }
 /* }}} */
 
-void _php_curl_multi_cleanup_list(void *data) /* {{{ */
+static void _php_curl_multi_cleanup_list(void *data) /* {{{ */
 {
 	zval *z_ch = (zval *)data;
 
@@ -282,7 +282,7 @@ void _php_curl_multi_cleanup_list(void *data) /* {{{ */
 /* }}} */
 
 #if PHP_VERSION_ID < 80000
-void _php_curl_multi_close(zend_resource *rsrc) /* {{{ */
+static void _php_curl_multi_close(zend_resource *rsrc) /* {{{ */
 {
 	php_curlm *mh = (php_curlm *)rsrc->ptr;
 	if (mh) {
@@ -315,7 +315,7 @@ void _php_curl_multi_close(zend_resource *rsrc) /* {{{ */
 }
 /* }}} */
 #else
-void swow_curl_multi_free_obj(zend_object *object)
+static void swow_curl_multi_free_obj(zend_object *object)
 {
 	php_curlm *mh = curl_multi_from_obj(object);
 
@@ -349,7 +349,7 @@ void swow_curl_multi_free_obj(zend_object *object)
 #endif
 
 /* {{{ Perform a cURL session */
-PHP_FUNCTION(swow_curl_exec)
+static PHP_FUNCTION(swow_curl_exec)
 {
 	CURLcode	error;
 	zval		*zid;
@@ -414,7 +414,7 @@ PHP_FUNCTION(swow_curl_exec)
 
 /* {{{ proto resource curl_multi_init(void)
    Returns a new cURL multi handle */
-PHP_FUNCTION(swow_curl_multi_init)
+static PHP_FUNCTION(swow_curl_multi_init)
 {
 	php_curlm *mh;
 
@@ -437,7 +437,7 @@ PHP_FUNCTION(swow_curl_multi_init)
 /* }}} */
 
 /* {{{ Run the sub-connections of the current cURL handle */
-PHP_FUNCTION(swow_curl_multi_exec)
+static PHP_FUNCTION(swow_curl_multi_exec)
 {
 	zval      *z_mh;
 	zval      *z_still_running;
@@ -491,7 +491,7 @@ PHP_FUNCTION(swow_curl_multi_exec)
 /* }}} */
 
 /* {{{ Get all the sockets associated with the cURL extension, which can then be "selected" */
-PHP_FUNCTION(swow_curl_multi_select)
+static PHP_FUNCTION(swow_curl_multi_select)
 {
 	zval           *z_mh;
 	php_curlm      *mh;
