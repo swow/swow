@@ -61,14 +61,13 @@ static PHP_METHOD(Swow_Socket, __construct)
 {
     SWOW_SOCKET_GETTER(ssocket, socket);
     zend_long type = CAT_SOCKET_TYPE_TCP;
-    zend_long fd = CAT_SOCKET_INVALID_FD;
 
     if (UNEXPECTED(cat_socket_is_available(socket))) {
         zend_throw_error(NULL, "%s can only construct once", ZEND_THIS_NAME);
         RETURN_THROWS();
     }
 
-    ZEND_PARSE_PARAMETERS_START(0, 2)
+    ZEND_PARSE_PARAMETERS_START(0, 1)
         Z_PARAM_OPTIONAL
         Z_PARAM_LONG(type)
     ZEND_PARSE_PARAMETERS_END();
