@@ -44,14 +44,22 @@
 
 typedef struct
 {
-    php_netstream_data_t sock;
-    cat_socket_t socket;
+    cat_socket_t *socket;
+    /* original ops */
+    const php_stream_ops *ops;
+    /* maybe allocated by original factory
+     * or allocated by ourself (when there is no original factory) */
+    php_netstream_data_t *sock;
+    php_netstream_data_t _sock;
 } swow_netstream_data_t;
+
+static php_stream_transport_factory php_stream_socket_factory;
+static php_stream_transport_factory php_stream_ssl_socket_factory;
 
 #define SWOW_STREAM_MEMBERS(stream, swow_sock, sock, socket) \
     swow_netstream_data_t *swow_sock = (swow_netstream_data_t *) (stream)->abstract; \
-    php_netstream_data_t *sock = EXPECTED(swow_sock != NULL) ? &swow_sock->sock : NULL; \
-    cat_socket_t *socket = EXPECTED(swow_sock != NULL) ? &swow_sock->socket : NULL; \
+    php_netstream_data_t *sock = EXPECTED(swow_sock != NULL) ? swow_sock->sock : NULL; \
+    cat_socket_t *socket = EXPECTED(swow_sock != NULL) ? swow_sock->socket : NULL; \
     (void) swow_sock; (void) sock; (void) socket
 
 #define SWOW_STREAM_SOCKET_GETTER(stream, swow_sock, sock, socket, failure) \
@@ -72,23 +80,19 @@ SWOW_API php_stream *swow_stream_socket_factory(
 {
     swow_netstream_data_t *swow_sock;
     php_netstream_data_t *sock;
-    php_stream *stream;
+    php_stream *stream = NULL;
     const php_stream_ops *ops;
 
-    /* check */
-    if (UNEXPECTED(flags & STREAM_XPORT_CONNECT_ASYNC)) {
-        // php_error_docref(NULL, E_WARNING, "Stream can only be in blocking mode");
-        // ignore
+    if (strncmp(proto, ZEND_STRL("ssl")) == 0 ||
+        strncmp(proto, ZEND_STRL("tls")) == 0 ||
+        strncmp(proto, ZEND_STRL("https")) == 0 ||
+        strncmp(proto, ZEND_STRL("ftps")) == 0) {
+        if (php_stream_ssl_socket_factory != NULL) {
+            stream = php_stream_ssl_socket_factory(proto, protolen, resourcename, resourcenamelen, persistent_id, options, flags, timeout, context STREAMS_CC);
+        }
+    } else {
+        stream = php_stream_socket_factory(proto, protolen, resourcename, resourcenamelen, persistent_id, options, flags, timeout, context STREAMS_CC);
     }
-
-    /* alloc and init */
-    swow_sock = (swow_netstream_data_t *) pecalloc(1, sizeof(*swow_sock), persistent_id ? 1 : 0);
-    sock = &swow_sock->sock;
-    sock->is_blocked = 1;
-    sock->timeout.tv_sec = FG(default_socket_timeout);
-    sock->timeout.tv_usec = 0;
-    /* we don't know the socket until we have determined if we are binding or connecting */
-    sock->socket = -1;
 
     /* which type of socket ? */
     if (strncmp(proto, "tcp", protolen) == 0) {
@@ -110,13 +114,32 @@ SWOW_API php_stream *swow_stream_socket_factory(
         CAT_NEVER_HERE("Unknown protocol");
     }
 
-    /* alloc php_stream (php_stream_ops * is not const on PHP-7.x) */
-    stream = php_stream_alloc_rel((php_stream_ops *) ops, sock, persistent_id, "r+");
-    if (UNEXPECTED(stream == NULL)) {
-        pefree(swow_sock, persistent_id ? 1 : 0);
-        return NULL;
+    if (stream != NULL) {
+        /* use native stream */
+        swow_sock = (swow_netstream_data_t *) pecalloc(1, sizeof(*swow_sock) - sizeof(swow_sock->_sock), persistent_id ? 1 : 0);
+        swow_sock->sock = stream->abstract;
+        swow_sock->ops = stream->ops;
+        stream->ops = ops;
+    } else {
+        /* alloc stream by ourself */
+        swow_sock = (swow_netstream_data_t *) pecalloc(1, sizeof(*swow_sock), persistent_id ? 1 : 0);
+        swow_sock->sock = &swow_sock->_sock;
+        sock = swow_sock->sock;
+        sock->is_blocked = 1;
+        sock->timeout.tv_sec = FG(default_socket_timeout);
+        sock->timeout.tv_usec = 0;
+        /* we don't know the socket until we have determined if we are binding or connecting */
+        sock->socket = -1;
+
+        /* alloc php_stream (php_stream_ops * is not const on PHP-7.x) */
+        stream = php_stream_alloc_rel((php_stream_ops *) ops, sock, persistent_id, "r+");
+        if (UNEXPECTED(stream == NULL)) {
+            pefree(swow_sock, persistent_id ? 1 : 0);
+            return NULL;
+        }
     }
-    stream->abstract = (swow_netstream_data_t *) swow_sock;
+
+    stream->abstract = swow_sock;
 
     return stream;
 }
@@ -201,7 +224,7 @@ static char *swow_stream_parse_ip_address(php_stream_xport_param *xparam, int *p
 static inline int swow_stream_bind(php_stream *stream, swow_netstream_data_t *swow_sock, php_stream_xport_param *xparam)
 {
     cat_socket_type_t type = swow_stream_parse_socket_type(stream->ops);
-    cat_socket_t *socket = &swow_sock->socket;
+    cat_socket_t *socket = NULL;
     cat_socket_bind_flags_t bind_flags = CAT_SOCKET_BIND_FLAG_NONE;
     char *ip = NULL;
     const char *host;
@@ -255,7 +278,7 @@ static inline int swow_stream_bind(php_stream *stream, swow_netstream_data_t *sw
         host_len = xparam->inputs.namelen;
     }
 
-    socket = cat_socket_create(socket, type);
+    socket = cat_socket_create(NULL, type);
 
     if (UNEXPECTED(socket == NULL)) {
         goto _error;
@@ -267,7 +290,8 @@ static inline int swow_stream_bind(php_stream *stream, swow_netstream_data_t *sw
         goto _error;
     }
 
-    swow_sock->sock.socket = cat_socket_get_fd(socket);
+    swow_sock->socket = socket;
+    swow_sock->sock->socket = cat_socket_get_fd(socket);
 
     if (0) {
         _error:
@@ -300,8 +324,8 @@ static inline int swow_stream_accept(php_stream *stream, swow_netstream_data_t *
 
     client_sock = (swow_netstream_data_t *) ecalloc(1, sizeof(*client_sock));
 
-    server = &server_sock->socket;
-    client = &client_sock->socket;
+    server = server_sock->socket;
+    client = client_sock->socket;
 
     xparam->outputs.client = NULL;
 
@@ -337,7 +361,7 @@ static inline int swow_stream_accept(php_stream *stream, swow_netstream_data_t *
         (void) cat_socket_set_tcp_nodelay(client, cat_false);
     }
 
-    client_sock->sock.socket = cat_socket_get_fd(client);
+    client_sock->sock->socket = cat_socket_get_fd(client);
 
     xparam->outputs.client = php_stream_alloc_rel(stream->ops, &client_sock->sock, NULL, "r+");
     if (xparam->outputs.client) {
@@ -362,7 +386,7 @@ static inline int swow_stream_accept(php_stream *stream, swow_netstream_data_t *
 static int swow_stream_connect(php_stream *stream, swow_netstream_data_t *swow_sock, php_stream_xport_param *xparam)
 {
     cat_socket_type_t type = swow_stream_parse_socket_type(stream->ops);
-    cat_socket_t *socket = &swow_sock->socket;
+    cat_socket_t *socket = NULL;
     char *host = NULL, *bind_host = NULL;
     int port, bind_port = 0;
     zval *ztmp = NULL;
@@ -370,7 +394,7 @@ static int swow_stream_connect(php_stream *stream, swow_netstream_data_t *swow_s
     if (type & CAT_SOCKET_TYPE_FLAG_LOCAL) {
         int ret;
 
-        socket = cat_socket_create(socket, type);
+        socket = cat_socket_create(NULL, type);
 
         if (UNEXPECTED(socket == NULL)) {
             goto _error;
@@ -426,7 +450,7 @@ static int swow_stream_connect(php_stream *stream, swow_netstream_data_t *swow_s
         type |= CAT_SOCKET_TYPE_FLAG_TCP_DELAY;
     }
 
-    socket = cat_socket_create(socket, type);
+    socket = cat_socket_create(NULL, type);
     if (UNEXPECTED(socket == NULL)) {
         goto _error;
     }
@@ -441,7 +465,8 @@ static int swow_stream_connect(php_stream *stream, swow_netstream_data_t *swow_s
 
     if (1) {
         _success:
-        swow_sock->sock.socket = cat_socket_get_fd(socket);
+        swow_sock->socket = socket;
+        swow_sock->sock->socket = cat_socket_get_fd(socket);
     } else {
         _error:
         if (socket != NULL) {
@@ -520,6 +545,14 @@ static int swow_stream_set_option(php_stream *stream, int option, int value, voi
         return PHP_STREAM_OPTION_RETURN_ERR;
     }
 
+    if (!swow_sock->sock->is_blocked) {
+        int ret;
+        stream->abstract = swow_sock->sock;
+        ret = swow_sock->ops->set_option(stream, option, value, ptrparam);
+        stream->abstract = swow_sock;
+        return ret;
+    }
+
     switch (option) {
         case PHP_STREAM_OPTION_CHECK_LIVENESS: {
             if (!socket || !cat_socket_check_liveness(socket)) {
@@ -528,9 +561,13 @@ static int swow_stream_set_option(php_stream *stream, int option, int value, voi
             return PHP_STREAM_OPTION_RETURN_OK;
         }
         case PHP_STREAM_OPTION_BLOCKING: {
-			int oldmode = sock->is_blocked;
-            sock->is_blocked = value;
-            return oldmode;
+            if (swow_sock->socket != NULL && !value) {
+                return PHP_STREAM_OPTION_RETURN_ERR;
+            } else {
+                int oldmode = sock->is_blocked;
+                sock->is_blocked = value;
+                return oldmode;
+            }
         }
         case PHP_STREAM_OPTION_READ_TIMEOUT: {
             sock->timeout = *(struct timeval *) ptrparam;
@@ -684,6 +721,13 @@ static bytes_t swow_stream_read(php_stream *stream, char *buffer, size_t size)
     SWOW_STREAM_SOCKET_GETTER(stream, swow_sock, sock, socket, return 0);
     ssize_t nr_bytes = 0;
 
+    if (!swow_sock->sock->is_blocked) {
+        stream->abstract = swow_sock->sock;
+        nr_bytes = swow_sock->ops->read(stream, buffer, size);
+        stream->abstract = swow_sock;
+        return nr_bytes;
+    }
+
     nr_bytes = cat_socket_recv_ex(socket, buffer, size, cat_time_tv2to(&sock->timeout));
 
     if (EXPECTED(nr_bytes > 0)) {
@@ -705,6 +749,14 @@ static bytes_t swow_stream_write(php_stream *stream, const char *buffer, size_t 
 {
     SWOW_STREAM_SOCKET_GETTER(stream, swow_sock, sock, socket, return 0);
     cat_bool_t ret;
+
+    if (!swow_sock->sock->is_blocked) {
+        ssize_t nwritten;
+        stream->abstract = swow_sock->sock;
+        nwritten = swow_sock->ops->write(stream, buffer, length);
+        stream->abstract = swow_sock;
+        return nwritten;
+    }
 
     ret = cat_socket_send_ex(socket, buffer, length, cat_time_tv2to(&sock->timeout));
 
@@ -731,9 +783,19 @@ static bytes_t swow_stream_write(php_stream *stream, const char *buffer, size_t 
 static int swow_stream_close(php_stream *stream, int close_handle)
 {
     SWOW_STREAM_MEMBERS(stream, swow_sock, sock, socket);
+    php_socket_t fd;
+    int ret = 0;
 
     if (!swow_sock) {
         return 0;
+    }
+
+    fd = sock->socket;
+
+    if (swow_sock->ops != NULL) {
+        sock->socket = SOCK_ERR;
+        stream->abstract = swow_sock->sock;
+        ret = swow_sock->ops->close(stream, close_handle);
     }
 
     if (close_handle) {
@@ -742,15 +804,14 @@ static int swow_stream_close(php_stream *stream, int close_handle)
             sock->socket = SOCK_ERR;
         }
 #endif
-        if (sock->socket != SOCK_ERR) {
+        if (fd != SOCK_ERR) {
             cat_socket_close(socket);
-            sock->socket = SOCK_ERR;
         }
     }
 
     pefree(swow_sock, php_stream_is_persistent(stream));
 
-    return 0;
+    return ret;
 }
 
 /* useless methods */
@@ -762,12 +823,21 @@ static int swow_stream_flush(php_stream *stream)
 
 static int swow_stream_cast(php_stream *stream, int castas, void **ret)
 {
-    php_netstream_data_t *sock = (php_netstream_data_t *) stream->abstract;
+    SWOW_STREAM_MEMBERS(stream, swow_sock, sock, socket);
+
+    if (swow_sock->ops->cast != NULL) {
+        int error;
+        stream->abstract = swow_sock->sock;
+        error = swow_sock->ops->cast(stream, castas, ret);
+        stream->abstract = swow_sock;
+        return error;
+    }
 
     if (!sock) {
         return FAILURE;
     }
 
+    // TODO: SSL?
     switch (castas) {
         case PHP_STREAM_AS_STDIO:
             if (ret) {
@@ -1046,6 +1116,9 @@ int swow_stream_module_init(INIT_FUNC_ARGS)
     SWOW_MODULES_CHECK_PRE_START() {
         "openssl"
     } SWOW_MODULES_CHECK_PRE_END();
+
+    php_stream_socket_factory = zend_hash_str_find_ptr(php_stream_xport_get_hash(), ZEND_STRL("tcp"));
+    php_stream_ssl_socket_factory = zend_hash_str_find_ptr(php_stream_xport_get_hash(), ZEND_STRL("ssl"));
 
     if (php_stream_xport_register("tcp", swow_stream_socket_factory) != SUCCESS) {
         return FAILURE;
