@@ -416,9 +416,16 @@ static void swow_coroutine_main_create(void)
 {
     swow_coroutine_t *scoroutine;
 
-    scoroutine = swow_coroutine_get_from_object(
-        swow_object_create(swow_coroutine_ce)
-    );
+    /* Notice: if object id is 0, its destructor will never be called */
+    do {
+        uint32_t top = EG(objects_store).top;
+        EG(objects_store).top = 0;
+        scoroutine = swow_coroutine_get_from_object(
+            swow_object_create(swow_coroutine_ce)
+        );
+        EG(objects_store).top = top;
+        EG(objects_store).object_buckets[0] = NULL;
+    } while (0);
 
     /* register first (sync coroutine info) */
     SWOW_COROUTINE_G(original_main) = cat_coroutine_register_main(&scoroutine->coroutine);
@@ -454,7 +461,8 @@ static void swow_coroutine_main_close(void)
     scoroutine->executor->vm_stack = NULL;
 
     /* release main scoroutine */
-    zend_object_release(&scoroutine->std);
+    swow_coroutine_close(scoroutine);
+    EG(objects_store).object_buckets[0] = NULL;
 }
 
 SWOW_API swow_coroutine_t *swow_coroutine_create(zval *zcallable)

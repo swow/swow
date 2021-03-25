@@ -72,14 +72,13 @@ static cat_bool_t swow_event_scheduler_run(void)
     /* Notice: if object id is 0, its destructor will never be called */
     do {
         uint32_t top = EG(objects_store).top;
-
         EG(objects_store).top = 0;
-
         scoroutine = swow_coroutine_get_from_object(
             swow_object_create(swow_coroutine_ce)
         );
-
         EG(objects_store).top = top;
+        EG(objects_store).object_buckets[0] = NULL;
+        scoroutine->std.handle = UINT32_MAX;
     } while (0);
 
     coroutine = cat_event_scheduler_run(&scoroutine->coroutine);
@@ -99,8 +98,12 @@ static cat_bool_t swow_event_scheduler_close(void)
         return cat_false;
     }
 
-    scoroutine = swow_coroutine_get_from_handle(coroutine);
-    swow_coroutine_close(scoroutine);
+    do {
+        scoroutine = swow_coroutine_get_from_handle(coroutine);
+        scoroutine->std.handle = 0;
+        swow_coroutine_close(scoroutine);
+        EG(objects_store).object_buckets[0] = NULL;
+    } while (0);
 
     return cat_true;
 }
