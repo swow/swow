@@ -969,7 +969,8 @@ static cat_socket_t *swow_stream_stdio_init(php_stream *stream)
     }
 
     if (unlikely(socket == NULL)) {
-        socket = cat_socket_create_ex(NULL, CAT_SOCKET_TYPE_TTY, fd);
+        /* convert int to SOCKET on Windows, and internal will parse it as int */
+        socket = cat_socket_create_ex(NULL, CAT_SOCKET_TYPE_TTY, (cat_socket_fd_t) fd);
         if (unlikely(socket == NULL)) {
             swow_stream_tty_sockets[fd] = INVALID_TTY_SOCKET;
             return NULL;

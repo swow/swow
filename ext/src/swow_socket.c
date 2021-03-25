@@ -55,7 +55,6 @@ static void swow_socket_dtor_object(zend_object *object)
 
 ZEND_BEGIN_ARG_INFO_EX(arginfo_class_Swow_Socket___construct, 0, ZEND_RETURN_VALUE, 0)
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, type, IS_LONG, 0, "Swow\\Socket::TYPE_TCP")
-    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, fd, IS_LONG, 0, "Swow\\Socket::INVALID_FD")
 ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Socket, __construct)
@@ -72,10 +71,9 @@ static PHP_METHOD(Swow_Socket, __construct)
     ZEND_PARSE_PARAMETERS_START(0, 2)
         Z_PARAM_OPTIONAL
         Z_PARAM_LONG(type)
-        Z_PARAM_LONG(fd)
     ZEND_PARSE_PARAMETERS_END();
 
-    socket = cat_socket_create_ex(socket, type, fd);
+    socket = cat_socket_create(socket, type);
 
     if (UNEXPECTED(socket == NULL)) {
         swow_throw_exception_with_last(swow_socket_exception_ce);
@@ -119,7 +117,7 @@ static PHP_METHOD(Swow_Socket, getFd)
 
     ZEND_PARSE_PARAMETERS_NONE();
 
-    RETURN_LONG(cat_socket_get_fd(socket));
+    RETURN_LONG((zend_long) cat_socket_get_fd(socket));
 }
 
 #define arginfo_class_Swow_Socket_getGlobalTimeout arginfo_class_Swow_Socket_getLong
@@ -1428,7 +1426,7 @@ static PHP_METHOD(Swow_Socket, __debugInfo)
 
     array_init(&zdebug_info);
     add_assoc_string(&zdebug_info, "type", cat_socket_get_type_name(socket));
-    add_assoc_long(&zdebug_info, "fd", cat_socket_get_fd_fast(socket));
+    add_assoc_long(&zdebug_info, "fd", (zend_long) cat_socket_get_fd_fast(socket));
     if (!cat_socket_is_available(socket)) {
         goto _return;
     }
