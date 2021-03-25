@@ -108,7 +108,11 @@ typedef struct {
 #else
 typedef struct {
 	CURL                         *cp;
+#if PHP_VERSION_ID < 80100
+	php_curl_handlers            *handlers;
+#else
 	php_curl_handlers             handlers;
+#endif
 	struct _php_curl_free        *to_free;
 	struct _php_curl_send_headers header;
 	struct _php_curl_error        err;
@@ -142,7 +146,7 @@ typedef struct {
 	CURLM      *multi;
 	zend_llist  easyh;
 #if PHP_VERSION_ID < 80100
-	php_curl_handlers *handlers;
+	php_curlm_handlers *handlers;
 #else
 	php_curlm_handlers handlers;
 #endif
