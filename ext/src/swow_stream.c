@@ -949,7 +949,7 @@ typedef struct {
     int fd;
 } php_stdio_stream_data;
 
-static php_stream_ops swow_stream_stdio_fs_ops;
+static const php_stream_ops *swow_php_stream_stdio_ptr;
 static cat_socket_t *swow_stream_tty_sockets[3];
 
 static cat_socket_t *swow_stream_stdio_init(php_stream *stream)
@@ -986,7 +986,7 @@ static bytes_t swow_stream_stdio_read(php_stream *stream, char *buffer, size_t s
     cat_socket_t *socket = swow_stream_stdio_init(stream);
 
     if (socket == NULL) {
-        return swow_stream_stdio_fs_ops.read(stream, buffer, size);
+        return swow_php_stream_stdio_ptr->read(stream, buffer, size);
     }
 
     return cat_socket_recv(socket, buffer, size);
@@ -998,7 +998,7 @@ static bytes_t swow_stream_stdio_write(php_stream *stream, const char *buffer, s
     cat_bool_t ret;
 
     if (socket == NULL) {
-        return swow_stream_stdio_fs_ops.write(stream, buffer, length);
+        return swow_php_stream_stdio_ptr->write(stream, buffer, length);
     }
 
     ret = cat_socket_send(socket, buffer, length);
@@ -1012,39 +1012,39 @@ static bytes_t swow_stream_stdio_write(php_stream *stream, const char *buffer, s
 
 static int swow_stream_stdio_close(php_stream *stream, int close_handle)
 {
-    return swow_stream_stdio_fs_ops.close(stream, close_handle);
+    return swow_php_stream_stdio_ptr->close(stream, close_handle);
 }
 
 static int swow_stream_stdio_flush(php_stream *stream)
 {
-    return swow_stream_stdio_fs_ops.flush(stream);
+    return swow_php_stream_stdio_ptr->flush(stream);
 }
 
-static int swow_stream_stdiop_seek(php_stream *stream, zend_off_t offset, int whence, zend_off_t *newoffset)
+static int swow_stream_stdio_seek(php_stream *stream, zend_off_t offset, int whence, zend_off_t *newoffset)
 {
-    return swow_stream_stdio_fs_ops.seek(stream, offset, whence, newoffset);
+    return swow_php_stream_stdio_ptr->seek(stream, offset, whence, newoffset);
 }
 
 static int swow_stream_stdio_cast(php_stream *stream, int castas, void **ret)
 {
-    return swow_stream_stdio_fs_ops.cast(stream, castas, ret);
+    return swow_php_stream_stdio_ptr->cast(stream, castas, ret);
 }
 
 static int swow_stream_stdio_stat(php_stream *stream, php_stream_statbuf *ssb)
 {
-    return swow_stream_stdio_fs_ops.stat(stream, ssb);
+    return swow_php_stream_stdio_ptr->stat(stream, ssb);
 }
 
 static int swow_stream_stdio_set_option(php_stream *stream, int option, int value, void *ptrparam)
 {
-    return swow_stream_stdio_fs_ops.set_option(stream, option, value, ptrparam);
+    return swow_php_stream_stdio_ptr->set_option(stream, option, value, ptrparam);
 }
 
 SWOW_API const php_stream_ops swow_stream_stdio_ops = {
     swow_stream_stdio_write, swow_stream_stdio_read,
     swow_stream_stdio_close, swow_stream_stdio_flush,
     "STDIO",
-    swow_stream_stdiop_seek,
+    swow_stream_stdio_seek,
     swow_stream_stdio_cast,
     swow_stream_stdio_stat,
     swow_stream_stdio_set_option,
@@ -1110,8 +1110,10 @@ static const zend_function_entry swow_stream_functions[] = {
     PHP_FE_END
 };
 
-extern SWOW_API php_stream_wrapper swow_php_plain_files_wrapper;
 extern SWOW_API php_stream_ops swow_php_stream_stdio_ops;
+extern SWOW_API const php_stream_ops swow_stream_stdio_fs_ops;
+extern SWOW_API const php_stream_wrapper swow_plain_files_wrapper;
+
 int swow_stream_module_init(INIT_FUNC_ARGS)
 {
     SWOW_MODULES_CHECK_PRE_START() {
@@ -1136,14 +1138,22 @@ int swow_stream_module_init(INIT_FUNC_ARGS)
     if (php_stream_xport_register("udg", swow_stream_socket_factory) != SUCCESS) {
         return FAILURE;
     }
-    // TODO: configurable
-    if("plain"){
-        memcpy(&swow_stream_stdio_fs_ops, &swow_php_stream_stdio_ops, sizeof(swow_stream_stdio_fs_ops));
-        memcpy(&php_plain_files_wrapper, &swow_php_plain_files_wrapper, sizeof(php_plain_files_wrapper));
-    }else{
-        memcpy(&swow_stream_stdio_fs_ops, &php_stream_stdio_ops, sizeof(swow_stream_stdio_fs_ops));
+    // TODO: configurable? but it looks that we have no need to disable async file IO
+    if ("plain") {
+        /* use async file IO */
+        /* backup blocking stdio wrapper (for include/require) */
+        memcpy(&swow_php_stream_stdio_ops, &php_stream_stdio_ops, sizeof(php_stream_stdio_ops));
+        /* hook blocking file IO */
+        memcpy(&php_plain_files_wrapper, &swow_plain_files_wrapper, sizeof(php_plain_files_wrapper));
+        /* if not tty, redirect to async file ops */
+        swow_php_stream_stdio_ptr = &swow_stream_stdio_fs_ops;
+    } else {
+        /* async file IO disabled */
+        /* if not tty, redirect to original php stdio ops */
+        swow_php_stream_stdio_ptr = &php_stream_stdio_ops;
     }
-    if ("tty") { 
+    if ("tty") {
+        /* hook stdio (only tty, and file IO will redirect to the original ops) */
         memcpy(&php_stream_stdio_ops, &swow_stream_stdio_ops, sizeof(php_stream_stdio_ops));
     }
     if (!swow_hook_internal_functions(swow_stream_functions)) {

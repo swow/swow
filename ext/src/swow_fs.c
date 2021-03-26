@@ -105,10 +105,10 @@
 # include "win32/readdir.h"
 #endif
 
-#define swow_php_stream_fopen_from_fd_int(fd, mode, persistent_id)    _swow_php_stream_fopen_from_fd_int((fd), (mode), (persistent_id) STREAMS_CC)
-#define swow_php_stream_fopen_from_fd_int_rel(fd, mode, persistent_id)     _swow_php_stream_fopen_from_fd_int((fd), (mode), (persistent_id) STREAMS_REL_CC)
-#define swow_php_stream_fopen_from_file_int(file, mode)    _swow_php_stream_fopen_from_file_int((file), (mode) STREAMS_CC)
-#define swow_php_stream_fopen_from_file_int_rel(file, mode)     _swow_php_stream_fopen_from_file_int((file), (mode) STREAMS_REL_CC)
+#define swow_stream_fopen_from_fd_int(fd, mode, persistent_id)    _swow_stream_fopen_from_fd_int((fd), (mode), (persistent_id) STREAMS_CC)
+#define swow_stream_fopen_from_fd_int_rel(fd, mode, persistent_id)     _swow_stream_fopen_from_fd_int((fd), (mode), (persistent_id) STREAMS_REL_CC)
+#define swow_stream_fopen_from_file_int(file, mode)    _swow_stream_fopen_from_file_int((file), (mode) STREAMS_CC)
+#define swow_stream_fopen_from_file_int_rel(file, mode)     _swow_stream_fopen_from_file_int((file), (mode) STREAMS_REL_CC)
 
 #ifndef PHP_WIN32
 extern int php_get_uid_by_name(const char *name, uid_t *uid);
@@ -123,7 +123,7 @@ extern int php_get_gid_by_name(const char *name, gid_t *gid);
 
 // from win32/winutils.c @ a08a2b48b489572db89940027206020ee714afa5
 #ifdef PHP_WIN32
-static int swow_php_win32_check_trailing_space(const char * path, const size_t path_len)
+static int swow_win32_check_trailing_space(const char * path, const size_t path_len)
 {
 	if (path_len > MAXPATHLEN - 1) {
 		return 1;
@@ -141,7 +141,7 @@ static int swow_php_win32_check_trailing_space(const char * path, const size_t p
 #endif
 
 // from main/streams/cast.c @ b0d139456aad9921d30ba8dfd32fc6cac79dedf9
-static void swow_php_stream_mode_sanitize_fdopen_fopencookie(php_stream *stream, char *result)
+static void swow_stream_mode_sanitize_fdopen_fopencookie(php_stream *stream, char *result)
 {
 	/* replace modes not supported by fdopen and fopencookie, but supported
 	 * by PHP's fread(), so that their calls won't fail */
@@ -212,16 +212,16 @@ typedef struct {
 #endif
 
     zend_stat_t sb;
-} swow_php_stdio_stream_data;
+} swow_stdio_stream_data;
 #define SWOW_STDIOP_FD(data)    ((data)->file ? fileno((data)->file) : (data)->fd)
 
-static int do_fstat(swow_php_stdio_stream_data *d, int force)
+static int do_fstat(swow_stdio_stream_data *d, int force)
 {
     if (!d->cached_fstat || (force && !d->no_forced_fstat)) {
         cat_stat_t statbuf;
         int fd = SWOW_STDIOP_FD(d);
         int r = cat_fs_fstat(fd, &statbuf);
-        
+
 #define COPY_MEMBER(x) d->sb.x = statbuf.x
         COPY_MEMBER(st_dev);
         COPY_MEMBER(st_ino);
@@ -247,9 +247,9 @@ static int do_fstat(swow_php_stdio_stream_data *d, int force)
     return 0;
 }
 
-static php_stream *_swow_php_stream_fopen_from_fd_int(int fd, const char *mode, const char *persistent_id STREAMS_DC)
+static php_stream *_swow_stream_fopen_from_fd_int(int fd, const char *mode, const char *persistent_id STREAMS_DC)
 {
-    swow_php_stdio_stream_data *self;
+    swow_stdio_stream_data *self;
 
     self = pemalloc_rel_orig(sizeof(*self), persistent_id);
     memset(self, 0, sizeof(*self));
@@ -267,9 +267,9 @@ static php_stream *_swow_php_stream_fopen_from_fd_int(int fd, const char *mode, 
     return php_stream_alloc_rel(&php_stream_stdio_ops, self, persistent_id, mode);
 }
 
-static php_stream *_swow_php_stream_fopen_from_file_int(FILE *file, const char *mode STREAMS_DC)
+static php_stream *_swow_stream_fopen_from_file_int(FILE *file, const char *mode STREAMS_DC)
 {
-    swow_php_stdio_stream_data *self;
+    swow_stdio_stream_data *self;
 
     self = emalloc_rel_orig(sizeof(*self));
     memset(self, 0, sizeof(*self));
@@ -288,7 +288,7 @@ static php_stream *_swow_php_stream_fopen_from_file_int(FILE *file, const char *
 }
 
 // from main/php_open_temporary_file.c
-static int swow_php_do_open_temporary_file(const char *path, const char *pfx, zend_string **opened_path_p)
+static int swow_do_open_temporary_file(const char *path, const char *pfx, zend_string **opened_path_p)
 {
     char opened_path[MAXPATHLEN];
     const char *trailing_slash;
@@ -299,10 +299,10 @@ static int swow_php_do_open_temporary_file(const char *path, const char *pfx, ze
     if (!path || !path[0]) {
         return -1;
     }
-    
+
 
 #ifdef PHP_WIN32
-    if (!swow_php_win32_check_trailing_space(pfx, strlen(pfx))) {
+    if (!swow_win32_check_trailing_space(pfx, strlen(pfx))) {
         cat_update_last_error(EINVAL, "Bad file name"); // fixme: check this!
         return -1;
     }
@@ -342,7 +342,7 @@ static int swow_php_do_open_temporary_file(const char *path, const char *pfx, ze
 }
 
 // from main/php_open_temporary_file.c
-static int swow_php_open_temporary_fd(const char *dir, const char *pfx, zend_string **opened_path_p)
+static int swow_open_temporary_fd(const char *dir, const char *pfx, zend_string **opened_path_p)
 {
     int fd;
     const char *temp_dir;
@@ -361,14 +361,14 @@ def_tmp:
         if (temp_dir &&
             *temp_dir != '\0' &&
             (!php_check_open_basedir(temp_dir))) {
-            return swow_php_do_open_temporary_file(temp_dir, pfx, opened_path_p);
+            return swow_do_open_temporary_file(temp_dir, pfx, opened_path_p);
         } else {
             return -1;
         }
     }
 
     /* Try the directory given as parameter. */
-    fd = swow_php_do_open_temporary_file(dir, pfx, opened_path_p);
+    fd = swow_do_open_temporary_file(dir, pfx, opened_path_p);
     if (fd == -1) {
         /* Use default temporary directory. */
         php_error_docref(NULL, E_NOTICE, "file created in the system's temporary directory");
@@ -378,12 +378,12 @@ def_tmp:
 }
 
 // todo: hijack TEMP stream implementation
-SWOW_API php_stream *_swow_php_stream_fopen_temporary_file(const char *dir, const char *pfx, zend_string **opened_path_ptr STREAMS_DC)
+SWOW_API php_stream *_swow_stream_fopen_temporary_file(const char *dir, const char *pfx, zend_string **opened_path_ptr STREAMS_DC)
 {
     zend_string *opened_path = NULL;
     int fd;
 
-    fd = swow_php_open_temporary_fd(dir, pfx, &opened_path);
+    fd = swow_open_temporary_fd(dir, pfx, &opened_path);
     if (fd != -1)    {
         php_stream *stream;
 
@@ -391,9 +391,9 @@ SWOW_API php_stream *_swow_php_stream_fopen_temporary_file(const char *dir, cons
             *opened_path_ptr = opened_path;
         }
 
-        stream = swow_php_stream_fopen_from_fd_int_rel(fd, "r+b", NULL);
+        stream = swow_stream_fopen_from_fd_int_rel(fd, "r+b", NULL);
         if (stream) {
-            swow_php_stdio_stream_data *self = (swow_php_stdio_stream_data*)stream->abstract;
+            swow_stdio_stream_data *self = (swow_stdio_stream_data*)stream->abstract;
             stream->wrapper = (php_stream_wrapper*)&php_plain_files_wrapper;
             stream->orig_path = estrndup(ZSTR_VAL(opened_path), ZSTR_LEN(opened_path));
 
@@ -412,7 +412,7 @@ SWOW_API php_stream *_swow_php_stream_fopen_temporary_file(const char *dir, cons
 }
 
 // todo: swowify this
-static void detect_is_seekable(swow_php_stdio_stream_data *self) {
+static void detect_is_seekable(swow_stdio_stream_data *self) {
     #if defined(S_ISFIFO) && defined(S_ISCHR)
 	if (self->fd >= 0 && do_fstat(self, 0) == 0) {
 		self->is_seekable = !(S_ISFIFO(self->sb.st_mode) || S_ISCHR(self->sb.st_mode));
@@ -435,12 +435,12 @@ static void detect_is_seekable(swow_php_stdio_stream_data *self) {
 #endif
 }
 
-static php_stream *_swow_php_stream_fopen_from_fd(int fd, const char *mode, const char *persistent_id STREAMS_DC)
+static php_stream *_swow_stream_fopen_from_fd(int fd, const char *mode, const char *persistent_id STREAMS_DC)
 {
-    php_stream *stream = swow_php_stream_fopen_from_fd_int_rel(fd, mode, persistent_id);
+    php_stream *stream = swow_stream_fopen_from_fd_int_rel(fd, mode, persistent_id);
 
     if (stream) {
-        swow_php_stdio_stream_data *self = (swow_php_stdio_stream_data*)stream->abstract;
+        swow_stdio_stream_data *self = (swow_stdio_stream_data*)stream->abstract;
 
         detect_is_seekable(self);
         if (!self->is_seekable) {
@@ -461,12 +461,12 @@ static php_stream *_swow_php_stream_fopen_from_fd(int fd, const char *mode, cons
     return stream;
 }
 
-SWOW_API php_stream *_swow_php_stream_fopen_from_file(FILE *file, const char *mode STREAMS_DC)
+SWOW_API php_stream *_swow_stream_fopen_from_file(FILE *file, const char *mode STREAMS_DC)
 {
-    php_stream *stream = swow_php_stream_fopen_from_file_int_rel(file, mode);
+    php_stream *stream = swow_stream_fopen_from_file_int_rel(file, mode);
 
     if (stream) {
-        swow_php_stdio_stream_data *self = (swow_php_stdio_stream_data*)stream->abstract;
+        swow_stdio_stream_data *self = (swow_stdio_stream_data*)stream->abstract;
 
         detect_is_seekable(self);
         if (!self->is_seekable) {
@@ -480,9 +480,9 @@ SWOW_API php_stream *_swow_php_stream_fopen_from_file(FILE *file, const char *mo
     return stream;
 }
 
-SWOW_API php_stream *_swow_php_stream_fopen_from_pipe(FILE *file, const char *mode STREAMS_DC)
+SWOW_API php_stream *_swow_stream_fopen_from_pipe(FILE *file, const char *mode STREAMS_DC)
 {
-    swow_php_stdio_stream_data *self;
+    swow_stdio_stream_data *self;
     php_stream *stream;
 
     self = emalloc_rel_orig(sizeof(*self));
@@ -503,9 +503,9 @@ SWOW_API php_stream *_swow_php_stream_fopen_from_pipe(FILE *file, const char *mo
     return stream;
 }
 
-static ssize_t swow_php_stdiop_write(php_stream *stream, const char *buf, size_t count)
+static ssize_t swow_stdiop_fs_write(php_stream *stream, const char *buf, size_t count)
 {
-    swow_php_stdio_stream_data *data = (swow_php_stdio_stream_data*)stream->abstract;
+    swow_stdio_stream_data *data = (swow_stdio_stream_data*)stream->abstract;
 
     assert(data != NULL);
 
@@ -538,9 +538,9 @@ static ssize_t swow_php_stdiop_write(php_stream *stream, const char *buf, size_t
     }
 }
 
-static ssize_t swow_php_stdiop_read(php_stream *stream, char *buf, size_t count)
+static ssize_t swow_stdiop_fs_read(php_stream *stream, char *buf, size_t count)
 {
-    swow_php_stdio_stream_data *data = (swow_php_stdio_stream_data*) stream->abstract;
+    swow_stdio_stream_data *data = (swow_stdio_stream_data*) stream->abstract;
     ssize_t ret;
 
     assert(data != NULL);
@@ -590,10 +590,10 @@ static ssize_t swow_php_stdiop_read(php_stream *stream, char *buf, size_t count)
     return ret;
 }
 
-static int swow_php_stdiop_close(php_stream *stream, int close_handle)
+static int swow_stdiop_fs_close(php_stream *stream, int close_handle)
 {
     int ret;
-    swow_php_stdio_stream_data *data = (swow_php_stdio_stream_data*)stream->abstract;
+    swow_stdio_stream_data *data = (swow_stdio_stream_data*)stream->abstract;
 
     assert(data != NULL);
 
@@ -652,9 +652,9 @@ static int swow_php_stdiop_close(php_stream *stream, int close_handle)
     return ret;
 }
 
-static int swow_php_stdiop_flush(php_stream *stream)
+static int swow_stdiop_fs_flush(php_stream *stream)
 {
-    swow_php_stdio_stream_data *data = (swow_php_stdio_stream_data*)stream->abstract;
+    swow_stdio_stream_data *data = (swow_stdio_stream_data*)stream->abstract;
 
     assert(data != NULL);
 
@@ -670,10 +670,10 @@ static int swow_php_stdiop_flush(php_stream *stream)
     return 0;
 }
 
-static int swow_php_stdiop_seek(php_stream *stream, zend_off_t offset, int whence, zend_off_t *newoffset)
+static int swow_stdiop_fs_seek(php_stream *stream, zend_off_t offset, int whence, zend_off_t *newoffset)
 {
-    //printf("on calling swow_php_stdiop_seek(%p, %zu, %d, %p)\n", stream,offset,whence,newoffset);
-    swow_php_stdio_stream_data *data = (swow_php_stdio_stream_data*)stream->abstract;
+    //printf("on calling swow_stdiop_fs_seek(%p, %zu, %d, %p)\n", stream,offset,whence,newoffset);
+    swow_stdio_stream_data *data = (swow_stdio_stream_data*)stream->abstract;
     int ret;
 
     assert(data != NULL);
@@ -702,10 +702,10 @@ static int swow_php_stdiop_seek(php_stream *stream, zend_off_t offset, int whenc
     }
 }
 
-static int swow_php_stdiop_cast(php_stream *stream, int castas, void **ret)
+static int swow_stdiop_fs_cast(php_stream *stream, int castas, void **ret)
 {
     php_socket_t fd;
-    swow_php_stdio_stream_data *data = (swow_php_stdio_stream_data*) stream->abstract;
+    swow_stdio_stream_data *data = (swow_stdio_stream_data*) stream->abstract;
 
     assert(data != NULL);
 
@@ -720,7 +720,7 @@ static int swow_php_stdiop_cast(php_stream *stream, int castas, void **ret)
                     /* we were opened as a plain file descriptor, so we
                      * need fdopen now */
                     char fixed_mode[5];
-                    swow_php_stream_mode_sanitize_fdopen_fopencookie(stream, fixed_mode);
+                    swow_stream_mode_sanitize_fdopen_fopencookie(stream, fixed_mode);
                     data->file = fdopen(data->fd, fixed_mode);
                     if (data->file == NULL) {
                         return FAILURE;
@@ -761,10 +761,10 @@ static int swow_php_stdiop_cast(php_stream *stream, int castas, void **ret)
     }
 }
 
-static int swow_php_stdiop_stat(php_stream *stream, php_stream_statbuf *ssb)
+static int swow_stdiop_fs_stat(php_stream *stream, php_stream_statbuf *ssb)
 {
     int ret;
-    swow_php_stdio_stream_data *data = (swow_php_stdio_stream_data*) stream->abstract;
+    swow_stdio_stream_data *data = (swow_stdio_stream_data*) stream->abstract;
 
     assert(data != NULL);
     if((ret = do_fstat(data, 1)) == 0) {
@@ -774,9 +774,9 @@ static int swow_php_stdiop_stat(php_stream *stream, php_stream_statbuf *ssb)
     return ret;
 }
 
-static int swow_php_stdiop_set_option(php_stream *stream, int option, int value, void *ptrparam)
+static int swow_stdiop_fs_set_option(php_stream *stream, int option, int value, void *ptrparam)
 {
-    swow_php_stdio_stream_data *data = (swow_php_stdio_stream_data*) stream->abstract;
+    swow_stdio_stream_data *data = (swow_stdio_stream_data*) stream->abstract;
     size_t size;
     int fd = SWOW_STDIOP_FD(data);;
 #ifdef O_NONBLOCK
@@ -1058,19 +1058,19 @@ static int swow_php_stdiop_set_option(php_stream *stream, int option, int value,
     }
 }
 
-const php_stream_ops    swow_php_stream_stdio_ops = {
-    swow_php_stdiop_write, swow_php_stdiop_read,
-    swow_php_stdiop_close, swow_php_stdiop_flush,
+SWOW_API const php_stream_ops swow_stream_stdio_fs_ops = {
+    swow_stdiop_fs_write, swow_stdiop_fs_read,
+    swow_stdiop_fs_close, swow_stdiop_fs_flush,
     "STDIO",
-    swow_php_stdiop_seek,
-    swow_php_stdiop_cast,
-    swow_php_stdiop_stat,
-    swow_php_stdiop_set_option
+    swow_stdiop_fs_seek,
+    swow_stdiop_fs_cast,
+    swow_stdiop_fs_stat,
+    swow_stdiop_fs_set_option
 };
 /* }}} */
 
 /* {{{ plain files opendir/readdir implementation */
-static ssize_t swow_php_plain_files_dirstream_read(php_stream *stream, char *buf, size_t count)
+static ssize_t swow_plain_files_dirstream_read(php_stream *stream, char *buf, size_t count)
 {
     cat_dir_t *dir = (cat_dir_t *)stream->abstract;
     cat_dirent_t *result;
@@ -1090,29 +1090,29 @@ static ssize_t swow_php_plain_files_dirstream_read(php_stream *stream, char *buf
     return 0;
 }
 
-static int swow_php_plain_files_dirstream_close(php_stream *stream, int close_handle)
+static int swow_plain_files_dirstream_close(php_stream *stream, int close_handle)
 {
     int ret = cat_fs_closedir((cat_dir_t*)stream->abstract);
     return ret;
 }
 
-static int swow_php_plain_files_dirstream_rewind(php_stream *stream, zend_off_t offset, int whence, zend_off_t *newoffs)
+static int swow_plain_files_dirstream_rewind(php_stream *stream, zend_off_t offset, int whence, zend_off_t *newoffs)
 {
     cat_fs_rewinddir((cat_dir_t*)stream->abstract);
     return 0;
 }
 
-static const php_stream_ops swow_php_plain_files_dirstream_ops = {
-    NULL, swow_php_plain_files_dirstream_read,
-    swow_php_plain_files_dirstream_close, NULL,
+static const php_stream_ops swow_plain_files_dirstream_ops = {
+    NULL, swow_plain_files_dirstream_read,
+    swow_plain_files_dirstream_close, NULL,
     "dir",
-    swow_php_plain_files_dirstream_rewind,
+    swow_plain_files_dirstream_rewind,
     NULL, /* cast */
     NULL, /* stat */
     NULL  /* set_option */
 };
 
-static php_stream *swow_php_plain_files_dir_opener(php_stream_wrapper *wrapper, const char *path, const char *mode,
+static php_stream *swow_plain_files_dir_opener(php_stream_wrapper *wrapper, const char *path, const char *mode,
     int options, zend_string **opened_path, php_stream_context *context STREAMS_DC)
 {
     php_stream *stream = NULL;
@@ -1129,7 +1129,7 @@ static php_stream *swow_php_plain_files_dir_opener(php_stream_wrapper *wrapper, 
 
     cat_dir_t * dir = cat_fs_opendir(path);
     if (dir) {
-        stream = php_stream_alloc(&swow_php_plain_files_dirstream_ops, dir, 0, mode);
+        stream = php_stream_alloc(&swow_plain_files_dirstream_ops, dir, 0, mode);
         if (stream == NULL){
             cat_fs_closedir(dir);
         }
@@ -1139,8 +1139,10 @@ static php_stream *swow_php_plain_files_dir_opener(php_stream_wrapper *wrapper, 
 }
 /* }}} */
 
+SWOW_API php_stream_ops swow_php_stream_stdio_ops;
+
 /* {{{ php_stream_fopen */
-SWOW_API  php_stream *_swow_php_stream_fopen(const char *filename, const char *mode, zend_string **opened_path, int options STREAMS_DC)
+SWOW_API  php_stream *_swow_stream_fopen(const char *filename, const char *mode, zend_string **opened_path, int options STREAMS_DC)
 {
     if (options & STREAM_OPEN_FOR_INCLUDE) {
         return _php_stream_fopen(filename, mode, opened_path, options STREAMS_REL_CC);
@@ -1182,7 +1184,7 @@ SWOW_API  php_stream *_swow_php_stream_fopen(const char *filename, const char *m
     }
     fd = cat_fs_open(realpath, open_flags, 0666);
     if (fd != -1)    {
-        ret = _swow_php_stream_fopen_from_fd(fd, mode, persistent_id STREAMS_REL_CC);
+        ret = _swow_stream_fopen_from_fd(fd, mode, persistent_id STREAMS_REL_CC);
 
         if (ret)    {
             if (opened_path) {
@@ -1198,7 +1200,7 @@ SWOW_API  php_stream *_swow_php_stream_fopen(const char *filename, const char *m
              * We check these after opening the stream, so that we save
              * on fstat() syscalls */
             if (options & STREAM_OPEN_FOR_INCLUDE) {
-                swow_php_stdio_stream_data *self = (swow_php_stdio_stream_data*)ret->abstract;
+                swow_stdio_stream_data *self = (swow_stdio_stream_data*)ret->abstract;
                 int r;
 
                 r = do_fstat(self, 0);
@@ -1217,7 +1219,7 @@ SWOW_API  php_stream *_swow_php_stream_fopen(const char *filename, const char *m
             }
 
             if (options & STREAM_USE_BLOCKING_PIPE) {
-                swow_php_stdio_stream_data *self = (swow_php_stdio_stream_data*)ret->abstract;
+                swow_stdio_stream_data *self = (swow_stdio_stream_data*)ret->abstract;
                 self->is_pipe_blocking = 1;
             }
 #endif
@@ -1235,17 +1237,17 @@ SWOW_API  php_stream *_swow_php_stream_fopen(const char *filename, const char *m
 /* }}} */
 
 
-static php_stream *swow_php_plain_files_stream_opener(php_stream_wrapper *wrapper, const char *path, const char *mode,
+static php_stream *swow_plain_files_stream_opener(php_stream_wrapper *wrapper, const char *path, const char *mode,
     int options, zend_string **opened_path, php_stream_context *context STREAMS_DC)
 {
     if (((options & STREAM_DISABLE_OPEN_BASEDIR) == 0) && php_check_open_basedir(path)) {
         return NULL;
     }
 
-    return _swow_php_stream_fopen(path, mode, opened_path, options STREAMS_REL_CC);
+    return _swow_stream_fopen(path, mode, opened_path, options STREAMS_REL_CC);
 }
 
-static int swow_php_plain_files_url_stater(php_stream_wrapper *wrapper, const char *url, int flags, php_stream_statbuf *ssb, php_stream_context *context)
+static int swow_plain_files_url_stater(php_stream_wrapper *wrapper, const char *url, int flags, php_stream_statbuf *ssb, php_stream_context *context)
 {
     // note: PHP_STREAM_URL_STAT_NOCACHE is also 4 and will be passed here before 8.1
 #ifdef PHP_STREAM_URL_STAT_IGNORE_OPEN_BASEDIR
@@ -1275,7 +1277,7 @@ static int swow_php_plain_files_url_stater(php_stream_wrapper *wrapper, const ch
         return VCWD_STAT(url, &ssb->sb);
 }
 
-static int swow_php_plain_files_unlink(php_stream_wrapper *wrapper, const char *url, int options, php_stream_context *context)
+static int swow_plain_files_unlink(php_stream_wrapper *wrapper, const char *url, int options, php_stream_context *context)
 {
     int ret;
 
@@ -1301,7 +1303,7 @@ static int swow_php_plain_files_unlink(php_stream_wrapper *wrapper, const char *
     return 1;
 }
 
-static int swow_php_plain_files_rename(php_stream_wrapper *wrapper, const char *url_from, const char *url_to, int options, php_stream_context *context)
+static int swow_plain_files_rename(php_stream_wrapper *wrapper, const char *url_from, const char *url_to, int options, php_stream_context *context)
 {
     int ret;
 
@@ -1310,11 +1312,11 @@ static int swow_php_plain_files_rename(php_stream_wrapper *wrapper, const char *
     }
 
 #ifdef PHP_WIN32
-    if (!swow_php_win32_check_trailing_space(url_from, strlen(url_from))) {
+    if (!swow_win32_check_trailing_space(url_from, strlen(url_from))) {
         php_win32_docref2_from_error(ERROR_INVALID_NAME, url_from, url_to);
         return 0;
     }
-    if (!swow_php_win32_check_trailing_space(url_to, strlen(url_to))) {
+    if (!swow_win32_check_trailing_space(url_to, strlen(url_to))) {
         php_win32_docref2_from_error(ERROR_INVALID_NAME, url_from, url_to);
         return 0;
     }
@@ -1402,7 +1404,7 @@ static int swow_php_plain_files_rename(php_stream_wrapper *wrapper, const char *
     return 1;
 }
 
-static int swow_php_mkdir_ex(const char *dir, zend_long mode, int options){
+static int swow_mkdir_ex(const char *dir, zend_long mode, int options){
     int ret;
 
 	if (php_check_open_basedir(dir)) {
@@ -1416,7 +1418,7 @@ static int swow_php_mkdir_ex(const char *dir, zend_long mode, int options){
 	return ret;
 }
 
-static int swow_php_plain_files_mkdir(php_stream_wrapper *wrapper, const char *dir, int mode, int options, php_stream_context *context)
+static int swow_plain_files_mkdir(php_stream_wrapper *wrapper, const char *dir, int mode, int options, php_stream_context *context)
 {
     int ret, recursive = options & PHP_STREAM_MKDIR_RECURSIVE;
     char *p;
@@ -1426,7 +1428,7 @@ static int swow_php_plain_files_mkdir(php_stream_wrapper *wrapper, const char *d
     }
 
     if (!recursive) {
-        ret = swow_php_mkdir_ex(dir, mode, REPORT_ERRORS);
+        ret = swow_mkdir_ex(dir, mode, REPORT_ERRORS);
     } else {
         /* we look for directory separator from the end of string, thus hopefully reducing our work load */
         char *e;
@@ -1472,8 +1474,8 @@ static int swow_php_plain_files_mkdir(php_stream_wrapper *wrapper, const char *d
         }
 
         if (p == buf) {
-            ret = swow_php_mkdir_ex(dir, mode, REPORT_ERRORS);
-        } else if (!(ret = swow_php_mkdir_ex(buf, mode, REPORT_ERRORS))) {
+            ret = swow_mkdir_ex(dir, mode, REPORT_ERRORS);
+        } else if (!(ret = swow_mkdir_ex(buf, mode, REPORT_ERRORS))) {
             if (!p) {
                 p = buf;
             }
@@ -1501,7 +1503,7 @@ static int swow_php_plain_files_mkdir(php_stream_wrapper *wrapper, const char *d
     }
 }
 
-static int swow_php_plain_files_rmdir(php_stream_wrapper *wrapper, const char *url, int options, php_stream_context *context)
+static int swow_plain_files_rmdir(php_stream_wrapper *wrapper, const char *url, int options, php_stream_context *context)
 {
     if (strncasecmp(url, "file://", sizeof("file://") - 1) == 0) {
         url += sizeof("file://") - 1;
@@ -1512,7 +1514,7 @@ static int swow_php_plain_files_rmdir(php_stream_wrapper *wrapper, const char *u
     }
 
 #ifdef PHP_WIN32
-    if (!swow_php_win32_check_trailing_space(url, strlen(url))) {
+    if (!swow_win32_check_trailing_space(url, strlen(url))) {
         php_error_docref1(NULL, url, E_WARNING, "%s", strerror(ENOENT));
         return 0;
     }
@@ -1529,7 +1531,7 @@ static int swow_php_plain_files_rmdir(php_stream_wrapper *wrapper, const char *u
     return 1;
 }
 
-static int swow_php_plain_files_metadata(php_stream_wrapper *wrapper, const char *url, int option, void *value, php_stream_context *context)
+static int swow_plain_files_metadata(php_stream_wrapper *wrapper, const char *url, int option, void *value, php_stream_context *context)
 {
     struct utimbuf *newtime;
 #ifndef PHP_WIN32
@@ -1540,7 +1542,7 @@ static int swow_php_plain_files_metadata(php_stream_wrapper *wrapper, const char
     int ret = 0;
 
 #ifdef PHP_WIN32
-    if (!swow_php_win32_check_trailing_space(url, strlen(url))) {
+    if (!swow_win32_check_trailing_space(url, strlen(url))) {
         php_error_docref1(NULL, url, E_WARNING, "%s", strerror(ENOENT));
         return 0;
     }
@@ -1610,28 +1612,28 @@ static int swow_php_plain_files_metadata(php_stream_wrapper *wrapper, const char
     return 1;
 }
 
-static const php_stream_wrapper_ops swow_php_plain_files_wrapper_ops = {
-    swow_php_plain_files_stream_opener,
+static const php_stream_wrapper_ops swow_plain_files_wrapper_ops = {
+    swow_plain_files_stream_opener,
     NULL,
     NULL,
-    swow_php_plain_files_url_stater,
-    swow_php_plain_files_dir_opener,
+    swow_plain_files_url_stater,
+    swow_plain_files_dir_opener,
     "plainfile",
-    swow_php_plain_files_unlink,
-    swow_php_plain_files_rename,
-    swow_php_plain_files_mkdir,
-    swow_php_plain_files_rmdir,
-    swow_php_plain_files_metadata
+    swow_plain_files_unlink,
+    swow_plain_files_rename,
+    swow_plain_files_mkdir,
+    swow_plain_files_rmdir,
+    swow_plain_files_metadata
 };
 
-SWOW_API php_stream_wrapper swow_php_plain_files_wrapper = {
-    &swow_php_plain_files_wrapper_ops,
+SWOW_API const php_stream_wrapper swow_plain_files_wrapper = {
+    &swow_plain_files_wrapper_ops,
     NULL,
     0
 };
 
 /* {{{ php_stream_fopen_with_path */
-SWOW_API php_stream *_swow_php_stream_fopen_with_path(const char *filename, const char *mode, const char *path, zend_string **opened_path, int options STREAMS_DC)
+SWOW_API php_stream *_swow_stream_fopen_with_path(const char *filename, const char *mode, const char *path, zend_string **opened_path, int options STREAMS_DC)
 {
     /* code ripped off from fopen_wrappers.c */
     char *pathbuf, *end;
@@ -1670,7 +1672,7 @@ SWOW_API php_stream *_swow_php_stream_fopen_with_path(const char *filename, cons
             return NULL;
         }
 
-        return _swow_php_stream_fopen(filename, mode, opened_path, options STREAMS_REL_CC);
+        return _swow_stream_fopen(filename, mode, opened_path, options STREAMS_REL_CC);
     }
 
 not_relative_path:
@@ -1682,7 +1684,7 @@ not_relative_path:
             return NULL;
         }
 
-        return _swow_php_stream_fopen(filename, mode, opened_path, options STREAMS_REL_CC);
+        return _swow_stream_fopen(filename, mode, opened_path, options STREAMS_REL_CC);
     }
 
 #ifdef PHP_WIN32
@@ -1703,12 +1705,12 @@ not_relative_path:
             return NULL;
         }
 
-        return _swow_php_stream_fopen(trypath, mode, opened_path, options STREAMS_REL_CC);
+        return _swow_stream_fopen(trypath, mode, opened_path, options STREAMS_REL_CC);
     }
 #endif
 
     if (!path || !*path) {
-        return _swow_php_stream_fopen(filename, mode, opened_path, options STREAMS_REL_CC);
+        return _swow_stream_fopen(filename, mode, opened_path, options STREAMS_REL_CC);
     }
 
     /* check in provided path */
@@ -1756,7 +1758,7 @@ not_relative_path:
             goto stream_skip;
         }
 
-        stream = _swow_php_stream_fopen(trypath, mode, opened_path, options STREAMS_REL_CC);
+        stream = _swow_stream_fopen(trypath, mode, opened_path, options STREAMS_REL_CC);
         if (stream) {
             efree(pathbuf);
             return stream;
