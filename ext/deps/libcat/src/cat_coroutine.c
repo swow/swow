@@ -203,7 +203,10 @@ CAT_API cat_coroutine_t *cat_coroutine_get_current(void)
 
 CAT_API cat_coroutine_id_t cat_coroutine_get_current_id(void)
 {
-    return CAT_COROUTINE_G(current)->id;
+    cat_coroutine_t *coroutine = CAT_COROUTINE_G(current);
+
+    /* Notice: current coroutine is NULL before runtime_init() */
+    return likely(coroutine != NULL) ? coroutine->id : CAT_COROUTINE_MAIN_ID;
 }
 
 CAT_API cat_coroutine_t *cat_coroutine_get_by_index(cat_coroutine_count_t index)
@@ -409,7 +412,16 @@ CAT_API cat_data_t *cat_coroutine_jump(cat_coroutine_t *coroutine, cat_data_t *d
 {
     cat_coroutine_t *current_coroutine = CAT_COROUTINE_G(current);
 
-    cat_debug(COROUTINE, "Jump to R" CAT_COROUTINE_ID_FMT, coroutine->id);
+#ifdef CAT_DEBUG
+    do {
+        const char *name = cat_coroutine_get_role_name(coroutine);
+        if (name != NULL) {
+            cat_debug(COROUTINE, "Jump to %s", name);
+        } else {
+            cat_debug(COROUTINE, "Jump to R" CAT_COROUTINE_ID_FMT, coroutine->id);
+        }
+    } while (0);
+#endif
     /* update from */
     coroutine->from = current_coroutine;
     /* solve origin */
@@ -528,6 +540,7 @@ CAT_API cat_bool_t cat_coroutine_yield(cat_data_t *data, cat_data_t **retval)
 }
 
 /* properties */
+
 CAT_API cat_coroutine_id_t cat_coroutine_get_id(const cat_coroutine_t *coroutine)
 {
     return coroutine->id;
@@ -671,10 +684,10 @@ CAT_API cat_coroutine_t *cat_coroutine_scheduler_run(cat_coroutine_t *coroutine,
         return NULL;
     }
 
-    /* let scheduler id be 0 */
+    /* let scheduler id be MAX */
     do {
         cat_coroutine_id_t last_id = CAT_COROUTINE_G(last_id);
-        CAT_COROUTINE_G(last_id) = 0;
+        CAT_COROUTINE_G(last_id) = CAT_COROUTINE_SCHEDULER_ID;
         coroutine = cat_coroutine_create(coroutine, (void *) scheduler);
         CAT_COROUTINE_G(last_id) = last_id;
     } while (0);
@@ -818,6 +831,23 @@ CAT_API cat_bool_t cat_coroutine_unlock(cat_coroutine_t *coroutine)
     CAT_ASSERT(ret && "Unlock never fail");
 
     return cat_true;
+}
+
+CAT_API const char *cat_coroutine_get_role_name(const cat_coroutine_t *coroutine)
+{
+    switch (coroutine->id) {
+        case CAT_COROUTINE_MAIN_ID:
+            return "main";
+        case CAT_COROUTINE_SCHEDULER_ID:
+            return "scheduler";
+        default:
+            return NULL;
+    }
+}
+
+CAT_API const char *cat_coroutine_get_current_role_name(void)
+{
+    return cat_coroutine_get_role_name(CAT_COROUTINE_G(current));
 }
 
 /* helper */

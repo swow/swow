@@ -65,14 +65,6 @@ static cat_always_inline void cat_curl_multi_configure(CURLM *multi, void *socke
     curl_multi_setopt(multi, CURLMOPT_TIMERDATA, context);
 }
 
-static cat_always_inline void cat_curl_multi_unconfigure(CURLM *multi)
-{
-    curl_multi_setopt(multi, CURLMOPT_SOCKETFUNCTION, NULL);
-    curl_multi_setopt(multi, CURLMOPT_SOCKETDATA, NULL);
-    curl_multi_setopt(multi, CURLMOPT_TIMERFUNCTION, NULL);
-    curl_multi_setopt(multi, CURLMOPT_TIMERDATA, NULL);
-}
-
 static cat_always_inline int cat_curl_translate_poll_flags_from_sys(int revents)
 {
     int action = CURL_POLL_NONE;
@@ -286,17 +278,6 @@ CAT_API CURLcode cat_curl_easy_perform(CURL *ch)
     CURLcode code = CURLE_RECV_ERROR;
     int running_handles;
 
-    /* check if CURL is busy */
-    do {
-        cat_coroutine_t *coroutine = NULL;
-        curl_easy_getinfo(ch, CURLINFO_PRIVATE, &coroutine);
-        if (unlikely(coroutine != NULL)) {
-            /* can not find appropriate error code */
-            return CURLE_AGAIN;
-        }
-    } while (0);
-
-    curl_easy_setopt(ch, CURLOPT_PRIVATE, CAT_COROUTINE_G(current));
     context.multi = curl_multi_init();
     if (unlikely(context.multi == NULL)) {
         return CURLE_OUT_OF_MEMORY;
@@ -311,7 +292,15 @@ CAT_API CURLcode cat_curl_easy_perform(CURL *ch)
         cat_curl_easy_timeout_function,
         &context
     );
-    curl_multi_add_handle(context.multi, ch);
+    mcode = curl_multi_add_handle(context.multi, ch);
+    if (unlikely(mcode != CURLM_OK)) {
+        if (mcode == CURLM_ADDED_ALREADY) {
+            /* cURL is busy with IO,
+             * and can not find appropriate error code. */
+            code = CURLE_AGAIN;
+        }
+        goto _add_failed;
+    }
 
     while (1) {
         if (context.events == POLLNONE) {
@@ -356,9 +345,8 @@ CAT_API CURLcode cat_curl_easy_perform(CURL *ch)
     }
 
     curl_multi_remove_handle(context.multi, ch);
-    //cat_curl_multi_unconfigure(context.multi);
+    _add_failed:
     curl_multi_cleanup(context.multi);
-    curl_easy_setopt(ch, CURLOPT_PRIVATE, NULL);
 
     return code;
 }

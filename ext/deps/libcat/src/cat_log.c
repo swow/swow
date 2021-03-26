@@ -91,11 +91,22 @@ CAT_API void cat_log_standard(CAT_LOG_PARAMATERS)
             CAT_NEVER_HERE("Unknown log type");
     }
 
-    fprintf(
-        output,
-        "%s: <%s> %s in R" CAT_COROUTINE_ID_FMT CAT_EOL,
-        type_string, module_name, message, CAT_COROUTINE_G(current)->id
-    );
+    do {
+        const char *name = cat_coroutine_get_current_role_name();
+        if (name != NULL) {
+            fprintf(
+                output,
+                "%s: <%s> %s in %s" CAT_EOL,
+                type_string, module_name, message, name
+            );
+        } else {
+            fprintf(
+                output,
+                "%s: <%s> %s in R" CAT_COROUTINE_ID_FMT CAT_EOL,
+                type_string, module_name, message, cat_coroutine_get_current_id()
+            );
+        }
+    } while (0);
 #ifdef CAT_SOURCE_POSITION
     if (CAT_G(log_source_postion)) {
         fprintf(

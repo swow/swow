@@ -390,12 +390,12 @@ CAT_API int cat_fs_statfs(const char* path, cat_statfs_t* buf){
 
 // cat_work wrapped fs functions
 typedef struct cat_fs_ret_s{
+    int error; // original errno / GetLastError()
+    const char * msg; // cat error message, will be cat_free'd
     union {
         signed long long int num;
         void * ptr;
     }ret;
-    int error; // original errno / GetLastError()
-    const char * msg; // cat error message, will be cat_free'd
 } cat_fs_ret_t;
 
 #define CAT_FS_WORK_STRUCT1(name, ta) \
