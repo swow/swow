@@ -15,7 +15,7 @@ Swow\Coroutine::run(function () {
 
 ?>
 --EXPECTF--
-Warning: [Fatal error in R2] Uncaught Swow\Coroutine\Exception: Coroutine is running in %s:%d
+Warning: [Fatal error in R%d] Uncaught Swow\Coroutine\Exception: Coroutine is running in %s:%d
 Stack trace:
 #0 %s(%d): Swow\Coroutine->resume()
 #1 [internal function]: {closure}()

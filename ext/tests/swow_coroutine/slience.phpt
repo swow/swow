@@ -25,7 +25,7 @@ $coroutine->resume();
 
 ?>
 --EXPECTF--
-Warning: [Warning in R1] %s
+Warning: [Warning in main] %s
 Stack trace:
 #0 %s(%d): trigger_error('%s', %d)
 #1 {main}

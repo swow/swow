@@ -8,6 +8,7 @@ require __DIR__ . '/../../include/skipif.php';
 <?php
 require __DIR__ . '/../../include/bootstrap.php';
 
+// FIXME: memory leak
 Swow\Coroutine::run(function () {
     ob_start();
     echo "2\n"; // [#1] yield

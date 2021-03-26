@@ -28,7 +28,7 @@ echo 'Done' . PHP_LF;
 In
 object(Swow\Coroutine)#%d (%d) {
   ["id"]=>
-  int(2)
+  int(%d)
   ["state"]=>
   string(7) "running"
   ["round"]=>
@@ -46,7 +46,7 @@ object(Swow\Coroutine)#%d (%d) {
 Out
 object(Swow\Coroutine)#%d (%d) {
   ["id"]=>
-  int(2)
+  int(%d)
   ["state"]=>
   string(7) "waiting"
   ["round"]=>
@@ -63,7 +63,7 @@ object(Swow\Coroutine)#%d (%d) {
 Kill
 object(Swow\Coroutine)#%d (%d) {
   ["id"]=>
-  int(2)
+  int(%d)
   ["state"]=>
   string(4) "dead"
   ["round"]=>

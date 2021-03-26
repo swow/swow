@@ -35,7 +35,7 @@ var_dump('never here');
 
 ?>
 --EXPECTF--
-Warning: [Fatal error in R1] Uncaught %s@anonymous in %s:%d
+Fatal error: Uncaught %s@anonymous in %s:%d
 Stack trace:
 #0 %s(%d): {closure}()
 #1 %s(%d): {closure}()

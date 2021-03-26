@@ -15,7 +15,7 @@ var_dump($coroutine);
 --EXPECTF--
 object(Swow\Coroutine)#%d (%d) {
   ["id"]=>
-  int(2)
+  int(%d)
   ["state"]=>
   string(5) "ready"
   ["round"]=>

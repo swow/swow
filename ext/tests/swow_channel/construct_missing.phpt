@@ -16,7 +16,7 @@ $channel->push(true);
 
 ?>
 --EXPECTF--
-Warning: [Fatal error in R1] Uncaught Error: %s@anonymous must construct first in %s:%d
+Fatal error: Uncaught Error: %s@anonymous must construct first in %s:%d
 Stack trace:
 #0 %s(%d): Swow\Channel->push(true)
 #1 {main}
