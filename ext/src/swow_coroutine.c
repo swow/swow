@@ -2166,21 +2166,23 @@ static void swow_coroutine_error_cb(int type, const char *error_filename, const 
             }
         }
         do {
-            /* Notice: current coroutine is NULL before RINIT */
-            cat_coroutine_id_t id =
-                current_scoroutine != NULL ?
-                current_scoroutine->coroutine.id :
-                CAT_COROUTINE_MAIN_ID;
-
-            new_message = zend_strpprintf(0,
-                "[%s in R" CAT_COROUTINE_ID_FMT "] %s%s%s%s",
-                original_type_string,
-                id,
-                format,
-                trace != NULL ? "\nStack trace:\n" : "",
-                trace != NULL ? ZSTR_VAL(trace) : "",
-                trace != NULL ? "\n  triggered" : ""
-            );
+            const char *trace1 = trace != NULL ? "\nStack trace:\n" : "";
+            const char *trace2 = trace != NULL ? ZSTR_VAL(trace) : "";
+            const char *trace3 = trace != NULL ? "\n  triggered" : "";
+            const char *name = cat_coroutine_get_current_role_name();
+            if (name != NULL) {
+                new_message = zend_strpprintf(0,
+                    "[%s in %s] %s%s%s%s",
+                    original_type_string, name, format,
+                    trace1, trace2, trace3
+                );
+            } else {
+                new_message = zend_strpprintf(0,
+                    "[%s in R" CAT_COROUTINE_ID_FMT "] %s%s%s%s",
+                    original_type_string, cat_coroutine_get_current_id(), format,
+                    trace1, trace2, trace3
+                );
+            }
 #if PHP_VERSION_ID < 80000
             format = ZSTR_VAL(new_message);
 #else

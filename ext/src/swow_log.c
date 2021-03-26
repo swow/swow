@@ -17,6 +17,7 @@
  */
 
 #include "swow_log.h"
+#include "swow_coroutine.h" /* for coroutine id (TODO: need to decouple it?) */
 
 SWOW_API zend_class_entry *swow_log_ce;
 SWOW_API zend_object_handlers swow_log_handlers;
@@ -52,10 +53,22 @@ static void swow_log_standard(CAT_LOG_PARAMATERS)
             type_string = "Info";
         }
         /* stdout */
-        output = cat_sprintf(
-            "%s: <%s> %s in %s on line %u" PHP_EOL,
-            type_string, module_name, message, zend_get_executed_filename(), zend_get_executed_lineno()
-        );
+        do {
+            const char *name = cat_coroutine_get_current_role_name();
+            if (name != NULL) {
+                output = cat_sprintf(
+                    "%s: <%s> %s in %s in %s on line %u" PHP_EOL,
+                    type_string, module_name, message, name,
+                    zend_get_executed_filename(), zend_get_executed_lineno()
+                );
+            } else {
+                output = cat_sprintf(
+                    "%s: <%s> %s in R" CAT_COROUTINE_ID_FMT " in %s on line %u" PHP_EOL,
+                    type_string, module_name, message, cat_coroutine_get_current_id(),
+                    zend_get_executed_filename(), zend_get_executed_lineno()
+                );
+            }
+        } while (0);
         if (likely(output != NULL)) {
             ZEND_PUTS(output);
             cat_free(output);
