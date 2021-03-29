@@ -236,7 +236,7 @@ static inline void swow_stream_check_unix_path_len(size_t* len)
     }
 }
 #else
-#define swow_stream_check_unix_path(len)
+#define swow_stream_check_unix_path_len(len)
 #endif
 
 static char *swow_stream_parse_ip_address(php_stream_xport_param *xparam, int *portno)
