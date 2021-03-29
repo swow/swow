@@ -131,4 +131,3 @@ CAT_API CAT_NORETURN void cat_abort(void);
 
 CAT_API const char *cat_strerror(cat_errno_t error);
 CAT_API int cat_orig_errno(cat_errno_t error);
-CAT_API const char *cat_orig_strerror(cat_errno_t error);

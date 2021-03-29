@@ -413,13 +413,17 @@ typedef struct cat_fs_ret_s{
 #define CAT_FS_WORK_STRUCT_INIT(name, valname, ...) struct cat_fs_##name##_s valname = {{0}, __VA_ARGS__}
 #define CAT_FS_WORK_CB(name) static void _cat_fs_##name##_cb(struct cat_fs_##name##_s* data)
 #define CAT_FS_WORK_CB_CALL(name) ((void(*)(void*))_cat_fs_##name##_cb)
-#define _CAT_FS_WORK_CB_MKERR(valname, fmt, errmsg, freemsg) if(0 != valname.ret.error){\
-    const char* msg = NULL;\
-    cat_update_last_error(cat_translate_sys_error(valname.ret.error), fmt, (NULL != valname.ret.msg) ? valname.ret.msg : (msg=(errmsg))); \
+#define _CAT_FS_WORK_CB_MKERR(error, msg, fmt, errmsg, freemsg) if(0 != error){\
+    const char* _msg = NULL;\
+    cat_update_last_error(error, fmt, (NULL != msg) ? msg : (_msg=(errmsg))); \
     {freemsg} \
-    if(valname.ret.msg){cat_free((void*)valname.ret.msg);} \
+    if(msg){cat_free((void*)msg);} \
 }
-#define CAT_FS_WORK_CB_MKERR_UNIX(a,b)  _CAT_FS_WORK_CB_MKERR(a,b, strerror(a.ret.error), {})
+#ifdef CAT_OS_WIN
+#define CAT_FS_WORK_CB_MKERR(fmt)  _CAT_FS_WORK_CB_MKERR(-(data.ret.error), data.ret.msg, fmt, strerror(data.ret.error), {})
+#else
+#define CAT_FS_WORK_CB_MKERR(fmt)  _CAT_FS_WORK_CB_MKERR(cat_translate_sys_error(data.ret.error), data.ret.msg, fmt, strerror(data.ret.error), {})
+#endif
 
 CAT_FS_WORK_STRUCT3(read, int, void*, size_t)
 CAT_FS_WORK_CB(read){
@@ -436,7 +440,7 @@ CAT_FS_WORK_CB(read){
 CAT_API ssize_t cat_fs_read(cat_file_t fd, void* buf, size_t size){
     CAT_FS_WORK_STRUCT_INIT(read, data, fd, buf, size);
     if(cat_work(CAT_WORK_KIND_FAST_IO, CAT_FS_WORK_CB_CALL(read), &data, CAT_TIMEOUT_FOREVER)){
-        CAT_FS_WORK_CB_MKERR_UNIX(data, "Read failed: %s");
+        CAT_FS_WORK_CB_MKERR("Read failed: %s");
         return data.ret.ret.num;
     }
     return -1;
@@ -457,7 +461,7 @@ CAT_FS_WORK_CB(write){
 CAT_API ssize_t cat_fs_write(cat_file_t fd, const void* buf, size_t length){
     CAT_FS_WORK_STRUCT_INIT(write, data, fd, buf, length);
     if (cat_work(CAT_WORK_KIND_FAST_IO, CAT_FS_WORK_CB_CALL(write), &data, CAT_TIMEOUT_FOREVER)) {
-        CAT_FS_WORK_CB_MKERR_UNIX(data, "Write failed: %s");
+        CAT_FS_WORK_CB_MKERR("Write failed: %s");
         return (ssize_t)data.ret.ret.num;
     }
     return -1;
@@ -474,7 +478,7 @@ CAT_FS_WORK_CB(lseek){
 CAT_API off_t cat_fs_lseek(cat_file_t fd, off_t offset, int whence){
     CAT_FS_WORK_STRUCT_INIT(lseek, data, fd, offset, whence);
     if (cat_work(CAT_WORK_KIND_FAST_IO, CAT_FS_WORK_CB_CALL(lseek), &data, CAT_TIMEOUT_FOREVER)) {
-        CAT_FS_WORK_CB_MKERR_UNIX(data, "Calling lseek failed: %s");
+        CAT_FS_WORK_CB_MKERR("Calling lseek failed: %s");
         return (off_t)data.ret.ret.num;
     }
     return -1;
@@ -541,7 +545,7 @@ CAT_FS_WORK_CB(readdir) {
 CAT_API cat_dirent_t* cat_fs_readdir(cat_dir_t* dir){
     CAT_FS_WORK_STRUCT_INIT(readdir, data, dir);
     if (cat_work(CAT_WORK_KIND_FAST_IO, CAT_FS_WORK_CB_CALL(readdir), &data, CAT_TIMEOUT_FOREVER)) {
-        CAT_FS_WORK_CB_MKERR_UNIX(data, "Readdir failed: %s");
+        CAT_FS_WORK_CB_MKERR("Readdir failed: %s");
         return data.ret.ret.ptr;
     }
     return NULL;
@@ -681,7 +685,7 @@ static const char * cat_fs_nt_strerror(NTSTATUS status){
 */
 
 #ifdef CAT_OS_WIN
-#define CAT_FS_WORK_CB_MKERR_WIN(a,b)  _CAT_FS_WORK_CB_MKERR(a,b, cat_fs_win_strerror(a.ret.error),{if(NULL!=msg)HeapFree(GetProcessHeap(), 0, (LPVOID)msg);})
+#define CAT_FS_WORK_CB_MKERR_WIN(fmt)  _CAT_FS_WORK_CB_MKERR(data.ret.error, data.ret.msg, fmt, cat_fs_win_strerror(data.ret.error), {if(NULL!=_msg)HeapFree(GetProcessHeap(), 0, (LPVOID)_msg);})
 #endif
 
 CAT_FS_WORK_STRUCT1(opendir, const char*)
@@ -716,7 +720,7 @@ CAT_FS_WORK_CB(opendir){
 CAT_API cat_dir_t *cat_fs_opendir(const char* path){
     CAT_FS_WORK_STRUCT_INIT(opendir, data, path);
     if (cat_work(CAT_WORK_KIND_FAST_IO, CAT_FS_WORK_CB_CALL(opendir), &data, CAT_TIMEOUT_FOREVER)) {
-        CAT_FS_WORK_CB_MKERR_WIN(data, "Opendir failed: %s");
+        CAT_FS_WORK_CB_MKERR_WIN("Opendir failed: %s");
         return data.ret.ret.ptr;
     }
     return NULL;
@@ -736,7 +740,7 @@ CAT_FS_WORK_CB(closedir){
 CAT_API int cat_fs_closedir(cat_dir_t* dir){
     CAT_FS_WORK_STRUCT_INIT(closedir, data, dir);
     if (cat_work(CAT_WORK_KIND_FAST_IO, CAT_FS_WORK_CB_CALL(closedir), &data, CAT_TIMEOUT_FOREVER)) {
-        CAT_FS_WORK_CB_MKERR_WIN(data, "Closedir failed: %s");
+        CAT_FS_WORK_CB_MKERR_WIN("Closedir failed: %s");
         return (int)data.ret.ret.num;
     }
     return -1;
@@ -855,7 +859,7 @@ CAT_FS_WORK_CB(readdir){
 CAT_API uv_dirent_t* cat_fs_readdir(cat_dir_t* dir){
     CAT_FS_WORK_STRUCT_INIT(readdir, data, dir);
     if (cat_work(CAT_WORK_KIND_FAST_IO, CAT_FS_WORK_CB_CALL(readdir), &data, CAT_TIMEOUT_FOREVER)) {
-        CAT_FS_WORK_CB_MKERR_WIN(data, "Readdir failed: %s");
+        CAT_FS_WORK_CB_MKERR_WIN("Readdir failed: %s");
         return data.ret.ret.ptr;
     }
     return NULL;
