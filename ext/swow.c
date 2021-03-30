@@ -60,6 +60,8 @@ SWOW_API zend_object_handlers swow_module_handlers;
 
 ZEND_DECLARE_MODULE_GLOBALS(swow)
 
+SWOW_API swow_nts_globals_t swow_nts_globals;
+
 typedef int (*zend_loader_t)(INIT_FUNC_ARGS);
 
 #ifdef ZEND_ACC_HAS_TYPE_HINTS_DENY
@@ -130,6 +132,9 @@ PHP_MINIT_FUNCTION(swow)
     } while (0);
 #undef SWOW_FUNCTIONS_REMOVE_TYPE_HINT
 #endif
+
+    SWOW_NTS_G(cli) = strcmp(sapi_module.name, "cli") != 0 &&
+                      strcmp(sapi_module.name, "phpdbg") != 0;
 
     return SUCCESS;
 }
@@ -420,7 +425,7 @@ int swow_runtime_shutdown(INIT_FUNC_ARGS)
  */
 SWOW_API zend_module_entry swow_module_entry = {
     STANDARD_MODULE_HEADER,
-    "Swow",                       /* Extension name */
+    "Swow",                      /* Extension name */
     swow_functions,              /* zend_function_entry */
     PHP_MINIT(swow),             /* PHP_MINIT - Module initialization */
     PHP_MSHUTDOWN(swow),         /* PHP_MSHUTDOWN - Module shutdown */

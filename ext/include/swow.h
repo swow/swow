@@ -64,6 +64,16 @@ ZEND_EXTERN_MODULE_GLOBALS(swow)
 
 #define SWOW_G(v) ZEND_MODULE_GLOBALS_ACCESSOR(swow, v)
 
+/* globals (not thread safe) */
+
+typedef struct {
+    zend_bool cli;
+} swow_nts_globals_t;
+
+extern SWOW_API swow_nts_globals_t swow_nts_globals;
+
+#define SWOW_NTS_G(x) swow_nts_globals.x
+
 #ifdef ZTS
 ZEND_TSRMLS_CACHE_EXTERN()
 #endif
