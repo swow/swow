@@ -88,6 +88,8 @@ if (PHP_SWOW != 'no') (function(){
         ADD_FLAG("CFLAGS_SWOW", "/w14090");
         // -Wuninitialized or -Winit-self like
         ADD_FLAG("CFLAGS_SWOW", "/w14700");
+        // -Werror=implicit-function-declaration like
+        ADD_FLAG("CFLAGS_SWOW", "/we4013");
     }
     ADD_FLAG("CFLAGS_SWOW", "/wd4244");
     // -Wno-sign-compare like

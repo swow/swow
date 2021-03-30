@@ -88,6 +88,7 @@ if test "${SWOW}" != "no"; then
     AX_CHECK_COMPILE_FLAG(-Wpointer-bool-conversion,       SWOW_MAINTAINER_CFLAGS="${SWOW_MAINTAINER_CFLAGS} -Wpointer-bool-conversion")
     AX_CHECK_COMPILE_FLAG(-Wsizeof-array-argument,         SWOW_MAINTAINER_CFLAGS="${SWOW_MAINTAINER_CFLAGS} -Wsizeof-array-argument")
     AX_CHECK_COMPILE_FLAG(-Wwrite-strings,                 SWOW_MAINTAINER_CFLAGS="${SWOW_MAINTAINER_CFLAGS} -Wwrite-strings")
+    AX_CHECK_COMPILE_FLAG(-Werror=implicit-function-declaration, SWOW_MAINTAINER_CFLAGS="${SWOW_MAINTAINER_CFLAGS} -Werror=implicit-function-declaration")
     AX_CHECK_COMPILE_FLAG(-fdiagnostics-show-option,       SWOW_MAINTAINER_CFLAGS="${SWOW_MAINTAINER_CFLAGS} -fdiagnostics-show-option")
     AX_CHECK_COMPILE_FLAG(-fno-omit-frame-pointer,         SWOW_MAINTAINER_CFLAGS="${SWOW_MAINTAINER_CFLAGS} -fno-omit-frame-pointer")
     AX_CHECK_COMPILE_FLAG(-fno-optimize-sibling-calls,     SWOW_MAINTAINER_CFLAGS="${SWOW_MAINTAINER_CFLAGS} -fno-optimize-sibling-calls")
