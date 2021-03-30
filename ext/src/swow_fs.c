@@ -182,6 +182,242 @@ static void swow_stream_mode_sanitize_fdopen_fopencookie(php_stream *stream, cha
 	result[res_curs] = '\0';
 }
 
+#define COPY_MEMBER(x) statbuf->x = _statbuf.x
+#ifndef PHP_WIN32
+#define COPY_MEMBERS() do{\
+    COPY_MEMBER(st_dev);\
+    COPY_MEMBER(st_ino);\
+    COPY_MEMBER(st_mode);\
+    COPY_MEMBER(st_nlink);\
+    COPY_MEMBER(st_uid);\
+    COPY_MEMBER(st_gid);\
+    COPY_MEMBER(st_rdev);\
+    COPY_MEMBER(st_size);\
+    statbuf->st_atime = _statbuf.st_atim.tv_sec;\
+    statbuf->st_ctime = _statbuf.st_ctim.tv_sec;\
+    statbuf->st_mtime = _statbuf.st_mtim.tv_sec;\
+    COPY_MEMBER(st_blksize);\
+    COPY_MEMBER(st_blocks);\
+}while(0)
+#else
+#define COPY_MEMBERS() do{\
+    COPY_MEMBER(st_dev);\
+    COPY_MEMBER(st_ino);\
+    COPY_MEMBER(st_mode);\
+    COPY_MEMBER(st_nlink);\
+    COPY_MEMBER(st_uid);\
+    COPY_MEMBER(st_gid);\
+    COPY_MEMBER(st_rdev);\
+    COPY_MEMBER(st_size);\
+    statbuf->st_atime = _statbuf.st_atim.tv_sec;\
+    statbuf->st_ctime = _statbuf.st_ctim.tv_sec;\
+    statbuf->st_mtime = _statbuf.st_mtim.tv_sec;\
+}while(0)
+#endif
+
+static inline int swow_fs_fstat(int fd, zend_stat_t *statbuf){
+    cat_stat_t _statbuf;
+    int ret=cat_fs_fstat(fd, &_statbuf);
+    if (ret<0){
+        return ret;
+    }
+    COPY_MEMBERS();
+
+    return ret;
+}
+
+static inline int swow_fs_stat_mock(int (*stat_func)(const char*, cat_stat_t *), const char *pathname, zend_stat_t *statbuf){
+    cat_stat_t _statbuf;
+    int ret=stat_func(pathname, &_statbuf);
+    if (ret<0){
+        errno=cat_orig_errno(cat_get_last_error_code());
+        return ret;
+    }
+    COPY_MEMBERS();
+#ifndef PHP_WIN32
+    COPY_MEMBER(st_blksize);
+    COPY_MEMBER(st_blocks);
+#endif
+    return ret;
+}
+#undef COPY_MEMBER
+
+// mock VCWD_XXXX macros
+# ifndef HAVE_UTIME
+struct utimbuf {
+    time_t actime;
+    time_t modtime;
+};
+# endif // HAVE_UTIME
+
+#ifdef VIRTUAL_DIR
+# define SWOW_VCWD_WRAP(path, new_path, failed, wrapped) do {\
+    char * new_path = NULL;\
+    /* virtual_filepath_ex returns non-zero(1 or -1) for error */ \
+    if(0 != virtual_filepath_ex(path, &new_path, NULL)){\
+        {failed}\
+        break;\
+    }\
+    {wrapped}\
+    efree(new_path);\
+}while(0)
+
+// on-shot use here, only needs one form
+static inline int swow_virtual_open(const char *path, int flags){
+    int ret;
+    SWOW_VCWD_WRAP(path, real_path, {
+        ret = -1;
+    }, {
+        ret = cat_fs_open(real_path, flags);
+    });
+    return ret;
+}
+
+static inline int swow_virtual_unlink(const char *path){
+    int ret;
+    SWOW_VCWD_WRAP(path, real_path, {
+        ret = -1;
+    }, {
+        ret = cat_fs_unlink(real_path);
+    });
+    return ret;
+}
+
+static inline cat_dir_t* swow_virtual_opendir(const char *path){
+    cat_dir_t * ret;
+    SWOW_VCWD_WRAP(path, real_path, {
+        ret = NULL;
+    }, {
+        ret = cat_fs_opendir(real_path);
+    });
+    return ret;
+}
+
+static inline int swow_virtual_access(const char *path, int mode){
+    int ret;
+    SWOW_VCWD_WRAP(path, real_path, {
+        ret = -1;
+    }, {
+        ret = cat_fs_access(real_path, mode);
+    });
+    return ret;
+}
+
+static inline int swow_virtual_stat(const char *path, zend_stat_t * statbuf){
+    int ret;
+    SWOW_VCWD_WRAP(path, real_path, {
+        ret = -1;
+    }, {
+        ret = swow_fs_stat_mock(cat_fs_stat, real_path, statbuf);
+    });
+    return ret;
+}
+
+static inline int swow_virtual_lstat(const char *path, zend_stat_t * statbuf){
+    int ret;
+    SWOW_VCWD_WRAP(path, real_path, {
+        ret = -1;
+    }, {
+        ret = swow_fs_stat_mock(cat_fs_lstat, real_path, statbuf);
+    });
+    return ret;
+}
+
+static inline int swow_virtual_utime(const char *path, struct utimbuf *buf){
+    int ret;
+    SWOW_VCWD_WRAP(path, real_path, {
+        ret = -1;
+    }, {
+        ret = cat_fs_utime(real_path, buf->actime, buf->modtime);
+    });
+    return ret;
+}
+
+static inline int swow_virtual_rename(const char *a, const char *b){
+    int ret;
+    SWOW_VCWD_WRAP(a, real_a, {
+        ret = -1;
+    }, {
+        SWOW_VCWD_WRAP(b, real_b, {
+            ret = -1;
+        }, {
+            ret = cat_fs_rename(real_a, real_b);
+        });
+    });
+    return ret;
+}
+
+static inline int swow_virtual_chmod(const char *path,  mode_t mode){
+    int ret;
+    SWOW_VCWD_WRAP(path, real_path, {
+        ret = -1;
+    }, {
+        ret = cat_fs_chmod(real_path, (int)mode);
+    });
+    return ret;
+}
+
+static inline int swow_virtual_mkdir(const char *path,  mode_t mode){
+    int ret;
+    SWOW_VCWD_WRAP(path, real_path, {
+        ret = -1;
+    }, {
+        ret = cat_fs_mkdir(real_path, (int)mode);
+    });
+    return ret;
+}
+
+static inline int swow_virtual_rmdir(const char *path){
+    int ret;
+    SWOW_VCWD_WRAP(path, real_path, {
+        ret = -1;
+    }, {
+        ret = cat_fs_rmdir(real_path);
+    });
+    return ret;
+}
+
+# ifndef PHP_WIN32
+static inline int swow_virtual_chown(const char *path, uid_t owner, gid_t group){
+    int ret;
+    SWOW_VCWD_WRAP(path, real_path, {
+        ret = -1;
+    }, {
+        ret = cat_fs_chown(real_path, (cat_uid_t)owner, (cat_gid_t)group);
+    });
+    return ret;
+}
+
+static inline int swow_virtual_lchown(const char *path, uid_t owner, gid_t group){
+    int ret;
+    SWOW_VCWD_WRAP(path, real_path, {
+        ret = -1;
+    }, {
+        ret = cat_fs_lchown(real_path, (cat_uid_t)owner, (cat_gid_t)group);
+    });
+    return ret;
+}
+# endif // PHP_WIN32
+
+#else
+# define swow_virtual_open cat_fs_open
+# define swow_virtual_unlink cat_fs_unlink
+# define swow_virtual_opendir cat_fs_opendir
+# define swow_virtual_access cat_fs_access
+# define swow_virtual_stat(path, sb) swow_fs_stat_mock(cat_fs_stat, path, sb)
+# define swow_virtual_lstat(path, sb) swow_fs_stat_mock(cat_fs_lstat, path, sb)
+# define swow_virtual_utime(path, buf) cat_fs_utime(path, buf->actime, buf->modtime)
+# define swow_virtual_rename cat_fs_rename
+# define swow_virtual_chmod cat_fs_chmod
+# define swow_virtual_mkdir cat_fs_mkdir
+# define swow_virtual_rmdir cat_fs_rmdir
+# ifndef PHP_WIN32
+#  define swow_virtual_chown cat_fs_chown
+#  define swow_virtual_lchown cat_fs_lchown
+# endif // PHP_WIN32
+#endif // VIRTUAL_DIR
+
+// plain_wrappers.c
 /* {{{ ------- plain file stream implementation -------*/
 
 typedef struct {
@@ -218,29 +454,8 @@ typedef struct {
 static int do_fstat(swow_stdio_stream_data *d, int force)
 {
     if (!d->cached_fstat || (force && !d->no_forced_fstat)) {
-        cat_stat_t statbuf;
-        int fd = SWOW_STDIOP_FD(d);
-        int r = cat_fs_fstat(fd, &statbuf);
-
-#define COPY_MEMBER(x) d->sb.x = statbuf.x
-        COPY_MEMBER(st_dev);
-        COPY_MEMBER(st_ino);
-        COPY_MEMBER(st_mode);
-        COPY_MEMBER(st_nlink);
-        COPY_MEMBER(st_uid);
-        COPY_MEMBER(st_gid);
-        COPY_MEMBER(st_rdev);
-        COPY_MEMBER(st_size);
-
-        d->sb.st_atime = statbuf.st_atim.tv_sec;
-        d->sb.st_ctime = statbuf.st_ctim.tv_sec;
-        d->sb.st_mtime = statbuf.st_mtim.tv_sec;
-#ifndef PHP_WIN32
-        COPY_MEMBER(st_blksize);
-        COPY_MEMBER(st_blocks);
-#endif
-#undef COPY_MEMBER
-        d->cached_fstat = r == 0;
+        int r = swow_fs_fstat(SWOW_STDIOP_FD(d), &d->sb);
+		d->cached_fstat = r == 0;
 
         return r;
     }
@@ -1127,7 +1342,7 @@ static php_stream *swow_plain_files_dir_opener(php_stream_wrapper *wrapper, cons
         return NULL;
     }
 
-    cat_dir_t * dir = cat_fs_opendir(path);
+    cat_dir_t * dir = swow_virtual_opendir(path);
     if (dir) {
         stream = php_stream_alloc(&swow_plain_files_dirstream_ops, dir, 0, mode);
         if (stream == NULL){
@@ -1285,16 +1500,16 @@ static int swow_plain_files_url_stater(php_stream_wrapper *wrapper, const char *
 
 #ifdef PHP_WIN32
     if (flags & PHP_STREAM_URL_STAT_LINK) {
-        return VCWD_LSTAT(url, &ssb->sb);
+        return swow_virtual_lstat(url, &ssb->sb);
     }
 #else
 # ifdef HAVE_SYMLINK
     if (flags & PHP_STREAM_URL_STAT_LINK) {
-        return VCWD_LSTAT(url, &ssb->sb);
+        return swow_virtual_lstat(url, &ssb->sb);
     } else
 # endif
 #endif
-        return VCWD_STAT(url, &ssb->sb);
+        return swow_virtual_stat(url, &ssb->sb);
 }
 
 static int swow_plain_files_unlink(php_stream_wrapper *wrapper, const char *url, int options, php_stream_context *context)
@@ -1309,7 +1524,7 @@ static int swow_plain_files_unlink(php_stream_wrapper *wrapper, const char *url,
         return 0;
     }
 
-    ret = cat_fs_unlink(url);
+    ret = swow_virtual_unlink(url);
     if (ret == -1) {
         if (options & REPORT_ERRORS) {
             php_error_docref1(NULL, url, E_WARNING, "%s", strerror(cat_orig_errno(cat_get_last_error_code())));
@@ -1354,7 +1569,7 @@ static int swow_plain_files_rename(php_stream_wrapper *wrapper, const char *url_
         return 0;
     }
 
-    ret = cat_fs_rename(url_from, url_to);
+    ret = swow_virtual_rename(url_from, url_to);
 
     if (ret == -1) {
 #ifndef PHP_WIN32
@@ -1367,7 +1582,7 @@ static int swow_plain_files_rename(php_stream_wrapper *wrapper, const char *url_
 # endif
             int success = 0;
             if (php_copy_file(url_from, url_to) == SUCCESS) {
-                if (VCWD_STAT(url_from, &sb) == 0) {
+                if (swow_virtual_stat(url_from, &sb)) {
                     success = 1;
 #  ifndef TSRM_WIN32
                     /*
@@ -1377,7 +1592,7 @@ static int swow_plain_files_rename(php_stream_wrapper *wrapper, const char *url_
                      * on the system environment to have proper umask to not allow
                      * access to the file in the meantime.
                      */
-                    if (cat_fs_chown(url_to, sb.st_uid, sb.st_gid)) {
+                    if (swow_virtual_chown(url_to, sb.st_uid, sb.st_gid)) {
                         php_error_docref2(NULL, url_from, url_to, E_WARNING, "%s", strerror(cat_orig_errno(cat_get_last_error_code())));
                         if (errno != EPERM) {
                             success = 0;
@@ -1385,7 +1600,7 @@ static int swow_plain_files_rename(php_stream_wrapper *wrapper, const char *url_
                     }
 
                     if (success) {
-                        if (cat_fs_chmod(url_to, sb.st_mode)) {
+                        if (swow_virtual_chmod(url_to, sb.st_mode)) {
                             php_error_docref2(NULL, url_from, url_to, E_WARNING, "%s", strerror(cat_orig_errno(cat_get_last_error_code())));
                             if (errno != EPERM) {
                                 success = 0;
@@ -1394,7 +1609,7 @@ static int swow_plain_files_rename(php_stream_wrapper *wrapper, const char *url_
                     }
 #  endif
                     if (success) {
-                        cat_fs_unlink(url_from);
+                        swow_virtual_unlink(url_from);
                     }
                 } else {
                     php_error_docref2(NULL, url_from, url_to, E_WARNING, "%s", strerror(errno));
@@ -1411,7 +1626,9 @@ static int swow_plain_files_rename(php_stream_wrapper *wrapper, const char *url_
 #endif
 
 #ifdef PHP_WIN32
-        php_win32_docref2_from_error(GetLastError(), url_from, url_to);
+        // should be php_win32_docref2_from_error(GetLastError(), url_from, url_to);
+        // but {G,S}etLastError is not usable
+        php_error_docref2(NULL, url_from, url_to, E_WARNING, "%s (code: %lu)", cat_get_last_error_message(), cat_orig_errno(cat_get_last_error_code()));
 #else
         php_error_docref2(NULL, url_from, url_to, E_WARNING, "%s", strerror(cat_orig_errno(cat_get_last_error_code())));
 #endif
@@ -1431,7 +1648,7 @@ static int swow_mkdir_ex(const char *dir, zend_long mode, int options){
 		return -1;
 	}
 
-	if ((ret = cat_fs_mkdir(dir, (mode_t)mode)) < 0 && (options & REPORT_ERRORS)) {
+	if ((ret = swow_virtual_mkdir(dir, (mode_t)mode)) < 0 && (options & REPORT_ERRORS)) {
 		php_error_docref(NULL, E_WARNING, "%s", strerror(cat_orig_errno(cat_get_last_error_code())));
 	}
 
@@ -1481,7 +1698,7 @@ static int swow_plain_files_mkdir(php_stream_wrapper *wrapper, const char *dir, 
                     --p;
                     *p = '\0';
                 }
-                if (VCWD_STAT(buf, &sb) == 0) {
+                if (swow_virtual_stat(buf, &sb) == 0) {
                     while (1) {
                         *p = DEFAULT_SLASH;
                         if (!n) break;
@@ -1504,7 +1721,7 @@ static int swow_plain_files_mkdir(php_stream_wrapper *wrapper, const char *dir, 
                 if (*p == '\0') {
                     *p = DEFAULT_SLASH;
                     if ((*(p+1) != '\0') &&
-                        (ret = cat_fs_mkdir(buf, (mode_t)mode)) < 0) {
+                        (ret = swow_virtual_mkdir(buf, (mode_t)mode)) < 0) {
                         if (options & REPORT_ERRORS) {
                             php_error_docref(NULL, E_WARNING, "%s", strerror(cat_orig_errno(cat_get_last_error_code())));
                         }
@@ -1540,7 +1757,7 @@ static int swow_plain_files_rmdir(php_stream_wrapper *wrapper, const char *url, 
     }
 #endif
 
-    if (cat_fs_rmdir(url) < 0) {
+    if (swow_virtual_rmdir(url) < 0) {
         php_error_docref1(NULL, url, E_WARNING, "%s", strerror(cat_orig_errno(cat_get_last_error_code())));
         return 0;
     }
@@ -1579,8 +1796,8 @@ static int swow_plain_files_metadata(php_stream_wrapper *wrapper, const char *ur
     switch(option) {
         case PHP_STREAM_META_TOUCH:
             newtime = (struct utimbuf *)value;
-            if (cat_fs_access(url, F_OK) != 0) {
-                int fd = cat_fs_open(url,  O_TRUNC | O_CREAT);
+            if (swow_virtual_access(url, F_OK) != 0) {
+                int fd = swow_virtual_open(url,  O_TRUNC | O_CREAT);
                 if (fd < 0) {
                     php_error_docref1(NULL, url, E_WARNING, "Unable to create file %s because %s", url, strerror(cat_orig_errno(cat_get_last_error_code())));
                     return 0;
@@ -1588,7 +1805,7 @@ static int swow_plain_files_metadata(php_stream_wrapper *wrapper, const char *ur
                 cat_fs_close(fd);
             }
 
-            ret = cat_fs_utime(url, newtime->actime, newtime->modtime);
+            ret = swow_virtual_utime(url, newtime);
             break;
 #ifndef PHP_WIN32
         case PHP_STREAM_META_OWNER_NAME:
@@ -1601,7 +1818,7 @@ static int swow_plain_files_metadata(php_stream_wrapper *wrapper, const char *ur
             } else {
                 uid = (uid_t)*(long *)value;
             }
-            ret = cat_fs_chown(url, uid, -1);
+            ret = swow_virtual_chown(url, uid, -1);
             break;
         case PHP_STREAM_META_GROUP:
         case PHP_STREAM_META_GROUP_NAME:
@@ -1613,12 +1830,12 @@ static int swow_plain_files_metadata(php_stream_wrapper *wrapper, const char *ur
             } else {
                 gid = (gid_t)*(long *)value;
             }
-            ret = cat_fs_chown(url, -1, gid);
+            ret = swow_virtual_chown(url, -1, gid);
             break;
 #endif
         case PHP_STREAM_META_ACCESS:
             mode = (mode_t)*(zend_long *)value;
-            ret = cat_fs_chmod(url, mode);
+            ret = swow_virtual_chmod(url, mode);
             break;
         default:
             zend_value_error("Unknown option %d for stream_metadata", option);
