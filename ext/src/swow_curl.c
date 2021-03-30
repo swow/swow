@@ -501,7 +501,11 @@ static PHP_FUNCTION(swow_curl_multi_exec)
 
     still_running = zval_get_long(z_still_running);
     error = cat_curl_multi_perform(mh->multi, &still_running);
+#ifdef ZEND_TRY_ASSIGN_REF_LONG
     ZEND_TRY_ASSIGN_REF_LONG(z_still_running, still_running);
+#else
+    ZVAL_LONG(z_still_running, still_running);
+#endif
 
     SAVE_CURLM_ERROR(mh, error);
     RETURN_LONG((zend_long) error);
