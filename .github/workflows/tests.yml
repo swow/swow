@@ -50,10 +50,12 @@ jobs:
         #env:
           #phpts: ${{ matrix.ts }}
 
-      - name: Setup Deps
+      - name: Setup extension dependencies
         run: |
-          composer update -o --ignore-platform-reqs
-          ${{ runner.os == 'Linux' && 'sudo apt-get install -yqq libssl-dev libcurl4-openssl-dev' || '' }}
+          if ${{ runner.os }} = 'Linux'
+          then
+            sudo apt-get install -yqq libssl-dev libcurl4-openssl-dev
+          fi
 
       - name: Build Swow extension
         run: |
@@ -78,6 +80,9 @@ jobs:
         run: |
           composer test-extension -- \
             -j`${{ runner.os == 'Linux' && 'nproc' || 'sysctl -n hw.logicalcpu' }}`
+
+      - name: Setup composer dependencies
+        run: composer update -o --ignore-platform-reqs
 
       - name: Run library tests
         run: composer test-library
@@ -119,9 +124,6 @@ jobs:
           extensions: curl,openssl
         env:
           phpts: ${{ matrix.ts }}
-      
-      - name: Setup Deps
-        run: composer update -o --ignore-platform-reqs
 
       - name: Build Swow extension
         uses: ./.github/workflows/winext
@@ -138,6 +140,9 @@ jobs:
         continue-on-error: true
         run: |
           composer test-extension
+
+      - name: Setup composer dependencies
+        run: composer update -o --ignore-platform-reqs
 
       - name: Run library tests
         shell: cmd
