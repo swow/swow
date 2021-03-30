@@ -448,6 +448,9 @@ EOF
       fi
       AC_MSG_CHECKING(for $2 $3 or greater)
       dnl shall we find env first?
+      dnl echo env PKG_CONFIG_PATH=${SWOW_PKG_FIND_PATH}/lib/pkgconfig $PKG_CONFIG --atleast-version $3 $2
+      dnl env PKG_CONFIG_PATH=${SWOW_PKG_FIND_PATH}/lib/pkgconfig $PKG_CONFIG --atleast-version $3 $2; echo $?
+      dnl env PKG_CONFIG_PATH=${SWOW_PKG_FIND_PATH}/lib/pkgconfig $PKG_CONFIG --modversion $2
       if env PKG_CONFIG_PATH=${SWOW_PKG_FIND_PATH}/lib/pkgconfig $PKG_CONFIG --atleast-version $3 $2; then
         $2_version_full=`env PKG_CONFIG_PATH=${SWOW_PKG_FIND_PATH}/lib/pkgconfig $PKG_CONFIG --modversion $2`
         AC_MSG_RESULT(${$2_version_full})

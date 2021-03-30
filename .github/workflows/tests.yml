@@ -52,9 +52,9 @@ jobs:
 
       - name: Setup extension dependencies
         run: |
-          if ${{ runner.os }} = 'Linux'
+          if [ ${{ runner.os }} = 'Linux' ]
           then
-            sudo apt-get install -yqq libssl-dev libcurl4-openssl-dev
+            sudo apt-get install -yqq libcurl4-openssl-dev
           fi
 
       - name: Build Swow extension
