@@ -331,6 +331,8 @@ static void swow_curl_multi_free_obj(zend_object *object)
 }
 #endif
 
+// TODO: hook curl_read()/curl_write()
+
 /* {{{ Perform a cURL session */
 static PHP_FUNCTION(swow_curl_exec)
 {
