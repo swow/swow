@@ -292,40 +292,7 @@ static void _php_curl_multi_cleanup_list(void *data) /* {{{ */
 }
 /* }}} */
 
-#if PHP_VERSION_ID < 80000
-static void _php_curl_multi_close(zend_resource *rsrc) /* {{{ */
-{
-    php_curlm *mh = (php_curlm *)rsrc->ptr;
-    if (mh) {
-        zend_llist_position pos;
-        php_curl *ch;
-        zval    *pz_ch;
-
-        for (pz_ch = (zval *)zend_llist_get_first_ex(&mh->easyh, &pos); pz_ch;
-            pz_ch = (zval *)zend_llist_get_next_ex(&mh->easyh, &pos)) {
-            /* ptr is NULL means it already be freed */
-            if (Z_RES_P(pz_ch)->ptr) {
-                if ((ch = (php_curl *) zend_fetch_resource(Z_RES_P(pz_ch), le_curl_name, le_curl))) {
-                    _php_curl_verify_handlers(ch, 0);
-                }
-            }
-        }
-
-        cat_curl_multi_cleanup(mh->multi);
-        zend_llist_clean(&mh->easyh);
-        if (mh->handlers->server_push) {
-            zval_ptr_dtor(&mh->handlers->server_push->func_name);
-            efree(mh->handlers->server_push);
-        }
-        if (mh->handlers) {
-            efree(mh->handlers);
-        }
-        efree(mh);
-        rsrc->ptr = NULL;
-    }
-}
-/* }}} */
-#else
+#if PHP_VERSION_ID >= 80000
 static void swow_curl_multi_free_obj(zend_object *object)
 {
     php_curlm *mh = curl_multi_from_obj(object);
@@ -549,6 +516,30 @@ static PHP_FUNCTION(swow_curl_multi_select)
 }
 /* }}} */
 
+#if PHP_VERSION_ID < 80000
+/* {{{ proto void curl_multi_close(resource mh)
+   Close a set of cURL handles */
+PHP_FUNCTION(swow_curl_multi_close)
+{
+	zval      *z_mh;
+	php_curlm *mh;
+    CURLM     *multi;
+
+	ZEND_PARSE_PARAMETERS_START(1,1)
+		Z_PARAM_RESOURCE(z_mh)
+	ZEND_PARSE_PARAMETERS_END();
+
+	if ((mh = (php_curlm *)zend_fetch_resource(Z_RES_P(z_mh), le_curl_multi_handle_name, le_curl_multi_handle)) == NULL) {
+		RETURN_FALSE;
+	}
+
+    multi = mh->multi;
+	zend_list_close(Z_RES_P(z_mh)); /* curl_multi_cleanup */
+    cat_curl_multi_cleanup_context(multi);
+}
+/* }}} */
+#endif
+
 int swow_curl_module_init(INIT_FUNC_ARGS)
 {
     SWOW_MODULES_CHECK_PRE_START() {
@@ -556,12 +547,11 @@ int swow_curl_module_init(INIT_FUNC_ARGS)
     } SWOW_MODULES_CHECK_PRE_END();
 
 #if PHP_VERSION_ID < 80000
-    zend_module_entry *curl_module;
-    if ((curl_module = zend_hash_str_find_ptr(&module_registry, ZEND_STRL("curl"))) == NULL) {
+    le_curl = zend_fetch_list_dtor_id("curl");
+    if (le_curl == 0) {
         return SUCCESS;
     }
-    le_curl = zend_fetch_list_dtor_id("curl");
-    le_curl_multi_handle = zend_register_list_destructors_ex(_php_curl_multi_close, NULL, "curl_multi", curl_module->module_number);
+    le_curl_multi_handle = zend_fetch_list_dtor_id("curl_multi");
     CAT_ASSERT(le_curl != 0 && le_curl_multi_handle != 0);
 #else
     curl_ce = (zend_class_entry *) zend_hash_str_find_ptr(CG(class_table), ZEND_STRL("curlhandle"));
@@ -588,6 +578,11 @@ int swow_curl_module_init(INIT_FUNC_ARGS)
     if (!swow_hook_internal_function_handler(ZEND_STRL("curl_multi_select"), PHP_FN(swow_curl_multi_select))) {
         return FAILURE;
     }
+#if PHP_VERSION_ID < 80000
+    if (!swow_hook_internal_function_handler(ZEND_STRL("curl_multi_close"), PHP_FN(swow_curl_multi_close))) {
+        return FAILURE;
+    }
+#endif
 
     return SUCCESS;
 }
@@ -616,5 +611,18 @@ int swow_curl_module_shutdown(INIT_FUNC_ARGS)
 
     return SUCCESS;
 }
+
+#if PHP_VERSION_ID < 80000
+int swow_curl_runtime_shutdown(INIT_FUNC_ARGS)
+{
+    SWOW_CURL_CHECK_MODULE();
+
+#if PHP_VERSION_ID < 80000
+    cat_curl_multi_cleanup_all_contexts();
+#endif
+
+    return SUCCESS;
+}
+#endif
 
 #endif /* CAT_CURL */

@@ -215,6 +215,9 @@ PHP_RINIT_FUNCTION(swow)
 PHP_RSHUTDOWN_FUNCTION(swow)
 {
     static const zend_loader_t rshutdown_callbacks[] = {
+#if defined(CAT_HAVE_CURL) && PHP_VERSION_ID < 80000
+        swow_curl_runtime_shutdown,
+#endif
         swow_debug_runtime_shutdown,
         swow_watch_dog_runtime_shudtown,
         swow_stream_runtime_shutdown,
