@@ -1830,12 +1830,8 @@ static ssize_t cat_socket_internal_read_raw(
     } while (0);
 #endif
 
-    if (!is_udp) {
-        error = uv_read_start(&isocket->u.stream, cat_socket_read_alloc_callback, cat_socket_read_callback);
-    } else {
-        error = uv_udp_recv_start(&isocket->u.udp, cat_socket_read_alloc_callback, cat_socket_udp_recv_callback);
-    }
-    if (likely(error == 0)) {
+    /* async read */
+    {
         cat_socket_read_context_t context;
         cat_bool_t ret;
         /* construct context */
@@ -1863,11 +1859,22 @@ static ssize_t cat_socket_internal_read_raw(
         isocket->context.io.read.data.ptr = &context;
         isocket->context.io.read.coroutine = CAT_COROUTINE_G(current);
         isocket->io_flags |= CAT_SOCKET_IO_FLAG_READ;
-        ret = cat_time_wait(timeout);
+        /* Notice: we must put (read/recv)_start here,
+         * because read_alloc_callback may triggered immediately on Windows,
+         * and it requires some data from context. */
+        if (!is_udp) {
+            error = uv_read_start(&isocket->u.stream, cat_socket_read_alloc_callback, cat_socket_read_callback);
+        } else {
+            error = uv_udp_recv_start(&isocket->u.udp, cat_socket_read_alloc_callback, cat_socket_udp_recv_callback);
+        }
+        ret = error == 0 && cat_time_wait(timeout);
         isocket->io_flags ^= CAT_SOCKET_IO_FLAG_READ;
         isocket->context.io.read.coroutine = NULL;
         isocket->context.io.read.data.ptr = NULL;
-        /* read stop */
+        if (unlikely(error != 0)) {
+            goto _error;
+        }
+        /* read stop after wait done */
         if (!is_udp) {
             uv_read_stop(&isocket->u.stream);
         } else {
@@ -1882,9 +1889,6 @@ static ssize_t cat_socket_internal_read_raw(
         error = context.error;
     }
 
-    if (unlikely(error != 0)) {
-        goto _error;
-    }
 #ifdef CAT_OS_UNIX_LIKE
     if (is_udg) {
         goto _recv;
@@ -2316,7 +2320,7 @@ static cat_bool_t cat_socket__write_to(cat_socket_t *socket, const cat_socket_wr
         }
         cat_queue_remove(&CAT_COROUTINE_G(current)->waiter.node);
         if (unlikely(!ret)) {
-           cat_update_last_error_with_previous("Socket bind failed");
+           cat_update_last_error_with_previous("Socket write failed");
            return cat_false;
         }
         address = &address_info.address.common;

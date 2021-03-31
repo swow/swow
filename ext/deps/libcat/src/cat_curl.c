@@ -20,6 +20,7 @@
 #include "cat_coroutine.h"
 #include "cat_event.h"
 #include "cat_poll.h"
+#include "cat_queue.h"
 #include "cat_time.h"
 
 #ifdef CAT_CURL
@@ -183,7 +184,7 @@ static int cat_curl_multi_timeout_function(CURLM *multi, long timeout, cat_curl_
     return 0;
 }
 
-static cat_curl_multi_context_t *cat_curl_multi_context_create(CURLM *multi)
+static cat_curl_multi_context_t *cat_curl_multi_create_context(CURLM *multi)
 {
     cat_curl_multi_context_t *context;
 
@@ -214,7 +215,7 @@ static cat_curl_multi_context_t *cat_curl_multi_context_create(CURLM *multi)
     return context;
 }
 
-static cat_curl_multi_context_t *cat_curl_multi_context_get(CURLM *multi)
+static cat_curl_multi_context_t *cat_curl_multi_get_context(CURLM *multi)
 {
     size_t i = 0;
 
@@ -231,12 +232,10 @@ static cat_curl_multi_context_t *cat_curl_multi_context_get(CURLM *multi)
     return NULL;
 }
 
-static void cat_curl_multi_context_close(CURLM *multi)
+static void cat_curl_multi_context_close(cat_curl_multi_context_t *context)
 {
-    cat_curl_multi_context_t *context = cat_curl_multi_context_get(multi);
     cat_curl_pollfd_t *fd;
 
-    CAT_ASSERT(context != NULL);
     while ((fd = cat_queue_front_data(&context->fds, cat_curl_pollfd_t, node))) {
         cat_queue_remove(&fd->node);
         cat_free(fd);
@@ -245,6 +244,15 @@ static void cat_curl_multi_context_close(CURLM *multi)
     CAT_ASSERT(context->nfds == 0);
     cat_queue_remove(&context->node);
     cat_free(context);
+}
+
+static void cat_curl_multi_close_context(CURLM *multi)
+{
+    cat_curl_multi_context_t *context;
+
+    context = cat_curl_multi_get_context(multi);
+    CAT_ASSERT(context != NULL);
+    cat_curl_multi_context_close(context);
 }
 
 CAT_API cat_bool_t cat_curl_module_init(void)
@@ -360,7 +368,7 @@ CAT_API CURLM *cat_curl_multi_init(void)
         return NULL;
     }
 
-    context = cat_curl_multi_context_create(multi);
+    context = cat_curl_multi_create_context(multi);
     if (unlikely(context == NULL)) {
         (void) curl_multi_cleanup(multi);
         return NULL;
@@ -376,7 +384,7 @@ CAT_API CURLMcode cat_curl_multi_cleanup(CURLM *multi)
     mcode = curl_multi_cleanup(multi);
     /* we do not know whether libcurl would do somthing during cleanup,
      * so we close the context later */
-    cat_curl_multi_context_close(multi);
+    cat_curl_multi_close_context(multi);
 
     return mcode;
 }
@@ -404,7 +412,7 @@ static CURLMcode cat_curl_multi_exec(
         running_handles = &_running_handles;
     }
 
-    context = cat_curl_multi_context_get(multi);
+    context = cat_curl_multi_get_context(multi);
 
     CAT_ASSERT(context != NULL);
 
@@ -504,6 +512,22 @@ CAT_API CURLMcode cat_curl_multi_wait(
 )
 {
     return cat_curl_multi_exec(multi, extra_fds, extra_nfds, timeout_ms, numfds, NULL);
+}
+
+/* multi context */
+
+CAT_API void cat_curl_multi_cleanup_context(CURLM *multi)
+{
+    cat_curl_multi_close_context(multi);
+}
+
+CAT_API void cat_curl_multi_cleanup_all_contexts(void)
+{
+    cat_curl_multi_context_t *context;
+
+    while ((context = cat_queue_front_data(&CAT_CURL_G(multi_map), cat_curl_multi_context_t, node))) {
+        cat_curl_multi_context_close(context);
+    }
 }
 
 #endif /* CAT_CURL */
