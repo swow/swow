@@ -125,61 +125,61 @@ extern int php_get_gid_by_name(const char *name, gid_t *gid);
 #ifdef PHP_WIN32
 static int swow_win32_check_trailing_space(const char * path, const size_t path_len)
 {
-	if (path_len > MAXPATHLEN - 1) {
-		return 1;
-	}
-	if (path) {
-		if (path[0] == ' ' || path[path_len - 1] == ' ') {
-			return 0;
-		} else {
-			return 1;
-		}
-	} else {
-		return 0;
-	}
+    if (path_len > MAXPATHLEN - 1) {
+        return 1;
+    }
+    if (path) {
+        if (path[0] == ' ' || path[path_len - 1] == ' ') {
+            return 0;
+        } else {
+            return 1;
+        }
+    } else {
+        return 0;
+    }
 }
 #endif
 
 // from main/streams/cast.c @ b0d139456aad9921d30ba8dfd32fc6cac79dedf9
 static void swow_stream_mode_sanitize_fdopen_fopencookie(php_stream *stream, char *result)
 {
-	/* replace modes not supported by fdopen and fopencookie, but supported
-	 * by PHP's fread(), so that their calls won't fail */
-	const char *cur_mode = stream->mode;
-	int         has_plus = 0,
-		        has_bin  = 0,
-				i,
-				res_curs = 0;
+    /* replace modes not supported by fdopen and fopencookie, but supported
+     * by PHP's fread(), so that their calls won't fail */
+    const char *cur_mode = stream->mode;
+    int         has_plus = 0,
+                has_bin  = 0,
+                i,
+                res_curs = 0;
 
-	if (cur_mode[0] == 'r' || cur_mode[0] == 'w' || cur_mode[0] == 'a') {
-		result[res_curs++] = cur_mode[0];
-	} else {
-		/* assume cur_mode[0] is 'c' or 'x'; substitute by 'w', which should not
-		 * truncate anything in fdopen/fopencookie */
-		result[res_curs++] = 'w';
+    if (cur_mode[0] == 'r' || cur_mode[0] == 'w' || cur_mode[0] == 'a') {
+        result[res_curs++] = cur_mode[0];
+    } else {
+        /* assume cur_mode[0] is 'c' or 'x'; substitute by 'w', which should not
+         * truncate anything in fdopen/fopencookie */
+        result[res_curs++] = 'w';
 
-		/* x is allowed (at least by glibc & compat), but not as the 1st mode
-		 * as in PHP and in any case is (at best) ignored by fdopen and fopencookie */
-	}
+        /* x is allowed (at least by glibc & compat), but not as the 1st mode
+         * as in PHP and in any case is (at best) ignored by fdopen and fopencookie */
+    }
 
-	/* assume current mode has at most length 4 (e.g. wbn+) */
-	for (i = 1; i < 4 && cur_mode[i] != '\0'; i++) {
-		if (cur_mode[i] == 'b') {
-			has_bin = 1;
-		} else if (cur_mode[i] == '+') {
-			has_plus = 1;
-		}
-		/* ignore 'n', 't' or other stuff */
-	}
+    /* assume current mode has at most length 4 (e.g. wbn+) */
+    for (i = 1; i < 4 && cur_mode[i] != '\0'; i++) {
+        if (cur_mode[i] == 'b') {
+            has_bin = 1;
+        } else if (cur_mode[i] == '+') {
+            has_plus = 1;
+        }
+        /* ignore 'n', 't' or other stuff */
+    }
 
-	if (has_bin) {
-		result[res_curs++] = 'b';
-	}
-	if (has_plus) {
-		result[res_curs++] = '+';
-	}
+    if (has_bin) {
+        result[res_curs++] = 'b';
+    }
+    if (has_plus) {
+        result[res_curs++] = '+';
+    }
 
-	result[res_curs] = '\0';
+    result[res_curs] = '\0';
 }
 
 #define COPY_MEMBER(x) statbuf->x = _statbuf.x
@@ -251,15 +251,22 @@ struct utimbuf {
 # endif // HAVE_UTIME
 
 #ifdef VIRTUAL_DIR
-# define SWOW_VCWD_WRAP(path, new_path, failed, wrapped) do {\
-    char * new_path = NULL;\
-    /* virtual_filepath_ex returns non-zero(1 or -1) for error */ \
-    if(0 != virtual_filepath_ex(path, &new_path, NULL)){\
+
+# define SWOW_VCWD_WRAP(path, new_path, failed, wrapped, flags) do {\
+    cwd_state new_state = {0}; \
+    new_state.cwd = virtual_getcwd_ex(&new_state.cwd_length); \
+    if(NULL == new_state.cwd){\
         {failed}\
         break;\
     }\
+    /* virtual_file_ex returns non-zero(1 or -1) for error */ \
+    if (0 != virtual_file_ex(&new_state, path, NULL, flags)) {\
+        {failed}\
+        break;\
+    }\
+    const char *new_path = new_state.cwd;\
     {wrapped}\
-    efree(new_path);\
+    efree(new_state.cwd);\
 }while(0)
 
 // on-shot use here, only needs one form
@@ -269,7 +276,7 @@ static inline int swow_virtual_open(const char *path, int flags){
         ret = -1;
     }, {
         ret = cat_fs_open(real_path, flags);
-    });
+    }, CWD_FILEPATH);
     return ret;
 }
 
@@ -279,7 +286,7 @@ static inline int swow_virtual_unlink(const char *path){
         ret = -1;
     }, {
         ret = cat_fs_unlink(real_path);
-    });
+    }, CWD_EXPAND);
     return ret;
 }
 
@@ -289,7 +296,7 @@ static inline cat_dir_t* swow_virtual_opendir(const char *path){
         ret = NULL;
     }, {
         ret = cat_fs_opendir(real_path);
-    });
+    }, CWD_REALPATH);
     return ret;
 }
 
@@ -299,7 +306,7 @@ static inline int swow_virtual_access(const char *path, int mode){
         ret = -1;
     }, {
         ret = cat_fs_access(real_path, mode);
-    });
+    }, CWD_REALPATH);
     return ret;
 }
 
@@ -309,7 +316,7 @@ static inline int swow_virtual_stat(const char *path, zend_stat_t * statbuf){
         ret = -1;
     }, {
         ret = swow_fs_stat_mock(cat_fs_stat, real_path, statbuf);
-    });
+    }, CWD_REALPATH);
     return ret;
 }
 
@@ -319,7 +326,7 @@ static inline int swow_virtual_lstat(const char *path, zend_stat_t * statbuf){
         ret = -1;
     }, {
         ret = swow_fs_stat_mock(cat_fs_lstat, real_path, statbuf);
-    });
+    }, CWD_EXPAND);
     return ret;
 }
 
@@ -329,7 +336,7 @@ static inline int swow_virtual_utime(const char *path, struct utimbuf *buf){
         ret = -1;
     }, {
         ret = cat_fs_utime(real_path, buf->actime, buf->modtime);
-    });
+    }, CWD_REALPATH);
     return ret;
 }
 
@@ -342,8 +349,8 @@ static inline int swow_virtual_rename(const char *a, const char *b){
             ret = -1;
         }, {
             ret = cat_fs_rename(real_a, real_b);
-        });
-    });
+        }, CWD_EXPAND);
+    }, CWD_EXPAND);
     return ret;
 }
 
@@ -353,7 +360,7 @@ static inline int swow_virtual_chmod(const char *path,  mode_t mode){
         ret = -1;
     }, {
         ret = cat_fs_chmod(real_path, (int)mode);
-    });
+    }, CWD_REALPATH);
     return ret;
 }
 
@@ -363,7 +370,7 @@ static inline int swow_virtual_mkdir(const char *path,  mode_t mode){
         ret = -1;
     }, {
         ret = cat_fs_mkdir(real_path, (int)mode);
-    });
+    }, CWD_FILEPATH);
     return ret;
 }
 
@@ -373,7 +380,7 @@ static inline int swow_virtual_rmdir(const char *path){
         ret = -1;
     }, {
         ret = cat_fs_rmdir(real_path);
-    });
+    }, CWD_EXPAND);
     return ret;
 }
 
@@ -384,7 +391,7 @@ static inline int swow_virtual_chown(const char *path, uid_t owner, gid_t group)
         ret = -1;
     }, {
         ret = cat_fs_chown(real_path, (cat_uid_t)owner, (cat_gid_t)group);
-    });
+    }, CWD_REALPATH);
     return ret;
 }
 
@@ -394,7 +401,7 @@ static inline int swow_virtual_lchown(const char *path, uid_t owner, gid_t group
         ret = -1;
     }, {
         ret = cat_fs_lchown(real_path, (cat_uid_t)owner, (cat_gid_t)group);
-    });
+    }, CWD_REALPATH);
     return ret;
 }
 # endif // PHP_WIN32
@@ -455,7 +462,7 @@ static int do_fstat(swow_stdio_stream_data *d, int force)
 {
     if (!d->cached_fstat || (force && !d->no_forced_fstat)) {
         int r = swow_fs_fstat(SWOW_STDIOP_FD(d), &d->sb);
-		d->cached_fstat = r == 0;
+        d->cached_fstat = r == 0;
 
         return r;
     }
@@ -629,24 +636,24 @@ SWOW_API php_stream *_swow_stream_fopen_temporary_file(const char *dir, const ch
 // todo: swowify this
 static void detect_is_seekable(swow_stdio_stream_data *self) {
     #if defined(S_ISFIFO) && defined(S_ISCHR)
-	if (self->fd >= 0 && do_fstat(self, 0) == 0) {
-		self->is_seekable = !(S_ISFIFO(self->sb.st_mode) || S_ISCHR(self->sb.st_mode));
-		self->is_pipe = S_ISFIFO(self->sb.st_mode);
-	}
+    if (self->fd >= 0 && do_fstat(self, 0) == 0) {
+        self->is_seekable = !(S_ISFIFO(self->sb.st_mode) || S_ISCHR(self->sb.st_mode));
+        self->is_pipe = S_ISFIFO(self->sb.st_mode);
+    }
 #elif defined(PHP_WIN32)
-	zend_uintptr_t handle = _get_osfhandle(self->fd);
+    zend_uintptr_t handle = _get_osfhandle(self->fd);
 
-	if (handle != (zend_uintptr_t)INVALID_HANDLE_VALUE) {
-		DWORD file_type = GetFileType((HANDLE)handle);
+    if (handle != (zend_uintptr_t)INVALID_HANDLE_VALUE) {
+        DWORD file_type = GetFileType((HANDLE)handle);
 
-		self->is_seekable = !(file_type == FILE_TYPE_PIPE || file_type == FILE_TYPE_CHAR);
-		self->is_pipe = file_type == FILE_TYPE_PIPE;
+        self->is_seekable = !(file_type == FILE_TYPE_PIPE || file_type == FILE_TYPE_CHAR);
+        self->is_pipe = file_type == FILE_TYPE_PIPE;
 
-		/* Additional check needed to distinguish between pipes and sockets. */
-		if (self->is_pipe && !GetNamedPipeInfo((HANDLE) handle, NULL, NULL, NULL, NULL)) {
-			self->is_pipe = 0;
-		}
-	}
+        /* Additional check needed to distinguish between pipes and sockets. */
+        if (self->is_pipe && !GetNamedPipeInfo((HANDLE) handle, NULL, NULL, NULL, NULL)) {
+            self->is_pipe = 0;
+        }
+    }
 #endif
 }
 
@@ -1644,15 +1651,15 @@ static int swow_plain_files_rename(php_stream_wrapper *wrapper, const char *url_
 static int swow_mkdir_ex(const char *dir, zend_long mode, int options){
     int ret;
 
-	if (php_check_open_basedir(dir)) {
-		return -1;
-	}
+    if (php_check_open_basedir(dir)) {
+        return -1;
+    }
 
-	if ((ret = swow_virtual_mkdir(dir, (mode_t)mode)) < 0 && (options & REPORT_ERRORS)) {
-		php_error_docref(NULL, E_WARNING, "%s", strerror(cat_orig_errno(cat_get_last_error_code())));
-	}
+    if ((ret = swow_virtual_mkdir(dir, (mode_t)mode)) < 0 && (options & REPORT_ERRORS)) {
+        php_error_docref(NULL, E_WARNING, "%s", strerror(cat_orig_errno(cat_get_last_error_code())));
+    }
 
-	return ret;
+    return ret;
 }
 
 static int swow_plain_files_mkdir(php_stream_wrapper *wrapper, const char *dir, int mode, int options, php_stream_context *context)
