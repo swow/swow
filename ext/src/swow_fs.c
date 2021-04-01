@@ -129,7 +129,7 @@ extern int php_get_gid_by_name(const char *name, gid_t *gid);
 
 #ifdef PHP_WIN32
 // for junctions:
-// uv will return 120666 for directory junctions' st_mode
+// uv will return 0o120666 for directory junctions' st_mode
 // while php_win32_ioutil_stat_ex_w returns 0
 struct _swow_fs_lstat_s{
     int ret;
@@ -155,7 +155,93 @@ static inline int swow_fs_lstat(const char *path, zend_stat_t * statbuf){
 	free(pathw);
     return data.ret;
 }
+// for fstat a pipe:
+// uv will return 0o100666 (regular file + rw-rw-rw-) for pipe
+// this may be a uv bug?
+// while php_win32_ioutil_fstat_ex_w returns 0o10666 (regular file + rw-rw-rw-)
+struct _swow_fs_fstat_s{
+    int ret;
+    int fd;
+    zend_stat_t * statbuf;
+};
+static void _swow_fs_fstat_cb(struct _swow_fs_fstat_s *data){
+    data->ret = php_win32_ioutil_fstat(data->fd, data->statbuf);
+}
+static inline int swow_fs_fstat(int fd, zend_stat_t * statbuf){
+    struct _swow_fs_fstat_s data = {-1, fd, statbuf};
+    if(!cat_work(CAT_WORK_KIND_FAST_IO, _swow_fs_fstat_cb, &data, CAT_TIMEOUT_FOREVER)){
+        data.ret = -1;
+    }
+    UPDATE_ERRNO_FROM_CAT();
+    return data.ret;
+}
 #endif
+#define COPY_MEMBER(x) statbuf->x = _statbuf.x
+#ifndef PHP_WIN32
+#define COPY_MEMBERS() do{\
+    COPY_MEMBER(st_dev);\
+    COPY_MEMBER(st_ino);\
+    COPY_MEMBER(st_mode);\
+    COPY_MEMBER(st_nlink);\
+    COPY_MEMBER(st_uid);\
+    COPY_MEMBER(st_gid);\
+    COPY_MEMBER(st_rdev);\
+    COPY_MEMBER(st_size);\
+    statbuf->st_atime = _statbuf.st_atim.tv_sec;\
+    statbuf->st_ctime = _statbuf.st_ctim.tv_sec;\
+    statbuf->st_mtime = _statbuf.st_mtim.tv_sec;\
+    COPY_MEMBER(st_blksize);\
+    COPY_MEMBER(st_blocks);\
+}while(0)
+#else
+
+#define COPY_MEMBERS() do{\
+    COPY_MEMBER(st_dev);\
+    COPY_MEMBER(st_ino);\
+    COPY_MEMBER(st_mode);\
+    COPY_MEMBER(st_nlink);\
+    COPY_MEMBER(st_uid);\
+    COPY_MEMBER(st_gid);\
+    COPY_MEMBER(st_rdev);\
+    COPY_MEMBER(st_size);\
+    /* (uint32_t) is workaround for 2038 year problem */\
+    /* needs uv fix this */\
+    statbuf->st_atime = (uint32_t)_statbuf.st_atim.tv_sec;\
+    statbuf->st_ctime = (uint32_t)_statbuf.st_ctim.tv_sec;\
+    statbuf->st_mtime = (uint32_t)_statbuf.st_mtim.tv_sec;\
+}while(0)
+#endif
+
+static inline int swow_fs_stat_mock(int lstat, ...){
+    const char* pathname = NULL;
+    int fd = -1;
+    zend_stat_t *statbuf = NULL;
+    va_list argp;
+    va_start(argp, lstat);
+    pathname = va_arg(argp, const char*);
+    statbuf = va_arg(argp, zend_stat_t *);
+    va_end(argp);
+    cat_stat_t _statbuf;
+    int ret;
+    if(lstat){
+#ifdef PHP_WIN32
+        ret = swow_fs_lstat(pathname, statbuf);
+        UPDATE_ERRNO_FROM_CAT();
+        return ret;
+#else
+        ret = cat_fs_lstat(pathname, &_statbuf);
+#endif
+    }else{
+        ret = cat_fs_stat(pathname, &_statbuf);
+    }
+    if (ret<0){
+        UPDATE_ERRNO_FROM_CAT();
+        return ret;
+    }
+    COPY_MEMBERS();
+    return ret;
+}
+#undef COPY_MEMBER
 
 // from win32/winutils.c @ a08a2b48b489572db89940027206020ee714afa5
 #ifdef PHP_WIN32
@@ -217,88 +303,6 @@ static void swow_stream_mode_sanitize_fdopen_fopencookie(php_stream *stream, cha
 
     result[res_curs] = '\0';
 }
-
-#define COPY_MEMBER(x) statbuf->x = _statbuf.x
-#ifndef PHP_WIN32
-#define COPY_MEMBERS() do{\
-    COPY_MEMBER(st_dev);\
-    COPY_MEMBER(st_ino);\
-    COPY_MEMBER(st_mode);\
-    COPY_MEMBER(st_nlink);\
-    COPY_MEMBER(st_uid);\
-    COPY_MEMBER(st_gid);\
-    COPY_MEMBER(st_rdev);\
-    COPY_MEMBER(st_size);\
-    statbuf->st_atime = _statbuf.st_atim.tv_sec;\
-    statbuf->st_ctime = _statbuf.st_ctim.tv_sec;\
-    statbuf->st_mtime = _statbuf.st_mtim.tv_sec;\
-    COPY_MEMBER(st_blksize);\
-    COPY_MEMBER(st_blocks);\
-}while(0)
-#else
-#define COPY_MEMBERS() do{\
-    COPY_MEMBER(st_dev);\
-    COPY_MEMBER(st_ino);\
-    COPY_MEMBER(st_mode);\
-    COPY_MEMBER(st_nlink);\
-    COPY_MEMBER(st_uid);\
-    COPY_MEMBER(st_gid);\
-    COPY_MEMBER(st_rdev);\
-    COPY_MEMBER(st_size);\
-    /* (uint32_t) is workaround for 2038 year problem */\
-    /* needs uv fix this */\
-    statbuf->st_atime = (uint32_t)_statbuf.st_atim.tv_sec;\
-    statbuf->st_ctime = (uint32_t)_statbuf.st_ctim.tv_sec;\
-    statbuf->st_mtime = (uint32_t)_statbuf.st_mtim.tv_sec;\
-}while(0)
-#endif
-
-typedef enum _swow_stat_type_t{
-    CAT_STAT,
-    CAT_LSTAT,
-    CAT_FSTAT
-} swow_stat_type_t;
-static inline int swow_fs_stat_mock(swow_stat_type_t type, ...){
-    const char* pathname = NULL;
-    int fd = -1;
-    zend_stat_t *statbuf = NULL;
-    va_list argp;
-    va_start(argp, type);
-    if(CAT_FSTAT == type){
-        fd = va_arg(argp, int);
-    }else{
-        assert(CAT_STAT == type || CAT_LSTAT == type);
-        pathname = va_arg(argp, const char*);
-    }
-    statbuf = va_arg(argp, zend_stat_t *);
-    va_end(argp);
-    cat_stat_t _statbuf;
-    int ret;
-    switch(type){
-        case CAT_FSTAT:
-            ret = cat_fs_fstat(fd, &_statbuf);
-            break;
-        case CAT_STAT:
-            ret = cat_fs_stat(pathname, &_statbuf);
-            break;
-        case CAT_LSTAT:
-#ifdef PHP_WIN32
-            ret = swow_fs_lstat(pathname, statbuf);
-            UPDATE_ERRNO_FROM_CAT();
-            return ret;
-#else
-            ret = cat_fs_lstat(pathname, &_statbuf);
-#endif
-            break;
-    }
-    if (ret<0){
-        UPDATE_ERRNO_FROM_CAT();
-        return ret;
-    }
-    COPY_MEMBERS();
-    return ret;
-}
-#undef COPY_MEMBER
 
 // mock VCWD_XXXX macros
 # ifndef HAVE_UTIME
@@ -370,7 +374,7 @@ static inline int swow_virtual_stat(const char *path, zend_stat_t * statbuf){
     SWOW_VCWD_WRAP(path, real_path, {
         ret = -1;
     }, {
-        ret = swow_fs_stat_mock(CAT_STAT, real_path, statbuf);
+        ret = swow_fs_stat_mock(0, real_path, statbuf);
     }, CWD_REALPATH);
     return ret;
 }
@@ -380,7 +384,7 @@ static inline int swow_virtual_lstat(const char *path, zend_stat_t * statbuf){
     SWOW_VCWD_WRAP(path, real_path, {
         ret = -1;
     }, {
-        ret = swow_fs_stat_mock(CAT_LSTAT, real_path, statbuf);
+        ret = swow_fs_stat_mock(1, real_path, statbuf);
     }, CWD_EXPAND);
     return ret;
 }
@@ -516,7 +520,7 @@ typedef struct {
 static int do_fstat(swow_stdio_stream_data *d, int force)
 {
     if (!d->cached_fstat || (force && !d->no_forced_fstat)) {
-        int r = swow_fs_stat_mock(CAT_FSTAT, SWOW_STDIOP_FD(d), &d->sb);
+        int r = swow_fs_fstat(SWOW_STDIOP_FD(d), &d->sb);
         d->cached_fstat = r == 0;
 
         return r;
