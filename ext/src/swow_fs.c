@@ -55,6 +55,11 @@
 #endif
 #include "SAPI.h"
 
+// update errno from cat err code
+#define UPDATE_ERRNO_FROM_CAT() do{\
+    errno = cat_orig_errno(cat_get_last_error_code());\
+}while(0);
+
 // compatiable with PHP7
 #ifndef PHP_STREAM_FLAG_SUPPRESS_ERRORS
 #define PHP_STREAM_FLAG_SUPPRESS_ERRORS 0
@@ -230,7 +235,7 @@ static inline int swow_fs_stat_mock(int (*stat_func)(const char*, cat_stat_t *),
     cat_stat_t _statbuf;
     int ret=stat_func(pathname, &_statbuf);
     if (ret<0){
-        errno=cat_orig_errno(cat_get_last_error_code());
+        UPDATE_ERRNO_FROM_CAT();
         return ret;
     }
     COPY_MEMBERS();
@@ -255,17 +260,14 @@ struct utimbuf {
 # define SWOW_VCWD_WRAP(path, new_path, failed, wrapped, flags) do {\
     cwd_state new_state = {0}; \
     new_state.cwd = virtual_getcwd_ex(&new_state.cwd_length); \
-    if(NULL == new_state.cwd){\
-        {failed}\
-        break;\
-    }\
     /* virtual_file_ex returns non-zero(1 or -1) for error */ \
-    if (0 != virtual_file_ex(&new_state, path, NULL, flags)) {\
+    if (NULL == new_state.cwd || 0 != virtual_file_ex(&new_state, path, NULL, flags)) {\
         {failed}\
         break;\
     }\
     const char *new_path = new_state.cwd;\
     {wrapped}\
+    UPDATE_ERRNO_FROM_CAT();\
     efree(new_state.cwd);\
 }while(0)
 
@@ -670,6 +672,7 @@ static php_stream *_swow_stream_fopen_from_fd(int fd, const char *mode, const ch
             stream->position = -1;
         } else {
             stream->position = cat_fs_lseek(self->fd, 0, SEEK_CUR);
+            UPDATE_ERRNO_FROM_CAT();
 #ifdef ESPIPE
             /* FIXME: Is this code still needed? */
             if (stream->position == (zend_off_t)-1 && errno == ESPIPE) {
@@ -733,6 +736,7 @@ static ssize_t swow_stdiop_fs_write(php_stream *stream, const char *buf, size_t 
 
     if (data->fd >= 0) {
         ssize_t bytes_written = cat_fs_write(data->fd, buf, count);
+        UPDATE_ERRNO_FROM_CAT();
         if (bytes_written < 0) {
             if (cat_get_last_error_code() == CAT_EAGAIN) {
                 return 0;
@@ -742,8 +746,7 @@ static ssize_t swow_stdiop_fs_write(php_stream *stream, const char *buf, size_t 
                 return bytes_written;
             }
             if (!(stream->flags & PHP_STREAM_FLAG_SUPPRESS_ERRORS)) {
-                int myerrno = cat_orig_errno(cat_get_last_error_code());
-                php_error_docref(NULL, E_NOTICE, "Write of %zu bytes failed with errno=%d %s", count, myerrno, strerror(myerrno));
+                php_error_docref(NULL, E_NOTICE, "Write of %zu bytes failed with errno=%d %s", count, errno, strerror(errno));
             }
         }
         return bytes_written;
@@ -777,6 +780,8 @@ static ssize_t swow_stdiop_fs_read(php_stream *stream, char *buf, size_t count)
             ret = cat_fs_read(data->fd, buf,  PLAIN_WRAP_BUF_SIZE(count));
         }
 
+        UPDATE_ERRNO_FROM_CAT();
+
         if (ret < 0) {
             if (cat_get_last_error_code() == CAT_EAGAIN) {
                 /* Not an error. */
@@ -785,8 +790,7 @@ static ssize_t swow_stdiop_fs_read(php_stream *stream, char *buf, size_t count)
                 /* TODO: Should this be treated as a proper error or not? */
             } else {
                 if (!(stream->flags & PHP_STREAM_FLAG_SUPPRESS_ERRORS)) {
-                    int myerrno = cat_orig_errno(cat_get_last_error_code());
-                    php_error_docref(NULL, E_NOTICE, "Read of %zu bytes failed with errno=%d %s", count, myerrno, strerror(myerrno));
+                    php_error_docref(NULL, E_NOTICE, "Read of %zu bytes failed with errno=%d %s", count, errno, strerror(errno));
                 }
 
                 /* TODO: Remove this special-case? */
@@ -853,12 +857,14 @@ static int swow_stdiop_fs_close(php_stream *stream, int close_handle)
             }
         } else if (data->fd != -1) {
             ret = cat_fs_close(data->fd);
+            UPDATE_ERRNO_FROM_CAT();
             data->fd = -1;
         } else {
             return 0; /* everything should be closed already -> success */
         }
         if (data->temp_name) {
             cat_fs_unlink(ZSTR_VAL(data->temp_name));
+            UPDATE_ERRNO_FROM_CAT();
             /* temporary streams are never persistent */
             zend_string_release_ex(data->temp_name, 0);
             data->temp_name = NULL;
@@ -909,6 +915,7 @@ static int swow_stdiop_fs_seek(php_stream *stream, zend_off_t offset, int whence
         zend_off_t result;
 
         result = cat_fs_lseek(data->fd, offset, whence);
+        UPDATE_ERRNO_FROM_CAT();
         if (result == (zend_off_t)-1)
             return -1;
 
@@ -1252,7 +1259,9 @@ static int swow_stdiop_fs_set_option(php_stream *stream, int option, int value, 
                     if (new_size < 0) {
                         return PHP_STREAM_OPTION_RETURN_ERR;
                     }
-                    return cat_fs_ftruncate(fd, new_size) == 0 ? PHP_STREAM_OPTION_RETURN_OK : PHP_STREAM_OPTION_RETURN_ERR;
+                    int _ret = cat_fs_ftruncate(fd, new_size);
+                    UPDATE_ERRNO_FROM_CAT();
+                    return _ret == 0 ? PHP_STREAM_OPTION_RETURN_OK : PHP_STREAM_OPTION_RETURN_ERR;
                 }
             }
             return PHP_STREAM_OPTION_RETURN_NOTIMPL;
@@ -1303,6 +1312,7 @@ static ssize_t swow_plain_files_dirstream_read(php_stream *stream, char *buf, si
         return -1;
 
     result = cat_fs_readdir(dir);
+    UPDATE_ERRNO_FROM_CAT();
     if (result) {
         PHP_STRLCPY(ent->d_name, result->name, sizeof(ent->d_name), strlen(result->name));
         free((void*)result->name);
@@ -1315,6 +1325,7 @@ static ssize_t swow_plain_files_dirstream_read(php_stream *stream, char *buf, si
 static int swow_plain_files_dirstream_close(php_stream *stream, int close_handle)
 {
     int ret = cat_fs_closedir((cat_dir_t*)stream->abstract);
+    UPDATE_ERRNO_FROM_CAT();
     return ret;
 }
 
@@ -1354,6 +1365,7 @@ static php_stream *swow_plain_files_dir_opener(php_stream_wrapper *wrapper, cons
         stream = php_stream_alloc(&swow_plain_files_dirstream_ops, dir, 0, mode);
         if (stream == NULL){
             cat_fs_closedir(dir);
+            UPDATE_ERRNO_FROM_CAT();
         }
     }
 
@@ -1425,6 +1437,7 @@ SWOW_API  php_stream *_swow_stream_fopen(const char *filename, const char *mode,
         }
     }
     fd = cat_fs_open(realpath, open_flags, 0666);
+    UPDATE_ERRNO_FROM_CAT();
     if (fd != -1)    {
         ret = _swow_stream_fopen_from_fd(fd, mode, persistent_id STREAMS_REL_CC);
 
@@ -1469,8 +1482,8 @@ SWOW_API  php_stream *_swow_stream_fopen(const char *filename, const char *mode,
             return ret;
         }
         cat_fs_close(fd);
+        UPDATE_ERRNO_FROM_CAT();
     }
-    errno = cat_orig_errno(cat_get_last_error_code());
     if (persistent_id) {
         efree(persistent_id);
     }
@@ -1810,6 +1823,7 @@ static int swow_plain_files_metadata(php_stream_wrapper *wrapper, const char *ur
                     return 0;
                 }
                 cat_fs_close(fd);
+                UPDATE_ERRNO_FROM_CAT();
             }
 
             ret = swow_virtual_utime(url, newtime);
