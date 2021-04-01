@@ -32,6 +32,7 @@
 
 #include "swow.h"
 #include "cat_fs.h"
+#include "cat_work.h"
 
 // from php-src: 13e4ce386bb7257dbbe3167b070382ea959ec763
 
@@ -124,6 +125,36 @@ extern int php_get_gid_by_name(const char *name, gid_t *gid);
 # define PLAIN_WRAP_BUF_SIZE(st) (((st) > UINT_MAX) ? UINT_MAX : (unsigned int)(st))
 #else
 # define PLAIN_WRAP_BUF_SIZE(st) (st)
+#endif
+
+#ifdef PHP_WIN32
+// for junctions:
+// uv will return 120666 for directory junctions' st_mode
+// while php_win32_ioutil_stat_ex_w returns 0
+struct _swow_fs_lstat_s{
+    int ret;
+    const char * pathw;
+    size_t len;
+    zend_stat_t * statbuf;
+};
+static void _swow_fs_lstat_cb(struct _swow_fs_lstat_s *data){
+    data->ret = php_win32_ioutil_stat_ex_w(data->pathw, data->len, data->statbuf, 1);
+}
+static inline int swow_fs_lstat(const char *path, zend_stat_t * statbuf){
+    size_t pathw_len;
+	LPCWSTR pathw = php_win32_ioutil_conv_any_to_w(path, PHP_WIN32_CP_IGNORE_LEN, &pathw_len);
+	if (!pathw) {
+		SET_ERRNO_FROM_WIN32_CODE(ERROR_INVALID_PARAMETER);
+		return -1;
+	}
+    struct _swow_fs_lstat_s data = {-1, pathw, pathw_len, statbuf};
+    if(!cat_work(CAT_WORK_KIND_FAST_IO, _swow_fs_lstat_cb, &data, CAT_TIMEOUT_FOREVER)){
+        data.ret = -1;
+    }
+    UPDATE_ERRNO_FROM_CAT();
+	free(pathw);
+    return data.ret;
+}
 #endif
 
 // from win32/winutils.c @ a08a2b48b489572db89940027206020ee714afa5
@@ -249,7 +280,13 @@ static inline int swow_fs_stat_mock(swow_stat_type_t type, ...){
             ret = cat_fs_stat(pathname, &_statbuf);
             break;
         case CAT_LSTAT:
+#ifdef PHP_WIN32
+            ret = swow_fs_lstat(pathname, statbuf);
+            UPDATE_ERRNO_FROM_CAT();
+            return ret;
+#else
             ret = cat_fs_lstat(pathname, &_statbuf);
+#endif
             break;
     }
     if (ret<0){
