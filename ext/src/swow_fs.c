@@ -245,9 +245,11 @@ static void swow_stream_mode_sanitize_fdopen_fopencookie(php_stream *stream, cha
     COPY_MEMBER(st_gid);\
     COPY_MEMBER(st_rdev);\
     COPY_MEMBER(st_size);\
-    statbuf->st_atime = _statbuf.st_atim.tv_sec;\
-    statbuf->st_ctime = _statbuf.st_ctim.tv_sec;\
-    statbuf->st_mtime = _statbuf.st_mtim.tv_sec;\
+    /* (uint32_t) is workaround for 2038 year problem */\
+    /* needs uv fix this */\
+    statbuf->st_atime = (uint32_t)_statbuf.st_atim.tv_sec;\
+    statbuf->st_ctime = (uint32_t)_statbuf.st_ctim.tv_sec;\
+    statbuf->st_mtime = (uint32_t)_statbuf.st_mtim.tv_sec;\
 }while(0)
 #endif
 
@@ -294,10 +296,6 @@ static inline int swow_fs_stat_mock(swow_stat_type_t type, ...){
         return ret;
     }
     COPY_MEMBERS();
-#ifndef PHP_WIN32
-    COPY_MEMBER(st_blksize);
-    COPY_MEMBER(st_blocks);
-#endif
     return ret;
 }
 #undef COPY_MEMBER
