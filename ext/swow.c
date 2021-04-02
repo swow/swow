@@ -199,6 +199,11 @@ PHP_RINIT_FUNCTION(swow)
     }
 #endif
 
+    /* Do not generate OG(output_start_filename) */
+    if (SWOW_NTS_G(cli)) {
+        SG(headers_sent) = 1;
+    }
+
     size_t i = 0;
     for (; i < CAT_ARRAY_SIZE(rinit_callbacks); i++) {
         if (rinit_callbacks[i](INIT_FUNC_ARGS_PASSTHRU) != SUCCESS) {
