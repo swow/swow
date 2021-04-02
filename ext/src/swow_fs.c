@@ -175,6 +175,8 @@ static inline int swow_fs_fstat(int fd, zend_stat_t * statbuf){
     UPDATE_ERRNO_FROM_CAT();
     return data.ret;
 }
+#else
+# define swow_fs_fstat cat_fs_fstat
 #endif
 #define COPY_MEMBER(x) statbuf->x = _statbuf.x
 #ifndef PHP_WIN32
@@ -470,8 +472,8 @@ static inline int swow_virtual_lchown(const char *path, uid_t owner, gid_t group
 # define swow_virtual_unlink cat_fs_unlink
 # define swow_virtual_opendir cat_fs_opendir
 # define swow_virtual_access cat_fs_access
-# define swow_virtual_stat(path, sb) swow_fs_stat_mock(CAT_STAT, path, sb)
-# define swow_virtual_lstat(path, sb) swow_fs_stat_mock(CAT_LSTAT, path, sb)
+# define swow_virtual_stat(path, sb) swow_fs_stat_mock(0, path, sb)
+# define swow_virtual_lstat(path, sb) swow_fs_stat_mock(1, path, sb)
 # define swow_virtual_utime(path, buf) cat_fs_utime(path, buf->actime, buf->modtime)
 # define swow_virtual_rename cat_fs_rename
 # define swow_virtual_chmod cat_fs_chmod
