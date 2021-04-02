@@ -54,6 +54,7 @@ jobs:
         run: |
           if [ ${{ runner.os }} = 'Linux' ]
           then
+            sudo apt-get update
             sudo apt-get install -yqq libcurl4-openssl-dev
           fi
 
