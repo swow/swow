@@ -329,6 +329,7 @@ struct utimbuf {
     new_state.cwd = virtual_getcwd_ex(&new_state.cwd_length); \
     /* virtual_file_ex returns non-zero(1 or -1) for error */ \
     if (NULL == new_state.cwd || 0 != virtual_file_ex(&new_state, path, NULL, flags)) {\
+        if(new_state.cwd) efree(new_state.cwd);\
         {failed}\
         break;\
     }\
