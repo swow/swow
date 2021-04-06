@@ -87,10 +87,37 @@ static void cat_fs_callback(uv_fs_t *fs)
     cat_free(context);
 }
 
+#ifdef CAT_OS_WIN
+#define wrappath(_path, path) \
+char path##buf[(32767/*hard limit*/ + 4/* \\?\ */ + 1/* \0 */)*sizeof(wchar_t)] = {'\\', '\\', '?', '\\'}; \
+const char * path = NULL; \
+do{\
+    const size_t lenpath = strnlen(_path, 32767);\
+    if ( \
+        !( /* not  \\?\-ed */ \
+            '\\' == _path[0] && \
+            '\\' == _path[1] && \
+            '?' == _path[2] && \
+            '\\' == _path[3] \
+        ) && \
+        lenpath >= MAX_PATH && /* longer than 260 */ \
+        lenpath < sizeof(path##buf) - 4 - 1 /* shorter than hard limit*/ \
+    ){ \
+        /* fix it: prepend "\\?\" */ \
+        memcpy(&path##buf[4], _path, lenpath + 1/*\0*/); \
+        path = path##buf;\
+    }else{\
+        path = _path;\
+    }\
+}while(0)
+#else
+#define wrappath(_path, path) const char* path = _path
+#endif
+
 // basic functions for fs io
 // open, close, read, write
 
-CAT_API cat_file_t cat_fs_open(const char *path, int flags, ...)
+CAT_API cat_file_t cat_fs_open(const char *_path, int flags, ...)
 {
     va_list args;
     int mode = 0666;
@@ -100,6 +127,8 @@ CAT_API cat_file_t cat_fs_open(const char *path, int flags, ...)
         mode = va_arg(args, int);
         va_end(args);
     }
+
+    wrappath(_path, path);
 
     CAT_FS_DO_RESULT(cat_file_t, open, path, flags, mode);
 }
@@ -236,75 +265,50 @@ CAT_API int cat_fs_scandir(const char* path, cat_dirent_t ** namelist,
 // directory/file operations
 // mkdir, rmdir, rename, unlink
 
-CAT_API int cat_fs_mkdir(const char *path, int mode)
+CAT_API int cat_fs_mkdir(const char *_path, int mode)
 {
+    wrappath(_path, path);
     CAT_FS_DO_RESULT(int, mkdir, path, mode);
 }
 
-CAT_API int cat_fs_rmdir(const char *path)
+CAT_API int cat_fs_rmdir(const char *_path)
 {
+    wrappath(_path, path);
     CAT_FS_DO_RESULT(int, rmdir, path);
 }
 
-CAT_API int cat_fs_rename(const char *path, const char *new_path)
+CAT_API int cat_fs_rename(const char *_path, const char *_new_path)
 {
+    wrappath(_path, path);
+    wrappath(_new_path, new_path);
     CAT_FS_DO_RESULT(int, rename, path, new_path);
 }
 
-CAT_API int cat_fs_unlink(const char *path)
+CAT_API int cat_fs_unlink(const char *_path)
 {
+    wrappath(_path, path);
     CAT_FS_DO_RESULT(int, unlink, path);
 }
 
 // file info utils
 // access, stat(s), utime(s)
 
-CAT_API int cat_fs_access(const char *path, int mode)
+CAT_API int cat_fs_access(const char *_path, int mode)
 {
+    wrappath(_path, path);
     CAT_FS_DO_RESULT(int, access, path, mode);
 }
 
 #define CAT_FS_DO_STAT(name, target) \
     CAT_FS_DO_RESULT_EX({return -1;}, {memcpy(buf, &context->fs.statbuf, sizeof(uv_stat_t)); return 0;}, name, target)
 
-CAT_API int cat_fs_stat(const char * path, cat_stat_t * buf){
-    //CAT_FS_DO_STAT(stat, path);
-    cat_fs_context_t* context = (cat_fs_context_t*)cat_malloc(sizeof(*context));
-    if (unlikely(context == NULL)) {
-        cat_update_last_error_of_syscall("Malloc for file-system context failed");
-        {return -1;}
-    }
-    cat_bool_t done;
-    cat_bool_t ret;
-    int error = uv_fs_stat(cat_event_loop, & context->fs, path, cat_fs_callback);
-    if (error != 0) {
-        cat_update_last_error_with_reason(error, "File-System stat init failed");
-        cat_free(context);
-        {return -1; }
-    }
-    context->coroutine = CAT_COROUTINE_G(current);
-    ret = cat_time_wait(-1);
-    done = context->coroutine == NULL;
-    context->coroutine = NULL;
-    if (unlikely(!ret)) {
-        cat_update_last_error_with_previous("File-System stat wait failed");
-        (void) uv_cancel(&context->req);
-        {return -1; }
-    }
-    if (unlikely(!done)) {
-        cat_update_last_error(CAT_ECANCELED, "File-System stat has been canceled");
-        (void) uv_cancel(&context->req);
-        {return -1; }
-    }
-    if (unlikely(context->fs.result < 0)) {
-        cat_update_last_error_with_reason((cat_errno_t) context->fs.result, "File-System dysy failed");
-        {return -1; }
-    }
-    memcpy(buf, &context->fs.statbuf, sizeof(uv_stat_t));
-    return 0;
+CAT_API int cat_fs_stat(const char * _path, cat_stat_t * buf){
+    wrappath(_path, path);
+    CAT_FS_DO_STAT(stat, path);
 }
 
-CAT_API int cat_fs_lstat(const char * path, cat_stat_t * buf){
+CAT_API int cat_fs_lstat(const char * _path, cat_stat_t * buf){
+    wrappath(_path, path);
     CAT_FS_DO_STAT(lstat, path);
 }
 
@@ -312,11 +316,13 @@ CAT_API int cat_fs_fstat(cat_file_t fd, cat_stat_t * buf){
     CAT_FS_DO_STAT(fstat, fd);
 }
 
-CAT_API int cat_fs_utime(const char* path, double atime, double mtime){
+CAT_API int cat_fs_utime(const char* _path, double atime, double mtime){
+    wrappath(_path, path);
     CAT_FS_DO_RESULT(int, utime, path, atime, mtime);
 }
 
-CAT_API int cat_fs_lutime(const char* path, double atime, double mtime){
+CAT_API int cat_fs_lutime(const char* _path, double atime, double mtime){
+    wrappath(_path, path);
     CAT_FS_DO_RESULT(int, lutime, path, atime, mtime);
 }
 
@@ -327,18 +333,23 @@ CAT_API int cat_fs_futime(cat_file_t fd, double atime, double mtime){
 // hard link and symbol link
 // link, symlink, readlink, realpath
 
-CAT_API int cat_fs_link(const char * path, const char * new_path){
+CAT_API int cat_fs_link(const char * _path, const char * _new_path){
+    wrappath(_path, path);
+    wrappath(_new_path, new_path);
     CAT_FS_DO_RESULT(int, link, path, new_path);
 }
 
-CAT_API int cat_fs_symlink(const char * path, const char * new_path, int flags){
+CAT_API int cat_fs_symlink(const char * _path, const char * _new_path, int flags){
+    wrappath(_path, path);
+    wrappath(_new_path, new_path);
     CAT_FS_DO_RESULT(int, symlink, path, new_path, flags);
 }
 
 #ifdef CAT_OS_WIN
 #   define PATH_MAX 32768
 #endif
-CAT_API int cat_fs_readlink(const char * pathname, char * buf, size_t len){
+CAT_API int cat_fs_readlink(const char * _path, char * buf, size_t len){
+    wrappath(_path, path);
     CAT_FS_DO_RESULT_EX({return (int)-1;}, {
         size_t ret = strnlen(context->fs.ptr, PATH_MAX);
         if(ret > len){
@@ -347,17 +358,18 @@ CAT_API int cat_fs_readlink(const char * pathname, char * buf, size_t len){
         }
         strncpy(buf, context->fs.ptr, len);
         return (int)ret;
-    }, readlink, pathname);
+    }, readlink, path);
 }
 
-CAT_API char * cat_fs_realpath(const char *pathname, char* buf){
+CAT_API char * cat_fs_realpath(const char *_path, char* buf){
+    wrappath(_path, path);
     CAT_FS_DO_RESULT_EX({return NULL;}, {
         if(NULL == buf){
             return strdup(context->fs.ptr);
         }
         strcpy(buf, context->fs.ptr);
         return buf;
-    }, realpath, pathname);
+    }, realpath, path);
 }
 #ifdef CAT_OS_WIN
 #   undef PATH_MAX
@@ -366,7 +378,8 @@ CAT_API char * cat_fs_realpath(const char *pathname, char* buf){
 // permissions
 // chmod(s), chown(s)
 
-CAT_API int cat_fs_chmod(const char *path, int mode){
+CAT_API int cat_fs_chmod(const char *_path, int mode){
+    wrappath(_path, path);
     CAT_FS_DO_RESULT(int, chmod, path, mode);
 }
 
@@ -374,21 +387,25 @@ CAT_API int cat_fs_fchmod(cat_file_t fd, int mode){
     CAT_FS_DO_RESULT(int, fchmod, fd, mode);
 }
 
-CAT_API int cat_fs_chown(const char *path, cat_uid_t uid, cat_gid_t gid){
+CAT_API int cat_fs_chown(const char *_path, cat_uid_t uid, cat_gid_t gid){
+    wrappath(_path, path);
     CAT_FS_DO_RESULT(int, chown, path, uid, gid);
+}
+
+CAT_API int cat_fs_lchown(const char *_path, cat_uid_t uid, cat_gid_t gid){
+    wrappath(_path, path);
+    CAT_FS_DO_RESULT(int, lchown, path, uid, gid);
 }
 
 CAT_API int cat_fs_fchown(cat_file_t fd, cat_uid_t uid, cat_gid_t gid){
     CAT_FS_DO_RESULT(int, fchown, fd, uid, gid);
 }
 
-CAT_API int cat_fs_lchown(const char *path, cat_uid_t uid, cat_gid_t gid){
-    CAT_FS_DO_RESULT(int, lchown, path, uid, gid);
-}
-
 // miscellaneous
 // copyfile
-CAT_API int cat_fs_copyfile(const char* path, const char* new_path, int flags){
+CAT_API int cat_fs_copyfile(const char* _path, const char* _new_path, int flags){
+    wrappath(_path, path);
+    wrappath(_new_path, new_path);
     CAT_FS_DO_RESULT(int, copyfile, path, new_path, flags);
 }
 
@@ -399,7 +416,8 @@ CAT_API int cat_fs_sendfile(cat_file_t out_fd, cat_file_t in_fd, int64_t in_offs
 /*
 * cat_fs_mkdtemp - like mkdtemp(3) but the returned path is not same as inputed template
 */
-CAT_API const char* cat_fs_mkdtemp(const char* tpl){
+CAT_API const char* cat_fs_mkdtemp(const char* _tpl){
+    wrappath(_tpl, tpl);
     CAT_FS_DO_RESULT_EX({return NULL;}, {
         if(0 != context->fs.result){
             return NULL;
@@ -408,13 +426,15 @@ CAT_API const char* cat_fs_mkdtemp(const char* tpl){
     }, mkdtemp, tpl);
 }
 
-CAT_API int cat_fs_mkstemp(const char* tpl){
+CAT_API int cat_fs_mkstemp(const char* _tpl){
+    wrappath(_tpl, tpl);
     CAT_FS_DO_RESULT_EX({return -1;}, {
         return (int)context->fs.result;
     }, mkstemp, tpl);
 }
 
-CAT_API int cat_fs_statfs(const char* path, cat_statfs_t* buf){
+CAT_API int cat_fs_statfs(const char* _path, cat_statfs_t* buf){
+    wrappath(_path, path);
     CAT_FS_DO_RESULT_EX({return -1;}, {
         memcpy(buf, context->fs.ptr, sizeof(*buf));
         return 0;
@@ -720,7 +740,7 @@ static const char * cat_fs_nt_strerror(NTSTATUS status){
 */
 
 #ifdef CAT_OS_WIN
-#define CAT_FS_WORK_CB_MKERR_WIN(fmt)  _CAT_FS_WORK_CB_MKERR(data.ret.error, data.ret.msg, fmt, cat_fs_win_strerror(data.ret.error), {if(NULL!=_msg)HeapFree(GetProcessHeap(), 0, (LPVOID)_msg);})
+#define CAT_FS_WORK_CB_MKERR_WIN(fmt)  _CAT_FS_WORK_CB_MKERR(cat_translate_sys_error(data.ret.error), data.ret.msg, fmt, cat_fs_win_strerror(data.ret.error), {if(NULL!=_msg)HeapFree(GetProcessHeap(), 0, (LPVOID)_msg);})
 #endif
 
 CAT_FS_WORK_STRUCT1(opendir, const char*)
@@ -752,7 +772,8 @@ CAT_FS_WORK_CB(opendir){
     pdir->rewind = cat_true;
     data->ret.ret.ptr = pdir;
 }
-CAT_API cat_dir_t *cat_fs_opendir(const char* path){
+CAT_API cat_dir_t *cat_fs_opendir(const char* _path){
+    wrappath(_path, path);
     CAT_FS_WORK_STRUCT_INIT(opendir, data, path);
     if (cat_work(CAT_WORK_KIND_FAST_IO, CAT_FS_WORK_CB_CALL(opendir), &data, CAT_TIMEOUT_FOREVER)) {
         CAT_FS_WORK_CB_MKERR_WIN("Opendir failed: %s");
