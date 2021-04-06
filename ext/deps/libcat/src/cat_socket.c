@@ -1887,6 +1887,9 @@ static ssize_t cat_socket_internal_read_raw(
         }
         nread = context.nread;
         error = context.error;
+        if (unlikely(error != 0)) {
+            goto _error;
+        }
     }
 
 #ifdef CAT_OS_UNIX_LIKE
@@ -1901,7 +1904,7 @@ static ssize_t cat_socket_internal_read_raw(
     if (error == CAT_ECANCELED) {
         cat_update_last_error(CAT_ECANCELED, "Socket read has been canceled");
     } else {
-        cat_update_last_error_with_reason((cat_errno_t) error, "Socket read %s", nread != 0 ? "incompleted" : "failed");
+        cat_update_last_error_with_reason((cat_errno_t) error, "Socket read %s", nread != 0 ? "uncompleted" : "failed");
     }
     _wait_error:
     if (nread != 0) {

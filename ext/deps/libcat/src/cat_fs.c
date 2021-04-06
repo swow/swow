@@ -268,7 +268,40 @@ CAT_API int cat_fs_access(const char *path, int mode)
     CAT_FS_DO_RESULT_EX({return -1;}, {memcpy(buf, &context->fs.statbuf, sizeof(uv_stat_t)); return 0;}, name, target)
 
 CAT_API int cat_fs_stat(const char * path, cat_stat_t * buf){
-    CAT_FS_DO_STAT(stat, path);
+    //CAT_FS_DO_STAT(stat, path);
+    cat_fs_context_t* context = (cat_fs_context_t*)cat_malloc(sizeof(*context));
+    if (unlikely(context == NULL)) {
+        cat_update_last_error_of_syscall("Malloc for file-system context failed");
+        {return -1;}
+    }
+    cat_bool_t done;
+    cat_bool_t ret;
+    int error = uv_fs_stat(cat_event_loop, & context->fs, path, cat_fs_callback);
+    if (error != 0) {
+        cat_update_last_error_with_reason(error, "File-System stat init failed");
+        cat_free(context);
+        {return -1; }
+    }
+    context->coroutine = CAT_COROUTINE_G(current);
+    ret = cat_time_wait(-1);
+    done = context->coroutine == NULL;
+    context->coroutine = NULL;
+    if (unlikely(!ret)) {
+        cat_update_last_error_with_previous("File-System stat wait failed");
+        (void) uv_cancel(&context->req);
+        {return -1; }
+    }
+    if (unlikely(!done)) {
+        cat_update_last_error(CAT_ECANCELED, "File-System stat has been canceled");
+        (void) uv_cancel(&context->req);
+        {return -1; }
+    }
+    if (unlikely(context->fs.result < 0)) {
+        cat_update_last_error_with_reason((cat_errno_t) context->fs.result, "File-System dysy failed");
+        {return -1; }
+    }
+    memcpy(buf, &context->fs.statbuf, sizeof(uv_stat_t));
+    return 0;
 }
 
 CAT_API int cat_fs_lstat(const char * path, cat_stat_t * buf){
@@ -420,7 +453,9 @@ typedef struct cat_fs_ret_s{
     if(msg){cat_free((void*)msg);} \
 }
 #ifdef CAT_OS_WIN
-#define CAT_FS_WORK_CB_MKERR(fmt)  _CAT_FS_WORK_CB_MKERR(-(data.ret.error), data.ret.msg, fmt, strerror(data.ret.error), {})
+// so nasty, but i have no clear way to do this
+cat_errno_t cat_translate_unix_error(int error);
+#define CAT_FS_WORK_CB_MKERR(fmt)  _CAT_FS_WORK_CB_MKERR(cat_translate_unix_error(data.ret.error), data.ret.msg, fmt, strerror(data.ret.error), {})
 #else
 #define CAT_FS_WORK_CB_MKERR(fmt)  _CAT_FS_WORK_CB_MKERR(cat_translate_sys_error(data.ret.error), data.ret.msg, fmt, strerror(data.ret.error), {})
 #endif
