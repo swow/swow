@@ -155,10 +155,10 @@ static inline int swow_fs_lstat(const char *path, zend_stat_t * statbuf){
 	free(pathw);
     return data.ret;
 }
-// for fstat a pipe:
-// uv will return 0o100666 (regular file + rw-rw-rw-) for pipe
+// for fstat a pipe on win:
+// uv will return 0o100666 (regular file | rw-rw-rw-) for pipe
 // this may be a uv bug?
-// while php_win32_ioutil_fstat_ex_w returns 0o10666 (regular file + rw-rw-rw-)
+// while php_win32_ioutil_fstat_ex_w returns 0o10666 (pipe | rw-rw-rw-)
 struct _swow_fs_fstat_s{
     int ret;
     int fd;
