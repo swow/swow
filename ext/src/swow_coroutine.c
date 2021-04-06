@@ -250,7 +250,7 @@ static zval *swow_coroutine_function(zval *zdata)
 
     /* ob end clean */
 #ifdef SWOW_COROUTINE_SWAP_OUTPUT_GLOBALS
-    swow_output_globals_fast_end();
+    swow_output_globals_fast_shutdown();
 #endif
 
     /* solve retval */
@@ -541,7 +541,7 @@ SWOW_API void swow_coroutine_executor_save(swow_coroutine_executor_t *executor)
                 executor->output_globals = (zend_output_globals *) emalloc(sizeof(zend_output_globals));
             }
             memcpy(executor->output_globals, og, sizeof(zend_output_globals));
-            php_output_activate();
+            swow_output_globals_init();
         }
     } while (0);
 #endif
@@ -588,8 +588,10 @@ SWOW_API void swow_coroutine_executor_recover(swow_coroutine_executor_t *executo
         zend_output_globals *og = executor->output_globals;
         if (UNEXPECTED(og != NULL)) {
             if (UNEXPECTED(og->handlers.elements != NULL)) {
-                memcpy(SWOW_GLOBALS_PTR(output_globals), og, sizeof(zend_output_globals));
-                og->handlers.elements = NULL;
+                SWOW_OUTPUT_GLOBALS_MODIFY_START() {
+                    memcpy(SWOW_GLOBALS_PTR(output_globals), og, sizeof(zend_output_globals));
+                    og->handlers.elements = NULL; /* clear state */
+                } SWOW_OUTPUT_GLOBALS_MODIFY_END();
             }
         }
     } while (0);

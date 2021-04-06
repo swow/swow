@@ -591,13 +591,38 @@ SWOW_API cat_bool_t swow_function_internal_access_only_check(INTERNAL_FUNCTION_P
 
 /* output globals */
 
-#define swow_output_globals_fast_end() do { \
-    if (UNEXPECTED(OG(handlers).elements != NULL)) { \
-        swow_output_globals_end(); \
-    } \
-} while (0)
+#if PHP_VERSION_ID >= 80100
+#define SWOW_OUTPUT_GLOBALS_START_FILENAME OG(output_start_filename)
+#else
+#if PHP_VERSION_ID >= 80000
+#define SWOW_OUTPUT_GLOBALS_START_FILENAME OG(output_start_filename_str)
+#endif
+#endif
+#define SWOW_OUTPUT_GLOBALS_START_LINENO OG(output_start_lineno)
 
-SWOW_API void swow_output_globals_end(void);
+#ifdef SWOW_OUTPUT_GLOBALS_START_FILENAME
+#define SWOW_OUTPUT_GLOBALS_MODIFY_START() do { \
+    zend_string *output_start_filename = SWOW_OUTPUT_GLOBALS_START_FILENAME; \
+    int output_start_lineno = SWOW_OUTPUT_GLOBALS_START_LINENO; \
+
+#define SWOW_OUTPUT_GLOBALS_MODIFY_END() \
+    SWOW_OUTPUT_GLOBALS_START_FILENAME = output_start_filename; \
+    SWOW_OUTPUT_GLOBALS_START_LINENO = output_start_lineno; \
+} while (0)
+#else
+#define SWOW_OUTPUT_GLOBALS_MODIFY_START()
+#define SWOW_OUTPUT_GLOBALS_MODIFY_END()
+#endif
+
+SWOW_API void swow_output_globals_init(void);
+SWOW_API void swow_output_globals_shutdown(void);
+
+static cat_always_inline void swow_output_globals_fast_shutdown(void)
+{
+    if (UNEXPECTED(OG(handlers).elements != NULL)) {
+        swow_output_globals_shutdown();
+    }
+}
 
 #ifdef __cplusplus
 }

@@ -321,21 +321,38 @@ SWOW_API cat_bool_t swow_function_internal_access_only_check(INTERNAL_FUNCTION_P
 
 #include "SAPI.h"
 
-SWOW_API void swow_output_globals_end(void)
+SWOW_API void swow_output_globals_init(void)
 {
-    zend_bool no_headers = SG(request_info).no_headers;
+    SWOW_OUTPUT_GLOBALS_MODIFY_START() {
+        php_output_activate();
+    } SWOW_OUTPUT_GLOBALS_MODIFY_END();
+}
 
-    SG(request_info).no_headers = 1;
-    if (OG(active)) {
-        if (UNEXPECTED(SWOW_IS_OUT_OF_MEMORY())) {
-            php_output_discard_all();
-        } else {
-            php_output_end_all();
+SWOW_API void swow_output_globals_shutdown(void)
+{
+    SWOW_OUTPUT_GLOBALS_MODIFY_START() {
+        zend_bool no_headers = SG(request_info).no_headers;
+
+        /* Do not send headers by SAPI */
+        SG(request_info).no_headers = 1;
+#ifdef SWOW_OUTPUT_GLOBALS_START_FILENAME
+        if (output_start_filename != NULL) {
+            zend_string_addref(output_start_filename);
         }
-    }
-    php_output_deactivate();
-    php_output_activate();
-    SG(request_info).no_headers = no_headers;
+#endif
+
+        if (OG(active)) {
+            if (UNEXPECTED(SWOW_IS_OUT_OF_MEMORY())) {
+                php_output_discard_all();
+            } else {
+                php_output_end_all();
+            }
+        }
+        php_output_deactivate();
+        php_output_activate();
+
+        SG(request_info).no_headers = no_headers;
+    } SWOW_OUTPUT_GLOBALS_MODIFY_END();
 }
 
 /* wrapper init/shutdown */
