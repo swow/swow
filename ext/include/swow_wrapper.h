@@ -485,9 +485,6 @@ static zend_always_inline void* swow_object_alloc_ex(size_t size, zend_class_ent
     void *ptr = emalloc(size + zend_object_properties_size(ce));
     zend_object *object = (zend_object *) (((char *) ptr) + handlers->offset);
 
-    /* Subtraction of sizeof(zval) is necessary, because zend_object_properties_size() may be
-     * -sizeof(zval), if the object has no properties. */
-    memset(object, 0, sizeof(*object) - sizeof(object->properties_table));
     zend_object_std_init(object, ce);
     object_properties_init(object, ce);
     object->handlers = handlers;
