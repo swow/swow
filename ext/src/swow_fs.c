@@ -127,6 +127,42 @@ extern int php_get_gid_by_name(const char *name, gid_t *gid);
 # define PLAIN_WRAP_BUF_SIZE(st) (st)
 #endif
 
+#define COPY_MEMBER(x) statbuf->x = _statbuf.x
+#ifndef PHP_WIN32
+#define COPY_MEMBERS() do{\
+    COPY_MEMBER(st_dev);\
+    COPY_MEMBER(st_ino);\
+    COPY_MEMBER(st_mode);\
+    COPY_MEMBER(st_nlink);\
+    COPY_MEMBER(st_uid);\
+    COPY_MEMBER(st_gid);\
+    COPY_MEMBER(st_rdev);\
+    COPY_MEMBER(st_size);\
+    statbuf->st_atime = _statbuf.st_atim.tv_sec;\
+    statbuf->st_ctime = _statbuf.st_ctim.tv_sec;\
+    statbuf->st_mtime = _statbuf.st_mtim.tv_sec;\
+    COPY_MEMBER(st_blksize);\
+    COPY_MEMBER(st_blocks);\
+}while(0)
+#else
+
+#define COPY_MEMBERS() do{\
+    COPY_MEMBER(st_dev);\
+    COPY_MEMBER(st_ino);\
+    COPY_MEMBER(st_mode);\
+    COPY_MEMBER(st_nlink);\
+    COPY_MEMBER(st_uid);\
+    COPY_MEMBER(st_gid);\
+    COPY_MEMBER(st_rdev);\
+    COPY_MEMBER(st_size);\
+    /* (uint32_t) is workaround for 2038 year problem */\
+    /* needs uv fix this */\
+    statbuf->st_atime = (uint32_t)_statbuf.st_atim.tv_sec;\
+    statbuf->st_ctime = (uint32_t)_statbuf.st_ctim.tv_sec;\
+    statbuf->st_mtime = (uint32_t)_statbuf.st_mtim.tv_sec;\
+}while(0)
+#endif
+
 #ifdef PHP_WIN32
 // for junctions:
 // uv will return 0o120666 for directory junctions' st_mode
@@ -176,42 +212,14 @@ static inline int swow_fs_fstat(int fd, zend_stat_t * statbuf){
     return data.ret;
 }
 #else
-# define swow_fs_fstat cat_fs_fstat
-#endif
-#define COPY_MEMBER(x) statbuf->x = _statbuf.x
-#ifndef PHP_WIN32
-#define COPY_MEMBERS() do{\
-    COPY_MEMBER(st_dev);\
-    COPY_MEMBER(st_ino);\
-    COPY_MEMBER(st_mode);\
-    COPY_MEMBER(st_nlink);\
-    COPY_MEMBER(st_uid);\
-    COPY_MEMBER(st_gid);\
-    COPY_MEMBER(st_rdev);\
-    COPY_MEMBER(st_size);\
-    statbuf->st_atime = _statbuf.st_atim.tv_sec;\
-    statbuf->st_ctime = _statbuf.st_ctim.tv_sec;\
-    statbuf->st_mtime = _statbuf.st_mtim.tv_sec;\
-    COPY_MEMBER(st_blksize);\
-    COPY_MEMBER(st_blocks);\
-}while(0)
-#else
-
-#define COPY_MEMBERS() do{\
-    COPY_MEMBER(st_dev);\
-    COPY_MEMBER(st_ino);\
-    COPY_MEMBER(st_mode);\
-    COPY_MEMBER(st_nlink);\
-    COPY_MEMBER(st_uid);\
-    COPY_MEMBER(st_gid);\
-    COPY_MEMBER(st_rdev);\
-    COPY_MEMBER(st_size);\
-    /* (uint32_t) is workaround for 2038 year problem */\
-    /* needs uv fix this */\
-    statbuf->st_atime = (uint32_t)_statbuf.st_atim.tv_sec;\
-    statbuf->st_ctime = (uint32_t)_statbuf.st_ctim.tv_sec;\
-    statbuf->st_mtime = (uint32_t)_statbuf.st_mtim.tv_sec;\
-}while(0)
+static inline int swow_fs_fstat(int fd, zend_stat_t * statbuf){
+    int ret = -1;
+    cat_stat_t _statbuf;
+    if((ret = cat_fs_fstat(fd, &_statbuf)) == 0){
+        COPY_MEMBERS();
+    }
+    return ret;
+}
 #endif
 
 static inline int swow_fs_stat_mock(int lstat, ...){
