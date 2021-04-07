@@ -169,7 +169,7 @@ extern int php_get_gid_by_name(const char *name, gid_t *gid);
 // while php_win32_ioutil_stat_ex_w returns 0
 struct _swow_fs_lstat_s{
     int ret;
-    const char * pathw;
+    const wchar_t * pathw;
     size_t len;
     zend_stat_t * statbuf;
 };
@@ -188,7 +188,7 @@ static inline int swow_fs_lstat(const char *path, zend_stat_t * statbuf){
         data.ret = -1;
     }
     UPDATE_ERRNO_FROM_CAT();
-	free(pathw);
+	free((void*)pathw);
     return data.ret;
 }
 // for fstat a pipe on win:
