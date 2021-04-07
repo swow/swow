@@ -314,6 +314,43 @@ static void swow_stream_mode_sanitize_fdopen_fopencookie(php_stream *stream, cha
     result[res_curs] = '\0';
 }
 
+// add PHP_WIN32_IOUTIL_CHECK_PATH_W behavior
+#ifdef CAT_OS_WIN
+#define CHECK_PATH(x, failed) {\
+    PHP_WIN32_IOUTIL_INIT_W(x)\
+	if (!pathw) {\
+		SET_ERRNO_FROM_WIN32_CODE(ERROR_INVALID_PARAMETER);\
+		{failed}\
+	}\
+	size_t _len = wcslen(pathw);\
+    if (!PHP_WIN32_IOUTIL_PATH_IS_OK_W(pathw, _len)) {\
+        free((void *)pathw);\
+        SET_ERRNO_FROM_WIN32_CODE(ERROR_ACCESS_DENIED);\
+        cat_update_last_error(CAT_EACCES, "Bad file name");\
+        {failed}\
+    } \
+    free((void *)pathw);\
+}
+
+static inline int swow_fs_open(const char * path, int flags, ...){
+	CHECK_PATH(path, {return -1;});
+    mode_t mode;
+
+    if (flags & O_CREAT) {
+		va_list arg;
+
+		va_start(arg, flags);
+		mode = (mode_t) va_arg(arg, int);
+		va_end(arg);
+        return cat_fs_open(path, flags, mode);
+	}
+    return cat_fs_open(path, flags);
+}
+
+#else
+#define CHECK_PATH(...) {}
+#define swow_fs_open cat_fs_open
+#endif
 // mock VCWD_XXXX macros
 # ifndef HAVE_UTIME
 struct utimbuf {
@@ -333,6 +370,11 @@ struct utimbuf {
         {failed}\
         break;\
     }\
+    CHECK_PATH(path, {\
+        if(new_state.cwd) efree(new_state.cwd);\
+        {failed}\
+        break;\
+    });\
     const char *new_path = new_state.cwd;\
     {wrapped}\
     UPDATE_ERRNO_FROM_CAT();\
@@ -1504,7 +1546,7 @@ SWOW_API  php_stream *_swow_stream_fopen(const char *filename, const char *mode,
                 return ret;
         }
     }
-    fd = cat_fs_open(realpath, open_flags, 0666);
+    fd = swow_fs_open(realpath, open_flags, 0666);
     UPDATE_ERRNO_FROM_CAT();
     if (fd != -1)    {
         ret = _swow_stream_fopen_from_fd(fd, mode, persistent_id STREAMS_REL_CC);
