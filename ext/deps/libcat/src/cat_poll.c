@@ -159,12 +159,19 @@ typedef struct {
     cat_bool_t is_head;
 } cat_poll_t;
 
+/* double defer here to avoid use-after-free */
+
+static void cat_poll_free_function(void *data)
+{
+    cat_event_defer(cat_free_function, data);
+}
+
 static void cat_poll_close_function(uv_handle_t *handle)
 {
     cat_poll_t *poll = (cat_poll_t *) handle;
 
     if (poll->is_head) {
-        cat_event_defer(cat_free_function, poll);
+        cat_event_defer(cat_poll_free_function, poll);
     }
 }
 

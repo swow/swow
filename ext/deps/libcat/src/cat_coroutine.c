@@ -847,7 +847,14 @@ CAT_API const char *cat_coroutine_get_role_name(const cat_coroutine_t *coroutine
 
 CAT_API const char *cat_coroutine_get_current_role_name(void)
 {
-    return cat_coroutine_get_role_name(CAT_COROUTINE_G(current));
+    const cat_coroutine_t *coroutine = CAT_COROUTINE_G(current);
+
+    if (unlikely(coroutine == NULL)) {
+        /* may be called out of runtime (usually in log) */
+        return "main";
+    }
+
+    return cat_coroutine_get_role_name(coroutine);
 }
 
 /* helper */

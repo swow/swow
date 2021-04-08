@@ -239,8 +239,16 @@ CAT_API int cat_time_nanosleep(const struct timespec *rqtp, struct timespec *rmt
 
 CAT_API cat_timeout_t cat_time_tv2to(const struct timeval *tv)
 {
-    if (tv && tv->tv_sec > 0) {
-        return (tv->tv_sec * 1000) + (tv->tv_usec / 1000);
+    cat_timeout_t timeout;
+
+    if (tv == NULL) {
+        timeout = CAT_TIMEOUT_FOREVER;
+    } else {
+        timeout = (tv->tv_sec * 1000) + (tv->tv_usec / 1000);
+        if (unlikely(timeout < 0)) {
+            timeout = CAT_TIMEOUT_FOREVER;
+        }
     }
-    return -1;
+
+    return timeout;
 }

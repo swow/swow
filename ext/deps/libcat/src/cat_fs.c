@@ -100,7 +100,7 @@ do{\
             '?' == _path[2] && \
             '\\' == _path[3] \
         ) && \
-        lenpath >= MAX_PATH && /* longer than 260 */ \
+        lenpath >= MAX_PATH - 12 && /* longer than 260(MAX_PATH) - 12(8.3 filename) */ \
         lenpath < sizeof(path##buf) - 4 - 1 /* shorter than hard limit*/ \
     ){ \
         /* fix it: prepend "\\?\" */ \
