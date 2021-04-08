@@ -1102,9 +1102,6 @@ SWOW_API const php_stream_ops swow_stream_stdio_ops = {
     swow_stream_stdio_set_option,
 };
 
-#undef INVALID_TTY_SOCKET
-#undef IS_TTY
-
 /* {{{ proto int|false stream_socket_sendto(resource stream, string data [, int flags [, string target_addr]])
    Send data to a socket stream.  If target_addr is specified it must be in dotted quad (or [ipv6]) format */
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_MASK_EX(arginfo_swow_stream_socket_sendto, 0, 2, MAY_BE_LONG | MAY_BE_FALSE)
@@ -1233,7 +1230,7 @@ int swow_stream_runtime_shutdown(INIT_FUNC_ARGS)
     size_t i = 0;
     for (; i < CAT_ARRAY_SIZE(swow_stream_tty_sockets); i++) {
         cat_socket_t *socket = swow_stream_tty_sockets[i];
-        if (socket != NULL) {
+        if (socket != NULL && socket != INVALID_TTY_SOCKET) {
             cat_socket_close(socket);
         }
     }
