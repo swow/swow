@@ -780,6 +780,10 @@ static bytes_t swow_stream_read(php_stream *stream, char *buffer, size_t size)
         return PHP_STREAM_SOCKET_RETURN_ERR;
     }
 
+#if 1 /* PHP_VERSION_ID < 80100 */
+    sock->timeout_event = 0; // clear error state
+#endif
+
     nr_bytes = cat_socket_recv_ex(socket, buffer, size, cat_time_tv2to(&sock->timeout));
 
     if (EXPECTED(nr_bytes > 0)) {
