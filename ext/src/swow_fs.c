@@ -173,7 +173,8 @@ struct _swow_fs_lstat_s{
     size_t len;
     zend_stat_t * statbuf;
 };
-static void _swow_fs_lstat_cb(struct _swow_fs_lstat_s *data){
+static void _swow_fs_lstat_cb(cat_data_t *ptr){
+    struct _swow_fs_lstat_s *data = (struct _swow_fs_lstat_s *) ptr;
     data->ret = php_win32_ioutil_stat_ex_w(data->pathw, data->len, data->statbuf, 1);
 }
 static inline int swow_fs_lstat(const char *path, zend_stat_t * statbuf){
@@ -217,7 +218,8 @@ struct _swow_fs_lstat_s{
     const char * path;
     zend_stat_t * statbuf;
 };
-static void _swow_fs_lstat_cb(struct _swow_fs_lstat_s *data){
+static void _swow_fs_lstat_cb(cat_data_t *ptr){
+    struct _swow_fs_lstat_s *data = (struct _swow_fs_lstat_s *) ptr;
     data->ret = lstat(data->path, data->statbuf);
 }
 static inline int swow_fs_lstat(const char *path, zend_stat_t * statbuf){
@@ -356,7 +358,8 @@ struct _swow_fs_open_s{
     mode_t mode;
     int error; // errno
 };
-static void _swow_fs_open_cb(struct _swow_fs_open_s *data){
+static void _swow_fs_open_cb(cat_data_t *ptr){
+    struct _swow_fs_open_s *data = (struct _swow_fs_open_s *) ptr;
     errno = data->error;
 #ifdef PHP_WIN32
 	data->ret = php_win32_ioutil_open_w(data->pathw, data->flags, data->mode);
@@ -383,7 +386,7 @@ static inline int swow_fs_open(const char * path, int flags, ...){
 #else
     data.path = path;
 #endif
-    
+
     if (flags & CAT_FS_O_CREAT) {
 		va_list arg;
 
