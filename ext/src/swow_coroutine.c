@@ -2099,14 +2099,16 @@ static const zend_function_entry swow_coroutine_cross_exception_methods[] = {
 /* hack error hook */
 
 #if PHP_VERSION_ID < 80000
-#define ZEND_ERROR_CB_LAST_ARG_D const char *format, va_list args
+#define ZEND_ERROR_CB_LAST_ARG_D     const char *format, va_list args
 #define ZEND_ERROR_CB_LAST_ARG_RELAY format, args
 #else
 #define ZEND_ERROR_CB_LAST_ARG_D     zend_string *message
 #define ZEND_ERROR_CB_LAST_ARG_RELAY message
 #endif
 
-static void (*original_zend_error_cb)(int type, const char *error_filename, const uint32_t error_lineno, ZEND_ERROR_CB_LAST_ARG_D);
+typedef void (*swow_error_cb_t)(int type, const char *error_filename, const uint32_t error_lineno, ZEND_ERROR_CB_LAST_ARG_D);
+
+static swow_error_cb_t original_zend_error_cb;
 
 static void swow_call_original_zend_error_cb(int type, const char *error_filename, const uint32_t error_lineno, ZEND_ERROR_CB_LAST_ARG_D)
 {
@@ -2225,8 +2227,6 @@ static void swow_zend_throw_exception_hook(zend7_object *exception)
 
 /* hook exit */
 
-static user_opcode_handler_t original_zend_exit_handler;
-
 static int swow_coroutine_exit_handler(zend_execute_data *execute_data)
 {
     swow_coroutine_t *scoroutine = swow_coroutine_get_current();
@@ -2283,9 +2283,6 @@ static int swow_coroutine_exit_handler(zend_execute_data *execute_data)
 /* hook silence */
 
 #ifdef SWOW_COROUTINE_SWAP_SILENCE_CONTEXT
-static user_opcode_handler_t original_zend_begin_silence_handler;
-static user_opcode_handler_t original_zend_end_silence_handler;
-
 static int swow_coroutine_begin_silence_handler(zend_execute_data *execute_data)
 {
     swow_coroutine_t *scoroutine = swow_coroutine_get_current();
@@ -2348,30 +2345,9 @@ int swow_coroutine_module_init(INIT_FUNC_ARGS)
     );
     zend_class_implements(swow_coroutine_kill_exception_ce, 1, swow_uncatchable_ce);
 
-    /* hook zend_error_cb */
-    do {
-        original_zend_error_cb = zend_error_cb;
-        zend_error_cb = swow_coroutine_error_cb;
-    } while (0);
-
     /* hook zend_throw_exception_hook */
-    do {
-        original_zend_throw_exception_hook = zend_throw_exception_hook;
-        zend_throw_exception_hook = swow_zend_throw_exception_hook;
-    } while (0);
-
-    /* hook opcode exit (pre) */
-    do {
-        original_zend_exit_handler = (user_opcode_handler_t) -1;
-    } while (0);
-
-#ifdef SWOW_COROUTINE_SWAP_SILENCE_CONTEXT
-    /* hook opcode silence (pre) */
-    do {
-        original_zend_begin_silence_handler = (user_opcode_handler_t) -1;
-        original_zend_end_silence_handler = (user_opcode_handler_t) -1;
-    } while (0);
-#endif
+    original_zend_throw_exception_hook = zend_throw_exception_hook;
+    zend_throw_exception_hook = swow_zend_throw_exception_hook;
 
     return SUCCESS;
 }
@@ -2382,22 +2358,23 @@ int swow_coroutine_runtime_init(INIT_FUNC_ARGS)
         return FAILURE;
     }
 
-    /* hook opcode exit */
-    if (original_zend_exit_handler == (user_opcode_handler_t) -1) {
-        original_zend_exit_handler = zend_get_user_opcode_handler(ZEND_EXIT);
-        zend_set_user_opcode_handler(ZEND_EXIT, swow_coroutine_exit_handler);
-    }
+    /* hook zend_error_cb (we should only do it in runtime) */
+    original_zend_error_cb = zend_error_cb;
+    zend_error_cb = swow_coroutine_error_cb;
 
+    /* hook opcode here is to escape JIT check when PHP version < 8.1 */
+    /* hook opcode exit */
+    if (zend_get_user_opcode_handler(ZEND_EXIT) != NULL) {
+        cat_core_error(COROUTINE, "Coroutine module is incompatible with some extensions that setup exit user opcode handler");
+    }
+    zend_set_user_opcode_handler(ZEND_EXIT, swow_coroutine_exit_handler);
 #ifdef SWOW_COROUTINE_SWAP_SILENCE_CONTEXT
     /* hook opcode silence */
-    if (original_zend_begin_silence_handler == (user_opcode_handler_t) -1) {
-        original_zend_begin_silence_handler = zend_get_user_opcode_handler(ZEND_BEGIN_SILENCE);
-        zend_set_user_opcode_handler(ZEND_BEGIN_SILENCE, swow_coroutine_begin_silence_handler);
+    if (zend_get_user_opcode_handler(ZEND_BEGIN_SILENCE) != NULL || zend_get_user_opcode_handler(ZEND_END_SILENCE) != NULL) {
+        cat_core_error(COROUTINE, "Coroutine module is incompatible with some extensions that setup silence related user opcode handlers");
     }
-    if (original_zend_end_silence_handler == (user_opcode_handler_t) -1) {
-        original_zend_end_silence_handler = zend_get_user_opcode_handler(ZEND_END_SILENCE);
-        zend_set_user_opcode_handler(ZEND_END_SILENCE, swow_coroutine_end_silence_handler);
-    }
+    zend_set_user_opcode_handler(ZEND_BEGIN_SILENCE, swow_coroutine_begin_silence_handler);
+    zend_set_user_opcode_handler(ZEND_END_SILENCE, swow_coroutine_end_silence_handler);
 #endif
 
     SWOW_COROUTINE_G(original_resume) = cat_coroutine_register_resume(
@@ -2469,6 +2446,18 @@ int swow_coroutine_runtime_shutdown(SHUTDOWN_FUNC_ARGS)
     cat_coroutine_register_resume(
         SWOW_COROUTINE_G(original_resume)
     );
+
+    /* recover opcode exit */
+    zend_set_user_opcode_handler(ZEND_EXIT, NULL);
+#ifdef SWOW_COROUTINE_SWAP_SILENCE_CONTEXT
+    /* recover opcode silence */
+    zend_set_user_opcode_handler(ZEND_BEGIN_SILENCE, NULL);
+    zend_set_user_opcode_handler(ZEND_END_SILENCE, NULL);
+#endif
+
+    /* recover zend_error_cb */
+    zend_error_cb = original_zend_error_cb;
+    original_zend_error_cb = NULL;
 
     if (!cat_coroutine_runtime_shutdown()) {
         return FAILURE;
