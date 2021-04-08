@@ -27,7 +27,7 @@ SWOW_API zend_class_entry *swow_watch_dog_exception_ce;
 
 typedef void (*swow_interrupt_function_t)(zend_execute_data *execute_data);
 
-static swow_interrupt_function_t original_zend_interrupt_function = NULL;
+static swow_interrupt_function_t original_zend_interrupt_function;
 
 SWOW_API void swow_watch_dog_alert_standard(cat_watch_dog_t *watch_dog)
 {
@@ -235,9 +235,6 @@ int swow_watch_dog_module_init(INIT_FUNC_ARGS)
         "Swow\\WatchDog\\Exception", swow_exception_ce, NULL, NULL, NULL, cat_true, cat_true, cat_true, NULL, NULL, 0
     );
 
-    original_zend_interrupt_function = zend_interrupt_function;
-    zend_interrupt_function = swow_watch_dog_interrupt_function;
-
     return SUCCESS;
 }
 
@@ -247,6 +244,9 @@ int swow_watch_dog_runtime_init(INIT_FUNC_ARGS)
         return FAILURE;
     }
 
+    original_zend_interrupt_function = zend_interrupt_function;
+    zend_interrupt_function = swow_watch_dog_interrupt_function;
+
     return SUCCESS;
 }
 
@@ -255,6 +255,9 @@ int swow_watch_dog_runtime_shudtown(INIT_FUNC_ARGS)
     if (cat_watch_dog_is_running() && !swow_watch_dog_stop()) {
         cat_core_error_with_last(WATCH_DOG, "WatchDog stop failed");
     }
+
+    zend_interrupt_function = original_zend_interrupt_function;
+    original_zend_interrupt_function = NULL;
 
     if (!cat_watch_dog_runtime_shutdown()) {
         return FAILURE;
