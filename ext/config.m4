@@ -99,7 +99,16 @@ if test "${SWOW}" != "no"; then
 
   dnl start declare extension sources
 
-  PHP_NEW_EXTENSION(swow, "swow.c", $ext_shared, ,\\$(SWOW_CFLAGS))
+  PHP_NEW_EXTENSION(swow, "swow.c", $ext_shared, ,\\$(SWOW_CFLAGS) \\$(SWOW_GIT_VERSION_CFLAG))
+
+  dnl for git version number in swow.c
+  AC_PATH_PROG(SWOW_GIT, git, no)
+  if test x"$SWOW_GIT" != x"" && test -d ${ext_srcdir}/../.git ; then
+     SWOW_GIT_VERSION_CFLAG=-DSWOW_GIT_VERSION=\\\"'-"`'"$SWOW_GIT --git-dir=${ext_srcdir}/../.git describe --always --abbrev=8 --dirty 2>&-"'`"'\\\"
+  else
+     SWOW_GIT_VERSION_CFLAG=
+  fi
+  PHP_SUBST(SWOW_GIT_VERSION_CFLAG)
 
   dnl solve in-tree build config.h problem
   dnl just make a fake config.h before all things

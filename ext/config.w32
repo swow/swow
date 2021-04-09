@@ -70,6 +70,37 @@ if (PHP_SWOW != 'no') (function(){
         }
     }
 
+    // prepare for git version in swow.c
+    var git_cflags = "";
+    var SWOW_GIT = PATH_PROG('git');
+    var git_dir = configure_module_dirname + '\\..\\.git';
+    if(SWOW_GIT && FSO.FolderExists(git_dir)){
+        git_dir = FSO.GetAbsolutePathName(git_dir);
+
+        DEFINE("SWOW_GIT", SWOW_GIT);
+        var temp_dir = '$(BUILD_DIR)\\ext\\swow\\build';
+        var git_header = temp_dir + "\\git_version.h";
+
+        var git_ver_target = "swow_git_version";
+        ADD_FLAG("DEPS_SWOW", git_ver_target);
+        var git_ver_cmd = '$(SWOW_GIT) "--git-dir=' + git_dir + '" describe --always "--abbrev=8" --dirty';
+        //var gitcmd = 'notgit "--git-dir=' + git_dir + '" describe --always "--abbrev=8" --dirty';
+        MFO.WriteLine(git_ver_target + ":");
+        MFO.WriteLine('    @ECHO Get Swow git version by $(SWOW_GIT)' );
+        MFO.WriteLine('    @IF NOT EXIST ' + temp_dir + ' MKDIR ' + temp_dir);
+        MFO.WriteLine('    @ECHO #define SWOW_GIT_VERSION "" > ' + git_header);
+        MFO.WriteLine('    -@FOR /F "tokens=* USEBACKQ" %F IN (`\\');
+        MFO.WriteLine('        ' + git_ver_cmd + '\\');
+        MFO.WriteLine('    `) DO @( \\');
+        MFO.WriteLine('        ECHO Got Swow git version: %%F &&\\' );
+        MFO.WriteLine('        ECHO #define SWOW_GIT_VERSION "-%%F" > ' + git_header + '\\');
+        MFO.WriteLine('    )');
+        MFO.WriteLine('');
+
+        ADD_FLAG("SWOW_GIT_VERSION_CFLAG", "/FI " + git_header);
+        git_cflags = "$(SWOW_GIT_VERSION_CFLAG)";
+    }
+
     //ADD_MAKEFILE_FRAGMENT()
 
     // definations
@@ -265,7 +296,7 @@ if (PHP_SWOW != 'no') (function(){
     if(PHP_SWOW.replace(/static/,"") != PHP_SWOW){
         shared = null;
     }
-    EXTENSION('swow', 'swow.c', shared, "", "php_swow.dll");
+    EXTENSION('swow', 'swow.c', shared, git_cflags, "php_swow.dll");
     //ADD_FLAG("PHP_SWOW_SWOW", "asmobjs");
 
     //PHP_INSTALL_HEADERS("ext/swow", "include/cat_vm.h include/swow.h include/swow_api.h include/swow_buffer.h include/swow_channel.h include/swow_coroutine.h include/swow_debug.h include/swow_defer.h include/swow_event.h include/swow_exceptions.h include/swow_hook.h include/swow_http.h include/swow_log.h include/swow_signal.h include/swow_socket.h include/swow_stream.h include/swow_sync.h include/swow_time.h include/swow_watch_dog.h include/swow_websocket.h include/swow_wrapper.h")

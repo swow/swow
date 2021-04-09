@@ -293,10 +293,14 @@ PHP_MINFO_FUNCTION(swow)
 #define SWOW_COROUTINE_CONTEXT_TYPE "boost-context"
 #endif
 
+#ifndef SWOW_GIT_VERSION
+#define SWOW_GIT_VERSION ""
+#endif
+
     php_info_print_table_start();
     php_info_print_table_header(2, "Status", "enabled");
     php_info_print_table_header(2, "Author", "twosee <twosee@php.net>");
-    php_info_print_table_header(2, "Version", SWOW_VERSION " ( " SWOW_VERSION_SUFFIX SWOW_VERSION_SUFFIX_EXT " )");
+    php_info_print_table_header(2, "Version", SWOW_VERSION SWOW_GIT_VERSION " ( " SWOW_VERSION_SUFFIX SWOW_VERSION_SUFFIX_EXT " )");
     php_info_print_table_header(2, "Context", SWOW_COROUTINE_CONTEXT_TYPE);
     php_info_print_table_header(2, "Scheduler", "libuv-event");
     php_info_print_table_end();
