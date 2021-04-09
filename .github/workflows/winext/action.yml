@@ -118,7 +118,7 @@ runs:
           ${{ inputs.conf-args }} ^
           -ExtPath ${{ inputs.ext-path }} ^
           -ExtName swow ^
-          -ToolsPath ${{ inputs.tools-path }}
+          -ToolsPath ${{ inputs.tools-path }} || EXIT /b 1
         ECHO ::endgroup::
 
     - name: Install extension
@@ -127,7 +127,7 @@ runs:
         TOOLS_PATH: ${{ inputs.tools-path }}
         UNIX_COLOR: "1"
       run: |
-        IF 1==${{ inputs.install }} powershell .github\workflows\winext\install.ps1 ^
+        IF 1==${{ inputs.install }} ( powershell .github\workflows\winext\install.ps1 ^
           -ExtPath ${{ inputs.ext-path }} ^
-          -ExtName swow
+          -ExtName swow ) || EXIT /b 1
         ECHO ::endgroup::
