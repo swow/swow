@@ -251,8 +251,14 @@ static inline int swow_fs_stat_mock(int use_lstat, ...){
     cat_stat_t _statbuf;
     int ret;
     if(use_lstat){
+#if defined(PHP_WIN32) && PHP_VERSION_ID < 70400
+        // php7.3 donot have a stat function can be used in cat_work
+        // so we just use the original blocking version
+        ret = php_sys_stat_ex(pathname, statbuf, 1);
+#else
         ret = swow_fs_lstat(pathname, statbuf);
         UPDATE_ERRNO_FROM_CAT();
+#endif
     }else{
         ret = cat_fs_stat(pathname, &_statbuf);
         if (ret<0){
