@@ -74,8 +74,49 @@ if (PHP_SWOW != 'no') (function(){
     var git_cflags = "";
     var SWOW_GIT = PATH_PROG('git');
     var git_dir = configure_module_dirname + '\\..\\.git';
-    if(SWOW_GIT && FSO.FolderExists(git_dir)){
+    var swow_check_git = function(){
+        // prove git binary
+        if(!SWOW_GIT){
+            return false;
+        }
+        // prove git dir
+        if(!FSO.FolderExists(git_dir)){
+            return false;
+        }
         git_dir = FSO.GetAbsolutePathName(git_dir);
+        var swow_exec = function (cmd){
+            var timeout = 100; // 100 * 100 == 10000ms == 10s
+            var e;
+            try{
+                e = WshShell.Exec(cmd);
+            }catch(x){
+                return {code: "execfail"};
+            }
+            while (e.Status == 0 && timeout > 0)
+            {
+                WScript.Sleep(100);
+                timeout = timeout-1;
+            }
+            if(e.Status == 0){
+                e.Terminate();
+                return {code: "timeout", stdout:e.StdOut.ReadAll(), stderr:e.StdErr.ReadAll()};
+            }
+            return {code: e.ExitCode, stdout:e.StdOut.ReadAll(), stderr:e.StdErr.ReadAll()};
+        };
+        // check if it's bare
+        var bare_check = swow_exec('"' +SWOW_GIT + '" "--git-dir=' + git_dir + '" rev-parse --is-bare-repository');
+        if(bare_check.code != 0 || bare_check.stdout.match(/.*true.*/)){
+            return false;
+        }
+        // prove it's swow's git dir
+        var self_check = swow_exec('"' + SWOW_GIT + '" "--git-dir=' + git_dir + '" branch --contains e874691b20cddae2d169e47c05b7b42464f11cc0');
+        if(self_check.code != 0 || !self_check.stdout.match(/.*\*.*/)){
+            return false;
+        }
+        return true;
+    }
+
+    if(swow_check_git()){
 
         DEFINE("SWOW_GIT", SWOW_GIT);
         var temp_dir = '$(BUILD_DIR)\\ext\\swow\\build';
@@ -83,7 +124,7 @@ if (PHP_SWOW != 'no') (function(){
 
         var git_ver_target = "swow_git_version";
         ADD_FLAG("DEPS_SWOW", git_ver_target);
-        var git_ver_cmd = '$(SWOW_GIT) "--git-dir=' + git_dir + '" describe --always "--abbrev=8" --dirty';
+        var git_ver_cmd = '$(SWOW_GIT) "--work-tree=' + git_dir.replace(/\\*\.git$/, "") + '" "--git-dir=' + git_dir + '" describe --always "--abbrev=8" --dirty';
         //var gitcmd = 'notgit "--git-dir=' + git_dir + '" describe --always "--abbrev=8" --dirty';
         MFO.WriteLine(git_ver_target + ":");
         MFO.WriteLine('    @ECHO Get Swow git version by $(SWOW_GIT)' );
