@@ -20,6 +20,15 @@
 
 #include "swow_hook.h"
 
+#if PHP_VERSION_ID < 80000
+#define swow_argument_value_error(arg_num, format, ...) \
+        php_error_docref(NULL, E_WARNING, format, ##__VA_ARGS__)
+#define RETURN_FAILURE() RETURN_FALSE
+#else
+#define swow_argument_value_error zend_argument_value_error
+#define RETURN_FAILURE() RETURN_THROWS()
+#endif
+
 ZEND_BEGIN_ARG_INFO_EX(arginfo_swow_sleep, 0 , ZEND_RETURN_VALUE, 1)
     ZEND_ARG_TYPE_INFO(0, seconds, IS_LONG, 0)
 ZEND_END_ARG_INFO()
@@ -34,10 +43,9 @@ static PHP_FUNCTION(swow_sleep)
         Z_PARAM_LONG(seconds)
     ZEND_PARSE_PARAMETERS_END();
 
-    if (UNEXPECTED(seconds < 0))
-    {
-        zend_argument_value_error(1, "must be greater than or equal to 0");
-        RETURN_THROWS();
+    if (UNEXPECTED(seconds < 0)) {
+        swow_argument_value_error(1, "must be greater than or equal to 0");
+        RETURN_FAILURE();
     }
 
     RETURN_LONG(cat_time_sleep(seconds));
@@ -59,8 +67,8 @@ static PHP_FUNCTION(swow_msleep)
     ZEND_PARSE_PARAMETERS_END();
 
     if (milli_seconds < 0) {
-        zend_argument_value_error(1, "must be greater than or equal to 0");
-        RETURN_THROWS();
+        swow_argument_value_error(1, "must be greater than or equal to 0");
+        RETURN_FAILURE();
     }
 
     RETURN_LONG(cat_time_msleep((uint64_t) milli_seconds));
@@ -82,8 +90,8 @@ static PHP_FUNCTION(swow_usleep)
     ZEND_PARSE_PARAMETERS_END();
 
     if (micro_seconds < 0) {
-        zend_argument_value_error(1, "must be greater than or equal to 0");
-        RETURN_THROWS();
+        swow_argument_value_error(1, "must be greater than or equal to 0");
+        RETURN_FAILURE();
     }
 
     (void) cat_time_usleep((unsigned int) micro_seconds);
@@ -108,26 +116,29 @@ static PHP_FUNCTION(swow_nanosleep)
     ZEND_PARSE_PARAMETERS_END();
 
     if (tv_sec < 0) {
-        zend_argument_value_error(1, "must be greater than or equal to 0");
-        RETURN_THROWS();
+        swow_argument_value_error(1, "must be greater than or equal to 0");
+        RETURN_FAILURE();
     }
     if (tv_nsec < 0) {
-        zend_argument_value_error(2, "must be greater than or equal to 0");
-        RETURN_THROWS();
+        swow_argument_value_error(2, "must be greater than or equal to 0");
+        RETURN_FAILURE();
     }
 
     php_req.tv_sec = (time_t) tv_sec;
     php_req.tv_nsec = (long) tv_nsec;
     if (cat_time_nanosleep(&php_req, &php_rem) == 0) {
         RETURN_TRUE;
-    } else if (cat_get_last_error_code() == CAT_EINVAL) {
-        zend_value_error("Nanoseconds was not in the range 0 to 999 999 999 or seconds was negative");
-        RETURN_THROWS();
-    } else {
+    } else if (cat_get_last_error_code() == CAT_ECANCELED)  {
         array_init(return_value);
         add_assoc_long_ex(return_value, ZEND_STRL("seconds"), php_rem.tv_sec);
         add_assoc_long_ex(return_value, ZEND_STRL("nanoseconds"), php_rem.tv_nsec);
+        return;
+    } else if (cat_get_last_error_code() == CAT_EINVAL) {
+        zend_value_error("Nanoseconds was not in the range 0 to 999 999 999 or seconds was negative");
+        RETURN_FAILURE();
     }
+
+    RETURN_FALSE;
 }
 /* }}} */
 
