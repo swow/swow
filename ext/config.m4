@@ -231,7 +231,6 @@ EOF
       [x86*|i?86*|amd*|pentium], [SWOW_CPU_ARCH="x86"],
       [aarch64*|arm64*], [SWOW_CPU_ARCH="arm64"],
       [arm*], [SWOW_CPU_ARCH="arm"],
-      [arm64*], [SWOW_CPU_ARCH="arm64"],
       [ppc64*], [SWOW_CPU_ARCH="ppc64"],
       [powerpc*], [SWOW_CPU_ARCH="ppc"],
       [mips64*], [SWOW_CPU_ARCH="mips64"],
