@@ -44,9 +44,6 @@ static PHP_METHOD(Swow_Event, wait)
 
     /* user space (we simulate main exit here) */
     swow_defer_do_main_tasks();
-#ifdef SWOW_COROUTINE_SWAP_OUTPUT_GLOBALS
-    swow_output_globals_fast_shutdown();
-#endif
 
     /* TODO: remove from coroutine map */
     /* internal space */
