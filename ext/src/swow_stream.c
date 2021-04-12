@@ -1166,13 +1166,19 @@ static const zend_function_entry swow_stream_functions[] = {
 extern SWOW_API php_stream_ops swow_php_stream_stdio_ops;
 extern SWOW_API const php_stream_ops swow_stream_stdio_fs_ops;
 extern SWOW_API const php_stream_wrapper swow_plain_files_wrapper;
+static php_stream_wrapper swow_php_plain_files_wrapper;
 
 int swow_stream_module_init(INIT_FUNC_ARGS)
 {
-    SWOW_MODULES_CHECK_PRE_START() {
-        "openssl"
-    } SWOW_MODULES_CHECK_PRE_END();
+    if (!swow_hook_internal_functions(swow_stream_functions)) {
+        return FAILURE;
+    }
 
+    return SUCCESS;
+}
+
+int swow_stream_runtime_init(INIT_FUNC_ARGS)
+{
     php_stream_tcp_socket_factory = zend_hash_str_find_ptr(php_stream_xport_get_hash(), ZEND_STRL("tcp"));
     php_stream_udp_socket_factory = zend_hash_str_find_ptr(php_stream_xport_get_hash(), ZEND_STRL("udp"));
 #ifdef AF_UNIX
@@ -1196,9 +1202,6 @@ int swow_stream_module_init(INIT_FUNC_ARGS)
     if (php_stream_xport_register("udg", swow_stream_socket_factory) != SUCCESS) {
         return FAILURE;
     }
-    if (!swow_hook_internal_functions(swow_stream_functions)) {
-        return FAILURE;
-    }
 
     /* backup blocking stdio wrapper (for include/require) */
     memcpy(&swow_php_stream_stdio_ops, &php_stream_stdio_ops, sizeof(php_stream_stdio_ops));
@@ -1206,6 +1209,7 @@ int swow_stream_module_init(INIT_FUNC_ARGS)
     if ("plain") {
         /* use async file IO */
         /* hook blocking file IO */
+        memcpy(&swow_php_plain_files_wrapper, &php_plain_files_wrapper, sizeof(php_plain_files_wrapper));
         memcpy(&php_plain_files_wrapper, &swow_plain_files_wrapper, sizeof(php_plain_files_wrapper));
         /* if not tty, redirect to async file ops */
         swow_php_stream_stdio_ops_ptr = &swow_stream_stdio_fs_ops;
@@ -1219,11 +1223,6 @@ int swow_stream_module_init(INIT_FUNC_ARGS)
         memcpy(&php_stream_stdio_ops, &swow_stream_stdio_ops, sizeof(php_stream_stdio_ops));
     }
 
-    return SUCCESS;
-}
-
-int swow_stream_runtime_init(INIT_FUNC_ARGS)
-{
     memset(swow_stream_tty_sockets, 0, sizeof(swow_stream_tty_sockets));
 
     return SUCCESS;
@@ -1237,6 +1236,31 @@ int swow_stream_runtime_shutdown(INIT_FUNC_ARGS)
         if (socket != NULL && socket != INVALID_TTY_SOCKET) {
             cat_socket_close(socket);
         }
+    }
+
+    if (php_stream_xport_register("tcp", php_stream_tcp_socket_factory) != SUCCESS) {
+        return FAILURE;
+    }
+    if (php_stream_xport_register("udp", php_stream_udp_socket_factory) != SUCCESS) {
+        return FAILURE;
+    }
+    if (php_stream_xport_unregister("pipe") != SUCCESS) {
+        return FAILURE;
+    }
+#ifdef AF_UNIX
+    if (php_stream_xport_register("unix", php_stream_unix_socket_factory) != SUCCESS) {
+        return FAILURE;
+    }
+    if (php_stream_xport_register("udg", php_stream_udg_socket_factory) != SUCCESS) {
+        return FAILURE;
+    }
+#endif
+    if ("plain") {
+        memcpy(&php_plain_files_wrapper, &swow_php_plain_files_wrapper, sizeof(php_plain_files_wrapper));
+    }
+    if ("tty") {
+        /* hook stdio (only tty, and file IO will redirect to the original ops) */
+        memcpy(&php_stream_stdio_ops, &swow_php_stream_stdio_ops, sizeof(php_stream_stdio_ops));
     }
 
     return SUCCESS;
