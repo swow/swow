@@ -788,12 +788,15 @@ static bytes_t swow_stream_read(php_stream *stream, char *buffer, size_t size)
 
     if (EXPECTED(nr_bytes > 0)) {
         php_stream_notify_progress_increment(PHP_STREAM_CONTEXT(stream), nr_bytes, 0);
-    }
-    else if (nr_bytes < 0) {
+    } else if (nr_bytes < 0) {
         cat_errno_t error =  cat_get_last_error_code();
         stream->eof = cat_socket_is_eof_error(error);
         sock->timeout_event = (error == CAT_ETIMEDOUT);
-        nr_bytes = PHP_STREAM_SOCKET_RETURN_ERR;
+        if (sock->timeout_event) {
+            nr_bytes = 0;
+        } else {
+            nr_bytes = PHP_STREAM_SOCKET_RETURN_ERR;
+        }
     } else {
         stream->eof = 1;
     }
