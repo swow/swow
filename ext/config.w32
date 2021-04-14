@@ -37,8 +37,7 @@ if (PHP_SWOW != 'no') (function(){
     var use_ssl = 0;
     if('no' !== PHP_SWOW_SSL){
         if (0 < SETUP_OPENSSL("swow", PHP_SWOW)) {
-            //AC_DEFINE("HAVE_OPENSSL", 1);
-            AC_DEFINE("CAT_HAVE_SSL", 1);
+            ADD_FLAG('CFLAGS_SWOW', '/D CAT_HAVE_SSL');
             use_ssl = 1;
         } else {
             WARNING("Swow OpenSSL support not enabled; libraries and headers not found");
@@ -57,7 +56,7 @@ if (PHP_SWOW != 'no') (function(){
             CHECK_LIB("libssh2.lib", "swow", PHP_SWOW) &&
             CHECK_LIB("nghttp2.lib", "swow", PHP_SWOW))
             {
-            AC_DEFINE('CAT_HAVE_CURL', 1, 'libcat uses cURL library');
+            ADD_FLAG("CFLAGS_SWOW", "/D CAT_HAVE_CURL");
             ADD_FLAG("CFLAGS_SWOW", "/D CURL_STATICLIB");
             // TODO: check for curl_version_info
             use_curl = 1;
@@ -145,13 +144,12 @@ if (PHP_SWOW != 'no') (function(){
     //ADD_MAKEFILE_FRAGMENT()
 
     // definations
-    ADD_FLAG("CFLAGS_SWOW", "/D HAVE_CONFIG_H");
-    AC_DEFINE('HAVE_SWOW', 1, 'Swow support enabled');
-    AC_DEFINE('HAVE_LIBCAT', 1, 'Have libcat');
-    AC_DEFINE('CAT_VM', 1, 'Use libcat in Zend VM');
+    // no, we donot use config.h, that thing have non-unified behavior
+    //ADD_FLAG("CFLAGS_SWOW", "/D HAVE_CONFIG_H");
+    ADD_FLAG('CFLAGS_SWOW', '/D HAVE_SWOW /D HAVE_LIBCAT /D CAT_VM');
 
     if (PHP_SWOW_DEBUG != 'no'){
-        AC_DEFINE('CAT_DEBUG', 1, 'Debug build');
+        ADD_FLAG('CFLAGS_SWOW', '/D CAT_DEBUG');
         // add (warning) cflags for swow
         ADD_FLAG("CFLAGS_SWOW", "/W3");
         // string formating warings like -Wformat
