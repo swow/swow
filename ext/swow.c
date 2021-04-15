@@ -263,6 +263,9 @@ static zend_result swow_reserved_delay_runtime_shutdown(void)
 static zend_result swow_delay_runtime_shutdown(void)
 {
     static const swow_delay_shutdown_function_t delay_rshutdown_functions[] = {
+#if defined(CAT_HAVE_CURL) && PHP_VERSION_ID < 80000
+        swow_curl_delay_runtime_shutdown,
+#endif
         swow_reserved_delay_runtime_shutdown,
     };
 

@@ -28,7 +28,7 @@ extern "C" {
 int swow_curl_module_init(INIT_FUNC_ARGS);
 int swow_curl_module_shutdown(INIT_FUNC_ARGS);
 #if PHP_VERSION_ID < 80000
-int swow_curl_runtime_shutdown(INIT_FUNC_ARGS);
+zend_result swow_curl_delay_runtime_shutdown(void);
 #endif
 #endif
 

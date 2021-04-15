@@ -615,13 +615,11 @@ int swow_curl_module_shutdown(INIT_FUNC_ARGS)
 }
 
 #if PHP_VERSION_ID < 80000
-int swow_curl_runtime_shutdown(INIT_FUNC_ARGS)
+zend_result swow_curl_delay_runtime_shutdown(void)
 {
     SWOW_CURL_CHECK_MODULE();
 
-#if PHP_VERSION_ID < 80000
     cat_curl_multi_cleanup_all_contexts();
-#endif
 
     return SUCCESS;
 }
