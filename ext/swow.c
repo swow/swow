@@ -62,7 +62,9 @@ ZEND_DECLARE_MODULE_GLOBALS(swow)
 
 SWOW_API swow_nts_globals_t swow_nts_globals;
 
-typedef int (*zend_loader_t)(INIT_FUNC_ARGS);
+typedef int (*swow_init_function_t)(INIT_FUNC_ARGS);
+typedef int (*swow_shutdown_function_t)(INIT_FUNC_ARGS);
+typedef zend_result (*swow_delay_shutdown_function_t)(void);
 
 #ifdef ZEND_ACC_HAS_TYPE_HINTS_DENY
 HashTable swow_type_hint_functions;
@@ -74,7 +76,7 @@ PHP_MINIT_FUNCTION(swow)
 {
     swow_wrapper_init();
 
-    static const zend_loader_t minit_callbacks[] = {
+    static const swow_init_function_t minit_functions[] = {
         swow_module_init,
         swow_log_module_init,
         swow_exceptions_module_init,
@@ -98,8 +100,8 @@ PHP_MINIT_FUNCTION(swow)
     };
 
     size_t i = 0;
-    for (; i < CAT_ARRAY_SIZE(minit_callbacks); i++) {
-        if (minit_callbacks[i](INIT_FUNC_ARGS_PASSTHRU) != SUCCESS) {
+    for (; i < CAT_ARRAY_SIZE(minit_functions); i++) {
+        if (minit_functions[i](INIT_FUNC_ARGS_PASSTHRU) != SUCCESS) {
             return FAILURE;
         }
     }
@@ -155,7 +157,7 @@ PHP_MSHUTDOWN_FUNCTION(swow)
     zend_hash_destroy(&swow_type_hint_functions);
 #endif
 
-    static const zend_loader_t mshutdown_callbacks[] = {
+    static const swow_shutdown_function_t mshutdown_functions[] = {
 #ifdef CAT_HAVE_CURL
         swow_curl_module_shutdown,
 #endif
@@ -164,8 +166,8 @@ PHP_MSHUTDOWN_FUNCTION(swow)
     };
 
     size_t i = 0;
-    for (; i < CAT_ARRAY_SIZE(mshutdown_callbacks); i++) {
-        if (mshutdown_callbacks[i](SHUTDOWN_FUNC_ARGS_PASSTHRU) != SUCCESS) {
+    for (; i < CAT_ARRAY_SIZE(mshutdown_functions); i++) {
+        if (mshutdown_functions[i](SHUTDOWN_FUNC_ARGS_PASSTHRU) != SUCCESS) {
             return FAILURE;
         }
     }
@@ -182,7 +184,7 @@ PHP_MSHUTDOWN_FUNCTION(swow)
  */
 PHP_RINIT_FUNCTION(swow)
 {
-    static const zend_loader_t rinit_callbacks[] = {
+    static const swow_init_function_t rinit_functions[] = {
         swow_runtime_init,
         swow_exceptions_runtime_init,
         swow_coroutine_runtime_init,
@@ -200,8 +202,8 @@ PHP_RINIT_FUNCTION(swow)
 #endif
 
     size_t i = 0;
-    for (; i < CAT_ARRAY_SIZE(rinit_callbacks); i++) {
-        if (rinit_callbacks[i](INIT_FUNC_ARGS_PASSTHRU) != SUCCESS) {
+    for (; i < CAT_ARRAY_SIZE(rinit_functions); i++) {
+        if (rinit_functions[i](INIT_FUNC_ARGS_PASSTHRU) != SUCCESS) {
             return FAILURE;
         }
     }
@@ -214,10 +216,7 @@ PHP_RINIT_FUNCTION(swow)
  */
 PHP_RSHUTDOWN_FUNCTION(swow)
 {
-    static const zend_loader_t rshutdown_callbacks[] = {
-#if defined(CAT_HAVE_CURL) && PHP_VERSION_ID < 80000
-        swow_curl_runtime_shutdown,
-#endif
+    static const swow_shutdown_function_t rshutdown_functions[] = {
         swow_debug_runtime_shutdown,
         swow_watch_dog_runtime_shudtown,
         swow_stream_runtime_shutdown,
@@ -233,8 +232,8 @@ PHP_RSHUTDOWN_FUNCTION(swow)
 #endif
 
     size_t i = 0;
-    for (; i < CAT_ARRAY_SIZE(rshutdown_callbacks); i++) {
-        if (rshutdown_callbacks[i](SHUTDOWN_FUNC_ARGS_PASSTHRU) != SUCCESS) {
+    for (; i < CAT_ARRAY_SIZE(rshutdown_functions); i++) {
+        if (rshutdown_functions[i](SHUTDOWN_FUNC_ARGS_PASSTHRU) != SUCCESS) {
             return FAILURE;
         }
     }
@@ -255,8 +254,25 @@ PHP_RSHUTDOWN_FUNCTION(swow)
 }
 /* }}} */
 
+/* Some compilers do not support empty list */
+static zend_result swow_reserved_delay_runtime_shutdown(void)
+{
+    return SUCCESS;
+}
+
 static zend_result swow_delay_runtime_shutdown(void)
 {
+    static const swow_delay_shutdown_function_t delay_rshutdown_functions[] = {
+        swow_reserved_delay_runtime_shutdown,
+    };
+
+    size_t i = 0;
+    for (; i < CAT_ARRAY_SIZE(delay_rshutdown_functions); i++) {
+        if (delay_rshutdown_functions[i]() != SUCCESS) {
+            return FAILURE;
+        }
+    }
+
     cat_bool_t ret;
 
     ret = cat_stop();
