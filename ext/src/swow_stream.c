@@ -1199,12 +1199,14 @@ int swow_stream_runtime_init(INIT_FUNC_ARGS)
     if (php_stream_xport_register("pipe", swow_stream_socket_factory) != SUCCESS) {
         return FAILURE;
     }
+#ifdef AF_UNIX
     if (php_stream_xport_register("unix", swow_stream_socket_factory) != SUCCESS) {
         return FAILURE;
     }
     if (php_stream_xport_register("udg", swow_stream_socket_factory) != SUCCESS) {
         return FAILURE;
     }
+#endif
 
     /* backup blocking stdio wrapper (for include/require) */
     memcpy(&swow_php_stream_stdio_ops, &php_stream_stdio_ops, sizeof(php_stream_stdio_ops));
