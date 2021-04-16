@@ -450,9 +450,13 @@ static inline const char * swow_check_path(const char* path){
     return php_win32_cp_w_to_utf8(pathw);
 }
 # define check_path_free free
+# define SAVE_LE DWORD le = GetLastError()
+# define RESTORE_LE SetLastError(le)
 #else
 # define swow_check_path(path) path
 # define check_path_free(...) {}
+# define SAVE_LE {}
+# define RESTORE_LE {}
 #endif // PHP_WIN32
 
 #ifdef VIRTUAL_DIR
@@ -465,7 +469,10 @@ static inline const char* swow_vcwd_path(const char *path, int flags) {
     new_state.cwd = virtual_getcwd_ex(&new_state.cwd_length);
     // virtual_file_ex returns non-zero(1 or -1) for error
     if (NULL == new_state.cwd || 0 != virtual_file_ex(&new_state, path, NULL, flags)) {
+        printf("le: %08x\n", GetLastError());
+        SAVE_LE;
         if(new_state.cwd) efree(new_state.cwd);
+        RESTORE_LE;
 # ifdef PHP_WIN32
         cat_update_last_error(cat_translate_sys_error(GetLastError()), "Bad file name");
 # else
@@ -487,7 +494,10 @@ static inline const char* swow_vcwd_path(const char *path, int flags) {
     }else{\
         {wrapped}\
     }\
+    SAVE_LE;\
     efree((void*)new_path_cur);\
+    check_path_free((void*)new_path);\
+    RESTORE_LE;\
 } while(0);
 #else
 #define SWOW_VCWD_WRAP(path, new_path, flags, failed, wrapped) do{\
@@ -497,7 +507,9 @@ static inline const char* swow_vcwd_path(const char *path, int flags) {
         break;\
     }\
     {wrapped}\
+    SAVE_LE;\
     check_path_free((void*)new_path);\
+    RESTORE_LE;\
 }while(0)
 #endif // VIRTUAL_DIR
 
@@ -1637,6 +1649,11 @@ static php_stream *swow_plain_files_dir_opener(php_stream_wrapper *wrapper, cons
     }
 
     cat_dir_t * dir = swow_virtual_opendir(path);
+#ifdef PHP_WIN32
+	if (!dir) {
+		php_win32_docref2_from_error(GetLastError(), path, path);
+	}
+#endif
     if (dir) {
         stream = php_stream_alloc(&swow_plain_files_dirstream_ops, dir, 0, mode);
         if (stream == NULL){
