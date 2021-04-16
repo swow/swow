@@ -167,7 +167,11 @@ static PHP_FUNCTION(swow_sleep_until)
     target_ns = (uint64_t) (target_secs * ns_per_sec);
     current_ns = ((uint64_t) tm.tv_sec) * ns_per_sec + ((uint64_t) tm.tv_usec) * 1000;
     if (target_ns < current_ns) {
+#if PHP_VERSION_ID >= 80000
+        php_error_docref(NULL, E_WARNING, "Argument #1 ($timestamp) must be greater than or equal to the current time");
+#else
         php_error_docref(NULL, E_WARNING, "Sleep until to time is less than current time");
+#endif
         RETURN_FALSE;
     }
 
