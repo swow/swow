@@ -2349,19 +2349,6 @@ int swow_coroutine_module_init(INIT_FUNC_ARGS)
     original_zend_throw_exception_hook = zend_throw_exception_hook;
     zend_throw_exception_hook = swow_zend_throw_exception_hook;
 
-    return SUCCESS;
-}
-
-int swow_coroutine_runtime_init(INIT_FUNC_ARGS)
-{
-    if (!cat_coroutine_runtime_init()) {
-        return FAILURE;
-    }
-
-    /* hook zend_error_cb (we should only do it in runtime) */
-    original_zend_error_cb = zend_error_cb;
-    zend_error_cb = swow_coroutine_error_cb;
-
     /* hook opcode here is to escape JIT check when PHP version < 8.1 */
     /* hook opcode exit */
     if (zend_get_user_opcode_handler(ZEND_EXIT) != NULL) {
@@ -2376,6 +2363,19 @@ int swow_coroutine_runtime_init(INIT_FUNC_ARGS)
     zend_set_user_opcode_handler(ZEND_BEGIN_SILENCE, swow_coroutine_begin_silence_handler);
     zend_set_user_opcode_handler(ZEND_END_SILENCE, swow_coroutine_end_silence_handler);
 #endif
+
+    return SUCCESS;
+}
+
+int swow_coroutine_runtime_init(INIT_FUNC_ARGS)
+{
+    if (!cat_coroutine_runtime_init()) {
+        return FAILURE;
+    }
+
+    /* hook zend_error_cb (we should only do it in runtime) */
+    original_zend_error_cb = zend_error_cb;
+    zend_error_cb = swow_coroutine_error_cb;
 
     SWOW_COROUTINE_G(original_resume) = cat_coroutine_register_resume(
         swow_coroutine_resume_standard
@@ -2446,14 +2446,6 @@ int swow_coroutine_runtime_shutdown(SHUTDOWN_FUNC_ARGS)
     cat_coroutine_register_resume(
         SWOW_COROUTINE_G(original_resume)
     );
-
-    /* recover opcode exit */
-    zend_set_user_opcode_handler(ZEND_EXIT, NULL);
-#ifdef SWOW_COROUTINE_SWAP_SILENCE_CONTEXT
-    /* recover opcode silence */
-    zend_set_user_opcode_handler(ZEND_BEGIN_SILENCE, NULL);
-    zend_set_user_opcode_handler(ZEND_END_SILENCE, NULL);
-#endif
 
     /* recover zend_error_cb */
     zend_error_cb = original_zend_error_cb;

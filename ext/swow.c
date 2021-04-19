@@ -186,7 +186,6 @@ PHP_RINIT_FUNCTION(swow)
 {
     static const swow_init_function_t rinit_functions[] = {
         swow_runtime_init,
-        swow_exceptions_runtime_init,
         swow_coroutine_runtime_init,
         swow_event_runtime_init,
         swow_socket_runtime_init,
