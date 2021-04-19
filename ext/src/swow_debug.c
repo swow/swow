@@ -20,6 +20,8 @@
 
 #include "swow_coroutine.h"
 
+static zend_bool swow_compile_extended_info = cat_false;
+
 #define TRACE_APPEND_KEY(key) do {                                          \
         tmp = zend_hash_find(ht, key);                                      \
         if (tmp) {                                                          \
@@ -272,7 +274,7 @@ static PHP_FUNCTION(Swow_Debug_registerExtendedStatementHandler)
         Z_PARAM_FUNC_EX(fci, fcc, 1, 0)
     ZEND_PARSE_PARAMETERS_END();
 
-    if (fci.size > 0 && !(CG(compiler_options) & ZEND_COMPILE_EXTENDED_STMT)) {
+    if (fci.size > 0 && !swow_compile_extended_info) {
         zend_throw_error(NULL, "Please re-run your program with \"-e\" option");
         RETURN_THROWS();
     }
@@ -342,7 +344,11 @@ int swow_debug_module_init(INIT_FUNC_ARGS)
     }
 
     /* hook opcode ext_stmt (pre) */
-    original_zend_ext_stmt_handler = (user_opcode_handler_t) -1;
+    if (CG(compiler_options) & ZEND_COMPILE_EXTENDED_INFO) {
+        original_zend_ext_stmt_handler = zend_get_user_opcode_handler(ZEND_EXT_STMT);
+        zend_set_user_opcode_handler(ZEND_EXT_STMT, swow_debug_ext_stmt_handler);
+        swow_compile_extended_info = cat_true;
+    }
 
     ZVAL_NULL(&SWOW_DEBUG_G(zextended_statement_handler));
 
@@ -351,12 +357,6 @@ int swow_debug_module_init(INIT_FUNC_ARGS)
 
 int swow_debug_runtime_init(INIT_FUNC_ARGS)
 {
-    /* hook opcode ext_stmt */
-    if (original_zend_ext_stmt_handler == (user_opcode_handler_t) -1) {
-        original_zend_ext_stmt_handler = zend_get_user_opcode_handler(ZEND_EXT_STMT);
-        zend_set_user_opcode_handler(ZEND_EXT_STMT, swow_debug_ext_stmt_handler);
-    }
-
     ZVAL_NULL(&SWOW_DEBUG_G(zextended_statement_handler));
 
     return SUCCESS;

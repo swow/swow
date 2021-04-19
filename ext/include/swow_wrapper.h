@@ -89,8 +89,8 @@ void swow_wrapper_shutdown(void);
 /* }}} */
 
 /* PHP 7.4 compatibility macro {{{*/
-#ifndef ZEND_COMPILE_EXTENDED_STMT
-#define ZEND_COMPILE_EXTENDED_STMT ZEND_COMPILE_EXTENDED_INFO
+#ifndef ZEND_COMPILE_EXTENDED_INFO
+#define ZEND_COMPILE_EXTENDED_INFO ZEND_COMPILE_EXTENDED_STMT
 #endif
 
 #ifndef ZVAL_EMPTY_ARRAY
