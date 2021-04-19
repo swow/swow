@@ -114,7 +114,7 @@ CAT_API char *cat_snrand(char *buffer, size_t count)
     }
 
     for (; n < count; n++) {
-        int key = rand() % (int) (sizeof charset - 1);
+        int key = rand() % ((int) (sizeof(charset) - 1));
         buffer[n] = charset[key];
     }
 

@@ -117,8 +117,8 @@ CAT_API cat_bool_t cat_module_run(cat_module_type_t type, const char **dependenc
     if (dependencies != NULL) {
         const char *dependency = *dependencies;
         while (dependency != NULL) {
-            const cat_module_info_t *info = cat_module_get_info_by_name(dependency);
-            if (info == NULL || !info->running) {
+            const cat_module_info_t *dinfo = cat_module_get_info_by_name(dependency);
+            if (dinfo == NULL || !dinfo->running) {
                 cat_update_last_error(CAT_EAGAIN, "Module %s require module %s is runable", info->name, dependency);
                 return cat_false;
             }
