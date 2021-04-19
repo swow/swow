@@ -371,7 +371,7 @@ static void _swow_fs_open_cb(cat_data_t *ptr){
     data->error = errno;
 }
 static inline int swow_fs_open(const char * path, int flags, ...){
-    struct _swow_fs_open_s data = {-1, NULL, flags, 0666};
+    struct _swow_fs_open_s data = {-1, NULL, flags, 0666, 0};
 #ifdef PHP_WIN32
     size_t pathw_len;
 	data.pathw = php_win32_ioutil_conv_any_to_w(path, PHP_WIN32_CP_IGNORE_LEN, &pathw_len);
