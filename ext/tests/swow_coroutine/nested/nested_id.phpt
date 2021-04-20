@@ -4,42 +4,41 @@ swow_coroutine/nested: nested id
 <?php
 require __DIR__ . '/../../include/skipif.php';
 ?>
---XFAIL--
-Solve hard code
 --FILE--
 <?php
 require __DIR__ . '/../../include/bootstrap.php';
 
-// FIXME: use constant
-Assert::same(Swow\Coroutine::getCurrent()->getId(), 0);
-Assert::same(Swow\Coroutine::getCurrent()->getPrevious()->getId(), 0);
+define('TEST_COROUTINE_MAIN_ID', Swow\Coroutine::getMain()->getId());
+
+Assert::same(Swow\Coroutine::getCurrent()->getId(), TEST_COROUTINE_MAIN_ID);
+Assert::same(Swow\Coroutine::getCurrent()->getPrevious()->getId(), TEST_COROUTINE_MAIN_ID - 1);
 Swow\Coroutine::run(function () {
-    Assert::same(Swow\Coroutine::getCurrent()->getId(), 2);
+    Assert::same(Swow\Coroutine::getCurrent()->getId(), TEST_COROUTINE_MAIN_ID + 1);
     msleep(1);
-    Assert::same(Swow\Coroutine::getCurrent()->getId(), 2);
+    Assert::same(Swow\Coroutine::getCurrent()->getId(), TEST_COROUTINE_MAIN_ID + 1);
 });
-Assert::same(Swow\Coroutine::getCurrent()->getId(), 1);
-Assert::same(Swow\Coroutine::getCurrent()->getPrevious()->getId(), 0);
+Assert::same(Swow\Coroutine::getCurrent()->getId(), TEST_COROUTINE_MAIN_ID);
+Assert::same(Swow\Coroutine::getCurrent()->getPrevious()->getId(), TEST_COROUTINE_MAIN_ID - 1);
 Swow\Coroutine::run(function () {
-    Assert::same(Swow\Coroutine::getCurrent()->getId(), 3);
+    Assert::same(Swow\Coroutine::getCurrent()->getId(), TEST_COROUTINE_MAIN_ID + 2);
     Swow\Coroutine::run(function () {
-        Assert::same(Swow\Coroutine::getCurrent()->getId(), 4);
+        Assert::same(Swow\Coroutine::getCurrent()->getId(), TEST_COROUTINE_MAIN_ID + 3);
         Swow\Coroutine::run(function () {
-            Assert::same(Swow\Coroutine::getCurrent()->getId(), 5);
+            Assert::same(Swow\Coroutine::getCurrent()->getId(), TEST_COROUTINE_MAIN_ID + 4);
             Swow\Coroutine::run(function () {
-                Assert::same(Swow\Coroutine::getCurrent()->getId(), 6);
+                Assert::same(Swow\Coroutine::getCurrent()->getId(), TEST_COROUTINE_MAIN_ID + 5);
                 msleep(1);
-                Assert::same(Swow\Coroutine::getCurrent()->getId(), 6);
+                Assert::same(Swow\Coroutine::getCurrent()->getId(), TEST_COROUTINE_MAIN_ID + 5);
                 echo 'Done' . PHP_LF;
             });
-            Assert::same(Swow\Coroutine::getCurrent()->getId(), 5);
+            Assert::same(Swow\Coroutine::getCurrent()->getId(), TEST_COROUTINE_MAIN_ID + 4);
         });
-        Assert::same(Swow\Coroutine::getCurrent()->getId(), 4);
+        Assert::same(Swow\Coroutine::getCurrent()->getId(), TEST_COROUTINE_MAIN_ID + 3);
     });
-    Assert::same(Swow\Coroutine::getCurrent()->getId(), 3);
+    Assert::same(Swow\Coroutine::getCurrent()->getId(), TEST_COROUTINE_MAIN_ID + 2);
 });
-Assert::same(Swow\Coroutine::getCurrent()->getPrevious()->getId(), 0);
-Assert::same(Swow\Coroutine::getCurrent()->getId(), 1);
+Assert::same(Swow\Coroutine::getCurrent()->getPrevious()->getId(), TEST_COROUTINE_MAIN_ID - 1);
+Assert::same(Swow\Coroutine::getCurrent()->getId(), TEST_COROUTINE_MAIN_ID);
 ?>
 --EXPECT--
 Done

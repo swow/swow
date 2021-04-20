@@ -12,7 +12,11 @@ use Swow\Channel;
 use Swow\Coroutine;
 
 $coroutine = Coroutine::run(function () {
-    (new Channel())->pop();
+    try {
+        (new Channel())->pop();
+    } catch (Exception $exception) {
+        echo 'Never here' . PHP_LF;
+    }
 });
 
 $coroutine->kill();

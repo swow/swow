@@ -18,7 +18,7 @@ $o1 = new class {
         echo 'Destruct in main' . PHP_LF;
         usleep(1000);
         echo 'Everything is done' . PHP_LF;
-        Assert::same(Coroutine::getCurrent()->getId(), 0); // TODO: use constant
+        Assert::greaterThan(Coroutine::getCurrent()->getId(), 0);
     }
 };
 $o2 = new class {
@@ -27,7 +27,7 @@ $o2 = new class {
         echo 'Destructor in sub' . PHP_LF;
         usleep(1000);
         echo 'After WaitReference but i can still work' . PHP_LF;
-        Assert::same(Coroutine::getCurrent()->getId(), 1); // TODO: use constant
+        Assert::greaterThan(Coroutine::getCurrent()->getId(), 0);
     }
 };
 
