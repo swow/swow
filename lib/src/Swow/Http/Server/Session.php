@@ -177,9 +177,10 @@ class Session extends Socket
                 if ($message === '') {
                     $message = HttpStatus::getReasonPhrase($code);
                 }
+                $message = "<html lang=\"en\"><body><h2>HTTP {$code} {$message}</h2><hr><i>Powered by Swow</i></body></html>";
                 $this->write([
                     packResponse($code, $this->generateResponseHeaders($message)),
-                    "<html lang=\"en\"><body><h2>HTTP {$code} {$message}</h2><hr><i>Powered by Swow</i></body></html>\r\n",
+                    $message,
                 ]);
                 break;
             }

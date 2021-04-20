@@ -28,7 +28,7 @@ class Response extends \Swow\Http\Response
         $this
             ->setStatus($statusCode, $reasonPhrase)
             ->getBody()->clear()
-            ->write('<html lang="en"><body><h2>HTTP ')->write((string) $statusCode)->write(' ')->write($reasonPhrase)->write("</h2><hr><i>Powered by Swow</i></body></html>\r\n");
+            ->write('<html lang="en"><body><h2>HTTP ')->write((string) $statusCode)->write(' ')->write($reasonPhrase)->write('</h2><hr><i>Powered by Swow</i></body></html>');
 
         return $this;
     }
