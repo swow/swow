@@ -53,6 +53,20 @@ static void swow_socket_dtor_object(zend_object *object)
     }
 }
 
+static void swow_socket_free_object(zend_object *object)
+{
+    /* __destruct will not be called if fatal error occurred */
+
+    /* force close the socket */
+    SWOW_SOCKET_GETTER_INTERNAL(object, ssocket, socket);
+
+    if (cat_socket_is_available(socket)) {
+        cat_socket_close(socket);
+    }
+
+    zend_object_std_dtor(&ssocket->std);
+}
+
 ZEND_BEGIN_ARG_INFO_EX(arginfo_class_Swow_Socket___construct, 0, ZEND_RETURN_VALUE, 0)
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, type, IS_LONG, 0, "Swow\\Socket::TYPE_TCP")
 ZEND_END_ARG_INFO()
@@ -1558,7 +1572,7 @@ int swow_socket_module_init(INIT_FUNC_ARGS)
         "Swow\\Socket", NULL, swow_socket_methods,
         &swow_socket_handlers, NULL,
         cat_false, cat_false, cat_false,
-        swow_socket_create_object, NULL,
+        swow_socket_create_object, swow_socket_free_object,
         XtOffsetOf(swow_socket_t, std)
     );
     swow_socket_handlers.dtor_obj = swow_socket_dtor_object;
