@@ -28,14 +28,11 @@ SWOW_API zend_class_entry *swow_coroutine_ce;
 SWOW_API zend_object_handlers swow_coroutine_handlers;
 
 SWOW_API zend_class_entry *swow_coroutine_exception_ce;
-SWOW_API zend_class_entry *swow_coroutine_cross_exception_ce;
-SWOW_API zend_class_entry *swow_coroutine_term_exception_ce;
-#if PHP_VERSION_ID < 80000
+
 /* Internal pseudo-exception that is not exposed to userland. */
-static zend_class_entry swow_coroutine_unwind_exit_ce;
-#endif
-#define SWOW_COROUTINE_UNWIND_EXIT ((zend_object *) -1)
-#define SWOW_COROUTINE_IS_UNWIND_EXIT(exception) (exception == SWOW_COROUTINE_UNWIND_EXIT)
+static zend_class_entry *swow_coroutine_unwind_exit_ce;
+#define SWOW_COROUTINE_UNWIND_EXIT_MAGIC               ((zend_object *) -1)
+#define SWOW_COROUTINE_IS_UNWIND_EXIT_MAGIC(exception) (exception == SWOW_COROUTINE_UNWIND_EXIT_MAGIC)
 
 SWOW_API CAT_GLOBALS_DECLARE(swow_coroutine)
 
@@ -53,9 +50,10 @@ CAT_GLOBALS_CTOR_DECLARE_SZ(swow_coroutine)
 /* pre declare */
 static cat_bool_t swow_coroutine_construct(swow_coroutine_t *scoroutine, zval *zcallable, size_t stack_page_size, size_t c_stack_size);
 static void swow_coroutine_shutdown(swow_coroutine_t *scoroutine);
-static void swow_coroutine_handle_cross_exception(zend_object *cross_exception);
-static cat_bool_t swow_coroutine_resume_deny(cat_coroutine_t *coroutine, cat_data_t *data, cat_data_t **retval);
+static ZEND_COLD void swow_coroutine_handle_cross_exception(zend_object *cross_exception);
+static ZEND_COLD cat_bool_t swow_coroutine_resume_deny(cat_coroutine_t *coroutine, cat_data_t *data, cat_data_t **retval);
 static ZEND_COLD void swow_coroutine_throw_unwind_exit(void);
+static zend_bool swow_coroutine_has_unwind_exit(zend_object *exception);
 
 static cat_always_inline size_t swow_coroutine_align_stack_page_size(size_t size)
 {
@@ -109,44 +107,18 @@ static void swow_coroutine_free_object(zend_object *object)
     zend_object_std_dtor(&scoroutine->std);
 }
 
-static CAT_COLD cat_bool_t swow_coroutine_exception_should_be_silent(zend_object *exception)
-{
-    zval *zprevious_exception, ztmp;
-
-    while (1) {
-        ZVAL7_ALLOC_OBJECT(exception);
-        if (instanceof_function(exception->ce, swow_coroutine_term_exception_ce)) {
-            zval *zcode, ztmp;
-            zcode = zend_read_property_ex(exception->ce, ZVAL7_OBJECT(exception), ZSTR_KNOWN(ZEND_STR_CODE), 1, &ztmp);
-            if (zval_get_long(zcode) == 0) {
-                return cat_true;
-            }
-            return cat_false;
-        }
-#if PHP_VERSION_ID < 80000
-        else if (exception->ce == &swow_coroutine_unwind_exit_ce) {
-            return cat_true;
-        }
-#endif
-        zprevious_exception = zend_read_property_ex(zend_get_exception_base(ZVAL7_OBJECT(exception)), ZVAL7_OBJECT(exception), ZSTR_KNOWN(ZEND_STR_PREVIOUS), 1, &ztmp);
-        if (Z_TYPE_P(zprevious_exception) == IS_OBJECT) {
-            exception = Z_OBJ_P(zprevious_exception);
-            continue;
-        }
-        break;
-    }
-
-    return cat_false;
-}
-
 static CAT_COLD void swow_coroutine_function_handle_exception(void)
 {
     CAT_ASSERT(EG(exception) != NULL);
 
     zend_exception_restore();
 
-    /* keep silent for killer and term(0) */
-    if (swow_coroutine_exception_should_be_silent(EG(exception))) {
+#if PHP_VERSION_ID < 80000
+#define zend_is_unwind_exit(exception) 0
+#endif
+
+    if (swow_coroutine_has_unwind_exit(EG(exception)) ||
+        zend_is_unwind_exit(EG(exception))) {
         OBJ_RELEASE(EG(exception));
         EG(exception) = NULL;
         return;
@@ -372,7 +344,6 @@ static cat_bool_t swow_coroutine_construct(swow_coroutine_t *scoroutine, zval *z
         executor->fcc = fcc;
         /* it's unnecessary to init the zdata */
         /* ZVAL_UNDEF(&executor->zdata); */
-        executor->cross_exception = NULL;
     } while (0);
 
     scoroutine->executor = executor;
@@ -688,9 +659,9 @@ SWOW_API zval *swow_coroutine_jump(swow_coroutine_t *scoroutine, zval *zdata)
         swow_coroutine_executor_t *executor = current_scoroutine->executor;
         if (executor != NULL) {
             /* handle cross exception */
-            if (UNEXPECTED(executor->cross_exception != NULL)) {
-                swow_coroutine_handle_cross_exception(executor->cross_exception);
-                executor->cross_exception = NULL;
+            if (UNEXPECTED(SWOW_COROUTINE_G(exception) != NULL)) {
+                swow_coroutine_handle_cross_exception(SWOW_COROUTINE_G(exception));
+                SWOW_COROUTINE_G(exception) = NULL;
             }
         }
     }
@@ -833,7 +804,7 @@ SWOW_API size_t swow_coroutine_set_default_c_stack_size(size_t size)
     return cat_coroutine_set_default_stack_size(size);
 }
 
-static cat_bool_t swow_coroutine_resume_deny(cat_coroutine_t *coroutine, cat_data_t *data, cat_data_t **retval)
+static ZEND_COLD cat_bool_t swow_coroutine_resume_deny(cat_coroutine_t *coroutine, cat_data_t *data, cat_data_t **retval)
 {
     cat_update_last_error(CAT_EMISUSE, "Unexpected coroutine switching");
 
@@ -1158,51 +1129,28 @@ SWOW_API void swow_coroutine_dump_all(void)
 
 /* exception */
 
-static void swow_coroutine_handle_cross_exception(zend_object *cross_exception)
+static ZEND_COLD void swow_coroutine_handle_cross_exception(zend_object *exception)
 {
-    if (SWOW_COROUTINE_IS_UNWIND_EXIT(cross_exception)) {
+    if (SWOW_COROUTINE_IS_UNWIND_EXIT_MAGIC(exception)) {
         swow_coroutine_throw_unwind_exit();
     } else {
-        zend_object *exception;
-        zend_class_entry *ce = cross_exception->ce;
-        zval ztmp;
-
         /* for throw method success */
-        GC_ADDREF(cross_exception);
-        ZVAL7_ALLOC_OBJECT(cross_exception);
-
-        exception = swow_object_create(ce);
+        GC_ADDREF(exception);
         ZVAL7_ALLOC_OBJECT(exception);
-        zend_update_property_ex(
-            ce, ZVAL7_OBJECT(exception), ZSTR_KNOWN(ZEND_STR_MESSAGE),
-            zend_read_property_ex(ce, ZVAL7_OBJECT(cross_exception), ZSTR_KNOWN(ZEND_STR_MESSAGE), 1, &ztmp)
-        );
-        zend_update_property_ex(
-            ce, ZVAL7_OBJECT(exception), ZSTR_KNOWN(ZEND_STR_CODE),
-            zend_read_property_ex(ce, ZVAL7_OBJECT(cross_exception), ZSTR_KNOWN(ZEND_STR_CODE), 1, &ztmp)
-        );
-        if (UNEXPECTED(EG(exception) != NULL)) {
-            zend_throw_exception_internal(ZVAL7_OBJECT(cross_exception));
-            zend_throw_exception_internal(ZVAL7_OBJECT(exception));
-        } else {
-            zend_exception_set_previous(exception, cross_exception);
-            if (EG(exception) == NULL) {
-                zend_throw_exception_internal(ZVAL7_OBJECT(exception));
-            }
-        }
+        zend_throw_exception_internal(ZVAL7_OBJECT(exception));
     }
 }
 
 SWOW_API cat_bool_t swow_coroutine_throw(swow_coroutine_t *scoroutine, zend_object *exception, zval *retval)
 {
-    if (!SWOW_COROUTINE_IS_UNWIND_EXIT(exception) &&
+    if (!SWOW_COROUTINE_IS_UNWIND_EXIT_MAGIC(exception) &&
         UNEXPECTED(!instanceof_function(exception->ce, zend_ce_throwable))) {
         cat_update_last_error(CAT_EMISUSE, "Instance of %s is not throwable", ZSTR_VAL(exception->ce->name));
         return cat_false;
     }
 
     if (UNEXPECTED(scoroutine == swow_coroutine_get_current())) {
-        if (SWOW_COROUTINE_IS_UNWIND_EXIT(exception)) {
+        if (SWOW_COROUTINE_IS_UNWIND_EXIT_MAGIC(exception)) {
             swow_coroutine_throw_unwind_exit();
         } else {
             ZVAL7_ALLOC_OBJECT(exception);
@@ -1213,9 +1161,9 @@ SWOW_API cat_bool_t swow_coroutine_throw(swow_coroutine_t *scoroutine, zend_obje
     } else {
         SWOW_COROUTINE_SHOULD_BE_IN_EXECUTING(scoroutine, cat_true, return cat_false);
         // TODO: split check & resume
-        scoroutine->executor->cross_exception = exception;
+        SWOW_COROUTINE_G(exception) = exception;
         if (UNEXPECTED(!swow_coroutine_resume(scoroutine, NULL, retval))) {
-            scoroutine->executor->cross_exception = NULL;
+            SWOW_COROUTINE_G(exception) = NULL;
             return cat_false;
         }
     }
@@ -1223,29 +1171,10 @@ SWOW_API cat_bool_t swow_coroutine_throw(swow_coroutine_t *scoroutine, zend_obje
     return cat_true;
 }
 
-SWOW_API cat_bool_t swow_coroutine_term(swow_coroutine_t *scoroutine, const char *message, zend_long code, zval *retval)
-{
-    zend_object *exception;
-    cat_bool_t success;
-
-    exception = swow_object_create(swow_coroutine_term_exception_ce);
-    swow_exception_set_properties(exception, message, code);
-    success = swow_coroutine_throw(scoroutine, exception, retval);
-    OBJ_RELEASE(exception);
-
-    return success;
-}
-
 static ZEND_COLD void swow_coroutine_throw_unwind_exit(void)
 {
-#if PHP_VERSION_ID < 80000
-	ZEND_ASSERT(!EG(exception));
-	EG(exception) = zend_objects_new(&swow_coroutine_unwind_exit_ce);
-	EG(opline_before_exception) = EG(current_execute_data)->opline;
-	EG(current_execute_data)->opline = EG(exception_op);
-#else
-    zend_throw_unwind_exit();
-#endif
+    swow_coroutine_get_current()->coroutine.flags |= SWOW_COROUTINE_FLAG_DEYING;
+    zend_throw_exception(swow_coroutine_unwind_exit_ce, NULL, 0);
 }
 
 SWOW_API cat_bool_t swow_coroutine_kill(swow_coroutine_t *scoroutine)
@@ -1253,7 +1182,7 @@ SWOW_API cat_bool_t swow_coroutine_kill(swow_coroutine_t *scoroutine)
     cat_bool_t success;
     zval retval;
 
-    success = swow_coroutine_throw(scoroutine, SWOW_COROUTINE_UNWIND_EXIT, &retval);
+    success = swow_coroutine_throw(scoroutine, SWOW_COROUTINE_UNWIND_EXIT_MAGIC, &retval);
 
     if (!success) {
         return cat_false;
@@ -1816,34 +1745,8 @@ static PHP_METHOD(Swow_Coroutine, throw)
     }
 }
 
-#define SWOW_COROUTINE_MESSAGE_AND_CODE_PARAMETERS_PARSER() \
-    char *message = NULL; \
-    size_t message_length = 0; \
-    zend_long code = ~0; \
-    ZEND_PARSE_PARAMETERS_START(0, 2) \
-        Z_PARAM_OPTIONAL \
-        Z_PARAM_STRING(message, message_length) \
-        Z_PARAM_LONG(code) \
-    ZEND_PARSE_PARAMETERS_END(); \
-
-ZEND_BEGIN_ARG_INFO_EX(arginfo_class_Swow_Coroutine_throwCrossException, 0, ZEND_RETURN_VALUE, 0)
-    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, message, IS_STRING, 0, "null")
-    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, code, IS_LONG, 0, "null")
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Coroutine_kill, ZEND_RETURN_VALUE, 0, IS_VOID, 0)
 ZEND_END_ARG_INFO()
-
-#define arginfo_class_Swow_Coroutine_term arginfo_class_Swow_Coroutine_throwCrossException
-
-static PHP_METHOD(Swow_Coroutine, term)
-{
-    SWOW_COROUTINE_MESSAGE_AND_CODE_PARAMETERS_PARSER();
-
-    if (UNEXPECTED(!swow_coroutine_term(getThisCoroutine(), message, code, return_value)))  {
-        swow_throw_exception_with_last(swow_coroutine_exception_ce);
-        RETURN_THROWS();
-    }
-}
-
-#define arginfo_class_Swow_Coroutine_kill arginfo_class_Swow_Coroutine_throwCrossException
 
 static PHP_METHOD(Swow_Coroutine, kill)
 {
@@ -2012,7 +1915,6 @@ static const zend_function_entry swow_coroutine_methods[] = {
     PHP_ME(Swow_Coroutine, eval,                    arginfo_class_Swow_Coroutine_eval,                    ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Coroutine, call,                    arginfo_class_Swow_Coroutine_call,                    ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Coroutine, throw,                   arginfo_class_Swow_Coroutine_throw,                   ZEND_ACC_PUBLIC)
-    PHP_ME(Swow_Coroutine, term,                    arginfo_class_Swow_Coroutine_term,                    ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Coroutine, kill,                    arginfo_class_Swow_Coroutine_kill,                    ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Coroutine, count,                   arginfo_class_Swow_Coroutine_count,                   ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
     PHP_ME(Swow_Coroutine, get,                     arginfo_class_Swow_Coroutine_get,                     ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
@@ -2039,35 +1941,6 @@ static HashTable *swow_coroutine_get_gc(ZEND_GET_GC_PARAMATERS)
     ZEND_GET_GC_RETURN_ZVAL(zcallable);
 }
 
-/* exception/error */
-
-static zend_object *swow_coroutine_cross_exception_create_object(zend_class_entry *ce)
-{
-    zend_object *object;
-    zval zcoroutine;
-
-    object = swow_exception_create_object(ce);
-    ZVAL7_ALLOC_OBJECT(object);
-    ZVAL_OBJ(&zcoroutine, &swow_coroutine_get_current()->std);
-    zend_update_property(ce, ZVAL7_OBJECT(object), ZEND_STRL("coroutine"), &zcoroutine);
-
-    return object;
-}
-
-#define arginfo_class_Swow_Coroutine_Cross_Exception_getCoroutine arginfo_class_Swow_Coroutine_getCoroutine
-
-static PHP_METHOD(Swow_Coroutine_Cross_Exception, getCoroutine)
-{
-    ZEND_PARSE_PARAMETERS_NONE();
-
-    RETURN_THIS_PROPERTY("coroutine");
-}
-
-static const zend_function_entry swow_coroutine_cross_exception_methods[] = {
-    PHP_ME(Swow_Coroutine_Cross_Exception, getCoroutine, arginfo_class_Swow_Coroutine_Cross_Exception_getCoroutine, ZEND_ACC_FINAL | ZEND_ACC_PUBLIC)
-    PHP_FE_END
-};
-
 /* hack error hook */
 
 #if PHP_VERSION_ID < 80000
@@ -2092,6 +1965,7 @@ static void swow_call_original_zend_error_cb_safe(int type, const char *error_fi
     zend_try {
         original_zend_error_cb(type, error_filename, error_lineno, ZEND_ERROR_CB_LAST_ARG_RELAY);
     } zend_catch {
+        // TODO: kill all coroutines?
         exit(EG(exit_status));
     } zend_end_try();
 }
@@ -2100,17 +1974,21 @@ static void swow_coroutine_error_cb(int type, const char *error_filename, const 
 {
     swow_coroutine_t *current_scoroutine = swow_coroutine_get_current();
     swow_coroutine_t *main_scoroutine = swow_coroutine_get_main();
-#if PHP_VERSION_ID >= 80000
+#if PHP_VERSION_ID < 80000
+    /* strncmp maybe macro if compiler is Virtual Pascal? */
+    zend_bool is_uncaught_exception = strncmp(format, "Uncaught ", sizeof("Uncaught ") - 1) == 0;
+#else
     const char *format = ZSTR_VAL(message);
+    zend_bool is_uncaught_exception = type & E_DONT_BAIL;
 #endif
     zend_string *new_message = NULL;
 
+    /* keep silent for kill */
+    if (is_uncaught_exception && current_scoroutine->coroutine.flags & SWOW_COROUTINE_FLAG_DEYING) {
+        return;
+    }
+
     if (current_scoroutine == main_scoroutine) {
-        /* keep silent for kill/term(0) */
-        if (SWOW_COROUTINE_G(silent_exception_in_main)) {
-            SWOW_COROUTINE_G(silent_exception_in_main) = cat_false;
-            return;
-        }
         /* only main coroutine, keep error behaviour as normal */
         if (CAT_COROUTINE_G(count) == 1) {
             swow_call_original_zend_error_cb(type, error_filename, error_lineno, ZEND_ERROR_CB_LAST_ARG_RELAY);
@@ -2121,8 +1999,7 @@ static void swow_coroutine_error_cb(int type, const char *error_filename, const 
     if (!SWOW_COROUTINE_G(classic_error_handler)) {
         const char *original_type_string = swow_strerrortype(type);
         zend_string *trace = NULL;
-        /* strncmp maybe macro if compiler is Virtual Pascal? */
-        if (strncmp(format, "Uncaught ", sizeof("Uncaught ") - 1) == 0) {
+        if (is_uncaught_exception) {
             /* hack hook for error in main */
             if (current_scoroutine == main_scoroutine) {
                 zend_long severity = SWOW_COROUTINE_G(exception_error_severity);
@@ -2181,42 +2058,48 @@ static void swow_coroutine_error_cb(int type, const char *error_filename, const 
     }
 }
 
-/* hook exception */
-
-static void (*original_zend_throw_exception_hook)(zend7_object *exception);
-
-static void swow_zend_throw_exception_hook(zend7_object *exception)
-{
-    if (swow_coroutine_get_current() == swow_coroutine_get_main()) {
-        if (swow_coroutine_exception_should_be_silent(Z7_OBJ_P(exception))) {
-            SWOW_COROUTINE_G(silent_exception_in_main) = cat_true;
-        }
-    }
-    if (original_zend_throw_exception_hook != NULL) {
-        original_zend_throw_exception_hook(exception);
-    }
-}
-
 /* hook catch */
 
-#if PHP_VERSION_ID < 80000
 static user_opcode_handler_t original_zend_catch_handler = NULL;
+
+static zend_bool swow_coroutine_has_unwind_exit(zend_object *exception)
+{
+    while (1) {
+        zval *zprevious_exception, ztmp;
+        if (exception->ce == swow_coroutine_unwind_exit_ce) {
+            return 1;
+        }
+        ZVAL7_ALLOC_OBJECT(exception);
+        zprevious_exception = zend_read_property_ex(
+            zend_get_exception_base(ZVAL7_OBJECT(exception)),
+            ZVAL7_OBJECT(exception),
+            ZSTR_KNOWN(ZEND_STR_PREVIOUS),
+            1, &ztmp
+        );
+        if (Z_TYPE_P(zprevious_exception) == IS_OBJECT) {
+            exception = Z_OBJ_P(zprevious_exception);
+            continue;
+        }
+        break;
+    }
+
+    return 0;
+}
 
 static int swow_coroutine_catch_handler(zend_execute_data *execute_data)
 {
     zend_exception_restore();
-    if (UNEXPECTED(EG(exception))) {
-        if (EG(exception)->ce == &swow_coroutine_unwind_exit_ce) {
+    if (UNEXPECTED(EG(exception) != NULL)) {
+        if (swow_coroutine_has_unwind_exit(EG(exception))) {
             return ZEND_USER_OPCODE_RETURN;
         }
     }
-    if (UNEXPECTED(original_zend_catch_handler)) {
+    if (UNEXPECTED(original_zend_catch_handler != NULL)) {
         return original_zend_catch_handler(execute_data);
     }
 
     return ZEND_USER_OPCODE_DISPATCH;
 }
-#endif
 
 /* hook exit */
 
@@ -2258,7 +2141,11 @@ static int swow_coroutine_exit_handler(zend_execute_data *execute_data)
         status = 0;
     }
     if (EG(exception) == NULL) {
+#if PHP_VERSION_ID < 80000
         swow_coroutine_throw_unwind_exit();
+#else
+        zend_throw_unwind_exit();
+#endif
     }
     if (scoroutine != swow_coroutine_get_main()) {
         scoroutine->exit_status = status;
@@ -2318,41 +2205,16 @@ int swow_coroutine_module_init(INIT_FUNC_ARGS)
         "Swow\\Coroutine\\Exception", swow_exception_ce, NULL, NULL, NULL, cat_true, cat_true, cat_true, NULL, NULL, 0
     );
 
-    /* Exceptions for cross throw */
-    swow_coroutine_cross_exception_ce = swow_register_internal_class(
-        "Swow\\Coroutine\\CrossException", swow_coroutine_exception_ce, swow_coroutine_cross_exception_methods, NULL, NULL, cat_true, cat_true, cat_true,
-        swow_coroutine_cross_exception_create_object, NULL, 0
+    /* implement UnwindExit by ourself (temporarily) */
+    swow_coroutine_unwind_exit_ce = swow_register_internal_class(
+        "Swow\\Coroutine\\UnwindExit", swow_coroutine_exception_ce, NULL, NULL, NULL, cat_true, cat_true, cat_true, NULL, NULL, 0
     );
-    zend_declare_property_null(swow_coroutine_cross_exception_ce, ZEND_STRL("coroutine"), ZEND_ACC_PROTECTED);
-    /* TODO: zend_declare_property_long(swow_coroutine_error_ce, ZEND_STRL("severity"), 0, ZEND_ACC_PROTECTED); */
+    swow_coroutine_unwind_exit_ce->ce_flags |= ZEND_ACC_FINAL;
 
-    swow_coroutine_term_exception_ce = swow_register_internal_class(
-        "Swow\\Coroutine\\TermException", swow_coroutine_cross_exception_ce, NULL, NULL, NULL, cat_true, cat_true, cat_true, NULL, NULL, 0
-    );
-
-#if PHP_VERSION_ID < 80000
-    /* hook opcode catch */
-    original_zend_catch_handler = zend_get_user_opcode_handler(ZEND_CATCH);
-    zend_set_user_opcode_handler(ZEND_CATCH, swow_coroutine_catch_handler);
-    /* same as unwind_exit() */
-	INIT_CLASS_ENTRY(swow_coroutine_unwind_exit_ce, "Swow\\Coroutine\\UnwindExit", NULL);
-#endif
-
-    /* hook zend_throw_exception_hook */
-    original_zend_throw_exception_hook = zend_throw_exception_hook;
-    zend_throw_exception_hook = swow_zend_throw_exception_hook;
-
-    /* hook opcode here is to escape JIT check when PHP version < 8.1 */
     /* hook opcode exit */
-    if (zend_get_user_opcode_handler(ZEND_EXIT) != NULL) {
-        cat_core_error(COROUTINE, "Coroutine module is incompatible with some extensions that setup exit user opcode handler");
-    }
     zend_set_user_opcode_handler(ZEND_EXIT, swow_coroutine_exit_handler);
 #ifdef SWOW_COROUTINE_SWAP_SILENCE_CONTEXT
     /* hook opcode silence */
-    if (zend_get_user_opcode_handler(ZEND_BEGIN_SILENCE) != NULL || zend_get_user_opcode_handler(ZEND_END_SILENCE) != NULL) {
-        cat_core_error(COROUTINE, "Coroutine module is incompatible with some extensions that setup silence related user opcode handlers");
-    }
     zend_set_user_opcode_handler(ZEND_BEGIN_SILENCE, swow_coroutine_begin_silence_handler);
     zend_set_user_opcode_handler(ZEND_END_SILENCE, swow_coroutine_end_silence_handler);
 #endif
@@ -2370,6 +2232,10 @@ int swow_coroutine_runtime_init(INIT_FUNC_ARGS)
     original_zend_error_cb = zend_error_cb;
     zend_error_cb = swow_coroutine_error_cb;
 
+    /* hook opcode catch (bypass JIT check) */
+    original_zend_catch_handler = zend_get_user_opcode_handler(ZEND_CATCH);
+    zend_set_user_opcode_handler(ZEND_CATCH, swow_coroutine_catch_handler);
+
     SWOW_COROUTINE_G(original_resume) = cat_coroutine_register_resume(
         swow_coroutine_resume_standard
     );
@@ -2383,7 +2249,7 @@ int swow_coroutine_runtime_init(INIT_FUNC_ARGS)
     SWOW_COROUTINE_G(readonly.original_create_object) = NULL;
     SWOW_COROUTINE_G(readonly.original_resume) = NULL;
 
-    SWOW_COROUTINE_G(silent_exception_in_main) = cat_false;
+    SWOW_COROUTINE_G(exception) = NULL;
 
     /* create scoroutine map */
     do {

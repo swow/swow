@@ -46,12 +46,10 @@ extern SWOW_API zend_object_handlers swow_coroutine_handlers;
 
 extern SWOW_API zend_class_entry *swow_coroutine_exception_ce;
 
-extern SWOW_API zend_class_entry *swow_coroutine_cross_exception_ce;
-extern SWOW_API zend_class_entry *swow_coroutine_term_exception_ce;
-
 typedef enum
 {
-    SWOW_COROUTINE_FLAG_DEBUGGING = CAT_COROUTINE_FLAG_USR1,
+    SWOW_COROUTINE_FLAG_DEYING = CAT_COROUTINE_FLAG_USR1,
+    SWOW_COROUTINE_FLAG_DEBUGGING = CAT_COROUTINE_FLAG_USR2,
 } swow_coroutine_flag_t;
 
 typedef enum
@@ -68,7 +66,6 @@ typedef struct
     /* coroutine info */
     zval zcallable;
     zend_fcall_info_cache fcc;
-    zend_object *cross_exception;
     /* zend things */
     JMP_BUF *bailout;
     zval *vm_stack_top;
@@ -141,12 +138,12 @@ CAT_GLOBALS_STRUCT_BEGIN(swow_coroutine)
     /* internal special */
     cat_coroutine_resume_t original_resume;
     cat_coroutine_t *original_main;
-    cat_bool_t silent_exception_in_main; /* used to ignore some exceptions in main */
     swow_coroutine_readonly_t readonly;
 #ifdef SWOW_COROUTINE_USE_RATED
     swow_coroutine_rated_t rated;
 #endif
     zval ztransfer_data;
+    zend_object *exception;
 CAT_GLOBALS_STRUCT_END(swow_coroutine)
 
 typedef zval *(*swow_coroutine_resume_t)(swow_coroutine_t *scoroutine, zval *zdata);
@@ -154,7 +151,7 @@ typedef zval *(*swow_coroutine_yield_t)(zval *zdata);
 
 extern SWOW_API CAT_GLOBALS_DECLARE(swow_coroutine)
 
-#define SWOW_COROUTINE_G(x)       CAT_GLOBALS_GET(swow_coroutine, x)
+#define SWOW_COROUTINE_G(x) CAT_GLOBALS_GET(swow_coroutine, x)
 
 /* loaders */
 
@@ -283,7 +280,6 @@ SWOW_API void swow_coroutine_dump_all(void);
 
 /* exceptions */
 SWOW_API cat_bool_t swow_coroutine_throw(swow_coroutine_t *scoroutine, zend_object *exception, zval *retval);
-SWOW_API cat_bool_t swow_coroutine_term(swow_coroutine_t *scoroutine, const char *message, zend_long code, zval *retval);
 SWOW_API cat_bool_t swow_coroutine_kill(swow_coroutine_t *scoroutine);
 
 #ifdef __cplusplus
