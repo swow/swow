@@ -23,7 +23,11 @@ enum _cat_bool_t
 };
 
 #ifdef CAT_IDE_HELPER
+#ifdef __cplusplus
+typedef bool cat_bool_t;
+#else
 typedef enum _cat_bool_t cat_bool_t;
+#endif
 #else
 #define cat_bool_t uint8_t
 #endif
