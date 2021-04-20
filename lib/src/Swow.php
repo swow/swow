@@ -17,6 +17,16 @@ namespace
 
 namespace Swow
 {
+    const MAJOR_VERSION = 0;
+    const MINOR_VERSION = 1;
+    const RELEASE_VERSION = 0;
+    const EXTRA_VERSION = '';
+    const VERSION = '0.1.0';
+    const VERSION_ID = 100;
+}
+
+namespace Swow
+{
     class Module
     {
         public const TYPE_CORE = 1;
@@ -34,7 +44,8 @@ namespace Swow
         public const TYPE_PROCESS = 4096;
         public const TYPE_WATCH_DOG = 131072;
         public const TYPE_PROTOCOL = 262144;
-        public const TYPE_SSL = 4194304;
+        public const TYPE_SSL = 2097152;
+        public const TYPE_EXT = 4194304;
         public const TYPE_TEST = 8388608;
         public const TYPE_USR1 = 16777216;
         public const TYPE_USR2 = 33554432;
@@ -44,9 +55,9 @@ namespace Swow
         public const TYPE_USR6 = 536870912;
         public const TYPE_USR7 = 1073741824;
         public const TYPE_USR8 = -2147483648;
-        public const TYPES_BUILTIN = 12984319;
+        public const TYPES_BUILTIN = 15081471;
         public const TYPES_USR = -16777216;
-        public const TYPES_ALL = -3792897;
+        public const TYPES_ALL = -1695745;
     }
 }
 
@@ -87,11 +98,6 @@ namespace Swow
          */
         public static function setModuleTypes(int $moduleTypes): void { }
     }
-}
-
-namespace Swow
-{
-    interface Uncatchable { }
 }
 
 namespace Swow
@@ -300,18 +306,9 @@ namespace Swow
         public function throw(\Throwable $throwable) { }
 
         /**
-         * @param string $message [optional] = null
-         * @param int $code [optional] = null
-         * @return mixed
+         * @return void
          */
-        public function term(string $message = null, int $code = null) { }
-
-        /**
-         * @param string $message [optional] = null
-         * @param int $code [optional] = null
-         * @return mixed
-         */
-        public function kill(string $message = null, int $code = null) { }
+        public function kill(): void { }
 
         /**
          * @return int
@@ -675,9 +672,8 @@ namespace Swow
 
         /**
          * @param int $type [optional] = \Swow\Socket::TYPE_TCP
-         * @param int $fd [optional] = \Swow\Socket::INVALID_FD
          */
-        public function __construct(int $type = \Swow\Socket::TYPE_TCP, int $fd = \Swow\Socket::INVALID_FD) { }
+        public function __construct(int $type = \Swow\Socket::TYPE_TCP) { }
 
         /**
          * @return int
@@ -1224,25 +1220,7 @@ namespace Swow\Coroutine
 
 namespace Swow\Coroutine
 {
-    class CrossException extends \Swow\Coroutine\Exception
-    {
-        protected $coroutine;
-
-        /**
-         * @return mixed
-         */
-        final function getCoroutine() { }
-    }
-}
-
-namespace Swow\Coroutine
-{
-    class TermException extends \Swow\Coroutine\CrossException { }
-}
-
-namespace Swow\Coroutine
-{
-    class KillException extends \Swow\Coroutine\CrossException implements \Swow\Uncatchable { }
+    final class UnwindExit extends \Swow\Coroutine\Exception { }
 }
 
 namespace Swow\Channel
@@ -1439,16 +1417,20 @@ namespace Swow\Http
         public const EVENT_NONE = 0;
         public const EVENT_MESSAGE_BEGIN = 65536;
         public const EVENT_URL = 131078;
-        public const EVENT_STATUS = 262150;
-        public const EVENT_HEADER_FIELD = 524292;
-        public const EVENT_HEADER_VALUE = 1048580;
-        public const EVENT_HEADERS_COMPLETE = 2097152;
-        public const EVENT_BODY = 4194308;
-        public const EVENT_MESSAGE_COMPLETE = 8388608;
-        public const EVENT_CHUNK_HEADER = 16777216;
-        public const EVENT_CHUNK_COMPLETE = 33554432;
+        public const EVENT_URL_COMPLETE = 262152;
+        public const EVENT_STATUS = 524294;
+        public const EVENT_STATUS_COMPLETE = 1048584;
+        public const EVENT_HEADER_FIELD = 2097156;
+        public const EVENT_HEADER_VALUE = 4194308;
+        public const EVENT_HEADER_FIELD_COMPLETE = 8388616;
+        public const EVENT_HEADER_VALUE_COMPLETE = 16777224;
+        public const EVENT_HEADERS_COMPLETE = 33554440;
+        public const EVENT_BODY = 67108868;
+        public const EVENT_MESSAGE_COMPLETE = 134217736;
+        public const EVENT_CHUNK_HEADER = 268435456;
+        public const EVENT_CHUNK_COMPLETE = 536870920;
         public const EVENTS_NONE = 0;
-        public const EVENTS_ALL = 67043334;
+        public const EVENTS_ALL = 1073676302;
 
         /**
          * @return int
@@ -1700,9 +1682,9 @@ namespace Swow\WebSocket
         public function setOpcode(int $opcode) { }
 
         /**
-         * @return int
+         * @return bool
          */
-        public function getFin(): int { }
+        public function getFin(): bool { }
 
         /**
          * @param int $fin [required]
@@ -1711,9 +1693,9 @@ namespace Swow\WebSocket
         public function setFin(int $fin) { }
 
         /**
-         * @return int
+         * @return bool
          */
-        public function getRSV1(): int { }
+        public function getRSV1(): bool { }
 
         /**
          * @param int $rsv1 [required]
@@ -1722,9 +1704,9 @@ namespace Swow\WebSocket
         public function setRSV1(int $rsv1) { }
 
         /**
-         * @return int
+         * @return bool
          */
-        public function getRSV2(): int { }
+        public function getRSV2(): bool { }
 
         /**
          * @param int $rsv2 [required]
@@ -1733,9 +1715,9 @@ namespace Swow\WebSocket
         public function setRSV2(int $rsv2) { }
 
         /**
-         * @return int
+         * @return bool
          */
-        public function getRSV3(): int { }
+        public function getRSV3(): bool { }
 
         /**
          * @param int $rsv3 [required]
@@ -1760,9 +1742,9 @@ namespace Swow\WebSocket
         public function setPayloadLength(int $payloadLength) { }
 
         /**
-         * @return int
+         * @return bool
          */
-        public function getMask(): int { }
+        public function getMask(): bool { }
 
         /**
          * @param bool $mask [required]
@@ -1782,9 +1764,9 @@ namespace Swow\WebSocket
         public function setMaskKey(string $maskKey) { }
 
         /**
-         * @return int
+         * @return bool
          */
-        public function hasPayloadData(): int { }
+        public function hasPayloadData(): bool { }
 
         /**
          * @return \Swow\Buffer
@@ -1916,6 +1898,8 @@ namespace Swow\Errno
     const ECLOSED = -9757;
     const EDEADLK = -9756;
     const ESSL = -9755;
+    const ENOCERT = -9754;
+    const ECERT = -9753;
 }
 
 namespace Swow\Errno
