@@ -19,33 +19,52 @@ use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
 use Swow\Http\Client\NetworkException;
 use Swow\Http\Client\RequestException;
-use Swow\Http\Parser\Exception as ParserException;
+use Swow\Http\Parser as HttpParser;
+use Swow\Http\Status as HttpStatus;
+use Swow\Http\TypeInterface as HttpTypeInterface;
 use Swow\Socket;
 use Swow\Socket\Exception as SocketException;
+use Swow\WebSocket;
 
-class Client extends Socket implements ClientInterface
+class Client extends Socket implements ClientInterface, HttpTypeInterface
 {
+    use TypeTrait;
     use ConfigTrait;
     use ReceiverTrait {
         __construct as receiverConstruct;
         execute as receiverExecute;
     }
+    use WebSocketTrait;
+
+    public const DEFAULT_HTTP_PARSER_EVENTS =
+        HttpParser::EVENT_STATUS |
+        HttpParser::EVENT_HEADER_FIELD |
+        HttpParser::EVENT_HEADER_VALUE |
+        HttpParser::EVENT_HEADERS_COMPLETE |
+        HttpParser::EVENT_BODY |
+        HttpParser::EVENT_MESSAGE_COMPLETE;
 
     protected $host;
 
     public function __construct(int $type = Socket::TYPE_TCP)
     {
         parent::__construct($type);
-        $this->receiverConstruct(Parser::TYPE_RESPONSE, Parser::EVENTS_ALL);
+        $this->receiverConstruct(Parser::TYPE_RESPONSE, static::DEFAULT_HTTP_PARSER_EVENTS);
     }
 
-    public function connect(string $name, int $port = 0, ?int $timeout = null): Socket
+    /**
+     * @return $this
+     */
+    public function connect(string $name, int $port = 0, ?int $timeout = null)
     {
         $this->host = $name;
 
         return parent::connect($name, $port, $timeout);
     }
 
+    /**
+     * @return $this
+     */
     public function sendRaw(
         string $method = 'GET',
         string $path = '/',
@@ -53,7 +72,7 @@ class Client extends Socket implements ClientInterface
         string $body = '',
         string $protocolVersion = '1.1'
     ) {
-        $this->write([
+        return $this->write([
             packRequest(
                 $method,
                 $path,
@@ -91,15 +110,13 @@ class Client extends Socket implements ClientInterface
                 $headers['Connection'] = 'keep-alive';
             }
 
-            $this->sendRaw(
+            $result = $this->sendRaw(
                 $request->getMethod(),
                 $request->getRequestTarget(),
                 $headers,
                 $body,
                 $request->getProtocolVersion()
-            );
-
-            $result = $this->recvRaw();
+            )->recvRaw();
 
             return new Response(
                 $result->statusCode,
@@ -108,9 +125,34 @@ class Client extends Socket implements ClientInterface
                 $result->reasonPhrase,
                 $result->protocolVersion
             );
-        } catch (SocketException | ParserException | Exception  $exception) {
+        } catch (Exception $exception) {
             throw $this->convertToClientException($exception, $request);
         }
+    }
+
+    public function upgradeToWebSocket(Request $request): Response
+    {
+        $request = $request->withHeaders([
+            'Connection' => 'Upgrade',
+            'Upgrade' => 'websocket',
+            'Sec-WebSocket-Key' => ($secWebSocketKey = base64_encode(random_bytes(16))),
+            'Sec-WebSocket-Version' => WebSocket\VERSION,
+        ]);
+        try {
+            $response = $this->sendRequest($request);
+        } catch (Exception $exception) {
+            throw $this->convertToClientException($exception, $request);
+        }
+        if ($response->getStatusCode() !== HttpStatus::SWITCHING_PROTOCOLS) {
+            throw new RequestException($request, $response->getReasonPhrase(), $response->getStatusCode());
+        }
+        // for performance (TODO: make it configurable)
+        // if ($response->getHeaderLine('Sec-WebSocket-Accept') !== base64_encode(sha1($secWebSocketKey . WebSocket\GUID, true))) {
+        //     throw new RequestException($request, 'Bad Sec-WebSocket-Accept');
+        // }
+        $this->upgraded(static::TYPE_WEBSOCKET);
+
+        return $response;
     }
 
     protected function convertToClientException(\Exception $exception, RequestInterface $request): ClientExceptionInterface

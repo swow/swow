@@ -17,11 +17,7 @@ use Swow\Http\Exception as HttpException;
 use Swow\Http\Parser as HttpParser;
 use Swow\Http\Parser\Exception as HttpParserException;
 use Swow\Http\Status as HttpStatus;
-use Swow\Socket;
 
-/**
- * @mixin Socket
- */
 trait ReceiverTrait
 {
     /**

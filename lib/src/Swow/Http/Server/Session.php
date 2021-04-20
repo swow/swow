@@ -18,22 +18,21 @@ use Swow\Http\Parser as HttpParser;
 use Swow\Http\ReceiverTrait;
 use Swow\Http\Server;
 use Swow\Http\Status as HttpStatus;
+use Swow\Http\TypeInterface as HttpTypeInterface;
+use Swow\Http\TypeTrait as HttpTypeTrait;
+use Swow\Http\WebSocketTrait;
 use Swow\Socket;
 use Swow\WebSocket;
 use function Swow\Http\packResponse;
 
-class Session extends Socket
+class Session extends Socket implements HttpTypeInterface
 {
+    use HttpTypeTrait;
     use ReceiverTrait {
         __construct as receiverConstruct;
         execute as receiverExecute;
     }
-
-    public const TYPE_HTTP = 1 << 0;
-
-    public const TYPE_WEBSOCKET = 1 << 1;
-
-    public const TYPE_HTTP2 = 1 << 2;
+    use WebSocketTrait;
 
     public const DEFAULT_HTTP_PARSER_EVENTS =
         HttpParser::EVENT_URL |
@@ -49,11 +48,6 @@ class Session extends Socket
      * @var Server
      */
     protected $server;
-
-    /**
-     * @var int
-     */
-    protected $type = self::TYPE_HTTP;
 
     /**
      * @var null|bool
@@ -115,17 +109,12 @@ class Session extends Socket
         return $request;
     }
 
-    /**
-     * @return $this
-     */
     public function sendHttpResponse(Response $response)
     {
-        $this->write([
+        return $this->write([
             $response->toString(true),
             $response->getBodyAsString(),
         ]);
-
-        return $this;
     }
 
     protected function generateResponseHeaders(string $body): array
@@ -192,15 +181,6 @@ class Session extends Socket
         }
     }
 
-    protected function upgraded(int $type)
-    {
-        $this->type = $type;
-        /* release useless resources */
-        // if (!($type & static::TYPE_HTTP)) {
-        $this->httpParser = null;
-        // }
-    }
-
     /**
      * @return $this
      */
@@ -229,59 +209,6 @@ class Session extends Socket
         $this->upgraded(static::TYPE_WEBSOCKET);
 
         return $this;
-    }
-
-    public function recvWebSocketFrame(WebSocketFrame $frame = null): WebSocketFrame
-    {
-        $frame = $frame ?? new WebSocketFrame();
-        $buffer = $this->buffer;
-        $expectMore = $buffer->eof();
-        while (true) {
-            if ($expectMore) {
-                /* ltrim (data left from the last request) */
-                $this->recvData($buffer);
-            }
-            $headerLength = $frame->unpackHeader($buffer);
-            if ($headerLength === 0) {
-                $expectMore = true;
-                continue;
-            }
-            $payloadLength = $frame->getPayloadLength();
-            if ($payloadLength > 0) {
-                $payloadData = $frame->getPayloadData();
-                $writableSize = $payloadData->getWritableSize();
-                if ($writableSize < $payloadLength) {
-                    $payloadData->realloc($payloadData->tell() + $payloadLength);
-                }
-                if (!$buffer->eof()) {
-                    $copyLength = min($buffer->getReadableLength(), $payloadLength);
-                    /* TODO: $payloadData->copy($buffer, $copyLength); */
-                    $payloadData->write($buffer->toString(), $buffer->tell(), $copyLength);
-                    $buffer->seek($copyLength, SEEK_CUR);
-                    $payloadLength -= $copyLength;
-                }
-                if ($payloadLength > 0) {
-                    $this->read($payloadData, $payloadLength);
-                }
-                if ($frame->getMask()) {
-                    $frame->unmaskPayloadData();
-                } /* else {
-                    // TODO: bad frame
-                } */
-                $payloadData->rewind();
-            }
-            break;
-        }
-
-        return $frame;
-    }
-
-    public function sendWebSocketFrame(WebSocketFrame $frame)
-    {
-        $this->write([
-            $frame->toString(true),
-            $frame->getPayloadDataAsString(),
-        ]);
     }
 
     protected function offline(): void

@@ -11,9 +11,8 @@
 
 declare(strict_types=1);
 
-namespace Swow\Http\Server;
+namespace Swow\Http;
 
-use Swow\Http\Buffer;
 use Swow\WebSocket;
 
 class WebSocketFrame extends WebSocket\Frame

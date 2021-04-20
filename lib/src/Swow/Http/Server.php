@@ -14,7 +14,6 @@ declare(strict_types=1);
 namespace Swow\Http;
 
 use Swow\Http\Server\Session;
-use Swow\Http\Server\WebSocketFrame;
 use Swow\Socket;
 use Swow\Socket\Exception as SocketException;
 
