@@ -39,7 +39,6 @@ extern "C" {
     EG(error_reporting) = error_reporting; \
 } while (0);
 
-extern SWOW_API zend_class_entry *swow_uncatchable_ce;
 extern SWOW_API zend_class_entry *swow_exception_ce;
 extern SWOW_API zend_class_entry *swow_call_exception_ce;
 

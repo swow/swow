@@ -18,28 +18,10 @@
 
 #include "swow_exceptions.h"
 
-SWOW_API zend_class_entry *swow_uncatchable_ce;
 SWOW_API zend_class_entry *swow_exception_ce;
 SWOW_API zend_class_entry *swow_call_exception_ce;
 
 SWOW_API swow_object_create_t swow_exception_create_object;
-
-static user_opcode_handler_t original_zend_catch_handler = NULL;
-
-static int swow_catch_handler(zend_execute_data *execute_data)
-{
-    zend_exception_restore();
-    if (UNEXPECTED(EG(exception))) {
-        if (instanceof_function(EG(exception)->ce, swow_uncatchable_ce)) {
-            return ZEND_USER_OPCODE_RETURN;
-        }
-    }
-    if (UNEXPECTED(original_zend_catch_handler)) {
-        return original_zend_catch_handler(execute_data);
-    }
-
-    return ZEND_USER_OPCODE_DISPATCH;
-}
 
 SWOW_API CAT_COLD void swow_exception_set_properties(zend_object *exception, const char *message, zend_long code)
 {
@@ -106,12 +88,6 @@ static const zend_function_entry swow_call_exception_methods[] = {
 
 int swow_exceptions_module_init(INIT_FUNC_ARGS)
 {
-    swow_uncatchable_ce = swow_register_internal_interface("Swow\\Uncatchable", NULL, NULL);
-
-    /* hook opcode catch */
-    original_zend_catch_handler = zend_get_user_opcode_handler(ZEND_CATCH);
-    zend_set_user_opcode_handler(ZEND_CATCH, swow_catch_handler);
-
     /* Exception for user */
     swow_exception_ce = swow_register_internal_class(
         "Swow\\Exception", spl_ce_RuntimeException, NULL, NULL, NULL, cat_true, cat_true, cat_true, NULL, NULL, 0

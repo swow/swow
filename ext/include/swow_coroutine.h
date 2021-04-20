@@ -48,7 +48,6 @@ extern SWOW_API zend_class_entry *swow_coroutine_exception_ce;
 
 extern SWOW_API zend_class_entry *swow_coroutine_cross_exception_ce;
 extern SWOW_API zend_class_entry *swow_coroutine_term_exception_ce;
-extern SWOW_API zend_class_entry *swow_coroutine_kill_exception_ce;
 
 typedef enum
 {
@@ -285,7 +284,7 @@ SWOW_API void swow_coroutine_dump_all(void);
 /* exceptions */
 SWOW_API cat_bool_t swow_coroutine_throw(swow_coroutine_t *scoroutine, zend_object *exception, zval *retval);
 SWOW_API cat_bool_t swow_coroutine_term(swow_coroutine_t *scoroutine, const char *message, zend_long code, zval *retval);
-SWOW_API cat_bool_t swow_coroutine_kill(swow_coroutine_t *scoroutine, const char *message, zend_long code);
+SWOW_API cat_bool_t swow_coroutine_kill(swow_coroutine_t *scoroutine);
 
 #ifdef __cplusplus
 }

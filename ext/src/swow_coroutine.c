@@ -30,7 +30,12 @@ SWOW_API zend_object_handlers swow_coroutine_handlers;
 SWOW_API zend_class_entry *swow_coroutine_exception_ce;
 SWOW_API zend_class_entry *swow_coroutine_cross_exception_ce;
 SWOW_API zend_class_entry *swow_coroutine_term_exception_ce;
-SWOW_API zend_class_entry *swow_coroutine_kill_exception_ce;
+#if PHP_VERSION_ID < 80000
+/* Internal pseudo-exception that is not exposed to userland. */
+static zend_class_entry swow_coroutine_unwind_exit_ce;
+#endif
+#define SWOW_COROUTINE_UNWIND_EXIT ((zend_object *) -1)
+#define SWOW_COROUTINE_IS_UNWIND_EXIT(exception) (exception == SWOW_COROUTINE_UNWIND_EXIT)
 
 SWOW_API CAT_GLOBALS_DECLARE(swow_coroutine)
 
@@ -50,6 +55,7 @@ static cat_bool_t swow_coroutine_construct(swow_coroutine_t *scoroutine, zval *z
 static void swow_coroutine_shutdown(swow_coroutine_t *scoroutine);
 static void swow_coroutine_handle_cross_exception(zend_object *cross_exception);
 static cat_bool_t swow_coroutine_resume_deny(cat_coroutine_t *coroutine, cat_data_t *data, cat_data_t **retval);
+static ZEND_COLD void swow_coroutine_throw_unwind_exit(void);
 
 static cat_always_inline size_t swow_coroutine_align_stack_page_size(size_t size)
 {
@@ -85,7 +91,7 @@ static void swow_coroutine_dtor_object(zend_object *object)
 
     while (UNEXPECTED(swow_coroutine_is_alive(scoroutine))) {
         /* not finished, should be discard */
-        if (UNEXPECTED(!swow_coroutine_kill(scoroutine, NULL, ~0))) {
+        if (UNEXPECTED(!swow_coroutine_kill(scoroutine))) {
             cat_core_error(COROUTINE, "Kill coroutine failed when destruct object, reason: %s", cat_get_last_error_message());
         }
     }
@@ -116,9 +122,12 @@ static CAT_COLD cat_bool_t swow_coroutine_exception_should_be_silent(zend_object
                 return cat_true;
             }
             return cat_false;
-        } else if (instanceof_function(exception->ce, swow_coroutine_kill_exception_ce)) {
+        }
+#if PHP_VERSION_ID < 80000
+        else if (exception->ce == &swow_coroutine_unwind_exit_ce) {
             return cat_true;
         }
+#endif
         zprevious_exception = zend_read_property_ex(zend_get_exception_base(ZVAL7_OBJECT(exception)), ZVAL7_OBJECT(exception), ZSTR_KNOWN(ZEND_STR_PREVIOUS), 1, &ztmp);
         if (Z_TYPE_P(zprevious_exception) == IS_OBJECT) {
             exception = Z_OBJ_P(zprevious_exception);
@@ -1151,53 +1160,55 @@ SWOW_API void swow_coroutine_dump_all(void)
 
 static void swow_coroutine_handle_cross_exception(zend_object *cross_exception)
 {
-    zend_object *exception;
-    zend_class_entry *ce = cross_exception->ce;
-    zval ztmp;
-
-    /* for throw method success */
-    GC_ADDREF(cross_exception);
-
-    if (UNEXPECTED(EG(exception) != NULL)) {
-        // FIXME: why?
-        if (instanceof_function(ce, swow_coroutine_kill_exception_ce)) {
-            OBJ_RELEASE(EG(exception));
-            EG(exception) = NULL;
-        }
-    }
-    exception = swow_object_create(ce);
-    ZVAL7_ALLOC_OBJECT(exception);
-    ZVAL7_ALLOC_OBJECT(cross_exception);
-    zend_update_property_ex(
-        ce, ZVAL7_OBJECT(exception), ZSTR_KNOWN(ZEND_STR_MESSAGE),
-        zend_read_property_ex(ce, ZVAL7_OBJECT(cross_exception), ZSTR_KNOWN(ZEND_STR_MESSAGE), 1, &ztmp)
-    );
-    zend_update_property_ex(
-        ce, ZVAL7_OBJECT(exception), ZSTR_KNOWN(ZEND_STR_CODE),
-        zend_read_property_ex(ce, ZVAL7_OBJECT(cross_exception), ZSTR_KNOWN(ZEND_STR_CODE), 1, &ztmp)
-    );
-    if (UNEXPECTED(EG(exception) != NULL)) {
-        zend_throw_exception_internal(ZVAL7_OBJECT(cross_exception));
-        zend_throw_exception_internal(ZVAL7_OBJECT(exception));
+    if (SWOW_COROUTINE_IS_UNWIND_EXIT(cross_exception)) {
+        swow_coroutine_throw_unwind_exit();
     } else {
-        zend_exception_set_previous(exception, cross_exception);
-        if (EG(exception) == NULL) {
+        zend_object *exception;
+        zend_class_entry *ce = cross_exception->ce;
+        zval ztmp;
+
+        /* for throw method success */
+        GC_ADDREF(cross_exception);
+        ZVAL7_ALLOC_OBJECT(cross_exception);
+
+        exception = swow_object_create(ce);
+        ZVAL7_ALLOC_OBJECT(exception);
+        zend_update_property_ex(
+            ce, ZVAL7_OBJECT(exception), ZSTR_KNOWN(ZEND_STR_MESSAGE),
+            zend_read_property_ex(ce, ZVAL7_OBJECT(cross_exception), ZSTR_KNOWN(ZEND_STR_MESSAGE), 1, &ztmp)
+        );
+        zend_update_property_ex(
+            ce, ZVAL7_OBJECT(exception), ZSTR_KNOWN(ZEND_STR_CODE),
+            zend_read_property_ex(ce, ZVAL7_OBJECT(cross_exception), ZSTR_KNOWN(ZEND_STR_CODE), 1, &ztmp)
+        );
+        if (UNEXPECTED(EG(exception) != NULL)) {
+            zend_throw_exception_internal(ZVAL7_OBJECT(cross_exception));
             zend_throw_exception_internal(ZVAL7_OBJECT(exception));
+        } else {
+            zend_exception_set_previous(exception, cross_exception);
+            if (EG(exception) == NULL) {
+                zend_throw_exception_internal(ZVAL7_OBJECT(exception));
+            }
         }
     }
 }
 
 SWOW_API cat_bool_t swow_coroutine_throw(swow_coroutine_t *scoroutine, zend_object *exception, zval *retval)
 {
-    if (UNEXPECTED(!instanceof_function(exception->ce, zend_ce_throwable))) {
+    if (!SWOW_COROUTINE_IS_UNWIND_EXIT(exception) &&
+        UNEXPECTED(!instanceof_function(exception->ce, zend_ce_throwable))) {
         cat_update_last_error(CAT_EMISUSE, "Instance of %s is not throwable", ZSTR_VAL(exception->ce->name));
         return cat_false;
     }
 
     if (UNEXPECTED(scoroutine == swow_coroutine_get_current())) {
-        ZVAL7_ALLOC_OBJECT(exception);
-        GC_ADDREF(exception);
-        zend_throw_exception_internal(ZVAL7_OBJECT(exception));
+        if (SWOW_COROUTINE_IS_UNWIND_EXIT(exception)) {
+            swow_coroutine_throw_unwind_exit();
+        } else {
+            ZVAL7_ALLOC_OBJECT(exception);
+            GC_ADDREF(exception);
+            zend_throw_exception_internal(ZVAL7_OBJECT(exception));
+        }
         ZVAL_NULL(retval);
     } else {
         SWOW_COROUTINE_SHOULD_BE_IN_EXECUTING(scoroutine, cat_true, return cat_false);
@@ -1225,70 +1236,31 @@ SWOW_API cat_bool_t swow_coroutine_term(swow_coroutine_t *scoroutine, const char
     return success;
 }
 
-#ifdef SWOW_COROUTINE_USE_RATED
-static cat_data_t swow_coroutine_resume_rated(cat_coroutine_t *coroutine, cat_data_t data)
+static ZEND_COLD void swow_coroutine_throw_unwind_exit(void)
 {
-    swow_coroutine_t *scoroutine = swow_coroutine_get_from_handle(coroutine);
-    swow_coroutine_t *current_scoroutine = swow_coroutine_get_current();
-    swow_coroutine_rated_t *rated = &SWOW_COROUTINE_G(rated);
-
-    /* target + current */
-    if (UNEXPECTED((
-        scoroutine != rated->dead &&
-        scoroutine != rated->killer
-    ) || (
-        current_scoroutine != rated->dead &&
-        current_scoroutine != rated->killer
-    ))) {
-        return swow_coroutine_resume_deny(coroutine, data);
-    }
-
-    return swow_coroutine_resume_standard(coroutine, data);
-}
+#if PHP_VERSION_ID < 80000
+	ZEND_ASSERT(!EG(exception));
+	EG(exception) = zend_objects_new(&swow_coroutine_unwind_exit_ce);
+	EG(opline_before_exception) = EG(current_execute_data)->opline;
+	EG(current_execute_data)->opline = EG(exception_op);
+#else
+    zend_throw_unwind_exit();
 #endif
+}
 
-SWOW_API cat_bool_t swow_coroutine_kill(swow_coroutine_t *scoroutine, const char *message, zend_long code)
+SWOW_API cat_bool_t swow_coroutine_kill(swow_coroutine_t *scoroutine)
 {
-    zend_object *exception;
     cat_bool_t success;
     zval retval;
 
-    exception = swow_object_create(swow_coroutine_kill_exception_ce);
-    swow_exception_set_properties(exception, message, code);
-#ifndef SWOW_COROUTINE_USE_RATED
-    success = swow_coroutine_throw(scoroutine, exception, &retval);
-    OBJ_RELEASE(exception);
+    success = swow_coroutine_throw(scoroutine, SWOW_COROUTINE_UNWIND_EXIT, &retval);
+
     if (!success) {
         return cat_false;
     }
     zval_ptr_dtor(&retval);
 
     return cat_true;
-#else
-    do {
-        swow_coroutine_rated_t *rated = &SWOW_COROUTINE_G(rated);
-        /* prevent coroutines from escaping */
-        cat_coroutine_resume_t original_resume = cat_coroutine_register_resume(swow_coroutine_resume_rated);
-        rated->killer = swow_coroutine_get_current();
-        rated->dead = scoroutine;
-        success = swow_coroutine_throw(scoroutine, exception, &retval);
-        CAT_ASSERT(!SWOW_COROUTINE_G(kill_main));
-        /* revert */
-        cat_coroutine_register_resume(original_resume);
-    } while (0);
-    OBJ_RELEASE(exception);
-    if (UNEXPECTED(!success)) {
-        return cat_false;
-    }
-    if (UNEXPECTED(swow_coroutine_is_running(scoroutine))) {
-        cat_core_error(COROUTINE, "Kill coroutine failed by unknown reason");
-    }
-    if (UNEXPECTED(!ZVAL_IS_NULL(&retval))) {
-        cat_core_error(COROUTINE, "Unexpected return value");
-    }
-
-    return cat_true;
-#endif
 }
 
 #define getThisCoroutine() (swow_coroutine_get_from_object(Z_OBJ_P(ZEND_THIS)))
@@ -1875,9 +1847,9 @@ static PHP_METHOD(Swow_Coroutine, term)
 
 static PHP_METHOD(Swow_Coroutine, kill)
 {
-    SWOW_COROUTINE_MESSAGE_AND_CODE_PARAMETERS_PARSER();
+    ZEND_PARSE_PARAMETERS_NONE();
 
-    if (UNEXPECTED(!swow_coroutine_kill(getThisCoroutine(), message, code))) {
+    if (UNEXPECTED(!swow_coroutine_kill(getThisCoroutine()))) {
         swow_throw_exception_with_last(swow_coroutine_exception_ce);
         RETURN_THROWS();
     }
@@ -2225,6 +2197,27 @@ static void swow_zend_throw_exception_hook(zend7_object *exception)
     }
 }
 
+/* hook catch */
+
+#if PHP_VERSION_ID < 80000
+static user_opcode_handler_t original_zend_catch_handler = NULL;
+
+static int swow_coroutine_catch_handler(zend_execute_data *execute_data)
+{
+    zend_exception_restore();
+    if (UNEXPECTED(EG(exception))) {
+        if (EG(exception)->ce == &swow_coroutine_unwind_exit_ce) {
+            return ZEND_USER_OPCODE_RETURN;
+        }
+    }
+    if (UNEXPECTED(original_zend_catch_handler)) {
+        return original_zend_catch_handler(execute_data);
+    }
+
+    return ZEND_USER_OPCODE_DISPATCH;
+}
+#endif
+
 /* hook exit */
 
 static int swow_coroutine_exit_handler(zend_execute_data *execute_data)
@@ -2265,11 +2258,7 @@ static int swow_coroutine_exit_handler(zend_execute_data *execute_data)
         status = 0;
     }
     if (EG(exception) == NULL) {
-#if PHP_VERSION_ID < 80000
-        zend_throw_exception(swow_coroutine_kill_exception_ce, NULL, 0);
-#else
-        zend_throw_unwind_exit();
-#endif
+        swow_coroutine_throw_unwind_exit();
     }
     if (scoroutine != swow_coroutine_get_main()) {
         scoroutine->exit_status = status;
@@ -2340,10 +2329,14 @@ int swow_coroutine_module_init(INIT_FUNC_ARGS)
     swow_coroutine_term_exception_ce = swow_register_internal_class(
         "Swow\\Coroutine\\TermException", swow_coroutine_cross_exception_ce, NULL, NULL, NULL, cat_true, cat_true, cat_true, NULL, NULL, 0
     );
-    swow_coroutine_kill_exception_ce = swow_register_internal_class(
-        "Swow\\Coroutine\\KillException", swow_coroutine_cross_exception_ce, NULL, NULL, NULL, cat_true, cat_true, cat_true, NULL, NULL, 0
-    );
-    zend_class_implements(swow_coroutine_kill_exception_ce, 1, swow_uncatchable_ce);
+
+#if PHP_VERSION_ID < 80000
+    /* hook opcode catch */
+    original_zend_catch_handler = zend_get_user_opcode_handler(ZEND_CATCH);
+    zend_set_user_opcode_handler(ZEND_CATCH, swow_coroutine_catch_handler);
+    /* same as unwind_exit() */
+	INIT_CLASS_ENTRY(swow_coroutine_unwind_exit_ce, "Swow\\Coroutine\\UnwindExit", NULL);
+#endif
 
     /* hook zend_throw_exception_hook */
     original_zend_throw_exception_hook = zend_throw_exception_hook;
@@ -2411,7 +2404,7 @@ static void swow_coroutines_kill_destructor(zval *zscoroutine)
 {
     swow_coroutine_t *scoroutine = swow_coroutine_get_from_object(Z_OBJ_P(zscoroutine));
     CAT_ASSERT(swow_coroutine_is_alive(scoroutine));
-    if (UNEXPECTED(!swow_coroutine_kill(scoroutine, "Coroutine is forced to kill when the runtime shutdown", ~0))) {
+    if (UNEXPECTED(!swow_coroutine_kill(scoroutine))) {
         cat_core_error(COROUTINE, "Execute kill destructor failed, reason: %s", cat_get_last_error_message());
     }
     swow_coroutine_close(scoroutine);
