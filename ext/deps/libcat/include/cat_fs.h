@@ -72,6 +72,27 @@ typedef uv_file cat_file_t;
 typedef uv_dirent_t cat_dirent_t;
 typedef void cat_dir_t;
 
+#ifdef LOCK_SH
+#define CAT_LOCK_SH LOCK_SH
+#else
+#define CAT_LOCK_SH 0x1
+#endif // LOCK_SH
+#ifdef LOCK_EX
+#define CAT_LOCK_EX LOCK_EX
+#else
+#define CAT_LOCK_EX 0x2
+#endif // LOCK_EX
+#ifdef LOCK_UN
+#define CAT_LOCK_UN LOCK_UN
+#else
+#define CAT_LOCK_UN 0x8
+#endif // LOCK_UN
+#ifdef LOCK_NB
+#define CAT_LOCK_NB LOCK_NB
+#else
+#define CAT_LOCK_NB 0x4
+#endif // LOCK_NB
+
 CAT_API cat_file_t cat_fs_open(const char *path, int flags, ...);
 CAT_API ssize_t cat_fs_pread(cat_file_t fd, void *buffer, size_t size, off_t offset);
 CAT_API ssize_t cat_fs_pwrite(cat_file_t fd, const void *buffer, size_t length, off_t offset);
@@ -121,6 +142,8 @@ CAT_API int cat_fs_sendfile(cat_file_t out_fd, cat_file_t in_fd, int64_t in_offs
 CAT_API const char* cat_fs_mkdtemp(const char* tpl);
 CAT_API cat_file_t cat_fs_mkstemp(const char* tpl);
 CAT_API int cat_fs_statfs(const char* path, cat_statfs_t* buf);
+
+CAT_API int cat_fs_flock(cat_file_t fd, int operation);
 
 #ifdef __cplusplus
 }
