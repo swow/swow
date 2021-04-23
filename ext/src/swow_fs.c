@@ -1534,7 +1534,8 @@ static int swow_stdiop_fs_set_option(php_stream *stream, int option, int value, 
 				case PHP_STREAM_SYNC_FDSYNC:
 					return swow_stdiop_fs_sync(stream, 1) == 0 ? PHP_STREAM_OPTION_RETURN_OK : PHP_STREAM_OPTION_RETURN_ERR;
 			}
-            return PHP_STREAM_OPTION_RETURN_NOTIMPL;
+			/* Invalid option passed */
+			return PHP_STREAM_OPTION_RETURN_ERR;
 #endif
 
         case PHP_STREAM_OPTION_TRUNCATE_API:
@@ -1651,9 +1652,14 @@ static php_stream *swow_plain_files_dir_opener(php_stream_wrapper *wrapper, cons
     cat_dir_t * dir = swow_virtual_opendir(path);
 #ifdef PHP_WIN32
 	if (!dir) {
+# if PHP_VERSION_ID > 80003 || ( PHP_VERSION_ID > 70417 && PHP_VERSION_ID < 80000 )
+        // added in 8.1.x, 8.0.4, 7.4.17
+		php_win32_docref1_from_error(GetLastError(), path);
+# else
 		php_win32_docref2_from_error(GetLastError(), path, path);
+# endif
 	}
-#endif
+#endif // PHP_WIN32
     if (dir) {
         stream = php_stream_alloc(&swow_plain_files_dirstream_ops, dir, 0, mode);
         if (stream == NULL){
