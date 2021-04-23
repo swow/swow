@@ -364,9 +364,9 @@ static void _swow_fs_open_cb(cat_data_t *ptr){
     struct _swow_fs_open_s *data = (struct _swow_fs_open_s *) ptr;
     errno = data->error;
 #ifdef PHP_WIN32
-	data->ret = php_win32_ioutil_open_w(data->pathw, data->flags, data->mode);
+    data->ret = php_win32_ioutil_open_w(data->pathw, data->flags, data->mode);
 #else
-	data->ret = open(data->path, data->flags, data->mode);
+    data->ret = open(data->path, data->flags, data->mode);
 #endif
     data->error = errno;
 }
@@ -374,11 +374,11 @@ static inline int swow_fs_open(const char * path, int flags, ...){
     struct _swow_fs_open_s data = {-1, NULL, flags, 0666, 0};
 #ifdef PHP_WIN32
     size_t pathw_len;
-	data.pathw = php_win32_ioutil_conv_any_to_w(path, PHP_WIN32_CP_IGNORE_LEN, &pathw_len);
-	if (!data.pathw) {
-		SET_ERRNO_FROM_WIN32_CODE(ERROR_INVALID_PARAMETER);
-		return -1;
-	}
+    data.pathw = php_win32_ioutil_conv_any_to_w(path, PHP_WIN32_CP_IGNORE_LEN, &pathw_len);
+    if (!data.pathw) {
+        SET_ERRNO_FROM_WIN32_CODE(ERROR_INVALID_PARAMETER);
+        return -1;
+    }
     if (!PHP_WIN32_IOUTIL_PATH_IS_OK_W(data.pathw, pathw_len)) {
         free((void *)data.pathw);
         SET_ERRNO_FROM_WIN32_CODE(ERROR_ACCESS_DENIED);
@@ -390,12 +390,12 @@ static inline int swow_fs_open(const char * path, int flags, ...){
 #endif
 
     if (flags & CAT_FS_O_CREAT) {
-		va_list arg;
+        va_list arg;
 
-		va_start(arg, flags);
-		data.mode = (mode_t) va_arg(arg, int);
-		va_end(arg);
-	}
+        va_start(arg, flags);
+        data.mode = (mode_t) va_arg(arg, int);
+        va_end(arg);
+    }
 
     data.error = errno;
     if(!cat_work(CAT_WORK_KIND_FAST_IO, _swow_fs_open_cb, &data, CAT_TIMEOUT_FOREVER)){
@@ -425,12 +425,12 @@ struct utimbuf {
 */
 static inline const wchar_t * swow_check_path_w(const char*path){
     PHP_WIN32_IOUTIL_INIT_W(path)
-	if (!pathw) {
-		SET_ERRNO_FROM_WIN32_CODE(ERROR_INVALID_PARAMETER);
+    if (!pathw) {
+        SET_ERRNO_FROM_WIN32_CODE(ERROR_INVALID_PARAMETER);
         cat_update_last_error(CAT_EINVAL, "Bad file name");
         return NULL;
-	}
-	size_t _len = wcslen(pathw);
+    }
+    size_t _len = wcslen(pathw);
     if (!PHP_WIN32_IOUTIL_PATH_IS_OK_W(pathw, _len)) {
         free((void*)pathw);
         SET_ERRNO_FROM_WIN32_CODE(ERROR_ACCESS_DENIED);
@@ -1151,22 +1151,22 @@ static int swow_stdiop_fs_flush(php_stream *stream)
 #ifdef PHP_STREAM_OPTION_SYNC_API
 static int swow_stdiop_fs_sync(php_stream *stream, bool dataonly)
 {
-	swow_stdio_stream_data *data = (swow_stdio_stream_data*)stream->abstract;
-	FILE *fp;
+    swow_stdio_stream_data *data = (swow_stdio_stream_data*)stream->abstract;
+    FILE *fp;
 
-	if (php_stream_cast(stream, PHP_STREAM_AS_STDIO, (void**)&fp, REPORT_ERRORS) == FAILURE) {
-		return -1;
-	}
+    if (php_stream_cast(stream, PHP_STREAM_AS_STDIO, (void**)&fp, REPORT_ERRORS) == FAILURE) {
+        return -1;
+    }
 
-	if (swow_stdiop_fs_flush(stream) == 0) {
-		int fd = data->file ? fileno(data->file) : data->fd;
-		if (dataonly) {
-			return cat_fs_fdatasync(fd);
-		} else {
-			return cat_fs_fsync(fd);
-		}
-	}
-	return -1;
+    if (swow_stdiop_fs_flush(stream) == 0) {
+        int fd = data->file ? fileno(data->file) : data->fd;
+        if (dataonly) {
+            return cat_fs_fdatasync(fd);
+        } else {
+            return cat_fs_fsync(fd);
+        }
+    }
+    return -1;
 }
 #endif
 
@@ -1526,16 +1526,16 @@ static int swow_stdiop_fs_set_option(php_stream *stream, int option, int value, 
 
 #ifdef PHP_STREAM_OPTION_SYNC_API
         case PHP_STREAM_OPTION_SYNC_API:
-			switch (value) {
-				case PHP_STREAM_SYNC_SUPPORTED:
-					return fd == -1 ? PHP_STREAM_OPTION_RETURN_ERR : PHP_STREAM_OPTION_RETURN_OK;
-				case PHP_STREAM_SYNC_FSYNC:
-					return swow_stdiop_fs_sync(stream, 0) == 0 ? PHP_STREAM_OPTION_RETURN_OK : PHP_STREAM_OPTION_RETURN_ERR;
-				case PHP_STREAM_SYNC_FDSYNC:
-					return swow_stdiop_fs_sync(stream, 1) == 0 ? PHP_STREAM_OPTION_RETURN_OK : PHP_STREAM_OPTION_RETURN_ERR;
-			}
-			/* Invalid option passed */
-			return PHP_STREAM_OPTION_RETURN_ERR;
+            switch (value) {
+                case PHP_STREAM_SYNC_SUPPORTED:
+                    return fd == -1 ? PHP_STREAM_OPTION_RETURN_ERR : PHP_STREAM_OPTION_RETURN_OK;
+                case PHP_STREAM_SYNC_FSYNC:
+                    return swow_stdiop_fs_sync(stream, 0) == 0 ? PHP_STREAM_OPTION_RETURN_OK : PHP_STREAM_OPTION_RETURN_ERR;
+                case PHP_STREAM_SYNC_FDSYNC:
+                    return swow_stdiop_fs_sync(stream, 1) == 0 ? PHP_STREAM_OPTION_RETURN_OK : PHP_STREAM_OPTION_RETURN_ERR;
+            }
+            /* Invalid option passed */
+            return PHP_STREAM_OPTION_RETURN_ERR;
 #endif
 
         case PHP_STREAM_OPTION_TRUNCATE_API:
@@ -1651,14 +1651,14 @@ static php_stream *swow_plain_files_dir_opener(php_stream_wrapper *wrapper, cons
 
     cat_dir_t * dir = swow_virtual_opendir(path);
 #ifdef PHP_WIN32
-	if (!dir) {
+    if (!dir) {
 # if PHP_VERSION_ID > 80003 || ( PHP_VERSION_ID > 70417 && PHP_VERSION_ID < 80000 )
         // added in 8.1.x, 8.0.4, 7.4.17
-		php_win32_docref1_from_error(GetLastError(), path);
+        php_win32_docref1_from_error(GetLastError(), path);
 # else
-		php_win32_docref2_from_error(GetLastError(), path, path);
+        php_win32_docref2_from_error(GetLastError(), path, path);
 # endif
-	}
+    }
 #endif // PHP_WIN32
     if (dir) {
         stream = php_stream_alloc(&swow_plain_files_dirstream_ops, dir, 0, mode);
