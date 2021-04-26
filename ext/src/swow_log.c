@@ -44,11 +44,9 @@ static void swow_log_standard(CAT_LOG_PARAMATERS)
         cat_bool_t failed = cat_false;
         switch (type)
         {
-#ifdef CAT_DEBUG
         case CAT_LOG_TYPE_DEBUG:
             type_string = "Debug";
             break;
-#endif
         default:
             type_string = "Info";
         }
