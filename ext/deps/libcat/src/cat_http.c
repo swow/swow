@@ -71,7 +71,7 @@ static int cat_http_parser_on_##name(llhttp_t *llhttp) \
     \
 
 #define CAT_HTTP_PARSER_ON_EVENT_END() \
-    if ((parser->events & parser->event) == parser->event) { \
+    if ((cat_http_parser_event_t) (parser->events & parser->event) == parser->event) { \
         return HPE_PAUSED; \
     } else { \
         return HPE_OK; \
@@ -110,7 +110,7 @@ static int cat_http_parser_on_##name(llhttp_t *llhttp) \
     if (parser->event != CAT_HTTP_PARSER_EVENT_##NAME) { \
         /* first execute, may paused */ \
         parser->event = CAT_HTTP_PARSER_EVENT_##NAME; \
-        if ((parser->events & parser->event) == parser->event) { \
+        if ((cat_http_parser_event_t) (parser->events & parser->event) == parser->event) { \
             return HPE_PAUSED; \
         } \
     } \

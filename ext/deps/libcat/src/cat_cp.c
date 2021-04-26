@@ -89,6 +89,8 @@ CAT_API int nanosleep(const struct timespec *rqtp, struct timespec *rmtp)
         cat_set_sys_errno(WSAEINVAL);
         return -1;
     }
+    rmtp->tv_nsec = 0;
+    rmtp->tv_sec = 0;
     return usleep((unsigned int) (rqtp->tv_sec * 1000000 + rqtp->tv_nsec / 1000));
 }
 #endif

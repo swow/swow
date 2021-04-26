@@ -33,9 +33,9 @@ typedef struct
     int events;
 } cat_poll_one_t;
 
-static cat_always_inline int cat_poll_translate_to_sysno(int uevents)
+static cat_always_inline cat_pollfd_events_t cat_poll_translate_to_sysno(int uevents)
 {
-    int events = 0;
+    cat_pollfd_events_t events = 0;
 
     if (uevents & UV_READABLE) {
         events |= POLLIN;

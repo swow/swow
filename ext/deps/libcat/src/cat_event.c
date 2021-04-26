@@ -119,7 +119,7 @@ CAT_API void cat_event_schedule(void)
     while (1) {
         cat_bool_t alive;
 
-        alive = uv_crun(loop);
+        alive = !!uv_crun(loop);
 
         /* if we have unfinished tasks, continue to loop  */
         alive = cat_event_do_defer_tasks() || alive;

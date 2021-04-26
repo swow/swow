@@ -350,7 +350,7 @@ CAT_API cat_bool_t cat_buffer_make_pair(cat_buffer_t *rbuffer, size_t rsize, cat
 
 CAT_API void cat_buffer_dump(cat_buffer_t *buffer)
 {
-    cat_debug(BUFFER, "Buffer(%p) {\n"
+    cat_info(BUFFER, "Buffer(%p) {\n"
         "    [\"value\"]=>\n"
         "    string(%zu) \"%.*s\"\n"
         "    [\"length\"]=>\n"

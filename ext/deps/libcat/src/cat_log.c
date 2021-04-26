@@ -41,6 +41,7 @@ CAT_API void cat_log_standard(CAT_LOG_PARAMATERS)
     const char *type_string;
     char *message;
     FILE *output;
+    (void) module_type;
 
     do {
         va_list args;
@@ -55,13 +56,11 @@ CAT_API void cat_log_standard(CAT_LOG_PARAMATERS)
 
     switch (type)
     {
-#ifdef CAT_DEBUG
         case CAT_LOG_TYPE_DEBUG : {
             type_string = "Debug";
             output = stdout;
             break;
         }
-#endif
         case CAT_LOG_TYPE_INFO : {
             type_string = "Info";
             output = stdout;
@@ -89,6 +88,7 @@ CAT_API void cat_log_standard(CAT_LOG_PARAMATERS)
         }
         default:
             CAT_NEVER_HERE("Unknown log type");
+            break;
     }
 
     do {

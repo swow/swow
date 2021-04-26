@@ -164,10 +164,10 @@ CAT_API cat_bool_t cat_sockaddr_set_port(cat_sockaddr_t *address, int port)
     switch (address->sa_family)
     {
         case AF_INET:
-            ((cat_sockaddr_in_t *) address)->sin_port = htons(port);
+            ((cat_sockaddr_in_t *) address)->sin_port = htons((uint16_t)port);
             return cat_true;
         case AF_INET6:
-            ((cat_sockaddr_in6_t *) address)->sin6_port = htons(port);
+            ((cat_sockaddr_in6_t *) address)->sin6_port = htons((uint16_t)port);
             return cat_true;
         default:
             cat_update_last_error(CAT_EINVAL, "Socket address family %d does not belong to INET", address->sa_family);
@@ -192,7 +192,7 @@ static int cat_sockaddr__getbyname(cat_sockaddr_t *address, cat_socklen_t *addre
             return CAT_ENAMETOOLONG;
         }
         real_length += offsetof(cat_sockaddr_t, sa_data);
-        if (unlikely(real_length > length)) {
+        if (unlikely(real_length > (size_t)length)) {
             *address_length = (cat_socklen_t) real_length;
             return CAT_ENOSPC;
         }
@@ -1218,7 +1218,7 @@ static cat_bool_t cat_socket__connect(
     CAT_SOCKET_CHECK_INPUT_ADDRESS(address, address_length, return cat_false);
     cat_socket_type_t type = socket->type;
     uv_connect_t *request;
-    int error;
+    int error = 0;
 
     /* only TCP and PIPE need request */
     if (((type & CAT_SOCKET_TYPE_TCP) == CAT_SOCKET_TYPE_TCP) || (type & CAT_SOCKET_TYPE_FLAG_LOCAL)) {
@@ -1323,6 +1323,7 @@ CAT_API cat_bool_t cat_socket_connect_ex(cat_socket_t *socket, const char *name,
     } else {
         address = NULL;
         address_length = 0;
+        is_host_name = cat_false;
     }
 
     ret = cat_socket__connect(socket, isocket, address, address_length, timeout);
@@ -1665,6 +1666,7 @@ typedef struct
 
 static void cat_socket_read_alloc_callback(uv_handle_t *handle, size_t suggested_size, uv_buf_t *buf)
 {
+    (void) suggested_size;
     cat_socket_internal_t *isocket = cat_container_of(handle, cat_socket_internal_t, u.handle);
     cat_socket_read_context_t *context = (cat_socket_read_context_t *) isocket->context.io.read.data.ptr;
 
@@ -1674,6 +1676,7 @@ static void cat_socket_read_alloc_callback(uv_handle_t *handle, size_t suggested
 
 static void cat_socket_read_callback(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf)
 {
+    (void) buf;
     cat_socket_internal_t *isocket = cat_container_of(stream, cat_socket_internal_t, u.stream);
     cat_socket_read_context_t *context = (cat_socket_read_context_t *) isocket->context.io.read.data.ptr;
 
@@ -1713,6 +1716,8 @@ static void cat_socket_read_callback(uv_stream_t *stream, ssize_t nread, const u
 
 static void cat_socket_udp_recv_callback(uv_udp_t *udp, ssize_t nread, const uv_buf_t *buf, const struct sockaddr *address, unsigned flags)
 {
+    (void) buf;
+    (void) flags;
     cat_socket_internal_t *isocket = cat_container_of(udp, cat_socket_internal_t, u.udp);
     cat_socket_read_context_t *context = (cat_socket_read_context_t *) isocket->context.io.read.data.ptr;
 
@@ -2279,6 +2284,7 @@ static cat_always_inline cat_bool_t cat_socket__send(cat_socket_t *socket, const
     if (unlikely((_name == NULL || _name_length == NULL || *_name_length == 0) && _port == NULL)) { \
         _address = NULL; \
         _address##_length = NULL; \
+        _address##_info.length = 0; \
     } else { \
         _address = &_address##_info.address.common; \
         _address##_length = &_address##_info.length; \
@@ -2950,6 +2956,8 @@ CAT_API int cat_socket_get_local_free_port(void)
 
 static void cat_socket_dump_callback(uv_handle_t* handle, void* arg)
 {
+    (void) arg;
+
     cat_socket_t *socket;
     cat_socket_internal_t *isocket;
     cat_socket_fd_t fd;
@@ -2958,7 +2966,8 @@ static void cat_socket_dump_callback(uv_handle_t* handle, void* arg)
     size_t sock_addr_size = sizeof(sock_addr), peer_addr_size = sizeof(peer_addr);
     int sock_port, peer_port;
 
-    switch (handle->type) {
+    // this convert makes MSVC happy (C4061)
+    switch ((int)handle->type) {
         case UV_TCP:
             isocket = cat_container_of(handle, cat_socket_internal_t, u.tcp);
             type_name = "TCP";

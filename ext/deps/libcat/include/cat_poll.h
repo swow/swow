@@ -32,9 +32,11 @@ extern "C" {
 #ifndef CAT_OS_WIN
 typedef struct pollfd cat_pollfd_t;
 typedef nfds_t cat_nfds_t;
+typedef int cat_pollfd_events_t;
 #else
 typedef WSAPOLLFD cat_pollfd_t;
 typedef ULONG cat_nfds_t;
+typedef SHORT cat_pollfd_events_t;
 #endif
 
 #ifndef POLLNONE

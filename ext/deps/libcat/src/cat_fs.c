@@ -515,7 +515,7 @@ typedef struct cat_fs_work_ret_s{
         tb b; \
         tc c; \
     };
-#define CAT_FS_WORK_STRUCT_INIT(name, valname, ...) struct cat_fs_##name##_s valname = {{0}, __VA_ARGS__}
+#define CAT_FS_WORK_STRUCT_INIT(name, valname, ...) struct cat_fs_##name##_s valname = {{{0},{0}}, __VA_ARGS__}
 #define CAT_FS_WORK_CB(name) static void _cat_fs_##name##_cb(struct cat_fs_##name##_s* data)
 #define CAT_FS_WORK_CB_CALL(name) ((void(*)(void*))_cat_fs_##name##_cb)
 
@@ -541,6 +541,7 @@ static inline cat_errno_t cat_fs_set_error_code(cat_fs_error_t *e){
         case CAT_FS_ERROR_CAT_ERRNO:
             errno = cat_orig_errno(e->val.cat_errno);
             return cat_translate_sys_error(errno);
+        case CAT_FS_ERROR_NONE:
         default:
             // never here
             CAT_NEVER_HERE("Strange error type");
@@ -606,7 +607,8 @@ static const char* cat_fs_wcs2mbs(LPCWSTR wcs){
 
 static const char* cat_fs_win_strerror(DWORD le) {
     LPVOID temp_msg;
-    DWORD len_msg = FormatMessageW(
+    //DWORD len_msg = 
+    FormatMessageW(
         FORMAT_MESSAGE_ALLOCATE_BUFFER |
         FORMAT_MESSAGE_FROM_SYSTEM |
         FORMAT_MESSAGE_IGNORE_INSERTS, // flags
@@ -669,6 +671,12 @@ static inline void cat_fs_error_msg_free(cat_fs_error_t *e){
             return;
         case CAT_FS_FREER_FREE:
             free((void*)e->msg);
+            return;
+#ifdef CAT_OS_WIN
+        case CAT_FS_FREER_LOCAL_FREE:
+            // not implemented
+#endif
+        default:
             return;
     }
 }
@@ -854,7 +862,7 @@ typedef struct cat_dir_int_s {
 } cat_dir_int_t;
 
 static HANDLE hntdll = NULL;
-static void cat_fs_proventdll(){
+static void cat_fs_proventdll(void){
     if (NULL != hntdll){
         return;
     }
@@ -865,7 +873,7 @@ static void cat_fs_proventdll(){
 }
 
 static ULONG(*pRtlNtStatusToDosError) (NTSTATUS) = NULL;
-static const char * cat_fs_proveRtlNtStatusToDosError() {
+static const char * cat_fs_proveRtlNtStatusToDosError(void) {
     if (NULL == pRtlNtStatusToDosError) {
         if (NULL == hntdll) {
             cat_fs_proventdll();
@@ -873,7 +881,7 @@ static const char * cat_fs_proveRtlNtStatusToDosError() {
                 return "Cannot open ntdll.dll";
             }
         }
-        pRtlNtStatusToDosError = (LPVOID)GetProcAddress(hntdll, "RtlNtStatusToDosError");
+        pRtlNtStatusToDosError = (ULONG (*)(NTSTATUS))GetProcAddress(hntdll, "RtlNtStatusToDosError");
         if (NULL == pRtlNtStatusToDosError) {
             return "Cannot resolve RtlNtStatusToDosError";
         }
@@ -1010,7 +1018,8 @@ CAT_FS_WORK_CB(readdir){
                 return;
             }
         }
-        pNtQueryDirectoryFile = (LPVOID)GetProcAddress(hntdll, "NtQueryDirectoryFile");
+        pNtQueryDirectoryFile = (NTSTATUS (*)(HANDLE, HANDLE, PVOID, PVOID, PVOID, PVOID, ULONG, FILE_INFORMATION_CLASS, BOOLEAN, PVOID, BOOLEAN))
+            GetProcAddress(hntdll, "NtQueryDirectoryFile");
         if(NULL == pNtQueryDirectoryFile){
             data->ret.error.msg_free = CAT_FS_FREER_NONE;
             data->ret.error.msg = "Cannot find NtQueryDirectoryFile in readdir";
@@ -1140,10 +1149,9 @@ static void cat_fs_orig_flock(struct cat_fs_flock_s*data){
     cat_file_t fd = data->a;
     int cat_op = data->b;
     int *running = data->c;
-    int operation = 0;
-    int op_type = cat_op & (CAT_LOCK_SH | CAT_LOCK_EX | CAT_LOCK_UN);
 #ifdef CAT_OS_WIN
     // Windows implement
+    int op_type = cat_op & (CAT_LOCK_SH | CAT_LOCK_EX | CAT_LOCK_UN);
     HANDLE hFile = (HANDLE)_get_osfhandle(fd);
     if(INVALID_HANDLE_VALUE == hFile){
         data->ret.error.type = CAT_FS_ERROR_ERRNO;
@@ -1208,7 +1216,8 @@ static void cat_fs_orig_flock(struct cat_fs_flock_s*data){
                 data->ret.ret.num = -1;
                 *running = 0;
                 DWORD dummy;
-                BOOL done = GetOverlappedResult(hFile, &overlapped, &dummy, 1);
+                //BOOL done = 
+                GetOverlappedResult(hFile, &overlapped, &dummy, 1);
                 //printf("nb wait done\n");
                 UnlockFileEx(
                     hFile,
@@ -1217,6 +1226,7 @@ static void cat_fs_orig_flock(struct cat_fs_flock_s*data){
                     MAXDWORD,
                     &overlapped
                 );
+                //assert(done);
                 return;
             }
             //printf("b done\n");
@@ -1238,15 +1248,14 @@ static void cat_fs_orig_flock(struct cat_fs_flock_s*data){
         *running = 0;
         return;
     }
-    // never here
-    CAT_NEVER_HERE("impossible");
 #elif defined(LOCK_EX) && defined(LOCK_SH) && defined(LOCK_UN)
     // Linux / BSDs / macOS implement with flock(2)
+    int operation = 0;
 # ifdef LOCK_NB
 #  define FLOCK_HAVE_NB
     operation = cat_op;
 # else
-    operation = op_type;
+    operation = cat_op & (CAT_LOCK_SH | CAT_LOCK_EX | CAT_LOCK_UN);
 # endif // LOCK_NB
     data->ret.ret.num = flock(fd, operation);
     data->ret.error.type = CAT_FS_ERROR_ERRNO;
@@ -1256,6 +1265,7 @@ static void cat_fs_orig_flock(struct cat_fs_flock_s*data){
 #elif defined(F_SETLK) && defined(F_SETLKW) && defined(F_RDLCK) && defined(F_WRLCK) && defined(F_UNLCK)
     // fcntl implement
 # define FLOCK_HAVE_NB
+    int op_type = cat_op & (CAT_LOCK_SH | CAT_LOCK_EX | CAT_LOCK_UN);
     int cmd = (CAT_LOCK_NB == (cat_op & CAT_LOCK_NB)) ? F_SETLK : F_SETLKW;
     struct flock lbuf = {
         .l_whence = SEEK_SET,
@@ -1280,6 +1290,7 @@ static void cat_fs_orig_flock(struct cat_fs_flock_s*data){
     // "POSIX.1 leaves the relationship between lockf() and fcntl(2) locks unspecified"
     // so we assume that some os may have an indepednent lockf implement
 # define FLOCK_HAVE_NB
+    int op_type = cat_op & (CAT_LOCK_SH | CAT_LOCK_EX | CAT_LOCK_UN);
     int cmd;
     if (CAT_LOCK_SH == op_type){
         // fcntl donot have a share flock
@@ -1310,7 +1321,7 @@ static void cat_fs_orig_flock(struct cat_fs_flock_s*data){
     data->ret.error.type = CAT_FS_ERROR_ERRNO;
     data->ret.error.val.error = ENOSYS;
     *running = 0;
-    return -1;
+    return;
 #endif // LOCK_EX...
 }
 

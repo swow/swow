@@ -46,6 +46,11 @@ CAT_API void cat_update_last_error(cat_errno_t code, const char *format, ...)
 
     /* Notice: new message maybe relying on the previous message */
     va_start(args, format);
+    // if format is NULL, update message with standard error message 
+    if (unlikely(format == NULL)) {
+        cat_set_last_error(code, cat_sprintf("%s", cat_strerror(code)));
+        return;
+    }
     message = cat_vsprintf(format, args);
     if (unlikely(message == NULL)) {
         fprintf(stderr, "Sprintf last error message failed" CAT_EOL);

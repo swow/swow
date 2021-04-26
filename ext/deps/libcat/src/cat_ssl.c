@@ -275,6 +275,7 @@ CAT_API void cat_ssl_context_set_verify_depth(cat_ssl_context_t *context, int de
 #ifdef CAT_OS_WIN
 static int cat_ssl_win_cert_verify_callback(X509_STORE_CTX *x509_store_ctx, void *data) /* {{{ */
 {
+    (void) data;
 	PCCERT_CONTEXT cert_ctx = NULL;
 	PCCERT_CHAIN_CONTEXT cert_chain_ctx = NULL;
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
@@ -292,7 +293,7 @@ static int cat_ssl_win_cert_verify_callback(X509_STORE_CTX *x509_store_ctx, void
 
 		der_len = i2d_X509(cert, &der_buf);
 		if (der_len < 0) {
-			unsigned long err_code, e;
+			unsigned long err_code = 0, e;
 			char err_buf[512];
 
 			while ((e = ERR_get_error()) != 0) {
@@ -563,6 +564,7 @@ CAT_API void cat_ssl_close(cat_ssl_t *ssl)
 
 CAT_API cat_bool_t cat_ssl_shutdown(cat_ssl_t *ssl)
 {
+    (void) ssl;
     // FIXME: BIO shutdown
     // if (ssl->flags & CAT_SSL_FLAG_HANDSHAKED) {
         // SSL_shutdown(ssl->connection);
@@ -635,6 +637,7 @@ CAT_API cat_bool_t cat_ssl_set_sni_server_name(cat_ssl_t *ssl, const char *name)
 
 static int cat_ssl_password_callback(char *buf, int length, int verify, void *data)
 {
+    (void) verify;
     cat_ssl_t *ssl = (cat_ssl_t *) data;
 
     if (ssl->passphrase.length < (size_t) length - 1) {
@@ -1179,7 +1182,7 @@ CAT_API char *cat_ssl_get_error_reason(void)
     return errstr;
 }
 
-CAT_API void cat_ssl_update_last_error(cat_errno_t error, char *format, ...)
+CAT_API void cat_ssl_update_last_error(cat_errno_t error, const char *format, ...)
 {
     va_list args;
     char *message, *reason;
@@ -1221,6 +1224,7 @@ static void cat_ssl_clear_error(void)
 
 static void cat_ssl_info_callback(const cat_ssl_connection_t *connection, int where, int ret)
 {
+    (void) ret;
 
 #ifndef SSL_OP_NO_RENEGOTIATION
     if ((where & SSL_CB_HANDSHAKE_START) && SSL_is_server(connection)) {

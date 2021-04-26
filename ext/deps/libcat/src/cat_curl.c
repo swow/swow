@@ -80,9 +80,9 @@ static cat_always_inline int cat_curl_translate_poll_flags_from_sys(int revents)
     return action;
 }
 
-static cat_always_inline int cat_curl_translate_poll_flags_to_sys(int action)
+static cat_always_inline cat_pollfd_events_t cat_curl_translate_poll_flags_to_sys(int action)
 {
-    int events = POLLNONE;
+    cat_pollfd_events_t events = POLLNONE;
 
     if (action != CURL_POLL_REMOVE) {
         if (action != CURL_POLL_IN) {
@@ -126,6 +126,8 @@ static cat_always_inline cat_msec_t cat_curl_timeout_min(cat_msec_t timeout1, ca
 
 static int cat_curl_easy_socket_function(CURL *ch, curl_socket_t sockfd, int action, cat_curl_easy_context_t *context, void *unused)
 {
+    (void) ch;
+    (void) unused;
     cat_debug(EXT, "curl_easy_socket_function(multi=%p, sockfd=%d, action=%s), timeout=%ld",
         context->multi, sockfd, cat_curl_translate_action_name(action), context->timeout);
 
@@ -137,6 +139,7 @@ static int cat_curl_easy_socket_function(CURL *ch, curl_socket_t sockfd, int act
 
 static int cat_curl_easy_timeout_function(CURLM *multi, long timeout, cat_curl_easy_context_t *context)
 {
+    (void) multi;
     cat_debug(EXT, "curl_easy_timeout_function(multi=%p, timeout=%ld)", multi, timeout);
 
     context->timeout = timeout;
@@ -148,6 +151,7 @@ static int cat_curl_multi_socket_function(
     CURL *ch, curl_socket_t sockfd, int action,
     cat_curl_multi_context_t *context, cat_curl_pollfd_t *fd)
 {
+    (void) ch;
     CURLM *multi = context->multi;
 
     cat_debug(EXT, "curl_multi_socket_function(multi=%p, sockfd=%d, action=%s), nfds=%zu, timeout=%ld",
@@ -177,6 +181,7 @@ static int cat_curl_multi_socket_function(
 
 static int cat_curl_multi_timeout_function(CURLM *multi, long timeout, cat_curl_multi_context_t *context)
 {
+    (void) multi;
     cat_debug(EXT, "curl_multi_timeout_function(multi=%p, timeout=%ld)", multi, timeout);
 
     context->timeout = timeout;
@@ -207,8 +212,8 @@ static cat_curl_multi_context_t *cat_curl_multi_create_context(CURLM *multi)
 
     cat_curl_multi_configure(
         multi,
-        cat_curl_multi_socket_function,
-        cat_curl_multi_timeout_function,
+        (void*)cat_curl_multi_socket_function,
+        (void*)cat_curl_multi_timeout_function,
         context
     );
 
@@ -296,8 +301,8 @@ CAT_API CURLcode cat_curl_easy_perform(CURL *ch)
     context.events = POLLNONE;
     cat_curl_multi_configure(
         context.multi,
-        cat_curl_easy_socket_function,
-        cat_curl_easy_timeout_function,
+        (void*)cat_curl_easy_socket_function,
+        (void*)cat_curl_easy_timeout_function,
         &context
     );
     mcode = curl_multi_add_handle(context.multi, ch);

@@ -194,7 +194,7 @@ CAT_API cat_bool_t cat_ssl_decrypt(cat_ssl_t *ssl, char *out, size_t *out_length
 
 /* errors */
 CAT_API char *cat_ssl_get_error_reason(void);
-CAT_API void cat_ssl_update_last_error(cat_errno_t code, char *format, ...);
+CAT_API void cat_ssl_update_last_error(cat_errno_t code, const char *format, ...);
 
 #endif /* CAT_HAVE_OPENSSL */
 #ifdef __cplusplus

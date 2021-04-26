@@ -489,9 +489,13 @@ CAT_API cat_bool_t cat_coroutine_is_resumable(const cat_coroutine_t *coroutine)
         case CAT_COROUTINE_STATE_LOCKED:
             cat_update_last_error(CAT_ELOCKED, "Coroutine is locked");
             return cat_false;
-        default:
+        case CAT_COROUTINE_STATE_INIT:
+        case CAT_COROUTINE_STATE_FINISHED:
+        case CAT_COROUTINE_STATE_DEAD:
             cat_update_last_error(CAT_ESRCH, "Coroutine is not available");
             return cat_false;
+        default:
+            CAT_NEVER_HERE("Bad state");
     }
 
     if (unlikely((coroutine->opcodes & CAT_COROUTINE_OPCODE_WAIT) &&
@@ -688,7 +692,7 @@ CAT_API cat_coroutine_t *cat_coroutine_scheduler_run(cat_coroutine_t *coroutine,
     do {
         cat_coroutine_id_t last_id = CAT_COROUTINE_G(last_id);
         CAT_COROUTINE_G(last_id) = CAT_COROUTINE_SCHEDULER_ID;
-        coroutine = cat_coroutine_create(coroutine, (void *) scheduler);
+        coroutine = cat_coroutine_create(coroutine, (cat_coroutine_function_t) scheduler);
         CAT_COROUTINE_G(last_id) = last_id;
     } while (0);
 

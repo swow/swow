@@ -35,6 +35,7 @@ CAT_API char *cat_env_get_ex(const char *name, char *buffer, size_t *size)
             size_ptr = &alloc_size;
         } else {
             alloc_size = *size;
+            size_ptr = size;
         }
         if (alloc_size <= sizeof(_buffer)) {
             buffer = _buffer;

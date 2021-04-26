@@ -18,12 +18,14 @@
 
 #ifndef CAT_FS_H
 #define CAT_FS_H
-#include <sys/types.h>
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 #include "cat.h"
+#ifndef CAT_OS_WIN
+# include <sys/file.h>
+#endif
 
 #define CAT_FS_COPYFILE_EXCL          UV_FS_COPYFILE_EXCL
 #define CAT_FS_COPYFILE_FICLONE       UV_FS_COPYFILE_FICLONE
