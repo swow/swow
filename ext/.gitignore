@@ -36,7 +36,9 @@ run-tests.php
 /tests/*/*/*
 !/tests/*/*/
 !/tests/*/*.phpt
+!/tests/*/*.inc
 !/tests/*/*/*.phpt
+!/tests/*/*/*.inc
 !/tests/include/*
 !/tests/include/lib/*
 !/tests/runner/*
