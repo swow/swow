@@ -378,7 +378,7 @@ static void swow_coroutine_shutdown(swow_coroutine_t *scoroutine)
     }
 
     /* free zend vm stack */
-    if (EXPECTED(executor->vm_stack != NULL)) {
+    if (UNEXPECTED(executor->vm_stack != NULL)) {
         zend_vm_stack stack = executor->vm_stack;
         do {
             zend_vm_stack prev = stack->prev;
