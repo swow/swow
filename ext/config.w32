@@ -153,7 +153,7 @@ if (PHP_SWOW != 'no') (function(){
         // add (warning) cflags for swow
         ADD_FLAG("CFLAGS_SWOW", "/W3");
         // string formating warings like -Wformat
-        ADD_FLAG("CFLAGS_SWOW", "/w14473 /w14774 /w14775 /w14775 /w14776 /w14777 /w14778");
+        ADD_FLAG("CFLAGS_SWOW", "/w14473 /w14774 /w14775 /w14776 /w14777 /w14778");
         // -Wincompatible-pointer-types-discards-qualifiers like
         ADD_FLAG("CFLAGS_SWOW", "/w14090");
         // -Wuninitialized or -Winit-self like
