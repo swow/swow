@@ -1179,7 +1179,8 @@ int swow_stream_module_init(INIT_FUNC_ARGS)
 
     return SUCCESS;
 }
-
+int swow_unhook_stream_wrapper(const char * name, size_t name_len);
+int swow_rehook_stream_wrappers(void);
 int swow_stream_runtime_init(INIT_FUNC_ARGS)
 {
     php_stream_tcp_socket_factory = zend_hash_str_find_ptr(php_stream_xport_get_hash(), ZEND_STRL("tcp"));
@@ -1226,17 +1227,31 @@ int swow_stream_runtime_init(INIT_FUNC_ARGS)
     if ("tty") {
         /* hook stdio (only tty, and file IO will redirect to the original ops) */
         memcpy(&php_stream_stdio_ops, &swow_stream_stdio_ops, sizeof(php_stream_stdio_ops));
+        memset(swow_stream_tty_sockets, 0, sizeof(swow_stream_tty_sockets));
     }
 
-    memset(swow_stream_tty_sockets, 0, sizeof(swow_stream_tty_sockets));
+    if("phar unhook"){
+        swow_unhook_stream_wrapper("phar", 4);
+    }
 
     return SUCCESS;
 }
 
+void _swow_hook_stdio_ops(void){
+    memcpy(&swow_php_plain_files_wrapper, &php_plain_files_wrapper, sizeof(php_plain_files_wrapper));    
+    memcpy(&php_stream_stdio_ops, &swow_stream_stdio_ops, sizeof(php_stream_stdio_ops));
+}
+void _swow_unhook_stdio_ops(void){
+    memcpy(&php_plain_files_wrapper, &swow_php_plain_files_wrapper, sizeof(php_plain_files_wrapper));
+    memcpy(&php_stream_stdio_ops, &swow_php_stream_stdio_ops, sizeof(php_stream_stdio_ops));
+}
+
 int swow_stream_runtime_shutdown(INIT_FUNC_ARGS)
 {
-    size_t i = 0;
-    for (; i < CAT_ARRAY_SIZE(swow_stream_tty_sockets); i++) {
+    size_t i;
+    swow_rehook_stream_wrappers();
+
+    for (i = 0; i < CAT_ARRAY_SIZE(swow_stream_tty_sockets); i++) {
         cat_socket_t *socket = swow_stream_tty_sockets[i];
         if (socket != NULL && socket != INVALID_TTY_SOCKET) {
             cat_socket_close(socket);
