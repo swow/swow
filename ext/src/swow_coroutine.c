@@ -1428,9 +1428,17 @@ static PHP_METHOD(Swow_Coroutine, getCurrentRound)
 
 static PHP_METHOD(Swow_Coroutine, getElapsed)
 {
+    cat_msec_t elapsed;
+
     ZEND_PARSE_PARAMETERS_NONE();
 
-    RETURN_LONG(cat_coroutine_get_elapsed(&getThisCoroutine()->coroutine));
+    elapsed = cat_coroutine_get_elapsed(&getThisCoroutine()->coroutine);
+
+    if (elapsed > ZEND_LONG_MAX) {
+        RETURN_STR(zend_ulong_to_str(elapsed));
+    }
+
+    RETURN_LONG(elapsed);
 }
 
 #define arginfo_class_Swow_Coroutine_getElapsedAsString arginfo_class_Swow_Coroutine_getString
