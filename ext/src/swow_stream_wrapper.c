@@ -296,13 +296,12 @@ int swow_unhook_stream_wrapper(void){
 * swow_rehook_stream_wrapper: rehook all wrappers
 */
 int swow_rehook_stream_wrappers(void){
-    int ret = 0;
     //printf("free modified %s\n", name);
-    if(SUCCESS != (ret = php_unregister_url_stream_wrapper("phar"))){
+    if(SUCCESS != php_unregister_url_stream_wrapper("phar")){
         //printf("failed unregister %s\n", name);
         return 0;
     }
-    if(SUCCESS != (ret = php_register_url_stream_wrapper("phar", orig_wrapper))){
+    if(SUCCESS != php_register_url_stream_wrapper("phar", orig_wrapper)){
         //printf("failed restore %s\n", name);
         return -1;
     }
