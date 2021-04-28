@@ -1959,16 +1959,23 @@ static HashTable *swow_coroutine_get_gc(ZEND_GET_GC_PARAMATERS)
 #define ZEND_ERROR_CB_LAST_ARG_RELAY message
 #endif
 
-typedef void (*swow_error_cb_t)(int type, const char *error_filename, const uint32_t error_lineno, ZEND_ERROR_CB_LAST_ARG_D);
+#if PHP_VERSION_ID < 80100
+#define ZEND_ERROR_CB_FILENAME_T const char
+#else
+#define ZEND_ERROR_CB_FILENAME_T zend_string
+#endif
+
+typedef void (*swow_error_cb_t)(int type, ZEND_ERROR_CB_FILENAME_T *
+, const uint32_t error_lineno, ZEND_ERROR_CB_LAST_ARG_D);
 
 static swow_error_cb_t original_zend_error_cb;
 
-static void swow_call_original_zend_error_cb(int type, const char *error_filename, const uint32_t error_lineno, ZEND_ERROR_CB_LAST_ARG_D)
+static void swow_call_original_zend_error_cb(int type, ZEND_ERROR_CB_FILENAME_T *error_filename, const uint32_t error_lineno, ZEND_ERROR_CB_LAST_ARG_D)
 {
     original_zend_error_cb(type, error_filename, error_lineno, ZEND_ERROR_CB_LAST_ARG_RELAY);
 }
 
-static void swow_call_original_zend_error_cb_safe(int type, const char *error_filename, const uint32_t error_lineno, ZEND_ERROR_CB_LAST_ARG_D)
+static void swow_call_original_zend_error_cb_safe(int type, ZEND_ERROR_CB_FILENAME_T *error_filename, const uint32_t error_lineno, ZEND_ERROR_CB_LAST_ARG_D)
 {
     zend_try {
         original_zend_error_cb(type, error_filename, error_lineno, ZEND_ERROR_CB_LAST_ARG_RELAY);
@@ -1978,7 +1985,7 @@ static void swow_call_original_zend_error_cb_safe(int type, const char *error_fi
     } zend_end_try();
 }
 
-static void swow_coroutine_error_cb(int type, const char *error_filename, const uint32_t error_lineno, ZEND_ERROR_CB_LAST_ARG_D)
+static void swow_coroutine_error_cb(int type, ZEND_ERROR_CB_FILENAME_T *error_filename, const uint32_t error_lineno, ZEND_ERROR_CB_LAST_ARG_D)
 {
     swow_coroutine_t *current_scoroutine = swow_coroutine_get_current();
     swow_coroutine_t *main_scoroutine = swow_coroutine_get_main();
