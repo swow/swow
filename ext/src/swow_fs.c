@@ -1681,8 +1681,7 @@ static php_stream *swow_plain_files_dir_opener(php_stream_wrapper *wrapper, cons
     cat_dir_t * dir = swow_virtual_opendir(path);
 #ifdef PHP_WIN32
     if (!dir) {
-# if PHP_VERSION_ID > 80003 || ( PHP_VERSION_ID > 70417 && PHP_VERSION_ID < 80000 )
-        // added in 8.1.x, 8.0.4, 7.4.17
+# if PHP_VERSION_ID >= 80100
         php_win32_docref1_from_error(GetLastError(), path);
 # else
         php_win32_docref2_from_error(GetLastError(), path, path);
