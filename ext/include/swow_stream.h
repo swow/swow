@@ -23,6 +23,7 @@ extern "C" {
 #endif
 
 #include "swow.h"
+#include "cat_socket.h"
 
 #if defined(PHP_WIN32) || defined(__riscos__)
 #undef AF_UNIX
@@ -40,6 +41,17 @@ extern SWOW_API const php_stream_ops swow_stream_udg_socket_ops;
 int swow_stream_module_init(INIT_FUNC_ARGS);
 int swow_stream_runtime_init(INIT_FUNC_ARGS);
 int swow_stream_runtime_shutdown(INIT_FUNC_ARGS);
+int swow_stream_module_shutdown(INIT_FUNC_ARGS);
+
+CAT_GLOBALS_STRUCT_BEGIN(swow_stream)
+    cat_bool_t hooking_stdio_ops;
+    cat_bool_t hooking_plain_wrapper;
+    cat_socket_t *tty_sockets[3];
+CAT_GLOBALS_STRUCT_END(swow_stream)
+
+extern CAT_GLOBALS_DECLARE(swow_stream)
+
+#define SWOW_STREAM_G(x) CAT_GLOBALS_GET(swow_stream, x)
 
 #ifdef __cplusplus
 }
