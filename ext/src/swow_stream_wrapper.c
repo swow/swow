@@ -138,7 +138,7 @@ static inline void swow_modify_stream_ops(php_stream* ps){
 // stream ops proxies
 static php_stream* swow_proxy_stream_opener(
     php_stream_wrapper *wrapper, const char *filename, const char *mode,
-	int options, zend_string **opened_path, php_stream_context *context STREAMS_DC) {
+	int options, zend_string **opened_path, php_stream_context *context STREAMS_DC){
     //printf("wrapper is %p, orig is %p\n", wrapper, wrapper->abstract);
     //printf("opener real wrapper is %p\n", orig_wrapper);
     SWOW_UNHOOK(ZEND_ASSERT(orig_wrapper););
