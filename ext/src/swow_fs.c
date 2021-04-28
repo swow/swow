@@ -1707,7 +1707,7 @@ SWOW_API  php_stream *_swow_stream_fopen(const char *filename, const char *mode,
 {
     zend_bool open_for_include = options & STREAM_OPEN_FOR_INCLUDE;
     /** phar_open_archive_fp, cannot use async-io */
-    /*
+    
     if (!open_for_include && EG(current_execute_data) && EG(current_execute_data)->func &&
         ZEND_USER_CODE(EG(current_execute_data)->func->type)) {
         const zend_op *opline = EG(current_execute_data)->opline;
@@ -1715,12 +1715,11 @@ SWOW_API  php_stream *_swow_stream_fopen(const char *filename, const char *mode,
             (opline->extended_value & (ZEND_INCLUDE | ZEND_INCLUDE_ONCE | ZEND_REQUIRE | ZEND_REQUIRE_ONCE))) {
             size_t filename_len = strlen(filename);
             size_t phar_len = sizeof(".phar") - 1;
-            if (filename_len > phar_len && memcmp(filename + filename_len - phar_len, ".phar", phar_len) == 0) {
+            //if (filename_len > phar_len && memcmp(filename + filename_len - phar_len, ".phar", phar_len) == 0) {
                 open_for_include = 1;
-            }
+            //}
         }
     }
-    */
     /* OPEN_FOR_INCLUDE must be blocking */
     if (open_for_include) {
         php_stream *stream = _php_stream_fopen(filename, mode, opened_path, options STREAMS_REL_CC);
