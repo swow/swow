@@ -1389,8 +1389,6 @@ int swow_stream_runtime_init(INIT_FUNC_ARGS)
 {
     SWOW_STREAM_G(hooking_stdio_ops) = cat_true;
     SWOW_STREAM_G(hooking_plain_wrapper) = cat_true;
-    //SWOW_STREAM_G(hooking_stdio_ops) = cat_false;
-    //SWOW_STREAM_G(hooking_plain_wrapper) = cat_false;
     return SUCCESS;
 }
 
