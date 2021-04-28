@@ -1012,8 +1012,6 @@ typedef struct {
     int fd;
 } php_stdio_stream_data;
 
-static php_stream_ops swow_php_stream_stdio_ops_orig;
-
 static cat_socket_t *swow_stream_stdio_init(php_stream *stream)
 {
     php_stdio_stream_data *data = (php_stdio_stream_data *) stream->abstract;
@@ -1049,7 +1047,7 @@ extern SWOW_API php_stream_ops swow_stream_stdio_ops_sync; // in swow_fs.c
 // our modified async stream operators
 extern SWOW_API const php_stream_ops swow_stream_stdio_ops_async; // in swow_fs.c
 // orginal plain wrapper holder
-SWOW_API static php_stream_wrapper swow_plain_files_wrapper_sync;
+SWOW_API php_stream_wrapper swow_plain_files_wrapper_sync;
 // our modified async stream wrapper
 extern SWOW_API const php_stream_wrapper swow_plain_files_wrapper_async; // in swow_fs.c
 
@@ -1164,10 +1162,10 @@ static php_stream* swow_plain_files_proxy_stream_opener(
     if (!SWOW_STREAM_G(hooking_plain_wrapper)){
         // we are not hooking plain wrapper ops
         return swow_plain_files_wrapper_sync.wops->stream_opener(wrapper,
-        filename, mode, options, opened_path, context, STREAMS_REL_C);
+        filename, mode, options, opened_path, context STREAMS_REL_CC);
     }
     return swow_plain_files_wrapper_async.wops->stream_opener(wrapper,
-        filename, mode, options, opened_path, context, STREAMS_REL_C);
+        filename, mode, options, opened_path, context STREAMS_REL_CC);
 }
 
 /*
@@ -1205,10 +1203,10 @@ static php_stream *swow_plain_files_proxy_dir_opener(
     if (!SWOW_STREAM_G(hooking_plain_wrapper)){
         // we are not hooking plain wrapper ops
         return swow_plain_files_wrapper_sync.wops->dir_opener(
-            wrapper, filename, mode,options, opened_path, context, STREAMS_REL_C);
+            wrapper, filename, mode,options, opened_path, context STREAMS_REL_CC);
     }
     return swow_plain_files_wrapper_async.wops->dir_opener(
-        wrapper, filename, mode,options, opened_path, context, STREAMS_REL_C);
+        wrapper, filename, mode,options, opened_path, context STREAMS_REL_CC);
 }
 
 static int swow_plain_files_proxy_unlink(php_stream_wrapper *wrapper, const char *url, int options,
@@ -1334,7 +1332,7 @@ static const zend_function_entry swow_stream_functions[] = {
 };
 
 // stream initializer / finalizers
-int swow_unhook_stream_wrapper(const char * name, size_t name_len); // in swow_stream_wrapper.c
+int swow_unhook_stream_wrapper(void); // in swow_stream_wrapper.c
 int swow_stream_module_init(INIT_FUNC_ARGS)
 {
     CAT_GLOBALS_REGISTER(swow_stream, CAT_GLOBALS_CTOR(swow_stream), NULL);
@@ -1381,7 +1379,7 @@ int swow_stream_module_init(INIT_FUNC_ARGS)
     memset(SWOW_STREAM_G(tty_sockets), 0, sizeof(SWOW_STREAM_G(tty_sockets)));
 
     if("phar unhook"){
-        swow_unhook_stream_wrapper("phar", 4);
+        swow_unhook_stream_wrapper();
     }
 
     return SUCCESS;
