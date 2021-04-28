@@ -19,7 +19,7 @@
 /*
 * swow_stream_wrapper.c: stream_wrapper unhooker
 * this file implements a way to take use of synchronous fs io operations
-* in php phar stream wrapper
+* in php phar stream wrapper to support ie
 */
 
 #include "swow.h"
