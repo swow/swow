@@ -16,6 +16,8 @@ if(false === strpos($loaded, "Swow")){
     }
 }
 ?>
+--INI--
+phar.readonly=0
 --FILE--
 <?php
 
