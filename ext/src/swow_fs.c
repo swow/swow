@@ -34,7 +34,7 @@
 #include "cat_fs.h"
 #include "cat_work.h"
 
-// from php-src: 13e4ce386bb7257dbbe3167b070382ea959ec763
+// from main/streams/plain_wrapper.c @ 7aba6de1d02e445ce4a6088c2af4ce327bd67bd6
 
 #include "php.h"
 #include "php_globals.h"
@@ -123,8 +123,6 @@ extern int php_get_gid_by_name(const char *name, gid_t *gid);
 
 #if defined(PHP_WIN32)
 # define PLAIN_WRAP_BUF_SIZE(st) (((st) > UINT_MAX) ? UINT_MAX : (unsigned int)(st))
-#define fsync _commit
-#define fdatasync fsync
 #else
 # define PLAIN_WRAP_BUF_SIZE(st) (st)
 #endif
@@ -288,7 +286,7 @@ static inline int swow_fs_stat_mock(const char* path, zend_stat_t *statbuf, int 
 }
 #undef COPY_MEMBER
 
-// from win32/winutils.c @ a08a2b48b489572db89940027206020ee714afa5
+// from win32/winutil.c @ a08a2b48b489572db89940027206020ee714afa5
 #ifdef PHP_WIN32
 static int swow_win32_check_trailing_space(const char * path, const size_t path_len)
 {
