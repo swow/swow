@@ -1712,11 +1712,7 @@ SWOW_API  php_stream *_swow_stream_fopen(const char *filename, const char *mode,
         const zend_op *opline = EG(current_execute_data)->opline;
         if (opline && opline->opcode == ZEND_INCLUDE_OR_EVAL &&
             (opline->extended_value & (ZEND_INCLUDE | ZEND_INCLUDE_ONCE | ZEND_REQUIRE | ZEND_REQUIRE_ONCE))) {
-            size_t filename_len = strlen(filename);
-            size_t phar_len = sizeof(".phar") - 1;
-            if (filename_len > phar_len && memcmp(filename + filename_len - phar_len, ".phar", phar_len) == 0) {
-                open_for_include = 1;
-            }
+            open_for_include = 1;
         }
     }
     /* OPEN_FOR_INCLUDE must be blocking */
