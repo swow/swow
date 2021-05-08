@@ -3,14 +3,12 @@ swow_fs: flock basic functionality
 --SKIPIF--
 <?php
 require __DIR__ . '/../include/skipif.php';
-$ext_enable = "";
-$loaded = shell_exec(PHP_BINARY . " -m");
-if(false === strpos($loaded, "Swow")){
-    $loaded = shell_exec(PHP_BINARY . " -dextension=swow -ri swow -r \"\" ");
-    var_dump($loaded);
+$loaded1 = shell_exec(PHP_BINARY . " -m");
+if(false === strpos($loaded1, "Swow")){
+    $loaded2 = shell_exec(PHP_BINARY . " -dextension=swow --ri swow");
     if(
-        false === strpos($loaded, "Swow") ||
-        false !== strpos($loaded, "Warning")
+        false === strpos($loaded2, "Swow") ||
+        false !== strpos($loaded2, "Warning")
     ){
         skip("Swow is not present in TEST_PHP_EXECUTABLE and cannot load it via -dextension=swow", true);
     }
@@ -44,7 +42,7 @@ $fd = fopen(TEST_LOCKNAME, "w+");
 // create child
 $ext_enable = " ";
 $loaded = shell_exec(PHP_BINARY . " -m");
-if(strpos($loaded, "Swow") < 0){
+if(false === strpos($loaded, "Swow")){
     $ext_enable = " -dextension=swow ";
 }
 $p = popen(PHP_BINARY . $ext_enable . __DIR__ . DIRECTORY_SEPARATOR ."flockchild.inc " . SOCK_NAME, "w");

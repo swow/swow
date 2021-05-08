@@ -1607,7 +1607,7 @@ static int swow_stdiop_fs_set_option(php_stream *stream, int option, int value, 
     }
 }
 
-SWOW_API const php_stream_ops swow_stream_stdio_fs_ops = {
+SWOW_API const php_stream_ops swow_stream_stdio_ops_async = {
     swow_stdiop_fs_write, swow_stdiop_fs_read,
     swow_stdiop_fs_close, swow_stdiop_fs_flush,
     "STDIO",
@@ -1653,7 +1653,7 @@ static int swow_plain_files_dirstream_rewind(php_stream *stream, zend_off_t offs
     return 0;
 }
 
-static const php_stream_ops swow_plain_files_dirstream_ops = {
+static const php_stream_ops swow_plain_files_dirstream_ops_async = {
     NULL, swow_plain_files_dirstream_read,
     swow_plain_files_dirstream_close, NULL,
     "dir",
@@ -1689,7 +1689,7 @@ static php_stream *swow_plain_files_dir_opener(php_stream_wrapper *wrapper, cons
     }
 #endif // PHP_WIN32
     if (dir) {
-        stream = php_stream_alloc(&swow_plain_files_dirstream_ops, dir, 0, mode);
+        stream = php_stream_alloc(&swow_plain_files_dirstream_ops_async, dir, 0, mode);
         if (stream == NULL){
             cat_fs_closedir(dir);
             UPDATE_ERRNO_FROM_CAT();
@@ -1700,13 +1700,14 @@ static php_stream *swow_plain_files_dir_opener(php_stream_wrapper *wrapper, cons
 }
 /* }}} */
 
-SWOW_API php_stream_ops swow_php_stream_stdio_ops;
+SWOW_API php_stream_ops swow_stream_stdio_ops_sync;
 
 /* {{{ php_stream_fopen */
 SWOW_API  php_stream *_swow_stream_fopen(const char *filename, const char *mode, zend_string **opened_path, int options STREAMS_DC)
 {
     zend_bool open_for_include = options & STREAM_OPEN_FOR_INCLUDE;
     /** phar_open_archive_fp, cannot use async-io */
+    
     if (!open_for_include && EG(current_execute_data) && EG(current_execute_data)->func &&
         ZEND_USER_CODE(EG(current_execute_data)->func->type)) {
         const zend_op *opline = EG(current_execute_data)->opline;
@@ -1719,7 +1720,7 @@ SWOW_API  php_stream *_swow_stream_fopen(const char *filename, const char *mode,
     if (open_for_include) {
         php_stream *stream = _php_stream_fopen(filename, mode, opened_path, options STREAMS_REL_CC);
         if (stream != NULL) {
-            stream->ops = &swow_php_stream_stdio_ops;
+            stream->ops = &swow_stream_stdio_ops_sync;
         }
         return stream;
     }
@@ -2192,7 +2193,7 @@ static int swow_plain_files_metadata(php_stream_wrapper *wrapper, const char *ur
     return 1;
 }
 
-static const php_stream_wrapper_ops swow_plain_files_wrapper_ops = {
+static const php_stream_wrapper_ops swow_plain_files_wrapper_ops_async = {
     swow_plain_files_stream_opener,
     NULL,
     NULL,
@@ -2206,8 +2207,8 @@ static const php_stream_wrapper_ops swow_plain_files_wrapper_ops = {
     swow_plain_files_metadata
 };
 
-SWOW_API const php_stream_wrapper swow_plain_files_wrapper = {
-    &swow_plain_files_wrapper_ops,
+SWOW_API const php_stream_wrapper swow_plain_files_wrapper_async = {
+    &swow_plain_files_wrapper_ops_async,
     NULL,
     0
 };

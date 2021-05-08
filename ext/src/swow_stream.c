@@ -32,6 +32,10 @@
 #include <sys/un.h>
 #endif
 
+CAT_GLOBALS_DECLARE(swow_stream)
+
+CAT_GLOBALS_CTOR_DECLARE_SZ(swow_stream)
+
 /* $Id: f078bca729f4ab1bc2d60370e83bfa561f86b88d $ */
 
 #if PHP_VERSION_ID < 70400
@@ -1008,9 +1012,6 @@ typedef struct {
     int fd;
 } php_stdio_stream_data;
 
-static const php_stream_ops *swow_php_stream_stdio_ops_ptr;
-static cat_socket_t *swow_stream_tty_sockets[3];
-
 static cat_socket_t *swow_stream_stdio_init(php_stream *stream)
 {
     php_stdio_stream_data *data = (php_stdio_stream_data *) stream->abstract;
@@ -1021,7 +1022,7 @@ static cat_socket_t *swow_stream_stdio_init(php_stream *stream)
         return NULL;
     }
 
-    socket = swow_stream_tty_sockets[fd];
+    socket = SWOW_STREAM_G(tty_sockets)[fd];
 
     if (unlikely(socket == INVALID_TTY_SOCKET)) {
         return NULL;
@@ -1031,33 +1032,54 @@ static cat_socket_t *swow_stream_stdio_init(php_stream *stream)
         /* convert int to SOCKET on Windows, and internal will parse it as int */
         socket = cat_socket_create_ex(NULL, CAT_SOCKET_TYPE_TTY, (cat_socket_fd_t) fd);
         if (unlikely(socket == NULL)) {
-            swow_stream_tty_sockets[fd] = INVALID_TTY_SOCKET;
+            SWOW_STREAM_G(tty_sockets)[fd] = INVALID_TTY_SOCKET;
             return NULL;
         }
-        swow_stream_tty_sockets[fd] = socket;
+        SWOW_STREAM_G(tty_sockets)[fd] = socket;
     }
 
     return socket;
 }
 
-static bytes_t swow_stream_stdio_read(php_stream *stream, char *buffer, size_t size)
-{
-    cat_socket_t *socket = swow_stream_stdio_init(stream);
+// stream ops things
+// original standard stream operators holder
+extern SWOW_API php_stream_ops swow_stream_stdio_ops_sync; // in swow_fs.c
+// our modified async stream operators
+extern SWOW_API const php_stream_ops swow_stream_stdio_ops_async; // in swow_fs.c
+// orginal plain wrapper holder
+SWOW_API php_stream_wrapper swow_plain_files_wrapper_sync;
+// our modified async stream wrapper
+extern SWOW_API const php_stream_wrapper swow_plain_files_wrapper_async; // in swow_fs.c
 
-    if (socket == NULL) {
-        return swow_php_stream_stdio_ops_ptr->read(stream, buffer, size);
+// plain stream operators proxies
+static bytes_t swow_stream_stdio_proxy_read(php_stream *stream, char *buffer, size_t size)
+{
+    cat_socket_t *socket;
+
+    if (!SWOW_STREAM_G(hooking_stdio_ops)) {
+        // we are not hooking stdio ops
+        return swow_stream_stdio_ops_sync.read(stream, buffer, size);
+    }
+    if (NULL == (socket = swow_stream_stdio_init(stream))) {
+        // this is not a socket
+        return swow_stream_stdio_ops_async.read(stream, buffer, size);
     }
 
     return cat_socket_recv(socket, buffer, size);
 }
 
-static bytes_t swow_stream_stdio_write(php_stream *stream, const char *buffer, size_t length)
+static bytes_t swow_stream_stdio_proxy_write(php_stream *stream, const char *buffer, size_t length)
 {
     cat_socket_t *socket = swow_stream_stdio_init(stream);
     cat_bool_t ret;
 
-    if (socket == NULL) {
-        return swow_php_stream_stdio_ops_ptr->write(stream, buffer, length);
+    if (!SWOW_STREAM_G(hooking_stdio_ops)) {
+        // we are not hooking stdio ops
+        return swow_stream_stdio_ops_sync.write(stream, buffer, length);
+    }
+    if (NULL == (socket = swow_stream_stdio_init(stream))) {
+        // this is not a socket
+        return swow_stream_stdio_ops_async.write(stream, buffer, length);
     }
 
     ret = cat_socket_send(socket, buffer, length);
@@ -1069,45 +1091,188 @@ static bytes_t swow_stream_stdio_write(php_stream *stream, const char *buffer, s
     return length;
 }
 
-static int swow_stream_stdio_close(php_stream *stream, int close_handle)
+static int swow_stream_stdio_proxy_close(php_stream *stream, int close_handle)
 {
-    return swow_php_stream_stdio_ops_ptr->close(stream, close_handle);
+    if (!SWOW_STREAM_G(hooking_stdio_ops)) {
+        // we are not hooking stdio ops
+        return swow_stream_stdio_ops_sync.close(stream, close_handle);
+    }
+    return swow_stream_stdio_ops_async.close(stream, close_handle);
 }
 
-static int swow_stream_stdio_flush(php_stream *stream)
+static int swow_stream_stdio_proxy_flush(php_stream *stream)
 {
-    return swow_php_stream_stdio_ops_ptr->flush(stream);
+    if (!SWOW_STREAM_G(hooking_stdio_ops)) {
+        // we are not hooking stdio ops
+        return swow_stream_stdio_ops_sync.flush(stream);
+    }
+    return swow_stream_stdio_ops_async.flush(stream);
 }
 
-static int swow_stream_stdio_seek(php_stream *stream, zend_off_t offset, int whence, zend_off_t *newoffset)
+static int swow_stream_stdio_proxy_seek(php_stream *stream, zend_off_t offset, int whence, zend_off_t *newoffset)
 {
-    return swow_php_stream_stdio_ops_ptr->seek(stream, offset, whence, newoffset);
+    if (!SWOW_STREAM_G(hooking_stdio_ops)) {
+        // we are not hooking stdio ops
+        return swow_stream_stdio_ops_sync.seek(stream, offset, whence, newoffset);
+    }
+    return swow_stream_stdio_ops_async.seek(stream, offset, whence, newoffset);
 }
 
-static int swow_stream_stdio_cast(php_stream *stream, int castas, void **ret)
+static int swow_stream_stdio_proxy_cast(php_stream *stream, int castas, void **ret)
 {
-    return swow_php_stream_stdio_ops_ptr->cast(stream, castas, ret);
+    if (!SWOW_STREAM_G(hooking_stdio_ops)) {
+        // we are not hooking stdio ops
+        return swow_stream_stdio_ops_sync.cast(stream, castas, ret);
+    }
+    return swow_stream_stdio_ops_async.cast(stream, castas, ret);
 }
 
-static int swow_stream_stdio_stat(php_stream *stream, php_stream_statbuf *ssb)
+static int swow_stream_stdio_proxy_stat(php_stream *stream, php_stream_statbuf *ssb)
 {
-    return swow_php_stream_stdio_ops_ptr->stat(stream, ssb);
+    if (!SWOW_STREAM_G(hooking_stdio_ops)) {
+        // we are not hooking stdio ops
+        return swow_stream_stdio_ops_sync.stat(stream, ssb);
+    }
+    return swow_stream_stdio_ops_async.stat(stream, ssb);
 }
 
-static int swow_stream_stdio_set_option(php_stream *stream, int option, int value, void *ptrparam)
+static int swow_stream_stdio_proxy_set_option(php_stream *stream, int option, int value, void *ptrparam)
 {
-    return swow_php_stream_stdio_ops_ptr->set_option(stream, option, value, ptrparam);
+    if (!SWOW_STREAM_G(hooking_stdio_ops)) {
+        // we are not hooking stdio ops
+        return swow_stream_stdio_ops_sync.set_option(stream, option, value, ptrparam);
+    }
+    return swow_stream_stdio_ops_async.set_option(stream, option, value, ptrparam);
 }
 
-SWOW_API const php_stream_ops swow_stream_stdio_ops = {
-    swow_stream_stdio_write, swow_stream_stdio_read,
-    swow_stream_stdio_close, swow_stream_stdio_flush,
+SWOW_API const php_stream_ops swow_stream_stdio_ops_proxy = {
+    swow_stream_stdio_proxy_write, swow_stream_stdio_proxy_read,
+    swow_stream_stdio_proxy_close, swow_stream_stdio_proxy_flush,
     "STDIO",
-    swow_stream_stdio_seek,
-    swow_stream_stdio_cast,
-    swow_stream_stdio_stat,
-    swow_stream_stdio_set_option,
+    swow_stream_stdio_proxy_seek,
+    swow_stream_stdio_proxy_cast,
+    swow_stream_stdio_proxy_stat,
+    swow_stream_stdio_proxy_set_option,
 };
+
+// plain wrapper proxies
+static php_stream* swow_plain_files_proxy_stream_opener(
+    php_stream_wrapper *wrapper, const char *filename, const char *mode,
+	int options, zend_string **opened_path, php_stream_context *context STREAMS_DC) {
+    if (!SWOW_STREAM_G(hooking_plain_wrapper)) {
+        // we are not hooking plain wrapper ops
+        return swow_plain_files_wrapper_sync.wops->stream_opener(wrapper,
+        filename, mode, options, opened_path, context STREAMS_REL_CC);
+    }
+    return swow_plain_files_wrapper_async.wops->stream_opener(wrapper,
+        filename, mode, options, opened_path, context STREAMS_REL_CC);
+}
+
+/*
+// these two proxies is not used
+static int swow_plain_files_proxy_stream_closer(php_stream_wrapper *wrapper, php_stream *stream) {
+    if (!SWOW_STREAM_G(hooking_plain_wrapper)) {
+        // we are not hooking plain wrapper ops
+        return swow_plain_files_wrapper_sync.wops->stream_closer(wrapper, stream);
+    }
+    return swow_plain_files_wrapper_async.wops->stream_closer(wrapper, stream);
+}
+
+static int swow_plain_files_proxy_stream_stat(php_stream_wrapper *wrapper, php_stream *stream,
+    php_stream_statbuf *ssb) {
+    if (!SWOW_STREAM_G(hooking_plain_wrapper)) {
+        // we are not hooking plain wrapper ops
+        return swow_plain_files_wrapper_sync.wops->stream_stat(wrapper, stream, ssb);
+    }
+    return swow_plain_files_wrapper_async.wops->stream_stat(wrapper, stream, ssb);
+}
+*/
+
+static int swow_plain_files_proxy_url_stat(php_stream_wrapper *wrapper,
+    const char *url, int flags, php_stream_statbuf *ssb,php_stream_context *context) {
+    if (!SWOW_STREAM_G(hooking_plain_wrapper)) {
+        // we are not hooking plain wrapper ops
+        return swow_plain_files_wrapper_sync.wops->url_stat(wrapper, url, flags, ssb, context);
+    }
+    return swow_plain_files_wrapper_async.wops->url_stat(wrapper, url, flags, ssb, context);
+}
+
+static php_stream *swow_plain_files_proxy_dir_opener(
+    php_stream_wrapper *wrapper, const char *filename, const char *mode,
+    int options, zend_string **opened_path, php_stream_context *context STREAMS_DC) {
+    if (!SWOW_STREAM_G(hooking_plain_wrapper)) {
+        // we are not hooking plain wrapper ops
+        return swow_plain_files_wrapper_sync.wops->dir_opener(
+            wrapper, filename, mode,options, opened_path, context STREAMS_REL_CC);
+    }
+    return swow_plain_files_wrapper_async.wops->dir_opener(
+        wrapper, filename, mode,options, opened_path, context STREAMS_REL_CC);
+}
+
+static int swow_plain_files_proxy_unlink(php_stream_wrapper *wrapper, const char *url, int options,
+    php_stream_context *context) {
+    if (!SWOW_STREAM_G(hooking_plain_wrapper)) {
+        // we are not hooking plain wrapper ops
+        return swow_plain_files_wrapper_sync.wops->unlink(wrapper, url, options, context);
+    }
+    return swow_plain_files_wrapper_async.wops->unlink(wrapper, url, options, context);
+}
+
+static int swow_plain_files_proxy_rename(php_stream_wrapper *wrapper, const char *url_from,
+    const char *url_to, int options, php_stream_context *context) {
+    if (!SWOW_STREAM_G(hooking_plain_wrapper)) {
+        // we are not hooking plain wrapper ops
+        return swow_plain_files_wrapper_sync.wops->rename(wrapper, url_from, url_to, options, context);
+    }
+    return swow_plain_files_wrapper_async.wops->rename(wrapper, url_from, url_to, options, context);
+}
+
+static int swow_plain_files_proxy_stream_mkdir(php_stream_wrapper *wrapper, const char *url,
+    int mode, int options, php_stream_context *context) {
+    if (!SWOW_STREAM_G(hooking_plain_wrapper)) {
+        // we are not hooking plain wrapper ops
+        return swow_plain_files_wrapper_sync.wops->stream_mkdir(wrapper, url, mode, options, context);
+    }
+    return swow_plain_files_wrapper_async.wops->stream_mkdir(wrapper, url, mode, options, context);
+}
+static int swow_plain_files_proxy_stream_rmdir(php_stream_wrapper *wrapper, const char *url,
+    int options, php_stream_context *context) {
+    if (!SWOW_STREAM_G(hooking_plain_wrapper)) {
+        // we are not hooking plain wrapper ops
+        return swow_plain_files_wrapper_sync.wops->stream_rmdir(wrapper, url, options, context);
+    }
+    return swow_plain_files_wrapper_async.wops->stream_rmdir(wrapper, url, options, context);
+}
+
+static int swow_plain_files_proxy_stream_metadata(php_stream_wrapper *wrapper, const char *url,
+    int options, void *value, php_stream_context *context) {
+    if (!SWOW_STREAM_G(hooking_plain_wrapper)) {
+        // we are not hooking plain wrapper ops
+        return swow_plain_files_wrapper_sync.wops->stream_metadata(wrapper, url, options, value, context);
+    }
+    return swow_plain_files_wrapper_async.wops->stream_metadata(wrapper, url, options, value, context);
+}
+
+static php_stream_wrapper_ops swow_plain_files_wrapper_ops_proxy = {
+    swow_plain_files_proxy_stream_opener,
+    NULL,
+    NULL,
+    swow_plain_files_proxy_url_stat,
+    swow_plain_files_proxy_dir_opener,
+    "plainfile",
+    swow_plain_files_proxy_unlink,
+    swow_plain_files_proxy_rename,
+    swow_plain_files_proxy_stream_mkdir,
+    swow_plain_files_proxy_stream_rmdir,
+    swow_plain_files_proxy_stream_metadata
+};
+
+static php_stream_wrapper swow_plain_files_wrapper_proxy = {
+    &swow_plain_files_wrapper_ops_proxy,
+    NULL,
+    0
+};
+
 
 /* {{{ proto int|false stream_socket_sendto(resource stream, string data [, int flags [, string target_addr]])
    Send data to a socket stream.  If target_addr is specified it must be in dotted quad (or [ipv6]) format */
@@ -1166,22 +1331,16 @@ static const zend_function_entry swow_stream_functions[] = {
     PHP_FE_END
 };
 
-extern SWOW_API php_stream_ops swow_php_stream_stdio_ops;
-extern SWOW_API const php_stream_ops swow_stream_stdio_fs_ops;
-extern SWOW_API const php_stream_wrapper swow_plain_files_wrapper;
-static php_stream_wrapper swow_php_plain_files_wrapper;
-
+// stream initializer / finalizers
+int swow_unhook_stream_wrapper(void); // in swow_stream_wrapper.c
 int swow_stream_module_init(INIT_FUNC_ARGS)
 {
+    CAT_GLOBALS_REGISTER(swow_stream, CAT_GLOBALS_CTOR(swow_stream), NULL);
+
     if (!swow_hook_internal_functions(swow_stream_functions)) {
         return FAILURE;
     }
-
-    return SUCCESS;
-}
-
-int swow_stream_runtime_init(INIT_FUNC_ARGS)
-{
+    // hook things
     php_stream_tcp_socket_factory = zend_hash_str_find_ptr(php_stream_xport_get_hash(), ZEND_STRL("tcp"));
     php_stream_udp_socket_factory = zend_hash_str_find_ptr(php_stream_xport_get_hash(), ZEND_STRL("udp"));
 #ifdef AF_UNIX
@@ -1208,65 +1367,52 @@ int swow_stream_runtime_init(INIT_FUNC_ARGS)
     }
 #endif
 
-    /* backup blocking stdio wrapper (for include/require) */
-    memcpy(&swow_php_stream_stdio_ops, &php_stream_stdio_ops, sizeof(php_stream_stdio_ops));
-    // TODO: configurable? but it looks that we have no need to disable async file IO
-    if ("plain") {
-        /* use async file IO */
-        /* hook blocking file IO */
-        memcpy(&swow_php_plain_files_wrapper, &php_plain_files_wrapper, sizeof(php_plain_files_wrapper));
-        memcpy(&php_plain_files_wrapper, &swow_plain_files_wrapper, sizeof(php_plain_files_wrapper));
-        /* if not tty, redirect to async file ops */
-        swow_php_stream_stdio_ops_ptr = &swow_stream_stdio_fs_ops;
-    } else {
-        /* async file IO disabled */
-        /* if not tty, redirect to original php stdio ops */
-        swow_php_stream_stdio_ops_ptr = &swow_php_stream_stdio_ops;
-    }
-    if ("tty") {
-        /* hook stdio (only tty, and file IO will redirect to the original ops) */
-        memcpy(&php_stream_stdio_ops, &swow_stream_stdio_ops, sizeof(php_stream_stdio_ops));
-    }
+    // backup blocking stdio operators (for include/require)
+    memcpy(&swow_stream_stdio_ops_sync, &php_stream_stdio_ops, sizeof(php_stream_stdio_ops));
+    // hook std ops
+    memcpy(&php_stream_stdio_ops, &swow_stream_stdio_ops_proxy, sizeof(php_stream_stdio_ops));
+    // backup blocking plain files wrapper
+    memcpy(&swow_plain_files_wrapper_sync, &php_plain_files_wrapper, sizeof(php_plain_files_wrapper));
+    // hook plain wrapper
+    memcpy(&php_plain_files_wrapper, &swow_plain_files_wrapper_proxy, sizeof(php_plain_files_wrapper));
+    // prepare tty sockets
+    memset(SWOW_STREAM_G(tty_sockets), 0, sizeof(SWOW_STREAM_G(tty_sockets)));
 
-    memset(swow_stream_tty_sockets, 0, sizeof(swow_stream_tty_sockets));
+    if ("phar unhook") {
+        swow_unhook_stream_wrapper();
+    }
 
     return SUCCESS;
 }
 
+int swow_stream_runtime_init(INIT_FUNC_ARGS)
+{
+    SWOW_STREAM_G(hooking_stdio_ops) = cat_true;
+    SWOW_STREAM_G(hooking_plain_wrapper) = cat_true;
+    return SUCCESS;
+}
+
+int swow_rehook_stream_wrappers(void); // in swow_stream_wrapper.c
 int swow_stream_runtime_shutdown(INIT_FUNC_ARGS)
 {
-    size_t i = 0;
-    for (; i < CAT_ARRAY_SIZE(swow_stream_tty_sockets); i++) {
-        cat_socket_t *socket = swow_stream_tty_sockets[i];
+    size_t i;
+
+    SWOW_STREAM_G(hooking_plain_wrapper) = cat_false;
+    SWOW_STREAM_G(hooking_stdio_ops) = cat_false;
+
+    for (i = 0; i < CAT_ARRAY_SIZE(SWOW_STREAM_G(tty_sockets)); i++) {
+        cat_socket_t *socket = SWOW_STREAM_G(tty_sockets)[i];
         if (socket != NULL && socket != INVALID_TTY_SOCKET) {
             cat_socket_close(socket);
         }
     }
 
-    if (php_stream_xport_register("tcp", php_stream_tcp_socket_factory) != SUCCESS) {
-        return FAILURE;
-    }
-    if (php_stream_xport_register("udp", php_stream_udp_socket_factory) != SUCCESS) {
-        return FAILURE;
-    }
-    if (php_stream_xport_unregister("pipe") != SUCCESS) {
-        return FAILURE;
-    }
-#ifdef AF_UNIX
-    if (php_stream_xport_register("unix", php_stream_unix_socket_factory) != SUCCESS) {
-        return FAILURE;
-    }
-    if (php_stream_xport_register("udg", php_stream_udg_socket_factory) != SUCCESS) {
-        return FAILURE;
-    }
-#endif
-    if ("plain") {
-        memcpy(&php_plain_files_wrapper, &swow_php_plain_files_wrapper, sizeof(php_plain_files_wrapper));
-    }
-    if ("tty") {
-        /* hook stdio (only tty, and file IO will redirect to the original ops) */
-        memcpy(&php_stream_stdio_ops, &swow_php_stream_stdio_ops, sizeof(php_stream_stdio_ops));
-    }
+    return SUCCESS;
+}
+
+int swow_stream_module_shutdown(INIT_FUNC_ARGS)
+{
+    swow_rehook_stream_wrappers();
 
     return SUCCESS;
 }

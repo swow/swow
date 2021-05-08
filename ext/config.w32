@@ -196,6 +196,7 @@ if (PHP_SWOW != 'no') (function(){
         'swow_socket.c',
         'swow_fs.c',
         'swow_stream.c',
+        'swow_stream_wrapper.c',
         'swow_signal.c',
         'swow_watch_dog.c',
         'swow_http.c',
