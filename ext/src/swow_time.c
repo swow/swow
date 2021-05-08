@@ -20,6 +20,10 @@
 
 #include "swow_hook.h"
 
+#ifdef PHP_WIN32
+#include "win32/time.h"
+#endif // PHP_WIN32
+
 #if PHP_VERSION_ID < 80000
 #define swow_argument_value_error(arg_num, format, ...) \
         php_error_docref(NULL, E_WARNING, format, ##__VA_ARGS__)

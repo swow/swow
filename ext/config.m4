@@ -216,6 +216,7 @@ EOF
       cat_buffer.c \
       cat_fs.c \
       cat_signal.c \
+      cat_async.c \
       cat_watch_dog.c \
       cat_http.c \
       cat_websocket.c, SWOW_CAT_CFLAGS)

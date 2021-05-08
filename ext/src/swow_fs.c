@@ -213,6 +213,13 @@ static void _swow_fs_stat_ex_cb(cat_data_t *ptr){
     struct _swow_fs_stat_ex_s *data = (struct _swow_fs_stat_ex_s *) ptr;
     data->ret = php_win32_ioutil_stat_ex_w(data->pathw, data->len, data->statbuf, data->use_lstat);
 }
+static void _swow_fs_stat_ex_free(cat_data_t *ptr){
+    struct _swow_fs_stat_ex_s *data = (struct _swow_fs_stat_ex_s *) ptr;
+    if(data->pathw){
+        free((void*)data->pathw);
+    }
+    cat_free(data);
+}
 // for fstat a pipe on win:
 // uv will return 0o100666 (regular file | rw-rw-rw-) for pipe
 // this may be a uv bug?
@@ -222,16 +229,25 @@ struct _swow_fs_fstat_s{
     int fd;
     zend_stat_t * statbuf;
 };
-static void _swow_fs_fstat_cb(struct _swow_fs_fstat_s *data){
+static void _swow_fs_fstat_cb(cat_data_t *ptr){
+    struct _swow_fs_fstat_s *data = (struct _swow_fs_fstat_s*)ptr;
     data->ret = php_win32_ioutil_fstat(data->fd, data->statbuf);
 }
 static inline int swow_fs_fstat(int fd, zend_stat_t * statbuf){
-    struct _swow_fs_fstat_s data = {-1, fd, statbuf};
-    if(!cat_work(CAT_WORK_KIND_FAST_IO, _swow_fs_fstat_cb, &data, CAT_TIMEOUT_FOREVER)){
-        data.ret = -1;
+    struct _swow_fs_fstat_s *data = cat_malloc(sizeof(*data));
+    data->ret = -1;
+    data->fd = fd;
+    data->statbuf = statbuf;
+    if(!cat_work(
+        CAT_WORK_KIND_FAST_IO,
+        _swow_fs_fstat_cb,
+        cat_free_function,
+        data,
+        CAT_TIMEOUT_FOREVER)){
+        data->ret = -1;
     }
     UPDATE_ERRNO_FROM_CAT();
-    return data.ret;
+    return data->ret;
 }
 #else
 static inline int swow_fs_fstat(int fd, zend_stat_t * statbuf){
@@ -258,13 +274,22 @@ static inline int swow_fs_stat_mock(const char* path, zend_stat_t *statbuf, int 
         SET_ERRNO_FROM_WIN32_CODE(ERROR_INVALID_PARAMETER);
         return -1;
     }
-    struct _swow_fs_stat_ex_s data = {-1, pathw, pathw_len, statbuf, use_lstat};
-    if(!cat_work(CAT_WORK_KIND_FAST_IO, _swow_fs_stat_ex_cb, &data, CAT_TIMEOUT_FOREVER)){
-        data.ret = -1;
+    struct _swow_fs_stat_ex_s *data = cat_malloc(sizeof(*data));
+    data->ret = -1;
+    data->pathw = pathw;
+    data->len = pathw_len;
+    data->statbuf = statbuf;
+    data->use_lstat = use_lstat;
+    if(!cat_work(
+        CAT_WORK_KIND_FAST_IO,
+        _swow_fs_stat_ex_cb,
+        _swow_fs_stat_ex_free,
+        data,
+        CAT_TIMEOUT_FOREVER)){
+        data->ret = -1;
     }
     UPDATE_ERRNO_FROM_CAT();
-    free((void*)pathw);
-    return data.ret;
+    return data->ret;
 # endif // PHP_VERSION_ID < 70400
 #else // PHP_WIN32
     // for unix-like
@@ -368,44 +393,54 @@ static void _swow_fs_open_cb(cat_data_t *ptr){
 #endif
     data->error = errno;
 }
+static void _swow_fs_open_free(cat_data_t *ptr){
+    struct _swow_fs_open_s *data = (struct _swow_fs_open_s *) ptr;
+#ifdef PHP_WIN32
+    free((void *)data->pathw);
+#endif
+    cat_free(data);
+}
 static inline int swow_fs_open(const char * path, int flags, ...){
-    struct _swow_fs_open_s data = {-1, NULL, flags, 0666, 0};
+    struct _swow_fs_open_s *data = cat_malloc(sizeof(*data));
+    data->ret = -1;
+    data->flags = flags;
+    data->mode = 0666;
+    data->error = 0;
 #ifdef PHP_WIN32
     size_t pathw_len;
-    data.pathw = php_win32_ioutil_conv_any_to_w(path, PHP_WIN32_CP_IGNORE_LEN, &pathw_len);
-    if (!data.pathw) {
+    data->pathw = php_win32_ioutil_conv_any_to_w(path, PHP_WIN32_CP_IGNORE_LEN, &pathw_len);
+    if (!data->pathw) {
         SET_ERRNO_FROM_WIN32_CODE(ERROR_INVALID_PARAMETER);
+        cat_free(data);
         return -1;
     }
-    if (!PHP_WIN32_IOUTIL_PATH_IS_OK_W(data.pathw, pathw_len)) {
-        free((void *)data.pathw);
+    if (!PHP_WIN32_IOUTIL_PATH_IS_OK_W(data->pathw, pathw_len)) {
+        free((void *)data->pathw);
+        cat_free(data);
         SET_ERRNO_FROM_WIN32_CODE(ERROR_ACCESS_DENIED);
         cat_update_last_error(CAT_EACCES, "Bad file name");
         return -1;
     }
 #else
-    data.path = path;
+    data->path = path;
 #endif
 
     if (flags & CAT_FS_O_CREAT) {
         va_list arg;
 
         va_start(arg, flags);
-        data.mode = (mode_t) va_arg(arg, int);
+        data->mode = (mode_t) va_arg(arg, int);
         va_end(arg);
     }
 
-    data.error = errno;
-    if(!cat_work(CAT_WORK_KIND_FAST_IO, _swow_fs_open_cb, &data, CAT_TIMEOUT_FOREVER)){
+    data->error = errno;
+    if(!cat_work(CAT_WORK_KIND_FAST_IO, _swow_fs_open_cb, _swow_fs_open_free, data, CAT_TIMEOUT_FOREVER)){
         UPDATE_ERRNO_FROM_CAT();
-        data.ret = -1;
+        data->ret = -1;
     }
-    errno = data.error;
-#ifdef PHP_WIN32
-    free((void *)data.pathw);
-#endif
+    errno = data->error;
 
-    return data.ret;
+    return data->ret;
 }
 
 // mock VCWD_XXXX macros

@@ -38,9 +38,6 @@
     } \
 } while (0)
 
-#define cat_strdup     estrdup
-#define cat_strndup    estrndup
-
 /* thread safe */
 
 #ifdef ZTS
