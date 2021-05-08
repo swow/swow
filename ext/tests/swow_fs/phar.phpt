@@ -10,7 +10,7 @@ if(false === strpos($loaded1, "Swow")){
         false === strpos($loaded2, "Swow") ||
         false !== strpos($loaded2, "Warning")
     ){
-        skip("Swow is not present in TEST_PHP_EXECUTABLE and cannot load it via -dextension=swow", true);
+        skip("Swow is not present in TEST_PHP_EXECUTABLE and cannot load it via -dextension=swow");
     }
 }
 ?>
