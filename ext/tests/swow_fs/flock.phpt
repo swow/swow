@@ -42,7 +42,7 @@ $fd = fopen(TEST_LOCKNAME, "w+");
 // create child
 $ext_enable = " ";
 $loaded = shell_exec(PHP_BINARY . " -m");
-if(strpos($loaded, "Swow") < 0){
+if(false === strpos($loaded, "Swow")){
     $ext_enable = " -dextension=swow ";
 }
 $p = popen(PHP_BINARY . $ext_enable . __DIR__ . DIRECTORY_SEPARATOR ."flockchild.inc " . SOCK_NAME, "w");
