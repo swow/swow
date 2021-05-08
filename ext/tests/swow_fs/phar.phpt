@@ -23,7 +23,7 @@ require_once __DIR__ . "/build_phar.inc";
 
 $ext_enable = " ";
 $loaded = shell_exec(PHP_BINARY . " -m");
-if(strpos($loaded, "Swow") < 0){
+if(false === strpos($loaded, "Swow")){
     $ext_enable = " -dextension=swow ";
 }
 
