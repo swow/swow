@@ -3,7 +3,6 @@ swow_fs: flock basic functionality
 --SKIPIF--
 <?php
 require __DIR__ . '/../include/skipif.php';
-$ext_enable = "";
 $loaded = shell_exec(PHP_BINARY . " -m");
 if(false === strpos($loaded, "Swow")){
     $loaded = shell_exec(PHP_BINARY . " -dextension=swow -ri swow -r \"\" ");
