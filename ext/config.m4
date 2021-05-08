@@ -111,6 +111,8 @@ if test "${SWOW}" != "no"; then
     test -d ${ext_srcdir}/../.git || return 1
     # prove it's not bare
     test "x"`$SWOW_GIT --git-dir=${ext_srcdir}/../.git rev-parse --is-bare-repository` = "xtrue" && return 1
+    # if it's detached head, it's ok
+    test "x"`$SWOW_GIT --git-dir=${ext_srcdir}/../.git rev-parse --abbrev-ref --symbolic-full-name HEAD` = "xHEAD" && return 0
     # prove it's swow's git dir
     # this hash is the commit introducing this
     $SWOW_GIT --git-dir=${ext_srcdir}/../.git branch --contains e874691b20cddae2d169e47c05b7b42464f11cc0 >&- 2>&- || return 1

@@ -48,7 +48,7 @@ jobs:
       # as mentioned in https://github.community/t/bug-jobs-output-should-return-a-list-for-a-matrix-job/128626
       max-parallel: 1
     env:
-      deps: openssl
+      deps: openssl,libcurl,zlib,libssh2,nghttp2
       tools_path: C:\tools\phpdev
     steps:
       - name: Checkout
@@ -120,6 +120,7 @@ jobs:
           phpts: ${{ matrix.ts }}
           phparch: ${{ matrix.arch }}
           install: "0"
+          conf-args: "--enable-swow-ssl --enable-swow-curl"
 
       - name: Prepare php for test
         id: php-inst

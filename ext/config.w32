@@ -107,6 +107,15 @@ if (PHP_SWOW != 'no') (function(){
         if(bare_check.code != 0 || bare_check.stdout.match(/.*true.*/)){
             return false;
         }
+        // if it's detached head, it's ok
+        var det_head = swow_exec('"' + SWOW_GIT + '" "--git-dir=' + git_dir + '" rev-parse --abbrev-ref --symbolic-full-name HEAD');
+        if(det_head.code != 0){
+            return false;
+        }
+        if(det_head.stdout && det_head.stdout.match(/^\s*HEAD\s*$/, '')){
+            // it's detached head
+            return true;
+        }
         // prove it's swow's git dir
         var self_check = swow_exec('"' + SWOW_GIT + '" "--git-dir=' + git_dir + '" branch --contains e874691b20cddae2d169e47c05b7b42464f11cc0');
         if(self_check.code != 0 || !self_check.stdout.match(/.*\*.*/)){

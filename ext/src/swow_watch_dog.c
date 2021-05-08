@@ -42,7 +42,7 @@ SWOW_API void swow_watch_dog_alert_standard(cat_watch_dog_t *watch_dog)
         vm_interrupted == 0 /* interrupt maybe failed */
     ) {
         if (watch_dog->threshold > 0 && /* blocking time is greater than syscall threshold */
-            ((cat_nsec_t) (watch_dog->quantum * watch_dog->alert_count)) > watch_dog->threshold
+            ((cat_timeout_t) (watch_dog->quantum * watch_dog->alert_count)) > watch_dog->threshold
         ) {
             /* Syscall blocking
              * CPU starvation is also possbile,
@@ -91,11 +91,11 @@ static void swow_watch_dog_interrupt_function(zend_execute_data *execute_data)
     }
 }
 
-SWOW_API cat_bool_t swow_watch_dog_run(cat_usec_t quantum, cat_nsec_t threshold, zval *zalerter)
+SWOW_API cat_bool_t swow_watch_dog_run(cat_timeout_t quantum, cat_timeout_t threshold, zval *zalerter)
 {
     swow_watch_dog_t *swatch_dog;
     zend_fcall_info_cache fcc = empty_fcall_info_cache;
-    cat_msec_t delay = 0;
+    cat_timeout_t delay = 0;
     cat_bool_t ret;
 
     if (zalerter != NULL) {
