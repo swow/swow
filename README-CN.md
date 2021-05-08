@@ -1,6 +1,6 @@
-[English](./README.md) | 中文
-
 # Swow
+
+[English](./README.md) | 中文
 
 [![license][license-badge]][license-link]
 [![ci][ci-badge]][ci-link]
@@ -23,11 +23,11 @@ Swow实现了一套有史以来最完整的PHP协程模型，它全面释放了P
 
 ### 💫高可控💫
 
-现在协程可以使得PHP虚拟机像一个迷你操作系统一样，其中运行的协程近似于操作系统的进程/线程，开发者可以以超细粒度任意操控这些协程，如查看所有协程的运行状态、attach进入协程、单步调试跟踪、查看协程堆栈乃至每个栈帧、查看或修改协程内变量、对协程进行中断或杀死协程等。
+现在协程可以使得PHP虚拟机像一个迷你操作系统一样，其中运行的协程近似于操作系统的进程/线程，开发者能够以超细粒度任意操控这些协程，如查看所有协程的运行状态、attach进入协程、单步调试跟踪、查看协程栈乃至每个栈帧、查看或修改协程内变量、中断协程或杀死协程等。
 
 基于这样的可控性，开发者还可以借助WatchDog组件对陷入死循环或处于IO阻塞的协程进行警报、中断、让出甚至杀死等多种处理，以避免个别协程影响到程序整体稳定性。
 
-并且，其与进程设计哲学的契合性，也决定了协程应用的健壮性极佳。正如进程的崩溃不会导致系统的崩溃一样，协程的崩溃也不会导致进程的崩溃，并且得益于PHP强大的异常机制和资源管理能力，与协程绑定的相关资源都能被安全地释放。你无需再为未捕获的异常殚精竭力，也不要再去捕获Throwable，遇到未知的错误请Let it crash。
+并且，其与进程设计哲学的契合性，也决定了协程应用的健壮性极佳。正如单个进程的崩溃不会导致整个系统的崩溃一样，单个协程的崩溃也不会导致整个进程的崩溃，并且得益于PHP强大的异常机制和资源管理能力，与协程绑定的相关资源都能被安全地释放。你无需再为未捕获的异常殚精竭力，也不要再去捕获Throwable，遇到未知的错误请Let it crash。
 
 ### 🌟易兼容🌟
 
@@ -35,7 +35,7 @@ Swow实现了一套有史以来最完整的PHP协程模型，它全面释放了P
 
 ## ⚙️ 事件驱动
 
-Swow基于协程事件库[**libcat**](https://github.com/libcat/libcat)开发，libcat又基于异步事件库[**libuv**](https://github.com/libuv/libuv)开发，得益于此，我们拥有了经过工业级验证的事件循环驱动，并且它支持几乎所有主流操作系统。因此，Swow也是首个能在原生Windows平台运行，且通过IOCP驱动的PHP协程网络编程引擎。由于libuv遵循Proactor模型，不久后我们又可以在Linux下免费获得由新特性io_uring带来的可观性能提升。
+Swow基于协程事件库[**libcat**](https://github.com/libcat/libcat)开发，libcat又基于异步事件库[**libuv**](https://github.com/libuv/libuv)开发，得益于此，我们拥有了经过工业级验证的事件循环驱动，并且它支持几乎所有常见操作系统。因此，Swow也是首个能在原生Windows平台运行，且通过IOCP驱动的PHP协程网络编程引擎。由于libuv遵循Proactor模型，不久后我们又可以在Linux下免费获得由新特性io_uring带来的可观性能提升。
 
 ## 🐘 PHP可编程性
 
@@ -43,7 +43,7 @@ Swow基于协程事件库[**libcat**](https://github.com/libcat/libcat)开发，
 
 且随着PHP8和JIT的到来，我们为什么还要大量使用C或是C++来完成那些PHP也能做到的工作呢？更多地使用PHP而不是C、C++，也契合了PHP内核的未来发展方向。
 
-更强的可编程性也带来了更多的可能性。试想一下，曾经你想写一个简单的Waf程序，通过检测IP或是解析HTTP头部来实施一些鉴权操作，但当你在回调中拿到请求对象时，底层已经替你完成了整个请求的接收，庞大的HTTP报文解析或许已经损害了你的程序性能。
+更强的可编程性也带来了更多的可能性。试想一下，曾经你想写一个简单的WAF程序，通过检测IP或是解析HTTP头部来实施一些鉴权操作，但当你在回调中拿到请求对象时，底层已经替你完成了整个请求的接收，庞大的HTTP报文解析或许已经损害了你的程序性能。
 
 但现在，Swow提供的Buffer模块使得PHP可以像C一样精细地进行内存管理，结合Socket模块和一些协议解析器，它允许你掌握小到每个字节的接收和解析，或许在未来开发者完全可以使用Swow编写高性能的网关程序，一切都可以通过PHP编程的方式改变，且它们全都是内存安全的。
 
@@ -85,9 +85,9 @@ Swow是否又是一个全新的轮子？答案是否定的。如果你熟悉如S
 
 ## ⛓ 编程理念
 
-### 两个问题
+Swow遵循CSP的并发模型，而不是Callback模型。在实现上来说，协程是异步回调的超集，通过创建新的协程可以模拟异步回调，而反之则不行。
 
-Swow推崇CSP的并发模型，而不是Callback模型。在实现上来说，协程是异步回调的超集，通过创建新的协程可以模拟异步回调，而反之则不行。
+### 两个问题
 
 Swoole/Swow对于并发网络编程支持的技术抉择终结于克服两个巨大的现实技术难题：一个是回调地狱，另一个是生态。
 
@@ -109,8 +109,8 @@ PHP异步网络编程技术的奠基者Swoole早期就尝试了异步回调模�
 
 ### 编译需求
 
-  - Linux、 Windows、macOS、Android等主流操作系统（与[libuv](https://github.com/libuv/libuv/blob/v1.x/SUPPORTED_PLATFORMS.md)一致）
-  - PHP 7.3.0 或以上版本，推荐使用PHP 8.0 (版本越高性能越好)
+- Linux、 Windows、macOS等常见操作系统（与[libuv](https://github.com/libuv/libuv/blob/v1.x/SUPPORTED_PLATFORMS.md)一致）
+- PHP 7.3.0 或以上版本，推荐使用PHP 8+ (版本越高性能越好)
 
 #### Composer安装
 
@@ -128,7 +128,9 @@ composer require swow/swow:dev-develop
 | ./vendor/bin/swow-builder --debug                   | 构建debug版本       |
 | ./vendor/bin/swow-builder --enable="--enable-debug" | 指定特殊的构建参数  |
 
-使用此方式安装时，最后一步程序会提示输入密码以使用root权限安装到系统，你可以选择不输入，安装程序仍会提供类似于以下的运行命令：
+使用此方式安装时，最后一步程序会使用`sudo`命令安装Swow扩展，`sudo`可能会询问你管理员密码来安装Swow到系统目录。
+
+安装程序也会提供类似于以下的运行命令：
 
 `/usr/bin/env php -n -d extension=/path/to/vendor/swow/swow/ext/modules/swow.so --ri swow`
 
@@ -137,10 +139,13 @@ composer require swow/swow:dev-develop
 #### 手动安装扩展 (不包含PHP库部分)
 
 克隆项目（也可以通过Composer引入，cd到`vendor/swow/swow/ext`中手动编译）
+
 ```shell
 git clone https://github.com/swow/swow.git
 ````
+
 熟悉的构建三板斧，最后使用root权限安装到系统
+
 ```shell
 cd swow/ext && \
 phpize && ./configure && make && \
@@ -149,7 +154,7 @@ sudo make install
 
 #### Windows安装
 
-手动构建暂无文档，请等待官方二进制发布，敬请期待。
+手动构建见[文档](https://wiki.s-wow.com/#/zh-cn/install?id=%e7%bc%96%e8%af%91%e5%ae%89%e8%a3%85-windows)，你也可以考虑使用官方DLL发布。
 
 ## ℹ️ IDE助手
 
@@ -171,8 +176,8 @@ Swow的[PHP源代码](lib/src/Swow)也是良好的示例，Swow是为PHP语言�
 
 ## 🛠 开发 & 讨论
 
-  - **中文文档**：[https://wiki.s-wow.com](https://wiki.s-wow.com)（尚未完成，敬请期待）
-  - **计划列表**：https://github.com/swow/swow/projects
+- **中文文档**：[https://wiki.s-wow.com](https://wiki.s-wow.com)（尚未完成，敬请期待）
+- **计划列表**：[https://github.com/swow/swow/projects](https://github.com/swow/swow/projects)
 
 [license-badge]: https://img.shields.io/badge/license-apache2-blue.svg
 [license-link]: LICENSE
@@ -182,4 +187,3 @@ Swow的[PHP源代码](lib/src/Swow)也是良好的示例，Swow是为PHP语言�
 [codecov-link]: https://codecov.io/gh/swow/swow
 [release-badge]: https://img.shields.io/github/release/swow/swow.svg?style=flat-square
 [release-link]: https://github.com/swow/swow/releases
-
