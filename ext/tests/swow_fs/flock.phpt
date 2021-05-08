@@ -7,7 +7,6 @@ $ext_enable = "";
 $loaded = shell_exec(PHP_BINARY . " -m");
 if(false === strpos($loaded, "Swow")){
     $loaded = shell_exec(PHP_BINARY . " -dextension=swow -ri swow -r \"\" ");
-    var_dump($loaded);
     if(
         false === strpos($loaded, "Swow") ||
         false !== strpos($loaded, "Warning")
