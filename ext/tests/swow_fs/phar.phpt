@@ -3,6 +3,7 @@ swow_fs: phar functionality
 --SKIPIF--
 <?php
 require __DIR__ . '/../include/skipif.php';
+/*
 $loaded1 = shell_exec(PHP_BINARY . " -m");
 if(false === strpos($loaded1, "Swow")){
     $loaded2 = shell_exec(PHP_BINARY . " -dextension=swow -ri swow -r \"\" ");
@@ -10,14 +11,29 @@ if(false === strpos($loaded1, "Swow")){
         false === strpos($loaded2, "Swow") ||
         false !== strpos($loaded2, "Warning")
     ){
-        skip("Swow is not present in TEST_PHP_EXECUTABLE and cannot load it via -dextension=swow\n$loaded1\n$loaded2", true);
+        skip("Swow is not present in TEST_PHP_EXECUTABLE and cannot load it via -dextension=swow", true);
     }
 }
+*/
 ?>
 --INI--
 phar.readonly=0
 --FILE--
 <?php
+
+$loaded1 = shell_exec(PHP_BINARY . " -m");
+if(false === strpos($loaded1, "Swow")){
+    var_dump($loaded1);
+    $loaded2 = shell_exec(PHP_BINARY . " -dextension=swow -ri swow -r \"\" ");
+    if(
+        false === strpos($loaded2, "Swow") ||
+        false !== strpos($loaded2, "Warning")
+    ){
+        var_dump($loaded2);
+        //skip("Swow is not present in TEST_PHP_EXECUTABLE and cannot load it via -dextension=swow", true);
+    }
+}
+exit(1);
 
 require_once __DIR__ . "/build_phar.inc";
 
