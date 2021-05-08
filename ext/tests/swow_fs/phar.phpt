@@ -2,11 +2,11 @@
 swow_fs: phar functionality
 --SKIPIF--
 <?php
-require __DIR__ . '/../include/skipif.php';
 /*
+require __DIR__ . '/../include/skipif.php';
 $loaded1 = shell_exec(PHP_BINARY . " -m");
 if(false === strpos($loaded1, "Swow")){
-    $loaded2 = shell_exec(PHP_BINARY . " -dextension=swow -ri swow -r \"\" ");
+    $loaded2 = shell_exec(PHP_BINARY . " -dextension=swow -ri swow -r \"exit(0);\" ");
     if(
         false === strpos($loaded2, "Swow") ||
         false !== strpos($loaded2, "Warning")
@@ -24,7 +24,7 @@ phar.readonly=0
 $loaded1 = shell_exec(PHP_BINARY . " -m");
 if(false === strpos($loaded1, "Swow")){
     var_dump($loaded1);
-    $loaded2 = shell_exec(PHP_BINARY . " -dextension=swow -ri swow -r \"\" ");
+    $loaded2 = shell_exec(PHP_BINARY . " -dextension=swow -ri swow");
     if(
         false === strpos($loaded2, "Swow") ||
         false !== strpos($loaded2, "Warning")
