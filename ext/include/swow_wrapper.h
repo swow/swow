@@ -281,6 +281,12 @@ SWOW_API ZEND_COLD void ZEND_FASTCALL zend_argument_value_error(uint32_t arg_num
 #endif
 /* }}} */
 
+/* PHP 8.1 compatibility macro {{{*/
+#if PHP_VERSION_ID < 80100
+SWOW_API zend_string* ZEND_FASTCALL zend_ulong_to_str(zend_ulong num);
+#endif
+/* }}} */
+
 /* ZTS */
 
 #ifdef ZTS
