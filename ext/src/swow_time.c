@@ -60,7 +60,7 @@ ZEND_BEGIN_ARG_INFO_EX(arginfo_swow_msleep, 0 , ZEND_RETURN_VALUE, 1)
     ZEND_ARG_TYPE_INFO(0, milli_seconds, IS_LONG, 0)
 ZEND_END_ARG_INFO()
 
-/* {{{ proto void usleep(int milliseconds)
+/* {{{ proto void msleep(int milliseconds)
    Delay for a given number of micro seconds */
 static PHP_FUNCTION(swow_msleep)
 {
