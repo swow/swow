@@ -128,7 +128,7 @@ Start the installation by executing the `swow-builder` under `vendor/bin`
 | ./vendor/bin/swow-builder --debug                   | Build with debug                  |
 | ./vendor/bin/swow-builder --enable="--enable-debug" | Specify special build parameters  |
 
-When installing in this way, the last step of the program will try use `sudo` to install the extension with out futher asking.
+When installing in this way, the last step of the program will try use `sudo` to install the extension without futher asking, and `sudo` may ask you for password to install Swow into your system path.
 
 It may also prompts commands like:
 
