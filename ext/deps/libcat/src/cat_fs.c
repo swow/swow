@@ -890,7 +890,7 @@ CAT_API cat_dir_t *cat_fs_opendir(const char *path)
     }
     memset(&data->ret, 0, sizeof(data->ret));
     data->canceled = cat_false;
-    data->path = cat_sys_strdup(path);
+    data->path = cat_strdup(path);
     if (!cat_work(CAT_WORK_KIND_FAST_IO, cat_fs_opendir_cb, cat_fs_opendir_free, data, CAT_TIMEOUT_FOREVER)) {
         // canceled, tell freer close handle
         data->canceled = cat_true;
@@ -1236,7 +1236,7 @@ CAT_API cat_dir_t *cat_fs_opendir(const char *_path)
     }
     memset(&data->ret, 0, sizeof(data->ret));
     data->canceled = cat_false;
-    data->path = cat_sys_strdup(path);
+    data->path = cat_strdup(path);
     data->ret.ret.handle = INVALID_HANDLE_VALUE;
     if (!cat_work(CAT_WORK_KIND_FAST_IO, cat_fs_opendir_cb, cat_fs_opendir_free, data, CAT_TIMEOUT_FOREVER)) {
         // canceled, tell freer close handle
