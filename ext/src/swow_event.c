@@ -151,10 +151,13 @@ int swow_event_runtime_init(INIT_FUNC_ARGS)
     if (!swow_event_scheduler_run()) {
         return FAILURE;
     }
-
     do {
         php_shutdown_function_entry shutdown_function_entry;
         zval *zfunction_name;
+#if PHP_VERSION_ID >= 80100
+        zval zcallable;
+        zfunction_name = &zcallable;
+#else
         int arg_count;
 #if PHP_VERSION_ID >= 80000
         arg_count = 1;
@@ -168,8 +171,17 @@ int swow_event_runtime_init(INIT_FUNC_ARGS)
 #else
         zfunction_name = &shutdown_function_entry.arguments[0];
 #endif
+#endif
         ZVAL_STRING(zfunction_name, "Swow\\Event::wait");
+#if PHP_VERSION_ID >= 80100
+        zval zkey;
+        ZVAL_PTR(&zkey, &swow_internal_callable_key);
+        zend_fcall_info_init(&zcallable, 0, &shutdown_function_entry.fci,
+            &shutdown_function_entry.fci_cache, NULL, NULL);
+	    zend_fcall_info_argp(&shutdown_function_entry.fci, 1, &zkey);
+#else
         ZVAL_PTR(&shutdown_function_entry.arguments[arg_count - 1], &swow_internal_callable_key);
+#endif
         register_user_shutdown_function(Z_STRVAL_P(zfunction_name), Z_STRLEN_P(zfunction_name), &shutdown_function_entry);
     } while (0);
 
