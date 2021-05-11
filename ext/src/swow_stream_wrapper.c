@@ -26,8 +26,10 @@
 #include "swow_stream.h"
 
 static php_stream_ops modified_ops = { 0 };
+static php_stream_ops modified_dir_ops = { 0 };
 // holder for phar_ops
 static const php_stream_ops *orig_ops = NULL;
+static const php_stream_ops *orig_dir_ops = NULL;
 static php_stream_wrapper modified_wrapper = { 0 };
 static php_stream_wrapper_ops modified_wops = { 0 };
 static php_stream_wrapper *orig_wrapper = NULL;
@@ -108,15 +110,59 @@ int swow_proxy_set_option(php_stream *stream, int option, int value, void *ptrpa
 }
 */
 
-static inline void swow_modify_stream_ops(php_stream* ps){
-    if(!ps){
+// stream dir ops proxies
+ssize_t swow_proxy_dir_write(php_stream *stream, const char *buf, size_t count){
+    SWOW_UNHOOK(ZEND_ASSERT(orig_dir_ops););
+    ssize_t ret = orig_dir_ops->write(stream, buf, count);
+    SWOW_REHOOK();
+    return ret;
+}
+
+ssize_t swow_proxy_dir_read(php_stream *stream, char *buf, size_t count){
+    SWOW_UNHOOK(ZEND_ASSERT(orig_dir_ops););
+    ssize_t ret = orig_dir_ops->read(stream, buf, count);
+    SWOW_REHOOK();
+    return ret;
+}
+
+int swow_proxy_dir_close(php_stream *stream, int close_handle){
+    SWOW_UNHOOK(ZEND_ASSERT(orig_dir_ops););
+    int ret = orig_dir_ops->close(stream, close_handle);
+    SWOW_REHOOK();
+    return ret;
+}
+
+int swow_proxy_dir_flush(php_stream *stream){
+    SWOW_UNHOOK(ZEND_ASSERT(orig_dir_ops););
+    int ret = orig_dir_ops->flush(stream);
+    SWOW_REHOOK();
+    return ret;
+}
+
+int swow_proxy_dir_seek(php_stream *stream, zend_off_t offset, int whence, zend_off_t *newoffset){
+    SWOW_UNHOOK(ZEND_ASSERT(orig_dir_ops););
+    int ret = orig_dir_ops->seek(stream, offset, whence, newoffset);
+    SWOW_REHOOK();
+    return ret;
+}
+
+static php_stream* swow_proxy_stream_opener(
+    php_stream_wrapper *wrapper, const char *filename, const char *mode,
+	int options, zend_string **opened_path, php_stream_context *context STREAMS_DC){
+    //printf("wrapper is %p, orig is %p\n", wrapper, wrapper->abstract);
+    //printf("opener real wrapper is %p\n", orig_wrapper);
+    SWOW_UNHOOK(ZEND_ASSERT(orig_wrapper););
+    php_stream* ret = orig_wrapper->wops->stream_opener(wrapper,
+        filename, mode, options, opened_path, context STREAMS_REL_CC);
+    SWOW_REHOOK();
+    if(!ret || !ret->ops || !ret->ops->label){
         // if operation failed, exit
-        return;
+        return ret;
     }
-    if(NULL == orig_ops){
+    if(NULL == orig_ops && 0 == strncmp(ret->ops->label, "phar stream", sizeof("phar stream"))){
         // lazy setting
-        orig_ops = ps->ops;
-        memcpy(&modified_ops, ps->ops, sizeof(modified_ops));
+        orig_ops = ret->ops;
+        memcpy(&modified_ops, ret->ops, sizeof(modified_ops));
         // modify stream operators
 #define modify(x) modified_ops.x = modified_ops.x ? swow_proxy_##x : NULL
         modify(write);
@@ -131,21 +177,13 @@ static inline void swow_modify_stream_ops(php_stream* ps){
         //modify(set_option);
 #undef modify
     }
-    ZEND_ASSERT(orig_ops == ps->ops);
-    ps->ops = &modified_ops;
-}
-
-// stream ops proxies
-static php_stream* swow_proxy_stream_opener(
-    php_stream_wrapper *wrapper, const char *filename, const char *mode,
-	int options, zend_string **opened_path, php_stream_context *context STREAMS_DC){
-    //printf("wrapper is %p, orig is %p\n", wrapper, wrapper->abstract);
-    //printf("opener real wrapper is %p\n", orig_wrapper);
-    SWOW_UNHOOK(ZEND_ASSERT(orig_wrapper););
-    php_stream* ret = orig_wrapper->wops->stream_opener(wrapper,
-        filename, mode, options, opened_path, context STREAMS_REL_CC);
-    SWOW_REHOOK();
-    swow_modify_stream_ops(ret);
+    // at first use, orig_ops is not set, ret->ops may not be phar things
+    // this will be (NULL != ret->ops) -> true, that's ok
+    if(orig_ops != ret->ops){
+        // we're not modify this because it's not phar stream
+        return ret;
+    }
+    ret->ops = &modified_ops;
     //printf("end opener\n");
     return ret;
 }
@@ -189,7 +227,33 @@ static php_stream *swow_proxy_dir_opener(
         wrapper, filename, mode,options, opened_path, context STREAMS_REL_CC);
     //printf("returnnig wrp %p\n", ret->wrapper);
     SWOW_REHOOK();
-    swow_modify_stream_ops(ret);
+    if(!ret || !ret->ops || !ret->ops->label){
+        // if operation failed, exit
+        return ret;
+    }
+    if(NULL == orig_dir_ops && 0 == strncmp(ret->ops->label, "phar dir", sizeof("phar dir"))){
+        // lazy setting
+        orig_dir_ops = ret->ops;
+        memcpy(&modified_dir_ops, ret->ops, sizeof(modified_dir_ops));
+        // modify stream operators
+#define modify(x) modified_dir_ops.x = modified_dir_ops.x ? swow_proxy_dir_##x : NULL
+        modify(write);
+        modify(read);
+        modify(close);
+        modify(flush);
+        modify(seek);
+        ZEND_ASSERT(NULL == modified_dir_ops.cast);
+        ZEND_ASSERT(NULL == modified_dir_ops.stat);
+        ZEND_ASSERT(NULL == modified_dir_ops.set_option);
+#undef modify
+    }
+    // at first use, orig_dir_ops is not set, ret->ops may not be phar things
+    // this will be (NULL != ret->ops) -> true, that's ok
+    if(orig_dir_ops != ret->ops){
+        // we're not modify this because it's not phar dir stream
+        return ret;
+    }
+    ret->ops = &modified_dir_ops;
     return ret;
 }
 
