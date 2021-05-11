@@ -89,7 +89,7 @@ static PHP_METHOD(Swow_Sync_WaitReference, wait)
     swr->scoroutine = NULL;
 
     if (UNEXPECTED(!ret)) {
-        swow_throw_exception_with_last_as_reason(swow_sync_exception_ce, "WaiReference waiting for completion failed");
+        swow_throw_exception_with_last_as_reason(swow_sync_exception_ce, "WaitReference waiting for completion failed");
         RETURN_THROWS();
     }
 }
