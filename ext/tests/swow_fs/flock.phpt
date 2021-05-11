@@ -109,6 +109,7 @@ $wr = new WaitReference();
 for($i = 0; $i < TEST_THREADS; $i++){
     $coros[$i] = Swow\Coroutine::run(function()use(&$count, $wr, $fd){
         $ret = flock($fd, LOCK_EX); // always stuck here
+        flock($fd, LOCK_UN);
         $count++;
     });
 }
