@@ -645,7 +645,7 @@ static void cat_coroutine_dead_lock(cat_coroutine_dead_lock_function_t dead_lock
 
     if (dead_lock != NULL) {
         dead_lock();
-    } else while (usleep(60 * 1000 * 1000) == 0);
+    } else while (cat_sys_usleep(999999) == 0);
 }
 
 static cat_data_t *cat_coroutine_scheduler_function(cat_data_t *data)

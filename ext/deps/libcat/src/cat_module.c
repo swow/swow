@@ -37,7 +37,7 @@ CAT_API const cat_module_info_t *cat_module_get_info_by_name(const char *name)
 
     for (i = 0; i < CAT_ARRAY_SIZE(cat_module_info_map); i++) {
         cat_module_info_t *info = &cat_module_info_map[i];
-        if (info->registered && strcasecmp(name, info->name) == 0) {
+        if (info->registered && cat_strcasecmp(name, info->name) == 0) {
             return info;
         }
     }

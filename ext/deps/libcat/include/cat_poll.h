@@ -51,9 +51,17 @@ typedef SHORT cat_pollfd_events_t;
 # define POLLNVAL    0x0020    /* Invalid request: fd not open */
 #endif
 
+/* OK: events triggered, NONE: timedout, ERROR: error ocurred */
 CAT_API cat_ret_t cat_poll_one(cat_os_socket_t fd, int events, int *revents, cat_timeout_t timeout);
 
+/* same with poll(),
+ * returns the number of descriptors that are ready for I/O, or -1 if an error occurred.
+ * If the time limit expires, poll() returns 0. */
 CAT_API int cat_poll(cat_pollfd_t *fds, cat_nfds_t nfds, cat_timeout_t timeout);
+
+/* same with select(),
+ * but we can not use it for file IO */
+CAT_API int cat_select(int max_fd, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout);
 
 #ifdef __cplusplus
 }

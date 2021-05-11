@@ -27,7 +27,7 @@ CAT_API cat_bool_t cat_module_init(void)
     cat_log = cat_log_standard;
 
 #ifdef CAT_USE_DYNAMIC_ALLOCATOR
-    cat_register_allocator(&cat_sys_allocator);
+    cat_register_allocator(NULL);
 #endif
 #if 0
     /* https://github.com/libuv/libuv/pull/2760 */

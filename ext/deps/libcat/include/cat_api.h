@@ -35,6 +35,7 @@ extern "C" {
 #include "cat_buffer.h"
 #include "cat_fs.h"
 #include "cat_signal.h"
+#include "cat_async.h"
 #include "cat_watch_dog.h"
 #include "cat_ssl.h"
 

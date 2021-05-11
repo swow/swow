@@ -111,7 +111,7 @@ static cat_always_inline cat_bool_t cat_channel_waiter_is_dummy(const cat_corout
     return coroutine->id == CAT_COROUTINE_MAX_ID;
 }
 
-static cat_always_inline cat_bool_t cat_channel_resume_waiter(cat_coroutine_t *coroutine)
+static cat_always_inline void cat_channel_resume_waiter(cat_coroutine_t *coroutine, const char *name)
 {
     if (unlikely(cat_channel_waiter_is_dummy(coroutine))) {
         cat_channel_dummy_coroutine_t *dummy_coroutine = (cat_channel_dummy_coroutine_t *) coroutine;
@@ -120,7 +120,7 @@ static cat_always_inline cat_bool_t cat_channel_resume_waiter(cat_coroutine_t *c
         CAT_ASSERT(coroutine != NULL);
     }
 
-    return cat_coroutine_resume(coroutine, NULL, NULL);
+    cat_coroutine_schedule(coroutine, CHANNEL, "%s", name);
 }
 
 static cat_always_inline cat_bool_t cat_channel_wait(cat_queue_t *queue, cat_timeout_t timeout)
@@ -186,9 +186,7 @@ static cat_always_inline void cat_channel_unbuffered_notify_consumer(cat_channel
     channel->u.unbuffered.data.in = data;
     channel->u.unbuffered.able.pop = cat_true;
 
-    if (unlikely(!cat_channel_resume_waiter(consumer))) {
-        cat_core_error_with_last(CHANNEL, "Notify consumer failed");
-    }
+    cat_channel_resume_waiter(consumer, "Consumer");
 }
 
 static cat_always_inline void cat_channel_unbuffered_notify_producer(cat_channel_t *channel, cat_data_t *data)
@@ -202,9 +200,7 @@ static cat_always_inline void cat_channel_unbuffered_notify_producer(cat_channel
     channel->u.unbuffered.data.out = data;
     channel->u.unbuffered.able.push = cat_true;
 
-    if (unlikely(!cat_channel_resume_waiter(producer))) {
-        cat_core_error_with_last(CHANNEL, "Notify producer failed");
-    }
+    cat_channel_resume_waiter(producer, "Producer");
 }
 
 static cat_bool_t cat_channel_unbuffered_push(cat_channel_t *channel, const cat_data_t *data, cat_timeout_t timeout)
@@ -314,9 +310,7 @@ static cat_always_inline void cat_channel_notify_possible_consumer(cat_channel_t
 
     if (consumer != NULL) {
         /* notify a possible consume to consume */
-        if (unlikely(!cat_channel_resume_waiter(consumer))) {
-            cat_core_error_with_last(CHANNEL, "Notify consumer failed");
-        }
+        cat_channel_resume_waiter(consumer, "Consumer");
     }
 }
 
@@ -326,9 +320,7 @@ static cat_always_inline void cat_channel_notify_possible_producer(cat_channel_t
 
     if (producer != NULL) {
         /* notify a possible producer to produce */
-        if (unlikely(!cat_channel_resume_waiter(producer))) {
-            cat_core_error_with_last(CHANNEL, "Notify producer failed");
-        }
+        cat_channel_resume_waiter(producer, "Producer");
     }
 }
 
@@ -442,14 +434,10 @@ CAT_API void cat_channel_close(cat_channel_t *channel)
     /* notify all waiters */
     cat_coroutine_t *waiter;
     while ((waiter = cat_queue_front_data(&channel->producers, cat_coroutine_t, waiter.node))) {
-        if (unlikely(!cat_channel_resume_waiter(waiter))) {
-            cat_core_error_with_last(CHANNEL, "Close producer failed");
-        }
+        cat_channel_resume_waiter(waiter, "Producer");
     }
     while ((waiter = cat_queue_front_data(&channel->consumers, cat_coroutine_t, waiter.node))) {
-        if (unlikely(!cat_channel_resume_waiter(waiter))) {
-            cat_core_error_with_last(CHANNEL, "Close consumer failed");
-        }
+        cat_channel_resume_waiter(waiter, "Consumer");
     }
 
     CAT_ASSERT(!cat_channel__has_producers(channel));

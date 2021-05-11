@@ -50,9 +50,7 @@ void cat_signal_callback(uv_signal_t* handle, int signum)
 
     signal->coroutine = NULL;
 
-    if (unlikely(!cat_coroutine_resume(coroutine, NULL, NULL))) {
-        cat_core_error_with_last(TIME, "Signal schedule failed");
-    }
+    cat_coroutine_schedule(coroutine, SIGNAL, "Signal");
 }
 
 CAT_API cat_bool_t cat_signal_wait(int signum, cat_timeout_t timeout)

@@ -17,78 +17,44 @@
  */
 
 #ifdef CAT_OS_WIN
+
 #include <io.h>
-#include <malloc.h>
-#include <direct.h>
-#include <sys/types.h>
 #include <process.h>
 
-typedef int uid_t;
-typedef int gid_t;
-typedef char* caddr_t;
-typedef int pid_t;
+typedef int cat_pid_t;
 
-#ifndef off_t
-#define off_t _off_t
-#endif
+#define cat_getpid _getpid
 
-#ifndef getpid
-#define getpid _getpid
-#endif
+#define cat_strcasecmp  _stricmp
+#define cat_strncasecmp _strnicmp
 
-#ifndef getcwd
-#define getcwd(a, b) _getcwd(a, b)
-#endif
-
-#ifndef strcasecmp
-#define strcasecmp _stricmp
-#endif
-#ifndef strncasecmp
-#define strncasecmp _strnicmp
-#endif
-#if (_MSC_VER >= 1310)
-#ifndef strdup
-#define strdup _strdup
-#endif
-#endif
-
-CAT_API char *strndup(const char *string, size_t length);
-
-CAT_API int setenv(const char *name, const char *value, int overwrite);
-
-struct timezone
-{
-    int tz_minuteswest;
-    int tz_dsttime;
-};
-
-struct itimerval
-{
-    struct timeval it_interval; /* next value */
-    struct timeval it_value; /* current value */
-};
-
-#if !defined(timespec) && _MSC_VER < 1900
-struct timespec
-{
+struct cat_timespec {
     time_t   tv_sec;   /* seconds */
     long     tv_nsec;  /* nanoseconds */
 };
-#endif
 
-#define ITIMER_REAL    0        /*generates sigalrm */
-#define ITIMER_VIRTUAL 1        /*generates sigvtalrm */
-#define ITIMER_VIRT    1        /*generates sigvtalrm */
-#define ITIMER_PROF    2        /*generates sigprof */
+CAT_API unsigned int cat_sys_sleep(unsigned int seconds);
+CAT_API int cat_sys_usleep(unsigned int useconds);
+CAT_API int cat_sys_nanosleep(const struct cat_timespec *req, struct cat_timespec *rem);
 
-typedef long suseconds_t;
+#else
 
-CAT_API int gettimeofday(struct timeval *time_info, struct timezone *timezone_info);
+typedef pid_t cat_pid_t;
 
-CAT_API unsigned int sleep(unsigned int seconds);
-CAT_API int usleep(unsigned int useconds);
-CAT_API int nanosleep(const struct timespec *rqtp, struct timespec *rmtp);
-#endif
+#define cat_getpid getpid
+
+#define cat_strcasecmp  strcasecmp
+#define cat_strncasecmp strncasecmp
+
+#define cat_timespec timespec
+
+#define cat_sys_sleep     sleep
+#define cat_sys_usleep    usleep
+#define cat_sys_nanosleep nanosleep
+
+#endif // CAT_OS_WIN
+
+/* vector */
 
 #ifndef CAT_OS_WIN
 typedef size_t cat_io_vector_length_t;

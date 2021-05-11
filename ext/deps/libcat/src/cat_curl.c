@@ -116,7 +116,7 @@ static const char *cat_curl_translate_action_name(int action)
 }
 #endif
 
-static cat_always_inline cat_msec_t cat_curl_timeout_min(cat_msec_t timeout1, cat_msec_t timeout2)
+static cat_always_inline cat_timeout_t cat_curl_timeout_min(cat_timeout_t timeout1, cat_timeout_t timeout2)
 {
     if (timeout1 < timeout2 && timeout1 >= 0) {
         return timeout1;
@@ -423,7 +423,7 @@ static CURLMcode cat_curl_multi_exec(
 
     while (1) {
         if (context->nfds == 0) {
-            cat_msec_t op_timeout = cat_curl_timeout_min(context->timeout, timeout);
+            cat_timeout_t op_timeout = cat_curl_timeout_min(context->timeout, timeout);
             cat_ret_t ret;
             cat_debug(EXT, "curl_time_delay(multi=%p, timeout=" CAT_TIMEOUT_FMT ")", multi, op_timeout);
             ret = cat_time_delay(op_timeout);

@@ -19,25 +19,73 @@
 #include "cat.h"
 
 #ifdef CAT_USE_DYNAMIC_ALLOCATOR
-cat_allocator_t cat_allocator;
-const cat_allocator_t cat_sys_allocator = { malloc, calloc, realloc, free, strdup, strndup };
+CAT_API cat_allocator_t cat_allocator;
+static const cat_allocator_t cat_sys_allocator = { cat_sys_malloc, cat_sys_calloc, cat_sys_realloc, cat_sys_free };
 
 CAT_API cat_bool_t cat_register_allocator(const cat_allocator_t *allocator)
 {
-    if (
-        allocator->malloc == NULL ||
-        allocator->calloc == NULL ||
-        allocator->realloc == NULL ||
-        allocator->free == NULL ||
-        allocator->strdup == NULL ||
-        allocator->strndup == NULL
-    ) {
-        cat_update_last_error(CAT_EINVAL, "Allocator must be filled");
+    if (allocator != NULL) {
+        if (
+            allocator->malloc == NULL ||
+            allocator->calloc == NULL ||
+            allocator->realloc == NULL ||
+            allocator->free == NULL
+        ) {
+            cat_update_last_error(CAT_EINVAL, "Allocator must be filled");
+        }
+        cat_allocator = *allocator;
+    } else {
+        cat_allocator = cat_sys_allocator;
     }
-    cat_allocator = *allocator;
     return cat_true;
 }
 #endif
+
+CAT_API char *cat_sys_strdup(const char *string)
+{
+    size_t size = strlen(string) + 1;
+	char *ptr = (char *) malloc(size);
+    if (unlikely(ptr == NULL)) {
+        return NULL;
+    }
+	return memcpy(ptr, string, size);
+}
+
+CAT_API char *cat_sys_strndup(const char *string, size_t length)
+{
+	char *ptr;
+    length = cat_strnlen(string, length);
+    ptr = (char *) malloc(length + 1);
+    if (unlikely(ptr == NULL)) {
+        return NULL;
+    }
+	memcpy(ptr, string, length);
+	ptr[length] = '\0';
+	return ptr;
+}
+
+CAT_API char *cat_strdup(const char *string)
+{
+    size_t size = strlen(string) + 1;
+	char *ptr = (char *) cat_malloc(size);
+    if (unlikely(ptr == NULL)) {
+        return NULL;
+    }
+	return memcpy(ptr, string, size);
+}
+
+CAT_API char *cat_strndup(const char *string, size_t length)
+{
+    char *ptr;
+    length = cat_strnlen(string, length);
+	ptr = (char *) cat_malloc(length + 1);
+    if (unlikely(ptr == NULL)) {
+        return NULL;
+    }
+	memcpy(ptr, string, length);
+	ptr[length] = '\0';
+	return ptr;
+}
 
 CAT_API void *cat_malloc_function(size_t size)
 {
@@ -56,9 +104,6 @@ CAT_API void *cat_realloc_function(void *ptr, size_t size)
 
 CAT_API void cat_free_function(void *ptr)
 {
-    if (unlikely(ptr == NULL)) {
-        return;
-    }
     cat_free(ptr);
 }
 
@@ -69,16 +114,6 @@ CAT_API void cat_freep_function(void *ptr)
     }
     ptr = *((void **) ptr);
     cat_free_function(ptr);
-}
-
-CAT_API char *cat_strdup_function(const char *string)
-{
-    return cat_strdup(string);
-}
-
-CAT_API char *cat_strndup_function(const char *string, size_t length)
-{
-    return cat_strndup(string ,length);
 }
 
 CAT_API int cat_getpagesize(void)
@@ -106,9 +141,9 @@ CAT_API int cat_getpagesize(void)
     return (int) pagesize;
 }
 
-CAT_API void *cat_getpageof(const void *p)
+CAT_API void *cat_getpageof(const void *ptr)
 {
-    return (void *) (((uintptr_t) p) & ~(cat_getpagesize() - 1));
+    return (void *) (((uintptr_t) ptr) & ~(cat_getpagesize() - 1));
 }
 
 CAT_API unsigned int cat_bit_count(uintmax_t num)

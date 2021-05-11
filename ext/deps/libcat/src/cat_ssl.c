@@ -767,7 +767,7 @@ static cat_bool_t cat_ssl_check_name(const char *name, size_t name_length, ASN1_
     slen = name_length;
     p = ASN1_STRING_data(pattern);
     plen = ASN1_STRING_length(pattern);
-    if (slen == plen && strncasecmp(s, p, plen) == 0) {
+    if (slen == plen && cat_strncasecmp(s, p, plen) == 0) {
         return cat_true;
     }
     if (plen > 2 && p[0] == '*' && p[1] == '.') {
@@ -779,7 +779,7 @@ static cat_bool_t cat_ssl_check_name(const char *name, size_t name_length, ASN1_
             return cat_false;
         }
         slen = end - s;
-        if (plen == slen && strncasecmp(s, p, plen) == 0) {
+        if (plen == slen && cat_strncasecmp(s, p, plen) == 0) {
             return cat_true;
         }
     }

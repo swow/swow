@@ -39,8 +39,6 @@ static cat_always_inline char* cat_memcpy(char *p, const char *data, size_t leng
 #define cat_sys_calloc                 calloc
 #define cat_sys_realloc                realloc
 #define cat_sys_free                   free
-#define cat_sys_strdup                 strdup
-#define cat_sys_strndup                strndup
 
 #ifndef cat_malloc
 #ifndef CAT_USE_DYNAMIC_ALLOCATOR
@@ -48,15 +46,11 @@ static cat_always_inline char* cat_memcpy(char *p, const char *data, size_t leng
 #define cat_calloc                     cat_sys_calloc
 #define cat_realloc                    cat_sys_realloc
 #define cat_free                       cat_sys_free
-#define cat_strdup                     cat_sys_strdup
-#define cat_strndup                    cat_sys_strndup
 #else
-#define cat_malloc(size)               cat_allocator.malloc(size)
-#define cat_calloc(count, size)        cat_allocator.calloc(count, size)
-#define cat_realloc(ptr, size)         cat_allocator.realloc(ptr, size)
-#define cat_free(ptr)                  cat_allocator.free(ptr)
-#define cat_strdup(string)             cat_allocator.strdup(string)
-#define cat_strndup(string, length)    cat_allocator.strndup(string, length)
+#define cat_malloc                     cat_allocator.malloc
+#define cat_calloc                     cat_allocator.calloc
+#define cat_realloc                    cat_allocator.realloc
+#define cat_free                       cat_allocator.free
 #endif
 #endif
 
@@ -65,8 +59,6 @@ typedef void *(*cat_malloc_function_t)(size_t size);
 typedef void *(*cat_calloc_function_t)(size_t count, size_t size);
 typedef void *(*cat_realloc_function_t)(void *ptr, size_t size);
 typedef void (*cat_free_function_t)(void *ptr);
-typedef char *(*cat_strdup_function_t)(const char *string);
-typedef char *(*cat_strndup_function_t)(const char *string, size_t length);
 
 typedef struct
 {
@@ -74,26 +66,27 @@ typedef struct
     cat_calloc_function_t calloc;
     cat_realloc_function_t realloc;
     cat_free_function_t free;
-    cat_strdup_function_t strdup;
-    cat_strndup_function_t strndup;
 } cat_allocator_t;
 
-extern cat_allocator_t cat_allocator;
-extern const cat_allocator_t cat_sys_allocator;
+extern CAT_API cat_allocator_t cat_allocator;
 
 CAT_API cat_bool_t cat_register_allocator(const cat_allocator_t *allocator);
 #endif
+
+CAT_API char *cat_sys_strdup(const char *string);
+CAT_API char *cat_sys_strndup(const char *string, size_t length);
+
+CAT_API char *cat_strdup(const char *string);
+CAT_API char *cat_strndup(const char *string, size_t length);
 
 CAT_API void *cat_malloc_function(size_t size);
 CAT_API void *cat_calloc_function(size_t count, size_t size);
 CAT_API void *cat_realloc_function(void *ptr, size_t size);
 CAT_API void cat_free_function(void *ptr);
 CAT_API void cat_freep_function(void *ptr); /* free(ptr->ptr) */
-CAT_API char *cat_strdup_function(const char *string);
-CAT_API char *cat_strndup_function(const char *string, size_t length);
 
 CAT_API int cat_getpagesize(void);
-CAT_API void *cat_getpageof(const void *p);
+CAT_API void *cat_getpageof(const void *ptr);
 
 CAT_API unsigned int cat_bit_count(uintmax_t num);
 CAT_API int cat_bit_pos(uintmax_t num);

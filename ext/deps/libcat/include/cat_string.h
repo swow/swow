@@ -68,10 +68,12 @@ static cat_always_inline void cat_string_close(cat_string_t *string)
 {
     if (string->value != NULL) {
         cat_free(string->value);
+        cat_string_init(string);
     }
 }
 
-CAT_API const unsigned char *cat_strlchr(const unsigned char *p, const unsigned char *last, unsigned char c);
+CAT_API size_t cat_strnlen(const char *s, size_t n);
+CAT_API const char *cat_strlchr(const char *s, const char *last, char c);
 
 CAT_API char *cat_vsprintf(const char *format, va_list args); CAT_FREE
 CAT_API char *cat_sprintf(const char *format, ...)            CAT_FREE CAT_ATTRIBUTE_FORMAT(printf, 1, 2);

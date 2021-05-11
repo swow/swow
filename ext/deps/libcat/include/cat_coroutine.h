@@ -271,6 +271,12 @@ CAT_API const char *cat_coroutine_get_current_role_name(void);
 /* helper */
 CAT_API cat_coroutine_t *cat_coroutine_run(cat_coroutine_t *coroutine, cat_coroutine_function_t function, cat_data_t *data);
 
+#define cat_coroutine_schedule(coroutine, module_type, name, ...) do { \
+    if (unlikely(!cat_coroutine_resume(coroutine, NULL, NULL))) { \
+        cat_core_error_with_last(module_type, name " schedule failed", ##__VA_ARGS__); \
+    } \
+} while (0)
+
 #ifdef __cplusplus
 }
 #endif

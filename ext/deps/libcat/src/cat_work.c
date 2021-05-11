@@ -29,6 +29,7 @@ typedef struct
         uv_work_t work;
     } request;
     cat_work_function_t function;
+    cat_work_cleanup_callback_t cleanup;
     cat_data_t *data;
     int status;
 } cat_work_context_t;
@@ -45,31 +46,28 @@ static void cat_work_after_done(uv_work_t *request, int status)
 
     if (likely(context->request.coroutine != NULL)) {
         context->status = status;
-        if (unlikely(!cat_coroutine_resume(context->request.coroutine, NULL, NULL))) {
-            cat_core_error_with_last(WORK, "Work schedule failed");
-        }
+        cat_coroutine_schedule(context->request.coroutine, WORK, "Work");
     }
 
+    if (context->cleanup != NULL) {
+        context->cleanup(context->data);
+    }
     cat_free(context);
 }
 
-CAT_API cat_bool_t cat_work(cat_work_kind_t kind, cat_work_function_t function, cat_data_t *data, cat_timeout_t timeout)
+CAT_API cat_bool_t cat_work(cat_work_kind_t kind, cat_work_function_t function, cat_work_cleanup_callback_t cleanup, cat_data_t *data, cat_timeout_t timeout)
 {
     cat_work_context_t *context = (cat_work_context_t *) cat_malloc(sizeof(*context));
-    int error;
     cat_bool_t ret;
 
     if (unlikely(context == NULL)) {
         cat_update_last_error_of_syscall("Malloc for work context failed");
-        return cat_false;
+        goto _error;
     }
     context->function = function;
+    context->cleanup = cleanup;
     context->data = data;
-    error = uv_queue_work_ex(cat_event_loop, &context->request.work, (uv_work_kind) kind, cat_work_callback, cat_work_after_done);
-    if (unlikely(error != 0)) {
-        cat_update_last_error_with_reason(error, "Work queue failed");
-        return cat_false;
-    }
+    (void) uv_queue_work_ex(cat_event_loop, &context->request.work, (uv_work_kind) kind, cat_work_callback, cat_work_after_done);
     context->status = CAT_ECANCELED;
     context->request.coroutine = CAT_COROUTINE_G(current);
     ret = cat_time_wait(timeout);
@@ -80,14 +78,15 @@ CAT_API cat_bool_t cat_work(cat_work_kind_t kind, cat_work_function_t function, 
         return cat_false;
     }
     if (unlikely(context->status != 0)) {
-        if (context->status == CAT_ECANCELED) {
-            cat_update_last_error(CAT_ECANCELED, "Work has been canceled");
-            (void) uv_cancel(&context->request.req);
-        } else {
-            cat_update_last_error_with_reason(context->status, "Work failed");
-        }
+        cat_update_last_error_with_reason(context->status, "Work failed");
         return cat_false;
     }
 
     return cat_true;
+
+    _error:
+    if (cleanup != NULL) {
+        cleanup(data);
+    }
+    return cat_false;
 }

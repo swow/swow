@@ -18,15 +18,21 @@
 
 #include "cat.h"
 
+CAT_API size_t cat_strnlen(const char *s, size_t n)
+{
+    const char *p = memchr(s, 0, n);
+	return p ? (size_t) (p - s) : n;
+}
+
 /* Searches a string based on the pointer to the beginning and end of the string for a given character.
  * Returns a pointer to the first match of that character. */
-CAT_API const unsigned char *cat_strlchr(const unsigned char *p, const unsigned char *last, unsigned char c)
+CAT_API const char *cat_strlchr(const char *s, const char *last, char c)
 {
-    while (p < last) {
-        if (*p == c) {
-            return p;
+    while ((unsigned char *) s < (unsigned char *) last) {
+        if (*s == c) {
+            return s;
         }
-        p++;
+        s++;
     }
 
     return NULL;

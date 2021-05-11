@@ -54,8 +54,10 @@ extern CAT_API CAT_GLOBALS_DECLARE(cat_watch_dog)
 struct cat_watch_dog_s
 {
     /* public (options, readonly) */
-    cat_nsec_t quantum;
-    cat_nsec_t threshold;
+    /* alert if blocking time is greater than quantum (nano secondes) */
+    cat_timeout_t quantum;
+    /* do something if blocking time is greate than threshold (nano secondes) */
+    cat_timeout_t threshold;
     cat_watch_dog_alerter_t alerter;
     /* private */
     cat_alert_count_t alert_count;
@@ -74,14 +76,14 @@ CAT_API cat_bool_t cat_watch_dog_module_init(void);
 CAT_API cat_bool_t cat_watch_dog_runtime_init(void);
 CAT_API cat_bool_t cat_watch_dog_runtime_shutdown(void);
 
-CAT_API cat_bool_t cat_watch_dog_run(cat_watch_dog_t *watch_dog, cat_nsec_t quantum, cat_nsec_t threshold, cat_watch_dog_alerter_t alerter);
+CAT_API cat_bool_t cat_watch_dog_run(cat_watch_dog_t *watch_dog, cat_timeout_t quantum, cat_timeout_t threshold, cat_watch_dog_alerter_t alerter);
 CAT_API cat_bool_t cat_watch_dog_stop(void);
 
 CAT_API void cat_watch_dog_alert_standard(cat_watch_dog_t *watch_dog);
 
 CAT_API cat_bool_t cat_watch_dog_is_running(void);
-CAT_API cat_nsec_t cat_watch_dog_get_quantum(void);
-CAT_API cat_nsec_t cat_watch_dog_get_threshold(void);
+CAT_API cat_timeout_t cat_watch_dog_get_quantum(void);
+CAT_API cat_timeout_t cat_watch_dog_get_threshold(void);
 
 #ifdef __cplusplus
 }

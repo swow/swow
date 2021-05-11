@@ -22,7 +22,7 @@ CAT_API CAT_GLOBALS_DECLARE(cat_watch_dog)
 
 CAT_GLOBALS_CTOR_DECLARE_SZ(cat_watch_dog)
 
-static cat_nsec_t cat_watch_dog_align_quantum(cat_nsec_t quantum)
+static cat_timeout_t cat_watch_dog_align_quantum(cat_timeout_t quantum)
 {
     if (quantum <= 0) {
         quantum = CAT_WATCH_DOG_DEFAULT_QUANTUM;
@@ -31,7 +31,7 @@ static cat_nsec_t cat_watch_dog_align_quantum(cat_nsec_t quantum)
     return quantum;
 }
 
-static cat_nsec_t cat_watch_dog_align_threshold(cat_nsec_t threshold)
+static cat_timeout_t cat_watch_dog_align_threshold(cat_timeout_t threshold)
 {
     if (threshold == 0) {
         threshold = CAT_WATCH_DOG_DEFAULT_THRESHOLD;
@@ -96,11 +96,11 @@ CAT_API cat_bool_t cat_watch_dog_runtime_shutdown(void)
 CAT_API void cat_watch_dog_alert_standard(cat_watch_dog_t *watch_dog)
 {
     fprintf(stderr, "Warning: <Watch-Dog> Syscall blocking or CPU starvation may occur in " CAT_WATCH_DOG_ROLE_NAME " %d, "
-                    "it has been blocked for more than " CAT_NSEC_FMT  " ns" CAT_EOL,
+                    "it has been blocked for more than " CAT_TIMEOUT_FMT  " ns" CAT_EOL,
                     watch_dog->pid, watch_dog->quantum * watch_dog->alert_count);
 }
 
-CAT_API cat_bool_t cat_watch_dog_run(cat_watch_dog_t *watch_dog, cat_nsec_t quantum, cat_nsec_t threshold, cat_watch_dog_alerter_t alerter)
+CAT_API cat_bool_t cat_watch_dog_run(cat_watch_dog_t *watch_dog, cat_timeout_t quantum, cat_timeout_t threshold, cat_watch_dog_alerter_t alerter)
 {
     uv_thread_options_t options;
     uv_sem_t sem;
@@ -219,7 +219,7 @@ CAT_API cat_bool_t cat_watch_dog_is_running(void)
     return CAT_WATCH_DOG_G(watch_dog) != NULL;
 }
 
-CAT_API cat_nsec_t cat_watch_dog_get_quantum(void)
+CAT_API cat_timeout_t cat_watch_dog_get_quantum(void)
 {
     cat_watch_dog_t *watch_dog = CAT_WATCH_DOG_G(watch_dog);
 
@@ -228,7 +228,7 @@ CAT_API cat_nsec_t cat_watch_dog_get_quantum(void)
             -1;
 }
 
-CAT_API cat_nsec_t cat_watch_dog_get_threshold(void)
+CAT_API cat_timeout_t cat_watch_dog_get_threshold(void)
 {
     cat_watch_dog_t *watch_dog = CAT_WATCH_DOG_G(watch_dog);
 

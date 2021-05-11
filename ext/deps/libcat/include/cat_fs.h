@@ -12,7 +12,8 @@
   | See the License for the specific language governing permissions and      |
   | limitations under the License. See accompanying LICENSE file.            |
   +--------------------------------------------------------------------------+
-  | Author: Twosee <twosee@php.net>                                          |
+  | Author: dixyes <dixyes@gmail.com>                                        |
+  |         Twosee <twosee@php.net>                                          |
   +--------------------------------------------------------------------------+
  */
 
@@ -106,20 +107,20 @@ CAT_API int cat_fs_fsync(cat_file_t fd);
 CAT_API int cat_fs_fdatasync(cat_file_t fd);
 CAT_API int cat_fs_ftruncate(cat_file_t fd, int64_t offset);
 
-CAT_API cat_dir_t *cat_fs_opendir(const char* path);
-CAT_API uv_dirent_t* cat_fs_readdir(cat_dir_t* dir);
-CAT_API void cat_fs_rewinddir(cat_dir_t* dir);
-CAT_API int cat_fs_closedir(cat_dir_t* dir);
-CAT_API int cat_fs_scandir(const char* path, cat_dirent_t ** namelist,
+CAT_API cat_dir_t *cat_fs_opendir(const char *path);
+CAT_API cat_dirent_t *cat_fs_readdir(cat_dir_t *dir);
+CAT_API void cat_fs_rewinddir(cat_dir_t *dir);
+CAT_API int cat_fs_closedir(cat_dir_t *dir);
+CAT_API int cat_fs_scandir(const char *path, cat_dirent_t * *namelist,
   int (*filter)(const cat_dirent_t *),
   int (*compar)(const cat_dirent_t *, const cat_dirent_t *));
 
 CAT_API int cat_fs_access(const char *path, int mode);
-CAT_API int cat_fs_stat(const char* path, cat_stat_t * buf);
-CAT_API int cat_fs_lstat(const char* path, cat_stat_t * buf);
-CAT_API int cat_fs_fstat(cat_file_t fd, cat_stat_t * buf);
-CAT_API int cat_fs_utime(const char* path, double atime, double mtime);
-CAT_API int cat_fs_lutime(const char* path, double atime, double mtime);
+CAT_API int cat_fs_stat(const char *path, cat_stat_t  *buf);
+CAT_API int cat_fs_lstat(const char *path, cat_stat_t  *buf);
+CAT_API int cat_fs_fstat(cat_file_t fd, cat_stat_t  *buf);
+CAT_API int cat_fs_utime(const char *path, double atime, double mtime);
+CAT_API int cat_fs_lutime(const char *path, double atime, double mtime);
 CAT_API int cat_fs_futime(cat_file_t fd, double atime, double mtime);
 
 CAT_API int cat_fs_mkdir(const char *path, int mode);
@@ -127,11 +128,11 @@ CAT_API int cat_fs_rmdir(const char *path);
 CAT_API int cat_fs_rename(const char *path, const char *new_path);
 CAT_API int cat_fs_unlink(const char *path);
 
-CAT_API int cat_fs_link(const char * path, const char * new_path);
-CAT_API int cat_fs_symlink(const char * path, const char * new_path, int flags);
+CAT_API int cat_fs_link(const char  *path, const char  *new_path);
+CAT_API int cat_fs_symlink(const char  *path, const char  *new_path, int flags);
 
-CAT_API int cat_fs_readlink(const char * pathname, char * buf, size_t len);
-CAT_API char * cat_fs_realpath(const char *pathname, char* buf);
+CAT_API int cat_fs_readlink(const char  *pathname, char  *buf, size_t len);
+CAT_API char *cat_fs_realpath(const char *pathname, char *buf);
 
 CAT_API int cat_fs_chmod(const char *path, int mode);
 CAT_API int cat_fs_fchmod(cat_file_t fd, int mode);
@@ -139,11 +140,11 @@ CAT_API int cat_fs_chown(const char *path, cat_uid_t uid, cat_gid_t gid);
 CAT_API int cat_fs_fchown(cat_file_t fd, cat_uid_t uid, cat_gid_t gid);
 CAT_API int cat_fs_lchown(const char *path, cat_uid_t uid, cat_gid_t gid);
 
-CAT_API int cat_fs_copyfile(const char* path, const char* new_path, int flags);
+CAT_API int cat_fs_copyfile(const char *path, const char *new_path, int flags);
 CAT_API int cat_fs_sendfile(cat_file_t out_fd, cat_file_t in_fd, int64_t in_offset, size_t length);
-CAT_API const char* cat_fs_mkdtemp(const char* tpl);
-CAT_API cat_file_t cat_fs_mkstemp(const char* tpl);
-CAT_API int cat_fs_statfs(const char* path, cat_statfs_t* buf);
+CAT_API const char *cat_fs_mkdtemp(const char *tpl);
+CAT_API cat_file_t cat_fs_mkstemp(const char *tpl);
+CAT_API int cat_fs_statfs(const char *path, cat_statfs_t *buf);
 
 CAT_API int cat_fs_flock(cat_file_t fd, int operation);
 

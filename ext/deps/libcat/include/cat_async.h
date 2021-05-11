@@ -16,26 +16,41 @@
   +--------------------------------------------------------------------------+
  */
 
-#ifndef CAT_WORK_H
-#define CAT_WORK_H
+#ifndef CAT_THREAD_H
+#define CAT_THREAD_H
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 #include "cat.h"
+#include "cat_coroutine.h"
 
-typedef cat_data_callback_t cat_work_function_t;
-typedef cat_data_callback_t cat_work_cleanup_callback_t;
+typedef struct cat_async_s cat_async_t;
+typedef void (*cat_async_cleanup_callback)(cat_async_t *async);
 
-typedef enum {
-  CAT_WORK_KIND_CPU = UV_WORK_CPU,
-  CAT_WORK_KIND_FAST_IO = UV_WORK_FAST_IO,
-  CAT_WORK_KIND_SLOW_IO = UV_WORK_SLOW_IO,
-} cat_work_kind_t;
+struct cat_async_s {
 
-CAT_API cat_bool_t cat_work(cat_work_kind_t kind, cat_work_function_t function, cat_work_cleanup_callback_t cleanup, cat_data_t *data, cat_timeout_t timeout);
+    union {
+        uv_handle_t handle;
+        uv_async_t async;
+    } u;
+    cat_async_cleanup_callback cleanup;
+    cat_coroutine_t *coroutine;
+    cat_bool_t allocated;
+    cat_bool_t done;
+    cat_bool_t closing;
+};
+
+CAT_API cat_async_t *cat_async_create(cat_async_t *async);
+CAT_API int cat_async_notify(cat_async_t *async);
+/* eq to wait + cleanup/close */
+CAT_API cat_bool_t cat_async_wait_and_close(cat_async_t *async, cat_async_cleanup_callback cleanup, cat_timeout_t timeout);
+/* clean up callback will be called after async was notified, and async closed */
+CAT_API cat_bool_t cat_async_cleanup(cat_async_t *async, cat_async_cleanup_callback cleanup);
+/* async handle will be closed immediately, clean up callback will be called at the same time  */
+CAT_API cat_bool_t cat_async_close(cat_async_t *async, cat_async_cleanup_callback cleanup);
 
 #ifdef __cplusplus
 }
 #endif
-#endif /* CAT_WORK_H */
+#endif /* CAT_THREAD_H */

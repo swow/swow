@@ -81,9 +81,7 @@ CAT_API cat_bool_t cat_sync_wait_group_done(cat_sync_wait_group_t *wg)
     }
     wg->count = count;
     if (count == 0 && wg->coroutine != NULL) {
-        if (unlikely(!cat_coroutine_resume(wg->coroutine, NULL, NULL))) {
-            cat_core_error_with_last(SYNC, "WaitGroup resume waiter failed");
-        }
+        cat_coroutine_schedule(wg->coroutine, SYNC, "WaitGroup");
     }
 
     return cat_true;

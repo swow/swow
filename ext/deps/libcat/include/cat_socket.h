@@ -63,6 +63,8 @@ typedef short cat_sa_family_t;
 typedef unsigned short cat_in_port_t;
 #endif
 
+#define CAT_SOCKADDR_HEADER_LENGTH offsetof(cat_sockaddr_t, sa_data)
+
 typedef struct sockaddr     cat_sockaddr_t;
 typedef struct sockaddr_in  cat_sockaddr_in_t;
 typedef struct sockaddr_in6 cat_sockaddr_in6_t;
@@ -590,6 +592,7 @@ CAT_API cat_bool_t cat_socket_set_tcp_accept_balance(cat_socket_t *socket, cat_b
 
 CAT_API int cat_socket_get_local_free_port(void);
 CAT_API void cat_socket_dump_all(void);
+CAT_API void cat_socket_close_all(void);
 
 #ifdef __cplusplus
 }
