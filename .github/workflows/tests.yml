@@ -29,7 +29,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest]
         #os: [macos-latest]
-        php-version: ['8.0', '7.4', '7.3']
+        php-version: ['8.1', '8.0', '7.4', '7.3']
         #php-version: ['8.0']
         #ts: ['nts', 'ts']
       max-parallel: 12
@@ -99,7 +99,7 @@ jobs:
       fail-fast: false
       matrix:
         os: ['windows-latest', 'windows-2016']
-        php-version: ['8.0', '7.4', '7.3']
+        php-version: ['8.1', '8.0', '7.4', '7.3']
         ts: [ 'nts', 'ts' ]
         exclude:
           - os: windows-latest
@@ -108,6 +108,8 @@ jobs:
             php-version: "7.3"
           - os: windows-2016
             php-version: "8.0"
+          - os: windows-2016
+            php-version: "8.1"
       max-parallel: 6
     steps:
       - name: Checkout
@@ -129,6 +131,8 @@ jobs:
       - name: Build Swow extension
         uses: ./.github/workflows/winext
         with:
+          phpver: ${{ matrix.php-version }}
+          phpts: ${{ matrix.ts == 'ts' && '1' || '0' }}
           ext-path: ./ext
           tools-path: C:\tools\phpdev
           conf-args: --enable-swow-debug --enable-swow-ssl --enable-swow-curl

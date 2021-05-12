@@ -73,6 +73,13 @@ runs:
           $PhpBin = ""
           $PhpVer = "${{ inputs.phpver }}"
         }
+        $master = $false
+        if ($PhpVer -Eq "8.1"){
+          # using master
+          $master = $true
+          # use 8.0 deps
+          $PhpVer = "8.0"
+        }
         $os = "${{ matrix.os }}"
         if($os.Equals("windows-latest") -Or $os.Equals("windows-2019")){
           $PhpVCVer = "VS16"
@@ -95,17 +102,30 @@ runs:
         if( 0 -Ne $ret ){
             exit 1
         }
-        Write-Host "::group::Fetching devel-pack from windows.php.net"
-        ./.github/workflows/winext/devpack.ps1 `
-          -MaxTry ${{ inputs.max-try }} `
-          -ToolsPath ${{ inputs.tools-path }} `
-          -PhpBin $PhpBin `
-          -PhpVer $PhpVer `
-          -PhpTs ${{ inputs.phpts }} `
-          -PhpArch ${{ inputs.phparch }} `
-          -PhpVCVer $PhpVCVer
-        $ret = $lastexitcode
-        Write-Host "::endgroup::"
+        if($master){
+          Write-Host "::group::Fetching devel-pack from shivammathur/php-builder-windows"
+          ./.github/workflows/winext/devpack_master.ps1 `
+            -MaxTry ${{ inputs.max-try }} `
+            -ToolsPath ${{ inputs.tools-path }} `
+            -PhpTs ${{ inputs.phpts }} `
+            -PhpArch ${{ inputs.phparch }} `
+            -PhpVCVer $PhpVCVer
+          $ret = $lastexitcode
+          Write-Host "::endgroup::"
+        }else{
+          Write-Host "::group::Fetching devel-pack from windows.php.net"
+          ./.github/workflows/winext/devpack.ps1 `
+            -MaxTry ${{ inputs.max-try }} `
+            -ToolsPath ${{ inputs.tools-path }} `
+            -PhpBin $PhpBin `
+            -PhpVer $PhpVer `
+            -PhpTs ${{ inputs.phpts }} `
+            -PhpArch ${{ inputs.phparch }} `
+            -PhpVCVer $PhpVCVer
+          $ret = $lastexitcode
+          Write-Host "::endgroup::"
+        }
+        
         exit $ret
 
     - name: Build extension
