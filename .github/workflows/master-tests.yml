@@ -1,38 +1,22 @@
-name: tests
+name: tests for latest PHP
 
-#on: [gollum]
-on: [push, pull_request]
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    # upstream shivammathur/php-builder* run at 23:30+0000 per day
+    - cron:  '42 3 * * *'
 
 jobs:
-  cs-check:
-    name: Library coding style check
-    runs-on: "ubuntu-latest"
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: 7.4 # should be update to latest when cs-fixer supports 8.0
-
-      - name: Coding Standards Check
-        run: |
-          composer update -o --ignore-platform-reqs
-          composer update -o
-          composer cs-check
-
   unix-tests:
-    name: PHP ${{ matrix.php-version }} ${{ matrix.ts }} Test on ${{ matrix.os }}
+    name: PHP latest Test on ${{ matrix.os }}
     runs-on: "${{ matrix.os }}"
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
-        #os: [macos-latest]
-        php-version: ['8.0', '7.4', '7.3']
-        #php-version: ['8.0']
-        #ts: ['nts', 'ts']
-      max-parallel: 12
+      max-parallel: 2
     steps:
 
       - name: Checkout
@@ -41,7 +25,7 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: ${{ matrix.php-version }}
+          php-version: '8.1'
           tools: phpize
           # ini-values: pcov.directory=lib
           # coverage: pcov
@@ -93,34 +77,24 @@ jobs:
         run: exit 1
 
   windows-tests:
-    name: PHP ${{ matrix.php-version }} ${{ matrix.ts }} Test on ${{ matrix.os }}
+    name: PHP latest ${{ matrix.ts }} Test on Windows
     runs-on: "${{ matrix.os }}"
     strategy:
       fail-fast: false
       matrix:
-        os: ['windows-latest', 'windows-2016']
-        php-version: ['8.0', '7.4', '7.3']
+        os: ['windows-latest']
         ts: [ 'nts', 'ts' ]
-        exclude:
-          - os: windows-latest
-            php-version: "7.4"
-          - os: windows-latest
-            php-version: "7.3"
-          - os: windows-2016
-            php-version: "8.0"
-          - os: windows-2016
-            php-version: "8.1"
-      max-parallel: 6
+      max-parallel: 2
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v1
 
       # TODO: windows varient of setup-php seems to be so slow
       #       shell we add caches?
       - name: Setup PHP
         uses: shivammathur/setup-php@master
         with:
-          php-version: ${{ matrix.php-version }}
+          php-version: '8.1'
           # ini-values: pcov.directory=lib
           # coverage: pcov
           coverage: none
@@ -131,6 +105,8 @@ jobs:
       - name: Build Swow extension
         uses: ./.github/workflows/winext
         with:
+          phpver: '8.1'
+          phpts: ${{ matrix.ts == 'ts' && '1' || '0' }}
           ext-path: ./ext
           tools-path: C:\tools\phpdev
           conf-args: --enable-swow-debug --enable-swow-ssl --enable-swow-curl
