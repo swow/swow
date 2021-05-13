@@ -28,6 +28,8 @@ typedef int cat_pid_t;
 #define cat_strcasecmp  _stricmp
 #define cat_strncasecmp _strnicmp
 
+typedef long cat_timeval_sec_t;
+
 struct cat_timespec {
     time_t   tv_sec;   /* seconds */
     long     tv_nsec;  /* nanoseconds */
@@ -45,6 +47,8 @@ typedef pid_t cat_pid_t;
 
 #define cat_strcasecmp  strcasecmp
 #define cat_strncasecmp strncasecmp
+
+typedef time_t cat_timeval_sec_t;
 
 #define cat_timespec timespec
 

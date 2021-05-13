@@ -88,6 +88,10 @@ extern char** environ;
 # define uv__accept4 accept4
 #endif
 
+#if defined(__linux__) && defined(__SANITIZE_THREAD__) && defined(__clang__)
+# include <sanitizer/linux_syscall_hooks.h>
+#endif
+
 static int uv__run_pending(uv_loop_t* loop);
 
 /* Verify that uv_buf_t is ABI-compatible with struct iovec. */
@@ -423,32 +427,40 @@ int uv_run(uv_loop_t* loop, uv_run_mode mode) {
 
 
 #ifdef HAVE_LIBCAT
-int uv_crun(uv_loop_t* loop) {
-  int timeout;
+int uv_crun(uv_loop_t* loop, uv_defer_callback_t defer) {
+  int r, d;
 
-  if (!uv__loop_alive(loop)) {
+  r = uv__loop_alive(loop);
+  d = 1;
+  uv_update_time(loop);
+
+  while (r || d) {
+    if (r) {
+      uv__run_pending(loop);
+      uv__run_idle(loop);
+      uv__run_prepare(loop);
+
+      uv__io_poll(loop, uv_backend_timeout(loop));
+      uv__metrics_update_idle_time(loop);
+
+      uv__run_check(loop);
+      uv__run_closing_handles(loop);
+    }
+
+    loop->round++;
     uv__update_time(loop);
-    return 0;
+    d = defer(loop);
+
+    if (r)
+      uv__run_timers(loop);
+
+    r = uv__loop_alive(loop) && !loop->stop_flag;
   }
 
-  if (uv__run_pending(loop)) {
-    timeout = 0;
-  } else {
-    timeout = uv_backend_timeout(loop);
-  }
-  uv__run_idle(loop);
-  uv__run_prepare(loop);
+  if (loop->stop_flag)
+    loop->stop_flag = 0;
 
-  uv__io_poll(loop, timeout);
-
-  loop->round++;
-  uv__update_time(loop);
-  uv__run_timers(loop);
-
-  uv__run_check(loop);
-  uv__run_closing_handles(loop);
-
-  return uv__loop_alive(loop);
+  return r;
 }
 #endif
 
@@ -570,7 +582,13 @@ int uv__close_nocancel(int fd) {
   return close$NOCANCEL$UNIX2003(fd);
 #endif
 #pragma GCC diagnostic pop
-#elif defined(__linux__)
+#elif defined(__linux__) && defined(__SANITIZE_THREAD__) && defined(__clang__)
+  long rc;
+  __sanitizer_syscall_pre_close(fd);
+  rc = syscall(SYS_close, fd);
+  __sanitizer_syscall_post_close(rc, fd);
+  return rc;
+#elif defined(__linux__) && !defined(__SANITIZE_THREAD__)
   return syscall(SYS_close, fd);
 #else
   return close(fd);
@@ -1601,7 +1619,7 @@ int uv__search_path(const char* prog, char* buf, size_t* buflen) {
     buf[*buflen] = '\0';
 
     return 0;
-  } 
+  }
 
   /* Case iii). Search PATH environment variable */
   cloned_path = NULL;

@@ -52,7 +52,7 @@ typedef SHORT cat_pollfd_events_t;
 #endif
 
 /* OK: events triggered, NONE: timedout, ERROR: error ocurred */
-CAT_API cat_ret_t cat_poll_one(cat_os_socket_t fd, int events, int *revents, cat_timeout_t timeout);
+CAT_API cat_ret_t cat_poll_one(cat_os_socket_t fd, cat_pollfd_events_t events, cat_pollfd_events_t *revents, cat_timeout_t timeout);
 
 /* same with poll(),
  * returns the number of descriptors that are ready for I/O, or -1 if an error occurred.

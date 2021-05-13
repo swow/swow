@@ -60,6 +60,7 @@ CAT_API void cat_event_dead_lock(void) CAT_INTERNAL;
 CAT_API cat_coroutine_t *cat_event_scheduler_run(cat_coroutine_t *coroutine);
 CAT_API cat_coroutine_t *cat_event_scheduler_close(void);
 
+/* Notice: we should not call any event related APIs in shutdown task */
 CAT_API cat_event_task_t *cat_event_register_runtime_shutdown_task(cat_data_callback_t callback, cat_data_t *data);
 CAT_API void cat_event_unregister_runtime_shutdown_task(cat_event_task_t *task);
 

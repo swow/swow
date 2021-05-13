@@ -47,6 +47,27 @@ CAT_API cat_msec_t cat_time_msec_cached(void)
     return cat_event_loop->time;
 }
 
+CAT_API cat_nsec_t cat_time_nsec2(void)
+{
+	uv_timeval64_t tv;
+    (void) uv_gettimeofday(&tv);
+    return ((cat_nsec_t) (tv.tv_sec * 1000000)) + ((cat_nsec_t) (tv.tv_usec));
+}
+
+CAT_API cat_msec_t cat_time_msec2(void)
+{
+	uv_timeval64_t tv;
+    (void) uv_gettimeofday(&tv);
+    return ((cat_msec_t) (tv.tv_sec * 1000)) + ((cat_msec_t) (tv.tv_usec / 1000.00));
+}
+
+CAT_API double cat_microtime(void)
+{
+	uv_timeval64_t tv;
+    (void) uv_gettimeofday(&tv);
+    return (double) (tv.tv_sec + tv.tv_usec / 1000000.00);
+}
+
 CAT_API char *cat_time_format_msec(cat_msec_t msec)
 {
 #define DAY    (24ULL * HOUR)

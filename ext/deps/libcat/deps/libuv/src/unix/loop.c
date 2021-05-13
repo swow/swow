@@ -64,6 +64,9 @@ int uv_loop_init(uv_loop_t* loop) {
 
   loop->closing_handles = NULL;
   uv__update_time(loop);
+#ifdef HAVE_LIBCAT
+  loop->round = 0;
+#endif
   loop->async_io_watcher.fd = -1;
   loop->async_wfd = -1;
   loop->signal_pipefd[0] = -1;

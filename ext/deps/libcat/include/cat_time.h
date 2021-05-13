@@ -24,9 +24,16 @@ extern "C" {
 
 #include "cat.h"
 
+/* powered by hr_time() */
 CAT_API cat_nsec_t cat_time_nsec(void);
 CAT_API cat_msec_t cat_time_msec(void);
+/* powered by event loop */
 CAT_API cat_msec_t cat_time_msec_cached(void);
+
+/* powered by gettimeofday() */
+CAT_API cat_nsec_t cat_time_nsec2(void);
+CAT_API cat_msec_t cat_time_msec2(void);
+CAT_API double cat_microtime(void);
 
 CAT_API char *cat_time_format_msec(cat_msec_t msec);
 

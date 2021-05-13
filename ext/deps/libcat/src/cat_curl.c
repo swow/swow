@@ -29,7 +29,7 @@ typedef struct {
     CURLM *multi;
     cat_coroutine_t *coroutine;
     curl_socket_t sockfd;
-    int events;
+    cat_pollfd_events_t events;
     long timeout;
 } cat_curl_easy_context_t;
 
@@ -324,7 +324,8 @@ CAT_API CURLcode cat_curl_easy_perform(CURL *ch)
             }
             mcode = curl_multi_socket_action(context.multi, CURL_SOCKET_TIMEOUT, 0, &running_handles);
         } else {
-            int action, revents;
+            cat_pollfd_events_t revents;
+            int action;
             cat_ret_t ret;
             ret = cat_poll_one(context.sockfd, context.events, &revents, context.timeout);
             if (unlikely(ret == CAT_RET_ERROR)) {

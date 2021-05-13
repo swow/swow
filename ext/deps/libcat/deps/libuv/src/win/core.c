@@ -660,35 +660,43 @@ int uv_run(uv_loop_t *loop, uv_run_mode mode) {
 
 
 #ifdef HAVE_LIBCAT
-int uv_crun(uv_loop_t *loop) {
-  DWORD timeout;
+int uv_crun(uv_loop_t *loop, uv_defer_callback_t defer) {
+  int r, d;
 
-  if (!uv__loop_alive(loop)) {
-    uv_update_time(loop);
-    return 0;
-  }
-
-  if (uv_process_reqs(loop)) {
-    timeout = 0;
-  } else {
-    timeout = uv_backend_timeout(loop);
-  }
-  uv_idle_invoke(loop);
-  uv_prepare_invoke(loop);
-
-  if (pGetQueuedCompletionStatusEx)
-    uv__poll(loop, timeout);
-  else
-    uv__poll_wine(loop, timeout);
-
-  loop->round++;
+  r = uv__loop_alive(loop);
+  d = 1;
   uv_update_time(loop);
-  uv__run_timers(loop);
 
-  uv_check_invoke(loop);
-  uv_process_endgames(loop);
+  while (r || d) {
+    if (r) {
+      uv_process_reqs(loop);
+      uv_idle_invoke(loop);
+      uv_prepare_invoke(loop);
 
-  return uv__loop_alive(loop);
+      if (pGetQueuedCompletionStatusEx)
+        uv__poll(loop, uv_backend_timeout(loop));
+      else
+        uv__poll_wine(loop, uv_backend_timeout(loop));
+      uv__metrics_update_idle_time(loop);
+
+      uv_check_invoke(loop);
+      uv_process_endgames(loop);
+    }
+
+    loop->round++;
+    uv_update_time(loop);
+    d = defer(loop);
+
+    if (r)
+      uv__run_timers(loop);
+
+    r = uv__loop_alive(loop) && !loop->stop_flag;
+  }
+
+  if (loop->stop_flag)
+    loop->stop_flag = 0;
+
+  return r;
 }
 #endif
 

@@ -147,6 +147,10 @@ struct cat_coroutine_s
 #ifdef CAT_HAVE_VALGRIND
     uint32_t valgrind_stack_id;
 #endif
+#ifdef __SANITIZE_ADDRESS__
+    const void *asan_stack;
+    size_t asan_stack_size;
+#endif
 };
 
 typedef cat_bool_t (*cat_coroutine_resume_t)(cat_coroutine_t *coroutine, cat_data_t *data, cat_data_t **retval);
@@ -166,6 +170,7 @@ CAT_GLOBALS_STRUCT_BEGIN(cat_coroutine)
     /* scheduler */
     cat_coroutine_t *scheduler;
     cat_queue_t waiters;
+    cat_coroutine_count_t waiter_count;
     /* functions */
     cat_coroutine_resume_t resume;
     /* info */

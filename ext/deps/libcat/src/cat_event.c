@@ -71,8 +71,8 @@ CAT_API cat_bool_t cat_event_runtime_init(void)
 
 CAT_API cat_bool_t cat_event_runtime_shutdown(void)
 {
-    cat_queue_t *shutdown_tasks = &CAT_EVENT_G(runtime_shutdown_tasks);
     do {
+        cat_queue_t *shutdown_tasks = &CAT_EVENT_G(runtime_shutdown_tasks);
         cat_event_task_t *task;
         /* call shutdown tasks */
         while ((task = cat_queue_front_data(shutdown_tasks, cat_event_task_t, node))) {
@@ -80,10 +80,10 @@ CAT_API cat_bool_t cat_event_runtime_shutdown(void)
             task->callback(task->data);
             cat_free(task);
         }
-        /* we must call run to close all handles and clear defer tasks */
-        cat_event_schedule();
-    } while (!cat_queue_empty(shutdown_tasks));
+    } while (0);
 
+    /* we must call run to close all handles and clear defer tasks */
+    cat_event_schedule();
     CAT_ASSERT(cat_queue_empty(&CAT_EVENT_G(defer_tasks)));
     CAT_ASSERT(CAT_EVENT_G(defer_task_count) == 0);
 
@@ -109,44 +109,20 @@ static void cat_event_dead_lock_callback(uv_timer_t *dead_lock)
 CAT_API void cat_event_dead_lock(void)
 {
     uv_timer_t *dead_lock = CAT_EVENT_G(dead_lock);
-    int error;
+    (void) uv_timer_init(cat_event_loop, dead_lock);
+    (void) uv_timer_start(dead_lock, cat_event_dead_lock_callback, UINT64_MAX, UINT64_MAX);
+    (void) cat_event_defer(cat_event_dead_lock_unlock_callback, dead_lock);
+}
 
-    error = uv_timer_init(cat_event_loop, dead_lock);
-
-    if (unlikely(error != 0)) {
-        cat_core_error_with_reason(EVENT, error, "Dead-Lock init failed");
-    }
-
-    error = uv_timer_start(dead_lock, cat_event_dead_lock_callback, UINT64_MAX, UINT64_MAX);
-
-    if (unlikely(error != 0)) {
-        cat_core_error_with_reason(EVENT, error, "Dead-Lock start failed");
-    }
-
-    if (!cat_event_defer(cat_event_dead_lock_unlock_callback, dead_lock)) {
-        cat_core_error_with_last(EVENT, "Dead-Lock defer failed");
-    }
+static int cat_event_defer_callback(uv_loop_t *loop)
+{
+    (void) loop;
+    return cat_event_do_defer_tasks();
 }
 
 CAT_API void cat_event_schedule(void)
 {
-    uv_loop_t *loop = CAT_EVENT_G(loop);
-
-    /* do not forget to call it first */
-    cat_event_do_defer_tasks();
-
-    while (1) {
-        cat_bool_t alive;
-
-        alive = !!uv_crun(loop);
-
-        /* if we have unfinished tasks, continue to loop  */
-        alive = cat_event_do_defer_tasks() || alive;
-
-        if (!alive) {
-            break;
-        }
-    }
+    (void) uv_crun(CAT_EVENT_G(loop), cat_event_defer_callback);
 }
 
 CAT_API cat_coroutine_t *cat_event_scheduler_run(cat_coroutine_t *coroutine)

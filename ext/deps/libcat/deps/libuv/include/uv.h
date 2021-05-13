@@ -309,10 +309,12 @@ UV_EXTERN int uv_loop_configure(uv_loop_t* loop, uv_loop_option option, ...);
 UV_EXTERN int uv_loop_fork(uv_loop_t* loop);
 
 UV_EXTERN int uv_run(uv_loop_t*, uv_run_mode mode);
-#ifdef HAVE_LIBCAT
-UV_EXTERN int uv_crun(uv_loop_t* loop);
-#endif
 UV_EXTERN void uv_stop(uv_loop_t*);
+
+#ifdef HAVE_LIBCAT
+typedef int (*uv_defer_callback_t)(uv_loop_t* loop);
+UV_EXTERN int uv_crun(uv_loop_t* loop, uv_defer_callback_t defer);
+#endif
 
 UV_EXTERN void uv_ref(uv_handle_t*);
 UV_EXTERN void uv_unref(uv_handle_t*);
@@ -657,8 +659,8 @@ enum uv_udp_flags {
   /*
    * Indicates if IP_RECVERR/IPV6_RECVERR will be set when binding the handle.
    * This sets IP_RECVERR for IPv4 and IPV6_RECVERR for IPv6 UDP sockets on
-   * Linux. This stops the Linux kernel from supressing some ICMP error messages
-   * and enables full ICMP error reporting for faster failover.
+   * Linux. This stops the Linux kernel from suppressing some ICMP error
+   * messages and enables full ICMP error reporting for faster failover.
    * This flag is no-op on platforms other than Linux.
    */
   UV_UDP_LINUX_RECVERR = 32,

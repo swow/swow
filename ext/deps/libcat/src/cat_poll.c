@@ -102,11 +102,12 @@ static void cat_poll_one_callback(uv_poll_t* handle, int status, int events)
     cat_coroutine_schedule(poll->u.coroutine, EVENT, "Poll one");
 }
 
-CAT_API cat_ret_t cat_poll_one(cat_os_socket_t fd, int events, int *revents, cat_timeout_t timeout)
+CAT_API cat_ret_t cat_poll_one(cat_os_socket_t fd, cat_pollfd_events_t events, cat_pollfd_events_t *revents, cat_timeout_t timeout)
 {
     cat_poll_one_t *poll;
+    cat_pollfd_events_t _revents;
     cat_ret_t ret;
-    int error, _revents;
+    int error;
 
     cat_debug(EVENT, "poll_one(fd=" CAT_OS_SOCKET_FMT ", events=%d, timeout=" CAT_TIMEOUT_FMT ")", fd, events, timeout);
 

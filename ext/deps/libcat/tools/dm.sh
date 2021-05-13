@@ -10,7 +10,7 @@ __exit__() {
   exit "$1"
 }
 error(){ echo "[ERROR] $1"; __exit__ 1; }
-ok(){ echo "[OK] $1"; __exit__ 0; }
+ok(){ echo ""; echo "[OK] $1"; echo ""; __exit__ 0; }
 
 if [ $# -ne 7 ] ; then
   printf "Usage:\n %s\n" \
