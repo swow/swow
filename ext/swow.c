@@ -433,7 +433,7 @@ int swow_runtime_init(INIT_FUNC_ARGS)
     ZEND_TSRMLS_CACHE_UPDATE();
 #endif
     /* See: https://bugs.php.net/bug.php?id=79064 */
-    EG(full_tables_cleanup) = cat_true;
+    // EG(full_tables_cleanup) = cat_true; // not needed for now
 
     cat_runtime_init();
 
