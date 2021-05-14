@@ -205,7 +205,7 @@ static inline php_curlm *curl_multi_from_obj(zend_object *obj) {
 #endif
 #define CURLM_HANDLERS_GET(mh, name) CURL_HANDLERS_GET(mh, name)
 
-static void _php_curl_verify_handlers(php_curl *ch, int reporterror) /* {{{ */
+static void _swow_php_curl_verify_handlers(php_curl *ch, int reporterror) /* {{{ */
 {
     php_stream *stream;
 
@@ -271,7 +271,7 @@ static void _php_curl_verify_handlers(php_curl *ch, int reporterror) /* {{{ */
 
 /* {{{ _php_curl_cleanup_handle(ch)
    Cleanup an execution phase */
-static void _php_curl_cleanup_handle(php_curl *ch)
+static void _swow_php_curl_cleanup_handle(php_curl *ch)
 {
     smart_str_free(&CURL_HANDLERS_GET(ch, write)->buf);
     if (ch->header.str) {
@@ -284,7 +284,7 @@ static void _php_curl_cleanup_handle(php_curl *ch)
 }
 /* }}} */
 
-static void _php_curl_multi_cleanup_list(void *data) /* {{{ */
+static void _swow_php_curl_multi_cleanup_list(void *data) /* {{{ */
 {
     zval *z_ch = (zval *)data;
 
@@ -311,7 +311,7 @@ static void swow_curl_multi_free_obj(zend_object *object)
         pz_ch = (zval *)zend_llist_get_next_ex(&mh->easyh, &pos)) {
         if (!(OBJ_FLAGS(Z_OBJ_P(pz_ch)) & IS_OBJ_FREE_CALLED)) {
             ch = Z_CURL_P(pz_ch);
-            _php_curl_verify_handlers(ch, 0);
+            _swow_php_curl_verify_handlers(ch, 0);
         }
     }
 
@@ -356,9 +356,9 @@ static PHP_FUNCTION(swow_curl_exec)
     ch = Z_CURL_P(zid);
 #endif
 
-    _php_curl_verify_handlers(ch, 1);
+    _swow_php_curl_verify_handlers(ch, 1);
 
-    _php_curl_cleanup_handle(ch);
+    _swow_php_curl_cleanup_handle(ch);
 
     error = cat_curl_easy_perform(ch->cp);
     SAVE_CURL_ERROR(ch, error);
@@ -420,7 +420,7 @@ static PHP_FUNCTION(swow_curl_multi_init)
     ((zend_object_handlers *) mh->std.handlers)->free_obj = swow_curl_multi_free_obj;
 #endif
 
-    zend_llist_init(&mh->easyh, sizeof(zval), _php_curl_multi_cleanup_list, 0);
+    zend_llist_init(&mh->easyh, sizeof(zval), _swow_php_curl_multi_cleanup_list, 0);
 }
 /* }}} */
 
@@ -464,7 +464,7 @@ static PHP_FUNCTION(swow_curl_multi_exec)
 #else
             ch = Z_CURL_P(pz_ch);
 #endif
-            _php_curl_verify_handlers(ch, 1);
+            _swow_php_curl_verify_handlers(ch, 1);
         }
     }
 
