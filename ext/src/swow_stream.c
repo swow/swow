@@ -1484,8 +1484,8 @@ PHP_FUNCTION(swow_stream_select)
 	php_socket_t max_fd = 0;
 	int retval, sets = 0;
 	zend_long sec, usec = 0;
-	bool secnull;
-	bool usecnull = 1;
+	zend_bool secnull;
+	zend_bool usecnull = 1;
 	int set_count, max_set_count = 0;
 
 	ZEND_PARSE_PARAMETERS_START(4, 5)
