@@ -22,9 +22,19 @@
 #include "cat_time.h"
 #include "cat_poll.h"
 
+#ifdef CAT_IDE_HELPER
 #include "uv-common.h"
+#else
+#include "../deps/libuv/src/uv-common.h"
+#endif
 
 #ifdef CAT_OS_UNIX_LIKE
+/* for uv__close */
+#ifdef CAT_IDE_HELPER
+#include "unix/internal.h"
+#else
+#include "../deps/libuv/src/unix/internal.h"
+#endif
 /* For EINTR */
 #include <errno.h>
 /* For syscall recv */
@@ -624,7 +634,14 @@ CAT_API cat_socket_t *cat_socket_create_ex(cat_socket_t *socket, cat_socket_type
     } else if ((type & CAT_SOCKET_TYPE_UDP) == CAT_SOCKET_TYPE_UDP) {
         isocket_size = cat_offsize_of(cat_socket_internal_t, u.udp);
     } else if (type & CAT_SOCKET_TYPE_FLAG_LOCAL) {
-        isocket_size = cat_offsize_of(cat_socket_internal_t, u.pipe);
+#ifdef CAT_OS_UNIX_LIKE
+        if (type & CAT_SOCKET_TYPE_FLAG_DGRAM) {
+            isocket_size = cat_offsize_of(cat_socket_internal_t, u.udg);
+        } else
+#endif
+        {
+            isocket_size = cat_offsize_of(cat_socket_internal_t, u.pipe);
+        }
     } else if ((type & CAT_SOCKET_TYPE_TTY) == CAT_SOCKET_TYPE_TTY) {
         isocket_size = cat_offsize_of(cat_socket_internal_t, u.tty);
     } else {
@@ -682,6 +699,8 @@ CAT_API cat_socket_t *cat_socket_create_ex(cat_socket_t *socket, cat_socket_type
             }
             type &= ~CAT_SOCKET_TYPE_FLAG_IPC;
             check_connection = cat_false;
+            isocket->u.udg.readfd = dup(fd);
+            isocket->u.udg.writefd = dup(fd);
         }
         else
 #endif
@@ -1834,7 +1853,11 @@ static ssize_t cat_socket_internal_read_raw(
         }
         if (is_udg) {
             cat_ret_t poll_ret;
-            poll_ret = cat_poll_one(fd, POLLIN, NULL, timeout);
+            isocket->context.io.read.coroutine = CAT_COROUTINE_G(current);
+            isocket->io_flags |= CAT_SOCKET_IO_FLAG_READ;
+            poll_ret = cat_poll_one(isocket->u.udg.readfd, POLLIN, NULL, timeout);
+            isocket->io_flags ^= CAT_SOCKET_IO_FLAG_READ;
+            isocket->context.io.read.coroutine = NULL;
             if (poll_ret == CAT_RET_OK) {
                 continue;
             } else if (poll_ret == CAT_RET_NONE) {
@@ -2088,13 +2111,13 @@ static cat_never_inline cat_bool_t cat_socket_internal_udg_write(
         } while (error < 0 && CAT_SOCKET_RETRY_ON_WRITE_ERROR(cat_sys_errno));
         if (unlikely(error < 0)) {
             if (CAT_SOCKET_IS_TRANSIENT_WRITE_ERROR(cat_sys_errno)) {
-                cat_ret_t poll_ret = cat_poll_one(fd, POLLOUT, NULL, timeout);
+                cat_ret_t poll_ret = cat_poll_one(isocket->u.udg.writefd, POLLOUT, NULL, timeout);
                 if (poll_ret == CAT_RET_OK) {
                     continue;
                 } else if (poll_ret == CAT_RET_NONE) {
-                    cat_update_last_error_with_reason(CAT_ETIMEDOUT, "Socket poll writable failed");
+                    cat_update_last_error(CAT_ETIMEDOUT, "Socket UDG poll writable timedout");
                 } else {
-                    cat_update_last_error_with_previous("Socket UDG write wait failed");
+                    cat_update_last_error_with_previous("Socket UDG poll writable failed");
                 }
             } else {
                 cat_update_last_error_of_syscall("Socket write failed");
@@ -2600,6 +2623,13 @@ static void cat_socket_internal_close(cat_socket_internal_t *isocket)
     if (unlikely(cat_socket_is_server(socket))) {
         uv_ref(&isocket->u.handle); /* unref in listen (references are idempotent) */
     }
+#ifdef CAT_OS_UNIX_LIKE
+    /* TODO: move to callback? but we can not detect socket type in internal callback now */
+    if ((socket->type & CAT_SOCKET_TYPE_UDG) == CAT_SOCKET_TYPE_UDG) {
+        (void) uv__close(isocket->u.udg.readfd);
+        (void) uv__close(isocket->u.udg.writefd);
+    }
+#endif
     uv_close(&isocket->u.handle, cat_socket_close_callback);
 }
 

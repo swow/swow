@@ -357,6 +357,15 @@ typedef struct
     cat_queue_t coroutines;
 } cat_socket_write_context_t;
 
+#ifdef CAT_OS_UNIX_LIKE
+typedef struct
+{
+    uv_pipe_t pipe;
+    int readfd;
+    int writefd;
+} uv_udg_t;
+#endif
+
 typedef struct cat_socket_s cat_socket_t;
 typedef struct cat_socket_internal_s cat_socket_internal_t;
 
@@ -402,6 +411,9 @@ struct cat_socket_internal_s
         uv_pipe_t pipe;
         uv_tty_t tty;
         uv_udp_t udp;
+#ifdef CAT_OS_UNIX_LIKE
+        uv_udg_t udg;
+#endif
     } u;
 };
 
