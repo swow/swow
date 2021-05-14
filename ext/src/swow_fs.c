@@ -34,6 +34,13 @@
 #include "cat_fs.h"
 #include "cat_work.h"
 
+// shim for php 7.3
+#if PHP_VERSION_ID < 70400
+# define swow_ssize_t size_t
+#else
+# define swow_ssize_t ssize_t
+#endif // PHP_VERSION_ID < 70400
+
 // from main/streams/plain_wrapper.c @ 7aba6de1d02e445ce4a6088c2af4ce327bd67bd6
 
 #include "php.h"
@@ -1026,7 +1033,7 @@ SWOW_API php_stream *_swow_stream_fopen_from_pipe(FILE *file, const char *mode S
     return stream;
 }
 
-static ssize_t swow_stdiop_fs_write(php_stream *stream, const char *buf, size_t count)
+static swow_ssize_t swow_stdiop_fs_write(php_stream *stream, const char *buf, size_t count)
 {
     swow_stdio_stream_data *data = (swow_stdio_stream_data*)stream->abstract;
 
@@ -1041,7 +1048,11 @@ static ssize_t swow_stdiop_fs_write(php_stream *stream, const char *buf, size_t 
             }
             if (cat_get_last_error_code() == CAT_EINTR) {
                 /* TODO: Should this be treated as a proper error or not? */
+#if PHP_VERSION_ID < 70400
+                return 0;
+#else
                 return bytes_written;
+#endif
             }
             if (!(stream->flags & PHP_STREAM_FLAG_SUPPRESS_ERRORS)) {
 #if PHP_VERSION_ID >= 80000
@@ -1051,7 +1062,7 @@ static ssize_t swow_stdiop_fs_write(php_stream *stream, const char *buf, size_t 
 #endif
             }
         }
-        return bytes_written;
+        return (swow_ssize_t) bytes_written;
     } else {
 
 #ifdef HAVE_FLUSHIO
@@ -1063,12 +1074,12 @@ static ssize_t swow_stdiop_fs_write(php_stream *stream, const char *buf, size_t 
         }
         data->last_op = 'w';
 #endif
-
-        return (ssize_t) fwrite(buf, 1, count, data->file);
+        // todo: cat_work it
+        return (swow_ssize_t) fwrite(buf, 1, count, data->file);
     }
 }
 
-static ssize_t swow_stdiop_fs_read(php_stream *stream, char *buf, size_t count)
+static swow_ssize_t swow_stdiop_fs_read(php_stream *stream, char *buf, size_t count)
 {
     swow_stdio_stream_data *data = (swow_stdio_stream_data*) stream->abstract;
     ssize_t ret;
@@ -1125,7 +1136,7 @@ static ssize_t swow_stdiop_fs_read(php_stream *stream, char *buf, size_t count)
 
         stream->eof = feof(data->file);
     }
-    return ret;
+    return (swow_ssize_t) ret;
 }
 
 static int swow_stdiop_fs_close(php_stream *stream, int close_handle)
@@ -1652,15 +1663,20 @@ SWOW_API const php_stream_ops swow_stream_stdio_ops_async = {
 /* }}} */
 
 /* {{{ plain files opendir/readdir implementation */
-static ssize_t swow_plain_files_dirstream_read(php_stream *stream, char *buf, size_t count)
+static swow_ssize_t swow_plain_files_dirstream_read(php_stream *stream, char *buf, size_t count)
 {
     cat_dir_t *dir = (cat_dir_t *)stream->abstract;
     cat_dirent_t *result;
     php_stream_dirent *ent = (php_stream_dirent*)buf;
 
     /* avoid problems if someone mis-uses the stream */
-    if (count != sizeof(php_stream_dirent))
+    if (count != sizeof(php_stream_dirent)){
+#if PHP_VERSION_ID < 70400
+        return 0;
+#else
         return -1;
+#endif
+    }
 
     result = swow_fs_readdir(dir);
     UPDATE_ERRNO_FROM_CAT();
