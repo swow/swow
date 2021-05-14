@@ -8,6 +8,7 @@ param (
     [string]$PhpVer = "",
     [string]$PhpVCVer = "",
     [string]$PhpArch = "x64",
+    [bool]$Staging = $false,
     [bool]$PhpTs = $false,
     [bool]$DryRun = $false
 )
@@ -43,7 +44,12 @@ if ("".Equals($PhpVer)){
 }
 
 info "Try to fetch deps series list from windows.php.net"
-$series = (fetchpage "https://windows.php.net/downloads/php-sdk/deps/series/packages-$PhpVer-$PhpVCVer-$PhpArch-staging.txt").Content
+if($Staging){
+    $stagingStr = "staging"
+}else{
+    $stagingStr = "stable"
+}
+$series = (fetchpage "https://windows.php.net/downloads/php-sdk/deps/series/packages-$PhpVer-$PhpVCVer-$PhpArch-$stagingStr.txt").Content
 if(!$series){
     warn "Cannot get series information from windows.php.net, try file list instead"
     $filelist = (fetchpage ("https://windows.php.net/downloads/php-sdk/deps/" + $PhpVCVer.ToLower() + "/$PhpArch/")).Content
