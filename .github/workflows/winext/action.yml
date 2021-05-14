@@ -41,6 +41,10 @@ inputs:
     description: 'php arch we used, now there are x64 and x86'
     required: false
     default: "x64"
+  staging-deps:
+    description: 'use staging dependencies'
+    required: false
+    default: "0"
 outputs:
   vcver:
     description: 'max retry for downloading things'
@@ -96,7 +100,8 @@ runs:
           -PhpVer $PhpVer `
           -PhpTs ${{ inputs.phpts }} `
           -PhpArch ${{ inputs.phparch }} `
-          -PhpVCVer $PhpVCVer
+          -PhpVCVer $PhpVCVer `
+          -Staging ${{ inputs.staging-deps }}
         $ret = $lastexitcode
         Write-Host "::endgroup::"
         if( 0 -Ne $ret ){

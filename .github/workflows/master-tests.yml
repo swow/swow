@@ -111,6 +111,7 @@ jobs:
           tools-path: C:\tools\phpdev
           conf-args: --enable-swow-debug --enable-swow-ssl --enable-swow-curl
           ext-name: swow
+          staging-deps: '1'
           deps: openssl,libcurl,libssh2,zlib,nghttp2
 
       - name: Run extension tests
