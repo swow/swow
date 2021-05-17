@@ -511,12 +511,13 @@ static inline const char* swow_vcwd_path(const char *path, int flags) {
     if (NULL == new_state.cwd || 0 != virtual_file_ex(&new_state, path, NULL, flags)) {
         SAVE_LE;
         if(new_state.cwd) efree(new_state.cwd);
-        RESTORE_LE;
 # ifdef PHP_WIN32
+        // this may omit LastError
         cat_update_last_error(cat_translate_sys_error(GetLastError()), "Bad file name");
 # else
         cat_update_last_error(cat_translate_sys_error(errno), "Bad file name");
 # endif // PHP_WIN32
+        RESTORE_LE;
         return NULL;
     }
     return new_state.cwd;
