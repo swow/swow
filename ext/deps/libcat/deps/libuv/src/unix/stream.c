@@ -1660,7 +1660,11 @@ void uv__stream_close(uv_stream_t* handle) {
 
   if (handle->io_watcher.fd != -1) {
     /* Don't close stdio file descriptors.  Nothing good comes from it. */
+#ifdef HAVE_LIBCAT
+    if (handle->type != UV_TTY)
+#else
     if (handle->io_watcher.fd > STDERR_FILENO)
+#endif
       uv__close(handle->io_watcher.fd);
     handle->io_watcher.fd = -1;
   }

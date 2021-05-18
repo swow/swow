@@ -432,7 +432,7 @@ int uv_crun(uv_loop_t* loop, uv_defer_callback_t defer) {
 
   r = uv__loop_alive(loop);
   d = 1;
-  uv_update_time(loop);
+  uv__update_time(loop);
 
   while (r || d) {
     if (r) {
@@ -616,7 +616,9 @@ int uv__close_nocheckstdio(int fd) {
 
 
 int uv__close(int fd) {
+#ifndef HAVE_LIBCAT /* STDIO fds maybe reused after they were closed */
   assert(fd > STDERR_FILENO);  /* Catch stdio close bugs. */
+#endif
 #if defined(__MVS__)
   SAVE_ERRNO(epoll_file_close(fd));
 #endif
