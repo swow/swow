@@ -195,11 +195,12 @@ PHP_RINIT_FUNCTION(swow)
         swow_debug_runtime_init,
     };
 
-#ifdef ZEND_COMPILE_PRELOAD
-    if (CG(compiler_options) & ZEND_COMPILE_PRELOAD) {
-        return SUCCESS;
-    }
-#endif
+// FIXME: Why opcache do not set ZEND_COMPILE_PRELOAD before runtime init anymore?
+// #ifdef ZEND_COMPILE_PRELOAD
+//     if (CG(compiler_options) & ZEND_COMPILE_PRELOAD) {
+//         return SUCCESS;
+//     }
+// #endif
 
     size_t i = 0;
     for (; i < CAT_ARRAY_SIZE(rinit_functions); i++) {
@@ -225,11 +226,11 @@ PHP_RSHUTDOWN_FUNCTION(swow)
         swow_runtime_shutdown,
     };
 
-#ifdef ZEND_COMPILE_PRELOAD
-    if (CG(compiler_options) & ZEND_COMPILE_PRELOAD) {
-        return SUCCESS;
-    }
-#endif
+// #ifdef ZEND_COMPILE_PRELOAD
+//     if (CG(compiler_options) & ZEND_COMPILE_PRELOAD) {
+//         return SUCCESS;
+//     }
+// #endif
 
     size_t i = 0;
     for (; i < CAT_ARRAY_SIZE(rshutdown_functions); i++) {
