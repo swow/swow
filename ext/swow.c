@@ -74,6 +74,17 @@ HashTable swow_type_hint_functions;
  */
 PHP_MINIT_FUNCTION(swow)
 {
+    /* Conflict extensions check */
+    if (zend_hash_str_find_ptr(&module_registry, ZEND_STRL("swoole"))) {
+        zend_error(E_WARNING, "Swow is incompatible with Swoole"
+            "because they provide the similar functionality through different implementations."
+            "Please disable one of them and re-run.");
+        return FAILURE;
+    }
+    if (zend_hash_str_find_ptr(&module_registry, ZEND_STRL("xdebug"))) {
+        zend_error(E_WARNING, "Please note that using Swow with Xdebug may cause unknown problems");
+    }
+
     swow_wrapper_init();
 
     static const swow_init_function_t minit_functions[] = {
