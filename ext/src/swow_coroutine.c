@@ -2075,8 +2075,6 @@ static void swow_coroutine_error_cb(int type, ZEND_ERROR_CB_FILENAME_T *error_fi
 
 /* hook catch */
 
-static user_opcode_handler_t original_zend_catch_handler = NULL;
-
 static zend_bool swow_coroutine_has_unwind_exit(zend_object *exception)
 {
     while (1) {
@@ -2108,9 +2106,6 @@ static int swow_coroutine_catch_handler(zend_execute_data *execute_data)
         if (swow_coroutine_has_unwind_exit(EG(exception))) {
             return ZEND_USER_OPCODE_RETURN;
         }
-    }
-    if (UNEXPECTED(original_zend_catch_handler != NULL)) {
-        return original_zend_catch_handler(execute_data);
     }
 
     return ZEND_USER_OPCODE_DISPATCH;
@@ -2248,7 +2243,6 @@ int swow_coroutine_runtime_init(INIT_FUNC_ARGS)
     zend_error_cb = swow_coroutine_error_cb;
 
     /* hook opcode catch (bypass JIT check) */
-    original_zend_catch_handler = zend_get_user_opcode_handler(ZEND_CATCH);
     zend_set_user_opcode_handler(ZEND_CATCH, swow_coroutine_catch_handler);
 
     SWOW_COROUTINE_G(original_resume) = cat_coroutine_register_resume(
