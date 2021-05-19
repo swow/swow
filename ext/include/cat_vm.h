@@ -28,6 +28,8 @@
 
 /* memory */
 
+#define CAT_ALLOC_NEVER_RETURNS_NULL
+
 #define cat_malloc     emalloc
 #define cat_calloc     ecalloc
 #define cat_realloc    erealloc
