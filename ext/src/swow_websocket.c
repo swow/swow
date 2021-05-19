@@ -597,10 +597,8 @@ static PHP_METHOD(Swow_WebSocket_Frame, __debugInfo)
     }
     if (header->mask) {
         char *mask_key = cat_hexprint(header->mask_key, CAT_WEBSOCKET_MASK_KEY_LENGTH);
-        if (mask_key != NULL) {
-            add_assoc_string(&zdebug_info, "mask_key", mask_key);
-            cat_free(mask_key);
-        }
+        add_assoc_string(&zdebug_info, "mask_key", mask_key);
+        cat_free(mask_key);
     }
     if (sframe->payload_data != NULL) {
         GC_ADDREF(sframe->payload_data);
