@@ -3,7 +3,8 @@
 param (
     [string]$ExtName,
     [string]$PhpBin= "php",
-    [string]$ExtPath = "."
+    [string]$ExtPath = ".",
+    [bool]$Enable = $true
 )
 
 $scriptPath = Split-Path -parent $MyInvocation.MyCommand.Definition
@@ -26,23 +27,26 @@ if(-Not (Test-Path "$env:BUILD_DIR\php_$ExtName.dll" -PathType Leaf)){
 info "Copy $env:BUILD_DIR\php_$ExtName.dll to $extdir"
 Copy-Item "$env:BUILD_DIR\php_$ExtName.dll" $extdir | Out-Null
 
-try{
-    $ini = Get-Content $inipath
-}catch{
-    $ini = ""
-}
+if($Enable){
+    try{
+        $ini = Get-Content $inipath
+    }catch{
+        $ini = ""
+    }
 
-$match = $ini | Select-String -Pattern ('^\s*extension\s*=\s*["' + "'" + "]*$ExtName['" + '"' + ']*\s*')
-if($match.Matches){
-    warn ("Ini entry extension=$ExtName is already setted at $inipath line" + $match.LineNumber + ", skipping ini modification")
-}else{
-    info ('Append "extension=' + $ExtName + '" to ' + $inipath)
-    $content = "
+    $match = $ini | Select-String -Pattern ('^\s*extension\s*=\s*["' + "'" + "]*$ExtName['" + '"' + ']*\s*')
+    if($match.Matches){
+        warn ("Ini entry extension=$ExtName is already setted at $inipath line" + $match.LineNumber + ", skipping ini modification")
+    }else{
+        info ('Append "extension=' + $ExtName + '" to ' + $inipath)
+        $content = "
 extension_dir=$extdir
 extension=$ExtName
 "
-    $content | Out-File -Encoding utf8 -Append $inipath
+        $content | Out-File -Encoding utf8 -Append $inipath
+    }
 }
+
 info "Run 'php --ri $ExtName'"
 & $PhpBin --ri $ExtName
 
