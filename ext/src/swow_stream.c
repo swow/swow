@@ -1677,5 +1677,10 @@ int swow_stream_module_shutdown(INIT_FUNC_ARGS)
 {
     swow_rehook_stream_wrappers();
 
+    // unhook std ops
+    memcpy(&php_stream_stdio_ops, &swow_stream_stdio_ops_sync, sizeof(php_stream_stdio_ops));
+    // unhook plain wrapper
+    memcpy(&php_plain_files_wrapper, &swow_plain_files_wrapper_sync, sizeof(php_plain_files_wrapper));
+
     return SUCCESS;
 }
