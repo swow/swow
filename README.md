@@ -27,7 +27,7 @@ Now, coroutine can make the PHP virtual machine works like real operating system
 
 Benefit from this controllability, developers can also use WatchDog component to notify, interrupt, suspend or even kill the coroutines that are trapped in an infinite loop or a blocking IO operation, so as to prevent a particular coroutine from affecting overall stability of a program.
 
-Moreover, process design pattern also makes coroutine application robust. Just like the crash of a single process will not cause the entire operating system to crash, the crash of a singl coroutine will not cause the entire process to crash. And thanks to PHP's powerful exception mechanism and resource management capabilities, related resources bound to the crashed coroutine can be safely released. You needn't to take heavy effort to catch all kinds of exceptions and deal with uncatched exceptions. Just let the coroutine crash when an unknown exception happens.
+Moreover, process design pattern also makes coroutine application robust. Just like the crash of a single process will not cause the entire operating system to crash, the crash of a single coroutine will not cause the entire process to crash. And thanks to PHP's powerful exception mechanism and resource management capabilities, related resources bound to the crashed coroutine can be safely released. You needn't to take heavy effort to catch all kinds of exceptions and deal with uncatched exceptions. Just let the coroutine crash when an unknown exception happens.
 
 ### 🌟Compatibility🌟
 
