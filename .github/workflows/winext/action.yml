@@ -92,7 +92,7 @@ runs:
         }
         Write-Host "::set-output name=vcver::$PhpVCVer"
         Write-Host "::group::Fetching deps from windows.php.net"
-        ./.github/workflows/winext/deps.ps1 `
+        ${{github.action_path}}/deps.ps1 `
           ${{ inputs.deps }} `
           -MaxTry ${{ inputs.max-try }} `
           -ToolsPath ${{ inputs.tools-path }} `
@@ -109,7 +109,7 @@ runs:
         }
         if($master){
           Write-Host "::group::Fetching devel-pack from shivammathur/php-builder-windows"
-          ./.github/workflows/winext/devpack_master.ps1 `
+          ${{github.action_path}}/devpack_master.ps1 `
             -MaxTry ${{ inputs.max-try }} `
             -ToolsPath ${{ inputs.tools-path }} `
             -PhpTs ${{ inputs.phpts }} `
@@ -119,7 +119,7 @@ runs:
           Write-Host "::endgroup::"
         }else{
           Write-Host "::group::Fetching devel-pack from windows.php.net"
-          ./.github/workflows/winext/devpack.ps1 `
+          ${{github.action_path}}/devpack.ps1 `
             -MaxTry ${{ inputs.max-try }} `
             -ToolsPath ${{ inputs.tools-path }} `
             -PhpBin $PhpBin `
@@ -139,7 +139,7 @@ runs:
         TOOLS_PATH: ${{ inputs.tools-path }}
         UNIX_COLOR: "1"
       run: |
-        powershell .github\workflows\winext\build.ps1 ^
+        powershell ${{github.action_path}}\build.ps1 ^
           ${{ inputs.conf-args }} ^
           -ExtPath ${{ inputs.ext-path }} ^
           -ExtName swow ^
@@ -152,7 +152,7 @@ runs:
         TOOLS_PATH: ${{ inputs.tools-path }}
         UNIX_COLOR: "1"
       run: |
-        IF 1==${{ inputs.install }} ( powershell .github\workflows\winext\install.ps1 ^
+        IF 1==${{ inputs.install }} ( powershell ${{github.action_path}}\install.ps1 ^
           -ExtPath ${{ inputs.ext-path }} ^
           -ExtName swow ) || EXIT /b 1
         ECHO ::endgroup::
