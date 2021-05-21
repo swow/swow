@@ -179,13 +179,13 @@ SWOW_API ZEND_COLD void ZEND_FASTCALL zend_argument_value_error(uint32_t arg_num
 #if PHP_VERSION_ID < 80100
 SWOW_API zend_string* ZEND_FASTCALL zend_ulong_to_str(zend_ulong num)
 {
-	if (num <= 9) {
-		return ZSTR_CHAR((zend_uchar)'0' + (zend_uchar)num);
-	} else {
-		char buf[MAX_LENGTH_OF_LONG + 1];
-		char *res = zend_print_ulong_to_buf(buf + sizeof(buf) - 1, num);
-		return zend_string_init(res, buf + sizeof(buf) - 1 - res, 0);
-	}
+    if (num <= 9) {
+        return ZSTR_CHAR((zend_uchar)'0' + (zend_uchar)num);
+    } else {
+        char buf[MAX_LENGTH_OF_LONG + 1];
+        char *res = zend_print_ulong_to_buf(buf + sizeof(buf) - 1, num);
+        return zend_string_init(res, buf + sizeof(buf) - 1 - res, 0);
+    }
 }
 #endif
 /* }}} */

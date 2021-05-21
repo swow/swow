@@ -178,7 +178,7 @@ int swow_event_runtime_init(INIT_FUNC_ARGS)
         ZVAL_PTR(&zkey, &swow_internal_callable_key);
         zend_fcall_info_init(&zcallable, 0, &shutdown_function_entry.fci,
             &shutdown_function_entry.fci_cache, NULL, NULL);
-	    zend_fcall_info_argp(&shutdown_function_entry.fci, 1, &zkey);
+        zend_fcall_info_argp(&shutdown_function_entry.fci, 1, &zkey);
 #else
         ZVAL_PTR(&shutdown_function_entry.arguments[arg_count - 1], &swow_internal_callable_key);
 #endif

@@ -155,7 +155,7 @@ int swow_proxy_dir_seek(php_stream *stream, zend_off_t offset, int whence, zend_
 
 static php_stream* swow_proxy_stream_opener(
     php_stream_wrapper *wrapper, const char *filename, const char *mode,
-	int options, zend_string **opened_path, php_stream_context *context STREAMS_DC){
+    int options, zend_string **opened_path, php_stream_context *context STREAMS_DC){
     //printf("wrapper is %p, orig is %p\n", wrapper, wrapper->abstract);
     //printf("opener real wrapper is %p\n", orig_wrapper);
     SWOW_UNHOOK(ZEND_ASSERT(orig_wrapper););

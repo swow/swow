@@ -87,7 +87,7 @@ struct _php_curl_send_headers {
 
 struct _php_curl_free {
 #if PHP_VERSION_ID < 80100
-	zend_llist str;
+    zend_llist str;
 #endif
     zend_llist post;
     zend_llist stream;
@@ -322,9 +322,9 @@ static void swow_curl_multi_free_obj(zend_object *object)
         efree(CURLM_HANDLERS_GET(mh, server_push));
     }
 #if PHP_VERSION_ID < 80100
-	if (mh->handlers) {
-		efree(mh->handlers);
-	}
+    if (mh->handlers) {
+        efree(mh->handlers);
+    }
 #endif
 
     zend_object_std_dtor(&mh->std);
@@ -415,7 +415,7 @@ static PHP_FUNCTION(swow_curl_multi_init)
     mh = Z_CURL_MULTI_P(return_value);
     mh->multi = cat_curl_multi_init();
 #if PHP_VERSION_ID < 80100
-	mh->handlers = ecalloc(1, sizeof(php_curlm_handlers));
+    mh->handlers = ecalloc(1, sizeof(php_curlm_handlers));
 #endif
     ((zend_object_handlers *) mh->std.handlers)->free_obj = swow_curl_multi_free_obj;
 #endif
@@ -523,20 +523,20 @@ static PHP_FUNCTION(swow_curl_multi_select)
    Close a set of cURL handles */
 PHP_FUNCTION(swow_curl_multi_close)
 {
-	zval      *z_mh;
-	php_curlm *mh;
+    zval      *z_mh;
+    php_curlm *mh;
     CURLM     *multi;
 
-	ZEND_PARSE_PARAMETERS_START(1,1)
-		Z_PARAM_RESOURCE(z_mh)
-	ZEND_PARSE_PARAMETERS_END();
+    ZEND_PARSE_PARAMETERS_START(1,1)
+        Z_PARAM_RESOURCE(z_mh)
+    ZEND_PARSE_PARAMETERS_END();
 
-	if ((mh = (php_curlm *)zend_fetch_resource(Z_RES_P(z_mh), le_curl_multi_handle_name, le_curl_multi_handle)) == NULL) {
-		RETURN_FALSE;
-	}
+    if ((mh = (php_curlm *)zend_fetch_resource(Z_RES_P(z_mh), le_curl_multi_handle_name, le_curl_multi_handle)) == NULL) {
+        RETURN_FALSE;
+    }
 
     multi = mh->multi;
-	zend_list_close(Z_RES_P(z_mh)); /* curl_multi_cleanup */
+    zend_list_close(Z_RES_P(z_mh)); /* curl_multi_cleanup */
     cat_curl_multi_cleanup_context(multi);
 }
 /* }}} */
