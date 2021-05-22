@@ -1757,7 +1757,7 @@ SWOW_API  php_stream *_swow_stream_fopen(const char *filename, const char *mode,
 {
     zend_bool open_for_include = options & STREAM_OPEN_FOR_INCLUDE;
     /** phar_open_archive_fp, cannot use async-io */
-    
+
     if (!open_for_include && EG(current_execute_data) && EG(current_execute_data)->func &&
         ZEND_USER_CODE(EG(current_execute_data)->func->type)) {
         const zend_op *opline = EG(current_execute_data)->opline;

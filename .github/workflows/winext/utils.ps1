@@ -85,7 +85,7 @@ function dlwithhash{
             Write-Host $_
             continue
         }
-        
+
         if($Hashmethod -And -Not $Hash -Eq (Get-FileHash $Dest -Algorithm $Hashmethod).Hash ){
             warn "Bad checksum, remove file $Dest."
             Remove-Item $Dest | Out-Null
@@ -119,7 +119,7 @@ function script:vercompare{
             return $a[$i].ToString() -Gt $b[$i].ToString()
         }
     }
-    
+
     return $false
 }
 function script:filecompare{
@@ -138,7 +138,7 @@ function script:filecompare{
             $plainb = $b
         }
     }
-    
+
     if ($plaina -Or $plainb){
         #Write-Host "plain"
         if($plaina -Eq $plainb){

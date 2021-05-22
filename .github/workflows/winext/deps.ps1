@@ -74,7 +74,7 @@ foreach ($depname in $DllDeps) {
         $fnver = searchfile $filelist -Pattern ("$depname-:-" + $PhpVCVer.ToLower() + "-$PhpArch.zip")
         $depfile = $fnver[0]
     }
-    
+
     if(!$depfile){
         err "Cannot find dep file for $depname"
         exit 1
@@ -99,7 +99,7 @@ foreach ($depname in $DllDeps) {
         }
     }
     info "Unzipping $dest to $ToolsPath\deps\"
-    
+
     Expand-Archive $dest -Destination "$ToolsPath\deps\" -Force
 }
 

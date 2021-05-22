@@ -63,7 +63,7 @@ function fetchdevpack(){
         if($DryRun){
             return
         }
-        
+
         if($latest.sha1){
             $hash = $latest.sha1
             $hashmethod = "SHA1"
@@ -81,7 +81,7 @@ function fetchdevpack(){
                 return $dest
             }
         }
-        
+
         provedir $ToolsPath
         $ret = dlwithhash `
             -Uri ("https://windows.php.net/downloads/releases/" + ($latest.path)) `

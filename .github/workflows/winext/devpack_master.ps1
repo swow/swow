@@ -23,7 +23,7 @@ if($PhpTs){
 function fetchdevpack(){
     info "Fetching php master dev pack from shivammathur/php-builder-windows"
     provedir $ToolsPath
-    
+
     $VCVer = $PhpVCVer.ToLower()
     $fn = "php-debug-pack-master-$nts-Win32-$VCVer-$PhpArch.zip"
     $ret = dlwithhash -Uri "https://github.com/shivammathur/php-builder-windows/releases/download/$Release/php-devel-pack-master-$nts-windows-$VCVer-$PhpArch.zip" -Dest "$ToolsPath\$fn"

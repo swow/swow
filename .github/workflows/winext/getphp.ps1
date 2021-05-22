@@ -79,7 +79,7 @@ if($info.$PhpVer.$phpvar){
             warn "$dest is already provided, skipping downloading."
         }
     }
-    
+
     provedir $ToolsPath
     $ret = dlwithhash `
         -Uri ("https://windows.php.net/downloads/releases/" + ($latest.path)) `

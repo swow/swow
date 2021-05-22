@@ -71,7 +71,7 @@ jobs:
 
       - name: Run library tests
         run: composer test-library
-      
+
       - name: Fail if anything failed
         if: steps.ext-test.outcome != 'success'
         run: exit 1

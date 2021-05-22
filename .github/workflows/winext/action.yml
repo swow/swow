@@ -130,7 +130,6 @@ runs:
           $ret = $lastexitcode
           Write-Host "::endgroup::"
         }
-        
         exit $ret
 
     - name: Build extension
