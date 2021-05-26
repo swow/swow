@@ -15,7 +15,14 @@ $origwd = (Get-Location).Path
 Set-Location $ExtPath
 
 $phppath = ((Get-Command $PhpBin).Source | Select-String -Pattern '(.+)\\php\.exe').Matches.Groups[1].Value
-$extdir = "$phppath\ext"
+$extdir = & $PhpBin -r "echo ini_get('extension_dir');"
+$extdir_ini = ""
+if (![System.IO.Path]::IsPathRooted($extdir)){
+    # if it's not absolute, it's relative path to $phppath
+    # we need set full path in ini
+    $extdir = "$phppath\$extdir"
+    $extdir_ini = "extension_dir=$extdir"
+}
 $inipath = "$phppath\php.ini"
 
 if(-Not (Test-Path "$env:BUILD_DIR\php_$ExtName.dll" -PathType Leaf)){
@@ -27,24 +34,27 @@ if(-Not (Test-Path "$env:BUILD_DIR\php_$ExtName.dll" -PathType Leaf)){
 info "Copy $env:BUILD_DIR\php_$ExtName.dll to $extdir"
 Copy-Item "$env:BUILD_DIR\php_$ExtName.dll" $extdir | Out-Null
 
+$ext_ini = ""
 if($Enable){
-    try{
-        $ini = Get-Content $inipath
-    }catch{
-        $ini = ""
-    }
+    $ext_ini = "extension=$ExtName"
+}
 
-    $match = $ini | Select-String -Pattern ('^\s*extension\s*=\s*["' + "'" + "]*$ExtName['" + '"' + ']*\s*')
-    if($match.Matches){
-        warn ("Ini entry extension=$ExtName is already setted at $inipath line" + $match.LineNumber + ", skipping ini modification")
-    }else{
-        info ('Append "extension=' + $ExtName + '" to ' + $inipath)
-        $content = "
-extension_dir=$extdir
-extension=$ExtName
+try{
+    $ini = Get-Content $inipath
+}catch{
+    $ini = ""
+}
+
+$match = $ini | Select-String -Pattern ('^\s*extension\s*=\s*["' + "'" + "]*$ExtName['" + '"' + ']*\s*')
+if($match.Matches){
+    warn ("Ini entry extension=$ExtName is already setted at $inipath line" + $match.LineNumber + ", skipping ini modification")
+}elseif($Enable -Or ($extdir_ini -Ne "")){
+    info ("Append `"$extdir_ini`", `"$ext_ini`" to " + $inipath)
+    $content = "
+$extdir_ini
+$ext_ini
 "
-        $content | Out-File -Encoding utf8 -Append $inipath
-    }
+    $content | Out-File -Encoding utf8 -Append $inipath
 }
 
 info "Run 'php --ri $ExtName'"
