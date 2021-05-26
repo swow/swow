@@ -31,6 +31,12 @@ if(-Not (Test-Path "$env:BUILD_DIR\php_$ExtName.dll" -PathType Leaf)){
     exit 1
 }
 
+if(-Not (Test-Path $extdir -PathType Container)){
+    info "Create extension dir $extdir"
+    New-Item -Path $extdir -ItemType Container | Out-Null
+    exit 1
+}
+
 info "Copy $env:BUILD_DIR\php_$ExtName.dll to $extdir"
 Copy-Item "$env:BUILD_DIR\php_$ExtName.dll" $extdir | Out-Null
 
