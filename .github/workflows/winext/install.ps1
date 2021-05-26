@@ -57,8 +57,16 @@ $ext_ini
     $content | Out-File -Encoding utf8 -Append $inipath
 }
 
-info "Run 'php --ri $ExtName'"
-& $PhpBin --ri $ExtName
+$define = ""
+if (!$Enable){
+    $define = "-dextension=swow"
+}
+
+info "Run 'php $define --ri $ExtName'"
+& $PhpBin $define --ri $ExtName
+if(0 -Ne $lastexitcode){
+    exit 1
+}
 
 Set-Location $origwd
 
