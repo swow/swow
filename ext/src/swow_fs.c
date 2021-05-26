@@ -689,7 +689,8 @@ static inline int swow_virtual_chown(const char *path, uid_t owner, gid_t group)
     });
     return ret;
 }
-
+/*
+// this shim is not used
 static inline int swow_virtual_lchown(const char *path, uid_t owner, gid_t group){
     int ret;
     SWOW_VCWD_WRAP(path, real_path, CWD_REALPATH, {
@@ -699,6 +700,7 @@ static inline int swow_virtual_lchown(const char *path, uid_t owner, gid_t group
     });
     return ret;
 }
+*/
 # endif // PHP_WIN32
 
 /*
