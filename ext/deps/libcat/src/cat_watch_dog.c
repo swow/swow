@@ -95,7 +95,7 @@ CAT_API cat_bool_t cat_watch_dog_runtime_shutdown(void)
 
 CAT_API void cat_watch_dog_alert_standard(cat_watch_dog_t *watch_dog)
 {
-    fprintf(stderr, "Warning: <Watch-Dog> Syscall blocking or CPU starvation may occur in " CAT_WATCH_DOG_ROLE_NAME " %d, "
+    fprintf(CAT_G(error_log), "Warning: <Watch-Dog> Syscall blocking or CPU starvation may occur in " CAT_WATCH_DOG_ROLE_NAME " %d, "
                     "it has been blocked for more than " CAT_TIMEOUT_FMT  " ns" CAT_EOL,
                     watch_dog->pid, watch_dog->quantum * watch_dog->alert_count);
 }
@@ -113,10 +113,12 @@ CAT_API cat_bool_t cat_watch_dog_run(cat_watch_dog_t *watch_dog, cat_timeout_t q
 
     if (watch_dog == NULL) {
         watch_dog = (cat_watch_dog_t *) cat_malloc(sizeof(*watch_dog));
+#ifndef CAT_ALLOC_NEVER_RETURNS_NULL
         if (watch_dog == NULL) {
             cat_update_last_error_of_syscall("Malloc for watch-dog failed");
             return cat_false;
         }
+#endif
         watch_dog->allocated = cat_true;
     } else {
         watch_dog->allocated = cat_false;

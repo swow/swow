@@ -62,6 +62,9 @@ CAT_API void cat_enable_debug_mode(void);
 #define cat_enable_debug_mode()
 #endif
 
+CAT_API FILE *cat_get_error_log(void);
+CAT_API void cat_set_error_log(FILE *file);
+
 #ifdef __cplusplus
 }
 #endif

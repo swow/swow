@@ -55,6 +55,7 @@ CAT_API cat_bool_t cat_runtime_init(void)
 
     CAT_G(log_types) = CAT_LOG_TYPES_DEFAULT;
     CAT_G(log_module_types) = CAT_MODULE_TYPES_ALL;
+    CAT_G(error_log) = stderr;
 #ifdef CAT_SOURCE_POSITION
     CAT_G(log_source_postion) = cat_false;
 #endif
@@ -63,6 +64,16 @@ CAT_API cat_bool_t cat_runtime_init(void)
 #endif
     memset(&CAT_G(last_error), 0, sizeof(CAT_G(last_error)));
 
+    /* error log */
+    if (cat_env_exists("CAT_ERROR_LOG")) {
+        char *error_log = cat_env_get("CAT_ERROR_LOG");
+        if (cat_strcasecmp(error_log, "stdout") == 0) {
+            CAT_G(error_log) = stdout;
+        } else if (cat_strcasecmp(error_log, "stderr") == 0) {
+            CAT_G(error_log) = stderr;
+        }  /* TODO: log file support */
+        cat_free(error_log);
+    }
 #ifdef CAT_DEBUG
 do {
     /* enable all log types and log module types */

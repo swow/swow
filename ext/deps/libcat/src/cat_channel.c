@@ -52,12 +52,11 @@ static cat_always_inline cat_bool_t cat_channel__is_available(const cat_channel_
 
 static cat_never_inline void cat_channel__update_last_error(const cat_channel_t *channel)
 {
+    CAT_ASSERT((channel->flags & (CAT_CHANNEL_FLAG_CLOSING | CAT_CHANNEL_FLAG_CLOSED)) && "Unexpected state");
     if (channel->flags & CAT_CHANNEL_FLAG_CLOSING) {
         cat_update_last_error(CAT_ECLOSING, "Channel is closing");
     } else if (channel->flags & CAT_CHANNEL_FLAG_CLOSED) {
         cat_update_last_error(CAT_ECLOSED, "Channel has been closed");
-    } else {
-        CAT_NEVER_HERE("unknown state");
     }
 }
 
@@ -263,10 +262,12 @@ static cat_always_inline cat_channel_bucket_t *cat_channel_buffered_bucket_creat
 
     bucket = (cat_channel_bucket_t *) cat_malloc(offsetof(cat_channel_bucket_t, data) + data_size);
 
+#ifndef CAT_ALLOC_NEVER_RETURNS_NULL
     if (unlikely(bucket == NULL)) {
         cat_update_last_error_of_syscall("Malloc for channel bucket failed");
         return NULL;
     }
+#endif
 
     memcpy(bucket->data, data, data_size);
 
@@ -279,9 +280,11 @@ static cat_always_inline cat_bool_t cat_channel_buffered_push_data(cat_channel_t
 
     bucket = cat_channel_buffered_bucket_create(data, channel->data_size);
 
+#ifndef CAT_ALLOC_NEVER_RETURNS_NULL
     if (unlikely(bucket == NULL)) {
         return cat_false;
     }
+#endif
 
     cat_queue_push_back(&channel->u.buffered.storage, &bucket->node);
     channel->length++;
@@ -344,9 +347,13 @@ static cat_bool_t cat_channel_buffered_push(cat_channel_t *channel, const cat_da
     } else {
         CAT_ASSERT(!cat_channel__has_producers(channel));
         /* push data to the storage queue */
+#ifndef CAT_ALLOC_NEVER_RETURNS_NULL
         if (unlikely(!cat_channel_buffered_push_data(channel, data))) {
             return cat_false;
         }
+#else
+        (void) cat_channel_buffered_push_data(channel, data);
+#endif
         /* try to notify one for balance */
         cat_channel_notify_possible_consumer(channel);
         return cat_true;
@@ -511,10 +518,12 @@ CAT_API cat_channel_select_response_t *cat_channel_select(cat_channel_select_req
     /* dummy coroutines */
     dummy_coroutines = (cat_channel_dummy_coroutine_t *) cat_malloc(sizeof(cat_channel_dummy_coroutine_t) * count);
 
+#ifndef CAT_ALLOC_NEVER_RETURNS_NULL
     if (unlikely(dummy_coroutines == NULL)) {
         cat_update_last_error_of_syscall("Malloc for dummy coroutines failed");
         return NULL;
     }
+#endif
 
     for (i = 0, request = requests; i < count; i++, request++) {
         channel = request->channel;

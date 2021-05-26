@@ -60,10 +60,12 @@ CAT_API cat_bool_t cat_signal_wait(int signum, cat_timeout_t timeout)
     int error;
 
     signal = (cat_signal_t *) cat_malloc(sizeof(*signal));
+#ifndef CAT_ALLOC_NEVER_RETURNS_NULL
     if (unlikely(signal == NULL)) {
         cat_update_last_error_of_syscall("Malloc for signal failed");
         return cat_false;
     }
+#endif
     error = uv_signal_init(cat_event_loop, &signal->signal);
     if (unlikely(error != 0)) {
         cat_update_last_error_with_reason(error, "Signal(%d) init failed", signum);

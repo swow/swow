@@ -653,10 +653,12 @@ CAT_API cat_socket_t *cat_socket_create_ex(cat_socket_t *socket, cat_socket_type
     isocket_size = sizeof(*isocket);
 #endif
     isocket = (cat_socket_internal_t *) cat_malloc(isocket_size + (socket == NULL ? sizeof(*socket) : 0));
+#ifndef CAT_ALLOC_NEVER_RETURNS_NULL
     if (unlikely(isocket == NULL)) {
         cat_update_last_error_of_syscall("Malloc for socket failed");
         goto _syscall_error;
     }
+#endif
     if (socket == NULL) {
         socket = (cat_socket_t *) ((char *) isocket + isocket_size);
     }
@@ -799,7 +801,9 @@ CAT_API cat_socket_t *cat_socket_create_ex(cat_socket_t *socket, cat_socket_type
     _pre_error:
 #endif
     cat_update_last_error_with_reason(error, "Socket init with type %s failed", cat_socket_type_name(type));
+#ifndef CAT_ALLOC_NEVER_RETURNS_NULL
     _syscall_error:
+#endif
 
     return NULL;
 }
@@ -1245,10 +1249,12 @@ static cat_bool_t cat_socket__connect(
     if (((type & CAT_SOCKET_TYPE_TCP) == CAT_SOCKET_TYPE_TCP) || (type & CAT_SOCKET_TYPE_FLAG_LOCAL)) {
         /* malloc for request (we must free it in the callback if it has been started) */
         request = (uv_connect_t *) cat_malloc(sizeof(*request));
+#ifndef CAT_ALLOC_NEVER_RETURNS_NULL
         if (unlikely(request == NULL)) {
             cat_update_last_error_of_syscall("Malloc for Socket connect request failed");
             return cat_false;
         }
+#endif
     } else {
         request = NULL;
     }
@@ -1644,10 +1650,12 @@ CAT_API const cat_sockaddr_info_t *cat_socket_getname_fast(cat_socket_t *socket,
     }
     size = offsetof(cat_sockaddr_info_t, address) + tmp.length;
     cache = (cat_sockaddr_info_t *) cat_malloc(size);
+#ifndef CAT_ALLOC_NEVER_RETURNS_NULL
     if (unlikely(cache == NULL)) {
         cat_update_last_error_of_syscall("Malloc for socket address info failed with size %zu", size);
         return NULL;
     }
+#endif
     if (!ret) {
         /* ENOSPC, retry now */
         ret = cat_socket_getname(socket, &cache->address.common, &cache->length, is_peer);
@@ -2179,10 +2187,12 @@ static cat_bool_t cat_socket_internal_write_raw(
         context_size = cat_offsize_of(cat_socket_write_request_t, u.udp);
     }
     request = (cat_socket_write_request_t *) cat_malloc(context_size);
+#ifndef CAT_ALLOC_NEVER_RETURNS_NULL
     if (unlikely(request == NULL)) {
         cat_update_last_error_of_syscall("Malloc for write reuqest failed");
         goto _out;
     }
+#endif
     if (!is_dgram) {
         error = uv_write(
             &request->u.stream, &isocket->u.stream,

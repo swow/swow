@@ -27,26 +27,26 @@ typedef struct
 } cat_error_t;
 
 #define CAT_ERRNO_MAP(XX) \
-    UV_ERRNO_MAP(XX) \
+    UV_ERRNO_MAP2(XX) \
     CAT_ERRNO_EXT_MAP(XX) \
 
 #define CAT_ERRNO_EXT_MAP(XX) \
     /* the error has no specific code, we should check the message of error  */ \
-    XX(UNCODED, "please check the error message") \
+    XX(UNCODED, "Please check the error message") \
     /* we should check the previous error */ \
-    XX(EPREV, "please check the previous error") \
+    XX(EPREV, "Please check the previous error") \
     /* must fix your code to prevent from this error */ \
-    XX(EMISUSE, "misuse error") \
+    XX(EMISUSE, "Misuse error") \
     /* illegal value (e.g. pass negative value to unsigned interface) */ \
-    XX(EVALUE, "value error") \
+    XX(EVALUE, "Value error") \
     /* it's different from EBUSY, it always caused by misuse */ \
-    XX(ELOCKED, "resource locked") \
+    XX(ELOCKED, "Resource locked") \
     /* resource is closing (similar to locked) */ \
-    XX(ECLOSING, "resource is closing") \
+    XX(ECLOSING, "Resource is closing") \
     /* resource has been closed */ \
-    XX(ECLOSED, "resource has been closed") \
+    XX(ECLOSED, "Resource has been closed") \
     /* dead lock */ \
-    XX(EDEADLK, "dead lock") \
+    XX(EDEADLK, "Dead lock") \
     /* generic error about ssl */ \
     XX(ESSL, "SSL error") \
     /* no certificate */ \

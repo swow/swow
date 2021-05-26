@@ -42,10 +42,12 @@ CAT_API char *cat_env_get_ex(const char *name, char *buffer, size_t *size)
         } else {
             _retry:
             buffer = (char *) cat_malloc(alloc_size);
+#ifndef CAT_ALLOC_NEVER_RETURNS_NULL
             if (unlikely(buffer == NULL)) {
                 cat_update_last_error_of_syscall("Malloc for env failed");
                 return NULL;
             }
+#endif
         }
     } else {
         size_ptr = size;
@@ -66,10 +68,12 @@ CAT_API char *cat_env_get_ex(const char *name, char *buffer, size_t *size)
 
     if (buffer == _buffer) {
         buffer = cat_strdup(buffer);
+#ifndef CAT_ALLOC_NEVER_RETURNS_NULL
         if (unlikely(buffer == NULL)) {
             cat_update_last_error_of_syscall("Dup for env failed");
             return NULL;
         }
+#endif
     }
 
     return buffer;
@@ -118,36 +122,63 @@ CAT_API cat_bool_t cat_env_exists(const char *name)
     return cat_true;
 }
 
-CAT_API cat_bool_t cat_env_is(const char *name, const char *value, cat_bool_t default_value)
+CAT_API cat_bool_t cat_env_compare(const char *name, const char *value, cat_env_comparer_t comparer, cat_bool_t default_value)
+{
+    const char *values[1] = { value };
+    return cat_env_compares(name, values, 1, comparer, default_value);
+}
+
+CAT_API cat_bool_t cat_env_compares(const char *name, const char **values, size_t count, cat_env_comparer_t comparer, cat_bool_t default_value)
 {
     char *env, buffer[CAT_ENV_BUFFER_SIZE];
-    size_t size = strlen(value) + 1;
-    int error;
+    size_t n, size = 0;
+    cat_bool_t ret;
+
+    for (n = 0; n < count; n++) {
+        size_t length = strlen(values[n]) + 1;
+        if (length > size) {
+            size = length;
+        }
+    }
 
     if (likely(size <= sizeof(buffer))) {
         env = buffer;
         size = sizeof(buffer);
     } else {
         env = (char *) cat_malloc(size);
+#ifndef CAT_ALLOC_NEVER_RETURNS_NULL
         if (unlikely(env == NULL)) {
             return default_value;
         }
+#endif
     }
 
-    error = uv_os_getenv(name, env, &size);
-
-    if (error == 0) {
-        default_value = strcmp(env, value) == 0;
+    if (uv_os_getenv(name, env, &size) == 0) {
+        ret = cat_false;
+        for (n = 0; n < count; n++) {
+            if (comparer(env, values[n]) == 0) {
+                ret = cat_true;
+                break;
+            }
+        }
+    } else {
+        ret = default_value;
     }
 
     if (unlikely(env != buffer)) {
         cat_free(env);
     }
 
-    return default_value;
+    return ret;
+}
+
+CAT_API cat_bool_t cat_env_is(const char *name, const char *value, cat_bool_t default_value)
+{
+    return cat_env_compare(name, value, strcmp, default_value);
 }
 
 CAT_API cat_bool_t cat_env_is_true(const char *name, cat_bool_t default_value)
 {
-    return cat_env_is(name, "1", default_value);
+    const char *values[3] = { "1", "true", "on" };
+    return cat_env_compares(name, values, CAT_ARRAY_SIZE(values), cat_strcasecmp, default_value);
 }

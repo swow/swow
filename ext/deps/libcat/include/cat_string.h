@@ -56,9 +56,11 @@ static cat_always_inline void cat_string_init(cat_string_t *string)
 static cat_always_inline cat_bool_t cat_string_create(cat_string_t *string, const char *value, size_t length)
 {
     char *new_value = (char *) cat_strndup(value, length);
+#ifndef CAT_ALLOC_NEVER_RETURNS_NULL
     if (unlikely(new_value == NULL)) {
         return cat_false;
     }
+#endif
     string->value = new_value;
     string->length = length;
     return cat_true;

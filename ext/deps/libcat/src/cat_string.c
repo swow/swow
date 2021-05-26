@@ -21,7 +21,7 @@
 CAT_API size_t cat_strnlen(const char *s, size_t n)
 {
     const char *p = memchr(s, 0, n);
-	return p ? (size_t) (p - s) : n;
+    return p ? (size_t) (p - s) : n;
 }
 
 /* Searches a string based on the pointer to the beginning and end of the string for a given character.
@@ -48,9 +48,11 @@ CAT_API char *cat_vsprintf(const char *format, va_list args)
     size = vsnprintf(NULL, 0, format, _args) + 1;
     va_end(_args);
     string = (char *) cat_malloc(size);
+#ifndef CAT_ALLOC_NEVER_RETURNS_NULL
     if (unlikely(string == NULL)) {
         return NULL;
     }
+#endif
     if (unlikely(vsnprintf(string, size, format, args) < 0)) {
         cat_free(string);
         return NULL;
@@ -80,9 +82,11 @@ CAT_API char *cat_hexprint(const char *data, size_t length)
     int n;
 
     buffer = (char *) cat_malloc(size + 1);
+#ifndef CAT_ALLOC_NEVER_RETURNS_NULL
     if (unlikely(buffer == NULL)) {
         return NULL;
     }
+#endif
     for (offset = 0, offsetx = 0; offset < length; offset++)
     {
         n = snprintf(buffer + offsetx, size - offsetx, "0x%02X ", data[offset] & 0xff);
@@ -114,9 +118,11 @@ CAT_API char *cat_snrand(char *buffer, size_t count)
 
     if (buffer == NULL) {
         buffer = (char *) cat_malloc(count);
+#ifndef CAT_ALLOC_NEVER_RETURNS_NULL
         if (unlikely(buffer == NULL)) {
             return NULL;
         }
+#endif
     }
 
     for (; n < count; n++) {

@@ -297,7 +297,7 @@ static void cat_coroutine_context_function(cat_coroutine_transfer_t transfer)
 {
     cat_coroutine_t *coroutine = CAT_COROUTINE_G(current);
 #ifdef __SANITIZE_ADDRESS__
-	__sanitizer_finish_switch_fiber(NULL, &coroutine->from->asan_stack, &coroutine->from->asan_stack_size);
+    __sanitizer_finish_switch_fiber(NULL, &coroutine->from->asan_stack, &coroutine->from->asan_stack_size);
 #endif
     if (unlikely(++CAT_COROUTINE_G(count) > CAT_COROUTINE_G(peak_count))) {
         CAT_COROUTINE_G(peak_count) = CAT_COROUTINE_G(count);

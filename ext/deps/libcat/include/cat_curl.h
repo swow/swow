@@ -39,8 +39,10 @@ CAT_API CURLMcode cat_curl_multi_cleanup(CURLM *multi);
 CAT_API CURLMcode cat_curl_multi_perform(CURLM *multi, int *running_handles);
 CAT_API CURLMcode cat_curl_multi_wait(CURLM *multi, struct curl_waitfd *extra_fds, unsigned int extra_nfds, int timeout_ms, int *numfds);
 
+#ifdef CAT_CURL_MULTI_CLEANUP_CONTEXT_SUPPORT
 CAT_API void cat_curl_multi_cleanup_context(CURLM *multi) CAT_INTERNAL; /* should be called after multi_cleanup() */
 CAT_API void cat_curl_multi_cleanup_all_contexts(void); CAT_INTERNAL /* should be called in runtime shutdown if you need it */
+#endif
 
 #endif /* CAT_HAVE_CURL */
 

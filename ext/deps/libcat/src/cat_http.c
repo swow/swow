@@ -143,7 +143,7 @@ const llhttp_settings_t cat_http_parser_settings = {
     cat_http_parser_on_body,
     cat_http_parser_on_message_complete,
     cat_http_parser_on_chunk_header,
-    cat_http_parser_on_chunk_complete, 
+    cat_http_parser_on_chunk_complete,
     cat_http_parser_on_url_complete,
     cat_http_parser_on_status_complete,
     cat_http_parser_on_header_field_complete,
@@ -176,10 +176,12 @@ CAT_API cat_http_parser_t *cat_http_parser_create(cat_http_parser_t *parser)
 {
     if (parser == NULL) {
         parser = (cat_http_parser_t *) cat_malloc(sizeof(*parser));
+#ifndef CAT_ALLOC_NEVER_RETURNS_NULL
         if (unlikely(parser == NULL)) {
             cat_update_last_error_of_syscall("Malloc for HTTP parser failed");
             return NULL;
         }
+#endif
     }
     cat_http_parser_init(parser);
 

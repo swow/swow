@@ -23,5 +23,10 @@ CAT_API char *cat_env_get_ex(const char *name, char *buffer, size_t *size); CAT_
 CAT_API cat_bool_t cat_env_set(const char *name, const char *value);
 CAT_API cat_bool_t cat_env_unset(const char *name);
 CAT_API cat_bool_t cat_env_exists(const char *name);
+
+typedef int (cat_env_comparer_t)(const char *s1, const char *s2);
+CAT_API cat_bool_t cat_env_compare(const char *name, const char *value, cat_env_comparer_t comparer, cat_bool_t default_value);
+CAT_API cat_bool_t cat_env_compares(const char *name, const char **values, size_t count, cat_env_comparer_t comparer, cat_bool_t default_value);
+
 CAT_API cat_bool_t cat_env_is(const char *name, const char *value, cat_bool_t default_value);
 CAT_API cat_bool_t cat_env_is_true(const char *name, cat_bool_t default_value);

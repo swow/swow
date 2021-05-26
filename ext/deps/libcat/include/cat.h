@@ -69,6 +69,7 @@ CAT_GLOBALS_STRUCT_BEGIN(cat)
     cat_module_types_t log_module_types;
     cat_error_t last_error;
     cat_bool_t runtime;
+    FILE *error_log;
 #ifdef CAT_SOURCE_POSITION
     cat_bool_t log_source_postion;
 #endif

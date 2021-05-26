@@ -48,7 +48,7 @@ CAT_API void cat_log_standard(CAT_LOG_PARAMATERS)
         va_start(args, format);
         message = cat_vsprintf(format, args);
         if (unlikely(message == NULL)) {
-            fprintf(stderr, "Sprintf log message failed" CAT_EOL);
+            fprintf(CAT_G(error_log), "Sprintf log message failed" CAT_EOL);
             return;
         }
         va_end(args);
@@ -68,22 +68,22 @@ CAT_API void cat_log_standard(CAT_LOG_PARAMATERS)
         }
         case CAT_LOG_TYPE_NOTICE : {
             type_string = "Notice";
-            output = stderr;
+            output = CAT_G(error_log);
             break;
         }
         case CAT_LOG_TYPE_WARNING : {
             type_string = "Warning";
-            output = stderr;
+            output = CAT_G(error_log);
             break;
         }
         case CAT_LOG_TYPE_ERROR : {
             type_string = "Error";
-            output = stderr;
+            output = CAT_G(error_log);
             break;
         }
         case CAT_LOG_TYPE_CORE_ERROR : {
             type_string = "Core Error";
-            output = stderr;
+            output = CAT_G(error_log);
             break;
         }
         default:

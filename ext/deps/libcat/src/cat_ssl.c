@@ -69,7 +69,7 @@ CAT_API cat_bool_t cat_ssl_module_init(void)
     /* SSL library initialisation */
 #if OPENSSL_VERSION_NUMBER >= 0x10100003L
     if (OPENSSL_init_ssl(OPENSSL_INIT_LOAD_CONFIG | OPENSSL_INIT_SSL_DEFAULT | OPENSSL_INIT_ADD_ALL_CIPHERS, NULL) == 0) {
-        ERR_print_errors_fp(stderr);
+        ERR_print_errors_fp(CAT_G(error_log));
         cat_core_error(SSL, "OPENSSL_init_ssl() failed");
     }
 #else
@@ -96,12 +96,12 @@ CAT_API cat_bool_t cat_ssl_module_init(void)
 
     cat_ssl_index = SSL_get_ex_new_index(0, NULL, NULL, NULL, NULL);
     if (cat_ssl_index == -1) {
-        ERR_print_errors_fp(stderr);
+        ERR_print_errors_fp(CAT_G(error_log));
         cat_core_error(SSL, "SSL_get_ex_new_index() failed");
     }
     cat_ssl_context_index = SSL_CTX_get_ex_new_index(0, NULL, NULL, NULL, NULL);
     if (cat_ssl_context_index == -1) {
-        ERR_print_errors_fp(stderr);
+        ERR_print_errors_fp(CAT_G(error_log));
         cat_core_error(SSL, "SSL_CTX_get_ex_new_index() failed");
     }
 
@@ -276,203 +276,203 @@ CAT_API void cat_ssl_context_set_verify_depth(cat_ssl_context_t *context, int de
 static int cat_ssl_win_cert_verify_callback(X509_STORE_CTX *x509_store_ctx, void *data) /* {{{ */
 {
     (void) data;
-	PCCERT_CONTEXT cert_ctx = NULL;
-	PCCERT_CHAIN_CONTEXT cert_chain_ctx = NULL;
+    PCCERT_CONTEXT cert_ctx = NULL;
+    PCCERT_CHAIN_CONTEXT cert_chain_ctx = NULL;
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
-	X509 *cert = x509_store_ctx->cert;
+    X509 *cert = x509_store_ctx->cert;
 #else
-	X509 *cert = X509_STORE_CTX_get0_cert(x509_store_ctx);
+    X509 *cert = X509_STORE_CTX_get0_cert(x509_store_ctx);
 #endif
-	cat_ssl_connection_t *connection = X509_STORE_CTX_get_ex_data(x509_store_ctx, SSL_get_ex_data_X509_STORE_CTX_idx());
-	cat_ssl_t *ssl = cat_ssl_get_from_connection(connection);
-	cat_bool_t is_self_signed = 0;
+    cat_ssl_connection_t *connection = X509_STORE_CTX_get_ex_data(x509_store_ctx, SSL_get_ex_data_X509_STORE_CTX_idx());
+    cat_ssl_t *ssl = cat_ssl_get_from_connection(connection);
+    cat_bool_t is_self_signed = 0;
 
-	{ /* First convert the x509 struct back to a DER encoded buffer and let Windows decode it into a form it can work with */
-		unsigned char *der_buf = NULL;
-		int der_len;
+    { /* First convert the x509 struct back to a DER encoded buffer and let Windows decode it into a form it can work with */
+        unsigned char *der_buf = NULL;
+        int der_len;
 
-		der_len = i2d_X509(cert, &der_buf);
-		if (der_len < 0) {
-			unsigned long err_code = 0, e;
-			char err_buf[512];
+        der_len = i2d_X509(cert, &der_buf);
+        if (der_len < 0) {
+            unsigned long err_code = 0, e;
+            char err_buf[512];
 
-			while ((e = ERR_get_error()) != 0) {
-				err_code = e;
-			}
+            while ((e = ERR_get_error()) != 0) {
+                err_code = e;
+            }
 
             cat_update_last_error(CAT_ECERT, "Error encoding X509 certificate: %d: %s", err_code, ERR_error_string(err_code, err_buf));
             X509_STORE_CTX_set_error(x509_store_ctx, SSL_R_CERTIFICATE_VERIFY_FAILED);
             return cat_false;
-		}
+        }
 
-		cert_ctx = CertCreateCertificateContext(X509_ASN_ENCODING, der_buf, der_len);
-		OPENSSL_free(der_buf);
+        cert_ctx = CertCreateCertificateContext(X509_ASN_ENCODING, der_buf, der_len);
+        OPENSSL_free(der_buf);
 
-		if (cert_ctx == NULL) {
+        if (cert_ctx == NULL) {
             cat_update_last_error_of_syscall("Error creating certificate context");
             X509_STORE_CTX_set_error(x509_store_ctx, SSL_R_CERTIFICATE_VERIFY_FAILED);
             return cat_false;
-		}
-	}
+        }
+    }
 
-	{ /* Next fetch the relevant cert chain from the store */
-		CERT_ENHKEY_USAGE enhkey_usage = {0};
-		CERT_USAGE_MATCH cert_usage = {0};
-		CERT_CHAIN_PARA chain_params = {sizeof(CERT_CHAIN_PARA)};
-		LPSTR usages[] = {szOID_PKIX_KP_SERVER_AUTH, szOID_SERVER_GATED_CRYPTO, szOID_SGC_NETSCAPE};
-		DWORD chain_flags = 0;
+    { /* Next fetch the relevant cert chain from the store */
+        CERT_ENHKEY_USAGE enhkey_usage = {0};
+        CERT_USAGE_MATCH cert_usage = {0};
+        CERT_CHAIN_PARA chain_params = {sizeof(CERT_CHAIN_PARA)};
+        LPSTR usages[] = {szOID_PKIX_KP_SERVER_AUTH, szOID_SERVER_GATED_CRYPTO, szOID_SGC_NETSCAPE};
+        DWORD chain_flags = 0;
         int allowed_depth;
-		unsigned int i;
+        unsigned int i;
 
-		enhkey_usage.cUsageIdentifier = 3;
-		enhkey_usage.rgpszUsageIdentifier = usages;
-		cert_usage.dwType = USAGE_MATCH_TYPE_OR;
-		cert_usage.Usage = enhkey_usage;
-		chain_params.RequestedUsage = cert_usage;
-		chain_flags = CERT_CHAIN_CACHE_END_CERT | CERT_CHAIN_REVOCATION_CHECK_CHAIN_EXCLUDE_ROOT;
+        enhkey_usage.cUsageIdentifier = 3;
+        enhkey_usage.rgpszUsageIdentifier = usages;
+        cert_usage.dwType = USAGE_MATCH_TYPE_OR;
+        cert_usage.Usage = enhkey_usage;
+        chain_params.RequestedUsage = cert_usage;
+        chain_flags = CERT_CHAIN_CACHE_END_CERT | CERT_CHAIN_REVOCATION_CHECK_CHAIN_EXCLUDE_ROOT;
 
-		if (!CertGetCertificateChain(NULL, cert_ctx, NULL, NULL, &chain_params, chain_flags, NULL, &cert_chain_ctx)) {
+        if (!CertGetCertificateChain(NULL, cert_ctx, NULL, NULL, &chain_params, chain_flags, NULL, &cert_chain_ctx)) {
             cat_update_last_error_of_syscall("Error getting certificate chain");
-			CertFreeCertificateContext(cert_ctx);
+            CertFreeCertificateContext(cert_ctx);
             X509_STORE_CTX_set_error(x509_store_ctx, SSL_R_CERTIFICATE_VERIFY_FAILED);
             return cat_false;
-		}
+        }
 
-		/* check if the cert is self-signed */
-		if (cert_chain_ctx->cChain > 0 && cert_chain_ctx->rgpChain[0]->cElement > 0
-			&& (cert_chain_ctx->rgpChain[0]->rgpElement[0]->TrustStatus.dwInfoStatus & CERT_TRUST_IS_SELF_SIGNED) != 0) {
-			is_self_signed = 1;
-		}
+        /* check if the cert is self-signed */
+        if (cert_chain_ctx->cChain > 0 && cert_chain_ctx->rgpChain[0]->cElement > 0
+            && (cert_chain_ctx->rgpChain[0]->rgpElement[0]->TrustStatus.dwInfoStatus & CERT_TRUST_IS_SELF_SIGNED) != 0) {
+            is_self_signed = 1;
+        }
 
-		/* check the depth */
+        /* check the depth */
         allowed_depth = SSL_get_verify_depth(connection);
         if (allowed_depth < 0) {
             allowed_depth = OPENSSL_DEFAULT_STREAM_VERIFY_DEPTH;
         }
-		for (i = 0; i < cert_chain_ctx->cChain; i++) {
-			if ((int) cert_chain_ctx->rgpChain[i]->cElement > allowed_depth) {
-				CertFreeCertificateChain(cert_chain_ctx);
-				CertFreeCertificateContext(cert_ctx);
+        for (i = 0; i < cert_chain_ctx->cChain; i++) {
+            if ((int) cert_chain_ctx->rgpChain[i]->cElement > allowed_depth) {
+                CertFreeCertificateChain(cert_chain_ctx);
+                CertFreeCertificateContext(cert_ctx);
                 X509_STORE_CTX_set_error(x509_store_ctx, X509_V_ERR_CERT_CHAIN_TOO_LONG);
                 return cat_false;
-			}
-		}
-	}
+            }
+        }
+    }
 
-	{ /* Then verify it against a policy */
-		SSL_EXTRA_CERT_CHAIN_POLICY_PARA ssl_policy_params = {sizeof(SSL_EXTRA_CERT_CHAIN_POLICY_PARA)};
-		CERT_CHAIN_POLICY_PARA chain_policy_params = {sizeof(CERT_CHAIN_POLICY_PARA)};
-		CERT_CHAIN_POLICY_STATUS chain_policy_status = {sizeof(CERT_CHAIN_POLICY_STATUS)};
-		LPWSTR server_name = NULL;
-		BOOL verify_result;
+    { /* Then verify it against a policy */
+        SSL_EXTRA_CERT_CHAIN_POLICY_PARA ssl_policy_params = {sizeof(SSL_EXTRA_CERT_CHAIN_POLICY_PARA)};
+        CERT_CHAIN_POLICY_PARA chain_policy_params = {sizeof(CERT_CHAIN_POLICY_PARA)};
+        CERT_CHAIN_POLICY_STATUS chain_policy_status = {sizeof(CERT_CHAIN_POLICY_STATUS)};
+        LPWSTR server_name = NULL;
+        BOOL verify_result;
 
-		{ /* This looks ridiculous and it is - but we validate the name ourselves using the peer_name
-		     ctx option, so just use the CN from the cert here */
+        { /* This looks ridiculous and it is - but we validate the name ourselves using the peer_name
+             ctx option, so just use the CN from the cert here */
 
-			X509_NAME *cert_name;
-			unsigned char *cert_name_utf8;
-			int index, cert_name_utf8_len;
-			DWORD num_wchars;
+            X509_NAME *cert_name;
+            unsigned char *cert_name_utf8;
+            int index, cert_name_utf8_len;
+            DWORD num_wchars;
 
-			cert_name = X509_get_subject_name(cert);
-			index = X509_NAME_get_index_by_NID(cert_name, NID_commonName, -1);
-			if (index < 0) {
-				cat_update_last_error(CAT_ECERT, "Unable to locate certificate CN");
-				CertFreeCertificateChain(cert_chain_ctx);
-				CertFreeCertificateContext(cert_ctx);
+            cert_name = X509_get_subject_name(cert);
+            index = X509_NAME_get_index_by_NID(cert_name, NID_commonName, -1);
+            if (index < 0) {
+                cat_update_last_error(CAT_ECERT, "Unable to locate certificate CN");
+                CertFreeCertificateChain(cert_chain_ctx);
+                CertFreeCertificateContext(cert_ctx);
                 X509_STORE_CTX_set_error(x509_store_ctx, SSL_R_CERTIFICATE_VERIFY_FAILED);
                 return cat_false;
-			}
+            }
 
-			cert_name_utf8_len = ASN1_STRING_to_UTF8(&cert_name_utf8, X509_NAME_ENTRY_get_data(X509_NAME_get_entry(cert_name, index)));
+            cert_name_utf8_len = ASN1_STRING_to_UTF8(&cert_name_utf8, X509_NAME_ENTRY_get_data(X509_NAME_get_entry(cert_name, index)));
 
-			num_wchars = MultiByteToWideChar(CP_UTF8, 0, (char*)cert_name_utf8, -1, NULL, 0);
-			if (num_wchars == 0) {
-				cat_update_last_error(CAT_ECERT, "Unable to convert %s to wide character string", cert_name_utf8);
-				OPENSSL_free(cert_name_utf8);
-				CertFreeCertificateChain(cert_chain_ctx);
-				CertFreeCertificateContext(cert_ctx);
+            num_wchars = MultiByteToWideChar(CP_UTF8, 0, (char*)cert_name_utf8, -1, NULL, 0);
+            if (num_wchars == 0) {
+                cat_update_last_error(CAT_ECERT, "Unable to convert %s to wide character string", cert_name_utf8);
+                OPENSSL_free(cert_name_utf8);
+                CertFreeCertificateChain(cert_chain_ctx);
+                CertFreeCertificateContext(cert_ctx);
                 X509_STORE_CTX_set_error(x509_store_ctx, SSL_R_CERTIFICATE_VERIFY_FAILED);
                 return cat_false;
-			}
+            }
 
-			server_name = (LPWSTR) cat_malloc((num_wchars * sizeof(WCHAR)) + sizeof(WCHAR));
+            server_name = (LPWSTR) cat_malloc((num_wchars * sizeof(WCHAR)) + sizeof(WCHAR));
 
-			num_wchars = MultiByteToWideChar(CP_UTF8, 0, (char*)cert_name_utf8, -1, server_name, num_wchars);
-			if (num_wchars == 0) {
-				cat_update_last_error(CAT_ECERT, "Unable to convert %s to wide character string", cert_name_utf8);
-				cat_free(server_name);
-				OPENSSL_free(cert_name_utf8);
-				CertFreeCertificateChain(cert_chain_ctx);
-				CertFreeCertificateContext(cert_ctx);
+            num_wchars = MultiByteToWideChar(CP_UTF8, 0, (char*)cert_name_utf8, -1, server_name, num_wchars);
+            if (num_wchars == 0) {
+                cat_update_last_error(CAT_ECERT, "Unable to convert %s to wide character string", cert_name_utf8);
+                cat_free(server_name);
+                OPENSSL_free(cert_name_utf8);
+                CertFreeCertificateChain(cert_chain_ctx);
+                CertFreeCertificateContext(cert_ctx);
                 X509_STORE_CTX_set_error(x509_store_ctx, SSL_R_CERTIFICATE_VERIFY_FAILED);
                 return cat_false;
-			}
+            }
 
-			OPENSSL_free(cert_name_utf8);
-		}
+            OPENSSL_free(cert_name_utf8);
+        }
 
-		ssl_policy_params.dwAuthType = (ssl->flags & CAT_SSL_FLAG_ACCEPT_STATE) ? AUTHTYPE_SERVER : AUTHTYPE_CLIENT;
-		ssl_policy_params.pwszServerName = server_name;
-		chain_policy_params.pvExtraPolicyPara = &ssl_policy_params;
+        ssl_policy_params.dwAuthType = (ssl->flags & CAT_SSL_FLAG_ACCEPT_STATE) ? AUTHTYPE_SERVER : AUTHTYPE_CLIENT;
+        ssl_policy_params.pwszServerName = server_name;
+        chain_policy_params.pvExtraPolicyPara = &ssl_policy_params;
 
-		verify_result = CertVerifyCertificateChainPolicy(CERT_CHAIN_POLICY_SSL, cert_chain_ctx, &chain_policy_params, &chain_policy_status);
+        verify_result = CertVerifyCertificateChainPolicy(CERT_CHAIN_POLICY_SSL, cert_chain_ctx, &chain_policy_params, &chain_policy_status);
 
-		cat_free(server_name);
-		CertFreeCertificateChain(cert_chain_ctx);
-		CertFreeCertificateContext(cert_ctx);
+        cat_free(server_name);
+        CertFreeCertificateChain(cert_chain_ctx);
+        CertFreeCertificateContext(cert_ctx);
 
-		if (!verify_result) {
+        if (!verify_result) {
             cat_update_last_error_of_syscall("Error verifying certificate chain policy");
             X509_STORE_CTX_set_error(x509_store_ctx, SSL_R_CERTIFICATE_VERIFY_FAILED);
             return cat_false;
-		}
+        }
 
-		if (chain_policy_status.dwError != 0) {
-			/* The chain does not match the policy */
-			if (is_self_signed && chain_policy_status.dwError == CERT_E_UNTRUSTEDROOT
-				&& ssl->allow_self_signed) {
-				/* allow self-signed certs */
-				X509_STORE_CTX_set_error(x509_store_ctx, X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT);
-			} else {
+        if (chain_policy_status.dwError != 0) {
+            /* The chain does not match the policy */
+            if (is_self_signed && chain_policy_status.dwError == CERT_E_UNTRUSTEDROOT
+                && ssl->allow_self_signed) {
+                /* allow self-signed certs */
+                X509_STORE_CTX_set_error(x509_store_ctx, X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT);
+            } else {
                 X509_STORE_CTX_set_error(x509_store_ctx, SSL_R_CERTIFICATE_VERIFY_FAILED);
                 return cat_false;
-			}
-		}
-	}
+            }
+        }
+    }
 
-	return cat_true;
+    return cat_true;
 }
 
 static int cat_ssl_verify_callback(int preverify_ok, X509_STORE_CTX *ctx) /* {{{ */
 {
-	/* conjure the stream & context to use */
-	cat_ssl_connection_t *connection = X509_STORE_CTX_get_ex_data(ctx, SSL_get_ex_data_X509_STORE_CTX_idx());
-	cat_ssl_t *ssl = cat_ssl_get_from_connection(connection);
-	int err, depth, ret, allowed_depth;
+    /* conjure the stream & context to use */
+    cat_ssl_connection_t *connection = X509_STORE_CTX_get_ex_data(ctx, SSL_get_ex_data_X509_STORE_CTX_idx());
+    cat_ssl_t *ssl = cat_ssl_get_from_connection(connection);
+    int err, depth, ret, allowed_depth;
 
-	ret = preverify_ok;
+    ret = preverify_ok;
 
-	/* determine the status for the current cert */
-	err = X509_STORE_CTX_get_error(ctx);
-	depth = X509_STORE_CTX_get_error_depth(ctx);
+    /* determine the status for the current cert */
+    err = X509_STORE_CTX_get_error(ctx);
+    depth = X509_STORE_CTX_get_error_depth(ctx);
 
-	/* if allow_self_signed is set, make sure that verification succeeds */
-	if (err == X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT && ssl->allow_self_signed) {
-		ret = 1;
-	}
+    /* if allow_self_signed is set, make sure that verification succeeds */
+    if (err == X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT && ssl->allow_self_signed) {
+        ret = 1;
+    }
 
-	/* check the depth */
+    /* check the depth */
     allowed_depth = SSL_get_verify_depth(connection);
     if (allowed_depth < 0) {
         allowed_depth = OPENSSL_DEFAULT_STREAM_VERIFY_DEPTH;
     }
-	if (depth > allowed_depth) {
-		ret = 0;
-		X509_STORE_CTX_set_error(ctx, X509_V_ERR_CERT_CHAIN_TOO_LONG);
-	}
+    if (depth > allowed_depth) {
+        ret = 0;
+        X509_STORE_CTX_set_error(ctx, X509_V_ERR_CERT_CHAIN_TOO_LONG);
+    }
 
-	return ret;
+    return ret;
 }
 
 CAT_API void cat_ssl_context_configure_verify(cat_ssl_context_t *context)
@@ -488,10 +488,12 @@ CAT_API cat_ssl_t *cat_ssl_create(cat_ssl_t *ssl, cat_ssl_context_t *context)
 {
     if (ssl == NULL) {
         ssl = (cat_ssl_t *) cat_malloc(sizeof(*ssl));
+#ifndef CAT_ALLOC_NEVER_RETURNS_NULL
         if (unlikely(ssl == NULL)) {
             cat_update_last_error_of_syscall("Malloc for SSL failed");
             goto _malloc_failed;
         }
+#endif
         ssl->flags = CAT_SSL_FLAG_ALLOC;
     } else {
         ssl->flags = CAT_SSL_FLAG_NONE;
@@ -541,7 +543,9 @@ CAT_API cat_ssl_t *cat_ssl_create(cat_ssl_t *ssl, cat_ssl_context_t *context)
     if (ssl->flags & CAT_SSL_FLAG_ALLOC) {
         cat_free(ssl);
     }
+#ifndef CAT_ALLOC_NEVER_RETURNS_NULL
     _malloc_failed:
+#endif
     return NULL;
 }
 
@@ -1014,10 +1018,12 @@ CAT_API cat_bool_t cat_ssl_encrypt(
     size = cat_ssl_encrypted_size(vin_length);
     if (unlikely(size >  ssl->write_buffer.size)) {
         buffer = (char *) cat_malloc(size);
+#ifndef CAT_ALLOC_NEVER_RETURNS_NULL
         if (unlikely(buffer == NULL)) {
             cat_update_last_error_of_syscall("Malloc for SSL write buffer failed");
             return cat_false;
         }
+#endif
     } else {
         size = ssl->write_buffer.size;
     }
@@ -1042,10 +1048,12 @@ CAT_API cat_bool_t cat_ssl_encrypt(
                     goto _error;
                 }
                 buffer = (char *) cat_malloc(size = CAT_SSL_BUFFER_SIZE);
+#ifndef CAT_ALLOC_NEVER_RETURNS_NULL
                 if (unlikely(buffer == NULL)) {
                     cat_update_last_error_of_syscall("Realloc for SSL write buffer failed");
                     goto _error;
                 }
+#endif
                 /* switch to the next */
                 vout++;
                 continue;
@@ -1169,7 +1177,7 @@ CAT_API char *cat_ssl_get_error_reason(void)
             } else {
                 errstr2 = cat_sprintf("%s (SSL: %s:%s)", errstr, ERR_error_string(n, NULL), data);
                 if (unlikely(errstr2 == NULL)) {
-                    ERR_print_errors_fp(stderr);
+                    ERR_print_errors_fp(CAT_G(error_log));
                     break;
                 }
                 cat_free(errstr);
@@ -1192,7 +1200,7 @@ CAT_API void cat_ssl_update_last_error(cat_errno_t error, const char *format, ..
     va_end(args);
 
     if (unlikely(message == NULL)) {
-        ERR_print_errors_fp(stderr);
+        ERR_print_errors_fp(CAT_G(error_log));
         return;
     }
 

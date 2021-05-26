@@ -49,21 +49,21 @@ CAT_API cat_msec_t cat_time_msec_cached(void)
 
 CAT_API cat_nsec_t cat_time_nsec2(void)
 {
-	uv_timeval64_t tv;
+    uv_timeval64_t tv;
     (void) uv_gettimeofday(&tv);
     return ((cat_nsec_t) (tv.tv_sec * 1000000)) + ((cat_nsec_t) (tv.tv_usec));
 }
 
 CAT_API cat_msec_t cat_time_msec2(void)
 {
-	uv_timeval64_t tv;
+    uv_timeval64_t tv;
     (void) uv_gettimeofday(&tv);
     return ((cat_msec_t) (tv.tv_sec * 1000)) + ((cat_msec_t) (tv.tv_usec / 1000.00));
 }
 
 CAT_API double cat_microtime(void)
 {
-	uv_timeval64_t tv;
+    uv_timeval64_t tv;
     (void) uv_gettimeofday(&tv);
     return (double) (tv.tv_sec + tv.tv_usec / 1000000.00);
 }
@@ -125,11 +125,12 @@ static cat_timer_t *cat_timer_wait(cat_msec_t msec)
     cat_bool_t ret;
 
     timer = (cat_timer_t *) cat_malloc(sizeof(*timer));;
-
+#ifndef CAT_ALLOC_NEVER_RETURNS_NULL
     if (unlikely(timer == NULL)) {
         cat_update_last_error_of_syscall("Malloc for timer failed");
         return NULL;
     }
+#endif
 
     (void) uv_timer_init(cat_event_loop, &timer->timer);
     (void) uv_timer_start(&timer->timer, cat_sleep_timer_callback, msec, 0);

@@ -445,4 +445,10 @@
 # define UV__EILSEQ (-4027)
 #endif
 
+#if defined(ESTALE) && !defined(_WIN32)
+# define UV__ESTALE UV__ERR(ESTALE)
+#else
+# define UV__ESTALE (-10070)
+#endif
+
 #endif /* UV_ERRNO_H_ */

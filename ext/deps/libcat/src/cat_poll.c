@@ -60,13 +60,10 @@ static cat_always_inline int cat_poll_translate_from_sysno(int ievents)
     int uv_events = 0;
 
     if (ievents & POLLIN) {
-        uv_events |= UV_READABLE;
+        uv_events |= (UV_READABLE | UV_DISCONNECT);
     }
     if (ievents & POLLOUT) {
-        uv_events |= UV_WRITABLE;
-    }
-    if (ievents & POLLHUP) {
-        uv_events |= UV_DISCONNECT;
+        uv_events |= (UV_WRITABLE | UV_DISCONNECT);
     }
     if (ievents & POLLPRI) {
         uv_events |= UV_PRIORITIZED;
@@ -75,7 +72,7 @@ static cat_always_inline int cat_poll_translate_from_sysno(int ievents)
     return uv_events;
 }
 
-static cat_pollfd_events_t cat_poll_translate_error_to_revents(cat_pollfd_events_t events, int error)
+static CAT_COLD cat_pollfd_events_t cat_poll_translate_error_to_revents(cat_pollfd_events_t events, int error)
 {
     switch (error) {
         case CAT_EBADF:
@@ -89,6 +86,18 @@ static cat_pollfd_events_t cat_poll_translate_error_to_revents(cat_pollfd_events
             return (events & (POLLIN | POLLOUT)) | POLLERR;
         default:
             return POLLERR;
+    }
+}
+
+static CAT_COLD int cat_poll_filter_init_error(int error)
+{
+    switch (error) {
+        case CAT_EEXIST:
+        case CAT_EBADF:
+            return error;
+        default:
+            /* for select/poll regular file */
+            return CAT_ENOTSOCK;
     }
 }
 
@@ -116,17 +125,19 @@ CAT_API cat_ret_t cat_poll_one(cat_os_socket_t fd, cat_pollfd_events_t events, c
     }
     *revents = POLLNONE;
 
-    poll = (cat_poll_one_t *) cat_malloc(sizeof(*poll));;
+    poll = (cat_poll_one_t *) cat_malloc(sizeof(*poll));
+#ifndef CAT_ALLOC_NEVER_RETURNS_NULL
     if (unlikely(poll == NULL)) {
         cat_update_last_error_of_syscall("Malloc for poll failed");
         return CAT_RET_ERROR;
     }
+#endif
 
     error = uv_poll_init_socket(cat_event_loop, &poll->u.poll, fd);
     if (unlikely(error != 0)) {
         cat_update_last_error_with_reason(error, "Poll init failed");
         cat_free(poll);
-        *revents = cat_poll_translate_error_to_revents(events, error == CAT_EEXIST ? error : CAT_ENOTSOCK);
+        *revents = cat_poll_translate_error_to_revents(events, cat_poll_filter_init_error(error));
         return CAT_RET_ERROR;
     }
     error = uv_poll_start(&poll->u.poll, cat_poll_translate_from_sysno(events), cat_poll_one_callback);
@@ -249,11 +260,13 @@ CAT_API int cat_poll(cat_pollfd_t *fds, cat_nfds_t nfds, cat_timeout_t timeout)
 
     cat_debug(EVENT, "poll(fds=%p, nfds=%zu, timeout=" CAT_TIMEOUT_FMT ")", fds, (size_t) nfds, timeout);
 
-    context = (cat_poll_context_t *) cat_malloc(sizeof(*context) + sizeof(*polls) * nfds);;
+    context = (cat_poll_context_t *) cat_malloc(sizeof(*context) + sizeof(*polls) * nfds);
+#ifndef CAT_ALLOC_NEVER_RETURNS_NULL
     if (unlikely(context == NULL)) {
         cat_update_last_error_of_syscall("Malloc for poll failed");
         return CAT_RET_ERROR;
     }
+#endif
     polls = (cat_poll_t *) (((char *) context) + sizeof(*context));
 
     context->coroutine = CAT_COROUTINE_G(current);
@@ -272,7 +285,7 @@ CAT_API int cat_poll(cat_pollfd_t *fds, cat_nfds_t nfds, cat_timeout_t timeout)
             error = uv_poll_init_socket(cat_event_loop, &poll->u.poll, fd->fd);
             if (unlikely(error != 0)) {
                 /* ENOTSOCK means it maybe a regular file */
-                poll->status = error == CAT_EEXIST ? error : CAT_ENOTSOCK;
+                poll->status = cat_poll_filter_init_error(error);
                 e++;
                 break;
             }
@@ -387,10 +400,12 @@ CAT_API int cat_select(int max_fd, fd_set *readfds, fd_set *writefds, fd_set *ex
 
     /* malloc for poll fds */
     pfds = (cat_pollfd_t *) cat_malloc(sizeof(*pfds) * nfds);
+#ifndef CAT_ALLOC_NEVER_RETURNS_NULL
     if (unlikely(pfds == NULL)) {
         cat_update_last_error_of_syscall("Malloc for poll fds failed");
         return -1;
     }
+#endif
 
     /* translate from select structure to pollfd structure */
     ifds = 0;
@@ -420,9 +435,9 @@ CAT_API int cat_select(int max_fd, fd_set *readfds, fd_set *writefds, fd_set *ex
     }
 
     /* translate from poll structure to select structrue */
-	SAFE_FD_ZERO(readfds);
-	SAFE_FD_ZERO(writefds);
-	SAFE_FD_ZERO(exceptfds);
+    SAFE_FD_ZERO(readfds);
+    SAFE_FD_ZERO(writefds);
+    SAFE_FD_ZERO(exceptfds);
     for (ifds = 0; ifds < nfds; ifds++) {
         pfd = &pfds[ifds];
         if (pfd->revents & POLLIN) {

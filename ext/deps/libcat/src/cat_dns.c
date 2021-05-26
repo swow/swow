@@ -58,10 +58,12 @@ CAT_API struct addrinfo *cat_dns_getaddrinfo_ex(const char *hostname, const char
     cat_bool_t ret;
     int error;
 
+#ifndef CAT_ALLOC_NEVER_RETURNS_NULL
     if (unlikely(context == NULL)) {
         cat_update_last_error_of_syscall("Malloc for DNS getaddrinfo context failed");
         return NULL;
     }
+#endif
     error = uv_getaddrinfo(cat_event_loop, &context->request.getaddrinfo, cat_dns_getaddrinfo_callback, hostname, service, hints);
     if (error != 0) {
         cat_update_last_error_with_reason(error, "DNS getaddrinfo init failed");
@@ -123,9 +125,8 @@ CAT_API cat_bool_t cat_dns_get_ip_ex(char *buffer, size_t buffer_size, const cha
             error = uv_ip6_name((struct sockaddr_in6 *) response->ai_addr, buffer, buffer_size);
             break;
         default:
-            cat_update_last_error(CAT_EAFNOSUPPORT, "DNS get ip failed due to unknown DNS response family %d returned", response->ai_family);
-            cat_dns_freeaddrinfo(response);
-            return cat_false;
+            error = CAT_EAFNOSUPPORT;
+            break;
     }
     cat_dns_freeaddrinfo(response);
     if (unlikely(error != 0)) {

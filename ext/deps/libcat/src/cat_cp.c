@@ -41,13 +41,12 @@ CAT_API int cat_sys_usleep(unsigned int useconds)
 
 CAT_API int cat_sys_nanosleep(const struct cat_timespec *req, struct cat_timespec *rem)
 {
+    (void) rem;
     if (req->tv_nsec > 999999999) {
         /* The time interval specified 1,000,000 or more microseconds. */
         cat_set_sys_errno(WSAEINVAL);
         return -1;
     }
-    rem->tv_nsec = 0;
-    rem->tv_sec = 0;
     return cat_sys_usleep((unsigned int) (req->tv_sec * 1000000 + req->tv_nsec / 1000));
 }
 #endif

@@ -99,20 +99,19 @@ static cat_always_inline cat_pollfd_events_t cat_curl_translate_poll_flags_to_sy
 #ifdef CAT_DEBUG
 static const char *cat_curl_translate_action_name(int action)
 {
+#define CAT_CURL_ACTION_MAP(XX) \
+    XX(NONE) \
+    XX(IN) \
+    XX(OUT) \
+    XX(INOUT) \
+    XX(REMOVE)
+#define CAT_CURL_ACTION_NAME_GEN(name) case CURL_POLL_##name: return "CURL_POLL_" #name;
     switch (action) {
-        case CURL_POLL_NONE:
-            return "CURL_POLL_NONE";
-        case CURL_POLL_IN:
-            return "CURL_POLL_IN";
-        case CURL_POLL_OUT:
-            return "CURL_POLL_OUT";
-        case CURL_POLL_INOUT:
-            return "CURL_POLL_INOUT";
-        case CURL_POLL_REMOVE:
-            return "CURL_POLL_REMOVE";
-        default:
-            CAT_NEVER_HERE("Non-exist");
+        CAT_CURL_ACTION_MAP(CAT_CURL_ACTION_NAME_GEN);
+        default: CAT_NEVER_HERE("Non-exist");
     }
+#undef CAT_CURL_ACTION_NAME_GEN
+#undef CAT_CURL_ACTION_MAP
 }
 #endif
 
@@ -160,9 +159,11 @@ static int cat_curl_multi_socket_function(
     if (action != CURL_POLL_REMOVE) {
         if (fd == NULL) {
             fd = (cat_curl_pollfd_t *) cat_malloc(sizeof(*fd));
+#ifndef CAT_ALLOC_NEVER_RETURNS_NULL
             if (unlikely(fd == NULL)) {
                 return CURLM_OUT_OF_MEMORY;
             }
+#endif
             cat_queue_push_back(&context->fds, &fd->node);
             context->nfds++;
             fd->sockfd = sockfd;
@@ -196,10 +197,11 @@ static cat_curl_multi_context_t *cat_curl_multi_create_context(CURLM *multi)
     cat_debug(EXT, "curl_multi_context_create(multi=%p)", multi);
 
     context = (cat_curl_multi_context_t *) cat_malloc(sizeof(*context));
-
+#ifndef CAT_ALLOC_NEVER_RETURNS_NULL
     if (unlikely(context == NULL)) {
         return NULL;
     }
+#endif
 
     context->multi = multi;
     context->coroutine = NULL;
@@ -239,13 +241,14 @@ static cat_curl_multi_context_t *cat_curl_multi_get_context(CURLM *multi)
 
 static void cat_curl_multi_context_close(cat_curl_multi_context_t *context)
 {
+#ifdef CAT_DO_NOT_OPTIMIZE /* fds should have been free'd in curl_multi_socket_function() */
     cat_curl_pollfd_t *fd;
-
     while ((fd = cat_queue_front_data(&context->fds, cat_curl_pollfd_t, node))) {
         cat_queue_remove(&fd->node);
         cat_free(fd);
         context->nfds--;
     }
+#endif
     CAT_ASSERT(context->nfds == 0);
     cat_queue_remove(&context->node);
     cat_free(context);
@@ -375,10 +378,14 @@ CAT_API CURLM *cat_curl_multi_init(void)
     }
 
     context = cat_curl_multi_create_context(multi);
+#ifdef CAT_ALLOC_NEVER_RETURNS_NULL
+    (void) context;
+#else
     if (unlikely(context == NULL)) {
         (void) curl_multi_cleanup(multi);
         return NULL;
     }
+#endif
 
     return multi;
 }
@@ -414,6 +421,13 @@ static CURLMcode cat_curl_multi_exec(
     CAT_ASSERT(extra_fds == NULL && "Not support yet");
     CAT_ASSERT(extra_nfds == 0 && "Not support yet");
 
+#ifdef CAT_OS_WIN
+    /* poll event will never be triggered if timeout is 0 on Windows,
+     * because uv__poll() treats 0 timeout specially.  */
+    if (timeout == 0) {
+        timeout = 1;
+    }
+#endif
     if (running_handles == NULL) {
         running_handles = &_running_handles;
     }
@@ -439,10 +453,12 @@ static CURLMcode cat_curl_multi_exec(
         } else {
             cat_nfds_t i;
             fds = (cat_pollfd_t *) cat_malloc(sizeof(*fds) * context->nfds);
+#ifndef CAT_ALLOC_NEVER_RETURNS_NULL
             if (unlikely(fds == NULL)) {
                 mcode = CURLM_OUT_OF_MEMORY;
                 goto _out;
             }
+#endif
             i = 0;
             CAT_QUEUE_FOREACH_DATA_START(&context->fds, cat_curl_pollfd_t, node, curl_fd) {
                 cat_pollfd_t *fd = &fds[i];
@@ -522,6 +538,7 @@ CAT_API CURLMcode cat_curl_multi_wait(
 
 /* multi context */
 
+#ifdef CAT_CURL_MULTI_CLEANUP_CONTEXT_SUPPORT
 CAT_API void cat_curl_multi_cleanup_context(CURLM *multi)
 {
     cat_curl_multi_close_context(multi);
@@ -535,5 +552,6 @@ CAT_API void cat_curl_multi_cleanup_all_contexts(void)
         cat_curl_multi_context_close(context);
     }
 }
+#endif /* CAT_CURL_MULTI_CLEANUP_CONTEXT_SUPPORT */
 
 #endif /* CAT_CURL */

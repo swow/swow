@@ -172,6 +172,12 @@ static const char* uv__unknown_err_code(int err) {
   return copy != NULL ? copy : "Unknown system error";
 }
 
+#ifdef HAVE_LIBCAT
+#define UV_ERRNO_MAP_COUNT_GEN(a, b) + 1
+STATIC_ASSERT((0 UV_ERRNO_MAP(UV_ERRNO_MAP_COUNT_GEN)) == (0 UV_ERRNO_MAP2(UV_ERRNO_MAP_COUNT_GEN)));
+#undef UV_ERRNO_MAP_COUNT_GEN
+#endif
+
 #define UV_ERR_NAME_GEN_R(name, _) \
 case UV_## name: \
   uv__strscpy(buf, #name, buflen); break;

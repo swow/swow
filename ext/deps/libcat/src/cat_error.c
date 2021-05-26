@@ -26,7 +26,11 @@ CAT_API cat_errno_t cat_get_last_error_code(void)
 CAT_API const char *cat_get_last_error_message(void)
 {
     const char *message = CAT_G(last_error).message;
-    return message ? message : "";
+    if (message == NULL) {
+        cat_errno_t code = cat_get_last_error_code();
+        return code == 0 ? "" : cat_strerror(code);
+    }
+    return message;
 }
 
 CAT_API void cat_clear_last_error(void)
@@ -44,19 +48,18 @@ CAT_API void cat_update_last_error(cat_errno_t code, const char *format, ...)
     va_list args;
     char *message;
 
-    /* Notice: new message maybe relying on the previous message */
-    va_start(args, format);
-    // if format is NULL, update message with standard error message
-    if (unlikely(format == NULL)) {
-        cat_set_last_error(code, cat_sprintf("%s", cat_strerror(code)));
-        return;
+    if (format == NULL) {
+        message = NULL;
+    } else {
+        /* Notice: new message maybe relying on the previous message */
+        va_start(args, format);
+        message = cat_vsprintf(format, args);
+        if (unlikely(message == NULL)) {
+            fprintf(CAT_G(error_log), "Sprintf last error message failed" CAT_EOL);
+            return;
+        }
+        va_end(args);
     }
-    message = cat_vsprintf(format, args);
-    if (unlikely(message == NULL)) {
-        fprintf(stderr, "Sprintf last error message failed" CAT_EOL);
-        return;
-    }
-    va_end(args);
 
     cat_set_last_error(code, message);
 }
@@ -110,7 +113,7 @@ CAT_API const char *cat_strerror(cat_errno_t error)
         CAT_ERRNO_MAP(CAT_STRERROR_GEN)
     }
 #undef CAT_STRERROR_GEN
-    return "unknown error";
+    return "Unknown error";
 }
 
 #ifndef E2BIG

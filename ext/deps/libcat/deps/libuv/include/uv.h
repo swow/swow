@@ -163,6 +163,93 @@ extern "C" {
   XX(ENOTTY, "inappropriate ioctl for device")                                \
   XX(EFTYPE, "inappropriate file type or format")                             \
   XX(EILSEQ, "illegal byte sequence")                                         \
+  XX(ESTALE, "stale file handle")                                             \
+
+#ifdef HAVE_LIBCAT
+#define UV_ERRNO_MAP2(XX)                                                     \
+  XX(E2BIG, "Argument list too long")                                         \
+  XX(EACCES, "Permission denied")                                             \
+  XX(EADDRINUSE, "Address already in use")                                    \
+  XX(EADDRNOTAVAIL, "Address not available")                                  \
+  XX(EAFNOSUPPORT, "Address family not supported")                            \
+  XX(EAGAIN, "Resource temporarily unavailable")                              \
+  XX(EAI_ADDRFAMILY, "Address family not supported")                          \
+  XX(EAI_AGAIN, "Temporary failure")                                          \
+  XX(EAI_BADFLAGS, "Bad ai_flags value")                                      \
+  XX(EAI_BADHINTS, "Invalid value for hints")                                 \
+  XX(EAI_CANCELED, "Request canceled")                                        \
+  XX(EAI_FAIL, "Permanent failure")                                           \
+  XX(EAI_FAMILY, "The requested address family is not supported")             \
+  XX(EAI_MEMORY, "Out of memory")                                             \
+  XX(EAI_NODATA, "No address")                                                \
+  XX(EAI_NONAME, "Unknown node or service")                                   \
+  XX(EAI_OVERFLOW, "Argument buffer overflow")                                \
+  XX(EAI_PROTOCOL, "Resolved protocol is unknown")                            \
+  XX(EAI_SERVICE, "Service not available for socket type")                    \
+  XX(EAI_SOCKTYPE, "Socket type not supported")                               \
+  XX(EALREADY, "Connection already in progress")                              \
+  XX(EBADF, "Bad file descriptor")                                            \
+  XX(EBUSY, "Resource busy or locked")                                        \
+  XX(ECANCELED, "Operation canceled")                                         \
+  XX(ECHARSET, "Invalid Unicode character")                                   \
+  XX(ECONNABORTED, "Software caused connection abort")                        \
+  XX(ECONNREFUSED, "Connection refused")                                      \
+  XX(ECONNRESET, "Connection reset by peer")                                  \
+  XX(EDESTADDRREQ, "Destination address required")                            \
+  XX(EEXIST, "File already exists")                                           \
+  XX(EFAULT, "Bad address in system call argument")                           \
+  XX(EFBIG, "File too large")                                                 \
+  XX(EHOSTUNREACH, "Host is unreachable")                                     \
+  XX(EINTR, "Interrupted system call")                                        \
+  XX(EINVAL, "Invalid argument")                                              \
+  XX(EIO, "I/O error")                                                        \
+  XX(EISCONN, "Socket is already connected")                                  \
+  XX(EISDIR, "Illegal operation on a directory")                              \
+  XX(ELOOP, "Too many symbolic links encountered")                            \
+  XX(EMFILE, "Too many open files")                                           \
+  XX(EMSGSIZE, "Message too long")                                            \
+  XX(ENAMETOOLONG, "Name too long")                                           \
+  XX(ENETDOWN, "Network is down")                                             \
+  XX(ENETUNREACH, "Network is unreachable")                                   \
+  XX(ENFILE, "File table overflow")                                           \
+  XX(ENOBUFS, "No buffer space available")                                    \
+  XX(ENODEV, "No such device")                                                \
+  XX(ENOENT, "No such file or directory")                                     \
+  XX(ENOMEM, "Not enough memory")                                             \
+  XX(ENONET, "Machine is not on the network")                                 \
+  XX(ENOPROTOOPT, "Protocol not available")                                   \
+  XX(ENOSPC, "No space left on device")                                       \
+  XX(ENOSYS, "Function not implemented")                                      \
+  XX(ENOTCONN, "Socket is not connected")                                     \
+  XX(ENOTDIR, "Not a directory")                                              \
+  XX(ENOTEMPTY, "Directory not empty")                                        \
+  XX(ENOTSOCK, "Socket operation on non-socket")                              \
+  XX(ENOTSUP, "Operation not supported on socket")                            \
+  XX(EPERM, "Operation not permitted")                                        \
+  XX(EPIPE, "Broken pipe")                                                    \
+  XX(EPROTO, "Protocol error")                                                \
+  XX(EPROTONOSUPPORT, "Protocol not supported")                               \
+  XX(EPROTOTYPE, "Protocol wrong type for socket")                            \
+  XX(ERANGE, "Result too large")                                              \
+  XX(EROFS, "Read-only file system")                                          \
+  XX(ESHUTDOWN, "Cannot send after transport endpoint shutdown")              \
+  XX(ESPIPE, "Invalid seek")                                                  \
+  XX(ESRCH, "No such process")                                                \
+  XX(ETIMEDOUT, "Connection timed out")                                       \
+  XX(ETXTBSY, "Text file is busy")                                            \
+  XX(EXDEV, "Cross-device link not permitted")                                \
+  XX(UNKNOWN, "Unknown error")                                                \
+  XX(EOF, "End of file")                                                      \
+  XX(ENXIO, "No such device or address")                                      \
+  XX(EMLINK, "Too many links")                                                \
+  XX(EHOSTDOWN, "Host is down")                                               \
+  XX(EREMOTEIO, "Remote I/O error")                                           \
+  XX(ENOTTY, "Inappropriate ioctl for device")                                \
+  XX(EFTYPE, "Inappropriate file type or format")                             \
+  XX(EILSEQ, "Illegal byte sequence")                                         \
+  XX(ESTALE, "Stale file handle")                                             \
+
+#endif /* HAVE_LIBCAT */
 
 #define UV_HANDLE_TYPE_MAP(XX)                                                \
   XX(ASYNC, async)                                                            \

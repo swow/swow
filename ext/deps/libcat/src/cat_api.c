@@ -102,3 +102,13 @@ CAT_API void cat_enable_debug_mode(void)
     CAT_G(log_module_types) = CAT_MODULE_TYPES_ALL;
 }
 #endif
+
+CAT_API FILE *cat_get_error_log(void)
+{
+    return CAT_G(error_log);
+}
+
+CAT_API void cat_set_error_log(FILE *file)
+{
+    CAT_G(error_log) = file;
+}

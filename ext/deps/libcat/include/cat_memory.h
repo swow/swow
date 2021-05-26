@@ -35,10 +35,12 @@ static cat_always_inline char* cat_memcpy(char *p, const char *data, size_t leng
 
 /* allocator */
 
+#ifndef cat_sys_malloc
 #define cat_sys_malloc                 malloc
 #define cat_sys_calloc                 calloc
 #define cat_sys_realloc                realloc
 #define cat_sys_free                   free
+#endif
 
 #ifndef cat_malloc
 #ifndef CAT_USE_DYNAMIC_ALLOCATOR
