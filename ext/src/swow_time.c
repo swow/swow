@@ -25,11 +25,8 @@
 #endif // PHP_WIN32
 
 #if PHP_VERSION_ID < 80000
-#define swow_argument_value_error(arg_num, format, ...) \
-        php_error_docref(NULL, E_WARNING, format, ##__VA_ARGS__)
 #define RETURN_FAILURE() RETURN_FALSE
 #else
-#define swow_argument_value_error zend_argument_value_error
 #define RETURN_FAILURE() RETURN_THROWS()
 #endif
 
@@ -48,7 +45,11 @@ static PHP_FUNCTION(swow_sleep)
     ZEND_PARSE_PARAMETERS_END();
 
     if (UNEXPECTED(seconds < 0)) {
-        swow_argument_value_error(1, "must be greater than or equal to 0");
+#if PHP_VERSION_ID < 80000
+        php_error_docref(NULL, E_WARNING, "Number of seconds must be greater than or equal to 0");
+#else
+        zend_argument_value_error(1, "must be greater than or equal to 0");
+#endif
         RETURN_FAILURE();
     }
 
@@ -71,7 +72,11 @@ static PHP_FUNCTION(swow_msleep)
     ZEND_PARSE_PARAMETERS_END();
 
     if (milli_seconds < 0) {
-        swow_argument_value_error(1, "must be greater than or equal to 0");
+#if PHP_VERSION_ID < 80000
+        php_error_docref(NULL, E_WARNING, "Number of milliseconds must be greater than or equal to 0");
+#else
+        zend_argument_value_error(1, "must be greater than or equal to 0");
+#endif
         RETURN_FAILURE();
     }
 
@@ -94,7 +99,11 @@ static PHP_FUNCTION(swow_usleep)
     ZEND_PARSE_PARAMETERS_END();
 
     if (micro_seconds < 0) {
-        swow_argument_value_error(1, "must be greater than or equal to 0");
+#if PHP_VERSION_ID < 80000
+        php_error_docref(NULL, E_WARNING, "Number of microseconds must be greater than or equal to 0");
+#else
+        zend_argument_value_error(1, "must be greater than or equal to 0");
+#endif
         RETURN_FAILURE();
     }
 
@@ -120,11 +129,19 @@ static PHP_FUNCTION(swow_nanosleep)
     ZEND_PARSE_PARAMETERS_END();
 
     if (tv_sec < 0) {
-        swow_argument_value_error(1, "must be greater than or equal to 0");
+#if PHP_VERSION_ID < 80000
+        php_error_docref(NULL, E_WARNING, "The seconds value must be greater than 0");
+#else
+        zend_argument_value_error(1, "must be greater than or equal to 0");
+#endif
         RETURN_FAILURE();
     }
     if (tv_nsec < 0) {
-        swow_argument_value_error(2, "must be greater than or equal to 0");
+#if PHP_VERSION_ID < 80000
+		php_error_docref(NULL, E_WARNING, "The nanoseconds value must be greater than 0");
+#else
+        zend_argument_value_error(2, "must be greater than or equal to 0");
+#endif
         RETURN_FAILURE();
     }
 
@@ -138,7 +155,11 @@ static PHP_FUNCTION(swow_nanosleep)
         add_assoc_long_ex(return_value, ZEND_STRL("nanoseconds"), php_rem.tv_nsec);
         return;
     } else if (cat_get_last_error_code() == CAT_EINVAL) {
+#if PHP_VERSION_ID < 80000
+        php_error_docref(NULL, E_WARNING, "nanoseconds was not in the range 0 to 999 999 999 or seconds was negative");
+#else
         zend_value_error("Nanoseconds was not in the range 0 to 999 999 999 or seconds was negative");
+#endif
         RETURN_FAILURE();
     }
 
