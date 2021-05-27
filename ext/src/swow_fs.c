@@ -945,7 +945,7 @@ SWOW_API php_stream *_swow_stream_fopen_temporary_file(const char *dir, const ch
 
 // todo: swowify this
 static void detect_is_seekable(swow_stdio_stream_data *self) {
-    #if defined(S_ISFIFO) && defined(S_ISCHR)
+#if defined(S_ISFIFO) && defined(S_ISCHR)
     if (self->fd >= 0 && do_fstat(self, 0) == 0) {
         self->is_seekable = !(S_ISFIFO(self->sb.st_mode) || S_ISCHR(self->sb.st_mode));
         self->is_pipe = S_ISFIFO(self->sb.st_mode);
@@ -975,7 +975,12 @@ static php_stream *_swow_stream_fopen_from_fd(int fd, const char *mode, const ch
         swow_stdio_stream_data *self = (swow_stdio_stream_data*)stream->abstract;
 
         detect_is_seekable(self);
-        if (!self->is_seekable) {
+#if PHP_VERSION_ID < 70400
+        if (self->is_pipe)
+#else
+        if (!self->is_seekable)
+#endif
+        {
             stream->flags |= PHP_STREAM_FLAG_NO_SEEK;
             stream->position = -1;
         } else {
@@ -1002,7 +1007,12 @@ SWOW_API php_stream *_swow_stream_fopen_from_file(FILE *file, const char *mode S
         swow_stdio_stream_data *self = (swow_stdio_stream_data*)stream->abstract;
 
         detect_is_seekable(self);
-        if (!self->is_seekable) {
+#if PHP_VERSION_ID < 70400
+        if (self->is_pipe)
+#else
+        if (!self->is_seekable)
+#endif
+        {
             stream->flags |= PHP_STREAM_FLAG_NO_SEEK;
             stream->position = -1;
         } else {
@@ -1069,14 +1079,14 @@ static swow_ssize_t swow_stdiop_fs_write(php_stream *stream, const char *buf, si
     } else {
 
 #ifdef HAVE_FLUSHIO
-#if PHP_VERSION_ID < 70400
+# if PHP_VERSION_ID < 70400
         detect_is_seekable(data); // workaround for PHP 7.3
-#endif
+# endif // PHP_VERSION_ID < 70400
         if (data->is_seekable && data->last_op == 'r') {
             zend_fseek(data->file, 0, SEEK_CUR);
         }
         data->last_op = 'w';
-#endif
+#endif // HAVE_FLUSHIO
         // todo: cat_work it
         return (swow_ssize_t) fwrite(buf, 1, count, data->file);
     }
@@ -1128,9 +1138,10 @@ static swow_ssize_t swow_stdiop_fs_read(php_stream *stream, char *buf, size_t co
     } else {
 #ifdef HAVE_FLUSHIO
 #if PHP_VERSION_ID < 70400
-        detect_is_seekable(data); // workaround for PHP 7.3
-#endif
+        if (!data->is_pipe && data->last_op == 'w')
+#else
         if (data->is_seekable && data->last_op == 'w')
+#endif
             zend_fseek(data->file, 0, SEEK_CUR);
         data->last_op = 'r';
 #endif
@@ -1255,9 +1266,11 @@ static int swow_stdiop_fs_seek(php_stream *stream, zend_off_t offset, int whence
     assert(data != NULL);
 
 #if PHP_VERSION_ID < 70400
-    detect_is_seekable(data); // workaround for PHP 7.3
+    if (data->is_pipe)
+#else
+    if (!data->is_seekable)
 #endif
-    if (!data->is_seekable) {
+    {
         php_error_docref(NULL, E_WARNING, "Cannot seek on this stream");
         return -1;
     }
