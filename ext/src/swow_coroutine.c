@@ -2152,15 +2152,19 @@ static int swow_coroutine_exit_handler(zend_execute_data *execute_data)
     }
     if (EG(exception) == NULL) {
 #if PHP_VERSION_ID < 80000
-        swow_coroutine_throw_unwind_exit();
+        if (scoroutine == swow_coroutine_get_main()) {
+            zend_bailout();
+        } else {
+            swow_coroutine_throw_unwind_exit();
+        }
 #else
         zend_throw_unwind_exit();
 #endif
     }
-    if (scoroutine != swow_coroutine_get_main()) {
-        scoroutine->exit_status = status;
-    } else {
+    if (scoroutine == swow_coroutine_get_main()) {
         EG(exit_status) = status;
+    } else {
+        scoroutine->exit_status = status;
     }
 
     return ZEND_USER_OPCODE_CONTINUE;
