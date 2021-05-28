@@ -2073,6 +2073,12 @@ static void swow_coroutine_error_cb(int type, ZEND_ERROR_CB_FILENAME_T *error_fi
     }
 }
 
+/* user opcode handler maybe called after runtime shutdown */
+#define SWOW_COROUTINE_OPCODE_HANDLER_CHECK() \
+    if (SWOW_COROUTINE_G(runtime_state) == SWOW_COROUTINE_RUNTIME_STATE_NONE) { \
+        return ZEND_USER_OPCODE_DISPATCH; \
+    }
+
 /* hook catch */
 
 static zend_bool swow_coroutine_has_unwind_exit(zend_object *exception)
@@ -2101,6 +2107,7 @@ static zend_bool swow_coroutine_has_unwind_exit(zend_object *exception)
 
 static int swow_coroutine_catch_handler(zend_execute_data *execute_data)
 {
+    SWOW_COROUTINE_OPCODE_HANDLER_CHECK();
     zend_exception_restore();
     if (UNEXPECTED(EG(exception) != NULL)) {
         if (swow_coroutine_has_unwind_exit(EG(exception))) {
@@ -2115,6 +2122,7 @@ static int swow_coroutine_catch_handler(zend_execute_data *execute_data)
 
 static int swow_coroutine_exit_handler(zend_execute_data *execute_data)
 {
+    SWOW_COROUTINE_OPCODE_HANDLER_CHECK();
     swow_coroutine_t *scoroutine = swow_coroutine_get_current();
     const zend_op *opline = EX(opline);
     zval *zstatus = NULL;
@@ -2175,6 +2183,7 @@ static int swow_coroutine_exit_handler(zend_execute_data *execute_data)
 #ifdef SWOW_COROUTINE_SWAP_SILENCE_CONTEXT
 static int swow_coroutine_begin_silence_handler(zend_execute_data *execute_data)
 {
+    SWOW_COROUTINE_OPCODE_HANDLER_CHECK();
     swow_coroutine_t *scoroutine = swow_coroutine_get_current();
     scoroutine->executor->error_reporting = EG(error_reporting) | E_MAGIC;
     return ZEND_USER_OPCODE_DISPATCH;
@@ -2182,6 +2191,7 @@ static int swow_coroutine_begin_silence_handler(zend_execute_data *execute_data)
 
 static int swow_coroutine_end_silence_handler(zend_execute_data *execute_data)
 {
+    SWOW_COROUTINE_OPCODE_HANDLER_CHECK();
     swow_coroutine_t *scoroutine = swow_coroutine_get_current();
     scoroutine->executor->error_reporting = 0;
     return ZEND_USER_OPCODE_DISPATCH;
@@ -2319,14 +2329,6 @@ int swow_coroutine_runtime_shutdown(SHUTDOWN_FUNC_ARGS)
         SWOW_COROUTINE_G(original_resume)
     );
 
-    /* restore opcode handlers */
-    zend_set_user_opcode_handler(ZEND_EXIT, NULL);
-#ifdef SWOW_COROUTINE_SWAP_SILENCE_CONTEXT
-    zend_set_user_opcode_handler(ZEND_BEGIN_SILENCE, NULL);
-    zend_set_user_opcode_handler(ZEND_END_SILENCE, NULL);
-#endif
-    zend_set_user_opcode_handler(ZEND_CATCH, NULL);
-
     /* recover zend_error_cb */
     zend_error_cb = original_zend_error_cb;
     original_zend_error_cb = NULL;
@@ -2336,6 +2338,19 @@ int swow_coroutine_runtime_shutdown(SHUTDOWN_FUNC_ARGS)
     }
 
     SWOW_COROUTINE_G(runtime_state) = SWOW_COROUTINE_RUNTIME_STATE_NONE;
+
+    return SUCCESS;
+}
+
+zend_result swow_coroutine_delay_runtime_shutdown(void)
+{
+    /* restore opcode handlers */
+    zend_set_user_opcode_handler(ZEND_EXIT, NULL);
+#ifdef SWOW_COROUTINE_SWAP_SILENCE_CONTEXT
+    zend_set_user_opcode_handler(ZEND_BEGIN_SILENCE, NULL);
+    zend_set_user_opcode_handler(ZEND_END_SILENCE, NULL);
+#endif
+    zend_set_user_opcode_handler(ZEND_CATCH, NULL);
 
     return SUCCESS;
 }

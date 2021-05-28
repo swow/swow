@@ -158,6 +158,7 @@ extern SWOW_API CAT_GLOBALS_DECLARE(swow_coroutine)
 int swow_coroutine_module_init(INIT_FUNC_ARGS);
 int swow_coroutine_runtime_init(INIT_FUNC_ARGS);
 int swow_coroutine_runtime_shutdown(SHUTDOWN_FUNC_ARGS);
+zend_result swow_coroutine_delay_runtime_shutdown(void);
 
 /* helper */
 
