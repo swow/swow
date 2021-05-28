@@ -1485,16 +1485,26 @@ PHP_FUNCTION(swow_stream_select)
     int retval, sets = 0;
     zend_long sec, usec = 0;
     zend_bool secnull;
+#if PHP_VERSION_ID >= 80100
     zend_bool usecnull = 1;
+#endif // PHP_VERSION_ID >= 80100
     int set_count, max_set_count = 0;
 
     ZEND_PARSE_PARAMETERS_START(4, 5)
         Z_PARAM_ARRAY_EX2(r_array, 1, 1, 0)
         Z_PARAM_ARRAY_EX2(w_array, 1, 1, 0)
         Z_PARAM_ARRAY_EX2(e_array, 1, 1, 0)
+#if PHP_VERSION_ID < 80000
+        Z_PARAM_LONG_EX(sec, secnull, 1, 0)
+#else
         Z_PARAM_LONG_OR_NULL(sec, secnull)
+#endif // PHP_VERSION_ID < 80000
         Z_PARAM_OPTIONAL
+#if PHP_VERSION_ID < 80100
+        Z_PARAM_LONG(usec)
+#else
         Z_PARAM_LONG_OR_NULL(usec, usecnull)
+#endif // PHP_VERSION_ID < 80100
     ZEND_PARSE_PARAMETERS_END();
 
     FD_ZERO(&rfds);
@@ -1523,12 +1533,18 @@ PHP_FUNCTION(swow_stream_select)
     }
 
     if (!sets) {
+#if PHP_VERSION_ID < 80000
+        php_error_docref(NULL, E_WARNING, "No stream arrays were passed");
+        RETURN_FALSE;
+#else
         zend_value_error("No stream arrays were passed");
         RETURN_THROWS();
+#endif // PHP_VERSION_ID < 80000
     }
 
     PHP_SAFE_MAX_FD(max_fd, max_set_count);
 
+#if PHP_VERSION_ID >= 80100
     if (secnull && !usecnull) {
         if (usec == 0) {
             php_error_docref(NULL, E_DEPRECATED, "Argument #5 ($microseconds) should be null instead of 0 when argument #4 ($seconds) is null");
@@ -1537,16 +1553,30 @@ PHP_FUNCTION(swow_stream_select)
             RETURN_THROWS();
         }
     }
+#endif // PHP_VERSION_ID >= 80000
 
     /* If seconds is not set to null, build the timeval, else we wait indefinitely */
     if (!secnull) {
+
+#if PHP_VERSION_ID < 80000
+        if (sec < 0) {
+            php_error_docref(NULL, E_WARNING, "The seconds parameter must be greater than 0");
+            RETURN_FALSE;
+        } else if (usec < 0) {
+            php_error_docref(NULL, E_WARNING, "The microseconds parameter must be greater than 0");
+            RETURN_FALSE;
+        }
+#else
         if (sec < 0) {
             zend_argument_value_error(4, "must be greater than or equal to 0");
             RETURN_THROWS();
         } else if (usec < 0) {
-            zend_argument_value_error(4, "must be greater than or equal to 0");
+            // there's a bug before b751c24e233945281b08ef15b569a63feb6e0c48
+            // here we fixed it
+            zend_argument_value_error(5, "must be greater than or equal to 0");
             RETURN_THROWS();
         }
+#endif // PHP_VERSION_ID < 80000
 
         /* Windows, Solaris and BSD do not like microsecond values which are >= 1 sec */
         tv.tv_sec = (long)(sec + (usec / 1000000));
