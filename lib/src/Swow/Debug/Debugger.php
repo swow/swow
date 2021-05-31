@@ -198,7 +198,7 @@ TEXT;
     protected function callSourcePositionHandler(string $sourcePosition): string
     {
         $sourcePositionHandler = $this->sourcePositionHandler;
-        if ($sourcePositionHandler != null) {
+        if ($sourcePositionHandler !== null) {
             return $sourcePositionHandler($sourcePosition);
         }
 
@@ -232,7 +232,7 @@ TEXT;
     {
         $pathMap = getenv('SDB_PATH_MAP');
         if (is_string($pathMap) && file_exists($pathMap)) {
-            $pathMap = json_decode(file_get_contents($pathMap), true);
+            $pathMap = json_decode(file_get_contents($pathMap), true, 512, JSON_THROW_ON_ERROR);
             if (count($pathMap) > 0) {
                 /* This can help you to see the real source position in the host machine in the terminal */
                 $this->setSourcePositionHandler(function (string $sourcePosition) use ($pathMap): string {
@@ -417,7 +417,7 @@ TEXT;
         switch (1) {
             case is_int($value):
             case is_float($value):
-                return "{$value}";
+                return (string) $value;
             case is_null($value):
                 return 'null';
             case is_bool($value):
@@ -458,14 +458,12 @@ TEXT;
             $atClass = $frame['class'] ?? '';
             $delimiter = $atClass ? '::' : '';
             $args = $frame['args'] ?? [];
+            $argsString = '';
             if ($args) {
-                $argsString = '';
                 foreach ($args as $argName => $argValue) {
                     $argsString .= static::convertValueToString($argValue) . ', ';
                 }
                 $argsString = rtrim($argsString, ', ');
-            } else {
-                $argsString = '';
             }
             $executing = "{$atClass}{$delimiter}{$atFunction}({$argsString})";
         } else {
@@ -479,10 +477,8 @@ TEXT;
     {
         $traceTable = [];
         foreach ($trace as $index => $frame) {
-            if ($frameIndex !== null) {
-                if ($index !== $frameIndex) {
-                    continue;
-                }
+            if ($frameIndex !== null && $index !== $frameIndex) {
+                continue;
             }
             $executing = static::getExecutingFromFrame($frame);
             $file = $frame['file'] ?? null;
@@ -904,11 +900,11 @@ TEXT;
             $this->logo()->out('Enter \'r\' to run your program');
             goto _recvLoop;
         }
-        if (strlen($keyword) > 0) {
+        if ($keyword !== '') {
             $this->lf()->out("You can input '{$keyword}' to to call out the debug interface...");
         }
         _restart:
-        if (strlen($keyword) > 0) {
+        if ($keyword !== '') {
             while ($in = $this->in(false)) {
                 if (trim($in) === $keyword) {
                     break;
@@ -931,8 +927,8 @@ TEXT;
                         $argument = trim($argument);
                     }
                     unset($argument);
-                    $arguments = array_filter($arguments, function (string $value) {
-                        return strlen($value) !== 0;
+                    $arguments = array_filter($arguments, static function (string $value) {
+                        return $value !== '';
                     });
                     $command = array_shift($arguments);
                     switch ($command) {
@@ -981,7 +977,7 @@ TEXT;
                             break;
                         case 'b':
                             $breakPoint = $arguments[0] ?? '';
-                            if (strlen($breakPoint) === 0) {
+                            if ($breakPoint === '') {
                                 throw new DebuggerException('Invalid break point');
                             }
                             $coroutine = $this->getCurrentCoroutine();
@@ -1113,7 +1109,7 @@ TEXT;
                             break;
                         case 'q':
                             $this->clear();
-                            if (strlen($keyword) !== 0 && !static::isAlone()) {
+                            if ($keyword !== '' && !static::isAlone()) {
                                 /* we can input keyword to call out the debugger */
                                 goto _restart;
                             }

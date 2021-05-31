@@ -44,7 +44,7 @@ class CallbackSelector extends Selector
 
     public function select(int $timeout = -1): void
     {
-        $channel = parent::commit($timeout);
+        $channel = $this->commit($timeout);
         $id = spl_object_id($channel);
         if ($this->getLastOpcode() === Channel::OPCODE_PUSH) {
             $this->pushCallbacks[$id]();
