@@ -29,7 +29,7 @@
         "psr/http-message": "^1.0"
     },
     "require-dev": {
-        "friendsofphp/php-cs-fixer": "2.16.*",
+        "friendsofphp/php-cs-fixer": "^3.0",
         "phpunit/phpunit": ">=8.0"
     },
     "suggest": {
@@ -55,7 +55,7 @@
         "sort-packages": true
     },
     "scripts": {
-        "cs-check": [ "@php vendor/bin/php-cs-fixer fix --dry-run" ],
+        "cs-check": [ "@php vendor/bin/php-cs-fixer fix --dry-run --diff" ],
         "cs-fix": [ "@php vendor/bin/php-cs-fixer fix" ],
         "sync-extension": [ "@php -n tools/extension/sync.php" ],
         "build-extension": [ "@php tools/builder/swow-builder" ],

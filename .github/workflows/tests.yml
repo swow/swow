@@ -13,12 +13,16 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: 7.4 # should be update to latest when cs-fixer supports 8.0
+          php-version: 8.0
 
       - name: Coding Standards Check
+        shell: bash
         run: |
+          echo "::group::Accquire composer dependencies"
           composer update -o --ignore-platform-reqs
           composer update -o
+          echo "::endgroup::"
+          echo "::group::Run cs-check"
           composer cs-check
 
   unix-tests:
