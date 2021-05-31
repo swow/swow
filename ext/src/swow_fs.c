@@ -1271,7 +1271,11 @@ static int swow_stdiop_fs_seek(php_stream *stream, zend_off_t offset, int whence
     if (!data->is_seekable)
 #endif
     {
+#if PHP_VERSION_ID < 80000
+        php_error_docref(NULL, E_WARNING, "cannot seek on this stream");
+#else
         php_error_docref(NULL, E_WARNING, "Cannot seek on this stream");
+#endif
         return -1;
     }
 
@@ -1371,7 +1375,7 @@ static int swow_stdiop_fs_set_option(php_stream *stream, int option, int value, 
 {
     swow_stdio_stream_data *data = (swow_stdio_stream_data*) stream->abstract;
     size_t size;
-    int fd = SWOW_STDIOP_FD(data);;
+    int fd = SWOW_STDIOP_FD(data);
 #ifdef O_NONBLOCK
     /* FIXME: make this work for win32 */
     int flags;
@@ -2247,7 +2251,11 @@ static int swow_plain_files_metadata(php_stream_wrapper *wrapper, const char *ur
             ret = swow_virtual_chmod(url, mode);
             break;
         default:
+#if PHP_VERSION_ID < 80000
+            php_error_docref1(NULL, url, E_WARNING, "Unknown option %d for stream_metadata", option);
+#else
             zend_value_error("Unknown option %d for stream_metadata", option);
+#endif // PHP_VERSION_ID < 80000
             return 0;
     }
     if (ret == -1) {
