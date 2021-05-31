@@ -198,7 +198,7 @@ TEXT;
     protected function callSourcePositionHandler(string $sourcePosition): string
     {
         $sourcePositionHandler = $this->sourcePositionHandler;
-        if ($sourcePositionHandler != null) {
+        if ($sourcePositionHandler !== null) {
             return $sourcePositionHandler($sourcePosition);
         }
 
