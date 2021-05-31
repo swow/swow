@@ -417,7 +417,7 @@ TEXT;
         switch (1) {
             case is_int($value):
             case is_float($value):
-                return (string)($value);
+                return (string) $value;
             case is_null($value):
                 return 'null';
             case is_bool($value):
@@ -477,7 +477,7 @@ TEXT;
     {
         $traceTable = [];
         foreach ($trace as $index => $frame) {
-            if (($frameIndex !== null) && $index !== $frameIndex) {
+            if ($frameIndex !== null && $index !== $frameIndex) {
                 continue;
             }
             $executing = static::getExecutingFromFrame($frame);
