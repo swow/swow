@@ -59,7 +59,7 @@ Swow is also consistent with PHP's new error handling policy. In PHP8, a large a
 
 Once we asked developers to check the return value after each IO operation, otherwise the program may fall into an unexpected error state. This coding style is tantamount to a historical regression. Eliminating `if ($err != null)` and embracing the exception mechanism will be the correct path of development.
 
-Based on the above improvements, we can now write code in method chaining sytle, making the code more concise and full of rhythm.
+Based on the above improvements, we can now write code in method chaining style, making the code more concise and full of rhythm.
 
 ## 🍀 Free enhancement
 
