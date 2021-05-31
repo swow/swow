@@ -957,7 +957,7 @@ TEXT;
                             goto _next;
                         case 'bt':
                             $this->showCoroutine($this->getCurrentCoroutine(), false)
-                                 ->showSourceFileContentByTrace($this->getCurrentCoroutineTrace(), 0, true);
+                                ->showSourceFileContentByTrace($this->getCurrentCoroutineTrace(), 0, true);
                             break;
                         case 'f':
                             $frameIndex = $arguments[0] ?? null;
