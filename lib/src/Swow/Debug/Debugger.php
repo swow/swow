@@ -86,7 +86,7 @@ TEXT;
     /**
      * @return $this
      */
-    public static function getInstance() : self
+    public static function getInstance()
     {
         return static::$instance ?? (static::$instance = new static());
     }
@@ -129,7 +129,7 @@ TEXT;
     /**
      * @return $this
      */
-    public function out(string $string = '', bool $newline = true) : self
+    public function out(string $string = '', bool $newline = true)
     {
         $this->output->write([$string, $newline ? "\n" : null]);
 
@@ -139,7 +139,7 @@ TEXT;
     /**
      * @return $this
      */
-    public function exception(string $string = '', bool $newline = true) : self
+    public function exception(string $string = '', bool $newline = true)
     {
         $this->output->write([$string, $newline ? "\n" : null]);
 
@@ -149,7 +149,7 @@ TEXT;
     /**
      * @return $this
      */
-    public function error(string $string = '', bool $newline = true) : self
+    public function error(string $string = '', bool $newline = true)
     {
         $this->error->write([$string, $newline ? "\n" : null]);
 
@@ -159,7 +159,7 @@ TEXT;
     /**
      * @return $this
      */
-    public function cr() : self
+    public function cr()
     {
         return $this->out("\r", false);
     }
@@ -167,7 +167,7 @@ TEXT;
     /**
      * @return $this
      */
-    public function lf() : self
+    public function lf()
     {
         return $this->out("\n", false);
     }
@@ -175,7 +175,7 @@ TEXT;
     /**
      * @return $this
      */
-    public function clear() : self
+    public function clear()
     {
         $this->output->sendString("\033c");
 
@@ -185,7 +185,7 @@ TEXT;
     /**
      * @return $this
      */
-    public function table(array $table, bool $newline = true) : self
+    public function table(array $table, bool $newline = true)
     {
         return $this->out($this::tableFormat($table), $newline);
     }
@@ -198,7 +198,7 @@ TEXT;
     protected function callSourcePositionHandler(string $sourcePosition): string
     {
         $sourcePositionHandler = $this->sourcePositionHandler;
-        if ($sourcePositionHandler !== null) {
+        if ($sourcePositionHandler != null) {
             return $sourcePositionHandler($sourcePosition);
         }
 
@@ -208,7 +208,7 @@ TEXT;
     /**
      * @return $this
      */
-    public function setLastCommand(string $lastCommand) : self
+    public function setLastCommand(string $lastCommand)
     {
         $this->lastCommand = $lastCommand;
 
@@ -218,7 +218,7 @@ TEXT;
     /**
      * @return $this
      */
-    public function setSourcePositionHandler(callable $sourcePositionHandler) : self
+    public function setSourcePositionHandler(callable $sourcePositionHandler)
     {
         $this->sourcePositionHandler = $sourcePositionHandler;
 
@@ -228,7 +228,7 @@ TEXT;
     /**
      * @return $this
      */
-    public function checkPathMap() : self
+    public function checkPathMap()
     {
         $pathMap = getenv('SDB_PATH_MAP');
         if (is_string($pathMap) && file_exists($pathMap)) {
@@ -253,7 +253,7 @@ TEXT;
     /**
      * @return $this
      */
-    protected function setCursorVisibility(bool $bool) : self
+    protected function setCursorVisibility(bool $bool)
     {
         if (1 /* is tty */) {
             $this->out("\033[?25" . ($bool ? 'h' : 'l'));
@@ -270,7 +270,7 @@ TEXT;
     /**
      * @return $this
      */
-    protected function setCurrentCoroutine(Coroutine $coroutine) : self
+    protected function setCurrentCoroutine(Coroutine $coroutine)
     {
         $this->currentCoroutine = $coroutine;
         $this->currentFrameIndex = 0;
@@ -291,7 +291,7 @@ TEXT;
     /**
      * @return $this
      */
-    protected function setCurrentFrameIndex(int $index) : self
+    protected function setCurrentFrameIndex(int $index)
     {
         if (count($this->getCurrentCoroutineTrace()) < $index) {
             throw new DebuggerException('Invalid frame index');
@@ -309,7 +309,7 @@ TEXT;
     /**
      * @return $this
      */
-    public function setCurrentSourceFile(?SplFileObject $currentSourceFile) : self
+    public function setCurrentSourceFile(?SplFileObject $currentSourceFile)
     {
         $this->currentSourceFile = $currentSourceFile;
 
@@ -324,7 +324,7 @@ TEXT;
     /**
      * @return $this
      */
-    public function setCurrentSourceFileLine(int $currentSourceFileLine) : self
+    public function setCurrentSourceFileLine(int $currentSourceFileLine)
     {
         $this->currentSourceFileLine = $currentSourceFileLine;
 
@@ -458,14 +458,12 @@ TEXT;
             $atClass = $frame['class'] ?? '';
             $delimiter = $atClass ? '::' : '';
             $args = $frame['args'] ?? [];
+            $argsString = '';
             if ($args) {
-                $argsString = '';
                 foreach ($args as $argName => $argValue) {
                     $argsString .= static::convertValueToString($argValue) . ', ';
                 }
                 $argsString = rtrim($argsString, ', ');
-            } else {
-                $argsString = '';
             }
             $executing = "{$atClass}{$delimiter}{$atFunction}({$argsString})";
         } else {
@@ -479,10 +477,8 @@ TEXT;
     {
         $traceTable = [];
         foreach ($trace as $index => $frame) {
-            if ($frameIndex !== null) {
-                if ($index !== $frameIndex) {
-                    continue;
-                }
+            if (($frameIndex !== null) && $index !== $frameIndex) {
+                continue;
             }
             $executing = static::getExecutingFromFrame($frame);
             $file = $frame['file'] ?? null;
@@ -511,7 +507,7 @@ TEXT;
     /**
      * @return $this
      */
-    protected function showTrace(array $trace, ?int $frameIndex = null, bool $newLine = true) : self
+    protected function showTrace(array $trace, ?int $frameIndex = null, bool $newLine = true)
     {
         $traceTable = $this::convertTraceToTable($trace, $frameIndex);
         foreach ($traceTable as &$traceItem) {
@@ -523,7 +519,7 @@ TEXT;
         return $this;
     }
 
-    protected static function getStateNameOfCoroutine(Coroutine $coroutine) : string
+    protected static function getStateNameOfCoroutine(Coroutine $coroutine)
     {
         if ($coroutine->__stopped ?? false) {
             $state = 'stopped';
@@ -595,7 +591,7 @@ TEXT;
     /**
      * @return $this
      */
-    protected function showCoroutine(Coroutine $coroutine, bool $newLine = true) : self
+    protected function showCoroutine(Coroutine $coroutine, bool $newLine = true)
     {
         $debugInfo = static::getSimpleInfoOfCoroutine($coroutine, false);
         $trace = $this::getTraceOfCoroutine($coroutine);
@@ -611,7 +607,7 @@ TEXT;
      * @param Coroutine[] $coroutines
      * @return $this
      */
-    public function showCoroutines(array $coroutines) : self
+    public function showCoroutines(array $coroutines)
     {
         $map = [];
         foreach ($coroutines as $coroutine) {
@@ -694,7 +690,7 @@ TEXT;
     /**
      * @return $this
      */
-    public function showSourceFileContentByTrace(array $trace, int $frameIndex, bool $following = false) : self
+    public function showSourceFileContentByTrace(array $trace, int $frameIndex, bool $following = false)
     {
         try {
             $contentTable = $this::getSourceFileContentByTrace($trace, $frameIndex, $file, $line);
@@ -738,7 +734,7 @@ TEXT;
     /**
      * @return $this
      */
-    protected function showFollowingSourceFileContent(int $lineCount = self::SOURCE_FILE_DEFAULT_LINE_COUNT) : self
+    protected function showFollowingSourceFileContent(int $lineCount = self::SOURCE_FILE_DEFAULT_LINE_COUNT)
     {
         $sourceFile = $this->getCurrentSourceFile();
         if (!$sourceFile) {
@@ -754,7 +750,7 @@ TEXT;
     /**
      * @return $this
      */
-    public function addBreakPoint(string $point) : self
+    public function addBreakPoint(string $point)
     {
         $this
             ->checkBreakPointHandler()
@@ -778,7 +774,7 @@ TEXT;
     /**
      * @return $this
      */
-    public static function breakOn(string $point) : self
+    public static function breakOn(string $point)
     {
         return static::getInstance()->addBreakPoint($point);
     }
@@ -828,7 +824,7 @@ TEXT;
     /**
      * @return $this
      */
-    private function checkBreakPointHandler() : self
+    private function checkBreakPointHandler()
     {
         if (!$this->breakPointHandlerEnabled) {
             if (!self::$breakPointHandlerRegistered) {
@@ -885,7 +881,7 @@ TEXT;
     /**
      * @return $this
      */
-    public function logo() : self
+    public function logo()
     {
         return $this->clear()->out($this::SDB)->lf();
     }
@@ -931,7 +927,7 @@ TEXT;
                         $argument = trim($argument);
                     }
                     unset($argument);
-                    $arguments = array_filter($arguments, function (string $value) {
+                    $arguments = array_filter($arguments, static function (string $value) {
                         return $value !== '';
                     });
                     $command = array_shift($arguments);
@@ -961,7 +957,7 @@ TEXT;
                             goto _next;
                         case 'bt':
                             $this->showCoroutine($this->getCurrentCoroutine(), false)
-                                ->showSourceFileContentByTrace($this->getCurrentCoroutineTrace(), 0, true);
+                                 ->showSourceFileContentByTrace($this->getCurrentCoroutineTrace(), 0, true);
                             break;
                         case 'f':
                             $frameIndex = $arguments[0] ?? null;
@@ -1113,7 +1109,7 @@ TEXT;
                             break;
                         case 'q':
                             $this->clear();
-                            if (strlen($keyword) !== 0 && !static::isAlone()) {
+                            if ($keyword !== '' && !static::isAlone()) {
                                 /* we can input keyword to call out the debugger */
                                 goto _restart;
                             }
@@ -1148,7 +1144,7 @@ TEXT;
     /**
      * @return $this
      */
-    public static function runOnTTY(string $keyword = 'sdb') : self
+    public static function runOnTTY(string $keyword = 'sdb')
     {
         return static::getInstance()->run($keyword);
     }
