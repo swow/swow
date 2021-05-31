@@ -33,6 +33,7 @@
 #include "swow.h"
 #include "cat_fs.h"
 #include "cat_work.h"
+#include "cat_time.h"
 
 // shim for php 7.3
 #if PHP_VERSION_ID < 70400
@@ -1100,6 +1101,32 @@ static swow_ssize_t swow_stdiop_fs_read(php_stream *stream, char *buf, size_t co
     assert(data != NULL);
 
     if (data->fd >= 0) {
+#ifdef PHP_WIN32
+        if ((data->is_pipe || data->is_process_pipe) && !data->is_pipe_blocking) {
+            HANDLE ph = (HANDLE)_get_osfhandle(data->fd);
+            int retry = 0;
+            DWORD avail_read = 0;
+
+            do {
+                /* Look ahead to get the available data amount to read. Do the same
+                    as read() does, however not blocking forever. In case it failed,
+                    no data will be read (better than block). */
+                if (!PeekNamedPipe(ph, NULL, 0, NULL, &avail_read, NULL)) {
+                    break;
+                }
+                /* If there's nothing to read, wait in 10us periods. */
+                if (0 == avail_read) {
+                    cat_time_usleep(10);
+                }
+            } while (0 == avail_read && retry++ < 3200000);
+
+            /* Reduce the required data amount to what is available, otherwise read()
+                will block.*/
+            if (avail_read < count) {
+                count = avail_read;
+            }
+        }
+#endif
         ret = cat_fs_read(data->fd, buf,  PLAIN_WRAP_BUF_SIZE(count));
 
         if (ret == -1 && cat_get_last_error_code() == CAT_EINTR) {
