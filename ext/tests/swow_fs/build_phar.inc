@@ -17,7 +17,7 @@ EOF;
 const class2_php = <<<'EOF'
 <?php
 require_once __DIR__ . "/cororun.php";
-require_once __DIR__ . "/autoload.php";
+%s
 class Class2{
     function __construct($myarg){
         echo "Class2 initializing" . PHP_EOL;
@@ -98,8 +98,8 @@ cororun(function(){
 EOF;
 
 const TEST_AUTOLOAD = 0;
-const TEST_INCLUDE = 0;
-const TEST_REQUIRE = 0;
+const TEST_INCLUDE = 1;
+const TEST_REQUIRE = 2;
 
 function build_phar($pharFile = __DIR__ . "/phartest.phar", $test_type = TEST_AUTOLOAD){
     if (file_exists($pharFile)){
@@ -110,12 +110,15 @@ function build_phar($pharFile = __DIR__ . "/phartest.phar", $test_type = TEST_AU
         case TEST_AUTOLOAD:
             $phar->addFromString("autoload.php", autoload_php);
             $phar->addFromString("run.php", run_head . test_autoload_str);
+            $phar->addFromString("Class2.php", sprintf(class2_php, 'require_once __DIR__ . "/autoload.php";'));
             break;
         case TEST_INCLUDE:
             $phar->addFromString("run.php", run_head . test_include_str);
+            $phar->addFromString("Class2.php", sprintf(class2_php, 'include_once __DIR__ . "/Class1.php";'));
             break;
         case TEST_REQUIRE:
             $phar->addFromString("run.php", run_head . test_require_str);
+            $phar->addFromString("Class2.php", sprintf(class2_php, 'require_once __DIR__ . "/Class1.php";'));
             break;
         default:
             throw new Exception("no such type");
@@ -123,7 +126,6 @@ function build_phar($pharFile = __DIR__ . "/phartest.phar", $test_type = TEST_AU
     }
     $phar->addFromString("cororun.php", cororun_php);
     $phar->addFromString("Class1.php", class1_php);
-    $phar->addFromString("Class2.php", class2_php);
     $phar->compressFiles (\Phar::GZ);
     $phar->stopBuffering();
     $phar->setStub($phar->createDefaultStub("run.php"));
