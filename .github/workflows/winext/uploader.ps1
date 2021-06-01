@@ -1,14 +1,9 @@
-# dll release uploader
+# dll release uploader (via artifact)
 
 param (
-    [string]$fn,
-    [string]$Name,
     [int]$MaxTry=3,
-    [string]$RelId,
     [string]$Repo,
-    [string]$RunName,
-    [string]$RunID,
-    [string]$TestResult,
+    [string]$RelID,
     [string]$Token
 )
 
@@ -22,96 +17,99 @@ $headers = @{
     "authorization"="Bearer ${Token}";
 }
 
-if(-Not $Name){
-    err "Needs file name and id to work."
-    exit 1
-}
-if(-Not $Repo -Or -Not $fn -Or -Not $Token -Or -Not $RelId){
-    err "Needs repo, filename, release id and gh token to work."
-    exit 1
-}
-if(-Not $RunName -Or -Not $RunID -Or -Not $TestResult){
-    err "Needs run name and id to work."
-    exit 1
+if(-Not $Repo -Or -Not $Token -Or -Not $RelID){
+    err "Needs repo name and gh token to work."
+    #exit 1
 }
 
-function upload{
-    param([string]$Name)
-    info "Uploading file"
-    $match = $info."upload_url" | Select-String -Pattern "(?<url>(?:http|https)://.+)(?<arg>\{.+\})"
-    $upload_url = ($match.Matches[0].Groups["url"]).ToString() + "?name=$Name"
-    info "URL: $upload_url"
-
-    $ret = Invoke-WebRequest `
-        -Uri $upload_url `
-        -Method "POST" `
-        -ContentType "application/zip" `
-        -Headers $headers `
-        -InFile $fn
-    return $ret
+$RelInfo = fetchjson `
+    -Uri "https://api.github.com/repos/$Repo/releases/$RelID" `
+    -Headers $headers
+if(!$RelInfo){
+    err "Failed fetch release information"
+    return
 }
 
-function finduri{
-    $ret = fetchjson `
-        -Headers $headers `
-        -Uri "https://api.github.com/repos/$Repo/actions/runs/$RunID/jobs"
-    #Write-Host $ret.jobs
-    foreach($job in $ret.jobs) {
-        #Write-Host $job.name
-        #Write-Host $job.html_url
-        if($job.name.ToString().Contains($RunName)){
-            return $job.html_url
+$match = $RelInfo."upload_url" | Select-String -Pattern "(?<url>(?:http|https)://.+)(?<arg>\{.+\})"
+$uploadUrl = ($match.Matches[0].Groups["url"]).ToString() + "?name="
+
+$RunID = $null
+$jobdata = $null
+
+$note = "`n## Hashes and notes`n`n" + `
+    "| File name | Size (in bytes) | SHA256 sum | Build log | Tests result |`n" + `
+    "| - | - | - | - | - |`n"
+
+# read all jsons for all dlls
+Get-ChildItem . | Sort-Object -Property Name | ForEach-Object -Process {
+    if($_.Name.EndsWith(".dll")){
+        $fn = $_.Name
+        $jsonfn = "${fn}.json"
+        if (Test-Path $jsonfn -Type Leaf){
+            info "Read information from $jsonfn"
+            $data = Get-Content $jsonfn | ConvertFrom-Json
+            if($fn -Ne $data.name){
+                warn "Not same filename, bad json, skip it"
+                continue
+            }
+            if(-Not $RunID){
+                $RunID = $data.runid
+                $jobdata = (fetchjson `
+                    -Headers $headers `
+                    -Uri "https://api.github.com/repos/$Repo/actions/runs/$RunID/jobs")."jobs"
+            }else{
+                if ($RunID -Ne $data.runid){
+                    warn "Not same runid, bad json, skip it"
+                    continue
+                }
+            }
+            if((Get-FileHash -Algorithm SHA256 $fn).Hash -Ne $data.hash){
+                warn "Bad dll hash, skip it"
+                continue
+            }
+            $link = $null
+            foreach($job in $jobdata) {
+                if($job.name.ToString().Contains($data.jobname)){
+                    $link = $job."html_url"
+                    info "Workflow run link is $link"
+                }
+            }
+            $linkstr = "[link](${link})"
+            if(-Not $link){
+                warn "Not found work run, strange"
+                $linkstr = "-"
+            }
+            info "Uploading file $fn"
+            $ret = Invoke-WebRequest `
+                -Uri "$uploadUrl$fn" `
+                -Method "POST" `
+                -ContentType "application/zip" `
+                -Headers $headers `
+                -InFile $fn
+            if(-Not $ret){
+                warn "Failed to upload $fn"
+                continue
+            }
+            $size = $data.size
+            $hash = $data.hash
+            $result = $data.result
+            $note += "| ${fn} | ${size} | ${hash} | ${linkstr} | ${result} |`n"
         }
     }
 }
 
-function patchnote{
-    param([string]$Name)
-    info "Fetching original notes"
+info "Fetching original notes"
+$note = $RelInfo.body.ToString() + $note
+$patch = @{
+    "body"="$note";
+} | ConvertTo-Json -Compress
 
-    $note = $info.body.ToString()
-
-    $mark = '<!-- mark for notes -->'
-
-    if(!($note | Select-String $mark).Matches.Success){
-        info "Add hashes markdown tag and init it's content"
-        $note += "`n## Hashes and notes`n`n" + `
-            "| File name | Size (in bytes) | SHA256 sum | Build log | Tests result |`n" + `
-            "| - | - | - | - | - |`n" + `
-            "${mark}`n"
-    }
-    $filesize = (Get-Item $fn).Length
-    $filehash = (Get-FileHash -Algorithm SHA256 $fn).Hash
-    $link = finduri
-    $note = $note.Replace($mark, "| ${Name} | ${filesize} | ${filehash} | [link](${link}) | ${TestResult} |`n" + $mark)
-
-    $patch = @{
-      "body"="$note";
-    } | ConvertTo-Json -Compress
-    info "Repost note"
-    $ret = fetchjson `
-        -Body $patch `
-        -Method "PATCH" `
-        -Uri "https://api.github.com/repos/$Repo/releases/$RelID" `
-        -Headers $headers
-    return $ret
-}
-
-$info = fetchjson `
+info "Repost note"
+$ret = fetchjson `
+    -Body $patch `
+    -Method "PATCH" `
     -Uri "https://api.github.com/repos/$Repo/releases/$RelID" `
     -Headers $headers
-if(!$info){
-    err "Failed fetch release"
-    return
-}
-
-$ret = upload -Name $Name
-if (-Not $ret){
-    err "Failed upload asset"
-    exit 1
-}
-
-$ret = patchnote -Name $Name
 if (-Not $ret){
     err "Failed patch notes"
     exit 1

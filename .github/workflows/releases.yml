@@ -1,33 +1,19 @@
 name: releases
 
 on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Using Swow commmit'
+        required: false
   push:
     tags:
     - 'v*'
 
 jobs:
-  createrel:
-    name: Create draft release
-    runs-on: "windows-latest"
-    outputs:
-      id: ${{ steps.create_release.outputs.id }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-
-      - name: Create Release
-        id: create_release
-        run: |
-          .\.github\workflows\winext\release.ps1 `
-            -Repo "${{ github.repository }}" `
-            -Token "${{ secrets.GITHUB_TOKEN }}" `
-            -TagName "${{ github.ref }}".Split("/")[-1] `
-            -prerelease $true
-
   builddlls:
     # this name is used after, change it with cautious
     name: Build dll for PHP-${{ matrix.phpver }}-${{ matrix.arch }}-${{ (matrix.ts == '0') && 'N' || '' }}TS-${{ (matrix.os == 'windows-latest') && 'VS16' || 'VC15' }}
-    needs: createrel
     runs-on: "${{ matrix.os }}"
     strategy:
       fail-fast: false
@@ -43,17 +29,24 @@ jobs:
             phpver: "7.3"
           - os: windows-2016
             phpver: "8.0"
-      # we used not-atomic github apis after, so make it 1 only
-      # we may use per-matrix outputs to solve this
-      # as mentioned in https://github.community/t/bug-jobs-output-should-return-a-list-for-a-matrix-job/128626
-      max-parallel: 1
+      max-parallel: 6
+    outputs:
+      ref: ${{ steps.getref.outputs.ref }}
     env:
       deps: openssl,libcurl,zlib,libssh2,nghttp2
       tools_path: C:\tools\phpdev
+      dllname: "php_swow-php${{ matrix.phpver }}-${{ matrix.arch }}-${{ (matrix.ts == '0') && 'n' || '' }}ts-${{ (matrix.os == 'windows-latest') && 'VS16' || 'VC15' }}.dll"
     steps:
       - name: Checkout
         uses: actions/checkout@v2
-
+        with:
+          ref: ${{ (github.event.inputs && github.event.inputs.ref) || github.ref }}
+      - name: Get git commit ref hash
+        id: getref
+        shell: powershell
+        run: |
+          $ref = git rev-parse HEAD 
+          Write-Host "::set-output name=ref::$ref"
       - name: Prepare caches
         id: cacheprepare
         env:
@@ -100,14 +93,18 @@ jobs:
             -DryRun 1 &&
           ($ret = 0 | Out-Null)
           exit $ret
-
       - name: Cache build environments
         uses: actions/cache@v2
         with:
+          # this should be ok, but there's a bug, excluding not work properly
+          # see https://github.com/actions/cache/issues/494
+          # see https://github.com/actions/toolkit/issues/713
+          # so we must remove dll and ini before
           path: |
             ${{ env.tools_path }}
-          key: buildenv-v1-${{ matrix.arch }}-${{ matrix.ts }}-${{ steps.cacheprepare.outputs.phpver }}-${{ steps.cacheprepare.outputs.devpackver }}-${{ steps.cacheprepare.outputs.downloadeddeps }}-${{ steps.cacheprepare.outputs.phpsdkver }}
-
+            !${{ env.tools_path }}\php\ext\php_swow.dll
+            !${{ env.tools_path }}\php\php.ini
+          key: buildenv-v4-${{ matrix.arch }}-${{ matrix.ts }}-${{ steps.cacheprepare.outputs.phpver }}-${{ steps.cacheprepare.outputs.devpackver }}-${{ steps.cacheprepare.outputs.downloadeddeps }}-${{ steps.cacheprepare.outputs.phpsdkver }}
       - name: Build Swow extension
         id: ext-build
         uses: ./.github/workflows/winext
@@ -121,7 +118,6 @@ jobs:
           phparch: ${{ matrix.arch }}
           install: "0"
           conf-args: "--enable-swow-ssl --enable-swow-curl"
-
       - name: Prepare php for test
         id: php-inst
         continue-on-error: true
@@ -140,14 +136,9 @@ jobs:
               exit 1
           }
           Write-Host "::group::Installing swow"
-          .\.github\workflows\winext\install.ps1 `
-            -ExtName "swow" `
-            -ExtPath "ext" `
-            -Enable $true
-          $ret = $lastexitcode
-          Write-Host "::endgroup::"
-          exit $ret
-
+          Copy-Item ext\${{ matrix.arch }}\Release${{ matrix.ts == 1 && '_TS' || '' }}\php_swow.dll ${{ env.tools_path }}\php\ext\
+          "extension_dir=C:\tools\phpdev\php\ext`nzend_extension=opcache`nextension=swow`n" | Out-File ${{ env.tools_path }}\php\php.ini -Encoding ASCII # for no BOM
+          php --ri swow
       # shell we move these commands into some bats or composer.json?
       - name: Run extension tests
         shell: cmd
@@ -165,18 +156,61 @@ jobs:
             --set-timeout 30 ^
             --color ^
             ext\tests
-
-      - name: Note about the built dll
+      - name: Generate information about this dll
+        shell: powershell
+        run: |
+          $fn = "${{ env.dllname }}"
+          Copy-Item ext\${{ matrix.arch }}\Release${{ matrix.ts == 1 && '_TS' || '' }}\php_swow.dll $fn
+          @{
+            "name" = $fn;
+            "size" = (Get-Item $fn).Length;
+            "hash" = (Get-FileHash -Algorithm SHA256 $fn).Hash;
+            "result" = "${{ steps.ext-test.outcome }}";
+            "runid" = "${{ github.run_id }}";
+            "jobname" = "PHP-${{ matrix.phpver }}-${{ matrix.arch }}-${{ (matrix.ts == '0') && 'N' || '' }}TS-${{ (matrix.os == 'windows-latest') && 'VS16' || 'VC15' }}";
+          } | ConvertTo-Json -Compress | Out-File "${fn}.json" -Encoding ASCII # for no BOM
+      - name: Upload artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: "${{ steps.getref.outputs.ref }}"
+          path: |
+            ${{ env.dllname }}
+            ${{ env.dllname }}.json
+      # see notes at cache step
+      # TODO: remove this step when upstream fixed the bug
+      - name: Remove ini and dll to avoid them being cached
+        shell: powershell
+        run: |
+          Remove-Item ${{ env.tools_path }}\php\ext\php_swow.dll
+          Remove-Item ${{ env.tools_path }}\php\php.ini
+  uploaddlls:
+    name: Upload DLLs
+    if: ${{ github.event_name == 'push' }}
+    needs:
+      - builddlls
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Create Release
+        id: create_release
+        run: |
+          .\.github\workflows\winext\release.ps1 `
+            -Repo "${{ github.repository }}" `
+            -Token "${{ secrets.GITHUB_TOKEN }}" `
+            -TagName "${{ github.ref }}".Split("/")[-1] `
+            -prerelease $true
+      - name: Fetch artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: ${{ needs.builddlls.outputs.ref }}
+          path: .
+      - name: Upload all dlls
         shell: powershell
         env:
           UNIX_COLOR: "1"
         run: |
           .\.github\workflows\winext\uploader.ps1 `
-            -RelID "${{ needs.createrel.outputs.id }}" `
-            -RunID "${{ github.run_id }}" `
-            -RunName "PHP-${{ matrix.phpver }}-${{ matrix.arch }}-${{ (matrix.ts == '0') && 'N' || '' }}TS-${{ (matrix.os == 'windows-latest') && 'VS16' || 'VC15' }}" `
-            -fn "ext\${{ matrix.arch }}\Release${{ (matrix.ts == '1') && '_TS' || ''}}\php_swow.dll" `
-            -Name "php_swow-php${{ matrix.phpver }}-${{ matrix.arch }}-${{ (matrix.ts == '0') && 'n' || '' }}ts-${{ (matrix.os == 'windows-latest') && 'VS16' || 'VC15' }}.dll" `
+            -RelId "${{ steps.create_release.outputs.id }}" `
             -Repo "${{ github.repository }}" `
-            -Token "${{ secrets.GITHUB_TOKEN }}" `
-            -TestResult "${{ steps.ext-test.outcome }}"
+            -Token "${{ github.token }}"

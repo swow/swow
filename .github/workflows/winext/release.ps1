@@ -24,23 +24,26 @@ $headers = @{
     "authorization"="Bearer ${Token}";
 }
 
-$data = @{
-    "tag_name"=$TagName;
-    "name"=$TagName;
-    "body"=$body;
-    "draft"=$true;
-    "prerelease"=$true;
-}
-
-
 $ret = fetchjson `
-    -Body ($data | ConvertTo-Json -Compress) `
-    -Method "POST" `
-    -Uri "https://api.github.com/repos/$Repo/releases" `
+    -Uri "https://api.github.com/repos/$Repo/releases/tags/$TagName" `
     -Headers $headers
 if(!$ret){
-    err "Failed create release"
-    exit 1
+    $data = @{
+        "tag_name"=$TagName;
+        "name"=$TagName;
+        "body"=$body;
+        "draft"=$true;
+        "prerelease"=$true;
+    }
+    $ret = fetchjson `
+        -Body ($data | ConvertTo-Json -Compress) `
+        -Method "POST" `
+        -Uri "https://api.github.com/repos/$Repo/releases" `
+        -Headers $headers
+    if(!$ret){
+        err "Failed create release"
+        exit 1
+    }
 }
 
 Write-Host ("::set-output name=upload_url::" + $ret."upload_url")
