@@ -74,18 +74,26 @@ if($info.$PhpVer.$phpvar){
     }
     $dest = "$ToolsPath\" + ($latest.path)
 
+    $skip = $false
     if($hashmethod -And (Test-Path $dest -PathType Leaf)){
         if($hashmethod -And $hash -Eq (Get-FileHash $dest -Algorithm $Hashmethod).Hash){
             warn "$dest is already provided, skipping downloading."
+            $skip = $true
         }
     }
 
-    provedir $ToolsPath
-    $ret = dlwithhash `
-        -Uri ("https://windows.php.net/downloads/releases/" + ($latest.path)) `
-        -Dest $dest `
-        -Hash $hash `
-        -Hashmethod $hashmethod
+    if (-Not $skip){
+        provedir $ToolsPath
+        $ret = dlwithhash `
+            -Uri ("https://windows.php.net/downloads/releases/" + ($latest.path)) `
+            -Dest $dest `
+            -Hash $hash `
+            -Hashmethod $hashmethod
+        if (!$ret){
+            err "Cannot fetch $fn"
+            exit 1
+        }
+    }
 }else{
     info "Cannot find in releases, fetching php list from windows.php.net"
     $page = fetchpage "https://windows.php.net/downloads/releases/archives/"
