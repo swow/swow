@@ -42,10 +42,6 @@ function upload{
     $upload_url = ($match.Matches[0].Groups["url"]).ToString() + "?name=$Name"
     info "URL: $upload_url"
 
-    $form = @{
-        avatar = Get-Item -Path $fn
-    }
-
     $ret = Invoke-WebRequest `
         -Uri $upload_url `
         -Method "POST" `
