@@ -4,7 +4,7 @@ param (
     [string]$ExtName,
     [string]$PhpBin= "php",
     [string]$ExtPath = ".",
-    [bool]$Enable = $true
+    [bool]$Enable = $false
 )
 
 $scriptPath = Split-Path -parent $MyInvocation.MyCommand.Definition
@@ -34,7 +34,6 @@ if(-Not (Test-Path "$env:BUILD_DIR\php_$ExtName.dll" -PathType Leaf)){
 if(-Not (Test-Path $extdir -PathType Container)){
     info "Create extension dir $extdir"
     New-Item -Path $extdir -ItemType Container | Out-Null
-    exit 1
 }
 
 info "Copy $env:BUILD_DIR\php_$ExtName.dll to $extdir"

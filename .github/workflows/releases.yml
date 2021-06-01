@@ -142,7 +142,8 @@ jobs:
           Write-Host "::group::Installing swow"
           .\.github\workflows\winext\install.ps1 `
             -ExtName "swow" `
-            -ExtPath "ext"
+            -ExtPath "ext" `
+            -Enable $true
           $ret = $lastexitcode
           Write-Host "::endgroup::"
           exit $ret

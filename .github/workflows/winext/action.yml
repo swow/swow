@@ -153,5 +153,6 @@ runs:
       run: |
         IF 1==${{ inputs.install }} ( powershell ${{github.action_path}}\install.ps1 ^
           -ExtPath ${{ inputs.ext-path }} ^
-          -ExtName swow ) || EXIT /b 1
+          -ExtName swow ^
+          -Enable 1 ) || EXIT /b 1
         ECHO ::endgroup::
