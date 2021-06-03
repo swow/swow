@@ -20,7 +20,7 @@ if ("".Equals($PhpVer)){
         $phpinfo = & $PhpBin -i
         $PhpVCVer = ($phpinfo | Select-String -Pattern 'PHP Extension Build => .+,(.+)' -CaseSensitive -List).Matches.Groups[1]
         $PhpArch = ($phpinfo | Select-String -Pattern 'Architecture => (.+)' -CaseSensitive -List).Matches.Groups[1]
-        $phpvar = & $PhpBin -r "echo (PHP_ZTS?:'n') . 'ts-$PhpVCVer-$PhpArch' . PHP_EOL;"
+        $phpvar = & $PhpBin -r "echo (PHP_ZTS?'':'n') . 'ts-$PhpVCVer-$PhpArch' . PHP_EOL;"
         $dashnts = & $PhpBin -r "echo (PHP_ZTS?'':'-nts') . PHP_EOL;"
         $underscorets = & $PhpBin -r "echo (PHP_ZTS?'_TS':'') . PHP_EOL;"
     }finally{
