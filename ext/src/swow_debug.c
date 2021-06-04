@@ -343,20 +343,17 @@ int swow_debug_module_init(INIT_FUNC_ARGS)
         return FAILURE;
     }
 
-    /* hook opcode ext_stmt (pre) */
-    if (CG(compiler_options) & ZEND_COMPILE_EXTENDED_INFO) {
-        original_zend_ext_stmt_handler = zend_get_user_opcode_handler(ZEND_EXT_STMT);
-        zend_set_user_opcode_handler(ZEND_EXT_STMT, swow_debug_ext_stmt_handler);
-        swow_compile_extended_info = cat_true;
-    }
-
-    ZVAL_NULL(&SWOW_DEBUG_G(zextended_statement_handler));
-
     return SUCCESS;
 }
 
 int swow_debug_runtime_init(INIT_FUNC_ARGS)
 {
+    if ((CG(compiler_options) & ZEND_COMPILE_EXTENDED_INFO) && !swow_compile_extended_info) {
+        original_zend_ext_stmt_handler = zend_get_user_opcode_handler(ZEND_EXT_STMT);
+        zend_set_user_opcode_handler(ZEND_EXT_STMT, swow_debug_ext_stmt_handler);
+        swow_compile_extended_info = cat_true;
+    }
+
     ZVAL_NULL(&SWOW_DEBUG_G(zextended_statement_handler));
 
     return SUCCESS;
