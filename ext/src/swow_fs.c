@@ -1467,6 +1467,11 @@ static int swow_stdiop_fs_set_option(php_stream *stream, int option, int value, 
                 data->lock_flag = value;
                 return 0;
             } else {
+#ifdef PHP_WIN32
+                if (CAT_EAGAIN == cat_get_last_error_code()) {
+                    errno = WSAEWOULDBLOCK;
+                }
+#endif // PHP_WIN32
                 return -1;
             }
             break;
