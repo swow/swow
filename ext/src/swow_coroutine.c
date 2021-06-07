@@ -2124,6 +2124,11 @@ static int swow_coroutine_exit_handler(zend_execute_data *execute_data)
 {
     SWOW_COROUTINE_OPCODE_HANDLER_CHECK();
     swow_coroutine_t *scoroutine = swow_coroutine_get_current();
+
+    if (scoroutine == swow_coroutine_get_main()) {
+        return ZEND_USER_OPCODE_DISPATCH;
+    }
+
     const zend_op *opline = EX(opline);
     zval *zstatus = NULL;
     zend_long status;
@@ -2158,21 +2163,13 @@ static int swow_coroutine_exit_handler(zend_execute_data *execute_data)
     } else {
         status = 0;
     }
+    scoroutine->exit_status = status;
     if (EG(exception) == NULL) {
 #if PHP_VERSION_ID < 80000
-        if (scoroutine == swow_coroutine_get_main()) {
-            zend_bailout();
-        } else {
-            swow_coroutine_throw_unwind_exit();
-        }
+        swow_coroutine_throw_unwind_exit();
 #else
         zend_throw_unwind_exit();
 #endif
-    }
-    if (scoroutine == swow_coroutine_get_main()) {
-        EG(exit_status) = status;
-    } else {
-        scoroutine->exit_status = status;
     }
 
     return ZEND_USER_OPCODE_CONTINUE;
