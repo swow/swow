@@ -186,12 +186,6 @@ void swow_wrapper_shutdown(void);
         ZEND_ARG_OBJ_INFO(pass_by_ref, name, classname, allow_null)
 #endif
 
-#if ZEND_PARSE_PARAMS_THROW != 0
-#undef ZEND_PARSE_PARAMETERS_START
-#define ZEND_PARSE_PARAMETERS_START(min_num_args, max_num_args) \
-        ZEND_PARSE_PARAMETERS_START_EX(ZEND_PARSE_PARAMS_THROW, min_num_args, max_num_args)
-#endif
-
 #ifndef Z_PARAM_LONG_OR_NULL
 #define Z_PARAM_LONG_OR_NULL(dest, is_null) \
         Z_PARAM_LONG_EX(dest, is_null, 1, 0)

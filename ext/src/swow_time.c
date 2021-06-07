@@ -42,7 +42,11 @@ static PHP_FUNCTION(swow_sleep)
 
     ZEND_PARSE_PARAMETERS_START(1, 1)
         Z_PARAM_LONG(seconds)
+#if PHP_VERSION_ID < 80000
+    ZEND_PARSE_PARAMETERS_END_EX(RETURN_FALSE);
+#else
     ZEND_PARSE_PARAMETERS_END();
+#endif
 
     if (UNEXPECTED(seconds < 0)) {
 #if PHP_VERSION_ID < 80000
