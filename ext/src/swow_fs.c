@@ -1775,32 +1775,16 @@ static ZEND_COLD void swow_php_win32_docref1_from_error(DWORD error, const char 
     while (swow_php_win32_docref1_from_error == orig) {
         orig = NULL;
         DWORD le = GetLastError();
-        zval *zv = zend_get_constant_str(ZEND_STRL("PHP_VERSION_ID"));
-        ZEND_ASSERT(zv);
-        if (!zv) { break; }
-        zend_long ver = Z_LVAL_P(zv);
-#  if PHP_VERSION_ID < 80000
-        if (ver >= 70420)
-#  else
-        if (ver >= 80007)
-#  endif // PHP_VERSION_ID < 80000
-        {
-            // versions that were already fixed
-            static const char *phpdll = "php" CAT_TO_STR(PHP_MAJOR_VERSION)
+        HMODULE hModule = GetModuleHandleA("php" CAT_TO_STR(PHP_MAJOR_VERSION)
 #  ifdef ZTS
-            "ts"
+        "ts"
 #  endif // ZTS
 #  if ZEND_DEBUG
-            "_debug"
+        "_debug"
 #  endif // ZEND_DEBUG
-            ;
-            HMODULE hModule = GetModuleHandleA(phpdll);
-            //printf("mod %s is %p, le is %d\n", phpdll, hModule, GetLastError());
-            ZEND_ASSERT(hModule);
-            if (!hModule) { break; }
-            orig = (void (*)(DWORD, const char *))GetProcAddress(hModule, "php_win32_docref1_from_error");
-            ZEND_ASSERT(orig);
-        }
+        );
+        ZEND_ASSERT(hModule);
+        orig = (void (*)(DWORD, const char *))GetProcAddress(hModule, "php_win32_docref1_from_error");
         SetLastError(le);
     }
     if(orig) {
