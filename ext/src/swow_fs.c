@@ -1764,6 +1764,57 @@ static const php_stream_ops swow_plain_files_dirstream_ops_async = {
     NULL  /* set_option */
 };
 
+#if defined(PHP_WIN32)
+# if PHP_VERSION_ID < 70400
+// no docref1
+#  define swow_php_win32_docref1_from_error(le, arg) php_win32_docref2_from_error(le, arg, arg);
+# elif PHP_VERSION_ID < 80100
+// using shim
+static ZEND_COLD void swow_php_win32_docref1_from_error(DWORD error, const char *param1) {
+    static void (*orig)(DWORD, const char *) = swow_php_win32_docref1_from_error;
+    while (swow_php_win32_docref1_from_error == orig) {
+        orig = NULL;
+        DWORD le = GetLastError();
+        zval *zv = zend_get_constant_str(ZEND_STRL("PHP_VERSION_ID"));
+        ZEND_ASSERT(zv);
+        if (!zv) { break; }
+        zend_long ver = Z_LVAL_P(zv);
+#  if PHP_VERSION_ID < 80000
+        if (ver >= 70420)
+#  else
+        if (ver >= 80007)
+#  endif // PHP_VERSION_ID < 80000
+        {
+            // versions that were already fixed
+            static const char *phpdll = "php" CAT_TO_STR(PHP_MAJOR_VERSION)
+#  ifdef ZTS
+            "ts"
+#  endif // ZTS
+#  if ZEND_DEBUG
+            "_debug"
+#  endif // ZEND_DEBUG
+            ;
+            HMODULE hModule = GetModuleHandleA(phpdll);
+            //printf("mod %s is %p, le is %d\n", phpdll, hModule, GetLastError());
+            ZEND_ASSERT(hModule);
+            if (!hModule) { break; }
+            orig = (void (*)(DWORD, const char *))GetProcAddress(hModule, "php_win32_docref1_from_error");
+            ZEND_ASSERT(orig);
+        }
+        SetLastError(le);
+    }
+    if(orig) {
+        orig(error, param1);
+    }else{
+        php_win32_docref2_from_error(error, param1, param1);
+    }
+}
+# else
+// native docref1
+#  define swow_php_win32_docref1_from_error(le, arg) php_win32_docref1_from_error(le, arg);
+# endif
+#endif
+
 static php_stream *swow_plain_files_dir_opener(php_stream_wrapper *wrapper, const char *path, const char *mode,
     int options, zend_string **opened_path, php_stream_context *context STREAMS_DC)
 {
@@ -1782,11 +1833,7 @@ static php_stream *swow_plain_files_dir_opener(php_stream_wrapper *wrapper, cons
     cat_dir_t * dir = swow_virtual_opendir(path);
 #ifdef PHP_WIN32
     if (!dir) {
-# if PHP_VERSION_ID >= 80007 || (PHP_VERSION_ID < 80000 && PHP_VERSION_ID >= 70420)
-        php_win32_docref1_from_error(GetLastError(), path);
-# else
-        php_win32_docref2_from_error(GetLastError(), path, path);
-# endif
+        swow_php_win32_docref1_from_error(GetLastError(), path);
     }
 #endif // PHP_WIN32
     if (dir) {
