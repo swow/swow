@@ -125,7 +125,7 @@ ZEND_END_ARG_INFO()
 static PHP_FUNCTION(swow_nanosleep)
 {
     zend_long tv_sec, tv_nsec;
-    struct timespec php_req, php_rem;
+    struct cat_timespec php_req, php_rem;
 
     ZEND_PARSE_PARAMETERS_START(2, 2)
         Z_PARAM_LONG(tv_sec)
@@ -151,7 +151,7 @@ static PHP_FUNCTION(swow_nanosleep)
 
     php_req.tv_sec = (time_t) tv_sec;
     php_req.tv_nsec = (long) tv_nsec;
-    if (cat_time_nanosleep(&php_req, &php_rem) == 0) {
+    if (cat_time_nanosleep((const struct cat_timespec *)&php_req, &php_rem) == 0) {
         RETURN_TRUE;
     } else if (cat_get_last_error_code() == CAT_ECANCELED)  {
         array_init(return_value);
@@ -181,7 +181,7 @@ static PHP_FUNCTION(swow_sleep_until)
 {
     double target_secs;
     struct timeval tm;
-    struct timespec php_req, php_rem;
+    struct cat_timespec php_req, php_rem;
     uint64_t current_ns, target_ns, diff_ns;
     const uint64_t ns_per_sec = 1000000000;
 
@@ -208,7 +208,7 @@ static PHP_FUNCTION(swow_sleep_until)
     php_req.tv_sec = (time_t) (diff_ns / ns_per_sec);
     php_req.tv_nsec = (long) (diff_ns % ns_per_sec);
 
-    RETURN_BOOL(cat_time_nanosleep(&php_req, &php_rem) == 0);
+    RETURN_BOOL(cat_time_nanosleep((const struct cat_timespec *)&php_req, &php_rem) == 0);
 }
 /* }}} */
 
