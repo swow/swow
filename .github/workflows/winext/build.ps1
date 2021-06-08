@@ -1,10 +1,11 @@
 #php extension builder
 
 param (
-    [System.Object[]]$ExtraArgs,
     [string]$ToolsPath = "C:\tools\phpdev",
     [string]$ExtPath = ".",
-    [string]$ExtName
+    [string]$ExtName,
+    [parameter(ValueFromRemainingArguments = $true)]
+    [string[]]$ExtraArgs
 )
 
 $scriptPath = Split-Path -parent $MyInvocation.MyCommand.Definition
@@ -36,6 +37,33 @@ if (0 -Ne $lastexitcode){
     Set-Location $origwd
     exit 1
 }
+
+if ("${env:FIX_PICKLE}" -Eq "1"){
+    info "Modify config.pickle.h to avoid C4005"
+    $picklefn = "${env:DEVPACK_PATH}\include\main\config.pickle.h"
+    $orig = Get-Content $picklefn
+    $modified = $orig
+
+    $definitions = @(
+        "PHP_BUILD_SYSTEM",
+        "PHP_BUILD_PROVIDER",
+        "PHP_LINKER_MAJOR",
+        "PHP_LINKER_MINOR",
+        "__SSE__",
+        "__SSE2__",
+        "__SSE3__",
+        "__SSSE3__",
+        "__SSE4_1__",
+        "__SSE4_2__",
+        "PHP_SIMD_SCALE"
+    )
+    foreach ($definition in $definitions){
+        $re = "^(\s*#\s*define\s*" + $definition + ".+)$"
+        $modified = $modified -Replace ($re, '// $1')
+    }
+    $modified | Out-File $picklefn
+}
+
 info "Start nmake"
 nmake
 if (0 -Ne $lastexitcode){

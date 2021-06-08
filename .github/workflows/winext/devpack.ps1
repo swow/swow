@@ -167,6 +167,7 @@ $content="
 @ECHO OFF
 SET BUILD_DIR=$PhpArch\Release$underscorets
 SET PATH=$ToolsPath\$dirname;%PATH%
+SET DEVPACK_PATH=$ToolsPath\$dirname
 $ToolsPath\php-sdk-binary-tools\phpsdk-starter.bat -c $PhpVCVer -a $PhpArch -t %*
 "
 [IO.File]::WriteAllLines("$ToolsPath\env.bat", $content)

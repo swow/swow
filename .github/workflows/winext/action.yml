@@ -45,6 +45,10 @@ inputs:
     description: 'use staging dependencies'
     required: false
     default: "0"
+  fix-pickle:
+    description: 'fix pickle.h definitions duplicates'
+    required: false
+    default: "1"
 outputs:
   vcver:
     description: 'max retry for downloading things'
@@ -137,12 +141,13 @@ runs:
       env:
         TOOLS_PATH: ${{ inputs.tools-path }}
         UNIX_COLOR: "1"
+        FIX_PICKLE: ${{ inputs.fix-pickle != '0' && '1' || '0' }}
       run: |
         powershell ${{github.action_path}}\build.ps1 ^
-          ${{ inputs.conf-args }} ^
           -ExtPath ${{ inputs.ext-path }} ^
+          -ToolsPath ${{ inputs.tools-path }} ^
           -ExtName swow ^
-          -ToolsPath ${{ inputs.tools-path }} || EXIT /b 1
+          ${{ inputs.conf-args }} || EXIT /b 1
         ECHO ::endgroup::
 
     - name: Install extension
