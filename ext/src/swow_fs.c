@@ -660,12 +660,35 @@ static inline int swow_virtual_chmod(const char *path,  mode_t mode){
     return ret;
 }
 
+#ifdef PHP_WIN32
+    // '/' -> '\\'
+# define NORMALIZE_PATH() do {\
+    for (char* p = strchr(real_path, '/'); p!=NULL; p = strchr(p, '/')){ \
+        if(real_path_dup == real_path){ \
+            real_path_dup = estrdup(real_path); \
+            p = strchr(real_path_dup, '/'); \
+        } \
+        *p = '\\'; \
+    } \
+} while(0)
+# define FREE_NORMALIZED_PATH() do {\
+    if(real_path_dup != real_path){ \
+        efree(real_path_dup); \
+    } \
+} while(0)
+#else
+# define NORMALIZE_PATH() {}
+# define FREE_NORMALIZED_PATH() {}
+#endif // PHP_WIN32
 static inline int swow_virtual_mkdir(const char *path,  mode_t mode){
     int ret;
     SWOW_VCWD_WRAP(path, real_path, CWD_FILEPATH, {
         ret = -1;
     }, {
-        ret = cat_fs_mkdir(real_path, (int)mode);
+        char *real_path_dup = (char*) real_path;
+        NORMALIZE_PATH();
+        ret = cat_fs_mkdir(real_path_dup, (int)mode);
+        FREE_NORMALIZED_PATH();
     });
     return ret;
 }
