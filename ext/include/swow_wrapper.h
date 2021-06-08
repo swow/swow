@@ -209,7 +209,7 @@ SWOW_API ZEND_COLD void zend_value_error(const char *format, ...) ZEND_ATTRIBUTE
 
 #if PHP_VERSION_ID < 80000
 /* see: https://github.com/php/php-src/pull/6002 */
-typedef ZEND_RESULT_CODE zend_result;
+typedef int zend_result;
 #endif
 
 #if PHP_VERSION_ID < 80000
@@ -260,7 +260,7 @@ SWOW_API ZEND_COLD void ZEND_FASTCALL zend_argument_value_error(uint32_t arg_num
 #ifdef ZEND_NO_GC_BUFFER
 #define ZEND_GET_GC_BUFFER_DECLARE                  zval *zgc_buffer;
 #define ZEND_GET_GC_BUFFER_INIT(_object)            (_object)->zgc_buffer = NULL
-#define ZEND_GET_GC_BUFFER_CREATE(_object, _length) zval *zgc_buffer = (_object)->zgc_buffer; size_t _##zgc_buffer##_index = 0; \
+#define ZEND_GET_GC_BUFFER_CREATE(_object, _length) zval *zgc_buffer = (_object)->zgc_buffer; int _##zgc_buffer##_index = 0; \
                                                     (_object)->zgc_buffer = zgc_buffer = safe_erealloc(zgc_buffer, _length, sizeof(zval), 0)
 #define ZEND_GET_GC_BUFFER_ADD(_zv)                 ZVAL_COPY_VALUE(&zgc_buffer[_##zgc_buffer##_index++], _zv)
 #define ZEND_GET_GC_BUFFER_DONE()                   do { *gc_data = zgc_buffer; *gc_count = _##zgc_buffer##_index; return zend_std_get_properties(object); } while (0)

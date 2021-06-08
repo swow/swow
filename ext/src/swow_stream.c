@@ -552,7 +552,7 @@ static inline int swow_stream_socket_recvfrom(
 #ifdef PHP_WIN32
         /* POSIX discards excess bytes without signalling failure; emulate this on Windows */
         if (ret == -1 && cat_get_last_error_code() == CAT_EMSGSIZE) {
-            ret = buflen;
+            ret = (int) buflen;
         }
 #endif
         if (sl) {
