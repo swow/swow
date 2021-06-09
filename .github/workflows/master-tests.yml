@@ -125,10 +125,7 @@ jobs:
         run: composer update -o --ignore-platform-reqs
 
       - name: Run library tests
-        shell: cmd
-        run: |
-          CD lib && ^
-          ..\vendor\bin\phpunit.bat
+        run: composer test-library
 
       - name: Fail if anything failed
         if: steps.ext-test.outcome != 'success'
