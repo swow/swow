@@ -31,7 +31,7 @@ SWOW_API zend_class_entry *swow_channel_selector_exception_ce;
     swow_channel_t *schannel = swow_channel_get_from_object(object); \
     cat_channel_t *channel = &schannel->channel
 
-#define CHANNEL_HAS_CONSTRUCTED(channel) ((channel)->dtor == (cat_channel_data_dtor_t) i_zval_ptr_dtor)
+#define CHANNEL_HAS_CONSTRUCTED(channel) ((channel)->dtor == (cat_channel_data_dtor_t) zval_ptr_dtor)
 
 static zend_object *swow_channel_create_object(zend_class_entry *ce)
 {
