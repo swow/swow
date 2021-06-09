@@ -52,6 +52,10 @@
 #include "ext/pcre/php_pcre.h"
 #endif
 
+#ifdef CAT_HAVE_CURL
+#include <curl/curl.h>
+#endif
+
 SWOW_API zend_class_entry *swow_ce;
 SWOW_API zend_object_handlers swow_handlers;
 
@@ -318,11 +322,22 @@ PHP_MINFO_FUNCTION(swow)
 #endif
 
     php_info_print_table_start();
-    php_info_print_table_header(2, "Status", "enabled");
-    php_info_print_table_header(2, "Author", "twosee <twosee@php.net>");
-    php_info_print_table_header(2, "Version", SWOW_VERSION SWOW_GIT_VERSION " ( " SWOW_VERSION_SUFFIX SWOW_VERSION_SUFFIX_EXT " )");
-    php_info_print_table_header(2, "Context", SWOW_COROUTINE_CONTEXT_TYPE);
-    php_info_print_table_header(2, "Scheduler", "libuv-event");
+    php_info_print_table_row(2, "Status", "enabled");
+    php_info_print_table_row(2, "Author", "twosee <twosee@php.net>");
+    php_info_print_table_row(2, "Version", SWOW_VERSION SWOW_GIT_VERSION " ( " SWOW_VERSION_SUFFIX SWOW_VERSION_SUFFIX_EXT " )");
+    php_info_print_table_row(2, "Context", SWOW_COROUTINE_CONTEXT_TYPE);
+    php_info_print_table_row(2, "Scheduler", "libuv-event");
+#ifdef CAT_HAVE_CURL
+    curl_version_info_data * curl_vid = curl_version_info(CURLVERSION_NOW);
+    char *curl_str = cat_sprintf("cURL %s", curl_vid->version);
+    php_info_print_table_row(2, "With", curl_str);
+    cat_free(curl_str);
+#endif
+/*
+#ifdef CAT_HAVE_SSL
+    //TODO: add ssl library versions here
+#endif
+*/
     php_info_print_table_end();
 }
 /* }}} */
