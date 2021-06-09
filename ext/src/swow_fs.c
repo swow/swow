@@ -1077,36 +1077,44 @@ static swow_ssize_t swow_stdiop_fs_write(php_stream *stream, const char *buf, si
     assert(data != NULL);
 
     if (data->fd >= 0) {
-        ssize_t bytes_written = cat_fs_write(data->fd, buf, count);
-        UPDATE_ERRNO_FROM_CAT();
-        if (bytes_written < 0) {
-            if (cat_get_last_error_code() == CAT_EAGAIN) {
-                return 0;
-            }
-            if (cat_get_last_error_code() == CAT_EINTR) {
-                /* TODO: Should this be treated as a proper error or not? */
 #if PHP_VERSION_ID < 70400
+        int bytes_written = cat_fs_write(data->fd, buf, count);
+#else
+        ssize_t bytes_written = cat_fs_write(data->fd, buf, count);
+#endif
+        UPDATE_ERRNO_FROM_CAT();
+        if (bytes_written < 0)
+#if PHP_VERSION_ID < 70400
+            return 0;
+#else
+        {
+            cat_errno_t cat_errno = cat_get_last_error_code();
+            if (cat_errno == CAT_EAGAIN) {
                 return 0;
-#else
+            }
+            if (cat_errno == CAT_EINTR) {
+                /* TODO: Should this be treated as a proper error or not? */
                 return bytes_written;
-#endif
             }
+# if PHP_VERSION_ID < 80000
             if (!(stream->flags & PHP_STREAM_FLAG_SUPPRESS_ERRORS)) {
-#if PHP_VERSION_ID >= 80000
                 php_error_docref(NULL, E_NOTICE, "Write of %zu bytes failed with errno=%d %s", count, errno, strerror(errno));
-#else
-                php_error_docref(NULL, E_NOTICE, "write of %zu bytes failed with errno=%d %s", count, errno, strerror(errno));
-#endif
             }
+# else
+            php_error_docref(NULL, E_NOTICE, "write of %zu bytes failed with errno=%d %s", count, errno, strerror(errno));
+# endif // PHP_VERSION_ID < 80000
         }
+#endif // PHP_VERSION_ID < 70400
         return (swow_ssize_t) bytes_written;
     } else {
 
 #ifdef HAVE_FLUSHIO
 # if PHP_VERSION_ID < 70400
-        detect_is_seekable(data); // workaround for PHP 7.3
+        if (!data->is_pipe && data->last_op == 'r')
+# else
+        if (data->is_seekable && data->last_op == 'r')
 # endif // PHP_VERSION_ID < 70400
-        if (data->is_seekable && data->last_op == 'r') {
+        {
             zend_fseek(data->file, 0, SEEK_CUR);
         }
         data->last_op = 'w';
@@ -1160,31 +1168,35 @@ static swow_ssize_t swow_stdiop_fs_read(php_stream *stream, char *buf, size_t co
         }
 
         UPDATE_ERRNO_FROM_CAT();
+        cat_errno_t cat_errno = cat_get_last_error_code();
 
+#if PHP_VERSION_ID < 70400
+        stream->eof = (ret == 0 || (ret == -1 && cat_errno != CAT_EAGAIN && cat_errno != CAT_EINTR && cat_errno != CAT_EBADF));
+#else
         if (ret < 0) {
-            if (cat_get_last_error_code() == CAT_EAGAIN) {
+            if (cat_errno == CAT_EAGAIN) {
                 /* Not an error. */
                 ret = 0;
-            } else if (cat_get_last_error_code() == CAT_EINTR) {
+            } else if (cat_errno == CAT_EINTR) {
                 /* TODO: Should this be treated as a proper error or not? */
             } else {
                 if (!(stream->flags & PHP_STREAM_FLAG_SUPPRESS_ERRORS)) {
-#if PHP_VERSION_ID >= 80000
+# if PHP_VERSION_ID >= 80000
                     php_error_docref(NULL, E_NOTICE, "Read of %zu bytes failed with errno=%d %s", count, errno, strerror(errno));
-#else
+# else
                     php_error_docref(NULL, E_NOTICE, "read of %zu bytes failed with errno=%d %s", count, errno, strerror(errno));
-#endif
+# endif // PHP_VERSION_ID >= 80000
                 }
 
                 /* TODO: Remove this special-case? */
-                if (cat_get_last_error_code() != CAT_EBADF) {
+                if (cat_errno != CAT_EBADF) {
                     stream->eof = 1;
                 }
             }
         } else if (ret == 0) {
             stream->eof = 1;
         }
-
+#endif // PHP_VERSION_ID < 70400
     } else {
 #ifdef HAVE_FLUSHIO
 #if PHP_VERSION_ID < 70400
@@ -1195,7 +1207,7 @@ static swow_ssize_t swow_stdiop_fs_read(php_stream *stream, char *buf, size_t co
             zend_fseek(data->file, 0, SEEK_CUR);
         data->last_op = 'r';
 #endif
-
+        // TODO: cat_work it
         ret = fread(buf, 1, count, data->file);
 
         stream->eof = feof(data->file);
