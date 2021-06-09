@@ -109,7 +109,7 @@ static PHP_METHOD(Swow_Channel, __construct)
         RETURN_THROWS();
     }
 
-    channel = cat_channel_create(channel, capacity, sizeof(zval), (cat_channel_data_dtor_t) i_zval_ptr_dtor);
+    channel = cat_channel_create(channel, capacity, sizeof(zval), (cat_channel_data_dtor_t) zval_ptr_dtor);
 
     if (UNEXPECTED(channel == NULL)) {
         swow_throw_exception_with_last(swow_channel_exception_ce);
