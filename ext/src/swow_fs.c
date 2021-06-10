@@ -1097,11 +1097,11 @@ static swow_ssize_t swow_stdiop_fs_write(php_stream *stream, const char *buf, si
                 return bytes_written;
             }
 # if PHP_VERSION_ID < 80000
+            php_error_docref(NULL, E_NOTICE, "write of %zu bytes failed with errno=%d %s", count, errno, strerror(errno));
+# else
             if (!(stream->flags & PHP_STREAM_FLAG_SUPPRESS_ERRORS)) {
                 php_error_docref(NULL, E_NOTICE, "Write of %zu bytes failed with errno=%d %s", count, errno, strerror(errno));
             }
-# else
-            php_error_docref(NULL, E_NOTICE, "write of %zu bytes failed with errno=%d %s", count, errno, strerror(errno));
 # endif // PHP_VERSION_ID < 80000
         }
 #endif // PHP_VERSION_ID < 70400
@@ -1181,10 +1181,10 @@ static swow_ssize_t swow_stdiop_fs_read(php_stream *stream, char *buf, size_t co
                 /* TODO: Should this be treated as a proper error or not? */
             } else {
                 if (!(stream->flags & PHP_STREAM_FLAG_SUPPRESS_ERRORS)) {
-# if PHP_VERSION_ID >= 80000
-                    php_error_docref(NULL, E_NOTICE, "Read of %zu bytes failed with errno=%d %s", count, errno, strerror(errno));
-# else
+# if PHP_VERSION_ID < 80000
                     php_error_docref(NULL, E_NOTICE, "read of %zu bytes failed with errno=%d %s", count, errno, strerror(errno));
+# else
+                    php_error_docref(NULL, E_NOTICE, "Read of %zu bytes failed with errno=%d %s", count, errno, strerror(errno));
 # endif // PHP_VERSION_ID >= 80000
                 }
 
