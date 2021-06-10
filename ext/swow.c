@@ -323,7 +323,9 @@ PHP_MINFO_FUNCTION(swow)
 
     php_info_print_table_start();
     php_info_print_table_row(2, "Status", "enabled");
-    php_info_print_table_row(2, "Author", "twosee <twosee@php.net>");
+    php_info_print_table_row(2, "Author", "Swow Team");
+    php_info_print_table_row(2, "Link", "https://github.com/swow/swow");
+    php_info_print_table_row(2, "Contact", "Twosee <twosee@php.net>");
     php_info_print_table_row(2, "Version", SWOW_VERSION SWOW_GIT_VERSION " ( " SWOW_VERSION_SUFFIX SWOW_VERSION_SUFFIX_EXT " )");
     php_info_print_table_row(2, "Context", SWOW_COROUTINE_CONTEXT_TYPE);
     php_info_print_table_row(2, "Scheduler", "libuv-event");
