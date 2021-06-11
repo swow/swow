@@ -1220,6 +1220,17 @@ static PHP_METHOD(Swow_Socket, isEstablished)
     RETURN_BOOL(cat_socket_is_established(socket));
 }
 
+#define arginfo_class_Swow_Socket_getLiveness arginfo_class_Swow_Socket_getLong
+
+static PHP_METHOD(Swow_Socket, getLiveness)
+{
+    SWOW_SOCKET_GETTER(ssocket, socket);
+
+    ZEND_PARSE_PARAMETERS_NONE();
+
+    RETURN_LONG(cat_socket_get_liveness(socket));
+}
+
 ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO_EX(arginfo_class_Swow_Socket_checkLiveness, 0)
 ZEND_END_ARG_INFO()
 
@@ -1531,6 +1542,7 @@ static const zend_function_entry swow_socket_methods[] = {
     /* status */
     PHP_ME(Swow_Socket, isAvailable,               arginfo_class_Swow_Socket_isAvailable,         ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Socket, isEstablished,             arginfo_class_Swow_Socket_isEstablished,       ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Socket, getLiveness,               arginfo_class_Swow_Socket_getLiveness,         ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Socket, checkLiveness,             arginfo_class_Swow_Socket_checkLiveness,       ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Socket, getIoState,                arginfo_class_Swow_Socket_getIoState,          ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Socket, getIoStateName,            arginfo_class_Swow_Socket_getIoStateName,      ZEND_ACC_PUBLIC)
