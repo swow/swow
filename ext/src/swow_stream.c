@@ -105,10 +105,10 @@ SWOW_API php_stream *swow_stream_socket_factory(
     php_stream_transport_factory_func *factory = NULL;
     zend_bool ssl = 0;
 
-    if (strncmp(proto, ZEND_STRL("ssl")) == 0 ||
-        strncmp(proto, ZEND_STRL("tls")) == 0 ||
-        strncmp(proto, ZEND_STRL("https")) == 0 ||
-        strncmp(proto, ZEND_STRL("ftps")) == 0) {
+    if (strncmp(proto, "ssl", sizeof("ssl") - 1) == 0 ||
+        strncmp(proto, "tls", sizeof("tls") - 1) == 0 ||
+        strncmp(proto, "https", sizeof("https") - 1) == 0 ||
+        strncmp(proto, "ftps", sizeof("ftps") - 1) == 0) {
         if (php_stream_ssl_socket_factory != NULL) {
             factory = php_stream_ssl_socket_factory;
         }
