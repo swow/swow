@@ -747,7 +747,7 @@ static int swow_stream_set_tcp_option(php_stream *stream, int option, int value,
                          * because ssl has context */
                         if (!swow_sock->ssl) {
                             cat_socket_type_t type = swow_stream_parse_socket_type(stream->ops);
-                            socket = cat_socket_create_ex(NULL, type, sock->socket);
+                            socket = cat_socket_open_os_socket(NULL, type, sock->socket);
                             swow_sock->socket = socket;
                         }
                         return ret;
@@ -1031,7 +1031,7 @@ static cat_socket_t *swow_stream_stdio_init(php_stream *stream)
 
     if (unlikely(socket == NULL)) {
         /* convert int to SOCKET on Windows, and internal will parse it as int */
-        socket = cat_socket_create_ex(NULL, CAT_SOCKET_TYPE_TTY, (cat_socket_fd_t) fd);
+        socket = cat_socket_open_os_fd(NULL, CAT_SOCKET_TYPE_TTY, fd);
         if (unlikely(socket == NULL)) {
             SWOW_STREAM_G(tty_sockets)[fd] = INVALID_TTY_SOCKET;
             return NULL;
