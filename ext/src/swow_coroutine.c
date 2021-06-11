@@ -480,7 +480,9 @@ SWOW_API void swow_coroutine_executor_switch(swow_coroutine_executor_t *current_
     if (target_executor != NULL) {
         swow_coroutine_executor_recover(target_executor);
     } else {
-        EG(current_execute_data) = NULL; /* make the log stack trace empty */
+        zend_executor_globals *eg = SWOW_GLOBALS_FAST_PTR(executor_globals);
+        eg->current_execute_data = NULL; /* make the log stack trace empty */
+        eg->exception = NULL; /* or maybe thrown in zend_error() (TODO: confirm it) */
     }
 }
 
