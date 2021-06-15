@@ -141,6 +141,7 @@ extern "C" {
   XX(ENOTEMPTY, "directory not empty")                                        \
   XX(ENOTSOCK, "socket operation on non-socket")                              \
   XX(ENOTSUP, "operation not supported on socket")                            \
+  XX(EOVERFLOW, "value too large for defined data type")                      \
   XX(EPERM, "operation not permitted")                                        \
   XX(EPIPE, "broken pipe")                                                    \
   XX(EPROTO, "protocol error")                                                \
@@ -163,6 +164,7 @@ extern "C" {
   XX(ENOTTY, "inappropriate ioctl for device")                                \
   XX(EFTYPE, "inappropriate file type or format")                             \
   XX(EILSEQ, "illegal byte sequence")                                         \
+  XX(ESOCKTNOSUPPORT, "socket type not supported")                            \
   XX(ESTALE, "stale file handle")                                             \
 
 #ifdef HAVE_LIBCAT
@@ -225,6 +227,7 @@ extern "C" {
   XX(ENOTEMPTY, "Directory not empty")                                        \
   XX(ENOTSOCK, "Socket operation on non-socket")                              \
   XX(ENOTSUP, "Operation not supported on socket")                            \
+  XX(EOVERFLOW, "Value too large for defined data type")                      \
   XX(EPERM, "Operation not permitted")                                        \
   XX(EPIPE, "Broken pipe")                                                    \
   XX(EPROTO, "Protocol error")                                                \
@@ -247,6 +250,7 @@ extern "C" {
   XX(ENOTTY, "Inappropriate ioctl for device")                                \
   XX(EFTYPE, "Inappropriate file type or format")                             \
   XX(EILSEQ, "Illegal byte sequence")                                         \
+  XX(ESOCKTNOSUPPORT, "Socket type not supported")                            \
   XX(ESTALE, "Stale file handle")                                             \
 
 #endif /* HAVE_LIBCAT */
@@ -633,12 +637,10 @@ UV_EXTERN int uv_write2(uv_write_t* req,
 UV_EXTERN int uv_try_write(uv_stream_t* handle,
                            const uv_buf_t bufs[],
                            unsigned int nbufs);
-#ifdef HAVE_LIBCAT
-UV_EXTERN int uv_try_write2(uv_stream_t* stream,
-		                    const uv_buf_t bufs[],
-		                    unsigned int nbufs,
-		                    uv_stream_t* send_handle);
-#endif
+UV_EXTERN int uv_try_write2(uv_stream_t* handle,
+                            const uv_buf_t bufs[],
+                            unsigned int nbufs,
+                            uv_stream_t* send_handle);
 
 /* uv_write_t is a subclass of uv_req_t. */
 struct uv_write_s {

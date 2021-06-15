@@ -144,7 +144,7 @@ CAT_API cat_event_task_t *cat_event_register_runtime_shutdown_task(cat_data_call
 {
     cat_event_task_t *task = (cat_event_task_t *) cat_malloc(sizeof(*task));
 
-#ifndef CAT_ALLOC_NEVER_RETURNS_NULL
+#if CAT_ALLOC_HANDLE_ERRORS
     if (unlikely(task == NULL)) {
         cat_update_last_error_of_syscall("Malloc for defer task failed");
         return NULL;
@@ -172,7 +172,7 @@ CAT_API cat_bool_t cat_event_defer_ex(cat_data_callback_t callback, cat_data_t *
 {
     cat_event_task_t *task = (cat_event_task_t *) cat_malloc(sizeof(*task));
 
-#ifndef CAT_ALLOC_NEVER_RETURNS_NULL
+#if CAT_ALLOC_HANDLE_ERRORS
     if (unlikely(task == NULL)) {
         cat_update_last_error_of_syscall("Malloc for defer task failed");
         return cat_false;

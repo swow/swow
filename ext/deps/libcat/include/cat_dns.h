@@ -28,7 +28,7 @@ extern "C" {
 /* Notice: this module is a part of Socket */
 
 /*
-typedef struct {
+typedef struct cat_dns_cache_s {
 
 } cat_dns_cache_t;
 */

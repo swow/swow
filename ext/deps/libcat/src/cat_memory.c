@@ -72,7 +72,7 @@ CAT_API char *cat_strdup(const char *string)
 {
     size_t size = strlen(string) + 1;
     char *ptr = (char *) cat_malloc(size);
-#ifndef CAT_ALLOC_NEVER_RETURNS_NULL
+#if CAT_ALLOC_HANDLE_ERRORS
     if (unlikely(ptr == NULL)) {
         return NULL;
     }
@@ -85,7 +85,7 @@ CAT_API char *cat_strndup(const char *string, size_t length)
     char *ptr;
     length = cat_strnlen(string, length);
     ptr = (char *) cat_malloc(length + 1);
-#ifndef CAT_ALLOC_NEVER_RETURNS_NULL
+#if CAT_ALLOC_HANDLE_ERRORS
     if (unlikely(ptr == NULL)) {
         return NULL;
     }

@@ -69,7 +69,7 @@ CAT_API cat_async_t *cat_async_create(cat_async_t *async)
 
     if (async == NULL) {
         async = (cat_async_t *) cat_malloc(sizeof(*async));
-#ifndef CAT_ALLOC_NEVER_RETURNS_NULL
+#if CAT_ALLOC_HANDLE_ERRORS
         if (unlikely(async == NULL)) {
             cat_update_last_error_of_syscall("Malloc for async failed");
             return NULL;

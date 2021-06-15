@@ -42,7 +42,7 @@ CAT_API char *cat_env_get_ex(const char *name, char *buffer, size_t *size)
         } else {
             _retry:
             buffer = (char *) cat_malloc(alloc_size);
-#ifndef CAT_ALLOC_NEVER_RETURNS_NULL
+#if CAT_ALLOC_HANDLE_ERRORS
             if (unlikely(buffer == NULL)) {
                 cat_update_last_error_of_syscall("Malloc for env failed");
                 return NULL;
@@ -68,7 +68,7 @@ CAT_API char *cat_env_get_ex(const char *name, char *buffer, size_t *size)
 
     if (buffer == _buffer) {
         buffer = cat_strdup(buffer);
-#ifndef CAT_ALLOC_NEVER_RETURNS_NULL
+#if CAT_ALLOC_HANDLE_ERRORS
         if (unlikely(buffer == NULL)) {
             cat_update_last_error_of_syscall("Dup for env failed");
             return NULL;
@@ -146,7 +146,7 @@ CAT_API cat_bool_t cat_env_compares(const char *name, const char **values, size_
         size = sizeof(buffer);
     } else {
         env = (char *) cat_malloc(size);
-#ifndef CAT_ALLOC_NEVER_RETURNS_NULL
+#if CAT_ALLOC_HANDLE_ERRORS
         if (unlikely(env == NULL)) {
             return default_value;
         }

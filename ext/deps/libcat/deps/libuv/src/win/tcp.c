@@ -1024,6 +1024,7 @@ void uv_process_tcp_read_req(uv_loop_t* loop, uv_tcp_t* handle,
          */
         err = WSAECONNRESET;
       }
+      handle->flags &= ~(UV_HANDLE_READABLE | UV_HANDLE_WRITABLE);
 
       handle->read_cb((uv_stream_t*)handle,
                       uv_translate_sys_error(err),
@@ -1105,6 +1106,7 @@ void uv_process_tcp_read_req(uv_loop_t* loop, uv_tcp_t* handle,
              * Unix. */
             err = WSAECONNRESET;
           }
+          handle->flags &= ~(UV_HANDLE_READABLE | UV_HANDLE_WRITABLE);
 
           handle->read_cb((uv_stream_t*)handle,
                           uv_translate_sys_error(err),
@@ -1336,7 +1338,7 @@ int uv_tcp_nodelay(uv_tcp_t* handle, int enable) {
   if (handle->socket != INVALID_SOCKET) {
     err = uv__tcp_nodelay(handle, handle->socket, enable);
     if (err)
-      return err;
+      return uv_translate_sys_error(err);
   }
 
   if (enable) {
@@ -1355,7 +1357,7 @@ int uv_tcp_keepalive(uv_tcp_t* handle, int enable, unsigned int delay) {
   if (handle->socket != INVALID_SOCKET) {
     err = uv__tcp_keepalive(handle, handle->socket, enable, delay);
     if (err)
-      return err;
+      return uv_translate_sys_error(err);
   }
 
   if (enable) {

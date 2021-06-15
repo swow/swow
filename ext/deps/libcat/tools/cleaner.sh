@@ -40,13 +40,13 @@ fi
 info "Following files will be removed:"
 
 if [ "${USE_AUTOTOOLS}" = "1" ]; then
-  find . \( -name \*.gcno -o -name \*.gcda -follow -path build \) -print0 | xargs -0 rm -f -v
-  find . \( -name \*.lo -o -name \*.o      -follow -path build \) -print0 | xargs -0 rm -f -v
-  find . \( -name \*.la -o -name \*.a      -follow -path build \) -print0 | xargs -0 rm -f -v
-  find . \( -name \*.so                    -follow -path build \) -print0 | xargs -0 rm -f -v
-  find . \( -name .libs -a -type d         -follow -path build \) -print0 | xargs -0 rm -rf -v
+  find . \( -path "*/build" -prune -name "skip build dir" -o -name \*.gcno -o -name \*.gcda            -follow \) -print0 | xargs -0 rm -f -v
+  find . \( -path "*/build" -prune -name "skip build dir" -o -name \*.lo -o -name \*.o -o -name \*.dep -follow \) -print0 | xargs -0 rm -f -v
+  find . \( -path "*/build" -prune -name "skip build dir" -o -name \*.la -o -name \*.a                 -follow \) -print0 | xargs -0 rm -f -v
+  find . \( -path "*/build" -prune -name "skip build dir" -o -name \*.so                               -follow \) -print0 | xargs -0 rm -f -v
+  find . \( -path "*/build" -prune -name "skip build dir" -o -name .libs -a -type d                    -follow \) -print0 | xargs -0 rm -rf -v
 else
-  find . \( -name main -a -type f          -follow             \) -print0 | xargs -0 rm -f -v
+  find . \( -name main -a -type f -follow \) -print0 | xargs -0 rm -f -v
 fi
 
 success "Clean '${workdir}' done"

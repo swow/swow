@@ -113,7 +113,7 @@ CAT_API cat_bool_t cat_watch_dog_run(cat_watch_dog_t *watch_dog, cat_timeout_t q
 
     if (watch_dog == NULL) {
         watch_dog = (cat_watch_dog_t *) cat_malloc(sizeof(*watch_dog));
-#ifndef CAT_ALLOC_NEVER_RETURNS_NULL
+#if CAT_ALLOC_HANDLE_ERRORS
         if (watch_dog == NULL) {
             cat_update_last_error_of_syscall("Malloc for watch-dog failed");
             return cat_false;

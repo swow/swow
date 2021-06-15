@@ -25,8 +25,7 @@ extern "C" {
 #include "cat.h"
 #include "cat_coroutine.h"
 
-typedef struct
-{
+typedef struct cat_sync_wait_group_s {
     cat_coroutine_t *coroutine;
     size_t count;
 } cat_sync_wait_group_t;

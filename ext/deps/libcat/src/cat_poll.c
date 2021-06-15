@@ -126,7 +126,7 @@ CAT_API cat_ret_t cat_poll_one(cat_os_socket_t fd, cat_pollfd_events_t events, c
     *revents = POLLNONE;
 
     poll = (cat_poll_one_t *) cat_malloc(sizeof(*poll));
-#ifndef CAT_ALLOC_NEVER_RETURNS_NULL
+#if CAT_ALLOC_HANDLE_ERRORS
     if (unlikely(poll == NULL)) {
         cat_update_last_error_of_syscall("Malloc for poll failed");
         return CAT_RET_ERROR;
@@ -189,7 +189,7 @@ CAT_API cat_ret_t cat_poll_one(cat_os_socket_t fd, cat_pollfd_events_t events, c
     return ret;
 }
 
-typedef struct {
+typedef struct cat_poll_context_s {
     cat_coroutine_t *coroutine;
     cat_bool_t done;
     cat_bool_t deferred_done_callback;
@@ -261,7 +261,7 @@ CAT_API int cat_poll(cat_pollfd_t *fds, cat_nfds_t nfds, cat_timeout_t timeout)
     cat_debug(EVENT, "poll(fds=%p, nfds=%zu, timeout=" CAT_TIMEOUT_FMT ")", fds, (size_t) nfds, timeout);
 
     context = (cat_poll_context_t *) cat_malloc(sizeof(*context) + sizeof(*polls) * nfds);
-#ifndef CAT_ALLOC_NEVER_RETURNS_NULL
+#if CAT_ALLOC_HANDLE_ERRORS
     if (unlikely(context == NULL)) {
         cat_update_last_error_of_syscall("Malloc for poll failed");
         return CAT_RET_ERROR;
@@ -400,7 +400,7 @@ CAT_API int cat_select(int max_fd, fd_set *readfds, fd_set *writefds, fd_set *ex
 
     /* malloc for poll fds */
     pfds = (cat_pollfd_t *) cat_malloc(sizeof(*pfds) * nfds);
-#ifndef CAT_ALLOC_NEVER_RETURNS_NULL
+#if CAT_ALLOC_HANDLE_ERRORS
     if (unlikely(pfds == NULL)) {
         cat_update_last_error_of_syscall("Malloc for poll fds failed");
         return -1;

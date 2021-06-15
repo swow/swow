@@ -35,6 +35,10 @@ static cat_always_inline char* cat_memcpy(char *p, const char *data, size_t leng
 
 /* allocator */
 
+#ifndef CAT_ALLOC_HANDLE_ERRORS
+#define CAT_ALLOC_HANDLE_ERRORS 0
+#endif
+
 #ifndef cat_sys_malloc
 #define cat_sys_malloc                 malloc
 #define cat_sys_calloc                 calloc
@@ -62,8 +66,7 @@ typedef void *(*cat_calloc_function_t)(size_t count, size_t size);
 typedef void *(*cat_realloc_function_t)(void *ptr, size_t size);
 typedef void (*cat_free_function_t)(void *ptr);
 
-typedef struct
-{
+typedef struct cat_allocator_s {
     cat_malloc_function_t malloc;
     cat_calloc_function_t calloc;
     cat_realloc_function_t realloc;

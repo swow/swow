@@ -27,7 +27,7 @@ extern "C" {
 typedef cat_data_callback_t cat_work_function_t;
 typedef cat_data_callback_t cat_work_cleanup_callback_t;
 
-typedef enum {
+typedef enum cat_work_kind_e {
   CAT_WORK_KIND_CPU = UV_WORK_CPU,
   CAT_WORK_KIND_FAST_IO = UV_WORK_FAST_IO,
   CAT_WORK_KIND_SLOW_IO = UV_WORK_SLOW_IO,

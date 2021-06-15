@@ -68,8 +68,7 @@ extern "C" {
 
 #define OPENSSL_DEFAULT_STREAM_VERIFY_DEPTH 9
 
-typedef enum
-{
+typedef enum cat_ssl_flag_e {
     CAT_SSL_FLAG_NONE                  = 0,
     CAT_SSL_FLAG_ALLOC                 = 1 << 0,
     CAT_SSL_FLAG_ACCEPT_STATE          = 1 << 1,
@@ -79,8 +78,7 @@ typedef enum
     CAT_SSL_FLAG_HANDSHAKE_BUFFER_SET  = 1 << 5,
 } cat_ssl_flag_t;
 
-typedef enum
-{
+typedef enum cat_ssl_union_flags_e {
     CAT_SSL_FLAGS_STATE = CAT_SSL_FLAG_ACCEPT_STATE | CAT_SSL_FLAG_CONNECT_STATE,
 } cat_ssl_union_flags_t;
 
@@ -90,8 +88,7 @@ typedef uint32_t cat_ssl_flags_t;
     XX(TLS,  1 << 0) \
     XX(DTLS, 1 << 1) \
 
-typedef enum
-{
+typedef enum cat_ssl_method_e {
 #define CAT_SSL_METHOD_GEN(name, value) CAT_ENUM_GEN(CAT_SSL_METHOD_, name, value)
     CAT_SSL_METHOD_MAP(CAT_SSL_METHOD_GEN)
 #undef CAT_SSL_METHOD_GEN
@@ -105,15 +102,13 @@ typedef enum
     XX(TLSv1_2, 1 << 4) \
     XX(TLSv1_3, 1 << 5) \
 
-typedef enum
-{
+typedef enum cat_ssl_protocol_e {
 #define CAT_SSL_PROTOCOL_GEN(name, value) CAT_ENUM_GEN(CAT_SSL_PROTOCOL_, name, value)
     CAT_SSL_PROTOCOL_MAP(CAT_SSL_PROTOCOL_GEN)
 #undef CAT_SSL_PROTOCOL_GEN
 } cat_ssl_protocol_t;
 
-typedef enum
-{
+typedef enum cat_ssl_union_protocols_e {
 #define CAT_SSL_PROTOCO_ALLL_GEN(name, value) CAT_SSL_PROTOCOL_##name |
     CAT_SSL_PROTOCOLS_ALL = CAT_SSL_PROTOCOL_MAP(CAT_SSL_PROTOCO_ALLL_GEN) 0,
 #undef CAT_SSL_PROTOCO_ALLL_GEN
@@ -125,8 +120,7 @@ typedef SSL_CTX cat_ssl_context_t;
 typedef SSL     cat_ssl_connection_t;
 typedef BIO     cat_ssl_bio_t;
 
-typedef struct
-{
+typedef struct cat_ssl_s {
     cat_ssl_flags_t flags;
     cat_ssl_context_t *context;
     cat_ssl_connection_t *connection;
@@ -169,7 +163,7 @@ CAT_API void cat_ssl_set_connect_state(cat_ssl_t *ssl);
 CAT_API cat_bool_t cat_ssl_set_sni_server_name(cat_ssl_t *ssl, const char *name);
 CAT_API cat_bool_t cat_ssl_set_passphrase(cat_ssl_t *ssl, const char *passphrase, size_t passphrase_length);
 
-typedef enum {
+typedef enum cat_ssl_ret_e {
     CAT_SSL_RET_OK         = 0,
     CAT_SSL_RET_ERROR      = -1,
     CAT_SSL_RET_WANT_READ  = 1 << 0,

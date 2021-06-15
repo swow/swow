@@ -111,8 +111,7 @@ CAT_API const char* cat_websocket_status_get_description(cat_websocket_status_co
 
 typedef uint64_t uint64_t;
 
-typedef struct
-{
+typedef struct cat_websocket_header_s {
     unsigned opcode :4;
     unsigned rsv3 :1;
     unsigned rsv2 :1;

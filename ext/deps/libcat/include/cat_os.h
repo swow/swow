@@ -55,13 +55,13 @@
 #define CAT_EOL "\n"
 #endif
 
-/* fd & socket */
+/* always be int (same with uv_file) */
 typedef int cat_os_fd_t;
 #define CAT_OS_FD_FMT "%d"
 #define CAT_OS_FD_FMT_SPEC "d"
 #define CAT_OS_INVALID_FD -1
 
-/* on UNIX is init, on Windows is SOCKET */
+/* on UNIX is int, on Windows is SOCKET */
 typedef uv_os_sock_t cat_os_socket_t;
 #ifndef CAT_OS_WIN
 #define CAT_OS_SOCKET_FMT "%d"

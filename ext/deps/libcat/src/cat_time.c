@@ -125,7 +125,7 @@ static cat_timer_t *cat_timer_wait(cat_msec_t msec)
     cat_bool_t ret;
 
     timer = (cat_timer_t *) cat_malloc(sizeof(*timer));;
-#ifndef CAT_ALLOC_NEVER_RETURNS_NULL
+#if CAT_ALLOC_HANDLE_ERRORS
     if (unlikely(timer == NULL)) {
         cat_update_last_error_of_syscall("Malloc for timer failed");
         return NULL;

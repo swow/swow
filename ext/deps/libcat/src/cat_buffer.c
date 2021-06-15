@@ -24,7 +24,7 @@ static char *cat_buffer_alloc_standard(size_t size)
 {
     char *value = (char *) cat_malloc(size);
 
-#ifndef CAT_ALLOC_NEVER_RETURNS_NULL
+#if CAT_ALLOC_HANDLE_ERRORS
     if (unlikely(value == NULL)) {
         cat_update_last_error_of_syscall("Malloc for buffer value failed with size %zu", size);
         return NULL;
@@ -38,7 +38,7 @@ static char *cat_buffer_realloc_standard(char *old_value, size_t old_length, siz
 {
     char *new_value = (char *) cat_malloc(new_size);
 
-#ifndef CAT_ALLOC_NEVER_RETURNS_NULL
+#if CAT_ALLOC_HANDLE_ERRORS
     if (unlikely(new_value == NULL)) {
         cat_update_last_error_of_syscall("Realloc for buffer value failed with new size %zu", new_size);
         return NULL;

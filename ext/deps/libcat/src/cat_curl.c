@@ -25,7 +25,7 @@
 
 #ifdef CAT_CURL
 
-typedef struct {
+typedef struct cat_curl_easy_context_s {
     CURLM *multi;
     cat_coroutine_t *coroutine;
     curl_socket_t sockfd;
@@ -33,7 +33,7 @@ typedef struct {
     long timeout;
 } cat_curl_easy_context_t;
 
-typedef struct {
+typedef struct cat_curl_multi_context_s {
     cat_queue_node_t node;
     CURLM *multi;
     cat_coroutine_t *coroutine;
@@ -42,7 +42,7 @@ typedef struct {
     long timeout;
 } cat_curl_multi_context_t;
 
-typedef struct {
+typedef struct cat_curl_pollfd_s {
     cat_queue_node_t node;
     curl_socket_t sockfd;
     int action;
@@ -159,7 +159,7 @@ static int cat_curl_multi_socket_function(
     if (action != CURL_POLL_REMOVE) {
         if (fd == NULL) {
             fd = (cat_curl_pollfd_t *) cat_malloc(sizeof(*fd));
-#ifndef CAT_ALLOC_NEVER_RETURNS_NULL
+#if CAT_ALLOC_HANDLE_ERRORS
             if (unlikely(fd == NULL)) {
                 return CURLM_OUT_OF_MEMORY;
             }
@@ -197,7 +197,7 @@ static cat_curl_multi_context_t *cat_curl_multi_create_context(CURLM *multi)
     cat_debug(EXT, "curl_multi_context_create(multi=%p)", multi);
 
     context = (cat_curl_multi_context_t *) cat_malloc(sizeof(*context));
-#ifndef CAT_ALLOC_NEVER_RETURNS_NULL
+#if CAT_ALLOC_HANDLE_ERRORS
     if (unlikely(context == NULL)) {
         return NULL;
     }
@@ -453,7 +453,7 @@ static CURLMcode cat_curl_multi_exec(
         } else {
             cat_nfds_t i;
             fds = (cat_pollfd_t *) cat_malloc(sizeof(*fds) * context->nfds);
-#ifndef CAT_ALLOC_NEVER_RETURNS_NULL
+#if CAT_ALLOC_HANDLE_ERRORS
             if (unlikely(fds == NULL)) {
                 mcode = CURLM_OUT_OF_MEMORY;
                 goto _out;

@@ -488,7 +488,7 @@ CAT_API cat_ssl_t *cat_ssl_create(cat_ssl_t *ssl, cat_ssl_context_t *context)
 {
     if (ssl == NULL) {
         ssl = (cat_ssl_t *) cat_malloc(sizeof(*ssl));
-#ifndef CAT_ALLOC_NEVER_RETURNS_NULL
+#if CAT_ALLOC_HANDLE_ERRORS
         if (unlikely(ssl == NULL)) {
             cat_update_last_error_of_syscall("Malloc for SSL failed");
             goto _malloc_failed;
@@ -543,7 +543,7 @@ CAT_API cat_ssl_t *cat_ssl_create(cat_ssl_t *ssl, cat_ssl_context_t *context)
     if (ssl->flags & CAT_SSL_FLAG_ALLOC) {
         cat_free(ssl);
     }
-#ifndef CAT_ALLOC_NEVER_RETURNS_NULL
+#if CAT_ALLOC_HANDLE_ERRORS
     _malloc_failed:
 #endif
     return NULL;
@@ -1018,7 +1018,7 @@ CAT_API cat_bool_t cat_ssl_encrypt(
     size = cat_ssl_encrypted_size(vin_length);
     if (unlikely(size >  ssl->write_buffer.size)) {
         buffer = (char *) cat_malloc(size);
-#ifndef CAT_ALLOC_NEVER_RETURNS_NULL
+#if CAT_ALLOC_HANDLE_ERRORS
         if (unlikely(buffer == NULL)) {
             cat_update_last_error_of_syscall("Malloc for SSL write buffer failed");
             return cat_false;
@@ -1048,7 +1048,7 @@ CAT_API cat_bool_t cat_ssl_encrypt(
                     goto _error;
                 }
                 buffer = (char *) cat_malloc(size = CAT_SSL_BUFFER_SIZE);
-#ifndef CAT_ALLOC_NEVER_RETURNS_NULL
+#if CAT_ALLOC_HANDLE_ERRORS
                 if (unlikely(buffer == NULL)) {
                     cat_update_last_error_of_syscall("Realloc for SSL write buffer failed");
                     goto _error;

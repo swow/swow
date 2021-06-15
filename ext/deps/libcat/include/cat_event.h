@@ -25,8 +25,7 @@ extern "C" {
 #include "cat.h"
 #include "cat_coroutine.h"
 
-typedef struct
-{
+typedef struct cat_event_task_s {
     cat_queue_node_t node;
     cat_data_callback_t callback;
     cat_data_t *data;

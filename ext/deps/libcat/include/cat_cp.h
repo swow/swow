@@ -68,16 +68,14 @@ typedef ULONG cat_io_vector_length_t;
 
 #ifndef CAT_OS_WIN
 /* Note: May be cast to struct iovec. See writev(2). */
-typedef struct
-{
+typedef struct cat_io_vector_s {
     char *base;
     size_t length;
 } cat_io_vector_t;
 #else
 /* Note: May be cast to WSABUF[]
  * see http://msdn.microsoft.com/en-us/library/ms741542(v=vs.85).aspx */
-typedef struct
-{
+typedef struct cat_io_vector_s {
     ULONG length;
     char* base;
 } cat_io_vector_t;

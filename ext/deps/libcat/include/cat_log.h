@@ -16,8 +16,7 @@
   +--------------------------------------------------------------------------+
  */
 
-typedef enum
-{
+typedef enum cat_log_type_e {
     CAT_LOG_TYPE_DEBUG           = 1 << 0,
     CAT_LOG_TYPE_INFO            = 1 << 1,
     CAT_LOG_TYPE_NOTICE          = 1 << 2,
@@ -28,8 +27,7 @@ typedef enum
 
 typedef uint16_t cat_log_types_t;
 
-typedef enum
-{
+typedef enum cat_log_union_types_e {
     CAT_LOG_TYPES_ALL             = CAT_LOG_TYPE_DEBUG | CAT_LOG_TYPE_INFO | CAT_LOG_TYPE_NOTICE | CAT_LOG_TYPE_WARNING | CAT_LOG_TYPE_ERROR | CAT_LOG_TYPE_CORE_ERROR,
     CAT_LOG_TYPES_DEFAULT         = CAT_LOG_TYPES_ALL ^ CAT_LOG_TYPE_DEBUG,
     CAT_LOG_TYPES_ABNORMAL        = CAT_LOG_TYPE_NOTICE | CAT_LOG_TYPE_WARNING | CAT_LOG_TYPE_ERROR | CAT_LOG_TYPE_CORE_ERROR,

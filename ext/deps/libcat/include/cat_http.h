@@ -116,15 +116,13 @@ CAT_API const char *cat_http_status_get_reason(cat_http_status_code_t status);
 
 /* parser */
 
-typedef enum
-{
+typedef enum cat_http_parser_type_e {
     CAT_HTTP_PARSER_TYPE_BOTH     = HTTP_BOTH,
     CAT_HTTP_PARSER_TYPE_REQUEST  = HTTP_REQUEST,
     CAT_HTTP_PARSER_TYPE_RESPONSE = HTTP_RESPONSE,
 } cat_http_parser_type_t;
 
-typedef enum
-{
+typedef enum cat_http_parser_event_flag_e {
     CAT_HTTP_PARSER_EVENT_FLAG_NONE = 0,
     CAT_HTTP_PARSER_EVENT_FLAG_LINE = 1 << 1, /* first line */
     CAT_HTTP_PARSER_EVENT_FLAG_DATA = 1 << 2, /* have data */
@@ -148,8 +146,7 @@ typedef enum
     XX(CHUNK_HEADER,          (1 << 28)) \
     XX(CHUNK_COMPLETE,        (1 << 29) | CAT_HTTP_PARSER_EVENT_FLAG_COMPLETE)
 
-typedef enum
-{
+typedef enum cat_http_parser_event_e {
 #define CAT_HTTP_PARSER_EVENT_GEN(name, value) CAT_HTTP_PARSER_EVENT_##name = value,
     CAT_HTTP_PARSER_EVENT_MAP(CAT_HTTP_PARSER_EVENT_GEN)
 #undef CAT_HTTP_PARSER_EVENT_GEN
@@ -158,16 +155,14 @@ typedef enum
 #define CAT_HTTP_PARSER_EVENTS_ALL_GEN(name, unused1)    CAT_HTTP_PARSER_EVENT_##name |
 #define CAT_HTTP_PARSER_EVENTS_ALL_VALUE                 CAT_HTTP_PARSER_EVENT_MAP(CAT_HTTP_PARSER_EVENTS_ALL_GEN) 0
 
-typedef enum
-{
+typedef enum cat_http_parser_union_events_e {
     CAT_HTTP_PARSER_EVENTS_NONE = 0,
     CAT_HTTP_PARSER_EVENTS_ALL  = CAT_HTTP_PARSER_EVENTS_ALL_VALUE
 } cat_http_parser_union_events_t;
 
 typedef uint32_t cat_http_parser_events_t;
 
-typedef struct
-{
+typedef struct cat_http_parser_s {
     /* private: handle */
     llhttp_t llhttp;
     /* private: which events will return from execute */

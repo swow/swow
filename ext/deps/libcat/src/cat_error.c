@@ -54,11 +54,11 @@ CAT_API void cat_update_last_error(cat_errno_t code, const char *format, ...)
         /* Notice: new message maybe relying on the previous message */
         va_start(args, format);
         message = cat_vsprintf(format, args);
+        va_end(args);
         if (unlikely(message == NULL)) {
             fprintf(CAT_G(error_log), "Sprintf last error message failed" CAT_EOL);
             return;
         }
-        va_end(args);
     }
 
     cat_set_last_error(code, message);

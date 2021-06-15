@@ -26,7 +26,7 @@ extern "C" {
 
 #define CAT_BUFFER_DEFAULT_SIZE 8192
 
-typedef struct {
+typedef struct cat_buffer_s {
     /* public readonly */
     char *value;
     size_t size;
@@ -38,8 +38,7 @@ typedef char *(*cat_buffer_realloc_function_t)(char *old_value, size_t old_lengt
 typedef void (*cat_buffer_update_function_t)(char *value, size_t new_length);
 typedef void (*cat_buffer_free_function_t)(char *value);
 
-typedef struct
-{
+typedef struct cat_buffer_allocator_s {
     cat_buffer_alloc_function_t alloc_function;
     cat_buffer_realloc_function_t realloc_function;
     cat_buffer_update_function_t update_function;

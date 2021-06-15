@@ -262,7 +262,7 @@ static cat_always_inline cat_channel_bucket_t *cat_channel_buffered_bucket_creat
 
     bucket = (cat_channel_bucket_t *) cat_malloc(offsetof(cat_channel_bucket_t, data) + data_size);
 
-#ifndef CAT_ALLOC_NEVER_RETURNS_NULL
+#if CAT_ALLOC_HANDLE_ERRORS
     if (unlikely(bucket == NULL)) {
         cat_update_last_error_of_syscall("Malloc for channel bucket failed");
         return NULL;
@@ -280,7 +280,7 @@ static cat_always_inline cat_bool_t cat_channel_buffered_push_data(cat_channel_t
 
     bucket = cat_channel_buffered_bucket_create(data, channel->data_size);
 
-#ifndef CAT_ALLOC_NEVER_RETURNS_NULL
+#if CAT_ALLOC_HANDLE_ERRORS
     if (unlikely(bucket == NULL)) {
         return cat_false;
     }
@@ -347,7 +347,7 @@ static cat_bool_t cat_channel_buffered_push(cat_channel_t *channel, const cat_da
     } else {
         CAT_ASSERT(!cat_channel__has_producers(channel));
         /* push data to the storage queue */
-#ifndef CAT_ALLOC_NEVER_RETURNS_NULL
+#if CAT_ALLOC_HANDLE_ERRORS
         if (unlikely(!cat_channel_buffered_push_data(channel, data))) {
             return cat_false;
         }
@@ -518,7 +518,7 @@ CAT_API cat_channel_select_response_t *cat_channel_select(cat_channel_select_req
     /* dummy coroutines */
     dummy_coroutines = (cat_channel_dummy_coroutine_t *) cat_malloc(sizeof(cat_channel_dummy_coroutine_t) * count);
 
-#ifndef CAT_ALLOC_NEVER_RETURNS_NULL
+#if CAT_ALLOC_HANDLE_ERRORS
     if (unlikely(dummy_coroutines == NULL)) {
         cat_update_last_error_of_syscall("Malloc for dummy coroutines failed");
         return NULL;

@@ -23,7 +23,7 @@
 #define CAT_TO_STR_NAKED(str)    #str
 #define CAT_TO_STR(str)          CAT_TO_STR_NAKED(str)
 
-typedef struct {
+typedef struct cat_const_string_s {
     const char *data;
     size_t length;
 } cat_const_string_t;
@@ -42,7 +42,7 @@ static cat_always_inline void cat_const_string_create(cat_const_string_t *string
     string->length = length;
 }
 
-typedef struct {
+typedef struct cat_string_s {
     char *value;
     size_t length;
 } cat_string_t;
@@ -56,7 +56,7 @@ static cat_always_inline void cat_string_init(cat_string_t *string)
 static cat_always_inline cat_bool_t cat_string_create(cat_string_t *string, const char *value, size_t length)
 {
     char *new_value = (char *) cat_strndup(value, length);
-#ifndef CAT_ALLOC_NEVER_RETURNS_NULL
+#if CAT_ALLOC_HANDLE_ERRORS
     if (unlikely(new_value == NULL)) {
         return cat_false;
     }

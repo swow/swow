@@ -25,8 +25,7 @@ extern "C" {
 #include "cat.h"
 #include "cat_queue.h"
 
-typedef enum
-{
+typedef enum cat_channel_flag_e {
     CAT_CHANNEL_FLAG_NONE    = 0,
     CAT_CHANNEL_FLAG_CLOSING = 1 << 0,
     CAT_CHANNEL_FLAG_CLOSED  = 1 << 1,
@@ -46,14 +45,12 @@ typedef uint8_t cat_channel_data_size_t;
 
 typedef void (*cat_channel_data_dtor_t)(const cat_data_t *data);
 
-typedef struct
-{
+typedef struct cat_channel_bucket_s {
     cat_queue_node_t node;
     char data[1];
 } cat_channel_bucket_t;
 
-typedef struct
-{
+typedef struct cat_channel_s {
     cat_channel_flags_t flags;
     cat_channel_data_size_t data_size;
     cat_channel_data_dtor_t dtor;
@@ -90,14 +87,12 @@ CAT_API void cat_channel_close(cat_channel_t *channel);
 
 /* select */
 
-typedef enum
-{
+typedef enum cat_channel_opcode_e {
     CAT_CHANNEL_OPCODE_PUSH,
     CAT_CHANNEL_OPCODE_POP,
 } cat_channel_opcode_t;
 
-typedef struct
-{
+typedef struct cat_channel_select_message_s {
     cat_channel_t *channel;
     union {
         cat_data_t *common;

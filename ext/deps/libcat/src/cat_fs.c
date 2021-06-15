@@ -27,7 +27,7 @@
 # include <winternl.h>
 #endif // CAT_OS_WIN
 
-typedef enum {
+typedef enum cat_fs_error_type_e {
     CAT_FS_ERROR_NONE = 0, // no error
     CAT_FS_ERROR_ERRNO, // is errno
     CAT_FS_ERROR_CAT_ERRNO, // is cat_errno_t
@@ -37,7 +37,7 @@ typedef enum {
 #endif // CAT_OS_WIN
 } cat_fs_error_type_t;
 
-typedef enum {
+typedef enum cat_fs_freer_type_e {
     CAT_FS_FREER_NONE = 0, // do not free
     CAT_FS_FREER_FREE, // free(x)
     CAT_FS_FREER_CAT_FREE, // cat_free(x)
@@ -540,7 +540,7 @@ static inline cat_errno_t cat_fs_set_error_code(cat_fs_error_t *e)
 #endif // CAT_OS_WIN
         case CAT_FS_ERROR_CAT_ERRNO:
             errno = cat_orig_errno(e->val.cat_errno);
-            return cat_translate_sys_error(errno);
+            return e->val.cat_errno;
         case CAT_FS_ERROR_NONE:
         default:
             // never here
@@ -711,7 +711,7 @@ typedef unsigned int cat_fs_read_size_t;
 typedef unsigned int cat_fs_write_size_t;
 #endif // CAT_OS_WIN
 
-typedef struct {
+typedef struct cat_fs_read_data_s {
     cat_fs_work_ret_t ret;
     int fd;
     void *buf;
@@ -731,7 +731,7 @@ static void cat_fs_read_cb(cat_data_t *ptr)
 CAT_API ssize_t cat_fs_read(cat_file_t fd, void *buf, size_t size)
 {
     cat_fs_read_data_t *data = (cat_fs_read_data_t *) cat_malloc(sizeof(*data));
-#ifndef CAT_ALLOC_NEVER_RETURNS_NULL
+#if CAT_ALLOC_HANDLE_ERRORS
     if (data == NULL) {
         cat_update_last_error_of_syscall("Malloc for fs read failed");
         return -1;
@@ -748,7 +748,7 @@ CAT_API ssize_t cat_fs_read(cat_file_t fd, void *buf, size_t size)
     return data->ret.ret.num;
 }
 
-typedef struct {
+typedef struct cat_fs_write_data_s {
     cat_fs_work_ret_t ret;
     int fd;
     const void* buf;
@@ -768,7 +768,7 @@ static void cat_fs_write_cb(cat_data_t *ptr)
 CAT_API ssize_t cat_fs_write(cat_file_t fd, const void *buf, size_t length)
 {
     cat_fs_write_data_t *data = (cat_fs_write_data_t *) cat_malloc(sizeof(*data));
-#ifndef CAT_ALLOC_NEVER_RETURNS_NULL
+#if CAT_ALLOC_HANDLE_ERRORS
     if (data == NULL) {
         cat_update_last_error_of_syscall("Malloc for fs write failed");
         return -1;
@@ -785,7 +785,7 @@ CAT_API ssize_t cat_fs_write(cat_file_t fd, const void *buf, size_t length)
     return (ssize_t) data->ret.ret.num;
 }
 
-typedef struct {
+typedef struct cat_fs_lseek_data_s {
     cat_fs_work_ret_t ret;
     int fd;
     off_t offset;
@@ -805,7 +805,7 @@ static void cat_fs_lseek_cb(cat_data_t *ptr)
 CAT_API off_t cat_fs_lseek(cat_file_t fd, off_t offset, int whence)
 {
     cat_fs_lseek_data_t *data = (cat_fs_lseek_data_t *) cat_malloc(sizeof(*data));
-#ifndef CAT_ALLOC_NEVER_RETURNS_NULL
+#if CAT_ALLOC_HANDLE_ERRORS
     if (data == NULL) {
         cat_update_last_error_of_syscall("Malloc for fs lseek failed");
         return -1;
@@ -832,7 +832,7 @@ static void cat_fs_dir_async_close(void *ptr)
     }
     dir->dir = ptr;
     cat_fs_context_t *context = (cat_fs_context_t *) cat_malloc(sizeof(*context));
-#ifndef CAT_ALLOC_NEVER_RETURNS_NULL
+#if CAT_ALLOC_HANDLE_ERRORS
     if (context == NULL) {
         goto _malloc_context_error;
     }
@@ -844,13 +844,13 @@ static void cat_fs_dir_async_close(void *ptr)
     return;
     _closedir_error:
     cat_free(context);
-#ifndef CAT_ALLOC_NEVER_RETURNS_NULL
+#if CAT_ALLOC_HANDLE_ERRORS
     _malloc_context_error:
 #endif
     free(dir);
 }
 
-typedef struct {
+typedef struct cat_fs_opendir_data_s {
     cat_fs_work_ret_t ret;
     char *path;
     cat_bool_t canceled;
@@ -894,7 +894,7 @@ CAT_API cat_dir_t *cat_fs_opendir(const char *path)
         return NULL;
     }
     cat_fs_opendir_data_t *data = (cat_fs_opendir_data_t *) cat_malloc(sizeof(*data));
-#ifndef CAT_ALLOC_NEVER_RETURNS_NULL
+#if CAT_ALLOC_HANDLE_ERRORS
     if (data == NULL) {
         cat_update_last_error_of_syscall("Malloc for fs opendir failed");
         return NULL;
@@ -920,7 +920,7 @@ CAT_API cat_dir_t *cat_fs_opendir(const char *path)
     return pdir;
 }
 
-typedef struct {
+typedef struct cat_fs_readdir_data_s {
     cat_fs_work_ret_t ret;
     DIR *dir;
     cat_bool_t canceled;
@@ -1012,7 +1012,7 @@ CAT_API cat_dirent_t *cat_fs_readdir(cat_dir_t *dir)
         return NULL;
     }
     cat_fs_readdir_data_t *data = (cat_fs_readdir_data_t *) cat_malloc(sizeof(*data));
-#ifndef CAT_ALLOC_NEVER_RETURNS_NULL
+#if CAT_ALLOC_HANDLE_ERRORS
     if (data == NULL) {
         cat_update_last_error_of_syscall("Malloc for fs readdir failed");
         return NULL;
@@ -1039,7 +1039,7 @@ CAT_API cat_dirent_t *cat_fs_readdir(cat_dir_t *dir)
     return ret;
 }
 
-typedef struct {
+typedef struct cat_fs_rewinddir_data_s {
     DIR *dir;
     cat_bool_t canceled;
 } cat_fs_rewinddir_data_t;
@@ -1074,7 +1074,7 @@ CAT_API void cat_fs_rewinddir(cat_dir_t *dir)
         return;
     }
     cat_fs_rewinddir_data_t *data = (cat_fs_rewinddir_data_t *) cat_malloc(sizeof(*data));
-#ifndef CAT_ALLOC_NEVER_RETURNS_NULL
+#if CAT_ALLOC_HANDLE_ERRORS
     if (data == NULL) {
         cat_update_last_error_of_syscall("Malloc for fs rewinddir failed");
         return;
@@ -1088,7 +1088,7 @@ CAT_API void cat_fs_rewinddir(cat_dir_t *dir)
     }
 }
 
-typedef struct {
+typedef struct cat_fs_closedir_data_s {
     DIR *dir;
 } cat_fs_closedir_data_t;
 
@@ -1116,7 +1116,7 @@ CAT_API int cat_fs_closedir(cat_dir_t *dir)
         return 0;
     }
     cat_fs_closedir_data_t *data = (cat_fs_closedir_data_t *) cat_malloc(sizeof(*data));
-#ifndef CAT_ALLOC_NEVER_RETURNS_NULL
+#if CAT_ALLOC_HANDLE_ERRORS
     if (data == NULL) {
         cat_update_last_error_of_syscall("Malloc for fs closedir failed");
         return -1;
@@ -1131,7 +1131,7 @@ CAT_API int cat_fs_closedir(cat_dir_t *dir)
 }
 #else
 // use NtQueryDirectoryFile to mock readdir,rewinddir behavior.
-typedef struct {
+typedef struct cat_dir_int_s {
     HANDLE dir;
     cat_bool_t rewind;
 } cat_dir_int_t;
@@ -1183,7 +1183,7 @@ static const char *cat_fs_nt_strerror(NTSTATUS status)
 }
 */
 
-typedef struct {
+typedef struct cat_fs_opendir_data_s {
     cat_fs_work_ret_t ret;
     const char *path;
     cat_bool_t canceled;
@@ -1239,7 +1239,7 @@ CAT_API cat_dir_t *cat_fs_opendir(const char *_path)
         return NULL;
     }
     cat_fs_opendir_data_t *data = (cat_fs_opendir_data_t *) cat_malloc(sizeof(*data));
-#ifndef CAT_ALLOC_NEVER_RETURNS_NULL
+#if CAT_ALLOC_HANDLE_ERRORS
     if (data == NULL) {
         cat_update_last_error_of_syscall("Malloc for fs opendir failed");
         return NULL;
@@ -1267,7 +1267,7 @@ CAT_API cat_dir_t *cat_fs_opendir(const char *_path)
     return pdir;
 }
 
-typedef struct {
+typedef struct cat_fs_closedir_data_s {
     cat_fs_work_ret_t ret;
     HANDLE handle;
 } cat_fs_closedir_data_t;
@@ -1304,7 +1304,7 @@ CAT_API int cat_fs_closedir(cat_dir_t *dir)
         return 0;
     }
     cat_fs_closedir_data_t *data = (cat_fs_closedir_data_t *) cat_malloc(sizeof(*data));
-#ifndef CAT_ALLOC_NEVER_RETURNS_NULL
+#if CAT_ALLOC_HANDLE_ERRORS
     if (data == NULL) {
         cat_update_last_error_of_syscall("Malloc for fs closedir failed");
         return -1;
@@ -1338,7 +1338,7 @@ typedef struct _CAT_FILE_DIRECTORY_INFORMATION {
   WCHAR         FileName[1];
 } CAT_FILE_DIRECTORY_INFORMATION, *CAT_PFILE_DIRECTORY_INFORMATION;
 
-typedef struct {
+typedef struct cat_fs_readdir_data_s {
     cat_fs_work_ret_t ret;
     cat_dir_int_t dir;
 } cat_fs_readdir_data_t;
@@ -1479,7 +1479,7 @@ CAT_API cat_dirent_t *cat_fs_readdir(cat_dir_t *dir)
         return NULL;
     }
     cat_fs_readdir_data_t *data = (cat_fs_readdir_data_t *) cat_malloc(sizeof(*data));
-#ifndef CAT_ALLOC_NEVER_RETURNS_NULL
+#if CAT_ALLOC_HANDLE_ERRORS
     if (data == NULL) {
         cat_update_last_error_of_syscall("Malloc for fs readdir failed");
         return NULL;
@@ -1523,7 +1523,7 @@ CAT_API void cat_fs_rewinddir(cat_dir_t *dir)
 }
 #endif // CAT_OS_WIN
 
-typedef struct {
+typedef struct cat_fs_flock_data_s {
     cat_fs_work_ret_t ret;
     cat_file_t fd;
     int op;
@@ -1546,15 +1546,17 @@ static void cat_fs_orig_flock(cat_data_t *ptr)
 #ifdef CAT_OS_WIN
     // Windows implement
     int op_type = op & (CAT_LOCK_SH | CAT_LOCK_EX | CAT_LOCK_UN);
-    HANDLE hFile = (HANDLE) _get_osfhandle(fd);
-    if (INVALID_HANDLE_VALUE == hFile) {
+    DWORD le;
+    HANDLE hFile;
+    OVERLAPPED overlapped = { 0 };
+    if (INVALID_HANDLE_VALUE == (hFile = (HANDLE) _get_osfhandle(fd))) {
+        // bad fd, return error
         data->ret.error.type = CAT_FS_ERROR_ERRNO;
         data->ret.error.val.error = EBADF;
         data->ret.ret.num = -1;
         goto _done;
     }
 
-    OVERLAPPED overlapped = { 0 };
     // mock unix-like behavier: if we already have a lock,
     // flock only update the lock to specified type (shared or exclusive)
     // so we unlock first, then re-lock it
@@ -1566,75 +1568,73 @@ static void cat_fs_orig_flock(cat_data_t *ptr)
             MAXDWORD,
             &overlapped
         )) &&
-        GetLastError() != ERROR_NOT_LOCKED // not an error
+        (le = GetLastError()) != ERROR_NOT_LOCKED // not an error
     ) {
+        // unlock failed
         // printf("u failed\n");
         // printf("le %08x\n", errno, GetLastError());
         data->ret.error.type = CAT_FS_ERROR_WIN32;
-        data->ret.error.val.le = GetLastError();
+        data->ret.error.val.le = le;
         data->ret.ret.num = -1;
         goto _done;
     }
+
     if (CAT_LOCK_UN == op_type) {
-        // already unlocked
+        // request unlock and already unlocked
         // printf("u end\n");
         data->ret.ret.num = 0;
         goto _done;
     }
 
-    if (CAT_LOCK_EX == op_type || CAT_LOCK_SH == op_type) {
-        DWORD flags = 0;
-        if (CAT_LOCK_EX == op_type) {
-            flags |= LOCKFILE_EXCLUSIVE_LOCK;
-        }
-        if ((CAT_LOCK_NB & op) == CAT_LOCK_NB) {
-            flags |= LOCKFILE_FAIL_IMMEDIATELY;
-        }
-        if (!LockFileEx(
-            hFile,
-            flags,
-            0,
-            MAXDWORD,
-            MAXDWORD,
-            &overlapped
-        )) {
-            // if LOCK_NB is set, but we donot get lock
-            // we should unlock it after it was done (cancelling lock behavior)
-            if ((CAT_LOCK_NB & op) == CAT_LOCK_NB) {
-                // printf("nb wait\n");
-                data->ret.error.type = CAT_FS_ERROR_CAT_ERRNO;
-                data->ret.error.val.le = CAT_EAGAIN;
-                data->ret.ret.num = -1;
-                DWORD dummy;
-                // BOOL done =
-                GetOverlappedResult(hFile, &overlapped, &dummy, 1);
-                // printf("nb wait done\n");
-                UnlockFileEx(
-                    hFile,
-                    0,
-                    MAXDWORD,
-                    MAXDWORD,
-                    &overlapped
-                );
-                // assert(done);
-                goto _done;
-            }
-            // printf("b done\n");
-            data->ret.error.type = CAT_FS_ERROR_WIN32;
-            data->ret.error.val.le = GetLastError();
-            data->ret.ret.num = -1;
-            goto _done;
-        }
-        // printf("nb done\n");
+    if (LockFileEx(
+        hFile,
+        (
+            ((CAT_LOCK_NB & op) ? LOCKFILE_FAIL_IMMEDIATELY : 0) |
+            ((CAT_LOCK_EX == op_type) ? LOCKFILE_EXCLUSIVE_LOCK : 0)
+        ),
+        0,
+        MAXDWORD,
+        MAXDWORD,
+        &overlapped
+    )) {
+        // lock success
         data->ret.ret.num = 0;
         goto _done;
-    } else {
-        // printf("not supported\n");
+    }
+
+    if ((CAT_LOCK_NB & op) != CAT_LOCK_NB) {
+        // blocking lock failed
+        // printf("b done\n");
         data->ret.error.type = CAT_FS_ERROR_WIN32;
-        data->ret.error.val.le = ERROR_INVALID_PARAMETER;
+        data->ret.error.val.le = GetLastError();
         data->ret.ret.num = -1;
         goto _done;
     }
+
+    // if LOCK_NB is set, but we donot get lock
+    // we should unlock it after it was done (cancelling lock behavior)
+    // printf("nb wait\n");
+    data->ret.error.type = CAT_FS_ERROR_CAT_ERRNO;
+    data->ret.error.val.le = CAT_EAGAIN;
+    data->ret.ret.num = -1;
+
+    // tell calling thread return
+    data->done = cat_true;
+    cat_async_notify(&data->async);
+
+    DWORD dummy;
+    // BOOL done =
+    GetOverlappedResult(hFile, &overlapped, &dummy, 1);
+    // printf("nb wait done\n");
+    UnlockFileEx(
+        hFile,
+        0,
+        MAXDWORD,
+        MAXDWORD,
+        &overlapped
+    );
+    return;
+
 #elif defined(LOCK_EX) && defined(LOCK_SH) && defined(LOCK_UN)
     // Linux / BSDs / macOS implement with flock(2)
     int operation = 0;
@@ -1781,8 +1781,16 @@ static void cat_fs_flock_shutdown(cat_data_t *ptr)
 */
 CAT_API int cat_fs_flock(cat_file_t fd, int op)
 {
+    int op_type = (CAT_LOCK_UN | CAT_LOCK_EX | CAT_LOCK_SH) & op;
+    if (
+        (op & (~(CAT_LOCK_NB | CAT_LOCK_UN | CAT_LOCK_EX | CAT_LOCK_SH))) ||
+        (CAT_LOCK_UN != op_type && CAT_LOCK_EX != op_type && CAT_LOCK_SH != op_type)
+    ) {
+        cat_update_last_error_with_reason(CAT_EINVAL, "Flock failed");
+        return -1;
+    }
     cat_fs_flock_data_t *data = (cat_fs_flock_data_t *) cat_malloc(sizeof(*data));
-#ifndef CAT_ALLOC_NEVER_RETURNS_NULL
+#if CAT_ALLOC_HANDLE_ERRORS
     if (data == NULL) {
         cat_update_last_error_of_syscall("Malloc for fs flock failed");
         return -1;

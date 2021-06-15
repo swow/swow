@@ -48,8 +48,11 @@ CAT_API char *cat_vsprintf(const char *format, va_list args)
     size = vsnprintf(NULL, 0, format, _args) + 1;
     va_end(_args);
     string = (char *) cat_malloc(size);
-#ifndef CAT_ALLOC_NEVER_RETURNS_NULL
+#if CAT_ALLOC_HANDLE_ERRORS
     if (unlikely(string == NULL)) {
+        /* no need to update error message, we even have no mem to sprintf,
+           so we may also have no mem to update error message */
+        cat_update_last_error(cat_translate_sys_error(cat_sys_errno), NULL);
         return NULL;
     }
 #endif
@@ -82,7 +85,7 @@ CAT_API char *cat_hexprint(const char *data, size_t length)
     int n;
 
     buffer = (char *) cat_malloc(size + 1);
-#ifndef CAT_ALLOC_NEVER_RETURNS_NULL
+#if CAT_ALLOC_HANDLE_ERRORS
     if (unlikely(buffer == NULL)) {
         return NULL;
     }
@@ -118,8 +121,9 @@ CAT_API char *cat_snrand(char *buffer, size_t count)
 
     if (buffer == NULL) {
         buffer = (char *) cat_malloc(count);
-#ifndef CAT_ALLOC_NEVER_RETURNS_NULL
+#if CAT_ALLOC_HANDLE_ERRORS
         if (unlikely(buffer == NULL)) {
+            cat_update_last_error_of_syscall("Malloc for random string failed");
             return NULL;
         }
 #endif

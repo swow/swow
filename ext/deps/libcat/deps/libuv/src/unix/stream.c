@@ -1011,6 +1011,7 @@ uv_handle_type uv__handle_type(int fd) {
 static void uv__stream_eof(uv_stream_t* stream, const uv_buf_t* buf) {
   stream->flags |= UV_HANDLE_READ_EOF;
   stream->flags &= ~UV_HANDLE_READING;
+  stream->flags &= ~UV_HANDLE_READABLE;
   uv__io_stop(stream->loop, &stream->io_watcher, POLLIN);
   if (!uv__io_active(&stream->io_watcher, POLLOUT))
     uv__handle_stop(stream);
@@ -1198,6 +1199,7 @@ static void uv__read(uv_stream_t* stream) {
 #endif
       } else {
         /* Error. User should call uv_close(). */
+        stream->flags &= ~(UV_HANDLE_READABLE | UV_HANDLE_WRITABLE);
         stream->read_cb(stream, UV__ERR(errno), &buf);
         if (stream->flags & UV_HANDLE_READING) {
           stream->flags &= ~UV_HANDLE_READING;
@@ -1286,6 +1288,7 @@ int uv_shutdown(uv_shutdown_t* req, uv_stream_t* stream, uv_shutdown_cb cb) {
   req->cb = cb;
   stream->shutdown_req = req;
   stream->flags |= UV_HANDLE_SHUTTING;
+  stream->flags &= ~UV_HANDLE_WRITABLE;
 
   uv__io_start(stream->loop, &stream->io_watcher, POLLOUT);
   uv__stream_osx_interrupt_select(stream);
@@ -1519,16 +1522,17 @@ int uv_write(uv_write_t* req,
 }
 
 
-#ifndef HAVE_LIBCAT
 int uv_try_write(uv_stream_t* stream,
                  const uv_buf_t bufs[],
                  unsigned int nbufs) {
-#else
+  return uv_try_write2(stream, bufs, nbufs, NULL);
+}
+
+
 int uv_try_write2(uv_stream_t* stream,
-                 const uv_buf_t bufs[],
-                 unsigned int nbufs,
-                 uv_stream_t* send_handle) {
-#endif
+                  const uv_buf_t bufs[],
+                  unsigned int nbufs,
+                  uv_stream_t* send_handle) {
   int err;
 
   /* Connecting or already writing some data */
@@ -1539,21 +1543,8 @@ int uv_try_write2(uv_stream_t* stream,
   if (err < 0)
     return err;
 
-#ifndef HAVE_LIBCAT
-  return uv__try_write(stream, bufs, nbufs, NULL);
-#else
   return uv__try_write(stream, bufs, nbufs, send_handle);
-#endif
 }
-
-
-#ifdef HAVE_LIBCAT
-int uv_try_write(uv_stream_t* stream,
-                 const uv_buf_t bufs[],
-                 unsigned int nbufs) {
-    return uv_try_write2(stream, bufs, nbufs, NULL);
-}
-#endif
 
 
 int uv__read_start(uv_stream_t* stream,

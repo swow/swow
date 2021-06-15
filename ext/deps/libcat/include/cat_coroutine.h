@@ -50,8 +50,7 @@ typedef uint64_t cat_coroutine_id_t;
 #define CAT_COROUTINE_ID_FMT "%" PRIu64
 #define CAT_COROUTINE_ID_FMT_SPEC PRIu64
 
-typedef enum
-{
+typedef enum cat_coroutine_flag_e {
     CAT_COROUTINE_FLAG_NONE = 0,
     /* for user */
 #define CAT_COROUTINE_FLAG_USR_GEN(XX) \
@@ -78,15 +77,13 @@ typedef uint32_t cat_coroutine_flags_t;
     XX(FINISHED, 5, "finished") \
     XX(DEAD,     6, "dead") \
 
-typedef enum
-{
+typedef enum cat_coroutine_state_e {
 #define CAT_COROUTINE_STATE_GEN(name, value, unused) CAT_ENUM_GEN(CAT_COROUTINE_STATE_, name, value)
     CAT_COROUTINE_STATE_MAP(CAT_COROUTINE_STATE_GEN)
 #undef CAT_COROUTINE_STATE_GEN
 } cat_coroutine_state_t;
 
-typedef enum
-{
+typedef enum cat_coroutine_opcode_e {
     /* built-in (0 ~ 7) */
     CAT_COROUTINE_OPCODE_NONE     = 0,
     CAT_COROUTINE_OPCODE_CHECKED  = 1 << 0, /* we have already checked if it is resumable */
@@ -252,7 +249,7 @@ CAT_API char *cat_coroutine_get_elapsed_as_string(const cat_coroutine_t *corouti
 /* scheduler */
 typedef void (*cat_coroutine_schedule_function_t)(void);
 typedef void (*cat_coroutine_dead_lock_function_t)(void);
-typedef struct {
+typedef struct cat_coroutine_scheduler_s {
     cat_coroutine_schedule_function_t schedule;
     cat_coroutine_dead_lock_function_t dead_lock;
 } cat_coroutine_scheduler_t;

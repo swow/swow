@@ -58,7 +58,7 @@ CAT_API struct addrinfo *cat_dns_getaddrinfo_ex(const char *hostname, const char
     cat_bool_t ret;
     int error;
 
-#ifndef CAT_ALLOC_NEVER_RETURNS_NULL
+#if CAT_ALLOC_HANDLE_ERRORS
     if (unlikely(context == NULL)) {
         cat_update_last_error_of_syscall("Malloc for DNS getaddrinfo context failed");
         return NULL;

@@ -60,7 +60,7 @@ CAT_API cat_bool_t cat_work(cat_work_kind_t kind, cat_work_function_t function, 
     cat_work_context_t *context = (cat_work_context_t *) cat_malloc(sizeof(*context));
     cat_bool_t ret;
 
-#ifndef CAT_ALLOC_NEVER_RETURNS_NULL
+#if CAT_ALLOC_HANDLE_ERRORS
     if (unlikely(context == NULL)) {
         cat_update_last_error_of_syscall("Malloc for work context failed");
         if (cleanup != NULL) {

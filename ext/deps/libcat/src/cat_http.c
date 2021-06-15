@@ -176,7 +176,7 @@ CAT_API cat_http_parser_t *cat_http_parser_create(cat_http_parser_t *parser)
 {
     if (parser == NULL) {
         parser = (cat_http_parser_t *) cat_malloc(sizeof(*parser));
-#ifndef CAT_ALLOC_NEVER_RETURNS_NULL
+#if CAT_ALLOC_HANDLE_ERRORS
         if (unlikely(parser == NULL)) {
             cat_update_last_error_of_syscall("Malloc for HTTP parser failed");
             return NULL;
