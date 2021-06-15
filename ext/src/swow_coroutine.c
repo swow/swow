@@ -447,15 +447,15 @@ static void swow_coroutine_main_close(void)
 
 SWOW_API swow_coroutine_t *swow_coroutine_create(zval *zcallable)
 {
-    return swow_coroutine_create_ex(zcallable, 0, 0);
+    return swow_coroutine_create_ex(NULL, zcallable, 0, 0);
 }
 
-SWOW_API swow_coroutine_t *swow_coroutine_create_ex(zval *zcallable, size_t stack_page_size, size_t c_stack_size)
+SWOW_API swow_coroutine_t *swow_coroutine_create_ex(zend_class_entry *ce, zval *zcallable, size_t stack_page_size, size_t c_stack_size)
 {
     swow_coroutine_t *scoroutine;
 
     scoroutine = swow_coroutine_get_from_object(
-        swow_object_create(swow_coroutine_ce)
+        swow_object_create(ce == NULL ? swow_coroutine_ce : ce)
     );
 
     if (UNEXPECTED(!swow_coroutine_construct(scoroutine, zcallable, stack_page_size, c_stack_size))) {
@@ -1261,7 +1261,7 @@ static PHP_METHOD(Swow_Coroutine, run)
         Z_PARAM_VARIADIC('*', fci.params, fci.param_count)
     ZEND_PARSE_PARAMETERS_END();
 
-    swow_coroutine_t *scoroutine = swow_coroutine_create(zcallable);
+    swow_coroutine_t *scoroutine = swow_coroutine_create_ex(zend_get_called_scope(execute_data), zcallable, 0, 0);
     if (UNEXPECTED(scoroutine == NULL)) {
         swow_throw_exception_with_last(swow_coroutine_exception_ce);
         RETURN_THROWS();

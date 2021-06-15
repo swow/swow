@@ -174,7 +174,7 @@ static cat_always_inline swow_coroutine_t *swow_coroutine_get_from_object(zend_o
 
 /* create */
 SWOW_API swow_coroutine_t *swow_coroutine_create(zval *zcallable);
-SWOW_API swow_coroutine_t *swow_coroutine_create_ex(zval *zcallable, size_t stack_page_size, size_t c_stack_size);
+SWOW_API swow_coroutine_t *swow_coroutine_create_ex(zend_class_entry *ce, zval *zcallable, size_t stack_page_size, size_t c_stack_size);
 SWOW_API void swow_coroutine_close(swow_coroutine_t *scoroutine);
 
 /* switch */
