@@ -61,7 +61,6 @@ for ($c = 0; $c < TEST_MAX_CONCURRENCY; $c++) {
                 $packet = $client->readString(TEST_MAX_LENGTH);
                 Assert::same($packet, $randoms[$n]);
             }
-            $client->close();
         });
         for ($n = 0; $n < TEST_MAX_REQUESTS; $n++) {
             $client->sendString($randoms[$n]);
