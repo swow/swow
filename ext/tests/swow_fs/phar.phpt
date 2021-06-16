@@ -3,6 +3,9 @@ swow_fs: phar functionality
 --SKIPIF--
 <?php
 require __DIR__ . '/../include/skipif.php';
+if(!extension_loaded('phar')){
+    skip("phar extension is not enabled");
+}
 $loaded1 = shell_exec(PHP_BINARY . " -m");
 if(false === strpos($loaded1, "Swow")){
     $loaded2 = shell_exec(PHP_BINARY . " -dextension=swow --ri swow");
