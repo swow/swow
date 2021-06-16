@@ -2,7 +2,7 @@ name: git mirrors
 
 on:
   push:
-    branches: develop
+    branches: [ 'develop' ]
   delete:
   create:
 
