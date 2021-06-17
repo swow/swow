@@ -170,8 +170,7 @@ static PHP_METHOD(Swow_Http_Parser, execute)
     ret = cat_http_parser_execute(parser, buffer, length);
 
     /* anyway, update the parsed length */
-    sparser->parsed_length = cat_http_parser_get_parsed_length(parser, buffer);
-    swow_buffer_virtual_read(sbuffer, sparser->parsed_length);
+    swow_buffer_virtual_read(sbuffer, cat_http_parser_get_parsed_length(parser));
 
     if (UNEXPECTED(!ret)) {
         swow_throw_exception_with_last(swow_http_parser_exception_ce);
@@ -237,9 +236,11 @@ static PHP_METHOD(Swow_Http_Parser, getDataLength)
 
 static PHP_METHOD(Swow_Http_Parser, getParsedLength)
 {
+    SWOW_HTTP_PARSER_GETTER(sparser, parser);
+
     ZEND_PARSE_PARAMETERS_NONE();
 
-    RETURN_LONG(getThisParser()->parsed_length);
+    RETURN_LONG(cat_http_parser_get_parsed_length(parser));
 }
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Http_Parser_getBool, ZEND_RETURN_VALUE, 0, _IS_BOOL, 0)
@@ -385,7 +386,6 @@ static PHP_METHOD(Swow_Http_Parser, reset)
     ZEND_PARSE_PARAMETERS_NONE();
 
     cat_http_parser_reset(parser);
-    sparser->parsed_length = 0;
     sparser->data_offset = 0;
 
     RETURN_THIS();

@@ -36,7 +36,6 @@ typedef struct
 {
     cat_http_parser_t parser;
     size_t data_offset;
-    size_t parsed_length;
     zend_object std;
 } swow_http_parser_t;
 
