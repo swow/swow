@@ -188,48 +188,6 @@ static PHP_METHOD(Swow_Http_Parser, execute)
     RETURN_LONG(parser->event);
 }
 
-#if 0
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Http_Parser_executeString, ZEND_RETURN_VALUE, 1, IS_LONG, 0)
-    ZEND_ARG_TYPE_INFO(0, string, IS_STRING, 0)
-    ZEND_ARG_TYPE_INFO(0, string_offset, IS_LONG, 0)
-    ZEND_ARG_TYPE_INFO(0, string_length, IS_LONG, 0)
-ZEND_END_ARG_INFO()
-
-static PHP_METHOD(Swow_Http_Parser, executeString)
-{
-    SWOW_HTTP_PARSER_GETTER(sparser, parser);
-    zend_string *string;
-    zend_long offset = 0;
-    const char *data;
-    zend_long length = 0;
-    cat_bool_t ret;
-
-    ZEND_PARSE_PARAMETERS_START(1, 3)
-        Z_PARAM_STR(string)
-        Z_PARAM_OPTIONAL
-        Z_PARAM_LONG(offset)
-        Z_PARAM_LONG(length)
-    ZEND_PARSE_PARAMETERS_END();
-
-    SWOW_BUFFER_CHECK_STRING_SCOPE(string, offset, length);
-    data = ZSTR_VAL(string) + offset;
-
-    ret = cat_http_parser_execute(parser, data, length);
-
-    /* anyway, update the parsed length */
-    sparser->parsed_length = cat_http_parser_get_parsed_length(parser, data);
-
-    if (UNEXPECTED(!ret)) {
-        swow_throw_exception_with_last(swow_http_parser_exception_ce);
-        RETURN_THROWS();
-    }
-
-    sparser->data_offset = parser->data - ZSTR_VAL(string);
-
-    RETURN_LONG(parser->event);
-}
-#endif
-
 #define arginfo_class_Swow_Http_Parser_getEvent arginfo_class_Swow_Http_Parser_getLong
 
 static PHP_METHOD(Swow_Http_Parser, getEvent)
