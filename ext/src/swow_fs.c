@@ -1040,7 +1040,7 @@ SWOW_API php_stream *_swow_stream_fopen_from_file(FILE *file, const char *mode S
             stream->flags |= PHP_STREAM_FLAG_NO_SEEK;
             stream->position = -1;
         } else {
-            stream->position = zend_ftell(file);
+            stream->position = cat_fs_ftell(file);
         }
     }
 
@@ -1115,12 +1115,11 @@ static swow_ssize_t swow_stdiop_fs_write(php_stream *stream, const char *buf, si
         if (data->is_seekable && data->last_op == 'r')
 # endif // PHP_VERSION_ID < 70400
         {
-            zend_fseek(data->file, 0, SEEK_CUR);
+            cat_fs_fseek(data->file, 0, SEEK_CUR);
         }
         data->last_op = 'w';
 #endif // HAVE_FLUSHIO
-        // todo: cat_work it
-        return (swow_ssize_t) fwrite(buf, 1, count, data->file);
+        return (swow_ssize_t) cat_fs_fwrite(buf, 1, count, data->file);
     }
 }
 
@@ -1204,11 +1203,10 @@ static swow_ssize_t swow_stdiop_fs_read(php_stream *stream, char *buf, size_t co
 #else
         if (data->is_seekable && data->last_op == 'w')
 #endif
-            zend_fseek(data->file, 0, SEEK_CUR);
+            cat_fs_fseek(data->file, 0, SEEK_CUR);
         data->last_op = 'r';
 #endif
-        // TODO: cat_work it
-        ret = fread(buf, 1, count, data->file);
+        ret = cat_fs_fread(buf, 1, count, data->file);
 
         stream->eof = feof(data->file);
     }
@@ -1250,8 +1248,7 @@ static int swow_stdiop_fs_close(php_stream *stream, int close_handle)
                 }
 #endif
             } else {
-                // todo: use cat_work to fclose
-                ret = fclose(data->file);
+                ret = cat_fs_fclose(data->file);
                 data->file = NULL;
             }
         } else if (data->fd != -1) {
@@ -1291,8 +1288,7 @@ static int swow_stdiop_fs_flush(php_stream *stream)
      * something completely different.
      */
     if (data->file) {
-        // todo: use cat_work to wrap it
-        return fflush(data->file);
+        return cat_fs_fflush(data->file);
     }
     return 0;
 }
@@ -1354,12 +1350,11 @@ static int swow_stdiop_fs_seek(php_stream *stream, zend_off_t offset, int whence
         return 0;
 
     } else {
-        // todo: cat_work
-        ret = zend_fseek(data->file, offset, whence);
-        *newoffset = zend_ftell(data->file);
+        ret = cat_fs_fseek(data->file, offset, whence);
+        *newoffset = cat_fs_ftell(data->file);
         return ret;
     }
-}
+} 
 
 static int swow_stdiop_fs_cast(php_stream *stream, int castas, void **ret)
 {
@@ -1408,8 +1403,7 @@ static int swow_stdiop_fs_cast(php_stream *stream, int castas, void **ret)
                 return FAILURE;
             }
             if (data->file) {
-                // todo: cat_work
-                fflush(data->file);
+                cat_fs_fflush(data->file);
             }
             if (ret) {
                 *(php_socket_t *)ret = fd;
