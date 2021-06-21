@@ -26,7 +26,7 @@ int usleep(unsigned int usec);
 C
 );
 // syscall blocking 100ms
-$ffi->usleep(100 * 1000);
+$ffi->usleep(100 * 1000 * (PHP_OS_FAMILY === 'Darwin' ? 10 : 1));
 
 ?>
 --EXPECTREGEX--
