@@ -108,11 +108,9 @@ static int cat_http_parser_on_##name(llhttp_t *llhttp) \
     cat_http_parser_t *parser = cat_http_parser_get_from_handle(llhttp); \
     \
     if (parser->event != CAT_HTTP_PARSER_EVENT_##NAME) { \
-        /* first execute, may paused */ \
+        /* first execute, always paused to update current pos */ \
         parser->event = CAT_HTTP_PARSER_EVENT_##NAME; \
-        if ((cat_http_parser_event_t) (parser->events & parser->event) == parser->event) { \
-            return HPE_PAUSED; \
-        } \
+        return HPE_PAUSED; \
     } \
     \
     return HPE_OK; \
@@ -120,18 +118,20 @@ static int cat_http_parser_on_##name(llhttp_t *llhttp) \
 
 CAT_HTTP_PARSER_ON_EVENT(message_begin,         MESSAGE_BEGIN        )
 CAT_HTTP_PARSER_ON_DATA (url,                   URL                  )
-CAT_HTTP_PARSER_ON_EVENT(url_complete,          URL_COMPLETE         )
 CAT_HTTP_PARSER_ON_DATA (status,                STATUS               )
-CAT_HTTP_PARSER_ON_EVENT(status_complete,       STATUS_COMPLETE      )
 CAT_HTTP_PARSER_ON_DATA (header_field,          HEADER_FIELD         )
 CAT_HTTP_PARSER_ON_DATA (header_value,          HEADER_VALUE         )
-CAT_HTTP_PARSER_ON_EVENT(header_field_complete, HEADER_FIELD_COMPLETE)
-CAT_HTTP_PARSER_ON_EVENT(header_value_complete, HEADER_VALUE_COMPLETE)
 CAT_HTTP_PARSER_ON_HDONE(headers_complete,      HEADERS_COMPLETE     )
 CAT_HTTP_PARSER_ON_DATA (body,                  BODY                 )
 CAT_HTTP_PARSER_ON_EVENT(chunk_header,          CHUNK_HEADER         )
 CAT_HTTP_PARSER_ON_EVENT(chunk_complete,        CHUNK_COMPLETE       )
 CAT_HTTP_PARSER_ON_DONE (message_complete,      MESSAGE_COMPLETE     )
+#if 0
+CAT_HTTP_PARSER_ON_EVENT(url_complete,          URL_COMPLETE         )
+CAT_HTTP_PARSER_ON_EVENT(status_complete,       STATUS_COMPLETE      )
+CAT_HTTP_PARSER_ON_EVENT(header_field_complete, HEADER_FIELD_COMPLETE)
+CAT_HTTP_PARSER_ON_EVENT(header_value_complete, HEADER_VALUE_COMPLETE)
+#endif
 
 const llhttp_settings_t cat_http_parser_settings = {
     cat_http_parser_on_message_begin,
@@ -144,10 +144,14 @@ const llhttp_settings_t cat_http_parser_settings = {
     cat_http_parser_on_message_complete,
     cat_http_parser_on_chunk_header,
     cat_http_parser_on_chunk_complete,
+#if 0
     cat_http_parser_on_url_complete,
     cat_http_parser_on_status_complete,
     cat_http_parser_on_header_field_complete,
     cat_http_parser_on_header_value_complete,
+#else
+    NULL, NULL, NULL, NULL,
+#endif
 };
 
 static cat_always_inline void cat_http_parser__init(cat_http_parser_t *parser)
@@ -155,6 +159,7 @@ static cat_always_inline void cat_http_parser__init(cat_http_parser_t *parser)
     parser->llhttp.method = CAT_HTTP_METHOD_UNKNOWN;
     parser->data = NULL;
     parser->data_length = 0;
+    parser->parsed_length = 0;
     parser->keep_alive = cat_false;
 }
 
@@ -221,23 +226,29 @@ CAT_API cat_bool_t cat_http_parser_execute(cat_http_parser_t *parser, const char
     parser->event = CAT_HTTP_PARSER_EVENT_NONE;
     llhttp_resume(&parser->llhttp);
     error = llhttp_execute(&parser->llhttp, data, length);
-    if (unlikely(error != HPE_OK)) {
+    if (error != HPE_OK) {
+        parser->parsed_length = llhttp_get_error_pos(&parser->llhttp) - data;
         if (unlikely(error != HPE_PAUSED)) {
             if (unlikely(error != HPE_PAUSED_UPGRADE)) {
                 goto _error;
             }
-        } else if (unlikely(parser->event == CAT_HTTP_PARSER_EVENT_MESSAGE_COMPLETE)) {
-            llhttp_resume(&parser->llhttp);
-            error = llhttp_execute(&parser->llhttp, NULL, 0);
-            if (unlikely(error != HPE_OK && error != HPE_PAUSED_UPGRADE)) {
-                goto _error;
+        } else {
+            if (unlikely(parser->event == CAT_HTTP_PARSER_EVENT_MESSAGE_COMPLETE)) {
+                llhttp_resume(&parser->llhttp);
+                error = llhttp_execute(&parser->llhttp, NULL, 0);
+                if (unlikely(error != HPE_OK && error != HPE_PAUSED_UPGRADE)) {
+                    goto _error;
+                }
             }
         }
+    } else {
+        parser->parsed_length = 0;
     }
 
     return cat_true;
 
     _error:
+    parser->parsed_length = 0;
     cat_update_last_error(error, "HTTP-Parser execute failed: %s", llhttp_errno_name(error));
     return cat_false;
 }
@@ -312,9 +323,14 @@ CAT_API const char *cat_http_parser_get_current_pos(const cat_http_parser_t *par
     return llhttp_get_error_pos(&parser->llhttp);
 }
 
-CAT_API size_t cat_http_parser_get_parsed_length(cat_http_parser_t *parser, const char *data)
+CAT_API size_t cat_http_parser_get_parsed_length(const cat_http_parser_t *parser)
 {
-    const char *p = cat_http_parser_get_current_pos(parser);
+    return parser->parsed_length;
+}
+
+CAT_API size_t cat_http_parser_get_parsed_offset(const cat_http_parser_t *parser, const char *data)
+{
+    const char *p = llhttp_get_error_pos(&parser->llhttp);
 
     if (p == NULL) {
         return 0;

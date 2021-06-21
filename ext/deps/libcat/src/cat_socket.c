@@ -2314,11 +2314,14 @@ static cat_never_inline cat_bool_t cat_socket_internal_udg_write(
     }
 
     while (1) {
-        struct msghdr msg = { };
+        struct msghdr msg;
         msg.msg_name = (struct sockaddr *) address;
         msg.msg_namelen = address_length;
         msg.msg_iov = (struct iovec *) vector;
         msg.msg_iovlen = vector_count;
+        msg.msg_control = NULL;
+        msg.msg_controllen = 0;
+        msg.msg_flags = 0;
         do {
             error = sendmsg(fd, &msg, 0);
         } while (error < 0 && CAT_SOCKET_RETRY_ON_WRITE_ERROR(cat_sys_errno));
@@ -3450,6 +3453,23 @@ static void cat_socket_close_by_handle_callback(uv_handle_t* handle, void* arg)
 CAT_API void cat_socket_close_all(void)
 {
     uv_walk(cat_event_loop, cat_socket_close_by_handle_callback, NULL);
+}
+
+CAT_API cat_bool_t cat_socket_move(cat_socket_t *from, cat_socket_t *to)
+{
+    if (from->internal != NULL && from->internal->io_flags != CAT_SOCKET_IO_FLAG_NONE) {
+        // TODO: make it work
+        cat_update_last_error(CAT_EMISUSE, "Socket is immovable during IO operations");
+        return cat_false;
+    }
+
+    *to = *from;
+    if (from->internal != NULL) {
+        from->internal = NULL;
+        to->internal->u.socket = to;
+    }
+
+    return cat_true;
 }
 
 /* pipe */

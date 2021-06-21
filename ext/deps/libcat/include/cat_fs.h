@@ -60,8 +60,6 @@ extern "C" {
 
 typedef uv_stat_t cat_stat_t;
 typedef uv_statfs_t cat_statfs_t;
-typedef uv_uid_t cat_uid_t;
-typedef uv_gid_t cat_gid_t;
 typedef uv_file cat_file_t;
 
 #define CAT_DIRENT_UNKNOWN    UV_DIRENT_UNKNOWN
@@ -99,13 +97,32 @@ typedef void cat_dir_t;
 CAT_API cat_file_t cat_fs_open(const char *path, int flags, ...);
 CAT_API ssize_t cat_fs_pread(cat_file_t fd, void *buffer, size_t size, off_t offset);
 CAT_API ssize_t cat_fs_pwrite(cat_file_t fd, const void *buffer, size_t length, off_t offset);
-CAT_API ssize_t cat_fs_read(cat_file_t fd, void *buffer, size_t size);
-CAT_API ssize_t cat_fs_write(cat_file_t fd, const void *buffer, size_t length);
 CAT_API int cat_fs_close(cat_file_t fd);
 CAT_API off_t cat_fs_lseek(cat_file_t fd, off_t offset, int whence);
 CAT_API int cat_fs_fsync(cat_file_t fd);
 CAT_API int cat_fs_fdatasync(cat_file_t fd);
 CAT_API int cat_fs_ftruncate(cat_file_t fd, int64_t offset);
+
+/*
+  Note: fopen(3) is not fork-safe,
+  back fd for a FILE struct may be modified without modifing itself
+  Use cat_fs_open to get a fd, manually manage the fd,
+  then use fdopen(3) to make FILE struct up for other C stream functions.
+*/
+// TODO: implement this
+/* CAT_API FILE *cat_fs_fopen(const char *path, const char *mode); */
+
+CAT_API ssize_t cat_fs_read(cat_file_t fd, void *buffer, size_t size);
+CAT_API ssize_t cat_fs_write(cat_file_t fd, const void *buffer, size_t length);
+CAT_API size_t cat_fs_fread(void *ptr, size_t size, size_t nmemb, FILE *stream);
+CAT_API size_t cat_fs_fwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream);
+CAT_API int cat_fs_fseek(FILE *stream, off_t offset, int whence);
+CAT_API off_t cat_fs_ftell(FILE *stream);
+CAT_API int cat_fs_fflush(FILE *stream);
+/*
+  Note: fclose will also close the backing fd that the struct used
+*/
+CAT_API int cat_fs_fclose(FILE *stream);
 
 CAT_API cat_dir_t *cat_fs_opendir(const char *path);
 CAT_API cat_dirent_t *cat_fs_readdir(cat_dir_t *dir);

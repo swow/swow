@@ -310,11 +310,14 @@ CAT_API CURLcode cat_curl_easy_perform(CURL *ch)
     );
     mcode = curl_multi_add_handle(context.multi, ch);
     if (unlikely(mcode != CURLM_OK)) {
+#if (LIBCURL_VERSION_NUM >= ((7) << 16 | (32) << 8 | (1)))
+/* See: https://github.com/curl/curl/commit/19122c07682c268c2383218f62e09c3d24a41e76 */
         if (mcode == CURLM_ADDED_ALREADY) {
             /* cURL is busy with IO,
              * and can not find appropriate error code. */
             code = CURLE_AGAIN;
         }
+#endif
         goto _add_failed;
     }
 

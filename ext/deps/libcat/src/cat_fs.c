@@ -27,6 +27,16 @@
 # include <winternl.h>
 #endif // CAT_OS_WIN
 
+#ifdef CAT_OS_WIN
+# ifdef _WIN64
+#  define fseeko _fseeki64
+#  define ftello _ftelli64
+# else
+#  define fseeko fseek
+#  define ftello ftell
+# endif // _WIN64
+#endif // CAT_OS_WIN
+
 typedef enum cat_fs_error_type_e {
     CAT_FS_ERROR_NONE = 0, // no error
     CAT_FS_ERROR_ERRNO, // is errno
@@ -149,7 +159,7 @@ do { \
         path = NULL; \
         break; \
     } \
-    const size_t lenpath = strnlen(_path, 32767); \
+    const size_t lenpath = cat_strnlen(_path, 32767); \
     if ( \
         !( /* not  \\?\-ed */ \
             '\\' == _path[0] && \
@@ -405,7 +415,7 @@ CAT_API int cat_fs_readlink(const char *_path, char *buf, size_t len)
 {
     wrappath(_path, path);
     CAT_FS_DO_RESULT_EX({return (int)-1;}, {
-        size_t ret = strnlen(context->fs.ptr, PATH_MAX);
+        size_t ret = cat_strnlen(context->fs.ptr, PATH_MAX);
         if (ret > len) {
             // will truncate
             ret = len;
@@ -690,7 +700,7 @@ static inline void cat_fs_error_msg_free(cat_fs_error_t *e)
 #define cat_fs_work_check_error(error, fmt) do { \
     cat_fs_error_t *_error = error; \
     if (_error->type != CAT_FS_ERROR_NONE) { \
-        cat_fs_work_error(_error, fmt " failed: %s"); \
+        cat_fs_work_error(_error, "File-System " fmt " failed: %s"); \
     } \
 } while (0)
 
@@ -744,7 +754,7 @@ CAT_API ssize_t cat_fs_read(cat_file_t fd, void *buf, size_t size)
     if (!cat_work(CAT_WORK_KIND_FAST_IO, cat_fs_read_cb, cat_free_function, data, CAT_TIMEOUT_FOREVER)) {
         return -1;
     }
-    cat_fs_work_check_error(&data->ret.error, "Read");
+    cat_fs_work_check_error(&data->ret.error, "read");
     return data->ret.ret.num;
 }
 
@@ -781,7 +791,7 @@ CAT_API ssize_t cat_fs_write(cat_file_t fd, const void *buf, size_t length)
     if (!cat_work(CAT_WORK_KIND_FAST_IO, cat_fs_write_cb, cat_free_function, data, CAT_TIMEOUT_FOREVER)) {
         return -1;
     }
-    cat_fs_work_check_error(&data->ret.error, "Write");
+    cat_fs_work_check_error(&data->ret.error, "write");
     return (ssize_t) data->ret.ret.num;
 }
 
@@ -818,13 +828,239 @@ CAT_API off_t cat_fs_lseek(cat_file_t fd, off_t offset, int whence)
     if (!cat_work(CAT_WORK_KIND_FAST_IO, cat_fs_lseek_cb, cat_free_function, data, CAT_TIMEOUT_FOREVER)) {
         return -1;
     }
-    cat_fs_work_check_error(&data->ret.error, "Calling lseek");
+    cat_fs_work_check_error(&data->ret.error, "lseek");
     return (off_t) data->ret.ret.num;
 }
 
+// TODO: fopen wrapper
+
+typedef struct cat_fs_fclose_data_s {
+    cat_fs_work_ret_t ret;
+    FILE* stream;
+} cat_fs_fclose_data_t;
+
+static void cat_fs_fclose_cb(cat_data_t *ptr)
+{
+    cat_fs_fclose_data_t *data = (cat_fs_fclose_data_t *) ptr;
+    data->ret.ret.num = fclose(data->stream);
+    if (0 != data->ret.ret.num) {
+        data->ret.error.type = CAT_FS_ERROR_ERRNO;
+        data->ret.error.val.error = errno;
+    }
+}
+
+CAT_API int cat_fs_fclose(FILE *stream)
+{
+    if (stream == NULL) {
+        cat_fs_error_t error = { 0 };
+        error.type = CAT_FS_ERROR_ERRNO;
+        error.val.error = EINVAL;
+        cat_fs_work_error(&error, "File-System fclose failed: %s");
+        return -1;
+    }
+    cat_fs_fclose_data_t *data = (cat_fs_fclose_data_t *) cat_malloc(sizeof(*data));
+#if CAT_ALLOC_HANDLE_ERRORS
+    if (data == NULL) {
+        cat_update_last_error_of_syscall("Malloc for fs fclose failed");
+        return -1;
+    }
+#endif
+    memset(&data->ret, 0, sizeof(data->ret));
+    data->stream = stream;
+    if (!cat_work(CAT_WORK_KIND_FAST_IO, cat_fs_fclose_cb, cat_free_function, data, CAT_TIMEOUT_FOREVER)) {
+        return -1;
+    }
+    cat_fs_work_check_error(&data->ret.error, "fclose");
+    return (int) data->ret.ret.num;
+}
+
+typedef struct cat_fs_fread_data_s {
+    cat_fs_work_ret_t ret;
+    void *ptr;
+    size_t size;
+    size_t nmemb;
+    FILE *stream;
+} cat_fs_fread_data_t;
+
+static void cat_fs_fread_cb(cat_data_t *ptr)
+{
+    cat_fs_fread_data_t *data = (cat_fs_fread_data_t *) ptr;
+    errno = 0;
+    data->ret.ret.num = fread(data->ptr, data->size, data->nmemb, data->stream);
+    if (0 != errno) {
+        data->ret.error.type = CAT_FS_ERROR_ERRNO;
+        data->ret.error.val.error = errno;
+    }
+}
+
+CAT_API size_t cat_fs_fread(void *ptr, size_t size, size_t nmemb, FILE *stream)
+{
+    cat_fs_fread_data_t *data = (cat_fs_fread_data_t *) cat_malloc(sizeof(*data));
+#if CAT_ALLOC_HANDLE_ERRORS
+    if (data == NULL) {
+        cat_update_last_error_of_syscall("Malloc for fs fread failed");
+        return 0;
+    }
+#endif
+    memset(&data->ret, 0, sizeof(data->ret));
+    data->ptr = ptr;
+    data->size = size;
+    data->nmemb = nmemb;
+    data->stream = stream;
+    if (!cat_work(CAT_WORK_KIND_FAST_IO, cat_fs_fread_cb, cat_free_function, data, CAT_TIMEOUT_FOREVER)) {
+        return 0;
+    }
+    cat_fs_work_check_error(&data->ret.error, "fread");
+    return (size_t) data->ret.ret.num;
+}
+
+typedef struct cat_fs_fwrite_data_s {
+    cat_fs_work_ret_t ret;
+    const void *ptr;
+    size_t size;
+    size_t nmemb;
+    FILE *stream;
+} cat_fs_fwrite_data_t;
+
+static void cat_fs_fwrite_cb(cat_data_t *ptr)
+{
+    cat_fs_fwrite_data_t *data = (cat_fs_fwrite_data_t *) ptr;
+    errno = 0;
+    data->ret.ret.num = fwrite(data->ptr, data->size, data->nmemb, data->stream);
+    if (0 != errno) {
+        data->ret.error.type = CAT_FS_ERROR_ERRNO;
+        data->ret.error.val.error = errno;
+    }
+}
+
+CAT_API size_t cat_fs_fwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream)
+{
+    cat_fs_fwrite_data_t *data = (cat_fs_fwrite_data_t *) cat_malloc(sizeof(*data));
+#if CAT_ALLOC_HANDLE_ERRORS
+    if (data == NULL) {
+        cat_update_last_error_of_syscall("Malloc for fs fwrite failed");
+        return 0;
+    }
+#endif
+    memset(&data->ret, 0, sizeof(data->ret));
+    data->ptr = ptr;
+    data->size = size;
+    data->nmemb = nmemb;
+    data->stream = stream;
+    if (!cat_work(CAT_WORK_KIND_FAST_IO, cat_fs_fwrite_cb, cat_free_function, data, CAT_TIMEOUT_FOREVER)) {
+        return 0;
+    }
+    cat_fs_work_check_error(&data->ret.error, "fwrite");
+    return (size_t) data->ret.ret.num;
+}
+
+typedef struct cat_fs_fseek_data_s {
+    cat_fs_work_ret_t ret;
+    FILE *stream;
+    off_t offset;
+    int whence;
+} cat_fs_fseek_data_t;
+
+static void cat_fs_fseek_cb(cat_data_t *ptr)
+{
+    cat_fs_fseek_data_t *data = (cat_fs_fseek_data_t *) ptr;
+    data->ret.ret.num = fseeko(data->stream, data->offset, data->whence);
+    if (0 != data->ret.ret.num) {
+        data->ret.error.type = CAT_FS_ERROR_ERRNO;
+        data->ret.error.val.error = errno;
+    }
+}
+
+CAT_API int cat_fs_fseek(FILE *stream, off_t offset, int whence)
+{
+    cat_fs_fseek_data_t *data = (cat_fs_fseek_data_t *) cat_malloc(sizeof(*data));
+#if CAT_ALLOC_HANDLE_ERRORS
+    if (data == NULL) {
+        cat_update_last_error_of_syscall("Malloc for fs fseek failed");
+        return -1;
+    }
+#endif
+    memset(&data->ret, 0, sizeof(data->ret));
+    data->stream = stream;
+    data->offset = offset;
+    data->whence = whence;
+    if (!cat_work(CAT_WORK_KIND_FAST_IO, cat_fs_fseek_cb, cat_free_function, data, CAT_TIMEOUT_FOREVER)) {
+        return -1;
+    }
+    cat_fs_work_check_error(&data->ret.error, "fseek");
+    return (int) data->ret.ret.num;
+}
+
+typedef struct cat_fs_ftell_data_s {
+    cat_fs_work_ret_t ret;
+    FILE *stream;
+} cat_fs_ftell_data_t;
+
+static void cat_fs_ftell_cb(cat_data_t *ptr)
+{
+    cat_fs_ftell_data_t *data = (cat_fs_ftell_data_t *) ptr;
+    data->ret.ret.num = ftello(data->stream);
+    if (0 != data->ret.ret.num) {
+        data->ret.error.type = CAT_FS_ERROR_ERRNO;
+        data->ret.error.val.error = errno;
+    }
+}
+
+CAT_API off_t cat_fs_ftell(FILE *stream)
+{
+    cat_fs_ftell_data_t *data = (cat_fs_ftell_data_t *) cat_malloc(sizeof(*data));
+#if CAT_ALLOC_HANDLE_ERRORS
+    if (data == NULL) {
+        cat_update_last_error_of_syscall("Malloc for fs ftell failed");
+        return -1;
+    }
+#endif
+    memset(&data->ret, 0, sizeof(data->ret));
+    data->stream = stream;
+    if (!cat_work(CAT_WORK_KIND_FAST_IO, cat_fs_ftell_cb, cat_free_function, data, CAT_TIMEOUT_FOREVER)) {
+        return -1;
+    }
+    cat_fs_work_check_error(&data->ret.error, "ftell");
+    return (long) data->ret.ret.num;
+}
+
+typedef struct cat_fs_fflush_data_s {
+    cat_fs_work_ret_t ret;
+    FILE *stream;
+} cat_fs_fflush_data_t;
+
+static void cat_fs_fflush_cb(cat_data_t *ptr)
+{
+    cat_fs_fflush_data_t *data = (cat_fs_fflush_data_t *) ptr;
+    data->ret.ret.num = fflush(data->stream);
+    if (0 != data->ret.ret.num) {
+        data->ret.error.type = CAT_FS_ERROR_ERRNO;
+        data->ret.error.val.error = errno;
+    }
+}
+
+CAT_API int cat_fs_fflush(FILE *stream)
+{
+    cat_fs_fflush_data_t *data = (cat_fs_fflush_data_t *) cat_malloc(sizeof(*data));
+#if CAT_ALLOC_HANDLE_ERRORS
+    if (data == NULL) {
+        cat_update_last_error_of_syscall("Malloc for fs fflush failed");
+        return -1;
+    }
+#endif
+    memset(&data->ret, 0, sizeof(data->ret));
+    data->stream = stream;
+    if (!cat_work(CAT_WORK_KIND_FAST_IO, cat_fs_fflush_cb, cat_free_function, data, CAT_TIMEOUT_FOREVER)) {
+        return -1;
+    }
+    cat_fs_work_check_error(&data->ret.error, "fflush");
+    return (long) data->ret.ret.num;
+}
+
+// platform-specific cat_work wrapped fs functions
 #ifndef CAT_OS_WIN
 
-static void cat_fs_dir_async_close(void *ptr)
+static void cat_fs_async_closedir(void *ptr)
 {
     uv_dir_t *dir = (uv_dir_t *) calloc(1, sizeof(*dir));
     if (dir == NULL) {
@@ -875,7 +1111,7 @@ static void cat_fs_opendir_free(cat_data_t *ptr)
     cat_fs_opendir_data_t *data = (cat_fs_opendir_data_t *) ptr;
 
     if (data->canceled && NULL != data->ret.ret.ptr) {
-        cat_fs_dir_async_close(data->ret.ret.ptr);
+        cat_fs_async_closedir(data->ret.ret.ptr);
     }
     cat_free(data->path);
     cat_free(data);
@@ -890,7 +1126,7 @@ CAT_API cat_dir_t *cat_fs_opendir(const char *path)
             .msg_free = CAT_FS_FREER_NONE,
             .msg = "Invalid path (NULL)"
         };
-        cat_fs_work_check_error(&error, "Opendir");
+        cat_fs_work_check_error(&error, "opendir");
         return NULL;
     }
     cat_fs_opendir_data_t *data = (cat_fs_opendir_data_t *) cat_malloc(sizeof(*data));
@@ -908,7 +1144,7 @@ CAT_API cat_dir_t *cat_fs_opendir(const char *path)
         data->canceled = cat_true;
         return NULL;
     }
-    cat_fs_work_check_error(&data->ret.error, "Opendir");
+    cat_fs_work_check_error(&data->ret.error, "opendir");
     if (CAT_FS_ERROR_NONE != data->ret.error.type) {
         return NULL;
     }
@@ -982,7 +1218,7 @@ static void cat_fs_readdir_free(cat_data_t *ptr)
 
     if (data->canceled) {
         // if canceled, tell freer to free things
-        cat_fs_dir_async_close(data->dir);
+        cat_fs_async_closedir(data->dir);
     }
     if (data->ret.ret.ptr) {
         cat_dirent_t *dirent = data->ret.ret.ptr;
@@ -1008,7 +1244,7 @@ CAT_API cat_dirent_t *cat_fs_readdir(cat_dir_t *dir)
             .msg_free = CAT_FS_FREER_NONE,
             .msg = "Invalid dir handle"
         };
-        cat_fs_work_check_error(&error, "Readdir");
+        cat_fs_work_check_error(&error, "readdir");
         return NULL;
     }
     cat_fs_readdir_data_t *data = (cat_fs_readdir_data_t *) cat_malloc(sizeof(*data));
@@ -1026,7 +1262,7 @@ CAT_API cat_dirent_t *cat_fs_readdir(cat_dir_t *dir)
         data->canceled = cat_true;
         return NULL;
     }
-    cat_fs_work_check_error(&data->ret.error, "Readdir");
+    cat_fs_work_check_error(&data->ret.error, "readdir");
     if (CAT_FS_ERROR_NONE != data->ret.error.type) {
         return NULL;
     }
@@ -1055,7 +1291,7 @@ static void cat_fs_rewinddir_free(cat_data_t *ptr)
     cat_fs_rewinddir_data_t *data = (cat_fs_rewinddir_data_t *) ptr;
     if (data->canceled) {
         // if canceled, tell freer to free things
-        cat_fs_dir_async_close(data->dir);
+        cat_fs_async_closedir(data->dir);
     }
     cat_free(data);
 }
@@ -1070,7 +1306,7 @@ CAT_API void cat_fs_rewinddir(cat_dir_t *dir)
             .msg_free = CAT_FS_FREER_NONE,
             .msg = "Invalid dir handle"
         };
-        cat_fs_work_check_error(&error, "Rewinddir");
+        cat_fs_work_check_error(&error, "rewinddir");
         return;
     }
     cat_fs_rewinddir_data_t *data = (cat_fs_rewinddir_data_t *) cat_malloc(sizeof(*data));
@@ -1108,7 +1344,7 @@ CAT_API int cat_fs_closedir(cat_dir_t *dir)
             .msg_free = CAT_FS_FREER_NONE,
             .msg = "Invalid dir handle"
         };
-        cat_fs_work_check_error(&error, "Closedir");
+        cat_fs_work_check_error(&error, "closedir");
         return -1;
     }
     if (NULL == uv_dir->dir) {
@@ -1219,7 +1455,7 @@ static void cat_fs_opendir_free(cat_fs_opendir_data_t *data)
     if (data->canceled && INVALID_HANDLE_VALUE != data->ret.ret.handle) {
         CloseHandle(data->ret.ret.handle);
     }
-    if(data->path){
+    if (data->path) {
         cat_free((void*)data->path);
     }
     cat_free(data);
@@ -1235,7 +1471,7 @@ CAT_API cat_dir_t *cat_fs_opendir(const char *_path)
             .msg_free = CAT_FS_FREER_NONE,
             .msg = "Invalid path (NULL)"
         };
-        cat_fs_work_check_error(&error, "Opendir");
+        cat_fs_work_check_error(&error, "opendir");
         return NULL;
     }
     cat_fs_opendir_data_t *data = (cat_fs_opendir_data_t *) cat_malloc(sizeof(*data));
@@ -1254,8 +1490,8 @@ CAT_API cat_dir_t *cat_fs_opendir(const char *_path)
         data->canceled = cat_true;
         return NULL;
     }
-    cat_fs_work_check_error(&data->ret.error, "Opendir");
-    if(CAT_FS_ERROR_NONE != data->ret.error.type){
+    cat_fs_work_check_error(&data->ret.error, "opendir");
+    if (CAT_FS_ERROR_NONE != data->ret.error.type) {
         return NULL;
     }
     // if no error occured, ret handle must be assigned
@@ -1296,7 +1532,7 @@ CAT_API int cat_fs_closedir(cat_dir_t *dir)
             .msg_free = CAT_FS_FREER_NONE,
             .msg = "Invalid dir handle"
         };
-        cat_fs_work_check_error(&error, "Closedir");
+        cat_fs_work_check_error(&error, "closedir");
         return -1;
     }
     if (INVALID_HANDLE_VALUE == ((cat_dir_int_t*)dir)->dir) {
@@ -1317,8 +1553,8 @@ CAT_API int cat_fs_closedir(cat_dir_t *dir)
     if (!ret) {
         return -1;
     }
-    cat_fs_work_check_error(&data->ret.error, "Closedir");
-    if(CAT_FS_ERROR_NONE != data->ret.error.type){
+    cat_fs_work_check_error(&data->ret.error, "closedir");
+    if (CAT_FS_ERROR_NONE != data->ret.error.type) {
         return -1;
     }
     return 0;
@@ -1453,8 +1689,8 @@ static void cat_fs_readdir_free(cat_data_t *ptr)
 {
     cat_fs_readdir_data_t *data = (cat_fs_readdir_data_t*)ptr;
     cat_dirent_t *dirent = data->ret.ret.ptr;
-    if(dirent){
-        if(dirent->name){
+    if (dirent) {
+        if (dirent->name) {
             free((void*)dirent->name);
         }
         free(dirent);
@@ -1475,7 +1711,7 @@ CAT_API cat_dirent_t *cat_fs_readdir(cat_dir_t *dir)
             .msg_free = CAT_FS_FREER_NONE,
             .msg = "Invalid dir handle"
         };
-        cat_fs_work_check_error(&error, "Closedir");
+        cat_fs_work_check_error(&error, "closedir");
         return NULL;
     }
     cat_fs_readdir_data_t *data = (cat_fs_readdir_data_t *) cat_malloc(sizeof(*data));
@@ -1494,8 +1730,8 @@ CAT_API cat_dirent_t *cat_fs_readdir(cat_dir_t *dir)
         pintdir->dir = INVALID_HANDLE_VALUE;
         return NULL;
     }
-    cat_fs_work_check_error(&data->ret.error, "Readdir");
-    if(data->ret.error.type != CAT_FS_ERROR_NONE){
+    cat_fs_work_check_error(&data->ret.error, "readdir");
+    if (data->ret.error.type != CAT_FS_ERROR_NONE) {
         return NULL;
     }
     CAT_ASSERT(data->ret.ret.ptr);
@@ -1516,7 +1752,7 @@ CAT_API void cat_fs_rewinddir(cat_dir_t *dir)
             .msg_free = CAT_FS_FREER_NONE,
             .msg = "Invalid dir handle"
         };
-        cat_fs_work_check_error(&error, "Closedir");
+        cat_fs_work_check_error(&error, "rewinddir");
         return;
     }
     ((cat_dir_int_t *) dir)->rewind = cat_true;
@@ -1822,7 +2058,7 @@ CAT_API int cat_fs_flock(cat_file_t fd, int op)
             return -1;
         }
     }
-    cat_fs_work_check_error(&data->ret.error, "Flock");
+    cat_fs_work_check_error(&data->ret.error, "flock");
     return (int) data->ret.ret.num;
 }
 

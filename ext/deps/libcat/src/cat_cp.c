@@ -18,6 +18,8 @@
 
 #include "cat.h"
 
+/* sleep */
+
 #ifdef CAT_OS_WIN
 CAT_API unsigned int cat_sys_sleep(unsigned int seconds)
 {
@@ -50,6 +52,36 @@ CAT_API int cat_sys_nanosleep(const struct cat_timespec *req, struct cat_timespe
     return cat_sys_usleep((unsigned int) (req->tv_sec * 1000000 + req->tv_nsec / 1000));
 }
 #endif
+
+/* process */
+
+CAT_API cat_pid_t cat_getpid(void)
+{
+    cat_pid_t pid;
+
+    pid = uv_os_getpid();
+
+    if (unlikely(pid < 0)) {
+        cat_update_last_error_of_syscall("Process get id failed");
+    }
+
+    return pid;
+}
+
+CAT_API cat_pid_t cat_getppid(void)
+{
+    cat_pid_t ppid;
+
+    ppid = uv_os_getppid();
+
+    if (unlikely(ppid < 0)) {
+        cat_update_last_error_of_syscall("Process get parent id failed");
+    }
+
+    return ppid;
+}
+
+/* vector */
 
 CAT_API size_t cat_io_vector_length(const cat_io_vector_t *vector, unsigned int vector_count)
 {

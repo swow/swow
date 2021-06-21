@@ -173,6 +173,8 @@ typedef struct cat_http_parser_s {
     const char *data;
     /* public readonly: current data length */
     size_t data_length;
+    /* public readonly: current parsed length */
+    size_t parsed_length;
     /* public readonly: keep alive (update on message complete) */
     cat_bool_t keep_alive;
 } cat_http_parser_t;
@@ -196,7 +198,8 @@ CAT_API llhttp_errno_t cat_http_parser_get_error_code(const cat_http_parser_t *p
 CAT_API const char *cat_http_parser_get_error_message(const cat_http_parser_t *parser);
 CAT_API cat_bool_t cat_http_parser_is_completed(const cat_http_parser_t *parser);
 CAT_API const char *cat_http_parser_get_current_pos(const cat_http_parser_t *parser);
-CAT_API size_t cat_http_parser_get_parsed_length(cat_http_parser_t *parser, const char *data);
+CAT_API size_t cat_http_parser_get_parsed_length(const cat_http_parser_t *parser);
+CAT_API size_t cat_http_parser_get_parsed_offset(const cat_http_parser_t *parser, const char *data);
 CAT_API cat_http_method_t cat_http_parser_get_method(const cat_http_parser_t *parser);
 CAT_API const char  *cat_http_parser_get_method_name(const cat_http_parser_t *parser);
 CAT_API uint8_t cat_http_parser_get_major_version(const cat_http_parser_t *parser);

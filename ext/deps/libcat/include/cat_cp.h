@@ -19,11 +19,6 @@
 #ifdef CAT_OS_WIN
 
 #include <io.h>
-#include <process.h>
-
-typedef int cat_pid_t;
-
-#define cat_getpid _getpid
 
 #define cat_strcasecmp  _stricmp
 #define cat_strncasecmp _strnicmp
@@ -41,10 +36,6 @@ CAT_API int cat_sys_nanosleep(const struct cat_timespec *req, struct cat_timespe
 
 #else
 
-typedef pid_t cat_pid_t;
-
-#define cat_getpid getpid
-
 #define cat_strcasecmp  strcasecmp
 #define cat_strncasecmp strncasecmp
 
@@ -58,21 +49,26 @@ typedef time_t cat_timeval_sec_t;
 
 #endif // CAT_OS_WIN
 
+/* process/group/user */
+
+typedef uv_pid_t cat_pid_t;
+typedef uv_gid_t cat_gid_t;
+typedef uv_uid_t cat_uid_t;
+
+CAT_API cat_pid_t cat_getpid(void);
+CAT_API cat_pid_t cat_getppid(void);
+
 /* vector */
 
 #ifndef CAT_OS_WIN
 typedef size_t cat_io_vector_length_t;
-#else
-typedef ULONG cat_io_vector_length_t;
-#endif
-
-#ifndef CAT_OS_WIN
 /* Note: May be cast to struct iovec. See writev(2). */
 typedef struct cat_io_vector_s {
     char *base;
     size_t length;
 } cat_io_vector_t;
 #else
+typedef ULONG cat_io_vector_length_t;
 /* Note: May be cast to WSABUF[]
  * see http://msdn.microsoft.com/en-us/library/ms741542(v=vs.85).aspx */
 typedef struct cat_io_vector_s {
