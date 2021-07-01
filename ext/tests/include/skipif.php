@@ -108,3 +108,14 @@ function skip_unsupported(string $message = ''): void
 {
     skip($message ?: 'the test cannot continue to work for some implementation reasons');
 }
+
+function skip_if_c_function_not_exist(string $def, ?string $lib = null): void
+{
+    skip_if_extension_not_exist('ffi');
+    
+    try {
+        \FFI::cdef($def, $lib);
+    } catch(\Throwable $_) {
+        skip('"' . $def . '" not usable');
+    }
+}
