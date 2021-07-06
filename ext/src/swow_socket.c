@@ -524,7 +524,7 @@ static PHP_METHOD_EX(Swow_Socket, _read, zend_bool once, zend_bool may_address, 
         int port;
         if (!peek) {
             CAT_ASSERT(once);
-            ret = cat_socket_read_from_ex(socket, address, size, address, &address_length, &port, timeout);
+            ret = cat_socket_recv_from_ex(socket, address, size, address, &address_length, &port, timeout);
         } else {
             ret = cat_socket_peek_from(socket, ptr, size, address, &address_length, &port);
         }
@@ -707,7 +707,7 @@ static PHP_METHOD_EX(Swow_Socket, _readString, zend_bool once, zend_bool may_add
         int port;
         if (!peek) {
             CAT_ASSERT(once);
-            ret = cat_socket_read_from_ex(socket, ptr, size, address, &address_length, &port, timeout);
+            ret = cat_socket_recv_from_ex(socket, ptr, size, address, &address_length, &port, timeout);
         } else {
             ret = cat_socket_peek_from(socket, ptr, size, address, &address_length, &port);
         }
