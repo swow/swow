@@ -80,12 +80,6 @@ SWOW_API php_stream *swow_stream_socket_factory(
     php_stream *stream;
     const php_stream_ops *ops;
 
-    /* check */
-    if (UNEXPECTED(flags & STREAM_XPORT_CONNECT_ASYNC)) {
-        // php_error_docref(NULL, E_WARNING, "Stream can only be in blocking mode");
-        // ignore
-    }
-
     /* alloc and init */
     swow_sock = (swow_netstream_data_t *) pecalloc(1, sizeof(*swow_sock), persistent_id ? 1 : 0);
     sock = &swow_sock->sock;
@@ -366,7 +360,16 @@ static inline int swow_stream_accept(php_stream *stream, swow_netstream_data_t *
     return -1;
 }
 
-static int swow_stream_connect(php_stream *stream, swow_netstream_data_t *swow_sock, php_stream_xport_param *xparam)
+static zend_always_inline zend_bool swow_stream_socket_connect(cat_socket_t *socket, const char *name, size_t name_length, int port, const struct timeval *timeout, zend_bool asynchronous)
+{
+    if (!asynchronous) {
+        return cat_socket_connect_ex(socket, name, name_length, port, cat_time_tv2to(timeout));
+    } else {
+        return cat_socket_try_connect(socket, name, name_length, port);
+    }
+}
+
+static int swow_stream_connect(php_stream *stream, swow_netstream_data_t *swow_sock, php_stream_xport_param *xparam, zend_bool asynchronous)
 {
     cat_socket_type_t type = swow_stream_parse_socket_type(stream->ops);
     cat_socket_t *socket = &swow_sock->socket;
@@ -375,8 +378,6 @@ static int swow_stream_connect(php_stream *stream, swow_netstream_data_t *swow_s
     zval *ztmp = NULL;
 
     if (type & CAT_SOCKET_TYPE_FLAG_LOCAL) {
-        int ret;
-
         socket = cat_socket_create(socket, type);
 
         if (UNEXPECTED(socket == NULL)) {
@@ -385,9 +386,7 @@ static int swow_stream_connect(php_stream *stream, swow_netstream_data_t *swow_s
 
         swow_stream_check_unix_path_len(&xparam->inputs.namelen);
 
-        ret = cat_socket_connect_ex(socket, xparam->inputs.name, xparam->inputs.namelen, 0, cat_time_tv2to(xparam->inputs.timeout)) ? 0 : -1;
-
-        if (UNEXPECTED(ret != 0)) {
+        if (UNEXPECTED(!swow_stream_socket_connect(socket, xparam->inputs.name, xparam->inputs.namelen, 0, xparam->inputs.timeout, asynchronous))) {
             goto _error;
         }
 
@@ -442,7 +441,7 @@ static int swow_stream_connect(php_stream *stream, swow_netstream_data_t *swow_s
             goto _error;
         }
     }
-    if (UNEXPECTED(!cat_socket_connect_ex(socket, host, strlen(host), port, cat_time_tv2to(xparam->inputs.timeout)))) {
+    if (UNEXPECTED(!swow_stream_socket_connect(socket, host, strlen(host), port, xparam->inputs.timeout, asynchronous))) {
         goto _error;
     }
 
@@ -474,18 +473,23 @@ static int swow_stream_connect(php_stream *stream, swow_netstream_data_t *swow_s
 }
 
 static inline int swow_stream_socket_recvfrom(
-    cat_socket_t *socket, char *buf, size_t buflen, zend_bool peek,
+    cat_socket_t *socket, char *buf, size_t buflen, int flags,
     zend_string **textaddr,
-    struct sockaddr **addr, socklen_t *addrlen
-)
+    struct sockaddr **addr, socklen_t *addrlen)
 {
     int ret;
     int want_addr = textaddr || addr;
 
+#if 0 /* TODO: support MSG_OOB */
+    if (flags & STREAM_OOB) {
+        // ...
+    }
+#endif
+
     if (want_addr) {
         php_sockaddr_storage sa;
         socklen_t sl = sizeof(sa);
-        if (!peek) {
+        if (!(flags & STREAM_PEEK)) {
             ret = cat_socket_recvfrom(socket, buf, buflen, (struct sockaddr *) &sa, &sl);
         } else {
             ret = cat_socket_peekfrom(socket, buf, buflen, (struct sockaddr *) &sa, &sl);
@@ -508,7 +512,7 @@ static inline int swow_stream_socket_recvfrom(
             }
         }
     } else {
-        if (!peek) {
+        if (!(flags & STREAM_PEEK)) {
             ret = cat_socket_recv(socket, buf, buflen);
         } else {
             ret = cat_socket_peek(socket, buf, buflen);
@@ -609,21 +613,8 @@ static int swow_stream_set_option(php_stream *stream, int option, int value, voi
                     return PHP_STREAM_OPTION_RETURN_OK;
                 }
                 case STREAM_XPORT_OP_RECV: {
-                    zend_bool peek;
-#if 0
-                    int flags;
-                    flags = 0;
-                    if ((xparam->inputs.flags & STREAM_OOB) == STREAM_OOB) {
-                        flags |= MSG_OOB;
-                    }
-#endif
-                    if ((xparam->inputs.flags & STREAM_PEEK) == STREAM_PEEK) {
-                        peek = 1;
-                    } else {
-                        peek = 0;
-                    }
                     xparam->outputs.returncode = swow_stream_socket_recvfrom(
-                        socket, xparam->inputs.buf, xparam->inputs.buflen, peek,
+                        socket, xparam->inputs.buf, xparam->inputs.buflen, xparam->inputs.flags,
                         xparam->want_textaddr ? &xparam->outputs.textaddr : NULL, xparam->want_addr ? &xparam->outputs.addr : NULL,
                         xparam->want_addr ? &xparam->outputs.addrlen : NULL
                     );
@@ -667,7 +658,7 @@ static int swow_stream_set_tcp_option(php_stream *stream, int option, int value,
             switch (xparam->op) {
                 case STREAM_XPORT_OP_CONNECT:
                 case STREAM_XPORT_OP_CONNECT_ASYNC: {
-                    xparam->outputs.returncode = swow_stream_connect(stream, swow_sock, xparam);
+                    xparam->outputs.returncode = swow_stream_connect(stream, swow_sock, xparam, xparam->op == STREAM_XPORT_OP_CONNECT_ASYNC);
                     return PHP_STREAM_OPTION_RETURN_OK;
                 }
                 case STREAM_XPORT_OP_BIND: {
@@ -695,7 +686,14 @@ static bytes_t swow_stream_read(php_stream *stream, char *buffer, size_t size)
     sock->timeout_event = 0; // clear error state
 #endif
 
-    nr_bytes = cat_socket_recv_ex(socket, buffer, size, cat_time_tv2to(&sock->timeout));
+    if (sock->is_blocked) {
+        nr_bytes = cat_socket_recv_ex(socket, buffer, size, cat_time_tv2to(&sock->timeout));
+    } else {
+        nr_bytes = cat_socket_try_recv(socket, buffer, size);
+        if (nr_bytes == CAT_EAGAIN) {
+            return 0;
+        }
+    }
 
     if (EXPECTED(nr_bytes > 0)) {
         php_stream_notify_progress_increment(PHP_STREAM_CONTEXT(stream), nr_bytes, 0);
@@ -718,10 +716,21 @@ static bytes_t swow_stream_read(php_stream *stream, char *buffer, size_t size)
 static bytes_t swow_stream_write(php_stream *stream, const char *buffer, size_t length)
 {
     SWOW_STREAM_SOCKET_GETTER(stream, swow_sock, sock, socket, return 0);
+    ssize_t didwrite;
     cat_bool_t ret;
 
-    ret = cat_socket_send_ex(socket, buffer, length, cat_time_tv2to(&sock->timeout));
-
+    if (sock->is_blocked) {
+        ret = cat_socket_send_ex(socket, buffer, length, cat_time_tv2to(&sock->timeout));
+        didwrite = length;
+    } else {
+        didwrite = cat_socket_try_send(socket, buffer, length);
+        if (UNEXPECTED(didwrite == CAT_EAGAIN)) {
+            /* EWOULDBLOCK/EAGAIN is not an error for a non-blocking stream.
+             * Report zero byte write instead. */
+            return 0;
+        }
+        ret = didwrite >= 0;
+    }
     if (UNEXPECTED(!ret)) {
         cat_errno_t error =  cat_get_last_error_code();
 #ifdef PHP_STREAM_FLAG_SUPPRESS_ERRORS
@@ -737,9 +746,9 @@ static bytes_t swow_stream_write(php_stream *stream, const char *buffer, size_t 
         return PHP_STREAM_SOCKET_RETURN_ERR;
     }
 
-    php_stream_notify_progress_increment(PHP_STREAM_CONTEXT(stream), length, 0);
+    php_stream_notify_progress_increment(PHP_STREAM_CONTEXT(stream), didwrite, 0);
 
-    return length;
+    return didwrite;
 }
 
 static int swow_stream_close(php_stream *stream, int close_handle)
