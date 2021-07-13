@@ -363,62 +363,16 @@ static int cat_ssl_win_cert_verify_callback(X509_STORE_CTX *x509_store_ctx, void
         SSL_EXTRA_CERT_CHAIN_POLICY_PARA ssl_policy_params = {sizeof(SSL_EXTRA_CERT_CHAIN_POLICY_PARA)};
         CERT_CHAIN_POLICY_PARA chain_policy_params = {sizeof(CERT_CHAIN_POLICY_PARA)};
         CERT_CHAIN_POLICY_STATUS chain_policy_status = {sizeof(CERT_CHAIN_POLICY_STATUS)};
-        LPWSTR server_name = NULL;
         BOOL verify_result;
 
-        { /* This looks ridiculous and it is - but we validate the name ourselves using the peer_name
-             ctx option, so just use the CN from the cert here */
-
-            X509_NAME *cert_name;
-            unsigned char *cert_name_utf8;
-            int index, cert_name_utf8_len;
-            DWORD num_wchars;
-
-            cert_name = X509_get_subject_name(cert);
-            index = X509_NAME_get_index_by_NID(cert_name, NID_commonName, -1);
-            if (index < 0) {
-                cat_update_last_error(CAT_ECERT, "Unable to locate certificate CN");
-                CertFreeCertificateChain(cert_chain_ctx);
-                CertFreeCertificateContext(cert_ctx);
-                X509_STORE_CTX_set_error(x509_store_ctx, SSL_R_CERTIFICATE_VERIFY_FAILED);
-                return cat_false;
-            }
-
-            cert_name_utf8_len = ASN1_STRING_to_UTF8(&cert_name_utf8, X509_NAME_ENTRY_get_data(X509_NAME_get_entry(cert_name, index)));
-
-            num_wchars = MultiByteToWideChar(CP_UTF8, 0, (char*)cert_name_utf8, -1, NULL, 0);
-            if (num_wchars == 0) {
-                cat_update_last_error(CAT_ECERT, "Unable to convert %s to wide character string", cert_name_utf8);
-                OPENSSL_free(cert_name_utf8);
-                CertFreeCertificateChain(cert_chain_ctx);
-                CertFreeCertificateContext(cert_ctx);
-                X509_STORE_CTX_set_error(x509_store_ctx, SSL_R_CERTIFICATE_VERIFY_FAILED);
-                return cat_false;
-            }
-
-            server_name = (LPWSTR) cat_malloc((num_wchars * sizeof(WCHAR)) + sizeof(WCHAR));
-
-            num_wchars = MultiByteToWideChar(CP_UTF8, 0, (char*)cert_name_utf8, -1, server_name, num_wchars);
-            if (num_wchars == 0) {
-                cat_update_last_error(CAT_ECERT, "Unable to convert %s to wide character string", cert_name_utf8);
-                cat_free(server_name);
-                OPENSSL_free(cert_name_utf8);
-                CertFreeCertificateChain(cert_chain_ctx);
-                CertFreeCertificateContext(cert_ctx);
-                X509_STORE_CTX_set_error(x509_store_ctx, SSL_R_CERTIFICATE_VERIFY_FAILED);
-                return cat_false;
-            }
-
-            OPENSSL_free(cert_name_utf8);
-        }
-
         ssl_policy_params.dwAuthType = (ssl->flags & CAT_SSL_FLAG_ACCEPT_STATE) ? AUTHTYPE_SERVER : AUTHTYPE_CLIENT;
-        ssl_policy_params.pwszServerName = server_name;
+        /* we validate the name ourselves using the peer_name
+           ctx option, so no need to use a server name here */
+        ssl_policy_params.pwszServerName = NULL;
         chain_policy_params.pvExtraPolicyPara = &ssl_policy_params;
 
         verify_result = CertVerifyCertificateChainPolicy(CERT_CHAIN_POLICY_SSL, cert_chain_ctx, &chain_policy_params, &chain_policy_status);
 
-        cat_free(server_name);
         CertFreeCertificateChain(cert_chain_ctx);
         CertFreeCertificateContext(cert_ctx);
 
@@ -1014,7 +968,6 @@ CAT_API cat_bool_t cat_ssl_encrypt(
 
     *vout_count = 0;
 
-    buffer = ssl->write_buffer.value;
     size = cat_ssl_encrypted_size(vin_length);
     if (unlikely(size >  ssl->write_buffer.size)) {
         buffer = (char *) cat_malloc(size);
@@ -1025,6 +978,7 @@ CAT_API cat_bool_t cat_ssl_encrypt(
         }
 #endif
     } else {
+        buffer = ssl->write_buffer.value;
         size = ssl->write_buffer.size;
     }
 

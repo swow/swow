@@ -111,6 +111,8 @@ CAT_API const char* cat_sockaddr_af_name(cat_sa_family_t af);
 /* Notice: input buffer_size is size of buffer (not length)
  * and if ENOSPC, *buffer_size will be the minimum required buffer **size**, otherwise, *buffer_size will be strlen(buffer)
  * buffer is always zero-termination */
+CAT_API cat_errno_t cat_sockaddr_get_address_silent(const cat_sockaddr_t *address, cat_socklen_t address_length, char *buffer, size_t *buffer_size);
+CAT_API int cat_sockaddr_get_port_silent(const cat_sockaddr_t *address);
 CAT_API cat_bool_t cat_sockaddr_get_address(const cat_sockaddr_t *address, cat_socklen_t address_length, char *buffer, size_t *buffer_size);
 CAT_API int cat_sockaddr_get_port(const cat_sockaddr_t *address);
 CAT_API cat_bool_t cat_sockaddr_set_port(cat_sockaddr_t *address, int port);
@@ -118,10 +120,12 @@ CAT_API cat_bool_t cat_sockaddr_set_port(cat_sockaddr_t *address, int port);
 /* Notice: do not forget to init address->sa_family and address_length */
 CAT_API cat_bool_t cat_sockaddr_getbyname(cat_sockaddr_t *address, cat_socklen_t *address_length, const char *name, size_t name_length, int port);
 /* Notice: it can handle empty case internally, but address must be valid or empty */
+CAT_API cat_errno_t cat_sockaddr_to_name_silent(const cat_sockaddr_t *address, cat_socklen_t address_length, char *name, size_t *name_length, int *port);
 CAT_API cat_bool_t cat_sockaddr_to_name(const cat_sockaddr_t *address, cat_socklen_t address_length, char *name, size_t *name_length, int *port);
 
 /* Notice: it can handle empty "to" internally */
 CAT_API int cat_sockaddr_copy(cat_sockaddr_t *to, cat_socklen_t *to_length, const cat_sockaddr_t *from, cat_socklen_t from_length);
+CAT_API cat_errno_t cat_sockaddr_check_silent(const cat_sockaddr_t *address, cat_socklen_t address_length);
 CAT_API cat_bool_t cat_sockaddr_check(const cat_sockaddr_t *address, cat_socklen_t address_length);
 
 /* socket fd */
@@ -382,6 +386,15 @@ typedef struct cat_socket_write_context_s {
     cat_queue_t coroutines;
 } cat_socket_write_context_t;
 
+typedef struct cat_socket_write_request_s {
+    int error;
+    union {
+        cat_coroutine_t *coroutine;
+        uv_write_t stream;
+        uv_udp_send_t udp;
+    } u;
+} cat_socket_write_request_t;
+
 #ifdef CAT_OS_UNIX_LIKE
 typedef struct uv_udg_s {
     uv_pipe_t pipe;
@@ -418,6 +431,8 @@ struct cat_socket_internal_s
     } context;
     /* cache */
     struct {
+        cat_socket_fd_t fd;
+        cat_socket_write_request_t *write_request;
         cat_sockaddr_info_t *sockname;
         cat_sockaddr_info_t *peername;
         int recv_buffer_size;
@@ -538,6 +553,9 @@ CAT_API cat_bool_t cat_socket_connect_ex(cat_socket_t *socket, const char *name,
 CAT_API cat_bool_t cat_socket_connect_to(cat_socket_t *socket, const cat_sockaddr_t *address, cat_socklen_t address_length);
 CAT_API cat_bool_t cat_socket_connect_to_ex(cat_socket_t *socket, const cat_sockaddr_t *address, cat_socklen_t address_length, cat_timeout_t timeout);
 
+CAT_API cat_bool_t cat_socket_try_connect(cat_socket_t *socket, const char *name, size_t name_length, int port);
+CAT_API cat_bool_t cat_socket_try_connect_to(cat_socket_t *socket, const cat_sockaddr_t *address, cat_socklen_t address_length);
+
 #ifdef CAT_SSL
 typedef cat_ssl_context_t cat_socket_crypto_context_t;
 
@@ -562,20 +580,6 @@ CAT_API const cat_sockaddr_info_t *cat_socket_getname_fast(cat_socket_t *socket,
 CAT_API const cat_sockaddr_info_t *cat_socket_getsockname_fast(cat_socket_t *socket);
 CAT_API const cat_sockaddr_info_t *cat_socket_getpeername_fast(cat_socket_t *socket);
 
-/* read: it always reads data of the specified length as far as possible, unless interrupted by errors  */
-CAT_API ssize_t cat_socket_read(cat_socket_t *socket, char *buffer, size_t length);
-CAT_API ssize_t cat_socket_read_ex(cat_socket_t *socket, char *buffer, size_t length, cat_timeout_t timeout);
-/* write: it always writes all data as much as possible, unless interrupted by errors */
-CAT_API cat_bool_t cat_socket_write(cat_socket_t *socket, const cat_socket_write_vector_t *vector, unsigned int vector_count);
-CAT_API cat_bool_t cat_socket_write_ex(cat_socket_t *socket, const cat_socket_write_vector_t *vector, unsigned int vector_count, cat_timeout_t timeout);
-
-CAT_API ssize_t cat_socket_read_from(cat_socket_t *socket, char *buffer, size_t size, char *name, size_t *name_length, int *port);
-CAT_API ssize_t cat_socket_read_from_ex(cat_socket_t *socket, char *buffer, size_t size, char *name, size_t *name_length, int *port, cat_timeout_t timeout);
-CAT_API cat_bool_t cat_socket_writeto(cat_socket_t *socket, const cat_socket_write_vector_t *vector, unsigned int vector_count, const cat_sockaddr_t *address, cat_socklen_t address_length);
-CAT_API cat_bool_t cat_socket_writeto_ex(cat_socket_t *socket, const cat_socket_write_vector_t *vector, unsigned int vector_count, const cat_sockaddr_t *address, cat_socklen_t address_length, cat_timeout_t timeout);
-CAT_API cat_bool_t cat_socket_write_to(cat_socket_t *socket, const cat_socket_write_vector_t *vector, unsigned int vector_count, const char *name, size_t name_length, int port);
-CAT_API cat_bool_t cat_socket_write_to_ex(cat_socket_t *socket, const cat_socket_write_vector_t *vector, unsigned int vector_count, const char *name, size_t name_length, int port, cat_timeout_t timeout);
-
 /* recv: same as recv system call, it always returns as soon as possible */
 CAT_API ssize_t cat_socket_recv(cat_socket_t *socket, char *buffer, size_t size);
 CAT_API ssize_t cat_socket_recv_ex(cat_socket_t *socket, char *buffer, size_t size, cat_timeout_t timeout);
@@ -583,13 +587,38 @@ CAT_API ssize_t cat_socket_recv_ex(cat_socket_t *socket, char *buffer, size_t si
 CAT_API cat_bool_t cat_socket_send(cat_socket_t *socket, const char *buffer, size_t length);
 CAT_API cat_bool_t cat_socket_send_ex(cat_socket_t *socket, const char *buffer, size_t length, cat_timeout_t timeout);
 
+/* read: it always reads data of the specified length as far as possible, unless interrupted by errors  */
+CAT_API ssize_t cat_socket_read(cat_socket_t *socket, char *buffer, size_t length);
+CAT_API ssize_t cat_socket_read_ex(cat_socket_t *socket, char *buffer, size_t length, cat_timeout_t timeout);
+/* write: it always writes all data as much as possible, unless interrupted by errors */
+CAT_API cat_bool_t cat_socket_write(cat_socket_t *socket, const cat_socket_write_vector_t *vector, unsigned int vector_count);
+CAT_API cat_bool_t cat_socket_write_ex(cat_socket_t *socket, const cat_socket_write_vector_t *vector, unsigned int vector_count, cat_timeout_t timeout);
+
 /* Notice: [name rule] only native APIs use conjunctions, e.g. recvfrom/sendto/getsockname/getpeername...  */
 CAT_API ssize_t cat_socket_recvfrom(cat_socket_t *socket, char *buffer, size_t size, cat_sockaddr_t *address, cat_socklen_t *address_length);
 CAT_API ssize_t cat_socket_recvfrom_ex(cat_socket_t *socket, char *buffer, size_t size, cat_sockaddr_t *address, cat_socklen_t *address_length, cat_timeout_t timeout);
 CAT_API cat_bool_t cat_socket_sendto(cat_socket_t *socket, const char *buffer, size_t length, const cat_sockaddr_t *address, cat_socklen_t address_length);
 CAT_API cat_bool_t cat_socket_sendto_ex(cat_socket_t *socket, const char *buffer, size_t length, const cat_sockaddr_t *address, cat_socklen_t address_length, cat_timeout_t timeout);
+CAT_API cat_bool_t cat_socket_writeto(cat_socket_t *socket, const cat_socket_write_vector_t *vector, unsigned int vector_count, const cat_sockaddr_t *address, cat_socklen_t address_length);
+CAT_API cat_bool_t cat_socket_writeto_ex(cat_socket_t *socket, const cat_socket_write_vector_t *vector, unsigned int vector_count, const cat_sockaddr_t *address, cat_socklen_t address_length, cat_timeout_t timeout);
+
+CAT_API ssize_t cat_socket_recv_from(cat_socket_t *socket, char *buffer, size_t size, char *name, size_t *name_length, int *port);
+CAT_API ssize_t cat_socket_recv_from_ex(cat_socket_t *socket, char *buffer, size_t size, char *name, size_t *name_length, int *port, cat_timeout_t timeout);
 CAT_API cat_bool_t cat_socket_send_to(cat_socket_t *socket, const char *buffer, size_t length, const char *name, size_t name_length, int port);
 CAT_API cat_bool_t cat_socket_send_to_ex(cat_socket_t *socket, const char *buffer, size_t length, const char *name, size_t name_length, int port, cat_timeout_t timeout);
+CAT_API cat_bool_t cat_socket_write_to(cat_socket_t *socket, const cat_socket_write_vector_t *vector, unsigned int vector_count, const char *name, size_t name_length, int port);
+CAT_API cat_bool_t cat_socket_write_to_ex(cat_socket_t *socket, const cat_socket_write_vector_t *vector, unsigned int vector_count, const char *name, size_t name_length, int port, cat_timeout_t timeout);
+
+/* try_* APIs will return read/write bytes immediately, if error occurred, it returns E* errno */
+CAT_API ssize_t cat_socket_try_recv(cat_socket_t *socket, char *buffer, size_t size);
+CAT_API ssize_t cat_socket_try_recvfrom(cat_socket_t *socket, char *buffer, size_t size, cat_sockaddr_t *address, cat_socklen_t *address_length);
+CAT_API ssize_t cat_socket_try_recv_from(cat_socket_t *socket, char *buffer, size_t size, char *name, size_t *name_length, int *port);
+CAT_API ssize_t cat_socket_try_send(cat_socket_t *socket, const char *buffer, size_t length);
+CAT_API ssize_t cat_socket_try_sendto(cat_socket_t *socket, const char *buffer, size_t length, const cat_sockaddr_t *address, cat_socklen_t address_length);
+CAT_API ssize_t cat_socket_try_send_to(cat_socket_t *socket, const char *buffer, size_t length, const char *name, size_t name_length, int port);
+CAT_API ssize_t cat_socket_try_write(cat_socket_t *socket, const cat_socket_write_vector_t *vector, unsigned int vector_count);
+CAT_API ssize_t cat_socket_try_writeto(cat_socket_t *socket, const cat_socket_write_vector_t *vector, unsigned int vector_count, const cat_sockaddr_t *address, cat_socklen_t address_length);
+CAT_API ssize_t cat_socket_try_write_to(cat_socket_t *socket, const cat_socket_write_vector_t *vector, unsigned int vector_count, const char *name, size_t name_length, int port);
 
 CAT_API ssize_t cat_socket_peek(const cat_socket_t *socket, char *buffer, size_t size);
 CAT_API ssize_t cat_socket_peekfrom(const cat_socket_t *socket, char *buffer, size_t size, cat_sockaddr_t *address, cat_socklen_t *address_length);

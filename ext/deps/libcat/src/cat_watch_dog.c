@@ -42,9 +42,37 @@ static cat_timeout_t cat_watch_dog_align_threshold(cat_timeout_t threshold)
     return threshold;
 }
 
+#ifdef CAT_OS_WIN
+// in default, Windows timer slice is about 15.6ms
+// this function will try reduce it
+static void cat_improve_timer_resolution(void)
+{
+    static NTSTATUS (NTAPI *NtSetTimerResolution)(
+        IN ULONG                DesiredResolution,
+        IN BOOLEAN              SetResolution,
+        OUT PULONG              CurrentResolution
+    ) = NULL;
+    // prove NtSetTimerResolution
+    if (NULL == NtSetTimerResolution) {
+        if (NULL == (NtSetTimerResolution =
+            (NTSTATUS (NTAPI *)(ULONG, BOOLEAN, PULONG)) GetProcAddress(
+                GetModuleHandleW(L"ntdll.dll"), "NtSetTimerResolution"))) {
+            return;
+        }
+    }
+    // TODO: get current at first called, record it, then recover it
+    ULONG dummy;
+    (void) NtSetTimerResolution(1 /* 1us, will be upscaled to minimum */, TRUE, &dummy);
+}
+#endif
+
 static void cat_watch_dog_loop(void* arg)
 {
     cat_watch_dog_t *watch_dog = (cat_watch_dog_t *) arg;
+
+#ifdef CAT_OS_WIN
+    cat_improve_timer_resolution();
+#endif
 
     uv_sem_post(watch_dog->sem);
 
@@ -95,7 +123,7 @@ CAT_API cat_bool_t cat_watch_dog_runtime_shutdown(void)
 
 CAT_API void cat_watch_dog_alert_standard(cat_watch_dog_t *watch_dog)
 {
-    fprintf(CAT_G(error_log), "Warning: <Watch-Dog> Syscall blocking or CPU starvation may occur in " CAT_WATCH_DOG_ROLE_NAME " %d, "
+    fprintf(stderr, "Warning: <Watch-Dog> Syscall blocking or CPU starvation may occur in " CAT_WATCH_DOG_ROLE_NAME " %d, "
                     "it has been blocked for more than " CAT_TIMEOUT_FMT  " ns" CAT_EOL,
                     watch_dog->pid, watch_dog->quantum * watch_dog->alert_count);
 }

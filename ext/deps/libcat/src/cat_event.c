@@ -28,10 +28,7 @@ CAT_API cat_bool_t cat_event_module_init(void)
 
     CAT_GLOBALS_REGISTER(cat_event, CAT_GLOBALS_CTOR(cat_event), NULL);
 
-    CAT_EVENT_G(loop) = &CAT_EVENT_G(_loop);
-    CAT_EVENT_G(dead_lock) = &CAT_EVENT_G(_dead_lock);
-
-    error = uv_loop_init(CAT_EVENT_G(loop));
+    error = uv_loop_init(&CAT_EVENT_G(loop));
 
     if (error != 0) {
         cat_warn_with_reason(EVENT, error, "Event loop init failed");
@@ -49,7 +46,7 @@ CAT_API cat_bool_t cat_event_module_shutdown(void)
 {
     int error;
 
-    error = uv_loop_close(CAT_EVENT_G(loop));
+    error = uv_loop_close(&CAT_EVENT_G(loop));
 
     if (unlikely(error != 0)) {
         cat_warn_with_reason(EVENT, error, "Event loop close failed");
@@ -108,7 +105,7 @@ static void cat_event_dead_lock_callback(uv_timer_t *dead_lock)
 
 CAT_API void cat_event_dead_lock(void)
 {
-    uv_timer_t *dead_lock = CAT_EVENT_G(dead_lock);
+    uv_timer_t *dead_lock = &CAT_EVENT_G(dead_lock);
     (void) uv_timer_init(cat_event_loop, dead_lock);
     (void) uv_timer_start(dead_lock, cat_event_dead_lock_callback, UINT64_MAX, UINT64_MAX);
     (void) cat_event_defer(cat_event_dead_lock_unlock_callback, dead_lock);
@@ -122,7 +119,7 @@ static int cat_event_defer_callback(uv_loop_t *loop)
 
 CAT_API void cat_event_schedule(void)
 {
-    (void) uv_crun(CAT_EVENT_G(loop), cat_event_defer_callback);
+    (void) uv_crun(&CAT_EVENT_G(loop), cat_event_defer_callback);
 }
 
 CAT_API cat_coroutine_t *cat_event_scheduler_run(cat_coroutine_t *coroutine)

@@ -79,14 +79,12 @@ CAT_API void cat_set_last_error(cat_errno_t code, char *message)
     if (last_error_message != NULL && last_error_message != message) {
         cat_free(last_error_message);
     }
-#ifdef CAT_DEBUG
     if (CAT_G(show_last_error)) {
+#undef cat_show_last_error
         cat_show_last_error();
     }
-#endif
 }
 
-#ifdef CAT_DEBUG
 CAT_API void cat_show_last_error(void)
 {
     cat_info(
@@ -94,7 +92,6 @@ CAT_API void cat_show_last_error(void)
         cat_get_last_error_code(), cat_get_last_error_message()
     );
 }
-#endif
 
 CAT_API CAT_NORETURN void cat_abort(void)
 {

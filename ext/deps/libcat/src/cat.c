@@ -24,10 +24,21 @@ CAT_GLOBALS_CTOR_DECLARE_SZ(cat)
 
 static cat_bool_t cat_args_registered = cat_false;
 
-#ifndef CAT_OS_WIN
-#define CAT_EXEPATH_MAX (PATH_MAX + PATH_MAX + 1)
-#else
-#define CAT_EXEPATH_MAX 32768
+#if CAT_USE_BUG_DETECTOR
+void cat_bug_detector_callback(int signum)
+{
+    (void) signum;
+#ifndef CAT_BUG_REPORT
+#define CAT_BUG_REPORT \
+    "A bug occurred in libcat-v" CAT_VERSION ", please report it.\n" \
+    "The libcat developers probably don't know about it,\n" \
+    "and unless you report it, chances are it won't be fixed.\n" \
+    "You can read How to report a bug doc before submitting any bug reports:\n" \
+    ">> https://github.com/libcat/libcat/blob/master/.github/ISSUE.md \n"
+#endif
+    fprintf(CAT_G(error_log), CAT_BUG_REPORT);
+    abort();
+}
 #endif
 
 CAT_API cat_bool_t cat_module_init(void)
@@ -49,6 +60,12 @@ CAT_API cat_bool_t cat_module_init(void)
 
     CAT_GLOBALS_REGISTER(cat, CAT_GLOBALS_CTOR(cat), NULL);
 
+#if CAT_USE_BUG_DETECTOR
+    if (cat_env_is_true("CAT_BUG_DETECTOR", cat_true)) {
+        (void) signal(SIGSEGV, cat_bug_detector_callback);
+    }
+#endif
+
     return cat_true;
 }
 
@@ -64,12 +81,10 @@ CAT_API cat_bool_t cat_runtime_init(void)
     CAT_G(log_types) = CAT_LOG_TYPES_DEFAULT;
     CAT_G(log_module_types) = CAT_MODULE_TYPES_ALL;
     CAT_G(error_log) = stderr;
+    CAT_G(show_last_error) = cat_false;
     cat_const_string_init(&CAT_G(exepath));
 #ifdef CAT_SOURCE_POSITION
     CAT_G(log_source_postion) = cat_false;
-#endif
-#ifdef CAT_DEBUG
-    CAT_G(show_last_error) = cat_false;
 #endif
     memset(&CAT_G(last_error), 0, sizeof(CAT_G(last_error)));
 
@@ -82,6 +97,10 @@ CAT_API cat_bool_t cat_runtime_init(void)
             CAT_G(error_log) = stderr;
         }  /* TODO: log file support */
         cat_free(error_log);
+    }
+    /* show last error */
+    if (cat_env_is_true("CAT_SLE", cat_false)) {
+        CAT_G(show_last_error) = cat_true;
     }
 #ifdef CAT_DEBUG
 do {
@@ -96,10 +115,6 @@ do {
         CAT_G(log_source_postion) = cat_true;
     }
 #endif
-    /* show last error */
-    if (cat_env_is_true("CAT_SLE", cat_false)) {
-        CAT_G(show_last_error) = cat_true;
-    }
 } while (0);
 #endif
 

@@ -32,21 +32,18 @@ typedef struct cat_event_task_s {
 } cat_event_task_t;
 
 CAT_GLOBALS_STRUCT_BEGIN(cat_event)
-    uv_loop_t *loop;
-    uv_timer_t *dead_lock;
+    uv_loop_t loop;
+    uv_timer_t dead_lock;
     cat_queue_t runtime_shutdown_tasks;
     cat_queue_t defer_tasks;
     size_t defer_task_count;
-    /* --- */
-    uv_loop_t _loop;
-    uv_timer_t _dead_lock;
 CAT_GLOBALS_STRUCT_END(cat_event)
 
 extern CAT_API CAT_GLOBALS_DECLARE(cat_event)
 
 #define CAT_EVENT_G(x) CAT_GLOBALS_GET(cat_event, x)
 
-#define cat_event_loop CAT_EVENT_G(loop)
+#define cat_event_loop (&CAT_EVENT_G(loop))
 
 CAT_API cat_bool_t cat_event_module_init(void);
 CAT_API cat_bool_t cat_event_module_shutdown(void);

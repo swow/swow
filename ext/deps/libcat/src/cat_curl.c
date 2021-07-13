@@ -424,13 +424,6 @@ static CURLMcode cat_curl_multi_exec(
     CAT_ASSERT(extra_fds == NULL && "Not support yet");
     CAT_ASSERT(extra_nfds == 0 && "Not support yet");
 
-#ifdef CAT_OS_WIN
-    /* poll event will never be triggered if timeout is 0 on Windows,
-     * because uv__poll() treats 0 timeout specially.  */
-    if (timeout == 0) {
-        timeout = 1;
-    }
-#endif
     if (running_handles == NULL) {
         running_handles = &_running_handles;
     }

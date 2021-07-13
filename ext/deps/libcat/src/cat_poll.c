@@ -22,10 +22,31 @@
 #include "cat_event.h"
 #include "cat_time.h"
 
-/* TODO: support poll same fd multi times? */
+#ifdef CAT_OS_UNIX_LIKE
+/* for uv__fd_exists */
+#  ifdef CAT_IDE_HELPER
+#    include "unix/internal.h"
+#  else
+#    include "../deps/libuv/src/unix/internal.h"
+#  endif
+#endif
 
-typedef struct
-{
+/* poll event will never be triggered if timeout is 0 on Windows,
+ * because uv__poll() treats 0 timeout specially.
+ * TODO: could we fix it in libuv?  */
+#ifndef CAT_OS_WIN
+#define CAT_POLL_CHECK_TIMEOUT(timeout)
+#else
+#define CAT_POLL_CHECK_TIMEOUT(timeout) do { \
+    if (timeout == 0) { \
+        timeout = 1; \
+    } \
+} while (0)
+#endif
+
+/* TODO: Optimize dup() in poll() (can not find a better way temporarily) */
+
+typedef struct cat_poll_one_s {
     union {
         cat_coroutine_t *coroutine;
         uv_handle_t handle;
@@ -113,6 +134,7 @@ static void cat_poll_one_callback(uv_poll_t* handle, int status, int events)
 
 CAT_API cat_ret_t cat_poll_one(cat_os_socket_t fd, cat_pollfd_events_t events, cat_pollfd_events_t *revents, cat_timeout_t timeout)
 {
+    CAT_POLL_CHECK_TIMEOUT(timeout);
     cat_poll_one_t *poll;
     cat_pollfd_events_t _revents;
     cat_ret_t ret;
@@ -132,7 +154,19 @@ CAT_API cat_ret_t cat_poll_one(cat_os_socket_t fd, cat_pollfd_events_t events, c
         return CAT_RET_ERROR;
     }
 #endif
-
+#ifdef CAT_OS_UNIX_LIKE
+    cat_bool_t is_dup = cat_false;
+    if (unlikely(uv__fd_exists(cat_event_loop, fd))) {
+        fd = dup(fd);
+        if (unlikely(fd == CAT_OS_INVALID_SOCKET)) {
+            cat_update_last_error_of_syscall("Dup for poll_one() failed");
+            cat_free(poll);
+            return CAT_RET_ERROR;
+        }
+        is_dup = cat_true;
+        /* uv_poll_init_socket() and uv_poll_start() must return success if fd exists */
+    }
+#endif
     error = uv_poll_init_socket(cat_event_loop, &poll->u.poll, fd);
     if (unlikely(error != 0)) {
         cat_update_last_error_with_reason(error, "Poll init failed");
@@ -153,6 +187,11 @@ CAT_API cat_ret_t cat_poll_one(cat_os_socket_t fd, cat_pollfd_events_t events, c
 
     ret = cat_time_delay(timeout);
 
+#ifdef CAT_OS_UNIX_LIKE
+    if (is_dup) {
+        uv__close(fd);
+    }
+#endif
     uv_close(&poll->u.handle, (uv_close_cb) cat_free_function);
 
     switch (ret) {
@@ -205,6 +244,9 @@ typedef struct {
     int status;
     int revents;
     cat_bool_t initialized;
+#ifdef CAT_OS_UNIX_LIKE
+    cat_bool_t is_dup;
+#endif
 } cat_poll_t;
 
 /* double defer here to avoid use-after-free */
@@ -219,6 +261,11 @@ static void cat_poll_close_function(uv_handle_t *handle)
     cat_poll_t *poll = (cat_poll_t *) handle;
     cat_poll_context_t *context = poll->u.context;
 
+#ifdef CAT_OS_UNIX_LIKE
+    if (poll->is_dup) {
+        uv__close(poll->u.poll.io_watcher.fd);
+    }
+#endif
     if (!context->deferred_free_callback) {
         (void) cat_event_defer(cat_poll_free_function, context);
         context->deferred_free_callback = cat_true;
@@ -252,6 +299,7 @@ static void cat_poll_callback(uv_poll_t* handle, int status, int revents)
 
 CAT_API int cat_poll(cat_pollfd_t *fds, cat_nfds_t nfds, cat_timeout_t timeout)
 {
+    CAT_POLL_CHECK_TIMEOUT(timeout);
     cat_poll_context_t *context;
     cat_poll_t *polls;
     cat_nfds_t i, n = 0, e = 0;
@@ -282,6 +330,19 @@ CAT_API int cat_poll(cat_pollfd_t *fds, cat_nfds_t nfds, cat_timeout_t timeout)
         poll->revents = 0;
         poll->u.context = context;
         do {
+#ifdef CAT_OS_UNIX_LIKE
+            poll->is_dup = cat_false;
+            if (unlikely(uv__fd_exists(cat_event_loop, fd->fd))) {
+                fd->fd = dup(fd->fd);
+                if (unlikely(fd->fd == CAT_OS_INVALID_SOCKET)) {
+                    poll->status = cat_translate_sys_error(cat_sys_errno);
+                    e++;
+                    break;
+                }
+                poll->is_dup = cat_true;
+                /* uv_poll_init_socket() and uv_poll_start() must return success if fd exists */
+            }
+#endif
             error = uv_poll_init_socket(cat_event_loop, &poll->u.poll, fd->fd);
             if (unlikely(error != 0)) {
                 /* ENOTSOCK means it maybe a regular file */

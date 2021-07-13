@@ -61,21 +61,33 @@ extern "C" {
 #include "cat_debug.h"
 /* env */
 #include "cat_env.h"
+/* helper */
+#include "cat_helper.h"
+
+#ifndef CAT_USE_BUG_DETECTOR
+# if !defined(CAT_DEBUG) && defined(CAT_OS_UNIX_LIKE) && defined(SIGSEGV) && !defined(__SANITIZE_ADDRESS__)
+# define CAT_USE_BUG_DETECTOR 1 /* report segment fault for user */
+# endif
+#endif
+
+#ifndef CAT_OS_WIN
+#define CAT_EXEPATH_MAX (PATH_MAX + PATH_MAX + 1)
+#else
+#define CAT_EXEPATH_MAX 32768
+#endif
 
 /* global */
 
 CAT_GLOBALS_STRUCT_BEGIN(cat)
+    cat_bool_t runtime;
     cat_log_types_t log_types;
     cat_module_types_t log_module_types;
     cat_error_t last_error;
-    cat_bool_t runtime;
     FILE *error_log;
     cat_const_string_t exepath;
+    cat_bool_t show_last_error;
 #ifdef CAT_SOURCE_POSITION
     cat_bool_t log_source_postion;
-#endif
-#ifdef CAT_DEBUG
-    cat_bool_t show_last_error;
 #endif
 CAT_GLOBALS_STRUCT_END(cat)
 
