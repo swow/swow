@@ -554,7 +554,7 @@ static inline const char* swow_vcwd_path(const char *path, int flags) {
 }while(0)
 #endif // VIRTUAL_DIR
 
-// on-shot use here, only needs one form
+// one-shot use here, only needs one form
 static inline int swow_virtual_open(const char *path, int flags){
     int ret;
     SWOW_VCWD_WRAP(path, real_path, CWD_FILEPATH, {
