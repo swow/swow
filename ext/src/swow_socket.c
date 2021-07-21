@@ -374,7 +374,7 @@ static PHP_METHOD(Swow_Socket, connect)
         swow_throw_exception(
             swow_socket_exception_ce,
             cat_get_last_error_code(),
-            strerror(cat_orig_errno(cat_get_last_error_code()))
+            "%s", strerror(cat_orig_errno(cat_get_last_error_code()))
         );
         RETURN_THROWS();
     }
