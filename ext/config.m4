@@ -492,7 +492,7 @@ EOF
     if test "x${PHP_SWOW_SSL}" != "xno" ; then
       SWOW_PKG_CHECK_MODULES([OPENSSL], openssl, 1.0.1, [PHP_SWOW_SSL], [
         dnl make changes
-        AC_DEFINE([CAT_HAVE_SSL], 1, [Enable libcat ssl])
+        AC_DEFINE([CAT_HAVE_OPENSSL], 1, [Enable libcat SSL support with OpenSSL])
         PHP_EVAL_LIBLINE($OPENSSL_LIBS, SWOW_SHARED_LIBADD)
         PHP_EVAL_INCLINE($OPENSSL_CFLAGS)
         SWOW_ADD_SOURCES(deps/libcat/src, cat_ssl.c, SWOW_CAT_CFLAGS)

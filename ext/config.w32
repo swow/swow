@@ -22,7 +22,7 @@ if (PHP_SWOW != 'no') (function(){
     // check used libs
     if(
         !CHECK_LIB('Iphlpapi.lib', 'swow', PHP_SWOW) ||
-        !CHECK_LIB('Userenv.lib', 'swow', PHP_SWOW) 
+        !CHECK_LIB('Userenv.lib', 'swow', PHP_SWOW)
     ){
         WARNING('Swow not enabled; libraries not found');
         return;
@@ -37,7 +37,7 @@ if (PHP_SWOW != 'no') (function(){
     var use_ssl = 0;
     if('no' !== PHP_SWOW_SSL){
         if (0 < SETUP_OPENSSL("swow", PHP_SWOW)) {
-            ADD_FLAG('CFLAGS_SWOW_COMMON', '/D CAT_HAVE_SSL');
+            ADD_FLAG('CFLAGS_SWOW_COMMON', '/D CAT_HAVE_OPENSSL');
             use_ssl = 1;
         } else {
             WARNING("Swow OpenSSL support not enabled; libraries and headers not found");
