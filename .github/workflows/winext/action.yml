@@ -4,7 +4,7 @@ inputs:
   max-try:
     description: 'max retry for downloading things'
     required: false
-    default: 3
+    default: "3"
   tools-path:
     description: 'downloaded file path'
     required: true
