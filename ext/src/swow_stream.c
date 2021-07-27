@@ -23,11 +23,14 @@
 #include "cat_socket.h"
 #include "cat_time.h" /* for time_tv2to() */
 #include "cat_poll.h" /* for select() */
+#include "cat_ssl.h"
 
 #include "php.h"
-#include "ext/standard/file.h"
-#include "streams/php_streams_int.h"
 #include "php_network.h"
+#include "streams/php_streams_int.h"
+#include "ext/standard/file.h"
+#include "ext/standard/url.h"
+#include "ext/standard/php_fopen_wrappers.h"
 
 #if defined(AF_UNIX)
 #include <sys/un.h>
@@ -47,9 +50,22 @@ CAT_GLOBALS_CTOR_DECLARE_SZ(swow_stream)
 #define PHP_STREAM_SOCKET_RETURN_ERR -1
 #endif
 
+#ifdef CAT_SSL
+typedef struct swow_netstream_ssl_s {
+    zend_bool enable_on_connect;
+    zend_bool is_client;
+    struct timeval connect_timeout;
+    php_stream_xport_crypt_method_t method;
+    char *url_name;
+} swow_netstream_ssl_t;
+#endif
+
 typedef struct
 {
     php_netstream_data_t sock;
+#ifdef CAT_SSL
+    swow_netstream_ssl_t ssl;
+#endif
     cat_socket_t socket;
 } swow_netstream_data_t;
 
@@ -66,6 +82,162 @@ typedef struct
             failure; \
         } \
     } while (0)
+
+#ifdef CAT_SSL
+/* Flags for determining allowed stream crypto methods */
+#define STREAM_CRYPTO_IS_CLIENT            (1<<0)
+#define STREAM_CRYPTO_METHOD_SSLv2         (1<<1)
+#define STREAM_CRYPTO_METHOD_SSLv3         (1<<2)
+#define STREAM_CRYPTO_METHOD_TLSv1_0       (1<<3)
+#define STREAM_CRYPTO_METHOD_TLSv1_1       (1<<4)
+#define STREAM_CRYPTO_METHOD_TLSv1_2       (1<<5)
+#define STREAM_CRYPTO_METHOD_TLSv1_3       (1<<6)
+
+#ifndef OPENSSL_NO_TLS1_METHOD
+#define HAVE_TLS1 1
+#endif
+
+#ifndef OPENSSL_NO_TLS1_1_METHOD
+#define HAVE_TLS11 1
+#endif
+
+#ifndef OPENSSL_NO_TLS1_2_METHOD
+#define HAVE_TLS12 1
+#endif
+
+#if OPENSSL_VERSION_NUMBER >= 0x10101000 && !defined(OPENSSL_NO_TLS1_3)
+#define HAVE_TLS13 1
+#endif
+
+#ifndef OPENSSL_NO_ECDH
+#define HAVE_ECDH 1
+#endif
+
+#ifndef OPENSSL_NO_TLSEXT
+#define HAVE_TLS_SNI 1
+#define HAVE_TLS_ALPN 1
+#endif
+
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L && !defined(LIBRESSL_VERSION_NUMBER)
+#define HAVE_SEC_LEVEL 1
+#endif
+
+#ifndef OPENSSL_NO_SSL3
+#define HAVE_SSL3 1
+#define PHP_OPENSSL_MIN_PROTO_VERSION STREAM_CRYPTO_METHOD_SSLv3
+#else
+#define PHP_OPENSSL_MIN_PROTO_VERSION STREAM_CRYPTO_METHOD_TLSv1_0
+#endif
+#ifdef HAVE_TLS13
+#define PHP_OPENSSL_MAX_PROTO_VERSION STREAM_CRYPTO_METHOD_TLSv1_3
+#else
+#define PHP_OPENSSL_MAX_PROTO_VERSION STREAM_CRYPTO_METHOD_TLSv1_2
+#endif
+
+/* Simplify ssl context option retrieval */
+#define GET_VER_OPT(name) \
+    (PHP_STREAM_CONTEXT(stream) && \
+    (val = php_stream_context_get_option(PHP_STREAM_CONTEXT(stream), "ssl", name)) != NULL)
+
+#define GET_VER_OPT_STRING(name, str) do { \
+    if (GET_VER_OPT(name)) { \
+        if (try_convert_to_string(val)) { \
+            str = Z_STRVAL_P(val); \
+        } \
+    } \
+} while (0)
+
+#define GET_VER_OPT_LONG(name, num) do { \
+    if (GET_VER_OPT(name)) { \
+        num = zval_get_long(val); \
+    } \
+} while (0)
+
+static cat_ssl_protocols_t swow_stream_get_crypto_protocols_from_method(int method_flags)
+{
+    cat_ssl_protocols_t ssl_protocols = CAT_SSL_PROTOCOLS_ALL;
+
+#if PHP_OPENSSL_API_VERSION < 0x10100
+#ifdef SSL_OP_NO_SSLv2
+    ssl_protocols ^= CAT_SSL_PROTOCOL_SSLv2;
+#endif
+#ifdef HAVE_SSL3
+    if (!(method_flags & STREAM_CRYPTO_METHOD_SSLv3)) {
+        ssl_ctx_options ^= CAT_SSL_PROTOCOL_SSLv3;
+    }
+#endif
+#ifdef HAVE_TLS1
+    if (!(method_flags & STREAM_CRYPTO_METHOD_TLSv1_0)) {
+        ssl_protocols ^= CAT_SSL_PROTOCOL_TLSv1;
+    }
+#endif
+#ifdef HAVE_TLS11
+    if (!(method_flags & STREAM_CRYPTO_METHOD_TLSv1_1)) {
+        ssl_protocols ^= CAT_SSL_PROTOCOL_TLSv1_1;
+    }
+#endif
+#ifdef HAVE_TLS12
+    if (!(method_flags & STREAM_CRYPTO_METHOD_TLSv1_2)) {
+        ssl_protocols ^= CAT_SSL_PROTOCOL_TLSv1_2;
+    }
+#endif
+#ifdef HAVE_TLS13
+    if (!(method_flags & STREAM_CRYPTO_METHOD_TLSv1_3)) {
+        ssl_protocols ^= CAT_SSL_PROTOCOL_TLSv1_3;
+    }
+#endif
+#endif
+
+    return ssl_protocols;
+}
+
+static zend_long swow_stream_get_crypto_method(php_stream_context *ctx, zend_long crypto_method)  /* {{{ */
+{
+    zval *val;
+
+    if (ctx && (val = php_stream_context_get_option(ctx, "ssl", "crypto_method")) != NULL) {
+        crypto_method = zval_get_long(val);
+        crypto_method |= STREAM_CRYPTO_IS_CLIENT;
+    }
+
+    return crypto_method;
+}
+
+static char *swow_stream_ssl_get_url_name(const char *resourcename, size_t resourcenamelen, int is_persistent)
+{
+    php_url *url;
+
+    if (!resourcename) {
+        return NULL;
+    }
+
+    url = php_url_parse_ex(resourcename, resourcenamelen);
+    if (!url) {
+        return NULL;
+    }
+
+    if (url->host) {
+        const char * host = ZSTR_VAL(url->host);
+        char * url_name = NULL;
+        size_t len = ZSTR_LEN(url->host);
+
+        /* skip trailing dots */
+        while (len && host[len-1] == '.') {
+            --len;
+        }
+
+        if (len) {
+            url_name = pestrndup(host, len, is_persistent);
+        }
+
+        php_url_free(url);
+        return url_name;
+    }
+
+    php_url_free(url);
+    return NULL;
+}
+#endif
 
 SWOW_API php_stream *swow_stream_socket_factory(
     const char *proto, size_t protolen,
@@ -88,6 +260,9 @@ SWOW_API php_stream *swow_stream_socket_factory(
     sock->timeout.tv_usec = 0;
     /* we don't know the socket until we have determined if we are binding or connecting */
     sock->socket = -1;
+#ifdef CAT_SSL
+    swow_sock->ssl.connect_timeout = sock->timeout;
+#endif
 
     /* which type of socket ? */
     if (strncmp(proto, "tcp", protolen) == 0) {
@@ -104,6 +279,66 @@ SWOW_API php_stream *swow_stream_socket_factory(
         ops = &swow_stream_udg_socket_ops;
     }
 #endif
+#ifdef CAT_SSL
+    else if (strncmp(proto, "ssl", protolen) == 0) {
+        ops = &swow_stream_ssl_socket_ops;
+        swow_sock->ssl.enable_on_connect = 1;
+        swow_sock->ssl.method = swow_stream_get_crypto_method(context, STREAM_CRYPTO_METHOD_TLS_ANY_CLIENT);
+    } else if (strncmp(proto, "sslv2", protolen) == 0) {
+        php_error_docref(NULL, E_WARNING, "SSLv2 unavailable in this PHP version");
+        goto _error;
+    } else if (strncmp(proto, "sslv3", protolen) == 0) {
+#ifdef HAVE_SSL3
+        ops = &swow_stream_ssl_socket_ops;
+        swow_sock->ssl.enable_on_connect = 1;
+        swow_sock->ssl.method = STREAM_CRYPTO_METHOD_SSLv3_CLIENT;
+#else
+        php_error_docref(NULL, E_WARNING,
+            "SSLv3 support is not compiled into the OpenSSL library against which PHP is linked");
+        goto _error;
+#endif
+    } else if (strncmp(proto, "tls", protolen) == 0) {
+        ops = &swow_stream_ssl_socket_ops;
+        swow_sock->ssl.enable_on_connect = 1;
+        swow_sock->ssl.method = swow_stream_get_crypto_method(context, STREAM_CRYPTO_METHOD_TLS_ANY_CLIENT);
+        goto _error;
+    } else if (strncmp(proto, "tlsv1.0", protolen) == 0) {
+        ops = &swow_stream_ssl_socket_ops;
+        swow_sock->ssl.enable_on_connect = 1;
+        swow_sock->ssl.method = STREAM_CRYPTO_METHOD_TLSv1_0_CLIENT;
+        goto _error;
+    } else if (strncmp(proto, "tlsv1.1", protolen) == 0) {
+#ifdef HAVE_TLS11
+        ops = &swow_stream_ssl_socket_ops;
+        swow_sock->ssl.enable_on_connect = 1;
+        swow_sock->ssl.method = STREAM_CRYPTO_METHOD_TLSv1_1_CLIENT;
+#else
+        php_error_docref(NULL, E_WARNING,
+            "TLSv1.1 support is not compiled into the OpenSSL library against which PHP is linked");
+        goto _error;
+#endif
+    } else if (strncmp(proto, "tlsv1.2", protolen) == 0) {
+#ifdef HAVE_TLS12
+        ops = &swow_stream_ssl_socket_ops;
+        swow_sock->ssl.enable_on_connect = 1;
+        swow_sock->ssl.method = STREAM_CRYPTO_METHOD_TLSv1_2_CLIENT;
+#else
+        php_error_docref(NULL, E_WARNING,
+            "TLSv1.2 support is not compiled into the OpenSSL library against which PHP is linked");
+        goto _error;
+#endif
+    } else if (strncmp(proto, "tlsv1.3", protolen) == 0) {
+#ifdef HAVE_TLS13
+        ops = &swow_stream_ssl_socket_ops;
+        swow_sock->ssl.enable_on_connect = 1;
+        swow_sock->ssl.method = STREAM_CRYPTO_METHOD_TLSv1_3_CLIENT;
+#else
+        php_error_docref(NULL, E_WARNING,
+            "TLSv1.3 support is not compiled into the OpenSSL library against which PHP is linked");
+        goto _error;
+#endif
+    }
+#endif
     else {
         ops = NULL;
         CAT_NEVER_HERE("Unknown protocol");
@@ -112,12 +347,18 @@ SWOW_API php_stream *swow_stream_socket_factory(
     /* alloc php_stream (php_stream_ops * is not const on PHP-7.x) */
     stream = php_stream_alloc_rel((php_stream_ops *) ops, sock, persistent_id, "r+");
     if (UNEXPECTED(stream == NULL)) {
-        pefree(swow_sock, persistent_id ? 1 : 0);
-        return NULL;
+        goto _error;
     }
     stream->abstract = (swow_netstream_data_t *) swow_sock;
+#ifdef CAT_SSL
+    swow_sock->ssl.url_name = swow_stream_ssl_get_url_name(resourcename, resourcenamelen, persistent_id != NULL);
+#endif
 
     return stream;
+
+    _error:
+    pefree(swow_sock, persistent_id != NULL);
+    return NULL;
 }
 
 static cat_socket_type_t swow_stream_parse_socket_type(const php_stream_ops *ops)
@@ -523,6 +764,79 @@ static inline int swow_stream_socket_recvfrom(
     return ret;
 }
 
+#ifdef CAT_SSL
+static int swow_stream_setup_crypto(php_stream *stream,
+    swow_netstream_data_t *swow_sock, php_netstream_data_t *sock, cat_socket_t *socket,
+    php_stream_xport_crypto_param *cparam)
+{
+	if (cat_socket_is_encrypted(socket)) {
+        php_error_docref(NULL, E_WARNING, "SSL/TLS already set-up for this stream");
+        return FAILURE;
+	} else if (!sock->is_blocked && cat_socket_has_crypto(socket)) {
+        return SUCCESS;
+    }
+
+    return SUCCESS;
+}
+
+static int swow_stream_enable_crypto(php_stream *stream,
+    swow_netstream_data_t *swow_sock, php_netstream_data_t *sock, cat_socket_t *socket,
+    php_stream_xport_crypto_param *cparam)
+{
+    zend_bool encrypted = cat_socket_is_encrypted(socket);
+
+    if (cparam->inputs.activate && !encrypted) {
+        cat_socket_crypto_options_t options;
+        zend_bool is_client = cparam->inputs.method & STREAM_CRYPTO_IS_CLIENT;
+        zval *val;
+
+        cat_socket_crypto_options_init(&options, is_client);
+        if (GET_VER_OPT("verify_peer") && !zend_is_true(val)) {
+            options.verify_peer = cat_false;
+        }
+        if (GET_VER_OPT("verify_peer_name") && !zend_is_true(val)) {
+            options.verify_peer_name = cat_false;
+        }
+        if (GET_VER_OPT("allow_self_signed") && zend_is_true(val)) {
+            options.allow_self_signed = cat_true;
+        }
+        GET_VER_OPT_LONG("verify_depth", options.verify_depth);
+        GET_VER_OPT_STRING("cafile", options.ca_file);
+        GET_VER_OPT_STRING("capath", options.ca_path);
+        if (options.ca_file == NULL) {
+            options.ca_file = zend_ini_string(ZEND_STRL("openssl.cafile"), 0);
+            options.ca_file = strlen(options.ca_file) != 0 ? options.ca_file : NULL;
+            options.no_client_ca_list = cat_true;
+        }
+        GET_VER_OPT_STRING("passphrase", options.passphrase);
+        GET_VER_OPT_STRING("local_cert", options.certificate);
+        GET_VER_OPT_STRING("local_pk", options.certificate_key);
+        if (GET_VER_OPT("no_ticket") && zend_is_true(val)) {
+            options.no_ticket = cat_true;
+        }
+        if (!GET_VER_OPT("disable_compression") || zend_is_true(val)) {
+            options.no_compression = cat_true;
+        }
+        GET_VER_OPT_STRING("peer_name", options.passphrase);
+        if (is_client) {
+            /* If SNI is explicitly disabled we're finished here */
+            if (!GET_VER_OPT("SNI_enabled") || zend_is_true(val)) {
+                GET_VER_OPT_STRING("peer_name", options.peer_name);
+                if (options.peer_name == NULL) {
+                    options.peer_name = swow_sock->ssl.url_name;
+                }
+            }
+        }
+        return cat_socket_enable_crypto_ex(socket, &options, -1 /*FIXME: cat_time_tv2to(swow_sock->ssl.connect_timeout)*/) ? SUCCESS : FAILURE;
+    } else if (!cparam->inputs.activate && encrypted) {
+        /* deactivate - common for server/client */
+        // cat_socket_disable_crypto(socket->internal->ssl);
+        return SUCCESS;
+    }
+    return FAILURE;
+}
+#endif
+
 static int swow_stream_set_option(php_stream *stream, int option, int value, void *ptrparam)
 {
     SWOW_STREAM_MEMBERS(stream, swow_sock, sock, socket);
@@ -540,7 +854,7 @@ static int swow_stream_set_option(php_stream *stream, int option, int value, voi
             return PHP_STREAM_OPTION_RETURN_OK;
         }
         case PHP_STREAM_OPTION_BLOCKING: {
-			int oldmode = sock->is_blocked;
+            int oldmode = sock->is_blocked;
             sock->is_blocked = value;
             return oldmode;
         }
@@ -654,12 +968,22 @@ static int swow_stream_set_tcp_option(php_stream *stream, int option, int value,
     php_stream_xport_param *xparam;
 
     switch (option) {
-        case PHP_STREAM_OPTION_XPORT_API:
+        case PHP_STREAM_OPTION_XPORT_API: {
             xparam = (php_stream_xport_param *) ptrparam;
             switch (xparam->op) {
                 case STREAM_XPORT_OP_CONNECT:
                 case STREAM_XPORT_OP_CONNECT_ASYNC: {
                     xparam->outputs.returncode = swow_stream_connect(stream, swow_sock, xparam, xparam->op == STREAM_XPORT_OP_CONNECT_ASYNC);
+					if (swow_sock->ssl.enable_on_connect && xparam->outputs.returncode == 0) {
+                        /* TODO: ssl non-blocking handshake support
+						|| (xparam->op == STREAM_XPORT_OP_CONNECT_ASYNC &&
+						    xparam->outputs.returncode == 1 && xparam->outputs.error_code == EINPROGRESS */
+						if (php_stream_xport_crypto_setup(stream, swow_sock->ssl.method, NULL) < 0 ||
+								php_stream_xport_crypto_enable(stream, 1) < 0) {
+							php_error_docref(NULL, E_WARNING, "Failed to enable crypto");
+							xparam->outputs.returncode = -1;
+						}
+					}
                     return PHP_STREAM_OPTION_RETURN_OK;
                 }
                 case STREAM_XPORT_OP_BIND: {
@@ -673,6 +997,24 @@ static int swow_stream_set_tcp_option(php_stream *stream, int option, int value,
                 default:
                     break;
             }
+            break;
+        }
+#ifdef CAT_SSL
+        case PHP_STREAM_OPTION_CRYPTO_API: {
+            php_stream_xport_crypto_param *cparam = (php_stream_xport_crypto_param *) ptrparam;
+            switch (cparam->op) {
+                case STREAM_XPORT_CRYPTO_OP_SETUP:
+                    cparam->outputs.returncode = swow_stream_setup_crypto(stream, swow_sock, sock, socket, cparam);;
+                    return PHP_STREAM_OPTION_RETURN_OK;
+                case STREAM_XPORT_CRYPTO_OP_ENABLE:
+                    cparam->outputs.returncode = swow_stream_enable_crypto(stream, swow_sock, sock, socket, cparam);
+                    return PHP_STREAM_OPTION_RETURN_OK;
+                default:
+                    break;
+            }
+            break;
+        }
+#endif
     }
 
     return swow_stream_set_option(stream, option, value, ptrparam);
@@ -772,6 +1114,9 @@ static int swow_stream_close(php_stream *stream, int close_handle)
         }
     }
 
+	if (swow_sock->ssl.url_name != NULL) {
+		pefree(swow_sock->ssl.url_name, php_stream_is_persistent(stream));
+	}
     pefree(swow_sock, php_stream_is_persistent(stream));
 
     return 0;
@@ -786,11 +1131,18 @@ static int swow_stream_flush(php_stream *stream)
 
 static int swow_stream_cast(php_stream *stream, int castas, void **ret)
 {
-    php_netstream_data_t *sock = (php_netstream_data_t *) stream->abstract;
+    SWOW_STREAM_MEMBERS(stream, swow_sock, sock, socket);
 
     if (!sock) {
         return FAILURE;
     }
+
+#ifdef CAT_SSL
+    if (castas != PHP_STREAM_AS_FD_FOR_SELECT &&
+        cat_socket_is_encrypted(socket)) {
+        return FAILURE;
+    }
+#endif
 
     switch (castas) {
         case PHP_STREAM_AS_STDIO:
@@ -804,8 +1156,9 @@ static int swow_stream_cast(php_stream *stream, int castas, void **ret)
         case PHP_STREAM_AS_FD_FOR_SELECT:
         case PHP_STREAM_AS_FD:
         case PHP_STREAM_AS_SOCKETD:
-            if (ret)
+            if (ret) {
                 *(php_socket_t *) ret = sock->socket;
+            }
             return SUCCESS;
         default:
             return FAILURE;
@@ -885,6 +1238,18 @@ SWOW_API const php_stream_ops swow_stream_udg_socket_ops = {
     swow_stream_write, swow_stream_read,
     swow_stream_close, swow_stream_flush,
     "udg_socket",
+    NULL, /* seek */
+    swow_stream_cast,
+    swow_stream_stat,
+    swow_stream_set_tcp_option,
+};
+#endif
+
+#ifdef CAT_SSL
+SWOW_API const php_stream_ops swow_stream_ssl_socket_ops = {
+    swow_stream_write, swow_stream_read,
+    swow_stream_close, swow_stream_flush,
+	"tcp_socket/ssl",
     NULL, /* seek */
     swow_stream_cast,
     swow_stream_stat,
@@ -1608,6 +1973,21 @@ int swow_stream_module_init(INIT_FUNC_ARGS)
     if (php_stream_xport_register("udg", swow_stream_socket_factory) != SUCCESS) {
         return FAILURE;
     }
+#endif
+#ifdef CAT_SSL
+    php_stream_xport_register("ssl", swow_stream_socket_factory);
+#ifndef OPENSSL_NO_SSL3
+    php_stream_xport_register("sslv3", swow_stream_socket_factory);
+#endif
+    php_stream_xport_register("tls", swow_stream_socket_factory);
+    php_stream_xport_register("tlsv1.0", swow_stream_socket_factory);
+    php_stream_xport_register("tlsv1.1", swow_stream_socket_factory);
+    php_stream_xport_register("tlsv1.2", swow_stream_socket_factory);
+#if OPENSSL_VERSION_NUMBER >= 0x10101000
+    php_stream_xport_register("tlsv1.3", swow_stream_socket_factory);
+#endif
+    php_register_url_stream_wrapper("https", &php_stream_http_wrapper);
+    php_register_url_stream_wrapper("ftps", &php_stream_ftp_wrapper);
 #endif
 
     // backup blocking stdio operators (for include/require)

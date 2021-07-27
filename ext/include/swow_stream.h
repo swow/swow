@@ -37,6 +37,9 @@ extern SWOW_API const php_stream_ops swow_stream_pipe_socket_ops;
 extern SWOW_API const php_stream_ops swow_stream_unix_socket_ops;
 extern SWOW_API const php_stream_ops swow_stream_udg_socket_ops;
 #endif
+#ifdef CAT_SSL
+extern SWOW_API const php_stream_ops swow_stream_ssl_socket_ops;
+#endif
 
 int swow_stream_module_init(INIT_FUNC_ARGS);
 int swow_stream_runtime_init(INIT_FUNC_ARGS);
