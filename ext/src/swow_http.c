@@ -671,7 +671,7 @@ int swow_http_module_init(INIT_FUNC_ARGS)
     /* Status */
     swow_http_status_ce = swow_register_internal_class(
         "Swow\\Http\\Status", NULL, swow_http_status_methods,
-        NULL, NULL, cat_false, cat_false, cat_false,
+        NULL, NULL, cat_false, cat_false,
         swow_create_object_deny, NULL, 0
     );
 #define SWOW_HTTP_STATUS_GEN(name, value, unused)  zend_declare_class_constant_long(swow_http_status_ce, ZEND_STRL(#name), value);
@@ -682,7 +682,7 @@ int swow_http_module_init(INIT_FUNC_ARGS)
     swow_http_parser_ce = swow_register_internal_class(
         "Swow\\Http\\Parser", NULL, swow_http_parser_methods,
         &swow_http_parser_handlers, NULL,
-        cat_false, cat_false, cat_false,
+        cat_false, cat_false,
         swow_http_parser_create_object, NULL,
         XtOffsetOf(swow_http_parser_t, std)
     );
@@ -699,7 +699,7 @@ int swow_http_module_init(INIT_FUNC_ARGS)
     zend_declare_class_constant_long(swow_http_parser_ce, ZEND_STRL("EVENTS_ALL"), CAT_HTTP_PARSER_EVENTS_ALL);
     /* Parser\\Exception */
     swow_http_parser_exception_ce = swow_register_internal_class(
-        "Swow\\Http\\Parser\\Exception", swow_exception_ce, NULL, NULL, NULL, cat_true, cat_true, cat_true, NULL, NULL, 0
+        "Swow\\Http\\Parser\\Exception", swow_exception_ce, NULL, NULL, NULL, cat_true, cat_true, NULL, NULL, 0
     );
 
     if (zend_register_functions(NULL, swow_http_functions, NULL, MODULE_PERSISTENT) != SUCCESS) {

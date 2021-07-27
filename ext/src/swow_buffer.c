@@ -997,7 +997,7 @@ int swow_buffer_module_init(INIT_FUNC_ARGS)
     swow_buffer_ce = swow_register_internal_class(
         "Swow\\Buffer", NULL, swow_buffer_methods,
         &swow_buffer_handlers, NULL,
-        cat_true, cat_false, cat_false,
+        cat_true, cat_false,
         swow_buffer_create_object,
         swow_buffer_free_object,
         XtOffsetOf(swow_buffer_t, std)
@@ -1008,7 +1008,7 @@ int swow_buffer_module_init(INIT_FUNC_ARGS)
     zend_declare_class_constant_long(swow_buffer_ce, ZEND_STRL("DEFAULT_SIZE"), CAT_BUFFER_DEFAULT_SIZE);
 
     swow_buffer_exception_ce = swow_register_internal_class(
-        "Swow\\Buffer\\Exception", swow_exception_ce, NULL, NULL, NULL, cat_true, cat_true, cat_true, NULL, NULL, 0
+        "Swow\\Buffer\\Exception", swow_exception_ce, NULL, NULL, NULL, cat_true, cat_true, NULL, NULL, 0
     );
 
     return SUCCESS;

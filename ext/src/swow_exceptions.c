@@ -90,12 +90,12 @@ int swow_exceptions_module_init(INIT_FUNC_ARGS)
 {
     /* Exception for user */
     swow_exception_ce = swow_register_internal_class(
-        "Swow\\Exception", spl_ce_RuntimeException, NULL, NULL, NULL, cat_true, cat_true, cat_true, NULL, NULL, 0
+        "Swow\\Exception", spl_ce_RuntimeException, NULL, NULL, NULL, cat_true, cat_true, NULL, NULL, 0
     );
 
     swow_call_exception_ce = swow_register_internal_class(
         "Swow\\CallException", swow_exception_ce, swow_call_exception_methods,
-        NULL, NULL, cat_true, cat_true, cat_true, NULL, NULL, 0
+        NULL, NULL, cat_true, cat_true, NULL, NULL, 0
     );
     zend_declare_property_null(swow_call_exception_ce, ZEND_STRL("returnValue"), ZEND_ACC_PROTECTED);
 

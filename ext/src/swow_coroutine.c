@@ -2210,7 +2210,7 @@ int swow_coroutine_module_init(INIT_FUNC_ARGS)
     swow_coroutine_ce = swow_register_internal_class(
         "Swow\\Coroutine", NULL, swow_coroutine_methods,
         &swow_coroutine_handlers, NULL,
-        cat_false, cat_false, cat_false,
+        cat_false, cat_false,
         swow_coroutine_create_object,
         swow_coroutine_free_object,
         XtOffsetOf(swow_coroutine_t, std)
@@ -2225,12 +2225,12 @@ int swow_coroutine_module_init(INIT_FUNC_ARGS)
 
     /* Exception for common errors */
     swow_coroutine_exception_ce = swow_register_internal_class(
-        "Swow\\Coroutine\\Exception", swow_exception_ce, NULL, NULL, NULL, cat_true, cat_true, cat_true, NULL, NULL, 0
+        "Swow\\Coroutine\\Exception", swow_exception_ce, NULL, NULL, NULL, cat_true, cat_true, NULL, NULL, 0
     );
 
     /* implement UnwindExit by ourself (temporarily) */
     swow_coroutine_unwind_exit_ce = swow_register_internal_class(
-        "Swow\\Coroutine\\UnwindExit", swow_coroutine_exception_ce, NULL, NULL, NULL, cat_true, cat_true, cat_true, NULL, NULL, 0
+        "Swow\\Coroutine\\UnwindExit", swow_coroutine_exception_ce, NULL, NULL, NULL, cat_true, cat_true, NULL, NULL, 0
     );
     swow_coroutine_unwind_exit_ce->ce_flags |= ZEND_ACC_FINAL;
 

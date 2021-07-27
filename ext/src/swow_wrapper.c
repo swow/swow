@@ -195,7 +195,7 @@ SWOW_API zend_string* ZEND_FASTCALL zend_ulong_to_str(zend_ulong num)
 SWOW_API zend_class_entry *swow_register_internal_class(
     const char *name, zend_class_entry *parent_ce, const zend_function_entry methods[],
     zend_object_handlers *handlers, const zend_object_handlers *parent_handlers,
-    const cat_bool_t cloneable,const cat_bool_t serializable, const cat_bool_t unserializable,
+    const cat_bool_t cloneable,const cat_bool_t serializable,
     const swow_object_create_t create_object, const swow_object_free_t free_object, const int offset
 )
 {
@@ -212,10 +212,12 @@ SWOW_API zend_class_entry *swow_register_internal_class(
         parent_ce->ce_flags |= ZEND_ACC_FINAL;
     }
     if (!serializable) {
+#ifdef ZEND_ACC_NOT_SERIALIZABLE
+        ce->ce_flags |= ZEND_ACC_NOT_SERIALIZABLE;
+#else
         ce->serialize = zend_class_serialize_deny;
-    }
-    if (!unserializable) {
         ce->unserialize = zend_class_unserialize_deny;
+#endif
     }
     if (create_object != NULL) {
         ce->create_object = create_object;

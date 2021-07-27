@@ -607,7 +607,7 @@ int swow_channel_module_init(INIT_FUNC_ARGS)
     swow_channel_ce = swow_register_internal_class(
         "Swow\\Channel", NULL, swow_channel_methods,
         &swow_channel_handlers, NULL,
-        cat_false, cat_false, cat_false,
+        cat_false, cat_false,
         swow_channel_create_object,
         swow_channel_free_object,
         XtOffsetOf(swow_channel_t, std)
@@ -619,7 +619,7 @@ int swow_channel_module_init(INIT_FUNC_ARGS)
     zend_declare_class_constant_long(swow_channel_ce, ZEND_STRL("OPCODE_POP"), CAT_CHANNEL_OPCODE_POP);
 
     swow_channel_exception_ce = swow_register_internal_class(
-        "Swow\\Channel\\Exception", swow_exception_ce, NULL, NULL, NULL, cat_true, cat_true, cat_true, NULL, NULL, 0
+        "Swow\\Channel\\Exception", swow_exception_ce, NULL, NULL, NULL, cat_true, cat_true, NULL, NULL, 0
     );
 
     /* selector */
@@ -627,7 +627,7 @@ int swow_channel_module_init(INIT_FUNC_ARGS)
     swow_channel_selector_ce = swow_register_internal_class(
         "Swow\\Channel\\Selector", NULL, swow_channel_selector_methods,
         &swow_channel_selector_handlers, NULL,
-        cat_false, cat_false, cat_false,
+        cat_false, cat_false,
         swow_channel_selector_create_object,
         swow_channel_selector_free_object,
         XtOffsetOf(swow_channel_selector_t, std)
@@ -635,7 +635,7 @@ int swow_channel_module_init(INIT_FUNC_ARGS)
     swow_channel_selector_handlers.get_gc = swow_channel_selector_get_gc;
 
     swow_channel_selector_exception_ce = swow_register_internal_class(
-        "Swow\\Channel\\Selector\\Exception", swow_call_exception_ce, NULL, NULL, NULL, cat_true, cat_true, cat_true, NULL, NULL, 0
+        "Swow\\Channel\\Selector\\Exception", swow_call_exception_ce, NULL, NULL, NULL, cat_true, cat_true, NULL, NULL, 0
     );
 
     return SUCCESS;

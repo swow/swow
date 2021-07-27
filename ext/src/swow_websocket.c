@@ -679,7 +679,7 @@ int swow_websocket_module_init(INIT_FUNC_ARGS)
 
     swow_websocket_opcode_ce = swow_register_internal_class(
         "Swow\\WebSocket\\Opcode", NULL, swow_websocket_opcode_methods,
-        NULL, NULL, cat_false, cat_false, cat_false,
+        NULL, NULL, cat_false, cat_false,
         swow_create_object_deny, NULL, 0
     );
 #define SWOW_WEBSOCKET_OPCODE_GEN(name, value) zend_declare_class_constant_long(swow_websocket_opcode_ce, ZEND_STRL(#name), value);
@@ -688,7 +688,7 @@ int swow_websocket_module_init(INIT_FUNC_ARGS)
 
     swow_websocket_status_ce = swow_register_internal_class(
         "Swow\\WebSocket\\Status", NULL, swow_websocket_status_methods,
-        NULL, NULL, cat_false, cat_false, cat_false,
+        NULL, NULL, cat_false, cat_false,
         swow_create_object_deny, NULL, 0
     );
 #define SWOW_WEBSOCKET_STATUS_GEN(name, value, description) zend_declare_class_constant_long(swow_websocket_status_ce, ZEND_STRL(#name), value);
@@ -698,7 +698,7 @@ int swow_websocket_module_init(INIT_FUNC_ARGS)
     swow_websocket_frame_ce = swow_register_internal_class(
         "Swow\\WebSocket\\Frame", NULL, swow_websocket_frame_methods,
         &swow_websocket_frame_handlers, NULL,
-        cat_true, cat_false, cat_false,
+        cat_true, cat_false,
         swow_websocket_frame_create_object,
         swow_websocket_frame_free_object,
         XtOffsetOf(swow_websocket_frame_t, std)

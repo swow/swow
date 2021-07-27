@@ -72,7 +72,7 @@ int swow_{{module_name}}_module_init(INIT_FUNC_ARGS)
     swow_{{type_name}}_ce = swow_register_internal_class(
         "Swow\\{{class_name}}", NULL, swow_{{type_name}}_methods,
         &swow_{{type_name}}_handlers, NULL,
-        cat_false, cat_false, cat_false,
+        cat_false, cat_false,
         swow_{{type_name}}_create_object,
         swow_{{type_name}}_free_object,
         XtOffsetOf(swow_{{type_name}}_t, std)

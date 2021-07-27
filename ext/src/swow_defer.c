@@ -167,7 +167,7 @@ int swow_defer_module_init(INIT_FUNC_ARGS)
     swow_defer_ce = swow_register_internal_class(
         "Swow\\Defer", NULL, swow_defer_methods,
         &swow_defer_handlers, NULL,
-        cat_false, cat_false, cat_false,
+        cat_false, cat_false,
         swow_defer_create_object, NULL,
         XtOffsetOf(swow_defer_t, std)
     );

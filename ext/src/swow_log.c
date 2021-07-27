@@ -189,7 +189,7 @@ int swow_log_module_init(INIT_FUNC_ARGS)
     swow_log_ce = swow_register_internal_class(
         "Swow\\Log", NULL, swow_log_methods,
         &swow_log_handlers, NULL,
-        cat_false, cat_false, cat_false,
+        cat_false, cat_false,
         swow_create_object_deny, NULL, 0
     );
     zend_declare_class_constant_long(swow_log_ce, ZEND_STRL("TYPE_DEBUG"),         CAT_LOG_TYPE_DEBUG);

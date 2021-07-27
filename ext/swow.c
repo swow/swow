@@ -399,7 +399,7 @@ int swow_module_init(INIT_FUNC_ARGS)
     swow_ce = swow_register_internal_class(
         "Swow", NULL, NULL,
         &swow_handlers, NULL,
-        cat_false, cat_false, cat_false,
+        cat_false, cat_false,
         swow_create_object_deny, NULL, 0
     );
 
@@ -415,7 +415,7 @@ int swow_module_init(INIT_FUNC_ARGS)
     swow_module_ce = swow_register_internal_class(
         "Swow\\Module", NULL, NULL,
         &swow_module_handlers, NULL,
-        cat_false, cat_false, cat_false,
+        cat_false, cat_false,
         swow_create_object_deny, NULL, 0
     );
 #define SWOW_MODULE_TYPE_GEN(name, value) \

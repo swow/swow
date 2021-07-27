@@ -227,12 +227,12 @@ int swow_watch_dog_module_init(INIT_FUNC_ARGS)
     swow_watch_dog_ce = swow_register_internal_class(
         "Swow\\WatchDog", NULL, swow_watch_dog_methods,
         &swow_watch_dog_handlers, NULL,
-        cat_false, cat_false, cat_false,
+        cat_false, cat_false,
         swow_create_object_deny, NULL, 0
     );
 
     swow_watch_dog_exception_ce = swow_register_internal_class(
-        "Swow\\WatchDog\\Exception", swow_exception_ce, NULL, NULL, NULL, cat_true, cat_true, cat_true, NULL, NULL, 0
+        "Swow\\WatchDog\\Exception", swow_exception_ce, NULL, NULL, NULL, cat_true, cat_true, NULL, NULL, 0
     );
 
     return SUCCESS;

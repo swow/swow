@@ -1587,7 +1587,7 @@ int swow_socket_module_init(INIT_FUNC_ARGS)
     swow_socket_ce = swow_register_internal_class(
         "Swow\\Socket", NULL, swow_socket_methods,
         &swow_socket_handlers, NULL,
-        cat_false, cat_false, cat_false,
+        cat_false, cat_false,
         swow_socket_create_object, swow_socket_free_object,
         XtOffsetOf(swow_socket_t, std)
     );
@@ -1613,7 +1613,7 @@ int swow_socket_module_init(INIT_FUNC_ARGS)
 #undef SWOW_SOCKET_BIND_FLAG_GEN
 
     swow_socket_exception_ce = swow_register_internal_class(
-        "Swow\\Socket\\Exception", swow_call_exception_ce, NULL, NULL, NULL, cat_true, cat_true, cat_true, NULL, NULL, 0
+        "Swow\\Socket\\Exception", swow_call_exception_ce, NULL, NULL, NULL, cat_true, cat_true, NULL, NULL, 0
     );
 
     return SUCCESS;

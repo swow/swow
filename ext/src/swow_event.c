@@ -126,7 +126,7 @@ int swow_event_module_init(INIT_FUNC_ARGS)
     swow_event_ce = swow_register_internal_class(
         "Swow\\Event", NULL, swow_event_methods,
         &swow_event_handlers, NULL,
-        cat_false, cat_false, cat_false,
+        cat_false, cat_false,
         swow_create_object_deny, NULL, 0
     );
 

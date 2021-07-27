@@ -463,7 +463,7 @@ typedef int (*swow_interface_gets_implemented_t)(zend_class_entry *iface, zend_c
 SWOW_API zend_class_entry *swow_register_internal_class(
     const char *name, zend_class_entry *parent_ce, const zend_function_entry methods[],
     zend_object_handlers *handlers, const zend_object_handlers *parent_handlers,
-    const cat_bool_t cloneable,const cat_bool_t serializable, const cat_bool_t unserializable,
+    const cat_bool_t cloneable, const cat_bool_t serializable,
     const swow_object_create_t create_object, const swow_object_free_t free_object, const int offset
 );
 
