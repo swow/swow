@@ -494,7 +494,7 @@ EOF
         dnl make changes
         AC_DEFINE([CAT_HAVE_OPENSSL], 1, [Enable libcat SSL support with OpenSSL])
         PHP_EVAL_LIBLINE($OPENSSL_LIBS, SWOW_SHARED_LIBADD)
-        PHP_EVAL_INCLINE($OPENSSL_CFLAGS)
+        PHP_EVAL_INCLINE($OPENSSL_INCL)
         SWOW_ADD_SOURCES(deps/libcat/src, cat_ssl.c, SWOW_CAT_CFLAGS)
         dnl SWOW_ADD_SOURCES(src, swow_curl.c, SWOW_CFLAGS)
       ],[
@@ -511,7 +511,7 @@ EOF
         dnl make changes
         AC_DEFINE([CAT_HAVE_CURL], 1, [Enable libcat cURL])
         PHP_EVAL_LIBLINE($CURL_LIBS, SWOW_SHARED_LIBADD)
-        PHP_EVAL_INCLINE($CURL_CFLAGS)
+        PHP_EVAL_INCLINE($CURL_INCL)
         SWOW_ADD_SOURCES(deps/libcat/src, cat_curl.c, SWOW_CAT_CFLAGS)
         SWOW_ADD_SOURCES(src, swow_curl.c, SWOW_CFLAGS)
       ],[
