@@ -338,6 +338,7 @@ static inline int swow_stream_accept(php_stream *stream, swow_netstream_data_t *
         (void) cat_socket_set_tcp_nodelay(client, cat_false);
     }
 
+    memcpy(&client_sock->sock, &server_sock->sock, sizeof(client_sock->sock));
     client_sock->sock.socket = cat_socket_get_fd(client);
 
     xparam->outputs.client = php_stream_alloc_rel(stream->ops, &client_sock->sock, NULL, "r+");
@@ -726,7 +727,7 @@ static bytes_t swow_stream_write(php_stream *stream, const char *buffer, size_t 
         didwrite = cat_socket_try_send(socket, buffer, length);
         if (UNEXPECTED(didwrite == CAT_EAGAIN)) {
             /* EWOULDBLOCK/EAGAIN is not an error for a non-blocking stream.
-             * Report zero byte write instead. */
+             * Report zero byte wrote instead. */
             return 0;
         }
         ret = didwrite >= 0;
