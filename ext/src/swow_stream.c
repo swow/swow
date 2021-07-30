@@ -903,9 +903,9 @@ typedef struct {
     int fd;
 } php_stdio_stream_data;
 
-static cat_socket_t *swow_stream_stdio_init(php_stream *stream)
+static cat_socket_t *swow_stream_stdio_init(const php_stream *stream)
 {
-    php_stdio_stream_data *data = (php_stdio_stream_data *) stream->abstract;
+    const php_stdio_stream_data *data = (const php_stdio_stream_data *) stream->abstract;
     int fd = data->fd >= 0 ? data->fd : fileno(data->file);
     cat_socket_t *socket;
 
@@ -1508,6 +1508,66 @@ PHP_FUNCTION(swow_stream_select)
 }
 /* }}} */
 
+static zif_handler PHP_FN(original_socket_export_stream) = (zif_handler) -1;
+
+/* hook for socket_export_stream */
+static PHP_FUNCTION(swow_socket_export_stream)
+{
+    PHP_FN(original_socket_export_stream)(execute_data, return_value);
+    if (Z_TYPE_P(return_value) != IS_RESOURCE) {
+        return;
+    }
+
+    php_stream *stream;
+    php_stream_from_zval(stream, return_value);
+
+    swow_netstream_data_t *data = (swow_netstream_data_t *) stream->abstract;
+    php_socket_t sock = data->sock.socket;
+    cat_socket_t *socket = &data->socket;
+    int type, af = AF_UNSPEC;
+    socklen_t option_len;
+
+    option_len = sizeof(type);
+    if (getsockopt(sock, SOL_SOCKET, SO_TYPE, (char *) &type, &option_len) != 0) {
+        zval_ptr_dtor(return_value);
+        RETURN_FALSE;
+    }
+#ifdef SO_DOMAIN
+    option_len = sizeof(af);
+    (void) getsockopt(sock, SOL_SOCKET, SO_DOMAIN, &af, &option_len);
+#endif
+    cat_socket_type_t socket_type = CAT_SOCKET_TYPE_ANY;
+    // determine type by sock type and domain
+    if (AF_INET == af || AF_INET6 == af || AF_UNSPEC == af) {
+        if (SOCK_STREAM == type) {
+            socket_type = CAT_SOCKET_TYPE_TCP;
+        } else if (SOCK_DGRAM == type) {
+            socket_type = CAT_SOCKET_TYPE_UDP;
+        }
+    }
+#ifdef CAT_OS_UNIX_LIKE
+    else if (af == AF_LOCAL) {
+        if (SOCK_STREAM == type) {
+            socket_type = CAT_SOCKET_TYPE_UNIX;
+        } else if (SOCK_DGRAM == type) {
+            socket_type = CAT_SOCKET_TYPE_UDG;
+        }
+    }
+#endif
+#ifdef CAT_OS_UNIX_LIKE
+    if (socket_type & CAT_SOCKET_TYPE_FLAG_LOCAL) {
+        socket = cat_socket_open_os_fd(socket, socket_type, sock);
+    } else
+#endif
+    {
+        socket = cat_socket_open_os_socket(socket, socket_type, sock);
+    }
+    if (socket == NULL) {
+        zval_ptr_dtor(return_value);
+        RETURN_FALSE;
+    }
+}
+
 static const zend_function_entry swow_stream_functions[] = {
     PHP_FENTRY(stream_socket_sendto, PHP_FN(swow_stream_socket_sendto), arginfo_swow_stream_socket_sendto, 0)
     PHP_FENTRY(stream_select, PHP_FN(swow_stream_select), arginfo_swow_stream_select, 0)
@@ -1566,6 +1626,15 @@ int swow_stream_runtime_init(INIT_FUNC_ARGS)
 {
     SWOW_STREAM_G(hooking_stdio_ops) = cat_true;
     SWOW_STREAM_G(hooking_plain_wrapper) = cat_true;
+
+    if (PHP_FN(original_socket_export_stream) == (zif_handler) -1) {
+        (void) swow_hook_internal_function_handler_ex(
+            ZEND_STRL("socket_export_stream"),
+            PHP_FN(swow_socket_export_stream),
+            &PHP_FN(original_socket_export_stream)
+        );
+    }
+
     return SUCCESS;
 }
 
