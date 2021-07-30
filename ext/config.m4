@@ -106,6 +106,7 @@ if test "${SWOW}" != "no"; then
   swow_check_git()
   {
     # prove git found
+    test x"$SWOW_GIT" != x"no" || return 1
     test x"$SWOW_GIT" != x"" || return 1
     # prove git dir exists
     test -d ${ext_srcdir}/../.git || return 1
@@ -464,27 +465,35 @@ EOF
     fi
     dnl SWOW_PKG_CHECK_MODULES($varname, $libname, $ver, $search_path, $if_found, $if_not_found)
     AC_DEFUN([SWOW_PKG_CHECK_MODULES],[
-      dnl find pkg using pkg-config cli tool
-      if test ! -x "$PKG_CONFIG" ; then
-        AC_MSG_WARN([Cannot find package $2: pkg-config not found])
-      fi
-      SWOW_PKG_FIND_PATH=${$4}
-      if test "xyes" = "x${$4}" ; then
-        SWOW_PKG_FIND_PATH=
-      fi
       AC_MSG_CHECKING(for $2 $3 or greater)
-      dnl shall we find env first?
-      dnl echo env PKG_CONFIG_PATH=${SWOW_PKG_FIND_PATH}/lib/pkgconfig $PKG_CONFIG --atleast-version $3 $2
-      dnl env PKG_CONFIG_PATH=${SWOW_PKG_FIND_PATH}/lib/pkgconfig $PKG_CONFIG --atleast-version $3 $2; echo $?
-      dnl env PKG_CONFIG_PATH=${SWOW_PKG_FIND_PATH}/lib/pkgconfig $PKG_CONFIG --modversion $2
-      if env PKG_CONFIG_PATH=${SWOW_PKG_FIND_PATH}/lib/pkgconfig $PKG_CONFIG --atleast-version $3 $2; then
-        $2_version_full=`env PKG_CONFIG_PATH=${SWOW_PKG_FIND_PATH}/lib/pkgconfig $PKG_CONFIG --modversion $2`
-        AC_MSG_RESULT(${$2_version_full})
-        $1_LIBS=`env PKG_CONFIG_PATH=${SWOW_PKG_FIND_PATH}/lib/pkgconfig $PKG_CONFIG --libs   $2`
-        $1_INCL=`env PKG_CONFIG_PATH=${SWOW_PKG_FIND_PATH}/lib/pkgconfig $PKG_CONFIG --cflags $2`
+      if test "x${$1_LIBS+set}" = "xset" || test "x${$1_INCLUDES+set}" = "xset"; then
+        AC_MSG_RESULT([using $1_CFLAGS and $1_LIBS])
+        $1_LIBS=${$1_CFLAGS}
+        $1_INCL=${$1_LIBS}
         $5
+      elif test -x "$PKG_CONFIG" ; then
+        dnl find pkg using pkg-config cli tool
+        SWOW_PKG_FIND_PATH=${$4}
+        if test "xyes" = "x${$4}" ; then
+          SWOW_PKG_FIND_PATH=
+        fi
+        
+        dnl echo env PKG_CONFIG_PATH=${SWOW_PKG_FIND_PATH}/lib/pkgconfig $PKG_CONFIG --atleast-version $3 $2
+        dnl env PKG_CONFIG_PATH=${SWOW_PKG_FIND_PATH}/lib/pkgconfig $PKG_CONFIG --atleast-version $3 $2; echo $?
+        dnl env PKG_CONFIG_PATH=${SWOW_PKG_FIND_PATH}/lib/pkgconfig $PKG_CONFIG --modversion $2
+        if env PKG_CONFIG_PATH=${SWOW_PKG_FIND_PATH}/lib/pkgconfig $PKG_CONFIG --atleast-version $3 $2; then
+          $2_version_full=`env PKG_CONFIG_PATH=${SWOW_PKG_FIND_PATH}/lib/pkgconfig $PKG_CONFIG --modversion $2`
+          AC_MSG_RESULT(${$2_version_full})
+          $1_LIBS=`env PKG_CONFIG_PATH=${SWOW_PKG_FIND_PATH}/lib/pkgconfig $PKG_CONFIG --libs   $2`
+          $1_INCL=`env PKG_CONFIG_PATH=${SWOW_PKG_FIND_PATH}/lib/pkgconfig $PKG_CONFIG --cflags $2`
+          $5
+        else
+          AC_MSG_RESULT(no)
+          $6
+        fi
       else
         AC_MSG_RESULT(no)
+        AC_MSG_WARN([Cannot find pkg-config, please set $1_CFLAGS and $1_LIBS to use $2])
         $6
       fi
     ])
