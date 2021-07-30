@@ -340,7 +340,7 @@ PHP_MINFO_FUNCTION(swow)
 #ifdef CAT_HAVE_OPENSSL
         smart_str_append_printf(&str, "%s, ", cat_ssl_version());
 #endif
-        if (ZSTR_LEN(str.s) == 0) {
+        if (str.s == NULL || ZSTR_LEN(str.s) == 0) {
             break;
         }
         ZSTR_LEN(str.s) -= 2; // rtrim(&str, ", ")
