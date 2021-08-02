@@ -4,7 +4,7 @@ swow_watch_dog: syscall
 <?php
 require __DIR__ . '/../include/skipif.php';
 if (PHP_OS_FAMILY != 'Windows') {
-    skip_if_c_function_not_exist('int nanosleep(const coid *, void *);');
+    skip_if_c_function_not_exist('int nanosleep(const void *, void *);');
 } else {
     skip_if_c_function_not_exist('void Sleep(uint32_t);', 'kernel32.dll');
 }
