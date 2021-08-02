@@ -1,7 +1,7 @@
 ---
 name: Bug report / 反馈一个bug
 about: Create a report about something not working in Swow / 反馈有Swow工作不正常的地方
-title: '[bug] (Replace with your short bug description / 替换括号和里面的字为一个简短的bug描述)'
+title: '[bug] Replace with your short bug description / 替换标题为一个简短的bug描述'
 labels: 'bug'
 assignees: ''
 
@@ -58,7 +58,11 @@ fill here with your OS version / 在这填入你的OS信息
 
 <!-- Provide your PHP version  -->
 <!-- 提供下 PHP 版本  -->
-PHP: <!-- e.g. 例如 "8.0.3 with debug, zend_thread_safe" / "php-8.0.3-nts-Win32-vs16-x64.zip" -->
+PHP: <!-- e.g. 例如 "8.0.3 with debug, zend_thread_safe" / "php-8.0.3-nts-Win32-vs16-x64.zip" / php -v 结果 -->
+
+<!-- Provide your Swow version  -->
+<!-- 提供下 Swow 版本  -->
+Swow: <!-- php --ri swow -->
 
 **Additional context / 补充说明**
 <!-- Add any other context about the problem here. -->
