@@ -23,8 +23,7 @@ jobs:
           composer update -o
           echo "::endgroup::"
           echo "::group::Run cs-check"
-          composer cs-check
-
+          composer cs-check -- -v
   unix-tests:
     name: PHP ${{ matrix.php-version }} ${{ matrix.ts }} Test on ${{ matrix.os }}
     runs-on: "${{ matrix.os }}"
