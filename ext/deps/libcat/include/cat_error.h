@@ -112,15 +112,11 @@ CAT_API CAT_NORETURN void cat_abort(void);
 
 #ifndef CAT_OS_WIN
 #define cat_sys_errno                  ((cat_errno_t) errno)
-#define cat_socket_errno               ((cat_errno_t) errno)
 #define cat_set_sys_errno(error)       errno = error
-#define cat_set_socket_errno(error)    errno = error
 #define cat_translate_sys_error(error) ((cat_errno_t) (-(error)))
 #else
-#define cat_sys_errno                   ((cat_errno_t) GetLastError())
-#define cat_socket_errno                ((cat_errno_t) WSAGetLastError())
-#define cat_set_sys_errno(error)        SetLastError(error)
-#define cat_set_socket_errno(error)     WSASetLastError(error)
+#define cat_sys_errno                   ((cat_errno_t) WSAGetLastError())
+#define cat_set_sys_errno(error)        WSASetLastError(error)
 #define cat_translate_sys_error(error)  ((cat_errno_t) uv_translate_sys_error(error))
 #endif
 

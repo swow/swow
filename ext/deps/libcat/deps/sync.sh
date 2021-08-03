@@ -26,10 +26,10 @@ if sync_boost_context  && cd "${context_dir}/asm"; then
   ALL_FILES=()
   while IFS='' read -r line; do ALL_FILES+=("$line"); done < <(ls ./*.asm ./*.S)
 
-  perl -p -i -e 's;\bjump_fcontext\b;cat_coroutine_context_jump;g' "${ALL_FILES[@]}";
-  perl -p -i -e 's;\b_jump_fcontext\b;_cat_coroutine_context_jump;g' "${ALL_FILES[@]}";
   perl -p -i -e 's;\b_make_fcontext\b;_cat_coroutine_context_make;g' "${ALL_FILES[@]}";
   perl -p -i -e 's;\bmake_fcontext\b;cat_coroutine_context_make;g' "${ALL_FILES[@]}";
+  perl -p -i -e 's;\b_jump_fcontext\b;_cat_coroutine_context_jump;g' "${ALL_FILES[@]}";
+  perl -p -i -e 's;\bjump_fcontext\b;cat_coroutine_context_jump;g' "${ALL_FILES[@]}";
   perl -p -i -e 's;\b_ontop_fcontext\b;_cat_coroutine_context_ontop;g' "${ALL_FILES[@]}";
   perl -p -i -e 's;\bontop_fcontext\b;cat_coroutine_context_ontop;g' "${ALL_FILES[@]}";
 

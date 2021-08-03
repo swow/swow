@@ -51,6 +51,14 @@ extern "C" {
 #include <openssl/x509v3.h>
 #include <openssl/ossl_typ.h>
 
+#ifdef CAT_OS_WIN
+#include <Wincrypt.h>
+/* These are from Wincrypt.h, they conflict with OpenSSL */
+#undef X509_NAME
+#undef X509_CERT_PAIR
+#undef X509_EXTENSIONS
+#endif
+
 #if (defined LIBRESSL_VERSION_NUMBER && OPENSSL_VERSION_NUMBER == 0x20000000L)
 #undef OPENSSL_VERSION_NUMBER
 #if (LIBRESSL_VERSION_NUMBER >= 0x2080000fL)
@@ -60,13 +68,13 @@ extern "C" {
 #endif
 #endif
 
+#define CAT_SSL_DEFAULT_STREAM_VERIFY_DEPTH 9
+
 #if (OPENSSL_VERSION_NUMBER >= 0x10100001L)
 #define cat_ssl_version() OpenSSL_version(OPENSSL_VERSION)
 #else
 #define cat_ssl_version() SSLeay_version(SSLEAY_VERSION)
 #endif
-
-#define OPENSSL_DEFAULT_STREAM_VERIFY_DEPTH 9
 
 typedef enum cat_ssl_flag_e {
     CAT_SSL_FLAG_NONE                  = 0,
@@ -109,9 +117,9 @@ typedef enum cat_ssl_protocol_e {
 } cat_ssl_protocol_t;
 
 typedef enum cat_ssl_union_protocols_e {
-#define CAT_SSL_PROTOCO_ALLL_GEN(name, value) CAT_SSL_PROTOCOL_##name |
-    CAT_SSL_PROTOCOLS_ALL = CAT_SSL_PROTOCOL_MAP(CAT_SSL_PROTOCO_ALLL_GEN) 0,
-#undef CAT_SSL_PROTOCO_ALLL_GEN
+#define CAT_SSL_PROTOCOL_ALL_GEN(name, value) CAT_SSL_PROTOCOL_##name |
+    CAT_SSL_PROTOCOLS_ALL = CAT_SSL_PROTOCOL_MAP(CAT_SSL_PROTOCOL_ALL_GEN) 0,
+#undef CAT_SSL_PROTOCOL_ALL_GEN
 } cat_ssl_union_protocols_t;
 
 typedef unsigned int cat_ssl_protocols_t;
@@ -143,17 +151,24 @@ CAT_API cat_ssl_context_t *cat_ssl_context_create(cat_ssl_method_t method);
 CAT_API void cat_ssl_context_close(cat_ssl_context_t *context);
 
 CAT_API void cat_ssl_context_set_protocols(cat_ssl_context_t *context, cat_ssl_protocols_t protocols);
+
+CAT_API cat_bool_t cat_ssl_context_set_client_ca_list(cat_ssl_context_t *context, const char *ca_file);
 CAT_API cat_bool_t cat_ssl_context_set_default_verify_paths(cat_ssl_context_t *context);
-CAT_API cat_bool_t cat_ssl_context_set_ca_file(cat_ssl_context_t *context, const char *ca_file);
-CAT_API cat_bool_t cat_ssl_context_set_ca_path(cat_ssl_context_t *context, const char *ca_path);
+CAT_API cat_bool_t cat_ssl_context_load_verify_locations(cat_ssl_context_t *context, const char *ca_file, const char *ca_path);
+CAT_API cat_bool_t cat_ssl_context_set_certificate(cat_ssl_context_t *context, const char *certificate, const char *certificate_key);
 CAT_API void cat_ssl_context_set_verify_depth(cat_ssl_context_t *context, int depth);
 #ifdef CAT_OS_WIN
-CAT_API void cat_ssl_context_configure_verify(cat_ssl_context_t *context);
+CAT_API void cat_ssl_context_configure_cert_verify_callback(cat_ssl_context_t *context);
 #endif
+CAT_API void cat_ssl_context_enable_verify_peer(cat_ssl_context_t *context);
+CAT_API void cat_ssl_context_disable_verify_peer(cat_ssl_context_t *context);
+CAT_API void cat_ssl_context_set_no_ticket(cat_ssl_context_t *context);
+CAT_API void cat_ssl_context_set_no_compression(cat_ssl_context_t *context);
 
 /* connection */
 CAT_API cat_ssl_t *cat_ssl_create(cat_ssl_t *ssl, cat_ssl_context_t *context);
 CAT_API void cat_ssl_close(cat_ssl_t *ssl);
+CAT_API cat_bool_t cat_ssl_shutdown(cat_ssl_t *ssl);
 
 CAT_API cat_buffer_t *cat_ssl_get_read_buffer(cat_ssl_t *ssl, size_t size);
 

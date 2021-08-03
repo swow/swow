@@ -165,6 +165,9 @@ CAT_API int cat_fs_statfs(const char *path, cat_statfs_t *buf);
 
 CAT_API int cat_fs_flock(cat_file_t fd, int operation);
 
+CAT_API char *cat_fs_get_contents(const char *filename, size_t *length);
+CAT_API ssize_t cat_fs_put_contents(const char *filename, const char *content, size_t length);
+
 #ifdef __cplusplus
 }
 #endif

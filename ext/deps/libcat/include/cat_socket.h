@@ -292,10 +292,12 @@ typedef enum cat_socket_common_type_e {
 } cat_socket_common_type_t;
 
 typedef enum cat_socket_union_type_flags_e {
-    CAT_SOCKET_TYPE_FLAGS_DO_NOT_EXTENDS =
+    CAT_SOCKET_TYPE_FLAGS_ROLE =
         CAT_SOCKET_TYPE_FLAG_SERVER |
         CAT_SOCKET_TYPE_FLAG_CLIENT |
         CAT_SOCKET_TYPE_FLAG_SESSION,
+    CAT_SOCKET_TYPE_FLAGS_DO_NOT_EXTENDS =
+        CAT_SOCKET_TYPE_FLAGS_ROLE,
 } cat_socket_union_type_flags_t;
 
 typedef uint32_t cat_socket_type_t;
@@ -557,20 +559,25 @@ CAT_API cat_bool_t cat_socket_try_connect(cat_socket_t *socket, const char *name
 CAT_API cat_bool_t cat_socket_try_connect_to(cat_socket_t *socket, const cat_sockaddr_t *address, cat_socklen_t address_length);
 
 #ifdef CAT_SSL
-typedef cat_ssl_context_t cat_socket_crypto_context_t;
-
 typedef struct cat_socket_crypto_options_s {
-    cat_const_string_t peer_name;
+    const char *peer_name;
+    const char *ca_file;
+    const char *ca_path;
+    const char *certificate;
+    const char *certificate_key;
+    const char *passphrase;
+    int verify_depth;
     cat_bool_t verify_peer;
     cat_bool_t verify_peer_name;
     cat_bool_t allow_self_signed;
-    cat_const_string_t passphrase;
+    cat_bool_t no_ticket;
+    cat_bool_t no_compression;
 } cat_socket_crypto_options_t;
 
 CAT_API void cat_socket_crypto_options_init(cat_socket_crypto_options_t *options);
 
-CAT_API cat_bool_t cat_socket_enable_crypto(cat_socket_t *socket, cat_socket_crypto_context_t *context, const cat_socket_crypto_options_t *options);
-CAT_API cat_bool_t cat_socket_enable_crypto_ex(cat_socket_t *socket, cat_socket_crypto_context_t *context, const cat_socket_crypto_options_t *options, cat_timeout_t timeout);
+CAT_API cat_bool_t cat_socket_enable_crypto(cat_socket_t *socket, const cat_socket_crypto_options_t *options);
+CAT_API cat_bool_t cat_socket_enable_crypto_ex(cat_socket_t *socket, const cat_socket_crypto_options_t *options, cat_timeout_t timeout);
 #endif
 
 CAT_API cat_bool_t cat_socket_getname(const cat_socket_t *socket, cat_sockaddr_t *address, cat_socklen_t *length, cat_bool_t is_peer);
@@ -636,6 +643,10 @@ CAT_API cat_bool_t cat_socket_close(cat_socket_t *socket);
 CAT_API cat_bool_t cat_socket_is_available(const cat_socket_t *socket);
 CAT_API cat_bool_t cat_socket_is_open(const cat_socket_t *socket);
 CAT_API cat_bool_t cat_socket_is_established(const cat_socket_t *socket);
+#ifdef CAT_SSL
+CAT_API cat_bool_t cat_socket_has_crypto(const cat_socket_t *socket);
+CAT_API cat_bool_t cat_socket_is_encrypted(const cat_socket_t *socket);
+#endif
 CAT_API cat_bool_t cat_socket_is_server(const cat_socket_t *socket);
 CAT_API cat_bool_t cat_socket_is_client(const cat_socket_t *socket);
 CAT_API cat_bool_t cat_socket_is_session(const cat_socket_t *socket);

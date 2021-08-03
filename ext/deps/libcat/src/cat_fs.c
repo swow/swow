@@ -2063,3 +2063,47 @@ CAT_API int cat_fs_flock(cat_file_t fd, int op)
 }
 
 #undef _CAT_LOCK_NB
+
+CAT_API char *cat_fs_get_contents(const char *filename, size_t *length)
+{
+    cat_file_t fd = cat_fs_open(filename, O_RDONLY);
+
+    if (length != NULL) {
+        *length = 0;
+    }
+    if (fd == CAT_OS_INVALID_FD) {
+        return NULL;
+    }
+    off_t offset = cat_fs_lseek(fd, 0, SEEK_END);
+    if (offset < 0) {
+        return NULL;
+    }
+    size_t size = (size_t) offset;
+    char *buffer = (char *) cat_malloc(size + 1);
+    if (buffer == NULL) {
+        cat_update_last_error_of_syscall("Malloc for file content failed");
+        return NULL;
+    }
+    ssize_t nread = cat_fs_pread(fd, buffer, size, 0);
+    if (nread < 0) {
+        cat_free(buffer);
+        return NULL;
+    }
+    buffer[nread] = '\0';
+    if (length != NULL) {
+        *length = (size_t) nread;
+    }
+
+    return buffer;
+}
+
+CAT_API ssize_t cat_fs_put_contents(const char *filename, const char *content, size_t length)
+{
+    cat_file_t fd = cat_fs_open(filename,  O_CREAT | O_TRUNC | O_WRONLY, 0666);
+
+    if (fd == CAT_OS_INVALID_FD) {
+        return -1;
+    }
+
+    return cat_fs_pwrite(fd, content, length, 0);
+}

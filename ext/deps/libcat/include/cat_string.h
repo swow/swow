@@ -23,6 +23,16 @@
 #define CAT_TO_STR_NAKED(str)    #str
 #define CAT_TO_STR(str)          CAT_TO_STR_NAKED(str)
 
+static cat_always_inline cat_bool_t cat_str_is_empty(const char *str)
+{
+    return str != NULL && str[0] != '\0';
+}
+
+static cat_always_inline const char *cat_str_dempty(const char *str)
+{
+    return !cat_str_is_empty(str) ? str : NULL;
+}
+
 typedef struct cat_const_string_s {
     const char *data;
     size_t length;
