@@ -53,8 +53,16 @@ static cat_bool_t swow_function_is_hookable(const char *name, size_t name_length
 
 SWOW_API cat_bool_t swow_hook_internal_function_handler(const char *name, size_t name_length, zif_handler handler)
 {
+    return swow_hook_internal_function_handler_ex(name, name_length, handler, NULL);
+}
+
+SWOW_API cat_bool_t swow_hook_internal_function_handler_ex(const char *name, size_t name_length, zif_handler handler, zif_handler *original_handler)
+{
     zend_function *function = (zend_function *) zend_hash_str_find_ptr(CG(function_table), name, name_length);
 
+    if (original_handler != NULL) {
+        *original_handler = NULL;
+    }
     if (function == NULL) {
         return cat_false;
     }
@@ -63,7 +71,9 @@ SWOW_API cat_bool_t swow_hook_internal_function_handler(const char *name, size_t
         return cat_true; // ignore disabled function
     }
 #endif
-
+    if (original_handler != NULL) {
+        *original_handler = function->internal_function.handler;
+    }
     function->internal_function.handler = handler;
 
     return cat_true;

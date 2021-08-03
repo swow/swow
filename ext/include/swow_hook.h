@@ -25,6 +25,7 @@ extern "C" {
 #include "swow.h"
 
 SWOW_API cat_bool_t swow_hook_internal_function_handler(const char *name, size_t name_length, zif_handler handler);
+SWOW_API cat_bool_t swow_hook_internal_function_handler_ex(const char *name, size_t name_length, zif_handler handler, zif_handler *original_handler);
 SWOW_API cat_bool_t swow_hook_internal_function(const zend_function_entry *fe);
 SWOW_API cat_bool_t swow_hook_internal_functions(const zend_function_entry *fes);
 
