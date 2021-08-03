@@ -29,7 +29,7 @@
         "psr/http-message": "^1.0"
     },
     "require-dev": {
-        "friendsofphp/php-cs-fixer": "^3.0",
+        "friendsofphp/php-cs-fixer": "3.0.0",
         "phpunit/phpunit": ">=8.0"
     },
     "suggest": {
