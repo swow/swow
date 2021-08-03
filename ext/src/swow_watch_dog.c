@@ -198,7 +198,7 @@ static PHP_METHOD(Swow_WatchDog, stop)
 
     ZEND_PARSE_PARAMETERS_NONE();
 
-    ret = cat_watch_dog_stop();
+    ret = swow_watch_dog_stop();
 
     if (UNEXPECTED(!ret)) {
         swow_throw_exception_with_last(swow_watch_dog_exception_ce);
