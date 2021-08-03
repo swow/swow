@@ -1,7 +1,7 @@
 ---
 name: Discussion / 讨论
 about: Talk about Swow/ 关于Swow的讨论
-title: '[discussion] (Replace with your title / 替换括号和里面的字为你的标题)'
+title: '[discussion] Replace with your title / 替换为你的标题'
 labels: 'discussion'
 assignees: ''
 
