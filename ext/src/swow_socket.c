@@ -1464,6 +1464,7 @@ static PHP_METHOD(Swow_Socket, __debugInfo)
         add_assoc_long(&ztimeout, "dns", cat_socket_get_dns_timeout(socket));
         add_assoc_long(&ztimeout, "accept", cat_socket_get_accept_timeout(socket));
         add_assoc_long(&ztimeout, "connect", cat_socket_get_connect_timeout(socket));
+        add_assoc_long(&ztimeout, "handshake", cat_socket_get_handshake_timeout(socket));
         add_assoc_long(&ztimeout, "read", cat_socket_get_read_timeout(socket));
         add_assoc_long(&ztimeout, "write", cat_socket_get_write_timeout(socket));
         add_assoc_zval(&zdebug_info, "timeout", &ztimeout);
