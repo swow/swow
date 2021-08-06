@@ -1580,6 +1580,12 @@ int swow_rehook_stream_wrappers(void); // in swow_stream_wrapper.c
 // stream initializer / finalizers
 int swow_stream_module_init(INIT_FUNC_ARGS)
 {
+#ifdef CAT_SSL
+    SWOW_MODULES_CHECK_PRE_START() {
+        "openssl"
+    } SWOW_MODULES_CHECK_PRE_END();
+#endif
+
     CAT_GLOBALS_REGISTER(swow_stream, CAT_GLOBALS_CTOR(swow_stream), NULL);
 
     if (!swow_hook_internal_functions(swow_stream_functions)) {
