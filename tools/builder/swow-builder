@@ -27,7 +27,7 @@ if (PHP_OS_FAMILY === 'Windows') {
 $workSpace = realpath(__DIR__ . '/../../ext');
 $swowSo = "{$workSpace}/.libs/swow.so";
 
-$options = getopt('', ['rebuild', 'show-log', 'debug', 'enable::']);
+$options = getopt('', ['rebuild', 'show-log', 'debug', 'msan', 'asan', 'ubsan', 'enable::']);
 
 $commandArray = ["cd {$workSpace}"];
 
@@ -41,8 +41,23 @@ if (!file_exists("{$workSpace}/configure") || isset($options['rebuild'])) {
     $commandArray[] = 'phpize';
 }
 if (!file_exists("{$workSpace}/Makefile") || isset($options['rebuild'])) {
-    $configureOptions = isset($options['debug']) ? '--enable-swow-debug ' : '';
-    $configureOptions = isset($options['enable']) ? $configureOptions . $options['enable'] : $configureOptions;
+    $configureOptions = [];
+    if (isset($options['debug'])) {
+        $configureOptions[] = '--enable-swow-debug';
+    }
+    if (isset($options['msan'])) {
+        $configureOptions[] = '--enable-swow-memory-sanitizer';
+    }
+    if (isset($options['asan'])) {
+        $configureOptions[] = '--enable-swow-address-sanitizer';
+    }
+    if (isset($options['ubsan'])) {
+        $configureOptions[] = '--enable-swow-undefined-sanitizer';
+    }
+    if (isset($options['enable'])) {
+        $configureOptions[] = $options['enable'];
+    }
+    $configureOptions = implode(' ', $configureOptions);
     $commandArray[] = "./configure {$configureOptions}";
 }
 

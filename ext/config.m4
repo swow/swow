@@ -18,6 +18,24 @@ PHP_ARG_ENABLE([swow-valgrind],
   [$PHP_SWOW_DEBUG], [no]
 )
 
+PHP_ARG_ENABLE([swow-memory-sanitizer],
+  [whether to enable Swow MSan support],
+  [AS_HELP_STRING([--enable-memory-sanitizer], [Enable memory sanitizer (clang only)])],
+  [no], [no]
+)
+
+PHP_ARG_ENABLE([swow-address-sanitizer],
+  [whether to enable Swow ASan support],
+  [AS_HELP_STRING([--enable-address-sanitizer], [Enable address sanitizer])],
+  [no], [no]
+)
+
+PHP_ARG_ENABLE([swow-undefined-sanitizer],
+  [whether to enable Swow UBSan support],
+  [AS_HELP_STRING([--enable-undefined-sanitizer], [Enable undefined sanitizer])],
+  [no], [no]
+)
+
 PHP_ARG_ENABLE([swow-ssl],
   [whether to enable Swow OpenSSL support],
   [AS_HELP_STRING([--enable-swow-ssl], [Enable Swow OpenSSL support])],
@@ -90,9 +108,7 @@ if test "${SWOW}" != "no"; then
     AX_CHECK_COMPILE_FLAG(-Wwrite-strings,                 SWOW_MAINTAINER_CFLAGS="${SWOW_MAINTAINER_CFLAGS} -Wwrite-strings")
     AX_CHECK_COMPILE_FLAG(-Werror=implicit-function-declaration, SWOW_MAINTAINER_CFLAGS="${SWOW_MAINTAINER_CFLAGS} -Werror=implicit-function-declaration")
     AX_CHECK_COMPILE_FLAG(-fdiagnostics-show-option,       SWOW_MAINTAINER_CFLAGS="${SWOW_MAINTAINER_CFLAGS} -fdiagnostics-show-option")
-    AX_CHECK_COMPILE_FLAG(-fno-omit-frame-pointer,         SWOW_MAINTAINER_CFLAGS="${SWOW_MAINTAINER_CFLAGS} -fno-omit-frame-pointer")
     AX_CHECK_COMPILE_FLAG(-fno-optimize-sibling-calls,     SWOW_MAINTAINER_CFLAGS="${SWOW_MAINTAINER_CFLAGS} -fno-optimize-sibling-calls")
-    AX_CHECK_COMPILE_FLAG(-fsanitize-address,              SWOW_MAINTAINER_CFLAGS="${SWOW_MAINTAINER_CFLAGS} -fsanitize-address")
     AX_CHECK_COMPILE_FLAG(-fstack-protector,               SWOW_MAINTAINER_CFLAGS="${SWOW_MAINTAINER_CFLAGS} -fstack-protector")
   fi
   SWOW_CFLAGS="${SWOW_CFLAGS} ${SWOW_STD_CFLAGS} ${SWOW_MAINTAINER_CFLAGS}"
@@ -190,6 +206,32 @@ EOF
       ],[
           AC_MSG_RESULT([no])
       ])
+    fi
+
+    if test "$PHP_SWOW_MEMORY_SANITIZER" = "yes" &&
+       test "$PHP_SWOW_ADDRESS_SANITIZER" = "yes"; then
+       AC_MSG_ERROR([MemorySanitizer and AddressSanitizer are mutually exclusive])
+    fi
+
+    if test "$PHP_SWOW_MEMORY_SANITIZER" = "yes"; then
+      AX_CHECK_COMPILE_FLAG([-fsanitize=memory -fsanitize-memory-track-origins], [
+        CFLAGS="$CFLAGS -fsanitize=memory -fsanitize-memory-track-origins"
+        CXXFLAGS="$CXXFLAGS -fsanitize=memory -fsanitize-memory-track-origins"
+      ], [AC_MSG_ERROR([MemorySanitizer is not available])])
+    fi
+
+    if test "$PHP_SWOW_ADDRESS_SANITIZER" = "yes"; then
+      AX_CHECK_COMPILE_FLAG([-fsanitize=address], [
+        CFLAGS="$CFLAGS -fsanitize=address -DZEND_TRACK_ARENA_ALLOC"
+        CXXFLAGS="$CXXFLAGS -fsanitize=address -DZEND_TRACK_ARENA_ALLOC"
+      ], [AC_MSG_ERROR([AddressSanitizer is not available])])
+    fi
+
+    if test "$PHP_SWOW_MEMORY_SANITIZER" = "yes" ||
+       test "$PHP_SWOW_ADDRESS_SANITIZER" = "yes" ||
+       test "$PHP_SWOW_UNDEFINED_SANITIZER" = "yes"; then
+        CFLAGS="$CFLAGS -fno-omit-frame-pointer"
+        CXXFLAGS="$CXXFLAGS -fno-omit-frame-pointer"
     fi
 
     SWOW_CAT_INCLUDES="${SWOW_CAT_INCLUDES} -I${ext_srcdir}/include"
