@@ -90,7 +90,7 @@ static void swow_coroutine_dtor_object(zend_object *object)
     while (UNEXPECTED(swow_coroutine_is_alive(scoroutine))) {
         /* not finished, should be discard */
         if (UNEXPECTED(!swow_coroutine_kill(scoroutine))) {
-            cat_core_error(COROUTINE, "Kill coroutine failed when destruct object, reason: %s", cat_get_last_error_message());
+            CAT_CORE_ERROR(COROUTINE, "Kill coroutine failed when destruct object, reason: %s", cat_get_last_error_message());
         }
     }
 }
@@ -594,7 +594,7 @@ static void swow_coroutine_handle_not_null_zdata(swow_coroutine_t *scoroutine, s
 {
     if (!(current_scoroutine->coroutine.opcodes & SWOW_COROUTINE_OPCODE_ACCEPT_ZDATA)) {
         if (UNEXPECTED(scoroutine->coroutine.opcodes & SWOW_COROUTINE_OPCODE_ACCEPT_ZDATA)) {
-            cat_core_error(COROUTINE, "Internal logic error: sent unrecognized data to PHP layer");
+            CAT_CORE_ERROR(COROUTINE, "Internal logic error: sent unrecognized data to PHP layer");
         } else {
             /* internal raw data to internal operation coroutine */
         }
@@ -2293,7 +2293,7 @@ static void swow_coroutines_kill_destructor(zval *zscoroutine)
     swow_coroutine_t *scoroutine = swow_coroutine_get_from_object(Z_OBJ_P(zscoroutine));
     CAT_ASSERT(swow_coroutine_is_alive(scoroutine));
     if (UNEXPECTED(!swow_coroutine_kill(scoroutine))) {
-        cat_core_error(COROUTINE, "Execute kill destructor failed, reason: %s", cat_get_last_error_message());
+        CAT_CORE_ERROR(COROUTINE, "Execute kill destructor failed, reason: %s", cat_get_last_error_message());
     }
     swow_coroutine_close(scoroutine);
 }

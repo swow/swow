@@ -65,7 +65,7 @@ static void swow_watch_dog_interrupt_function(zend_execute_data *execute_data)
                 if (!cat_time_wait(swatch_dog->delay) &&
                     cat_get_last_error_code() != CAT_ETIMEDOUT
                 ) {
-                    cat_core_error_with_last(WATCH_DOG, "WatchDog interrupt schedule failed");
+                    CAT_CORE_ERROR_WITH_LAST(WATCH_DOG, "WatchDog interrupt schedule failed");
                 }
             } else {
                 zend_fcall_info fci;
@@ -255,7 +255,7 @@ int swow_watch_dog_runtime_init(INIT_FUNC_ARGS)
 int swow_watch_dog_runtime_shudtown(INIT_FUNC_ARGS)
 {
     if (cat_watch_dog_is_running() && !swow_watch_dog_stop()) {
-        cat_core_error_with_last(WATCH_DOG, "WatchDog stop failed");
+        CAT_CORE_ERROR_WITH_LAST(WATCH_DOG, "WatchDog stop failed");
     }
 
     if (!cat_watch_dog_runtime_shutdown()) {

@@ -336,7 +336,7 @@ SWOW_API zend_string* ZEND_FASTCALL zend_ulong_to_str(zend_ulong num);
                 const char *_pre_module = _pre_modules[_n]; \
                 if (memcmp(ZSTR_VAL(_module_name), _pre_module, strlen(_pre_module)) == 0) { \
                     if (_loaded) { \
-                        cat_core_error(CORE, "Module %s must be loaded before " SWOW_MODULE_NAME, _pre_module); \
+                        CAT_CORE_ERROR(CORE, "Module %s must be loaded before " SWOW_MODULE_NAME, _pre_module); \
                     } \
                 } \
             } \

@@ -185,7 +185,7 @@ static const zend_function_entry swow_log_methods[] = {
 
 int swow_log_module_init(INIT_FUNC_ARGS)
 {
-    cat_log = swow_log_standard;
+    cat_log_function = swow_log_standard;
     swow_log_ce = swow_register_internal_class(
         "Swow\\Log", NULL, swow_log_methods,
         &swow_log_handlers, NULL,

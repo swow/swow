@@ -91,7 +91,7 @@ static cat_bool_t swow_event_scheduler_close(void)
     coroutine = cat_event_scheduler_close();
 
     if (coroutine == NULL) {
-        cat_warn_with_last(EVENT, "Event sheduler close failed");
+        CAT_WARN_WITH_LAST(EVENT, "Event sheduler close failed");
         return cat_false;
     }
 
