@@ -105,7 +105,7 @@ typedef struct
 #define HAVE_TLS12 1
 #endif
 
-#if OPENSSL_VERSION_NUMBER >= 0x10101000 && !defined(OPENSSL_NO_TLS1_3)
+#if OPENSSL_VERSION_NUMBER >= 0x10101000 && !defined(OPENSSL_NO_TLS1_3) && PHP_VERSION_ID >= 70400
 #define HAVE_TLS13 1
 #endif
 
@@ -139,6 +139,14 @@ typedef struct
     (PHP_STREAM_CONTEXT(stream) && \
     (val = php_stream_context_get_option(PHP_STREAM_CONTEXT(stream), "ssl", name)) != NULL)
 
+#if PHP_VERSION_ID < 70400
+#define GET_VER_OPT_STRING(name, str) do { \
+    if (GET_VER_OPT(name)) { \
+        convert_to_string_ex(val); \
+        str = Z_STRVAL_P(val); \
+    } \
+} while (0)
+#else
 #define GET_VER_OPT_STRING(name, str) do { \
     if (GET_VER_OPT(name)) { \
         if (try_convert_to_string(val)) { \
@@ -146,6 +154,7 @@ typedef struct
         } \
     } \
 } while (0)
+#endif
 
 #define GET_VER_OPT_LONG(name, num) do { \
     if (GET_VER_OPT(name)) { \
