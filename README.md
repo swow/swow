@@ -6,6 +6,10 @@ English | [中文](./README-CN.md)
 [![ci][ci-badge]][ci-link]
 [![codecov][codecov-badge]][codecov-link]
 [![release][release-badge]][release-link]
+![❤️][made-with-love-badge]  
+![php][supported-php-versions-badge]
+![platform][supported-platforms-badge]
+![architecture][supported-architectures-badge]
 
 > ⚠️ Preview version, not yet production ready. Use it with care.
 
@@ -187,3 +191,7 @@ Swow's [PHP source code](lib/src/Swow) is also a good example. Swow is an incred
 [codecov-link]: https://codecov.io/gh/swow/swow
 [release-badge]: https://img.shields.io/github/release/swow/swow.svg?style=flat-square
 [release-link]: https://github.com/swow/swow/releases
+[made-with-love-badge]: https://img.shields.io/badge/made%20with-%E2%9D%A4-f00
+[supported-php-versions-badge]: https://img.shields.io/badge/php-7.3--8.1-royalblue.svg
+[supported-platforms-badge]: https://img.shields.io/badge/platform-Win32%20|%20GNU/Linux%20|%20macOS%20|%20FreeBSD%20-gold
+[supported-architectures-badge]: https://img.shields.io/badge/architecture-x86--64%20|%20ARM64%20|%20mips64el%20-maroon
