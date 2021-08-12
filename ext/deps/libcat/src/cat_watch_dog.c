@@ -115,7 +115,7 @@ CAT_API cat_bool_t cat_watch_dog_runtime_init(void)
 CAT_API cat_bool_t cat_watch_dog_runtime_shutdown(void)
 {
     if (cat_watch_dog_is_running() && !cat_watch_dog_stop()) {
-        cat_core_error(WATCH_DOG, "Watch-Dog close failed during rshutdown");
+        CAT_CORE_ERROR(WATCH_DOG, "Watch-Dog close failed during rshutdown");
     }
 
     return cat_true;

@@ -44,6 +44,9 @@ CAT_API cat_bool_t cat_time_wait(cat_timeout_t timeout);
     cat_msec_t __time_cached = cat_time_msec_cached(); \
 
 #define CAT_TIME_WAIT_END(timeout) \
+    if (timeout == CAT_TIMEOUT_FOREVER) { \
+        break; \
+    } \
     timeout -= (cat_time_msec_cached() - __time_cached); \
     if (unlikely(timeout < 0)) { \
         timeout = 0; \

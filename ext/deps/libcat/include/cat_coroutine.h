@@ -275,7 +275,7 @@ CAT_API cat_coroutine_t *cat_coroutine_run(cat_coroutine_t *coroutine, cat_corou
 
 #define cat_coroutine_schedule(coroutine, module_type, name, ...) do { \
     if (unlikely(!cat_coroutine_resume(coroutine, NULL, NULL))) { \
-        cat_core_error_with_last(module_type, name " schedule failed", ##__VA_ARGS__); \
+        CAT_CORE_ERROR_WITH_LAST(module_type, name " schedule failed", ##__VA_ARGS__); \
     } \
 } while (0)
 

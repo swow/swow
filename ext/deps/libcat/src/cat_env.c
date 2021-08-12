@@ -25,10 +25,28 @@ CAT_API char *cat_env_get(const char *name)
 
 CAT_API char *cat_env_get_ex(const char *name, char *buffer, size_t *size)
 {
+    cat_errno_t error;
+    char *env = cat_env_get_silent_ex(name, buffer, size, &error);
+    if (error != 0) {
+        cat_update_last_error_with_reason(error, "Env get \"%s\" failed", name);
+    }
+    return env;
+}
+
+CAT_API char *cat_env_get_silent(const char *name, cat_errno_t *error_ptr)
+{
+    return cat_env_get_silent_ex(name, NULL, NULL, error_ptr);
+}
+
+CAT_API char *cat_env_get_silent_ex(const char *name, char *buffer, size_t *size, cat_errno_t *error_ptr)
+{
     char _buffer[CAT_ENV_BUFFER_SIZE];
     size_t *size_ptr, alloc_size = 0;
     int error;
 
+    if (error_ptr != NULL) {
+        *error_ptr = 0;
+    }
     if (buffer == NULL) {
         if (size == NULL || *size == 0) {
             alloc_size = sizeof(_buffer);
@@ -44,7 +62,9 @@ CAT_API char *cat_env_get_ex(const char *name, char *buffer, size_t *size)
             buffer = (char *) cat_malloc(alloc_size);
 #if CAT_ALLOC_HANDLE_ERRORS
             if (unlikely(buffer == NULL)) {
-                cat_update_last_error_of_syscall("Malloc for env failed");
+                if (error_ptr != NULL) {
+                    *error_ptr = cat_translate_sys_error(cat_sys_errno);
+                }
                 return NULL;
             }
 #endif
@@ -62,7 +82,9 @@ CAT_API char *cat_env_get_ex(const char *name, char *buffer, size_t *size)
         if (error == CAT_ENOBUFS && size_ptr == &alloc_size) {
             goto _retry;
         }
-        cat_update_last_error_with_reason(error, "Env get failed");
+        if (error_ptr != NULL) {
+            *error_ptr = error;
+        }
         return NULL;
     }
 
@@ -70,13 +92,28 @@ CAT_API char *cat_env_get_ex(const char *name, char *buffer, size_t *size)
         buffer = cat_strdup(buffer);
 #if CAT_ALLOC_HANDLE_ERRORS
         if (unlikely(buffer == NULL)) {
-            cat_update_last_error_of_syscall("Dup for env failed");
+            if (error_ptr != NULL) {
+                *error_ptr = cat_translate_sys_error(cat_sys_errno);
+            }
             return NULL;
         }
 #endif
     }
 
     return buffer;
+}
+
+CAT_API int cat_env_get_i(const char *name, int default_value)
+{
+    char *env = cat_env_get_silent(name, NULL);
+
+    if (env != NULL) {
+        int i = atoi(env);
+        cat_free(env);
+        return i;
+    }
+
+    return default_value;
 }
 
 CAT_API cat_bool_t cat_env_set(const char *name, const char *value)
@@ -107,19 +144,24 @@ CAT_API cat_bool_t cat_env_unset(const char *name)
     return cat_true;
 }
 
+static cat_always_inline int cat_env_peek(const char *name, char buffer[1])
+{
+    size_t size = 1;
+    return uv_os_getenv(name, buffer, &size);
+}
+
 CAT_API cat_bool_t cat_env_exists(const char *name)
 {
     char buffer[1];
-    size_t size = 1;
-    int error;
+    int error = cat_env_peek(name, buffer);
+    return error == CAT_ENOBUFS || error == 0;
+}
 
-    error = uv_os_getenv(name, buffer, &size);
-
-    if (error != 0 && error != CAT_ENOBUFS) {
-        return cat_false;
-    }
-
-    return cat_true;
+CAT_API cat_bool_t cat_env_is_empty(const char *name)
+{
+    char buffer[1];
+    int error = cat_env_peek(name, buffer);
+    return error != CAT_ENOBUFS && (error != 0 || buffer[0] == '\0');
 }
 
 CAT_API cat_bool_t cat_env_compare(const char *name, const char *value, cat_env_comparer_t comparer, cat_bool_t default_value)

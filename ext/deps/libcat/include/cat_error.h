@@ -82,7 +82,11 @@ CAT_API void cat_show_last_error(void);
 #ifndef CAT_DEBUG
 #define cat_show_last_error() __remove_me__
 #endif
+#ifndef CAT_IDE_HELPER
 CAT_API CAT_NORETURN void cat_abort(void);
+#else
+#define cat_abort abort /* make IDE happy */
+#endif
 
 #define cat_update_last_error_with_previous(format, ...) \
        cat_update_last_error(cat_get_last_error_code(), format ", reason: %s", ##__VA_ARGS__, cat_get_last_error_message())

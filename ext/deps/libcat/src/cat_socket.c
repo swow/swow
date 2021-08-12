@@ -218,14 +218,15 @@ CAT_API cat_bool_t cat_sockaddr_set_port(cat_sockaddr_t *address, int port)
 
 static int cat_sockaddr__getbyname(cat_sockaddr_t *address, cat_socklen_t *address_length, const char *name, size_t name_length, int port)
 {
+    cat_socklen_t size = address_length != NULL ? *address_length : 0;
+    if (unlikely(((int) size) < ((int) sizeof(address->sa_family)))) {
+        return CAT_EINVAL;
+    }
     cat_sa_family_t af = address->sa_family;
-    cat_socklen_t length = address_length != NULL ? *address_length : 0;
     cat_bool_t unspec = af == AF_UNSPEC;
     int error;
 
-    if (unlikely(((int) length) < 0)) {
-        return CAT_EINVAL;
-    }
+    *address_length = 0;
 
     if (af == AF_LOCAL) {
         cat_socklen_t real_length;
@@ -237,7 +238,7 @@ static int cat_sockaddr__getbyname(cat_sockaddr_t *address, cat_socklen_t *addre
         }
         is_lan = cat_sockaddr_is_linux_abstract_name(name, name_length);
         real_length = (cat_socklen_t) (CAT_SOCKADDR_HEADER_LENGTH + name_length + !is_lan);
-        if (unlikely(real_length > length)) {
+        if (unlikely(real_length > size)) {
             *address_length = (cat_socklen_t) real_length;
             return CAT_ENOSPC;
         }
@@ -260,7 +261,7 @@ static int cat_sockaddr__getbyname(cat_sockaddr_t *address, cat_socklen_t *addre
     while (1) {
         if (af == AF_INET) {
             *address_length = sizeof(cat_sockaddr_in_t);
-            if (unlikely(length < sizeof(cat_sockaddr_in_t))) {
+            if (unlikely(size < sizeof(cat_sockaddr_in_t))) {
                 error = CAT_ENOSPC;
             } else {
                 error = uv_ip4_addr(name, port, (cat_sockaddr_in_t *) address);
@@ -271,7 +272,7 @@ static int cat_sockaddr__getbyname(cat_sockaddr_t *address, cat_socklen_t *addre
             }
         } else if (af == AF_INET6) {
             *address_length = sizeof(cat_sockaddr_in6_t);
-            if (unlikely(length < sizeof(cat_sockaddr_in6_t))) {
+            if (unlikely(size < sizeof(cat_sockaddr_in6_t))) {
                 error = CAT_ENOSPC;
             } else {
                 error = uv_ip6_addr(name, port, (cat_sockaddr_in6_t *) address);
@@ -283,7 +284,6 @@ static int cat_sockaddr__getbyname(cat_sockaddr_t *address, cat_socklen_t *addre
     }
 
     if (error != 0) { /* may need DNS resolve */
-        *address_length = 0;
         return error;
     }
     if (unspec) {
@@ -482,7 +482,8 @@ CAT_API cat_bool_t cat_socket_runtime_init(void)
 
 #define CAT_SOCKET_INTERNAL_GETTER(_socket, _isocket, _failure) \
         CAT_SOCKET_INTERNAL_GETTER_SILENT(_socket, _isocket, { \
-            cat_update_last_error(error, "Socket has been closed"); \
+            cat_update_last_error(error, "Socket has been closed%s", \
+                (_socket->flags & CAT_SOCKET_FLAG_UNRECOVERABLE_ERROR) ? " due to unrecoverable IO error" : ""); \
             _failure; \
         })
 
@@ -604,7 +605,12 @@ static cat_always_inline cat_bool_t cat_socket_internal_is_established(cat_socke
     } \
 } while (0)
 
-static void cat_socket_internal_close(cat_socket_internal_t *isocket);
+static void cat_socket_internal_close(cat_socket_internal_t *isocket, cat_bool_t unrecoverable_error);
+
+static CAT_COLD void cat_socket_internal_unrecoverable_io_error(cat_socket_internal_t *isocket);
+#ifdef CAT_SSL
+static cat_always_inline void cat_socket_internal_ssl_recoverability_check(cat_socket_internal_t *isocket);
+#endif
 
 #ifdef CAT_OS_UNIX_LIKE
 static int socket_create(int domain, int type, int protocol)
@@ -798,6 +804,10 @@ CAT_API cat_socket_t *cat_socket_create_ex(cat_socket_t *socket, cat_socket_type
         goto _malloc_internal_error;
     }
 #endif
+    /* Notice: dump callback may access this even if creation failed,
+     * so we must set it to NULL here */
+    isocket->u.socket = NULL;
+
     if (options == NULL) {
         memset(&ioptions, 0, sizeof(ioptions));
     } else {
@@ -1527,14 +1537,14 @@ static cat_bool_t cat_socket__connect(
             if (unlikely(!ret)) {
                 cat_update_last_error_with_previous("Socket connect wait failed");
                 /* interrupt can not recover */
-                cat_socket_internal_close(isocket);
+                cat_socket_internal_unrecoverable_io_error(isocket);
                 return cat_false;
             }
             error = isocket->context.connect.data.status;
             if (error == CAT_ECANCELED) {
                 cat_update_last_error(CAT_ECANCELED, "Socket connect has been canceled");
                 /* interrupt can not recover */
-                cat_socket_internal_close(isocket);
+                cat_socket_internal_unrecoverable_io_error(isocket);
                 return cat_false;
             }
         }
@@ -1626,7 +1636,7 @@ static cat_bool_t cat_socket__smart_connect(cat_socket_t *socket, const char *na
         if (response->ai_family != last_af) {
             CAT_ASSERT(af == AF_UNSPEC);
             // af changed and socket has not been initialized yet, recreate isocket
-            cat_socket_internal_close(isocket);
+            cat_socket_internal_close(isocket, cat_false);
             ret = cat_socket_create(socket, socket->type) != NULL;
             if (!ret) {
                 cat_update_last_error_with_previous("Socket connect recreate failed");
@@ -1695,7 +1705,7 @@ CAT_API cat_bool_t cat_socket_try_connect_to(cat_socket_t *socket, const cat_soc
 }
 
 #ifdef CAT_SSL
-CAT_API void cat_socket_crypto_options_init(cat_socket_crypto_options_t *options)
+CAT_API void cat_socket_crypto_options_init(cat_socket_crypto_options_t *options, cat_bool_t is_client)
 {
     options->peer_name = NULL;
     options->ca_file = NULL;
@@ -1703,12 +1713,14 @@ CAT_API void cat_socket_crypto_options_init(cat_socket_crypto_options_t *options
     options->certificate = NULL;
     options->certificate_key = NULL;
     options->passphrase = NULL;
+    options->protocols = CAT_SSL_PROTOCOLS_DEFAULT;
     options->verify_depth = CAT_SSL_DEFAULT_STREAM_VERIFY_DEPTH;
-    options->verify_peer = cat_true;
-    options->verify_peer_name = cat_true;
+    options->verify_peer = is_client;
+    options->verify_peer_name = is_client;
     options->allow_self_signed = cat_false;
     options->no_ticket = cat_false;
     options->no_compression = cat_false;
+    options->no_client_ca_list = cat_false;
 }
 
 /* TODO: Support non-blocking SSL handshake? (just for PHP, stupid design) */
@@ -1738,9 +1750,16 @@ CAT_API cat_bool_t cat_socket_enable_crypto_ex(cat_socket_t *socket, const cat_s
 
     /* check options */
     if (options == NULL) {
-        cat_socket_crypto_options_init(&ioptions);
+        cat_socket_crypto_options_init(&ioptions, is_client);
     } else {
         ioptions = *options;
+    }
+    if (ioptions.peer_name == NULL) {
+        ioptions.peer_name = isocket->ssl_peer_name;
+    }
+    if (ioptions.verify_peer_name && ioptions.peer_name == NULL) {
+        cat_update_last_error(CAT_EINVAL, "SSL verify peer name is enabled but peer name is empty");
+        goto _prepare_error;
     }
 
     /* check context (TODO: support context from arg?) */
@@ -1749,20 +1768,17 @@ CAT_API cat_bool_t cat_socket_enable_crypto_ex(cat_socket_t *socket, const cat_s
         cat_ssl_method_t method;
         if (socket->type & CAT_SOCKET_TYPE_FLAG_STREAM) {
             method = CAT_SSL_METHOD_TLS;
-        } else if (socket->type & CAT_SOCKET_TYPE_FLAG_DGRAM)  {
+        } else /* if (socket->type & CAT_SOCKET_TYPE_FLAG_DGRAM) */ {
             method = CAT_SSL_METHOD_DTLS;
-        } else {
-            cat_update_last_error(CAT_ESSL, "Socket type is not supported by SSL");
-            goto _create_error;
         }
-        context = cat_ssl_context_create(method);
+        context = cat_ssl_context_create(method, ioptions.protocols);
         if (unlikely(context == NULL)) {
-            goto _create_error;
+            goto _prepare_error;
         }
     }
 
     if (ioptions.verify_peer) {
-        if (!is_client && ioptions.ca_file != NULL) {
+        if (!is_client && !ioptions.no_client_ca_list && ioptions.ca_file != NULL) {
             if (!cat_ssl_context_set_client_ca_list(context, ioptions.ca_file)) {
                 goto _setup_error;
             }
@@ -1786,6 +1802,11 @@ CAT_API cat_bool_t cat_socket_enable_crypto_ex(cat_socket_t *socket, const cat_s
     } else {
         cat_ssl_context_disable_verify_peer(context);
     }
+    if (ioptions.passphrase != NULL) {
+        if (!cat_ssl_context_set_passphrase(context, ioptions.passphrase, strlen(ioptions.passphrase))) {
+            goto _setup_error;
+        }
+    }
     if (ioptions.certificate != NULL) {
         cat_ssl_context_set_certificate(context, ioptions.certificate, ioptions.certificate_key);
     }
@@ -1803,7 +1824,7 @@ CAT_API cat_bool_t cat_socket_enable_crypto_ex(cat_socket_t *socket, const cat_s
         cat_ssl_context_close(context);
     }
     if (unlikely(ssl == NULL)) {
-        goto _create_error;
+        goto _prepare_error;
     }
 
     /* set state */
@@ -1814,18 +1835,10 @@ CAT_API cat_bool_t cat_socket_enable_crypto_ex(cat_socket_t *socket, const cat_s
     }
 
     /* connection related options */
-    if (ioptions.peer_name == NULL) {
-        ioptions.peer_name = isocket->ssl_peer_name;
-    }
     if (is_client && ioptions.peer_name != NULL) {
         cat_ssl_set_sni_server_name(ssl, ioptions.peer_name);
     }
     ssl->allow_self_signed = ioptions.allow_self_signed;
-    if (ioptions.passphrase != NULL) {
-        if (!cat_ssl_set_passphrase(ssl, ioptions.passphrase, strlen(ioptions.passphrase))) {
-            goto _set_options_error;
-        }
-    }
 
     buffer = &ssl->read_buffer;
 
@@ -1856,7 +1869,7 @@ CAT_API cat_bool_t cat_socket_enable_crypto_ex(cat_socket_t *socket, const cat_s
          * it means server will response something later, so, we need to recv it then returns,
          * otherwise it will lead errors on Windows */
         if (ssl_ret == CAT_SSL_RET_OK && !(n > 0 && is_client)) {
-            cat_debug(SOCKET, "Socket SSL handshake completed");
+            CAT_LOG_DEBUG(SOCKET, "Socket SSL handshake completed");
             ret = cat_true;
             break;
         }
@@ -1878,21 +1891,17 @@ CAT_API cat_bool_t cat_socket_enable_crypto_ex(cat_socket_t *socket, const cat_s
 
     if (unlikely(!ret)) {
         /* Notice: io error can not recover */
-        goto _io_error;
+        goto _unrecoverable_error;
     }
 
     if (ioptions.verify_peer) {
         if (!cat_ssl_verify_peer(ssl, ioptions.allow_self_signed)) {
-            goto _verify_error;
+            goto _unrecoverable_error;
         }
     }
     if (ioptions.verify_peer_name) {
-        if (ioptions.peer_name == NULL) {
-            cat_update_last_error(CAT_EINVAL, "SSL verify peer name is enabled but peer name is empty");
-            goto _verify_error;
-        }
         if (!cat_ssl_check_host(ssl, ioptions.peer_name, strlen(ioptions.peer_name))) {
-            goto _verify_error;
+            goto _unrecoverable_error;
         }
     }
 
@@ -1900,20 +1909,41 @@ CAT_API cat_bool_t cat_socket_enable_crypto_ex(cat_socket_t *socket, const cat_s
 
     return cat_true;
 
-    _verify_error:
-    _io_error:
-    cat_socket_internal_close(isocket);
-    _set_options_error:
+    _unrecoverable_error:
+    cat_socket_internal_unrecoverable_io_error(isocket);
     cat_ssl_close(ssl);
     if (0) {
         _setup_error:
         cat_ssl_context_close(context);
     }
-    _create_error:
+    _prepare_error:
     cat_update_last_error_with_previous("Socket enable crypto failed");
 
     return cat_false;
 }
+
+#if 0
+/* TODO: BIO SSL shutdown
+ * we must cancel all IO operations and mark this socket unavailable temporarily,
+ * then read or write on it to shutdown SSL connection */
+CAT_API cat_bool_t cat_socket_disable_crypto(cat_socket_t *socket)
+{
+    if (!cat_socket_is_encrypted(socket)) {
+        return cat_true;
+    }
+    CAT_SOCKET_INTERNAL_GETTER_WITH_IO(socket, isocket, CAT_SOCKET_IO_FLAG_RDWR, return cat_false);
+    cat_ssl_t *ssl = isocket->ssl;
+
+    while (1) {
+        cat_ssl_ret_t ret = cat_ssl_shutdown(ssl);
+        if (ret == 1) {
+            cat_ssl_close(ssl);
+            return cat_true;
+        }
+        // read or write...
+    }
+}
+#endif
 #endif
 
 static int cat_socket_internal_getname(const cat_socket_internal_t *isocket, cat_sockaddr_t *address, cat_socklen_t *address_length, cat_bool_t is_peer)
@@ -2246,7 +2276,9 @@ static ssize_t cat_socket_internal_read_raw(
             CAT_ASSERT(is_dgram && "only dgram fd creation is lazy");
         } else while (1) {
             while (1) {
-                if (!is_dgram) {
+                if (isocket->flags & CAT_SOCKET_INTERNAL_FLAG_NOT_SOCK) {
+                    error = read(fd, buffer + nread, size - nread);
+                } else if (!is_dgram) {
                     error = recv(fd, buffer + nread, size - nread, 0);
                 } else {
                     error = recvfrom(fd, buffer, size, 0, address, address_length);
@@ -2256,6 +2288,10 @@ static ssize_t cat_socket_internal_read_raw(
                         break;
                     }
                     if (unlikely(cat_sys_errno == EINTR)) {
+                        continue;
+                    }
+                    if (unlikely(cat_sys_errno == ENOTSOCK)) {
+                        isocket->flags |= CAT_SOCKET_INTERNAL_FLAG_NOT_SOCK;
                         continue;
                     }
                     error = cat_translate_sys_error(cat_sys_errno);
@@ -2412,12 +2448,13 @@ static ssize_t cat_socket_internal_read_decrypted(
     cat_ssl_t *ssl = isocket->ssl; CAT_ASSERT(ssl != NULL);
     cat_buffer_t *read_buffer = &ssl->read_buffer;
     size_t nread = 0;
+    cat_bool_t eof;
 
     while (1) {
         size_t out_length = size - nread;
         ssize_t n;
 
-        if (!cat_ssl_decrypt(ssl, buffer, &out_length)) {
+        if (!cat_ssl_decrypt(ssl, buffer, &out_length, &eof)) {
             cat_update_last_error_with_previous("Socket SSL decrypt failed");
             goto _error;
         }
@@ -2430,6 +2467,13 @@ static ssize_t cat_socket_internal_read_decrypted(
             if (nread == size) {
                 break;
             }
+        }
+        if (eof) {
+            if (once) {
+                /* do not treat it as error */
+                break;
+            }
+            goto _error;
         }
 
         CAT_TIME_WAIT_START() {
@@ -2453,6 +2497,7 @@ static ssize_t cat_socket_internal_read_decrypted(
     return (ssize_t) nread;
 
     _error:
+    cat_socket_internal_ssl_recoverability_check(isocket);
     if (nread == 0) {
         return -1;
     }
@@ -2472,20 +2517,24 @@ static ssize_t cat_socket_internal_try_recv_decrypted(
         size_t out_length = size;
         ssize_t nread;
         cat_errno_t error = 0;
-        cat_bool_t decrypted;
+        cat_bool_t decrypted, eof;
 
         CAT_PROTECT_LAST_ERROR_START() {
-            decrypted = cat_ssl_decrypt(ssl, buffer, &out_length);
+            decrypted = cat_ssl_decrypt(ssl, buffer, &out_length, &eof);
             if (!decrypted) {
                 error = cat_get_last_error_code();
             }
         } CAT_PROTECT_LAST_ERROR_END();
         if (!decrypted) {
+            cat_socket_internal_ssl_recoverability_check(isocket);
             return error;
         }
 
         if (out_length > 0) {
             return out_length;
+        }
+        if (eof) {
+            return 0;
         }
 
         nread = cat_socket_internal_try_recv_raw(
@@ -2736,8 +2785,9 @@ static cat_bool_t cat_socket_internal_write_raw(
         }
         /* handle error */
         if (unlikely(!ret || request->error == CAT_ECANCELED)) {
-            /* write request is in progress, we must cancel it by close */
-            cat_socket_internal_close(isocket);
+            /* write request is in progress, it can not be cancelled gracefully,
+             * so we must cancel it by socket_close(), it's unrecoverable */
+            cat_socket_internal_unrecoverable_io_error(isocket);
 #if 0
             /* event scheduler will wake up the current coroutine on cat_socket_write_callback with ECANCELED */
             cat_coroutine_wait_for(CAT_COROUTINE_G(scheduler));
@@ -2853,6 +2903,7 @@ static cat_bool_t cat_socket_internal_write_encrypted(
 
     if (unlikely(!ret)) {
         cat_update_last_error_with_previous("Socket SSL write failed");
+        cat_socket_internal_ssl_recoverability_check(isocket);
         return cat_false;
     }
 
@@ -2904,6 +2955,7 @@ static ssize_t cat_socket_internal_try_write_encrypted(
         }
     } CAT_PROTECT_LAST_ERROR_END();
     if (unlikely(!encrypted)) {
+        cat_socket_internal_ssl_recoverability_check(isocket);
         return error;
     }
 
@@ -2935,7 +2987,7 @@ static ssize_t cat_socket_internal_try_write_encrypted(
             * try again in the next call. */
 #ifdef CAT_DEBUG
         size_t encrypted_bytes = cat_io_vector_length(ssl_vector, ssl_vector_count);
-        cat_debug(SSL, "SSL %p expect send %zu encrypted bytes, actually %zu bytes was sent (raw data is %zu bytes)",
+        CAT_LOG_DEBUG(SSL, "SSL %p expect send %zu encrypted bytes, actually %zu bytes was sent (raw data is %zu bytes)",
             ssl, encrypted_bytes, (size_t) nwrite_encrypted, (size_t) nwrite);
         CAT_ASSERT(((size_t) nwrite_encrypted == encrypted_bytes) ==
                     (ssl_vector_current == ssl_vector_eof));
@@ -2958,7 +3010,7 @@ static ssize_t cat_socket_internal_try_write_encrypted(
             }
             /* We tell caller all data has been sent, but actually they are in buffered,
                 * it's ok, just like syscall write() did. */
-            cat_debug(SSL, "SSL %p write buffer now has %zu bytes queued data", ssl, ssl->write_buffer.length);
+            CAT_LOG_DEBUG(SSL, "SSL %p write buffer now has %zu bytes queued data", ssl, ssl->write_buffer.length);
             uv_write_t *request = (uv_write_t *) cat_malloc(sizeof(*request));
 #if CAT_ALLOC_HANDLE_ERRORS
             if (unlikely(request == NULL)) {
@@ -3429,7 +3481,7 @@ CAT_API cat_bool_t cat_socket_send_handle_ex(cat_socket_t *socket, cat_socket_t 
     };
     cat_socket_write_vector_t vector = cat_socket_write_vector_init((char *) &handle_info, (cat_socket_vector_length_t) sizeof(handle_info));
     if (!cat_socket_internal_write_raw(isocket, &vector, 1, NULL, 0, handle, timeout)) {
-        cat_socket_internal_close(isocket);
+        cat_socket_internal_unrecoverable_io_error(isocket);
         return cat_false;
     }
 
@@ -3451,7 +3503,7 @@ CAT_API cat_socket_t *cat_socket_recv_handle_ex(cat_socket_t *socket, cat_socket
     if (nread != sizeof(handle_info)) {
         if (nread >= 0) {
             /* interrupt can not recover */
-            cat_socket_internal_close(isocket);
+            cat_socket_internal_unrecoverable_io_error(isocket);
         }
         return NULL;
     }
@@ -3471,7 +3523,7 @@ CAT_API cat_socket_t *cat_socket_recv_handle_ex(cat_socket_t *socket, cat_socket
     return cat_socket__accept(socket, handle, handle_info.type, &handle_info.options, timeout);
 }
 
-static cat_always_inline void cat_socket_cancel_io(cat_coroutine_t *coroutine, const char *type_name)
+static cat_always_inline void cat_socket_io_cancel(cat_coroutine_t *coroutine, const char *type_name)
 {
     if (coroutine != NULL) {
         /* interrupt the operation */
@@ -3506,12 +3558,16 @@ static void cat_socket_close_callback(uv_handle_t *handle)
 }
 
 /* Notice: socket may be freed before isocket closed, so we can not use socket anymore after IO wait failure  */
-static void cat_socket_internal_close(cat_socket_internal_t *isocket)
+static void cat_socket_internal_close(cat_socket_internal_t *isocket, cat_bool_t unrecoverable_error)
 {
     cat_socket_t *socket = isocket->u.socket;
 
     if (socket == NULL) {
         return;
+    }
+
+    if (unlikely(unrecoverable_error)) {
+        socket->flags |= CAT_SOCKET_FLAG_UNRECOVERABLE_ERROR;
     }
 
     /* unbind */
@@ -3535,25 +3591,32 @@ static void cat_socket_internal_close(cat_socket_internal_t *isocket)
     }
 #endif
 
+#ifdef CAT_SSL
+    if (isocket->ssl != NULL &&
+        cat_ssl_get_shutdown(isocket->ssl) != (CAT_SSL_SENT_SHUTDOWN | CAT_SSL_RECEIVED_SHUTDOWN)) {
+        cat_ssl_set_quiet_shutdown(isocket->ssl, cat_true);
+    }
+#endif
+
     /* cancel all IO operations */
     if (isocket->io_flags == CAT_SOCKET_IO_FLAG_BIND) {
-        cat_socket_cancel_io(isocket->context.bind.coroutine, "bind");
+        cat_socket_io_cancel(isocket->context.bind.coroutine, "bind");
     } else if (isocket->io_flags == CAT_SOCKET_IO_FLAG_ACCEPT) {
-        cat_socket_cancel_io(isocket->context.accept.coroutine, "accept");
+        cat_socket_io_cancel(isocket->context.accept.coroutine, "accept");
     } else if (isocket->io_flags == CAT_SOCKET_IO_FLAG_CONNECT) {
-        cat_socket_cancel_io(isocket->context.connect.coroutine, "connect");
+        cat_socket_io_cancel(isocket->context.connect.coroutine, "connect");
     } else {
         /* Notice: we cancel write first */
         if (isocket->io_flags & CAT_SOCKET_IO_FLAG_WRITE) {
             cat_queue_t *write_coroutines = &isocket->context.io.write.coroutines;
             cat_coroutine_t *write_coroutine;
             while ((write_coroutine = cat_queue_front_data(write_coroutines, cat_coroutine_t, waiter.node))) {
-                cat_socket_cancel_io(write_coroutine, "write");
+                cat_socket_io_cancel(write_coroutine, "write");
             }
             CAT_ASSERT(cat_queue_empty(write_coroutines));
         }
         if (isocket->io_flags & CAT_SOCKET_IO_FLAG_READ) {
-            cat_socket_cancel_io(isocket->context.io.read.coroutine, "read");
+            cat_socket_io_cancel(isocket->context.io.read.coroutine, "read");
         }
     }
 
@@ -3565,6 +3628,9 @@ CAT_API cat_bool_t cat_socket_close(cat_socket_t *socket)
     cat_socket_internal_t *isocket = socket->internal;
     cat_bool_t ret = cat_true;
 
+    /* native EBADF will be reported from now on */
+    socket->flags &= ~CAT_SOCKET_FLAG_UNRECOVERABLE_ERROR;
+
     if (isocket == NULL) {
         /* we do not update the last error here
          * because the only reason for close failure is
@@ -3574,7 +3640,7 @@ CAT_API cat_bool_t cat_socket_close(cat_socket_t *socket)
 #endif
         ret = cat_false;
     } else {
-        cat_socket_internal_close(isocket);
+        cat_socket_internal_close(isocket, cat_false);
     }
 
     if (socket->flags & CAT_SOCKET_FLAG_ALLOCATED) {
@@ -3592,6 +3658,26 @@ CAT_API cat_bool_t cat_socket_close(cat_socket_t *socket)
 
     return ret;
 }
+
+static CAT_COLD void cat_socket_internal_unrecoverable_io_error(cat_socket_internal_t *isocket)
+{
+#ifdef CAT_SSL
+    if (isocket->ssl != NULL) {
+        cat_ssl_unrecoverable_error(isocket->ssl);
+    }
+#endif
+    cat_socket_internal_close(isocket, cat_true);
+}
+
+#ifdef CAT_SSL
+static cat_always_inline void cat_socket_internal_ssl_recoverability_check(cat_socket_internal_t *isocket)
+{
+    if (!cat_ssl_is_down(isocket->ssl)) {
+        return;
+    }
+    cat_socket_internal_close(isocket, cat_true);
+}
+#endif
 
 /* getter / status / options */
 
@@ -4055,7 +4141,7 @@ static void cat_socket_dump_callback(uv_handle_t* handle, void* arg)
         peer_port = cat_socket_get_peer_port(socket);
     }
 
-    cat_info(SOCKET, "%-4s fd: %-6d io: %-12s role: %-7s addr: %s:%d, peer: %s:%d",
+    CAT_LOG_INFO(SOCKET, "%-4s fd: %-6d io: %-12s role: %-7s addr: %s:%d, peer: %s:%d",
                      type_name, (int) fd, io_state_naming, role, sock_addr, sock_port, peer_addr, peer_port);
 }
 
@@ -4104,6 +4190,9 @@ CAT_API void cat_socket_close_all(void)
 
 CAT_API cat_bool_t cat_socket_move(cat_socket_t *from, cat_socket_t *to)
 {
+    if (from == to) {
+        return cat_true;
+    }
     if (from->internal != NULL && from->internal->io_flags != CAT_SOCKET_IO_FLAG_NONE) {
         // TODO: make it work
         cat_update_last_error(CAT_EMISUSE, "Socket is immovable during IO operations");

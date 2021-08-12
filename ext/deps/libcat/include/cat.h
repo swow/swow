@@ -89,6 +89,7 @@ CAT_GLOBALS_STRUCT_BEGIN(cat)
 #ifdef CAT_SOURCE_POSITION
     cat_bool_t log_source_postion;
 #endif
+    size_t log_str_size;
 CAT_GLOBALS_STRUCT_END(cat)
 
 extern CAT_API CAT_GLOBALS_DECLARE(cat)

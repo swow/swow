@@ -53,6 +53,7 @@
     if (unlikely(!(x))) { __builtin_unreachable(); } \
 } while (0)
 #else
+#define CAT_NO_ASSUME
 #define CAT_ASSUME(x)
 #endif
 
@@ -60,6 +61,18 @@
 #define CAT_ASSERT(x) assert(x)
 #else
 #define CAT_ASSERT(x) CAT_ASSUME(x)
+#endif
+
+#ifdef CAT_DEBUG
+#define CAT_SHOULD_BE(x) CAT_ASSERT(x)
+#else
+#ifndef CAT_NO_ASSUME
+#define CAT_SHOULD_BE(x) CAT_ASSUME(x)
+#else
+#define CAT_SHOULD_BE(x) do { \
+    if (unlikely(!(x))) { abort(); } \
+} while (0)
+#endif
 #endif
 
 #ifndef CAT_IDE_HELPER
@@ -73,6 +86,13 @@
 #define CAT_NEVER_HERE(reason) CAT_ASSERT(0 && reason)
 #else
 #define CAT_NEVER_HERE(reason) abort()
+#endif
+
+/* pseudo fallthrough keyword; */
+#if defined(__GNUC__) && __GNUC__ >= 7
+# define CAT_FALLTHROUGH __attribute__((__fallthrough__))
+#else
+# define CAT_FALLTHROUGH ((void) 0)
 #endif
 
 /* function prefix */
@@ -157,6 +177,26 @@
 #define CAT_HOT
 #define CAT_OPT_SIZE
 #define CAT_OPT_SPEED
+#endif
+
+#if defined(__GNUC__) && CAT_GCC_VERSION >= 5000
+# define CAT_ATTRIBUTE_UNUSED_LABEL __attribute__((cold, unused));
+# define CAT_ATTRIBUTE_COLD_LABEL __attribute__((cold));
+# define CAT_ATTRIBUTE_HOT_LABEL __attribute__((hot));
+#else
+# define CAT_ATTRIBUTE_UNUSED_LABEL
+# define CAT_ATTRIBUTE_COLD_LABEL
+# define CAT_ATTRIBUTE_HOT_LABEL
+#endif
+
+#if defined(__GNUC__) && CAT_GCC_VERSION >= 3004 && defined(__i386__)
+# define CAT_FASTCALL __attribute__((fastcall))
+#elif defined(_MSC_VER) && defined(_M_IX86) && _MSC_VER == 1700
+# define CAT_FASTCALL __fastcall
+#elif defined(_MSC_VER) && _MSC_VER >= 1800 && !defined(__clang__)
+# define CAT_FASTCALL __vectorcall
+#else
+# define CAT_FASTCALL
 #endif
 
 #if (defined(__GNUC__) && __GNUC__ >= 3 && !defined(__INTEL_COMPILER) && !defined(DARWIN) && !defined(__hpux) && !defined(_AIX) && !defined(__osf__)) || __has_attribute(noreturn)

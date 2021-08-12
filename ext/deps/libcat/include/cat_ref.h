@@ -16,21 +16,47 @@
   +--------------------------------------------------------------------------+
  */
 
-#define CAT_ENV_BUFFER_SIZE 512
+#ifndef CAT_REF_H
+#define CAT_REF_H
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-CAT_API char *cat_env_get(const char *name); CAT_FREE
-CAT_API char *cat_env_get_ex(const char *name, char *buffer, size_t *size); CAT_MAY_FREE
-CAT_API char *cat_env_get_silent(const char *name, cat_errno_t *error_ptr); CAT_FREE
-CAT_API char *cat_env_get_silent_ex(const char *name, char *buffer, size_t *size, cat_errno_t *error_ptr); CAT_MAY_FREE
-CAT_API int cat_env_get_i(const char *name, int default_value);
-CAT_API cat_bool_t cat_env_set(const char *name, const char *value);
-CAT_API cat_bool_t cat_env_unset(const char *name);
-CAT_API cat_bool_t cat_env_exists(const char *name);
-CAT_API cat_bool_t cat_env_is_empty(const char *name);
+#include "cat.h"
 
-typedef int (cat_env_comparer_t)(const char *s1, const char *s2);
-CAT_API cat_bool_t cat_env_compare(const char *name, const char *value, cat_env_comparer_t comparer, cat_bool_t default_value);
-CAT_API cat_bool_t cat_env_compares(const char *name, const char **values, size_t count, cat_env_comparer_t comparer, cat_bool_t default_value);
+typedef uint32_t cat_refcount_t;
 
-CAT_API cat_bool_t cat_env_is(const char *name, const char *value, cat_bool_t default_value);
-CAT_API cat_bool_t cat_env_is_true(const char *name, cat_bool_t default_value);
+typedef struct cat_ref_s {
+    cat_refcount_t count;
+} cat_ref_t;
+
+#define CAT_REF_FIELD cat_ref_t ref
+#define CAT_REF_INIT(object) cat_ref_init(&((object)->ref))
+#define CAT_REF_GET(object)  cat_ref_get(&((object)->ref))
+#define CAT_REF_ADD(object)  cat_ref_add(&((object)->ref))
+#define CAT_REF_DEL(object)  cat_ref_del(&((object)->ref))
+
+static cat_always_inline void cat_ref_init(cat_ref_t *ref)
+{
+    ref->count = 1;
+}
+
+static cat_always_inline cat_refcount_t cat_ref_get(const cat_ref_t *ref)
+{
+    return ref->count;
+}
+
+static cat_always_inline cat_refcount_t cat_ref_add(cat_ref_t *ref)
+{
+    return ++ref->count;
+}
+
+static cat_always_inline cat_refcount_t cat_ref_del(cat_ref_t *ref)
+{
+    return --ref->count;
+}
+
+#ifdef __cplusplus
+}
+#endif
+#endif /* CAT_REF_H */

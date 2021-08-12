@@ -31,7 +31,7 @@ CAT_API cat_bool_t cat_event_module_init(void)
     error = uv_loop_init(&CAT_EVENT_G(loop));
 
     if (error != 0) {
-        cat_warn_with_reason(EVENT, error, "Event loop init failed");
+        CAT_WARN_WITH_REASON(EVENT, error, "Event loop init failed");
         return cat_false;
     }
 
@@ -49,7 +49,7 @@ CAT_API cat_bool_t cat_event_module_shutdown(void)
     error = uv_loop_close(&CAT_EVENT_G(loop));
 
     if (unlikely(error != 0)) {
-        cat_warn_with_reason(EVENT, error, "Event loop close failed");
+        CAT_WARN_WITH_REASON(EVENT, error, "Event loop close failed");
 #ifdef CAT_DEBUG
         if (error == CAT_EBUSY) {
             uv_print_all_handles(cat_event_loop, CAT_G(error_log));
@@ -215,6 +215,6 @@ CAT_API void cat_event_fork(void)
     int error = uv_loop_fork(cat_event_loop);
 
     if (error != 0) {
-        cat_core_error_with_reason(EVENT, error, "Event loop fork failed");
+        CAT_CORE_ERROR_WITH_REASON(EVENT, error, "Event loop fork failed");
     }
 }

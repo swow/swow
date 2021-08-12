@@ -134,13 +134,10 @@ static cat_timer_t *cat_timer_wait(cat_msec_t msec)
 
     (void) uv_timer_init(cat_event_loop, &timer->timer);
     (void) uv_timer_start(&timer->timer, cat_sleep_timer_callback, msec, 0);
-#ifdef CAT_DEBUG
-    do {
-        char *tmp = NULL;
-        cat_debug(TIME, "Sleep %s", tmp = cat_time_format_msec(msec));
-        if (tmp != NULL) { cat_free(tmp); }
-    } while (0);
-#endif
+
+    CAT_LOG_DEBUG_SCOPE_START_EX(TIME, char *tmp) {
+        CAT_LOG_DEBUG_D(TIME, "Sleep %s", tmp = cat_time_format_msec(msec));
+    } CAT_LOG_DEBUG_SCOPE_END_EX(cat_free(tmp));
 
     timer->coroutine = CAT_COROUTINE_G(current);
 

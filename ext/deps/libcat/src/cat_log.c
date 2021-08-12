@@ -19,7 +19,7 @@
 #include "cat.h"
 #include "cat_coroutine.h" /* for coroutine id (TODO: need to decouple it?) */
 
-CAT_API cat_log_t cat_log;
+CAT_API cat_log_t cat_log_function;
 
 #if 0
 static const char *cat_log_get_date()
@@ -43,23 +43,15 @@ CAT_API void cat_log_standard(CAT_LOG_PARAMATERS)
     FILE *output;
     (void) module_type;
 
-    do {
-        va_list args;
-        va_start(args, format);
-        message = cat_vsprintf(format, args);
-        if (unlikely(message == NULL)) {
-            fprintf(CAT_G(error_log), "Sprintf log message failed" CAT_EOL);
-            return;
-        }
-        va_end(args);
-    } while (0);
-
-    switch (type)
-    {
+    switch (type) {
         case CAT_LOG_TYPE_DEBUG : {
+#ifndef CAT_ENABLE_DEBUG_LOG
+            return;
+#else
             type_string = "Debug";
             output = stdout;
             break;
+#endif
         }
         case CAT_LOG_TYPE_INFO : {
             type_string = "Info";
@@ -88,8 +80,18 @@ CAT_API void cat_log_standard(CAT_LOG_PARAMATERS)
         }
         default:
             CAT_NEVER_HERE("Unknown log type");
-            break;
     }
+
+    do {
+        va_list args;
+        va_start(args, format);
+        message = cat_vsprintf(format, args);
+        if (unlikely(message == NULL)) {
+            fprintf(CAT_G(error_log), "Sprintf log message failed" CAT_EOL);
+            return;
+        }
+        va_end(args);
+    } while (0);
 
     do {
         const char *name = cat_coroutine_get_current_role_name();
@@ -126,4 +128,16 @@ CAT_API void cat_log_standard(CAT_LOG_PARAMATERS)
     if (type & (CAT_LOG_TYPE_ERROR | CAT_LOG_TYPE_CORE_ERROR)) {
         cat_abort();
     }
+}
+
+CAT_API const char *cat_log_buffer_quote(const char *buffer, ssize_t n, char **tmp_str)
+{
+    if (n > 0) {
+        char *quoted_data;
+        cat_str_quote(buffer, CAT_MIN((size_t) n, CAT_G(log_str_size)), &quoted_data, NULL);
+        *tmp_str = quoted_data;
+        return quoted_data;
+    }
+
+    return *tmp_str = cat_sprintf("%p", buffer);
 }

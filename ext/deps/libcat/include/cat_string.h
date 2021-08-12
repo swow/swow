@@ -25,7 +25,7 @@
 
 static cat_always_inline cat_bool_t cat_str_is_empty(const char *str)
 {
-    return str != NULL && str[0] != '\0';
+    return str == NULL || str[0] == '\0';
 }
 
 static cat_always_inline const char *cat_str_dempty(const char *str)
@@ -86,6 +86,7 @@ static cat_always_inline void cat_string_close(cat_string_t *string)
 
 CAT_API size_t cat_strnlen(const char *s, size_t n);
 CAT_API const char *cat_strlchr(const char *s, const char *last, char c);
+CAT_API char *cat_stpcpy(char *dest, const char *src);
 
 CAT_API char *cat_vsprintf(const char *format, va_list args); CAT_FREE
 CAT_API char *cat_sprintf(const char *format, ...)            CAT_FREE CAT_ATTRIBUTE_FORMAT(printf, 1, 2);
@@ -94,3 +95,56 @@ CAT_API char *cat_hexprint(const char *data, size_t length); CAT_FREE
 
 CAT_API char *cat_srand(char *buffer, size_t count);  CAT_MAY_FREE
 CAT_API char *cat_snrand(char *buffer, size_t count); CAT_MAY_FREE
+
+/* Note: `quote` related code are borrowed from the `strace` project */
+
+static cat_always_inline char *cat_byte_to_hexstr(uint8_t c, char *out)
+{
+    static const char hex_map[] = "0123456789abcdef";
+    *out++ = hex_map[c >> 4];
+    *out++ = hex_map[c & 0xf];
+    return out;
+}
+
+static cat_always_inline cat_bool_t cat_byte_is_printable(uint8_t c)
+{
+    return (c >= ' ') && (c < 0x7f);
+}
+
+typedef enum cat_string_quote_style_flag_e {
+    CAT_STR_QUOTE_STYLE_FLAG_NONE = 0,
+    /** String is '\0'-terminated. */
+    CAT_STR_QUOTE_STYLE_FLAG_ZERO_TERMINATED = 1 << 0,
+    /** Do not emit leading and ending '"' characters. */
+    CAT_STR_QUOTE_STYLE_FLAG_OMIT_LEADING_TRAILING_QUOTES = 1 << 1,
+    /** Do not print '\0' if it is the last character. */
+    CAT_STR_QUOTE_STYLE_FLAG_OMIT_TRAILING_0 = 1 << 2,
+    /** Print ellipsis if the last character is not '\0' */
+    CAT_STR_QUOTE_STYLE_FLAG_EXPECT_TRAILING_0 = 1 << 3,
+    /* Print non-ascii strings in hex */
+    CAT_STR_QUOTE_STYLE_FLAG_PRINT_NON_ASCILL_STRINGS_IN_HEX = 1 << 4,
+    /* Print all strings in hex (using '\xHH' notation) */
+    CAT_STR_QUOTE_STYLE_FLAG_PRINT_ALL_STRINGS_IN_HEX = 1 << 5,
+    /** Enclose the string in C comment syntax. */
+    CAT_STR_QUOTE_STYLE_FLAG_EMIT_COMMENT = 1 << 6,
+} cat_str_quote_style_flag_t;
+
+typedef uint8_t cat_string_quote_style_flags_t;
+
+CAT_API cat_bool_t cat_str_quote(
+    const char *str, size_t length,
+    char **new_str_ptr, size_t *new_length_ptr
+); CAT_MAY_FREE
+
+CAT_API cat_bool_t cat_str_quote_ex(
+    const char *str, size_t length,
+    char **new_str_ptr, size_t *new_length_ptr,
+    cat_string_quote_style_flags_t style, const char *escape_chars,
+    cat_bool_t *is_complete
+); CAT_MAY_FREE
+
+CAT_API cat_bool_t cat_str_quote_ex2(
+    const char *in, size_t length, char *out,
+    size_t *out_length, cat_string_quote_style_flags_t style,
+    const char *escape_chars
+);

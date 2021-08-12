@@ -16,6 +16,10 @@
   +--------------------------------------------------------------------------+
  */
 
+#if defined(CAT_DEBUG) && !defined(CAT_DISABLE_DEBUG_LOG)
+#define CAT_ENABLE_DEBUG_LOG 1
+#endif
+
 typedef enum cat_log_type_e {
     CAT_LOG_TYPE_DEBUG           = 1 << 0,
     CAT_LOG_TYPE_INFO            = 1 << 1,
@@ -34,61 +38,120 @@ typedef enum cat_log_union_types_e {
     CAT_LOG_TYPES_UNFILTERABLE    = CAT_LOG_TYPE_ERROR | CAT_LOG_TYPE_CORE_ERROR,
 } cat_log_union_types_t;
 
-#define cat_log_with_type(type, module_type, code, format, ...) do { \
+#define CAT_LOG_STRING_OR_X_PARAM(string, x) \
+        (string != NULL ? "\"" : ""), (string != NULL ? string : x), (string != NULL ? "\"" : "")
+
+#define CAT_LOG_STRINGL_OR_X_PARAM(string, length, x) \
+        ((string != NULL && length > 0) ? "\"" : ""), (int) ((string != NULL && length > 0) ? length : strlen(x)), ((string != NULL && length > 0) ? string : x), ((string != NULL && length > 0) ? "\"" : "")
+
+#define CAT_LOG_STRING_OR_NULL_FMT "%s%s%s"
+#define CAT_LOG_STRING_OR_NULL_PARAM(string) \
+        CAT_LOG_STRING_OR_X_PARAM(string, "NULL")
+
+#define CAT_LOG_STRINGL_OR_NULL_FMT "%s%.*s%s"
+#define CAT_LOG_STRINGL_OR_NULL_PARAM(string, length) \
+        CAT_LOG_STRINGL_OR_X_PARAM(string, length, "NULL")
+
+/* Notes for log macros:
+ * [XXX_WITH_TYPE] macros designed for dynamic types,
+ * [XXX_D] macros means log directly without checking user config */
+
+#define CAT_LOG_SCOPE_WITH_TYPE_START(type, module_type) do { \
     if (( \
             (((type) & CAT_G(log_types)) == (type)) && \
             ((CAT_MODULE_TYPE_##module_type & CAT_G(log_module_types)) == CAT_MODULE_TYPE_##module_type) \
         ) || \
         unlikely(((type) & CAT_LOG_TYPES_UNFILTERABLE) == (type)) \
-    ) { \
-        cat_log( \
-            (type), CAT_MODULE_TYPE_##module_type, #module_type \
-            CAT_SOURCE_POSITION_CC, code, format, ##__VA_ARGS__ \
-        ); \
+    ) {
+
+#define CAT_LOG_SCOPE_WITH_TYPE_END() \
     } \
 } while (0)
 
-#define cat_log_helper(type, module_type, code, format, ...) \
-        cat_log_with_type(CAT_LOG_TYPE_##type, module_type, code, format, ##__VA_ARGS__)
+#define CAT_LOG_SCOPE_START(type, module_type) \
+        CAT_LOG_SCOPE_WITH_TYPE_START(CAT_LOG_TYPE_##type, module_type)
+
+#define CAT_LOG_SCOPE_END CAT_LOG_SCOPE_WITH_TYPE_END
+
+#define CAT_LOG_D_WITH_TYPE(type, module_type, code, format, ...) \
+        cat_log_function( \
+            type, CAT_MODULE_TYPE_##module_type, #module_type \
+            CAT_SOURCE_POSITION_CC, code, format, ##__VA_ARGS__ \
+        )
+
+#define CAT_LOG_D(type, module_type, code, format, ...) \
+        CAT_LOG_D_WITH_TYPE( \
+            CAT_LOG_TYPE_##type, module_type, \
+            code, format, ##__VA_ARGS__ \
+        )
+
+#define CAT_LOG_WITH_TYPE(type, module_type, code, format, ...) \
+        CAT_LOG_SCOPE_WITH_TYPE_START(type, module_type) { \
+            CAT_LOG_D_WITH_TYPE(type, module_type, code, format, ##__VA_ARGS__); \
+        } CAT_LOG_SCOPE_END()
+
+#define CAT_LOG(type, module_type, code, format, ...) \
+        CAT_LOG_WITH_TYPE(CAT_LOG_TYPE_##type, module_type, code, format, ##__VA_ARGS__)
+
+#define CAT_LOG_NORETURN(type, module_type, code, format, ...) do { \
+        CAT_LOG_D_WITH_TYPE(CAT_LOG_TYPE_##type, module_type, code, format, ##__VA_ARGS__); \
+        cat_abort(); /* make static analysis happy */ \
+} while (0)
 
 /* make MSVC happy */
-#define cat_log_helper_with_reason(type, module_type, code, reason, format, ...) \
-        cat_log_helper__with_reason(type, module_type, code, format ", reason: %s", reason, ##__VA_ARGS__ )
+#define CAT_LOG_WITH_REASON(type, module_type, code, reason, format, ...) \
+        CAT_LOG__WITH_REASON(type, module_type, code, format ", reason: %s", reason, ##__VA_ARGS__)
 
-#define cat_log_helper__with_reason(type, module_type, code, ...) \
-        cat_log_helper(type, module_type, code, ##__VA_ARGS__)
+#define CAT_LOG__WITH_REASON(type, module_type, code, ...) \
+        CAT_LOG(type, module_type, code, ##__VA_ARGS__)
 
-#ifndef CAT_DEBUG
-#define cat_debug(module_type, format, ...)
+#define CAT_LOG_WITH_REASON_NORETURN(type, module_type, code, reason, format, ...) \
+        CAT_LOG__WITH_REASON_NORETURN(type, module_type, code, format ", reason: %s", reason, ##__VA_ARGS__)
+
+#define CAT_LOG__WITH_REASON_NORETURN(type, module_type, code, ...) \
+        CAT_LOG_NORETURN(type, module_type, code, ##__VA_ARGS__)
+
+#ifndef CAT_ENABLE_DEBUG_LOG
+#define CAT_LOG_DEBUG_SCOPE_START(module_type)
+#define CAT_LOG_DEBUG_SCOPE_END()
+#define CAT_LOG_DEBUG_SCOPE_START_EX(module_type, pre)
+#define CAT_LOG_DEBUG_SCOPE_END_EX(end)
+#define CAT_LOG_DEBUG(module_type, format, ...)
+#define CAT_LOG_DEBUG_D(module_type, format, ...)
 #else
-#define cat_debug(module_type, format, ...)                           cat_log_helper(DEBUG, module_type, 0, format, ##__VA_ARGS__);
+#define CAT_LOG_DEBUG_SCOPE_START(module_type)                     CAT_LOG_SCOPE_START(DEBUG, module_type) {
+#define CAT_LOG_DEBUG_SCOPE_END()                                  } CAT_LOG_SCOPE_END()
+#define CAT_LOG_DEBUG_SCOPE_START_EX(module_type, pre)             CAT_LOG_SCOPE_START(DEBUG, module_type) { pre;
+#define CAT_LOG_DEBUG_SCOPE_END_EX(end)                            end; } CAT_LOG_SCOPE_END()
+#define CAT_LOG_DEBUG(module_type, format, ...)                    CAT_LOG(DEBUG, module_type, 0, format, ##__VA_ARGS__);
+#define CAT_LOG_DEBUG_D(module_type, format, ...)                  CAT_LOG_D(DEBUG, module_type, 0, format, ##__VA_ARGS__);
 #endif
 
-#define cat_info(module_type, format, ...)                            cat_log_helper(INFO, module_type, 0, format, ##__VA_ARGS__)
+#define CAT_LOG_INFO(module_type, format, ...)                     CAT_LOG(INFO, module_type, 0, format, ##__VA_ARGS__)
 
-#define cat_notice(module_type, format, ...)                          cat_notice_ex(module_type, CAT_UNCODED, format, ##__VA_ARGS__)
-#define cat_notice_ex(module_type, code, format, ...)                 cat_log_helper(NOTICE, module_type, code, format, ##__VA_ARGS__)
-#define cat_notice_with_last(module_type, format, ...)                cat_log_helper_with_reason(NOTICE, module_type, cat_get_last_error_code(), cat_get_last_error_message(), format, ##__VA_ARGS__)
-#define cat_notice_with_reason(module_type, code, format, ...)        cat_log_helper_with_reason(NOTICE, module_type, code, cat_strerror(code), format, ##__VA_ARGS__)
+#define CAT_NOTICE(module_type, format, ...)                       CAT_NOTICE_EX(module_type, CAT_UNCODED, format, ##__VA_ARGS__)
+#define CAT_NOTICE_EX(module_type, code, format, ...)              CAT_LOG(NOTICE, module_type, code, format, ##__VA_ARGS__)
+#define CAT_NOTICE_WITH_LAST(module_type, format, ...)             CAT_LOG_WITH_REASON(NOTICE, module_type, cat_get_last_error_code(), cat_get_last_error_message(), format, ##__VA_ARGS__)
+#define CAT_NOTICE_WITH_REASON(module_type, code, format, ...)     CAT_LOG_WITH_REASON(NOTICE, module_type, code, cat_strerror(code), format, ##__VA_ARGS__)
 
-#define cat_warn(module_type, format, ...)                            cat_warn_ex(module_type, CAT_UNCODED, format, ##__VA_ARGS__)
-#define cat_warn_ex(module_type, code, format, ...)                   cat_log_helper(WARNING, module_type, code, format, ##__VA_ARGS__)
-#define cat_warn_with_last(module_type, format, ...)                  cat_log_helper_with_reason(WARNING, module_type, cat_get_last_error_code(), cat_get_last_error_message(), format, ##__VA_ARGS__)
-#define cat_warn_with_reason(module_type, code, format, ...)          cat_log_helper_with_reason(WARNING, module_type, code, cat_strerror(code), format, ##__VA_ARGS__)
+#define CAT_WARN(module_type, format, ...)                         CAT_WARN_EX(module_type, CAT_UNCODED, format, ##__VA_ARGS__)
+#define CAT_WARN_EX(module_type, code, format, ...)                CAT_LOG(WARNING, module_type, code, format, ##__VA_ARGS__)
+#define CAT_WARN_WITH_LAST(module_type, format, ...)               CAT_LOG_WITH_REASON(WARNING, module_type, cat_get_last_error_code(), cat_get_last_error_message(), format, ##__VA_ARGS__)
+#define CAT_WARN_WITH_REASON(module_type, code, format, ...)       CAT_LOG_WITH_REASON(WARNING, module_type, code, cat_strerror(code), format, ##__VA_ARGS__)
 
-#define cat_error(module_type, format, ...)                           cat_error_ex(module_type, CAT_UNCODED, format, ##__VA_ARGS__)
-#define cat_error_ex(module_type, code, format, ...)                  cat_log_helper(ERROR, module_type, code, format, ##__VA_ARGS__)
-#define cat_error_with_last(module_type, format, ...)                 cat_log_helper_with_reason(ERROR, module_type, cat_get_last_error_code(), cat_get_last_error_message(), format, ##__VA_ARGS__)
-#define cat_error_with_reason(module_type, code, format, ...)         cat_log_helper_with_reason(ERROR, module_type, code, cat_strerror(code), format, ##__VA_ARGS__)
+#define CAT_ERROR(module_type, format, ...)                        CAT_ERROR_EX(module_type, CAT_UNCODED, format, ##__VA_ARGS__)
+#define CAT_ERROR_EX(module_type, code, format, ...)               CAT_LOG_NORETURN(ERROR, module_type, code, format, ##__VA_ARGS__)
+#define CAT_ERROR_WITH_LAST(module_type, format, ...)              CAT_LOG_WITH_REASON_NORETURN(ERROR, module_type, cat_get_last_error_code(), cat_get_last_error_message(), format, ##__VA_ARGS__)
+#define CAT_ERROR_WITH_REASON(module_type, code, format, ...)      CAT_LOG_WITH_REASON_NORETURN(ERROR, module_type, code, cat_strerror(code), format, ##__VA_ARGS__)
 
-#define cat_core_error(module_type, format, ...)                      cat_core_error_ex(module_type, CAT_UNCODED, format, ##__VA_ARGS__)
-#define cat_core_error_ex(module_type, code, format, ...)             cat_log_helper(CORE_ERROR, module_type, code, format, ##__VA_ARGS__); abort() /* make IDE happy */
-#define cat_core_error_with_last(module_type, format, ...)            cat_log_helper_with_reason(CORE_ERROR, module_type, cat_get_last_error_code(), cat_get_last_error_message(), format, ##__VA_ARGS__); abort() /* make IDE happy */
-#define cat_core_error_with_reason(module_type, code, format, ...)    cat_log_helper_with_reason(CORE_ERROR, module_type, code, cat_strerror(code), format, ##__VA_ARGS__); abort() /* make IDE happy */
+#define CAT_CORE_ERROR(module_type, format, ...)                   CAT_CORE_ERROR_EX(module_type, CAT_UNCODED, format, ##__VA_ARGS__)
+#define CAT_CORE_ERROR_EX(module_type, code, format, ...)          CAT_LOG_NORETURN(CORE_ERROR, module_type, code, format, ##__VA_ARGS__); abort() /* make IDE happy */
+#define CAT_CORE_ERROR_WITH_LAST(module_type, format, ...)         CAT_LOG_WITH_REASON_NORETURN(CORE_ERROR, module_type, cat_get_last_error_code(), cat_get_last_error_message(), format, ##__VA_ARGS__); abort() /* make IDE happy */
+#define CAT_CORE_ERROR_WITH_REASON(module_type, code, format, ...) CAT_LOG_WITH_REASON_NORETURN(CORE_ERROR, module_type, code, cat_strerror(code), format, ##__VA_ARGS__); abort() /* make IDE happy */
 
-#define cat_syscall_failure(type, module_type, format, ...) do { \
+#define CAT_SYSCALL_FAILURE(type, module_type, format, ...) do { \
     cat_errno_t _error = cat_translate_sys_error(cat_sys_errno); \
-    cat_log_helper(type, module_type, _error, format " (syscall failure " CAT_ERRNO_FMT ": %s)", ##__VA_ARGS__, _error, cat_strerror(_error)); \
+    CAT_LOG(type, module_type, _error, format " (syscall failure " CAT_ERRNO_FMT ": %s)", ##__VA_ARGS__, _error, cat_strerror(_error)); \
 } while (0)
 
 #define CAT_LOG_PARAMATERS \
@@ -107,6 +170,8 @@ typedef enum cat_log_union_types_e {
 
 typedef void (*cat_log_t)(CAT_LOG_PARAMATERS);
 
-extern CAT_API cat_log_t cat_log CAT_LOG_ATTRIBUTES;
+extern CAT_API cat_log_t cat_log_function CAT_LOG_ATTRIBUTES;
 
 CAT_API void cat_log_standard(CAT_LOG_PARAMATERS);
+
+CAT_API const char *cat_log_buffer_quote(const char *buffer, ssize_t n, char **tmp_str); CAT_FREE

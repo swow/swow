@@ -43,7 +43,7 @@ void cat_bug_detector_callback(int signum)
 
 CAT_API cat_bool_t cat_module_init(void)
 {
-    cat_log = cat_log_standard;
+    cat_log_function = cat_log_standard;
 
 #ifdef CAT_USE_DYNAMIC_ALLOCATOR
     cat_register_allocator(NULL);
@@ -102,12 +102,17 @@ CAT_API cat_bool_t cat_runtime_init(void)
     if (cat_env_is_true("CAT_SLE", cat_false)) {
         CAT_G(show_last_error) = cat_true;
     }
+    CAT_G(log_str_size) = cat_env_get_i("CAT_LOG_STR_SIZE", 32);
 #ifdef CAT_DEBUG
 do {
     /* enable all log types and log module types */
     if (cat_env_is_true("CAT_DEBUG", cat_false)) {
         CAT_G(log_types) = CAT_LOG_TYPES_ALL;
         CAT_G(log_module_types) = CAT_MODULE_TYPES_ALL;
+        /* enable SLE if there is no env to set it explicitly */
+        if (!cat_env_exists("CAT_SLE")) {
+            CAT_G(show_last_error) = cat_true;
+        }
     }
 #ifdef CAT_SOURCE_POSITION
     /* show source position */
@@ -138,7 +143,7 @@ CAT_API cat_bool_t cat_runtime_shutdown(void)
 CAT_API char **cat_setup_args(int argc, char** argv)
 {
     if (cat_args_registered) {
-        cat_core_error(PROCESS, "API misuse: setup_args() should be called only once");
+        CAT_CORE_ERROR(PROCESS, "API misuse: setup_args() should be called only once");
     }
     cat_args_registered = cat_true;
 

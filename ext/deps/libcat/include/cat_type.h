@@ -16,8 +16,7 @@
   +--------------------------------------------------------------------------+
  */
 
-enum _cat_bool_t
-{
+enum cat_bool_e {
     cat_false = 0,
     cat_true = 1
 };
@@ -26,7 +25,7 @@ enum _cat_bool_t
 #ifdef __cplusplus
 typedef bool cat_bool_t;
 #else
-typedef enum _cat_bool_t cat_bool_t;
+typedef enum cat_bool_e cat_bool_t;
 #endif
 #else
 #define cat_bool_t uint8_t

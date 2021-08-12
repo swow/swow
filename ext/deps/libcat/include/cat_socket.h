@@ -304,8 +304,9 @@ typedef uint32_t cat_socket_type_t;
 
 /* 0 ~ 8 */
 #define CAT_SOCKET_FLAG_MAP(XX) \
-    XX(NONE, 0)           \
-    XX(ALLOCATED, 1 << 0) \
+    XX(NONE,                     0) \
+    XX(ALLOCATED,           1 << 0) \
+    XX(UNRECOVERABLE_ERROR, 1 << 1) \
 
 typedef enum cat_socket_flag_e {
 #define CAT_SOCKET_FLAG_GEN(name, value) CAT_ENUM_GEN(CAT_SOCKET_FLAG_, name, value)
@@ -315,9 +316,17 @@ typedef enum cat_socket_flag_e {
 
 typedef uint8_t cat_socket_flags_t;
 
+#define CAT_SOCKET_INTERNAL_FLAG_MAP(XX) \
+    XX(NONE,           0) \
+    XX(CONNECTED, 1 << 0) \
+    /* socket may be a pipe file, which is created by pipe2()
+     * and can only work with read()/write() */ \
+    XX(NOT_SOCK,  1 << 1) \
+
 typedef enum cat_socket_internal_flag_e {
-    CAT_SOCKET_INTERNAL_FLAG_NONE = 0,
-    CAT_SOCKET_INTERNAL_FLAG_CONNECTED = 1 << 0,
+#define CAT_SOCKET_INTERNAL_FLAG_GEN(name, value) CAT_ENUM_GEN(CAT_SOCKET_INTERNAL_FLAG_, name, value)
+    CAT_SOCKET_INTERNAL_FLAG_MAP(CAT_SOCKET_INTERNAL_FLAG_GEN)
+#undef CAT_SOCKET_INTERNAL_FLAG_GEN
 } cat_socket_internal_flag_t;
 
 typedef uint32_t cat_socket_internal_flags_t;
@@ -566,15 +575,17 @@ typedef struct cat_socket_crypto_options_s {
     const char *certificate;
     const char *certificate_key;
     const char *passphrase;
+    cat_ssl_protocols_t protocols;
     int verify_depth;
     cat_bool_t verify_peer;
     cat_bool_t verify_peer_name;
     cat_bool_t allow_self_signed;
     cat_bool_t no_ticket;
     cat_bool_t no_compression;
+    cat_bool_t no_client_ca_list;
 } cat_socket_crypto_options_t;
 
-CAT_API void cat_socket_crypto_options_init(cat_socket_crypto_options_t *options);
+CAT_API void cat_socket_crypto_options_init(cat_socket_crypto_options_t *options, cat_bool_t is_client);
 
 CAT_API cat_bool_t cat_socket_enable_crypto(cat_socket_t *socket, const cat_socket_crypto_options_t *options);
 CAT_API cat_bool_t cat_socket_enable_crypto_ex(cat_socket_t *socket, const cat_socket_crypto_options_t *options, cat_timeout_t timeout);
@@ -689,7 +700,7 @@ CAT_API int cat_socket_get_local_free_port(void);
 CAT_API void cat_socket_dump_all(void);
 CAT_API void cat_socket_close_all(void);
 
-CAT_API cat_bool_t cat_socket_move(cat_socket_t *s1, cat_socket_t *s2);
+CAT_API cat_bool_t cat_socket_move(cat_socket_t *from, cat_socket_t *to);
 
 /* pipe */
 

@@ -52,7 +52,7 @@ typedef struct cat_coroutine_transfer_s {
 
 #define cat_coroutine_context_jump(current_ucontext, ucontext)    do { \
     if (unlikely(swapcontext(current_ucontext, ucontext) != 0)) { \
-        cat_core_error(COROUTINE, "Ucontext swapcontext failed"); \
+        CAT_CORE_ERROR(COROUTINE, "Ucontext swapcontext failed"); \
     } \
 } while (0)
 
@@ -300,7 +300,7 @@ static void cat_coroutine_context_function(cat_coroutine_transfer_t transfer)
     if (unlikely(++CAT_COROUTINE_G(count) > CAT_COROUTINE_G(peak_count))) {
         CAT_COROUTINE_G(peak_count) = CAT_COROUTINE_G(count);
     }
-    cat_debug(COROUTINE, "Start (count=" CAT_COROUTINE_COUNT_FMT ")", CAT_COROUTINE_G(count));
+    CAT_LOG_DEBUG(COROUTINE, "Start (count=" CAT_COROUTINE_COUNT_FMT ")", CAT_COROUTINE_G(count));
 #ifdef CAT_COROUTINE_USE_UCONTEXT
     CAT_ASSERT(transfer.data == NULL);
     transfer.data = coroutine->transfer_data;
@@ -316,7 +316,7 @@ static void cat_coroutine_context_function(cat_coroutine_transfer_t transfer)
     coroutine->state = CAT_COROUTINE_STATE_FINISHED;
     /* finished */
     CAT_COROUTINE_G(count)--;
-    cat_debug(COROUTINE, "Finished (count=" CAT_COROUTINE_COUNT_FMT ")", CAT_COROUTINE_G(count));
+    CAT_LOG_DEBUG(COROUTINE, "Finished (count=" CAT_COROUTINE_COUNT_FMT ")", CAT_COROUTINE_G(count));
     /* yield to previous */
     cat_coroutine_yield(transfer.data, NULL);
     /* never here */
@@ -370,7 +370,7 @@ CAT_API cat_coroutine_t *cat_coroutine_create_ex(cat_coroutine_t *coroutine, cat
     /* protect stack */
 #ifdef CAT_COROUTINE_USE_MPEOTECT
     if (unlikely(mprotect(cat_getpageof(stack) + cat_getpagesize(), cat_getpagesize(), PROT_NONE) != 0)) {
-        cat_syscall_failure(NOTICE, COROUTINE, "Protect stack failed");
+        CAT_SYSCALL_FAILURE(NOTICE, COROUTINE, "Protect stack failed");
     }
 #endif
     /* init coroutine properties */
@@ -396,7 +396,7 @@ CAT_API cat_coroutine_t *cat_coroutine_create_ex(cat_coroutine_t *coroutine, cat
     coroutine->asan_stack = stack;
     coroutine->asan_stack_size = stack_size;
 #endif
-    cat_debug(COROUTINE, "Create R" CAT_COROUTINE_ID_FMT " with stack = %p, stack_size = %zu, function = %p on the %s",
+    CAT_LOG_DEBUG(COROUTINE, "Create R" CAT_COROUTINE_ID_FMT " with stack = %p, stack_size = %zu, function = %p on the %s",
                         coroutine->id, stack, stack_size, function, ((void *) coroutine) == ((void*) stack_end) ? "stack" : "heap");
 
     return coroutine;
@@ -414,7 +414,7 @@ CAT_API void cat_coroutine_close(cat_coroutine_t *coroutine)
 #endif
 #ifdef CAT_COROUTINE_USE_MPEOTECT
     if (unlikely(mprotect(cat_getpageof(stack) + cat_getpagesize(), cat_getpagesize(), PROT_READ | PROT_WRITE) != 0)) {
-        cat_syscall_failure(NOTICE, COROUTINE, "Unprotect stack failed");
+        CAT_SYSCALL_FAILURE(NOTICE, COROUTINE, "Unprotect stack failed");
     }
 #endif
     /* fast free */
@@ -431,9 +431,9 @@ CAT_API cat_data_t *cat_coroutine_jump(cat_coroutine_t *coroutine, cat_data_t *d
     do {
         const char *name = cat_coroutine_get_role_name(coroutine);
         if (name != NULL) {
-            cat_debug(COROUTINE, "Jump to %s", name);
+            CAT_LOG_DEBUG(COROUTINE, "Jump to %s", name);
         } else {
-            cat_debug(COROUTINE, "Jump to R" CAT_COROUTINE_ID_FMT, coroutine->id);
+            CAT_LOG_DEBUG(COROUTINE, "Jump to R" CAT_COROUTINE_ID_FMT, coroutine->id);
         }
     } while (0);
 #endif
@@ -666,7 +666,7 @@ static void cat_coroutine_dead_lock(cat_coroutine_dead_lock_function_t dead_lock
 {
     cat_log_type_t type = CAT_COROUTINE_G(dead_lock_log_type);
 
-    cat_log_with_type(type, COROUTINE, CAT_EDEADLK, "Dead lock: all coroutines are asleep");
+    CAT_LOG_WITH_TYPE(type, COROUTINE, CAT_EDEADLK, "Dead lock: all coroutines are asleep");
 
     if (dead_lock != NULL) {
         dead_lock();
@@ -798,7 +798,7 @@ CAT_API void cat_coroutine_notify_all(void)
     while (count--) {
         cat_coroutine_t *coroutine = cat_queue_front_data(waiters, cat_coroutine_t, waiter.node);
         if (!cat_coroutine_unlock(coroutine)) {
-            cat_core_error_with_last(COROUTINE, "Notify failed");
+            CAT_CORE_ERROR_WITH_LAST(COROUTINE, "Notify failed");
         }
     }
 }

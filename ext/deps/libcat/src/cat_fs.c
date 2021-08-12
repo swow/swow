@@ -85,7 +85,7 @@ static cat_bool_t cat_fs_do_result(cat_fs_context_t *context, int error, const c
     if (error != 0) {
         cat_update_last_error_with_reason(error, "File-System %s init failed", operation);
         errno = cat_orig_errno(cat_get_last_error_code());
-        cat_debug(FS, "Failed uv_fs_%s context=%p, uv_errno=%d", operation, context, error);
+        CAT_LOG_DEBUG(FS, "Failed uv_fs_%s context=%p, uv_errno=%d", operation, context, error);
         cat_free(context);
         return cat_false;
     }
@@ -97,24 +97,24 @@ static cat_bool_t cat_fs_do_result(cat_fs_context_t *context, int error, const c
         cat_update_last_error_with_previous("File-System %s wait failed", operation);
         (void) uv_cancel(&context->req);
         errno = cat_orig_errno(cat_get_last_error_code());
-        cat_debug(FS, "Failed %s() context=%p waiting failed", operation, context);
+        CAT_LOG_DEBUG(FS, "Failed %s() context=%p waiting failed", operation, context);
         return cat_false;
     }
     if (unlikely(!done)) {
         cat_update_last_error(CAT_ECANCELED, "File-System %s has been canceled", operation);
         (void) uv_cancel(&context->req);
         errno = ECANCELED;
-        cat_debug(FS, "Failed %s() context=%p canceled", operation, context);
+        CAT_LOG_DEBUG(FS, "Failed %s() context=%p canceled", operation, context);
         return cat_false;
     }
     if (unlikely(context->fs.result < 0)) {
         cat_update_last_error_with_reason((cat_errno_t) context->fs.result, "File-System %s failed", operation);
         errno = cat_orig_errno((cat_errno_t) context->fs.result);
-        cat_debug(FS, "Failed %s() context=%p, uv_errno=%d", operation, context, (int) context->fs.result);
+        CAT_LOG_DEBUG(FS, "Failed %s() context=%p, uv_errno=%d", operation, context, (int) context->fs.result);
         return cat_false;
     }
 
-    cat_debug(FS, "Done %s() context=%p", operation, context);
+    CAT_LOG_DEBUG(FS, "Done %s() context=%p", operation, context);
     return cat_true;
 }
 
@@ -125,7 +125,7 @@ static cat_bool_t cat_fs_do_result(cat_fs_context_t *context, int error, const c
         errno = ENOMEM; \
         {on_fail} \
     } \
-    cat_debug(FS, "Start " #operation "() context=%p", context); \
+    CAT_LOG_DEBUG(FS, "Start " #operation "() context=%p", context); \
     int error = uv_fs_##operation(cat_event_loop, &context->fs, ##__VA_ARGS__, cat_fs_callback); \
     if (!cat_fs_do_result(context, error, #operation)) { \
         {on_fail} \
