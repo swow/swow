@@ -24,8 +24,13 @@ SWOW_API zend_object_handlers swow_log_handlers;
 
 static void swow_log_standard(CAT_LOG_PARAMATERS)
 {
-    char *message;
+#ifndef CAT_ENABLE_DEBUG_LOG
+    if (type == CAT_LOG_TYPE_DEBUG) {
+        return;
+    }
+#endif
 
+    char *message;
     do {
         va_list args;
         va_start(args, format);
@@ -37,18 +42,21 @@ static void swow_log_standard(CAT_LOG_PARAMATERS)
         va_end(args);
     } while (0);
 
-    if (type & (CAT_LOG_TYPE_DEBUG | CAT_LOG_TYPE_INFO))
-    {
+    if (!(type & CAT_LOG_TYPES_ABNORMAL)) {
         char *output;
         const char *type_string;
         cat_bool_t failed = cat_false;
-        switch (type)
-        {
+        switch (type) {
+#ifdef CAT_ENABLE_DEBUG_LOG
         case CAT_LOG_TYPE_DEBUG:
             type_string = "Debug";
             break;
-        default:
+#endif
+        case CAT_LOG_TYPE_INFO:
             type_string = "Info";
+            break;
+        default:
+            CAT_NEVER_HERE("Unknown log type");
         }
         /* stdout */
         do {
