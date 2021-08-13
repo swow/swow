@@ -162,44 +162,6 @@ typedef struct
     } \
 } while (0)
 
-static cat_ssl_protocols_t swow_stream_get_crypto_protocols_from_method(int method_flags)
-{
-    cat_ssl_protocols_t ssl_protocols = CAT_SSL_PROTOCOLS_ALL;
-
-#if PHP_OPENSSL_API_VERSION < 0x10100
-#ifdef SSL_OP_NO_SSLv2
-    ssl_protocols ^= CAT_SSL_PROTOCOL_SSLv2;
-#endif
-#ifdef HAVE_SSL3
-    if (!(method_flags & STREAM_CRYPTO_METHOD_SSLv3)) {
-        ssl_ctx_options ^= CAT_SSL_PROTOCOL_SSLv3;
-    }
-#endif
-#ifdef HAVE_TLS1
-    if (!(method_flags & STREAM_CRYPTO_METHOD_TLSv1_0)) {
-        ssl_protocols ^= CAT_SSL_PROTOCOL_TLSv1;
-    }
-#endif
-#ifdef HAVE_TLS11
-    if (!(method_flags & STREAM_CRYPTO_METHOD_TLSv1_1)) {
-        ssl_protocols ^= CAT_SSL_PROTOCOL_TLSv1_1;
-    }
-#endif
-#ifdef HAVE_TLS12
-    if (!(method_flags & STREAM_CRYPTO_METHOD_TLSv1_2)) {
-        ssl_protocols ^= CAT_SSL_PROTOCOL_TLSv1_2;
-    }
-#endif
-#ifdef HAVE_TLS13
-    if (!(method_flags & STREAM_CRYPTO_METHOD_TLSv1_3)) {
-        ssl_protocols ^= CAT_SSL_PROTOCOL_TLSv1_3;
-    }
-#endif
-#endif
-
-    return ssl_protocols;
-}
-
 static zend_long swow_stream_get_crypto_method(php_stream_context *ctx, zend_long crypto_method)  /* {{{ */
 {
     zval *val;
