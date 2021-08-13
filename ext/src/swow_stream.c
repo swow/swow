@@ -983,6 +983,7 @@ static int swow_stream_set_tcp_option(php_stream *stream, int option, int value,
                 case STREAM_XPORT_OP_CONNECT:
                 case STREAM_XPORT_OP_CONNECT_ASYNC: {
                     xparam->outputs.returncode = swow_stream_connect(stream, swow_sock, xparam, xparam->op == STREAM_XPORT_OP_CONNECT_ASYNC);
+#ifdef CAT_SSL
 					if (swow_sock->ssl.enable_on_connect && xparam->outputs.returncode == 0) {
                         /* TODO: ssl non-blocking handshake support
 						|| (xparam->op == STREAM_XPORT_OP_CONNECT_ASYNC &&
@@ -993,6 +994,7 @@ static int swow_stream_set_tcp_option(php_stream *stream, int option, int value,
 							xparam->outputs.returncode = -1;
 						}
 					}
+#endif
                     return PHP_STREAM_OPTION_RETURN_OK;
                 }
                 case STREAM_XPORT_OP_BIND: {
@@ -1123,9 +1125,11 @@ static int swow_stream_close(php_stream *stream, int close_handle)
         }
     }
 
+#ifdef CAT_SSL
 	if (swow_sock->ssl.url_name != NULL) {
 		pefree(swow_sock->ssl.url_name, php_stream_is_persistent(stream));
 	}
+#endif
     pefree(swow_sock, php_stream_is_persistent(stream));
 
     return 0;
