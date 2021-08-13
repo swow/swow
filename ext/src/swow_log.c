@@ -44,7 +44,7 @@ static void swow_log_standard(CAT_LOG_PARAMATERS)
 
     if (!(type & CAT_LOG_TYPES_ABNORMAL)) {
         char *output;
-        const char *type_string;
+        const char *type_string = "Unknown";
         cat_bool_t failed = cat_false;
         switch (type) {
 #ifdef CAT_ENABLE_DEBUG_LOG
