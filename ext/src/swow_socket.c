@@ -299,7 +299,7 @@ static PHP_METHOD(Swow_Socket, listen)
 }
 
 ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO_EX(arginfo_class_Swow_Socket_accept, 0)
-    ZEND_ARG_OBJ_INFO_WITH_DEFAULT_VALUE(0, object, Swow\\Socket, 1, "\'$this\'")
+    ZEND_ARG_OBJ_INFO_WITH_DEFAULT_VALUE(0, client, Swow\\Socket, 1, "null")
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, timeout, IS_LONG, 1, "\'$this->getAcceptTimeout()\'")
 ZEND_END_ARG_INFO()
 
