@@ -189,7 +189,7 @@ Swow's [PHP source code](lib/src/Swow) is also a good example. Swow is an incred
 [ci-link]: https://github.com/swow/swow/actions?query=workflow:tests
 [codecov-badge]: https://codecov.io/gh/swow/swow/branch/develop/graph/badge.svg?token=
 [codecov-link]: https://codecov.io/gh/swow/swow
-[release-badge]: https://img.shields.io/github/release/swow/swow.svg?style=flat-square
+[release-badge]: https://img.shields.io/github/release/swow/swow.svg?include_prereleases
 [release-link]: https://github.com/swow/swow/releases
 [made-with-love-badge]: https://img.shields.io/badge/made%20with-%E2%9D%A4-f00
 [supported-php-versions-badge]: https://img.shields.io/badge/php-7.3--8.1-royalblue.svg
