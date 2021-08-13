@@ -17,6 +17,7 @@ use function Swow\Tools\error;
 use function Swow\Tools\notice;
 use function Swow\Tools\log;
 use function Swow\Tools\ok;
+use function Swow\Tools\success;
 use function Swow\Tools\warn;
 use function Swow\Tools\passthru;
 
@@ -25,23 +26,31 @@ if (PHP_OS_FAMILY === 'Windows') {
 }
 
 $workSpace = realpath(__DIR__ . '/../../ext');
-$swowSo = "{$workSpace}/.libs/swow.so";
 
+$swowSo = "{$workSpace}/.libs/swow.so";
 $options = getopt('', ['rebuild', 'show-log', 'debug', 'msan', 'asan', 'ubsan', 'enable::']);
 
-$commandArray = ["cd {$workSpace}"];
+$commandExecutor = function (string $name, array $commands) use ($workSpace): void {
+    $commands = ["cd {$workSpace}", ...$commands];
+    passthru(...$commands) && error("{$name} failed");
+    ok("{$name} complete");
+    br();
+};
 
 if (isset($options['rebuild'])) {
+    $cleanCommands = [];
     if (file_exists("{$workSpace}/Makefile")) {
-        $commandArray[] = './clean.sh';
+        $cleanCommands[] = './clean.sh';
     }
-    $commandArray[] = 'phpize --clean';
+    $cleanCommands[] = 'phpize --clean';
+    $commandExecutor('Clean', $cleanCommands);
 }
+
+$configureCommands = [];
 if (!file_exists("{$workSpace}/configure") || isset($options['rebuild'])) {
-    $commandArray[] = 'phpize';
+    $configureCommands[] = 'phpize';
 }
 if (!file_exists("{$workSpace}/Makefile") || isset($options['rebuild'])) {
-    $configureOptions = [];
     if (isset($options['debug'])) {
         $configureOptions[] = '--enable-swow-debug';
     }
@@ -58,25 +67,22 @@ if (!file_exists("{$workSpace}/Makefile") || isset($options['rebuild'])) {
         $configureOptions[] = $options['enable'];
     }
     $configureOptions = implode(' ', $configureOptions);
-    $commandArray[] = "./configure {$configureOptions}";
+    $configureCommands[] = "./configure {$configureOptions}";
 }
+$commandExecutor('Configure', $configureCommands);
 
 // TODO: use Swow\Cpu module
-$cpuCount = (int) shell_exec("{$workSpace}/deps/libcat/tools/cpu_count.sh");
+$cpuCount = (int) `{$workSpace}/deps/libcat/tools/cpu_count.sh`;
 if ($cpuCount <= 0) {
     $cpuCount = 4;
 }
 // TODO: CFLAGS/CXXFLAGS Werror
-$commandArray[] = isset($options['show-log']) ? "make -j{$cpuCount}" : "make -j{$cpuCount} > /dev/null";
-
-$command = implode(" && \\\n", $commandArray);
-
-$status = passthru($command);
-if ($status !== 0) {
-    error('Make failed');
+$makeCommand = "make -j{$cpuCount}";
+if (!isset($options['show-log'])) {
+    $makeCommand .= ' > /dev/null';
+    notice('Please be patient while compiling in silent mode...');
 }
-ok('Make complete');
-br();
+$commandExecutor('Make', [$makeCommand]);
 
 $checkCommand = "/usr/bin/env php -n -d extension={$swowSo} --ri swow";
 ob_start();
@@ -94,7 +100,6 @@ if (getmyuid() !== 0) {
 } else {
     $sudo = '';
 }
-passthru("cd {$workSpace} && {$sudo} make install");
+$commandExecutor('Install', ["{$sudo} make install"]);
 
-br();
-ok('Do\'not forget to add \'extension=swow\' to your PHP ini');
+success('Build completed');

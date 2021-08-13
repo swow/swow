@@ -67,7 +67,7 @@ function ok(string $message): void
 function success(string $content): void
 {
     $em = str_repeat(EMOJI_SUCCESS, 3);
-    log("{$em}{$content}{$em}", COLOR_CYAN);
+    log("{$em} {$content} {$em}", COLOR_CYAN);
     exit(0);
 }
 
@@ -80,8 +80,9 @@ function check(bool $is_ok, string $message): void
     }
 }
 
-function passthru(string $command): int
+function passthru(...$commands): int
 {
+    $command = implode(" && \\\n", $commands);
     log("> {$command}");
     \passthru($command, $status);
 
