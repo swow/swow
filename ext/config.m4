@@ -282,6 +282,7 @@ EOF
       [powerpc*], [SWOW_CPU_ARCH="ppc"],
       [mips64*], [SWOW_CPU_ARCH="mips64"],
       [mips*], [SWOW_CPU_ARCH="mips32"],
+      [riscv64*], [SWOW_CPU_ARCH="riscv64"],
       [SWOW_CPU_ARCH="unsupported"]
     )
 
@@ -294,6 +295,7 @@ EOF
       [ppc], [CAT_CONTEXT_FILE_PREFIX="ppc_sysv"],
       [mips64], [CAT_CONTEXT_FILE_PREFIX="mips64_n64"],
       [mips32], [CAT_CONTEXT_FILE_PREFIX="mips32_o32"],
+      [riscv64], [CAT_CONTEXT_FILE_PREFIX="riscv64_sysv"],
       [CAT_CONTEXT_FILE_PREFIX="combined_sysv"]
     )
 
