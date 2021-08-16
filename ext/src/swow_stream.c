@@ -524,6 +524,7 @@ static inline int swow_stream_accept(php_stream *stream, swow_netstream_data_t *
         delay = 1;
     }
 
+    cat_socket_init(client);
     client = cat_socket_accept_ex(server, client, cat_time_tv2to(xparam->inputs.timeout));
 
     if (UNEXPECTED(client == NULL)) {
