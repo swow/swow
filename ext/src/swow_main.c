@@ -331,23 +331,21 @@ PHP_MINFO_FUNCTION(swow)
     php_info_print_table_row(2, "Version", SWOW_VERSION SWOW_GIT_VERSION " ( " SWOW_VERSION_SUFFIX SWOW_VERSION_SUFFIX_EXT " )");
     php_info_print_table_row(2, "Context", SWOW_COROUTINE_CONTEXT_TYPE);
     php_info_print_table_row(2, "Scheduler", "libuv-event");
-    do {
-        smart_str str = { 0 };
-#ifdef CAT_HAVE_CURL
-        curl_version_info_data * curl_vid = curl_version_info(CURLVERSION_NOW);
-        smart_str_append_printf(&str, "cURL %s, ", curl_vid->version);
+#if defined(CAT_HAVE_CURL) || defined(CAT_HAVE_OPENSSL)
+    smart_str str = { 0 };
+# ifdef CAT_HAVE_CURL
+    curl_version_info_data * curl_vid = curl_version_info(CURLVERSION_NOW);
+    smart_str_append_printf(&str, "cURL %s, ", curl_vid->version);
+# endif
+# ifdef CAT_HAVE_OPENSSL
+    smart_str_append_printf(&str, "%s, ", cat_ssl_version());
+# endif
+    CAT_ASSERT(str.s != NULL && ZSTR_LEN(str.s) > 1);
+    ZSTR_LEN(str.s) -= 2; // rtrim(&str, ", ")
+    smart_str_0(&str);
+    php_info_print_table_row(2, "With", ZSTR_VAL(str.s));
+    smart_str_free(&str);
 #endif
-#ifdef CAT_HAVE_OPENSSL
-        smart_str_append_printf(&str, "%s, ", cat_ssl_version());
-#endif
-        if (str.s == NULL || ZSTR_LEN(str.s) == 0) {
-            break;
-        }
-        ZSTR_LEN(str.s) -= 2; // rtrim(&str, ", ")
-        smart_str_0(&str);
-        php_info_print_table_row(2, "With", ZSTR_VAL(str.s));
-        smart_str_free(&str);
-    } while (0);
     php_info_print_table_end();
 }
 /* }}} */
