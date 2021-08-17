@@ -213,6 +213,7 @@ if (PHP_SWOW != 'no') (function(){
     // sources
     var SWOW_SRC_DIR='src';
     var SWOW_SOURCE_FILENAMES = [
+        'swow_main.c',
         'swow_wrapper.c',
         'swow_log.c',
         'swow_exceptions.c',
