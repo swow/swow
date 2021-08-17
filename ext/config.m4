@@ -12,6 +12,12 @@ PHP_ARG_ENABLE([swow-debug],
   [no], [no]
 )
 
+PHP_ARG_ENABLE([swow-gcov],
+  [whether to enable Swow GCOV support],
+  [AS_HELP_STRING([--enable-swow-gcov], [Enable Swow GCOV support])],
+  [no], [no]
+)
+
 PHP_ARG_ENABLE([swow-valgrind],
   [whether to enable Swow valgrind support],
   [AS_HELP_STRING([--enable-swow-valgrind], [Enable Swow valgrind support])],
@@ -110,6 +116,17 @@ if test "${SWOW}" != "no"; then
     AX_CHECK_COMPILE_FLAG(-fdiagnostics-show-option,       SWOW_MAINTAINER_CFLAGS="${SWOW_MAINTAINER_CFLAGS} -fdiagnostics-show-option")
     AX_CHECK_COMPILE_FLAG(-fno-optimize-sibling-calls,     SWOW_MAINTAINER_CFLAGS="${SWOW_MAINTAINER_CFLAGS} -fno-optimize-sibling-calls")
     AX_CHECK_COMPILE_FLAG(-fstack-protector,               SWOW_MAINTAINER_CFLAGS="${SWOW_MAINTAINER_CFLAGS} -fstack-protector")
+
+    if test "${PHP_SWOW_GCOV}" = "yes"; then
+      AX_CHECK_COMPILE_FLAG([-fprofile-arcs -ftest-coverage], [
+        dnl Remove all optimization flags from CFLAGS.
+        changequote({,})
+        CFLAGS=`echo "$CFLAGS" | "${SED}" -e 's/-O[0-9s]*//g'`
+        CXXFLAGS=`echo "$CXXFLAGS" | "${SED}" -e 's/-O[0-9s]*//g'`
+        changequote([,])
+        CFLAGS="$CFLAGS -O0 -fprofile-arcs -ftest-coverage"
+      ])
+    fi
   fi
   SWOW_CFLAGS="${SWOW_CFLAGS} ${SWOW_STD_CFLAGS} ${SWOW_MAINTAINER_CFLAGS}"
 
