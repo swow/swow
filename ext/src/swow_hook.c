@@ -26,26 +26,26 @@ static cat_bool_t swow_function_is_hookable(const zend_function *function)
 #else
 static cat_bool_t swow_function_is_hookable(const char *name, size_t name_length)
 {
-	const char *s = NULL, *e = INI_STR("disable_functions");
+    const char *s = NULL, *e = INI_STR("disable_functions");
 
-	while (1) {
-		if (*e == ' ' || *e == ',' || *e == '\0') {
-			if (s) {
+    while (1) {
+        if (*e == ' ' || *e == ',' || *e == '\0') {
+            if (s) {
                 if ((size_t) (e - s) == name_length && cat_strncasecmp(s, name, name_length) == 0) {
                     return cat_false;
                 }
-				s = NULL;
-			}
-		} else {
-			if (!s) {
-				s = e;
-			}
-		}
-		if (*e == '\0') {
-			break;
-		}
-		e++;
-	}
+                s = NULL;
+            }
+        } else {
+            if (!s) {
+                s = e;
+            }
+        }
+        if (*e == '\0') {
+            break;
+        }
+        e++;
+    }
 
     return cat_true;
 }
