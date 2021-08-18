@@ -9,44 +9,29 @@ require __DIR__ . '/../include/skipif.php';
 require __DIR__ . '/../include/bootstrap.php';
 
 set_error_handler(function (...$_) {
-    echo "caught a PHP7 warning\n";
+    throw new ValueError('converted ValueError');
 });
 
 foreach (
     [
-        'sleep',
-        'usleep',
-        'msleep',
-    ] as $func
+        'sleep' => [[-1]],
+        'usleep' => [[-1]],
+        'msleep' => [[-1]],
+        'time_nanosleep' => [
+            [-1, -2],
+            [0, 2000000000],
+        ],
+        'time_sleep_until' => [[0]],
+    ] as $func => $args_set
 ) {
-    try {
-        echo "{$func}:";
-        $func(-1);
-    } catch (ValueError $e) {
-        echo "caught a PHP8 ValueError\n";
+    foreach ($args_set as $args) {
+        Assert::throws(function () use ($func, $args) {
+            $func(...$args);
+        }, ValueError::class);
     }
 }
 
-try {
-    echo 'time_nanosleep:';
-    time_nanosleep(-1, -2);
-} catch (ValueError $e) {
-    echo "caught a PHP8 ValueError\n";
-}
-
-try {
-    echo 'time_sleep_until:';
-    time_sleep_until(0);
-} catch (ValueError $e) {
-    echo "caught a PHP8 ValueError\n";
-}
-
-echo 'done';
+echo 'Done' . PHP_LF;
 ?>
---EXPECTREGEX--
-sleep:caught a (PHP8 ValueError|PHP7 warning)
-usleep:caught a \1
-msleep:caught a \1
-time_nanosleep:caught a \1
-time_sleep_until:caught a (PHP8 ValueError|PHP7 warning)
-done
+--EXPECT--
+Done
