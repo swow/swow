@@ -200,11 +200,17 @@ CAT_API size_t cat_socket_write_vector_length(const cat_socket_write_vector_t *v
 #undef TCP_KEEPALIVE
 #endif
 
+#define CAT_SOCKET_CREATION_FLAG_MAP(XX) \
+    XX(NONE,              0) \
+    XX(OPEN_FD,      1 << 0) \
+    XX(OPEN_SOCKET,  1 << 1) \
+    XX(OPEN_HANDLE,  1 << 2) \
+    XX(ACCEPT,       1 << 3) \
+
 typedef enum cat_socket_creation_flag_e {
-    CAT_SOCKET_CREATION_FLAG_NONE        = 0,
-    CAT_SOCKET_CREATION_FLAG_OPEN_FD     = 1 << 0,
-    CAT_SOCKET_CREATION_FLAG_OPEN_SOCKET = 1 << 1,
-    CAT_SOCKET_CREATION_FLAG_OPEN_HANDLE = 1 << 2,
+#define CAT_SOCKET_CREATION_FLAG_GEN(name, value) CAT_ENUM_GEN(CAT_SOCKET_CREATION_FLAG_, name, value)
+    CAT_SOCKET_CREATION_FLAG_MAP(CAT_SOCKET_CREATION_FLAG_GEN)
+#undef CAT_SOCKET_CREATION_FLAG_GEN
 } cat_socket_creation_flag_t;
 
 typedef enum cat_socket_creation_union_flags_e {
@@ -235,20 +241,15 @@ typedef struct cat_socket_creation_options_s {
     XX(IPV6,  1 << 6) \
     XX(LOCAL, 1 << 7) \
     /* 10 ~ 19 ((tcp|udp)-extra) */ \
-    XX(UNSPEC,        1 << 10)  CAT_INTERNAL /* (it is AF_UNSPEC when was created by user) */ \
-    XX(TCP_DELAY,     1 << 11)  CAT_INTERNAL /* (disable tcp_nodelay) */ \
-    XX(TCP_KEEPALIVE, 1 << 12)  CAT_INTERNAL /* (enable keep-alive) */ \
-    XX(UDP_BROADCAST, 1 << 11)  CAT_INTERNAL /* (enable broadcast) TODO: support it or remove */ \
+    XX(TCP_DELAY,     1 << 10)  CAT_INTERNAL /* (disable tcp_nodelay) */ \
+    XX(TCP_KEEPALIVE, 1 << 11)  CAT_INTERNAL /* (enable keep-alive) */ \
+    XX(UDP_BROADCAST, 1 << 12)  CAT_INTERNAL /* (enable broadcast) TODO: support it or remove */ \
     /* 10 ~ 19 (pipe-extra) */ \
     XX(IPC,    1 << 10) \
     /* 10 ~ 19 (tty-extra) */ \
     XX(STDIN,  1 << 10) \
     XX(STDOUT, 1 << 11) \
     XX(STDERR, 1 << 12) \
-    /* 20 ~ 23 (stream (tcp|pipe|tty)) */ \
-    XX(SERVER,      1 << 20) CAT_INTERNAL \
-    XX(CLIENT,      1 << 21) CAT_INTERNAL \
-    XX(SESSION,     1 << 22) CAT_INTERNAL \
 
 #define CAT_SOCKET_TYPE_FLAG_MAP(XX) CAT_SOCKET_TYPE_FLAG_MAP_EX(XX, CAT_SSL_ENUM_GEN(XX))
 
@@ -291,15 +292,6 @@ typedef enum cat_socket_common_type_e {
 #undef CAT_SOCKET_TYPE_GEN
 } cat_socket_common_type_t;
 
-typedef enum cat_socket_union_type_flags_e {
-    CAT_SOCKET_TYPE_FLAGS_ROLE =
-        CAT_SOCKET_TYPE_FLAG_SERVER |
-        CAT_SOCKET_TYPE_FLAG_CLIENT |
-        CAT_SOCKET_TYPE_FLAG_SESSION,
-    CAT_SOCKET_TYPE_FLAGS_DO_NOT_EXTENDS =
-        CAT_SOCKET_TYPE_FLAGS_ROLE,
-} cat_socket_union_type_flags_t;
-
 typedef uint32_t cat_socket_type_t;
 
 /* 0 ~ 8 */
@@ -317,11 +309,15 @@ typedef enum cat_socket_flag_e {
 typedef uint8_t cat_socket_flags_t;
 
 #define CAT_SOCKET_INTERNAL_FLAG_MAP(XX) \
-    XX(NONE,           0) \
-    XX(CONNECTED, 1 << 0) \
+    XX(NONE,              0) \
+    XX(ESTABLISHED,       1 << 0) \
     /* socket may be a pipe file, which is created by pipe2()
      * and can only work with read()/write() */ \
-    XX(NOT_SOCK,  1 << 1) \
+    XX(NOT_SOCK,          1 << 1) \
+    /* 20 ~ 23 (stream (tcp|pipe|tty)) */ \
+    XX(SERVER,            1 << 20) \
+    XX(SERVER_CONNECTION, 1 << 21) \
+    XX(CLIENT,            1 << 22) \
 
 typedef enum cat_socket_internal_flag_e {
 #define CAT_SOCKET_INTERNAL_FLAG_GEN(name, value) CAT_ENUM_GEN(CAT_SOCKET_INTERNAL_FLAG_, name, value)
@@ -421,6 +417,11 @@ typedef struct cat_socket_internal_options_s {
     cat_socket_timeout_options_t timeout;
 } cat_socket_internal_options_t;
 
+typedef struct cat_socket_inheritance_info_s {
+    cat_socket_type_t type;
+    cat_socket_internal_options_t options;
+} cat_socket_inheritance_info_t;
+
 struct cat_socket_internal_s
 {
     /* === public === */
@@ -444,6 +445,7 @@ struct cat_socket_internal_s
     struct {
         cat_socket_fd_t fd;
         cat_socket_write_request_t *write_request;
+        cat_socket_inheritance_info_t *recv_handle_info;
         cat_sockaddr_info_t *sockname;
         cat_sockaddr_info_t *peername;
         int recv_buffer_size;
@@ -475,11 +477,6 @@ struct cat_socket_s
     cat_socket_flags_t flags;
     cat_socket_internal_t *internal;
 };
-
-typedef struct cat_socket_inheritance_info_s {
-    cat_socket_type_t type;
-    cat_socket_internal_options_t options;
-} cat_socket_inheritance_info_t;
 
 /* globals */
 
@@ -577,6 +574,7 @@ typedef struct cat_socket_crypto_options_s {
     const char *passphrase;
     cat_ssl_protocols_t protocols;
     int verify_depth;
+    cat_bool_t is_client;
     cat_bool_t verify_peer;
     cat_bool_t verify_peer_name;
     cat_bool_t allow_self_signed;
@@ -659,10 +657,10 @@ CAT_API cat_bool_t cat_socket_has_crypto(const cat_socket_t *socket);
 CAT_API cat_bool_t cat_socket_is_encrypted(const cat_socket_t *socket);
 #endif
 CAT_API cat_bool_t cat_socket_is_server(const cat_socket_t *socket);
+CAT_API cat_bool_t cat_socket_is_server_connection(const cat_socket_t *socket);
 CAT_API cat_bool_t cat_socket_is_client(const cat_socket_t *socket);
-CAT_API cat_bool_t cat_socket_is_session(const cat_socket_t *socket);
 CAT_API const char *cat_socket_get_role_name(const cat_socket_t *socket);
-CAT_API cat_errno_t cat_socket_get_liveness(const cat_socket_t *socket);
+CAT_API cat_errno_t cat_socket_get_connection_error(const cat_socket_t *socket);
 CAT_API cat_bool_t cat_socket_check_liveness(const cat_socket_t *socket);
 CAT_API cat_bool_t cat_socket_is_eof_error(cat_errno_t error);
 

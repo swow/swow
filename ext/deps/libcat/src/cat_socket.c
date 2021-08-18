@@ -523,7 +523,7 @@ CAT_API cat_bool_t cat_socket_runtime_init(void)
 
 static cat_always_inline cat_bool_t cat_socket_internal_is_established(cat_socket_internal_t *isocket)
 {
-    if (!(isocket->flags & CAT_SOCKET_INTERNAL_FLAG_CONNECTED)) {
+    if (!(isocket->flags & CAT_SOCKET_INTERNAL_FLAG_ESTABLISHED)) {
         return cat_false;
     }
 #ifdef CAT_SSL
@@ -636,57 +636,56 @@ static cat_bool_t cat_socket_getaddrbyname_ex(cat_socket_t *socket, cat_sockaddr
     address_info->length = sizeof(address_info->address);
     error = cat_sockaddr__getbyname(&address->common, &address_info->length, name, name_length, port);
 
-    /* why only unspec is allowed ? */
-    if ((socket->type & CAT_SOCKET_TYPE_FLAG_UNSPEC)) {
-        if (error == CAT_EINVAL) {
-            // try to solve the name
-            struct addrinfo hints = {0};
-            struct addrinfo *response;
-            cat_bool_t ret;
-            hints.ai_family = af;
-            hints.ai_flags = 0;
-            if (socket->type & CAT_SOCKET_TYPE_FLAG_STREAM) {
-                hints.ai_socktype = SOCK_STREAM;
-            } else if (socket->type & CAT_SOCKET_TYPE_FLAG_DGRAM) {
-                hints.ai_socktype = SOCK_DGRAM;
-            } else {
-                hints.ai_socktype = 0;
-            }
-            response = cat_dns_getaddrinfo_ex(name, NULL, &hints, cat_socket_get_dns_timeout_fast(socket));
-            if (unlikely(response == NULL)) {
-                return cat_false;
-            }
-            if (is_host_name != NULL) {
-                *is_host_name = cat_true;
-            }
-            memcpy(&address->common, response->ai_addr, response->ai_addrlen);
-            cat_dns_freeaddrinfo(response);
-            ret = cat_sockaddr_set_port(&address->common, port);
-            if (unlikely(!ret)) {
-                return cat_false;
-            }
-            switch (address->common.sa_family)
-            {
-                case AF_INET:
-                    address_info->length = sizeof(cat_sockaddr_in_t);
-                    break;
-                case AF_INET6:
-                    address_info->length = sizeof(cat_sockaddr_in6_t);
-                    break;
-                default:
-                    CAT_NEVER_HERE("Must be AF_INET/AF_INET6");
-            }
-        }
-
+    if (likely(error == 0)) {
         return cat_true;
     }
-
-    if (unlikely(error != 0)) {
+    if (unlikely(error != CAT_EINVAL)) {
         cat_update_last_error_with_reason(error, "Socket get address by name failed");
         return cat_false;
     }
 
-    return cat_true;
+    /* try to solve the name */
+    do {
+        struct addrinfo hints = {0};
+        struct addrinfo *response;
+        cat_bool_t ret;
+        hints.ai_family = af;
+        hints.ai_flags = 0;
+        if (socket->type & CAT_SOCKET_TYPE_FLAG_STREAM) {
+            hints.ai_socktype = SOCK_STREAM;
+        } else if (socket->type & CAT_SOCKET_TYPE_FLAG_DGRAM) {
+            hints.ai_socktype = SOCK_DGRAM;
+        } else {
+            hints.ai_socktype = 0;
+        }
+        response = cat_dns_getaddrinfo_ex(name, NULL, &hints, cat_socket_get_dns_timeout_fast(socket));
+        if (unlikely(response == NULL)) {
+            break;
+        }
+        if (is_host_name != NULL) {
+            *is_host_name = cat_true;
+        }
+        memcpy(&address->common, response->ai_addr, response->ai_addrlen);
+        cat_dns_freeaddrinfo(response);
+        ret = cat_sockaddr_set_port(&address->common, port);
+        if (unlikely(!ret)) {
+            break;
+        }
+        switch (address->common.sa_family) {
+            case AF_INET:
+                address_info->length = sizeof(cat_sockaddr_in_t);
+                break;
+            case AF_INET6:
+                address_info->length = sizeof(cat_sockaddr_in6_t);
+                break;
+            default:
+                CAT_NEVER_HERE("Must be AF_INET/AF_INET6");
+        }
+        return cat_true;
+    } while (0);
+
+    cat_update_last_error_with_previous("Socket get address by name failed");
+    return cat_false;
 }
 
 static cat_always_inline cat_bool_t cat_socket_getaddrbyname(cat_socket_t *socket, cat_sockaddr_info_t *address_info, const char *name, size_t name_length, int port)
@@ -744,6 +743,7 @@ static CAT_COLD void cat_socket_fail_close_callback(uv_handle_t *handle)
 CAT_API void cat_socket_init(cat_socket_t *socket)
 {
     socket->type = CAT_SOCKET_TYPE_ANY;
+    socket->flags = CAT_SOCKET_FLAG_NONE;
     socket->internal = NULL;
 }
 
@@ -815,28 +815,19 @@ CAT_API cat_socket_t *cat_socket_create_ex(cat_socket_t *socket, cat_socket_type
     }
 
     /* solve type and get af */
-    if (type & CAT_SOCKET_TYPE_FLAG_SERVER) {
-        type &= ~CAT_SOCKET_TYPE_FLAGS_DO_NOT_EXTENDS;
-        type |= CAT_SOCKET_TYPE_FLAG_SESSION;
+    if (ioptions.flags & CAT_SOCKET_CREATION_FLAG_ACCEPT) {
         /* Notice: use AF_UNSPEC to make sure that
          * socket will not be created for now
          * (it should be created when accept) */
         af = AF_UNSPEC;
+    } else if (type & CAT_SOCKET_TYPE_FLAG_IPV4) {
+        af = AF_INET;
+    } else if (type & CAT_SOCKET_TYPE_FLAG_IPV6) {
+        af = AF_INET6;
     } else {
-        type &= ~CAT_SOCKET_TYPE_FLAGS_DO_NOT_EXTENDS;
-        if (type & CAT_SOCKET_TYPE_FLAG_UNSPEC) {
-            af = AF_UNSPEC;
-        } else if (type & CAT_SOCKET_TYPE_FLAG_IPV4) {
-            af = AF_INET;
-        } else if (type & CAT_SOCKET_TYPE_FLAG_IPV6) {
-            af = AF_INET6;
-        } else {
-            af = AF_UNSPEC;
-            if (type & CAT_SOCKET_TYPE_FLAG_INET) {
-                type |= CAT_SOCKET_TYPE_FLAG_UNSPEC;
-            }
-        }
+        af = AF_UNSPEC;
     }
+
     /* init handle */
     if ((type & CAT_SOCKET_TYPE_TCP) == CAT_SOCKET_TYPE_TCP) {
         error = uv_tcp_init_ex(cat_event_loop, &isocket->u.tcp, af);
@@ -937,6 +928,7 @@ CAT_API cat_socket_t *cat_socket_create_ex(cat_socket_t *socket, cat_socket_type
     /* part of cache */
     isocket->cache.fd = CAT_SOCKET_INVALID_FD;
     isocket->cache.write_request = NULL;
+    isocket->cache.recv_handle_info = NULL;
     isocket->cache.sockname = NULL;
     isocket->cache.peername = NULL;
     isocket->cache.recv_buffer_size = -1;
@@ -951,14 +943,14 @@ CAT_API cat_socket_t *cat_socket_create_ex(cat_socket_t *socket, cat_socket_type
     if (ioptions.flags & CAT_SOCKET_CREATION_OPEN_FLAGS) {
         const cat_sockaddr_info_t *address_info = NULL;
         if (check_connection) {
-            cat_bool_t is_connected = cat_false;
+            cat_bool_t is_established = cat_false;
             if (((type & CAT_SOCKET_TYPE_TTY) == CAT_SOCKET_TYPE_TTY)) {
-                is_connected = cat_true;
+                is_established = cat_true;
             } else if (isocket->u.handle.flags & (UV_HANDLE_READABLE | UV_HANDLE_WRITABLE)) {
-                is_connected = cat_true;
+                is_established = cat_true;
             }
-            if (is_connected) {
-                isocket->flags |= CAT_SOCKET_INTERNAL_FLAG_CONNECTED;
+            if (is_established) {
+                isocket->flags |= CAT_SOCKET_INTERNAL_FLAG_ESTABLISHED;
             }
         }
         cat_socket_on_open(socket, address_info != NULL ? address_info->address.common.sa_family : AF_UNSPEC);
@@ -1353,7 +1345,7 @@ CAT_API cat_bool_t cat_socket_listen(cat_socket_t *socket, int backlog)
         return cat_false;
     }
     uv_unref(&isocket->u.handle);
-    socket->type |= CAT_SOCKET_TYPE_FLAG_SERVER;
+    isocket->flags |= CAT_SOCKET_INTERNAL_FLAG_SERVER;
 
     return cat_true;
 }
@@ -1364,26 +1356,32 @@ static cat_socket_t *cat_socket__accept(cat_socket_t *server, cat_socket_t *clie
         CAT_SOCKET_SERVER_ONLY(server, return NULL);
     }
     CAT_SOCKET_INTERNAL_GETTER_WITH_IO(server, iserver, CAT_SOCKET_IO_FLAG_ACCEPT, return NULL);
+    cat_socket_internal_t *iclient;
     int error;
 
-    client = cat_socket_create(client, client_type == CAT_SOCKET_TYPE_ANY ? server->type : client_type);
-    if (unlikely(client == NULL)) {
-        cat_update_last_error_with_previous("Socket create for accepting connection failed");
+    if (client == NULL || client->internal == NULL) {
+        cat_socket_creation_options_t options;
+        options.flags = CAT_SOCKET_CREATION_FLAG_ACCEPT;
+        client = cat_socket_create_ex(client, client_type == CAT_SOCKET_TYPE_ANY ? server->type : client_type, &options);
+        if (unlikely(client == NULL)) {
+            cat_update_last_error_with_previous("Socket create for accepting connection failed");
+            return NULL;
+        }
+    } else if (unlikely(client_type != CAT_SOCKET_TYPE_ANY)) {
+        cat_update_last_error(CAT_EMISUSE, "Socket accept can not specify the type for a constructed socket");
         return NULL;
     }
+    iclient = client->internal;
 
     while (1) {
         cat_bool_t ret;
         error = uv_accept(&iserver->u.stream, &client->internal->u.stream);
         if (error == 0) {
-            cat_socket_internal_t *iclient = client->internal;
             /* init client properties */
-            iclient->flags |= CAT_SOCKET_INTERNAL_FLAG_CONNECTED;
+            iclient->flags |= (CAT_SOCKET_INTERNAL_FLAG_ESTABLISHED | CAT_SOCKET_INTERNAL_FLAG_SERVER_CONNECTION);
             /* TODO: socket_extends() ? */
             memcpy(&iclient->options, iclient_options == NULL ? &iserver->options : iclient_options, sizeof(iclient->options));
             cat_socket_on_open(client, AF_UNSPEC);
-            /* recover socket role when recv_handle() */
-            client->type |= (client_type & CAT_SOCKET_TYPE_FLAGS_ROLE);
             return client;
         }
         if (unlikely(error != CAT_EAGAIN)) {
@@ -1416,7 +1414,7 @@ static cat_socket_t *cat_socket__accept(cat_socket_t *server, cat_socket_t *clie
 
 CAT_API cat_socket_t *cat_socket_accept(cat_socket_t *server, cat_socket_t *client)
 {
-    return cat_socket__accept(server, client, CAT_SOCKET_TYPE_ANY, NULL, cat_socket_get_accept_timeout_fast(server));
+    return cat_socket_accept_ex(server, client, cat_socket_get_accept_timeout_fast(server));
 }
 
 CAT_API cat_socket_t *cat_socket_accept_ex(cat_socket_t *server, cat_socket_t *client, cat_timeout_t timeout)
@@ -1437,8 +1435,7 @@ CAT_API cat_socket_t *cat_socket_accept_typed_ex(cat_socket_t *server, cat_socke
 static cat_always_inline void cat_socket_on_connect_done(cat_socket_t *socket, cat_socket_internal_t *isocket, cat_sa_family_t af)
 {
     /* connect done successfully, we can do something here before transfer data */
-    socket->type |= CAT_SOCKET_TYPE_FLAG_CLIENT;
-    isocket->flags |= CAT_SOCKET_INTERNAL_FLAG_CONNECTED;
+    isocket->flags |= (CAT_SOCKET_INTERNAL_FLAG_ESTABLISHED | CAT_SOCKET_INTERNAL_FLAG_CLIENT);
     cat_socket_on_open(socket, af);
     /* clear previous cache (maybe impossible here) */
     if (unlikely(isocket->cache.peername)) {
@@ -1707,6 +1704,7 @@ CAT_API cat_bool_t cat_socket_try_connect_to(cat_socket_t *socket, const cat_soc
 #ifdef CAT_SSL
 CAT_API void cat_socket_crypto_options_init(cat_socket_crypto_options_t *options, cat_bool_t is_client)
 {
+    options->is_client = is_client;
     options->peer_name = NULL;
     options->ca_file = NULL;
     options->ca_path = NULL;
@@ -1744,12 +1742,12 @@ CAT_API cat_bool_t cat_socket_enable_crypto_ex(cat_socket_t *socket, const cat_s
     cat_ssl_context_t *context = NULL;
     cat_buffer_t *buffer;
     cat_socket_crypto_options_t ioptions;
-    cat_bool_t is_client = cat_socket_is_client(socket);
     cat_bool_t use_tmp_context;
     cat_bool_t ret = cat_false;
 
     /* check options */
     if (options == NULL) {
+        cat_bool_t is_client = !cat_socket_is_server_connection(socket);
         cat_socket_crypto_options_init(&ioptions, is_client);
     } else {
         ioptions = *options;
@@ -1778,7 +1776,7 @@ CAT_API cat_bool_t cat_socket_enable_crypto_ex(cat_socket_t *socket, const cat_s
     }
 
     if (ioptions.verify_peer) {
-        if (!is_client && !ioptions.no_client_ca_list && ioptions.ca_file != NULL) {
+        if (!ioptions.is_client && !ioptions.no_client_ca_list && ioptions.ca_file != NULL) {
             if (!cat_ssl_context_set_client_ca_list(context, ioptions.ca_file)) {
                 goto _setup_error;
             }
@@ -1790,7 +1788,7 @@ CAT_API cat_bool_t cat_socket_enable_crypto_ex(cat_socket_t *socket, const cat_s
         } else {
 #ifndef CAT_OS_WIN
             /* check context related options */
-            if (is_client && !cat_ssl_context_set_default_verify_paths(context)) {
+            if (ioptions.is_client && !cat_ssl_context_set_default_verify_paths(context)) {
                 goto _setup_error;
             }
 #else
@@ -1828,14 +1826,14 @@ CAT_API cat_bool_t cat_socket_enable_crypto_ex(cat_socket_t *socket, const cat_s
     }
 
     /* set state */
-    if (!is_client) {
+    if (!ioptions.is_client) {
         cat_ssl_set_accept_state(ssl);
     } else {
         cat_ssl_set_connect_state(ssl);
     }
 
     /* connection related options */
-    if (is_client && ioptions.peer_name != NULL) {
+    if (ioptions.is_client && ioptions.peer_name != NULL) {
         cat_ssl_set_sni_server_name(ssl, ioptions.peer_name);
     }
     ssl->allow_self_signed = ioptions.allow_self_signed;
@@ -1868,7 +1866,7 @@ CAT_API cat_bool_t cat_socket_enable_crypto_ex(cat_socket_t *socket, const cat_s
         /* Notice: if it's client and it write something to the server,
          * it means server will response something later, so, we need to recv it then returns,
          * otherwise it will lead errors on Windows */
-        if (ssl_ret == CAT_SSL_RET_OK && !(n > 0 && is_client)) {
+        if (ssl_ret == CAT_SSL_RET_OK && !(n > 0 && ioptions.is_client)) {
             CAT_LOG_DEBUG(SOCKET, "Socket SSL handshake completed");
             ret = cat_true;
             break;
@@ -3490,22 +3488,31 @@ CAT_API cat_bool_t cat_socket_send_handle_ex(cat_socket_t *socket, cat_socket_t 
 
 CAT_API cat_socket_t *cat_socket_recv_handle(cat_socket_t *socket, cat_socket_t *handle)
 {
-    return cat_socket_recv_handle_ex(socket, handle, cat_socket_get_read_timeout_fast(socket));
+    return cat_socket_recv_handle_ex(socket, handle, cat_socket_get_accept_timeout_fast(socket));
 }
 
 CAT_API cat_socket_t *cat_socket_recv_handle_ex(cat_socket_t *socket, cat_socket_t *handle, cat_timeout_t timeout)
 {
     CAT_SOCKET_IPCC_CHECK(socket, isocket, CAT_SOCKET_IO_FLAG_READ, return NULL);
-    cat_socket_inheritance_info_t handle_info;
-    ssize_t nread;
+    cat_socket_inheritance_info_t *handle_info = isocket->cache.recv_handle_info;
+    cat_socket_inheritance_info_t handle_info_storage;
+    cat_socket_t *ret;
 
-    nread = cat_socket_internal_read(isocket, (char *) &handle_info, sizeof(handle_info), NULL, NULL, timeout, cat_false);
-    if (nread != sizeof(handle_info)) {
-        if (nread >= 0) {
-            /* interrupt can not recover */
-            cat_socket_internal_unrecoverable_io_error(isocket);
+    if (handle_info == NULL) {
+        ssize_t nread = cat_socket_internal_read(
+            isocket, (char *) &handle_info_storage, sizeof(handle_info_storage),
+            NULL, NULL, timeout, cat_false
+        );
+        if (nread != sizeof(handle_info_storage)) {
+            if (nread >= 0) {
+                /* interrupt can not recover */
+                cat_socket_internal_unrecoverable_io_error(isocket);
+            }
+            return NULL;
         }
-        return NULL;
+        handle_info = &handle_info_storage;
+    } else {
+        handle_info = isocket->cache.recv_handle_info;
     }
 
     CAT_ASSERT(uv_pipe_pending_count(&isocket->u.pipe) > 0);
@@ -3517,10 +3524,30 @@ CAT_API cat_socket_t *cat_socket_recv_handle_ex(cat_socket_t *socket, cat_socket
     } else if (uv_handle_type == UV_NAMED_PIPE) {
         handle_type = CAT_SOCKET_TYPE_PIPE;
     }
-    CAT_ASSERT((handle_type & handle_info.type) == handle_type);
+    CAT_ASSERT((handle_type & handle_info->type) == handle_type);
 #endif
 
-    return cat_socket__accept(socket, handle, handle_info.type, &handle_info.options, timeout);
+    ret = cat_socket__accept(socket, handle, handle_info->type, &handle_info->options, timeout);
+
+    if (unlikely(ret == NULL)) {
+        if (handle_info != isocket->cache.recv_handle_info) {
+            isocket->cache.recv_handle_info =
+                (cat_socket_inheritance_info_t *) cat_memdup(handle_info, sizeof(*handle_info));
+#if CAT_ALLOC_HANDLE_ERRORS
+            if (unlikely(isocket->cache.recv_handle_info == NULL)) {
+                /* dup failed, we can not re-accept it without handle info */
+                cat_socket_internal_unrecoverable_io_error(isocket);
+            }
+#endif
+        }
+    } else {
+        if (handle_info == isocket->cache.recv_handle_info) {
+            cat_free(handle_info);
+            isocket->cache.recv_handle_info = NULL;
+        }
+    }
+
+    return ret;
 }
 
 static cat_always_inline void cat_socket_io_cancel(cat_coroutine_t *coroutine, const char *type_name)
@@ -3714,38 +3741,43 @@ CAT_API cat_bool_t cat_socket_is_encrypted(const cat_socket_t *socket)
 
 CAT_API cat_bool_t cat_socket_is_server(const cat_socket_t *socket)
 {
-    return !!(socket->type & CAT_SOCKET_TYPE_FLAG_SERVER);
+    cat_socket_internal_t *isocket = socket->internal;
+    return isocket != NULL && isocket->flags & CAT_SOCKET_INTERNAL_FLAG_SERVER;
+}
+
+CAT_API cat_bool_t cat_socket_is_server_connection(const cat_socket_t *socket)
+{
+    cat_socket_internal_t *isocket = socket->internal;
+    return isocket != NULL && isocket->flags & CAT_SOCKET_INTERNAL_FLAG_SERVER_CONNECTION;
 }
 
 CAT_API cat_bool_t cat_socket_is_client(const cat_socket_t *socket)
 {
-    return !!(socket->type & CAT_SOCKET_TYPE_FLAG_CLIENT);
-}
-
-CAT_API cat_bool_t cat_socket_is_session(const cat_socket_t *socket)
-{
-    return !!(socket->type & CAT_SOCKET_TYPE_FLAG_SESSION);
+    cat_socket_internal_t *isocket = socket->internal;
+    return isocket != NULL && isocket->flags & CAT_SOCKET_INTERNAL_FLAG_CLIENT;
 }
 
 CAT_API const char *cat_socket_get_role_name(const cat_socket_t *socket)
 {
-    if (cat_socket_is_session(socket)) {
-        return "session";
-    } else if (cat_socket_is_client(socket)) {
+    if (cat_socket_is_server_connection(socket)) {
+        return "server-connection";
+    }
+    if (cat_socket_is_client(socket)) {
         return "client";
-    } else if (cat_socket_is_server(socket)) {
+    }
+    if (cat_socket_is_server(socket)) {
         return "server";
     }
 
-    return "none";
+    return "unknown";
 }
 
 #ifndef CAT_SSL
-#define CAT_SOCKET_INTERNAL_SSL_LIVENESS_FAST_CHECK(isocket, return_statement)
+#define CAT_SOCKET_INTERNAL_SSL_LIVENESS_FAST_CHECK(isocket, on_success)
 #else
-#define CAT_SOCKET_INTERNAL_SSL_LIVENESS_FAST_CHECK(isocket, return_statement) do { \
+#define CAT_SOCKET_INTERNAL_SSL_LIVENESS_FAST_CHECK(isocket, on_success) do { \
     if (cat_socket_internal_ssl_get_liveness(isocket)) { \
-        return_statement; \
+        on_success; \
     } \
 } while (0)
 
@@ -3783,7 +3815,7 @@ static cat_errno_t cat_socket_check_liveness_by_fd(cat_socket_fd_t fd)
     return 0;
 }
 
-CAT_API cat_errno_t cat_socket_get_liveness(const cat_socket_t *socket)
+CAT_API cat_errno_t cat_socket_get_connection_error(const cat_socket_t *socket)
 {
     CAT_SOCKET_INTERNAL_GETTER_SILENT(socket, isocket, return CAT_EBADF);
     CAT_SOCKET_INTERNAL_FD_GETTER_SILENT(isocket, fd, return CAT_EBADF);

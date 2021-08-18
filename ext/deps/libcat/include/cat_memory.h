@@ -28,7 +28,7 @@
 #define cat_container_of(ptr, type, member)  ((type *) ((char *) (ptr) - offsetof(type, member)))
 
 /* return the eof point */
-static cat_always_inline char* cat_memcpy(char *p, const char *data, size_t length)
+static cat_always_inline char *cat_memcpy(char *p, const void *data, size_t length)
 {
     return (((char *) memcpy(p, data, length)) + length);
 }
@@ -77,6 +77,17 @@ extern CAT_API cat_allocator_t cat_allocator;
 
 CAT_API cat_bool_t cat_register_allocator(const cat_allocator_t *allocator);
 #endif
+
+static cat_always_inline char *cat_memdup(const void *p, size_t size)
+{
+    void *np = cat_malloc(size);
+#if CAT_ALLOC_HANDLE_ERRORS
+    if (unlikely(np == NULL)) {
+        return NULL;
+    }
+#endif
+    return (char *) memcpy(np, p, size);
+}
 
 CAT_API char *cat_sys_strdup(const char *string);
 CAT_API char *cat_sys_strndup(const char *string, size_t length);

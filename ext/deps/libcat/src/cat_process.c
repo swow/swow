@@ -69,7 +69,7 @@ static int cat_process_update_stdio(uv_stdio_container_t *stdio)
 {
     if (stdio->flags & CAT_PROCESS_STDIO_FLAG_CREATE_PIPE) {
         cat_socket_internal_t *istream = cat_container_of(stdio->data.stream, cat_socket_internal_t, u.stream);
-        istream->flags |= CAT_SOCKET_INTERNAL_FLAG_CONNECTED;
+        istream->flags |= CAT_SOCKET_INTERNAL_FLAG_ESTABLISHED;
         // TODO: on_open() ?
     }
 
