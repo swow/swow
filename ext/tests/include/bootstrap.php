@@ -81,6 +81,14 @@ function getRandomBytesArray(int $size, int $length = 64): array
     return $randoms;
 }
 
+function getRandomPipePath(): string
+{
+    return sprintf(
+        PHP_OS_FAMILY !== 'Windows' ? '/tmp/swow_test_%s.sock' : '\\\\?\\pipe\\cat_test_%s',
+        getRandomBytes(8)
+    );
+}
+
 function switchProcess(): void
 {
     usleep(100 * 1000);
