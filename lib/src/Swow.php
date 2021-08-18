@@ -42,6 +42,7 @@ namespace Swow
         public const TYPE_FS = 1024;
         public const TYPE_SIGNAL = 2048;
         public const TYPE_PROCESS = 4096;
+        public const TYPE_THREAD = 8192;
         public const TYPE_WATCH_DOG = 131072;
         public const TYPE_PROTOCOL = 262144;
         public const TYPE_SSL = 2097152;
@@ -55,9 +56,9 @@ namespace Swow
         public const TYPE_USR6 = 536870912;
         public const TYPE_USR7 = 1073741824;
         public const TYPE_USR8 = -2147483648;
-        public const TYPES_BUILTIN = 15081471;
+        public const TYPES_BUILTIN = 15089663;
         public const TYPES_USR = -16777216;
-        public const TYPES_ALL = -1695745;
+        public const TYPES_ALL = -1687553;
     }
 }
 
@@ -633,22 +634,19 @@ namespace Swow
         public const TYPE_FLAG_IPV4 = 32;
         public const TYPE_FLAG_IPV6 = 64;
         public const TYPE_FLAG_LOCAL = 128;
-        public const TYPE_FLAG_UNSPEC = 1024;
-        public const TYPE_FLAG_TCP_DELAY = 2048;
-        public const TYPE_FLAG_TCP_KEEPALIVE = 4096;
-        public const TYPE_FLAG_UDP_BROADCAST = 2048;
+        public const TYPE_FLAG_TCP_DELAY = 1024;
+        public const TYPE_FLAG_TCP_KEEPALIVE = 2048;
+        public const TYPE_FLAG_UDP_BROADCAST = 4096;
         public const TYPE_FLAG_IPC = 1024;
         public const TYPE_FLAG_STDIN = 1024;
         public const TYPE_FLAG_STDOUT = 2048;
         public const TYPE_FLAG_STDERR = 4096;
-        public const TYPE_FLAG_SERVER = 1048576;
-        public const TYPE_FLAG_CLIENT = 2097152;
-        public const TYPE_FLAG_SESSION = 4194304;
         public const TYPE_ANY = 0;
         public const TYPE_TCP = 16777233;
         public const TYPE_TCP4 = 16777265;
         public const TYPE_TCP6 = 16777297;
         public const TYPE_PIPE = 33554561;
+        public const TYPE_IPCC = 33555585;
         public const TYPE_TTY = 67108865;
         public const TYPE_STDIN = 67109889;
         public const TYPE_STDOUT = 67110913;
@@ -777,11 +775,19 @@ namespace Swow
         public function listen(int $backlog = \Swow\Socket::DEFAULT_BACKLOG) { }
 
         /**
-         * @param null|\Swow\Socket $object [optional] = $this
+         * @param null|\Swow\Socket $client [optional] = null
          * @param null|int $timeout [optional] = $this->getAcceptTimeout()
          * @return $this
          */
-        public function accept(?\Swow\Socket $object = null, ?int $timeout = null) { }
+        public function accept(?\Swow\Socket $client = null, ?int $timeout = null) { }
+
+        /**
+         * @param null|int $client_type [optional] = \Swow\Socket::TYPE_ANY
+         * @param null|\Swow\Socket $client [optional] = null
+         * @param null|int $timeout [optional] = $this->getAcceptTimeout()
+         * @return $this
+         */
+        public function acceptTyped(?int $client_type = \Swow\Socket::TYPE_ANY, ?\Swow\Socket $client = null, ?int $timeout = null) { }
 
         /**
          * @param string $name [required]
@@ -979,6 +985,20 @@ namespace Swow
         public function sendStringTo(string $string, $address = null, $port = null, ?int $timeout = null, int $offset = 0, int $length = 0) { }
 
         /**
+         * @param \Swow\Socket $handle [required]
+         * @param null|int $timeout [optional] = $this->getWriteTimeout()
+         * @return $this
+         */
+        public function sendHandle(\Swow\Socket $handle, ?int $timeout = null) { }
+
+        /**
+         * @param null|\Swow\Socket $handle [optional] = null
+         * @param null|int $timeout [optional] = $this->getAcceptTimeout()
+         * @return $this
+         */
+        public function recvHandle(?\Swow\Socket $handle = null, ?int $timeout = null) { }
+
+        /**
          * @return bool
          */
         public function close(): bool { }
@@ -992,6 +1012,11 @@ namespace Swow
          * @return bool
          */
         public function isEstablished(): bool { }
+
+        /**
+         * @return int
+         */
+        public function getConnectionError(): int { }
 
         /**
          * @return $this
@@ -1867,6 +1892,7 @@ namespace Swow\Errno
     const ENOTEMPTY = -39;
     const ENOTSOCK = -88;
     const ENOTSUP = -95;
+    const EOVERFLOW = -75;
     const EPERM = -1;
     const EPIPE = -32;
     const EPROTO = -71;
@@ -1889,6 +1915,8 @@ namespace Swow\Errno
     const ENOTTY = -25;
     const EFTYPE = -4028;
     const EILSEQ = -84;
+    const ESOCKTNOSUPPORT = -94;
+    const ESTALE = -116;
     const UNCODED = -9763;
     const EPREV = -9762;
     const EMISUSE = -9761;
