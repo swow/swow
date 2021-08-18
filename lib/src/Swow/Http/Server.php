@@ -13,7 +13,7 @@ declare(strict_types=1);
 
 namespace Swow\Http;
 
-use Swow\Http\Server\Session;
+use Swow\Http\Server\Connection;
 use Swow\Socket;
 use Swow\Socket\Exception as SocketException;
 
@@ -22,34 +22,34 @@ class Server extends Socket
     use ConfigTrait;
 
     /**
-     * @var Session[]
+     * @var Connection[]
      */
-    protected $sessions = [];
+    protected $connections = [];
 
     public function __construct()
     {
         parent::__construct(static::TYPE_TCP);
     }
 
-    public function acceptSession(int $timeout = null): Session
+    public function acceptConnection(int $timeout = null): Connection
     {
         if ($timeout === null) {
             $timeout = $this->getAcceptTimeout();
         }
-        /* @var $session Session */
-        $session = parent::accept(new Session(), $timeout);
-        if ($session) {
-            $session->setServer($this);
-            $this->sessions[$session->getFd()] = $session;
+        /* @var $connection Connection */
+        $connection = parent::accept(new Connection(), $timeout);
+        if ($connection) {
+            $connection->setServer($this);
+            $this->connections[$connection->getFd()] = $connection;
         }
 
-        return $session;
+        return $connection;
     }
 
     public function broadcastMessage(WebSocketFrame $frame, array $targets = null)
     {
         if ($targets = null) {
-            $targets = $this->sessions;
+            $targets = $this->connections;
         }
         if ($frame->getPayloadLength() <= Buffer::PAGE_SIZE) {
             $frame = $frame->toString();
@@ -72,15 +72,15 @@ class Server extends Socket
 
     public function offline(int $fd)
     {
-        unset($this->sessions[$fd]);
+        unset($this->connections[$fd]);
     }
 
     public function closeSessions()
     {
-        foreach ($this->sessions as $session) {
-            $session->close();
+        foreach ($this->connections as $connection) {
+            $connection->close();
         }
-        $this->sessions = [];
+        $this->connections = [];
     }
 
     public function close(): bool

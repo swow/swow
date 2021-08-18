@@ -31,41 +31,41 @@ $server = new HttpServer();
 $server->bind('0.0.0.0', 9764)->listen();
 while (true) {
     try {
-        $session = $server->acceptSession();
-        Coroutine::run(function () use ($session) {
+        $connection = $server->acceptConnection();
+        Coroutine::run(function () use ($connection) {
             try {
                 while (true) {
                     $request = null;
                     try {
-                        $request = $session->recvHttpRequest();
+                        $request = $connection->recvHttpRequest();
                         switch ($request->getPath()) {
                             case '/':
                             {
-                                $session->respond();
+                                $connection->respond();
                                 break;
                             }
                             case '/greeter':
                             {
-                                $session->respond('Hello Swow');
+                                $connection->respond('Hello Swow');
                                 break;
                             }
                             case '/echo':
                             {
-                                $session->respond($request->getBodyAsString());
+                                $connection->respond($request->getBodyAsString());
                                 break;
                             }
                             case '/chat':
                             {
                                 if ($upgrade = $request->getUpgrade()) {
                                     if ($upgrade === $request::UPGRADE_WEBSOCKET) {
-                                        $session->upgradeToWebSocket($request);
+                                        $connection->upgradeToWebSocket($request);
                                         $request = null;
                                         while (true) {
-                                            $frame = $session->recvWebSocketFrame();
+                                            $frame = $connection->recvWebSocketFrame();
                                             $opcode = $frame->getOpcode();
                                             switch ($opcode) {
                                                 case WebSocketOpcode::PING:
-                                                    $session->sendString(WebSocketFrame::PONG);
+                                                    $connection->sendString(WebSocketFrame::PONG);
                                                     break;
                                                 case WebSocketOpcode::PONG:
                                                     break;
@@ -73,23 +73,23 @@ while (true) {
                                                     break 2;
                                                 default:
                                                     $frame->getPayloadData()->rewind()->write("You said: {$frame->getPayloadData()}");
-                                                    $session->sendWebSocketFrame($frame);
+                                                    $connection->sendWebSocketFrame($frame);
                                             }
                                         }
                                         break;
                                     }
                                     throw new HttpException(HttpStatus::BAD_REQUEST, 'Unsupported Upgrade Type');
                                 }
-                                $session->respond(file_get_contents(__DIR__ . '/chat.html'));
+                                $connection->respond(file_get_contents(__DIR__ . '/chat.html'));
                                 break;
                             }
                             default:
                             {
-                                $session->error(HttpStatus::NOT_FOUND);
+                                $connection->error(HttpStatus::NOT_FOUND);
                             }
                         }
                     } catch (HttpException $exception) {
-                        $session->error($exception->getCode(), $exception->getMessage());
+                        $connection->error($exception->getCode(), $exception->getMessage());
                     }
                     if (!$request || !$request->getKeepAlive()) {
                         break;
@@ -98,7 +98,7 @@ while (true) {
             } catch (Exception $exception) {
                 // you can log error here
             } finally {
-                $session->close();
+                $connection->close();
             }
         });
     } catch (SocketException | CoroutineException $exception) {

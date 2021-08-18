@@ -25,7 +25,7 @@ use Swow\Socket;
 use Swow\WebSocket;
 use function Swow\Http\packResponse;
 
-class Session extends Socket implements HttpTypeInterface
+class Connection extends Socket implements HttpTypeInterface
 {
     use HttpTypeTrait;
     use ReceiverTrait {
