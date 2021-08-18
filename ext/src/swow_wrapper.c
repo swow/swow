@@ -376,7 +376,7 @@ SWOW_API void swow_output_globals_shutdown(void)
 
 void swow_wrapper_init(void)
 {
-#ifdef ZEND_NO_VALUE_ERROR
+#if PHP_VERSION_ID < 80000
     do {
         zend_class_entry ce;
         INIT_CLASS_ENTRY(ce, "ValueError", NULL);

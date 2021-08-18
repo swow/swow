@@ -198,10 +198,12 @@ static zend_always_inline int zend8_parse_arg_long(zval *arg, zend_long *dest, z
 #define zend_parse_arg_long(arg, dest, is_null, check_null, ...) zend8_parse_arg_long(arg, dest, is_null, check_null)
 #endif
 
-#ifndef RETURN_THROWS
+#if PHP_VERSION_ID < 80000
 extern SWOW_API zend_class_entry *zend_ce_value_error;
 SWOW_API ZEND_COLD void zend_value_error(const char *format, ...) ZEND_ATTRIBUTE_FORMAT(printf, 1, 2);
-#else
+#endif
+
+#ifdef RETURN_THROWS
 #undef RETURN_THROWS
 #endif
 #define RETURN_THROWS_ASSERTION() do { ZEND_ASSERT(EG(exception)); (void) return_value; } while (0)
