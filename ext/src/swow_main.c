@@ -366,6 +366,12 @@ static PHP_FUNCTION(Swow_Errno_strerror)
         Z_PARAM_LONG(error)
     ZEND_PARSE_PARAMETERS_END();
 
+    // overflow for int
+    if(error < INT_MIN || error > INT_MAX){
+        zend_value_error("Errno passed in is not in errno_t range");
+        RETURN_THROWS();
+    }
+
     RETURN_STRING(cat_strerror(error));
 }
 
