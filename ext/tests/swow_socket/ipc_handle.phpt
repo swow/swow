@@ -25,13 +25,16 @@ $wr::wait($wr);
 
 // prepare server
 $wr = new WaitReference();
-Coroutine::run(function () use ($workerSocket, $wr) {
-    $client = $workerSocket->accept();
-    echo $client->sendString('Hello Client')->recvString() . PHP_LF;
+$tcpServer = new Socket(Socket::TYPE_TCP);
+$tcpServer->bind('127.0.0.1')->listen();
+Coroutine::run(function () use ($tcpServer, $wr) {
+    $client = $tcpServer->accept();
+    echo $client->recvString() . PHP_LF;
+    $client->sendString('Hello Client');
 });
 // prepare handle
-$mainClient = new Socket(Socket::TYPE_PIPE);
-$mainClient->connect($pipePath);
+$mainClient = new Socket(Socket::TYPE_TCP);
+$mainClient->connect('127.0.0.1', $tcpServer->getSockPort());
 // transfer handle
 $mainSocket->sendHandle($mainClient);
 $workerClient = $workerChannel->recvHandle();
@@ -42,6 +45,6 @@ $wr::wait($wr);
 echo 'Done' . PHP_LF;
 ?>
 --EXPECT--
-Hello Client
 Hello Server
+Hello Client
 Done

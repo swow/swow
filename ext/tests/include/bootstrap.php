@@ -84,7 +84,7 @@ function getRandomBytesArray(int $size, int $length = 64): array
 function getRandomPipePath(): string
 {
     return sprintf(
-        PHP_OS_FAMILY !== 'Windows' ? '/tmp/swow_test_%s.sock' : '\\\\?\\pipe\\cat_test_%s',
+        PHP_OS_FAMILY !== 'Windows' ? '/tmp/swow_test_%s.sock' : '\\\\?\\pipe\\swow_test_%s',
         getRandomBytes(8)
     );
 }
