@@ -19,6 +19,7 @@ foreach (
         'msleep' => [[-1]],
         'time_nanosleep' => [
             [-1, -2],
+            [0, -2],
             [0, 2000000000],
         ],
         'time_sleep_until' => [[0]],

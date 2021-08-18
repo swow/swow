@@ -142,7 +142,7 @@ static PHP_FUNCTION(swow_nanosleep)
     }
     if (tv_nsec < 0) {
 #if PHP_VERSION_ID < 80000
-		php_error_docref(NULL, E_WARNING, "The nanoseconds value must be greater than 0");
+        php_error_docref(NULL, E_WARNING, "The nanoseconds value must be greater than 0");
 #else
         zend_argument_value_error(2, "must be greater than or equal to 0");
 #endif
@@ -166,8 +166,6 @@ static PHP_FUNCTION(swow_nanosleep)
 #endif
         RETURN_FAILURE();
     }
-
-    RETURN_FALSE;
 }
 /* }}} */
 
