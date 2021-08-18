@@ -15,23 +15,27 @@ $wg = new WaitGroup();
 $wg->add($n = 10);
 while ($n--) {
     Coroutine::run(function () use ($wg, $n) {
+        // mock doing some tasks consuming times
+        pseudo_random_sleep();
         echo $n . PHP_LF;
         $wg->done();
     });
 }
+echo 'Start WG' . PHP_LF;
 $wg->wait();
 echo 'Done' . PHP_LF;
 
 ?>
 --EXPECT--
+Start WG
 9
+2
+4
+0
+5
+3
 8
 7
-6
-5
-4
-3
-2
 1
-0
+6
 Done
