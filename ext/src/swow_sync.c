@@ -33,6 +33,7 @@ static zend_object *swow_sync_wait_reference_create_object(zend_class_entry *ce)
     swow_sync_wait_reference_t *swr = swow_object_alloc(swow_sync_wait_reference_t, ce, swow_sync_wait_reference_handlers);
 
     swr->scoroutine = NULL;
+    swr->done = cat_false;
 
     return &swr->std;
 }
@@ -92,6 +93,10 @@ static PHP_METHOD(Swow_Sync_WaitReference, wait)
         swow_throw_exception_with_last_as_reason(swow_sync_exception_ce, "WaitReference waiting for completion failed");
         RETURN_THROWS();
     }
+    if (UNEXPECTED(!swr->done)) {
+        swow_throw_exception(swow_sync_exception_ce, CAT_ECANCELED, "WaitReference waiting has been canceled");
+        RETURN_THROWS();
+    }
 }
 
 #define getThisWR() (swow_sync_wait_reference_get_from_object(Z_OBJ_P(ZEND_THIS)))
@@ -103,7 +108,8 @@ static PHP_METHOD(Swow_Sync_WaitReference, __destruct)
 {
     swow_sync_wait_reference_t *swr = getThisWR();
 
-    if (swr->scoroutine) {
+    if (swr->scoroutine != NULL) {
+        swr->done = cat_true;
         if (UNEXPECTED(!swow_coroutine_resume(swr->scoroutine, NULL, NULL))) {
             CAT_CORE_ERROR(SYNC, "Resume waiting coroutine failed, reason: %s", cat_get_last_error_message());
         }

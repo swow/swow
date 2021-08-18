@@ -38,6 +38,7 @@ extern SWOW_API zend_class_entry *swow_sync_exception_ce;
 typedef struct
 {
     swow_coroutine_t *scoroutine;
+    cat_bool_t done;
     zend_object std;
 } swow_sync_wait_reference_t;
 
