@@ -115,3 +115,11 @@ function phpt_var_dump(...$args): void
     }
     var_dump(...$args);
 }
+
+function pseudo_random_sleep(): void
+{
+    static $seed = 42;
+    // simple LCG with fixed seed
+    $seed = (75 * $seed + 74) % 65537;
+    usleep($seed);
+}
