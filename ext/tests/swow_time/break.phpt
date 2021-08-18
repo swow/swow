@@ -11,11 +11,11 @@ require __DIR__ . '/../include/bootstrap.php';
 const LONG_TIME = 5;
 
 foreach ([
-    "sleep" => LONG_TIME,
-    "msleep" => LONG_TIME * 1000,
-] as $func => $arg){
-    $co = \Swow\Coroutine::run(function()use($func, $arg){
-        echo "start $func($arg)\n";
+    'sleep' => LONG_TIME,
+    'msleep' => LONG_TIME * 1000,
+] as $func => $arg) {
+    $co = \Swow\Coroutine::run(function () use ($func, $arg) {
+        echo "start {$func}({$arg})\n";
         $ret = $func($arg);
         // fixme: KNOWN BC here
         // original will return 192 on Windows
@@ -25,9 +25,9 @@ foreach ([
 }
 
 $start = microtime(true);
-$co = \Swow\Coroutine::run(function(){
+$co = \Swow\Coroutine::run(function () {
     $usleep_time = LONG_TIME * 1000 * 1000;
-    echo "start usleep($usleep_time)\n";
+    echo "start usleep({$usleep_time})\n";
     usleep($usleep_time);
 });
 $co->resume();
@@ -35,8 +35,8 @@ $end = microtime(true);
 Assert::lessThan($end - $start, LONG_TIME * 1000);
 
 $start = microtime(true);
-$co = \Swow\Coroutine::run(function(){
-    echo "start time_nanosleep(" . LONG_TIME .", 0)\n";
+$co = \Swow\Coroutine::run(function () {
+    echo 'start time_nanosleep(' . LONG_TIME . ", 0)\n";
     $ret = time_nanosleep(LONG_TIME, 0);
     Assert::integer($ret['seconds']);
     Assert::integer($ret['nanoseconds']);
@@ -48,9 +48,9 @@ $end = microtime(true);
 Assert::lessThan($end - $start, LONG_TIME * 1000);
 
 $start = microtime(true);
-$co = \Swow\Coroutine::run(function()use($start){
+$co = \Swow\Coroutine::run(function () use ($start) {
     $sleep_ms = LONG_TIME * 1000;
-    echo "start time_sleep_untime(now + $sleep_ms)\n";
+    echo "start time_sleep_until(now + {$sleep_ms})\n";
     $ret = time_sleep_until($start + $sleep_ms);
     Assert::false($ret);
 });
@@ -58,13 +58,12 @@ $co->resume();
 $end = microtime(true);
 Assert::lessThan($end - $start, LONG_TIME * 1000);
 
-
-echo "done";
+echo 'done';
 ?>
 --EXPECT--
 start sleep(5)
 start msleep(5000)
 start usleep(5000000)
 start time_nanosleep(5, 0)
-start time_sleep_untime(now + 5000)
+start time_sleep_until(now + 5000)
 done

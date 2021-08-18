@@ -1,5 +1,5 @@
 --TEST--
-swow misc: hook unhookable function
+swow_misc: hook unhookable function
 --SKIPIF--
 <?php
 require __DIR__ . '/../include/skipif.php';
@@ -9,19 +9,19 @@ disable_functions=dummyOne, msleep,dummy_2, usleep
 --FILE--
 <?php
 require __DIR__ . '/../include/bootstrap.php';
-set_error_handler(function(...$_){
+set_error_handler(function (...$_) {
     echo "caught a PHP7 warning\n";
 });
 
-try{
+try {
     msleep(1);
-}catch(Error $e){
+} catch (Error $e) {
     echo "caught a PHP8 exception\n";
 }
 
-try{
+try {
     usleep(1);
-}catch(Error $e){
+} catch (Error $e) {
     echo "caught a PHP8 exception\n";
 }
 
