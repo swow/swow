@@ -134,15 +134,12 @@ static CAT_COLD void swow_coroutine_function_handle_exception(void)
         ZVAL_COPY_VALUE(&origin_user_exception_handler, &EG(user_exception_handler));
         if (call_user_function(CG(function_table), NULL, &origin_user_exception_handler, &retval, 1, &param) == SUCCESS) {
             zval_ptr_dtor(&retval);
-            if (EG(exception)) {
-                if (EG(exception) == old_exception) {
-                    GC_DELREF(old_exception);
-                } else {
-                    zend_exception_set_previous(EG(exception), old_exception);
-                }
+            if (EG(exception) != NULL) {
+                OBJ_RELEASE(EG(exception));
+                EG(exception) = NULL;
             }
-        }
-        if (EG(exception) == NULL) {
+            OBJ_RELEASE(old_exception);
+        } else {
             EG(exception) = old_exception;
         }
     }
