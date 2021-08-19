@@ -22,6 +22,29 @@
 
 static zend_bool swow_compile_extended_info = cat_false;
 
+SWOW_API zend_execute_data *swow_debug_execute_data_resolve(zend_execute_data *execute_data, zend_long level, zend_bool skip_internal)
+{
+    if (level < 0) {
+        level = 0;
+    }
+    /* Search for last called function */
+    if (skip_internal) {
+        level++;
+    }
+    while (level) {
+        execute_data = execute_data->prev_execute_data;
+        if (!execute_data) {
+            break;
+        }
+        if (!execute_data->func || (skip_internal && !ZEND_USER_CODE(execute_data->func->common.type))) {
+            continue;
+        }
+        level--;
+    }
+
+    return execute_data;
+}
+
 #define TRACE_APPEND_KEY(key) do {                                          \
         tmp = zend_hash_find(ht, key);                                      \
         if (tmp) {                                                          \

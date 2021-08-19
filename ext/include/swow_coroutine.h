@@ -187,58 +187,6 @@ SWOW_API cat_bool_t swow_coroutine_resume_standard(cat_coroutine_t *coroutine, c
 SWOW_API cat_bool_t swow_coroutine_resume(swow_coroutine_t *scoroutine, zval *zdata, zval *retval);
 SWOW_API cat_bool_t swow_coroutine_yield(zval *zdata, zval *retval);
 
-SWOW_UNSAFE
-#define SWOW_COROUTINE_EXECUTE_START_EX(scoroutine, level, is_user) do { \
-    const swow_coroutine_t *_scoroutine = scoroutine; \
-    zend_execute_data *_current_execute_data = EG(current_execute_data); \
-    if (EXPECTED(_scoroutine != swow_coroutine_get_current())) { \
-        EG(current_execute_data) = _scoroutine->executor->current_execute_data; \
-    } \
-    do { \
-        zend_execute_data *_exeute_data; \
-        zend_long _level = level; \
-        \
-        _exeute_data = EG(current_execute_data); \
-        if (_level < 0) { \
-            _level = 0; \
-        } \
-        /* Search for last called function */ \
-        if (is_user) { \
-            _level++; \
-        } \
-        while (_level) { \
-            _exeute_data = _exeute_data->prev_execute_data; \
-            if (!_exeute_data) { \
-                break; \
-            } \
-            if (!_exeute_data->func || (is_user && !ZEND_USER_CODE(_exeute_data->func->common.type))) { \
-                continue; \
-            } \
-            _level--; \
-        } \
-        EG(current_execute_data) = _exeute_data;
-
-#define SWOW_COROUTINE_EXECUTE_END_EX() \
-    } while (0); \
-    EG(current_execute_data) = _current_execute_data; \
-} while (0)
-
-SWOW_UNSAFE
-#define SWOW_COROUTINE_EXECUTE_START(scoroutine, level) \
-        SWOW_COROUTINE_EXECUTE_START_EX(scoroutine, level, 0)
-
-SWOW_UNSAFE
-#define SWOW_COROUTINE_EXECUTE_END \
-        SWOW_COROUTINE_EXECUTE_END_EX
-
-SWOW_UNSAFE
-#define SWOW_COROUTINE_USER_EXECUTE_START(scoroutine, level) \
-        SWOW_COROUTINE_EXECUTE_START_EX(scoroutine, level, 1)
-
-SWOW_UNSAFE
-#define SWOW_COROUTINE_USER_EXECUTE_END \
-        SWOW_COROUTINE_EXECUTE_END_EX
-
 /* basic info */
 SWOW_API cat_bool_t swow_coroutine_is_available(const swow_coroutine_t *scoroutine);
 SWOW_API cat_bool_t swow_coroutine_is_alive(const swow_coroutine_t *scoroutine);

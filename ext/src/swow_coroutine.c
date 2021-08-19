@@ -852,6 +852,30 @@ SWOW_API swow_coroutine_t *swow_coroutine_get_scheduler(void)
 
 /* debug */
 
+#define SWOW_COROUTINE_EXECUTE_START_EX(scoroutine, level, skip_internal) do { \
+    const swow_coroutine_t *_scoroutine = scoroutine; \
+    zend_execute_data *_current_execute_data = EG(current_execute_data); \
+    if (EXPECTED(_scoroutine != swow_coroutine_get_current())) { \
+        EG(current_execute_data) = _scoroutine->executor->current_execute_data; \
+    } \
+    EG(current_execute_data) = swow_debug_execute_data_resolve(EG(current_execute_data), level, skip_internal); \
+
+#define SWOW_COROUTINE_EXECUTE_END_EX() \
+    EG(current_execute_data) = _current_execute_data; \
+} while (0)
+
+#define SWOW_COROUTINE_EXECUTE_START(scoroutine, level) \
+        SWOW_COROUTINE_EXECUTE_START_EX(scoroutine, level, 0)
+
+#define SWOW_COROUTINE_EXECUTE_END \
+        SWOW_COROUTINE_EXECUTE_END_EX
+
+#define SWOW_COROUTINE_USER_EXECUTE_START(scoroutine, level) \
+        SWOW_COROUTINE_EXECUTE_START_EX(scoroutine, level, 1)
+
+#define SWOW_COROUTINE_USER_EXECUTE_END \
+        SWOW_COROUTINE_EXECUTE_END_EX
+
 SWOW_API zend_string *swow_coroutine_get_executed_filename(const swow_coroutine_t *scoroutine, zend_long level)
 {
     zend_string *filename;

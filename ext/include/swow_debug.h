@@ -37,6 +37,8 @@ int swow_debug_module_init(INIT_FUNC_ARGS);
 int swow_debug_runtime_init(INIT_FUNC_ARGS);
 int swow_debug_runtime_shutdown(INIT_FUNC_ARGS);
 
+SWOW_API zend_execute_data *swow_debug_execute_data_resolve(zend_execute_data *execute_data, zend_long level, zend_bool skip_internal);
+
 SWOW_API smart_str *swow_debug_build_trace_as_smart_str(smart_str *str, HashTable *trace); SWOW_INTERNAL
 SWOW_API zend_string *swow_debug_build_trace_as_string(HashTable *trace);
 
