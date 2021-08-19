@@ -76,10 +76,13 @@ foreach ([
         $callable(true);
     });
     [$line, $file, $function] = $remote_coro->resume();
-    Assert::same($remote_coro->getExecutedFunctionName(1), $function);
-    Assert::same($remote_coro->getExecutedFilename(1), $file);
-    Assert::same($remote_coro->getExecutedLineno(1), $line);
-    $remote_coro->resume();
+    try {
+        Assert::same($remote_coro->getExecutedFunctionName(1), $function);
+        Assert::same($remote_coro->getExecutedFilename(1), $file);
+        Assert::same($remote_coro->getExecutedLineno(1), $line);
+    } finally {
+        $remote_coro->resume();
+    }
 }
 
 register_shutdown_function($closure);
