@@ -11,38 +11,31 @@
 
 declare(strict_types=1);
 
-use function Swow\Debug\buildTraceAsString;
-
 class AssertException extends Exception
 {
-    protected $traceToStringHandler;
-
-    /**
-     * @return $this
-     */
-    public function setTraceToStringHandler(callable $handler)
+    public function __construct($message = "", $code = 0, Throwable $previous = null)
     {
-        $this->traceToStringHandler = $handler;
+        parent::__construct($message, $code, $previous);
 
-        return $this;
-    }
-
-    public function __toString()
-    {
-        $message = $this->getMessage();
-        $trace = $this->getTrace();
-
-        $handler = $this->traceToStringHandler;
-        if ($handler !== null) {
-            $trace = $handler($trace);
+        $rp = new ReflectionProperty(Exception::class, 'trace');
+        $rp->setAccessible(true);
+        $trace = $rp->getValue($this);
+        $file = null;
+        foreach ($trace as $index => $frame) {
+            if ($file !== null && $file !== $frame['file']) {
+                $trace = array_slice($trace, $index);
+                break;
+            }
+            $file = $file ?? $frame['file'];
         }
-        $file = $trace[0]['file'] ?? 'Unknown';
-        $line = $trace[0]['line'] ?? 0;
-        $traceString = buildTraceAsString($trace);
+        $rp->setValue($this, $trace);
 
-        return 'AssertException: ' .
-            "{$message}" . ($message ? ' ' : '') .
-            "in {$file} on line {$line}\n" .
-            "Stack trace: \n{$traceString}";
+        $rp = new ReflectionProperty(Exception::class, 'file');
+        $rp->setAccessible(true);
+        $rp->setValue($this, $trace[0]['file']);
+
+        $rp = new ReflectionProperty(Exception::class, 'line');
+        $rp->setAccessible(true);
+        $rp->setValue($this, $trace[0]['line']);
     }
 }

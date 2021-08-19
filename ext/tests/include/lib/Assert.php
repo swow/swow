@@ -1506,26 +1506,7 @@ class Assert
 
     protected static function reportInvalidArgument(string $message = '')
     {
-        $exception = new AssertException($message);
-        $exception->setTraceToStringHandler(function (array $trace): array {
-            foreach ($trace as $index => $frame) {
-                $file = $frame['file'] ?? 'Unknown';
-                if ($file !== __FILE__) {
-                    break;
-                }
-            }
-
-            return array_slice($trace, $index ?? 0);
-        });
-
-        if (!static::$throwException) {
-            $exception = str_replace('AssertException', 'Assert failed', (string) $exception);
-            trigger_error($exception, E_USER_WARNING);
-
-            return;
-        }
-
-        throw $exception;
+        throw new AssertException($message);
     }
 
     private function __construct()
