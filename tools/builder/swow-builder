@@ -31,7 +31,7 @@ $swowSo = "{$workSpace}/.libs/swow.so";
 $options = getopt('', ['rebuild', 'show-log', 'debug', 'msan', 'asan', 'ubsan', 'enable::']);
 
 $commandExecutor = function (string $name, array $commands) use ($workSpace): void {
-    $commands = ["cd {$workSpace}", ...$commands];
+    array_unshift($commands, "cd {$workSpace}");
     passthru(...$commands) && error("{$name} failed");
     ok("{$name} complete");
     br();
@@ -51,6 +51,7 @@ if (!file_exists("{$workSpace}/configure") || isset($options['rebuild'])) {
     $configureCommands[] = 'phpize';
 }
 if (!file_exists("{$workSpace}/Makefile") || isset($options['rebuild'])) {
+    $configureOptions = [];
     if (isset($options['debug'])) {
         $configureOptions[] = '--enable-swow-debug';
     }
