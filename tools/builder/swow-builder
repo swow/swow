@@ -51,6 +51,7 @@ if (!file_exists("{$workSpace}/configure") || isset($options['rebuild'])) {
     $configureCommands[] = 'phpize';
 }
 if (!file_exists("{$workSpace}/Makefile") || isset($options['rebuild'])) {
+    $configureOptions = [];
     if (isset($options['debug'])) {
         $configureOptions[] = '--enable-swow-debug';
     }
