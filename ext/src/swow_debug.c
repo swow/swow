@@ -32,10 +32,10 @@ SWOW_API zend_execute_data *swow_debug_execute_data_resolve(zend_execute_data *e
         level++;
     }
     while (level) {
-        execute_data = execute_data->prev_execute_data;
-        if (!execute_data) {
+        if (!execute_data->prev_execute_data) {
             break;
         }
+        execute_data = execute_data->prev_execute_data;
         if (!execute_data->func || (skip_internal && !ZEND_USER_CODE(execute_data->func->common.type))) {
             continue;
         }
