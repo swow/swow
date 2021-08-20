@@ -1929,7 +1929,7 @@ static const zend_function_entry swow_coroutine_methods[] = {
     PHP_ME(Swow_Coroutine, getState,                arginfo_class_Swow_Coroutine_getState,                ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Coroutine, getStateName,            arginfo_class_Swow_Coroutine_getStateName,            ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Coroutine, getRound,                arginfo_class_Swow_Coroutine_getRound,                ZEND_ACC_PUBLIC)
-    PHP_ME(Swow_Coroutine, getCurrentRound,         arginfo_class_Swow_Coroutine_getCurrentRound,         ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Coroutine, getCurrentRound,         arginfo_class_Swow_Coroutine_getCurrentRound,         ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
     PHP_ME(Swow_Coroutine, getElapsed,              arginfo_class_Swow_Coroutine_getElapsed,              ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Coroutine, getElapsedAsString,      arginfo_class_Swow_Coroutine_getElapsedAsString,      ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Coroutine, getExitStatus,           arginfo_class_Swow_Coroutine_getExitStatus,           ZEND_ACC_PUBLIC)

@@ -203,7 +203,7 @@ namespace Swow
         /**
          * @return int
          */
-        public function getCurrentRound(): int { }
+        public static function getCurrentRound(): int { }
 
         /**
          * @return int
