@@ -11,7 +11,7 @@ require __DIR__ . '/../include/bootstrap.php';
 use Swow\Channel;
 use Swow\Coroutine;
 
-$channel = new Channel;
+$channel = new Channel();
 $n = 10;
 Coroutine::run(function () use ($channel, $n) {
     echo 'Pop start' . PHP_LF;
@@ -24,7 +24,7 @@ Coroutine::run(function () use ($channel, $n) {
     echo 'Push start' . PHP_LF;
     for ($i = 1; $i <= $n; $i++) {
         $channel->push($i * $i);
-        echo "Push#{$i} done". PHP_LF;
+        echo "Push#{$i} done" . PHP_LF;
     }
 });
 
