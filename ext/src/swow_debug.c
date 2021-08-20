@@ -171,7 +171,9 @@ static void swow_debug_build_trace_string(smart_str *str, HashTable *ht, uint32_
             zend_error(E_WARNING, "args element is no array");
         }
     }
-    if (!trim) {
+    if (trim) {
+        smart_str_appendc(str, ')');
+    } else {
         smart_str_appends(str, ")\n");
     }
 }
