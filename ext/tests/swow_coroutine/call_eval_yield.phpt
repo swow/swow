@@ -50,6 +50,23 @@ try {
 Assert::isInstanceOf($e, Error::class);
 Assert::same($e->getMessage(), 'Unexpected coroutine switching');
 
+$remote_coro = Coroutine::run(function () use ($closure) {
+    // yield to test eval
+    Coroutine::yield();
+});
+
+try {
+    // cannot create a coroutine in eval
+    $remote_coro->eval('$coro_denied = new \Swow\Coroutine(function(){});');
+    echo 'Never here' . PHP_LF;
+} catch (Throwable $e) {
+} finally {
+    $remote_coro->resume();
+}
+
+Assert::isInstanceOf($e, Error::class);
+Assert::same($e->getMessage(), 'The object of Swow\Coroutine can not be created for security reasons');
+
 echo 'Done' . PHP_LF;
 
 ?>

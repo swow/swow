@@ -1230,6 +1230,10 @@ static PHP_METHOD(Swow_Coroutine, __construct)
     zend_long stack_page_size = 0;
     zend_long c_stack_size = 0;
 
+    if (UNEXPECTED(EG(exception))) {
+        RETURN_THROWS();
+    }
+
     if (UNEXPECTED(scoroutine->coroutine.state != CAT_COROUTINE_STATE_INIT)) {
         zend_throw_error(NULL, "%s can only construct once", ZEND_THIS_NAME);
         RETURN_THROWS();
