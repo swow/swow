@@ -451,9 +451,9 @@ static PHP_METHOD(Swow_WebSocket_Frame, getPayloadDataAsString)
     }
 
     payload_data = swow_buffer_fetch_string(swow_buffer_get_from_object(sframe->payload_data));
-    GC_ADDREF(payload_data);
 
-    RETURN_STR(payload_data);
+    /* Notice: string maybe interned, so we must use zend_string_copy() here */
+    RETURN_STR(zend_string_copy(payload_data));
 }
 
 ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO_EX(arginfo_class_Swow_WebSocket_Frame_setPayloadData, 1)
