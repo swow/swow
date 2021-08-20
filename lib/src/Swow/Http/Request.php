@@ -26,7 +26,7 @@ class Request extends Message implements RequestInterface
     protected $method = 'GET';
 
     /**
-     * @var Uri|UriInterface
+     * @var null|Uri|UriInterface
      */
     protected $uri;
 
@@ -53,10 +53,16 @@ class Request extends Message implements RequestInterface
             $this->setMethod($method);
         }
 
-        if (!($uri instanceof UriInterface)) {
-            $uri = new Uri($uri);
+        if ($uri !== '') {
+            if (is_string($uri)) {
+                $this->setUriString($uri);
+            } else {
+                if (!($uri instanceof UriInterface)) {
+                    $uri = new Uri($uri);
+                }
+                $this->setUri($uri);
+            }
         }
-        $this->setUri($uri);
 
         parent::__construct($headers, $body, $protocolVersion);
     }
@@ -94,7 +100,7 @@ class Request extends Message implements RequestInterface
 
     protected function getHostFromUri(): string
     {
-        $uri = $this->uri;
+        $uri = $this->getUri();
 
         $host = $uri->getHost();
         if ($host !== '') {
@@ -122,7 +128,7 @@ class Request extends Message implements RequestInterface
     public function getUri(): UriInterface
     {
         if ($this->uri === null) {
-            return $this->uri = new Uri($this->uriString);
+            $this->setUri(new Uri($this->uriString));
         }
 
         return $this->uri;
@@ -131,6 +137,7 @@ class Request extends Message implements RequestInterface
     public function setUri(UriInterface $uri, ?bool $preserveHost = null): Message
     {
         $this->uri = $uri;
+        $this->uriString = '';
 
         if (!($preserveHost ?? static::PRESERVE_HOST) || !$this->hasHeader('host')) {
             $this->updateHostFromUri();
@@ -157,6 +164,7 @@ class Request extends Message implements RequestInterface
     public function setUriString(string $uriString)
     {
         $this->uriString = $uriString;
+        $this->uri = null;
 
         return $this;
     }
