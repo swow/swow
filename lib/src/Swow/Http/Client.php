@@ -132,10 +132,11 @@ class Client extends Socket implements ClientInterface, HttpTypeInterface
 
     public function upgradeToWebSocket(Request $request): Response
     {
+        $secWebSocketKey = base64_encode(random_bytes(16));
         $request = $request->withHeaders([
             'Connection' => 'Upgrade',
             'Upgrade' => 'websocket',
-            'Sec-WebSocket-Key' => ($secWebSocketKey = base64_encode(random_bytes(16))),
+            'Sec-WebSocket-Key' => $secWebSocketKey,
             'Sec-WebSocket-Version' => WebSocket\VERSION,
         ]);
         try {
