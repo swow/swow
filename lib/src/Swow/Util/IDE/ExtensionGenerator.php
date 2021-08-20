@@ -91,7 +91,7 @@ class ExtensionGenerator
 
         $content =
             "<?php\n" .
-            "/** @noinspection PhpUnused, PhpInconsistentReturnPointsInspection, PhpMissingParentConstructorInspection */\n\n" .
+            "/** @noinspection PhpUnused, PhpInconsistentReturnPointsInspection, PhpMissingParentConstructorInspection, PhpReturnDocTypeMismatchInspection */\n\n" .
             "{$declarations}\n";
 
         if (is_resource($output)) {

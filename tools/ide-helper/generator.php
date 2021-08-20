@@ -20,7 +20,7 @@ use function Swow\Util\FileSystem\scan;
         });
         foreach ($sourceFiles as $SourceFile) {
             $source = file_get_contents($SourceFile);
-            $getFullName = function (string $argInfoName):string {
+            $getFullName = function (string $argInfoName): string {
                 $argInfoNameParts = explode('_', $argInfoName);
                 assert(count($argInfoNameParts) > 1);
                 $methodName = array_pop($argInfoNameParts);
@@ -54,7 +54,7 @@ use function Swow\Util\FileSystem\scan;
             foreach ($matches as $match) {
                 $bName = $getFullName($match['B']);
                 if (isset($returnThisMap[$bName])) {
-                    $aName = $match['class_name'] . '_' . $match['method_name'];
+                    $aName = "{$match['class_name']}_{$match['method_name']}";
                     $aName = $getFullName($aName);
                     $returnThisMap[$aName] = $returnThisMap[$bName];
                 }
