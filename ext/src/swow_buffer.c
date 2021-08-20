@@ -43,28 +43,6 @@ static cat_always_inline zend_string *swow_buffer_get_string_from_handle(cat_buf
     return swow_buffer_get_string_from_value(buffer->value);
 }
 
-static cat_always_inline void swow_buffer_string_addref(zend_string *string)
-{
-    /* Notice: if string may be interned, then we should use zend_string_addref instead of GC_ADDREF */
-    CAT_ASSERT(!ZSTR_IS_INTERNED(string));
-    GC_ADDREF(string);
-}
-
-static cat_always_inline zend_string* swow_buffer_string_copy(zend_string *string)
-{
-    swow_buffer_string_addref(string);
-    return string;
-}
-
-static cat_always_inline void swow_buffer_string_release(zend_string *string)
-{
-    /* Notice: if string may be interned or persistent, then we should use zend_string_release_ex(string, persistent) instead */
-    CAT_ASSERT(!ZSTR_IS_INTERNED(string));
-    if (GC_DELREF(string) == 0) {
-        efree(string);
-    }
-}
-
 SWOW_API zend_string *swow_buffer_fetch_string(swow_buffer_t *sbuffer)
 {
     CAT_BUFFER_GETTER_NOT_EMPTY(sbuffer, buffer, return NULL);
@@ -691,8 +669,8 @@ static PHP_METHOD(Swow_Buffer, write)
     }
 
     if (SWOW_BUFFER_CAN_BE_SHARED(sbuffer, buffer, string, offset, length)) {
-        /* Notice: string may be interned, so we must use zend_string_addref instead of GC_ADDREF */
-        swow_buffer_string_addref(string);
+        /* Notice: string maybe interned, so we must use zend_string_addref() here */
+        zend_string_addref(string);
         buffer->value = ZSTR_VAL(string);
         buffer->size = buffer->length = ZSTR_LEN(string);
         SWOW_BUFFER_SHARED(sbuffer);
@@ -815,7 +793,8 @@ static PHP_METHOD(Swow_Buffer, toString)
         RETURN_EMPTY_STRING();
     }
 
-    RETURN_STR(swow_buffer_string_copy(string));
+    /* Notice: string maybe interned, so we must use zend_string_copy() here */
+    RETURN_STR(zend_string_copy(string));
 }
 
 ZEND_BEGIN_ARG_INFO_EX(arginfo_class_Swow_Buffer_close, 0, ZEND_RETURN_VALUE, 0)
@@ -959,7 +938,8 @@ static char *swow_buffer_realloc_standard(char *old_value, size_t old_length, si
             memcpy(ZSTR_VAL(new_string), ZSTR_VAL(old_string), old_length);
             ZSTR_VAL(new_string)[ZSTR_LEN(new_string) = old_length] = '\0';
         }
-        swow_buffer_string_release(old_string);
+        /* Notice: string maybe interned or persistent, so we should use zend_string_release() here */
+        zend_string_release(old_string);
     }
 
     return ZSTR_VAL(new_string);
@@ -974,7 +954,8 @@ static void swow_buffer_update_standard(char *value, size_t new_length)
 
 static void swow_buffer_free_standard(char *value)
 {
-    swow_buffer_string_release(swow_buffer_get_string_from_value(value));
+    /* Notice: string maybe interned or persistent, so we should use zend_string_release() here */
+    zend_string_release(swow_buffer_get_string_from_value(value));
 }
 
 SWOW_API const cat_buffer_allocator_t swow_buffer_allocator = {
