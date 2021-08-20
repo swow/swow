@@ -187,7 +187,7 @@ Swow的[PHP源代码](lib/src/Swow)也是良好的示例，Swow是为PHP语言�
 [license-link]: LICENSE
 [ci-badge]: https://github.com/swow/swow/workflows/tests/badge.svg
 [ci-link]: https://github.com/swow/swow/actions?query=workflow:tests
-[codecov-badge]: https://codecov.io/gh/swow/swow/branch/develop/graph/badge.svg?token=
+[codecov-badge]: https://codecov.io/gh/swow/swow/branch/develop/graph/badge.svg
 [codecov-link]: https://codecov.io/gh/swow/swow
 [release-badge]: https://img.shields.io/github/release/swow/swow.svg?style=flat-square
 [release-link]: https://github.com/swow/swow/releases
