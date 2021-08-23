@@ -578,19 +578,6 @@ typedef struct
 #define swow_call_method_with_2_params(zobject, object_ce, fn_ptr_ptr, fn_name, retval, v1, v2) \
         zend_call_method_with_2_params(Z8_OBJ_P(zobject), object_ce, fn_ptr_ptr, fn_name, retval, v1, v2)
 
-/* callable helper */
-
-extern SWOW_API zval swow_internal_callable_key;
-
-SWOW_API cat_bool_t swow_function_is_internal_accessor(INTERNAL_FUNCTION_PARAMETERS);
-SWOW_API cat_bool_t swow_function_internal_access_only_check(INTERNAL_FUNCTION_PARAMETERS);
-
-#define SWOW_FUNCTION_INTERNAL_ACCESS_ONLY() do { \
-    if (UNEXPECTED(!swow_function_internal_access_only_check(INTERNAL_FUNCTION_PARAM_PASSTHRU))) { \
-        RETURN_THROWS(); \
-    } \
-} while (0)
-
 /* output globals */
 
 #if PHP_VERSION_ID >= 80100

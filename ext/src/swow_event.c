@@ -29,8 +29,8 @@ ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Event, wait)
 {
-    if (!swow_function_is_internal_accessor(INTERNAL_FUNCTION_PARAM_PASSTHRU)) {
-        /* called by user */
+    if (!(EG(flags) & EG_FLAGS_IN_SHUTDOWN)) {
+        /* called in runtime (by user) */
         cat_event_wait();
         return;
     }
@@ -91,7 +91,7 @@ static cat_bool_t swow_event_scheduler_close(void)
     coroutine = cat_event_scheduler_close();
 
     if (coroutine == NULL) {
-        CAT_WARN_WITH_LAST(EVENT, "Event sheduler close failed");
+        CAT_WARN_WITH_LAST(EVENT, "Event scheduler close failed");
         return cat_false;
     }
 
@@ -151,6 +151,7 @@ int swow_event_runtime_init(INIT_FUNC_ARGS)
     if (!swow_event_scheduler_run()) {
         return FAILURE;
     }
+
     do {
         php_shutdown_function_entry shutdown_function_entry;
         zval *zfunction_name;
@@ -160,12 +161,12 @@ int swow_event_runtime_init(INIT_FUNC_ARGS)
 #else
         int arg_count;
 #if PHP_VERSION_ID >= 80000
-        arg_count = 1;
+        arg_count = 0;
 #else
-        arg_count = 2;
+        arg_count = 1;
 #endif
         shutdown_function_entry.arg_count = arg_count;
-        shutdown_function_entry.arguments = (zval *) safe_emalloc(sizeof(zval), arg_count, 0);
+        shutdown_function_entry.arguments = arg_count > 0 ? ((zval *) safe_emalloc(sizeof(zval), arg_count, 0)) : NULL;
 #if PHP_VERSION_ID >= 80000
         zfunction_name = &shutdown_function_entry.function_name;
 #else
@@ -174,13 +175,8 @@ int swow_event_runtime_init(INIT_FUNC_ARGS)
 #endif
         ZVAL_STRING(zfunction_name, "Swow\\Event::wait");
 #if PHP_VERSION_ID >= 80100
-        zval zkey;
-        ZVAL_PTR(&zkey, &swow_internal_callable_key);
         zend_fcall_info_init(&zcallable, 0, &shutdown_function_entry.fci,
             &shutdown_function_entry.fci_cache, NULL, NULL);
-        zend_fcall_info_argp(&shutdown_function_entry.fci, 1, &zkey);
-#else
-        ZVAL_PTR(&shutdown_function_entry.arguments[arg_count - 1], &swow_internal_callable_key);
 #endif
         register_user_shutdown_function(Z_STRVAL_P(zfunction_name), Z_STRLEN_P(zfunction_name), &shutdown_function_entry);
     } while (0);

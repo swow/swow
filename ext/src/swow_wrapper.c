@@ -296,44 +296,6 @@ SWOW_API zend_object *swow_custom_object_clone(zend7_object *object)
     return new_object;
 }
 
-/* callable helper */
-
-SWOW_API zval swow_internal_callable_key;
-
-SWOW_API cat_bool_t swow_function_is_internal_accessor(INTERNAL_FUNCTION_PARAMETERS)
-{
-    zval *zdata = NULL;
-
-    ZEND_PARSE_PARAMETERS_START_EX(ZEND_PARSE_PARAMS_QUIET, 0, 1)
-        Z_PARAM_OPTIONAL
-        Z_PARAM_ZVAL(zdata)
-    ZEND_PARSE_PARAMETERS_END_EX(;/* do nothing */);
-
-    if (!zdata || Z_TYPE_P(zdata) != IS_PTR || Z_PTR_P(zdata) != &swow_internal_callable_key) {
-        return cat_false;
-    }
-    return cat_true;
-}
-
-SWOW_API cat_bool_t swow_function_internal_access_only_check(INTERNAL_FUNCTION_PARAMETERS)
-{
-    cat_bool_t ret;
-
-    ret = swow_function_is_internal_accessor(INTERNAL_FUNCTION_PARAM_PASSTHRU);
-
-    if (unlikely(!ret)) {
-        const char *space, *class_name;
-        class_name = get_active_class_name(&space);
-        zend_throw_error(
-            NULL, "%s%s%s can not be called for security reasons",
-            class_name, space, get_active_function_name()
-        );
-        return cat_false;
-    }
-
-    return cat_true;
-}
-
 /* output globals */
 
 #include "SAPI.h"
@@ -384,8 +346,6 @@ void swow_wrapper_init(void)
         zend_ce_value_error->create_object = zend_ce_error->create_object;
     } while (0);
 #endif
-
-    ZVAL_PTR(&swow_internal_callable_key, &swow_internal_callable_key);
 }
 
 void swow_wrapper_shutdown(void)
