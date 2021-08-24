@@ -11,28 +11,56 @@ require __DIR__ . '/../include/bootstrap.php';
 use Swow\Coroutine;
 use Swow\Socket;
 
+Socket::setGlobalTimeout(1000);
+
+$randoms = getRandomBytesArray(TEST_MAX_REQUESTS, TEST_MAX_LENGTH_LOW);
+
 $server = new Socket(Socket::TYPE_UDP);
-Coroutine::run(function () use ($server) {
+$client = new Socket(Socket::TYPE_UDP);
+
+// a simple udp echo server
+Coroutine::run(function () use ($server, $client, $randoms) {
     $server->bind('127.0.0.1', 0);
-    while (true) {
-        $packet = $server->recvStringFrom(TEST_MAX_LENGTH_LOW, $ip, $port);
-        if (!$packet) {
-            break;
+    foreach ($randoms as $_) {
+        try {
+            $packet = $server->recvStringFrom(TEST_MAX_LENGTH_LOW + 4, $ip, $port);
+            if (!$packet) {
+                break;
+            }
+            $index = unpack('Nindex', substr($packet, 0, 4))['index'];
+            Assert::keyExists($randoms, $index);
+            $random = substr($packet, 4);
+            Assert::same($random, $randoms[$index]);
+            $server->sendStringTo($packet, $ip, $port);
+        } catch (Exception $e) {
+            $server->close();
+            $client->close();
+            throw $e;
         }
-        $server->sendStringTo($packet, $ip, $port);
     }
 });
 
-$client = new Socket(Socket::TYPE_UDP);
-$randoms = getRandomBytesArray(TEST_MAX_REQUESTS, TEST_MAX_LENGTH_LOW);
-for ($n = 0; $n < TEST_MAX_REQUESTS; $n++) {
-    $client->sendStringTo($randoms[$n], $server->getSockAddress(), $server->getSockPort());
+// use coroutine to avoid buffer exhaust and packet drop
+Coroutine::run(function () use ($server, $client, $randoms) {
+    foreach ($randoms as $n => $random) {
+        try {
+            $index_bin = pack('N', $n);
+            $client->sendStringTo($index_bin . $random, $server->getSockAddress(), $server->getSockPort());
+        } catch (Exception $e) {
+            $server->close();
+            $client->close();
+            throw $e;
+        }
+    }
+});
+
+foreach ($randoms as $_) {
+    $packet = $client->recvStringFrom(TEST_MAX_LENGTH_LOW + 4, $ip, $port);
+    $index = unpack('Nindex', substr($packet, 0, 4))['index'];
+    Assert::keyExists($randoms, $index);
+    $random = substr($packet, 4);
+    Assert::same($random, $randoms[$index]);
 }
-for ($n = 0; $n < TEST_MAX_REQUESTS; $n++) {
-    $packet = $client->recvStringFrom(TEST_MAX_LENGTH_LOW, $ip, $port);
-    Assert::same($packet, $randoms[$n]);
-}
-$client->sendStringTo('', $server->getSockAddress(), $server->getSockPort());
 
 echo 'Done' . PHP_LF;
 
