@@ -38,7 +38,7 @@ function skip_if_php_version_between($a, $b): void
 
 function skip_if_ini_bool_equal_to(string $name, bool $value): void
 {
-    if (((bool)ini_get($name)) === $value) {
+    if (((bool) ini_get($name)) === $value) {
         $value = $value ? 'enable' : 'disable';
         skip("{$name} is {$value}");
     }
@@ -86,7 +86,7 @@ function skip_if_darwin(): void
 
 function skip_if_musl_libc(): void
 {
-    skip('Not support when use musl libc', !empty(`ldd 2>&1 | grep -i musl`));
+    skip('Not support when use musl libc', !empty(shell_exec('ldd 2>&1 | grep -i musl')));
 }
 
 function skip_if_in_valgrind(string $reason = 'valgrind is too slow'): void
@@ -112,10 +112,14 @@ function skip_unsupported(string $message = ''): void
 function skip_if_c_function_not_exist(string $def, ?string $lib = null): void
 {
     skip_if_extension_not_exist('ffi');
-    
+
     try {
-        \FFI::cdef($def, $lib);
-    } catch(\Throwable $_) {
+        if ($lib) {
+            \FFI::cdef($def, $lib);
+        } else {
+            \FFI::cdef($def);
+        }
+    } catch (\Throwable $_) {
         skip('"' . $def . '" not usable');
     }
 }
