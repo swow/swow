@@ -52,8 +52,7 @@ define('TEST_MAX_PROCESSES', [1, 1, 2, 4, 8][TEST_PRESSURE_LEVEL]);
 
 # ini
 
-// TODO: remove it
-ini_set('swow.better_error_info', '1');
+\Swow\Socket::setGlobalTimeout(30 * 1000);
 
 # functions
 
