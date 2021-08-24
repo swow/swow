@@ -16,47 +16,70 @@ require __DIR__ . '/../include/bootstrap.php';
 use Swow\Coroutine;
 use Swow\WatchDog;
 
-// should be 0.1ms quantum + 1ms threshold
-if (PHP_OS_FAMILY != 'Windows') {
-    WatchDog::run(100 * 1000, 1 * 1000 * 1000);
-} else {
-    // but at windows, sleep functions only accept 1ms+
-    WatchDog::run(1 * 1000 * 1000, 5 * 1000 * 1000);
-}
-
-Coroutine::run(function () {
-    sleep(0);
-    WatchDog::stop();
-    echo 'I am back' . PHP_LF;
-});
-
-if (PHP_OS_FAMILY != 'Windows') {
-    // mocking blocking with nanosleep at unix
-    $time_t = 'uint' . (string)(PHP_INT_SIZE * 8) . '_t';
-    $ffi = FFI::cdef(<<<DEF
+function ffi_sleep($ns)
+{
+    if (PHP_OS_FAMILY != 'Windows') {
+        // mocking blocking with nanosleep at unix
+        $time_t = 'uint' . (string) (PHP_INT_SIZE * 8) . '_t';
+        $ffi = FFI::cdef(
+            <<<DEF
 typedef struct timespec_t {
-    $time_t tv_sec;
+    {$time_t} tv_sec;
     long tv_nsec;
 } timespec;
 int nanosleep(timespec *req, timespec *rem);
 DEF
-    );
-    $ts = $ffi->new('timespec');
-    // syscall blocking 100ms
-    $ts->tv_sec = 0;
-    $ts->tv_nsec = 100 * 1000 * 1000;
-    while ($ffi->nanosleep(\FFI::addr($ts), \FFI::addr($ts)) != 0) {
-        // do nothing
-    }
-} else {
-    // mocking blocking with Sleep at windows
-    $ffi = FFI::cdef(<<<DEF
+        );
+        $ts = $ffi->new('timespec');
+        $ts->tv_sec = (int) floor($ns / 1e9);
+        $ts->tv_nsec = $ns % (1000 * 1000 * 1000);
+        while ($ffi->nanosleep(\FFI::addr($ts), \FFI::addr($ts)) != 0) {
+            // do nothing
+        }
+    } else {
+        // mocking blocking with Sleep at windows
+        $ffi = FFI::cdef(<<<'DEF'
 void Sleep(uint32_t);
 DEF
-    , 'kernel32.dll');
-    // syscall blocking 100ms
-    $ffi->Sleep(100);
+            , 'kernel32.dll');
+        $ffi->Sleep($ns / (1000 * 1000));
+    }
 }
+
+switch (PHP_OS_FAMILY) {
+    case 'Darwin':
+    case 'Linux':
+        // use default 100us
+        $quantum = 100 * 1000;
+        break;
+    case 'Windows':
+        // windows have a 1ms+ timer resolution
+        $quantum = 1 * 1000 * 1000; // 1ms
+        break;
+    case 'Unknown':
+    case 'Solaris':
+    case 'BSD':
+        // most UNIXs only support a 100hz/10ms timer resolution
+        $quantum = 10 * 1000 * 1000; // 10ms
+        break;
+    default:
+        throw new Exception('not supported system');
+}
+$threshold = 5 * $quantum; // 5 times quantum to bite
+$blocking_time = 100 * $quantum; // 100 times quantum
+
+WatchDog::run($quantum, $threshold);
+
+$watcher = Coroutine::run(function () {
+    Coroutine::yield();
+    WatchDog::stop();
+    echo 'I am back' . PHP_LF;
+});
+
+// mock blocking
+ffi_sleep($blocking_time);
+
+$watcher->resume();
 
 ?>
 --EXPECTREGEX--
