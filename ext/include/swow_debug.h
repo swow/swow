@@ -37,7 +37,14 @@ int swow_debug_module_init(INIT_FUNC_ARGS);
 int swow_debug_runtime_init(INIT_FUNC_ARGS);
 int swow_debug_runtime_shutdown(INIT_FUNC_ARGS);
 
-SWOW_API zend_execute_data *swow_debug_execute_data_resolve(zend_execute_data *execute_data, zend_long level, zend_bool skip_internal);
+static zend_always_inline zend_bool swow_debug_is_user_call(zend_execute_data *call)
+{
+    return call && call->func && ZEND_USER_CODE(call->func->common.type);
+}
+
+SWOW_API zend_long swow_debug_backtrace_depth(zend_execute_data *call, zend_long limit);
+SWOW_API zend_execute_data *swow_debug_backtrace_resolve(zend_execute_data *call, zend_long level);
+SWOW_API zend_execute_data *swow_debug_backtrace_resolve_ex(zend_execute_data *call, zend_long level, zend_long limit, zend_long *depth);
 
 SWOW_API smart_str *swow_debug_build_trace_as_smart_str(smart_str *str, HashTable *trace); SWOW_INTERNAL
 SWOW_API zend_string *swow_debug_build_trace_as_string(HashTable *trace);

@@ -20,30 +20,174 @@
 
 #include "swow_coroutine.h"
 
+#include "zend_generators.h"
+
 static zend_bool swow_compile_extended_info = cat_false;
 
-SWOW_API zend_execute_data *swow_debug_execute_data_resolve(zend_execute_data *execute_data, zend_long level, zend_bool skip_internal)
+SWOW_API zend_long swow_debug_backtrace_depth(zend_execute_data *call, zend_long limit)
+{
+    zend_long depth;
+    swow_debug_backtrace_resolve_ex(call, ZEND_LONG_MAX, limit, &depth);
+    return depth;
+}
+
+SWOW_API zend_execute_data *swow_debug_backtrace_resolve(zend_execute_data *call, zend_long level)
 {
     if (level < 0) {
-        level = 0;
-    }
-    /* Search for last called function */
-    if (skip_internal) {
-        level++;
-    }
-    while (level) {
-        if (!execute_data->prev_execute_data) {
-            break;
-        }
-        execute_data = execute_data->prev_execute_data;
-        if (!execute_data->func || (skip_internal && !ZEND_USER_CODE(execute_data->func->common.type))) {
-            continue;
-        }
-        level--;
+        level = swow_debug_backtrace_depth(call, 0) + level;
     }
 
-    return execute_data;
+    return swow_debug_backtrace_resolve_ex(call, level, 0, NULL);
 }
+
+#if PHP_VERSION_ID < 80100
+static inline zend_bool swow_debug_skip_internal_handler(zend_execute_data *skip) /* {{{ */
+{
+    return !(skip->func && ZEND_USER_CODE(skip->func->common.type))
+            && skip->prev_execute_data
+            && skip->prev_execute_data->func
+            && ZEND_USER_CODE(skip->prev_execute_data->func->common.type)
+            && skip->prev_execute_data->opline->opcode != ZEND_DO_FCALL
+            && skip->prev_execute_data->opline->opcode != ZEND_DO_ICALL
+            && skip->prev_execute_data->opline->opcode != ZEND_DO_UCALL
+            && skip->prev_execute_data->opline->opcode != ZEND_DO_FCALL_BY_NAME
+            && skip->prev_execute_data->opline->opcode != ZEND_INCLUDE_OR_EVAL;
+}
+
+SWOW_API zend_execute_data *swow_debug_backtrace_resolve_ex(zend_execute_data *execute_data, zend_long level, zend_long limit, zend_long *depth)
+{
+    zend_execute_data *prev = execute_data, *skip, *call = NULL;
+    zend_long count = 0;
+    zend_string *filename, *function_name;
+
+    if (depth) {
+        *depth = 0;
+    }
+    if (!prev) {
+        return NULL;
+    }
+
+    if (!prev->func || !ZEND_USER_CODE(prev->func->common.type)) {
+        call = prev;
+        prev = prev->prev_execute_data;
+    }
+    if (prev) {
+        /* skip "new Exception()" */
+        if (prev->func && ZEND_USER_CODE(prev->func->common.type) && (prev->opline->opcode == ZEND_NEW)) {
+            call = prev;
+            prev = prev->prev_execute_data;
+        }
+        if (!call) {
+            call = prev;
+            prev = prev->prev_execute_data;
+        }
+    }
+    while (level > 0 && (limit <= 0 || count < limit)) {
+        prev = zend_generator_check_placeholder_frame(prev);
+        skip = prev;
+        /* skip internal handler */
+        if (swow_debug_skip_internal_handler(skip)) {
+            skip = skip->prev_execute_data;
+        }
+        if (skip->func && ZEND_USER_CODE(skip->func->common.type)) {
+            filename = skip->func->op_array.filename;
+        } else {
+            filename = NULL;
+        }
+        if (call && call->func) {
+            function_name = call->func->common.function_name;
+        } else {
+            function_name = NULL;
+        }
+        if (!function_name) {
+            uint32_t include_kind = 0;
+            if (prev->func && ZEND_USER_CODE(prev->func->common.type) && prev->opline->opcode == ZEND_INCLUDE_OR_EVAL) {
+                include_kind = prev->opline->extended_value;
+            }
+            if (include_kind == 0) {
+                /* Skip dummy frame unless it is needed to preserve filename/lineno info. */
+                if (!filename) {
+                    goto skip_frame;
+                }
+            }
+        }
+        count++;
+        level--;
+skip_frame:
+        if (!skip->prev_execute_data) {
+            break;
+        }
+        call = skip;
+        prev = skip->prev_execute_data;
+    }
+
+    if (depth) {
+        *depth = count;
+    }
+    return call;
+}
+#else
+SWOW_API zend_execute_data *swow_debug_backtrace_resolve_ex(zend_execute_data *call, zend_long level, zend_long limit, zend_long *depth)
+{
+    zend_function *func;
+    zend_string *filename;
+    zend_long count = 0;
+    bool fake_frame = 0;
+
+    if (depth) {
+        *depth = 0;
+    }
+    if (!call) {
+        return NULL;
+    }
+
+    while (level > 0 && (limit <= 0 || count < limit)) {
+        zend_execute_data *prev = call->prev_execute_data;
+        if (!prev) {
+            /* add frame for a handler call without {main} code */
+            if (EXPECTED((ZEND_CALL_INFO(call) & ZEND_CALL_TOP_FUNCTION) == 0)) {
+                break;
+            }
+        } else if (UNEXPECTED((ZEND_CALL_INFO(call) & ZEND_CALL_GENERATOR) != 0)) {
+            prev = zend_generator_check_placeholder_frame(prev);
+        }
+        if (swow_debug_is_user_call(prev)) {
+            filename = prev->func->op_array.filename;
+        } else {
+            filename = NULL;
+        }
+        func = call->func;
+        if (fake_frame || !func->common.function_name) {
+            uint32_t include_kind = 0;
+            if (swow_debug_is_user_call(prev) && prev->opline->opcode == ZEND_INCLUDE_OR_EVAL) {
+                include_kind = prev->opline->extended_value;
+            }
+            if (include_kind == 0 && !filename) {
+                /* Skip dummy frame unless it is needed to preserve filename/lineno info. */
+                goto _skip_frame;
+            }
+        }
+        count++;
+        level--;
+_skip_frame:
+        if (!prev) {
+            break;
+        }
+        if (UNEXPECTED((ZEND_CALL_INFO(call) & ZEND_CALL_TOP_FUNCTION) != 0) && !fake_frame &&
+            swow_debug_is_user_call(prev) && prev->opline->opcode == ZEND_INCLUDE_OR_EVAL) {
+            fake_frame = 1;
+        } else {
+            fake_frame = 0;
+            call = prev;
+        }
+    }
+
+    if (depth) {
+        *depth = count;
+    }
+    return call;
+}
+#endif
 
 #define TRACE_APPEND_KEY(key) do {                                          \
         tmp = zend_hash_find(ht, key);                                      \

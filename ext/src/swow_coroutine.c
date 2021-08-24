@@ -852,29 +852,17 @@ SWOW_API swow_coroutine_t *swow_coroutine_get_scheduler(void)
 
 /* debug */
 
-#define SWOW_COROUTINE_EXECUTE_START_EX(scoroutine, level, skip_internal) do { \
+#define SWOW_COROUTINE_EXECUTE_START(scoroutine, level) do { \
     const swow_coroutine_t *_scoroutine = scoroutine; \
     zend_execute_data *_current_execute_data = EG(current_execute_data); \
     if (EXPECTED(_scoroutine != swow_coroutine_get_current())) { \
         EG(current_execute_data) = _scoroutine->executor->current_execute_data; \
     } \
-    EG(current_execute_data) = swow_debug_execute_data_resolve(EG(current_execute_data), level, skip_internal); \
+    EG(current_execute_data) = swow_debug_backtrace_resolve(EG(current_execute_data), level); \
 
-#define SWOW_COROUTINE_EXECUTE_END_EX() \
+#define SWOW_COROUTINE_EXECUTE_END() \
     EG(current_execute_data) = _current_execute_data; \
 } while (0)
-
-#define SWOW_COROUTINE_EXECUTE_START(scoroutine, level) \
-        SWOW_COROUTINE_EXECUTE_START_EX(scoroutine, level, 0)
-
-#define SWOW_COROUTINE_EXECUTE_END \
-        SWOW_COROUTINE_EXECUTE_END_EX
-
-#define SWOW_COROUTINE_USER_EXECUTE_START(scoroutine, level) \
-        SWOW_COROUTINE_EXECUTE_START_EX(scoroutine, level, 1)
-
-#define SWOW_COROUTINE_USER_EXECUTE_END \
-        SWOW_COROUTINE_EXECUTE_END_EX
 
 SWOW_API zend_string *swow_coroutine_get_executed_filename(const swow_coroutine_t *scoroutine, zend_long level)
 {
@@ -986,7 +974,7 @@ SWOW_API HashTable *swow_coroutine_get_defined_vars(swow_coroutine_t *scoroutine
 
     SWOW_COROUTINE_SHOULD_BE_IN_EXECUTING(scoroutine, cat_true, return NULL);
 
-    SWOW_COROUTINE_USER_EXECUTE_START(scoroutine, level) {
+    SWOW_COROUTINE_EXECUTE_START(scoroutine, level) {
         SWOW_COROUTINE_CHECK_CALL_INFO(goto _error);
 
         symbol_table = zend_rebuild_symbol_table();
@@ -999,7 +987,7 @@ SWOW_API HashTable *swow_coroutine_get_defined_vars(swow_coroutine_t *scoroutine
             _error:
             symbol_table = NULL;
         }
-    } SWOW_COROUTINE_USER_EXECUTE_END();
+    } SWOW_COROUTINE_EXECUTE_END();
 
     return symbol_table;
 }
@@ -1010,7 +998,7 @@ SWOW_API cat_bool_t swow_coroutine_set_local_var(swow_coroutine_t *scoroutine, z
 
     SWOW_COROUTINE_SHOULD_BE_IN_EXECUTING(scoroutine, cat_true, return cat_false);
 
-    SWOW_COROUTINE_USER_EXECUTE_START(scoroutine, level) {
+    SWOW_COROUTINE_EXECUTE_START(scoroutine, level) {
         int error;
 
         SWOW_COROUTINE_CHECK_CALL_INFO(goto _error);
@@ -1024,7 +1012,7 @@ SWOW_API cat_bool_t swow_coroutine_set_local_var(swow_coroutine_t *scoroutine, z
         } else {
             ret = cat_true;
         }
-    } SWOW_COROUTINE_USER_EXECUTE_END();
+    } SWOW_COROUTINE_EXECUTE_END();
 
     return ret;
 }
@@ -1041,9 +1029,9 @@ SWOW_API cat_bool_t swow_coroutine_eval(swow_coroutine_t *scoroutine, zend_strin
         swow_coroutine_set_readonly(cat_true);
     }
 
-    SWOW_COROUTINE_USER_EXECUTE_START(scoroutine, level) {
+    SWOW_COROUTINE_EXECUTE_START(scoroutine, level) {
         error = zend_eval_stringl(ZSTR_VAL(string), ZSTR_LEN(string), return_value, (char *) "Coroutine::eval()");
-    } SWOW_COROUTINE_USER_EXECUTE_END();
+    } SWOW_COROUTINE_EXECUTE_END();
 
     swow_coroutine_set_readonly(cat_false);
 
@@ -1656,11 +1644,6 @@ static PHP_METHOD(Swow_Coroutine, getDefinedVars)
         Z_PARAM_LONG(level)
     ZEND_PARSE_PARAMETERS_END();
 
-    if (UNEXPECTED(level < 0)) {
-        zend_argument_value_error(1, "can not be negative");
-        RETURN_THROWS();
-    }
-
     symbol_table = swow_coroutine_get_defined_vars(scoroutine, level);
 
     if (UNEXPECTED(symbol_table == NULL)) {
@@ -1693,11 +1676,6 @@ static PHP_METHOD(Swow_Coroutine, setLocalVar)
         Z_PARAM_LONG(level)
         Z_PARAM_BOOL(force)
     ZEND_PARSE_PARAMETERS_END();
-
-    if (UNEXPECTED(level < 0)) {
-        zend_argument_value_error(1, "can not be negative");
-        RETURN_THROWS();
-    }
 
     ret = swow_coroutine_set_local_var(scoroutine, name, value, level, force);
 
