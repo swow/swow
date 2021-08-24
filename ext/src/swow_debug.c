@@ -359,7 +359,7 @@ SWOW_API zend_string *swow_debug_build_trace_as_string(HashTable *trace)
 SWOW_API HashTable *swow_debug_get_trace(zend_long options, zend_long limit)
 {
     zval retval;
-    zend_fetch_debug_backtrace(&retval, 0, options, limit);
+    zend_fetch_debug_backtrace(&retval, 0, options, limit > 0 ? limit : 0);
     return Z_ARRVAL(retval);
 }
 
