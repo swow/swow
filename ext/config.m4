@@ -417,7 +417,7 @@ EOF
     dnl will be determined below
     CAT_CONTEXT_FILE_SUFFIX=""
     AS_CASE([$host_os],
-      [linux*|*aix*|freebsd*|netbsd*|openbsd*|dragonfly*], [CAT_CONTEXT_FILE_SUFFIX="elf_gas.S"],
+      [linux*|*aix*|freebsd*|netbsd*|openbsd*|dragonfly*|solaris*|haiku*], [CAT_CONTEXT_FILE_SUFFIX="elf_gas.S"],
       [darwin*], [
         CAT_CONTEXT_FILE_PREFIX="combined_sysv"
         CAT_CONTEXT_FILE_SUFFIX="macho_gas.S"
@@ -547,6 +547,29 @@ EOF
             bsd-proctitle.c \
             bsd-ifaddrs.c \
             posix-hrtime.c, SWOW_UV_INCLUDES, SWOW_UV_CFLAGS)
+        ],
+        [solaris*], [
+          SWOW_UV_CFLAGS="${SWOW_UV_CFLAGS} -D__EXTENSIONS__"
+          SWOW_UV_CFLAGS="${SWOW_UV_CFLAGS} -D_XOPEN_SOURCE=500"
+          PHP_ADD_LIBRARY(kstat)
+          PHP_ADD_LIBRARY(nsl)
+          PHP_ADD_LIBRARY(sendfile)
+          PHP_ADD_LIBRARY(socket)
+          SWOW_ADD_SOURCES(deps/libcat/deps/libuv/src/unix,
+            sunos.c \
+            no-proctitle.c, SWOW_UV_INCLUDES, SWOW_UV_CFLAGS)
+        ],
+        [haiku*], [
+          SWOW_UV_CFLAGS="${SWOW_UV_CFLAGS} -D_BSD_SOURCE"
+          PHP_ADD_LIBRARY(bsd)
+          PHP_ADD_LIBRARY(network)
+          SWOW_ADD_SOURCES(deps/libcat/deps/libuv/src/unix,
+            haiku.c \
+            posix-hrtime.c \
+            posix-poll.c \
+            bsd-ifaddrs.c \
+            no-fsevents.c \
+            no-proctitle.c, SWOW_UV_INCLUDES, SWOW_UV_CFLAGS)
         ]
       )
 
@@ -591,24 +614,6 @@ EOF
       dnl     ${uv_dir}/src/unix/no-fsevents.c
       dnl     ${uv_dir}/src/unix/no-proctitle.c
       dnl     ${uv_dir}/src/unix/posix-poll.c)
-      dnl endif()
-
-      dnl if(CMAKE_SYSTEM_NAME STREQUAL "SunOS")
-      dnl   list(APPEND uv_defines __EXTENSIONS__ _XOPEN_SOURCE=500)
-      dnl   list(APPEND uv_libraries kstat nsl sendfile socket)
-      dnl   list(APPEND uv_sources ${uv_dir}/src/unix/no-proctitle.c ${uv_dir}/src/unix/sunos.c)
-      dnl endif()
-
-      dnl if(CMAKE_SYSTEM_NAME STREQUAL "Haiku")
-      dnl   list(APPEND uv_defines _BSD_SOURCE)
-      dnl   list(APPEND uv_libraries bsd network)
-      dnl   list(APPEND uv_sources
-      dnl       ${uv_dir}/src/unix/haiku.c
-      dnl       ${uv_dir}/src/unix/bsd-ifaddrs.c
-      dnl       ${uv_dir}/src/unix/no-fsevents.c
-      dnl       ${uv_dir}/src/unix/no-proctitle.c
-      dnl       ${uv_dir}/src/unix/posix-hrtime.c
-      dnl       ${uv_dir}/src/unix/posix-poll.c)
       dnl endif()
 
       SWOW_CAT_INCLUDES="${SWOW_CAT_INCLUDES} \$(SWOW_UV_INCLUDES)"
