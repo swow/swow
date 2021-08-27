@@ -33,35 +33,35 @@ echo 'Done' . PHP_LF;
 ?>
 --EXPECTF--
 level=-3, limit=3
-#0 %s/backtrace.php(%d): Swow\Coroutine->getTraceAsString(-3, 3)
+#0 %sbacktrace.php(%d): Swow\Coroutine->getTraceAsString(-3, 3)
 #1 [internal function]: Foo->__debugInfo()
-#2 %s/backtrace.php(%d): var_dump(Object(Foo))
+#2 %sbacktrace.php(%d): var_dump(Object(Foo))
 #3 {main}
 
 level=-3, limit=2
-#0 %s/backtrace.php(%d): Swow\Coroutine->getTraceAsString(-3, 2)
+#0 %sbacktrace.php(%d): Swow\Coroutine->getTraceAsString(-3, 2)
 #1 [internal function]: Foo->__debugInfo()
 #2 {main}
 
 level=-3, limit=1
-#0 %s/backtrace.php(%d): Swow\Coroutine->getTraceAsString(-3, 1)
+#0 %sbacktrace.php(%d): Swow\Coroutine->getTraceAsString(-3, 1)
 #1 {main}
 
 level=-3, limit=0
-#0 %s/backtrace.php(%d): Swow\Coroutine->getTraceAsString(-3, 0)
+#0 %sbacktrace.php(%d): Swow\Coroutine->getTraceAsString(-3, 0)
 #1 [internal function]: Foo->__debugInfo()
-#2 %s/backtrace.php(%d): var_dump(Object(Foo))
+#2 %sbacktrace.php(%d): var_dump(Object(Foo))
 #3 {main}
 
 level=-3, limit=-1
-#0 %s/backtrace.php(%d): Swow\Coroutine->getTraceAsString(-3, -1)
+#0 %sbacktrace.php(%d): Swow\Coroutine->getTraceAsString(-3, -1)
 #1 [internal function]: Foo->__debugInfo()
-#2 %s/backtrace.php(%d): var_dump(Object(Foo))
+#2 %sbacktrace.php(%d): var_dump(Object(Foo))
 #3 {main}
 
 level=-2, limit=2
 #0 [internal function]: Foo->__debugInfo()
-#1 %s/backtrace.php(%d): var_dump(Object(Foo))
+#1 %sbacktrace.php(%d): var_dump(Object(Foo))
 #2 {main}
 
 level=-2, limit=1
@@ -70,56 +70,56 @@ level=-2, limit=1
 
 level=-2, limit=0
 #0 [internal function]: Foo->__debugInfo()
-#1 %s/backtrace.php(%d): var_dump(Object(Foo))
+#1 %sbacktrace.php(%d): var_dump(Object(Foo))
 #2 {main}
 
 level=-2, limit=-1
 #0 [internal function]: Foo->__debugInfo()
-#1 %s/backtrace.php(%d): var_dump(Object(Foo))
+#1 %sbacktrace.php(%d): var_dump(Object(Foo))
 #2 {main}
 
 level=-1, limit=1
-#0 %s/backtrace.php(%d): var_dump(Object(Foo))
+#0 %sbacktrace.php(%d): var_dump(Object(Foo))
 #1 {main}
 
 level=-1, limit=0
-#0 %s/backtrace.php(%d): var_dump(Object(Foo))
+#0 %sbacktrace.php(%d): var_dump(Object(Foo))
 #1 {main}
 
 level=-1, limit=-1
-#0 %s/backtrace.php(%d): var_dump(Object(Foo))
+#0 %sbacktrace.php(%d): var_dump(Object(Foo))
 #1 {main}
 
 level=0, limit=3
-#0 %s/backtrace.php(%d): Swow\Coroutine->getTraceAsString(0, 3)
+#0 %sbacktrace.php(%d): Swow\Coroutine->getTraceAsString(0, 3)
 #1 [internal function]: Foo->__debugInfo()
-#2 %s/backtrace.php(%d): var_dump(Object(Foo))
+#2 %sbacktrace.php(%d): var_dump(Object(Foo))
 #3 {main}
 
 level=0, limit=2
-#0 %s/backtrace.php(%d): Swow\Coroutine->getTraceAsString(0, 2)
+#0 %sbacktrace.php(%d): Swow\Coroutine->getTraceAsString(0, 2)
 #1 [internal function]: Foo->__debugInfo()
 #2 {main}
 
 level=0, limit=1
-#0 %s/backtrace.php(%d): Swow\Coroutine->getTraceAsString(0, 1)
+#0 %sbacktrace.php(%d): Swow\Coroutine->getTraceAsString(0, 1)
 #1 {main}
 
 level=0, limit=0
-#0 %s/backtrace.php(%d): Swow\Coroutine->getTraceAsString(0, 0)
+#0 %sbacktrace.php(%d): Swow\Coroutine->getTraceAsString(0, 0)
 #1 [internal function]: Foo->__debugInfo()
-#2 %s/backtrace.php(%d): var_dump(Object(Foo))
+#2 %sbacktrace.php(%d): var_dump(Object(Foo))
 #3 {main}
 
 level=0, limit=-1
-#0 %s/backtrace.php(%d): Swow\Coroutine->getTraceAsString(0, -1)
+#0 %sbacktrace.php(%d): Swow\Coroutine->getTraceAsString(0, -1)
 #1 [internal function]: Foo->__debugInfo()
-#2 %s/backtrace.php(%d): var_dump(Object(Foo))
+#2 %sbacktrace.php(%d): var_dump(Object(Foo))
 #3 {main}
 
 level=1, limit=2
 #0 [internal function]: Foo->__debugInfo()
-#1 %s/backtrace.php(%d): var_dump(Object(Foo))
+#1 %sbacktrace.php(%d): var_dump(Object(Foo))
 #2 {main}
 
 level=1, limit=1
@@ -128,24 +128,24 @@ level=1, limit=1
 
 level=1, limit=0
 #0 [internal function]: Foo->__debugInfo()
-#1 %s/backtrace.php(%d): var_dump(Object(Foo))
+#1 %sbacktrace.php(%d): var_dump(Object(Foo))
 #2 {main}
 
 level=1, limit=-1
 #0 [internal function]: Foo->__debugInfo()
-#1 %s/backtrace.php(%d): var_dump(Object(Foo))
+#1 %sbacktrace.php(%d): var_dump(Object(Foo))
 #2 {main}
 
 level=2, limit=1
-#0 %s/backtrace.php(%d): var_dump(Object(Foo))
+#0 %sbacktrace.php(%d): var_dump(Object(Foo))
 #1 {main}
 
 level=2, limit=0
-#0 %s/backtrace.php(%d): var_dump(Object(Foo))
+#0 %sbacktrace.php(%d): var_dump(Object(Foo))
 #1 {main}
 
 level=2, limit=-1
-#0 %s/backtrace.php(%d): var_dump(Object(Foo))
+#0 %sbacktrace.php(%d): var_dump(Object(Foo))
 #1 {main}
 
 object(Foo)#%d (1) {
