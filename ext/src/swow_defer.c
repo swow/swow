@@ -124,7 +124,7 @@ ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Defer, __construct)
 {
-    zend_throw_error(NULL, "%s can not be construct for security reasons", ZEND_THIS_NAME);
+    zend_throw_error(NULL, "The object of %s can not be constructed for security reasons", ZEND_THIS_NAME);
 }
 
 static const zend_function_entry swow_defer_methods[] = {
