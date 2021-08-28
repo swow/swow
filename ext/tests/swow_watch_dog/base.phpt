@@ -12,7 +12,11 @@ require __DIR__ . '/../include/bootstrap.php';
 use Swow\Coroutine;
 use Swow\WatchDog;
 
+Assert::same(WatchDog::isRunning(), false);
+
 WatchDog::run();
+
+Assert::same(WatchDog::isRunning(), true);
 
 $coroutine = Coroutine::getCurrent();
 $count = 0;

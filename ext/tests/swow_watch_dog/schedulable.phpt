@@ -12,7 +12,10 @@ require __DIR__ . '/../include/bootstrap.php';
 use Swow\Coroutine;
 use Swow\WatchDog;
 
+Assert::same(WatchDog::isRunning(), false);
+
 WatchDog::run(1 * 1000 * 1000, 0, function () {
+    Assert::same(WatchDog::isRunning(), true);
     $coroutine = Coroutine::getCurrent();
     $coroutine->__alert_count = ($coroutine->__alert_count ?? 0) + 1;
     sleep(0);
