@@ -22,6 +22,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
 
+      - name: Setup extension dependencies
+        run: |
+          if [ ${{ runner.os }} = 'Linux' ]
+          then
+            sudo apt-get update
+            sudo apt-get install -yqq libcurl4-openssl-dev
+          fi
+
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
@@ -33,14 +41,6 @@ jobs:
           extensions: curl,openssl
         #env:
           #phpts: ${{ matrix.ts }}
-
-      - name: Setup extension dependencies
-        run: |
-          if [ ${{ runner.os }} = 'Linux' ]
-          then
-            sudo apt-get update
-            sudo apt-get install -yqq libcurl4-openssl-dev
-          fi
 
       - name: Build Swow extension
         run: |

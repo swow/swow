@@ -41,6 +41,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
 
+      - name: Setup extension dependencies
+        run: |
+          if [ ${{ runner.os }} = 'Linux' ]
+          then
+            sudo apt-get update
+            sudo apt-get install -yqq libcurl4-openssl-dev lcov
+          else
+            brew install lcov
+          fi
+
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
@@ -52,14 +62,6 @@ jobs:
           extensions: curl,openssl,sockets,ffi
         #env:
           #phpts: ${{ matrix.ts }}
-
-      - name: Setup extension dependencies
-        run: |
-          if [ ${{ runner.os }} = 'Linux' ]
-          then
-            sudo apt-get update
-            sudo apt-get install -yqq libcurl4-openssl-dev
-          fi
 
       - name: Build Swow extension
         run: |
@@ -103,7 +105,6 @@ jobs:
             echo "No CODECOV_TOKEN set, skipping coverage tests"
             exit 0
           }
-          ${{ runner.os == 'macOS' && 'brew install lcov' || 'sudo apt-get install lcov' }} &&
           lcov \
             --capture \
             --directory "ext/src" \
