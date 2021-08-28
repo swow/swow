@@ -1,4 +1,15 @@
 <?php
+/**
+ * This file is part of Swow
+ *
+ * @link     https://github.com/swow/swow
+ * @contact  twosee <twosee@php.net>
+ *
+ * For the full copyright and license information,
+ * please view the LICENSE file that was distributed with this source code
+ */
+
+declare(strict_types=1);
 
 const class1_php = <<<'EOF'
 <?php
@@ -52,7 +63,6 @@ function cororun($x){
 }
 EOF;
 
-
 const run_head = <<<'EOF'
 <?php
 require_once __DIR__ . "/cororun.php";
@@ -101,34 +111,34 @@ const TEST_AUTOLOAD = 0;
 const TEST_INCLUDE = 1;
 const TEST_REQUIRE = 2;
 
-function build_phar($pharFile = __DIR__ . "/phartest.phar", $test_type = TEST_AUTOLOAD){
-    if (file_exists($pharFile)){
+function build_phar($pharFile = __DIR__ . '/phartest.phar', $test_type = TEST_AUTOLOAD)
+{
+    if (file_exists($pharFile)) {
         unlink($pharFile);
     }
     $phar = new \Phar($pharFile);
-    switch($test_type){
+    switch ($test_type) {
         case TEST_AUTOLOAD:
-            $phar->addFromString("autoload.php", autoload_php);
-            $phar->addFromString("run.php", run_head . test_autoload_str);
-            $phar->addFromString("Class2.php", sprintf(class2_php, 'require_once __DIR__ . "/autoload.php";'));
+            $phar->addFromString('autoload.php', autoload_php);
+            $phar->addFromString('run.php', run_head . test_autoload_str);
+            $phar->addFromString('Class2.php', sprintf(class2_php, 'require_once __DIR__ . "/autoload.php";'));
             break;
         case TEST_INCLUDE:
-            $phar->addFromString("run.php", run_head . test_include_str);
-            $phar->addFromString("Class2.php", sprintf(class2_php, 'include_once __DIR__ . "/Class1.php";'));
+            $phar->addFromString('run.php', run_head . test_include_str);
+            $phar->addFromString('Class2.php', sprintf(class2_php, 'include_once __DIR__ . "/Class1.php";'));
             break;
         case TEST_REQUIRE:
-            $phar->addFromString("run.php", run_head . test_require_str);
-            $phar->addFromString("Class2.php", sprintf(class2_php, 'require_once __DIR__ . "/Class1.php";'));
+            $phar->addFromString('run.php', run_head . test_require_str);
+            $phar->addFromString('Class2.php', sprintf(class2_php, 'require_once __DIR__ . "/Class1.php";'));
             break;
         default:
-            throw new Exception("no such type");
-
+            throw new Exception('no such type');
     }
-    $phar->addFromString("cororun.php", cororun_php);
-    $phar->addFromString("Class1.php", class1_php);
-    if(extension_loaded('zlib')){
-        $phar->compressFiles (\Phar::GZ);
+    $phar->addFromString('cororun.php', cororun_php);
+    $phar->addFromString('Class1.php', class1_php);
+    if (extension_loaded('zlib')) {
+        $phar->compressFiles(\Phar::GZ);
     }
     $phar->stopBuffering();
-    $phar->setStub($phar->createDefaultStub("run.php"));
+    $phar->setStub($phar->createDefaultStub('run.php'));
 }
