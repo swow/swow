@@ -2,7 +2,6 @@
 swow_fs: phar fs operations
 --SKIPIF--
 <?php
-/*
 require __DIR__ . '/../include/skipif.php';
 skip_if_extension_not_exist('phar');
 $ext_enable = '';
@@ -21,7 +20,6 @@ if (
 ) {
     skip('Swow or phar is not present in TEST_PHP_EXECUTABLE and cannot load it via -dextension');
 }
-*/
 ?>
 --INI--
 phar.readonly=0
