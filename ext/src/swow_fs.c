@@ -42,7 +42,7 @@
 # define swow_ssize_t ssize_t
 #endif // PHP_VERSION_ID < 70400
 
-// from main/streams/plain_wrapper.c @ aff365871aec54c9a556d7667f131b8638d20194
+// from main/streams/plain_wrapper.c @ aec08cc841a436a9a28468ce420e2f39adc3515a
 
 #include "php.h"
 #include "php_globals.h"
@@ -319,7 +319,7 @@ static inline int swow_fs_stat_mock(const char* path, zend_stat_t *statbuf, int 
 }
 #undef COPY_MEMBER
 
-// from win32/winutil.c @ a08a2b48b489572db89940027206020ee714afa5
+// from win32/winutil.c @ 01b3fc03c30c6cb85038250bb5640be3a09c6a32
 #ifdef PHP_WIN32
 static int swow_win32_check_trailing_space(const char * path, const size_t path_len)
 {
@@ -338,7 +338,7 @@ static int swow_win32_check_trailing_space(const char * path, const size_t path_
 }
 #endif
 
-// from main/streams/cast.c @ b0d139456aad9921d30ba8dfd32fc6cac79dedf9
+// from main/streams/cast.c @ 01b3fc03c30c6cb85038250bb5640be3a09c6a32
 static void swow_stream_mode_sanitize_fdopen_fopencookie(php_stream *stream, char *result)
 {
     /* replace modes not supported by fdopen and fopencookie, but supported
@@ -2164,86 +2164,93 @@ static int swow_mkdir_ex(const char *dir, zend_long mode, int options){
 
 static int swow_plain_files_mkdir(php_stream_wrapper *wrapper, const char *dir, int mode, int options, php_stream_context *context)
 {
-    int ret, recursive = options & PHP_STREAM_MKDIR_RECURSIVE;
-    char *p;
-
     if (strncasecmp(dir, "file://", sizeof("file://") - 1) == 0) {
         dir += sizeof("file://") - 1;
     }
 
-    if (!recursive) {
-        ret = swow_mkdir_ex(dir, mode, REPORT_ERRORS);
-    } else {
-        /* we look for directory separator from the end of string, thus hopefully reducing our work load */
-        char *e;
-        zend_stat_t sb;
-        size_t dir_len = strlen(dir), offset = 0;
-        char buf[MAXPATHLEN];
+    if (!(options & PHP_STREAM_MKDIR_RECURSIVE)) {
+        return swow_mkdir_ex(dir, mode, REPORT_ERRORS) == 0;
+    }
 
-        if (!expand_filepath_with_mode(dir, buf, NULL, 0, CWD_EXPAND )) {
-            php_error_docref(NULL, E_WARNING, "Invalid path");
+    char buf[MAXPATHLEN];
+    if (!expand_filepath_with_mode(dir, buf, NULL, 0, CWD_EXPAND)) {
+        php_error_docref(NULL, E_WARNING, "Invalid path");
+        return 0;
+    }
+
+    if (php_check_open_basedir(buf)) {
+        return 0;
+    }
+
+    /* we look for directory separator from the end of string, thus hopefully reducing our work load */
+    char *p;
+    zend_stat_t sb;
+    size_t dir_len = strlen(dir), offset = 0;
+    char *e = buf +  strlen(buf);
+
+    if ((p = memchr(buf, DEFAULT_SLASH, dir_len))) {
+        offset = p - buf + 1;
+    }
+
+    if (p && dir_len == 1) {
+        /* buf == "DEFAULT_SLASH" */
+    }
+    else {
+        /* find a top level directory we need to create */
+        while ( (p = strrchr(buf + offset, DEFAULT_SLASH)) || (offset != 1 && (p = strrchr(buf, DEFAULT_SLASH))) ) {
+            int n = 0;
+
+            *p = '\0';
+            while (p > buf && *(p-1) == DEFAULT_SLASH) {
+                ++n;
+                --p;
+                *p = '\0';
+            }
+            if (VCWD_STAT(buf, &sb) == 0) {
+                while (1) {
+                    *p = DEFAULT_SLASH;
+                    if (!n) break;
+                    --n;
+                    ++p;
+                }
+                break;
+            }
+        }
+    }
+
+    if (!p) {
+        p = buf;
+    }
+    while (1) {
+        int ret = swow_virtual_mkdir(buf, (mode_t) mode);
+        if (ret < 0 && errno != EEXIST) {
+            if (options & REPORT_ERRORS) {
+                php_error_docref(NULL, E_WARNING, "%s", strerror(errno));
+            }
             return 0;
         }
 
-        e = buf +  strlen(buf);
-
-        if ((p = memchr(buf, DEFAULT_SLASH, dir_len))) {
-            offset = p - buf + 1;
-        }
-
-        if (p && dir_len == 1) {
-            /* buf == "DEFAULT_SLASH" */
-        }
-        else {
-            /* find a top level directory we need to create */
-            while ( (p = strrchr(buf + offset, DEFAULT_SLASH)) || (offset != 1 && (p = strrchr(buf, DEFAULT_SLASH))) ) {
-                int n = 0;
-
-                *p = '\0';
-                while (p > buf && *(p-1) == DEFAULT_SLASH) {
-                    ++n;
-                    --p;
-                    *p = '\0';
-                }
-                if (swow_virtual_stat(buf, &sb) == 0) {
-                    while (1) {
-                        *p = DEFAULT_SLASH;
-                        if (!n) break;
-                        --n;
-                        ++p;
-                    }
+        zend_bool replaced_slash = 0;
+        while (++p != e) {
+            if (*p == '\0') {
+                replaced_slash = 1;
+                *p = DEFAULT_SLASH;
+                if (*(p+1) != '\0') {
                     break;
                 }
             }
         }
-
-        if (p == buf) {
-            ret = swow_mkdir_ex(dir, mode, REPORT_ERRORS);
-        } else if (!(ret = swow_mkdir_ex(buf, mode, REPORT_ERRORS))) {
-            if (!p) {
-                p = buf;
-            }
-            /* create any needed directories if the creation of the 1st directory worked */
-            while (++p != e) {
-                if (*p == '\0') {
-                    *p = DEFAULT_SLASH;
-                    if ((*(p+1) != '\0') &&
-                        (ret = swow_virtual_mkdir(buf, (mode_t)mode)) < 0) {
-                        if (options & REPORT_ERRORS) {
-                            php_error_docref(NULL, E_WARNING, "%s", strerror(cat_orig_errno(cat_get_last_error_code())));
-                        }
-                        break;
-                    }
+        if (p == e || !replaced_slash) {
+            /* No more directories to create */
+            /* issue a warning to client when the last directory was created failed */
+            if (ret < 0) {
+                if (options & REPORT_ERRORS) {
+                    php_error_docref(NULL, E_WARNING, "%s", strerror(errno));
                 }
+                return 0;
             }
+            return 1;
         }
-    }
-    if (ret < 0) {
-        /* Failure */
-        return 0;
-    } else {
-        /* Success */
-        return 1;
     }
 }
 
