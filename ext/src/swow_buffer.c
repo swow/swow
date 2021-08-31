@@ -374,7 +374,7 @@ static PHP_METHOD(Swow_Buffer, isFull)
 
     ZEND_PARSE_PARAMETERS_NONE();
 
-    RETURN_LONG(buffer->length == buffer->size);
+    RETURN_BOOL(buffer->length == buffer->size);
 }
 
 ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO_EX(arginfo_class_Swow_Buffer_realloc, 0)
