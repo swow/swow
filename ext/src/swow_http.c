@@ -460,10 +460,10 @@ static cat_always_inline char *swow_http_pack_header(char *p, zend_string *heade
     zend_string *header_value, *tmp_header_value;
 
     header_value = zval_get_tmp_string(zheader_value, &tmp_header_value);
-    p = cat_memcpy(p, ZSTR_VAL(header_name), ZSTR_LEN(header_name));
-    p = cat_memcpy(p, CAT_STRL(": "));
-    p = cat_memcpy(p, ZSTR_VAL(header_value), ZSTR_LEN(header_value));
-    p = cat_memcpy(p, CAT_STRL("\r\n"));
+    p = cat_strnappend(p, ZSTR_VAL(header_name), ZSTR_LEN(header_name));
+    p = cat_strnappend(p, CAT_STRL(": "));
+    p = cat_strnappend(p, ZSTR_VAL(header_value), ZSTR_LEN(header_value));
+    p = cat_strnappend(p, CAT_STRL("\r\n"));
     zend_tmp_string_release(tmp_header_value);
 
     return p;
@@ -494,10 +494,10 @@ static cat_always_inline char* swow_http_pack_message(char *p, HashTable *header
 {
     p = swow_http_pack_headers(p, headers);
 
-    p = cat_memcpy(p, CAT_STRL("\r\n"));
+    p = cat_strnappend(p, CAT_STRL("\r\n"));
 
     if (ZSTR_LEN(body) > 0) {
-        p = cat_memcpy(p, ZSTR_VAL(body), ZSTR_LEN(body));
+        p = cat_strnappend(p, ZSTR_VAL(body), ZSTR_LEN(body));
     }
 
     *p = '\0';
@@ -582,12 +582,12 @@ static PHP_FUNCTION(Swow_Http_packRequest)
     request = zend_string_alloc(size, 0);
 
     p = ZSTR_VAL(request);
-    p = cat_memcpy(p, ZSTR_VAL(method), ZSTR_LEN(method));
-    p = cat_memcpy(p, CAT_STRL(" "));
-    p = cat_memcpy(p, ZSTR_VAL(url), ZSTR_LEN(url));
-    p = cat_memcpy(p, CAT_STRL(" HTTP/"));
-    p = cat_memcpy(p, protocol_version, protocol_version_length);
-    p = cat_memcpy(p, CAT_STRL("\r\n"));
+    p = cat_strnappend(p, ZSTR_VAL(method), ZSTR_LEN(method));
+    p = cat_strnappend(p, CAT_STRL(" "));
+    p = cat_strnappend(p, ZSTR_VAL(url), ZSTR_LEN(url));
+    p = cat_strnappend(p, CAT_STRL(" HTTP/"));
+    p = cat_strnappend(p, protocol_version, protocol_version_length);
+    p = cat_strnappend(p, CAT_STRL("\r\n"));
 
     (void) swow_http_pack_message(p, headers, body);
 
@@ -646,13 +646,13 @@ static PHP_FUNCTION(Swow_Http_packResponse)
     response = zend_string_alloc(size, 0);
 
     p = ZSTR_VAL(response);
-    p = cat_memcpy(p, CAT_STRL("HTTP/"));
-    p = cat_memcpy(p, protocol_version, protocol_version_length);
-    p = cat_memcpy(p, CAT_STRL(" "));
-    p = cat_memcpy(p, status_code_string, status_code_length);
-    p = cat_memcpy(p, CAT_STRL(" "));
-    p = cat_memcpy(p, reason_phrase, reason_phrase_length);
-    p = cat_memcpy(p, CAT_STRL("\r\n"));
+    p = cat_strnappend(p, CAT_STRL("HTTP/"));
+    p = cat_strnappend(p, protocol_version, protocol_version_length);
+    p = cat_strnappend(p, CAT_STRL(" "));
+    p = cat_strnappend(p, status_code_string, status_code_length);
+    p = cat_strnappend(p, CAT_STRL(" "));
+    p = cat_strnappend(p, reason_phrase, reason_phrase_length);
+    p = cat_strnappend(p, CAT_STRL("\r\n"));
 
     (void) swow_http_pack_message(p, headers, body);
 
