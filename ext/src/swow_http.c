@@ -106,7 +106,7 @@ static PHP_METHOD(Swow_Http_Parser, setType)
             type = CAT_HTTP_PARSER_TYPE_RESPONSE;
             break;
         default:
-            zend_throw_error(NULL, "Unknown HTTP-Parser type");
+            zend_value_error("Unknown HTTP-Parser type " ZEND_LONG_FMT, ptype);
             RETURN_THROWS();
     }
     cat_http_parser_set_type(parser, type);
