@@ -1402,7 +1402,7 @@ static PHP_METHOD(Swow_Socket, setRecvBufferSize)
     zend_long size;
     int error;
 
-    ZEND_PARSE_PARAMETERS_START(0, 1)
+    ZEND_PARSE_PARAMETERS_START(1, 1)
         Z_PARAM_LONG(size)
     ZEND_PARSE_PARAMETERS_END();
 
@@ -1424,7 +1424,7 @@ static PHP_METHOD(Swow_Socket, setSendBufferSize)
     zend_long size;
     int error;
 
-    ZEND_PARSE_PARAMETERS_START(0, 1)
+    ZEND_PARSE_PARAMETERS_START(1, 1)
         Z_PARAM_LONG(size)
     ZEND_PARSE_PARAMETERS_END();
 
