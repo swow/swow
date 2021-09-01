@@ -73,6 +73,8 @@ $conn = $socket->accept();
 
 try {
     Assert::true($conn->isEstablished());
+    Assert::string($conn->getPeerAddress());
+    Assert::greaterThan($conn->getPeerPort(), 0);
     $conn->checkLiveness();
 } finally {
     // tell client to shut down
