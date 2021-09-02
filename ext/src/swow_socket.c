@@ -557,7 +557,7 @@ static PHP_METHOD_EX(Swow_Socket, _read, zend_bool once, zend_bool may_address, 
         int port;
         if (!peek) {
             CAT_ASSERT(once);
-            ret = cat_socket_recv_from_ex(socket, address, size, address, &address_length, &port, timeout);
+            ret = cat_socket_recv_from_ex(socket, ptr, size, address, &address_length, &port, timeout);
         } else {
             ret = cat_socket_peek_from(socket, ptr, size, address, &address_length, &port);
         }
@@ -908,7 +908,7 @@ static PHP_METHOD_EX(Swow_Socket, _write, zend_bool single, zend_bool may_addres
                         uint32_t vector_array_count = zend_hash_num_elements(vector_array);
                         Bucket *bucket = vector_array->arData;
                         Bucket *bucket_end = bucket + vector_array->nNumUsed;
-                        if (UNEXPECTED(vector_array_count < 1 || vector_array_count > 2)) {
+                        if (UNEXPECTED(vector_array_count < 1 || vector_array_count > 3)) {
                             zend_argument_value_error(1, "[%u] must have 1 or 2 elements as paramaters", vector_count);
                             goto _error;
                         }
