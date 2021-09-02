@@ -593,7 +593,7 @@ static PHP_METHOD_EX(Swow_Socket, _read, zend_bool once, zend_bool may_address, 
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_read, ZEND_RETURN_VALUE, 1, IS_LONG, 0)
     ZEND_ARG_OBJ_INFO(0, buffer, Swow\\Buffer, 0)
-    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, length, IS_LONG, 1, "\'$this->getWritableSize()\'")
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, length, IS_LONG, 1, "\'$buffer->getWritableSize()\'")
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, timeout, IS_LONG, 1, "\'$this->getReadTimeout()\'")
 ZEND_END_ARG_INFO()
 
@@ -604,7 +604,7 @@ static PHP_METHOD(Swow_Socket, read)
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_recv, ZEND_RETURN_VALUE, 1, IS_LONG, 0)
     ZEND_ARG_OBJ_INFO(0, buffer, Swow\\Buffer, 0)
-    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, size, IS_LONG, 1, "\'$this->getWritableSize()\'")
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, size, IS_LONG, 1, "\'$buffer->getWritableSize()\'")
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, timeout, IS_LONG, 1, "\'$this->getReadTimeout()\'")
 ZEND_END_ARG_INFO()
 
@@ -630,7 +630,7 @@ static PHP_METHOD(Swow_Socket, recvData)
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_recvFrom, ZEND_RETURN_VALUE, 1, IS_LONG, 0)
     ZEND_ARG_OBJ_INFO(0, buffer, Swow\\Buffer, 0)
-    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, size, IS_LONG, 1, "\'$this->getWritableSize()\'")
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, size, IS_LONG, 1, "\'$buffer->getWritableSize()\'")
     ZEND_ARG_INFO_WITH_DEFAULT_VALUE(1, address, "null")
     ZEND_ARG_INFO_WITH_DEFAULT_VALUE(1, port, "null")
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, timeout, IS_LONG, 1, "\'$this->getReadTimeout()\'")
@@ -651,7 +651,7 @@ static PHP_METHOD(Swow_Socket, recvDataFrom)
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_peek, ZEND_RETURN_VALUE, 1, IS_LONG, 0)
     ZEND_ARG_OBJ_INFO(0, buffer, Swow\\Buffer, 0)
-    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, size, IS_LONG, 1, "\'$this->getWritableSize()\'")
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, size, IS_LONG, 1, "\'$buffer->getWritableSize()\'")
 ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Socket, peek)
@@ -661,7 +661,7 @@ static PHP_METHOD(Swow_Socket, peek)
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_peekFrom, ZEND_RETURN_VALUE, 1, IS_LONG, 0)
     ZEND_ARG_OBJ_INFO(0, buffer, Swow\\Buffer, 0)
-    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, size, IS_LONG, 1, "\'$this->getWritableSize()\'")
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, size, IS_LONG, 1, "\'$buffer->getWritableSize()\'")
     ZEND_ARG_INFO_WITH_DEFAULT_VALUE(1, address, "null")
     ZEND_ARG_INFO_WITH_DEFAULT_VALUE(1, port, "null")
 ZEND_END_ARG_INFO()
@@ -777,7 +777,7 @@ static PHP_METHOD_EX(Swow_Socket, _readString, zend_bool once, zend_bool may_add
 }
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_readString, ZEND_RETURN_VALUE, 1, IS_STRING, 0)
-    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, length, IS_LONG, 1, "\'$this->getWritableSize()\'")
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, length, IS_LONG, 1, "Swow\\Buffer::DEFAULT_SIZE")
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, timeout, IS_LONG, 1, "\'$this->getReadTimeout()\'")
 ZEND_END_ARG_INFO()
 
@@ -787,7 +787,7 @@ static PHP_METHOD(Swow_Socket, readString)
 }
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_recvString, ZEND_RETURN_VALUE, 0, IS_STRING, 0)
-    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, size, IS_LONG, 1, "\'$this->getWritableSize()\'")
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, size, IS_LONG, 1, "Swow\\Buffer::DEFAULT_SIZE")
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, timeout, IS_LONG, 1, "\'$this->getReadTimeout()\'")
 ZEND_END_ARG_INFO()
 
@@ -805,7 +805,7 @@ static PHP_METHOD(Swow_Socket, recvStringData)
 }
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_recvStringFrom, ZEND_RETURN_VALUE, 0, IS_STRING, 0)
-    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, size, IS_LONG, 1, "\'$this->getWritableSize()\'")
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, size, IS_LONG, 1, "Swow\\Buffer::DEFAULT_SIZE")
     ZEND_ARG_INFO_WITH_DEFAULT_VALUE(1, address, "null")
     ZEND_ARG_INFO_WITH_DEFAULT_VALUE(1, port, "null")
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, timeout, IS_LONG, 1, "\'$this->getReadTimeout()\'")
@@ -825,7 +825,7 @@ static PHP_METHOD(Swow_Socket, recvStringDataFrom)
 }
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_peekString, ZEND_RETURN_VALUE, 0, IS_STRING, 0)
-    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, size, IS_LONG, 1, "\'$this->getWritableSize()\'")
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, size, IS_LONG, 1, "Swow\\Buffer::DEFAULT_SIZE")
 ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Socket, peekString)
@@ -834,7 +834,7 @@ static PHP_METHOD(Swow_Socket, peekString)
 }
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_peekStringFrom, ZEND_RETURN_VALUE, 0, IS_STRING, 0)
-    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, size, IS_LONG, 1, "\'$this->getWritableSize()\'")
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, size, IS_LONG, 1, "Swow\\Buffer::DEFAULT_SIZE")
     ZEND_ARG_INFO_WITH_DEFAULT_VALUE(1, address, "null")
     ZEND_ARG_INFO_WITH_DEFAULT_VALUE(1, port, "null")
 ZEND_END_ARG_INFO()
@@ -1121,7 +1121,7 @@ static PHP_METHOD(Swow_Socket, writeTo)
 
 ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO_EX(arginfo_class_Swow_Socket_send, 1)
     ZEND_ARG_OBJ_INFO(0, buffer, Swow\\Buffer, 0)
-    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, length, IS_LONG, 1, "\'$this->getReadableLength()\'")
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, length, IS_LONG, 1, "\'$buffer->getReadableLength()\'")
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, timeout, IS_LONG, 1, "\'$this->getWriteTimeout()\'")
 ZEND_END_ARG_INFO()
 
@@ -1132,7 +1132,7 @@ static PHP_METHOD(Swow_Socket, send)
 
 ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO_EX(arginfo_class_Swow_Socket_sendTo, 1)
     ZEND_ARG_OBJ_INFO(0, buffer, Swow\\Buffer, 0)
-    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, length, IS_LONG, 1, "\'$this->getReadableLength()\'")
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, length, IS_LONG, 1, "\'$buffer->getReadableLength()\'")
     ZEND_ARG_INFO_WITH_DEFAULT_VALUE(0, address, "null")
     ZEND_ARG_INFO_WITH_DEFAULT_VALUE(0, port, "null")
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, timeout, IS_LONG, 1, "\'$this->getWriteTimeout()\'")
