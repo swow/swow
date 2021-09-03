@@ -656,7 +656,7 @@ ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Socket, peek)
 {
-    PHP_METHOD_CALL(Swow_Socket, _read, 0, 0, 1);
+    PHP_METHOD_CALL(Swow_Socket, _read, 1, 0, 1);
 }
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_peekFrom, ZEND_RETURN_VALUE, 1, IS_LONG, 0)
