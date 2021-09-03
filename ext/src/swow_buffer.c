@@ -693,36 +693,66 @@ static PHP_METHOD(Swow_Buffer, write)
 }
 
 ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO_EX(arginfo_class_Swow_Buffer_truncate, 0)
-    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, start, IS_LONG, 0, "\'$this->getOffset()\'")
-    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, length, IS_LONG, 0, "0")
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, length, IS_LONG, 0, "\'$this->getOffset()\'")
 ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Buffer, truncate)
 {
     SWOW_BUFFER_GETTER(sbuffer, buffer);
     SWOW_BUFFER_CHECK_LOCK(sbuffer);
-    zend_long start = sbuffer->offset;
-    zend_long length = 0;
+    zend_long length = sbuffer->offset;
 
-    ZEND_PARSE_PARAMETERS_START(0, 2)
+    ZEND_PARSE_PARAMETERS_START(0, 1)
         Z_PARAM_OPTIONAL
-        Z_PARAM_LONG(start)
         Z_PARAM_LONG(length)
     ZEND_PARSE_PARAMETERS_END();
 
-    if (UNEXPECTED(start < 0)) {
-        zend_argument_value_error(1, "can not be negative");
-        RETURN_THROWS();
-    }
     if (UNEXPECTED(length < 0)) {
-        zend_argument_value_error(2, "can not be negative");
+        zend_argument_value_error(1, "can not be negative");
         RETURN_THROWS();
     }
 
     SWOW_BUFFER_TRY_UNSHARED(sbuffer, buffer);
 
-    cat_buffer_truncate(buffer, start, length);
-    sbuffer->offset = 0;
+    cat_buffer_truncate(buffer, length);
+    if (sbuffer->offset > buffer->length) {
+        /* offset right overflow, reset to zero */
+        sbuffer->offset = buffer->length;
+    }
+
+    RETURN_THIS();
+}
+
+ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO_EX(arginfo_class_Swow_Buffer_truncateFrom, 0)
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, offset, IS_LONG, 0, "\'$this->getOffset()\'")
+ZEND_END_ARG_INFO()
+
+static PHP_METHOD(Swow_Buffer, truncateFrom)
+{
+    SWOW_BUFFER_GETTER(sbuffer, buffer);
+    SWOW_BUFFER_CHECK_LOCK(sbuffer);
+    zend_long offset = sbuffer->offset;
+
+    ZEND_PARSE_PARAMETERS_START(0, 1)
+        Z_PARAM_OPTIONAL
+        Z_PARAM_LONG(offset)
+    ZEND_PARSE_PARAMETERS_END();
+
+    if (UNEXPECTED(offset < 0)) {
+        zend_argument_value_error(1, "can not be negative");
+        RETURN_THROWS();
+    }
+
+    SWOW_BUFFER_TRY_UNSHARED(sbuffer, buffer);
+
+    cat_buffer_truncate_from(buffer, offset);
+    if (sbuffer->offset >= offset) {
+        /* offset should be reset to the same position of data */
+        sbuffer->offset -= offset;
+    } else {
+        /* offset target has been removed, reset to zero */
+        sbuffer->offset = 0;
+    }
 
     RETURN_THIS();
 }
@@ -883,6 +913,7 @@ static const zend_function_entry swow_buffer_methods[] = {
     PHP_ME(Swow_Buffer, getContents,       arginfo_class_Swow_Buffer_getContents,       ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Buffer, write,             arginfo_class_Swow_Buffer_write,             ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Buffer, truncate,          arginfo_class_Swow_Buffer_truncate,          ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Buffer, truncateFrom,      arginfo_class_Swow_Buffer_truncateFrom,      ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Buffer, clear,             arginfo_class_Swow_Buffer_clear,             ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Buffer, fetchString,       arginfo_class_Swow_Buffer_fetchString,       ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Buffer, dupString,         arginfo_class_Swow_Buffer_dupString,         ZEND_ACC_PUBLIC)

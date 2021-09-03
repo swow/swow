@@ -579,11 +579,16 @@ namespace Swow
         public function write($string, int $offset = 0, int $length = 0) { }
 
         /**
-         * @param int $start [optional] = $this->getOffset()
-         * @param int $length [optional] = 0
+         * @param int $length [optional] = $this->getOffset()
          * @return $this
          */
-        public function truncate(int $start = null, int $length = 0) { }
+        public function truncate(int $length = null) { }
+
+        /**
+         * @param int $offset [optional] = $this->getOffset()
+         * @return $this
+         */
+        public function truncateFrom(int $offset = null) { }
 
         /**
          * @return $this

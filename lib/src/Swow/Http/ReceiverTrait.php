@@ -89,7 +89,7 @@ trait ReceiverTrait
                         $expectMore = true;
                         if (!$buffer->eof()) {
                             /* make sure we have moved the left data to the head */
-                            $buffer->truncate();
+                            $buffer->truncateFrom();
                             if ($buffer->isFull()) {
                                 $newSize = $buffer->getSize() * 2;
                                 /* we need bigger buffer to handle the large filed (or throw error) */
