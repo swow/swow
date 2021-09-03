@@ -108,7 +108,7 @@ static PHP_METHOD(Swow_Socket, getType)
 
     ZEND_PARSE_PARAMETERS_NONE();
 
-    RETURN_LONG(socket->type);
+    RETURN_LONG(cat_socket_get_type(socket));
 }
 
 #define arginfo_class_Swow_Socket_getTypeName arginfo_class_Swow_Socket_getString
@@ -445,7 +445,7 @@ static PHP_METHOD_EX(Swow_Socket, getPort, zend_bool is_peer)
 
     ZEND_PARSE_PARAMETERS_NONE();
 
-    if (EXPECTED(!(socket->type & CAT_SOCKET_TYPE_FLAG_LOCAL))) {
+    if (EXPECTED(!(cat_socket_get_type(socket) & CAT_SOCKET_TYPE_FLAG_LOCAL))) {
         port = cat_socket_get_port(socket, is_peer);
         if (UNEXPECTED(port <= 0)) {
             swow_throw_exception_with_last(swow_socket_exception_ce);
