@@ -246,7 +246,7 @@ if test "${SWOW}" != "no"; then
 
   dnl start declare extension sources
 
-  PHP_NEW_EXTENSION(swow, "swow.c", $ext_shared, ,\\$(SWOW_CFLAGS) \\$(SWOW_GIT_VERSION_CFLAG))
+  PHP_NEW_EXTENSION(swow, "swow.c", $ext_shared, ,\\$(SWOW_CFLAGS))
 
   dnl for git version number in swow.c
   AC_PATH_PROG(SWOW_GIT, git, no)
@@ -282,8 +282,11 @@ EOF
   INCLUDES="-I. -I${ext_builddir}/build ${INCLUDES}"
 
   SWOW_INCLUDES="-I${ext_srcdir}/include"
+
+  SWOW_MAIN_CFLAGS='$(SWOW_CFLAGS) $(SWOW_GIT_VERSION_CFLAG)'
+  PHP_SUBST(SWOW_MAIN_CFLAGS)
+  SWOW_ADD_SOURCES(src, swow_main.c, SWOW_INCLUDES, SWOW_MAIN_CFLAGS)
   SWOW_ADD_SOURCES(src,
-    swow_main.c \
     swow_wrapper.c \
     swow_log.c \
     swow_exceptions.c \
