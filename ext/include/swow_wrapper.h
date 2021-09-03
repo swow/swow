@@ -606,7 +606,7 @@ typedef struct
 SWOW_API void swow_output_globals_init(void);
 SWOW_API void swow_output_globals_shutdown(void);
 
-static cat_always_inline void swow_output_globals_fast_shutdown(void)
+static zend_always_inline void swow_output_globals_fast_shutdown(void)
 {
     if (UNEXPECTED(OG(handlers).elements != NULL)) {
         swow_output_globals_shutdown();

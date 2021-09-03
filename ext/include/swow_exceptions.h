@@ -56,19 +56,19 @@ SWOW_API CAT_COLD zend_object *swow_throw_exception_with_last(zend_class_entry *
 SWOW_API CAT_COLD void swow_call_exception_set_return_value(zend_object *exception, zval *return_value);
 
 #define swow_throw_call_exception(ce, code, format, ...) do { \
-    CAT_ASSERT(instanceof_function(ce, swow_call_exception_ce)); \
+    ZEND_ASSERT(instanceof_function(ce, swow_call_exception_ce)); \
     zend_object *exception = swow_throw_exception(ce, code, format, ##__VA_ARGS__); \
     swow_call_exception_set_return_value(exception, return_value); \
 } while (0)
 
 #define swow_throw_call_exception_with_last(ce)  do { \
-    CAT_ASSERT(instanceof_function(ce, swow_call_exception_ce)); \
+    ZEND_ASSERT(instanceof_function(ce, swow_call_exception_ce)); \
     zend_object *exception = swow_throw_exception_with_last(ce); \
     swow_call_exception_set_return_value(exception, return_value); \
 } while (0)
 
 #define swow_throw_call_exception_with_last_as_reason(ce, format, ...)  do { \
-    CAT_ASSERT(instanceof_function(ce, swow_call_exception_ce)); \
+    ZEND_ASSERT(instanceof_function(ce, swow_call_exception_ce)); \
     zend_object *exception = swow_throw_exception_with_last_as_reason(ce, format, ##__VA_ARGS__); \
     swow_call_exception_set_return_value(exception, return_value); \
 } while (0)

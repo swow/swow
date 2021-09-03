@@ -55,7 +55,7 @@ static ZEND_COLD cat_bool_t swow_coroutine_resume_deny(cat_coroutine_t *coroutin
 static ZEND_COLD void swow_coroutine_throw_unwind_exit(void);
 static zend_bool swow_coroutine_has_unwind_exit(zend_object *exception);
 
-static cat_always_inline size_t swow_coroutine_align_stack_page_size(size_t size)
+static zend_always_inline size_t swow_coroutine_align_stack_page_size(size_t size)
 {
     if (size == 0) {
         size = SWOW_COROUTINE_G(default_stack_page_size);
@@ -110,7 +110,7 @@ static void swow_coroutine_free_object(zend_object *object)
 
 static CAT_COLD void swow_coroutine_function_handle_exception(void)
 {
-    CAT_ASSERT(EG(exception) != NULL);
+    ZEND_ASSERT(EG(exception) != NULL);
 
     zend_exception_restore();
 
@@ -165,7 +165,7 @@ static zval *swow_coroutine_function(zval *zdata)
     zend_fcall_info fci;
     zval retval;
 
-    CAT_ASSERT(executor != NULL);
+    ZEND_ASSERT(executor != NULL);
 
     /* add to scoroutines map (we can not add beofre run otherwise refcount would never be 0) */
     do {
@@ -530,7 +530,7 @@ SWOW_API void swow_coroutine_executor_save(swow_coroutine_executor_t *executor)
 #ifdef SWOW_COROUTINE_SWAP_SILENCE_CONTEXT
     do {
         if (UNEXPECTED(executor->error_reporting != 0)) {
-            CAT_ASSERT(executor->error_reporting & E_MAGIC);
+            ZEND_ASSERT(executor->error_reporting & E_MAGIC);
             int error_reporting = executor->error_reporting;
             executor->error_reporting = eg->error_reporting | E_MAGIC;
             eg->error_reporting = error_reporting ^ E_MAGIC;
@@ -581,7 +581,7 @@ SWOW_API void swow_coroutine_executor_recover(swow_coroutine_executor_t *executo
 #ifdef SWOW_COROUTINE_SWAP_SILENCE_CONTEXT
     do {
         if (UNEXPECTED(executor->error_reporting != 0)) {
-            CAT_ASSERT(executor->error_reporting & E_MAGIC);
+            ZEND_ASSERT(executor->error_reporting & E_MAGIC);
             int error_reporting = eg->error_reporting;
             eg->error_reporting = executor->error_reporting ^ E_MAGIC;
             executor->error_reporting = error_reporting | E_MAGIC;
@@ -602,7 +602,7 @@ static void swow_coroutine_handle_not_null_zdata(swow_coroutine_t *scoroutine, s
         zval *zdata = *zdata_ptr;
         zend_bool handle_ref = current_scoroutine->coroutine.state == CAT_COROUTINE_STATE_FINISHED;
         if (!(scoroutine->coroutine.opcodes & SWOW_COROUTINE_OPCODE_ACCEPT_ZDATA)) {
-            CAT_ASSERT(Z_TYPE_P(zdata) != IS_PTR);
+            ZEND_ASSERT(Z_TYPE_P(zdata) != IS_PTR);
             /* the PHP layer can not send data to the internal-controlled coroutine */
             if (handle_ref) {
                 zval_ptr_dtor(zdata);
@@ -633,7 +633,7 @@ SWOW_API zval *swow_coroutine_jump(swow_coroutine_t *scoroutine, zval *zdata)
             GC_DELREF(&current_previous_scoroutine->std);
         } else {
             /* it is not yield */
-            CAT_ASSERT(swow_coroutine_get_previous(scoroutine) == NULL);
+            ZEND_ASSERT(swow_coroutine_get_previous(scoroutine) == NULL);
             /* current becomes target's origin */
             GC_ADDREF(&current_scoroutine->std);
         }
@@ -691,7 +691,7 @@ SWOW_API cat_bool_t swow_coroutine_resume_standard(cat_coroutine_t *coroutine, c
     if (retval != NULL) {
         *retval = data;
     } else {
-        CAT_ASSERT(data == NULL && "Unexpected non-empty data, resource may leak");
+        ZEND_ASSERT(data == NULL && "Unexpected non-empty data, resource may leak");
     }
 
     return cat_true;
@@ -2304,7 +2304,7 @@ int swow_coroutine_runtime_init(INIT_FUNC_ARGS)
 static void swow_coroutines_kill_destructor(zval *zscoroutine)
 {
     swow_coroutine_t *scoroutine = swow_coroutine_get_from_object(Z_OBJ_P(zscoroutine));
-    CAT_ASSERT(swow_coroutine_is_alive(scoroutine));
+    ZEND_ASSERT(swow_coroutine_is_alive(scoroutine));
     if (UNEXPECTED(!swow_coroutine_kill(scoroutine))) {
         CAT_CORE_ERROR(COROUTINE, "Execute kill destructor failed, reason: %s", cat_get_last_error_message());
     }

@@ -417,7 +417,7 @@ static const zend_function_entry swow_http_parser_methods[] = {
     PHP_FE_END
 };
 
-static cat_always_inline size_t swow_http_get_header_length(zend_string *header_name, zval *zheader_value)
+static zend_always_inline size_t swow_http_get_header_length(zend_string *header_name, zval *zheader_value)
 {
     zend_string *header_value, *tmp_header_value;
     size_t size;
@@ -429,7 +429,7 @@ static cat_always_inline size_t swow_http_get_header_length(zend_string *header_
     return size;
 }
 
-static cat_always_inline size_t swow_http_get_message_length(HashTable *headers, zend_string *body)
+static zend_always_inline size_t swow_http_get_message_length(HashTable *headers, zend_string *body)
 {
     zend_string *header_name;
     zval *zheader_value;
@@ -455,7 +455,7 @@ static cat_always_inline size_t swow_http_get_message_length(HashTable *headers,
     return size;
 }
 
-static cat_always_inline char *swow_http_pack_header(char *p, zend_string *header_name, zval *zheader_value)
+static zend_always_inline char *swow_http_pack_header(char *p, zend_string *header_name, zval *zheader_value)
 {
     zend_string *header_value, *tmp_header_value;
 
@@ -469,7 +469,7 @@ static cat_always_inline char *swow_http_pack_header(char *p, zend_string *heade
     return p;
 }
 
-static cat_always_inline char *swow_http_pack_headers(char *p, HashTable *headers)
+static zend_always_inline char *swow_http_pack_headers(char *p, HashTable *headers)
 {
     zend_string *header_name;
     zval *zheader_value;
@@ -490,7 +490,7 @@ static cat_always_inline char *swow_http_pack_headers(char *p, HashTable *header
     return p;
 }
 
-static cat_always_inline char* swow_http_pack_message(char *p, HashTable *headers, zend_string *body)
+static zend_always_inline char* swow_http_pack_message(char *p, HashTable *headers, zend_string *body)
 {
     p = swow_http_pack_headers(p, headers);
 

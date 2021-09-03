@@ -45,12 +45,12 @@ int swow_http_module_init(INIT_FUNC_ARGS);
 
 /* helper*/
 
-static cat_always_inline swow_http_parser_t *swow_http_parser_get_from_handle(cat_http_parser_t *parser)
+static zend_always_inline swow_http_parser_t *swow_http_parser_get_from_handle(cat_http_parser_t *parser)
 {
     return cat_container_of(parser, swow_http_parser_t, parser);
 }
 
-static cat_always_inline swow_http_parser_t *swow_http_parser_get_from_object(zend_object *object)
+static zend_always_inline swow_http_parser_t *swow_http_parser_get_from_object(zend_object *object)
 {
     return cat_container_of(object, swow_http_parser_t, std);
 }

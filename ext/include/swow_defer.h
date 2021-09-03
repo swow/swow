@@ -54,7 +54,7 @@ SWOW_API void swow_defer_do_main_tasks(void); SWOW_INTERNAL
 
 /* helper*/
 
-static cat_always_inline swow_defer_t *swow_defer_get_from_object(zend_object *object)
+static zend_always_inline swow_defer_t *swow_defer_get_from_object(zend_object *object)
 {
     return cat_container_of(object, swow_defer_t, std);
 }

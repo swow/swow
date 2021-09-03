@@ -240,9 +240,9 @@ SWOW_API zend_class_entry *swow_register_internal_class(
             }
         }
     } else {
-        CAT_ASSERT(create_object == swow_create_object_deny || cloneable);
-        CAT_ASSERT(free_object == NULL);
-        CAT_ASSERT(offset == 0);
+        ZEND_ASSERT(create_object == swow_create_object_deny || cloneable);
+        ZEND_ASSERT(free_object == NULL);
+        ZEND_ASSERT(offset == 0);
     }
 
     return ce;

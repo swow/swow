@@ -44,12 +44,12 @@ int swow_socket_runtime_init(INIT_FUNC_ARGS);
 
 /* helper*/
 
-static cat_always_inline swow_socket_t *swow_socket_get_from_handle(cat_socket_t *socket)
+static zend_always_inline swow_socket_t *swow_socket_get_from_handle(cat_socket_t *socket)
 {
     return cat_container_of(socket, swow_socket_t, socket);
 }
 
-static cat_always_inline swow_socket_t *swow_socket_get_from_object(zend_object *object)
+static zend_always_inline swow_socket_t *swow_socket_get_from_object(zend_object *object)
 {
     return cat_container_of(object, swow_socket_t, std);
 }

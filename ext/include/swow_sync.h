@@ -54,12 +54,12 @@ int swow_sync_module_init(INIT_FUNC_ARGS);
 
 /* helper*/
 
-static cat_always_inline swow_sync_wait_reference_t *swow_sync_wait_reference_get_from_object(zend_object *object)
+static zend_always_inline swow_sync_wait_reference_t *swow_sync_wait_reference_get_from_object(zend_object *object)
 {
     return cat_container_of(object, swow_sync_wait_reference_t, std);
 }
 
-static cat_always_inline swow_sync_wait_group_t *swow_sync_wait_group_get_from_object(zend_object *object)
+static zend_always_inline swow_sync_wait_group_t *swow_sync_wait_group_get_from_object(zend_object *object)
 {
     return cat_container_of(object, swow_sync_wait_group_t, std);
 }

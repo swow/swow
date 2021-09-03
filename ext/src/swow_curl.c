@@ -575,14 +575,14 @@ int swow_curl_module_init(INIT_FUNC_ARGS)
         return SUCCESS;
     }
     le_curl_multi_handle = zend_fetch_list_dtor_id("curl_multi");
-    CAT_ASSERT(le_curl != 0 && le_curl_multi_handle != 0);
+    ZEND_ASSERT(le_curl != 0 && le_curl_multi_handle != 0);
 #else
     curl_ce = (zend_class_entry *) zend_hash_str_find_ptr(CG(class_table), ZEND_STRL("curlhandle"));
     if (curl_ce == NULL) {
         return SUCCESS;
     }
     curl_multi_ce = (zend_class_entry *) zend_hash_str_find_ptr(CG(class_table), ZEND_STRL("curlmultihandle"));
-    CAT_ASSERT(curl_multi_ce != NULL);
+    ZEND_ASSERT(curl_multi_ce != NULL);
 #endif
 
     if (!cat_curl_module_init()) {

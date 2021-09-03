@@ -56,12 +56,12 @@ int swow_buffer_module_init(INIT_FUNC_ARGS);
 
 /* helper */
 
-static cat_always_inline swow_buffer_t *swow_buffer_get_from_handle(cat_buffer_t *buffer)
+static zend_always_inline swow_buffer_t *swow_buffer_get_from_handle(cat_buffer_t *buffer)
 {
     return cat_container_of(buffer, swow_buffer_t, buffer);
 }
 
-static cat_always_inline swow_buffer_t *swow_buffer_get_from_object(zend_object *object)
+static zend_always_inline swow_buffer_t *swow_buffer_get_from_object(zend_object *object)
 {
     return cat_container_of(object, swow_buffer_t, std);
 }
@@ -128,7 +128,7 @@ SWOW_INTERNAL
 
 SWOW_INTERNAL
 #define SWOW_BUFFER_UNLOCK(sbuffer) do { \
-    CAT_ASSERT((sbuffer)->locked && "unlock an unlocked buffer"); \
+    ZEND_ASSERT((sbuffer)->locked && "unlock an unlocked buffer"); \
     (sbuffer)->locked = cat_false; \
 } while (0)
 

@@ -162,12 +162,12 @@ zend_result swow_coroutine_delay_runtime_shutdown(void);
 
 /* helper */
 
-static cat_always_inline swow_coroutine_t *swow_coroutine_get_from_handle(cat_coroutine_t *coroutine)
+static zend_always_inline swow_coroutine_t *swow_coroutine_get_from_handle(cat_coroutine_t *coroutine)
 {
     return cat_container_of(coroutine, swow_coroutine_t, coroutine);
 }
 
-static cat_always_inline swow_coroutine_t *swow_coroutine_get_from_object(zend_object *object)
+static zend_always_inline swow_coroutine_t *swow_coroutine_get_from_object(zend_object *object)
 {
     return cat_container_of(object, swow_coroutine_t, std);
 }

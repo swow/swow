@@ -357,7 +357,7 @@ PHP_MINFO_FUNCTION(swow)
 # ifdef CAT_HAVE_OPENSSL
     smart_str_append_printf(&str, "%s, ", cat_ssl_version());
 # endif
-    CAT_ASSERT(str.s != NULL && ZSTR_LEN(str.s) > 1);
+    ZEND_ASSERT(str.s != NULL && ZSTR_LEN(str.s) > 1);
     ZSTR_LEN(str.s) -= 2; // rtrim(&str, ", ")
     smart_str_0(&str);
     php_info_print_table_row(2, "With", ZSTR_VAL(str.s));

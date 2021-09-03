@@ -49,12 +49,12 @@ int swow_watch_dog_runtime_shudtown(INIT_FUNC_ARGS);
 
 /* helper */
 
-static cat_always_inline swow_watch_dog_t *swow_watch_dog_get_from_handle(cat_watch_dog_t *watch_dog)
+static zend_always_inline swow_watch_dog_t *swow_watch_dog_get_from_handle(cat_watch_dog_t *watch_dog)
 {
     return cat_container_of(watch_dog, swow_watch_dog_t, watch_dog);
 }
 
-static cat_always_inline swow_watch_dog_t *swow_watch_dog_get_current(void)
+static zend_always_inline swow_watch_dog_t *swow_watch_dog_get_current(void)
 {
     cat_watch_dog_t *watch_dog = CAT_WATCH_DOG_G(watch_dog);
     return watch_dog != NULL ? swow_watch_dog_get_from_handle(watch_dog) : NULL;

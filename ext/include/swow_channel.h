@@ -64,17 +64,17 @@ int swow_channel_module_init(INIT_FUNC_ARGS);
 
 /* helper*/
 
-static cat_always_inline swow_channel_t *swow_channel_get_from_handle(cat_channel_t *channel)
+static zend_always_inline swow_channel_t *swow_channel_get_from_handle(cat_channel_t *channel)
 {
     return cat_container_of(channel, swow_channel_t, channel);
 }
 
-static cat_always_inline swow_channel_t *swow_channel_get_from_object(zend_object *object)
+static zend_always_inline swow_channel_t *swow_channel_get_from_object(zend_object *object)
 {
     return cat_container_of(object, swow_channel_t, std);
 }
 
-static cat_always_inline swow_channel_selector_t *swow_channel_selector_get_from_object(zend_object *object)
+static zend_always_inline swow_channel_selector_t *swow_channel_selector_get_from_object(zend_object *object)
 {
     return cat_container_of(object, swow_channel_selector_t, std);
 }

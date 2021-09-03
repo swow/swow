@@ -33,12 +33,12 @@ SWOW_API zend_class_entry *swow_buffer_exception_ce;
     } \
 } while (0)
 
-static cat_always_inline zend_string *swow_buffer_get_string_from_value(char *value)
+static zend_always_inline zend_string *swow_buffer_get_string_from_value(char *value)
 {
     return (zend_string *) (value - offsetof(zend_string, val));
 }
 
-static cat_always_inline zend_string *swow_buffer_get_string_from_handle(cat_buffer_t *buffer) SWOW_UNSAFE
+static zend_always_inline zend_string *swow_buffer_get_string_from_handle(cat_buffer_t *buffer) SWOW_UNSAFE
 {
     return swow_buffer_get_string_from_value(buffer->value);
 }
@@ -73,7 +73,7 @@ SWOW_API void swow_buffer_virtual_read(swow_buffer_t *sbuffer, size_t length)
     sbuffer->offset += length;
 }
 
-static cat_always_inline void swow_buffer__virtual_write(swow_buffer_t *sbuffer, size_t length)
+static zend_always_inline void swow_buffer__virtual_write(swow_buffer_t *sbuffer, size_t length)
 {
     CAT_BUFFER_GETTER(sbuffer, buffer);
     zend_string *string = swow_buffer_get_string_from_handle(buffer);
@@ -95,7 +95,7 @@ SWOW_API void swow_buffer_virtual_write_no_seek(swow_buffer_t *sbuffer, size_t l
     swow_buffer__virtual_write(sbuffer, length);
 }
 
-static cat_always_inline void swow_buffer_init(swow_buffer_t *sbuffer)
+static zend_always_inline void swow_buffer_init(swow_buffer_t *sbuffer)
 {
     sbuffer->offset = 0;
     sbuffer->locked = cat_false;
@@ -166,7 +166,7 @@ static void swow_buffer_separate_by_handle(cat_buffer_t *buffer)
 
 #ifdef CAT_DEBUG
 #define SWOW_BUFFER_UNSHARED_END(sbuffer, buffer) \
-        CAT_ASSERT(((buffer)->value != __old_value) && "expect buffer always change here"); \
+        ZEND_ASSERT(((buffer)->value != __old_value) && "expect buffer always change here"); \
         SWOW_BUFFER_UNSHARED(sbuffer); \
 } while (0)
 #else

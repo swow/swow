@@ -556,7 +556,7 @@ static PHP_METHOD_EX(Swow_Socket, _read, zend_bool once, zend_bool may_address, 
         size_t address_length = sizeof(address);
         int port;
         if (!peek) {
-            CAT_ASSERT(once);
+            ZEND_ASSERT(once);
             ret = cat_socket_recv_from_ex(socket, ptr, size, address, &address_length, &port, timeout);
         } else {
             ret = cat_socket_peek_from(socket, ptr, size, address, &address_length, &port);
@@ -739,7 +739,7 @@ static PHP_METHOD_EX(Swow_Socket, _readString, zend_bool once, zend_bool may_add
         size_t address_length = sizeof(address);
         int port;
         if (!peek) {
-            CAT_ASSERT(once);
+            ZEND_ASSERT(once);
             ret = cat_socket_recv_from_ex(socket, ptr, size, address, &address_length, &port, timeout);
         } else {
             ret = cat_socket_peek_from(socket, ptr, size, address, &address_length, &port);
@@ -941,7 +941,7 @@ static PHP_METHOD_EX(Swow_Socket, _write, zend_bool single, zend_bool may_addres
 #define _ARG_POS(x) , x
 #endif
                         _CURRENT_ZVAL_(bucket, bucket_end, ztmp);
-                        CAT_ASSERT(ztmp != NULL);
+                        ZEND_ASSERT(ztmp != NULL);
                         if (EXPECTED(Z_TYPE_P(ztmp) == IS_STRING)) {
                             /* [string, offset, length] */
                             if (1) {
@@ -997,7 +997,7 @@ static PHP_METHOD_EX(Swow_Socket, _write, zend_bool single, zend_bool may_addres
                         }
                         ptr = ZSTR_VAL(string) + offset;
                     } else {
-                        CAT_ASSERT(zbuffer != NULL);
+                        ZEND_ASSERT(zbuffer != NULL);
                         sbuffer = swow_buffer_get_from_object(Z_OBJ_P(zbuffer));
                         readable_length = swow_buffer_get_readable_space(sbuffer, &ptr);
                         if (length_is_null) {

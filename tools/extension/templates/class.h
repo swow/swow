@@ -41,13 +41,13 @@ int swow_{{module_name}}_module_init(INIT_FUNC_ARGS);
 
 /* helper*/
 
-static cat_always_inline swow_{{type_name}}_t* swow_{{type_name}}_get_from_handle(cat_{{type_name}}_t *{{cat_var_name}})
+static zend_always_inline swow_{{type_name}}_t* swow_{{type_name}}_get_from_handle(cat_{{type_name}}_t *{{cat_var_name}})
 {
     CAT_STATIC_ASSERT(offsetof(swow_{{type_name}}_t, {{cat_var_name}}) == 0);
     return (swow_{{type_name}}_t *) {{cat_var_name}};
 }
 
-static cat_always_inline swow_{{type_name}}_t* swow_{{type_name}}_get_from_object(zend_object *object)
+static zend_always_inline swow_{{type_name}}_t* swow_{{type_name}}_get_from_object(zend_object *object)
 {
     return (swow_{{type_name}}_t *) ((char *) object - swow_{{type_name}}_handlers.offset);
 }
