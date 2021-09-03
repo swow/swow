@@ -100,8 +100,9 @@ static void swow_coroutine_free_object(zend_object *object)
     swow_coroutine_t *scoroutine = swow_coroutine_get_from_object(object);
 
     if (UNEXPECTED(swow_coroutine_is_available(scoroutine))) {
-        /* created but never run (or it is main coroutine) */
+        /* created but never run */
         swow_coroutine_shutdown(scoroutine);
+        cat_coroutine_close(&scoroutine->coroutine);
     }
 
     zend_object_std_dtor(&scoroutine->std);
@@ -353,7 +354,8 @@ static void swow_coroutine_shutdown(swow_coroutine_t *scoroutine)
 {
     swow_coroutine_executor_t *executor = scoroutine->executor;
 
-    if (executor == NULL) {
+    if (UNEXPECTED(executor == NULL)) {
+        // Pure C stacked coroutine (e.g. scheduler)
         return;
     }
 
@@ -375,7 +377,7 @@ static void swow_coroutine_shutdown(swow_coroutine_t *scoroutine)
     }
 
     /* free zend vm stack */
-    if (UNEXPECTED(executor->vm_stack != NULL)) {
+    if (EXPECTED(executor->vm_stack != NULL)) {
         zend_vm_stack stack = executor->vm_stack;
         do {
             zend_vm_stack prev = stack->prev;
@@ -433,9 +435,10 @@ static void swow_coroutine_main_close(void)
     /* revert globals main */
     cat_coroutine_register_main(SWOW_COROUTINE_G(original_main));
 
-    /* hack way to close the main */
-    scoroutine->coroutine.state = CAT_COROUTINE_STATE_READY;
+    /* hack way to shutdown the main */
+    scoroutine->coroutine.state = CAT_COROUTINE_STATE_DEAD;
     scoroutine->executor->vm_stack = NULL;
+    swow_coroutine_shutdown(scoroutine);
 
     /* release main scoroutine */
     swow_coroutine_close(scoroutine);
