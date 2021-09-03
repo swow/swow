@@ -138,19 +138,19 @@ PHP_ARG_ENABLE([swow-valgrind],
 
 PHP_ARG_ENABLE([swow-memory-sanitizer],
   [whether to enable Swow MSan support],
-  [AS_HELP_STRING([--enable-memory-sanitizer], [Enable memory sanitizer (clang only)])],
+  [AS_HELP_STRING([--enable-swow-memory-sanitizer], [Enable memory sanitizer (clang only)])],
   [no], [no]
 )
 
 PHP_ARG_ENABLE([swow-address-sanitizer],
   [whether to enable Swow ASan support],
-  [AS_HELP_STRING([--enable-address-sanitizer], [Enable address sanitizer])],
+  [AS_HELP_STRING([--enable-swow-address-sanitizer], [Enable address sanitizer])],
   [no], [no]
 )
 
 PHP_ARG_ENABLE([swow-undefined-sanitizer],
   [whether to enable Swow UBSan support],
-  [AS_HELP_STRING([--enable-undefined-sanitizer], [Enable undefined sanitizer])],
+  [AS_HELP_STRING([--enable-swow-undefined-sanitizer], [Enable undefined sanitizer])],
   [no], [no]
 )
 
