@@ -87,6 +87,7 @@ CAT_HTTP_PARSER_ON_DATA (header_field,           HEADER_FIELD    )
 CAT_HTTP_PARSER_ON_DATA (header_value,           HEADER_VALUE    )
 CAT_HTTP_PARSER_ON_EVENT_BEGIN(headers_complete, HEADERS_COMPLETE) {
     parser->keep_alive = !!llhttp_should_keep_alive(&parser->llhttp);
+    parser->content_length = parser->llhttp.content_length;
 } CAT_HTTP_PARSER_ON_EVENT_END()
 CAT_HTTP_PARSER_ON_DATA (body,                   BODY            )
 CAT_HTTP_PARSER_ON_EVENT(chunk_header,           CHUNK_HEADER    )
@@ -114,6 +115,7 @@ static cat_always_inline void cat_http_parser__init(cat_http_parser_t *parser)
     parser->data = NULL;
     parser->data_length = 0;
     parser->parsed_length = 0;
+    parser->content_length = 0;
     parser->keep_alive = cat_false;
 }
 
@@ -333,7 +335,7 @@ CAT_API const char *cat_http_parser_get_reason_phrase(const cat_http_parser_t *p
 
 CAT_API uint64_t cat_http_parser_get_content_length(const cat_http_parser_t *parser)
 {
-    return parser->llhttp.content_length;
+    return parser->content_length;
 }
 
 CAT_API cat_bool_t cat_http_parser_is_upgrade(const cat_http_parser_t *parser)

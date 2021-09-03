@@ -102,11 +102,12 @@ CAT_API cat_bool_t cat_runtime_init(void)
     if (cat_env_is_true("CAT_SLE", cat_false)) {
         CAT_G(show_last_error) = cat_true;
     }
-    CAT_G(log_str_size) = cat_env_get_i("CAT_LOG_STR_SIZE", 32);
+    CAT_G(log_str_size) = (size_t) cat_env_get_i("CAT_LOG_STR_SIZE", 32);
 #ifdef CAT_DEBUG
 do {
-    /* enable all log types and log module types */
-    if (cat_env_is_true("CAT_DEBUG", cat_false)) {
+    CAT_G(log_debug_level) = (unsigned int) cat_env_get_i("CAT_DEBUG", 0);
+    if (CAT_G(log_debug_level) > 0) {
+        /* enable all log types and log module types */
         CAT_G(log_types) = CAT_LOG_TYPES_ALL;
         CAT_G(log_module_types) = CAT_MODULE_TYPES_ALL;
         /* enable SLE if there is no env to set it explicitly */

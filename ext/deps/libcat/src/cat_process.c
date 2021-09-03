@@ -56,7 +56,8 @@ static int cat_process_check_stdio(uv_stdio_container_t *stdio)
 {
     if (stdio->flags & (CAT_PROCESS_STDIO_FLAG_INHERIT_STREAM | CAT_PROCESS_STDIO_FLAG_CREATE_PIPE)) {
         cat_socket_t *stream = (cat_socket_t *) stdio->data.stream;
-        if (unlikely(!(stream->type & CAT_SOCKET_TYPE_FLAG_STREAM))) {
+        cat_socket_internal_t *istream = stream->internal;
+        if (unlikely(istream == NULL || !(istream->type & CAT_SOCKET_TYPE_FLAG_STREAM))) {
             return CAT_EINVAL;
         }
         stdio->data.stream = &stream->internal->u.stream;

@@ -271,3 +271,9 @@
 
 #define CAT_ENUM_EMPTY_GEN(name, value)
 #define CAT_ENUM_GEN(prefix, name, value) prefix##name = (value),
+
+/* sanitizer */
+
+#if defined(__SANITIZE_ADDRESS__) || __has_feature(address_sanitizer)
+#define CAT_HAVE_ASAN 1
+#endif

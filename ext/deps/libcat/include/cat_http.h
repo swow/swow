@@ -175,6 +175,10 @@ typedef struct cat_http_parser_s {
     size_t data_length;
     /* public readonly: current parsed length */
     size_t parsed_length;
+    /* Note: llhttp will clear content_length before parse body,
+     * so we store it ourselves to ensure it is always available.
+     * public readonly: it is not always reliable (consider chunk case) */
+    uint64_t content_length;
     /* public readonly: keep alive (update on headers complete) */
     cat_bool_t keep_alive;
 } cat_http_parser_t;

@@ -25,7 +25,6 @@ extern "C" {
 #include "cat.h"
 #include "cat_queue.h"
 
-#define CAT_COROUTINE_STACK_ALIGNED_SIZE        (4UL * 1024UL)
 #define CAT_COROUTINE_MIN_STACK_SIZE            (128UL * 1024UL)
 #define CAT_COROUTINE_RECOMMENDED_STACK_SIZE    (256UL * 1024UL)
 #define CAT_COROUTINE_MAX_STACK_SIZE            (16UL * 1024UL * 1024UL)
@@ -35,8 +34,6 @@ extern "C" {
 
 #define CAT_COROUTINE_SCHEDULER_ID              CAT_COROUTINE_MIN_ID
 #define CAT_COROUTINE_MAIN_ID                   1ULL
-
-typedef void cat_coroutine_stack_t;
 
 #ifndef CAT_COROUTINE_USE_UCONTEXT
 typedef void *cat_coroutine_context_t;
@@ -52,6 +49,7 @@ typedef uint64_t cat_coroutine_id_t;
 
 typedef enum cat_coroutine_flag_e {
     CAT_COROUTINE_FLAG_NONE = 0,
+    CAT_COROUTINE_FLAG_ALLOCATED = 1 << 0,
     /* for user */
 #define CAT_COROUTINE_FLAG_USR_GEN(XX) \
     CAT_COROUTINE_FLAG_USR##XX = 1 << (XX + (32 - 1 - 8))
@@ -133,9 +131,11 @@ struct cat_coroutine_s
     cat_coroutine_t *from CAT_UNSAFE;
     cat_coroutine_t *previous;
     /* internal properties (readonly) */
-    cat_coroutine_stack_t *stack;
-    cat_coroutine_stack_size_t stack_size;
     cat_coroutine_function_t function;
+    cat_coroutine_stack_size_t stack_size;
+    /* internal properties (inaccessible) */
+    uint32_t virtual_memory_size;
+    void *virtual_memory;
     cat_coroutine_context_t context;
 #ifdef CAT_COROUTINE_USE_UCONTEXT
     cat_data_t *transfer_data;
@@ -144,7 +144,8 @@ struct cat_coroutine_s
 #ifdef CAT_HAVE_VALGRIND
     uint32_t valgrind_stack_id;
 #endif
-#ifdef __SANITIZE_ADDRESS__
+#ifdef CAT_HAVE_ASAN
+    void *asan_fake_stack;
     const void *asan_stack;
     size_t asan_stack_size;
 #endif

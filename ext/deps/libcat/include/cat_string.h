@@ -33,6 +33,12 @@ static cat_always_inline const char *cat_str_dempty(const char *str)
     return !cat_str_is_empty(str) ? str : NULL;
 }
 
+/* return the eof of str */
+static cat_always_inline char *cat_strnappend(char *str, const void *data, size_t length)
+{
+    return ((char *) memcpy(str, data, length)) + length;
+}
+
 typedef struct cat_const_string_s {
     const char *data;
     size_t length;

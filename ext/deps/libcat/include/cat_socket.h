@@ -298,7 +298,8 @@ typedef uint32_t cat_socket_type_t;
 #define CAT_SOCKET_FLAG_MAP(XX) \
     XX(NONE,                     0) \
     XX(ALLOCATED,           1 << 0) \
-    XX(UNRECOVERABLE_ERROR, 1 << 1) \
+    XX(CLOSED,              1 << 1) \
+    XX(UNRECOVERABLE_ERROR, 1 << 2) \
 
 typedef enum cat_socket_flag_e {
 #define CAT_SOCKET_FLAG_GEN(name, value) CAT_ENUM_GEN(CAT_SOCKET_FLAG_, name, value)
@@ -415,18 +416,20 @@ typedef struct cat_socket_internal_s cat_socket_internal_t;
 
 typedef struct cat_socket_internal_options_s {
     cat_socket_timeout_options_t timeout;
-} cat_socket_internal_options_t;
+} cat_socket_options_t;
 
 typedef struct cat_socket_inheritance_info_s {
     cat_socket_type_t type;
-    cat_socket_internal_options_t options;
+    cat_socket_options_t options;
 } cat_socket_inheritance_info_t;
 
 struct cat_socket_internal_s
 {
     /* === public === */
+    /* type (readonly) */
+    cat_socket_type_t type;
     /* options */
-    cat_socket_internal_options_t options;
+    cat_socket_options_t options;
     /* === private === */
     /* internal bits */
     cat_socket_internal_flags_t flags;
@@ -473,7 +476,6 @@ struct cat_socket_internal_s
 
 struct cat_socket_s
 {
-    cat_socket_type_t type;
     cat_socket_flags_t flags;
     cat_socket_internal_t *internal;
 };
@@ -509,6 +511,7 @@ CAT_API cat_socket_t *cat_socket_create_ex(cat_socket_t *socket, cat_socket_type
 CAT_API cat_socket_t *cat_socket_open_os_fd(cat_socket_t *socket, cat_socket_type_t type, cat_os_fd_t os_fd);
 CAT_API cat_socket_t *cat_socket_open_os_socket(cat_socket_t *socket, cat_socket_type_t type, cat_os_socket_t os_socket);
 
+CAT_API cat_socket_type_t cat_socket_get_type(const cat_socket_t *socket);
 CAT_API const char *cat_socket_type_name(cat_socket_type_t type);
 CAT_API const char *cat_socket_get_type_name(const cat_socket_t *socket);
 CAT_API cat_sa_family_t cat_socket_get_af_of_type(cat_socket_type_t type);
