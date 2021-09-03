@@ -15,26 +15,8 @@ namespace Swow\Http;
 
 use Psr\Http\Message\StreamInterface;
 
-class Buffer extends \Swow\Buffer implements StreamInterface
+class Buffer extends \Swow\Stream\Buffer implements StreamInterface
 {
-    /**
-     * @param mixed $body
-     * @return $this
-     */
-    public static function for($body = '')
-    {
-        if ($body instanceof static) {
-            return $body;
-        }
-
-        $buffer = new static();
-        if ($body != '') {
-            $buffer->write((string) $body);
-        }
-
-        return $buffer;
-    }
-
     public function detach()
     {
         throw new \RuntimeException('Can not detach a BufferStream');
