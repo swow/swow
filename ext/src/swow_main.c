@@ -322,6 +322,7 @@ PHP_MINFO_FUNCTION(swow)
 #ifndef SWOW_GIT_VERSION
 #define SWOW_GIT_VERSION ""
 #endif
+    smart_str str;
 
     php_info_print_table_start();
     php_info_print_table_row(2, "Status", "enabled");
@@ -331,8 +332,24 @@ PHP_MINFO_FUNCTION(swow)
     php_info_print_table_row(2, "Version", SWOW_VERSION SWOW_GIT_VERSION " ( " SWOW_VERSION_SUFFIX SWOW_VERSION_SUFFIX_EXT " )");
     php_info_print_table_row(2, "Context", SWOW_COROUTINE_CONTEXT_TYPE);
     php_info_print_table_row(2, "Scheduler", "libuv-event");
+#if defined(CAT_HAVE_MSAN) || defined(CAT_HAVE_ASAN) || defined(CAT_HAVE_UBSAN)
+    memset(&str, 0, sizeof(str));
+# if defined(CAT_HAVE_MSAN)
+    smart_str_appends(&str, "MSan, ");
+# endif
+# if defined(CAT_HAVE_ASAN)
+    smart_str_appends(&str, "ASan, ");
+# endif
+# if defined(CAT_HAVE_UBSAN)
+    smart_str_appends(&str, "UBSan, ");
+# endif
+    ZSTR_LEN(str.s) -= 2; // rtrim(&str, ", ")
+    smart_str_0(&str);
+    php_info_print_table_row(2, "Sanitizers", ZSTR_VAL(str.s));
+    smart_str_free(&str);
+#endif
 #if defined(CAT_HAVE_CURL) || defined(CAT_HAVE_OPENSSL)
-    smart_str str = { 0 };
+    memset(&str, 0, sizeof(str));
 # ifdef CAT_HAVE_CURL
     curl_version_info_data * curl_vid = curl_version_info(CURLVERSION_NOW);
     smart_str_append_printf(&str, "cURL %s, ", curl_vid->version);
