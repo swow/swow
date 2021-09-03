@@ -613,6 +613,10 @@ static cat_always_inline void swow_output_globals_fast_shutdown(void)
     }
 }
 
+#if PHP_VERSION_ID >= 80200
+#define zend_forbid_dynamic_call(x) zend_forbid_dynamic_call()
+#endif
+
 #ifdef __cplusplus
 }
 #endif
