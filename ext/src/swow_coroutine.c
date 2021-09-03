@@ -1210,16 +1210,12 @@ SWOW_API cat_bool_t swow_coroutine_kill(swow_coroutine_t *scoroutine)
 
 ZEND_BEGIN_ARG_INFO_EX(arginfo_class_Swow_Coroutine___construct, 0, ZEND_RETURN_VALUE, 1)
     ZEND_ARG_CALLABLE_INFO(0, callable, 0)
-    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, stackPageSize, IS_LONG, 0, "0")
-    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, stackSize, IS_LONG, 0, "0")
 ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Coroutine, __construct)
 {
     swow_coroutine_t *scoroutine = getThisCoroutine();
     zval *zcallable;
-    zend_long stack_page_size = 0;
-    zend_long c_stack_size = 0;
 
     if (UNEXPECTED(EG(exception))) {
         RETURN_THROWS();
@@ -1230,15 +1226,11 @@ static PHP_METHOD(Swow_Coroutine, __construct)
         RETURN_THROWS();
     }
 
-    ZEND_PARSE_PARAMETERS_START(1, 3)
+    ZEND_PARSE_PARAMETERS_START(1, 1)
         Z_PARAM_ZVAL(zcallable)
-        Z_PARAM_OPTIONAL
-        /* TODO: options & ulong */
-        Z_PARAM_LONG(stack_page_size)
-        Z_PARAM_LONG(c_stack_size)
     ZEND_PARSE_PARAMETERS_END();
 
-    if (UNEXPECTED(!swow_coroutine_construct(scoroutine, zcallable, stack_page_size, c_stack_size))) {
+    if (UNEXPECTED(!swow_coroutine_construct(scoroutine, zcallable, 0, 0))) {
         swow_throw_exception_with_last(swow_coroutine_exception_ce);
         RETURN_THROWS();
     }
