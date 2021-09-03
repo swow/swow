@@ -1970,6 +1970,12 @@ static HashTable *swow_coroutine_get_gc(ZEND_GET_GC_PARAMATERS)
 #define ZEND_ERROR_CB_FILENAME_T zend_string
 #endif
 
+/* we should call original error_cb when we are not in runtime */
+#define SWOW_COROUTINE_ERROR_CB_CHECK() \
+    if (SWOW_COROUTINE_G(runtime_state) == SWOW_COROUTINE_RUNTIME_STATE_NONE) { \
+        swow_call_original_zend_error_cb(type, error_filename, error_lineno, ZEND_ERROR_CB_LAST_ARG_RELAY); \
+    }
+
 typedef void (*swow_error_cb_t)(int type, ZEND_ERROR_CB_FILENAME_T *
 , const uint32_t error_lineno, ZEND_ERROR_CB_LAST_ARG_D);
 
@@ -1992,6 +1998,7 @@ static void swow_call_original_zend_error_cb_safe(int type, ZEND_ERROR_CB_FILENA
 
 static void swow_coroutine_error_cb(int type, ZEND_ERROR_CB_FILENAME_T *error_filename, const uint32_t error_lineno, ZEND_ERROR_CB_LAST_ARG_D)
 {
+    SWOW_COROUTINE_ERROR_CB_CHECK();
     swow_coroutine_t *current_scoroutine = swow_coroutine_get_current();
     swow_coroutine_t *main_scoroutine = swow_coroutine_get_main();
 #if PHP_VERSION_ID < 80000
@@ -2237,6 +2244,10 @@ int swow_coroutine_module_init(INIT_FUNC_ARGS)
     );
     swow_coroutine_unwind_exit_ce->ce_flags |= ZEND_ACC_FINAL;
 
+    /* hook zend_error_cb (we should only do it in runtime) */
+    original_zend_error_cb = zend_error_cb;
+    zend_error_cb = swow_coroutine_error_cb;
+
     return SUCCESS;
 }
 
@@ -2245,10 +2256,6 @@ int swow_coroutine_runtime_init(INIT_FUNC_ARGS)
     if (!cat_coroutine_runtime_init()) {
         return FAILURE;
     }
-
-    /* hook zend_error_cb (we should only do it in runtime) */
-    original_zend_error_cb = zend_error_cb;
-    zend_error_cb = swow_coroutine_error_cb;
 
     /* hook opcode handlers here (bypass JIT check) */
     /* hook opcode exit */
@@ -2330,10 +2337,6 @@ int swow_coroutine_runtime_shutdown(SHUTDOWN_FUNC_ARGS)
     cat_coroutine_register_resume(
         SWOW_COROUTINE_G(original_resume)
     );
-
-    /* recover zend_error_cb */
-    zend_error_cb = original_zend_error_cb;
-    original_zend_error_cb = NULL;
 
     if (!cat_coroutine_runtime_shutdown()) {
         return FAILURE;
