@@ -220,7 +220,7 @@ class ExtensionGenerator
         $params = $function->getParameters();
         foreach ($params as $param) {
             $variadic = $param->isVariadic() ? '...' : '';
-            $paramType = (ltrim((string) $param->getType(), '?') ?: 'mixed');
+            $paramType = ltrim((string) $param->getType(), '?') ?: 'mixed';
             if (class_exists($paramType) || interface_exists($paramType)) {
                 $paramType = '\\' . $paramType;
             }
@@ -230,14 +230,14 @@ class ExtensionGenerator
                 $defaultParamValue = $param->getDefaultValue();
                 $defaultParamConstantName = $param->getDefaultValueConstantName();
                 $defaultParamValueString = $this::convertValueToString($defaultParamValue);
-                if (is_string($defaultParamValue) && ($paramType !== 'string' || preg_match('/[^\W]/', $defaultParamValue) > 0)) {
+                if (is_string($defaultParamValue) && ($paramType !== 'string' || preg_match('/[\W]/', $defaultParamValue) > 0)) {
                     $defaultParamValueTip = 'null';
                     $defaultParamValueTipOnDoc = trim($defaultParamValueString, '\'');
                 } else {
                     if (is_string($defaultParamConstantName) && $defaultParamConstantName !== '') {
                         $defaultParamValueTip = "\\{$defaultParamConstantName}";
                     } elseif ($defaultParamValueString !== '') {
-                        $defaultParamValueTip = ($defaultParamValueString);
+                        $defaultParamValueTip = (string) $defaultParamValueString;
                     } else {
                         $defaultParamValueTip = $defaultParamValueTipOnDoc = '';
                     }

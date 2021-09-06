@@ -1047,7 +1047,7 @@ TEXT;
                             foreach (Coroutine::getAll() as $coroutine) {
                                 $roundMap[$coroutine->getId()] = $coroutine->getRound();
                             }
-                            usleep(($time * 1000 * 1000));
+                            usleep((int) ($time * 1000 * 1000));
                             $coroutines = Coroutine::getAll();
                             $zombies = [];
                             foreach ($roundMap as $id => $round) {
