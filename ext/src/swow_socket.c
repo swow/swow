@@ -1477,7 +1477,7 @@ static PHP_METHOD(Swow_Socket, setTcpKeepAlive)
     zend_long delay = 0;
     cat_bool_t ret;
 
-    ZEND_PARSE_PARAMETERS_START(0, 1)
+    ZEND_PARSE_PARAMETERS_START(0, 2)
         Z_PARAM_OPTIONAL
         Z_PARAM_BOOL(enable)
         Z_PARAM_LONG(delay)
