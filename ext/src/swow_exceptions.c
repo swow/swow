@@ -67,7 +67,10 @@ SWOW_API CAT_COLD zend_object *swow_throw_exception_with_last(zend_class_entry *
 SWOW_API CAT_COLD void swow_call_exception_set_return_value(zend_object *exception, zval *return_value)
 {
     ZVAL7_ALLOC_OBJECT(exception);
-    ZEND_ASSERT(instanceof_function(exception->ce, swow_call_exception_ce));
+    if (!instanceof_function(exception->ce, swow_call_exception_ce)) {
+        ZEND_ASSERT(instanceof_function(exception->ce, zend_ce_error));
+        return;
+    }
     zend_update_property(exception->ce, ZVAL7_OBJECT(exception), ZEND_STRL("returnValue"), return_value);
 }
 
