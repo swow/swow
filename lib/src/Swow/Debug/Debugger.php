@@ -937,6 +937,7 @@ TEXT;
                             break;
                         case 'attach':
                         case 'co':
+                        case 'coroutine':
                             $id = $arguments[0] ?? 'unknown';
                             if (!is_numeric($id)) {
                                 throw new DebuggerException('Argument[1]: Coroutine id must be numeric');
@@ -956,10 +957,12 @@ TEXT;
                             $in = 'bt';
                             goto _next;
                         case 'bt':
+                        case 'backtrace':
                             $this->showCoroutine($this->getCurrentCoroutine(), false)
                                 ->showSourceFileContentByTrace($this->getCurrentCoroutineTrace(), 0, true);
                             break;
                         case 'f':
+                        case 'frame':
                             $frameIndex = $arguments[0] ?? null;
                             if (!is_numeric($frameIndex)) {
                                 throw new DebuggerException('Frame index must be numeric');
@@ -976,6 +979,7 @@ TEXT;
                                 ->showSourceFileContentByTrace($trace, $frameIndex, true);
                             break;
                         case 'b':
+                        case 'breakpoint':
                             $breakPoint = $arguments[0] ?? '';
                             if ($breakPoint === '') {
                                 throw new DebuggerException('Invalid break point');
@@ -988,7 +992,9 @@ TEXT;
                             }
                             break;
                         case 'n':
+                        case 'next':
                         case 'c':
+                        case 'continue':
                             $coroutine = $this->getCurrentCoroutine();
                             if (!($coroutine->__stopped ?? false)) {
                                 if ($coroutine->__stop ?? false) {
@@ -1012,6 +1018,7 @@ TEXT;
                             }
                             break;
                         case 'l':
+                        case 'list':
                             $lineCount = $arguments[0] ?? null;
                             if (!is_numeric($lineCount)) {
                                 $this->showFollowingSourceFileContent();
@@ -1020,6 +1027,7 @@ TEXT;
                             }
                             break;
                         case 'p':
+                        case 'print':
                             $expression = implode(' ', $arguments);
                             if (!$expression) {
                                 throw new DebuggerException('No expression');
@@ -1090,6 +1098,8 @@ TEXT;
                             $this->clear();
                             break;
                         case 'q':
+                        case 'quit':
+                        case 'exit':
                             $this->clear();
                             if ($keyword !== '' && !static::isAlone()) {
                                 /* we can input keyword to call out the debugger */
@@ -1097,6 +1107,7 @@ TEXT;
                             }
                             goto _quit;
                         case 'r':
+                        case 'run':
                             $args = func_get_args();
                             Coroutine::run(function () use ($args) {
                                 $this->reloading = true;
