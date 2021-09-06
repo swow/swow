@@ -614,7 +614,7 @@ static PHP_METHOD(Swow_Socket, recv)
 }
 
 #define SWOW_SOCKET_THROW_CONNRESET_EXCEPTION_AND_RETURN_IF(condition) do { \
-    if (UNEXPECTED(condition)) { \
+    if (UNEXPECTED(EG(exception) == NULL && (condition))) { \
         swow_throw_call_exception(swow_socket_exception_ce, 0, "Connection closed normally by peer while waiting for data"); \
         RETURN_THROWS(); \
     } \
