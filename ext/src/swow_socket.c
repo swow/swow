@@ -1063,9 +1063,6 @@ static PHP_METHOD_EX(Swow_Socket, _write, zend_bool single, zend_bool may_addres
         sbuffers[buffer_count++] = sbuffer;
         vector[0].base = ptr;
         vector[0].length = length;
-    } else if (UNEXPECTED(vector_count == 0)) {
-        zend_argument_value_error(1, "can not be empty");
-        goto _error;
     }
     if (timeout_is_null) {
         timeout = cat_socket_get_read_timeout(socket);
