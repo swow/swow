@@ -141,10 +141,8 @@ namespace Swow
 
         /**
          * @param callable $callable [required]
-         * @param int $stackPageSize [optional] = 0
-         * @param int $stackSize [optional] = 0
          */
-        public function __construct(callable $callable, int $stackPageSize = 0, int $stackSize = 0) { }
+        public function __construct(callable $callable) { }
 
         /**
          * @param callable $callable [required]
@@ -310,6 +308,11 @@ namespace Swow
          * @return void
          */
         public function kill(): void { }
+
+        /**
+         * @return void
+         */
+        public static function killAll(): void { }
 
         /**
          * @return int
@@ -824,7 +827,7 @@ namespace Swow
 
         /**
          * @param \Swow\Buffer $buffer [required]
-         * @param null|int $length [optional] = $this->getWritableSize()
+         * @param null|int $length [optional] = $buffer->getWritableSize()
          * @param null|int $timeout [optional] = $this->getReadTimeout()
          * @return int
          */
@@ -832,7 +835,7 @@ namespace Swow
 
         /**
          * @param \Swow\Buffer $buffer [required]
-         * @param null|int $size [optional] = $this->getWritableSize()
+         * @param null|int $size [optional] = $buffer->getWritableSize()
          * @param null|int $timeout [optional] = $this->getReadTimeout()
          * @return int
          */
@@ -840,7 +843,7 @@ namespace Swow
 
         /**
          * @param \Swow\Buffer $buffer [required]
-         * @param null|int $size [optional] = $this->getWritableSize()
+         * @param null|int $size [optional] = $buffer->getWritableSize()
          * @param null|int $timeout [optional] = $this->getReadTimeout()
          * @return int
          */
@@ -848,7 +851,7 @@ namespace Swow
 
         /**
          * @param \Swow\Buffer $buffer [required]
-         * @param null|int $size [optional] = $this->getWritableSize()
+         * @param null|int $size [optional] = $buffer->getWritableSize()
          * @param mixed $address [optional] = null
          * @param mixed $port [optional] = null
          * @param null|int $timeout [optional] = $this->getReadTimeout()
@@ -858,7 +861,7 @@ namespace Swow
 
         /**
          * @param \Swow\Buffer $buffer [required]
-         * @param null|int $size [optional] = $this->getWritableSize()
+         * @param null|int $size [optional] = $buffer->getWritableSize()
          * @param mixed $address [optional] = null
          * @param mixed $port [optional] = null
          * @param null|int $timeout [optional] = $this->getReadTimeout()
@@ -868,14 +871,14 @@ namespace Swow
 
         /**
          * @param \Swow\Buffer $buffer [required]
-         * @param null|int $size [optional] = $this->getWritableSize()
+         * @param null|int $size [optional] = $buffer->getWritableSize()
          * @return int
          */
         public function peek(\Swow\Buffer $buffer, ?int $size = null): int { }
 
         /**
          * @param \Swow\Buffer $buffer [required]
-         * @param null|int $size [optional] = $this->getWritableSize()
+         * @param null|int $size [optional] = $buffer->getWritableSize()
          * @param mixed $address [optional] = null
          * @param mixed $port [optional] = null
          * @return int
@@ -883,57 +886,57 @@ namespace Swow
         public function peekFrom(\Swow\Buffer $buffer, ?int $size = null, &$address = null, &$port = null): int { }
 
         /**
-         * @param null|int $length [required] = $this->getWritableSize()
+         * @param null|int $length [required] = \Swow\Buffer::DEFAULT_SIZE
          * @param null|int $timeout [optional] = $this->getReadTimeout()
          * @return string
          */
-        public function readString(?int $length = null, ?int $timeout = null): string { }
+        public function readString(?int $length = \Swow\Buffer::DEFAULT_SIZE, ?int $timeout = null): string { }
 
         /**
-         * @param null|int $size [optional] = $this->getWritableSize()
+         * @param null|int $size [optional] = \Swow\Buffer::DEFAULT_SIZE
          * @param null|int $timeout [optional] = $this->getReadTimeout()
          * @return string
          */
-        public function recvString(?int $size = null, ?int $timeout = null): string { }
+        public function recvString(?int $size = \Swow\Buffer::DEFAULT_SIZE, ?int $timeout = null): string { }
 
         /**
-         * @param null|int $size [optional] = $this->getWritableSize()
+         * @param null|int $size [optional] = \Swow\Buffer::DEFAULT_SIZE
          * @param null|int $timeout [optional] = $this->getReadTimeout()
          * @return string
          */
-        public function recvStringData(?int $size = null, ?int $timeout = null): string { }
+        public function recvStringData(?int $size = \Swow\Buffer::DEFAULT_SIZE, ?int $timeout = null): string { }
 
         /**
-         * @param null|int $size [optional] = $this->getWritableSize()
+         * @param null|int $size [optional] = \Swow\Buffer::DEFAULT_SIZE
          * @param mixed $address [optional] = null
          * @param mixed $port [optional] = null
          * @param null|int $timeout [optional] = $this->getReadTimeout()
          * @return string
          */
-        public function recvStringFrom(?int $size = null, &$address = null, &$port = null, ?int $timeout = null): string { }
+        public function recvStringFrom(?int $size = \Swow\Buffer::DEFAULT_SIZE, &$address = null, &$port = null, ?int $timeout = null): string { }
 
         /**
-         * @param null|int $size [optional] = $this->getWritableSize()
+         * @param null|int $size [optional] = \Swow\Buffer::DEFAULT_SIZE
          * @param mixed $address [optional] = null
          * @param mixed $port [optional] = null
          * @param null|int $timeout [optional] = $this->getReadTimeout()
          * @return string
          */
-        public function recvStringDataFrom(?int $size = null, &$address = null, &$port = null, ?int $timeout = null): string { }
+        public function recvStringDataFrom(?int $size = \Swow\Buffer::DEFAULT_SIZE, &$address = null, &$port = null, ?int $timeout = null): string { }
 
         /**
-         * @param null|int $size [optional] = $this->getWritableSize()
+         * @param null|int $size [optional] = \Swow\Buffer::DEFAULT_SIZE
          * @return string
          */
-        public function peekString(?int $size = null): string { }
+        public function peekString(?int $size = \Swow\Buffer::DEFAULT_SIZE): string { }
 
         /**
-         * @param null|int $size [optional] = $this->getWritableSize()
+         * @param null|int $size [optional] = \Swow\Buffer::DEFAULT_SIZE
          * @param mixed $address [optional] = null
          * @param mixed $port [optional] = null
          * @return string
          */
-        public function peekStringFrom(?int $size = null, &$address = null, &$port = null): string { }
+        public function peekStringFrom(?int $size = \Swow\Buffer::DEFAULT_SIZE, &$address = null, &$port = null): string { }
 
         /**
          * @param array $vector [required]
@@ -953,7 +956,7 @@ namespace Swow
 
         /**
          * @param \Swow\Buffer $buffer [required]
-         * @param null|int $length [optional] = $this->getReadableLength()
+         * @param null|int $length [optional] = $buffer->getReadableLength()
          * @param null|int $timeout [optional] = $this->getWriteTimeout()
          * @return $this
          */
@@ -961,7 +964,7 @@ namespace Swow
 
         /**
          * @param \Swow\Buffer $buffer [required]
-         * @param null|int $length [optional] = $this->getReadableLength()
+         * @param null|int $length [optional] = $buffer->getReadableLength()
          * @param mixed $address [optional] = null
          * @param mixed $port [optional] = null
          * @param null|int $timeout [optional] = $this->getWriteTimeout()
