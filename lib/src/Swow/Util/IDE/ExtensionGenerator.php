@@ -108,7 +108,7 @@ class ExtensionGenerator
         switch (1) {
             case is_int($value):
             case is_float($value):
-                return "{$value}";
+                return (string) ($value);
             case is_null($value):
                 return 'null';
             case is_bool($value):
@@ -210,9 +210,8 @@ class ExtensionGenerator
     /**
      * @param ReflectionFunction|ReflectionMethod $function
      * @param string $prefix
-     * @return string
      */
-    protected function generateFunctionDeclaration(ReflectionFunctionAbstract $function)
+    protected function generateFunctionDeclaration(ReflectionFunctionAbstract $function): string
     {
         $name = ltrim(str_replace($function->getNamespaceName(), '', $function->getName(), $isInNamespace), '\\');
 
@@ -221,7 +220,7 @@ class ExtensionGenerator
         $params = $function->getParameters();
         foreach ($params as $param) {
             $variadic = $param->isVariadic() ? '...' : '';
-            $paramType = (string) (ltrim((string) $param->getType(), '?') ?: 'mixed');
+            $paramType = ltrim((string) $param->getType(), '?') ?: 'mixed';
             if (class_exists($paramType) || interface_exists($paramType)) {
                 $paramType = '\\' . $paramType;
             }
@@ -231,14 +230,14 @@ class ExtensionGenerator
                 $defaultParamValue = $param->getDefaultValue();
                 $defaultParamConstantName = $param->getDefaultValueConstantName();
                 $defaultParamValueString = $this::convertValueToString($defaultParamValue);
-                if (is_string($defaultParamValue) && ($paramType !== 'string' || preg_match('/[^\w]/', $defaultParamValue) > 0)) {
+                if (is_string($defaultParamValue) && ($paramType !== 'string' || preg_match('/[\W]/', $defaultParamValue) > 0)) {
                     $defaultParamValueTip = 'null';
                     $defaultParamValueTipOnDoc = trim($defaultParamValueString, '\'');
                 } else {
-                    if (is_string($defaultParamConstantName) && strlen($defaultParamConstantName) > 0) {
+                    if (is_string($defaultParamConstantName) && $defaultParamConstantName !== '') {
                         $defaultParamValueTip = "\\{$defaultParamConstantName}";
-                    } elseif (strlen($defaultParamValueString) > 0) {
-                        $defaultParamValueTip = "{$defaultParamValueString}";
+                    } elseif ($defaultParamValueString !== '') {
+                        $defaultParamValueTip = (string) $defaultParamValueString;
                     } else {
                         $defaultParamValueTip = $defaultParamValueTipOnDoc = '';
                     }
@@ -254,7 +253,7 @@ class ExtensionGenerator
                 $variadic,
                 $param->getName(),
                 !$variadic ? ($param->isOptional() ? ' [optional]' : ' [required]') : '',
-                strlen($defaultParamValueTipOnDoc) > 0 ? " = {$defaultParamValueTipOnDoc}" : ''
+                $defaultParamValueTipOnDoc !== '' ? " = {$defaultParamValueTipOnDoc}" : ''
             );
             $paramsDeclarations[] = sprintf(
                 '%s%s%s%s$%s%s',
@@ -263,7 +262,7 @@ class ExtensionGenerator
                 $variadic,
                 $param->isPassedByReference() ? '&' : '',
                 $param->getName(),
-                strlen($defaultParamValueTip) > 0 ? " = {$defaultParamValueTip}" : ''
+                $defaultParamValueTip !== '' ? " = {$defaultParamValueTip}" : ''
             );
         }
         $paramsDeclaration = implode(', ', $paramsDeclarations);
@@ -291,7 +290,7 @@ class ExtensionGenerator
                     }
                     if ($namespace) {
                         $returnTypeShortName = ltrim(str_replace($namespace, '', $returnTypeName, $count), '\\');
-                        if ($count === 0 || strlen($returnTypeShortName) == 0) {
+                        if ($count === 0 || $returnTypeShortName === '') {
                             goto _full_namespace;
                         }
                         $returnTypeName = $returnTypeShortName;
@@ -435,13 +434,13 @@ class ExtensionGenerator
         $lines = explode($eol, $content);
         $content = '';
         foreach ($lines as $line) {
-            if (strlen($line) === 0) {
+            if ($line === '') {
                 $content .= $eol;
             } else {
                 $content .= $spaces . $line . $eol;
             }
         }
-        if (strlen($content) > 0) {
+        if ($content !== '') {
             $content = substr($content, 0, strlen($content) - strlen($eol));
         }
 

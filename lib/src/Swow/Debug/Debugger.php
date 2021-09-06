@@ -519,7 +519,7 @@ TEXT;
         return $this;
     }
 
-    protected static function getStateNameOfCoroutine(Coroutine $coroutine)
+    protected static function getStateNameOfCoroutine(Coroutine $coroutine): string
     {
         if ($coroutine->__stopped ?? false) {
             $state = 'stopped';
@@ -622,7 +622,7 @@ TEXT;
         return $this->table($map);
     }
 
-    protected static function getSourceFileContentAsTable(string $file, int $line, SplFileObject &$sourceFile = null, int $lineCount = self::SOURCE_FILE_DEFAULT_LINE_COUNT): array
+    protected static function getSourceFileContentAsTable(string $filename, int $line, SplFileObject &$sourceFile = null, int $lineCount = self::SOURCE_FILE_DEFAULT_LINE_COUNT): array
     {
         $sourceFile = null;
         if ($line < 2) {
@@ -630,7 +630,7 @@ TEXT;
         } else {
             $startLine = $line - ($lineCount - static::SOURCE_FILE_CONTENT_PADDING - 1);
         }
-        $file = new SplFileObject($file);
+        $file = new SplFileObject($filename);
         $sourceFile = $file;
         $i = 0;
         while (!$file->eof()) {
@@ -961,7 +961,7 @@ TEXT;
                             break;
                         case 'f':
                             $frameIndex = $arguments[0] ?? null;
-                            if ($frameIndex === null || !is_numeric($frameIndex)) {
+                            if (!is_numeric($frameIndex)) {
                                 throw new DebuggerException('Frame index must be numeric');
                             }
                             $frameIndex = (int) $frameIndex;
@@ -1013,7 +1013,7 @@ TEXT;
                             break;
                         case 'l':
                             $lineCount = $arguments[0] ?? null;
-                            if ($lineCount === null || !is_numeric($lineCount)) {
+                            if (!is_numeric($lineCount)) {
                                 $this->showFollowingSourceFileContent();
                             } else {
                                 $this->showFollowingSourceFileContent((int) $lineCount);
