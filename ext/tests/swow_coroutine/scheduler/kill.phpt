@@ -13,16 +13,14 @@ $wr = new WaitReference();
 Swow\Coroutine::run(function () use ($wr) {
     usleep(1000);
     $eventScheduler = Swow\Coroutine::getCurrent()->getPrevious();
-    $eventScheduler->kill();
+    Assert::throws(function () use ($eventScheduler) {
+        $eventScheduler->kill();
+    }, Swow\Coroutine\Exception::class);
 });
 
 WaitReference::wait($wr);
 
+echo 'Done' . PHP_LF;
 ?>
---EXPECTF--
-Warning: [Fatal error in R%d] Uncaught Swow\Coroutine\Exception: Coroutine is not in executing in %s:%d
-Stack trace:
-#0 %s(%d): Swow\Coroutine->kill()
-#1 [internal function]: {closure}()
-#2 {main}
-  thrown in %s on line %d
+--EXPECT--
+Done

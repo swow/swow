@@ -12,13 +12,13 @@ use Swow\Coroutine;
 
 class InitialCoroutine extends Coroutine
 {
-    public function __construct(callable $callable, int $stackPageSize = 0, int $stackSize = 0)
+    public function __construct(callable $callable)
     {
         // when Coroutine::__construct is not called on coro,
         // it will have Coroutine::STATE_INIT as state
         Assert::same($this->getState(), Coroutine::STATE_INIT);
         Assert::same($this->getStateName(), 'init');
-        parent::__construct($callable, $stackPageSize, $stackSize);
+        parent::__construct($callable);
     }
 }
 $coro = new InitialCoroutine(function () {});
