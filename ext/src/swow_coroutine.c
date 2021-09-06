@@ -171,7 +171,7 @@ static zval *swow_coroutine_function(zval *zdata)
     do {
         zval ztmp;
         ZVAL_OBJ(&ztmp, &scoroutine->std);
-        zend_hash_index_update(SWOW_COROUTINE_G(map), scoroutine->coroutine.id, &ztmp);
+        zend_hash_index_add_new(SWOW_COROUTINE_G(map), scoroutine->coroutine.id, &ztmp);
         GC_ADDREF(&scoroutine->std);
     } while (0);
 
