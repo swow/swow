@@ -1206,6 +1206,34 @@ SWOW_API cat_bool_t swow_coroutine_kill(swow_coroutine_t *scoroutine)
     return cat_true;
 }
 
+SWOW_API cat_bool_t swow_coroutine_kill_all(void)
+{
+    HashTable *map = SWOW_COROUTINE_G(map);
+    cat_bool_t try_again, ret = cat_true;
+
+    do {
+        try_again = cat_false;
+        ZEND_HASH_FOREACH_VAL(map, zval *zscoroutine) {
+            swow_coroutine_t *scoroutine = swow_coroutine_get_from_object(Z_OBJ_P(zscoroutine));
+            if (!swow_coroutine_is_executing(scoroutine)) {
+                // TODO: remove from map if the coroutine has been locked
+                CAT_ASSERT(scoroutine->coroutine.state == CAT_COROUTINE_STATE_LOCKED);
+                continue;
+            }
+            if (scoroutine == swow_coroutine_get_current()) {
+                continue;
+            }
+            if (unlikely(!swow_coroutine_kill(scoroutine))) {
+                CAT_WARN_WITH_LAST(COROUTINE, "Error occurred while killing all coroutines");
+                ret = cat_false;
+            }
+            try_again = ret;
+        } ZEND_HASH_FOREACH_END();
+    } while (try_again);
+
+    return ret;
+}
+
 #define getThisCoroutine() (swow_coroutine_get_from_object(Z_OBJ_P(ZEND_THIS)))
 
 ZEND_BEGIN_ARG_INFO_EX(arginfo_class_Swow_Coroutine___construct, 0, ZEND_RETURN_VALUE, 1)
@@ -1766,6 +1794,19 @@ static PHP_METHOD(Swow_Coroutine, kill)
     }
 }
 
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Coroutine_killAll, ZEND_RETURN_VALUE, 0, IS_VOID, 0)
+ZEND_END_ARG_INFO()
+
+static PHP_METHOD(Swow_Coroutine, killAll)
+{
+    ZEND_PARSE_PARAMETERS_NONE();
+
+    if (UNEXPECTED(!swow_coroutine_kill_all())) {
+        swow_throw_exception_with_last(swow_coroutine_exception_ce);
+        RETURN_THROWS();
+    }
+}
+
 #undef SWOW_COROUTINE_MESSAGE_AND_CODE_PARAMETERS_PARSER
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Coroutine_count, ZEND_RETURN_VALUE, 0, IS_LONG, 0)
@@ -1924,6 +1965,7 @@ static const zend_function_entry swow_coroutine_methods[] = {
     PHP_ME(Swow_Coroutine, call,                    arginfo_class_Swow_Coroutine_call,                    ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Coroutine, throw,                   arginfo_class_Swow_Coroutine_throw,                   ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Coroutine, kill,                    arginfo_class_Swow_Coroutine_kill,                    ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Coroutine, killAll,                 arginfo_class_Swow_Coroutine_killAll,                 ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
     PHP_ME(Swow_Coroutine, count,                   arginfo_class_Swow_Coroutine_count,                   ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
     PHP_ME(Swow_Coroutine, get,                     arginfo_class_Swow_Coroutine_get,                     ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
     PHP_ME(Swow_Coroutine, getAll,                  arginfo_class_Swow_Coroutine_getAll,                  ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)

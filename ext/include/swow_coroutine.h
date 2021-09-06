@@ -230,6 +230,7 @@ SWOW_API void swow_coroutine_dump_all(void);
 /* exceptions */
 SWOW_API cat_bool_t swow_coroutine_throw(swow_coroutine_t *scoroutine, zend_object *exception, zval *retval);
 SWOW_API cat_bool_t swow_coroutine_kill(swow_coroutine_t *scoroutine);
+SWOW_API cat_bool_t swow_coroutine_kill_all(void);
 
 #ifdef __cplusplus
 }
