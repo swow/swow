@@ -526,7 +526,7 @@ static PHP_METHOD_EX(Swow_Socket, _read, zend_bool once, zend_bool may_address, 
         RETURN_THROWS();
     }
     if (UNEXPECTED(size == 0 || (size_t) size > writable_size)) {
-        swow_throw_exception(swow_socket_exception_ce, CAT_ENOBUFS, "No enough writable buffer space");
+        zend_argument_value_error(2, "is invalid, no enough writable buffer space");
         RETURN_THROWS();
     }
     if (timeout_is_null) {
@@ -908,10 +908,6 @@ static PHP_METHOD_EX(Swow_Socket, _write, zend_bool single, zend_bool may_addres
                         uint32_t vector_array_count = zend_hash_num_elements(vector_array);
                         Bucket *bucket = vector_array->arData;
                         Bucket *bucket_end = bucket + vector_array->nNumUsed;
-                        if (UNEXPECTED(vector_array_count < 1 || vector_array_count > 3)) {
-                            zend_argument_value_error(1, "[%u] must have 1 or 2 elements as paramaters", vector_count);
-                            goto _error;
-                        }
 /* TODO: let it be API */
 #define _CURRENT_ZVAL_(bucket, bucket_end, ztmp) do { \
         while (1) { \
@@ -944,6 +940,10 @@ static PHP_METHOD_EX(Swow_Socket, _write, zend_bool single, zend_bool may_addres
                         ZEND_ASSERT(ztmp != NULL);
                         if (EXPECTED(Z_TYPE_P(ztmp) == IS_STRING)) {
                             /* [string, offset, length] */
+                            if (UNEXPECTED(vector_array_count < 1 || vector_array_count > 3)) {
+                                zend_argument_value_error(1, "[%u] must have 1 to 3 elements as paramaters", vector_count);
+                                goto _error;
+                            }
                             if (1) {
                                 string = Z_STR_P(ztmp);
                             } else {
@@ -965,6 +965,10 @@ static PHP_METHOD_EX(Swow_Socket, _write, zend_bool single, zend_bool may_addres
                             }
                         } else {
                             /* [buffer, length] */
+                            if (UNEXPECTED(vector_array_count < 1 || vector_array_count > 2)) {
+                                zend_argument_value_error(1, "[%u] must have 1 or 2 elements as paramaters", vector_count);
+                                goto _error;
+                            }
                             if (!zend_parse_arg_object(ztmp, &zbuffer, swow_buffer_ce, 0)) {
                                 if (Z_TYPE_P(ztmp) == IS_OBJECT) {
                                     goto _maybe_stringable_object;
@@ -1010,7 +1014,7 @@ static PHP_METHOD_EX(Swow_Socket, _write, zend_bool single, zend_bool may_addres
                             continue;
                         }
                         if (UNEXPECTED((size_t) length > readable_length)) {
-                            swow_throw_exception(swow_socket_exception_ce, CAT_ENOBUFS, "No enough readable buffer space on vector[%u]", vector_count);
+                            zend_argument_value_error(1, "is invalid, no enough readable buffer space on vector[%u]", vector_count);
                             goto _error;
                         }
                         SWOW_BUFFER_LOCK_EX(sbuffer, goto _error);
@@ -1052,7 +1056,7 @@ static PHP_METHOD_EX(Swow_Socket, _write, zend_bool single, zend_bool may_addres
             goto _error;
         }
         if (UNEXPECTED((size_t) length > readable_length)) {
-            swow_throw_exception(swow_socket_exception_ce, CAT_ENOBUFS, "No enough readable buffer space");
+            zend_argument_value_error(2, "is invalid, no enough readable buffer space");
             goto _error;
         }
         SWOW_BUFFER_LOCK_EX(sbuffer, goto _error);
