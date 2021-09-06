@@ -61,7 +61,8 @@
         "build-extension": [ "@php tools/builder/swow-builder" ],
         "rebuild-extension": [ "@build-extension --rebuild" ],
         "test-extension": [ "@putenv NO_INTERACTION=1", "@php tools/extension/test" ],
-        "test-library": [ "cd lib && php -dextension=swow ../vendor/bin/phpunit" ],
+        "test-library": [ "cd lib && @php -dextension=swow ../vendor/bin/phpunit" ],
+        "test": [ "@test-extension", "@test-library" ],
         "ide-help": [ "@php -n -d extension=swow tools/ide-helper/generator.php swow lib/src/Swow.php" ]
     },
     "bin": [
