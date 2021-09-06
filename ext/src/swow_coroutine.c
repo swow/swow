@@ -87,7 +87,7 @@ static void swow_coroutine_dtor_object(zend_object *object)
     /* force kill the coroutine if it is still alive */
     swow_coroutine_t *scoroutine = swow_coroutine_get_from_object(object);
 
-    while (UNEXPECTED(swow_coroutine_is_alive(scoroutine))) {
+    if (UNEXPECTED(swow_coroutine_is_alive(scoroutine))) {
         /* not finished, should be discard */
         if (UNEXPECTED(!swow_coroutine_kill(scoroutine))) {
             CAT_CORE_ERROR(COROUTINE, "Kill coroutine failed when destruct object, reason: %s", cat_get_last_error_message());
@@ -1193,15 +1193,15 @@ static ZEND_COLD void swow_coroutine_throw_unwind_exit(void)
 
 SWOW_API cat_bool_t swow_coroutine_kill(swow_coroutine_t *scoroutine)
 {
-    cat_bool_t success;
-    zval retval;
-
-    success = swow_coroutine_throw(scoroutine, SWOW_COROUTINE_UNWIND_EXIT_MAGIC, &retval);
-
-    if (!success) {
-        return cat_false;
-    }
-    zval_ptr_dtor(&retval);
+    do {
+        zval retval;
+        cat_bool_t success = swow_coroutine_throw(scoroutine, SWOW_COROUTINE_UNWIND_EXIT_MAGIC, &retval);
+        if (!success) {
+            cat_update_last_error_with_previous("Kill coroutine " CAT_COROUTINE_ID_FMT " failed", scoroutine->coroutine.id);
+            return cat_false;
+        }
+        zval_ptr_dtor(&retval); // TODO: __destruct may lead coroutine switch
+    } while (UNEXPECTED(swow_coroutine_is_alive(scoroutine)));
 
     return cat_true;
 }
