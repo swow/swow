@@ -1083,25 +1083,7 @@ TEXT;
                             }
                             break;
                         case 'killall':
-                            $tryAgain = false;
-                            do {
-                                foreach (Coroutine::getAll() as $coroutine) {
-                                    if ($coroutine === Coroutine::getCurrent()) {
-                                        continue;
-                                    }
-                                    if ($coroutine->getState() === $coroutine::STATE_LOCKED) {
-                                        continue;
-                                    }
-                                    $this->out("Kill {$coroutine->getId()}...");
-                                    $coroutine->kill();
-                                    if ($coroutine->isAvailable()) {
-                                        $this->out('Not fully killed, try again later...');
-                                        $tryAgain = true;
-                                    } else {
-                                        $this->out('Killed');
-                                    }
-                                }
-                            } while ($tryAgain);
+                            Coroutine::killAll();
                             $this->out('All coroutines has been killed');
                             break;
                         case 'clear':
