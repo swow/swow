@@ -252,7 +252,7 @@ object(Swow\Socket)#7 (8) {
 }
 object(MySocket)#2 (2) {
   ["type"]=>
-  string(4) "TCP4"
+  string(7) "UNKNOWN"
   ["fd"]=>
   int(-1)
 }
