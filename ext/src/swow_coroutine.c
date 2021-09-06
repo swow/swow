@@ -1201,7 +1201,7 @@ SWOW_API cat_bool_t swow_coroutine_kill(swow_coroutine_t *scoroutine)
             return cat_false;
         }
         zval_ptr_dtor(&retval); // TODO: __destruct may lead coroutine switch
-    } while (UNEXPECTED(swow_coroutine_is_alive(scoroutine)));
+    } while (UNEXPECTED(swow_coroutine_is_alive(scoroutine) && scoroutine != swow_coroutine_get_current()));
 
     return cat_true;
 }
