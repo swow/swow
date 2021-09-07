@@ -3601,17 +3601,6 @@ static void cat_socket_close_callback(uv_handle_t *handle)
         cat_free(isocket->cache.peername);
     }
 
-#ifdef CAT_OS_UNIX_LIKE
-    if ((isocket->type & CAT_SOCKET_TYPE_UDG) == CAT_SOCKET_TYPE_UDG) {
-        if (isocket->u.udg.readfd != CAT_OS_INVALID_FD) {
-            (void) uv__close(isocket->u.udg.readfd);
-        }
-        if (isocket->u.udg.writefd != CAT_OS_INVALID_FD) {
-            (void) uv__close(isocket->u.udg.writefd);
-        }
-    }
-#endif
-
     cat_free(isocket);
 }
 
@@ -3666,6 +3655,17 @@ static void cat_socket_internal_close(cat_socket_internal_t *isocket, cat_bool_t
             cat_socket_io_cancel(isocket->context.io.read.coroutine, "read");
         }
     }
+
+#ifdef CAT_OS_UNIX_LIKE
+    if ((isocket->type & CAT_SOCKET_TYPE_UDG) == CAT_SOCKET_TYPE_UDG) {
+        if (isocket->u.udg.readfd != CAT_OS_INVALID_FD) {
+            (void) uv__close(isocket->u.udg.readfd);
+        }
+        if (isocket->u.udg.writefd != CAT_OS_INVALID_FD) {
+            (void) uv__close(isocket->u.udg.writefd);
+        }
+    }
+#endif
 
     uv_close(&isocket->u.handle, cat_socket_close_callback);
 }

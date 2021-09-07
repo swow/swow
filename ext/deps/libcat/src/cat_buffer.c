@@ -130,14 +130,12 @@ static cat_always_inline void cat_buffer__update(cat_buffer_t *buffer, size_t ne
 CAT_API size_t cat_buffer_align_size(size_t size, size_t alignment)
 {
     if (size == 0) {
-        size = CAT_MEMORY_ALIGNED_SIZE(1);
-    } else if (alignment == 0) {
-        size = CAT_MEMORY_ALIGNED_SIZE(size);
-    } else {
-        size = CAT_MEMORY_ALIGNED_SIZE_EX(size, alignment);
+        size = 1;
     }
-
-    return size;
+    if (alignment == 0) {
+        alignment = CAT_MEMORY_DEFAULT_ALIGNED_SIZE;
+    }
+    return CAT_MEMORY_ALIGNED_SIZE_EX(size, alignment);;
 }
 
 CAT_API void cat_buffer_init(cat_buffer_t *buffer)
@@ -248,7 +246,12 @@ CAT_API cat_bool_t cat_buffer_append(cat_buffer_t *buffer, const char *ptr, size
     return cat_buffer_write(buffer, buffer->length, ptr, length);
 }
 
-CAT_API void cat_buffer_sub(cat_buffer_t *buffer, size_t offset, size_t length)
+CAT_API void cat_buffer_truncate(cat_buffer_t *buffer, size_t length)
+{
+    cat_buffer_truncate_from(buffer, 0, length);
+}
+
+CAT_API void cat_buffer_truncate_from(cat_buffer_t *buffer, size_t offset, size_t length)
 {
     if (unlikely(buffer->value == NULL)) {
         return;
@@ -267,16 +270,6 @@ CAT_API void cat_buffer_sub(cat_buffer_t *buffer, size_t offset, size_t length)
         return;
     }
     cat_buffer__update(buffer, length);
-}
-
-CAT_API void cat_buffer_truncate(cat_buffer_t *buffer, size_t length)
-{
-    cat_buffer_sub(buffer, 0, length);
-}
-
-CAT_API void cat_buffer_truncate_from(cat_buffer_t *buffer, size_t offset)
-{
-    cat_buffer_sub(buffer, offset, 0);
 }
 
 CAT_API void cat_buffer_clear(cat_buffer_t *buffer)

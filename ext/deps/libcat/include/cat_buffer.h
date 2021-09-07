@@ -61,9 +61,8 @@ CAT_API cat_bool_t cat_buffer_extend(cat_buffer_t *buffer, size_t recommend_size
 CAT_API cat_bool_t cat_buffer_malloc_trim(cat_buffer_t *buffer);
 CAT_API cat_bool_t cat_buffer_write(cat_buffer_t *buffer, size_t offset, const char *ptr, size_t length);
 CAT_API cat_bool_t cat_buffer_append(cat_buffer_t *buffer, const char *ptr, size_t length);
-CAT_API void cat_buffer_sub(cat_buffer_t *buffer, size_t offset, size_t length);
 CAT_API void cat_buffer_truncate(cat_buffer_t *buffer, size_t length);
-CAT_API void cat_buffer_truncate_from(cat_buffer_t *buffer, size_t offset);
+CAT_API void cat_buffer_truncate_from(cat_buffer_t *buffer, size_t offset, size_t length);
 CAT_API void cat_buffer_clear(cat_buffer_t *buffer);
 CAT_API char *cat_buffer_fetch(cat_buffer_t *buffer);
 CAT_API cat_bool_t cat_buffer_dup(cat_buffer_t *buffer, cat_buffer_t *new_buffer);
