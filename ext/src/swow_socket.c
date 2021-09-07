@@ -936,6 +936,10 @@ static PHP_METHOD_EX(Swow_Socket, _write, zend_bool single, zend_bool may_addres
 #else
 #define _ARG_POS(x) , x
 #endif
+                        if (UNEXPECTED(vector_array_count == 0)) {
+                            zend_argument_value_error(1, "[%u] can not be empty", vector_count);
+                            goto _error;
+                        }
                         _CURRENT_ZVAL_(bucket, bucket_end, ztmp);
                         ZEND_ASSERT(ztmp != NULL);
                         if (EXPECTED(Z_TYPE_P(ztmp) == IS_STRING)) {
