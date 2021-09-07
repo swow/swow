@@ -4,8 +4,6 @@ swow_socket: bad args passed in
 <?php
 require __DIR__ . '/../include/skipif.php';
 ?>
---XFAIL--
-writev argument checks should be modified
 --FILE--
 <?php
 require __DIR__ . '/../include/bootstrap.php';
@@ -25,14 +23,13 @@ class MySocket1 extends Socket
     }
 }
 Assert::throws(function () {
-    $socket = new MySocket1();
+    new MySocket1();
 }, Error::class);
 
 class MySocket2 extends Socket
 {
     public function __construct(int $type = Socket::TYPE_TCP)
     {
-        // TODO: should be Error::class
         // not constructed
         foreach ([
             'setTimeout',
@@ -47,7 +44,7 @@ class MySocket2 extends Socket
         ] as $function) {
             Assert::throws(function () use ($function) {
                 [$this, $function](-1);
-            }, Throwable::class);
+            }, Error::class);
         }
         foreach ([
             'listen',
@@ -61,26 +58,26 @@ class MySocket2 extends Socket
         ] as $function) {
             Assert::throws(function () use ($function) {
                 [$this, $function]();
-            }, Throwable::class);
+            }, Error::class);
         }
         Assert::throws(function () {
             $this->bind('127.0.0.1');
-        }, Throwable::class);
+        }, Error::class);
         Assert::throws(function () {
             $this->connect('127.0.0.1', 1234);
-        }, Throwable::class);
+        }, Error::class);
         Assert::throws(function () {
             $this->sendString('dasd');
-        }, Throwable::class);
+        }, Error::class);
         Assert::throws(function () {
             $this->setTcpNodelay(false);
-        }, Throwable::class);
+        }, Error::class);
         Assert::throws(function () {
             $this->setTcpAcceptBalance(false);
-        }, Throwable::class);
+        }, Error::class);
         Assert::throws(function () {
             $this->setTcpKeepAlive(true, 1);
-        }, Throwable::class);
+        }, Error::class);
         parent::__construct($type);
     }
 }
@@ -174,7 +171,7 @@ foreach ([
 ] as $function) {
     Assert::throws(function () use ($buffer, $function, $conn) {
         [$conn, $function]($buffer, 12345);
-    }, Swow\Socket\Exception::class);
+    }, ValueError::class);
 }
 
 $buffer->rewind();
@@ -197,7 +194,7 @@ foreach ([
 ] as $function) {
     Assert::throws(function () use ($buffer, $function, $conn) {
         [$conn, $function]($buffer, 54321);
-    }, Swow\Socket\Exception::class);
+    }, ValueError::class);
 }
 
 // buffer readable length should greater than or equal to send length

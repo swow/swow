@@ -4,8 +4,6 @@ swow_buffer: truncate truncateFrom
 <?php
 require __DIR__ . '/../include/skipif.php';
 ?>
---XFAIL--
-not implemented
 --FILE--
 <?php
 require __DIR__ . '/../include/bootstrap.php';
