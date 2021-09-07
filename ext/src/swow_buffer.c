@@ -725,6 +725,7 @@ static PHP_METHOD(Swow_Buffer, truncate)
 
 ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO_EX(arginfo_class_Swow_Buffer_truncateFrom, 0)
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, offset, IS_LONG, 0, "\'$this->getOffset()\'")
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, length, IS_LONG, 0, "\'$this->getLength() - $offset\'")
 ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Buffer, truncateFrom)
@@ -732,20 +733,26 @@ static PHP_METHOD(Swow_Buffer, truncateFrom)
     SWOW_BUFFER_GETTER(sbuffer, buffer);
     SWOW_BUFFER_CHECK_LOCK(sbuffer);
     zend_long offset = sbuffer->offset;
+    zend_long length = 0;
 
-    ZEND_PARSE_PARAMETERS_START(0, 1)
+    ZEND_PARSE_PARAMETERS_START(0, 2)
         Z_PARAM_OPTIONAL
         Z_PARAM_LONG(offset)
+        Z_PARAM_LONG(length)
     ZEND_PARSE_PARAMETERS_END();
 
     if (UNEXPECTED(offset < 0)) {
         zend_argument_value_error(1, "can not be negative");
         RETURN_THROWS();
     }
+    if (UNEXPECTED(length < 0)) {
+        zend_argument_value_error(2, "can not be negative");
+        RETURN_THROWS();
+    }
 
     SWOW_BUFFER_TRY_UNSHARED(sbuffer, buffer);
 
-    cat_buffer_truncate_from(buffer, offset);
+    cat_buffer_truncate_from(buffer, offset, length);
     if (sbuffer->offset >= offset) {
         /* offset should be reset to the same position of data */
         sbuffer->offset -= offset;

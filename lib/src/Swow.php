@@ -589,9 +589,10 @@ namespace Swow
 
         /**
          * @param int $offset [optional] = $this->getOffset()
+         * @param int $length [optional] = $this->getLength() - $offset
          * @return $this
          */
-        public function truncateFrom(int $offset = null) { }
+        public function truncateFrom(int $offset = null, int $length = null) { }
 
         /**
          * @return $this
