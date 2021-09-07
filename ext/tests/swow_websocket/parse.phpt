@@ -45,7 +45,9 @@ Assert::same($frame->getOpcode(), 8);
 Assert::same($frame->getMask(), false);
 Assert::same($frame->getMaskKey(), '');
 Assert::same($frame->getPayloadLength(), 0);
+Assert::same($frame->getHeaderLength(), 2);
 Assert::same($buffer->tell(), $headerLength);
+Assert::same($frame->getPayloadDataAsString(), '');
 
 // fin, ping, len = 0
 $buffer->rewind();
@@ -66,7 +68,9 @@ Assert::same($frame->getOpcode(), 9);
 Assert::same($frame->getMask(), false);
 Assert::same($frame->getMaskKey(), '');
 Assert::same($frame->getPayloadLength(), 0);
+Assert::same($frame->getHeaderLength(), 2);
 Assert::same($buffer->tell(), $headerLength);
+Assert::same($frame->getPayloadDataAsString(), '');
 
 // fin, pong, len = 0
 $buffer->rewind();
@@ -87,7 +91,9 @@ Assert::same($frame->getOpcode(), 0xa);
 Assert::same($frame->getMask(), false);
 Assert::same($frame->getMaskKey(), '');
 Assert::same($frame->getPayloadLength(), 0);
+Assert::same($frame->getHeaderLength(), 2);
 Assert::same($buffer->tell(), $headerLength);
+Assert::same($frame->getPayloadDataAsString(), '');
 
 // fin, text message, len=16, payload = 'the data sent 16'
 $buffer->rewind();
@@ -109,12 +115,15 @@ Assert::same($frame->getOpcode(), 1);
 Assert::same($frame->getMask(), false);
 Assert::same($frame->getMaskKey(), '');
 Assert::same($payloadLength = $frame->getPayloadLength(), 16);
+Assert::same($frame->getHeaderLength(), 2);
 Assert::same($buffer->tell(), $headerLength);
 $payloadBuffer = $frame->getPayloadData();
 $payloadBuffer->realloc($payloadLength);
 $payloadBuffer->write($buffer->peekFrom($headerLength, $payloadLength));
 $frame->unmaskPayloadData();
 $payloadBuffer->rewind();
+Assert::same($payloadBuffer->read(), 'the data sent 16');
+Assert::same($frame->getPayloadDataAsString(), 'the data sent 16');
 // buffer filled debugInfo
 var_dump($frame);
 
@@ -143,6 +152,7 @@ Assert::same($frame->getOpcode(), 1);
 Assert::same($frame->getMask(), true);
 Assert::same($frame->getMaskKey(), "\x80\x81\x82\x84");
 Assert::same($payloadLength = $frame->getPayloadLength(), 16);
+Assert::same($frame->getHeaderLength(), 6);
 Assert::same($buffer->tell(), $headerLength);
 $payloadBuffer = $frame->getPayloadData();
 $payloadBuffer->realloc($payloadLength);
@@ -150,8 +160,9 @@ $payloadBuffer->write($buffer->peekFrom($headerLength, $payloadLength));
 $frame->unmaskPayloadData();
 $payloadBuffer->rewind();
 Assert::same($payloadBuffer->read(), 'the data sent 16');
+Assert::same($frame->getPayloadDataAsString(), 'the data sent 16');
 
-// rsv2, binary message, masked, len=256, payload = '\xca\xfe\xba\xbe\xde\xad\xbe\xef' * 32
+    // rsv2, binary message, masked, len=256, payload = '\xca\xfe\xba\xbe\xde\xad\xbe\xef' * 32
 $buffer->rewind();
 $buffer->write(pack('C2', RSV2 | OPCODE_BIN, MASK_BIT | 0x7e));
 $buffer->write(pack('n', 256));
@@ -177,6 +188,7 @@ Assert::same($frame->getOpcode(), 2);
 Assert::same($frame->getMask(), true);
 Assert::same($frame->getMaskKey(), "\x10\x21\x32\x44");
 Assert::same($payloadLength = $frame->getPayloadLength(), 256);
+Assert::same($frame->getHeaderLength(), 8);
 Assert::same($buffer->tell(), $headerLength);
 $payloadBuffer = $frame->getPayloadData();
 $payloadBuffer->realloc($payloadLength);
@@ -184,6 +196,7 @@ $payloadBuffer->write($buffer->peekFrom($headerLength, $payloadLength));
 $frame->unmaskPayloadData();
 $payloadBuffer->rewind();
 Assert::same($payloadBuffer->read(), str_repeat("\xca\xfe\xba\xbe\xde\xad\xbe\xef", 32));
+Assert::same($frame->getPayloadDataAsString(), str_repeat("\xca\xfe\xba\xbe\xde\xad\xbe\xef", 32));
 
 // fin, rsv3, binary message, len=65536, payload = '\xf0\x0f\xc7\xc8\x2f\x90\x2f\x90' * 8192
 $buffer->rewind();
@@ -211,6 +224,7 @@ Assert::same($frame->getOpcode(), 2);
 Assert::same($frame->getMask(), true);
 Assert::same($frame->getMaskKey(), 'swow');
 Assert::same($payloadLength = $frame->getPayloadLength(), 65536);
+Assert::same($frame->getHeaderLength(), 14);
 Assert::same($buffer->tell(), $headerLength);
 $payloadBuffer = $frame->getPayloadData();
 $payloadBuffer->realloc($payloadLength);
@@ -218,6 +232,7 @@ $payloadBuffer->write($buffer->peekFrom($headerLength, $payloadLength));
 $frame->unmaskPayloadData();
 $payloadBuffer->rewind();
 Assert::same($payloadBuffer->read(), str_repeat("\xf0\x0f\xc7\xc8\x2f\x90\x2f\x90", 8192));
+Assert::same($frame->getPayloadDataAsString(), str_repeat("\xf0\x0f\xc7\xc8\x2f\x90\x2f\x90", 8192));
 
 echo 'Done' . PHP_LF;
 
@@ -311,7 +326,7 @@ object(Swow\WebSocket\Frame)#4 (8) {
     ["length"]=>
     int(16)
     ["offset"]=>
-    int(0)
+    int(16)
   }
 }
 object(Swow\WebSocket\Frame)#5 (8) {

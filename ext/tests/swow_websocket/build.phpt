@@ -19,7 +19,9 @@ $frame = new Frame();
 $frame
     ->setFin(1)
     ->setOpcode(Opcode::CLOSE)
+    ->setPayloadLength($buffer->getLength())
     ->setPayloadData($buffer);
+Assert::same($frame->getHeaderLength(), 2);
 Assert::same($frame->toString(true), "\x88\0");
 Assert::same($frame->toString(false), "\x88\0");
 
@@ -28,7 +30,9 @@ $frame = new Frame();
 $frame
     ->setFin(1)
     ->setOpcode(Opcode::PING)
+    ->setPayloadLength($buffer->getLength())
     ->setPayloadData($buffer);
+Assert::same($frame->getHeaderLength(), 2);
 Assert::same($frame->toString(true), "\x89\0");
 Assert::same($frame->toString(false), "\x89\0");
 
@@ -37,7 +41,9 @@ $frame = new Frame();
 $frame
     ->setFin(1)
     ->setOpcode(Opcode::PONG)
+    ->setPayloadLength($buffer->getLength())
     ->setPayloadData($buffer);
+Assert::same($frame->getHeaderLength(), 2);
 Assert::same($frame->toString(true), "\x8a\0");
 Assert::same($frame->toString(false), "\x8a\0");
 
@@ -48,7 +54,9 @@ $frame = new Frame();
 $frame
     ->setFin(1)
     ->setOpcode(Opcode::TEXT)
+    ->setPayloadLength($buffer->getLength())
     ->setPayloadData($buffer);
+Assert::same($frame->getHeaderLength(), 2);
 Assert::same($frame->toString(true), "\x81\x10");
 Assert::same($frame->toString(false), "\x81\x10the data sent 16");
 
@@ -67,7 +75,9 @@ $frame
     ->setOpcode(Opcode::TEXT)
     ->setMask(true)
     ->setMaskKey("\x80\x81\x82\x84")
+    ->setPayloadLength($buffer->getLength())
     ->setPayloadData($buffer);
+Assert::same($frame->getHeaderLength(), 6);
 Assert::same($frame->toString(true), "\xC1\x90\x80\x81\x82\x84");
 Assert::same($frame->toString(false), "\xC1\x90\x80\x81\x82\x84{$maskedMessage}");
 $frame->resetHeader();
@@ -87,7 +97,9 @@ $frame
     ->setOpcode(Opcode::BINARY)
     ->setMask(true)
     ->setMaskKey("\x10\x21\x32\x44")
+    ->setPayloadLength($buffer->getLength())
     ->setPayloadData($buffer);
+Assert::same($frame->getHeaderLength(), 8);
 Assert::same($frame->toString(true), "\xA2\xfe\x01\x00\x10\x21\x32\x44");
 Assert::same($frame->toString(false), "\xA2\xfe\x01\x00\x10\x21\x32\x44{$maskedMessage}");
 $frame->resetHeader();
@@ -108,7 +120,9 @@ $frame
     ->setOpcode(Opcode::BINARY)
     ->setMask(true)
     ->setMaskKey('swow')
+    ->setPayloadLength($buffer->getLength())
     ->setPayloadData($buffer);
+Assert::same($frame->getHeaderLength(), 14);
 Assert::same($frame->toString(true), "\x92\xff\x00\x00\x00\x00\x00\x01\x00\x00swow");
 Assert::same($frame->toString(false), "\x92\xff\x00\x00\x00\x00\x00\x01\x00\x00swow{$maskedMessage}");
 $frame->resetHeader();
