@@ -377,18 +377,17 @@ static PHP_METHOD(Swow_Buffer, isFull)
     RETURN_BOOL(buffer->length == buffer->size);
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO_EX(arginfo_class_Swow_Buffer_realloc, 0)
-    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, newSize, IS_LONG, 0, "0")
+ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO_EX(arginfo_class_Swow_Buffer_realloc, 1)
+    ZEND_ARG_TYPE_INFO(0, newSize, IS_LONG, 0)
 ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Buffer, realloc)
 {
     SWOW_BUFFER_GETTER(sbuffer, buffer);
     SWOW_BUFFER_CHECK_LOCK(sbuffer);
-    zend_long new_size = 0;
+    zend_long new_size;
 
-    ZEND_PARSE_PARAMETERS_START(0, 1)
-        Z_PARAM_OPTIONAL
+    ZEND_PARSE_PARAMETERS_START(1, 1)
         Z_PARAM_LONG(new_size)
     ZEND_PARSE_PARAMETERS_END();
 
