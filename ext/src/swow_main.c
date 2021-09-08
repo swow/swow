@@ -330,6 +330,9 @@ PHP_MINFO_FUNCTION(swow)
     php_info_print_table_row(2, "Link", "https://github.com/swow/swow");
     php_info_print_table_row(2, "Contact", "Twosee <twosee@php.net>");
     php_info_print_table_row(2, "Version", SWOW_VERSION SWOW_GIT_VERSION " ( " SWOW_VERSION_SUFFIX SWOW_VERSION_SUFFIX_EXT " )");
+    str.s = zend_strpprintf(0, "%s %s", __DATE__, __TIME__);
+    php_info_print_table_row(2, "Built", str.s->val);
+    zend_string_release(str.s);
     php_info_print_table_row(2, "Context", SWOW_COROUTINE_CONTEXT_TYPE);
     php_info_print_table_row(2, "Scheduler", "libuv-event");
 #if defined(CAT_HAVE_MSAN) || defined(CAT_HAVE_ASAN) || defined(CAT_HAVE_UBSAN)
