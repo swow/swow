@@ -95,18 +95,23 @@ SWOW_API void swow_buffer_virtual_write_no_seek(swow_buffer_t *sbuffer, size_t l
     swow_buffer__virtual_write(sbuffer, length);
 }
 
-static zend_always_inline void swow_buffer_init(swow_buffer_t *sbuffer)
+static zend_always_inline void swow_buffer_reset(swow_buffer_t *sbuffer)
 {
     sbuffer->offset = 0;
     sbuffer->locked = cat_false;
     sbuffer->shared = cat_false;
 }
 
+static zend_always_inline void swow_buffer_init(swow_buffer_t *sbuffer)
+{
+    cat_buffer_init(&sbuffer->buffer);
+    swow_buffer_reset(sbuffer);
+}
+
 static zend_object *swow_buffer_create_object(zend_class_entry *ce)
 {
     swow_buffer_t *sbuffer = swow_object_alloc(swow_buffer_t, ce, swow_buffer_handlers);
 
-    cat_buffer_init(&sbuffer->buffer);
     swow_buffer_init(sbuffer);
 
     return &sbuffer->std;
@@ -127,61 +132,23 @@ static void swow_buffer_free_object(zend_object *object)
     swow_buffer_t *_sbuffer = getThisBuffer(); \
     CAT_BUFFER_GETTER(_sbuffer, _buffer)
 
-#define SWOW_BUFFER_CAN_BE_SHARED(sbuffer, buffer, string, _offset, length) \
-    ((buffer)->value == NULL && sbuffer->offset == 0 && _offset == 0 && (size_t) length == ZSTR_LEN(string))
-
-#define SWOW_BUFFER_SHARED(sbuffer) do { \
-    (sbuffer)->shared = cat_true; \
-} while (0)
-
-#define SWOW_BUFFER_UNSHARED(sbuffer) do { \
-    (sbuffer)->shared = cat_false; \
-} while (0)
-
-static void swow_buffer_separate_by_handle(cat_buffer_t *buffer)
+static zend_never_inline void swow_buffer_separate(swow_buffer_t *sbuffer)
 {
-    zend_string *string = swow_buffer_get_string_from_handle(buffer);
-
-    if (GC_REFCOUNT(string) != 1 || ZSTR_IS_INTERNED(string) || (GC_FLAGS(string) & IS_STR_PERSISTENT)) {
-        cat_buffer_t new_buffer;
-        cat_buffer_dup(buffer, &new_buffer);
-        cat_buffer_close(buffer);
-        *buffer = new_buffer;
-    }
+    cat_buffer_t new_buffer;
+    cat_buffer_dup(&sbuffer->buffer, &new_buffer);
+    cat_buffer_close(&sbuffer->buffer);
+    sbuffer->buffer = new_buffer;
 }
 
-#define SWOW_BUFFER_TRY_UNSHARED(sbuffer, buffer) do { \
-    if (UNEXPECTED((sbuffer)->shared)) { \
-        swow_buffer_separate_by_handle(buffer); \
-        SWOW_BUFFER_UNSHARED(sbuffer); \
-    } \
-} while (0)
-
-#ifdef CAT_DEBUG
-#define SWOW_BUFFER_UNSHARED_START(sbuffer, buffer) do { \
-    const char *__old_value = (buffer)->value; (void) __old_value;
-#else
-#define SWOW_BUFFER_UNSHARED_START(_sbuffer, _buffer)
-#endif
-
-#ifdef CAT_DEBUG
-#define SWOW_BUFFER_UNSHARED_END(sbuffer, buffer) \
-        ZEND_ASSERT(((buffer)->value != __old_value) && "expect buffer always change here"); \
-        SWOW_BUFFER_UNSHARED(sbuffer); \
-} while (0)
-#else
-#define SWOW_BUFFER_UNSHARED_END(sbuffer, buffer) \
-        SWOW_BUFFER_UNSHARED(sbuffer)
-#endif
-
-#define SWOW_BUFFER_UNSHARED_CHECK_START(_sbuffer, _buffer) do { \
-    const char *__old_value = _buffer->value;
-
-#define SWOW_BUFFER_UNSHARED_CHECK_END(_sbuffer, _buffer) \
-    if (_buffer->value != __old_value) { \
-        SWOW_BUFFER_UNSHARED(_sbuffer); \
-    } \
-} while (0)
+/* COW (copy on write) */
+static zend_always_inline void swow_buffer_cow(swow_buffer_t *sbuffer)
+{
+    zend_string *string = swow_buffer_get_string_from_handle(&sbuffer->buffer);
+    if (GC_REFCOUNT(string) != 1 || ZSTR_IS_INTERNED(string) || (GC_FLAGS(string) & IS_STR_PERSISTENT)) {
+        swow_buffer_separate(sbuffer);
+    }
+    sbuffer->shared = cat_false;
+}
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Buffer_alignSize, ZEND_RETURN_VALUE, 0, IS_LONG, 0)
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, size, IS_LONG, 0, "0")
@@ -396,18 +363,17 @@ static PHP_METHOD(Swow_Buffer, realloc)
         RETURN_THROWS();
     }
 
-    SWOW_BUFFER_UNSHARED_CHECK_START(sbuffer, buffer) {
-        cat_bool_t ret;
+    do {
+        const char *old_buffer_value = buffer->value;
 
-        ret = cat_buffer_realloc(buffer, new_size);
+        (void) cat_buffer_realloc(buffer, new_size);
 
-        if (UNEXPECTED(!ret)) {
-            swow_throw_exception_with_last(swow_buffer_exception_ce);
-            RETURN_THROWS();
+        if (buffer->value != old_buffer_value) {
+            sbuffer->shared = cat_false;
         }
-    } SWOW_BUFFER_UNSHARED_CHECK_END(sbuffer, buffer);
+    } while (0);
 
-    /* shrink lead to overflow */
+    /* realloc may lead offset to overflow if new_size is too small */
     if (UNEXPECTED(sbuffer->offset > buffer->length)) {
         sbuffer->offset = buffer->length;
     }
@@ -435,17 +401,10 @@ static PHP_METHOD(Swow_Buffer, extend)
         RETURN_THROWS();
     }
 
-    /* if extend success, buffer value always changed */
-    SWOW_BUFFER_UNSHARED_START(sbuffer, buffer) {
-        cat_bool_t ret;
+    (void) cat_buffer_extend(buffer, recommend_size);
 
-        ret = cat_buffer_extend(buffer, recommend_size);
-
-        if (UNEXPECTED(!ret)) {
-            swow_throw_exception_with_last(swow_buffer_exception_ce);
-            RETURN_THROWS();
-        }
-    } SWOW_BUFFER_UNSHARED_END(sbuffer, buffer);
+    /* buffer value always changed after extended */
+    sbuffer->shared = cat_false;
 
     RETURN_THIS();
 }
@@ -667,25 +626,17 @@ static PHP_METHOD(Swow_Buffer, write)
         RETURN_THIS();
     }
 
-    if (SWOW_BUFFER_CAN_BE_SHARED(sbuffer, buffer, string, offset, length)) {
+    if (buffer->value == NULL && offset == 0 && (size_t) length == ZSTR_LEN(string)) {
+        ZEND_ASSERT(sbuffer->offset == 0);
         /* Notice: string maybe interned, so we must use zend_string_addref() here */
         zend_string_addref(string);
         buffer->value = ZSTR_VAL(string);
         buffer->size = buffer->length = ZSTR_LEN(string);
-        SWOW_BUFFER_SHARED(sbuffer);
+        sbuffer->shared = cat_true;
     } else {
-        cat_bool_t ret;
-
-        SWOW_BUFFER_TRY_UNSHARED(sbuffer, buffer);
-
-        ret = cat_buffer_write(buffer, sbuffer->offset, ZSTR_VAL(string) + offset, length);
-
-        if (UNEXPECTED(!ret)) {
-            swow_throw_exception_with_last(swow_buffer_exception_ce);
-            RETURN_THROWS();
-        }
+        swow_buffer_cow(sbuffer);
+        (void) cat_buffer_write(buffer, sbuffer->offset, ZSTR_VAL(string) + offset, length);
     }
-
     sbuffer->offset += length;
 
     RETURN_THIS();
@@ -711,11 +662,12 @@ static PHP_METHOD(Swow_Buffer, truncate)
         RETURN_THROWS();
     }
 
-    SWOW_BUFFER_TRY_UNSHARED(sbuffer, buffer);
+    swow_buffer_cow(sbuffer);
 
     cat_buffer_truncate(buffer, length);
+
     if (sbuffer->offset > buffer->length) {
-        /* offset right overflow, reset to zero */
+        /* offset right overflow, reset to eof */
         sbuffer->offset = buffer->length;
     }
 
@@ -749,7 +701,7 @@ static PHP_METHOD(Swow_Buffer, truncateFrom)
         RETURN_THROWS();
     }
 
-    SWOW_BUFFER_TRY_UNSHARED(sbuffer, buffer);
+    swow_buffer_cow(sbuffer);
 
     cat_buffer_truncate_from(buffer, offset, length);
 
@@ -777,7 +729,7 @@ static PHP_METHOD(Swow_Buffer, clear)
 
     ZEND_PARSE_PARAMETERS_NONE();
 
-    SWOW_BUFFER_TRY_UNSHARED(sbuffer, buffer);
+    swow_buffer_cow(sbuffer);
 
     cat_buffer_clear(buffer);
     sbuffer->offset = 0;
@@ -800,9 +752,11 @@ static PHP_METHOD(Swow_Buffer, fetchString)
     ZEND_PARSE_PARAMETERS_NONE();
 
     value = cat_buffer_fetch(buffer);
+
     if (UNEXPECTED(value == NULL)) {
         RETURN_EMPTY_STRING();
     }
+
     sbuffer->offset = 0;
 
     RETURN_STR((zend_string *) (value - offsetof(zend_string, val)));
@@ -810,6 +764,7 @@ static PHP_METHOD(Swow_Buffer, fetchString)
 
 #define arginfo_class_Swow_Buffer_dupString arginfo_class_Swow_Buffer_getString
 
+/* return string copy immediately */
 static PHP_METHOD(Swow_Buffer, dupString)
 {
     SWOW_BUFFER_GETTER(sbuffer, buffer);
@@ -829,6 +784,7 @@ static PHP_METHOD(Swow_Buffer, toString)
     ZEND_PARSE_PARAMETERS_NONE();
 
     string = swow_buffer_fetch_string(getThisBuffer());
+
     if (UNEXPECTED(string == NULL)) {
         RETURN_EMPTY_STRING();
     }
@@ -848,7 +804,7 @@ static PHP_METHOD(Swow_Buffer, close)
     ZEND_PARSE_PARAMETERS_NONE();
 
     cat_buffer_close(buffer);
-    swow_buffer_init(sbuffer);
+    swow_buffer_reset(sbuffer);
 }
 
 #define arginfo_class_Swow_Buffer___toString arginfo_class_Swow_Buffer_toString
