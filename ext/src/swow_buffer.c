@@ -143,11 +143,13 @@ static zend_never_inline void swow_buffer_separate(swow_buffer_t *sbuffer)
 /* COW (copy on write) */
 static zend_always_inline void swow_buffer_cow(swow_buffer_t *sbuffer)
 {
-    zend_string *string = swow_buffer_get_string_from_handle(&sbuffer->buffer);
-    if (GC_REFCOUNT(string) != 1 || ZSTR_IS_INTERNED(string) || (GC_FLAGS(string) & IS_STR_PERSISTENT)) {
-        swow_buffer_separate(sbuffer);
+    if (sbuffer->buffer.value != NULL) {
+        zend_string *string = swow_buffer_get_string_from_handle(&sbuffer->buffer);
+        if (GC_REFCOUNT(string) != 1 || ZSTR_IS_INTERNED(string) || (GC_FLAGS(string) & IS_STR_PERSISTENT)) {
+            swow_buffer_separate(sbuffer);
+        }
+        sbuffer->shared = cat_false;
     }
-    sbuffer->shared = cat_false;
 }
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Buffer_alignSize, ZEND_RETURN_VALUE, 0, IS_LONG, 0)
@@ -732,7 +734,7 @@ static PHP_METHOD(Swow_Buffer, clear)
     swow_buffer_cow(sbuffer);
 
     cat_buffer_clear(buffer);
-    sbuffer->offset = 0;
+    swow_buffer_reset(sbuffer);
 
     RETURN_THIS();
 }
@@ -757,7 +759,7 @@ static PHP_METHOD(Swow_Buffer, fetchString)
         RETURN_EMPTY_STRING();
     }
 
-    sbuffer->offset = 0;
+    swow_buffer_reset(sbuffer);
 
     RETURN_STR((zend_string *) (value - offsetof(zend_string, val)));
 }
