@@ -752,12 +752,16 @@ static PHP_METHOD(Swow_Buffer, truncateFrom)
     SWOW_BUFFER_TRY_UNSHARED(sbuffer, buffer);
 
     cat_buffer_truncate_from(buffer, offset, length);
-    if (sbuffer->offset >= offset) {
-        /* offset should be reset to the same position of data */
-        sbuffer->offset -= offset;
-    } else {
+
+    if (sbuffer->offset < offset) {
         /* offset target has been removed, reset to zero */
         sbuffer->offset = 0;
+    } else if (sbuffer->offset > (offset + buffer->length)) {
+        /* offset right overflow, reset to eof */
+        sbuffer->offset = buffer->length;
+    } else {
+        /* offset should be reset to the same position of data */
+        sbuffer->offset -= offset;
     }
 
     RETURN_THIS();
