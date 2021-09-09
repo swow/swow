@@ -4,8 +4,6 @@ swow_buffer: alignSize getSize getLength getAvailableSize getReadableLength getW
 <?php
 require __DIR__ . '/../include/skipif.php';
 ?>
---XFAIL--
-alignSize implementation problem
 --FILE--
 <?php
 require __DIR__ . '/../include/bootstrap.php';
