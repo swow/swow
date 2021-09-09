@@ -27,7 +27,6 @@ if ('Windows' === PHP_OS_FAMILY) {
     $shell = 'CMD /C';
     $cmd = PHP_BINARY;
 } else {
-    notice("Setting nolimit to {$NOLIMIT}" . PHP_EOL);
     $shell = 'sh -c';
     $cmd = "{ ulimit -n {$NOLIMIT} || echo 'Cannot set nolimit to {$NOLIMIT}, some tests may fail.' ; } && NO_INTERACTION=1 " . PHP_BINARY;
 }
@@ -35,7 +34,6 @@ if ('Windows' === PHP_OS_FAMILY) {
 if (!extension_loaded('Swow')) {
     $enable_swow = '-d extension=swow';
     $check = '-d extension=swow --ri swow';
-    notice('Checking if we have swow built' . PHP_EOL);
     $status = passthru(sprintf('%s "%s %s"', $shell, $cmd, $check));
     br();
     if ($status !== 0) {
@@ -49,6 +47,9 @@ $test = "-n {$workspace}/tests/runner/run-tests.php -P {$enable_swow} --show-dif
 
 $myArgs = array_map('escapeshellarg', $argv);
 array_shift($myArgs);
+if (empty($myArgs)) {
+    $myArgs = ['ext'];
+}
 $myArgs = escapeshellarg(implode(' ', $myArgs));
 
 notice('Start testing Swow');
