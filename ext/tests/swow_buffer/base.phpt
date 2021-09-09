@@ -52,6 +52,6 @@ object(Swow\Buffer)#%d (%d) {
   int(9)
 }
 string(9) "foobarcar"
-string(0) ""
+string(9) "foobarcar"
 string(9) "foobarcar"
 string(9) "foobarcar"
