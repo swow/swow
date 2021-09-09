@@ -85,6 +85,9 @@ ffi_sleep($blocking_time);
 
 $watcher->resume();
 
+echo 'Done' . PHP_LF;
+
 ?>
 --EXPECTREGEX--
 (?:Warning: <(?:Watch-Dog)> [\S ]+\n)+I am back
+Done

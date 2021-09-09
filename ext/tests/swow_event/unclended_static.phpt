@@ -18,5 +18,8 @@ $foo = new class {
     }
 };
 
+echo 'Done' . PHP_LF;
+
 ?>
 --EXPECT--
+Done

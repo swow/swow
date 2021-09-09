@@ -30,7 +30,10 @@ try {
     echo $exception->getMessage() . PHP_LF;
 }
 
+echo 'Done' . PHP_LF;
+
 ?>
 --EXPECT--
 Serialization of 'Swow\Coroutine' is not allowed
 Serialization of 'TestCoroutine' is not allowed
+Done

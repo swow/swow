@@ -39,6 +39,8 @@ while (true) {
     $count++;
 }
 
+echo 'Never here' . PHP_LF;
+
 ?>
 --EXPECTREGEX--
 int\(0\)

@@ -46,6 +46,7 @@ build_phar(__DIR__ . DIRECTORY_SEPARATOR . 'phartest3.phar', TEST_INCLUDE);
 rename(__DIR__ . DIRECTORY_SEPARATOR . 'phartest3.phar', __DIR__ . DIRECTORY_SEPARATOR . 'phartest3');
 passthru(PHP_BINARY . $ext_enable . __DIR__ . DIRECTORY_SEPARATOR . 'phartest3');
 
+echo "Done\n";
 ?>
 --CLEAN--
 <?php
@@ -75,3 +76,4 @@ Class1 run() is called
 Class2 initializing
 Class2 run() is called
 Class1 initializing
+Done

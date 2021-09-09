@@ -32,6 +32,8 @@ while (true) {
     $count++;
 }
 
+echo 'Never here' . PHP_LF;
+
 ?>
 --EXPECTF--
 int(%d)

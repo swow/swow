@@ -42,6 +42,8 @@ $memoryUsages[2] = memory_get_usage();
 Assert::lessThan($memoryUsages[1] - $memoryUsages[0], $buffer::PAGE_SIZE / 2); // 0 memory copy
 Assert::lessThan($memoryUsages[2] - $memoryUsages[1], $buffer::PAGE_SIZE / 2); // 0 memory copy (ownership changed)
 
+echo 'Done' . PHP_LF;
+
 ?>
 --EXPECTF--
 object(Swow\Buffer)#%d (%d) {
@@ -77,3 +79,4 @@ object(Swow\Buffer)#%d (%d) {
   int(5)
 }
 string(13) "{"foo":"bar"}"
+Done

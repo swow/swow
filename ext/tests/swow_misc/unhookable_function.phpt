@@ -25,9 +25,9 @@ try {
     echo "caught a PHP8 exception\n";
 }
 
-echo "done\n";
+echo 'Done' . PHP_LF;
 ?>
 --EXPECTREGEX--
 caught a (PHP7 warning|PHP8 exception)
 caught a (PHP7 warning|PHP8 exception)
-done
+Done

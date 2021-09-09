@@ -8,9 +8,14 @@ require __DIR__ . '/../include/skipif.php';
 <?php
 require __DIR__ . '/../include/bootstrap.php';
 
+register_shutdown_function(function (){
+    echo 'Done' . PHP_LF;
+});
+
 Swow\Coroutine::getCurrent()->kill();
 
-echo 'Never here and keep silent' . PHP_LF;
+echo 'Never here' . PHP_LF;
 
 ?>
 --EXPECT--
+Done

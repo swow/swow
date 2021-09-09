@@ -40,9 +40,12 @@ $coroutine = Swow\Coroutine::run(function () {
 });
 Assert::same($coroutine->getExitStatus(), 1);
 
+echo 'Done' . PHP_LF;
+
 ?>
 --EXPECTF--
 0
 1
 2
 3
+Done

@@ -22,7 +22,7 @@ if (PHP_INT_MAX > 2147483647) {
     }
 }
 
-echo "done\n";
+echo "Done\n";
 ?>
 --EXPECT--
-done
+Done

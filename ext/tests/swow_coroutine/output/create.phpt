@@ -20,8 +20,11 @@ Swow\Coroutine::run(function () {
 });// close 1
 // close 0
 
+echo 'Done' . PHP_LF;
+
 ?>
 --EXPECT--
 2
 1
 0
+Done

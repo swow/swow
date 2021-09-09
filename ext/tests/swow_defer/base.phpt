@@ -29,8 +29,11 @@ defer(function () {
     echo '3' . PHP_LF;
 });
 
+echo 'Done' . PHP_LF;
+
 ?>
 --EXPECT--
+Done
 3
 2
 1

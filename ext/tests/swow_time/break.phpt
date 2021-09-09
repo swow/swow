@@ -58,7 +58,7 @@ $co->resume();
 $end = microtime(true);
 Assert::lessThan($end - $start, LONG_TIME * 1000);
 
-echo 'done';
+echo 'Done' . PHP_LF;
 ?>
 --EXPECT--
 start sleep(5)
@@ -66,4 +66,4 @@ start msleep(5000)
 start usleep(5000000)
 start time_nanosleep(5, 0)
 start time_sleep_until(now + 5000)
-done
+Done

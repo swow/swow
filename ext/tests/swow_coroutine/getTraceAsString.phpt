@@ -34,6 +34,8 @@ $coroutine = Swow\Coroutine::run(function () {
 echo $coroutine->getTraceAsString() . PHP_LF;
 $coroutine->resume();
 
+echo 'Done' . PHP_LF;
+
 ?>
 --EXPECTF--
 #0 %s(%d): Swow\Coroutine::yield()
@@ -42,3 +44,4 @@ $coroutine->resume();
 #3 %s(%d): {closure}()
 #4 [internal function]: {closure}()
 #5 {main}
+Done

@@ -143,7 +143,7 @@ if($count != TEST_THREADS){
     fprintf(STDERR, "not all coro done, that's impossible\n");
 }
 
-var_dump("done");
+echo 'Done' . PHP_LF;
 ?>
 --CLEAN--
 <?php
@@ -154,4 +154,4 @@ string(1) "1"
 string(1) "a"
 string(1) "2"
 string(1) "b"
-string(4) "done"
+Done

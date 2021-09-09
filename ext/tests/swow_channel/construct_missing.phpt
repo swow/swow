@@ -14,6 +14,8 @@ $channel = new class extends Swow\Channel {
 };
 $channel->push(true);
 
+echo 'Never here' . PHP_LF;
+
 ?>
 --EXPECTF--
 Fatal error: Uncaught Error: %s@anonymous must construct first in %s:%d

@@ -11,10 +11,12 @@ require __DIR__ . '/../include/bootstrap.php';
 $coroutine = new Swow\Coroutine(function () use (&$coroutine) {
     echo 'In' .PHP_LF;
     $coroutine->resume();
-    echo 'Never here';
+    echo 'Never here' . PHP_LF;
 });
 echo 'Resume' . PHP_LF;
 $coroutine->resume();
+
+echo 'Done' . PHP_LF;
 
 ?>
 --EXPECTF--
@@ -27,3 +29,4 @@ Stack trace:
 #1 [internal function]: {closure}()
 #2 {main}
   thrown in %s on line %d
+Done

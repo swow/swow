@@ -37,7 +37,6 @@ for ($n = 3; $n--;) {
         ->pop($channel3)
         ->commit();
     $data = $s->fetch();
-    echo $data . PHP_LF;
     if ($channel === $channel1) {
         Assert::same($data, 'one');
     } elseif ($channel === $channel2) {
@@ -48,6 +47,7 @@ for ($n = 3; $n--;) {
         Assert::false('impossible');
     }
     Assert::same($s->getLastOpcode(), Channel::OPCODE_POP);
+    echo $data . PHP_LF;
 }
 
 ?>

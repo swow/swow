@@ -23,9 +23,12 @@ Swow\Coroutine::run(function () {
 }); // [#3] destroyed and output: 2 3
 sleep(0);
 
+echo 'Done' . PHP_LF;
+
 ?>
 --EXPECT--
 1
 2
 3
 4
+Done

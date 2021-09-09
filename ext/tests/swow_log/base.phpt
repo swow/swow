@@ -18,7 +18,7 @@ $types = Log::getModuleTypes();
 Assert::integer($types);
 Log::setModuleTypes($types);
 
-echo "done\n";
+echo 'Done' . PHP_LF;
 ?>
 --EXPECT--
-done
+Done
