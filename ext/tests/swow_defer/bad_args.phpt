@@ -10,6 +10,10 @@ require __DIR__ . '/../include/bootstrap.php';
 
 use Swow\Defer;
 
+set_error_handler(function ($errno, $errstr, $errfile, $errline) {
+    throw new Error($errstr, $errno);
+}, E_WARNING);
+
 Assert::throws(function () {
     // argument must be a callable
     Defer('I am not a callback');
