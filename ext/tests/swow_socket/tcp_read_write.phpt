@@ -90,7 +90,7 @@ class TestMethod
      */
     public function __construct()
     {
-        $this->offset = random_int(0, strlen(static::$testString));
+        $this->offset = random_int(0, strlen(static::$testString) - 1);
     }
 
     /**
