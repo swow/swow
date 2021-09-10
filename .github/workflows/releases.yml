@@ -104,7 +104,7 @@ jobs:
             ${{ env.tools_path }}
             !${{ env.tools_path }}\php\ext\php_swow.dll
             !${{ env.tools_path }}\php\php.ini
-          key: buildenv-v4-${{ matrix.arch }}-${{ matrix.ts }}-${{ steps.cacheprepare.outputs.phpver }}-${{ steps.cacheprepare.outputs.devpackver }}-${{ steps.cacheprepare.outputs.downloadeddeps }}-${{ steps.cacheprepare.outputs.phpsdkver }}
+          key: buildenv-v1-${{ matrix.arch }}-${{ matrix.ts }}-${{ steps.cacheprepare.outputs.phpver }}-${{ steps.cacheprepare.outputs.devpackver }}-${{ steps.cacheprepare.outputs.downloadeddeps }}-${{ steps.cacheprepare.outputs.phpsdkver }}
       - name: Build Swow extension
         id: ext-build
         uses: ./.github/workflows/winext

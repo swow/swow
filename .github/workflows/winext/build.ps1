@@ -41,7 +41,7 @@ if (0 -Ne $lastexitcode){
 if ("${env:FIX_PICKLE}" -Eq "1"){
     info "Modify config.pickle.h to avoid C4005"
     $picklefn = "${env:DEVPACK_PATH}\include\main\config.pickle.h"
-    $orig = Get-Content $picklefn
+    $orig = Get-Content -Raw $picklefn
     $modified = $orig
 
     $definitions = @(
@@ -61,7 +61,8 @@ if ("${env:FIX_PICKLE}" -Eq "1"){
         $re = "^(\s*#\s*define\s*" + $definition + ".+)$"
         $modified = $modified -Replace ($re, '// $1')
     }
-    $modified | Out-File $picklefn
+    # avoid utf8 bom
+    [System.IO.File]::WriteAllLines($picklefn, $modified)
 }
 
 info "Start nmake"
