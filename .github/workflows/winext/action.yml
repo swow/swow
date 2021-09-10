@@ -136,6 +136,22 @@ runs:
         }
         exit $ret
 
+    - name: Workaround for extension build
+      shell: php {0}
+      run: |
+        <?php
+        file_put_contents('ext/src/swow_main.c', str_replace(
+            '    STANDARD_MODULE_HEADER',
+            <<<C
+        #if ZEND_MODULE_API_NO == 20210903
+        #undef ZEND_MODULE_API_NO
+        #define ZEND_MODULE_API_NO 20210902 // workaround
+        #endif
+            STANDARD_MODULE_HEADER
+        C,
+            file_get_contents('ext/src/swow_main.c')
+        ));
+
     - name: Build extension
       shell: cmd /c ECHO ::group::Start build extension && %TOOLS_PATH%\env.bat {0}
       env:
