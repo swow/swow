@@ -23,10 +23,12 @@ $headers = @{
     "content-type"="application/json";
     "authorization"="Bearer ${Token}";
 }
-
-$ret = fetchjson `
-    -Uri "https://api.github.com/repos/$Repo/releases/tags/$TagName" `
-    -Headers $headers
+try {
+    $ret = fetchjson `
+        -Uri "https://api.github.com/repos/$Repo/releases/tags/$TagName" `
+        -Headers $headers
+} catch {
+}
 if(!$ret){
     $data = @{
         "tag_name"=$TagName;
