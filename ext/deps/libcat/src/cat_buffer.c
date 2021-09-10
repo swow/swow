@@ -223,15 +223,9 @@ CAT_API cat_bool_t cat_buffer_write(cat_buffer_t *buffer, size_t offset, const c
         if (unlikely(!cat_buffer_extend(buffer, new_length))) {
             return cat_false;
         }
-    } else {
-        if (unlikely(buffer->value == NULL)) {
-            /* initialized but not allocted */
-            if (unlikely(!cat_buffer__alloc(buffer, buffer->size))) {
-                return cat_false;
-            }
-        }
     }
     if (length > 0) {
+        // Do not use memcpy, ptr maybe at the same scope with dest
         memmove(buffer->value + offset, ptr, length);
         if (new_length > buffer->length) {
             cat_buffer__update(buffer, new_length);

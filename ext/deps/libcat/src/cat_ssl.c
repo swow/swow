@@ -749,7 +749,7 @@ CAT_API cat_ssl_ret_t cat_ssl_handshake(cat_ssl_t *ssl)
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
 #ifdef SSL3_FLAGS_NO_RENEGOTIATE_CIPHERS
         /* initial handshake done, disable renegotiation (CVE-2009-3555) */
-        if (connection->s3 && SSL_is_server(connection)) {
+        if (connection->s3 && SSL_is_server((SSL *) connection)) {
             connection->s3->flags |= SSL3_FLAGS_NO_RENEGOTIATE_CIPHERS;
         }
 #endif
