@@ -16,11 +16,11 @@ require __DIR__ . '/../include/bootstrap.php';
 use Swow\Coroutine;
 use Swow\WatchDog;
 
-function ffi_sleep($ns)
+function ffi_sleep(int $ns): void
 {
-    if (PHP_OS_FAMILY != 'Windows') {
+    if (PHP_OS_FAMILY !== 'Windows') {
         // mocking blocking with nanosleep at unix
-        $time_t = 'uint' . (string) (PHP_INT_SIZE * 8) . '_t';
+        $time_t = 'uint' . (PHP_INT_SIZE * 8) . '_t';
         $ffi = FFI::cdef(
             <<<DEF
 typedef struct timespec_t {
@@ -33,7 +33,7 @@ DEF
         $ts = $ffi->new('timespec');
         $ts->tv_sec = (int) floor($ns / 1e9);
         $ts->tv_nsec = $ns % (1000 * 1000 * 1000);
-        while ($ffi->nanosleep(\FFI::addr($ts), \FFI::addr($ts)) != 0) {
+        while ($ffi->nanosleep(\FFI::addr($ts), \FFI::addr($ts)) !== 0) {
             // do nothing
         }
     } else {
@@ -47,7 +47,6 @@ DEF
 }
 
 switch (PHP_OS_FAMILY) {
-    case 'Darwin':
     case 'Linux':
         // use default 100us
         $quantum = 100 * 1000;
@@ -56,9 +55,10 @@ switch (PHP_OS_FAMILY) {
         // windows have a 1ms+ timer resolution
         $quantum = 1 * 1000 * 1000; // 1ms
         break;
-    case 'Unknown':
+    case 'Darwin':
     case 'Solaris':
     case 'BSD':
+    case 'Unknown':
         // most UNIXs only support a 100hz/10ms timer resolution
         $quantum = 10 * 1000 * 1000; // 10ms
         break;
