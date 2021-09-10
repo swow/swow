@@ -43,14 +43,13 @@ if (!extension_loaded('Swow')) {
 } else {
     $enable_swow = '';
 }
-$test = "-n {$workspace}/tests/runner/run-tests.php -P {$enable_swow} --show-diff --show-slow 1000 --set-timeout 30 --color ";
-
-$myArgs = array_map('escapeshellarg', $argv);
-array_shift($myArgs);
-if (empty($myArgs)) {
-    $myArgs = ['ext'];
-}
-$myArgs = escapeshellarg(implode(' ', $myArgs));
+$options = "-n {$workspace}/tests/runner/run-tests.php -P {$enable_swow} --show-diff --show-slow 1000 --set-timeout 30 --color";
+$options = implode(' ', array_map('trim', explode(' ', $options)));
+$user_args = $argv;
+array_shift($user_args);
+$user_args = array_map('trim', $user_args);
+$user_args = array_map('escapeshellarg', $user_args);
+$user_args = escapeshellarg(implode(' ', $user_args));
 
 notice('Start testing Swow');
-exit(passthru(sprintf('%s "%s %s"%s', $shell, $cmd, $test, $myArgs)));
+exit(passthru(sprintf('%s "%s %s "%s', $shell, $cmd, $options, $user_args)));
