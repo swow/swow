@@ -44,12 +44,12 @@ Coroutine::run(function () use ($server, $client, $randoms, $wr) {
         $packet = $client->readString(TEST_MAX_LENGTH_HIGH);
         Assert::same($packet, $randoms[$n]);
     }
-    $client->close();
 });
 for ($n = 0; $n < TEST_MAX_REQUESTS_LOW; $n++) {
     $client->sendString($randoms[$n]);
 }
 WaitReference::wait($wr);
+$client->close();
 $server->close();
 
 echo 'Done' . PHP_LF;
