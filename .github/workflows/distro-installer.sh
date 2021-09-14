@@ -1,6 +1,7 @@
 #!/bin/sh
 #      ^ should be bash, but this is also for ash
 # install php+swow for different distros in docker
+# shellcheck shell=bash
 
 set -eo pipefail
 
@@ -53,7 +54,7 @@ installapk()
 {
     info Installing dependencies using apk
     apk update
-    apk add sqlite-dev libxml2-dev curl-dev openssl-dev alpine-sdk autoconf automake
+    apk add --no-progress sqlite-dev libxml2-dev curl-dev alpine-sdk autoconf automake
 }
 
 installzypper()
@@ -82,12 +83,12 @@ buildswow()
     ./configure --enable-swow-debug --enable-swow-curl --enable-swow-ssl
     info Building Swow
     make -j"${cpunum-2}" EXTRA_CFLAGS='-O2' >/tmp/build.log 2>/tmp/buildwarn.log || {
-        [ x"$CI" = xtrue ] && printf '::error::' 
+        [ "$CI" = true ] && printf '::error::' 
         cat /tmp/buildwarn.log
         exit 1
     }
     [ -s /tmp/buildwarn.log ] && {
-        [ x"$CI" = xtrue ] && printf '::warning::' 
+        [ "$CI" = true ] && printf '::warning::' 
         cat /tmp/buildwarn.log
     }
     info Installing Swow
