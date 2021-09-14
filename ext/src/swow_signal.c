@@ -23,6 +23,30 @@ SWOW_API zend_object_handlers swow_signal_handlers;
 
 SWOW_API zend_class_entry *swow_signal_exception_ce;
 
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Signal_kill, ZEND_RETURN_VALUE, 2, IS_VOID, 0)
+    ZEND_ARG_TYPE_INFO(0, pid, IS_LONG, 0)
+    ZEND_ARG_TYPE_INFO(0, signum, IS_LONG, 0)
+ZEND_END_ARG_INFO()
+
+static PHP_METHOD(Swow_Signal, kill)
+{
+    zend_long pid;
+    zend_long signum;
+    cat_bool_t ret;
+
+    ZEND_PARSE_PARAMETERS_START(2, 2)
+        Z_PARAM_LONG(pid)
+        Z_PARAM_LONG(signum)
+    ZEND_PARSE_PARAMETERS_END();
+
+    ret = cat_kill(pid, signum);
+
+    if (UNEXPECTED(!ret)) {
+        swow_throw_exception_with_last(swow_signal_exception_ce);
+        RETURN_THROWS();
+    }
+}
+
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Signal_wait, ZEND_RETURN_VALUE, 1, IS_VOID, 0)
     ZEND_ARG_TYPE_INFO(0, num, IS_LONG, 0)
     ZEND_ARG_TYPE_INFO(0, timeout, IS_LONG, 0)
@@ -50,6 +74,7 @@ static PHP_METHOD(Swow_Signal, wait)
 
 static const zend_function_entry swow_signal_methods[] = {
     PHP_ME(Swow_Signal, wait, arginfo_class_Swow_Signal_wait, ZEND_ACC_STATIC | ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Signal, kill, arginfo_class_Swow_Signal_kill, ZEND_ACC_STATIC | ZEND_ACC_PUBLIC)
     PHP_FE_END
 };
 

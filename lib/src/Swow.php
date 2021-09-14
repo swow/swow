@@ -511,10 +511,10 @@ namespace Swow
         public function isFull(): bool { }
 
         /**
-         * @param int $newSize [optional] = 0
+         * @param int $newSize [required]
          * @return $this
          */
-        public function realloc(int $newSize = 0) { }
+        public function realloc(int $newSize) { }
 
         /**
          * @param int $recommendSize [optional] = $this->getSize() * 2
@@ -1211,6 +1211,13 @@ namespace Swow
          * @return void
          */
         public static function wait(int $num, int $timeout): void { }
+
+        /**
+         * @param int $pid [required]
+         * @param int $signum [required]
+         * @return void
+         */
+        public static function kill(int $pid, int $signum): void { }
     }
 }
 
