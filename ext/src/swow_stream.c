@@ -799,7 +799,11 @@ static int swow_stream_enable_crypto(php_stream *stream,
                 }
             }
         }
-        return cat_socket_enable_crypto_ex(socket, &options, -1 /*FIXME: cat_time_tv2to(swow_sock->ssl.connect_timeout)*/) ? SUCCESS : FAILURE;
+        cat_timeout_t timeout = cat_time_tv2to(swow_sock->ssl.is_client ?
+            &swow_sock->ssl.connect_timeout :
+            &swow_sock->sock.timeout
+        );
+        return cat_socket_enable_crypto_ex(socket, &options,timeout) ? SUCCESS : FAILURE;
     } else if (!cparam->inputs.activate && encrypted) {
         /* deactivate - common for server/client */
         // cat_socket_disable_crypto(socket->internal->ssl);
