@@ -741,10 +741,10 @@ static int swow_stream_setup_crypto(php_stream *stream,
     swow_netstream_data_t *swow_sock, php_netstream_data_t *sock, cat_socket_t *socket,
     php_stream_xport_crypto_param *cparam)
 {
-	if (cat_socket_is_encrypted(socket)) {
+    if (cat_socket_is_encrypted(socket)) {
         php_error_docref(NULL, E_WARNING, "SSL/TLS already set-up for this stream");
         return FAILURE;
-	} else if (!sock->is_blocked && cat_socket_has_crypto(socket)) {
+    } else if (!sock->is_blocked && cat_socket_has_crypto(socket)) {
         return SUCCESS;
     }
 
@@ -951,16 +951,16 @@ static int swow_stream_set_tcp_option(php_stream *stream, int option, int value,
                 case STREAM_XPORT_OP_CONNECT_ASYNC: {
                     xparam->outputs.returncode = swow_stream_connect(stream, swow_sock, xparam, xparam->op == STREAM_XPORT_OP_CONNECT_ASYNC);
 #ifdef CAT_SSL
-					if (swow_sock->ssl.enable_on_connect && xparam->outputs.returncode == 0) {
+                    if (swow_sock->ssl.enable_on_connect && xparam->outputs.returncode == 0) {
                         /* TODO: ssl non-blocking handshake support
-						|| (xparam->op == STREAM_XPORT_OP_CONNECT_ASYNC &&
-						    xparam->outputs.returncode == 1 && xparam->outputs.error_code == EINPROGRESS */
-						if (php_stream_xport_crypto_setup(stream, swow_sock->ssl.method, NULL) < 0 ||
-								php_stream_xport_crypto_enable(stream, 1) < 0) {
-							php_error_docref(NULL, E_WARNING, "Failed to enable crypto");
-							xparam->outputs.returncode = -1;
-						}
-					}
+                        || (xparam->op == STREAM_XPORT_OP_CONNECT_ASYNC &&
+                            xparam->outputs.returncode == 1 && xparam->outputs.error_code == EINPROGRESS */
+                        if (php_stream_xport_crypto_setup(stream, swow_sock->ssl.method, NULL) < 0 ||
+                                php_stream_xport_crypto_enable(stream, 1) < 0) {
+                            php_error_docref(NULL, E_WARNING, "Failed to enable crypto");
+                            xparam->outputs.returncode = -1;
+                        }
+                    }
 #endif
                     return PHP_STREAM_OPTION_RETURN_OK;
                 }
@@ -1093,9 +1093,9 @@ static int swow_stream_close(php_stream *stream, int close_handle)
     }
 
 #ifdef CAT_SSL
-	if (swow_sock->ssl.url_name != NULL) {
-		pefree(swow_sock->ssl.url_name, php_stream_is_persistent(stream));
-	}
+    if (swow_sock->ssl.url_name != NULL) {
+        pefree(swow_sock->ssl.url_name, php_stream_is_persistent(stream));
+    }
 #endif
     pefree(swow_sock, php_stream_is_persistent(stream));
 
@@ -1229,7 +1229,7 @@ SWOW_API const php_stream_ops swow_stream_udg_socket_ops = {
 SWOW_API const php_stream_ops swow_stream_ssl_socket_ops = {
     swow_stream_write, swow_stream_read,
     swow_stream_close, swow_stream_flush,
-	"tcp_socket/ssl",
+    "tcp_socket/ssl",
     NULL, /* seek */
     swow_stream_cast,
     swow_stream_stat,
