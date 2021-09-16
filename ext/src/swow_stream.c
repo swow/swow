@@ -622,10 +622,12 @@ static int swow_stream_connect(php_stream *stream, swow_netstream_data_t *swow_s
             return -1;
         }
         bind_host = swow_stream_parse_ip_address_ex(Z_STRVAL_P(ztmp), Z_STRLEN_P(ztmp), &bind_port, xparam->want_errortext, &xparam->outputs.error_text);
+#if PHP_VERSION_ID < 70323 || (PHP_VERSION_ID < 70411 || PHP_VERSION_ID >= 70400)
         if (bind_host == NULL) {
             efree(host);
             return -1;
         }
+#endif
     }
 
 #ifdef SO_BROADCAST
