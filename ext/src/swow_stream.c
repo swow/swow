@@ -803,13 +803,13 @@ static int swow_stream_enable_crypto(php_stream *stream,
             &swow_sock->ssl.connect_timeout :
             &swow_sock->sock.timeout
         );
-        return cat_socket_enable_crypto_ex(socket, &options,timeout) ? SUCCESS : FAILURE;
+        return cat_socket_enable_crypto_ex(socket, &options,timeout) ? 1 : -1;
     } else if (!cparam->inputs.activate && encrypted) {
         /* deactivate - common for server/client */
         // cat_socket_disable_crypto(socket->internal->ssl);
-        return SUCCESS;
+        return 1;
     }
-    return FAILURE;
+    return -1;
 }
 #endif
 
