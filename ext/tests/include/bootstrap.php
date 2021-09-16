@@ -25,19 +25,21 @@ error_reporting(E_ALL);
 # constants
 
 define('PHP_LF', "\n");
-/** ============== Env =============== */
+/* ============== Env =============== */
 define('USE_VALGRIND', getenv('USE_ZEND_ALLOC') === '0');
-/** ============== Pressure ============== */
+/* ============== Pressure ============== */
 define('TEST_PRESSURE_DEBUG', 0);
 define('TEST_PRESSURE_MIN', 1);
 define('TEST_PRESSURE_LOW', 2);
 define('TEST_PRESSURE_MID', 3);
 define('TEST_PRESSURE_NORMAL', 4);
-define('TEST_PRESSURE_LEVEL',
+define(
+    'TEST_PRESSURE_LEVEL',
     (getenv('TEST_PRESSURE_DEBUG') == 1) ? TEST_PRESSURE_DEBUG :
         (USE_VALGRIND ? TEST_PRESSURE_LOW :
-            ((0) ? TEST_PRESSURE_MID : TEST_PRESSURE_NORMAL)));
-/** ============== Count ============== */
+            ((0) ? TEST_PRESSURE_MID : TEST_PRESSURE_NORMAL))
+);
+/* ============== Count ============== */
 define('TEST_MAX_CONCURRENCY', [1, 16, 32, 64, 256][TEST_PRESSURE_LEVEL]);
 define('TEST_MAX_CONCURRENCY_MID', [1, 8, 16, 32, 128][TEST_PRESSURE_LEVEL]);
 define('TEST_MAX_CONCURRENCY_LOW', [1, 4, 8, 16, 64][TEST_PRESSURE_LEVEL]);
@@ -51,8 +53,9 @@ define('TEST_MAX_LOOPS', (int) ([0.001, 1, 10, 100, 1000][TEST_PRESSURE_LEVEL] *
 define('TEST_MAX_PROCESSES', [1, 1, 2, 4, 8][TEST_PRESSURE_LEVEL]);
 
 # ini
-
-\Swow\Socket::setGlobalTimeout(30 * 1000);
+if (extension_loaded('Swow')) {
+    \Swow\Socket::setGlobalTimeout(30 * 1000);
+}
 
 # functions
 
@@ -65,9 +68,8 @@ function getRandomBytes(int $length = 64): string
     }
     $random = base64_encode($random);
     $random = str_replace(['/', '+', '='], ['x', 'y', 'z'], $random);
-    $random = substr($random, 0, $length);
 
-    return $random;
+    return substr($random, 0, $length);
 }
 
 function getRandomBytesArray(int $size, int $length = 64): array
@@ -96,6 +98,7 @@ function switchProcess(): void
 function isInTest(): bool
 {
     global $argv;
+
     return !(substr($argv[0], -5) === '.phpt');
 }
 
@@ -121,4 +124,22 @@ function pseudo_random_sleep(): void
     // simple LCG with fixed seed
     $seed = (75 * $seed + 74) % 65537;
     usleep($seed);
+}
+
+function swow_subprocess($args)
+{
+    $definitions = ' -d error_prepend_string=' .
+        ' -d error_append_string=' .
+        ' -d error_reporting=32767' .
+        ' -d display_errors=1' .
+        ' -d display_startup_errors=1' .
+        ' -d log_errors=0 ' .
+        ' -d html_errors=0 ' .
+        ' -d track_errors=0 ';
+    $loaded_modules = shell_exec(PHP_BINARY . ' -m');
+    if (strpos($loaded_modules, 'Swow') === false) {
+        $definitions .= '-dextension=swow ';
+    }
+
+    return shell_exec(PHP_BINARY . $definitions . $args . ' 2>&1');
 }

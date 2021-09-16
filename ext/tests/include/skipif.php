@@ -123,3 +123,18 @@ function skip_if_c_function_not_exist(string $def, ?string $lib = null): void
         skip('"' . $def . '" not usable');
     }
 }
+
+function skip_if_cannot_make_subprocess()
+{
+    skip('shell_exec is not callable', (!is_callable('shell_exec')) || (!is_callable('popen')));
+    $loaded_modules = shell_exec(PHP_BINARY . ' -m');
+    if (strpos($loaded_modules, 'Swow') === false) {
+        $loaded_modules = shell_exec(PHP_BINARY . ' -dextension=swow --ri swow');
+        if (
+            strpos($loaded_modules, 'Swow') === false ||
+            strpos($loaded_modules, 'Warning') !== false
+        ) {
+            skip('Swow is not present in TEST_PHP_EXECUTABLE and cannot load it via -dextension=swow');
+        }
+    }
+}
