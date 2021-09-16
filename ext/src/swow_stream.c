@@ -562,6 +562,21 @@ static inline int swow_stream_accept(php_stream *stream, swow_netstream_data_t *
         }
     }
 
+    if (xparam->outputs.client && server_sock->ssl.enable_on_connect) {
+        /* remove the client bit */
+        server_sock->ssl.method &= ~STREAM_CRYPTO_IS_CLIENT;
+        client_sock->ssl.method = server_sock->ssl.method;
+        if (php_stream_xport_crypto_setup(xparam->outputs.client, client_sock->ssl.method, NULL) < 0 ||
+            php_stream_xport_crypto_enable(xparam->outputs.client, 1) < 0
+        ) {
+            php_error_docref(NULL, E_WARNING, "Failed to enable crypto");
+            php_stream_close(xparam->outputs.client);
+            xparam->outputs.client = NULL;
+            xparam->outputs.returncode = -1;
+            return -1;
+        }
+    }
+
     return 0;
 
     _error:
