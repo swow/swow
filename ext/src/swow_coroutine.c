@@ -2011,6 +2011,7 @@ static HashTable *swow_coroutine_get_gc(ZEND_GET_GC_PARAMATERS)
 #define SWOW_COROUTINE_ERROR_CB_CHECK() \
     if (SWOW_COROUTINE_G(runtime_state) == SWOW_COROUTINE_RUNTIME_STATE_NONE) { \
         swow_call_original_zend_error_cb(type, error_filename, error_lineno, ZEND_ERROR_CB_LAST_ARG_RELAY); \
+        return; \
     }
 
 typedef void (*swow_error_cb_t)(int type, ZEND_ERROR_CB_FILENAME_T *
