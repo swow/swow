@@ -761,9 +761,14 @@ static int swow_stream_setup_crypto(php_stream *stream,
     if (cat_socket_is_encrypted(socket)) {
         php_error_docref(NULL, E_WARNING, "SSL/TLS already set-up for this stream");
         return FAILURE;
-    } else if (!sock->is_blocked && cat_socket_has_crypto(socket)) {
-        return SUCCESS;
     }
+    // else if (!sock->is_blocked && cat_socket_has_crypto(socket)) {
+    //     return SUCCESS;
+    // }
+
+	/* We need to do slightly different things based on client/server method
+	 * so lets remember which method was selected */
+	swow_sock->ssl.is_client = cparam->inputs.method & STREAM_CRYPTO_IS_CLIENT;
 
     return SUCCESS;
 }
@@ -776,7 +781,7 @@ static int swow_stream_enable_crypto(php_stream *stream,
 
     if (cparam->inputs.activate && !encrypted) {
         cat_socket_crypto_options_t options;
-        zend_bool is_client = cparam->inputs.method & STREAM_CRYPTO_IS_CLIENT;
+        zend_bool is_client = swow_sock->ssl.is_client;
         zval *val;
 
         cat_socket_crypto_options_init(&options, is_client);
