@@ -707,10 +707,10 @@ static PHP_METHOD(Swow_Buffer, truncateFrom)
 
     cat_buffer_truncate_from(buffer, offset, length);
 
-    if (sbuffer->offset < offset) {
+    if (sbuffer->offset < (size_t) offset) {
         /* offset target has been removed, reset to zero */
         sbuffer->offset = 0;
-    } else if (sbuffer->offset > (offset + buffer->length)) {
+    } else if (sbuffer->offset > (size_t) (offset + buffer->length)) {
         /* offset right overflow, reset to eof */
         sbuffer->offset = buffer->length;
     } else {
