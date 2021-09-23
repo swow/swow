@@ -181,13 +181,15 @@ if (PHP_SWOW != 'no') (function(){
     var LIBCAT_DIR = "deps\\libcat";
     var UV_DIR = LIBCAT_DIR + "\\deps\\libuv";
     var LLHTTP_DIR = LIBCAT_DIR + "\\deps\\llhttp";
+    var MULTIPART_PARSER_DIR = LIBCAT_DIR + "\\deps\\multipart_parser";
 
     // swow uses self
     ADD_FLAG('CFLAGS_SWOW', '/I "' + configure_module_dirname + '\\include"');
-    // swow uses libcat(libuv, llhttp)
+    // swow uses libcat(libuv, llhttp, multipart-parser)
     ADD_FLAG('CFLAGS_SWOW', '/I "' + configure_module_dirname + '\\' + LIBCAT_DIR + '\\include"');
     ADD_FLAG('CFLAGS_SWOW', '/I "' + configure_module_dirname + '\\' + UV_DIR + '/include"');
     ADD_FLAG('CFLAGS_SWOW', '/I "' + configure_module_dirname + '\\' + LLHTTP_DIR + '/include"');
+    ADD_FLAG('CFLAGS_SWOW', '/I "' + configure_module_dirname + '\\' + MULTIPART_PARSER_DIR + '"');
     // libcat uses cat_vm.h from swow
     ADD_FLAG('CFLAGS_SWOW_LIBCAT_OBJ', '/I "' + configure_module_dirname + '\\include"');
     // libcat uses self
@@ -197,6 +199,8 @@ if (PHP_SWOW != 'no') (function(){
     ADD_FLAG('CFLAGS_SWOW_LIBCAT_OBJ', '/I "' + configure_module_dirname + '\\' + UV_DIR + '/include"');
     // libcat uses llhttp
     ADD_FLAG('CFLAGS_SWOW_LIBCAT_OBJ', '/I "' + configure_module_dirname + '\\' + LLHTTP_DIR + '/include"');
+    // libcat uses multipart-parser
+    ADD_FLAG('CFLAGS_SWOW_LIBCAT_OBJ', '/I "' + configure_module_dirname + '\\' + MULTIPART_PARSER_DIR + '"');
     // libuv uses self
     ADD_FLAG('CFLAGS_SWOW_LIBUV_OBJ', '$(CFLAGS_SWOW_COMMON)');
     ADD_FLAG('CFLAGS_SWOW_LIBUV_OBJ', '/wd4090');
@@ -209,6 +213,9 @@ if (PHP_SWOW != 'no') (function(){
     // llhttp uses self
     ADD_FLAG('CFLAGS_SWOW_LLHTTP_OBJ', '$(CFLAGS_SWOW_COMMON)');
     ADD_FLAG('CFLAGS_SWOW_LLHTTP_OBJ', '/I "' + configure_module_dirname + '\\' + LLHTTP_DIR + '/include"');
+    // multipart-parser uses self
+    ADD_FLAG('CFLAGS_SWOW_LLHTTP_OBJ', '$(CFLAGS_SWOW_COMMON)');
+    ADD_FLAG('CFLAGS_SWOW_MULTIPART_PARSER_OBJ', '/I "' + configure_module_dirname + '\\' + MULTIPART_PARSER_DIR + '"');
 
     // sources
     var SWOW_SRC_DIR='src';
@@ -371,8 +378,10 @@ if (PHP_SWOW != 'no') (function(){
     ADD_FLAG("SWOW_GLOBAL_OBJS", "$(SWOW_LLHTTP_GLOBAL_OBJS)");
     ADD_FLAG("LIBS_SWOW", "$(SWOW_LLHTTP_GLOBAL_OBJS_RESP)");
 
-    //var mp_src = "multipart_parser.c";
-    //ADD_SOURCES("ext/swow/deps/libcat/deps/multipart_parser",  mp_src, "swow");
+    // multipart-parser sources
+    ADD_SOURCES(configure_module_dirname + '\\' + MULTIPART_PARSER_DIR, "multipart_parser.c", "swow_multipart_parser");
+    ADD_FLAG("SWOW_GLOBAL_OBJS", "$(SWOW_MULTIPART_PARSER_GLOBAL_OBJS)");
+    ADD_FLAG("LIBS_SWOW", "$(SWOW_MULTIPART_PARSER_GLOBAL_OBJS_RESP)");
 
     var shared = PHP_SWOW;
     if(PHP_SWOW.replace(/static/,"") != PHP_SWOW){

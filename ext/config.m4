@@ -636,6 +636,16 @@ EOF
       http.c \
       llhttp.c, SWOW_LLHTTP_INCLUDES, SWOW_LLHTTP_CFLAGS)
 
+    dnl add multipart-parser sources
+
+    SWOW_MULTIPART_PARSER_INCLUDES="-I${ext_srcdir}/deps/libcat/deps/multipart_parser"
+    SWOW_CAT_INCLUDES="${SWOW_CAT_INCLUDES} \$(SWOW_MULTIPART_PARSER_INCLUDES)"
+    SWOW_MULTIPART_PARSER_CFLAGS="${SWOW_MULTIPART_PARSER_CFLAGS} \$(SWOW_STD_CFLAGS)"
+    PHP_SUBST(SWOW_MULTIPART_PARSER_INCLUDES)
+    PHP_SUBST(SWOW_MULTIPART_PARSER_CFLAGS)
+    SWOW_ADD_SOURCES(deps/libcat/deps/multipart_parser,
+      multipart_parser.c, SWOW_MULTIPART_PARSER_INCLUDES, SWOW_MULTIPART_PARSER_CFLAGS)
+
     dnl prepare pkg-config
     if test -z "$PKG_CONFIG"; then
       AC_PATH_PROG(PKG_CONFIG, pkg-config, no)
