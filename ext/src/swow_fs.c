@@ -1354,7 +1354,7 @@ static int swow_stdiop_fs_seek(php_stream *stream, zend_off_t offset, int whence
         *newoffset = cat_fs_ftell(data->file);
         return ret;
     }
-} 
+}
 
 static int swow_stdiop_fs_cast(php_stream *stream, int castas, void **ret)
 {

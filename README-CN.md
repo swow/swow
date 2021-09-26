@@ -6,7 +6,7 @@
 [![ci][ci-badge]][ci-link]
 [![codecov][codecov-badge]][codecov-link]
 [![release][release-badge]][release-link]
-![❤️][made-with-love-badge]  
+![❤️][made-with-love-badge]
 ![php][supported-php-versions-badge]
 ![platform][supported-platforms-badge]
 ![architecture][supported-architectures-badge]

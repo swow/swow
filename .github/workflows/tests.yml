@@ -215,7 +215,7 @@ jobs:
         shell: pwsh
         id: ext-test
         continue-on-error: true
-        run: | 
+        run: |
           & C:\OpenCppCoverage\OpenCppCoverage.exe `
             --export_type binary:ext_test.cov `
             --sources ext\include `

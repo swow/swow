@@ -83,12 +83,12 @@ buildswow()
     ./configure --enable-swow-debug --enable-swow-curl --enable-swow-ssl
     info Building Swow
     make -j"${cpunum-2}" EXTRA_CFLAGS='-O2' >/tmp/build.log 2>/tmp/buildwarn.log || {
-        [ "$CI" = true ] && printf '::error::' 
+        [ "$CI" = true ] && printf '::error::'
         cat /tmp/buildwarn.log
         exit 1
     }
     [ -s /tmp/buildwarn.log ] && {
-        [ "$CI" = true ] && printf '::warning::' 
+        [ "$CI" = true ] && printf '::warning::'
         cat /tmp/buildwarn.log
     }
     info Installing Swow

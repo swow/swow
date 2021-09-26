@@ -69,7 +69,3 @@ jobs:
             -v `realpath swow/.github/workflows/distro-installer.sh`:/distro-installer.sh:ro \
             -e CI=true \
             ${{ matrix.distro.image }} /distro-installer.sh ${{ matrix.distro.pkg }}
-
-  
-
-

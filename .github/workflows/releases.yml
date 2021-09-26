@@ -45,7 +45,7 @@ jobs:
         id: getref
         shell: powershell
         run: |
-          $ref = git rev-parse HEAD 
+          $ref = git rev-parse HEAD
           Write-Host "::set-output name=ref::$ref"
       - name: Prepare caches
         id: cacheprepare
