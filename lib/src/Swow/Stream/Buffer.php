@@ -26,7 +26,7 @@ class Buffer extends \Swow\Buffer
         }
 
         $buffer = new static();
-        if ($body != '') {
+        if ($body !== '') {
             $buffer->write((string) $body);
         }
 

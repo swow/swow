@@ -68,7 +68,7 @@ class ExtensionGenerator
         $declarations = [];
 
         $namespacedGroups = [];
-        foreach (($this->extension->getClasses() + $this->extension->getFunctions()) as $functionOrClass) {
+        foreach ((array_merge($this->extension->getClasses(), $this->extension->getFunctions())) as $functionOrClass) {
             $namespacedGroups[$functionOrClass->getNamespaceName()][] = $functionOrClass;
         }
 
@@ -171,15 +171,11 @@ class ExtensionGenerator
     protected function getDeclarationPrefix(Reflector $reflector, bool $withSpace = false): string
     {
         $prefix = '';
-        if (method_exists($reflector, 'isFinal')) {
-            if ($reflector->isFinal()) {
-                $prefix .= 'final ';
-            }
+        if (method_exists($reflector, 'isFinal') && $reflector->isFinal()) {
+            $prefix .= 'final ';
         }
-        if (method_exists($reflector, 'isAbstract')) {
-            if ($reflector->isAbstract()) {
-                $prefix .= 'abstract ';
-            }
+        if (method_exists($reflector, 'isAbstract') && $reflector->isAbstract()) {
+            $prefix .= 'abstract ';
         }
         if (method_exists($reflector, 'getModifiers')) {
             $modifier = $this::MODIFIERS_MAP[$reflector->getModifiers()] ?? '';
@@ -209,7 +205,6 @@ class ExtensionGenerator
 
     /**
      * @param ReflectionFunction|ReflectionMethod $function
-     * @param string $prefix
      */
     protected function generateFunctionDeclaration(ReflectionFunctionAbstract $function): string
     {

@@ -65,11 +65,9 @@ class Response extends Message implements ResponseInterface
     }
 
     /**
-     * @param int $code
-     * @param string $reasonPhrase
      * @return $this
      */
-    public function withStatus($code, $reasonPhrase = '')
+    public function withStatus(int $code, string $reasonPhrase = '')
     {
         if ($reasonPhrase === '' && $code === $this->statusCode) {
             return $this;

@@ -56,10 +56,7 @@ class Request extends Message implements RequestInterface
         if ($uri !== '') {
             if (is_string($uri)) {
                 $this->setUriString($uri);
-            } else {
-                if (!($uri instanceof UriInterface)) {
-                    $uri = new Uri($uri);
-                }
+            } elseif ($uri instanceof UriInterface) {
                 $this->setUri($uri);
             }
         }
@@ -84,6 +81,7 @@ class Request extends Message implements RequestInterface
 
     /**
      * @param string $method
+     *
      * @return $this
      */
     public function withMethod($method)
@@ -221,6 +219,7 @@ class Request extends Message implements RequestInterface
 
     /**
      * @param mixed $requestTarget
+     *
      * @return $this
      */
     public function withRequestTarget($requestTarget)
