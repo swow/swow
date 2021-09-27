@@ -110,12 +110,6 @@ typedef enum
     SWOW_COROUTINE_RUNTIME_STATE_IN_SHUTDOWN
 } swow_coroutine_runtime_state_t;
 
-typedef struct
-{
-    swow_object_create_t original_create_object;
-    cat_coroutine_resume_t original_resume;
-} swow_coroutine_readonly_t;
-
 #ifdef SWOW_COROUTINE_USE_RATED
 typedef struct
 {
@@ -138,7 +132,6 @@ CAT_GLOBALS_STRUCT_BEGIN(swow_coroutine)
     /* internal special */
     cat_coroutine_resume_t original_resume;
     cat_coroutine_t *original_main;
-    swow_coroutine_readonly_t readonly;
 #ifdef SWOW_COROUTINE_USE_RATED
     swow_coroutine_rated_t rated;
 #endif
@@ -197,7 +190,6 @@ SWOW_API swow_coroutine_t *swow_coroutine_get_previous(const swow_coroutine_t *s
 /* globals (options) */
 SWOW_API size_t swow_coroutine_set_default_stack_page_size(size_t size);
 SWOW_API size_t swow_coroutine_set_default_c_stack_size(size_t size);
-SWOW_API void swow_coroutine_set_readonly(cat_bool_t enable);
 
 /* globals (getter) */
 SWOW_API swow_coroutine_t *swow_coroutine_get_current(void);

@@ -51,7 +51,6 @@ CAT_GLOBALS_CTOR_DECLARE_SZ(swow_coroutine)
 static cat_bool_t swow_coroutine_construct(swow_coroutine_t *scoroutine, zval *zcallable, size_t stack_page_size, size_t c_stack_size);
 static void swow_coroutine_shutdown(swow_coroutine_t *scoroutine);
 static ZEND_COLD void swow_coroutine_handle_cross_exception(zend_object *cross_exception);
-static ZEND_COLD cat_bool_t swow_coroutine_resume_deny(cat_coroutine_t *coroutine, cat_data_t *data, cat_data_t **retval);
 static ZEND_COLD void swow_coroutine_throw_unwind_exit(void);
 static zend_bool swow_coroutine_has_unwind_exit(zend_object *exception);
 
@@ -806,36 +805,6 @@ SWOW_API size_t swow_coroutine_set_default_c_stack_size(size_t size)
     return cat_coroutine_set_default_stack_size(size);
 }
 
-static ZEND_COLD cat_bool_t swow_coroutine_resume_deny(cat_coroutine_t *coroutine, cat_data_t *data, cat_data_t **retval)
-{
-    cat_update_last_error(CAT_EMISUSE, "Unexpected coroutine switching");
-
-    return cat_false;
-}
-
-SWOW_API void swow_coroutine_set_readonly(cat_bool_t enable)
-{
-    swow_coroutine_readonly_t *readonly = &SWOW_COROUTINE_G(readonly);
-    if (enable) {
-        readonly->original_create_object = swow_coroutine_ce->create_object;
-        readonly->original_resume = cat_coroutine_register_resume(swow_coroutine_resume_deny);
-        swow_coroutine_ce->create_object = swow_create_object_deny;
-    } else {
-        if (
-            swow_coroutine_ce->create_object == swow_create_object_deny &&
-            readonly->original_create_object != NULL
-        ) {
-            swow_coroutine_ce->create_object = readonly->original_create_object;
-        }
-        if (
-            cat_coroutine_resume == swow_coroutine_resume_deny &&
-            readonly->original_resume != NULL
-        ) {
-            cat_coroutine_register_resume(readonly->original_resume);
-        }
-    }
-}
-
 /* globals (getter) */
 
 SWOW_API swow_coroutine_t *swow_coroutine_get_current(void)
@@ -1029,14 +998,14 @@ SWOW_API cat_bool_t swow_coroutine_eval(swow_coroutine_t *scoroutine, zend_strin
     SWOW_COROUTINE_SHOULD_BE_IN_EXECUTING(scoroutine, cat_true, return cat_false);
 
     if (scoroutine != swow_coroutine_get_current() || level != 0) {
-        swow_coroutine_set_readonly(cat_true);
+        cat_coroutine_block();
     }
 
     SWOW_COROUTINE_EXECUTE_START(scoroutine, level) {
         error = zend_eval_stringl(ZSTR_VAL(string), ZSTR_LEN(string), return_value, (char *) "Coroutine::eval()");
     } SWOW_COROUTINE_EXECUTE_END();
 
-    swow_coroutine_set_readonly(cat_false);
+    cat_coroutine_unblock();
 
     if (UNEXPECTED(error != SUCCESS)) {
         cat_update_last_error(CAT_UNKNOWN, "Eval failed by unknown reason");
@@ -1076,14 +1045,14 @@ SWOW_API cat_bool_t swow_coroutine_call(swow_coroutine_t *scoroutine, zval *zcal
     fci.retval = return_value;
 
     if (scoroutine != swow_coroutine_get_current()) {
-        swow_coroutine_set_readonly(cat_true);
+        cat_coroutine_block();
     }
 
     SWOW_COROUTINE_EXECUTE_START(scoroutine, 0) {
         error = zend_call_function(&fci, &fcc);
     } SWOW_COROUTINE_EXECUTE_END();
 
-    swow_coroutine_set_readonly(cat_false);
+    cat_coroutine_unblock();
 
     if (UNEXPECTED(error != SUCCESS)) {
         cat_update_last_error(CAT_UNKNOWN, "Call function failed by unknown reason");
@@ -2315,9 +2284,6 @@ int swow_coroutine_runtime_init(INIT_FUNC_ARGS)
     SWOW_COROUTINE_G(exception_error_severity) = E_ERROR; /* TODO: get php.ini */
 
     SWOW_COROUTINE_G(runtime_state) = SWOW_COROUTINE_RUNTIME_STATE_RUNNING;
-
-    SWOW_COROUTINE_G(readonly.original_create_object) = NULL;
-    SWOW_COROUTINE_G(readonly.original_resume) = NULL;
 
     SWOW_COROUTINE_G(exception) = NULL;
 
