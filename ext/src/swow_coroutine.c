@@ -2301,7 +2301,7 @@ int swow_coroutine_runtime_init(INIT_FUNC_ARGS)
 }
 
 // TODO: killall API
-#ifdef CAT_DO_NOT_OPTIMIZE
+#ifdef CAT_DONT_OPTIMIZE
 static void swow_coroutines_kill_destructor(zval *zscoroutine)
 {
     swow_coroutine_t *scoroutine = swow_coroutine_get_from_object(Z_OBJ_P(zscoroutine));
@@ -2317,7 +2317,7 @@ int swow_coroutine_runtime_shutdown(SHUTDOWN_FUNC_ARGS)
 {
     SWOW_COROUTINE_G(runtime_state) = SWOW_COROUTINE_RUNTIME_STATE_IN_SHUTDOWN;
 
-#ifdef CAT_DO_NOT_OPTIMIZE /* the optimization deps on event scheduler */
+#ifdef CAT_DONT_OPTIMIZE /* the optimization deps on event scheduler */
     /* destruct active scoroutines */
     HashTable *map = SWOW_COROUTINE_G(map);
     do {
