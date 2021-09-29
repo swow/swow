@@ -541,7 +541,7 @@ static inline int swow_stream_accept(php_stream *stream, swow_netstream_data_t *
     }
 
     php_network_populate_name_from_sockaddr(
-        (struct sockaddr *) &address_info->address.common,address_info->length,
+        (struct sockaddr *) &address_info->address.common, address_info->length,
         xparam->want_textaddr ? &xparam->outputs.textaddr : NULL,
         xparam->want_addr ? &xparam->outputs.addr : NULL,
         xparam->want_addr ? &xparam->outputs.addrlen : NULL
@@ -827,7 +827,7 @@ static int swow_stream_enable_crypto(php_stream *stream,
             &swow_sock->ssl.connect_timeout :
             &swow_sock->sock.timeout
         );
-        return cat_socket_enable_crypto_ex(socket, &options,timeout) ? 1 : -1;
+        return cat_socket_enable_crypto_ex(socket, &options, timeout) ? 1 : -1;
     } else if (!cparam->inputs.activate && encrypted) {
         /* deactivate - common for server/client */
         // cat_socket_disable_crypto(socket->internal->ssl);
@@ -1449,7 +1449,7 @@ static int swow_plain_files_proxy_stream_stat(php_stream_wrapper *wrapper, php_s
 */
 
 static int swow_plain_files_proxy_url_stat(php_stream_wrapper *wrapper,
-    const char *url, int flags, php_stream_statbuf *ssb,php_stream_context *context) {
+    const char *url, int flags, php_stream_statbuf *ssb, php_stream_context *context) {
     if (!SWOW_STREAM_G(hooking_plain_wrapper)) {
         // we are not hooking plain wrapper ops
         return swow_plain_files_wrapper_sync.wops->url_stat(wrapper, url, flags, ssb, context);
@@ -1463,10 +1463,10 @@ static php_stream *swow_plain_files_proxy_dir_opener(
     if (!SWOW_STREAM_G(hooking_plain_wrapper)) {
         // we are not hooking plain wrapper ops
         return swow_plain_files_wrapper_sync.wops->dir_opener(
-            wrapper, filename, mode,options, opened_path, context STREAMS_REL_CC);
+            wrapper, filename, mode, options, opened_path, context STREAMS_REL_CC);
     }
     return swow_plain_files_wrapper_async.wops->dir_opener(
-        wrapper, filename, mode,options, opened_path, context STREAMS_REL_CC);
+        wrapper, filename, mode, options, opened_path, context STREAMS_REL_CC);
 }
 
 static int swow_plain_files_proxy_unlink(php_stream_wrapper *wrapper, const char *url, int options,

@@ -231,7 +231,7 @@ static php_stream *swow_proxy_dir_opener(
     SWOW_UNHOOK(ZEND_ASSERT(orig_wrapper););
     //printf("orig wrapper %p\n", orig_wrapper);
     php_stream *ret = orig_wrapper->wops->dir_opener(
-        wrapper, filename, mode,options, opened_path, context STREAMS_REL_CC);
+        wrapper, filename, mode, options, opened_path, context STREAMS_REL_CC);
     //printf("returnnig wrp %p\n", ret->wrapper);
     SWOW_REHOOK();
     if(!ret || !ret->ops || !ret->ops->label){

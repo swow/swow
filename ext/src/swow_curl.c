@@ -511,7 +511,7 @@ static PHP_FUNCTION(swow_curl_multi_select)
     int             numfds = 0;
     CURLMcode error = CURLM_OK;
 
-    ZEND_PARSE_PARAMETERS_START(1,2)
+    ZEND_PARSE_PARAMETERS_START(1, 2)
 #if PHP_VERSION_ID < 80000
         Z_PARAM_RESOURCE(z_mh)
 #else
@@ -548,7 +548,7 @@ PHP_FUNCTION(swow_curl_multi_close)
     php_curlm *mh;
     CURLM     *multi;
 
-    ZEND_PARSE_PARAMETERS_START(1,1)
+    ZEND_PARSE_PARAMETERS_START(1, 1)
         Z_PARAM_RESOURCE(z_mh)
     ZEND_PARSE_PARAMETERS_END();
 

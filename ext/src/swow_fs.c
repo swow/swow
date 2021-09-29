@@ -1317,7 +1317,6 @@ static int swow_stdiop_fs_sync(php_stream *stream, bool dataonly)
 
 static int swow_stdiop_fs_seek(php_stream *stream, zend_off_t offset, int whence, zend_off_t *newoffset)
 {
-    //printf("on calling swow_stdiop_fs_seek(%p, %zu, %d, %p)\n", stream,offset,whence,newoffset);
     swow_stdio_stream_data *data = (swow_stdio_stream_data*)stream->abstract;
     int ret;
 
@@ -1345,7 +1344,6 @@ static int swow_stdiop_fs_seek(php_stream *stream, zend_off_t offset, int whence
         if (result == (zend_off_t)-1)
             return -1;
 
-        //printf("ret: %ld\n", result);
         *newoffset = result;
         return 0;
 
