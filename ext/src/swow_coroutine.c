@@ -998,14 +998,14 @@ SWOW_API cat_bool_t swow_coroutine_eval(swow_coroutine_t *scoroutine, zend_strin
     SWOW_COROUTINE_SHOULD_BE_IN_EXECUTING(scoroutine, cat_true, return cat_false);
 
     if (scoroutine != swow_coroutine_get_current() || level != 0) {
-        cat_coroutine_block();
+        cat_coroutine_switch_block();
     }
 
     SWOW_COROUTINE_EXECUTE_START(scoroutine, level) {
         error = zend_eval_stringl(ZSTR_VAL(string), ZSTR_LEN(string), return_value, (char *) "Coroutine::eval()");
     } SWOW_COROUTINE_EXECUTE_END();
 
-    cat_coroutine_unblock();
+    cat_coroutine_switch_unblock();
 
     if (UNEXPECTED(error != SUCCESS)) {
         cat_update_last_error(CAT_UNKNOWN, "Eval failed by unknown reason");
@@ -1045,14 +1045,14 @@ SWOW_API cat_bool_t swow_coroutine_call(swow_coroutine_t *scoroutine, zval *zcal
     fci.retval = return_value;
 
     if (scoroutine != swow_coroutine_get_current()) {
-        cat_coroutine_block();
+        cat_coroutine_switch_block();
     }
 
     SWOW_COROUTINE_EXECUTE_START(scoroutine, 0) {
         error = zend_call_function(&fci, &fcc);
     } SWOW_COROUTINE_EXECUTE_END();
 
-    cat_coroutine_unblock();
+    cat_coroutine_switch_unblock();
 
     if (UNEXPECTED(error != SUCCESS)) {
         cat_update_last_error(CAT_UNKNOWN, "Call function failed by unknown reason");
