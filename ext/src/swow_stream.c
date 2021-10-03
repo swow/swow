@@ -562,6 +562,7 @@ static inline int swow_stream_accept(php_stream *stream, swow_netstream_data_t *
         }
     }
 
+#ifdef CAT_SSL
     if (xparam->outputs.client && server_sock->ssl.enable_on_connect) {
         /* remove the client bit */
         server_sock->ssl.method &= ~STREAM_CRYPTO_IS_CLIENT;
@@ -576,6 +577,7 @@ static inline int swow_stream_accept(php_stream *stream, swow_netstream_data_t *
             return -1;
         }
     }
+#endif
 
     return 0;
 
