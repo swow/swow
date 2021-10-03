@@ -86,19 +86,20 @@ AC_DEFUN([SWOW_PKG_CHECK_MODULES],[
     $5
   elif test -x "$PKG_CONFIG" ; then
 dnl find pkg using pkg-config cli tool
-    SWOW_PKG_FIND_PATH=${$4}
+    SWOW_PKG_FIND_PATH=${$4}/lib/pkgconfig
     if test "xyes" = "x${$4}" ; then
-      SWOW_PKG_FIND_PATH=
+      SWOW_PKG_FIND_PATH=/lib/pkgconfig
     fi
 
-dnl echo env PKG_CONFIG_PATH=${SWOW_PKG_FIND_PATH}/lib/pkgconfig $PKG_CONFIG --atleast-version $3 $2
-dnl env PKG_CONFIG_PATH=${SWOW_PKG_FIND_PATH}/lib/pkgconfig $PKG_CONFIG --atleast-version $3 $2; echo $?
-dnl env PKG_CONFIG_PATH=${SWOW_PKG_FIND_PATH}/lib/pkgconfig $PKG_CONFIG --modversion $2
-    if env PKG_CONFIG_PATH=${SWOW_PKG_FIND_PATH}/lib/pkgconfig $PKG_CONFIG --atleast-version $3 $2; then
-      $2_version_full=`env PKG_CONFIG_PATH=${SWOW_PKG_FIND_PATH}/lib/pkgconfig $PKG_CONFIG --modversion $2`
+    if test "x" != "x$PKG_CONFIG_PATH"; then
+      SWOW_PKG_FIND_PATH="$SWOW_PKG_FIND_PATH:$PKG_CONFIG_PATH"
+    fi
+
+    if env PKG_CONFIG_PATH=${SWOW_PKG_FIND_PATH} $PKG_CONFIG --atleast-version $3 $2; then
+      $2_version_full=`env PKG_CONFIG_PATH=${SWOW_PKG_FIND_PATH} $PKG_CONFIG --modversion $2`
       AC_MSG_RESULT(${$2_version_full})
-      $1_LIBS=`env PKG_CONFIG_PATH=${SWOW_PKG_FIND_PATH}/lib/pkgconfig $PKG_CONFIG --libs   $2`
-      $1_INCL=`env PKG_CONFIG_PATH=${SWOW_PKG_FIND_PATH}/lib/pkgconfig $PKG_CONFIG --cflags $2`
+      $1_LIBS=`env PKG_CONFIG_PATH=${SWOW_PKG_FIND_PATH} $PKG_CONFIG --libs   $2`
+      $1_INCL=`env PKG_CONFIG_PATH=${SWOW_PKG_FIND_PATH} $PKG_CONFIG --cflags $2`
       $5
     else
       AC_MSG_RESULT(no)
