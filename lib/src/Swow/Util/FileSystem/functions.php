@@ -13,29 +13,40 @@ declare(strict_types=1);
 
 namespace Swow\Util\FileSystem;
 
+use Exception;
+use RecursiveDirectoryIterator;
+use RecursiveIteratorIterator;
+use SplFileInfo;
+use function array_filter;
+use function array_values;
+use function array_walk;
+use function rmdir;
+use function scandir;
+use function unlink;
+
 function scan(string $dir, callable $filter = null): array
 {
-    $files = \array_filter(\scandir($dir), function (string $file) { return $file[0] !== '.'; });
-    \array_walk($files, function (&$file) use ($dir) { $file = "{$dir}/{$file}"; });
+    $files = array_filter(scandir($dir), function (string $file) { return $file[0] !== '.'; });
+    array_walk($files, function (&$file) use ($dir) { $file = "{$dir}/{$file}"; });
 
-    return \array_values($filter ? \array_filter($files, $filter) : $files);
+    return array_values($filter ? array_filter($files, $filter) : $files);
 }
 
 function remove(string $path): void
 {
     try {
         if (!is_dir($path) || is_link($path)) {
-            \unlink($path);
+            unlink($path);
         } else {
-            $it = new \RecursiveDirectoryIterator($path, \RecursiveDirectoryIterator::SKIP_DOTS);
-            $files = new \RecursiveIteratorIterator($it, \RecursiveIteratorIterator::CHILD_FIRST);
-            /** @var \SplFileInfo $file */
+            $it = new RecursiveDirectoryIterator($path, RecursiveDirectoryIterator::SKIP_DOTS);
+            $files = new RecursiveIteratorIterator($it, RecursiveIteratorIterator::CHILD_FIRST);
+            /** @var SplFileInfo $file */
             foreach ($files as $file) {
                 remove($file->getRealPath());
             }
-            \rmdir($path);
+            rmdir($path);
         }
-    } catch (\Exception $exception) {
+    } catch (Exception $exception) {
         // We don not want individual failures to lead to overall failures
         trigger_error($exception->getMessage(), E_USER_WARNING);
     }

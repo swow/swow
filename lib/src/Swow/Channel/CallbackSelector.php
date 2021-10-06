@@ -14,6 +14,7 @@ declare(strict_types=1);
 namespace Swow\Channel;
 
 use Swow\Channel;
+use function spl_object_id;
 
 class CallbackSelector extends Selector
 {

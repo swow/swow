@@ -15,6 +15,16 @@ namespace Swow\Http;
 
 use InvalidArgumentException;
 use Psr\Http\Message\ServerRequestInterface;
+use function is_array;
+use function json_decode;
+use function json_last_error;
+use function json_last_error_msg;
+use function libxml_disable_entity_loader;
+use function parse_str;
+use function simplexml_load_string;
+use function strpos;
+use function strtolower;
+use function substr;
 
 class BodyParser
 {

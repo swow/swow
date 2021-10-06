@@ -14,6 +14,7 @@ declare(strict_types=1);
 namespace Swow\Http;
 
 use Swow\WebSocket\Frame as WebSocketFrame;
+use function min;
 
 trait WebSocketTrait
 {

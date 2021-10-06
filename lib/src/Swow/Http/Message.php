@@ -15,6 +15,9 @@ namespace Swow\Http;
 
 use Psr\Http\Message\MessageInterface;
 use Psr\Http\Message\StreamInterface;
+use function implode;
+use function is_array;
+use function strtolower;
 
 class Message implements MessageInterface
 {

@@ -25,6 +25,9 @@ use Swow\Http\TypeInterface as HttpTypeInterface;
 use Swow\Socket;
 use Swow\Socket\Exception as SocketException;
 use Swow\WebSocket;
+use function base64_encode;
+use function random_bytes;
+use function strlen;
 
 class Client extends Socket implements ClientInterface, HttpTypeInterface
 {

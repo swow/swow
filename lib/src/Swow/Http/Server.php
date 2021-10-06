@@ -16,6 +16,7 @@ namespace Swow\Http;
 use Swow\Http\Server\Connection;
 use Swow\Socket;
 use Swow\Socket\Exception as SocketException;
+use function is_string;
 
 class Server extends Socket
 {

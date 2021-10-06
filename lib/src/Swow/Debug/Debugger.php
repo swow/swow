@@ -18,7 +18,46 @@ use Swow\Coroutine;
 use Swow\Signal;
 use Swow\Socket;
 use Throwable;
+use function array_filter;
+use function array_shift;
+use function array_sum;
+use function assert;
+use function basename;
+use function bin2hex;
+use function count;
+use function ctype_print;
+use function end;
+use function explode;
+use function extension_loaded;
+use function file_exists;
+use function file_get_contents;
+use function func_get_args;
+use function get_class;
+use function getenv;
+use function is_array;
+use function is_bool;
+use function is_float;
+use function is_int;
+use function is_null;
+use function is_numeric;
+use function is_object;
+use function is_string;
+use function json_decode;
+use function max;
+use function mb_strlen;
+use function mb_substr;
+use function rtrim;
+use function spl_object_id;
+use function sprintf;
+use function str_repeat;
+use function str_replace;
+use function strlen;
+use function strpos;
+use function substr;
 use function Swow\Util\var_dump_return;
+use function trigger_error;
+use function trim;
+use function usleep;
 use const Swow\Errno\ETIMEDOUT;
 
 class Debugger
@@ -414,7 +453,7 @@ TEXT;
 
     protected static function convertValueToString($value, bool $forArgs = true): string
     {
-        switch (1) {
+        switch (true) {
             case is_int($value):
             case is_float($value):
                 return (string) $value;

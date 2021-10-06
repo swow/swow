@@ -18,6 +18,7 @@ use Swow\Coroutine;
 use Swow\Http\Client as HttpClient;
 use Swow\Http\Request as HttpRequest;
 use Swow\Http\WebSocketFrame;
+use function file_exists;
 use function Swow\defer;
 
 /**

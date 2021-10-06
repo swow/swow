@@ -13,6 +13,10 @@ declare(strict_types=1);
 
 namespace Swow\Http\Server;
 
+use function explode;
+use function parse_str;
+use function rawurldecode;
+
 class Request extends \Swow\Http\ServerRequest
 {
     protected $path = '';
@@ -102,8 +106,8 @@ class Request extends \Swow\Http\ServerRequest
     {
         $this->method = $method;
         $this->uriString = $uri;
-        $uriParts = \explode('?', $uri, 2);
-        $this->path = \rawurldecode($uriParts[0]);
+        $uriParts = explode('?', $uri, 2);
+        $this->path = rawurldecode($uriParts[0]);
         $this->query = $uriParts[1] ?? '';
         $this->protocolVersion = $protocolVersion;
         $this->headers = $headers;

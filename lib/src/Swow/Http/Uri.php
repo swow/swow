@@ -13,7 +13,13 @@ declare(strict_types=1);
 
 namespace Swow\Http;
 
+use InvalidArgumentException;
 use Psr\Http\Message\UriInterface;
+use function ltrim;
+use function parse_url;
+use function preg_replace_callback;
+use function rawurlencode;
+use function sprintf;
 
 /**
  * PSR-7 URI implementation (https://github.com/Nyholm/psr7/blob/master/src/Uri.php)
@@ -69,9 +75,9 @@ class Uri implements UriInterface
      */
     public function apply(string $uri)
     {
-        $parts = \parse_url($uri);
+        $parts = parse_url($uri);
         if ($parts === false) {
-            throw new \InvalidArgumentException("Unable to parse URI: {$uri}");
+            throw new InvalidArgumentException("Unable to parse URI: {$uri}");
         }
 
         return $this->applyParts($parts);
@@ -242,7 +248,7 @@ class Uri implements UriInterface
         }
 
         if ($port < 0 || $port > 0xffff) {
-            throw new \InvalidArgumentException(\sprintf('Invalid port: %d. Must be between 0 and 65535', $port));
+            throw new InvalidArgumentException(sprintf('Invalid port: %d. Must be between 0 and 65535', $port));
         }
 
         $scheme = $this->scheme;
@@ -287,10 +293,10 @@ class Uri implements UriInterface
 
     protected function filterPath(string $path): string
     {
-        return \preg_replace_callback(
+        return preg_replace_callback(
             '/(?:[^a-zA-Z0-9_\-.~!\$&\'()*+,;=%:@\/]++|%(?![A-Fa-f0-9]{2}))/',
             static function (array $match): string {
-                return \rawurlencode($match[0]);
+                return rawurlencode($match[0]);
             },
             $path
         );
@@ -330,10 +336,10 @@ class Uri implements UriInterface
 
     protected function filterQueryAndFragment(string $string): string
     {
-        return \preg_replace_callback(
+        return preg_replace_callback(
             '/(?:[^a-zA-Z0-9_\-.~!\$&\'()*+,;=%:@\/?]++|%(?![A-Fa-f0-9]{2}))/',
             static function (array $match): string {
-                return \rawurlencode($match[0]);
+                return rawurlencode($match[0]);
             },
             $string
         );
@@ -419,7 +425,7 @@ class Uri implements UriInterface
                 if ($authority === '') {
                     // If the path is starting with more than one "/" and no authority is present, the
                     // starting slashes MUST be reduced to one.
-                    $path = '/' . \ltrim($path, '/');
+                    $path = '/' . ltrim($path, '/');
                 }
             }
 

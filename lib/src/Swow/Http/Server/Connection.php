@@ -23,6 +23,13 @@ use Swow\Http\TypeTrait as HttpTypeTrait;
 use Swow\Http\WebSocketTrait;
 use Swow\Socket;
 use Swow\WebSocket;
+use function base64_encode;
+use function func_get_args;
+use function is_array;
+use function is_int;
+use function is_string;
+use function sha1;
+use function strlen;
 use function Swow\Http\packResponse;
 
 class Connection extends Socket implements HttpTypeInterface

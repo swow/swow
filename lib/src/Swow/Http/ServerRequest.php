@@ -15,6 +15,8 @@ namespace Swow\Http;
 
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\UploadedFileInterface;
+use function array_key_exists;
+use function strcasecmp;
 
 class ServerRequest extends Request implements ServerRequestInterface
 {
@@ -194,7 +196,7 @@ class ServerRequest extends Request implements ServerRequestInterface
 
     public function getAttribute($attribute, $default = null)
     {
-        if (\array_key_exists($attribute, $this->attributes) === false) {
+        if (array_key_exists($attribute, $this->attributes) === false) {
             return $default;
         }
 
@@ -243,7 +245,7 @@ class ServerRequest extends Request implements ServerRequestInterface
      */
     public function withoutAttribute($attribute)
     {
-        if (\array_key_exists($attribute, $this->attributes) === false) {
+        if (array_key_exists($attribute, $this->attributes) === false) {
             return $this;
         }
 

@@ -14,12 +14,13 @@ declare(strict_types=1);
 namespace Swow\Http;
 
 use Psr\Http\Message\StreamInterface;
+use RuntimeException;
 
 class Buffer extends \Swow\Stream\Buffer implements StreamInterface
 {
     public function detach()
     {
-        throw new \RuntimeException('Can not detach a BufferStream');
+        throw new RuntimeException('Can not detach a BufferStream');
     }
 
     public function getMetadata($key = null)

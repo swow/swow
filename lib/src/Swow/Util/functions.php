@@ -13,6 +13,10 @@ declare(strict_types=1);
 
 namespace Swow\Util;
 
+use function ob_get_clean;
+use function ob_start;
+use function var_dump;
+
 function var_dump_return(...$expressions): string
 {
     ob_start();

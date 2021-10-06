@@ -15,6 +15,7 @@ namespace Swow\Http;
 
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\UriInterface;
+use function is_string;
 
 class Request extends Message implements RequestInterface
 {

@@ -91,8 +91,16 @@ return (new PhpCsFixer\Config())
         'class_attributes_separation' => true,
         'combine_consecutive_unsets' => true,
         'declare_strict_types' => true,
+        'global_namespace_import' => [
+            'import_classes' => true,
+            'import_constants' => true,
+            'import_functions' => true,
+        ],
+        // NOTE: this is for anonymous functions using WaitReference, maybe there's better solution
+        'lambda_not_used_import' => false,
         'linebreak_after_opening_tag' => true,
         'lowercase_static_reference' => true,
+        'multiline_comment_opening_closing' => true,
         'no_useless_else' => true,
         'no_unused_imports' => true,
         'no_unneeded_curly_braces' => false,
@@ -106,9 +114,6 @@ return (new PhpCsFixer\Config())
         'increment_style' => false,
         'standardize_increment' => false,
         'standardize_not_equals' => true,
-        'multiline_comment_opening_closing' => true,
-        // NOTE: this is for anonymous functions using WaitReference, maybe there's better solution
-        'lambda_not_used_import' => false,
     ])
     ->setFinder(
         PhpCsFixer\Finder::create()

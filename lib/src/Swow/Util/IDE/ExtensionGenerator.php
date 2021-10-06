@@ -13,6 +13,7 @@ declare(strict_types=1);
 
 namespace Swow\Util\IDE;
 
+use InvalidArgumentException;
 use ReflectionClass;
 use ReflectionExtension;
 use ReflectionFunction;
@@ -20,6 +21,40 @@ use ReflectionFunctionAbstract;
 use ReflectionMethod;
 use ReflectionProperty;
 use Reflector;
+use RuntimeException;
+use Throwable;
+use function array_pop;
+use function bin2hex;
+use function class_exists;
+use function count;
+use function ctype_print;
+use function dirname;
+use function explode;
+use function file_put_contents;
+use function fwrite;
+use function get_class;
+use function implode;
+use function interface_exists;
+use function is_array;
+use function is_bool;
+use function is_dir;
+use function is_float;
+use function is_int;
+use function is_null;
+use function is_numeric;
+use function is_resource;
+use function is_string;
+use function ltrim;
+use function method_exists;
+use function rtrim;
+use function sprintf;
+use function str_repeat;
+use function str_replace;
+use function strlen;
+use function strpos;
+use function substr;
+use function trim;
+use function var_export;
 
 class ExtensionGenerator
 {
@@ -82,7 +117,7 @@ class ExtensionGenerator
                 } elseif ($functionOrClass instanceof ReflectionClass) {
                     $declarations[] = $this->generateClassDeclaration($functionOrClass);
                 } else {
-                    throw new \InvalidArgumentException('Unknown type ' . get_class($functionOrClass));
+                    throw new InvalidArgumentException('Unknown type ' . get_class($functionOrClass));
                 }
             }
         }
@@ -155,7 +190,7 @@ class ExtensionGenerator
         $constantsOfNamespace = $this->getConstantsOfNamespace($namespaceName);
 
         if (empty($constantsOfNamespace)) {
-            throw new \RuntimeException("No constant in {$namespaceName}");
+            throw new RuntimeException("No constant in {$namespaceName}");
         }
 
         $declaration = "namespace {$namespaceName}\n{\n";
@@ -243,7 +278,7 @@ class ExtensionGenerator
                     }
                     $defaultParamValueTipOnDoc = $defaultParamValueTip;
                 }
-            } catch (\Throwable $throwable) {
+            } catch (Throwable $throwable) {
                 $defaultParamValueTip = $defaultParamValueTipOnDoc = '';
             }
             $comment .= sprintf(

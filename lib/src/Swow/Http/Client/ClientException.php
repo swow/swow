@@ -16,6 +16,7 @@ namespace Swow\Http\Client;
 use Psr\Http\Client\ClientExceptionInterface;
 use Psr\Http\Message\RequestInterface;
 use Swow\Socket\Exception;
+use Throwable;
 
 class ClientException extends Exception implements ClientExceptionInterface
 {
@@ -24,7 +25,7 @@ class ClientException extends Exception implements ClientExceptionInterface
      */
     protected $request;
 
-    public function __construct(RequestInterface $request, $message = '', $code = 0, \Throwable $previous = null)
+    public function __construct(RequestInterface $request, $message = '', $code = 0, Throwable $previous = null)
     {
         $this->request = $request;
         parent::__construct($message, $code, $previous);
