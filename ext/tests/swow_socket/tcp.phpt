@@ -3,6 +3,7 @@ swow_socket: tcp
 --SKIPIF--
 <?php
 require __DIR__ . '/../include/skipif.php';
+skip_if_max_open_files_less_than(256);
 ?>
 --FILE--
 <?php
@@ -17,7 +18,7 @@ use const Swow\Errno\ECONNRESET;
 
 $server = new Socket(Socket::TYPE_TCP);
 Coroutine::run(function () use ($server) {
-    $server->bind('127.0.0.1')->listen();
+    $server->bind('127.0.0.1')->listen(TEST_MAX_CONCURRENCY * 2);
     try {
         while (true) {
             $client = $server->accept();

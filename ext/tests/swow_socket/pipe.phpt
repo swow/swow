@@ -3,6 +3,7 @@ swow_socket: pipe
 --SKIPIF--
 <?php
 require __DIR__ . '/../include/skipif.php';
+skip_if_max_open_files_less_than(256);
 ?>
 --FILE--
 <?php
@@ -25,7 +26,7 @@ if (PHP_OS_FAMILY !== 'Windows') {
 
 $server = new Socket(Socket::TYPE_PIPE);
 Coroutine::run(function () use ($server) {
-    $server->bind(SERVER_SOCK)->listen();
+    $server->bind(SERVER_SOCK)->listen(TEST_MAX_CONCURRENCY * 2);
     try {
         while (true) {
             $client = $server->accept();

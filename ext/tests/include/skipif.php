@@ -138,3 +138,18 @@ function skip_if_cannot_make_subprocess()
         }
     }
 }
+
+function skip_if_max_open_files_less_than(int $number)
+{
+    if (PHP_OS_FAMILY === 'Windows') {
+        $n = PHP_INT_MAX;
+    } else {
+        if (function_exists('posix_getrlimit')) {
+            $n = posix_getrlimit()['soft openfiles'] ?? null;
+        }
+        $n = $n ?? (int) shell_exec('ulmit -n');
+    }
+    if ($n < $number) {
+        skip("Max open files should be greater than or equal to {$number}, but it is {$n} now");
+    }
+}
