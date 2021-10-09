@@ -45,8 +45,7 @@ echo PHP_LF . 'Done' . PHP_LF;
 
 ?>
 --EXPECTF--
-Warning: [Warning in scheduler] Dead lock: all coroutines are asleep in Unknown on line 0
-
-Warning: [Warning in scheduler] Dead lock: all coroutines are asleep in Unknown on line 0
+Warning: <COROUTINE> Dead lock: all coroutines are asleep in scheduler
+Warning: <COROUTINE> Dead lock: all coroutines are asleep in scheduler
 
 Done
