@@ -17,6 +17,8 @@ use Swow\Http\Exception as HttpException;
 use Swow\Http\Parser as HttpParser;
 use Swow\Http\Parser\Exception as HttpParserException;
 use Swow\Http\Status as HttpStatus;
+use function count;
+use function strtolower;
 
 trait ReceiverTrait
 {
@@ -75,7 +77,9 @@ trait ReceiverTrait
                 if ($expectMore) {
                     $this->recvData($buffer);
                 }
+                $event = HttpParser::EVENT_NONE;
                 while (true) {
+                    $previousEvent = $event;
                     if (!$headersComplete) {
                         $event = $parser->execute($buffer, $data);
                         $headerLength += $parser->getParsedLength();
@@ -110,19 +114,31 @@ trait ReceiverTrait
                         switch ($event) {
                             case HttpParser::EVENT_HEADER_FIELD:
                             {
-                                $headerName = $data;
+                                if ($event !== $previousEvent) {
+                                    $headerName = $data;
+                                } else {
+                                    $headerName .= $data;
+                                }
                                 break;
                             }
                             case HttpParser::EVENT_HEADER_VALUE:
                             {
-                                $headers[$headerName][] = $data;
-                                $headerNames[strtolower($headerName)] = $headerName;
+                                if ($event !== $previousEvent) {
+                                    $headers[$headerName][] = $data;
+                                    $headerNames[strtolower($headerName)] = $headerName;
+                                } else {
+                                    $headers[$headerName][count($headers[$headerName]) - 1] .= $data;
+                                }
                                 break;
                             }
                             case HttpParser::EVENT_URL:
                             case HttpParser::EVENT_STATUS:
                             {
-                                $uriOrReasonPhrase = $data;
+                                if ($event !== $previousEvent) {
+                                    $uriOrReasonPhrase = $data;
+                                } else {
+                                    $uriOrReasonPhrase .= $data;
+                                }
                                 break;
                             }
                             case HttpParser::EVENT_HEADERS_COMPLETE:
