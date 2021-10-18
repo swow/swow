@@ -20,8 +20,10 @@ use Swow\Util\FileSystem\IOException;
 use function array_filter;
 use function array_values;
 use function array_walk;
+use function chmod;
 use function copy;
 use function error_get_last;
+use function fileperms;
 use function is_dir;
 use function is_file;
 use function is_link;
@@ -50,6 +52,7 @@ class FileSystem
             if (@unlink($path) === false) {
                 throw IOException::getLast();
             }
+
             return;
         }
 
@@ -57,6 +60,7 @@ class FileSystem
             if (@rmdir($path) === false) {
                 throw IOException::getLast();
             }
+
             return;
         }
 
@@ -71,41 +75,71 @@ class FileSystem
         }
     }
 
+    protected static function perms(string $file): int
+    {
+        $perms = @fileperms($file);
+        if ($perms === false) {
+            $perms = 0644;
+        }
+
+        return $perms;
+    }
+
+    protected static function copyFile(string $source, string $destination): bool
+    {
+        if (@copy($source, $destination)) {
+            @chmod($destination, static::perms($source));
+
+            return true;
+        }
+
+        return false;
+    }
+
+    protected static function copyDir(string $source, string $destination): bool
+    {
+        if (is_dir($destination)) {
+            @chmod($destination, static::perms($source));
+
+            return true;
+        }
+
+        return @mkdir($destination, static::perms($source));
+    }
+
     /**
-     * @param string $source
-     * @param string $destination
-     * @param bool $ignoreErrors
      * @return array Errors that occurred in the copy() operation
      */
     public static function copy(string $source, string $destination, bool $ignoreErrors = false): array
     {
         if (is_file($source)) {
-            if (!@copy($source, $destination)) {
+            if (!static::copyFile($source, $destination)) {
                 throw IOException::getLast();
             }
+
             return [];
         }
 
         $errors = [];
-        if (!is_dir($destination) && !@mkdir($destination, 0755)) {
+        if (!static::copyDir($source, $destination)) {
             throw IOException::getLast();
         }
-        $it = new \RecursiveDirectoryIterator($source, \RecursiveDirectoryIterator::SKIP_DOTS);
-        $files = new \RecursiveIteratorIterator($it, \RecursiveIteratorIterator::SELF_FIRST);
-        /** @var $files RecursiveIteratorIterator|RecursiveDirectoryIterator */
+        $it = new RecursiveDirectoryIterator($source, RecursiveDirectoryIterator::SKIP_DOTS);
+        $files = new RecursiveIteratorIterator($it, RecursiveIteratorIterator::SELF_FIRST);
+        /** @var RecursiveDirectoryIterator|RecursiveIteratorIterator $files */
         foreach ($files as $info) {
             $ret = true;
             $subPath = $files->getSubPathName();
             if ($info->isDir()) {
                 $directory = "{$destination}/{$subPath}";
-                /**@var $info RecursiveDirectoryIterator */
-                if (!is_dir($directory) && !@mkdir($directory, 0755)) {
+                /*@var $info RecursiveDirectoryIterator */
+                if (!static::copyDir($info->getPathname(), $directory)) {
                     $ret = false;
                 }
             } else {
-                /**@var $info SplFileInfo */
+                /*@var $info SplFileInfo */
                 $file = "{$destination}/{$subPath}";
-                if (!@copy($info->getPathname(), $file)) {
+                if (!static::copyFile($info->getPathname(), $file)) {
                     $ret = false;
                 }
             }
