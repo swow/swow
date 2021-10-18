@@ -4,7 +4,7 @@ require __DIR__ . '/../autoload.php';
 
 use Swow\Coroutine;
 use Swow\Util\IDE\ExtensionGenerator;
-use function Swow\Util\FileSystem\scan;
+use Swow\Util\FileSystem;
 
 (function () {
     global $argv;
@@ -15,7 +15,7 @@ use function Swow\Util\FileSystem\scan;
     $g = new ExtensionGenerator($n);
     if (strcasecmp($g->getExtensionName(), 'Swow') === 0) {
         $returnThisMap = [];
-        $sourceFiles = scan(__DIR__ . '/../../ext/src', function (string $filename) {
+        $sourceFiles = FileSystem::scanDir(__DIR__ . '/../../ext/src', function (string $filename) {
             return pathinfo($filename, PATHINFO_EXTENSION) === 'c';
         });
         foreach ($sourceFiles as $SourceFile) {

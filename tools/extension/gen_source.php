@@ -2,7 +2,7 @@
 
 require __DIR__ . '/../tools.php';
 
-use function Swow\Util\FileSystem\scan;
+use Swow\Util\FileSystem;
 
 (function () {
     $replacement = [
@@ -19,7 +19,7 @@ use function Swow\Util\FileSystem\scan;
     }
 
     $result = '';
-    $templatesFiles = scan(__DIR__ . '/templates');
+    $templatesFiles = FileSystem::scanDir(__DIR__ . '/templates');
     foreach ($templatesFiles as $filename) {
         $content = file_get_contents($filename);
         foreach ($replacement as $name => $value) {

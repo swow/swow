@@ -34,8 +34,7 @@
         },
         "files": [
             "src/Swow/functions.php",
-            "src/Swow/Util/functions.php",
-            "src/Swow/Util/FileSystem/functions.php"
+            "src/Swow/Util/functions.php"
         ]
     },
     "config": {
