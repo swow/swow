@@ -12,35 +12,47 @@
 namespace Swow\Tools;
 
 use RuntimeException;
-use function Swow\Util\FileSystem\remove;
+use Swow\Util\FileSystem;
+use function count;
+use function date;
+use function dirname;
+use function file_exists;
+use function is_dir;
+use function is_writable;
+use function mkdir;
+use function parse_url;
+use function strlen;
+use function substr;
+use function sys_get_temp_dir;
+use function trim;
 
 class DependencyManager
 {
-    protected const TMP_DIR = '/tmp';
-
     public static function sync(string $name, string $url, string $sourceDir, string $targetDir, array $requires = []): string
     {
         if (PHP_OS_FAMILY === 'Windows') {
             throw new RuntimeException('Linux only');
         }
-        if (file_exists($targetDir) && !`cd {$targetDir} && git rev-parse HEAD`) {
+        $targetWorkspace = dirname($targetDir);
+        if (file_exists($targetDir) && !`cd {$targetWorkspace} && git rev-parse HEAD`) {
             throw new RuntimeException("Unable to find git repo in {$targetDir}");
         }
-        $tmpBackupDir = static::TMP_DIR . '/swow_deps_backup_' . date('YmdHis');
-        if (!is_dir($tmpBackupDir) && !mkdir($tmpBackupDir)) {
+        $sysTmpDir = static::getSysTmpDir();
+        $tmpBackupDir = $sysTmpDir . '/swow_deps_backup_' . date('YmdHis');
+        if (!is_dir($tmpBackupDir) && !mkdir($tmpBackupDir, 0755)) {
             throw new RuntimeException("Unable to create tmp backup dir '{$tmpBackupDir}'");
         }
         if (substr($url, -4) === '.git' || (parse_url($url)['scheme'] ?? '') === 'file') {
-            $tmpSourceDir = static::TMP_DIR . "/swow_deps/{$name}";
+            $tmpSourceDir = $sysTmpDir . "/swow_deps/{$name}";
             if (is_dir($tmpSourceDir)) {
-                remove($tmpSourceDir);
+                FileSystem::remove($tmpSourceDir);
             }
-            if (!mkdir($tmpSourceDir, 0777, true)) {
+            if (!mkdir($tmpSourceDir, 0755, true)) {
                 throw new RuntimeException("Unable to create tmp source dir '{$tmpSourceDir}'");
             }
             defer($defer, function () use ($tmpSourceDir) {
                 if (is_dir($tmpSourceDir)) {
-                    remove($tmpSourceDir);
+                    FileSystem::remove($tmpSourceDir);
                 }
             });
             `git clone --depth=1 {$url} {$tmpSourceDir}`;
@@ -51,39 +63,61 @@ class DependencyManager
             if (strlen($version) !== 40) {
                 throw new RuntimeException("Invalid git version {$version}");
             }
-            remove("{$tmpSourceDir}/.git");
+            FileSystem::remove("{$tmpSourceDir}/.git");
         } else {
             throw new RuntimeException('Unsupported now');
         }
         if (file_exists($targetDir)) {
-            if (!rename($targetDir, $tmpBackupDir)) {
-                throw new RuntimeException("Backup from '{$targetDir}' to '{$tmpBackupDir}' failed");
+            try {
+                FileSystem::move($targetDir, $tmpBackupDir);
+            } catch (FileSystem\IOException $exception) {
+                throw new RuntimeException("Backup from '{$targetDir}' to '{$tmpBackupDir}' failed: {$exception->getMessage()}");
             }
         }
         if (count($requires) > 0) {
-            if (!mkdir($targetDir, 0777, true)) {
+            if (!mkdir($targetDir, 0755, true)) {
                 throw new RuntimeException("Unable to create target source dir '{$targetDir}'");
             }
             foreach ($requires as $require) {
                 $tmpSourceFile = "{$tmpSourceDir}/{$require}";
                 $targetFile = "{$targetDir}/{$require}";
-                if (!rename($tmpSourceFile, $targetFile)) {
-                    throw new RuntimeException("Update dep files from '{$tmpSourceFile}' to {$targetFile} failed");
+                try {
+                    FileSystem::move($tmpSourceFile, $targetFile);
+                } catch (FileSystem\IOException $exception) {
+                    throw new RuntimeException("Update dep files from '{$tmpSourceFile}' to {$targetFile} failed: {$exception->getMessage()}");
                 }
             }
         } else {
             $targetParentDir = dirname($targetDir);
             if (!is_dir($targetParentDir)) {
-                if (!mkdir($targetParentDir, 0777, true)) {
+                if (!mkdir($targetParentDir, 0755, true)) {
                     throw new RuntimeException("Unable to create target parent dir '{$targetParentDir}'");
                 }
             }
-            if (!rename($tmpSourceDir, $targetDir)) {
-                throw new RuntimeException("Update dep files from '{$tmpSourceDir}' to {$targetDir} failed");
+            try {
+                FileSystem::move($tmpSourceDir, $targetDir);
+            } catch (FileSystem\IOException $exception) {
+                throw new RuntimeException("Update dep files from '{$tmpSourceDir}' to {$targetDir} failed: {$exception->getMessage()}");
             }
         }
         `cd {$targetDir} && git add --ignore-errors -A`;
 
         return $version;
+    }
+
+    protected static $sysTmpDir;
+
+    protected static function getSysTmpDir(): string
+    {
+        if (!isset(static::$sysTmpDir)) {
+            if (is_writable('/tmp')) {
+                static::$sysTmpDir = '/tmp';
+            } else {
+                static::$sysTmpDir = sys_get_temp_dir();
+                notice('Sys temp dir is redirected to ' . static::$sysTmpDir);
+            }
+        }
+
+        return static::$sysTmpDir;
     }
 }
