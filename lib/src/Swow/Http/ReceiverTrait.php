@@ -158,11 +158,7 @@ trait ReceiverTrait
                         switch ($event) {
                             case HttpParser::EVENT_BODY:
                             {
-                                $body = new Buffer(0);
-                                $writableSize = $body->getWritableSize();
-                                if ($writableSize < $contentLength) {
-                                    $body->realloc($body->tell() + $writableSize);
-                                }
+                                $body = new Buffer($contentLength);
                                 $body->write($buffer->toString(), $parser->getDataOffset(), $parser->getDataLength());
                                 $neededLength = $contentLength - $body->getLength();
                                 if ($neededLength > 0) {
