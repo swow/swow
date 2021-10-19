@@ -510,7 +510,7 @@ static PHP_METHOD(Swow_Buffer, seek)
     }
     ptr += offset;
     if (UNEXPECTED((ptr < buffer->value) || (ptr > (buffer->value + buffer->length)))) {
-        swow_throw_exception(swow_buffer_exception_ce, CAT_EINVAL, "Offset would be a value which cannot be represented correctly");
+        swow_throw_exception(swow_buffer_exception_ce, CAT_EINVAL, "Offset overflow");
         RETURN_THROWS();
     }
     sbuffer->offset = ptr - buffer->value;
@@ -545,7 +545,7 @@ static PHP_METHOD_EX(Swow_Buffer, _read, swow_buffer_read_type_t type)
             RETURN_THROWS();
         }
         if (UNEXPECTED((size_t) offset > buffer->length)) {
-            swow_throw_exception(swow_buffer_exception_ce, CAT_EINVAL, "Offset would be a value which cannot be represented correctly");
+            swow_throw_exception(swow_buffer_exception_ce, CAT_EINVAL, "Offset overflow");
             RETURN_THROWS();
         }
     }
