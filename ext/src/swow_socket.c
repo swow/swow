@@ -1034,6 +1034,10 @@ static PHP_METHOD_EX(Swow_Socket, _write, zend_bool single, zend_bool may_addres
                     length = -1;
                     length_is_null = 1;
                 } ZEND_HASH_FOREACH_END();
+                if (UNEXPECTED(vector_count == 0)) {
+                    zend_argument_value_error(1, "does not contain any non-empty elements");
+                    goto _error;
+                }
             } while (0);
             Z_PARAM_OPTIONAL
         } else {
