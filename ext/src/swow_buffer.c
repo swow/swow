@@ -528,7 +528,7 @@ static PHP_METHOD_EX(Swow_Buffer, _read, swow_buffer_read_type_t type)
 {
     SWOW_BUFFER_GETTER(sbuffer, buffer);
     SWOW_BUFFER_CHECK_LOCK_IF(sbuffer, !(type & SWOW_BUFFER_PEEK));
-    zend_long length = 0;
+    zend_long length = -1;
     zend_long offset = sbuffer->offset;
 
     ZEND_PARSE_PARAMETERS_START(0, type != SWOW_BUFFER_PEEK_FROM ? 1 : 2)
@@ -539,10 +539,6 @@ static PHP_METHOD_EX(Swow_Buffer, _read, swow_buffer_read_type_t type)
         Z_PARAM_LONG(length)
     ZEND_PARSE_PARAMETERS_END();
 
-    if (UNEXPECTED(length < 0)) {
-        zend_argument_value_error(type != SWOW_BUFFER_PEEK_FROM ? 2 : 3, "can not be negative");
-        RETURN_THROWS();
-    }
     if (type == SWOW_BUFFER_PEEK_FROM) {
         if (UNEXPECTED(offset < 0)) {
             zend_argument_value_error(3, "can not be negative");
@@ -553,8 +549,11 @@ static PHP_METHOD_EX(Swow_Buffer, _read, swow_buffer_read_type_t type)
             RETURN_THROWS();
         }
     }
-
-    if (length == 0) {
+    if (UNEXPECTED(length < -1)) {
+        zend_argument_value_error(type != SWOW_BUFFER_PEEK_FROM ? 2 : 3, "should be greater than or equal to -1");
+        RETURN_THROWS();
+    }
+    if (length == -1) {
         length = buffer->length - offset;
     } else if (UNEXPECTED((size_t) offset + length > buffer->length)) {
         length = buffer->length - offset;
@@ -687,7 +686,7 @@ static PHP_METHOD(Swow_Buffer, truncateFrom)
     SWOW_BUFFER_GETTER(sbuffer, buffer);
     SWOW_BUFFER_CHECK_LOCK(sbuffer);
     zend_long offset = sbuffer->offset;
-    zend_long length = 0;
+    zend_long length = -1;
 
     ZEND_PARSE_PARAMETERS_START(0, 2)
         Z_PARAM_OPTIONAL
@@ -695,6 +694,9 @@ static PHP_METHOD(Swow_Buffer, truncateFrom)
         Z_PARAM_LONG(length)
     ZEND_PARSE_PARAMETERS_END();
 
+    if (EXPECTED(length == -1)) {
+        length = ZEND_LONG_MAX;
+    }
     if (UNEXPECTED(offset < 0)) {
         zend_argument_value_error(1, "can not be negative");
         RETURN_THROWS();
