@@ -615,9 +615,24 @@ namespace Swow
         public function toString(): string { }
 
         /**
-         * @return mixed
+         * @return void
          */
-        public function close() { }
+        public function lock(): void { }
+
+        /**
+         * @return bool
+         */
+        public function tryLock(): bool { }
+
+        /**
+         * @return void
+         */
+        public function unlock(): void { }
+
+        /**
+         * @return void
+         */
+        public function close(): void { }
 
         /**
          * @return string
@@ -636,7 +651,7 @@ namespace Swow
     class Socket
     {
         public const INVALID_FD = -1;
-        public const DEFAULT_BACKLOG = 128;
+        public const DEFAULT_BACKLOG = 511;
         public const TYPE_FLAG_STREAM = 1;
         public const TYPE_FLAG_DGRAM = 2;
         public const TYPE_FLAG_INET = 16;

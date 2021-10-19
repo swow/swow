@@ -44,6 +44,7 @@ typedef struct
      * TODO: can we use swow_coroutine_t* and show it trace here?
      * but this module should not have any other dependency */
     cat_bool_t locked;
+    cat_bool_t user_locked;
     /* ownership is not on the current object, it needs to be separated when writing  */
     cat_bool_t shared;
     /* ================ */
@@ -94,9 +95,18 @@ SWOW_INTERNAL
     } \
 } while (0)
 
+static zend_always_inline zend_bool swow_buffer_is_locked(const swow_buffer_t *sbuffer)
+{
+    return sbuffer->locked || sbuffer->user_locked;
+}
+
 #define SWOW_BUFFER_CHECK_LOCK_EX(sbuffer, failure) do { \
-    if (UNEXPECTED((sbuffer)->locked)) { \
-        swow_throw_exception(swow_buffer_exception_ce, CAT_ELOCKED, "Buffer has been locked"); \
+    if (UNEXPECTED(swow_buffer_is_locked(sbuffer))) { \
+        swow_throw_exception( \
+            swow_buffer_exception_ce, \
+            CAT_ELOCKED, "Buffer has been locked by %s", \
+            (sbuffer)->user_locked ? "user" : "internal" \
+        ); \
         failure; \
     } \
 } while (0)

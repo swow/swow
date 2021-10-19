@@ -99,6 +99,7 @@ static zend_always_inline void swow_buffer_reset(swow_buffer_t *sbuffer)
 {
     sbuffer->offset = 0;
     sbuffer->locked = cat_false;
+    sbuffer->user_locked = cat_false;
     sbuffer->shared = cat_false;
 }
 
@@ -795,8 +796,49 @@ static PHP_METHOD(Swow_Buffer, toString)
     RETURN_STR(zend_string_copy(string));
 }
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_class_Swow_Buffer_close, 0, ZEND_RETURN_VALUE, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Buffer_void, ZEND_RETURN_VALUE, 0, IS_VOID, 0)
 ZEND_END_ARG_INFO()
+
+#define arginfo_class_Swow_Buffer_lock arginfo_class_Swow_Buffer_void
+
+static PHP_METHOD(Swow_Buffer, lock)
+{
+    swow_buffer_t *sbuffer = getThisBuffer();
+    SWOW_BUFFER_CHECK_LOCK(sbuffer);
+
+    ZEND_PARSE_PARAMETERS_NONE();
+
+    sbuffer->user_locked = cat_true;
+}
+
+#define arginfo_class_Swow_Buffer_tryLock arginfo_class_Swow_Buffer_getBool
+
+static PHP_METHOD(Swow_Buffer, tryLock)
+{
+    swow_buffer_t *sbuffer = getThisBuffer();
+
+    ZEND_PARSE_PARAMETERS_NONE();
+
+    if (UNEXPECTED(swow_buffer_is_locked(sbuffer))) {
+        RETURN_FALSE;
+    }
+
+    sbuffer->user_locked = cat_true;
+    RETURN_TRUE;
+}
+
+#define arginfo_class_Swow_Buffer_unlock arginfo_class_Swow_Buffer_void
+
+static PHP_METHOD(Swow_Buffer, unlock)
+{
+    swow_buffer_t *sbuffer = getThisBuffer();
+
+    ZEND_PARSE_PARAMETERS_NONE();
+
+    sbuffer->user_locked = cat_false;
+}
+
+#define arginfo_class_Swow_Buffer_close arginfo_class_Swow_Buffer_void
 
 static PHP_METHOD(Swow_Buffer, close)
 {
@@ -886,6 +928,9 @@ static const zend_function_entry swow_buffer_methods[] = {
     PHP_ME(Swow_Buffer, fetchString,       arginfo_class_Swow_Buffer_fetchString,       ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Buffer, dupString,         arginfo_class_Swow_Buffer_dupString,         ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Buffer, toString,          arginfo_class_Swow_Buffer_toString,          ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Buffer, lock,              arginfo_class_Swow_Buffer_lock,              ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Buffer, tryLock,           arginfo_class_Swow_Buffer_tryLock,           ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Buffer, unlock,            arginfo_class_Swow_Buffer_unlock,            ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Buffer, close,             arginfo_class_Swow_Buffer_close,             ZEND_ACC_PUBLIC)
     /* magic */
     PHP_ME(Swow_Buffer, __toString,        arginfo_class_Swow_Buffer___toString,        ZEND_ACC_PUBLIC)
