@@ -1001,7 +1001,7 @@ static PHP_METHOD_EX(Swow_Socket, _write, zend_bool single, zend_bool may_addres
                     if (EXPECTED(string != NULL)) {
                         SWOW_BUFFER_CHECK_STRING_SCOPE_EX(string, offset, length, goto _error);
                         if (length == 0) {
-                            continue;
+                            goto _next;
                         }
                         ptr = ZSTR_VAL(string) + offset;
                     } else {
@@ -1015,7 +1015,7 @@ static PHP_METHOD_EX(Swow_Socket, _write, zend_bool single, zend_bool may_addres
                             goto _error;
                         }
                         if (length == 0) {
-                            continue;
+                            goto _next;
                         }
                         if (UNEXPECTED((size_t) length > readable_length)) {
                             zend_argument_value_error(1, "is invalid, no enough readable buffer space on vector[%u]", vector_count);
@@ -1027,6 +1027,7 @@ static PHP_METHOD_EX(Swow_Socket, _write, zend_bool single, zend_bool may_addres
                     vector[vector_count].base = ptr;
                     vector[vector_count].length = length;
                     vector_count++;
+                    _next:
                     /* reset arguments */
                     zbuffer = NULL;
                     string = NULL;
