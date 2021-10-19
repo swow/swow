@@ -78,20 +78,20 @@ SWOW_API void swow_buffer_virtual_write_no_seek(swow_buffer_t *sbuffer, size_t l
 
 SWOW_INTERNAL
 #define SWOW_BUFFER_CHECK_STRING_SCOPE_EX(string, offset, length, failure) do { \
+    if (length == -1) { \
+        length = ZSTR_LEN(string) - offset; \
+    } \
     if (UNEXPECTED(offset < 0)) { \
         zend_value_error("String offset can not be negative"); \
         failure; \
     } \
     if (UNEXPECTED(length < 0)) { \
-        zend_value_error("String length can not be negative"); \
+        zend_value_error("String length should be greater than or equal to -1 (unlimited)"); \
         failure; \
     } \
     if (UNEXPECTED(((size_t) (offset + length)) > ZSTR_LEN(string))) { \
         zend_value_error("String scope overflow"); \
         failure; \
-    } \
-    if (length == 0) { \
-        length = ZSTR_LEN(string) - offset; \
     } \
 } while (0)
 

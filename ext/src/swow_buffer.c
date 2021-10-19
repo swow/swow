@@ -614,7 +614,7 @@ static PHP_METHOD(Swow_Buffer, write)
     SWOW_BUFFER_CHECK_LOCK(sbuffer);
     zend_string *string;
     zend_long offset = 0;
-    zend_long length = 0;
+    zend_long length = -1;
 
     ZEND_PARSE_PARAMETERS_START(1, 3)
         Z_PARAM_STR(string)

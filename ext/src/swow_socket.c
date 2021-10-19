@@ -851,7 +851,7 @@ static PHP_METHOD_EX(Swow_Socket, _write, zend_bool single, zend_bool may_addres
     zval *zbuffer = NULL;
     zend_string *string = NULL;
     zend_long offset = 0;
-    zend_long length = 0;
+    zend_long length = -1;
     zend_bool length_is_null = 1;
     zend_string *address = NULL;
     zend_long port = 0;
@@ -937,7 +937,7 @@ static PHP_METHOD_EX(Swow_Socket, _write, zend_bool single, zend_bool may_addres
 #define _ARG_POS(x) , x
 #endif
                         if (UNEXPECTED(vector_array_count == 0)) {
-                            zend_argument_value_error(1, "[%u] can not be empty", vector_count);
+                            zend_argument_value_error(1, "can not be empty");
                             goto _error;
                         }
                         _CURRENT_ZVAL_(bucket, bucket_end, ztmp);
@@ -1031,7 +1031,7 @@ static PHP_METHOD_EX(Swow_Socket, _write, zend_bool single, zend_bool may_addres
                     zbuffer = NULL;
                     string = NULL;
                     offset = 0;
-                    length = 0;
+                    length = -1;
                     length_is_null = 1;
                 } ZEND_HASH_FOREACH_END();
             } while (0);
@@ -1157,7 +1157,7 @@ static PHP_METHOD_EX(Swow_Socket, _sendString, zend_bool may_address)
     zend_long timeout;
     zend_bool timeout_is_null = 1;
     zend_long offset = 0;
-    zend_long length = 0;
+    zend_long length = -1;
     const char *ptr;
     cat_bool_t ret;
 
