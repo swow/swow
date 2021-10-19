@@ -17,6 +17,7 @@ use SplFileObject;
 use Swow\Coroutine;
 use Swow\Signal;
 use Swow\Socket;
+use Swow\Util\FileSystem\IOException;
 use Throwable;
 use function array_filter;
 use function array_shift;
@@ -26,11 +27,15 @@ use function basename;
 use function bin2hex;
 use function count;
 use function ctype_print;
+use function debug_backtrace;
 use function end;
 use function explode;
 use function extension_loaded;
+use function fclose;
+use function fgets;
 use function file_exists;
 use function file_get_contents;
+use function fopen;
 use function func_get_args;
 use function get_class;
 use function getenv;
@@ -58,6 +63,8 @@ use function Swow\Util\var_dump_return;
 use function trigger_error;
 use function trim;
 use function usleep;
+use const DEBUG_BACKTRACE_IGNORE_ARGS;
+use const PHP_EOL;
 use const Swow\Errno\ETIMEDOUT;
 
 class Debugger
@@ -1173,11 +1180,42 @@ TEXT;
         return $this;
     }
 
-    /**
-     * @return $this
-     */
+    /** @return $this */
     public static function runOnTTY(string $keyword = 'sdb')
     {
         return static::getInstance()->run($keyword);
+    }
+
+    /** @var string[] file names */
+    protected static $showExecutedSourceLinesHandlers = [];
+
+    final public static function showExecutedSourceLines(): void
+    {
+        $file = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 1)[0]['file'] ?? '';
+        if (self::$showExecutedSourceLinesHandlers[$file] ?? false) {
+            return;
+        }
+        $fp = @fopen($file, 'r');
+        if ($fp === false) {
+            throw IOException::getLast();
+        }
+        $lines = [];
+        while (($line = fgets($fp)) !== false) {
+            $lines[] = rtrim($line);
+        }
+        fclose($fp);
+        $previousHandler = registerExtendedStatementHandler(null);
+        registerExtendedStatementHandler(function () use ($file, $lines, $previousHandler) {
+            $call = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 1)[0];
+            $callFile = $call['file'];
+            $callLine = $call['line'];
+            if ($callFile === $file) {
+                echo sprintf('%-6s%s%s', $callLine, $lines[$callLine - 1], PHP_EOL);
+            }
+            if ($previousHandler) {
+                $previousHandler();
+            }
+        });
+        self::$showExecutedSourceLinesHandlers[$file] = true;
     }
 }
