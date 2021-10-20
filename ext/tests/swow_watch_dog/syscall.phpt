@@ -68,11 +68,11 @@ switch (PHP_OS_FAMILY) {
 $threshold = 5 * $quantum; // 5 times quantum to bite
 $blocking_time = 100 * $quantum; // 100 times quantum
 
-Assert::same(WatchDog::isRunning(), false);
+Assert::false(WatchDog::isRunning());
 
 WatchDog::run($quantum, $threshold);
 
-Assert::same(WatchDog::isRunning(), true);
+Assert::true(WatchDog::isRunning());
 
 $watcher = Coroutine::run(function () {
     Coroutine::yield();

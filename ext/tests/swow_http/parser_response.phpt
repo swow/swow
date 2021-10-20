@@ -78,8 +78,8 @@ while (Parser::EVENT_MESSAGE_COMPLETE !== ($event = $parser->execute($buffer))) 
             Assert::same($parser->getProtocolVersion(), '1.1');
             Assert::same($parser->getMajorVersion(), 1);
             Assert::same($parser->getMinorVersion(), 1);
-            Assert::same($parser->isUpgrade(), false);
-            Assert::same($parser->shouldKeepAlive(), false);
+            Assert::false($parser->isUpgrade());
+            Assert::false($parser->shouldKeepAlive());
             break;
         case Parser::EVENT_BODY:
             $body = $data;
@@ -88,7 +88,7 @@ while (Parser::EVENT_MESSAGE_COMPLETE !== ($event = $parser->execute($buffer))) 
     }
 }
 
-Assert::same($parser->isCompleted(), true);
+Assert::true($parser->isCompleted());
 Assert::isInstanceOf($parser->finish(), Parser::class);
 
 // assert generated headers
