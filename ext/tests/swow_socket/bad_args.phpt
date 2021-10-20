@@ -293,7 +293,7 @@ foreach (['write', 'writeTo'] as $function) {
 
     Assert::throws(function () use ($buffer, $notString, $function, $conn) {
         // send buffer overflow
-        [$conn, $function]([[/* buffer-ish: string */ 'im a short string', /* offset */ 0, /* send length */ -1]]);
+        [$conn, $function]([[/* buffer-ish: string */ 'im a short string', /* offset */ 0, /* send length */ -2]]);
     }, Throwable::class);
 
     Assert::throws(function () use ($buffer, $notString, $function, $conn) {

@@ -659,8 +659,10 @@ static PHP_METHOD(Swow_Buffer, truncate)
         Z_PARAM_LONG(length)
     ZEND_PARSE_PARAMETERS_END();
 
-    if (UNEXPECTED(length < 0)) {
-        zend_argument_value_error(1, "can not be negative");
+    if (EXPECTED(length == -1)) {
+        length = ZEND_LONG_MAX;
+    } else if (UNEXPECTED(length < 0)) {
+        zend_argument_value_error(1, "should be greater than or equal to -1");
         RETURN_THROWS();
     }
 
@@ -694,15 +696,14 @@ static PHP_METHOD(Swow_Buffer, truncateFrom)
         Z_PARAM_LONG(length)
     ZEND_PARSE_PARAMETERS_END();
 
-    if (EXPECTED(length == -1)) {
-        length = ZEND_LONG_MAX;
-    }
     if (UNEXPECTED(offset < 0)) {
         zend_argument_value_error(1, "can not be negative");
         RETURN_THROWS();
     }
-    if (UNEXPECTED(length < 0)) {
-        zend_argument_value_error(2, "can not be negative");
+    if (EXPECTED(length == -1)) {
+        length = ZEND_LONG_MAX;
+    } else if (UNEXPECTED(length < 0)) {
+        zend_argument_value_error(2, "should be greater than or equal to -1");
         RETURN_THROWS();
     }
 

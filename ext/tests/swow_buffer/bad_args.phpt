@@ -45,8 +45,8 @@ Assert::throws(function () use ($buffer) {
 $buffer->write('cafebabe');
 
 Assert::throws(function () use ($buffer) {
-    // read length must > 0
-    $buffer->read(-1);
+    // read length must >= -1
+    $buffer->read(-8);
 }, ValueError::class);
 
 Assert::throws(function () use ($buffer) {
@@ -55,7 +55,7 @@ Assert::throws(function () use ($buffer) {
 }, ValueError::class);
 
 Assert::throws(function () use ($buffer) {
-    // length must > 0
+    // length must >= -1
     $buffer->peekFrom(0, -8);
 }, ValueError::class);
 
@@ -70,18 +70,18 @@ Assert::throws(function () use ($buffer) {
 }, Swow\Buffer\Exception::class);
 
 Assert::throws(function () use ($buffer) {
-    // length must > 0
-    $buffer->peek(-1);
+    // length must >= -1
+    $buffer->peek(-8);
 }, ValueError::class);
 
 Assert::throws(function () use ($buffer) {
-    // length must > 0
+    // offset must >= 0
     $buffer->write('nope', -1);
 }, ValueError::class);
 
 Assert::throws(function () use ($buffer) {
-    // length must > 0
-    $buffer->truncate(-1);
+    // length must >= -1
+    $buffer->truncate(-123);
 }, ValueError::class);
 
 Assert::throws(function () use ($buffer) {
@@ -90,8 +90,8 @@ Assert::throws(function () use ($buffer) {
 }, ValueError::class);
 
 Assert::throws(function () use ($buffer) {
-    // offset must > 0
-    $buffer->truncateFrom(1, -1);
+    // length must >= -1
+    $buffer->truncateFrom(1, -123);
 }, ValueError::class);
 
 // these are OK
