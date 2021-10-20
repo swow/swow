@@ -171,6 +171,7 @@ CAT_GLOBALS_STRUCT_BEGIN(cat_coroutine)
     cat_coroutine_count_t waiter_count;
     /* functions */
     cat_coroutine_resume_t resume;
+    cat_coroutine_resume_t original_resume;
     /* info */
     cat_coroutine_id_t last_id;
     cat_coroutine_count_t count;
@@ -181,7 +182,7 @@ CAT_GLOBALS_STRUCT_END(cat_coroutine)
 
 extern CAT_API CAT_GLOBALS_DECLARE(cat_coroutine)
 
-#define CAT_COROUTINE_G(x)                   CAT_GLOBALS_GET(cat_coroutine, x)
+#define CAT_COROUTINE_G(x) CAT_GLOBALS_GET(cat_coroutine, x)
 
 /* module initializers */
 CAT_API cat_bool_t cat_coroutine_module_init(void);
@@ -191,6 +192,9 @@ CAT_API cat_bool_t cat_coroutine_runtime_shutdown(void);
 /* register/options */
 /* return the original resume function ptr */
 CAT_API cat_coroutine_resume_t cat_coroutine_register_resume(cat_coroutine_resume_t resume);
+CAT_API cat_bool_t cat_coroutine_switch_blocked(void);
+CAT_API void cat_coroutine_switch_block(void);
+CAT_API void cat_coroutine_switch_unblock(void);
 /* return the original main coroutine ptr */
 CAT_API cat_coroutine_t *cat_coroutine_register_main(cat_coroutine_t *coroutine);
 /* return the original stack size */

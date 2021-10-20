@@ -556,13 +556,13 @@ static int cat_ssl_verify_callback(int preverify_ok, X509_STORE_CTX *ctx) /* {{{
 CAT_API void cat_ssl_context_enable_verify_peer(cat_ssl_context_t *context)
 {
     CAT_LOG_DEBUG(SSL, "SSL_CTX_set_verify(%p, SSL_VERIFY_PEER, ssl_verify_callback)", context);
-	SSL_CTX_set_verify(context->ctx, SSL_VERIFY_PEER, cat_ssl_verify_callback);
+    SSL_CTX_set_verify(context->ctx, SSL_VERIFY_PEER, cat_ssl_verify_callback);
 }
 
 CAT_API void cat_ssl_context_disable_verify_peer(cat_ssl_context_t *context)
 {
     CAT_LOG_DEBUG(SSL, "SSL_CTX_set_verify(%p, SSL_VERIFY_NONE, NULL)", context);
-	SSL_CTX_set_verify(context->ctx, SSL_VERIFY_NONE, NULL);
+    SSL_CTX_set_verify(context->ctx, SSL_VERIFY_NONE, NULL);
 }
 
 CAT_API void cat_ssl_context_set_no_ticket(cat_ssl_context_t *context)
@@ -1227,7 +1227,7 @@ CAT_API cat_bool_t cat_ssl_decrypt(cat_ssl_t *ssl, char *out, size_t *out_length
         }
     }
 
-    cat_buffer_truncate_from(buffer, nwrite, 0);
+    cat_buffer_truncate_from(buffer, nwrite, SIZE_MAX);
 
     *out_length = nread;
 

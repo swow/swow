@@ -241,7 +241,7 @@ static cat_curl_multi_context_t *cat_curl_multi_get_context(CURLM *multi)
 
 static void cat_curl_multi_context_close(cat_curl_multi_context_t *context)
 {
-#ifdef CAT_DO_NOT_OPTIMIZE /* fds should have been free'd in curl_multi_socket_function() */
+#ifdef CAT_DONT_OPTIMIZE /* fds should have been free'd in curl_multi_socket_function() */
     cat_curl_pollfd_t *fd;
     while ((fd = cat_queue_front_data(&context->fds, cat_curl_pollfd_t, node))) {
         cat_queue_remove(&fd->node);

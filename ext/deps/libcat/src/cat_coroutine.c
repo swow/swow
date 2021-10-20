@@ -145,6 +145,7 @@ CAT_API cat_bool_t cat_coroutine_runtime_init(void)
 {
     /* register coroutine resume */
     cat_coroutine_register_resume(cat_coroutine_resume_standard);
+    CAT_COROUTINE_G(original_resume) = NULL;
 
     /* init options */
     cat_coroutine_set_default_stack_size(CAT_COROUTINE_RECOMMENDED_STACK_SIZE);
@@ -224,9 +225,38 @@ CAT_API cat_bool_t cat_coroutine_set_dead_lock_log_type(cat_log_type_t type)
 
 CAT_API cat_coroutine_resume_t cat_coroutine_register_resume(cat_coroutine_resume_t resume)
 {
-    cat_coroutine_resume_t origin_resume = cat_coroutine_resume;
+    cat_coroutine_resume_t original_resume = cat_coroutine_resume;
     cat_coroutine_resume = resume;
-    return origin_resume;
+    return original_resume;
+}
+
+static CAT_COLD cat_bool_t cat_coroutine_resume_deny(cat_coroutine_t *coroutine, cat_data_t *data, cat_data_t **retval)
+{
+    (void) coroutine;
+    (void) data;
+    (void) retval;
+    cat_update_last_error(CAT_EMISUSE, "Unexpected coroutine switching");
+
+    return cat_false;
+}
+
+CAT_API cat_bool_t cat_coroutine_switch_blocked(void)
+{
+    return CAT_COROUTINE_G(resume) == cat_coroutine_resume_deny;
+}
+
+CAT_API void cat_coroutine_switch_block(void)
+{
+    CAT_COROUTINE_G(original_resume) = cat_coroutine_register_resume(cat_coroutine_resume_deny);
+}
+
+CAT_API void cat_coroutine_switch_unblock(void)
+{
+    if (CAT_COROUTINE_G(resume) != cat_coroutine_resume_deny) {
+        return;
+    }
+    cat_coroutine_register_resume(CAT_COROUTINE_G(original_resume));
+    CAT_COROUTINE_G(original_resume) = NULL;
 }
 
 CAT_API cat_coroutine_t *cat_coroutine_register_main(cat_coroutine_t *coroutine)
@@ -247,6 +277,7 @@ CAT_API cat_coroutine_t *cat_coroutine_register_main(cat_coroutine_t *coroutine)
 }
 
 /* globals */
+
 CAT_API cat_coroutine_stack_size_t cat_coroutine_get_default_stack_size(void)
 {
     return CAT_COROUTINE_G(default_stack_size);
@@ -429,9 +460,9 @@ CAT_API cat_coroutine_t *cat_coroutine_create_ex(cat_coroutine_t *coroutine, cat
 #if defined(CAT_COROUTINE_USE_MMAP)
     virtual_memory = mmap(NULL, virtual_memory_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_STACK, -1, 0);
 #elif defined(CAT_COROUTINE_USE_VIRTUAL_ALLOC)
-	virtual_memory = VirtualAlloc(0, virtual_memory_size, MEM_COMMIT, PAGE_READWRITE);
+    virtual_memory = VirtualAlloc(0, virtual_memory_size, MEM_COMMIT, PAGE_READWRITE);
 #else // if defined(CAT_COROUTINE_USE_SYS_MALLOC)
-	virtual_memory = cat_sys_malloc(virtual_memory_size);
+    virtual_memory = cat_sys_malloc(virtual_memory_size);
 #endif
     if (unlikely(virtual_memory == CAT_COROUTINE_MEMORY_INVALID)) {
         cat_update_last_error_of_syscall("Allocate virtual memory for coroutine stack failed with size %zu", virtual_memory_size);
@@ -686,7 +717,7 @@ CAT_API cat_bool_t cat_coroutine_yield(cat_data_t *data, cat_data_t **retval)
 
     ret = cat_coroutine_resume(coroutine, data, retval);
 
-    CAT_ASSERT(ret && "Yield never fail");
+    CAT_ASSERT((ret || cat_coroutine_switch_blocked()) && "Yield never fail");
 
     return ret;
 }

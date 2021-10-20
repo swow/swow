@@ -120,7 +120,7 @@ CAT_API CAT_NORETURN void cat_abort(void);
 #define cat_translate_sys_error(error) ((cat_errno_t) (-(error)))
 #else
 #define cat_sys_errno                   ((cat_errno_t) WSAGetLastError())
-#define cat_set_sys_errno(error)        WSASetLastError(error)
+#define cat_set_sys_errno(error)        do { errno = error; WSASetLastError(error); } while (0)
 #define cat_translate_sys_error(error)  ((cat_errno_t) uv_translate_sys_error(error))
 #endif
 

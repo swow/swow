@@ -123,6 +123,12 @@ do {
 #endif
 } while (0);
 #endif
+    /* log module types */
+    if (cat_env_exists("CAT_LOG_MODULE_TYPES")) {
+        char *names = cat_env_get("CAT_LOG_MODULE_TYPES");
+        CAT_G(log_module_types) = cat_module_get_types_from_names(names);
+        cat_free(names);
+    }
 
     CAT_G(runtime) = cat_true;
 

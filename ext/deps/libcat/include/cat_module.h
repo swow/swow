@@ -93,6 +93,7 @@ typedef struct cat_module_info_s {
     cat_bool_t running;
 } cat_module_info_t;
 
+#ifdef CAT_NOT_IMPL
 extern CAT_API cat_module_info_t cat_module_info_map[CAT_MODULE_MAX_COUNT];
 
 CAT_API const cat_module_info_t *cat_module_get_info(cat_module_type_t type);
@@ -103,3 +104,6 @@ CAT_API cat_bool_t cat_module_register(cat_module_type_t type, const char *name,
 CAT_API cat_bool_t cat_module_unregister(cat_module_type_t type);
 CAT_API cat_bool_t cat_module_run(cat_module_type_t type, const char **dependencies);
 CAT_API cat_bool_t cat_module_stop(cat_module_type_t type);
+#endif /* CAT_NOT_IMPL */
+
+CAT_API cat_module_types_t cat_module_get_types_from_names(const char *names);

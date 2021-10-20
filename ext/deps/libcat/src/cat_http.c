@@ -180,17 +180,18 @@ CAT_API cat_bool_t cat_http_parser_execute(cat_http_parser_t *parser, const char
     llhttp_errno_t error;
 
     parser->event = CAT_HTTP_PARSER_EVENT_NONE;
-    llhttp_resume(&parser->llhttp);
     error = llhttp_execute(&parser->llhttp, data, length);
     if (error != HPE_OK) {
         parser->parsed_length = llhttp_get_error_pos(&parser->llhttp) - data;
         if (unlikely(error != HPE_PAUSED)) {
             if (unlikely(error != HPE_PAUSED_UPGRADE)) {
-                cat_update_last_error(error, "HTTP-Parser execute failed: %s", llhttp_errno_name(error));
+                cat_update_last_error(error, "HTTP-Parser execute failed: %s", llhttp_get_error_reason(&parser->llhttp));
                 return cat_false;
             } else {
                 llhttp_resume_after_upgrade(&parser->llhttp);
             }
+        } else {
+            llhttp_resume(&parser->llhttp);
         }
     } else {
         parser->parsed_length = length;

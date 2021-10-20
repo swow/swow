@@ -633,6 +633,7 @@ static int socket_create(int domain, int type, int protocol)
 
 static cat_always_inline cat_timeout_t cat_socket_internal_get_dns_timeout(const cat_socket_internal_t *isocket);
 static cat_always_inline cat_sa_family_t cat_socket_internal_get_af(const cat_socket_internal_t *isocket);
+static const cat_sockaddr_info_t *cat_socket_internal_getname_fast(cat_socket_internal_t *isocket, cat_bool_t is_peer, int *error_ptr);
 
 static cat_bool_t cat_socket_internal_getaddrbyname(
     cat_socket_internal_t *isocket,
@@ -781,7 +782,7 @@ CAT_API cat_socket_t *cat_socket_create_ex(cat_socket_t *socket, cat_socket_type
 #endif
         flags |= CAT_SOCKET_FLAG_ALLOCATED;
     }
-#ifndef CAT_DO_NOT_OPTIMIZE
+#ifndef CAT_DONT_OPTIMIZE
     /* dynamic memory allocation so we can save some space */
     if ((type & CAT_SOCKET_TYPE_TCP) == CAT_SOCKET_TYPE_TCP) {
         isocket_size = cat_offsize_of(cat_socket_internal_t, u.tcp);
@@ -834,6 +835,10 @@ CAT_API cat_socket_t *cat_socket_create_ex(cat_socket_t *socket, cat_socket_type
     } else if (type & CAT_SOCKET_TYPE_FLAG_IPV6) {
         af = AF_INET6;
     } else {
+        af = AF_UNSPEC;
+    }
+    if (ioptions.flags & CAT_SOCKET_CREATION_OPEN_FLAGS) {
+        /* prevent uv from creating a new socket */
         af = AF_UNSPEC;
     }
 
@@ -952,11 +957,24 @@ CAT_API cat_socket_t *cat_socket_create_ex(cat_socket_t *socket, cat_socket_type
     if (ioptions.flags & CAT_SOCKET_CREATION_OPEN_FLAGS) {
         const cat_sockaddr_info_t *address_info = NULL;
         if (check_connection) {
-            cat_bool_t is_established = cat_false;
+            cat_bool_t is_established;
             if (((type & CAT_SOCKET_TYPE_TTY) == CAT_SOCKET_TYPE_TTY)) {
                 is_established = cat_true;
-            } else if (isocket->u.handle.flags & (UV_HANDLE_READABLE | UV_HANDLE_WRITABLE)) {
-                is_established = cat_true;
+            } else if (type & CAT_SOCKET_TYPE_FLAG_STREAM) {
+                do {
+                    if ((type & CAT_SOCKET_TYPE_PIPE) == CAT_SOCKET_TYPE_PIPE) {
+                        unsigned int flags = isocket->u.handle.flags & (UV_HANDLE_READABLE | UV_HANDLE_WRITABLE);
+                        if (flags != 0 && flags != (UV_HANDLE_READABLE | UV_HANDLE_WRITABLE)) {
+                            // pipe2() pipe
+                            is_established = cat_true;
+                            break;
+                        }
+                    }
+                    is_established = cat_socket_internal_getname_fast(isocket, cat_true, NULL) != NULL;
+                } while (0);
+            } else {
+                /* non-connection types */
+                is_established = cat_false;
             }
             if (is_established) {
                 isocket->flags |= CAT_SOCKET_INTERNAL_FLAG_ESTABLISHED;

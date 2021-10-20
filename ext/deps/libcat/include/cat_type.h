@@ -35,6 +35,10 @@ typedef void cat_data_t;
 typedef void (*cat_data_callback_t)(cat_data_t *data);
 typedef void (*cat_data_dtor_t)(cat_data_t *data);
 
+#ifndef SIZE_MAX
+#define SIZE_MAX ((size_t) ~0)
+#endif
+
 #if defined(__x86_64__) || defined(__LP64__) || defined(_LP64) || defined(_WIN64)
 #define CAT_L64 1
 #endif
