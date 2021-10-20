@@ -555,7 +555,7 @@ static PHP_METHOD_EX(Swow_Buffer, _read, swow_buffer_read_type_t type)
     }
     if (length == -1) {
         length = buffer->length - offset;
-    } else if (UNEXPECTED((size_t) offset + length > buffer->length)) {
+    } else if (UNEXPECTED(length > buffer->length - ((size_t) offset))) {
         length = buffer->length - offset;
     }
     if (!(type & SWOW_BUFFER_PEEK)) {
