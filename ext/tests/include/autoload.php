@@ -11,7 +11,9 @@
 
 declare(strict_types=1);
 
-/* TODO: should we go to PHPUnit? */
+/* TODO: should we go to PHPUnit?
+ * : no, we can just test extension here,
+ *   and test library by phpunit */
 
 spl_autoload_register(function (string $class) {
     $file = __DIR__ . "/lib/{$class}.php";
