@@ -43,7 +43,7 @@ class MySocket2 extends Socket
             'setSendBufferSize',
         ] as $function) {
             Assert::throws(function () use ($function) {
-                [$this, $function](-1);
+                $this->$function(-1);
             }, Error::class);
         }
         foreach ([
@@ -57,7 +57,7 @@ class MySocket2 extends Socket
             'recvString',
         ] as $function) {
             Assert::throws(function () use ($function) {
-                [$this, $function]();
+                $this->$function();
             }, Error::class);
         }
         Assert::throws(function () {
@@ -91,7 +91,7 @@ foreach ([
     'getSockPort',
 ] as $function) {
     Assert::throws(function () use ($function, $socket) {
-        [$socket, $function]();
+        $socket->$function();
     }, Error::class);
 }
 // cannot accept before binding
@@ -100,7 +100,7 @@ foreach ([
     'acceptTyped',
 ] as $function) {
     Assert::throws(function () use ($function, $socket) {
-        [$socket, $function]();
+        $socket->$function();
     }, Error::class);
 }
 
@@ -138,7 +138,7 @@ foreach ([
     'peekStringFrom',
 ] as $function) {
     Assert::throws(function () use ($function, $conn) {
-        [$conn, $function](-1);
+        $conn->$function(-1);
     }, ValueError::class);
 }
 
@@ -153,10 +153,10 @@ foreach ([
     'peekFrom',
 ] as $function) {
     Assert::throws(function () use ($buffer, $function, $conn) {
-        [$conn, $function]($buffer, 0);
+        $conn->$function($buffer, 0);
     }, ValueError::class);
     Assert::throws(function () use ($buffer, $function, $conn) {
-        [$conn, $function]($buffer, -123);
+        $conn->$function($buffer, -123);
     }, ValueError::class);
 }
 
@@ -173,7 +173,7 @@ foreach ([
     'peekFrom',
 ] as $function) {
     Assert::throws(function () use ($buffer, $function, $conn) {
-        [$conn, $function]($buffer, 12345);
+        $conn->$function($buffer, 12345);
     }, ValueError::class);
 }
 
@@ -184,9 +184,9 @@ foreach ([
     'send',
     'sendTo',
 ] as $function) {
-    [$conn, $function]($buffer, 0);
+    $conn->$function($buffer, 0);
     Assert::throws(function () use ($buffer, $function, $conn) {
-        [$conn, $function]($buffer, -123);
+        $conn->$function($buffer, -123);
     }, ValueError::class);
 }
 
@@ -196,7 +196,7 @@ foreach ([
     'sendTo',
 ] as $function) {
     Assert::throws(function () use ($buffer, $function, $conn) {
-        [$conn, $function]($buffer, 54321);
+        $conn->$function($buffer, 54321);
     }, ValueError::class);
 }
 
@@ -226,82 +226,82 @@ foreach (['write', 'writeTo'] as $function) {
     };
     Assert::throws(function () use ($function, $conn) {
         // empty buffers
-        [$conn, $function]([]);
+        $conn->$function([]);
     }, ValueError::class);
 
     Assert::throws(function () use ($notString, $function, $conn) {
         // bad buffer spec
-        [$conn, $function]([/* buffer spec */ $notString]);
+        $conn->$function([/* buffer spec */ $notString]);
     }, ValueError::class);
 
     Assert::throws(function () use ($notString, $function, $conn) {
         // bad buffer spec
-        [$conn, $function]([[/* buffer-ish */ $notString]]);
+        $conn->$function([[/* buffer-ish */ $notString]]);
     }, ValueError::class);
 
     Assert::throws(function () use ($buffer, $notString, $function, $conn) {
         // bad buffer spec
-        [$conn, $function]([/* buffer spec */ []]);
+        $conn->$function([/* buffer spec */ []]);
     }, ValueError::class);
 
     Assert::throws(function () use ($buffer, $notString, $function, $conn) {
         // bad buffer spec
-        [$conn, $function]([[/* buffer-ish: strange things */ []]]);
+        $conn->$function([[/* buffer-ish: strange things */ []]]);
     }, ValueError::class);
 
     Assert::throws(function () use ($buffer, $notString, $function, $conn) {
         // bad buffer spec
-        [$conn, $function]([[/* buffer-ish: buffer */ $buffer, /* send length */ 1, /* ?? */ 2, /* ?? */ 3]]);
+        $conn->$function([[/* buffer-ish: buffer */ $buffer, /* send length */ 1, /* ?? */ 2, /* ?? */ 3]]);
     }, ValueError::class);
 
     Assert::throws(function () use ($buffer, $notString, $function, $conn) {
         // send buffer overflow
-        [$conn, $function]([[/* buffer-ish: buffer */ $buffer, /* send length */ 99999]]);
+        $conn->$function([[/* buffer-ish: buffer */ $buffer, /* send length */ 99999]]);
     }, Throwable::class);
 
     Assert::throws(function () use ($buffer, $notString, $function, $conn) {
         // send buffer overflow
-        [$conn, $function]([[/* buffer-ish: buffer */ $buffer, /* send length */ $notString]]);
+        $conn->$function([[/* buffer-ish: buffer */ $buffer, /* send length */ $notString]]);
     }, Throwable::class);
 
     Assert::throws(function () use ($buffer, $notString, $function, $conn) {
         // send buffer overflow
-        [$conn, $function]([[/* buffer-ish: buffer */ $buffer, /* send length */ -123]]);
+        $conn->$function([[/* buffer-ish: buffer */ $buffer, /* send length */ -123]]);
     }, Throwable::class);
 
     Assert::throws(function () use ($buffer, $notString, $function, $conn) {
         // send buffer overflow
-        [$conn, $function]([[/* buffer-ish: string */ 'im a short string', /* offset */ 99999, /* send length */ 2]]);
+        $conn->$function([[/* buffer-ish: string */ 'im a short string', /* offset */ 99999, /* send length */ 2]]);
     }, Throwable::class);
 
     Assert::throws(function () use ($buffer, $notString, $function, $conn) {
         // send buffer overflow
-        [$conn, $function]([[/* buffer-ish: string */ 'im a short string', /* offset */ 0, /* send length */ 29999]]);
+        $conn->$function([[/* buffer-ish: string */ 'im a short string', /* offset */ 0, /* send length */ 29999]]);
     }, Throwable::class);
 
     Assert::throws(function () use ($buffer, $notString, $function, $conn) {
         // send buffer overflow
-        [$conn, $function]([[/* buffer-ish: string */ 'im a short string', /* offset */ $notString, /* send length */ 2]]);
+        $conn->$function([[/* buffer-ish: string */ 'im a short string', /* offset */ $notString, /* send length */ 2]]);
     }, Throwable::class);
 
     Assert::throws(function () use ($buffer, $notString, $function, $conn) {
         // send buffer overflow
-        [$conn, $function]([[/* buffer-ish: string */ 'im a short string', /* offset */ 0, /* send length */ $notString]]);
+        $conn->$function([[/* buffer-ish: string */ 'im a short string', /* offset */ 0, /* send length */ $notString]]);
     }, Throwable::class);
 
     Assert::throws(function () use ($buffer, $notString, $function, $conn) {
         // send buffer overflow
-        [$conn, $function]([[/* buffer-ish: string */ 'im a short string', /* offset */ -1, /* send length */ 2]]);
+        $conn->$function([[/* buffer-ish: string */ 'im a short string', /* offset */ -1, /* send length */ 2]]);
     }, Throwable::class);
 
     Assert::throws(function () use ($buffer, $notString, $function, $conn) {
         // send buffer overflow
-        [$conn, $function]([[/* buffer-ish: string */ 'im a short string', /* offset */ 0, /* send length */ -123]]);
+        $conn->$function([[/* buffer-ish: string */ 'im a short string', /* offset */ 0, /* send length */ -123]]);
     }, Throwable::class);
 
     Assert::throws(function () use ($buffer, $notString, $function, $conn) {
         // bad buffer spec
-        [$conn, $function]([[/* buffer-ish: buffer */ $buffer, /* send length */ 1, /* ?? */ 2]]);
+        $conn->$function([[/* buffer-ish: buffer */ $buffer, /* send length */ 1, /* ?? */ 2]]);
     }, ValueError::class);
 }
 
