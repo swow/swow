@@ -142,7 +142,7 @@ foreach ([
     }, ValueError::class);
 }
 
-// read length should greater than 0
+// read length should greater than 0 or equal to -1
 foreach ([
     'read',
     'recv',
@@ -153,7 +153,10 @@ foreach ([
     'peekFrom',
 ] as $function) {
     Assert::throws(function () use ($buffer, $function, $conn) {
-        [$conn, $function]($buffer, -1);
+        [$conn, $function]($buffer, 0);
+    }, ValueError::class);
+    Assert::throws(function () use ($buffer, $function, $conn) {
+        [$conn, $function]($buffer, -123);
     }, ValueError::class);
 }
 
@@ -176,14 +179,14 @@ foreach ([
 
 $buffer->rewind();
 
-// send length should greater than or equal to 0
+// send length should greater than or equal to -1
 foreach ([
     'send',
     'sendTo',
 ] as $function) {
     [$conn, $function]($buffer, 0);
     Assert::throws(function () use ($buffer, $function, $conn) {
-        [$conn, $function]($buffer, -1);
+        [$conn, $function]($buffer, -123);
     }, ValueError::class);
 }
 
@@ -263,7 +266,7 @@ foreach (['write', 'writeTo'] as $function) {
 
     Assert::throws(function () use ($buffer, $notString, $function, $conn) {
         // send buffer overflow
-        [$conn, $function]([[/* buffer-ish: buffer */ $buffer, /* send length */ -1]]);
+        [$conn, $function]([[/* buffer-ish: buffer */ $buffer, /* send length */ -123]]);
     }, Throwable::class);
 
     Assert::throws(function () use ($buffer, $notString, $function, $conn) {
@@ -293,7 +296,7 @@ foreach (['write', 'writeTo'] as $function) {
 
     Assert::throws(function () use ($buffer, $notString, $function, $conn) {
         // send buffer overflow
-        [$conn, $function]([[/* buffer-ish: string */ 'im a short string', /* offset */ 0, /* send length */ -2]]);
+        [$conn, $function]([[/* buffer-ish: string */ 'im a short string', /* offset */ 0, /* send length */ -123]]);
     }, Throwable::class);
 
     Assert::throws(function () use ($buffer, $notString, $function, $conn) {

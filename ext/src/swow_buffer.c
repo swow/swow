@@ -566,7 +566,7 @@ static PHP_METHOD_EX(Swow_Buffer, _read, swow_buffer_read_type_t type)
 }
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Buffer_read, ZEND_RETURN_VALUE, 0, IS_STRING, 0)
-    ZEND_ARG_INFO_WITH_DEFAULT_VALUE(0, length, "0")
+    ZEND_ARG_INFO_WITH_DEFAULT_VALUE(0, length, "-1")
 ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Buffer, read)
@@ -583,7 +583,7 @@ static PHP_METHOD(Swow_Buffer, peek)
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Buffer_peekFrom, ZEND_RETURN_VALUE, 0, IS_STRING, 0)
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, offset, IS_LONG, 0, "\'$this->getOffset()\'")
-    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, length, IS_LONG, 0, "0")
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, length, IS_LONG, 0, "-1")
 ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Buffer, peekFrom)
@@ -604,7 +604,7 @@ static PHP_METHOD(Swow_Buffer, getContents)
 ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO_EX(arginfo_class_Swow_Buffer_write, 1)
     ZEND_ARG_INFO(0, string)
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, offset, IS_LONG, 0, "0")
-    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, length, IS_LONG, 0, "0")
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, length, IS_LONG, 0, "-1")
 ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Buffer, write)
@@ -645,14 +645,14 @@ static PHP_METHOD(Swow_Buffer, write)
 }
 
 ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO_EX(arginfo_class_Swow_Buffer_truncate, 0)
-    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, length, IS_LONG, 0, "\'$this->getOffset()\'")
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, length, IS_LONG, 0, "-1")
 ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Buffer, truncate)
 {
     SWOW_BUFFER_GETTER(sbuffer, buffer);
     SWOW_BUFFER_CHECK_LOCK(sbuffer);
-    zend_long length = sbuffer->offset;
+    zend_long length = -1;
 
     ZEND_PARSE_PARAMETERS_START(0, 1)
         Z_PARAM_OPTIONAL
@@ -660,7 +660,7 @@ static PHP_METHOD(Swow_Buffer, truncate)
     ZEND_PARSE_PARAMETERS_END();
 
     if (EXPECTED(length == -1)) {
-        length = ZEND_LONG_MAX;
+        length = sbuffer->offset;
     } else if (UNEXPECTED(length < 0)) {
         zend_argument_value_error(1, "should be greater than or equal to -1");
         RETURN_THROWS();
@@ -680,7 +680,7 @@ static PHP_METHOD(Swow_Buffer, truncate)
 
 ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO_EX(arginfo_class_Swow_Buffer_truncateFrom, 0)
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, offset, IS_LONG, 0, "\'$this->getOffset()\'")
-    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, length, IS_LONG, 0, "\'$this->getLength() - $offset\'")
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, length, IS_LONG, 0, "-1")
 ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Buffer, truncateFrom)

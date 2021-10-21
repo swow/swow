@@ -61,7 +61,7 @@ function testMultiClient(string $name, callable $function)
 
 testMultiClient('recvFrom', function (Socket $server) {
     $buffer = new Buffer(8192);
-    $server->recvFrom($buffer, null, $addr_from, $port_from);
+    $server->recvFrom($buffer, -1, $addr_from, $port_from);
     $buffer->rewind();
 
     return [$buffer->read(), $port_from];
@@ -79,7 +79,7 @@ testMultiClient('peekFrom', function (Socket $server) {
 
 testMultiClient('recvDataFrom', function (Socket $server) {
     $buffer = new Buffer(8192);
-    $server->recvDataFrom($buffer, null, $addr_from, $port_from);
+    $server->recvDataFrom($buffer, -1, $addr_from, $port_from);
     $buffer->rewind();
 
     return [$buffer->read(), $port_from];
@@ -170,7 +170,7 @@ testMultiServer('sendTo', function (Socket $client, Socket $server) {
     $buffer->write(pack('N', $client->getSockPort()));
     $buffer->write(pack('N', $server->getSockPort()));
     $buffer->rewind();
-    $client->sendTo($buffer, null, $server->getSockAddress(), $server->getSockPort());
+    $client->sendTo($buffer, -1, $server->getSockAddress(), $server->getSockPort());
 });
 
 echo 'Done' . PHP_LF;

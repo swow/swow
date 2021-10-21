@@ -154,17 +154,17 @@ class TestMethod
         $testBuffer->seek($this->offset, SEEK_SET);
         switch ($type) {
             case static::SEND:
-                $socket->send($testBuffer, null, static::WRITE_TIMEOUT);
+                $socket->send($testBuffer, -1, static::WRITE_TIMEOUT);
                 break;
             case static::SENDTO:
-                $socket->sendTo($testBuffer, null, $socket->getPeerAddress(), $socket->getPeerPort(), static::WRITE_TIMEOUT);
+                $socket->sendTo($testBuffer, -1, $socket->getPeerAddress(), $socket->getPeerPort(), static::WRITE_TIMEOUT);
                 break;
             case static::WRITE:
                 $socket->write(
                     [
                         [
                             /* buffer */ $testBuffer,
-                            /* length */ null,
+                            /* length */ -1,
                         ],
                     ],
                     static::WRITE_TIMEOUT
@@ -175,7 +175,7 @@ class TestMethod
                     [
                         [
                             /* buffer */ $testBuffer,
-                            /* length */ null,
+                            /* length */ -1,
                         ],
                     ],
                     $socket->getPeerAddress(),
@@ -204,31 +204,31 @@ class TestMethod
         $received_str = null;
         switch ($type) {
             case static::RECV:
-                $received = $socket->recv($testBuffer, null, $timeout);
+                $received = $socket->recv($testBuffer, -1, $timeout);
                 break;
             case static::RECVFROM:
-                $received = $socket->recvFrom($testBuffer, null, $addr_from, $port_from, $timeout);
+                $received = $socket->recvFrom($testBuffer, -1, $addr_from, $port_from, $timeout);
                 break;
             case static::RECVDATA:
-                $received = $socket->recvData($testBuffer, null, $timeout);
+                $received = $socket->recvData($testBuffer, -1, $timeout);
                 break;
             case static::RECVDATAFROM:
-                $received = $socket->recvDataFrom($testBuffer, null, $addr_from, $port_from, $timeout);
+                $received = $socket->recvDataFrom($testBuffer, -1, $addr_from, $port_from, $timeout);
                 break;
             case static::RECVSTRING:
-                $received_str = $socket->recvString(null, $timeout);
+                $received_str = $socket->recvString(Buffer::DEFAULT_SIZE, $timeout);
                 $received = strlen($received_str);
                 break;
             case static::RECVSTRINGFROM:
-                $received_str = $socket->recvStringFrom(null, $addr_from, $port_from, $timeout);
+                $received_str = $socket->recvStringFrom(Buffer::DEFAULT_SIZE, $addr_from, $port_from, $timeout);
                 $received = strlen($received_str);
                 break;
             case static::RECVSTRINGDATA:
-                $received_str = $socket->recvStringData(null, $timeout);
+                $received_str = $socket->recvStringData(Buffer::DEFAULT_SIZE, $timeout);
                 $received = strlen($received_str);
                 break;
             case static::RECVSTRINGDATAFROM:
-                $received_str = $socket->recvStringDataFrom(null, $addr_from, $port_from, $timeout);
+                $received_str = $socket->recvStringDataFrom(Buffer::DEFAULT_SIZE, $addr_from, $port_from, $timeout);
                 $received = strlen($received_str);
                 break;
             case static::READ:
@@ -252,7 +252,7 @@ class TestMethod
                 break;
             case static::PEEKFROM:
                 while ($timeout-- > 0) {
-                    $received += $socket->peekFrom($testBuffer, null, $addr_from, $port_from);
+                    $received += $socket->peekFrom($testBuffer, -1, $addr_from, $port_from);
                     if ($received < $length) {
                         msleep(1);
                     } else {
@@ -279,7 +279,7 @@ class TestMethod
             case static::PEEKSTRINGFROM:
                 $received_str = '';
                 while ($timeout-- > 0) {
-                    $received_str .= $socket->peekStringFrom(null, $addr_from, $port_from);
+                    $received_str .= $socket->peekStringFrom(Buffer::DEFAULT_SIZE, $addr_from, $port_from);
                     if (strlen($received_str) < $length) {
                         msleep(1);
                     } else {

@@ -78,7 +78,7 @@ class EofStream extends Socket
             if ($expectMore) {
                 try {
                     $buffer->lock();
-                    $nread = $this->recvData($internalBuffer, null, $timeout);
+                    $nread = $this->recvData($internalBuffer, -1, $timeout);
                 } finally {
                     $buffer->unlock();
                 }
