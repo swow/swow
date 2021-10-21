@@ -89,7 +89,6 @@ while (Parser::EVENT_MESSAGE_COMPLETE !== ($event = $parser->execute($buffer))) 
 }
 
 Assert::true($parser->isCompleted());
-Assert::isInstanceOf($parser->finish(), Parser::class);
 
 // assert generated headers
 $expected = [
