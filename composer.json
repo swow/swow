@@ -60,7 +60,7 @@
         "build-extension": [ "@php tools/builder/swow-builder" ],
         "rebuild-extension": [ "@build-extension --rebuild" ],
         "test-extension": [ "@php tools/extension/test.php" ],
-        "test-library": [ "@php -dextension=swow vendor/bin/phpunit lib" ],
+        "test-library": [ "@php -dextension=swow vendor/bin/phpunit --configuration lib lib" ],
         "test": [ "@test-extension", "@test-library" ],
         "ide-help": [ "@php -n -d extension=swow tools/ide-helper/generator.php swow lib/src/Swow.php" ]
     },
