@@ -1035,7 +1035,27 @@ namespace Swow
         /**
          * @return bool
          */
+        public function isOpen(): bool { }
+
+        /**
+         * @return bool
+         */
         public function isEstablished(): bool { }
+
+        /**
+         * @return bool
+         */
+        public function isServer(): bool { }
+
+        /**
+         * @return bool
+         */
+        public function isServerConnection(): bool { }
+
+        /**
+         * @return bool
+         */
+        public function isClient(): bool { }
 
         /**
          * @return int

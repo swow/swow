@@ -43,19 +43,21 @@ Assert::same($socket->getTypeName(), 'TCP');
 $socket->bind('localhost')->listen(1);
 
 $socket->setRecvBufferSize(0);
-$recv_bufsiz = $socket->getRecvBufferSize();
-$recv_bufsiz += Buffer::PAGE_SIZE / 2;
-$socket->setRecvBufferSize($recv_bufsiz);
-Assert::greaterThanEq($socket->getRecvBufferSize(), $recv_bufsiz);
+$recvBufferSize = $socket->getRecvBufferSize();
+$recvBufferSize += Buffer::PAGE_SIZE / 2;
+$socket->setRecvBufferSize($recvBufferSize);
+Assert::greaterThanEq($socket->getRecvBufferSize(), $recvBufferSize);
 
 $socket->setSendBufferSize(0);
-$send_bufsiz = $socket->getSendBufferSize();
-$send_bufsiz += Buffer::PAGE_SIZE / 2;
-$socket->setsendBufferSize($send_bufsiz);
-Assert::greaterThanEq($socket->getSendBufferSize(), $send_bufsiz);
+$sendBufferSize = $socket->getSendBufferSize();
+$sendBufferSize += Buffer::PAGE_SIZE / 2;
+$socket->setsendBufferSize($sendBufferSize);
+Assert::greaterThanEq($socket->getSendBufferSize(), $sendBufferSize);
 
-Assert::false($socket->isEstablished());
 Assert::true($socket->isAvailable());
+Assert::true($socket->isOpen());
+Assert::true($socket->isServer());
+Assert::false($socket->isEstablished());
 Assert::greaterThanEq($socket->getFd(), 0);
 Assert::string($socket->getSockAddress());
 Assert::greaterThan($socket->getSockPort(), 0);
@@ -63,37 +65,42 @@ Assert::greaterThan($socket->getSockPort(), 0);
 $noticer = new Channel(0);
 Coroutine::run(function () use ($noticer, $socket) {
     $client = new Socket(Socket::TYPE_TCP);
+    Assert::false($client->isOpen());
     $client->connect($socket->getSockAddress(), $socket->getSockPort());
+    Assert::true($client->isOpen());
+    Assert::true($client->isClient());
     $noticer->push(1);
     $client->close();
 });
 
-$conn = $socket->accept();
-//Assert::same($conn->getConnectionError(), 0);
+$connection = $socket->accept();
+//Assert::same($connection->getConnectionError(), 0);
 
 try {
-    Assert::true($conn->isEstablished());
-    Assert::string($conn->getPeerAddress());
-    Assert::greaterThan($conn->getPeerPort(), 0);
-    $conn->checkLiveness();
+    Assert::true($connection->isOpen());
+    Assert::true($connection->isEstablished());
+    Assert::true($connection->isServerConnection());
+    Assert::string($connection->getPeerAddress());
+    Assert::greaterThan($connection->getPeerPort(), 0);
+    $connection->checkLiveness();
 } finally {
     // tell client to shut down
     $noticer->pop();
 }
 
 try {
-    Assert::same($conn->recvString(), '');
+    Assert::same($connection->recvString(), '');
     while (true) {
-        $conn->checkLiveness();
+        $connection->checkLiveness();
         msleep(1);
     }
 } catch (Swow\Socket\Exception $e) {
-    Assert::same($e->getCode(), $conn->getConnectionError());
+    Assert::same($e->getCode(), $connection->getConnectionError());
     Assert::same($e->getCode(), Errno\ECONNRESET);
 }
 
-$conn->close();
-Assert::false($conn->isEstablished());
+$connection->close();
+Assert::false($connection->isEstablished());
 
 $socket->close();
 

@@ -1286,27 +1286,39 @@ static PHP_METHOD(Swow_Socket, close)
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_getBool, ZEND_RETURN_VALUE, 0, _IS_BOOL, 0)
 ZEND_END_ARG_INFO()
 
+#define SWOW_SOCKET_IS_XXX_API_GEN(Name, name) \
+static PHP_METHOD(Swow_Socket, is##Name) \
+{ \
+    SWOW_SOCKET_GETTER(ssocket, socket); \
+    \
+    ZEND_PARSE_PARAMETERS_NONE(); \
+    \
+    RETURN_BOOL(cat_socket_is_##name(socket)); \
+}
+
 #define arginfo_class_Swow_Socket_isAvailable arginfo_class_Swow_Socket_getBool
 
-static PHP_METHOD(Swow_Socket, isAvailable)
-{
-    SWOW_SOCKET_GETTER(ssocket, socket);
+SWOW_SOCKET_IS_XXX_API_GEN(Available, available)
 
-    ZEND_PARSE_PARAMETERS_NONE();
+#define arginfo_class_Swow_Socket_isOpen arginfo_class_Swow_Socket_getBool
 
-    RETURN_BOOL(cat_socket_is_available(socket));
-}
+SWOW_SOCKET_IS_XXX_API_GEN(Open, open)
 
 #define arginfo_class_Swow_Socket_isEstablished arginfo_class_Swow_Socket_getBool
 
-static PHP_METHOD(Swow_Socket, isEstablished)
-{
-    SWOW_SOCKET_GETTER(ssocket, socket);
+SWOW_SOCKET_IS_XXX_API_GEN(Established, established)
 
-    ZEND_PARSE_PARAMETERS_NONE();
+#define arginfo_class_Swow_Socket_isServer arginfo_class_Swow_Socket_getBool
 
-    RETURN_BOOL(cat_socket_is_established(socket));
-}
+SWOW_SOCKET_IS_XXX_API_GEN(Server, server)
+
+#define arginfo_class_Swow_Socket_isServerConnection arginfo_class_Swow_Socket_getBool
+
+SWOW_SOCKET_IS_XXX_API_GEN(ServerConnection, server_connection)
+
+#define arginfo_class_Swow_Socket_isClient arginfo_class_Swow_Socket_getBool
+
+SWOW_SOCKET_IS_XXX_API_GEN(Client, client)
 
 #define arginfo_class_Swow_Socket_getConnectionError arginfo_class_Swow_Socket_getLong
 
@@ -1633,7 +1645,11 @@ static const zend_function_entry swow_socket_methods[] = {
     PHP_ME(Swow_Socket, close,                     arginfo_class_Swow_Socket_close,               ZEND_ACC_PUBLIC)
     /* status */
     PHP_ME(Swow_Socket, isAvailable,               arginfo_class_Swow_Socket_isAvailable,         ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Socket, isOpen,                    arginfo_class_Swow_Socket_isOpen,              ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Socket, isEstablished,             arginfo_class_Swow_Socket_isEstablished,       ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Socket, isServer,                  arginfo_class_Swow_Socket_isServer,            ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Socket, isServerConnection,        arginfo_class_Swow_Socket_isServerConnection,  ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Socket, isClient,                  arginfo_class_Swow_Socket_isClient,            ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Socket, getConnectionError,        arginfo_class_Swow_Socket_getConnectionError,  ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Socket, checkLiveness,             arginfo_class_Swow_Socket_checkLiveness,       ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Socket, getIoState,                arginfo_class_Swow_Socket_getIoState,          ZEND_ACC_PUBLIC)
