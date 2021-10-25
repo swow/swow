@@ -25,7 +25,7 @@ class Buffer extends \Swow\Stream\Buffer implements StreamInterface
 
     public function getMetadata($key = null)
     {
-        $metadata = parent::__debugInfo();
+        $metadata = $this->__debugInfo();
 
         return $key === null ? $metadata : $metadata[$key];
     }

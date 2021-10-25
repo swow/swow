@@ -38,7 +38,7 @@ class Server extends Socket
             $timeout = $this->getAcceptTimeout();
         }
         /* @var $connection Connection */
-        $connection = parent::accept(new Connection(), $timeout);
+        $connection = $this->accept(new Connection(), $timeout);
         if ($connection) {
             $connection->setServer($this);
             $this->connections[$connection->getFd()] = $connection;
@@ -49,7 +49,7 @@ class Server extends Socket
 
     public function broadcastMessage(WebSocketFrame $frame, array $targets = null)
     {
-        if ($targets = null) {
+        if ($targets === null) {
             $targets = $this->connections;
         }
         if ($frame->getPayloadLength() <= Buffer::PAGE_SIZE) {

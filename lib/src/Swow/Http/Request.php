@@ -15,6 +15,7 @@ namespace Swow\Http;
 
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\UriInterface;
+use TypeError;
 use function is_string;
 
 class Request extends Message implements RequestInterface
@@ -57,11 +58,13 @@ class Request extends Message implements RequestInterface
         if ($uri !== '') {
             if (is_string($uri)) {
                 $this->setUriString($uri);
-            } else {
-                if (!($uri instanceof UriInterface)) {
-                    $uri = new Uri($uri);
-                }
+            } elseif ($uri instanceof UriInterface) {
                 $this->setUri($uri);
+            } else {
+                throw new TypeError(sprintf(
+                    'Argument #2 (\$uri) must be of type %s|string, array given',
+                    UriInterface::class
+                ));
             }
         }
 

@@ -241,7 +241,7 @@ class Uri implements UriInterface
         return $this->port;
     }
 
-    protected function filterPort(int $port): ?int
+    protected function filterPort(?int $port): ?int
     {
         if ($port === null) {
             return null;
