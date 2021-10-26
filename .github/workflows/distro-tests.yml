@@ -62,6 +62,7 @@ jobs:
       - name: Build things
         run: |
           docker run --rm --name testcontainer \
+            ${{ matrix.distro.image == 'opensuse/tumbleweed' && '--privileged' || '' }} \
             --cap-add=SYS_NICE \
             --cap-add=IPC_LOCK \
             -v `realpath php-src`:/src/php-src:rw,rshared \
