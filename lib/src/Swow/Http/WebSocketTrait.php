@@ -42,8 +42,7 @@ trait WebSocketTrait
                 }
                 if (!$buffer->eof()) {
                     $copyLength = min($buffer->getReadableLength(), $payloadLength);
-                    /* TODO: $payloadData->copy($buffer, $copyLength); */
-                    $payloadData->write($buffer->toString(), $buffer->tell(), $copyLength);
+                    $payloadData->copy($buffer->toString(), $buffer->tell(), $copyLength);
                     $buffer->seek($copyLength, SEEK_CUR);
                     $payloadLength -= $copyLength;
                 }
@@ -55,7 +54,6 @@ trait WebSocketTrait
                 } /* else {
                     // TODO: bad frame
                 } */
-                $payloadData->rewind();
             }
             break;
         }
