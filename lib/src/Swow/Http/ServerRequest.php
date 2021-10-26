@@ -21,11 +21,8 @@ use function strcasecmp;
 class ServerRequest extends Request implements ServerRequestInterface
 {
     public const UPGRADE_NONE = 0;
-
     public const UPGRADE_WEBSOCKET = 1 << 0;
-
     public const UPGRADE_H2C = 1 << 1;
-
     public const UPGRADE_UNKNOWN = 1 << 31;
 
     /**

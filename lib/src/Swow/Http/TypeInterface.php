@@ -16,8 +16,6 @@ namespace Swow\Http;
 interface TypeInterface
 {
     public const TYPE_HTTP = 1 << 0;
-
     public const TYPE_WEBSOCKET = 1 << 1;
-
     public const TYPE_HTTP2 = 1 << 2;
 }

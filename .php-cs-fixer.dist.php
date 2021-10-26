@@ -88,7 +88,11 @@ return (new PhpCsFixer\Config())
             'only_booleans' => true,
             'position' => 'end',
         ],
-        'class_attributes_separation' => true,
+        'class_attributes_separation' => [
+            'elements' => [
+                'method' => 'one',
+            ],
+        ],
         'combine_consecutive_unsets' => true,
         'declare_strict_types' => true,
         'global_namespace_import' => [
