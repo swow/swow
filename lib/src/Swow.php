@@ -582,6 +582,14 @@ namespace Swow
         public function write($string, int $offset = 0, int $length = -1) { }
 
         /**
+         * @param mixed $string [required]
+         * @param int $offset [optional] = 0
+         * @param int $length [optional] = -1
+         * @return $this
+         */
+        public function copy($string, int $offset = 0, int $length = -1) { }
+
+        /**
          * @param int $length [optional] = -1
          * @return $this
          */
