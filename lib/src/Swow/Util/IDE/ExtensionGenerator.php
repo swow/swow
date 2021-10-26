@@ -55,6 +55,7 @@ use function strlen;
 use function strpos;
 use function substr;
 use function trim;
+use function var_dump;
 use function var_export;
 
 class ExtensionGenerator
@@ -104,7 +105,7 @@ class ExtensionGenerator
         $declarations = [];
 
         $namespacedGroups = [];
-        foreach (array_merge($this->extension->getFunctions(), $this->extension->getClasses()) as $functionOrClass) {
+        foreach (array_merge($this->extension->getClasses(), $this->extension->getFunctions()) as $functionOrClass) {
             $namespacedGroups[$functionOrClass->getNamespaceName()][] = $functionOrClass;
         }
 
