@@ -55,7 +55,6 @@ use function strlen;
 use function strpos;
 use function substr;
 use function trim;
-use function var_dump;
 use function var_export;
 
 class ExtensionGenerator
