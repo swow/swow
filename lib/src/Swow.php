@@ -1000,10 +1000,10 @@ namespace Swow
          * @param string $string [required]
          * @param null|int $timeout [optional] = $this->getWriteTimeout()
          * @param int $offset [optional] = 0
-         * @param int $length [optional] = 0
+         * @param int $length [optional] = -1
          * @return $this
          */
-        public function sendString(string $string, ?int $timeout = null, int $offset = 0, int $length = 0) { }
+        public function sendString(string $string, ?int $timeout = null, int $offset = 0, int $length = -1) { }
 
         /**
          * @param string $string [required]
@@ -1011,10 +1011,10 @@ namespace Swow
          * @param mixed $port [optional] = null
          * @param null|int $timeout [optional] = $this->getWriteTimeout()
          * @param int $offset [optional] = 0
-         * @param int $length [optional] = 0
+         * @param int $length [optional] = -1
          * @return $this
          */
-        public function sendStringTo(string $string, $address = null, $port = null, ?int $timeout = null, int $offset = 0, int $length = 0) { }
+        public function sendStringTo(string $string, $address = null, $port = null, ?int $timeout = null, int $offset = 0, int $length = -1) { }
 
         /**
          * @param \Swow\Socket $handle [required]

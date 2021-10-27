@@ -1197,7 +1197,7 @@ ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO_EX(arginfo_class_Swow_Socket_sendString, 1)
     ZEND_ARG_TYPE_INFO(0, string, IS_STRING, 0)
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, timeout, IS_LONG, 1, "\'$this->getWriteTimeout()\'")
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, offset, IS_LONG, 0, "0")
-    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, length, IS_LONG, 0, "0")
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, length, IS_LONG, 0, "-1")
 ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Socket, sendString)
@@ -1211,7 +1211,7 @@ ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO_EX(arginfo_class_Swow_Socket_sendStringTo, 
     ZEND_ARG_INFO_WITH_DEFAULT_VALUE(0, port, "null")
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, timeout, IS_LONG, 1, "\'$this->getWriteTimeout()\'")
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, offset, IS_LONG, 0, "0")
-    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, length, IS_LONG, 0, "0")
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, length, IS_LONG, 0, "-1")
 ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Socket, sendStringTo)
