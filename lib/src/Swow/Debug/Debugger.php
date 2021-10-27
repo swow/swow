@@ -52,7 +52,6 @@ use function max;
 use function mb_strlen;
 use function mb_substr;
 use function rtrim;
-use function spl_object_id;
 use function sprintf;
 use function str_repeat;
 use function str_replace;
@@ -83,9 +82,6 @@ TEXT;
 
     /* @var bool */
     private static $breakPointHandlerRegistered = false;
-
-    /* @var Debugger[] */
-    private static $debuggerMap = [];
 
     /* @var $this */
     protected static $instance;
@@ -126,15 +122,15 @@ TEXT;
     /* @var bool */
     protected $breakPointHandlerEnabled = false;
 
-    /* @var array */
+    /* @var string[] */
     protected $breakPoints = [];
 
     /**
      * @return $this
      */
-    public static function getInstance()
+    final public static function getInstance()
     {
-        return static::$instance ?? (static::$instance = new static());
+        return self::$instance ?? (self::$instance = new static());
     }
 
     public function __construct()
@@ -145,20 +141,11 @@ TEXT;
         $this
             ->setCurrentCoroutine(Coroutine::getCurrent())
             ->checkPathMap();
-        self::$debuggerMap[spl_object_id($this)] = $this;
     }
 
     public function __destruct()
     {
-        unset(self::$debuggerMap[spl_object_id($this)]);
-        $breakPointHandlerShouldBeRemoved = true;
-        foreach (self::$debuggerMap as $debugger) {
-            if ($debugger->breakPointHandlerEnabled) {
-                $breakPointHandlerShouldBeRemoved = false;
-                break;
-            }
-        }
-        if ($breakPointHandlerShouldBeRemoved) {
+        if ($this->breakPointHandlerEnabled) {
             self::removeBreakPointHandler();
         }
     }
@@ -844,19 +831,18 @@ TEXT;
             $baseFunction = end($baseFunction);
         }
         $hit = false;
-        foreach (self::$debuggerMap as $debugger) {
-            $breakPoints = $debugger->breakPoints;
-            foreach ($breakPoints as $breakPoint) {
-                if (
-                    $breakPoint === $basePosition ||
-                    $breakPoint === $baseFunction ||
-                    $breakPoint === $function ||
-                    $breakPoint === $fullPosition
-                ) {
-                    $debugger->out("Hit breakpoint <{$breakPoint}> on Coroutine#{$coroutine->getId()}");
-                    $hit = true;
-                    break 2;
-                }
+        $debugger = self::getInstance();
+        $breakPoints = $debugger->breakPoints;
+        foreach ($breakPoints as $breakPoint) {
+            if (
+                $breakPoint === $basePosition ||
+                $breakPoint === $baseFunction ||
+                $breakPoint === $function ||
+                $breakPoint === $fullPosition
+            ) {
+                $debugger->out("Hit breakpoint <{$breakPoint}> on Coroutine#{$coroutine->getId()}");
+                $hit = true;
+                break;
             }
         }
         if ($hit) {
