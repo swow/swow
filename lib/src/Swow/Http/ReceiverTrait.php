@@ -76,6 +76,7 @@ trait ReceiverTrait
             while (true) {
                 if ($expectMore) {
                     $this->recvData($buffer);
+                    // TODO: call $parser->finished() if connection error?
                 }
                 $event = HttpParser::EVENT_NONE;
                 while (true) {
