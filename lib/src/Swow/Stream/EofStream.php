@@ -25,13 +25,12 @@ class EofStream extends Socket
     /** @var string */
     protected $eof = "\r\n";
 
-    /** @var bool */
-    protected $trim = true;
-
     /** @var Buffer */
     protected $internalBuffer;
 
-    public function __construct(string $eof = "\r\n", int $type = EofStream::TYPE_TCP, bool $trim = true)
+    use MaxMessageLengthTrait;
+
+    public function __construct(string $eof = "\r\n", int $type = EofStream::TYPE_TCP)
     {
         if (!($type & Socket::TYPE_FLAG_STREAM)) {
             throw new InvalidArgumentException('Socket type should be a kind of streams');
@@ -40,10 +39,9 @@ class EofStream extends Socket
         $this->__selfConstruct($eof);
     }
 
-    protected function __selfConstruct(string $eof = "\r\n", bool $trim = true)
+    protected function __selfConstruct(string $eof = "\r\n")
     {
         $this->eof = $eof;
-        $this->trim = $trim;
         $this->internalBuffer = new Buffer();
     }
 
@@ -52,26 +50,29 @@ class EofStream extends Socket
         return $this->eof;
     }
 
+    /** @return $this */
     public function accept(?Socket $client = null, ?int $timeout = null)
     {
         if ($client !== null && !($client instanceof self)) {
             throw new TypeError('Client should be an instance of ' . self::class);
         }
         $stream = parent::accept($client, $timeout);
-        $stream->__selfConstruct($this->eof, $this->trim);
+        $stream->__selfConstruct($this->eof);
+        $stream->maxMessageLength = $this->maxMessageLength;
 
         return $stream;
     }
 
     /**
-     * @return int package length
+     * @return int message length
      */
-    public function recvPacket(Buffer $buffer, ?int $timeout = null)
+    public function recvMessage(Buffer $buffer, ?int $timeout = null)
     {
         $bufferPreviousOffset = $buffer->tell();
         $internalBuffer = $this->internalBuffer;
         $eof = $this->eof;
         $eofOffset = 0;
+        $maxMessageLength = $this->maxMessageLength;
         $length = 0;
         $expectMore = $internalBuffer->isEmpty();
         while (true) {
@@ -96,6 +97,9 @@ class EofStream extends Socket
                 if ($eofOffset > 0) {
                     $buffer->write($internalBuffer->toString(), 0, $eofOffset);
                     $length += $eofOffset;
+                    if ($length > $maxMessageLength) {
+                        throw new MessageTooLargeException($length, $maxMessageLength);
+                    }
                     $internalBuffer->truncateFrom($eofOffset);
                     $eofOffset = 0;
                 } else {
@@ -104,39 +108,42 @@ class EofStream extends Socket
             }
             $expectMore = true;
         }
-        $increment = $pos + ($this->trim ? 0 : strlen($eof));
+        $length += $pos;
+        if ($length > $maxMessageLength) {
+            throw new MessageTooLargeException($length, $maxMessageLength);
+        }
         $buffer
-            ->write($internalBuffer->toString(), 0, $increment)
+            ->write($internalBuffer->toString(), 0, $pos)
             ->seek($bufferPreviousOffset);
-        $length += $increment;
         /* next packet data maybe received */
         $internalBuffer->truncateFrom($pos + strlen($eof));
 
         return $length;
     }
 
-    public function recvPacketString(?int $timeout = null): string
+    public function recvMessageString(?int $timeout = null): string
     {
         $buffer = Buffer::for();
-        $this->recvPacket($buffer, $timeout);
+        $this->recvMessage($buffer, $timeout);
 
         return $buffer->toString();
     }
 
     /**
-     * It's faster, but it may consume more memory when package is small.
+     * It's faster, but it may consume more memory when message is small.
      * Use it when expect a big package.
-     * @return int package length
+     * @return int message length
      */
-    public function recvPacketFast(Buffer $buffer, ?int $timeout = null): int
+    public function recvMessageFast(Buffer $buffer, ?int $timeout = null): int
     {
         $bufferPreviousOffset = $buffer->tell();
         $internalBuffer = $this->internalBuffer;
         $eof = $this->eof;
         $eofOffset = 0;
+        $maxMessageLength = $this->maxMessageLength;
         while (true) {
             if ($internalBuffer->isEmpty()) {
-                $nread = $this->recvData($buffer, null, $timeout);
+                $nread = $this->recvData($buffer, -1, $timeout);
                 $buffer->seek($nread, SEEK_CUR);
             } else {
                 $buffer->write($internalBuffer->toString());
@@ -144,14 +151,15 @@ class EofStream extends Socket
             }
             $pos = strpos($buffer->toString(), $eof, $eofOffset);
             if ($pos !== false) {
-                if ($this->trim) {
-                    $buffer->truncate($pos);
-                }
+                $buffer->truncate($pos);
                 break;
             }
             $eofOffset = ($buffer->getLength() - (strlen($eof) - 1));
             if ($eofOffset < 0) {
                 $eofOffset = 0;
+            }
+            if ($eofOffset > $maxMessageLength) {
+                throw new MessageTooLargeException($eofOffset, $maxMessageLength);
             }
             if ($buffer->isFull()) {
                 $buffer->extend();
@@ -163,25 +171,25 @@ class EofStream extends Socket
         return $length;
     }
 
-    public function recvPacketStringFast(?int $timeout = null): string
+    public function recvMessageStringFast(?int $timeout = null): string
     {
         $buffer = new Buffer(Buffer::PAGE_SIZE);
-        $this->recvPacketFast($buffer, $timeout);
+        $this->recvMessageFast($buffer, $timeout);
 
         return $buffer->toString();
     }
 
     /** @return $this */
-    public function sendPacketString(string $packet)
+    public function sendMessageString(string $message, ?int $timeout = null)
     {
-        return $this->write([$packet, $this->eof]);
+        return $this->write([$message, $this->eof], $timeout);
     }
 
     /** @return $this */
-    public function writePackets(array $packets, ?int $timeout = null)
+    public function writeMessages(array $messages, ?int $timeout = null)
     {
-        $packets[] = $this->eof;
+        $messages[] = $this->eof;
 
-        return $this->write($packets, $timeout);
+        return $this->write($messages, $timeout);
     }
 }

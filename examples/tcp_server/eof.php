@@ -23,9 +23,9 @@ while (true) {
         echo "Stream<fd={$stream->getFd()}> accepted" . PHP_EOL;
         try {
             while (true) {
-                $packet = $stream->recvPacketString();
-                echo "Stream<fd={$stream->getFd()}>: \"{$packet}\"" . PHP_EOL;
-                $stream->write([$packet, $stream->getEof()]);
+                $message = $stream->recvMessageString();
+                echo "Stream<fd={$stream->getFd()}>: \"{$message}\"" . PHP_EOL;
+                $stream->sendMessageString($message);
             }
         } catch (\Swow\Socket\Exception $exception) {
             echo "Stream<fd={$stream->getFd()}> goaway, reason: {$exception->getMessage()}" . PHP_EOL;
