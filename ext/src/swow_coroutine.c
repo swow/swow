@@ -243,33 +243,6 @@ static zval *swow_coroutine_function(zval *zdata)
     return NULL;
 }
 
-#ifdef SWOW_COROUTINE_ENABLE_CUSTOM_ENTRY
-static swow_coroutine_t *swow_coroutine_create_custom_object(zval *zcallable)
-{
-    zend_class_entry *custom_entry = SWOW_COROUTINE_G(custom_entry);
-    swow_coroutine_t *scoroutine;
-    zval zscoroutine;
-
-    scoroutine = swow_coroutine_get_from_object(swow_object_create(custom_entry));
-    ZVAL_OBJ(&zscoroutine, &scoroutine->std);
-    swow_call_method_with_1_params(
-        &zscoroutine,
-        custom_entry,
-        &custom_entry->constructor,
-        "__construct",
-        NULL,
-        zcallable
-    );
-    if (UNEXPECTED(EG(exception))) {
-        cat_update_last_error_ez("Exception occurred during construction");
-        swow_coroutine_close(scoroutine);
-        return NULL;
-    }
-
-    return scoroutine;
-}
-#endif
-
 static cat_bool_t swow_coroutine_construct(swow_coroutine_t *scoroutine, zval *zcallable, size_t stack_page_size, size_t c_stack_size)
 {
     swow_coroutine_executor_t *executor;
@@ -344,7 +317,6 @@ static cat_bool_t swow_coroutine_construct(swow_coroutine_t *scoroutine, zval *z
     } while (0);
 
     scoroutine->executor = executor;
-    scoroutine->exit_status = 0;
 
     return cat_true;
 }
@@ -1822,54 +1794,6 @@ static PHP_METHOD(Swow_Coroutine, getAll)
     RETURN_ARR(zend_array_dup(map));
 }
 
-#ifdef SWOW_COROUTINE_ENABLE_CUSTOM_ENTRY
-ZEND_BEGIN_ARG_INFO_EX(arginfo_class_Swow_Coroutine_extends, 0, ZEND_RETURN_VALUE, 1)
-    ZEND_ARG_TYPE_INFO(0, class, IS_STRING, 0)
-ZEND_END_ARG_INFO()
-
-static cat_data_t swow_coroutine_custom_resume(cat_coroutine_t *coroutine, cat_data_t data)
-{
-    swow_coroutine_t *scoroutine = swow_coroutine_get_from_handle(coroutine);
-    zval *retval = scoroutine->executor ? &scoroutine->executor->zdata : NULL;
-    zval zscoroutine;
-
-    // TOOD: if PHP and zdata == IS_PTR
-
-    ZVAL_OBJ(&zscoroutine, &scoroutine->std);
-    swow_call_method_with_1_params(&zscoroutine, scoroutine->std.ce, NULL, "resume", retval, (zval *) data);
-
-    return retval;
-}
-
-static PHP_METHOD(Swow_Coroutine, extends)
-{
-    zend_string *name;
-    zend_class_entry *ce;
-
-    ZEND_PARSE_PARAMETERS_START(1, 1)
-        Z_PARAM_STR(name)
-    ZEND_PARSE_PARAMETERS_END();
-
-    ce = zend_lookup_class(name);
-    if (UNEXPECTED(ce == NULL)) {
-        swow_throw_error(swow_coroutine_error_ce, "Class %s dose not exist", ZSTR_VAL(name));
-        RETURN_THROWS();
-    }
-    if (ce == swow_coroutine_ce) {
-        SWOW_COROUTINE_G(custom_entry) = NULL;
-        cat_coroutine_register_resume(swow_coroutine_resume_standard);
-        return;
-    }
-    if (UNEXPECTED(!instanceof_function(ce, swow_coroutine_ce))) {
-        swow_throw_error(swow_coroutine_error_ce, "Class %s must extends %s", ZSTR_VAL(name), ZSTR_VAL(swow_coroutine_error_ce->name));
-        RETURN_THROWS();
-    }
-    SWOW_COROUTINE_G(custom_entry) = ce;
-    cat_coroutine_register_resume(swow_coroutine_custom_resume);
-    // TODO: replace self::resume function_handler
-}
-#endif
-
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Coroutine___debugInfo, ZEND_RETURN_VALUE, 0, IS_ARRAY, 0)
 ZEND_END_ARG_INFO()
 
@@ -1938,9 +1862,6 @@ static const zend_function_entry swow_coroutine_methods[] = {
     PHP_ME(Swow_Coroutine, count,                   arginfo_class_Swow_Coroutine_count,                   ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
     PHP_ME(Swow_Coroutine, get,                     arginfo_class_Swow_Coroutine_get,                     ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
     PHP_ME(Swow_Coroutine, getAll,                  arginfo_class_Swow_Coroutine_getAll,                  ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-#ifdef SWOW_COROUTINE_ENABLE_CUSTOM_ENTRY
-    PHP_ME(Swow_Coroutine, extends,                 arginfo_class_Swow_Coroutine_extends,                 ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-#endif
     /* magic */
     PHP_ME(Swow_Coroutine, __debugInfo,             arginfo_class_Swow_Coroutine___debugInfo,             ZEND_ACC_PUBLIC)
     PHP_FE_END

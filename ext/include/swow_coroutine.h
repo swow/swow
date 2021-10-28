@@ -110,14 +110,6 @@ typedef enum
     SWOW_COROUTINE_RUNTIME_STATE_IN_SHUTDOWN
 } swow_coroutine_runtime_state_t;
 
-#ifdef SWOW_COROUTINE_USE_RATED
-typedef struct
-{
-    swow_coroutine_t *killer;
-    swow_coroutine_t *dead;
-} swow_coroutine_rated_t;
-#endif
-
 CAT_GLOBALS_STRUCT_BEGIN(swow_coroutine)
     /* ini */
     size_t default_stack_page_size;
@@ -126,15 +118,9 @@ CAT_GLOBALS_STRUCT_BEGIN(swow_coroutine)
     /* runtime */
     swow_coroutine_runtime_state_t runtime_state;
     HashTable *map;
-#ifdef SWOW_COROUTINE_ENABLE_CUSTOM_ENTRY
-    zend_class_entry *custom_entry; /* we can resolve resume now */
-#endif
     /* internal special */
     cat_coroutine_resume_t original_resume;
     cat_coroutine_t *original_main;
-#ifdef SWOW_COROUTINE_USE_RATED
-    swow_coroutine_rated_t rated;
-#endif
     zval ztransfer_data;
     zend_object *exception;
 CAT_GLOBALS_STRUCT_END(swow_coroutine)
