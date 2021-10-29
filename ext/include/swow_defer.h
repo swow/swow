@@ -29,15 +29,13 @@ extern "C" {
 extern SWOW_API zend_class_entry *swow_defer_ce;
 extern SWOW_API zend_object_handlers swow_defer_handlers;
 
-typedef struct
-{
+typedef struct swow_defer_task_s {
     cat_queue_node_t node;
     zval zcallable;
     zend_fcall_info_cache fcc;
 } swow_defer_task_t;
 
-typedef struct
-{
+typedef struct swow_defer_s {
     cat_queue_t tasks;
     zend_object std;
 } swow_defer_t;

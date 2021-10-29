@@ -51,14 +51,12 @@ extern SWOW_API zend_object_handlers swow_coroutine_handlers;
 
 extern SWOW_API zend_class_entry *swow_coroutine_exception_ce;
 
-typedef enum
-{
+typedef enum swow_coroutine_flag_e {
     SWOW_COROUTINE_FLAG_DEYING = CAT_COROUTINE_FLAG_USR1,
     SWOW_COROUTINE_FLAG_DEBUGGING = CAT_COROUTINE_FLAG_USR2,
 } swow_coroutine_flag_t;
 
-typedef enum
-{
+typedef enum swow_coroutine_opcode_e {
     SWOW_COROUTINE_OPCODE_ACCEPT_ZDATA = CAT_COROUTINE_OPCODE_USR1,
 } swow_coroutine_opcode_t;
 
@@ -66,8 +64,7 @@ typedef enum
  * these things will no longer be used
  * after the coroutine is finished
  */
-typedef struct
-{
+typedef struct swow_coroutine_executor_s {
     /* coroutine info */
     zval zcallable;
     zend_fcall_info_cache fcc;
@@ -99,8 +96,7 @@ typedef struct
 #endif
 } swow_coroutine_executor_t;
 
-typedef struct
-{
+typedef struct swow_coroutine_s {
     cat_coroutine_t coroutine;
     /* php things... */
     int exit_status;
@@ -111,8 +107,7 @@ typedef struct
     zend_object std;
 } swow_coroutine_t;
 
-typedef enum
-{
+typedef enum swow_coroutine_runtime_state_e {
     SWOW_COROUTINE_RUNTIME_STATE_NONE,
     SWOW_COROUTINE_RUNTIME_STATE_RUNNING,
     SWOW_COROUTINE_RUNTIME_STATE_IN_SHUTDOWN

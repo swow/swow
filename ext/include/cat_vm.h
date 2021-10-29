@@ -50,8 +50,7 @@
 // #define CAT_TSRMG_FAST 1
 #endif
 
-typedef struct
-{
+typedef struct cat_globals_info_s {
     ts_rsrc_id id;
 #ifdef TSRMG_FAST
     size_t offset;

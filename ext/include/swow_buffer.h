@@ -33,8 +33,7 @@ extern SWOW_API zend_class_entry *swow_buffer_exception_ce;
 
 extern SWOW_API const cat_buffer_allocator_t swow_buffer_allocator;
 
-typedef struct
-{
+typedef struct swow_buffer_s {
     /* === public ===  */
     cat_buffer_t buffer;
     size_t offset;

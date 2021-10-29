@@ -32,8 +32,7 @@ extern SWOW_API zend_class_entry *swow_http_parser_ce;
 extern SWOW_API zend_object_handlers swow_http_parser_handlers;
 extern SWOW_API zend_class_entry *swow_http_parser_exception_ce;
 
-typedef struct
-{
+typedef struct swow_http_parser_s {
     cat_http_parser_t parser;
     size_t data_offset;
     zend_object std;

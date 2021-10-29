@@ -31,8 +31,7 @@ extern SWOW_API zend_object_handlers swow_socket_handlers;
 
 extern SWOW_API zend_class_entry *swow_socket_exception_ce;
 
-typedef struct
-{
+typedef struct swow_socket_s {
     cat_socket_t socket;
     zend_object std;
 } swow_socket_t;

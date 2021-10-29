@@ -60,8 +60,7 @@ typedef struct swow_netstream_ssl_s {
 } swow_netstream_ssl_t;
 #endif
 
-typedef struct
-{
+typedef struct swow_netstream_data_s {
     php_netstream_data_t sock;
 #ifdef CAT_SSL
     swow_netstream_ssl_t ssl;

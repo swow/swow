@@ -35,15 +35,13 @@ extern SWOW_API zend_object_handlers swow_channel_selector_handlers;
 extern SWOW_API zend_class_entry *swow_channel_exception_ce;
 extern SWOW_API zend_class_entry *swow_channel_selector_exception_ce;
 
-typedef struct
-{
+typedef struct swow_channel_s {
     cat_channel_t channel;
     ZEND_GET_GC_BUFFER_DECLARE
     zend_object std;
 } swow_channel_t;
 
-typedef struct
-{
+typedef struct swow_channel_selector_s {
     /* requests */
     uint32_t size;
     uint32_t count;

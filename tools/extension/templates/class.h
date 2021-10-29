@@ -29,8 +29,7 @@ extern "C" {
 extern SWOW_API zend_class_entry *swow_{{type_name}}_ce;
 extern SWOW_API zend_object_handlers swow_{{type_name}}_handlers;
 
-typedef struct
-{
+typedef struct swow_{{type_name}}_s {
     cat_{{type_name}}_t {{cat_var_name}};
     zend_object std;
 } swow_{{type_name}}_t;

@@ -561,8 +561,7 @@ static zend_always_inline zend_object* swow_object_create(zend_class_entry *ce)
 
 /* function */
 
-typedef struct
-{
+typedef struct swow_fcall_s {
     zend_fcall_info info;
     zend_fcall_info_cache cache;
 } swow_fcall_t;

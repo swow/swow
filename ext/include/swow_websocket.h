@@ -34,8 +34,7 @@ extern SWOW_API zend_class_entry *swow_websocket_status_ce;
 extern SWOW_API zend_class_entry *swow_websocket_frame_ce;
 extern SWOW_API zend_object_handlers swow_websocket_frame_handlers;
 
-typedef struct
-{
+typedef struct swow_websocket_frame_s {
     cat_websocket_header_t header;
     zend_object *payload_data;
     ZEND_GET_GC_BUFFER_DECLARE

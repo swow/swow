@@ -31,8 +31,7 @@ extern SWOW_API zend_object_handlers swow_watch_dog_handlers;
 
 extern SWOW_API zend_class_entry *swow_watch_dog_exception_ce;
 
-typedef struct
-{
+typedef struct swow_watch_dog_s {
     cat_watch_dog_t watch_dog;
     zend_bool vm_interrupted;
     zend_bool *vm_interrupt_ptr;
