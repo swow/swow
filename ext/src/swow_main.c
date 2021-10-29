@@ -80,16 +80,38 @@ HashTable swow_type_hint_functions;
  */
 PHP_MINIT_FUNCTION(swow)
 {
+    size_t i;
+
     /* Conflict extensions check */
     if (zend_hash_str_find_ptr(&module_registry, ZEND_STRL("swoole"))) {
         zend_error(E_WARNING, "Swow is incompatible with Swoole "
-            "because they provide the similar functionality through different implementations. "
-            "Please disable one of them and re-run.");
+            "because we provide the similar functionality through different implementations. "
+            "Please disable one of us and re-run.");
         return FAILURE;
     }
-    if (zend_hash_str_find_ptr(&module_registry, ZEND_STRL("xdebug"))) {
-        zend_error(E_WARNING, "Please note that using Swow with Xdebug may cause unknown problems");
+
+    /* Debug extensions check */
+    static const char *debug_extension_names[] = { "xdebug", "ddtrace" };
+#ifndef SWOW_COROUTINE_MOCK_FIBER_CONTEXT
+    smart_str str;
+    memset(&str, 0, sizeof(str));
+#endif
+    for (i = 0; i < CAT_ARRAY_SIZE(debug_extension_names); i++) {
+        const char *name = debug_extension_names[i];
+        if (zend_hash_str_find_ptr(&module_registry, name, strlen(name))) {
+#ifndef SWOW_COROUTINE_MOCK_FIBER_CONTEXT
+            smart_str_appends(&str, name);
+            smart_str_appends(&str, ", ");
+#endif
+            SWOW_NTS_G(has_debug_extension) = 1;
+        }
     }
+#ifndef SWOW_COROUTINE_MOCK_FIBER_CONTEXT
+    ZSTR_LEN(str.s) -= CAT_STRLEN(", "); // rtrim(&str, ", ")
+    smart_str_0(&str);
+    zend_error(E_WARNING, "Please note that using Swow with %s may cause unknown problems", ZSTR_VAL(str.s));
+    smart_str_free(&str);
+#endif
 
     swow_wrapper_init();
 
@@ -116,8 +138,7 @@ PHP_MINIT_FUNCTION(swow)
 #endif
     };
 
-    size_t i = 0;
-    for (; i < CAT_ARRAY_SIZE(minit_functions); i++) {
+    for (i = 0; i < CAT_ARRAY_SIZE(minit_functions); i++) {
         if (minit_functions[i](INIT_FUNC_ARGS_PASSTHRU) != SUCCESS) {
             return FAILURE;
         }
@@ -219,12 +240,16 @@ PHP_RINIT_FUNCTION(swow)
 //     }
 // #endif
 
+    SWOW_G(runtime_state) = SWOW_RUNTIME_STATE_INIT;
+
     size_t i = 0;
     for (; i < CAT_ARRAY_SIZE(rinit_functions); i++) {
         if (rinit_functions[i](INIT_FUNC_ARGS_PASSTHRU) != SUCCESS) {
             return FAILURE;
         }
     }
+
+    SWOW_G(runtime_state) = SWOW_RUNTIME_STATE_RUNNING;
 
     return SUCCESS;
 }
@@ -249,6 +274,8 @@ PHP_RSHUTDOWN_FUNCTION(swow)
 //     }
 // #endif
 
+    SWOW_G(runtime_state) = SWOW_RUNTIME_STATE_SHUTDOWN;
+
     size_t i = 0;
     for (; i < CAT_ARRAY_SIZE(rshutdown_functions); i++) {
         if (rshutdown_functions[i](SHUTDOWN_FUNC_ARGS_PASSTHRU) != SUCCESS) {
@@ -267,6 +294,8 @@ PHP_RSHUTDOWN_FUNCTION(swow)
     if (!cat_run(CAT_RUN_EASY)) {
         return FAILURE;
     }
+
+    SWOW_G(runtime_state) = SWOW_RUNTIME_STATE_NONE;
 
     return SUCCESS;
 }

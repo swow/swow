@@ -26,6 +26,11 @@ extern "C" {
 
 #include "cat_coroutine.h"
 
+#if PHP_VERSION_ID >= 80100
+#include "zend_fibers.h"
+#define SWOW_COROUTINE_MOCK_FIBER_CONTEXT 1
+#endif
+
 #define SWOW_COROUTINE_STACK_PAGE_ALIGNED_SIZE (4 * 1024)
 #define SWOW_COROUTINE_MIN_STACK_PAGE_SIZE     (4 * 1024)
 #define SWOW_COROUTINE_DEFAULT_STACK_PAGE_SIZE (4 * 1024)
@@ -100,6 +105,9 @@ typedef struct
     /* php things... */
     int exit_status;
     swow_coroutine_executor_t *executor;
+#ifdef SWOW_COROUTINE_MOCK_FIBER_CONTEXT
+    zend_fiber_context *fiber_context;
+#endif
     zend_object std;
 } swow_coroutine_t;
 

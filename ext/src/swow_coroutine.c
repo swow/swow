@@ -20,6 +20,10 @@
 
 #include "swow_debug.h"
 
+#ifdef SWOW_COROUTINE_MOCK_FIBER_CONTEXT
+#include "zend_observer.h"
+#endif
+
 #ifdef SWOW_COROUTINE_SWAP_SILENCE_CONTEXT
 #define E_MAGIC (1 << 31)
 #endif
@@ -69,6 +73,27 @@ static zend_always_inline size_t swow_coroutine_align_stack_page_size(size_t siz
     return size;
 }
 
+#ifdef SWOW_COROUTINE_MOCK_FIBER_CONTEXT
+static zend_never_inline void swow_coroutine_fiber_context_init(swow_coroutine_t *scoroutine)
+{
+    zend_fiber_context *fiber_context = (zend_fiber_context *) emalloc(sizeof(*fiber_context));
+    fiber_context->handle = (void *) -1;
+    fiber_context->kind = swow_coroutine_ce;
+    fiber_context->function = (zend_fiber_coroutine) -1;
+    fiber_context->stack = (zend_fiber_stack *) -1;
+    scoroutine->fiber_context = fiber_context;
+}
+
+static zend_always_inline void swow_coroutine_fiber_context_try_init(swow_coroutine_t *scoroutine)
+{
+    if (UNEXPECTED(SWOW_NTS_G(has_debug_extension))) {
+        swow_coroutine_fiber_context_init(scoroutine);
+    } else {
+        scoroutine->fiber_context = NULL;
+    }
+}
+#endif
+
 static zend_object *swow_coroutine_create_object(zend_class_entry *ce)
 {
     swow_coroutine_t *scoroutine = swow_object_alloc(swow_coroutine_t, ce, swow_coroutine_handlers);
@@ -77,6 +102,9 @@ static zend_object *swow_coroutine_create_object(zend_class_entry *ce)
 
     scoroutine->executor = NULL;
     scoroutine->exit_status = 0;
+#ifdef SWOW_COROUTINE_MOCK_FIBER_CONTEXT
+    swow_coroutine_fiber_context_try_init(scoroutine);
+#endif
 
     return &scoroutine->std;
 }
@@ -103,6 +131,12 @@ static void swow_coroutine_free_object(zend_object *object)
         swow_coroutine_shutdown(scoroutine);
         cat_coroutine_close(&scoroutine->coroutine);
     }
+
+#ifdef SWOW_COROUTINE_MOCK_FIBER_CONTEXT
+    if (scoroutine->fiber_context != NULL) {
+        efree(scoroutine->fiber_context);
+    }
+#endif
 
     zend_object_std_dtor(&scoroutine->std);
 }
@@ -382,7 +416,10 @@ static void swow_coroutine_main_create(void)
 
     scoroutine->executor = ecalloc(1, sizeof(*scoroutine->executor));
     ZVAL_NULL(&scoroutine->executor->zcallable);
-    scoroutine->exit_status = 0;
+#ifdef SWOW_COROUTINE_MOCK_FIBER_CONTEXT
+    efree(scoroutine->fiber_context);
+    scoroutine->fiber_context = EG(main_fiber_context);
+#endif
 
     /* add main scoroutine to the map */
     do {
@@ -409,6 +446,9 @@ static void swow_coroutine_main_close(void)
     /* hack way to shutdown the main */
     scoroutine->coroutine.state = CAT_COROUTINE_STATE_DEAD;
     scoroutine->executor->vm_stack = NULL;
+#ifdef SWOW_COROUTINE_MOCK_FIBER_CONTEXT
+    scoroutine->fiber_context = NULL;
+#endif
     swow_coroutine_shutdown(scoroutine);
 
     /* release main scoroutine */
@@ -592,9 +632,56 @@ static void swow_coroutine_handle_not_null_zdata(swow_coroutine_t *scoroutine, s
     }
 }
 
+#ifdef SWOW_COROUTINE_MOCK_FIBER_CONTEXT
+// TODO: simplify it
+static zend_always_inline zend_fiber_status swow_coroutine_translate_state_to_fiber_status(cat_coroutine_state_t state)
+{
+    switch (state) {
+        case CAT_COROUTINE_STATE_INIT:
+        case CAT_COROUTINE_STATE_READY:
+            return ZEND_FIBER_STATUS_INIT;
+        case CAT_COROUTINE_STATE_RUNNING:
+            return ZEND_FIBER_STATUS_RUNNING;
+        case CAT_COROUTINE_STATE_WAITING:
+        case CAT_COROUTINE_STATE_LOCKED:
+            return ZEND_FIBER_STATUS_SUSPENDED;
+        case CAT_COROUTINE_STATE_FINISHED:
+        case CAT_COROUTINE_STATE_DEAD:
+            return ZEND_FIBER_STATUS_DEAD;
+    }
+}
+
+static zend_never_inline void swow_coroutine_fiber_context_switch_notify(swow_coroutine_t *from, swow_coroutine_t *to)
+{
+    zend_fiber_context *from_context = from->fiber_context;
+    zend_fiber_context *to_context = to->fiber_context;
+
+    from_context->status = swow_coroutine_translate_state_to_fiber_status(from->coroutine.state);
+    to_context->status = swow_coroutine_translate_state_to_fiber_status(to->coroutine.state);
+
+    zend_observer_fiber_switch_notify(from_context, to_context);
+}
+
+static zend_always_inline void swow_coroutine_fiber_context_switch_try_notify(swow_coroutine_t *from, swow_coroutine_t *to)
+{
+    if (EXPECTED(!SWOW_NTS_G(has_debug_extension))) {
+        return;
+    }
+    if (UNEXPECTED(SWOW_G(runtime_state) != SWOW_RUNTIME_STATE_RUNNING)) {
+        return;
+    }
+
+    swow_coroutine_fiber_context_switch_notify(from, to);
+}
+#endif /* SWOW_COROUTINE_MOCK_FIBER_CONTEXT */
+
 SWOW_API zval *swow_coroutine_jump(swow_coroutine_t *scoroutine, zval *zdata)
 {
     swow_coroutine_t *current_scoroutine = swow_coroutine_get_current();
+
+#ifdef SWOW_COROUTINE_MOCK_FIBER_CONTEXT
+    swow_coroutine_fiber_context_switch_try_notify(current_scoroutine, scoroutine);
+#endif
 
     /* solve origin's refcount */
     do {

@@ -56,8 +56,15 @@ extern SWOW_API zend_module_entry swow_module_entry;
 ZEND_TSRMLS_CACHE_EXTERN()
 #endif
 
+typedef enum swow_runtime_state_e {
+    SWOW_RUNTIME_STATE_NONE = 0,
+    SWOW_RUNTIME_STATE_INIT,
+    SWOW_RUNTIME_STATE_RUNNING,
+    SWOW_RUNTIME_STATE_SHUTDOWN,
+} swow_runtime_state_t;
+
 ZEND_BEGIN_MODULE_GLOBALS(swow)
-    cat_bool_t reserve;
+    swow_runtime_state_t runtime_state;
 ZEND_END_MODULE_GLOBALS(swow)
 
 ZEND_EXTERN_MODULE_GLOBALS(swow)
@@ -68,6 +75,7 @@ ZEND_EXTERN_MODULE_GLOBALS(swow)
 
 typedef struct {
     zend_bool cli;
+    zend_bool has_debug_extension;
 } swow_nts_globals_t;
 
 extern SWOW_API swow_nts_globals_t swow_nts_globals;
