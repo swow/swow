@@ -375,7 +375,7 @@ PHP_MINFO_FUNCTION(swow)
 # if defined(CAT_HAVE_UBSAN)
     smart_str_appends(&str, "UBSan, ");
 # endif
-    ZSTR_LEN(str.s) -= 2; // rtrim(&str, ", ")
+    ZSTR_LEN(str.s) -= CAT_STRLEN(", "); // rtrim(&str, ", ")
     smart_str_0(&str);
     php_info_print_table_row(2, "Sanitizers", ZSTR_VAL(str.s));
     smart_str_free(&str);
@@ -390,7 +390,7 @@ PHP_MINFO_FUNCTION(swow)
     smart_str_append_printf(&str, "%s, ", cat_ssl_version());
 # endif
     ZEND_ASSERT(str.s != NULL && ZSTR_LEN(str.s) > 1);
-    ZSTR_LEN(str.s) -= 2; // rtrim(&str, ", ")
+    ZSTR_LEN(str.s) -= CAT_STRLEN(", "); // rtrim(&str, ", ")
     smart_str_0(&str);
     php_info_print_table_row(2, "With", ZSTR_VAL(str.s));
     smart_str_free(&str);

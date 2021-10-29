@@ -185,7 +185,7 @@ int swow_event_runtime_init(INIT_FUNC_ARGS)
         zend_function *pcntl_fork_function = (zend_function *) zend_hash_str_find_ptr(CG(function_table), ZEND_STRL("pcntl_fork"));
         if (pcntl_fork_function != NULL && pcntl_fork_function->type == ZEND_INTERNAL_FUNCTION) {
             original_pcntl_fork = pcntl_fork_function->internal_function.handler;
-            pcntl_fork_function->internal_function.handler = zif_swow_pcntl_fork;
+            pcntl_fork_function->internal_function.handler = PHP_FN(swow_pcntl_fork);
         }
     }
 
