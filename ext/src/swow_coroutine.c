@@ -98,8 +98,7 @@ static zend_object *swow_coroutine_create_object(zend_class_entry *ce)
 {
     swow_coroutine_t *scoroutine = swow_object_alloc(swow_coroutine_t, ce, swow_coroutine_handlers);
 
-    cat_coroutine_init(&scoroutine->coroutine);
-
+    scoroutine->coroutine.state = CAT_COROUTINE_STATE_NONE;
     scoroutine->executor = NULL;
     scoroutine->exit_status = 0;
 #ifdef SWOW_COROUTINE_MOCK_FIBER_CONTEXT
@@ -129,7 +128,7 @@ static void swow_coroutine_free_object(zend_object *object)
     if (UNEXPECTED(swow_coroutine_is_available(scoroutine))) {
         /* created but never run */
         swow_coroutine_shutdown(scoroutine);
-        cat_coroutine_close(&scoroutine->coroutine);
+        cat_coroutine_free(&scoroutine->coroutine);
     }
 
 #ifdef SWOW_COROUTINE_MOCK_FIBER_CONTEXT
@@ -139,6 +138,19 @@ static void swow_coroutine_free_object(zend_object *object)
 #endif
 
     zend_object_std_dtor(&scoroutine->std);
+}
+
+static zend_always_inline void swow_coroutine_add_to_map(swow_coroutine_t *scoroutine, HashTable *map)
+{
+    zval ztmp;
+    ZVAL_OBJ(&ztmp, &scoroutine->std);
+    zend_hash_index_add_new(map, scoroutine->coroutine.id, &ztmp);
+    GC_ADDREF(&scoroutine->std);
+}
+
+static zend_always_inline void swow_coroutine_remove_from_map(swow_coroutine_t *scoroutine, HashTable *map)
+{
+    zend_hash_index_del(map, scoroutine->coroutine.id);
 }
 
 static CAT_COLD void swow_coroutine_function_handle_exception(void)
@@ -200,13 +212,8 @@ static zval *swow_coroutine_function(zval *zdata)
 
     ZEND_ASSERT(executor != NULL);
 
-    /* add to scoroutines map (we can not add beofre run otherwise refcount would never be 0) */
-    do {
-        zval ztmp;
-        ZVAL_OBJ(&ztmp, &scoroutine->std);
-        zend_hash_index_add_new(SWOW_COROUTINE_G(map), scoroutine->coroutine.id, &ztmp);
-        GC_ADDREF(&scoroutine->std);
-    } while (0);
+    /* add to scoroutines map (we can not add before run otherwise refcount would never be 0) */
+    swow_coroutine_add_to_map(scoroutine, SWOW_COROUTINE_G(map));
 
     /* prepare function call info */
     fci.size = sizeof(fci);
@@ -611,7 +618,7 @@ static void swow_coroutine_handle_not_null_zdata(swow_coroutine_t *scoroutine, s
         }
     } else {
         zval *zdata = *zdata_ptr;
-        zend_bool handle_ref = current_scoroutine->coroutine.state == CAT_COROUTINE_STATE_FINISHED;
+        zend_bool handle_ref = current_scoroutine->coroutine.state == CAT_COROUTINE_STATE_DEAD;
         if (!(scoroutine->coroutine.opcodes & SWOW_COROUTINE_OPCODE_ACCEPT_ZDATA)) {
             ZEND_ASSERT(Z_TYPE_P(zdata) != IS_PTR);
             /* the PHP layer can not send data to the internal-controlled coroutine */
@@ -633,21 +640,23 @@ static void swow_coroutine_handle_not_null_zdata(swow_coroutine_t *scoroutine, s
 }
 
 #ifdef SWOW_COROUTINE_MOCK_FIBER_CONTEXT
-// TODO: simplify it
-static zend_always_inline zend_fiber_status swow_coroutine_translate_state_to_fiber_status(cat_coroutine_state_t state)
+
+static zend_always_inline zend_fiber_status swow_coroutine_get_fiber_status(const swow_coroutine_t *scoroutine)
 {
-    switch (state) {
-        case CAT_COROUTINE_STATE_INIT:
-        case CAT_COROUTINE_STATE_READY:
-            return ZEND_FIBER_STATUS_INIT;
+    switch (scoroutine->coroutine.state) {
+        case CAT_COROUTINE_STATE_WAITING:
+            if (EXPECTED(scoroutine->coroutine.start_time > 0)) {
+                return ZEND_FIBER_STATUS_SUSPENDED;
+            } else {
+                return ZEND_FIBER_STATUS_INIT;
+            }
         case CAT_COROUTINE_STATE_RUNNING:
             return ZEND_FIBER_STATUS_RUNNING;
-        case CAT_COROUTINE_STATE_WAITING:
-        case CAT_COROUTINE_STATE_LOCKED:
-            return ZEND_FIBER_STATUS_SUSPENDED;
-        case CAT_COROUTINE_STATE_FINISHED:
         case CAT_COROUTINE_STATE_DEAD:
             return ZEND_FIBER_STATUS_DEAD;
+        case CAT_COROUTINE_STATE_NONE:
+        default:
+            CAT_NEVER_HERE("Unexpected state");
     }
 }
 
@@ -656,8 +665,8 @@ static zend_never_inline void swow_coroutine_fiber_context_switch_notify(swow_co
     zend_fiber_context *from_context = from->fiber_context;
     zend_fiber_context *to_context = to->fiber_context;
 
-    from_context->status = swow_coroutine_translate_state_to_fiber_status(from->coroutine.state);
-    to_context->status = swow_coroutine_translate_state_to_fiber_status(to->coroutine.state);
+    from_context->status = swow_coroutine_get_fiber_status(from);
+    to_context->status = swow_coroutine_get_fiber_status(to);
 
     zend_observer_fiber_switch_notify(from_context, to_context);
 }
@@ -689,11 +698,19 @@ SWOW_API zval *swow_coroutine_jump(swow_coroutine_t *scoroutine, zval *zdata)
         if (current_previous_scoroutine == scoroutine) {
             /* if it is yield, break the origin */
             GC_DELREF(&current_previous_scoroutine->std);
+            /*  current is locked, remove from global coroutine map */
+            if (UNEXPECTED(current_scoroutine->coroutine.opcodes & CAT_COROUTINE_OPCODE_LOCKED)) {
+                swow_coroutine_remove_from_map(current_scoroutine, SWOW_COROUTINE_G(map));
+            }
         } else {
-            /* it is not yield */
+            /* it is resume, not yield */
             ZEND_ASSERT(swow_coroutine_get_previous(scoroutine) == NULL);
             /* current becomes target's origin */
             GC_ADDREF(&current_scoroutine->std);
+            /* unlock a coroutine, re-add it to global coroutine map */
+            if (UNEXPECTED(scoroutine->coroutine.opcodes & CAT_COROUTINE_OPCODE_UNLOCKING)) {
+                swow_coroutine_add_to_map(scoroutine, SWOW_COROUTINE_G(map));
+            }
         }
     } while (0);
 
@@ -714,7 +731,7 @@ SWOW_API zval *swow_coroutine_jump(swow_coroutine_t *scoroutine, zval *zdata)
         swow_coroutine_shutdown(scoroutine);
         /* delete it from global map
          * (we can not delete it in coroutine_function, object maybe released during deletion) */
-        zend_hash_index_del(SWOW_COROUTINE_G(map), scoroutine->coroutine.id);
+        swow_coroutine_remove_from_map(scoroutine, SWOW_COROUTINE_G(map));
     } else {
         swow_coroutine_executor_t *executor = current_scoroutine->executor;
         if (executor != NULL) {
@@ -1273,11 +1290,12 @@ static PHP_METHOD(Swow_Coroutine, __construct)
     swow_coroutine_t *scoroutine = getThisCoroutine();
     zval *zcallable;
 
+    /* create_object() may fail */
     if (UNEXPECTED(EG(exception))) {
         RETURN_THROWS();
     }
 
-    if (UNEXPECTED(scoroutine->coroutine.state != CAT_COROUTINE_STATE_INIT)) {
+    if (UNEXPECTED(scoroutine->coroutine.state != CAT_COROUTINE_STATE_NONE)) {
         zend_throw_error(NULL, "%s can only construct once", ZEND_THIS_NAME);
         RETURN_THROWS();
     }
@@ -1302,8 +1320,8 @@ static PHP_METHOD(Swow_Coroutine, __construct)
     } else if (EXPECTED(fci.param_count == 1)) { \
         zdata = fci.params; \
     } else /* if (fci.param_count > 1) */ { \
-        if (UNEXPECTED(scoroutine->coroutine.state != CAT_COROUTINE_STATE_READY)) { \
-            zend_throw_error(NULL, "Only one argument allowed when resuming an coroutine which is alive"); \
+        if (UNEXPECTED(scoroutine->coroutine.start_time > 0)) { \
+            zend_throw_error(NULL, "Only one argument allowed when resuming an coroutine that has been run"); \
             RETURN_THROWS(); \
         } \
         zdata = &_##zdata; \
@@ -2332,7 +2350,7 @@ int swow_coroutine_runtime_shutdown(SHUTDOWN_FUNC_ARGS)
         /* kill first (for memory safety) */
         HashTable *map_copy = zend_array_dup(map);
         /* kill all coroutines */
-        zend_hash_index_del(map_copy, swow_coroutine_get_main()->coroutine.id);
+        swow_coroutine_remove_from_map(swow_coroutine_get_main(), map_copy);
         map_copy->pDestructor = swow_coroutines_kill_destructor;
         zend_array_destroy(map_copy);
     } while (zend_hash_num_elements(map) != 1);
