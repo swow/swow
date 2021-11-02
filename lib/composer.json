@@ -20,11 +20,6 @@
         "psr/http-client": "^1.0",
         "psr/http-message": "^1.0"
     },
-    "autoload-dev": {
-        "psr-4": {
-            "SwowTest\\": "tests/"
-        }
-    },
     "suggest": {
         "ext-swow": "*"
     },
@@ -36,6 +31,11 @@
             "src/Swow/functions.php",
             "src/Swow/Util/functions.php"
         ]
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "SwowTest\\": "tests/"
+        }
     },
     "config": {
         "process-timeout": 0,
