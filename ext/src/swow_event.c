@@ -24,14 +24,14 @@
 SWOW_API zend_class_entry *swow_event_ce;
 SWOW_API zend_object_handlers swow_event_handlers;
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Event_wait, ZEND_RETURN_VALUE, 0, IS_VOID, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Event_waitAll, ZEND_RETURN_VALUE, 0, IS_VOID, 0)
 ZEND_END_ARG_INFO()
 
-static PHP_METHOD(Swow_Event, wait)
+static PHP_METHOD(Swow_Event, waitAll)
 {
     if (!(EG(flags) & EG_FLAGS_IN_SHUTDOWN)) {
         /* called in runtime (by user) */
-        cat_event_wait();
+        cat_event_wait_all();
         return;
     }
 
@@ -47,7 +47,7 @@ static PHP_METHOD(Swow_Event, wait)
 
     /* TODO: remove from coroutine map */
     /* internal space */
-    cat_event_wait();
+    cat_event_wait_all();
 
 #if defined(EG_FLAGS_IN_SHUTDOWN) && !defined(EG_FLAGS_OBJECT_STORE_NO_REUSE)
     if (in_shutdown) {
@@ -57,7 +57,7 @@ static PHP_METHOD(Swow_Event, wait)
 }
 
 static const zend_function_entry swow_event_methods[] = {
-    PHP_ME(Swow_Event, wait, arginfo_class_Swow_Event_wait, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    PHP_ME(Swow_Event, waitAll, arginfo_class_Swow_Event_waitAll, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
     PHP_FE_END
 };
 
@@ -173,7 +173,7 @@ int swow_event_runtime_init(INIT_FUNC_ARGS)
         zfunction_name = &shutdown_function_entry.arguments[0];
 #endif
 #endif
-        ZVAL_STRING(zfunction_name, "Swow\\Event::wait");
+        ZVAL_STRING(zfunction_name, "Swow\\Event::waitAll");
 #if PHP_VERSION_ID >= 80100
         zend_fcall_info_init(&zcallable, 0, &shutdown_function_entry.fci,
             &shutdown_function_entry.fci_cache, NULL, NULL);
