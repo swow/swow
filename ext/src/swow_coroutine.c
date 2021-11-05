@@ -1237,7 +1237,7 @@ static ZEND_COLD void swow_coroutine_throw_unwind_exit(void)
 
 SWOW_API cat_bool_t swow_coroutine_kill(swow_coroutine_t *scoroutine)
 {
-    do {
+    while (1) {
         zval retval;
         cat_bool_t success = swow_coroutine_throw(scoroutine, SWOW_COROUTINE_UNWIND_EXIT_MAGIC, &retval);
         if (!success) {
@@ -1245,7 +1245,18 @@ SWOW_API cat_bool_t swow_coroutine_kill(swow_coroutine_t *scoroutine)
             return cat_false;
         }
         zval_ptr_dtor(&retval); // TODO: __destruct may lead coroutine switch
-    } while (UNEXPECTED(swow_coroutine_is_alive(scoroutine) && scoroutine != swow_coroutine_get_current()));
+        if (UNEXPECTED(swow_coroutine_is_alive(scoroutine))) {
+            if (scoroutine == swow_coroutine_get_current()) {
+                break;
+            }
+            /* FIXME: workaround */
+            if (scoroutine->coroutine.opcodes & CAT_COROUTINE_OPCODE_LOCKED) {
+                break;
+            }
+            continue;
+        }
+        break;
+    }
 
     return cat_true;
 }
