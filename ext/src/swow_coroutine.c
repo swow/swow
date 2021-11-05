@@ -248,6 +248,15 @@ static zval *swow_coroutine_function(zval *zdata)
         swow_coroutine_function_handle_exception();
     }
 
+    /* discard all possible resources (e.g. variable by "use" in zend_closure) */
+    EG(current_execute_data) = (zend_execute_data *) &dummy_execute_data;
+    ZVAL_NULL(&executor->zcallable);
+    zval_ptr_dtor(&zcallable);
+    EG(current_execute_data) = NULL;
+    if (UNEXPECTED(EG(exception) != NULL)) {
+        swow_coroutine_function_handle_exception();
+    }
+
     /* call __destruct() first here (prevent destructing in scheduler) */
     if (scoroutine->std.ce->destructor != NULL) {
         EG(current_execute_data) = (zend_execute_data *) &dummy_execute_data;
@@ -259,15 +268,6 @@ static zval *swow_coroutine_function(zval *zdata)
     }
     /* do not call __destruct() anymore  */
     GC_ADD_FLAGS(&scoroutine->std, IS_OBJ_DESTRUCTOR_CALLED);
-
-    /* discard all possible resources (varibles by "use" in zend_closure) */
-    EG(current_execute_data) = (zend_execute_data *) &dummy_execute_data;
-    ZVAL_NULL(&executor->zcallable);
-    zval_ptr_dtor(&zcallable);
-    EG(current_execute_data) = NULL;
-    if (UNEXPECTED(EG(exception) != NULL)) {
-        swow_coroutine_function_handle_exception();
-    }
 
     /* ob end clean */
 #ifdef SWOW_COROUTINE_SWAP_OUTPUT_GLOBALS
