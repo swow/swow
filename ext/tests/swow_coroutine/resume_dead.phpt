@@ -23,7 +23,7 @@ Resume
 End
 Out
 
-Fatal error: Uncaught Swow\Coroutine\Exception: Coroutine is not available in %s:%d
+Fatal error: Uncaught Swow\Coroutine\Exception: Coroutine is dead in %s:%d
 Stack trace:
 #0 %s(%d): Swow\Coroutine->resume()
 #1 {main}

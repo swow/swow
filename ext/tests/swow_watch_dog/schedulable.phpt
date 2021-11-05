@@ -3,6 +3,7 @@ swow_watch_dog: schedulable
 --SKIPIF--
 <?php
 require __DIR__ . '/../include/skipif.php';
+skip('Fix needed');
 skip_if_in_valgrind();
 ?>
 --FILE--

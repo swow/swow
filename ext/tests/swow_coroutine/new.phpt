@@ -17,7 +17,7 @@ object(Swow\Coroutine)#%d (%d) {
   ["id"]=>
   int(%d)
   ["state"]=>
-  string(5) "ready"
+  string(7) "waiting"
   ["round"]=>
   int(%d)
   ["elapsed"]=>

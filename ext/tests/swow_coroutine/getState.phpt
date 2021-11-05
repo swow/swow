@@ -15,9 +15,9 @@ class InitialCoroutine extends Coroutine
     public function __construct(callable $callable)
     {
         // when Coroutine::__construct is not called on coro,
-        // it will have Coroutine::STATE_INIT as state
-        Assert::same($this->getState(), Coroutine::STATE_INIT);
-        Assert::same($this->getStateName(), 'init');
+        // it will have Coroutine::STATE_NONE as state
+        Assert::same($this->getState(), Coroutine::STATE_NONE);
+        Assert::same($this->getStateName(), 'none');
         parent::__construct($callable);
     }
 }
@@ -36,9 +36,9 @@ $coro = new Coroutine(function () {
     }
 });
 // when Coroutine::__construct is called on coro, while it's not started
-// it will have Coroutine::STATE_READY as state
-Assert::same($coro->getState(), Coroutine::STATE_READY);
-Assert::same($coro->getStateName(), 'ready');
+// it will have Coroutine::STATE_WAITING as state
+Assert::same($coro->getState(), Coroutine::STATE_WAITING);
+Assert::same($coro->getStateName(), 'waiting');
 Assert::true($coro->isAvailable());
 
 $coro->resume();
