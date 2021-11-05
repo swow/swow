@@ -80,7 +80,7 @@ CAT_API cat_bool_t cat_runtime_shutdown_all(void)
     return ret;
 }
 
-CAT_API cat_bool_t cat_run(cat_run_mode run_mode)
+CAT_API cat_bool_t cat_run(cat_run_mode_t run_mode)
 {
     switch (run_mode) {
         case CAT_RUN_EASY: {

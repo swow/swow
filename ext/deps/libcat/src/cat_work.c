@@ -21,8 +21,7 @@
 #include "cat_event.h"
 #include "cat_time.h"
 
-typedef struct
-{
+typedef struct cat_work_context_s {
     union {
         cat_coroutine_t *coroutine;
         uv_req_t req;

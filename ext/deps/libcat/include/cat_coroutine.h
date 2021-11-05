@@ -67,13 +67,10 @@ typedef enum cat_coroutine_flag_e {
 typedef uint32_t cat_coroutine_flags_t;
 
 #define CAT_COROUTINE_STATE_MAP(XX) \
-    XX(INIT,     0, "init") \
-    XX(READY,    1, "ready") \
-    XX(RUNNING,  2, "running") \
-    XX(WAITING,  3, "waiting") \
-    XX(LOCKED,   4, "locked") \
-    XX(FINISHED, 5, "finished") \
-    XX(DEAD,     6, "dead") \
+    XX(NONE,    0, "none") \
+    XX(WAITING, 1, "waiting") \
+    XX(RUNNING, 2, "running") \
+    XX(DEAD,    3, "dead") \
 
 typedef enum cat_coroutine_state_e {
 #define CAT_COROUTINE_STATE_GEN(name, value, unused) CAT_ENUM_GEN(CAT_COROUTINE_STATE_, name, value)
@@ -83,9 +80,11 @@ typedef enum cat_coroutine_state_e {
 
 typedef enum cat_coroutine_opcode_e {
     /* built-in (0 ~ 7) */
-    CAT_COROUTINE_OPCODE_NONE     = 0,
-    CAT_COROUTINE_OPCODE_CHECKED  = 1 << 0, /* we have already checked if it is resumable */
-    CAT_COROUTINE_OPCODE_WAIT     = 1 << 1, /* wait for a specified coroutine to wake it up */
+    CAT_COROUTINE_OPCODE_NONE      = 0,
+    CAT_COROUTINE_OPCODE_CHECKED   = 1 << 0, /* we have already checked if it is resumable */
+    CAT_COROUTINE_OPCODE_LOCKED    = 1 << 1, /* can only be resumed by unlock() */
+    CAT_COROUTINE_OPCODE_UNLOCKING = 1 << 2, /* is in unlocking */
+    CAT_COROUTINE_OPCODE_WAITING_FOR = 1 << 3, /* waiting for a specified coroutine to wake it up */
     /* for user (8 ~ 15) */
 #define CAT_COROUTINE_OPCODE_USR_GEN(XX) \
     CAT_COROUTINE_OPCODE_USR##XX = 1 << (XX + (16 - 1 - 8))
@@ -123,6 +122,7 @@ struct cat_coroutine_s
     /* invariant info (readonly) */
     cat_coroutine_id_t id;
     cat_msec_t start_time;
+    cat_msec_t end_time;
     cat_coroutine_flags_t flags;
     /* runtime info (readonly) */
     cat_coroutine_state_t state;
@@ -218,15 +218,15 @@ CAT_API cat_coroutine_count_t cat_coroutine_get_peak_count(void);
 CAT_API cat_coroutine_round_t cat_coroutine_get_current_round(void);
 
 /* ctor and dtor */
-CAT_API void cat_coroutine_init(cat_coroutine_t *coroutine);
 CAT_API cat_coroutine_t *cat_coroutine_create(cat_coroutine_t *coroutine, cat_coroutine_function_t function);
 CAT_API cat_coroutine_t *cat_coroutine_create_ex(cat_coroutine_t *coroutine, cat_coroutine_function_t function, size_t stack_size);
-/* Notice: unless you set FLAG_MANUAL_CLOSE, or you need not close coroutine by yourself */
-CAT_API void cat_coroutine_close(cat_coroutine_t *coroutine);
+CAT_API void cat_coroutine_free(cat_coroutine_t *coroutine);
+/* Notice: unless you create a coroutine and never ran it, or you need not close coroutine by yourself */
+CAT_API cat_bool_t cat_coroutine_close(cat_coroutine_t *coroutine);
 /* switch (internal) */
 CAT_API cat_data_t *cat_coroutine_jump(cat_coroutine_t *coroutine, cat_data_t *data);
 /* switch (external) */
-CAT_API cat_bool_t cat_coroutine_is_resumable(const cat_coroutine_t *coroutine);
+CAT_API cat_bool_t cat_coroutine_check_resumability(const cat_coroutine_t *coroutine);
 CAT_API cat_bool_t cat_coroutine_resume_standard(cat_coroutine_t *coroutine, cat_data_t *data, cat_data_t **retval);
 #define cat_coroutine_resume CAT_COROUTINE_G(resume)
 CAT_API cat_bool_t cat_coroutine_yield(cat_data_t *data, cat_data_t **retval);
@@ -244,10 +244,12 @@ CAT_API cat_bool_t cat_coroutine_is_over(const cat_coroutine_t *coroutine);
 CAT_API const char *cat_coroutine_state_name(cat_coroutine_state_t state);
 CAT_API cat_coroutine_state_t cat_coroutine_get_state(const cat_coroutine_t *coroutine);
 CAT_API const char *cat_coroutine_get_state_name(const cat_coroutine_t *coroutine);
+CAT_API const char *cat_coroutine_get_debug_state_name(const cat_coroutine_t *coroutine);
 CAT_API cat_coroutine_opcodes_t cat_coroutine_get_opcodes(const cat_coroutine_t *coroutine);
 CAT_API void cat_coroutine_set_opcodes(cat_coroutine_t *coroutine, cat_coroutine_opcodes_t opcodes);
 CAT_API cat_coroutine_round_t cat_coroutine_get_round(const cat_coroutine_t *coroutine);
 CAT_API cat_msec_t cat_coroutine_get_start_time(const cat_coroutine_t *coroutine);
+CAT_API cat_msec_t cat_coroutine_get_end_time(const cat_coroutine_t *coroutine);
 CAT_API cat_msec_t cat_coroutine_get_elapsed(const cat_coroutine_t *coroutine);
 CAT_API char *cat_coroutine_get_elapsed_as_string(const cat_coroutine_t *coroutine);
 
@@ -262,7 +264,7 @@ CAT_API cat_coroutine_t *cat_coroutine_scheduler_run(cat_coroutine_t *coroutine,
 CAT_API cat_coroutine_t *cat_coroutine_scheduler_close(void); CAT_INTERNAL
 
 /* sync */
-CAT_API cat_bool_t cat_coroutine_wait(void);
+CAT_API cat_bool_t cat_coroutine_wait_all(void);
 CAT_API void cat_coroutine_notify_all(void); CAT_INTERNAL
 
 /* special */

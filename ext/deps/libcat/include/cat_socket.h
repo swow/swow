@@ -381,8 +381,7 @@ typedef struct cat_socket_timeout_options_s {
 
 #define CAT_SOCKET_TIMEOUT_OPTIONS_COUNT (sizeof(cat_socket_timeout_options_t) / sizeof(cat_socket_timeout_storage_t))
 
-typedef struct
-{
+typedef struct cat_socket_context_s {
     union {
         void *ptr;
         int status;

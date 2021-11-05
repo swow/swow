@@ -395,20 +395,17 @@ static void cat_coroutine_context_function(cat_coroutine_transfer_t transfer)
     coroutine->start_time = cat_time_msec();
     /* execute function */
     transfer.data = coroutine->function(transfer.data);
-    /* is finished */
-    coroutine->state = CAT_COROUTINE_STATE_FINISHED;
+    /* end time */
+    coroutine->end_time = cat_time_msec();
     /* finished */
     CAT_COROUTINE_G(count)--;
     CAT_LOG_DEBUG(COROUTINE, "Finished (count=" CAT_COROUTINE_COUNT_FMT ")", CAT_COROUTINE_G(count));
+    /* mark as dead */
+    coroutine->state = CAT_COROUTINE_STATE_DEAD;
     /* yield to previous */
     cat_coroutine_yield(transfer.data, NULL);
     /* never here */
     CAT_NEVER_HERE("Coroutine is dead");
-}
-
-CAT_API void cat_coroutine_init(cat_coroutine_t *coroutine)
-{
-    coroutine->state = CAT_COROUTINE_STATE_INIT;
 }
 
 CAT_API cat_coroutine_t *cat_coroutine_create(cat_coroutine_t *coroutine, cat_coroutine_function_t function)
@@ -511,12 +508,13 @@ CAT_API cat_coroutine_t *cat_coroutine_create_ex(cat_coroutine_t *coroutine, cat
     /* init coroutine properties */
     coroutine->id = CAT_COROUTINE_G(last_id)++;
     coroutine->flags = flags;
-    coroutine->state = CAT_COROUTINE_STATE_READY;
+    coroutine->state = CAT_COROUTINE_STATE_WAITING;
     coroutine->opcodes = CAT_COROUTINE_OPCODE_NONE;
     coroutine->round = 0;
     coroutine->from = NULL;
     coroutine->previous = NULL;
     coroutine->start_time = 0;
+    coroutine->end_time = 0;
     coroutine->stack_size = (cat_coroutine_stack_size_t) stack_size;
     coroutine->function = function;
     coroutine->virtual_memory = virtual_memory;
@@ -542,15 +540,13 @@ CAT_API cat_coroutine_t *cat_coroutine_create_ex(cat_coroutine_t *coroutine, cat
     return coroutine;
 }
 
-CAT_API void cat_coroutine_close(cat_coroutine_t *coroutine)
+CAT_API void cat_coroutine_free(cat_coroutine_t *coroutine)
 {
-    CAT_ASSERT(coroutine->state != CAT_COROUTINE_STATE_DEAD && "Coroutine is unready or closed");
-    CAT_ASSERT(!cat_coroutine_is_alive(coroutine) && "Coroutine should not be active");
     CAT_LOG_DEBUG(COROUTINE, "Close R" CAT_COROUTINE_ID_FMT, coroutine->id);
+    CAT_ASSERT(!cat_coroutine_is_alive(coroutine) && "Coroutine can not be forced to close when it is running or waiting");
 #ifdef CAT_HAVE_VALGRIND
     VALGRIND_STACK_DEREGISTER(coroutine->valgrind_stack_id);
 #endif
-    coroutine->state = CAT_COROUTINE_STATE_DEAD;
 #if defined(CAT_COROUTINE_USE_MEMORY_PROTECT) && defined(CAT_COROUTINE_USE_SYS_MALLOC)
     do {
         void *page = cat_getpageafter(coroutine->virtual_memory);
@@ -577,6 +573,22 @@ CAT_API void cat_coroutine_close(cat_coroutine_t *coroutine)
     if (coroutine->flags & CAT_COROUTINE_FLAG_ALLOCATED) {
         cat_free(coroutine);
     }
+}
+
+CAT_API cat_bool_t cat_coroutine_close(cat_coroutine_t *coroutine)
+{
+    if (!cat_coroutine_is_available(coroutine)) {
+        cat_update_last_error(CAT_EBADF, "Coroutine is not avaliable");
+        return cat_false;
+    }
+    if (cat_coroutine_is_alive(coroutine)) {
+        cat_update_last_error(CAT_EBUSY, "Coroutine can not be forced to close when it is running or waiting");
+        return cat_false;
+    }
+
+    cat_coroutine_free(coroutine);
+
+    return cat_true;
 }
 
 CAT_API cat_data_t *cat_coroutine_jump(cat_coroutine_t *coroutine, cat_data_t *data)
@@ -612,13 +624,11 @@ CAT_API cat_data_t *cat_coroutine_jump(cat_coroutine_t *coroutine, cat_data_t *d
     }
     /* update state */
     coroutine->state = CAT_COROUTINE_STATE_RUNNING;
-    /* reset the opcode */
-    coroutine->opcodes = CAT_COROUTINE_OPCODE_NONE;
     /* round++ */
     coroutine->round = ++CAT_COROUTINE_G(round);
 #ifdef CAT_HAVE_ASAN
     __sanitizer_start_switch_fiber(
-        current_coroutine->state != CAT_COROUTINE_STATE_FINISHED ? &current_coroutine->asan_fake_stack : NULL,
+        current_coroutine->state != CAT_COROUTINE_STATE_DEAD ? &current_coroutine->asan_fake_stack : NULL,
         coroutine->asan_stack, coroutine->asan_stack_size
     );
 #endif
@@ -643,14 +653,14 @@ CAT_API cat_data_t *cat_coroutine_jump(cat_coroutine_t *coroutine, cat_data_t *d
     coroutine->context = transfer.from_context;
 #endif
     /* close the coroutine if it is finished */
-    if (unlikely(coroutine->state == CAT_COROUTINE_STATE_FINISHED)) {
-        cat_coroutine_close(coroutine);
+    if (unlikely(coroutine->state == CAT_COROUTINE_STATE_DEAD)) {
+        cat_coroutine_free(coroutine);
     }
 
     return data;
 }
 
-CAT_API cat_bool_t cat_coroutine_is_resumable(const cat_coroutine_t *coroutine)
+CAT_API cat_bool_t cat_coroutine_check_resumability(const cat_coroutine_t *coroutine)
 {
     cat_coroutine_t *current_coroutine = CAT_COROUTINE_G(current);
 
@@ -660,27 +670,29 @@ CAT_API cat_bool_t cat_coroutine_is_resumable(const cat_coroutine_t *coroutine)
 
     switch (coroutine->state) {
         case CAT_COROUTINE_STATE_WAITING:
-        case CAT_COROUTINE_STATE_READY:
+            if (unlikely((coroutine->opcodes & (CAT_COROUTINE_OPCODE_LOCKED | CAT_COROUTINE_OPCODE_UNLOCKING)) == CAT_COROUTINE_OPCODE_LOCKED)) {
+                cat_update_last_error(CAT_ELOCKED, "Coroutine is locked");
+                return cat_false;
+            }
+            if (unlikely((coroutine->opcodes & CAT_COROUTINE_OPCODE_WAITING_FOR) && (current_coroutine != coroutine->waiter.coroutine))) {
+                cat_update_last_error(CAT_EAGAIN, "Coroutine is waiting for someone else");
+                return cat_false;
+            }
             break;
         case CAT_COROUTINE_STATE_RUNNING:
             cat_update_last_error(CAT_EBUSY, "Coroutine is running");
             return cat_false;
-        case CAT_COROUTINE_STATE_LOCKED:
-            cat_update_last_error(CAT_ELOCKED, "Coroutine is locked");
-            return cat_false;
-        case CAT_COROUTINE_STATE_INIT:
-        case CAT_COROUTINE_STATE_FINISHED:
         case CAT_COROUTINE_STATE_DEAD:
-            cat_update_last_error(CAT_ESRCH, "Coroutine is not available");
+            if (coroutine->opcodes & CAT_COROUTINE_OPCODE_UNLOCKING) {
+                break;
+            }
+            cat_update_last_error(CAT_ESRCH, "Coroutine is dead");
+            return cat_false;
+        case CAT_COROUTINE_STATE_NONE:
+            cat_update_last_error(CAT_EMISUSE, "Coroutine is uninitialized");
             return cat_false;
         default:
-            CAT_NEVER_HERE("Bad state");
-    }
-
-    if (unlikely((coroutine->opcodes & CAT_COROUTINE_OPCODE_WAIT) &&
-                 (current_coroutine != coroutine->waiter.coroutine))) {
-        cat_update_last_error(CAT_EAGAIN, "Coroutine is waiting for someone else");
-        return cat_false;
+            CAT_NEVER_HERE("Unknown state");
     }
 
     return cat_true;
@@ -689,7 +701,7 @@ CAT_API cat_bool_t cat_coroutine_is_resumable(const cat_coroutine_t *coroutine)
 CAT_API cat_bool_t cat_coroutine_resume_standard(cat_coroutine_t *coroutine, cat_data_t *data, cat_data_t **retval)
 {
     if (likely(!(coroutine->opcodes & CAT_COROUTINE_OPCODE_CHECKED))) {
-        if (unlikely(!cat_coroutine_is_resumable(coroutine))) {
+        if (unlikely(!cat_coroutine_check_resumability(coroutine))) {
             return cat_false;
         }
     }
@@ -748,17 +760,17 @@ CAT_API cat_coroutine_stack_size_t cat_coroutine_get_stack_size(const cat_corout
 
 CAT_API cat_bool_t cat_coroutine_is_available(const cat_coroutine_t *coroutine)
 {
-    return coroutine->state < CAT_COROUTINE_STATE_LOCKED && coroutine->state > CAT_COROUTINE_STATE_INIT;
+    return coroutine->state < CAT_COROUTINE_STATE_DEAD && coroutine->state > CAT_COROUTINE_STATE_NONE;
 }
 
 CAT_API cat_bool_t cat_coroutine_is_alive(const cat_coroutine_t *coroutine)
 {
-    return coroutine->state < CAT_COROUTINE_STATE_LOCKED && coroutine->state > CAT_COROUTINE_STATE_READY;
+    return coroutine->end_time == 0 && coroutine->start_time > 0;
 }
 
 CAT_API cat_bool_t cat_coroutine_is_over(const cat_coroutine_t *coroutine)
 {
-    return coroutine->state >= CAT_COROUTINE_STATE_FINISHED;
+    return coroutine->state >= CAT_COROUTINE_STATE_DEAD;
 }
 
 CAT_API const char *cat_coroutine_state_name(cat_coroutine_state_t state)
@@ -778,6 +790,19 @@ CAT_API cat_coroutine_state_t cat_coroutine_get_state(const cat_coroutine_t *cor
 
 CAT_API const char *cat_coroutine_get_state_name(const cat_coroutine_t *coroutine)
 {
+    return cat_coroutine_state_name(coroutine->state);
+}
+
+CAT_API const char *cat_coroutine_get_debug_state_name(const cat_coroutine_t *coroutine)
+{
+    if (unlikely(coroutine->opcodes & CAT_COROUTINE_OPCODE_LOCKED)) {
+        return "locked";
+    }
+    if (unlikely(coroutine->opcodes & CAT_COROUTINE_OPCODE_WAITING_FOR)) {
+        if (coroutine->waiter.coroutine != CAT_COROUTINE_G(current)) {
+            return "uninterruptible";
+        }
+    }
     return cat_coroutine_state_name(coroutine->state);
 }
 
@@ -801,10 +826,18 @@ CAT_API cat_msec_t cat_coroutine_get_start_time(const cat_coroutine_t *coroutine
     return coroutine->start_time;
 }
 
+CAT_API cat_msec_t cat_coroutine_get_end_time(const cat_coroutine_t *coroutine)
+{
+    return coroutine->end_time;
+}
+
 CAT_API cat_msec_t cat_coroutine_get_elapsed(const cat_coroutine_t *coroutine)
 {
-    if (unlikely(coroutine->state < CAT_COROUTINE_STATE_RUNNING)) {
+    if (unlikely(coroutine->start_time == 0)) {
         return 0;
+    }
+    if (unlikely(coroutine->end_time != 0)) {
+        return coroutine->end_time - coroutine->start_time;
     }
     return cat_time_msec() - coroutine->start_time;
 }
@@ -907,7 +940,7 @@ CAT_API cat_coroutine_t *cat_coroutine_scheduler_close(void)
         return NULL;
     }
 
-    cat_coroutine_wait();
+    cat_coroutine_wait_all();
 
     /* remove it from the root */
     cat_coroutine_get_by_index(1)->previous = NULL;
@@ -922,7 +955,7 @@ CAT_API cat_coroutine_t *cat_coroutine_scheduler_close(void)
     return coroutine;
 }
 
-CAT_API cat_bool_t cat_coroutine_wait(void)
+CAT_API cat_bool_t cat_coroutine_wait_all(void)
 {
     cat_bool_t ret;
 
@@ -964,13 +997,15 @@ CAT_API cat_bool_t cat_coroutine_wait_for(cat_coroutine_t *who)
     cat_coroutine_t *current_coroutine = CAT_COROUTINE_G(current);
     cat_bool_t ret;
 
-    current_coroutine->opcodes |= CAT_COROUTINE_OPCODE_WAIT;
+    current_coroutine->opcodes |= CAT_COROUTINE_OPCODE_WAITING_FOR;
     current_coroutine->waiter.coroutine = who;
 
     ret = cat_coroutine_yield(NULL, NULL);
 
+    current_coroutine->waiter.coroutine = NULL;
+    current_coroutine->opcodes ^= CAT_COROUTINE_OPCODE_WAITING_FOR;
+
     if (unlikely(!ret)) {
-        current_coroutine->opcodes ^= CAT_COROUTINE_OPCODE_WAIT;
         return cat_false;
     }
 
@@ -979,19 +1014,21 @@ CAT_API cat_bool_t cat_coroutine_wait_for(cat_coroutine_t *who)
 
 CAT_API cat_bool_t cat_coroutine_lock(void)
 {
-    cat_coroutine_t *coroutine = CAT_COROUTINE_G(current);
+    cat_coroutine_t *current_coroutine = CAT_COROUTINE_G(current);
     cat_bool_t ret;
 
-    coroutine->state = CAT_COROUTINE_STATE_LOCKED;
+    current_coroutine->opcodes |= CAT_COROUTINE_OPCODE_LOCKED;
     CAT_COROUTINE_G(count)--;
 
     ret = cat_coroutine_yield(NULL, NULL);
 
+    CAT_ASSERT(current_coroutine->opcodes & CAT_COROUTINE_OPCODE_UNLOCKING);
+
     CAT_COROUTINE_G(count)++;
-    coroutine->state = CAT_COROUTINE_STATE_WAITING;
+    current_coroutine->opcodes ^= (CAT_COROUTINE_OPCODE_LOCKED | CAT_COROUTINE_OPCODE_UNLOCKING);
 
     if (!ret) {
-        cat_update_last_error_with_previous("Lock coroutine failed");
+        cat_update_last_error_with_previous("Coroutine lock failed");
         return cat_false;
     }
 
@@ -1002,18 +1039,22 @@ CAT_API cat_bool_t cat_coroutine_unlock(cat_coroutine_t *coroutine)
 {
     cat_bool_t ret;
 
-    if (coroutine->state != CAT_COROUTINE_STATE_LOCKED) {
-        cat_update_last_error(CAT_EINVAL, "Unlock an unlocked coroutine");
+    if (!(coroutine->opcodes & CAT_COROUTINE_OPCODE_LOCKED)) {
+        cat_update_last_error(CAT_EINVAL, "Coroutine can only be unlocked when it is locked");
         return cat_false;
     }
 
-    coroutine->opcodes |= CAT_COROUTINE_OPCODE_CHECKED;
+    coroutine->opcodes |= CAT_COROUTINE_OPCODE_UNLOCKING;
 
     ret = cat_coroutine_resume(coroutine, NULL, NULL);
 
-    CAT_ASSERT(ret && "Unlock never fail");
+    /* this flag will be cleared after lock yield returned
+     * we can not clear it here, because the coroutine maybe dead here. */
+    // coroutine->opcodes ^= CAT_COROUTINE_OPCODE_UNLOCKING;
 
-    return cat_true;
+    CAT_ASSERT((ret || cat_coroutine_switch_blocked()) && "Unlock never fail");
+
+    return ret;
 }
 
 CAT_API const char *cat_coroutine_get_role_name(const cat_coroutine_t *coroutine)
@@ -1055,7 +1096,7 @@ CAT_API cat_coroutine_t *cat_coroutine_run(cat_coroutine_t *coroutine, cat_corou
     ret = cat_coroutine_resume(coroutine, data, NULL);
 
     if (unlikely(!ret)) {
-        cat_coroutine_close(coroutine);
+        cat_coroutine_free(coroutine);
         return NULL;
     }
 

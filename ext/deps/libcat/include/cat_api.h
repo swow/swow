@@ -40,10 +40,9 @@ extern "C" {
 #include "cat_process.h"
 #include "cat_ssl.h"
 
-typedef enum
-{
+typedef enum cat_run_mode_e{
     CAT_RUN_EASY = 0,
-} cat_run_mode;
+} cat_run_mode_t;
 
 CAT_API cat_bool_t cat_init_all(void);
 CAT_API cat_bool_t cat_shutdown_all(void);
@@ -54,7 +53,7 @@ CAT_API cat_bool_t cat_module_shutdown_all(void);
 CAT_API cat_bool_t cat_runtime_init_all(void);
 CAT_API cat_bool_t cat_runtime_shutdown_all(void);
 
-CAT_API cat_bool_t cat_run(cat_run_mode run_mode);
+CAT_API cat_bool_t cat_run(cat_run_mode_t run_mode);
 CAT_API cat_bool_t cat_stop(void);
 
 #ifdef CAT_DEBUG
