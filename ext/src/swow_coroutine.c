@@ -1259,11 +1259,6 @@ SWOW_API cat_bool_t swow_coroutine_kill_all(void)
         try_again = cat_false;
         ZEND_HASH_FOREACH_VAL(map, zval *zscoroutine) {
             swow_coroutine_t *scoroutine = swow_coroutine_get_from_object(Z_OBJ_P(zscoroutine));
-            if (!swow_coroutine_is_executing(scoroutine)) {
-                // TODO: remove from map if the coroutine has been locked
-                CAT_ASSERT(scoroutine->coroutine.state == CAT_COROUTINE_STATE_LOCKED);
-                continue;
-            }
             if (scoroutine == swow_coroutine_get_current()) {
                 continue;
             }
