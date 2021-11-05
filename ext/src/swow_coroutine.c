@@ -215,6 +215,8 @@ static zval *swow_coroutine_function(zval *zdata)
     /* add to scoroutines map (we can not add before run otherwise refcount would never be 0) */
     swow_coroutine_add_to_map(scoroutine, SWOW_COROUTINE_G(map));
 
+    /* clear accept zval data flag (it was set in constructor) */
+    scoroutine->coroutine.opcodes ^= SWOW_COROUTINE_OPCODE_ACCEPT_ZDATA;
     /* prepare function call info */
     fci.size = sizeof(fci);
     ZVAL_UNDEF(&fci.function_name);
@@ -772,67 +774,64 @@ SWOW_API cat_bool_t swow_coroutine_resume_standard(cat_coroutine_t *coroutine, c
     return cat_true;
 }
 
-#define SWOW_COROUTINE_JUMP_INIT(retval) \
-    cat_coroutine_t *current_coroutine = CAT_COROUTINE_G(current); do { \
-    \
-    if (retval != NULL) { \
-        ZVAL_NULL(retval); \
-    } \
-    \
-    current_coroutine->opcodes |= SWOW_COROUTINE_OPCODE_ACCEPT_ZDATA; \
-} while (0)
-
-#define SWOW_COROUTINE_JUMP_HANDLE_FAILURE() do { \
-    current_coroutine->opcodes ^= SWOW_COROUTINE_OPCODE_ACCEPT_ZDATA; \
-} while (0);
-
-#define SWOW_COROUTINE_JUMP_HANDLE_RETVAL(zdata, retval) do { \
-    if (UNEXPECTED(zdata != NULL)) { \
-        if (retval == NULL) { \
-            zval_ptr_dtor(zdata); \
-        } else { \
-            ZVAL_COPY_VALUE(retval, zdata); \
-        } \
-    } \
-} while (0)
+static zend_always_inline void swow_coroutine_jump_handle_retval(zval *zdata, zval *retval)
+{
+    if (UNEXPECTED(zdata != NULL)) {
+        if (retval == NULL) {
+            zval_ptr_dtor(zdata);
+        } else {
+            ZVAL_COPY_VALUE(retval, zdata);
+        }
+    }
+}
 
 SWOW_API cat_bool_t swow_coroutine_resume(swow_coroutine_t *scoroutine, zval *zdata, zval *retval)
 {
-    SWOW_COROUTINE_JUMP_INIT(retval);
+    cat_coroutine_t *current_coroutine = CAT_COROUTINE_G(current);
     cat_bool_t ret;
+
+    if (retval != NULL) {
+        ZVAL_NULL(retval);
+    }
+
+    current_coroutine->opcodes |= SWOW_COROUTINE_OPCODE_ACCEPT_ZDATA;
 
     ret = cat_coroutine_resume(&scoroutine->coroutine, zdata, (cat_data_t **) &zdata);
 
+    current_coroutine->opcodes ^= SWOW_COROUTINE_OPCODE_ACCEPT_ZDATA;
+
     if (UNEXPECTED(!ret)) {
-        SWOW_COROUTINE_JUMP_HANDLE_FAILURE();
         return cat_false;
     }
 
-    SWOW_COROUTINE_JUMP_HANDLE_RETVAL(zdata, retval);
+    swow_coroutine_jump_handle_retval(zdata, retval);
 
     return cat_true;
 }
 
 SWOW_API cat_bool_t swow_coroutine_yield(zval *zdata, zval *retval)
 {
-    SWOW_COROUTINE_JUMP_INIT(retval);
+    cat_coroutine_t *current_coroutine = CAT_COROUTINE_G(current);
     cat_bool_t ret;
+
+    if (retval != NULL) {
+        ZVAL_NULL(retval);
+    }
+
+    current_coroutine->opcodes |= SWOW_COROUTINE_OPCODE_ACCEPT_ZDATA;
 
     ret = cat_coroutine_yield(zdata, (cat_data_t **) &zdata);
 
+    current_coroutine->opcodes ^= SWOW_COROUTINE_OPCODE_ACCEPT_ZDATA;
+
     if (UNEXPECTED(!ret)) {
-        SWOW_COROUTINE_JUMP_HANDLE_FAILURE();
         return cat_false;
     }
 
-    SWOW_COROUTINE_JUMP_HANDLE_RETVAL(zdata, retval);
+    swow_coroutine_jump_handle_retval(zdata, retval);
 
     return cat_true;
 }
-
-#undef SWOW_COROUTINE_JUMP_HANDLE_FAILURE
-#undef SWOW_COROUTINE_JUMP_HANDLE_RETVAL
-#undef SWOW_COROUTINE_JUMP_INIT
 
 /* basic info */
 
