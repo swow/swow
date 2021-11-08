@@ -107,10 +107,12 @@ PHP_MINIT_FUNCTION(swow)
         }
     }
 #ifndef SWOW_COROUTINE_MOCK_FIBER_CONTEXT
-    ZSTR_LEN(str.s) -= CAT_STRLEN(", "); // rtrim(&str, ", ")
-    smart_str_0(&str);
-    zend_error(E_WARNING, "Please note that using Swow with %s may cause unknown problems when PHP version < 8.1", ZSTR_VAL(str.s));
-    smart_str_free(&str);
+    if (str.s != NULL) {
+        ZSTR_LEN(str.s) -= CAT_STRLEN(", "); // rtrim(&str, ", ")
+        smart_str_0(&str);
+        zend_error(E_WARNING, "Please note that using Swow with %s may cause unknown problems when PHP version < 8.1", ZSTR_VAL(str.s));
+        smart_str_free(&str);
+    }
 #endif
 
     swow_wrapper_init();
