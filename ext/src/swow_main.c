@@ -80,7 +80,7 @@ HashTable swow_type_hint_functions;
 static PHP_GINIT_FUNCTION(swow)
 {
 #if defined(COMPILE_DL_BCMATH) && defined(ZTS)
-	ZEND_TSRMLS_CACHE_UPDATE();
+    ZEND_TSRMLS_CACHE_UPDATE();
 #endif
     memset(swow_globals, 0, sizeof(*swow_globals));
 }
@@ -102,8 +102,8 @@ PHP_MINIT_FUNCTION(swow)
     /* Conflict extensions check */
     if (zend_hash_str_find_ptr(&module_registry, ZEND_STRL("swoole"))) {
         zend_error(E_WARNING, "Swow is incompatible with Swoole "
-            "because we provide the similar functionality through different implementations. "
-            "Please disable one of us and re-run.");
+            "because both of Swow and Swoole provide the similar functionality through different implementations. "
+            "Please disable one of Swow or Swoole and re-run.");
         return FAILURE;
     }
 
@@ -559,9 +559,9 @@ SWOW_API zend_module_entry swow_module_entry = {
     PHP_RSHUTDOWN(swow),         /* PHP_RSHUTDOWN - Request shutdown */
     PHP_MINFO(swow),             /* PHP_MINFO - Module info */
     SWOW_VERSION,                /* version */
-	PHP_MODULE_GLOBALS(swow),    /* globals descriptor */
-	PHP_GINIT(swow),             /* globals ctor */
-	PHP_GSHUTDOWN(swow),         /* globals dtor */
+    PHP_MODULE_GLOBALS(swow),    /* globals descriptor */
+    PHP_GINIT(swow),             /* globals ctor */
+    PHP_GSHUTDOWN(swow),         /* globals dtor */
     swow_delay_runtime_shutdown, /* post deactivate */
     STANDARD_MODULE_PROPERTIES_EX
 };

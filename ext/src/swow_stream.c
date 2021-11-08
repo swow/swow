@@ -767,9 +767,9 @@ static int swow_stream_setup_crypto(php_stream *stream,
     //     return SUCCESS;
     // }
 
-	/* We need to do slightly different things based on client/server method
-	 * so lets remember which method was selected */
-	swow_sock->ssl.is_client = cparam->inputs.method & STREAM_CRYPTO_IS_CLIENT;
+    /* We need to do slightly different things based on client/server method
+    * so lets remember which method was selected */
+    swow_sock->ssl.is_client = cparam->inputs.method & STREAM_CRYPTO_IS_CLIENT;
 
     return SUCCESS;
 }

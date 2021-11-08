@@ -882,7 +882,7 @@ PHP         : $php $php_info $php_cgi_info $phpdbg_info
 CWD         : " . TEST_PHP_SRCDIR . "
 Extra dirs  : ";
     foreach ($user_tests as $test_dir) {
-        echo "{$test_dir}\n			  ";
+        echo "{$test_dir}\n\t\t\t  ";
     }
     echo "
 VALGRIND    : " . ($valgrind ? $valgrind->getHeader() : 'Not used') . "
@@ -905,7 +905,7 @@ function save_or_mail_results(): void
         echo QA_REPORTS_PAGE . " and http://news.php.net/php.qa.reports\n";
         echo "This gives us a better understanding of PHP's behavior.\n";
         echo "If you don't want to send the report immediately you can choose\n";
-        echo "option \"s\" to save it.	You can then email it to " . PHP_QA_EMAIL . " later.\n";
+        echo "option \"s\" to save it.\tYou can then email it to " . PHP_QA_EMAIL . " later.\n";
         echo "Do you want to send this report now? [Yns]: ";
         flush();
 

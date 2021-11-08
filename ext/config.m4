@@ -45,6 +45,7 @@ dnl Choose the right compiler/flags/etc. for the source-file.
         *.cpp|*.cc|*.cxx[)] ac_comp="$b_cxx_pre $3 $ac_inc $b_cxx_meta -c $ac_srcdir$ac_src -o $ac_bdir$ac_obj.$b_lo $6$b_cxx_post" ;;
       esac
 
+dnl note: this tab is necessary for generated Makefile
 dnl Create a rule for the object/source combo.
     cat >>Makefile.objects<<EOF
 $ac_bdir[$]ac_obj.lo: $ac_srcdir[$]ac_src
