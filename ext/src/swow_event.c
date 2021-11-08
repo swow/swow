@@ -78,6 +78,9 @@ static cat_bool_t swow_event_scheduler_run(void)
         scoroutine->std.handle = UINT32_MAX;
     } while (0);
 
+    /* do not call __destruct() on scheduler scoroutine (but unnecessary here) */
+    // GC_ADD_FLAGS(&scoroutine->std, IS_OBJ_DESTRUCTOR_CALLED);
+
     coroutine = cat_event_scheduler_run(&scoroutine->coroutine);
 
     return coroutine != NULL;
