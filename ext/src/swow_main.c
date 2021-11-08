@@ -76,6 +76,23 @@ typedef zend_result (*swow_delay_shutdown_function_t)(void);
 HashTable swow_type_hint_functions;
 #endif
 
+/* {{{ PHP_GINIT_FUNCTION */
+static PHP_GINIT_FUNCTION(swow)
+{
+#if defined(COMPILE_DL_BCMATH) && defined(ZTS)
+	ZEND_TSRMLS_CACHE_UPDATE();
+#endif
+    memset(swow_globals, 0, sizeof(*swow_globals));
+}
+/* }}} */
+
+/* {{{ PHP_GSHUTDOWN_FUNCTION */
+static PHP_GSHUTDOWN_FUNCTION(swow)
+{
+    /* reserved */
+}
+/* }}} */
+
 /* {{{ PHP_MINIT_FUNCTION
  */
 PHP_MINIT_FUNCTION(swow)
@@ -515,9 +532,6 @@ int swow_module_shutdown(INIT_FUNC_ARGS)
 
 int swow_runtime_init(INIT_FUNC_ARGS)
 {
-#if defined(ZTS) && defined(COMPILE_DL_SWOW)
-    ZEND_TSRMLS_CACHE_UPDATE();
-#endif
     /* See: https://bugs.php.net/bug.php?id=79064 */
     // EG(full_tables_cleanup) = cat_true; // not needed for now
 
@@ -544,10 +558,10 @@ SWOW_API zend_module_entry swow_module_entry = {
     PHP_RINIT(swow),             /* PHP_RINIT - Request initialization */
     PHP_RSHUTDOWN(swow),         /* PHP_RSHUTDOWN - Request shutdown */
     PHP_MINFO(swow),             /* PHP_MINFO - Module info */
-    SWOW_VERSION,                /* Version */
-    0, NULL,                     /* globals descriptor */
-    NULL,                        /* globals ctor */
-    NULL,                        /* globals dtor */
+    SWOW_VERSION,                /* version */
+	PHP_MODULE_GLOBALS(swow),    /* globals descriptor */
+	PHP_GINIT(swow),             /* globals ctor */
+	PHP_GSHUTDOWN(swow),         /* globals dtor */
     swow_delay_runtime_shutdown, /* post deactivate */
     STANDARD_MODULE_PROPERTIES_EX
 };
