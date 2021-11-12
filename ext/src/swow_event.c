@@ -21,46 +21,6 @@
 #include "swow_defer.h"
 #include "swow_coroutine.h"
 
-SWOW_API zend_class_entry *swow_event_ce;
-SWOW_API zend_object_handlers swow_event_handlers;
-
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Event_waitAll, ZEND_RETURN_VALUE, 0, IS_VOID, 0)
-ZEND_END_ARG_INFO()
-
-static PHP_METHOD(Swow_Event, waitAll)
-{
-    if (!(EG(flags) & EG_FLAGS_IN_SHUTDOWN)) {
-        /* called in runtime (by user) */
-        cat_event_wait_all();
-        return;
-    }
-
-    // Don't disable object slot reuse while running shutdown functions:
-    // https://github.com/php/php-src/commit/bd6eabd6591ae5a7c9ad75dfbe7cc575fa907eac
-#if defined(EG_FLAGS_IN_SHUTDOWN) && !defined(EG_FLAGS_OBJECT_STORE_NO_REUSE)
-    zend_bool in_shutdown = EG(flags) & EG_FLAGS_IN_SHUTDOWN;
-    EG(flags) &= ~EG_FLAGS_IN_SHUTDOWN;
-#endif
-
-    /* user space (we simulate main exit here) */
-    swow_defer_do_main_tasks();
-
-    /* TODO: remove from coroutine map */
-    /* internal space */
-    cat_event_wait_all();
-
-#if defined(EG_FLAGS_IN_SHUTDOWN) && !defined(EG_FLAGS_OBJECT_STORE_NO_REUSE)
-    if (in_shutdown) {
-        EG(flags) |= EG_FLAGS_IN_SHUTDOWN;
-    }
-#endif
-}
-
-static const zend_function_entry swow_event_methods[] = {
-    PHP_ME(Swow_Event, waitAll, arginfo_class_Swow_Event_waitAll, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-    PHP_FE_END
-};
-
 static cat_bool_t swow_event_scheduler_run(void)
 {
     swow_coroutine_t *scoroutine;
@@ -126,13 +86,6 @@ int swow_event_module_init(INIT_FUNC_ARGS)
         return FAILURE;
     }
 
-    swow_event_ce = swow_register_internal_class(
-        "Swow\\Event", NULL, swow_event_methods,
-        &swow_event_handlers, NULL,
-        cat_false, cat_false,
-        swow_create_object_deny, NULL, 0
-    );
-
     return SUCCESS;
 }
 
@@ -154,35 +107,6 @@ int swow_event_runtime_init(INIT_FUNC_ARGS)
     if (!swow_event_scheduler_run()) {
         return FAILURE;
     }
-
-    do {
-        php_shutdown_function_entry shutdown_function_entry;
-        zval *zfunction_name;
-#if PHP_VERSION_ID >= 80100
-        zval zcallable;
-        zfunction_name = &zcallable;
-#else
-        int arg_count;
-#if PHP_VERSION_ID >= 80000
-        arg_count = 0;
-#else
-        arg_count = 1;
-#endif
-        shutdown_function_entry.arg_count = arg_count;
-        shutdown_function_entry.arguments = arg_count > 0 ? ((zval *) safe_emalloc(sizeof(zval), arg_count, 0)) : NULL;
-#if PHP_VERSION_ID >= 80000
-        zfunction_name = &shutdown_function_entry.function_name;
-#else
-        zfunction_name = &shutdown_function_entry.arguments[0];
-#endif
-#endif
-        ZVAL_STRING(zfunction_name, "Swow\\Event::waitAll");
-#if PHP_VERSION_ID >= 80100
-        zend_fcall_info_init(&zcallable, 0, &shutdown_function_entry.fci,
-            &shutdown_function_entry.fci_cache, NULL, NULL);
-#endif
-        register_user_shutdown_function(Z_STRVAL_P(zfunction_name), Z_STRLEN_P(zfunction_name), &shutdown_function_entry);
-    } while (0);
 
     if (original_pcntl_fork == (zif_handler) -1) {
         zend_function *pcntl_fork_function = (zend_function *) zend_hash_str_find_ptr(CG(function_table), ZEND_STRL("pcntl_fork"));

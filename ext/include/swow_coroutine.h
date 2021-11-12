@@ -52,13 +52,10 @@ extern SWOW_API zend_object_handlers swow_coroutine_handlers;
 extern SWOW_API zend_class_entry *swow_coroutine_exception_ce;
 
 typedef enum swow_coroutine_flag_e {
-    SWOW_COROUTINE_FLAG_DEYING = CAT_COROUTINE_FLAG_USR1,
+    SWOW_COROUTINE_FLAG_ACCEPT_ZDATA = CAT_COROUTINE_FLAG_USR1,
     SWOW_COROUTINE_FLAG_DEBUGGING = CAT_COROUTINE_FLAG_USR2,
+    SWOW_COROUTINE_FLAG_KILLED = CAT_COROUTINE_FLAG_USR3,
 } swow_coroutine_flag_t;
-
-typedef enum swow_coroutine_opcode_e {
-    SWOW_COROUTINE_OPCODE_ACCEPT_ZDATA = CAT_COROUTINE_OPCODE_USR1,
-} swow_coroutine_opcode_t;
 
 /*
  * these things will no longer be used
@@ -122,7 +119,7 @@ CAT_GLOBALS_STRUCT_BEGIN(swow_coroutine)
     swow_coroutine_runtime_state_t runtime_state;
     HashTable *map;
     /* internal special */
-    cat_coroutine_resume_t original_resume;
+    cat_coroutine_jump_t original_jump;
     cat_coroutine_t *original_main;
     zval ztransfer_data;
     zend_object *exception;
@@ -163,9 +160,7 @@ SWOW_API void swow_coroutine_close(swow_coroutine_t *scoroutine);
 SWOW_API void swow_coroutine_executor_switch(swow_coroutine_executor_t *current_executor, swow_coroutine_executor_t *target_executor); SWOW_INTERNAL
 SWOW_API void swow_coroutine_executor_save(swow_coroutine_executor_t *executor);    SWOW_INTERNAL
 SWOW_API void swow_coroutine_executor_recover(swow_coroutine_executor_t *executor); SWOW_INTERNAL
-SWOW_API zval *swow_coroutine_jump(swow_coroutine_t *scoroutine, zval *zdata);
-SWOW_API cat_bool_t swow_coroutine_check_resumability(const swow_coroutine_t *scoroutine);
-SWOW_API cat_bool_t swow_coroutine_resume_standard(cat_coroutine_t *coroutine, cat_data_t *data, cat_data_t **retval); SWOW_INTERNAL
+
 SWOW_API cat_bool_t swow_coroutine_resume(swow_coroutine_t *scoroutine, zval *zdata, zval *retval);
 SWOW_API cat_bool_t swow_coroutine_yield(zval *zdata, zval *retval);
 
