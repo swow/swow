@@ -77,7 +77,7 @@ static PHP_METHOD(Swow_Socket, __construct)
     zend_long type = CAT_SOCKET_TYPE_TCP;
 
     if (UNEXPECTED(cat_socket_is_available(socket))) {
-        zend_throw_error(NULL, "%s can only construct once", ZEND_THIS_NAME);
+        zend_throw_error(NULL, "%s can be constructed only once", ZEND_THIS_NAME);
         RETURN_THROWS();
     }
 

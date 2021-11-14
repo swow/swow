@@ -95,7 +95,7 @@ static PHP_METHOD(Swow_Channel, __construct)
     zend_long capacity = 0;
 
     if (UNEXPECTED(CHANNEL_HAS_CONSTRUCTED(channel))) {
-        zend_throw_error(NULL, "%s can only construct once", ZEND_THIS_NAME);
+        zend_throw_error(NULL, "%s can be constructed only once", ZEND_THIS_NAME);
         RETURN_THROWS();
     }
 

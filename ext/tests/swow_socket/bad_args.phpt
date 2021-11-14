@@ -17,7 +17,7 @@ class MySocket1 extends Socket
 {
     public function __construct(int $type = Socket::TYPE_TCP)
     {
-        // can only construct once
+        // can be constructed only once
         parent::__construct($type);
         parent::__construct($type);
     }

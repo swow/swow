@@ -1250,7 +1250,7 @@ static PHP_METHOD(Swow_Coroutine, __construct)
     }
 
     if (UNEXPECTED(scoroutine->coroutine.state != CAT_COROUTINE_STATE_NONE)) {
-        zend_throw_error(NULL, "%s can only construct once", ZEND_THIS_NAME);
+        zend_throw_error(NULL, "%s can be constructed only once", ZEND_THIS_NAME);
         RETURN_THROWS();
     }
 

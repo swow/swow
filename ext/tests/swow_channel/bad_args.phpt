@@ -12,7 +12,7 @@ use Swow\Channel;
 
 $chan = new Channel(0);
 Assert::throws(function () use ($chan) {
-    // Swow\Channel can only construct once
+    // Swow\Channel can be constructed only once
     $chan->__construct();
 }, Error::class);
 
