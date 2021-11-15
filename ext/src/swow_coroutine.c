@@ -203,7 +203,6 @@ static CAT_COLD void swow_coroutine_function_handle_exception(void)
 
 static zval *swow_coroutine_function(zval *zdata)
 {
-    static const zend_execute_data dummy_execute_data;
     swow_coroutine_t *scoroutine = swow_coroutine_get_current();
     swow_coroutine_executor_t *executor = scoroutine->executor;
     zval zcallable = executor->zcallable;
@@ -241,27 +240,21 @@ static zval *swow_coroutine_function(zval *zdata)
     fci.retval = &retval;
 
     /* call function */
-    EG(current_execute_data) = (zend_execute_data *) &dummy_execute_data;
     (void) zend_call_function(&fci, &executor->fcc);
-    EG(current_execute_data) = NULL;
     if (UNEXPECTED(EG(exception) != NULL)) {
         swow_coroutine_function_handle_exception();
     }
 
     /* discard all possible resources (e.g. variable by "use" in zend_closure) */
-    EG(current_execute_data) = (zend_execute_data *) &dummy_execute_data;
     ZVAL_NULL(&executor->zcallable);
     zval_ptr_dtor(&zcallable);
-    EG(current_execute_data) = NULL;
     if (UNEXPECTED(EG(exception) != NULL)) {
         swow_coroutine_function_handle_exception();
     }
 
     /* call __destruct() first here (prevent destructing in scheduler) */
     if (scoroutine->std.ce->destructor != NULL) {
-        EG(current_execute_data) = (zend_execute_data *) &dummy_execute_data;
         zend_objects_destroy_object(&scoroutine->std);
-        EG(current_execute_data) = NULL;
         if (UNEXPECTED(EG(exception) != NULL)) {
             swow_coroutine_function_handle_exception();
         }
@@ -335,7 +328,15 @@ static cat_bool_t swow_coroutine_construct(swow_coroutine_t *scoroutine, zval *z
         executor->vm_stack_top = executor->vm_stack->top;
         executor->vm_stack_end = executor->vm_stack->end;
         executor->vm_stack_page_size = stack_page_size;
-        executor->current_execute_data = NULL;
+        do {
+            /* add const to make sure it would not be modified */
+            static const zend_function swow_coroutine_internal_function = { ZEND_INTERNAL_FUNCTION };
+            executor->root_execute_data = (zend_execute_data *) executor->vm_stack_top;
+            memset(executor->root_execute_data, 0, sizeof(*executor->root_execute_data));
+            executor->root_execute_data->func = (zend_function *) &swow_coroutine_internal_function;
+            executor->vm_stack_top += ZEND_CALL_FRAME_SLOT;
+        } while (0);
+        executor->current_execute_data = executor->root_execute_data;
         executor->exception = NULL;
 #ifdef SWOW_COROUTINE_SWAP_ERROR_HANDING
         executor->error_handling = EH_NORMAL;
@@ -425,6 +426,7 @@ static void swow_coroutine_main_create(void)
     SWOW_COROUTINE_G(original_main) = cat_coroutine_register_main(&scoroutine->coroutine);
 
     scoroutine->executor = ecalloc(1, sizeof(*scoroutine->executor));
+    scoroutine->executor->root_execute_data = (zend_execute_data *) EG(vm_stack)->top;
     ZVAL_NULL(&scoroutine->executor->zcallable);
 #ifdef SWOW_COROUTINE_MOCK_FIBER_CONTEXT
     efree(scoroutine->fiber_context);
@@ -492,14 +494,28 @@ SWOW_API void swow_coroutine_close(swow_coroutine_t *scoroutine)
     zend_object_release(&scoroutine->std);
 }
 
-SWOW_API void swow_coroutine_executor_switch(swow_coroutine_executor_t *current_executor, swow_coroutine_executor_t *target_executor)
+static zend_always_inline void swow_coroutine_relink_executor_linkedlist_node(swow_coroutine_t *scoroutine, swow_coroutine_executor_t *executor)
 {
+    swow_coroutine_t *previous_scoroutine = swow_coroutine_get_previous(scoroutine);
+    if (previous_scoroutine != NULL && previous_scoroutine->executor != NULL) {
+        executor->root_execute_data->prev_execute_data = previous_scoroutine->executor->current_execute_data;
+    } else {
+        executor->root_execute_data->prev_execute_data = NULL;
+    }
+}
+
+SWOW_API void swow_coroutine_switch_executor(swow_coroutine_t *current_scoroutine, swow_coroutine_t *target_scoroutine)
+{
+    swow_coroutine_executor_t *current_executor = current_scoroutine->executor;
+    swow_coroutine_executor_t *target_executor = target_scoroutine->executor;
     // TODO: it's not optimal
     if (current_executor != NULL) {
         swow_coroutine_executor_save(current_executor);
+        swow_coroutine_relink_executor_linkedlist_node(current_scoroutine, current_executor);
     }
     if (target_executor != NULL) {
         swow_coroutine_executor_recover(target_executor);
+        swow_coroutine_relink_executor_linkedlist_node(target_scoroutine, target_executor);
     } else {
         zend_executor_globals *eg = SWOW_GLOBALS_FAST_PTR(executor_globals);
         eg->current_execute_data = NULL; /* make the log stack trace empty */
@@ -698,8 +714,9 @@ static void swow_coroutine_jump_standard(cat_coroutine_t *coroutine, cat_data_t 
 #endif
 
     /* switch executor */
-    swow_coroutine_executor_switch(current_scoroutine->executor, scoroutine->executor);
+    swow_coroutine_switch_executor(current_scoroutine, scoroutine);
 
+    /* solve transfer zval data */
     if (UNEXPECTED(zdata != NULL)) {
         swow_coroutine_handle_not_null_zdata(scoroutine, swow_coroutine_get_current(), &zdata);
     }
@@ -852,16 +869,29 @@ SWOW_API swow_coroutine_t *swow_coroutine_get_scheduler(void)
 
 /* debug */
 
+static zend_always_inline zend_execute_data *swow_coroutine_execute_scope_start(const swow_coroutine_t *scoroutine, zend_long level)
+{
+    zend_execute_data *current_execute_data_backup = EG(current_execute_data);
+
+    if (EXPECTED(scoroutine != swow_coroutine_get_current())) {
+        EG(current_execute_data) = scoroutine->executor->current_execute_data;
+    }
+    EG(current_execute_data) = swow_debug_backtrace_resolve(EG(current_execute_data), level);
+
+    return current_execute_data_backup;
+}
+
+static zend_always_inline void swow_coroutine_execute_scope_end(zend_execute_data *current_execute_data_backup)
+{
+    EG(current_execute_data) = current_execute_data_backup;
+}
+
 #define SWOW_COROUTINE_EXECUTE_START(scoroutine, level) do { \
-    const swow_coroutine_t *_scoroutine = scoroutine; \
-    zend_execute_data *_current_execute_data = EG(current_execute_data); \
-    if (EXPECTED(_scoroutine != swow_coroutine_get_current())) { \
-        EG(current_execute_data) = _scoroutine->executor->current_execute_data; \
-    } \
-    EG(current_execute_data) = swow_debug_backtrace_resolve(EG(current_execute_data), level); \
+    zend_execute_data *current_execute_data_backup; \
+    current_execute_data_backup = swow_coroutine_execute_scope_start(scoroutine, level); \
 
 #define SWOW_COROUTINE_EXECUTE_END() \
-    EG(current_execute_data) = _current_execute_data; \
+    swow_coroutine_execute_scope_end(current_execute_data_backup); \
 } while (0)
 
 SWOW_API zend_string *swow_coroutine_get_executed_filename(const swow_coroutine_t *scoroutine, zend_long level)

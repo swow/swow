@@ -71,6 +71,7 @@ typedef struct swow_coroutine_executor_s {
     zval *vm_stack_end;
     zend_vm_stack vm_stack;
     size_t vm_stack_page_size;
+    zend_execute_data *root_execute_data;
     zend_execute_data *current_execute_data;
     zend_object *exception;
 #ifdef SWOW_COROUTINE_SWAP_ERROR_HANDING
@@ -157,9 +158,10 @@ SWOW_API swow_coroutine_t *swow_coroutine_create_ex(zend_class_entry *ce, zval *
 SWOW_API void swow_coroutine_close(swow_coroutine_t *scoroutine);
 
 /* switch */
-SWOW_API void swow_coroutine_executor_switch(swow_coroutine_executor_t *current_executor, swow_coroutine_executor_t *target_executor); SWOW_INTERNAL
 SWOW_API void swow_coroutine_executor_save(swow_coroutine_executor_t *executor);    SWOW_INTERNAL
 SWOW_API void swow_coroutine_executor_recover(swow_coroutine_executor_t *executor); SWOW_INTERNAL
+
+SWOW_API void swow_coroutine_switch_executor(swow_coroutine_t *current_scoroutine, swow_coroutine_t *target_scoroutine); SWOW_INTERNAL
 
 SWOW_API cat_bool_t swow_coroutine_resume(swow_coroutine_t *scoroutine, zval *zdata, zval *retval);
 SWOW_API cat_bool_t swow_coroutine_yield(zval *zdata, zval *retval);
