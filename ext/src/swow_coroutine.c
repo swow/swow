@@ -1892,26 +1892,35 @@ static PHP_METHOD(Swow_Coroutine, __debugInfo)
     cat_coroutine_t *coroutine = &scoroutine->coroutine;
     zval zdebug_info;
     char *tmp;
+    const char *const_tmp;
 
     ZEND_PARSE_PARAMETERS_NONE();
 
     array_init(&zdebug_info);
     add_assoc_long(&zdebug_info, "id", coroutine->id);
+    const_tmp = cat_coroutine_get_role_name(coroutine);
+    if (const_tmp != NULL) {
+        add_assoc_string(&zdebug_info, "role", const_tmp);
+    }
     add_assoc_string(&zdebug_info, "state", cat_coroutine_get_state_name(coroutine));
     tmp = cat_coroutine_get_elapsed_as_string(coroutine);
     add_assoc_long(&zdebug_info, "round", coroutine->round);
     add_assoc_string(&zdebug_info, "elapsed", tmp);
     cat_free(tmp);
-    if (swow_coroutine_is_alive(scoroutine)) {
+    if (swow_coroutine_is_executing(scoroutine)) {
         const zend_long level = 0;
         const zend_long limit = 0;
         const zend_long options = DEBUG_BACKTRACE_PROVIDE_OBJECT;
         smart_str str = { 0 };
         smart_str_appendc(&str, '\n');
         swow_coroutine_get_trace_as_smart_str(scoroutine, &str, level, limit, options);
-        smart_str_appendc(&str, '\n');
-        smart_str_0(&str);
-        add_assoc_str(&zdebug_info, "trace", str.s);
+        if (ZSTR_LEN(str.s) == CAT_STRLEN("\n")) {
+            smart_str_free(&str);
+        } else {
+            smart_str_appendc(&str, '\n');
+            smart_str_0(&str);
+            add_assoc_str(&zdebug_info, "trace", str.s);
+        }
     }
 
     RETURN_DEBUG_INFO_WITH_PROPERTIES(&zdebug_info);
