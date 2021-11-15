@@ -687,6 +687,11 @@ static zend_never_inline void swow_coroutine_fiber_context_switch_notify(swow_co
     from_context->status = swow_coroutine_get_fiber_status(from);
     to_context->status = swow_coroutine_get_fiber_status(to);
 
+    if (to_context->status == ZEND_FIBER_STATUS_INIT) {
+        zend_observer_fiber_init_notify(to_context);
+    } else if (from_context->status == ZEND_FIBER_STATUS_DEAD) {
+        zend_observer_fiber_destroy_notify(from_context);
+    }
     zend_observer_fiber_switch_notify(from_context, to_context);
 }
 
