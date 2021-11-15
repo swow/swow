@@ -954,12 +954,12 @@ static PHP_METHOD_EX(Swow_Socket, _write, zend_bool single, zend_bool may_addres
                             }
                             _NEXT_ZVAL_(bucket, bucket_end, ztmp);
                             if (UNEXPECTED(ztmp!= NULL && !zend_parse_arg_long(ztmp, &offset, NULL, 0 _ARG_POS(1)))) {
-                                zend_argument_value_error(1, "[%u][offset] must be type of long", vector_count);
+                                zend_argument_value_error(1, "[%u][offset] must be type of int", vector_count);
                                 goto _error;
                             }
                             _NEXT_ZVAL_(bucket, bucket_end, ztmp);
                             if (UNEXPECTED(ztmp != NULL && !zend_parse_arg_long(ztmp, &length, NULL, 0 _ARG_POS(1)))) {
-                                zend_argument_value_error(1, "[%u][length] must be type of long", vector_count);
+                                zend_argument_value_error(1, "[%u][length] must be type of int", vector_count);
                                 goto _error;
                             }
                         } else {
@@ -977,7 +977,7 @@ static PHP_METHOD_EX(Swow_Socket, _write, zend_bool single, zend_bool may_addres
                             }
                             _NEXT_ZVAL_(bucket, bucket_end, ztmp);
                             if (UNEXPECTED(ztmp != NULL && !zend_parse_arg_long(ztmp, &length, NULL, 0 _ARG_POS(1)))) {
-                                zend_argument_value_error(1, "[%u][length] must be type of long or null, %s given", vector_count, zend_zval_type_name(ztmp));
+                                zend_argument_value_error(1, "[%u][length] must be type of int or null, %s given", vector_count, zend_zval_type_name(ztmp));
                                 goto _error;
                             }
                         }
