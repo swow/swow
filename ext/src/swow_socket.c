@@ -901,31 +901,7 @@ static PHP_METHOD_EX(Swow_Socket, _write, zend_bool single, zend_bool may_addres
                         /* array include paramaters */
                         HashTable *vector_array = Z_ARR_P(ztmp);
                         uint32_t vector_array_count = zend_hash_num_elements(vector_array);
-                        Bucket *bucket = vector_array->arData;
-                        Bucket *bucket_end = bucket + vector_array->nNumUsed;
-/* TODO: let it be API */
-#define _CURRENT_ZVAL_(bucket, bucket_end, ztmp) do { \
-        while (1) { \
-            ztmp = &bucket->val; \
-            if (EXPECTED(Z_TYPE_P(ztmp) != IS_UNDEF)) { \
-                break; \
-            } \
-            if (bucket != bucket_end) { \
-                bucket++; \
-            } else { \
-                ztmp = NULL; \
-                break; \
-            } \
-        } \
-} while (0)
-#define _NEXT_ZVAL_(bucket, bucket_end, ztmp) do { \
-        if (bucket != bucket_end) { \
-            bucket++; \
-            _CURRENT_ZVAL_(bucket, bucket_end, ztmp); \
-        } else { \
-            ztmp = NULL; \
-        } \
-} while (0)
+						zend_bool maybe_stringable_object = 0;
 #if PHP_VERSION_ID < 80100
 #define _ARG_POS(x)
 #else
@@ -935,54 +911,79 @@ static PHP_METHOD_EX(Swow_Socket, _write, zend_bool single, zend_bool may_addres
                             zend_argument_value_error(1, "can not be empty");
                             goto _error;
                         }
-                        _CURRENT_ZVAL_(bucket, bucket_end, ztmp);
-                        ZEND_ASSERT(ztmp != NULL);
-                        if (EXPECTED(Z_TYPE_P(ztmp) == IS_STRING)) {
-                            /* [string, offset, length] */
-                            if (UNEXPECTED(vector_array_count < 1 || vector_array_count > 3)) {
-                                zend_argument_value_error(1, "[%u] must have 1 to 3 elements as paramaters", vector_count);
-                                goto _error;
-                            }
-                            if (1) {
-                                string = Z_STR_P(ztmp);
-                            } else {
-                                _maybe_stringable_object:
-                                if (UNEXPECTED(!zend_parse_arg_str(ztmp, &string, 0 _ARG_POS(1)))) {
-                                    zend_argument_value_error(1, "[%u][string] must be type of string, %s given", vector_count, zend_zval_type_name(ztmp));
+                        ZEND_HASH_FOREACH_VAL(vector_array, ztmp) {
+                            if (EXPECTED(Z_TYPE_P(ztmp) == IS_STRING)) {
+                                /* [string, offset, length] */
+                                if (UNEXPECTED(vector_array_count < 1 || vector_array_count > 3)) {
+                                    zend_argument_value_error(1, "[%u] must have 1 to 3 elements as paramaters", vector_count);
                                     goto _error;
                                 }
-                            }
-                            _NEXT_ZVAL_(bucket, bucket_end, ztmp);
-                            if (UNEXPECTED(ztmp!= NULL && !zend_parse_arg_long(ztmp, &offset, NULL, 0 _ARG_POS(1)))) {
-                                zend_argument_value_error(1, "[%u][offset] must be type of int", vector_count);
-                                goto _error;
-                            }
-                            _NEXT_ZVAL_(bucket, bucket_end, ztmp);
-                            if (UNEXPECTED(ztmp != NULL && !zend_parse_arg_long(ztmp, &length, NULL, 0 _ARG_POS(1)))) {
-                                zend_argument_value_error(1, "[%u][length] must be type of int", vector_count);
-                                goto _error;
-                            }
-                        } else {
-                            /* [buffer, length] */
-                            if (UNEXPECTED(vector_array_count < 1 || vector_array_count > 2)) {
-                                zend_argument_value_error(1, "[%u] must have 1 or 2 elements as paramaters", vector_count);
-                                goto _error;
-                            }
-                            if (!zend_parse_arg_object(ztmp, &zbuffer, swow_buffer_ce, 0)) {
-                                if (Z_TYPE_P(ztmp) == IS_OBJECT) {
-                                    goto _maybe_stringable_object;
+                                goto _string_offset_length;
+                            } else {
+                                /* [buffer, length] */
+                                if (UNEXPECTED(vector_array_count < 1 || vector_array_count > 2)) {
+                                    zend_argument_value_error(1, "[%u] must have 1 or 2 elements as paramaters", vector_count);
+                                    goto _error;
                                 }
-                                zend_argument_value_error(1, "[%u][buffer] must be type of %s, %s given", vector_count, ZSTR_VAL(swow_buffer_ce->name), zend_zval_type_name(ztmp));
-                                goto _error;
+                                goto _buffer_length;
                             }
-                            _NEXT_ZVAL_(bucket, bucket_end, ztmp);
-                            if (UNEXPECTED(ztmp != NULL && !zend_parse_arg_long(ztmp, &length, NULL, 0 _ARG_POS(1)))) {
-                                zend_argument_value_error(1, "[%u][length] must be type of int or null, %s given", vector_count, zend_zval_type_name(ztmp));
-                                goto _error;
-                            }
+                            break;
+                        } ZEND_HASH_FOREACH_END();
+                        if (0) {
+                            _string_offset_length:;
+                            /* [string|stringableObject, offset, length] */
+							if (0) {
+								_maybe_stringable_object:
+								maybe_stringable_object = 1;
+							}
+                            uint32_t index = 0;
+                            ZEND_HASH_FOREACH_VAL(vector_array, ztmp) {
+                                ZEND_ASSERT(index == 0 || index == 1 || index == 2);
+                                if (index == 0) {
+                                    if (!maybe_stringable_object) {
+                                        string = Z_STR_P(ztmp);
+                                    } else {
+                                        if (UNEXPECTED(!zend_parse_arg_str(ztmp, &string, 0 _ARG_POS(1)))) {
+                                            zend_argument_value_error(1, "[%u][string] must be type of string, %s given", vector_count, zend_zval_type_name(ztmp));
+                                            goto _error;
+                                        }
+                                    }
+                                } else if (index == 1) {
+                                    if (UNEXPECTED(ztmp!= NULL && !zend_parse_arg_long(ztmp, &offset, NULL, 0 _ARG_POS(1)))) {
+                                        zend_argument_value_error(1, "[%u][offset] must be type of int", vector_count);
+                                        goto _error;
+                                    }
+                                } else if (index == 2) {
+                                    if (UNEXPECTED(ztmp != NULL && !zend_parse_arg_long(ztmp, &length, NULL, 0 _ARG_POS(1)))) {
+                                        zend_argument_value_error(1, "[%u][length] must be type of int", vector_count);
+                                        goto _error;
+                                    }
+                                }
+                                index++;
+                            } ZEND_HASH_FOREACH_END();
+                        } else if (0) {
+                            /* [buffer, length] */
+                            _buffer_length:;
+                            uint32_t index = 0;
+                            ZEND_HASH_FOREACH_VAL(vector_array, ztmp) {
+                                ZEND_ASSERT(index == 0 || index == 1);
+                                if (index == 0) {
+                                    if (!zend_parse_arg_object(ztmp, &zbuffer, swow_buffer_ce, 0)) {
+                                        if (Z_TYPE_P(ztmp) == IS_OBJECT) {
+                                            goto _maybe_stringable_object;
+                                        }
+                                        zend_argument_value_error(1, "[%u][buffer] must be type of %s, %s given", vector_count, ZSTR_VAL(swow_buffer_ce->name), zend_zval_type_name(ztmp));
+                                        goto _error;
+                                    }
+                                } else if (index == 1) {
+                                    if (UNEXPECTED(ztmp != NULL && !zend_parse_arg_long(ztmp, &length, NULL, 0 _ARG_POS(1)))) {
+                                        zend_argument_value_error(1, "[%u][length] must be type of int or null, %s given", vector_count, zend_zval_type_name(ztmp));
+                                        goto _error;
+                                    }
+                                }
+                                index++;
+                            } ZEND_HASH_FOREACH_END();
                         }
-#undef _CURRENT_ZVAL_
-#undef _NEXT_ZVAL_
                     } else if (zend_parse_arg_object(ztmp, &zbuffer, swow_buffer_ce, 0)) {
                         /* buffer object (do othing) */
                     } else {
