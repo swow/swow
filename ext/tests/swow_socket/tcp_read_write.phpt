@@ -14,8 +14,6 @@ use Swow\Coroutine;
 use Swow\Socket;
 use Swow\Sync\WaitReference;
 
-$wr = new WaitReference();
-
 class TestMethod
 {
     /**
@@ -301,61 +299,63 @@ class TestMethod
     }
 }
 
+$wr = new WaitReference();
+
 TestMethod::init();
 
 $tester = new TestMethod();
 
-$chan = new Channel(0);
+$channel = new Channel(0);
 $server = new Socket(Socket::TYPE_TCP);
 $server->bind('127.0.0.1')->listen();
-Coroutine::run(function () use ($chan, $tester, $server, $wr) {
-    $conn = $server->accept();
+Coroutine::run(function () use ($channel, $tester, $server, $wr) {
+    $connection = $server->accept();
     try {
         for ($type = TestMethod::RECV_TYPE_START; $type <= TestMethod::RECV_TYPE_END; $type++) {
-            while (($remote_type = $chan->pop()) !== 'end round') {
+            while (($remote_type = $channel->pop()) !== 'end round') {
                 echo 'server ' . TestMethod::parseType($type) . ', client ' . TestMethod::parseType($remote_type) . PHP_LF;
-                $tester->recv($conn, $type);
+                $tester->recv($connection, $type);
             }
         }
         for ($_ = TestMethod::RECV_TYPE_START; $_ <= TestMethod::RECV_TYPE_END; $_++) {
             for ($type = TestMethod::SEND_TYPE_START; $type <= TestMethod::SEND_TYPE_END; $type++) {
-                $chan->push($type);
-                $tester->send($conn, $type);
+                $channel->push($type);
+                $tester->send($connection, $type);
             }
-            $chan->push('end round');
+            $channel->push('end round');
         }
     } finally {
-        $conn->close();
-        $chan->close();
+        $connection->close();
+        $channel->close();
     }
 });
 
 $client = new Socket(Socket::TYPE_TCP);
-Coroutine::run(function () use ($tester, $chan, $server, $client, $wr) {
-    $conn = $client->connect($server->getSockAddress(), $server->getSockPort());
+Coroutine::run(function () use ($tester, $channel, $server, $client, $wr) {
+    $connection = $client->connect($server->getSockAddress(), $server->getSockPort());
     try {
         for ($_ = TestMethod::RECV_TYPE_START; $_ <= TestMethod::RECV_TYPE_END; $_++) {
             for ($type = TestMethod::SEND_TYPE_START; $type <= TestMethod::SEND_TYPE_END; $type++) {
-                $chan->push($type);
-                $tester->send($conn, $type);
+                $channel->push($type);
+                $tester->send($connection, $type);
             }
-            $chan->push('end round');
+            $channel->push('end round');
         }
         for ($type = TestMethod::RECV_TYPE_START; $type <= TestMethod::RECV_TYPE_END; $type++) {
-            while (($remote_type = $chan->pop()) !== 'end round') {
+            while (($remote_type = $channel->pop()) !== 'end round') {
                 echo 'client ' . TestMethod::parseType($type) . ', server ' . TestMethod::parseType($remote_type) . PHP_LF;
-                $tester->recv($conn, $type);
+                $tester->recv($connection, $type);
             }
         }
     } finally {
-        $conn->close();
-        $chan->close();
+        $connection->close();
+        $channel->close();
     }
 });
 
 WaitReference::wait($wr);
-$server->close();
-$client->close();
+// $server->close();
+// $client->close();
 
 echo 'Done' . PHP_LF;
 

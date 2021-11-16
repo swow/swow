@@ -26,10 +26,9 @@ $o2 = new class {
     {
         echo 'Destructor in sub' . PHP_LF;
         usleep(1000);
-        echo 'After WaitReference but i can still work' . PHP_LF;
-        Assert::greaterThan(Coroutine::getCurrent()->getId(), 0);
+        echo 'Never here because coroutine will be killed in shutdown dtor' . PHP_LF;
     }
-};
+}; // Notice: o2 will be bound to coroutine#2
 
 Coroutine::run(function () use ($wr, $o2) {
     $sleeper = new class(Coroutine::getCurrent()->getPrevious()) {
@@ -47,9 +46,6 @@ Coroutine::run(function () use ($wr, $o2) {
             echo 'Sleep done' . PHP_LF;
         }
     };
-    while (!$sleeper) {
-        continue;
-    }
 });
 
 unset($o2);
@@ -62,7 +58,6 @@ echo 'Exit now' . PHP_LF;
 Sleeping...
 Sleep done
 Exit now
-Destructor in sub
-After WaitReference but i can still work
 Destruct in main
+Destructor in sub
 Everything is done

@@ -15,37 +15,42 @@ require __DIR__ . '/../include/bootstrap.php';
 
 foreach (
     [
-        function () {
-            Swow\Coroutine::yield();
-            echo 'Never here' . PHP_LF;
-        },
-        function () {
-            Swow\Coroutine::run(function () {
+        [
+            'function' => function () {
                 Swow\Coroutine::yield();
                 echo 'Never here' . PHP_LF;
-            });
-        }
-    ] as $main
+            },
+            'expect_status' => SIGTERM
+        ],
+        [
+            'function' => function () {
+                Swow\Coroutine::run(function () {
+                    Swow\Coroutine::yield();
+                    echo 'Never here' . PHP_LF;
+                });
+            },
+            'expect_status' => 0
+        ]
+    ] as $item
 ) {
     $child = pcntl_fork();
     if ($child < 0) {
         return;
     }
     if ($child === 0) {
-        return $main();
+        return $item['function']();
     } else {
         switchProcess();
         posix_kill($child, SIGTERM);
         switchProcess();
         pcntl_wait($status);
-        Assert::same($status, SIGTERM);
+        Assert::same($status, $item['expect_status']);
     }
 }
 echo PHP_LF . 'Done' . PHP_LF;
 
 ?>
 --EXPECTF--
-Warning: <COROUTINE> Dead lock: all coroutines are asleep in scheduler
 Warning: <COROUTINE> Dead lock: all coroutines are asleep in scheduler
 
 Done

@@ -20,7 +20,6 @@ function try_create(string $class): void
 }
 foreach ([
     'Swow',
-    'Swow\\Event',
     'Swow\\Http\\Status',
     'Swow\\Log',
     'Swow\\Module',

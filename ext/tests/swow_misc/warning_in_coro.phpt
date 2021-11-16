@@ -30,26 +30,30 @@ echo "Never here\n";
 Stack trace:
 #0 %swarning_in_coro.php(%d): trigger_error('running run-tes...', %d)
 #1 [internal function]: {closure}()
-#2 {main}
+#2 %s(%d): Swow\Coroutine::run(Object(Closure))
+#3 {main}
   triggered in %swarning_in_coro.php on line %d
 
 %ANotice: [Notice in R%d] running run-tests.php to test swow is deprecated
 Stack trace:
 #0 %swarning_in_coro.php(%d): trigger_error('running run-tes...', %d)
 #1 [internal function]: {closure}()
-#2 {main}
+#2 %s(%d): Swow\Coroutine::run(Object(Closure))
+#3 {main}
   triggered in %swarning_in_coro.php on line %d
 
 %AWarning: [Warning in R%d] running run-tests.php to test twosee is deprecated
 Stack trace:
 #0 %swarning_in_coro.php(%d): trigger_error('running run-tes...', %d)
 #1 [internal function]: {closure}()
-#2 {main}
+#2 %s(%d): Swow\Coroutine::run(Object(Closure))
+#3 {main}
   triggered in %swarning_in_coro.php on line %d
 
 %AFatal error: [Fatal error in R%d] running run-tests.php to test dixyes is deprecated
 Stack trace:
 #0 %swarning_in_coro.php(%d): trigger_error('running run-tes...', %d)
 #1 [internal function]: {closure}()
-#2 {main}
+#2 %s(%d): Swow\Coroutine::run(Object(Closure))
+#3 {main}
   triggered in %swarning_in_coro.php on line %d

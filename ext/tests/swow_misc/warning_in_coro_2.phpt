@@ -8,9 +8,13 @@ skip('no proper deprecation in this version of PHP', PHP_VERSION_ID >= 80200 || 
 --FILE--
 <?php
 require __DIR__ . '/../include/bootstrap.php';
-use Swow\Coroutine;
 
-Coroutine::run(function () {
+use Swow\Coroutine;
+use Swow\Sync\WaitReference;
+
+$wr = new WaitReference();
+
+Coroutine::run(function () use ($wr) {
     // E_DEPRECATED
     if (PHP_VERSION_ID < 70400) {
         assert('(function(){return true;})()');
@@ -28,6 +32,8 @@ Coroutine::run(function () {
     eval(/* @lang text */ 'try{}finally{goto out;}out:');
 });
 
+WaitReference::wait($wr);
+
 echo "Never here\n";
 ?>
 --EXPECTF--
@@ -35,31 +41,36 @@ Deprecated: [Deprecated in R%d] %s
 Stack trace:
 #0 %swarning_in_coro_2.php(%d): %s
 #1 [internal function]: {closure}()
-#2 {main}
+#2 %swarning_in_coro_2.php(%d): Swow\Coroutine::run(Object(Closure))
+#3 {main}
   triggered in %swarning_in_coro_2.php on line %d
 
 %ANotice: [Notice in R%d] %s
 Stack trace:
 #0 %swarning_in_coro_2.php(%d): %s
 #1 [internal function]: {closure}()
-#2 {main}
+#2 %swarning_in_coro_2.php(%d): Swow\Coroutine::run(Object(Closure))
+#3 {main}
   triggered in %swarning_in_coro_2.php on line %d
 
 %AWarning: [Warning in R%d] %s
 Stack trace:
 #0 %swarning_in_coro_2.php(%d): %s
 #1 [internal function]: {closure}()
-#2 {main}
+#2 %swarning_in_coro_2.php(%d): Swow\Coroutine::run(Object(Closure))
+#3 {main}
   triggered in %swarning_in_coro_2.php on line %d
 
 %AWarning: [Warning in R%d] Unsupported declare 'not_a_declare'
 Stack trace:
 #0 [internal function]: {closure}()
-#1 {main}
+#1 %swarning_in_coro_2.php(%d): Swow\Coroutine::run(Object(Closure))
+#2 {main}
   triggered in %swarning_in_coro_2.php(%d) : eval()'d code on line 1
 
 %AFatal error: [Fatal error in R%d] jump out of a finally block is disallowed
 Stack trace:
 #0 [internal function]: {closure}()
-#1 {main}
+#1 %swarning_in_coro_2.php(%d): Swow\Coroutine::run(Object(Closure))
+#2 {main}
   triggered in %swarning_in_coro_2.php(%d) : eval()'d code on line 1

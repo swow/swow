@@ -12,10 +12,13 @@ require __DIR__ . '/../include/bootstrap.php';
 
 use Swow\Coroutine;
 use Swow\Socket;
+use Swow\Sync\WaitReference;
+
+$wr = new WaitReference();
 
 // on-shot http server
 $server = new Socket(Socket::TYPE_TCP);
-Coroutine::run(function () use ($server) {
+Coroutine::run(function () use ($server, $wr) {
     $server->bind('127.0.0.1')->listen();
     $conn = $server->accept();
     $req = '';
@@ -63,7 +66,7 @@ Coroutine::run(function () use ($server) {
 
 $ch = curl_init();
 // curl it
-Coroutine::run(function () use ($ch, $server) {
+Coroutine::run(function () use ($ch, $server, $wr) {
     Assert::notSame($ch, false);
     Assert::same(curl_setopt_array($ch, [
         CURLOPT_URL => $server->getSockAddress() . ':' . $server->getSockPort() . '/?name=Swow',
@@ -84,6 +87,8 @@ Coroutine::run(function () use ($ch, $server) {
     Assert::same($ret['age'], 2);
     curl_close($ch);
 });
+
+WaitReference::wait($wr);
 
 echo 'Done' . PHP_LF;
 ?>

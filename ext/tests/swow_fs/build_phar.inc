@@ -11,7 +11,7 @@
 
 declare(strict_types=1);
 
-const class1_php = <<<'EOF'
+const class1_php = <<<'PHP'
 <?php
 class Class1{
     function __construct($myarg){
@@ -23,9 +23,9 @@ class Class1{
         echo "Class1 run() is called" . PHP_EOL;
     }
 }
-EOF;
+PHP;
 
-const class2_php = <<<'EOF'
+const class2_php = <<<'PHP'
 <?php
 require_once __DIR__ . "/cororun.php";
 %s
@@ -42,33 +42,37 @@ class Class2{
         });
     }
 }
-EOF;
+PHP;
 
-const autoload_php = <<<'EOF'
+const autoload_php = <<<'PHP'
 <?php
 spl_autoload_register(static function ($class){
     require __DIR__ . "/" . $class . ".php";
 });
-EOF;
+PHP;
 
-const cororun_php = <<<'EOF'
+const cororun_php = <<<'PHP'
 <?php
 function cororun($x){
     if(extension_loaded("Swow")){
         usleep(1000);
-        \Swow\Coroutine::run($x);
+        $wr = new \Swow\Sync\WaitReference();
+        \Swow\Coroutine::run(function() use ($x, $wr) {
+            $x();
+        });
+        \Swow\Sync\WaitReference::wait($wr);
     }else{
         $x();
     }
 }
-EOF;
+PHP;
 
-const run_head = <<<'EOF'
+const run_head = <<<'PHP'
 <?php
 require_once __DIR__ . "/cororun.php";
 echo "on run.php" . PHP_EOL;
-EOF;
-const test_autoload_str = <<<'EOF'
+PHP;
+const test_autoload_str = <<<'PHP'
 // include with spl autoloader
 require_once __DIR__ . "/autoload.php";
 cororun(function(){
@@ -79,8 +83,8 @@ cororun(function(){
     $x = new Class2("b");
     $x->run();
 });
-EOF;
-const test_include_str = <<<'EOF'
+PHP;
+const test_include_str = <<<'PHP'
 // include with include_once
 cororun(function(){
     include_once __DIR__ . "/Class1.php";
@@ -92,8 +96,8 @@ cororun(function(){
     $x = new Class2("b");
     $x->run();
 });
-EOF;
-const test_require_str = <<<'EOF'
+PHP;
+const test_require_str = <<<'PHP'
 // include with require_once
 cororun(function(){
     require_once __DIR__ . "/Class1.php";
@@ -105,7 +109,7 @@ cororun(function(){
     $x = new Class2("b");
     $x->run();
 });
-EOF;
+PHP;
 
 const TEST_AUTOLOAD = 0;
 const TEST_INCLUDE = 1;

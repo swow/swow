@@ -16,16 +16,17 @@ use const Swow\Errno\ECANCELED;
 use const Swow\Errno\ECONNREFUSED;
 use const Swow\Errno\ECONNRESET;
 
+$wrServer = new WaitReference();
 $server = new Socket(Socket::TYPE_TCP);
-Coroutine::run(function () use ($server) {
+Coroutine::run(function () use ($server, $wrServer) {
     $server->bind('127.0.0.1')->listen(TEST_MAX_CONCURRENCY * 2);
     try {
         while (true) {
-            $client = $server->accept();
-            Coroutine::run(function () use ($client) {
+            $connection = $server->accept();
+            Coroutine::run(function () use ($connection, $wrServer) {
                 try {
                     while (true) {
-                        $client->sendString($client->readString(TEST_MAX_LENGTH));
+                        $connection->sendString($connection->readString(TEST_MAX_LENGTH));
                     }
                 } catch (Socket\Exception $exception) {
                     Assert::same($exception->getCode(), ECONNRESET);
@@ -37,10 +38,10 @@ Coroutine::run(function () use ($server) {
     }
 });
 
-$wr = new WaitReference();
+$wrClient = new WaitReference();
 $randoms = getRandomBytesArray(TEST_MAX_REQUESTS, TEST_MAX_LENGTH);
 for ($c = 0; $c < TEST_MAX_CONCURRENCY; $c++) {
-    Coroutine::run(function () use ($server, $randoms, $wr) {
+    Coroutine::run(function () use ($server, $randoms, $wrClient) {
         /* @var $client Socket */
         for ($r = TEST_MAX_REQUESTS; $r--;) {
             try {
@@ -57,7 +58,7 @@ for ($c = 0; $c < TEST_MAX_CONCURRENCY; $c++) {
                 usleep(1000);
             }
         }
-        Coroutine::run(function () use ($client, $randoms, $wr) {
+        Coroutine::run(function () use ($client, $randoms, $wrClient) {
             for ($n = 0; $n < TEST_MAX_REQUESTS; $n++) {
                 $packet = $client->readString(TEST_MAX_LENGTH);
                 Assert::same($packet, $randoms[$n]);
@@ -68,8 +69,9 @@ for ($c = 0; $c < TEST_MAX_CONCURRENCY; $c++) {
         }
     });
 }
-WaitReference::wait($wr);
+WaitReference::wait($wrClient);
 $server->close();
+WaitReference::wait($wrServer);
 
 echo 'Done' . PHP_LF;
 

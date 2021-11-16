@@ -8,9 +8,13 @@ require __DIR__ . '/../../include/skipif.php';
 <?php
 require __DIR__ . '/../../include/bootstrap.php';
 
-Swow\Coroutine::run(function () {
+use Swow\Sync\WaitReference;
+
+$wr = new WaitReference();
+
+Swow\Coroutine::run(function () use ($wr) {
     echo 'coroutine[1] start' . PHP_LF;
-    Swow\Coroutine::run(function () {
+    Swow\Coroutine::run(function () use ($wr) {
         echo 'coroutine[2] start' . PHP_LF;
         msleep(2);
         echo 'coroutine[2] exit' . PHP_LF;
@@ -19,7 +23,9 @@ Swow\Coroutine::run(function () {
     echo 'coroutine[1] exit' . PHP_LF;
 });
 echo 'end' . PHP_LF;
-// TODO: WaitGroup
+
+WaitReference::wait($wr);
+echo 'done' . PHP_LF;
 
 ?>
 --EXPECT--
@@ -28,3 +34,4 @@ coroutine[2] start
 end
 coroutine[1] exit
 coroutine[2] exit
+done

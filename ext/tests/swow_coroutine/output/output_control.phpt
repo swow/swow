@@ -8,10 +8,14 @@ require __DIR__ . '/../../include/skipif.php';
 <?php
 require __DIR__ . '/../../include/bootstrap.php';
 
+use Swow\Sync\WaitReference;
+
+$wr = new WaitReference();
+
 ob_start();
 echo 'main';
 // #co1
-Swow\Coroutine::run(function () {
+Swow\Coroutine::run(function () use ($wr) {
     ob_start();
     echo "foo\n";
     $ob_1 = (ob_get_status(true));
@@ -29,11 +33,13 @@ Swow\Coroutine::run(function () {
     Assert::same(ob_get_status()['level'], 2);
     echo "baz\n";
     Assert::same(ob_get_clean(), "baz\n"); // clean ob_3
-    echo ob_get_clean(); // ob_1, ob_2, expect foo\n bar\n;
+    $output2 = ob_get_clean(); // expect "foo\n"
+    $output1 = ob_get_clean(); // expect "bar\n"
+    echo $output1 . $output2;
 });
 
 // #co2
-Swow\Coroutine::run(function () {
+Swow\Coroutine::run(function () use ($wr) {
     Assert::same(ob_get_status(true), []); //empty
     Assert::assert(!ob_get_contents());
     msleep(1);
@@ -41,15 +47,17 @@ Swow\Coroutine::run(function () {
 });
 
 // #co3
-Swow\Coroutine::run(function () {
+Swow\Coroutine::run(function () use ($wr) {
     msleep(3);
     Assert::same(ob_get_status(true), []); //empty
 });
 Assert::same(ob_get_clean(), 'main');
 
-// TODO: WaitGroup
+WaitReference::wait($wr);
+echo 'Done' . PHP_LF;
 
 ?>
 --EXPECT--
 foo
 bar
+Done

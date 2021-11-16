@@ -23,10 +23,11 @@ echo 'Done' . PHP_LF;
 Resume
 In
 
-Warning: [Fatal error in R%d] Uncaught Swow\Coroutine\Exception: Coroutine is running in %s:%d
+Warning: [Fatal error in R%d] Uncaught Swow\Coroutine\Exception: Coroutine is already running in %s:%d
 Stack trace:
 #0 %s(%d): Swow\Coroutine->resume()
 #1 [internal function]: {closure}()
-#2 {main}
+#2 %s(%d): Swow\Coroutine->resume()
+#3 {main}
   thrown in %s on line %d
 Done

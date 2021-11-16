@@ -52,6 +52,10 @@ Coroutine::run(function ($wr) {
 unset($wr);
 echo 'Done main 2' . PHP_LF;
 
+while (Coroutine::count() !== 1) {
+    sleep(0);
+}
+
 ?>
 --EXPECT--
 Start WR 1

@@ -8,7 +8,7 @@ require __DIR__ . '/../include/skipif.php';
 <?php
 require __DIR__ . '/../include/bootstrap.php';
 
-const N = 10;
+const N = 1;
 
 for ($n = N; $n--;) {
     Swow\Coroutine::run(function () {

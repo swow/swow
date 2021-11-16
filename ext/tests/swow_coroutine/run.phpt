@@ -40,7 +40,8 @@ object(Swow\Coroutine)#%d (%d) {
 #0 [internal function]: Swow\Coroutine->__debugInfo()
 #1 %s(%d): var_dump(Object(Swow\Coroutine))
 #2 [internal function]: {closure}('I', 'n')
-#3 {main}
+#3 %s(%d): Swow\Coroutine::run(Object(Closure), 'I', 'n')
+#4 {main}
 "
 }
 Out
