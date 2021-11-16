@@ -36,11 +36,20 @@ for ($c = N; $c--;) {
     Coroutine::run(function () use ($wr, $c) {
         $tmp_filename = "/tmp/test-{$c}.php";
         $self = file_get_contents(__FILE__);
-        file_put_contents($tmp_filename, $self);
-        for ($n = N; $n--;) {
-            assert(file_get_contents($tmp_filename) === $self);
+        if (!file_put_contents($tmp_filename, $self)) {
+            return;
         }
-        unlink($tmp_filename);
+        try {
+            $wrSub = new WaitReference();
+            for ($n = N; $n--;) {
+                Coroutine::run(function () use ($tmp_filename, $self, $wrSub) {
+                    assert(file_get_contents($tmp_filename) === $self);
+                });
+            }
+            WaitReference::wait($wrSub);
+        } finally {
+            unlink($tmp_filename);
+        }
     });
 }
 

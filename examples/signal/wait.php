@@ -16,11 +16,10 @@ use Swow\Signal;
 $pid = getmypid();
 $count = 3;
 
-echo "Press Ctrl + C\n";
-
 do {
+    echo sprintf("Press [CTRL + C] %s times if you want to quit\n", $count--);
     Signal::wait(Signal::INT);
     echo "\n"; // for ^C
-} while ($count-- && print_r("Repeat {$count} times if you want to quit\n"));
+} while ($count);
 
 echo "Quit\n";

@@ -23,6 +23,7 @@ WatchDog::run(100 * 1000 * 1000, 0, function () {
     echo 'CPU starvation occurred, suspend this coroutine...' . PHP_EOL;
     sleep(0);
     if ($coroutine->__alert_count > 5) {
+        echo 'Kill the bad guy' . PHP_EOL;
         $coroutine->kill();
     }
 });

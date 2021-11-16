@@ -14,6 +14,7 @@ declare(strict_types=1);
 $server = (new Swow\Socket(Swow\Socket::TYPE_TCP))
     ->bind('127.0.0.1', 9764)->listen()
     ->setReadTimeout(3000);
+echo "$ telnet 127.0.0.1 9764\n\n";
 while (true) {
     Swow\Coroutine::run(static function (Swow\Socket $client) {
         echo "No.{$client->getFd()} established" . PHP_EOL;

@@ -13,6 +13,7 @@ declare(strict_types=1);
 
 $server = new Swow\Socket(Swow\Socket::TYPE_TCP);
 $server->bind('127.0.0.1', 9764)->listen();
+echo "$ telnet 127.0.0.1 9764\n\n";
 while (true) {
     $client = $server->accept();
     Swow\Coroutine::run(function () use ($client) {

@@ -16,6 +16,7 @@ require __DIR__ . '/../../../tools/autoload.php';
 use Swow\Channel;
 use Swow\Coroutine;
 use Swow\Debug\Debugger;
+use function Swow\Sync\waitAll;
 
 Debugger::runOnTTY();
 
@@ -54,3 +55,5 @@ for ($n = 1; $n < 10; $n++) {
         }
     });
 }
+
+waitAll();

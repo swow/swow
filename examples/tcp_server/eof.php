@@ -18,6 +18,7 @@ use Swow\Stream\EofStream;
 
 $server = new EofStream();
 $server->bind('127.0.0.1', 9764)->listen();
+echo "$ telnet 127.0.0.1 9764\n\n";
 while (true) {
     Coroutine::run(function (EofStream $stream) {
         echo "Stream<fd={$stream->getFd()}> accepted" . PHP_EOL;
