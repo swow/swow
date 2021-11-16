@@ -144,8 +144,8 @@ CAT_API cat_bool_t cat_coroutine_module_init(void)
 CAT_API cat_bool_t cat_coroutine_runtime_init(void)
 {
     /* register coroutine resume */
-    cat_coroutine_register_resume(cat_coroutine_resume_standard);
-    CAT_COROUTINE_G(original_resume) = NULL;
+    cat_coroutine_register_jump(cat_coroutine_jump_standard);
+    CAT_COROUTINE_G(switch_denied) = cat_false;
 
     /* init options */
     cat_coroutine_set_default_stack_size(CAT_COROUTINE_RECOMMENDED_STACK_SIZE);
@@ -162,12 +162,13 @@ CAT_API cat_bool_t cat_coroutine_runtime_init(void)
         cat_coroutine_t *main_coroutine = &CAT_COROUTINE_G(_main);
         main_coroutine->id = CAT_COROUTINE_MAIN_ID;
         main_coroutine->start_time = cat_time_msec();
+        main_coroutine->end_time = 0;
         main_coroutine->flags = CAT_COROUTINE_FLAG_NONE;
         main_coroutine->state = CAT_COROUTINE_STATE_RUNNING;
-        main_coroutine->opcodes = CAT_COROUTINE_OPCODE_NONE;
         main_coroutine->round = ++CAT_COROUTINE_G(round);
         main_coroutine->from = NULL;
         main_coroutine->previous = NULL;
+        main_coroutine->next = NULL;
         main_coroutine->stack_size = 0;
         main_coroutine->function = NULL;
         main_coroutine->virtual_memory = NULL;
@@ -202,6 +203,9 @@ CAT_API cat_bool_t cat_coroutine_runtime_init(void)
 
 CAT_API cat_bool_t cat_coroutine_runtime_shutdown(void)
 {
+    /* For the non-scheduler mode */
+    cat_coroutine_notify_all();
+
     CAT_ASSERT(cat_queue_empty(&CAT_COROUTINE_G(waiters)) && CAT_COROUTINE_G(waiter_count) == 0 &&
         "Coroutine waiter should be empty");
     CAT_ASSERT(cat_coroutine_get_scheduler() == NULL && "Coroutine scheduler should have been stopped");
@@ -223,40 +227,26 @@ CAT_API cat_bool_t cat_coroutine_set_dead_lock_log_type(cat_log_type_t type)
     return cat_true;
 }
 
-CAT_API cat_coroutine_resume_t cat_coroutine_register_resume(cat_coroutine_resume_t resume)
+CAT_API cat_coroutine_jump_t cat_coroutine_register_jump(cat_coroutine_jump_t jump)
 {
-    cat_coroutine_resume_t original_resume = cat_coroutine_resume;
-    cat_coroutine_resume = resume;
-    return original_resume;
+    cat_coroutine_jump_t original_jump = cat_coroutine_jump;
+    cat_coroutine_jump = jump;
+    return original_jump;
 }
 
-static CAT_COLD cat_bool_t cat_coroutine_resume_deny(cat_coroutine_t *coroutine, cat_data_t *data, cat_data_t **retval)
+CAT_API cat_bool_t cat_coroutine_switch_denied(void)
 {
-    (void) coroutine;
-    (void) data;
-    (void) retval;
-    cat_update_last_error(CAT_EMISUSE, "Unexpected coroutine switching");
-
-    return cat_false;
+    return CAT_COROUTINE_G(switch_denied);
 }
 
-CAT_API cat_bool_t cat_coroutine_switch_blocked(void)
+CAT_API void cat_coroutine_switch_deny(void)
 {
-    return CAT_COROUTINE_G(resume) == cat_coroutine_resume_deny;
+    CAT_COROUTINE_G(switch_denied) = cat_true;
 }
 
-CAT_API void cat_coroutine_switch_block(void)
+CAT_API void cat_coroutine_switch_allow(void)
 {
-    CAT_COROUTINE_G(original_resume) = cat_coroutine_register_resume(cat_coroutine_resume_deny);
-}
-
-CAT_API void cat_coroutine_switch_unblock(void)
-{
-    if (CAT_COROUTINE_G(resume) != cat_coroutine_resume_deny) {
-        return;
-    }
-    cat_coroutine_register_resume(CAT_COROUTINE_G(original_resume));
-    CAT_COROUTINE_G(original_resume) = NULL;
+    CAT_COROUTINE_G(switch_denied) = cat_false;
 }
 
 CAT_API cat_coroutine_t *cat_coroutine_register_main(cat_coroutine_t *coroutine)
@@ -299,37 +289,6 @@ CAT_API cat_coroutine_id_t cat_coroutine_get_current_id(void)
 
     /* Notice: current coroutine is NULL before runtime_init() */
     return likely(coroutine != NULL) ? coroutine->id : CAT_COROUTINE_MAIN_ID;
-}
-
-CAT_API cat_coroutine_t *cat_coroutine_get_by_index(cat_coroutine_count_t index)
-{
-    cat_coroutine_t *coroutine = CAT_COROUTINE_G(current);
-    cat_coroutine_count_t max_index = 0;
-
-    while (coroutine->previous != NULL) {
-        max_index++;
-        coroutine = coroutine->previous;
-    }
-
-    if (index != 0) {
-        /* overflow */
-        if (index > max_index) {
-            return NULL;
-        }
-        /* re-loop */
-        coroutine = CAT_COROUTINE_G(current);
-        max_index -= index;
-        while (max_index--) {
-            coroutine = coroutine->previous;
-        }
-    }
-
-    return coroutine;
-}
-
-CAT_API cat_coroutine_t *cat_coroutine_get_root(void)
-{
-    return cat_coroutine_get_by_index(0);
 }
 
 CAT_API cat_coroutine_t *cat_coroutine_get_main(void)
@@ -507,12 +466,12 @@ CAT_API cat_coroutine_t *cat_coroutine_create_ex(cat_coroutine_t *coroutine, cat
 
     /* init coroutine properties */
     coroutine->id = CAT_COROUTINE_G(last_id)++;
-    coroutine->flags = flags;
+    coroutine->flags = flags | CAT_COROUTINE_FLAG_ACCEPT_DATA;
     coroutine->state = CAT_COROUTINE_STATE_WAITING;
-    coroutine->opcodes = CAT_COROUTINE_OPCODE_NONE;
     coroutine->round = 0;
     coroutine->from = NULL;
     coroutine->previous = NULL;
+    coroutine->next = NULL;
     coroutine->start_time = 0;
     coroutine->end_time = 0;
     coroutine->stack_size = (cat_coroutine_stack_size_t) stack_size;
@@ -591,48 +550,36 @@ CAT_API cat_bool_t cat_coroutine_close(cat_coroutine_t *coroutine)
     return cat_true;
 }
 
-CAT_API cat_data_t *cat_coroutine_jump(cat_coroutine_t *coroutine, cat_data_t *data)
+CAT_API void cat_coroutine_jump_standard(cat_coroutine_t *coroutine, cat_data_t *data, cat_data_t **retval)
 {
     cat_coroutine_t *current_coroutine = CAT_COROUTINE_G(current);
 
-    CAT_LOG_DEBUG_SCOPE_START(COROUTINE) {
-        const char *name = cat_coroutine_get_role_name(coroutine);
-        if (name != NULL) {
-            CAT_LOG_DEBUG_D(COROUTINE, "Jump to %s", name);
-        } else {
-            CAT_LOG_DEBUG_D(COROUTINE, "Jump to R" CAT_COROUTINE_ID_FMT, coroutine->id);
-        }
-    } CAT_LOG_DEBUG_SCOPE_END();
+    CAT_ASSERT((data == NULL || (coroutine->flags & CAT_COROUTINE_FLAG_ACCEPT_DATA)) && "Coroutine does not accept data");
+
     /* swap ptr */
     CAT_COROUTINE_G(current) = coroutine;
     /* update from */
     coroutine->from = current_coroutine;
-    /* solve origin */
-    if (current_coroutine->previous == coroutine) {
-        /* if it is yield, update current state to waiting */
-        if (current_coroutine->state == CAT_COROUTINE_STATE_RUNNING) {
-            /* maybe locked or finished */
-            current_coroutine->state = CAT_COROUTINE_STATE_WAITING;
-        }
-        /* break the origin */
-        current_coroutine->previous = NULL;
-    } else {
-        /* it is not yield */
-        CAT_ASSERT(coroutine->previous == NULL);
-        /* current becomes target's origin */
-        coroutine->previous = current_coroutine;
+    /* update current coroutine state */
+    if (current_coroutine->state == CAT_COROUTINE_STATE_RUNNING) {
+        /* maybe dead */
+        current_coroutine->state = CAT_COROUTINE_STATE_WAITING;
     }
     /* update state */
     coroutine->state = CAT_COROUTINE_STATE_RUNNING;
     /* round++ */
     coroutine->round = ++CAT_COROUTINE_G(round);
+    /* accept-data check */
+    if (retval != NULL) {
+        current_coroutine->flags |= CAT_COROUTINE_FLAG_ACCEPT_DATA;
+    }
 #ifdef CAT_HAVE_ASAN
     __sanitizer_start_switch_fiber(
         current_coroutine->state != CAT_COROUTINE_STATE_DEAD ? &current_coroutine->asan_fake_stack : NULL,
         coroutine->asan_stack, coroutine->asan_stack_size
     );
 #endif
-    /* jump */
+    /* jump {{{ */
 #ifdef CAT_COROUTINE_USE_UCONTEXT
     coroutine->transfer_data = data;
     cat_coroutine_context_jump(&current_coroutine->context, &coroutine->context);
@@ -641,7 +588,10 @@ CAT_API cat_data_t *cat_coroutine_jump(cat_coroutine_t *coroutine, cat_data_t *d
     cat_coroutine_transfer_t transfer = cat_coroutine_context_jump(coroutine->context, data);
     data = transfer.data;
 #endif
+    /* }}} */
     CAT_ASSERT(current_coroutine == CAT_COROUTINE_G(current));
+    /* accept-data clear */
+    current_coroutine->flags &= ~CAT_COROUTINE_FLAG_ACCEPT_DATA;
     /* handle from */
     coroutine = current_coroutine->from;
     CAT_ASSERT(coroutine != NULL);
@@ -657,35 +607,28 @@ CAT_API cat_data_t *cat_coroutine_jump(cat_coroutine_t *coroutine, cat_data_t *d
         cat_coroutine_free(coroutine);
     }
 
-    return data;
+    if (retval != NULL) {
+        *retval = data;
+    } else {
+        CAT_ASSERT(data == NULL && "Unexpected transfer return data");
+    }
 }
 
-CAT_API cat_bool_t cat_coroutine_check_resumability(const cat_coroutine_t *coroutine)
-{
-    cat_coroutine_t *current_coroutine = CAT_COROUTINE_G(current);
-
-    if (coroutine == current_coroutine->previous) {
-        return cat_true;
+#define CAT_COROUTINE_SWITCH_PRECHECK(failure) \
+    if (unlikely(CAT_COROUTINE_G(switch_denied))) { \
+        cat_update_last_error(CAT_EMISUSE, "Coroutine switch denied"); \
+        failure; \
     }
 
+static cat_always_inline cat_bool_t cat_coroutine_check_resumability(const cat_coroutine_t *coroutine)
+{
     switch (coroutine->state) {
         case CAT_COROUTINE_STATE_WAITING:
-            if (unlikely((coroutine->opcodes & (CAT_COROUTINE_OPCODE_LOCKED | CAT_COROUTINE_OPCODE_UNLOCKING)) == CAT_COROUTINE_OPCODE_LOCKED)) {
-                cat_update_last_error(CAT_ELOCKED, "Coroutine is locked");
-                return cat_false;
-            }
-            if (unlikely((coroutine->opcodes & CAT_COROUTINE_OPCODE_WAITING_FOR) && (current_coroutine != coroutine->waiter.coroutine))) {
-                cat_update_last_error(CAT_EAGAIN, "Coroutine is waiting for someone else");
-                return cat_false;
-            }
             break;
         case CAT_COROUTINE_STATE_RUNNING:
-            cat_update_last_error(CAT_EBUSY, "Coroutine is running");
+            cat_update_last_error(CAT_EBUSY, "Coroutine is already running");
             return cat_false;
         case CAT_COROUTINE_STATE_DEAD:
-            if (coroutine->opcodes & CAT_COROUTINE_OPCODE_UNLOCKING) {
-                break;
-            }
             cat_update_last_error(CAT_ESRCH, "Coroutine is dead");
             return cat_false;
         case CAT_COROUTINE_STATE_NONE:
@@ -698,40 +641,108 @@ CAT_API cat_bool_t cat_coroutine_check_resumability(const cat_coroutine_t *corou
     return cat_true;
 }
 
-CAT_API cat_bool_t cat_coroutine_resume_standard(cat_coroutine_t *coroutine, cat_data_t *data, cat_data_t **retval)
+#define CAT_COROUTINE_SWITCH_LOG(action, to) cat_coroutine_switch_log(#action, to)
+
+static cat_always_inline void cat_coroutine_switch_log(const char *action, const cat_coroutine_t *coroutine)
 {
-    if (likely(!(coroutine->opcodes & CAT_COROUTINE_OPCODE_CHECKED))) {
-        if (unlikely(!cat_coroutine_check_resumability(coroutine))) {
-            return cat_false;
+    CAT_LOG_DEBUG_SCOPE_START(COROUTINE) {
+        const char *name = cat_coroutine_get_role_name(coroutine);
+        if (name != NULL) {
+            CAT_LOG_DEBUG_D(COROUTINE, "%s to %s", action, name);
+        } else {
+            CAT_LOG_DEBUG_D(COROUTINE, "%s to R" CAT_COROUTINE_ID_FMT, action, coroutine->id);
         }
+    } CAT_LOG_DEBUG_SCOPE_END();
+}
+
+CAT_API cat_bool_t cat_coroutine_resume(cat_coroutine_t *coroutine, cat_data_t *data, cat_data_t **retval)
+{
+    CAT_COROUTINE_SWITCH_PRECHECK(return cat_false);
+    if (unlikely(!cat_coroutine_check_resumability(coroutine))) {
+        return cat_false;
     }
 
-    data = cat_coroutine_jump(coroutine, data);
+    CAT_COROUTINE_SWITCH_LOG(resume, coroutine);
 
-    if (retval != NULL) {
-        *retval = data;
-    } else {
-        CAT_ASSERT(data == NULL && "Unexpected non-empty data, resource may leak");
-    }
+    /* resume flow:
+     * ┌──────┐  ┌──────┐       ┌──────┐
+     * │ co-1 ├─►│ co-2 ├─here─►│ co-3 │
+     * └──────┘  └──────┘       └──────┘
+     * resume previous
+     * ┌──────┐  ┌──────┐  ┌──────┐
+     * │ co-1 ├─►│ co-2 ├─►│ co-3 │
+     * └──────┘  └──▲───┘  └───┬──┘
+     *              └───here───┘
+     *  then it becomes:
+     *  ┌──────┐  ┌──────┐  ┌──────┐
+     *  │ co-1 ├─►┤ co-3 ├─►│ co-2 │
+     *  └──────┘  └──────┘  └──────┘
+     * or cross resume flow:
+     * ┌──────┐  ┌──────┐  ┌──────┐
+     * │ co-1 ├─►│ co-2 ├─►│ co-3 │
+     * └──▲───┘  └──────┘  └───┬──┘
+     *    └─────here-we-are────┘
+     *  then it becomes:
+     *  ┌──────┐  ┌──────┐  ┌──────┐
+     *  │ co-2 ├─►┤ co-3 ├─►│ co-1 │
+     *  └──────┘  └──────┘  └──────┘
+     * */
+    do {
+        cat_coroutine_t *current_coroutine = CAT_COROUTINE_G(current);
+        /* remove target from linked list */
+        if (coroutine->previous != NULL) {
+            coroutine->previous->next = coroutine->next;
+        }
+        if (coroutine->next != NULL) {
+            coroutine->next->previous = coroutine->previous;
+        }
+        /* target's previous becomes current */
+        coroutine->previous = current_coroutine;
+        /* target's next becomes NULL */
+        coroutine->next = NULL;
+        /* current's next becomes target */
+        current_coroutine->next = coroutine;
+    } while (0);
+
+    cat_coroutine_jump(coroutine, data, retval);
 
     return cat_true;
 }
 
 CAT_API cat_bool_t cat_coroutine_yield(cat_data_t *data, cat_data_t **retval)
 {
-    cat_coroutine_t *coroutine = CAT_COROUTINE_G(current)->previous;
-    cat_bool_t ret;
+    CAT_COROUTINE_SWITCH_PRECHECK(return cat_false);
+    cat_coroutine_t *current_coroutine = CAT_COROUTINE_G(current);
+    cat_coroutine_t *coroutine = current_coroutine->previous;
 
-    if (unlikely(coroutine == NULL)) {
-        cat_update_last_error(CAT_EMISUSE, "Coroutine has nowhere to go");
-        return cat_false;
+    if (coroutine == NULL) {
+        coroutine = CAT_COROUTINE_G(scheduler);
+        if (unlikely(coroutine == NULL || coroutine == current_coroutine)) {
+            cat_update_last_error(CAT_EMISUSE, "Coroutine has nowhere to go");
+            return cat_false;
+        }
     }
 
-    ret = cat_coroutine_resume(coroutine, data, retval);
+    CAT_COROUTINE_SWITCH_LOG(yield, coroutine);
 
-    CAT_ASSERT((ret || cat_coroutine_switch_blocked()) && "Yield never fail");
+    /* yield flow:
+    * ┌──────┐  ┌──────┐       ┌──────┐
+    * │ co-1 ├─►│ co-2 │◄-here─┤ co-3 │
+    * └──────┘  └──────┘       └──────┘
+    * then it becomes:
+    * ┌──────┐  ┌──────┐  ┌──────┐
+    * │ co-1 ├─►│ co-2 │  │ co-3 │:(waiting)
+    * └──────┘  └──────┘  └──────┘
+    */
 
-    return ret;
+    /* break the previous */
+    current_coroutine->previous = NULL;
+    /* break the next */
+    coroutine->next = NULL;
+
+    cat_coroutine_jump(coroutine, data, retval);
+
+    return cat_true;
 }
 
 /* properties */
@@ -749,6 +760,11 @@ CAT_API cat_coroutine_t *cat_coroutine_get_from(const cat_coroutine_t *coroutine
 CAT_API cat_coroutine_t *cat_coroutine_get_previous(const cat_coroutine_t *coroutine)
 {
     return coroutine->previous;
+}
+
+CAT_API cat_coroutine_t *cat_coroutine_get_next(const cat_coroutine_t *coroutine)
+{
+    return coroutine->next;
 }
 
 CAT_API cat_coroutine_stack_size_t cat_coroutine_get_stack_size(const cat_coroutine_t *coroutine)
@@ -773,6 +789,16 @@ CAT_API cat_bool_t cat_coroutine_is_over(const cat_coroutine_t *coroutine)
     return coroutine->state >= CAT_COROUTINE_STATE_DEAD;
 }
 
+CAT_API cat_coroutine_flags_t cat_coroutine_get_flags(const cat_coroutine_t *coroutine)
+{
+    return coroutine->flags;
+}
+
+CAT_API void cat_coroutine_set_flags(cat_coroutine_t *coroutine, cat_coroutine_flags_t flags)
+{
+    coroutine->flags = flags;
+}
+
 CAT_API const char *cat_coroutine_state_name(cat_coroutine_state_t state)
 {
     switch (state) {
@@ -791,29 +817,6 @@ CAT_API cat_coroutine_state_t cat_coroutine_get_state(const cat_coroutine_t *cor
 CAT_API const char *cat_coroutine_get_state_name(const cat_coroutine_t *coroutine)
 {
     return cat_coroutine_state_name(coroutine->state);
-}
-
-CAT_API const char *cat_coroutine_get_debug_state_name(const cat_coroutine_t *coroutine)
-{
-    if (unlikely(coroutine->opcodes & CAT_COROUTINE_OPCODE_LOCKED)) {
-        return "locked";
-    }
-    if (unlikely(coroutine->opcodes & CAT_COROUTINE_OPCODE_WAITING_FOR)) {
-        if (coroutine->waiter.coroutine != CAT_COROUTINE_G(current)) {
-            return "uninterruptible";
-        }
-    }
-    return cat_coroutine_state_name(coroutine->state);
-}
-
-CAT_API cat_coroutine_opcodes_t cat_coroutine_get_opcodes(const cat_coroutine_t *coroutine)
-{
-    return coroutine->opcodes;
-}
-
-CAT_API void cat_coroutine_set_opcodes(cat_coroutine_t *coroutine, cat_coroutine_opcodes_t opcodes)
-{
-    coroutine->opcodes = opcodes;
 }
 
 CAT_API cat_coroutine_round_t cat_coroutine_get_round(const cat_coroutine_t *coroutine)
@@ -870,11 +873,11 @@ static cat_data_t *cat_coroutine_scheduler_function(cat_data_t *data)
 
     cat_coroutine_yield(NULL, NULL);
 
-    while (coroutine == cat_coroutine_get_root()) {
+    while (!(coroutine->from->flags & CAT_COROUTINE_FLAG_SCHEDULING)) {
 
         scheduler.schedule();
 
-        if (CAT_COROUTINE_G(count) > 0) {
+        if (CAT_COROUTINE_G(count) - CAT_COROUTINE_G(waiter_count) > 0) {
             /* we expect everything is done,
              * but there are still coroutines that have not finished
              * so we try to trigger the dead lock */
@@ -883,7 +886,6 @@ static cat_data_t *cat_coroutine_scheduler_function(cat_data_t *data)
             continue;
         }
 
-        /* notify waiters */
         cat_coroutine_notify_all();
     }
 
@@ -904,7 +906,7 @@ CAT_API cat_coroutine_t *cat_coroutine_scheduler_run(cat_coroutine_t *coroutine,
     do {
         cat_coroutine_id_t last_id = CAT_COROUTINE_G(last_id);
         CAT_COROUTINE_G(last_id) = CAT_COROUTINE_SCHEDULER_ID;
-        coroutine = cat_coroutine_create(coroutine, (cat_coroutine_function_t) scheduler);
+        coroutine = cat_coroutine_create(coroutine, cat_coroutine_scheduler_function);
         CAT_COROUTINE_G(last_id) = last_id;
     } while (0);
 
@@ -913,20 +915,10 @@ CAT_API cat_coroutine_t *cat_coroutine_scheduler_run(cat_coroutine_t *coroutine,
         return NULL;
     }
 
-    /* hook scheduler function */
-    do {
-        cat_coroutine_function_t function = coroutine->function;
-        coroutine->function = cat_coroutine_scheduler_function;
-        (void) cat_coroutine_resume(coroutine, (void *) function, NULL);
-        CAT_ASSERT(cat_coroutine_is_alive(coroutine));
-    } while (0);
+    /* run scheduler */
+    (void) cat_coroutine_resume(coroutine, (cat_data_t *) scheduler, NULL);
 
     CAT_ASSERT(CAT_COROUTINE_G(scheduler) != NULL);
-
-    /* let it be in running state */
-    coroutine->state = CAT_COROUTINE_STATE_RUNNING;
-    /* let it be the new root */
-    cat_coroutine_get_root()->previous = coroutine;
 
     return coroutine;
 }
@@ -940,15 +932,14 @@ CAT_API cat_coroutine_t *cat_coroutine_scheduler_close(void)
         return NULL;
     }
 
-    cat_coroutine_wait_all();
+    /* wait all coroutines done before we close scheduler */
+    while (1) {
+        if (cat_coroutine_wait_all()) {
+            break;
+        }
+    }
 
-    /* remove it from the root */
-    cat_coroutine_get_by_index(1)->previous = NULL;
-    /* let it be in waiting state
-     * (TODO: remove this line if we do not do check before internal resume ?) */
-    coroutine->state = CAT_COROUTINE_STATE_WAITING;
-
-    (void) cat_coroutine_resume(coroutine, NULL, NULL);
+    cat_coroutine_schedule(coroutine, COROUTINE, "Close scheduler");
 
     CAT_ASSERT(CAT_COROUTINE_G(scheduler) == NULL);
 
@@ -957,19 +948,30 @@ CAT_API cat_coroutine_t *cat_coroutine_scheduler_close(void)
 
 CAT_API cat_bool_t cat_coroutine_wait_all(void)
 {
-    cat_bool_t ret;
+    return cat_coroutine_wait_all_ex(CAT_TIMEOUT_FOREVER);
+}
 
-    cat_queue_push_back(&CAT_COROUTINE_G(waiters), &CAT_COROUTINE_G(current)->waiter.node);
+CAT_API cat_bool_t cat_coroutine_wait_all_ex(cat_timeout_t timeout)
+{
+    cat_coroutine_t *coroutine = CAT_COROUTINE_G(current);
+    cat_bool_t done, ret;
+
+    cat_queue_push_back(&CAT_COROUTINE_G(waiters), &coroutine->waiter.node);
     CAT_COROUTINE_G(waiter_count)++;
 
     /* usually, it will be unlocked by event scheduler */
-    ret = cat_coroutine_lock();
+    ret = cat_time_wait(timeout);
+    done = !!(coroutine->from->flags & CAT_COROUTINE_FLAG_SCHEDULING);
 
     CAT_COROUTINE_G(waiter_count)--;
-    cat_queue_remove(&CAT_COROUTINE_G(current)->waiter.node);
+    cat_queue_remove(&coroutine->waiter.node);
 
     if (!ret) {
-        cat_update_last_error_with_previous("Wait lock failed");
+        cat_update_last_error_with_previous("Wait all failed");
+        return cat_false;
+    }
+    if (!done) {
+        cat_update_last_error(CAT_ECANCELED, "Wait all has been canceled");
         return cat_false;
     }
 
@@ -980,82 +982,15 @@ CAT_API void cat_coroutine_notify_all(void)
 {
     cat_queue_t *waiters = &CAT_COROUTINE_G(waiters);
     cat_coroutine_count_t count = CAT_COROUTINE_G(waiter_count);
-    /* Notice: coroutine may re-wait after unlock immediately, so we must record count here,
+    /* Notice: coroutine may re-wait after resume immediately, so we must record count here,
      * otherwise it will always be resumed */
     while (count--) {
         cat_coroutine_t *coroutine = cat_queue_front_data(waiters, cat_coroutine_t, waiter.node);
-        if (!cat_coroutine_unlock(coroutine)) {
-            CAT_CORE_ERROR_WITH_LAST(COROUTINE, "Notify failed");
-        }
+        cat_coroutine_schedule(coroutine, COROUTINE, "Notify all");
     }
 }
 
 /* special */
-
-CAT_API cat_bool_t cat_coroutine_wait_for(cat_coroutine_t *who)
-{
-    cat_coroutine_t *current_coroutine = CAT_COROUTINE_G(current);
-    cat_bool_t ret;
-
-    current_coroutine->opcodes |= CAT_COROUTINE_OPCODE_WAITING_FOR;
-    current_coroutine->waiter.coroutine = who;
-
-    ret = cat_coroutine_yield(NULL, NULL);
-
-    current_coroutine->waiter.coroutine = NULL;
-    current_coroutine->opcodes ^= CAT_COROUTINE_OPCODE_WAITING_FOR;
-
-    if (unlikely(!ret)) {
-        return cat_false;
-    }
-
-    return cat_true;
-}
-
-CAT_API cat_bool_t cat_coroutine_lock(void)
-{
-    cat_coroutine_t *current_coroutine = CAT_COROUTINE_G(current);
-    cat_bool_t ret;
-
-    current_coroutine->opcodes |= CAT_COROUTINE_OPCODE_LOCKED;
-    CAT_COROUTINE_G(count)--;
-
-    ret = cat_coroutine_yield(NULL, NULL);
-
-    CAT_ASSERT(current_coroutine->opcodes & CAT_COROUTINE_OPCODE_UNLOCKING);
-
-    CAT_COROUTINE_G(count)++;
-    current_coroutine->opcodes ^= (CAT_COROUTINE_OPCODE_LOCKED | CAT_COROUTINE_OPCODE_UNLOCKING);
-
-    if (!ret) {
-        cat_update_last_error_with_previous("Coroutine lock failed");
-        return cat_false;
-    }
-
-    return cat_true;
-}
-
-CAT_API cat_bool_t cat_coroutine_unlock(cat_coroutine_t *coroutine)
-{
-    cat_bool_t ret;
-
-    if (!(coroutine->opcodes & CAT_COROUTINE_OPCODE_LOCKED)) {
-        cat_update_last_error(CAT_EINVAL, "Coroutine can only be unlocked when it is locked");
-        return cat_false;
-    }
-
-    coroutine->opcodes |= CAT_COROUTINE_OPCODE_UNLOCKING;
-
-    ret = cat_coroutine_resume(coroutine, NULL, NULL);
-
-    /* this flag will be cleared after lock yield returned
-     * we can not clear it here, because the coroutine maybe dead here. */
-    // coroutine->opcodes ^= CAT_COROUTINE_OPCODE_UNLOCKING;
-
-    CAT_ASSERT((ret || cat_coroutine_switch_blocked()) && "Unlock never fail");
-
-    return ret;
-}
 
 CAT_API const char *cat_coroutine_get_role_name(const cat_coroutine_t *coroutine)
 {

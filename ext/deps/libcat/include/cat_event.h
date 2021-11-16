@@ -64,8 +64,6 @@ CAT_API cat_bool_t cat_event_defer(cat_data_callback_t callback, cat_data_t *dat
 CAT_API cat_bool_t cat_event_defer_ex(cat_data_callback_t callback, cat_data_t *data, cat_bool_t high_priority);
 CAT_API cat_bool_t cat_event_do_defer_tasks(void);
 
-CAT_API cat_bool_t cat_event_wait_all(void);
-
 CAT_API void cat_event_fork(void);
 
 #ifdef __cplusplus

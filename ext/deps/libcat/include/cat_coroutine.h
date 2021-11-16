@@ -47,21 +47,23 @@ typedef uint64_t cat_coroutine_id_t;
 #define CAT_COROUTINE_ID_FMT "%" PRIu64
 #define CAT_COROUTINE_ID_FMT_SPEC PRIu64
 
+#define CAT_COROUTINE_FLAG_MAP(XX) \
+    /* built-in persistent (0 ~ 7) */ \
+    XX(NONE,        0) \
+    XX(ALLOCATED,   1 << 0) \
+    /* built-in runtime (8 ~ 15) */ \
+    XX(SCHEDULING,  1 << 8) \
+    XX(ACCEPT_DATA, 1 << 9) \
+    /* for user (16 ~ 31) */ \
+    XX(USR1,  1 << 16) XX(USR2,  1 << 17) XX(USR3,  1 << 18) XX(USR4,  1 << 19) \
+    XX(USR5,  1 << 20) XX(USR6,  1 << 21) XX(USR7,  1 << 22) XX(USR8,  1 << 23) \
+    XX(USR9,  1 << 24) XX(USR10, 1 << 25) XX(USR11, 1 << 26) XX(USR12, 1 << 27) \
+    XX(USR13, 1 << 28) XX(USR14, 1 << 29) XX(USR15, 1 << 30) XX(USR16, 1 << 31) \
+
 typedef enum cat_coroutine_flag_e {
-    CAT_COROUTINE_FLAG_NONE = 0,
-    CAT_COROUTINE_FLAG_ALLOCATED = 1 << 0,
-    /* for user */
-#define CAT_COROUTINE_FLAG_USR_GEN(XX) \
-    CAT_COROUTINE_FLAG_USR##XX = 1 << (XX + (32 - 1 - 8))
-    CAT_COROUTINE_FLAG_USR_GEN(1),
-    CAT_COROUTINE_FLAG_USR_GEN(2),
-    CAT_COROUTINE_FLAG_USR_GEN(3),
-    CAT_COROUTINE_FLAG_USR_GEN(4),
-    CAT_COROUTINE_FLAG_USR_GEN(5),
-    CAT_COROUTINE_FLAG_USR_GEN(6),
-    CAT_COROUTINE_FLAG_USR_GEN(7),
-    CAT_COROUTINE_FLAG_USR_GEN(8),
-#undef CAT_COROUTINE_FLAG_USR_GEN
+#define CAT_COROUTINE_FLAG_GEN(name, value) CAT_ENUM_GEN(CAT_COROUTINE_FLAG_, name, value)
+    CAT_COROUTINE_FLAG_MAP(CAT_COROUTINE_FLAG_GEN)
+#undef CAT_COROUTINE_FLAG_GEN
 } cat_coroutine_flag_t;
 
 typedef uint32_t cat_coroutine_flags_t;
@@ -77,29 +79,6 @@ typedef enum cat_coroutine_state_e {
     CAT_COROUTINE_STATE_MAP(CAT_COROUTINE_STATE_GEN)
 #undef CAT_COROUTINE_STATE_GEN
 } cat_coroutine_state_t;
-
-typedef enum cat_coroutine_opcode_e {
-    /* built-in (0 ~ 7) */
-    CAT_COROUTINE_OPCODE_NONE      = 0,
-    CAT_COROUTINE_OPCODE_CHECKED   = 1 << 0, /* we have already checked if it is resumable */
-    CAT_COROUTINE_OPCODE_LOCKED    = 1 << 1, /* can only be resumed by unlock() */
-    CAT_COROUTINE_OPCODE_UNLOCKING = 1 << 2, /* is in unlocking */
-    CAT_COROUTINE_OPCODE_WAITING_FOR = 1 << 3, /* waiting for a specified coroutine to wake it up */
-    /* for user (8 ~ 15) */
-#define CAT_COROUTINE_OPCODE_USR_GEN(XX) \
-    CAT_COROUTINE_OPCODE_USR##XX = 1 << (XX + (16 - 1 - 8))
-    CAT_COROUTINE_OPCODE_USR_GEN(1),
-    CAT_COROUTINE_OPCODE_USR_GEN(2),
-    CAT_COROUTINE_OPCODE_USR_GEN(3),
-    CAT_COROUTINE_OPCODE_USR_GEN(4),
-    CAT_COROUTINE_OPCODE_USR_GEN(5),
-    CAT_COROUTINE_OPCODE_USR_GEN(6),
-    CAT_COROUTINE_OPCODE_USR_GEN(7),
-    CAT_COROUTINE_OPCODE_USR_GEN(8),
-#undef CAT_COROUTINE_OPCODE_USR_GEN
-} cat_coroutine_opcode_t;
-
-typedef uint16_t cat_coroutine_opcodes_t;
 
 typedef uint64_t cat_coroutine_round_t;
 #define CAT_COROUTINE_ROUND_FMT "%" PRIu64
@@ -119,17 +98,18 @@ struct cat_coroutine_s
         cat_coroutine_t *coroutine;
         cat_queue_node_t node;
     } waiter;
-    /* invariant info (readonly) */
+    /* persistent info (readonly) */
     cat_coroutine_id_t id;
     cat_msec_t start_time;
     cat_msec_t end_time;
+    /* persistent/runtime flags */
     cat_coroutine_flags_t flags;
     /* runtime info (readonly) */
     cat_coroutine_state_t state;
-    cat_coroutine_opcodes_t opcodes; /* (writable) will be reset before resume */
     cat_coroutine_round_t round;
     cat_coroutine_t *from CAT_UNSAFE;
     cat_coroutine_t *previous;
+    cat_coroutine_t *next;
     /* internal properties (readonly) */
     cat_coroutine_function_t function;
     cat_coroutine_stack_size_t stack_size;
@@ -151,7 +131,7 @@ struct cat_coroutine_s
 #endif
 };
 
-typedef cat_bool_t (*cat_coroutine_resume_t)(cat_coroutine_t *coroutine, cat_data_t *data, cat_data_t **retval);
+typedef void (*cat_coroutine_jump_t)(cat_coroutine_t *coroutine, cat_data_t *data, cat_data_t **retval);
 
 typedef uint32_t cat_coroutine_count_t;
 #define CAT_COROUTINE_COUNT_FMT "%u"
@@ -170,8 +150,8 @@ CAT_GLOBALS_STRUCT_BEGIN(cat_coroutine)
     cat_queue_t waiters;
     cat_coroutine_count_t waiter_count;
     /* functions */
-    cat_coroutine_resume_t resume;
-    cat_coroutine_resume_t original_resume;
+    cat_coroutine_jump_t jump;
+    cat_bool_t switch_denied;
     /* info */
     cat_coroutine_id_t last_id;
     cat_coroutine_count_t count;
@@ -191,10 +171,10 @@ CAT_API cat_bool_t cat_coroutine_runtime_shutdown(void);
 
 /* register/options */
 /* return the original resume function ptr */
-CAT_API cat_coroutine_resume_t cat_coroutine_register_resume(cat_coroutine_resume_t resume);
-CAT_API cat_bool_t cat_coroutine_switch_blocked(void);
-CAT_API void cat_coroutine_switch_block(void);
-CAT_API void cat_coroutine_switch_unblock(void);
+CAT_API cat_coroutine_jump_t cat_coroutine_register_jump(cat_coroutine_jump_t jump);
+CAT_API cat_bool_t cat_coroutine_switch_denied(void);
+CAT_API void cat_coroutine_switch_deny(void);
+CAT_API void cat_coroutine_switch_allow(void);
 /* return the original main coroutine ptr */
 CAT_API cat_coroutine_t *cat_coroutine_register_main(cat_coroutine_t *coroutine);
 /* return the original stack size */
@@ -207,8 +187,6 @@ CAT_API cat_coroutine_stack_size_t cat_coroutine_get_default_stack_size(void);
 CAT_API cat_log_type_t cat_coroutine_get_dead_lock_log_type(void);
 CAT_API cat_coroutine_t *cat_coroutine_get_current(void);
 CAT_API cat_coroutine_id_t cat_coroutine_get_current_id(void);
-CAT_API cat_coroutine_t *cat_coroutine_get_by_index(cat_coroutine_count_t index);
-CAT_API cat_coroutine_t *cat_coroutine_get_root(void);
 CAT_API cat_coroutine_t *cat_coroutine_get_main(void);
 CAT_API cat_coroutine_t *cat_coroutine_get_scheduler(void);
 CAT_API cat_coroutine_id_t cat_coroutine_get_last_id(void);
@@ -224,17 +202,17 @@ CAT_API void cat_coroutine_free(cat_coroutine_t *coroutine);
 /* Notice: unless you create a coroutine and never ran it, or you need not close coroutine by yourself */
 CAT_API cat_bool_t cat_coroutine_close(cat_coroutine_t *coroutine);
 /* switch (internal) */
-CAT_API cat_data_t *cat_coroutine_jump(cat_coroutine_t *coroutine, cat_data_t *data);
+#define cat_coroutine_jump CAT_COROUTINE_G(jump)
+CAT_API void cat_coroutine_jump_standard(cat_coroutine_t *coroutine, cat_data_t *data, cat_data_t **retval);
 /* switch (external) */
-CAT_API cat_bool_t cat_coroutine_check_resumability(const cat_coroutine_t *coroutine);
-CAT_API cat_bool_t cat_coroutine_resume_standard(cat_coroutine_t *coroutine, cat_data_t *data, cat_data_t **retval);
-#define cat_coroutine_resume CAT_COROUTINE_G(resume)
+CAT_API cat_bool_t cat_coroutine_resume(cat_coroutine_t *coroutine, cat_data_t *data, cat_data_t **retval);
 CAT_API cat_bool_t cat_coroutine_yield(cat_data_t *data, cat_data_t **retval);
 
 /* properties */
 CAT_API cat_coroutine_id_t cat_coroutine_get_id(const cat_coroutine_t *coroutine);
 CAT_API cat_coroutine_t *cat_coroutine_get_from(const cat_coroutine_t *coroutine); CAT_UNSAFE
 CAT_API cat_coroutine_t *cat_coroutine_get_previous(const cat_coroutine_t *coroutine);
+CAT_API cat_coroutine_t *cat_coroutine_get_next(const cat_coroutine_t *coroutine);
 CAT_API cat_coroutine_stack_size_t cat_coroutine_get_stack_size(const cat_coroutine_t *coroutine);
 
 /* status */
@@ -242,11 +220,10 @@ CAT_API cat_bool_t cat_coroutine_is_available(const cat_coroutine_t *coroutine);
 CAT_API cat_bool_t cat_coroutine_is_alive(const cat_coroutine_t *coroutine);
 CAT_API cat_bool_t cat_coroutine_is_over(const cat_coroutine_t *coroutine);
 CAT_API const char *cat_coroutine_state_name(cat_coroutine_state_t state);
+CAT_API cat_coroutine_flags_t cat_coroutine_get_flags(const cat_coroutine_t *coroutine);
+CAT_API void cat_coroutine_set_flags(cat_coroutine_t *coroutine, cat_coroutine_flags_t flags);
 CAT_API cat_coroutine_state_t cat_coroutine_get_state(const cat_coroutine_t *coroutine);
 CAT_API const char *cat_coroutine_get_state_name(const cat_coroutine_t *coroutine);
-CAT_API const char *cat_coroutine_get_debug_state_name(const cat_coroutine_t *coroutine);
-CAT_API cat_coroutine_opcodes_t cat_coroutine_get_opcodes(const cat_coroutine_t *coroutine);
-CAT_API void cat_coroutine_set_opcodes(cat_coroutine_t *coroutine, cat_coroutine_opcodes_t opcodes);
 CAT_API cat_coroutine_round_t cat_coroutine_get_round(const cat_coroutine_t *coroutine);
 CAT_API cat_msec_t cat_coroutine_get_start_time(const cat_coroutine_t *coroutine);
 CAT_API cat_msec_t cat_coroutine_get_end_time(const cat_coroutine_t *coroutine);
@@ -263,28 +240,27 @@ typedef struct cat_coroutine_scheduler_s {
 CAT_API cat_coroutine_t *cat_coroutine_scheduler_run(cat_coroutine_t *coroutine, const cat_coroutine_scheduler_t *scheduler); CAT_INTERNAL
 CAT_API cat_coroutine_t *cat_coroutine_scheduler_close(void); CAT_INTERNAL
 
+#define cat_coroutine_schedule(coroutine, module_type, name, ...) do { \
+    cat_coroutine_t *current_coroutine = CAT_COROUTINE_G(current); \
+    current_coroutine->flags |= CAT_COROUTINE_FLAG_SCHEDULING; \
+    if (unlikely(!cat_coroutine_resume(coroutine, NULL, NULL))) { \
+        CAT_CORE_ERROR_WITH_LAST(module_type, name " schedule failed", ##__VA_ARGS__); \
+    } \
+    current_coroutine->flags ^= CAT_COROUTINE_FLAG_SCHEDULING; \
+} while (0)
+
 /* sync */
 CAT_API cat_bool_t cat_coroutine_wait_all(void);
+CAT_API cat_bool_t cat_coroutine_wait_all_ex(cat_timeout_t timeout);
 CAT_API void cat_coroutine_notify_all(void); CAT_INTERNAL
 
 /* special */
-/* take a nap, wait for sb to wake it up */
-CAT_API cat_bool_t cat_coroutine_wait_for(cat_coroutine_t *who); CAT_INTERNAL
-/* lock */
-CAT_API cat_bool_t cat_coroutine_lock(void);                         CAT_INTERNAL
-CAT_API cat_bool_t cat_coroutine_unlock(cat_coroutine_t *coroutine); CAT_INTERNAL
 /* main/scheduler/none */
 CAT_API const char *cat_coroutine_get_role_name(const cat_coroutine_t *coroutine);
 CAT_API const char *cat_coroutine_get_current_role_name(void);
 
 /* helper */
 CAT_API cat_coroutine_t *cat_coroutine_run(cat_coroutine_t *coroutine, cat_coroutine_function_t function, cat_data_t *data);
-
-#define cat_coroutine_schedule(coroutine, module_type, name, ...) do { \
-    if (unlikely(!cat_coroutine_resume(coroutine, NULL, NULL))) { \
-        CAT_CORE_ERROR_WITH_LAST(module_type, name " schedule failed", ##__VA_ARGS__); \
-    } \
-} while (0)
 
 #ifdef __cplusplus
 }

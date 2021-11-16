@@ -2822,12 +2822,10 @@ static cat_bool_t cat_socket_internal_write_raw(
         /* handle error */
         if (unlikely(!ret || request->error == CAT_ECANCELED)) {
             /* write request is in progress, it can not be cancelled gracefully,
-             * so we must cancel it by socket_close(), it's unrecoverable */
+             * so we must cancel it by socket_close(), it's unrecoverable.
+             * TODO: should we wait for close done here?
+             * Release buffers before write operation is totally over is dangerous on Windows */
             cat_socket_internal_unrecoverable_io_error(isocket);
-#if 0
-            /* event scheduler will wake up the current coroutine on cat_socket_write_callback with ECANCELED */
-            cat_coroutine_wait_for(CAT_COROUTINE_G(scheduler));
-#endif
         }
         if (unlikely(!ret)) {
             cat_update_last_error_with_previous("Socket write wait failed");

@@ -205,11 +205,6 @@ CAT_API cat_bool_t cat_event_do_defer_tasks(void)
     return CAT_EVENT_G(defer_task_count) > 0;
 }
 
-CAT_API cat_bool_t cat_event_wait_all(void)
-{
-    return cat_coroutine_wait_all();
-}
-
 CAT_API void cat_event_fork(void)
 {
     int error = uv_loop_fork(cat_event_loop);
