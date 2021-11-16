@@ -1257,6 +1257,9 @@ SWOW_API cat_bool_t swow_coroutine_kill_all(void)
             if (scoroutine == swow_coroutine_get_current()) {
                 continue;
             }
+            if (scoroutine == swow_coroutine_get_main()) {
+                continue;
+            }
             if (unlikely(!swow_coroutine_kill(scoroutine))) {
                 CAT_WARN_WITH_LAST(COROUTINE, "Error occurred while killing all coroutines");
                 ret = cat_false;
