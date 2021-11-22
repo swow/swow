@@ -37,11 +37,11 @@ object(Swow\Coroutine)#%d (%d) {
   string(%d) "%s"
   ["trace"]=>
   string(%d) "
-#0 [internal function]: Swow\Coroutine->__debugInfo()
-#1 %s(%d): var_dump(Object(Swow\Coroutine))
-#2 [internal function]: {closure}('I', 'n')
-#3 %s(%d): Swow\Coroutine::run(Object(Closure), 'I', 'n')
-#4 {main}
+#%d [internal function]: Swow\Coroutine->__debugInfo()
+#%d %s(%d): var_dump(Object(Swow\Coroutine))
+#%d [internal function]: {closure}('I', 'n')%A
+#%d %s(%d): Swow\Coroutine::run(Object(Closure), 'I', 'n')
+#%d {main}
 "
 }
 Out
@@ -56,9 +56,9 @@ object(Swow\Coroutine)#%d (%d) {
   string(%d) "%s"
   ["trace"]=>
   string(%d) "
-#0 %s(%d): Swow\Coroutine::yield(%s)
-#1 [%s]: {closure}(%s)
-#2 {main}
+#%d %s(%d): Swow\Coroutine::yield(%s)
+#%d [%s]: {closure}(%s)
+#%d {main}
 "
 }
 Kill

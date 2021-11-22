@@ -2,7 +2,7 @@
 swow_misc: trig user warning in coroutine
 --SKIPIF--
 <?php
-require __DIR__ . '/../include/skipif.php';
+// require __DIR__ . '/../include/skipif.php';
 ?>
 --FILE--
 <?php
@@ -24,36 +24,40 @@ Coroutine::run(function () {
 echo "Never here\n";
 ?>
 --EXPECTF--
-%A: [Parse error in R%d] %s in %swarning_in_coro.php(%d) : eval()'d code on line 1
+%A: [Parse error in R%d] %s
+Stack trace:%A
+#%d %s(%d): Swow\Coroutine::run(Object(Closure))
+#%d {main}
+  triggered in %s(%d) : eval()'d code on line %d
 
 %ADeprecated: [Deprecated in R%d] running run-tests.php to test php is deprecated
 Stack trace:
-#0 %swarning_in_coro.php(%d): trigger_error('running run-tes...', %d)
-#1 [internal function]: {closure}()
-#2 %s(%d): Swow\Coroutine::run(Object(Closure))
-#3 {main}
+#%d %swarning_in_coro.php(%d): trigger_error('running run-tes...', %d)
+#%d [internal function]: {closure}()%A
+#%d %s(%d): Swow\Coroutine::run(Object(Closure))
+#%d {main}
   triggered in %swarning_in_coro.php on line %d
 
 %ANotice: [Notice in R%d] running run-tests.php to test swow is deprecated
 Stack trace:
-#0 %swarning_in_coro.php(%d): trigger_error('running run-tes...', %d)
-#1 [internal function]: {closure}()
-#2 %s(%d): Swow\Coroutine::run(Object(Closure))
-#3 {main}
+#%d %swarning_in_coro.php(%d): trigger_error('running run-tes...', %d)
+#%d [internal function]: {closure}()%A
+#%d %s(%d): Swow\Coroutine::run(Object(Closure))
+#%d {main}
   triggered in %swarning_in_coro.php on line %d
 
 %AWarning: [Warning in R%d] running run-tests.php to test twosee is deprecated
 Stack trace:
-#0 %swarning_in_coro.php(%d): trigger_error('running run-tes...', %d)
-#1 [internal function]: {closure}()
-#2 %s(%d): Swow\Coroutine::run(Object(Closure))
-#3 {main}
+#%d %swarning_in_coro.php(%d): trigger_error('running run-tes...', %d)
+#%d [internal function]: {closure}()%A
+#%d %s(%d): Swow\Coroutine::run(Object(Closure))
+#%d {main}
   triggered in %swarning_in_coro.php on line %d
 
 %AFatal error: [Fatal error in R%d] running run-tests.php to test dixyes is deprecated
 Stack trace:
-#0 %swarning_in_coro.php(%d): trigger_error('running run-tes...', %d)
-#1 [internal function]: {closure}()
-#2 %s(%d): Swow\Coroutine::run(Object(Closure))
-#3 {main}
+#%d %swarning_in_coro.php(%d): trigger_error('running run-tes...', %d)
+#%d [internal function]: {closure}()%A
+#%d %s(%d): Swow\Coroutine::run(Object(Closure))
+#%d {main}
   triggered in %swarning_in_coro.php on line %d

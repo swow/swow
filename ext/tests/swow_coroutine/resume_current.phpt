@@ -8,10 +8,14 @@ require __DIR__ . '/../include/skipif.php';
 <?php
 require __DIR__ . '/../include/bootstrap.php';
 
-$coroutine = new Swow\Coroutine(function () use (&$coroutine) {
-    echo 'In' .PHP_LF;
-    $coroutine->resume();
-    echo 'Never here' . PHP_LF;
+use Swow\Coroutine;
+
+$coroutine = new Coroutine(function () use (&$coroutine) {
+    echo 'In' . PHP_LF;
+    Assert::throws(function () use ($coroutine) {
+        $coroutine->resume();
+    }, Coroutine\Exception::class);
+    echo 'Out' . PHP_LF;
 });
 echo 'Resume' . PHP_LF;
 $coroutine->resume();
@@ -19,15 +23,8 @@ $coroutine->resume();
 echo 'Done' . PHP_LF;
 
 ?>
---EXPECTF--
+--EXPECT--
 Resume
 In
-
-Warning: [Fatal error in R%d] Uncaught Swow\Coroutine\Exception: Coroutine is already running in %s:%d
-Stack trace:
-#0 %s(%d): Swow\Coroutine->resume()
-#1 [internal function]: {closure}()
-#2 %s(%d): Swow\Coroutine->resume()
-#3 {main}
-  thrown in %s on line %d
+Out
 Done

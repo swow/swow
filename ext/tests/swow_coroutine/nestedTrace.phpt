@@ -21,11 +21,11 @@ Coroutine::run(function () use ($wr) {
             Coroutine::run(function () use ($wr) {
                 global $coroutine;
                 $coroutine = Coroutine::run(function () use ($wr) {
-                    echo (new Exception())->getTraceAsString() . PHP_LF . PHP_LF;
+                    echo Coroutine::getCurrent()->getTraceAsString() . PHP_LF . PHP_LF;
                     Coroutine::yield();
-                    echo (new Exception())->getTraceAsString() . PHP_LF . PHP_LF;
+                    echo Coroutine::getCurrent()->getTraceAsString() . PHP_LF . PHP_LF;
                     usleep(1);
-                    echo (new Exception())->getTraceAsString() . PHP_LF . PHP_LF;
+                    echo Coroutine::getCurrent()->getTraceAsString() . PHP_LF . PHP_LF;
                 });
             });
         });
@@ -39,23 +39,26 @@ echo 'Done' . PHP_LF;
 
 ?>
 --EXPECTF--
-#0 [internal function]: {closure}()
-#1 %s(%d): Swow\Coroutine::run(Object(Closure))
-#2 [internal function]: {closure}()
-#3 %s(%d): Swow\Coroutine::run(Object(Closure))
-#4 [internal function]: {closure}()
-#5 %s(%d): Swow\Coroutine::run(Object(Closure))
-#6 [internal function]: {closure}()
-#7 %s(%d): Swow\Coroutine::run(Object(Closure))
-#8 [internal function]: {closure}()
-#9 %s(%d): Swow\Coroutine::run(Object(Closure))
-#10 {main}
+#%d %s(%d): Swow\Coroutine->getTraceAsString()
+#%d [internal function]: {closure}()%A
+#%d %s(%d): Swow\Coroutine::run(Object(Closure))
+#%d [internal function]: {closure}()%A
+#%d %s(%d): Swow\Coroutine::run(Object(Closure))
+#%d [internal function]: {closure}()%A
+#%d %s(%d): Swow\Coroutine::run(Object(Closure))
+#%d [internal function]: {closure}()%A
+#%d %s(%d): Swow\Coroutine::run(Object(Closure))
+#%d [internal function]: {closure}()%A
+#%d %s(%d): Swow\Coroutine::run(Object(Closure))
+#%d {main}
 
-#0 [internal function]: {closure}()
-#1 %s(%d): Swow\Coroutine->resume()
-#2 {main}
+#%d %s(%d): Swow\Coroutine->getTraceAsString()
+#%d [internal function]: {closure}()%A
+#%d %s(%d): Swow\Coroutine->resume()
+#%d {main}
 
-#0 [internal function]: {closure}()
-#1 {main}
+#%d %s(%d): Swow\Coroutine->getTraceAsString()
+#%d [internal function]: {closure}()%A
+#%d {main}
 
 Done

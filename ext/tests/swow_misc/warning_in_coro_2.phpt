@@ -39,38 +39,38 @@ echo "Never here\n";
 --EXPECTF--
 Deprecated: [Deprecated in R%d] %s
 Stack trace:
-#0 %swarning_in_coro_2.php(%d): %s
-#1 [internal function]: {closure}()
-#2 %swarning_in_coro_2.php(%d): Swow\Coroutine::run(Object(Closure))
-#3 {main}
+#%d %swarning_in_coro_2.php(%d): %s
+#%d [internal function]: {closure}()%A
+#%d %swarning_in_coro_2.php(%d): Swow\Coroutine::run(Object(Closure))
+#%d {main}
   triggered in %swarning_in_coro_2.php on line %d
 
 %ANotice: [Notice in R%d] %s
 Stack trace:
-#0 %swarning_in_coro_2.php(%d): %s
-#1 [internal function]: {closure}()
-#2 %swarning_in_coro_2.php(%d): Swow\Coroutine::run(Object(Closure))
-#3 {main}
+#%d %swarning_in_coro_2.php(%d): %s
+#%d [internal function]: {closure}()%A
+#%d %swarning_in_coro_2.php(%d): Swow\Coroutine::run(Object(Closure))
+#%d {main}
   triggered in %swarning_in_coro_2.php on line %d
 
 %AWarning: [Warning in R%d] %s
 Stack trace:
-#0 %swarning_in_coro_2.php(%d): %s
-#1 [internal function]: {closure}()
-#2 %swarning_in_coro_2.php(%d): Swow\Coroutine::run(Object(Closure))
-#3 {main}
+#%d %swarning_in_coro_2.php(%d): %s
+#%d [internal function]: {closure}()%A
+#%d %swarning_in_coro_2.php(%d): Swow\Coroutine::run(Object(Closure))
+#%d {main}
   triggered in %swarning_in_coro_2.php on line %d
 
 %AWarning: [Warning in R%d] Unsupported declare 'not_a_declare'
 Stack trace:
-#0 [internal function]: {closure}()
-#1 %swarning_in_coro_2.php(%d): Swow\Coroutine::run(Object(Closure))
-#2 {main}
+#%d [internal function]: {closure}()%A
+#%d %swarning_in_coro_2.php(%d): Swow\Coroutine::run(Object(Closure))
+#%d {main}
   triggered in %swarning_in_coro_2.php(%d) : eval()'d code on line 1
 
 %AFatal error: [Fatal error in R%d] jump out of a finally block is disallowed
 Stack trace:
-#0 [internal function]: {closure}()
-#1 %swarning_in_coro_2.php(%d): Swow\Coroutine::run(Object(Closure))
-#2 {main}
+#%d [internal function]: {closure}()%A
+#%d %swarning_in_coro_2.php(%d): Swow\Coroutine::run(Object(Closure))
+#%d {main}
   triggered in %swarning_in_coro_2.php(%d) : eval()'d code on line 1
