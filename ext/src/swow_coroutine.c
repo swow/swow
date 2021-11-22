@@ -2041,7 +2041,7 @@ static void swow_coroutine_error_cb(int type, ZEND_ERROR_CB_FILENAME_T *error_fi
     zend_bool is_uncaught_exception = strncmp(format, "Uncaught ", sizeof("Uncaught ") - 1) == 0;
 #else
     const char *format = ZSTR_VAL(message);
-    zend_bool is_uncaught_exception = type & E_DONT_BAIL;
+    zend_bool is_uncaught_exception = !!(type & E_DONT_BAIL) && !(type & (E_PARSE | E_COMPILE_ERROR));
 #endif
     zend_string *new_message = NULL;
 
