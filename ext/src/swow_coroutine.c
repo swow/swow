@@ -38,6 +38,8 @@ static zend_class_entry *swow_coroutine_unwind_exit_ce;
 #define SWOW_COROUTINE_UNWIND_EXIT_MAGIC               ((zend_object *) -1)
 #define SWOW_COROUTINE_IS_UNWIND_EXIT_MAGIC(exception) (exception == SWOW_COROUTINE_UNWIND_EXIT_MAGIC)
 
+static zend_function swow_coroutine_internal_function;
+
 SWOW_API CAT_GLOBALS_DECLARE(swow_coroutine)
 
 CAT_GLOBALS_CTOR_DECLARE_SZ(swow_coroutine)
@@ -330,7 +332,6 @@ static cat_bool_t swow_coroutine_construct(swow_coroutine_t *scoroutine, zval *z
         executor->vm_stack_page_size = stack_page_size;
         do {
             /* add const to make sure it would not be modified */
-            static const zend_function swow_coroutine_internal_function = { ZEND_INTERNAL_FUNCTION };
             executor->root_execute_data = (zend_execute_data *) executor->vm_stack_top;
             memset(executor->root_execute_data, 0, sizeof(*executor->root_execute_data));
             executor->root_execute_data->func = (zend_function *) &swow_coroutine_internal_function;
@@ -2281,6 +2282,13 @@ int swow_coroutine_module_init(INIT_FUNC_ARGS)
     /* hook zend_error_cb (we should only do it in runtime) */
     original_zend_error_cb = zend_error_cb;
     zend_error_cb = swow_coroutine_error_cb;
+
+    /* construct coroutine php internal function */
+    memset(&swow_coroutine_internal_function, 0, sizeof(swow_coroutine_internal_function));
+    swow_coroutine_internal_function.common.type = ZEND_INTERNAL_FUNCTION;
+#if PHP_VERSION_ID < 80000
+    swow_coroutine_internal_function.common.function_name = zend_string_init_interned(ZEND_STRL("{coroutine}"), 1);
+#endif
 
     return SUCCESS;
 }
