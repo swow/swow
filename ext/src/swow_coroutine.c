@@ -677,6 +677,8 @@ static zend_always_inline zend_fiber_status swow_coroutine_get_fiber_status(cons
         case CAT_COROUTINE_STATE_NONE:
         default:
             CAT_NEVER_HERE("Unexpected state");
+            // make compiler happy
+            return ZEND_FIBER_STATUS_DEAD;
     }
 }
 

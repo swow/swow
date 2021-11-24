@@ -1638,7 +1638,7 @@ static int swow_stdiop_fs_set_option(php_stream *stream, int option, int value, 
                             gran = info.dwAllocationGranularity;
                             ZEND_ASSERT(gran != 0 && (gran & (gran - 1)) == 0);
                             size_t rounded_offset = (range->offset / gran) * gran;
-                            delta = range->offset - rounded_offset;
+                            delta = (DWORD)(range->offset - rounded_offset);
                             loffs = (DWORD)rounded_offset;
                             hoffs = (DWORD)(rounded_offset >> 32);
                         }
