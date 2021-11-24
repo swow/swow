@@ -82,16 +82,13 @@ runs:
           $PhpVer = "${{ inputs.phpver }}"
         }
         $master = $false
-        if ($PhpVer -Eq "8.1"){
+        if ($PhpVer -Eq "8.2"){
           # using master
           $master = $true
-          # use 8.0 deps
-          $PhpVer = "8.0"
         }
-        $os = "${{ matrix.os }}"
-        if($os.Equals("windows-latest") -Or $os.Equals("windows-2019")){
+        if ($PhpVer.Equals("8.2") -Or $PhpVer.Equals("8.1") -Or $PhpVer.Equals("8.0")) {
           $PhpVCVer = "VS16"
-        }elseif($os.Equals("windows-2016")){
+        } else {
           $PhpVCVer = "VC15"
         }
         Write-Host "::set-output name=vcver::$PhpVCVer"
@@ -137,6 +134,7 @@ runs:
         exit $ret
 
     - name: Workaround for extension build
+      if: 'false'
       shell: php {0}
       run: |
         <?php

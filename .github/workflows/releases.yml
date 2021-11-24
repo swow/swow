@@ -13,29 +13,21 @@ on:
 jobs:
   builddlls:
     # this name is used after, change it with cautious
-    name: Build dll for PHP-${{ matrix.phpver }}-${{ matrix.arch }}-${{ (matrix.ts == '0') && 'N' || '' }}TS-${{ (matrix.os == 'windows-latest') && 'VS16' || 'VC15' }}
-    runs-on: "${{ matrix.os }}"
+    name: Build dll for PHP-${{ matrix.php-version }}-${{ matrix.arch }}-${{ (matrix.ts == '0') && 'N' || '' }}TS-${{ (matrix.php-version == '7.4' || matrix.php-version == '7.3') && 'VC15' || 'VS16' }}
+    runs-on: "${{ (matrix.php-version == '7.4' || matrix.php-version == '7.3') && 'windows-2016' || 'windows-2019' }}"
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, windows-2016]
-        phpver: ["8.0","7.4","7.3"]
+        php-version: ["8.1","8.0","7.4","7.3"]
         arch: ["x64"]
         ts: ["0", "1"]
-        exclude:
-          - os: windows-latest
-            phpver: "7.4"
-          - os: windows-latest
-            phpver: "7.3"
-          - os: windows-2016
-            phpver: "8.0"
-      max-parallel: 6
+      max-parallel: 8
     outputs:
       ref: ${{ steps.getref.outputs.ref }}
     env:
       deps: openssl,libcurl,zlib,libssh2,nghttp2
       tools_path: C:\tools\phpdev
-      dllname: "php_swow-php${{ matrix.phpver }}-${{ matrix.arch }}-${{ (matrix.ts == '0') && 'n' || '' }}ts-${{ (matrix.os == 'windows-latest') && 'VS16' || 'VC15' }}.dll"
+      dllname: "php_swow-php${{ matrix.php-version }}-${{ matrix.arch }}-${{ (matrix.ts == '0') && 'n' || '' }}ts-${{ (matrix.php-version == '7.4' || matrix.php-version == '7.3') && 'VC15' || 'VS16' }}.dll"
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -53,22 +45,22 @@ jobs:
           UNIX_COLOR: 1
         run: |
           . "./.github/workflows/winext/utils.ps1" -ToolName "cacheprepare" -MaxTry 3
-          $os = "${{ matrix.os }}"
-          if($os.Equals("windows-latest") -Or $os.Equals("windows-2019")){
+          $phpver = "${{ matrix.php-version }}"
+          if ($phpver.Equals("8.1") -Or $phpver.Equals("8.0")) {
             $PhpVCVer = "VS16"
-          }elseif($os.Equals("windows-2016")){
+          } else {
             $PhpVCVer = "VC15"
           }
-          function phpsdkver{
+          function phpsdkver {
             $headers = @{
               "accept"="application/vnd.github.v3+json";
               "content-type"="application/json";
               "authorization"="Bearer ${{ secrets.GITHUB_TOKEN }}";
             }
             $info = fetchjson -Uri "https://api.github.com/repos/microsoft/php-sdk-binary-tools/git/ref/heads/master" -Headers $headers
-            if(!$info){
+            if (!$info) {
               warn "Cannot fetch php-sdk-binary-tools info from api.github.com"
-            }else{
+            } else {
               $ver = $info."object"."sha"
               Write-Host "::set-output name=phpsdkver::$ver"
             }
@@ -77,13 +69,13 @@ jobs:
           $ret = 1
           phpsdkver
           ./.github/workflows/winext/getphp.ps1 `
-            -PhpVer ${{ matrix.phpver }} `
+            -PhpVer ${{ matrix.php-version }} `
             -PhpArch ${{ matrix.arch }} `
             -PhpVCVer $PhpVCVer `
             -PhpTs ${{ matrix.ts }} `
             -DryRun 1 &&
           ./.github/workflows/winext/devpack.ps1 `
-            -PhpVer ${{ matrix.phpver }} `
+            -PhpVer ${{ matrix.php-version }} `
             -PhpArch ${{ matrix.arch }} `
             -PhpVCVer $PhpVCVer `
             -PhpTs ${{ matrix.ts }} `
@@ -104,7 +96,7 @@ jobs:
             ${{ env.tools_path }}
             !${{ env.tools_path }}\php\ext\php_swow.dll
             !${{ env.tools_path }}\php\php.ini
-          key: buildenv-v1-${{ matrix.arch }}-${{ matrix.ts }}-${{ steps.cacheprepare.outputs.phpver }}-${{ steps.cacheprepare.outputs.devpackver }}-${{ steps.cacheprepare.outputs.downloadeddeps }}-${{ steps.cacheprepare.outputs.phpsdkver }}
+          key: buildenv-v1-${{ matrix.arch }}-${{ matrix.ts }}-${{ steps.cacheprepare.outputs.php-version }}-${{ steps.cacheprepare.outputs.devpackver }}-${{ steps.cacheprepare.outputs.downloadeddeps }}-${{ steps.cacheprepare.outputs.phpsdkver }}
       - name: Build Swow extension
         id: ext-build
         uses: ./.github/workflows/winext
@@ -113,7 +105,7 @@ jobs:
           tools-path: ${{ env.tools_path }}
           ext-name: swow
           deps: ${{ env.deps }}
-          phpver: ${{ matrix.phpver }}
+          phpver: ${{ matrix.php-version }}
           phpts: ${{ matrix.ts }}
           phparch: ${{ matrix.arch }}
           install: "0"
@@ -127,7 +119,7 @@ jobs:
         run: |
           Write-Host "::group::Fetching php from windows.php.net"
           .\.github\workflows\winext\getphp.ps1 `
-            -PhpVer "${{ matrix.phpver }}" `
+            -PhpVer "${{ matrix.php-version }}" `
             -PhpVCVer "${{ steps.ext-build.outputs.vcver }}" `
             -PhpTs ${{ matrix.ts }}
           $ret = $lastexitcode
@@ -167,7 +159,7 @@ jobs:
             "hash" = (Get-FileHash -Algorithm SHA256 $fn).Hash;
             "result" = "${{ steps.ext-test.outcome }}";
             "runid" = "${{ github.run_id }}";
-            "jobname" = "PHP-${{ matrix.phpver }}-${{ matrix.arch }}-${{ (matrix.ts == '0') && 'N' || '' }}TS-${{ (matrix.os == 'windows-latest') && 'VS16' || 'VC15' }}";
+            "jobname" = "PHP-${{ matrix.php-version }}-${{ matrix.arch }}-${{ (matrix.ts == '0') && 'N' || '' }}TS-${{ (matrix.php-version == '7.4' || matrix.php-version == '7.3') && 'VC15' || 'VS16' }}";
           } | ConvertTo-Json -Compress | Out-File "${fn}.json" -Encoding ASCII # for no BOM
       - name: Upload artifact
         uses: actions/upload-artifact@v2

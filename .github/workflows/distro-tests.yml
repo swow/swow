@@ -11,6 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
+        php-version: [ '8.1', '8.0', '7.4', '7.3' ]
         distro:
           - name: CentOS 7
             image: centos:7
@@ -18,6 +19,12 @@ jobs:
           - name: CentOS 8
             image: centos:8
             pkg: yum
+          - name: Fedora
+            image: fedora
+            pkg: dnf
+          - name: Fedora rawhide
+            image: fedora:rawhide
+            pkg: dnf
           - name: Archlinux
             image: archlinux
             pkg: pacman
@@ -27,13 +34,19 @@ jobs:
           - name: Alpine Edge
             image: alpine:edge
             pkg: apk
+          - name: Debian
+            image: debian:stable-slim
+            pkg: apt
+          - name: Debian sid
+            image: debian:sid-slim
+            pkg: apt
           - name: openSUSE Leap
             image: opensuse/leap
             pkg: zypper
           - name: openSUSE Tumbleweed
             image: opensuse/tumbleweed
             pkg: zypper
-        php-version: [ '8.0', '7.4', '7.3' ]
+      max-parallel: 11
       fail-fast: false
     steps:
       - name: Prepare Swow codes
@@ -42,23 +55,37 @@ jobs:
           path: swow
       - name: Prepare cache PHP source
         id: cacheprepare
+        shell: bash
         run: |
-          echo "::set-output name=phpfn::"`curl 'https://www.php.net/releases/?json&version=${{ matrix.php-version }}' | jq -r '.source[] | select( .filename | endswith("tar.xz")) | .filename'`
+          infojson=$(curl 'https://www.php.net/releases/?json&version=${{ matrix.php-version }}')
+          if [ "$(echo "$infojson" | jq -r '.error')" != 'null' ]
+          then
+            echo ::warning::PHP version ${{ matrix.php-version }} is not found in releases, it may not be released.
+          else
+            echo "::set-output name=phpfn::"$(echo "${infojson}" | jq -r '.source[] | select( .filename | endswith("tar.xz")) | .filename')
+          fi
       - name: Cache PHP codes
+        if: steps.cacheprepare.outputs.phpfn
         uses: actions/cache@v2
         with:
           key: phpcode-v2-${{steps.cacheprepare.outputs.phpfn}}
           path: |
             ${{steps.cacheprepare.outputs.phpfn}}
       - name: Prepare PHP codes
+        shell: bash
         run: |
-          fn=${{steps.cacheprepare.outputs.phpfn}}
-          if [ ! -f "$fn" ]
+          fn='${{steps.cacheprepare.outputs.phpfn}}'
+          if [ "$fn" != "" ]
           then
-            wget https://www.php.net/distributions/${fn}
+            if [ ! -f "$fn" ]
+            then
+              wget https://www.php.net/distributions/${fn}
+            fi
+            mkdir php-src
+            tar xf "${fn}" -C php-src --strip-components=1
+          else
+            git clone --single-branch --branch PHP-${{ matrix.php-version }} --depth 1 https://github.com/php/php-src php-src
           fi
-          mkdir php-src
-          tar xf ${fn} -C php-src --strip-components=1
       - name: Build things
         run: |
           docker run --rm --name testcontainer \
@@ -69,4 +96,4 @@ jobs:
             -v `realpath swow`:/src/swow:rw,rshared \
             -v `realpath swow/.github/workflows/distro-installer.sh`:/distro-installer.sh:ro \
             -e CI=true \
-            ${{ matrix.distro.image }} /distro-installer.sh ${{ matrix.distro.pkg }}
+            ${{ matrix.distro.image }} ${{ matrix.distro.pkg == 'apt' && '/bin/bash ' || ''}}/distro-installer.sh ${{ matrix.distro.pkg }}

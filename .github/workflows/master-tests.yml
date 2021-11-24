@@ -31,9 +31,9 @@ jobs:
           fi
 
       - name: Setup PHP
-        uses: shivammathur/setup-php@v2
+        uses: shivammathur/setup-php@master
         with:
-          php-version: '8.1'
+          php-version: '8.2'
           tools: phpize
           # ini-values: pcov.directory=lib
           # coverage: pcov
@@ -94,7 +94,7 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@master
         with:
-          php-version: '8.1'
+          php-version: '8.2'
           # ini-values: pcov.directory=lib
           # coverage: pcov
           coverage: none
@@ -105,7 +105,7 @@ jobs:
       - name: Build Swow extension
         uses: ./.github/workflows/winext
         with:
-          phpver: '8.1'
+          phpver: '8.2'
           phpts: ${{ matrix.ts == 'ts' && '1' || '0' }}
           ext-path: ./ext
           tools-path: C:\tools\phpdev

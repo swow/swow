@@ -14,6 +14,7 @@ $scriptPath = Split-Path -parent $MyInvocation.MyCommand.Definition
 . "$scriptPath\utils.ps1" -ToolName "getphp" -MaxTry $MaxTry
 
 $guessedVCVers = @{
+    "8.1" = "VS16";
     "8.0" = "VS16";
     "7.4" = "VC15";
     "7.3" = "VC15";
