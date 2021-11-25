@@ -74,7 +74,7 @@ runs:
       env:
         UNIX_COLOR: "1"
       run: |
-        if ("${{ inputs.phpver }}".Equals("php")){
+        if ("${{ inputs.phpver }}".Equals("php")) {
           $PhpBin = "php"
           $PhpVer = ""
         } else {
@@ -82,7 +82,7 @@ runs:
           $PhpVer = "${{ inputs.phpver }}"
         }
         $master = $false
-        if ($PhpVer -Eq "8.2"){
+        if ($PhpVer -Eq "8.2") {
           # using master
           $master = $true
         }
@@ -105,10 +105,10 @@ runs:
           -Staging ${{ inputs.staging-deps }}
         $ret = $lastexitcode
         Write-Host "::endgroup::"
-        if( 0 -Ne $ret ){
+        if (0 -Ne $ret) {
             exit 1
         }
-        if($master){
+        if ($master) {
           Write-Host "::group::Fetching devel-pack from shivammathur/php-builder-windows"
           ${{github.action_path}}/devpack_master.ps1 `
             -MaxTry ${{ inputs.max-try }} `
@@ -118,7 +118,7 @@ runs:
             -PhpVCVer $PhpVCVer
           $ret = $lastexitcode
           Write-Host "::endgroup::"
-        }else{
+        } else {
           Write-Host "::group::Fetching devel-pack from windows.php.net"
           ${{github.action_path}}/devpack.ps1 `
             -MaxTry ${{ inputs.max-try }} `

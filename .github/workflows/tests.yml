@@ -35,7 +35,7 @@ jobs:
         php-version: ['8.1', '8.0', '7.4', '7.3']
         #php-version: ['8.0']
         #ts: ['nts', 'ts']
-      max-parallel: 12
+      max-parallel: 8
     steps:
 
       - name: Checkout
@@ -171,7 +171,7 @@ jobs:
             -Uri https://api.github.com/repos/OpenCppCoverage/OpenCppCoverage/releases/latest `
               | ConvertFrom-Json
           foreach ($x in $info.assets) {
-            if($x.name.EndsWith('.exe')) {
+            if ($x.name.EndsWith('.exe')) {
               Write-Host "Downloading latest OpenCppCoverage"
               $uri = $x.browser_download_url
               Invoke-WebRequest -Uri $uri -OutFile OpenCppCoverage.exe -Headers $headers -UseBasicParsing
@@ -189,7 +189,7 @@ jobs:
             -Uri https://api.github.com/repos/codecov/codecov-exe/releases/latest `
               | ConvertFrom-Json
           foreach ($x in $info.assets) {
-            if($x.name.EndsWith('win7-x64.zip')) {
+            if ($x.name.EndsWith('win7-x64.zip')) {
               Write-Host "Downloading latest codecov uploader"
               $uri = $x.browser_download_url
               Invoke-WebRequest -Uri $uri -OutFile codecov.zip -Headers $headers -UseBasicParsing
