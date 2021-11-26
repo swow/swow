@@ -245,6 +245,8 @@ if test "${SWOW}" != "no"; then
   fi
   PHP_SUBST(SWOW_MAINTAINER_CFLAGS)
   SWOW_CFLAGS="${SWOW_CFLAGS} \$(SWOW_STD_CFLAGS) \$(SWOW_MAINTAINER_CFLAGS)"
+  dnl for php 067df263448ee26013cddee1065bc9c1f028bd23 break
+  SWOW_CFLAGS="${SWOW_CFLAGS} -D_GNU_SOURCE"
 
   dnl start declare extension sources
 
@@ -364,6 +366,8 @@ EOF
 
     SWOW_CAT_INCLUDES="${SWOW_CAT_INCLUDES} -I${ext_srcdir}/include -I${ext_srcdir}/deps/libcat/include"
     SWOW_CAT_CFLAGS="${SWOW_CAT_CFLAGS} \$(SWOW_STD_CFLAGS)"
+    dnl for php 067df263448ee26013cddee1065bc9c1f028bd23 break
+    SWOW_CAT_CFLAGS="${SWOW_CAT_CFLAGS} -D_GNU_SOURCE"
     SWOW_ADD_SOURCES(deps/libcat/src,
       cat_cp.c \
       cat_memory.c \
