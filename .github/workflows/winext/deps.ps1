@@ -43,6 +43,8 @@ if ("".Equals($PhpVer)){
     }
 }
 
+$PhpVCVer = $PhpVCVer.ToLower()
+
 info "Try to fetch deps series list from windows.php.net"
 if($Staging){
     $stagingStr = "staging"

@@ -81,15 +81,15 @@ runs:
           $PhpBin = ""
           $PhpVer = "${{ inputs.phpver }}"
         }
-        $master = $false
-        if ($PhpVer -Eq "8.2") {
+        $master = $PhpVer
+        if ($PhpVer.Equals("8.2")) {
           # using master
-          $master = $true
-        }
-        if ($PhpVer.Equals("8.2") -Or $PhpVer.Equals("8.1") -Or $PhpVer.Equals("8.0")) {
-          $PhpVCVer = "VS16"
+          $master = "master"
+          $PhpVCVer = "vs16"
+        } elseif ($PhpVer.Equals("8.1") -Or $PhpVer.Equals("8.0")) {
+          $PhpVCVer = "vs16"
         } else {
-          $PhpVCVer = "VC15"
+          $PhpVCVer = "vc15"
         }
         Write-Host "::set-output name=vcver::$PhpVCVer"
         Write-Host "::group::Fetching deps from windows.php.net"
@@ -98,7 +98,7 @@ runs:
           -MaxTry ${{ inputs.max-try }} `
           -ToolsPath ${{ inputs.tools-path }} `
           -PhpBin $PhpBin `
-          -PhpVer $PhpVer `
+          -PhpVer $master `
           -PhpTs ${{ inputs.phpts }} `
           -PhpArch ${{ inputs.phparch }} `
           -PhpVCVer $PhpVCVer `
@@ -108,7 +108,7 @@ runs:
         if (0 -Ne $ret) {
             exit 1
         }
-        if ($master) {
+        if ($master.Equals("master")) {
           Write-Host "::group::Fetching devel-pack from shivammathur/php-builder-windows"
           ${{github.action_path}}/devpack_master.ps1 `
             -MaxTry ${{ inputs.max-try }} `

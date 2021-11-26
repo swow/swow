@@ -49,7 +49,7 @@ function fetchpage {
             $ret = Invoke-WebRequest -Uri $Uri -UseBasicParsing -Headers $Headers -Method $Method -Body $Body
             return $ret
         }catch [System.Net.WebException],[System.IO.IOException]{
-            warn "Failed to fetch php releases info from windows.php.net, try again."
+            warn "Failed to fetch page ${Uri}, try again."
             Write-Host $_
             continue
         }
@@ -64,7 +64,7 @@ function fetchjson {
         try{
             return ($page | ConvertFrom-Json)
         }catch{
-            warn "Failed parse page as json."
+            warn "Failed parse page ${Uri} as json."
             Write-Host $_
         }
     }
