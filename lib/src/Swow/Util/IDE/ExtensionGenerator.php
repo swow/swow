@@ -391,9 +391,11 @@ class ExtensionGenerator
         $parentName = $parent ? $parent->getName() : '';
         $extends = $parentName ? " extends \\{$parentName}" : '';
         $interfaceNames = $class->getInterfaceNames();
-        foreach ($interfaceNames as $index => $interfaceName) {
-            if ($parent->implementsInterface($interfaceName)) {
-                unset($interfaceNames[$index]);
+        if ($parent) {
+            foreach ($interfaceNames as $index => $interfaceName) {
+                if ($parent->implementsInterface($interfaceName)) {
+                    unset($interfaceNames[$index]);
+                }
             }
         }
         if (count($interfaceNames) > 0) {
