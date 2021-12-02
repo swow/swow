@@ -14,6 +14,7 @@ declare(strict_types=1);
 const class1_php = <<<'PHP'
 <?php
 class Class1{
+    public $myarg;
     function __construct($myarg){
         echo "Class1 initializing" . PHP_EOL;
         $this->myarg = $myarg;
@@ -30,6 +31,7 @@ const class2_php = <<<'PHP'
 require_once __DIR__ . "/cororun.php";
 %s
 class Class2{
+    public $class1;
     function __construct($myarg){
         echo "Class2 initializing" . PHP_EOL;
     }

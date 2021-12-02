@@ -57,11 +57,6 @@ class Connection extends Socket implements HttpTypeInterface
     protected $server;
 
     /**
-     * @var null|bool
-     */
-    protected $keepAlive = false;
-
-    /**
      * @noinspection PhpMissingParentConstructorInspection
      */
     public function __construct()
