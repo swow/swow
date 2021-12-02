@@ -401,12 +401,12 @@ PHP_MINFO_FUNCTION(swow)
 #endif
 #if defined(CAT_HAVE_CURL) || defined(CAT_HAVE_OPENSSL)
     memset(&str, 0, sizeof(str));
+# ifdef CAT_HAVE_OPENSSL
+    smart_str_append_printf(&str, "%s, ", cat_ssl_version());
+# endif
 # ifdef CAT_HAVE_CURL
     curl_version_info_data * curl_vid = curl_version_info(CURLVERSION_NOW);
     smart_str_append_printf(&str, "cURL %s, ", curl_vid->version);
-# endif
-# ifdef CAT_HAVE_OPENSSL
-    smart_str_append_printf(&str, "%s, ", cat_ssl_version());
 # endif
     ZEND_ASSERT(str.s != NULL && ZSTR_LEN(str.s) > 1);
     ZSTR_LEN(str.s) -= CAT_STRLEN(", "); // rtrim(&str, ", ")
@@ -419,6 +419,60 @@ PHP_MINFO_FUNCTION(swow)
 /* }}} */
 
 static const zend_function_entry swow_functions[] = {
+    PHP_FE_END
+};
+
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_Swow_isBuiltWith, ZEND_RETURN_VALUE, 0, _IS_BOOL, 0)
+    ZEND_ARG_TYPE_INFO(0, lib, IS_STRING, 0)
+ZEND_END_ARG_INFO()
+
+static PHP_METHOD(Swow, isBuiltWith)
+{
+    zend_string *lib;
+    zend_bool ret = 0;
+
+    ZEND_PARSE_PARAMETERS_START(1, 1)
+        Z_PARAM_STR(lib)
+    ZEND_PARSE_PARAMETERS_END();
+
+    if (0) { }
+#ifdef CAT_DEBUG
+    else if (zend_string_equals_literal_ci(lib, "debug")) {
+        ret = 1;
+    }
+#endif
+#ifdef CAT_HAVE_ASAN
+    else if (zend_string_equals_literal_ci(lib, "asan")) {
+        ret = 1;
+    }
+#endif
+#ifdef CAT_HAVE_MSAN
+    else if (zend_string_equals_literal_ci(lib, "msan")) {
+        ret = 1;
+    }
+#endif
+#ifdef CAT_HAVE_UBSAN
+    else if (zend_string_equals_literal_ci(lib, "ubsan")) {
+        ret = 1;
+    }
+#endif
+#ifdef CAT_HAVE_OPENSSL
+    else if (zend_string_equals_literal_ci(lib, "ssl") ||
+             zend_string_equals_literal_ci(lib, "openssl")) {
+        ret = 1;
+    }
+#endif
+#ifdef CAT_HAVE_CURL
+     else if (zend_string_equals_literal_ci(lib, "curl")) {
+        ret = 1;
+    }
+#endif
+
+    RETURN_BOOL(ret);
+}
+
+static const zend_function_entry swow_methods[] = {
+    PHP_ME(Swow, isBuiltWith, arginfo_Swow_isBuiltWith, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
     PHP_FE_END
 };
 
@@ -477,7 +531,7 @@ int swow_module_init(INIT_FUNC_ARGS)
 
     /* Swow class is reserved  */
     swow_ce = swow_register_internal_class(
-        "Swow", NULL, NULL,
+        "Swow", NULL, swow_methods,
         &swow_handlers, NULL,
         cat_false, cat_false,
         swow_create_object_deny, NULL, 0
