@@ -12,6 +12,7 @@
 
 require_once __DIR__ . '/../tools.php';
 
+use function Swow\Tools\askBool;
 use function Swow\Tools\br;
 use function Swow\Tools\error;
 use function Swow\Tools\notice;
@@ -28,7 +29,7 @@ if (PHP_OS_FAMILY === 'Windows') {
 $workSpace = realpath(__DIR__ . '/../../ext');
 
 $swowSo = "{$workSpace}/.libs/swow.so";
-$options = getopt('', ['rebuild', 'show-log', 'debug', 'msan', 'asan', 'ubsan', 'enable::']);
+$options = getopt('', ['sudo', 'install', 'rebuild', 'show-log', 'debug', 'msan', 'asan', 'ubsan', 'enable::']);
 
 $commandExecutor = function (string $name, array $commands) use ($workSpace): void {
     array_unshift($commands, "cd {$workSpace}");
@@ -95,12 +96,20 @@ if ($status === 0) {
     warn("Get extension info failed");
 }
 
-if (getmyuid() !== 0) {
-    notice('Install the extension to your system requires root privileges');
-    $sudo = 'sudo';
-} else {
-    $sudo = '';
+$expectInstall = isset($options['install']);
+if (!$expectInstall) {
+    $expectInstall = askBool('Do you want to install it right now?');
 }
-$commandExecutor('Install', ["{$sudo} make install"]);
+if ($expectInstall) {
+    $haveSudo = getmyuid() !== 0;
+    $expectSudo = isset($options['sudo']);
+    if ($expectSudo && $haveSudo) {
+        notice('Install the extension to your system requires root privileges');
+        $sudo = 'sudo';
+    } else {
+        $sudo = '';
+    }
+    $commandExecutor('Install', ["{$sudo} make install"]);
+}
 
-success('Build completed');
+success('All tasks have been completed');

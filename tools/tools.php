@@ -11,6 +11,9 @@
 
 namespace Swow\Tools;
 
+use function fgets;
+use function trim;
+
 require __DIR__ . '/autoload.php';
 
 const COLOR_NONE = 0;
@@ -77,6 +80,19 @@ function check(bool $is_ok, string $message): void
         ok("{$message} OK!");
     } else {
         error("{$message} Failed!");
+    }
+}
+
+function askBool(string $question): bool
+{
+    while (true) {
+        echo dye('👀' . " {$question} (Y/n): ", COLOR_YELLOW);
+        $response = trim(fgets(STDIN));
+        if ($response === 'Y') {
+            return true;
+        } elseif ($response === 'n') {
+            return false;
+        }
     }
 }
 
