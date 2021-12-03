@@ -26,12 +26,11 @@ $status = proc_get_status($proc);
 
 Signal::kill($status['pid'], Signal::TERM);
 
-while (($status = proc_get_status($proc)) && $status['running']) {
-    msleep(20);
-}
+$exitStatus = proc_close($proc);
+
+Assert::same($exitStatus, Signal::TERM);
 
 echo 'Done' . PHP_LF;
 ?>
 --EXPECT--
 Done
-
