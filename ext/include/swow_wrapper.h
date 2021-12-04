@@ -612,6 +612,18 @@ static zend_always_inline void swow_output_globals_fast_shutdown(void)
     }
 }
 
+#define SWOW_OB_START(output) do { \
+    zval zoutput; \
+    zend_string **output_ptr = &output; \
+    zend_result ret; \
+    php_output_start_user(NULL, 0, PHP_OUTPUT_HANDLER_STDFLAGS); \
+
+#define SWOW_OB_END(output) \
+    ret = php_output_get_contents(&zoutput); \
+    php_output_discard(); \
+    *output_ptr = ret == SUCCESS ? Z_STR(zoutput) : NULL; \
+} while (0);
+
 #if PHP_VERSION_ID >= 80200
 #define zend_forbid_dynamic_call(x) zend_forbid_dynamic_call()
 #endif
