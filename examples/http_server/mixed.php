@@ -21,14 +21,19 @@ use Swow\Http\Exception as HttpException;
 use Swow\Http\Server as HttpServer;
 use Swow\Http\Server\WebSocketFrame;
 use Swow\Http\Status as HttpStatus;
+use Swow\Socket;
 use Swow\Socket\Exception as SocketException;
 use Swow\WebSocket\Opcode as WebSocketOpcode;
 use const Swow\Errno\EMFILE;
 use const Swow\Errno\ENFILE;
 use const Swow\Errno\ENOMEM;
 
+$host = getenv('SERVER_HOST') ?: '127.0.0.1';
+$port = (int) (getenv('SERVER_PORT') ?: 9764);
+$backlog = (int) (getenv('SERVER_BACKLOG') ?: Socket::DEFAULT_BACKLOG);
+
 $server = new HttpServer();
-$server->bind('0.0.0.0', 9764)->listen();
+$server->bind($host, $port)->listen($backlog);
 while (true) {
     try {
         $connection = $server->acceptConnection();
