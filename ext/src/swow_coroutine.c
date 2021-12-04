@@ -1176,6 +1176,26 @@ SWOW_API void swow_coroutine_dump_all(void)
     php_var_dump(&zmap, 0);
 }
 
+SWOW_API void swow_coroutine_dump_all_to_file(const char *filename)
+{
+    zend_string *output;
+
+    SWOW_OB_START(output) {
+        swow_coroutine_dump_all();
+    } SWOW_OB_END();
+
+    if (output == NULL) {
+        return;
+    }
+
+    FILE *file = fopen(filename, "w");
+    if (file == NULL) {
+        return;
+    }
+    (void) fwrite(ZSTR_VAL(output), sizeof(char), ZSTR_LEN(output), file);
+    (void) fclose(file);
+}
+
 /* exception */
 
 static ZEND_COLD void swow_coroutine_handle_cross_exception(zend_object *exception)

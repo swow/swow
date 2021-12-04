@@ -204,6 +204,7 @@ SWOW_API zval *swow_coroutine_get_zval_by_id(cat_coroutine_id_t id);
 SWOW_API void swow_coroutine_dump(swow_coroutine_t *scoroutine);
 SWOW_API void swow_coroutine_dump_by_id(cat_coroutine_id_t id);
 SWOW_API void swow_coroutine_dump_all(void);
+SWOW_API void swow_coroutine_dump_all_to_file(const char *filename);
 
 /* exceptions */
 SWOW_API cat_bool_t swow_coroutine_throw(swow_coroutine_t *scoroutine, zend_object *exception, zval *retval);
