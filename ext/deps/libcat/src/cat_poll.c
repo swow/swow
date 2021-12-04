@@ -221,7 +221,6 @@ CAT_API cat_ret_t cat_poll_one(cat_os_socket_t fd, cat_pollfd_events_t events, c
             break;
         default:
             CAT_NEVER_HERE("Impossible");
-            break;
     }
     CAT_LOG_DEBUG(EVENT, "poll_one(fd=" CAT_OS_SOCKET_FMT ", *revents=%u) = %d", fd, *revents, ret);
 

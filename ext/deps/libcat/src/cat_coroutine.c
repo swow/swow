@@ -22,18 +22,20 @@
 /* Note: ASan can not work well with mmap()/VirtualAlloc(),
  * Using sys_malloc() so we can get better memory log.
  * and on OpenBSD we must use mmap() with MAP_STACK */
-#if defined(CAT_HAVE_ASAN) && !defined(__OpenBSD__)
-# define CAT_COROUTINE_USE_SYS_MALLOC 1
-#elif !defined(CAT_OS_WIN)
-# define CAT_COROUTINE_USE_MMAP 1
-#else
-# define CAT_COROUTINE_USE_VIRTUAL_ALLOC 1
+#ifndef CAT_COROUTINE_USE_THREAD_CONTEXT
+# if defined(CAT_COROUTINE_USE_ASAN) && !defined(__OpenBSD__)
+#  define CAT_COROUTINE_USE_SYS_MALLOC 1
+# elif !defined(CAT_OS_WIN)
+#  define CAT_COROUTINE_USE_MMAP 1
+# else
+#  define CAT_COROUTINE_USE_VIRTUAL_ALLOC 1
+# endif
 #endif
 
 /** Note: LeakSanitizer will access protected page
  * if memleak ocurred (e.g. fatal error),
  * so we can not protect memory if ASan is enabled */
-#if defined(CAT_DEBUG) && !defined(CAT_HAVE_ASAN)
+#if defined(CAT_DEBUG) && !defined(CAT_COROUTINE_USE_ASAN) && defined(CAT_COROUTINE_USE_USER_STACK)
 # define CAT_COROUTINE_USE_MEMORY_PROTECT 1
 #endif
 
@@ -56,7 +58,7 @@
 #  define MAP_FAILED ((void * ) -1)
 # endif
 # define CAT_COROUTINE_MEMORY_INVALID MAP_FAILED
-#else
+#elif defined(CAT_COROUTINE_USE_SYS_MALLOC) || defined(CAT_COROUTINE_USE_VIRTUAL_ALLOC)
 # define CAT_COROUTINE_MEMORY_INVALID NULL
 #endif
 
@@ -74,7 +76,7 @@
 # include <valgrind/valgrind.h>
 #endif
 
-#ifdef CAT_HAVE_ASAN
+#ifdef CAT_COROUTINE_USE_ASAN
 // for warning -Wstrict-prototypes/C4255
 # define __sanitizer_acquire_crash_state() __sanitizer_acquire_crash_state(void)
 # ifndef _MSC_VER
@@ -86,7 +88,14 @@
 
 /* context */
 
-#ifdef CAT_COROUTINE_USE_UCONTEXT
+#if defined(CAT_COROUTINE_USE_THREAD_CONTEXT)
+
+typedef struct cat_coroutine_transfer_s {
+    cat_coroutine_t *coroutine;
+} cat_coroutine_transfer_t;
+
+#elif defined(CAT_COROUTINE_USE_UCONTEXT)
+
 typedef struct cat_coroutine_transfer_s {
     cat_data_t *data;
 } cat_coroutine_transfer_t;
@@ -100,7 +109,7 @@ typedef struct cat_coroutine_transfer_s {
     } \
 } while (0)
 
-#else
+#else // defined(CAT_COROUTINE_USE_BOOST_CONTEXT)
 
 typedef struct cat_coroutine_transfer_s {
     cat_coroutine_context_t from_context;
@@ -111,6 +120,7 @@ typedef void (*cat_coroutine_context_function_t)(cat_coroutine_transfer_t transf
 
 cat_coroutine_context_t cat_coroutine_context_make(void *stack, size_t stack_size, cat_coroutine_context_function_t function);
 cat_coroutine_transfer_t cat_coroutine_context_jump(cat_coroutine_context_t const target_context, cat_data_t *transfer_data);
+
 #endif
 
 /* coroutine */
@@ -171,16 +181,21 @@ CAT_API cat_bool_t cat_coroutine_runtime_init(void)
         main_coroutine->next = NULL;
         main_coroutine->stack_size = 0;
         main_coroutine->function = NULL;
+#ifdef CAT_COROUTINE_USE_USER_STACK
         main_coroutine->virtual_memory = NULL;
         main_coroutine->virtual_memory_size = 0;
         memset(&main_coroutine->context, 0, sizeof(cat_coroutine_context_t));
-#ifdef CAT_COROUTINE_USE_UCONTEXT
+#endif
+#ifdef CAT_COROUTINE_USE_USER_TRANSFER_DATA
         main_coroutine->transfer_data = NULL;
+#endif
+#ifdef CAT_COROUTINE_USE_THREAD_CONTEXT
+        CAT_SHOULD_BE(uv_sem_init(&main_coroutine->sem, 0) == 0);
 #endif
 #ifdef CAT_HAVE_VALGRIND
         main_coroutine->valgrind_stack_id = UINT32_MAX;
 #endif
-#ifdef CAT_HAVE_ASAN
+#ifdef CAT_COROUTINE_USE_ASAN
         main_coroutine->asan_fake_stack = NULL;
         main_coroutine->asan_stack = NULL;
         main_coroutine->asan_stack_size = 0;
@@ -334,8 +349,23 @@ CAT_API cat_coroutine_round_t cat_coroutine_get_current_round(void)
 
 static void cat_coroutine_context_function(cat_coroutine_transfer_t transfer)
 {
-    cat_coroutine_t *coroutine = CAT_COROUTINE_G(current);
-#ifdef CAT_HAVE_ASAN
+    cat_coroutine_t *coroutine;
+    cat_data_t *data;
+#ifndef CAT_COROUTINE_USE_THREAD_CONTEXT
+    coroutine = CAT_COROUTINE_G(current);
+#else
+    coroutine = transfer.coroutine;
+    /* we must create the thread first,
+     * because thread creation does not always succeed,
+     * we should handle error before we start.
+     * And we need to wait for the first resume() call here. */
+    uv_sem_wait(&coroutine->sem);
+    if (unlikely(coroutine->state == CAT_COROUTINE_STATE_DEAD)) {
+        /* coroutine maybe closed after created without executing anything */
+        return;
+    }
+#endif
+#ifdef CAT_COROUTINE_USE_ASAN
     CAT_ASSERT(coroutine->asan_fake_stack == NULL);
     __sanitizer_finish_switch_fiber(coroutine->asan_fake_stack, &coroutine->from->asan_stack, &coroutine->from->asan_stack_size);
 #endif
@@ -343,17 +373,17 @@ static void cat_coroutine_context_function(cat_coroutine_transfer_t transfer)
         CAT_COROUTINE_G(peak_count) = CAT_COROUTINE_G(count);
     }
     CAT_LOG_DEBUG(COROUTINE, "Start (count=" CAT_COROUTINE_COUNT_FMT ")", CAT_COROUTINE_G(count));
-#ifdef CAT_COROUTINE_USE_UCONTEXT
-    CAT_ASSERT(transfer.data == NULL);
-    transfer.data = coroutine->transfer_data;
-#else
+#if defined(CAT_COROUTINE_USE_BOOST_CONTEXT)
     /* update origin's context */
     coroutine->from->context = transfer.from_context;
+    data = transfer.data;
+#elif defined(CAT_COROUTINE_USE_USER_TRANSFER_DATA)
+    data = coroutine->transfer_data;
 #endif
     /* start time */
     coroutine->start_time = cat_time_msec();
     /* execute function */
-    transfer.data = coroutine->function(transfer.data);
+    data = coroutine->function(data);
     /* end time */
     coroutine->end_time = cat_time_msec();
     /* finished */
@@ -362,7 +392,10 @@ static void cat_coroutine_context_function(cat_coroutine_transfer_t transfer)
     /* mark as dead */
     coroutine->state = CAT_COROUTINE_STATE_DEAD;
     /* yield to previous */
-    cat_coroutine_yield(transfer.data, NULL);
+    cat_coroutine_yield(data, NULL);
+#ifdef CAT_COROUTINE_USE_THREAD_CONTEXT
+    return;
+#endif
     /* never here */
     CAT_NEVER_HERE("Coroutine is dead");
 }
@@ -374,10 +407,6 @@ CAT_API cat_coroutine_t *cat_coroutine_create(cat_coroutine_t *coroutine, cat_co
 
 CAT_API cat_coroutine_t *cat_coroutine_create_ex(cat_coroutine_t *coroutine, cat_coroutine_function_t function, size_t stack_size)
 {
-    void *virtual_memory;
-    size_t virtual_memory_size;
-    size_t padding_size = cat_getpagesize() * CAT_COROUTINE_STACK_PADDING_PAGE_COUNT;
-    void *stack, *stack_start;
     cat_coroutine_context_t context;
     cat_coroutine_flags_t flags = CAT_COROUTINE_FLAG_NONE;
 
@@ -402,6 +431,32 @@ CAT_API cat_coroutine_t *cat_coroutine_create_ex(cat_coroutine_t *coroutine, cat
 
     /* align stack size and add padding */
     stack_size = cat_coroutine_align_stack_size(stack_size);
+
+#ifdef CAT_COROUTINE_USE_THREAD_CONTEXT
+    int error = uv_sem_init(&coroutine->sem, 0);
+    if (unlikely(error != 0)) {
+        cat_update_last_error_with_reason(error, "Coroutine sem init failed");
+        return NULL;
+    }
+    uv_thread_options_t options;
+    options.flags = UV_THREAD_HAS_STACK_SIZE;
+    options.stack_size = stack_size;
+    error = uv_thread_create_ex(&context, &options, (uv_thread_cb) cat_coroutine_context_function, coroutine);
+    if (unlikely(error != 0)) {
+        uv_sem_destroy(&coroutine->sem);
+        if (flags & CAT_COROUTINE_FLAG_ALLOCATED) {
+            cat_free(coroutine);
+        }
+        cat_update_last_error_with_reason(error, "Coroutine thread create failed");
+        return NULL;
+    }
+#endif
+
+#ifdef  CAT_COROUTINE_USE_USER_STACK
+    void *virtual_memory;
+    size_t virtual_memory_size;
+    size_t padding_size = cat_getpagesize() * CAT_COROUTINE_STACK_PADDING_PAGE_COUNT;
+    void *stack, *stack_start;
     /* Coroutine Virtual Memory
     * - PADDING: memory-protection is on
     *   (1 page for mmap/VirtualAlloc, 2 pages for sys_malloc)
@@ -451,16 +506,17 @@ CAT_API cat_coroutine_t *cat_coroutine_create_ex(cat_coroutine_t *coroutine, cat
             CAT_SYSCALL_FAILURE(NOTICE, COROUTINE, "Protect stack page failed");
         }
     } while (0);
-#endif
+#endif /* CAT_COROUTINE_USE_MEMORY_PROTECT */
+#endif /* CAT_COROUTINE_USE_USER_STACK */
 
     /* make context */
-#ifdef CAT_COROUTINE_USE_UCONTEXT
+#if defined(CAT_COROUTINE_USE_UCONTEXT)
     context.uc_stack.ss_sp = stack;
     context.uc_stack.ss_size = stack_size;
     context.uc_stack.ss_flags = 0;
     context.uc_link = NULL;
     cat_coroutine_context_make(&context, (void (*)(void)) &cat_coroutine_context_function, 1, NULL);
-#else
+#elif defined(CAT_COROUTINE_USE_BOOST_CONTEXT)
     context = cat_coroutine_context_make(stack_start, stack_size, cat_coroutine_context_function);
 #endif
 
@@ -476,25 +532,33 @@ CAT_API cat_coroutine_t *cat_coroutine_create_ex(cat_coroutine_t *coroutine, cat
     coroutine->end_time = 0;
     coroutine->stack_size = (cat_coroutine_stack_size_t) stack_size;
     coroutine->function = function;
+#ifdef CAT_COROUTINE_USE_USER_STACK
     coroutine->virtual_memory = virtual_memory;
     coroutine->virtual_memory_size = (uint32_t) virtual_memory_size;
+#endif
     coroutine->context = context;
-#ifdef CAT_COROUTINE_USE_UCONTEXT
+#ifdef CAT_COROUTINE_USE_USER_TRANSFER_DATA
     coroutine->transfer_data = NULL;
 #endif
 #ifdef CAT_HAVE_VALGRIND
     coroutine->valgrind_stack_id = VALGRIND_STACK_REGISTER(stack_start, stack);
 #endif
-#ifdef CAT_HAVE_ASAN
+#ifdef CAT_COROUTINE_USE_ASAN
     coroutine->asan_fake_stack = NULL;
     coroutine->asan_stack = stack;
     coroutine->asan_stack_size = stack_size;
 #endif
+#ifndef CAT_COROUTINE_USE_THREAD_CONTEXT
     CAT_LOG_DEBUG(COROUTINE, "Create R" CAT_COROUTINE_ID_FMT " "
         "with stack = %p, stack_size = %zu, function = %p, "
         "virtual_memory = %p, virtual_memory_size = %zu",
-        coroutine->id, stack, stack_size, function,
+        coroutine->id, stack, stack_size, function, 
         virtual_memory, virtual_memory_size);
+#else
+    CAT_LOG_DEBUG(COROUTINE, "Create R" CAT_COROUTINE_ID_FMT " "
+        "with tid = %" PRId64 ", stack_size = %zu, function = %p, ",
+        coroutine->id, (int64_t) coroutine->context, stack_size, function);
+#endif
 
     return coroutine;
 }
@@ -503,6 +567,13 @@ CAT_API void cat_coroutine_free(cat_coroutine_t *coroutine)
 {
     CAT_LOG_DEBUG(COROUTINE, "Close R" CAT_COROUTINE_ID_FMT, coroutine->id);
     CAT_ASSERT(!cat_coroutine_is_alive(coroutine) && "Coroutine can not be forced to close when it is running or waiting");
+#ifdef CAT_COROUTINE_USE_THREAD_CONTEXT
+    if (coroutine->start_time == 0) {
+        coroutine->state = CAT_COROUTINE_STATE_DEAD;
+    }
+    uv_sem_post(&coroutine->sem);
+    uv_thread_join(&coroutine->context);
+#endif
 #ifdef CAT_HAVE_VALGRIND
     VALGRIND_STACK_DEREGISTER(coroutine->valgrind_stack_id);
 #endif
@@ -526,7 +597,7 @@ CAT_API void cat_coroutine_free(cat_coroutine_t *coroutine)
     munmap(coroutine->virtual_memory, coroutine->virtual_memory_size);
 #elif defined(CAT_COROUTINE_USE_VIRTUAL_ALLOC)
     VirtualFree(coroutine->virtual_memory, 0, MEM_RELEASE);
-#else // if defined(CAT_COROUTINE_USE_SYS_MALLOC)
+#elif defined(CAT_COROUTINE_USE_SYS_MALLOC)
     cat_sys_free(coroutine->virtual_memory);
 #endif
     if (coroutine->flags & CAT_COROUTINE_FLAG_ALLOCATED) {
@@ -573,20 +644,30 @@ CAT_API void cat_coroutine_jump_standard(cat_coroutine_t *coroutine, cat_data_t 
     if (retval != NULL) {
         current_coroutine->flags |= CAT_COROUTINE_FLAG_ACCEPT_DATA;
     }
-#ifdef CAT_HAVE_ASAN
+#ifdef CAT_COROUTINE_USE_ASAN
     __sanitizer_start_switch_fiber(
         current_coroutine->state != CAT_COROUTINE_STATE_DEAD ? &current_coroutine->asan_fake_stack : NULL,
         coroutine->asan_stack, coroutine->asan_stack_size
     );
 #endif
     /* jump {{{ */
-#ifdef CAT_COROUTINE_USE_UCONTEXT
+#ifdef CAT_COROUTINE_USE_USER_TRANSFER_DATA
     coroutine->transfer_data = data;
+#endif
+#if defined(CAT_COROUTINE_USE_THREAD_CONTEXT)
+    uv_sem_post(&coroutine->sem);
+    uv_sem_wait(&current_coroutine->sem);
+    if (unlikely(current_coroutine->state == CAT_COROUTINE_STATE_DEAD)) {
+        return;
+    }
+#elif defined(CAT_COROUTINE_USE_UCONTEXT)
     cat_coroutine_context_jump(&current_coroutine->context, &coroutine->context);
-    data = current_coroutine->transfer_data;
-#else
+#elif defined(CAT_COROUTINE_USE_BOOST_CONTEXT)
     cat_coroutine_transfer_t transfer = cat_coroutine_context_jump(coroutine->context, data);
     data = transfer.data;
+#endif
+#ifdef CAT_COROUTINE_USE_USER_TRANSFER_DATA
+    data = current_coroutine->transfer_data;
 #endif
     /* }}} */
     CAT_ASSERT(current_coroutine == CAT_COROUTINE_G(current));
@@ -595,10 +676,10 @@ CAT_API void cat_coroutine_jump_standard(cat_coroutine_t *coroutine, cat_data_t 
     /* handle from */
     coroutine = current_coroutine->from;
     CAT_ASSERT(coroutine != NULL);
-#ifdef CAT_HAVE_ASAN
+#ifdef CAT_COROUTINE_USE_ASAN
     __sanitizer_finish_switch_fiber(current_coroutine->asan_fake_stack, &coroutine->asan_stack, &coroutine->asan_stack_size);
 #endif
-#ifndef CAT_COROUTINE_USE_UCONTEXT
+#ifdef CAT_COROUTINE_USE_BOOST_CONTEXT
     /* update the from context */
     coroutine->context = transfer.from_context;
 #endif

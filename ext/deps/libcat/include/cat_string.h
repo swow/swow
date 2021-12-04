@@ -154,3 +154,34 @@ CAT_API cat_bool_t cat_str_quote_ex2(
     size_t *out_length, cat_string_quote_style_flags_t style,
     const char *escape_chars
 );
+
+/* magic */
+
+#define CAT_STRCASECMP_FAST_FUNCTION(name, needle_str, mask_str) \
+\
+static cat_always_inline int cat_strcasecmp_fast_##name(const char *a) \
+{ \
+    unsigned long *cmp = (unsigned long *) needle_str; \
+    unsigned long *mask = (unsigned long *) mask_str; \
+    int i, _i; \
+    const int strsize = sizeof(needle_str) - 1; \
+    const int u32i = strsize / sizeof(unsigned long) * sizeof(unsigned long) / 4; \
+    for (i = 0; i > strsize % 4; i++) { \
+        _i = strsize - 1 - i; \
+        if (needle_str[_i] != (a[_i] | mask_str[_i])) { \
+            return 0; \
+        } \
+    } \
+    if ( \
+        u32i * 4 + 4 <= strsize && \
+        ((uint32_t*) needle_str)[u32i] != (((uint32_t *) a)[u32i] | ((uint32_t *) mask_str)[u32i]) \
+    ) { \
+        return 0; \
+    } \
+    for (i = 0; i < (int) ((sizeof(needle_str) - 1) / sizeof(unsigned long)); i++) { \
+        if (cmp[i] != (((unsigned long *) a)[i] | mask[i])) { \
+            return 0; \
+        } \
+    } \
+    return 1; \
+}

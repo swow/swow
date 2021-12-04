@@ -132,9 +132,14 @@ CAT_API void cat_log_standard(CAT_LOG_PARAMATERS)
 
 CAT_API const char *cat_log_buffer_quote(const char *buffer, ssize_t n, char **tmp_str)
 {
+    return cat_log_buffer_quote_unlimited(buffer, CAT_MIN((size_t) n, CAT_G(log_str_size)), tmp_str);
+}
+
+CAT_API const char *cat_log_buffer_quote_unlimited(const char *buffer, ssize_t n, char **tmp_str)
+{
     if (n > 0) {
         char *quoted_data;
-        cat_str_quote(buffer, CAT_MIN((size_t) n, CAT_G(log_str_size)), &quoted_data, NULL);
+        cat_str_quote(buffer, n, &quoted_data, NULL);
         *tmp_str = quoted_data;
         return quoted_data;
     }

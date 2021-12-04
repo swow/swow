@@ -207,9 +207,13 @@ CAT_API cat_bool_t cat_event_do_defer_tasks(void)
 
 CAT_API void cat_event_fork(void)
 {
+#ifndef CAT_COROUTINE_USE_THREAD_CONTEXT
     int error = uv_loop_fork(cat_event_loop);
 
     if (error != 0) {
         CAT_CORE_ERROR_WITH_REASON(EVENT, error, "Event loop fork failed");
     }
+#else
+    CAT_ERROR(EVENT, "Function fork() is disabled for internal reasons when using thread-context");
+#endif
 }

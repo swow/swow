@@ -118,7 +118,7 @@ typedef enum cat_log_union_types_e {
 #define CAT_LOG_DEBUG_SCOPE_START_EX(module_type, pre)
 #define CAT_LOG_DEBUG_SCOPE_END_EX(end)
 #define CAT_LOG_DEBUG_SCOPE_START_WITH_LEVEL_EX(module_type, level, pre)
-#define CAT_LOG_DEBUG_SCOPE_END_WITH_LEVEL()
+#define CAT_LOG_DEBUG_SCOPE_END_WITH_LEVEL_EX(end)
 #define CAT_LOG_DEBUG(module_type, format, ...)
 #define CAT_LOG_DEBUG_V2(module_type, format, ...)
 #define CAT_LOG_DEBUG_V3(module_type, format, ...)
@@ -225,4 +225,7 @@ extern CAT_API cat_log_t cat_log_function CAT_LOG_ATTRIBUTES;
 
 CAT_API void cat_log_standard(CAT_LOG_PARAMATERS);
 
+/* Notice: n will be limited to CAT_G(log_str_size) if it exceed CAT_G(log_str_size) */
 CAT_API const char *cat_log_buffer_quote(const char *buffer, ssize_t n, char **tmp_str); CAT_FREE
+/* Notice: n will not be limited anyway */
+CAT_API const char *cat_log_buffer_quote_unlimited(const char *buffer, ssize_t n, char **tmp_str); CAT_FREE

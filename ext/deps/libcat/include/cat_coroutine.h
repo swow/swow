@@ -35,12 +35,30 @@ extern "C" {
 #define CAT_COROUTINE_SCHEDULER_ID              CAT_COROUTINE_MIN_ID
 #define CAT_COROUTINE_MAIN_ID                   1ULL
 
-#ifndef CAT_COROUTINE_USE_UCONTEXT
-typedef void *cat_coroutine_context_t;
-#else
-#define _XOPEN_SOURCE 700 /* for APPLE */
-#include <ucontext.h>
+#if defined(CAT_COROUTINE_USE_THREAD_CONTEXT)
+# if defined(CAT_THREAD_SAFE)
+# error "Coroutine thread-context can not work on thread-safe mode"
+# endif
+typedef uv_thread_t cat_coroutine_context_t;
+#elif defined(CAT_COROUTINE_USE_UCONTEXT)
+# define _XOPEN_SOURCE 700 /* for APPLE */
+# include <ucontext.h>
 typedef ucontext_t cat_coroutine_context_t;
+#else
+#define CAT_COROUTINE_USE_BOOST_CONTEXT
+typedef void *cat_coroutine_context_t;
+#endif
+
+#if defined(CAT_COROUTINE_USE_BOOST_CONTEXT) || defined(CAT_COROUTINE_USE_UCONTEXT)
+#define CAT_COROUTINE_USE_USER_STACK 1
+#endif
+
+#ifndef CAT_COROUTINE_USE_BOOST_CONTEXT
+#define CAT_COROUTINE_USE_USER_TRANSFER_DATA
+#endif
+
+#if defined(CAT_HAVE_ASAN) && !defined(CAT_COROUTINE_USE_THREAD_CONTEXT)
+#define CAT_COROUTINE_USE_ASAN
 #endif
 
 typedef uint64_t cat_coroutine_id_t;
@@ -114,17 +132,22 @@ struct cat_coroutine_s
     cat_coroutine_function_t function;
     cat_coroutine_stack_size_t stack_size;
     /* internal properties (inaccessible) */
+#ifdef CAT_COROUTINE_USE_USER_STACK
     uint32_t virtual_memory_size;
     void *virtual_memory;
+#endif
     cat_coroutine_context_t context;
-#ifdef CAT_COROUTINE_USE_UCONTEXT
+#ifdef CAT_COROUTINE_USE_USER_TRANSFER_DATA
     cat_data_t *transfer_data;
+#endif
+#ifdef CAT_COROUTINE_USE_THREAD_CONTEXT
+    uv_sem_t sem;
 #endif
     /* ext info */
 #ifdef CAT_HAVE_VALGRIND
     uint32_t valgrind_stack_id;
 #endif
-#ifdef CAT_HAVE_ASAN
+#ifdef CAT_COROUTINE_USE_ASAN
     void *asan_fake_stack;
     const void *asan_stack;
     size_t asan_stack_size;
