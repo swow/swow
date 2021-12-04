@@ -29,7 +29,7 @@ if (PHP_OS_FAMILY === 'Windows') {
 $workSpace = realpath(__DIR__ . '/../../ext');
 
 $swowSo = "{$workSpace}/.libs/swow.so";
-$options = getopt('', ['sudo', 'install', 'rebuild', 'show-log', 'debug', 'msan', 'asan', 'ubsan', 'enable::']);
+$options = getopt('', ['sudo', 'install', 'rebuild', 'show-log', 'debug', 'thread-context', 'msan', 'asan', 'ubsan', 'enable::']);
 
 $commandExecutor = function (string $name, array $commands) use ($workSpace): void {
     array_unshift($commands, "cd {$workSpace}");
@@ -55,6 +55,9 @@ if (!file_exists("{$workSpace}/Makefile") || isset($options['rebuild'])) {
     $configureOptions = [];
     if (isset($options['debug'])) {
         $configureOptions[] = '--enable-swow-debug';
+    }
+    if (isset($options['thread-context'])) {
+        $configureOptions[] = '--enable-swow-thread-context';
     }
     if (isset($options['msan'])) {
         $configureOptions[] = '--enable-swow-memory-sanitizer';

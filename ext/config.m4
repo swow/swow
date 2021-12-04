@@ -126,6 +126,12 @@ PHP_ARG_ENABLE([swow-debug],
   [no], [no]
 )
 
+PHP_ARG_ENABLE([swow-thread-context],
+  [whether to enable Swow thread context support],
+  [AS_HELP_STRING([--enable-swow-thread-context], [Enable Swow thread context support])],
+  [no], [no]
+)
+
 PHP_ARG_ENABLE([swow-gcov],
   [whether to enable Swow GCOV support],
   [AS_HELP_STRING([--enable-swow-gcov], [Enable Swow GCOV support])],
@@ -397,54 +403,58 @@ EOF
 
     dnl prepare cat used context
 
-    AS_CASE([$host_cpu],
-      [x86_64*|amd64*], [SWOW_CPU_ARCH="x86_64"],
-      [x86*|i?86*|amd*|pentium], [SWOW_CPU_ARCH="x86"],
-      [aarch64*|arm64*], [SWOW_CPU_ARCH="arm64"],
-      [arm*], [SWOW_CPU_ARCH="arm"],
-      [ppc64*], [SWOW_CPU_ARCH="ppc64"],
-      [powerpc*], [SWOW_CPU_ARCH="ppc"],
-      [mips64*], [SWOW_CPU_ARCH="mips64"],
-      [mips*], [SWOW_CPU_ARCH="mips32"],
-      [riscv64*], [SWOW_CPU_ARCH="riscv64"],
-      [SWOW_CPU_ARCH="unsupported"]
-    )
-
-    AS_CASE([$SWOW_CPU_ARCH],
-      [x86_64], [CAT_CONTEXT_FILE_PREFIX="x86_64_sysv"],
-      [x86], [CAT_CONTEXT_FILE_PREFIX="x86_sysv"],
-      [arm64], [CAT_CONTEXT_FILE_PREFIX="arm64_aapcs"],
-      [arm], [CAT_CONTEXT_FILE_PREFIX="arm_aapcs"],
-      [ppc64], [CAT_CONTEXT_FILE_PREFIX="ppc64_sysv"],
-      [ppc], [CAT_CONTEXT_FILE_PREFIX="ppc_sysv"],
-      [mips64], [CAT_CONTEXT_FILE_PREFIX="mips64_n64"],
-      [mips32], [CAT_CONTEXT_FILE_PREFIX="mips32_o32"],
-      [riscv64], [CAT_CONTEXT_FILE_PREFIX="riscv64_sysv"],
-      [CAT_CONTEXT_FILE_PREFIX="combined_sysv"]
-    )
-
-    dnl will be determined below
-    CAT_CONTEXT_FILE_SUFFIX=""
-    AS_CASE([$host_os],
-      [linux*|*aix*|freebsd*|netbsd*|openbsd*|dragonfly*|solaris*|haiku*], [CAT_CONTEXT_FILE_SUFFIX="elf_gas.S"],
-      [darwin*], [
-        CAT_CONTEXT_FILE_PREFIX="combined_sysv"
-        CAT_CONTEXT_FILE_SUFFIX="macho_gas.S"
-      ],
-      [CAT_CONTEXT_FILE_SUFFIX="unknown"]
-    )
-
-    if test "x${CAT_CONTEXT_FILE_SUFFIX}" = 'xunknown'; then
-      AC_CHECK_HEADER(ucontext.h,
-        [AC_DEFINE(CAT_COROUTINE_USE_UCONTEXT, 1, [ Cat Coroutine use ucontext ])],
-        [AC_MSG_ERROR([Unsupported platform])])
+    if test "${PHP_SWOW_THREAD_CONTEXT}" = "yes"; then
+        AC_DEFINE(CAT_COROUTINE_USE_THREAD_CONTEXT, 1, [ Cat Coroutine use thread-context ])
     else
-      SWOW_CAT_ASM_FLAGS=""
-      PHP_SUBST(SWOW_CAT_ASM_FLAGS)
-      SWOW_ADD_SOURCES(deps/libcat/deps/context/asm,
-        make_${CAT_CONTEXT_FILE_PREFIX}_${CAT_CONTEXT_FILE_SUFFIX} \
-        jump_${CAT_CONTEXT_FILE_PREFIX}_${CAT_CONTEXT_FILE_SUFFIX}, , SWOW_CAT_ASM_FLAGS)
-        dnl                              note this should be empty ^
+        AS_CASE([$host_cpu],
+          [x86_64*|amd64*], [SWOW_CPU_ARCH="x86_64"],
+          [x86*|i?86*|amd*|pentium], [SWOW_CPU_ARCH="x86"],
+          [aarch64*|arm64*], [SWOW_CPU_ARCH="arm64"],
+          [arm*], [SWOW_CPU_ARCH="arm"],
+          [ppc64*], [SWOW_CPU_ARCH="ppc64"],
+          [powerpc*], [SWOW_CPU_ARCH="ppc"],
+          [mips64*], [SWOW_CPU_ARCH="mips64"],
+          [mips*], [SWOW_CPU_ARCH="mips32"],
+          [riscv64*], [SWOW_CPU_ARCH="riscv64"],
+          [SWOW_CPU_ARCH="unsupported"]
+        )
+
+        AS_CASE([$SWOW_CPU_ARCH],
+          [x86_64], [CAT_CONTEXT_FILE_PREFIX="x86_64_sysv"],
+          [x86], [CAT_CONTEXT_FILE_PREFIX="x86_sysv"],
+          [arm64], [CAT_CONTEXT_FILE_PREFIX="arm64_aapcs"],
+          [arm], [CAT_CONTEXT_FILE_PREFIX="arm_aapcs"],
+          [ppc64], [CAT_CONTEXT_FILE_PREFIX="ppc64_sysv"],
+          [ppc], [CAT_CONTEXT_FILE_PREFIX="ppc_sysv"],
+          [mips64], [CAT_CONTEXT_FILE_PREFIX="mips64_n64"],
+          [mips32], [CAT_CONTEXT_FILE_PREFIX="mips32_o32"],
+          [riscv64], [CAT_CONTEXT_FILE_PREFIX="riscv64_sysv"],
+          [CAT_CONTEXT_FILE_PREFIX="combined_sysv"]
+        )
+
+        dnl will be determined below
+        CAT_CONTEXT_FILE_SUFFIX=""
+        AS_CASE([$host_os],
+          [linux*|*aix*|freebsd*|netbsd*|openbsd*|dragonfly*|solaris*|haiku*], [CAT_CONTEXT_FILE_SUFFIX="elf_gas.S"],
+          [darwin*], [
+            CAT_CONTEXT_FILE_PREFIX="combined_sysv"
+            CAT_CONTEXT_FILE_SUFFIX="macho_gas.S"
+          ],
+          [CAT_CONTEXT_FILE_SUFFIX="unknown"]
+        )
+
+        if test "x${CAT_CONTEXT_FILE_SUFFIX}" = 'xunknown'; then
+          AC_CHECK_HEADER(ucontext.h,
+            [AC_DEFINE(CAT_COROUTINE_USE_UCONTEXT, 1, [ Cat Coroutine use ucontext ])],
+            [AC_MSG_ERROR([Unsupported platform])])
+        else
+          SWOW_CAT_ASM_FLAGS=""
+          PHP_SUBST(SWOW_CAT_ASM_FLAGS)
+          SWOW_ADD_SOURCES(deps/libcat/deps/context/asm,
+            make_${CAT_CONTEXT_FILE_PREFIX}_${CAT_CONTEXT_FILE_SUFFIX} \
+            jump_${CAT_CONTEXT_FILE_PREFIX}_${CAT_CONTEXT_FILE_SUFFIX}, , SWOW_CAT_ASM_FLAGS)
+            dnl                              note this should be empty ^
+        fi
     fi
 
     dnl prepare uv sources
