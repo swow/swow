@@ -40,22 +40,15 @@ while (true) {
                         $request = $connection->recvHttpRequest();
                         switch ($request->getPath()) {
                             case '/':
-                            {
                                 $connection->respond();
                                 break;
-                            }
                             case '/greeter':
-                            {
                                 $connection->respond('Hello Swow');
                                 break;
-                            }
                             case '/echo':
-                            {
                                 $connection->respond($request->getBodyAsString());
                                 break;
-                            }
                             case '/chat':
-                            {
                                 if ($upgrade = $request->getUpgrade()) {
                                     if ($upgrade === $request::UPGRADE_WEBSOCKET) {
                                         $connection->upgradeToWebSocket($request);
@@ -82,11 +75,8 @@ while (true) {
                                 }
                                 $connection->respond(file_get_contents(__DIR__ . '/chat.html'));
                                 break;
-                            }
                             default:
-                            {
                                 $connection->error(HttpStatus::NOT_FOUND);
-                            }
                         }
                     } catch (HttpException $exception) {
                         $connection->error($exception->getCode(), $exception->getMessage());
