@@ -37,15 +37,15 @@ if (strpos($loaded, 'Swow') === false) {
 
 build_phar(__DIR__ . DIRECTORY_SEPARATOR . 'phartest.phar', TEST_AUTOLOAD);
 rename(__DIR__ . DIRECTORY_SEPARATOR . 'phartest.phar', __DIR__ . DIRECTORY_SEPARATOR . 'phartest');
-var_dump(swow_subprocess(__DIR__ . DIRECTORY_SEPARATOR . 'phartest'));
+var_dump(php_exec_with_swow(__DIR__ . DIRECTORY_SEPARATOR . 'phartest'));
 
 build_phar(__DIR__ . DIRECTORY_SEPARATOR . 'phartest2.phar', TEST_REQUIRE);
 rename(__DIR__ . DIRECTORY_SEPARATOR . 'phartest2.phar', __DIR__ . DIRECTORY_SEPARATOR . 'phartest2');
-var_dump(swow_subprocess(__DIR__ . DIRECTORY_SEPARATOR . 'phartest2'));
+var_dump(php_exec_with_swow(__DIR__ . DIRECTORY_SEPARATOR . 'phartest2'));
 
 build_phar(__DIR__ . DIRECTORY_SEPARATOR . 'phartest3.phar', TEST_INCLUDE);
 rename(__DIR__ . DIRECTORY_SEPARATOR . 'phartest3.phar', __DIR__ . DIRECTORY_SEPARATOR . 'phartest3');
-var_dump(swow_subprocess(__DIR__ . DIRECTORY_SEPARATOR . 'phartest3'));
+var_dump(php_exec_with_swow(__DIR__ . DIRECTORY_SEPARATOR . 'phartest3'));
 
 echo "Done\n";
 ?>

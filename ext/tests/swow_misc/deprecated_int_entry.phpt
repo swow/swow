@@ -9,9 +9,9 @@ skip_if_cannot_make_subprocess();
 --FILE--
 <?php
 require __DIR__ . '/../include/bootstrap.php';
-var_dump(trim(swow_subprocess('-d allow_url_include=1 -r ""')));
-var_dump(trim(swow_subprocess('-d allow_call_time_pass_reference=1 -r ""')));
-var_dump(trim(swow_subprocess('-d asp_tags=1 -r ""')));
+var_dump(trim(php_exec_with_swow('-d allow_url_include=1 -r ""')));
+var_dump(trim(php_exec_with_swow('-d allow_call_time_pass_reference=1 -r ""')));
+var_dump(trim(php_exec_with_swow('-d asp_tags=1 -r ""')));
 
 echo "Done\n";
 ?>

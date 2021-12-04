@@ -54,7 +54,7 @@ define('TEST_MAX_PROCESSES', [1, 1, 2, 4, 8][TEST_PRESSURE_LEVEL]);
 
 # ini
 if (extension_loaded('Swow')) {
-    \Swow\Socket::setGlobalTimeout(30 * 1000);
+    \Swow\Socket::setGlobalTimeout(15 * 1000);
 }
 
 # functions
@@ -126,9 +126,9 @@ function pseudo_random_sleep(): void
     usleep($seed);
 }
 
-function swow_subprocess($args)
+function php_options_with_swow(): string
 {
-    $definitions = ' -d error_prepend_string=' .
+    $options = ' -d error_prepend_string=' .
         ' -d error_append_string=' .
         ' -d error_reporting=32767' .
         ' -d display_errors=1' .
@@ -138,8 +138,24 @@ function swow_subprocess($args)
         ' -d track_errors=0 ';
     $loaded_modules = shell_exec(PHP_BINARY . ' -m');
     if (strpos($loaded_modules, 'Swow') === false) {
-        $definitions .= '-dextension=swow ';
+        $options .= '-d extension=swow ';
     }
 
-    return shell_exec(PHP_BINARY . $definitions . $args . ' 2>&1');
+    return $options;
+}
+
+function php_exec_with_swow(string $args)
+{
+    return shell_exec(PHP_BINARY . php_options_with_swow() . $args . ' 2>&1');
+}
+
+function php_proc_with_swow(string $args, callable $handler, array $options = []): int
+{
+    $proc = proc_open(PHP_BINARY . php_options_with_swow() . $args, [
+        0 => $options['stdin'] ?? STDIN,
+        1 => $options['stdout'] ?? ['pipe', 'w'],
+        2 => $options['stderr'] ?? ['pipe', 'w'],
+    ], $pipes);
+    $handler($proc, $pipes);
+    return proc_close($proc);
 }
