@@ -22,5 +22,5 @@ Bad discussion donot respect others: "Swow have ability to cancel I/O bound oper
 Good discussion respect others: "Swow have ability to cancel I/O bound operations, golang io cannot, let us share the idea to them!"
 好的讨论尊重他人：“Swow 可以取消IO操作，go不行，得向他们分享下这种操作”
 
-In additional： please "speak English" / 请 ”说人话“
+In additional： please "speak English" / 请 “说人话”
 -->
