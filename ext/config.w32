@@ -7,8 +7,29 @@ ARG_ENABLE('swow-curl', 'Enable Swow cURL support', 'yes');
 
 if (PHP_SWOW != 'no') (function(){
 
-    // TODO: arch specified
-    var SWOW_ASSEMBLER = PATH_PROG('ML64');
+    var SWOW_TARGET_ARCH = 'x64';
+    try {
+        if (TARGET_ARCH) {
+            SWOW_TARGET_ARCH = TARGET_ARCH;
+        }
+    } catch (_) {
+        // do nothing
+    }
+
+    var SWOW_ASSEMBLER = PATH_PROG({
+        'x64':'ML64',
+        'x86':'ML',
+        'arm64':'ARMASM64'
+    }[SWOW_TARGET_ARCH]);
+
+    try {
+        if (PHP_ASSEMBLER) {
+            SWOW_ASSEMBLER = PHP_ASSEMBLER;
+        }
+    } catch (_) {
+        // do nothing
+    }
+
     function swow_map(arr, func){
         var ret = [];
         if(typeof arr == 'object' && arr instanceof Array){
@@ -30,7 +51,7 @@ if (PHP_SWOW != 'no') (function(){
 
     // check ml64
     if(!SWOW_ASSEMBLER){
-        WARNING('Swow not enabled; assembler(ML64.exe) not found');
+        WARNING('Swow not enabled; assembler not found');
         return;
     }
 
@@ -299,7 +320,18 @@ if (PHP_SWOW != 'no') (function(){
     // TODO: arch specified
     DEFINE('SWOW_ASSEMBLER', SWOW_ASSEMBLER);
     var CAT_CONTEXT_ASM_DIR = LIBCAT_DIR + '\\deps\\context\\asm';
-    var CAT_CONTEXT_FILENAMES = ['jump_x86_64_ms_pe_masm.asm', 'make_x86_64_ms_pe_masm.asm'];
+    var CAT_CONTEXT_FILENAMES;
+    switch (SWOW_TARGET_ARCH) {
+        case 'x64':
+            CAT_CONTEXT_FILENAMES = ['jump_x86_64_ms_pe_masm.asm', 'make_x86_64_ms_pe_masm.asm'];
+            break;
+        case 'x86':
+            CAT_CONTEXT_FILENAMES = ['jump_i386_ms_pe_masm.asm', 'make_i386_ms_pe_masm.asm'];
+            break;
+        case 'arm64':
+            CAT_CONTEXT_FILENAMES = ['jump_arm64_aapcs_pe_armasm.asm', 'make_arm64_aapcs_pe_armasm.asm'];
+            break;
+    }
     swow_map(CAT_CONTEXT_FILENAMES, function(e){
         // $(BUILD_DIR)/ext/swow/ may cause problem,
         // however, no solution for this yet
@@ -318,7 +350,11 @@ if (PHP_SWOW != 'no') (function(){
         MFO.WriteLine(obj + ': ' + src);
         var objdir = obj.replace(/\\[^\\]+$/, "");
         MFO.WriteLine('    @IF NOT EXIST ' + objdir + ' MKDIR ' + objdir);
-        MFO.WriteLine('    @$(SWOW_ASSEMBLER) /nologo ' + '/Fo' + obj + ' /c ' + src); // dont know why /Fo broken
+        if (SWOW_TARGET_ARCH == 'arm64') {
+            MFO.WriteLine('    @$(SWOW_ASSEMBLER) -nologo -machine ARM64 -o ' + obj + ' ' + src);
+        } else {
+            MFO.WriteLine('    @$(SWOW_ASSEMBLER) /nologo ' + '/Fo' + obj + ' /c ' + src); // dont know why /Fo broken
+        }
     });
 
     // libuv sources
