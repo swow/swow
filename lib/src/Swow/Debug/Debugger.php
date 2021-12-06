@@ -1036,11 +1036,13 @@ TEXT;
                             }
                             switch ($command) {
                                 case 'n':
+                                case 'next':
                                     $coroutine->resume();
                                     $this->waitStoppedCoroutine($coroutine);
                                     $in = 'f 0';
                                     goto _next;
                                 case 'c':
+                                case 'continue':
                                     unset($coroutine->__stop);
                                     $this->out("Coroutine#{$coroutine->getId()} continue to run...");
                                     $coroutine->resume();
@@ -1052,10 +1054,12 @@ TEXT;
                         case 'l':
                         case 'list':
                             $lineCount = $arguments[0] ?? null;
-                            if (!is_numeric($lineCount)) {
+                            if ($lineCount === null) {
                                 $this->showFollowingSourceFileContent();
-                            } else {
+                            } elseif (is_numeric($lineCount)) {
                                 $this->showFollowingSourceFileContent((int) $lineCount);
+                            } else {
+                                throw new DebuggerException('Argument[1]: line no must be numeric');
                             }
                             break;
                         case 'p':
@@ -1134,7 +1138,7 @@ TEXT;
                         case 'exit':
                             $this->clear();
                             if ($keyword !== '' && !static::isAlone()) {
-                                /* we can input keyword to call out the debugger */
+                                /* we can input keyword to call out the debugger later */
                                 goto _restart;
                             }
                             goto _quit;
