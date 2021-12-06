@@ -2819,6 +2819,9 @@ case "$1" in
 "gdb")
     gdb --args {$cmd}
     ;;
+"lldb")
+    lldb -- {$cmd}
+    ;;
 "valgrind")
     USE_ZEND_ALLOC=0 valgrind $2 ${cmd}
     ;;
