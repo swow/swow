@@ -46,7 +46,7 @@ return (new PhpCsFixer\Config())
         'blank_line_before_statement' => [
             'statements' => [
                 'declare',
-                'return',
+                // 'return',
             ],
         ],
         'blank_line_after_namespace' => true,
