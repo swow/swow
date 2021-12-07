@@ -128,6 +128,7 @@ function pseudo_random_sleep(): void
 
 function php_options_with_swow(): string
 {
+    // these options are from run-tests.php for running child process with same options
     $options = ' -d error_prepend_string=' .
         ' -d error_append_string=' .
         ' -d error_reporting=32767' .
@@ -155,7 +156,7 @@ function php_proc_with_swow(string $args, callable $handler, array $options = []
         0 => $options['stdin'] ?? STDIN,
         1 => $options['stdout'] ?? ['pipe', 'w'],
         2 => $options['stderr'] ?? ['pipe', 'w'],
-    ], $pipes);
+    ], $pipes, null, null, PHP_OS_FAMILY === 'Windows' ? [ 'bypass_shell' => true ] : null);
     $handler($proc, $pipes);
     return proc_close($proc);
 }
