@@ -13,12 +13,14 @@ declare(strict_types=1);
 
 namespace Swow\Debug;
 
+use ArrayObject;
 use SplFileObject;
 use Swow\Coroutine;
 use Swow\Signal;
 use Swow\Socket;
 use Swow\Util\FileSystem\IOException;
 use Throwable;
+use WeakMap;
 use function array_filter;
 use function array_shift;
 use function array_sum;
@@ -64,6 +66,7 @@ use function trim;
 use function usleep;
 use const DEBUG_BACKTRACE_IGNORE_ARGS;
 use const PHP_EOL;
+use const PHP_VERSION_ID;
 use const Swow\Errno\ETIMEDOUT;
 
 class Debugger
@@ -88,6 +91,9 @@ TEXT;
 
     /* @var bool */
     protected static $useMbString;
+
+    /* @var WeakMap */
+    protected static $coroutineDebugWeakMap;
 
     /* @var Socket */
     protected $input;
@@ -309,6 +315,43 @@ TEXT;
         $this->currentFrameIndex = 0;
 
         return $this;
+    }
+
+    public static function getCoroutineDebugWeakMap(): WeakMap
+    {
+        return static::$coroutineDebugWeakMap ?? (static::$coroutineDebugWeakMap = new WeakMap());
+    }
+
+    public static function getDebugFieldOfCoroutine(Coroutine $coroutine, string $field, $defaultValue = null)
+    {
+        if (PHP_VERSION_ID > 80000) {
+            $coroutineDebugContext = static::getCoroutineDebugWeakMap()[$coroutine] ?? [];
+            return $coroutineDebugContext[$field] ?? $defaultValue;
+        } else {
+            return $coroutine->$field ?? $defaultValue;
+        }
+    }
+
+    public static function setDebugFieldOfCoroutine(Coroutine $coroutine, string $field, $value): void
+    {
+        if (PHP_VERSION_ID > 80000) {
+            $weakMap = static::getCoroutineDebugWeakMap();
+            if (!isset($weakMap[$coroutine])) {
+                $weakMap[$coroutine] = new ArrayObject();
+            }
+            $weakMap[$coroutine][$field] = $value;
+        } else {
+            $coroutine->$field = $value;
+        }
+    }
+
+    public static function unsetDebugFieldOfCoroutine(Coroutine $coroutine, string $field): void
+    {
+        if (PHP_VERSION_ID > 80000) {
+            unset(static::getCoroutineDebugWeakMap()[$coroutine][$field]);
+        } else {
+            unset($coroutine->$field);
+        }
     }
 
     public function getCurrentFrameIndex(): int
@@ -554,7 +597,7 @@ TEXT;
 
     protected static function getStateNameOfCoroutine(Coroutine $coroutine): string
     {
-        if ($coroutine->__stopped ?? false) {
+        if (static::getDebugFieldOfCoroutine($coroutine, 'stopped', false)) {
             $state = 'stopped';
         } else {
             $state = $coroutine->getStateName();
@@ -565,7 +608,7 @@ TEXT;
 
     protected static function getExtendedLevelOfCoroutine(Coroutine $coroutine): int
     {
-        if ($coroutine->__stopped ?? false) {
+        if (static::getDebugFieldOfCoroutine($coroutine, 'stopped', false)) {
             $level = 2; // skip extended statement handler
         } else {
             $level = 0;
@@ -795,12 +838,12 @@ TEXT;
     public static function break(): void
     {
         $coroutine = Coroutine::getCurrent();
-        $coroutine->__stopped = true;
+        static::setDebugFieldOfCoroutine($coroutine, 'stopped', true);
         Coroutine::yield();
-        if ($coroutine->__stop ?? false) {
-            $coroutine->__stopped = false;
+        if (static::getDebugFieldOfCoroutine($coroutine, 'stop', false)) {
+            static::setDebugFieldOfCoroutine($coroutine, 'stopped', false);
         } else {
-            unset($coroutine->__stopped);
+            static::unsetDebugFieldOfCoroutine($coroutine, 'stopped');
         }
     }
 
@@ -815,6 +858,12 @@ TEXT;
     protected static function breakPointHandler(): void
     {
         $coroutine = Coroutine::getCurrent();
+
+        if (static::getDebugFieldOfCoroutine($coroutine, 'stop', false)) {
+            static::break();
+            return;
+        }
+
         $file = $coroutine->getExecutedFilename(2);
         $line = $coroutine->getExecutedLineno(2);
         $fullPosition = "{$file}:{$line}";
@@ -846,9 +895,9 @@ TEXT;
             }
         }
         if ($hit) {
-            $coroutine->__stop = true;
+            static::setDebugFieldOfCoroutine($coroutine, 'stop', true);
         }
-        if ($coroutine->__stop ?? false) {
+        if (static::getDebugFieldOfCoroutine($coroutine, 'stop', false)) {
             static::break();
         }
     }
@@ -879,10 +928,10 @@ TEXT;
 
     protected function waitStoppedCoroutine(Coroutine $coroutine): void
     {
-        if (!($coroutine->__stopped ?? false)) {
+        if (!static::getDebugFieldOfCoroutine($coroutine, 'stopped', false)) {
             $this->out('Waiting...');
         }
-        while (!($coroutine->__stopped ?? false)) {
+        while (!static::getDebugFieldOfCoroutine($coroutine, 'stopped', false)) {
             try {
                 Signal::wait(Signal::INT, 100);
                 throw new DebuggerException('Cancelled');
@@ -980,7 +1029,7 @@ TEXT;
                                 if ($coroutine === Coroutine::getCurrent()) {
                                     throw new DebuggerException('Attach debugger is not allowed');
                                 }
-                                $coroutine->__stop = true;
+                                static::setDebugFieldOfCoroutine($coroutine, 'stop', true);
                             }
                             $this->setCurrentCoroutine($coroutine);
                             $in = 'bt';
@@ -1025,8 +1074,8 @@ TEXT;
                         case 'c':
                         case 'continue':
                             $coroutine = $this->getCurrentCoroutine();
-                            if (!($coroutine->__stopped ?? false)) {
-                                if ($coroutine->__stop ?? false) {
+                            if (!static::getDebugFieldOfCoroutine($coroutine, 'stopped', false)) {
+                                if (static::getDebugFieldOfCoroutine($coroutine, 'stop', false)) {
                                     $this->waitStoppedCoroutine($coroutine);
                                 }
                                 throw new DebuggerException('Not in debugging');
@@ -1040,7 +1089,7 @@ TEXT;
                                     goto _next;
                                 case 'c':
                                 case 'continue':
-                                    unset($coroutine->__stop);
+                                    static::unsetDebugFieldOfCoroutine($coroutine, 'stop');
                                     $this->out("Coroutine#{$coroutine->getId()} continue to run...");
                                     $coroutine->resume();
                                     break;
