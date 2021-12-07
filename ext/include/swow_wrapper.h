@@ -618,7 +618,7 @@ static zend_always_inline void swow_output_globals_fast_shutdown(void)
     zend_result ret; \
     php_output_start_user(NULL, 0, PHP_OUTPUT_HANDLER_STDFLAGS); \
 
-#define SWOW_OB_END(output) \
+#define SWOW_OB_END() \
     ret = php_output_get_contents(&zoutput); \
     php_output_discard(); \
     *output_ptr = ret == SUCCESS ? Z_STR(zoutput) : NULL; \
