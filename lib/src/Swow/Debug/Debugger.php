@@ -900,9 +900,6 @@ TEXT;
             if ($coroutine === Coroutine::getCurrent()) {
                 continue;
             }
-            if ($coroutine->getState() === $coroutine::STATE_LOCKED) {
-                continue;
-            }
 
             return false;
         }
@@ -1176,36 +1173,58 @@ TEXT;
         return static::getInstance()->run($keyword);
     }
 
-    /** @var string[] file names */
-    protected static $showExecutedSourceLinesHandlers = [];
-
-    final public static function showExecutedSourceLines(): void
+    public static function showExecutedSourceLines(bool $all = false): void
     {
-        $file = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 1)[0]['file'] ?? '';
-        if (self::$showExecutedSourceLinesHandlers[$file] ?? false) {
-            return;
+        if ($all) {
+            $handler = function () {
+                static $lastFile;
+                $call = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 1)[0];
+                ['file' => $file, 'line' => $line] = $call;
+                if ($file === __FILE__) {
+                    return;
+                }
+                if ($lastFile !== $file) {
+                    $lastFile = $file;
+                    echo '>>> ' . $file . PHP_EOL;
+                }
+                echo sprintf('%-6s%s' . PHP_EOL, $line, static::getFileLine($file, $line));
+            };
+        } else {
+            $file = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 1)[0]['file'] ?? '';
+            $fp = @fopen($file, 'r');
+            if ($fp === false) {
+                throw IOException::getLast();
+            }
+            $lines = [];
+            while (($line = fgets($fp)) !== false) {
+                $lines[] = rtrim($line);
+            }
+            fclose($fp);
+            $handler = function () use ($file, $lines) {
+                $call = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 1)[0];
+                $callFile = $call['file'];
+                $callLine = $call['line'];
+                if ($callFile === $file) {
+                    echo sprintf('%-6s%s' . PHP_EOL, $callLine, $lines[$callLine - 1]);
+                }
+            };
         }
+        registerExtendedStatementHandler($handler);
+    }
+
+    protected static function getFileLine(string $file, int $lineNo): string
+    {
         $fp = @fopen($file, 'r');
         if ($fp === false) {
-            throw IOException::getLast();
+            return "Unable to open {$file}";
         }
-        $lines = [];
+        $i = 0;
         while (($line = fgets($fp)) !== false) {
-            $lines[] = rtrim($line);
+            if (++$i === $lineNo) {
+                return rtrim($line);
+            }
         }
-        fclose($fp);
-        $previousHandler = registerExtendedStatementHandler(null);
-        registerExtendedStatementHandler(function () use ($file, $lines, $previousHandler) {
-            $call = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 1)[0];
-            $callFile = $call['file'];
-            $callLine = $call['line'];
-            if ($callFile === $file) {
-                echo sprintf('%-6s%s%s', $callLine, $lines[$callLine - 1], PHP_EOL);
-            }
-            if ($previousHandler) {
-                $previousHandler();
-            }
-        });
-        self::$showExecutedSourceLinesHandlers[$file] = true;
+
+        return "Unable to read {$file}:{$line}";
     }
 }
