@@ -126,20 +126,33 @@ function pseudo_random_sleep(): void
     usleep($seed);
 }
 
-function php_options_with_swow(): string
+function real_php_path(): string
 {
+    return realpath(PHP_BINARY);
+}
+
+function php_options_with_swow(): array
+{
+    static $options;
+    if ($options) {
+        return $options;
+    }
+
     // these options are from run-tests.php for running child process with same options
-    $options = ' -d error_prepend_string=' .
-        ' -d error_append_string=' .
-        ' -d error_reporting=32767' .
-        ' -d display_errors=1' .
-        ' -d display_startup_errors=1' .
-        ' -d log_errors=0 ' .
-        ' -d html_errors=0 ' .
-        ' -d track_errors=0 ';
-    $loaded_modules = shell_exec(PHP_BINARY . ' -m');
-    if (strpos($loaded_modules, 'Swow') === false) {
-        $options .= '-d extension=swow ';
+    $options = [
+        '-d', 'error_prepend_string=',
+        '-d', 'error_append_string=',
+        '-d', 'error_reporting=32767',
+        '-d', 'display_errors=1',
+        '-d', 'display_startup_errors=1',
+        '-d', 'log_errors=0',
+        '-d', 'html_errors=0',
+        '-d', 'track_errors=0',
+    ];
+
+    if (strpos(shell_exec(real_php_path() . ' -m'), 'Swow') === false) {
+        $options []= '-d';
+        $options []= 'extension=swow';
     }
 
     return $options;
@@ -147,12 +160,14 @@ function php_options_with_swow(): string
 
 function php_exec_with_swow(string $args)
 {
-    return shell_exec(PHP_BINARY . php_options_with_swow() . $args . ' 2>&1');
+    return shell_exec(real_php_path() . ' ' . implode(' ', php_options_with_swow()) . ' ' . $args . ' 2>&1');
 }
 
-function php_proc_with_swow(string $args, callable $handler, array $options = []): int
+function php_proc_with_swow(array $args, callable $handler, array $options = []): int
 {
-    $proc = proc_open(PHP_BINARY . php_options_with_swow() . $args, [
+    $_args = array_merge([real_php_path()], php_options_with_swow(), $args);
+    $proc = proc_open($_args,
+    [
         0 => $options['stdin'] ?? STDIN,
         1 => $options['stdout'] ?? ['pipe', 'w'],
         2 => $options['stderr'] ?? ['pipe', 'w'],

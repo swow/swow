@@ -1,4 +1,5 @@
 <?php
 
+fwrite(STDOUT, getmypid() . PHP_EOL);
 Swow\Coroutine::yield();
-echo 'Never here' . PHP_LF;
+fwrite(STDERR, 'Never here' . PHP_EOL);

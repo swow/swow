@@ -3,6 +3,7 @@ swow_signal: Swow\Signal::kill
 --SKIPIF--
 <?php
 require __DIR__ . '/../include/skipif.php';
+skip_if_php_version_lower_than('7.4');
 ?>
 --FILE--
 <?php
@@ -10,26 +11,24 @@ require __DIR__ . '/../include/bootstrap.php';
 
 use Swow\Signal;
 
-$other_options = PHP_OS_FAMILY === 'Windows' ? [ 'bypass_shell' => true ] : null;
-
 $proc = proc_open(
-    PHP_BINARY . ' -r "echo \'start\'.PHP_EOL;sleep(10);fwrite(STDERR, \'Never here\'.PHP_EOL);"',
     [
+        real_php_path(),
+        '-r',
+        'echo getmypid().PHP_EOL;' .
+            'sleep(10);' .
+            'fwrite(STDERR, "Never here".PHP_EOL);',
+    ], [
         0 => STDIN,
         1 => ['pipe', 'w'],
         2 => STDERR,
     ],
     $pipes,
-    null,
-    null,
-    $other_options
 );
 
-Assert::same(fread($pipes[1], 4096), 'start' . PHP_EOL);
+$pid = (int)trim(fgets($pipes[1]));
 
-$status = proc_get_status($proc);
-
-Signal::kill($status['pid'], Signal::TERM);
+Signal::kill($pid, Signal::TERM);
 
 $exitStatus = proc_close($proc);
 
