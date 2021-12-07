@@ -51,12 +51,12 @@ echo "Done\n";
 ?>
 --CLEAN--
 <?php
-unlink(__DIR__ . '/phartest.phar');
-unlink(__DIR__ . '/phartest');
-unlink(__DIR__ . '/phartest2.phar');
-unlink(__DIR__ . '/phartest2');
-unlink(__DIR__ . '/phartest3.phar');
-unlink(__DIR__ . '/phartest3');
+@unlink(__DIR__ . '/phartest.phar');
+@unlink(__DIR__ . '/phartest');
+@unlink(__DIR__ . '/phartest2.phar');
+@unlink(__DIR__ . '/phartest2');
+@unlink(__DIR__ . '/phartest3.phar');
+@unlink(__DIR__ . '/phartest3');
 ?>
 --EXPECT--
 string(117) "on run.php
