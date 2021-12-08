@@ -3,7 +3,7 @@
 require __DIR__ . '/../autoload.php';
 
 use Swow\Coroutine;
-use Swow\Util\IDE\ExtensionGenerator;
+use Swow\Extension\StubGenerator;
 use Swow\Util\FileSystem;
 
 (function () {
@@ -12,7 +12,7 @@ use Swow\Util\FileSystem;
         exit('Usage: php ' . basename(__FILE__) . ' <extension_name> [output_path]');
     }
     $n = $argv[1];
-    $g = new ExtensionGenerator($n);
+    $g = new StubGenerator($n);
     if (strcasecmp($g->getExtensionName(), 'Swow') === 0) {
         $returnThisMap = [];
         $sourceFiles = FileSystem::scanDir(__DIR__ . '/../../ext/src', function (string $filename) {

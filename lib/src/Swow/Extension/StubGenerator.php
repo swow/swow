@@ -11,7 +11,7 @@
 
 declare(strict_types=1);
 
-namespace Swow\Util\IDE;
+namespace Swow\Extension;
 
 use InvalidArgumentException;
 use ReflectionClass;
@@ -57,7 +57,7 @@ use function substr;
 use function trim;
 use function var_export;
 
-class ExtensionGenerator
+class StubGenerator
 {
     protected const INDENT = '    ';
 
