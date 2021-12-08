@@ -79,6 +79,9 @@ class StubGenerator
     /** @var callable */
     protected $functionFormatHandler;
 
+    /** @var bool */
+    protected $noinspection = false;
+
     public function __construct(string $extensionName)
     {
         $this->extension = new ReflectionExtension($extensionName);
@@ -95,6 +98,22 @@ class StubGenerator
     public function setFunctionFormatHandler(callable $formatter)
     {
         $this->functionFormatHandler = $formatter;
+
+        return $this;
+    }
+
+    /** @return $this */
+    public function withNoinspection()
+    {
+        $this->noinspection = true;
+
+        return $this;
+    }
+
+    /** @return $this */
+    public function withOutNoinspection()
+    {
+        $this->noinspection = false;
 
         return $this;
     }
@@ -125,10 +144,12 @@ class StubGenerator
 
         $declarations = implode("\n\n", $declarations);
 
-        $content =
-            "<?php\n" .
-            "/** @noinspection PhpUnused, PhpInconsistentReturnPointsInspection, PhpMissingParentConstructorInspection, PhpReturnDocTypeMismatchInspection */\n\n" .
-            "{$declarations}\n";
+        $content = implode("\n", [
+            '<?php',
+            $this->noinspection ? '/** @noinspection PhpUnused, PhpInconsistentReturnPointsInspection, PhpMissingParentConstructorInspection, PhpReturnDocTypeMismatchInspection */' : '',
+            '',
+            $declarations
+        ]);
 
         if (is_resource($output)) {
             fwrite($output, $content);
