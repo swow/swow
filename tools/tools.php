@@ -152,9 +152,9 @@ function executeAndCheck(array $commands): void
 function fileSize(string $filename, int $decimals = 2): string
 {
     $bytes = filesize($filename);
-    $sz = 'BKMGTP';
+    $units = ['B', 'K', 'M', 'G', 'T', 'P'];
     $factor = (int) floor((strlen($bytes) - 1) / 3);
-    return sprintf("%.{$decimals}f", $bytes / pow(1024, $factor)) . $sz[$factor];
+    return sprintf("%.{$decimals}f", $bytes / pow(1024, $factor)) . $units[$factor];
 }
 
 function gitFiles(string $root = '.'): array
