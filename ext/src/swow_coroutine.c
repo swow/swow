@@ -999,6 +999,23 @@ SWOW_API HashTable *swow_coroutine_get_trace_as_list(const swow_coroutine_t *sco
     return trace;
 }
 
+SWOW_API zend_long swow_coroutine_get_trace_depth(const swow_coroutine_t *scoroutine, zend_long limit)
+{
+    zend_long depth;
+
+    SWOW_COROUTINE_SHOULD_BE_IN_EXECUTING(scoroutine, cat_false, return -1);
+
+    SWOW_COROUTINE_EXECUTE_START(scoroutine, 0) {
+        zend_execute_data *root_execute_data = scoroutine->executor->root_execute_data;
+        zend_execute_data *root_previous_execute_data = root_execute_data->prev_execute_data;
+        root_execute_data->prev_execute_data = NULL;
+        depth = swow_debug_backtrace_depth(EG(current_execute_data), limit);
+        root_execute_data->prev_execute_data = root_previous_execute_data;
+    } SWOW_COROUTINE_EXECUTE_END();
+
+    return depth;
+}
+
 #define SWOW_COROUTINE_CHECK_CALL_INFO(failure) do { \
     if (UNEXPECTED(ZEND_CALL_INFO(EG(current_execute_data)) & ZEND_CALL_DYNAMIC)) { \
         cat_update_last_error(CAT_EPERM, "Coroutine executor is dynamic"); \
@@ -1718,6 +1735,22 @@ static PHP_METHOD(Swow_Coroutine, getTraceAsList)
     RETURN_ARR(trace);
 }
 
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Coroutine_getTraceDepth, ZEND_RETURN_VALUE, 0, IS_LONG, 0)
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, limit, IS_LONG, 0, "0")
+ZEND_END_ARG_INFO()
+
+static PHP_METHOD(Swow_Coroutine, getTraceDepth)
+{
+    zend_long level = 0;
+
+    ZEND_PARSE_PARAMETERS_START(0, 1)
+        Z_PARAM_OPTIONAL
+        Z_PARAM_LONG(level)
+    ZEND_PARSE_PARAMETERS_END();
+
+    RETURN_LONG(swow_coroutine_get_trace_depth(getThisCoroutine(), level));
+}
+
 #undef SWOW_COROUTINE_GET_TRACE_PARAMETERS_PARSER
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Coroutine_getDefinedVars, ZEND_RETURN_VALUE, 0, IS_ARRAY, 0)
@@ -1988,6 +2021,7 @@ static const zend_function_entry swow_coroutine_methods[] = {
     PHP_ME(Swow_Coroutine, getTrace,                arginfo_class_Swow_Coroutine_getTrace,                ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Coroutine, getTraceAsString,        arginfo_class_Swow_Coroutine_getTraceAsString,        ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Coroutine, getTraceAsList,          arginfo_class_Swow_Coroutine_getTraceAsList,          ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Coroutine, getTraceDepth,           arginfo_class_Swow_Coroutine_getTraceDepth,           ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Coroutine, getDefinedVars,          arginfo_class_Swow_Coroutine_getDefinedVars,          ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Coroutine, setLocalVar,             arginfo_class_Swow_Coroutine_setLocalVar,             ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Coroutine, eval,                    arginfo_class_Swow_Coroutine_eval,                    ZEND_ACC_PUBLIC)
