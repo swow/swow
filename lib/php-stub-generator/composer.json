@@ -16,7 +16,7 @@
         "issues": "https://github.com/swow/php-stub-generator"
     },
     "require": {
-        "php": ">=7.3"
+        "php": ">=7.4"
     },
     "autoload": {
         "psr-4": {

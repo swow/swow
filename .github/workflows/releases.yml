@@ -13,12 +13,12 @@ on:
 jobs:
   builddlls:
     # this name is used after, change it with cautious
-    name: Build dll for PHP-${{ matrix.php-version }}-${{ matrix.arch }}-${{ (matrix.ts == '0') && 'N' || '' }}TS-${{ (matrix.php-version == '7.4' || matrix.php-version == '7.3') && 'VC15' || 'VS16' }}
-    runs-on: "${{ (matrix.php-version == '7.4' || matrix.php-version == '7.3') && 'windows-2016' || 'windows-2019' }}"
+    name: Build dll for PHP-${{ matrix.php-version }}-${{ matrix.arch }}-${{ (matrix.ts == '0') && 'N' || '' }}TS-${{ (matrix.php-version == '7.4') && 'VC15' || 'VS16' }}
+    runs-on: "${{ (matrix.php-version == '7.4') && 'windows-2016' || 'windows-2019' }}"
     strategy:
       fail-fast: false
       matrix:
-        php-version: ["8.1","8.0","7.4","7.3"]
+        php-version: ["8.1","8.0","7.4"]
         arch: ["x64"]
         ts: ["0", "1"]
       max-parallel: 8
@@ -27,7 +27,7 @@ jobs:
     env:
       deps: openssl,libcurl,zlib,libssh2,nghttp2
       tools_path: C:\tools\phpdev
-      dllname: "php_swow-php${{ matrix.php-version }}-${{ matrix.arch }}-${{ (matrix.ts == '0') && 'n' || '' }}ts-${{ (matrix.php-version == '7.4' || matrix.php-version == '7.3') && 'VC15' || 'VS16' }}.dll"
+      dllname: "php_swow-php${{ matrix.php-version }}-${{ matrix.arch }}-${{ (matrix.ts == '0') && 'n' || '' }}ts-${{ (matrix.php-version == '7.4') && 'VC15' || 'VS16' }}.dll"
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -159,7 +159,7 @@ jobs:
             "hash" = (Get-FileHash -Algorithm SHA256 $fn).Hash;
             "result" = "${{ steps.ext-test.outcome }}";
             "runid" = "${{ github.run_id }}";
-            "jobname" = "PHP-${{ matrix.php-version }}-${{ matrix.arch }}-${{ (matrix.ts == '0') && 'N' || '' }}TS-${{ (matrix.php-version == '7.4' || matrix.php-version == '7.3') && 'VC15' || 'VS16' }}";
+            "jobname" = "PHP-${{ matrix.php-version }}-${{ matrix.arch }}-${{ (matrix.ts == '0') && 'N' || '' }}TS-${{ (matrix.php-version == '7.4') && 'VC15' || 'VS16' }}";
           } | ConvertTo-Json -Compress | Out-File "${fn}.json" -Encoding ASCII # for no BOM
       - name: Upload artifact
         uses: actions/upload-artifact@v2

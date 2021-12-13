@@ -17,8 +17,6 @@ $guessedVCVers = @{
     "8.1" = "VS16";
     "8.0" = "VS16";
     "7.4" = "VC15";
-    "7.3" = "VC15";
-    "7.2" = "VC15";
 }
 
 if ("".Equals($PhpVCVer)){
