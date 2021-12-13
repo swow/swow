@@ -29,7 +29,7 @@ class ServerTest extends TestCase
 {
     public function testMixedServer()
     {
-        $mixedServerFile = __DIR__ . '/../../../examples/http_server/mixed.php';
+        $mixedServerFile = __DIR__ . '/../../../../examples/http_server/mixed.php';
         if (!file_exists($mixedServerFile)) {
             $this->markTestSkipped('aaa');
         }

@@ -11,4 +11,4 @@
 
 declare(strict_types=1);
 
-require __DIR__ . '/../../ext/tests/include/bootstrap.php';
+require __DIR__ . '/../../../ext/tests/include/bootstrap.php';

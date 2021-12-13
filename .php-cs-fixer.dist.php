@@ -124,8 +124,7 @@ return (new PhpCsFixer\Config())
             ->in([
                 __DIR__ . '/benchmark',
                 __DIR__ . '/examples',
-                __DIR__ . '/lib/src',
-                __DIR__ . '/lib/tests',
+                __DIR__ . '/lib',
             ])
             ->notName([
                 'Swow.php',

@@ -275,6 +275,12 @@ namespace Swow
         public function getTraceAsList(int $level = 0, int $limit = 0, int $options = \DEBUG_BACKTRACE_PROVIDE_OBJECT): array { }
 
         /**
+         * @param int $limit [optional] = 0
+         * @return int
+         */
+        public function getTraceDepth(int $limit = 0): int { }
+
+        /**
          * @param int $level [optional] = 0
          * @return array
          */
@@ -1499,22 +1505,28 @@ namespace Swow\Http
         public const EVENT_FLAG_LINE = 2;
         public const EVENT_FLAG_DATA = 4;
         public const EVENT_NONE = 0;
-        public const EVENT_MESSAGE_BEGIN = 65536;
-        public const EVENT_URL = 131078;
-        public const EVENT_URL_COMPLETE = 262152;
-        public const EVENT_STATUS = 524294;
-        public const EVENT_STATUS_COMPLETE = 1048584;
-        public const EVENT_HEADER_FIELD = 2097156;
-        public const EVENT_HEADER_VALUE = 4194308;
-        public const EVENT_HEADER_FIELD_COMPLETE = 8388616;
-        public const EVENT_HEADER_VALUE_COMPLETE = 16777224;
-        public const EVENT_HEADERS_COMPLETE = 33554440;
-        public const EVENT_BODY = 67108868;
-        public const EVENT_MESSAGE_COMPLETE = 134217736;
-        public const EVENT_CHUNK_HEADER = 268435456;
-        public const EVENT_CHUNK_COMPLETE = 536870920;
+        public const EVENT_MESSAGE_BEGIN = 512;
+        public const EVENT_URL = 1030;
+        public const EVENT_URL_COMPLETE = 2056;
+        public const EVENT_STATUS = 4102;
+        public const EVENT_STATUS_COMPLETE = 8200;
+        public const EVENT_HEADER_FIELD = 16388;
+        public const EVENT_HEADER_VALUE = 32772;
+        public const EVENT_HEADER_FIELD_COMPLETE = 65544;
+        public const EVENT_HEADER_VALUE_COMPLETE = 131080;
+        public const EVENT_HEADERS_COMPLETE = 262152;
+        public const EVENT_BODY = 524292;
+        public const EVENT_MESSAGE_COMPLETE = 1048584;
+        public const EVENT_CHUNK_HEADER = 2097152;
+        public const EVENT_CHUNK_COMPLETE = 4194312;
+        public const EVENT_MULTIPART_HEADER_FIELD = 8388628;
+        public const EVENT_MULTIPART_HEADER_VALUE = 16777236;
+        public const EVENT_MULTIPART_DATA = 33554452;
+        public const EVENT_MULTIPART_DATA_BEGIN = 67108880;
+        public const EVENT_MULTIPART_HEADERS_COMPLETE = 134217752;
+        public const EVENT_MULTIPART_DATA_END = 268435480;
         public const EVENTS_NONE = 0;
-        public const EVENTS_ALL = 1073676302;
+        public const EVENTS_ALL = 536870430;
 
         /**
          * @return int

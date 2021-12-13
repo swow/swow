@@ -148,7 +148,7 @@ class StubGenerator
             '<?php',
             $this->noinspection ? '/** @noinspection PhpUnused, PhpInconsistentReturnPointsInspection, PhpMissingParentConstructorInspection, PhpReturnDocTypeMismatchInspection */' : '',
             '',
-            $declarations
+            $declarations,
         ]);
 
         if (is_resource($output)) {

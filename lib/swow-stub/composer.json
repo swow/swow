@@ -1,0 +1,24 @@
+{
+    "name": "swow/swow-stub",
+    "description": "Swow extension's stub",
+    "keywords": [
+        "swow",
+        "stub"
+    ],
+    "license": "Apache-2.0",
+    "authors": [
+        {
+            "name": "twose",
+            "email": "twosee@php.net"
+        }
+    ],
+    "support": {
+        "issues": "https://github.com/swow/swow-stub"
+    },
+    "require": {
+        "php": ">=7.3"
+    },
+    "suggest": {
+        "ext-swow": "*"
+    }
+}

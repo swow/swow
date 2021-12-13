@@ -25,11 +25,11 @@
     },
     "autoload": {
         "psr-4": {
-            "Swow\\": "src/Swow/"
+            "Swow\\": "src/"
         },
         "files": [
-            "src/Swow/functions.php",
-            "src/Swow/Util/functions.php"
+            "src/functions.php",
+            "src/Util/functions.php"
         ]
     },
     "autoload-dev": {
@@ -42,6 +42,6 @@
         "sort-packages": true
     },
     "scripts": {
-        "test": [ "@php -dextension=swow ../vendor/bin/phpunit" ]
+        "test": [ "@php -dextension=swow ../../vendor/bin/phpunit" ]
     }
 }

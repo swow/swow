@@ -1,0 +1,29 @@
+{
+    "name": "swow/php-stub-generator",
+    "description": "PHP extension stub generator",
+    "keywords": [
+        "swow",
+        "extension"
+    ],
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "twose",
+            "email": "twosee@php.net"
+        }
+    ],
+    "support": {
+        "issues": "https://github.com/swow/php-stub-generator"
+    },
+    "require": {
+        "php": ">=7.3"
+    },
+    "autoload": {
+        "psr-4": {
+            "Swow\\": "src/"
+        }
+    },
+    "config": {
+        "sort-packages": true
+    }
+}
