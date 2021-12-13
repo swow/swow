@@ -41,6 +41,7 @@ use function fopen;
 use function func_get_args;
 use function get_class;
 use function getenv;
+use function implode;
 use function is_array;
 use function is_bool;
 use function is_float;
@@ -65,6 +66,8 @@ use function trigger_error;
 use function trim;
 use function usleep;
 use const DEBUG_BACKTRACE_IGNORE_ARGS;
+use const E_USER_WARNING;
+use const JSON_THROW_ON_ERROR;
 use const PHP_EOL;
 use const PHP_VERSION_ID;
 use const Swow\Errno\ETIMEDOUT;
@@ -327,9 +330,8 @@ TEXT;
         if (PHP_VERSION_ID > 80000) {
             $coroutineDebugContext = static::getCoroutineDebugWeakMap()[$coroutine] ?? [];
             return $coroutineDebugContext[$field] ?? $defaultValue;
-        } else {
-            return $coroutine->$field ?? $defaultValue;
         }
+        return $coroutine->{$field} ?? $defaultValue;
     }
 
     public static function setDebugFieldOfCoroutine(Coroutine $coroutine, string $field, $value): void
@@ -341,7 +343,7 @@ TEXT;
             }
             $weakMap[$coroutine][$field] = $value;
         } else {
-            $coroutine->$field = $value;
+            $coroutine->{$field} = $value;
         }
     }
 
@@ -350,7 +352,7 @@ TEXT;
         if (PHP_VERSION_ID > 80000) {
             unset(static::getCoroutineDebugWeakMap()[$coroutine][$field]);
         } else {
-            unset($coroutine->$field);
+            unset($coroutine->{$field});
         }
     }
 
