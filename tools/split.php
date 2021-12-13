@@ -11,6 +11,7 @@ use function Swow\Tools\success;
 $repoInfo = [
     'swow-stub' => 'lib/swow-stub',
     'swow-library' => 'lib/swow-library',
+    'swow-examples' => 'examples',
     'php-stub-generator' => 'lib/php-stub-generator',
 ];
 
