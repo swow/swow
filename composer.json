@@ -62,7 +62,8 @@
         "test-extension": [ "@php tools/extension/test.php" ],
         "test-library": [ "@php -dextension=swow vendor/bin/phpunit --configuration lib/swow-library lib/swow-library" ],
         "test": [ "@test-extension", "@test-library" ],
-        "gen-stub": [ "@php -n -d extension=swow tools/stub/gen.php swow lib/swow-stub/src/Swow.php" ]
+        "gen-stub": [ "@php -n -d extension=swow tools/stub/gen.php swow lib/swow-stub/src/Swow.php" ],
+        "split": [ "@php -n tools/split.php" ]
     },
     "bin": [
         "tools/builder/swow-builder"
