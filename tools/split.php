@@ -14,6 +14,15 @@ $repoInfo = [
     'php-stub-generator' => 'lib/php-stub-generator',
 ];
 
+$specifiedRepoName = $argv[1] ?? null;
+if ($specifiedRepoName) {
+    $specifiedRepoPath = $repoInfo[$specifiedRepoName] ?? null;
+    if (!$specifiedRepoPath) {
+        error("A non-existent repo '{$specifiedRepoName}' is specified");
+    }
+    $repoInfo = [$specifiedRepoName => $specifiedRepoPath];
+}
+
 chdir($workspace = dirname(__DIR__));
 if (strpos(`splitsh-lite --version 2>&1` ?: '', 'splitsh-lite') === false) {
     error('splitsh-lite tool is unavailable');
