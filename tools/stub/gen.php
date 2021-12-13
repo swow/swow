@@ -3,7 +3,7 @@
 require __DIR__ . '/../autoload.php';
 
 use Swow\Coroutine;
-use Swow\Extension\StubGenerator;
+use Swow\StubGenerator;
 use Swow\Util\FileSystem;
 
 (function () {

@@ -47,7 +47,10 @@
     "autoload-dev": {
         "psr-4": {
             "SwowTest\\": "lib/swow-library/tests"
-        }
+        },
+        "classmap": [
+            "lib/php-stub-generator/src"
+        ]
     },
     "config": {
         "process-timeout": 0,

@@ -11,7 +11,7 @@
 
 declare(strict_types=1);
 
-namespace Swow\Extension;
+namespace Swow;
 
 use InvalidArgumentException;
 use ReflectionClass;

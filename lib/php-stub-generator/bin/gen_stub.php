@@ -14,7 +14,7 @@ declare(strict_types=1);
 
 require __DIR__ . '/StubGenerator.php';
 
-use Swow\Extension\StubGenerator;
+use Swow\StubGenerator;
 
 (function () {
     global $argv;
