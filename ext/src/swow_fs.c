@@ -263,9 +263,28 @@ static inline int swow_fs_fstat(int fd, zend_stat_t * statbuf){
 
 static inline int swow_fs_stat_mock(const char* path, zend_stat_t *statbuf, int use_lstat){
 #ifdef PHP_WIN32
-    // php7.3 donot have a stat function can be used in cat_work
-    // so we just use the original blocking version
-    return php_sys_stat_ex(path, statbuf, use_lstat);
+    size_t pathw_len;
+    LPCWSTR pathw = php_win32_ioutil_conv_any_to_w(path, PHP_WIN32_CP_IGNORE_LEN, &pathw_len);
+    if (!pathw) {
+        SET_ERRNO_FROM_WIN32_CODE(ERROR_INVALID_PARAMETER);
+        return -1;
+    }
+    struct _swow_fs_stat_ex_s *data = cat_malloc(sizeof(*data));
+    data->ret = -1;
+    data->pathw = pathw;
+    data->len = pathw_len;
+    data->statbuf = statbuf;
+    data->use_lstat = use_lstat;
+    if(!cat_work(
+        CAT_WORK_KIND_FAST_IO,
+        _swow_fs_stat_ex_cb,
+        _swow_fs_stat_ex_free,
+        data,
+        CAT_TIMEOUT_FOREVER)){
+        data->ret = -1;
+    }
+    UPDATE_ERRNO_FROM_CAT();
+    return data->ret;
 #else // PHP_WIN32
     // for unix-like
     // we use cat_fs_xstat then copy it
