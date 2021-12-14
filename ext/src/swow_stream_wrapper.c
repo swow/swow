@@ -25,13 +25,6 @@
 #include "swow.h"
 #include "swow_stream.h"
 
-// shim for php 7.3
-#if PHP_VERSION_ID < 70400
-# define swow_ssize_t size_t
-#else
-# define swow_ssize_t ssize_t
-#endif // PHP_VERSION_ID < 70400
-
 static php_stream_ops modified_ops = { 0 };
 static php_stream_ops modified_dir_ops = { 0 };
 // holder for phar_ops
@@ -55,16 +48,16 @@ do {\
 }while(0)
 
 // stream ops proxies
-swow_ssize_t swow_proxy_write(php_stream *stream, const char *buf, size_t count){
+ssize_t swow_proxy_write(php_stream *stream, const char *buf, size_t count){
     SWOW_UNHOOK(ZEND_ASSERT(orig_ops););
-    swow_ssize_t ret = orig_ops->write(stream, buf, count);
+    ssize_t ret = orig_ops->write(stream, buf, count);
     SWOW_REHOOK();
     return ret;
 }
 
-swow_ssize_t swow_proxy_read(php_stream *stream, char *buf, size_t count){
+ssize_t swow_proxy_read(php_stream *stream, char *buf, size_t count){
     SWOW_UNHOOK(ZEND_ASSERT(orig_ops););
-    swow_ssize_t ret = orig_ops->read(stream, buf, count);
+    ssize_t ret = orig_ops->read(stream, buf, count);
     SWOW_REHOOK();
     return ret;
 }
@@ -118,16 +111,16 @@ int swow_proxy_set_option(php_stream *stream, int option, int value, void *ptrpa
 */
 
 // stream dir ops proxies
-swow_ssize_t swow_proxy_dir_write(php_stream *stream, const char *buf, size_t count){
+ssize_t swow_proxy_dir_write(php_stream *stream, const char *buf, size_t count){
     SWOW_UNHOOK(ZEND_ASSERT(orig_dir_ops););
-    swow_ssize_t ret = orig_dir_ops->write(stream, buf, count);
+    ssize_t ret = orig_dir_ops->write(stream, buf, count);
     SWOW_REHOOK();
     return ret;
 }
 
-swow_ssize_t swow_proxy_dir_read(php_stream *stream, char *buf, size_t count){
+ssize_t swow_proxy_dir_read(php_stream *stream, char *buf, size_t count){
     SWOW_UNHOOK(ZEND_ASSERT(orig_dir_ops););
-    swow_ssize_t ret = orig_dir_ops->read(stream, buf, count);
+    ssize_t ret = orig_dir_ops->read(stream, buf, count);
     SWOW_REHOOK();
     return ret;
 }

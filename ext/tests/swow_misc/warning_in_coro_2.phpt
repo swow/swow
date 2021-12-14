@@ -16,9 +16,7 @@ $wr = new WaitReference();
 
 Coroutine::run(function () use ($wr) {
     // E_DEPRECATED
-    if (PHP_VERSION_ID < 70400) {
-        assert('(function(){return true;})()');
-    } elseif (PHP_VERSION_ID < 80200) {
+    if (PHP_VERSION_ID < 80200) {
         hexdec('bad_arg-1');
     }
     // E_NOTICE

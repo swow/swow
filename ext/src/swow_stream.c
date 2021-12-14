@@ -42,14 +42,6 @@ CAT_GLOBALS_CTOR_DECLARE_SZ(swow_stream)
 
 /* $Id: f078bca729f4ab1bc2d60370e83bfa561f86b88d $ */
 
-#if PHP_VERSION_ID < 70400
-#define bytes_t size_t
-#define PHP_STREAM_SOCKET_RETURN_ERR 0
-#else
-#define bytes_t ssize_t
-#define PHP_STREAM_SOCKET_RETURN_ERR -1
-#endif
-
 #ifdef CAT_SSL
 typedef struct swow_netstream_ssl_s {
     zend_bool enable_on_connect;
@@ -104,7 +96,7 @@ typedef struct swow_netstream_data_s {
 #define HAVE_TLS12 1
 #endif
 
-#if OPENSSL_VERSION_NUMBER >= 0x10101000 && !defined(OPENSSL_NO_TLS1_3) && PHP_VERSION_ID >= 70400
+#if OPENSSL_VERSION_NUMBER >= 0x10101000 && !defined(OPENSSL_NO_TLS1_3)
 #define HAVE_TLS13 1
 #endif
 
@@ -138,14 +130,6 @@ typedef struct swow_netstream_data_s {
     (PHP_STREAM_CONTEXT(stream) && \
     (val = php_stream_context_get_option(PHP_STREAM_CONTEXT(stream), "ssl", name)) != NULL)
 
-#if PHP_VERSION_ID < 70400
-#define GET_VER_OPT_STRING(name, str) do { \
-    if (GET_VER_OPT(name)) { \
-        convert_to_string_ex(val); \
-        str = Z_STRVAL_P(val); \
-    } \
-} while (0)
-#else
 #define GET_VER_OPT_STRING(name, str) do { \
     if (GET_VER_OPT(name)) { \
         if (try_convert_to_string(val)) { \
@@ -153,7 +137,6 @@ typedef struct swow_netstream_data_s {
         } \
     } \
 } while (0)
-#endif
 
 #define GET_VER_OPT_LONG(name, num) do { \
     if (GET_VER_OPT(name)) { \
@@ -638,7 +621,7 @@ static int swow_stream_connect(php_stream *stream, swow_netstream_data_t *swow_s
             return -1;
         }
         bind_host = swow_stream_parse_ip_address_ex(Z_STRVAL_P(ztmp), Z_STRLEN_P(ztmp), &bind_port, xparam->want_errortext, &xparam->outputs.error_text);
-#if PHP_VERSION_ID < 70323 || (PHP_VERSION_ID < 70411 || PHP_VERSION_ID >= 70400)
+#if PHP_VERSION_ID < 70411
         if (bind_host == NULL) {
             efree(host);
             return -1;
@@ -1021,7 +1004,7 @@ static int swow_stream_set_tcp_option(php_stream *stream, int option, int value,
     return swow_stream_set_option(stream, option, value, ptrparam);
 }
 
-static bytes_t swow_stream_read(php_stream *stream, char *buffer, size_t size)
+static ssize_t swow_stream_read(php_stream *stream, char *buffer, size_t size)
 {
     SWOW_STREAM_SOCKET_GETTER(stream, swow_sock, sock, socket, return 0);
     ssize_t nr_bytes = 0;
@@ -1048,7 +1031,7 @@ static bytes_t swow_stream_read(php_stream *stream, char *buffer, size_t size)
         if (sock->timeout_event) {
             nr_bytes = 0;
         } else {
-            nr_bytes = PHP_STREAM_SOCKET_RETURN_ERR;
+            nr_bytes = -1;
         }
     } else {
         stream->eof = 1;
@@ -1057,7 +1040,7 @@ static bytes_t swow_stream_read(php_stream *stream, char *buffer, size_t size)
     return nr_bytes;
 }
 
-static bytes_t swow_stream_write(php_stream *stream, const char *buffer, size_t length)
+static ssize_t swow_stream_write(php_stream *stream, const char *buffer, size_t length)
 {
     SWOW_STREAM_SOCKET_GETTER(stream, swow_sock, sock, socket, return 0);
     ssize_t didwrite;
@@ -1087,7 +1070,7 @@ static bytes_t swow_stream_write(php_stream *stream, const char *buffer, size_t 
             );
         }
         sock->timeout_event = (error == CAT_ETIMEDOUT);
-        return PHP_STREAM_SOCKET_RETURN_ERR;
+        return -1;
     }
 
     php_stream_notify_progress_increment(PHP_STREAM_CONTEXT(stream), didwrite, 0);
@@ -1311,7 +1294,7 @@ SWOW_API php_stream_wrapper swow_plain_files_wrapper_sync;
 extern SWOW_API const php_stream_wrapper swow_plain_files_wrapper_async; // in swow_fs.c
 
 // plain stream operators proxies
-static bytes_t swow_stream_stdio_proxy_read(php_stream *stream, char *buffer, size_t size)
+static ssize_t swow_stream_stdio_proxy_read(php_stream *stream, char *buffer, size_t size)
 {
     cat_socket_t *socket;
 
@@ -1327,7 +1310,7 @@ static bytes_t swow_stream_stdio_proxy_read(php_stream *stream, char *buffer, si
     return cat_socket_recv(socket, buffer, size);
 }
 
-static bytes_t swow_stream_stdio_proxy_write(php_stream *stream, const char *buffer, size_t length)
+static ssize_t swow_stream_stdio_proxy_write(php_stream *stream, const char *buffer, size_t length)
 {
     cat_socket_t *socket = swow_stream_stdio_init(stream);
     cat_bool_t ret;

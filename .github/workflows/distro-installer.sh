@@ -52,7 +52,7 @@ installdnf()
     if [ "$openssl_ver" = "3" ] && [ "${SUPPORTS_OPENSSL3}" != "yes" ]
     then
         # rawhide is now using openssl 3
-        # so it's need to be downgraded when building php 7.3-8.0
+        # so it's need to be downgraded when building php 7.4-8.0
         openssl_pkg="openssl1.1-devel"
     fi
     dnf groupinstall -yy "Development Tools"

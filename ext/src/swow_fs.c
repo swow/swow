@@ -35,13 +35,6 @@
 #include "cat_work.h"
 #include "cat_time.h"
 
-// shim for php 7.3
-#if PHP_VERSION_ID < 70400
-# define swow_ssize_t size_t
-#else
-# define swow_ssize_t ssize_t
-#endif // PHP_VERSION_ID < 70400
-
 // from main/streams/plain_wrapper.c @ aec08cc841a436a9a28468ce420e2f39adc3515a
 
 #include "php.h"
@@ -206,7 +199,7 @@ static inline cat_dirent_t* swow_fs_readdir(cat_dir_t * dir){
 #define swow_fs_readdir cat_fs_readdir
 #endif
 
-#if defined(PHP_WIN32) && PHP_VERSION_ID >= 70400
+#ifdef PHP_WIN32
 // for junctions:
 // uv will return 0o120666 for directory junctions' st_mode
 // while php_win32_ioutil_stat_ex_w returns 0
@@ -270,12 +263,6 @@ static inline int swow_fs_fstat(int fd, zend_stat_t * statbuf){
 
 static inline int swow_fs_stat_mock(const char* path, zend_stat_t *statbuf, int use_lstat){
 #ifdef PHP_WIN32
-# if PHP_VERSION_ID < 70400
-    // php7.3 donot have a stat function can be used in cat_work
-    // so we just use the original blocking version
-    return php_sys_stat_ex(path, statbuf, use_lstat);
-# else
-    // php7.4+ use cat_work
     size_t pathw_len;
     LPCWSTR pathw = php_win32_ioutil_conv_any_to_w(path, PHP_WIN32_CP_IGNORE_LEN, &pathw_len);
     if (!pathw) {
@@ -298,7 +285,6 @@ static inline int swow_fs_stat_mock(const char* path, zend_stat_t *statbuf, int 
     }
     UPDATE_ERRNO_FROM_CAT();
     return data->ret;
-# endif // PHP_VERSION_ID < 70400
 #else // PHP_WIN32
     // for unix-like
     // we use cat_fs_xstat then copy it
@@ -999,12 +985,7 @@ static php_stream *_swow_stream_fopen_from_fd(int fd, const char *mode, const ch
         swow_stdio_stream_data *self = (swow_stdio_stream_data*)stream->abstract;
 
         detect_is_seekable(self);
-#if PHP_VERSION_ID < 70400
-        if (self->is_pipe)
-#else
-        if (!self->is_seekable)
-#endif
-        {
+        if (!self->is_seekable) {
             stream->flags |= PHP_STREAM_FLAG_NO_SEEK;
             stream->position = -1;
         } else {
@@ -1031,12 +1012,7 @@ SWOW_API php_stream *_swow_stream_fopen_from_file(FILE *file, const char *mode S
         swow_stdio_stream_data *self = (swow_stdio_stream_data*)stream->abstract;
 
         detect_is_seekable(self);
-#if PHP_VERSION_ID < 70400
-        if (self->is_pipe)
-#else
-        if (!self->is_seekable)
-#endif
-        {
+        if (!self->is_seekable) {
             stream->flags |= PHP_STREAM_FLAG_NO_SEEK;
             stream->position = -1;
         } else {
@@ -1070,24 +1046,16 @@ SWOW_API php_stream *_swow_stream_fopen_from_pipe(FILE *file, const char *mode S
     return stream;
 }
 
-static swow_ssize_t swow_stdiop_fs_write(php_stream *stream, const char *buf, size_t count)
+static ssize_t swow_stdiop_fs_write(php_stream *stream, const char *buf, size_t count)
 {
     swow_stdio_stream_data *data = (swow_stdio_stream_data*)stream->abstract;
 
     assert(data != NULL);
 
     if (data->fd >= 0) {
-#if PHP_VERSION_ID < 70400
-        int bytes_written = cat_fs_write(data->fd, buf, count);
-#else
         ssize_t bytes_written = cat_fs_write(data->fd, buf, count);
-#endif
         UPDATE_ERRNO_FROM_CAT();
-        if (bytes_written < 0)
-#if PHP_VERSION_ID < 70400
-            return 0;
-#else
-        {
+        if (bytes_written < 0) {
             cat_errno_t cat_errno = cat_get_last_error_code();
             if (cat_errno == CAT_EAGAIN) {
                 return 0;
@@ -1104,26 +1072,20 @@ static swow_ssize_t swow_stdiop_fs_write(php_stream *stream, const char *buf, si
             }
 # endif // PHP_VERSION_ID < 80000
         }
-#endif // PHP_VERSION_ID < 70400
-        return (swow_ssize_t) bytes_written;
+        return (ssize_t) bytes_written;
     } else {
 
 #ifdef HAVE_FLUSHIO
-# if PHP_VERSION_ID < 70400
-        if (!data->is_pipe && data->last_op == 'r')
-# else
-        if (data->is_seekable && data->last_op == 'r')
-# endif // PHP_VERSION_ID < 70400
-        {
+        if (data->is_seekable && data->last_op == 'r') {
             cat_fs_fseek(data->file, 0, SEEK_CUR);
         }
         data->last_op = 'w';
 #endif // HAVE_FLUSHIO
-        return (swow_ssize_t) cat_fs_fwrite(buf, 1, count, data->file);
+        return (ssize_t) cat_fs_fwrite(buf, 1, count, data->file);
     }
 }
 
-static swow_ssize_t swow_stdiop_fs_read(php_stream *stream, char *buf, size_t count)
+static ssize_t swow_stdiop_fs_read(php_stream *stream, char *buf, size_t count)
 {
     swow_stdio_stream_data *data = (swow_stdio_stream_data*) stream->abstract;
     ssize_t ret;
@@ -1169,9 +1131,6 @@ static swow_ssize_t swow_stdiop_fs_read(php_stream *stream, char *buf, size_t co
         UPDATE_ERRNO_FROM_CAT();
         cat_errno_t cat_errno = cat_get_last_error_code();
 
-#if PHP_VERSION_ID < 70400
-        stream->eof = (ret == 0 || (ret == -1 && cat_errno != CAT_EAGAIN && cat_errno != CAT_EINTR && cat_errno != CAT_EBADF));
-#else
         if (ret < 0) {
             if (cat_errno == CAT_EAGAIN) {
                 /* Not an error. */
@@ -1195,22 +1154,18 @@ static swow_ssize_t swow_stdiop_fs_read(php_stream *stream, char *buf, size_t co
         } else if (ret == 0) {
             stream->eof = 1;
         }
-#endif // PHP_VERSION_ID < 70400
     } else {
 #ifdef HAVE_FLUSHIO
-#if PHP_VERSION_ID < 70400
-        if (!data->is_pipe && data->last_op == 'w')
-#else
-        if (data->is_seekable && data->last_op == 'w')
-#endif
+        if (data->is_seekable && data->last_op == 'w') {
             cat_fs_fseek(data->file, 0, SEEK_CUR);
+        }
         data->last_op = 'r';
 #endif
         ret = cat_fs_fread(buf, 1, count, data->file);
 
         stream->eof = feof(data->file);
     }
-    return (swow_ssize_t) ret;
+    return (ssize_t) ret;
 }
 
 static int swow_stdiop_fs_close(php_stream *stream, int close_handle)
@@ -1322,12 +1277,7 @@ static int swow_stdiop_fs_seek(php_stream *stream, zend_off_t offset, int whence
 
     assert(data != NULL);
 
-#if PHP_VERSION_ID < 70400
-    if (data->is_pipe)
-#else
-    if (!data->is_seekable)
-#endif
-    {
+    if (!data->is_seekable) {
 #if PHP_VERSION_ID < 80000
         php_error_docref(NULL, E_WARNING, "cannot seek on this stream");
 #else
@@ -1745,7 +1695,7 @@ SWOW_API const php_stream_ops swow_stream_stdio_ops_async = {
 /* }}} */
 
 /* {{{ plain files opendir/readdir implementation */
-static swow_ssize_t swow_plain_files_dirstream_read(php_stream *stream, char *buf, size_t count)
+static ssize_t swow_plain_files_dirstream_read(php_stream *stream, char *buf, size_t count)
 {
     cat_dir_t *dir = (cat_dir_t *)stream->abstract;
     cat_dirent_t *result;
@@ -1753,11 +1703,7 @@ static swow_ssize_t swow_plain_files_dirstream_read(php_stream *stream, char *bu
 
     /* avoid problems if someone mis-uses the stream */
     if (count != sizeof(php_stream_dirent)){
-#if PHP_VERSION_ID < 70400
-        return 0;
-#else
         return -1;
-#endif
     }
 
     result = swow_fs_readdir(dir);
@@ -1795,10 +1741,7 @@ static const php_stream_ops swow_plain_files_dirstream_ops_async = {
 };
 
 #if defined(PHP_WIN32)
-# if PHP_VERSION_ID < 70400
-// no docref1
-#  define swow_php_win32_docref1_from_error(le, arg) php_win32_docref2_from_error(le, arg, arg);
-# elif PHP_VERSION_ID < 80100
+# if PHP_VERSION_ID < 80100
 // using shim
 static ZEND_COLD void swow_php_win32_docref1_from_error(DWORD error, const char *param1) {
     static void (*orig)(DWORD, const char *) = swow_php_win32_docref1_from_error;

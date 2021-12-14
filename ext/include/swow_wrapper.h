@@ -44,50 +44,6 @@ extern "C" {
 void swow_wrapper_init(void);
 void swow_wrapper_shutdown(void);
 
-/* PHP 7.3 compatibility macro {{{*/
-#ifndef GC_ADD_FLAGS
-#define GC_ADD_FLAGS(p, flags) do { \
-    GC_FLAGS(p) |= (flags); \
-} while (0)
-#endif
-
-#ifndef GC_DEL_FLAGS
-#define GC_DEL_FLAGS(p, flags) do { \
-    GC_FLAGS(p) &= ~(flags); \
-} while (0)
-#endif
-
-#ifndef GC_SET_REFCOUNT
-#define GC_SET_REFCOUNT(p, rc) do { \
-    GC_REFCOUNT(p) = rc; \
-} while (0)
-#endif
-
-#ifndef GC_ADDREF
-#define GC_ADDREF(ref) (++GC_REFCOUNT(ref))
-#define GC_DELREF(ref) (--GC_REFCOUNT(ref))
-#endif
-
-#ifndef GC_IS_RECURSIVE
-#define GC_IS_RECURSIVE(p) \
-    (ZEND_HASH_GET_APPLY_COUNT(p) >= 1)
-#define GC_PROTECT_RECURSION(p) \
-    ZEND_HASH_INC_APPLY_COUNT(p)
-#define GC_UNPROTECT_RECURSION(p) \
-    ZEND_HASH_DEC_APPLY_COUNT(p)
-#endif
-
-#ifndef ZEND_CLOSURE_OBJECT
-#define ZEND_CLOSURE_OBJECT(func) ((zend_object *) func->op_array.prototype)
-#endif
-
-#ifndef ZEND_PARSE_PARAMETERS_NONE
-#define ZEND_PARSE_PARAMETERS_NONE() \
-        ZEND_PARSE_PARAMETERS_START(0, 0) \
-        ZEND_PARSE_PARAMETERS_END()
-#endif
-/* }}} */
-
 /* PHP 7.4 compatibility macro {{{*/
 #ifndef ZEND_COMPILE_EXTENDED_INFO
 #define ZEND_COMPILE_EXTENDED_INFO ZEND_COMPILE_EXTENDED_STMT

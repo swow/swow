@@ -114,7 +114,7 @@ PHP异步网络编程技术的奠基者Swoole早期就尝试了异步回调模�
 ### 编译需求
 
 - Linux、 Windows、macOS等常见操作系统（与[libuv](https://github.com/libuv/libuv/blob/v1.x/SUPPORTED_PLATFORMS.md)一致）
-- PHP 7.3.0 或以上版本，推荐使用PHP 8+ (版本越高性能越好)
+- PHP 7.4.0 或以上版本，推荐使用PHP 8+ (版本越高性能越好)
 
 #### Composer安装
 
@@ -192,6 +192,6 @@ Swow的[PHP源代码](lib/src/Swow)也是良好的示例，Swow是为PHP语言�
 [release-badge]: https://img.shields.io/github/release/swow/swow.svg?style=flat-square
 [release-link]: https://github.com/swow/swow/releases
 [made-with-love-badge]: https://img.shields.io/badge/made%20with-%E2%9D%A4-f00
-[supported-php-versions-badge]: https://img.shields.io/badge/php-7.3--8.2-royalblue.svg
+[supported-php-versions-badge]: https://img.shields.io/badge/php-7.4--8.2-royalblue.svg
 [supported-platforms-badge]: https://img.shields.io/badge/platform-Win32%20|%20GNU/Linux%20|%20macOS%20|%20FreeBSD%20-gold
 [supported-architectures-badge]: https://img.shields.io/badge/architecture-x86--64%20|%20ARM64%20|%20mips64el%20|%20riscv64%20-maroon
