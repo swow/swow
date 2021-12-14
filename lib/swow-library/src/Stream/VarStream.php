@@ -14,19 +14,20 @@ declare(strict_types=1);
 namespace Swow\Stream;
 
 use Swow\Pack\Format;
+use Swow\Socket;
 use function serialize;
 use function unserialize;
 
 class VarStream extends LengthStream
 {
-    public function __construct(int $type = EofStream::TYPE_TCP)
+    public function __construct(int $type = Socket::TYPE_TCP)
     {
         parent::__construct(Format::UINT32_BE, $type);
     }
 
     public function recvVar(array $options = [], ?int $timeout = null)
     {
-        $serializedString = parent::recvMessageString($timeout);
+        $serializedString = $this->recvMessageString($timeout);
 
         return unserialize($serializedString, $options);
     }

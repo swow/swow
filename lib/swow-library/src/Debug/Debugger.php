@@ -87,52 +87,52 @@ TEXT;
     protected const SOURCE_FILE_DEFAULT_LINE_COUNT = 8;
 
     /* @var bool */
-    private static $breakPointHandlerRegistered = false;
+    private static bool $breakPointHandlerRegistered = false;
 
     /* @var $this */
-    protected static $instance;
+    protected static Debugger $instance;
 
     /* @var bool */
-    protected static $useMbString;
+    protected static bool $useMbString;
 
     /* @var WeakMap */
     protected static $coroutineDebugWeakMap;
 
     /* @var Socket */
-    protected $input;
+    protected Socket $input;
 
     /* @var Socket */
-    protected $output;
+    protected Socket $output;
 
     /* @var Socket */
-    protected $error;
+    protected Socket $error;
 
     /* @var bool */
-    protected $reloading;
+    protected bool $reloading;
 
     /* @var callable */
     protected $sourcePositionHandler;
 
     /* @var string */
-    protected $lastCommand = '';
+    protected string $lastCommand = '';
 
     /* @var Coroutine */
-    protected $currentCoroutine;
+    protected Coroutine $currentCoroutine;
 
     /* @var int */
-    protected $currentFrameIndex = 0;
+    protected int $currentFrameIndex = 0;
 
     /* @var SplFileObject */
-    protected $currentSourceFile;
+    protected SplFileObject $currentSourceFile;
 
     /* @var int */
-    protected $currentSourceFileLine = 0;
+    protected int $currentSourceFileLine = 0;
 
     /* @var bool */
-    protected $breakPointHandlerEnabled = false;
+    protected bool $breakPointHandlerEnabled = false;
 
     /* @var string[] */
-    protected $breakPoints = [];
+    protected array $breakPoints = [];
 
     /**
      * @return $this
@@ -1227,7 +1227,7 @@ TEXT;
     public static function showExecutedSourceLines(bool $all = false): void
     {
         if ($all) {
-            $handler = function () {
+            $handler = static function () {
                 static $lastFile;
                 $call = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 1)[0];
                 ['file' => $file, 'line' => $line] = $call;
@@ -1251,7 +1251,7 @@ TEXT;
                 $lines[] = rtrim($line);
             }
             fclose($fp);
-            $handler = function () use ($file, $lines) {
+            $handler = static function () use ($file, $lines) {
                 $call = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 1)[0];
                 $callFile = $call['file'];
                 $callLine = $call['line'];

@@ -15,13 +15,7 @@ namespace Swow\Http;
 
 class RawResponse extends RawResult
 {
-    /**
-     * @var int
-     */
-    public $statusCode = 0;
+    public int $statusCode = 0;
 
-    /**
-     * @var string
-     */
-    public $reasonPhrase = '';
+    public string $reasonPhrase = '';
 }

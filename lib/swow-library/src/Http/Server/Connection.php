@@ -131,7 +131,7 @@ class Connection extends Socket implements HttpTypeInterface
         return $headers;
     }
 
-    public function respond(...$args)
+    public function respond(...$args): void
     {
         switch ($this->type) {
             case static::TYPE_HTTP:
@@ -160,7 +160,7 @@ class Connection extends Socket implements HttpTypeInterface
         }
     }
 
-    public function error(int $code, string $message = '')
+    public function error(int $code, string $message = ''): void
     {
         switch ($this->type) {
             case static::TYPE_HTTP:

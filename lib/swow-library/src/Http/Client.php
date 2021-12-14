@@ -47,7 +47,7 @@ class Client extends Socket implements ClientInterface, HttpTypeInterface
         HttpParser::EVENT_BODY |
         HttpParser::EVENT_MESSAGE_COMPLETE;
 
-    protected $host;
+    protected string $host = '';
 
     public function __construct(int $type = Socket::TYPE_TCP)
     {

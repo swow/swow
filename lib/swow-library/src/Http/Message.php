@@ -23,28 +23,19 @@ class Message implements MessageInterface
 {
     public const DEFAULT_PROTOCOL_VERSION = '1.1';
 
-    /**
-     * @var string
-     */
-    protected $protocolVersion = self::DEFAULT_PROTOCOL_VERSION;
+    protected string $protocolVersion = self::DEFAULT_PROTOCOL_VERSION;
 
     /**
      * @var string[][]
      */
-    protected $headers = [];
+    protected array $headers = [];
+
+    protected ?array $headerNames = null;
+
+    protected bool $keepAlive = true;
 
     /**
-     * @var null|array
-     */
-    protected $headerNames;
-
-    /**
-     * @var bool
-     */
-    protected $keepAlive = true;
-
-    /**
-     * @var Buffer
+     * @var null|Buffer|string
      */
     protected $body;
 
@@ -52,7 +43,7 @@ class Message implements MessageInterface
      * @param array $headers Request headers
      * @param null|Buffer|string $body Request body
      */
-    public function __construct(array $headers = [], $body = '', string $protocolVersion = self::DEFAULT_PROTOCOL_VERSION)
+    public function __construct(array $headers = [], $body = null, string $protocolVersion = self::DEFAULT_PROTOCOL_VERSION)
     {
         $this->setProtocolVersion($protocolVersion);
 
@@ -82,7 +73,8 @@ class Message implements MessageInterface
     }
 
     /**
-     * @param string $protocolVersion
+     * @param $protocolVersion
+     *
      * @return $this
      */
     public function withProtocolVersion($protocolVersion)

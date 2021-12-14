@@ -15,10 +15,7 @@ namespace Swow\Http\Server;
 
 class Response extends \Swow\Http\Response
 {
-    /**
-     * @var array
-     */
-    protected $headers = ['Server' => 'swow'];
+    protected array $headers = ['Server' => 'swow'];
 
     /**
      * @return $this

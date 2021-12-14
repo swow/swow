@@ -17,8 +17,7 @@ use const PHP_INT_MAX;
 
 trait MaxMessageLengthTrait
 {
-    /** @var int */
-    protected $maxMessageLength = PHP_INT_MAX;
+    protected int $maxMessageLength = PHP_INT_MAX;
 
     public function getMaxMessageLength(): int
     {
