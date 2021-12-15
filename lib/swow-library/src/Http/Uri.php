@@ -46,7 +46,7 @@ class Uri implements UriInterface
     /**
      * @var null|int uri port
      */
-    protected ?int $port;
+    protected ?int $port = null;
 
     /**
      * @var string uri path

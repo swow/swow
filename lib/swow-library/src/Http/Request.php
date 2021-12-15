@@ -32,7 +32,7 @@ class Request extends Message implements RequestInterface
 
     protected string $uriString = '';
 
-    protected ?string $requestTarget;
+    protected ?string $requestTarget = null;
 
     /**
      * @param string $method HTTP method

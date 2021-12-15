@@ -30,7 +30,7 @@ class ServerRequest extends Request implements ServerRequestInterface
      */
     protected const PRESERVE_HOST = true;
 
-    protected array $serverParams;
+    protected array $serverParams = [];
 
     protected array $cookieParams = [];
 
