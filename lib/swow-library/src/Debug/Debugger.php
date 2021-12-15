@@ -86,49 +86,35 @@ TEXT;
 
     protected const SOURCE_FILE_DEFAULT_LINE_COUNT = 8;
 
-    /* @var bool */
     private static bool $breakPointHandlerRegistered = false;
 
-    /* @var $this */
     protected static Debugger $instance;
 
-    /* @var bool */
     protected static bool $useMbString;
 
-    /* @var WeakMap */
     protected static $coroutineDebugWeakMap;
 
-    /* @var Socket */
     protected Socket $input;
 
-    /* @var Socket */
     protected Socket $output;
 
-    /* @var Socket */
     protected Socket $error;
 
-    /* @var bool */
     protected bool $reloading;
 
     /* @var callable */
     protected $sourcePositionHandler;
 
-    /* @var string */
     protected string $lastCommand = '';
 
-    /* @var Coroutine */
     protected Coroutine $currentCoroutine;
 
-    /* @var int */
     protected int $currentFrameIndex = 0;
 
-    /* @var SplFileObject */
     protected SplFileObject $currentSourceFile;
 
-    /* @var int */
     protected int $currentSourceFileLine = 0;
 
-    /* @var bool */
     protected bool $breakPointHandlerEnabled = false;
 
     /* @var string[] */
@@ -1227,7 +1213,7 @@ TEXT;
     public static function showExecutedSourceLines(bool $all = false): void
     {
         if ($all) {
-            $handler = static function () {
+            $handler = function () {
                 static $lastFile;
                 $call = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 1)[0];
                 ['file' => $file, 'line' => $line] = $call;
@@ -1251,7 +1237,7 @@ TEXT;
                 $lines[] = rtrim($line);
             }
             fclose($fp);
-            $handler = static function () use ($file, $lines) {
+            $handler = function () use ($file, $lines) {
                 $call = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 1)[0];
                 $callFile = $call['file'];
                 $callLine = $call['line'];

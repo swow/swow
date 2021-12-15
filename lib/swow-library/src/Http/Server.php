@@ -23,9 +23,6 @@ class Server extends Socket
 {
     use ConfigTrait;
 
-    /**
-     * @var Connection[]
-     */
     protected array $connections = [];
 
     public function __construct()

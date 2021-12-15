@@ -15,9 +15,6 @@ namespace Swow\Http;
 
 class RawResult
 {
-    /**
-     * @var string[][]
-     */
     public array $headers = [];
 
     /**

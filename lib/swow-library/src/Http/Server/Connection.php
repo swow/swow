@@ -51,10 +51,7 @@ class Connection extends Socket implements HttpTypeInterface
 
     /* TODO: support chunk transfer encoding */
 
-    /**
-     * @var Server
-     */
-    protected $server;
+    protected ?Server $server = null;
 
     /**
      * @noinspection PhpMissingParentConstructorInspection
@@ -69,9 +66,6 @@ class Connection extends Socket implements HttpTypeInterface
         return $this->server;
     }
 
-    /**
-     * @return $this
-     */
     public function setServer(Server $server)
     {
         $this->server = $server;

@@ -25,9 +25,6 @@ class Message implements MessageInterface
 
     protected string $protocolVersion = self::DEFAULT_PROTOCOL_VERSION;
 
-    /**
-     * @var string[][]
-     */
     protected array $headers = [];
 
     protected ?array $headerNames = null;
