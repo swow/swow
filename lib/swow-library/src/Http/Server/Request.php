@@ -26,7 +26,7 @@ class Request extends \Swow\Http\ServerRequest
     /**
      * @var null|array
      */
-    protected $queryParams;
+    protected array $queryParams;
 
     protected bool $upgrade;
 

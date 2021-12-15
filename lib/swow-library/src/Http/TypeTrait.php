@@ -15,10 +15,7 @@ namespace Swow\Http;
 
 trait TypeTrait
 {
-    /**
-     * @var int
-     */
-    protected $type = self::TYPE_HTTP;
+    protected int $type = self::TYPE_HTTP;
 
     protected function upgraded(int $type): void
     {
