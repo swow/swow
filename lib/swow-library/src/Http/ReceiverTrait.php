@@ -24,10 +24,7 @@ trait ReceiverTrait
 {
     protected Buffer $buffer;
 
-    /**
-     * @var HttpParser
-     */
-    protected Parser $httpParser;
+    protected ?Parser $httpParser;
 
     protected int $maxBufferSize;
 
