@@ -29,7 +29,7 @@ class LengthStream extends Socket
 
     use MaxMessageLengthTrait;
 
-    public function __construct(string $format = Format::UINT32_BE, int $type = Socket::TYPE_TCP)
+    public function __construct(string $format = Format::UINT32_BE, int $type = self::TYPE_TCP)
     {
         if (!($type & Socket::TYPE_FLAG_STREAM)) {
             throw new InvalidArgumentException('Socket type should be a kind of streams');

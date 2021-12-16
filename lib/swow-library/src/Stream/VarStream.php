@@ -20,7 +20,7 @@ use function unserialize;
 
 class VarStream extends LengthStream
 {
-    public function __construct(int $type = Socket::TYPE_TCP)
+    public function __construct(int $type = self::TYPE_TCP)
     {
         parent::__construct(Format::UINT32_BE, $type);
     }

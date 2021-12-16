@@ -28,7 +28,7 @@ class Request extends Message implements RequestInterface
     /**
      * @var null|Uri|UriInterface
      */
-    private $uri;
+    protected $uri;
 
     protected string $uriString = '';
 
