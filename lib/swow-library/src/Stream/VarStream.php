@@ -14,7 +14,6 @@ declare(strict_types=1);
 namespace Swow\Stream;
 
 use Swow\Pack\Format;
-use Swow\Socket;
 use function serialize;
 use function unserialize;
 
