@@ -46,7 +46,6 @@ use function is_array;
 use function is_bool;
 use function is_float;
 use function is_int;
-use function is_null;
 use function is_numeric;
 use function is_object;
 use function is_string;
@@ -482,7 +481,7 @@ TEXT;
             case is_int($value):
             case is_float($value):
                 return (string) $value;
-            case is_null($value):
+            case $value === null:
                 return 'null';
             case is_bool($value):
                 return $value ? 'true' : 'false';
