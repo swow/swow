@@ -92,7 +92,7 @@ TEXT;
 
     protected static bool $useMbString;
 
-    protected static $coroutineDebugWeakMap;
+    protected static WeakMap $coroutineDebugWeakMap;
 
     protected Socket $input;
 

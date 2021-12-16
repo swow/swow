@@ -20,9 +20,9 @@ use function error_get_last;
 
 class IOException extends Exception
 {
-    protected $path;
+    protected string $path;
 
-    public function __construct(string $message, int $code = 0, Throwable $previous = null, string $path = null)
+    public function __construct(string $message, int $code = 0, Throwable $previous = null, string $path = 'Unknown')
     {
         $this->path = $path;
 

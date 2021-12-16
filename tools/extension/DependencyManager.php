@@ -105,7 +105,7 @@ class DependencyManager
         return $version;
     }
 
-    protected static $sysTmpDir;
+    protected static string $sysTmpDir;
 
     protected static function getSysTmpDir(): string
     {

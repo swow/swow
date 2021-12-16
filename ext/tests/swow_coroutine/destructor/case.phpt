@@ -31,8 +31,9 @@ $o2 = new class {
 }; // Notice: o2 will be bound to coroutine#2
 
 Coroutine::run(function () use ($wr, $o2) {
+    /** @noinspection PhpUnusedLocalVariableInspection */
     $sleeper = new class(Coroutine::getCurrent()->getPrevious()) {
-        public $coroutine;
+        public Coroutine $coroutine;
 
         public function __construct(Coroutine $coroutine)
         {

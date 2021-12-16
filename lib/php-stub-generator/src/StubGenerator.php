@@ -70,17 +70,14 @@ class StubGenerator
         ReflectionProperty::IS_PRIVATE | ReflectionProperty::IS_STATIC => 'private static',
     ];
 
-    /** @var string */
-    protected $extension;
+    protected ReflectionExtension $extension;
 
-    /** @var array */
-    protected $constantMap;
+    protected array $constantMap;
 
     /** @var callable */
     protected $functionFormatHandler;
 
-    /** @var bool */
-    protected $noinspection = false;
+    protected bool $noinspection = false;
 
     public function __construct(string $extensionName)
     {

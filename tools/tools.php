@@ -166,7 +166,7 @@ function defer(&$any, callable $callback)
 {
     if (!$any) {
         $any = new class {
-            private $callbacks = [];
+            private array $callbacks = [];
 
             public function add(callable $callback)
             {

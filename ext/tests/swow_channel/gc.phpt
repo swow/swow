@@ -8,13 +8,15 @@ require __DIR__ . '/../include/skipif.php';
 <?php
 require __DIR__ . '/../include/bootstrap.php';
 
+use Swow\Channel;
+
 $foo = new class
 {
-    public $channel;
+    public Channel $channel;
 
     public function __construct()
     {
-        $this->channel = new Swow\Channel(1);
+        $this->channel = new Channel(1);
         $this->channel->push($this);
     }
 };

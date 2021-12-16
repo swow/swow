@@ -17,11 +17,12 @@ function call(callable $callable)
 
 class A
 {
-    public static $instance;
+    public static self $instance;
 
+    /* @var $callable */
     private $callable;
 
-    private $generator;
+    private Generator $generator;
 
     private function __construct(callable $callable)
     {
