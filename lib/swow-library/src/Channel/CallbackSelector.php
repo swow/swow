@@ -18,9 +18,9 @@ use function spl_object_id;
 
 class CallbackSelector extends Selector
 {
-    protected $pushCallbacks = [];
+    protected array $pushCallbacks = [];
 
-    protected $popCallbacks = [];
+    protected array $popCallbacks = [];
 
     /**
      * @param mixed $data

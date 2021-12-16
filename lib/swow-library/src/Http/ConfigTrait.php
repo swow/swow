@@ -15,15 +15,9 @@ namespace Swow\Http;
 
 trait ConfigTrait
 {
-    /**
-     * @var int
-     */
-    protected $maxHeaderLength = 8192;
+    protected int $maxHeaderLength = 8192;
 
-    /**
-     * @var int
-     */
-    protected $maxContentLength = 8 * 1024 * 1024;
+    protected int $maxContentLength = 8 * 1024 * 1024;
 
     public function getMaxHeaderLength(): int
     {

@@ -19,14 +19,14 @@ use function unserialize;
 
 class VarStream extends LengthStream
 {
-    public function __construct(int $type = EofStream::TYPE_TCP)
+    public function __construct(int $type = self::TYPE_TCP)
     {
         parent::__construct(Format::UINT32_BE, $type);
     }
 
     public function recvVar(array $options = [], ?int $timeout = null)
     {
-        $serializedString = parent::recvMessageString($timeout);
+        $serializedString = $this->recvMessageString($timeout);
 
         return unserialize($serializedString, $options);
     }

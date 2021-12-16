@@ -15,13 +15,7 @@ namespace Swow\Http;
 
 class RawRequest extends RawResult
 {
-    /**
-     * @var string
-     */
-    public $uri = '';
+    public string $uri = '';
 
-    /**
-     * @var string
-     */
-    public $method = '';
+    public string $method = '';
 }

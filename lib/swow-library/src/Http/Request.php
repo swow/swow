@@ -14,6 +14,7 @@ declare(strict_types=1);
 namespace Swow\Http;
 
 use Psr\Http\Message\RequestInterface;
+use Psr\Http\Message\StreamInterface;
 use Psr\Http\Message\UriInterface;
 use TypeError;
 use function is_string;
@@ -22,25 +23,16 @@ class Request extends Message implements RequestInterface
 {
     protected const PRESERVE_HOST = false;
 
-    /**
-     * @var string
-     */
-    protected $method = 'GET';
+    protected string $method = 'GET';
 
     /**
      * @var null|Uri|UriInterface
      */
     protected $uri;
 
-    /**
-     * @var string
-     */
-    protected $uriString = '';
+    protected string $uriString = '';
 
-    /**
-     * @var null|string
-     */
-    protected $requestTarget;
+    protected ?string $requestTarget = null;
 
     /**
      * @param string $method HTTP method

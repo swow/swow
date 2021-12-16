@@ -173,9 +173,9 @@ declare(strict_types=1);
  */
 class Assert
 {
-    protected static $throwException = true;
+    protected static bool $throwException = true;
 
-    protected static $maxStringLength = 64;
+    protected static int $maxStringLength = 64;
 
     public static function setThrowException(bool $b)
     {

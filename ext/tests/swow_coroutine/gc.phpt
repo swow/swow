@@ -8,13 +8,15 @@ require __DIR__ . '/../include/skipif.php';
 <?php
 require __DIR__ . '/../include/bootstrap.php';
 
+use Swow\Coroutine;
+
 $foo = new class
 {
-    public $coroutine;
+    public Coroutine $coroutine;
 
     public function __construct()
     {
-        $this->coroutine = new \Swow\Coroutine(function () { });
+        $this->coroutine = new Coroutine(function () { });
     }
 };
 

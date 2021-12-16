@@ -14,18 +14,13 @@ declare(strict_types=1);
 namespace Swow\Http;
 
 use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Message\StreamInterface;
 
 class Response extends Message implements ResponseInterface
 {
-    /**
-     * @var int
-     */
-    protected $statusCode = Status::OK;
+    protected int $statusCode = Status::OK;
 
-    /**
-     * @var string
-     */
-    protected $reasonPhrase = 'OK';
+    protected string $reasonPhrase = 'OK';
 
     /**
      * @param int $statusCode Status code

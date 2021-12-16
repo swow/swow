@@ -76,7 +76,7 @@ class BodyParser
         return (array) $respObject;
     }
 
-    public static function getContentType(ServerRequestInterface $request)
+    public static function getContentType(ServerRequestInterface $request): string
     {
         $rawContentType = $request->getHeaderLine('Content-Type');
         if (($pos = strpos($rawContentType, ';')) !== false) {

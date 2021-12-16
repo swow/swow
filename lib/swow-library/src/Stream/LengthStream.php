@@ -23,15 +23,13 @@ use function unpack;
 
 class LengthStream extends Socket
 {
-    /** @var string */
-    protected $format = Format::UINT32_BE;
+    protected string $format = Format::UINT32_BE;
 
-    /** @var int */
-    protected $formatSize = 4;
+    protected int  $formatSize = 4;
 
     use MaxMessageLengthTrait;
 
-    public function __construct(string $format = Format::UINT32_BE, int $type = EofStream::TYPE_TCP)
+    public function __construct(string $format = Format::UINT32_BE, int $type = self::TYPE_TCP)
     {
         if (!($type & Socket::TYPE_FLAG_STREAM)) {
             throw new InvalidArgumentException('Socket type should be a kind of streams');

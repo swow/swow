@@ -22,11 +22,9 @@ use const SEEK_CUR;
 
 class EofStream extends Socket
 {
-    /** @var string */
-    protected $eof = "\r\n";
+    protected string $eof = "\r\n";
 
-    /** @var Buffer */
-    protected $internalBuffer;
+    protected Buffer $internalBuffer;
 
     use MaxMessageLengthTrait;
 

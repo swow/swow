@@ -15,38 +15,20 @@ namespace Swow\Http;
 
 class RawResult
 {
-    /**
-     * @var string[][]
-     */
-    public $headers = [];
+    public array $headers = [];
 
     /**
-     * @var Buffer
+     * @var Buffer|string
      */
     public $body;
 
-    /**
-     * @var string
-     */
-    public $protocolVersion = '';
+    public string $protocolVersion = '';
 
-    /**
-     * @var array
-     */
-    public $headerNames = [];
+    public array $headerNames = [];
 
-    /**
-     * @var int
-     */
-    public $contentLength = 0;
+    public int $contentLength = 0;
 
-    /**
-     * @var bool
-     */
-    public $shouldKeepAlive = false;
+    public bool $shouldKeepAlive = false;
 
-    /**
-     * @var bool
-     */
-    public $isUpgrade = false;
+    public bool $isUpgrade = false;
 }

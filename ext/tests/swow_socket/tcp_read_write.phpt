@@ -16,10 +16,7 @@ use Swow\Sync\WaitReference;
 
 class TestMethod
 {
-    /**
-     * @var string
-     */
-    private static $testString;
+    private static string $testString;
 
     public static function init()
     {
@@ -78,10 +75,7 @@ class TestMethod
 
     public const WRITE_TIMEOUT = 1002;
 
-    /**
-     * @var int
-     */
-    private $offset;
+    private int $offset;
 
     /**
      * @throws Exception

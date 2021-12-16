@@ -30,20 +30,11 @@ class ServerRequest extends Request implements ServerRequestInterface
      */
     protected const PRESERVE_HOST = true;
 
-    /**
-     * @var array
-     */
-    protected $serverParams;
+    protected array $serverParams = [];
 
-    /**
-     * @var array
-     */
-    protected $cookieParams = [];
+    protected array $cookieParams = [];
 
-    /**
-     * @var array
-     */
-    protected $queryParams = [];
+    protected array $queryParams = [];
 
     /**
      * @var null|array|object
@@ -53,12 +44,9 @@ class ServerRequest extends Request implements ServerRequestInterface
     /**
      * @var UploadedFileInterface[]
      */
-    protected $uploadedFiles = [];
+    protected array $uploadedFiles = [];
 
-    /**
-     * @var array
-     */
-    protected $attributes = [];
+    protected array $attributes = [];
 
     public function getServerParams(): array
     {

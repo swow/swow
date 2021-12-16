@@ -13,15 +13,15 @@ use Swow\Coroutine;
 
 class Consumer
 {
-    private $consumed = 0;
+    private int $consumed = 0;
 
-    private $chan;
+    private Channel $chan;
 
-    private $sync_chan;
+    private Channel $sync_chan;
 
-    private $running = false;
+    private bool $running = false;
 
-    public function __construct($chan)
+    public function __construct(Channel $chan)
     {
         $this->sync_chan = new Channel();
         $this->chan = $chan;
@@ -57,13 +57,13 @@ class Consumer
 
 class Producer
 {
-    private $produced = 0;
+    private int $produced = 0;
 
-    private $chan;
+    private Channel $chan;
 
-    private $sync_chan;
+    private Channel $sync_chan;
 
-    private $running = false;
+    private bool $running = false;
 
     public function __construct($chan)
     {

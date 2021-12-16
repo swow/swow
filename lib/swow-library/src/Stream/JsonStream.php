@@ -14,19 +14,20 @@ declare(strict_types=1);
 namespace Swow\Stream;
 
 use Swow\Pack\Format;
+use Swow\Socket;
 use function json_decode;
 use function json_encode;
 
 class JsonStream extends LengthStream
 {
-    public function __construct(int $type = EofStream::TYPE_TCP)
+    public function __construct(int $type = Socket::TYPE_TCP)
     {
         parent::__construct(Format::UINT32_BE, $type);
     }
 
     public function recvJson(?bool $associative = true, int $depth = 512, int $flags = 0, ?int $timeout = null): array
     {
-        $jsonString = parent::recvMessageString($timeout);
+        $jsonString = $this->recvMessageString($timeout);
 
         return json_decode($jsonString, $associative, $depth, $flags);
     }

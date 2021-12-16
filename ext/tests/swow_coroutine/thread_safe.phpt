@@ -15,8 +15,8 @@ use Swow\Coroutine;
 
 class Corker extends \Thread
 {
-    protected static $num = 0;
-    protected $id;
+    protected static int $num = 0;
+    protected int $id;
 
     public function __construct()
     {

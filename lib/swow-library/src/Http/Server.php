@@ -13,6 +13,7 @@ declare(strict_types=1);
 
 namespace Swow\Http;
 
+use Swow\Buffer;
 use Swow\Http\Server\Connection;
 use Swow\Socket;
 use Swow\Socket\Exception as SocketException;
@@ -22,10 +23,7 @@ class Server extends Socket
 {
     use ConfigTrait;
 
-    /**
-     * @var Connection[]
-     */
-    protected $connections = [];
+    protected array $connections = [];
 
     public function __construct()
     {
@@ -71,12 +69,12 @@ class Server extends Socket
         }
     }
 
-    public function offline(int $fd)
+    public function offline(int $fd): void
     {
         unset($this->connections[$fd]);
     }
 
-    public function closeSessions()
+    public function closeSessions(): void
     {
         foreach ($this->connections as $connection) {
             $connection->close();

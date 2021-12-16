@@ -22,25 +22,13 @@ use function strtolower;
 
 trait ReceiverTrait
 {
-    /**
-     * @var Buffer
-     */
-    protected $buffer;
+    protected Buffer $buffer;
 
-    /**
-     * @var HttpParser
-     */
-    protected $httpParser;
+    protected ?Parser $httpParser;
 
-    /**
-     * @var int
-     */
-    protected $maxBufferSize;
+    protected int $maxBufferSize;
 
-    /**
-     * @var null|bool
-     */
-    protected $keepAlive = false;
+    protected ?bool $keepAlive = false;
 
     protected function __construct(int $type, int $events, int $maxBufferSize = Buffer::DEFAULT_SIZE)
     {

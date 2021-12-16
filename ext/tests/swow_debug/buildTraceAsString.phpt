@@ -17,11 +17,12 @@ function call(callable $callable)
 
 class A
 {
-    public static $instance;
+    public static self $instance;
 
+    /* @var $callable */
     private $callable;
 
-    private $generator;
+    private Generator $generator;
 
     private function __construct(callable $callable)
     {
@@ -50,7 +51,7 @@ class A
     public static function callStatic(callable $callable)
     {
         array_map(function ($e) use ($callable) {
-            if (self::$instance === null) {
+            if (!isset(self::$instance)) {
                 self::$instance = new self($callable);
             }
             self::$instance->generator->next();

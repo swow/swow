@@ -19,24 +19,15 @@ use function rawurldecode;
 
 class Request extends \Swow\Http\ServerRequest
 {
-    protected $path = '';
+    protected string $path = '';
 
-    protected $query = '';
+    protected string $query = '';
 
-    /**
-     * @var null|array
-     */
-    protected $queryParams;
+    protected array $queryParams;
 
-    /**
-     * @var bool
-     */
-    protected $upgrade;
+    protected bool $upgrade;
 
-    /**
-     * @var null|int
-     */
-    protected $contentLength;
+    protected ?int $contentLength = null;
 
     /** @noinspection PhpMissingParentConstructorInspection */
     public function __construct()
