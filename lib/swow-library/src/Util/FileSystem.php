@@ -40,7 +40,7 @@ class FileSystem
         if ($files === null) {
             throw IOException::getLast();
         }
-        $files = array_filter($files, fn(string $file) => $file[0] !== '.');
+        $files = array_filter($files, static fn (string $file) => $file[0] !== '.');
         array_walk($files, function (&$file) use ($dir) { $file = "{$dir}/{$file}"; });
 
         return array_values($filter ? array_filter($files, $filter) : $files);
