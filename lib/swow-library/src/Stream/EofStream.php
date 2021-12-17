@@ -48,8 +48,7 @@ class EofStream extends Socket
         return $this->eof;
     }
 
-    /** @return $this */
-    public function accept(?Socket $client = null, ?int $timeout = null)
+    public function accept(?Socket $client = null, ?int $timeout = null): static
     {
         if ($client !== null && !($client instanceof self)) {
             throw new TypeError('Client should be an instance of ' . self::class);
@@ -178,13 +177,13 @@ class EofStream extends Socket
     }
 
     /** @return $this */
-    public function sendMessageString(string $message, ?int $timeout = null)
+    public function sendMessageString(string $message, ?int $timeout = null): static
     {
         return $this->write([$message, $this->eof], $timeout);
     }
 
     /** @return $this */
-    public function writeMessages(array $messages, ?int $timeout = null)
+    public function writeMessages(array $messages, ?int $timeout = null): static
     {
         $messages[] = $this->eof;
 

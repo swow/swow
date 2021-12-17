@@ -24,10 +24,8 @@ trait ConfigTrait
         return $this->maxHeaderLength;
     }
 
-    /**
-     * @return $this
-     */
-    public function setMaxHeaderLength(int $maxHeaderLength)
+    /** @return $this */
+    public function setMaxHeaderLength(int $maxHeaderLength): static
     {
         $this->maxHeaderLength = $maxHeaderLength;
 
@@ -39,10 +37,8 @@ trait ConfigTrait
         return $this->maxContentLength;
     }
 
-    /**
-     * @return $this
-     */
-    public function setMaxContentLength(int $maxContentLength)
+    /** @return $this */
+    public function setMaxContentLength(int $maxContentLength): static
     {
         $this->maxContentLength = $maxContentLength;
 

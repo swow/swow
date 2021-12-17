@@ -17,9 +17,8 @@ class Buffer extends \Swow\Buffer
 {
     /**
      * @param mixed $body
-     * @return $this
      */
-    public static function for($body = '')
+    public static function for($body = ''): static
     {
         if ($body instanceof static) {
             return $body;

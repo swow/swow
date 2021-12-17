@@ -53,10 +53,8 @@ class ServerRequest extends Request implements ServerRequestInterface
         return $this->serverParams;
     }
 
-    /**
-     * @return $this
-     */
-    public function setServerParams(array $serverParams)
+    /** @return $this */
+    public function setServerParams(array $serverParams): static
     {
         $this->serverParams = $serverParams;
 
@@ -68,17 +66,15 @@ class ServerRequest extends Request implements ServerRequestInterface
         return $this->queryParams;
     }
 
-    /**
-     * @return $this
-     */
-    public function setQueryParams(array $query)
+    /** @return $this */
+    public function setQueryParams(array $query): static
     {
         $this->queryParams = $query;
 
         return $this;
     }
 
-    public function withQueryParams(array $query)
+    public function withQueryParams(array $query): static
     {
         $new = clone $this;
         $new->queryParams = $query;
@@ -91,14 +87,15 @@ class ServerRequest extends Request implements ServerRequestInterface
         return $this->cookieParams;
     }
 
-    public function setCookieParams(array $cookies)
+    /** @return $this */
+    public function setCookieParams(array $cookies): static
     {
         $this->cookieParams = $cookies;
 
         return $this;
     }
 
-    public function withCookieParams(array $cookies)
+    public function withCookieParams(array $cookies): static
     {
         $new = clone $this;
         $new->cookieParams = $cookies;
@@ -135,7 +132,7 @@ class ServerRequest extends Request implements ServerRequestInterface
      * @param array|object $data
      * @return $this
      */
-    public function setParsedBody($data)
+    public function setParsedBody($data): static
     {
         $this->parsedBody = $data;
 
@@ -144,9 +141,8 @@ class ServerRequest extends Request implements ServerRequestInterface
 
     /**
      * @param array|object $data
-     * @return $this
      */
-    public function withParsedBody($data)
+    public function withParsedBody($data): static
     {
         $new = clone $this;
         $new->parsedBody = $data;
@@ -193,7 +189,7 @@ class ServerRequest extends Request implements ServerRequestInterface
      * @param mixed $value
      * @return $this
      */
-    public function setAttribute($attribute, $value)
+    public function setAttribute($attribute, $value): static
     {
         $this->attributes[$attribute] = $value;
 
@@ -204,7 +200,7 @@ class ServerRequest extends Request implements ServerRequestInterface
      * @param string $attribute
      * @return $this
      */
-    public function unsetAttribute($attribute)
+    public function unsetAttribute($attribute): static
     {
         unset($this->attributes[$attribute]);
 
@@ -214,9 +210,8 @@ class ServerRequest extends Request implements ServerRequestInterface
     /**
      * @param string $attribute
      * @param mixed $value
-     * @return $this
      */
-    public function withAttribute($attribute, $value)
+    public function withAttribute($attribute, $value): static
     {
         $new = clone $this;
         $new->attributes[$attribute] = $value;
@@ -226,9 +221,8 @@ class ServerRequest extends Request implements ServerRequestInterface
 
     /**
      * @param string $attribute
-     * @return $this
      */
-    public function withoutAttribute($attribute)
+    public function withoutAttribute($attribute): static
     {
         if (array_key_exists($attribute, $this->attributes) === false) {
             return $this;

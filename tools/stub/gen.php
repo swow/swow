@@ -83,7 +83,7 @@ use Swow\Util\FileSystem;
                 }
             }
         });
-        $g->withNoinspection();
+        $g->setNoinspection();
     }
     $g->generate($argv[2] ?? STDOUT);
 })();

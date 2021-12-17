@@ -17,10 +17,8 @@ class Response extends \Swow\Http\Response
 {
     protected array $headers = ['Server' => 'swow'];
 
-    /**
-     * @return $this
-     */
-    public function error(int $statusCode, string $reasonPhrase = '')
+    /** @return $this */
+    public function error(int $statusCode, string $reasonPhrase = ''): static
     {
         $this
             ->setStatus($statusCode, $reasonPhrase)

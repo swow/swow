@@ -49,10 +49,8 @@ class Uri implements UriInterface
         }
     }
 
-    /**
-     * @return $this
-     */
-    public function apply(string $uri)
+    /** @return $this */
+    public function apply(string $uri): static
     {
         $parts = parse_url($uri);
         if ($parts === false) {
@@ -62,10 +60,8 @@ class Uri implements UriInterface
         return $this->applyParts($parts);
     }
 
-    /**
-     * @return $this
-     */
-    public function applyParts(array $parts)
+    /** @return $this */
+    public function applyParts(array $parts): static
     {
         $this->scheme = isset($parts['scheme']) ? strtolower($parts['scheme']) : '';
         $this->userInfo = $parts['user'] ?? '';
@@ -86,10 +82,8 @@ class Uri implements UriInterface
         return $this->scheme;
     }
 
-    /**
-     * @return $this
-     */
-    public function setScheme(string $scheme)
+    /** @return $this */
+    public function setScheme(string $scheme): static
     {
         $scheme = strtolower($scheme);
         if ($scheme !== $this->scheme) {
@@ -107,9 +101,8 @@ class Uri implements UriInterface
 
     /**
      * @param string $scheme
-     * @return $this
      */
-    public function withScheme($scheme)
+    public function withScheme($scheme): static
     {
         $scheme = $this->filterScheme($scheme);
         if ($scheme === $this->scheme) {
@@ -145,10 +138,8 @@ class Uri implements UriInterface
         return $this->userInfo;
     }
 
-    /**
-     * @return $this
-     */
-    public function setUserInfo(string $user, string $password = '')
+    /** @return $this */
+    public function setUserInfo(string $user, string $password = ''): static
     {
         $this->userInfo = $password === '' ? $user : "{$user}:{$password}";
 
@@ -163,9 +154,8 @@ class Uri implements UriInterface
     /**
      * @param string $user
      * @param string $password
-     * @return $this
      */
-    public function withUserInfo($user, $password = '')
+    public function withUserInfo($user, $password = ''): static
     {
         $userInfo = $this->filterUserInfo($user, $password);
         if ($userInfo === $this->userInfo) {
@@ -183,10 +173,8 @@ class Uri implements UriInterface
         return $this->host;
     }
 
-    /**
-     * @return $this
-     */
-    public function setHost(string $host)
+    /** @return $this */
+    public function setHost(string $host): static
     {
         $this->host = strtolower($host);
 
@@ -200,9 +188,8 @@ class Uri implements UriInterface
 
     /**
      * @param string $host
-     * @return $this
      */
-    public function withHost($host)
+    public function withHost($host): static
     {
         $host = $this->filterHost($host);
         if ($host === $this->host) {
@@ -238,10 +225,8 @@ class Uri implements UriInterface
         return $port;
     }
 
-    /**
-     * @return $this
-     */
-    public function setPort(?int $port)
+    /** @return $this */
+    public function setPort(?int $port): static
     {
         $this->port = $this->filterPort($port);
 
@@ -250,9 +235,8 @@ class Uri implements UriInterface
 
     /**
      * @param int $port
-     * @return $this
      */
-    public function withPort($port)
+    public function withPort($port): static
     {
         $port = $this->filterPort($port);
         if ($port === $this->port) {
@@ -281,10 +265,8 @@ class Uri implements UriInterface
         );
     }
 
-    /**
-     * @return $this
-     */
-    public function setPath(string $path)
+    /** @return $this */
+    public function setPath(string $path): static
     {
         $this->path = $this->filterPath($path);
 
@@ -293,9 +275,8 @@ class Uri implements UriInterface
 
     /**
      * @param string $path
-     * @return $this
      */
-    public function withPath($path)
+    public function withPath($path): static
     {
         $path = $this->filterPath($path);
         if ($path === $this->path) {
@@ -324,10 +305,8 @@ class Uri implements UriInterface
         );
     }
 
-    /**
-     * @return $this
-     */
-    public function setQuery(string $query)
+    /** @return $this */
+    public function setQuery(string $query): static
     {
         $this->query = $this->filterQueryAndFragment($query);
 
@@ -336,9 +315,8 @@ class Uri implements UriInterface
 
     /**
      * @param string $query
-     * @return $this
      */
-    public function withQuery($query)
+    public function withQuery($query): static
     {
         $query = $this->filterQueryAndFragment($query);
         if ($query === $this->query) {
@@ -356,10 +334,8 @@ class Uri implements UriInterface
         return $this->fragment;
     }
 
-    /**
-     * @return $this
-     */
-    public function setFragment(string $fragment)
+    /** @return $this */
+    public function setFragment(string $fragment): static
     {
         $this->fragment = $this->filterQueryAndFragment($fragment);
 
@@ -368,9 +344,8 @@ class Uri implements UriInterface
 
     /**
      * @param string $fragment
-     * @return $this
      */
-    public function withFragment($fragment)
+    public function withFragment($fragment): static
     {
         $fragment = $this->filterQueryAndFragment($fragment);
         if ($fragment === $this->fragment) {

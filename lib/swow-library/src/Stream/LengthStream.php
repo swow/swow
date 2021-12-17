@@ -25,7 +25,7 @@ class LengthStream extends Socket
 {
     protected string $format = Format::UINT32_BE;
 
-    protected int  $formatSize = 4;
+    protected int $formatSize = 4;
 
     use MaxMessageLengthTrait;
 
@@ -43,7 +43,7 @@ class LengthStream extends Socket
     }
 
     /** @return $this */
-    public function setFormat(string $format)
+    public function setFormat(string $format): static
     {
         $this->format = $format;
         $this->formatSize = Format::getSize($format);
@@ -56,8 +56,7 @@ class LengthStream extends Socket
         return $this->formatSize;
     }
 
-    /** @return $this */
-    public function accept(?Socket $client = null, ?int $timeout = null)
+    public function accept(?Socket $client = null, ?int $timeout = null): static
     {
         if ($client !== null && !($client instanceof self)) {
             throw new TypeError('Client should be an instance of ' . self::class);
@@ -96,7 +95,7 @@ class LengthStream extends Socket
     }
 
     /** @return $this */
-    public function sendMessageString(string $string, ?int $timeout = null, int $offset = 0, int $length = -1)
+    public function sendMessageString(string $string, ?int $timeout = null, int $offset = 0, int $length = -1): static
     {
         return $this->write([pack($this->format, strlen($string)), [$string, $offset, $length]], $timeout);
     }
