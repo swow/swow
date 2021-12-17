@@ -1348,6 +1348,8 @@ static PHP_METHOD(Swow_Socket, checkLiveness)
         swow_throw_exception_with_last(swow_socket_exception_ce);
         RETURN_THROWS();
     }
+
+    RETURN_THIS();
 }
 
 #define arginfo_class_Swow_Socket_getIoState arginfo_class_Swow_Socket_getLong
