@@ -30,7 +30,8 @@
     },
     "require-dev": {
         "friendsofphp/php-cs-fixer": "3.2.*",
-        "phpunit/phpunit": ">=8.0"
+        "phpunit/phpunit": ">=8.0",
+        "rector/rector": "^0.12.8"
     },
     "suggest": {
         "ext-swow": "*"
@@ -59,6 +60,7 @@
     "scripts": {
         "cs-check": [ "@php vendor/bin/php-cs-fixer fix --dry-run --diff" ],
         "cs-fix": [ "@php vendor/bin/php-cs-fixer fix" ],
+        "rector": [ "@php vendor/bin/rector process --config=tools/rector.php" ],
         "sync-extension": [ "@php -n tools/extension/sync.php" ],
         "build-extension": [ "@php tools/builder/swow-builder" ],
         "rebuild-extension": [ "@build-extension --rebuild" ],

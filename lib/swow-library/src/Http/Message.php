@@ -15,11 +15,12 @@ namespace Swow\Http;
 
 use Psr\Http\Message\MessageInterface;
 use Psr\Http\Message\StreamInterface;
+use Stringable;
 use function implode;
 use function is_array;
 use function strtolower;
 
-class Message implements MessageInterface
+class Message implements MessageInterface, Stringable
 {
     public const DEFAULT_PROTOCOL_VERSION = '1.1';
 
@@ -31,10 +32,7 @@ class Message implements MessageInterface
 
     protected bool $keepAlive = true;
 
-    /**
-     * @var null|Buffer|string
-     */
-    protected $body;
+    protected ?\Swow\Http\Buffer $body = null;
 
     /**
      * @param array $headers Request headers
@@ -59,7 +57,6 @@ class Message implements MessageInterface
         return $this->protocolVersion;
     }
 
-    /** @return $this */
     public function setProtocolVersion(string $protocolVersion): static
     {
         $this->protocolVersion = $protocolVersion;
@@ -96,11 +93,7 @@ class Message implements MessageInterface
         return implode(',', $this->getHeader($name));
     }
 
-    /**
-     * @param array|string $value
-     * @return $this
-     */
-    public function setHeader(string $name, $value): static
+    public function setHeader(string $name, array|string $value): static
     {
         $lowerCaseName = strtolower($name);
         $rawName = $this->headerNames[$lowerCaseName] ?? null;
@@ -136,7 +129,6 @@ class Message implements MessageInterface
         return $headers;
     }
 
-    /** @return $this */
     public function setHeaders(array $headers): static
     {
         foreach ($headers as $name => $value) {
@@ -198,7 +190,6 @@ class Message implements MessageInterface
         return $this->keepAlive;
     }
 
-    /** @return $this */
     public function setKeepAlive(bool $keepAlive): static
     {
         $this->keepAlive = $keepAlive;
@@ -258,7 +249,7 @@ class Message implements MessageInterface
         );
     }
 
-    public function __toString()
+    public function __toString(): string
     {
         return $this->toString();
     }

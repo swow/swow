@@ -5,6 +5,7 @@ require __DIR__ . '/../tools.php';
 use Swow\Util\FileSystem;
 
 (function () {
+    global $argv;
     $replacement = [
         'file_name' => $argv[1] ?? 'foo',
         'module_name' => $argv[2] ?? 'foo',

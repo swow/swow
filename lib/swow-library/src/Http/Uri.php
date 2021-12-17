@@ -15,6 +15,7 @@ namespace Swow\Http;
 
 use InvalidArgumentException;
 use Psr\Http\Message\UriInterface;
+use Stringable;
 use function ltrim;
 use function parse_url;
 use function preg_replace_callback;
@@ -24,7 +25,7 @@ use function sprintf;
 /**
  * PSR-7 URI implementation (https://github.com/Nyholm/psr7/blob/master/src/Uri.php)
  */
-class Uri implements UriInterface
+class Uri implements UriInterface, Stringable
 {
     protected const SCHEMES = ['http' => 80, 'https' => 443];
 
@@ -49,7 +50,6 @@ class Uri implements UriInterface
         }
     }
 
-    /** @return $this */
     public function apply(string $uri): static
     {
         $parts = parse_url($uri);
@@ -60,7 +60,6 @@ class Uri implements UriInterface
         return $this->applyParts($parts);
     }
 
-    /** @return $this */
     public function applyParts(array $parts): static
     {
         $this->scheme = isset($parts['scheme']) ? strtolower($parts['scheme']) : '';
@@ -82,7 +81,6 @@ class Uri implements UriInterface
         return $this->scheme;
     }
 
-    /** @return $this */
     public function setScheme(string $scheme): static
     {
         $scheme = strtolower($scheme);
@@ -138,7 +136,6 @@ class Uri implements UriInterface
         return $this->userInfo;
     }
 
-    /** @return $this */
     public function setUserInfo(string $user, string $password = ''): static
     {
         $this->userInfo = $password === '' ? $user : "{$user}:{$password}";
@@ -173,7 +170,6 @@ class Uri implements UriInterface
         return $this->host;
     }
 
-    /** @return $this */
     public function setHost(string $host): static
     {
         $this->host = strtolower($host);
@@ -225,7 +221,6 @@ class Uri implements UriInterface
         return $port;
     }
 
-    /** @return $this */
     public function setPort(?int $port): static
     {
         $this->port = $this->filterPort($port);
@@ -258,14 +253,11 @@ class Uri implements UriInterface
     {
         return preg_replace_callback(
             '/(?:[^a-zA-Z0-9_\-.~!\$&\'()*+,;=%:@\/]++|%(?![A-Fa-f0-9]{2}))/',
-            static function (array $match): string {
-                return rawurlencode($match[0]);
-            },
+            static fn(array $match): string => rawurlencode($match[0]),
             $path
         );
     }
 
-    /** @return $this */
     public function setPath(string $path): static
     {
         $this->path = $this->filterPath($path);
@@ -298,14 +290,11 @@ class Uri implements UriInterface
     {
         return preg_replace_callback(
             '/(?:[^a-zA-Z0-9_\-.~!\$&\'()*+,;=%:@\/?]++|%(?![A-Fa-f0-9]{2}))/',
-            static function (array $match): string {
-                return rawurlencode($match[0]);
-            },
+            static fn(array $match): string => rawurlencode($match[0]),
             $string
         );
     }
 
-    /** @return $this */
     public function setQuery(string $query): static
     {
         $this->query = $this->filterQueryAndFragment($query);
@@ -334,7 +323,6 @@ class Uri implements UriInterface
         return $this->fragment;
     }
 
-    /** @return $this */
     public function setFragment(string $fragment): static
     {
         $this->fragment = $this->filterQueryAndFragment($fragment);

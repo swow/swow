@@ -20,7 +20,7 @@ trait WebSocketTrait
 {
     public function recvWebSocketFrame(WebSocketFrame $frame = null): WebSocketFrame
     {
-        $frame = $frame ?? new WebSocketFrame();
+        $frame ??= new WebSocketFrame();
         $buffer = $this->buffer;
         $expectMore = $buffer->eof();
         while (true) {

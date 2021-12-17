@@ -24,7 +24,7 @@ trait ReceiverTrait
 {
     protected Buffer $buffer;
 
-    protected ?Parser $httpParser;
+    protected ?Parser $httpParser = null;
 
     protected int $maxBufferSize;
 
@@ -187,7 +187,7 @@ trait ReceiverTrait
             $result->contentLength = $contentLength;
             $result->shouldKeepAlive = $shouldKeepAlive;
             $result->isUpgrade = $parser->isUpgrade();
-        } catch (HttpParserException $exception) {
+        } catch (HttpParserException) {
             /* TODO: get bad request */
             throw new HttpException(HttpStatus::BAD_REQUEST, 'Protocol Parsing Error');
         } finally {

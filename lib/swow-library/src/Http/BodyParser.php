@@ -15,11 +15,11 @@ namespace Swow\Http;
 
 use InvalidArgumentException;
 use Psr\Http\Message\ServerRequestInterface;
+use SimpleXMLElement;
 use function is_array;
 use function json_decode;
 use function json_last_error;
 use function json_last_error_msg;
-use function libxml_disable_entity_loader;
 use function parse_str;
 use function simplexml_load_string;
 use function strpos;
@@ -66,9 +66,7 @@ class BodyParser
 
     public static function decodeXml(string $xml): array
     {
-        $disableLibxmlEntityLoader = libxml_disable_entity_loader(true);
-        $respObject = simplexml_load_string($xml, 'SimpleXMLElement', LIBXML_NOCDATA | LIBXML_NOERROR);
-        libxml_disable_entity_loader($disableLibxmlEntityLoader);
+        $respObject = simplexml_load_string($xml, SimpleXMLElement::class, LIBXML_NOCDATA | LIBXML_NOERROR);
         if ($respObject === false) {
             throw new InvalidArgumentException('Syntax error.');
         }

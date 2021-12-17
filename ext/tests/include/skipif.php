@@ -119,7 +119,7 @@ function skip_if_c_function_not_exist(string $def, ?string $lib = null): void
         } else {
             \FFI::cdef($def);
         }
-    } catch (\Throwable $_) {
+    } catch (\Throwable) {
         skip('"' . $def . '" not usable');
     }
 }
@@ -128,11 +128,11 @@ function skip_if_cannot_make_subprocess()
 {
     skip('shell_exec is not callable', (!is_callable('shell_exec')) || (!is_callable('popen')));
     $loaded_modules = shell_exec(PHP_BINARY . ' -m');
-    if (strpos($loaded_modules, 'Swow') === false) {
+    if (!str_contains($loaded_modules, \Swow::class)) {
         $loaded_modules = shell_exec(PHP_BINARY . ' -dextension=swow --ri swow');
         if (
-            strpos($loaded_modules, 'Swow') === false ||
-            strpos($loaded_modules, 'Warning') !== false
+            !str_contains($loaded_modules, \Swow::class) ||
+            str_contains($loaded_modules, 'Warning')
         ) {
             skip('Swow is not present in TEST_PHP_EXECUTABLE and cannot load it via -dextension=swow');
         }
@@ -141,13 +141,14 @@ function skip_if_cannot_make_subprocess()
 
 function skip_if_max_open_files_less_than(int $number)
 {
+    $n = null;
     if (PHP_OS_FAMILY === 'Windows') {
         $n = PHP_INT_MAX;
     } else {
         if (function_exists('posix_getrlimit')) {
             $n = posix_getrlimit()['soft openfiles'] ?? null;
         }
-        $n = $n ?? (int) shell_exec('ulmit -n');
+        $n ??= (int) shell_exec('ulmit -n');
     }
     if ($n < $number) {
         skip("Max open files should be greater than or equal to {$number}, but it is {$n} now");

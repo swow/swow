@@ -33,7 +33,6 @@ use function dirname;
 use function explode;
 use function file_put_contents;
 use function fwrite;
-use function get_class;
 use function implode;
 use function in_array;
 use function interface_exists;
@@ -53,7 +52,6 @@ use function sprintf;
 use function str_repeat;
 use function str_replace;
 use function strlen;
-use function strpos;
 use function substr;
 use function trim;
 use function var_export;
@@ -90,7 +88,6 @@ class StubGenerator
         return $this->extension->getName();
     }
 
-    /** @return $this */
     public function setFunctionFormatHandler(callable $formatter): static
     {
         $this->functionFormatHandler = $formatter;
@@ -98,7 +95,6 @@ class StubGenerator
         return $this;
     }
 
-    /** @return $this */
     public function setNoinspection(bool $enable = true): static
     {
         $this->noinspection = $enable;
@@ -125,7 +121,7 @@ class StubGenerator
                 } elseif ($functionOrClass instanceof ReflectionClass) {
                     $declarations[] = $this->generateClassDeclaration($functionOrClass);
                 } else {
-                    throw new InvalidArgumentException('Unknown type ' . get_class($functionOrClass));
+                    throw new InvalidArgumentException('Unknown type ' . $functionOrClass::class);
                 }
             }
         }
@@ -150,21 +146,14 @@ class StubGenerator
 
     protected static function convertValueToString($value): string
     {
-        switch (1) {
-            case is_int($value):
-            case is_float($value):
-                return (string) ($value);
-            case is_null($value):
-                return 'null';
-            case is_bool($value):
-                return $value ? 'true' : 'false';
-            case is_string($value):
-                return '\'' . (ctype_print($value) ? $value : bin2hex($value)) . '\'';
-            case is_array($value):
-                return '[]';
-            default:
-                return var_export($value, true);
-        }
+        return match (true) {
+            is_int($value), is_float($value) => (string) ($value),
+            is_null($value) => 'null',
+            is_bool($value) => $value ? 'true' : 'false',
+            is_string($value) => '\'' . (ctype_print($value) ? $value : bin2hex($value)) . '\'',
+            is_array($value) => '[]',
+            default => var_export($value, true),
+        };
     }
 
     protected function getConstantMap(): array
@@ -212,8 +201,7 @@ class StubGenerator
         return $declaration;
     }
 
-    /** @param ReflectionFunction|ReflectionMethod|ReflectionProperty|Reflector $reflector */
-    protected function getDeclarationPrefix(Reflector $reflector, bool $withSpace = false): string
+    protected function getDeclarationPrefix(ReflectionFunction|ReflectionMethod|ReflectionProperty|Reflector $reflector, bool $withSpace = false): string
     {
         $prefix = '';
         if (method_exists($reflector, 'isFinal') && $reflector->isFinal()) {
@@ -249,10 +237,9 @@ class StubGenerator
     }
 
     /**
-     * @param ReflectionFunction|ReflectionMethod $function
      * @param string $prefix
      */
-    protected function generateFunctionDeclaration(ReflectionFunctionAbstract $function): string
+    protected function generateFunctionDeclaration(ReflectionFunction|ReflectionMethod $function): string
     {
         $name = ltrim(str_replace($function->getNamespaceName(), '', $function->getName(), $isInNamespace), '\\');
 
@@ -261,11 +248,11 @@ class StubGenerator
         $params = $function->getParameters();
         foreach ($params as $param) {
             $variadic = $param->isVariadic() ? '...' : '';
-            $paramType = ltrim((string) $param->getType(), '?') ?: 'mixed';
+            $paramType = ltrim((string) ($param->getType() ? $param->getType()->getName() : null), '?') ?: 'mixed';
             if (class_exists($paramType) || interface_exists($paramType)) {
                 $paramType = '\\' . $paramType;
             }
-            $paramIsUnion = strpos($paramType, '|') !== false;
+            $paramIsUnion = str_contains($paramType, '|');
             $nullTypeHint = $paramType !== 'mixed' && !$paramIsUnion && $param->allowsNull();
             try {
                 $defaultParamValue = $param->getDefaultValue();
@@ -284,7 +271,7 @@ class StubGenerator
                     }
                     $defaultParamValueTipOnDoc = $defaultParamValueTip;
                 }
-            } catch (Throwable $throwable) {
+            } catch (Throwable) {
                 $defaultParamValueTip = $defaultParamValueTipOnDoc = '';
             }
             $comment .= sprintf(
@@ -472,7 +459,7 @@ class StubGenerator
 
     protected static function indent(string $content, int $level, ?string $eol = null): string
     {
-        $eol = $eol ?? "\n";
+        $eol ??= "\n";
         $spaces = str_repeat(static::INDENT, $level);
         $lines = explode($eol, $content);
         $content = '';

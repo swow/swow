@@ -22,7 +22,6 @@ class CallbackSelector extends Selector
 
     protected array $popCallbacks = [];
 
-    /** @return $this */
     public function casePush(Channel $channel, mixed $data, callable $callback): static
     {
         $this->pushCallbacks[spl_object_id($channel)] = $callback;
@@ -30,7 +29,6 @@ class CallbackSelector extends Selector
         return $this->push($channel, $data);
     }
 
-    /** @return $this */
     public function casePop(Channel $channel, callable $callback): static
     {
         $this->popCallbacks[spl_object_id($channel)] = $callback;

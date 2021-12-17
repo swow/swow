@@ -37,27 +37,12 @@ class Format
 
     public static function getSize(string $format): int
     {
-        switch ($format) {
-            case static::INT8:
-            case static::UINT8:
-                return 1;
-            case static::INT16:
-            case static::UINT16:
-            case static::UINT16_BE:
-            case static::UINT16_LE:
-                return 2;
-            case static::INT32:
-            case static::UINT32:
-            case static::UINT32_BE:
-            case static::UINT32_LE:
-                return 4;
-            case static::INT64:
-            case static::UINT64:
-            case static::UINT64_BE:
-            case static::UINT64_LE:
-                return 8;
-            default:
-                throw new InvalidArgumentException(sprintf('Unknown format type \'%s\'', $format));
-        }
+        return match ($format) {
+            static::INT8, static::UINT8 => 1,
+            static::INT16, static::UINT16, static::UINT16_BE, static::UINT16_LE => 2,
+            static::INT32, static::UINT32, static::UINT32_BE, static::UINT32_LE => 4,
+            static::INT64, static::UINT64, static::UINT64_BE, static::UINT64_LE => 8,
+            default => throw new InvalidArgumentException(sprintf('Unknown format type \'%s\'', $format)),
+        };
     }
 }

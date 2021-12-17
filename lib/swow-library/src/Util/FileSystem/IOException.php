@@ -20,12 +20,8 @@ use function error_get_last;
 
 class IOException extends Exception
 {
-    protected string $path;
-
-    public function __construct(string $message, int $code = 0, Throwable $previous = null, string $path = 'Unknown')
+    public function __construct(string $message, int $code = 0, Throwable $previous = null, protected string $path = 'Unknown')
     {
-        $this->path = $path;
-
         parent::__construct($message, $code, $previous);
     }
 

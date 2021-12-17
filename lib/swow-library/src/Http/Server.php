@@ -63,7 +63,7 @@ class Server extends Socket
                 } else {
                     $target->sendWebSocketFrame($frame);
                 }
-            } catch (SocketException $exception) {
+            } catch (SocketException) {
                 /* ignore */
             }
         }

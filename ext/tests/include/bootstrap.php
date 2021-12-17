@@ -53,7 +53,7 @@ define('TEST_MAX_LOOPS', (int) ([0.001, 1, 10, 100, 1000][TEST_PRESSURE_LEVEL] *
 define('TEST_MAX_PROCESSES', [1, 1, 2, 4, 8][TEST_PRESSURE_LEVEL]);
 
 # ini
-if (extension_loaded('Swow')) {
+if (extension_loaded(\Swow::class)) {
     \Swow\Socket::setGlobalTimeout(15 * 1000);
 }
 
@@ -99,7 +99,7 @@ function isInTest(): bool
 {
     global $argv;
 
-    return !(substr($argv[0], -5) === '.phpt');
+    return !(str_ends_with($argv[0], '.phpt'));
 }
 
 function phpt_sprint(...$args): void
@@ -150,7 +150,7 @@ function php_options_with_swow(): array
         '-d', 'track_errors=0',
     ];
 
-    if (strpos(shell_exec(real_php_path() . ' -m'), 'Swow') === false) {
+    if (!str_contains(shell_exec(real_php_path() . ' -m'), \Swow::class)) {
         $options []= '-d';
         $options []= 'extension=swow';
     }

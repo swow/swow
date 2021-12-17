@@ -53,7 +53,6 @@ class ServerRequest extends Request implements ServerRequestInterface
         return $this->serverParams;
     }
 
-    /** @return $this */
     public function setServerParams(array $serverParams): static
     {
         $this->serverParams = $serverParams;
@@ -66,7 +65,6 @@ class ServerRequest extends Request implements ServerRequestInterface
         return $this->queryParams;
     }
 
-    /** @return $this */
     public function setQueryParams(array $query): static
     {
         $this->queryParams = $query;
@@ -87,7 +85,6 @@ class ServerRequest extends Request implements ServerRequestInterface
         return $this->cookieParams;
     }
 
-    /** @return $this */
     public function setCookieParams(array $cookies): static
     {
         $this->cookieParams = $cookies;
@@ -130,7 +127,6 @@ class ServerRequest extends Request implements ServerRequestInterface
 
     /**
      * @param array|object $data
-     * @return $this
      */
     public function setParsedBody($data): static
     {
@@ -187,7 +183,6 @@ class ServerRequest extends Request implements ServerRequestInterface
     /**
      * @param mixed $attribute
      * @param mixed $value
-     * @return $this
      */
     public function setAttribute($attribute, $value): static
     {
@@ -198,7 +193,6 @@ class ServerRequest extends Request implements ServerRequestInterface
 
     /**
      * @param string $attribute
-     * @return $this
      */
     public function unsetAttribute($attribute): static
     {

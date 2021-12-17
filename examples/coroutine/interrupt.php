@@ -18,7 +18,7 @@ $coroutine = Coroutine::run(function () {
         try {
             // output: int(999)
             var_dump(sleep(999));
-        } catch (Exception $e) {
+        } catch (Exception) {
             // skip
         }
     }

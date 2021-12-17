@@ -44,7 +44,7 @@ Coroutine::run(function () use ($server, $wr) {
                 }
             });
         }
-    } catch (SocketException $exception) {
+    } catch (SocketException) {
     }
 });
 $client = new JsonStream();

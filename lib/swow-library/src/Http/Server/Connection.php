@@ -90,7 +90,7 @@ class Connection extends Socket implements HttpTypeInterface
             $this->server->getMaxContentLength()
         );
 
-        $request = $request ?? new Request();
+        $request ??= new Request();
         $request->setHead(
             $result->method,
             $result->uri,
@@ -177,7 +177,6 @@ class Connection extends Socket implements HttpTypeInterface
         }
     }
 
-    /** @return $this */
     public function upgradeToWebSocket(Request $request, Response $response = null): static
     {
         $secWebSocketKey = $request->getHeaderLine('sec-websocket-key');
