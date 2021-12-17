@@ -161,10 +161,6 @@ static CAT_COLD void swow_coroutine_function_handle_exception(void)
 
     zend_exception_restore();
 
-#if PHP_VERSION_ID < 80000
-#define zend_is_unwind_exit(exception) 0
-#endif
-
     if (swow_coroutine_has_unwind_exit(EG(exception)) ||
         zend_is_unwind_exit(EG(exception))) {
         OBJ_RELEASE(EG(exception));
@@ -234,11 +230,7 @@ static zval *swow_coroutine_function(zval *zdata)
         fci.param_count = fci_ptr->param_count;
         fci.params = fci_ptr->params;
     }
-#if PHP_VERSION_ID >= 80000
     fci.named_params = NULL;
-#else
-    fci.no_separation = 0;
-#endif
     fci.retval = &retval;
 
     /* call function */
@@ -1120,11 +1112,7 @@ SWOW_API cat_bool_t swow_coroutine_call(swow_coroutine_t *scoroutine, zval *zcal
     ZVAL_UNDEF(&fci.function_name);
     fci.object = NULL;
     fci.param_count = 0;
-#if PHP_VERSION_ID >= 80000
     fci.named_params = NULL;
-#else
-    fci.no_separation = 0;
-#endif
     fci.retval = return_value;
 
     if (scoroutine != swow_coroutine_get_current()) {
@@ -1229,8 +1217,7 @@ static ZEND_COLD void swow_coroutine_handle_cross_exception(zend_object *excepti
     } else {
         /* for throw method success */
         GC_ADDREF(exception);
-        ZVAL7_ALLOC_OBJECT(exception);
-        zend_throw_exception_internal(ZVAL7_OBJECT(exception));
+        zend_throw_exception_internal(exception);
     }
 }
 
@@ -1246,9 +1233,8 @@ SWOW_API cat_bool_t swow_coroutine_throw(swow_coroutine_t *scoroutine, zend_obje
         if (SWOW_COROUTINE_IS_UNWIND_EXIT_MAGIC(exception)) {
             swow_coroutine_throw_unwind_exit();
         } else {
-            ZVAL7_ALLOC_OBJECT(exception);
             GC_ADDREF(exception);
-            zend_throw_exception_internal(ZVAL7_OBJECT(exception));
+            zend_throw_exception_internal(exception);
         }
         ZVAL_NULL(retval);
     } else {
@@ -2039,27 +2025,23 @@ static const zend_function_entry swow_coroutine_methods[] = {
 
 /* handlers */
 
-static HashTable *swow_coroutine_get_gc(ZEND_GET_GC_PARAMATERS)
+static HashTable *swow_coroutine_get_gc(zend_object *object, zval **gc_data, int *gc_count)
 {
-    swow_coroutine_t *scoroutine = swow_coroutine_get_from_object(Z7_OBJ_P(object));
+    swow_coroutine_t *scoroutine = swow_coroutine_get_from_object(object);
     zval *zcallable = scoroutine->executor ? &scoroutine->executor->zcallable : NULL;
 
     if (zcallable == NULL || ZVAL_IS_NULL(zcallable)) {
-        ZEND_GET_GC_RETURN_EMPTY();
+        *gc_data = NULL;
+        *gc_count = 0;
+    } else {
+        *gc_data = zcallable;
+        *gc_count = 1;
     }
 
-    ZEND_GET_GC_RETURN_ZVAL(zcallable);
+    return zend_std_get_properties(object);
 }
 
 /* hack error hook */
-
-#if PHP_VERSION_ID < 80000
-#define ZEND_ERROR_CB_LAST_ARG_D     const char *format, va_list args
-#define ZEND_ERROR_CB_LAST_ARG_RELAY format, args
-#else
-#define ZEND_ERROR_CB_LAST_ARG_D     zend_string *message
-#define ZEND_ERROR_CB_LAST_ARG_RELAY message
-#endif
 
 #if PHP_VERSION_ID < 80100
 #define ZEND_ERROR_CB_FILENAME_T const char
@@ -2070,42 +2052,37 @@ static HashTable *swow_coroutine_get_gc(ZEND_GET_GC_PARAMATERS)
 /* we should call original error_cb when we are not in runtime */
 #define SWOW_COROUTINE_ERROR_CB_CHECK() \
     if (SWOW_COROUTINE_G(runtime_state) == SWOW_COROUTINE_RUNTIME_STATE_NONE) { \
-        swow_call_original_zend_error_cb(type, error_filename, error_lineno, ZEND_ERROR_CB_LAST_ARG_RELAY); \
+        swow_call_original_zend_error_cb(type, error_filename, error_lineno, message); \
         return; \
     }
 
 typedef void (*swow_error_cb_t)(int type, ZEND_ERROR_CB_FILENAME_T *
-, const uint32_t error_lineno, ZEND_ERROR_CB_LAST_ARG_D);
+, const uint32_t error_lineno, zend_string *message);
 
 static swow_error_cb_t original_zend_error_cb;
 
-static void swow_call_original_zend_error_cb(int type, ZEND_ERROR_CB_FILENAME_T *error_filename, const uint32_t error_lineno, ZEND_ERROR_CB_LAST_ARG_D)
+static void swow_call_original_zend_error_cb(int type, ZEND_ERROR_CB_FILENAME_T *error_filename, const uint32_t error_lineno, zend_string *message)
 {
-    original_zend_error_cb(type, error_filename, error_lineno, ZEND_ERROR_CB_LAST_ARG_RELAY);
+    original_zend_error_cb(type, error_filename, error_lineno, message);
 }
 
-static void swow_call_original_zend_error_cb_safe(int type, ZEND_ERROR_CB_FILENAME_T *error_filename, const uint32_t error_lineno, ZEND_ERROR_CB_LAST_ARG_D)
+static void swow_call_original_zend_error_cb_safe(int type, ZEND_ERROR_CB_FILENAME_T *error_filename, const uint32_t error_lineno, zend_string *message)
 {
     zend_try {
-        original_zend_error_cb(type, error_filename, error_lineno, ZEND_ERROR_CB_LAST_ARG_RELAY);
+        original_zend_error_cb(type, error_filename, error_lineno, message);
     } zend_catch {
         // TODO: kill all coroutines?
         exit(EG(exit_status));
     } zend_end_try();
 }
 
-static void swow_coroutine_error_cb(int type, ZEND_ERROR_CB_FILENAME_T *error_filename, const uint32_t error_lineno, ZEND_ERROR_CB_LAST_ARG_D)
+static void swow_coroutine_error_cb(int type, ZEND_ERROR_CB_FILENAME_T *error_filename, const uint32_t error_lineno, zend_string *message)
 {
     SWOW_COROUTINE_ERROR_CB_CHECK();
     swow_coroutine_t *current_scoroutine = swow_coroutine_get_current();
     swow_coroutine_t *main_scoroutine = swow_coroutine_get_main();
-#if PHP_VERSION_ID < 80000
-    /* strncmp maybe macro if compiler is Virtual Pascal? */
-    zend_bool is_uncaught_exception = strncmp(format, "Uncaught ", sizeof("Uncaught ") - 1) == 0;
-#else
     const char *format = ZSTR_VAL(message);
     zend_bool is_uncaught_exception = !!(type & E_DONT_BAIL) && !(type & (E_PARSE | E_COMPILE_ERROR));
-#endif
     zend_string *new_message = NULL;
 
     /* keep silent for kill */
@@ -2116,7 +2093,7 @@ static void swow_coroutine_error_cb(int type, ZEND_ERROR_CB_FILENAME_T *error_fi
     if (current_scoroutine == main_scoroutine) {
         /* only main coroutine, keep error behaviour as normal */
         if (CAT_COROUTINE_G(count) == 1) {
-            swow_call_original_zend_error_cb(type, error_filename, error_lineno, ZEND_ERROR_CB_LAST_ARG_RELAY);
+            swow_call_original_zend_error_cb(type, error_filename, error_lineno, message);
             return;
         }
     }
@@ -2161,11 +2138,7 @@ static void swow_coroutine_error_cb(int type, ZEND_ERROR_CB_FILENAME_T *error_fi
                     trace1, trace2, trace3
                 );
             }
-#if PHP_VERSION_ID < 80000
-            format = ZSTR_VAL(new_message);
-#else
             message = new_message;
-#endif
         } while (0);
         if (trace != NULL) {
             zend_string_release(trace);
@@ -2177,7 +2150,7 @@ static void swow_coroutine_error_cb(int type, ZEND_ERROR_CB_FILENAME_T *error_fi
             swow_coroutine_executor_save(swow_coroutine_get_current()->executor);
         }
     }
-    swow_call_original_zend_error_cb_safe(type, error_filename, error_lineno, ZEND_ERROR_CB_LAST_ARG_RELAY);
+    swow_call_original_zend_error_cb_safe(type, error_filename, error_lineno, message);
     if (new_message != NULL) {
         zend_string_release(new_message);
     }
@@ -2198,10 +2171,9 @@ static zend_bool swow_coroutine_has_unwind_exit(zend_object *exception)
         if (exception->ce == swow_coroutine_unwind_exit_ce) {
             return 1;
         }
-        ZVAL7_ALLOC_OBJECT(exception);
         zprevious_exception = zend_read_property_ex(
-            zend_get_exception_base(ZVAL7_OBJECT(exception)),
-            ZVAL7_OBJECT(exception),
+            zend_get_exception_base(exception),
+            exception,
             ZSTR_KNOWN(ZEND_STR_PREVIOUS),
             1, &ztmp
         );
@@ -2275,11 +2247,7 @@ static int swow_coroutine_exit_handler(zend_execute_data *execute_data)
     }
     scoroutine->exit_status = status;
     if (EG(exception) == NULL) {
-#if PHP_VERSION_ID < 80000
-        swow_coroutine_throw_unwind_exit();
-#else
         zend_throw_unwind_exit();
-#endif
     }
 
     return ZEND_USER_OPCODE_CONTINUE;
@@ -2349,9 +2317,6 @@ int swow_coroutine_module_init(INIT_FUNC_ARGS)
     /* construct coroutine php internal function */
     memset(&swow_coroutine_internal_function, 0, sizeof(swow_coroutine_internal_function));
     swow_coroutine_internal_function.common.type = ZEND_INTERNAL_FUNCTION;
-#if PHP_VERSION_ID < 80000
-    swow_coroutine_internal_function.common.function_name = zend_string_init_interned(ZEND_STRL("{coroutine}"), 1);
-#endif
 
     return SUCCESS;
 }

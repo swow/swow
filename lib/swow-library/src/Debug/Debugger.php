@@ -313,33 +313,22 @@ TEXT;
 
     public static function getDebugFieldOfCoroutine(Coroutine $coroutine, string $field, $defaultValue = null)
     {
-        if (PHP_VERSION_ID > 80000) {
-            $coroutineDebugContext = static::getCoroutineDebugWeakMap()[$coroutine] ?? [];
-            return $coroutineDebugContext[$field] ?? $defaultValue;
-        }
-        return $coroutine->{$field} ?? $defaultValue;
+        $coroutineDebugContext = static::getCoroutineDebugWeakMap()[$coroutine] ?? [];
+        return $coroutineDebugContext[$field] ?? $defaultValue;
     }
 
     public static function setDebugFieldOfCoroutine(Coroutine $coroutine, string $field, $value): void
     {
-        if (PHP_VERSION_ID > 80000) {
-            $weakMap = static::getCoroutineDebugWeakMap();
-            if (!isset($weakMap[$coroutine])) {
-                $weakMap[$coroutine] = new ArrayObject();
-            }
-            $weakMap[$coroutine][$field] = $value;
-        } else {
-            $coroutine->{$field} = $value;
+        $weakMap = static::getCoroutineDebugWeakMap();
+        if (!isset($weakMap[$coroutine])) {
+            $weakMap[$coroutine] = new ArrayObject();
         }
+        $weakMap[$coroutine][$field] = $value;
     }
 
     public static function unsetDebugFieldOfCoroutine(Coroutine $coroutine, string $field): void
     {
-        if (PHP_VERSION_ID > 80000) {
-            unset(static::getCoroutineDebugWeakMap()[$coroutine][$field]);
-        } else {
-            unset($coroutine->{$field});
-        }
+        unset(static::getCoroutineDebugWeakMap()[$coroutine][$field]);
     }
 
     public function getCurrentFrameIndex(): int

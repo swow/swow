@@ -74,11 +74,7 @@ static void swow_watch_dog_interrupt_function(zend_execute_data *execute_data)
                 ZVAL_UNDEF(&fci.function_name);
                 fci.object = NULL;
                 fci.param_count = 0;
-#if PHP_VERSION_ID >= 80000
                 fci.named_params = NULL;
-#else
-                fci.no_separation = 0;
-#endif
                 fci.retval = &retval;
                 (void) zend_call_function(&fci, &swatch_dog->alerter);
                 zval_ptr_dtor(&retval);

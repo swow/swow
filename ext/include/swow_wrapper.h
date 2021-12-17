@@ -44,194 +44,12 @@ extern "C" {
 void swow_wrapper_init(void);
 void swow_wrapper_shutdown(void);
 
-/* PHP 7.4 compatibility macro {{{*/
-#ifndef ZEND_COMPILE_EXTENDED_INFO
-#define ZEND_COMPILE_EXTENDED_INFO ZEND_COMPILE_EXTENDED_STMT
-#endif
-
-#ifndef ZVAL_EMPTY_ARRAY
-#define ZVAL_EMPTY_ARRAY(zval) (array_init((zval)))
-#endif
-#ifndef RETVAL_EMPTY_ARRAY
-#define RETVAL_EMPTY_ARRAY()   ZVAL_EMPTY_ARRAY(return_value)
-#endif
-#ifndef RETURN_EMPTY_ARRAY
-#define RETURN_EMPTY_ARRAY()   do { RETVAL_EMPTY_ARRAY(); return; } while (0)
-#endif
-
-#ifndef ZEND_THIS
-#define ZEND_THIS (&EX(This))
-#endif
-
-#ifndef ZEND_THIS_OBJECT
-#define ZEND_THIS_OBJECT Z_OBJ_P(ZEND_THIS)
-#endif
-
-#ifndef E_FATAL_ERRORS
-#define E_FATAL_ERRORS (E_ERROR | E_CORE_ERROR | E_COMPILE_ERROR | E_USER_ERROR | E_RECOVERABLE_ERROR | E_PARSE)
-#endif
-/* }}} */
-
-/* PHP 8 compatibility macro {{{*/
-#if PHP_VERSION_ID < 80000
-/* type is zval in PHP7, is object in PHP8 */
-#define zend7_object      zval
-/* zval to object only in PHP7 */
-#define Z7_OBJ_P(zobject) Z_OBJ_P(zobject)
-/* zval to object only in PHP8 */
-#define Z8_OBJ_P(zobject) zobject
-/* get this as zval in PHP7, as object in PHP8 */
-#define ZEND7_THIS        ZEND_THIS
-/* create zval in PHP7, do nothing in PHP8 */
-#define ZVAL7_ALLOC_OBJECT(object) \
-        zval z##object; ZVAL_OBJ(&z##object, object)
-/* use zval in PHP7, object in PHP8 */
-#define ZVAL7_OBJECT(object) &z##object
-#else
-#define zend7_object      zend_object
-#define Z7_OBJ_P(object)  object
-#define Z8_OBJ_P(zobject) Z_OBJ_P(zobject)
-#define ZEND7_THIS        Z_OBJ_P(ZEND_THIS)
-#define ZVAL7_ALLOC_OBJECT(object)
-#define ZVAL7_OBJECT(object) object
-#endif
-
-#ifndef IS_MIXED
-#define IS_MIXED 0 /* TODO: it works, but... */
-#endif
-
 /* TODO: maybe one day we can return static here (require PHP >= 8.0) */
 #define ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO_EX(name, required_num_args) \
         ZEND_BEGIN_ARG_INFO_EX(name, 0, ZEND_RETURN_VALUE, required_num_args)
 
 #define ZEND_BEGIN_ARG_WITH_RETURN_THIS_OR_NULL_INFO_EX(name, required_num_args) \
         ZEND_BEGIN_ARG_INFO_EX(name, 0, ZEND_RETURN_VALUE, required_num_args)
-
-#ifndef ZEND_ARG_INFO_WITH_DEFAULT_VALUE
-#define ZEND_ARG_INFO_WITH_DEFAULT_VALUE(pass_by_ref, name, default_value) \
-        ZEND_ARG_INFO(pass_by_ref, name)
-#endif
-
-#ifndef ZEND_ARG_TYPE_MASK
-#define ZEND_ARG_TYPE_MASK(pass_by_ref, name, type_mask, default_value) \
-        ZEND_ARG_INFO_WITH_DEFAULT_VALUE(pass_by_ref, name, default_value)
-#endif
-
-#ifndef ZEND_BEGIN_ARG_WITH_RETURN_TYPE_MASK_EX
-#define ZEND_BEGIN_ARG_WITH_RETURN_TYPE_MASK_EX(name, return_reference, required_num_args, type) \
-        ZEND_BEGIN_ARG_INFO_EX(name, unused, return_reference, required_num_args)
-#endif
-
-#ifndef ZEND_BEGIN_ARG_WITH_RETURN_OBJ_TYPE_MASK_EX
-#define ZEND_BEGIN_ARG_WITH_RETURN_OBJ_TYPE_MASK_EX(name, return_reference, required_num_args, class_name, type) \
-        ZEND_BEGIN_ARG_INFO_EX(name, unused, return_reference, required_num_args)
-#endif
-
-#ifndef ZEND_ARG_INFO_WITH_DEFAULT_VALUE
-#define ZEND_ARG_INFO_WITH_DEFAULT_VALUE(pass_by_ref, name, default_value) \
-        ZEND_ARG_INFO(pass_by_ref, name)
-#endif
-
-#ifndef ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE
-#define ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(pass_by_ref, name, type_hint, allow_null, default_value) \
-        ZEND_ARG_TYPE_INFO(pass_by_ref, name, type_hint, allow_null)
-#endif
-
-#ifndef ZEND_ARG_OBJ_INFO_WITH_DEFAULT_VALUE
-#define ZEND_ARG_OBJ_INFO_WITH_DEFAULT_VALUE(pass_by_ref, name, classname, allow_null, default_value) \
-        ZEND_ARG_OBJ_INFO(pass_by_ref, name, classname, allow_null)
-#endif
-
-#ifndef Z_PARAM_LONG_OR_NULL
-#define Z_PARAM_LONG_OR_NULL(dest, is_null) \
-        Z_PARAM_LONG_EX(dest, is_null, 1, 0)
-
-static zend_always_inline int zend8_parse_arg_long(zval *arg, zend_long *dest, zend_bool *is_null, int check_null)
-{
-    return zend_parse_arg_long(arg, dest, is_null, check_null, 0);
-}
-
-#define zend_parse_arg_long(arg, dest, is_null, check_null, ...) zend8_parse_arg_long(arg, dest, is_null, check_null)
-#endif
-
-#if PHP_VERSION_ID < 80000
-extern SWOW_API zend_class_entry *zend_ce_value_error;
-SWOW_API ZEND_COLD void zend_value_error(const char *format, ...) ZEND_ATTRIBUTE_FORMAT(printf, 1, 2);
-#endif
-
-#ifdef RETURN_THROWS
-#undef RETURN_THROWS
-#endif
-#define RETURN_THROWS_ASSERTION() do { ZEND_ASSERT(EG(exception)); (void) return_value; } while (0)
-#define RETURN_THROWS()  do { RETURN_THROWS_ASSERTION(); return; } while (0)
-
-#if PHP_VERSION_ID < 80000
-/* see: https://github.com/php/php-src/pull/6002 */
-typedef int zend_result;
-#endif
-
-#if PHP_VERSION_ID < 80000
-SWOW_API zend_string *zend_string_concat2(
-    const char *str1, size_t str1_len,
-    const char *str2, size_t str2_len);
-SWOW_API zend_string *zend_string_concat3(
-    const char *str1, size_t str1_len,
-    const char *str2, size_t str2_len,
-    const char *str3, size_t str3_len);
-SWOW_API zend_string *zend_create_member_string(zend_string *class_name, zend_string *member_name);
-SWOW_API zend_string *get_active_function_or_method_name(void);
-SWOW_API zend_string *get_function_or_method_name(const zend_function *func);
-SWOW_API const char *get_active_function_arg_name(uint32_t arg_num);
-SWOW_API const char *get_function_arg_name(const zend_function *func, uint32_t arg_num);
-
-SWOW_API ZEND_COLD void ZEND_FASTCALL zend_argument_error(zend_class_entry *error_ce, uint32_t arg_num, const char *format, ...);
-SWOW_API ZEND_COLD void ZEND_FASTCALL zend_argument_type_error(uint32_t arg_num, const char *format, ...);
-SWOW_API ZEND_COLD void ZEND_FASTCALL zend_argument_value_error(uint32_t arg_num, const char *format, ...);
-#endif
-
-/* see: https://github.com/php/php-src/commit/57670c6769039a2e7b6379a68f04ecc9cb127101 */
-#if PHP_VERSION_ID < 80000
-#ifndef CAT_DEBUG
-#define ZEND_ACC_HAS_TYPE_HINTS_DENY 1 /* Improve the performance on the production env */
-
-#if 0
-#ifdef ZEND_ARG_OBJ_INFO
-#undef ZEND_ARG_OBJ_INFO
-#endif
-#define ZEND_ARG_OBJ_INFO(pass_by_ref, name, classname, allow_null) \
-        ZEND_ARG_OBJ_INFO_WITH_DEFAULT_VALUE(pass_by_ref, name, classname, allow_null, NULL)
-#ifdef ZEND_ARG_OBJ_INFO_WITH_DEFAULT_VALUE
-#undef ZEND_ARG_OBJ_INFO_WITH_DEFAULT_VALUE
-#endif
-#define ZEND_ARG_OBJ_INFO_WITH_DEFAULT_VALUE(pass_by_ref, name, classname, allow_null, default_value) \
-        ZEND_ARG_TYPE_MASK(pass_by_ref, name, MAY_BE_OBJECT | (allow_null ? MAY_BE_NULL : 0), default_value)
-#endif
-#endif
-#endif
-
-#define ZEND_GET_GC_PARAMATERS                      zend7_object *object, zval **gc_data, int *gc_count
-#define ZEND_GET_GC_RETURN_ZVAL(_zdata)             do { *gc_data = _zdata; *gc_count = 1; return zend_std_get_properties(object); } while (0)
-#define ZEND_GET_GC_RETURN_EMPTY()                  do { *gc_data = NULL; *gc_count = 0; return zend_std_get_properties(object); } while (0)
-#if PHP_VERSION_ID < 80000 || defined(CAT_IDE_HELPER)
-#define ZEND_NO_GC_BUFFER 1
-#endif
-#ifdef ZEND_NO_GC_BUFFER
-#define ZEND_GET_GC_BUFFER_DECLARE                  zval *zgc_buffer;
-#define ZEND_GET_GC_BUFFER_INIT(_object)            (_object)->zgc_buffer = NULL
-#define ZEND_GET_GC_BUFFER_CREATE(_object, _length) zval *zgc_buffer = (_object)->zgc_buffer; int _##zgc_buffer##_index = 0; \
-                                                    (_object)->zgc_buffer = zgc_buffer = safe_erealloc(zgc_buffer, _length, sizeof(zval), 0)
-#define ZEND_GET_GC_BUFFER_ADD(_zv)                 ZVAL_COPY_VALUE(&zgc_buffer[_##zgc_buffer##_index++], _zv)
-#define ZEND_GET_GC_BUFFER_DONE()                   do { *gc_data = zgc_buffer; *gc_count = _##zgc_buffer##_index; return zend_std_get_properties(object); } while (0)
-#define ZEND_GET_GC_BUFFER_FREE(_object)            do { if ((_object)->zgc_buffer != NULL) { efree((_object)->zgc_buffer); } } while (0)
-#else
-#define ZEND_GET_GC_BUFFER_DECLARE
-#define ZEND_GET_GC_BUFFER_INIT(_object)
-#define ZEND_GET_GC_BUFFER_CREATE(_object, _length) zend_get_gc_buffer *zgc_buffer = zend_get_gc_buffer_create()
-#define ZEND_GET_GC_BUFFER_ADD(_zv)                 zend_get_gc_buffer_add_zval(zgc_buffer, _zv)
-#define ZEND_GET_GC_BUFFER_DONE()                   do { zend_get_gc_buffer_use(zgc_buffer, gc_data, gc_count); return zend_std_get_properties(object); } while (0)
-#define ZEND_GET_GC_BUFFER_FREE(_object)
-#endif
-/* }}} */
 
 /* PHP 8.1 compatibility macro {{{*/
 #if PHP_VERSION_ID < 80100
@@ -302,43 +120,6 @@ SWOW_API zend_string* ZEND_FASTCALL zend_ulong_to_str(zend_ulong num);
     } ZEND_HASH_FOREACH_END(); \
 } while (0)
 
-/* string */
-
-#ifndef ZVAL_CHAR /* see: https://github.com/php/php-src/pull/5684 */
-static zend_always_inline zend_string *zend_string_init_fast(const char *str, size_t len)
-{
-    if (len > 1) {
-        return zend_string_init(str, len, 0);
-    } else if (len == 0) {
-        return zend_empty_string;
-    } else /* if (len == 1) */ {
-        return ZSTR_CHAR((zend_uchar) *str);
-    }
-}
-
-#define ZVAL_CHAR(z, c)  do {                   \
-        char _c = (c);                          \
-        ZVAL_INTERNED_STR(z, ZSTR_CHAR((zend_uchar) _c));   \
-    } while (0)
-
-#define ZVAL_STRINGL_FAST(z, s, l) do {         \
-        ZVAL_STR(z, zend_string_init_fast(s, l));   \
-    } while (0)
-
-#define ZVAL_STRING_FAST(z, s) do {             \
-        const char *_s = (s);                   \
-        ZVAL_STRINGL_FAST(z, _s, strlen(_s));   \
-    } while (0)
-
-#define RETVAL_STRING_FAST(s)           ZVAL_STRING_FAST(return_value, s)
-#define RETVAL_STRINGL_FAST(s, l)       ZVAL_STRINGL_FAST(return_value, s, l)
-#define RETVAL_CHAR(c)                  ZVAL_CHAR(return_value, c)
-
-#define RETURN_STRING_FAST(s)           do { RETVAL_STRING_FAST(s); return; } while (0)
-#define RETURN_STRINGL_FAST(s, l)       do { RETVAL_STRINGL_FAST(s, l); return; } while (0)
-#define RETURN_CHAR(c)                  do { RETVAL_CHAR(c); return; } while (0)
-#endif
-
 /* array */
 
 #ifndef add_assoc_string_fast
@@ -375,41 +156,39 @@ static zend_always_inline void add_assoc_stringl_fast_ex(zval *arg, const char *
 }
 #endif
 
-#ifndef add_assoc_array
-static zend_always_inline void add_next_index_array(zval *arg, zend_array *array)
+#if PHP_VERSION_ID < 80100
+static zend_always_inline zend_result add_next_index_array(zval *arg, zend_array *arr)
 {
     zval tmp;
-    ZVAL_ARR(&tmp, array);
-    add_next_index_zval(arg, &tmp);
+    ZVAL_ARR(&tmp, arr);
+    return zend_hash_next_index_insert(Z_ARRVAL_P(arg), &tmp) ? SUCCESS : FAILURE;
 }
 
-#define add_assoc_array(arg, key, array) add_assoc_array_ex(arg, key, strlen(key), array)
+#define add_assoc_array(arg, key, arr) add_assoc_array_ex(arg, key, strlen(key), arr)
 
-static zend_always_inline void add_assoc_array_ex(zval *arg, const char *key, size_t key_len, zend_array *array)
+static zend_always_inline void add_assoc_array_ex(zval *arg, const char *key, size_t key_len, zend_array *arr)
 {
     zval tmp;
-    ZVAL_ARR(&tmp, array);
-    add_assoc_zval_ex(arg, key, key_len, &tmp);
+    ZVAL_ARR(&tmp, arr);
+    zend_symtable_str_update(Z_ARRVAL_P(arg), key, key_len, &tmp);
 }
-#endif /* add_assoc_array */
 
-#ifndef add_assoc_object
-static zend_always_inline void add_next_index_object(zval *arg, zend_object *object)
+static zend_always_inline zend_result add_next_index_object(zval *arg, zend_object *obj)
 {
     zval tmp;
-    ZVAL_OBJ(&tmp, object);
-    add_next_index_zval(arg, &tmp);
+    ZVAL_OBJ(&tmp, obj);
+    return zend_hash_next_index_insert(Z_ARRVAL_P(arg), &tmp) ? SUCCESS : FAILURE;
 }
 
-#define add_assoc_object(arg, key, object) add_assoc_object_ex(arg, key, strlen(key), object)
+#define add_assoc_object(arg, key, obj) add_assoc_object_ex(arg, key, strlen(key), obj)
 
-static zend_always_inline void add_assoc_object_ex(zval *arg, const char *key, size_t key_len, zend_object *object)
+static zend_always_inline void add_assoc_object_ex(zval *arg, const char *key, size_t key_len, zend_object *obj)
 {
     zval tmp;
-    ZVAL_OBJ(&tmp, object);
-    add_assoc_zval_ex(arg, key, key_len, &tmp);
+    ZVAL_OBJ(&tmp, obj);
+    zend_symtable_str_update(Z_ARRVAL_P(arg), key, key_len, &tmp);
 }
-#endif /* add_assoc_object */
+#endif /* PHP_VERSION_ID < 80100 (add_array, add_object) */
 
 /* class */
 
@@ -434,7 +213,7 @@ SWOW_API zend_class_entry *swow_register_internal_interface(
 /* object */
 
 SWOW_API zend_object *swow_create_object_deny(zend_class_entry *ce);
-SWOW_API zend_object *swow_custom_object_clone(zend7_object *object);
+SWOW_API zend_object *swow_custom_object_clone(zend_object *object);
 
 #define swow_object_alloc(type, ce, handlers) ((type *) swow_object_alloc_ex(sizeof(type), ce, &handlers))
 
@@ -500,19 +279,30 @@ static zend_always_inline zend_object* swow_object_create(zend_class_entry *ce)
 
 #define RETVAL_THIS_PROPERTY(name) do { \
     zval *zproperty, zretval; \
-    zproperty = zend_read_property(Z_OBJCE_P(ZEND_THIS), Z8_OBJ_P(ZEND_THIS), ZEND_STRL(name), 1, &zretval); \
+    zproperty = zend_read_property(Z_OBJCE_P(ZEND_THIS), Z_OBJ_P(ZEND_THIS), ZEND_STRL(name), 1, &zretval); \
     ZVAL_DEREF(zproperty); \
     ZVAL_COPY(return_value, zproperty); \
 } while (0)
 
-#define RETURN_THIS_PROPERTY(name)  do { \
+#define RETURN_THIS_PROPERTY(name) do { \
     RETVAL_THIS_PROPERTY(name); \
     return; \
 } while (0)
 
 #define RETURN_DEBUG_INFO_WITH_PROPERTIES(zdebug_info) do { \
-    php_array_merge(Z_ARR_P(zdebug_info), ZEND_THIS_OBJECT->handlers->get_properties(ZEND7_THIS)); \
+    php_array_merge(Z_ARR_P(zdebug_info), Z_OBJ_P(ZEND_THIS)->handlers->get_properties(Z_OBJ_P(ZEND_THIS))); \
     RETURN_ZVAL(zdebug_info, 0, 0); \
+} while (0)
+
+#define ZEND_ASSERT_HAS_EXCEPTION() do { \
+    ZEND_ASSERT(EG(exception)); \
+    (void) return_value; /* suppress unused return_value */ \
+} while (0)
+
+#undef RETURN_THROWS
+#define RETURN_THROWS() do { \
+    ZEND_ASSERT_HAS_EXCEPTION(); \
+    return; \
 } while (0)
 
 /* function */
@@ -525,22 +315,20 @@ typedef struct swow_fcall_s {
 /* method caller */
 
 #define swow_call_method_with_0_params(zobject, object_ce, fn_ptr_ptr, fn_name, retval) \
-        zend_call_method_with_0_params(Z8_OBJ_P(zobject), object_ce, fn_ptr_ptr, fn_name, retval)
+        zend_call_method_with_0_params(Z_OBJ_P(zobject), object_ce, fn_ptr_ptr, fn_name, retval)
 
 #define swow_call_method_with_1_params(zobject, object_ce, fn_ptr_ptr, fn_name, retval, v1) \
-        zend_call_method_with_1_params(Z8_OBJ_P(zobject), object_ce, fn_ptr_ptr, fn_name, retval, v1)
+        zend_call_method_with_1_params(Z_OBJ_P(zobject), object_ce, fn_ptr_ptr, fn_name, retval, v1)
 
 #define swow_call_method_with_2_params(zobject, object_ce, fn_ptr_ptr, fn_name, retval, v1, v2) \
-        zend_call_method_with_2_params(Z8_OBJ_P(zobject), object_ce, fn_ptr_ptr, fn_name, retval, v1, v2)
+        zend_call_method_with_2_params(Z_OBJ_P(zobject), object_ce, fn_ptr_ptr, fn_name, retval, v1, v2)
 
 /* output globals */
 
 #if PHP_VERSION_ID >= 80100
 #define SWOW_OUTPUT_GLOBALS_START_FILENAME OG(output_start_filename)
 #else
-#if PHP_VERSION_ID >= 80000
 #define SWOW_OUTPUT_GLOBALS_START_FILENAME OG(output_start_filename_str)
-#endif
 #endif
 #define SWOW_OUTPUT_GLOBALS_START_LINENO OG(output_start_lineno)
 

@@ -3,7 +3,6 @@ swow_coroutine: dead lock
 --SKIPIF--
 <?php
 require __DIR__ . '/../include/skipif.php';
-skip_if_php_version_lower_than('7.4');
 ?>
 --FILE--
 <?php

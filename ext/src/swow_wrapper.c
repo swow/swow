@@ -18,163 +18,6 @@
 
 #include "swow.h"
 
-/* PHP 8 compatibility macro {{{*/
-#if PHP_VERSION_ID < 80000
-SWOW_API zend_string *zend_string_concat2(
-        const char *str1, size_t str1_len,
-        const char *str2, size_t str2_len)
-{
-    size_t len = str1_len + str2_len;
-    zend_string *res = zend_string_alloc(len, 0);
-
-    memcpy(ZSTR_VAL(res), str1, str1_len);
-    memcpy(ZSTR_VAL(res) + str1_len, str2, str2_len);
-    ZSTR_VAL(res)[len] = '\0';
-
-    return res;
-}
-
-SWOW_API zend_string *zend_string_concat3(
-        const char *str1, size_t str1_len,
-        const char *str2, size_t str2_len,
-        const char *str3, size_t str3_len)
-{
-    size_t len = str1_len + str2_len + str3_len;
-    zend_string *res = zend_string_alloc(len, 0);
-
-    memcpy(ZSTR_VAL(res), str1, str1_len);
-    memcpy(ZSTR_VAL(res) + str1_len, str2, str2_len);
-    memcpy(ZSTR_VAL(res) + str1_len + str2_len, str3, str3_len);
-    ZSTR_VAL(res)[len] = '\0';
-
-    return res;
-}
-
-SWOW_API zend_string *zend_create_member_string(zend_string *class_name, zend_string *member_name)
-{
-    return zend_string_concat3(
-        ZSTR_VAL(class_name), ZSTR_LEN(class_name),
-        "::", sizeof("::") - 1,
-        ZSTR_VAL(member_name), ZSTR_LEN(member_name));
-}
-
-SWOW_API zend_string *get_active_function_or_method_name(void) /* {{{ */
-{
-    ZEND_ASSERT(zend_is_executing());
-
-    return get_function_or_method_name(EG(current_execute_data)->func);
-}
-/* }}} */
-
-SWOW_API zend_string *get_function_or_method_name(const zend_function *func) /* {{{ */
-{
-    if (func->common.scope) {
-        return zend_create_member_string(func->common.scope->name, func->common.function_name);
-    }
-
-    return func->common.function_name ? zend_string_copy(func->common.function_name) : zend_string_init("main", sizeof("main") - 1, 0);
-}
-/* }}} */
-
-SWOW_API const char *get_active_function_arg_name(uint32_t arg_num) /* {{{ */
-{
-    zend_function *func;
-
-    if (!zend_is_executing()) {
-        return NULL;
-    }
-
-    func = EG(current_execute_data)->func;
-
-    return get_function_arg_name(func, arg_num);
-}
-/* }}} */
-
-SWOW_API const char *get_function_arg_name(const zend_function *func, uint32_t arg_num) /* {{{ */
-{
-    if (!func || func->common.num_args < arg_num) {
-        return NULL;
-    }
-
-    switch (func->type) {
-        case ZEND_USER_FUNCTION:
-            return ZSTR_VAL(func->common.arg_info[arg_num - 1].name);
-        case ZEND_INTERNAL_FUNCTION:
-            return ((zend_internal_arg_info*) func->common.arg_info)[arg_num - 1].name;
-        default:
-            return NULL;
-    }
-}
-/* }}} */
-
-SWOW_API zend_class_entry *zend_ce_value_error;
-
-SWOW_API ZEND_COLD void zend_value_error(const char *format, ...) /* {{{ */
-{
-    va_list va;
-    char *message = NULL;
-
-    va_start(va, format);
-    zend_vspprintf(&message, 0, format, va);
-    zend_throw_exception(zend_ce_value_error, message, 0);
-    efree(message);
-    va_end(va);
-} /* }}} */
-
-static ZEND_COLD void ZEND_FASTCALL zend_argument_error_variadic(zend_class_entry *error_ce, uint32_t arg_num, const char *format, va_list va) /* {{{ */
-{
-    const char *space;
-    const char *class_name;
-    const char *arg_name;
-    char *message = NULL;
-    if (EG(exception)) {
-        return;
-    }
-
-    class_name = get_active_class_name(&space);
-    arg_name = get_active_function_arg_name(arg_num);
-
-    zend_vspprintf(&message, 0, format, va);
-    zend_throw_error(error_ce, "%s%s%s(): Argument #%d%s%s%s %s",
-        class_name, space, get_active_function_name(), arg_num,
-        arg_name ? " ($" : "", arg_name ? arg_name : "", arg_name ? ")" : "", message
-    );
-    efree(message);
-}
-/* }}} */
-
-SWOW_API ZEND_COLD void ZEND_FASTCALL zend_argument_error(zend_class_entry *error_ce, uint32_t arg_num, const char *format, ...) /* {{{ */
-{
-    va_list va;
-
-    va_start(va, format);
-    zend_argument_error_variadic(error_ce, arg_num, format, va);
-    va_end(va);
-}
-/* }}} */
-
-SWOW_API ZEND_COLD void ZEND_FASTCALL zend_argument_type_error(uint32_t arg_num, const char *format, ...) /* {{{ */
-{
-    va_list va;
-
-    va_start(va, format);
-    zend_argument_error_variadic(zend_ce_type_error, arg_num, format, va);
-    va_end(va);
-}
-/* }}} */
-
-SWOW_API ZEND_COLD void ZEND_FASTCALL zend_argument_value_error(uint32_t arg_num, const char *format, ...) /* {{{ */
-{
-    va_list va;
-
-    va_start(va, format);
-    zend_argument_error_variadic(zend_ce_value_error, arg_num, format, va);
-    va_end(va);
-}
-/* }}} */
-#endif
-/* }}} */
-
 /* PHP 8.1 compatibility macro {{{*/
 #if PHP_VERSION_ID < 80100
 SWOW_API zend_string* ZEND_FASTCALL zend_ulong_to_str(zend_ulong num)
@@ -282,9 +125,9 @@ SWOW_API zend_object *swow_create_object_deny(zend_class_entry *ce)
     return object;
 }
 
-SWOW_API zend_object *swow_custom_object_clone(zend7_object *object)
+SWOW_API zend_object *swow_custom_object_clone(zend_object *object)
 {
-    zend_object *old_object = Z7_OBJ_P(object), *new_object;
+    zend_object *old_object = object, *new_object;
     zend_class_entry *ce = old_object->ce;
     int offset = old_object->handlers->offset;
 
@@ -338,14 +181,7 @@ SWOW_API void swow_output_globals_shutdown(void)
 
 void swow_wrapper_init(void)
 {
-#if PHP_VERSION_ID < 80000
-    do {
-        zend_class_entry ce;
-        INIT_CLASS_ENTRY(ce, "ValueError", NULL);
-        zend_ce_value_error = zend_register_internal_class_ex(&ce, zend_ce_error);
-        zend_ce_value_error->create_object = zend_ce_error->create_object;
-    } while (0);
-#endif
+    /* reserved */
 }
 
 void swow_wrapper_shutdown(void)

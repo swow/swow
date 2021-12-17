@@ -99,21 +99,6 @@ struct _php_curl_free {
     HashTable *slist;
 };
 
-#if PHP_VERSION_ID < 80000
-typedef struct {
-    CURL                         *cp;
-    php_curl_handlers            *handlers;
-    zend_resource                *res;
-    struct _php_curl_free        *to_free;
-    struct _php_curl_send_headers header;
-    struct _php_curl_error        err;
-    zend_bool                     in_callback;
-    uint32_t*                     clone;
-#if LIBCURL_VERSION_NUM >= 0x073800 /* 7.56.0 */
-    zval                          postfields;
-#endif
-} php_curl;
-#else
 typedef struct {
     CURL                         *cp;
 #if PHP_VERSION_ID < 80100
@@ -135,23 +120,11 @@ typedef struct {
     struct _php_curlsh           *share;
     zend_object                   std;
 } php_curl;
-#endif
 
 typedef struct {
     php_curl_callback    *server_push;
 } php_curlm_handlers;
 
-#if PHP_VERSION_ID < 80000
-typedef struct {
-    int         still_running;
-    CURLM      *multi;
-    zend_llist  easyh;
-    php_curlm_handlers    *handlers;
-    struct {
-        int no;
-    } err;
-} php_curlm;
-#else
 typedef struct {
 #if PHP_VERSION_ID < 80100
     int         still_running;
@@ -168,17 +141,6 @@ typedef struct {
     } err;
     zend_object std;
 } php_curlm;
-#endif
-
-#if PHP_VERSION_ID < 80000
-
-static int  le_curl = 0;
-#define le_curl_name "cURL handle"
-
-static int  le_curl_multi_handle = 0;
-#define le_curl_multi_handle_name "cURL Multi Handle"
-
-#else
 
 static zend_class_entry *curl_ce = NULL;
 
@@ -196,7 +158,6 @@ static inline php_curlm *curl_multi_from_obj(zend_object *obj) {
 
 #define Z_CURL_MULTI_P(zv) curl_multi_from_obj(Z_OBJ_P(zv))
 
-#endif
 
 #if PHP_VERSION_ID < 80100
 #define CURL_HANDLERS_GET(ch, name) ch->handlers->name
@@ -287,26 +248,10 @@ static void _swow_php_curl_cleanup_handle(php_curl *ch)
 static void _swow_php_curl_multi_cleanup_list(void *data) /* {{{ */
 {
     zval *z_ch = (zval *)data;
-#if PHP_VERSION_ID < 80000
-    php_curl *ch;
-
-    if (!z_ch) {
-        return;
-    }
-    if (!Z_RES_P(z_ch)->ptr) {
-        return;
-    }
-    if ((ch = (php_curl *)zend_fetch_resource(Z_RES_P(z_ch), le_curl_name, le_curl)) == NULL) {
-        return;
-    }
-    zend_list_delete(Z_RES_P(z_ch));
-#else
     zval_ptr_dtor(z_ch);
-#endif
 }
 /* }}} */
 
-#if PHP_VERSION_ID >= 80000
 static void swow_curl_multi_free_obj(zend_object *object)
 {
     php_curlm *mh = curl_multi_from_obj(object);
@@ -343,7 +288,6 @@ static void swow_curl_multi_free_obj(zend_object *object)
 
     zend_object_std_dtor(&mh->std);
 }
-#endif
 
 // TODO: hook curl_read()/curl_write()
 
@@ -355,20 +299,10 @@ static PHP_FUNCTION(swow_curl_exec)
     php_curl    *ch;
 
     ZEND_PARSE_PARAMETERS_START(1, 1)
-#if PHP_VERSION_ID < 80000
-        Z_PARAM_RESOURCE(zid)
-#else
         Z_PARAM_OBJECT_OF_CLASS(zid, curl_ce)
-#endif
     ZEND_PARSE_PARAMETERS_END();
 
-#if PHP_VERSION_ID < 80000
-    if ((ch = (php_curl*)zend_fetch_resource(Z_RES_P(zid), le_curl_name, le_curl)) == NULL) {
-        RETURN_FALSE;
-    }
-#else
     ch = Z_CURL_P(zid);
-#endif
 
     _swow_php_curl_verify_handlers(ch, 1);
 
@@ -377,13 +311,7 @@ static PHP_FUNCTION(swow_curl_exec)
     error = cat_curl_easy_perform(ch->cp);
     SAVE_CURL_ERROR(ch, error);
 
-#if PHP_VERSION_ID < 80000
-    /* CURLE_PARTIAL_FILE is returned by HEAD requests */
-    if (error != CURLE_OK && error != CURLE_PARTIAL_FILE)
-#else
-    if (error != CURLE_OK)
-#endif
-    {
+    if (error != CURLE_OK) {
         smart_str_free(&CURL_HANDLERS_GET(ch, write)->buf);
         RETURN_FALSE;
     }
@@ -425,12 +353,6 @@ static PHP_FUNCTION(swow_curl_multi_init)
 
     ZEND_PARSE_PARAMETERS_NONE();
 
-#if PHP_VERSION_ID < 80000
-    mh = ecalloc(1, sizeof(php_curlm));
-    mh->multi = cat_curl_multi_init();
-    mh->handlers = ecalloc(1, sizeof(php_curlm_handlers));
-    RETVAL_RES(zend_register_resource(mh, le_curl_multi_handle));
-#else
     object_init_ex(return_value, curl_multi_ce);
     mh = Z_CURL_MULTI_P(return_value);
     mh->multi = cat_curl_multi_init();
@@ -438,7 +360,6 @@ static PHP_FUNCTION(swow_curl_multi_init)
     mh->handlers = ecalloc(1, sizeof(php_curlm_handlers));
 # endif
     ((zend_object_handlers *) mh->std.handlers)->free_obj = swow_curl_multi_free_obj;
-#endif
 
     zend_llist_init(&mh->easyh, sizeof(zval), _swow_php_curl_multi_cleanup_list, 0);
 }
@@ -454,21 +375,11 @@ static PHP_FUNCTION(swow_curl_multi_exec)
     CURLMcode error = CURLM_OK;
 
     ZEND_PARSE_PARAMETERS_START(2, 2)
-#if PHP_VERSION_ID < 80000
-        Z_PARAM_RESOURCE(z_mh)
-#else
         Z_PARAM_OBJECT_OF_CLASS(z_mh, curl_multi_ce)
-#endif
         Z_PARAM_ZVAL(z_still_running)
     ZEND_PARSE_PARAMETERS_END();
 
-#if PHP_VERSION_ID < 80000
-    if ((mh = (php_curlm *)zend_fetch_resource(Z_RES_P(z_mh), le_curl_multi_handle_name, le_curl_multi_handle)) == NULL) {
-        RETURN_FALSE;
-    }
-#else
     mh = Z_CURL_MULTI_P(z_mh);
-#endif
 
     {
         zend_llist_position pos;
@@ -477,13 +388,7 @@ static PHP_FUNCTION(swow_curl_multi_exec)
 
         for (pz_ch = (zval *)zend_llist_get_first_ex(&mh->easyh, &pos); pz_ch;
             pz_ch = (zval *)zend_llist_get_next_ex(&mh->easyh, &pos)) {
-#if PHP_VERSION_ID < 80000
-            if ((ch = (php_curl *)zend_fetch_resource(Z_RES_P(pz_ch), le_curl_name, le_curl)) == NULL) {
-                RETURN_FALSE;
-            }
-#else
             ch = Z_CURL_P(pz_ch);
-#endif
             _swow_php_curl_verify_handlers(ch, 1);
         }
     }
@@ -512,22 +417,12 @@ static PHP_FUNCTION(swow_curl_multi_select)
     CURLMcode error = CURLM_OK;
 
     ZEND_PARSE_PARAMETERS_START(1, 2)
-#if PHP_VERSION_ID < 80000
-        Z_PARAM_RESOURCE(z_mh)
-#else
         Z_PARAM_OBJECT_OF_CLASS(z_mh, curl_multi_ce)
-#endif
         Z_PARAM_OPTIONAL
         Z_PARAM_DOUBLE(timeout)
     ZEND_PARSE_PARAMETERS_END();
 
-#if PHP_VERSION_ID < 80000
-    if ((mh = (php_curlm *)zend_fetch_resource(Z_RES_P(z_mh), le_curl_multi_handle_name, le_curl_multi_handle)) == NULL) {
-        RETURN_FALSE;
-    }
-#else
     mh = Z_CURL_MULTI_P(z_mh);
-#endif
 
     error = cat_curl_multi_wait(mh->multi, NULL, 0, (unsigned long) (timeout * 1000.0), &numfds);
     if (CURLM_OK != error) {
@@ -539,51 +434,18 @@ static PHP_FUNCTION(swow_curl_multi_select)
 }
 /* }}} */
 
-#if PHP_VERSION_ID < 80000
-/* {{{ proto void curl_multi_close(resource mh)
-   Close a set of cURL handles */
-PHP_FUNCTION(swow_curl_multi_close)
-{
-    zval      *z_mh;
-    php_curlm *mh;
-    CURLM     *multi;
-
-    ZEND_PARSE_PARAMETERS_START(1, 1)
-        Z_PARAM_RESOURCE(z_mh)
-    ZEND_PARSE_PARAMETERS_END();
-
-    if ((mh = (php_curlm *)zend_fetch_resource(Z_RES_P(z_mh), le_curl_multi_handle_name, le_curl_multi_handle)) == NULL) {
-        RETURN_FALSE;
-    }
-
-    multi = mh->multi;
-    zend_list_close(Z_RES_P(z_mh)); /* curl_multi_cleanup */
-    cat_curl_multi_cleanup_context(multi);
-}
-/* }}} */
-#endif
-
 int swow_curl_module_init(INIT_FUNC_ARGS)
 {
     SWOW_MODULES_CHECK_PRE_START() {
         "curl"
     } SWOW_MODULES_CHECK_PRE_END();
 
-#if PHP_VERSION_ID < 80000
-    le_curl = zend_fetch_list_dtor_id("curl");
-    if (le_curl == 0) {
-        return SUCCESS;
-    }
-    le_curl_multi_handle = zend_fetch_list_dtor_id("curl_multi");
-    ZEND_ASSERT(le_curl != 0 && le_curl_multi_handle != 0);
-#else
     curl_ce = (zend_class_entry *) zend_hash_str_find_ptr(CG(class_table), ZEND_STRL("curlhandle"));
     if (curl_ce == NULL) {
         return SUCCESS;
     }
     curl_multi_ce = (zend_class_entry *) zend_hash_str_find_ptr(CG(class_table), ZEND_STRL("curlmultihandle"));
     ZEND_ASSERT(curl_multi_ce != NULL);
-#endif
 
     if (!cat_curl_module_init()) {
         return FAILURE;
@@ -601,28 +463,15 @@ int swow_curl_module_init(INIT_FUNC_ARGS)
     if (!swow_hook_internal_function_handler(ZEND_STRL("curl_multi_select"), PHP_FN(swow_curl_multi_select))) {
         return FAILURE;
     }
-#if PHP_VERSION_ID < 80000
-    if (!swow_hook_internal_function_handler(ZEND_STRL("curl_multi_close"), PHP_FN(swow_curl_multi_close))) {
-        return FAILURE;
-    }
-#endif
 
     return SUCCESS;
 }
 
-#if PHP_VERSION_ID < 80000
-#define SWOW_CURL_CHECK_MODULE() do { \
-    if (le_curl == 0) { \
-        return SUCCESS; \
-    } \
-} while (0)
-#else
 #define SWOW_CURL_CHECK_MODULE() do { \
     if (curl_ce == NULL) { \
         return SUCCESS; \
     } \
 } while (0)
-#endif
 
 int swow_curl_module_shutdown(INIT_FUNC_ARGS)
 {
@@ -634,16 +483,5 @@ int swow_curl_module_shutdown(INIT_FUNC_ARGS)
 
     return SUCCESS;
 }
-
-#if PHP_VERSION_ID < 80000
-zend_result swow_curl_delay_runtime_shutdown(void)
-{
-    SWOW_CURL_CHECK_MODULE();
-
-    cat_curl_multi_cleanup_all_contexts();
-
-    return SUCCESS;
-}
-#endif
 
 #endif /* CAT_CURL */

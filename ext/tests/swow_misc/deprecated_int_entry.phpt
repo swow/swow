@@ -3,7 +3,6 @@ swow_misc: deprecated ini entries
 --SKIPIF--
 <?php
 require __DIR__ . '/../include/skipif.php';
-skip_if_php_version_lower_than('7.4');
 skip_if_cannot_make_subprocess();
 ?>
 --FILE--

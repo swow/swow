@@ -26,15 +26,14 @@ SWOW_API swow_object_create_t swow_exception_create_object;
 SWOW_API CAT_COLD void swow_exception_set_properties(zend_object *exception, const char *message, zend_long code)
 {
     zval ztmp;
-    ZVAL7_ALLOC_OBJECT(exception);
     if (message != NULL) {
         ZVAL_STRING(&ztmp, message);
         Z_SET_REFCOUNT(ztmp, 0);
-        zend_update_property_ex(exception->ce, ZVAL7_OBJECT(exception), ZSTR_KNOWN(ZEND_STR_MESSAGE), &ztmp);
+        zend_update_property_ex(exception->ce, exception, ZSTR_KNOWN(ZEND_STR_MESSAGE), &ztmp);
     }
     if (code != (zend_long) ~0) {
         ZVAL_LONG(&ztmp, code);
-        zend_update_property_ex(exception->ce, ZVAL7_OBJECT(exception), ZSTR_KNOWN(ZEND_STR_CODE), &ztmp);
+        zend_update_property_ex(exception->ce, exception, ZSTR_KNOWN(ZEND_STR_CODE), &ztmp);
     }
 }
 
@@ -66,12 +65,11 @@ SWOW_API CAT_COLD zend_object *swow_throw_exception_with_last(zend_class_entry *
 
 SWOW_API CAT_COLD void swow_call_exception_set_return_value(zend_object *exception, zval *return_value)
 {
-    ZVAL7_ALLOC_OBJECT(exception);
     if (!instanceof_function(exception->ce, swow_call_exception_ce)) {
         ZEND_ASSERT(instanceof_function(exception->ce, zend_ce_error));
         return;
     }
-    zend_update_property(exception->ce, ZVAL7_OBJECT(exception), ZEND_STRL("returnValue"), return_value);
+    zend_update_property(exception->ce, exception, ZEND_STRL("returnValue"), return_value);
 }
 
 ZEND_BEGIN_ARG_INFO_EX(arginfo_class_Swow_Call_Exception_getReturnValue, 0, ZEND_RETURN_VALUE, 0)

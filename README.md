@@ -114,7 +114,7 @@ Obviously, the advantage of the coroutine approach is that the code is intuitive
 ### Compilation requirements
 
 - Common operating systems such as Linux, Windows, macOS, etc.. Same as [libuv](https://github.com/libuv/libuv/blob/v1.x/SUPPORTED_PLATFORMS.md).
-- PHP 7.4.0 or above, PHP 8+ is recommended (The higher the version is, the better the performance you will get)
+- PHP 8.0.0 or above, the latest version is recommended (The higher the version is, the better the performance you will get)
 
 #### By Composer
 
@@ -192,6 +192,6 @@ Swow's [PHP source code](lib/src/Swow) is also a good example. Swow is an incred
 [release-badge]: https://img.shields.io/github/release/swow/swow.svg?include_prereleases
 [release-link]: https://github.com/swow/swow/releases
 [made-with-love-badge]: https://img.shields.io/badge/made%20with-%E2%9D%A4-f00
-[supported-php-versions-badge]: https://img.shields.io/badge/php-7.4--8.2-royalblue.svg
+[supported-php-versions-badge]: https://img.shields.io/badge/php-8.0--8.2-royalblue.svg
 [supported-platforms-badge]: https://img.shields.io/badge/platform-Win32%20|%20GNU/Linux%20|%20macOS%20|%20FreeBSD%20-gold
 [supported-architectures-badge]: https://img.shields.io/badge/architecture-x86--64%20|%20ARM64%20|%20mips64el%20|%20riscv64%20-maroon

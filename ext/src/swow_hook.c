@@ -18,12 +18,6 @@
 
 #include "swow_hook.h"
 
-#if PHP_VERSION_ID < 80000
-static cat_bool_t swow_function_is_hookable(const zend_function *function)
-{
-    return function->internal_function.handler != ZEND_FN(display_disabled_function);
-}
-#else
 static cat_bool_t swow_function_is_hookable(const char *name, size_t name_length)
 {
     const char *s = NULL, *e = INI_STR("disable_functions");
@@ -49,7 +43,6 @@ static cat_bool_t swow_function_is_hookable(const char *name, size_t name_length
 
     return cat_true;
 }
-#endif
 
 SWOW_API cat_bool_t swow_hook_internal_function_handler(const char *name, size_t name_length, zif_handler handler)
 {
@@ -66,11 +59,6 @@ SWOW_API cat_bool_t swow_hook_internal_function_handler_ex(const char *name, siz
     if (function == NULL) {
         return cat_false;
     }
-#if PHP_VERSION_ID < 80000
-    if (!swow_function_is_hookable(function)) {
-        return cat_true; // ignore disabled function
-    }
-#endif
     if (original_handler != NULL) {
         *original_handler = function->internal_function.handler;
     }
@@ -86,21 +74,13 @@ SWOW_API cat_bool_t swow_hook_internal_function(const zend_function_entry *fe)
     zend_function *function = (zend_function *) zend_hash_str_find_ptr(CG(function_table), name, name_length);
 
     if (UNEXPECTED(function == NULL)) {
-#if PHP_VERSION_ID >= 80000
-        if (swow_function_is_hookable(name, name_length))
-#endif
-        {
+        if (swow_function_is_hookable(name, name_length)) {
             zend_function_entry fes[] = { fe[0], PHP_FE_END };
             if (zend_register_functions(NULL, fes, NULL, MODULE_PERSISTENT) != SUCCESS) {
                 return cat_false;
             }
         }
     } else {
-#if PHP_VERSION_ID < 80000
-        if (!swow_function_is_hookable(function)) {
-            return cat_true; // ignore disabled function
-        }
-#endif
         function->internal_function.handler = fe->handler;
     }
 

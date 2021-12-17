@@ -32,7 +32,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest]
         #os: [macos-latest]
-        php-version: ['8.1', '8.0', '7.4']
+        php-version: ['8.1', '8.0']
         #php-version: ['8.0']
         #ts: ['nts', 'ts']
       max-parallel: 8
@@ -121,12 +121,12 @@ jobs:
           ./codecov.sh -f coverage.info -t ${{ secrets.CODECOV_TOKEN }}
 
   windows-tests:
-    name: PHP ${{ matrix.php-version }} ${{ matrix.ts }} Test on ${{ (matrix.php-version == '7.4') && 'windows-2016' || 'windows-2019' }}
-    runs-on: "${{ (matrix.php-version == '7.4') && 'windows-2016' || 'windows-2019' }}"
+    name: PHP ${{ matrix.php-version }} ${{ matrix.ts }} Test on windows-2019
+    runs-on: windows-2019
     strategy:
       fail-fast: false
       matrix:
-        php-version: ["8.1", "8.0", "7.4"]
+        php-version: ["8.1", "8.0"]
         ts: [ 'nts', 'ts' ]
       max-parallel: 8
     steps:
