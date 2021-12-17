@@ -28,7 +28,7 @@ use Swow\Util\FileSystem;
                 return "{$className}::{$methodName}";
             };
             preg_match_all(
-                '/ZEND_BEGIN_ARG_WITH_RETURN_THIS(?<allow_null>_OR_NULL)?_INFO_EX\(arginfo_class_(?<name>\w+), \d+\)/',
+                '/ZEND_BEGIN_ARG_WITH_RETURN_THIS(?<allow_null>_OR_NULL)?_INFO\(arginfo_class_(?<name>\w+), \d+\)/',
                 $source, $matches, PREG_SET_ORDER
             );
             foreach ($matches as $match) {
