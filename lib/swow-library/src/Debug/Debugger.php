@@ -910,7 +910,7 @@ TEXT;
                         $argument = trim($argument);
                     }
                     unset($argument);
-                    $arguments = array_filter($arguments, static fn(string $value) => $value !== '');
+                    $arguments = array_filter($arguments, static fn (string $value) => $value !== '');
                     $command = array_shift($arguments);
                     switch ($command) {
                         case 'ps':

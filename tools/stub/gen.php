@@ -17,7 +17,7 @@ use Swow\Util\FileSystem;
         $returnThisMap = [];
         $sourceFiles = FileSystem::scanDir(
             __DIR__ . '/../../ext/src',
-            fn(string $filename) => pathinfo($filename, PATHINFO_EXTENSION) === 'c'
+            static fn (string $filename) => pathinfo($filename, PATHINFO_EXTENSION) === 'c'
         );
         foreach ($sourceFiles as $SourceFile) {
             $source = file_get_contents($SourceFile);
