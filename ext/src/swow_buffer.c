@@ -210,7 +210,7 @@ static PHP_METHOD(Swow_Buffer, __construct)
     PHP_METHOD_CALL(Swow_Buffer, create, 0);
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO_EX(arginfo_class_Swow_Buffer_alloc, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO(arginfo_class_Swow_Buffer_alloc, 0)
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, size, IS_LONG, 0, "Swow\\Buffer::DEFAULT_SIZE")
 ZEND_END_ARG_INFO()
 
@@ -347,7 +347,7 @@ static PHP_METHOD(Swow_Buffer, isFull)
     RETURN_BOOL(buffer->length == buffer->size);
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO_EX(arginfo_class_Swow_Buffer_realloc, 1)
+ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO(arginfo_class_Swow_Buffer_realloc, 1)
     ZEND_ARG_TYPE_INFO(0, newSize, IS_LONG, 0)
 ZEND_END_ARG_INFO()
 
@@ -384,7 +384,7 @@ static PHP_METHOD(Swow_Buffer, realloc)
     RETURN_THIS();
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO_EX(arginfo_class_Swow_Buffer_extend, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO(arginfo_class_Swow_Buffer_extend, 0)
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, recommendSize, IS_LONG, 0, "\'$this->getSize() * 2\'")
 ZEND_END_ARG_INFO()
 
@@ -412,7 +412,7 @@ static PHP_METHOD(Swow_Buffer, extend)
     RETURN_THIS();
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO_EX(arginfo_class_Swow_Buffer_mallocTrim, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO(arginfo_class_Swow_Buffer_mallocTrim, 0)
 ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Buffer, mallocTrim)
@@ -447,7 +447,7 @@ static PHP_METHOD(Swow_Buffer, tell)
     RETURN_LONG(sbuffer->offset);
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO_EX(arginfo_class_Swow_Buffer_rewind, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO(arginfo_class_Swow_Buffer_rewind, 0)
 ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Buffer, rewind)
@@ -474,7 +474,7 @@ static PHP_METHOD(Swow_Buffer, eof)
     RETURN_BOOL(sbuffer->offset == buffer->length);
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO_EX(arginfo_class_Swow_Buffer_seek, 1)
+ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO(arginfo_class_Swow_Buffer_seek, 1)
     ZEND_ARG_INFO(0, offset)
     ZEND_ARG_INFO_WITH_DEFAULT_VALUE(0, whence, "SEEK_SET")
 ZEND_END_ARG_INFO()
@@ -640,7 +640,7 @@ static PHP_METHOD_EX(Swow_Buffer, _write, zend_bool no_seek)
     RETURN_THIS();
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO_EX(arginfo_class_Swow_Buffer_write, 1)
+ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO(arginfo_class_Swow_Buffer_write, 1)
     ZEND_ARG_INFO(0, string)
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, offset, IS_LONG, 0, "0")
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, length, IS_LONG, 0, "-1")
@@ -658,7 +658,7 @@ static PHP_METHOD(Swow_Buffer, copy)
     PHP_METHOD_CALL(Swow_Buffer, _write, 1);
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO_EX(arginfo_class_Swow_Buffer_truncate, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO(arginfo_class_Swow_Buffer_truncate, 0)
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, length, IS_LONG, 0, "-1")
 ZEND_END_ARG_INFO()
 
@@ -692,7 +692,7 @@ static PHP_METHOD(Swow_Buffer, truncate)
     RETURN_THIS();
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO_EX(arginfo_class_Swow_Buffer_truncateFrom, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO(arginfo_class_Swow_Buffer_truncateFrom, 0)
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, offset, IS_LONG, 0, "\'$this->getOffset()\'")
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, length, IS_LONG, 0, "-1")
 ZEND_END_ARG_INFO()
@@ -739,7 +739,7 @@ static PHP_METHOD(Swow_Buffer, truncateFrom)
     RETURN_THIS();
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO_EX(arginfo_class_Swow_Buffer_clear, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO(arginfo_class_Swow_Buffer_clear, 0)
 ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Buffer, clear)

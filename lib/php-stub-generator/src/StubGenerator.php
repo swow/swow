@@ -35,6 +35,7 @@ use function file_put_contents;
 use function fwrite;
 use function get_class;
 use function implode;
+use function in_array;
 use function interface_exists;
 use function is_array;
 use function is_bool;
@@ -89,10 +90,8 @@ class StubGenerator
         return $this->extension->getName();
     }
 
-    /**
-     * @return $this
-     */
-    public function setFunctionFormatHandler(callable $formatter)
+    /** @return $this */
+    public function setFunctionFormatHandler(callable $formatter): static
     {
         $this->functionFormatHandler = $formatter;
 
@@ -100,17 +99,9 @@ class StubGenerator
     }
 
     /** @return $this */
-    public function withNoinspection()
+    public function setNoinspection(bool $enable = true): static
     {
-        $this->noinspection = true;
-
-        return $this;
-    }
-
-    /** @return $this */
-    public function withOutNoinspection()
-    {
-        $this->noinspection = false;
+        $this->noinspection = $enable;
 
         return $this;
     }
@@ -357,7 +348,7 @@ class StubGenerator
 
         $isCtorOrDtor = $function instanceof ReflectionMethod && ($function->isConstructor() || $function->isDestructor());
         if (!$isCtorOrDtor) {
-            $returnTypeNameInComment = $returnTypeName === 'self' ? '$this' : $returnTypeName;
+            $returnTypeNameInComment = $returnTypeName === 'static' ? '$this' : $returnTypeName;
             if ($returnTypeAllowNull) {
                 $returnTypeNameInComment = "null|{$returnTypeNameInComment}";
             }

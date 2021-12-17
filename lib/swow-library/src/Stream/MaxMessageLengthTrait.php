@@ -25,7 +25,7 @@ trait MaxMessageLengthTrait
     }
 
     /** @return $this */
-    public function setMaxMessageLength(int $maxMessageLength)
+    public function setMaxMessageLength(int $maxMessageLength): static
     {
         if ($maxMessageLength < 0) {
             $maxMessageLength = PHP_INT_MAX;

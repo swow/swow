@@ -68,10 +68,8 @@ class Request extends Message implements RequestInterface
         return $this->method;
     }
 
-    /**
-     * @return $this
-     */
-    public function setMethod(string $method)
+    /** @return $this */
+    public function setMethod(string $method): static
     {
         $this->method = $method;
 
@@ -80,9 +78,8 @@ class Request extends Message implements RequestInterface
 
     /**
      * @param string $method
-     * @return $this
      */
-    public function withMethod($method)
+    public function withMethod($method): static
     {
         if ($method === $this->method) {
             return $this;
@@ -154,10 +151,8 @@ class Request extends Message implements RequestInterface
         return $new;
     }
 
-    /**
-     * @return $this
-     */
-    public function setUriString(string $uriString)
+    /** @return $this */
+    public function setUriString(string $uriString): static
     {
         $this->uriString = $uriString;
         $this->uri = null;
@@ -205,10 +200,8 @@ class Request extends Message implements RequestInterface
         return $target;
     }
 
-    /**
-     * @return $this
-     */
-    public function setRequestTarget(string $requestTarget)
+    /** @return $this */
+    public function setRequestTarget(string $requestTarget): static
     {
         $this->requestTarget = $requestTarget;
 
@@ -216,10 +209,9 @@ class Request extends Message implements RequestInterface
     }
 
     /**
-     * @param mixed $requestTarget
-     * @return $this
+     * @param string $requestTarget
      */
-    public function withRequestTarget($requestTarget)
+    public function withRequestTarget($requestTarget): static
     {
         $new = clone $this;
         $new->setRequestTarget($requestTarget);

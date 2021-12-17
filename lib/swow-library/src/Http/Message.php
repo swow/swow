@@ -59,29 +59,22 @@ class Message implements MessageInterface
         return $this->protocolVersion;
     }
 
-    /**
-     * @return $this
-     */
-    public function setProtocolVersion(string $protocolVersion)
+    /** @return $this */
+    public function setProtocolVersion(string $protocolVersion): static
     {
         $this->protocolVersion = $protocolVersion;
 
         return $this;
     }
 
-    /**
-     * @param $protocolVersion
-     *
-     * @return $this
-     */
-    public function withProtocolVersion($protocolVersion)
+    public function withProtocolVersion($version): static
     {
-        if ($protocolVersion === $this->protocolVersion) {
+        if ($version === $this->protocolVersion) {
             return $this;
         }
 
         $new = clone $this;
-        $new->protocolVersion = $protocolVersion;
+        $new->protocolVersion = $version;
 
         return $new;
     }
@@ -107,7 +100,7 @@ class Message implements MessageInterface
      * @param array|string $value
      * @return $this
      */
-    public function setHeader(string $name, $value)
+    public function setHeader(string $name, $value): static
     {
         $lowerCaseName = strtolower($name);
         $rawName = $this->headerNames[$lowerCaseName] ?? null;
@@ -143,10 +136,8 @@ class Message implements MessageInterface
         return $headers;
     }
 
-    /**
-     * @return $this
-     */
-    public function setHeaders(array $headers)
+    /** @return $this */
+    public function setHeaders(array $headers): static
     {
         foreach ($headers as $name => $value) {
             $this->setHeader($name, $value);
@@ -155,10 +146,7 @@ class Message implements MessageInterface
         return $this;
     }
 
-    /**
-     * @return $this
-     */
-    public function withHeaders(array $headers)
+    public function withHeaders(array $headers): static
     {
         $new = clone $this;
         $new->setHeaders($headers);
@@ -169,9 +157,8 @@ class Message implements MessageInterface
     /**
      * @param string $name
      * @param null|string $value
-     * @return $this
      */
-    public function withHeader($name, $value)
+    public function withHeader($name, $value): static
     {
         $new = clone $this;
         $new->setHeader($name, $value);
@@ -182,9 +169,8 @@ class Message implements MessageInterface
     /**
      * @param string $name
      * @param null|string $value
-     * @return $this
      */
-    public function withAddedHeader($name, $value)
+    public function withAddedHeader($name, $value): static
     {
         $new = clone $this;
         $header = $new->getHeaderLine($name);
@@ -198,9 +184,8 @@ class Message implements MessageInterface
 
     /**
      * @param string $name
-     * @return $this
      */
-    public function withoutHeader($name)
+    public function withoutHeader($name): static
     {
         $new = clone $this;
         $new->setHeader($name, null);
@@ -213,10 +198,8 @@ class Message implements MessageInterface
         return $this->keepAlive;
     }
 
-    /**
-     * @return $this
-     */
-    public function setKeepAlive(bool $keepAlive)
+    /** @return $this */
+    public function setKeepAlive(bool $keepAlive): static
     {
         $this->keepAlive = $keepAlive;
 
@@ -255,10 +238,7 @@ class Message implements MessageInterface
         return $this;
     }
 
-    /**
-     * @return $this
-     */
-    public function withBody(StreamInterface $body)
+    public function withBody(StreamInterface $body): static
     {
         if ($body === $this->body) {
             return $this;

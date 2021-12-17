@@ -44,13 +44,6 @@ extern "C" {
 void swow_wrapper_init(void);
 void swow_wrapper_shutdown(void);
 
-/* TODO: maybe one day we can return static here (require PHP >= 8.0) */
-#define ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO_EX(name, required_num_args) \
-        ZEND_BEGIN_ARG_INFO_EX(name, 0, ZEND_RETURN_VALUE, required_num_args)
-
-#define ZEND_BEGIN_ARG_WITH_RETURN_THIS_OR_NULL_INFO_EX(name, required_num_args) \
-        ZEND_BEGIN_ARG_INFO_EX(name, 0, ZEND_RETURN_VALUE, required_num_args)
-
 /* PHP 8.1 compatibility macro {{{*/
 #if PHP_VERSION_ID < 80100
 SWOW_API zend_string* ZEND_FASTCALL zend_ulong_to_str(zend_ulong num);
@@ -243,6 +236,12 @@ static zend_always_inline zend_object* swow_object_create(zend_class_entry *ce)
 #endif
 
 /* function/method */
+
+#define ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO(name, required_num_args) \
+        ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(name, ZEND_RETURN_VALUE, required_num_args, IS_STATIC, 0)
+
+#define ZEND_BEGIN_ARG_WITH_RETURN_THIS_OR_NULL_INFO(name, required_num_args) \
+        ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(name, ZEND_RETURN_VALUE, required_num_args, IS_STATIC, 1)
 
 #ifndef PHP_FENTRY
 #define PHP_FENTRY                              ZEND_FENTRY

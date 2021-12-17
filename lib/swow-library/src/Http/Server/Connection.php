@@ -177,10 +177,8 @@ class Connection extends Socket implements HttpTypeInterface
         }
     }
 
-    /**
-     * @return $this
-     */
-    public function upgradeToWebSocket(Request $request, Response $response = null)
+    /** @return $this */
+    public function upgradeToWebSocket(Request $request, Response $response = null): static
     {
         $secWebSocketKey = $request->getHeaderLine('sec-websocket-key');
         if (strlen($secWebSocketKey) !== WebSocket\SECRET_KEY_ENCODED_LENGTH) {
