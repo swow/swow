@@ -492,10 +492,10 @@ static PHP_METHOD(Swow_WebSocket_Frame, unmaskPayloadData)
     ZEND_PARSE_PARAMETERS_NONE();
 
     if (!header->mask) {
-        return;
+        RETURN_THIS();
     }
     if (UNEXPECTED(sframe->payload_data == NULL)) {
-        return;
+        RETURN_THIS();
     }
     payload_data = swow_buffer_get_from_object(sframe->payload_data);
 
