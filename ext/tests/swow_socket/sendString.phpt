@@ -9,7 +9,7 @@ require __DIR__ . '/../include/skipif.php';
 require __DIR__ . '/../include/bootstrap.php';
 
 $socket = new Swow\Socket(Swow\Socket::TYPE_TCP);
-$host = 'www.bing.com';
+$host = 'www4.bing.com';
 $request =
     "GET / HTTP/1.1\r\n" .
     "Host: {$host}\n" .

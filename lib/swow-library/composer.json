@@ -16,7 +16,7 @@
         "issues": "https://github.com/swow/swow"
     },
     "require": {
-        "php": ">=7.4",
+        "php": ">=8.0",
         "psr/http-client": "^1.0",
         "psr/http-message": "^1.0"
     },

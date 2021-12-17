@@ -189,8 +189,8 @@ if test "${SWOW}" != "no"; then
   fi
   PHP_VERSION_ID=`echo "${PHP_VERSION}" | $AWK 'BEGIN { FS = "."; } { printf "%d", ([$]1 * 100 + [$]2) * 100 + [$]3;}'`
 
-  if test "${PHP_VERSION_ID}" -lt "70400" || test "${PHP_VERSION_ID}" -ge "80300"; then
-    AC_MSG_ERROR([not supported. Need a PHP version >= 7.4.0 and < 8.3.0 (found $PHP_VERSION)])
+  if test "${PHP_VERSION_ID}" -lt "80000" || test "${PHP_VERSION_ID}" -gt "80200"; then
+    AC_MSG_ERROR([not supported. Need a PHP version >= 8.0.0 and <= 8.2.0 (found $PHP_VERSION)])
   else
     AC_MSG_RESULT([supported ($PHP_VERSION)])
   fi

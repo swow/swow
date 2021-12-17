@@ -77,7 +77,6 @@ static zend_object *swow_websocket_frame_create_object(zend_class_entry *ce)
 
     (void) cat_websocket_header_init(&sframe->header);
     sframe->payload_data = NULL;
-    ZEND_GET_GC_BUFFER_INIT(sframe);
 
     return &sframe->std;
 }
@@ -90,7 +89,6 @@ static void swow_websocket_frame_free_object(zend_object *object)
         zend_object_release(sframe->payload_data);
     }
 
-    ZEND_GET_GC_BUFFER_FREE(sframe);
     zend_object_std_dtor(&sframe->std);
 }
 
@@ -640,20 +638,24 @@ static const zend_function_entry swow_websocket_frame_methods[] = {
     PHP_FE_END
 };
 
-static HashTable *swow_websocket_frame_get_gc(ZEND_GET_GC_PARAMATERS)
+static HashTable *swow_websocket_frame_get_gc(zend_object *object, zval **gc_data, int *gc_count)
 {
-    swow_websocket_frame_t *sframe = swow_websocket_frame_get_from_object(Z7_OBJ_P(object));
+    swow_websocket_frame_t *sframe = swow_websocket_frame_get_from_object(object);
     zend_object *payload_data = sframe->payload_data;
     zval ztmp;
 
     if (payload_data == NULL) {
-        ZEND_GET_GC_RETURN_EMPTY();
+        *gc_data = NULL;
+        *gc_count = 0;
+        return zend_std_get_properties(object);
     }
 
-    ZEND_GET_GC_BUFFER_CREATE(sframe, 1);
+    zend_get_gc_buffer *zgc_buffer = zend_get_gc_buffer_create();
     ZVAL_OBJ(&ztmp, payload_data);
-    ZEND_GET_GC_BUFFER_ADD(&ztmp);
-    ZEND_GET_GC_BUFFER_DONE();
+    zend_get_gc_buffer_add_zval(zgc_buffer, &ztmp);
+    zend_get_gc_buffer_use(zgc_buffer, gc_data, gc_count);
+
+    return zend_std_get_properties(object);
 }
 
 int swow_websocket_module_init(INIT_FUNC_ARGS)

@@ -16,7 +16,7 @@
         "issues": "https://github.com/swow/swow-stub"
     },
     "require": {
-        "php": ">=7.4"
+        "php": ">=8.0"
     },
     "suggest": {
         "ext-swow": "*"

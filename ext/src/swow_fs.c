@@ -1064,13 +1064,9 @@ static ssize_t swow_stdiop_fs_write(php_stream *stream, const char *buf, size_t 
                 /* TODO: Should this be treated as a proper error or not? */
                 return bytes_written;
             }
-# if PHP_VERSION_ID < 80000
-            php_error_docref(NULL, E_NOTICE, "write of %zu bytes failed with errno=%d %s", count, errno, strerror(errno));
-# else
             if (!(stream->flags & PHP_STREAM_FLAG_SUPPRESS_ERRORS)) {
                 php_error_docref(NULL, E_NOTICE, "Write of %zu bytes failed with errno=%d %s", count, errno, strerror(errno));
             }
-# endif // PHP_VERSION_ID < 80000
         }
         return (ssize_t) bytes_written;
     } else {
@@ -1139,11 +1135,7 @@ static ssize_t swow_stdiop_fs_read(php_stream *stream, char *buf, size_t count)
                 /* TODO: Should this be treated as a proper error or not? */
             } else {
                 if (!(stream->flags & PHP_STREAM_FLAG_SUPPRESS_ERRORS)) {
-# if PHP_VERSION_ID < 80000
-                    php_error_docref(NULL, E_NOTICE, "read of %zu bytes failed with errno=%d %s", count, errno, strerror(errno));
-# else
                     php_error_docref(NULL, E_NOTICE, "Read of %zu bytes failed with errno=%d %s", count, errno, strerror(errno));
-# endif // PHP_VERSION_ID >= 80000
                 }
 
                 /* TODO: Remove this special-case? */
@@ -1278,11 +1270,7 @@ static int swow_stdiop_fs_seek(php_stream *stream, zend_off_t offset, int whence
     assert(data != NULL);
 
     if (!data->is_seekable) {
-#if PHP_VERSION_ID < 80000
-        php_error_docref(NULL, E_WARNING, "cannot seek on this stream");
-#else
         php_error_docref(NULL, E_WARNING, "Cannot seek on this stream");
-#endif
         return -1;
     }
 
@@ -2294,11 +2282,7 @@ static int swow_plain_files_metadata(php_stream_wrapper *wrapper, const char *ur
             ret = swow_virtual_chmod(url, mode);
             break;
         default:
-#if PHP_VERSION_ID < 80000
-            php_error_docref1(NULL, url, E_WARNING, "Unknown option %d for stream_metadata", option);
-#else
             zend_value_error("Unknown option %d for stream_metadata", option);
-#endif // PHP_VERSION_ID < 80000
             return 0;
     }
     if (ret == -1) {

@@ -16,7 +16,6 @@ $scriptPath = Split-Path -parent $MyInvocation.MyCommand.Definition
 $guessedVCVers = @{
     "8.1" = "VS16";
     "8.0" = "VS16";
-    "7.4" = "VC15";
 }
 
 if ("".Equals($PhpVCVer)){

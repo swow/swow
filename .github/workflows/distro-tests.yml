@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        php-version: [ '8.1', '8.0', '7.4' ]
+        php-version: [ '8.1', '8.0' ]
         distro:
           - name: CentOS 7
             image: centos:7

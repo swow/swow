@@ -621,12 +621,6 @@ static int swow_stream_connect(php_stream *stream, swow_netstream_data_t *swow_s
             return -1;
         }
         bind_host = swow_stream_parse_ip_address_ex(Z_STRVAL_P(ztmp), Z_STRLEN_P(ztmp), &bind_port, xparam->want_errortext, &xparam->outputs.error_text);
-#if PHP_VERSION_ID < 70411
-        if (bind_host == NULL) {
-            efree(host);
-            return -1;
-        }
-#endif
     }
 
 #ifdef SO_BROADCAST
@@ -1735,11 +1729,7 @@ PHP_FUNCTION(swow_stream_select)
         Z_PARAM_ARRAY_EX2(r_array, 1, 1, 0)
         Z_PARAM_ARRAY_EX2(w_array, 1, 1, 0)
         Z_PARAM_ARRAY_EX2(e_array, 1, 1, 0)
-#if PHP_VERSION_ID < 80000
-        Z_PARAM_LONG_EX(sec, secnull, 1, 0)
-#else
         Z_PARAM_LONG_OR_NULL(sec, secnull)
-#endif // PHP_VERSION_ID < 80000
         Z_PARAM_OPTIONAL
 #if PHP_VERSION_ID < 80100
         Z_PARAM_LONG(usec)
@@ -1774,13 +1764,8 @@ PHP_FUNCTION(swow_stream_select)
     }
 
     if (!sets) {
-#if PHP_VERSION_ID < 80000
-        php_error_docref(NULL, E_WARNING, "No stream arrays were passed");
-        RETURN_FALSE;
-#else
         zend_value_error("No stream arrays were passed");
         RETURN_THROWS();
-#endif // PHP_VERSION_ID < 80000
     }
 
     PHP_SAFE_MAX_FD(max_fd, max_set_count);
@@ -1794,20 +1779,11 @@ PHP_FUNCTION(swow_stream_select)
             RETURN_THROWS();
         }
     }
-#endif // PHP_VERSION_ID >= 80000
+#endif // PHP_VERSION_ID >= 80100
 
     /* If seconds is not set to null, build the timeval, else we wait indefinitely */
     if (!secnull) {
 
-#if PHP_VERSION_ID < 80000
-        if (sec < 0) {
-            php_error_docref(NULL, E_WARNING, "The seconds parameter must be greater than 0");
-            RETURN_FALSE;
-        } else if (usec < 0) {
-            php_error_docref(NULL, E_WARNING, "The microseconds parameter must be greater than 0");
-            RETURN_FALSE;
-        }
-#else
         if (sec < 0) {
             zend_argument_value_error(4, "must be greater than or equal to 0");
             RETURN_THROWS();
@@ -1817,7 +1793,6 @@ PHP_FUNCTION(swow_stream_select)
             zend_argument_value_error(5, "must be greater than or equal to 0");
             RETURN_THROWS();
         }
-#endif // PHP_VERSION_ID < 80000
 
         /* Windows, Solaris and BSD do not like microsecond values which are >= 1 sec */
         tv.tv_sec = (long)(sec + (usec / 1000000));

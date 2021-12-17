@@ -1089,7 +1089,7 @@ static PHP_METHOD_EX(Swow_Socket, _write, zend_bool single, zend_bool may_addres
 
     if (0) {
         _error:
-        RETURN_THROWS_ASSERTION();
+        ZEND_ASSERT_HAS_EXCEPTION();
     }
     while (buffer_count--) {
         SWOW_BUFFER_UNLOCK(sbuffers[buffer_count]);

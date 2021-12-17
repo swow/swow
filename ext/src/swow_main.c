@@ -72,10 +72,6 @@ typedef int (*swow_init_function_t)(INIT_FUNC_ARGS);
 typedef int (*swow_shutdown_function_t)(INIT_FUNC_ARGS);
 typedef zend_result (*swow_delay_shutdown_function_t)(void);
 
-#ifdef ZEND_ACC_HAS_TYPE_HINTS_DENY
-HashTable swow_type_hint_functions;
-#endif
-
 /* {{{ PHP_GINIT_FUNCTION */
 static PHP_GINIT_FUNCTION(swow)
 {
@@ -163,35 +159,6 @@ PHP_MINIT_FUNCTION(swow)
         }
     }
 
-#ifdef ZEND_ACC_HAS_TYPE_HINTS_DENY
-    zend_hash_init(&swow_type_hint_functions, 0, NULL, NULL, 1);
-#define SWOW_FUNCTIONS_REMOVE_TYPE_HINT(function_table) do { \
-    void *ptr; \
-    ZEND_HASH_FOREACH_PTR(function_table, ptr) { \
-        zend_function *zif = (zend_function *) ptr; \
-        if ( \
-            (zif->common.fn_flags & ZEND_ACC_HAS_TYPE_HINTS) && \
-            zif->common.type == ZEND_INTERNAL_FUNCTION && \
-            zif->internal_function.module->module_number == module_number \
-        ) { \
-            zif->common.fn_flags ^= ZEND_ACC_HAS_TYPE_HINTS; \
-            zend_hash_next_index_insert_ptr(&swow_type_hint_functions, zif); \
-        } \
-    } ZEND_HASH_FOREACH_END(); \
-} while (0);
-    SWOW_FUNCTIONS_REMOVE_TYPE_HINT(CG(function_table));
-    do {
-        void *ptr;
-        ZEND_HASH_FOREACH_PTR(CG(class_table), ptr) {
-            zend_class_entry *ce = (zend_class_entry *) ptr;
-            if (ce->info.internal.module->module_number == module_number) {
-                SWOW_FUNCTIONS_REMOVE_TYPE_HINT(&ce->function_table);
-            }
-        } ZEND_HASH_FOREACH_END();
-    } while (0);
-#undef SWOW_FUNCTIONS_REMOVE_TYPE_HINT
-#endif
-
     SWOW_NTS_G(cli) = strcmp(sapi_module.name, "cli") != 0 &&
                       strcmp(sapi_module.name, "phpdbg") != 0;
 
@@ -203,17 +170,6 @@ PHP_MINIT_FUNCTION(swow)
  */
 PHP_MSHUTDOWN_FUNCTION(swow)
 {
-#ifdef ZEND_ACC_HAS_TYPE_HINTS_DENY
-    do {
-        void *ptr;
-        ZEND_HASH_FOREACH_PTR(&swow_type_hint_functions, ptr) {
-            zend_function *zif = (zend_function *) ptr;
-            zif->common.fn_flags |= ZEND_ACC_HAS_TYPE_HINTS;
-        } ZEND_HASH_FOREACH_END();
-    } while (0);
-    zend_hash_destroy(&swow_type_hint_functions);
-#endif
-
     static const swow_shutdown_function_t mshutdown_functions[] = {
 #ifdef CAT_HAVE_CURL
         swow_curl_module_shutdown,
@@ -323,9 +279,6 @@ PHP_RSHUTDOWN_FUNCTION(swow)
 static zend_result swow_delay_runtime_shutdown(void)
 {
     static const swow_delay_shutdown_function_t delay_rshutdown_functions[] = {
-#if defined(CAT_HAVE_CURL) && PHP_VERSION_ID < 80000
-        swow_curl_delay_runtime_shutdown,
-#endif
         swow_coroutine_delay_runtime_shutdown,
     };
 

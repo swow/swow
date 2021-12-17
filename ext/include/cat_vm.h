@@ -81,9 +81,3 @@ typedef struct cat_globals_info_s {
 #endif /* CAT_TSRMG_FAST */
 
 #endif /* CAT_THREAD_SAFE */
-
-/* cURL */
-
-#if PHP_VERSION_ID < 80000
-#define CAT_CURL_MULTI_CLEANUP_CONTEXT_SUPPORT    1
-#endif
