@@ -25,7 +25,7 @@ if ($specifiedRepoName) {
 }
 
 chdir($workspace = dirname(__DIR__));
-if (strpos(`splitsh-lite --version 2>&1` ?: '', 'splitsh-lite') === false) {
+if (!str_contains(`splitsh-lite --version 2>&1` ?: '', 'splitsh-lite')) {
     error('splitsh-lite tool is unavailable');
 }
 

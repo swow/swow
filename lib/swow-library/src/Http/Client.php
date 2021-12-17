@@ -55,7 +55,6 @@ class Client extends Socket implements ClientInterface, HttpTypeInterface
         $this->receiverConstruct(Parser::TYPE_RESPONSE, static::DEFAULT_HTTP_PARSER_EVENTS);
     }
 
-    /** @return $this */
     public function connect(string $name, int $port = 0, ?int $timeout = null): static
     {
         $this->host = $name;
@@ -63,7 +62,6 @@ class Client extends Socket implements ClientInterface, HttpTypeInterface
         return parent::connect($name, $port, $timeout);
     }
 
-    /** @return $this */
     public function sendRaw(
         string $method = 'GET',
         string $path = '/',
@@ -91,9 +89,6 @@ class Client extends Socket implements ClientInterface, HttpTypeInterface
         );
     }
 
-    /**
-     * @return Response|ResponseInterface
-     */
     public function sendRequest(RequestInterface $request): ResponseInterface
     {
         try {

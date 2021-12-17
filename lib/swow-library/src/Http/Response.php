@@ -48,7 +48,6 @@ class Response extends Message implements ResponseInterface
         return $this->reasonPhrase;
     }
 
-    /** @return $this */
     public function setStatus(int $statusCode, string $reasonPhrase = ''): static
     {
         $this->statusCode = $statusCode;

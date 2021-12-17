@@ -42,7 +42,6 @@ class LengthStream extends Socket
         return $this->format;
     }
 
-    /** @return $this */
     public function setFormat(string $format): static
     {
         $this->format = $format;
@@ -94,7 +93,6 @@ class LengthStream extends Socket
         return $buffer->toString();
     }
 
-    /** @return $this */
     public function sendMessageString(string $string, ?int $timeout = null, int $offset = 0, int $length = -1): static
     {
         return $this->write([pack($this->format, strlen($string)), [$string, $offset, $length]], $timeout);

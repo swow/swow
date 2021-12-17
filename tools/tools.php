@@ -14,7 +14,7 @@ namespace Swow\Tools;
 use function fgets;
 use function trim;
 
-require __DIR__ . '/autoload.php';
+require_once __DIR__ . '/autoload.php';
 
 const COLOR_NONE = 0;
 const COLOR_RED = 1;
@@ -139,7 +139,7 @@ function executeAndCheck(array $commands): void
     echo "===========  Execute  ==============" . PHP_EOL;
     $command = implode(' ', $commands);
     exec($command, $output, $return_var);
-    if (substr($output[0] ?? '', 0, 2) === '#!') {
+    if (str_starts_with($output[0] ?? '', '#!')) {
         array_shift($output);
     }
     echo '> ' . implode("\n> ", $output) . "" . PHP_EOL;
@@ -154,7 +154,7 @@ function fileSize(string $filename, int $decimals = 2): string
     $bytes = filesize($filename);
     $units = ['B', 'K', 'M', 'G', 'T', 'P'];
     $factor = (int) floor((strlen($bytes) - 1) / 3);
-    return sprintf("%.{$decimals}f", $bytes / pow(1024, $factor)) . $units[$factor];
+    return sprintf("%.{$decimals}f", $bytes / 1024 ** $factor) . $units[$factor];
 }
 
 function gitFiles(string $root = '.'): array

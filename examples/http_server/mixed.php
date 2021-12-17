@@ -90,7 +90,7 @@ while (true) {
                         break;
                     }
                 }
-            } catch (Exception $exception) {
+            } catch (Exception) {
                 // you can log error here
             } finally {
                 $connection->close();

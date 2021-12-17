@@ -23,7 +23,7 @@ Debugger::runOnTTY();
 for ($n = 1; $n <= 3; $n++) {
     Coroutine::run(function () use ($n) {
         $tip = "I am zombie {$n}";
-        if (mt_rand(0, 1)) {
+        if (random_int(0, 1)) {
             Coroutine::yield();
         } else {
             (new Channel())->pop();

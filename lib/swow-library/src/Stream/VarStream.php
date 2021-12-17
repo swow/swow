@@ -31,7 +31,6 @@ class VarStream extends LengthStream
         return unserialize($serializedString, $options);
     }
 
-    /** @return $this */
     public function sendVar($var, ?int $timeout = null): static
     {
         return $this->sendMessageString(serialize($var), $timeout);

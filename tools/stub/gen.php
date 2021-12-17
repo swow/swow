@@ -13,11 +13,12 @@ use Swow\Util\FileSystem;
     }
     $n = $argv[1];
     $g = new StubGenerator($n);
-    if (strcasecmp($g->getExtensionName(), 'Swow') === 0) {
+    if (strcasecmp($g->getExtensionName(), \Swow::class) === 0) {
         $returnThisMap = [];
-        $sourceFiles = FileSystem::scanDir(__DIR__ . '/../../ext/src', function (string $filename) {
-            return pathinfo($filename, PATHINFO_EXTENSION) === 'c';
-        });
+        $sourceFiles = FileSystem::scanDir(
+            __DIR__ . '/../../ext/src',
+            fn(string $filename) => pathinfo($filename, PATHINFO_EXTENSION) === 'c'
+        );
         foreach ($sourceFiles as $SourceFile) {
             $source = file_get_contents($SourceFile);
             $getFullName = function (string $argInfoName): string {

@@ -17,10 +17,7 @@ class RawResult
 {
     public array $headers = [];
 
-    /**
-     * @var Buffer|string
-     */
-    public $body;
+    public string|Buffer $body;
 
     public string $protocolVersion = '';
 

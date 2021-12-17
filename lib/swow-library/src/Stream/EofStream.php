@@ -176,13 +176,11 @@ class EofStream extends Socket
         return $buffer->toString();
     }
 
-    /** @return $this */
     public function sendMessageString(string $message, ?int $timeout = null): static
     {
         return $this->write([$message, $this->eof], $timeout);
     }
 
-    /** @return $this */
     public function writeMessages(array $messages, ?int $timeout = null): static
     {
         $messages[] = $this->eof;

@@ -42,7 +42,7 @@ class DependencyManager
         if (!is_dir($tmpBackupDir) && !mkdir($tmpBackupDir, 0755)) {
             throw new RuntimeException("Unable to create tmp backup dir '{$tmpBackupDir}'");
         }
-        if (substr($url, -4) === '.git' || (parse_url($url)['scheme'] ?? '') === 'file') {
+        if (str_ends_with($url, '.git') || (parse_url($url)['scheme'] ?? '') === 'file') {
             $tmpSourceDir = $sysTmpDir . "/swow_deps/{$name}";
             if (is_dir($tmpSourceDir)) {
                 FileSystem::remove($tmpSourceDir);

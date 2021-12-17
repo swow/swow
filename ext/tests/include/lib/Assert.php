@@ -769,7 +769,7 @@ class Assert
 
     public static function contains($value, $subString, $message = ''): bool
     {
-        if (strpos($value, $subString) === false) {
+        if (!str_contains($value, $subString)) {
             static::reportInvalidArgument(sprintf(
                 $message ?: 'Expected a value to contain %2$s. Got: %s',
                 static::valueToString($value),
@@ -784,7 +784,7 @@ class Assert
 
     public static function notContains($value, $subString, $message = ''): bool
     {
-        if (strpos($value, $subString) !== false) {
+        if (str_contains($value, $subString)) {
             static::reportInvalidArgument(sprintf(
                 $message ?: '%2$s was not expected to be contained in a value. Got: %s',
                 static::valueToString($value),
@@ -813,7 +813,7 @@ class Assert
 
     public static function startsWith($value, $prefix, $message = ''): bool
     {
-        if (strpos($value, $prefix) !== 0) {
+        if (!str_starts_with($value, $prefix)) {
             static::reportInvalidArgument(sprintf(
                 $message ?: 'Expected a value to start with %2$s. Got: %s',
                 static::valueToString($value),
@@ -1273,18 +1273,18 @@ class Assert
     public static function count($array, $number, $message = ''): bool
     {
         return static::eq(
-            count($array),
+            is_countable($array) ? count($array) : 0,
             $number,
-            $message ?: sprintf('Expected an array to contain %d elements. Got: %d.', $number, count($array))
+            $message ?: sprintf('Expected an array to contain %d elements. Got: %d.', $number, is_countable($array) ? count($array) : 0)
         );
     }
 
     public static function minCount($array, $min, $message = ''): bool
     {
-        if (count($array) < $min) {
+        if ((is_countable($array) ? count($array) : 0) < $min) {
             static::reportInvalidArgument(sprintf(
                 $message ?: 'Expected an array to contain at least %2$d elements. Got: %d',
-                count($array),
+                is_countable($array) ? count($array) : 0,
                 $min
             ));
 
@@ -1296,10 +1296,10 @@ class Assert
 
     public static function maxCount($array, $max, $message = ''): bool
     {
-        if (count($array) > $max) {
+        if ((is_countable($array) ? count($array) : 0) > $max) {
             static::reportInvalidArgument(sprintf(
                 $message ?: 'Expected an array to contain at most %2$d elements. Got: %d',
-                count($array),
+                is_countable($array) ? count($array) : 0,
                 $max
             ));
 
@@ -1311,7 +1311,7 @@ class Assert
 
     public static function countBetween($array, $min, $max, $message = ''): bool
     {
-        $count = count($array);
+        $count = is_countable($array) ? count($array) : 0;
 
         if ($count < $min || $count > $max) {
             static::reportInvalidArgument(sprintf(
@@ -1345,9 +1345,7 @@ class Assert
         if (
             !is_array($array) ||
             !$array ||
-            array_keys($array) !== array_filter(array_keys($array), function ($key) {
-                return is_string($key);
-            })
+            array_keys($array) !== array_filter(array_keys($array), fn($key) => is_string($key))
         ) {
             static::reportInvalidArgument(
                 $message ?: 'Expected map - associative array with string keys.'
@@ -1389,13 +1387,8 @@ class Assert
 
         try {
             $expression();
-        } catch (Exception $e) {
-            $actual = get_class($e);
-            if ($e instanceof $class) {
-                return true;
-            }
         } catch (Throwable $e) {
-            $actual = get_class($e);
+            $actual = $e::class;
             if ($e instanceof $class) {
                 return true;
             }
@@ -1412,7 +1405,7 @@ class Assert
 
     public static function __callStatic($name, $arguments): bool
     {
-        if (substr($name, 0, 6) === 'nullOr') {
+        if (str_starts_with($name, 'nullOr')) {
             if ($arguments[0] !== null) {
                 $method = lcfirst(substr($name, 6));
                 if (!call_user_func_array(['static', $method], $arguments)) {
@@ -1423,7 +1416,7 @@ class Assert
             return true;
         }
 
-        if (substr($name, 0, 3) === 'all') {
+        if (str_starts_with($name, 'all')) {
             if (!static::isIterable($arguments[0])) {
                 return false;
             }
@@ -1464,10 +1457,10 @@ class Assert
 
         if (is_object($value)) {
             if (method_exists($value, '__toString')) {
-                return get_class($value) . ': ' . self::valueToString($value->__toString());
+                return $value::class . ': ' . self::valueToString($value->__toString());
             }
 
-            return get_class($value);
+            return $value::class;
         }
 
         if (is_resource($value)) {
@@ -1488,7 +1481,7 @@ class Assert
 
     protected static function typeToString($value): string
     {
-        return is_object($value) ? get_class($value) : gettype($value);
+        return get_debug_type($value);
     }
 
     protected static function strlen($value): int

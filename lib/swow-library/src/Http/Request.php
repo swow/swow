@@ -25,10 +25,7 @@ class Request extends Message implements RequestInterface
 
     protected string $method = 'GET';
 
-    /**
-     * @var null|Uri|UriInterface
-     */
-    protected $uri;
+    protected ?\Psr\Http\Message\UriInterface $uri = null;
 
     protected string $uriString = '';
 
@@ -68,7 +65,6 @@ class Request extends Message implements RequestInterface
         return $this->method;
     }
 
-    /** @return $this */
     public function setMethod(string $method): static
     {
         $this->method = $method;
@@ -151,7 +147,6 @@ class Request extends Message implements RequestInterface
         return $new;
     }
 
-    /** @return $this */
     public function setUriString(string $uriString): static
     {
         $this->uriString = $uriString;
@@ -200,7 +195,6 @@ class Request extends Message implements RequestInterface
         return $target;
     }
 
-    /** @return $this */
     public function setRequestTarget(string $requestTarget): static
     {
         $this->requestTarget = $requestTarget;

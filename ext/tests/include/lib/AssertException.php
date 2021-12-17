@@ -26,7 +26,7 @@ class AssertException extends Exception
                 $trace = array_slice($trace, $index);
                 break;
             }
-            $file = $file ?? $frame['file'];
+            $file ??= $frame['file'];
         }
         $rp->setValue($this, $trace);
 

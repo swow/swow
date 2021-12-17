@@ -92,7 +92,7 @@ class EofStreamTest extends TestCase
                 } catch (SocketException $exception) {
                     $this->assertContains($exception->getCode(), [0, ECONNRESET]);
                 }
-            } catch (MessageTooLargeException $exception) {
+            } catch (MessageTooLargeException) {
                 // ignore
             }
         });
@@ -103,7 +103,7 @@ class EofStreamTest extends TestCase
         $response = null;
         try {
             $response = $client->recvMessageString();
-        } catch (SocketException $exception) {
+        } catch (SocketException) {
             // ignore
         }
         $this->assertNull($response);

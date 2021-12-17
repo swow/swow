@@ -32,7 +32,6 @@ class JsonStream extends LengthStream
         return json_decode($jsonString, $associative, $depth, $flags);
     }
 
-    /** @return $this */
     public function sendJson(array $json, int $flags = 0, int $depth = 512, ?int $timeout = null): static
     {
         return $this->sendMessageString(json_encode($json, $flags, $depth), $timeout);
