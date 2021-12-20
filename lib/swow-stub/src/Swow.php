@@ -444,15 +444,15 @@ namespace Swow
         public static function alignSize(int $size = 0, int $alignment = 0): int { }
 
         /**
-         * @param int $size [optional] = \Swow\Buffer::DEFAULT_SIZE
+         * @param int $size [optional] = self::DEFAULT_SIZE
          */
-        public function __construct(int $size = \Swow\Buffer::DEFAULT_SIZE) { }
+        public function __construct(int $size = self::DEFAULT_SIZE) { }
 
         /**
-         * @param int $size [optional] = \Swow\Buffer::DEFAULT_SIZE
+         * @param int $size [optional] = self::DEFAULT_SIZE
          * @return $this
          */
-        public function alloc(int $size = \Swow\Buffer::DEFAULT_SIZE): static { }
+        public function alloc(int $size = self::DEFAULT_SIZE): static { }
 
         /**
          * @return int
@@ -700,9 +700,9 @@ namespace Swow
         public const BIND_FLAG_REUSEPORT = 4;
 
         /**
-         * @param int $type [optional] = \Swow\Socket::TYPE_TCP
+         * @param int $type [optional] = self::TYPE_TCP
          */
-        public function __construct(int $type = \Swow\Socket::TYPE_TCP) { }
+        public function __construct(int $type = self::TYPE_TCP) { }
 
         /**
          * @return int
@@ -794,31 +794,31 @@ namespace Swow
         /**
          * @param string $name [required]
          * @param int $port [optional] = 0
-         * @param int $flags [optional] = \Swow\Socket::BIND_FLAG_NONE
+         * @param int $flags [optional] = self::BIND_FLAG_NONE
          * @return $this
          */
-        public function bind(string $name, int $port = 0, int $flags = \Swow\Socket::BIND_FLAG_NONE): static { }
+        public function bind(string $name, int $port = 0, int $flags = self::BIND_FLAG_NONE): static { }
 
         /**
-         * @param int $backlog [optional] = \Swow\Socket::DEFAULT_BACKLOG
+         * @param int $backlog [optional] = self::DEFAULT_BACKLOG
          * @return $this
          */
-        public function listen(int $backlog = \Swow\Socket::DEFAULT_BACKLOG): static { }
+        public function listen(int $backlog = self::DEFAULT_BACKLOG): static { }
 
         /**
-         * @param null|\Swow\Socket $client [optional] = null
+         * @param null|self $client [optional] = null
          * @param null|int $timeout [optional] = $this->getAcceptTimeout()
-         * @return $this
+         * @return self
          */
-        public function accept(?\Swow\Socket $client = null, ?int $timeout = null): static { }
+        public function accept(?self $client = null, ?int $timeout = null): self { }
 
         /**
-         * @param null|int $client_type [optional] = \Swow\Socket::TYPE_ANY
-         * @param null|\Swow\Socket $client [optional] = null
+         * @param null|int $client_type [optional] = self::TYPE_ANY
+         * @param null|self $client [optional] = null
          * @param null|int $timeout [optional] = $this->getAcceptTimeout()
-         * @return $this
+         * @return self
          */
-        public function acceptTyped(?int $client_type = \Swow\Socket::TYPE_ANY, ?\Swow\Socket $client = null, ?int $timeout = null): static { }
+        public function acceptTyped(?int $client_type = self::TYPE_ANY, ?self $client = null, ?int $timeout = null): self { }
 
         /**
          * @param string $name [required]
@@ -1016,18 +1016,18 @@ namespace Swow
         public function sendStringTo(string $string, $address = null, $port = null, ?int $timeout = null, int $offset = 0, int $length = -1): static { }
 
         /**
-         * @param \Swow\Socket $handle [required]
+         * @param self $handle [required]
          * @param null|int $timeout [optional] = $this->getWriteTimeout()
          * @return $this
          */
-        public function sendHandle(\Swow\Socket $handle, ?int $timeout = null): static { }
+        public function sendHandle(self $handle, ?int $timeout = null): static { }
 
         /**
-         * @param null|\Swow\Socket $handle [optional] = null
+         * @param null|self $handle [optional] = null
          * @param null|int $timeout [optional] = $this->getAcceptTimeout()
          * @return $this
          */
-        public function recvHandle(?\Swow\Socket $handle = null, ?int $timeout = null): static { }
+        public function recvHandle(?self $handle = null, ?int $timeout = null): static { }
 
         /**
          * @return bool
@@ -1354,11 +1354,11 @@ namespace Swow\Sync
     class WaitReference
     {
         /**
-         * @param \Swow\Sync\WaitReference $waitReference [required]
+         * @param self $waitReference [required]
          * @param int $timeout [optional] = -1
          * @return void
          */
-        public static function wait(\Swow\Sync\WaitReference &$waitReference, int $timeout = -1): void { }
+        public static function wait(self &$waitReference, int $timeout = -1): void { }
 
         public function __destruct() { }
     }
