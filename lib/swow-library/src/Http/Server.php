@@ -43,14 +43,20 @@ class Server extends Socket
         return $connection;
     }
 
-    public function broadcastMessage(WebSocketFrame $frame, array $targets = null)
+    /**
+     * @param Connection[] $targets
+     * @return SocketException[]
+     */
+    public function broadcastMessage(WebSocketFrame $frame, array $targets = null): array
     {
+        /** @var Connection[] $targets */
         if ($targets === null) {
             $targets = $this->connections;
         }
         if ($frame->getPayloadLength() <= Buffer::PAGE_SIZE) {
             $frame = $frame->toString();
         }
+        $exceptions = [];
         foreach ($targets as $target) {
             if ($target->getType() !== $target::TYPE_WEBSOCKET) {
                 continue;
@@ -61,10 +67,13 @@ class Server extends Socket
                 } else {
                     $target->sendWebSocketFrame($frame);
                 }
-            } catch (SocketException) {
-                /* ignore */
+            } catch (SocketException $exception) {
+                /* record it and ignore */
+                $exceptions[$target->getFd()] = $exception;
             }
         }
+
+        return $exceptions;
     }
 
     public function offline(int $fd): void
