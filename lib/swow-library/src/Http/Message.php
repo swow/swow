@@ -93,7 +93,7 @@ class Message implements MessageInterface, Stringable
         return implode(',', $this->getHeader($name));
     }
 
-    public function setHeader(string $name, array|string $value): static
+    public function setHeader(string $name, mixed $value): static
     {
         $lowerCaseName = strtolower($name);
         $rawName = $this->headerNames[$lowerCaseName] ?? null;
@@ -102,7 +102,7 @@ class Message implements MessageInterface, Stringable
         }
 
         if ($value !== null) {
-            $this->headers[$name] = is_array($value) ? $value : [$value];
+            $this->headers[$name] = is_array($value) ? $value : [(string) $value];
             $this->headerNames[$lowerCaseName] = $name;
         } else {
             unset($this->headerNames[$lowerCaseName]);
@@ -148,7 +148,7 @@ class Message implements MessageInterface, Stringable
 
     /**
      * @param string $name
-     * @param null|string $value
+     * @param string|string[] $value
      */
     public function withHeader($name, $value): static
     {
@@ -160,7 +160,7 @@ class Message implements MessageInterface, Stringable
 
     /**
      * @param string $name
-     * @param null|string $value
+     * @param string|string[] $value
      */
     public function withAddedHeader($name, $value): static
     {

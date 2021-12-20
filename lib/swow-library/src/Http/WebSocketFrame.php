@@ -14,13 +14,11 @@ declare(strict_types=1);
 namespace Swow\Http;
 
 use Swow\WebSocket;
+use TypeError;
 
 class WebSocketFrame extends WebSocket\Frame
 {
-    /**
-     * @return Buffer
-     */
-    public function getPayloadData(): \Swow\Buffer
+    public function getPayloadData(): Buffer
     {
         if (!$this->hasPayloadData()) {
             $payloadData = new Buffer();
@@ -29,6 +27,19 @@ class WebSocketFrame extends WebSocket\Frame
             return $payloadData;
         }
 
+        /* @noinspection PhpIncompatibleReturnTypeInspection */
         return parent::getPayloadData();
+    }
+
+    /**
+     * @param null|Buffer $buffer
+     */
+    public function setPayloadData(?\Swow\Buffer $buffer): static
+    {
+        if (!($buffer instanceof Buffer)) {
+            throw new TypeError('$buffer should be an instance of ' . Buffer::class);
+        }
+
+        return parent::setPayloadData($buffer);
     }
 }
