@@ -150,7 +150,7 @@ function php_options_with_swow(): array
         '-d', 'track_errors=0',
     ];
 
-    if (!str_contains(shell_exec(real_php_path() . ' -m'), Swow::class)) {
+    if (!str_contains(shell_exec(real_php_path() . ' -m') ?? '', Swow::class)) {
         $options []= '-d';
         $options []= 'extension=swow';
     }
