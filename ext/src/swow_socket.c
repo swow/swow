@@ -354,7 +354,7 @@ static PHP_METHOD_EX(Swow_Socket, _accept, swow_socket_accept_type_t type)
     RETURN_OBJ(&sclient->std);
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO(arginfo_class_Swow_Socket_accept, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_class_Swow_Socket_accept, ZEND_RETURN_VALUE, 0, Swow\\Socket, 0)
     ZEND_ARG_OBJ_INFO_WITH_DEFAULT_VALUE(0, client, Swow\\Socket, 1, "null")
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, timeout, IS_LONG, 1, "\'$this->getAcceptTimeout()\'")
 ZEND_END_ARG_INFO()
@@ -364,7 +364,7 @@ static PHP_METHOD(Swow_Socket, accept)
     PHP_METHOD_CALL(Swow_Socket, _accept, SWOW_SOCKET_ACCEPT_TYPE_DEFAULT);
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO(arginfo_class_Swow_Socket_acceptTyped, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_class_Swow_Socket_acceptTyped, ZEND_RETURN_VALUE, 0, Swow\\Socket, 0)
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, client_type, IS_LONG, 1, "Swow\\Socket::TYPE_ANY")
     ZEND_ARG_OBJ_INFO_WITH_DEFAULT_VALUE(0, client, Swow\\Socket, 1, "null")
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, timeout, IS_LONG, 1, "\'$this->getAcceptTimeout()\'")

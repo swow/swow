@@ -55,7 +55,7 @@ class LengthStream extends Socket
         return $this->formatSize;
     }
 
-    public function accept(?Socket $client = null, ?int $timeout = null): static
+    public function accept(?Socket $client = null, ?int $timeout = null): self
     {
         if ($client !== null && !($client instanceof self)) {
             throw new TypeError('Client should be an instance of ' . self::class);
