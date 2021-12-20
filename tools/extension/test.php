@@ -31,7 +31,7 @@ if ('Windows' === PHP_OS_FAMILY) {
     $cmd = "{ ulimit -n {$NOLIMIT} || echo 'Cannot set nolimit to {$NOLIMIT}, some tests may fail.' ; } && NO_INTERACTION=1 " . PHP_BINARY;
 }
 
-if (!extension_loaded(\Swow::class)) {
+if (!extension_loaded(Swow::class)) {
     $enable_swow = '-d extension=swow';
     $check = '-d extension=swow --ri swow';
     $status = passthru(sprintf('%s "%s %s"', $shell, $cmd, $check));

@@ -20,7 +20,7 @@ define('testnotzip', __DIR__ . DIRECTORY_SEPARATOR . 'zip_ops.notzip');
 if (file_exists(testzip)) {
     unlink(testzip);
 }
-$zip = new \ZipArchive();
+$zip = new ZipArchive();
 $zip->open(testzip, ZipArchive::CREATE);
 $zip->addFromString('file_1', "this is content of file_1.\n");
 $zip->addFromString('file_2', "this is content of file_2.\n");
@@ -35,7 +35,7 @@ $zip->close();
 
 rename(testzip, testnotzip);
 
-$zip = new \ZipArchive();
+$zip = new ZipArchive();
 $zip->open(testnotzip);
 
 for ($i = 0; $i < $zip->count(); $i++) {

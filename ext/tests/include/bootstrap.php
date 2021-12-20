@@ -53,8 +53,8 @@ define('TEST_MAX_LOOPS', (int) ([0.001, 1, 10, 100, 1000][TEST_PRESSURE_LEVEL] *
 define('TEST_MAX_PROCESSES', [1, 1, 2, 4, 8][TEST_PRESSURE_LEVEL]);
 
 # ini
-if (extension_loaded(\Swow::class)) {
-    \Swow\Socket::setGlobalTimeout(15 * 1000);
+if (extension_loaded(Swow::class)) {
+    Swow\Socket::setGlobalTimeout(15 * 1000);
 }
 
 # functions
@@ -150,7 +150,7 @@ function php_options_with_swow(): array
         '-d', 'track_errors=0',
     ];
 
-    if (!str_contains(shell_exec(real_php_path() . ' -m'), \Swow::class)) {
+    if (!str_contains(shell_exec(real_php_path() . ' -m'), Swow::class)) {
         $options []= '-d';
         $options []= 'extension=swow';
     }

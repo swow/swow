@@ -15,8 +15,9 @@ namespace Swow\Http;
 
 use Psr\Http\Message\StreamInterface;
 use RuntimeException;
+use Swow\Stream\Buffer as StreamBuffer;
 
-class Buffer extends \Swow\Stream\Buffer implements StreamInterface
+class Buffer extends StreamBuffer implements StreamInterface
 {
     public function detach()
     {

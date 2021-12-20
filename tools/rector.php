@@ -9,7 +9,7 @@ use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigura
 if (PHP_VERSION_ID >= 80200) {
     throw new Error('Please use released PHP version');
 }
-if (extension_loaded(\Swow::class)) {
+if (extension_loaded(Swow::class)) {
     throw new Error(
         'Unable to run with Swow extension, ' .
         'because PHPStan\\BetterReflection does not support generate stub files for PHP-8.x extension, ' .

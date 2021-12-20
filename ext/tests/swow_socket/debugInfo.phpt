@@ -14,7 +14,7 @@ use Swow\Sync\WaitReference;
 
 class MySocket extends Socket
 {
-    public function __construct(int $type = \Swow\Socket::TYPE_TCP)
+    public function __construct(int $type = self::TYPE_TCP)
     {
         // not initialized
         var_dump($this);
@@ -22,7 +22,7 @@ class MySocket extends Socket
     }
 }
 
-$server = new MySocket(Socket::TYPE_TCP);
+$server = new MySocket(MySocket::TYPE_TCP);
 
 // not connected
 var_dump($server);

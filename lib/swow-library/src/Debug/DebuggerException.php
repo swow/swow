@@ -13,6 +13,8 @@ declare(strict_types=1);
 
 namespace Swow\Debug;
 
-class DebuggerException extends \Swow\Exception
+use Swow\Exception;
+
+class DebuggerException extends Exception
 {
 }

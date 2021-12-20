@@ -115,11 +115,11 @@ function skip_if_c_function_not_exist(string $def, ?string $lib = null): void
 
     try {
         if ($lib) {
-            \FFI::cdef($def, $lib);
+            FFI::cdef($def, $lib);
         } else {
-            \FFI::cdef($def);
+            FFI::cdef($def);
         }
-    } catch (\Throwable) {
+    } catch (Throwable) {
         skip('"' . $def . '" not usable');
     }
 }
@@ -128,10 +128,10 @@ function skip_if_cannot_make_subprocess()
 {
     skip('shell_exec is not callable', (!is_callable('shell_exec')) || (!is_callable('popen')));
     $loaded_modules = shell_exec(PHP_BINARY . ' -m');
-    if (!str_contains($loaded_modules, \Swow::class)) {
+    if (!str_contains($loaded_modules, Swow::class)) {
         $loaded_modules = shell_exec(PHP_BINARY . ' -dextension=swow --ri swow');
         if (
-            !str_contains($loaded_modules, \Swow::class) ||
+            !str_contains($loaded_modules, Swow::class) ||
             str_contains($loaded_modules, 'Warning')
         ) {
             skip('Swow is not present in TEST_PHP_EXECUTABLE and cannot load it via -dextension=swow');

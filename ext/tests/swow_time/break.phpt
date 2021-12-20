@@ -8,13 +8,15 @@ require __DIR__ . '/../include/skipif.php';
 <?php
 require __DIR__ . '/../include/bootstrap.php';
 
+use Swow\Coroutine;
+
 const LONG_TIME = 5;
 
 foreach ([
     'sleep' => LONG_TIME,
     'msleep' => LONG_TIME * 1000,
 ] as $func => $arg) {
-    $co = \Swow\Coroutine::run(function () use ($func, $arg) {
+    $co = Coroutine::run(function () use ($func, $arg) {
         echo "start {$func}({$arg})\n";
         $ret = $func($arg);
         // fixme: KNOWN BC here
@@ -25,7 +27,7 @@ foreach ([
 }
 
 $start = microtime(true);
-$co = \Swow\Coroutine::run(function () {
+$co = Coroutine::run(function () {
     $usleep_time = LONG_TIME * 1000 * 1000;
     echo "start usleep({$usleep_time})\n";
     usleep($usleep_time);
@@ -35,7 +37,7 @@ $end = microtime(true);
 Assert::lessThan($end - $start, LONG_TIME * 1000);
 
 $start = microtime(true);
-$co = \Swow\Coroutine::run(function () {
+$co = Coroutine::run(function () {
     echo 'start time_nanosleep(' . LONG_TIME . ", 0)\n";
     $ret = time_nanosleep(LONG_TIME, 0);
     Assert::integer($ret['seconds']);
@@ -48,7 +50,7 @@ $end = microtime(true);
 Assert::lessThan($end - $start, LONG_TIME * 1000);
 
 $start = microtime(true);
-$co = \Swow\Coroutine::run(function () use ($start) {
+$co = Coroutine::run(function () use ($start) {
     $sleep_ms = LONG_TIME * 1000;
     echo "start time_sleep_until(now + {$sleep_ms})\n";
     $ret = time_sleep_until($start + $sleep_ms);

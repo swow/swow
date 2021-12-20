@@ -16,7 +16,7 @@ use Swow\Socket;
 
 class StrangeSocket extends Socket
 {
-    public function __construct(int $type = \Swow\Socket::TYPE_TCP)
+    public function __construct(int $type = self::TYPE_TCP)
     {
         // if not constructed, socket is not available
         Assert::false($this->isAvailable());
@@ -24,7 +24,7 @@ class StrangeSocket extends Socket
     }
 }
 
-$socket = new StrangeSocket(Socket::TYPE_TCP);
+$socket = new StrangeSocket(StrangeSocket::TYPE_TCP);
 
 // lazy init here, if socket is not listening or connected
 // fd will not be accessible

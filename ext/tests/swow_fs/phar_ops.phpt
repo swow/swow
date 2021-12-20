@@ -86,7 +86,7 @@ EOF;
 if (file_exists(testphar)) {
     unlink(testphar);
 }
-$phar = new \Phar(testphar);
+$phar = new Phar(testphar);
 $phar->addFromString('file_1', "this is content of file_1.\n");
 $phar->addFromString('file_2', "this is content of file_2.\n");
 $phar->addFromString('file_3', "this is content of file_3.\n");

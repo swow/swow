@@ -16,7 +16,6 @@ namespace Swow\Http;
 use Psr\Http\Client\ClientExceptionInterface;
 use Psr\Http\Client\ClientInterface;
 use Psr\Http\Message\RequestInterface;
-use Psr\Http\Message\ResponseInterface;
 use Swow\Http\Client\NetworkException;
 use Swow\Http\Client\RequestException;
 use Swow\Http\Parser as HttpParser;
@@ -89,7 +88,7 @@ class Client extends Socket implements ClientInterface, HttpTypeInterface
         );
     }
 
-    public function sendRequest(RequestInterface $request): ResponseInterface
+    public function sendRequest(RequestInterface $request): Response
     {
         try {
             $headers = $request->getHeaders();
