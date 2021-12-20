@@ -43,7 +43,17 @@ if (!extension_loaded(Swow::class)) {
 } else {
     $enable_swow = '';
 }
-$options = "-n {$workspace}/tests/runner/run-tests.php -P {$enable_swow} --show-diff --show-slow 1000 --set-timeout 30 --color";
+if (PHP_OS_FAMILY === 'Windows') {
+    // TODO: parallel testing has bugs on Windows
+    $cpuCount = 1;
+} else {
+    // TODO: use Swow\Cpu module
+    $cpuCount = (int) `{$workspace}/deps/libcat/tools/cpu_count.sh`;
+    if ($cpuCount <= 0) {
+        $cpuCount = 4;
+    }
+}
+$options = "-n {$workspace}/tests/runner/run-tests.php -P {$enable_swow} --show-diff --show-slow 1000 --set-timeout 30 --color -j{$cpuCount}";
 $options = implode(' ', array_map('trim', explode(' ', $options)));
 $user_args = $argv;
 array_shift($user_args);

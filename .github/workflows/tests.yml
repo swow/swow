@@ -85,8 +85,7 @@ jobs:
         id: ext-test
         continue-on-error: true
         run: |
-          composer test-extension -- \
-            -j`${{ runner.os == 'Linux' && 'nproc' || 'sysctl -n hw.logicalcpu' }}`
+          composer test-extension
 
       - name: Setup composer dependencies
         run: composer update -o --ignore-platform-reqs
