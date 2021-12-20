@@ -29,23 +29,28 @@ if (PHP_OS_FAMILY === 'Windows') {
 $workSpace = realpath(__DIR__ . '/../../ext');
 
 $swowSo = "{$workSpace}/.libs/swow.so";
-$options = getopt('', ['sudo', 'install', 'rebuild', 'show-log', 'debug', 'thread-context', 'msan', 'asan', 'ubsan', 'enable::']);
+$options = getopt('', ['sudo', 'install', 'rebuild', 'clean', 'show-log', 'debug', 'thread-context', 'msan', 'asan', 'ubsan', 'enable::']);
 
 $commandExecutor = function (string $name, array $commands) use ($workSpace): void {
+    if (!$commands) {
+        return;
+    }
     array_unshift($commands, "cd {$workSpace}");
     passthru(...$commands) && error("{$name} failed");
     ok("{$name} complete");
     br();
 };
 
-if (isset($options['rebuild'])) {
-    $cleanCommands = [];
+$cleanCommands = [];
+if (isset($options['rebuild']) || isset($options['clean'])) {
     if (file_exists("{$workSpace}/Makefile")) {
         $cleanCommands[] = './clean.sh';
     }
-    $cleanCommands[] = 'phpize --clean';
-    $commandExecutor('Clean', $cleanCommands);
 }
+if (isset($options['rebuild'])) {
+    $cleanCommands[] = 'phpize --clean';
+}
+$commandExecutor('Clean', $cleanCommands);
 
 $configureCommands = [];
 if (!file_exists("{$workSpace}/configure") || isset($options['rebuild'])) {
