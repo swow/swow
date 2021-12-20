@@ -32,7 +32,6 @@ function testMultiClient(string $name, callable $function)
                 [$data, $peer_port] = $function($server);
             } catch (Swow\Socket\Exception $e) {
                 Assert::same($e->getCode(), ETIMEDOUT);
-
                 return;
             }
             [1 => $peer_port_in_data, 2 => $local_port_in_data] = unpack('N2', $data);
