@@ -20,11 +20,13 @@ use ReflectionFunction;
 use ReflectionFunctionAbstract;
 use ReflectionMethod;
 use ReflectionProperty;
+use ReflectionUnionType;
 use Reflector;
 use RuntimeException;
 use Throwable;
 use function array_merge;
 use function array_pop;
+use function array_walk;
 use function bin2hex;
 use function class_exists;
 use function count;
@@ -34,7 +36,6 @@ use function explode;
 use function file_put_contents;
 use function fwrite;
 use function implode;
-use function in_array;
 use function interface_exists;
 use function is_array;
 use function is_bool;
@@ -49,6 +50,7 @@ use function ltrim;
 use function method_exists;
 use function rtrim;
 use function sprintf;
+use function str_contains;
 use function str_repeat;
 use function str_replace;
 use function strlen;
@@ -158,7 +160,7 @@ class StubGenerator
 
     protected function getConstantMap(): array
     {
-        if ($this->constantMap !== null) {
+        if (isset($this->constantMap)) {
             return $this->constantMap;
         }
 
@@ -236,19 +238,30 @@ class StubGenerator
         return sprintf('%s%s function %s(%s)%s {%s}', $comment, $prefix, $name, $params, $returnType, $body);
     }
 
-    /**
-     * @param string $prefix
-     */
     protected function generateFunctionDeclaration(ReflectionFunction|ReflectionMethod $function): string
     {
         $name = ltrim(str_replace($function->getNamespaceName(), '', $function->getName(), $isInNamespace), '\\');
+        $scope = $function instanceof ReflectionMethod ? $function->getDeclaringClass()->getName() : '';
 
         $comment = '';
         $paramsDeclarations = [];
         $params = $function->getParameters();
         foreach ($params as $param) {
             $variadic = $param->isVariadic() ? '...' : '';
-            $paramType = ltrim((string) ($param->getType() ? $param->getType()->getName() : null), '?') ?: 'mixed';
+            $paramTypeReflection = $param->getType();
+            if ($paramTypeReflection) {
+                $paramTypeResolve = fn (string $type) => ($type !== $scope) ? $type : 'self';
+                if ($paramTypeReflection instanceof ReflectionUnionType) {
+                    $paramTypes = $paramTypeReflection->getTypes();
+                    array_walk($paramTypes, $paramTypeResolve);
+                    $paramTypeName = implode('|', $paramTypes);
+                } else {
+                    $paramTypeName = $paramTypeResolve($paramTypeReflection->getName());
+                }
+            } else {
+                $paramTypeName = '';
+            }
+            $paramType = ltrim($paramTypeName, '?') ?: 'mixed';
             if (class_exists($paramType) || interface_exists($paramType)) {
                 $paramType = '\\' . $paramType;
             }
@@ -264,10 +277,17 @@ class StubGenerator
                 } else {
                     if (is_string($defaultParamConstantName) && $defaultParamConstantName !== '') {
                         $defaultParamValueTip = "\\{$defaultParamConstantName}";
+                        if (str_contains($defaultParamValueTip, '::')) {
+                            $parts = explode('::', $defaultParamValueTip);
+                            $class = ltrim($parts[0], '\\');
+                            if ($class === $scope) {
+                                $defaultParamValueTip = "self::{$parts[1]}";
+                            }
+                        }
                     } elseif ($defaultParamValueString !== '') {
-                        $defaultParamValueTip = (string) $defaultParamValueString;
+                        $defaultParamValueTip = $defaultParamValueString;
                     } else {
-                        $defaultParamValueTip = $defaultParamValueTipOnDoc = '';
+                        $defaultParamValueTip = '';
                     }
                     $defaultParamValueTipOnDoc = $defaultParamValueTip;
                 }
@@ -305,7 +325,6 @@ class StubGenerator
         if ($function->hasReturnType()) {
             $returnType = $function->getReturnType();
             $returnTypeAllowNull = $returnType->allowsNull();
-            /** @noinspection PhpPossiblePolymorphicInvocationInspection */
             $returnTypeName = $returnType->getName();
             if (class_exists($returnTypeName)) {
                 if ($function instanceof ReflectionMethod && $returnTypeName === $function->getDeclaringClass()->getName()) {
