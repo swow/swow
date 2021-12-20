@@ -60,7 +60,7 @@ Coroutine::run(function () use ($server, $wrServer) {
                 ] + $requestPayload);
             $response = [
                 'HTTP/1.0 200 OK',
-                'server: Swow/' . \Swow\VERSION,
+                'server: Swow/' . Swow\VERSION,
                 'content-length: ' . strlen($payload),
                 'content-type: application/json',
                 'connection: close',

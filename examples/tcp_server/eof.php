@@ -14,6 +14,7 @@ declare(strict_types=1);
 require __DIR__ . '/../../tools/autoload.php';
 
 use Swow\Coroutine;
+use Swow\Socket\Exception as SocketException;
 use Swow\Stream\EofStream;
 
 $server = new EofStream();
@@ -28,7 +29,7 @@ while (true) {
                 echo "Stream<fd={$stream->getFd()}>: \"{$message}\"" . PHP_EOL;
                 $stream->sendMessageString($message);
             }
-        } catch (\Swow\Socket\Exception $exception) {
+        } catch (SocketException $exception) {
             echo "Stream<fd={$stream->getFd()}> goaway, reason: {$exception->getMessage()}" . PHP_EOL;
         }
     }, $server->accept());

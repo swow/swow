@@ -33,7 +33,7 @@ DEF
         $ts = $ffi->new('timespec');
         $ts->tv_sec = (int) floor($ns / 1e9);
         $ts->tv_nsec = $ns % (1000 * 1000 * 1000);
-        while ($ffi->nanosleep(\FFI::addr($ts), \FFI::addr($ts)) !== 0) {
+        while ($ffi->nanosleep(FFI::addr($ts), FFI::addr($ts)) !== 0) {
             // do nothing
         }
     } else {

@@ -9,6 +9,7 @@ require __DIR__ . '/../include/skipif.php';
 require __DIR__ . '/../include/bootstrap.php';
 
 use Swow\Channel;
+use Swow\Coroutine;
 
 $bucket = new Channel(0);
 Assert::same($bucket->getLength(), 0);
@@ -38,7 +39,7 @@ Assert::same($bucket->getCapacity(), 2);
 $fruits = ['apple', 'pear', 'orange', 'banana', 'grape'];
 
 array_map(function ($fruit) use ($bucket) {
-    \Swow\Coroutine::run(function () use ($fruit, $bucket) {
+    Coroutine::run(function () use ($fruit, $bucket) {
         // "wash it"
         pseudo_random_sleep();
         $bucket->push("washed {$fruit}");

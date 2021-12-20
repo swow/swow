@@ -8,6 +8,7 @@ require __DIR__ . '/../include/skipif.php';
 <?php
 require __DIR__ . '/../include/bootstrap.php';
 
+use Swow\Http;
 
 $payload = 'hello world';
 $headers = [
@@ -21,9 +22,9 @@ $headers = [
     $payload,
 ];
 
-var_dump(\Swow\Http\packMessage($headers, $payload));
-var_dump(\Swow\Http\packRequest('GET', '/some#path?a=b&c=d', $headers, $payload));
-var_dump(\Swow\Http\packResponse(418, $headers, $payload, "I'm apt, not apk", '1.0'));
+var_dump(Http\packMessage($headers, $payload));
+var_dump(Http\packRequest('GET', '/some#path?a=b&c=d', $headers, $payload));
+var_dump(Http\packResponse(418, $headers, $payload, "I'm apt, not apk", '1.0'));
 
 echo 'Done' . PHP_LF;
 ?>

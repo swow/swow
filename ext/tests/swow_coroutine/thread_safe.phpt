@@ -13,7 +13,7 @@ require __DIR__ . '/../include/bootstrap.php';
 
 use Swow\Coroutine;
 
-class Corker extends \Thread
+class Corker extends Thread
 {
     protected static int $num = 0;
     protected int $id;

@@ -21,7 +21,7 @@ Signal::kill(getmypid(), Signal::INT);
 Assert::throws(function () {
     // timeout situation
     Signal::wait(Signal::TERM, 10);
-}, \Swow\Signal\Exception::class);
+}, Signal\Exception::class);
 
 echo 'Done' . PHP_LF;
 ?>

@@ -13,7 +13,7 @@ use Swow\Util\FileSystem;
     }
     $n = $argv[1];
     $g = new StubGenerator($n);
-    if (strcasecmp($g->getExtensionName(), \Swow::class) === 0) {
+    if (strcasecmp($g->getExtensionName(), Swow::class) === 0) {
         $returnThisMap = [];
         $sourceFiles = FileSystem::scanDir(
             __DIR__ . '/../../ext/src',
