@@ -8,12 +8,7 @@ require __DIR__ . '/../include/skipif.php';
 <?php
 require __DIR__ . '/../include/bootstrap.php';
 
-use Swow\Coroutine;
 use Swow\Socket;
-use Swow\Sync\WaitReference;
-use const Swow\Errno\ECANCELED;
-use const Swow\Errno\ECONNREFUSED;
-use const Swow\Errno\ECONNRESET;
 
 $socket = new Socket(Socket::TYPE_TCP);
 $socket->bind('127.0.0.1');

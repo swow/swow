@@ -14,7 +14,6 @@ declare(strict_types=1);
 namespace Swow\Http;
 
 use Psr\Http\Message\RequestInterface;
-use Psr\Http\Message\StreamInterface;
 use Psr\Http\Message\UriInterface;
 use TypeError;
 use function is_string;

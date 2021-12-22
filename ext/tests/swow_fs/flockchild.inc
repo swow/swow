@@ -1,7 +1,6 @@
 <?php
 require __DIR__ . '/../include/bootstrap.php';
 
-use Swow\Coroutine;
 use Swow\Socket;
 
 const TEST_LOCKNAME = __DIR__ . DIRECTORY_SEPARATOR . "lockfile.txt";

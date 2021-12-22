@@ -22,7 +22,6 @@ use function is_writable;
 use function mkdir;
 use function parse_url;
 use function strlen;
-use function substr;
 use function sys_get_temp_dir;
 use function trim;
 
