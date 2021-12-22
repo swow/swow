@@ -15,10 +15,7 @@ namespace Swow\Stream;
 
 class Buffer extends \Swow\Buffer
 {
-    /**
-     * @param mixed $body
-     */
-    public static function for($body = ''): static
+    public static function for(mixed $body = ''): static
     {
         if ($body instanceof static) {
             return $body;

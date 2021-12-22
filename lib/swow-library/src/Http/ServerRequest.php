@@ -36,10 +36,7 @@ class ServerRequest extends Request implements ServerRequestInterface
 
     protected array $queryParams = [];
 
-    /**
-     * @var null|array|object
-     */
-    protected $parsedBody;
+    protected null|array|object $parsedBody;
 
     /**
      * @var UploadedFileInterface[]
@@ -125,10 +122,7 @@ class ServerRequest extends Request implements ServerRequestInterface
         return $this->parsedBody = BodyParser::parse($this);
     }
 
-    /**
-     * @param array|object $data
-     */
-    public function setParsedBody($data): static
+    public function setParsedBody(null|array|object $data): static
     {
         $this->parsedBody = $data;
 
@@ -136,12 +130,12 @@ class ServerRequest extends Request implements ServerRequestInterface
     }
 
     /**
-     * @param array|object $data
+     * @param null|array|object $data
      */
     public function withParsedBody($data): static
     {
         $new = clone $this;
-        $new->parsedBody = $data;
+        $new->setParsedBody($data);
 
         return $new;
     }
@@ -171,59 +165,52 @@ class ServerRequest extends Request implements ServerRequestInterface
         return $this->attributes;
     }
 
-    public function getAttribute($attribute, $default = null)
+    public function getAttribute($name, $default = null)
     {
-        if (array_key_exists($attribute, $this->attributes) === false) {
+        if (array_key_exists($name, $this->attributes) === false) {
             return $default;
         }
 
-        return $this->attributes[$attribute];
+        return $this->attributes[$name];
     }
 
-    /**
-     * @param mixed $attribute
-     * @param mixed $value
-     */
-    public function setAttribute($attribute, $value): static
+    public function setAttribute(string $name, mixed $value): static
     {
-        $this->attributes[$attribute] = $value;
+        $this->attributes[$name] = $value;
+
+        return $this;
+    }
+
+    public function unsetAttribute(string $name): static
+    {
+        unset($this->attributes[$name]);
 
         return $this;
     }
 
     /**
-     * @param string $attribute
-     */
-    public function unsetAttribute($attribute): static
-    {
-        unset($this->attributes[$attribute]);
-
-        return $this;
-    }
-
-    /**
-     * @param string $attribute
+     * @param string $name
      * @param mixed $value
      */
-    public function withAttribute($attribute, $value): static
+    public function withAttribute($name, $value): static
     {
         $new = clone $this;
-        $new->attributes[$attribute] = $value;
+        $new->setAttribute($name, $value);
 
         return $new;
     }
 
     /**
-     * @param string $attribute
+     * @param string $name
      */
-    public function withoutAttribute($attribute): static
+    public function withoutAttribute($name): static
     {
-        if (array_key_exists($attribute, $this->attributes) === false) {
+        if (array_key_exists($name, $this->attributes) === false) {
             return $this;
         }
 
         $new = clone $this;
-        unset($new->attributes[$attribute]);
+        $new->unsetAttribute($name);
 
         return $new;
     }

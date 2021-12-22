@@ -34,10 +34,10 @@ class Request extends Message implements RequestInterface
      * @param string $method HTTP method
      * @param string|UriInterface $uri URI
      * @param array $headers Request headers
-     * @param null|resource|StreamInterface|string $body Request body
+     * @param mixed $body Request body
      * @param string $protocolVersion Protocol version
      */
-    public function __construct(string $method = '', $uri = '', array $headers = [], $body = '', string $protocolVersion = self::DEFAULT_PROTOCOL_VERSION)
+    public function __construct(string $method = '', $uri = '', array $headers = [], mixed $body = '', string $protocolVersion = self::DEFAULT_PROTOCOL_VERSION)
     {
         if ($method !== '') {
             $this->setMethod($method);

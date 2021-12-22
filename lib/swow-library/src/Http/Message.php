@@ -36,9 +36,9 @@ class Message implements MessageInterface, Stringable
 
     /**
      * @param array $headers Request headers
-     * @param null|Buffer|string $body Request body
+     * @param mixed $body Request body
      */
-    public function __construct(array $headers = [], $body = null, string $protocolVersion = self::DEFAULT_PROTOCOL_VERSION)
+    public function __construct(array $headers = [], mixed $body = null, string $protocolVersion = self::DEFAULT_PROTOCOL_VERSION)
     {
         $this->setProtocolVersion($protocolVersion);
 
