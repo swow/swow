@@ -13,14 +13,37 @@
 declare(strict_types=1);
 
 use function Swow\Tools\br;
+use function Swow\Tools\error;
 use function Swow\Tools\notice;
 use function Swow\Tools\passthru;
 use function Swow\Tools\warn;
 
 require __DIR__ . '/../tools.php';
 
+$workspace = dirname(__DIR__, 2) . '/ext';
+
+$runTestsPath = "{$workspace}/run-tests.php";
+if (!file_exists($runTestsPath)) {
+    $requestArgs = ['filename' => 'https://raw.githubusercontent.com/php/php-src/master/run-tests.php'];
+    if (getenv('http_proxy')) {
+        $requestArgs['context'] = stream_context_create([
+            'http' => [
+                'proxy' => str_replace(['http://'], 'tcp://', getenv('http_proxy')),
+                'request_fulluri' => true,
+            ],
+        ]);
+    }
+    $runTestsSource = file_get_contents(...$requestArgs);
+    if (!$runTestsSource) {
+        error('Unable to download run-tests.php');
+    }
+    file_put_contents($runTestsPath, $runTestsSource);
+    if (!file_exists($runTestsPath)) {
+        error('Unable to put run-tests.php');
+    }
+}
+
 $NOLIMIT = 8192;
-$workspace = __DIR__ . '/../../ext';
 
 if ('Windows' === PHP_OS_FAMILY) {
     // No need to set nolimit on Windows
@@ -53,7 +76,7 @@ if (PHP_OS_FAMILY === 'Windows') {
         $cpuCount = 4;
     }
 }
-$options = "-n {$workspace}/tests/runner/run-tests.php -P {$enable_swow} --show-diff --show-slow 1000 --set-timeout 30 --color -j{$cpuCount}";
+$options = "-n {$runTestsPath} -P {$enable_swow} --show-diff --show-slow 1000 --set-timeout 30 --color -j{$cpuCount}";
 $options = implode(' ', array_map('trim', explode(' ', $options)));
 $user_args = $argv;
 array_shift($user_args);
