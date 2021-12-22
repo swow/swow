@@ -13,9 +13,10 @@ declare(strict_types=1);
 
 namespace Swow\Debug;
 
-use ArrayObject;
 use Error;
 use SplFileObject;
+use stdClass;
+use Swow\Channel;
 use Swow\Coroutine;
 use Swow\Signal;
 use Swow\Socket;
@@ -41,6 +42,7 @@ use function fopen;
 use function func_get_args;
 use function getenv;
 use function implode;
+use function is_a;
 use function is_array;
 use function is_bool;
 use function is_float;
@@ -67,6 +69,7 @@ use const DEBUG_BACKTRACE_IGNORE_ARGS;
 use const E_USER_WARNING;
 use const JSON_THROW_ON_ERROR;
 use const PHP_EOL;
+use const PHP_INT_MAX;
 use const Swow\Errno\ETIMEDOUT;
 
 class Debugger
@@ -85,8 +88,11 @@ SDB (Swow Debugger)
 TEXT;
 
     protected const SOURCE_FILE_CONTENT_PADDING = 4;
-
     protected const SOURCE_FILE_DEFAULT_LINE_COUNT = 8;
+
+    protected const STEP_TYPE_NONE = 0;
+    protected const STEP_TYPE_NEXT = 1;
+    protected const STEP_TYPE_STEP_IN = 2;
 
     private static bool $breakPointHandlerRegistered = false;
 
@@ -122,12 +128,18 @@ TEXT;
     /* @var string[] */
     protected array $breakPoints = [];
 
+    protected int $stepType = self::STEP_TYPE_NONE;
+
+    /**  @var int For "next" command, only break when the trace depth
+     * is less or equal to the last trace depth */
+    protected int $lastTraceDepth = PHP_INT_MAX;
+
     final public static function getInstance(): static
     {
         return self::$instance ?? (self::$instance = new static());
     }
 
-    public function __construct()
+    protected function __construct()
     {
         $this->input = new Socket(Socket::TYPE_STDIN);
         $this->output = new Socket(Socket::TYPE_STDOUT);
@@ -269,29 +281,19 @@ TEXT;
         return $this;
     }
 
+    /** @return stdClass[] */
     public static function getCoroutineDebugWeakMap(): WeakMap
     {
         return static::$coroutineDebugWeakMap ?? (static::$coroutineDebugWeakMap = new WeakMap());
     }
 
-    public static function getDebugFieldOfCoroutine(Coroutine $coroutine, string $field, $defaultValue = null)
-    {
-        $coroutineDebugContext = static::getCoroutineDebugWeakMap()[$coroutine] ?? [];
-        return $coroutineDebugContext[$field] ?? $defaultValue;
-    }
-
-    public static function setDebugFieldOfCoroutine(Coroutine $coroutine, string $field, $value): void
+    public static function getDebugContextOfCoroutine(Coroutine $coroutine): stdClass
     {
         $weakMap = static::getCoroutineDebugWeakMap();
         if (!isset($weakMap[$coroutine])) {
-            $weakMap[$coroutine] = new ArrayObject();
+            return $weakMap[$coroutine] = new stdClass();
         }
-        $weakMap[$coroutine][$field] = $value;
-    }
-
-    public static function unsetDebugFieldOfCoroutine(Coroutine $coroutine, string $field): void
-    {
-        unset(static::getCoroutineDebugWeakMap()[$coroutine][$field]);
+        return $weakMap[$coroutine];
     }
 
     public function getCurrentFrameIndex(): int
@@ -467,7 +469,7 @@ TEXT;
             $args = $frame['args'] ?? [];
             $argsString = '';
             if ($args) {
-                foreach ($args as $argName => $argValue) {
+                foreach ($args as $argValue) {
                     $argsString .= static::convertValueToString($argValue) . ', ';
                 }
                 $argsString = rtrim($argsString, ', ');
@@ -525,7 +527,7 @@ TEXT;
 
     protected static function getStateNameOfCoroutine(Coroutine $coroutine): string
     {
-        if (static::getDebugFieldOfCoroutine($coroutine, 'stopped', false)) {
+        if (static::getDebugContextOfCoroutine($coroutine)->stopped ?? false) {
             $state = 'stopped';
         } else {
             $state = $coroutine->getStateName();
@@ -536,8 +538,9 @@ TEXT;
 
     protected static function getExtendedLevelOfCoroutine(Coroutine $coroutine): int
     {
-        if (static::getDebugFieldOfCoroutine($coroutine, 'stopped', false)) {
-            $level = 2; // skip extended statement handler
+        if (static::getDebugContextOfCoroutine($coroutine)->stopped ?? false) {
+            // skip extended statement handler
+            $level = static::getCoroutineTraceDiffLevel($coroutine, 'getExtendedLevelOfCoroutine');
         } else {
             $level = 0;
         }
@@ -689,8 +692,6 @@ TEXT;
 
     public function showSourceFileContentByTrace(array $trace, int $frameIndex, bool $following = false): static
     {
-        $file = null;
-        $line = null;
         try {
             $contentTable = $this::getSourceFileContentByTrace($trace, $frameIndex, $file, $line);
         } catch (DebuggerException $exception) {
@@ -743,6 +744,31 @@ TEXT;
             ->setCurrentSourceFileLine($line + $lineCount - 1);
     }
 
+    /** We need to subtract the number of call stack layers of the Debugger itself */
+    protected static function getCoroutineTraceDiffLevel(Coroutine $coroutine, string $name): int
+    {
+        static $diffLevelCache = [];
+        if (isset($diffLevelCache[$name])) {
+            return $diffLevelCache[$name];
+        }
+
+        $trace = $coroutine->getTrace();
+        $diffLevel = 0;
+        foreach ($trace as $index => $frame) {
+            $class = $frame['class'] ?? '';
+            if (is_a($class, self::class, true)) {
+                $diffLevel = $index;
+            }
+        }
+        /* Debugger::breakPointHandler() or something like it are not the Debugger frame,
+         * but we do not need to -1 here because index is start with 0. */
+        if ($coroutine === Coroutine::getCurrent()) {
+            $diffLevel -= 1; /* we are in getTrace() here */
+        }
+
+        return $diffLevelCache[$name] = $diffLevel;
+    }
+
     public function addBreakPoint(string $point): static
     {
         $this
@@ -755,12 +781,13 @@ TEXT;
     public static function break(): void
     {
         $coroutine = Coroutine::getCurrent();
-        static::setDebugFieldOfCoroutine($coroutine, 'stopped', true);
+        $context = static::getDebugContextOfCoroutine($coroutine);
+        $context->stopped = true;
         Coroutine::yield();
-        if (static::getDebugFieldOfCoroutine($coroutine, 'stop', false)) {
-            static::setDebugFieldOfCoroutine($coroutine, 'stopped', false);
+        if ($context->stop ?? false) {
+            $context->stopped = false;
         } else {
-            static::unsetDebugFieldOfCoroutine($coroutine, 'stopped');
+            unset($context->stopped);
         }
     }
 
@@ -771,10 +798,16 @@ TEXT;
 
     protected static function breakPointHandler(): void
     {
+        $debugger = static::getInstance();
         $coroutine = Coroutine::getCurrent();
+        $context = static::getDebugContextOfCoroutine($coroutine);
 
-        if (static::getDebugFieldOfCoroutine($coroutine, 'stop', false)) {
-            static::break();
+        if ($context->stop ?? false) {
+            $traceDepth = $coroutine->getTraceDepth();
+            $traceDiffLevel = static::getCoroutineTraceDiffLevel($coroutine, 'breakPointHandler');
+            if ($traceDepth - $traceDiffLevel <= $debugger->lastTraceDepth) {
+                static::break();
+            }
             return;
         }
 
@@ -794,7 +827,6 @@ TEXT;
             $baseFunction = end($baseFunction);
         }
         $hit = false;
-        $debugger = self::getInstance();
         $breakPoints = $debugger->breakPoints;
         foreach ($breakPoints as $breakPoint) {
             if (
@@ -809,9 +841,7 @@ TEXT;
             }
         }
         if ($hit) {
-            static::setDebugFieldOfCoroutine($coroutine, 'stop', true);
-        }
-        if (static::getDebugFieldOfCoroutine($coroutine, 'stop', false)) {
+            $context->stop = true;
             static::break();
         }
     }
@@ -839,19 +869,27 @@ TEXT;
 
     protected function waitStoppedCoroutine(Coroutine $coroutine): void
     {
-        if (!static::getDebugFieldOfCoroutine($coroutine, 'stopped', false)) {
-            $this->out('Waiting...');
+        $context = static::getDebugContextOfCoroutine($coroutine);
+        if ($context->stopped ?? false) {
+            return;
         }
-        while (!static::getDebugFieldOfCoroutine($coroutine, 'stopped', false)) {
+        $signalChannel = new Channel();
+        $signalListener = Coroutine::run(function () use ($signalChannel) {
+            // Always wait signal int, prevent signals from coming in gaps
+            Signal::wait(Signal::INT);
+            $signalChannel->push(true);
+        });
+        do {
             try {
-                Signal::wait(Signal::INT, 100);
+                $signalChannel->pop(100);
                 throw new DebuggerException('Cancelled');
-            } catch (Signal\Exception $exception) {
+            } catch (Channel\Exception $exception) {
                 if ($exception->getCode() !== ETIMEDOUT) {
                     throw $exception;
                 }
             }
-        }
+        } while (!($context->stopped ?? false));
+        $signalListener->kill();
     }
 
     protected static function isAlone(): bool
@@ -932,7 +970,7 @@ TEXT;
                                 if ($coroutine === Coroutine::getCurrent()) {
                                     throw new DebuggerException('Attach debugger is not allowed');
                                 }
-                                static::setDebugFieldOfCoroutine($coroutine, 'stop', true);
+                                static::getDebugContextOfCoroutine($coroutine)->stop = true;
                             }
                             $this->setCurrentCoroutine($coroutine);
                             $in = 'bt';
@@ -974,25 +1012,35 @@ TEXT;
                             break;
                         case 'n':
                         case 'next':
+                        case 's':
+                        case 'step':
                         case 'c':
                         case 'continue':
                             $coroutine = $this->getCurrentCoroutine();
-                            if (!static::getDebugFieldOfCoroutine($coroutine, 'stopped', false)) {
-                                if (static::getDebugFieldOfCoroutine($coroutine, 'stop', false)) {
+                            $context = static::getDebugContextOfCoroutine($coroutine);
+                            if (!($context->stopped ?? false)) {
+                                if ($context->stop ?? false) {
                                     $this->waitStoppedCoroutine($coroutine);
+                                } else {
+                                    throw new DebuggerException('Not in debugging');
                                 }
-                                throw new DebuggerException('Not in debugging');
                             }
                             switch ($command) {
                                 case 'n':
                                 case 'next':
+                                case 's':
+                                case 'step_in':
+                                    if ($command === 'n' || $command === 'next') {
+                                        $this->lastTraceDepth = $coroutine->getTraceDepth() - static::getCoroutineTraceDiffLevel($coroutine, 'nextCommand');
+                                    }
                                     $coroutine->resume();
                                     $this->waitStoppedCoroutine($coroutine);
+                                    $this->lastTraceDepth = PHP_INT_MAX;
                                     $in = 'f 0';
                                     goto _next;
                                 case 'c':
                                 case 'continue':
-                                    static::unsetDebugFieldOfCoroutine($coroutine, 'stop');
+                                    unset(static::getDebugContextOfCoroutine($coroutine)->stop);
                                     $this->out("Coroutine#{$coroutine->getId()} continue to run...");
                                     $coroutine->resume();
                                     break;
@@ -1101,6 +1149,8 @@ TEXT;
                                     ->run(...$args);
                             });
                             goto _quit;
+                        case null:
+                            break;
                         default:
                             if (!ctype_print($command)) {
                                 $command = bin2hex($command);
