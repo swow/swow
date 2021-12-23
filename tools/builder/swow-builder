@@ -23,7 +23,11 @@ use function Swow\Tools\warn;
 use function Swow\Tools\passthru;
 
 if (PHP_OS_FAMILY === 'Windows') {
-    error('Not supported on Windows temporarily');
+    error(
+        'This script only provides Linux build support. ' . PHP_EOL .
+        'Please download the official DLL (https://github.com/swow/swow/releases), ' .
+        'or build it yourself on Windows.'
+    );
 }
 
 $workSpace = realpath(__DIR__ . '/../../ext');
