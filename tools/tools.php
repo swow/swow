@@ -11,8 +11,20 @@
 
 namespace Swow\Tools;
 
+use RuntimeException;
+use function array_map;
+use function array_shift;
+use function error_get_last;
+use function escapeshellarg;
 use function fgets;
+use function file_get_contents;
+use function file_put_contents;
+use function getenv;
+use function implode;
+use function str_replace;
+use function stream_context_create;
 use function trim;
+use const PHP_OS_FAMILY;
 
 require_once __DIR__ . '/autoload.php';
 
@@ -183,4 +195,50 @@ function defer(&$any, callable $callback)
         };
     }
     $any->add($callback);
+}
+
+function escapeShellArgs(array $args): string
+{
+    $args = array_map('trim', $args);
+    $args = array_map('escapeshellarg', $args);
+    return escapeshellarg(implode(' ', $args));
+}
+
+function passthru2(string $cmd, array $args): int
+{
+    if ('Windows' === PHP_OS_FAMILY) {
+        $shell = 'CMD /C';
+    } else {
+        $shell = 'sh -c';
+    }
+    $args = escapeShellArgs($args);
+
+    return passthru("{$shell} \"{$cmd} \"{$args}");
+}
+
+function httpGet(string $url): false|string
+{
+    $requestArgs = ['filename' => $url];
+    if (getenv('http_proxy')) {
+        $requestArgs['context'] = stream_context_create([
+            'http' => [
+                'proxy' => str_replace('http://', 'tcp://', getenv('http_proxy')),
+                'request_fulluri' => true,
+            ],
+        ]);
+    }
+    $response = @file_get_contents(...$requestArgs);
+    if (!$response) {
+        throw new RuntimeException(sprintf("Failed to download from {$url} (%s)", error_get_last()['message']));
+    }
+
+    return $response;
+}
+
+function httpDownload(string $from, string $to): void
+{
+    $content = httpGet($from);
+    if (!@file_put_contents($to, $content)) {
+        throw new RuntimeException(sprintf("Failed to put content to {$to} (%s)", error_get_last()['message']));
+    }
 }
