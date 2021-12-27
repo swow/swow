@@ -16,9 +16,9 @@ use function Swow\Tools\notice;
 use function Swow\Tools\ok;
 use Swow\Util\FileSystem;
 
-require __DIR__ . '/../tools.php';
+require __DIR__ . '/autoload.php';
 
-$workSpace = __DIR__ . '/../../ext/deps';
+$workSpace = __DIR__ . '/../ext/deps';
 
 $sysTempDir = (function (): string {
     if (is_writable('/tmp')) {

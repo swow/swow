@@ -1,7 +1,7 @@
 #!/usr/bin/env php
 <?php
 
-require __DIR__ . '/tools.php';
+require __DIR__ . '/autoload.php';
 
 use function Swow\Tools\check;
 use function Swow\Tools\error;

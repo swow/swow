@@ -1,6 +1,6 @@
 <?php
 
-require __DIR__ . '/../tools.php';
+require __DIR__ . '/autoload.php';
 
 use Swow\Util\FileSystem;
 

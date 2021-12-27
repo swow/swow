@@ -19,9 +19,9 @@ use function Swow\Tools\notice;
 use function Swow\Tools\passthru2;
 use function Swow\Tools\warn;
 
-require __DIR__ . '/../tools.php';
+require __DIR__ . '/autoload.php';
 
-$workspace = dirname(__DIR__, 2) . '/ext';
+$workspace = dirname(__DIR__) . '/ext';
 
 $runTestsPath = "{$workspace}/run-tests.php";
 if (!file_exists($runTestsPath)) {

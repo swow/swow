@@ -61,20 +61,20 @@
         "cs-check": [ "@php vendor/bin/php-cs-fixer fix --dry-run --diff" ],
         "cs-fix": [ "@php vendor/bin/php-cs-fixer fix" ],
         "rector": [ "@php vendor/bin/rector process --config=tools/rector.php" ],
-        "sync-extension": [ "@php -n tools/extension/sync.php" ],
-        "build-extension": [ "@php tools/builder/swow-builder" ],
+        "sync-extension": [ "@php -n tools/sync-extension.php" ],
+        "build-extension": [ "@php tools/swow-builder" ],
         "rebuild-extension": [ "@build-extension --rebuild" ],
         "rebuild-debug-extension": [ "@build-extension --rebuild --debug" ],
         "install-extension": [ "@build-extension --install" ],
         "reinstall-extension": [ "@rebuild-extension --install" ],
         "reinstall-debug-extension": [ "@rebuild-debug-extension --install" ],
-        "test-extension": [ "@php tools/extension/test.php" ],
-        "test-library": [ "@php -dextension=swow vendor/bin/phpunit --configuration lib/swow-library lib/swow-library" ],
+        "test-extension": [ "@php tools/test-extension.php" ],
+        "test-library": [ "@php -d extension=swow vendor/bin/phpunit --configuration lib/swow-library lib/swow-library" ],
         "test": [ "@test-extension", "@test-library" ],
-        "gen-stub": [ "@php -n -d extension=swow tools/stub/gen.php swow lib/swow-stub/src/Swow.php" ],
+        "gen-stub": [ "@php -n -d extension=swow tools/gen-stub.php --noinspection --stub-file=lib/swow-stub/src/Swow.php swow lib/swow-stub/src/Swow.php" ],
         "split": [ "@php -n tools/split.php" ]
     },
     "bin": [
-        "tools/builder/swow-builder"
+        "tools/swow-builder"
     ]
 }

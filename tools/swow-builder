@@ -10,7 +10,7 @@
  * please view the LICENSE file that was distributed with this source code
  */
 
-require_once __DIR__ . '/../tools.php';
+require_once __DIR__ . '/autoload.php';
 
 use function Swow\Tools\askBool;
 use function Swow\Tools\br;
@@ -30,7 +30,7 @@ if (PHP_OS_FAMILY === 'Windows') {
     );
 }
 
-$workSpace = realpath(__DIR__ . '/../../ext');
+$workSpace = dirname(__DIR__) . '/ext';
 
 $swowSo = "{$workSpace}/.libs/swow.so";
 $options = getopt('', ['sudo', 'install', 'rebuild', 'clean', 'show-log', 'debug', 'thread-context', 'msan', 'asan', 'ubsan', 'enable::']);
