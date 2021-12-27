@@ -26,8 +26,7 @@ return static function (ContainerConfigurator $containerConfigurator): void {
         ->set(Option::FILE_EXTENSIONS, ['php'])
         ->set(Option::BOOTSTRAP_FILES, [
             $stubFile,
-            dirname(__DIR__) . '/vendor/autoload.php',
-            dirname(__DIR__) . '/tools/tools.php',
+            __DIR__ . '/autoload.php',
         ])->set(Option::PATHS, [
             dirname(__DIR__) . '/benchmark',
             dirname(__DIR__) . '/examples',

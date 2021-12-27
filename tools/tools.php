@@ -25,8 +25,7 @@ use function str_replace;
 use function stream_context_create;
 use function trim;
 use const PHP_OS_FAMILY;
-
-require_once __DIR__ . '/autoload.php';
+use const STDIN;
 
 const COLOR_NONE = 0;
 const COLOR_RED = 1;

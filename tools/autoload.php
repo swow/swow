@@ -23,3 +23,5 @@ foreach (
         break;
     }
 }
+
+require __DIR__ . '/tools.php';
