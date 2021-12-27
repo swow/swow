@@ -11,7 +11,7 @@
 
 declare(strict_types=1);
 
-require __DIR__ . '/../../tools/autoload.php';
+require __DIR__ . '/../autoload.php';
 
 use Swow\Http\Client as HttpClient;
 use Swow\Http\Request;
