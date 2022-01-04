@@ -47,7 +47,7 @@ static zend_object *swow_sync_wait_group_create_object(zend_class_entry *ce)
     return &swg->std;
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Sync_WaitReference_wait, ZEND_RETURN_VALUE, 1, IS_VOID, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Sync_WaitReference_wait, 0, 1, IS_VOID, 0)
     ZEND_ARG_OBJ_INFO(1, waitReference, Swow\\Sync\\WaitReference, 0)
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, timeout, IS_LONG, 0, "-1")
 ZEND_END_ARG_INFO()
@@ -101,7 +101,7 @@ static PHP_METHOD(Swow_Sync_WaitReference, wait)
 
 #define getThisWR() (swow_sync_wait_reference_get_from_object(Z_OBJ_P(ZEND_THIS)))
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_class_Swow_Sync_WaitReference___destruct, 0, ZEND_RETURN_VALUE, 0)
+ZEND_BEGIN_ARG_INFO_EX(arginfo_class_Swow_Sync_WaitReference___destruct, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Sync_WaitReference, __destruct)
@@ -124,7 +124,7 @@ static const zend_function_entry swow_sync_wait_reference_methods[] = {
 
 #define getThisWG() (swow_sync_wait_group_get_from_object(Z_OBJ_P(ZEND_THIS)))
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Sync_WaitGroup_add, ZEND_RETURN_VALUE, 0, IS_VOID, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Sync_WaitGroup_add, 0, 0, IS_VOID, 0)
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, delta, IS_LONG, 0, "1")
 ZEND_END_ARG_INFO()
 
@@ -147,7 +147,7 @@ static PHP_METHOD(Swow_Sync_WaitGroup, add)
     }
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Sync_WaitGroup_wait, ZEND_RETURN_VALUE, 0, IS_VOID, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Sync_WaitGroup_wait, 0, 1, IS_VOID, 0)
     ZEND_ARG_TYPE_INFO(0, timeout, IS_LONG, 0)
 ZEND_END_ARG_INFO()
 
@@ -170,7 +170,7 @@ static PHP_METHOD(Swow_Sync_WaitGroup, wait)
     }
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Sync_WaitGroup_done, ZEND_RETURN_VALUE, 0, IS_VOID, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Sync_WaitGroup_done, 0, 0, IS_VOID, 0)
 ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Sync_WaitGroup, done)

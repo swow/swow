@@ -23,7 +23,7 @@ SWOW_API zend_object_handlers swow_signal_handlers;
 
 SWOW_API zend_class_entry *swow_signal_exception_ce;
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Signal_kill, ZEND_RETURN_VALUE, 2, IS_VOID, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Signal_kill, 0, 2, IS_VOID, 0)
     ZEND_ARG_TYPE_INFO(0, pid, IS_LONG, 0)
     ZEND_ARG_TYPE_INFO(0, signum, IS_LONG, 0)
 ZEND_END_ARG_INFO()
@@ -47,7 +47,7 @@ static PHP_METHOD(Swow_Signal, kill)
     }
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Signal_wait, ZEND_RETURN_VALUE, 1, IS_VOID, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Signal_wait, 0, 2, IS_VOID, 0)
     ZEND_ARG_TYPE_INFO(0, num, IS_LONG, 0)
     ZEND_ARG_TYPE_INFO(0, timeout, IS_LONG, 0)
 ZEND_END_ARG_INFO()

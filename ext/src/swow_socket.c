@@ -67,7 +67,7 @@ static void swow_socket_free_object(zend_object *object)
     zend_object_std_dtor(&ssocket->std);
 }
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_class_Swow_Socket___construct, 0, ZEND_RETURN_VALUE, 0)
+ZEND_BEGIN_ARG_INFO_EX(arginfo_class_Swow_Socket___construct, 0, 0, 0)
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, type, IS_LONG, 0, "Swow\\Socket::TYPE_TCP")
 ZEND_END_ARG_INFO()
 
@@ -100,7 +100,8 @@ ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_getString, ZEND_RETURN_VALUE, 0, IS_STRING, 0)
 ZEND_END_ARG_INFO()
 
-#define arginfo_class_Swow_Socket_getType arginfo_class_Swow_Socket_getLong
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_getType, 0, 0, IS_LONG, 0)
+ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Socket, getType)
 {
@@ -111,7 +112,8 @@ static PHP_METHOD(Swow_Socket, getType)
     RETURN_LONG(cat_socket_get_type(socket));
 }
 
-#define arginfo_class_Swow_Socket_getTypeName arginfo_class_Swow_Socket_getString
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_getTypeName, 0, 0, IS_STRING, 0)
+ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Socket, getTypeName)
 {
@@ -122,7 +124,7 @@ static PHP_METHOD(Swow_Socket, getTypeName)
     RETURN_STRING(cat_socket_get_type_name(socket));
 }
 
-#define arginfo_class_Swow_Socket_getFd arginfo_class_Swow_Socket_getLong
+#define arginfo_class_Swow_Socket_getFd arginfo_class_Swow_Socket_getType
 
 static PHP_METHOD(Swow_Socket, getFd)
 {
@@ -135,7 +137,7 @@ static PHP_METHOD(Swow_Socket, getFd)
 
 #define arginfo_class_Swow_Socket_getGlobalTimeout arginfo_class_Swow_Socket_getLong
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_class_Swow_Socket_setGlobalTimeout, 0, ZEND_RETURN_VALUE, 1)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_setGlobalTimeout, 0, 1, IS_VOID, 0)
     ZEND_ARG_TYPE_INFO(0, timeout, IS_LONG, 0)
 ZEND_END_ARG_INFO()
 
@@ -152,7 +154,7 @@ static PHP_METHOD(Swow_Socket, setGlobalTimeout)
 
 #define arginfo_class_Swow_Socket_getTimeout arginfo_class_Swow_Socket_getLong
 
-ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO(arginfo_class_Swow_Socket_setTimeout, 1)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_setTimeout, 0, 1, IS_STATIC, 0)
     ZEND_ARG_TYPE_INFO(0, timeout, IS_LONG, 0)
 ZEND_END_ARG_INFO()
 
@@ -242,7 +244,7 @@ SWOW_SOCKET_TIMEOUT_API_GEN(Write,         write);
 
 #undef SWOW_SOCKET_TIMEOUT_API_GEN
 
-ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO(arginfo_class_Swow_Socket_bind, 1)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_bind, 0, 1, IS_STATIC, 0)
     ZEND_ARG_TYPE_INFO(0, name, IS_STRING, 0)
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, port, IS_LONG, 0, "0")
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, flags, IS_LONG, 0, "Swow\\Socket::BIND_FLAG_NONE")
@@ -273,7 +275,7 @@ static PHP_METHOD(Swow_Socket, bind)
     RETURN_THIS();
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO(arginfo_class_Swow_Socket_listen, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_listen, 0, 0, IS_STATIC, 0)
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, backlog, IS_LONG, 0, "Swow\\Socket::DEFAULT_BACKLOG")
 ZEND_END_ARG_INFO()
 
@@ -354,9 +356,9 @@ static PHP_METHOD_EX(Swow_Socket, _accept, swow_socket_accept_type_t type)
     RETURN_OBJ(&sclient->std);
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_class_Swow_Socket_accept, ZEND_RETURN_VALUE, 0, Swow\\Socket, 0)
-    ZEND_ARG_OBJ_INFO_WITH_DEFAULT_VALUE(0, client, Swow\\Socket, 1, "null")
-    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, timeout, IS_LONG, 1, "\'$this->getAcceptTimeout()\'")
+ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_class_Swow_Socket_accept, 0, 0, Swow\\Socket, 0)
+    ZEND_ARG_OBJ_INFO_WITH_DEFAULT_VALUE(0, client, Swow\\Socket, 0, "null")
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, timeout, IS_LONG, 0, "null")
 ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Socket, accept)
@@ -364,10 +366,10 @@ static PHP_METHOD(Swow_Socket, accept)
     PHP_METHOD_CALL(Swow_Socket, _accept, SWOW_SOCKET_ACCEPT_TYPE_DEFAULT);
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_class_Swow_Socket_acceptTyped, ZEND_RETURN_VALUE, 0, Swow\\Socket, 0)
-    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, client_type, IS_LONG, 1, "Swow\\Socket::TYPE_ANY")
-    ZEND_ARG_OBJ_INFO_WITH_DEFAULT_VALUE(0, client, Swow\\Socket, 1, "null")
-    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, timeout, IS_LONG, 1, "\'$this->getAcceptTimeout()\'")
+ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_class_Swow_Socket_acceptTyped, 0, 0, Swow\\Socket, 0)
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, client_type, IS_LONG, 0, "Swow\\Socket::TYPE_ANY")
+    ZEND_ARG_OBJ_INFO_WITH_DEFAULT_VALUE(0, client, Swow\\Socket, 0, "null")
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, timeout, IS_LONG, 0, "null")
 ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Socket, acceptTyped)
@@ -375,10 +377,10 @@ static PHP_METHOD(Swow_Socket, acceptTyped)
     PHP_METHOD_CALL(Swow_Socket, _accept, SWOW_SOCKET_ACCEPT_TYPE_TYPED);
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO(arginfo_class_Swow_Socket_connect, 1)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_connect, 0, 1, IS_STATIC, 0)
     ZEND_ARG_TYPE_INFO(0, name, IS_STRING, 0)
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, port, IS_LONG, 0, "0")
-    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, timeout, IS_LONG, 1, "\'$this->getConnectTimeout()\'")
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, timeout, IS_LONG, 0, "null")
 ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Socket, connect)
@@ -590,10 +592,10 @@ static PHP_METHOD_EX(Swow_Socket, _read, zend_bool once, zend_bool may_address, 
     }
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_read, ZEND_RETURN_VALUE, 1, IS_LONG, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_read, 0, 1, IS_LONG, 0)
     ZEND_ARG_OBJ_INFO(0, buffer, Swow\\Buffer, 0)
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, length, IS_LONG, 0, "-1")
-    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, timeout, IS_LONG, 1, "\'$this->getReadTimeout()\'")
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, timeout, IS_LONG, 0, "null")
 ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Socket, read)
@@ -601,10 +603,10 @@ static PHP_METHOD(Swow_Socket, read)
     PHP_METHOD_CALL(Swow_Socket, _read, 0, 0, 0);
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_recv, ZEND_RETURN_VALUE, 1, IS_LONG, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_recv, 0, 1, IS_LONG, 0)
     ZEND_ARG_OBJ_INFO(0, buffer, Swow\\Buffer, 0)
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, size, IS_LONG, 0, "-1")
-    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, timeout, IS_LONG, 1, "\'$this->getReadTimeout()\'")
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, timeout, IS_LONG, 0, "null")
 ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Socket, recv)
@@ -627,12 +629,12 @@ static PHP_METHOD(Swow_Socket, recvData)
     SWOW_SOCKET_THROW_CONNRESET_EXCEPTION_AND_RETURN_IF(Z_LVAL_P(return_value) == 0);
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_recvFrom, ZEND_RETURN_VALUE, 1, IS_LONG, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_recvFrom, 0, 1, IS_LONG, 0)
     ZEND_ARG_OBJ_INFO(0, buffer, Swow\\Buffer, 0)
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, size, IS_LONG, 0, "-1")
     ZEND_ARG_INFO_WITH_DEFAULT_VALUE(1, address, "null")
     ZEND_ARG_INFO_WITH_DEFAULT_VALUE(1, port, "null")
-    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, timeout, IS_LONG, 1, "\'$this->getReadTimeout()\'")
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, timeout, IS_LONG, 0, "null")
 ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Socket, recvFrom)
@@ -648,7 +650,7 @@ static PHP_METHOD(Swow_Socket, recvDataFrom)
     SWOW_SOCKET_THROW_CONNRESET_EXCEPTION_AND_RETURN_IF(Z_LVAL_P(return_value) == 0);
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_peek, ZEND_RETURN_VALUE, 1, IS_LONG, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_peek, 0, 1, IS_LONG, 0)
     ZEND_ARG_OBJ_INFO(0, buffer, Swow\\Buffer, 0)
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, size, IS_LONG, 0, "-1")
 ZEND_END_ARG_INFO()
@@ -658,7 +660,7 @@ static PHP_METHOD(Swow_Socket, peek)
     PHP_METHOD_CALL(Swow_Socket, _read, 1, 0, 1);
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_peekFrom, ZEND_RETURN_VALUE, 1, IS_LONG, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_peekFrom, 0, 1, IS_LONG, 0)
     ZEND_ARG_OBJ_INFO(0, buffer, Swow\\Buffer, 0)
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, size, IS_LONG, 0, "-1")
     ZEND_ARG_INFO_WITH_DEFAULT_VALUE(1, address, "null")
@@ -772,9 +774,9 @@ static PHP_METHOD_EX(Swow_Socket, _readString, zend_bool once, zend_bool may_add
     }
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_readString, ZEND_RETURN_VALUE, 1, IS_STRING, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_readString, 0, 0, IS_STRING, 0)
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, length, IS_LONG, 0, "Swow\\Buffer::DEFAULT_SIZE")
-    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, timeout, IS_LONG, 1, "\'$this->getReadTimeout()\'")
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, timeout, IS_LONG, 0, "null")
 ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Socket, readString)
@@ -782,9 +784,9 @@ static PHP_METHOD(Swow_Socket, readString)
     PHP_METHOD_CALL(Swow_Socket, _readString, 0, 0, 0);
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_recvString, ZEND_RETURN_VALUE, 0, IS_STRING, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_recvString, 0, 0, IS_STRING, 0)
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, size, IS_LONG, 0, "Swow\\Buffer::DEFAULT_SIZE")
-    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, timeout, IS_LONG, 1, "\'$this->getReadTimeout()\'")
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, timeout, IS_LONG, 0, "null")
 ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Socket, recvString)
@@ -800,11 +802,11 @@ static PHP_METHOD(Swow_Socket, recvStringData)
     SWOW_SOCKET_THROW_CONNRESET_EXCEPTION_AND_RETURN_IF(Z_STRLEN_P(return_value) == 0);
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_recvStringFrom, ZEND_RETURN_VALUE, 0, IS_STRING, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_recvStringFrom, 0, 0, IS_STRING, 0)
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, size, IS_LONG, 0, "Swow\\Buffer::DEFAULT_SIZE")
     ZEND_ARG_INFO_WITH_DEFAULT_VALUE(1, address, "null")
     ZEND_ARG_INFO_WITH_DEFAULT_VALUE(1, port, "null")
-    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, timeout, IS_LONG, 1, "\'$this->getReadTimeout()\'")
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, timeout, IS_LONG, 0, "null")
 ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Socket, recvStringFrom)
@@ -820,7 +822,7 @@ static PHP_METHOD(Swow_Socket, recvStringDataFrom)
     SWOW_SOCKET_THROW_CONNRESET_EXCEPTION_AND_RETURN_IF(Z_STRLEN_P(return_value) == 0);
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_peekString, ZEND_RETURN_VALUE, 0, IS_STRING, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_peekString, 0, 0, IS_STRING, 0)
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, size, IS_LONG, 0, "Swow\\Buffer::DEFAULT_SIZE")
 ZEND_END_ARG_INFO()
 
@@ -829,7 +831,7 @@ static PHP_METHOD(Swow_Socket, peekString)
     PHP_METHOD_CALL(Swow_Socket, _readString, 1, 0, 1);
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_peekStringFrom, ZEND_RETURN_VALUE, 0, IS_STRING, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_peekStringFrom, 0, 0, IS_STRING, 0)
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, size, IS_LONG, 0, "Swow\\Buffer::DEFAULT_SIZE")
     ZEND_ARG_INFO_WITH_DEFAULT_VALUE(1, address, "null")
     ZEND_ARG_INFO_WITH_DEFAULT_VALUE(1, port, "null")
@@ -1102,9 +1104,9 @@ static PHP_METHOD_EX(Swow_Socket, _write, zend_bool single, zend_bool may_addres
     }
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO(arginfo_class_Swow_Socket_write, 1)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_write, 0, 1, IS_STATIC, 0)
     ZEND_ARG_TYPE_INFO(0, vector, IS_ARRAY, 0)
-    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, timeout, IS_LONG, 1, "\'$this->getWriteTimeout()\'")
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, timeout, IS_LONG, 0, "null")
 ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Socket, write)
@@ -1112,11 +1114,11 @@ static PHP_METHOD(Swow_Socket, write)
     PHP_METHOD_CALL(Swow_Socket, _write, 0, 0);
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO(arginfo_class_Swow_Socket_writeTo, 1)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_writeTo, 0, 1, IS_STATIC, 0)
     ZEND_ARG_TYPE_INFO(0, vector, IS_ARRAY, 0)
     ZEND_ARG_INFO_WITH_DEFAULT_VALUE(0, address, "null")
     ZEND_ARG_INFO_WITH_DEFAULT_VALUE(0, port, "null")
-    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, timeout, IS_LONG, 1, "\'$this->getWriteTimeout()\'")
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, timeout, IS_LONG, 0, "null")
 ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Socket, writeTo)
@@ -1124,10 +1126,10 @@ static PHP_METHOD(Swow_Socket, writeTo)
     PHP_METHOD_CALL(Swow_Socket, _write, 0, 1);
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO(arginfo_class_Swow_Socket_send, 1)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_send, 0, 1, IS_STATIC, 0)
     ZEND_ARG_OBJ_INFO(0, buffer, Swow\\Buffer, 0)
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, length, IS_LONG, 0, "-1")
-    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, timeout, IS_LONG, 1, "\'$this->getWriteTimeout()\'")
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, timeout, IS_LONG, 0, "null")
 ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Socket, send)
@@ -1135,12 +1137,12 @@ static PHP_METHOD(Swow_Socket, send)
     PHP_METHOD_CALL(Swow_Socket, _write, 1, 0);
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO(arginfo_class_Swow_Socket_sendTo, 1)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_sendTo, 0, 1, IS_STATIC, 0)
     ZEND_ARG_OBJ_INFO(0, buffer, Swow\\Buffer, 0)
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, length, IS_LONG, 0, "-1")
     ZEND_ARG_INFO_WITH_DEFAULT_VALUE(0, address, "null")
     ZEND_ARG_INFO_WITH_DEFAULT_VALUE(0, port, "null")
-    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, timeout, IS_LONG, 1, "\'$this->getWriteTimeout()\'")
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, timeout, IS_LONG, 0, "null")
 ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Socket, sendTo)
@@ -1194,9 +1196,9 @@ static PHP_METHOD_EX(Swow_Socket, _sendString, zend_bool may_address)
     RETURN_THIS();
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO(arginfo_class_Swow_Socket_sendString, 1)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_sendString, 0, 1, IS_STATIC, 0)
     ZEND_ARG_TYPE_INFO(0, string, IS_STRING, 0)
-    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, timeout, IS_LONG, 1, "\'$this->getWriteTimeout()\'")
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, timeout, IS_LONG, 0, "null")
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, offset, IS_LONG, 0, "0")
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, length, IS_LONG, 0, "-1")
 ZEND_END_ARG_INFO()
@@ -1206,11 +1208,11 @@ static PHP_METHOD(Swow_Socket, sendString)
     PHP_METHOD_CALL(Swow_Socket, _sendString, 0);
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO(arginfo_class_Swow_Socket_sendStringTo, 1)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_sendStringTo, 0, 1, IS_STATIC, 0)
     ZEND_ARG_TYPE_INFO(0, string, IS_STRING, 0)
     ZEND_ARG_INFO_WITH_DEFAULT_VALUE(0, address, "null")
     ZEND_ARG_INFO_WITH_DEFAULT_VALUE(0, port, "null")
-    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, timeout, IS_LONG, 1, "\'$this->getWriteTimeout()\'")
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, timeout, IS_LONG, 0, "null")
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, offset, IS_LONG, 0, "0")
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, length, IS_LONG, 0, "-1")
 ZEND_END_ARG_INFO()
@@ -1220,9 +1222,9 @@ static PHP_METHOD(Swow_Socket, sendStringTo)
     PHP_METHOD_CALL(Swow_Socket, _sendString, 1);
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO(arginfo_class_Swow_Socket_sendHandle, 1)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_sendHandle, 0, 1, IS_STATIC, 0)
     ZEND_ARG_OBJ_INFO(0, handle, Swow\\Socket, 0)
-    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, timeout, IS_LONG, 1, "\'$this->getWriteTimeout()\'")
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, timeout, IS_LONG, 0, "null")
 ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Socket, sendHandle)
@@ -1257,9 +1259,9 @@ static PHP_METHOD(Swow_Socket, sendHandle)
     RETURN_THIS();
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO(arginfo_class_Swow_Socket_recvHandle, 0)
-    ZEND_ARG_OBJ_INFO_WITH_DEFAULT_VALUE(0, handle, Swow\\Socket, 1, "null")
-    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, timeout, IS_LONG, 1, "\'$this->getAcceptTimeout()\'")
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_recvHandle, 0, 0, IS_STATIC, 0)
+    ZEND_ARG_OBJ_INFO_WITH_DEFAULT_VALUE(0, handle, Swow\\Socket, 0, "null")
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, timeout, IS_LONG, 0, "null")
 ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Socket, recvHandle)
@@ -1267,7 +1269,7 @@ static PHP_METHOD(Swow_Socket, recvHandle)
     PHP_METHOD_CALL(Swow_Socket, _accept, SWOW_SOCKET_ACCEPT_TYPE_RECV_HANDLE);
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_close, ZEND_RETURN_VALUE, 0, _IS_BOOL, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_close, 0, 0, _IS_BOOL, 0)
 ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Socket, close)
@@ -1297,31 +1299,31 @@ static PHP_METHOD(Swow_Socket, is##Name) \
     RETURN_BOOL(cat_socket_is_##name(socket)); \
 }
 
-#define arginfo_class_Swow_Socket_isAvailable arginfo_class_Swow_Socket_getBool
+#define arginfo_class_Swow_Socket_isAvailable arginfo_class_Swow_Socket_close
 
 SWOW_SOCKET_IS_XXX_API_GEN(Available, available)
 
-#define arginfo_class_Swow_Socket_isOpen arginfo_class_Swow_Socket_getBool
+#define arginfo_class_Swow_Socket_isOpen arginfo_class_Swow_Socket_close
 
 SWOW_SOCKET_IS_XXX_API_GEN(Open, open)
 
-#define arginfo_class_Swow_Socket_isEstablished arginfo_class_Swow_Socket_getBool
+#define arginfo_class_Swow_Socket_isEstablished arginfo_class_Swow_Socket_close
 
 SWOW_SOCKET_IS_XXX_API_GEN(Established, established)
 
-#define arginfo_class_Swow_Socket_isServer arginfo_class_Swow_Socket_getBool
+#define arginfo_class_Swow_Socket_isServer arginfo_class_Swow_Socket_close
 
 SWOW_SOCKET_IS_XXX_API_GEN(Server, server)
 
-#define arginfo_class_Swow_Socket_isServerConnection arginfo_class_Swow_Socket_getBool
+#define arginfo_class_Swow_Socket_isServerConnection arginfo_class_Swow_Socket_close
 
 SWOW_SOCKET_IS_XXX_API_GEN(ServerConnection, server_connection)
 
-#define arginfo_class_Swow_Socket_isClient arginfo_class_Swow_Socket_getBool
+#define arginfo_class_Swow_Socket_isClient arginfo_class_Swow_Socket_close
 
 SWOW_SOCKET_IS_XXX_API_GEN(Client, client)
 
-#define arginfo_class_Swow_Socket_getConnectionError arginfo_class_Swow_Socket_getLong
+#define arginfo_class_Swow_Socket_getConnectionError arginfo_class_Swow_Socket_getType
 
 static PHP_METHOD(Swow_Socket, getConnectionError)
 {
@@ -1332,7 +1334,7 @@ static PHP_METHOD(Swow_Socket, getConnectionError)
     RETURN_LONG(cat_socket_get_connection_error(socket));
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO(arginfo_class_Swow_Socket_checkLiveness, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_checkLiveness, 0, 0, IS_STATIC, 0)
 ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Socket, checkLiveness)
@@ -1352,7 +1354,7 @@ static PHP_METHOD(Swow_Socket, checkLiveness)
     RETURN_THIS();
 }
 
-#define arginfo_class_Swow_Socket_getIoState arginfo_class_Swow_Socket_getLong
+#define arginfo_class_Swow_Socket_getIoState arginfo_class_Swow_Socket_getType
 
 static PHP_METHOD(Swow_Socket, getIoState)
 {
@@ -1363,7 +1365,7 @@ static PHP_METHOD(Swow_Socket, getIoState)
     RETURN_LONG(cat_socket_get_io_state(socket));
 }
 
-#define arginfo_class_Swow_Socket_getIoStateName arginfo_class_Swow_Socket_getString
+#define arginfo_class_Swow_Socket_getIoStateName arginfo_class_Swow_Socket_getTypeName
 
 static PHP_METHOD(Swow_Socket, getIoStateName)
 {
@@ -1374,7 +1376,7 @@ static PHP_METHOD(Swow_Socket, getIoStateName)
     RETURN_STRING(cat_socket_get_io_state_name(socket));
 }
 
-#define arginfo_class_Swow_Socket_getIoStateNaming arginfo_class_Swow_Socket_getString
+#define arginfo_class_Swow_Socket_getIoStateNaming arginfo_class_Swow_Socket_getTypeName
 
 static PHP_METHOD(Swow_Socket, getIoStateNaming)
 {
@@ -1385,7 +1387,7 @@ static PHP_METHOD(Swow_Socket, getIoStateNaming)
     RETURN_STRING(cat_socket_get_io_state_naming(socket));
 }
 
-#define arginfo_class_Swow_Socket_getRecvBufferSize arginfo_class_Swow_Socket_getLong
+#define arginfo_class_Swow_Socket_getRecvBufferSize arginfo_class_Swow_Socket_getType
 
 static PHP_METHOD(Swow_Socket, getRecvBufferSize)
 {
@@ -1396,7 +1398,7 @@ static PHP_METHOD(Swow_Socket, getRecvBufferSize)
     RETURN_LONG(cat_socket_get_recv_buffer_size(socket));
 }
 
-#define arginfo_class_Swow_Socket_getSendBufferSize arginfo_class_Swow_Socket_getLong
+#define arginfo_class_Swow_Socket_getSendBufferSize arginfo_class_Swow_Socket_getType
 
 static PHP_METHOD(Swow_Socket, getSendBufferSize)
 {
@@ -1409,11 +1411,9 @@ static PHP_METHOD(Swow_Socket, getSendBufferSize)
 
 /* setter */
 
-ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO(arginfo_class_Swow_Socket_setSize, 1)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_setRecvBufferSize, 0, 1, IS_STATIC, 0)
     ZEND_ARG_TYPE_INFO(0, size, IS_LONG, 0)
 ZEND_END_ARG_INFO()
-
-#define arginfo_class_Swow_Socket_setRecvBufferSize arginfo_class_Swow_Socket_setSize
 
 static PHP_METHOD(Swow_Socket, setRecvBufferSize)
 {
@@ -1435,7 +1435,7 @@ static PHP_METHOD(Swow_Socket, setRecvBufferSize)
     RETURN_THIS();
 }
 
-#define arginfo_class_Swow_Socket_setSendBufferSize arginfo_class_Swow_Socket_setSize
+#define arginfo_class_Swow_Socket_setSendBufferSize arginfo_class_Swow_Socket_setRecvBufferSize
 
 static PHP_METHOD(Swow_Socket, setSendBufferSize)
 {
@@ -1457,11 +1457,9 @@ static PHP_METHOD(Swow_Socket, setSendBufferSize)
     RETURN_THIS();
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO(arginfo_class_Swow_Socket_setBool, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_setTcpNodelay, 0, 1, IS_STATIC, 0)
     ZEND_ARG_TYPE_INFO(0, enable, _IS_BOOL, 0)
 ZEND_END_ARG_INFO()
-
-#define arginfo_class_Swow_Socket_setTcpNodelay arginfo_class_Swow_Socket_setBool
 
 static PHP_METHOD(Swow_Socket, setTcpNodelay)
 {
@@ -1484,7 +1482,7 @@ static PHP_METHOD(Swow_Socket, setTcpNodelay)
     RETURN_THIS();
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO(arginfo_class_Swow_Socket_setTcpKeepAlive, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_setTcpKeepAlive, 0, 2, IS_STATIC, 0)
     ZEND_ARG_TYPE_INFO(0, enable, _IS_BOOL, 0)
     ZEND_ARG_TYPE_INFO(0, delay, IS_LONG, 0)
 ZEND_END_ARG_INFO()
@@ -1517,7 +1515,7 @@ static PHP_METHOD(Swow_Socket, setTcpKeepAlive)
     RETURN_THIS();
 }
 
-#define arginfo_class_Swow_Socket_setTcpAcceptBalance arginfo_class_Swow_Socket_setBool
+#define arginfo_class_Swow_Socket_setTcpAcceptBalance arginfo_class_Swow_Socket_setTcpNodelay
 
 static PHP_METHOD(Swow_Socket, setTcpAcceptBalance)
 {
@@ -1540,7 +1538,7 @@ static PHP_METHOD(Swow_Socket, setTcpAcceptBalance)
     RETURN_THIS();
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket___debugInfo, ZEND_RETURN_VALUE, 0, IS_ARRAY, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket___debugInfo, 0, 0, IS_ARRAY, 0)
 ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Socket, __debugInfo)

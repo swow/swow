@@ -115,7 +115,7 @@ static void swow_defer_dtor_object(zend_object *object)
     swow_defer_do_tasks(sdefer);
 }
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_class_Swow_Defer___construct, 0, ZEND_RETURN_VALUE, 0)
+ZEND_BEGIN_ARG_INFO_EX(arginfo_class_Swow_Defer___construct, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Defer, __construct)

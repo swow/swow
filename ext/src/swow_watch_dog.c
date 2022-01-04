@@ -152,10 +152,10 @@ SWOW_API cat_bool_t swow_watch_dog_stop(void)
     return cat_true;
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_WatchDog_run, ZEND_RETURN_VALUE, 0, IS_VOID, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_WatchDog_run, 0, 0, IS_VOID, 0)
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, quantum, IS_LONG, 0, "0")
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, threshold, IS_LONG, 0, "0")
-    ZEND_ARG_TYPE_MASK(0, alerter, MAY_BE_NULL | MAY_BE_LONG | MAY_BE_DOUBLE | MAY_BE_CALLABLE, "null")
+    ZEND_ARG_TYPE_MASK(0, alerter, MAY_BE_CALLABLE|MAY_BE_LONG|MAY_BE_DOUBLE|MAY_BE_NULL, "null")
 ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_WatchDog, run)
@@ -185,7 +185,7 @@ static PHP_METHOD(Swow_WatchDog, run)
     }
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_WatchDog_stop, ZEND_RETURN_VALUE, 0, IS_VOID, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_WatchDog_stop, 0, 0, IS_VOID, 0)
 ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_WatchDog, stop)
@@ -202,7 +202,7 @@ static PHP_METHOD(Swow_WatchDog, stop)
     }
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_WatchDog_isRunning, ZEND_RETURN_VALUE, 0, _IS_BOOL, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_WatchDog_isRunning, 0, 0, _IS_BOOL, 0)
 ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_WatchDog, isRunning)

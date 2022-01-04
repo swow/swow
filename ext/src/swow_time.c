@@ -24,11 +24,11 @@
 #include "win32/time.h"
 #endif // PHP_WIN32
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_swow_sleep, 0 , ZEND_RETURN_VALUE, 1)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_swow_sleep, 0, 1, IS_LONG, 0)
     ZEND_ARG_TYPE_INFO(0, seconds, IS_LONG, 0)
 ZEND_END_ARG_INFO()
 
-/* {{{ proto void sleep(int seconds)
+/* {{{ proto void sleep(int seconds): int
    Delay for a given number of seconds */
 static PHP_FUNCTION(swow_sleep)
 {
@@ -47,11 +47,11 @@ static PHP_FUNCTION(swow_sleep)
 }
 /* }}} */
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_swow_msleep, 0 , ZEND_RETURN_VALUE, 1)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_swow_msleep, 0, 1, IS_LONG, 0)
     ZEND_ARG_TYPE_INFO(0, milli_seconds, IS_LONG, 0)
 ZEND_END_ARG_INFO()
 
-/* {{{ proto void msleep(int milliseconds)
+/* {{{ proto void msleep(int milliseconds): int
    Delay for a given number of micro seconds */
 static PHP_FUNCTION(swow_msleep)
 {
@@ -74,7 +74,7 @@ ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_swow_usleep, ZEND_RETURN_VALUE, 
     ZEND_ARG_TYPE_INFO(0, micro_seconds, IS_LONG, 0)
 ZEND_END_ARG_INFO()
 
-/* {{{ proto void usleep(int micro_seconds)
+/* {{{ proto void usleep(int micro_seconds): void
    Delay for a given number of micro seconds */
 static PHP_FUNCTION(swow_usleep)
 {
@@ -98,7 +98,7 @@ ZEND_BEGIN_ARG_WITH_RETURN_TYPE_MASK_EX(arginfo_swow_nanosleep, ZEND_RETURN_VALU
     ZEND_ARG_TYPE_INFO(0, nanoseconds, IS_LONG, 0)
 ZEND_END_ARG_INFO()
 
-/* {{{ proto mixed time_nanosleep(int seconds, int nanoseconds)
+/* {{{ proto mixed time_nanosleep(int seconds, int nanoseconds): bool|array
    Delay for a number of seconds and nano seconds */
 static PHP_FUNCTION(swow_nanosleep)
 {
@@ -139,7 +139,7 @@ ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_swow_sleep_until, ZEND_RETURN_VA
     ZEND_ARG_TYPE_INFO(0, timestamp, IS_LONG, 0)
 ZEND_END_ARG_INFO()
 
-/* {{{ proto bool time_sleep_until(float timestamp)
+/* {{{ proto bool time_sleep_until(float timestamp): bool
    Make the script sleep until the specified time */
 static PHP_FUNCTION(swow_sleep_until)
 {

@@ -72,10 +72,10 @@ SWOW_API CAT_COLD void swow_call_exception_set_return_value(zend_object *excepti
     zend_update_property(exception->ce, exception, ZEND_STRL("returnValue"), return_value);
 }
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_class_Swow_Call_Exception_getReturnValue, 0, ZEND_RETURN_VALUE, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_CallException_getReturnValue, 0, 0, IS_MIXED, 0)
 ZEND_END_ARG_INFO()
 
-static PHP_METHOD(Swow_Call_Exception, getReturnValue)
+static PHP_METHOD(Swow_CallException, getReturnValue)
 {
     ZEND_PARSE_PARAMETERS_NONE();
 
@@ -83,7 +83,7 @@ static PHP_METHOD(Swow_Call_Exception, getReturnValue)
 }
 
 static const zend_function_entry swow_call_exception_methods[] = {
-    PHP_ME(Swow_Call_Exception, getReturnValue, arginfo_class_Swow_Call_Exception_getReturnValue, ZEND_ACC_FINAL | ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_CallException, getReturnValue, arginfo_class_Swow_CallException_getReturnValue, ZEND_ACC_FINAL | ZEND_ACC_PUBLIC)
     PHP_FE_END
 };
 
@@ -98,7 +98,13 @@ int swow_exceptions_module_init(INIT_FUNC_ARGS)
         "Swow\\CallException", swow_exception_ce, swow_call_exception_methods,
         NULL, NULL, cat_true, cat_true, NULL, NULL, 0
     );
-    zend_declare_property_null(swow_call_exception_ce, ZEND_STRL("returnValue"), ZEND_ACC_PROTECTED);
+    do {
+        zval default_value;
+        ZVAL_NULL(&default_value);
+        zend_string *name = zend_string_init(ZEND_STRL("returnValue"), 1);
+        zend_declare_typed_property(swow_call_exception_ce, name, &default_value, ZEND_ACC_PROTECTED, NULL, (zend_type) ZEND_TYPE_INIT_MASK(MAY_BE_ANY));
+        zend_string_release(name);
+    } while (0);
 
     /* fast call */
     swow_exception_create_object = zend_ce_exception->create_object;

@@ -375,7 +375,7 @@ static const zend_function_entry swow_functions[] = {
     PHP_FE_END
 };
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_Swow_isBuiltWith, ZEND_RETURN_VALUE, 0, _IS_BOOL, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_isBuiltWith, 0, 1, _IS_BOOL, 0)
     ZEND_ARG_TYPE_INFO(0, lib, IS_STRING, 0)
 ZEND_END_ARG_INFO()
 
@@ -425,7 +425,7 @@ static PHP_METHOD(Swow, isBuiltWith)
 }
 
 static const zend_function_entry swow_methods[] = {
-    PHP_ME(Swow, isBuiltWith, arginfo_Swow_isBuiltWith, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    PHP_ME(Swow, isBuiltWith, arginfo_class_Swow_isBuiltWith, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
     PHP_FE_END
 };
 

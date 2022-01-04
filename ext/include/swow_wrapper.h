@@ -237,12 +237,6 @@ static zend_always_inline zend_object* swow_object_create(zend_class_entry *ce)
 
 /* function/method */
 
-#define ZEND_BEGIN_ARG_WITH_RETURN_THIS_INFO(name, required_num_args) \
-        ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(name, ZEND_RETURN_VALUE, required_num_args, IS_STATIC, 0)
-
-#define ZEND_BEGIN_ARG_WITH_RETURN_THIS_OR_NULL_INFO(name, required_num_args) \
-        ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(name, ZEND_RETURN_VALUE, required_num_args, IS_STATIC, 1)
-
 #ifndef PHP_FENTRY
 #define PHP_FENTRY                              ZEND_FENTRY
 #endif

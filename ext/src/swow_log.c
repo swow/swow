@@ -137,7 +137,7 @@ static void swow_log_standard(CAT_LOG_PARAMATERS)
     }
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Log_getTypes, ZEND_RETURN_VALUE, 0, IS_LONG, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Log_getTypes, 0, 0, IS_LONG, 0)
 ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Log, getTypes)
@@ -145,7 +145,7 @@ static PHP_METHOD(Swow_Log, getTypes)
     RETURN_LONG(CAT_G(log_types));
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Log_setTypes, ZEND_RETURN_VALUE, 1, IS_VOID, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Log_setTypes, 0, 1, IS_VOID, 0)
     ZEND_ARG_TYPE_INFO(0, types, IS_LONG, 0)
 ZEND_END_ARG_INFO()
 
@@ -164,15 +164,14 @@ static PHP_METHOD(Swow_Log, setTypes)
     CAT_G(log_types) = types;
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Log_getModuleTypes, ZEND_RETURN_VALUE, 0, IS_LONG, 0)
-ZEND_END_ARG_INFO()
+#define arginfo_class_Swow_Log_getModuleTypes arginfo_class_Swow_Log_getTypes
 
 static PHP_METHOD(Swow_Log, getModuleTypes)
 {
     RETURN_LONG(CAT_G(log_module_types));
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Log_setModuleTypes, ZEND_RETURN_VALUE, 1, IS_VOID, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Log_setModuleTypes, 0, 1, IS_VOID, 0)
     ZEND_ARG_TYPE_INFO(0, moduleTypes, IS_LONG, 0)
 ZEND_END_ARG_INFO()
 
