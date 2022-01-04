@@ -6,11 +6,21 @@ It can work with php-src's gen_stub.php to update arginfo of extension C source 
 
 ## Usage
 
+### gen-stub.php
+
 ```
-$ php gen-stub.php \
-    [--stub-file=x.stub.php] [--gen-arginfo-mode] \
-    [--function-filter=functionA|functionB] [--class-filter=classA|classB] \
-    <extension_name> [output_path]
+Usage: php gen-stub.php \
+         [-h|--help] [--noinspection] [--stub-file=/path/to/ext.stub.php] [--gen-arginfo-mode] \
+         [--function-filter=functionA|functionB] [--class-filter=classA|classB] \
+         <extension-name> [output-target]
+```
+
+### update-arginfo.php
+
+```
+Usage: php update-arginfo.php \
+         [--clear-cache] [--cache-path=/path/to/cache] [--stub-file=/path/to/ext.stub.php] \
+         <extension-name> <extension-source-path> <extension-build-dir>
 ```
 
 ## Results show
