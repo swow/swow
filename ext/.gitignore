@@ -32,6 +32,7 @@ x86/**
 
 # tests
 run-tests.php
+run-tests-x.php
 /tests/*/*
 /tests/*/*/*
 !/tests/*/*/

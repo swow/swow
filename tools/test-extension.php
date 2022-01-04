@@ -16,7 +16,6 @@ use function Swow\Util\br;
 use function Swow\Util\error;
 use function Swow\Util\httpDownload;
 use function Swow\Util\notice;
-use function Swow\Util\passthru2;
 use function Swow\Util\warn;
 
 require __DIR__ . '/autoload.php';
@@ -31,24 +30,36 @@ if (!file_exists($runTestsPath)) {
         error($exception->getMessage());
     }
 }
+$runTestsXPath = "{$workspace}/run-tests-x.php";
+if (!file_exists($runTestsXPath)) {
+    file_put_contents(
+        $runTestsXPath,
+        str_replace(
+            '$optionals = [\'Zend\', \'tests\', \'ext\', \'sapi\'];',
+            '$optionals = [\'ext/tests\'];',
+            file_get_contents($runTestsPath)
+        )
+    );
+}
 
 if ('Windows' === PHP_OS_FAMILY) {
     // No need to set nolimit on Windows
+    $shell = 'CMD /C';
     $cmd = PHP_BINARY;
 } else {
+    $shell = 'sh -c';
     $NOLIMIT = 8192;
     $cmd = "{ ulimit -n {$NOLIMIT} || echo 'Cannot set nolimit to {$NOLIMIT}, some tests may fail.' ; } && NO_INTERACTION=1 " . PHP_BINARY;
 }
 
 if (!extension_loaded(Swow::class)) {
-    $enableSwow = ['-d', 'extension=swow'];
-    $check = ['-d', 'extension=swow', '--ri', 'swow'];
-    $status = passthru2($cmd, $check);
+    passthru("{$shell} \"{$cmd} -d extension=swow --ri swow\"", $status);
     br();
     if ($status !== 0) {
-        warn('Failed load swow extension, have you installed swow (i.e. run composer build-extension)?');
+        warn('Failed load Swow extension, have you installed Swow (i.e. run composer build-extension)?');
         exit($status);
     }
+    $enableSwow = ['-d', 'extension=swow'];
 } else {
     $enableSwow = [];
 }
@@ -63,7 +74,7 @@ if (PHP_OS_FAMILY === 'Windows') {
     }
 }
 $options = [
-    '-n', $runTestsPath,
+    '-n', $runTestsXPath,
     '-P', ...$enableSwow,
     '--show-diff',
     '--show-slow', '1000',
@@ -71,7 +82,11 @@ $options = [
     '--color',
     "-j{$cpuCount}",
 ];
+$options = implode(' ', $options);
 $userArgs = array_slice($argv, 1);
+$userArgs = array_map('trim', $userArgs);
+$userArgs = array_map('escapeshellarg', $userArgs);
+$userArgs = escapeshellarg(implode(' ', $userArgs));
 
 notice('Start testing Swow');
-exit(passthru2($cmd, [...$options, ...$userArgs]));
+exit(passthru("{$shell} \"{$cmd} {$options} \"{$userArgs}"));

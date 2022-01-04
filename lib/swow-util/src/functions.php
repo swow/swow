@@ -14,10 +14,8 @@ declare(strict_types=1);
 namespace Swow\Util;
 
 use RuntimeException;
-use function array_map;
 use function array_shift;
 use function error_get_last;
-use function escapeshellarg;
 use function feof;
 use function fgets;
 use function file_get_contents;
@@ -208,26 +206,6 @@ function defer(&$any, callable $callback)
         };
     }
     $any->add($callback);
-}
-
-function escapeShellArgs(array $args): string
-{
-    $args = array_map('trim', $args);
-    $args = array_map('escapeshellarg', $args);
-    return escapeshellarg(implode(' ', $args));
-}
-
-function passthru2(string $cmd, array $args): int
-{
-    if ('Windows' === PHP_OS_FAMILY) {
-        $shell = 'CMD /C';
-    } else {
-        $shell = 'sh -c';
-    }
-    $args = escapeShellArgs($args);
-
-    \passthru("{$shell} \"{$cmd} \"{$args}", $status);
-    return $status;
 }
 
 function processExecute(array $command, &$status = null): string
