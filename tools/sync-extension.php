@@ -1,3 +1,4 @@
+#!/usr/bin/env php
 <?php
 /**
  * This file is part of Swow
@@ -9,12 +10,14 @@
  * please view the LICENSE file that was distributed with this source code
  */
 
-use function Swow\Tools\defer;
-use function Swow\Tools\error;
-use function Swow\Tools\log;
-use function Swow\Tools\notice;
-use function Swow\Tools\ok;
+declare(strict_types=1);
+
 use Swow\Util\FileSystem;
+use function Swow\Util\defer;
+use function Swow\Util\error;
+use function Swow\Util\log;
+use function Swow\Util\notice;
+use function Swow\Util\ok;
 
 require __DIR__ . '/autoload.php';
 
@@ -23,20 +26,18 @@ $workSpace = __DIR__ . '/../ext/deps';
 $sysTempDir = (function (): string {
     if (is_writable('/tmp')) {
         return '/tmp';
-    } else {
-        $tempDir = sys_get_temp_dir();
-        notice('Sys temp dir is redirected to ' . $tempDir);
-        return $tempDir;
     }
+    $tempDir = sys_get_temp_dir();
+    notice('Sys temp dir is redirected to ' . $tempDir);
+    return $tempDir;
 })();
 
-$sync = function (string $name, string $url, string $sourceDir, string $targetDir, array $requires = []) use ($sysTempDir): string
-{
+$sync = function (string $name, string $url, string $sourceDir, string $targetDir, array $requires = []) use ($sysTempDir): string {
     if (PHP_OS_FAMILY === 'Windows') {
         throw new RuntimeException('Linux only');
     }
     $targetWorkspace = dirname($targetDir);
-    if (file_exists($targetDir) && !`cd {$targetWorkspace} && git rev-parse HEAD`) {
+    if (file_exists($targetDir) && !shell_exec("cd {$targetWorkspace} && git rev-parse HEAD")) {
         throw new RuntimeException("Unable to find git repo in {$targetDir}");
     }
     $tmpBackupDir = $sysTempDir . '/swow_deps_backup_' . date('YmdHis');
@@ -56,11 +57,11 @@ $sync = function (string $name, string $url, string $sourceDir, string $targetDi
                 FileSystem::remove($tmpSourceDir);
             }
         });
-        `git clone --depth=1 {$url} {$tmpSourceDir}`;
+        shell_exec("git clone --depth=1 {$url} {$tmpSourceDir}");
         if (!is_dir("{$tmpSourceDir}/.git")) {
             throw new RuntimeException("Clone source files of {$name} failed");
         }
-        $version = trim(`cd {$tmpSourceDir} && git rev-parse HEAD`);
+        $version = trim(shell_exec("cd {$tmpSourceDir} && git rev-parse HEAD"));
         if (strlen($version) !== 40) {
             throw new RuntimeException("Invalid git version {$version}");
         }
@@ -101,7 +102,7 @@ $sync = function (string $name, string $url, string $sourceDir, string $targetDi
             throw new RuntimeException("Update dep files from '{$tmpSourceDir}' to {$targetDir} failed: {$exception->getMessage()}");
         }
     }
-    `cd {$targetDir} && git add --ignore-errors -A`;
+    shell_exec("cd {$targetDir} && git add --ignore-errors -A");
 
     return $version;
 };
@@ -134,8 +135,10 @@ $syncFromGit = function (string $orgName, string $repoName, string $sourceDir, s
 try {
     $deps = [];
     $deps += $syncFromGit(
-        orgName: 'libcat', repoName: 'libcat',
-        sourceDir: 'libcat', targetDir: "{$workSpace}/libcat",
+        orgName: 'libcat',
+        repoName: 'libcat',
+        sourceDir: 'libcat',
+        targetDir: "{$workSpace}/libcat",
         requires: ['include', 'src', 'deps', 'tools', 'clean.sh', 'LICENSE']
     );
 } catch (Exception $exception) {

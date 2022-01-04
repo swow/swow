@@ -1,12 +1,23 @@
 #!/usr/bin/env php
 <?php
+/**
+ * This file is part of Swow
+ *
+ * @link     https://github.com/swow/swow
+ * @contact  twosee <twosee@php.net>
+ *
+ * For the full copyright and license information,
+ * please view the LICENSE file that was distributed with this source code
+ */
+
+declare(strict_types=1);
 
 require __DIR__ . '/autoload.php';
 
-use function Swow\Tools\check;
-use function Swow\Tools\error;
-use function Swow\Tools\passthru;
-use function Swow\Tools\success;
+use function Swow\Util\check;
+use function Swow\Util\error;
+use function Swow\Util\passthru;
+use function Swow\Util\success;
 
 $repoInfo = [
     'swow-stub' => 'lib/swow-stub',
@@ -25,7 +36,7 @@ if ($specifiedRepoName) {
 }
 
 chdir($workspace = dirname(__DIR__));
-if (!str_contains(`splitsh-lite --version 2>&1` ?: '', 'splitsh-lite')) {
+if (!str_contains(shell_exec('splitsh-lite --version 2>&1') ?: '', 'splitsh-lite')) {
     error('splitsh-lite tool is unavailable');
 }
 
@@ -38,7 +49,7 @@ foreach ($repoInfo as $repoName => $repoPath) {
         error("Repo {$repoName}'s path '{$repoPath}' is unavailable");
     }
     passthru("git remote add {$repoName} git@github.com:swow/{$repoName}.git >/dev/null 2>&1");
-    $sha1 = trim(`splitsh-lite --prefix={$repoPath} 2>/dev/null`);
+    $sha1 = trim(shell_exec("splitsh-lite --prefix={$repoPath} 2>/dev/null"));
     $status = passthru("git push {$repoName} {$sha1}:refs/heads/{$targetBranch} -f 2>&1");
     check($status === 0, "Update {$repoName}");
 }

@@ -12,12 +12,12 @@
 
 declare(strict_types=1);
 
-use function Swow\Tools\br;
-use function Swow\Tools\error;
-use function Swow\Tools\httpDownload;
-use function Swow\Tools\notice;
-use function Swow\Tools\passthru2;
-use function Swow\Tools\warn;
+use function Swow\Util\br;
+use function Swow\Util\error;
+use function Swow\Util\httpDownload;
+use function Swow\Util\notice;
+use function Swow\Util\passthru2;
+use function Swow\Util\warn;
 
 require __DIR__ . '/autoload.php';
 
@@ -57,7 +57,7 @@ if (PHP_OS_FAMILY === 'Windows') {
     $cpuCount = 1;
 } else {
     // TODO: use Swow\Cpu module
-    $cpuCount = (int) `{$workspace}/deps/libcat/tools/cpu_count.sh`;
+    $cpuCount = (int) shell_exec("{$workspace}/deps/libcat/tools/cpu_count.sh");
     if ($cpuCount <= 0) {
         $cpuCount = 4;
     }
@@ -69,7 +69,7 @@ $options = [
     '--show-slow', '1000',
     '--set-timeout', '30',
     '--color',
-    "-j{$cpuCount}"
+    "-j{$cpuCount}",
 ];
 $userArgs = array_slice($argv, 1);
 
