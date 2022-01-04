@@ -71,7 +71,7 @@
         "test-extension": [ "@php tools/test-extension.php" ],
         "test-library": [ "@php -d extension=swow vendor/bin/phpunit --configuration lib/swow-library lib/swow-library" ],
         "test": [ "@test-extension", "@test-library" ],
-        "gen-stub": [ "@php -n -d extension=swow tools/gen-stub.php --noinspection --stub-file=lib/swow-stub/src/Swow.php swow lib/swow-stub/src/Swow.php" ],
+        "gen-stub": [ "@php -n -d extension=swow lib/php-stub-generator/bin/gen-stub.php --noinspection --stub-file=lib/swow-stub/src/Swow.php swow lib/swow-stub/src/Swow.php" ],
         "split": [ "@php -n tools/split.php" ]
     },
     "bin": [

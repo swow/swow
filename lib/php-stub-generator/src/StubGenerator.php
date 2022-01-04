@@ -15,6 +15,7 @@ namespace Swow;
 
 use InvalidArgumentException;
 use ReflectionClass;
+use ReflectionException;
 use ReflectionExtension;
 use ReflectionFunction;
 use ReflectionFunctionAbstract;
@@ -23,9 +24,11 @@ use ReflectionProperty;
 use ReflectionUnionType;
 use Reflector;
 use RuntimeException;
-use Throwable;
+use function array_filter;
+use function array_map;
 use function array_merge;
 use function array_pop;
+use function array_slice;
 use function array_walk;
 use function bin2hex;
 use function class_exists;
@@ -48,7 +51,6 @@ use function is_resource;
 use function is_string;
 use function ltrim;
 use function method_exists;
-use function rtrim;
 use function sprintf;
 use function str_contains;
 use function str_repeat;
@@ -62,23 +64,17 @@ class StubGenerator
 {
     protected const INDENT = '    ';
 
-    protected const MODIFIERS_MAP = [
-        ReflectionProperty::IS_PUBLIC => 'public',
-        ReflectionProperty::IS_PUBLIC | ReflectionProperty::IS_STATIC => 'public static',
-        ReflectionProperty::IS_PROTECTED => 'protected',
-        ReflectionProperty::IS_PROTECTED | ReflectionProperty::IS_STATIC => 'protected static',
-        ReflectionProperty::IS_PRIVATE => 'private',
-        ReflectionProperty::IS_PRIVATE | ReflectionProperty::IS_STATIC => 'private static',
-    ];
-
     protected ReflectionExtension $extension;
 
     protected array $constantMap;
 
-    /** @var callable */
-    protected $functionFormatHandler;
-
-    protected bool $noinspection = false;
+    protected array $headerComment = [];
+    protected array $noinspection = [];
+    protected array $commentMap = [];
+    /* Disable some features because php-src gen_stub.php not support it */
+    protected bool $genArginfoMode = false;
+    /* @var callable[] */
+    protected array $filters = [];
 
     public function __construct(string $extensionName)
     {
@@ -90,34 +86,76 @@ class StubGenerator
         return $this->extension->getName();
     }
 
-    public function setFunctionFormatHandler(callable $formatter): static
+    public function addHeaderCommentLine(string $line): static
     {
-        $this->functionFormatHandler = $formatter;
+        $this->headerComment[] = $line;
 
         return $this;
     }
 
-    public function setNoinspection(bool $enable = true): static
+    public function setNoinspection(bool|array $enable = true): static
     {
-        $this->noinspection = $enable;
+        if (is_bool($enable)) {
+            $this->noinspection = $enable ? [
+                'PhpUnused',
+                'PhpInconsistentReturnPointsInspection',
+                'PhpMissingParentConstructorInspection',
+                'PhpReturnDocTypeMismatchInspection',
+            ] : [];
+        } else {
+            $this->noinspection = $enable;
+        }
 
         return $this;
+    }
+
+    public function setCommentMap(array $map): static
+    {
+        $this->commentMap = $map;
+
+        return $this;
+    }
+
+    public function setGenArginfoMode(bool $enable = true): static
+    {
+        $this->genArginfoMode = $enable;
+
+        return $this;
+    }
+
+    public function addFilter(callable $filters): static
+    {
+        $this->filters[] = $filters;
+
+        return $this;
+    }
+
+    public function getExtensionFunctionAndClassReflectionsGroupByNamespace(): array
+    {
+        $reflections = [];
+        foreach (array_merge($this->extension->getClasses(), $this->extension->getFunctions()) as $functionOrClass) {
+            $reflections[$functionOrClass->getNamespaceName()][$functionOrClass->getShortName()] = $functionOrClass;
+        }
+
+        return $reflections;
     }
 
     public function generate($output = null): void
     {
         $declarations = [];
 
-        $namespacedGroups = [];
-        foreach (array_merge($this->extension->getClasses(), $this->extension->getFunctions()) as $functionOrClass) {
-            $namespacedGroups[$functionOrClass->getNamespaceName()][] = $functionOrClass;
-        }
-
-        foreach ($namespacedGroups as $namespaceName => $namespacedGroup) {
-            if ($this->hasConstantsInNamespace($namespaceName)) {
+        foreach ($this->getExtensionFunctionAndClassReflectionsGroupByNamespace() as $namespaceName => $namespacedGroup) {
+            if (!$this->genArginfoMode && $this->hasConstantInNamespace($namespaceName)) {
                 $declarations[] = $this->generateConstantDeclarationOfNamespace($namespaceName);
             }
             foreach ($namespacedGroup as $functionOrClass) {
+                if ($this->filters) {
+                    foreach ($this->filters as $filter) {
+                        if (!$filter($functionOrClass)) {
+                            continue 2;
+                        }
+                    }
+                }
                 if ($functionOrClass instanceof ReflectionFunction) {
                     $declarations[] = $this->generateFunctionDeclaration($functionOrClass);
                 } elseif ($functionOrClass instanceof ReflectionClass) {
@@ -129,13 +167,24 @@ class StubGenerator
         }
 
         $declarations = implode("\n\n", $declarations);
+        $headerComment = $this->headerComment;
+        if ($this->noinspection) {
+            $headerComment[] = '@noinspection ' . implode(', ', $this->noinspection);
+        }
+        if ($headerComment) {
+            $headerComment = static::genComment($headerComment);
+        }
 
-        $content = implode("\n", [
-            '<?php',
-            $this->noinspection ? '/** @noinspection PhpUnused, PhpInconsistentReturnPointsInspection, PhpMissingParentConstructorInspection, PhpReturnDocTypeMismatchInspection */' : '',
-            '',
-            $declarations,
-        ]);
+        if ($declarations) {
+            $content = implode("\n", [
+                '<?php',
+                ...($headerComment ? [$headerComment, ''] : ['']),
+                $declarations,
+                '',
+            ]);
+        } else {
+            $content = '';
+        }
 
         if (is_resource($output)) {
             fwrite($output, $content);
@@ -158,7 +207,7 @@ class StubGenerator
         };
     }
 
-    protected function getConstantMap(): array
+    public function getConstantMap(): array
     {
         if (isset($this->constantMap)) {
             return $this->constantMap;
@@ -176,7 +225,7 @@ class StubGenerator
         return $this->constantMap = $constantMap;
     }
 
-    protected function hasConstantsInNamespace(string $namespacedName): bool
+    protected function hasConstantInNamespace(string $namespacedName): bool
     {
         return !empty($this->getConstantsOfNamespace($namespacedName));
     }
@@ -194,48 +243,76 @@ class StubGenerator
             throw new RuntimeException("No constant in {$namespaceName}");
         }
 
-        $declaration = "namespace {$namespaceName}\n{\n";
+        $declaration = [];
+        $declaration[] = "namespace {$namespaceName}";
+        $declaration[] = '{';
         foreach ($constantsOfNamespace as $constantName => $constantValue) {
-            $declaration .= "    const {$constantName} = {$this::convertValueToString($constantValue)};\n";
+            $declaration[] = "    const {$constantName} = {$this::convertValueToString($constantValue)};";
         }
-        $declaration .= '}';
+        $declaration[] = '}';
 
-        return $declaration;
+        return implode("\n", $declaration);
     }
 
     protected function getDeclarationPrefix(ReflectionFunction|ReflectionMethod|ReflectionProperty|Reflector $reflector, bool $withSpace = false): string
     {
-        $prefix = '';
+        $prefix = [];
         if (method_exists($reflector, 'isFinal') && $reflector->isFinal()) {
-            $prefix .= 'final ';
+            $prefix[] = 'final';
         }
         if (method_exists($reflector, 'isAbstract') && $reflector->isAbstract()) {
-            $prefix .= 'abstract ';
+            $prefix[] = 'abstract';
         }
-        if (method_exists($reflector, 'getModifiers')) {
-            $modifier = $this::MODIFIERS_MAP[$reflector->getModifiers()] ?? '';
-            if ($modifier) {
-                $prefix .= $modifier . ' ';
-            }
+        if (method_exists($reflector, 'isPublic') && $reflector->isPublic()) {
+            $prefix[] = 'public';
+        } elseif (method_exists($reflector, 'isProtected') && $reflector->isProtected()) {
+            $prefix[] = 'protected';
+        } elseif (method_exists($reflector, 'isPrivate') && $reflector->isPrivate()) {
+            $prefix[] = 'private';
         }
-        if (!$withSpace) {
-            $prefix = rtrim($prefix, ' ');
+        if (method_exists($reflector, 'isStatic') && $reflector->isStatic()) {
+            $prefix[] = 'static';
+        }
+        if ($withSpace) {
+            $prefix[] = '';
         }
 
-        return $prefix;
+        return implode(' ', $prefix);
     }
 
-    protected function formatFunction(ReflectionFunctionAbstract $function, string $comment, string $prefix, string $name, string $params, string $returnType, string $body): string
+    protected static function genComment(string|array $comment): string
     {
-        $handler = $this->functionFormatHandler;
-        if ($handler) {
-            $result = $handler($function, $comment, $prefix, $name, $params, $returnType, $body);
-            if ($result) {
-                return $result;
+        if (is_array($comment)) {
+            if ($comment) {
+                if (count($comment) === 1) {
+                    $comment = ['/** ' . trim($comment[0], ' *') . ' */'];
+                } else {
+                    $comment = ['/**', ...array_map(fn (string $line): string => " * {$line}", $comment), ' */'];
+                }
+                $comment = implode("\n", $comment);
+            } else {
+                $comment = '';
             }
         }
 
-        return sprintf('%s%s function %s(%s)%s {%s}', $comment, $prefix, $name, $params, $returnType, $body);
+        return $comment;
+    }
+
+    protected function formatFunction(ReflectionFunctionAbstract $function, string|array $comment, string $prefix, string $name, string $params, string $returnType, string $body): string
+    {
+        $comment = static::genComment($comment);
+        return sprintf(
+            '%s%s%s%sfunction %s(%s)%s%s {%s}',
+            $comment,
+            $comment ? "\n" : '',
+            $prefix,
+            $prefix ? ' ' : '',
+            $name,
+            $params,
+            $returnType ? ': ' : '',
+            $returnType,
+            $body
+        );
     }
 
     protected function generateFunctionDeclaration(ReflectionFunction|ReflectionMethod $function): string
@@ -243,41 +320,55 @@ class StubGenerator
         $name = ltrim(str_replace($function->getNamespaceName(), '', $function->getName(), $isInNamespace), '\\');
         $scope = $function instanceof ReflectionMethod ? $function->getDeclaringClass()->getName() : '';
 
-        $comment = '';
+        $comment = [];
         $paramsDeclarations = [];
         $params = $function->getParameters();
         foreach ($params as $param) {
             $variadic = $param->isVariadic() ? '...' : '';
             $paramTypeReflection = $param->getType();
             if ($paramTypeReflection) {
-                $paramTypeResolve = fn (string $type) => ($type !== $scope) ? $type : 'self';
                 if ($paramTypeReflection instanceof ReflectionUnionType) {
-                    $paramTypes = $paramTypeReflection->getTypes();
-                    array_walk($paramTypes, $paramTypeResolve);
-                    $paramTypeName = implode('|', $paramTypes);
+                    $paramTypeNames = $paramTypeReflection->getTypes();
                 } else {
-                    $paramTypeName = $paramTypeResolve($paramTypeReflection->getName());
+                    $paramTypeNames = [$paramTypeReflection->getName()];
                 }
             } else {
-                $paramTypeName = '';
+                $paramTypeNames = [];
             }
-            $paramType = ltrim($paramTypeName, '?') ?: 'mixed';
-            if (class_exists($paramType) || interface_exists($paramType)) {
-                $paramType = '\\' . $paramType;
-            }
-            $paramIsUnion = str_contains($paramType, '|');
-            $nullTypeHint = $paramType !== 'mixed' && !$paramIsUnion && $param->allowsNull();
+            $paramTypeNames = array_map(function (string $type) use ($scope) {
+                if (!$this->genArginfoMode && $type === $scope) {
+                    return 'self';
+                }
+                if (class_exists($type) || interface_exists($type)) {
+                    return "\\{$type}";
+                }
+                return $type;
+            }, $paramTypeNames);
             try {
+                $paramDefaultValueIsNull = $param->getDefaultValue() === null;
+            } catch (ReflectionException) {
+                $paramDefaultValueIsNull = false;
+            }
+            $paramTypeNames = array_filter($paramTypeNames, function (string $type) use ($paramDefaultValueIsNull) {
+                if (!$this->genArginfoMode && $paramDefaultValueIsNull && $type === 'null') {
+                    return false;
+                }
+                return true;
+            });
+            $paramTypeName = implode('|', $paramTypeNames);
+            try {
+                $hasSpecialDefaultParamValue = false;
                 $defaultParamValue = $param->getDefaultValue();
                 $defaultParamConstantName = $param->getDefaultValueConstantName();
                 $defaultParamValueString = $this::convertValueToString($defaultParamValue);
-                if (is_string($defaultParamValue) && ($paramType !== 'string' || preg_match('/[\W]/', $defaultParamValue) > 0)) {
+                if (is_string($defaultParamValue) && ($paramTypeName !== 'string' || preg_match('/[\W]/', $defaultParamValue) > 0)) {
                     $defaultParamValueTip = 'null';
                     $defaultParamValueTipOnDoc = trim($defaultParamValueString, '\'');
+                    $hasSpecialDefaultParamValue = true;
                 } else {
                     if (is_string($defaultParamConstantName) && $defaultParamConstantName !== '') {
                         $defaultParamValueTip = "\\{$defaultParamConstantName}";
-                        if (str_contains($defaultParamValueTip, '::')) {
+                        if (!$this->genArginfoMode && str_contains($defaultParamValueTip, '::')) {
                             $parts = explode('::', $defaultParamValueTip);
                             $class = ltrim($parts[0], '\\');
                             if ($class === $scope) {
@@ -291,22 +382,39 @@ class StubGenerator
                     }
                     $defaultParamValueTipOnDoc = $defaultParamValueTip;
                 }
-            } catch (Throwable) {
+            } catch (ReflectionException) {
                 $defaultParamValueTip = $defaultParamValueTipOnDoc = '';
             }
-            $comment .= sprintf(
-                " * @param %s%s %s\$%s%s%s\n",
-                $nullTypeHint ? 'null|' : '',
-                $paramType,
-                $variadic,
-                $param->getName(),
-                !$variadic ? ($param->isOptional() ? ' [optional]' : ' [required]') : '',
-                $defaultParamValueTipOnDoc !== '' ? " = {$defaultParamValueTipOnDoc}" : ''
-            );
+            if ($function instanceof ReflectionFunction) {
+                $fullName = $function->getName();
+            } else /* if ($function instanceof ReflectionMethod) */ {
+                $fullName = "{$function->getDeclaringClass()->getName()}->{$function->getShortName()}";
+            }
+            $userComment = $this->commentMap[$fullName] ?? '';
+            if ($userComment) {
+                // format user comment
+                $userCommentLines = explode("\n", $userComment);
+                if (count($userCommentLines) === 1) {
+                    $comment = trim($userComment);
+                } else {
+                    $userCommentLines = array_slice($userCommentLines, 1, count($userCommentLines) - 2);
+                    $comment = array_map(fn (string $line) => trim($line, '/* '), $userCommentLines);
+                }
+            } elseif ($hasSpecialDefaultParamValue) {
+                $comment[] = sprintf(
+                    '@param %s%s%s$%s%s%s',
+                    $paramTypeName,
+                    $paramTypeName ? ' ' : '',
+                    $variadic,
+                    $param->getName(),
+                    !$variadic ? ($param->isOptional() ? ' [optional]' : ' [required]') : '',
+                    $defaultParamValueTipOnDoc !== '' ? " = {$defaultParamValueTipOnDoc}" : ''
+                );
+            }
             $paramsDeclarations[] = sprintf(
                 '%s%s%s%s$%s%s',
-                $nullTypeHint ? '?' : '',
-                ($paramType === 'mixed' || $paramIsUnion) ? '' : "{$paramType} ",
+                $paramTypeName,
+                $paramTypeName ? ' ' : '',
                 $variadic,
                 $param->isPassedByReference() ? '&' : '',
                 $param->getName(),
@@ -314,76 +422,50 @@ class StubGenerator
             );
         }
         $paramsDeclaration = implode(', ', $paramsDeclarations);
-        // we can show more info on comment doc
-        // if (strlen($paramsDeclaration) > 80) {
-        //     $paramsDeclaration = $this::indent(
-        //         "\n" . implode(",\n", $paramsDeclarations) . "\n",
-        //         1
-        //     );
-        // }
 
         if ($function->hasReturnType()) {
             $returnType = $function->getReturnType();
-            $returnTypeAllowNull = $returnType->allowsNull();
-            $returnTypeName = $returnType->getName();
-            if (class_exists($returnTypeName)) {
-                if ($function instanceof ReflectionMethod && $returnTypeName === $function->getDeclaringClass()->getName()) {
-                    $returnTypeName = 'self';
-                } else {
-                    if ($function instanceof ReflectionMethod) {
-                        $namespace = $function->getDeclaringClass()->getNamespaceName();
+            if ($returnType instanceof ReflectionUnionType) {
+                $returnTypeNames = $returnType->getTypes();
+            } else {
+                $returnTypeNames = [$returnType->getName()];
+            }
+            array_walk($returnTypeNames, function (string &$returnTypeName) use ($function): void {
+                if (class_exists($returnTypeName) || interface_exists($returnTypeName)) {
+                    if (!$this->genArginfoMode && $function instanceof ReflectionMethod && $returnTypeName === $function->getDeclaringClass()->getName()) {
+                        $returnTypeName = 'self';
                     } else {
-                        $namespace = $function->getNamespaceName();
-                    }
-                    if ($namespace) {
-                        $returnTypeShortName = ltrim(str_replace($namespace, '', $returnTypeName, $count), '\\');
-                        if ($count === 0 || $returnTypeShortName === '') {
-                            goto _full_namespace;
+                        if ($function instanceof ReflectionMethod) {
+                            $namespace = $function->getDeclaringClass()->getNamespaceName();
+                        } else {
+                            $namespace = $function->getNamespaceName();
                         }
-                        $returnTypeName = $returnTypeShortName;
-                    } else {
-                        _full_namespace:
-                        $returnTypeName = '\\' . $returnTypeName;
+                        if ($namespace) {
+                            $returnTypeShortName = ltrim(str_replace($namespace, '', $returnTypeName, $count), '\\');
+                            if ($count === 0 || $returnTypeShortName === '') {
+                                goto _full_namespace;
+                            }
+                            $returnTypeName = $returnTypeShortName;
+                        } else {
+                            _full_namespace:
+                            $returnTypeName = '\\' . $returnTypeName;
+                        }
                     }
                 }
-            }
+            });
+            $returnTypeName = implode('|', $returnTypeNames);
         } else {
-            $returnTypeAllowNull = false;
-            $returnTypeName = 'mixed';
+            $returnTypeName = '';
         }
-
-        $isCtorOrDtor = $function instanceof ReflectionMethod && ($function->isConstructor() || $function->isDestructor());
-        if (!$isCtorOrDtor) {
-            $returnTypeNameInComment = $returnTypeName === 'static' ? '$this' : $returnTypeName;
-            if ($returnTypeAllowNull) {
-                $returnTypeNameInComment = "null|{$returnTypeNameInComment}";
-            }
-            $comment .= " * @return {$returnTypeNameInComment}\n";
-            /*if ($returnTypeName !== 'void') {
-                $body = " return \$GLOBALS[\"\\0fakeVariable\\0\"]; ";
-            } else {
-                $body = ' ';
-            }*/
-        }/* else {
-            if ($function->getDeclaringClass()->getParentClass()) {
-                if ($function->isConstructor()) {
-                    $body = " parent::__construct(...\$GLOBALS[\"\\0fakeVariable\\0\"]); ";
-                } else {
-                    $body = " parent::__destruct(...\$GLOBALS[\"\\0fakeVariable\\0\"]); ";
-                }
-            } else {
-                $body = ' ';
-            }
-        }*/
         $body = ' ';
 
         $declaration = $this->formatFunction(
             $function,
-            $comment ? $comment = "/**\n{$comment} */\n" : '',
-            $this->getDeclarationPrefix($function, false),
+            $comment,
+            $this->getDeclarationPrefix($function),
             $name,
             $paramsDeclaration,
-            ($isCtorOrDtor || !$returnTypeName || $returnTypeName === 'mixed') ? '' : (': ' . ($returnTypeAllowNull ? '?' : '') . $returnTypeName),
+            $returnTypeName,
             $body
         );
 
@@ -420,9 +502,11 @@ class StubGenerator
         }
 
         $constantDeclarations = [];
-        foreach ($class->getConstants() as $constantName => $constantValue) {
-            $constantValue = is_numeric($constantValue) ? $constantValue : "'{$constantValue}'";
-            $constantDeclarations[] = "public const {$constantName} = {$this::convertValueToString($constantValue)}";
+        if (!$this->genArginfoMode) {
+            foreach ($class->getConstants() as $constantName => $constantValue) {
+                $constantValue = is_numeric($constantValue) ? $constantValue : "'{$constantValue}'";
+                $constantDeclarations[] = "public const {$constantName} = {$this::convertValueToString($constantValue)}";
+            }
         }
 
         $propertyDeclarations = [];
@@ -430,7 +514,13 @@ class StubGenerator
             if ($property->getDeclaringClass()->getName() !== $class->getName()) {
                 continue;
             }
-            $propertyDeclarations[] = $this->getDeclarationPrefix($property, true) . '$' . $property->getName();
+            $propertyParts = [];
+            $propertyParts[] = $this->getDeclarationPrefix($property);
+            if ($propertyType = $property->getType()) {
+                $propertyParts[] = $propertyType->getName();
+            }
+            $propertyParts[] = "\${$property->getName()}";
+            $propertyDeclarations[] = implode(' ', $propertyParts);
         }
 
         $methodDeclarations = [];
@@ -456,7 +546,7 @@ class StubGenerator
         }
         $body = ltrim($this::indent(trim(implode("\n\n", $body), "\n"), 2));
 
-        $namespaceName = $namespaceName ? "namespace {$namespaceName}" : 'namespace';
+        $namespaceNameDeclaration = $namespaceName ? "namespace {$namespaceName}" : 'namespace';
 
         if (!empty($body)) {
             $body =
@@ -470,7 +560,7 @@ class StubGenerator
         }
 
         return
-            "{$namespaceName}\n" .
+            "{$namespaceNameDeclaration}\n" .
             "{\n" .
             "    {$prefix}{$type} {$shortName}{$extends}{$implements}{$body}" .
             '}';
