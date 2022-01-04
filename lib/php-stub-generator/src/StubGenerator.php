@@ -349,13 +349,17 @@ class StubGenerator
             } catch (ReflectionException) {
                 $paramDefaultValueIsNull = false;
             }
-            $paramTypeNames = array_filter($paramTypeNames, function (string $type) use ($paramDefaultValueIsNull) {
-                if (!$this->genArginfoMode && $paramDefaultValueIsNull && $type === 'null') {
+            $preferDropNullable = !$this->genArginfoMode && $paramDefaultValueIsNull;
+            $paramTypeNames = array_filter($paramTypeNames, function (string $type) use ($preferDropNullable) {
+                if ($preferDropNullable && $type === 'null') {
                     return false;
                 }
                 return true;
             });
             $paramTypeName = implode('|', $paramTypeNames);
+            if (count($paramTypeNames) === 1 && $paramTypeName !== 'mixed' && $param->allowsNull() && !$preferDropNullable) {
+                $paramTypeName = "?{$paramTypeName}";
+            }
             try {
                 $hasSpecialDefaultParamValue = false;
                 $defaultParamValue = $param->getDefaultValue();
