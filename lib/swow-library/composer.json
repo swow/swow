@@ -29,7 +29,7 @@
         },
         "files": [
             "src/functions.php",
-            "src/Util/functions.php"
+            "src/Debug/functions.php"
         ]
     },
     "autoload-dev": {

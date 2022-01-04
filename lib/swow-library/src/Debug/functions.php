@@ -11,7 +11,7 @@
 
 declare(strict_types=1);
 
-namespace Swow\Util;
+namespace Swow\Debug;
 
 use function ob_get_clean;
 use function ob_start;

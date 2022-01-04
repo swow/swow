@@ -42,7 +42,7 @@
         },
         "files": [
             "lib/swow-library/src/functions.php",
-            "lib/swow-library/src/Util/functions.php"
+            "lib/swow-library/src/Debug/functions.php"
         ]
     },
     "autoload-dev": {

@@ -61,7 +61,6 @@ use function str_repeat;
 use function str_replace;
 use function strlen;
 use function substr;
-use function Swow\Util\var_dump_return;
 use function trigger_error;
 use function trim;
 use function usleep;
