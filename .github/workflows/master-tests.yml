@@ -42,6 +42,9 @@ jobs:
         #env:
           #phpts: ${{ matrix.ts }}
 
+      - name: Setup composer dependencies
+        run: composer update -o --ignore-platform-reqs
+
       - name: Build Swow extension
         run: |
           cd ext
@@ -64,9 +67,6 @@ jobs:
         continue-on-error: true
         run: |
           composer test-extension
-
-      - name: Setup composer dependencies
-        run: composer update -o --ignore-platform-reqs
 
       - name: Run library tests
         run: composer test-library
@@ -113,15 +113,15 @@ jobs:
           staging-deps: '1'
           deps: openssl,libcurl,libssh2,zlib,nghttp2
 
+      - name: Setup composer dependencies
+        run: composer update -o --ignore-platform-reqs
+
       - name: Run extension tests
         shell: cmd
         id: ext-test
         continue-on-error: true
         run: |
           composer test-extension
-
-      - name: Setup composer dependencies
-        run: composer update -o --ignore-platform-reqs
 
       - name: Run library tests
         run: composer test-library
