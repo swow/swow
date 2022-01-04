@@ -33,6 +33,12 @@
         "phpunit/phpunit": ">=8.0",
         "rector/rector": "^0.12.8"
     },
+    "replace": {
+        "swow/swow-library": "*",
+        "swow/swow-stub": "*",
+        "swow/swow-util": "*",
+        "swow/php-stub-generator": "*"
+    },
     "suggest": {
         "ext-swow": "*"
     },
