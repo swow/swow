@@ -174,7 +174,7 @@ namespace Swow
 
         public function call(callable $callable): mixed { }
 
-        public function throw(\Throwable $throwable): void { }
+        public function throw(\Throwable $throwable): mixed { }
 
         public function kill(): void { }
 
@@ -1015,7 +1015,7 @@ namespace Swow\WebSocket
 
         public function getPayloadDataAsString(): string { }
 
-        public function setPayloadData(\Swow\Buffer $buffer): static { }
+        public function setPayloadData(?\Swow\Buffer $buffer): static { }
 
         public function unmaskPayloadData(): static { }
 
@@ -1137,5 +1137,5 @@ namespace Swow\Debug
 
 namespace Swow\Debug
 {
-    function registerExtendedStatementHandler(callable $handler): callable { }
+    function registerExtendedStatementHandler(?callable $handler): callable { }
 }

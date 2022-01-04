@@ -1850,7 +1850,7 @@ static PHP_METHOD(Swow_Coroutine, call)
     }
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Coroutine_throw, 0, 1, IS_VOID, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Coroutine_throw, 0, 1, IS_MIXED, 0)
     ZEND_ARG_OBJ_INFO(0, throwable, Throwable, 0)
 ZEND_END_ARG_INFO()
 

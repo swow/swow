@@ -458,7 +458,7 @@ static PHP_METHOD(Swow_WebSocket_Frame, getPayloadDataAsString)
 }
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_WebSocket_Frame_setPayloadData, 0, 1, IS_STATIC, 0)
-    ZEND_ARG_OBJ_INFO(0, buffer, Swow\\Buffer, 0)
+    ZEND_ARG_OBJ_INFO(0, buffer, Swow\\Buffer, 1)
 ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_WebSocket_Frame, setPayloadData)

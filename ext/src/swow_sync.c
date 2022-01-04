@@ -20,6 +20,33 @@
 
 #include "cat_time.h"
 
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_Swow_Sync_waitAll, ZEND_RETURN_VALUE, 0, IS_VOID, 0)
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, timeout, IS_LONG, 0, "-1")
+ZEND_END_ARG_INFO()
+
+static PHP_FUNCTION(Swow_Sync_waitAll)
+{
+    zend_long timeout = -1;
+    cat_bool_t ret;
+
+    ZEND_PARSE_PARAMETERS_START(0, 1)
+        Z_PARAM_OPTIONAL
+        Z_PARAM_LONG(timeout)
+    ZEND_PARSE_PARAMETERS_END();
+
+    ret = cat_coroutine_wait_all_ex(timeout);
+
+    if (UNEXPECTED(!ret)) {
+        swow_throw_exception_with_last(swow_sync_exception_ce);
+        RETURN_THROWS();
+    }
+}
+
+static const zend_function_entry swow_sync_functions[] = {
+    PHP_FENTRY(Swow\\Sync\\waitAll, PHP_FN(Swow_Sync_waitAll), arginfo_Swow_Sync_waitAll, 0)
+    PHP_FE_END
+};
+
 SWOW_API zend_class_entry *swow_sync_wait_reference_ce;
 SWOW_API zend_object_handlers swow_sync_wait_reference_handlers;
 
@@ -147,9 +174,7 @@ static PHP_METHOD(Swow_Sync_WaitGroup, add)
     }
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Sync_WaitGroup_wait, 0, 1, IS_VOID, 0)
-    ZEND_ARG_TYPE_INFO(0, timeout, IS_LONG, 0)
-ZEND_END_ARG_INFO()
+#define arginfo_class_Swow_Sync_WaitGroup_wait arginfo_Swow_Sync_waitAll
 
 static PHP_METHOD(Swow_Sync_WaitGroup, wait)
 {
@@ -195,35 +220,12 @@ static const zend_function_entry swow_sync_wait_group_methods[] = {
     PHP_FE_END
 };
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_Swow_Sync_waitAll, ZEND_RETURN_VALUE, 0, IS_VOID, 0)
-    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, timeout, IS_LONG, 0, "-1")
-ZEND_END_ARG_INFO()
-
-static PHP_FUNCTION(Swow_Sync_waitAll)
-{
-    zend_long timeout = -1;
-    cat_bool_t ret;
-
-    ZEND_PARSE_PARAMETERS_START(0, 1)
-        Z_PARAM_OPTIONAL
-        Z_PARAM_LONG(timeout)
-    ZEND_PARSE_PARAMETERS_END();
-
-    ret = cat_coroutine_wait_all_ex(timeout);
-
-    if (UNEXPECTED(!ret)) {
-        swow_throw_exception_with_last(swow_sync_exception_ce);
-        RETURN_THROWS();
-    }
-}
-
-static const zend_function_entry swow_sync_functions[] = {
-    PHP_FENTRY(Swow\\Sync\\waitAll, PHP_FN(Swow_Sync_waitAll), arginfo_Swow_Sync_waitAll, 0)
-    PHP_FE_END
-};
-
 int swow_sync_module_init(INIT_FUNC_ARGS)
 {
+    if (zend_register_functions(NULL, swow_sync_functions, NULL, MODULE_PERSISTENT) != SUCCESS) {
+        return FAILURE;
+    }
+
     swow_sync_wait_reference_ce = swow_register_internal_class(
         "Swow\\Sync\\WaitReference", NULL, swow_sync_wait_reference_methods,
         &swow_sync_wait_reference_handlers, NULL,
@@ -242,10 +244,6 @@ int swow_sync_module_init(INIT_FUNC_ARGS)
     swow_sync_exception_ce = swow_register_internal_class(
         "Swow\\Sync\\Exception", swow_exception_ce, NULL, NULL, NULL, cat_true, cat_true, NULL, NULL, 0
     );
-
-    if (zend_register_functions(NULL, swow_sync_functions, NULL, MODULE_PERSISTENT) != SUCCESS) {
-        return FAILURE;
-    }
 
     return SUCCESS;
 }
