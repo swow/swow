@@ -20,9 +20,10 @@ use function Swow\Util\passthru;
 use function Swow\Util\success;
 
 $repoInfo = [
+    'swow-examples' => 'examples',
     'swow-stub' => 'lib/swow-stub',
     'swow-library' => 'lib/swow-library',
-    'swow-examples' => 'examples',
+    'swow-util' => 'lib/swow-util',
     'php-stub-generator' => 'lib/php-stub-generator',
 ];
 
