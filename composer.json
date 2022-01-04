@@ -38,11 +38,13 @@
     },
     "autoload": {
         "psr-4": {
-            "Swow\\": "lib/swow-library/src/"
+            "Swow\\": "lib/swow-library/src/",
+            "Swow\\Util\\": "lib/swow-util/src/"
         },
         "files": [
             "lib/swow-library/src/functions.php",
-            "lib/swow-library/src/Debug/functions.php"
+            "lib/swow-library/src/Debug/functions.php",
+            "lib/swow-util/src/functions.php"
         ]
     },
     "autoload-dev": {

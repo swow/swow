@@ -132,12 +132,12 @@ class FileSystem
             $subPath = $files->getSubPathName();
             if ($info->isDir()) {
                 $directory = "{$destination}/{$subPath}";
-                /*@var $info RecursiveDirectoryIterator */
+                /** @var RecursiveDirectoryIterator $info */
                 if (!static::copyDir($info->getPathname(), $directory)) {
                     $ret = false;
                 }
             } else {
-                /*@var $info SplFileInfo */
+                /** @var SplFileInfo $info */
                 $file = "{$destination}/{$subPath}";
                 if (!static::copyFile($info->getPathname(), $file)) {
                     $ret = false;

@@ -1,0 +1,29 @@
+{
+    "name": "swow/swow-util",
+    "description": "Util functions and classes",
+    "keywords": [
+        "swow",
+        "util"
+    ],
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "twose",
+            "email": "twosee@php.net"
+        }
+    ],
+    "support": {
+        "issues": "https://github.com/swow/swow-util"
+    },
+    "require": {
+        "php": ">=8.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Swow\\Util\\": "src/"
+        },
+        "files": [
+            "src/functions.php"
+        ]
+    }
+}

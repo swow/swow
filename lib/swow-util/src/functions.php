@@ -2,25 +2,32 @@
 /**
  * This file is part of Swow
  *
- * @link     https://github.com/swow/swow
- * @contact  twosee <twosee@php.net>
+ * @link    https://github.com/swow/swow
+ * @contact twosee <twosee@php.net>
  *
  * For the full copyright and license information,
  * please view the LICENSE file that was distributed with this source code
  */
 
-namespace Swow\Tools;
+declare(strict_types=1);
+
+namespace Swow\Util;
 
 use RuntimeException;
 use function array_map;
 use function array_shift;
 use function error_get_last;
 use function escapeshellarg;
+use function feof;
 use function fgets;
 use function file_get_contents;
 use function file_put_contents;
+use function fread;
 use function getenv;
 use function implode;
+use function proc_close;
+use function proc_get_status;
+use function proc_open;
 use function str_replace;
 use function stream_context_create;
 use function trim;
@@ -38,7 +45,7 @@ const COLOR_WHITE = 7;
 
 function dye(string $string, int $color): string
 {
-    return ($color !== COLOR_NONE ? "\033[3{$color}m{$string}\033[0m" : $string);
+    return $color !== COLOR_NONE ? "\033[3{$color}m{$string}\033[0m" : $string;
 }
 
 function log(string $message, int $color = COLOR_NONE): void
@@ -53,7 +60,8 @@ function br(): void
 
 const EMOJI_WARN = '⚠️';
 const EMOJI_ERROR = '❌';
-const EMOJI_NOTICE = '💬';
+const EMOJI_NOTICE = '🔎';
+const EMOJI_INFO = '⛄️';
 const EMOJI_OK = '✅';
 const EMOJI_SUCCESS = '🚀';
 
@@ -71,6 +79,11 @@ function error(string $message): void
 function notice(string $message): void
 {
     log(EMOJI_NOTICE . " {$message}", COLOR_CYAN);
+}
+
+function info(string $message): void
+{
+    log(EMOJI_INFO . " {$message}", COLOR_NONE);
 }
 
 function ok(string $message): void
@@ -101,7 +114,8 @@ function askBool(string $question): bool
         $response = trim(fgets(STDIN));
         if ($response === 'Y') {
             return true;
-        } elseif ($response === 'n') {
+        }
+        if ($response === 'n') {
             return false;
         }
     }
@@ -147,17 +161,17 @@ function executeAndCheck(array $commands): void
 {
     $basename = pathinfo($commands[1] ?? '', PATHINFO_FILENAME);
     echo "[{$basename}]" . PHP_EOL;
-    echo "===========  Execute  ==============" . PHP_EOL;
+    echo '===========  Execute  ==============' . PHP_EOL;
     $command = implode(' ', $commands);
     exec($command, $output, $return_var);
     if (str_starts_with($output[0] ?? '', '#!')) {
         array_shift($output);
     }
-    echo '> ' . implode("\n> ", $output) . "" . PHP_EOL;
+    echo '> ' . implode("\n> ", $output) . '' . PHP_EOL;
     if ($return_var != 0) {
         error("Exec {$command} failed with code {$return_var}!");
     }
-    echo "=========== Finish Done ============" . PHP_EOL . PHP_EOL;
+    echo '=========== Finish Done ============' . PHP_EOL . PHP_EOL;
 }
 
 function fileSize(string $filename, int $decimals = 2): string
@@ -170,13 +184,13 @@ function fileSize(string $filename, int $decimals = 2): string
 
 function gitFiles(string $root = '.'): array
 {
-    return explode(PHP_EOL, `cd {$root} && git ls-files`);
+    return explode(PHP_EOL, shell_exec("cd {$root} && git ls-files"));
 }
 
 function defer(&$any, callable $callback)
 {
     if (!$any) {
-        $any = new class {
+        $any = new class() {
             private array $callbacks = [];
 
             public function add(callable $callback)
@@ -212,7 +226,28 @@ function passthru2(string $cmd, array $args): int
     }
     $args = escapeShellArgs($args);
 
-    return passthru("{$shell} \"{$cmd} \"{$args}");
+    \passthru("{$shell} \"{$cmd} \"{$args}", $status);
+    return $status;
+}
+
+function processExecute(array $command, &$status = null): string
+{
+    $proc = proc_open(
+        $command,
+        [0 => STDIN, 1 => ['pipe', 'w'], 2 => ['redirect', 1]],
+        $pipes,
+        null,
+        null,
+        PHP_OS_FAMILY === 'Windows' ? ['bypass_shell' => true] : null
+    );
+    $output = '';
+    do {
+        $output .= fread($pipes[1], 8192);
+    } while (!feof($pipes[1]));
+    $status = proc_get_status($proc);
+    proc_close($proc);
+
+    return $output;
 }
 
 function httpGet(string $url): false|string
