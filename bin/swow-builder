@@ -10,17 +10,22 @@
  * please view the LICENSE file that was distributed with this source code
  */
 
-require_once __DIR__ . '/autoload.php';
+foreach ([__DIR__ . '/../vendor/autoload.php', __DIR__ . '/../../../autoload.php',] as $file) {
+    if (file_exists($file)) {
+        require $file;
+        break;
+    }
+}
 
-use function Swow\Tools\askBool;
-use function Swow\Tools\br;
-use function Swow\Tools\error;
-use function Swow\Tools\notice;
-use function Swow\Tools\log;
-use function Swow\Tools\ok;
-use function Swow\Tools\success;
-use function Swow\Tools\warn;
-use function Swow\Tools\passthru;
+use function Swow\Util\askBool;
+use function Swow\Util\br;
+use function Swow\Util\error;
+use function Swow\Util\notice;
+use function Swow\Util\log;
+use function Swow\Util\ok;
+use function Swow\Util\success;
+use function Swow\Util\warn;
+use function Swow\Util\passthru;
 
 if (PHP_OS_FAMILY === 'Windows') {
     error(

@@ -62,7 +62,7 @@
         "cs-fix": [ "@php vendor/bin/php-cs-fixer fix" ],
         "rector": [ "@php vendor/bin/rector process --config=tools/rector.php" ],
         "sync-extension": [ "@php -n tools/sync-extension.php" ],
-        "build-extension": [ "@php tools/swow-builder" ],
+        "build-extension": [ "@php bin/swow-builder" ],
         "rebuild-extension": [ "@build-extension --rebuild" ],
         "rebuild-debug-extension": [ "@build-extension --rebuild --debug" ],
         "install-extension": [ "@build-extension --install" ],
@@ -75,6 +75,6 @@
         "split": [ "@php -n tools/split.php" ]
     },
     "bin": [
-        "tools/swow-builder"
+        "bin/swow-builder"
     ]
 }
