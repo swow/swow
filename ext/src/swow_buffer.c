@@ -231,9 +231,6 @@ static PHP_METHOD(Swow_Buffer, getSize)
     RETURN_LONG(buffer->size);
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Buffer_getLong, ZEND_RETURN_VALUE, 0, IS_LONG, 0)
-ZEND_END_ARG_INFO()
-
 #define arginfo_class_Swow_Buffer_getLength arginfo_class_Swow_Buffer_getSize
 
 static PHP_METHOD(Swow_Buffer, getLength)
@@ -277,9 +274,6 @@ static PHP_METHOD(Swow_Buffer, getWritableSize)
 
     RETURN_LONG(buffer->size - sbuffer->offset);
 }
-
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Buffer_getBool, ZEND_RETURN_VALUE, 0, _IS_BOOL, 0)
-ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Buffer_isReadable, 0, 0, _IS_BOOL, 0)
 ZEND_END_ARG_INFO()
@@ -754,9 +748,6 @@ static PHP_METHOD(Swow_Buffer, clear)
     RETURN_THIS();
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Buffer_getString, ZEND_RETURN_VALUE, 0, IS_STRING, 0)
-ZEND_END_ARG_INFO()
-
 #define arginfo_class_Swow_Buffer_fetchString arginfo_class_Swow_Buffer_getContents
 
 /* diffrent from __toString , it transfers ownership to return_value */
@@ -809,9 +800,6 @@ static PHP_METHOD(Swow_Buffer, toString)
     /* Notice: string maybe interned, so we must use zend_string_copy() here */
     RETURN_STR(zend_string_copy(string));
 }
-
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Buffer_void, ZEND_RETURN_VALUE, 0, IS_VOID, 0)
-ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Buffer_lock, 0, 0, IS_VOID, 0)
 ZEND_END_ARG_INFO()

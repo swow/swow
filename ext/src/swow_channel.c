@@ -180,9 +180,6 @@ static PHP_METHOD(Swow_Channel, close)
 
 /* status */
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Channel_getLong, ZEND_RETURN_VALUE, 0, IS_LONG, 0)
-ZEND_END_ARG_INFO()
-
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Channel_getCapacity, 0, 0, IS_LONG, 0)
 ZEND_END_ARG_INFO()
 
@@ -239,9 +236,6 @@ static PHP_METHOD(Swow_Channel, hasConsumers)
 
     RETURN_BOOL(cat_channel_has_consumers(channel));
 }
-
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Channel_getBool, ZEND_RETURN_VALUE, 0, _IS_BOOL, 0)
-ZEND_END_ARG_INFO()
 
 #define arginfo_class_Swow_Channel_isEmpty arginfo_class_Swow_Channel_isAvailable
 

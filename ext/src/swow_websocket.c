@@ -138,9 +138,6 @@ static PHP_METHOD(Swow_WebSocket_Frame, resetHeader)
     RETURN_THIS();
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_WebSocket_Frame_getLong, ZEND_RETURN_VALUE, 0, IS_LONG, 0)
-ZEND_END_ARG_INFO()
-
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_WebSocket_Frame_getOpcode, 0, 0, IS_LONG, 0)
 ZEND_END_ARG_INFO()
 
@@ -200,9 +197,6 @@ static PHP_METHOD(Swow_WebSocket_Frame, setFin)
 
     RETURN_THIS();
 }
-
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_WebSocket_Frame_getBool, ZEND_RETURN_VALUE, 0, _IS_BOOL, 0)
-ZEND_END_ARG_INFO()
 
 #define arginfo_class_Swow_WebSocket_Frame_getRSV1 arginfo_class_Swow_WebSocket_Frame_getFin
 
@@ -364,9 +358,6 @@ static PHP_METHOD(Swow_WebSocket_Frame, setMask)
 
     RETURN_THIS();
 }
-
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_WebSocket_Frame_getString, ZEND_RETURN_VALUE, 0, IS_STRING, 0)
-ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_WebSocket_Frame_getMaskKey, 0, 0, IS_STRING, 0)
 ZEND_END_ARG_INFO()

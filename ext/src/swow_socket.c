@@ -1286,9 +1286,6 @@ static PHP_METHOD(Swow_Socket, close)
 
 /* status */
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_getBool, ZEND_RETURN_VALUE, 0, _IS_BOOL, 0)
-ZEND_END_ARG_INFO()
-
 #define SWOW_SOCKET_IS_XXX_API_GEN(Name, name) \
 static PHP_METHOD(Swow_Socket, is##Name) \
 { \

@@ -1489,9 +1489,6 @@ static PHP_METHOD(Swow_Coroutine, getPrevious)
 
 #undef SWOW_COROUTINE_GETTER
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Coroutine_getLong, ZEND_RETURN_VALUE, 0, IS_LONG, 0)
-ZEND_END_ARG_INFO()
-
 #define arginfo_class_Swow_Coroutine_getState arginfo_class_Swow_Coroutine_getId
 
 static PHP_METHOD(Swow_Coroutine, getState)
@@ -1500,9 +1497,6 @@ static PHP_METHOD(Swow_Coroutine, getState)
 
     RETURN_LONG(getThisCoroutine()->coroutine.state);
 }
-
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Coroutine_getString, ZEND_RETURN_VALUE, 0, IS_STRING, 0)
-ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Coroutine_getStateName, 0, 0, IS_STRING, 0)
 ZEND_END_ARG_INFO()
@@ -1578,9 +1572,6 @@ static PHP_METHOD(Swow_Coroutine, getExitStatus)
 
     RETURN_LONG(scoroutine->exit_status);
 }
-
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Coroutine_getBool, ZEND_RETURN_VALUE, 0, _IS_BOOL, 0)
-ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Coroutine_isAvailable, 0, 0, _IS_BOOL, 0)
 ZEND_END_ARG_INFO()
