@@ -1177,12 +1177,15 @@ TEXT;
     {
         if ($all) {
             $handler = function () {
-                static $lastFile;
-                $call = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 1)[0];
-                ['file' => $file, 'line' => $line] = $call;
-                if ($file === __FILE__) {
+                static $lastFile = '', $firstTouch = false;
+                if (!$firstTouch) {
+                    /* skip for this function ending */
+                    $firstTouch = true;
                     return;
                 }
+                $call = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 1)[0];
+                $file = $call['file'] ?? null;
+                $line = $call['line'] ?? null;
                 if ($lastFile !== $file) {
                     $lastFile = $file;
                     echo '>>> ' . $file . PHP_EOL;
@@ -1212,19 +1215,33 @@ TEXT;
         registerExtendedStatementHandler($handler);
     }
 
-    protected static function getFileLine(string $file, int $lineNo): string
+    protected static function getFileLine(string $file, int $line): string
     {
-        $fp = @fopen($file, 'r');
-        if ($fp === false) {
-            return "Unable to open {$file}";
-        }
-        $i = 0;
-        while (($line = fgets($fp)) !== false) {
-            if (++$i === $lineNo) {
-                return rtrim($line);
+        // TODO: LRU cache
+        static $cache = [];
+        if (!isset($cache[$file])) {
+            $fileLines = [];
+            $fp = @fopen($file, 'r');
+            if ($fp === false) {
+                $cache[$file] = false;
+            } else {
+                while (true) {
+                    $lineContent = fgets($fp);
+                    if ($lineContent === false) {
+                        break;
+                    }
+                    $fileLines[] = rtrim($lineContent);
+                }
+                $cache[$file] = $fileLines;
             }
         }
+        if (!$cache[$file]) {
+            return "Unable to read file {$file}";
+        }
+        if (!isset($cache[$file][$line - 1])) {
+            return "Unable to read file line {$file}:{$line}";
+        }
 
-        return "Unable to read {$file}:{$line}";
+        return $cache[$file][$line - 1];
     }
 }
