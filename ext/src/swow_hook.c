@@ -76,7 +76,7 @@ SWOW_API cat_bool_t swow_hook_internal_function(const zend_function_entry *fe)
     if (UNEXPECTED(function == NULL)) {
         if (swow_function_is_hookable(name, name_length)) {
             zend_function_entry fes[] = { fe[0], PHP_FE_END };
-            if (zend_register_functions(NULL, fes, NULL, MODULE_PERSISTENT) != SUCCESS) {
+            if (zend_register_functions(NULL, fes, NULL, EG(current_module)->type) != SUCCESS) {
                 return cat_false;
             }
         }

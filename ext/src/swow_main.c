@@ -494,7 +494,7 @@ int swow_module_init(INIT_FUNC_ARGS)
 #define SWOW_ERRNO_GEN(name, message) REGISTER_LONG_CONSTANT("Swow\\Errno\\" #name, CAT_##name, CONST_CS | CONST_PERSISTENT);
     CAT_ERRNO_MAP(SWOW_ERRNO_GEN)
 #undef SWOW_ERRNO_GEN
-    if (zend_register_functions(NULL, swow_errno_functions, NULL, MODULE_PERSISTENT) != SUCCESS) {
+    if (zend_register_functions(NULL, swow_errno_functions, NULL, type) != SUCCESS) {
         return FAILURE;
     }
 

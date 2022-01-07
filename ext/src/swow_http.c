@@ -695,7 +695,7 @@ int swow_http_module_init(INIT_FUNC_ARGS)
         "Swow\\Http\\Parser\\Exception", swow_exception_ce, NULL, NULL, NULL, cat_true, cat_true, NULL, NULL, 0
     );
 
-    if (zend_register_functions(NULL, swow_http_functions, NULL, MODULE_PERSISTENT) != SUCCESS) {
+    if (zend_register_functions(NULL, swow_http_functions, NULL, type) != SUCCESS) {
         return FAILURE;
     }
 

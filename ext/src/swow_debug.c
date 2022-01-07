@@ -504,7 +504,7 @@ int swow_debug_module_init(INIT_FUNC_ARGS)
 {
     CAT_GLOBALS_REGISTER(swow_debug, CAT_GLOBALS_CTOR(swow_debug), NULL);
 
-    if (zend_register_functions(NULL, swow_debug_functions, NULL, MODULE_PERSISTENT) != SUCCESS) {
+    if (zend_register_functions(NULL, swow_debug_functions, NULL, type) != SUCCESS) {
         return FAILURE;
     }
 

@@ -171,7 +171,7 @@ int swow_defer_module_init(INIT_FUNC_ARGS)
     /* we do not need get_gc because we never expose defer object to user */
     swow_defer_handlers.dtor_obj = swow_defer_dtor_object;
 
-    if (zend_register_functions(NULL, swow_defer_functions, NULL, MODULE_PERSISTENT) != SUCCESS) {
+    if (zend_register_functions(NULL, swow_defer_functions, NULL, type) != SUCCESS) {
         return FAILURE;
     }
 
