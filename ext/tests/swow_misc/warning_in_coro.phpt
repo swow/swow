@@ -2,7 +2,7 @@
 swow_misc: trig user warning in coroutine
 --SKIPIF--
 <?php
-// require __DIR__ . '/../include/skipif.php';
+require __DIR__ . '/../include/skipif.php';
 ?>
 --FILE--
 <?php
