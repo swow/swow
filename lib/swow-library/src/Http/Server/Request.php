@@ -47,7 +47,7 @@ class Request extends \Swow\Http\ServerRequest
 
     public function getQueryParams(): array
     {
-        if ($this->queryParams === null) {
+        if (!isset($this->queryParams)) {
             parse_str($this->query, $this->queryParams);
         }
 
