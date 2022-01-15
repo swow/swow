@@ -1958,7 +1958,7 @@ static void cat_fs_flock_cb(cat_data_t *ptr)
     // (all threads in pool waiting flock(xx, LOCK_EX), while flock(xx, LOCK_UN) after them in queue)
     uv_thread_options_t params = {
         .flags = UV_THREAD_HAS_STACK_SIZE,
-        .stack_size = cat_getpagesize()
+        .stack_size = 4 * cat_getpagesize()
     };
     int error = uv_thread_create_ex(&data->tid, &params, cat_fs_orig_flock, data);
     if (0 != error) {

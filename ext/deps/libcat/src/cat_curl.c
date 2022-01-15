@@ -531,22 +531,4 @@ CAT_API CURLMcode cat_curl_multi_wait(
     return cat_curl_multi_exec(multi, extra_fds, extra_nfds, timeout_ms, numfds, NULL);
 }
 
-/* multi context */
-
-#ifdef CAT_CURL_MULTI_CLEANUP_CONTEXT_SUPPORT
-CAT_API void cat_curl_multi_cleanup_context(CURLM *multi)
-{
-    cat_curl_multi_close_context(multi);
-}
-
-CAT_API void cat_curl_multi_cleanup_all_contexts(void)
-{
-    cat_curl_multi_context_t *context;
-
-    while ((context = cat_queue_front_data(&CAT_CURL_G(multi_map), cat_curl_multi_context_t, node))) {
-        cat_curl_multi_context_close(context);
-    }
-}
-#endif /* CAT_CURL_MULTI_CLEANUP_CONTEXT_SUPPORT */
-
 #endif /* CAT_CURL */

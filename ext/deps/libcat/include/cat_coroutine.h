@@ -263,13 +263,20 @@ typedef struct cat_coroutine_scheduler_s {
 CAT_API cat_coroutine_t *cat_coroutine_scheduler_run(cat_coroutine_t *coroutine, const cat_coroutine_scheduler_t *scheduler); CAT_INTERNAL
 CAT_API cat_coroutine_t *cat_coroutine_scheduler_close(void); CAT_INTERNAL
 
+static cat_always_inline cat_bool_t cat_coroutine__schedule(cat_coroutine_t *coroutine)
+{
+    cat_coroutine_t *current_coroutine = CAT_COROUTINE_G(current);
+    cat_bool_t ret;
+    current_coroutine->flags |= CAT_COROUTINE_FLAG_SCHEDULING;
+    ret = cat_coroutine_resume(coroutine, NULL, NULL);
+    current_coroutine->flags ^= CAT_COROUTINE_FLAG_SCHEDULING;
+    return ret;
+}
+
 #define cat_coroutine_schedule(coroutine, module_type, name, ...) do { \
-    cat_coroutine_t *current_coroutine = CAT_COROUTINE_G(current); \
-    current_coroutine->flags |= CAT_COROUTINE_FLAG_SCHEDULING; \
-    if (unlikely(!cat_coroutine_resume(coroutine, NULL, NULL))) { \
+    if (unlikely(!cat_coroutine__schedule(coroutine))) { \
         CAT_CORE_ERROR_WITH_LAST(module_type, name " schedule failed", ##__VA_ARGS__); \
     } \
-    current_coroutine->flags ^= CAT_COROUTINE_FLAG_SCHEDULING; \
 } while (0)
 
 /* sync */
