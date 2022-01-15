@@ -1895,7 +1895,7 @@ static PHP_METHOD(Swow_Coroutine, count)
     RETURN_LONG(zend_hash_num_elements(SWOW_COROUTINE_G(map)));
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Coroutine_get, 0, 1, IS_STATIC, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Coroutine_get, 0, 1, IS_STATIC, 1)
     ZEND_ARG_TYPE_INFO(0, id, IS_LONG, 0)
 ZEND_END_ARG_INFO()
 

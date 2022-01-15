@@ -182,7 +182,7 @@ namespace Swow
 
         public static function count(): int { }
 
-        public static function get(int $id): static { }
+        public static function get(int $id): ?static { }
 
         public static function getAll(): array { }
 
