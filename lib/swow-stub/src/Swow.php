@@ -491,32 +491,20 @@ namespace Swow
         /** @var int $timeout [optional] = $this->getWriteTimeout() */
         public function write(array $vector, int $timeout = null): static { }
 
-        /**
-         * @param string $address
-         * @param int $port
-         * @var int $timeout [optional] = $this->getWriteTimeout()
-         */
-        public function writeTo(array $vector, $address = null, $port = null, int $timeout = null): static { }
+        /** @var int $timeout [optional] = $this->getWriteTimeout() */
+        public function writeTo(array $vector, string $address = null, int $port = null, int $timeout = null): static { }
 
         /** @var int $timeout [optional] = $this->getWriteTimeout() */
         public function send(\Swow\Buffer $buffer, int $length = -1, int $timeout = null): static { }
 
-        /**
-         * @param string $address
-         * @param int $port
-         * @var int $timeout [optional] = $this->getWriteTimeout()
-         */
-        public function sendTo(\Swow\Buffer $buffer, int $length = -1, $address = null, $port = null, int $timeout = null): static { }
+        /** @var int $timeout [optional] = $this->getWriteTimeout() */
+        public function sendTo(\Swow\Buffer $buffer, int $length = -1, string $address = null, int $port = null, int $timeout = null): static { }
 
         /** @var int $timeout [optional] = $this->getWriteTimeout() */
         public function sendString(string $string, int $timeout = null, int $offset = 0, int $length = -1): static { }
 
-        /**
-         * @param string $address
-         * @param int $port
-         * @var int $timeout [optional] = $this->getWriteTimeout()
-         */
-        public function sendStringTo(string $string, $address = null, $port = null, int $timeout = null, int $offset = 0, int $length = -1): static { }
+        /** @var int $timeout [optional] = $this->getWriteTimeout() */
+        public function sendStringTo(string $string, string $address = null, int $port = null, int $timeout = null, int $offset = 0, int $length = -1): static { }
 
         /** @var int $timeout [optional] = $this->getWriteTimeout() */
         public function sendHandle(self $handle, int $timeout = null): static { }
