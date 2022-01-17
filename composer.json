@@ -74,6 +74,7 @@
         "rebuild-extension": [ "@build-extension --rebuild" ],
         "rebuild-debug-extension": [ "@build-extension --rebuild --debug" ],
         "install-extension": [ "@build-extension --install" ],
+        "install-debug-extension": [ "@install-extension --debug" ],
         "reinstall-extension": [ "@rebuild-extension --install" ],
         "reinstall-debug-extension": [ "@rebuild-debug-extension --install" ],
         "test-extension": [ "@php tools/test-extension.php" ],
