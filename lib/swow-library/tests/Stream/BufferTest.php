@@ -26,6 +26,6 @@ class BufferTest extends TestCase
     {
         $buffer = Buffer::for('Hello Swow');
 
-        $this->assertSame('Hello Swow', (string) $buffer);
+        $this->assertSame('Hello Swow', $buffer->read());
     }
 }
