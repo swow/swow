@@ -703,7 +703,7 @@ namespace Swow\Sync
     {
         public function add(int $delta = 1): void { }
 
-        public function wait(int $timeout): void { }
+        public function wait(int $timeout = -1): void { }
 
         public function done(): void { }
     }
@@ -1137,5 +1137,5 @@ namespace Swow\Debug
 
 namespace Swow\Debug
 {
-    function registerExtendedStatementHandler(?callable $handler): callable { }
+    function registerExtendedStatementHandler(?callable $handler): ?callable { }
 }
