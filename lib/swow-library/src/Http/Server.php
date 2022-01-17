@@ -15,6 +15,7 @@ namespace Swow\Http;
 
 use Swow\Buffer;
 use Swow\Http\Server\Connection;
+use Swow\Server\ConnectionManagerTrait;
 use Swow\Socket;
 use Swow\Socket\Exception as SocketException;
 use function is_string;
@@ -23,7 +24,7 @@ class Server extends Socket
 {
     use ConfigTrait;
 
-    protected array $connections = [];
+    use ConnectionManagerTrait;
 
     public function __construct()
     {
@@ -38,7 +39,7 @@ class Server extends Socket
         /* @var $connection Connection */
         $connection = parent::accept($connection ?? new Connection(), $timeout);
         $connection->setServer($this);
-        $this->connections[$connection->getFd()] = $connection;
+        $this->online($connection);
 
         return $connection;
     }
@@ -74,31 +75,5 @@ class Server extends Socket
         }
 
         return $exceptions;
-    }
-
-    public function offline(int $fd): void
-    {
-        unset($this->connections[$fd]);
-    }
-
-    public function closeSessions(): void
-    {
-        foreach ($this->connections as $connection) {
-            $connection->close();
-        }
-        $this->connections = [];
-    }
-
-    public function close(): bool
-    {
-        $ret = parent::close();
-        $this->closeSessions();
-
-        return $ret;
-    }
-
-    public function __destruct()
-    {
-        $this->closeSessions();
     }
 }
