@@ -143,12 +143,7 @@ jobs:
         run: |
           SET NO_INTERACTION=1 && ^
           SET TEST_PHP_EXECUTABLE=C:\tools\phpdev\php\php.exe && ^
-          C:\tools\phpdev\php\php.exe ext\tests\runner\run-tests.php ^
-            --show-diff ^
-            --show-slow 1000 ^
-            --set-timeout 30 ^
-            --color ^
-            ext\tests
+          C:\tools\phpdev\php\php.exe tools/test-extension.php
       - name: Generate information about this dll
         shell: powershell
         run: |

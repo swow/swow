@@ -42,7 +42,6 @@ run-tests-x.php
 !/tests/*/*/*.inc
 !/tests/include/*
 !/tests/include/lib/*
-!/tests/runner/*
 
 # config
 config*
