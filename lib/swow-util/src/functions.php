@@ -29,7 +29,6 @@ use function proc_open;
 use function str_replace;
 use function stream_context_create;
 use function trim;
-use const PHP_OS_FAMILY;
 use const STDIN;
 
 const COLOR_NONE = 0;
@@ -215,8 +214,7 @@ function processExecute(array $command, &$status = null): string
         [0 => STDIN, 1 => ['pipe', 'w'], 2 => ['redirect', 1]],
         $pipes,
         null,
-        null,
-        PHP_OS_FAMILY === 'Windows' ? ['bypass_shell' => true] : null
+        null
     );
     $output = '';
     do {

@@ -166,12 +166,11 @@ function php_exec_with_swow(string $args)
 function php_proc_with_swow(array $args, callable $handler, array $options = []): int
 {
     $_args = array_merge([real_php_path()], php_options_with_swow(), $args);
-    $proc = proc_open($_args,
-    [
+    $proc = proc_open($_args, [
         0 => $options['stdin'] ?? STDIN,
         1 => $options['stdout'] ?? ['pipe', 'w'],
         2 => $options['stderr'] ?? ['pipe', 'w'],
-    ], $pipes, null, null, PHP_OS_FAMILY === 'Windows' ? [ 'bypass_shell' => true ] : null);
+    ], $pipes, null, null);
     $handler($proc, $pipes);
     return proc_close($proc);
 }
