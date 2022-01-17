@@ -23,7 +23,7 @@ class Buffer extends \Swow\Buffer
 
         $buffer = new static();
         if ($body !== '') {
-            $buffer->write((string) $body);
+            $buffer->write((string) $body)->rewind();
         }
 
         return $buffer;
