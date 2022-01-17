@@ -1465,7 +1465,7 @@ static PHP_METHOD_EX(Swow_Coroutine, getCoroutine, swow_coroutine_t *scoroutine)
     RETURN_OBJ(&scoroutine->std);
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Coroutine_getCurrent, 0, 0, IS_STATIC, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_OBJ_TYPE_MASK_EX(arginfo_class_Swow_Coroutine_getCurrent, 0, 0, Swow\\Coroutine, MAY_BE_STATIC)
 ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Coroutine, getCurrent)

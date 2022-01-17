@@ -128,11 +128,11 @@ namespace Swow
 
         public function getId(): int { }
 
-        public static function getCurrent(): static { }
+        public static function getCurrent(): self|static { }
 
-        public static function getMain(): static { }
+        public static function getMain(): self|static { }
 
-        public function getPrevious(): static { }
+        public function getPrevious(): self|static { }
 
         public function getState(): int { }
 
