@@ -39,6 +39,7 @@ use function explode;
 use function file_put_contents;
 use function fwrite;
 use function implode;
+use function in_array;
 use function interface_exists;
 use function is_array;
 use function is_bool;
@@ -458,6 +459,9 @@ class StubGenerator
                 }
             });
             $returnTypeName = implode('|', $returnTypeNames);
+            if ($returnTypeName !== 'mixed' && !in_array('null', $returnTypeNames, true) && $returnType->allowsNull()) {
+                $returnTypeName = "?{$returnTypeName}";
+            }
         } else {
             $returnTypeName = '';
         }
