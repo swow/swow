@@ -13,7 +13,7 @@ declare(strict_types=1);
 
 use Swow\Coroutine;
 
-$coroutine = new Coroutine(function () {
+$coroutine = new Coroutine(function (): void {
     while (Coroutine::yield() !== false) {
         continue;
     }

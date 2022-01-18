@@ -22,7 +22,7 @@ use Swow\Stream\Buffer;
  */
 class BufferTest extends TestCase
 {
-    public function testCreateBuffer()
+    public function testCreateBuffer(): void
     {
         $buffer = Buffer::for('Hello Swow');
 

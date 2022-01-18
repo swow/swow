@@ -16,7 +16,7 @@ require __DIR__ . '/autoload.php';
 
 use Swow\Util\FileSystem;
 
-(function () {
+(function (): void {
     global $argv;
     $replacement = [
         'file_name' => $argv[1] ?? 'foo',

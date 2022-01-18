@@ -24,7 +24,7 @@ foreach ([0, 2] as $level) {
 use Swow\StubGenerator;
 use function Swow\Util\processExecute;
 
-$genStub = function () {
+$genStub = function (): void {
     global $argv;
     $options = getopt('h', ['help', 'noinspection', 'stub-file::', 'gen-arginfo-mode', 'function-filter::', 'class-filter::'], $restIndex);
     $argv = array_slice($argv, $restIndex);
@@ -96,7 +96,7 @@ TEXT
     $g->generate($argv[1] ?? STDOUT);
 };
 
-$getStubComments = function () {
+$getStubComments = function (): void {
     global $argv;
     $stubFile = $argv[2];
     require $stubFile;

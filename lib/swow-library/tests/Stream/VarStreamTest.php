@@ -31,15 +31,15 @@ use const TEST_MAX_REQUESTS_MID;
  */
 class VarStreamTest extends TestCase
 {
-    public function testServer()
+    public function testServer(): void
     {
         $wr = new WaitReference();
         $server = new VarStream();
-        Coroutine::run(function () use ($server, $wr) {
+        Coroutine::run(function () use ($server, $wr): void {
             $server->bind('127.0.0.1')->listen();
             try {
                 while (true) {
-                    Coroutine::run(function (VarStream $connection) {
+                    Coroutine::run(function (VarStream $connection): void {
                         try {
                             while (true) {
                                 $request = (object) $connection->recvVar();
@@ -58,7 +58,7 @@ class VarStreamTest extends TestCase
         });
         for ($c = 0; $c < TEST_MAX_CONCURRENCY_LOW; $c++) {
             $wrc = new WaitReference();
-            Coroutine::run(function () use ($server, $wrc) {
+            Coroutine::run(function () use ($server, $wrc): void {
                 $client = new VarStream();
                 $client->connect($server->getSockAddress(), $server->getSockPort());
                 for ($n = 0; $n < TEST_MAX_REQUESTS_MID; $n++) {

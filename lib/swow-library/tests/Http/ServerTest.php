@@ -27,20 +27,20 @@ use function Swow\defer;
  */
 class ServerTest extends TestCase
 {
-    public function testMixedServer()
+    public function testMixedServer(): void
     {
         $mixedServerFile = __DIR__ . '/../../../../examples/http_server/mixed.php';
         if (!file_exists($mixedServerFile)) {
             $this->markTestSkipped('aaa');
         }
-        $serverCoroutine = Coroutine::run(function () use ($mixedServerFile) {
+        $serverCoroutine = Coroutine::run(function () use ($mixedServerFile): void {
             require $mixedServerFile;
         });
         // so hacky ^^
         /* @var Server $server */
         $serverCoroutine->eval('$GLOBALS[\'server\'] = $this;');
         $server = $GLOBALS['server'];
-        defer(function () use ($server) {
+        defer(function () use ($server): void {
             $server->close();
         });
 

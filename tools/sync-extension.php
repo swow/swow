@@ -52,7 +52,7 @@ $sync = function (string $name, string $url, string $sourceDir, string $targetDi
         if (!mkdir($tmpSourceDir, 0755, true)) {
             throw new RuntimeException("Unable to create tmp source dir '{$tmpSourceDir}'");
         }
-        defer($defer, function () use ($tmpSourceDir) {
+        defer($defer, function () use ($tmpSourceDir): void {
             if (is_dir($tmpSourceDir)) {
                 FileSystem::remove($tmpSourceDir);
             }

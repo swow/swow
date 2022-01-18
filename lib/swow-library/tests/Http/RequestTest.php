@@ -24,7 +24,7 @@ use Swow\Http\Uri;
  */
 class RequestTest extends TestCase
 {
-    public function testGetRequestTarget()
+    public function testGetRequestTarget(): void
     {
         $request = new Request();
         $this->assertSame('/', $request->getRequestTarget());

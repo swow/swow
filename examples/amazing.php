@@ -24,7 +24,7 @@ $s = microtime(true);
 
 // i just want to sleep...
 for ($c = N; $c--;) {
-    Coroutine::run(function () use ($wr) {
+    Coroutine::run(function () use ($wr): void {
         for ($n = N; $n--;) {
             usleep(1000);
         }
@@ -33,7 +33,7 @@ for ($c = N; $c--;) {
 
 // 10K file read and write
 for ($c = N; $c--;) {
-    Coroutine::run(function () use ($wr, $c) {
+    Coroutine::run(function () use ($wr, $c): void {
         $tmp_filename = "/tmp/test-{$c}.php";
         $self = file_get_contents(__FILE__);
         if (!file_put_contents($tmp_filename, $self)) {
@@ -42,7 +42,7 @@ for ($c = N; $c--;) {
         try {
             $wrSub = new WaitReference();
             for ($n = N; $n--;) {
-                Coroutine::run(function () use ($tmp_filename, $self, $wrSub) {
+                Coroutine::run(function () use ($tmp_filename, $self, $wrSub): void {
                     assert(file_get_contents($tmp_filename) === $self);
                 });
             }
@@ -55,7 +55,7 @@ for ($c = N; $c--;) {
 
 // 10K pdo and mysqli read
 for ($c = C / 2; $c--;) {
-    Coroutine::run(function () use ($wr) {
+    Coroutine::run(function () use ($wr): void {
         $pdo = new PDO('mysql:host=127.0.0.1;dbname=mysql;charset=utf8', 'root', 'root');
         $statement = $pdo->prepare('SELECT `User` FROM `user`');
         for ($n = N; $n--;) {
@@ -65,7 +65,7 @@ for ($c = C / 2; $c--;) {
     });
 }
 for ($c = C / 2; $c--;) {
-    Coroutine::run(function () use ($wr) {
+    Coroutine::run(function () use ($wr): void {
         $mysqli = new Mysqli('127.0.0.1', 'root', 'root', 'mysql');
         $statement = $mysqli->prepare('SELECT `User` FROM `user`');
         for ($n = N; $n--;) {
@@ -92,7 +92,7 @@ function tcp_length(string $head): int
     return unpack('n', $head)[1];
 }
 
-Coroutine::run(function () use ($wr) {
+Coroutine::run(function () use ($wr): void {
     $ctx = stream_context_create(['socket' => ['so_reuseaddr' => true, 'backlog' => C]]);
     $server = stream_socket_server(
         'tcp://0.0.0.0:9502',
@@ -106,7 +106,7 @@ Coroutine::run(function () use ($wr) {
     } else {
         $c = 0;
         while ($conn = @stream_socket_accept($server, 1)) {
-            Coroutine::run(function () use ($wr, $server, $conn, &$c) {
+            Coroutine::run(function () use ($wr, $server, $conn, &$c): void {
                 stream_set_timeout($conn, 5);
                 for ($n = N; $n--;) {
                     $data = fread($conn, tcp_length(fread($conn, 2)));
@@ -121,7 +121,7 @@ Coroutine::run(function () use ($wr) {
     }
 });
 for ($c = C; $c--;) {
-    Coroutine::run(function () use ($wr) {
+    Coroutine::run(function () use ($wr): void {
         $fp = stream_socket_client('tcp://127.0.0.1:9502', $errno, $errstr, 1);
         if (!$fp) {
             echo "{$errstr} ({$errno})\n";
@@ -138,7 +138,7 @@ for ($c = C; $c--;) {
 }
 
 // udp server & client with 12.8K requests in single process
-Coroutine::run(function () use ($wr) {
+Coroutine::run(function () use ($wr): void {
     $socket = new Socket(Socket::TYPE_UDP);
     $socket->bind('127.0.0.1', 9503);
     $client_map = [];
@@ -154,7 +154,7 @@ Coroutine::run(function () use ($wr) {
     $socket->close();
 });
 for ($c = C; $c--;) {
-    Coroutine::run(function () use ($wr) {
+    Coroutine::run(function () use ($wr): void {
         $fp = stream_socket_client('udp://127.0.0.1:9503', $errno, $errstr, 1);
         if (!$fp) {
             echo "{$errstr} ({$errno})\n";

@@ -11,9 +11,9 @@
 
 declare(strict_types=1);
 
-Swow\Coroutine::run(static function () {
-    (static function () {
-        (static function () {
+Swow\Coroutine::run(static function (): void {
+    (static function (): void {
+        (static function (): void {
             var_dump(Swow\Coroutine::getCurrent());
         })();
     })();

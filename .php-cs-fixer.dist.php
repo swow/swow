@@ -119,6 +119,7 @@ return (new PhpCsFixer\Config())
         'increment_style' => false,
         'standardize_increment' => false,
         'standardize_not_equals' => true,
+        'void_return' => true,
     ])
     ->setFinder(
         PhpCsFixer\Finder::create()

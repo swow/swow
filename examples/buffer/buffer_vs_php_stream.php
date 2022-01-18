@@ -15,7 +15,7 @@ declare(strict_types=1);
 
 $bigString = str_repeat('A', 10 * 1024 * 1024);
 
-(static function () use ($bigString) {
+(static function () use ($bigString): void {
     $buffer = fopen('php://memory', 'r+');
     $m = memory_get_usage();
     fwrite($buffer, $bigString);
@@ -25,7 +25,7 @@ $bigString = str_repeat('A', 10 * 1024 * 1024);
     var_dump($m);
 })();
 
-(static function () use ($bigString) {
+(static function () use ($bigString): void {
     $buffer = new Swow\Buffer(0);
     $m = memory_get_usage();
     $buffer->write($bigString);

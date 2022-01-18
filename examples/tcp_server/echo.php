@@ -16,7 +16,7 @@ $server->bind('127.0.0.1', 9764)->listen();
 echo "$ telnet 127.0.0.1 9764\n\n";
 while (true) {
     $connection = $server->accept();
-    Swow\Coroutine::run(function () use ($connection) {
+    Swow\Coroutine::run(function () use ($connection): void {
         echo "No.{$connection->getFd()} established" . PHP_EOL;
         $buffer = new Swow\Buffer();
         try {

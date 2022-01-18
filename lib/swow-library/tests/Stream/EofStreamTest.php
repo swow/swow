@@ -32,16 +32,16 @@ use const TEST_MAX_REQUESTS_MID;
  */
 class EofStreamTest extends TestCase
 {
-    public function testServer()
+    public function testServer(): void
     {
         foreach (['recvMessageString', 'recvMessageStringFast'] as $recvMethod) {
             $wr = new WaitReference();
             $server = new EofStream();
-            Coroutine::run(function () use ($server, $recvMethod, $wr) {
+            Coroutine::run(function () use ($server, $recvMethod, $wr): void {
                 $server->bind('127.0.0.1')->listen();
                 try {
                     while (true) {
-                        Coroutine::run(function (EofStream $connection) use ($recvMethod) {
+                        Coroutine::run(function (EofStream $connection) use ($recvMethod): void {
                             try {
                                 while (true) {
                                     $message = $connection->{$recvMethod}();
@@ -58,7 +58,7 @@ class EofStreamTest extends TestCase
             });
             for ($c = 0; $c < TEST_MAX_CONCURRENCY_LOW; $c++) {
                 $wrc = new WaitReference();
-                Coroutine::run(function () use ($server, $recvMethod, $wrc) {
+                Coroutine::run(function () use ($server, $recvMethod, $wrc): void {
                     $client = new EofStream();
                     $client->connect($server->getSockAddress(), $server->getSockPort());
                     for ($n = 0; $n < TEST_MAX_REQUESTS_MID; $n++) {
@@ -76,11 +76,11 @@ class EofStreamTest extends TestCase
         }
     }
 
-    public function testMaxMessageLength()
+    public function testMaxMessageLength(): void
     {
         $wr = new WaitReference();
         $server = new EofStream();
-        Coroutine::run(function () use ($server, $wr) {
+        Coroutine::run(function () use ($server, $wr): void {
             $server
                 ->setMaxMessageLength(TEST_MAX_LENGTH / 2)
                 ->bind('127.0.0.1')->listen();

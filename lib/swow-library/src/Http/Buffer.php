@@ -19,7 +19,7 @@ use Swow\Stream\Buffer as StreamBuffer;
 
 class Buffer extends StreamBuffer implements StreamInterface
 {
-    public function detach()
+    public function detach(): void
     {
         throw new RuntimeException('Can not detach a BufferStream');
     }

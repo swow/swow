@@ -23,12 +23,12 @@ use function extension_loaded;
  */
 class SwowExtensionTest extends TestCase
 {
-    public function testSwowExtension()
+    public function testSwowExtension(): void
     {
         $this->assertTrue(extension_loaded('swow'));
     }
 
-    public function testSwowLibrary()
+    public function testSwowLibrary(): void
     {
         $this->assertTrue(defined('SWOW_LIBRARY'));
         $this->assertTrue(SWOW_LIBRARY);

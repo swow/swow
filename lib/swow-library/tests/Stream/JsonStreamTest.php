@@ -30,15 +30,15 @@ use const TEST_MAX_REQUESTS_MID;
  */
 class JsonStreamTest extends TestCase
 {
-    public function testServer()
+    public function testServer(): void
     {
         $wr = new WaitReference();
         $server = new JsonStream();
-        Coroutine::run(function () use ($server, $wr) {
+        Coroutine::run(function () use ($server, $wr): void {
             $server->bind('127.0.0.1')->listen();
             try {
                 while (true) {
-                    Coroutine::run(function (JsonStream $connection) {
+                    Coroutine::run(function (JsonStream $connection): void {
                         try {
                             while (true) {
                                 $json = $connection->recvJson();
@@ -56,7 +56,7 @@ class JsonStreamTest extends TestCase
         });
         for ($c = 0; $c < TEST_MAX_CONCURRENCY_LOW; $c++) {
             $wrc = new WaitReference();
-            Coroutine::run(function () use ($server, $wrc) {
+            Coroutine::run(function () use ($server, $wrc): void {
                 $client = new JsonStream();
                 $client->connect($server->getSockAddress(), $server->getSockPort());
                 for ($n = 0; $n < TEST_MAX_REQUESTS_MID; $n++) {

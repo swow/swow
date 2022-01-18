@@ -16,7 +16,7 @@ namespace Swow\Example\Debug\Debugger\ExtendedStatementHandler;
 use Swow\Coroutine;
 use function Swow\Debug\registerExtendedStatementHandler;
 
-registerExtendedStatementHandler(function () {
+registerExtendedStatementHandler(function (): void {
     $coroutine = Coroutine::getCurrent();
     $file = $coroutine->getExecutedFilename(2);
     $line = $coroutine->getExecutedLineno(2);
@@ -24,8 +24,8 @@ registerExtendedStatementHandler(function () {
     echo "{$file}:{$line}\n{$function}()\n";
 });
 
-Coroutine::run(function () {
-    (function () {
+Coroutine::run(function (): void {
+    (function (): void {
         echo "Hello\n";
     })();
 });

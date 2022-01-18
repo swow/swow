@@ -873,7 +873,7 @@ TEXT;
             return;
         }
         $signalChannel = new Channel();
-        $signalListener = Coroutine::run(function () use ($signalChannel) {
+        $signalListener = Coroutine::run(function () use ($signalChannel): void {
             // Always wait signal int, prevent signals from coming in gaps
             Signal::wait(Signal::INT);
             $signalChannel->push(true);
@@ -1141,7 +1141,7 @@ TEXT;
                         case 'r':
                         case 'run':
                             $args = func_get_args();
-                            Coroutine::run(function () use ($args) {
+                            Coroutine::run(function () use ($args): void {
                                 $this->reloading = true;
                                 $this
                                     ->out('Program is running...')
@@ -1176,7 +1176,7 @@ TEXT;
     public static function showExecutedSourceLines(bool $all = false): void
     {
         if ($all) {
-            $handler = function () {
+            $handler = function (): void {
                 static $lastFile = '', $firstTouch = false;
                 if (!$firstTouch) {
                     /* skip for this function ending */
@@ -1203,7 +1203,7 @@ TEXT;
                 $lines[] = rtrim($line);
             }
             fclose($fp);
-            $handler = function () use ($file, $lines) {
+            $handler = function () use ($file, $lines): void {
                 $call = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 1)[0];
                 $callFile = $call['file'];
                 $callLine = $call['line'];

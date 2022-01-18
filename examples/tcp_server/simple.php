@@ -12,5 +12,5 @@
 declare(strict_types=1);
 
 while (true) {
-    Swow\Coroutine::run(static function (Swow\Socket $connection) { while ($data = $connection->recvString()) { $connection->sendString($data); } }, ($server ??= (new Swow\Socket(Swow\Socket::TYPE_TCP))->bind('127.0.0.1', 9764)->listen())->accept());
+    Swow\Coroutine::run(static function (Swow\Socket $connection): void { while ($data = $connection->recvString()) { $connection->sendString($data); } }, ($server ??= (new Swow\Socket(Swow\Socket::TYPE_TCP))->bind('127.0.0.1', 9764)->listen())->accept());
 }

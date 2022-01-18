@@ -184,13 +184,13 @@ function gitFiles(string $root = '.'): array
     return explode(PHP_EOL, shell_exec("cd {$root} && git ls-files"));
 }
 
-function defer(&$any, callable $callback)
+function defer(&$any, callable $callback): void
 {
     if (!$any) {
         $any = new class() {
             private array $callbacks = [];
 
-            public function add(callable $callback)
+            public function add(callable $callback): void
             {
                 $this->callbacks[] = $callback;
             }
