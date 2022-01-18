@@ -33,9 +33,6 @@ class Server extends Socket
 
     public function acceptConnection(?Connection $connection = null, int $timeout = null): Connection
     {
-        if ($timeout === null) {
-            $timeout = $this->getAcceptTimeout();
-        }
         /** @var Connection $connection */
         $connection = parent::accept($connection ?? new Connection(), $timeout);
         $connection->setServer($this);
