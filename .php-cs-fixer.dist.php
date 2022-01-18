@@ -133,6 +133,7 @@ return (new PhpCsFixer\Config())
             'scope' => 'namespaced',
         ],
         'no_unset_on_property' => false,
+        'nullable_type_declaration_for_default_null_value' => true,
         'php_unit_test_case_static_method_calls' => [
             'call_type' => 'this',
         ],

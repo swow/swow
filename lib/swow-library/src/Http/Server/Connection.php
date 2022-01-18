@@ -83,7 +83,7 @@ class Connection extends Socket implements HttpTypeInterface
         return $this->keepAlive;
     }
 
-    public function recvHttpRequest(Request $request = null): Request
+    public function recvHttpRequest(?Request $request = null): Request
     {
         $result = $this->receiverExecute(
             $this->server->getMaxHeaderLength(),
@@ -177,7 +177,7 @@ class Connection extends Socket implements HttpTypeInterface
         }
     }
 
-    public function upgradeToWebSocket(Request $request, Response $response = null): static
+    public function upgradeToWebSocket(Request $request, ?Response $response = null): static
     {
         $secWebSocketKey = $request->getHeaderLine('sec-websocket-key');
         if (strlen($secWebSocketKey) !== WebSocket\SECRET_KEY_ENCODED_LENGTH) {

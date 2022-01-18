@@ -20,7 +20,7 @@ use function error_get_last;
 
 class IOException extends Exception
 {
-    public function __construct(string $message, int $code = 0, Throwable $previous = null, protected string $path = 'Unknown')
+    public function __construct(string $message, int $code = 0, ?Throwable $previous = null, protected string $path = 'Unknown')
     {
         parent::__construct($message, $code, $previous);
     }

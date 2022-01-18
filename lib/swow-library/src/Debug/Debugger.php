@@ -547,7 +547,7 @@ TEXT;
         return $level;
     }
 
-    protected static function getTraceOfCoroutine(Coroutine $coroutine, int $index = null): array
+    protected static function getTraceOfCoroutine(Coroutine $coroutine, ?int $index = null): array
     {
         $level = static::getExtendedLevelOfCoroutine($coroutine);
         if ($index !== null) {
@@ -624,7 +624,7 @@ TEXT;
         return $this->table($map);
     }
 
-    protected static function getSourceFileContentAsTable(string $filename, int $line, SplFileObject &$sourceFile = null, int $lineCount = self::SOURCE_FILE_DEFAULT_LINE_COUNT): array
+    protected static function getSourceFileContentAsTable(string $filename, int $line, ?SplFileObject &$sourceFile = null, int $lineCount = self::SOURCE_FILE_DEFAULT_LINE_COUNT): array
     {
         $sourceFile = null;
         if ($line < 2) {
@@ -660,7 +660,7 @@ TEXT;
         return $content;
     }
 
-    protected static function getSourceFileContentByTrace(array $trace, int $frameIndex, SplFileObject &$sourceFile = null, int &$sourceFileLine = null): array
+    protected static function getSourceFileContentByTrace(array $trace, int $frameIndex, ?SplFileObject &$sourceFile = null, ?int &$sourceFileLine = null): array
     {
         /* init */
         $sourceFile = null;

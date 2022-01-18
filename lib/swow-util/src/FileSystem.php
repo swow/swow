@@ -34,7 +34,7 @@ use function unlink;
 
 class FileSystem
 {
-    public static function scanDir(string $dir, callable $filter = null): array
+    public static function scanDir(string $dir, ?callable $filter = null): array
     {
         $files = @scandir($dir);
         if ($files === null) {

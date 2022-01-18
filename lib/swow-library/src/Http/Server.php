@@ -31,7 +31,7 @@ class Server extends Socket
         parent::__construct(static::TYPE_TCP);
     }
 
-    public function acceptConnection(?Connection $connection = null, int $timeout = null): Connection
+    public function acceptConnection(?Connection $connection = null, ?int $timeout = null): Connection
     {
         /** @var Connection $connection */
         $connection = parent::accept($connection ?? new Connection(), $timeout);
@@ -45,7 +45,7 @@ class Server extends Socket
      * @param Connection[] $targets
      * @return SocketException[]
      */
-    public function broadcastMessage(WebSocketFrame $frame, array $targets = null): array
+    public function broadcastMessage(WebSocketFrame $frame, ?array $targets = null): array
     {
         /** @var Connection[] $targets */
         if ($targets === null) {

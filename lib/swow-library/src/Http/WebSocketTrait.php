@@ -19,7 +19,7 @@ use const SEEK_CUR;
 
 trait WebSocketTrait
 {
-    public function recvWebSocketFrame(WebSocketFrame $frame = null): WebSocketFrame
+    public function recvWebSocketFrame(?WebSocketFrame $frame = null): WebSocketFrame
     {
         $frame ??= new WebSocketFrame();
         $buffer = $this->buffer;
