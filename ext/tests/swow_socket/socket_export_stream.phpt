@@ -67,10 +67,10 @@ function test($type, $server, $msg)
 $server = new Socket(Socket::TYPE_TCP);
 Coroutine::run(function () use ($server) {
     $server->bind('127.0.0.1')->listen();
-    $client = $server->accept();
-    $red = $client->recvString(TEST_MAX_LENGTH);
-    $client->sendString($red);
-    $client->close();
+    $connection = $server->accept();
+    $red = $connection->recvString(TEST_MAX_LENGTH);
+    $connection->sendString($red);
+    $connection->close();
     $server->close();
 });
 test('tcp', $server, $random);
@@ -91,10 +91,10 @@ if (PHP_OS_FAMILY != 'Windows') {
     $server = new Socket(Socket::TYPE_UNIX);
     Coroutine::run(function () use ($server, $random) {
         $server->bind(SERVER_SOCK1)->listen();
-        $client = $server->accept();
-        $red = $client->recvString(TEST_MAX_LENGTH, 0);
-        $client->sendString($red);
-        $client->close();
+        $connection = $server->accept();
+        $red = $connection->recvString(TEST_MAX_LENGTH, 0);
+        $connection->sendString($red);
+        $connection->close();
         $server->close();
     });
     test('unix', $server, $random);
@@ -103,10 +103,10 @@ if (PHP_OS_FAMILY != 'Windows') {
     $server = new Socket(Socket::TYPE_PIPE);
     Coroutine::run(function () use ($server, $random) {
         $server->bind(SERVER_SOCK3)->listen();
-        $client = $server->accept();
-        $red = $client->recvString(TEST_MAX_LENGTH, 0);
-        $client->sendString($red);
-        $client->close();
+        $connection = $server->accept();
+        $red = $connection->recvString(TEST_MAX_LENGTH, 0);
+        $connection->sendString($red);
+        $connection->close();
         $server->close();
     });
     test('pipe', $server, $random);

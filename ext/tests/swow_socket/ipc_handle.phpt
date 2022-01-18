@@ -28,9 +28,9 @@ $wr = new WaitReference();
 $tcpServer = new Socket(Socket::TYPE_TCP);
 $tcpServer->bind('127.0.0.1')->listen();
 Coroutine::run(function () use ($tcpServer, $wr) {
-    $client = $tcpServer->accept();
-    echo $client->recvString() . PHP_LF;
-    $client->sendString('Hello Client');
+    $connection = $tcpServer->accept();
+    echo $connection->recvString() . PHP_LF;
+    $connection->sendString('Hello Client');
 });
 // prepare handle
 $mainClient = new Socket(Socket::TYPE_TCP);

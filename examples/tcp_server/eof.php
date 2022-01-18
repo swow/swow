@@ -21,16 +21,16 @@ $server = new EofStream();
 $server->bind('127.0.0.1', 9764)->listen();
 echo "$ telnet 127.0.0.1 9764\n\n";
 while (true) {
-    Coroutine::run(function (EofStream $stream) {
-        echo "Stream<fd={$stream->getFd()}> accepted" . PHP_EOL;
+    Coroutine::run(function (EofStream $connection) {
+        echo "Stream<fd={$connection->getFd()}> accepted" . PHP_EOL;
         try {
             while (true) {
-                $message = $stream->recvMessageString();
-                echo "Stream<fd={$stream->getFd()}>: \"{$message}\"" . PHP_EOL;
-                $stream->sendMessageString($message);
+                $message = $connection->recvMessageString();
+                echo "Stream<fd={$connection->getFd()}>: \"{$message}\"" . PHP_EOL;
+                $connection->sendMessageString($message);
             }
         } catch (SocketException $exception) {
-            echo "Stream<fd={$stream->getFd()}> goaway, reason: {$exception->getMessage()}" . PHP_EOL;
+            echo "Stream<fd={$connection->getFd()}> goaway, reason: {$exception->getMessage()}" . PHP_EOL;
         }
     }, $server->accept());
 }

@@ -32,17 +32,17 @@ if ($multi) {
 $server->bind($host, $port, $bindFlag)->listen($backlog);
 while (true) {
     try {
-        $client = $server->accept();
+        $connection = $server->accept();
     } catch (SocketException $exception) {
         break;
     }
-    Coroutine::run(function () use ($client) {
+    Coroutine::run(function () use ($connection) {
         $buffer = new Buffer();
         $parser = (new Parser())->setType(Parser::TYPE_REQUEST)->setEvents(Parser::EVENT_BODY);
         $body = null;
         try {
             while (true) {
-                $length = $client->recv($buffer);
+                $length = $connection->recv($buffer);
                 if ($length === 0) {
                     break;
                 }
@@ -64,7 +64,7 @@ while (true) {
                             $body ? $body->getLength() : 0,
                             $body ? $body->toString() : ''
                         );
-                        $client->sendString($response);
+                        $connection->sendString($response);
                         if ($body !== null) {
                             $body->clear();
                         }
@@ -76,10 +76,10 @@ while (true) {
                 }
             }
         } catch (SocketException $exception) {
-            echo "No.{$client->getFd()} goaway! {$exception->getMessage()}" . PHP_EOL;
+            echo "No.{$connection->getFd()} goaway! {$exception->getMessage()}" . PHP_EOL;
         } catch (ParserException $exception) {
-            echo "No.{$client->getFd()} parse error! {$exception->getMessage()}" . PHP_EOL;
+            echo "No.{$connection->getFd()} parse error! {$exception->getMessage()}" . PHP_EOL;
         }
-        $client->close();
+        $connection->close();
     });
 }

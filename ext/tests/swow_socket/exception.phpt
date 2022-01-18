@@ -22,10 +22,10 @@ $server = new Socket(Socket::TYPE_TCP);
 Coroutine::run(function () use ($server, $random, $wr) {
     $server->bind('127.0.0.1')->listen();
     try {
-        $client = $server->accept();
-        Coroutine::run(function () use ($client, $random, $wr) {
+        $connection = $server->accept();
+        Coroutine::run(function () use ($connection, $random, $wr) {
             try {
-                $client->readString(TEST_MAX_LENGTH_LOW + 1);
+                $connection->readString(TEST_MAX_LENGTH_LOW + 1);
                 Assert::assert(0 && 'never here');
             } catch (Socket\Exception $exception) {
                 Assert::same($exception->getCode(), ECONNRESET);

@@ -14,12 +14,12 @@ declare(strict_types=1);
 $server = new Swow\Socket(Swow\Socket::TYPE_TCP);
 $server->bind('127.0.0.1', 9764)->listen();
 while (true) {
-    $client = $server->accept();
-    Swow\Coroutine::run(function () use ($client) {
+    $connection = $server->accept();
+    Swow\Coroutine::run(function () use ($connection) {
         $buffer = new Swow\Buffer();
         try {
             while (true) {
-                $length = $client->recv($buffer);
+                $length = $connection->recv($buffer);
                 if ($length === 0) {
                     break;
                 }
@@ -29,7 +29,7 @@ while (true) {
                     if ($eof === false) {
                         break;
                     }
-                    $client->sendString(
+                    $connection->sendString(
                         "HTTP/1.1 200 OK\r\n" .
                         "Connection: keep-alive\r\n" .
                         "Content-Length: 0\r\n\r\n"
@@ -43,7 +43,7 @@ while (true) {
                 }
             }
         } catch (Swow\Socket\Exception $exception) {
-            echo "No.{$client->getFd()} goaway! {$exception->getMessage()}" . PHP_EOL;
+            echo "No.{$connection->getFd()} goaway! {$exception->getMessage()}" . PHP_EOL;
         }
     });
 }

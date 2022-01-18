@@ -16,24 +16,24 @@ $server = (new Swow\Socket(Swow\Socket::TYPE_TCP))
     ->setReadTimeout(3000);
 echo "$ telnet 127.0.0.1 9764\n\n";
 while (true) {
-    Swow\Coroutine::run(static function (Swow\Socket $client) {
-        echo "No.{$client->getFd()} established" . PHP_EOL;
+    Swow\Coroutine::run(static function (Swow\Socket $connection) {
+        echo "No.{$connection->getFd()} established" . PHP_EOL;
         $buffer = new Swow\Buffer();
         try {
             while (true) {
-                $length = $client->recv($buffer);
+                $length = $connection->recv($buffer);
                 if ($length === 0) {
                     break;
                 }
-                echo "No.{$client->getFd()} say: \"" . addcslashes($buffer->toString(), "\r\n") . '"' . PHP_EOL;
-                $client->send($buffer, $length);
+                echo "No.{$connection->getFd()} say: \"" . addcslashes($buffer->toString(), "\r\n") . '"' . PHP_EOL;
+                $connection->send($buffer, $length);
             }
-            echo "No.{$client->getFd()} closed" . PHP_EOL;
+            echo "No.{$connection->getFd()} closed" . PHP_EOL;
         } catch (Swow\Socket\Exception $exception) {
             if ($exception->getCode() === Swow\Errno\ETIMEDOUT) {
-                $client->sendString("Server has kicked you out\r\n");
+                $connection->sendString("Server has kicked you out\r\n");
             }
-            echo "No.{$client->getFd()} goaway! {$exception->getMessage()}" . PHP_EOL;
+            echo "No.{$connection->getFd()} goaway! {$exception->getMessage()}" . PHP_EOL;
         }
     }, $server->accept());
 }
