@@ -24,7 +24,6 @@ use ReflectionProperty;
 use ReflectionUnionType;
 use Reflector;
 use RuntimeException;
-use function array_filter;
 use function array_map;
 use function array_merge;
 use function array_pop;
@@ -350,15 +349,8 @@ class StubGenerator
             } catch (ReflectionException) {
                 $paramDefaultValueIsNull = false;
             }
-            $preferDropNullable = !$this->genArginfoMode && $paramDefaultValueIsNull;
-            $paramTypeNames = array_filter($paramTypeNames, function (string $type) use ($preferDropNullable) {
-                if ($preferDropNullable && $type === 'null') {
-                    return false;
-                }
-                return true;
-            });
             $paramTypeName = implode('|', $paramTypeNames);
-            if (count($paramTypeNames) === 1 && $paramTypeName !== 'mixed' && $param->allowsNull() && !$preferDropNullable) {
+            if (count($paramTypeNames) === 1 && $paramTypeName !== 'mixed' && ($param->allowsNull() || $paramDefaultValueIsNull)) {
                 $paramTypeName = "?{$paramTypeName}";
             }
             try {

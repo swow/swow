@@ -265,7 +265,7 @@ namespace Swow
         public function realloc(int $newSize): static { }
 
         /** @var int $recommendSize [optional] = $this->getSize() * 2 */
-        public function extend(int $recommendSize = null): static { }
+        public function extend(?int $recommendSize = null): static { }
 
         public function mallocTrim(): static { }
 
@@ -288,7 +288,7 @@ namespace Swow
         public function peek($length = -1): string { }
 
         /** @var int $offset [optional] = $this->getOffset() */
-        public function peekFrom(int $offset = null, int $length = -1): string { }
+        public function peekFrom(?int $offset = null, int $length = -1): string { }
 
         public function getContents(): string { }
 
@@ -301,7 +301,7 @@ namespace Swow
         public function truncate(int $length = -1): static { }
 
         /** @var int $offset [optional] = $this->getOffset() */
-        public function truncateFrom(int $offset = null, int $length = -1): static { }
+        public function truncateFrom(?int $offset = null, int $length = -1): static { }
 
         public function clear(): static { }
 
@@ -410,13 +410,13 @@ namespace Swow
         public function listen(int $backlog = self::DEFAULT_BACKLOG): static { }
 
         /** @var int $timeout [optional] = $this->getAcceptTimeout() */
-        public function accept(self $connection = null, int $timeout = null): self|static { }
+        public function accept(?self $connection = null, ?int $timeout = null): self { }
 
         /** @var int $timeout [optional] = $this->getAcceptTimeout() */
-        public function acceptTyped(int $type = self::TYPE_ANY, self $connection = null, int $timeout = null): self|static { }
+        public function acceptTyped(int $type = self::TYPE_ANY, ?self $connection = null, ?int $timeout = null): self { }
 
         /** @var int $timeout [optional] = $this->getConnectTimeout() */
-        public function connect(string $name, int $port = 0, int $timeout = null): static { }
+        public function connect(string $name, int $port = 0, ?int $timeout = null): static { }
 
         public function getSockAddress(): string { }
 
@@ -427,27 +427,27 @@ namespace Swow
         public function getPeerPort(): int { }
 
         /** @var int $timeout [optional] = $this->getReadTimeout() */
-        public function read(\Swow\Buffer $buffer, int $length = -1, int $timeout = null): int { }
+        public function read(\Swow\Buffer $buffer, int $length = -1, ?int $timeout = null): int { }
 
         /** @var int $timeout [optional] = $this->getReadTimeout() */
-        public function recv(\Swow\Buffer $buffer, int $size = -1, int $timeout = null): int { }
+        public function recv(\Swow\Buffer $buffer, int $size = -1, ?int $timeout = null): int { }
 
         /** @var int $timeout [optional] = $this->getReadTimeout() */
-        public function recvData(\Swow\Buffer $buffer, int $size = -1, int $timeout = null): int { }
+        public function recvData(\Swow\Buffer $buffer, int $size = -1, ?int $timeout = null): int { }
 
         /**
          * @param string $address [optional]
          * @param int $port [optional]
          * @var int $timeout [optional] = $this->getReadTimeout()
          */
-        public function recvFrom(\Swow\Buffer $buffer, int $size = -1, &$address = null, &$port = null, int $timeout = null): int { }
+        public function recvFrom(\Swow\Buffer $buffer, int $size = -1, &$address = null, &$port = null, ?int $timeout = null): int { }
 
         /**
          * @param string $address [optional]
          * @param int $port [optional]
          * @var int $timeout [optional] = $this->getReadTimeout()
          */
-        public function recvDataFrom(\Swow\Buffer $buffer, int $size = -1, &$address = null, &$port = null, int $timeout = null): int { }
+        public function recvDataFrom(\Swow\Buffer $buffer, int $size = -1, &$address = null, &$port = null, ?int $timeout = null): int { }
 
         public function peek(\Swow\Buffer $buffer, int $size = -1): int { }
 
@@ -458,27 +458,27 @@ namespace Swow
         public function peekFrom(\Swow\Buffer $buffer, int $size = -1, &$address = null, &$port = null): int { }
 
         /** @var int $timeout [optional] = $this->getReadTimeout() */
-        public function readString(int $length = \Swow\Buffer::DEFAULT_SIZE, int $timeout = null): string { }
+        public function readString(int $length = \Swow\Buffer::DEFAULT_SIZE, ?int $timeout = null): string { }
 
         /** @var int $timeout [optional] = $this->getReadTimeout() */
-        public function recvString(int $size = \Swow\Buffer::DEFAULT_SIZE, int $timeout = null): string { }
+        public function recvString(int $size = \Swow\Buffer::DEFAULT_SIZE, ?int $timeout = null): string { }
 
         /** @var int $timeout [optional] = $this->getReadTimeout() */
-        public function recvStringData(int $size = \Swow\Buffer::DEFAULT_SIZE, int $timeout = null): string { }
+        public function recvStringData(int $size = \Swow\Buffer::DEFAULT_SIZE, ?int $timeout = null): string { }
 
         /**
          * @param string $address
          * @param int $port
          * @var int $timeout [optional] = $this->getReadTimeout()
          */
-        public function recvStringFrom(int $size = \Swow\Buffer::DEFAULT_SIZE, &$address = null, &$port = null, int $timeout = null): string { }
+        public function recvStringFrom(int $size = \Swow\Buffer::DEFAULT_SIZE, &$address = null, &$port = null, ?int $timeout = null): string { }
 
         /**
          * @param string $address
          * @param int $port
          * @var int $timeout [optional] = $this->getReadTimeout()
          */
-        public function recvStringDataFrom(int $size = \Swow\Buffer::DEFAULT_SIZE, &$address = null, &$port = null, int $timeout = null): string { }
+        public function recvStringDataFrom(int $size = \Swow\Buffer::DEFAULT_SIZE, &$address = null, &$port = null, ?int $timeout = null): string { }
 
         public function peekString(int $size = \Swow\Buffer::DEFAULT_SIZE): string { }
 
@@ -489,28 +489,28 @@ namespace Swow
         public function peekStringFrom(int $size = \Swow\Buffer::DEFAULT_SIZE, &$address = null, &$port = null): string { }
 
         /** @var int $timeout [optional] = $this->getWriteTimeout() */
-        public function write(array $vector, int $timeout = null): static { }
+        public function write(array $vector, ?int $timeout = null): static { }
 
         /** @var int $timeout [optional] = $this->getWriteTimeout() */
-        public function writeTo(array $vector, string $address = null, int $port = null, int $timeout = null): static { }
+        public function writeTo(array $vector, ?string $address = null, ?int $port = null, ?int $timeout = null): static { }
 
         /** @var int $timeout [optional] = $this->getWriteTimeout() */
-        public function send(\Swow\Buffer $buffer, int $length = -1, int $timeout = null): static { }
+        public function send(\Swow\Buffer $buffer, int $length = -1, ?int $timeout = null): static { }
 
         /** @var int $timeout [optional] = $this->getWriteTimeout() */
-        public function sendTo(\Swow\Buffer $buffer, int $length = -1, string $address = null, int $port = null, int $timeout = null): static { }
+        public function sendTo(\Swow\Buffer $buffer, int $length = -1, ?string $address = null, ?int $port = null, ?int $timeout = null): static { }
 
         /** @var int $timeout [optional] = $this->getWriteTimeout() */
-        public function sendString(string $string, int $timeout = null, int $offset = 0, int $length = -1): static { }
+        public function sendString(string $string, ?int $timeout = null, int $offset = 0, int $length = -1): static { }
 
         /** @var int $timeout [optional] = $this->getWriteTimeout() */
-        public function sendStringTo(string $string, string $address = null, int $port = null, int $timeout = null, int $offset = 0, int $length = -1): static { }
+        public function sendStringTo(string $string, ?string $address = null, ?int $port = null, ?int $timeout = null, int $offset = 0, int $length = -1): static { }
 
         /** @var int $timeout [optional] = $this->getWriteTimeout() */
-        public function sendHandle(self $handle, int $timeout = null): static { }
+        public function sendHandle(self $handle, ?int $timeout = null): static { }
 
         /** @var int $timeout [optional] = $this->getAcceptTimeout() */
-        public function recvHandle(self $handle = null, int $timeout = null): static { }
+        public function recvHandle(?self $handle = null, ?int $timeout = null): static { }
 
         public function close(): bool { }
 
@@ -626,7 +626,7 @@ namespace Swow
 {
     class WatchDog
     {
-        public static function run(int $quantum = 0, int $threshold = 0, callable|int|float $alerter = null): void { }
+        public static function run(int $quantum = 0, int $threshold = 0, callable|int|float|null $alerter = null): void { }
 
         public static function stop(): void { }
 
