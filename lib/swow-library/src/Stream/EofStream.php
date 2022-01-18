@@ -15,7 +15,6 @@ namespace Swow\Stream;
 
 use InvalidArgumentException;
 use Swow\Socket;
-use TypeError;
 use function strlen;
 use function strpos;
 use const SEEK_CUR;
@@ -48,16 +47,15 @@ class EofStream extends Socket
         return $this->eof;
     }
 
-    public function accept(?Socket $client = null, ?int $timeout = null): self
+    public function accept(?Socket $connection = null, ?int $timeout = null): self|static
     {
-        if ($client !== null && !($client instanceof self)) {
-            throw new TypeError('Client should be an instance of ' . self::class);
+        $connection = parent::accept($connection, $timeout);
+        if ($connection instanceof self) {
+            $connection->__selfConstruct($this->eof);
+            $connection->maxMessageLength = $this->maxMessageLength;
         }
-        $stream = parent::accept($client, $timeout);
-        $stream->__selfConstruct($this->eof);
-        $stream->maxMessageLength = $this->maxMessageLength;
 
-        return $stream;
+        return $connection;
     }
 
     /**

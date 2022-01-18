@@ -16,7 +16,6 @@ namespace Swow\Stream;
 use InvalidArgumentException;
 use Swow\Pack\Format;
 use Swow\Socket;
-use TypeError;
 use function pack;
 use function strlen;
 use function unpack;
@@ -55,17 +54,16 @@ class LengthStream extends Socket
         return $this->formatSize;
     }
 
-    public function accept(?Socket $client = null, ?int $timeout = null): self
+    public function accept(?Socket $connection = null, ?int $timeout = null): self|static
     {
-        if ($client !== null && !($client instanceof self)) {
-            throw new TypeError('Client should be an instance of ' . self::class);
+        $connection = parent::accept($connection, $timeout);
+        if ($connection instanceof self) {
+            $connection->format = $this->format;
+            $connection->formatSize = $this->formatSize;
+            $connection->maxMessageLength = $this->maxMessageLength;
         }
-        $stream = parent::accept($client, $timeout);
-        $stream->format = $this->format;
-        $stream->formatSize = $this->formatSize;
-        $stream->maxMessageLength = $this->maxMessageLength;
 
-        return $stream;
+        return $connection;
     }
 
     /** @return int message length */

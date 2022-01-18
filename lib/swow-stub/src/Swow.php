@@ -410,10 +410,10 @@ namespace Swow
         public function listen(int $backlog = self::DEFAULT_BACKLOG): static { }
 
         /** @var int $timeout [optional] = $this->getAcceptTimeout() */
-        public function accept(self $client = null, int $timeout = null): self { }
+        public function accept(self $connection = null, int $timeout = null): self|static { }
 
         /** @var int $timeout [optional] = $this->getAcceptTimeout() */
-        public function acceptTyped(int $client_type = self::TYPE_ANY, self $client = null, int $timeout = null): self { }
+        public function acceptTyped(int $type = self::TYPE_ANY, self $connection = null, int $timeout = null): self|static { }
 
         /** @var int $timeout [optional] = $this->getConnectTimeout() */
         public function connect(string $name, int $port = 0, int $timeout = null): static { }
