@@ -14,12 +14,16 @@ declare(strict_types=1);
 namespace SwowTest\Http;
 
 use PHPUnit\Framework\TestCase;
+use Swow\Channel;
 use Swow\Coroutine;
 use Swow\Http\Client as HttpClient;
 use Swow\Http\Request as HttpRequest;
 use Swow\Http\WebSocketFrame;
+use Swow\WebSocket\Opcode;
 use function file_exists;
 use function Swow\defer;
+use function usleep;
+use const TEST_MAX_REQUESTS;
 
 /**
  * @internal
@@ -59,14 +63,33 @@ final class ServerTest extends TestCase
         /* WebSocket */
         $request = new HttpRequest('GET', '/chat');
         $client->upgradeToWebSocket($request);
+        $messageChannel = new Channel();
+        $worker = Coroutine::run(function () use ($client, $messageChannel): void {
+            while (true) {
+                $message = $client->recvWebSocketFrame();
+                if ($message->getOpcode() === Opcode::TEXT) {
+                    $messageChannel->push($message);
+                }
+            }
+        });
+        $heartBeatCount = 0;
+        $heartBeater = Coroutine::run(function () use ($client, &$heartBeatCount): void {
+            while (true) {
+                $client->sendString(WebSocketFrame::PING);
+                $heartBeatCount++;
+                usleep(1000);
+            }
+        });
         /* chat */
-        for ($n = 1; $n <= 3; $n++) {
+        for ($n = 1; $n <= TEST_MAX_REQUESTS; $n++) {
             $message = new WebSocketFrame();
             $message->getPayloadData()->write("Hello Swow {$n}");
-            $reply = $client
-                ->sendWebSocketFrame($message)
-                ->recvWebSocketFrame();
+            $client->sendWebSocketFrame($message);
+            $reply = $messageChannel->pop($client->getReadTimeout());
             $this->assertStringContainsString("Hello Swow {$n}", $reply->getPayloadDataAsString());
         }
+        $heartBeater->kill();
+        $worker->kill();
+        $this->assertGreaterThan(0, $heartBeatCount);
     }
 }
