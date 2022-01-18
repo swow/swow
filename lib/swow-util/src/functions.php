@@ -23,6 +23,7 @@ use function file_put_contents;
 use function fread;
 use function getenv;
 use function implode;
+use function passthru as native_passthru;
 use function proc_close;
 use function proc_get_status;
 use function proc_open;
@@ -125,7 +126,7 @@ function passthru(...$commands): int
 {
     $command = implode(" && \\\n", $commands);
     log("> {$command}");
-    \passthru($command, $status);
+    native_passthru($command, $status);
 
     return $status;
 }
