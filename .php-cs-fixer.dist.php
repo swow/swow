@@ -25,9 +25,12 @@ return (new PhpCsFixer\Config())
     ->setRiskyAllowed(true)
     ->setRules([
         '@PSR2' => true,
-        '@Symfony' => true,
-        '@DoctrineAnnotation' => true,
+        '@PSR12' => true,
         '@PhpCsFixer' => true,
+        '@Symfony' => true,
+        '@PhpCsFixer:risky' => true,
+        '@Symfony:risky' => true,
+        '@DoctrineAnnotation' => true,
         'header_comment' => [
             'comment_type' => 'PHPDoc',
             'header' => $header,
@@ -116,9 +119,23 @@ return (new PhpCsFixer\Config())
         'phpdoc_summary' => false,
         'phpdoc_no_alias_tag' => [],
         'single_quote' => true,
+        'single_line_throw' => false,
         'increment_style' => false,
         'standardize_increment' => false,
         'standardize_not_equals' => true,
+        'self_static_accessor' => true,
+        /* risky */
+        'is_null' => false, /* To keep aligned with other is_xxx */
+        'native_constant_invocation' => [
+            'scope' => 'namespaced',
+        ],
+        'native_function_invocation' => [
+            'scope' => 'namespaced',
+        ],
+        'no_unset_on_property' => false,
+        'php_unit_test_case_static_method_calls' => [
+            'call_type' => 'this',
+        ],
         'void_return' => true,
     ])
     ->setFinder(

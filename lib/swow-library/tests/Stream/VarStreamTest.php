@@ -29,7 +29,7 @@ use const TEST_MAX_REQUESTS_MID;
  * @internal
  * @coversNothing
  */
-class VarStreamTest extends TestCase
+final class VarStreamTest extends TestCase
 {
     public function testServer(): void
     {

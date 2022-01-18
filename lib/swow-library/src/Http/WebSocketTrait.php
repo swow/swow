@@ -15,6 +15,7 @@ namespace Swow\Http;
 
 use Swow\WebSocket\Frame as WebSocketFrame;
 use function min;
+use const SEEK_CUR;
 
 trait WebSocketTrait
 {

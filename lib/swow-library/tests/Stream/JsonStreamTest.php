@@ -28,7 +28,7 @@ use const TEST_MAX_REQUESTS_MID;
  * @internal
  * @coversNothing
  */
-class JsonStreamTest extends TestCase
+final class JsonStreamTest extends TestCase
 {
     public function testServer(): void
     {

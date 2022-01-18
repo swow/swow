@@ -221,7 +221,7 @@ class Message implements MessageInterface, Stringable
         return $this->body ? $this->body->toString() : '';
     }
 
-    /* @Notice MUST clone the object before you change the body's content */
+    /** @Notice MUST clone the object before you change the body's content */
     public function setBody(?Buffer $body)
     {
         $this->body = $body;

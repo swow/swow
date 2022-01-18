@@ -32,7 +32,7 @@ class WebSocketFrame extends WebSocket\Frame
     }
 
     /**
-     * @param null|Buffer $buffer
+     * @param Buffer|null $buffer
      */
     public function setPayloadData(?\Swow\Buffer $buffer): static
     {

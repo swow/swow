@@ -22,7 +22,7 @@ use Swow\Http\Uri;
  * @internal
  * @coversNothing
  */
-class RequestTest extends TestCase
+final class RequestTest extends TestCase
 {
     public function testGetRequestTarget(): void
     {

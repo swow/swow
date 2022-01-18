@@ -20,7 +20,7 @@ use Swow\Stream\Buffer;
  * @internal
  * @coversNothing
  */
-class BufferTest extends TestCase
+final class BufferTest extends TestCase
 {
     public function testCreateBuffer(): void
     {

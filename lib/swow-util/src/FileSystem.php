@@ -157,7 +157,7 @@ class FileSystem
 
     public static function move(string $source, string $destination): void
     {
-        FileSystem::copy($source, $destination);
-        FileSystem::remove($source);
+        static::copy($source, $destination);
+        static::remove($source);
     }
 }

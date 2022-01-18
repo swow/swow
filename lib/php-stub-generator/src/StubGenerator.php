@@ -74,7 +74,7 @@ class StubGenerator
     protected array $commentMap = [];
     /* Disable some features because php-src gen_stub.php not support it */
     protected bool $genArginfoMode = false;
-    /* @var callable[] */
+    /** @var callable[] */
     protected array $filters = [];
 
     public function __construct(string $extensionName)

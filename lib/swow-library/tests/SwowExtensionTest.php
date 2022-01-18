@@ -21,7 +21,7 @@ use function extension_loaded;
  * @internal
  * @coversNothing
  */
-class SwowExtensionTest extends TestCase
+final class SwowExtensionTest extends TestCase
 {
     public function testSwowExtension(): void
     {

@@ -30,7 +30,7 @@ class IOException extends Exception
         return $this->path;
     }
 
-    public static function getLast(): IOException
+    public static function getLast(): static
     {
         $lastError = error_get_last();
         $exception = new static($lastError['message']);

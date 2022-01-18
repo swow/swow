@@ -25,6 +25,9 @@ use function simplexml_load_string;
 use function strpos;
 use function strtolower;
 use function substr;
+use const JSON_ERROR_NONE;
+use const LIBXML_NOCDATA;
+use const LIBXML_NOERROR;
 
 class BodyParser
 {

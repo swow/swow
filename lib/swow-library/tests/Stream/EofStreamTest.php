@@ -30,7 +30,7 @@ use const TEST_MAX_REQUESTS_MID;
  * @internal
  * @coversNothing
  */
-class EofStreamTest extends TestCase
+final class EofStreamTest extends TestCase
 {
     public function testServer(): void
     {

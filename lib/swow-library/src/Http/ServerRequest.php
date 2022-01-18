@@ -130,7 +130,7 @@ class ServerRequest extends Request implements ServerRequestInterface
     }
 
     /**
-     * @param null|array|object $data
+     * @param array|object|null $data
      */
     public function withParsedBody($data): static
     {

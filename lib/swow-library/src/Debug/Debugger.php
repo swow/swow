@@ -74,10 +74,10 @@ use const Swow\Errno\ETIMEDOUT;
 class Debugger
 {
     public const SDB = <<<'TEXT'
-  ██████ ▓█████▄  ▄▄▄▄   
-▒██    ▒ ▒██▀ ██▌▓█████▄ 
+  ██████ ▓█████▄  ▄▄▄▄
+▒██    ▒ ▒██▀ ██▌▓█████▄
 ░ ▓██▄   ░██   █▌▒██▒ ▄██
-  ▒   ██▒░▓█▄   ▌▒██░█▀  
+  ▒   ██▒░▓█▄   ▌▒██░█▀
 ▒██████▒▒░▒████▓ ░▓█  ▀█▓
  ░▒▓▒ ▒ ░ ▒▒▓  ▒ ░▒▓███▀▒
   ░▒      ░ ▒  ▒ ▒░▒   ░
@@ -109,7 +109,7 @@ TEXT;
 
     protected bool $reloading = false;
 
-    /* @var callable */
+    /** @var callable */
     protected $sourcePositionHandler;
 
     protected string $lastCommand = '';
@@ -124,7 +124,7 @@ TEXT;
 
     protected bool $breakPointHandlerEnabled = false;
 
-    /* @var string[] */
+    /** @var string[] */
     protected array $breakPoints = [];
 
     protected int $stepType = self::STEP_TYPE_NONE;

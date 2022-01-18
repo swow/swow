@@ -28,7 +28,10 @@ use function proc_get_status;
 use function proc_open;
 use function str_replace;
 use function stream_context_create;
+use function strlen;
 use function trim;
+use const PATHINFO_FILENAME;
+use const PHP_EOL;
 use const STDIN;
 
 const COLOR_NONE = 0;
@@ -165,7 +168,7 @@ function executeAndCheck(array $commands): void
         array_shift($output);
     }
     echo '> ' . implode("\n> ", $output) . '' . PHP_EOL;
-    if ($return_var != 0) {
+    if ($return_var !== 0) {
         error("Exec {$command} failed with code {$return_var}!");
     }
     echo '=========== Finish Done ============' . PHP_EOL . PHP_EOL;

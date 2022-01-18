@@ -30,12 +30,12 @@ use function strlen;
 
 class Client extends Socket implements ClientInterface, HttpTypeInterface
 {
-    use TypeTrait;
     use ConfigTrait;
     use ReceiverTrait {
         __construct as receiverConstruct;
         execute as receiverExecute;
     }
+    use TypeTrait;
     use WebSocketTrait;
 
     public const DEFAULT_HTTP_PARSER_EVENTS =

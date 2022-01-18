@@ -36,7 +36,7 @@ class Server extends Socket
         if ($timeout === null) {
             $timeout = $this->getAcceptTimeout();
         }
-        /* @var $connection Connection */
+        /** @var Connection $connection */
         $connection = parent::accept($connection ?? new Connection(), $timeout);
         $connection->setServer($this);
         $this->online($connection);

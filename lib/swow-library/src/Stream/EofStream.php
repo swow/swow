@@ -27,7 +27,7 @@ class EofStream extends Socket
 
     use MaxMessageLengthTrait;
 
-    public function __construct(string $eof = "\r\n", int $type = EofStream::TYPE_TCP)
+    public function __construct(string $eof = "\r\n", int $type = self::TYPE_TCP)
     {
         if (!($type & Socket::TYPE_FLAG_STREAM)) {
             throw new InvalidArgumentException('Socket type should be a kind of streams');

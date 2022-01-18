@@ -25,7 +25,7 @@ use function Swow\defer;
  * @internal
  * @coversNothing
  */
-class ServerTest extends TestCase
+final class ServerTest extends TestCase
 {
     public function testMixedServer(): void
     {
