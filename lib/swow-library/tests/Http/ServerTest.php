@@ -31,7 +31,7 @@ final class ServerTest extends TestCase
     {
         $mixedServerFile = __DIR__ . '/../../../../examples/http_server/mixed.php';
         if (!file_exists($mixedServerFile)) {
-            $this->markTestSkipped('aaa');
+            $this->markTestSkipped('unable to find mixed server example file');
         }
         $serverCoroutine = Coroutine::run(function () use ($mixedServerFile): void {
             require $mixedServerFile;
