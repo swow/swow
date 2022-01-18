@@ -52,6 +52,7 @@ foreach ($repoInfo as $repoName => $repoPath) {
     passthru("git remote add {$repoName} git@github.com:swow/{$repoName}.git >/dev/null 2>&1");
     $sha1 = trim(shell_exec("splitsh-lite --prefix={$repoPath} 2>/dev/null"));
     $status = passthru("git push {$repoName} {$sha1}:refs/heads/{$targetBranch} -f 2>&1");
+    passthru("git remote rm {$repoName} >/dev/null 2>&1");
     check($status === 0, "Update {$repoName}");
 }
 
