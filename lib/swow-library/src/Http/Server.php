@@ -31,11 +31,10 @@ class Server extends Socket
         parent::__construct(static::TYPE_TCP);
     }
 
-    public function acceptConnection(?Connection $connection = null, ?int $timeout = null): Connection
+    public function acceptConnection(?int $timeout = null, ?Connection $connection = null): Connection
     {
         /** @var Connection $connection */
-        $connection = parent::accept($connection ?? new Connection(), $timeout);
-        $connection->setServer($this);
+        $connection = parent::accept($timeout, $connection ?? new Connection($this));
         $this->online($connection);
 
         return $connection;

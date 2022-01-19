@@ -51,12 +51,10 @@ class Connection extends Socket implements HttpTypeInterface
 
     /* TODO: support chunk transfer encoding */
 
-    protected ?Server $server = null;
-
     /**
      * @noinspection PhpMissingParentConstructorInspection
      */
-    public function __construct()
+    public function __construct(protected Server $server)
     {
         $this->__constructReceiver(HttpParser::TYPE_REQUEST, static::DEFAULT_HTTP_PARSER_EVENTS);
     }
@@ -64,13 +62,6 @@ class Connection extends Socket implements HttpTypeInterface
     public function getServer(): Server
     {
         return $this->server;
-    }
-
-    public function setServer(Server $server)
-    {
-        $this->server = $server;
-
-        return $this;
     }
 
     public function getType(): int
