@@ -86,6 +86,12 @@ static PHP_METHOD(Swow_Socket, __construct)
         Z_PARAM_LONG(type)
     ZEND_PARSE_PARAMETERS_END();
 
+    if (type == CAT_SOCKET_TYPE_ANY) {
+        /* we just want an initialized socket,
+         * maybe for accept_typed() */
+        return;
+    }
+
     socket = cat_socket_create(socket, type);
 
     if (UNEXPECTED(socket == NULL)) {
