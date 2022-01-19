@@ -616,7 +616,7 @@ namespace Swow
         public const INFO = 29;
         public const SYS = 12;
 
-        public static function wait(int $num, int $timeout): void { }
+        public static function wait(int $num, int $timeout = -1): void { }
 
         public static function kill(int $pid, int $signum): void { }
     }

@@ -47,9 +47,9 @@ static PHP_METHOD(Swow_Signal, kill)
     }
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Signal_wait, 0, 2, IS_VOID, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Signal_wait, 0, 1, IS_VOID, 0)
     ZEND_ARG_TYPE_INFO(0, num, IS_LONG, 0)
-    ZEND_ARG_TYPE_INFO(0, timeout, IS_LONG, 0)
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, timeout, IS_LONG, 0, "-1")
 ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Signal, wait)
