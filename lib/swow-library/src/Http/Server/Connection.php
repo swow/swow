@@ -36,7 +36,7 @@ class Connection extends Socket implements HttpTypeInterface
 {
     use HttpTypeTrait;
     use ReceiverTrait {
-        __construct as receiverConstruct;
+        __construct as __constructReceiver;
         execute as receiverExecute;
     }
     use WebSocketTrait;
@@ -58,7 +58,7 @@ class Connection extends Socket implements HttpTypeInterface
      */
     public function __construct()
     {
-        $this->receiverConstruct(HttpParser::TYPE_REQUEST, static::DEFAULT_HTTP_PARSER_EVENTS);
+        $this->__constructReceiver(HttpParser::TYPE_REQUEST, static::DEFAULT_HTTP_PARSER_EVENTS);
     }
 
     public function getServer(): Server
