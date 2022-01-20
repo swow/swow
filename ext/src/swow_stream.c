@@ -472,7 +472,7 @@ static inline int swow_stream_bind(php_stream *stream, swow_netstream_data_t *sw
             }
             socket = NULL;
         }
-        xparam->outputs.error_code = cat_get_last_error_code();
+        xparam->outputs.error_code = cat_orig_errno(cat_get_last_error_code());
         if (xparam->want_errortext) {
             xparam->outputs.error_text = strpprintf(0, "%s", cat_get_last_error_message());
         }
@@ -565,7 +565,7 @@ static inline int swow_stream_accept(php_stream *stream, swow_netstream_data_t *
 
     _error:
 
-    xparam->outputs.error_code = cat_get_last_error_code();
+    xparam->outputs.error_code = cat_orig_errno(cat_get_last_error_code());
     if (xparam->want_errortext) {
         xparam->outputs.error_text = strpprintf(0, "%s", cat_get_last_error_message());
     }
@@ -665,7 +665,7 @@ static int swow_stream_connect(php_stream *stream, swow_netstream_data_t *swow_s
             }
             socket = NULL;
         }
-        xparam->outputs.error_code = cat_get_last_error_code();
+        xparam->outputs.error_code = cat_orig_errno(cat_get_last_error_code());
         if (xparam->want_errortext) {
             xparam->outputs.error_text = strpprintf(0, "%s", cat_get_last_error_message());
         }
