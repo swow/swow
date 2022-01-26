@@ -486,6 +486,7 @@ static inline int swow_stream_accept(php_stream *stream, swow_netstream_data_t *
     const cat_sockaddr_info_t *address_info;
     zend_bool tcp_nodelay = 1;
     zval *tmpzval = NULL;
+    cat_bool_t ret;
 
     client_sock = (swow_netstream_data_t *) ecalloc(1, sizeof(*client_sock));
 
@@ -500,20 +501,22 @@ static inline int swow_stream_accept(php_stream *stream, swow_netstream_data_t *
         tcp_nodelay = 0;
     }
 
-    cat_socket_init(client);
-    client = cat_socket_accept_ex(server, client, cat_time_tv2to(xparam->inputs.timeout));
+    client = cat_socket_create(client, cat_socket_get_simple_type(server));
 
     if (UNEXPECTED(client == NULL)) {
-        efree(client_sock);
-        goto _error;
+        goto _creation_error;
+    }
+
+    ret = cat_socket_accept_ex(server, client, cat_time_tv2to(xparam->inputs.timeout));
+
+    if (UNEXPECTED(!ret)) {
+        goto _accept_error;
     }
 
     address_info = cat_socket_getsockname_fast(client);
 
     if (UNEXPECTED(address_info == NULL)) {
-        cat_socket_close(client);
-        efree(client_sock);
-        goto _error;
+        goto _accept_error;
     }
 
     php_network_populate_name_from_sockaddr(
@@ -557,13 +560,14 @@ static inline int swow_stream_accept(php_stream *stream, swow_netstream_data_t *
 
     return 0;
 
-    _error:
-
+    _accept_error:
+    cat_socket_close(client);
+    _creation_error:
+    efree(client_sock);
     xparam->outputs.error_code = cat_orig_errno(cat_get_last_error_code());
     if (xparam->want_errortext) {
         xparam->outputs.error_text = strpprintf(0, "%s", cat_get_last_error_message());
     }
-
     return -1;
 }
 

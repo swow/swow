@@ -372,7 +372,11 @@ namespace Swow
 
         public function getType(): int { }
 
+        public function getSimpleType(): int { }
+
         public function getTypeName(): string { }
+
+        public function getSimpleTypeName(): string { }
 
         public function getFd(): int { }
 
@@ -551,6 +555,10 @@ namespace Swow
         public function setTcpAcceptBalance(bool $enable): static { }
 
         public function __debugInfo(): array { }
+
+        public static function typeSimplify(int $type): int { }
+
+        public static function typeName(int $type): string { }
 
         public static function setGlobalTimeout(int $timeout): void { }
 
