@@ -115,7 +115,7 @@ class ServerRequest extends Request implements ServerRequestInterface
 
     public function getParsedBody()
     {
-        if ($this->parsedBody) {
+        if (isset($this->parsedBody)) {
             return $this->parsedBody;
         }
 

@@ -337,9 +337,6 @@ namespace Swow
         public const TYPE_FLAG_IPV4 = 32;
         public const TYPE_FLAG_IPV6 = 64;
         public const TYPE_FLAG_LOCAL = 128;
-        public const TYPE_FLAG_TCP_DELAY = 1024;
-        public const TYPE_FLAG_TCP_KEEPALIVE = 2048;
-        public const TYPE_FLAG_UDP_BROADCAST = 4096;
         public const TYPE_FLAG_IPC = 1024;
         public const TYPE_FLAG_STDIN = 1024;
         public const TYPE_FLAG_STDOUT = 2048;
@@ -409,11 +406,17 @@ namespace Swow
 
         public function listen(int $backlog = self::DEFAULT_BACKLOG): static { }
 
-        /** @var int $timeout [optional] = $this->getAcceptTimeout() */
-        public function accept(?self $connection = null, ?int $timeout = null): self { }
+        /**
+         * @var int $timeout [optional] = $this->getAcceptTimeout()
+         * @retrun static Notice: it returns a new un-constructed connection instead of returning itself
+         */
+        public function accept(?int $timeout = null): static { }
 
-        /** @var int $timeout [optional] = $this->getAcceptTimeout() */
-        public function acceptTyped(int $type = self::TYPE_ANY, ?self $connection = null, ?int $timeout = null): self { }
+        /**
+         * @var int $timeout [optional] = $this->getAcceptTimeout()
+         * @retrun $this Notice: it does not return the connection, but returns itself
+         */
+        public function acceptTo(self $connection, ?int $timeout = null): static { }
 
         /** @var int $timeout [optional] = $this->getConnectTimeout() */
         public function connect(string $name, int $port = 0, ?int $timeout = null): static { }
@@ -508,9 +511,6 @@ namespace Swow
 
         /** @var int $timeout [optional] = $this->getWriteTimeout() */
         public function sendHandle(self $handle, ?int $timeout = null): static { }
-
-        /** @var int $timeout [optional] = $this->getAcceptTimeout() */
-        public function recvHandle(?self $handle = null, ?int $timeout = null): static { }
 
         public function close(): bool { }
 

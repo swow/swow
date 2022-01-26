@@ -306,54 +306,47 @@ static PHP_METHOD(Swow_Socket, listen)
     RETURN_THIS();
 }
 
-typedef enum swow_socket_accept_type_e {
-    SWOW_SOCKET_ACCEPT_TYPE_DEFAULT = 0,
-    SWOW_SOCKET_ACCEPT_TYPE_TYPED = 1,
-    SWOW_SOCKET_ACCEPT_TYPE_RECV_HANDLE = 2,
-} swow_socket_accept_type_t;
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_accept, 0, 0, IS_STATIC, 0)
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, timeout, IS_LONG, 1, "null")
+ZEND_END_ARG_INFO()
 
-static PHP_METHOD_EX(Swow_Socket, _accept, swow_socket_accept_type_t accept_type)
+static PHP_METHOD(Swow_Socket, accept)
 {
     SWOW_SOCKET_GETTER(sserver, server);
-    zval *zconnection = NULL;
-    zend_long type;
+    cat_socket_type_t server_type = cat_socket_get_simple_type(server);
     zend_long timeout;
     zend_bool timeout_is_null = 1;
-    zend_bool typed = accept_type == SWOW_SOCKET_ACCEPT_TYPE_TYPED;
     swow_socket_t *sconnection;
     cat_socket_t *connection;
+    cat_bool_t ret;
 
-    ZEND_PARSE_PARAMETERS_START(0, !typed ? 2 : 3)
+    ZEND_PARSE_PARAMETERS_START(0, 1)
         Z_PARAM_OPTIONAL
-        if (typed) {
-            Z_PARAM_LONG(type)
-        }
-        Z_PARAM_OBJECT_OF_CLASS_EX(zconnection, swow_socket_ce, 1, 0)
         Z_PARAM_LONG_OR_NULL(timeout, timeout_is_null)
     ZEND_PARSE_PARAMETERS_END();
 
-    if (zconnection == NULL) {
-        sconnection = swow_socket_get_from_object(
-            swow_socket_create_object(Z_OBJCE_P(ZEND_THIS))
-        );
-    } else {
-        sconnection = swow_socket_get_from_object(Z_OBJ_P(zconnection));
-        GC_ADDREF(&sconnection->std);
-    }
+    sconnection = swow_socket_get_from_object(
+        swow_socket_create_object(Z_OBJCE_P(ZEND_THIS))
+    );
     connection = &sconnection->socket;
     if (timeout_is_null) {
         timeout = cat_socket_get_accept_timeout(server);
     }
 
-    if (accept_type == SWOW_SOCKET_ACCEPT_TYPE_DEFAULT) {
-        connection = cat_socket_accept_ex(server, connection, timeout);
-    } else if (typed) {
-        connection = cat_socket_accept_typed_ex(server, connection, type, timeout);
-    } else  /* if (type == SWOW_SOCKET_ACCEPT_TYPE_RECV_HANDLE) */ {
-        connection = cat_socket_recv_handle_ex(server, connection, timeout);
-    }
+    if (likely(server_type != CAT_SOCKET_TYPE_ANY)) {
+        ret = cat_socket_create(connection, server_type) != NULL;
+        if (UNEXPECTED(!ret)) {
+            goto _creation_error;
+        }
+    } /* else server has not been constructed, but error will be triggered later in socket_accept() */
 
-    if (UNEXPECTED(connection == NULL)) {
+    ret = cat_socket_accept_ex(server, connection, timeout);
+
+    if (UNEXPECTED(!ret)) {
+        if (server_type != CAT_SOCKET_TYPE_ANY) {
+            cat_socket_close(connection);
+        }
+        _creation_error:
         zend_object_release(&sconnection->std);
         swow_throw_exception_with_last(swow_socket_exception_ce);
         RETURN_THROWS();
@@ -362,25 +355,41 @@ static PHP_METHOD_EX(Swow_Socket, _accept, swow_socket_accept_type_t accept_type
     RETURN_OBJ(&sconnection->std);
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_class_Swow_Socket_accept, 0, 0, Swow\\Socket, 0)
-    ZEND_ARG_OBJ_INFO_WITH_DEFAULT_VALUE(0, connection, Swow\\Socket, 1, "null")
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_acceptTo, 0, 1, IS_STATIC, 0)
+    ZEND_ARG_OBJ_INFO(0, connection, Swow\\Socket, 0)
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, timeout, IS_LONG, 1, "null")
 ZEND_END_ARG_INFO()
 
-static PHP_METHOD(Swow_Socket, accept)
+static PHP_METHOD(Swow_Socket, acceptTo)
 {
-    PHP_METHOD_CALL(Swow_Socket, _accept, SWOW_SOCKET_ACCEPT_TYPE_DEFAULT);
-}
+    SWOW_SOCKET_GETTER(sserver, server);
+    zend_long timeout;
+    zend_bool timeout_is_null = 1;
+    zval *zconnection;
+    swow_socket_t *sconnection;
+    cat_socket_t *connection;
+    cat_bool_t ret;
 
-ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_class_Swow_Socket_acceptTyped, 0, 0, Swow\\Socket, 0)
-    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, type, IS_LONG, 0, "Swow\\Socket::TYPE_ANY")
-    ZEND_ARG_OBJ_INFO_WITH_DEFAULT_VALUE(0, connection, Swow\\Socket, 1, "null")
-    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, timeout, IS_LONG, 1, "null")
-ZEND_END_ARG_INFO()
+    ZEND_PARSE_PARAMETERS_START(1, 2)
+        Z_PARAM_OBJECT_OF_CLASS(zconnection, swow_socket_ce)
+        Z_PARAM_OPTIONAL
+        Z_PARAM_LONG_OR_NULL(timeout, timeout_is_null)
+    ZEND_PARSE_PARAMETERS_END();
 
-static PHP_METHOD(Swow_Socket, acceptTyped)
-{
-    PHP_METHOD_CALL(Swow_Socket, _accept, SWOW_SOCKET_ACCEPT_TYPE_TYPED);
+    sconnection = swow_socket_get_from_object(Z_OBJ_P(zconnection));
+    connection = &sconnection->socket;
+    if (timeout_is_null) {
+        timeout = cat_socket_get_accept_timeout(server);
+    }
+
+    ret = cat_socket_accept_ex(server, connection, timeout);
+
+    if (UNEXPECTED(!ret)) {
+        swow_throw_exception_with_last(swow_socket_exception_ce);
+        RETURN_THROWS();
+    }
+
+    RETURN_THIS();
 }
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_connect, 0, 1, IS_STATIC, 0)
@@ -1265,16 +1274,6 @@ static PHP_METHOD(Swow_Socket, sendHandle)
     RETURN_THIS();
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_recvHandle, 0, 0, IS_STATIC, 0)
-    ZEND_ARG_OBJ_INFO_WITH_DEFAULT_VALUE(0, handle, Swow\\Socket, 1, "null")
-    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, timeout, IS_LONG, 1, "null")
-ZEND_END_ARG_INFO()
-
-static PHP_METHOD(Swow_Socket, recvHandle)
-{
-    PHP_METHOD_CALL(Swow_Socket, _accept, SWOW_SOCKET_ACCEPT_TYPE_RECV_HANDLE);
-}
-
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_close, 0, 0, _IS_BOOL, 0)
 ZEND_END_ARG_INFO()
 
@@ -1618,7 +1617,7 @@ static const zend_function_entry swow_socket_methods[] = {
     PHP_ME(Swow_Socket, bind,                      arginfo_class_Swow_Socket_bind,                ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Socket, listen,                    arginfo_class_Swow_Socket_listen,              ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Socket, accept,                    arginfo_class_Swow_Socket_accept,              ZEND_ACC_PUBLIC)
-    PHP_ME(Swow_Socket, acceptTyped,               arginfo_class_Swow_Socket_acceptTyped,         ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Socket, acceptTo,                  arginfo_class_Swow_Socket_acceptTo,            ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Socket, connect,                   arginfo_class_Swow_Socket_connect,             ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Socket, getSockAddress,            arginfo_class_Swow_Socket_getAddress,          ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Socket, getSockPort,               arginfo_class_Swow_Socket_getPort,             ZEND_ACC_PUBLIC)
@@ -1645,7 +1644,6 @@ static const zend_function_entry swow_socket_methods[] = {
     PHP_ME(Swow_Socket, sendString,                arginfo_class_Swow_Socket_sendString,          ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Socket, sendStringTo,              arginfo_class_Swow_Socket_sendStringTo,        ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Socket, sendHandle,                arginfo_class_Swow_Socket_sendHandle,          ZEND_ACC_PUBLIC)
-    PHP_ME(Swow_Socket, recvHandle,                arginfo_class_Swow_Socket_recvHandle,          ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Socket, close,                     arginfo_class_Swow_Socket_close,               ZEND_ACC_PUBLIC)
     /* status */
     PHP_ME(Swow_Socket, isAvailable,               arginfo_class_Swow_Socket_isAvailable,         ZEND_ACC_PUBLIC)

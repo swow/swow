@@ -49,7 +49,7 @@ class MySocket2 extends Socket
         foreach ([
             'listen',
             'accept',
-            'acceptTyped',
+            'acceptTo',
             'getPeerAddress',
             'getPeerPort',
             'getSockAddress',

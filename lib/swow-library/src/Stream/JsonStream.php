@@ -14,13 +14,12 @@ declare(strict_types=1);
 namespace Swow\Stream;
 
 use Swow\Pack\Format;
-use Swow\Socket;
 use function json_decode;
 use function json_encode;
 
 class JsonStream extends LengthStream
 {
-    public function __construct(int $type = Socket::TYPE_TCP)
+    public function __construct(int $type = self::TYPE_TCP)
     {
         parent::__construct(Format::UINT32_BE, $type);
     }

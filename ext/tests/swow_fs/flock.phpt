@@ -44,7 +44,7 @@ if (!$p) {
 
 // wait for child connect
 //printf("wait connecting in\n");
-$conn = $sock->accept(null, 10000);
+$conn = $sock->accept(10000);
 //printf("accepted\n");
 
 function tellchild($char)

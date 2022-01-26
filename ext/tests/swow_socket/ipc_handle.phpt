@@ -20,7 +20,8 @@ $wr = new WaitReference();
 Coroutine::run(function () use ($mainSocket, $pipePath, $wr) {
     $mainSocket->connect($pipePath);
 });
-$workerChannel = $workerSocket->acceptTyped(Socket::TYPE_IPCC);
+$workerChannel = new Socket(Socket::TYPE_IPCC);
+$workerSocket->acceptTo($workerChannel);
 $wr::wait($wr);
 
 // prepare server
@@ -37,7 +38,8 @@ $mainClient = new Socket(Socket::TYPE_TCP);
 $mainClient->connect('127.0.0.1', $tcpServer->getSockPort());
 // transfer handle
 $mainSocket->sendHandle($mainClient);
-$workerClient = $workerChannel->recvHandle();
+$workerClient = new Socket(Socket::TYPE_TCP);
+$workerChannel->acceptTo($workerClient);
 // testing on received handle
 echo $workerClient->sendString('Hello Server')->recvString() . PHP_LF;
 $wr::wait($wr);

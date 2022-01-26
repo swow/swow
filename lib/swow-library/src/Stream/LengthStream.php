@@ -30,10 +30,11 @@ class LengthStream extends Socket
 
     public function __construct(string $format = Format::UINT32_BE, int $type = self::TYPE_TCP)
     {
-        if (!($type & Socket::TYPE_FLAG_STREAM)) {
+        if (!($type & static::TYPE_FLAG_STREAM)) {
             throw new InvalidArgumentException('Socket type should be a kind of streams');
         }
         parent::__construct($type);
+        $this->setFormat($format);
     }
 
     public function getFormat(): string
@@ -54,16 +55,25 @@ class LengthStream extends Socket
         return $this->formatSize;
     }
 
-    public function accept(?Socket $connection = null, ?int $timeout = null): self|static
+    public function accept(?int $timeout = null): static
     {
-        $connection = parent::accept($connection, $timeout);
+        $connection = parent::accept($timeout);
+        $connection->setFormat($this->format);
+        $connection->maxMessageLength = $this->maxMessageLength;
+
+        return $connection;
+    }
+
+    public function acceptTo(Socket $connection, ?int $timeout = null): static
+    {
+        $ret = parent::acceptTo($connection, $timeout);
         if ($connection instanceof self) {
             $connection->format = $this->format;
             $connection->formatSize = $this->formatSize;
             $connection->maxMessageLength = $this->maxMessageLength;
         }
 
-        return $connection;
+        return $ret;
     }
 
     /** @return int message length */
