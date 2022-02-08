@@ -113,7 +113,7 @@ class ServerRequest extends Request implements ServerRequestInterface
         return static::UPGRADE_UNKNOWN;
     }
 
-    public function getParsedBody()
+    public function getParsedBody(): null|array|object
     {
         if (isset($this->parsedBody)) {
             return $this->parsedBody;

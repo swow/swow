@@ -41,9 +41,8 @@ trait ReceiverTrait
 
     /**
      * TODO: The options must be managed in a unified way
-     * @return RawRequest|RawResponse|RawResult
      */
-    protected function execute(int $maxHeaderLength, int $maxContentLength): RawResult
+    protected function execute(int $maxHeaderLength, int $maxContentLength): RawRequest|RawResponse
     {
         $parser = $this->httpParser;
         $buffer = $this->buffer;
