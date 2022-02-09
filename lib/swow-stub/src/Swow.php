@@ -295,8 +295,7 @@ namespace Swow
         /** @param string $string */
         public function write($string, int $offset = 0, int $length = -1): static { }
 
-        /** @param string $string */
-        public function copy($string, int $offset = 0, int $length = -1): static { }
+        public function copy(string $string, int $offset = 0, int $length = -1): static { }
 
         public function truncate(int $length = -1): static { }
 

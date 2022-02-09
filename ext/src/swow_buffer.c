@@ -643,7 +643,11 @@ static PHP_METHOD(Swow_Buffer, write)
     PHP_METHOD_CALL(Swow_Buffer, _write, 0);
 }
 
-#define arginfo_class_Swow_Buffer_copy arginfo_class_Swow_Buffer_write
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Buffer_copy, 0, 1, IS_STATIC, 0)
+    ZEND_ARG_TYPE_INFO(0, string, IS_STRING, 0)
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, offset, IS_LONG, 0, "0")
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, length, IS_LONG, 0, "-1")
+ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Buffer, copy)
 {
