@@ -828,11 +828,11 @@ namespace Swow\Http
         public const EVENT_MESSAGE_COMPLETE = 1048584;
         public const EVENT_CHUNK_HEADER = 2097152;
         public const EVENT_CHUNK_COMPLETE = 4194312;
-        public const EVENT_MULTIPART_HEADER_FIELD = 8388628;
-        public const EVENT_MULTIPART_HEADER_VALUE = 16777236;
-        public const EVENT_MULTIPART_DATA = 33554452;
-        public const EVENT_MULTIPART_DATA_BEGIN = 67108880;
-        public const EVENT_MULTIPART_HEADERS_COMPLETE = 134217752;
+        public const EVENT_MULTIPART_DATA_BEGIN = 8388624;
+        public const EVENT_MULTIPART_HEADER_FIELD = 16777236;
+        public const EVENT_MULTIPART_HEADER_VALUE = 33554452;
+        public const EVENT_MULTIPART_HEADERS_COMPLETE = 67108888;
+        public const EVENT_MULTIPART_BODY = 134217748;
         public const EVENT_MULTIPART_DATA_END = 268435480;
         public const EVENTS_NONE = 0;
         public const EVENTS_ALL = 536870430;
@@ -875,6 +875,8 @@ namespace Swow\Http
         public function getReasonPhrase(): string { }
 
         public function getContentLength(): int { }
+
+        public function isMultipart(): bool { }
 
         public function isUpgrade(): bool { }
 
