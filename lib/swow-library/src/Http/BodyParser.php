@@ -25,6 +25,7 @@ use function simplexml_load_string;
 use function strpos;
 use function strtolower;
 use function substr;
+use function trim;
 use const JSON_ERROR_NONE;
 use const LIBXML_NOCDATA;
 use const LIBXML_NOERROR;
@@ -37,14 +38,11 @@ class BodyParser
         $contentType = static::getContentType($request);
         $contents = $request->getBody()->getContents();
         if ($contents) {
-            // TODO: use constants
             switch ($contentType) {
-                case 'text/json':
-                case 'application/json':
+                case MimeType::JSON:
                     $data = static::decodeJson($contents);
                     break;
-                case 'text/xml':
-                case 'application/xml':
+                case MimeType::XML:
                     $data = static::decodeXml($contents);
                     break;
                 default:
@@ -79,10 +77,10 @@ class BodyParser
 
     public static function getContentType(ServerRequestInterface $request): string
     {
-        $rawContentType = $request->getHeaderLine('Content-Type');
+        $rawContentType = $request->getHeaderLine('content-type');
         if (($pos = strpos($rawContentType, ';')) !== false) {
             // e.g. application/json; charset=UTF-8
-            $contentType = strtolower(substr($rawContentType, 0, $pos));
+            $contentType = strtolower(trim(substr($rawContentType, 0, $pos)));
         } else {
             $contentType = strtolower($rawContentType);
         }

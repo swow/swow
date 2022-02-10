@@ -82,6 +82,7 @@
         "test": [ "@test-extension", "@test-library" ],
         "gen-stub": [ "@php -n -d extension=swow lib/php-stub-generator/bin/gen-stub.php --noinspection --stub-file=lib/swow-stub/src/Swow.php swow lib/swow-stub/src/Swow.php" ],
         "update-arginfo": [ "@php -n lib/php-stub-generator/bin/update-arginfo.php --cache-path=ext/build --stub-file=lib/swow-stub/src/Swow.php swow ext/src ext/build" ],
+        "update-mime-types": [ "@php -n tools/update-mime-types.php" ],
         "split": [ "@php -n tools/split.php" ]
     },
     "bin": [

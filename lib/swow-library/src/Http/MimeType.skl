@@ -1,0 +1,28 @@
+<?php
+/**
+ * This file is part of Swow
+ *
+ * @link    https://github.com/swow/swow
+ * @contact twosee <twosee@php.net>
+ *
+ * For the full copyright and license information,
+ * please view the LICENSE file that was distributed with this source code
+ */
+
+declare(strict_types=1);
+
+namespace Swow\Http;
+
+class MimeType
+{
+{{constants}}
+
+    protected const EXTENSION_MAP = [
+{{extension_map}}
+    ];
+
+    public static function fromExtension(string $extension): string
+    {
+        return self::EXTENSION_MAP[$extension] ?? static::BIN;
+    }
+}
