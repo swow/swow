@@ -13,6 +13,8 @@
 declare(strict_types=1);
 
 use Rector\Core\Configuration\Option;
+use Rector\Php71\Rector\FuncCall\CountOnNullRector;
+use Rector\Php74\Rector\Closure\ClosureToArrowFunctionRector;
 use Rector\Set\ValueObject\LevelSetList;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 
@@ -47,4 +49,10 @@ return static function (ContainerConfigurator $containerConfigurator): void {
         ]);
     // Define what rule sets will be applied
     $containerConfigurator->import(LevelSetList::UP_TO_PHP_80);
+    // Some custom configurations
+    $services = $containerConfigurator->services();
+    /* I do not like this, it makes a lot of long lines of code */
+    $services->remove(ClosureToArrowFunctionRector::class);
+    /* It can not recognize vars which were assigned by passing to reference parameters */
+    $services->remove(CountOnNullRector::class);
 };
