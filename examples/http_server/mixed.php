@@ -53,6 +53,9 @@ while (true) {
                             case '/echo':
                                 $connection->respond($request->getBodyAsString());
                                 break;
+                            case '/echo_all':
+                                $connection->respond($request->toString());
+                                break;
                             case '/chat':
                                 if ($upgrade = $request->getUpgrade()) {
                                     if ($upgrade === $request::UPGRADE_WEBSOCKET) {

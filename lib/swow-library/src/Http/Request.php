@@ -212,14 +212,19 @@ class Request extends Message implements RequestInterface
         return $new;
     }
 
-    public function toString(bool $headOnly = false): string
+    protected function toStringEx(bool $headOnly = false, ?string $body = null): string
     {
         return packRequest(
             $this->getMethod(),
             $this->getUriAsString(),
             $this->getStandardHeaders(),
-            !$headOnly ? $this->getBodyAsString() : '',
+            !$headOnly ? ($body === null ? $this->getBodyAsString() : $body) : '',
             $this->getProtocolVersion()
         );
+    }
+
+    public function toString(bool $headOnly = false): string
+    {
+        return $this->toStringEx($headOnly);
     }
 }

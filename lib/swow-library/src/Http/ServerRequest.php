@@ -15,7 +15,10 @@ namespace Swow\Http;
 
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\UploadedFileInterface;
+use RuntimeException;
 use function array_key_exists;
+use function implode;
+use function preg_match;
 use function strcasecmp;
 
 class ServerRequest extends Request implements ServerRequestInterface
@@ -213,5 +216,27 @@ class ServerRequest extends Request implements ServerRequestInterface
         $new->unsetAttribute($name);
 
         return $new;
+    }
+
+    public function toStringEx(bool $headOnly = false, ?string $body = null): string
+    {
+        if (!$headOnly) {
+            $uploadedFiles = $this->getUploadedFiles();
+            if ($uploadedFiles !== [] && $this->getBody()->isEmpty()) {
+                $contentType = $this->getHeaderLine('content-type');
+                if (!preg_match('/boundary(?: *)?=(?: *)?\"?([a-zA-Z0-9\'\(\)+_,-.\/:=? ]*)(?<! )\"?/', $contentType, $matches)) {
+                    throw new RuntimeException('Can not find boundary in Content-Type header');
+                }
+                $boundary = $matches[1];
+                $parts = [];
+                foreach ($uploadedFiles as $uploadedFile) {
+                    $stream = $uploadedFile->getStream();
+                    $parts[] = "--{$boundary}\r\nContent-Disposition: form-data; name=\"{$uploadedFile->getClientFilename()}\"\r\n\r\n{$stream->getContents()}\r\n";
+                }
+                $parts[] = "--{$boundary}--\r\n";
+                $body = implode('', $parts);
+            }
+        }
+        return parent::toStringEx($headOnly, $body);
     }
 }
