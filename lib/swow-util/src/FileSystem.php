@@ -96,7 +96,7 @@ class FileSystem
         return false;
     }
 
-    protected static function copyDir(string $source, string $destination): bool
+    protected static function touchDir(string $source, string $destination): bool
     {
         if (is_dir($destination)) {
             @chmod($destination, static::perms($source));
@@ -121,7 +121,7 @@ class FileSystem
         }
 
         $errors = [];
-        if (!static::copyDir($source, $destination)) {
+        if (!static::touchDir($source, $destination)) {
             throw IOException::getLast();
         }
         $it = new RecursiveDirectoryIterator($source, RecursiveDirectoryIterator::SKIP_DOTS);
@@ -133,7 +133,7 @@ class FileSystem
             if ($info->isDir()) {
                 $directory = "{$destination}/{$subPath}";
                 /** @var RecursiveDirectoryIterator $info */
-                if (!static::copyDir($info->getPathname(), $directory)) {
+                if (!static::touchDir($info->getPathname(), $directory)) {
                     $ret = false;
                 }
             } else {
