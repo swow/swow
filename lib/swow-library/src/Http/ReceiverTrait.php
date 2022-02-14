@@ -17,8 +17,20 @@ use Swow\Http\Exception as HttpException;
 use Swow\Http\Parser as HttpParser;
 use Swow\Http\Parser\Exception as HttpParserException;
 use Swow\Http\Status as HttpStatus;
+use function array_map;
 use function count;
+use function explode;
+use function fopen;
+use function fwrite;
+use function str_starts_with;
+use function strlen;
 use function strtolower;
+use function substr;
+use function sys_get_temp_dir;
+use function tempnam;
+use function trim;
+use const UPLOAD_ERR_CANT_WRITE;
+use const UPLOAD_ERR_OK;
 
 trait ReceiverTrait
 {
@@ -26,17 +38,42 @@ trait ReceiverTrait
 
     protected ?Parser $httpParser = null;
 
-    protected int $maxBufferSize;
+    protected int $maxBufferSize = Buffer::DEFAULT_SIZE;
+
+    protected bool $preserveBodyData = false;
 
     protected ?bool $keepAlive = false;
 
-    protected function __construct(int $type, int $events, int $maxBufferSize = Buffer::DEFAULT_SIZE)
+    protected function __construct(int $type, int $events)
     {
         $this->buffer = new Buffer();
         $this->httpParser = (new HttpParser())
             ->setType($type)
             ->setEvents($events);
+    }
+
+    public function getMaxBufferSize(): int
+    {
+        return $this->maxBufferSize;
+    }
+
+    public function setMaxBufferSize(mixed $maxBufferSize): static
+    {
         $this->maxBufferSize = $maxBufferSize;
+
+        return $this;
+    }
+
+    public function isPreserveBodyData(): bool
+    {
+        return $this->preserveBodyData;
+    }
+
+    public function setPreserveBodyData(bool $value): static
+    {
+        $this->preserveBodyData = $value;
+
+        return $this;
     }
 
     /**
@@ -64,23 +101,31 @@ trait ReceiverTrait
         $headerLength = 0;
         $headersComplete = false;
         $body = null;
+        /* multipart related values {{{ */
+        $isMultipart = false;
+        $multipartHeaderName = '';
+        $multipartHeaders = [];
+        $tmpFilePath = '';
+        $tmpFile = null;
+        $tmpFileSize = 0;
+        $fileError = UPLOAD_ERR_OK;
+        $uploadedFiles = [];
+        /* }}} */
         try {
             while (true) {
                 if ($expectMore) {
-                    $this->recvData($buffer);
+                    $nRead = $this->recvData($buffer);
                     // TODO: call $parser->finished() if connection error?
                 }
                 $event = HttpParser::EVENT_NONE;
                 while (true) {
                     $previousEvent = $event;
+                    $event = $parser->execute($buffer, $data);
                     if (!$headersComplete) {
-                        $event = $parser->execute($buffer, $data);
                         $headerLength += $parser->getParsedLength();
                         if ($headerLength > $maxHeaderLength) {
                             throw new HttpException(HttpStatus::REQUEST_HEADER_FIELDS_TOO_LARGE);
                         }
-                    } else {
-                        $event = $parser->execute($buffer);
                     }
                     if ($event === HttpParser::EVENT_NONE) {
                         $expectMore = true;
@@ -144,7 +189,81 @@ trait ReceiverTrait
                                     throw new HttpException(HttpStatus::REQUEST_ENTITY_TOO_LARGE);
                                 }
                                 $headersComplete = true;
+                                if ($parser->isMultipart()) {
+                                    $isMultipart = true;
+                                    if ($this->preserveBodyData) {
+                                        $body = new Buffer($contentLength);
+                                        $body->write($buffer->toString(), $buffer->tell());
+                                        $neededLength = $contentLength - $body->getLength();
+                                        if ($neededLength > 0) {
+                                            $this->read($body, $neededLength);
+                                        }
+                                        // Notice: There may be some risks associated with doing so,
+                                        // but it's the easiest way...
+                                        $buffer = $body->rewind();
+                                    }
+                                }
                                 break;
+                            }
+                        }
+                    } elseif ($isMultipart) {
+                        switch ($event) {
+                            case HttpParser::EVENT_MULTIPART_HEADER_FIELD:
+                                $multipartHeaderName = strtolower($data);
+                                break;
+                            case HttpParser::EVENT_MULTIPART_HEADER_VALUE:
+                                $multipartHeaders[$multipartHeaderName] = $data;
+                                break;
+                            case HttpParser::EVENT_MULTIPART_HEADERS_COMPLETE:
+                            {
+                                // TODO: make dir and prefix configurable
+                                $tmpFilePath = tempnam(sys_get_temp_dir(), 'swow_');
+                                $tmpFile = fopen($tmpFilePath, 'w+');
+                                break;
+                            }
+                            case HttpParser::EVENT_MULTIPART_BODY:
+                            {
+                                if ($fileError === UPLOAD_ERR_OK) {
+                                    $nWrite = fwrite($tmpFile, $data);
+                                    if ($nWrite !== strlen($data)) {
+                                        $fileError = UPLOAD_ERR_CANT_WRITE;
+                                    } else {
+                                        $tmpFileSize += $nWrite;
+                                    }
+                                }
+                                break;
+                            }
+                            case HttpParser::EVENT_MULTIPART_DATA_END:
+                            {
+                                $contentDispositionParts = array_map(function (string $s) {
+                                    return trim($s, ' ;');
+                                }, explode(';', $multipartHeaders['content-disposition'] ?? ''));
+                                if (($contentDispositionParts[0] ?? '') !== 'form-data') {
+                                    throw new HttpException(HttpStatus::BAD_REQUEST, "Unsupported Content-Disposition type '{$contentDispositionParts[0]}'");
+                                }
+                                $fileName = null;
+                                foreach ($contentDispositionParts as $contentDispositionPart) {
+                                    if (str_starts_with($contentDispositionPart, 'filename=')) {
+                                        $fileName = trim(substr($contentDispositionPart, strlen('filename=')), '"');
+                                    }
+                                }
+                                if (!$fileName) {
+                                    throw new HttpException(HttpStatus::BAD_REQUEST, 'Missing filename in Content-Disposition');
+                                }
+                                $uploadedFile = new RawUploadedFile();
+                                $uploadedFile->name = $fileName;
+                                $uploadedFile->type = $multipartHeaders['content-type'] ?? MimeType::TXT;
+                                $uploadedFile->tmp_name = $tmpFilePath;
+                                $uploadedFile->error = $fileError;
+                                $uploadedFile->size = $tmpFileSize;
+                                $uploadedFiles[] = $uploadedFile;
+                                // reset for the next parts
+                                $multipartHeaderName = '';
+                                $multipartHeaders = [];
+                                $tmpFilePath = '';
+                                $tmpFile = null;
+                                $tmpFileSize = 0;
+                                $fileError = UPLOAD_ERR_OK;
                             }
                         }
                     } else {
@@ -161,7 +280,6 @@ trait ReceiverTrait
                                 if ($event === HttpParser::EVENT_BODY) {
                                     $event = $parser->execute($body);
                                 }
-                                $body->rewind();
                                 if ($event !== HttpParser::EVENT_MESSAGE_COMPLETE) {
                                     throw new HttpParserException('Unexpected body eof');
                                 }
@@ -171,7 +289,10 @@ trait ReceiverTrait
                     }
                 }
             }
-
+        } catch (HttpParserException) {
+            /* TODO: get bad request */
+            throw new HttpException(HttpStatus::BAD_REQUEST, 'Protocol Parsing Error');
+        } finally {
             if ($isRequest) {
                 $result->method = $parser->getMethod();
                 $result->uri = $uriOrReasonPhrase;
@@ -180,16 +301,13 @@ trait ReceiverTrait
                 $result->reasonPhrase = $uriOrReasonPhrase;
             }
             $result->headers = $headers;
-            $result->body = $body;
+            $result->body = $body?->rewind();
             $result->protocolVersion = $parser->getProtocolVersion();
             $result->headerNames = $headerNames;
             $result->contentLength = $contentLength;
             $result->shouldKeepAlive = $shouldKeepAlive;
             $result->isUpgrade = $parser->isUpgrade();
-        } catch (HttpParserException) {
-            /* TODO: get bad request */
-            throw new HttpException(HttpStatus::BAD_REQUEST, 'Protocol Parsing Error');
-        } finally {
+            $result->uploadedFiles = $uploadedFiles;
             $parser->reset();
         }
 

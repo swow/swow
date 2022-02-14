@@ -20,6 +20,7 @@ use Swow\Http\Server;
 use Swow\Http\Status as HttpStatus;
 use Swow\Http\TypeInterface as HttpTypeInterface;
 use Swow\Http\TypeTrait as HttpTypeTrait;
+use Swow\Http\UploadFile;
 use Swow\Http\WebSocketTrait;
 use Swow\Socket;
 use Swow\WebSocket;
@@ -47,7 +48,13 @@ class Connection extends Socket implements HttpTypeInterface
         HttpParser::EVENT_HEADER_VALUE |
         HttpParser::EVENT_HEADERS_COMPLETE |
         HttpParser::EVENT_BODY |
-        HttpParser::EVENT_MESSAGE_COMPLETE;
+        HttpParser::EVENT_MESSAGE_COMPLETE |
+        /* multipart */
+        HttpParser::EVENT_MULTIPART_HEADER_FIELD |
+        HttpParser::EVENT_MULTIPART_HEADER_VALUE |
+        HttpParser::EVENT_MULTIPART_HEADERS_COMPLETE |
+        HttpParser::EVENT_MULTIPART_BODY |
+        HttpParser::EVENT_MULTIPART_DATA_END;
 
     /* TODO: support chunk transfer encoding */
 
@@ -75,14 +82,14 @@ class Connection extends Socket implements HttpTypeInterface
         return $this->keepAlive;
     }
 
-    public function recvHttpRequest(?Request $request = null): Request
+    public function recvHttpRequest(): Request
     {
         $result = $this->receiverExecute(
             $this->server->getMaxHeaderLength(),
             $this->server->getMaxContentLength()
         );
 
-        $request ??= new Request();
+        $request = new Request();
         $request->setHead(
             $result->method,
             $result->uri,
@@ -93,6 +100,19 @@ class Connection extends Socket implements HttpTypeInterface
             $result->contentLength,
             $result->isUpgrade
         )->setBody($result->body);
+        if ($result->uploadedFiles) {
+            $uploadedFiles = [];
+            foreach ($result->uploadedFiles as $rawUploadedFile) {
+                $uploadedFiles[] = new UploadFile(
+                    $rawUploadedFile->tmp_name,
+                    $rawUploadedFile->size,
+                    $rawUploadedFile->error,
+                    $rawUploadedFile->name,
+                    $rawUploadedFile->type
+                );
+            }
+            $request->setUploadedFiles($uploadedFiles);
+        }
 
         return $request;
     }

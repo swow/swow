@@ -21,6 +21,7 @@ class RawResult
 
     public string $protocolVersion = '';
 
+    /** @var array<string, string> */
     public array $headerNames = [];
 
     public int $contentLength = 0;
@@ -28,4 +29,7 @@ class RawResult
     public bool $shouldKeepAlive = false;
 
     public bool $isUpgrade = false;
+
+    /** @var RawUploadedFile[] */
+    public array $uploadedFiles = [];
 }
