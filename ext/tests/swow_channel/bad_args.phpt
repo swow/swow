@@ -18,7 +18,7 @@ Assert::throws(function () use ($chan) {
 
 Assert::throws(function () {
     // Swow\Channel::__construct(): Argument #1 ($capacity) can not be negative
-    new Channel(-1);
+    new Channel(-999);
 }, ValueError::class);
 
 echo "Done\n";

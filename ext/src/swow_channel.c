@@ -101,6 +101,9 @@ static PHP_METHOD(Swow_Channel, __construct)
         Z_PARAM_LONG(capacity)
     ZEND_PARSE_PARAMETERS_END();
 
+    if (capacity == -1) {
+        capacity = CAT_CHANNEL_SIZE_MAX;
+    }
     if (UNEXPECTED(capacity < 0)) {
         zend_argument_value_error(1, "can not be negative");
         RETURN_THROWS();
