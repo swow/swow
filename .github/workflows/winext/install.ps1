@@ -64,7 +64,7 @@ $ext_ini
 
 $define = ""
 if (!$Enable){
-    $define = "-dextension=swow"
+    $define = "-dextension=$ExtName"
 }
 
 info "Run 'php $define --ri $ExtName'"
