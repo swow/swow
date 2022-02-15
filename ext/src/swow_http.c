@@ -339,6 +339,17 @@ static PHP_METHOD(Swow_Http_Parser, getContentLength)
     RETURN_LONG(cat_http_parser_get_content_length(parser));
 }
 
+#define arginfo_class_Swow_Http_Parser_getCurrentChunkLength arginfo_class_Swow_Http_Parser_getType
+
+static PHP_METHOD(Swow_Http_Parser, getCurrentChunkLength)
+{
+    SWOW_HTTP_PARSER_GETTER(sparser, parser);
+
+    ZEND_PARSE_PARAMETERS_NONE();
+
+    RETURN_LONG(cat_http_parser_get_current_chunk_length(parser));
+}
+
 #define arginfo_class_Swow_Http_Parser_isMultipart arginfo_class_Swow_Http_Parser_isCompleted
 
 static PHP_METHOD(Swow_Http_Parser, isMultipart)
@@ -396,29 +407,30 @@ static PHP_METHOD(Swow_Http_Parser, reset)
 }
 
 static const zend_function_entry swow_http_parser_methods[] = {
-    PHP_ME(Swow_Http_Parser, getType,            arginfo_class_Swow_Http_Parser_getType,            ZEND_ACC_PUBLIC)
-    PHP_ME(Swow_Http_Parser, setType,            arginfo_class_Swow_Http_Parser_setType,            ZEND_ACC_PUBLIC)
-    PHP_ME(Swow_Http_Parser, getEvents,          arginfo_class_Swow_Http_Parser_getEvents,          ZEND_ACC_PUBLIC)
-    PHP_ME(Swow_Http_Parser, setEvents,          arginfo_class_Swow_Http_Parser_setEvents,          ZEND_ACC_PUBLIC)
-    PHP_ME(Swow_Http_Parser, execute,            arginfo_class_Swow_Http_Parser_execute,            ZEND_ACC_PUBLIC)
-    PHP_ME(Swow_Http_Parser, getEvent,           arginfo_class_Swow_Http_Parser_getEvent,           ZEND_ACC_PUBLIC)
-    PHP_ME(Swow_Http_Parser, getEventName,       arginfo_class_Swow_Http_Parser_getEventName,       ZEND_ACC_PUBLIC)
-    PHP_ME(Swow_Http_Parser, getDataOffset,      arginfo_class_Swow_Http_Parser_getDataOffset,      ZEND_ACC_PUBLIC)
-    PHP_ME(Swow_Http_Parser, getDataLength,      arginfo_class_Swow_Http_Parser_getDataLength,      ZEND_ACC_PUBLIC)
-    PHP_ME(Swow_Http_Parser, getParsedLength,    arginfo_class_Swow_Http_Parser_getParsedLength,    ZEND_ACC_PUBLIC)
-    PHP_ME(Swow_Http_Parser, isCompleted,        arginfo_class_Swow_Http_Parser_isCompleted,        ZEND_ACC_PUBLIC)
-    PHP_ME(Swow_Http_Parser, shouldKeepAlive,    arginfo_class_Swow_Http_Parser_shouldKeepAlive,    ZEND_ACC_PUBLIC)
-    PHP_ME(Swow_Http_Parser, getMethod,          arginfo_class_Swow_Http_Parser_getMethod,          ZEND_ACC_PUBLIC)
-    PHP_ME(Swow_Http_Parser, getMajorVersion,    arginfo_class_Swow_Http_Parser_getMajorVersion,    ZEND_ACC_PUBLIC)
-    PHP_ME(Swow_Http_Parser, getMinorVersion,    arginfo_class_Swow_Http_Parser_getMinorVersion,    ZEND_ACC_PUBLIC)
-    PHP_ME(Swow_Http_Parser, getProtocolVersion, arginfo_class_Swow_Http_Parser_getProtocolVersion, ZEND_ACC_PUBLIC)
-    PHP_ME(Swow_Http_Parser, getStatusCode,      arginfo_class_Swow_Http_Parser_getStatusCode,      ZEND_ACC_PUBLIC)
-    PHP_ME(Swow_Http_Parser, getReasonPhrase,    arginfo_class_Swow_Http_Parser_getReasonPhrase,    ZEND_ACC_PUBLIC)
-    PHP_ME(Swow_Http_Parser, getContentLength,   arginfo_class_Swow_Http_Parser_getContentLength,   ZEND_ACC_PUBLIC)
-    PHP_ME(Swow_Http_Parser, isMultipart,        arginfo_class_Swow_Http_Parser_isMultipart,        ZEND_ACC_PUBLIC)
-    PHP_ME(Swow_Http_Parser, isUpgrade,          arginfo_class_Swow_Http_Parser_isUpgrade,          ZEND_ACC_PUBLIC)
-    PHP_ME(Swow_Http_Parser, finish,             arginfo_class_Swow_Http_Parser_finish,             ZEND_ACC_PUBLIC)
-    PHP_ME(Swow_Http_Parser, reset,              arginfo_class_Swow_Http_Parser_reset,              ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Http_Parser, getType,               arginfo_class_Swow_Http_Parser_getType,               ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Http_Parser, setType,               arginfo_class_Swow_Http_Parser_setType,               ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Http_Parser, getEvents,             arginfo_class_Swow_Http_Parser_getEvents,             ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Http_Parser, setEvents,             arginfo_class_Swow_Http_Parser_setEvents,             ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Http_Parser, execute,               arginfo_class_Swow_Http_Parser_execute,               ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Http_Parser, getEvent,              arginfo_class_Swow_Http_Parser_getEvent,              ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Http_Parser, getEventName,          arginfo_class_Swow_Http_Parser_getEventName,          ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Http_Parser, getDataOffset,         arginfo_class_Swow_Http_Parser_getDataOffset,         ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Http_Parser, getDataLength,         arginfo_class_Swow_Http_Parser_getDataLength,         ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Http_Parser, getParsedLength,       arginfo_class_Swow_Http_Parser_getParsedLength,       ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Http_Parser, isCompleted,           arginfo_class_Swow_Http_Parser_isCompleted,           ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Http_Parser, shouldKeepAlive,       arginfo_class_Swow_Http_Parser_shouldKeepAlive,       ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Http_Parser, getMethod,             arginfo_class_Swow_Http_Parser_getMethod,             ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Http_Parser, getMajorVersion,       arginfo_class_Swow_Http_Parser_getMajorVersion,       ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Http_Parser, getMinorVersion,       arginfo_class_Swow_Http_Parser_getMinorVersion,       ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Http_Parser, getProtocolVersion,    arginfo_class_Swow_Http_Parser_getProtocolVersion,    ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Http_Parser, getStatusCode,         arginfo_class_Swow_Http_Parser_getStatusCode,         ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Http_Parser, getReasonPhrase,       arginfo_class_Swow_Http_Parser_getReasonPhrase,       ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Http_Parser, getContentLength,      arginfo_class_Swow_Http_Parser_getContentLength,      ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Http_Parser, getCurrentChunkLength, arginfo_class_Swow_Http_Parser_getCurrentChunkLength, ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Http_Parser, isMultipart,           arginfo_class_Swow_Http_Parser_isMultipart,           ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Http_Parser, isUpgrade,             arginfo_class_Swow_Http_Parser_isUpgrade,             ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Http_Parser, finish,                arginfo_class_Swow_Http_Parser_finish,                ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Http_Parser, reset,                 arginfo_class_Swow_Http_Parser_reset,                 ZEND_ACC_PUBLIC)
     PHP_FE_END
 };
 
