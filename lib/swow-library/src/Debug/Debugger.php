@@ -1140,9 +1140,13 @@ TEXT;
                             goto _quit;
                         case 'r':
                         case 'run':
+                            if ($this->daemon) {
+                                throw new DebuggerException('Debugger is already running');
+                            }
                             $args = func_get_args();
                             Coroutine::run(function () use ($args): void {
                                 $this->reloading = true;
+                                $this->daemon = true;
                                 $this
                                     ->out('Program is running...')
                                     ->run(...$args);
