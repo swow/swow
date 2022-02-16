@@ -350,6 +350,17 @@ static PHP_METHOD(Swow_Http_Parser, getCurrentChunkLength)
     RETURN_LONG(cat_http_parser_get_current_chunk_length(parser));
 }
 
+#define arginfo_class_Swow_Http_Parser_isChunked arginfo_class_Swow_Http_Parser_isCompleted
+
+static PHP_METHOD(Swow_Http_Parser, isChunked)
+{
+    SWOW_HTTP_PARSER_GETTER(sparser, parser);
+
+    ZEND_PARSE_PARAMETERS_NONE();
+
+    RETURN_BOOL(cat_http_parser_is_chunked(parser));
+}
+
 #define arginfo_class_Swow_Http_Parser_isMultipart arginfo_class_Swow_Http_Parser_isCompleted
 
 static PHP_METHOD(Swow_Http_Parser, isMultipart)
@@ -427,6 +438,7 @@ static const zend_function_entry swow_http_parser_methods[] = {
     PHP_ME(Swow_Http_Parser, getReasonPhrase,       arginfo_class_Swow_Http_Parser_getReasonPhrase,       ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Http_Parser, getContentLength,      arginfo_class_Swow_Http_Parser_getContentLength,      ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Http_Parser, getCurrentChunkLength, arginfo_class_Swow_Http_Parser_getCurrentChunkLength, ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Http_Parser, isChunked,             arginfo_class_Swow_Http_Parser_isChunked,             ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Http_Parser, isMultipart,           arginfo_class_Swow_Http_Parser_isMultipart,           ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Http_Parser, isUpgrade,             arginfo_class_Swow_Http_Parser_isUpgrade,             ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Http_Parser, finish,                arginfo_class_Swow_Http_Parser_finish,                ZEND_ACC_PUBLIC)
