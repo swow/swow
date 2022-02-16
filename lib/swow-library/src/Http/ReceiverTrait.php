@@ -103,6 +103,7 @@ trait ReceiverTrait
         $body = null;
         /* multipart related values {{{ */
         $isMultipart = false;
+        $multiPartHeadersComplete = false;
         $multipartHeaderName = '';
         $multipartHeaders = [];
         $tmpFilePath = '';
@@ -114,13 +115,17 @@ trait ReceiverTrait
         try {
             while (true) {
                 if ($expectMore) {
-                    $nRead = $this->recvData($buffer);
+                    $this->recvData($buffer);
                     // TODO: call $parser->finished() if connection error?
                 }
                 $event = HttpParser::EVENT_NONE;
                 while (true) {
                     $previousEvent = $event;
-                    $event = $parser->execute($buffer, $data);
+                    if (!$headersComplete || ($isMultipart && !$multiPartHeadersComplete)) {
+                        $event = $parser->execute($buffer, $data);
+                    } else {
+                        $event = $parser->execute($buffer);
+                    }
                     if (!$headersComplete) {
                         $headerLength += $parser->getParsedLength();
                         if ($headerLength > $maxHeaderLength) {
@@ -216,6 +221,7 @@ trait ReceiverTrait
                                 break;
                             case HttpParser::EVENT_MULTIPART_HEADERS_COMPLETE:
                             {
+                                $multiPartHeadersComplete = true;
                                 // TODO: make dir and prefix configurable
                                 $tmpFilePath = tempnam(sys_get_temp_dir(), 'swow_');
                                 $tmpFile = fopen($tmpFilePath, 'w+');
@@ -224,7 +230,13 @@ trait ReceiverTrait
                             case HttpParser::EVENT_MULTIPART_BODY:
                             {
                                 if ($fileError === UPLOAD_ERR_OK) {
-                                    $nWrite = fwrite($tmpFile, $data);
+                                    $dataOffset = $parser->getDataOffset();
+                                    $dataLength = $parser->getDataLength();
+                                    if ($dataOffset === 0) {
+                                        $nWrite = fwrite($tmpFile, $buffer->toString(), $dataLength);
+                                    } else {
+                                        $nWrite = fwrite($tmpFile, $buffer->peekFrom($dataOffset, $dataLength));
+                                    }
                                     if ($nWrite !== strlen($data)) {
                                         $fileError = UPLOAD_ERR_CANT_WRITE;
                                     } else {
@@ -258,6 +270,7 @@ trait ReceiverTrait
                                 $uploadedFile->size = $tmpFileSize;
                                 $uploadedFiles[] = $uploadedFile;
                                 // reset for the next parts
+                                $multiPartHeadersComplete = false;
                                 $multipartHeaderName = '';
                                 $multipartHeaders = [];
                                 $tmpFilePath = '';
