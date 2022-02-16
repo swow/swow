@@ -107,6 +107,8 @@ TEXT;
 
     protected Socket $error;
 
+    protected bool $daemon = false;
+
     protected bool $reloading = false;
 
     /** @var callable */
@@ -1060,13 +1062,23 @@ TEXT;
                             break;
                         case 'p':
                         case 'print':
+                        case 'exec':
                             $expression = implode(' ', $arguments);
                             if (!$expression) {
                                 throw new DebuggerException('No expression');
                             }
-                            $coroutine = $this->getCurrentCoroutine();
-                            $index = $this->getCurrentFrameIndexExtended();
-                            $result = var_dump_return($coroutine->eval($expression, $index));
+                            if ($command === 'exec') {
+                                $transfer = new Channel();
+                                Coroutine::run(function () use ($expression, $transfer) {
+                                    $transfer->push(Coroutine::getCurrent()->eval($expression));
+                                });
+                                // TODO: support ctrl + c (also support ctrl + c twice confirm on global scope?)
+                                $result = var_dump_return($transfer->pop());
+                            } else {
+                                $coroutine = $this->getCurrentCoroutine();
+                                $index = $this->getCurrentFrameIndexExtended();
+                                $result = var_dump_return($coroutine->eval($expression, $index));
+                            }
                             $this->out($result, false);
                             break;
                         case 'vars':
