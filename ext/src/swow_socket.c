@@ -608,6 +608,10 @@ static PHP_METHOD_EX(Swow_Socket, _read, zend_bool once, zend_bool may_address, 
 
     SWOW_BUFFER_LOCK(sbuffer);
 
+    /* Read on socket is the same as write on Buffer,
+     * so we should call COW here */
+    swow_buffer_cow(sbuffer);
+
     /* read */
     if (!want_address) {
         if (!peek) {

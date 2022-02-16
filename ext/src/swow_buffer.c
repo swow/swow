@@ -141,8 +141,7 @@ static zend_never_inline void swow_buffer_separate(swow_buffer_t *sbuffer)
     sbuffer->buffer = new_buffer;
 }
 
-/* COW (copy on write) */
-static zend_always_inline void swow_buffer_cow(swow_buffer_t *sbuffer)
+SWOW_API void swow_buffer_cow(swow_buffer_t *sbuffer)
 {
     if (sbuffer->buffer.value != NULL) {
         zend_string *string = swow_buffer_get_string_from_handle(&sbuffer->buffer);

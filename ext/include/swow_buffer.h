@@ -74,6 +74,8 @@ SWOW_API size_t swow_buffer_get_writable_space(swow_buffer_t *sbuffer, char **pt
 SWOW_API void swow_buffer_virtual_read(swow_buffer_t *sbuffer, size_t length);            SWOW_INTERNAL SWOW_UNSAFE
 SWOW_API void swow_buffer_virtual_write(swow_buffer_t *sbuffer, size_t length);           SWOW_INTERNAL SWOW_UNSAFE
 SWOW_API void swow_buffer_virtual_write_no_seek(swow_buffer_t *sbuffer, size_t length);   SWOW_INTERNAL SWOW_UNSAFE
+/* this API should be called before write data to the buffer */
+SWOW_API void swow_buffer_cow(swow_buffer_t *sbuffer);
 
 SWOW_INTERNAL
 #define SWOW_BUFFER_CHECK_STRING_SCOPE_EX(string, offset, length, failure) do { \
