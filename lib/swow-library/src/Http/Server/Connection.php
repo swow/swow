@@ -226,10 +226,9 @@ class Connection extends Socket implements HttpTypeInterface
 
     public function close(): bool
     {
-        $ret = parent::close();
         $this->offline();
 
-        return $ret;
+        return parent::close();
     }
 
     public function __destruct()
