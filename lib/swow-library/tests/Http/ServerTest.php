@@ -41,9 +41,8 @@ final class ServerTest extends TestCase
             require $mixedServerFile;
         });
         // so hacky ^^
-        /* @var Server $server */
-        $serverCoroutine->eval('$GLOBALS[\'server\'] = $this;');
-        $server = $GLOBALS['server'];
+        /** @var Server $server */
+        $server = $serverCoroutine->eval('$this');
         defer(static function () use ($server): void {
             $server->close();
         });
