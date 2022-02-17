@@ -47,6 +47,8 @@ class Connection extends Socket implements HttpTypeInterface
         HttpParser::EVENT_HEADER_FIELD |
         HttpParser::EVENT_HEADER_VALUE |
         HttpParser::EVENT_HEADERS_COMPLETE |
+        HttpParser::EVENT_CHUNK_HEADER |
+        HttpParser::EVENT_CHUNK_COMPLETE |
         HttpParser::EVENT_BODY |
         HttpParser::EVENT_MESSAGE_COMPLETE |
         /* multipart */

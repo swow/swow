@@ -878,6 +878,10 @@ namespace Swow\Http
 
         public function getContentLength(): int { }
 
+        public function getCurrentChunkLength(): int { }
+
+        public function isChunked(): bool { }
+
         public function isMultipart(): bool { }
 
         public function isUpgrade(): bool { }

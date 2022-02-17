@@ -47,9 +47,18 @@ trait ReceiverTrait
     protected function __construct(int $type, int $events)
     {
         $this->buffer = new Buffer();
+        $requiredEvents =
+            HttpParser::EVENT_URL |
+            HttpParser::EVENT_HEADER_FIELD |
+            HttpParser::EVENT_HEADER_VALUE |
+            HttpParser::EVENT_HEADERS_COMPLETE |
+            HttpParser::EVENT_CHUNK_HEADER |
+            HttpParser::EVENT_CHUNK_COMPLETE |
+            HttpParser::EVENT_BODY |
+            HttpParser::EVENT_MESSAGE_COMPLETE;
         $this->httpParser = (new HttpParser())
             ->setType($type)
-            ->setEvents($events);
+            ->setEvents($events | $requiredEvents);
     }
 
     public function getMaxBufferSize(): int
@@ -100,6 +109,8 @@ trait ReceiverTrait
         $contentLength = 0;
         $headerLength = 0;
         $headersComplete = false;
+        $isChunked = false;
+        $currentChunkLength = 0;
         $body = null;
         /* multipart related values {{{ */
         $isMultipart = false;
@@ -151,6 +162,13 @@ trait ReceiverTrait
                         break;
                     }
                     if ($event === HttpParser::EVENT_MESSAGE_COMPLETE) {
+                        if ($isChunked) {
+                            // TODO: Several values can be listed, separated by a comma. (Transfer-Encoding: gzip, chunked)
+                            unset($headers[$headerNames['transfer-encoding']], $headerNames['transfer-encoding']);
+                            if ($body && $body->getLength() < ($body->getSize() / 2)) {
+                                $body->mallocTrim();
+                            }
+                        }
                         break 2;
                     }
                     if (!$headersComplete) {
@@ -189,9 +207,13 @@ trait ReceiverTrait
                                 $defaultKeepAlive = $parser->getMajorVersion() !== 1 || $parser->getMinorVersion() !== 0;
                                 $shouldKeepAlive = $parser->shouldKeepAlive();
                                 $this->keepAlive = $shouldKeepAlive !== $defaultKeepAlive ? $shouldKeepAlive : null;
-                                $contentLength = $parser->getContentLength();
-                                if ($contentLength > $maxContentLength) {
-                                    throw new HttpException(HttpStatus::REQUEST_ENTITY_TOO_LARGE);
+                                if ($parser->isChunked()) {
+                                    $isChunked = true;
+                                } else {
+                                    $contentLength = $parser->getContentLength();
+                                    if ($contentLength > $maxContentLength) {
+                                        throw new HttpException(HttpStatus::REQUEST_ENTITY_TOO_LARGE);
+                                    }
                                 }
                                 $headersComplete = true;
                                 if ($parser->isMultipart()) {
@@ -214,11 +236,23 @@ trait ReceiverTrait
                     } elseif ($isMultipart) {
                         switch ($event) {
                             case HttpParser::EVENT_MULTIPART_HEADER_FIELD:
-                                $multipartHeaderName = strtolower($data);
+                            {
+                                if ($event !== $previousEvent) {
+                                    $multipartHeaderName = strtolower($data);
+                                } else {
+                                    $multipartHeaderName .= strtolower($data);
+                                }
                                 break;
+                            }
                             case HttpParser::EVENT_MULTIPART_HEADER_VALUE:
-                                $multipartHeaders[$multipartHeaderName] = $data;
+                            {
+                                if ($event !== $previousEvent) {
+                                    $multipartHeaders[$multipartHeaderName] = $data;
+                                } else {
+                                    $multipartHeaders[$multipartHeaderName] .= $data;
+                                }
                                 break;
+                            }
                             case HttpParser::EVENT_MULTIPART_HEADERS_COMPLETE:
                             {
                                 $multiPartHeadersComplete = true;
@@ -283,8 +317,19 @@ trait ReceiverTrait
                         switch ($event) {
                             case HttpParser::EVENT_BODY:
                             {
+                                $data = $buffer->toString();
+                                $dataOffset = $parser->getDataOffset();
+                                $dataLength = $parser->getDataLength();
+                                if ($isChunked) {
+                                    $currentChunkLength -= $dataLength;
+                                    if ($currentChunkLength < 0) {
+                                        throw new HttpParserException('Unexpected body data (chunk overflow)');
+                                    }
+                                    ($body ??= new Buffer())->write($data, $dataOffset, $dataLength);
+                                    break;
+                                }
                                 $body = new Buffer($contentLength);
-                                $body->write($buffer->toString(), $parser->getDataOffset(), $parser->getDataLength());
+                                $body->write($data, $dataOffset, $dataLength);
                                 $neededLength = $contentLength - $body->getLength();
                                 if ($neededLength > 0) {
                                     $this->read($body, $neededLength);
@@ -298,6 +343,24 @@ trait ReceiverTrait
                                 }
                                 break 3; /* end */
                             }
+                            case HttpParser::EVENT_CHUNK_HEADER:
+                            {
+                                $currentChunkLength = $parser->getCurrentChunkLength();
+                                $contentLength += $currentChunkLength;
+                                if ($contentLength > $maxContentLength) {
+                                    throw new HttpException(HttpStatus::REQUEST_ENTITY_TOO_LARGE);
+                                }
+                                break;
+                            }
+                            case HttpParser::EVENT_CHUNK_COMPLETE:
+                            {
+                                if ($currentChunkLength !== 0) {
+                                    throw new HttpParserException('Unexpected chunk eof');
+                                }
+                                break;
+                            }
+                            default:
+                                throw new HttpParserException('Unexpected Http-Parser event');
                         }
                     }
                 }
