@@ -17,7 +17,7 @@ use Swow\Coroutine;
 use Swow\WatchDog;
 
 // 0.1s/t
-WatchDog::run(100 * 1000 * 1000, 0, function (): void {
+WatchDog::run(100 * 1000 * 1000, 0, static function (): void {
     $coroutine = Coroutine::getCurrent();
     $coroutine->__alert_count = ($coroutine->__alert_count ?? 0) + 1;
     echo 'CPU starvation occurred, suspend this coroutine...' . PHP_EOL;
@@ -28,7 +28,7 @@ WatchDog::run(100 * 1000 * 1000, 0, function (): void {
     }
 });
 
-Coroutine::run(function (): void {
+Coroutine::run(static function (): void {
     $s = microtime(true);
     for ($n = 5; $n--;) {
         echo 'Do something...' . PHP_EOL;

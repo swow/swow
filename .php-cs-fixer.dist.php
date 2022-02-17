@@ -137,6 +137,7 @@ return (new PhpCsFixer\Config())
         'php_unit_test_case_static_method_calls' => [
             'call_type' => 'this',
         ],
+        'static_lambda' => true,
         'void_return' => true,
     ])
     ->setFinder(

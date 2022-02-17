@@ -13,7 +13,7 @@ declare(strict_types=1);
 
 use Swow\Coroutine;
 
-$coroutine = Coroutine::run(function (): void {
+$coroutine = Coroutine::run(static function (): void {
     while (true) {
         try {
             // output: int(999)

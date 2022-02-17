@@ -245,7 +245,7 @@ TEXT;
             $pathMap = json_decode(file_get_contents($pathMap), true, 512, JSON_THROW_ON_ERROR);
             if ((is_countable($pathMap) ? count($pathMap) : 0) > 0) {
                 /* This can help you to see the real source position in the host machine in the terminal */
-                $this->setSourcePositionHandler(function (string $sourcePosition) use ($pathMap): string {
+                $this->setSourcePositionHandler(static function (string $sourcePosition) use ($pathMap): string {
                     $search = $replace = [];
                     foreach ($pathMap as $key => $value) {
                         $search[] = $key;
@@ -875,7 +875,7 @@ TEXT;
             return;
         }
         $signalChannel = new Channel();
-        $signalListener = Coroutine::run(function () use ($signalChannel): void {
+        $signalListener = Coroutine::run(static function () use ($signalChannel): void {
             // Always wait signal int, prevent signals from coming in gaps
             Signal::wait(Signal::INT);
             $signalChannel->push(true);
@@ -1069,7 +1069,7 @@ TEXT;
                             }
                             if ($command === 'exec') {
                                 $transfer = new Channel();
-                                Coroutine::run(function () use ($expression, $transfer) {
+                                Coroutine::run(static function () use ($expression, $transfer): void {
                                     $transfer->push(Coroutine::getCurrent()->eval($expression));
                                 });
                                 // TODO: support ctrl + c (also support ctrl + c twice confirm on global scope?)
@@ -1192,7 +1192,7 @@ TEXT;
     public static function showExecutedSourceLines(bool $all = false): void
     {
         if ($all) {
-            $handler = function (): void {
+            $handler = static function (): void {
                 static $lastFile = '', $firstTouch = false;
                 if (!$firstTouch) {
                     /* skip for this function ending */
@@ -1219,7 +1219,7 @@ TEXT;
                 $lines[] = rtrim($line);
             }
             fclose($fp);
-            $handler = function () use ($file, $lines): void {
+            $handler = static function () use ($file, $lines): void {
                 $call = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 1)[0];
                 $callFile = $call['file'];
                 $callLine = $call['line'];

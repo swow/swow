@@ -16,10 +16,10 @@ use Swow\Sync\WaitReference;
 use Swow\WatchDog;
 
 /* if CPU starvation occurred, kill the coroutine */
-WatchDog::run(0, 0, function (): void { exit; });
+WatchDog::run(0, 0, static function (): void { exit; });
 
 $wf = new WaitReference();
-Coroutine::run(function () use ($wf): void {
+Coroutine::run(static function () use ($wf): void {
     $count = 0;
     while (true) {
         $count++;

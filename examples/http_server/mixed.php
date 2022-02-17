@@ -37,7 +37,7 @@ $server->bind($host, $port)->listen($backlog);
 while (true) {
     try {
         $connection = $server->acceptConnection();
-        Coroutine::run(function () use ($connection): void {
+        Coroutine::run(static function () use ($connection): void {
             try {
                 while (true) {
                     $request = null;

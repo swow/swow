@@ -21,7 +21,7 @@ use function Swow\Sync\waitAll;
 Debugger::runOnTTY();
 
 for ($n = 1; $n <= 3; $n++) {
-    Coroutine::run(function () use ($n): void {
+    Coroutine::run(static function () use ($n): void {
         $tip = "I am zombie {$n}";
         if (random_int(0, 1)) {
             Coroutine::yield();
@@ -32,20 +32,20 @@ for ($n = 1; $n <= 3; $n++) {
     });
 }
 for ($n = 1; $n < 10; $n++) {
-    Coroutine::run(function () use ($n): void {
+    Coroutine::run(static function () use ($n): void {
         $count = 1;
         while ($count) {
-            $c = function () use ($n, &$count): void {
+            $c = static function () use ($n, &$count): void {
                 $tip = 'I am C';
                 usleep($n * 111111);
                 unset($tip);
             };
-            $b = function () use ($c): void {
+            $b = static function () use ($c): void {
                 $tip = 'I am B';
                 $c();
                 unset($tip);
             };
-            $a = function () use ($b): void {
+            $a = static function () use ($b): void {
                 $tip = 'I am A';
                 $b();
                 unset($tip);

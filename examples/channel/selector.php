@@ -19,15 +19,15 @@ $channel1 = new Channel();
 $channel2 = new Channel();
 $channel3 = new Channel();
 
-Coroutine::run(function () use ($channel1): void {
+Coroutine::run(static function () use ($channel1): void {
     sleep(1);
     $channel1->push('one');
 });
-Coroutine::run(function () use ($channel2): void {
+Coroutine::run(static function () use ($channel2): void {
     sleep(2);
     $channel2->push('two');
 });
-Coroutine::run(function () use ($channel3): void {
+Coroutine::run(static function () use ($channel3): void {
     sleep(3);
     $channel3->push('three');
 });

@@ -36,7 +36,7 @@ while (true) {
     } catch (SocketException $exception) {
         break;
     }
-    Coroutine::run(function () use ($connection): void {
+    Coroutine::run(static function () use ($connection): void {
         $buffer = new Buffer();
         $parser = (new Parser())->setType(Parser::TYPE_REQUEST)->setEvents(Parser::EVENT_BODY);
         $body = null;

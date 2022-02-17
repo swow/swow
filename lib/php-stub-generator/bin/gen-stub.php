@@ -24,7 +24,7 @@ foreach ([0, 2] as $level) {
 use Swow\StubGenerator;
 use function Swow\Util\processExecute;
 
-$genStub = function (): void {
+$genStub = static function (): void {
     global $argv;
     $options = getopt('h', ['help', 'noinspection', 'stub-file::', 'gen-arginfo-mode', 'function-filter::', 'class-filter::'], $restIndex);
     $argv = array_slice($argv, $restIndex);
@@ -51,7 +51,7 @@ TEXT
     if (isset($options['stub-file'])) {
         $constantMap = $g->getConstantMap();
         $declarationMap = $g->getExtensionFunctionAndClassReflectionsGroupByNamespace();
-        $declarationMap = array_map(fn (array $reflections) => array_keys($reflections), $declarationMap);
+        $declarationMap = array_map(static fn (array $reflections) => array_keys($reflections), $declarationMap);
         $data = serialize([
             'constants' => $constantMap,
             'declarations' => $declarationMap,
@@ -71,7 +71,7 @@ TEXT
         $g->setGenArginfoMode();
     }
     if (isset($options['function-filter']) || isset($options['class-filter'])) {
-        $getFilterMap = function (string $filterString) {
+        $getFilterMap = static function (string $filterString) {
             $filterList = array_map('trim', explode('|', $filterString));
             $filterMap = [];
             foreach ($filterList as $item) {
@@ -81,7 +81,7 @@ TEXT
         };
         $functionFilterMap = $getFilterMap($options['function-filter'] ?? '');
         $classFilterMap = $getFilterMap($options['class-filter'] ?? '');
-        $g->addFilter(function (ReflectionFunction|ReflectionClass $reflection) use ($functionFilterMap, $classFilterMap) {
+        $g->addFilter(static function (ReflectionFunction|ReflectionClass $reflection) use ($functionFilterMap, $classFilterMap) {
             $name = str_replace('\\', '_', $reflection->getName());
             if ($functionFilterMap && $reflection instanceof ReflectionFunction) {
                 return isset($functionFilterMap[$name]);

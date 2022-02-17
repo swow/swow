@@ -23,7 +23,7 @@ require __DIR__ . '/autoload.php';
 
 $workSpace = __DIR__ . '/../ext/deps';
 
-$sysTempDir = (function (): string {
+$sysTempDir = (static function (): string {
     if (is_writable('/tmp')) {
         return '/tmp';
     }
@@ -32,7 +32,7 @@ $sysTempDir = (function (): string {
     return $tempDir;
 })();
 
-$sync = function (string $name, string $url, string $sourceDir, string $targetDir, array $requires = []) use ($sysTempDir): string {
+$sync = static function (string $name, string $url, string $sourceDir, string $targetDir, array $requires = []) use ($sysTempDir): string {
     if (PHP_OS_FAMILY === 'Windows') {
         throw new RuntimeException('Linux only');
     }
@@ -52,7 +52,7 @@ $sync = function (string $name, string $url, string $sourceDir, string $targetDi
         if (!mkdir($tmpSourceDir, 0755, true)) {
             throw new RuntimeException("Unable to create tmp source dir '{$tmpSourceDir}'");
         }
-        defer($defer, function () use ($tmpSourceDir): void {
+        defer($defer, static function () use ($tmpSourceDir): void {
             if (is_dir($tmpSourceDir)) {
                 FileSystem::remove($tmpSourceDir);
             }
@@ -107,7 +107,7 @@ $sync = function (string $name, string $url, string $sourceDir, string $targetDi
     return $version;
 };
 
-$syncFromGit = function (string $orgName, string $repoName, string $sourceDir, string $targetDir, array $requires = []) use ($sync): array {
+$syncFromGit = static function (string $orgName, string $repoName, string $sourceDir, string $targetDir, array $requires = []) use ($sync): array {
     $fullName = "{$orgName}/{$repoName}";
     log("Sync {$fullName}...");
     $url = null;

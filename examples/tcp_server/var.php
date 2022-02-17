@@ -24,11 +24,11 @@ $wr = new WaitReference();
 
 $server = new VarStream();
 $server->bind('127.0.0.1')->listen();
-Coroutine::run(function () use ($server, $wr): void {
+Coroutine::run(static function () use ($server, $wr): void {
     try {
         while (true) {
             $connection = $server->accept();
-            Coroutine::run(function () use ($connection, $wr): void {
+            Coroutine::run(static function () use ($connection, $wr): void {
                 echo "Connection<fd={$connection->getFd()}> accepted" . PHP_EOL;
                 try {
                     while (true) {

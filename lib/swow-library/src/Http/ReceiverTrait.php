@@ -281,7 +281,7 @@ trait ReceiverTrait
                             }
                             case HttpParser::EVENT_MULTIPART_DATA_END:
                             {
-                                $contentDispositionParts = array_map(function (string $s) {
+                                $contentDispositionParts = array_map(static function (string $s) {
                                     return trim($s, ' ;');
                                 }, explode(';', $multipartHeaders['content-disposition'] ?? ''));
                                 if (($contentDispositionParts[0] ?? '') !== 'form-data') {

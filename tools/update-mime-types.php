@@ -60,7 +60,7 @@ if (!$skeletonSource) {
 
 info('update Mime source file...');
 
-$escapeConstantName = function (string $constantName): string {
+$escapeConstantName = static function (string $constantName): string {
     return str_replace(['-'], ['_'],
         (!preg_match('/^[a-zA-Z_\x80-\xff]$/', $constantName[0]) ? '_' : '') . strtoupper($constantName)
     );

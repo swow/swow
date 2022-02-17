@@ -15,7 +15,7 @@ $server = new Swow\Socket(Swow\Socket::TYPE_TCP);
 $server->bind('127.0.0.1', 9764)->listen();
 while (true) {
     $connection = $server->accept();
-    Swow\Coroutine::run(function () use ($connection): void {
+    Swow\Coroutine::run(static function () use ($connection): void {
         $buffer = new Swow\Buffer();
         try {
             while (true) {

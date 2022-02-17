@@ -44,7 +44,7 @@ final class ServerTest extends TestCase
         /* @var Server $server */
         $serverCoroutine->eval('$GLOBALS[\'server\'] = $this;');
         $server = $GLOBALS['server'];
-        defer(function () use ($server): void {
+        defer(static function () use ($server): void {
             $server->close();
         });
 
@@ -64,7 +64,7 @@ final class ServerTest extends TestCase
         $request = new HttpRequest('GET', '/chat');
         $client->upgradeToWebSocket($request);
         $messageChannel = new Channel();
-        $worker = Coroutine::run(function () use ($client, $messageChannel): void {
+        $worker = Coroutine::run(static function () use ($client, $messageChannel): void {
             while (true) {
                 $message = $client->recvWebSocketFrame();
                 if ($message->getOpcode() === Opcode::TEXT) {
@@ -73,7 +73,7 @@ final class ServerTest extends TestCase
             }
         });
         $heartBeatCount = 0;
-        $heartBeater = Coroutine::run(function () use ($client, &$heartBeatCount): void {
+        $heartBeater = Coroutine::run(static function () use ($client, &$heartBeatCount): void {
             while (true) {
                 $client->sendString(WebSocketFrame::PING);
                 $heartBeatCount++;

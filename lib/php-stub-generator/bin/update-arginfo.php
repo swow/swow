@@ -63,7 +63,7 @@ if (!is_dir($stubCachePath)) {
 $stubCachePath = realpath($stubCachePath);
 info("Stub cache path is {$stubCachePath}");
 
-$cSourceFiles = FileSystem::scanDir($cSourcePath, function (string $filename) {
+$cSourceFiles = FileSystem::scanDir($cSourcePath, static function (string $filename) {
     return in_array(pathinfo($filename, PATHINFO_EXTENSION), ['c', 'cc', 'cpp'], true);
 });
 $functionCount = $methodCount = $replacedCount = 0;
@@ -75,10 +75,10 @@ foreach ($cSourceFiles as $cSourceFile) {
         $functionCount += count($functionNames);
     }
     if (preg_match_all('/(?:ZNED|PHP)_ME\(([^,]+,[ ]*[^,]+),[ ]*(arginfo_[^,]+)/', $cSource, $matches)) {
-        $classNames = array_unique(array_map(function (string $name) {
+        $classNames = array_unique(array_map(static function (string $name) {
             return array_map('trim', explode(',', $name))[0];
         }, $matches[1]));
-        $methodNames = array_map(function (string $name) {
+        $methodNames = array_map(static function (string $name) {
             return implode('_', array_map('trim', explode(',', $name)));
         }, $matches[1]);
         $argInfoNames = $matches[2];
