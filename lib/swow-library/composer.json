@@ -40,8 +40,5 @@
     "config": {
         "process-timeout": 0,
         "sort-packages": true
-    },
-    "scripts": {
-        "test": [ "@php -dextension=swow ../../vendor/bin/phpunit" ]
     }
 }
