@@ -36,7 +36,7 @@ class BodyParser
     {
         $data = [];
         $contentType = static::getContentType($request);
-        $contents = $request->getBody()->getContents();
+        $contents = (string) $request->getBody();
         if ($contents) {
             switch ($contentType) {
                 case MimeType::JSON:
