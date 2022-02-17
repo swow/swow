@@ -369,6 +369,8 @@ namespace Swow
 
         public function __construct(int $type = self::TYPE_TCP) { }
 
+        public function getId(): int { }
+
         public function getType(): int { }
 
         public function getSimpleType(): int { }

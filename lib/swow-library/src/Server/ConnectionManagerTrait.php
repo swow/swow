@@ -21,7 +21,7 @@ trait ConnectionManagerTrait
 
     protected function online(Socket $connection): void
     {
-        $this->connections[$connection->getFd()] = $connection;
+        $this->connections[$connection->getId()] = $connection;
     }
 
     public function offline(int $fd): void

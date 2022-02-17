@@ -103,11 +103,19 @@ static PHP_METHOD(Swow_Socket, __construct)
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_getLong, ZEND_RETURN_VALUE, 0, IS_LONG, 0)
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_getString, ZEND_RETURN_VALUE, 0, IS_STRING, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_getId, 0, 0, IS_LONG, 0)
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_getType, 0, 0, IS_LONG, 0)
-ZEND_END_ARG_INFO()
+static PHP_METHOD(Swow_Socket, getId)
+{
+    SWOW_SOCKET_GETTER(ssocket, socket);
+
+    ZEND_PARSE_PARAMETERS_NONE();
+
+    RETURN_LONG(cat_socket_get_id(socket));
+}
+
+#define arginfo_class_Swow_Socket_getType arginfo_class_Swow_Socket_getId
 
 static PHP_METHOD(Swow_Socket, getType)
 {
@@ -118,7 +126,7 @@ static PHP_METHOD(Swow_Socket, getType)
     RETURN_LONG(cat_socket_get_type(socket));
 }
 
-#define arginfo_class_Swow_Socket_getSimpleType arginfo_class_Swow_Socket_getType
+#define arginfo_class_Swow_Socket_getSimpleType arginfo_class_Swow_Socket_getId
 
 static PHP_METHOD(Swow_Socket, getSimpleType)
 {
@@ -152,7 +160,7 @@ static PHP_METHOD(Swow_Socket, getSimpleTypeName)
     RETURN_STRING(cat_socket_get_simple_type_name(socket));
 }
 
-#define arginfo_class_Swow_Socket_getFd arginfo_class_Swow_Socket_getType
+#define arginfo_class_Swow_Socket_getFd arginfo_class_Swow_Socket_getId
 
 static PHP_METHOD(Swow_Socket, getFd)
 {
@@ -484,7 +492,8 @@ static PHP_METHOD(Swow_Socket, connect)
     RETURN_THIS();
 }
 
-#define arginfo_class_Swow_Socket_getAddress arginfo_class_Swow_Socket_getString
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_getAddress, ZEND_RETURN_VALUE, 0, IS_STRING, 0)
+ZEND_END_ARG_INFO()
 
 static PHP_METHOD_EX(Swow_Socket, getAddress, zend_bool is_peer)
 {
@@ -1381,7 +1390,7 @@ SWOW_SOCKET_IS_XXX_API_GEN(ServerConnection, server_connection)
 
 SWOW_SOCKET_IS_XXX_API_GEN(Client, client)
 
-#define arginfo_class_Swow_Socket_getConnectionError arginfo_class_Swow_Socket_getType
+#define arginfo_class_Swow_Socket_getConnectionError arginfo_class_Swow_Socket_getId
 
 static PHP_METHOD(Swow_Socket, getConnectionError)
 {
@@ -1412,7 +1421,7 @@ static PHP_METHOD(Swow_Socket, checkLiveness)
     RETURN_THIS();
 }
 
-#define arginfo_class_Swow_Socket_getIoState arginfo_class_Swow_Socket_getType
+#define arginfo_class_Swow_Socket_getIoState arginfo_class_Swow_Socket_getId
 
 static PHP_METHOD(Swow_Socket, getIoState)
 {
@@ -1445,7 +1454,7 @@ static PHP_METHOD(Swow_Socket, getIoStateNaming)
     RETURN_STRING(cat_socket_get_io_state_naming(socket));
 }
 
-#define arginfo_class_Swow_Socket_getRecvBufferSize arginfo_class_Swow_Socket_getType
+#define arginfo_class_Swow_Socket_getRecvBufferSize arginfo_class_Swow_Socket_getId
 
 static PHP_METHOD(Swow_Socket, getRecvBufferSize)
 {
@@ -1456,7 +1465,7 @@ static PHP_METHOD(Swow_Socket, getRecvBufferSize)
     RETURN_LONG(cat_socket_get_recv_buffer_size(socket));
 }
 
-#define arginfo_class_Swow_Socket_getSendBufferSize arginfo_class_Swow_Socket_getType
+#define arginfo_class_Swow_Socket_getSendBufferSize arginfo_class_Swow_Socket_getId
 
 static PHP_METHOD(Swow_Socket, getSendBufferSize)
 {
@@ -1654,6 +1663,7 @@ static PHP_METHOD(Swow_Socket, __debugInfo)
 
 static const zend_function_entry swow_socket_methods[] = {
     PHP_ME(Swow_Socket, __construct,               arginfo_class_Swow_Socket___construct,         ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Socket, getId,                     arginfo_class_Swow_Socket_getId,               ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Socket, getType,                   arginfo_class_Swow_Socket_getType,             ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Socket, getSimpleType,             arginfo_class_Swow_Socket_getSimpleType,       ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Socket, getTypeName,               arginfo_class_Swow_Socket_getTypeName,         ZEND_ACC_PUBLIC)

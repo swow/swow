@@ -67,7 +67,7 @@ class Server extends Socket
                 }
             } catch (SocketException $exception) {
                 /* record it and ignore */
-                $exceptions[$target->getFd()] = $exception;
+                $exceptions[$target->getId()] = $exception;
             }
         }
 

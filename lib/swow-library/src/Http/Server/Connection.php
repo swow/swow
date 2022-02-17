@@ -219,7 +219,7 @@ class Connection extends Socket implements HttpTypeInterface
     protected function offline(): void
     {
         if ($this->server) {
-            $this->server->offline($this->getFd());
+            $this->server->offline($this->getId());
             $this->server = null;
         }
     }
