@@ -35,8 +35,7 @@ CAT_API cat_bool_t cat_kill(int pid, int signum)
     return cat_true;
 }
 
-typedef union
-{
+typedef union {
     cat_coroutine_t *coroutine;
     uv_handle_t handle;
     uv_signal_t signal;

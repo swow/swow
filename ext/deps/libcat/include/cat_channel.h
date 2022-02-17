@@ -37,6 +37,7 @@ typedef uint8_t cat_channel_flags_t;
 typedef uint32_t cat_channel_size_t;
 #define CAT_CHANNEL_SIZE_FMT "%u"
 #define CAT_CHANNEL_SIZE_FMT_SPEC "u"
+#define CAT_CHANNEL_SIZE_MAX UINT32_MAX
 
 typedef uint8_t cat_channel_data_size_t;
 #define CAT_CHANNEL_DATA_SIZE_FMT "%u"

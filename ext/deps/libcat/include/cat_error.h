@@ -53,6 +53,18 @@ typedef struct cat_error_s {
     /* certificate verify error */ \
     XX(ECERT, "Certificate verify error") \
 
+// workaround for orig_errno()
+#define CAT_ERRNO_EXT_ORIG_MAP(XX) \
+    XX(EMISUSE, EINVAL) \
+    XX(EVALUE, EINVAL) \
+    XX(ELOCKED, EBUSY) \
+    XX(ECLOSING, EBADF) \
+    XX(ECLOSED, EBADF) \
+    XX(EDEADLK, EBUSY) \
+    XX(ESSL, ECONNRESET) \
+    XX(ENOCERT, ECONNRESET) \
+    XX(ECERT, ECONNRESET) \
+
 typedef enum uv_errno_ext_e {
     UV__EEXT = -9764,
 #define CAT_ERRNO_EXT_GEN(code, unused) UV_ ## code,

@@ -13,6 +13,7 @@
   | limitations under the License. See accompanying LICENSE file.            |
   +--------------------------------------------------------------------------+
   | Author: Twosee <twosee@php.net>                                          |
+  |         dixyes <dixyes@gmail.com>                                        |
   +--------------------------------------------------------------------------+
  */
 
@@ -162,11 +163,11 @@ typedef enum cat_http_parser_event_flag_e {
     XX(CHUNK_HEADER,          (1 << 21)) \
     XX(CHUNK_COMPLETE,        (1 << 22) | CAT_HTTP_PARSER_EVENT_FLAG_COMPLETE) \
     /* multipart */ \
-    XX(MULTIPART_HEADER_FIELD,     (1 << 23 ) | CAT_HTTP_PARSER_EVENT_FLAG_DATA | CAT_HTTP_PARSER_EVENT_FLAG_MULTIPART) \
-    XX(MULTIPART_HEADER_VALUE,     (1 << 24) | CAT_HTTP_PARSER_EVENT_FLAG_DATA | CAT_HTTP_PARSER_EVENT_FLAG_MULTIPART) \
-    XX(MULTIPART_DATA,             (1 << 25) | CAT_HTTP_PARSER_EVENT_FLAG_DATA | CAT_HTTP_PARSER_EVENT_FLAG_MULTIPART) \
-    XX(MULTIPART_DATA_BEGIN,       (1 << 26) | CAT_HTTP_PARSER_EVENT_FLAG_MULTIPART) \
-    XX(MULTIPART_HEADERS_COMPLETE, (1 << 27) | CAT_HTTP_PARSER_EVENT_FLAG_COMPLETE | CAT_HTTP_PARSER_EVENT_FLAG_MULTIPART) \
+    XX(MULTIPART_DATA_BEGIN,       (1 << 23) | CAT_HTTP_PARSER_EVENT_FLAG_MULTIPART) \
+    XX(MULTIPART_HEADER_FIELD,     (1 << 24) | CAT_HTTP_PARSER_EVENT_FLAG_DATA | CAT_HTTP_PARSER_EVENT_FLAG_MULTIPART) \
+    XX(MULTIPART_HEADER_VALUE,     (1 << 25) | CAT_HTTP_PARSER_EVENT_FLAG_DATA | CAT_HTTP_PARSER_EVENT_FLAG_MULTIPART) \
+    XX(MULTIPART_HEADERS_COMPLETE, (1 << 26) | CAT_HTTP_PARSER_EVENT_FLAG_COMPLETE | CAT_HTTP_PARSER_EVENT_FLAG_MULTIPART) \
+    XX(MULTIPART_BODY,             (1 << 27) | CAT_HTTP_PARSER_EVENT_FLAG_DATA | CAT_HTTP_PARSER_EVENT_FLAG_MULTIPART) \
     XX(MULTIPART_DATA_END,         (1 << 28) | CAT_HTTP_PARSER_EVENT_FLAG_COMPLETE | CAT_HTTP_PARSER_EVENT_FLAG_MULTIPART) \
 
 #define CAT_HTTP_PARSER_INTERNAL_EVENT_MAP(XX) \
@@ -211,6 +212,8 @@ typedef struct cat_http_parser_s {
      * so we store it ourselves to ensure it is always available.
      * public readonly: it is not always reliable (consider chunk case) */
     uint64_t content_length;
+    /* public readonly: to distinguish it from content-length */
+    uint64_t current_chunk_length;
     /* public readonly: keep alive (update on headers complete) */
     cat_bool_t keep_alive;
     /* private: internal flags */
@@ -350,9 +353,22 @@ CAT_API const char *cat_http_parser_get_reason_phrase(const cat_http_parser_t *p
 */
 CAT_API uint64_t cat_http_parser_get_content_length(const cat_http_parser_t *parser);
 /*
+* get current http chunk length
+*/
+CAT_API uint64_t cat_http_parser_get_current_chunk_length(const cat_http_parser_t *parser);
+/*
+* tell if its' transfer-encoding is chunked
+*/
+CAT_API cat_bool_t cat_http_parser_is_chunked(const cat_http_parser_t *parser);
+/*
 * tell if needs protocol upgrade
 */
 CAT_API cat_bool_t cat_http_parser_is_upgrade(const cat_http_parser_t *parser);
+/*
+* tell if its' content-type is multipart form data
+* Notice: it should be called after headers complete event triggered
+*/
+CAT_API cat_bool_t cat_http_parser_is_multipart(const cat_http_parser_t *parser);
 
 #ifdef __cplusplus
 }

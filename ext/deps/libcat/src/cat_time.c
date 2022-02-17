@@ -103,8 +103,7 @@ CAT_API char *cat_time_format_msec(cat_msec_t msec)
 #undef SECOND
 }
 
-typedef union
-{
+typedef union {
     cat_coroutine_t *coroutine;
     uv_handle_t handle;
     uv_timer_t timer;

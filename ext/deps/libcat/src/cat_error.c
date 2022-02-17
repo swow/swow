@@ -304,99 +304,103 @@ CAT_API const char *cat_strerror(cat_errno_t error)
 #ifndef EILSEQ
 #define EILSEQ 84
 #endif
+#ifndef EUNKNOWN
+#define EUNKNOWN -1
+#endif
 
 #define ORIG_ERRNO_MAP(E) \
-    E(E2BIG, 7)\
-    E(EACCES, 13)\
-    E(EADDRINUSE, 98)\
-    E(EADDRNOTAVAIL, 99)\
-    E(EAFNOSUPPORT, 97)\
-    E(EAGAIN, 11)\
-    E(EALREADY, 114)\
-    E(EBADF, 9)\
-    E(EBUSY, 16)\
-    E(ECANCELED, 125)\
-    E(ECHARSET, 84)\
-    E(ECONNABORTED, 103)\
-    E(ECONNREFUSED, 111)\
-    E(ECONNRESET, 104)\
-    E(EDESTADDRREQ, 89)\
-    E(EEXIST, 17)\
-    E(EFAULT, 14)\
-    E(EFBIG, 27)\
-    E(EHOSTUNREACH, 113)\
-    E(EINTR, 4)\
-    E(EINVAL, 22)\
-    E(EIO, 5)\
-    E(EISCONN, 106)\
-    E(EISDIR, 21)\
-    E(ELOOP, 40)\
-    E(EMFILE, 24)\
-    E(EMSGSIZE, 90)\
-    E(ENAMETOOLONG, 36)\
-    E(ENETDOWN, 100)\
-    E(ENETUNREACH, 101)\
-    E(ENFILE, 23)\
-    E(ENOBUFS, 105)\
-    E(ENODEV, 19)\
-    E(ENOENT, 2)\
-    E(ENOMEM, 12)\
-    E(ENONET, 64)\
-    E(ENOPROTOOPT, 92)\
-    E(ENOSPC, 28)\
-    E(ENOSYS, 38)\
-    E(ENOTCONN, 107)\
-    E(ENOTDIR, 20)\
-    E(ENOTEMPTY, 39)\
-    E(ENOTSOCK, 88)\
-    E(ENOTSUP, 95)\
-    E(EPERM, 1)\
-    E(EPIPE, 32)\
-    E(EPROTO, 71)\
-    E(EPROTONOSUPPORT, 93)\
-    E(EPROTOTYPE, 91)\
-    E(ERANGE, 34)\
-    E(EROFS, 30)\
-    E(ESHUTDOWN, 108)\
-    E(ESPIPE, 29)\
-    E(ESRCH, 3)\
-    E(ETIMEDOUT, 110)\
-    E(ETXTBSY, 26)\
-    E(EXDEV, 18)\
-    E(ENXIO, 6)\
-    E(EMLINK, 31)\
-    E(EHOSTDOWN, 112)\
-    E(EREMOTEIO, 121)\
-    E(ENOTTY, 25)\
-    E(EILSEQ, 84)
+    E(E2BIG) \
+    E(EACCES) \
+    E(EADDRINUSE) \
+    E(EADDRNOTAVAIL) \
+    E(EAFNOSUPPORT) \
+    E(EAGAIN) \
+    E(EALREADY) \
+    E(EBADF) \
+    E(EBUSY) \
+    E(ECANCELED) \
+    E(ECHARSET) \
+    E(ECONNABORTED) \
+    E(ECONNREFUSED) \
+    E(ECONNRESET) \
+    E(EDESTADDRREQ) \
+    E(EEXIST) \
+    E(EFAULT) \
+    E(EFBIG) \
+    E(EHOSTUNREACH) \
+    E(EINTR) \
+    E(EINVAL) \
+    E(EIO) \
+    E(EISCONN) \
+    E(EISDIR) \
+    E(ELOOP) \
+    E(EMFILE) \
+    E(EMSGSIZE) \
+    E(ENAMETOOLONG) \
+    E(ENETDOWN) \
+    E(ENETUNREACH) \
+    E(ENFILE) \
+    E(ENOBUFS) \
+    E(ENODEV) \
+    E(ENOENT) \
+    E(ENOMEM) \
+    E(ENONET) \
+    E(ENOPROTOOPT) \
+    E(ENOSPC) \
+    E(ENOSYS) \
+    E(ENOTCONN) \
+    E(ENOTDIR) \
+    E(ENOTEMPTY) \
+    E(ENOTSOCK) \
+    E(ENOTSUP) \
+    E(EPERM) \
+    E(EPIPE) \
+    E(EPROTO) \
+    E(EPROTONOSUPPORT) \
+    E(EPROTOTYPE) \
+    E(ERANGE) \
+    E(EROFS) \
+    E(ESHUTDOWN) \
+    E(ESPIPE) \
+    E(ESRCH) \
+    E(ETIMEDOUT) \
+    E(ETXTBSY) \
+    E(EXDEV) \
+    E(ENXIO) \
+    E(EMLINK) \
+    E(EHOSTDOWN) \
+    E(EREMOTEIO) \
+    E(ENOTTY) \
+    E(EILSEQ)
 
 // shall we make separate posix errno code ?
 /* return original posix errno from uv errno */
 CAT_API int cat_orig_errno(cat_errno_t error)
 {
-#define CAT_ERROR_GEN(name, _) \
-    if(error == UV_ ## name)\
-        return name;
-
-    ORIG_ERRNO_MAP(CAT_ERROR_GEN)
-#undef CAT_ERROR_GEN
-#define CAT_ERROR_GEN(name, _) \
-    if(error == -name)\
-        return name;
-
+#define CAT_ERROR_GEN(name) \
+    if (error == UV_ ## name) { \
+        return name; \
+    }
     ORIG_ERRNO_MAP(CAT_ERROR_GEN)
 #undef CAT_ERROR_GEN
 
-    return -1;
+#define CAT_ERROR_GEN(a, b) \
+    if (error == CAT_##a) { \
+        return b; \
+    }
+    CAT_ERRNO_EXT_ORIG_MAP(CAT_ERROR_GEN)
+#undef CAT_ERROR_GEN
+
+    return EUNKNOWN;
 }
 
 #ifdef CAT_OS_WIN
 /* return uv errno from posix errno */
 /* why so WET */
-cat_errno_t cat_translate_unix_error(int error){
-#define CAT_ERROR_GEN(name, _)\
-    if(error == name){\
-        return CAT_##name;\
+cat_errno_t cat_translate_unix_error(int error) {
+#define CAT_ERROR_GEN(name, _) \
+    if (error == name){ \
+        return CAT_##name; \
     }
 
     ORIG_ERRNO_MAP(CAT_ERROR_GEN)
