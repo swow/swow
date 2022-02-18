@@ -17,11 +17,20 @@ use PHPUnit\Framework\TestCase;
 use Swow\Channel;
 use Swow\Coroutine;
 use Swow\Http\Client as HttpClient;
+use Swow\Http\MimeType;
 use Swow\Http\Request as HttpRequest;
+use Swow\Http\Server as HttpServer;
+use Swow\Http\Uri;
 use Swow\Http\WebSocketFrame;
+use Swow\Sync\WaitReference;
 use Swow\WebSocket\Opcode;
 use function file_exists;
+use function getRandomBytes;
+use function http_build_query;
+use function json_encode;
+use function serialize;
 use function Swow\defer;
+use function unserialize;
 use function usleep;
 use const TEST_MAX_REQUESTS;
 
@@ -31,6 +40,38 @@ use const TEST_MAX_REQUESTS;
  */
 final class ServerTest extends TestCase
 {
+    public function testHttpServer(): void
+    {
+        $randomBytes = getRandomBytes();
+        $query = ['foo' => 'bar', 'baz' => $randomBytes];
+
+        $server = new HttpServer();
+        $server->bind('127.0.0.1')->listen();
+        $wr = new WaitReference();
+        Coroutine::run(function () use ($server, $query, $wr): void {
+            $connection = $server->acceptConnection();
+            $request = $connection->recvHttpRequest();
+            $this->assertSame($query, $request->getQueryParams());
+            $this->assertSame($query, $request->getParsedBody());
+            $connection->respond(serialize($query));
+        });
+
+        $client = new HttpClient();
+        $request = new HttpRequest();
+        $uri = (new Uri('/'))->setQuery(http_build_query($query));
+        $request
+            ->setUri($uri)
+            ->setHeader('Content-Type', MimeType::JSON)
+            ->getBody()
+            ->write(json_encode($query));
+        $response = $client
+            ->connect($server->getSockAddress(), $server->getSockPort())
+            ->sendRequest($request);
+        $this->assertSame($query, unserialize($response->getBodyAsString()));
+
+        $wr::wait($wr);
+    }
+
     public function testMixedServer(): void
     {
         $mixedServerFile = __DIR__ . '/../../../../examples/http_server/mixed.php';

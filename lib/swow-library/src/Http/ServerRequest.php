@@ -118,11 +118,7 @@ class ServerRequest extends Request implements ServerRequestInterface
 
     public function getParsedBody(): null|array|object
     {
-        if (isset($this->parsedBody)) {
-            return $this->parsedBody;
-        }
-
-        return $this->parsedBody = BodyParser::parse($this);
+        return $this->parsedBody ??= BodyParser::parse($this);
     }
 
     public function setParsedBody(null|array|object $data): static
