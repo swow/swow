@@ -71,8 +71,8 @@ TEXT
         $g->setGenArginfoMode();
     }
     if (isset($options['function-filter']) || isset($options['class-filter'])) {
-        $getFilterMap = static function (string $filterString) {
-            $filterList = array_map('trim', explode('|', $filterString));
+        $getFilterMap = static function (string $filterString): array {
+            $filterList = array_filter(array_map('trim', explode('|', $filterString)));
             $filterMap = [];
             foreach ($filterList as $item) {
                 $filterMap[$item] = true;

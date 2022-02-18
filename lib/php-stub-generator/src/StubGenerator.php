@@ -19,7 +19,9 @@ use ReflectionException;
 use ReflectionExtension;
 use ReflectionFunction;
 use ReflectionFunctionAbstract;
+use ReflectionIntersectionType;
 use ReflectionMethod;
+use ReflectionNamedType;
 use ReflectionProperty;
 use ReflectionUnionType;
 use Reflector;
@@ -66,10 +68,14 @@ class StubGenerator
 
     protected ReflectionExtension $extension;
 
+    /** @var array<string, array<string, int|float|bool|string|array<mixed>>> */
     protected array $constantMap;
 
+    /** @var array<string> */
     protected array $headerComment = [];
+    /** @var array<string> */
     protected array $noinspection = [];
+    /** @var array<string, string> */
     protected array $commentMap = [];
     /* Disable some features because php-src gen_stub.php not support it */
     protected bool $genArginfoMode = false;
@@ -93,6 +99,11 @@ class StubGenerator
         return $this;
     }
 
+    /**
+     * set no inspection options
+     *
+     * @param bool|array<string> $enable true to setup default no inspections(PhpUnused, PhpInconsistentReturnPointsInspection, PhpMissingParentConstructorInspection, PhpReturnDocTypeMismatchInspection), array of options to setup only these options
+     */
     public function setNoinspection(bool|array $enable = true): static
     {
         if (is_bool($enable)) {
@@ -109,6 +120,11 @@ class StubGenerator
         return $this;
     }
 
+    /**
+     * set comments
+     *
+     * @param array<string, string> $map
+     */
     public function setCommentMap(array $map): static
     {
         $this->commentMap = $map;
@@ -123,13 +139,21 @@ class StubGenerator
         return $this;
     }
 
-    public function addFilter(callable $filters): static
+    /**
+     * filter by filters
+     *
+     * @param callable(ReflectionFunction|ReflectionClass $functionOrClass): bool $filter
+     */
+    public function addFilter(callable $filter): static
     {
-        $this->filters[] = $filters;
+        $this->filters[] = $filter;
 
         return $this;
     }
 
+    /**
+     * @return array<string, array<string, ReflectionClass|ReflectionFunction>>
+     */
     public function getExtensionFunctionAndClassReflectionsGroupByNamespace(): array
     {
         $reflections = [];
@@ -140,7 +164,10 @@ class StubGenerator
         return $reflections;
     }
 
-    public function generate($output = null): void
+    /**
+     * @param string|resource|null $output
+     */
+    public function generate(mixed $output = null): void
     {
         $declarations = [];
 
@@ -195,7 +222,7 @@ class StubGenerator
         }
     }
 
-    protected static function convertValueToString($value): string
+    protected static function convertValueToString(mixed $value): string
     {
         return match (true) {
             is_int($value), is_float($value) => (string) ($value),
@@ -207,6 +234,11 @@ class StubGenerator
         };
     }
 
+    /**
+     * get constant map like `[ '\Some\Namespace_' => [ 'SOME_CONST' => 1 ] ]`
+     *
+     * @return array<string, array<string, int|float|bool|string|array<mixed>>>
+     */
     public function getConstantMap(): array
     {
         if (isset($this->constantMap)) {
@@ -230,6 +262,9 @@ class StubGenerator
         return !empty($this->getConstantsOfNamespace($namespacedName));
     }
 
+    /**
+     * @return array<string, int|float|bool|string|array<mixed>>
+     */
     protected function getConstantsOfNamespace(string $namespacedName): array
     {
         return $this->getConstantMap()[$namespacedName] ?? [];
@@ -280,6 +315,9 @@ class StubGenerator
         return implode(' ', $prefix);
     }
 
+    /**
+     * @param string|array<string> $comment
+     */
     protected static function genComment(string|array $comment): string
     {
         if (is_array($comment)) {
@@ -298,6 +336,9 @@ class StubGenerator
         return $comment;
     }
 
+    /**
+     * @param string|array<string> $comment
+     */
     protected function formatFunction(ReflectionFunctionAbstract $function, string|array $comment, string $prefix, string $name, string $params, string $returnType, string $body): string
     {
         $comment = static::genComment($comment);
@@ -325,12 +366,13 @@ class StubGenerator
         $params = $function->getParameters();
         foreach ($params as $param) {
             $variadic = $param->isVariadic() ? '...' : '';
+            /** @var ReflectionNamedType|ReflectionUnionType|ReflectionIntersectionType|null */
             $paramTypeReflection = $param->getType();
             if ($paramTypeReflection) {
-                if ($paramTypeReflection instanceof ReflectionUnionType) {
-                    $paramTypeNames = $paramTypeReflection->getTypes();
-                } else {
+                if ($paramTypeReflection instanceof ReflectionNamedType) {
                     $paramTypeNames = [$paramTypeReflection->getName()];
+                } else {
+                    $paramTypeNames = $paramTypeReflection->getTypes();
                 }
             } else {
                 $paramTypeNames = [];
@@ -349,7 +391,14 @@ class StubGenerator
             } catch (ReflectionException) {
                 $paramDefaultValueIsNull = false;
             }
-            $paramTypeName = implode('|', $paramTypeNames);
+            switch (true) {
+                case $paramTypeReflection instanceof ReflectionIntersectionType:
+                    $paramTypeName = implode('&', $paramTypeNames);
+                    break;
+                default:
+                    $paramTypeName = implode('|', $paramTypeNames);
+                    break;
+            }
             if (count($paramTypeNames) === 1 && $paramTypeName !== 'mixed' && ($param->allowsNull() || $paramDefaultValueIsNull)) {
                 $paramTypeName = "?{$paramTypeName}";
             }
@@ -421,11 +470,12 @@ class StubGenerator
         $paramsDeclaration = implode(', ', $paramsDeclarations);
 
         if ($function->hasReturnType()) {
+            /** @var ReflectionNamedType|ReflectionUnionType|ReflectionIntersectionType|null */
             $returnType = $function->getReturnType();
-            if ($returnType instanceof ReflectionUnionType) {
-                $returnTypeNames = $returnType->getTypes();
-            } else {
+            if ($returnType instanceof ReflectionNamedType) {
                 $returnTypeNames = [$returnType->getName()];
+            } else {
+                $returnTypeNames = $returnType->getTypes();
             }
             array_walk($returnTypeNames, function (string &$returnTypeName) use ($function): void {
                 if (class_exists($returnTypeName) || interface_exists($returnTypeName)) {
@@ -450,7 +500,14 @@ class StubGenerator
                     }
                 }
             });
-            $returnTypeName = implode('|', $returnTypeNames);
+            switch (true) {
+                case $returnType instanceof ReflectionIntersectionType:
+                    $returnTypeName = implode('&', $returnTypeNames);
+                    break;
+                default:
+                    $returnTypeName = implode('|', $returnTypeNames);
+                    break;
+            }
             if ($returnTypeName !== 'mixed' && !in_array('null', $returnTypeNames, true) && $returnType->allowsNull()) {
                 $returnTypeName = "?{$returnTypeName}";
             }
@@ -517,7 +574,17 @@ class StubGenerator
             $propertyParts = [];
             $propertyParts[] = $this->getDeclarationPrefix($property);
             if ($propertyType = $property->getType()) {
-                $propertyParts[] = $propertyType->getName();
+                switch (true) {
+                    case $propertyType instanceof ReflectionNamedType:
+                        $propertyParts[] = $propertyType->getName();
+                        break;
+                    case $propertyType instanceof ReflectionUnionType:
+                        $propertyParts[] = implode('|', $propertyType->getTypes());
+                        break;
+                    case $propertyType instanceof ReflectionIntersectionType:
+                        $propertyParts[] = implode('&', $propertyType->getTypes());
+                        break;
+                }
             }
             $propertyParts[] = "\${$property->getName()}";
             $propertyDeclarations[] = implode(' ', $propertyParts);
@@ -566,6 +633,9 @@ class StubGenerator
             '}';
     }
 
+    /**
+     * @param non-empty-string|null $eol
+     */
     protected static function indent(string $content, int $level, ?string $eol = null): string
     {
         $eol ??= "\n";
