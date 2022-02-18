@@ -1,5 +1,5 @@
 --TEST--
-swow_coroutine: dead lock
+swow_coroutine: deadlock
 --SKIPIF--
 <?php
 require __DIR__ . '/../include/skipif.php';
@@ -25,5 +25,5 @@ echo 'Done' . PHP_LF;
 
 ?>
 --EXPECTF--
-Warning: <COROUTINE> Dead lock: all coroutines are asleep in scheduler
+Warning: <COROUTINE> Deadlock: all coroutines are asleep in scheduler
 Done
