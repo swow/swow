@@ -99,10 +99,6 @@ jobs:
       - name: Coverage tests
         shell: bash
         run: |
-          [ x"${{ secrets.CODECOV_TOKEN }}" != x"" ] || {
-            echo "No CODECOV_TOKEN set, skipping coverage tests"
-            exit 0
-          }
           lcov \
             --capture \
             --directory "ext/src" \
@@ -116,7 +112,7 @@ jobs:
           lcov --list coverage.info &&
           curl -s https://codecov.io/bash -o codecov.sh &&
           chmod +x codecov.sh &&
-          ./codecov.sh -f coverage.info -t ${{ secrets.CODECOV_TOKEN }}
+          ./codecov.sh -f coverage.info
 
   windows-tests:
     name: PHP ${{ matrix.php-version }} ${{ matrix.ts }} Test on windows-2019
@@ -241,10 +237,6 @@ jobs:
       - name: Upload coverage tests results
         shell: pwsh
         run: |
-          if ("${{ secrets.CODECOV_TOKEN }}" -Eq "") {
-            Write-Host "No CODECOV_TOKEN set, skipping coverage tests"
-            exit 0
-          }
           # merge results
           & C:\OpenCppCoverage\OpenCppCoverage.exe `
             --input_coverage=ext_test.cov `
@@ -258,4 +250,4 @@ jobs:
             --excluded_line_regex "\s*\{\s*" `
             --modules php_swow.dll `
             -- C:\tools\php\php.exe -dextension=swow --ri swow
-          & C:\Codecov\codecov.exe -f coverage.xml -t ${{ secrets.CODECOV_TOKEN }}
+          & C:\Codecov\codecov.exe -f coverage.xml
