@@ -27,7 +27,7 @@ class Request extends \Swow\Http\ServerRequest
 
     protected bool $upgrade;
 
-    protected ?int $contentLength = null;
+    protected int $contentLength;
 
     /** @noinspection PhpMissingParentConstructorInspection */
     public function __construct()
@@ -48,7 +48,8 @@ class Request extends \Swow\Http\ServerRequest
     public function getQueryParams(): array
     {
         if (!isset($this->queryParams)) {
-            parse_str($this->query, $this->queryParams);
+            parse_str($this->query, $queryParams);
+            $this->queryParams = $queryParams;
         }
 
         return $this->queryParams;
@@ -72,7 +73,7 @@ class Request extends \Swow\Http\ServerRequest
 
     public function getContentLength(): int
     {
-        if ($this->contentLength !== null) {
+        if (isset($this->contentLength)) {
             /* @Notice Used when we do not want to recv body */
             return $this->contentLength;
         }
