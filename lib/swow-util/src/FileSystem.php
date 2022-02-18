@@ -13,6 +13,7 @@ declare(strict_types=1);
 
 namespace Swow\Util;
 
+use FilesystemIterator;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 use SplFileInfo;
@@ -34,10 +35,15 @@ use function unlink;
 
 class FileSystem
 {
+    /**
+     * list files and dir in $dir
+     *
+     * @return array<string> files and dirs name in $dir
+     */
     public static function scanDir(string $dir, ?callable $filter = null): array
     {
         $files = @scandir($dir);
-        if ($files === null) {
+        if ($files === false) {
             throw IOException::getLast();
         }
         $files = array_filter($files, static fn (string $file) => $file[0] !== '.');
@@ -46,6 +52,9 @@ class FileSystem
         return array_values($filter ? array_filter($files, $filter) : $files);
     }
 
+    /**
+     * remove a file or dir by $path
+     */
     public static function remove(string $path, bool $recursive = true): void
     {
         if (!is_dir($path) || is_link($path)) {
@@ -108,7 +117,9 @@ class FileSystem
     }
 
     /**
-     * @return array Errors that occurred in the copy() operation
+     * copy file from $source to $destination recursively
+     *
+     * @return array<array{'type': int, 'message': string, 'file': string, 'line': int}> Errors that occurred in the copy() operation
      */
     public static function copy(string $source, string $destination, bool $ignoreErrors = false): array
     {
@@ -124,22 +135,28 @@ class FileSystem
         if (!static::touchDir($source, $destination)) {
             throw IOException::getLast();
         }
-        $it = new RecursiveDirectoryIterator($source, RecursiveDirectoryIterator::SKIP_DOTS);
-        $files = new RecursiveIteratorIterator($it, RecursiveIteratorIterator::SELF_FIRST);
-        /** @var RecursiveDirectoryIterator|RecursiveIteratorIterator $files */
-        foreach ($files as $info) {
+
+        $iterator = new RecursiveDirectoryIterator(
+            $source,
+            FilesystemIterator::SKIP_DOTS |
+            FilesystemIterator::CURRENT_AS_SELF |
+            FilesystemIterator::UNIX_PATHS
+        );
+
+        $iterator = new RecursiveIteratorIterator($iterator, RecursiveIteratorIterator::SELF_FIRST);
+
+        /** @var RecursiveIteratorIterator<RecursiveDirectoryIterator<SplFileInfo>> $iterator */
+        foreach ($iterator as $rdi) {
             $ret = true;
-            $subPath = $files->getSubPathName();
-            if ($info->isDir()) {
+            $subPath = $rdi->getSubPathName();
+            if ($rdi->isDir()) {
                 $directory = "{$destination}/{$subPath}";
-                /** @var RecursiveDirectoryIterator $info */
-                if (!static::touchDir($info->getPathname(), $directory)) {
+                if (!static::touchDir($rdi->getPathname(), $directory)) {
                     $ret = false;
                 }
             } else {
-                /** @var SplFileInfo $info */
                 $file = "{$destination}/{$subPath}";
-                if (!static::copyFile($info->getPathname(), $file)) {
+                if (!static::copyFile($rdi->getPathname(), $file)) {
                     $ret = false;
                 }
             }
@@ -155,6 +172,9 @@ class FileSystem
         return $errors;
     }
 
+    /**
+     * move file from $source to $destination
+     */
     public static function move(string $source, string $destination): void
     {
         static::copy($source, $destination);
