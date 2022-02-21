@@ -24,14 +24,15 @@ class VarStream extends LengthStream
         parent::__construct(Format::UINT32_BE, $type);
     }
 
-    public function recvVar(array $options = [], ?int $timeout = null)
+    /** @param array<string, mixed> $options */
+    public function recvVar(array $options = [], ?int $timeout = null): mixed
     {
         $serializedString = $this->recvMessageString($timeout);
 
         return unserialize($serializedString, $options);
     }
 
-    public function sendVar($var, ?int $timeout = null): static
+    public function sendVar(mixed $var, ?int $timeout = null): static
     {
         return $this->sendMessageString(serialize($var), $timeout);
     }

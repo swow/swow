@@ -20,7 +20,7 @@ class Buffer extends \Swow\Buffer
         if ($body instanceof static) {
             return $body;
         }
-
+        /* @phpstan-ignore-next-line */
         $buffer = new static();
         if ($body !== '') {
             $buffer->write((string) $body)->rewind();

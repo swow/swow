@@ -40,7 +40,7 @@ use const SEEK_SET;
  */
 class Psr7Stream implements StreamInterface, Stringable
 {
-    /** @var array Hash of readable and writable stream types */
+    /** @var array<string, array<string, bool>> Hash of readable and writable stream types */
     protected const READ_WRITE_HASH = [
         'read' => [
             'r' => true,
@@ -90,8 +90,7 @@ class Psr7Stream implements StreamInterface, Stringable
 
     protected ?bool $writable = null;
 
-    /** @var array|mixed|void|bool|null */
-    protected $uri;
+    protected mixed $uri;
 
     protected ?int $size = null;
 
@@ -119,6 +118,7 @@ class Psr7Stream implements StreamInterface, Stringable
         }
 
         if (is_resource($body)) {
+            /* @phpstan-ignore-next-line */
             $new = new static();
             $new->stream = $body;
             $meta = stream_get_meta_data($new->stream);
@@ -132,7 +132,7 @@ class Psr7Stream implements StreamInterface, Stringable
         throw new InvalidArgumentException('First argument to Stream::create() must be a string, resource or StreamInterface.');
     }
 
-    protected function getUri()
+    protected function getUri(): mixed
     {
         if ($this->uri !== false) {
             $this->uri = $this->getMetadata('uri') ?? false;

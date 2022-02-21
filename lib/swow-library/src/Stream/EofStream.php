@@ -188,6 +188,7 @@ class EofStream extends Socket
         return $this->write([$message, $this->eof], $timeout);
     }
 
+    /** @param array<mixed> $messages */
     public function writeMessages(array $messages, ?int $timeout = null): static
     {
         $messages[] = $this->eof;
