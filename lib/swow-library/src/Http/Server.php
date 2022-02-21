@@ -47,7 +47,7 @@ class Server extends Socket
      */
     public function broadcastMessage(WebSocketFrame $frame, ?array $targets = null): array
     {
-        /** @var Connection[] $targets */
+        /** @var Connection[]|null $targets */
         if ($targets === null) {
             $targets = $this->connections;
         }

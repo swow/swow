@@ -27,8 +27,7 @@ class WebSocketFrame extends WebSocket\Frame
             return $payloadData;
         }
 
-        /* @noinspection PhpIncompatibleReturnTypeInspection */
-        return parent::getPayloadData();
+        return Buffer::for(parent::getPayloadData());
     }
 
     /**

@@ -24,9 +24,9 @@ class Response extends Message implements ResponseInterface
 
     /**
      * @param int $statusCode Status code
-     * @param array $headers Response headers
+     * @param array<string, array<string>|string> $headers Response headers
      * @param resource|StreamInterface|string|null $body Response body
-     * @param string|null $reasonPhrase Reason phrase (when empty a default will be used based on the status code)
+     * @param string $reasonPhrase Reason phrase (when empty string '', a default will be used based on the status code)
      * @param string $protocolVersion Protocol version
      */
     public function __construct(int $statusCode = Status::OK, array $headers = [], $body = '', string $reasonPhrase = '', string $protocolVersion = self::DEFAULT_PROTOCOL_VERSION)

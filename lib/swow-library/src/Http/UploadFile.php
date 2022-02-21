@@ -14,8 +14,6 @@ declare(strict_types=1);
 namespace Swow\Http;
 
 use InvalidArgumentException;
-use JetBrains\PhpStorm\ArrayShape;
-use JetBrains\PhpStorm\Pure;
 use Psr\Http\Message\StreamInterface;
 use Psr\Http\Message\UploadedFileInterface;
 use RuntimeException;
@@ -45,6 +43,7 @@ use const UPLOAD_ERR_PARTIAL;
 
 class UploadFile extends SplFileInfo implements UploadedFileInterface, Stringable
 {
+    /** @var array<int> */
     protected static array $errors = [
         UPLOAD_ERR_OK,
         UPLOAD_ERR_INI_SIZE,
@@ -144,7 +143,7 @@ class UploadFile extends SplFileInfo implements UploadedFileInterface, Stringabl
         return $this->moved;
     }
 
-    #[Pure] #[ArrayShape(['name' => 'null|string', 'type' => 'null|string', 'tmp_file' => 'null|string', 'error' => 'int', 'size' => 'int|null'])]
+    /** @return array{'name': null|string, 'type': null|string, 'tmp_file': null|string, 'error': int, 'size': int|false} */
     public function toArray(): array
     {
         return [
@@ -161,6 +160,7 @@ class UploadFile extends SplFileInfo implements UploadedFileInterface, Stringabl
         return (string) json_encode($this->toArray(), JSON_THROW_ON_ERROR);
     }
 
+    /** @return array<string, mixed> */
     public function __debugInfo(): array
     {
         return $this->toArray() + [

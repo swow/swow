@@ -103,7 +103,9 @@ trait ReceiverTrait
         $data = '';
         $uriOrReasonPhrase = '';
         $headerName = '';
+        /** @var array<string, array<string>> */
         $headers = [];
+        /** @var array<string, string> */
         $headerNames = [];
         $shouldKeepAlive = false;
         $contentLength = 0;

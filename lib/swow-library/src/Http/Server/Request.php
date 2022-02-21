@@ -88,7 +88,11 @@ class Request extends \Swow\Http\ServerRequest
         return $this;
     }
 
-    public function setHead(string $method, string $uri, string $protocolVersion, array $headers, array $headerNames, bool $keepAlive, int $contentLength, bool $upgrade)
+    /**
+     * @param array<string, array<string>> $headers
+     * @param array<string, string> $headerNames
+     */
+    public function setHead(string $method, string $uri, string $protocolVersion, array $headers, array $headerNames, bool $keepAlive, int $contentLength, bool $upgrade): static
     {
         $this->method = $method;
         $this->uriString = $uri;

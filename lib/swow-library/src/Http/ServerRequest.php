@@ -33,12 +33,16 @@ class ServerRequest extends Request implements ServerRequestInterface
      */
     protected const PRESERVE_HOST = true;
 
+    /** @var array<string, mixed> */
     protected array $serverParams = [];
 
+    /** @var array<string, string> */
     protected array $cookieParams = [];
 
+    /** @var array<string, string> */
     protected array $queryParams = [];
 
+    /** @var array<mixed>|object|null */
     protected null|array|object $parsedBody;
 
     /**
@@ -46,13 +50,16 @@ class ServerRequest extends Request implements ServerRequestInterface
      */
     protected array $uploadedFiles = [];
 
+    /** @var array<string, mixed> */
     protected array $attributes = [];
 
+    /** @return array<string, mixed> */
     public function getServerParams(): array
     {
         return $this->serverParams;
     }
 
+    /** @param array<string, mixed> $serverParams */
     public function setServerParams(array $serverParams): static
     {
         $this->serverParams = $serverParams;
@@ -60,11 +67,13 @@ class ServerRequest extends Request implements ServerRequestInterface
         return $this;
     }
 
+    /** @return array<string, string> */
     public function getQueryParams(): array
     {
         return $this->queryParams;
     }
 
+    /** @param array<string, string> $query */
     public function setQueryParams(array $query): static
     {
         $this->queryParams = $query;
@@ -72,6 +81,7 @@ class ServerRequest extends Request implements ServerRequestInterface
         return $this;
     }
 
+    /** @param array<string, string> $query */
     public function withQueryParams(array $query): static
     {
         $new = clone $this;
@@ -80,11 +90,13 @@ class ServerRequest extends Request implements ServerRequestInterface
         return $new;
     }
 
+    /** @return array<string, string> */
     public function getCookieParams(): array
     {
         return $this->cookieParams;
     }
 
+    /** @param array<string, string> $cookies */
     public function setCookieParams(array $cookies): static
     {
         $this->cookieParams = $cookies;
@@ -92,6 +104,7 @@ class ServerRequest extends Request implements ServerRequestInterface
         return $this;
     }
 
+    /** @param array<string, string> $cookies */
     public function withCookieParams(array $cookies): static
     {
         $new = clone $this;
@@ -116,11 +129,13 @@ class ServerRequest extends Request implements ServerRequestInterface
         return static::UPGRADE_UNKNOWN;
     }
 
+    /** @return array<mixed>|object|null */
     public function getParsedBody(): null|array|object
     {
         return $this->parsedBody ??= BodyParser::parse($this);
     }
 
+    /** @param array<mixed>|object|null $data */
     public function setParsedBody(null|array|object $data): static
     {
         $this->parsedBody = $data;
@@ -129,7 +144,7 @@ class ServerRequest extends Request implements ServerRequestInterface
     }
 
     /**
-     * @param array|object|null $data
+     * @param array<mixed>|object|null $data
      */
     public function withParsedBody($data): static
     {
@@ -139,18 +154,21 @@ class ServerRequest extends Request implements ServerRequestInterface
         return $new;
     }
 
+    /** @return array<UploadedFileInterface> */
     public function getUploadedFiles(): array
     {
         return $this->uploadedFiles;
     }
 
-    public function setUploadedFiles(array $uploadedFiles)
+    /** @param array<UploadedFileInterface> $uploadedFiles */
+    public function setUploadedFiles(array $uploadedFiles): static
     {
         $this->uploadedFiles = $uploadedFiles;
 
         return $this;
     }
 
+    /** @param array<UploadedFileInterface> $uploadedFiles */
     public function withUploadedFiles(array $uploadedFiles)
     {
         $new = clone $this;
@@ -159,11 +177,17 @@ class ServerRequest extends Request implements ServerRequestInterface
         return $new;
     }
 
+    /** @return array<mixed> */
     public function getAttributes(): array
     {
         return $this->attributes;
     }
 
+    /**
+     * @param string $name
+     * @param mixed $default
+     * @return mixed
+     */
     public function getAttribute($name, $default = null)
     {
         if (array_key_exists($name, $this->attributes) === false) {

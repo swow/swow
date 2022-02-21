@@ -32,6 +32,7 @@ use const LIBXML_NOERROR;
 
 class BodyParser
 {
+    /** @return array<mixed> */
     public static function parse(ServerRequestInterface $request): array
     {
         $data = [];
@@ -54,6 +55,7 @@ class BodyParser
         return $data;
     }
 
+    /** @return array<mixed> */
     public static function decodeJson(string $json): array
     {
         $data = json_decode($json, true);
@@ -65,6 +67,7 @@ class BodyParser
         return is_array($data) ? $data : [];
     }
 
+    /** @return array<mixed> */
     public static function decodeXml(string $xml): array
     {
         $respObject = simplexml_load_string($xml, SimpleXMLElement::class, LIBXML_NOCDATA | LIBXML_NOERROR);

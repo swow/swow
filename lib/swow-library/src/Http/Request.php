@@ -33,7 +33,7 @@ class Request extends Message implements RequestInterface
     /**
      * @param string $method HTTP method
      * @param string|UriInterface $uri URI
-     * @param array $headers Request headers
+     * @param array<string, array<string>|string> $headers Request headers
      * @param mixed $body Request body
      * @param string $protocolVersion Protocol version
      */

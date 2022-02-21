@@ -62,7 +62,7 @@ trait WebSocketTrait
         return $frame;
     }
 
-    public function sendWebSocketFrame(WebSocketFrame $frame)
+    public function sendWebSocketFrame(WebSocketFrame $frame): static
     {
         return $this->write([
             $frame->toString(true),

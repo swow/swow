@@ -52,6 +52,9 @@ class Uri implements UriInterface, Stringable
 
     public function apply(string $uri): static
     {
+        /**
+         * @var array<string, string>|false $parts
+         */
         $parts = parse_url($uri);
         if ($parts === false) {
             throw new InvalidArgumentException("Unable to parse URI: {$uri}");
@@ -60,12 +63,15 @@ class Uri implements UriInterface, Stringable
         return $this->applyParts($parts);
     }
 
+    /**
+     * @param array<string, string> $parts
+     */
     public function applyParts(array $parts): static
     {
         $this->scheme = isset($parts['scheme']) ? strtolower($parts['scheme']) : '';
         $this->userInfo = $parts['user'] ?? '';
         $this->host = isset($parts['host']) ? strtolower($parts['host']) : '';
-        $this->port = isset($parts['port']) ? $this->filterPort($parts['port']) : null;
+        $this->port = isset($parts['port']) ? $this->filterPort((int) $parts['port']) : null;
         $this->path = isset($parts['path']) ? $this->filterPath($parts['path']) : '';
         $this->query = isset($parts['query']) ? $this->filterQueryAndFragment($parts['query']) : '';
         $this->fragment = isset($parts['fragment']) ? $this->filterQueryAndFragment($parts['fragment']) : '';

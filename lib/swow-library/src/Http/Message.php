@@ -26,8 +26,10 @@ class Message implements MessageInterface, Stringable
 
     protected string $protocolVersion = self::DEFAULT_PROTOCOL_VERSION;
 
+    /** @var array<string, array<string>> */
     protected array $headers = [];
 
+    /** @var array<string>|null */
     protected ?array $headerNames = null;
 
     protected bool $keepAlive = true;
@@ -35,7 +37,7 @@ class Message implements MessageInterface, Stringable
     protected ?\Swow\Http\Buffer $body = null;
 
     /**
-     * @param array $headers Request headers
+     * @param array<string, array<string>|string> $headers Request headers
      * @param mixed $body Request body
      */
     public function __construct(array $headers = [], mixed $body = null, string $protocolVersion = self::DEFAULT_PROTOCOL_VERSION)
@@ -93,6 +95,7 @@ class Message implements MessageInterface, Stringable
         return implode(',', $this->getHeader($name));
     }
 
+    /** @param string|array<string>|null $value */
     public function setHeader(string $name, mixed $value): static
     {
         $lowerCaseName = strtolower($name);
@@ -111,11 +114,13 @@ class Message implements MessageInterface, Stringable
         return $this;
     }
 
+    /** @return array<string, array<string>> $headers */
     public function getHeaders(): array
     {
         return $this->headers;
     }
 
+    /** @return array<string, array<string>> $headers */
     public function getStandardHeaders(): array
     {
         $headers = $this->getHeaders();
@@ -129,6 +134,7 @@ class Message implements MessageInterface, Stringable
         return $headers;
     }
 
+    /** @param array<string, array<string>|string> $headers */
     public function setHeaders(array $headers): static
     {
         foreach ($headers as $name => $value) {
@@ -138,6 +144,7 @@ class Message implements MessageInterface, Stringable
         return $this;
     }
 
+    /** @param array<string, array<string>|string> $headers */
     public function withHeaders(array $headers): static
     {
         $new = clone $this;
@@ -222,7 +229,7 @@ class Message implements MessageInterface, Stringable
     }
 
     /** @Notice MUST clone the object before you change the body's content */
-    public function setBody(?Buffer $body)
+    public function setBody(?Buffer $body): static
     {
         $this->body = $body;
 
@@ -236,7 +243,7 @@ class Message implements MessageInterface, Stringable
         }
 
         $new = clone $this;
-        $new->setBody($body);
+        $new->setBody(Buffer::for($body));
 
         return $new;
     }

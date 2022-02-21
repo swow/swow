@@ -25,7 +25,6 @@ use Swow\Http\WebSocketTrait;
 use Swow\Socket;
 use Swow\WebSocket;
 use function base64_encode;
-use function func_get_args;
 use function is_array;
 use function is_int;
 use function is_string;
@@ -119,7 +118,7 @@ class Connection extends Socket implements HttpTypeInterface
         return $request;
     }
 
-    public function sendHttpResponse(Response $response)
+    public function sendHttpResponse(Response $response): static
     {
         return $this->write([
             $response->toString(true),
@@ -127,6 +126,7 @@ class Connection extends Socket implements HttpTypeInterface
         ]);
     }
 
+    /** @return array<string, string> */
     protected function generateResponseHeaders(string $body): array
     {
         $headers = [];
@@ -134,12 +134,12 @@ class Connection extends Socket implements HttpTypeInterface
         if ($this->keepAlive !== null) {
             $headers['Connection'] = $this->keepAlive ? 'keep-alive' : 'close';
         }
-        $headers['Content-Length'] = strlen($body);
+        $headers['Content-Length'] = (string) strlen($body);
 
         return $headers;
     }
 
-    public function respond(...$args): void
+    public function respond(mixed ...$args): void
     {
         switch ($this->type) {
             case static::TYPE_HTTP:
@@ -147,7 +147,7 @@ class Connection extends Socket implements HttpTypeInterface
                 $statusCode = HttpStatus::OK;
                 $headers = [];
                 $body = '';
-                foreach (func_get_args() as $arg) {
+                foreach ($args as $arg) {
                     if (is_string($arg)) {
                         $body = $arg;
                     } elseif (is_int($arg)) {
@@ -204,7 +204,7 @@ class Connection extends Socket implements HttpTypeInterface
             'Connection' => 'Upgrade',
             'Upgrade' => 'websocket',
             'Sec-WebSocket-Accept' => $key,
-            'Sec-WebSocket-Version' => WebSocket\VERSION,
+            'Sec-WebSocket-Version' => (string) WebSocket\VERSION,
         ];
 
         if ($response === null) {

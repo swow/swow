@@ -20,7 +20,7 @@ use Throwable;
 
 class ClientException extends Exception implements ClientExceptionInterface
 {
-    public function __construct(protected RequestInterface $request, $message = '', $code = 0, ?Throwable $previous = null)
+    public function __construct(protected RequestInterface $request, string $message = '', int $code = 0, ?Throwable $previous = null)
     {
         parent::__construct($message, $code, $previous);
     }

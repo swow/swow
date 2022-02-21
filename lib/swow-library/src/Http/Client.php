@@ -61,6 +61,11 @@ class Client extends Socket implements ClientInterface, HttpTypeInterface
         return parent::connect($name, $port, $timeout);
     }
 
+    /**
+     * send request
+     *
+     * @param array<string, string> $headers
+     */
     public function sendRaw(
         string $method = 'GET',
         string $path = '/',
@@ -130,7 +135,7 @@ class Client extends Socket implements ClientInterface, HttpTypeInterface
             'Connection' => 'Upgrade',
             'Upgrade' => 'websocket',
             'Sec-WebSocket-Key' => $secWebSocketKey,
-            'Sec-WebSocket-Version' => WebSocket\VERSION,
+            'Sec-WebSocket-Version' => (string) WebSocket\VERSION,
         ]);
         try {
             $response = $this->sendRequest($request);

@@ -15,13 +15,22 @@ namespace Swow\Http;
 
 class RawResult
 {
+    /**
+     * headers holder format like `[ 'X-Header' => [ 'value 1', 'value 2' ] ]`
+     *
+     * @var array<string, array<string>>
+     */
     public array $headers = [];
 
     public null|string|Buffer $body = null;
 
     public string $protocolVersion = '';
 
-    /** @var array<string, string> */
+    /**
+     * headers names holder format like `[ 'x-header' => 'X-Header' ]`
+     *
+     * @var array<string, string>
+     */
     public array $headerNames = [];
 
     public int $contentLength = 0;
