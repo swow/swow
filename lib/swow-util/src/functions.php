@@ -122,7 +122,7 @@ function askBool(string $question): bool
     }
 }
 
-function passthru(...$commands): int
+function passthru(string ...$commands): int
 {
     $command = implode(" && \\\n", $commands);
     log("> {$command}");
@@ -158,6 +158,11 @@ function printAsMultiLines(string $title = '', int $length = 32): void
     echo "< {$title} > " . str_repeat('=', $length) . PHP_EOL;
 }
 
+/**
+ * execute command and check command result
+ *
+ * @param array<string> $commands
+ */
 function executeAndCheck(array $commands): void
 {
     $basename = pathinfo($commands[1] ?? '', PATHINFO_FILENAME);
@@ -183,15 +188,28 @@ function fileSize(string $filename, int $decimals = 2): string
     return sprintf("%.{$decimals}f", $bytes / 1024 ** $factor) . $units[$factor];
 }
 
+/**
+ * @return array<string>
+ */
 function gitFiles(string $root = '.'): array
 {
-    return explode(PHP_EOL, shell_exec("cd {$root} && git ls-files"));
+    if (is_dir("{$root}/.git")) {
+        return explode(PHP_EOL, shell_exec("git --git-dir={$root}/.git ls-files"));
+    }
+
+    return explode(PHP_EOL, shell_exec("git --git-dir={$root} ls-files"));
 }
 
+/**
+ * defer execute
+ *
+ * @param mixed $any reference to any variable used for defer
+ */
 function defer(&$any, callable $callback): void
 {
     if (!$any) {
         $any = new class() {
+            /** @var array<callable> */
             private array $callbacks = [];
 
             public function add(callable $callback): void
@@ -211,6 +229,19 @@ function defer(&$any, callable $callback): void
     $any->add($callback);
 }
 
+/**
+ * @param array<string> $command
+ * @param array{
+ *              'command': string,
+ *              'pid': int,
+ *              'running': bool,
+ *              'signaled':bool,
+ *              'stopped': bool,
+ *              'exitcode':int,
+ *              'termsig':int,
+ *              'stopsig': int
+ *        }|false $status
+ */
 function processExecute(array $command, &$status = null): string
 {
     $proc = proc_open(
@@ -230,7 +261,7 @@ function processExecute(array $command, &$status = null): string
     return $output;
 }
 
-function httpGet(string $url): false|string
+function httpGet(string $url): string
 {
     $requestArgs = ['filename' => $url];
     if (getenv('http_proxy')) {
