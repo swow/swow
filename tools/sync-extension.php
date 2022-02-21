@@ -102,7 +102,7 @@ $sync = static function (string $name, string $url, string $sourceDir, string $t
             throw new RuntimeException("Update dep files from '{$tmpSourceDir}' to {$targetDir} failed: {$exception->getMessage()}");
         }
     }
-    shell_exec("cd {$targetDir} && git add --ignore-errors -A");
+    shell_exec("cd {$targetDir} && git add --ignore-errors -A -- .");
 
     return $version;
 };
