@@ -95,6 +95,7 @@ TEXT;
 
     private static bool $breakPointHandlerRegistered = false;
 
+    /** @var static */
     protected static self $instance;
 
     protected static ?bool $useMbString = null;
@@ -111,7 +112,7 @@ TEXT;
 
     protected bool $reloading = false;
 
-    /** @var callable */
+    /** @var callable|null */
     protected $sourcePositionHandler;
 
     protected string $lastCommand = '';
@@ -137,6 +138,7 @@ TEXT;
 
     final public static function getInstance(): static
     {
+        /* @phpstan-ignore-next-line */
         return self::$instance ?? (self::$instance = new static());
     }
 
@@ -204,6 +206,9 @@ TEXT;
         return $this;
     }
 
+    /**
+     * @param array<mixed> $table
+     */
     public function table(array $table, bool $newline = true): static
     {
         return $this->out($this::tableFormat($table), $newline);
@@ -216,7 +221,7 @@ TEXT;
 
     protected function callSourcePositionHandler(string $sourcePosition): string
     {
-        $sourcePositionHandler = $this->sourcePositionHandler;
+        $sourcePositionHandler = $this->sourcePositionHandler ?? null;
         if ($sourcePositionHandler !== null) {
             return $sourcePositionHandler($sourcePosition);
         }
@@ -231,7 +236,7 @@ TEXT;
         return $this;
     }
 
-    public function setSourcePositionHandler(callable $sourcePositionHandler): static
+    public function setSourcePositionHandler(?callable $sourcePositionHandler): static
     {
         $this->sourcePositionHandler = $sourcePositionHandler;
 
@@ -262,6 +267,8 @@ TEXT;
 
     protected function setCursorVisibility(bool $bool): static
     {
+        // TODO tty check support
+        /* @phpstan-ignore-next-line */
         if (1 /* is tty */) {
             $this->out("\033[?25" . ($bool ? 'h' : 'l'));
         }
@@ -282,7 +289,7 @@ TEXT;
         return $this;
     }
 
-    /** @return stdClass[] */
+    /** @return WeakMap<stdClass> */
     public static function getCoroutineDebugWeakMap(): WeakMap
     {
         return static::$coroutineDebugWeakMap ?? (static::$coroutineDebugWeakMap = new WeakMap());
@@ -359,7 +366,7 @@ TEXT;
         return mb_strlen($string);
     }
 
-    protected static function substr($string, $offset, $length = null)
+    protected static function substr(string $string, int $offset, ?int $length = null): string
     {
         if (!static::hasMbString()) {
             return substr($string, $offset, $length);
@@ -379,6 +386,9 @@ TEXT;
         return $maxLength;
     }
 
+    /**
+     * @param array<mixed> $table
+     */
     protected static function tableFormat(array $table): string
     {
         if (empty($table)) {
@@ -422,7 +432,7 @@ TEXT;
         return $result;
     }
 
-    protected static function convertValueToString($value, bool $forArgs = true): string
+    protected static function convertValueToString(mixed $value, bool $forArgs = true): string
     {
         switch (true) {
             case is_int($value):
@@ -461,6 +471,13 @@ TEXT;
         }
     }
 
+    /**
+     * @param array{
+     *     'function': string|null,
+     *     'class': string|null,
+     *     'args': array<string>|null,
+     * } $frame
+     */
     protected static function getExecutingFromFrame(array $frame): string
     {
         $atFunction = $frame['function'] ?? '';
@@ -483,6 +500,20 @@ TEXT;
         return $executing;
     }
 
+    /**
+     * @param array<int, array{
+     *     'function': string|null,
+     *     'class': string|null,
+     *     'args': array<string>|null,
+     *     'file': string|null,
+     *     'line': int|null,
+     * }> $trace
+     * @return array<array{
+     *     'frame': int,
+     *     'executing': string,
+     *     'source position': string,
+     * }>
+     */
     protected static function convertTraceToTable(array $trace, ?int $frameIndex = null): array
     {
         $traceTable = [];
@@ -514,6 +545,15 @@ TEXT;
         return $traceTable;
     }
 
+    /**
+     * @param array<int, array{
+     *     'function': string|null,
+     *     'class': string|null,
+     *     'args': array<string>,
+     *     'file': string|null,
+     *     'line': int|null,
+     * }> $trace
+     */
     protected function showTrace(array $trace, ?int $frameIndex = null, bool $newLine = true): static
     {
         $traceTable = $this::convertTraceToTable($trace, $frameIndex);
@@ -549,6 +589,23 @@ TEXT;
         return $level;
     }
 
+    /**
+     * @return array<int, array{
+     *     'function': string|null,
+     *     'class': string|null,
+     *     'args': array<string>,
+     *     'file': string|null,
+     *     'line': int|null,
+     *     'type': string|null,
+     * }>|array{
+     *     'function': string|null,
+     *     'class': string|null,
+     *     'args': array<string>,
+     *     'file': string|null,
+     *     'line': int|null,
+     *     'type': string|null,
+     * } $trace
+     */
     protected static function getTraceOfCoroutine(Coroutine $coroutine, ?int $index = null): array
     {
         $level = static::getExtendedLevelOfCoroutine($coroutine);
@@ -566,11 +623,31 @@ TEXT;
         return $trace;
     }
 
+    /**
+     * @return array<int, array{
+     *     'function': string|null,
+     *     'class': string|null,
+     *     'args': array<string>,
+     *     'file': string|null,
+     *     'line': int|null,
+     *     'type': string|null,
+     * }> $trace
+     */
     protected function getCurrentCoroutineTrace(): array
     {
         return $this::getTraceOfCoroutine($this->getCurrentCoroutine());
     }
 
+    /**
+     * @return array{
+     *     'id': int,
+     *     'state': string,
+     *     'round': int,
+     *     'elapsed': string,
+     *     'executing': string|null,
+     *     'source position': string|null,
+     * } $simpleInfo
+     */
     protected static function getSimpleInfoOfCoroutine(Coroutine $coroutine, bool $whatAreYouDoing): array
     {
         $info = [
@@ -626,8 +703,18 @@ TEXT;
         return $this->table($map);
     }
 
-    protected static function getSourceFileContentAsTable(string $filename, int $line, ?SplFileObject &$sourceFile = null, int $lineCount = self::SOURCE_FILE_DEFAULT_LINE_COUNT): array
-    {
+    /**
+     * @return array<array{
+     *     'line': string,
+     *     'content': string,
+     * }>
+     */
+    protected static function getSourceFileContentAsTable(
+        string $filename,
+        int $line,
+        ?SplFileObject &$sourceFile = null,
+        int $lineCount = self::SOURCE_FILE_DEFAULT_LINE_COUNT,
+    ): array {
         $sourceFile = null;
         if ($line < 2) {
             $startLine = $line;
@@ -662,6 +749,16 @@ TEXT;
         return $content;
     }
 
+    /**
+     * @param array<array{
+     *     'file': string|null,
+     *     'line': int|null,
+     * }> $trace
+     * @return array<array{
+     *     'line': string,
+     *     'content': string,
+     * }>
+     */
     protected static function getSourceFileContentByTrace(array $trace, int $frameIndex, ?SplFileObject &$sourceFile = null, ?int &$sourceFileLine = null): array
     {
         /* init */
@@ -691,8 +788,16 @@ TEXT;
         return static::getSourceFileContentAsTable($file, $line, $sourceFile);
     }
 
+    /**
+     * @param array<array{
+     *     'file': string|null,
+     *     'line': int|null,
+     * }> $trace
+     */
     public function showSourceFileContentByTrace(array $trace, int $frameIndex, bool $following = false): static
     {
+        $file = null;
+        $line = 0;
         try {
             $contentTable = $this::getSourceFileContentByTrace($trace, $frameIndex, $file, $line);
         } catch (DebuggerException $exception) {
@@ -712,6 +817,12 @@ TEXT;
         return $this->table($contentTable);
     }
 
+    /**
+     * @return array<array{
+     *     'line': int,
+     *     'content': string,
+     * }>
+     */
     protected static function getFollowingSourceFileContent(
         SplFileObject $sourceFile,
         int $startLine,
