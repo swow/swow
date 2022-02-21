@@ -82,7 +82,7 @@ final class ServerTest extends TestCase
             require $mixedServerFile;
         });
         // so hacky ^^
-        /** @var Server $server */
+        /** @var HttpServer $server */
         $server = $serverCoroutine->eval('$this');
         defer(static function () use ($server): void {
             $server->close();
@@ -104,22 +104,28 @@ final class ServerTest extends TestCase
         $request = new HttpRequest('GET', '/chat');
         $client->upgradeToWebSocket($request);
         $messageChannel = new Channel();
-        $worker = Coroutine::run(static function () use ($client, $messageChannel): void {
-            while (true) {
-                $message = $client->recvWebSocketFrame();
-                if ($message->getOpcode() === Opcode::TEXT) {
-                    $messageChannel->push($message);
+        $worker = Coroutine::run(
+            /** @return never */
+            static function () use ($client, $messageChannel): void {
+                /* @phpstan-ignore-next-line */
+                while (true) {
+                    $message = $client->recvWebSocketFrame();
+                    if ($message->getOpcode() === Opcode::TEXT) {
+                        $messageChannel->push($message);
+                    }
                 }
-            }
-        });
+            });
         $heartBeatCount = 0;
-        $heartBeater = Coroutine::run(static function () use ($client, &$heartBeatCount): void {
-            while (true) {
-                $client->sendString(WebSocketFrame::PING);
-                $heartBeatCount++;
-                usleep(1000);
-            }
-        });
+        $heartBeater = Coroutine::run(
+            /** @return never */
+            static function () use ($client, &$heartBeatCount): void {
+                /* @phpstan-ignore-next-line */
+                while (true) {
+                    $client->sendString(WebSocketFrame::PING);
+                    $heartBeatCount++;
+                    usleep(1000);
+                }
+            });
         /* chat */
         for ($n = 1; $n <= TEST_MAX_REQUESTS; $n++) {
             $message = new WebSocketFrame();

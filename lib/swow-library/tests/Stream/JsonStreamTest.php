@@ -37,9 +37,11 @@ final class JsonStreamTest extends TestCase
         Coroutine::run(function () use ($server, $wr): void {
             $server->bind('127.0.0.1')->listen();
             try {
+                /* @phpstan-ignore-next-line */
                 while (true) {
                     Coroutine::run(function (JsonStream $connection): void {
                         try {
+                            /* @phpstan-ignore-next-line */
                             while (true) {
                                 $json = $connection->recvJson();
                                 $json = ['result' => $json['query']];

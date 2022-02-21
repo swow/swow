@@ -38,9 +38,11 @@ final class VarStreamTest extends TestCase
         Coroutine::run(function () use ($server, $wr): void {
             $server->bind('127.0.0.1')->listen();
             try {
+                /* @phpstan-ignore-next-line */
                 while (true) {
                     Coroutine::run(function (VarStream $connection): void {
                         try {
+                            /* @phpstan-ignore-next-line */
                             while (true) {
                                 $request = (object) $connection->recvVar();
                                 $response = new stdClass();

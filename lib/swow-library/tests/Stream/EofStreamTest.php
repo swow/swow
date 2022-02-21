@@ -40,9 +40,11 @@ final class EofStreamTest extends TestCase
             Coroutine::run(function () use ($server, $recvMethod, $wr): void {
                 $server->bind('127.0.0.1')->listen();
                 try {
+                    /* @phpstan-ignore-next-line */
                     while (true) {
                         Coroutine::run(function (EofStream $connection) use ($recvMethod): void {
                             try {
+                                /* @phpstan-ignore-next-line */
                                 while (true) {
                                     $message = $connection->{$recvMethod}();
                                     $connection->sendMessageString($message);
