@@ -17,7 +17,7 @@ use function ob_get_clean;
 use function ob_start;
 use function var_dump;
 
-function var_dump_return(...$expressions): string
+function var_dump_return(mixed ...$expressions): string
 {
     ob_start();
 
