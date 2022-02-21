@@ -44,8 +44,8 @@ typedef struct cat_error_s {
     XX(ECLOSING, "Resource is closing") \
     /* resource has been closed */ \
     XX(ECLOSED, "Resource has been closed") \
-    /* dead lock */ \
-    XX(EDEADLK, "Dead lock") \
+    /* deadlock */ \
+    XX(EDEADLK, "Deadlock") \
     /* generic error about ssl */ \
     XX(ESSL, "SSL error") \
     /* no certificate */ \

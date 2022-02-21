@@ -159,7 +159,8 @@ CAT_API cat_bool_t cat_coroutine_runtime_init(void)
 
     /* init options */
     cat_coroutine_set_default_stack_size(CAT_COROUTINE_RECOMMENDED_STACK_SIZE);
-    cat_coroutine_set_dead_lock_log_type(CAT_LOG_TYPE_WARNING);
+    cat_coroutine_set_deadlock_log_type(CAT_LOG_TYPE_WARNING);
+    cat_coroutine_set_deadlock_callback(NULL);
 
     /* init info */
     CAT_COROUTINE_G(last_id) = 0;
@@ -236,10 +237,18 @@ CAT_API cat_coroutine_stack_size_t cat_coroutine_set_default_stack_size(size_t s
     return original_size;
 }
 
-CAT_API cat_bool_t cat_coroutine_set_dead_lock_log_type(cat_log_type_t type)
+CAT_API cat_log_type_t cat_coroutine_set_deadlock_log_type(cat_log_type_t type)
 {
-    CAT_COROUTINE_G(dead_lock_log_type) = type;
-    return cat_true;
+    cat_log_type_t original_type = CAT_COROUTINE_G(deadlock_log_type);
+    CAT_COROUTINE_G(deadlock_log_type) = type;
+    return original_type;
+}
+
+CAT_API cat_coroutine_deadlock_callback_t cat_coroutine_set_deadlock_callback(cat_coroutine_deadlock_callback_t callback)
+{
+    cat_coroutine_deadlock_callback_t original_callback = CAT_COROUTINE_G(deadlock_callback);
+    CAT_COROUTINE_G(deadlock_callback) = callback;
+    return original_callback;
 }
 
 CAT_API cat_coroutine_jump_t cat_coroutine_register_jump(cat_coroutine_jump_t jump)
@@ -288,9 +297,9 @@ CAT_API cat_coroutine_stack_size_t cat_coroutine_get_default_stack_size(void)
     return CAT_COROUTINE_G(default_stack_size);
 }
 
-CAT_API cat_log_type_t cat_coroutine_get_dead_lock_log_type(void)
+CAT_API cat_log_type_t cat_coroutine_get_deadlock_log_type(void)
 {
-    return CAT_COROUTINE_G(dead_lock_log_type);
+    return CAT_COROUTINE_G(deadlock_log_type);
 }
 
 CAT_API cat_coroutine_t *cat_coroutine_get_current(void)
@@ -933,15 +942,18 @@ CAT_API char *cat_coroutine_get_elapsed_as_string(const cat_coroutine_t *corouti
 
 /* scheduler */
 
-static void cat_coroutine_dead_lock(cat_coroutine_dead_lock_function_t dead_lock)
+static void cat_coroutine_deadlock(cat_coroutine_deadlock_function_t deadlock)
 {
-    cat_log_type_t type = CAT_COROUTINE_G(dead_lock_log_type);
+    CAT_LOG_WITH_TYPE(CAT_COROUTINE_G(deadlock_log_type), COROUTINE, CAT_EDEADLK, "Deadlock: all coroutines are asleep");
 
-    CAT_LOG_WITH_TYPE(type, COROUTINE, CAT_EDEADLK, "Dead lock: all coroutines are asleep");
-
-    if (dead_lock != NULL) {
-        dead_lock();
+    if (deadlock != NULL) {
+        deadlock();
     } else while (cat_sys_usleep(999999) == 0);
+}
+
+static cat_always_inline cat_bool_t cat_coroutine_is_deadlocked(void)
+{
+    return CAT_COROUTINE_G(count) - CAT_COROUTINE_G(waiter_count) > 0;
 }
 
 static cat_data_t *cat_coroutine_scheduler_function(cat_data_t *data)
@@ -958,12 +970,18 @@ static cat_data_t *cat_coroutine_scheduler_function(cat_data_t *data)
 
         scheduler.schedule();
 
-        if (CAT_COROUTINE_G(count) - CAT_COROUTINE_G(waiter_count) > 0) {
+        if (cat_coroutine_is_deadlocked()) {
+            if (CAT_COROUTINE_G(deadlock_callback) != NULL) {
+                CAT_COROUTINE_G(deadlock_callback)();
+                if (!cat_coroutine_is_deadlocked()) {
+                    continue;
+                }
+            }
             /* we expect everything is done,
              * but there are still coroutines that have not finished
-             * so we try to trigger the dead lock */
-            cat_coroutine_dead_lock(scheduler.dead_lock);
-            /* dead lock failed or it was broken by some magic ways */
+             * so we try to trigger the deadlock */
+            cat_coroutine_deadlock(scheduler.deadlock);
+            /* deadlock failed or it was broken by some magic ways */
             continue;
         }
 

@@ -160,10 +160,13 @@ typedef uint32_t cat_coroutine_count_t;
 #define CAT_COROUTINE_COUNT_FMT "%u"
 #define CAT_COROUTINE_COUNT_FMT_SPEC "u"
 
+typedef void (*cat_coroutine_deadlock_callback_t)(void);
+
 CAT_GLOBALS_STRUCT_BEGIN(cat_coroutine)
     /* options */
     cat_coroutine_stack_size_t default_stack_size;
-    cat_log_type_t dead_lock_log_type;
+    cat_log_type_t deadlock_log_type;
+    cat_coroutine_deadlock_callback_t deadlock_callback;
     /* coroutines */
     cat_coroutine_t *current;
     cat_coroutine_t *main;
@@ -203,11 +206,13 @@ CAT_API cat_coroutine_t *cat_coroutine_register_main(cat_coroutine_t *coroutine)
 /* return the original stack size */
 CAT_API cat_coroutine_stack_size_t cat_coroutine_set_default_stack_size(size_t size);
 /* It is recommended to set to error or warning */
-CAT_API cat_bool_t cat_coroutine_set_dead_lock_log_type(cat_log_type_t type);
+CAT_API cat_log_type_t cat_coroutine_set_deadlock_log_type(cat_log_type_t type);
+/* callback will be called before deadlock() */
+CAT_API cat_coroutine_deadlock_callback_t cat_coroutine_set_deadlock_callback(cat_coroutine_deadlock_callback_t callback);
 
 /* globals */
 CAT_API cat_coroutine_stack_size_t cat_coroutine_get_default_stack_size(void);
-CAT_API cat_log_type_t cat_coroutine_get_dead_lock_log_type(void);
+CAT_API cat_log_type_t cat_coroutine_get_deadlock_log_type(void);
 CAT_API cat_coroutine_t *cat_coroutine_get_current(void);
 CAT_API cat_coroutine_id_t cat_coroutine_get_current_id(void);
 CAT_API cat_coroutine_t *cat_coroutine_get_main(void);
@@ -255,10 +260,10 @@ CAT_API char *cat_coroutine_get_elapsed_as_string(const cat_coroutine_t *corouti
 
 /* scheduler */
 typedef void (*cat_coroutine_schedule_function_t)(void);
-typedef void (*cat_coroutine_dead_lock_function_t)(void);
+typedef void (*cat_coroutine_deadlock_function_t)(void);
 typedef struct cat_coroutine_scheduler_s {
     cat_coroutine_schedule_function_t schedule;
-    cat_coroutine_dead_lock_function_t dead_lock;
+    cat_coroutine_deadlock_function_t deadlock;
 } cat_coroutine_scheduler_t;
 CAT_API cat_coroutine_t *cat_coroutine_scheduler_run(cat_coroutine_t *coroutine, const cat_coroutine_scheduler_t *scheduler); CAT_INTERNAL
 CAT_API cat_coroutine_t *cat_coroutine_scheduler_close(void); CAT_INTERNAL

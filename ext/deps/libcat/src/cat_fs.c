@@ -1953,8 +1953,8 @@ static void cat_fs_orig_flock(cat_data_t *ptr)
 static void cat_fs_flock_cb(cat_data_t *ptr)
 {
     cat_fs_flock_data_t *data = (cat_fs_flock_data_t *) ptr;
-    // we donot put blocking flock into thread pool directly,
-    // we create another thread to do flock to avoid dead lock when thread pool is full
+    // we do not put blocking flock into thread pool directly,
+    // we create another thread to do flock to avoid deadlock when thread pool is full
     // (all threads in pool waiting flock(xx, LOCK_EX), while flock(xx, LOCK_UN) after them in queue)
     uv_thread_options_t params = {
         .flags = UV_THREAD_HAS_STACK_SIZE,

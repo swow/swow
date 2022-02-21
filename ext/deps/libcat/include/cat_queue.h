@@ -47,8 +47,6 @@ typedef void *cat_queue_node_t[2];
 #define cat_queue_empty(queue) \
   ((const cat_queue_t *) (queue) == (const cat_queue_t *) cat_queue_next(queue))
 
-#define cat_queue_is_in(node) (!cat_queue_empty(node))
-
 #define cat_queue_front(queue) \
     ((!cat_queue_empty(queue)) ? cat_queue_next(queue) : NULL)
 
@@ -82,7 +80,7 @@ typedef void *cat_queue_node_t[2];
 #define cat_queue_remove(node) do { \
     cat_queue_prev_next(node) = cat_queue_next(node); \
     cat_queue_next_prev(node) = cat_queue_prev(node); \
-} while(0)
+} while (0)
 
 #define CAT_QUEUE_FOREACH(queue, node) do { \
   cat_queue_t *_queue = queue, *node; \

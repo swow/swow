@@ -87,28 +87,28 @@ CAT_API cat_bool_t cat_event_runtime_shutdown(void)
     return cat_true;
 }
 
-static void cat_event_dead_lock_unlock(uv_timer_t *dead_lock)
+static void cat_event_deadlock_unlock(uv_timer_t *deadlock)
 {
-    uv_timer_stop(dead_lock);
-    uv_close((uv_handle_t *) dead_lock, NULL);
+    uv_timer_stop(deadlock);
+    uv_close((uv_handle_t *) deadlock, NULL);
 }
 
-static void cat_event_dead_lock_unlock_callback(cat_data_t *data)
+static void cat_event_deadlock_unlock_callback(cat_data_t *data)
 {
-    cat_event_dead_lock_unlock((uv_timer_t *) data);
+    cat_event_deadlock_unlock((uv_timer_t *) data);
 }
 
-static void cat_event_dead_lock_callback(uv_timer_t *dead_lock)
+static void cat_event_deadlock_callback(uv_timer_t *deadlock)
 {
-    uv_timer_again(dead_lock);
+    uv_timer_again(deadlock);
 }
 
-CAT_API void cat_event_dead_lock(void)
+CAT_API void cat_event_deadlock(void)
 {
-    uv_timer_t *dead_lock = &CAT_EVENT_G(dead_lock);
-    (void) uv_timer_init(cat_event_loop, dead_lock);
-    (void) uv_timer_start(dead_lock, cat_event_dead_lock_callback, UINT64_MAX, UINT64_MAX);
-    (void) cat_event_defer(cat_event_dead_lock_unlock_callback, dead_lock);
+    uv_timer_t *deadlock = &CAT_EVENT_G(deadlock);
+    (void) uv_timer_init(cat_event_loop, deadlock);
+    (void) uv_timer_start(deadlock, cat_event_deadlock_callback, UINT64_MAX, UINT64_MAX);
+    (void) cat_event_defer(cat_event_deadlock_unlock_callback, deadlock);
 }
 
 static int cat_event_defer_callback(uv_loop_t *loop)
@@ -126,7 +126,7 @@ CAT_API cat_coroutine_t *cat_event_scheduler_run(cat_coroutine_t *coroutine)
 {
     const cat_coroutine_scheduler_t scheduler = {
         cat_event_schedule,
-        cat_event_dead_lock
+        cat_event_deadlock
     };
 
     return cat_coroutine_scheduler_run(coroutine, &scheduler);

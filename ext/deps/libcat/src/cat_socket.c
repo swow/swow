@@ -2668,7 +2668,6 @@ static cat_always_inline void cat_socket_internal_write_callback(cat_socket_inte
     cat_coroutine_t *coroutine = request->u.coroutine;
 
     if (coroutine != NULL) {
-        CAT_ASSERT(cat_queue_is_in(&coroutine->waiter.node));
         CAT_ASSERT(isocket->io_flags & CAT_SOCKET_IO_FLAG_WRITE);
         request->error = status;
         /* just resume and it will retry to send on while loop */
