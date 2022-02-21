@@ -18,8 +18,10 @@ use function spl_object_id;
 
 class CallbackSelector extends Selector
 {
+    /** @var array<callable> */
     protected array $pushCallbacks = [];
 
+    /** @var array<callable> */
     protected array $popCallbacks = [];
 
     public function casePush(Channel $channel, mixed $data, callable $callback): static
