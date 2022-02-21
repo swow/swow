@@ -125,6 +125,11 @@ return (new PhpCsFixer\Config())
         'standardize_not_equals' => true,
         'self_static_accessor' => true,
         /* risky */
+        'comment_to_phpdoc' => [
+            'ignored_tags' => [
+                'phpstan-ignore-next-line',
+            ],
+        ],
         'is_null' => false, /* To keep aligned with other is_xxx */
         'native_constant_invocation' => [
             'scope' => 'namespaced',
