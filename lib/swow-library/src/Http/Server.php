@@ -47,8 +47,8 @@ class Server extends Socket
      */
     public function broadcastMessage(WebSocketFrame $frame, ?array $targets = null): array
     {
-        /** @var Connection[]|null $targets */
         if ($targets === null) {
+            /** @var Connection[] $targets */
             $targets = $this->connections;
         }
         if ($frame->getPayloadLength() <= Buffer::PAGE_SIZE) {

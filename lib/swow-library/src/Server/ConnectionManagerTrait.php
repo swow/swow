@@ -17,6 +17,7 @@ use Swow\Socket;
 
 trait ConnectionManagerTrait
 {
+    /** @var array<int, Socket> */
     protected array $connections = [];
 
     protected function online(Socket $connection): void
