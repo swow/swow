@@ -128,11 +128,11 @@ static const zend_function_entry swow_defer_methods[] = {
     PHP_FE_END
 };
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_Swow_Defer, ZEND_RETURN_VALUE, 0, IS_VOID, 0)
-    ZEND_ARG_CALLABLE_INFO(0, tasks, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_Swow_defer, 0, 1, IS_VOID, 0)
+    ZEND_ARG_TYPE_INFO(0, tasks, IS_CALLABLE, 0)
 ZEND_END_ARG_INFO()
 
-static PHP_FUNCTION(Swow_Defer)
+static PHP_FUNCTION(Swow_defer)
 {
     zval *ztask;
     cat_bool_t ret;
@@ -154,7 +154,7 @@ static PHP_FUNCTION(Swow_Defer)
 }
 
 static const zend_function_entry swow_defer_functions[] = {
-    PHP_FENTRY(Swow\\defer, PHP_FN(Swow_Defer), arginfo_Swow_Defer, 0)
+    PHP_FENTRY(Swow\\defer, PHP_FN(Swow_defer), arginfo_Swow_defer, 0)
     PHP_FE_END
 };
 

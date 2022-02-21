@@ -454,7 +454,7 @@ static const zend_function_entry swow_methods[] = {
     PHP_FE_END
 };
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_Swow_Errno_strerror, ZEND_RETURN_VALUE, 0, IS_STRING, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_Swow_Errno_strerror, 0, 1, IS_STRING, 0)
     ZEND_ARG_TYPE_INFO(0, error, IS_LONG, 0)
 ZEND_END_ARG_INFO()
 

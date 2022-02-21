@@ -157,31 +157,36 @@ foreach ($cSourceFiles as $cSourceFile) {
     $argInfoSourceForModule = str_replace("\t", '    ', file_get_contents($argInfoFilePathForModule));
 
     $replacedCountT = 0;
-    if ($methodNames) {
-        foreach ($methodNames as $methodName) {
-            $argInfoName = "arginfo_class_{$methodName}";
-            $argInfoBodyRegex = "/ZEND_BEGIN_ARG[^(]+\\({$argInfoName},[\\s\\S]+?ZEND_END_ARG[^)]+\\)/";
-            $argInfoDefineRegex = "/#define {$argInfoName} [^\n]+/";
-            if (preg_match($argInfoBodyRegex, $cSource, $matches) ||
-                preg_match($argInfoDefineRegex, $cSource, $matches)) {
-                $oldArgInfoBody = $matches[0];
-            } else {
-                if (!isset($nonStandardArgInfoNameMap[$argInfoName])) {
-                    warn("Unable to find method arginfo of '{$methodName}'");
-                }
-                continue;
+    $argInfoNames = [
+        ...array_map(function (string $functionName) {
+            return "arginfo_{$functionName}";
+        }, $functionNames),
+        ...array_map(function (string $methodName) {
+            return "arginfo_class_{$methodName}";
+        }, $methodNames)
+    ];
+    foreach ($argInfoNames as $argInfoName) {
+        $argInfoBodyRegex = "/ZEND_BEGIN_ARG[^(]+\\({$argInfoName},[\\s\\S]+?ZEND_END_ARG[^)]+\\)/";
+        $argInfoDefineRegex = "/#define {$argInfoName} [^\n]+/";
+        if (preg_match($argInfoBodyRegex, $cSource, $matches) ||
+            preg_match($argInfoDefineRegex, $cSource, $matches)) {
+            $oldArgInfoBody = $matches[0];
+        } else {
+            if (!isset($nonStandardArgInfoNameMap[$argInfoName])) {
+                warn("Unable to find target function/method of '{$argInfoName}'");
             }
-            if (!preg_match($argInfoBodyRegex, $argInfoSourceForModule, $matches) &&
-                !preg_match($argInfoDefineRegex, $argInfoSourceForModule, $matches)) {
-                error("Unable to find '{$argInfoName}' in new arginfo source");
-            }
-            $newArgInfoBody = $matches[0];
-            if ($oldArgInfoBody === $newArgInfoBody) {
-                continue;
-            }
-            $cSource = str_replace($oldArgInfoBody, $newArgInfoBody, $cSource, $replacedCountTT);
-            $replacedCountT += $replacedCountTT;
+            continue;
         }
+        if (!preg_match($argInfoBodyRegex, $argInfoSourceForModule, $matches) &&
+            !preg_match($argInfoDefineRegex, $argInfoSourceForModule, $matches)) {
+            error("Unable to find '{$argInfoName}' in new arginfo source");
+        }
+        $newArgInfoBody = $matches[0];
+        if ($oldArgInfoBody === $newArgInfoBody) {
+            continue;
+        }
+        $cSource = str_replace($oldArgInfoBody, $newArgInfoBody, $cSource, $replacedCountTT);
+        $replacedCountT += $replacedCountTT;
     }
 
     if (!file_put_contents($cSourceFile, $cSource)) {
