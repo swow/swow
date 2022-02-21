@@ -14,14 +14,13 @@ declare(strict_types=1);
 namespace Swow\Http;
 
 use Swow\WebSocket;
-use TypeError;
 
 class WebSocketFrame extends WebSocket\Frame
 {
     public function getPayloadData(): Buffer
     {
         if (!$this->hasPayloadData()) {
-            $payloadData = new Buffer();
+            $payloadData = Buffer::for();
             $this->setPayloadData($payloadData);
 
             return $payloadData;
@@ -30,15 +29,8 @@ class WebSocketFrame extends WebSocket\Frame
         return Buffer::for(parent::getPayloadData());
     }
 
-    /**
-     * @param Buffer|null $buffer
-     */
-    public function setPayloadData(?\Swow\Buffer $buffer): static
+    public function setPayloadData(mixed $buffer): static
     {
-        if (!($buffer instanceof Buffer)) {
-            throw new TypeError('$buffer should be an instance of ' . Buffer::class);
-        }
-
-        return parent::setPayloadData($buffer);
+        return parent::setPayloadData(Buffer::for($buffer));
     }
 }
