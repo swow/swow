@@ -15,7 +15,6 @@ namespace Swow\Debug;
 
 use Error;
 use SplFileObject;
-use stdClass;
 use Swow\Channel;
 use Swow\Coroutine;
 use Swow\Signal;
@@ -289,17 +288,17 @@ TEXT;
         return $this;
     }
 
-    /** @return WeakMap<stdClass> */
+    /** @return WeakMap<DebuggerContext> */
     public static function getCoroutineDebugWeakMap(): WeakMap
     {
         return static::$coroutineDebugWeakMap ?? (static::$coroutineDebugWeakMap = new WeakMap());
     }
 
-    public static function getDebugContextOfCoroutine(Coroutine $coroutine): stdClass
+    public static function getDebugContextOfCoroutine(Coroutine $coroutine): DebuggerContext
     {
         $weakMap = static::getCoroutineDebugWeakMap();
         if (!isset($weakMap[$coroutine])) {
-            return $weakMap[$coroutine] = new stdClass();
+            return $weakMap[$coroutine] = new DebuggerContext();
         }
         return $weakMap[$coroutine];
     }
@@ -896,7 +895,7 @@ TEXT;
         $context = static::getDebugContextOfCoroutine($coroutine);
         $context->stopped = true;
         Coroutine::yield();
-        if ($context->stop ?? false) {
+        if ($context->stop) {
             $context->stopped = false;
         } else {
             unset($context->stopped);
@@ -914,7 +913,7 @@ TEXT;
         $coroutine = Coroutine::getCurrent();
         $context = static::getDebugContextOfCoroutine($coroutine);
 
-        if ($context->stop ?? false) {
+        if ($context->stop) {
             $traceDepth = $coroutine->getTraceDepth();
             $traceDiffLevel = static::getCoroutineTraceDiffLevel($coroutine, 'breakPointHandler');
             if ($traceDepth - $traceDiffLevel <= $debugger->lastTraceDepth) {
@@ -1000,7 +999,7 @@ TEXT;
                     throw $exception;
                 }
             }
-        } while (!($context->stopped ?? false));
+        } while ($context->stopped);
         $signalListener->kill();
     }
 
