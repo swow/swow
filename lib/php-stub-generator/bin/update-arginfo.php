@@ -158,12 +158,12 @@ foreach ($cSourceFiles as $cSourceFile) {
 
     $replacedCountT = 0;
     $argInfoNames = [
-        ...array_map(function (string $functionName) {
+        ...array_map(static function (string $functionName) {
             return "arginfo_{$functionName}";
         }, $functionNames),
-        ...array_map(function (string $methodName) {
+        ...array_map(static function (string $methodName) {
             return "arginfo_class_{$methodName}";
-        }, $methodNames)
+        }, $methodNames),
     ];
     foreach ($argInfoNames as $argInfoName) {
         $argInfoBodyRegex = "/ZEND_BEGIN_ARG[^(]+\\({$argInfoName},[\\s\\S]+?ZEND_END_ARG[^)]+\\)/";
@@ -179,9 +179,12 @@ foreach ($cSourceFiles as $cSourceFile) {
         }
         if (!preg_match($argInfoBodyRegex, $argInfoSourceForModule, $matches) &&
             !preg_match($argInfoDefineRegex, $argInfoSourceForModule, $matches)) {
-            error("Unable to find '{$argInfoName}' in new arginfo source");
+            warn("Unable to find '{$argInfoName}' in new arginfo source");
+            continue;
         }
         $newArgInfoBody = $matches[0];
+        // -Wunicode: \U used with no following hex digits; treating as '\' followed by identifier
+        $newArgInfoBody = preg_replace('/\\\\\\\\([uUxX])/', '\x5c$1', $newArgInfoBody);
         if ($oldArgInfoBody === $newArgInfoBody) {
             continue;
         }
