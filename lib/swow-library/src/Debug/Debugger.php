@@ -567,7 +567,7 @@ TEXT;
 
     protected static function getStateNameOfCoroutine(Coroutine $coroutine): string
     {
-        if (static::getDebugContextOfCoroutine($coroutine)->stopped ?? false) {
+        if (static::getDebugContextOfCoroutine($coroutine)->stopped) {
             $state = 'stopped';
         } else {
             $state = $coroutine->getStateName();
@@ -578,7 +578,7 @@ TEXT;
 
     protected static function getExtendedLevelOfCoroutine(Coroutine $coroutine): int
     {
-        if (static::getDebugContextOfCoroutine($coroutine)->stopped ?? false) {
+        if (static::getDebugContextOfCoroutine($coroutine)->stopped) {
             // skip extended statement handler
             $level = static::getCoroutineTraceDiffLevel($coroutine, 'getExtendedLevelOfCoroutine');
         } else {
@@ -895,11 +895,7 @@ TEXT;
         $context = static::getDebugContextOfCoroutine($coroutine);
         $context->stopped = true;
         Coroutine::yield();
-        if ($context->stop) {
-            $context->stopped = false;
-        } else {
-            unset($context->stopped);
-        }
+        $context->stopped = false;
     }
 
     public static function breakOn(string $point): static
@@ -981,7 +977,7 @@ TEXT;
     protected function waitStoppedCoroutine(Coroutine $coroutine): void
     {
         $context = static::getDebugContextOfCoroutine($coroutine);
-        if ($context->stopped ?? false) {
+        if ($context->stopped) {
             return;
         }
         $signalChannel = new Channel();
@@ -990,6 +986,7 @@ TEXT;
             Signal::wait(Signal::INT);
             $signalChannel->push(true);
         });
+        /** @noinspection PhpConditionAlreadyCheckedInspection */
         do {
             try {
                 $signalChannel->pop(100);
@@ -999,7 +996,7 @@ TEXT;
                     throw $exception;
                 }
             }
-        } while ($context->stopped);
+        } while (!$context->stopped);
         $signalListener->kill();
     }
 
@@ -1129,8 +1126,8 @@ TEXT;
                         case 'continue':
                             $coroutine = $this->getCurrentCoroutine();
                             $context = static::getDebugContextOfCoroutine($coroutine);
-                            if (!($context->stopped ?? false)) {
-                                if ($context->stop ?? false) {
+                            if (!$context->stopped) {
+                                if ($context->stop) {
                                     $this->waitStoppedCoroutine($coroutine);
                                 } else {
                                     throw new DebuggerException('Not in debugging');
@@ -1151,7 +1148,7 @@ TEXT;
                                     goto _next;
                                 case 'c':
                                 case 'continue':
-                                    unset(static::getDebugContextOfCoroutine($coroutine)->stop);
+                                    static::getDebugContextOfCoroutine($coroutine)->stop = false;
                                     $this->out("Coroutine#{$coroutine->getId()} continue to run...");
                                     $coroutine->resume();
                                     break;

@@ -16,5 +16,5 @@ namespace Swow\Debug;
 class DebuggerContext
 {
     public bool $stop = false;
-    public ?bool $stopped = null;
+    public bool $stopped = false;
 }
