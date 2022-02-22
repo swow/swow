@@ -85,12 +85,16 @@ class Connection extends Socket implements HttpTypeInterface
 
     public function recvHttpRequest(): Request
     {
+        return $this->recvHttpRequestTo(new Request());
+    }
+
+    public function recvHttpRequestTo(Request $request): Request
+    {
         $result = $this->receiverExecute(
             $this->server->getMaxHeaderLength(),
             $this->server->getMaxContentLength()
         );
 
-        $request = new Request();
         $request->setHead(
             $result->method,
             $result->uri,

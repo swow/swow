@@ -13,15 +13,18 @@ declare(strict_types=1);
 
 namespace Swow\Http;
 
-use Swow\WebSocket\Frame as WebSocketFrame;
 use function min;
 use const SEEK_CUR;
 
 trait WebSocketTrait
 {
-    public function recvWebSocketFrame(?WebSocketFrame $frame = null): WebSocketFrame
+    public function recvWebSocketFrame(): WebSocketFrame
     {
-        $frame ??= new WebSocketFrame();
+        return $this->recvWebSocketFrameTo(new WebSocketFrame());
+    }
+
+    public function recvWebSocketFrameTo(WebSocketFrame $frame): WebSocketFrame
+    {
         $buffer = $this->buffer;
         $expectMore = $buffer->eof();
         while (true) {
