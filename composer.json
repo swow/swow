@@ -31,7 +31,8 @@
     "require-dev": {
         "friendsofphp/php-cs-fixer": "3.4.*",
         "phpunit/phpunit": ">=8.0",
-        "rector/rector": "^0.12.8"
+        "rector/rector": "^0.12.8",
+        "phpstan/phpstan": "^1.4"
     },
     "replace": {
         "swow/swow-library": "*",
@@ -69,6 +70,7 @@
         "cs-check": [ "@php vendor/bin/php-cs-fixer fix --dry-run --diff" ],
         "cs-fix": [ "@php vendor/bin/php-cs-fixer fix" ],
         "rector": [ "@php vendor/bin/rector process --config=tools/rector.php" ],
+        "analyse": [ "@php -d extension=swow vendor/bin/phpstan analyse --memory-limit 4G -c phpstan.neon" ],
         "sync-extension": [ "@php -n tools/sync-extension.php" ],
         "build-extension": [ "@php bin/swow-builder" ],
         "rebuild-extension": [ "@build-extension --rebuild" ],
