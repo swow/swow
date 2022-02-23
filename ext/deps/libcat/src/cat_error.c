@@ -398,7 +398,7 @@ CAT_API int cat_orig_errno(cat_errno_t error)
 /* return uv errno from posix errno */
 /* why so WET */
 cat_errno_t cat_translate_unix_error(int error) {
-#define CAT_ERROR_GEN(name, _) \
+#define CAT_ERROR_GEN(name) \
     if (error == name){ \
         return CAT_##name; \
     }

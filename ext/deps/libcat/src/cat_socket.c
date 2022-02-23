@@ -778,6 +778,12 @@ CAT_API cat_socket_t *cat_socket_create_ex(cat_socket_t *socket, cat_socket_type
     size_t isocket_size;
     int error = CAT_EINVAL;
 
+    if (options == NULL) {
+        memset(&ioptions, 0, sizeof(ioptions));
+    } else {
+        ioptions = *options;
+    }
+
     if (socket == NULL) {
         socket = (cat_socket_t *) cat_malloc(sizeof(*socket));
 #if CAT_ALLOC_HANDLE_ERRORS
@@ -823,12 +829,6 @@ CAT_API cat_socket_t *cat_socket_create_ex(cat_socket_t *socket, cat_socket_type
     /* Notice: dump callback may access this even if creation failed,
      * so we must set it to NULL here */
     isocket->u.socket = NULL;
-
-    if (options == NULL) {
-        memset(&ioptions, 0, sizeof(ioptions));
-    } else {
-        ioptions = *options;
-    }
 
     /* solve type and get af
      *  Notice: we should create socket without IPV* flag (AF_UNSPEC)
