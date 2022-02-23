@@ -20,6 +20,7 @@ use Swow\Coroutine;
 use Swow\Signal;
 use Swow\Socket;
 use Swow\Util\FileSystem\IOException;
+use Swow\Util\Handler;
 use Throwable;
 use WeakMap;
 use function array_filter;
@@ -60,11 +61,9 @@ use function str_repeat;
 use function str_replace;
 use function strlen;
 use function substr;
-use function trigger_error;
 use function trim;
 use function usleep;
 use const DEBUG_BACKTRACE_IGNORE_ARGS;
-use const E_USER_WARNING;
 use const JSON_THROW_ON_ERROR;
 use const PHP_EOL;
 use const PHP_INT_MAX;
@@ -87,8 +86,6 @@ TEXT;
 
     protected const SOURCE_FILE_CONTENT_PADDING = 4;
     protected const SOURCE_FILE_DEFAULT_LINE_COUNT = 8;
-
-    private static bool $breakPointHandlerRegistered = false;
 
     /** @var static */
     protected static self $instance;
@@ -120,7 +117,7 @@ TEXT;
 
     protected int $currentSourceFileLine = 0;
 
-    protected bool $breakPointHandlerEnabled = false;
+    protected ?Handler $breakPointHandler = null;
 
     /** @var string[] */
     protected array $breakPoints = [];
@@ -147,8 +144,9 @@ TEXT;
 
     public function __destruct()
     {
-        if ($this->breakPointHandlerEnabled) {
-            self::removeBreakPointHandler();
+        if ($this->breakPointHandler) {
+            $this->breakPointHandler->remove();
+            $this->breakPointHandler = null;
         }
     }
 
@@ -947,25 +945,11 @@ TEXT;
         }
     }
 
-    private function checkBreakPointHandler(): static
+    protected function checkBreakPointHandler(): static
     {
-        if (!$this->breakPointHandlerEnabled) {
-            if (!self::$breakPointHandlerRegistered) {
-                $originalHandler = registerExtendedStatementHandler([$this, 'breakPointHandler']);
-                if ($originalHandler !== null) {
-                    trigger_error('Extended Statement Handler has been overwritten', E_USER_WARNING);
-                }
-                $this::$breakPointHandlerRegistered = true;
-            }
-            $this->breakPointHandlerEnabled = true;
-        }
+        $this->breakPointHandler ??= registerExtendedStatementHandler([$this, 'breakPointHandler']);
 
         return $this;
-    }
-
-    private static function removeBreakPointHandler(): void
-    {
-        registerExtendedStatementHandler(null);
     }
 
     protected function waitStoppedCoroutine(Coroutine $coroutine): void
@@ -980,7 +964,7 @@ TEXT;
             Signal::wait(Signal::INT);
             $signalChannel->push(true);
         });
-        /** @noinspection PhpConditionAlreadyCheckedInspection */
+        /* @noinspection PhpConditionAlreadyCheckedInspection */
         do {
             try {
                 $signalChannel->pop(100);

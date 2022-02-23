@@ -1150,5 +1150,5 @@ namespace Swow\Debug
 
 namespace Swow\Debug
 {
-    function registerExtendedStatementHandler(?callable $handler): ?callable { }
+    function registerExtendedStatementHandler(callable $handler): \Swow\Util\Handler { }
 }

@@ -24,9 +24,10 @@ extern "C" {
 
 #include "swow.h"
 
+#include "swow_util.h"
+
 CAT_GLOBALS_STRUCT_BEGIN(swow_debug)
-    zend_fcall_info_cache extended_statement_handler;
-    zval zextended_statement_handler;
+    cat_queue_t extended_statement_handlers;
 CAT_GLOBALS_STRUCT_END(swow_debug)
 
 extern SWOW_API CAT_GLOBALS_DECLARE(swow_debug)
