@@ -301,6 +301,7 @@ EOF
     swow_log.c \
     swow_exceptions.c \
     swow_debug.c \
+    swow_util.c \
     swow_hook.c \
     swow_defer.c \
     swow_coroutine.c \
@@ -316,7 +317,8 @@ EOF
     swow_signal.c \
     swow_watch_dog.c \
     swow_http.c \
-    swow_websocket.c, SWOW_INCLUDES, SWOW_CFLAGS)
+    swow_websocket.c \
+    , SWOW_INCLUDES, SWOW_CFLAGS)
 
   dnl TODO: may use separate libcat
   if test "libcat" != ""; then

@@ -18,6 +18,8 @@
 
 #include "swow.h"
 #include "swow_log.h"
+#include "swow_debug.h"
+#include "swow_util.h"
 #include "swow_defer.h"
 #include "swow_coroutine.h"
 #include "swow_channel.h"
@@ -29,7 +31,6 @@
 #include "swow_stream.h"
 #include "swow_signal.h"
 #include "swow_watch_dog.h"
-#include "swow_debug.h"
 #include "swow_http.h"
 #include "swow_websocket.h"
 #include "swow_curl.h"
@@ -134,6 +135,8 @@ PHP_MINIT_FUNCTION(swow)
         swow_module_init,
         swow_log_module_init,
         swow_exceptions_module_init,
+        swow_debug_module_init,
+        swow_util_module_init,
         swow_defer_module_init,
         swow_coroutine_module_init,
         swow_channel_module_init,
@@ -145,7 +148,6 @@ PHP_MINIT_FUNCTION(swow)
         swow_stream_module_init,
         swow_signal_module_init,
         swow_watch_dog_module_init,
-        swow_debug_module_init,
         swow_http_module_init,
         swow_websocket_module_init,
 #ifdef CAT_HAVE_CURL
@@ -225,12 +227,12 @@ PHP_RINIT_FUNCTION(swow)
 {
     static const swow_init_function_t rinit_functions[] = {
         swow_runtime_init,
+        swow_debug_runtime_init,
         swow_coroutine_runtime_init,
         swow_event_runtime_init,
         swow_socket_runtime_init,
         swow_stream_runtime_init,
         swow_watch_dog_runtime_init,
-        swow_debug_runtime_init,
     };
 
 // FIXME: Why opcache do not set ZEND_COMPILE_PRELOAD before runtime init anymore?
@@ -260,11 +262,11 @@ PHP_RINIT_FUNCTION(swow)
 PHP_RSHUTDOWN_FUNCTION(swow)
 {
     static const swow_shutdown_function_t rshutdown_functions[] = {
-        swow_debug_runtime_shutdown,
         swow_watch_dog_runtime_shudtown,
         swow_stream_runtime_shutdown,
         swow_event_runtime_shutdown,
         swow_coroutine_runtime_shutdown,
+        swow_debug_runtime_shutdown,
         swow_runtime_shutdown,
     };
 

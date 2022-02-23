@@ -225,6 +225,7 @@ if (PHP_SWOW != 'no') (function(){
         'swow_log.c',
         'swow_exceptions.c',
         'swow_debug.c',
+        'swow_util.c',
         'swow_hook.c',
         'swow_defer.c',
         'swow_coroutine.c',

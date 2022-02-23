@@ -648,6 +648,16 @@ namespace Swow
     function defer(callable $tasks): void { }
 }
 
+namespace Swow\Util
+{
+    class Handler
+    {
+        protected function __construct() { }
+
+        public function remove(): void { }
+    }
+}
+
 namespace Swow\Coroutine
 {
     class Exception extends \Swow\Exception { }
