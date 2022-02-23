@@ -88,10 +88,6 @@ TEXT;
     protected const SOURCE_FILE_CONTENT_PADDING = 4;
     protected const SOURCE_FILE_DEFAULT_LINE_COUNT = 8;
 
-    protected const STEP_TYPE_NONE = 0;
-    protected const STEP_TYPE_NEXT = 1;
-    protected const STEP_TYPE_STEP_IN = 2;
-
     private static bool $breakPointHandlerRegistered = false;
 
     /** @var static */
@@ -128,8 +124,6 @@ TEXT;
 
     /** @var string[] */
     protected array $breakPoints = [];
-
-    protected int $stepType = self::STEP_TYPE_NONE;
 
     /**  @var int For "next" command, only break when the trace depth
      * is less or equal to the last trace depth */
