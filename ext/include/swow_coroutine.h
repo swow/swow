@@ -78,7 +78,7 @@ typedef struct swow_coroutine_executor_s {
 #endif
 #ifdef SWOW_COROUTINE_SWAP_BASIC_GLOBALS
     /* for array_walk non-reentrancy */
-    swow_fcall_t *array_walk_context;
+    swow_fcall_info_t *array_walk_context;
 #endif
 #ifdef SWOW_COROUTINE_SWAP_OUTPUT_GLOBALS
     zend_output_globals *output_globals;

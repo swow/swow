@@ -303,7 +303,7 @@ static zend_always_inline zend_object* swow_object_create(zend_class_entry *ce)
 typedef struct swow_fcall_s {
     zend_fcall_info info;
     zend_fcall_info_cache cache;
-} swow_fcall_t;
+} swow_fcall_info_t;
 
 typedef struct swow_fcall_storage_s {
     zval zcallable;

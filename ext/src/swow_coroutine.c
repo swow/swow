@@ -526,10 +526,10 @@ SWOW_API void swow_coroutine_executor_save(swow_coroutine_executor_t *executor)
 #endif
 #ifdef SWOW_COROUTINE_SWAP_BASIC_GLOBALS
     do {
-        swow_fcall_t *fcall = (swow_fcall_t *) &BG(array_walk_fci);
+        swow_fcall_info_t *fcall = (swow_fcall_info_t *) &BG(array_walk_fci);
         if (UNEXPECTED(fcall->info.size != 0)) {
             if (UNEXPECTED(executor->array_walk_context == NULL)) {
-                executor->array_walk_context = (swow_fcall_t *) emalloc(sizeof(*fcall));
+                executor->array_walk_context = (swow_fcall_info_t *) emalloc(sizeof(*fcall));
             }
             memcpy(executor->array_walk_context, fcall, sizeof(*fcall));
             memset(fcall, 0, sizeof(*fcall));
@@ -579,7 +579,7 @@ SWOW_API void swow_coroutine_executor_recover(swow_coroutine_executor_t *executo
 #endif
 #ifdef SWOW_COROUTINE_SWAP_BASIC_GLOBALS
     do {
-        swow_fcall_t *fcall = executor->array_walk_context;
+        swow_fcall_info_t *fcall = executor->array_walk_context;
         if (UNEXPECTED(fcall != NULL && fcall->info.size != 0)) {
             memcpy(&BG(array_walk_fci), fcall, sizeof(*fcall));
             fcall->info.size = 0;
