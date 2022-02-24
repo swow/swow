@@ -532,11 +532,7 @@ int swow_debug_runtime_init(INIT_FUNC_ARGS)
 
 int swow_debug_runtime_shutdown(INIT_FUNC_ARGS)
 {
-    swow_util_handler_t *handler;
-    while ((handler = cat_queue_front_data(&SWOW_DEBUG_G(extended_statement_handlers), swow_util_handler_t, node))) {
-        swow_util_handler_remove(handler);
-        zend_object_release(&handler->std);
-    }
+    swow_util_handlers_release(&SWOW_DEBUG_G(extended_statement_handlers));
 
     return SUCCESS;
 }

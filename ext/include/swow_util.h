@@ -52,6 +52,8 @@ SWOW_API swow_util_handler_t *swow_util_handler_create(zval *zcallable);
 SWOW_API void swow_util_handler_push_back_to(swow_util_handler_t *handler, cat_queue_t *queue);
 SWOW_API void swow_util_handler_remove(swow_util_handler_t *handler);
 
+SWOW_API void swow_util_handlers_release(cat_queue_t *handlers);
+
 #ifdef __cplusplus
 }
 #endif

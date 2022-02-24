@@ -66,6 +66,15 @@ SWOW_API void swow_util_handler_remove(swow_util_handler_t *handler)
     cat_queue_init(&handler->node);
 }
 
+SWOW_API void swow_util_handlers_release(cat_queue_t *handlers)
+{
+    swow_util_handler_t *handler;
+    while ((handler = cat_queue_front_data(handlers, swow_util_handler_t, node))) {
+        swow_util_handler_remove(handler);
+        zend_object_release(&handler->std);
+    }
+}
+
 #define getThisUtilHandler() (swow_util_handler_get_from_object(Z_OBJ_P(ZEND_THIS)))
 
 ZEND_BEGIN_ARG_INFO_EX(arginfo_class_Swow_Util_Handler___construct, 0, 0, 0)
