@@ -436,10 +436,11 @@ ZEND_END_ARG_INFO()
 static PHP_FUNCTION(Swow_Debug_registerExtendedStatementHandler)
 {
     swow_util_handler_t *handler;
-    zval *zcallable;
+    swow_fcall_storage_t fcall;
+    zval zfcall;
 
     ZEND_PARSE_PARAMETERS_START(1, 1)
-        Z_PARAM_ZVAL(zcallable)
+        SWOW_PARAM_FCALL(fcall)
     ZEND_PARSE_PARAMETERS_END();
 
     if (!swow_compile_extended_info) {
@@ -447,12 +448,9 @@ static PHP_FUNCTION(Swow_Debug_registerExtendedStatementHandler)
         RETURN_THROWS();
     }
 
-    handler = swow_util_handler_create(zcallable);
-
-    if (handler == NULL) {
-        swow_throw_exception_with_last(swow_exception_ce);
-        RETURN_THROWS();
-    }
+    ZVAL_PTR(&zfcall, &fcall);
+    handler = swow_util_handler_create(&zfcall);
+    ZEND_ASSERT(handler != NULL);
 
     swow_util_handler_push_back_to(handler, &SWOW_DEBUG_G(extended_statement_handlers));
 

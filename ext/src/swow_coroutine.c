@@ -1304,7 +1304,8 @@ ZEND_END_ARG_INFO()
 static PHP_METHOD(Swow_Coroutine, __construct)
 {
     swow_coroutine_t *scoroutine = getThisCoroutine();
-    zval *zcallable;
+    swow_fcall_storage_t fcall;
+    zval zfcall;
 
     /* create_object() may fail */
     if (UNEXPECTED(EG(exception))) {
@@ -1317,10 +1318,11 @@ static PHP_METHOD(Swow_Coroutine, __construct)
     }
 
     ZEND_PARSE_PARAMETERS_START(1, 1)
-        Z_PARAM_ZVAL(zcallable)
+        SWOW_PARAM_FCALL(fcall)
     ZEND_PARSE_PARAMETERS_END();
 
-    if (UNEXPECTED(!swow_coroutine_construct(scoroutine, zcallable, 0, 0))) {
+    ZVAL_PTR(&zfcall, &fcall);
+    if (UNEXPECTED(!swow_coroutine_construct(scoroutine, &zfcall, 0, 0))) {
         swow_throw_exception_with_last(swow_coroutine_exception_ce);
         RETURN_THROWS();
     }
