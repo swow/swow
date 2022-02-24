@@ -81,7 +81,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: ['windows-latest']
+        os: ['windows-2019']
         ts: [ 'nts', 'ts' ]
       max-parallel: 2
     steps:

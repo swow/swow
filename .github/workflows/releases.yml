@@ -176,7 +176,7 @@ jobs:
     if: ${{ github.event_name == 'push' }}
     needs:
       - builddlls
-    runs-on: windows-latest
+    runs-on: windows-2019
     steps:
       - name: Checkout
         uses: actions/checkout@v2
