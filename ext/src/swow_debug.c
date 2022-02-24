@@ -491,7 +491,7 @@ static int swow_debug_ext_stmt_handler(zend_execute_data *execute_data)
         scoroutine->coroutine.flags |= SWOW_COROUTINE_FLAG_DEBUGGING;
 
         CAT_QUEUE_FOREACH_DATA_START(&SWOW_DEBUG_G(extended_statement_handlers), swow_util_handler_t, node, handler) {
-            (void) zend_call_function(&fci, &handler->fcc);
+            (void) zend_call_function(&fci, &handler->fcall.fcc);
         } CAT_QUEUE_FOREACH_DATA_END();
 
         scoroutine->coroutine.flags ^= SWOW_COROUTINE_FLAG_DEBUGGING;

@@ -61,8 +61,7 @@ typedef enum swow_coroutine_flag_e {
  */
 typedef struct swow_coroutine_executor_s {
     /* coroutine info */
-    zval zcallable;
-    zend_fcall_info_cache fcc;
+    swow_fcall_storage_t fcall;
     /* zend things */
     JMP_BUF *bailout;
     zval *vm_stack_top;

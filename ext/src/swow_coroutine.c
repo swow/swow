@@ -203,7 +203,6 @@ static zval *swow_coroutine_function(zval *zdata)
 {
     swow_coroutine_t *scoroutine = swow_coroutine_get_current();
     swow_coroutine_executor_t *executor = scoroutine->executor;
-    zval zcallable = executor->zcallable;
     zend_fcall_info fci;
     zval retval;
 
@@ -234,14 +233,13 @@ static zval *swow_coroutine_function(zval *zdata)
     fci.retval = &retval;
 
     /* call function */
-    (void) zend_call_function(&fci, &executor->fcc);
+    (void) zend_call_function(&fci, &executor->fcall.fcc);
     if (UNEXPECTED(EG(exception) != NULL)) {
         swow_coroutine_function_handle_exception();
     }
 
     /* discard all possible resources (e.g. variable by "use" in zend_closure) */
-    ZVAL_NULL(&executor->zcallable);
-    zval_ptr_dtor(&zcallable);
+    swow_fcall_storage_release(&executor->fcall);
     if (UNEXPECTED(EG(exception) != NULL)) {
         swow_coroutine_function_handle_exception();
     }
@@ -277,19 +275,13 @@ static zval *swow_coroutine_function(zval *zdata)
 static cat_bool_t swow_coroutine_construct(swow_coroutine_t *scoroutine, zval *zcallable, size_t stack_page_size, size_t c_stack_size)
 {
     swow_coroutine_executor_t *executor;
-    zend_fcall_info_cache fcc;
+    swow_fcall_storage_t fcall;
     cat_coroutine_t *coroutine;
 
-    /* check arguments */
-    do {
-        char *error;
-        if (!zend_is_callable_ex(zcallable, NULL, 0, NULL, &fcc, &error)) {
-            cat_update_last_error(CAT_EMISUSE, "Coroutine function must be callable, %s", error);
-            efree(error);
-            return cat_false;
-        }
-        efree(error);
-    } while (0);
+    if (!swow_fcall_storage_create(&fcall, zcallable)) {
+        cat_update_last_error_with_previous("Coroutine construct failed");
+        return cat_false;
+    }
 
     /* create C coroutine only if function is not NULL
      * (e.g. main coroutine is running so we do not need to re-create it,
@@ -347,9 +339,8 @@ static cat_bool_t swow_coroutine_construct(swow_coroutine_t *scoroutine, zval *z
 #ifdef SWOW_COROUTINE_SWAP_SILENCE_CONTEXT
         executor->error_reporting = 0;
 #endif
-        /* save function cache */
-        ZVAL_COPY(&executor->zcallable, zcallable);
-        executor->fcc = fcc;
+        /* save function info */
+        executor->fcall = fcall;
         /* it's unnecessary to init the zdata */
         /* ZVAL_UNDEF(&executor->zdata); */
     } while (0);
@@ -381,8 +372,8 @@ static void swow_coroutine_shutdown(swow_coroutine_t *scoroutine)
 #endif
 
     /* discard function (usually cleaned up before the coroutine finished, unless the coroutine never run) */
-    if (UNEXPECTED(!ZVAL_IS_NULL(&executor->zcallable))) {
-        zval_ptr_dtor(&executor->zcallable);
+    if (UNEXPECTED(swow_fcall_storage_is_available(&executor->fcall))) {
+        swow_fcall_storage_release(&executor->fcall);
     }
 
     /* free zend vm stack */
@@ -420,7 +411,7 @@ static void swow_coroutine_main_create(void)
 
     scoroutine->executor = ecalloc(1, sizeof(*scoroutine->executor));
     scoroutine->executor->root_execute_data = (zend_execute_data *) EG(vm_stack)->top;
-    ZVAL_NULL(&scoroutine->executor->zcallable);
+    // memset(&scoroutine->executor->fcall, 0, sizeof(scoroutine->executor->fcall));
 #ifdef SWOW_COROUTINE_MOCK_FIBER_CONTEXT
     efree(scoroutine->fiber_context);
     scoroutine->fiber_context = EG(main_fiber_context);
@@ -2016,7 +2007,7 @@ static const zend_function_entry swow_coroutine_methods[] = {
 static HashTable *swow_coroutine_get_gc(zend_object *object, zval **gc_data, int *gc_count)
 {
     swow_coroutine_t *scoroutine = swow_coroutine_get_from_object(object);
-    zval *zcallable = scoroutine->executor ? &scoroutine->executor->zcallable : NULL;
+    zval *zcallable = scoroutine->executor ? &scoroutine->executor->fcall.zcallable : NULL;
 
     if (zcallable == NULL || ZVAL_IS_NULL(zcallable)) {
         *gc_data = NULL;

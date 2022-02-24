@@ -305,6 +305,15 @@ typedef struct swow_fcall_s {
     zend_fcall_info_cache cache;
 } swow_fcall_t;
 
+typedef struct swow_fcall_storage_s {
+    zval zcallable;
+    zend_fcall_info_cache fcc;
+} swow_fcall_storage_t;
+
+SWOW_API zend_bool swow_fcall_storage_is_available(const swow_fcall_storage_t *fcall);
+SWOW_API zend_bool swow_fcall_storage_create(swow_fcall_storage_t *fcall, zval *zcallable);
+SWOW_API void swow_fcall_storage_release(swow_fcall_storage_t *fcall);
+
 /* method caller */
 
 #define swow_call_method_with_0_params(zobject, object_ce, fn_ptr_ptr, fn_name, retval) \

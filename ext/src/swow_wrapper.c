@@ -139,6 +139,38 @@ SWOW_API zend_object *swow_custom_object_clone(zend_object *object)
     return new_object;
 }
 
+/* callable */
+
+SWOW_API zend_bool swow_fcall_storage_is_available(const swow_fcall_storage_t *fcall)
+{
+    return Z_TYPE(fcall->zcallable) != IS_UNDEF;
+}
+
+SWOW_API zend_bool swow_fcall_storage_create(swow_fcall_storage_t *fcall, zval *zcallable)
+{
+    if (Z_TYPE_P(zcallable) == IS_PTR) {
+        *fcall = *((swow_fcall_storage_t *) Z_PTR_P(zcallable));
+        Z_TRY_ADDREF(fcall->zcallable);
+    } else {
+        char *error;
+        if (!zend_is_callable_ex(zcallable, NULL, 0, NULL, &fcall->fcc, &error)) {
+            cat_update_last_error(CAT_EMISUSE, "The argument passed in is not callable (%s)", error);
+            efree(error);
+            return false;
+        }
+        ZEND_ASSERT(!error);
+        ZVAL_COPY(&fcall->zcallable, zcallable);
+    }
+
+    return true;
+}
+
+SWOW_API void swow_fcall_storage_release(swow_fcall_storage_t *fcall)
+{
+    zval_ptr_dtor(&fcall->zcallable);
+    ZVAL_UNDEF(&fcall->zcallable);
+}
+
 /* output globals */
 
 #include "SAPI.h"
