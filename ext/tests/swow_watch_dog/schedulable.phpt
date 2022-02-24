@@ -3,7 +3,6 @@ swow_watch_dog: schedulable
 --SKIPIF--
 <?php
 require __DIR__ . '/../include/skipif.php';
-skip('Fix needed');
 skip_if_in_valgrind();
 ?>
 --FILE--
@@ -13,14 +12,31 @@ require __DIR__ . '/../include/bootstrap.php';
 use Swow\Coroutine;
 use Swow\WatchDog;
 
+final class CoroutineContext
+{
+    public int $alertCount = 0;
+}
+
+final class CoroutineContextManager
+{
+    private static WeakMap $map;
+
+    final public static function getContext(Coroutine $coroutine)
+    {
+        self::$map ??= new WeakMap();
+        return self::$map[$coroutine] ??= new CoroutineContext();
+    }
+}
+
 Assert::false(WatchDog::isRunning());
 
 WatchDog::run(1 * 1000 * 1000, 0, function () {
     Assert::true(WatchDog::isRunning());
     $coroutine = Coroutine::getCurrent();
-    $coroutine->__alert_count = ($coroutine->__alert_count ?? 0) + 1;
+    $context = CoroutineContextManager::getContext($coroutine);
+    $context->alertCount++;
     sleep(0);
-    if ($coroutine->__alert_count > 5) {
+    if ($context->alertCount > 5) {
         $coroutine->kill();
     }
 });
