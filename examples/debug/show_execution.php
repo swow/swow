@@ -11,9 +11,11 @@
 
 declare(strict_types=1);
 
+use function Swow\Debug\showExecutedSourceLines;
+
 require __DIR__ . '/../autoload.php';
 
-Swow\Debug\Debugger::showExecutedSourceLines(true);
+showExecutedSourceLines(true);
 
 ini_set('memory_limit', '512M');
 require __DIR__ . '/../amazing.php';

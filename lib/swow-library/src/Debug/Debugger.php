@@ -19,7 +19,6 @@ use Swow\Channel;
 use Swow\Coroutine;
 use Swow\Signal;
 use Swow\Socket;
-use Swow\Util\FileSystem\IOException;
 use Swow\Util\Handler;
 use Throwable;
 use WeakMap;
@@ -30,15 +29,11 @@ use function basename;
 use function bin2hex;
 use function count;
 use function ctype_print;
-use function debug_backtrace;
 use function end;
 use function explode;
 use function extension_loaded;
-use function fclose;
-use function fgets;
 use function file_exists;
 use function file_get_contents;
-use function fopen;
 use function func_get_args;
 use function getenv;
 use function implode;
@@ -63,9 +58,7 @@ use function strlen;
 use function substr;
 use function trim;
 use function usleep;
-use const DEBUG_BACKTRACE_IGNORE_ARGS;
 use const JSON_THROW_ON_ERROR;
-use const PHP_EOL;
 use const PHP_INT_MAX;
 use const Swow\Errno\ETIMEDOUT;
 
@@ -1273,77 +1266,5 @@ TEXT;
     public static function runOnTTY(string $keyword = 'sdb'): static
     {
         return static::getInstance()->run($keyword);
-    }
-
-    public static function showExecutedSourceLines(bool $all = false): void
-    {
-        if ($all) {
-            $handler = static function (): void {
-                static $lastFile = '', $firstTouch = false;
-                if (!$firstTouch) {
-                    /* skip for this function ending */
-                    $firstTouch = true;
-                    return;
-                }
-                $call = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 1)[0];
-                $file = $call['file'] ?? null;
-                $line = $call['line'] ?? null;
-                if ($lastFile !== $file) {
-                    $lastFile = $file;
-                    echo '>>> ' . $file . PHP_EOL;
-                }
-                echo sprintf('%-6s%s' . PHP_EOL, $line, static::getFileLine($file, $line));
-            };
-        } else {
-            $file = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 1)[0]['file'] ?? '';
-            $fp = @fopen($file, 'r');
-            if ($fp === false) {
-                throw IOException::getLast();
-            }
-            $lines = [];
-            while (($line = fgets($fp)) !== false) {
-                $lines[] = rtrim($line);
-            }
-            fclose($fp);
-            $handler = static function () use ($file, $lines): void {
-                $call = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 1)[0];
-                $callFile = $call['file'];
-                $callLine = $call['line'];
-                if ($callFile === $file) {
-                    echo sprintf('%-6s%s' . PHP_EOL, $callLine, $lines[$callLine - 1]);
-                }
-            };
-        }
-        registerExtendedStatementHandler($handler);
-    }
-
-    protected static function getFileLine(string $file, int $line): string
-    {
-        // TODO: LRU cache
-        static $cache = [];
-        if (!isset($cache[$file])) {
-            $fileLines = [];
-            $fp = @fopen($file, 'r');
-            if ($fp === false) {
-                $cache[$file] = false;
-            } else {
-                while (true) {
-                    $lineContent = fgets($fp);
-                    if ($lineContent === false) {
-                        break;
-                    }
-                    $fileLines[] = rtrim($lineContent);
-                }
-                $cache[$file] = $fileLines;
-            }
-        }
-        if (!$cache[$file]) {
-            return "Unable to read file {$file}";
-        }
-        if (!isset($cache[$file][$line - 1])) {
-            return "Unable to read file line {$file}:{$line}";
-        }
-
-        return $cache[$file][$line - 1];
     }
 }
