@@ -26,7 +26,7 @@ use function Swow\Util\processExecute;
 
 $genStub = static function (): void {
     global $argv;
-    $options = getopt('h', ['help', 'noinspection', 'stub-file::', 'gen-arginfo-mode', 'function-filter::', 'class-filter::'], $restIndex);
+    $options = getopt('h', ['help', 'noinspection', 'stub-file::', 'gen-arginfo-mode', 'filter-mode', 'function-filter::', 'class-filter::'], $restIndex);
     $argv = array_slice($argv, $restIndex);
     if (isset($options['h']) || isset($options['help']) || empty($argv[0])) {
         $basename = basename(__FILE__);
@@ -34,7 +34,7 @@ $genStub = static function (): void {
         <<<TEXT
 Usage: php {$basename} \\
          [-h|--help] [--noinspection] [--stub-file=/path/to/ext.stub.php] [--gen-arginfo-mode] \\
-         [--function-filter=functionA|functionB] [--class-filter=classA|classB] \\
+         [--filter-mode] [--function-filter=functionA|functionB] [--class-filter=classA|classB] \\
          <extension-name> [output-target]
 
 TEXT
@@ -70,7 +70,7 @@ TEXT
     if (isset($options['gen-arginfo-mode'])) {
         $g->setGenArginfoMode();
     }
-    if (isset($options['function-filter']) || isset($options['class-filter'])) {
+    if (isset($options['filter-mode']) || isset($options['function-filter']) || isset($options['class-filter'])) {
         $getFilterMap = static function (string $filterString): array {
             $filterList = array_filter(array_map('trim', explode('|', $filterString)));
             $filterMap = [];
@@ -79,17 +79,18 @@ TEXT
             }
             return $filterMap;
         };
+        $filterMode = isset($options['filter-mode']);
         $functionFilterMap = $getFilterMap($options['function-filter'] ?? '');
         $classFilterMap = $getFilterMap($options['class-filter'] ?? '');
-        $g->addFilter(static function (ReflectionFunction|ReflectionClass $reflection) use ($functionFilterMap, $classFilterMap) {
+        $g->addFilter(static function (ReflectionFunction|ReflectionClass $reflection) use ($filterMode, $functionFilterMap, $classFilterMap) {
             $name = str_replace('\\', '_', $reflection->getName());
             if ($functionFilterMap && $reflection instanceof ReflectionFunction) {
                 return isset($functionFilterMap[$name]);
             }
-            if ($classFilterMap /* && $reflection instanceof ReflectionMethod */) {
+            if ($classFilterMap && $reflection instanceof ReflectionClass) {
                 return isset($classFilterMap[$name]);
             }
-            return true;
+            return !$filterMode;
         });
     }
 

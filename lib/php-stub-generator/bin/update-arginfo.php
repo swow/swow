@@ -111,6 +111,7 @@ foreach ($cSourceFiles as $cSourceFile) {
             "-d extension={$extensionName}",
             __DIR__ . '/gen-stub.php',
             '--gen-arginfo-mode',
+            '--filter-mode',
             '--function-filter=' . implode('|', $functionNames),
             '--class-filter=' . implode('|', $classNames),
             ...(isset($options['stub-file']) ? ["--stub-file={$options['stub-file']}"] : []),

@@ -11,7 +11,7 @@ It can work with php-src's gen_stub.php to update arginfo of extension C source 
 ```
 Usage: php gen-stub.php \
          [-h|--help] [--noinspection] [--stub-file=/path/to/ext.stub.php] [--gen-arginfo-mode] \
-         [--function-filter=functionA|functionB] [--class-filter=classA|classB] \
+         [--filter-mode] [--function-filter=functionA|functionB] [--class-filter=classA|classB] \
          <extension-name> [output-target]
 ```
 
@@ -25,7 +25,7 @@ Usage: php update-arginfo.php \
 
 ## Results show
 
-+ [Swow](https://github.com/swow/swow/blob/develop/lib/swow-stub/Swow.php)
++ [Swow](https://github.com/swow/swow/blob/develop/lib/swow-stub/src/Swow.php)
 
 ## License
 
