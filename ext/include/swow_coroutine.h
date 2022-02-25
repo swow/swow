@@ -46,6 +46,7 @@ extern "C" {
 
 extern SWOW_API zend_class_entry *swow_coroutine_ce;
 extern SWOW_API zend_object_handlers swow_coroutine_handlers;
+extern SWOW_API zend_object_handlers swow_coroutine_main_handlers;
 
 extern SWOW_API zend_class_entry *swow_coroutine_exception_ce;
 

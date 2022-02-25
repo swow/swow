@@ -30,11 +30,26 @@
 
 SWOW_API zend_class_entry *swow_coroutine_ce;
 SWOW_API zend_object_handlers swow_coroutine_handlers;
+SWOW_API zend_object_handlers swow_coroutine_main_handlers;
 
 SWOW_API zend_class_entry *swow_coroutine_exception_ce;
 
+
+#if PHP_VERSION_ID > 80007
+/* See: https://github.com/php/php-src/pull/6640
+   and: https://github.com/php/php-src/commit/d4a206b27679779b698c4cbc9f6b17e082203073 */
+#define SWOW_JIT_OPCODE_HANDLER_SUPPORT 1
+#endif
+
 /* Internal pseudo-exception that is not exposed to userland. */
+#if PHP_VERSION_ID > 80012
+/* See: https://github.com/php/php-src/pull/7459 */
+#define SWOW_NATIVE_UNWIND_EXIT_SUPPORT 1
+#endif
+
+#ifndef SWOW_NATIVE_UNWIND_EXIT_SUPPORT
 static zend_class_entry *swow_coroutine_unwind_exit_ce;
+#endif
 #define SWOW_COROUTINE_UNWIND_EXIT_MAGIC               ((zend_object *) -1)
 #define SWOW_COROUTINE_IS_UNWIND_EXIT_MAGIC(exception) (exception == SWOW_COROUTINE_UNWIND_EXIT_MAGIC)
 
@@ -58,7 +73,7 @@ static cat_bool_t swow_coroutine_construct(swow_coroutine_t *scoroutine, zval *z
 static void swow_coroutine_shutdown(swow_coroutine_t *scoroutine);
 static ZEND_COLD void swow_coroutine_handle_cross_exception(zend_object *cross_exception);
 static ZEND_COLD void swow_coroutine_throw_unwind_exit(void);
-static zend_bool swow_coroutine_has_unwind_exit(zend_object *exception);
+static zend_always_inline zend_bool swow_coroutine_has_unwind_exit(zend_object *exception);
 
 static zend_always_inline size_t swow_coroutine_align_stack_page_size(size_t size)
 {
@@ -161,8 +176,7 @@ static CAT_COLD void swow_coroutine_function_handle_exception(void)
 
     zend_exception_restore();
 
-    if (swow_coroutine_has_unwind_exit(EG(exception)) ||
-        zend_is_unwind_exit(EG(exception))) {
+    if (swow_coroutine_has_unwind_exit(EG(exception))) {
         OBJ_RELEASE(EG(exception));
         EG(exception) = NULL;
         return;
@@ -395,16 +409,10 @@ static void swow_coroutine_main_create(void)
 {
     swow_coroutine_t *scoroutine;
 
-    /* Notice: if object id is 0, its destructor will never be called */
-    do {
-        uint32_t top = EG(objects_store).top;
-        EG(objects_store).top = 0;
-        scoroutine = swow_coroutine_get_from_object(
-            swow_object_create(swow_coroutine_ce)
-        );
-        EG(objects_store).top = top;
-        EG(objects_store).object_buckets[0] = NULL;
-    } while (0);
+    scoroutine = swow_coroutine_get_from_object(
+        swow_object_create(swow_coroutine_ce)
+    );
+    scoroutine->std.handlers = &swow_coroutine_main_handlers;
 
     /* register first (sync coroutine info) */
     SWOW_COROUTINE_G(original_main) = cat_coroutine_register_main(&scoroutine->coroutine);
@@ -425,9 +433,6 @@ static void swow_coroutine_main_create(void)
         /* Notice: we have 1 ref by create */
         GC_ADDREF(&scoroutine->std);
     } while (0);
-
-    /* do not call __destruct() on main scoroutine */
-    GC_ADD_FLAGS(&scoroutine->std, IS_OBJ_DESTRUCTOR_CALLED);
 }
 
 static void swow_coroutine_main_close(void)
@@ -450,6 +455,29 @@ static void swow_coroutine_main_close(void)
     /* release main scoroutine */
     swow_coroutine_close(scoroutine);
     EG(objects_store).object_buckets[0] = NULL;
+}
+
+static void swow_coroutine_main_dtor_object(zend_object *object)
+{
+    HashTable *map = SWOW_COROUTINE_G(map);
+
+    ZEND_ASSERT(EG(flags) & EG_FLAGS_OBJECT_STORE_NO_REUSE);
+    ZEND_ASSERT(EG(objects_store).top > 1);
+
+    ZEND_HASH_FOREACH_VAL(map, zval *zscoroutine) {
+        zend_object *object = Z_OBJ_P(zscoroutine);
+        if (IS_OBJ_VALID(object)) {
+            if (!(OBJ_FLAGS(object) & IS_OBJ_DESTRUCTOR_CALLED)) {
+                GC_ADD_FLAGS(object, IS_OBJ_DESTRUCTOR_CALLED);
+                if (object->handlers->dtor_obj != zend_objects_destroy_object ||
+                    object->ce->destructor) {
+                    GC_ADDREF(object);
+                    object->handlers->dtor_obj(object);
+                    GC_DELREF(object);
+                }
+            }
+        }
+    } ZEND_HASH_FOREACH_END();
 }
 
 SWOW_API swow_coroutine_t *swow_coroutine_create(zval *zcallable)
@@ -1244,7 +1272,11 @@ SWOW_API cat_bool_t swow_coroutine_throw(swow_coroutine_t *scoroutine, zend_obje
 static ZEND_COLD void swow_coroutine_throw_unwind_exit(void)
 {
     swow_coroutine_get_current()->coroutine.flags |= SWOW_COROUTINE_FLAG_KILLED;
+#ifndef SWOW_NATIVE_UNWIND_EXIT_SUPPORT
     zend_throw_exception(swow_coroutine_unwind_exit_ce, NULL, 0);
+#else
+    zend_throw_unwind_exit();
+#endif
 }
 
 SWOW_API cat_bool_t swow_coroutine_kill(swow_coroutine_t *scoroutine)
@@ -2170,8 +2202,13 @@ static void swow_coroutine_error_cb(int type, ZEND_ERROR_CB_FILENAME_T *error_fi
 
 /* hook catch */
 
-static zend_bool swow_coroutine_has_unwind_exit(zend_object *exception)
+static zend_always_inline zend_bool swow_coroutine_has_unwind_exit(zend_object *exception)
 {
+    if (zend_is_unwind_exit(exception)) {
+        return true;
+    }
+
+#ifndef SWOW_NATIVE_UNWIND_EXIT_SUPPORT
     while (1) {
         zval *zprevious_exception, ztmp;
         if (exception->ce == swow_coroutine_unwind_exit_ce) {
@@ -2189,10 +2226,12 @@ static zend_bool swow_coroutine_has_unwind_exit(zend_object *exception)
         }
         break;
     }
+#endif
 
-    return 0;
+    return false;
 }
 
+#ifndef SWOW_NATIVE_UNWIND_EXIT_SUPPORT
 static int swow_coroutine_catch_handler(zend_execute_data *execute_data)
 {
     SWOW_COROUTINE_OPCODE_HANDLER_CHECK();
@@ -2205,6 +2244,7 @@ static int swow_coroutine_catch_handler(zend_execute_data *execute_data)
 
     return ZEND_USER_OPCODE_DISPATCH;
 }
+#endif
 
 /* hook exit */
 
@@ -2323,6 +2363,8 @@ int swow_coroutine_module_init(INIT_FUNC_ARGS)
     );
     swow_coroutine_handlers.get_gc = swow_coroutine_get_gc;
     swow_coroutine_handlers.dtor_obj = swow_coroutine_dtor_object;
+    swow_coroutine_main_handlers = swow_coroutine_handlers;
+    swow_coroutine_main_handlers.dtor_obj = swow_coroutine_main_dtor_object;
     /* constants */
 #define SWOW_COROUTINE_STATE_GEN(name, value, unused) \
     zend_declare_class_constant_long(swow_coroutine_ce, ZEND_STRL("STATE_" #name), (value));
@@ -2334,11 +2376,13 @@ int swow_coroutine_module_init(INIT_FUNC_ARGS)
         "Swow\\Coroutine\\Exception", swow_exception_ce, NULL, NULL, NULL, cat_true, cat_true, NULL, NULL, 0
     );
 
+#ifndef SWOW_NATIVE_UNWIND_EXIT_SUPPORT
     /* implement UnwindExit by ourself (temporarily) */
     swow_coroutine_unwind_exit_ce = swow_register_internal_class(
         "Swow\\Coroutine\\UnwindExit", swow_coroutine_exception_ce, NULL, NULL, NULL, cat_true, cat_true, NULL, NULL, 0
     );
     swow_coroutine_unwind_exit_ce->ce_flags |= ZEND_ACC_FINAL;
+#endif
 
     /* hook zend_error_cb (we should only do it in runtime) */
     original_zend_error_cb = zend_error_cb;
@@ -2347,6 +2391,16 @@ int swow_coroutine_module_init(INIT_FUNC_ARGS)
     /* construct coroutine php internal function */
     memset(&swow_coroutine_internal_function, 0, sizeof(swow_coroutine_internal_function));
     swow_coroutine_internal_function.common.type = ZEND_INTERNAL_FUNCTION;
+
+#ifdef SWOW_JIT_OPCODE_HANDLER_SUPPORT
+    /* hook opcode exit */
+    zend_set_user_opcode_handler(ZEND_EXIT, swow_coroutine_exit_handler);
+#  ifdef SWOW_COROUTINE_SWAP_SILENCE_CONTEXT
+    /* hook opcode silence */
+    zend_set_user_opcode_handler(ZEND_BEGIN_SILENCE, swow_coroutine_begin_silence_handler);
+    zend_set_user_opcode_handler(ZEND_END_SILENCE, swow_coroutine_end_silence_handler);
+#  endif
+#endif
 
     return SUCCESS;
 }
@@ -2357,16 +2411,20 @@ int swow_coroutine_runtime_init(INIT_FUNC_ARGS)
         return FAILURE;
     }
 
+#ifndef SWOW_JIT_OPCODE_HANDLER_SUPPORT
     /* hook opcode handlers here (bypass JIT check) */
     /* hook opcode exit */
     zend_set_user_opcode_handler(ZEND_EXIT, swow_coroutine_exit_handler);
-#ifdef SWOW_COROUTINE_SWAP_SILENCE_CONTEXT
+#  ifdef SWOW_COROUTINE_SWAP_SILENCE_CONTEXT
     /* hook opcode silence */
     zend_set_user_opcode_handler(ZEND_BEGIN_SILENCE, swow_coroutine_begin_silence_handler);
     zend_set_user_opcode_handler(ZEND_END_SILENCE, swow_coroutine_end_silence_handler);
-#endif
+#  endif
+#  ifndef SWOW_NATIVE_UNWIND_EXIT_SUPPORT
     /* hook opcode catch */
     zend_set_user_opcode_handler(ZEND_CATCH, swow_coroutine_catch_handler);
+#  endif
+#endif
 
     SWOW_COROUTINE_G(original_jump) = cat_coroutine_register_jump(
         swow_coroutine_jump_standard
@@ -2453,12 +2511,16 @@ int swow_coroutine_runtime_shutdown(SHUTDOWN_FUNC_ARGS)
 zend_result swow_coroutine_delay_runtime_shutdown(void)
 {
     /* restore opcode handlers */
+#ifndef SWOW_JIT_OPCODE_HANDLER_SUPPORT
     zend_set_user_opcode_handler(ZEND_EXIT, NULL);
-#ifdef SWOW_COROUTINE_SWAP_SILENCE_CONTEXT
+#  ifdef SWOW_COROUTINE_SWAP_SILENCE_CONTEXT
     zend_set_user_opcode_handler(ZEND_BEGIN_SILENCE, NULL);
     zend_set_user_opcode_handler(ZEND_END_SILENCE, NULL);
-#endif
+#  endif
+#  ifndef SWOW_NATIVE_UNWIND_EXIT_SUPPORT
     zend_set_user_opcode_handler(ZEND_CATCH, NULL);
+#  endif
+#endif
 
     return SUCCESS;
 }
