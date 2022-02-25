@@ -35,7 +35,7 @@ static void swow_util_handler_free_object(zend_object *object)
 {
     swow_util_handler_t *handler = swow_util_handler_get_from_object(object);
 
-    swow_util_handler_remove(handler);
+    cat_queue_remove(&handler->node);
     swow_fcall_storage_release(&handler->fcall);
 
     zend_object_std_dtor(&handler->std);
@@ -64,6 +64,7 @@ SWOW_API void swow_util_handler_remove(swow_util_handler_t *handler)
 {
     cat_queue_remove(&handler->node);
     cat_queue_init(&handler->node);
+    zend_object_release(&handler->std);
 }
 
 SWOW_API void swow_util_handlers_release(cat_queue_t *handlers)
@@ -71,7 +72,6 @@ SWOW_API void swow_util_handlers_release(cat_queue_t *handlers)
     swow_util_handler_t *handler;
     while ((handler = cat_queue_front_data(handlers, swow_util_handler_t, node))) {
         swow_util_handler_remove(handler);
-        zend_object_release(&handler->std);
     }
 }
 
