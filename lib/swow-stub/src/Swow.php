@@ -187,6 +187,8 @@ namespace Swow
         public static function getAll(): array { }
 
         public function __debugInfo(): array { }
+
+        public static function registerDeadlockHandler(callable $callable): Util\Handler { }
     }
 }
 

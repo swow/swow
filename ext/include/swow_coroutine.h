@@ -116,6 +116,7 @@ CAT_GLOBALS_STRUCT_BEGIN(swow_coroutine)
     /* runtime */
     swow_coroutine_runtime_state_t runtime_state;
     HashTable *map;
+    cat_queue_t deadlock_handlers;
     /* internal special */
     cat_coroutine_jump_t original_jump;
     cat_coroutine_t *original_main;
