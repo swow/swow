@@ -13,12 +13,14 @@ declare(strict_types=1);
 
 namespace Swow\Debug;
 
+use Swow\Coroutine;
 use Swow\Util\FileSystem\IOException;
 use Swow\Util\Handler;
 use function debug_backtrace;
 use function fclose;
 use function fgets;
 use function fopen;
+use function fwrite;
 use function ob_get_clean;
 use function ob_start;
 use function rtrim;
@@ -26,6 +28,7 @@ use function sprintf;
 use function var_dump;
 use const DEBUG_BACKTRACE_IGNORE_ARGS;
 use const PHP_EOL;
+use const STDERR;
 
 function var_dump_return(mixed ...$expressions): string
 {
@@ -34,6 +37,14 @@ function var_dump_return(mixed ...$expressions): string
     var_dump(...$expressions);
 
     return ob_get_clean();
+}
+
+function registerDeadlockDetectorHandler(): Handler
+{
+    return Coroutine::registerDeadlockHandler(static function (): void {
+        fwrite(STDERR, 'Deadlock: all coroutines are asleep');
+        Debugger::runOnTTY();
+    });
 }
 
 function showExecutedSourceLines(bool $all = false): Handler
