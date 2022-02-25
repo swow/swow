@@ -237,8 +237,8 @@ Assert::same($frame->getPayloadDataAsString(), str_repeat("\xf0\x0f\xc7\xc8\x2f\
 echo 'Done' . PHP_LF;
 
 ?>
---EXPECT--
-object(Swow\WebSocket\Frame)#3 (7) {
+--EXPECTF--
+object(Swow\WebSocket\Frame)#%d (7) {
   ["opcode"]=>
   int(8)
   ["fin"]=>
@@ -254,7 +254,7 @@ object(Swow\WebSocket\Frame)#3 (7) {
   ["payload_length"]=>
   int(0)
 }
-object(Swow\WebSocket\Frame)#4 (7) {
+object(Swow\WebSocket\Frame)#%d (7) {
   ["opcode"]=>
   int(9)
   ["fin"]=>
@@ -270,7 +270,7 @@ object(Swow\WebSocket\Frame)#4 (7) {
   ["payload_length"]=>
   int(0)
 }
-object(Swow\WebSocket\Frame)#3 (7) {
+object(Swow\WebSocket\Frame)#%d (7) {
   ["opcode"]=>
   int(10)
   ["fin"]=>
@@ -286,7 +286,7 @@ object(Swow\WebSocket\Frame)#3 (7) {
   ["payload_length"]=>
   int(0)
 }
-object(Swow\WebSocket\Frame)#4 (7) {
+object(Swow\WebSocket\Frame)#%d (7) {
   ["opcode"]=>
   int(1)
   ["fin"]=>
@@ -302,7 +302,7 @@ object(Swow\WebSocket\Frame)#4 (7) {
   ["payload_length"]=>
   int(16)
 }
-object(Swow\WebSocket\Frame)#4 (8) {
+object(Swow\WebSocket\Frame)#%d (8) {
   ["opcode"]=>
   int(1)
   ["fin"]=>
@@ -318,7 +318,7 @@ object(Swow\WebSocket\Frame)#4 (8) {
   ["payload_length"]=>
   int(16)
   ["payload_data"]=>
-  object(Swow\Buffer)#3 (4) {
+  object(Swow\Buffer)#%d (4) {
     ["value"]=>
     string(16) "the data sent 16"
     ["size"]=>
@@ -329,7 +329,7 @@ object(Swow\WebSocket\Frame)#4 (8) {
     int(16)
   }
 }
-object(Swow\WebSocket\Frame)#5 (8) {
+object(Swow\WebSocket\Frame)#%d (8) {
   ["opcode"]=>
   int(1)
   ["fin"]=>
@@ -347,7 +347,7 @@ object(Swow\WebSocket\Frame)#5 (8) {
   ["mask_key"]=>
   string(19) "0x80 0x81 0x82 0x84"
 }
-object(Swow\WebSocket\Frame)#3 (8) {
+object(Swow\WebSocket\Frame)#%d (8) {
   ["opcode"]=>
   int(2)
   ["fin"]=>
@@ -365,7 +365,7 @@ object(Swow\WebSocket\Frame)#3 (8) {
   ["mask_key"]=>
   string(19) "0x10 0x21 0x32 0x44"
 }
-object(Swow\WebSocket\Frame)#4 (8) {
+object(Swow\WebSocket\Frame)#%d (8) {
   ["opcode"]=>
   int(2)
   ["fin"]=>

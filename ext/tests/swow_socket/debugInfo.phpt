@@ -132,7 +132,7 @@ object(MySocket)#%d (%d) {
   ["io_state"]=>
   string(4) "idle"
 }
-object(MySocket)#2 (8) {
+object(MySocket)#%d (8) {
   ["type"]=>
   string(4) "TCP4"
   ["fd"]=>
@@ -168,7 +168,7 @@ object(MySocket)#2 (8) {
   ["io_state"]=>
   string(4) "idle"
 }
-object(MySocket)#6 (8) {
+object(MySocket)#%d (8) {
   ["type"]=>
   string(4) "TCP4"
   ["fd"]=>
@@ -209,7 +209,7 @@ object(MySocket)#6 (8) {
   ["io_state"]=>
   string(4) "idle"
 }
-object(Swow\Socket)#7 (8) {
+object(Swow\Socket)#%d (8) {
   ["type"]=>
   string(4) "TCP4"
   ["fd"]=>
@@ -250,7 +250,7 @@ object(Swow\Socket)#7 (8) {
   ["io_state"]=>
   string(4) "idle"
 }
-object(MySocket)#2 (2) {
+object(MySocket)#%d (2) {
   ["type"]=>
   string(7) "UNKNOWN"
   ["fd"]=>
