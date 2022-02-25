@@ -74,3 +74,5 @@ try {
 
 // run remote coro
 $remote_coro->resume();
+
+echo "Done\n";
