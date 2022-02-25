@@ -100,7 +100,7 @@ TEXT;
 
     protected Socket $error;
 
-    protected bool $daemon = false;
+    protected bool $daemon = true;
 
     protected bool $reloading = false;
 
@@ -1004,6 +1004,7 @@ TEXT;
         }
         $this->setCursorVisibility(true);
         if (static::isAlone()) {
+            $this->daemon = false;
             $this->logo()->out('Enter \'r\' to run your program');
             goto _recvLoop;
         }
