@@ -973,6 +973,7 @@ static cat_data_t *cat_coroutine_scheduler_function(cat_data_t *data)
         if (cat_coroutine_is_deadlocked()) {
             if (CAT_COROUTINE_G(deadlock_callback) != NULL) {
                 CAT_COROUTINE_G(deadlock_callback)();
+                scheduler.schedule(); // There is only one chance
                 if (!cat_coroutine_is_deadlocked()) {
                     continue;
                 }
