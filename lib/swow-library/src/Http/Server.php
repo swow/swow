@@ -17,7 +17,7 @@ use Swow\Buffer;
 use Swow\Http\Server\Connection;
 use Swow\Server\ConnectionManagerTrait;
 use Swow\Socket;
-use Swow\Socket\Exception as SocketException;
+use Swow\SocketException;
 use function is_string;
 
 class Server extends Socket

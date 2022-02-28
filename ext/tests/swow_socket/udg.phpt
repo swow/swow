@@ -11,6 +11,7 @@ require __DIR__ . '/../include/bootstrap.php';
 
 use Swow\Coroutine;
 use Swow\Socket;
+use Swow\SocketException;
 use Swow\Sync\WaitReference;
 use const Swow\Errno\ECANCELED;
 
@@ -37,7 +38,7 @@ foreach ([false, true] as $useConnect) {
                 }
                 $server->sendStringTo($message, $address);
             }
-        } catch (Socket\Exception $exception) {
+        } catch (SocketException $exception) {
             Assert::same($exception->getCode(), ECANCELED);
         }
     });

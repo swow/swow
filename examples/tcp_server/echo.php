@@ -11,14 +11,19 @@
 
 declare(strict_types=1);
 
-$server = new Swow\Socket(Swow\Socket::TYPE_TCP);
+use Swow\Buffer;
+use Swow\Coroutine;
+use Swow\Socket;
+use Swow\SocketException;
+
+$server = new Socket(Socket::TYPE_TCP);
 $server->bind('127.0.0.1', 9764)->listen();
 echo "$ telnet 127.0.0.1 9764\n\n";
 while (true) {
     $connection = $server->accept();
-    Swow\Coroutine::run(static function () use ($connection): void {
+    Coroutine::run(static function () use ($connection): void {
         echo "No.{$connection->getFd()} established" . PHP_EOL;
-        $buffer = new Swow\Buffer();
+        $buffer = new Buffer();
         try {
             while (true) {
                 $length = $connection->recv($buffer);
@@ -29,7 +34,7 @@ while (true) {
                 $connection->send($buffer);
             }
             echo "No.{$connection->getFd()} closed" . PHP_EOL;
-        } catch (Swow\Socket\Exception $exception) {
+        } catch (SocketException $exception) {
             echo "No.{$connection->getFd()} goaway! {$exception->getMessage()}" . PHP_EOL;
         }
     });

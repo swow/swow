@@ -13,9 +13,9 @@ declare(strict_types=1);
 
 namespace Swow\Http\Server;
 
-use Swow\Http\Exception as HttpException;
 use Swow\Http\Parser as HttpParser;
 use Swow\Http\ReceiverTrait;
+use Swow\Http\ResponseException;
 use Swow\Http\Server;
 use Swow\Http\Status as HttpStatus;
 use Swow\Http\TypeInterface as HttpTypeInterface;
@@ -199,7 +199,7 @@ class Connection extends Socket implements HttpTypeInterface
     {
         $secWebSocketKey = $request->getHeaderLine('sec-websocket-key');
         if (strlen($secWebSocketKey) !== WebSocket\SECRET_KEY_ENCODED_LENGTH) {
-            throw new HttpException(HttpStatus::BAD_REQUEST, 'Invalid Secret Key');
+            throw new ResponseException(HttpStatus::BAD_REQUEST, 'Invalid Secret Key');
         }
         $key = base64_encode(sha1($secWebSocketKey . WebSocket\GUID, true));
 

@@ -13,6 +13,7 @@ declare(strict_types=1);
 
 namespace Swow\Http;
 
+use Exception;
 use Psr\Http\Client\ClientExceptionInterface;
 use Psr\Http\Client\ClientInterface;
 use Psr\Http\Message\RequestInterface;
@@ -22,7 +23,7 @@ use Swow\Http\Parser as HttpParser;
 use Swow\Http\Status as HttpStatus;
 use Swow\Http\TypeInterface as HttpTypeInterface;
 use Swow\Socket;
-use Swow\Socket\Exception as SocketException;
+use Swow\SocketException;
 use Swow\WebSocket;
 use function base64_encode;
 use function random_bytes;
@@ -150,7 +151,7 @@ class Client extends Socket implements ClientInterface, HttpTypeInterface
         return $response;
     }
 
-    protected function convertToClientException(\Exception $exception, RequestInterface $request): ClientExceptionInterface
+    protected function convertToClientException(Exception $exception, RequestInterface $request): ClientExceptionInterface
     {
         if ($exception instanceof SocketException) {
             return new NetworkException($request, $exception->getMessage(), $exception->getCode());

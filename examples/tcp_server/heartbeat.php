@@ -11,12 +11,17 @@
 
 declare(strict_types=1);
 
-$server = (new Swow\Socket(Swow\Socket::TYPE_TCP))
+use Swow\Coroutine;
+use Swow\Socket;
+use Swow\SocketException;
+use const Swow\Errno\ETIMEDOUT;
+
+$server = (new Socket(Socket::TYPE_TCP))
     ->bind('127.0.0.1', 9764)->listen()
     ->setReadTimeout(3000);
 echo "$ telnet 127.0.0.1 9764\n\n";
 while (true) {
-    Swow\Coroutine::run(static function (Swow\Socket $connection): void {
+    Coroutine::run(static function (Socket $connection): void {
         echo "No.{$connection->getFd()} established" . PHP_EOL;
         $buffer = new Swow\Buffer();
         try {
@@ -29,8 +34,8 @@ while (true) {
                 $connection->send($buffer, $length);
             }
             echo "No.{$connection->getFd()} closed" . PHP_EOL;
-        } catch (Swow\Socket\Exception $exception) {
-            if ($exception->getCode() === Swow\Errno\ETIMEDOUT) {
+        } catch (SocketException $exception) {
+            if ($exception->getCode() === ETIMEDOUT) {
                 $connection->sendString("Server has kicked you out\r\n");
             }
             echo "No.{$connection->getFd()} goaway! {$exception->getMessage()}" . PHP_EOL;

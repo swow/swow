@@ -92,7 +92,7 @@ int swow_signal_module_init(INIT_FUNC_ARGS)
 #undef SWOW_SIGNAL_GEN
 
     swow_signal_exception_ce = swow_register_internal_class(
-        "Swow\\Signal\\Exception", swow_exception_ce, NULL, NULL, NULL, cat_true, cat_true, NULL, NULL, 0
+        "Swow\\SignalException", swow_exception_ce, NULL, NULL, NULL, cat_true, cat_true, NULL, NULL, 0
     );
 
     return SUCCESS;

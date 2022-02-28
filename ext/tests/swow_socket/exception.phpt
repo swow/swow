@@ -10,6 +10,7 @@ require __DIR__ . '/../include/bootstrap.php';
 
 use Swow\Coroutine;
 use Swow\Socket;
+use Swow\SocketException;
 use Swow\Sync\WaitReference;
 use const Swow\Errno\ECANCELED;
 use const Swow\Errno\ECONNRESET;
@@ -27,12 +28,12 @@ Coroutine::run(function () use ($server, $random, $wr) {
             try {
                 $connection->readString(TEST_MAX_LENGTH_LOW + 1);
                 Assert::assert(0 && 'never here');
-            } catch (Socket\Exception $exception) {
+            } catch (SocketException $exception) {
                 Assert::same($exception->getCode(), ECONNRESET);
                 Assert::same($exception->getReturnValue(), $random);
             }
         });
-    } catch (Socket\Exception $exception) {
+    } catch (SocketException $exception) {
         Assert::same($exception->getCode(), ECANCELED);
     }
 });

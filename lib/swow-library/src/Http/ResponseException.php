@@ -13,7 +13,7 @@ declare(strict_types=1);
 
 namespace Swow\Http;
 
-class Exception extends \Swow\Exception
+class ResponseException extends \Swow\Exception
 {
     public function __construct(int $statusCode, string $reasonPhrase = '')
     {
