@@ -16,53 +16,53 @@
   +--------------------------------------------------------------------------+
  */
 
-#include "swow_watch_dog.h"
+#include "swow_watchdog.h"
 
 #include "cat_time.h" /* for time_wait() */
 
-SWOW_API zend_class_entry *swow_watch_dog_ce;
-SWOW_API zend_object_handlers swow_watch_dog_handlers;
+SWOW_API zend_class_entry *swow_watchdog_ce;
+SWOW_API zend_object_handlers swow_watchdog_handlers;
 
-SWOW_API zend_class_entry *swow_watch_dog_exception_ce;
+SWOW_API zend_class_entry *swow_watchdog_exception_ce;
 
 typedef void (*swow_interrupt_function_t)(zend_execute_data *execute_data);
 
 static swow_interrupt_function_t original_zend_interrupt_function = (swow_interrupt_function_t) -1;
 
-SWOW_API void swow_watch_dog_alert_standard(cat_watch_dog_t *watch_dog)
+SWOW_API void swow_watchdog_alert_standard(cat_watchdog_t *watchdog)
 {
-    swow_watch_dog_t *swatch_dog = swow_watch_dog_get_from_handle(watch_dog);
-    zend_bool vm_interrupted = swatch_dog->vm_interrupted;
+    swow_watchdog_t *swatchdog = swow_watchdog_get_from_handle(watchdog);
+    zend_bool vm_interrupted = swatchdog->vm_interrupted;
 
     // CPU starvation (and we should try to schedule the coroutine)
-    swatch_dog->vm_interrupted = 0;
-    *swatch_dog->vm_interrupt_ptr = 1;
+    swatchdog->vm_interrupted = 0;
+    *swatchdog->vm_interrupt_ptr = 1;
 
-    if (watch_dog->alert_count > 1 &&
+    if (watchdog->alert_count > 1 &&
         vm_interrupted == 0 /* interrupt maybe failed */
     ) {
-        if (watch_dog->threshold > 0 && /* blocking time is greater than syscall threshold */
-            ((cat_timeout_t) (watch_dog->quantum * watch_dog->alert_count)) > watch_dog->threshold
+        if (watchdog->threshold > 0 && /* blocking time is greater than syscall threshold */
+            ((cat_timeout_t) (watchdog->quantum * watchdog->alert_count)) > watchdog->threshold
         ) {
             /* Syscall blocking
              * CPU starvation is also possbile,
              * the machine performance is too bad (such as mine),
              * VM has not interrupted yet */
-            cat_watch_dog_alert_standard(watch_dog);
+            cat_watchdog_alert_standard(watchdog);
         }
     }
 }
 
-static void swow_watch_dog_interrupt_function(zend_execute_data *execute_data)
+static void swow_watchdog_interrupt_function(zend_execute_data *execute_data)
 {
-    if (cat_watch_dog_is_running()) {
-        swow_watch_dog_t *swatch_dog = swow_watch_dog_get_current();
-        cat_watch_dog_t *watch_dog = &swatch_dog->watch_dog;
-        swatch_dog->vm_interrupted = 1;
+    if (cat_watchdog_is_running()) {
+        swow_watchdog_t *swatchdog = swow_watchdog_get_current();
+        cat_watchdog_t *watchdog = &swatchdog->watchdog;
+        swatchdog->vm_interrupted = 1;
         /* re-check if current round still equal to last_round  */
-        if (CAT_COROUTINE_G(round) == watch_dog->last_round) {
-            if (swatch_dog->alerter.function_handler == NULL) {
-                if (!cat_time_wait(swatch_dog->delay) &&
+        if (CAT_COROUTINE_G(round) == watchdog->last_round) {
+            if (swatchdog->alerter.function_handler == NULL) {
+                if (!cat_time_wait(swatchdog->delay) &&
                     cat_get_last_error_code() != CAT_ETIMEDOUT
                 ) {
                     CAT_CORE_ERROR_WITH_LAST(WATCH_DOG, "WatchDog interrupt schedule failed");
@@ -76,7 +76,7 @@ static void swow_watch_dog_interrupt_function(zend_execute_data *execute_data)
                 fci.param_count = 0;
                 fci.named_params = NULL;
                 fci.retval = &retval;
-                (void) zend_call_function(&fci, &swatch_dog->alerter);
+                (void) zend_call_function(&fci, &swatchdog->alerter);
                 zval_ptr_dtor(&retval);
             }
         }
@@ -87,9 +87,9 @@ static void swow_watch_dog_interrupt_function(zend_execute_data *execute_data)
     }
 }
 
-SWOW_API cat_bool_t swow_watch_dog_run(cat_timeout_t quantum, cat_timeout_t threshold, zval *zalerter)
+SWOW_API cat_bool_t swow_watchdog_run(cat_timeout_t quantum, cat_timeout_t threshold, zval *zalerter)
 {
-    swow_watch_dog_t *swatch_dog;
+    swow_watchdog_t *swatchdog;
     zend_fcall_info_cache fcc = empty_fcall_info_cache;
     cat_timeout_t delay = 0;
     cat_bool_t ret;
@@ -114,40 +114,40 @@ SWOW_API cat_bool_t swow_watch_dog_run(cat_timeout_t quantum, cat_timeout_t thre
         }
     }
 
-    swatch_dog = (swow_watch_dog_t *) emalloc(sizeof(*swatch_dog));
-    swatch_dog->vm_interrupt_ptr = &EG(vm_interrupt);
-    swatch_dog->delay = delay;
-    swatch_dog->alerter = fcc;
+    swatchdog = (swow_watchdog_t *) emalloc(sizeof(*swatchdog));
+    swatchdog->vm_interrupt_ptr = &EG(vm_interrupt);
+    swatchdog->delay = delay;
+    swatchdog->alerter = fcc;
     if (zalerter != NULL) {
-        ZVAL_COPY(&swatch_dog->zalerter, zalerter);
+        ZVAL_COPY(&swatchdog->zalerter, zalerter);
     } else {
-        ZVAL_NULL(&swatch_dog->zalerter);
+        ZVAL_NULL(&swatchdog->zalerter);
     }
 
-    ret = cat_watch_dog_run(&swatch_dog->watch_dog, quantum, threshold, swow_watch_dog_alert_standard);
+    ret = cat_watchdog_run(&swatchdog->watchdog, quantum, threshold, swow_watchdog_alert_standard);
 
     if (!ret) {
-        Z_TRY_DELREF(swatch_dog->zalerter);
-        efree(swatch_dog);
+        Z_TRY_DELREF(swatchdog->zalerter);
+        efree(swatchdog);
         return cat_false;
     }
 
     return cat_true;
 }
 
-SWOW_API cat_bool_t swow_watch_dog_stop(void)
+SWOW_API cat_bool_t swow_watchdog_stop(void)
 {
-    swow_watch_dog_t *swatch_dog = swow_watch_dog_get_current();
+    swow_watchdog_t *swatchdog = swow_watchdog_get_current();
     cat_bool_t ret;
 
-    ret = cat_watch_dog_stop();
+    ret = cat_watchdog_stop();
 
     if (!ret) {
         return cat_false;
     }
 
-    zval_ptr_dtor(&swatch_dog->zalerter);
-    efree(swatch_dog);
+    zval_ptr_dtor(&swatchdog->zalerter);
+    efree(swatchdog);
 
     return cat_true;
 }
@@ -174,13 +174,13 @@ static PHP_METHOD(Swow_WatchDog, run)
 
     if (original_zend_interrupt_function == (swow_interrupt_function_t) -1) {
         original_zend_interrupt_function = zend_interrupt_function;
-        zend_interrupt_function = swow_watch_dog_interrupt_function;
+        zend_interrupt_function = swow_watchdog_interrupt_function;
     }
 
-    ret = swow_watch_dog_run(quantum, threshold, zalerter);
+    ret = swow_watchdog_run(quantum, threshold, zalerter);
 
     if (UNEXPECTED(!ret)) {
-        swow_throw_exception_with_last(swow_watch_dog_exception_ce);
+        swow_throw_exception_with_last(swow_watchdog_exception_ce);
         RETURN_THROWS();
     }
 }
@@ -194,10 +194,10 @@ static PHP_METHOD(Swow_WatchDog, stop)
 
     ZEND_PARSE_PARAMETERS_NONE();
 
-    ret = swow_watch_dog_stop();
+    ret = swow_watchdog_stop();
 
     if (UNEXPECTED(!ret)) {
-        swow_throw_exception_with_last(swow_watch_dog_exception_ce);
+        swow_throw_exception_with_last(swow_watchdog_exception_ce);
         RETURN_THROWS();
     }
 }
@@ -209,52 +209,52 @@ static PHP_METHOD(Swow_WatchDog, isRunning)
 {
     ZEND_PARSE_PARAMETERS_NONE();
 
-    RETURN_BOOL(cat_watch_dog_is_running());
+    RETURN_BOOL(cat_watchdog_is_running());
 }
 
-static const zend_function_entry swow_watch_dog_methods[] = {
+static const zend_function_entry swow_watchdog_methods[] = {
     PHP_ME(Swow_WatchDog, run,       arginfo_class_Swow_WatchDog_run,       ZEND_ACC_STATIC | ZEND_ACC_PUBLIC)
     PHP_ME(Swow_WatchDog, stop,      arginfo_class_Swow_WatchDog_stop,      ZEND_ACC_STATIC | ZEND_ACC_PUBLIC)
     PHP_ME(Swow_WatchDog, isRunning, arginfo_class_Swow_WatchDog_isRunning, ZEND_ACC_STATIC | ZEND_ACC_PUBLIC)
     PHP_FE_END
 };
 
-int swow_watch_dog_module_init(INIT_FUNC_ARGS)
+int swow_watchdog_module_init(INIT_FUNC_ARGS)
 {
-    if (!cat_watch_dog_module_init()) {
+    if (!cat_watchdog_module_init()) {
         return FAILURE;
     }
 
-    swow_watch_dog_ce = swow_register_internal_class(
-        "Swow\\WatchDog", NULL, swow_watch_dog_methods,
-        &swow_watch_dog_handlers, NULL,
+    swow_watchdog_ce = swow_register_internal_class(
+        "Swow\\WatchDog", NULL, swow_watchdog_methods,
+        &swow_watchdog_handlers, NULL,
         cat_false, cat_false,
         swow_create_object_deny, NULL, 0
     );
 
-    swow_watch_dog_exception_ce = swow_register_internal_class(
+    swow_watchdog_exception_ce = swow_register_internal_class(
         "Swow\\WatchDogException", swow_exception_ce, NULL, NULL, NULL, cat_true, cat_true, NULL, NULL, 0
     );
 
     return SUCCESS;
 }
 
-int swow_watch_dog_runtime_init(INIT_FUNC_ARGS)
+int swow_watchdog_runtime_init(INIT_FUNC_ARGS)
 {
-    if (!cat_watch_dog_runtime_init()) {
+    if (!cat_watchdog_runtime_init()) {
         return FAILURE;
     }
 
     return SUCCESS;
 }
 
-int swow_watch_dog_runtime_shudtown(INIT_FUNC_ARGS)
+int swow_watchdog_runtime_shudtown(INIT_FUNC_ARGS)
 {
-    if (cat_watch_dog_is_running() && !swow_watch_dog_stop()) {
+    if (cat_watchdog_is_running() && !swow_watchdog_stop()) {
         CAT_CORE_ERROR_WITH_LAST(WATCH_DOG, "WatchDog stop failed");
     }
 
-    if (!cat_watch_dog_runtime_shutdown()) {
+    if (!cat_watchdog_runtime_shutdown()) {
         return FAILURE;
     }
 
