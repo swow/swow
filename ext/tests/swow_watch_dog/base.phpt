@@ -1,5 +1,5 @@
 --TEST--
-swow_watch_dog: base
+swow_watchdog: base
 --SKIPIF--
 <?php
 require __DIR__ . '/../include/skipif.php';

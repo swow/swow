@@ -315,7 +315,7 @@ EOF
     swow_stream.c \
     swow_stream_wrapper.c \
     swow_signal.c \
-    swow_watch_dog.c \
+    swow_watchdog.c \
     swow_http.c \
     swow_websocket.c \
     , SWOW_INCLUDES, SWOW_CFLAGS)
@@ -399,7 +399,7 @@ EOF
       cat_fs.c \
       cat_signal.c \
       cat_async.c \
-      cat_watch_dog.c \
+      cat_watchdog.c \
       cat_http.c \
       cat_websocket.c, SWOW_CAT_INCLUDES, SWOW_CAT_CFLAGS)
 

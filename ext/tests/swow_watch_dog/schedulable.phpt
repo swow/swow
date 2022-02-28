@@ -1,5 +1,5 @@
 --TEST--
-swow_watch_dog: schedulable
+swow_watchdog: schedulable
 --SKIPIF--
 <?php
 require __DIR__ . '/../include/skipif.php';
