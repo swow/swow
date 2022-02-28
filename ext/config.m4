@@ -71,7 +71,7 @@ AC_DEFUN([SWOW_ADD_SOURCES],[
   if test $ext_shared = "yes"; then
     SWOW_ADD_SOURCES_X(PHP_EXT_DIR(swow)/$1, $2, $swow_extra, shared_objects_swow, yes)
   else
-    SWOW_ADD_SOURCES_X(PHP_EXT_DIR(swow)/$1, $2, $swow_extra)
+    SWOW_ADD_SOURCES_X(PHP_EXT_DIR(swow)/$1, $2, $swow_extra, PHP_GLOBAL_OBJS)
   fi
 ])
 
@@ -174,7 +174,7 @@ PHP_ARG_ENABLE([swow-curl],
   [yes], [no]
 )
 
-if test "${SWOW}" != "no"; then
+if test "${PHP_SWOW}" != "no"; then
   dnl check if this php version we support
   AC_MSG_CHECKING([Check for supported PHP versions])
   if test -z "$PHP_VERSION"; then
