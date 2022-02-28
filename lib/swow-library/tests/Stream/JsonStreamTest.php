@@ -15,7 +15,7 @@ namespace SwowTest\Stream;
 
 use PHPUnit\Framework\TestCase;
 use Swow\Coroutine;
-use Swow\Socket\Exception as SocketException;
+use Swow\SocketException;
 use Swow\Stream\JsonStream;
 use Swow\Sync\WaitReference;
 use function getRandomBytes;

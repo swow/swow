@@ -1789,7 +1789,7 @@ int swow_socket_module_init(INIT_FUNC_ARGS)
 #undef SWOW_SOCKET_BIND_FLAG_GEN
 
     swow_socket_exception_ce = swow_register_internal_class(
-        "Swow\\Socket\\Exception", swow_call_exception_ce, NULL, NULL, NULL, cat_true, cat_true, NULL, NULL, 0
+        "Swow\\SocketException", swow_call_exception_ce, NULL, NULL, NULL, cat_true, cat_true, NULL, NULL, 0
     );
 
     return SUCCESS;

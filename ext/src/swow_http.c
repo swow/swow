@@ -728,7 +728,7 @@ int swow_http_module_init(INIT_FUNC_ARGS)
     zend_declare_class_constant_long(swow_http_parser_ce, ZEND_STRL("EVENTS_ALL"), CAT_HTTP_PARSER_EVENTS_ALL);
     /* Parser\\Exception */
     swow_http_parser_exception_ce = swow_register_internal_class(
-        "Swow\\Http\\Parser\\Exception", swow_exception_ce, NULL, NULL, NULL, cat_true, cat_true, NULL, NULL, 0
+        "Swow\\Http\\ParserException", swow_exception_ce, NULL, NULL, NULL, cat_true, cat_true, NULL, NULL, 0
     );
 
     if (zend_register_functions(NULL, swow_http_functions, NULL, type) != SUCCESS) {

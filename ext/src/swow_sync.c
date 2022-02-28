@@ -242,7 +242,7 @@ int swow_sync_module_init(INIT_FUNC_ARGS)
     );
 
     swow_sync_exception_ce = swow_register_internal_class(
-        "Swow\\Sync\\Exception", swow_exception_ce, NULL, NULL, NULL, cat_true, cat_true, NULL, NULL, 0
+        "Swow\\SyncException", swow_exception_ce, NULL, NULL, NULL, cat_true, cat_true, NULL, NULL, 0
     );
 
     return SUCCESS;

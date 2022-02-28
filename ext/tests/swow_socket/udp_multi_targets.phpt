@@ -11,6 +11,7 @@ require __DIR__ . '/../include/bootstrap.php';
 use Swow\Buffer;
 use Swow\Coroutine;
 use Swow\Socket;
+use Swow\SocketException;
 use Swow\Sync\WaitReference;
 use const Swow\Errno\ETIMEDOUT;
 
@@ -30,7 +31,7 @@ function testMultiClient(string $name, callable $function)
         for ($i = 0; $i < TEST_MAX_REQUESTS; $i++) {
             try {
                 [$data, $peer_port] = $function($server);
-            } catch (Swow\Socket\Exception $e) {
+            } catch (SocketException $e) {
                 Assert::same($e->getCode(), ETIMEDOUT);
                 return;
             }
@@ -123,7 +124,7 @@ function testMultiServer(string $name, callable $function)
                 Assert::same($peer_port, $peer_port_in_data);
                 Assert::same($server->getSockPort(), $local_port_in_data);
                 $count++;
-            } catch (Swow\Socket\Exception $e) {
+            } catch (SocketException $e) {
                 // do nothing
                 Assert::same($e->getCode(), ETIMEDOUT);
             }

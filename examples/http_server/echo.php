@@ -14,9 +14,9 @@ declare(strict_types=1);
 use Swow\Buffer;
 use Swow\Coroutine;
 use Swow\Http\Parser;
-use Swow\Http\Parser\Exception as ParserException;
+use Swow\Http\ParserException;
 use Swow\Socket;
-use Swow\Socket\Exception as SocketException;
+use Swow\SocketException;
 
 $host = getenv('SERVER_HOST') ?: '127.0.0.1';
 $port = (int) (getenv('SERVER_PORT') ?: 9764);

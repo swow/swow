@@ -6,16 +6,18 @@ swow_coroutine/event_scheduler: kill event scheduler
 <?php
 require __DIR__ . '/../../include/bootstrap.php';
 
+use Swow\Coroutine;
+use Swow\CoroutineException;
 use Swow\Sync\WaitReference;
 
 $wr = new WaitReference();
 
-Swow\Coroutine::run(function () use ($wr) {
+Coroutine::run(function () use ($wr) {
     usleep(1000);
-    $eventScheduler = Swow\Coroutine::getCurrent()->getPrevious();
+    $eventScheduler = Coroutine::getCurrent()->getPrevious();
     Assert::throws(function () use ($eventScheduler) {
         $eventScheduler->kill();
-    }, Swow\Coroutine\Exception::class);
+    }, CoroutineException::class);
 });
 
 WaitReference::wait($wr);

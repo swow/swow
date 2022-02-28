@@ -9,6 +9,7 @@ require __DIR__ . '/../include/skipif.php';
 require __DIR__ . '/../include/bootstrap.php';
 
 use Swow\Buffer;
+use Swow\BufferException;
 
 Assert::throws(function () {
     // buffer size must > 0
@@ -62,12 +63,12 @@ Assert::throws(function () use ($buffer) {
 Assert::throws(function () use ($buffer) {
     // bad range
     $buffer->peekFrom(9, 23);
-}, Swow\Buffer\Exception::class);
+}, BufferException::class);
 
 Assert::throws(function () use ($buffer) {
     // bad range
     $buffer->peekFrom(9, 111111);
-}, Swow\Buffer\Exception::class);
+}, BufferException::class);
 
 Assert::throws(function () use ($buffer) {
     // length must >= -1

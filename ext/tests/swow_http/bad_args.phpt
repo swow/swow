@@ -2,6 +2,9 @@
 swow_http: bad args passed in
 --SKIPIF--
 <?php
+
+use Swow\Http\ParserException;
+
 require __DIR__ . '/../include/skipif.php';
 ?>
 --FILE--
@@ -21,7 +24,7 @@ Assert::throws(function () {
     $buffer->rewind();
     $parser = new Swow\Http\Parser();
     $parser->execute($buffer);
-}, Swow\Http\Parser\Exception::class);
+}, ParserException::class);
 
 // bad status code in Parser::execute
 Assert::throws(function () {
@@ -30,7 +33,7 @@ Assert::throws(function () {
     $buffer->rewind();
     $parser = new Swow\Http\Parser();
     $parser->execute($buffer);
-}, Swow\Http\Parser\Exception::class);
+}, ParserException::class);
 
 // bad EOF in Parser::finish
 Assert::throws(function () {
@@ -42,7 +45,7 @@ Assert::throws(function () {
         $parser->execute($buffer);
     }
     $parser->finish();
-}, Swow\Http\Parser\Exception::class);
+}, ParserException::class);
 
 echo 'Done' . PHP_LF;
 

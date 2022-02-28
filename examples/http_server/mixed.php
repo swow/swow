@@ -16,13 +16,13 @@ ini_set('memory_limit', '1G');
 require __DIR__ . '/../autoload.php';
 
 use Swow\Coroutine;
-use Swow\Coroutine\Exception as CoroutineException;
-use Swow\Http\Exception as HttpException;
+use Swow\CoroutineException;
+use Swow\Http\ResponseException;
 use Swow\Http\Server as HttpServer;
 use Swow\Http\Status as HttpStatus;
 use Swow\Http\WebSocketFrame;
 use Swow\Socket;
-use Swow\Socket\Exception as SocketException;
+use Swow\SocketException;
 use Swow\WebSocket\Opcode as WebSocketOpcode;
 use const Swow\Errno\EMFILE;
 use const Swow\Errno\ENFILE;
@@ -79,14 +79,14 @@ while (true) {
                                         }
                                         break;
                                     }
-                                    throw new HttpException(HttpStatus::BAD_REQUEST, 'Unsupported Upgrade Type');
+                                    throw new ResponseException(HttpStatus::BAD_REQUEST, 'Unsupported Upgrade Type');
                                 }
                                 $connection->respond(file_get_contents(__DIR__ . '/chat.html'));
                                 break;
                             default:
                                 $connection->error(HttpStatus::NOT_FOUND);
                         }
-                    } catch (HttpException $exception) {
+                    } catch (ResponseException $exception) {
                         $connection->error($exception->getCode(), $exception->getMessage());
                     }
                     if (!$request || !$request->getKeepAlive()) {
