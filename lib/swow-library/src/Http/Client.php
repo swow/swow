@@ -61,11 +61,7 @@ class Client extends Socket implements ClientInterface, HttpTypeInterface
         return parent::connect($name, $port, $timeout);
     }
 
-    /**
-     * send request
-     *
-     * @param array<string, string> $headers
-     */
+    /** @param array<string, array<string>> $headers */
     public function sendRaw(
         string $method = 'GET',
         string $path = '/',
