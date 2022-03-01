@@ -24,7 +24,7 @@ class Request extends Message implements RequestInterface
 
     protected string $method = 'GET';
 
-    protected ?\Psr\Http\Message\UriInterface $uri = null;
+    protected ?UriInterface $uri = null;
 
     protected string $uriString = '';
 
