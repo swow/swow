@@ -18,6 +18,7 @@ use Swow\Http\Server\Connection;
 use Swow\Server\ConnectionManagerTrait;
 use Swow\Socket;
 use Swow\SocketException;
+use function is_array;
 use function is_string;
 
 class Server extends Socket
@@ -41,11 +42,15 @@ class Server extends Socket
         return $connection;
     }
 
+    protected const BROADCAST_FLAG_NONE = 0;
+    protected const BROADCAST_FLAG_RECORD_EXCEPTIONS = 1 << 0;
+
     /**
      * @param Connection[] $targets
+     * @param array<int, Connection>|callable $filter
      * @return SocketException[]
      */
-    public function broadcastMessage(WebSocketFrame $frame, ?array $targets = null): array
+    public function broadcastMessage(WebSocketFrame $frame, ?array $targets = null, array|callable $filter = [], int $flags = self::BROADCAST_FLAG_NONE): static|array
     {
         if ($targets === null) {
             /** @var Connection[] $targets */
@@ -59,6 +64,15 @@ class Server extends Socket
             if ($target->getType() !== $target::TYPE_WEBSOCKET) {
                 continue;
             }
+            if (is_array($filter)) {
+                if (isset($filter[$target->getId()])) {
+                    continue;
+                }
+            } else /* if (is_callable($filter)) */ {
+                if (!$filter($target)) {
+                    continue;
+                }
+            }
             try {
                 if (is_string($frame)) {
                     $target->sendString($frame);
@@ -66,11 +80,13 @@ class Server extends Socket
                     $target->sendWebSocketFrame($frame);
                 }
             } catch (SocketException $exception) {
-                /* record it and ignore */
-                $exceptions[$target->getId()] = $exception;
+                if ($flags & static::BROADCAST_FLAG_RECORD_EXCEPTIONS) {
+                    /* record it and ignore */
+                    $exceptions[$target->getId()] = $exception;
+                }
             }
         }
 
-        return $exceptions;
+        return $flags & static::BROADCAST_FLAG_RECORD_EXCEPTIONS ? $exceptions : $this;
     }
 }
