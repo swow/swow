@@ -33,7 +33,7 @@ class Client extends Socket implements ClientInterface, HttpTypeInterface
 {
     use ConfigTrait;
     use ReceiverTrait {
-        __construct as receiverConstruct;
+        __construct as __constructReceiver;
         execute as receiverExecute;
     }
     use TypeTrait;
@@ -44,6 +44,8 @@ class Client extends Socket implements ClientInterface, HttpTypeInterface
         HttpParser::EVENT_HEADER_FIELD |
         HttpParser::EVENT_HEADER_VALUE |
         HttpParser::EVENT_HEADERS_COMPLETE |
+        HttpParser::EVENT_CHUNK_HEADER |
+        HttpParser::EVENT_CHUNK_COMPLETE |
         HttpParser::EVENT_BODY |
         HttpParser::EVENT_MESSAGE_COMPLETE;
 
@@ -52,7 +54,7 @@ class Client extends Socket implements ClientInterface, HttpTypeInterface
     public function __construct(int $type = Socket::TYPE_TCP)
     {
         parent::__construct($type);
-        $this->receiverConstruct(Parser::TYPE_RESPONSE, static::DEFAULT_HTTP_PARSER_EVENTS);
+        $this->__constructReceiver(Parser::TYPE_RESPONSE, static::DEFAULT_HTTP_PARSER_EVENTS);
     }
 
     public function connect(string $name, int $port = 0, ?int $timeout = null): static
