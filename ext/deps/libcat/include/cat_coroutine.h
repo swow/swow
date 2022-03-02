@@ -182,7 +182,7 @@ CAT_GLOBALS_STRUCT_BEGIN(cat_coroutine)
     cat_coroutine_id_t last_id;
     cat_coroutine_count_t count;
     cat_coroutine_count_t peak_count;
-    /* for watch-dog */
+    /* for watchdog */
     cat_coroutine_round_t round;
 CAT_GLOBALS_STRUCT_END(cat_coroutine)
 

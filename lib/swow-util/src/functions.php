@@ -264,10 +264,10 @@ function processExecute(array $command, &$status = null): string
 function httpGet(string $url): string
 {
     $requestArgs = ['filename' => $url];
-    if (getenv('http_proxy')) {
+    if (getenv('https_proxy') || getenv('http_proxy') || getenv('all_proxy')) {
         $requestArgs['context'] = stream_context_create([
             'http' => [
-                'proxy' => str_replace('http://', 'tcp://', getenv('http_proxy')),
+                'proxy' => str_replace('http://', 'tcp://', getenv('https_proxy') ?: getenv('http_proxy') ?: getenv('all_proxy')),
                 'request_fulluri' => true,
             ],
         ]);

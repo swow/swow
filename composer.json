@@ -67,10 +67,11 @@
         "sort-packages": true
     },
     "scripts": {
+        "swow-php": [ "@php tools/php-wrapper.php" ],
         "cs-check": [ "@php vendor/bin/php-cs-fixer fix --dry-run --diff" ],
         "cs-fix": [ "@php vendor/bin/php-cs-fixer fix" ],
         "rector": [ "@php vendor/bin/rector process --config=tools/rector.php" ],
-        "analyse": [ "@php -d extension=swow vendor/bin/phpstan analyse --memory-limit 4G -c phpstan.neon" ],
+        "analyse": [ "@swow-php vendor/bin/phpstan analyse --memory-limit 4G -c phpstan.neon" ],
         "sync-extension": [ "@php -n tools/sync-extension.php" ],
         "build-extension": [ "@php bin/swow-builder" ],
         "rebuild-extension": [ "@build-extension --rebuild" ],
@@ -80,9 +81,9 @@
         "reinstall-extension": [ "@rebuild-extension --install" ],
         "reinstall-debug-extension": [ "@rebuild-debug-extension --install" ],
         "test-extension": [ "@php tools/test-extension.php" ],
-        "test-library": [ "@php -d extension=swow vendor/bin/phpunit --configuration lib/swow-library lib/swow-library" ],
+        "test-library": [ "@swow-php vendor/bin/phpunit --configuration lib/swow-library lib/swow-library" ],
         "test": [ "@test-extension", "@test-library" ],
-        "gen-stub": [ "@php -n -d extension=swow lib/php-stub-generator/bin/gen-stub.php --noinspection --stub-file=lib/swow-stub/src/Swow.php swow lib/swow-stub/src/Swow.php" ],
+        "gen-stub": [ "@swow-php lib/php-stub-generator/bin/gen-stub.php --noinspection --stub-file=lib/swow-stub/src/Swow.php swow lib/swow-stub/src/Swow.php" ],
         "update-arginfo": [ "@php -n lib/php-stub-generator/bin/update-arginfo.php --cache-path=ext/build --stub-file=lib/swow-stub/src/Swow.php swow ext/src ext/build" ],
         "update-mime-types": [ "@php -n tools/update-mime-types.php" ],
         "split": [ "@php -n tools/split.php" ]

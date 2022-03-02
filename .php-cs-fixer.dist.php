@@ -22,6 +22,23 @@ please view the LICENSE file that was distributed with this source code
 TEXT;
 
 return (new PhpCsFixer\Config())
+    ->setFinder(
+        PhpCsFixer\Finder::create()
+            ->in([
+                __DIR__ . '/bin',
+                __DIR__ . '/benchmark',
+                __DIR__ . '/examples',
+                __DIR__ . '/lib',
+                __DIR__ . '/tools',
+            ])
+            ->notName([
+                'Swow.php',
+            ])
+            ->append([
+                __FILE__,
+            ])
+    )
+    ->setUsingCache(false)
     ->setRiskyAllowed(true)
     ->setRules([
         '@PSR2' => true,
@@ -144,20 +161,4 @@ return (new PhpCsFixer\Config())
         ],
         'static_lambda' => true,
         'void_return' => true,
-    ])
-    ->setFinder(
-        PhpCsFixer\Finder::create()
-            ->in([
-                __DIR__ . '/benchmark',
-                __DIR__ . '/examples',
-                __DIR__ . '/lib',
-                __DIR__ . '/tools',
-            ])
-            ->notName([
-                'Swow.php',
-            ])
-            ->append([
-                __FILE__,
-            ])
-    )
-    ->setUsingCache(false);
+    ]);

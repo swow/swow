@@ -13,9 +13,7 @@ declare(strict_types=1);
 
 namespace Swow\Http;
 
-use Swow\Http\Exception as HttpException;
 use Swow\Http\Parser as HttpParser;
-use Swow\Http\Parser\Exception as HttpParserException;
 use Swow\Http\Status as HttpStatus;
 use function array_map;
 use function count;
@@ -142,7 +140,7 @@ trait ReceiverTrait
                     if (!$headersComplete) {
                         $headerLength += $parser->getParsedLength();
                         if ($headerLength > $maxHeaderLength) {
-                            throw new HttpException(HttpStatus::REQUEST_HEADER_FIELDS_TOO_LARGE);
+                            throw new ResponseException(HttpStatus::REQUEST_HEADER_FIELDS_TOO_LARGE);
                         }
                     }
                     if ($event === HttpParser::EVENT_NONE) {
@@ -154,7 +152,7 @@ trait ReceiverTrait
                                 $newSize = $buffer->getSize() * 2;
                                 /* we need bigger buffer to handle the large filed (or throw error) */
                                 if ($newSize > $this->maxBufferSize) {
-                                    throw new HttpException(empty($uriOrReasonPhrase) ? HttpStatus::REQUEST_URI_TOO_LARGE : HttpStatus::REQUEST_HEADER_FIELDS_TOO_LARGE);
+                                    throw new ResponseException(empty($uriOrReasonPhrase) ? HttpStatus::REQUEST_URI_TOO_LARGE : HttpStatus::REQUEST_HEADER_FIELDS_TOO_LARGE);
                                 }
                                 $buffer->realloc($newSize);
                             }
@@ -214,7 +212,7 @@ trait ReceiverTrait
                                 } else {
                                     $contentLength = $parser->getContentLength();
                                     if ($contentLength > $maxContentLength) {
-                                        throw new HttpException(HttpStatus::REQUEST_ENTITY_TOO_LARGE);
+                                        throw new ResponseException(HttpStatus::REQUEST_ENTITY_TOO_LARGE);
                                     }
                                 }
                                 $headersComplete = true;
@@ -287,7 +285,7 @@ trait ReceiverTrait
                                     return trim($s, ' ;');
                                 }, explode(';', $multipartHeaders['content-disposition'] ?? ''));
                                 if (($contentDispositionParts[0] ?? '') !== 'form-data') {
-                                    throw new HttpException(HttpStatus::BAD_REQUEST, "Unsupported Content-Disposition type '{$contentDispositionParts[0]}'");
+                                    throw new ResponseException(HttpStatus::BAD_REQUEST, "Unsupported Content-Disposition type '{$contentDispositionParts[0]}'");
                                 }
                                 $fileName = null;
                                 foreach ($contentDispositionParts as $contentDispositionPart) {
@@ -296,7 +294,7 @@ trait ReceiverTrait
                                     }
                                 }
                                 if (!$fileName) {
-                                    throw new HttpException(HttpStatus::BAD_REQUEST, 'Missing filename in Content-Disposition');
+                                    throw new ResponseException(HttpStatus::BAD_REQUEST, 'Missing filename in Content-Disposition');
                                 }
                                 $uploadedFile = new RawUploadedFile();
                                 $uploadedFile->name = $fileName;
@@ -325,7 +323,7 @@ trait ReceiverTrait
                                 if ($isChunked) {
                                     $currentChunkLength -= $dataLength;
                                     if ($currentChunkLength < 0) {
-                                        throw new HttpParserException('Unexpected body data (chunk overflow)');
+                                        throw new ParserException('Unexpected body data (chunk overflow)');
                                     }
                                     ($body ??= new Buffer())->write($data, $dataOffset, $dataLength);
                                     break;
@@ -341,7 +339,7 @@ trait ReceiverTrait
                                     $event = $parser->execute($body);
                                 }
                                 if ($event !== HttpParser::EVENT_MESSAGE_COMPLETE) {
-                                    throw new HttpParserException('Unexpected body eof');
+                                    throw new ParserException('Unexpected body eof');
                                 }
                                 break 3; /* end */
                             }
@@ -350,26 +348,26 @@ trait ReceiverTrait
                                 $currentChunkLength = $parser->getCurrentChunkLength();
                                 $contentLength += $currentChunkLength;
                                 if ($contentLength > $maxContentLength) {
-                                    throw new HttpException(HttpStatus::REQUEST_ENTITY_TOO_LARGE);
+                                    throw new ResponseException(HttpStatus::REQUEST_ENTITY_TOO_LARGE);
                                 }
                                 break;
                             }
                             case HttpParser::EVENT_CHUNK_COMPLETE:
                             {
                                 if ($currentChunkLength !== 0) {
-                                    throw new HttpParserException('Unexpected chunk eof');
+                                    throw new ParserException('Unexpected chunk eof');
                                 }
                                 break;
                             }
                             default:
-                                throw new HttpParserException('Unexpected Http-Parser event');
+                                throw new ParserException('Unexpected Http-Parser event');
                         }
                     }
                 }
             }
-        } catch (HttpParserException) {
+        } catch (ParserException) {
             /* TODO: get bad request */
-            throw new HttpException(HttpStatus::BAD_REQUEST, 'Protocol Parsing Error');
+            throw new ResponseException(HttpStatus::BAD_REQUEST, 'Protocol Parsing Error');
         } finally {
             if ($isRequest) {
                 $result->method = $parser->getMethod();

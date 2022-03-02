@@ -14,7 +14,7 @@ declare(strict_types=1);
 require __DIR__ . '/../autoload.php';
 
 use Swow\Coroutine;
-use Swow\Socket\Exception as SocketException;
+use Swow\SocketException;
 use Swow\Stream\EofStream;
 
 $server = new EofStream();

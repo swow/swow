@@ -15,7 +15,7 @@ require __DIR__ . '/../autoload.php';
 
 use Swow\Coroutine;
 use Swow\Http\Status;
-use Swow\Socket\Exception as SocketException;
+use Swow\SocketException;
 use Swow\Stream\JsonStream;
 use Swow\Sync\WaitReference;
 

@@ -11,6 +11,7 @@ require __DIR__ . '/../include/bootstrap.php';
 
 use Swow\Coroutine;
 use Swow\Signal;
+use Swow\SignalException;
 
 Coroutine::run(function () {
     Signal::wait(Signal::INT, 1000);
@@ -21,7 +22,7 @@ Signal::kill(getmypid(), Signal::INT);
 Assert::throws(function () {
     // timeout situation
     Signal::wait(Signal::TERM, 10);
-}, Signal\Exception::class);
+}, SignalException::class);
 
 echo 'Done' . PHP_LF;
 ?>

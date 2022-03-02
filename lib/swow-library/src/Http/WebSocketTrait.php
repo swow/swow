@@ -59,6 +59,13 @@ trait WebSocketTrait
                     // TODO: bad frame
                 } */
             }
+            /* truncate buffer if offset is equal to length (so buffer can be truncated without memory copies),
+             * or buffer offset is too big (waste), we must truncate it right now */
+            $websocketMaxHeaderLength = 128;
+            if ($buffer->tell() === $buffer->getLength() ||
+                $buffer->getReadableLength() < $websocketMaxHeaderLength) {
+                $buffer->truncateFrom();
+            }
             break;
         }
 

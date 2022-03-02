@@ -34,7 +34,7 @@ extern "C" {
 #include "swow_socket.h"
 #include "swow_stream.h"
 #include "swow_signal.h"
-#include "swow_watch_dog.h"
+#include "swow_watchdog.h"
 #include "swow_debug.h"
 
 #ifdef __cplusplus

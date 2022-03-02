@@ -16,9 +16,16 @@ jobs:
           - name: CentOS 7
             image: centos:7
             pkg: yum
-          - name: CentOS 8
-            image: centos:8
-            pkg: yum
+          # CentOS 8 died
+          #- name: CentOS 8
+          #  image: centos:8
+          #  pkg: yum
+          - name: AlmaLinux
+            image: almalinux
+            pkg: dnf
+          - name: Rocky Linux
+            image: rockylinux
+            pkg: dnf
           - name: Fedora
             image: fedora
             pkg: dnf
@@ -46,7 +53,7 @@ jobs:
           - name: openSUSE Tumbleweed
             image: opensuse/tumbleweed
             pkg: zypper
-      max-parallel: 11
+      max-parallel: 12
       fail-fast: false
     steps:
       - name: Prepare Swow codes

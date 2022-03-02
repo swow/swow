@@ -15,10 +15,10 @@ namespace Swow\Http\Client;
 
 use Psr\Http\Client\ClientExceptionInterface;
 use Psr\Http\Message\RequestInterface;
-use Swow\Socket\Exception;
+use Swow\SocketException;
 use Throwable;
 
-class ClientException extends Exception implements ClientExceptionInterface
+class ClientException extends SocketException implements ClientExceptionInterface
 {
     public function __construct(protected RequestInterface $request, string $message = '', int $code = 0, ?Throwable $previous = null)
     {

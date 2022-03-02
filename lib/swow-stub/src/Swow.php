@@ -194,6 +194,11 @@ namespace Swow
 
 namespace Swow
 {
+    class CoroutineException extends \Swow\Exception { }
+}
+
+namespace Swow
+{
     class Channel
     {
         public const OPCODE_PUSH = 0;
@@ -227,6 +232,16 @@ namespace Swow
 
         public function __debugInfo(): array { }
     }
+}
+
+namespace Swow
+{
+    class ChannelException extends \Swow\Exception { }
+}
+
+namespace Swow
+{
+    class SyncException extends \Swow\Exception { }
 }
 
 namespace Swow
@@ -324,6 +339,11 @@ namespace Swow
 
         public function __debugInfo(): array { }
     }
+}
+
+namespace Swow
+{
+    class BufferException extends \Swow\Exception { }
 }
 
 namespace Swow
@@ -593,6 +613,11 @@ namespace Swow
 
 namespace Swow
 {
+    class SocketException extends \Swow\CallException { }
+}
+
+namespace Swow
+{
     class Signal
     {
         public const HUP = 1;
@@ -635,6 +660,11 @@ namespace Swow
 
 namespace Swow
 {
+    class SignalException extends \Swow\Exception { }
+}
+
+namespace Swow
+{
     class WatchDog
     {
         public static function run(int $quantum = 0, int $threshold = 0, callable|int|float|null $alerter = null): void { }
@@ -643,6 +673,11 @@ namespace Swow
 
         public static function isRunning(): bool { }
     }
+}
+
+namespace Swow
+{
+    class WatchDogException extends \Swow\Exception { }
 }
 
 namespace Swow
@@ -658,21 +693,6 @@ namespace Swow\Util
 
         public function remove(): void { }
     }
-}
-
-namespace Swow\Coroutine
-{
-    class Exception extends \Swow\Exception { }
-}
-
-namespace Swow\Coroutine
-{
-    final class UnwindExit extends \Swow\Coroutine\Exception { }
-}
-
-namespace Swow\Channel
-{
-    class Exception extends \Swow\Exception { }
 }
 
 namespace Swow\Channel
@@ -691,9 +711,9 @@ namespace Swow\Channel
     }
 }
 
-namespace Swow\Channel\Selector
+namespace Swow\Channel
 {
-    class Exception extends \Swow\CallException { }
+    class SelectorException extends \Swow\CallException { }
 }
 
 namespace Swow\Sync
@@ -720,32 +740,7 @@ namespace Swow\Sync
 
 namespace Swow\Sync
 {
-    class Exception extends \Swow\Exception { }
-}
-
-namespace Swow\Sync
-{
     function waitAll(int $timeout = -1): void { }
-}
-
-namespace Swow\Buffer
-{
-    class Exception extends \Swow\Exception { }
-}
-
-namespace Swow\Socket
-{
-    class Exception extends \Swow\CallException { }
-}
-
-namespace Swow\Signal
-{
-    class Exception extends \Swow\Exception { }
-}
-
-namespace Swow\WatchDog
-{
-    class Exception extends \Swow\Exception { }
 }
 
 namespace Swow\Http
@@ -906,6 +901,11 @@ namespace Swow\Http
 
 namespace Swow\Http
 {
+    class ParserException extends \Swow\Exception { }
+}
+
+namespace Swow\Http
+{
     function packMessage(array $headers = [], string $body = ''): string { }
 }
 
@@ -917,11 +917,6 @@ namespace Swow\Http
 namespace Swow\Http
 {
     function packResponse(int $statusCode = 0, array $headers = [], string $body = '', string $reasonPhrase = '', string $protocolVersion = ''): string { }
-}
-
-namespace Swow\Http\Parser
-{
-    class Exception extends \Swow\Exception { }
 }
 
 namespace Swow\WebSocket

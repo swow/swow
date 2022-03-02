@@ -13,6 +13,7 @@ require __DIR__ . '/../include/bootstrap.php';
 
 use Swow\Coroutine;
 use Swow\Socket;
+use Swow\SocketException;
 use Swow\Sync\WaitReference;
 
 // on-shot http server
@@ -23,7 +24,7 @@ Coroutine::run(function () use ($server, $wrServer) {
     while (true) {
         try {
             $connection = $server->accept();
-        } catch (Socket\Exception $exception) {
+        } catch (SocketException) {
             break;
         }
         Coroutine::run(function () use ($connection) {

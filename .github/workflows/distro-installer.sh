@@ -55,6 +55,14 @@ installdnf()
         # so it's need to be downgraded when building php 8.0
         openssl_pkg="openssl1.1-devel"
     fi
+
+    # for el8 things
+    if dnf install -yy epel-release 'dnf-command(config-manager)'
+    then
+        dnf config-manager --enable epel
+        dnf config-manager --enable powertools 
+    fi
+
     dnf groupinstall -yy "Development Tools"
     dnf install -yy sqlite-devel libxml2-devel libcurl-devel ${openssl_pkg} re2c bison autoconf
 }

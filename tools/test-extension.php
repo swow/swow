@@ -16,6 +16,7 @@ use function Swow\Util\br;
 use function Swow\Util\error;
 use function Swow\Util\httpDownload;
 use function Swow\Util\notice;
+use function Swow\Util\passthru;
 use function Swow\Util\warn;
 
 require __DIR__ . '/autoload.php';
@@ -53,7 +54,7 @@ if ('Windows' === PHP_OS_FAMILY) {
 }
 
 if (!extension_loaded(Swow::class)) {
-    passthru("{$shell} \"{$cmd} -d extension=swow --ri swow\"", $status);
+    $status = passthru("{$shell} \"{$cmd} -d extension=swow --ri swow\"");
     br();
     if ($status !== 0) {
         warn('Failed load Swow extension, have you installed Swow (i.e. run composer build-extension)?');

@@ -39,26 +39,26 @@ extern "C" {
 #define CAT_ALERT_COUNT_FMT_SPEC PRIu64
 typedef uint64_t cat_alert_count_t;
 
-typedef struct cat_watch_dog_s cat_watch_dog_t;
+typedef struct cat_watchdog_s cat_watchdog_t;
 
-typedef void (*cat_watch_dog_alerter_t)(cat_watch_dog_t *watch_dog);
+typedef void (*cat_watchdog_alerter_t)(cat_watchdog_t *watchdog);
 
-CAT_GLOBALS_STRUCT_BEGIN(cat_watch_dog)
-    cat_watch_dog_t *watch_dog;
-CAT_GLOBALS_STRUCT_END(cat_watch_dog)
+CAT_GLOBALS_STRUCT_BEGIN(cat_watchdog)
+    cat_watchdog_t *watchdog;
+CAT_GLOBALS_STRUCT_END(cat_watchdog)
 
-extern CAT_API CAT_GLOBALS_DECLARE(cat_watch_dog)
+extern CAT_API CAT_GLOBALS_DECLARE(cat_watchdog)
 
-#define CAT_WATCH_DOG_G(x) CAT_GLOBALS_GET(cat_watch_dog, x)
+#define CAT_WATCH_DOG_G(x) CAT_GLOBALS_GET(cat_watchdog, x)
 
-struct cat_watch_dog_s
+struct cat_watchdog_s
 {
     /* public (options, readonly) */
     /* alert if blocking time is greater than quantum (nano secondes) */
     cat_timeout_t quantum;
     /* do something if blocking time is greate than threshold (nano secondes) */
     cat_timeout_t threshold;
-    cat_watch_dog_alerter_t alerter;
+    cat_watchdog_alerter_t alerter;
     /* private */
     cat_alert_count_t alert_count;
     cat_bool_t allocated;
@@ -72,18 +72,18 @@ struct cat_watch_dog_s
     uv_mutex_t mutex;
 };
 
-CAT_API cat_bool_t cat_watch_dog_module_init(void);
-CAT_API cat_bool_t cat_watch_dog_runtime_init(void);
-CAT_API cat_bool_t cat_watch_dog_runtime_shutdown(void);
+CAT_API cat_bool_t cat_watchdog_module_init(void);
+CAT_API cat_bool_t cat_watchdog_runtime_init(void);
+CAT_API cat_bool_t cat_watchdog_runtime_shutdown(void);
 
-CAT_API cat_bool_t cat_watch_dog_run(cat_watch_dog_t *watch_dog, cat_timeout_t quantum, cat_timeout_t threshold, cat_watch_dog_alerter_t alerter);
-CAT_API cat_bool_t cat_watch_dog_stop(void);
+CAT_API cat_bool_t cat_watchdog_run(cat_watchdog_t *watchdog, cat_timeout_t quantum, cat_timeout_t threshold, cat_watchdog_alerter_t alerter);
+CAT_API cat_bool_t cat_watchdog_stop(void);
 
-CAT_API void cat_watch_dog_alert_standard(cat_watch_dog_t *watch_dog);
+CAT_API void cat_watchdog_alert_standard(cat_watchdog_t *watchdog);
 
-CAT_API cat_bool_t cat_watch_dog_is_running(void);
-CAT_API cat_timeout_t cat_watch_dog_get_quantum(void);
-CAT_API cat_timeout_t cat_watch_dog_get_threshold(void);
+CAT_API cat_bool_t cat_watchdog_is_running(void);
+CAT_API cat_timeout_t cat_watchdog_get_quantum(void);
+CAT_API cat_timeout_t cat_watchdog_get_threshold(void);
 
 #ifdef __cplusplus
 }

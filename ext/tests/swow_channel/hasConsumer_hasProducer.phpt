@@ -9,6 +9,7 @@ require __DIR__ . '/../include/skipif.php';
 require __DIR__ . '/../include/bootstrap.php';
 
 use Swow\Channel;
+use Swow\ChannelException;
 use Swow\Coroutine;
 
 class Consumer
@@ -34,7 +35,7 @@ class Consumer
             while ($this->running) {
                 try {
                     $good = $this->chan->pop();
-                } catch (Swow\Channel\Exception $e) {
+                } catch (ChannelException $e) {
                     return;
                 }
                 pseudo_random_sleep();
@@ -78,7 +79,7 @@ class Producer
             while ($this->running) {
                 try {
                     $this->chan->push('good');
-                } catch (Swow\Channel\Exception $e) {
+                } catch (ChannelException $e) {
                     return;
                 }
                 $this->produced++;

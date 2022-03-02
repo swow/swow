@@ -13,6 +13,7 @@ declare(strict_types=1);
 
 namespace Swow\Http;
 
+use Exception;
 use Psr\Http\Client\ClientExceptionInterface;
 use Psr\Http\Client\ClientInterface;
 use Psr\Http\Message\RequestInterface;
@@ -22,7 +23,7 @@ use Swow\Http\Parser as HttpParser;
 use Swow\Http\Status as HttpStatus;
 use Swow\Http\TypeInterface as HttpTypeInterface;
 use Swow\Socket;
-use Swow\Socket\Exception as SocketException;
+use Swow\SocketException;
 use Swow\WebSocket;
 use function base64_encode;
 use function random_bytes;
@@ -32,7 +33,7 @@ class Client extends Socket implements ClientInterface, HttpTypeInterface
 {
     use ConfigTrait;
     use ReceiverTrait {
-        __construct as receiverConstruct;
+        __construct as __constructReceiver;
         execute as receiverExecute;
     }
     use TypeTrait;
@@ -43,6 +44,8 @@ class Client extends Socket implements ClientInterface, HttpTypeInterface
         HttpParser::EVENT_HEADER_FIELD |
         HttpParser::EVENT_HEADER_VALUE |
         HttpParser::EVENT_HEADERS_COMPLETE |
+        HttpParser::EVENT_CHUNK_HEADER |
+        HttpParser::EVENT_CHUNK_COMPLETE |
         HttpParser::EVENT_BODY |
         HttpParser::EVENT_MESSAGE_COMPLETE;
 
@@ -51,7 +54,7 @@ class Client extends Socket implements ClientInterface, HttpTypeInterface
     public function __construct(int $type = Socket::TYPE_TCP)
     {
         parent::__construct($type);
-        $this->receiverConstruct(Parser::TYPE_RESPONSE, static::DEFAULT_HTTP_PARSER_EVENTS);
+        $this->__constructReceiver(Parser::TYPE_RESPONSE, static::DEFAULT_HTTP_PARSER_EVENTS);
     }
 
     public function connect(string $name, int $port = 0, ?int $timeout = null): static
@@ -150,7 +153,7 @@ class Client extends Socket implements ClientInterface, HttpTypeInterface
         return $response;
     }
 
-    protected function convertToClientException(\Exception $exception, RequestInterface $request): ClientExceptionInterface
+    protected function convertToClientException(Exception $exception, RequestInterface $request): ClientExceptionInterface
     {
         if ($exception instanceof SocketException) {
             return new NetworkException($request, $exception->getMessage(), $exception->getCode());

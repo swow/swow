@@ -11,6 +11,7 @@ require __DIR__ . '/../include/bootstrap.php';
 
 use Swow\Coroutine;
 use Swow\Socket;
+use Swow\SocketException;
 use Swow\Sync\WaitReference;
 use const Swow\Errno\ECANCELED;
 use const Swow\Errno\ECONNREFUSED;
@@ -28,12 +29,12 @@ Coroutine::run(function () use ($server, $wrServer) {
                     while (true) {
                         $connection->sendString($connection->readString(TEST_MAX_LENGTH));
                     }
-                } catch (Socket\Exception $exception) {
+                } catch (SocketException $exception) {
                     Assert::same($exception->getCode(), ECONNRESET);
                 }
             });
         }
-    } catch (Socket\Exception $exception) {
+    } catch (SocketException $exception) {
         Assert::same($exception->getCode(), ECANCELED);
     }
 });
@@ -48,7 +49,7 @@ for ($c = 0; $c < TEST_MAX_CONCURRENCY; $c++) {
                 $client = new Socket(Socket::TYPE_TCP);
                 $client->connect($server->getSockAddress(), $server->getSockPort());
                 break;
-            } catch (Socket\Exception $exception) {
+            } catch (SocketException $exception) {
                 /* Connection limitation on Windows latest and MacOS */
                 if ($exception->getCode() !== ECONNREFUSED &&
                     $exception->getCode() !== ECONNRESET ||

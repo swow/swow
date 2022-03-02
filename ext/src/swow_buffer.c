@@ -1040,7 +1040,7 @@ int swow_buffer_module_init(INIT_FUNC_ARGS)
     zend_declare_class_constant_long(swow_buffer_ce, ZEND_STRL("DEFAULT_SIZE"), CAT_BUFFER_DEFAULT_SIZE);
 
     swow_buffer_exception_ce = swow_register_internal_class(
-        "Swow\\Buffer\\Exception", swow_exception_ce, NULL, NULL, NULL, cat_true, cat_true, NULL, NULL, 0
+        "Swow\\BufferException", swow_exception_ce, NULL, NULL, NULL, cat_true, cat_true, NULL, NULL, 0
     );
 
     return SUCCESS;

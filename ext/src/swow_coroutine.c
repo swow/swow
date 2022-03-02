@@ -2373,7 +2373,7 @@ int swow_coroutine_module_init(INIT_FUNC_ARGS)
 
     /* Exception for common errors */
     swow_coroutine_exception_ce = swow_register_internal_class(
-        "Swow\\Coroutine\\Exception", swow_exception_ce, NULL, NULL, NULL, cat_true, cat_true, NULL, NULL, 0
+        "Swow\\CoroutineException", swow_exception_ce, NULL, NULL, NULL, cat_true, cat_true, NULL, NULL, 0
     );
 
 #ifndef SWOW_NATIVE_UNWIND_EXIT_SUPPORT

@@ -15,7 +15,7 @@ require __DIR__ . '/../autoload.php';
 
 use Swow\Coroutine;
 use Swow\Http\Status;
-use Swow\Socket\Exception as SocketException;
+use Swow\SocketException;
 use Swow\Stream\VarStream;
 use Swow\Sync\WaitReference;
 use function Swow\Debug\var_dump_return;

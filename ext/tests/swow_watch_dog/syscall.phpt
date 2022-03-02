@@ -1,5 +1,5 @@
 --TEST--
-swow_watch_dog: syscall
+swow_watchdog: syscall
 --SKIPIF--
 <?php
 require __DIR__ . '/../include/skipif.php';
@@ -89,5 +89,5 @@ echo 'Done' . PHP_LF;
 
 ?>
 --EXPECTREGEX--
-(?:Warning: <(?:Watch-Dog)> [\S ]+\n)+I am back
+(?:Warning: <(?:WatchDog)> [\S ]+\n)+I am back
 Done
