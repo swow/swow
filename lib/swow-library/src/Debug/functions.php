@@ -54,7 +54,7 @@ function showExecutedSourceLines(bool $all = false): Handler
         static $cache = [];
         if (!isset($cache[$file])) {
             $fileLines = [];
-            $fp = @fopen($file, 'r');
+            $fp = @fopen($file, 'rb');
             if ($fp === false) {
                 $cache[$file] = false;
             } else {
@@ -96,7 +96,7 @@ function showExecutedSourceLines(bool $all = false): Handler
         };
     } else {
         $file = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 1)[0]['file'] ?? '';
-        $fp = @fopen($file, 'r');
+        $fp = @fopen($file, 'rb');
         if ($fp === false) {
             throw IOException::getLast();
         }
