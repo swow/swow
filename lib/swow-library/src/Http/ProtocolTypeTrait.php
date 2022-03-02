@@ -13,13 +13,13 @@ declare(strict_types=1);
 
 namespace Swow\Http;
 
-trait TypeTrait
+trait ProtocolTypeTrait
 {
-    protected int $type = self::TYPE_HTTP;
+    protected int $protocolType = self::PROTOCOL_TYPE_HTTP;
 
-    protected function upgraded(int $type): void
+    protected function upgraded(int $protocolType): void
     {
-        $this->type = $type;
+        $this->protocolType = $protocolType;
         /* release useless resources */
         // if (!($type & static::TYPE_HTTP)) {
         $this->httpParser = null;

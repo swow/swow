@@ -66,7 +66,7 @@ class Server extends Socket
         }
         $exceptions = [];
         foreach ($targets as $target) {
-            if ($target->getType() !== $target::TYPE_WEBSOCKET) {
+            if ($target->getProtocolType() !== $target::PROTOCOL_TYPE_WEBSOCKET) {
                 continue;
             }
             if (is_array($filter)) {

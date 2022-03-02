@@ -14,12 +14,12 @@ declare(strict_types=1);
 namespace Swow\Http\Server;
 
 use Swow\Http\Parser as HttpParser;
+use Swow\Http\ProtocolTypeInterface;
+use Swow\Http\ProtocolTypeTrait;
 use Swow\Http\ReceiverTrait;
 use Swow\Http\ResponseException;
 use Swow\Http\Server;
 use Swow\Http\Status as HttpStatus;
-use Swow\Http\TypeInterface as HttpTypeInterface;
-use Swow\Http\TypeTrait as HttpTypeTrait;
 use Swow\Http\UploadFile;
 use Swow\Http\WebSocketTrait;
 use Swow\Socket;
@@ -32,9 +32,9 @@ use function sha1;
 use function strlen;
 use function Swow\Http\packResponse;
 
-class Connection extends Socket implements HttpTypeInterface
+class Connection extends Socket implements ProtocolTypeInterface
 {
-    use HttpTypeTrait;
+    use ProtocolTypeTrait;
     use ReceiverTrait {
         __construct as __constructReceiver;
         execute as receiverExecute;
@@ -73,9 +73,9 @@ class Connection extends Socket implements HttpTypeInterface
         return $this->server;
     }
 
-    public function getType(): int
+    public function getProtocolType(): int
     {
-        return $this->type;
+        return $this->protocolType;
     }
 
     public function getKeepAlive(): ?bool
@@ -145,8 +145,8 @@ class Connection extends Socket implements HttpTypeInterface
 
     public function respond(mixed ...$args): void
     {
-        switch ($this->type) {
-            case static::TYPE_HTTP:
+        switch ($this->protocolType) {
+            case static::PROTOCOL_TYPE_HTTP:
             {
                 $statusCode = HttpStatus::OK;
                 $headers = [];
@@ -164,7 +164,7 @@ class Connection extends Socket implements HttpTypeInterface
                 $this->write([packResponse($statusCode, $headers), $body]);
                 break;
             }
-            case static::TYPE_WEBSOCKET:
+            case static::PROTOCOL_TYPE_WEBSOCKET:
             {
                 // TODO: impl
                 break;
@@ -174,8 +174,8 @@ class Connection extends Socket implements HttpTypeInterface
 
     public function error(int $code, string $message = ''): void
     {
-        switch ($this->type) {
-            case static::TYPE_HTTP:
+        switch ($this->protocolType) {
+            case static::PROTOCOL_TYPE_HTTP:
             {
                 if ($message === '') {
                     $message = HttpStatus::getReasonPhrase($code);
@@ -187,7 +187,7 @@ class Connection extends Socket implements HttpTypeInterface
                 ]);
                 break;
             }
-            case static::TYPE_WEBSOCKET:
+            case static::PROTOCOL_TYPE_WEBSOCKET:
             {
                 // TODO: impl
                 break;
@@ -217,7 +217,7 @@ class Connection extends Socket implements HttpTypeInterface
             $this->sendHttpResponse($response->setStatus($statusCode)->setHeaders($headers));
         }
 
-        $this->upgraded(static::TYPE_WEBSOCKET);
+        $this->upgraded(static::PROTOCOL_TYPE_WEBSOCKET);
 
         return $this;
     }

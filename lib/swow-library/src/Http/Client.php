@@ -21,7 +21,6 @@ use Swow\Http\Client\NetworkException;
 use Swow\Http\Client\RequestException;
 use Swow\Http\Parser as HttpParser;
 use Swow\Http\Status as HttpStatus;
-use Swow\Http\TypeInterface as HttpTypeInterface;
 use Swow\Socket;
 use Swow\SocketException;
 use Swow\WebSocket;
@@ -29,14 +28,14 @@ use function base64_encode;
 use function random_bytes;
 use function strlen;
 
-class Client extends Socket implements ClientInterface, HttpTypeInterface
+class Client extends Socket implements ClientInterface, ProtocolTypeInterface
 {
     use ConfigTrait;
+    use ProtocolTypeTrait;
     use ReceiverTrait {
         __construct as __constructReceiver;
         execute as receiverExecute;
     }
-    use TypeTrait;
     use WebSocketTrait;
 
     public const DEFAULT_HTTP_PARSER_EVENTS =
@@ -148,7 +147,7 @@ class Client extends Socket implements ClientInterface, HttpTypeInterface
         // if ($response->getHeaderLine('Sec-WebSocket-Accept') !== base64_encode(sha1($secWebSocketKey . WebSocket\GUID, true))) {
         //     throw new RequestException($request, 'Bad Sec-WebSocket-Accept');
         // }
-        $this->upgraded(static::TYPE_WEBSOCKET);
+        $this->upgraded(static::PROTOCOL_TYPE_WEBSOCKET);
 
         return $response;
     }
