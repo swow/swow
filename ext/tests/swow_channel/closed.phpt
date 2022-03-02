@@ -9,6 +9,7 @@ require __DIR__ . '/../include/skipif.php';
 require __DIR__ . '/../include/bootstrap.php';
 
 use Swow\Channel;
+use Swow\ChannelException;
 use const Swow\Errno\ECLOSED;
 
 $channel = new Channel();
@@ -16,7 +17,7 @@ $channel->close();
 Assert::false($channel->isAvailable());
 try {
     $channel->pop();
-} catch (Channel\Exception $exception) {
+} catch (ChannelException $exception) {
     Assert::same($exception->getCode(), ECLOSED);
 }
 echo 'Done' . PHP_LF;

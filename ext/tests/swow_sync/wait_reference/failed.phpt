@@ -9,6 +9,7 @@ require __DIR__ . '/../../include/skipif.php';
 require __DIR__ . '/../../include/bootstrap.php';
 
 use Swow\Coroutine;
+use Swow\SyncException;
 use Swow\Sync\WaitReference;
 use const Swow\Errno\ETIMEDOUT;
 
@@ -46,7 +47,7 @@ Coroutine::run(function ($wr) {
         // will time out immediately
         WaitReference::wait($wr, 0);
         echo 'wait should not success' . PHP_LF;
-    } catch (Swow\Sync\Exception $e) {
+    } catch (SyncException $e) {
         Assert::same($e->getCode(), ETIMEDOUT);
     }
 }, $wr);

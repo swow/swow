@@ -3,13 +3,14 @@ swow_http: bad args passed in
 --SKIPIF--
 <?php
 
-use Swow\Http\ParserException;
 
 require __DIR__ . '/../include/skipif.php';
 ?>
 --FILE--
 <?php
 require __DIR__ . '/../include/bootstrap.php';
+
+use Swow\Http\ParserException;
 
 // bad parser type in Parser::setType
 Assert::throws(function () {

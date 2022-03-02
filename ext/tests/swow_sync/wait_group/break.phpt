@@ -9,6 +9,7 @@ require __DIR__ . '/../../include/skipif.php';
 require __DIR__ . '/../../include/bootstrap.php';
 
 use Swow\Coroutine;
+use Swow\SyncException;
 use Swow\Sync\WaitGroup;
 use const Swow\Errno\ECANCELED;
 
@@ -23,7 +24,7 @@ $waiting_coro = Coroutine::run(function () use ($wg) {
     try {
         $wg->wait();
         echo 'wait should not success' . PHP_LF;
-    } catch (Swow\Sync\Exception $e) {
+    } catch (SyncException $e) {
         Assert::same($e->getCode(), ECANCELED);
     }
 });
