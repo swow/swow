@@ -76,7 +76,7 @@ class StubGenerator
     /** @var array<string> */
     protected array $noinspection = [];
     /** @var array<string, string> */
-    protected array $commentMap = [];
+    protected array $userCommentMap = [];
     /* Disable some features because php-src gen_stub.php not support it */
     protected bool $genArginfoMode = false;
     /** @var callable[] */
@@ -125,9 +125,9 @@ class StubGenerator
      *
      * @param array<string, string> $map
      */
-    public function setCommentMap(array $map): static
+    public function setUserCommentMap(array $map): static
     {
-        $this->commentMap = $map;
+        $this->userCommentMap = $map;
 
         return $this;
     }
@@ -337,6 +337,23 @@ class StubGenerator
     }
 
     /**
+     * @return string|array<string>
+     */
+    protected static function solveRawUserComment(string $userComment): string|array
+    {
+        // format user comment
+        $userCommentLines = explode("\n", $userComment);
+        if (count($userCommentLines) === 1) {
+            $comment = trim($userComment);
+        } else {
+            $userCommentLines = array_slice($userCommentLines, 1, count($userCommentLines) - 2);
+            $comment = array_map(static fn (string $line) => trim($line, '/* '), $userCommentLines);
+        }
+
+        return $comment;
+    }
+
+    /**
      * @param string|array<string> $comment
      */
     protected function formatFunction(ReflectionFunctionAbstract $function, string|array $comment, string $prefix, string $name, string $params, string $returnType, string $body): string
@@ -436,16 +453,9 @@ class StubGenerator
             } else /* if ($function instanceof ReflectionMethod) */ {
                 $fullName = "{$function->getDeclaringClass()->getName()}->{$function->getShortName()}";
             }
-            $userComment = $this->commentMap[$fullName] ?? '';
+            $userComment = $this->userCommentMap[$fullName] ?? '';
             if ($userComment) {
-                // format user comment
-                $userCommentLines = explode("\n", $userComment);
-                if (count($userCommentLines) === 1) {
-                    $comment = trim($userComment);
-                } else {
-                    $userCommentLines = array_slice($userCommentLines, 1, count($userCommentLines) - 2);
-                    $comment = array_map(static fn (string $line) => trim($line, '/* '), $userCommentLines);
-                }
+                $comment = static::solveRawUserComment($userComment);
             } elseif ($hasSpecialDefaultParamValue) {
                 $comment[] = sprintf(
                     '@param %s%s%s$%s%s%s',
@@ -562,7 +572,15 @@ class StubGenerator
         if (!$this->genArginfoMode) {
             foreach ($class->getConstants() as $constantName => $constantValue) {
                 $constantValue = is_numeric($constantValue) ? $constantValue : "'{$constantValue}'";
-                $constantDeclarations[] = "public const {$constantName} = {$this::convertValueToString($constantValue)}";
+                $userComment = $this->userCommentMap["{$class->getName()}::{$constantName}"] ?? null;
+                $comment = $userComment ? static::genComment(static::solveRawUserComment($userComment)) : '';
+                $constantDeclarations[] = sprintf(
+                    '%s%spublic const %s = %s',
+                    $comment,
+                    $comment ? "\n" : '',
+                    $constantName,
+                    $this::convertValueToString($constantValue)
+                );
             }
         }
 
@@ -626,9 +644,19 @@ class StubGenerator
                 " { }\n";
         }
 
+        $userComment = $this->userCommentMap[$class->getName()] ?? null;
+        if ($userComment) {
+            $commentIndent = static::INDENT;
+            $comment = static::genComment(static::solveRawUserComment($userComment));
+            $commentLF = "\n";
+        } else {
+            $commentIndent = $comment = $commentLF = '';
+        }
+
         return
             "{$namespaceNameDeclaration}\n" .
             "{\n" .
+            "{$commentIndent}{$comment}{$commentLF}" .
             "    {$prefix}{$type} {$shortName}{$extends}{$implements}{$body}" .
             '}';
     }

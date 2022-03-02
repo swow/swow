@@ -56,7 +56,7 @@ TEXT
             'constants' => $constantMap,
             'declarations' => $declarationMap,
         ]);
-        $commentMap = processExecute([
+        $userCommentMap = processExecute([
             PHP_BINARY,
             '-n',
             __FILE__,
@@ -64,8 +64,8 @@ TEXT
             $options['stub-file'],
             $data,
         ]);
-        $commentMap = unserialize($commentMap);
-        $g->setCommentMap($commentMap);
+        $userCommentMap = unserialize($userCommentMap);
+        $g->setUserCommentMap($userCommentMap);
     }
     if (isset($options['gen-arginfo-mode'])) {
         $g->setGenArginfoMode();
@@ -97,8 +97,7 @@ TEXT
     $g->generate($argv[1] ?? STDOUT);
 };
 
-$getStubComments = function (): void {
-    global $argv;
+$getStubComments = function () use ($argv): void {
     $stubFile = $argv[2];
     require $stubFile;
     $data = unserialize($argv[3]);
@@ -112,11 +111,23 @@ $getStubComments = function (): void {
             $functionOrClassName = "{$namespace}\\{$functionOrClass}";
             if (class_exists($functionOrClassName)) {
                 $classReflection = new ReflectionClass($functionOrClassName);
+                $comment = $classReflection->getDocComment();
+                if ($comment) {
+                    $commentMap[$functionOrClassName] = $comment;
+                }
+                $classConstantReflections = $classReflection->getReflectionConstants();
+                foreach ($classConstantReflections as $classConstantReflection) {
+                    $comment = $classConstantReflection->getDocComment();
+                    if ($comment) {
+                        $classConstantName = "{$functionOrClassName}::{$classConstantReflection->getName()}";
+                        $commentMap[$classConstantName] = $comment;
+                    }
+                }
                 $methodsReflections = $classReflection->getMethods();
                 foreach ($methodsReflections as $methodsReflection) {
                     $comment = $methodsReflection->getDocComment();
-                    $methodName = "{$functionOrClassName}->{$methodsReflection->getShortName()}";
                     if ($comment) {
+                        $methodName = "{$functionOrClassName}->{$methodsReflection->getShortName()}";
                         $commentMap[$methodName] = $comment;
                     }
                 }
