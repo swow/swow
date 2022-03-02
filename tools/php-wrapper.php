@@ -28,7 +28,7 @@ declare(strict_types=1);
     $extensionLoaded = $exitCode === 0 && $output === '1';
     $proc = proc_open(
         [PHP_BINARY, ...($extensionLoaded ? [] : ['-d', 'extension=' . strtolower(Swow::class)]), ...$args],
-        [0 => STDIN, 1 => ['pty', 'w'], 2 => STDERR],
+        [0 => STDIN, 1 => [PHP_OS_FAMILY === 'Windows' ? 'pipe' : 'pty', 'w'], 2 => STDERR],
         $pipes, null, null
     );
     do {
