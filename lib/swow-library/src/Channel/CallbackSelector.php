@@ -13,27 +13,28 @@ declare(strict_types=1);
 
 namespace Swow\Channel;
 
+use Closure;
 use Swow\Channel;
 use function spl_object_id;
 
 class CallbackSelector extends Selector
 {
-    /** @var array<callable> */
+    /** @var array<Closure> */
     protected array $pushCallbacks = [];
 
-    /** @var array<callable> */
+    /** @var array<Closure> */
     protected array $popCallbacks = [];
 
     public function casePush(Channel $channel, mixed $data, callable $callback): static
     {
-        $this->pushCallbacks[spl_object_id($channel)] = $callback;
+        $this->pushCallbacks[spl_object_id($channel)] = Closure::fromCallable($callback);
 
         return $this->push($channel, $data);
     }
 
     public function casePop(Channel $channel, callable $callback): static
     {
-        $this->popCallbacks[spl_object_id($channel)] = $callback;
+        $this->popCallbacks[spl_object_id($channel)] = Closure::fromCallable($callback);
 
         return $this->pop($channel);
     }

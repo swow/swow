@@ -13,12 +13,14 @@ declare(strict_types=1);
 
 namespace Swow\Http;
 
+use Closure;
 use Swow\Buffer;
 use Swow\Http\Server\Connection;
 use Swow\Server\ConnectionManagerTrait;
 use Swow\Socket;
 use Swow\SocketException;
 use function is_array;
+use function is_callable;
 use function is_string;
 
 class Server extends Socket
@@ -58,6 +60,9 @@ class Server extends Socket
         }
         if ($frame->getPayloadLength() <= Buffer::PAGE_SIZE) {
             $frame = $frame->toString();
+        }
+        if (is_callable($filter)) {
+            $filter = Closure::fromCallable($filter);
         }
         $exceptions = [];
         foreach ($targets as $target) {
