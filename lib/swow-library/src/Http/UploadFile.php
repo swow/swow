@@ -80,7 +80,7 @@ class UploadFile extends SplFileInfo implements UploadedFileInterface, Stringabl
         if ($this->moved) {
             throw new RuntimeException('Uploaded file is moved');
         }
-        return Psr7Stream::create(fopen($this->tmpFile, 'r+'));
+        return Psr7Stream::create(fopen($this->tmpFile, 'rb+'));
     }
 
     public function moveTo($targetPath): void

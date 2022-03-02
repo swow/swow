@@ -282,10 +282,7 @@ TEXT;
     public static function getDebugContextOfCoroutine(Coroutine $coroutine): DebuggerContext
     {
         $weakMap = static::getCoroutineDebugWeakMap();
-        if (!isset($weakMap[$coroutine])) {
-            return $weakMap[$coroutine] = new DebuggerContext();
-        }
-        return $weakMap[$coroutine];
+        return $weakMap[$coroutine] ?? ($weakMap[$coroutine] = new DebuggerContext());
     }
 
     public function getCurrentFrameIndex(): int

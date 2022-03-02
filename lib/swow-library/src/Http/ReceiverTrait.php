@@ -258,7 +258,7 @@ trait ReceiverTrait
                                 $multiPartHeadersComplete = true;
                                 // TODO: make dir and prefix configurable
                                 $tmpFilePath = tempnam(sys_get_temp_dir(), 'swow_');
-                                $tmpFile = fopen($tmpFilePath, 'w+');
+                                $tmpFile = fopen($tmpFilePath, 'wb+');
                                 break;
                             }
                             case HttpParser::EVENT_MULTIPART_BODY:

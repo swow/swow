@@ -112,7 +112,7 @@ class Psr7Stream implements StreamInterface, Stringable
         }
 
         if (is_string($body)) {
-            $resource = fopen('php://temp', 'rw+');
+            $resource = fopen('php://temp', 'rwb+');
             fwrite($resource, $body);
             $body = $resource;
         }
