@@ -1,4 +1,5 @@
 <?php
+
 /** @noinspection PhpUnused, PhpInconsistentReturnPointsInspection, PhpMissingParentConstructorInspection, PhpReturnDocTypeMismatchInspection */
 
 namespace
@@ -246,9 +247,18 @@ namespace Swow
 
 namespace Swow
 {
+    /**
+     * Swow buffer abstract
+     * 
+     * a `Buffer` object holds a buffer size specified in constructing.
+     */
     class Buffer implements \Stringable
     {
-        public const PAGE_SIZE = 16384;
+        /** 
+         * This constant holds page size of this machine, it's platform-dependent.
+         * At Linux mips64 and macOS arm64 platforms, this constant may have a value `16384`
+         */
+        public const PAGE_SIZE = 4096;
         public const DEFAULT_SIZE = 8192;
 
         public static function alignSize(int $size = 0, int $alignment = 0): int { }
@@ -375,8 +385,8 @@ namespace Swow
         public const TYPE_UDP = 134217746;
         public const TYPE_UDP4 = 134217778;
         public const TYPE_UDP6 = 134217810;
-        public const TYPE_UNIX = 33554561;
-        public const TYPE_UDG = 268435586;
+        const TYPE_UNIX = 33554561;
+        const TYPE_UDG = 268435586;
         public const IO_FLAG_NONE = 0;
         public const IO_FLAG_READ = 1;
         public const IO_FLAG_WRITE = 2;
@@ -620,37 +630,261 @@ namespace Swow
 {
     class Signal
     {
+        /** 
+         * This constant holds SIGHUP value, it's platform-dependent.
+         * 
+         * At macOS platform, this constant means "hangup"
+         * At Windows platform, this constant may not exist
+         */
         public const HUP = 1;
+        /** 
+         * This constant holds SIGINT value, it's platform-dependent.
+         * 
+         * At macOS and Windows platforms, this constant means "interrupt"
+         */
         public const INT = 2;
+        /** 
+         * This constant holds SIGQUIT value, it's platform-dependent.
+         * 
+         * At macOS platform, this constant means "quit"
+         * At Windows platform, this constant may not exist
+         */
         public const QUIT = 3;
+        /** 
+         * This constant holds SIGILL value, it's platform-dependent.
+         * 
+         * At macOS platform, this constant means "illegal instruction (not reset when caught)"
+         * At Windows platform, this constant means "illegal instruction - invalid function image"
+         */
         public const ILL = 4;
+        /** 
+         * This constant holds SIGTRAP value, it's platform-dependent.
+         * 
+         * At macOS platform, this constant means "trace trap (not reset when caught)"
+         * At Windows platform, this constant may not exist
+         */
         public const TRAP = 5;
+        /** 
+         * This constant holds SIGABRT value, it's platform-dependent.
+         * 
+         * At macOS platform, this constant means "abort()"
+         * At Windows platform, this constant may have a value `22` means "abnormal termination triggered by abort call"
+         */
         public const ABRT = 6;
+        /** 
+         * This constant holds SIGIOT value, it's platform-dependent.
+         * 
+         * At macOS and Windows platforms, this constant may not exist
+         */
         public const IOT = 6;
-        public const BUS = 10;
+        /** 
+         * This constant holds SIGBUS value, it's platform-dependent.
+         * 
+         * At Linux mips64 platform, this constant may have a value `10`
+         * At macOS platform, this constant may have a value `10` means "bus error"
+         * At Windows platform, this constant may not exist
+         */
+        public const BUS = 7;
+        /** 
+         * This constant holds SIGEMT value, it's platform-dependent.
+         * 
+         * At macOS platform, this constant means "EMT instruction"
+         * At Windows, Linux x86_64, Linux arm64 and Linux riscv64 platforms, this constant may not exist
+         */
+        public const EMT = 7;
+        /** 
+         * This constant holds SIGPOLL value, it's platform-dependent.
+         * 
+         * At macOS platform, this constant means "pollable event ([XSR] generated, not supported)"
+         * At Linux and Windows platforms, this constant may not exist
+         */
+        public const POLL = 7;
+        /** 
+         * This constant holds SIGFPE value, it's platform-dependent.
+         * 
+         * At macOS and Windows platforms, this constant means "floating point exception"
+         */
         public const FPE = 8;
+        /** 
+         * This constant holds SIGKILL value, it's platform-dependent.
+         * 
+         * At macOS platform, this constant means "kill (cannot be caught or ignored)"
+         * At Windows platform, this constant may not exist
+         */
         public const KILL = 9;
-        public const USR1 = 30;
+        /** 
+         * This constant holds SIGSEGV value, it's platform-dependent.
+         * 
+         * At macOS platform, this constant means "segmentation violation"
+         * At Windows platform, this constant means "segment violation"
+         */
         public const SEGV = 11;
-        public const USR2 = 31;
+        /** 
+         * This constant holds SIGPIPE value, it's platform-dependent.
+         * 
+         * At macOS platform, this constant means "write on a pipe with no one to read it"
+         * At Windows platform, this constant may not exist
+         */
         public const PIPE = 13;
+        /** 
+         * This constant holds SIGALRM value, it's platform-dependent.
+         * 
+         * At macOS platform, this constant means "alarm clock"
+         * At Windows platform, this constant may not exist
+         */
         public const ALRM = 14;
+        /** 
+         * This constant holds SIGTERM value, it's platform-dependent.
+         * 
+         * At macOS platform, this constant means "software termination signal from kill"
+         * At Windows platform, this constant means "Software termination signal from kill"
+         */
         public const TERM = 15;
-        public const CHLD = 20;
-        public const CONT = 19;
-        public const STOP = 17;
-        public const TSTP = 18;
+        /** 
+         * This constant holds SIGSTKFLT value, it's platform-dependent.
+         * 
+         * At macOS and Windows platforms, this constant may not exist
+         */
+        public const STKFLT = 16;
+        /** 
+         * This constant holds SIGCHLD value, it's platform-dependent.
+         * 
+         * At Linux mips64 platform, this constant may have a value `18`
+         * At macOS platform, this constant may have a value `20` means "to parent on child stop or exit"
+         * At Windows platform, this constant may not exist
+         */
+        public const CHLD = 17;
+        /** 
+         * This constant holds SIGCONT value, it's platform-dependent.
+         * 
+         * At Linux mips64 platform, this constant may have a value `25`
+         * At macOS platform, this constant may have a value `19` means "continue a stopped process"
+         * At Windows platform, this constant may not exist
+         */
+        public const CONT = 18;
+        /** 
+         * This constant holds SIGSTOP value, it's platform-dependent.
+         * 
+         * At Linux mips64 platform, this constant may have a value `23`
+         * At macOS platform, this constant may have a value `17` means "sendable stop signal not from tty"
+         * At Windows platform, this constant may not exist
+         */
+        public const STOP = 19;
+        /** 
+         * This constant holds SIGTSTP value, it's platform-dependent.
+         * 
+         * At Linux mips64 platform, this constant may have a value `24`
+         * At macOS platform, this constant may have a value `18` means "stop signal from tty"
+         * At Windows platform, this constant may not exist
+         */
+        public const TSTP = 20;
+        /** 
+         * This constant holds SIGBREAK value, it's platform-dependent.
+         * 
+         * At Windows platform, this constant means "Ctrl-Break sequence"
+         * At Linux and macOS platforms, this constant may not exist
+         */
+        public const BREAK = 21;
+        /** 
+         * This constant holds SIGTTIN value, it's platform-dependent.
+         * 
+         * At Linux mips64 platform, this constant may have a value `26`
+         * At macOS platform, this constant means "to readers pgrp upon background tty read"
+         * At Windows platform, this constant may not exist
+         */
         public const TTIN = 21;
+        /** 
+         * This constant holds SIGTTOU value, it's platform-dependent.
+         * 
+         * At Linux mips64 platform, this constant may have a value `27`
+         * At macOS platform, this constant means "like TTIN for output if (tp->t_local&LTOSTOP)"
+         * At Windows platform, this constant may not exist
+         */
         public const TTOU = 22;
-        public const URG = 16;
+        /** 
+         * This constant holds SIGURG value, it's platform-dependent.
+         * 
+         * At Linux mips64 platform, this constant may have a value `21`
+         * At macOS platform, this constant may have a value `16` means "urgent condition on IO channel"
+         * At Windows platform, this constant may not exist
+         */
+        public const URG = 23;
+        /** 
+         * This constant holds SIGXCPU value, it's platform-dependent.
+         * 
+         * At Linux mips64 platform, this constant may have a value `30`
+         * At macOS platform, this constant means "exceeded CPU time limit"
+         * At Windows platform, this constant may not exist
+         */
         public const XCPU = 24;
+        /** 
+         * This constant holds SIGXFSZ value, it's platform-dependent.
+         * 
+         * At Linux mips64 platform, this constant may have a value `31`
+         * At macOS platform, this constant means "exceeded file size limit"
+         * At Windows platform, this constant may not exist
+         */
         public const XFSZ = 25;
+        /** 
+         * This constant holds SIGVTALRM value, it's platform-dependent.
+         * 
+         * At Linux mips64 platform, this constant may have a value `28`
+         * At macOS platform, this constant means "virtual time alarm"
+         * At Windows platform, this constant may not exist
+         */
         public const VTALRM = 26;
+        /** 
+         * This constant holds SIGPROF value, it's platform-dependent.
+         * 
+         * At Linux mips64 platform, this constant may have a value `29`
+         * At macOS platform, this constant means "profiling time alarm"
+         * At Windows platform, this constant may not exist
+         */
         public const PROF = 27;
+        /** 
+         * This constant holds SIGWINCH value, it's platform-dependent.
+         * 
+         * At Linux mips64 platform, this constant may have a value `20`
+         * At macOS platform, this constant means "window size changes"
+         * At Windows platform, this constant may not exist
+         */
         public const WINCH = 28;
-        public const IO = 23;
+        /** 
+         * This constant holds SIGINFO value, it's platform-dependent.
+         * 
+         * At macOS platform, this constant means "information request"
+         * At Linux and Windows platforms, this constant may not exist
+         */
         public const INFO = 29;
-        public const SYS = 12;
+        /** 
+         * This constant holds SIGIO value, it's platform-dependent.
+         * 
+         * At Linux mips64 platform, this constant may have a value `22`
+         * At macOS platform, this constant may have a value `23` means "input/output possible signal"
+         * At Windows platform, this constant may not exist
+         */
+        public const IO = 29;
+        /** 
+         * This constant holds SIGLOST value, it's platform-dependent.
+         * 
+         * At macOS and Windows platforms, this constant may not exist
+         */
+        public const LOST = 29;
+        /** 
+         * This constant holds SIGPWR value, it's platform-dependent.
+         * 
+         * At Linux mips64 platform, this constant may have a value `19`
+         * At macOS and Windows platforms, this constant may not exist
+         */
+        public const PWR = 30;
+        /** 
+         * This constant holds SIGSYS value, it's platform-dependent.
+         * 
+         * At Linux mips64 platform, this constant may have a value `12`
+         * At macOS platform, this constant may have a value `12` means "bad argument to system call"
+         * At Windows platform, this constant may not exist
+         */
+        public const SYS = 31;
 
         public static function wait(int $num, int $timeout = -1): void { }
 
@@ -1039,12 +1273,12 @@ namespace Swow\WebSocket
 
 namespace Swow\Errno
 {
-    const E2BIG = -7;
-    const EACCES = -13;
-    const EADDRINUSE = -48;
-    const EADDRNOTAVAIL = -49;
-    const EAFNOSUPPORT = -47;
-    const EAGAIN = -35;
+    const E2BIG = -4093;
+    const EACCES = -4092;
+    const EADDRINUSE = -4091;
+    const EADDRNOTAVAIL = -4090;
+    const EAFNOSUPPORT = -4089;
+    const EAGAIN = -4088;
     const EAI_ADDRFAMILY = -3000;
     const EAI_AGAIN = -3001;
     const EAI_BADFLAGS = -3002;
@@ -1059,69 +1293,69 @@ namespace Swow\Errno
     const EAI_PROTOCOL = -3014;
     const EAI_SERVICE = -3010;
     const EAI_SOCKTYPE = -3011;
-    const EALREADY = -37;
-    const EBADF = -9;
-    const EBUSY = -16;
-    const ECANCELED = -89;
+    const EALREADY = -4084;
+    const EBADF = -4083;
+    const EBUSY = -4082;
+    const ECANCELED = -4081;
     const ECHARSET = -4080;
-    const ECONNABORTED = -53;
-    const ECONNREFUSED = -61;
-    const ECONNRESET = -54;
-    const EDESTADDRREQ = -39;
-    const EEXIST = -17;
-    const EFAULT = -14;
-    const EFBIG = -27;
-    const EHOSTUNREACH = -65;
-    const EINTR = -4;
-    const EINVAL = -22;
-    const EIO = -5;
-    const EISCONN = -56;
-    const EISDIR = -21;
-    const ELOOP = -62;
-    const EMFILE = -24;
-    const EMSGSIZE = -40;
-    const ENAMETOOLONG = -63;
-    const ENETDOWN = -50;
-    const ENETUNREACH = -51;
-    const ENFILE = -23;
-    const ENOBUFS = -55;
-    const ENODEV = -19;
-    const ENOENT = -2;
-    const ENOMEM = -12;
+    const ECONNABORTED = -4079;
+    const ECONNREFUSED = -4078;
+    const ECONNRESET = -4077;
+    const EDESTADDRREQ = -4076;
+    const EEXIST = -4075;
+    const EFAULT = -4074;
+    const EFBIG = -4036;
+    const EHOSTUNREACH = -4073;
+    const EINTR = -4072;
+    const EINVAL = -4071;
+    const EIO = -4070;
+    const EISCONN = -4069;
+    const EISDIR = -4068;
+    const ELOOP = -4067;
+    const EMFILE = -4066;
+    const EMSGSIZE = -4065;
+    const ENAMETOOLONG = -4064;
+    const ENETDOWN = -4063;
+    const ENETUNREACH = -4062;
+    const ENFILE = -4061;
+    const ENOBUFS = -4060;
+    const ENODEV = -4059;
+    const ENOENT = -4058;
+    const ENOMEM = -4057;
     const ENONET = -4056;
-    const ENOPROTOOPT = -42;
-    const ENOSPC = -28;
-    const ENOSYS = -78;
-    const ENOTCONN = -57;
-    const ENOTDIR = -20;
-    const ENOTEMPTY = -66;
-    const ENOTSOCK = -38;
-    const ENOTSUP = -45;
-    const EOVERFLOW = -84;
-    const EPERM = -1;
-    const EPIPE = -32;
-    const EPROTO = -100;
-    const EPROTONOSUPPORT = -43;
-    const EPROTOTYPE = -41;
-    const ERANGE = -34;
-    const EROFS = -30;
-    const ESHUTDOWN = -58;
-    const ESPIPE = -29;
-    const ESRCH = -3;
-    const ETIMEDOUT = -60;
-    const ETXTBSY = -26;
-    const EXDEV = -18;
+    const ENOPROTOOPT = -4035;
+    const ENOSPC = -4055;
+    const ENOSYS = -4054;
+    const ENOTCONN = -4053;
+    const ENOTDIR = -4052;
+    const ENOTEMPTY = -4051;
+    const ENOTSOCK = -4050;
+    const ENOTSUP = -4049;
+    const EOVERFLOW = -4026;
+    const EPERM = -4048;
+    const EPIPE = -4047;
+    const EPROTO = -4046;
+    const EPROTONOSUPPORT = -4045;
+    const EPROTOTYPE = -4044;
+    const ERANGE = -4034;
+    const EROFS = -4043;
+    const ESHUTDOWN = -4042;
+    const ESPIPE = -4041;
+    const ESRCH = -4040;
+    const ETIMEDOUT = -4039;
+    const ETXTBSY = -4038;
+    const EXDEV = -4037;
     const UNKNOWN = -4094;
     const EOF = -4095;
-    const ENXIO = -6;
-    const EMLINK = -31;
-    const EHOSTDOWN = -64;
+    const ENXIO = -4033;
+    const EMLINK = -4032;
+    const EHOSTDOWN = -4031;
     const EREMOTEIO = -4030;
-    const ENOTTY = -25;
-    const EFTYPE = -79;
-    const EILSEQ = -92;
-    const ESOCKTNOSUPPORT = -44;
-    const ESTALE = -70;
+    const ENOTTY = -4029;
+    const EFTYPE = -4028;
+    const EILSEQ = -4027;
+    const ESOCKTNOSUPPORT = -4025;
+    const ESTALE = -10070;
     const UNCODED = -9763;
     const EPREV = -9762;
     const EMISUSE = -9761;
