@@ -21,7 +21,8 @@
     },
     "autoload": {
         "psr-4": {
-            "Swow\\": "src/"
+            "Swow\\StubUtils": "src/",
+            "Swow\\StubUtils\\ConstantFixer": "src/ConstantFixer"
         }
     },
     "config": {

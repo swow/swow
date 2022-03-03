@@ -11,7 +11,7 @@
 
 declare(strict_types=1);
 
-namespace Swow;
+namespace Swow\StubUtils;
 
 use InvalidArgumentException;
 use ReflectionClass;
@@ -204,7 +204,8 @@ class StubGenerator
 
         if ($declarations) {
             $content = implode("\n", [
-                '<?php',
+                "<?php",
+                '',
                 ...($headerComment ? [$headerComment, ''] : ['']),
                 $declarations,
                 '',
