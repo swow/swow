@@ -38,7 +38,7 @@ Coroutine::run(static function () use ($server, $wr): void {
                             $connection->getFd(),
                             var_dump_return($variable)
                         );
-                        $connection->sendVar(['code' => Status::OK, 'message' => Status::getReasonPhrase(Status::OK)]);
+                        $connection->sendVar(['code' => Status::OK, 'message' => Status::getReasonPhraseFor(Status::OK)]);
                     }
                 } catch (SocketException $exception) {
                     echo "Connection<fd={$connection->getFd()}> goaway, reason: {$exception->getMessage()}" . PHP_EOL;

@@ -28,11 +28,11 @@ SWOW_API zend_class_entry *swow_http_parser_exception_ce;
 
 /* Status */
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Http_Status_getReasonPhrase, 0, 1, IS_STRING, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Http_Status_getReasonPhraseFor, 0, 1, IS_STRING, 0)
     ZEND_ARG_TYPE_INFO(0, statusCode, IS_LONG, 0)
 ZEND_END_ARG_INFO()
 
-static PHP_METHOD(Swow_Http_Status, getReasonPhrase)
+static PHP_METHOD(Swow_Http_Status, getReasonPhraseFor)
 {
     zend_long status_code;
 
@@ -44,7 +44,7 @@ static PHP_METHOD(Swow_Http_Status, getReasonPhrase)
 }
 
 static const zend_function_entry swow_http_status_methods[] = {
-    PHP_ME(Swow_Http_Status, getReasonPhrase, arginfo_class_Swow_Http_Status_getReasonPhrase, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    PHP_ME(Swow_Http_Status, getReasonPhraseFor, arginfo_class_Swow_Http_Status_getReasonPhraseFor, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
     PHP_FE_END
 };
 

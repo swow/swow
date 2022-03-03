@@ -37,7 +37,7 @@ Coroutine::run(static function () use ($server, $wr): void {
                             $connection->getFd(),
                             json_encode($json, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT)
                         );
-                        $connection->sendJson(['code' => Status::OK, 'message' => Status::getReasonPhrase(Status::OK)]);
+                        $connection->sendJson(['code' => Status::OK, 'message' => Status::getReasonPhraseFor(Status::OK)]);
                     }
                 } catch (SocketException $exception) {
                     echo "Connection<fd={$connection->getFd()}> goaway, reason: {$exception->getMessage()}" . PHP_EOL;

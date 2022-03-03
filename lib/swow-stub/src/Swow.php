@@ -1268,7 +1268,7 @@ namespace Swow\Http
         public const NOT_EXTENDED = 510;
         public const NETWORK_AUTHENTICATION_REQUIRED = 511;
 
-        public static function getReasonPhrase(int $statusCode): string { }
+        public static function getReasonPhraseFor(int $statusCode): string { }
     }
 }
 
@@ -1421,7 +1421,7 @@ namespace Swow\WebSocket
         public const PING = 9;
         public const PONG = 10;
 
-        public static function getName(int $opcode): int { }
+        public static function getNameFor(int $opcode): int { }
     }
 }
 
@@ -1445,7 +1445,7 @@ namespace Swow\WebSocket
         public const BAD_GATEWAY = 1014;
         public const TLS_HANDSHAKE = 1015;
 
-        public static function getDescription(int $code): int { }
+        public static function getDescriptionFor(int $code): int { }
     }
 }
 

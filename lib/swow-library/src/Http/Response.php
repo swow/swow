@@ -51,7 +51,7 @@ class Response extends Message implements ResponseInterface
     public function setStatus(int $statusCode, string $reasonPhrase = ''): static
     {
         $this->statusCode = $statusCode;
-        $this->reasonPhrase = $reasonPhrase ?: Status::getReasonPhrase($statusCode);
+        $this->reasonPhrase = $reasonPhrase ?: Status::getReasonPhraseFor($statusCode);
 
         return $this;
     }

@@ -25,11 +25,11 @@ SWOW_API zend_class_entry *swow_websocket_status_ce;
 SWOW_API zend_class_entry *swow_websocket_frame_ce;
 SWOW_API zend_object_handlers swow_websocket_frame_handlers;
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_WebSocket_Opcode_getName, 0, 1, IS_LONG, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_WebSocket_Opcode_getNameFor, 0, 1, IS_LONG, 0)
     ZEND_ARG_TYPE_INFO(0, opcode, IS_LONG, 0)
 ZEND_END_ARG_INFO()
 
-static PHP_METHOD(Swow_WebSocket_Opcode, getName)
+static PHP_METHOD(Swow_WebSocket_Opcode, getNameFor)
 {
     zend_long opcode;
     const char *name;
@@ -44,15 +44,15 @@ static PHP_METHOD(Swow_WebSocket_Opcode, getName)
 }
 
 static const zend_function_entry swow_websocket_opcode_methods[] = {
-    PHP_ME(Swow_WebSocket_Opcode, getName, arginfo_class_Swow_WebSocket_Opcode_getName, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    PHP_ME(Swow_WebSocket_Opcode, getNameFor, arginfo_class_Swow_WebSocket_Opcode_getNameFor, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
     PHP_FE_END
 };
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_WebSocket_Status_getDescription, 0, 1, IS_LONG, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_WebSocket_Status_getDescriptionFor, 0, 1, IS_LONG, 0)
     ZEND_ARG_TYPE_INFO(0, code, IS_LONG, 0)
 ZEND_END_ARG_INFO()
 
-static PHP_METHOD(Swow_WebSocket_Status, getDescription)
+static PHP_METHOD(Swow_WebSocket_Status, getDescriptionFor)
 {
     zend_long code;
     const char *description;
@@ -67,7 +67,7 @@ static PHP_METHOD(Swow_WebSocket_Status, getDescription)
 }
 
 static const zend_function_entry swow_websocket_status_methods[] = {
-    PHP_ME(Swow_WebSocket_Status, getDescription, arginfo_class_Swow_WebSocket_Status_getDescription, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    PHP_ME(Swow_WebSocket_Status, getDescriptionFor, arginfo_class_Swow_WebSocket_Status_getDescriptionFor, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
     PHP_FE_END
 };
 
