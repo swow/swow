@@ -10,10 +10,10 @@ require __DIR__ . '/../include/bootstrap.php';
 
 use Swow\Buffer;
 use Swow\Coroutine;
+use Swow\Errno;
 use Swow\Socket;
 use Swow\SocketException;
 use Swow\Sync\WaitReference;
-use const Swow\Errno\ETIMEDOUT;
 
 Socket::setGlobalReadTimeout(1000);
 
@@ -32,7 +32,7 @@ function testMultiClient(string $name, callable $function)
             try {
                 [$data, $peer_port] = $function($server);
             } catch (SocketException $e) {
-                Assert::same($e->getCode(), ETIMEDOUT);
+                Assert::same($e->getCode(), Errno::ETIMEDOUT);
                 return;
             }
             [1 => $peer_port_in_data, 2 => $local_port_in_data] = unpack('N2', $data);
@@ -126,7 +126,7 @@ function testMultiServer(string $name, callable $function)
                 $count++;
             } catch (SocketException $e) {
                 // do nothing
-                Assert::same($e->getCode(), ETIMEDOUT);
+                Assert::same($e->getCode(), Errno::ETIMEDOUT);
             }
         });
     }

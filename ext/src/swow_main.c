@@ -17,6 +17,7 @@
  */
 
 #include "swow.h"
+#include "swow_errno.h"
 #include "swow_log.h"
 #include "swow_debug.h"
 #include "swow_util.h"
@@ -133,6 +134,7 @@ PHP_MINIT_FUNCTION(swow)
 
     static const swow_init_function_t minit_functions[] = {
         swow_module_init,
+        swow_errno_module_init,
         swow_log_module_init,
         swow_exceptions_module_init,
         swow_debug_module_init,
@@ -456,32 +458,6 @@ static const zend_function_entry swow_methods[] = {
     PHP_FE_END
 };
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_Swow_Errno_strerror, 0, 1, IS_STRING, 0)
-    ZEND_ARG_TYPE_INFO(0, error, IS_LONG, 0)
-ZEND_END_ARG_INFO()
-
-static PHP_FUNCTION(Swow_Errno_strerror)
-{
-    zend_long error;
-
-    ZEND_PARSE_PARAMETERS_START(1, 1)
-        Z_PARAM_LONG(error)
-    ZEND_PARSE_PARAMETERS_END();
-
-    // overflow for int
-    if(error < INT_MIN || error > INT_MAX){
-        zend_value_error("Errno passed in is not in errno_t range");
-        RETURN_THROWS();
-    }
-
-    RETURN_STRING(cat_strerror(error));
-}
-
-static const zend_function_entry swow_errno_functions[] = {
-    PHP_FENTRY(Swow\\Errno\\strerror, PHP_FN(Swow_Errno_strerror), arginfo_Swow_Errno_strerror, 0)
-    PHP_FE_END
-};
-
 int swow_module_init(INIT_FUNC_ARGS)
 {
 #ifdef SWOW_DISABLE_SESSION
@@ -516,14 +492,6 @@ int swow_module_init(INIT_FUNC_ARGS)
         cat_false, cat_false,
         swow_create_object_deny, NULL, 0
     );
-
-    /* Errno constants */
-#define SWOW_ERRNO_GEN(name, message) REGISTER_LONG_CONSTANT("Swow\\Errno\\" #name, CAT_##name, CONST_CS | CONST_PERSISTENT);
-    CAT_ERRNO_MAP(SWOW_ERRNO_GEN)
-#undef SWOW_ERRNO_GEN
-    if (zend_register_functions(NULL, swow_errno_functions, NULL, type) != SUCCESS) {
-        return FAILURE;
-    }
 
     /* Module constants */
     swow_module_ce = swow_register_internal_class(

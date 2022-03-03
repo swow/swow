@@ -298,6 +298,7 @@ EOF
   SWOW_ADD_SOURCES(src, swow_main.c, SWOW_INCLUDES, SWOW_MAIN_CFLAGS)
   SWOW_ADD_SOURCES(src,
     swow_wrapper.c \
+    swow_errno.c \
     swow_log.c \
     swow_exceptions.c \
     swow_debug.c \

@@ -9,11 +9,10 @@ require __DIR__ . '/../include/skipif.php';
 require __DIR__ . '/../include/bootstrap.php';
 
 use Swow\Coroutine;
+use Swow\Errno;
 use Swow\Socket;
 use Swow\SocketException;
 use Swow\Sync\WaitReference;
-use const Swow\Errno\ECANCELED;
-use const Swow\Errno\ECONNRESET;
 
 $wrServer = new WaitReference();
 $server = new Socket(Socket::TYPE_TCP);
@@ -28,12 +27,12 @@ Coroutine::run(function () use ($server, $wrServer) {
                         $connection->sendString($connection->readString(TEST_MAX_LENGTH_HIGH));
                     }
                 } catch (SocketException $exception) {
-                    Assert::same($exception->getCode(), ECONNRESET);
+                    Assert::same($exception->getCode(), Errno::ECONNRESET);
                 }
             });
         }
     } catch (SocketException $exception) {
-        Assert::same($exception->getCode(), ECANCELED);
+        Assert::same($exception->getCode(), Errno::ECANCELED);
     }
 });
 

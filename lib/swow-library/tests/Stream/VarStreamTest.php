@@ -16,12 +16,11 @@ namespace SwowTest\Stream;
 use PHPUnit\Framework\TestCase;
 use stdClass;
 use Swow\Coroutine;
+use Swow\Errno;
 use Swow\SocketException;
 use Swow\Stream\VarStream;
 use Swow\Sync\WaitReference;
 use function getRandomBytes;
-use const Swow\Errno\ECANCELED;
-use const Swow\Errno\ECONNRESET;
 use const TEST_MAX_CONCURRENCY_LOW;
 use const TEST_MAX_REQUESTS_MID;
 
@@ -50,12 +49,12 @@ final class VarStreamTest extends TestCase
                                 $connection->sendVar($response);
                             }
                         } catch (SocketException $exception) {
-                            $this->assertContains($exception->getCode(), [0, ECONNRESET]);
+                            $this->assertContains($exception->getCode(), [0, Errno::ECONNRESET]);
                         }
                     }, $server->accept());
                 }
             } catch (SocketException $exception) {
-                $this->assertSame(ECANCELED, $exception->getCode());
+                $this->assertSame(Errno::ECANCELED, $exception->getCode());
             }
         });
         for ($c = 0; $c < TEST_MAX_CONCURRENCY_LOW; $c++) {

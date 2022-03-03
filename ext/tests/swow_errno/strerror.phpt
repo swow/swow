@@ -8,14 +8,14 @@ require __DIR__ . '/../include/skipif.php';
 <?php
 require __DIR__ . '/../include/bootstrap.php';
 
-use function Swow\Errno\strerror;
+use Swow\Errno;
 
-Assert::same(strerror(0), 'Unknown error');
-Assert::same(strerror(Swow\Errno\EAGAIN), 'Resource temporarily unavailable');
-Assert::same(strerror(2147483647), 'Unknown error');
+Assert::same(Errno::getDescriptionFor(0), 'Unknown error');
+Assert::same(Errno::getDescriptionFor(Errno::EAGAIN), 'Resource temporarily unavailable');
+Assert::same(Errno::getDescriptionFor(2147483647), 'Unknown error');
 if (PHP_INT_MAX > 2147483647) {
     try {
-        $ret = strerror(PHP_INT_MAX);
+        $ret = Errno::getDescriptionFor(PHP_INT_MAX);
         var_dump('bad return', $ret);
     } catch (ValueError $e) {
         Assert::same($e->getMessage(), 'Errno passed in is not in errno_t range');

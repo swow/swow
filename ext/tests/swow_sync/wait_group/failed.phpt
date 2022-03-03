@@ -9,8 +9,8 @@ require __DIR__ . '/../../include/skipif.php';
 require __DIR__ . '/../../include/bootstrap.php';
 
 use Swow\Coroutine;
+use Swow\Errno;
 use Swow\Sync\WaitGroup;
-use const Swow\Errno\ETIMEDOUT;
 
 $wg = new WaitGroup();
 // done without add is not allowed
@@ -49,7 +49,7 @@ Coroutine::run(function () use ($wg) {
         // will time out immediately
         $wg->wait(0);
     } catch (Swow\Sync\Exception $e) {
-        Assert::same($e->getCode(), ETIMEDOUT);
+        Assert::same($e->getCode(), Errno::ETIMEDOUT);
     }
 });
 // clear wg to avoid deadlock

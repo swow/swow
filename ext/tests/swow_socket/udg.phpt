@@ -10,10 +10,10 @@ skip_if_win();
 require __DIR__ . '/../include/bootstrap.php';
 
 use Swow\Coroutine;
+use Swow\Errno;
 use Swow\Socket;
 use Swow\SocketException;
 use Swow\Sync\WaitReference;
-use const Swow\Errno\ECANCELED;
 
 // TODO: test both file and abstract name
 if (PHP_OS_FAMILY === 'Linux' && mt_rand(0, 1)) {
@@ -39,7 +39,7 @@ foreach ([false, true] as $useConnect) {
                 $server->sendStringTo($message, $address);
             }
         } catch (SocketException $exception) {
-            Assert::same($exception->getCode(), ECANCELED);
+            Assert::same($exception->getCode(), Errno::ECANCELED);
         }
     });
 

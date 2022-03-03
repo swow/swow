@@ -9,7 +9,7 @@ require __DIR__ . '/../include/skipif.php';
 require __DIR__ . '/../include/bootstrap.php';
 
 use Swow\Coroutine;
-use const Swow\Errno\EMISUSE;
+use Swow\Errno;
 
 $coroutine = Coroutine::run(function () {
     Coroutine::yield();
@@ -20,7 +20,7 @@ $subCoroutine = $coroutine->call(function (): Coroutine {
             echo 'Never here' . PHP_LF;
         });
     } catch (Error $error) {
-        Assert::same($error->getCode(), EMISUSE);
+        Assert::same($error->getCode(), Errno::EMISUSE);
     }
     return new Coroutine(function () {
         echo 'Here I am' . PHP_LF;

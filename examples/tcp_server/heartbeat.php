@@ -12,9 +12,9 @@
 declare(strict_types=1);
 
 use Swow\Coroutine;
+use Swow\Errno;
 use Swow\Socket;
 use Swow\SocketException;
-use const Swow\Errno\ETIMEDOUT;
 
 $server = (new Socket(Socket::TYPE_TCP))
     ->bind('127.0.0.1', 9764)->listen()
@@ -35,7 +35,7 @@ while (true) {
             }
             echo "No.{$connection->getFd()} closed" . PHP_EOL;
         } catch (SocketException $exception) {
-            if ($exception->getCode() === ETIMEDOUT) {
+            if ($exception->getCode() === Errno::ETIMEDOUT) {
                 $connection->sendString("Server has kicked you out\r\n");
             }
             echo "No.{$connection->getFd()} goaway! {$exception->getMessage()}" . PHP_EOL;

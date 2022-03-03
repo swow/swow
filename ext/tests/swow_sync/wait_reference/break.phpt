@@ -9,9 +9,9 @@ require __DIR__ . '/../../include/skipif.php';
 require __DIR__ . '/../../include/bootstrap.php';
 
 use Swow\Coroutine;
+use Swow\Errno;
 use Swow\SyncException;
 use Swow\Sync\WaitReference;
-use const Swow\Errno\ECANCELED;
 
 $wr = new WaitReference();
 // normal done
@@ -25,7 +25,7 @@ $waiting_coro = Coroutine::run(function ($wr) {
         WaitReference::wait($wr);
         echo 'wait should not success' . PHP_LF;
     } catch (SyncException $e) {
-        Assert::same($e->getCode(), ECANCELED);
+        Assert::same($e->getCode(), Errno::ECANCELED);
     }
 }, $wr);
 $waiting_coro->resume();

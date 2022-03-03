@@ -10,12 +10,10 @@ skip_if_max_open_files_less_than(256);
 require __DIR__ . '/../include/bootstrap.php';
 
 use Swow\Coroutine;
+use Swow\Errno;
 use Swow\Socket;
 use Swow\SocketException;
 use Swow\Sync\WaitReference;
-use const Swow\Errno\ECANCELED;
-use const Swow\Errno\ECONNRESET;
-use const Swow\Errno\ENOENT;
 
 if (PHP_OS_FAMILY !== 'Windows') {
     define('SERVER_SOCK', '/tmp/swow_server_' . getRandomBytes(8) . '.sock');
@@ -38,12 +36,12 @@ Coroutine::run(function () use ($server, $wrServer){
                         $connection->sendString($connection->readString(TEST_MAX_LENGTH));
                     }
                 } catch (SocketException $exception) {
-                    Assert::same($exception->getCode(), ECONNRESET);
+                    Assert::same($exception->getCode(), Errno::ECONNRESET);
                 }
             });
         }
     } catch (SocketException $exception) {
-        Assert::same($exception->getCode(), ECANCELED);
+        Assert::same($exception->getCode(), Errno::ECANCELED);
     }
 });
 
@@ -61,7 +59,7 @@ for ($c = 0; $c < TEST_MAX_CONCURRENCY_LOW; $c++) {
                 break;
             } catch (SocketException $exception) {
                 /* Connection limitation on Windows latest and MacOS */
-                if ($exception->getCode() !== ENOENT || $r === 0) {
+                if ($exception->getCode() !== Errno::ENOENT || $r === 0) {
                     throw $exception;
                 }
                 usleep(1000);

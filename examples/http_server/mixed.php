@@ -24,9 +24,7 @@ use Swow\Http\WebSocketFrame;
 use Swow\Socket;
 use Swow\SocketException;
 use Swow\WebSocket\Opcode as WebSocketOpcode;
-use const Swow\Errno\EMFILE;
-use const Swow\Errno\ENFILE;
-use const Swow\Errno\ENOMEM;
+use Swow\Errno;
 
 $host = getenv('SERVER_HOST') ?: '127.0.0.1';
 $port = (int) (getenv('SERVER_PORT') ?: 9764);
@@ -100,7 +98,7 @@ while (true) {
             }
         });
     } catch (SocketException|CoroutineException $exception) {
-        if (in_array($exception->getCode(), [EMFILE, ENFILE, ENOMEM], true)) {
+        if (in_array($exception->getCode(), [Errno::EMFILE, Errno::ENFILE, Errno::ENOMEM], true)) {
             sleep(1);
         } else {
             break;

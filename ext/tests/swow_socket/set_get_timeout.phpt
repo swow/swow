@@ -10,10 +10,9 @@ require __DIR__ . '/../include/bootstrap.php';
 
 use Swow\Channel;
 use Swow\Coroutine;
+use Swow\Errno;
 use Swow\Socket;
 use Swow\SocketException;
-use const Swow\Errno\EAI_NONAME;
-use const Swow\Errno\ETIMEDOUT;
 
 $socket = new Socket(Socket::TYPE_TCP);
 $socket->setTimeout(1);
@@ -36,7 +35,7 @@ try {
     $socket->connect('244.0.0.1', 1234);
     echo "Connect should not success\n";
 } catch (SocketException $e) {
-    Assert::same($e->getCode(), ETIMEDOUT);
+    Assert::same($e->getCode(), Errno::ETIMEDOUT);
 } finally {
     $socket->close();
 }
@@ -49,7 +48,7 @@ try {
     $socket->connect(getRandomBytes(12) . '.not-exist.donot.help', 1234);
     echo "Connect should not success\n";
 } catch (SocketException $e) {
-    Assert::oneOf($e->getCode(), [ETIMEDOUT, EAI_NONAME]);
+    Assert::oneOf($e->getCode(), [Errno::ETIMEDOUT, Errno::EAI_NONAME]);
 } finally {
     $socket->close();
 }
@@ -79,7 +78,7 @@ try {
         $socket->sendString(str_repeat('Hello SwowSocket', 1024));
     }
 } catch (SocketException $e) {
-    Assert::same($e->getCode(), ETIMEDOUT);
+    Assert::same($e->getCode(), Errno::ETIMEDOUT);
 } finally {
     $noticer->push(1);
 }
@@ -102,7 +101,7 @@ try {
     $socket->readString();
     echo "Recv should not success\n";
 } catch (SocketException $e) {
-    Assert::same($e->getCode(), ETIMEDOUT);
+    Assert::same($e->getCode(), Errno::ETIMEDOUT);
 } finally {
     $noticer->push(1);
     $socket->close();
@@ -116,7 +115,7 @@ try {
     Assert::same($server->getAcceptTimeout(), 1);
     $server->accept();
 } catch (SocketException $e) {
-    Assert::same($e->getCode(), ETIMEDOUT);
+    Assert::same($e->getCode(), Errno::ETIMEDOUT);
 } finally {
     $server->close();
 }

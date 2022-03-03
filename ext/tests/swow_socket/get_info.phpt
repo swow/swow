@@ -11,10 +11,9 @@ require __DIR__ . '/../include/bootstrap.php';
 use Swow\Buffer;
 use Swow\Channel;
 use Swow\Coroutine;
+use Swow\Errno;
 use Swow\Socket;
 use Swow\SocketException;
-use const Swow\Errno\ECANCELED;
-use const Swow\Errno\ECONNRESET;
 
 class StrangeSocket extends Socket
 {
@@ -98,7 +97,7 @@ try {
     }
 } catch (SocketException $e) {
     Assert::same($e->getCode(), $connection->getConnectionError());
-    Assert::same($e->getCode(), ECONNRESET);
+    Assert::same($e->getCode(), Errno::ECONNRESET);
 }
 
 $connection->close();
@@ -114,7 +113,7 @@ Coroutine::run(function () use ($socket) {
         $socket->connect('244.0.0.1', 1234);
         echo "Connect should not success\n";
     } catch (SocketException $e) {
-        Assert::same($e->getCode(), ECANCELED);
+        Assert::same($e->getCode(), Errno::ECANCELED);
     } finally {
         $socket->close();
     }

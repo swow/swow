@@ -10,7 +10,7 @@ require __DIR__ . '/../include/bootstrap.php';
 
 use Swow\Channel;
 use Swow\ChannelException;
-use const Swow\Errno\ECLOSED;
+use Swow\Errno;
 
 $channel = new Channel();
 $channel->close();
@@ -18,7 +18,7 @@ Assert::false($channel->isAvailable());
 try {
     $channel->pop();
 } catch (ChannelException $exception) {
-    Assert::same($exception->getCode(), ECLOSED);
+    Assert::same($exception->getCode(), Errno::ECLOSED);
 }
 echo 'Done' . PHP_LF;
 
