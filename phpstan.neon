@@ -1,11 +1,11 @@
 parameters:
-	level: 6
-	paths:
-		- lib
-	stubFiles:
-		- lib/swow-stub/src/Swow.php
-	scanFiles:
-		- ext/tests/include/bootstrap.php
-	checkGenericClassInNonGenericObjectType: false
-	ignoreErrors:
-		- '/Anonymous function has an unused use \$wrc{0,1}\./'
+    level: 6
+    paths:
+        - lib
+    stubFiles:
+        - lib/swow-stub/src/Swow.php
+    scanFiles:
+        - ext/tests/include/bootstrap.php
+    checkGenericClassInNonGenericObjectType: false
+    ignoreErrors:
+        - '/Anonymous function has an unused use \$wrc{0,1}\./'
