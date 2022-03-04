@@ -247,11 +247,6 @@ namespace Swow
 
 namespace Swow
 {
-    /**
-     * Swow buffer abstract
-     * 
-     * a `Buffer` object holds a buffer size specified in constructing.
-     */
     class Buffer implements \Stringable
     {
         /** 
