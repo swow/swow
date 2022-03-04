@@ -19,7 +19,7 @@ namespace Swow\StubUtils\ConstantFixer;
  */
 class XNUConstantDefinitionsFetcher extends ConstantDefinitionsFetcherAbstract
 {
-    public const SIGNAL_RE = '/#define\s+(?<name>SIG[A-Z]+)\s+(?<value>\d+)\s*\/\*\s*(?<comment>.+?)\s*\*\//';
+    public const SIGNAL_RE = '/#define\s+(?<name>SIG[A-Z0-9]+)\s+(?<value>\d+)\s*\/\*\s*(?<comment>.+?)\s*\*\//';
     public const SIGNAL_HEADER_URL = '/bsd/sys/signal.h';
 
     public const ERRNO_RE = '/#define\s+(?<name>E[A-Z0-9]+)\s+(?<value>\d+)\s*\/\*\s*(?<comment>.+?)\s*\*\//';

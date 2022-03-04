@@ -22,7 +22,7 @@ use function array_key_exists;
  */
 class LinuxConstantDefinitionsFetcher extends ConstantDefinitionsFetcherAbstract
 {
-    public const SIGNAL_RE = '/#define\s+(?<name>SIG[A-Z]+)\s+(?<value>\d+)/';
+    public const SIGNAL_RE = '/#define\s+(?<name>SIG[A-Z0-9]+)\s+(?<value>\d+)/';
     public const SIGNAL_HEADER_URL = '/include/uapi/asm-generic/signal.h';
     public const SIGNAL_HEADER_URLS = [
         'arm64' => '/arch/arm64/include/uapi/asm/signal.h',
