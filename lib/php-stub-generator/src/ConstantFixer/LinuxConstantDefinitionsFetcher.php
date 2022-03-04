@@ -16,23 +16,24 @@ namespace Swow\StubUtils\ConstantFixer;
 
 use Exception;
 
-use function Swow\Util\httpGet;
-
 /**
  * this class generates constants using latest github.com/torvalds/linux codes
  */
-class LinuxConstantDefinitionsFetcher implements ConstantDefinitionsFetcher
+class LinuxConstantDefinitionsFetcher extends ConstantDefinitionsFetcherAbstract
 {
 
-    const SIGNAL_HEADER_URL = '/include/uapi/asm-generic/signal.h';
-
     const SIGNAL_RE = '/#define\s+(?<name>SIG[A-Z]+)\s+(?<value>\d+)/';
+    const SIGNAL_HEADER_URL = '/include/uapi/asm-generic/signal.h';
     const SIGNAL_HEADER_URLS = [
         'arm64' => '/arch/arm64/include/uapi/asm/signal.h',
         'mips64' => '/arch/mips/include/uapi/asm/signal.h',
         'x86_64' => '/arch/x86/include/uapi/asm/signal.h',
         'riscv64' => null,
     ];
+
+    const ERRNO_RE = '/#define\s+(?<name>E[A-Z0-9]+)\s+(?<value>\d+)\s*\/\*\s*(?<comment>.+?)\s*\*\//';
+    const ERRNO_BASE_HEADER_URL = '/include/uapi/asm-generic/errno-base.h';
+    const ERRNO_HEADER_URL = '/include/uapi/asm-generic/errno.h';
 
     /**
      * default page size
@@ -67,8 +68,34 @@ class LinuxConstantDefinitionsFetcher implements ConstantDefinitionsFetcher
             value: $this->pageSize,
         );
 
+        // get errno_base.h
+        $errnoBase = $this->httpGet($this->baseUrl . static::ERRNO_BASE_HEADER_URL);
+        preg_match_all(static::ERRNO_RE, $errnoBase, $matches);
+        foreach ($matches['name'] as $index => $name) {
+            //printf("got %s = %d".PHP_EOL, $name, $matches['value'][$index]);
+            $ret[$name] = new ConstantDefinition(
+                value: (int)$matches['value'][$index],
+                comment: $matches['comment'][$index],
+            );
+        }
+
+        // get errno.h
+        // this will override(/concatenate with) errnos in errno_base.h
+        $errno = $this->httpGet($this->baseUrl . static::ERRNO_HEADER_URL);
+        preg_match_all(static::ERRNO_RE, $errno, $matches);
+        foreach ($matches['name'] as $index => $name) {
+            //printf("got %s = %d".PHP_EOL, $name, $matches['value'][$index]);
+            $ret[$name] = new ConstantDefinition(
+                value: (int)$matches['value'][$index],
+                comment: $matches['comment'][$index],
+            );
+        }
+
+        // generate UV_EXXX
+        UVConstantConverter::convert($ret);
+
         // get asm-generic/signal.h
-        $signalGeneric = httpGet($this->baseUrl . static::SIGNAL_HEADER_URL);
+        $signalGeneric = $this->httpGet($this->baseUrl . static::SIGNAL_HEADER_URL);
         preg_match_all(static::SIGNAL_RE, $signalGeneric, $matches);
         foreach ($matches['name'] as $index => $name) {
             //printf("got %s = %d".PHP_EOL, $name, $matches['value'][$index]);
@@ -82,7 +109,7 @@ class LinuxConstantDefinitionsFetcher implements ConstantDefinitionsFetcher
         if (static::SIGNAL_HEADER_URLS[$this->arch] === null) {
             return $ret;
         }
-        $signalGeneric = httpGet($this->baseUrl . static::SIGNAL_HEADER_URLS[$this->arch]);
+        $signalGeneric = $this->httpGet($this->baseUrl . static::SIGNAL_HEADER_URLS[$this->arch]);
         preg_match_all(static::SIGNAL_RE, $signalGeneric, $matches);
         foreach ($matches['name'] as $index => $name) {
             //printf("got %s = %d".PHP_EOL, $name, $matches['value'][$index]);
@@ -90,6 +117,7 @@ class LinuxConstantDefinitionsFetcher implements ConstantDefinitionsFetcher
                 value: (int)$matches['value'][$index],
             );
         }
+
 
         return $ret;
     }

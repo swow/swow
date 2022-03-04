@@ -14,16 +14,17 @@ declare(strict_types=1);
 
 namespace Swow\StubUtils\ConstantFixer;
 
-use function Swow\Util\httpGet;
-
 /**
  * this class generates constants using latest github.com/apple/darwin-xnu codes
  */
-class XNUConstantDefinitionsFetcher implements ConstantDefinitionsFetcher
+class XNUConstantDefinitionsFetcher extends ConstantDefinitionsFetcherAbstract
 {
 
     const SIGNAL_RE = '/#define\s+(?<name>SIG[A-Z]+)\s+(?<value>\d+)\s*\/\*\s*(?<comment>.+?)\s*\*\//';
     const SIGNAL_HEADER_URL = '/bsd/sys/signal.h';
+
+    const ERRNO_RE = '/#define\s+(?<name>E[A-Z0-9]+)\s+(?<value>\d+)\s*\/\*\s*(?<comment>.+?)\s*\*\//';
+    const ERRNO_HEADER_URL = '/bsd/sys/errno.h';
 
     /**
      * default page size
@@ -55,8 +56,22 @@ class XNUConstantDefinitionsFetcher implements ConstantDefinitionsFetcher
             value: $this->pageSize,
         );
 
+        // get errno.h
+        $errno = $this->httpGet($this->baseUrl . static::ERRNO_HEADER_URL);
+        preg_match_all(static::ERRNO_RE, $errno, $matches);
+        foreach ($matches['name'] as $index => $name) {
+            //printf("got %s = %d %s".PHP_EOL, $name, $matches['value'][$index], $matches['comment'][$index]);
+            $ret[$name] = new ConstantDefinition(
+                value: (int)$matches['value'][$index],
+                comment: $matches['comment'][$index],
+            );
+        }
+
+        // generate UV_EXXX
+        UVConstantConverter::convert($ret);
+
         // get asm-generic/signal.h
-        $signalGeneric = httpGet($this->baseUrl . static::SIGNAL_HEADER_URL);
+        $signalGeneric = $this->httpGet($this->baseUrl . static::SIGNAL_HEADER_URL);
         preg_match_all(static::SIGNAL_RE, $signalGeneric, $matches);
         foreach ($matches['name'] as $index => $name) {
             $comment = $matches['comment'][$index];
