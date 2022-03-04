@@ -267,10 +267,10 @@ $fixer = new ConstantFixer(
                         //print_r($newStmt);
                         return $newStmt;
                     } elseif (
-                        $node instanceof Node\Stmt\Const_ &&
-                        $this->inNamespace('Swow\Errno')
+                        $node instanceof Node\Stmt\ClassConst &&
+                        $this->inNamespaceClass('Swow', 'Errno')
                     ) {
-                        // entering const Swow\Errno\xxx
+                        // entering class const Swow\Errno::xxx
                         // note: swow stubs' const declaration only one constant per statment so we can do this
                         // comment is readonly attribute, so we need create a new ClassConst object to replace it
                         $oldStmt = $node;
@@ -298,10 +298,11 @@ $fixer = new ConstantFixer(
                         } else {
                             $attr = [];
                         }
-                        $newStmt = new Node\Stmt\Const_(
+                        $newStmt = new Node\Stmt\ClassConst(
                             consts: [
                                 $oldConst,
                             ],
+                            flags: $oldStmt->flags,
                             attributes: $attr,
                         );
                         //print_r($newStmt);
