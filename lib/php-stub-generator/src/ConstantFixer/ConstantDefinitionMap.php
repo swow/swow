@@ -22,6 +22,7 @@ use \ArrayIterator;
 
 class ConstantDefinitionMap implements ArrayAccess, IteratorAggregate
 {
+    /** @var array<string, ConstantDefinition> $map */
     private array $map = [];
     public function __construct(
         private string $arch,
@@ -36,18 +37,32 @@ class ConstantDefinitionMap implements ArrayAccess, IteratorAggregate
     {
         return $this->arch;
     }
+    /**
+     * @param string $offset
+     */
     public function offsetUnset(mixed $offset): void
     {
         unset($this->map[$offset]);
     }
+    /**
+     * @param string $offset
+     */
     public function offsetExists(mixed $offset): bool
     {
         return isset($this->map[$offset]);
     }
+    /**
+     * @param string $offset
+     * @return ConstantDefinition
+     */
     public function offsetGet(mixed $offset): mixed
     {
         return $this->map[$offset];
     }
+    /**
+     * @param string $offset
+     * @param ConstantDefinition $value
+     */
     public function offsetSet(mixed $offset, mixed $value): void
     {
         if (!$value instanceof ConstantDefinition) {
@@ -55,6 +70,9 @@ class ConstantDefinitionMap implements ArrayAccess, IteratorAggregate
         }
         $this->map[$offset] = $value;
     }
+    /**
+     * @return Traversable<string, ConstantDefinition>
+     */
     public function getIterator(): Traversable
     {
         return new ArrayIterator($this->map);

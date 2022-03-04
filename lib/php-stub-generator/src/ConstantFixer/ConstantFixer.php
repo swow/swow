@@ -45,14 +45,14 @@ class ConstantFixer
             $merger = new ConstantDefinitionsMerger($definitions);
 
             $this->constantDefinitions = $merger->merge();
-        }else {
+        } else {
             $this->constantDefinitions = $getConstantDefinitions();
         }
     }
     public function fix(
         string $fileName,
         bool $dryRun = true,
-    ) {
+    ): void {
         $content = file_get_contents($fileName);
         foreach ($this->modifiers as $modifier) {
             $content = $modifier($content, $this->constantDefinitions);

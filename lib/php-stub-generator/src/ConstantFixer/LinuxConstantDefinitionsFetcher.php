@@ -14,6 +14,8 @@ declare(strict_types=1);
 
 namespace Swow\StubUtils\ConstantFixer;
 
+use Exception;
+
 use function Swow\Util\httpGet;
 
 /**
@@ -52,6 +54,7 @@ class LinuxConstantDefinitionsFetcher implements ConstantDefinitionsFetcher
             $this->pageSize = match ($arch) {
                 'arm64', 'x86_64', 'riscv64' => 4096,
                 'mips64' => 16384,
+                default => 4096,
             };
         }
     }

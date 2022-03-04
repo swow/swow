@@ -51,14 +51,16 @@ abstract class SimpleNodeTraverserAbstract extends NodeVisitorAbstract
         }
         return null;
     }
-    protected function inNamespace(string $namespace) {
+    protected function inNamespace(string $namespace): bool
+    {
         return $this->namespace === $namespace;
     }
-    protected function inClass(string $class) {
+    protected function inClass(string $class): bool
+    {
         return $this->class === $class;
     }
-    protected function inNamespaceClass(string $namespace, string $class) {
+    protected function inNamespaceClass(string $namespace, string $class): bool
+    {
         return $this->namespace === $namespace && $this->class === $class;
-
     }
 }

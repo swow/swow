@@ -19,11 +19,20 @@ namespace Swow\StubUtils\ConstantFixer;
  */
 class ConstantDefinitionsMerger
 {
+    /**
+     * @param array<ConstantDefinitionMap> $constDefinitionMaps
+     * @param string|int $reference
+     */
     public function __construct(
         private array $constDefinitionMaps,
         private string|int $reference = 0,
     ) {
     }
+    /**
+     * merge constDefinitionMaps into one string->constdef map
+     *
+     * @return array<string,ConstantDefinition>
+     */
     public function merge(): array
     {
         $couples = [];
@@ -32,18 +41,18 @@ class ConstantDefinitionsMerger
         $ret = [];
         $defaults = [];
         // merge arches
-        foreach ($this->constDefinitionMaps as $i => $newMap) {
+        foreach ($this->constDefinitionMaps as $i => $map) {
             /** @var ConstantDefinitionMap $map */
-            $os = $newMap->getOS();
-            $arch = $newMap->getArch();
+            $os = $map->getOS();
+            $arch = $map->getArch();
             $couples[] = [$os, $arch];
             $osArchs[$os][] = [$os, $arch];
 
-            foreach ($newMap as $name => $newDef) {
-                /** @var ConstantDefinition $newDef */
-                $container[$name][$os][$arch] = $newDef;
+            foreach ($map as $name => $def) {
+                /** @var ConstantDefinition $def */
+                $container[$name][$os][$arch] = $def;
                 if ($i === $this->reference) {
-                    $defaults[$name] = $newDef->value;
+                    $defaults[$name] = $def->value;
                 }
             }
         }

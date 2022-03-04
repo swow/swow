@@ -20,8 +20,9 @@ use PhpParser\Node\Stmt;
 class StubPrettierPrinter extends StandardPrinter
 {
     private bool $fileDocPadded = false;
-    
-    protected function pStmts(array $nodes, bool $indent = true) : string {
+
+    protected function pStmts(array $nodes, bool $indent = true): string
+    {
         if ($indent) {
             $this->indent();
         }
@@ -44,7 +45,7 @@ class StubPrettierPrinter extends StandardPrinter
                 }
             }
 
-            if(!$this->fileDocPadded){
+            if (!$this->fileDocPadded) {
                 $this->fileDocPadded = true;
                 $result .= $this->nl;
             }
@@ -60,7 +61,8 @@ class StubPrettierPrinter extends StandardPrinter
         return $result;
     }
 
-    protected function pClassCommon(Stmt\Class_ $node, $afterClassToken) {
+    protected function pClassCommon(Stmt\Class_ $node, mixed $afterClassToken): string
+    {
         return $this->pAttrGroups($node->attrGroups, $node->name === null)
             . $this->pModifiers($node->flags)
             . 'class' . $afterClassToken
@@ -69,7 +71,7 @@ class StubPrettierPrinter extends StandardPrinter
             . ((count($node->stmts) > 0) ? $this->nl . '{' . $this->pStmts($node->stmts) . $this->nl . '}' : ' { }');
     }
 
-    protected function pStmt_ClassMethod(Stmt\ClassMethod $node)
+    protected function pStmt_ClassMethod(Stmt\ClassMethod $node): string
     {
         return $this->pAttrGroups($node->attrGroups)
             . $this->pModifiers($node->flags)
@@ -81,32 +83,35 @@ class StubPrettierPrinter extends StandardPrinter
                 : ';');
     }
 
-    protected function pModifiers(int $modifiers) {
+    protected function pModifiers(int $modifiers): string
+    {
         return ($modifiers & Stmt\Class_::MODIFIER_FINAL     ? 'final '     : '')
-             . ($modifiers & Stmt\Class_::MODIFIER_PUBLIC    ? 'public '    : '')
-             . ($modifiers & Stmt\Class_::MODIFIER_PROTECTED ? 'protected ' : '')
-             . ($modifiers & Stmt\Class_::MODIFIER_PRIVATE   ? 'private '   : '')
-             . ($modifiers & Stmt\Class_::MODIFIER_ABSTRACT  ? 'abstract '  : '')
-             . ($modifiers & Stmt\Class_::MODIFIER_STATIC    ? 'static '    : '')
-             . ($modifiers & Stmt\Class_::MODIFIER_READONLY  ? 'readonly '  : '');
+            . ($modifiers & Stmt\Class_::MODIFIER_PUBLIC    ? 'public '    : '')
+            . ($modifiers & Stmt\Class_::MODIFIER_PROTECTED ? 'protected ' : '')
+            . ($modifiers & Stmt\Class_::MODIFIER_PRIVATE   ? 'private '   : '')
+            . ($modifiers & Stmt\Class_::MODIFIER_ABSTRACT  ? 'abstract '  : '')
+            . ($modifiers & Stmt\Class_::MODIFIER_STATIC    ? 'static '    : '')
+            . ($modifiers & Stmt\Class_::MODIFIER_READONLY  ? 'readonly '  : '');
     }
 
 
-    protected function pStmt_Namespace(Stmt\Namespace_ $node) {
+    protected function pStmt_Namespace(Stmt\Namespace_ $node): string
+    {
         if ($this->canUseSemicolonNamespaces) {
             return 'namespace ' . $this->p($node->name) . ';'
-                 . $this->nl . $this->pStmts($node->stmts, false);
+                . $this->nl . $this->pStmts($node->stmts, false);
         } else {
             return 'namespace' . (null !== $node->name ? ' ' . $this->p($node->name) : '')
-                 . $this->nl . '{' . $this->pStmts($node->stmts) . $this->nl . "}\n";
+                . $this->nl . '{' . $this->pStmts($node->stmts) . $this->nl . "}\n";
         }
     }
 
-    protected function pStmt_Function(Stmt\Function_ $node) {
+    protected function pStmt_Function(Stmt\Function_ $node): string
+    {
         return $this->pAttrGroups($node->attrGroups)
-             . 'function ' . ($node->byRef ? '&' : '') . $node->name
-             . '(' . $this->pCommaSeparated($node->params) . ')'
-             . (null !== $node->returnType ? ': ' . $this->p($node->returnType) : '')
-             . ' { }';
+            . 'function ' . ($node->byRef ? '&' : '') . $node->name
+            . '(' . $this->pCommaSeparated($node->params) . ')'
+            . (null !== $node->returnType ? ': ' . $this->p($node->returnType) : '')
+            . ' { }';
     }
 }

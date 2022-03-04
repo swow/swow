@@ -42,6 +42,7 @@ class XNUConstantDefinitionsFetcher implements ConstantDefinitionsFetcher
             $this->pageSize = match ($arch) {
                 'x86_64' => 4096,
                 'arm64' => 16384,
+                default => 4096,
             };
         }
     }
