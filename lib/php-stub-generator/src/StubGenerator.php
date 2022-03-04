@@ -317,7 +317,7 @@ class StubGenerator
     }
 
     /**
-     * @param string|array<string> $comment
+     * @param string|array<int, string> $comment
      */
     protected static function genComment(string|array $comment): string
     {

@@ -81,6 +81,7 @@ class Psr7Stream implements StreamInterface, Stringable
         ],
     ];
 
+    /** @psalm-var closed-resource|resource|null */
     /** @var resource|null A resource reference */
     protected $stream;
 

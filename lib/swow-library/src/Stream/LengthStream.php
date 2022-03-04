@@ -57,6 +57,7 @@ class LengthStream extends Socket
 
     public function accept(?int $timeout = null): static
     {
+        /** @var static $connection */
         $connection = parent::accept($timeout);
         $connection->setFormat($this->format);
         $connection->maxMessageLength = $this->maxMessageLength;

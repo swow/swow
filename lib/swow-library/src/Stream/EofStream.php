@@ -49,6 +49,7 @@ class EofStream extends Socket
 
     public function accept(?int $timeout = null): static
     {
+        /** @var static $connection */
         $connection = parent::accept($timeout);
         $connection->__selfConstruct($this->eof);
         $connection->maxMessageLength = $this->maxMessageLength;
