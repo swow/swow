@@ -19,7 +19,7 @@ class UVConstantConverter{
     /** @var array<string, int> */
     private array $consts = [];
     const UV_HEADER = __DIR__ . '/../../../../ext/deps/libcat/deps/libuv/include/uv/errno.h';
-    const UV_RE = '/#\s*define\s*UV__(?<name>E[A-Z0-9]+)\s*\((?<value>-\d+)\)/';
+    const UV_RE = '/#\s*define\s*UV__(?<name>E[A-Z0-9_]+|UNKNOWN)\s*\((?<value>-\d+)\)/';
     private function __construct()
     {
         if(is_file(static::UV_HEADER)){

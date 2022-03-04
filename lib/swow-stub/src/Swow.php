@@ -256,6 +256,7 @@ namespace Swow
     {
         /** 
          * This constant holds page size of this machine, it's platform-dependent.
+         *
          * At Linux mips64 and macOS arm64 platforms, this constant may have a value `16384`
          */
         public const PAGE_SIZE = 4096;
@@ -385,8 +386,14 @@ namespace Swow
         public const TYPE_UDP = 134217746;
         public const TYPE_UDP4 = 134217778;
         public const TYPE_UDP6 = 134217810;
-        const TYPE_UNIX = 33554561;
-        const TYPE_UDG = 268435586;
+        /** 
+         * UNIX domain socket type, this constant is only avaliable at unix-like os.
+         */
+        public const TYPE_UNIX = 33554561;
+        /** 
+         * UNIX datagram socket type, this constant is only avaliable at unix-like os.
+         */
+        public const TYPE_UDG = 268435586;
         public const IO_FLAG_NONE = 0;
         public const IO_FLAG_READ = 1;
         public const IO_FLAG_WRITE = 2;
@@ -1273,12 +1280,52 @@ namespace Swow\WebSocket
 
 namespace Swow\Errno
 {
-    const E2BIG = -4093;
-    const EACCES = -4092;
-    const EADDRINUSE = -4091;
-    const EADDRNOTAVAIL = -4090;
-    const EAFNOSUPPORT = -4089;
-    const EAGAIN = -4088;
+    /** 
+     * This constant holds UV_E2BIG value, it's platform-dependent.
+     *
+     * At Linux and macOS platforms, this constant means "Argument list too long"
+     * At Windows platform, this constant may have a value `-4093`
+     */
+    const E2BIG = -7;
+    /** 
+     * This constant holds UV_EACCES value, it's platform-dependent.
+     *
+     * At Linux and macOS platforms, this constant means "Permission denied"
+     * At Windows platform, this constant may have a value `-4092`
+     */
+    const EACCES = -13;
+    /** 
+     * This constant holds UV_EADDRINUSE value, it's platform-dependent.
+     *
+     * At Linux platform, this constant means "Address already in use"
+     * At macOS platform, this constant may have a value `-48` means "Address already in use"
+     * At Windows platform, this constant may have a value `-4091`
+     */
+    const EADDRINUSE = -98;
+    /** 
+     * This constant holds UV_EADDRNOTAVAIL value, it's platform-dependent.
+     *
+     * At Linux platform, this constant means "Cannot assign requested address"
+     * At macOS platform, this constant may have a value `-49` means "Can't assign requested address"
+     * At Windows platform, this constant may have a value `-4090`
+     */
+    const EADDRNOTAVAIL = -99;
+    /** 
+     * This constant holds UV_EAFNOSUPPORT value, it's platform-dependent.
+     *
+     * At Linux platform, this constant means "Address family not supported by protocol"
+     * At macOS platform, this constant may have a value `-47` means "Address family not supported by protocol family"
+     * At Windows platform, this constant may have a value `-4089`
+     */
+    const EAFNOSUPPORT = -97;
+    /** 
+     * This constant holds UV_EAGAIN value, it's platform-dependent.
+     *
+     * At Linux platform, this constant means "Try again"
+     * At macOS platform, this constant may have a value `-35` means "Resource temporarily unavailable"
+     * At Windows platform, this constant may have a value `-4088`
+     */
+    const EAGAIN = -11;
     const EAI_ADDRFAMILY = -3000;
     const EAI_AGAIN = -3001;
     const EAI_BADFLAGS = -3002;
@@ -1293,69 +1340,465 @@ namespace Swow\Errno
     const EAI_PROTOCOL = -3014;
     const EAI_SERVICE = -3010;
     const EAI_SOCKTYPE = -3011;
-    const EALREADY = -4084;
-    const EBADF = -4083;
-    const EBUSY = -4082;
-    const ECANCELED = -4081;
+    /** 
+     * This constant holds UV_EALREADY value, it's platform-dependent.
+     *
+     * At Linux platform, this constant means "Operation already in progress"
+     * At macOS platform, this constant may have a value `-37` means "Operation already in progress"
+     * At Windows platform, this constant may have a value `-4084`
+     */
+    const EALREADY = -114;
+    /** 
+     * This constant holds UV_EBADF value, it's platform-dependent.
+     *
+     * At Linux platform, this constant means "Bad file number"
+     * At macOS platform, this constant means "Bad file descriptor"
+     * At Windows platform, this constant may have a value `-4083`
+     */
+    const EBADF = -9;
+    /** 
+     * This constant holds UV_EBUSY value, it's platform-dependent.
+     *
+     * At Linux platform, this constant means "Device or resource busy"
+     * At macOS platform, this constant means "Device / Resource busy"
+     * At Windows platform, this constant may have a value `-4082`
+     */
+    const EBUSY = -16;
+    /** 
+     * This constant holds UV_ECANCELED value, it's platform-dependent.
+     *
+     * At Linux platform, this constant means "Operation Canceled"
+     * At macOS platform, this constant may have a value `-89` means "Operation canceled"
+     * At Windows platform, this constant may have a value `-4081`
+     */
+    const ECANCELED = -125;
     const ECHARSET = -4080;
-    const ECONNABORTED = -4079;
-    const ECONNREFUSED = -4078;
-    const ECONNRESET = -4077;
-    const EDESTADDRREQ = -4076;
-    const EEXIST = -4075;
-    const EFAULT = -4074;
-    const EFBIG = -4036;
-    const EHOSTUNREACH = -4073;
-    const EINTR = -4072;
-    const EINVAL = -4071;
-    const EIO = -4070;
-    const EISCONN = -4069;
-    const EISDIR = -4068;
-    const ELOOP = -4067;
-    const EMFILE = -4066;
-    const EMSGSIZE = -4065;
-    const ENAMETOOLONG = -4064;
-    const ENETDOWN = -4063;
-    const ENETUNREACH = -4062;
-    const ENFILE = -4061;
-    const ENOBUFS = -4060;
-    const ENODEV = -4059;
-    const ENOENT = -4058;
-    const ENOMEM = -4057;
-    const ENONET = -4056;
-    const ENOPROTOOPT = -4035;
-    const ENOSPC = -4055;
-    const ENOSYS = -4054;
-    const ENOTCONN = -4053;
-    const ENOTDIR = -4052;
-    const ENOTEMPTY = -4051;
-    const ENOTSOCK = -4050;
+    /** 
+     * This constant holds UV_ECONNABORTED value, it's platform-dependent.
+     *
+     * At Linux platform, this constant means "Software caused connection abort"
+     * At macOS platform, this constant may have a value `-53` means "Software caused connection abort"
+     * At Windows platform, this constant may have a value `-4079`
+     */
+    const ECONNABORTED = -103;
+    /** 
+     * This constant holds UV_ECONNREFUSED value, it's platform-dependent.
+     *
+     * At Linux platform, this constant means "Connection refused"
+     * At macOS platform, this constant may have a value `-61` means "Connection refused"
+     * At Windows platform, this constant may have a value `-4078`
+     */
+    const ECONNREFUSED = -111;
+    /** 
+     * This constant holds UV_ECONNRESET value, it's platform-dependent.
+     *
+     * At Linux platform, this constant means "Connection reset by peer"
+     * At macOS platform, this constant may have a value `-54` means "Connection reset by peer"
+     * At Windows platform, this constant may have a value `-4077`
+     */
+    const ECONNRESET = -104;
+    /** 
+     * This constant holds UV_EDESTADDRREQ value, it's platform-dependent.
+     *
+     * At Linux platform, this constant means "Destination address required"
+     * At macOS platform, this constant may have a value `-39` means "Destination address required"
+     * At Windows platform, this constant may have a value `-4076`
+     */
+    const EDESTADDRREQ = -89;
+    /** 
+     * This constant holds UV_EEXIST value, it's platform-dependent.
+     *
+     * At Linux and macOS platforms, this constant means "File exists"
+     * At Windows platform, this constant may have a value `-4075`
+     */
+    const EEXIST = -17;
+    /** 
+     * This constant holds UV_EFAULT value, it's platform-dependent.
+     *
+     * At Linux and macOS platforms, this constant means "Bad address"
+     * At Windows platform, this constant may have a value `-4074`
+     */
+    const EFAULT = -14;
+    /** 
+     * This constant holds UV_EFBIG value, it's platform-dependent.
+     *
+     * At Linux and macOS platforms, this constant means "File too large"
+     * At Windows platform, this constant may have a value `-4036`
+     */
+    const EFBIG = -27;
+    /** 
+     * This constant holds UV_EHOSTUNREACH value, it's platform-dependent.
+     *
+     * At Linux platform, this constant means "No route to host"
+     * At macOS platform, this constant may have a value `-65` means "No route to host"
+     * At Windows platform, this constant may have a value `-4073`
+     */
+    const EHOSTUNREACH = -113;
+    /** 
+     * This constant holds UV_EINTR value, it's platform-dependent.
+     *
+     * At Linux and macOS platforms, this constant means "Interrupted system call"
+     * At Windows platform, this constant may have a value `-4072`
+     */
+    const EINTR = -4;
+    /** 
+     * This constant holds UV_EINVAL value, it's platform-dependent.
+     *
+     * At Linux and macOS platforms, this constant means "Invalid argument"
+     * At Windows platform, this constant may have a value `-4071`
+     */
+    const EINVAL = -22;
+    /** 
+     * This constant holds UV_EIO value, it's platform-dependent.
+     *
+     * At Linux platform, this constant means "I/O error"
+     * At macOS platform, this constant means "Input/output error"
+     * At Windows platform, this constant may have a value `-4070`
+     */
+    const EIO = -5;
+    /** 
+     * This constant holds UV_EISCONN value, it's platform-dependent.
+     *
+     * At Linux platform, this constant means "Transport endpoint is already connected"
+     * At macOS platform, this constant may have a value `-56` means "Socket is already connected"
+     * At Windows platform, this constant may have a value `-4069`
+     */
+    const EISCONN = -106;
+    /** 
+     * This constant holds UV_EISDIR value, it's platform-dependent.
+     *
+     * At Linux and macOS platforms, this constant means "Is a directory"
+     * At Windows platform, this constant may have a value `-4068`
+     */
+    const EISDIR = -21;
+    /** 
+     * This constant holds UV_ELOOP value, it's platform-dependent.
+     *
+     * At Linux platform, this constant means "Too many symbolic links encountered"
+     * At macOS platform, this constant may have a value `-62` means "Too many levels of symbolic links"
+     * At Windows platform, this constant may have a value `-4067`
+     */
+    const ELOOP = -40;
+    /** 
+     * This constant holds UV_EMFILE value, it's platform-dependent.
+     *
+     * At Linux and macOS platforms, this constant means "Too many open files"
+     * At Windows platform, this constant may have a value `-4066`
+     */
+    const EMFILE = -24;
+    /** 
+     * This constant holds UV_EMSGSIZE value, it's platform-dependent.
+     *
+     * At Linux platform, this constant means "Message too long"
+     * At macOS platform, this constant may have a value `-40` means "Message too long"
+     * At Windows platform, this constant may have a value `-4065`
+     */
+    const EMSGSIZE = -90;
+    /** 
+     * This constant holds UV_ENAMETOOLONG value, it's platform-dependent.
+     *
+     * At Linux platform, this constant means "File name too long"
+     * At macOS platform, this constant may have a value `-63` means "File name too long"
+     * At Windows platform, this constant may have a value `-4064`
+     */
+    const ENAMETOOLONG = -36;
+    /** 
+     * This constant holds UV_ENETDOWN value, it's platform-dependent.
+     *
+     * At Linux platform, this constant means "Network is down"
+     * At macOS platform, this constant may have a value `-50` means "Network is down"
+     * At Windows platform, this constant may have a value `-4063`
+     */
+    const ENETDOWN = -100;
+    /** 
+     * This constant holds UV_ENETUNREACH value, it's platform-dependent.
+     *
+     * At Linux platform, this constant means "Network is unreachable"
+     * At macOS platform, this constant may have a value `-51` means "Network is unreachable"
+     * At Windows platform, this constant may have a value `-4062`
+     */
+    const ENETUNREACH = -101;
+    /** 
+     * This constant holds UV_ENFILE value, it's platform-dependent.
+     *
+     * At Linux platform, this constant means "File table overflow"
+     * At macOS platform, this constant means "Too many open files in system"
+     * At Windows platform, this constant may have a value `-4061`
+     */
+    const ENFILE = -23;
+    /** 
+     * This constant holds UV_ENOBUFS value, it's platform-dependent.
+     *
+     * At Linux platform, this constant means "No buffer space available"
+     * At macOS platform, this constant may have a value `-55` means "No buffer space available"
+     * At Windows platform, this constant may have a value `-4060`
+     */
+    const ENOBUFS = -105;
+    /** 
+     * This constant holds UV_ENODEV value, it's platform-dependent.
+     *
+     * At Linux platform, this constant means "No such device"
+     * At macOS platform, this constant means "Operation not supported by device"
+     * At Windows platform, this constant may have a value `-4059`
+     */
+    const ENODEV = -19;
+    /** 
+     * This constant holds UV_ENOENT value, it's platform-dependent.
+     *
+     * At Linux and macOS platforms, this constant means "No such file or directory"
+     * At Windows platform, this constant may have a value `-4058`
+     */
+    const ENOENT = -2;
+    /** 
+     * This constant holds UV_ENOMEM value, it's platform-dependent.
+     *
+     * At Linux platform, this constant means "Out of memory"
+     * At macOS platform, this constant means "Cannot allocate memory"
+     * At Windows platform, this constant may have a value `-4057`
+     */
+    const ENOMEM = -12;
+    /** 
+     * This constant holds UV_ENONET value, it's platform-dependent.
+     *
+     * At Linux platform, this constant means "Machine is not on the network"
+     * At macOS and Windows platforms, this constant may have a value `-4056`
+     */
+    const ENONET = -64;
+    /** 
+     * This constant holds UV_ENOPROTOOPT value, it's platform-dependent.
+     *
+     * At Linux platform, this constant means "Protocol not available"
+     * At macOS platform, this constant may have a value `-42` means "Protocol not available"
+     * At Windows platform, this constant may have a value `-4035`
+     */
+    const ENOPROTOOPT = -92;
+    /** 
+     * This constant holds UV_ENOSPC value, it's platform-dependent.
+     *
+     * At Linux and macOS platforms, this constant means "No space left on device"
+     * At Windows platform, this constant may have a value `-4055`
+     */
+    const ENOSPC = -28;
+    /** 
+     * This constant holds UV_ENOSYS value, it's platform-dependent.
+     *
+     * At Linux platform, this constant means "Invalid system call number"
+     * At macOS platform, this constant may have a value `-78` means "Function not implemented"
+     * At Windows platform, this constant may have a value `-4054`
+     */
+    const ENOSYS = -38;
+    /** 
+     * This constant holds UV_ENOTCONN value, it's platform-dependent.
+     *
+     * At Linux platform, this constant means "Transport endpoint is not connected"
+     * At macOS platform, this constant may have a value `-57` means "Socket is not connected"
+     * At Windows platform, this constant may have a value `-4053`
+     */
+    const ENOTCONN = -107;
+    /** 
+     * This constant holds UV_ENOTDIR value, it's platform-dependent.
+     *
+     * At Linux and macOS platforms, this constant means "Not a directory"
+     * At Windows platform, this constant may have a value `-4052`
+     */
+    const ENOTDIR = -20;
+    /** 
+     * This constant holds UV_ENOTEMPTY value, it's platform-dependent.
+     *
+     * At Linux platform, this constant means "Directory not empty"
+     * At macOS platform, this constant may have a value `-66` means "Directory not empty"
+     * At Windows platform, this constant may have a value `-4051`
+     */
+    const ENOTEMPTY = -39;
+    /** 
+     * This constant holds UV_ENOTSOCK value, it's platform-dependent.
+     *
+     * At Linux platform, this constant means "Socket operation on non-socket"
+     * At macOS platform, this constant may have a value `-38` means "Socket operation on non-socket"
+     * At Windows platform, this constant may have a value `-4050`
+     */
+    const ENOTSOCK = -88;
+    /** 
+     * This constant holds UV_ENOTSUP value, it's platform-dependent.
+     *
+     * At macOS platform, this constant may have a value `-45` means "Operation not supported"
+     */
     const ENOTSUP = -4049;
-    const EOVERFLOW = -4026;
-    const EPERM = -4048;
-    const EPIPE = -4047;
-    const EPROTO = -4046;
-    const EPROTONOSUPPORT = -4045;
-    const EPROTOTYPE = -4044;
-    const ERANGE = -4034;
-    const EROFS = -4043;
-    const ESHUTDOWN = -4042;
-    const ESPIPE = -4041;
-    const ESRCH = -4040;
-    const ETIMEDOUT = -4039;
-    const ETXTBSY = -4038;
-    const EXDEV = -4037;
+    /** 
+     * This constant holds UV_EOVERFLOW value, it's platform-dependent.
+     *
+     * At Linux platform, this constant means "Value too large for defined data type"
+     * At macOS platform, this constant may have a value `-84` means "Value too large to be stored in data type"
+     * At Windows platform, this constant may have a value `-4026`
+     */
+    const EOVERFLOW = -75;
+    /** 
+     * This constant holds UV_EPERM value, it's platform-dependent.
+     *
+     * At Linux and macOS platforms, this constant means "Operation not permitted"
+     * At Windows platform, this constant may have a value `-4048`
+     */
+    const EPERM = -1;
+    /** 
+     * This constant holds UV_EPIPE value, it's platform-dependent.
+     *
+     * At Linux and macOS platforms, this constant means "Broken pipe"
+     * At Windows platform, this constant may have a value `-4047`
+     */
+    const EPIPE = -32;
+    /** 
+     * This constant holds UV_EPROTO value, it's platform-dependent.
+     *
+     * At Linux platform, this constant means "Protocol error"
+     * At macOS platform, this constant may have a value `-100` means "Protocol error"
+     * At Windows platform, this constant may have a value `-4046`
+     */
+    const EPROTO = -71;
+    /** 
+     * This constant holds UV_EPROTONOSUPPORT value, it's platform-dependent.
+     *
+     * At Linux platform, this constant means "Protocol not supported"
+     * At macOS platform, this constant may have a value `-43` means "Protocol not supported"
+     * At Windows platform, this constant may have a value `-4045`
+     */
+    const EPROTONOSUPPORT = -93;
+    /** 
+     * This constant holds UV_EPROTOTYPE value, it's platform-dependent.
+     *
+     * At Linux platform, this constant means "Protocol wrong type for socket"
+     * At macOS platform, this constant may have a value `-41` means "Protocol wrong type for socket"
+     * At Windows platform, this constant may have a value `-4044`
+     */
+    const EPROTOTYPE = -91;
+    /** 
+     * This constant holds UV_ERANGE value, it's platform-dependent.
+     *
+     * At Linux platform, this constant means "Math result not representable"
+     * At macOS platform, this constant means "Result too large"
+     * At Windows platform, this constant may have a value `-4034`
+     */
+    const ERANGE = -34;
+    /** 
+     * This constant holds UV_EROFS value, it's platform-dependent.
+     *
+     * At Linux and macOS platforms, this constant means "Read-only file system"
+     * At Windows platform, this constant may have a value `-4043`
+     */
+    const EROFS = -30;
+    /** 
+     * This constant holds UV_ESHUTDOWN value, it's platform-dependent.
+     *
+     * At Linux platform, this constant means "Cannot send after transport endpoint shutdown"
+     * At macOS platform, this constant may have a value `-58` means "Can't send after socket shutdown"
+     * At Windows platform, this constant may have a value `-4042`
+     */
+    const ESHUTDOWN = -108;
+    /** 
+     * This constant holds UV_ESPIPE value, it's platform-dependent.
+     *
+     * At Linux and macOS platforms, this constant means "Illegal seek"
+     * At Windows platform, this constant may have a value `-4041`
+     */
+    const ESPIPE = -29;
+    /** 
+     * This constant holds UV_ESRCH value, it's platform-dependent.
+     *
+     * At Linux and macOS platforms, this constant means "No such process"
+     * At Windows platform, this constant may have a value `-4040`
+     */
+    const ESRCH = -3;
+    /** 
+     * This constant holds UV_ETIMEDOUT value, it's platform-dependent.
+     *
+     * At Linux platform, this constant means "Connection timed out"
+     * At macOS platform, this constant may have a value `-60` means "Operation timed out"
+     * At Windows platform, this constant may have a value `-4039`
+     */
+    const ETIMEDOUT = -110;
+    /** 
+     * This constant holds UV_ETXTBSY value, it's platform-dependent.
+     *
+     * At Linux and macOS platforms, this constant means "Text file busy"
+     * At Windows platform, this constant may have a value `-4038`
+     */
+    const ETXTBSY = -26;
+    /** 
+     * This constant holds UV_EXDEV value, it's platform-dependent.
+     *
+     * At Linux and macOS platforms, this constant means "Cross-device link"
+     * At Windows platform, this constant may have a value `-4037`
+     */
+    const EXDEV = -18;
     const UNKNOWN = -4094;
     const EOF = -4095;
-    const ENXIO = -4033;
-    const EMLINK = -4032;
-    const EHOSTDOWN = -4031;
-    const EREMOTEIO = -4030;
-    const ENOTTY = -4029;
+    /** 
+     * This constant holds UV_ENXIO value, it's platform-dependent.
+     *
+     * At Linux platform, this constant means "No such device or address"
+     * At macOS platform, this constant means "Device not configured"
+     * At Windows platform, this constant may have a value `-4033`
+     */
+    const ENXIO = -6;
+    /** 
+     * This constant holds UV_EMLINK value, it's platform-dependent.
+     *
+     * At Linux and macOS platforms, this constant means "Too many links"
+     * At Windows platform, this constant may have a value `-4032`
+     */
+    const EMLINK = -31;
+    /** 
+     * This constant holds UV_EHOSTDOWN value, it's platform-dependent.
+     *
+     * At Linux platform, this constant means "Host is down"
+     * At macOS platform, this constant may have a value `-64` means "Host is down"
+     * At Windows platform, this constant may have a value `-4031`
+     */
+    const EHOSTDOWN = -112;
+    /** 
+     * This constant holds UV_EREMOTEIO value, it's platform-dependent.
+     *
+     * At Linux platform, this constant means "Remote I/O error"
+     * At macOS and Windows platforms, this constant may have a value `-4030`
+     */
+    const EREMOTEIO = -121;
+    /** 
+     * This constant holds UV_ENOTTY value, it's platform-dependent.
+     *
+     * At Linux platform, this constant means "Not a typewriter"
+     * At macOS platform, this constant means "Inappropriate ioctl for device"
+     * At Windows platform, this constant may have a value `-4029`
+     */
+    const ENOTTY = -25;
+    /** 
+     * This constant holds UV_EFTYPE value, it's platform-dependent.
+     *
+     * At macOS platform, this constant may have a value `-79` means "Inappropriate file type or format"
+     */
     const EFTYPE = -4028;
-    const EILSEQ = -4027;
-    const ESOCKTNOSUPPORT = -4025;
-    const ESTALE = -10070;
+    /** 
+     * This constant holds UV_EILSEQ value, it's platform-dependent.
+     *
+     * At Linux platform, this constant means "Illegal byte sequence"
+     * At macOS platform, this constant may have a value `-92` means "Illegal byte sequence"
+     * At Windows platform, this constant may have a value `-4027`
+     */
+    const EILSEQ = -84;
+    /** 
+     * This constant holds UV_ESOCKTNOSUPPORT value, it's platform-dependent.
+     *
+     * At Linux platform, this constant means "Socket type not supported"
+     * At macOS platform, this constant may have a value `-44` means "Socket type not supported"
+     * At Windows platform, this constant may have a value `-4025`
+     */
+    const ESOCKTNOSUPPORT = -94;
+    /** 
+     * This constant holds UV_ESTALE value, it's platform-dependent.
+     *
+     * At Linux platform, this constant means "Stale file handle"
+     * At macOS platform, this constant may have a value `-70` means "Stale NFS file handle"
+     * At Windows platform, this constant may have a value `-10070`
+     */
+    const ESTALE = -116;
     const UNCODED = -9763;
     const EPREV = -9762;
     const EMISUSE = -9761;

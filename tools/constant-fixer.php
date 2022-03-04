@@ -16,6 +16,7 @@ declare(strict_types=1);
 
 namespace Swow\StubUtils\ConstantFixer;
 
+use PDO;
 use PhpParser\ParserFactory;
 use PhpParser\Node;
 use PhpParser\NodeTraverser;
@@ -225,7 +226,7 @@ $fixer = new ConstantFixer(
                         // insert 
                         array_splice(
                             array: $node->stmts,
-                            offset: $last+1,
+                            offset: $last + 1,
                             length: 0,
                             replacement: $appending
                         );
@@ -242,21 +243,68 @@ $fixer = new ConstantFixer(
                         $oldConst = $node->consts[0];
                         // replace it with fixed value
                         $constantDefinition = $this->constantDefinitions['PAGE_SIZE'];
-                        $oldConst->value->value = $constantDefinition->value;
+                        $oldConst->value = new Node\Scalar\LNumber(
+                            value: $constantDefinition->value,
+                        );
+                        if ($constantDefinition->comment !== '') {
+                            $attr = [
+                                'comments' => [
+                                    new Doc(
+                                        text: "/** \n * This constant holds page size of this machine, it's platform-dependent.\n *" .
+                                            str_replace("\n", "\n * ", $constantDefinition->comment) .
+                                            "\n */",
+                                    ),
+                                ],
+                            ];
+                        } else {
+                            $attr = [];
+                        }
                         $newStmt = new Node\Stmt\ClassConst(
                             consts: [
                                 $oldConst,
                             ],
                             flags: $oldStmt->flags,
-                            attributes: [
+                            attributes: $attr,
+                        );
+                        //print_r($newStmt);
+                        return $newStmt;
+                    } else if (
+                        $node instanceof Node\Stmt\Const_ &&
+                        $this->inNamespace('Swow\Errno')
+                    ) {
+                        // entering const Swow\Errno\xxx
+                        // note: swow stubs' const declaration only one constant per statment so we can do this
+                        // comment is readonly attribute, so we need create a new ClassConst object to replace it
+                        $oldStmt = $node;
+                        $oldConst = $node->consts[0];
+                        $name = $oldConst->name->name;
+
+                        if (!($constantDefinition = $this->constantDefinitions["UV_{$name}"] ?? null)) {
+                            //printf("cannot find errno %s\n", $name);
+                            return null;
+                        }
+                        // replace it with fixed value
+                        $oldConst->value = new Node\Scalar\LNumber(
+                            value: $constantDefinition->value,
+                        );
+                        if ($constantDefinition->comment !== '') {
+                            $attr = [
                                 'comments' => [
                                     new Doc(
-                                        text: "/** \n * This constant holds page size of this machine, it's platform-dependent." .
+                                        text: "/** \n * This constant holds UV_$name value, it's platform-dependent.\n *" .
                                             str_replace("\n", "\n * ", $constantDefinition->comment) .
                                             "\n */",
                                     ),
                                 ],
-                            ]
+                            ];
+                        } else {
+                            $attr = [];
+                        }
+                        $newStmt = new Node\Stmt\Const_(
+                            consts: [
+                                $oldConst,
+                            ],
+                            attributes: $attr,
                         );
                         //print_r($newStmt);
                         return $newStmt;
