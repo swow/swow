@@ -153,24 +153,120 @@ namespace Swow
 
         public function isAlive(): bool { }
 
+        /**
+         * get current executed code file name
+         * 
+         * @see static::getTrace() for params usage
+         */
         public function getExecutedFilename(int $level = 0): string { }
 
+        /**
+         * get current executed code line
+         * 
+         * @see static::getTrace() for params usage
+         */
         public function getExecutedLineno(int $level = 0): int { }
 
+        /**
+         * get executed function name
+         * 
+         * @see static::getTrace() for params usage
+         */
         public function getExecutedFunctionName(int $level = 0): string { }
 
+        /**
+         * get trace information
+         * 
+         * positive `$level` value count frame from current to top,
+         * negative `$level` value count frame from top to current.
+         * 
+         * for example, a stack may be like:
+         * 
+         * | $level | frame                              | getTrace(0, 0) | getTrace(-1, 0) or getTrace(4, 0) | getTrace(0, 3) |
+         * | -      | -                                  | -              | -                                 | -              |
+         * | 5      | {main}                             | starts here    | starts here                       | FIXME: main?   |
+         * | 4 / -1 | Swow\Coroutine::run('a')           |                | ends here                         |                |
+         * | 3 / -2 | a()                                |                |                                   |                |
+         * | 2 / -3 | b()                                |                |                                   | starts here    |
+         * | 1 / -4 | c()                                |                |                                   |                |
+         * | 0 / -5 | Swow\Coroutine->getTraceAsString() | ends here      |                                   | ends here      |
+         * 
+         * @param int $level trace start level
+         * @param int $limit trace max length, 0 meaning no limit
+         * @param int $options trace options, same as `debug_backtrace` options { @see https://www.php.net/manual/en/function.debug-backtrace.php }
+         * @return array<array{'file': string, 'line': int, 'function': string, 'class': string, 'type': string, 'args': array<mixed>}>
+         */
         public function getTrace(int $level = 0, int $limit = 0, int $options = \DEBUG_BACKTRACE_PROVIDE_OBJECT): array { }
 
+        /**
+         * get trace information as string like original php strack trace format
+         * 
+         * return value maybe like
+         * ```plain
+         * #0 some.php(7): Swow\Coroutine->getTraceAsString()
+         * #1 some.php(10): c()
+         * #2 some.php(13): b()
+         * #3 [internal function]: a(1, 'some str', Array)
+         * #4 some.php(16): Swow\Coroutine::run('a', 1, 'some str', Array)
+         * #5 {main}
+         * ```
+         * 
+         * @see static::getTrace() for params usage
+         */
         public function getTraceAsString(int $level = 0, int $limit = 0, int $options = \DEBUG_BACKTRACE_PROVIDE_OBJECT): string { }
 
+        /**
+         * get trace information as string like original php strack trace format in array
+         * 
+         * return value maybe like
+         * ```php
+         * [
+         * "#0 some.php(7): Swow\Coroutine->getTraceAsString()",
+         * "#1 some.php(10): c()",
+         * "#2 some.php(13): b()",
+         * "#3 [internal function]: a(1, 'some str', Array)",
+         * "#4 some.php(16): Swow\Coroutine::run('a', 1, 'some str', Array)",
+         * "#5 {main}",
+         * ]
+         * ```
+         * 
+         * @return array<string>
+         * @see static::getTrace() for params usage
+         */
         public function getTraceAsList(int $level = 0, int $limit = 0, int $options = \DEBUG_BACKTRACE_PROVIDE_OBJECT): array { }
 
+        /**
+         * get trace depth
+         * 
+         * @see static::getTrace() for params usage
+         */
         public function getTraceDepth(int $limit = 0): int { }
 
+        /**
+         * get defined variables in specified scope
+         * 
+         * @return array<string, mixed>
+         * @see static::getTrace() for params usage
+         */
         public function getDefinedVars(int $level = 0): array { }
 
+        /**
+         * set variable in specified scope
+         * 
+         * @param string $name variable name
+         * @param mixed $value variable value
+         * @param bool $force force rebuild symbol table, if you donot know this, keep its default value
+         * @see static::getTrace() for `$level` params usage
+         */
         public function setLocalVar(string $name, mixed $value, int $level = 0, bool $force = true): static { }
 
+        /**
+         * evaluate code in specified scope
+         * 
+         * @todo string $string? why not rename it to $code
+         * @param string $string code to evaluate
+         * @see static::getTrace() for `$level` params usage
+         */
         public function eval(string $string, int $level = 0): mixed { }
 
         public function call(callable $callable): mixed { }
@@ -185,8 +281,14 @@ namespace Swow
 
         public static function get(int $id): ?static { }
 
+        /**
+         * get all coroutines
+         *
+         * @return array<int, static> all coroutines indexed by coroutine id
+         */
         public static function getAll(): array { }
 
+        /** @return array<string, mixed> */
         public function __debugInfo(): array { }
 
         public static function registerDeadlockHandler(callable $callable): Util\Handler { }
@@ -200,6 +302,13 @@ namespace Swow
 
 namespace Swow
 {
+    /**
+     * channle transfers information across coroutines
+     * 
+     * @phan-template T
+     * @phpstan-template T
+     * @psalm-template T
+     */
     class Channel
     {
         public const OPCODE_PUSH = 0;
@@ -207,8 +316,31 @@ namespace Swow
 
         public function __construct(int $capacity = 0) { }
 
+        /**
+         * push data into channel
+         * 
+         * @note context switching happens here when channel is full, context switching may also happen at this even channel is not full.
+         * 
+         * @phan-param T $data
+         * @phpstan-param T $data
+         * @psalm-param T $data
+         * @param mixed $data
+         * @param int $timeout in microseconds
+         * @return static
+         */
         public function push(mixed $data, int $timeout = -1): static { }
 
+        /**
+         * pop data from channel
+         * 
+         * @note context switching happens here when channel is empty, context switching may also happen at this even channel is not empty.
+         * 
+         * @param int $timeout in microseconds
+         * @phan-return T $data
+         * @phpstan-return T $data
+         * @psalm-return T $data
+         * @return mixed
+         */
         public function pop(int $timeout = -1): mixed { }
 
         public function close(): void { }
@@ -231,6 +363,7 @@ namespace Swow
 
         public function isWritable(): bool { }
 
+        /** @return array<string, mixed> */
         public function __debugInfo(): array { }
     }
 }
@@ -343,6 +476,7 @@ namespace Swow
 
         public function __toString(): string { }
 
+        /** @return array<string, mixed> */
         public function __debugInfo(): array { }
     }
 }
@@ -381,13 +515,9 @@ namespace Swow
         public const TYPE_UDP = 134217746;
         public const TYPE_UDP4 = 134217778;
         public const TYPE_UDP6 = 134217810;
-        /** 
-         * UNIX domain socket type, this constant is only avaliable at unix-like os.
-         */
+        /** UNIX domain socket type, this constant is only avaliable at unix-like os. */
         public const TYPE_UNIX = 33554561;
-        /** 
-         * UNIX datagram socket type, this constant is only avaliable at unix-like os.
-         */
+        /** UNIX datagram socket type, this constant is only avaliable at unix-like os. */
         public const TYPE_UDG = 268435586;
         public const IO_FLAG_NONE = 0;
         public const IO_FLAG_READ = 1;
@@ -530,10 +660,43 @@ namespace Swow
          */
         public function peekStringFrom(int $size = \Swow\Buffer::DEFAULT_SIZE, &$address = null, &$port = null): string { }
 
-        /** @var int $timeout [optional] = $this->getWriteTimeout() */
+        /**
+         * write io vector to socket
+         * 
+         * vector is an array for all contents to write, elements in it maybe
+         * - `string|Stringable|Buffer`: write full text from current position
+         * - `array[string|Stringable $content, int $offset, ?int $length]`: write the string from index `$offset`, with length `$length`
+         * - `array[Buffer $content, int $length]`: write it from current position, with length `$length`
+         * 
+         * for code
+         * ```php
+         * $s = new Socket(Socket::TYPE_STDOUT);
+         * $s->write([
+         * 'abc',
+         * ['1234567890', 1, 2],
+         * [(new Buffer())->write('1234567890')->seek(4), 2],
+         * ]);
+         * ```
+         * string `"abc2356"` will be wrote to the socket.
+         * 
+         * @param non-empty-array<string|\Stringable|Buffer|array{0: string|\Stringable, 1: int, 2?: int}|array{0: Buffer, 1: int}> $vector
+         * @param int $timeout [optional] = $this->getWriteTimeout()
+         */
         public function write(array $vector, ?int $timeout = null): static { }
 
-        /** @var int $timeout [optional] = $this->getWriteTimeout() */
+        /**
+         * write io vector to socket with client information
+         * 
+         * @see static::write() for io vector format
+         * 
+         * @param non-empty-array<string|\Stringable|Buffer|array{0: string|\Stringable, 1: int, 2?: int}|array{0: Buffer, 1: int}> $vector
+         * @param string|null $address address to send to, may be ip or domain
+         * @phan-param int<0, 65535>|null $port
+         * @phpstan-param int $port
+         * @psalm-param int $port
+         * @param int|null $port port to send to
+         * @param int $timeout [optional] = $this->getWriteTimeout()
+         */
         public function writeTo(array $vector, ?string $address = null, ?int $port = null, ?int $timeout = null): static { }
 
         /** @var int $timeout [optional] = $this->getWriteTimeout() */
@@ -589,6 +752,7 @@ namespace Swow
 
         public function setTcpAcceptBalance(bool $enable): static { }
 
+        /** @return array<string, mixed> */
         public function __debugInfo(): array { }
 
         public static function typeSimplify(int $type): int { }
@@ -715,12 +879,28 @@ namespace Swow
          */
         public const KILL = 9;
         /** 
+         * This constant holds SIGUSR1 value, it's platform-dependent.
+         * 
+         * At Linux mips64 platform, this constant may have a value `16`
+         * At macOS platform, this constant may have a value `30` means "user defined signal 1"
+         * At Windows platform, this constant may not exist
+         */
+        public const USR1 = 10;
+        /** 
          * This constant holds SIGSEGV value, it's platform-dependent.
          * 
          * At macOS platform, this constant means "segmentation violation"
          * At Windows platform, this constant means "segment violation"
          */
         public const SEGV = 11;
+        /** 
+         * This constant holds SIGUSR2 value, it's platform-dependent.
+         * 
+         * At Linux mips64 platform, this constant may have a value `17`
+         * At macOS platform, this constant may have a value `31` means "user defined signal 2"
+         * At Windows platform, this constant may not exist
+         */
+        public const USR2 = 12;
         /** 
          * This constant holds SIGPIPE value, it's platform-dependent.
          * 
@@ -933,14 +1113,58 @@ namespace Swow\Util
 
 namespace Swow\Channel
 {
+    /**
+     * channel selector selects any action done
+     * which action can be "pushing/poping `T` into/from (may be different) channel"
+     * 
+     * @phan-template T
+     * @phpstan-template T
+     * @psalm-template T
+     */
     class Selector
     {
+        /**
+         * add a "pushing a `T` into `$channel`" action into selector
+         * 
+         * @phan-param \Swow\Channel<T> $channel
+         * @phpstan-param \Swow\Channel<T> $channel
+         * @psalm-param \Swow\Channel<T> $channel
+         * @phan-param T $data
+         * @phpstan-param T $data
+         * @psalm-param T $data
+         */
         public function push(\Swow\Channel $channel, mixed $data): static { }
 
+        /**
+         * add a "popping a `T` from `$channel`" action into selector
+         * 
+         * @phan-param \Swow\Channel<T> $channel
+         * @phpstan-param \Swow\Channel<T> $channel
+         * @psalm-param \Swow\Channel<T> $channel
+         */
         public function pop(\Swow\Channel $channel): static { }
 
+        /**
+         * do select
+         * 
+         * any actions in selector will make this return
+         * 
+         * @note content switching may happen here
+         * 
+         * @param int $timeout timeout in microseconds
+         * @phan-return \Swow\Channel<T>
+         * @phpstan-return \Swow\Channel<T>
+         * @psalm-return \Swow\Channel<T>
+         */
         public function commit(int $timeout = -1): \Swow\Channel { }
 
+        /**
+         * fetch actions result
+         * 
+         * @phan-return T
+         * @phpstan-return T
+         * @psalm-return T
+         */
         public function fetch(): mixed { }
 
         public function getLastOpcode(): int { }
@@ -1142,16 +1366,31 @@ namespace Swow\Http
 
 namespace Swow\Http
 {
+    /**
+     * pack up message into string without method line or status code line
+     * 
+     * @param array<string, string|array<string>> $headers values indexed by fields
+     */
     function packMessage(array $headers = [], string $body = ''): string { }
 }
 
 namespace Swow\Http
 {
+    /**
+     * pack up request into string
+     * 
+     * @param array<string, string|array<string>> $headers values indexed by fields
+     */
     function packRequest(string $method = '', string $url = '', array $headers = [], string $body = '', string $protocolVersion = ''): string { }
 }
 
 namespace Swow\Http
 {
+    /**
+     * pack up response into string
+     * 
+     * @param array<string, string|array<string>> $headers values indexed by fields
+     */
     function packResponse(int $statusCode = 0, array $headers = [], string $body = '', string $reasonPhrase = '', string $protocolVersion = ''): string { }
 }
 
@@ -1269,6 +1508,7 @@ namespace Swow\WebSocket
 
         public function __toString(): string { }
 
+        /** @return array<string, mixed> */
         public function __debugInfo(): array { }
     }
 }
@@ -1814,6 +2054,12 @@ namespace Swow\Errno
 
 namespace Swow\Debug
 {
+    /**
+     * build trace info from `\Swow\Coroutine::getTrace()` returns
+     * 
+     * @see \Swow\Coroutine::getTrace()
+     * @param array<array{'file': string, 'line': int, 'function': string, 'class': string, 'type': string, 'args': array<mixed>}> $trace
+     */
     function buildTraceAsString(array $trace): string { }
 }
 
