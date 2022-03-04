@@ -54,131 +54,212 @@ $fixer = new ConstantFixer(
                 public function enterNode(Node $node)
                 {
                     parent::enterNode($node);
-                    switch (true) {
-                        case $node instanceof Node\Stmt\Class_:
-                            $this->class = $node->name->name;
-                            if (!$this->inNamespaceClass('Swow', 'Signal')) {
-                                break;
+                    if (
+                        $node instanceof Node\Stmt\Class_ &&
+                        $this->inNamespaceClass('Swow', 'Signal')
+                    ) {
+                        // entering class Swow\Signal
+                        /** @var array<array{'value': int, 'name': string, 'stmt': array<mixed>}> */
+                        $newStmts = [];
+                        $signalDefinitions = [];
+                        // filter out all SIGXXX constants
+                        foreach ($this->constantDefinitions as $k => $v) {
+                            if (
+                                str_starts_with($k, 'SIG') &&
+                                $k !== 'SIGSTKSZ' &&
+                                $k !== 'SIGUNUSED' &&
+                                $k !== 'SIGRTMIN' &&
+                                $k !== 'SIGRTMAX'
+                            ) {
+                                $signalDefinitions[substr($k, 3)] = $v;
                             }
-
-                            /** @var array<array{'value': int, 'name': string, 'stmt': array<mixed>}> */
-                            $newStmts = [];
-                            $signalDefinitions = [];
-                            // filter out all SIGXXX constants
-                            foreach ($this->constantDefinitions as $k => $v) {
-                                if (
-                                    str_starts_with($k, 'SIG') &&
-                                    $k !== 'SIGSTKSZ' &&
-                                    $k !== 'SIGUNUSED' &&
-                                    $k !== 'SIGRTMIN' &&
-                                    $k !== 'SIGRTMAX'
-                                ) {
-                                    $signalDefinitions[substr($k, 3)] = $v;
-                                }
+                        }
+                        foreach ($node->stmts as $i => $stmt) {
+                            if (!$stmt instanceof Node\Stmt\ClassConst) {
+                                continue;
                             }
-                            foreach ($node->stmts as $i => $stmt) {
-                                if (!$stmt instanceof Node\Stmt\ClassConst) {
-                                    continue;
-                                }
-                                // entering class const Swow\Signal::xxx
-                                // note: swow stubs' const declaration only one constant per statment so we can do this
-                                $name = $stmt->consts[0]->name->name;
-                                if (($constantDefinition = $signalDefinitions[$name] ?? null) === null) {
-                                    // not a signal name, skip it
-                                    continue;
-                                }
-                                unset($signalDefinitions[$name]);
-                                // remove old things
-                                unset($node->stmts[$i]);
-                                // replace it with fixed value
-                                $oldConst = $stmt->consts[0];
-                                $oldConst->value->value = $constantDefinition->value;
-                                $newStmt = new Node\Stmt\ClassConst(
-                                    consts: [
-                                        $oldConst
-                                    ],
-                                    flags: $stmt->flags,
-                                    attributes: [
-                                        'comments' => [
-                                            new Doc(
-                                                text: "/** \n * This constant holds SIG$name value, it's platform-dependent.\n * " .
-                                                    str_replace("\n", "\n * ", $constantDefinition->comment) .
-                                                    "\n */",
-                                            ),
-                                        ],
-                                    ]
-                                );
-                                $newStmts[] = [
-                                    'name' => $name,
-                                    'value' => $constantDefinition->value,
-                                    'stmt' => $newStmt,
-                                ];
-                            }
-                            foreach ($signalDefinitions as $name => $constantDefinition) {
-                                $newStmt = new Node\Stmt\ClassConst(
-                                    consts: [
-                                        new Node\Const_(
-                                            name: new Node\Identifier(
-                                                name: $name
-                                            ),
-                                            value: new Node\Scalar\LNumber(
-                                                value: $constantDefinition->value
-                                            ),
-                                        ),
-                                    ],
-                                    flags: Node\Stmt\Class_::MODIFIER_PUBLIC,
-                                    attributes: [
-                                        'comments' => [
-                                            new Doc(
-                                                text: "/** \n * This constant holds SIG$name value, it's platform-dependent.\n * " .
-                                                    str_replace("\n", "\n * ", $constantDefinition->comment) .
-                                                    "\n */",
-                                            ),
-                                        ],
-                                    ]
-                                );
-                                $newStmts[] = [
-                                    'name' => $name,
-                                    'value' => $constantDefinition->value,
-                                    'stmt' => $newStmt,
-                                ];
-                            }
-                            // sort all signals
-                            uasort($newStmts, fn ($x, $y) => $x['value'] - $y['value'] === 0 ? strcmp($x['name'], $y['name']) : $x['value'] - $y['value']);
-
-                            // prepend to original class
-                            //print_r(array_values($newStmts));
-                            $node->stmts = [...array_map(fn ($x) => $x['stmt'], $newStmts), ...$node->stmts];
-                            break;
-                        case $node instanceof Node\Stmt\ClassConst &&
-                            $this->inNamespaceClass('Swow', 'Buffer') &&
-                            $node->consts &&
-                            $node->consts[0]->name->name === 'PAGE_SIZE':
-                            // entering class const Swow\Buffer::PAGE_SIZE
+                            // entering class const Swow\Signal::xxx
                             // note: swow stubs' const declaration only one constant per statment so we can do this
-                            // comment is readonly attribute, so we need create a new ClassConst object to replace it
-                            $oldStmt = $node;
-                            $oldConst = $node->consts[0];
+                            $name = $stmt->consts[0]->name->name;
+                            if (($constantDefinition = $signalDefinitions[$name] ?? null) === null) {
+                                // not a signal name, skip it
+                                continue;
+                            }
+                            unset($signalDefinitions[$name], $node->stmts[$i]);
+                            // remove old things
+
                             // replace it with fixed value
-                            $constantDefinition = $this->constantDefinitions['PAGE_SIZE'];
+                            $oldConst = $stmt->consts[0];
                             $oldConst->value->value = $constantDefinition->value;
                             $newStmt = new Node\Stmt\ClassConst(
                                 consts: [
-                                    $oldConst
+                                    $oldConst,
                                 ],
-                                flags: $oldStmt->flags,
+                                flags: $stmt->flags,
                                 attributes: [
                                     'comments' => [
                                         new Doc(
-                                            text: "/** \n * This constant holds page size of this machine, it's platform-dependent." .
+                                            text: "/** \n * This constant holds SIG{$name} value, it's platform-dependent.\n * " .
                                                 str_replace("\n", "\n * ", $constantDefinition->comment) .
                                                 "\n */",
                                         ),
                                     ],
                                 ]
                             );
-                            //print_r($newStmt);
-                            return $newStmt;
+                            $newStmts[] = [
+                                'name' => $name,
+                                'value' => $constantDefinition->value,
+                                'stmt' => $newStmt,
+                            ];
+                        }
+                        foreach ($signalDefinitions as $name => $constantDefinition) {
+                            $newStmt = new Node\Stmt\ClassConst(
+                                consts: [
+                                    new Node\Const_(
+                                        name: new Node\Identifier(
+                                            name: $name
+                                        ),
+                                        value: new Node\Scalar\LNumber(
+                                            value: $constantDefinition->value
+                                        ),
+                                    ),
+                                ],
+                                flags: Node\Stmt\Class_::MODIFIER_PUBLIC,
+                                attributes: [
+                                    'comments' => [
+                                        new Doc(
+                                            text: "/** \n * This constant holds SIG{$name} value, it's platform-dependent.\n * " .
+                                                str_replace("\n", "\n * ", $constantDefinition->comment) .
+                                                "\n */",
+                                        ),
+                                    ],
+                                ]
+                            );
+                            $newStmts[] = [
+                                'name' => $name,
+                                'value' => $constantDefinition->value,
+                                'stmt' => $newStmt,
+                            ];
+                        }
+                        // sort all signals
+                        uasort($newStmts, static fn ($x, $y) => $x['value'] - $y['value'] === 0 ? strcmp($x['name'], $y['name']) : $x['value'] - $y['value']);
+
+                        // prepend to original class
+                        //print_r(array_values($newStmts));
+                        $node->stmts = [...array_map(static fn ($x) => $x['stmt'], $newStmts), ...$node->stmts];
+                    } else if (
+                        $node instanceof Node\Stmt\Class_ &&
+                        $this->inNamespaceClass('Swow', 'Socket')
+                    ) {
+                        // entering class Swow\Socket
+                        $unix_included = false;
+                        $udg_included = false;
+                        $last = 0;
+                        $lastFlag = 0;
+                        foreach ($node->stmts as $i => $stmt) {
+                            if (
+                                !$unix_included &&
+                                $stmt instanceof Node\Stmt\ClassConst &&
+                                $stmt->consts[0]->name->name === 'TYPE_UNIX'
+                            ) {
+                                $unix_included = true;
+                                continue;
+                            }
+                            if (
+                                !$udg_included &&
+                                $stmt instanceof Node\Stmt\ClassConst &&
+                                $stmt->consts[0]->name->name === 'TYPE_UDG'
+                            ) {
+                                $udg_included = true;
+                                continue;
+                            }
+                            if (
+                                $stmt instanceof Node\Stmt\ClassConst &&
+                                str_starts_with($stmt->consts[0]->name->name, 'TYPE_')
+                            ) {
+                                $last = $i;
+                                $lastFlag = $stmt->flags;
+                            }
+                        }
+                        $appending = [];
+                        if (!$unix_included) {
+                            $appending[] = new Node\Stmt\ClassConst(
+                                consts: [
+                                    new Node\Const_(
+                                        name: 'TYPE_UNIX',
+                                        value: new Node\Scalar\LNumber(
+                                            value: 33554561,
+                                        )
+                                    )
+                                ],
+                                flags: $lastFlag,
+                                attributes: [
+                                    'comments' => [
+                                        new Doc(
+                                            text: "/** \n * UNIX domain socket type, this constant is only avaliable at unix-like os.\n */"
+                                        )
+                                    ]
+                                ]
+                            );
+                        }
+                        if (!$udg_included) {
+                            $appending[] = new Node\Stmt\ClassConst(
+                                consts: [
+                                    new Node\Const_(
+                                        name: 'TYPE_UDG',
+                                        value: new Node\Scalar\LNumber(
+                                            value: 268435586,
+                                        )
+                                    )
+                                ],
+                                flags: $lastFlag,
+                                attributes: [
+                                    'comments' => [
+                                        new Doc(
+                                            text: "/** \n * UNIX datagram socket type, this constant is only avaliable at unix-like os.\n */"
+                                        )
+                                    ]
+                                ]
+                            );
+                        }
+                        // insert 
+                        array_splice(
+                            array: $node->stmts,
+                            offset: $last+1,
+                            length: 0,
+                            replacement: $appending
+                        );
+                    } else if (
+                        $node instanceof Node\Stmt\ClassConst &&
+                        $this->inNamespaceClass('Swow', 'Buffer') &&
+                        $node->consts &&
+                        $node->consts[0]->name->name === 'PAGE_SIZE'
+                    ) {
+                        // entering class const Swow\Buffer::PAGE_SIZE
+                        // note: swow stubs' const declaration only one constant per statment so we can do this
+                        // comment is readonly attribute, so we need create a new ClassConst object to replace it
+                        $oldStmt = $node;
+                        $oldConst = $node->consts[0];
+                        // replace it with fixed value
+                        $constantDefinition = $this->constantDefinitions['PAGE_SIZE'];
+                        $oldConst->value->value = $constantDefinition->value;
+                        $newStmt = new Node\Stmt\ClassConst(
+                            consts: [
+                                $oldConst,
+                            ],
+                            flags: $oldStmt->flags,
+                            attributes: [
+                                'comments' => [
+                                    new Doc(
+                                        text: "/** \n * This constant holds page size of this machine, it's platform-dependent." .
+                                            str_replace("\n", "\n * ", $constantDefinition->comment) .
+                                            "\n */",
+                                    ),
+                                ],
+                            ]
+                        );
+                        //print_r($newStmt);
+                        return $newStmt;
                     }
                     return null;
                 }
