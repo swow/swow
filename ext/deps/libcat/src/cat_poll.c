@@ -244,7 +244,7 @@ typedef struct {
     int revents;
     cat_bool_t initialized;
 #ifdef CAT_OS_UNIX_LIKE
-    cat_bool_t is_dup;
+    cat_os_fd_t fd_dup;
 #endif
 } cat_poll_t;
 
@@ -261,8 +261,8 @@ static void cat_poll_close_function(uv_handle_t *handle)
     cat_poll_context_t *context = poll->u.context;
 
 #ifdef CAT_OS_UNIX_LIKE
-    if (poll->is_dup) {
-        uv__close(poll->u.poll.io_watcher.fd);
+    if (poll->fd_dup != CAT_OS_INVALID_FD) {
+        uv__close(poll->fd_dup);
     }
 #endif
     if (!context->deferred_free_callback) {
@@ -329,20 +329,21 @@ CAT_API int cat_poll(cat_pollfd_t *fds, cat_nfds_t nfds, cat_timeout_t timeout)
         poll->revents = 0;
         poll->u.context = context;
         do {
+            cat_os_socket_t fd_no = fd->fd;
 #ifdef CAT_OS_UNIX_LIKE
-            poll->is_dup = cat_false;
+            poll->fd_dup = CAT_OS_INVALID_FD;
             if (unlikely(uv__fd_exists(cat_event_loop, fd->fd))) {
-                fd->fd = dup(fd->fd);
+                /* uv_poll_init_socket() and uv_poll_start() will return error if fd exists */
+                poll->fd_dup = dup(fd->fd);
                 if (unlikely(fd->fd == CAT_OS_INVALID_SOCKET)) {
                     poll->status = cat_translate_sys_error(cat_sys_errno);
                     e++;
                     break;
                 }
-                poll->is_dup = cat_true;
-                /* uv_poll_init_socket() and uv_poll_start() must return success if fd exists */
+                fd_no = poll->fd_dup;
             }
 #endif
-            error = uv_poll_init_socket(cat_event_loop, &poll->u.poll, fd->fd);
+            error = uv_poll_init_socket(cat_event_loop, &poll->u.poll, fd_no);
             if (unlikely(error != 0)) {
                 /* ENOTSOCK means it maybe a regular file */
                 poll->status = cat_poll_filter_init_error(error);
@@ -500,7 +501,7 @@ CAT_API int cat_select(int max_fd, fd_set *readfds, fd_set *writefds, fd_set *ex
     SAFE_FD_ZERO(exceptfds);
     for (ifds = 0; ifds < nfds; ifds++) {
         pfd = &pfds[ifds];
-        if (pfd->revents & POLLIN) {
+        if (pfd->revents & (POLLIN | POLLHUP | POLLPRI)) {
             SAFE_FD_SET(pfd->fd, readfds);
         }
         if (pfd->revents & POLLOUT) {
