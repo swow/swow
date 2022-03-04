@@ -16,7 +16,10 @@ namespace Swow\Debug;
 use Error;
 use SplFileObject;
 use Swow\Channel;
+use Swow\ChannelException;
 use Swow\Coroutine;
+use Swow\Debug\Debugger\DebugContext;
+use Swow\Errno;
 use Swow\Signal;
 use Swow\Socket;
 use Swow\Util\Handler;
@@ -60,7 +63,6 @@ use function trim;
 use function usleep;
 use const JSON_THROW_ON_ERROR;
 use const PHP_INT_MAX;
-use const Swow\Errno\ETIMEDOUT;
 
 class Debugger
 {
@@ -273,16 +275,15 @@ TEXT;
         return $this;
     }
 
-    /** @return WeakMap<DebuggerContext> */
+    /** @return WeakMap<Coroutine, DebugContext> */
     public static function getCoroutineDebugWeakMap(): WeakMap
     {
         return static::$coroutineDebugWeakMap ?? (static::$coroutineDebugWeakMap = new WeakMap());
     }
 
-    public static function getDebugContextOfCoroutine(Coroutine $coroutine): DebuggerContext
+    public static function getDebugContextOfCoroutine(Coroutine $coroutine): DebugContext
     {
-        $weakMap = static::getCoroutineDebugWeakMap();
-        return $weakMap[$coroutine] ?? ($weakMap[$coroutine] = new DebuggerContext());
+        return static::getCoroutineDebugWeakMap()[$coroutine] ??= new DebugContext();
     }
 
     public function getCurrentFrameIndex(): int
@@ -959,8 +960,8 @@ TEXT;
             try {
                 $signalChannel->pop(100);
                 throw new DebuggerException('Cancelled');
-            } catch (Channel\Exception $exception) {
-                if ($exception->getCode() !== ETIMEDOUT) {
+            } catch (ChannelException $exception) {
+                if ($exception->getCode() !== Errno::ETIMEDOUT) {
                     throw $exception;
                 }
             }

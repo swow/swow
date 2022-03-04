@@ -11,9 +11,9 @@
 
 declare(strict_types=1);
 
-namespace Swow\Debug;
+namespace Swow\Debug\Debugger;
 
-class DebuggerContext
+class DebugContext
 {
     public bool $stop = false;
     public bool $stopped = false;
