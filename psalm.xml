@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<psalm
+    errorLevel="7"
+    resolveFromConfigFile="true"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns="https://getpsalm.org/schema/config"
+    xsi:schemaLocation="https://getpsalm.org/schema/config vendor/vimeo/psalm/config.xsd"
+>
+    <projectFiles>
+        <directory name="lib/php-stub-generator" />
+        <directory name="lib/swow-library" />
+        <directory name="lib/swow-util" />
+        <directory name="tools" />
+        <ignoreFiles>
+            <directory name="vendor" />
+            <file name="tools/rector.php" />
+        </ignoreFiles>
+    </projectFiles>
+    <stubs>
+        <file name="lib/swow-stub/src/Swow.php" preloadClasses="true" />
+        <file name="ext/tests/include/bootstrap.php" preloadClasses="true" />
+    </stubs>
+    <issueHandlers>
+        <!-- for not LSP voilation mismatches -->
+        <MethodSignatureMismatch errorLevel="suppress" />
+    </issueHandlers>
+</psalm>
