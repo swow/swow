@@ -204,7 +204,7 @@ class StubGenerator
 
         if ($declarations) {
             $content = implode("\n", [
-                "<?php",
+                '<?php',
                 '',
                 ...($headerComment ? [$headerComment, ''] : ['']),
                 $declarations,

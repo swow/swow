@@ -15,39 +15,38 @@ declare(strict_types=1);
 namespace Swow\StubUtils\ConstantFixer;
 
 use Exception;
+use function array_key_exists;
 
 /**
  * this class generates constants using latest github.com/torvalds/linux codes
  */
 class LinuxConstantDefinitionsFetcher extends ConstantDefinitionsFetcherAbstract
 {
-
-    const SIGNAL_RE = '/#define\s+(?<name>SIG[A-Z]+)\s+(?<value>\d+)/';
-    const SIGNAL_HEADER_URL = '/include/uapi/asm-generic/signal.h';
-    const SIGNAL_HEADER_URLS = [
+    public const SIGNAL_RE = '/#define\s+(?<name>SIG[A-Z]+)\s+(?<value>\d+)/';
+    public const SIGNAL_HEADER_URL = '/include/uapi/asm-generic/signal.h';
+    public const SIGNAL_HEADER_URLS = [
         'arm64' => '/arch/arm64/include/uapi/asm/signal.h',
         'mips64' => '/arch/mips/include/uapi/asm/signal.h',
         'x86_64' => '/arch/x86/include/uapi/asm/signal.h',
         'riscv64' => null,
     ];
 
-    const ERRNO_RE = '/#define\s+(?<name>E[A-Z0-9]+)\s+(?<value>\d+)\s*\/\*\s*(?<comment>.+?)\s*\*\//';
-    const ERRNO_BASE_HEADER_URL = '/include/uapi/asm-generic/errno-base.h';
-    const ERRNO_HEADER_URL = '/include/uapi/asm-generic/errno.h';
+    public const ERRNO_RE = '/#define\s+(?<name>E[A-Z0-9]+)\s+(?<value>\d+)\s*\/\*\s*(?<comment>.+?)\s*\*\//';
+    public const ERRNO_BASE_HEADER_URL = '/include/uapi/asm-generic/errno-base.h';
+    public const ERRNO_HEADER_URL = '/include/uapi/asm-generic/errno.h';
 
     /**
      * default page size
-     *
-     * @var int $pageSize
      */
     private int $pageSize;
+
     public function __construct(
         private string $arch = 'x86_64',
         private string $baseUrl = 'https://raw.githubusercontent.com/torvalds/linux/master',
         ?int $pageSize = null,
     ) {
         if (!array_key_exists($arch, static::SIGNAL_HEADER_URLS)) {
-            throw new \Exception("arch $arch is not supported yet");
+            throw new Exception("arch {$arch} is not supported yet");
         }
         if ($pageSize !== null) {
             $this->pageSize = $pageSize;
@@ -74,7 +73,7 @@ class LinuxConstantDefinitionsFetcher extends ConstantDefinitionsFetcherAbstract
         foreach ($matches['name'] as $index => $name) {
             //printf("got %s = %d".PHP_EOL, $name, $matches['value'][$index]);
             $ret[$name] = new ConstantDefinition(
-                value: (int)$matches['value'][$index],
+                value: (int) $matches['value'][$index],
                 comment: $matches['comment'][$index],
             );
         }
@@ -86,7 +85,7 @@ class LinuxConstantDefinitionsFetcher extends ConstantDefinitionsFetcherAbstract
         foreach ($matches['name'] as $index => $name) {
             //printf("got %s = %d".PHP_EOL, $name, $matches['value'][$index]);
             $ret[$name] = new ConstantDefinition(
-                value: (int)$matches['value'][$index],
+                value: (int) $matches['value'][$index],
                 comment: $matches['comment'][$index],
             );
         }
@@ -100,7 +99,7 @@ class LinuxConstantDefinitionsFetcher extends ConstantDefinitionsFetcherAbstract
         foreach ($matches['name'] as $index => $name) {
             //printf("got %s = %d".PHP_EOL, $name, $matches['value'][$index]);
             $ret[$name] = new ConstantDefinition(
-                value: (int)$matches['value'][$index],
+                value: (int) $matches['value'][$index],
             );
         }
 
@@ -114,10 +113,9 @@ class LinuxConstantDefinitionsFetcher extends ConstantDefinitionsFetcherAbstract
         foreach ($matches['name'] as $index => $name) {
             //printf("got %s = %d".PHP_EOL, $name, $matches['value'][$index]);
             $ret[$name] = new ConstantDefinition(
-                value: (int)$matches['value'][$index],
+                value: (int) $matches['value'][$index],
             );
         }
-
 
         return $ret;
     }

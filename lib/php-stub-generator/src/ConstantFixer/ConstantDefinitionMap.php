@@ -14,29 +14,33 @@ declare(strict_types=1);
 
 namespace Swow\StubUtils\ConstantFixer;
 
-use \Exception;
-use \ArrayAccess;
-use \IteratorAggregate;
-use \Traversable;
-use \ArrayIterator;
+use ArrayAccess;
+use ArrayIterator;
+use Exception;
+use IteratorAggregate;
+use Traversable;
 
 class ConstantDefinitionMap implements ArrayAccess, IteratorAggregate
 {
-    /** @var array<string, ConstantDefinition> $map */
+    /** @var array<string, ConstantDefinition> */
     private array $map = [];
+
     public function __construct(
         private string $arch,
         private string $os,
     ) {
     }
+
     public function getOS(): string
     {
         return $this->os;
     }
+
     public function getArch(): string
     {
         return $this->arch;
     }
+
     /**
      * @param string $offset
      */
@@ -44,6 +48,7 @@ class ConstantDefinitionMap implements ArrayAccess, IteratorAggregate
     {
         unset($this->map[$offset]);
     }
+
     /**
      * @param string $offset
      */
@@ -51,6 +56,7 @@ class ConstantDefinitionMap implements ArrayAccess, IteratorAggregate
     {
         return isset($this->map[$offset]);
     }
+
     /**
      * @param string $offset
      * @return ConstantDefinition
@@ -59,6 +65,7 @@ class ConstantDefinitionMap implements ArrayAccess, IteratorAggregate
     {
         return $this->map[$offset];
     }
+
     /**
      * @param string $offset
      * @param ConstantDefinition $value
@@ -70,6 +77,7 @@ class ConstantDefinitionMap implements ArrayAccess, IteratorAggregate
         }
         $this->map[$offset] = $value;
     }
+
     /**
      * @return Traversable<string, ConstantDefinition>
      */

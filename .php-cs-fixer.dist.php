@@ -141,6 +141,9 @@ return (new PhpCsFixer\Config())
         'standardize_increment' => false,
         'standardize_not_equals' => true,
         'self_static_accessor' => true,
+        'phpdoc_to_comment' => [
+            'ignored_tags' => ['var'],
+        ],
         /* risky */
         'comment_to_phpdoc' => [
             'ignored_tags' => [
@@ -161,4 +164,5 @@ return (new PhpCsFixer\Config())
         ],
         'static_lambda' => true,
         'void_return' => true,
+        'fopen_flags' => false,
     ]);

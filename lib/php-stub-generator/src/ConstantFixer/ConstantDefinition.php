@@ -14,7 +14,7 @@ declare(strict_types=1);
 
 namespace Swow\StubUtils\ConstantFixer;
 
-use \stdClass;
+use stdClass;
 
 /** data class for a single definition */
 class ConstantDefinition extends stdClass

@@ -11,16 +11,14 @@
  * please view the LICENSE file that was distributed with this source code
  */
 
-
 declare(strict_types=1);
 
 namespace Swow\StubUtils\ConstantFixer;
 
-use PDO;
-use PhpParser\ParserFactory;
+use PhpParser\Comment\Doc;
 use PhpParser\Node;
 use PhpParser\NodeTraverser;
-use PhpParser\Comment\Doc;
+use PhpParser\ParserFactory;
 
 require __DIR__ . '/autoload.php';
 
@@ -46,12 +44,12 @@ $fixer = new ConstantFixer(
             $parser = (new ParserFactory())->create(ParserFactory::PREFER_PHP7);
             $ast = $parser->parse($content);
             $traverser = new NodeTraverser();
-            $traverser->addVisitor(new class($constantDefinitions) extends SimpleNodeTraverserAbstract
-            {
+            $traverser->addVisitor(new class($constantDefinitions) extends SimpleNodeTraverserAbstract {
                 public function __construct(
                     private array $constantDefinitions,
                 ) {
                 }
+
                 public function enterNode(Node $node)
                 {
                     parent::enterNode($node);
@@ -148,7 +146,7 @@ $fixer = new ConstantFixer(
                         // prepend to original class
                         //print_r(array_values($newStmts));
                         $node->stmts = [...array_map(static fn ($x) => $x['stmt'], $newStmts), ...$node->stmts];
-                    } else if (
+                    } elseif (
                         $node instanceof Node\Stmt\Class_ &&
                         $this->inNamespaceClass('Swow', 'Socket')
                     ) {
@@ -191,15 +189,15 @@ $fixer = new ConstantFixer(
                                         value: new Node\Scalar\LNumber(
                                             value: 33554561,
                                         )
-                                    )
+                                    ),
                                 ],
                                 flags: $lastFlag,
                                 attributes: [
                                     'comments' => [
                                         new Doc(
                                             text: "/** \n * UNIX domain socket type, this constant is only avaliable at unix-like os.\n */"
-                                        )
-                                    ]
+                                        ),
+                                    ],
                                 ]
                             );
                         }
@@ -211,26 +209,26 @@ $fixer = new ConstantFixer(
                                         value: new Node\Scalar\LNumber(
                                             value: 268435586,
                                         )
-                                    )
+                                    ),
                                 ],
                                 flags: $lastFlag,
                                 attributes: [
                                     'comments' => [
                                         new Doc(
                                             text: "/** \n * UNIX datagram socket type, this constant is only avaliable at unix-like os.\n */"
-                                        )
-                                    ]
+                                        ),
+                                    ],
                                 ]
                             );
                         }
-                        // insert 
+                        // insert
                         array_splice(
                             array: $node->stmts,
                             offset: $last + 1,
                             length: 0,
                             replacement: $appending
                         );
-                    } else if (
+                    } elseif (
                         $node instanceof Node\Stmt\ClassConst &&
                         $this->inNamespaceClass('Swow', 'Buffer') &&
                         $node->consts &&
@@ -268,7 +266,7 @@ $fixer = new ConstantFixer(
                         );
                         //print_r($newStmt);
                         return $newStmt;
-                    } else if (
+                    } elseif (
                         $node instanceof Node\Stmt\Const_ &&
                         $this->inNamespace('Swow\Errno')
                     ) {
@@ -291,7 +289,7 @@ $fixer = new ConstantFixer(
                             $attr = [
                                 'comments' => [
                                     new Doc(
-                                        text: "/** \n * This constant holds UV_$name value, it's platform-dependent.\n *" .
+                                        text: "/** \n * This constant holds UV_{$name} value, it's platform-dependent.\n *" .
                                             str_replace("\n", "\n * ", $constantDefinition->comment) .
                                             "\n */",
                                     ),

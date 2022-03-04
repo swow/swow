@@ -21,13 +21,14 @@ abstract class SimpleNodeTraverserAbstract extends NodeVisitorAbstract
 {
     protected ?string $namespace = null;
     protected ?string $class = null;
+
     public function enterNode(Node $node)
     {
         switch (true) {
             case $node instanceof Node\Stmt\Namespace_:
                 // entering namespace
                 if ($node->name && $node->name->parts) {
-                    $this->namespace = implode("\\", $node->name->parts);
+                    $this->namespace = implode('\\', $node->name->parts);
                 } else {
                     $this->namespace = '!GLOBAL!';
                 }
@@ -39,6 +40,7 @@ abstract class SimpleNodeTraverserAbstract extends NodeVisitorAbstract
         }
         return null;
     }
+
     public function leaveNode(Node $node)
     {
         switch (true) {
@@ -51,14 +53,17 @@ abstract class SimpleNodeTraverserAbstract extends NodeVisitorAbstract
         }
         return null;
     }
+
     protected function inNamespace(string $namespace): bool
     {
         return $this->namespace === $namespace;
     }
+
     protected function inClass(string $class): bool
     {
         return $this->class === $class;
     }
+
     protected function inNamespaceClass(string $namespace, string $class): bool
     {
         return $this->namespace === $namespace && $this->class === $class;

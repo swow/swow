@@ -14,12 +14,14 @@ declare(strict_types=1);
 
 namespace Swow\StubUtils\ConstantFixer;
 
+use function array_key_exists;
 use function Swow\Util\httpGet;
 
 abstract class ConstantDefinitionsFetcherAbstract implements ConstantDefinitionsFetcher
 {
-    /** @var array<string, string> $httpCache */
+    /** @var array<string, string> */
     protected static array $httpCache = [];
+
     protected function httpGet(string $uri): string
     {
         if (array_key_exists($uri, static::$httpCache)) {

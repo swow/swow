@@ -16,7 +16,7 @@ namespace Swow\StubUtils\ConstantFixer;
 
 class ConstantFixer
 {
-    /** @var array<string, ConstantDefinition> $constantDefinitions */
+    /** @var array<string, ConstantDefinition> */
     private array $constantDefinitions;
 
     /**
@@ -49,6 +49,7 @@ class ConstantFixer
             $this->constantDefinitions = $getConstantDefinitions();
         }
     }
+
     public function fix(
         string $fileName,
         bool $dryRun = true,

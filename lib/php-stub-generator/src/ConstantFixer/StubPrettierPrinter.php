@@ -14,8 +14,9 @@ declare(strict_types=1);
 
 namespace Swow\StubUtils\ConstantFixer;
 
-use PhpParser\PrettyPrinter\Standard as StandardPrinter;
 use PhpParser\Node\Stmt;
+use PhpParser\PrettyPrinter\Standard as StandardPrinter;
+use function count;
 
 class StubPrettierPrinter extends StandardPrinter
 {
@@ -66,7 +67,7 @@ class StubPrettierPrinter extends StandardPrinter
         return $this->pAttrGroups($node->attrGroups, $node->name === null)
             . $this->pModifiers($node->flags)
             . 'class' . $afterClassToken
-            . (null !== $node->extends ? ' extends ' . $this->p($node->extends) : '')
+            . ($node->extends !== null ? ' extends ' . $this->p($node->extends) : '')
             . (!empty($node->implements) ? ' implements ' . $this->pCommaSeparated($node->implements) : '')
             . ((count($node->stmts) > 0) ? $this->nl . '{' . $this->pStmts($node->stmts) . $this->nl . '}' : ' { }');
     }
@@ -77,33 +78,31 @@ class StubPrettierPrinter extends StandardPrinter
             . $this->pModifiers($node->flags)
             . 'function ' . ($node->byRef ? '&' : '') . $node->name
             . '(' . $this->pMaybeMultiline($node->params) . ')'
-            . (null !== $node->returnType ? ': ' . $this->p($node->returnType) : '')
-            . (null !== $node->stmts
+            . ($node->returnType !== null ? ': ' . $this->p($node->returnType) : '')
+            . ($node->stmts !== null
                 ? ' { }'
                 : ';');
     }
 
     protected function pModifiers(int $modifiers): string
     {
-        return ($modifiers & Stmt\Class_::MODIFIER_FINAL     ? 'final '     : '')
-            . ($modifiers & Stmt\Class_::MODIFIER_PUBLIC    ? 'public '    : '')
+        return ($modifiers & Stmt\Class_::MODIFIER_FINAL ? 'final ' : '')
+            . ($modifiers & Stmt\Class_::MODIFIER_PUBLIC ? 'public ' : '')
             . ($modifiers & Stmt\Class_::MODIFIER_PROTECTED ? 'protected ' : '')
-            . ($modifiers & Stmt\Class_::MODIFIER_PRIVATE   ? 'private '   : '')
-            . ($modifiers & Stmt\Class_::MODIFIER_ABSTRACT  ? 'abstract '  : '')
-            . ($modifiers & Stmt\Class_::MODIFIER_STATIC    ? 'static '    : '')
-            . ($modifiers & Stmt\Class_::MODIFIER_READONLY  ? 'readonly '  : '');
+            . ($modifiers & Stmt\Class_::MODIFIER_PRIVATE ? 'private ' : '')
+            . ($modifiers & Stmt\Class_::MODIFIER_ABSTRACT ? 'abstract ' : '')
+            . ($modifiers & Stmt\Class_::MODIFIER_STATIC ? 'static ' : '')
+            . ($modifiers & Stmt\Class_::MODIFIER_READONLY ? 'readonly ' : '');
     }
-
 
     protected function pStmt_Namespace(Stmt\Namespace_ $node): string
     {
         if ($this->canUseSemicolonNamespaces) {
             return 'namespace ' . $this->p($node->name) . ';'
                 . $this->nl . $this->pStmts($node->stmts, false);
-        } else {
-            return 'namespace' . (null !== $node->name ? ' ' . $this->p($node->name) : '')
-                . $this->nl . '{' . $this->pStmts($node->stmts) . $this->nl . "}\n";
         }
+        return 'namespace' . ($node->name !== null ? ' ' . $this->p($node->name) : '')
+                . $this->nl . '{' . $this->pStmts($node->stmts) . $this->nl . "}\n";
     }
 
     protected function pStmt_Function(Stmt\Function_ $node): string
@@ -111,7 +110,7 @@ class StubPrettierPrinter extends StandardPrinter
         return $this->pAttrGroups($node->attrGroups)
             . 'function ' . ($node->byRef ? '&' : '') . $node->name
             . '(' . $this->pCommaSeparated($node->params) . ')'
-            . (null !== $node->returnType ? ': ' . $this->p($node->returnType) : '')
+            . ($node->returnType !== null ? ': ' . $this->p($node->returnType) : '')
             . ' { }';
     }
 }
