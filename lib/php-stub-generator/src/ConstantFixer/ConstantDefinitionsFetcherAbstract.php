@@ -18,6 +18,7 @@ use function Swow\Util\httpGet;
 
 abstract class ConstantDefinitionsFetcherAbstract implements ConstantDefinitionsFetcher
 {
+    /** @var array<string, string> $httpCache */
     protected static array $httpCache = [];
     protected function httpGet(string $uri): string
     {
