@@ -66,21 +66,21 @@ namespace Swow
 {
     class Errno
     {
-        /** 
+        /**
          * This constant holds UV_E2BIG value, it's platform-dependent.
          *
          * At Linux and macOS platforms, this constant means "Argument list too long"
          * At Windows platform, this constant may have a value `-4093`
          */
         public const E2BIG = -7;
-        /** 
+        /**
          * This constant holds UV_EACCES value, it's platform-dependent.
          *
          * At Linux and macOS platforms, this constant means "Permission denied"
          * At Windows platform, this constant may have a value `-4092`
          */
         public const EACCES = -13;
-        /** 
+        /**
          * This constant holds UV_EADDRINUSE value, it's platform-dependent.
          *
          * At Linux platform, this constant means "Address already in use"
@@ -88,7 +88,7 @@ namespace Swow
          * At Windows platform, this constant may have a value `-4091`
          */
         public const EADDRINUSE = -98;
-        /** 
+        /**
          * This constant holds UV_EADDRNOTAVAIL value, it's platform-dependent.
          *
          * At Linux platform, this constant means "Cannot assign requested address"
@@ -96,7 +96,7 @@ namespace Swow
          * At Windows platform, this constant may have a value `-4090`
          */
         public const EADDRNOTAVAIL = -99;
-        /** 
+        /**
          * This constant holds UV_EAFNOSUPPORT value, it's platform-dependent.
          *
          * At Linux platform, this constant means "Address family not supported by protocol"
@@ -104,7 +104,7 @@ namespace Swow
          * At Windows platform, this constant may have a value `-4089`
          */
         public const EAFNOSUPPORT = -97;
-        /** 
+        /**
          * This constant holds UV_EAGAIN value, it's platform-dependent.
          *
          * At Linux platform, this constant means "Try again"
@@ -126,7 +126,7 @@ namespace Swow
         public const EAI_PROTOCOL = -3014;
         public const EAI_SERVICE = -3010;
         public const EAI_SOCKTYPE = -3011;
-        /** 
+        /**
          * This constant holds UV_EALREADY value, it's platform-dependent.
          *
          * At Linux platform, this constant means "Operation already in progress"
@@ -134,7 +134,7 @@ namespace Swow
          * At Windows platform, this constant may have a value `-4084`
          */
         public const EALREADY = -114;
-        /** 
+        /**
          * This constant holds UV_EBADF value, it's platform-dependent.
          *
          * At Linux platform, this constant means "Bad file number"
@@ -142,7 +142,7 @@ namespace Swow
          * At Windows platform, this constant may have a value `-4083`
          */
         public const EBADF = -9;
-        /** 
+        /**
          * This constant holds UV_EBUSY value, it's platform-dependent.
          *
          * At Linux platform, this constant means "Device or resource busy"
@@ -150,7 +150,7 @@ namespace Swow
          * At Windows platform, this constant may have a value `-4082`
          */
         public const EBUSY = -16;
-        /** 
+        /**
          * This constant holds UV_ECANCELED value, it's platform-dependent.
          *
          * At Linux platform, this constant means "Operation Canceled"
@@ -159,7 +159,7 @@ namespace Swow
          */
         public const ECANCELED = -125;
         public const ECHARSET = -4080;
-        /** 
+        /**
          * This constant holds UV_ECONNABORTED value, it's platform-dependent.
          *
          * At Linux platform, this constant means "Software caused connection abort"
@@ -167,7 +167,7 @@ namespace Swow
          * At Windows platform, this constant may have a value `-4079`
          */
         public const ECONNABORTED = -103;
-        /** 
+        /**
          * This constant holds UV_ECONNREFUSED value, it's platform-dependent.
          *
          * At Linux platform, this constant means "Connection refused"
@@ -175,7 +175,7 @@ namespace Swow
          * At Windows platform, this constant may have a value `-4078`
          */
         public const ECONNREFUSED = -111;
-        /** 
+        /**
          * This constant holds UV_ECONNRESET value, it's platform-dependent.
          *
          * At Linux platform, this constant means "Connection reset by peer"
@@ -183,7 +183,7 @@ namespace Swow
          * At Windows platform, this constant may have a value `-4077`
          */
         public const ECONNRESET = -104;
-        /** 
+        /**
          * This constant holds UV_EDESTADDRREQ value, it's platform-dependent.
          *
          * At Linux platform, this constant means "Destination address required"
@@ -191,28 +191,28 @@ namespace Swow
          * At Windows platform, this constant may have a value `-4076`
          */
         public const EDESTADDRREQ = -89;
-        /** 
+        /**
          * This constant holds UV_EEXIST value, it's platform-dependent.
          *
          * At Linux and macOS platforms, this constant means "File exists"
          * At Windows platform, this constant may have a value `-4075`
          */
         public const EEXIST = -17;
-        /** 
+        /**
          * This constant holds UV_EFAULT value, it's platform-dependent.
          *
          * At Linux and macOS platforms, this constant means "Bad address"
          * At Windows platform, this constant may have a value `-4074`
          */
         public const EFAULT = -14;
-        /** 
+        /**
          * This constant holds UV_EFBIG value, it's platform-dependent.
          *
          * At Linux and macOS platforms, this constant means "File too large"
          * At Windows platform, this constant may have a value `-4036`
          */
         public const EFBIG = -27;
-        /** 
+        /**
          * This constant holds UV_EHOSTUNREACH value, it's platform-dependent.
          *
          * At Linux platform, this constant means "No route to host"
@@ -220,21 +220,21 @@ namespace Swow
          * At Windows platform, this constant may have a value `-4073`
          */
         public const EHOSTUNREACH = -113;
-        /** 
+        /**
          * This constant holds UV_EINTR value, it's platform-dependent.
          *
          * At Linux and macOS platforms, this constant means "Interrupted system call"
          * At Windows platform, this constant may have a value `-4072`
          */
         public const EINTR = -4;
-        /** 
+        /**
          * This constant holds UV_EINVAL value, it's platform-dependent.
          *
          * At Linux and macOS platforms, this constant means "Invalid argument"
          * At Windows platform, this constant may have a value `-4071`
          */
         public const EINVAL = -22;
-        /** 
+        /**
          * This constant holds UV_EIO value, it's platform-dependent.
          *
          * At Linux platform, this constant means "I/O error"
@@ -242,7 +242,7 @@ namespace Swow
          * At Windows platform, this constant may have a value `-4070`
          */
         public const EIO = -5;
-        /** 
+        /**
          * This constant holds UV_EISCONN value, it's platform-dependent.
          *
          * At Linux platform, this constant means "Transport endpoint is already connected"
@@ -250,14 +250,14 @@ namespace Swow
          * At Windows platform, this constant may have a value `-4069`
          */
         public const EISCONN = -106;
-        /** 
+        /**
          * This constant holds UV_EISDIR value, it's platform-dependent.
          *
          * At Linux and macOS platforms, this constant means "Is a directory"
          * At Windows platform, this constant may have a value `-4068`
          */
         public const EISDIR = -21;
-        /** 
+        /**
          * This constant holds UV_ELOOP value, it's platform-dependent.
          *
          * At Linux platform, this constant means "Too many symbolic links encountered"
@@ -265,14 +265,14 @@ namespace Swow
          * At Windows platform, this constant may have a value `-4067`
          */
         public const ELOOP = -40;
-        /** 
+        /**
          * This constant holds UV_EMFILE value, it's platform-dependent.
          *
          * At Linux and macOS platforms, this constant means "Too many open files"
          * At Windows platform, this constant may have a value `-4066`
          */
         public const EMFILE = -24;
-        /** 
+        /**
          * This constant holds UV_EMSGSIZE value, it's platform-dependent.
          *
          * At Linux platform, this constant means "Message too long"
@@ -280,7 +280,7 @@ namespace Swow
          * At Windows platform, this constant may have a value `-4065`
          */
         public const EMSGSIZE = -90;
-        /** 
+        /**
          * This constant holds UV_ENAMETOOLONG value, it's platform-dependent.
          *
          * At Linux platform, this constant means "File name too long"
@@ -288,7 +288,7 @@ namespace Swow
          * At Windows platform, this constant may have a value `-4064`
          */
         public const ENAMETOOLONG = -36;
-        /** 
+        /**
          * This constant holds UV_ENETDOWN value, it's platform-dependent.
          *
          * At Linux platform, this constant means "Network is down"
@@ -296,7 +296,7 @@ namespace Swow
          * At Windows platform, this constant may have a value `-4063`
          */
         public const ENETDOWN = -100;
-        /** 
+        /**
          * This constant holds UV_ENETUNREACH value, it's platform-dependent.
          *
          * At Linux platform, this constant means "Network is unreachable"
@@ -304,7 +304,7 @@ namespace Swow
          * At Windows platform, this constant may have a value `-4062`
          */
         public const ENETUNREACH = -101;
-        /** 
+        /**
          * This constant holds UV_ENFILE value, it's platform-dependent.
          *
          * At Linux platform, this constant means "File table overflow"
@@ -312,7 +312,7 @@ namespace Swow
          * At Windows platform, this constant may have a value `-4061`
          */
         public const ENFILE = -23;
-        /** 
+        /**
          * This constant holds UV_ENOBUFS value, it's platform-dependent.
          *
          * At Linux platform, this constant means "No buffer space available"
@@ -320,7 +320,7 @@ namespace Swow
          * At Windows platform, this constant may have a value `-4060`
          */
         public const ENOBUFS = -105;
-        /** 
+        /**
          * This constant holds UV_ENODEV value, it's platform-dependent.
          *
          * At Linux platform, this constant means "No such device"
@@ -328,14 +328,14 @@ namespace Swow
          * At Windows platform, this constant may have a value `-4059`
          */
         public const ENODEV = -19;
-        /** 
+        /**
          * This constant holds UV_ENOENT value, it's platform-dependent.
          *
          * At Linux and macOS platforms, this constant means "No such file or directory"
          * At Windows platform, this constant may have a value `-4058`
          */
         public const ENOENT = -2;
-        /** 
+        /**
          * This constant holds UV_ENOMEM value, it's platform-dependent.
          *
          * At Linux platform, this constant means "Out of memory"
@@ -343,14 +343,14 @@ namespace Swow
          * At Windows platform, this constant may have a value `-4057`
          */
         public const ENOMEM = -12;
-        /** 
+        /**
          * This constant holds UV_ENONET value, it's platform-dependent.
          *
          * At Linux platform, this constant means "Machine is not on the network"
          * At macOS and Windows platforms, this constant may have a value `-4056`
          */
         public const ENONET = -64;
-        /** 
+        /**
          * This constant holds UV_ENOPROTOOPT value, it's platform-dependent.
          *
          * At Linux platform, this constant means "Protocol not available"
@@ -358,14 +358,14 @@ namespace Swow
          * At Windows platform, this constant may have a value `-4035`
          */
         public const ENOPROTOOPT = -92;
-        /** 
+        /**
          * This constant holds UV_ENOSPC value, it's platform-dependent.
          *
          * At Linux and macOS platforms, this constant means "No space left on device"
          * At Windows platform, this constant may have a value `-4055`
          */
         public const ENOSPC = -28;
-        /** 
+        /**
          * This constant holds UV_ENOSYS value, it's platform-dependent.
          *
          * At Linux platform, this constant means "Invalid system call number"
@@ -373,7 +373,7 @@ namespace Swow
          * At Windows platform, this constant may have a value `-4054`
          */
         public const ENOSYS = -38;
-        /** 
+        /**
          * This constant holds UV_ENOTCONN value, it's platform-dependent.
          *
          * At Linux platform, this constant means "Transport endpoint is not connected"
@@ -381,14 +381,14 @@ namespace Swow
          * At Windows platform, this constant may have a value `-4053`
          */
         public const ENOTCONN = -107;
-        /** 
+        /**
          * This constant holds UV_ENOTDIR value, it's platform-dependent.
          *
          * At Linux and macOS platforms, this constant means "Not a directory"
          * At Windows platform, this constant may have a value `-4052`
          */
         public const ENOTDIR = -20;
-        /** 
+        /**
          * This constant holds UV_ENOTEMPTY value, it's platform-dependent.
          *
          * At Linux platform, this constant means "Directory not empty"
@@ -396,7 +396,7 @@ namespace Swow
          * At Windows platform, this constant may have a value `-4051`
          */
         public const ENOTEMPTY = -39;
-        /** 
+        /**
          * This constant holds UV_ENOTSOCK value, it's platform-dependent.
          *
          * At Linux platform, this constant means "Socket operation on non-socket"
@@ -404,13 +404,13 @@ namespace Swow
          * At Windows platform, this constant may have a value `-4050`
          */
         public const ENOTSOCK = -88;
-        /** 
+        /**
          * This constant holds UV_ENOTSUP value, it's platform-dependent.
          *
          * At macOS platform, this constant may have a value `-45` means "Operation not supported"
          */
         public const ENOTSUP = -4049;
-        /** 
+        /**
          * This constant holds UV_EOVERFLOW value, it's platform-dependent.
          *
          * At Linux platform, this constant means "Value too large for defined data type"
@@ -418,21 +418,21 @@ namespace Swow
          * At Windows platform, this constant may have a value `-4026`
          */
         public const EOVERFLOW = -75;
-        /** 
+        /**
          * This constant holds UV_EPERM value, it's platform-dependent.
          *
          * At Linux and macOS platforms, this constant means "Operation not permitted"
          * At Windows platform, this constant may have a value `-4048`
          */
         public const EPERM = -1;
-        /** 
+        /**
          * This constant holds UV_EPIPE value, it's platform-dependent.
          *
          * At Linux and macOS platforms, this constant means "Broken pipe"
          * At Windows platform, this constant may have a value `-4047`
          */
         public const EPIPE = -32;
-        /** 
+        /**
          * This constant holds UV_EPROTO value, it's platform-dependent.
          *
          * At Linux platform, this constant means "Protocol error"
@@ -440,7 +440,7 @@ namespace Swow
          * At Windows platform, this constant may have a value `-4046`
          */
         public const EPROTO = -71;
-        /** 
+        /**
          * This constant holds UV_EPROTONOSUPPORT value, it's platform-dependent.
          *
          * At Linux platform, this constant means "Protocol not supported"
@@ -448,7 +448,7 @@ namespace Swow
          * At Windows platform, this constant may have a value `-4045`
          */
         public const EPROTONOSUPPORT = -93;
-        /** 
+        /**
          * This constant holds UV_EPROTOTYPE value, it's platform-dependent.
          *
          * At Linux platform, this constant means "Protocol wrong type for socket"
@@ -456,7 +456,7 @@ namespace Swow
          * At Windows platform, this constant may have a value `-4044`
          */
         public const EPROTOTYPE = -91;
-        /** 
+        /**
          * This constant holds UV_ERANGE value, it's platform-dependent.
          *
          * At Linux platform, this constant means "Math result not representable"
@@ -464,14 +464,14 @@ namespace Swow
          * At Windows platform, this constant may have a value `-4034`
          */
         public const ERANGE = -34;
-        /** 
+        /**
          * This constant holds UV_EROFS value, it's platform-dependent.
          *
          * At Linux and macOS platforms, this constant means "Read-only file system"
          * At Windows platform, this constant may have a value `-4043`
          */
         public const EROFS = -30;
-        /** 
+        /**
          * This constant holds UV_ESHUTDOWN value, it's platform-dependent.
          *
          * At Linux platform, this constant means "Cannot send after transport endpoint shutdown"
@@ -479,21 +479,21 @@ namespace Swow
          * At Windows platform, this constant may have a value `-4042`
          */
         public const ESHUTDOWN = -108;
-        /** 
+        /**
          * This constant holds UV_ESPIPE value, it's platform-dependent.
          *
          * At Linux and macOS platforms, this constant means "Illegal seek"
          * At Windows platform, this constant may have a value `-4041`
          */
         public const ESPIPE = -29;
-        /** 
+        /**
          * This constant holds UV_ESRCH value, it's platform-dependent.
          *
          * At Linux and macOS platforms, this constant means "No such process"
          * At Windows platform, this constant may have a value `-4040`
          */
         public const ESRCH = -3;
-        /** 
+        /**
          * This constant holds UV_ETIMEDOUT value, it's platform-dependent.
          *
          * At Linux platform, this constant means "Connection timed out"
@@ -501,14 +501,14 @@ namespace Swow
          * At Windows platform, this constant may have a value `-4039`
          */
         public const ETIMEDOUT = -110;
-        /** 
+        /**
          * This constant holds UV_ETXTBSY value, it's platform-dependent.
          *
          * At Linux and macOS platforms, this constant means "Text file busy"
          * At Windows platform, this constant may have a value `-4038`
          */
         public const ETXTBSY = -26;
-        /** 
+        /**
          * This constant holds UV_EXDEV value, it's platform-dependent.
          *
          * At Linux and macOS platforms, this constant means "Cross-device link"
@@ -517,7 +517,7 @@ namespace Swow
         public const EXDEV = -18;
         public const UNKNOWN = -4094;
         public const EOF = -4095;
-        /** 
+        /**
          * This constant holds UV_ENXIO value, it's platform-dependent.
          *
          * At Linux platform, this constant means "No such device or address"
@@ -525,14 +525,14 @@ namespace Swow
          * At Windows platform, this constant may have a value `-4033`
          */
         public const ENXIO = -6;
-        /** 
+        /**
          * This constant holds UV_EMLINK value, it's platform-dependent.
          *
          * At Linux and macOS platforms, this constant means "Too many links"
          * At Windows platform, this constant may have a value `-4032`
          */
         public const EMLINK = -31;
-        /** 
+        /**
          * This constant holds UV_EHOSTDOWN value, it's platform-dependent.
          *
          * At Linux platform, this constant means "Host is down"
@@ -540,14 +540,14 @@ namespace Swow
          * At Windows platform, this constant may have a value `-4031`
          */
         public const EHOSTDOWN = -112;
-        /** 
+        /**
          * This constant holds UV_EREMOTEIO value, it's platform-dependent.
          *
          * At Linux platform, this constant means "Remote I/O error"
          * At macOS and Windows platforms, this constant may have a value `-4030`
          */
         public const EREMOTEIO = -121;
-        /** 
+        /**
          * This constant holds UV_ENOTTY value, it's platform-dependent.
          *
          * At Linux platform, this constant means "Not a typewriter"
@@ -555,13 +555,13 @@ namespace Swow
          * At Windows platform, this constant may have a value `-4029`
          */
         public const ENOTTY = -25;
-        /** 
+        /**
          * This constant holds UV_EFTYPE value, it's platform-dependent.
          *
          * At macOS platform, this constant may have a value `-79` means "Inappropriate file type or format"
          */
         public const EFTYPE = -4028;
-        /** 
+        /**
          * This constant holds UV_EILSEQ value, it's platform-dependent.
          *
          * At Linux platform, this constant means "Illegal byte sequence"
@@ -569,7 +569,7 @@ namespace Swow
          * At Windows platform, this constant may have a value `-4027`
          */
         public const EILSEQ = -84;
-        /** 
+        /**
          * This constant holds UV_ESOCKTNOSUPPORT value, it's platform-dependent.
          *
          * At Linux platform, this constant means "Socket type not supported"
@@ -577,7 +577,7 @@ namespace Swow
          * At Windows platform, this constant may have a value `-4025`
          */
         public const ESOCKTNOSUPPORT = -94;
-        /** 
+        /**
          * This constant holds UV_ESTALE value, it's platform-dependent.
          *
          * At Linux platform, this constant means "Stale file handle"
@@ -694,33 +694,33 @@ namespace Swow
 
         /**
          * get current executed code file name
-         * 
-         * @see static::getTrace() for params usage
+         *
+         * @see Coroutine::getTrace() for params usage
          */
         public function getExecutedFilename(int $level = 0): string { }
 
         /**
          * get current executed code line
-         * 
-         * @see static::getTrace() for params usage
+         *
+         * @see Coroutine::getTrace() for params usage
          */
         public function getExecutedLineno(int $level = 0): int { }
 
         /**
          * get executed function name
-         * 
-         * @see static::getTrace() for params usage
+         *
+         * @see Coroutine::getTrace() for params usage
          */
         public function getExecutedFunctionName(int $level = 0): string { }
 
         /**
          * get trace information
-         * 
+         *
          * positive `$level` value count frame from current to top,
          * negative `$level` value count frame from top to current.
-         * 
+         *
          * for example, a stack may be like:
-         * 
+         *
          * | $level | frame                              | getTrace(0, 0) | getTrace(-1, 0) or getTrace(4, 0) | getTrace(0, 3) |
          * | -      | -                                  | -              | -                                 | -              |
          * | 5      | {main}                             | starts here    | starts here                       | FIXME: main?   |
@@ -729,7 +729,7 @@ namespace Swow
          * | 2 / -3 | b()                                |                |                                   | starts here    |
          * | 1 / -4 | c()                                |                |                                   |                |
          * | 0 / -5 | Swow\Coroutine->getTraceAsString() | ends here      |                                   | ends here      |
-         * 
+         *
          * @param int $level trace start level
          * @param int $limit trace max length, 0 meaning no limit
          * @param int $options trace options, same as `debug_backtrace` options { @see https://www.php.net/manual/en/function.debug-backtrace.php }
@@ -739,7 +739,7 @@ namespace Swow
 
         /**
          * get trace information as string like original php strack trace format
-         * 
+         *
          * return value maybe like
          * ```plain
          * #0 some.php(7): Swow\Coroutine->getTraceAsString()
@@ -749,14 +749,14 @@ namespace Swow
          * #4 some.php(16): Swow\Coroutine::run('a', 1, 'some str', Array)
          * #5 {main}
          * ```
-         * 
-         * @see static::getTrace() for params usage
+         *
+         * @see Coroutine::getTrace() for params usage
          */
         public function getTraceAsString(int $level = 0, int $limit = 0, int $options = \DEBUG_BACKTRACE_PROVIDE_OBJECT): string { }
 
         /**
          * get trace information as string like original php strack trace format in array
-         * 
+         *
          * return value maybe like
          * ```php
          * [
@@ -768,43 +768,43 @@ namespace Swow
          * "#5 {main}",
          * ]
          * ```
-         * 
+         *
          * @return array<string>
-         * @see static::getTrace() for params usage
+         * @see Coroutine::getTrace() for params usage
          */
         public function getTraceAsList(int $level = 0, int $limit = 0, int $options = \DEBUG_BACKTRACE_PROVIDE_OBJECT): array { }
 
         /**
          * get trace depth
-         * 
-         * @see static::getTrace() for params usage
+         *
+         * @see Coroutine::getTrace() for params usage
          */
         public function getTraceDepth(int $limit = 0): int { }
 
         /**
          * get defined variables in specified scope
-         * 
+         *
          * @return array<string, mixed>
-         * @see static::getTrace() for params usage
+         * @see Coroutine::getTrace() for params usage
          */
         public function getDefinedVars(int $level = 0): array { }
 
         /**
          * set variable in specified scope
-         * 
+         *
          * @param string $name variable name
          * @param mixed $value variable value
          * @param bool $force force rebuild symbol table, if you donot know this, keep its default value
-         * @see static::getTrace() for `$level` params usage
+         * @see Coroutine::getTrace() for `$level` params usage
          */
         public function setLocalVar(string $name, mixed $value, int $level = 0, bool $force = true): static { }
 
         /**
          * evaluate code in specified scope
-         * 
+         *
          * @todo string $string? why not rename it to $code
          * @param string $string code to evaluate
-         * @see static::getTrace() for `$level` params usage
+         * @see Coroutine::getTrace() for `$level` params usage
          */
         public function eval(string $string, int $level = 0): mixed { }
 
@@ -822,6 +822,7 @@ namespace Swow
 
         public static function getAll(): array { }
 
+        /** @return array<string, mixed> debug information for var_dump */
         public function __debugInfo(): array { }
 
         public static function registerDeadlockHandler(callable $callable): Util\Handler { }
@@ -837,7 +838,7 @@ namespace Swow
 {
     /**
      * channle transfers information across coroutines
-     * 
+     *
      * @phan-template T
      * @phpstan-template T
      * @psalm-template T
@@ -851,9 +852,9 @@ namespace Swow
 
         /**
          * push data into channel
-         * 
+         *
          * @note context switching happens here when channel is full, context switching may also happen at this even channel is not full.
-         * 
+         *
          * @phan-param T $data
          * @phpstan-param T $data
          * @psalm-param T $data
@@ -865,9 +866,9 @@ namespace Swow
 
         /**
          * pop data from channel
-         * 
+         *
          * @note context switching happens here when channel is empty, context switching may also happen at this even channel is not empty.
-         * 
+         *
          * @param int $timeout in microseconds
          * @phan-return T $data
          * @phpstan-return T $data
@@ -896,6 +897,7 @@ namespace Swow
 
         public function isWritable(): bool { }
 
+        /** @return array<string, mixed> debug information for var_dump */
         public function __debugInfo(): array { }
     }
 }
@@ -914,7 +916,7 @@ namespace Swow
 {
     class Buffer implements \Stringable
     {
-        /** 
+        /**
          * This constant holds page size of this machine, it's platform-dependent.
          *
          * At Linux mips64 and macOS arm64 platforms, this constant may have a value `16384`
@@ -1008,6 +1010,7 @@ namespace Swow
 
         public function __toString(): string { }
 
+        /** @return array<string, mixed> debug information for var_dump */
         public function __debugInfo(): array { }
     }
 }
@@ -1046,7 +1049,7 @@ namespace Swow
         public const TYPE_UDP = 134217746;
         public const TYPE_UDP4 = 134217778;
         public const TYPE_UDP6 = 134217810;
-        /** UNIX domain socket type, this constant is only avaliable at unix-like os. */
+        /** UNIX domain socket type, this constant is only available at unix-like os. */
         public const TYPE_UNIX = 33554561;
         /** UNIX datagram socket type, this constant is only avaliable at unix-like os. */
         public const TYPE_UDG = 268435586;
@@ -1129,117 +1132,374 @@ namespace Swow
 
         public function getPeerPort(): int { }
 
-        /** @var int $timeout [optional] = $this->getReadTimeout() */
+        /**
+         * read `$length` bytes data into buffer from socket,
+         * keep reading until `$length` bytes data received.
+         *
+         * @note context switching may happen here
+         *
+         * @throws SocketException when got eof without enough data received
+         * @throws SocketException when timed out
+         * @throws SocketException when socket read failed
+         * @param Buffer $buffer buffer to write in, data will be written from buffer current position
+         * @phan-param int<-1, max> $length
+         * @psalm-param int<-1, max> $length
+         * @param int $length -1 meaning not limited, receive until eof, otherwise length in bytes
+         * @param int|null $timeout timeout in microseconds or null for using {@see Socket::getReadTimeout()} value
+         * @return int bytes received
+         */
         public function read(\Swow\Buffer $buffer, int $length = -1, ?int $timeout = null): int { }
 
-        /** @var int $timeout [optional] = $this->getReadTimeout() */
+        /**
+         * read at max `$size` bytes data into buffer from socket,
+         * returns when any data received or eof.
+         *
+         * @note context switching may happen here
+         *
+         * @throws SocketException when timed out
+         * @throws SocketException when socket read failed
+         * @param Buffer $buffer buffer to write in, data will be written from buffer current position
+         * @phan-param int<-1, max> $size
+         * @psalm-param int<-1, max> $size
+         * @param int $size -1 meaning not limited, otherwise buffer size in bytes. only `$size` bytes data will be read from socket if there are more data than `$size` bytes, extra data will be kept in socket for further reading options
+         * @param int|null $timeout timeout in microseconds or null for using {@see Socket::getReadTimeout()} value
+         * @return int bytes received
+         */
         public function recv(\Swow\Buffer $buffer, int $size = -1, ?int $timeout = null): int { }
 
-        /** @var int $timeout [optional] = $this->getReadTimeout() */
+        /**
+         * read at max `$size` bytes data into buffer from socket,
+         * return when any data received.
+         *
+         * @note context switching may happen here
+         *
+         * @throws SocketException when no data received
+         * @throws SocketException when timed out
+         * @throws SocketException when socket read failed
+         * @param Buffer $buffer buffer to write in, data will be written from buffer current position
+         * @phan-param int<-1, max> $size
+         * @psalm-param int<-1, max> $size
+         * @param int $size -1 meaning not limited, otherwise buffer size in bytes. only `$size` bytes data will be read from socket if there are more data than `$size` bytes, extra data will be kept in socket for further reading options
+         * @param int|null $timeout timeout in microseconds or null for using {@see Socket::getReadTimeout()} value
+         */
         public function recvData(\Swow\Buffer $buffer, int $size = -1, ?int $timeout = null): int { }
 
         /**
-         * @param string $address [optional]
-         * @param int $port [optional]
-         * @var int $timeout [optional] = $this->getReadTimeout()
+         * read at max `$size` bytes data into buffer from socket,
+         * peer info is stored into `$address` and `$port` if applicable,
+         * return when any data received or eof.
+         *
+         * @note context switching may happen here
+         *
+         * @throws SocketException when timed out
+         * @throws SocketException when socket read failed
+         * @param Buffer $buffer buffer to write in, data will be written from buffer current position
+         * @phan-param int<-1, max> $size
+         * @psalm-param int<-1, max> $size
+         * @param int $size -1 meaning not limited, otherwise buffer size in bytes. only `$size` bytes data will be read from socket if there are more data than `$size` bytes, extra data will be kept in socket for further reading options
+         * @param string &$address peer address in string
+         * @phpstan-param int<0,65535>|null &$address
+         * @psalm-param int<0,65535>|null &$address
+         * @param int &$port peer address
+         * @param int|null $timeout timeout in microseconds or null for using {@see Socket::getReadTimeout()} value
+         * @return int bytes received
          */
         public function recvFrom(\Swow\Buffer $buffer, int $size = -1, &$address = null, &$port = null, ?int $timeout = null): int { }
 
         /**
-         * @param string $address [optional]
-         * @param int $port [optional]
-         * @var int $timeout [optional] = $this->getReadTimeout()
+         * read at max `$size` bytes data into buffer from socket,
+         * peer info is stored into `$address` and `$port` if applicable,
+         * return when any data received.
+         *
+         * @note context switching may happen here
+         *
+         * @throws SocketException when no data received
+         * @throws SocketException when timed out
+         * @throws SocketException when socket read failed
+         * @param Buffer $buffer buffer to write in, data will be written from buffer current position
+         * @phan-param int<-1, max> $size
+         * @psalm-param int<-1, max> $size
+         * @param int $size -1 meaning not limited, otherwise buffer size in bytes. only `$size` bytes data will be read from socket if there are more data than `$size` bytes, extra data will be kept in socket for further reading options
+         * @param string &$address peer address in string
+         * @phpstan-param int<0,65535>|null &$address
+         * @psalm-param int<0,65535>|null &$address
+         * @param int &$port peer address
+         * @param int|null $timeout timeout in microseconds or null for using {@see Socket::getReadTimeout()} value
+         * @return int bytes received
          */
         public function recvDataFrom(\Swow\Buffer $buffer, int $size = -1, &$address = null, &$port = null, ?int $timeout = null): int { }
 
+        /**
+         * read at max `$size` bytes data into buffer from socket without removing the read data from socket,
+         * only works on some type of socket,
+         * returns immediately.
+         *
+         * @throws SocketException when socket read failed
+         * @param Buffer $buffer buffer to write in, data will be written from buffer current position
+         * @phan-param int<-1, max> $size
+         * @psalm-param int<-1, max> $size
+         * @param int $size -1 meaning not limited, otherwise buffer size in bytes.
+         * @return int bytes received
+         */
         public function peek(\Swow\Buffer $buffer, int $size = -1): int { }
 
         /**
-         * @param string $address [optional]
-         * @param int $port [optional]
+         * read at max `$size` bytes data into buffer from socket without removing the read data from socket,
+         * only works on some type of socket,
+         * peer info is stored into `$address` and `$port` if applicable,
+         * returns immediately.
+         *
+         * @throws SocketException when socket read failed
+         * @param Buffer $buffer buffer to write in, data will be written from buffer current position
+         * @phan-param int<-1, max> $size
+         * @psalm-param int<-1, max> $size
+         * @param int $size -1 meaning not limited, otherwise buffer size in bytes.
+         * @param string &$address peer address in string
+         * @phpstan-param int<0,65535>|null &$address
+         * @psalm-param int<0,65535>|null &$address
+         * @param int &$port peer address
+         * @return int bytes received
          */
         public function peekFrom(\Swow\Buffer $buffer, int $size = -1, &$address = null, &$port = null): int { }
 
-        /** @var int $timeout [optional] = $this->getReadTimeout() */
+        /**
+         * read `$length` bytes data from socket as string,
+         * keep reading until `$length` bytes data received.
+         *
+         * @note context switching may happen here
+         *
+         * @throws SocketException when got eof without enough data received
+         * @throws SocketException when timed out
+         * @throws SocketException when socket read failed
+         * @phan-param int<-1, max> $length
+         * @psalm-param int<-1, max> $length
+         * @param int $length -1 meaning not limited, receive until eof, otherwise length in bytes
+         * @param int|null $timeout timeout in microseconds or null for using {@see Socket::getReadTimeout()} value
+         * @return string data received in string
+         */
         public function readString(int $length = \Swow\Buffer::DEFAULT_SIZE, ?int $timeout = null): string { }
 
-        /** @var int $timeout [optional] = $this->getReadTimeout() */
+        /**
+         * read at max `$size` bytes data from socket as string,
+         * returns when any data received or eof.
+         *
+         * @note context switching may happen here
+         *
+         * @throws SocketException when timed out
+         * @throws SocketException when socket read failed
+         * @phan-param int<-1, max> $size
+         * @psalm-param int<-1, max> $size
+         * @param int $size -1 meaning not limited, otherwise buffer size in bytes. only `$size` bytes data will be read from socket if there are more data than `$size` bytes, extra data will be kept in socket for further reading options
+         * @param int|null $timeout timeout in microseconds or null for using {@see Socket::getReadTimeout()} value
+         * @return string data received in string
+         */
         public function recvString(int $size = \Swow\Buffer::DEFAULT_SIZE, ?int $timeout = null): string { }
 
-        /** @var int $timeout [optional] = $this->getReadTimeout() */
+        /**
+         * read at max `$size` bytes data from socket as string,
+         * return when any data received.
+         *
+         * @note context switching may happen here
+         *
+         * @throws SocketException when no data received
+         * @throws SocketException when timed out
+         * @throws SocketException when socket read failed
+         * @phan-param int<-1, max> $size
+         * @psalm-param int<-1, max> $size
+         * @param int $size -1 meaning not limited, otherwise buffer size in bytes. only `$size` bytes data will be read from socket if there are more data than `$size` bytes, extra data will be kept in socket for further reading options
+         * @param int|null $timeout timeout in microseconds or null for using {@see Socket::getReadTimeout()} value
+         * @return string data received in string
+         */
         public function recvStringData(int $size = \Swow\Buffer::DEFAULT_SIZE, ?int $timeout = null): string { }
 
         /**
-         * @param string $address
-         * @param int $port
-         * @var int $timeout [optional] = $this->getReadTimeout()
+         * read at max `$size` bytes data from socket as string,
+         * peer info is stored into `$address` and `$port` if applicable,
+         * return when any data received or eof.
+         *
+         * @note context switching may happen here
+         *
+         * @throws SocketException when timed out
+         * @throws SocketException when socket read faile
+         * @phan-param int<-1, max> $size
+         * @psalm-param int<-1, max> $size
+         * @param int $size -1 meaning not limited, otherwise buffer size in bytes. only `$size` bytes data will be read from socket if there are more data than `$size` bytes, extra data will be kept in socket for further reading options
+         * @param string &$address peer address in string
+         * @phpstan-param int<0,65535>|null &$address
+         * @psalm-param int<0,65535>|null &$address
+         * @param int &$port peer address
+         * @param int|null $timeout timeout in microseconds or null for using {@see Socket::getReadTimeout()} value
+         * @return string data received in string
          */
         public function recvStringFrom(int $size = \Swow\Buffer::DEFAULT_SIZE, &$address = null, &$port = null, ?int $timeout = null): string { }
 
         /**
-         * @param string $address
-         * @param int $port
-         * @var int $timeout [optional] = $this->getReadTimeout()
+         * read at max `$size` bytes data from socket as string,
+         * peer info is stored into `$address` and `$port` if applicable,
+         * return when any data received.
+         *
+         * @note context switching may happen here
+         *
+         * @throws SocketException when no data received
+         * @throws SocketException when timed out
+         * @throws SocketException when socket read failed
+         * @phan-param int<-1, max> $size
+         * @psalm-param int<-1, max> $size
+         * @param int $size -1 meaning not limited, otherwise buffer size in bytes. only `$size` bytes data will be read from socket if there are more data than `$size` bytes, extra data will be kept in socket for further reading options
+         * @param string &$address peer address in string
+         * @phpstan-param int<0,65535>|null &$address
+         * @psalm-param int<0,65535>|null &$address
+         * @param int &$port peer address
+         * @param int|null $timeout timeout in microseconds or null for using {@see Socket::getReadTimeout()} value
+         * @return string data received in string
          */
         public function recvStringDataFrom(int $size = \Swow\Buffer::DEFAULT_SIZE, &$address = null, &$port = null, ?int $timeout = null): string { }
 
+        /**
+         * read at max `$size` bytes data from socket as string without removing the read data from socket,
+         * only works on some type of socket,
+         * returns immediately.
+         *
+         * @throws SocketException when socket read failed
+         * @phan-param int<-1, max> $size
+         * @psalm-param int<-1, max> $size
+         * @param int $size -1 meaning not limited, otherwise buffer size in bytes.
+         * @return string data received in string
+         */
         public function peekString(int $size = \Swow\Buffer::DEFAULT_SIZE): string { }
 
         /**
-         * @param string $address
-         * @param int $port
+         * read at max `$size` bytes data from socket as string without removing the read data from socket,
+         * only works on some type of socket,
+         * peer info is stored into `$address` and `$port` if applicable,
+         * returns immediately.
+         *
+         * @throws SocketException when socket read failed
+         * @phan-param int<-1, max> $size
+         * @psalm-param int<-1, max> $size
+         * @param int $size -1 meaning not limited, otherwise buffer size in bytes.
+         * @param string &$address peer address in string
+         * @phpstan-param int<0,65535>|null &$address
+         * @psalm-param int<0,65535>|null &$address
+         * @param int &$port peer address
+         * @return string data received in string
          */
         public function peekStringFrom(int $size = \Swow\Buffer::DEFAULT_SIZE, &$address = null, &$port = null): string { }
 
         /**
          * write io vector to socket
-         * 
+         *
          * vector is an array for all contents to write, elements in it maybe
-         * - `string|Stringable|Buffer`: write full text from current position
-         * - `array[string|Stringable $content, int $offset, ?int $length]`: write the string from index `$offset`, with length `$length`
+         * - `Buffer`: write full text from current position
+         * - `string|Stringable`: write full text from start
          * - `array[Buffer $content, int $length]`: write it from current position, with length `$length`
-         * 
+         * - `array[string|Stringable $content, int $offset, ?int $length]`: write the string from index `$offset`, with length `$length`
+         *
          * for code
          * ```php
          * $s = new Socket(Socket::TYPE_STDOUT);
          * $s->write([
+         * (new Buffer())->write('1234567890')->seek(6),
          * 'abc',
          * ['1234567890', 1, 2],
          * [(new Buffer())->write('1234567890')->seek(4), 2],
          * ]);
          * ```
-         * string `"abc2356"` will be wrote to the socket.
-         * 
-         * @param non-empty-array<string|\Stringable|Buffer|array{0: string|\Stringable, 1: int, 2?: int}|array{0: Buffer, 1: int}> $vector
-         * @param int $timeout [optional] = $this->getWriteTimeout()
+         * string `"7890abc2356"` will be written to the socket.
+         *
+         * @note context switching may happen here
+         *
+         * @throws SocketException when timed out
+         * @throws SocketException when write failed
+         * @phan-param non-empty-array<string|\Stringable|Buffer|array{0: string|\Stringable, 1: int, 2?: int}|array{0: Buffer, 1: int}> $vector
+         * @phpstan-param non-empty-array<string|\Stringable|Buffer|array{0: string|\Stringable, 1: int, 2?: int}|array{0: Buffer, 1: int}> $vector
+         * @psalm-param non-empty-array<string|\Stringable|Buffer|array{0: string|\Stringable, 1: int, 2?: int}|array{0: Buffer, 1: int}> $vector
+         * @psalm-param array<string|\Stringable|Buffer|array{0: string|\Stringable, 1: int, 2?: int}|array{0: Buffer, 1: int}> $vector
+         * @param int|null $timeout timeout in microseconds or null for using {@see Socket::getWriteTimeout()} value
          */
         public function write(array $vector, ?int $timeout = null): static { }
 
         /**
-         * write io vector to socket with client information
-         * 
-         * @see static::write() for io vector format
-         * 
-         * @param non-empty-array<string|\Stringable|Buffer|array{0: string|\Stringable, 1: int, 2?: int}|array{0: Buffer, 1: int}> $vector
-         * @param string|null $address address to send to, may be ip or domain
-         * @phan-param int<0, 65535>|null $port
-         * @phpstan-param int $port
-         * @psalm-param int $port
+         * write io vector to socket with peer information
+         *
+         * @see Socket::write() for io vector format
+         *
+         * @note context switching may happen here
+         *
+         * @throws SocketException when timed out
+         * @throws SocketException when write failed
+         * @phan-param non-empty-array<string|\Stringable|Buffer|array{0: string|\Stringable, 1: int, 2?: int}|array{0: Buffer, 1: int}> $vector
+         * @phpstan-param non-empty-array<string|\Stringable|Buffer|array{0: string|\Stringable, 1: int, 2?: int}|array{0: Buffer, 1: int}> $vector
+         * @psalm-param non-empty-array<string|\Stringable|Buffer|array{0: string|\Stringable, 1: int, 2?: int}|array{0: Buffer, 1: int}> $vector
+         * @psalm-param array<string|\Stringable|Buffer|array{0: string|\Stringable, 1: int, 2?: int}|array{0: Buffer, 1: int}> $vector
+         * @param string|null $address address to send to, may be ip or domain or path (for UNIX/UDG type)
+         * @phpstan-param int<0, 65535>|null $port
+         * @psalm-param int<0, 65535>|null $port
          * @param int|null $port port to send to
-         * @param int $timeout [optional] = $this->getWriteTimeout()
+         * @param int|null $timeout timeout in microseconds or null for using {@see Socket::getWriteTimeout()} value
          */
         public function writeTo(array $vector, ?string $address = null, ?int $port = null, ?int $timeout = null): static { }
 
-        /** @var int $timeout [optional] = $this->getWriteTimeout() */
+        /**
+         * write buffer into socket from buffer current position with `$length` bytes
+         *
+         * @throws SocketException when timed out
+         * @throws SocketException when write failed
+         * @phpstan-param int<-1, max> $length
+         * @psalm-param int<-1, max> $length
+         * @param int $length length of data to be sent, -1 meaning remaining data in buffer, otherwise length in bytes.
+         * @param int|null $timeout timeout in microseconds or null for using {@see Socket::getWriteTimeout()} value
+         */
         public function send(\Swow\Buffer $buffer, int $length = -1, ?int $timeout = null): static { }
 
-        /** @var int $timeout [optional] = $this->getWriteTimeout() */
+        /**
+         * write buffer to specified address (and port if protocol needs port) from buffer current position with `$length` bytes
+         *
+         * @throws SocketException when timed out
+         * @throws SocketException when write failed
+         * @phpstan-param int<-1, max> $length
+         * @psalm-param int<-1, max> $length
+         * @param int $length length of data to be sent, -1 meaning remaining data in buffer, otherwise length in bytes.
+         * @param int|null $timeout timeout in microseconds or null for using {@see Socket::getWriteTimeout()} value
+         * @param string|null $address address to send to, may be ip or domain or path (for UNIX/UDG type)
+         * @phpstan-param int<0, 65535>|null $port
+         * @psalm-param int<0, 65535>|null $port
+         * @param int|null $port port to send to
+         */
         public function sendTo(\Swow\Buffer $buffer, int $length = -1, ?string $address = null, ?int $port = null, ?int $timeout = null): static { }
 
-        /** @var int $timeout [optional] = $this->getWriteTimeout() */
+        /**
+         * write `$length` bytes of string into socket from `$offset` byte
+         *
+         * @throws SocketException when timed out
+         * @throws SocketException when write failed
+         * @param int|null $timeout timeout in microseconds or null for using {@see Socket::getWriteTimeout()} value
+         * @phpstan-param int<0, max> $offset
+         * @psalm-param int<0, max> $offset
+         * @param int $offset indexed string starts from 0: `sendString('1234567890', offset: 2, length: 2)` will write `'34'` into socket
+         * @phpstan-param int<-1, max> $length
+         * @psalm-param int<-1, max> $length
+         * @param int $length length of data to be sent, -1 meaning remaining data, otherwise length in bytes.
+         */
         public function sendString(string $string, ?int $timeout = null, int $offset = 0, int $length = -1): static { }
 
-        /** @var int $timeout [optional] = $this->getWriteTimeout() */
+        /**
+         * write `$length` bytes string to specified address (and port if protocol needs port) from `$offset` byte
+         *
+         * @throws SocketException when timed out
+         * @throws SocketException when write failed
+         * @param string|null $address address to send to, may be ip or domain or path (for UNIX/UDG type)
+         * @phpstan-param int<0, 65535>|null $port
+         * @psalm-param int<0, 65535>|null $port
+         * @param int|null $port port to send to
+         * @param int|null $timeout timeout in microseconds or null for using {@see Socket::getWriteTimeout()} value
+         * @phpstan-param int<0, max> $offset
+         * @psalm-param int<0, max> $offset
+         * @param int $offset indexed string starts from 0: `sendStringTo('1234567890', offset: 2, length: 2, ...)` will write `'34'` into socket
+         * @phpstan-param int<-1, max> $length
+         * @psalm-param int<-1, max> $length
+         * @param int $length length of data to be sent, -1 meaning remaining data, otherwise length in bytes.
+         */
         public function sendStringTo(string $string, ?string $address = null, ?int $port = null, ?int $timeout = null, int $offset = 0, int $length = -1): static { }
 
         /** @var int $timeout [optional] = $this->getWriteTimeout() */
@@ -1283,6 +1543,7 @@ namespace Swow
 
         public function setTcpAcceptBalance(bool $enable): static { }
 
+        /** @return array<string, mixed> debug information for var_dump */
         public function __debugInfo(): array { }
 
         public static function typeSimplify(int $type): int { }
@@ -1326,272 +1587,272 @@ namespace Swow
 {
     class Signal
     {
-        /** 
+        /**
          * This constant holds SIGHUP value, it's platform-dependent.
-         * 
+         *
          * At macOS platform, this constant means "hangup"
          * At Windows platform, this constant may not exist
          */
         public const HUP = 1;
-        /** 
+        /**
          * This constant holds SIGINT value, it's platform-dependent.
-         * 
+         *
          * At macOS and Windows platforms, this constant means "interrupt"
          */
         public const INT = 2;
-        /** 
+        /**
          * This constant holds SIGQUIT value, it's platform-dependent.
-         * 
+         *
          * At macOS platform, this constant means "quit"
          * At Windows platform, this constant may not exist
          */
         public const QUIT = 3;
-        /** 
+        /**
          * This constant holds SIGILL value, it's platform-dependent.
-         * 
+         *
          * At macOS platform, this constant means "illegal instruction (not reset when caught)"
          * At Windows platform, this constant means "illegal instruction - invalid function image"
          */
         public const ILL = 4;
-        /** 
+        /**
          * This constant holds SIGTRAP value, it's platform-dependent.
-         * 
+         *
          * At macOS platform, this constant means "trace trap (not reset when caught)"
          * At Windows platform, this constant may not exist
          */
         public const TRAP = 5;
-        /** 
+        /**
          * This constant holds SIGABRT value, it's platform-dependent.
-         * 
+         *
          * At macOS platform, this constant means "abort()"
          * At Windows platform, this constant may have a value `22` means "abnormal termination triggered by abort call"
          */
         public const ABRT = 6;
-        /** 
+        /**
          * This constant holds SIGIOT value, it's platform-dependent.
-         * 
+         *
          * At macOS and Windows platforms, this constant may not exist
          */
         public const IOT = 6;
-        /** 
+        /**
          * This constant holds SIGBUS value, it's platform-dependent.
-         * 
+         *
          * At Linux mips64 platform, this constant may have a value `10`
          * At macOS platform, this constant may have a value `10` means "bus error"
          * At Windows platform, this constant may not exist
          */
         public const BUS = 7;
-        /** 
+        /**
          * This constant holds SIGEMT value, it's platform-dependent.
-         * 
+         *
          * At macOS platform, this constant means "EMT instruction"
          * At Windows, Linux x86_64, Linux arm64 and Linux riscv64 platforms, this constant may not exist
          */
         public const EMT = 7;
-        /** 
+        /**
          * This constant holds SIGPOLL value, it's platform-dependent.
-         * 
+         *
          * At macOS platform, this constant means "pollable event ([XSR] generated, not supported)"
          * At Linux and Windows platforms, this constant may not exist
          */
         public const POLL = 7;
-        /** 
+        /**
          * This constant holds SIGFPE value, it's platform-dependent.
-         * 
+         *
          * At macOS and Windows platforms, this constant means "floating point exception"
          */
         public const FPE = 8;
-        /** 
+        /**
          * This constant holds SIGKILL value, it's platform-dependent.
-         * 
+         *
          * At macOS platform, this constant means "kill (cannot be caught or ignored)"
          * At Windows platform, this constant may not exist
          */
         public const KILL = 9;
-        /** 
+        /**
          * This constant holds SIGUSR1 value, it's platform-dependent.
-         * 
+         *
          * At Linux mips64 platform, this constant may have a value `16`
          * At macOS platform, this constant may have a value `30` means "user defined signal 1"
          * At Windows platform, this constant may not exist
          */
         public const USR1 = 10;
-        /** 
+        /**
          * This constant holds SIGSEGV value, it's platform-dependent.
-         * 
+         *
          * At macOS platform, this constant means "segmentation violation"
          * At Windows platform, this constant means "segment violation"
          */
         public const SEGV = 11;
-        /** 
+        /**
          * This constant holds SIGUSR2 value, it's platform-dependent.
-         * 
+         *
          * At Linux mips64 platform, this constant may have a value `17`
          * At macOS platform, this constant may have a value `31` means "user defined signal 2"
          * At Windows platform, this constant may not exist
          */
         public const USR2 = 12;
-        /** 
+        /**
          * This constant holds SIGPIPE value, it's platform-dependent.
-         * 
+         *
          * At macOS platform, this constant means "write on a pipe with no one to read it"
          * At Windows platform, this constant may not exist
          */
         public const PIPE = 13;
-        /** 
+        /**
          * This constant holds SIGALRM value, it's platform-dependent.
-         * 
+         *
          * At macOS platform, this constant means "alarm clock"
          * At Windows platform, this constant may not exist
          */
         public const ALRM = 14;
-        /** 
+        /**
          * This constant holds SIGTERM value, it's platform-dependent.
-         * 
+         *
          * At macOS platform, this constant means "software termination signal from kill"
          * At Windows platform, this constant means "Software termination signal from kill"
          */
         public const TERM = 15;
-        /** 
+        /**
          * This constant holds SIGSTKFLT value, it's platform-dependent.
-         * 
+         *
          * At macOS and Windows platforms, this constant may not exist
          */
         public const STKFLT = 16;
-        /** 
+        /**
          * This constant holds SIGCHLD value, it's platform-dependent.
-         * 
+         *
          * At Linux mips64 platform, this constant may have a value `18`
          * At macOS platform, this constant may have a value `20` means "to parent on child stop or exit"
          * At Windows platform, this constant may not exist
          */
         public const CHLD = 17;
-        /** 
+        /**
          * This constant holds SIGCONT value, it's platform-dependent.
-         * 
+         *
          * At Linux mips64 platform, this constant may have a value `25`
          * At macOS platform, this constant may have a value `19` means "continue a stopped process"
          * At Windows platform, this constant may not exist
          */
         public const CONT = 18;
-        /** 
+        /**
          * This constant holds SIGSTOP value, it's platform-dependent.
-         * 
+         *
          * At Linux mips64 platform, this constant may have a value `23`
          * At macOS platform, this constant may have a value `17` means "sendable stop signal not from tty"
          * At Windows platform, this constant may not exist
          */
         public const STOP = 19;
-        /** 
+        /**
          * This constant holds SIGTSTP value, it's platform-dependent.
-         * 
+         *
          * At Linux mips64 platform, this constant may have a value `24`
          * At macOS platform, this constant may have a value `18` means "stop signal from tty"
          * At Windows platform, this constant may not exist
          */
         public const TSTP = 20;
-        /** 
+        /**
          * This constant holds SIGBREAK value, it's platform-dependent.
-         * 
+         *
          * At Windows platform, this constant means "Ctrl-Break sequence"
          * At Linux and macOS platforms, this constant may not exist
          */
         public const BREAK = 21;
-        /** 
+        /**
          * This constant holds SIGTTIN value, it's platform-dependent.
-         * 
+         *
          * At Linux mips64 platform, this constant may have a value `26`
          * At macOS platform, this constant means "to readers pgrp upon background tty read"
          * At Windows platform, this constant may not exist
          */
         public const TTIN = 21;
-        /** 
+        /**
          * This constant holds SIGTTOU value, it's platform-dependent.
-         * 
+         *
          * At Linux mips64 platform, this constant may have a value `27`
          * At macOS platform, this constant means "like TTIN for output if (tp->t_local&LTOSTOP)"
          * At Windows platform, this constant may not exist
          */
         public const TTOU = 22;
-        /** 
+        /**
          * This constant holds SIGURG value, it's platform-dependent.
-         * 
+         *
          * At Linux mips64 platform, this constant may have a value `21`
          * At macOS platform, this constant may have a value `16` means "urgent condition on IO channel"
          * At Windows platform, this constant may not exist
          */
         public const URG = 23;
-        /** 
+        /**
          * This constant holds SIGXCPU value, it's platform-dependent.
-         * 
+         *
          * At Linux mips64 platform, this constant may have a value `30`
          * At macOS platform, this constant means "exceeded CPU time limit"
          * At Windows platform, this constant may not exist
          */
         public const XCPU = 24;
-        /** 
+        /**
          * This constant holds SIGXFSZ value, it's platform-dependent.
-         * 
+         *
          * At Linux mips64 platform, this constant may have a value `31`
          * At macOS platform, this constant means "exceeded file size limit"
          * At Windows platform, this constant may not exist
          */
         public const XFSZ = 25;
-        /** 
+        /**
          * This constant holds SIGVTALRM value, it's platform-dependent.
-         * 
+         *
          * At Linux mips64 platform, this constant may have a value `28`
          * At macOS platform, this constant means "virtual time alarm"
          * At Windows platform, this constant may not exist
          */
         public const VTALRM = 26;
-        /** 
+        /**
          * This constant holds SIGPROF value, it's platform-dependent.
-         * 
+         *
          * At Linux mips64 platform, this constant may have a value `29`
          * At macOS platform, this constant means "profiling time alarm"
          * At Windows platform, this constant may not exist
          */
         public const PROF = 27;
-        /** 
+        /**
          * This constant holds SIGWINCH value, it's platform-dependent.
-         * 
+         *
          * At Linux mips64 platform, this constant may have a value `20`
          * At macOS platform, this constant means "window size changes"
          * At Windows platform, this constant may not exist
          */
         public const WINCH = 28;
-        /** 
+        /**
          * This constant holds SIGINFO value, it's platform-dependent.
-         * 
+         *
          * At macOS platform, this constant means "information request"
          * At Linux and Windows platforms, this constant may not exist
          */
         public const INFO = 29;
-        /** 
+        /**
          * This constant holds SIGIO value, it's platform-dependent.
-         * 
+         *
          * At Linux mips64 platform, this constant may have a value `22`
          * At macOS platform, this constant may have a value `23` means "input/output possible signal"
          * At Windows platform, this constant may not exist
          */
         public const IO = 29;
-        /** 
+        /**
          * This constant holds SIGLOST value, it's platform-dependent.
-         * 
+         *
          * At macOS and Windows platforms, this constant may not exist
          */
         public const LOST = 29;
-        /** 
+        /**
          * This constant holds SIGPWR value, it's platform-dependent.
-         * 
+         *
          * At Linux mips64 platform, this constant may have a value `19`
          * At macOS and Windows platforms, this constant may not exist
          */
         public const PWR = 30;
-        /** 
+        /**
          * This constant holds SIGSYS value, it's platform-dependent.
-         * 
+         *
          * At Linux mips64 platform, this constant may have a value `12`
          * At macOS platform, this constant may have a value `12` means "bad argument to system call"
          * At Windows platform, this constant may not exist
@@ -1646,7 +1907,7 @@ namespace Swow\Channel
     /**
      * channel selector selects any action done
      * which action can be "pushing/poping `T` into/from (may be different) channel"
-     * 
+     *
      * @phan-template T
      * @phpstan-template T
      * @psalm-template T
@@ -1655,7 +1916,7 @@ namespace Swow\Channel
     {
         /**
          * add a "pushing a `T` into `$channel`" action into selector
-         * 
+         *
          * @phan-param \Swow\Channel<T> $channel
          * @phpstan-param \Swow\Channel<T> $channel
          * @psalm-param \Swow\Channel<T> $channel
@@ -1667,7 +1928,7 @@ namespace Swow\Channel
 
         /**
          * add a "popping a `T` from `$channel`" action into selector
-         * 
+         *
          * @phan-param \Swow\Channel<T> $channel
          * @phpstan-param \Swow\Channel<T> $channel
          * @psalm-param \Swow\Channel<T> $channel
@@ -1676,11 +1937,11 @@ namespace Swow\Channel
 
         /**
          * do select
-         * 
+         *
          * any actions in selector will make this return
-         * 
+         *
          * @note content switching may happen here
-         * 
+         *
          * @param int $timeout timeout in microseconds
          * @phan-return \Swow\Channel<T>
          * @phpstan-return \Swow\Channel<T>
@@ -1891,7 +2152,7 @@ namespace Swow\Http
 {
     /**
      * pack up message into string without method line or status code line
-     * 
+     *
      * @param array<string, string|array<string>> $headers values indexed by fields
      */
     function packMessage(array $headers = [], string $body = ''): string { }
@@ -1901,7 +2162,7 @@ namespace Swow\Http
 {
     /**
      * pack up request into string
-     * 
+     *
      * @param array<string, string|array<string>> $headers values indexed by fields
      */
     function packRequest(string $method = '', string $url = '', array $headers = [], string $body = '', string $protocolVersion = ''): string { }
@@ -1911,7 +2172,7 @@ namespace Swow\Http
 {
     /**
      * pack up response into string
-     * 
+     *
      * @param array<string, string|array<string>> $headers values indexed by fields
      */
     function packResponse(int $statusCode = 0, array $headers = [], string $body = '', string $reasonPhrase = '', string $protocolVersion = ''): string { }
@@ -2031,6 +2292,7 @@ namespace Swow\WebSocket
 
         public function __toString(): string { }
 
+        /** @return array<string, mixed> debug information for var_dump */
         public function __debugInfo(): array { }
     }
 }
@@ -2039,7 +2301,7 @@ namespace Swow\Debug
 {
     /**
      * build trace info from `\Swow\Coroutine::getTrace()` returns
-     * 
+     *
      * @see \Swow\Coroutine::getTrace()
      * @param array<array{'file': string, 'line': int, 'function': string, 'class': string, 'type': string, 'args': array<mixed>}> $trace
      */
