@@ -36,13 +36,14 @@ declare(strict_types=1);
     } while (!feof($pipes[1]));
     /* FIXME: workaround for some platforms  */
     if (function_exists('pcntl_waitpid')) {
-        pcntl_waitpid(proc_get_status($proc)['pid'], $exitCode);
+        pcntl_waitpid(proc_get_status($proc)['pid'], $status);
+        $exitCode = pcntl_wexitstatus($status);
     } else {
         while (proc_get_status($proc)['running']) {
             usleep(1000);
         }
         $exitCode = proc_get_status($proc)['exitcode'];
+        proc_close($proc);
     }
-    proc_close($proc);
     exit($exitCode);
 })();
