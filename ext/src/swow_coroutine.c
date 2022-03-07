@@ -1068,10 +1068,12 @@ SWOW_API cat_bool_t swow_coroutine_set_local_var(swow_coroutine_t *scoroutine, z
         int error;
 
         SWOW_COROUTINE_CHECK_CALL_INFO(goto _error);
+        Z_TRY_ADDREF_P(value);
 
         error = zend_set_local_var(name, value, force);
 
         if (UNEXPECTED(error != SUCCESS)) {
+            Z_TRY_DELREF_P(value);
             cat_update_last_error(CAT_EINVAL, "Set var '%.*s' failed by unknown reason", (int) ZSTR_LEN(name), ZSTR_VAL(name));
             _error:
             ret = cat_false;
