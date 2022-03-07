@@ -326,7 +326,7 @@ class StubGenerator
                 if (count($comment) === 1) {
                     $comment = ['/** ' . trim($comment[0], ' *') . ' */'];
                 } else {
-                    $comment = ['/**', ...array_map(static fn (string $line): string => " * {$line}", $comment), ' */'];
+                    $comment = ['/**', ...array_map(static fn (string $line): string => empty($line) ? ' *' : " * {$line}", $comment), ' */'];
                 }
                 $comment = implode("\n", $comment);
             } else {
