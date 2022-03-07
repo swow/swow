@@ -22,18 +22,6 @@ use PhpParser\ParserFactory;
 
 require __DIR__ . '/autoload.php';
 
-/*
-$data = '{"PAGE_SIZE":{"value":4096,"comment":"\nAt Linux mips64 and macOS arm64 platforms, this constant may have a value `16384`"},"SIGHUP":{"value":1,"comment":"\nAt macOS platform, this constant meaning \"hangup\"\nAt Windows platform, this constant may not exist"},"SIGINT":{"value":2,"comment":"\nAt macOS and Windows platforms, this constant meaning \"interrupt\""},"SIGQUIT":{"value":3,"comment":"\nAt macOS platform, this constant meaning \"quit\"\nAt Windows platform, this constant may not exist"},"SIGILL":{"value":4,"comment":"\nAt macOS platform, this constant meaning \"illegal instruction (not reset when caught)\"\nAt Windows platform, this constant meaning \"illegal instruction - invalid function image\""},"SIGTRAP":{"value":5,"comment":"\nAt macOS platform, this constant meaning \"trace trap (not reset when caught)\"\nAt Windows platform, this constant may not exist"},"SIGABRT":{"value":6,"comment":"\nAt macOS platform, this constant meaning \"abort()\"\nAt Windows platform, this constant may have a value `22` meaning \"abnormal termination triggered by abort call\""},"SIGIOT":{"value":6,"comment":"\nAt macOS and Windows platforms, this constant may not exist"},"SIGBUS":{"value":7,"comment":"\nAt Linux mips64 platform, this constant may have a value `10`\nAt macOS platform, this constant may have a value `10` meaning \"bus error\"\nAt Windows platform, this constant may not exist"},"SIGFPE":{"value":8,"comment":"\nAt macOS and Windows platforms, this constant meaning \"floating point exception\""},"SIGKILL":{"value":9,"comment":"\nAt macOS platform, this constant meaning \"kill (cannot be caught or ignored)\"\nAt Windows platform, this constant may not exist"},"SIGSEGV":{"value":11,"comment":"\nAt macOS platform, this constant meaning \"segmentation violation\"\nAt Windows platform, this constant meaning \"segment violation\""},"SIGPIPE":{"value":13,"comment":"\nAt macOS platform, this constant meaning \"write on a pipe with no one to read it\"\nAt Windows platform, this constant may not exist"},"SIGALRM":{"value":14,"comment":"\nAt macOS platform, this constant meaning \"alarm clock\"\nAt Windows platform, this constant may not exist"},"SIGTERM":{"value":15,"comment":"\nAt macOS platform, this constant meaning \"software termination signal from kill\"\nAt Windows platform, this constant meaning \"Software termination signal from kill\""},"SIGSTKFLT":{"value":16,"comment":"\nAt macOS and Windows platforms, this constant may not exist"},"SIGCHLD":{"value":17,"comment":"\nAt Linux mips64 platform, this constant may have a value `18`\nAt macOS platform, this constant may have a value `20` meaning \"to parent on child stop or exit\"\nAt Windows platform, this constant may not exist"},"SIGCONT":{"value":18,"comment":"\nAt Linux mips64 platform, this constant may have a value `25`\nAt macOS platform, this constant may have a value `19` meaning \"continue a stopped process\"\nAt Windows platform, this constant may not exist"},"SIGSTOP":{"value":19,"comment":"\nAt Linux mips64 platform, this constant may have a value `23`\nAt macOS platform, this constant may have a value `17` meaning \"sendable stop signal not from tty\"\nAt Windows platform, this constant may not exist"},"SIGTSTP":{"value":20,"comment":"\nAt Linux mips64 platform, this constant may have a value `24`\nAt macOS platform, this constant may have a value `18` meaning \"stop signal from tty\"\nAt Windows platform, this constant may not exist"},"SIGTTIN":{"value":21,"comment":"\nAt Linux mips64 platform, this constant may have a value `26`\nAt macOS platform, this constant meaning \"to readers pgrp upon background tty read\"\nAt Windows platform, this constant may not exist"},"SIGTTOU":{"value":22,"comment":"\nAt Linux mips64 platform, this constant may have a value `27`\nAt macOS platform, this constant meaning \"like TTIN for output if (tp->t_local&LTOSTOP)\"\nAt Windows platform, this constant may not exist"},"SIGURG":{"value":23,"comment":"\nAt Linux mips64 platform, this constant may have a value `21`\nAt macOS platform, this constant may have a value `16` meaning \"urgent condition on IO channel\"\nAt Windows platform, this constant may not exist"},"SIGXCPU":{"value":24,"comment":"\nAt Linux mips64 platform, this constant may have a value `30`\nAt macOS platform, this constant meaning \"exceeded CPU time limit\"\nAt Windows platform, this constant may not exist"},"SIGXFSZ":{"value":25,"comment":"\nAt Linux mips64 platform, this constant may have a value `31`\nAt macOS platform, this constant meaning \"exceeded file size limit\"\nAt Windows platform, this constant may not exist"},"SIGVTALRM":{"value":26,"comment":"\nAt Linux mips64 platform, this constant may have a value `28`\nAt macOS platform, this constant meaning \"virtual time alarm\"\nAt Windows platform, this constant may not exist"},"SIGPROF":{"value":27,"comment":"\nAt Linux mips64 platform, this constant may have a value `29`\nAt macOS platform, this constant meaning \"profiling time alarm\"\nAt Windows platform, this constant may not exist"},"SIGWINCH":{"value":28,"comment":"\nAt Linux mips64 platform, this constant may have a value `20`\nAt macOS platform, this constant meaning \"window size changes\"\nAt Windows platform, this constant may not exist"},"SIGIO":{"value":29,"comment":"\nAt Linux mips64 platform, this constant may have a value `22`\nAt macOS platform, this constant may have a value `23` meaning \"input\/output possible signal\"\nAt Windows platform, this constant may not exist"},"SIGLOST":{"value":29,"comment":"\nAt macOS and Windows platforms, this constant may not exist"},"SIGPWR":{"value":30,"comment":"\nAt Linux mips64 platform, this constant may have a value `19`\nAt macOS and Windows platforms, this constant may not exist"},"SIGSYS":{"value":31,"comment":"\nAt Linux mips64 platform, this constant may have a value `12`\nAt macOS platform, this constant may have a value `12` meaning \"bad argument to system call\"\nAt Windows platform, this constant may not exist"},"SIGUNUSED":{"value":31,"comment":"\nAt macOS and Windows platforms, this constant may not exist"},"SIGRTMIN":{"value":32,"comment":"\nAt macOS and Windows platforms, this constant may not exist"},"SIGSTKSZ":{"value":8192,"comment":"\nAt Linux arm64 platform, this constant may have a value `16384`\nAt macOS platform, this constant may have a value `131072` meaning \"(128K)recommended stack size\"\nAt Windows platform, this constant may not exist"},"SIGEMT":{"value":7,"comment":"\nAt macOS platform, this constant meaning \"EMT instruction\"\nAt Windows, Linux x86_64, Linux arm64 and Linux riscv64 platforms, this constant may not exist"},"SIGPOLL":{"value":7,"comment":"\nAt macOS platform, this constant meaning \"pollable event ([XSR] generated, not supported)\"\nAt Linux and Windows platforms, this constant may not exist"},"SIGINFO":{"value":29,"comment":"\nAt macOS platform, this constant meaning \"information request\"\nAt Linux and Windows platforms, this constant may not exist"},"SIGBREAK":{"value":21,"comment":"\nAt Windows platform, this constant meaning \"Ctrl-Break sequence\"\nAt Linux and macOS platforms, this constant may not exist"}}';
-
-$a = json_decode($data, true);
-foreach ($a as $i => &$e) {
-    $e = new ConstantDefinition(
-        value: $e['value'],
-        comment: $e['comment'],
-    );
-}
-*/
-
 $fixer = new ConstantFixer(
     modifiers: [
         // swow specified constant modifier
@@ -45,6 +33,9 @@ $fixer = new ConstantFixer(
             $ast = $parser->parse($content);
             $traverser = new NodeTraverser();
             $traverser->addVisitor(new class($constantDefinitions) extends SimpleNodeTraverserAbstract {
+                /**
+                 * @param array<string, ConstantDefinition> $constantDefinitions
+                 */
                 public function __construct(
                     private array $constantDefinitions,
                 ) {
@@ -89,7 +80,9 @@ $fixer = new ConstantFixer(
 
                             // replace it with fixed value
                             $oldConst = $stmt->consts[0];
-                            $oldConst->value->value = $constantDefinition->value;
+                            $oldConst->value = new Node\Scalar\LNumber(
+                                value: $constantDefinition->value,
+                            );
                             $newStmt = new Node\Stmt\ClassConst(
                                 consts: [
                                     $oldConst,
@@ -195,7 +188,7 @@ $fixer = new ConstantFixer(
                                 attributes: [
                                     'comments' => [
                                         new Doc(
-                                            text: '/** UNIX domain socket type, this constant is only avaliable at unix-like os. */'
+                                            text: '/** UNIX domain socket type, this constant is only available at unix-like os. */'
                                         ),
                                     ],
                                 ]
