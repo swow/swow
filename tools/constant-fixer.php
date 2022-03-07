@@ -46,6 +46,14 @@ $fixer = new ConstantFixer(
                 {
                     parent::enterNode($node);
                     if (
+                        $node instanceof Node\Stmt\ClassMethod &&
+                        $node->name->name === '__debugInfo'
+                    ) {
+                        // entering any __debugInfo
+                        $node->setAttribute('comments', [
+                            new Doc("/** @return array<string, mixed> debug information for var_dump */"),
+                        ]);
+                    } elseif (
                         $node instanceof Node\Stmt\Class_ &&
                         $this->inNamespaceClass('Swow', 'Signal')
                     ) {
@@ -65,6 +73,7 @@ $fixer = new ConstantFixer(
                                 $signalDefinitions[substr($k, 3)] = $v;
                             }
                         }
+                        // process all const exists
                         foreach ($node->stmts as $i => $stmt) {
                             if (!$stmt instanceof Node\Stmt\ClassConst) {
                                 continue;
@@ -121,7 +130,7 @@ $fixer = new ConstantFixer(
                                 attributes: [
                                     'comments' => [
                                         new Doc(
-                                            text: "/**\n* This constant holds SIG{$name} value, it's platform-dependent.\n *" .
+                                            text: "/**\n * This constant holds SIG{$name} value, it's platform-dependent.\n *" .
                                                 implode("\n *", array_map(static fn ($x) => $x === '' ? $x : " $x", explode("\n", $constantDefinition->comment))) .
                                                 "\n */",
                                         ),
@@ -209,7 +218,7 @@ $fixer = new ConstantFixer(
                                 attributes: [
                                     'comments' => [
                                         new Doc(
-                                            text: "/** \n * UNIX datagram socket type, this constant is only avaliable at unix-like os.\n */"
+                                            text: "/** UNIX datagram socket type, this constant is only avaliable at unix-like os. */"
                                         ),
                                     ],
                                 ]
@@ -229,78 +238,53 @@ $fixer = new ConstantFixer(
                         $node->consts[0]->name->name === 'PAGE_SIZE'
                     ) {
                         // entering class const Swow\Buffer::PAGE_SIZE
-                        // note: swow stubs' const declaration only one constant per statment so we can do this
-                        // comment is readonly attribute, so we need create a new ClassConst object to replace it
-                        $oldStmt = $node;
-                        $oldConst = $node->consts[0];
+                        $const = $node->consts[0];
                         // replace it with fixed value
                         $constantDefinition = $this->constantDefinitions['PAGE_SIZE'];
-                        $oldConst->value = new Node\Scalar\LNumber(
+                        $const->value = new Node\Scalar\LNumber(
                             value: $constantDefinition->value,
                         );
                         if ($constantDefinition->comment !== '') {
-                            $attr = [
-                                'comments' => [
+                            $const->setAttribute(
+                                'comments',
+                                [
                                     new Doc(
                                         text: "/**\n * This constant holds page size of this machine, it's platform-dependent.\n *" .
                                             implode("\n *", array_map(static fn ($x) => $x === '' ? $x : " $x", explode("\n", $constantDefinition->comment))) .
                                             "\n */",
                                     ),
-                                ],
-                            ];
-                        } else {
-                            $attr = [];
+                                ]
+                            );
                         }
-                        $newStmt = new Node\Stmt\ClassConst(
-                            consts: [
-                                $oldConst,
-                            ],
-                            flags: $oldStmt->flags,
-                            attributes: $attr,
-                        );
-                        //print_r($newStmt);
-                        return $newStmt;
                     } elseif (
                         $node instanceof Node\Stmt\ClassConst &&
                         $this->inNamespaceClass('Swow', 'Errno')
                     ) {
                         // entering class const Swow\Errno::xxx
                         // note: swow stubs' const declaration only one constant per statment so we can do this
-                        // comment is readonly attribute, so we need create a new ClassConst object to replace it
-                        $oldStmt = $node;
-                        $oldConst = $node->consts[0];
-                        $name = $oldConst->name->name;
+                        $const = $node->consts[0];
+                        $name = $const->name->name;
 
                         if (!($constantDefinition = $this->constantDefinitions["UV_{$name}"] ?? null)) {
                             //printf("cannot find errno %s\n", $name);
                             return null;
                         }
                         // replace it with fixed value
-                        $oldConst->value = new Node\Scalar\LNumber(
+                        $const->value = new Node\Scalar\LNumber(
                             value: $constantDefinition->value,
                         );
                         if ($constantDefinition->comment !== '') {
-                            $attr = [
-                                'comments' => [
+                            $const->setAttribute(
+                                'comments',
+                                [
                                     new Doc(
                                         text: "/**\n * This constant holds UV_{$name} value, it's platform-dependent.\n *" .
                                             implode("\n *", array_map(static fn ($x) => $x === '' ? $x : " $x", explode("\n", $constantDefinition->comment))) .
                                             "\n */",
                                     ),
                                 ],
-                            ];
-                        } else {
-                            $attr = [];
+                            );
                         }
-                        $newStmt = new Node\Stmt\ClassConst(
-                            consts: [
-                                $oldConst,
-                            ],
-                            flags: $oldStmt->flags,
-                            attributes: $attr,
-                        );
-                        //print_r($newStmt);
-                        return $newStmt;
                     }
                     return null;
                 }
@@ -308,7 +292,7 @@ $fixer = new ConstantFixer(
             $traverser->traverse($ast);
 
             $prettyPrinter = new StubPrettierPrinter();
-            return $prettyPrinter->prettyPrintFile($ast);
+            return preg_replace('/ +\n/', "\n", $prettyPrinter->prettyPrintFile($ast));
         },
     ],
 );
