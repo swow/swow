@@ -32,9 +32,17 @@ declare(strict_types=1);
         $pipes, null, null
     );
     do {
-        echo fread($pipes[1], 8192);
+        echo @fread($pipes[1], 8192);
     } while (!feof($pipes[1]));
-    $exitCode = proc_get_status($proc)['exitcode'];
+    /* FIXME: workaround for some platforms  */
+    if (function_exists('pcntl_waitpid')) {
+        pcntl_waitpid(proc_get_status($proc)['pid'], $exitCode);
+    } else {
+        while (proc_get_status($proc)['running']) {
+            usleep(1000);
+        }
+        $exitCode = proc_get_status($proc)['exitcode'];
+    }
     proc_close($proc);
     exit($exitCode);
 })();
