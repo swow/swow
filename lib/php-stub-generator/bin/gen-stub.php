@@ -28,22 +28,23 @@ $genStub = static function (): void {
     global $argv;
     $options = getopt('h', ['help', 'noinspection', 'stub-file::', 'gen-arginfo-mode', 'filter-mode', 'function-filter::', 'class-filter::'], $restIndex);
     $argv = array_slice($argv, $restIndex);
-    if (isset($options['h']) || isset($options['help']) || empty($argv[0])) {
+    $n = $argv[0] ?? '';
+    $error = empty($n);
+    if (isset($options['h']) || isset($options['help']) || $error) {
         $basename = basename(__FILE__);
-        exit(
-        <<<TEXT
+        echo <<<TEXT
 Usage: php {$basename} \\
          [-h|--help] [--noinspection] [--stub-file=/path/to/ext.stub.php] [--gen-arginfo-mode] \\
          [--filter-mode] [--function-filter=functionA|functionB] [--class-filter=classA|classB] \\
          <extension-name> [output-target]
 
-TEXT
-        );
+TEXT;
+        exit($error ? 1 : 0);
     }
     if (!empty($options['stub-file']) && !file_exists($options['stub-file'])) {
-        exit("Stub file '{$options['stub-file']}' not exist");
+        echo "Stub file '{$options['stub-file']}' not exist";
+        exit(1);
     }
-    $n = $argv[0];
     $g = new StubGenerator($n);
     if (isset($options['noinspection'])) {
         $g->setNoinspection();

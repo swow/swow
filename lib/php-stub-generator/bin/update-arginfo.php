@@ -34,16 +34,16 @@ use function Swow\Util\warn;
 $options = getopt('h', ['help', 'clear-cache', 'cache-path::', 'stub-file::'], $restIndex);
 $argv = array_slice($argv, $restIndex);
 
-if (isset($options['h']) || isset($options['help']) || count($argv) !== 3) {
+$error = count($argv) !== 3;
+if (isset($options['h']) || isset($options['help']) || $error) {
     $basename = basename(__FILE__);
-    exit(
-    <<<TEXT
+    echo <<<TEXT
 Usage: php {$basename} \\
          [--clear-cache] [--cache-path=/path/to/cache] [--stub-file=/path/to/ext.stub.php] \\
          <extension-name> <extension-source-path> <extension-build-dir>
 
-TEXT
-    );
+TEXT;
+    exit($error ? 1 : 0);
 }
 
 [$extensionName, $cSourcePath, $buildDir] = $argv;
