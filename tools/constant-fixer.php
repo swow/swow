@@ -32,8 +32,7 @@ $fixer = new ConstantFixer(
             $parser = (new ParserFactory())->create(ParserFactory::PREFER_PHP7);
             $ast = $parser->parse($content);
             $traverser = new NodeTraverser();
-            $traverser->addVisitor(new class($constantDefinitions) extends SimpleNodeTraverserAbstract
-            {
+            $traverser->addVisitor(new class($constantDefinitions) extends SimpleNodeTraverserAbstract {
                 /**
                  * @param array<string, ConstantDefinition> $constantDefinitions
                  */
@@ -51,7 +50,7 @@ $fixer = new ConstantFixer(
                     ) {
                         // entering any __debugInfo
                         $node->setAttribute('comments', [
-                            new Doc("/** @return array<string, mixed> debug information for var_dump */"),
+                            new Doc('/** @return array<string, mixed> debug information for var_dump */'),
                         ]);
                     } elseif (
                         $node instanceof Node\Stmt\Class_ &&
@@ -102,7 +101,7 @@ $fixer = new ConstantFixer(
                                     'comments' => [
                                         new Doc(
                                             text: "/**\n * This constant holds SIG{$name} value, it's platform-dependent.\n *" .
-                                                implode("\n *", array_map(static fn ($x) => $x === '' ? $x : " $x", explode("\n", $constantDefinition->comment))) .
+                                                implode("\n *", array_map(static fn ($x) => $x === '' ? $x : " {$x}", explode("\n", $constantDefinition->comment))) .
                                                 "\n */",
                                         ),
                                     ],
@@ -131,7 +130,7 @@ $fixer = new ConstantFixer(
                                     'comments' => [
                                         new Doc(
                                             text: "/**\n * This constant holds SIG{$name} value, it's platform-dependent.\n *" .
-                                                implode("\n *", array_map(static fn ($x) => $x === '' ? $x : " $x", explode("\n", $constantDefinition->comment))) .
+                                                implode("\n *", array_map(static fn ($x) => $x === '' ? $x : " {$x}", explode("\n", $constantDefinition->comment))) .
                                                 "\n */",
                                         ),
                                     ],
@@ -218,7 +217,7 @@ $fixer = new ConstantFixer(
                                 attributes: [
                                     'comments' => [
                                         new Doc(
-                                            text: "/** UNIX datagram socket type, this constant is only avaliable at unix-like os. */"
+                                            text: '/** UNIX datagram socket type, this constant is only avaliable at unix-like os. */'
                                         ),
                                     ],
                                 ]
@@ -250,7 +249,7 @@ $fixer = new ConstantFixer(
                                 [
                                     new Doc(
                                         text: "/**\n * This constant holds page size of this machine, it's platform-dependent.\n *" .
-                                            implode("\n *", array_map(static fn ($x) => $x === '' ? $x : " $x", explode("\n", $constantDefinition->comment))) .
+                                            implode("\n *", array_map(static fn ($x) => $x === '' ? $x : " {$x}", explode("\n", $constantDefinition->comment))) .
                                             "\n */",
                                     ),
                                 ]
@@ -279,7 +278,7 @@ $fixer = new ConstantFixer(
                                 [
                                     new Doc(
                                         text: "/**\n * This constant holds UV_{$name} value, it's platform-dependent.\n *" .
-                                            implode("\n *", array_map(static fn ($x) => $x === '' ? $x : " $x", explode("\n", $constantDefinition->comment))) .
+                                            implode("\n *", array_map(static fn ($x) => $x === '' ? $x : " {$x}", explode("\n", $constantDefinition->comment))) .
                                             "\n */",
                                     ),
                                 ],
