@@ -17,6 +17,7 @@ require __DIR__ . '/../autoload.php';
 
 use Swow\Coroutine;
 use Swow\CoroutineException;
+use Swow\Errno;
 use Swow\Http\ResponseException;
 use Swow\Http\Server as HttpServer;
 use Swow\Http\Status as HttpStatus;
@@ -24,7 +25,6 @@ use Swow\Http\WebSocketFrame;
 use Swow\Socket;
 use Swow\SocketException;
 use Swow\WebSocket\Opcode as WebSocketOpcode;
-use Swow\Errno;
 
 $host = getenv('SERVER_HOST') ?: '127.0.0.1';
 $port = (int) (getenv('SERVER_PORT') ?: 9764);

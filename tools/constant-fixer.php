@@ -195,7 +195,7 @@ $fixer = new ConstantFixer(
                                 attributes: [
                                     'comments' => [
                                         new Doc(
-                                            text: "/** UNIX domain socket type, this constant is only avaliable at unix-like os. */"
+                                            text: '/** UNIX domain socket type, this constant is only avaliable at unix-like os. */'
                                         ),
                                     ],
                                 ]
