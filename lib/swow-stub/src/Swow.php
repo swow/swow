@@ -733,7 +733,10 @@ namespace Swow
          * @param int $level trace start level
          * @param int $limit trace max length, negative or 0 meaning no limit
          * @param int $options trace options, same as `debug_backtrace` options { @see https://www.php.net/manual/en/function.debug-backtrace.php }
-         * @return array<array{'file': string, 'line': int, 'function': string, 'class': string, 'type': string, 'args': array<mixed>}>
+         * @phan-return array<array{'file': string, 'line': int, 'function': string, 'class': string, 'type': string, 'args': array<mixed>}>
+         * @phpstan-return array<array{'file': string, 'line': int, 'function': string, 'class': string, 'type': string, 'args': array<mixed>}>
+         * @psalm-return array<array{'file': string, 'line': int, 'function': string, 'class': string, 'type': string, 'args': array<mixed>}>
+         * @return array<array>
          */
         public function getTrace(int $level = 0, int $limit = 0, int $options = \DEBUG_BACKTRACE_PROVIDE_OBJECT): array { }
 
@@ -1477,7 +1480,7 @@ namespace Swow
          * @phan-param non-empty-array<string|\Stringable|Buffer|array{0: string|\Stringable, 1: int, 2?: int}|array{0: Buffer, 1: int}> $vector
          * @phpstan-param non-empty-array<string|\Stringable|Buffer|array{0: string|\Stringable, 1: int, 2?: int}|array{0: Buffer, 1: int}> $vector
          * @psalm-param non-empty-array<string|\Stringable|Buffer|array{0: string|\Stringable, 1: int, 2?: int}|array{0: Buffer, 1: int}> $vector
-         * @psalm-param array<string|\Stringable|Buffer|array{0: string|\Stringable, 1: int, 2?: int}|array{0: Buffer, 1: int}> $vector
+         * @param array<string|\Stringable|Buffer|array> $vector
          * @param int|null $timeout timeout in microseconds or null for using {@see Socket::getWriteTimeout()} value
          */
         public function write(array $vector, ?int $timeout = null): static { }

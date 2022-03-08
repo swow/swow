@@ -20,8 +20,13 @@ class ConstantFixer
     private array $constantDefinitions;
 
     /**
-     * @param array<callable(string, array<string, ConstantDefinition>): string> $modifiers
-     * @param callable():array<string, ConstantDefinition>|null $getConstantDefinitions
+     * @phan-param array<callable(string, array<string, ConstantDefinition>): string> $modifiers
+     * @phpstan-param array<callable(string, array<string, ConstantDefinition>): string> $modifiers
+     * @psalm-param array<callable(string, array<string, ConstantDefinition>): string> $modifiers
+     * @param array<callable> $modifiers
+     * @phan-param callable():array<string, ConstantDefinition>|null $getConstantDefinitions
+     * @phpstan-param callable():array<string, ConstantDefinition>|null $getConstantDefinitions
+     * @psalm-param callable():array<string, ConstantDefinition>|null $getConstantDefinitions
      */
     public function __construct(
         private array $modifiers,
