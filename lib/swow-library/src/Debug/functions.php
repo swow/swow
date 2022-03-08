@@ -71,11 +71,7 @@ function showExecutedSourceLines(bool $all = false): Handler
         if (!$cache[$file]) {
             return "Unable to read file {$file}";
         }
-        if (!isset($cache[$file][$line - 1])) {
-            return "Unable to read file line {$file}:{$line}";
-        }
-
-        return $cache[$file][$line - 1];
+        return $cache[$file][$line - 1] ?? "Unable to read file line {$file}:{$line}";
     };
     if ($all) {
         $handler = static function () use ($getFileLineCached): void {
