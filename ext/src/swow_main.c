@@ -63,9 +63,6 @@
 SWOW_API zend_class_entry *swow_ce;
 SWOW_API zend_object_handlers swow_handlers;
 
-SWOW_API zend_class_entry *swow_module_ce;
-SWOW_API zend_object_handlers swow_module_handlers;
-
 ZEND_DECLARE_MODULE_GLOBALS(swow)
 
 SWOW_API swow_nts_globals_t swow_nts_globals;
@@ -492,35 +489,27 @@ int swow_module_init(INIT_FUNC_ARGS)
         cat_false, cat_false,
         swow_create_object_deny, NULL, 0
     );
-
+    /* Version constants (TODO: remove type cast if we no longger support PHP 7.x) */
+#define SWOW_VERSION_MAP(XX) \
+    XX(MAJOR_VERSION, long, zend_long) \
+    XX(MINOR_VERSION, long, zend_long) \
+    XX(RELEASE_VERSION, long, zend_long) \
+    XX(EXTRA_VERSION, string, char *) \
+    XX(VERSION, string, char *) \
+    XX(VERSION_ID, long, zend_long)
+#define SWOW_VERSION_GEN(name, type, cast) \
+    zend_declare_class_constant_##type(swow_ce, ZEND_STRL(#name), (cast) SWOW_##name);
+    SWOW_VERSION_MAP(SWOW_VERSION_GEN)
+#undef SWOW_VERSION_GEN
     /* Module constants */
-    swow_module_ce = swow_register_internal_class(
-        "Swow\\Module", NULL, NULL,
-        &swow_module_handlers, NULL,
-        cat_false, cat_false,
-        swow_create_object_deny, NULL, 0
-    );
 #define SWOW_MODULE_TYPE_GEN(name, value) \
-    zend_declare_class_constant_long(swow_module_ce, ZEND_STRL("TYPE_" #name), (value));
+    zend_declare_class_constant_long(swow_ce, ZEND_STRL("MODULE_TYPE_" #name), (value));
     CAT_MODULE_TYPE_MAP(SWOW_MODULE_TYPE_GEN)
 #undef SWOW_MODULE_TYPE_GEN
 #define SWOW_MODULE_UNION_TYPE_GEN(name, value) \
-    zend_declare_class_constant_long(swow_module_ce, ZEND_STRL("TYPES_" #name), (value));
+    zend_declare_class_constant_long(swow_ce, ZEND_STRL("MODULE_TYPES_" #name), (value));
     CAT_MODULE_UNION_TYPE_MAP(SWOW_MODULE_UNION_TYPE_GEN)
 #undef SWOW_MODULE_UNION_TYPE_GEN
-
-    /* Version constants (TODO: remove type cast if we no longger support PHP 7.x) */
-#define SWOW_VERSION_MAP(XX) \
-    XX(MAJOR_VERSION, LONG, zend_long) \
-    XX(MINOR_VERSION, LONG, zend_long) \
-    XX(RELEASE_VERSION, LONG, zend_long) \
-    XX(EXTRA_VERSION, STRING, char *) \
-    XX(VERSION, STRING, char *) \
-    XX(VERSION_ID, LONG, zend_long)
-
-#define SWOW_VERSION_GEN(name, type, cast) REGISTER_##type##_CONSTANT("Swow\\" #name, (cast) SWOW_##name, CONST_CS | CONST_PERSISTENT);
-    SWOW_VERSION_MAP(SWOW_VERSION_GEN)
-#undef SWOW_VERSION_GEN
 
     return SUCCESS;
 }

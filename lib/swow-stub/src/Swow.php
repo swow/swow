@@ -6,6 +6,43 @@ namespace
 {
     class Swow
     {
+        public const MAJOR_VERSION = 0;
+        public const MINOR_VERSION = 1;
+        public const RELEASE_VERSION = 0;
+        public const EXTRA_VERSION = '';
+        public const VERSION = '0.1.0';
+        public const VERSION_ID = 100;
+        public const MODULE_TYPE_CORE = 1;
+        public const MODULE_TYPE_COROUTINE = 2;
+        public const MODULE_TYPE_CHANNEL = 4;
+        public const MODULE_TYPE_SYNC = 8;
+        public const MODULE_TYPE_EVENT = 16;
+        public const MODULE_TYPE_TIME = 32;
+        public const MODULE_TYPE_SOCKET = 64;
+        public const MODULE_TYPE_DNS = 128;
+        public const MODULE_TYPE_WORK = 256;
+        public const MODULE_TYPE_BUFFER = 512;
+        public const MODULE_TYPE_FS = 1024;
+        public const MODULE_TYPE_SIGNAL = 2048;
+        public const MODULE_TYPE_PROCESS = 4096;
+        public const MODULE_TYPE_THREAD = 8192;
+        public const MODULE_TYPE_WATCH_DOG = 131072;
+        public const MODULE_TYPE_PROTOCOL = 262144;
+        public const MODULE_TYPE_SSL = 2097152;
+        public const MODULE_TYPE_EXT = 4194304;
+        public const MODULE_TYPE_TEST = 8388608;
+        public const MODULE_TYPE_USR1 = 16777216;
+        public const MODULE_TYPE_USR2 = 33554432;
+        public const MODULE_TYPE_USR3 = 67108864;
+        public const MODULE_TYPE_USR4 = 134217728;
+        public const MODULE_TYPE_USR5 = 268435456;
+        public const MODULE_TYPE_USR6 = 536870912;
+        public const MODULE_TYPE_USR7 = 1073741824;
+        public const MODULE_TYPE_USR8 = -2147483648;
+        public const MODULE_TYPES_BUILTIN = 15089663;
+        public const MODULE_TYPES_USR = -16777216;
+        public const MODULE_TYPES_ALL = -1687553;
+
         public static function isBuiltWith(string $lib): bool { }
     }
 }
@@ -13,53 +50,6 @@ namespace
 namespace
 {
     function msleep(int $milli_seconds): int { }
-}
-
-namespace Swow
-{
-    const MAJOR_VERSION = 0;
-    const MINOR_VERSION = 1;
-    const RELEASE_VERSION = 0;
-    const EXTRA_VERSION = '';
-    const VERSION = '0.1.0';
-    const VERSION_ID = 100;
-}
-
-namespace Swow
-{
-    class Module
-    {
-        public const TYPE_CORE = 1;
-        public const TYPE_COROUTINE = 2;
-        public const TYPE_CHANNEL = 4;
-        public const TYPE_SYNC = 8;
-        public const TYPE_EVENT = 16;
-        public const TYPE_TIME = 32;
-        public const TYPE_SOCKET = 64;
-        public const TYPE_DNS = 128;
-        public const TYPE_WORK = 256;
-        public const TYPE_BUFFER = 512;
-        public const TYPE_FS = 1024;
-        public const TYPE_SIGNAL = 2048;
-        public const TYPE_PROCESS = 4096;
-        public const TYPE_THREAD = 8192;
-        public const TYPE_WATCH_DOG = 131072;
-        public const TYPE_PROTOCOL = 262144;
-        public const TYPE_SSL = 2097152;
-        public const TYPE_EXT = 4194304;
-        public const TYPE_TEST = 8388608;
-        public const TYPE_USR1 = 16777216;
-        public const TYPE_USR2 = 33554432;
-        public const TYPE_USR3 = 67108864;
-        public const TYPE_USR4 = 134217728;
-        public const TYPE_USR5 = 268435456;
-        public const TYPE_USR6 = 536870912;
-        public const TYPE_USR7 = 1073741824;
-        public const TYPE_USR8 = -2147483648;
-        public const TYPES_BUILTIN = 15089663;
-        public const TYPES_USR = -16777216;
-        public const TYPES_ALL = -1687553;
-    }
 }
 
 namespace Swow
@@ -2303,8 +2293,8 @@ namespace Swow\WebSocket
 {
     class Frame implements \Stringable
     {
-        public const PING = '27890027';
-        public const PONG = '278a0027';
+        public const PING = '8900';
+        public const PONG = '8a00';
 
         public function unpackHeader(\Swow\Buffer $buffer): int { }
 
