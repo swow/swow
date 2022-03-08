@@ -572,7 +572,6 @@ class StubGenerator
         $constantDeclarations = [];
         if (!$this->genArginfoMode) {
             foreach ($class->getConstants() as $constantName => $constantValue) {
-                $constantValue = is_numeric($constantValue) ? $constantValue : "'{$constantValue}'";
                 $userComment = $this->userCommentMap["{$class->getName()}::{$constantName}"] ?? null;
                 $comment = $userComment ? static::genComment(static::solveRawUserComment($userComment)) : '';
                 $constantDeclarations[] = sprintf(
