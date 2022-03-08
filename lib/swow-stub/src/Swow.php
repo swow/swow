@@ -731,7 +731,7 @@ namespace Swow
          * | 0 / -5 | Swow\Coroutine->getTraceAsString() | ends here      |                                   | ends here      |
          *
          * @param int $level trace start level
-         * @param int $limit trace max length, 0 meaning no limit
+         * @param int $limit trace max length, negative or 0 meaning no limit
          * @param int $options trace options, same as `debug_backtrace` options { @see https://www.php.net/manual/en/function.debug-backtrace.php }
          * @return array<array{'file': string, 'line': int, 'function': string, 'class': string, 'type': string, 'args': array<mixed>}>
          */
@@ -966,25 +966,88 @@ namespace Swow
         public function eof(): bool { }
 
         /**
-         * @param int $offset
-         * @param int $whence
+         * set the buffer position by `$offset` and `$whence`
+         *
+         * if `$whence` is
+         *
+         * - SEEK_SET: sets position to `$offset` from the buffer begin
+         * - SEEK_CUR: sets position to `$offset` from the current buffer position, `$offset` can be negative to seek forward
+         * - SEEK_END: sets position to `$offset` from the buffer end, `$offset` should be negative or 0
+         *
+         * @throws BufferException when new buffer position overflow (out of postion 0 to buffer size - 1)
+         * @param int $offset offset by `$whence`
+         * @param int $whence SEEK_SET or SEEK_CUR or SEEK_END
          */
         public function seek($offset, $whence = \SEEK_SET): static { }
 
-        /** @param int $length */
+        /**
+         * read at max `$length` bytes data from current position, set buffer position to next unread byte
+         *
+         * @throws \ValueError when specified `$length` not in range [-1, max]
+         * @phpstan-param int<-1, max> $length
+         * @psalm-param int<-1, max> $length
+         * @param int $length -1 meaning read all available, otherwise max length in byte to read
+         */
         public function read($length = -1): string { }
 
-        /** @param int $length */
+        /**
+         * read at max `$length` bytes data from current position, not change buffer position
+         *
+         * @throws \ValueError when specified `$length` not in range [-1, max]
+         * @phpstan-param int<-1, max> $length
+         * @psalm-param int<-1, max> $length
+         * @see Buffer::read() for param usage
+         */
         public function peek($length = -1): string { }
 
-        /** @var int $offset [optional] = $this->getOffset() */
+        /**
+         * read at max `$length` bytes data from specified position, not change buffer position
+         *
+         * @throws BufferException when specified `$offset` not in range [0, buffer length - 1]
+         * @throws \ValueError when specified `$length` not in range [-1, max]
+         * @phpstan-param int<0, max>|null $offset
+         * @psalm-param int<0, max>|null $offset
+         * @param int|null $offset starting position in bytes or null for using {@see Buffer::getOffset()} value
+         * @phpstan-param int<-1, max> $length
+         * @psalm-param int<-1, max> $length
+         * @param int $length -1 meaning read all available, otherwise max length in byte to read
+         */
         public function peekFrom(?int $offset = null, int $length = -1): string { }
 
         public function getContents(): string { }
 
-        /** @param string $string */
+        /**
+         * write `$string` to buffer, set buffer position to the end of written string
+         *
+         * `$offset` and `$length` is for input `$string`
+         *
+         * @throws \ValueError when specified `$offset` not in range [0, string length - 1]
+         * @throws \ValueError when specified `$length` not in range [-1, available string length]
+         * @param string $string data to write
+         * @phpstan-param int<0, max> $offset
+         * @psalm-param int<0, max> $offset
+         * @param int $offset starting offset in bytes
+         * @phpstan-param int<-1, max> $length
+         * @psalm-param int<-1, max> $length
+         * @param int $length max length in bytes
+         */
         public function write($string, int $offset = 0, int $length = -1): static { }
 
+        /**
+         * write `$string` to buffer, not change buffer position
+         *
+         * `$offset` and `$length` is for input `$string`
+         *
+         * @throws \ValueError when specified `$offset` not in range [0, string length - 1]
+         * @throws \ValueError when specified `$length` not in range [-1, available string length]
+         * @param string $string data to write
+         * @phpstan-param int<0, max> $offset
+         * @psalm-param int<0, max> $offset
+         * @param int $offset starting offset in bytes
+         * @phpstan-param int<-1, max> $length
+         * @psalm-param int<-1, max> $length
+         * @param int $length max length in bytes
+         */
         public function copy(string $string, int $offset = 0, int $length = -1): static { }
 
         public function truncate(int $length = -1): static { }
