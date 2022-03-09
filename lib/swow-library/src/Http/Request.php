@@ -163,6 +163,9 @@ class Request extends Message implements RequestInterface
         return $this->uriString;
     }
 
+    /**
+     * @return array<string, array<string>>
+     */
     public function getStandardHeaders(): array
     {
         $headers = parent::getStandardHeaders();
@@ -170,7 +173,7 @@ class Request extends Message implements RequestInterface
         if (!$this->hasHeader('host')) {
             // Ensure Host is the first header.
             // See: http://tools.ietf.org/html/rfc7230#section-5.4
-            $headers = ['Host' => $this->getHostFromUri()] + $headers;
+            $headers = ['Host' => [$this->getHostFromUri()]] + $headers;
         }
 
         return $headers;

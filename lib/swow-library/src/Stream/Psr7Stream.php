@@ -85,11 +85,11 @@ class Psr7Stream implements StreamInterface, Stringable
     /** @var resource|null A resource reference */
     protected $stream;
 
-    protected ?bool $seekable = null;
+    protected bool $seekable = false;
 
-    protected ?bool $readable = null;
+    protected bool $readable = false;
 
-    protected ?bool $writable = null;
+    protected bool $writable = false;
 
     protected mixed $uri;
 
@@ -185,7 +185,7 @@ class Psr7Stream implements StreamInterface, Stringable
         return $this->detached || feof($this->stream);
     }
 
-    public function isSeekable(): bool
+    public function isSeekable(): bool|null
     {
         return $this->seekable;
     }
@@ -210,7 +210,7 @@ class Psr7Stream implements StreamInterface, Stringable
         $this->seek(0);
     }
 
-    public function isWritable(): bool
+    public function isWritable(): bool|null
     {
         return $this->writable;
     }
@@ -235,7 +235,7 @@ class Psr7Stream implements StreamInterface, Stringable
         return $result;
     }
 
-    public function isReadable(): bool
+    public function isReadable(): bool|null
     {
         return $this->readable;
     }

@@ -59,7 +59,7 @@ class Connection extends Socket implements ProtocolTypeInterface
 
     /* TODO: support chunk transfer encoding */
 
-    protected ?Server $server;
+    protected Server $server;
 
     public function __construct(Server $server)
     {
@@ -143,6 +143,9 @@ class Connection extends Socket implements ProtocolTypeInterface
         return $headers;
     }
 
+    /**
+     * @param int|string|array<string, string>|array<string, array<string>> $args
+     */
     public function respond(mixed ...$args): void
     {
         switch ($this->protocolType) {

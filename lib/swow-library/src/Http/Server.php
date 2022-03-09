@@ -50,7 +50,9 @@ class Server extends Socket
     /**
      * @param Connection[] $targets
      * @param array<int, Connection>|callable $filter
-     * @return SocketException[]
+     * @return SocketException[]|static
+     * @psalm-todo: this is not correct: flags can be bitwise combined things
+     * @psalm-return $flags is self::BROADCAST_FLAG_RECORD_EXCEPTIONS ? array<SocketException> : static
      */
     public function broadcastMessage(WebSocketFrame $frame, ?array $targets = null, array|callable $filter = [], int $flags = self::BROADCAST_FLAG_NONE): static|array
     {

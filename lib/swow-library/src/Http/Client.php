@@ -32,6 +32,9 @@ class Client extends Socket implements ClientInterface, ProtocolTypeInterface
 {
     use ConfigTrait;
     use ProtocolTypeTrait;
+    /*
+     * @use ReceiverTrait<RawResponse>
+     */
     use ReceiverTrait {
         __construct as __constructReceiver;
         execute as receiverExecute;

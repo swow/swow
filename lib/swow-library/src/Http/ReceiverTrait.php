@@ -30,6 +30,13 @@ use function trim;
 use const UPLOAD_ERR_CANT_WRITE;
 use const UPLOAD_ERR_OK;
 
+/**
+ * http response / request receiver
+ *
+ * @phan-template T of RawRequest|RawResponse
+ * @phpstan-template T of RawRequest|RawResponse
+ * @psalm-template T of RawRequest|RawResponse
+ */
 trait ReceiverTrait
 {
     protected Buffer $buffer;
@@ -84,7 +91,10 @@ trait ReceiverTrait
     }
 
     /**
-     * TODO: The options must be managed in a unified way
+     * @todo The options must be managed in a unified way
+     * @phan-return T
+     * @phpstan-return T
+     * @psalm-return T
      */
     protected function execute(int $maxHeaderLength, int $maxContentLength): RawRequest|RawResponse
     {

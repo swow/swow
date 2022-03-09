@@ -587,6 +587,21 @@ TEXT;
      *     'line': int|null,
      *     'type': string|null,
      * } $trace
+     * @psalm-return ($index is null ? array<int, array{
+     *     'function': string|null,
+     *     'class': string|null,
+     *     'args': array<string>,
+     *     'file': string|null,
+     *     'line': int|null,
+     *     'type': string|null,
+     * }> : array{
+     *     'function': string|null,
+     *     'class': string|null,
+     *     'args': array<string>,
+     *     'file': string|null,
+     *     'line': int|null,
+     *     'type': string|null,
+     * }) $trace
      */
     protected static function getTraceOfCoroutine(Coroutine $coroutine, ?int $index = null): array
     {
@@ -629,6 +644,19 @@ TEXT;
      *     'executing': string|null,
      *     'source position': string|null,
      * } $simpleInfo
+     * @psalm-return ($whatAreYouDoing is true ?array{
+     *     'id': int,
+     *     'state': string,
+     *     'round': int,
+     *     'elapsed': string,
+     *     'executing': string,
+     *     'source position': string,
+     * } : array{
+     *     'id': int,
+     *     'state': string,
+     *     'round': int,
+     *     'elapsed': string,
+     * }) $simpleInfo
      */
     protected static function getSimpleInfoOfCoroutine(Coroutine $coroutine, bool $whatAreYouDoing): array
     {
@@ -687,7 +715,15 @@ TEXT;
 
     /**
      * @return array<array{
-     *     'line': string,
+     *     'line': string|int,
+     *     'content': string,
+     * }>
+     * @phpstan-return array<array{
+     *     'line': string|positive-int,
+     *     'content': string,
+     * }>
+     * @psalm-return array<array{
+     *     'line': string|positive-int,
      *     'content': string,
      * }>
      */
