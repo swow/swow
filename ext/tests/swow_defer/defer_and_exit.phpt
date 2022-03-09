@@ -8,19 +8,20 @@ require __DIR__ . '/../include/skipif.php';
 <?php
 require __DIR__ . '/../include/bootstrap.php';
 
+use Swow\Coroutine;
 use function Swow\defer;
 
-defer(function () {
-    echo '1' . PHP_LF;
+Coroutine::run(function(){
+    defer(function () {
+        echo '1' . PHP_EOL;
+    });
+    defer(function () {
+        echo '2' . PHP_EOL;
+    });
+    exit;
 });
-defer(function () {
-    echo '2' . PHP_LF;
-});
-
-echo 'Done' . PHP_LF;
 
 ?>
 --EXPECT--
-Done
 2
 1
