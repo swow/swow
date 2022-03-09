@@ -1069,6 +1069,7 @@ SWOW_API cat_bool_t swow_coroutine_set_local_var(swow_coroutine_t *scoroutine, z
 
         SWOW_COROUTINE_CHECK_CALL_INFO(goto _error);
 
+        Z_ADDREF_P(value);
         error = zend_set_local_var(name, value, force);
 
         if (UNEXPECTED(error != SUCCESS)) {
