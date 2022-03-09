@@ -209,6 +209,26 @@ SWOW_API void swow_output_globals_shutdown(void)
     } SWOW_OUTPUT_GLOBALS_MODIFY_END();
 }
 
+SWOW_API int swow_zend_call_function_anyway(zend_fcall_info *fci, zend_fcall_info_cache *fci_cache)
+{
+    zval retval;
+    zend_object *exception = EG(exception);
+    if (exception) {
+        EG(exception) = NULL;
+    }
+    if (!fci->retval) {
+        fci->retval = &retval;
+    }
+    int ret = zend_call_function(fci, fci_cache);
+    if (fci->retval == &retval) {
+        zval_ptr_dtor(&retval);
+    }
+    if (exception) {
+        EG(exception) = exception;
+    }
+    return ret;
+}
+
 /* wrapper init/shutdown */
 
 void swow_wrapper_init(void)

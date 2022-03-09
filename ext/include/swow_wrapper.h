@@ -379,6 +379,8 @@ static zend_always_inline void swow_output_globals_fast_shutdown(void)
 #define zend_forbid_dynamic_call(x) zend_forbid_dynamic_call()
 #endif
 
+SWOW_API int swow_zend_call_function_anyway(zend_fcall_info *fci, zend_fcall_info_cache *fci_cache);
+
 #ifdef __cplusplus
 }
 #endif

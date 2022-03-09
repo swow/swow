@@ -54,7 +54,6 @@ SWOW_API cat_bool_t swow_defer(zval *zcallable)
             zend_object *defer = swow_object_create(swow_defer_ce);
             zval zdefer;
             ZVAL_OBJ(&zdefer, defer);
-            Z_TRY_ADDREF(zdefer);
             /* zend_hash_str_add_new is macro on PHP-7.x, so we can not use ZEND_STRL here */
             zend_hash_str_add_new(symbol_table, SWOW_DEFER_MAGIC_NAME, sizeof(SWOW_DEFER_MAGIC_NAME) - 1, &zdefer);
             sdefer = swow_defer_get_from_object(defer);
@@ -84,7 +83,7 @@ SWOW_API void swow_defer_do_tasks(swow_defer_t *sdefer)
         fci.param_count = 0;
         fci.named_params = NULL;
         fci.retval = &retval;
-        (void) zend_call_function(&fci, &task->fcc);
+        (void) swow_zend_call_function_anyway(&fci, &task->fcc);
         zval_ptr_dtor(&retval);
         zval_ptr_dtor(&task->zcallable);
         efree(task);
