@@ -13,6 +13,7 @@ declare(strict_types=1);
 
 namespace Swow\Http\Server;
 
+use Swow\Errno;
 use Swow\Http\Parser as HttpParser;
 use Swow\Http\ProtocolTypeInterface;
 use Swow\Http\ProtocolTypeTrait;
@@ -23,6 +24,7 @@ use Swow\Http\Status as HttpStatus;
 use Swow\Http\UploadFile;
 use Swow\Http\WebSocketTrait;
 use Swow\Socket;
+use Swow\SocketException;
 use Swow\WebSocket;
 use function base64_encode;
 use function is_array;
@@ -59,7 +61,7 @@ class Connection extends Socket implements ProtocolTypeInterface
 
     /* TODO: support chunk transfer encoding */
 
-    protected Server $server;
+    protected ?Server $server;
 
     public function __construct(Server $server)
     {
@@ -68,9 +70,14 @@ class Connection extends Socket implements ProtocolTypeInterface
         $this->server = $server;
     }
 
+    /**
+     * get server bound to this connection
+     *
+     * @throws SocketException when connection is shut down
+     */
     public function getServer(): Server
     {
-        return $this->server;
+        return $this->server ?? throw new SocketException(message: 'Connection is shut down', code: Errno::EBADF);
     }
 
     public function getProtocolType(): int
