@@ -26,6 +26,9 @@ use function Swow\Util\processExecute;
 
 $genStub = static function (): void {
     global $argv;
+    /**
+     * @var array<string, string> $options
+     */
     $options = getopt('h', ['help', 'noinspection', 'stub-file::', 'gen-arginfo-mode', 'filter-mode', 'function-filter::', 'class-filter::'], $restIndex);
     $argv = array_slice($argv, $restIndex);
     $n = $argv[0] ?? '';

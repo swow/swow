@@ -23,5 +23,7 @@
     <issueHandlers>
         <!-- for not LSP voilation mismatches -->
         <MethodSignatureMismatch errorLevel="suppress" />
+        <!-- for dynamic requires -->
+        <UnresolvableInclude errorLevel="suppress" />
     </issueHandlers>
 </psalm>

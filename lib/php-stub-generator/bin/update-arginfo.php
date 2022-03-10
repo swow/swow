@@ -31,6 +31,9 @@ use function Swow\Util\processExecute;
 use function Swow\Util\success;
 use function Swow\Util\warn;
 
+/**
+ * @var array<string, string> $options
+ */
 $options = getopt('h', ['help', 'clear-cache', 'cache-path::', 'stub-file::'], $restIndex);
 $argv = array_slice($argv, $restIndex);
 
