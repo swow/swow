@@ -994,14 +994,19 @@ TEXT;
         /* @noinspection PhpConditionAlreadyCheckedInspection */
         do {
             try {
+                // this will yield out from current coroutine,
+                // $context->stopped may be changed here
                 $signalChannel->pop(100);
                 throw new DebuggerException('Cancelled');
             } catch (ChannelException $exception) {
+                // if timed out, continue
                 if ($exception->getCode() !== Errno::ETIMEDOUT) {
                     throw $exception;
                 }
             }
+            /* @phpstan-ignore-next-line */
         } while (!$context->stopped);
+        /* @phpstan-ignore-next-line */
         $signalListener->kill();
     }
 
