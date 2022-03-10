@@ -48,7 +48,6 @@ use function is_dir;
 use function is_float;
 use function is_int;
 use function is_null;
-use function is_numeric;
 use function is_resource;
 use function is_string;
 use function ltrim;
@@ -452,7 +451,8 @@ class StubGenerator
             if ($function instanceof ReflectionFunction) {
                 $fullName = $function->getName();
             } else /* if ($function instanceof ReflectionMethod) */ {
-                $fullName = "{$function->getDeclaringClass()->getName()}->{$function->getShortName()}";
+                $operator = $function->isStatic() ? '::' : '->';
+                $fullName = "{$function->getDeclaringClass()->getName()}{$operator}{$function->getShortName()}";
             }
             $userComment = $this->userCommentMap[$fullName] ?? '';
             if ($userComment) {

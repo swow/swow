@@ -109,7 +109,7 @@ $getStubComments = function () use ($argv): void {
         // TODO: we can not get comment of constant for now (use regex?)
         // if (isset($constantMap[$namespace])) { }
         foreach ($group as $functionOrClass) {
-            $functionOrClassName = "{$namespace}\\{$functionOrClass}";
+            $functionOrClassName = $namespace ? "{$namespace}\\{$functionOrClass}" : $functionOrClass;
             if (class_exists($functionOrClassName)) {
                 $classReflection = new ReflectionClass($functionOrClassName);
                 $comment = $classReflection->getDocComment();
@@ -128,7 +128,8 @@ $getStubComments = function () use ($argv): void {
                 foreach ($methodsReflections as $methodsReflection) {
                     $comment = $methodsReflection->getDocComment();
                     if ($comment) {
-                        $methodName = "{$functionOrClassName}->{$methodsReflection->getShortName()}";
+                        $operator = $methodsReflection->isStatic() ? '::' : '->';
+                        $methodName = "{$functionOrClassName}{$operator}{$methodsReflection->getShortName()}";
                         $commentMap[$methodName] = $comment;
                     }
                 }
