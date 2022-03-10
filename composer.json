@@ -74,7 +74,7 @@
         "cs-fix": [ "@php vendor/bin/php-cs-fixer fix" ],
         "rector": [ "@php vendor/bin/rector process --config=tools/rector.php" ],
         "phan": [ "@swow-php vendor/bin/phan" ],
-        "phpstan": [ "@swow-php vendor/bin/phpstan analyse --memory-limit 4G -c phpstan.neon" ],
+        "phpstan": [ "@php vendor/bin/phpstan analyse --memory-limit 4G -c phpstan.neon" ],
         "psalm": [ "@php vendor/bin/psalm" ],
         "sync-extension": [ "@php -n tools/sync-extension.php" ],
         "build-extension": [ "@php bin/swow-builder" ],
