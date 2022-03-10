@@ -32,7 +32,7 @@
         "friendsofphp/php-cs-fixer": "3.4.*",
         "phan/phan": "^5.3",
         "phpstan/phpstan": "^1.4",
-        "phpunit/phpunit": ">=8.0",
+        "phpunit/phpunit": "=9.5.16",
         "rector/rector": "^0.12.8",
         "vimeo/psalm": "^4.22"
     },
