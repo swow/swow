@@ -171,6 +171,23 @@ SWOW_API void swow_fcall_storage_release(swow_fcall_storage_t *fcall)
     ZVAL_UNDEF(&fcall->zcallable);
 }
 
+/* function caller */
+
+SWOW_API int swow_call_function_anyway(zend_fcall_info *fci, zend_fcall_info_cache *fci_cache)
+{
+    zval retval;
+    zend_object *exception = EG(exception);
+    if (exception) {
+        EG(exception) = NULL;
+    }
+    int ret = zend_call_function(fci, fci_cache);
+    /* TODO: handle exceptions here, it may leak now */
+    if (exception) {
+        EG(exception) = exception;
+    }
+    return ret;
+}
+
 /* output globals */
 
 #include "SAPI.h"
@@ -207,26 +224,6 @@ SWOW_API void swow_output_globals_shutdown(void)
 
         SG(request_info).no_headers = no_headers;
     } SWOW_OUTPUT_GLOBALS_MODIFY_END();
-}
-
-SWOW_API int swow_zend_call_function_anyway(zend_fcall_info *fci, zend_fcall_info_cache *fci_cache)
-{
-    zval retval;
-    zend_object *exception = EG(exception);
-    if (exception) {
-        EG(exception) = NULL;
-    }
-    if (!fci->retval) {
-        fci->retval = &retval;
-    }
-    int ret = zend_call_function(fci, fci_cache);
-    if (fci->retval == &retval) {
-        zval_ptr_dtor(&retval);
-    }
-    if (exception) {
-        EG(exception) = exception;
-    }
-    return ret;
 }
 
 /* wrapper init/shutdown */
