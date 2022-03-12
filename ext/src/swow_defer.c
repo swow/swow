@@ -83,7 +83,7 @@ SWOW_API void swow_defer_do_tasks(swow_defer_t *sdefer)
         fci.param_count = 0;
         fci.named_params = NULL;
         fci.retval = &retval;
-        (void) zend_call_function(&fci, &task->fcc);
+        (void) swow_call_function_anyway(&fci, &task->fcc);
         zval_ptr_dtor(&retval);
         zval_ptr_dtor(&task->zcallable);
         efree(task);

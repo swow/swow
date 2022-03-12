@@ -171,6 +171,23 @@ SWOW_API void swow_fcall_storage_release(swow_fcall_storage_t *fcall)
     ZVAL_UNDEF(&fcall->zcallable);
 }
 
+/* function caller */
+
+SWOW_API int swow_call_function_anyway(zend_fcall_info *fci, zend_fcall_info_cache *fci_cache)
+{
+    zval retval;
+    zend_object *exception = EG(exception);
+    if (exception) {
+        EG(exception) = NULL;
+    }
+    int ret = zend_call_function(fci, fci_cache);
+    /* TODO: handle exceptions here, it may leak now */
+    if (exception) {
+        EG(exception) = exception;
+    }
+    return ret;
+}
+
 /* output globals */
 
 #include "SAPI.h"

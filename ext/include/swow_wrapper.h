@@ -319,6 +319,10 @@ SWOW_API void swow_fcall_storage_release(swow_fcall_storage_t *fcall);
         Z_PARAM_FUNC(fci, fcall.fcc) \
         fcall.zcallable = *_arg; \
 
+/* function caller */
+
+SWOW_API int swow_call_function_anyway(zend_fcall_info *fci, zend_fcall_info_cache *fci_cache);
+
 /* method caller */
 
 #define swow_call_method_with_0_params(zobject, object_ce, fn_ptr_ptr, fn_name, retval) \
