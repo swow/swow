@@ -442,7 +442,7 @@ static inline int swow_stream_bind(php_stream *stream, swow_netstream_data_t *sw
         goto _error;
     }
 
-    ret = cat_socket_bind(socket, host, host_len, port) ? 0 : -1;
+    ret = cat_socket_bind_ex(socket, host, host_len, port, bind_flags) ? 0 : -1;
 
     if (UNEXPECTED(ret != 0)) {
         goto _error;
