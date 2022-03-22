@@ -861,7 +861,7 @@ namespace Swow
 namespace Swow
 {
     /**
-     * channle transfers information across coroutines
+     * channel transfers information across coroutines
      *
      * @phan-template T
      * @phpstan-template T
