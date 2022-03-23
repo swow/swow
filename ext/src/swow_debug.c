@@ -22,8 +22,6 @@
 
 #include "zend_generators.h"
 
-static zend_bool swow_compile_extended_info = cat_false;
-
 SWOW_API zend_long swow_debug_backtrace_depth(zend_execute_data *call, zend_long limit)
 {
     zend_long depth;
@@ -443,7 +441,7 @@ static PHP_FUNCTION(Swow_Debug_registerExtendedStatementHandler)
         SWOW_PARAM_FCALL(fcall)
     ZEND_PARSE_PARAMETERS_END();
 
-    if (!swow_compile_extended_info) {
+    if (!(CG(compiler_options) & ZEND_COMPILE_EXTENDED_INFO)) {
         zend_throw_error(NULL, "Please re-run your program with \"-e\" option");
         RETURN_THROWS();
     }
@@ -512,17 +510,14 @@ int swow_debug_module_init(INIT_FUNC_ARGS)
         return FAILURE;
     }
 
+    original_zend_ext_stmt_handler = zend_get_user_opcode_handler(ZEND_EXT_STMT);
+    (void) zend_set_user_opcode_handler(ZEND_EXT_STMT, swow_debug_ext_stmt_handler);
+
     return SUCCESS;
 }
 
 int swow_debug_runtime_init(INIT_FUNC_ARGS)
 {
-    if ((CG(compiler_options) & ZEND_COMPILE_EXTENDED_INFO) && !swow_compile_extended_info) {
-        original_zend_ext_stmt_handler = zend_get_user_opcode_handler(ZEND_EXT_STMT);
-        zend_set_user_opcode_handler(ZEND_EXT_STMT, swow_debug_ext_stmt_handler);
-        swow_compile_extended_info = cat_true;
-    }
-
     cat_queue_init(&SWOW_DEBUG_G(extended_statement_handlers));
 
     return SUCCESS;
