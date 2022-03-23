@@ -38,10 +38,12 @@ SWOW_API void swow_watchdog_alert_standard(cat_watchdog_t *watchdog)
     swatchdog->vm_interrupted = 0;
     *swatchdog->vm_interrupt_ptr = 1;
 
-    if (watchdog->alert_count > 1 &&
+    if (
+        watchdog->alert_count > 1 &&
         vm_interrupted == 0 /* interrupt maybe failed */
     ) {
-        if (watchdog->threshold > 0 && /* blocking time is greater than syscall threshold */
+        if (
+            watchdog->threshold > 0 && /* blocking time is greater than syscall threshold */
             ((cat_timeout_t) (watchdog->quantum * watchdog->alert_count)) > watchdog->threshold
         ) {
             /* Syscall blocking
@@ -62,7 +64,8 @@ static void swow_watchdog_interrupt_function(zend_execute_data *execute_data)
         /* re-check if current round still equal to last_round  */
         if (CAT_COROUTINE_G(round) == watchdog->last_round) {
             if (swatchdog->alerter.function_handler == NULL) {
-                if (!cat_time_wait(swatchdog->delay) &&
+                if (
+                    !cat_time_wait(swatchdog->delay) &&
                     cat_get_last_error_code() != CAT_ETIMEDOUT
                 ) {
                     CAT_CORE_ERROR_WITH_LAST(WATCH_DOG, "WatchDog interrupt schedule failed");
@@ -155,7 +158,7 @@ SWOW_API cat_bool_t swow_watchdog_stop(void)
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_WatchDog_run, 0, 0, IS_VOID, 0)
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, quantum, IS_LONG, 0, "0")
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, threshold, IS_LONG, 0, "0")
-    ZEND_ARG_TYPE_MASK(0, alerter, MAY_BE_CALLABLE|MAY_BE_LONG|MAY_BE_DOUBLE|MAY_BE_NULL, "null")
+    ZEND_ARG_TYPE_MASK(0, alerter, MAY_BE_CALLABLE | MAY_BE_LONG | MAY_BE_DOUBLE | MAY_BE_NULL, "null")
 ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_WatchDog, run)

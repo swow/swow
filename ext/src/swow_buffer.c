@@ -546,7 +546,7 @@ static PHP_METHOD_EX(Swow_Buffer, _read, swow_buffer_read_type_t type)
     }
     if (length == -1) {
         length = buffer->length - offset;
-    } else if (UNEXPECTED((size_t)length > buffer->length - ((size_t) offset))) {
+    } else if (UNEXPECTED((size_t) length > buffer->length - ((size_t) offset))) {
         length = buffer->length - offset;
     }
     if (!(type & SWOW_BUFFER_PEEK)) {
@@ -872,7 +872,7 @@ static PHP_METHOD(Swow_Buffer, __debugInfo)
     ZEND_PARSE_PARAMETERS_NONE();
 
     array_init(&zdebug_info);
-    if (buffer->value == NULL){
+    if (buffer->value == NULL) {
         add_assoc_str(&zdebug_info, "value", zend_empty_string);
     } else {
         const int maxlen = -1;

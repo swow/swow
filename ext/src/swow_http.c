@@ -92,8 +92,7 @@ static PHP_METHOD(Swow_Http_Parser, setType)
         Z_PARAM_LONG(ptype)
     ZEND_PARSE_PARAMETERS_END();
 
-    switch(ptype)
-    {
+    switch (ptype) {
         case CAT_HTTP_PARSER_TYPE_BOTH:
             type = CAT_HTTP_PARSER_TYPE_BOTH;
             break;
@@ -519,7 +518,7 @@ static zend_always_inline char *swow_http_pack_headers(char *p, HashTable *heade
     return p;
 }
 
-static zend_always_inline char* swow_http_pack_message(char *p, HashTable *headers, zend_string *body)
+static zend_always_inline char *swow_http_pack_message(char *p, HashTable *headers, zend_string *body)
 {
     p = swow_http_pack_headers(p, headers);
 

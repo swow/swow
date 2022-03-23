@@ -28,8 +28,7 @@ SWOW_API zend_class_entry *swow_socket_exception_ce;
     swow_socket_t *_ssocket = swow_socket_get_from_object(_object); \
     cat_socket_t *_socket = &_ssocket->socket
 
-#define SWOW_SOCKET_GETTER(_ssocket, _socket) \
-        SWOW_SOCKET_GETTER_INTERNAL(Z_OBJ_P(ZEND_THIS), _ssocket, _socket)
+#define SWOW_SOCKET_GETTER(_ssocket, _socket) SWOW_SOCKET_GETTER_INTERNAL(Z_OBJ_P(ZEND_THIS), _ssocket, _socket)
 
 static zend_object *swow_socket_create_object(zend_class_entry *ce)
 {
@@ -506,7 +505,7 @@ static PHP_METHOD_EX(Swow_Socket, getAddress, zend_bool is_peer)
 
     ret = cat_socket_get_address(socket, buffer, &buffer_length, is_peer);
 
-    if (unlikely(!ret)){
+    if (unlikely(!ret)) {
         swow_throw_exception_with_last(swow_socket_exception_ce);
         RETURN_THROWS();
     }
@@ -971,7 +970,8 @@ static PHP_METHOD_EX(Swow_Socket, _write, zend_bool single, zend_bool may_addres
             }
             do {
                 zval *ztmp;
-                ZEND_HASH_FOREACH_VAL(vector_array, ztmp) {
+                ZEND_HASH_FOREACH_VAL(vector_array, ztmp)
+                {
                     /* the last one can be null */
                     if (ZVAL_IS_NULL(ztmp)) {
                         break;
@@ -985,9 +985,9 @@ static PHP_METHOD_EX(Swow_Socket, _write, zend_bool single, zend_bool may_addres
                         uint32_t vector_array_count = zend_hash_num_elements(vector_array);
 						zend_bool maybe_stringable_object = 0;
 #if PHP_VERSION_ID < 80100
-#define _ARG_POS(x)
+# define _ARG_POS(x)
 #else
-#define _ARG_POS(x) , x
+# define _ARG_POS(x) , x
 #endif
                         if (UNEXPECTED(vector_array_count == 0)) {
                             zend_argument_value_error(1, "can not be empty");
@@ -1031,7 +1031,7 @@ static PHP_METHOD_EX(Swow_Socket, _write, zend_bool single, zend_bool may_addres
                                         }
                                     }
                                 } else if (index == 1) {
-                                    if (UNEXPECTED(ztmp!= NULL && !zend_parse_arg_long(ztmp, &offset, NULL, 0 _ARG_POS(1)))) {
+                                    if (UNEXPECTED(ztmp != NULL && !zend_parse_arg_long(ztmp, &offset, NULL, 0 _ARG_POS(1)))) {
                                         zend_argument_value_error(1, "[%u][offset] must be type of int", vector_count);
                                         goto _error;
                                     }
@@ -1243,7 +1243,7 @@ static PHP_METHOD_EX(Swow_Socket, _sendString, zend_bool may_address)
     const char *ptr;
     cat_bool_t ret;
 
-    ZEND_PARSE_PARAMETERS_START(1, !may_address ? 4: 6)
+    ZEND_PARSE_PARAMETERS_START(1, !may_address ? 4 : 6)
         Z_PARAM_STR(string)
         Z_PARAM_OPTIONAL
         if (may_address) {
@@ -1259,7 +1259,7 @@ static PHP_METHOD_EX(Swow_Socket, _sendString, zend_bool may_address)
     SWOW_BUFFER_CHECK_STRING_SCOPE(string, offset, length);
     ptr = ZSTR_VAL(string) + offset;
     if (timeout_is_null) {
-        timeout =  cat_socket_get_write_timeout(socket);
+        timeout = cat_socket_get_write_timeout(socket);
     }
 
     if (!may_address || address == NULL || ZSTR_LEN(address) == 0) {
@@ -1326,7 +1326,7 @@ static PHP_METHOD(Swow_Socket, sendHandle)
     shandle = swow_socket_get_from_object(Z_OBJ_P(zhandle));
     handle = &shandle->socket;
     if (timeout_is_null) {
-        timeout =  cat_socket_get_write_timeout(socket);
+        timeout = cat_socket_get_write_timeout(socket);
     }
 
     ret = cat_socket_send_handle_ex(socket, handle, timeout);
@@ -1635,7 +1635,7 @@ static PHP_METHOD(Swow_Socket, __debugInfo)
     } while (0);
     add_assoc_bool(&zdebug_info, "established", cat_socket_is_established(socket));
     add_assoc_string(&zdebug_info, "role", cat_socket_get_role_name(socket));
-    for (n = 2; n --;)  {
+    for (n = 2; n--;) {
         cat_bool_t is_peer = !n;
         zval zname;
         if (cat_socket_getname_fast(socket, is_peer) != NULL) {

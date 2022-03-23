@@ -33,7 +33,7 @@
 #include "ext/standard/php_fopen_wrappers.h"
 
 #if defined(AF_UNIX)
-#include <sys/un.h>
+# include <sys/un.h>
 #endif
 
 CAT_GLOBALS_DECLARE(swow_stream)
@@ -76,75 +76,77 @@ typedef struct swow_netstream_data_s {
 
 #ifdef CAT_SSL
 /* Flags for determining allowed stream crypto methods */
-#define STREAM_CRYPTO_IS_CLIENT            (1<<0)
-#define STREAM_CRYPTO_METHOD_SSLv2         (1<<1)
-#define STREAM_CRYPTO_METHOD_SSLv3         (1<<2)
-#define STREAM_CRYPTO_METHOD_TLSv1_0       (1<<3)
-#define STREAM_CRYPTO_METHOD_TLSv1_1       (1<<4)
-#define STREAM_CRYPTO_METHOD_TLSv1_2       (1<<5)
-#define STREAM_CRYPTO_METHOD_TLSv1_3       (1<<6)
+# define STREAM_CRYPTO_IS_CLIENT            (1<<0)
+# define STREAM_CRYPTO_METHOD_SSLv2         (1<<1)
+# define STREAM_CRYPTO_METHOD_SSLv3         (1<<2)
+# define STREAM_CRYPTO_METHOD_TLSv1_0       (1<<3)
+# define STREAM_CRYPTO_METHOD_TLSv1_1       (1<<4)
+# define STREAM_CRYPTO_METHOD_TLSv1_2       (1<<5)
+# define STREAM_CRYPTO_METHOD_TLSv1_3       (1<<6)
 
-#ifndef OPENSSL_NO_TLS1_METHOD
-#define HAVE_TLS1 1
-#endif
+# ifndef OPENSSL_NO_TLS1_METHOD
+#  define HAVE_TLS1 1
+# endif
 
-#ifndef OPENSSL_NO_TLS1_1_METHOD
-#define HAVE_TLS11 1
-#endif
+# ifndef OPENSSL_NO_TLS1_1_METHOD
+#  define HAVE_TLS11 1
+# endif
 
-#ifndef OPENSSL_NO_TLS1_2_METHOD
-#define HAVE_TLS12 1
-#endif
+# ifndef OPENSSL_NO_TLS1_2_METHOD
+#  define HAVE_TLS12 1
+# endif
 
-#if OPENSSL_VERSION_NUMBER >= 0x10101000 && !defined(OPENSSL_NO_TLS1_3)
-#define HAVE_TLS13 1
-#endif
+# if OPENSSL_VERSION_NUMBER >= 0x10101000 && !defined(OPENSSL_NO_TLS1_3)
+#  define HAVE_TLS13 1
+# endif
 
-#ifndef OPENSSL_NO_ECDH
-#define HAVE_ECDH 1
-#endif
+# ifndef OPENSSL_NO_ECDH
+#  define HAVE_ECDH 1
+# endif
 
-#ifndef OPENSSL_NO_TLSEXT
-#define HAVE_TLS_SNI 1
-#define HAVE_TLS_ALPN 1
-#endif
+# ifndef OPENSSL_NO_TLSEXT
+#  define HAVE_TLS_SNI 1
+#  define HAVE_TLS_ALPN 1
+# endif
 
-#if OPENSSL_VERSION_NUMBER >= 0x10100000L && !defined(LIBRESSL_VERSION_NUMBER)
-#define HAVE_SEC_LEVEL 1
-#endif
+# if OPENSSL_VERSION_NUMBER >= 0x10100000L && !defined(LIBRESSL_VERSION_NUMBER)
+#  define HAVE_SEC_LEVEL 1
+# endif
 
-#ifndef OPENSSL_NO_SSL3
-#define HAVE_SSL3 1
-#define PHP_OPENSSL_MIN_PROTO_VERSION STREAM_CRYPTO_METHOD_SSLv3
-#else
-#define PHP_OPENSSL_MIN_PROTO_VERSION STREAM_CRYPTO_METHOD_TLSv1_0
-#endif
-#ifdef HAVE_TLS13
-#define PHP_OPENSSL_MAX_PROTO_VERSION STREAM_CRYPTO_METHOD_TLSv1_3
-#else
-#define PHP_OPENSSL_MAX_PROTO_VERSION STREAM_CRYPTO_METHOD_TLSv1_2
-#endif
+# ifndef OPENSSL_NO_SSL3
+#  define HAVE_SSL3 1
+#  define PHP_OPENSSL_MIN_PROTO_VERSION STREAM_CRYPTO_METHOD_SSLv3
+# else
+#  define PHP_OPENSSL_MIN_PROTO_VERSION STREAM_CRYPTO_METHOD_TLSv1_0
+# endif
+# ifdef HAVE_TLS13
+#  define PHP_OPENSSL_MAX_PROTO_VERSION STREAM_CRYPTO_METHOD_TLSv1_3
+# else
+#  define PHP_OPENSSL_MAX_PROTO_VERSION STREAM_CRYPTO_METHOD_TLSv1_2
+# endif
 
 /* Simplify ssl context option retrieval */
-#define GET_VER_OPT(name) \
+# define GET_VER_OPT(name) \
     (PHP_STREAM_CONTEXT(stream) && \
     (val = php_stream_context_get_option(PHP_STREAM_CONTEXT(stream), "ssl", name)) != NULL)
 
-#define GET_VER_OPT_STRING(name, str) do { \
-    if (GET_VER_OPT(name)) { \
-        if (try_convert_to_string(val)) { \
-            str = Z_STRVAL_P(val); \
+# define GET_VER_OPT_STRING(name, str) \
+    do { \
+        if (GET_VER_OPT(name)) { \
+            if (try_convert_to_string(val)) { \
+                str = Z_STRVAL_P(val); \
+            } \
         } \
-    } \
-} while (0)
+    } while (0)
 
-#define GET_VER_OPT_LONG(name, num) do { \
-    if (GET_VER_OPT(name)) { \
-        num = zval_get_long(val); \
-    } \
-} while (0)
+# define GET_VER_OPT_LONG(name, num) \
+    do { \
+        if (GET_VER_OPT(name)) { \
+            num = zval_get_long(val); \
+        } \
+    } while (0)
 
-static zend_long swow_stream_get_crypto_method(php_stream_context *ctx, zend_long crypto_method)  /* {{{ */
+static zend_long swow_stream_get_crypto_method(php_stream_context *ctx, zend_long crypto_method) /* {{{ */
 {
     zval *val;
 
@@ -170,12 +172,12 @@ static char *swow_stream_ssl_get_url_name(const char *resourcename, size_t resou
     }
 
     if (url->host) {
-        const char * host = ZSTR_VAL(url->host);
-        char * url_name = NULL;
+        const char *host = ZSTR_VAL(url->host);
+        char *url_name = NULL;
         size_t len = ZSTR_LEN(url->host);
 
         /* skip trailing dots */
-        while (len && host[len-1] == '.') {
+        while (len && host[len - 1] == '.') {
             --len;
         }
 
@@ -241,15 +243,15 @@ SWOW_API php_stream *swow_stream_socket_factory(
         php_error_docref(NULL, E_WARNING, "SSLv2 unavailable in this PHP version");
         goto _error;
     } else if (strncmp(proto, "sslv3", protolen) == 0) {
-#ifdef HAVE_SSL3
+# ifdef HAVE_SSL3
         ops = &swow_stream_ssl_socket_ops;
         swow_sock->ssl.enable_on_connect = 1;
         swow_sock->ssl.method = STREAM_CRYPTO_METHOD_SSLv3_CLIENT;
-#else
-        php_error_docref(NULL, E_WARNING,
-            "SSLv3 support is not compiled into the OpenSSL library against which PHP is linked");
+# else
+        php_error_docref(
+            NULL, E_WARNING, "SSLv3 support is not compiled into the OpenSSL library against which PHP is linked");
         goto _error;
-#endif
+# endif
     } else if (strncmp(proto, "tls", protolen) == 0) {
         ops = &swow_stream_ssl_socket_ops;
         swow_sock->ssl.enable_on_connect = 1;
@@ -261,35 +263,35 @@ SWOW_API php_stream *swow_stream_socket_factory(
         swow_sock->ssl.method = STREAM_CRYPTO_METHOD_TLSv1_0_CLIENT;
         goto _error;
     } else if (strncmp(proto, "tlsv1.1", protolen) == 0) {
-#ifdef HAVE_TLS11
+# ifdef HAVE_TLS11
         ops = &swow_stream_ssl_socket_ops;
         swow_sock->ssl.enable_on_connect = 1;
         swow_sock->ssl.method = STREAM_CRYPTO_METHOD_TLSv1_1_CLIENT;
-#else
-        php_error_docref(NULL, E_WARNING,
-            "TLSv1.1 support is not compiled into the OpenSSL library against which PHP is linked");
+# else
+        php_error_docref(
+            NULL, E_WARNING, "TLSv1.1 support is not compiled into the OpenSSL library against which PHP is linked");
         goto _error;
-#endif
+# endif
     } else if (strncmp(proto, "tlsv1.2", protolen) == 0) {
-#ifdef HAVE_TLS12
+# ifdef HAVE_TLS12
         ops = &swow_stream_ssl_socket_ops;
         swow_sock->ssl.enable_on_connect = 1;
         swow_sock->ssl.method = STREAM_CRYPTO_METHOD_TLSv1_2_CLIENT;
-#else
-        php_error_docref(NULL, E_WARNING,
-            "TLSv1.2 support is not compiled into the OpenSSL library against which PHP is linked");
+# else
+        php_error_docref(
+            NULL, E_WARNING, "TLSv1.2 support is not compiled into the OpenSSL library against which PHP is linked");
         goto _error;
-#endif
+# endif
     } else if (strncmp(proto, "tlsv1.3", protolen) == 0) {
-#ifdef HAVE_TLS13
+# ifdef HAVE_TLS13
         ops = &swow_stream_ssl_socket_ops;
         swow_sock->ssl.enable_on_connect = 1;
         swow_sock->ssl.method = STREAM_CRYPTO_METHOD_TLSv1_3_CLIENT;
-#else
-        php_error_docref(NULL, E_WARNING,
-            "TLSv1.3 support is not compiled into the OpenSSL library against which PHP is linked");
+# else
+        php_error_docref(
+            NULL, E_WARNING, "TLSv1.3 support is not compiled into the OpenSSL library against which PHP is linked");
         goto _error;
-#endif
+# endif
     }
 #endif
     else {
@@ -325,8 +327,8 @@ static cat_socket_type_t swow_stream_parse_socket_type(const php_stream_ops *ops
         return CAT_SOCKET_TYPE_UNIX;
     } else if (ops == &swow_stream_udg_socket_ops) {
         return CAT_SOCKET_TYPE_UDG;
-#endif //PHP_WIN32
-    } else /* swow_stream_generic_socket_ops */{
+#endif // PHP_WIN32
+    } else /* swow_stream_generic_socket_ops */ {
         return CAT_SOCKET_TYPE_TCP;
     }
 }
@@ -374,7 +376,7 @@ static char *swow_stream_parse_ip_address_ex(const char *str, size_t str_len, in
 // from main/streams/xp_socket.c:parse_unix_address @ 3e01f5afb1b52fe26a956190296de0192eedeec1
 // should we remove this in the future?
 // TODO: should we remove this in the future?
-static inline void swow_stream_check_unix_path_len(size_t* len)
+static inline void swow_stream_check_unix_path_len(size_t *len)
 {
     const size_t max_path = sizeof(struct sockaddr_un) - offsetof(struct sockaddr_un, sun_path);
     if (*len >= max_path) {
@@ -385,7 +387,7 @@ static inline void swow_stream_check_unix_path_len(size_t* len)
     }
 }
 #else
-#define swow_stream_check_unix_path_len(len)
+# define swow_stream_check_unix_path_len(len)
 #endif
 
 static char *swow_stream_parse_ip_address(php_stream_xport_param *xparam, int *portno)
@@ -416,17 +418,19 @@ static inline int swow_stream_bind(php_stream *stream, swow_netstream_data_t *sw
         host = ip;
         host_len = strlen(ip);
 
-        if (PHP_STREAM_CONTEXT(stream)
-            && (tmpzval = php_stream_context_get_option(PHP_STREAM_CONTEXT(stream), "socket", "ipv6_v6only")) != NULL
-            && Z_TYPE_P(tmpzval) != IS_NULL
-            && zend_is_true(tmpzval)
+        if (
+            PHP_STREAM_CONTEXT(stream) &&
+            (tmpzval = php_stream_context_get_option(PHP_STREAM_CONTEXT(stream), "socket", "ipv6_v6only")) != NULL &&
+            Z_TYPE_P(tmpzval) != IS_NULL &&
+            zend_is_true(tmpzval)
         ) {
             bind_flags |= CAT_SOCKET_BIND_FLAG_IPV6ONLY;
         }
 
-        if (PHP_STREAM_CONTEXT(stream)
-            && (tmpzval = php_stream_context_get_option(PHP_STREAM_CONTEXT(stream), "socket", "so_reuseport")) != NULL
-            && zend_is_true(tmpzval)
+        if (
+            PHP_STREAM_CONTEXT(stream) &&
+            (tmpzval = php_stream_context_get_option(PHP_STREAM_CONTEXT(stream), "socket", "so_reuseport")) != NULL &&
+            zend_is_true(tmpzval)
         ) {
             bind_flags |= CAT_SOCKET_BIND_FLAG_REUSEPORT;
         }
@@ -450,10 +454,11 @@ static inline int swow_stream_bind(php_stream *stream, swow_netstream_data_t *sw
 
     swow_sock->sock.socket = cat_socket_get_fd(socket);
 
-    if (stream->ops == &swow_stream_udp_socket_ops /* SO_BROADCAST is only applicable for UDP */
-        && PHP_STREAM_CONTEXT(stream)
-        && (tmpzval = php_stream_context_get_option(PHP_STREAM_CONTEXT(stream), "socket", "so_broadcast")) != NULL
-        && zend_is_true(tmpzval)
+    if (
+        stream->ops == &swow_stream_udp_socket_ops && /* SO_BROADCAST is only applicable for UDP */
+        PHP_STREAM_CONTEXT(stream) &&
+        (tmpzval = php_stream_context_get_option(PHP_STREAM_CONTEXT(stream), "socket", "so_broadcast")) != NULL &&
+        zend_is_true(tmpzval)
     ) {
         (void) cat_socket_set_udp_broadcast(socket, cat_true);
     }
@@ -742,7 +747,7 @@ static int swow_stream_setup_crypto(php_stream *stream,
     // }
 
     /* We need to do slightly different things based on client/server method
-    * so lets remember which method was selected */
+     * so lets remember which method was selected */
     swow_sock->ssl.is_client = cparam->inputs.method & STREAM_CRYPTO_IS_CLIENT;
 
     return SUCCESS;
@@ -953,7 +958,7 @@ static int swow_stream_set_tcp_option(php_stream *stream, int option, int value,
                         || (xparam->op == STREAM_XPORT_OP_CONNECT_ASYNC &&
                             xparam->outputs.returncode == 1 && xparam->outputs.error_code == EINPROGRESS */
                         if (php_stream_xport_crypto_setup(stream, swow_sock->ssl.method, NULL) < 0 ||
-                                php_stream_xport_crypto_enable(stream, 1) < 0) {
+                            php_stream_xport_crypto_enable(stream, 1) < 0) {
                             php_error_docref(NULL, E_WARNING, "Failed to enable crypto");
                             xparam->outputs.returncode = -1;
                         }
@@ -979,7 +984,7 @@ static int swow_stream_set_tcp_option(php_stream *stream, int option, int value,
             php_stream_xport_crypto_param *cparam = (php_stream_xport_crypto_param *) ptrparam;
             switch (cparam->op) {
                 case STREAM_XPORT_CRYPTO_OP_SETUP:
-                    cparam->outputs.returncode = swow_stream_setup_crypto(stream, swow_sock, sock, socket, cparam);;
+                    cparam->outputs.returncode = swow_stream_setup_crypto(stream, swow_sock, sock, socket, cparam);
                     return PHP_STREAM_OPTION_RETURN_OK;
                 case STREAM_XPORT_CRYPTO_OP_ENABLE:
                     cparam->outputs.returncode = swow_stream_enable_crypto(stream, swow_sock, sock, socket, cparam);
@@ -1016,7 +1021,7 @@ static ssize_t swow_stream_read(php_stream *stream, char *buffer, size_t size)
     if (EXPECTED(nr_bytes > 0)) {
         php_stream_notify_progress_increment(PHP_STREAM_CONTEXT(stream), nr_bytes, 0);
     } else if (nr_bytes < 0) {
-        cat_errno_t error =  cat_get_last_error_code();
+        cat_errno_t error = cat_get_last_error_code();
         stream->eof = cat_socket_is_eof_error(error);
         sock->timeout_event = (error == CAT_ETIMEDOUT);
         if (sock->timeout_event) {
@@ -1050,7 +1055,7 @@ static ssize_t swow_stream_write(php_stream *stream, const char *buffer, size_t 
         ret = didwrite >= 0;
     }
     if (UNEXPECTED(!ret)) {
-        cat_errno_t error =  cat_get_last_error_code();
+        cat_errno_t error = cat_get_last_error_code();
 #ifdef PHP_STREAM_FLAG_SUPPRESS_ERRORS
         if (!(stream->flags & PHP_STREAM_FLAG_SUPPRESS_ERRORS))
 #endif
@@ -1394,11 +1399,13 @@ static php_stream* swow_plain_files_proxy_stream_opener(
     int options, zend_string **opened_path, php_stream_context *context STREAMS_DC) {
     if (!SWOW_STREAM_G(hooking_plain_wrapper)) {
         // we are not hooking plain wrapper ops
-        return swow_plain_files_wrapper_sync.wops->stream_opener(wrapper,
-        filename, mode, options, opened_path, context STREAMS_REL_CC);
+        return swow_plain_files_wrapper_sync.wops->stream_opener(
+            wrapper, filename, mode, options, opened_path, context STREAMS_REL_CC
+        );
     }
-    return swow_plain_files_wrapper_async.wops->stream_opener(wrapper,
-        filename, mode, options, opened_path, context STREAMS_REL_CC);
+    return swow_plain_files_wrapper_async.wops->stream_opener(
+        wrapper, filename, mode, options, opened_path, context STREAMS_REL_CC
+    );
 }
 
 /*
@@ -1506,7 +1513,6 @@ static php_stream_wrapper swow_plain_files_wrapper_proxy = {
     0
 };
 
-
 /* {{{ proto int|false stream_socket_sendto(resource stream, string data [, int flags [, string target_addr]])
    Send data to a socket stream.  If target_addr is specified it must be in dotted quad (or [ipv6]) format */
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_MASK_EX(arginfo_swow_stream_socket_sendto, 0, 2, MAY_BE_LONG | MAY_BE_FALSE)
@@ -1555,10 +1561,9 @@ static PHP_FUNCTION(swow_stream_socket_sendto)
         }
     }
 
-    RETURN_LONG(php_stream_xport_sendto(stream, data, datalen, (int)flags, target_addr_len ? &sa : NULL, sl));
+    RETURN_LONG(php_stream_xport_sendto(stream, data, datalen, (int) flags, target_addr_len ? &sa : NULL, sl));
 }
 /* }}} */
-
 
 /* {{{ stream_select related functions */
 static int swow_stream_array_to_fd_set(zval *stream_array, fd_set *fds, php_socket_t *max_fd)
@@ -1587,7 +1592,11 @@ static int swow_stream_array_to_fd_set(zval *stream_array, fd_set *fds, php_sock
          * when casting.  It is only used here so that the buffered data warning
          * is not displayed.
          * */
-        if (SUCCESS == php_stream_cast(stream, PHP_STREAM_AS_FD_FOR_SELECT | PHP_STREAM_CAST_INTERNAL, (void*)&this_fd, 1) && this_fd != -1) {
+        if (
+            SUCCESS == php_stream_cast(
+                stream, PHP_STREAM_AS_FD_FOR_SELECT | PHP_STREAM_CAST_INTERNAL, (void *) &this_fd, 1) &&
+            this_fd != -1
+        ) {
 
             PHP_SAFE_FD_SET(this_fd, fds);
 
@@ -1627,7 +1636,12 @@ static int swow_stream_array_from_fd_set(zval *stream_array, fd_set *fds)
          * when casting.  It is only used here so that the buffered data warning
          * is not displayed.
          */
-        if (SUCCESS == php_stream_cast(stream, PHP_STREAM_AS_FD_FOR_SELECT | PHP_STREAM_CAST_INTERNAL, (void*)&this_fd, 1) && this_fd != SOCK_ERR) {
+        if (
+            SUCCESS ==
+                php_stream_cast(
+                    stream, PHP_STREAM_AS_FD_FOR_SELECT | PHP_STREAM_CAST_INTERNAL, (void *) &this_fd, 1) &&
+            this_fd != SOCK_ERR
+        ) {
             if (PHP_SAFE_FD_ISSET(this_fd, fds)) {
                 if (!key) {
                     dest_elem = zend_hash_index_update(ht, num_ind, elem);
@@ -1792,8 +1806,8 @@ PHP_FUNCTION(swow_stream_select)
         }
 
         /* Windows, Solaris and BSD do not like microsecond values which are >= 1 sec */
-        tv.tv_sec = (long)(sec + (usec / 1000000));
-        tv.tv_usec = (long)(usec % 1000000);
+        tv.tv_sec = (long) (sec + (usec / 1000000));
+        tv.tv_usec = (long) (usec % 1000000);
         tv_p = &tv;
     }
 
@@ -1815,17 +1829,23 @@ PHP_FUNCTION(swow_stream_select)
         }
     }
 
-    retval = cat_select(max_fd+1, &rfds, &wfds, &efds, tv_p);
+    retval = cat_select(max_fd + 1, &rfds, &wfds, &efds, tv_p);
 
     if (retval == -1) {
         php_error_docref(NULL, E_WARNING, "Unable to select [%d]: %s (max_fd=%d)",
-                errno, strerror(errno), max_fd);
+            errno, strerror(errno), max_fd);
         RETURN_FALSE;
     }
 
-    if (r_array != NULL) swow_stream_array_from_fd_set(r_array, &rfds);
-    if (w_array != NULL) swow_stream_array_from_fd_set(w_array, &wfds);
-    if (e_array != NULL) swow_stream_array_from_fd_set(e_array, &efds);
+    if (r_array != NULL) {
+        swow_stream_array_from_fd_set(r_array, &rfds);
+    }
+    if (w_array != NULL) {
+        swow_stream_array_from_fd_set(w_array, &wfds);
+    }
+    if (e_array != NULL) {
+        swow_stream_array_from_fd_set(e_array, &efds);
+    }
 
     RETURN_LONG(retval);
 }
@@ -1934,16 +1954,16 @@ int swow_stream_module_init(INIT_FUNC_ARGS)
 #endif
 #ifdef CAT_SSL
     php_stream_xport_register("ssl", swow_stream_socket_factory);
-#ifndef OPENSSL_NO_SSL3
+# ifndef OPENSSL_NO_SSL3
     php_stream_xport_register("sslv3", swow_stream_socket_factory);
-#endif
+# endif
     php_stream_xport_register("tls", swow_stream_socket_factory);
     php_stream_xport_register("tlsv1.0", swow_stream_socket_factory);
     php_stream_xport_register("tlsv1.1", swow_stream_socket_factory);
     php_stream_xport_register("tlsv1.2", swow_stream_socket_factory);
-#if OPENSSL_VERSION_NUMBER >= 0x10101000
+# if OPENSSL_VERSION_NUMBER >= 0x10101000
     php_stream_xport_register("tlsv1.3", swow_stream_socket_factory);
-#endif
+# endif
     php_register_url_stream_wrapper("https", &php_stream_http_wrapper);
     php_register_url_stream_wrapper("ftps", &php_stream_ftp_wrapper);
 #endif

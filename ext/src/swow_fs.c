@@ -118,69 +118,71 @@ extern int php_get_gid_by_name(const char *name, gid_t *gid);
 #endif
 
 #if defined(PHP_WIN32)
-# define PLAIN_WRAP_BUF_SIZE(st) (((st) > UINT_MAX) ? UINT_MAX : (unsigned int)(st))
+# define PLAIN_WRAP_BUF_SIZE(st) (((st) > UINT_MAX) ? UINT_MAX : (unsigned int) (st))
 #else
 # define PLAIN_WRAP_BUF_SIZE(st) (st)
 #endif
 
 #define COPY_MEMBER(x) statbuf->x = _statbuf.x
 #ifndef PHP_WIN32
-#define COPY_MEMBERS() do{\
-    COPY_MEMBER(st_dev);\
-    COPY_MEMBER(st_ino);\
-    COPY_MEMBER(st_mode);\
-    COPY_MEMBER(st_nlink);\
-    COPY_MEMBER(st_uid);\
-    COPY_MEMBER(st_gid);\
-    COPY_MEMBER(st_rdev);\
-    COPY_MEMBER(st_size);\
-    statbuf->st_atime = _statbuf.st_atim.tv_sec;\
-    statbuf->st_ctime = _statbuf.st_ctim.tv_sec;\
-    statbuf->st_mtime = _statbuf.st_mtim.tv_sec;\
-    COPY_MEMBER(st_blksize);\
-    COPY_MEMBER(st_blocks);\
-}while(0)
+# define COPY_MEMBERS() do { \
+    COPY_MEMBER(st_dev); \
+    COPY_MEMBER(st_ino); \
+    COPY_MEMBER(st_mode); \
+    COPY_MEMBER(st_nlink); \
+    COPY_MEMBER(st_uid); \
+    COPY_MEMBER(st_gid); \
+    COPY_MEMBER(st_rdev); \
+    COPY_MEMBER(st_size); \
+    statbuf->st_atime = _statbuf.st_atim.tv_sec; \
+    statbuf->st_ctime = _statbuf.st_ctim.tv_sec; \
+    statbuf->st_mtime = _statbuf.st_mtim.tv_sec; \
+    COPY_MEMBER(st_blksize); \
+    COPY_MEMBER(st_blocks); \
+} while (0)
 #else
 
-#define COPY_MEMBERS() do{\
-    COPY_MEMBER(st_dev);\
-    COPY_MEMBER(st_ino);\
-    COPY_MEMBER(st_mode);\
-    COPY_MEMBER(st_nlink);\
-    COPY_MEMBER(st_uid);\
-    COPY_MEMBER(st_gid);\
-    COPY_MEMBER(st_rdev);\
-    COPY_MEMBER(st_size);\
-    /* (uint32_t) is workaround for 2038 year problem */\
-    /* needs uv fix this */\
-    statbuf->st_atime = (uint32_t)_statbuf.st_atim.tv_sec;\
-    statbuf->st_ctime = (uint32_t)_statbuf.st_ctim.tv_sec;\
-    statbuf->st_mtime = (uint32_t)_statbuf.st_mtim.tv_sec;\
-}while(0)
+# define COPY_MEMBERS() do { \
+    COPY_MEMBER(st_dev); \
+    COPY_MEMBER(st_ino); \
+    COPY_MEMBER(st_mode); \
+    COPY_MEMBER(st_nlink); \
+    COPY_MEMBER(st_uid); \
+    COPY_MEMBER(st_gid); \
+    COPY_MEMBER(st_rdev); \
+    COPY_MEMBER(st_size); \
+    /* (uint32_t) is workaround for 2038 year problem */ \
+    /* needs uv fix this */ \
+    statbuf->st_atime = (uint32_t)_statbuf.st_atim.tv_sec; \
+    statbuf->st_ctime = (uint32_t)_statbuf.st_ctim.tv_sec; \
+    statbuf->st_mtime = (uint32_t)_statbuf.st_mtim.tv_sec; \
+} while (0)
 #endif
 
 #ifdef PHP_WIN32
 // for readdir on windows with non-utf8 filenames
-static inline cat_dirent_t* swow_fs_readdir(cat_dir_t * dir){
-# define CLEANUP(dirent) do { \
-    if(dirent){ \
-        if((dirent)->name){ \
-            free((void*)(dirent)->name); \
+static inline cat_dirent_t *swow_fs_readdir(cat_dir_t *dir)
+{
+# define CLEANUP(dirent) \
+    do { \
+        if (dirent) { \
+            if ((dirent)->name) { \
+                free((void *) (dirent)->name); \
+            } \
+            free((void *) dirent); \
         } \
-        free((void*)dirent); \
-    } \
-}while(0)
+    } while (0)
 
-    cat_dirent_t* dirent = cat_fs_readdir(dir);
-    if(NULL != dirent && NULL != dirent->name){
-        const wchar_t * wname = php_win32_cp_utf8_to_w(dirent->name);
-        if(NULL == wname){
+    cat_dirent_t *dirent = cat_fs_readdir(dir);
+    if (NULL != dirent && NULL != dirent->name) {
+        const wchar_t *wname = php_win32_cp_utf8_to_w(dirent->name);
+        if (NULL == wname) {
             CLEANUP(dirent);
             return NULL;
         }
-        free((void*)dirent->name);
+        free((void *) dirent->name);
         dirent->name = php_win32_cp_w_to_cur(wname);
-        if(NULL == dirent->name){
+        if (NULL == dirent->name) {
             CLEANUP(dirent);
             return NULL;
         }
@@ -188,31 +190,33 @@ static inline cat_dirent_t* swow_fs_readdir(cat_dir_t * dir){
     }
     CLEANUP(dirent);
     return NULL;
-#undef CLEANUP
+# undef CLEANUP
 }
 #else
-#define swow_fs_readdir cat_fs_readdir
+# define swow_fs_readdir cat_fs_readdir
 #endif
 
 #ifdef PHP_WIN32
 // for junctions:
 // uv will return 0o120666 for directory junctions' st_mode
 // while php_win32_ioutil_stat_ex_w returns 0
-struct _swow_fs_stat_ex_s{
+struct _swow_fs_stat_ex_s {
     int ret;
-    const wchar_t * pathw;
+    const wchar_t *pathw;
     size_t len;
-    zend_stat_t * statbuf;
+    zend_stat_t *statbuf;
     int use_lstat;
 };
-static void _swow_fs_stat_ex_cb(cat_data_t *ptr){
+static void _swow_fs_stat_ex_cb(cat_data_t *ptr)
+{
     struct _swow_fs_stat_ex_s *data = (struct _swow_fs_stat_ex_s *) ptr;
     data->ret = php_win32_ioutil_stat_ex_w(data->pathw, data->len, data->statbuf, data->use_lstat);
 }
-static void _swow_fs_stat_ex_free(cat_data_t *ptr){
+static void _swow_fs_stat_ex_free(cat_data_t *ptr)
+{
     struct _swow_fs_stat_ex_s *data = (struct _swow_fs_stat_ex_s *) ptr;
-    if(data->pathw){
-        free((void*)data->pathw);
+    if (data->pathw) {
+        free((void *) data->pathw);
     }
     cat_free(data);
 }
@@ -220,43 +224,42 @@ static void _swow_fs_stat_ex_free(cat_data_t *ptr){
 // uv will return 0o100666 (regular file | rw-rw-rw-) for pipe
 // this may be a uv bug?
 // while php_win32_ioutil_fstat_ex_w returns 0o10666 (pipe | rw-rw-rw-)
-struct _swow_fs_fstat_s{
+struct _swow_fs_fstat_s {
     int ret;
     int fd;
-    zend_stat_t * statbuf;
+    zend_stat_t *statbuf;
 };
-static void _swow_fs_fstat_cb(cat_data_t *ptr){
-    struct _swow_fs_fstat_s *data = (struct _swow_fs_fstat_s*)ptr;
+static void _swow_fs_fstat_cb(cat_data_t *ptr)
+{
+    struct _swow_fs_fstat_s *data = (struct _swow_fs_fstat_s *) ptr;
     data->ret = php_win32_ioutil_fstat(data->fd, data->statbuf);
 }
-static inline int swow_fs_fstat(int fd, zend_stat_t * statbuf){
+static inline int swow_fs_fstat(int fd, zend_stat_t *statbuf)
+{
     struct _swow_fs_fstat_s *data = cat_malloc(sizeof(*data));
     data->ret = -1;
     data->fd = fd;
     data->statbuf = statbuf;
-    if(!cat_work(
-        CAT_WORK_KIND_FAST_IO,
-        _swow_fs_fstat_cb,
-        cat_free_function,
-        data,
-        CAT_TIMEOUT_FOREVER)){
+    if (!cat_work(CAT_WORK_KIND_FAST_IO, _swow_fs_fstat_cb, cat_free_function, data, CAT_TIMEOUT_FOREVER)) {
         data->ret = -1;
     }
     UPDATE_ERRNO_FROM_CAT();
     return data->ret;
 }
 #else
-static inline int swow_fs_fstat(int fd, zend_stat_t * statbuf){
+static inline int swow_fs_fstat(int fd, zend_stat_t *statbuf)
+{
     int ret = -1;
     cat_stat_t _statbuf;
-    if((ret = cat_fs_fstat(fd, &_statbuf)) == 0){
+    if ((ret = cat_fs_fstat(fd, &_statbuf)) == 0) {
         COPY_MEMBERS();
     }
     return ret;
 }
 #endif
 
-static inline int swow_fs_stat_mock(const char* path, zend_stat_t *statbuf, int use_lstat){
+static inline int swow_fs_stat_mock(const char *path, zend_stat_t *statbuf, int use_lstat)
+{
 #ifdef PHP_WIN32
     size_t pathw_len;
     LPCWSTR pathw = php_win32_ioutil_conv_any_to_w(path, PHP_WIN32_CP_IGNORE_LEN, &pathw_len);
@@ -270,12 +273,7 @@ static inline int swow_fs_stat_mock(const char* path, zend_stat_t *statbuf, int 
     data->len = pathw_len;
     data->statbuf = statbuf;
     data->use_lstat = use_lstat;
-    if(!cat_work(
-        CAT_WORK_KIND_FAST_IO,
-        _swow_fs_stat_ex_cb,
-        _swow_fs_stat_ex_free,
-        data,
-        CAT_TIMEOUT_FOREVER)){
+    if (!cat_work(CAT_WORK_KIND_FAST_IO, _swow_fs_stat_ex_cb, _swow_fs_stat_ex_free, data, CAT_TIMEOUT_FOREVER)) {
         data->ret = -1;
     }
     UPDATE_ERRNO_FROM_CAT();
@@ -285,13 +283,13 @@ static inline int swow_fs_stat_mock(const char* path, zend_stat_t *statbuf, int 
     // we use cat_fs_xstat then copy it
     int ret;
     cat_stat_t _statbuf;
-    if(use_lstat){
+    if (use_lstat) {
         ret = cat_fs_lstat(path, &_statbuf);
-    }else{
+    } else {
         ret = cat_fs_stat(path, &_statbuf);
     }
     UPDATE_ERRNO_FROM_CAT();
-    if (ret<0){
+    if (ret < 0) {
         return ret;
     }
     COPY_MEMBERS();
@@ -302,7 +300,7 @@ static inline int swow_fs_stat_mock(const char* path, zend_stat_t *statbuf, int 
 
 // from win32/winutil.c @ 01b3fc03c30c6cb85038250bb5640be3a09c6a32
 #ifdef PHP_WIN32
-static int swow_win32_check_trailing_space(const char * path, const size_t path_len)
+static int swow_win32_check_trailing_space(const char *path, const size_t path_len)
 {
     if (path_len > MAXPATHLEN - 1) {
         return 1;
@@ -361,18 +359,19 @@ static void swow_stream_mode_sanitize_fdopen_fopencookie(php_stream *stream, cha
     result[res_curs] = '\0';
 }
 
-struct _swow_fs_open_s{
+struct _swow_fs_open_s {
     int ret;
 #ifdef PHP_WIN32
-    const wchar_t * pathw;
+    const wchar_t *pathw;
 #else
-    const char * path;
+    const char *path;
 #endif
     int flags;
     mode_t mode;
     int error; // errno
 };
-static void _swow_fs_open_cb(cat_data_t *ptr){
+static void _swow_fs_open_cb(cat_data_t *ptr)
+{
     struct _swow_fs_open_s *data = (struct _swow_fs_open_s *) ptr;
     errno = data->error;
 #ifdef PHP_WIN32
@@ -382,14 +381,16 @@ static void _swow_fs_open_cb(cat_data_t *ptr){
 #endif
     data->error = errno;
 }
-static void _swow_fs_open_free(cat_data_t *ptr){
+static void _swow_fs_open_free(cat_data_t *ptr)
+{
     struct _swow_fs_open_s *data = (struct _swow_fs_open_s *) ptr;
 #ifdef PHP_WIN32
-    free((void *)data->pathw);
+    free((void *) data->pathw);
 #endif
     cat_free(data);
 }
-static inline int swow_fs_open(const char * path, int flags, ...){
+static inline int swow_fs_open(const char *path, int flags, ...)
+{
     struct _swow_fs_open_s *data = cat_malloc(sizeof(*data));
     data->ret = -1;
     data->flags = flags;
@@ -404,7 +405,7 @@ static inline int swow_fs_open(const char * path, int flags, ...){
         return -1;
     }
     if (!PHP_WIN32_IOUTIL_PATH_IS_OK_W(data->pathw, pathw_len)) {
-        free((void *)data->pathw);
+        free((void *) data->pathw);
         cat_free(data);
         SET_ERRNO_FROM_WIN32_CODE(ERROR_ACCESS_DENIED);
         cat_update_last_error(CAT_EACCES, "Bad file name");
@@ -423,7 +424,7 @@ static inline int swow_fs_open(const char * path, int flags, ...){
     }
 
     data->error = errno;
-    if(!cat_work(CAT_WORK_KIND_FAST_IO, _swow_fs_open_cb, _swow_fs_open_free, data, CAT_TIMEOUT_FOREVER)){
+    if (!cat_work(CAT_WORK_KIND_FAST_IO, _swow_fs_open_cb, _swow_fs_open_free, data, CAT_TIMEOUT_FOREVER)) {
         UPDATE_ERRNO_FROM_CAT();
         data->ret = -1;
     }
@@ -433,19 +434,20 @@ static inline int swow_fs_open(const char * path, int flags, ...){
 }
 
 // mock VCWD_XXXX macros
-# ifndef HAVE_UTIME
+#ifndef HAVE_UTIME
 struct utimbuf {
     time_t actime;
     time_t modtime;
 };
-# endif // HAVE_UTIME
+#endif // HAVE_UTIME
 
 // PHP_WIN32_IOUTIL_CHECK_PATH_W behavior
 #ifdef PHP_WIN32
 /*
-* check if path is good for using, then return wcs path
-*/
-static inline const wchar_t * swow_check_path_w(const char*path){
+ * check if path is good for using, then return wcs path
+ */
+static inline const wchar_t *swow_check_path_w(const char *path)
+{
     PHP_WIN32_IOUTIL_INIT_W(path)
     if (!pathw) {
         SET_ERRNO_FROM_WIN32_CODE(ERROR_INVALID_PARAMETER);
@@ -454,7 +456,7 @@ static inline const wchar_t * swow_check_path_w(const char*path){
     }
     size_t _len = wcslen(pathw);
     if (!PHP_WIN32_IOUTIL_PATH_IS_OK_W(pathw, _len)) {
-        free((void*)pathw);
+        free((void *) pathw);
         SET_ERRNO_FROM_WIN32_CODE(ERROR_ACCESS_DENIED);
         cat_update_last_error(CAT_EACCES, "Bad file name");
         return NULL;
@@ -462,11 +464,12 @@ static inline const wchar_t * swow_check_path_w(const char*path){
     return pathw;
 }
 /*
-* convert wide to utf8
-*/
-static inline const char * swow_check_path(const char* path){
+ * convert wide to utf8
+ */
+static inline const char *swow_check_path(const char *path)
+{
     LPCWSTR pathw = swow_check_path_w(path);
-    if(!pathw){
+    if (!pathw) {
         return NULL;
     }
     return php_win32_cp_w_to_utf8(pathw);
@@ -483,16 +486,19 @@ static inline const char * swow_check_path(const char* path){
 
 #ifdef VIRTUAL_DIR
 /*
-* parse vcwd(at zts) path
-* returned path should be efreed
-*/
-static inline const char* swow_vcwd_path(const char *path, int flags) {
+ * parse vcwd(at zts) path
+ * returned path should be efreed
+ */
+static inline const char *swow_vcwd_path(const char *path, int flags)
+{
     cwd_state new_state = {0};
     new_state.cwd = virtual_getcwd_ex(&new_state.cwd_length);
     // virtual_file_ex returns non-zero(1 or -1) for error
     if (NULL == new_state.cwd || 0 != virtual_file_ex(&new_state, path, NULL, flags)) {
         SAVE_LE;
-        if(new_state.cwd) efree(new_state.cwd);
+        if (new_state.cwd) {
+            efree(new_state.cwd);
+        }
 # ifdef PHP_WIN32
         // this may omit LastError
         cat_update_last_error(cat_translate_sys_error(GetLastError()), "Bad file name");
@@ -504,39 +510,45 @@ static inline const char* swow_vcwd_path(const char *path, int flags) {
     }
     return new_state.cwd;
 }
-#define SWOW_VCWD_WRAP(path, new_path, flags, failed, wrapped) do{\
-    const char* new_path_cur = swow_vcwd_path(path, flags);\
-    if (unlikely(NULL == new_path_cur)) {\
-        {failed};\
-        break;\
-    }\
-    const char* new_path = swow_check_path(new_path_cur);\
-    if (NULL == new_path) {\
-        {failed}\
-    }else{\
-        {wrapped}\
-    }\
-    SAVE_LE;\
-    efree((void*)new_path_cur);\
-    check_path_free((void*)new_path);\
-    RESTORE_LE;\
-} while(0);
+# define SWOW_VCWD_WRAP(path, new_path, flags, failed, wrapped) do { \
+    const char *new_path_cur = swow_vcwd_path(path, flags); \
+    if (unlikely(NULL == new_path_cur)) { \
+        {failed}; \
+        break; \
+    } \
+    const char *new_path = swow_check_path(new_path_cur); \
+    if (NULL == new_path) { \
+        { \
+            failed \
+        } \
+    } else { \
+        { \
+            wrapped \
+        } \
+    } \
+    SAVE_LE; \
+    efree((void *) new_path_cur); \
+    check_path_free((void *) new_path); \
+    RESTORE_LE; \
+} while (0);
 #else
-#define SWOW_VCWD_WRAP(path, new_path, flags, failed, wrapped) do{\
-    const char* new_path = path;\
-    if (!(new_path = swow_check_path(path))) {\
-        {failed}\
-        break;\
-    }\
-    {wrapped}\
-    SAVE_LE;\
-    check_path_free((void*)new_path);\
-    RESTORE_LE;\
-}while(0)
+# define SWOW_VCWD_WRAP(path, new_path, flags, failed, wrapped) do { \
+    const char *new_path = path; \
+    if (!(new_path = swow_check_path(path))) { \
+        { \
+            failed \
+        } \
+        break; \
+    } \
+    {wrapped} SAVE_LE; \
+    check_path_free((void *) new_path); \
+    RESTORE_LE; \
+} while (0)
 #endif // VIRTUAL_DIR
 
 // one-shot use here, only needs one form
-static inline int swow_virtual_open(const char *path, int flags){
+static inline int swow_virtual_open(const char *path, int flags)
+{
     int ret;
     SWOW_VCWD_WRAP(path, real_path, CWD_FILEPATH, {
         ret = -1;
@@ -546,7 +558,8 @@ static inline int swow_virtual_open(const char *path, int flags){
     return ret;
 }
 
-static inline int swow_virtual_unlink(const char *path){
+static inline int swow_virtual_unlink(const char *path)
+{
     int ret;
     SWOW_VCWD_WRAP(path, real_path, CWD_EXPAND, {
         ret = -1;
@@ -556,8 +569,8 @@ static inline int swow_virtual_unlink(const char *path){
     return ret;
 }
 
-static inline cat_dir_t* swow_virtual_opendir(const char *path){
-    cat_dir_t * ret;
+static inline cat_dir_t *swow_virtual_opendir(const char *path){
+    cat_dir_t *ret;
     SWOW_VCWD_WRAP(path, real_path, CWD_REALPATH, {
         ret = NULL;
     }, {
@@ -566,7 +579,8 @@ static inline cat_dir_t* swow_virtual_opendir(const char *path){
     return ret;
 }
 
-static inline int swow_virtual_access(const char *path, int mode){
+static inline int swow_virtual_access(const char *path, int mode)
+{
     int ret;
     SWOW_VCWD_WRAP(path, real_path, CWD_REALPATH, {
         ret = -1;
@@ -576,38 +590,42 @@ static inline int swow_virtual_access(const char *path, int mode){
     return ret;
 }
 
-static inline int swow_virtual_stat_ex(const char *path, zend_stat_t * statbuf, int use_lstat, int flags){
+static inline int swow_virtual_stat_ex(const char *path, zend_stat_t *statbuf, int use_lstat, int flags)
+{
 #ifdef VIRTUAL_DIR
-    const char* new_path_cur = swow_vcwd_path(path, flags);
+    const char *new_path_cur = swow_vcwd_path(path, flags);
     if (unlikely(NULL == new_path_cur)) {
         return -1;
     }
 #else
-    const char* new_path_cur = path;
+    const char *new_path_cur = path;
 #endif
     int ret;
 #ifdef PHP_WIN32
     LPCWSTR pathw = swow_check_path_w(path);
-    if(!pathw){
+    if (!pathw) {
         ret = -1;
-    }else
-#endif //PHP_WIN32
+    } else
+#endif // PHP_WIN32
         ret = swow_fs_stat_mock(new_path_cur, statbuf, use_lstat);
 #ifdef VIRTUAL_DIR
-    efree((void*)new_path_cur);
+    efree((void *) new_path_cur);
 #endif
     return ret;
 }
 
-static inline int swow_virtual_stat(const char *path, zend_stat_t * statbuf){
+static inline int swow_virtual_stat(const char *path, zend_stat_t *statbuf)
+{
     return swow_virtual_stat_ex(path, statbuf, 0, CWD_REALPATH);
 }
 
-static inline int swow_virtual_lstat(const char *path, zend_stat_t * statbuf){
+static inline int swow_virtual_lstat(const char *path, zend_stat_t *statbuf)
+{
     return swow_virtual_stat_ex(path, statbuf, 1, CWD_EXPAND);
 }
 
-static inline int swow_virtual_utime(const char *path, struct utimbuf *buf){
+static inline int swow_virtual_utime(const char *path, struct utimbuf *buf)
+{
     int ret;
     SWOW_VCWD_WRAP(path, real_path, CWD_REALPATH, {
         ret = -1;
@@ -617,7 +635,8 @@ static inline int swow_virtual_utime(const char *path, struct utimbuf *buf){
     return ret;
 }
 
-static inline int swow_virtual_rename(const char *a, const char *b){
+static inline int swow_virtual_rename(const char *a, const char *b)
+{
     int ret;
     SWOW_VCWD_WRAP(a, real_a, CWD_EXPAND, {
         ret = -1;
@@ -631,37 +650,36 @@ static inline int swow_virtual_rename(const char *a, const char *b){
     return ret;
 }
 
-static inline int swow_virtual_chmod(const char *path,  mode_t mode){
+static inline int swow_virtual_chmod(const char *path, mode_t mode)
+{
     int ret;
-    SWOW_VCWD_WRAP(path, real_path, CWD_REALPATH, {
-        ret = -1;
-    }, {
-        ret = cat_fs_chmod(real_path, (int)mode);
-    });
+    SWOW_VCWD_WRAP(
+        path, real_path, CWD_REALPATH, { ret = -1; }, { ret = cat_fs_chmod(real_path, (int) mode); });
     return ret;
 }
 
 #ifdef PHP_WIN32
-    // '/' -> '\\'
-# define NORMALIZE_PATH() do {\
-    for (char* p = strchr(real_path, '/'); p!=NULL; p = strchr(p, '/')){ \
-        if(real_path_dup == real_path){ \
+// '/' -> '\\'
+# define NORMALIZE_PATH() do { \
+    for (char *p = strchr(real_path, '/'); p != NULL; p = strchr(p, '/')) { \
+        if (real_path_dup == real_path) { \
             real_path_dup = estrdup(real_path); \
             p = strchr(real_path_dup, '/'); \
         } \
         *p = '\\'; \
     } \
-} while(0)
-# define FREE_NORMALIZED_PATH() do {\
-    if(real_path_dup != real_path){ \
+} while (0)
+# define FREE_NORMALIZED_PATH() do { \
+    if (real_path_dup != real_path) { \
         efree(real_path_dup); \
     } \
-} while(0)
+} while (0)
 #else
 # define NORMALIZE_PATH() {}
 # define FREE_NORMALIZED_PATH() {}
 #endif // PHP_WIN32
-static inline int swow_virtual_mkdir(const char *path,  mode_t mode){
+static inline int swow_virtual_mkdir(const char *path, mode_t mode)
+{
     int ret;
     SWOW_VCWD_WRAP(path, real_path, CWD_FILEPATH, {
         ret = -1;
@@ -674,7 +692,8 @@ static inline int swow_virtual_mkdir(const char *path,  mode_t mode){
     return ret;
 }
 
-static inline int swow_virtual_rmdir(const char *path){
+static inline int swow_virtual_rmdir(const char *path)
+{
     int ret;
     SWOW_VCWD_WRAP(path, real_path, CWD_EXPAND, {
         ret = -1;
@@ -684,8 +703,9 @@ static inline int swow_virtual_rmdir(const char *path){
     return ret;
 }
 
-# ifndef PHP_WIN32
-static inline int swow_virtual_chown(const char *path, uid_t owner, gid_t group){
+#ifndef PHP_WIN32
+static inline int swow_virtual_chown(const char *path, uid_t owner, gid_t group)
+{
     int ret;
     SWOW_VCWD_WRAP(path, real_path, CWD_REALPATH, {
         ret = -1;
@@ -706,22 +726,23 @@ static inline int swow_virtual_lchown(const char *path, uid_t owner, gid_t group
     return ret;
 }
 */
-# endif // PHP_WIN32
+#endif // PHP_WIN32
 
 /*
-* cat_fs_flock wrapper
-*/
+ * cat_fs_flock wrapper
+ */
 #if defined(LOCK_SH) && LOCK_SH == CAT_LOCK_SH && \
     defined(LOCK_EX) && LOCK_EX == CAT_LOCK_EX && \
     defined(LOCK_UN) && LOCK_UN == CAT_LOCK_UN && \
     defined(LOCK_NB) && LOCK_NB == CAT_LOCK_NB
 # define swow_fs_flock cat_fs_flock
 #else
-static inline int swow_fs_flock(int fd, int op){
+static inline int swow_fs_flock(int fd, int op)
+{
     int op_type = op | (LOCK_SH & LOCK_EX & LOCK_UN);
     int op_nb = op | LOCK_NB;
     int _op = op_nb != 0 ? CAT_LOCK_NB : 0;
-    switch(op_type){
+    switch (op_type) {
         case LOCK_SH:
             _op |= CAT_LOCK_SH;
             break;

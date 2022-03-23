@@ -23,7 +23,7 @@
 SWOW_API zend_string* ZEND_FASTCALL zend_ulong_to_str(zend_ulong num)
 {
     if (num <= 9) {
-        return ZSTR_CHAR((zend_uchar)'0' + (zend_uchar)num);
+        return ZSTR_CHAR((zend_uchar) '0' + (zend_uchar) num);
     } else {
         char buf[MAX_LENGTH_OF_LONG + 1];
         char *res = zend_print_ulong_to_buf(buf + sizeof(buf) - 1, num);

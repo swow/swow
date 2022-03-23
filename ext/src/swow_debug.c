@@ -273,7 +273,7 @@ static void swow_debug_build_trace_string(smart_str *str, HashTable *ht, uint32_
         if (Z_TYPE_P(file) != IS_STRING) {
             zend_error(E_WARNING, "Function name is no string");
             smart_str_appends(str, "[unknown function]");
-        } else{
+        } else {
             zend_long line;
             tmp = zend_hash_find_ex(ht, ZSTR_KNOWN(ZEND_STR_LINE), 1);
             if (tmp) {

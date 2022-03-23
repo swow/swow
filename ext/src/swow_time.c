@@ -21,7 +21,7 @@
 #include "swow_hook.h"
 
 #ifdef PHP_WIN32
-#include "win32/time.h"
+# include "win32/time.h"
 #endif // PHP_WIN32
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_swow_sleep, 0, 1, IS_LONG, 0)

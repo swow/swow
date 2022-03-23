@@ -58,7 +58,7 @@ SWOW_API cat_bool_t swow_defer(zval *zcallable)
             zend_hash_str_add_new(symbol_table, SWOW_DEFER_MAGIC_NAME, sizeof(SWOW_DEFER_MAGIC_NAME) - 1, &zdefer);
             sdefer = swow_defer_get_from_object(defer);
         } else {
-            ZEND_ASSERT(Z_TYPE_P(zdefer) == IS_OBJECT  && instanceof_function(Z_OBJCE_P(zdefer), swow_defer_ce));
+            ZEND_ASSERT(Z_TYPE_P(zdefer) == IS_OBJECT && instanceof_function(Z_OBJCE_P(zdefer), swow_defer_ce));
             sdefer = swow_defer_get_from_object(Z_OBJ_P(zdefer));
         }
         cat_queue_push_back(&sdefer->tasks, &task->node);

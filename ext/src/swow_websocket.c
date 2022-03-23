@@ -325,7 +325,7 @@ static PHP_METHOD(Swow_WebSocket_Frame, setPayloadLength)
         Z_PARAM_LONG(payload_length)
     ZEND_PARSE_PARAMETERS_END();
 
-    header->payload_length =  payload_length;
+    header->payload_length = payload_length;
 
     RETURN_THIS();
 }

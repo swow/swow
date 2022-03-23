@@ -56,15 +56,15 @@ static void swow_log_standard(CAT_LOG_PARAMATERS)
         cat_bool_t failed = cat_false;
         switch (type) {
 #ifdef CAT_ENABLE_DEBUG_LOG
-        case CAT_LOG_TYPE_DEBUG:
-            type_string = "Debug";
-            break;
+            case CAT_LOG_TYPE_DEBUG:
+                type_string = "Debug";
+                break;
 #endif
-        case CAT_LOG_TYPE_INFO:
-            type_string = "Info";
-            break;
-        default:
-            CAT_NEVER_HERE("Unknown log type");
+            case CAT_LOG_TYPE_INFO:
+                type_string = "Info";
+                break;
+            default:
+                CAT_NEVER_HERE("Unknown log type");
         }
         /* stdout */
         do {
@@ -157,7 +157,7 @@ static PHP_METHOD(Swow_Log, setTypes)
         Z_PARAM_LONG(types)
     ZEND_PARSE_PARAMETERS_END();
 
-    if (UNEXPECTED((types &~ CAT_LOG_TYPES_ALL) != 0)) {
+    if (UNEXPECTED((types & ~CAT_LOG_TYPES_ALL) != 0)) {
         zend_argument_value_error(1, "is unrecognized");
         RETURN_THROWS();
     }
@@ -183,7 +183,7 @@ static PHP_METHOD(Swow_Log, setModuleTypes)
         Z_PARAM_LONG(module_types)
     ZEND_PARSE_PARAMETERS_END();
 
-    if (UNEXPECTED((module_types &~ CAT_MODULE_TYPES_ALL) != 0)) {
+    if (UNEXPECTED((module_types & ~CAT_MODULE_TYPES_ALL) != 0)) {
         zend_argument_value_error(1, "is unrecognized");
         RETURN_THROWS();
     }

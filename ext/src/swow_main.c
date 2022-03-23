@@ -45,19 +45,19 @@
 #include "ext/standard/info.h"
 
 #ifdef SWOW_DISABLE_SESSION
-#if HAVE_PHP_SESSION && !defined(COMPILE_DL_SESSION)
-#define SWOW_HAVE_SESSION
-#include "ext/session/php_session.h"
-#endif
+# if HAVE_PHP_SESSION && !defined(COMPILE_DL_SESSION)
+#  define SWOW_HAVE_SESSION
+#  include "ext/session/php_session.h"
+# endif
 #endif
 
 #if (defined(HAVE_PCRE) || defined(HAVE_BUNDLED_PCRE)) && !defined(COMPILE_DL_PCRE) && \
      defined(__MACH__) && !defined(CAT_DEBUG)
-#include "ext/pcre/php_pcre.h"
+# include "ext/pcre/php_pcre.h"
 #endif
 
 #ifdef CAT_HAVE_CURL
-#include <curl/curl.h>
+# include <curl/curl.h>
 #endif
 
 SWOW_API zend_class_entry *swow_ce;
@@ -175,7 +175,7 @@ PHP_MINIT_FUNCTION(swow)
 static int swow_clean_module_function(zval *el, void *arg)
 {
     zend_function *fe = (zend_function *) Z_PTR_P(el);
-    int module_number = *(int *)arg;
+    int module_number = *(int *) arg;
     if (fe->common.type == ZEND_INTERNAL_FUNCTION && fe->internal_function.module->module_number == module_number) {
         return ZEND_HASH_APPLY_REMOVE;
     } else {
@@ -332,25 +332,25 @@ static zend_result swow_delay_runtime_shutdown(void)
 PHP_MINFO_FUNCTION(swow)
 {
 #ifndef CAT_THREAD_SAFE
-#define SWOW_VERSION_SUFFIX "NTS"
+# define SWOW_VERSION_SUFFIX "NTS"
 #else
-#define SWOW_VERSION_SUFFIX "CTS"
+# define SWOW_VERSION_SUFFIX "CTS"
 #endif
 
 #ifdef CAT_DEBUG
-#define SWOW_VERSION_SUFFIX_EXT " DEBUG"
+# define SWOW_VERSION_SUFFIX_EXT " DEBUG"
 #else
-#define SWOW_VERSION_SUFFIX_EXT ""
+# define SWOW_VERSION_SUFFIX_EXT ""
 #endif
 
 #ifdef CAT_COROUTINE_USE_UCONTEXT
-#define SWOW_COROUTINE_CONTEXT_TYPE "ucontext"
+# define SWOW_COROUTINE_CONTEXT_TYPE "ucontext"
 #else
-#define SWOW_COROUTINE_CONTEXT_TYPE "boost-context"
+# define SWOW_COROUTINE_CONTEXT_TYPE "boost-context"
 #endif
 
 #ifndef SWOW_GIT_VERSION
-#define SWOW_GIT_VERSION ""
+# define SWOW_GIT_VERSION ""
 #endif
     smart_str str;
 
@@ -387,7 +387,7 @@ PHP_MINFO_FUNCTION(swow)
     smart_str_append_printf(&str, "%s, ", cat_ssl_version());
 # endif
 # ifdef CAT_HAVE_CURL
-    curl_version_info_data * curl_vid = curl_version_info(CURLVERSION_NOW);
+    curl_version_info_data *curl_vid = curl_version_info(CURLVERSION_NOW);
     smart_str_append_printf(&str, "cURL %s, ", curl_vid->version);
 # endif
     ZEND_ASSERT(str.s != NULL && ZSTR_LEN(str.s) > 1);
@@ -445,7 +445,7 @@ static PHP_METHOD(Swow, isBuiltWith)
     }
 #endif
 #ifdef CAT_HAVE_CURL
-     else if (zend_string_equals_literal_ci(lib, "curl")) {
+    else if (zend_string_equals_literal_ci(lib, "curl")) {
         ret = 1;
     }
 #endif
@@ -466,9 +466,9 @@ int swow_module_init(INIT_FUNC_ARGS)
         SWOW_MODULES_CHECK_PRE_START() {
             "session"
         } SWOW_MODULES_CHECK_PRE_END();
-    #ifdef SWOW_HAVE_SESSION
+# ifdef SWOW_HAVE_SESSION
         PS(auto_start) = 0;
-    #endif
+# endif
         zend_disable_function(ZEND_STRL("session_start"));
     } while (0);
 #endif
@@ -569,8 +569,8 @@ SWOW_API zend_module_entry swow_module_entry = {
 /* }}} */
 
 #ifdef COMPILE_DL_SWOW
-#ifdef ZTS
+# ifdef ZTS
 ZEND_TSRMLS_CACHE_DEFINE()
-#endif
+# endif
 ZEND_GET_MODULE(swow)
 #endif
