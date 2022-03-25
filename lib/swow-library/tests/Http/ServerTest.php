@@ -52,21 +52,22 @@ final class ServerTest extends TestCase
             $connection = $server->acceptConnection();
             $request = $connection->recvHttpRequest();
             $this->assertSame($query, $request->getQueryParams());
-            $this->assertSame($query, $request->getParsedBody());
+            $this->assertSame($request->getServerParams()['remote_addr'], $request->getParsedBody()['address']);
+            $this->assertSame($request->getServerParams()['remote_port'], $request->getParsedBody()['port']);
             $connection->respond(serialize($query));
         });
 
         $client = new HttpClient();
         $request = new HttpRequest();
         $uri = (new Uri('/'))->setQuery(http_build_query($query));
+        $client
+            ->connect($server->getSockAddress(), $server->getSockPort());
         $request
             ->setUri($uri)
             ->setHeader('Content-Type', MimeType::JSON)
             ->getBody()
-            ->write(json_encode($query));
-        $response = $client
-            ->connect($server->getSockAddress(), $server->getSockPort())
-            ->sendRequest($request);
+            ->write(json_encode(['address' => $client->getSockAddress(), 'port' => $client->getSockPort()]));
+        $response = $client->sendRequest($request);
         $this->assertSame($query, unserialize($response->getBodyAsString()));
 
         $wr::wait($wr);

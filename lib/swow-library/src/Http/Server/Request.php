@@ -14,6 +14,7 @@ declare(strict_types=1);
 namespace Swow\Http\Server;
 
 use function explode;
+use function implode;
 use function parse_str;
 use function rawurldecode;
 
@@ -92,8 +93,17 @@ class Request extends \Swow\Http\ServerRequest
      * @param array<string, array<string>> $headers
      * @param array<string, string> $headerNames
      */
-    public function setHead(string $method, string $uri, string $protocolVersion, array $headers, array $headerNames, bool $keepAlive, int $contentLength, bool $upgrade): static
-    {
+    public function setHead(
+        string $method,
+        string $uri,
+        string $protocolVersion,
+        array $headers,
+        array $headerNames,
+        bool $keepAlive,
+        int $contentLength,
+        bool $upgrade,
+        array $serverParams
+    ): static {
         $this->method = $method;
         $this->uriString = $uri;
         $uriParts = explode('?', $uri, 2);
@@ -105,6 +115,7 @@ class Request extends \Swow\Http\ServerRequest
         $this->keepAlive = $keepAlive;
         $this->contentLength = $contentLength;
         $this->upgrade = $upgrade;
+        $this->serverParams = $serverParams;
 
         return $this;
     }

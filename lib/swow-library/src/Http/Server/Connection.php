@@ -63,6 +63,9 @@ class Connection extends Socket implements ProtocolTypeInterface
 
     protected ?Server $server;
 
+    /** @var array{'remote_addr': string, 'remote_port': int} */
+    protected array $serverParams;
+
     public function __construct(Server $server)
     {
         parent::__construct($server->getSimpleType());
@@ -101,6 +104,10 @@ class Connection extends Socket implements ProtocolTypeInterface
             $this->server->getMaxHeaderLength(),
             $this->server->getMaxContentLength()
         );
+        $result->serverParams = ($this->serverParams ??= [
+            'remote_addr' => $this->getPeerAddress(),
+            'remote_port' => $this->getPeerPort(),
+        ]);
 
         $request->setHead(
             $result->method,
@@ -110,7 +117,8 @@ class Connection extends Socket implements ProtocolTypeInterface
             $result->headerNames,
             $result->shouldKeepAlive,
             $result->contentLength,
-            $result->isUpgrade
+            $result->isUpgrade,
+            $result->serverParams,
         )->setBody($result->body);
         if ($result->uploadedFiles) {
             $uploadedFiles = [];
