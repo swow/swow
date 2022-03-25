@@ -52,6 +52,8 @@ final class ServerTest extends TestCase
             $connection = $server->acceptConnection();
             $request = $connection->recvHttpRequest();
             $this->assertSame($query, $request->getQueryParams());
+            $this->assertSame($request->getHeaderLine('content-type'), MimeType::JSON);
+            self::assertSame($request->getCookieParams(), ['foo' => 'bar', 'bar' => 'baz']);
             $this->assertSame($request->getServerParams()['remote_addr'], $request->getParsedBody()['address']);
             $this->assertSame($request->getServerParams()['remote_port'], $request->getParsedBody()['port']);
             $connection->respond(serialize($query));
@@ -65,6 +67,7 @@ final class ServerTest extends TestCase
         $request
             ->setUri($uri)
             ->setHeader('Content-Type', MimeType::JSON)
+            ->setHeader('Cookie', 'foo=bar; bar=baz')
             ->getBody()
             ->write(json_encode(['address' => $client->getSockAddress(), 'port' => $client->getSockPort()]));
         $response = $client->sendRequest($request);
