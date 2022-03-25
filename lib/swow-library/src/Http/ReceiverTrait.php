@@ -382,6 +382,8 @@ trait ReceiverTrait
             if ($isRequest) {
                 $result->method = $parser->getMethod();
                 $result->uri = $uriOrReasonPhrase;
+                $result->isUpgrade = $parser->isUpgrade();
+                $result->uploadedFiles = $uploadedFiles;
             } else {
                 $result->statusCode = $parser->getStatusCode();
                 $result->reasonPhrase = $uriOrReasonPhrase;
@@ -392,8 +394,6 @@ trait ReceiverTrait
             $result->headerNames = $headerNames;
             $result->contentLength = $contentLength;
             $result->shouldKeepAlive = $shouldKeepAlive;
-            $result->isUpgrade = $parser->isUpgrade();
-            $result->uploadedFiles = $uploadedFiles;
             $parser->reset();
         }
 

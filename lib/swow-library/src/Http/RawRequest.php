@@ -18,4 +18,9 @@ class RawRequest extends RawResult
     public string $uri = '';
 
     public string $method = '';
+
+    public bool $isUpgrade = false;
+
+    /** @var RawUploadedFile[] */
+    public array $uploadedFiles = [];
 }

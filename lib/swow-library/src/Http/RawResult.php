@@ -36,9 +36,4 @@ class RawResult
     public int $contentLength = 0;
 
     public bool $shouldKeepAlive = false;
-
-    public bool $isUpgrade = false;
-
-    /** @var RawUploadedFile[] */
-    public array $uploadedFiles = [];
 }
