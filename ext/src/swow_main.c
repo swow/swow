@@ -72,7 +72,7 @@ SWOW_API swow_nts_globals_t swow_nts_globals;
 
 typedef int (*swow_init_function_t)(INIT_FUNC_ARGS);
 typedef int (*swow_shutdown_function_t)(INIT_FUNC_ARGS);
-typedef zend_result (*swow_delay_shutdown_function_t)(void);
+typedef zend_result (*swow_close_function_t)(void);
 
 /* {{{ PHP_GINIT_FUNCTION */
 static PHP_GINIT_FUNCTION(swow)
@@ -311,15 +311,20 @@ PHP_RSHUTDOWN_FUNCTION(swow)
 }
 /* }}} */
 
-static zend_result swow_delay_runtime_shutdown(void)
+static zend_result swow_reserved_runtime_close(void)
 {
-    static const swow_delay_shutdown_function_t delay_rshutdown_functions[] = {
-        swow_coroutine_delay_runtime_shutdown,
+    return SUCCESS;
+}
+
+static zend_result swow_post_deactivate(void)
+{
+    static const swow_close_function_t rclose_functions[] = {
+        swow_reserved_runtime_close,
     };
 
     size_t i = 0;
-    for (; i < CAT_ARRAY_SIZE(delay_rshutdown_functions); i++) {
-        if (delay_rshutdown_functions[i]() != SUCCESS) {
+    for (; i < CAT_ARRAY_SIZE(rclose_functions); i++) {
+        if (rclose_functions[i]() != SUCCESS) {
             return FAILURE;
         }
     }
@@ -569,7 +574,7 @@ SWOW_API zend_module_entry swow_module_entry = {
     PHP_MODULE_GLOBALS(swow),    /* globals descriptor */
     PHP_GINIT(swow),             /* globals ctor */
     PHP_GSHUTDOWN(swow),         /* globals dtor */
-    swow_delay_runtime_shutdown, /* post deactivate */
+    swow_post_deactivate, /* post deactivate */
     STANDARD_MODULE_PROPERTIES_EX
 };
 /* }}} */
