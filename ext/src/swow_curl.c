@@ -484,4 +484,26 @@ int swow_curl_module_shutdown(INIT_FUNC_ARGS)
     return SUCCESS;
 }
 
+int swow_curl_runtime_init(INIT_FUNC_ARGS)
+{
+    SWOW_CURL_CHECK_MODULE();
+
+    if (!cat_curl_runtime_init()) {
+        return FAILURE;
+    }
+
+    return SUCCESS;
+}
+
+int swow_curl_runtime_shutdown(INIT_FUNC_ARGS)
+{
+    SWOW_CURL_CHECK_MODULE();
+
+    if (!cat_curl_runtime_shutdown()) {
+        return FAILURE;
+    }
+
+    return SUCCESS;
+}
+
 #endif /* CAT_CURL */

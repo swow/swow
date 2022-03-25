@@ -235,6 +235,9 @@ PHP_RINIT_FUNCTION(swow)
         swow_socket_runtime_init,
         swow_stream_runtime_init,
         swow_watchdog_runtime_init,
+#ifdef CAT_HAVE_CURL
+        swow_curl_runtime_init,
+#endif
     };
 
 // FIXME: Why opcache do not set ZEND_COMPILE_PRELOAD before runtime init anymore?
@@ -264,6 +267,9 @@ PHP_RINIT_FUNCTION(swow)
 PHP_RSHUTDOWN_FUNCTION(swow)
 {
     static const swow_shutdown_function_t rshutdown_functions[] = {
+#ifdef CAT_HAVE_CURL
+        swow_curl_runtime_shutdown,
+#endif
         swow_watchdog_runtime_shudtown,
         swow_stream_runtime_shutdown,
         swow_event_runtime_shutdown,
