@@ -44,7 +44,7 @@ typedef struct swow_watchdog_s {
 
 int swow_watchdog_module_init(INIT_FUNC_ARGS);
 int swow_watchdog_runtime_init(INIT_FUNC_ARGS);
-int swow_watchdog_runtime_shudtown(INIT_FUNC_ARGS);
+int swow_watchdog_runtime_shutdown(INIT_FUNC_ARGS);
 
 /* helper */
 

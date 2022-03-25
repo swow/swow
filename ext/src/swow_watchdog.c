@@ -251,7 +251,7 @@ int swow_watchdog_runtime_init(INIT_FUNC_ARGS)
     return SUCCESS;
 }
 
-int swow_watchdog_runtime_shudtown(INIT_FUNC_ARGS)
+int swow_watchdog_runtime_shutdown(INIT_FUNC_ARGS)
 {
     if (cat_watchdog_is_running() && !swow_watchdog_stop()) {
         CAT_CORE_ERROR_WITH_LAST(WATCH_DOG, "WatchDog stop failed");

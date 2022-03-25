@@ -270,7 +270,7 @@ PHP_RSHUTDOWN_FUNCTION(swow)
 #ifdef CAT_HAVE_CURL
         swow_curl_runtime_shutdown,
 #endif
-        swow_watchdog_runtime_shudtown,
+        swow_watchdog_runtime_shutdown,
         swow_stream_runtime_shutdown,
         swow_event_runtime_shutdown,
         swow_coroutine_runtime_shutdown,
