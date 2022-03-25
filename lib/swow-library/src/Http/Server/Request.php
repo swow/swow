@@ -116,6 +116,13 @@ class Request extends \Swow\Http\ServerRequest
         $this->contentLength = $contentLength;
         $this->upgrade = $upgrade;
         $this->serverParams = $serverParams;
+        if (isset($headerNames['cookie'])) {
+            // FIXME: it this reliable?
+            parse_str(
+                strtr(implode('; ', $headers[$headerNames['cookie']]), ['&' => '%26', '+' => '%2B', ';' => '&']),
+                $this->cookieParams
+            );
+        }
 
         return $this;
     }
