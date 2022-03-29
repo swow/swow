@@ -1113,23 +1113,18 @@ SWOW_API cat_bool_t swow_coroutine_eval(swow_coroutine_t *scoroutine, zend_strin
     return cat_true;
 }
 
-SWOW_API cat_bool_t swow_coroutine_call(swow_coroutine_t *scoroutine, zval *zcallable, zval *return_value)
+SWOW_API cat_bool_t swow_coroutine_call(swow_coroutine_t *scoroutine, zval *zcallable, zend_long level, zval *return_value)
 {
     zend_fcall_info fci;
-    zend_fcall_info_cache fcc;
+    swow_fcall_storage_t fcall;
     int error;
 
     SWOW_COROUTINE_SHOULD_BE_IN_EXECUTING(scoroutine, cat_true, return cat_false);
 
-    do {
-        char *error;
-        if (!zend_is_callable_ex(zcallable, NULL, 0, NULL, &fcc, &error)) {
-            cat_update_last_error(CAT_EMISUSE, "Coroutine::call() only accept callable parameter, %s", error);
-            efree(error);
-            return cat_false;
-        }
-        efree(error);
-    } while (0);
+    if (!swow_fcall_storage_create(&fcall, zcallable)) {
+        cat_update_last_error_with_previous("Coroutine::call() failed");
+        return cat_false;
+    }
 
     fci.size = sizeof(fci);
     ZVAL_UNDEF(&fci.function_name);
@@ -1142,11 +1137,13 @@ SWOW_API cat_bool_t swow_coroutine_call(swow_coroutine_t *scoroutine, zval *zcal
         cat_coroutine_switch_deny();
     }
 
-    SWOW_COROUTINE_EXECUTE_START(scoroutine, 0) {
-        error = zend_call_function(&fci, &fcc);
+    SWOW_COROUTINE_EXECUTE_START(scoroutine, level) {
+        error = zend_call_function(&fci, &fcall.fcc);
     } SWOW_COROUTINE_EXECUTE_END();
 
     cat_coroutine_switch_allow();
+
+    swow_fcall_storage_release(&fcall);
 
     if (UNEXPECTED(error != SUCCESS)) {
         cat_update_last_error(CAT_UNKNOWN, "Call function failed by unknown reason");
@@ -1389,15 +1386,17 @@ ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Coroutine, run)
 {
-    zval *zcallable;
+    swow_fcall_storage_t fcall;
+    zval zfcall;
     SWOW_COROUTINE_DECLARE_RESUME_TRANSFER(zdata);
 
     ZEND_PARSE_PARAMETERS_START(1, -1)
-        Z_PARAM_ZVAL(zcallable)
+        SWOW_PARAM_FCALL(fcall)
         Z_PARAM_VARIADIC('*', fci.params, fci.param_count)
     ZEND_PARSE_PARAMETERS_END();
 
-    swow_coroutine_t *scoroutine = swow_coroutine_create_ex(zend_get_called_scope(execute_data), zcallable, 0, 0);
+    ZVAL_PTR(&zfcall, &fcall);
+    swow_coroutine_t *scoroutine = swow_coroutine_create_ex(zend_get_called_scope(execute_data), &zfcall, 0, 0);
     if (UNEXPECTED(scoroutine == NULL)) {
         swow_throw_exception_with_last(swow_coroutine_exception_ce);
         RETURN_THROWS();
@@ -1850,19 +1849,25 @@ static PHP_METHOD(Swow_Coroutine, eval)
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Coroutine_call, 0, 1, IS_MIXED, 0)
     ZEND_ARG_TYPE_INFO(0, callable, IS_CALLABLE, 0)
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, level, IS_LONG, 0, "0")
 ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Coroutine, call)
 {
     swow_coroutine_t *scoroutine = getThisCoroutine();
-    zval *zcallable;
+    swow_fcall_storage_t fcall;
+    zval zfcall;
+    zend_long level = 0;
     cat_bool_t ret;
 
-    ZEND_PARSE_PARAMETERS_START(1, 1)
-        Z_PARAM_ZVAL(zcallable)
+    ZEND_PARSE_PARAMETERS_START(1, 2)
+        SWOW_PARAM_FCALL(fcall)
+        Z_PARAM_OPTIONAL
+        Z_PARAM_LONG(level)
     ZEND_PARSE_PARAMETERS_END();
 
-    ret = swow_coroutine_call(scoroutine, zcallable, return_value);
+    ZVAL_PTR(&zfcall, &fcall);
+    ret = swow_coroutine_call(scoroutine, &zfcall, level, return_value);
 
     if (UNEXPECTED(!ret)) {
         swow_throw_exception_with_last(swow_coroutine_exception_ce);

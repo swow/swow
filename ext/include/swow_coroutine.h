@@ -194,8 +194,8 @@ SWOW_API zend_long swow_coroutine_get_trace_depth(const swow_coroutine_t *scorou
 SWOW_API HashTable *swow_coroutine_get_defined_vars(swow_coroutine_t *scoroutine, zend_ulong level);
 SWOW_API cat_bool_t swow_coroutine_set_local_var(swow_coroutine_t *scoroutine, zend_string *name, zval *value, zend_long level, zend_bool force);
 
-SWOW_API cat_bool_t swow_coroutine_eval(swow_coroutine_t *scoroutine, zend_string *string, zend_long level, zval *return_value); SWOW_MAY_EXCEPTION
-SWOW_API cat_bool_t swow_coroutine_call(swow_coroutine_t *scoroutine, zval *zcallable, zval *return_value);                      SWOW_MAY_EXCEPTION
+SWOW_API cat_bool_t swow_coroutine_eval(swow_coroutine_t *scoroutine, zend_string *string, zend_long level, zval *return_value);
+SWOW_API cat_bool_t swow_coroutine_call(swow_coroutine_t *scoroutine, zval *zcallable, zend_long level, zval *return_value);
 
 SWOW_API swow_coroutine_t *swow_coroutine_get_by_id(cat_coroutine_id_t id);
 SWOW_API zval *swow_coroutine_get_zval_by_id(cat_coroutine_id_t id);

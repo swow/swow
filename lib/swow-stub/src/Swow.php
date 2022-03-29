@@ -832,7 +832,7 @@ namespace Swow
          */
         public function eval(string $string, int $level = 0): mixed { }
 
-        public function call(callable $callable): mixed { }
+        public function call(callable $callable, int $level = 0): mixed { }
 
         public function throw(\Throwable $throwable): mixed { }
 
