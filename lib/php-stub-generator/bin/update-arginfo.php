@@ -149,6 +149,9 @@ foreach ($cSourceFiles as $cSourceFile) {
             '/throw new Exception\("Missing parameter type"\);/' => '/** $0 */',
             '/error_reporting\(E_ALL\);/' => 'error_reporting(E_ALL ^ E_DEPRECATED);',
             '/"\|ZEND_ACC_/' => '" | ZEND_ACC_',
+            '/(toClassTypeString\(\)\: string \{\n +return implode\(\')\|(\')/' => '$1 | $2',
+            '/(toTypeMask\(\)\: string \{\n +if \(empty\(\$this\-\>builtinTypes\)\) \{\n +return \'0\'\;\n +\}\n +return implode\(\')\|(\'\,)/' => '$1 | $2',
+            '/(\|)(MAY_BE_\w+)/' => ' $1 $2',
         ];
         $genStubXSource = preg_replace(array_keys($genStubSourceReplaceMap), array_values($genStubSourceReplaceMap), $genStubSource);
         file_put_contents($genStubXPath, $genStubXSource);
