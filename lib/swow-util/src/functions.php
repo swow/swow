@@ -23,6 +23,7 @@ use function file_put_contents;
 use function fread;
 use function getenv;
 use function implode;
+use function is_numeric;
 use function passthru as native_passthru;
 use function proc_close;
 use function proc_get_status;
@@ -63,6 +64,7 @@ const EMOJI_WARN = '⚠️';
 const EMOJI_ERROR = '❌';
 const EMOJI_NOTICE = '🔎';
 const EMOJI_INFO = '⛄️';
+const EMOJI_DEBUG = '🧬';
 const EMOJI_OK = '✅';
 const EMOJI_SUCCESS = '🚀';
 
@@ -85,6 +87,22 @@ function notice(string $message): void
 function info(string $message): void
 {
     log(EMOJI_INFO . " {$message}", COLOR_NONE);
+}
+
+function debug(string $message, int $level = 1): void
+{
+    static $debugLevel;
+    if (!isset($debugLevel)) {
+        $debugLevel = getenv('DEBUG');
+        if (is_numeric($debugLevel)) {
+            $debugLevel = $debugLevel + 0;
+        } else {
+            $debugLevel = 0;
+        }
+    }
+    if ($debugLevel >= $level) {
+        log(EMOJI_DEBUG . " {$message}", COLOR_MAGENTA);
+    }
 }
 
 function ok(string $message): void
