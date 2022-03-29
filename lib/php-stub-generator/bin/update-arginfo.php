@@ -22,6 +22,7 @@ foreach ([0, 2] as $level) {
 }
 
 use Swow\Util\FileSystem;
+use function Swow\Util\debug;
 use function Swow\Util\error;
 use function Swow\Util\httpDownload;
 use function Swow\Util\info;
@@ -145,13 +146,16 @@ foreach ($cSourceFiles as $cSourceFile) {
         $genStubSource = file_get_contents($genStubPath);
         $genStubSourceReplaceMap = [
             '/throw new Exception\("Not implemented {\$classStmt->getType\(\)}"\);/' => 'if (!($classStmt instanceof Stmt\ClassConst)) { $0 }',
+            '/throw new Exception\("Missing parameter type"\);/' => '/** $0 */',
             '/error_reporting\(E_ALL\);/' => 'error_reporting(E_ALL ^ E_DEPRECATED);',
             '/"\|ZEND_ACC_/' => '" | ZEND_ACC_',
         ];
         $genStubXSource = preg_replace(array_keys($genStubSourceReplaceMap), array_values($genStubSourceReplaceMap), $genStubSource);
         file_put_contents($genStubXPath, $genStubXSource);
     }
-    $output = processExecute([PHP_BINARY, $genStubXPath, $stubFilePathForModule], $status);
+    $genStubXCommand = [PHP_BINARY, $genStubXPath, $stubFilePathForModule];
+    debug('> ' . implode(' ', $genStubXCommand));
+    $output = processExecute($genStubXCommand, $status);
     $argInfoFilePathForModule = "{$stubCachePath}/{$stubNameForModule}_arginfo.h";
     if (!file_exists($argInfoFilePathForModule) || $status['exitcode'] !== 0) {
         $output = str_replace("\n", ' ', $output);

@@ -454,19 +454,21 @@ class StubGenerator
                 $operator = $function->isStatic() ? '::' : '->';
                 $fullName = "{$function->getDeclaringClass()->getName()}{$operator}{$function->getShortName()}";
             }
-            $userComment = $this->userCommentMap[$fullName] ?? '';
-            if ($userComment) {
-                $comment = static::solveRawUserComment($userComment);
-            } elseif ($hasSpecialDefaultParamValue) {
-                $comment[] = sprintf(
-                    '@param %s%s%s$%s%s%s',
-                    $paramTypeName,
-                    $paramTypeName ? ' ' : '',
-                    $variadic,
-                    $param->getName(),
-                    !$variadic ? ($param->isOptional() ? ' [optional]' : ' [required]') : '',
-                    $defaultParamValueTipOnDoc !== '' ? " = {$defaultParamValueTipOnDoc}" : ''
-                );
+            if (!$this->genArginfoMode) {
+                $userComment = $this->userCommentMap[$fullName] ?? '';
+                if ($userComment) {
+                    $comment = static::solveRawUserComment($userComment);
+                } elseif ($hasSpecialDefaultParamValue) {
+                    $comment[] = sprintf(
+                        '@param %s%s%s$%s%s%s',
+                        $paramTypeName,
+                        $paramTypeName ? ' ' : '',
+                        $variadic,
+                        $param->getName(),
+                        !$variadic ? ($param->isOptional() ? ' [optional]' : ' [required]') : '',
+                        $defaultParamValueTipOnDoc !== '' ? " = {$defaultParamValueTipOnDoc}" : ''
+                    );
+                }
             }
             $paramsDeclarations[] = sprintf(
                 '%s%s%s%s$%s%s',
@@ -645,7 +647,7 @@ class StubGenerator
         }
 
         $userComment = $this->userCommentMap[$class->getName()] ?? null;
-        if ($userComment) {
+        if (!$this->genArginfoMode && $userComment) {
             $commentIndent = static::INDENT;
             $comment = static::genComment(static::solveRawUserComment($userComment));
             $commentLF = "\n";
