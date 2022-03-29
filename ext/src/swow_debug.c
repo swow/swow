@@ -102,16 +102,23 @@ SWOW_API zend_execute_data *swow_debug_backtrace_resolve_ex(zend_execute_data *e
             if (prev->func && ZEND_USER_CODE(prev->func->common.type) && prev->opline->opcode == ZEND_INCLUDE_OR_EVAL) {
                 include_kind = prev->opline->extended_value;
             }
-            if (include_kind == 0) {
-                /* Skip dummy frame unless it is needed to preserve filename/lineno info. */
-                if (!filename) {
-                    goto skip_frame;
-                }
+            switch (include_kind) {
+                case ZEND_EVAL:
+                case ZEND_INCLUDE:
+                case ZEND_REQUIRE:
+                case ZEND_INCLUDE_ONCE:
+                case ZEND_REQUIRE_ONCE:
+                    break;
+                default:
+                    if (!filename) {
+                        /* Skip dummy frame unless it is needed to preserve filename/lineno info. */
+                        goto _skip_frame;
+                    }
             }
         }
         count++;
         level--;
-skip_frame:
+_skip_frame:
         if (!skip->prev_execute_data) {
             break;
         }
@@ -160,9 +167,18 @@ SWOW_API zend_execute_data *swow_debug_backtrace_resolve_ex(zend_execute_data *c
             if (swow_debug_is_user_call(prev) && prev->opline->opcode == ZEND_INCLUDE_OR_EVAL) {
                 include_kind = prev->opline->extended_value;
             }
-            if (include_kind == 0 && !filename) {
-                /* Skip dummy frame unless it is needed to preserve filename/lineno info. */
-                goto _skip_frame;
+            switch (include_kind) {
+                case ZEND_EVAL:
+                case ZEND_INCLUDE:
+                case ZEND_REQUIRE:
+                case ZEND_INCLUDE_ONCE:
+                case ZEND_REQUIRE_ONCE:
+                    break;
+                default:
+                    if (!filename) {
+                        /* Skip dummy frame unless it is needed to preserve filename/lineno info. */
+                        goto _skip_frame;
+                    }
             }
         }
         count++;
