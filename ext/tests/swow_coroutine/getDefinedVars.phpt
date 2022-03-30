@@ -24,7 +24,7 @@ try {
 }
 
 ?>
---EXPECTF--
+--EXPECT--
 array(2) {
   ["var_a"]=>
   int(1)

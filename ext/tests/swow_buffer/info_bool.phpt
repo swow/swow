@@ -61,5 +61,5 @@ Assert::false($buffer->eof());
 
 echo 'Done' . PHP_LF;
 ?>
---EXPECTF--
+--EXPECT--
 Done

@@ -61,5 +61,5 @@ Assert::same($buffer->fetchString(), '');
 
 echo 'Done' . PHP_LF;
 ?>
---EXPECTF--
+--EXPECT--
 Done

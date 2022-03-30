@@ -24,6 +24,6 @@ php_proc_with_swow([
 echo 'Done' . PHP_LF;
 
 ?>
---EXPECTF--
+--EXPECT--
 Warning: <COROUTINE> Deadlock: all coroutines are asleep in scheduler
 Done

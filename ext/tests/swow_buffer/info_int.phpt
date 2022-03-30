@@ -63,5 +63,5 @@ Assert::same(Buffer::alignSize(0, 32), 32);
 
 echo 'Done' . PHP_LF;
 ?>
---EXPECTF--
+--EXPECT--
 Done

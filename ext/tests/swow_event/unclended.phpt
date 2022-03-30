@@ -21,5 +21,5 @@ $foo = new class {
 echo 'Done' . PHP_LF;
 
 ?>
---EXPECTF--
+--EXPECT--
 Done

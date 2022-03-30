@@ -27,5 +27,5 @@ Assert::same((string) $buffer, str_repeat('stte', 64));
 
 echo 'Done' . PHP_LF;
 ?>
---EXPECTF--
+--EXPECT--
 Done

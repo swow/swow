@@ -19,5 +19,5 @@ fclose($server);
 echo 'Done' . PHP_LF;
 
 ?>
---EXPECTF--
+--EXPECT--
 Done

@@ -35,7 +35,7 @@ echo "\n";
 
 echo "Done\n";
 ?>
---EXPECTF--
+--EXPECT--
 string(43) "Please re-run your program with "-e" option"
 
 array(2) {

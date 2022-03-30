@@ -43,5 +43,5 @@ Assert::false($clone->isEmpty());
 echo 'Done' . PHP_LF;
 
 ?>
---EXPECTF--
+--EXPECT--
 Done
