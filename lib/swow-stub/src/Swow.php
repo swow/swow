@@ -40,6 +40,7 @@ namespace Swow
         public const TYPE_SIGNAL = 2048;
         public const TYPE_PROCESS = 4096;
         public const TYPE_THREAD = 8192;
+        public const TYPE_OS = 16384;
         public const TYPE_WATCH_DOG = 131072;
         public const TYPE_PROTOCOL = 262144;
         public const TYPE_SSL = 2097152;
@@ -53,9 +54,9 @@ namespace Swow
         public const TYPE_USR6 = 536870912;
         public const TYPE_USR7 = 1073741824;
         public const TYPE_USR8 = -2147483648;
-        public const TYPES_BUILTIN = 15089663;
+        public const TYPES_BUILTIN = 15106047;
         public const TYPES_USR = -16777216;
-        public const TYPES_ALL = -1687553;
+        public const TYPES_ALL = -1671169;
     }
 }
 
@@ -593,6 +594,7 @@ namespace Swow
         public const ESSL = -9755;
         public const ENOCERT = -9754;
         public const ECERT = -9753;
+        public const ECHILD = -9752;
 
         public static function getDescriptionFor(int $error): string { }
     }
@@ -731,31 +733,31 @@ namespace Swow
          * @param int $limit trace max length, negative or 0 meaning no limit
          * @param int $options trace options, same as `debug_backtrace` options { @see https://www.php.net/manual/en/function.debug-backtrace.php }
          * @phan-return array<
-         *     array{
-         *         'file': string,
-         *         'line': int,
-         *         'function': string,
-         *         'args': array<mixed>,
-         *         'class'?: string
-         *     }
+         * array{
+         * 'file': string,
+         * 'line': int,
+         * 'function': string,
+         * 'args': array<mixed>,
+         * 'class'?: string
+         * }
          * >
          * @phpstan-return array<
-         *     array{
-         *         'file': string,
-         *         'line': int,
-         *         'function': string,
-         *         'args': array<mixed>,
-         *         'class'?: string
-         *     }
+         * array{
+         * 'file': string,
+         * 'line': int,
+         * 'function': string,
+         * 'args': array<mixed>,
+         * 'class'?: string
+         * }
          * >
          * @psalm-return array<
-         *     array{
-         *         'file': string,
-         *         'line': int,
-         *         'function': string,
-         *         'args': array<mixed>,
-         *         'class'?: string
-         *     }
+         * array{
+         * 'file': string,
+         * 'line': int,
+         * 'function': string,
+         * 'args': array<mixed>,
+         * 'class'?: string
+         * }
          * >
          * @return array<array>
          */
