@@ -314,10 +314,11 @@ SWOW_API zend_bool swow_fcall_storage_is_available(const swow_fcall_storage_t *f
 SWOW_API zend_bool swow_fcall_storage_create(swow_fcall_storage_t *fcall, zval *zcallable);
 SWOW_API void swow_fcall_storage_release(swow_fcall_storage_t *fcall);
 
-#define SWOW_PARAM_FCALL(fcall) \
-        zend_fcall_info fci; \
-        Z_PARAM_FUNC(fci, fcall.fcc) \
-        fcall.zcallable = *_arg; \
+#define SWOW_PARAM_FCALL(fcall) do { \
+    zend_fcall_info _fci; \
+    Z_PARAM_FUNC(_fci, fcall.fcc) \
+    fcall.zcallable = *_arg; \
+} while (0);
 
 /* function caller */
 
