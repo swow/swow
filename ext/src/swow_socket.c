@@ -1754,7 +1754,7 @@ static const zend_function_entry swow_socket_methods[] = {
     PHP_FE_END
 };
 
-int swow_socket_module_init(INIT_FUNC_ARGS)
+zend_result swow_socket_module_init(INIT_FUNC_ARGS)
 {
     if (!cat_socket_module_init()) {
         return FAILURE;
@@ -1795,7 +1795,7 @@ int swow_socket_module_init(INIT_FUNC_ARGS)
     return SUCCESS;
 }
 
-int swow_socket_runtime_init(INIT_FUNC_ARGS)
+zend_result swow_socket_runtime_init(INIT_FUNC_ARGS)
 {
     if (!cat_socket_runtime_init()) {
         return FAILURE;

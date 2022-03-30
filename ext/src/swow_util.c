@@ -114,7 +114,7 @@ static HashTable *swow_util_handler_get_gc(zend_object *object, zval **gc_data, 
     return zend_std_get_properties(object);
 }
 
-int swow_util_module_init(INIT_FUNC_ARGS)
+zend_result swow_util_module_init(INIT_FUNC_ARGS)
 {
     swow_util_handler_ce = swow_register_internal_class(
         "Swow\\Util\\Handler", NULL, swow_util_handler_methods,

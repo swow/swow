@@ -47,7 +47,7 @@ static const zend_function_entry swow_errno_methods[] = {
     PHP_FE_END
 };
 
-int swow_errno_module_init(INIT_FUNC_ARGS)
+zend_result swow_errno_module_init(INIT_FUNC_ARGS)
 {
     swow_errno_ce = swow_register_internal_class(
         "Swow\\Errno", NULL, swow_errno_methods,

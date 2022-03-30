@@ -87,7 +87,7 @@ static const zend_function_entry swow_call_exception_methods[] = {
     PHP_FE_END
 };
 
-int swow_exceptions_module_init(INIT_FUNC_ARGS)
+zend_result swow_exceptions_module_init(INIT_FUNC_ARGS)
 {
     /* Exception for user */
     swow_exception_ce = swow_register_internal_class(

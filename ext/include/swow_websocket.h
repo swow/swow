@@ -42,7 +42,7 @@ typedef struct swow_websocket_frame_s {
 
 /* loader */
 
-int swow_websocket_module_init(INIT_FUNC_ARGS);
+zend_result swow_websocket_module_init(INIT_FUNC_ARGS);
 
 /* helper*/
 

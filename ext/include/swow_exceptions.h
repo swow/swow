@@ -42,7 +42,7 @@ extern "C" {
 extern SWOW_API zend_class_entry *swow_exception_ce;
 extern SWOW_API zend_class_entry *swow_call_exception_ce;
 
-int swow_exceptions_module_init(INIT_FUNC_ARGS);
+zend_result swow_exceptions_module_init(INIT_FUNC_ARGS);
 
 extern SWOW_API swow_object_create_t swow_exception_create_object;
 

@@ -158,7 +158,7 @@ static const zend_function_entry swow_defer_functions[] = {
     PHP_FE_END
 };
 
-int swow_defer_module_init(INIT_FUNC_ARGS)
+zend_result swow_defer_module_init(INIT_FUNC_ARGS)
 {
     swow_defer_ce = swow_register_internal_class(
         "Swow\\Defer", NULL, swow_defer_methods,

@@ -434,7 +434,7 @@ static PHP_FUNCTION(swow_curl_multi_select)
 }
 /* }}} */
 
-int swow_curl_module_init(INIT_FUNC_ARGS)
+zend_result swow_curl_module_init(INIT_FUNC_ARGS)
 {
     SWOW_MODULES_CHECK_PRE_START() {
         "curl"
@@ -473,7 +473,7 @@ int swow_curl_module_init(INIT_FUNC_ARGS)
     } \
 } while (0)
 
-int swow_curl_module_shutdown(INIT_FUNC_ARGS)
+zend_result swow_curl_module_shutdown(INIT_FUNC_ARGS)
 {
     SWOW_CURL_CHECK_MODULE();
 
@@ -484,7 +484,7 @@ int swow_curl_module_shutdown(INIT_FUNC_ARGS)
     return SUCCESS;
 }
 
-int swow_curl_runtime_init(INIT_FUNC_ARGS)
+zend_result swow_curl_runtime_init(INIT_FUNC_ARGS)
 {
     SWOW_CURL_CHECK_MODULE();
 
@@ -495,7 +495,7 @@ int swow_curl_runtime_init(INIT_FUNC_ARGS)
     return SUCCESS;
 }
 
-int swow_curl_runtime_shutdown(INIT_FUNC_ARGS)
+zend_result swow_curl_runtime_shutdown(INIT_FUNC_ARGS)
 {
     SWOW_CURL_CHECK_MODULE();
 

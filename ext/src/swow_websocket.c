@@ -651,7 +651,7 @@ static HashTable *swow_websocket_frame_get_gc(zend_object *object, zval **gc_dat
     return zend_std_get_properties(object);
 }
 
-int swow_websocket_module_init(INIT_FUNC_ARGS)
+zend_result swow_websocket_module_init(INIT_FUNC_ARGS)
 {
 #define SWOW_WEBSOCKET_REGISTER_LONG_CONSTANT(name) \
     REGISTER_LONG_CONSTANT("Swow\\WebSocket\\" #name, CAT_WEBSOCKET_##name, CONST_CS | CONST_PERSISTENT)

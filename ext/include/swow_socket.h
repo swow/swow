@@ -38,8 +38,8 @@ typedef struct swow_socket_s {
 
 /* loader */
 
-int swow_socket_module_init(INIT_FUNC_ARGS);
-int swow_socket_runtime_init(INIT_FUNC_ARGS);
+zend_result swow_socket_module_init(INIT_FUNC_ARGS);
+zend_result swow_socket_runtime_init(INIT_FUNC_ARGS);
 
 /* helper*/
 

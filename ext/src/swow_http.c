@@ -694,7 +694,7 @@ static const zend_function_entry swow_http_functions[] = {
     PHP_FE_END
 };
 
-int swow_http_module_init(INIT_FUNC_ARGS)
+zend_result swow_http_module_init(INIT_FUNC_ARGS)
 {
     /* Status */
     swow_http_status_ce = swow_register_internal_class(

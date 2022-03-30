@@ -44,7 +44,7 @@ static zend_always_inline swow_util_handler_t *swow_util_handler_get_from_object
 
 /* loader */
 
-int swow_util_module_init(INIT_FUNC_ARGS);
+zend_result swow_util_module_init(INIT_FUNC_ARGS);
 
 /* APIs */
 

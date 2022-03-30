@@ -70,8 +70,8 @@ ZEND_DECLARE_MODULE_GLOBALS(swow)
 
 SWOW_API swow_nts_globals_t swow_nts_globals;
 
-typedef int (*swow_init_function_t)(INIT_FUNC_ARGS);
-typedef int (*swow_shutdown_function_t)(INIT_FUNC_ARGS);
+typedef zend_result (*swow_init_function_t)(INIT_FUNC_ARGS);
+typedef zend_result (*swow_shutdown_function_t)(INIT_FUNC_ARGS);
 typedef zend_result (*swow_close_function_t)(void);
 
 /* {{{ PHP_GINIT_FUNCTION */
@@ -470,7 +470,7 @@ static const zend_function_entry swow_methods[] = {
     PHP_FE_END
 };
 
-int swow_module_init(INIT_FUNC_ARGS)
+zend_result swow_module_init(INIT_FUNC_ARGS)
 {
 #ifdef SWOW_DISABLE_SESSION
     /* disable some conflict internal modules */
@@ -536,14 +536,14 @@ int swow_module_init(INIT_FUNC_ARGS)
     return SUCCESS;
 }
 
-int swow_module_shutdown(INIT_FUNC_ARGS)
+zend_result swow_module_shutdown(INIT_FUNC_ARGS)
 {
     cat_module_shutdown();
 
     return SUCCESS;
 }
 
-int swow_runtime_init(INIT_FUNC_ARGS)
+zend_result swow_runtime_init(INIT_FUNC_ARGS)
 {
     /* See: https://bugs.php.net/bug.php?id=79064 */
     // EG(full_tables_cleanup) = cat_true; // not needed for now
@@ -553,7 +553,7 @@ int swow_runtime_init(INIT_FUNC_ARGS)
     return SUCCESS;
 }
 
-int swow_runtime_shutdown(INIT_FUNC_ARGS)
+zend_result swow_runtime_shutdown(INIT_FUNC_ARGS)
 {
     cat_runtime_shutdown();
 

@@ -92,10 +92,10 @@ extern SWOW_API zend_object_handlers swow_handlers;
 extern SWOW_API zend_class_entry *swow_module_ce;
 extern SWOW_API zend_object_handlers swow_module_handlers;
 
-int swow_module_init(INIT_FUNC_ARGS);
-int swow_module_shutdown(INIT_FUNC_ARGS);
-int swow_runtime_init(INIT_FUNC_ARGS);
-int swow_runtime_shutdown(INIT_FUNC_ARGS);
+zend_result swow_module_init(INIT_FUNC_ARGS);
+zend_result swow_module_shutdown(INIT_FUNC_ARGS);
+zend_result swow_runtime_init(INIT_FUNC_ARGS);
+zend_result swow_runtime_shutdown(INIT_FUNC_ARGS);
 
 #ifdef __cplusplus
 }

@@ -33,7 +33,7 @@ extern SWOW_API zend_class_entry *swow_signal_exception_ce;
 
 /* loader */
 
-int swow_signal_module_init(INIT_FUNC_ARGS);
+zend_result swow_signal_module_init(INIT_FUNC_ARGS);
 
 #ifdef __cplusplus
 }

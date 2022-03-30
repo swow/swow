@@ -34,9 +34,9 @@ extern SWOW_API CAT_GLOBALS_DECLARE(swow_debug)
 
 #define SWOW_DEBUG_G(x) CAT_GLOBALS_GET(swow_debug, x)
 
-int swow_debug_module_init(INIT_FUNC_ARGS);
-int swow_debug_runtime_init(INIT_FUNC_ARGS);
-int swow_debug_runtime_shutdown(INIT_FUNC_ARGS);
+zend_result swow_debug_module_init(INIT_FUNC_ARGS);
+zend_result swow_debug_runtime_init(INIT_FUNC_ARGS);
+zend_result swow_debug_runtime_shutdown(INIT_FUNC_ARGS);
 
 static zend_always_inline zend_bool swow_debug_is_user_call(zend_execute_data *call)
 {

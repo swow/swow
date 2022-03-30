@@ -222,7 +222,7 @@ static const zend_function_entry swow_watchdog_methods[] = {
     PHP_FE_END
 };
 
-int swow_watchdog_module_init(INIT_FUNC_ARGS)
+zend_result swow_watchdog_module_init(INIT_FUNC_ARGS)
 {
     if (!cat_watchdog_module_init()) {
         return FAILURE;
@@ -242,7 +242,7 @@ int swow_watchdog_module_init(INIT_FUNC_ARGS)
     return SUCCESS;
 }
 
-int swow_watchdog_runtime_init(INIT_FUNC_ARGS)
+zend_result swow_watchdog_runtime_init(INIT_FUNC_ARGS)
 {
     if (!cat_watchdog_runtime_init()) {
         return FAILURE;
@@ -251,7 +251,7 @@ int swow_watchdog_runtime_init(INIT_FUNC_ARGS)
     return SUCCESS;
 }
 
-int swow_watchdog_runtime_shutdown(INIT_FUNC_ARGS)
+zend_result swow_watchdog_runtime_shutdown(INIT_FUNC_ARGS)
 {
     if (cat_watchdog_is_running() && !swow_watchdog_stop()) {
         CAT_CORE_ERROR_WITH_LAST(WATCH_DOG, "WatchDog stop failed");

@@ -26,7 +26,7 @@ extern "C" {
 
 #include "cat_time.h"
 
-int swow_time_module_init(INIT_FUNC_ARGS);
+zend_result swow_time_module_init(INIT_FUNC_ARGS);
 
 #ifdef __cplusplus
 }

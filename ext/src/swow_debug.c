@@ -518,7 +518,7 @@ static int swow_debug_ext_stmt_handler(zend_execute_data *execute_data)
     return ZEND_USER_OPCODE_DISPATCH;
 }
 
-int swow_debug_module_init(INIT_FUNC_ARGS)
+zend_result swow_debug_module_init(INIT_FUNC_ARGS)
 {
     CAT_GLOBALS_REGISTER(swow_debug, CAT_GLOBALS_CTOR(swow_debug), NULL);
 
@@ -532,14 +532,14 @@ int swow_debug_module_init(INIT_FUNC_ARGS)
     return SUCCESS;
 }
 
-int swow_debug_runtime_init(INIT_FUNC_ARGS)
+zend_result swow_debug_runtime_init(INIT_FUNC_ARGS)
 {
     cat_queue_init(&SWOW_DEBUG_G(extended_statement_handlers));
 
     return SUCCESS;
 }
 
-int swow_debug_runtime_shutdown(INIT_FUNC_ARGS)
+zend_result swow_debug_runtime_shutdown(INIT_FUNC_ARGS)
 {
     swow_util_handlers_release(&SWOW_DEBUG_G(extended_statement_handlers));
 

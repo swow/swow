@@ -80,7 +80,7 @@ static PHP_FUNCTION(swow_pcntl_fork)
     }
 }
 
-int swow_event_module_init(INIT_FUNC_ARGS)
+zend_result swow_event_module_init(INIT_FUNC_ARGS)
 {
     if (!cat_event_module_init()) {
         return FAILURE;
@@ -89,7 +89,7 @@ int swow_event_module_init(INIT_FUNC_ARGS)
     return SUCCESS;
 }
 
-int swow_event_runtime_init(INIT_FUNC_ARGS)
+zend_result swow_event_runtime_init(INIT_FUNC_ARGS)
 {
     if (!cat_event_runtime_init()) {
         return FAILURE;
@@ -111,7 +111,7 @@ int swow_event_runtime_init(INIT_FUNC_ARGS)
     return SUCCESS;
 }
 
-int swow_event_runtime_shutdown(SHUTDOWN_FUNC_ARGS)
+zend_result swow_event_runtime_shutdown(SHUTDOWN_FUNC_ARGS)
 {
     /* after register_shutdown and call all destructors */
 
@@ -127,7 +127,7 @@ int swow_event_runtime_shutdown(SHUTDOWN_FUNC_ARGS)
     return SUCCESS;
 }
 
-int swow_event_runtime_close(void)
+zend_result swow_event_runtime_close(void)
 {
     if (!cat_event_runtime_close()) {
         return FAILURE;

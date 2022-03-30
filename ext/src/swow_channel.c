@@ -601,7 +601,7 @@ static HashTable *swow_channel_selector_get_gc(zend_object *object, zval **gc_da
     return zend_std_get_properties(object);
 }
 
-int swow_channel_module_init(INIT_FUNC_ARGS)
+zend_result swow_channel_module_init(INIT_FUNC_ARGS)
 {
     /* channel */
 

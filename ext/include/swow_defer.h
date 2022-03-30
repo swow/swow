@@ -42,7 +42,7 @@ typedef struct swow_defer_s {
 
 /* loader */
 
-int swow_defer_module_init(INIT_FUNC_ARGS);
+zend_result swow_defer_module_init(INIT_FUNC_ARGS);
 
 /* functions */
 

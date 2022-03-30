@@ -78,7 +78,7 @@ static const zend_function_entry swow_signal_methods[] = {
     PHP_FE_END
 };
 
-int swow_signal_module_init(INIT_FUNC_ARGS)
+zend_result swow_signal_module_init(INIT_FUNC_ARGS)
 {
     swow_signal_ce = swow_register_internal_class(
         "Swow\\Signal", NULL, swow_signal_methods,

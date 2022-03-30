@@ -52,7 +52,7 @@ typedef struct swow_buffer_s {
 
 /* loader */
 
-int swow_buffer_module_init(INIT_FUNC_ARGS);
+zend_result swow_buffer_module_init(INIT_FUNC_ARGS);
 
 /* helper */
 

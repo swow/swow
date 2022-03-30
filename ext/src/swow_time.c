@@ -181,7 +181,7 @@ static const zend_function_entry swow_time_functions[] = {
     PHP_FE_END
 };
 
-int swow_time_module_init(INIT_FUNC_ARGS)
+zend_result swow_time_module_init(INIT_FUNC_ARGS)
 {
     SWOW_MODULES_CHECK_PRE_START() {
         "core"

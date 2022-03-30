@@ -48,7 +48,7 @@ typedef struct swow_sync_wait_group_s {
 
 /* loader */
 
-int swow_sync_module_init(INIT_FUNC_ARGS);
+zend_result swow_sync_module_init(INIT_FUNC_ARGS);
 
 /* helper*/
 

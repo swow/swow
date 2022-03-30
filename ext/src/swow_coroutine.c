@@ -2384,7 +2384,7 @@ static void swow_coroutine_deadlock_callback(void)
     CAT_WARN_WITH_LAST(COROUTINE, "Deadlock handler call failed");
 }
 
-int swow_coroutine_module_init(INIT_FUNC_ARGS)
+zend_result swow_coroutine_module_init(INIT_FUNC_ARGS)
 {
     if (!cat_coroutine_module_init()) {
         return FAILURE;
@@ -2448,7 +2448,7 @@ int swow_coroutine_module_init(INIT_FUNC_ARGS)
     return SUCCESS;
 }
 
-int swow_coroutine_runtime_init(INIT_FUNC_ARGS)
+zend_result swow_coroutine_runtime_init(INIT_FUNC_ARGS)
 {
     if (!cat_coroutine_runtime_init()) {
         return FAILURE;
@@ -2496,7 +2496,7 @@ static void swow_coroutines_kill_destructor(zval *zscoroutine)
 }
 #endif
 
-int swow_coroutine_runtime_shutdown(SHUTDOWN_FUNC_ARGS)
+zend_result swow_coroutine_runtime_shutdown(SHUTDOWN_FUNC_ARGS)
 {
     SWOW_COROUTINE_G(runtime_state) = SWOW_COROUTINE_RUNTIME_STATE_IN_SHUTDOWN;
 

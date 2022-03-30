@@ -220,7 +220,7 @@ static const zend_function_entry swow_sync_wait_group_methods[] = {
     PHP_FE_END
 };
 
-int swow_sync_module_init(INIT_FUNC_ARGS)
+zend_result swow_sync_module_init(INIT_FUNC_ARGS)
 {
     if (zend_register_functions(NULL, swow_sync_functions, NULL, type) != SUCCESS) {
         return FAILURE;

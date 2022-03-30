@@ -40,7 +40,7 @@ typedef struct swow_http_parser_s {
 
 /* loader */
 
-int swow_http_module_init(INIT_FUNC_ARGS);
+zend_result swow_http_module_init(INIT_FUNC_ARGS);
 
 /* helper*/
 

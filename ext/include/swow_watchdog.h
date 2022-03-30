@@ -42,9 +42,9 @@ typedef struct swow_watchdog_s {
 
 /* loader */
 
-int swow_watchdog_module_init(INIT_FUNC_ARGS);
-int swow_watchdog_runtime_init(INIT_FUNC_ARGS);
-int swow_watchdog_runtime_shutdown(INIT_FUNC_ARGS);
+zend_result swow_watchdog_module_init(INIT_FUNC_ARGS);
+zend_result swow_watchdog_runtime_init(INIT_FUNC_ARGS);
+zend_result swow_watchdog_runtime_shutdown(INIT_FUNC_ARGS);
 
 /* helper */
 

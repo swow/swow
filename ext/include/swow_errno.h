@@ -27,7 +27,7 @@ extern "C" {
 extern SWOW_API zend_class_entry *swow_errno_ce;
 extern SWOW_API zend_object_handlers swow_errno_handlers;
 
-int swow_errno_module_init(INIT_FUNC_ARGS);
+zend_result swow_errno_module_init(INIT_FUNC_ARGS);
 
 #ifdef __cplusplus
 }

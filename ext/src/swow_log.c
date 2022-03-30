@@ -198,7 +198,7 @@ static const zend_function_entry swow_log_methods[] = {
     PHP_FE_END
 };
 
-int swow_log_module_init(INIT_FUNC_ARGS)
+zend_result swow_log_module_init(INIT_FUNC_ARGS)
 {
     cat_log_function = swow_log_standard;
     swow_log_ce = swow_register_internal_class(

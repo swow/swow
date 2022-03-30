@@ -56,7 +56,7 @@ typedef struct swow_channel_selector_s {
 
 /* loader */
 
-int swow_channel_module_init(INIT_FUNC_ARGS);
+zend_result swow_channel_module_init(INIT_FUNC_ARGS);
 
 /* helper*/
 

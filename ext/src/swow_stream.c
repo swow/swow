@@ -1921,7 +1921,7 @@ int swow_unhook_stream_wrapper(void); // in swow_stream_wrapper.c
 int swow_rehook_stream_wrappers(void); // in swow_stream_wrapper.c
 
 // stream initializer / finalizers
-int swow_stream_module_init(INIT_FUNC_ARGS)
+zend_result swow_stream_module_init(INIT_FUNC_ARGS)
 {
 #ifdef CAT_SSL
     SWOW_MODULES_CHECK_PRE_START() {
@@ -1986,7 +1986,7 @@ int swow_stream_module_init(INIT_FUNC_ARGS)
     return SUCCESS;
 }
 
-int swow_stream_runtime_init(INIT_FUNC_ARGS)
+zend_result swow_stream_runtime_init(INIT_FUNC_ARGS)
 {
     SWOW_STREAM_G(hooking_stdio_ops) = cat_true;
     SWOW_STREAM_G(hooking_plain_wrapper) = cat_true;
@@ -2002,7 +2002,7 @@ int swow_stream_runtime_init(INIT_FUNC_ARGS)
     return SUCCESS;
 }
 
-int swow_stream_runtime_shutdown(INIT_FUNC_ARGS)
+zend_result swow_stream_runtime_shutdown(INIT_FUNC_ARGS)
 {
     size_t i;
 
@@ -2019,7 +2019,7 @@ int swow_stream_runtime_shutdown(INIT_FUNC_ARGS)
     return SUCCESS;
 }
 
-int swow_stream_module_shutdown(INIT_FUNC_ARGS)
+zend_result swow_stream_module_shutdown(INIT_FUNC_ARGS)
 {
     swow_rehook_stream_wrappers();
 

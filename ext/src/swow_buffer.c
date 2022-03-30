@@ -1016,7 +1016,7 @@ SWOW_API const cat_buffer_allocator_t swow_buffer_allocator = {
     swow_buffer_free_standard,
 };
 
-int swow_buffer_module_init(INIT_FUNC_ARGS)
+zend_result swow_buffer_module_init(INIT_FUNC_ARGS)
 {
     if (unlikely(!cat_buffer_module_init())) {
         return FAILURE;
