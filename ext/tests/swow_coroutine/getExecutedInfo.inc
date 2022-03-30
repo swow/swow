@@ -1,0 +1,3 @@
+<?php
+
+TestGetExecutedInfo::doNothing();

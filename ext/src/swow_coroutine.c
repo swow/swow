@@ -952,10 +952,42 @@ SWOW_API zend_string *swow_coroutine_get_executed_function_name(const swow_corou
     SWOW_COROUTINE_SHOULD_BE_IN_EXECUTING(scoroutine, cat_false, return zend_empty_string);
 
     SWOW_COROUTINE_EXECUTE_START(scoroutine, level) {
-        if (EXPECTED(zend_is_executing())) {
-            function_name = get_active_function_or_method_name();
+        zend_execute_data *ex = EG(current_execute_data);
+        if (ex->func->common.function_name == NULL) {
+            zend_execute_data *prev = ex->prev_execute_data;
+            uint32_t include_kind;
+            _prev_frame:
+            include_kind = 0;
+            if (prev && prev->func && ZEND_USER_CODE(prev->func->common.type) && prev->opline->opcode == ZEND_INCLUDE_OR_EVAL) {
+                include_kind = prev->opline->extended_value;
+            }
+            switch (include_kind) {
+                case ZEND_EVAL:
+                    function_name = ZSTR_KNOWN(ZEND_STR_EVAL);
+                    break;
+                case ZEND_INCLUDE:
+                    function_name = ZSTR_KNOWN(ZEND_STR_INCLUDE);
+                    break;
+                case ZEND_REQUIRE:
+                    function_name = ZSTR_KNOWN(ZEND_STR_REQUIRE);
+                    break;
+                case ZEND_INCLUDE_ONCE:
+                    function_name = ZSTR_KNOWN(ZEND_STR_INCLUDE_ONCE);
+                    break;
+                case ZEND_REQUIRE_ONCE:
+                    function_name = ZSTR_KNOWN(ZEND_STR_REQUIRE_ONCE);
+                    break;
+                default:
+                    /* Skip dummy frame unless it is needed to preserve filename/lineno info. */
+                    if (prev && !swow_debug_is_user_call(prev)) {
+                        prev = prev->prev_execute_data;
+                        goto _prev_frame;
+                    }
+                    function_name = ZSTR_KNOWN(ZEND_STR_UNKNOWN);
+                    break;
+            }
         } else {
-            function_name = zend_empty_string;
+           function_name = get_function_or_method_name(ex->func);
         }
     } SWOW_COROUTINE_EXECUTE_END();
 
