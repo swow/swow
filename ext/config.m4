@@ -476,6 +476,7 @@ EOF
         inet.c \
         random.c \
         strscpy.c \
+        strtok.c \
         threadpool.c \
         timer.c \
         uv-common.c \
@@ -537,7 +538,8 @@ EOF
             linux-syscalls.c \
             procfs-exepath.c \
             random-getrandom.c \
-            random-sysctl-linux.c, SWOW_UV_INCLUDES, SWOW_UV_CFLAGS)
+            random-sysctl-linux.c \
+            epoll.c, SWOW_UV_INCLUDES, SWOW_UV_CFLAGS)
         ],
         [freebsd*], [
           SWOW_ADD_SOURCES(deps/libcat/deps/libuv/src/unix,
@@ -573,6 +575,7 @@ EOF
         [solaris*], [
           SWOW_UV_CFLAGS="${SWOW_UV_CFLAGS} -D__EXTENSIONS__"
           SWOW_UV_CFLAGS="${SWOW_UV_CFLAGS} -D_XOPEN_SOURCE=500"
+          SWOW_UV_CFLAGS="${SWOW_UV_CFLAGS} -D_REENTRANT"
           PHP_ADD_LIBRARY(kstat)
           PHP_ADD_LIBRARY(nsl)
           PHP_ADD_LIBRARY(sendfile)
