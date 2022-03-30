@@ -32,6 +32,7 @@
     XX(SIGNAL,    1 << 11) \
     XX(PROCESS,   1 << 12) \
     XX(THREAD,    1 << 13) \
+    XX(OS,        1 << 14) \
     XX(WATCH_DOG, 1 << 17) \
     XX(PROTOCOL,  1 << 18) \
     /* optional (19 ~ 22) */ \

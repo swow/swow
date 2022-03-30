@@ -267,8 +267,6 @@ CAT_API cat_bool_t cat_curl_module_init(void)
 {
     CAT_GLOBALS_REGISTER(cat_curl, CAT_GLOBALS_CTOR(cat_curl), NULL);
 
-    cat_queue_init(&CAT_CURL_G(multi_map));
-
     if (curl_global_init(CURL_GLOBAL_DEFAULT) != CURLE_OK) {
         CAT_WARN_WITH_REASON(EXT, CAT_UNKNOWN, "Curl init failed");
         return cat_false;
@@ -279,9 +277,21 @@ CAT_API cat_bool_t cat_curl_module_init(void)
 
 CAT_API cat_bool_t cat_curl_module_shutdown(void)
 {
-    CAT_ASSERT(cat_queue_empty(&CAT_CURL_G(multi_map)));
-
     curl_global_cleanup();
+
+    return cat_true;
+}
+
+CAT_API cat_bool_t cat_curl_runtime_init(void)
+{
+    cat_queue_init(&CAT_CURL_G(multi_map));
+
+    return cat_true;
+}
+
+CAT_API cat_bool_t cat_curl_runtime_shutdown(void)
+{
+    CAT_ASSERT(cat_queue_empty(&CAT_CURL_G(multi_map)));
 
     return cat_true;
 }

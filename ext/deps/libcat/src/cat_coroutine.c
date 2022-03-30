@@ -755,28 +755,30 @@ CAT_API cat_bool_t cat_coroutine_resume(cat_coroutine_t *coroutine, cat_data_t *
     CAT_COROUTINE_SWITCH_LOG(resume, coroutine);
 
     /* resume flow:
-     * ┌──────┐  ┌──────┐       ┌──────┐
-     * │ co-1 ├─►│ co-2 ├─here─►│ co-3 │
-     * └──────┘  └──────┘       └──────┘
-     * resume previous
-     * ┌──────┐  ┌──────┐  ┌──────┐
-     * │ co-1 ├─►│ co-2 ├─►│ co-3 │
-     * └──────┘  └──▲───┘  └───┬──┘
-     *              └───here───┘
-     *  then it becomes:
-     *  ┌──────┐  ┌──────┐  ┌──────┐
-     *  │ co-1 ├─►┤ co-3 ├─►│ co-2 │
-     *  └──────┘  └──────┘  └──────┘
-     * or cross resume flow:
-     * ┌──────┐  ┌──────┐  ┌──────┐
-     * │ co-1 ├─►│ co-2 ├─►│ co-3 │
-     * └──▲───┘  └──────┘  └───┬──┘
-     *    └─────here-we-are────┘
-     *  then it becomes:
-     *  ┌──────┐  ┌──────┐  ┌──────┐
-     *  │ co-2 ├─►┤ co-3 ├─►│ co-1 │
-     *  └──────┘  └──────┘  └──────┘
-     * */
+    * +------+  +------+       +------+
+    * | co-1 +->| co-2 +-here->| co-3 |
+    * +------+  +------+       +------+
+    * resume previous
+    * +------+  +------+       +------+
+    * | co-1 +->| co-2 +------>| co-3 |
+    * +------+  +--^---+       +---+--+
+    *              |               |
+    *              +-----here------+
+    * then it becomes:
+    * +------+  +------+      +------+
+    * | co-1 +->| co-3 +----->| co-2 |
+    * +------+  +------+      +------+
+    * or cross resume flow:
+    * +------+  +------+      +------+
+    * | co-1 +->| co-2 +----->| co-3 |
+    * +--^---+  +------+      +---+--+
+    *   |                        |
+    *   +----- here-we-are-------+
+    * then it becomes:
+    * +------+  +------+      +------+
+    * | co-2 +->| co-3 +----->| co-1 |
+    * +------+  +------+      +------+
+    */
     do {
         cat_coroutine_t *current_coroutine = CAT_COROUTINE_G(current);
         /* remove target from linked list */
@@ -816,13 +818,13 @@ CAT_API cat_bool_t cat_coroutine_yield(cat_data_t *data, cat_data_t **retval)
     CAT_COROUTINE_SWITCH_LOG(yield, coroutine);
 
     /* yield flow:
-    * ┌──────┐  ┌──────┐       ┌──────┐
-    * │ co-1 ├─►│ co-2 │◄-here─┤ co-3 │
-    * └──────┘  └──────┘       └──────┘
+    * +------+  +------+       +------+
+    * | co-1 +->| co-2 +<-here-| co-3 |
+    * +------+  +------+       +------+
     * then it becomes:
-    * ┌──────┐  ┌──────┐  ┌──────┐
-    * │ co-1 ├─►│ co-2 │  │ co-3 │:(waiting)
-    * └──────┘  └──────┘  └──────┘
+    * +------+  +------+       +------+
+    * | co-1 +->| co-2 |       | co-3 |:(waiting)
+    * +------+  +------+       +------+
     */
 
     /* break the previous */

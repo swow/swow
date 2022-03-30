@@ -16,58 +16,43 @@
   +--------------------------------------------------------------------------+
  */
 
-#ifndef CAT_API_H
-#define CAT_API_H
+#ifndef CAT_OS_WAIT_H
+#define CAT_OS_WAIT_H
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 #include "cat.h"
-#include "cat_coroutine.h"
-#include "cat_channel.h"
-#include "cat_sync.h"
-#include "cat_event.h"
-#include "cat_poll.h"
-#include "cat_time.h"
-#include "cat_socket.h"
-#include "cat_dns.h"
-#include "cat_work.h"
-#include "cat_buffer.h"
-#include "cat_fs.h"
-#include "cat_signal.h"
-#include "cat_os_wait.h"
-#include "cat_async.h"
-#include "cat_watchdog.h"
-#include "cat_process.h"
-#include "cat_ssl.h"
 
-typedef enum cat_run_mode_e{
-    CAT_RUN_EASY = 0,
-} cat_run_mode_t;
+#ifdef CAT_OS_UNIX_LIKE
 
-CAT_API cat_bool_t cat_init_all(void);
-CAT_API cat_bool_t cat_shutdown_all(void);
+#include <sys/resource.h>
 
-CAT_API cat_bool_t cat_module_init_all(void);
-CAT_API cat_bool_t cat_module_shutdown_all(void);
+# define CAT_OS_WAIT 1
 
-CAT_API cat_bool_t cat_runtime_init_all(void);
-CAT_API cat_bool_t cat_runtime_shutdown_all(void);
-CAT_API cat_bool_t cat_runtime_close_all(void);
+/* we believe it's always available on nowadays machines,
+ * we can consider checking it only when someone met this problem :) */
+# define CAT_OS_WAIT_HAVE_RUSAGE 1
 
-CAT_API cat_bool_t cat_run(cat_run_mode_t run_mode);
-CAT_API cat_bool_t cat_stop(void);
+CAT_API cat_bool_t cat_os_wait_module_init(void);
+CAT_API cat_bool_t cat_os_wait_runtime_init(void);
+CAT_API cat_bool_t cat_os_wait_runtime_shutdown(void);
 
-#ifdef CAT_DEBUG
-CAT_API void cat_enable_debug_mode(void);
-#else
-#define cat_enable_debug_mode()
+CAT_API cat_pid_t cat_os_wait(int *status);
+CAT_API cat_pid_t cat_os_wait_ex(int *status, cat_msec_t timeout);
+CAT_API cat_pid_t cat_os_waitpid(cat_pid_t pid, int *status, int options);
+CAT_API cat_pid_t cat_os_waitpid_ex(cat_pid_t pid, int *status, int options, cat_msec_t timeout);
+
+#ifdef CAT_OS_WAIT_HAVE_RUSAGE
+CAT_API cat_pid_t cat_os_wait3(int *status, int options, struct rusage *rusage);
+CAT_API cat_pid_t cat_os_wait3_ex(int *status, int options, struct rusage *rusage, cat_msec_t timeout);
+CAT_API cat_pid_t cat_os_wait4(cat_pid_t pid, int *status, int options, struct rusage *rusage);
+CAT_API cat_pid_t cat_os_wait4_ex(cat_pid_t pid, int *status, int options, struct rusage *rusage, cat_msec_t timeout);
+#endif /* CAT_OS_WAIT_HAVE_RUSAGE */
+
 #endif
-
-CAT_API FILE *cat_get_error_log(void);
-CAT_API void cat_set_error_log(FILE *file);
 
 #ifdef __cplusplus
 }
 #endif
-#endif /* CAT_API_H */
+#endif /* CAT_OS_WAIT_H */

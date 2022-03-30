@@ -29,6 +29,7 @@ CAT_API cat_bool_t cat_shutdown_all(void)
     cat_bool_t ret = cat_true;
 
     ret = cat_runtime_shutdown_all();
+    ret = cat_runtime_close_all() && ret;
     ret = cat_module_shutdown_all() && ret;
 
     return  ret;
@@ -44,6 +45,9 @@ CAT_API cat_bool_t cat_module_init_all(void)
            cat_ssl_module_init() &&
 #endif
            cat_socket_module_init() &&
+#ifdef CAT_OS_WAIT
+           cat_os_wait_module_init() &&
+#endif
            cat_watchdog_module_init() &&
            cat_true;
 }
@@ -52,7 +56,6 @@ CAT_API cat_bool_t cat_module_shutdown_all(void)
 {
     cat_bool_t ret = cat_true;
 
-    ret = cat_event_module_shutdown() && ret;
     ret = cat_module_shutdown() && ret;
 
     return ret;
@@ -64,6 +67,9 @@ CAT_API cat_bool_t cat_runtime_init_all(void)
            cat_coroutine_runtime_init() &&
            cat_event_runtime_init() &&
            cat_socket_runtime_init() &&
+#ifdef CAT_OS_WAIT
+           cat_os_wait_runtime_init() &&
+#endif
            cat_watchdog_runtime_init() &&
            cat_true;
 }
@@ -73,9 +79,21 @@ CAT_API cat_bool_t cat_runtime_shutdown_all(void)
     cat_bool_t ret = cat_true;
 
     ret = cat_watchdog_runtime_shutdown() && ret;
+#ifdef CAT_OS_WAIT
+    ret = cat_os_wait_runtime_shutdown() && ret;
+#endif
     ret = cat_event_runtime_shutdown() && ret;
     ret = cat_coroutine_runtime_shutdown() && ret;
     ret = cat_runtime_shutdown() && ret;
+
+    return ret;
+}
+
+CAT_API cat_bool_t cat_runtime_close_all(void)
+{
+    cat_bool_t ret = cat_true;
+
+    ret = cat_event_runtime_close() && ret;
 
     return ret;
 }

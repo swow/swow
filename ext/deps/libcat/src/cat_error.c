@@ -139,6 +139,9 @@ CAT_API const char *cat_strerror(cat_errno_t error)
 #ifndef EBADF
 #define EBADF 9
 #endif
+#ifndef ECHILD
+#define ECHILD 10
+#endif
 #ifndef EBUSY
 #define EBUSY 16
 #endif
@@ -309,20 +312,23 @@ CAT_API const char *cat_strerror(cat_errno_t error)
 #endif
 
 #define ORIG_ERRNO_MAP(E) \
-    E(E2BIG) \
+    E(EAGAIN) \
+    E(ECONNABORTED) \
+    E(ECONNREFUSED) \
+    E(ECONNRESET) \
+    E(EIO) \
+    E(EPERM) \
+    E(EPIPE) \
     E(EACCES) \
+    E(E2BIG) \
     E(EADDRINUSE) \
     E(EADDRNOTAVAIL) \
     E(EAFNOSUPPORT) \
-    E(EAGAIN) \
     E(EALREADY) \
     E(EBADF) \
     E(EBUSY) \
     E(ECANCELED) \
     E(ECHARSET) \
-    E(ECONNABORTED) \
-    E(ECONNREFUSED) \
-    E(ECONNRESET) \
     E(EDESTADDRREQ) \
     E(EEXIST) \
     E(EFAULT) \
@@ -330,7 +336,6 @@ CAT_API const char *cat_strerror(cat_errno_t error)
     E(EHOSTUNREACH) \
     E(EINTR) \
     E(EINVAL) \
-    E(EIO) \
     E(EISCONN) \
     E(EISDIR) \
     E(ELOOP) \
@@ -353,8 +358,6 @@ CAT_API const char *cat_strerror(cat_errno_t error)
     E(ENOTEMPTY) \
     E(ENOTSOCK) \
     E(ENOTSUP) \
-    E(EPERM) \
-    E(EPIPE) \
     E(EPROTO) \
     E(EPROTONOSUPPORT) \
     E(EPROTOTYPE) \
@@ -380,14 +383,14 @@ CAT_API int cat_orig_errno(cat_errno_t error)
 #define CAT_ERROR_GEN(name) \
     if (error == UV_ ## name) { \
         return name; \
-    }
+    } else
     ORIG_ERRNO_MAP(CAT_ERROR_GEN)
 #undef CAT_ERROR_GEN
 
 #define CAT_ERROR_GEN(a, b) \
     if (error == CAT_##a) { \
         return b; \
-    }
+    } else
     CAT_ERRNO_EXT_ORIG_MAP(CAT_ERROR_GEN)
 #undef CAT_ERROR_GEN
 
@@ -401,7 +404,7 @@ cat_errno_t cat_translate_unix_error(int error) {
 #define CAT_ERROR_GEN(name) \
     if (error == name){ \
         return CAT_##name; \
-    }
+    } else
 
     ORIG_ERRNO_MAP(CAT_ERROR_GEN)
 #undef CAT_ERROR_GEN

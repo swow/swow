@@ -20,6 +20,7 @@
 
 #include "uv.h"
 #include "internal.h"
+#include "strtok.h"
 
 #include <stddef.h> /* NULL */
 #include <stdio.h> /* printf */
@@ -84,6 +85,7 @@ extern char** environ;
 #endif
 
 #if defined(__linux__)
+# include <sched.h>
 # include <sys/syscall.h>
 # define uv__accept4 accept4
 #endif
@@ -96,9 +98,9 @@ static int uv__run_pending(uv_loop_t* loop);
 
 /* Verify that uv_buf_t is ABI-compatible with struct iovec. */
 STATIC_ASSERT(sizeof(uv_buf_t) == sizeof(struct iovec));
-STATIC_ASSERT(sizeof(&((uv_buf_t*) 0)->base) ==
+STATIC_ASSERT(sizeof(((uv_buf_t*) 0)->base) ==
               sizeof(((struct iovec*) 0)->iov_base));
-STATIC_ASSERT(sizeof(&((uv_buf_t*) 0)->len) ==
+STATIC_ASSERT(sizeof(((uv_buf_t*) 0)->len) ==
               sizeof(((struct iovec*) 0)->iov_len));
 STATIC_ASSERT(offsetof(uv_buf_t, base) == offsetof(struct iovec, iov_base));
 STATIC_ASSERT(offsetof(uv_buf_t, len) == offsetof(struct iovec, iov_len));
@@ -334,35 +336,36 @@ int uv_backend_fd(const uv_loop_t* loop) {
 }
 
 
-int uv_backend_timeout(const uv_loop_t* loop) {
-  if (loop->stop_flag != 0)
-    return 0;
-
-  if (!uv__has_active_handles(loop) && !uv__has_active_reqs(loop))
-    return 0;
-
-  if (!QUEUE_EMPTY(&loop->idle_handles))
-    return 0;
-
-  if (!QUEUE_EMPTY(&loop->pending_queue))
-    return 0;
-
-  if (loop->closing_handles)
-    return 0;
-
-  return uv__next_timeout(loop);
-}
-
-
 static int uv__loop_alive(const uv_loop_t* loop) {
   return uv__has_active_handles(loop) ||
          uv__has_active_reqs(loop) ||
+         !QUEUE_EMPTY(&loop->pending_queue) ||
          loop->closing_handles != NULL;
 }
 
 
+static int uv__backend_timeout(const uv_loop_t* loop) {
+  if (loop->stop_flag == 0 &&
+      /* uv__loop_alive(loop) && */
+      (uv__has_active_handles(loop) || uv__has_active_reqs(loop)) &&
+      QUEUE_EMPTY(&loop->pending_queue) &&
+      QUEUE_EMPTY(&loop->idle_handles) &&
+      loop->closing_handles == NULL)
+    return uv__next_timeout(loop);
+  return 0;
+}
+
+
+int uv_backend_timeout(const uv_loop_t* loop) {
+  if (QUEUE_EMPTY(&loop->watcher_queue))
+    return uv__backend_timeout(loop);
+  /* Need to call uv_run to update the backend fd state. */
+  return 0;
+}
+
+
 int uv_loop_alive(const uv_loop_t* loop) {
-    return uv__loop_alive(loop);
+  return uv__loop_alive(loop);
 }
 
 
@@ -384,7 +387,7 @@ int uv_run(uv_loop_t* loop, uv_run_mode mode) {
 
     timeout = 0;
     if ((mode == UV_RUN_ONCE && !ran_pending) || mode == UV_RUN_DEFAULT)
-      timeout = uv_backend_timeout(loop);
+      timeout = uv__backend_timeout(loop);
 
     uv__io_poll(loop, timeout);
 
@@ -638,20 +641,6 @@ int uv__nonblock_ioctl(int fd, int set) {
 
   return 0;
 }
-
-
-int uv__cloexec_ioctl(int fd, int set) {
-  int r;
-
-  do
-    r = ioctl(fd, set ? FIOCLEX : FIONCLEX);
-  while (r == -1 && errno == EINTR);
-
-  if (r)
-    return UV__ERR(errno);
-
-  return 0;
-}
 #endif
 
 
@@ -686,25 +675,13 @@ int uv__nonblock_fcntl(int fd, int set) {
 }
 
 
-int uv__cloexec_fcntl(int fd, int set) {
+int uv__cloexec(int fd, int set) {
   int flags;
   int r;
 
-  do
-    r = fcntl(fd, F_GETFD);
-  while (r == -1 && errno == EINTR);
-
-  if (r == -1)
-    return UV__ERR(errno);
-
-  /* Bail out now if already set/clear. */
-  if (!!(r & FD_CLOEXEC) == !!set)
-    return 0;
-
+  flags = 0;
   if (set)
-    flags = r | FD_CLOEXEC;
-  else
-    flags = r & ~FD_CLOEXEC;
+    flags = FD_CLOEXEC;
 
   do
     r = fcntl(fd, F_SETFD, flags);
@@ -1077,6 +1054,32 @@ int uv__open_cloexec(const char* path, int flags) {
 }
 
 
+int uv__slurp(const char* filename, char* buf, size_t len) {
+  ssize_t n;
+  int fd;
+
+  assert(len > 0);
+
+  fd = uv__open_cloexec(filename, O_RDONLY);
+  if (fd < 0)
+    return fd;
+
+  do
+    n = read(fd, buf, len - 1);
+  while (n == -1 && errno == EINTR);
+
+  if (uv__close_nocheckstdio(fd))
+    abort();
+
+  if (n < 0)
+    return UV__ERR(errno);
+
+  buf[n] = '\0';
+
+  return 0;
+}
+
+
 int uv__dup2_cloexec(int oldfd, int newfd) {
 #if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__linux__)
   int r;
@@ -1201,24 +1204,17 @@ int uv__getpwuid_r(uv_passwd_t* pwd) {
   size_t name_size;
   size_t homedir_size;
   size_t shell_size;
-  long initsize;
   int r;
 
   if (pwd == NULL)
     return UV_EINVAL;
 
-  initsize = sysconf(_SC_GETPW_R_SIZE_MAX);
-
-  if (initsize <= 0)
-    bufsize = 4096;
-  else
-    bufsize = (size_t) initsize;
-
   uid = geteuid();
-  buf = NULL;
 
-  for (;;) {
-    uv__free(buf);
+  /* Calling sysconf(_SC_GETPW_R_SIZE_MAX) would get the suggested size, but it
+   * is frequently 1024 or 4096, so we can just use that directly. The pwent
+   * will not usually be large. */
+  for (bufsize = 2000;; bufsize *= 2) {
     buf = uv__malloc(bufsize);
 
     if (buf == NULL)
@@ -1228,21 +1224,18 @@ int uv__getpwuid_r(uv_passwd_t* pwd) {
       r = getpwuid_r(uid, &pw, buf, bufsize, &result);
     while (r == EINTR);
 
+    if (r != 0 || result == NULL)
+      uv__free(buf);
+
     if (r != ERANGE)
       break;
-
-    bufsize *= 2;
   }
 
-  if (r != 0) {
-    uv__free(buf);
+  if (r != 0)
     return UV__ERR(r);
-  }
 
-  if (result == NULL) {
-    uv__free(buf);
+  if (result == NULL)
     return UV_ENOENT;
-  }
 
   /* Allocate memory for the username, shell, and home directory */
   name_size = strlen(pw.pw_name) + 1;
@@ -1595,6 +1588,7 @@ int uv__search_path(const char* prog, char* buf, size_t* buflen) {
   char* cloned_path;
   char* path_env;
   char* token;
+  char* itr;
 
   if (buf == NULL || buflen == NULL || *buflen == 0)
     return UV_EINVAL;
@@ -1636,7 +1630,7 @@ int uv__search_path(const char* prog, char* buf, size_t* buflen) {
   if (cloned_path == NULL)
     return UV_ENOMEM;
 
-  token = strtok(cloned_path, ":");
+  token = uv__strtok(cloned_path, ":", &itr);
   while (token != NULL) {
     snprintf(trypath, sizeof(trypath) - 1, "%s/%s", token, prog);
     if (realpath(trypath, abspath) == abspath) {
@@ -1655,10 +1649,44 @@ int uv__search_path(const char* prog, char* buf, size_t* buflen) {
         return 0;
       }
     }
-    token = strtok(NULL, ":");
+    token = uv__strtok(NULL, ":", &itr);
   }
   uv__free(cloned_path);
 
   /* Out of tokens (path entries), and no match found */
   return UV_EINVAL;
+}
+
+
+unsigned int uv_available_parallelism(void) {
+#ifdef __linux__
+  cpu_set_t set;
+  long rc;
+
+  memset(&set, 0, sizeof(set));
+
+  /* sysconf(_SC_NPROCESSORS_ONLN) in musl calls sched_getaffinity() but in
+   * glibc it's... complicated... so for consistency try sched_getaffinity()
+   * before falling back to sysconf(_SC_NPROCESSORS_ONLN).
+   */
+  if (0 == sched_getaffinity(0, sizeof(set), &set))
+    rc = CPU_COUNT(&set);
+  else
+    rc = sysconf(_SC_NPROCESSORS_ONLN);
+
+  if (rc < 1)
+    rc = 1;
+
+  return (unsigned) rc;
+#elif defined(__MVS__)
+  return 1;  /* TODO(bnoordhuis) Read from CSD_NUMBER_ONLINE_CPUS? */
+#else  /* __linux__ */
+  long rc;
+
+  rc = sysconf(_SC_NPROCESSORS_ONLN);
+  if (rc < 1)
+    rc = 1;
+
+  return (unsigned) rc;
+#endif  /* __linux__ */
 }

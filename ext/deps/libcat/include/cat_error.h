@@ -52,6 +52,8 @@ typedef struct cat_error_s {
     XX(ENOCERT, "Certificate not found") \
     /* certificate verify error */ \
     XX(ECERT, "Certificate verify error") \
+    /* the process specified by pid does not exist */ \
+    XX(ECHILD, "No child processes") \
 
 // workaround for orig_errno()
 #define CAT_ERRNO_EXT_ORIG_MAP(XX) \
@@ -64,6 +66,7 @@ typedef struct cat_error_s {
     XX(ESSL, ECONNRESET) \
     XX(ENOCERT, ECONNRESET) \
     XX(ECERT, ECONNRESET) \
+    XX(ECHILD, ECHILD) \
 
 typedef enum uv_errno_ext_e {
     UV__EEXT = -9764,

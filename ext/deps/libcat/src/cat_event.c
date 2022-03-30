@@ -24,9 +24,14 @@ CAT_GLOBALS_CTOR_DECLARE_SZ(cat_event)
 
 CAT_API cat_bool_t cat_event_module_init(void)
 {
-    int error;
-
     CAT_GLOBALS_REGISTER(cat_event, CAT_GLOBALS_CTOR(cat_event), NULL);
+
+    return cat_true;
+}
+
+CAT_API cat_bool_t cat_event_runtime_init(void)
+{
+    int error;
 
     error = uv_loop_init(&CAT_EVENT_G(loop));
 
@@ -39,30 +44,6 @@ CAT_API cat_bool_t cat_event_module_init(void)
     cat_queue_init(&CAT_EVENT_G(defer_tasks));
     CAT_EVENT_G(defer_task_count) = 0;
 
-    return cat_true;
-}
-
-CAT_API cat_bool_t cat_event_module_shutdown(void)
-{
-    int error;
-
-    error = uv_loop_close(&CAT_EVENT_G(loop));
-
-    if (unlikely(error != 0)) {
-        CAT_WARN_WITH_REASON(EVENT, error, "Event loop close failed");
-#ifdef CAT_DEBUG
-        if (error == CAT_EBUSY) {
-            uv_print_all_handles(cat_event_loop, CAT_G(error_log));
-        }
-#endif
-        return cat_false;
-    }
-
-    return cat_true;
-}
-
-CAT_API cat_bool_t cat_event_runtime_init(void)
-{
     return cat_true;
 }
 
@@ -83,6 +64,25 @@ CAT_API cat_bool_t cat_event_runtime_shutdown(void)
     cat_event_schedule();
     CAT_ASSERT(cat_queue_empty(&CAT_EVENT_G(defer_tasks)));
     CAT_ASSERT(CAT_EVENT_G(defer_task_count) == 0);
+
+    return cat_true;
+}
+
+CAT_API cat_bool_t cat_event_runtime_close(void)
+{
+    int error;
+
+    error = uv_loop_close(&CAT_EVENT_G(loop));
+
+    if (unlikely(error != 0)) {
+        CAT_WARN_WITH_REASON(EVENT, error, "Event loop close failed");
+#ifdef CAT_DEBUG
+        if (error == CAT_EBUSY) {
+            uv_print_all_handles(cat_event_loop, CAT_G(error_log));
+        }
+#endif
+        return cat_false;
+    }
 
     return cat_true;
 }
