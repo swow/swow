@@ -31,10 +31,8 @@ Signal::kill($pid, Signal::TERM);
 
 $exitStatus = proc_close($proc);
 
-if ($exitStatus !== null) {
-    // "If PHP has been compiled with --enable-sigchild, the return value of this function is undefined."
-    Assert::same($exitStatus, PHP_OS_FAMILY === 'Windows' ? 1 : Signal::TERM);
-}
+// "If PHP has been compiled with --enable-sigchild, the return value of this function is undefined."
+Assert::same($exitStatus, PHP_OS_FAMILY === 'Windows' ? 1 : Signal::TERM);
 
 echo 'Done' . PHP_LF;
 ?>
