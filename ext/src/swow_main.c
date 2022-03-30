@@ -292,9 +292,10 @@ PHP_RSHUTDOWN_FUNCTION(swow)
         }
     }
 
-    /* Notice: some PHP objects still has not been released
-     * (e.g. static vars or set global vars on __destruct or circular references)
-     * so we must re-create C coroutine env to finish them */
+    /* Notice: some PHP resources still have not been released
+     * (e.g. static vars or set global vars on __destruct or circular references),
+     * so we must re-create C coroutine env to finish them
+     * In other words, now we are in pure C coroutine env instead of PHP runtime */
 
     if (!cat_runtime_init_all()) {
         return FAILURE;
