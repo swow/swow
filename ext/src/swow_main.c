@@ -34,6 +34,7 @@
 #include "swow_watchdog.h"
 #include "swow_http.h"
 #include "swow_websocket.h"
+#include "swow_proc_open.h"
 #include "swow_curl.h"
 
 #include "cat_api.h"
@@ -152,6 +153,9 @@ PHP_MINIT_FUNCTION(swow)
         swow_watchdog_module_init,
         swow_http_module_init,
         swow_websocket_module_init,
+#ifdef CAT_OS_WAIT
+        swow_proc_open_module_init,
+#endif
 #ifdef CAT_HAVE_CURL
         swow_curl_module_init,
 #endif
@@ -234,6 +238,9 @@ PHP_RINIT_FUNCTION(swow)
         swow_socket_runtime_init,
         swow_stream_runtime_init,
         swow_watchdog_runtime_init,
+#ifdef CAT_OS_WAIT
+        swow_proc_open_runtime_init,
+#endif
 #ifdef CAT_HAVE_CURL
         swow_curl_runtime_init,
 #endif
@@ -268,6 +275,9 @@ PHP_RSHUTDOWN_FUNCTION(swow)
     static const swow_shutdown_function_t rshutdown_functions[] = {
 #ifdef CAT_HAVE_CURL
         swow_curl_runtime_shutdown,
+#endif
+#ifdef CAT_OS_WAIT
+        swow_proc_open_runtime_shutdown,
 #endif
         swow_watchdog_runtime_shutdown,
         swow_stream_runtime_shutdown,

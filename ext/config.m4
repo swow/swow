@@ -319,6 +319,7 @@ EOF
     swow_watchdog.c \
     swow_http.c \
     swow_websocket.c \
+    swow_proc_open.c \
     , SWOW_INCLUDES, SWOW_CFLAGS)
 
   dnl TODO: may use separate libcat
@@ -399,6 +400,7 @@ EOF
       cat_buffer.c \
       cat_fs.c \
       cat_signal.c \
+      cat_os_wait.c \
       cat_async.c \
       cat_watchdog.c \
       cat_http.c \
