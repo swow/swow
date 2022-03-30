@@ -89,15 +89,6 @@ int swow_event_module_init(INIT_FUNC_ARGS)
     return SUCCESS;
 }
 
-int swow_event_module_shutdown(INIT_FUNC_ARGS)
-{
-    if (!cat_event_module_shutdown()) {
-        return FAILURE;
-    }
-
-    return SUCCESS;
-}
-
 int swow_event_runtime_init(INIT_FUNC_ARGS)
 {
     if (!cat_event_runtime_init()) {
@@ -130,6 +121,15 @@ int swow_event_runtime_shutdown(SHUTDOWN_FUNC_ARGS)
     }
 
     if (!cat_event_runtime_shutdown()) {
+        return FAILURE;
+    }
+
+    return SUCCESS;
+}
+
+int swow_event_runtime_close(void)
+{
+    if (!cat_event_runtime_close()) {
         return FAILURE;
     }
 

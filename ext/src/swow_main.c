@@ -198,7 +198,6 @@ PHP_MSHUTDOWN_FUNCTION(swow)
         swow_curl_module_shutdown,
 #endif
         swow_stream_module_shutdown,
-        swow_event_module_shutdown,
         swow_module_shutdown,
     };
 
@@ -311,15 +310,22 @@ PHP_RSHUTDOWN_FUNCTION(swow)
 }
 /* }}} */
 
-static zend_result swow_reserved_runtime_close(void)
-{
-    return SUCCESS;
-}
-
 static zend_result swow_post_deactivate(void)
 {
+    do {
+        cat_bool_t ret = cat_true;
+
+        ret = cat_stop();
+
+        ret = cat_runtime_shutdown_all() && ret;
+
+        if (!ret) {
+            return FAILURE;
+        }
+    } while (0);
+
     static const swow_close_function_t rclose_functions[] = {
-        swow_reserved_runtime_close,
+        swow_event_runtime_close,
     };
 
     size_t i = 0;
@@ -329,13 +335,7 @@ static zend_result swow_post_deactivate(void)
         }
     }
 
-    cat_bool_t ret;
-
-    ret = cat_stop();
-
-    ret = cat_runtime_shutdown_all() && ret;
-
-    return ret ? SUCCESS : FAILURE;
+    return SUCCESS;
 }
 
 /* {{{ PHP_MINFO_FUNCTION
