@@ -19,7 +19,6 @@
 #include "swow_errno.h"
 
 SWOW_API zend_class_entry *swow_errno_ce;
-SWOW_API zend_object_handlers swow_errno_handlers;
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_Swow_Errno_getDescriptionFor, 0, 1, IS_STRING, 0)
     ZEND_ARG_TYPE_INFO(0, error, IS_LONG, 0)
@@ -51,8 +50,7 @@ zend_result swow_errno_module_init(INIT_FUNC_ARGS)
 {
     swow_errno_ce = swow_register_internal_class(
         "Swow\\Errno", NULL, swow_errno_methods,
-        &swow_errno_handlers, NULL,
-        cat_false, cat_false,
+        NULL, NULL, cat_false, cat_false,
         swow_create_object_deny, NULL, 0
     );
 

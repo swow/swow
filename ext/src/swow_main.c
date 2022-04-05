@@ -62,10 +62,8 @@
 #endif
 
 SWOW_API zend_class_entry *swow_ce;
-SWOW_API zend_object_handlers swow_handlers;
 
 SWOW_API zend_class_entry *swow_module_ce;
-SWOW_API zend_object_handlers swow_module_handlers;
 
 ZEND_DECLARE_MODULE_GLOBALS(swow)
 
@@ -510,8 +508,7 @@ zend_result swow_module_init(INIT_FUNC_ARGS)
     /* Swow class is reserved  */
     swow_ce = swow_register_internal_class(
         "Swow", NULL, swow_methods,
-        &swow_handlers, NULL,
-        cat_false, cat_false,
+        NULL, NULL, cat_false, cat_false,
         swow_create_object_deny, NULL, 0
     );
     /* Version constants (TODO: remove type cast if we no longger support PHP 7.x) */
@@ -530,8 +527,7 @@ zend_result swow_module_init(INIT_FUNC_ARGS)
     /* Module class with constants */
     swow_module_ce = swow_register_internal_class(
         "Swow\\Module", NULL, NULL,
-        &swow_module_handlers, NULL,
-        cat_false, cat_false,
+        NULL, NULL, cat_false, cat_false,
         swow_create_object_deny, NULL, 0
     );
 #define SWOW_MODULE_TYPE_GEN(name, value) \

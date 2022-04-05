@@ -27,7 +27,6 @@ extern "C" {
 #include "cat_watchdog.h"
 
 extern SWOW_API zend_class_entry *swow_watchdog_ce;
-extern SWOW_API zend_object_handlers swow_watchdog_handlers;
 
 extern SWOW_API zend_class_entry *swow_watchdog_exception_ce;
 

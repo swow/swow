@@ -21,7 +21,6 @@
 #include "cat_time.h" /* for time_wait() */
 
 SWOW_API zend_class_entry *swow_watchdog_ce;
-SWOW_API zend_object_handlers swow_watchdog_handlers;
 
 SWOW_API zend_class_entry *swow_watchdog_exception_ce;
 
@@ -230,8 +229,7 @@ zend_result swow_watchdog_module_init(INIT_FUNC_ARGS)
 
     swow_watchdog_ce = swow_register_internal_class(
         "Swow\\WatchDog", NULL, swow_watchdog_methods,
-        &swow_watchdog_handlers, NULL,
-        cat_false, cat_false,
+        NULL, NULL, cat_false, cat_false,
         swow_create_object_deny, NULL, 0
     );
 

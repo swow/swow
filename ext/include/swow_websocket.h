@@ -27,6 +27,8 @@ extern "C" {
 
 #include "cat_websocket.h"
 
+extern SWOW_API zend_class_entry *swow_websocket_ce;
+
 extern SWOW_API zend_class_entry *swow_websocket_opcode_ce;
 
 extern SWOW_API zend_class_entry *swow_websocket_status_ce;

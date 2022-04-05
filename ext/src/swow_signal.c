@@ -19,7 +19,6 @@
 #include "swow_signal.h"
 
 SWOW_API zend_class_entry *swow_signal_ce;
-SWOW_API zend_object_handlers swow_signal_handlers;
 
 SWOW_API zend_class_entry *swow_signal_exception_ce;
 
@@ -82,8 +81,7 @@ zend_result swow_signal_module_init(INIT_FUNC_ARGS)
 {
     swow_signal_ce = swow_register_internal_class(
         "Swow\\Signal", NULL, swow_signal_methods,
-        &swow_signal_handlers, NULL,
-        cat_false, cat_false,
+        NULL, NULL, cat_false, cat_false,
         swow_create_object_deny, NULL, 0
     );
 

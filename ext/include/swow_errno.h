@@ -25,7 +25,6 @@ extern "C" {
 #include "swow.h"
 
 extern SWOW_API zend_class_entry *swow_errno_ce;
-extern SWOW_API zend_object_handlers swow_errno_handlers;
 
 zend_result swow_errno_module_init(INIT_FUNC_ARGS);
 

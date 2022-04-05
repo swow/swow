@@ -25,7 +25,6 @@ extern "C" {
 #include "swow.h"
 
 extern SWOW_API zend_class_entry *swow_log_ce;
-extern SWOW_API zend_object_handlers swow_log_handlers;
 
 zend_result swow_log_module_init(INIT_FUNC_ARGS);
 

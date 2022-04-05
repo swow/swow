@@ -27,7 +27,6 @@ extern "C" {
 #include "cat_signal.h"
 
 extern SWOW_API zend_class_entry *swow_signal_ce;
-extern SWOW_API zend_object_handlers swow_signal_handlers;
 
 extern SWOW_API zend_class_entry *swow_signal_exception_ce;
 
