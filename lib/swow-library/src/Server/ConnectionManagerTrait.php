@@ -20,6 +20,11 @@ trait ConnectionManagerTrait
     /** @var array<int, Socket> */
     protected array $connections = [];
 
+    public function getConnections(): array
+    {
+        return $this->connections;
+    }
+
     protected function online(Socket $connection): void
     {
         $this->connections[$connection->getId()] = $connection;
