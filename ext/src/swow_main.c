@@ -354,7 +354,7 @@ PHP_MINFO_FUNCTION(swow)
 #ifndef CAT_THREAD_SAFE
 # define SWOW_VERSION_SUFFIX "NTS"
 #else
-# define SWOW_VERSION_SUFFIX "CTS"
+# define SWOW_VERSION_SUFFIX "ZTS"
 #endif
 
 #ifdef CAT_DEBUG
