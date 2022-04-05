@@ -66,6 +66,12 @@ SWOW_API zend_class_entry *swow_register_internal_class(
         ce->create_object = create_object;
     }
     if (handlers) {
+        ZEND_ASSERT((
+            parent_handlers != NULL ||
+            !cloneable ||
+            free_object != NULL ||
+            offset != 0
+        ) &&  "Unused handlers");
         if (parent_handlers == NULL) {
             parent_handlers = zend_get_std_object_handlers();
         }
