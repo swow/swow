@@ -136,7 +136,7 @@ class Client extends Socket implements ClientInterface, ProtocolTypeInterface
             'Connection' => 'Upgrade',
             'Upgrade' => 'websocket',
             'Sec-WebSocket-Key' => $secWebSocketKey,
-            'Sec-WebSocket-Version' => (string) WebSocket\VERSION,
+            'Sec-WebSocket-Version' => (string) WebSocket::VERSION,
         ]);
         try {
             $response = $this->sendRequest($request);

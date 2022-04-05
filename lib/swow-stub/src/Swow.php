@@ -1978,6 +1978,25 @@ namespace Swow
 
 namespace Swow
 {
+    class WebSocket
+    {
+        public const VERSION = 13;
+        public const SECRET_KEY_LENGTH = 16;
+        public const SECRET_KEY_ENCODED_LENGTH = 24;
+        public const GUID = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11';
+        public const HEADER_LENGTH = 2;
+        public const EXT16_LENGTH = 126;
+        public const EXT64_LENGTH = 127;
+        public const EXT8_MAX_LENGTH = 125;
+        public const EXT16_MAX_LENGTH = 65535;
+        public const MASK_KEY_LENGTH = 4;
+        public const EMPTY_MASK_KEY = '';
+        public const HEADER_BUFFER_SIZE = 128;
+    }
+}
+
+namespace Swow
+{
     function defer(callable $tasks): void { }
 }
 
@@ -2265,22 +2284,6 @@ namespace Swow\Http
      * @param array<string, string|array<string>> $headers values indexed by fields
      */
     function packResponse(int $statusCode = 0, array $headers = [], string $body = '', string $reasonPhrase = '', string $protocolVersion = ''): string { }
-}
-
-namespace Swow\WebSocket
-{
-    const VERSION = 13;
-    const SECRET_KEY_LENGTH = 16;
-    const SECRET_KEY_ENCODED_LENGTH = 24;
-    const GUID = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11';
-    const HEADER_LENGTH = 2;
-    const EXT16_LENGTH = 126;
-    const EXT64_LENGTH = 127;
-    const EXT8_MAX_LENGTH = 125;
-    const EXT16_MAX_LENGTH = 65535;
-    const MASK_KEY_LENGTH = 4;
-    const EMPTY_MASK_KEY = '';
-    const HEADER_BUFFER_SIZE = 128;
 }
 
 namespace Swow\WebSocket

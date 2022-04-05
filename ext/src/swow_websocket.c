@@ -18,6 +18,8 @@
 
 #include "swow_websocket.h"
 
+SWOW_API zend_class_entry *swow_websocket_ce;
+
 SWOW_API zend_class_entry *swow_websocket_opcode_ce;
 
 SWOW_API zend_class_entry *swow_websocket_status_ce;
@@ -653,11 +655,19 @@ static HashTable *swow_websocket_frame_get_gc(zend_object *object, zval **gc_dat
 
 zend_result swow_websocket_module_init(INIT_FUNC_ARGS)
 {
-#define SWOW_WEBSOCKET_REGISTER_LONG_CONSTANT(name) \
-    REGISTER_LONG_CONSTANT("Swow\\WebSocket\\" #name, CAT_WEBSOCKET_##name, CONST_CS | CONST_PERSISTENT)
+    swow_websocket_ce = swow_register_internal_class(
+        "Swow\\WebSocket", NULL, NULL,
+        NULL, NULL, cat_false, cat_false,
+        swow_create_object_deny, NULL, 0
+    );
 
-#define SWOW_WEBSOCKET_REGISTER_STRING_CONSTANT(name) \
-    REGISTER_STRING_CONSTANT("Swow\\WebSocket\\" #name, (char *) CAT_WEBSOCKET_##name, CONST_CS | CONST_PERSISTENT)
+#define SWOW_WEBSOCKET_REGISTER_LONG_CONSTANT(name) do { \
+    zend_declare_class_constant_long(swow_websocket_ce, ZEND_STRL(#name), CAT_WEBSOCKET_##name); \
+} while (0);
+
+#define SWOW_WEBSOCKET_REGISTER_STRING_CONSTANT(name) do { \
+    zend_declare_class_constant_string(swow_websocket_ce, ZEND_STRL(#name), CAT_WEBSOCKET_##name); \
+} while (0);
 
     SWOW_WEBSOCKET_REGISTER_LONG_CONSTANT(VERSION);
     SWOW_WEBSOCKET_REGISTER_LONG_CONSTANT(SECRET_KEY_LENGTH);

@@ -216,17 +216,17 @@ class Connection extends Socket implements ProtocolTypeInterface
     public function upgradeToWebSocket(Request $request, ?Response $response = null): static
     {
         $secWebSocketKey = $request->getHeaderLine('sec-websocket-key');
-        if (strlen($secWebSocketKey) !== WebSocket\SECRET_KEY_ENCODED_LENGTH) {
+        if (strlen($secWebSocketKey) !== WebSocket::SECRET_KEY_ENCODED_LENGTH) {
             throw new ResponseException(HttpStatus::BAD_REQUEST, 'Invalid Secret Key');
         }
-        $key = base64_encode(sha1($secWebSocketKey . WebSocket\GUID, true));
+        $key = base64_encode(sha1($secWebSocketKey . WebSocket::GUID, true));
 
         $statusCode = HttpStatus::SWITCHING_PROTOCOLS;
         $headers = [
             'Connection' => 'Upgrade',
             'Upgrade' => 'websocket',
             'Sec-WebSocket-Accept' => $key,
-            'Sec-WebSocket-Version' => (string) WebSocket\VERSION,
+            'Sec-WebSocket-Version' => (string) WebSocket::VERSION,
         ];
 
         if ($response === null) {
