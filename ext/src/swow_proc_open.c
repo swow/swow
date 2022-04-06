@@ -25,6 +25,10 @@
 #include "zend_list.h"
 #include "ext/standard/proc_open.h"
 
+#ifdef HAVE_SYS_WAIT_H
+#  include <sys/wait.h>
+#endif
+
 static int le_proc_open = -1;
 
 static int swow_proc_open_rsrc_close(php_process_handle *proc)
