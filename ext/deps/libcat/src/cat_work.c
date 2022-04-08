@@ -71,7 +71,7 @@ CAT_API cat_bool_t cat_work(cat_work_kind_t kind, cat_work_function_t function, 
     context->function = function;
     context->cleanup = cleanup;
     context->data = data;
-    (void) uv_queue_work_ex(cat_event_loop, &context->request.work, (uv_work_kind) kind, cat_work_callback, cat_work_after_done);
+    (void) uv_queue_work_ex(&CAT_EVENT_G(loop), &context->request.work, (uv_work_kind) kind, cat_work_callback, cat_work_after_done);
     context->status = CAT_ECANCELED;
     context->request.coroutine = CAT_COROUTINE_G(current);
     ret = cat_time_wait(timeout);

@@ -156,7 +156,7 @@ CAT_API cat_ret_t cat_poll_one(cat_os_socket_t fd, cat_pollfd_events_t events, c
 #endif
 #ifdef CAT_OS_UNIX_LIKE
     cat_bool_t is_dup = cat_false;
-    if (unlikely(uv__fd_exists(cat_event_loop, fd))) {
+    if (unlikely(uv__fd_exists(&CAT_EVENT_G(loop), fd))) {
         fd = dup(fd);
         if (unlikely(fd == CAT_OS_INVALID_SOCKET)) {
             cat_update_last_error_of_syscall("Dup for poll_one() failed");
@@ -167,7 +167,7 @@ CAT_API cat_ret_t cat_poll_one(cat_os_socket_t fd, cat_pollfd_events_t events, c
         /* uv_poll_init_socket() and uv_poll_start() must return success if fd exists */
     }
 #endif
-    error = uv_poll_init_socket(cat_event_loop, &poll->u.poll, fd);
+    error = uv_poll_init_socket(&CAT_EVENT_G(loop), &poll->u.poll, fd);
     if (unlikely(error != 0)) {
         cat_update_last_error_with_reason(error, "Poll init failed");
         cat_free(poll);
@@ -332,7 +332,7 @@ CAT_API int cat_poll(cat_pollfd_t *fds, cat_nfds_t nfds, cat_timeout_t timeout)
             cat_os_socket_t fd_no = fd->fd;
 #ifdef CAT_OS_UNIX_LIKE
             poll->fd_dup = CAT_OS_INVALID_FD;
-            if (unlikely(uv__fd_exists(cat_event_loop, fd->fd))) {
+            if (unlikely(uv__fd_exists(&CAT_EVENT_G(loop), fd->fd))) {
                 /* uv_poll_init_socket() and uv_poll_start() will return error if fd exists */
                 poll->fd_dup = dup(fd->fd);
                 if (unlikely(fd->fd == CAT_OS_INVALID_SOCKET)) {
@@ -343,7 +343,7 @@ CAT_API int cat_poll(cat_pollfd_t *fds, cat_nfds_t nfds, cat_timeout_t timeout)
                 fd_no = poll->fd_dup;
             }
 #endif
-            error = uv_poll_init_socket(cat_event_loop, &poll->u.poll, fd_no);
+            error = uv_poll_init_socket(&CAT_EVENT_G(loop), &poll->u.poll, fd_no);
             if (unlikely(error != 0)) {
                 /* ENOTSOCK means it maybe a regular file */
                 poll->status = cat_poll_filter_init_error(error);

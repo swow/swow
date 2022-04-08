@@ -63,7 +63,7 @@ CAT_API struct addrinfo *cat_dns_getaddrinfo_ex(const char *hostname, const char
         return NULL;
     }
 #endif
-    error = uv_getaddrinfo(cat_event_loop, &context->request.getaddrinfo, cat_dns_getaddrinfo_callback, hostname, service, hints);
+    error = uv_getaddrinfo(&CAT_EVENT_G(loop), &context->request.getaddrinfo, cat_dns_getaddrinfo_callback, hostname, service, hints);
     if (error != 0) {
         cat_update_last_error_with_reason(error, "DNS getaddrinfo init failed");
         cat_free(context);

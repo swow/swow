@@ -455,7 +455,7 @@ CAT_API cat_bool_t cat_os_wait_module_init(void)
 
 CAT_API cat_bool_t cat_os_wait_runtime_init(void)
 {
-    uv_signal_init(cat_event_loop, &CAT_OS_WAIT_G(sigchld_watcher));
+    uv_signal_init(&CAT_EVENT_G(loop), &CAT_OS_WAIT_G(sigchld_watcher));
     cat_queue_init(&CAT_OS_WAIT_G(waiter_list));
 
     return cat_true;

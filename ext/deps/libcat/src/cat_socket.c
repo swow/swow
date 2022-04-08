@@ -848,9 +848,9 @@ CAT_API cat_socket_t *cat_socket_create_ex(cat_socket_t *socket, cat_socket_type
 
     /* init handle */
     if ((type & CAT_SOCKET_TYPE_TCP) == CAT_SOCKET_TYPE_TCP) {
-        error = uv_tcp_init_ex(cat_event_loop, &isocket->u.tcp, af);
+        error = uv_tcp_init_ex(&CAT_EVENT_G(loop), &isocket->u.tcp, af);
     } else if ((type & CAT_SOCKET_TYPE_UDP) == CAT_SOCKET_TYPE_UDP) {
-        error = uv_udp_init_ex(cat_event_loop, &isocket->u.udp, af);
+        error = uv_udp_init_ex(&CAT_EVENT_G(loop), &isocket->u.udp, af);
     } else if (type & CAT_SOCKET_TYPE_FLAG_LOCAL) {
 #ifdef CAT_OS_UNIX_LIKE
         if ((type & CAT_SOCKET_TYPE_UDG) == CAT_SOCKET_TYPE_UDG) {
@@ -878,7 +878,7 @@ CAT_API cat_socket_t *cat_socket_create_ex(cat_socket_t *socket, cat_socket_type
             error = CAT_ENOTSUP;
             goto _init_error;
         }
-        error = uv_pipe_init(cat_event_loop, &isocket->u.pipe, !!(type & CAT_SOCKET_TYPE_FLAG_IPC));
+        error = uv_pipe_init(&CAT_EVENT_G(loop), &isocket->u.pipe, !!(type & CAT_SOCKET_TYPE_FLAG_IPC));
     } else if ((type & CAT_SOCKET_TYPE_TTY) == CAT_SOCKET_TYPE_TTY) {
         /* convert SOCKET to int on Windows */
         cat_os_fd_t os_fd;
@@ -909,7 +909,7 @@ CAT_API cat_socket_t *cat_socket_create_ex(cat_socket_t *socket, cat_socket_type
         ioptions.flags &= ~CAT_SOCKET_CREATION_OPEN_FLAGS;
         ioptions.flags |= CAT_SOCKET_CREATION_FLAG_OPEN_FD;
         ioptions.o.fd = (cat_socket_fd_t) os_fd;
-        error = uv_tty_init(cat_event_loop, &isocket->u.tty, os_fd, 0);
+        error = uv_tty_init(&CAT_EVENT_G(loop), &isocket->u.tty, os_fd, 0);
     }
     if (unlikely(error != 0)) {
         goto _init_error;
@@ -4328,7 +4328,7 @@ static void cat_socket_dump_callback(uv_handle_t* handle, void* arg)
 
 CAT_API void cat_socket_dump_all(void)
 {
-    uv_walk(cat_event_loop, cat_socket_dump_callback, NULL);
+    uv_walk(&CAT_EVENT_G(loop), cat_socket_dump_callback, NULL);
 }
 
 static void cat_socket_close_by_handle_callback(uv_handle_t* handle, void* arg)
@@ -4366,7 +4366,7 @@ static void cat_socket_close_by_handle_callback(uv_handle_t* handle, void* arg)
 
 CAT_API void cat_socket_close_all(void)
 {
-    uv_walk(cat_event_loop, cat_socket_close_by_handle_callback, NULL);
+    uv_walk(&CAT_EVENT_G(loop), cat_socket_close_by_handle_callback, NULL);
 }
 
 CAT_API cat_bool_t cat_socket_move(cat_socket_t *from, cat_socket_t *to)

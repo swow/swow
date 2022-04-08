@@ -78,7 +78,7 @@ CAT_API cat_bool_t cat_event_runtime_close(void)
         CAT_WARN_WITH_REASON(EVENT, error, "Event loop close failed");
 #ifdef CAT_DEBUG
         if (error == CAT_EBUSY) {
-            uv_print_all_handles(cat_event_loop, CAT_G(error_log));
+            uv_print_all_handles(&CAT_EVENT_G(loop), CAT_G(error_log));
         }
 #endif
         return cat_false;
@@ -106,7 +106,7 @@ static void cat_event_deadlock_callback(uv_timer_t *deadlock)
 CAT_API void cat_event_deadlock(void)
 {
     uv_timer_t *deadlock = &CAT_EVENT_G(deadlock);
-    (void) uv_timer_init(cat_event_loop, deadlock);
+    (void) uv_timer_init(&CAT_EVENT_G(loop), deadlock);
     (void) uv_timer_start(deadlock, cat_event_deadlock_callback, UINT64_MAX, UINT64_MAX);
     (void) cat_event_defer(cat_event_deadlock_unlock_callback, deadlock);
 }
@@ -208,7 +208,7 @@ CAT_API cat_bool_t cat_event_do_defer_tasks(void)
 CAT_API void cat_event_fork(void)
 {
 #ifndef CAT_COROUTINE_USE_THREAD_CONTEXT
-    int error = uv_loop_fork(cat_event_loop);
+    int error = uv_loop_fork(&CAT_EVENT_G(loop));
 
     if (error != 0) {
         CAT_CORE_ERROR_WITH_REASON(EVENT, error, "Event loop fork failed");

@@ -65,7 +65,7 @@ CAT_API cat_bool_t cat_signal_wait(int signum, cat_timeout_t timeout)
         return cat_false;
     }
 #endif
-    error = uv_signal_init(cat_event_loop, &signal->signal);
+    error = uv_signal_init(&CAT_EVENT_G(loop), &signal->signal);
     if (unlikely(error != 0)) {
         cat_update_last_error_with_reason(error, "Signal(%d) init failed", signum);
         return cat_false;

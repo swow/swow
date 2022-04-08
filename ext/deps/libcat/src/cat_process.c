@@ -120,7 +120,7 @@ CAT_API cat_process_t *cat_process_run(const cat_process_options_t *options)
     cat_queue_init(&process->waiters);
 
     /* call spawn() to start process */
-    error = uv_spawn(cat_event_loop, &process->u.process, &uoptions);
+    error = uv_spawn(&CAT_EVENT_G(loop), &process->u.process, &uoptions);
 
     if (unlikely(error != 0)) {
         goto _out;

@@ -126,7 +126,7 @@ static cat_bool_t cat_fs_do_result(cat_fs_context_t *context, int error, const c
         {on_fail} \
     } \
     CAT_LOG_DEBUG(FS, "Start " #operation "() context=%p", context); \
-    int error = uv_fs_##operation(cat_event_loop, &context->fs, ##__VA_ARGS__, cat_fs_callback); \
+    int error = uv_fs_##operation(&CAT_EVENT_G(loop), &context->fs, ##__VA_ARGS__, cat_fs_callback); \
     if (!cat_fs_do_result(context, error, #operation)) { \
         {on_fail} \
     } \
@@ -1074,7 +1074,7 @@ static void cat_fs_async_closedir(void *ptr)
     }
 #endif
     context->coroutine = NULL;
-    if (uv_fs_closedir(cat_event_loop, &context->fs, dir, cat_fs_callback) != 0) {
+    if (uv_fs_closedir(&CAT_EVENT_G(loop), &context->fs, dir, cat_fs_callback) != 0) {
         goto _closedir_error;
     }
     return;

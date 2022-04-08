@@ -84,7 +84,7 @@ CAT_API cat_async_t *cat_async_create(cat_async_t *async)
     async->closing = cat_false;
     async->coroutine = NULL;
 
-    error = uv_async_init(cat_event_loop, &async->u.async, cat_async_callback);
+    error = uv_async_init(&CAT_EVENT_G(loop), &async->u.async, cat_async_callback);
 
     if (unlikely(error != 0)) {
         cat_update_last_error_with_reason(error, "Async init failed");

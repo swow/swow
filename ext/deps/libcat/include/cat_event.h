@@ -43,8 +43,6 @@ extern CAT_API CAT_GLOBALS_DECLARE(cat_event)
 
 #define CAT_EVENT_G(x) CAT_GLOBALS_GET(cat_event, x)
 
-#define cat_event_loop (&CAT_EVENT_G(loop))
-
 CAT_API cat_bool_t cat_event_module_init(void);
 CAT_API cat_bool_t cat_event_runtime_init(void);
 CAT_API cat_bool_t cat_event_runtime_shutdown(void);
