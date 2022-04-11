@@ -480,11 +480,7 @@ static PHP_METHOD(Swow_Socket, connect)
     ret = cat_socket_connect_ex(socket, ZSTR_VAL(name), ZSTR_LEN(name), port, timeout);
 
     if (UNEXPECTED(!ret)) {
-        swow_throw_exception(
-            swow_socket_exception_ce,
-            cat_get_last_error_code(),
-            "%s", cat_strerror(cat_get_last_error_code())
-        );
+        swow_throw_exception_with_last(swow_socket_exception_ce);
         RETURN_THROWS();
     }
 
