@@ -1,3 +1,3 @@
 # Swow Util
 
-Util functions and classes
+Utility functions and classes

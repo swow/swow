@@ -17,7 +17,7 @@ assignees: ''
 
 1. Do something first / 先做了什么
 2. Then do another / 然后做了什么
-3. Finally the software blowed up / 它炸了
+3. Finally the software blew up / 它炸了
 
 **Expected behavior / 正确的行为**
 <!-- A clear and concise description of what you expected to happen. -->
