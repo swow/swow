@@ -18,16 +18,19 @@ use function Swow\Util\success;
 
 require __DIR__ . '/autoload.php';
 
-$dbUri = 'https://raw.githubusercontent.com/nginx/nginx/master/conf/mime.types';
+$nginxDbUri = 'https://raw.githubusercontent.com/nginx/nginx/master/conf/mime.types';
+$jsHttpDbUri = 'https://raw.githubusercontent.com/jshttp/mime-db/master/db.json';
 $sourceFilePathWithoutExtension = dirname(__DIR__) . '/lib/swow-library/src/Http/MimeType';
 $indent = 4;
 
-/* download mine types info and prepare mime map */
-info('Downloading mime types info...');
-$mimeInfo = httpGet($dbUri);
-preg_match_all('/^[ ]+([^ ]+)[ \n]+([^;]+);$/m', $mimeInfo, $matches, PREG_SET_ORDER);
 $extensionMap = [];
+$nonExistentExtensionMap = [];
 $mimeList = [];
+
+/* download mine types info and prepare mime map */
+info('Downloading mime types info from nginx/mime.types...');
+$mimeInfo = httpGet($nginxDbUri);
+preg_match_all('/^[ ]+([^ ]+)[ \n]+([^;]+);$/m', $mimeInfo, $matches, PREG_SET_ORDER);
 foreach ($matches as $match) {
     $extensions = array_map('trim', explode(' ', $match[2]));
     foreach ($extensions as $extension) {
@@ -36,6 +39,30 @@ foreach ($matches as $match) {
         $mimeList[$mime][] = $extension;
     }
 }
+
+info('Downloading mime types info from jshttp/mime-db...');
+$mimeInfo = httpGet($jsHttpDbUri);
+$mimeInfo = json_decode($mimeInfo, true);
+foreach ($mimeInfo as $mime => $item) {
+    if (!isset($item['extensions'])) {
+        $extension = explode('/', $mime, 2);
+        $extension = $extension[count($extension) - 1];
+        $extension = preg_replace('/[^\w]/', '_', $extension);
+        $extensions = [$extension];
+        $nonExistentExtensionMap[$extension] = true;
+    } else {
+        $extensions = $item['extensions'];
+    }
+    foreach ($extensions as $extension) {
+        if ($extensionMap[$extension] ?? false) {
+            continue;
+        }
+        $extensionMap[$extension] = $mime;
+        $mimeList[$mime][] = $extension;
+    }
+}
+
+info('Solve mime info...');
 $extensionSimplyMap = [];
 foreach ($mimeList as $mime => $extensions) {
     if (count($extensions) > 1) {
@@ -70,9 +97,13 @@ $escapeConstantName = static function (string $constantName): string {
 $constantLines = [];
 $constantMimeMap = [];
 foreach ($extensionSimplyMap as $extension => $mime) {
+    /** @Notice A PHP gotcha, if the string is a numeric,
+     * then when it is used as the key of an array,
+     * it becomes a string */
     $extension = (string) $extension;
     $mimeConstant = null;
     foreach ($extensionSimplyMap as $extension2 => $mime2) {
+        $extension2 = (string) $extension2;
         if ($extension === $extension2) {
             break;
         }
@@ -97,6 +128,9 @@ $skeletonSource = str_replace('{{constants}}', $constantLines, $skeletonSource);
 $mimePairLines = [];
 foreach ($extensionMap as $extension => $mime) {
     $extension = (string) $extension;
+    if (isset($nonExistentExtensionMap[$extension])) {
+        continue;
+    }
     $constantName = $escapeConstantName($extension);
     if (!isset($extensionSimplyMap[$constantName])) {
         $constantName = $constantMimeMap[$mime];
