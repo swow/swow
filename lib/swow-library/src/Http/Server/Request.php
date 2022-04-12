@@ -72,14 +72,14 @@ class Request extends \Swow\Http\ServerRequest
         return $this;
     }
 
-    public function getContentLength(): int
+    public function detectContentLength(): int
     {
         if (isset($this->contentLength)) {
             /* @Notice Used when we do not want to recv body */
             return $this->contentLength;
         }
 
-        return parent::getContentLength();
+        return parent::detectContentLength();
     }
 
     public function setContentLength(int $contentLength): static

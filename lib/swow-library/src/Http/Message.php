@@ -128,7 +128,7 @@ class Message implements MessageInterface, Stringable
             $headers['Connection'] = [$this->getKeepAlive() ? 'keep-alive' : 'close'];
         }
         if (!$this->hasHeader('content-length')) {
-            $headers['Content-Length'] = [(string) $this->getContentLength()];
+            $headers['Content-Length'] = [(string) $this->detectContentLength()];
         }
 
         return $headers;
@@ -204,13 +204,14 @@ class Message implements MessageInterface, Stringable
         return $this;
     }
 
+    public function detectContentLength(): int
+    {
+        return $this->getBodyLength();
+    }
+
     public function getContentLength(): int
     {
-        if ($this->body === null) {
-            return 0;
-        }
-
-        return $this->body->getLength();
+        return (int) $this->getHeaderLine('content-length');
     }
 
     public function hasBody(): bool
