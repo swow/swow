@@ -21,6 +21,9 @@ class RawRequest extends RawResult
 
     public bool $isUpgrade = false;
 
+    /** @var array<string, string> */
+    public array $formData = [];
+
     /** @var RawUploadedFile[] */
     public array $uploadedFiles = [];
 

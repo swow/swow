@@ -120,6 +120,9 @@ class Connection extends Socket implements ProtocolTypeInterface
             $result->isUpgrade,
             $result->serverParams,
         )->setBody($result->body);
+        if ($result->formData) {
+            $request->setParsedBody($result->formData);
+        }
         if ($result->uploadedFiles) {
             $uploadedFiles = [];
             foreach ($result->uploadedFiles as $rawUploadedFile) {

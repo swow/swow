@@ -15,15 +15,13 @@ namespace Swow\Http;
 
 use Swow\Http\Parser as HttpParser;
 use Swow\Http\Status as HttpStatus;
-use function array_map;
 use function count;
 use function explode;
 use function fopen;
 use function fwrite;
-use function str_starts_with;
+use function in_array;
 use function strlen;
 use function strtolower;
-use function substr;
 use function sys_get_temp_dir;
 use function tempnam;
 use function trim;
@@ -111,6 +109,8 @@ trait ReceiverTrait
         $data = '';
         $uriOrReasonPhrase = '';
         $headerName = '';
+        $formDataName = '';
+        $fileName = '';
         /** @var array<string, array<string>> */
         $headers = [];
         /** @var array<string, string> */
@@ -131,6 +131,7 @@ trait ReceiverTrait
         $tmpFile = null;
         $tmpFileSize = 0;
         $fileError = UPLOAD_ERR_OK;
+        $formData = [];
         $uploadedFiles = [];
         /* }}} */
         try {
@@ -266,16 +267,47 @@ trait ReceiverTrait
                             case HttpParser::EVENT_MULTIPART_HEADERS_COMPLETE:
                             {
                                 $multiPartHeadersComplete = true;
-                                // TODO: make dir and prefix configurable
-                                $tmpFilePath = tempnam(sys_get_temp_dir(), 'swow_');
-                                $tmpFile = fopen($tmpFilePath, 'wb+');
+
+                                /* parse Content-Disposition */
+                                $contentDisposition = $multipartHeaders['content-disposition'] ?? '';
+                                $contentDispositionParts = explode(';', $contentDisposition, 2);
+                                $contentDispositionType = $contentDispositionParts[0];
+                                // FIXME: is inline/attachment valid?
+                                if (!in_array($contentDispositionType, ['form-data', 'inline', 'attachment'], true)) {
+                                    throw new ResponseException(HttpStatus::BAD_REQUEST, "Unsupported Content-Disposition type '{$contentDispositionParts[0]}'");
+                                }
+                                $contentDispositionParts = explode(';', $contentDispositionParts[1] ?? '');
+                                $contentDispositionMap = [];
+                                foreach ($contentDispositionParts as $contentDispositionPart) {
+                                    $contentDispositionKeyValue = explode('=', $contentDispositionPart, 2);
+                                    $contentDispositionMap[trim($contentDispositionKeyValue[0], ' ')] = trim($contentDispositionKeyValue[1] ?? '', ' "');
+                                }
+                                $formDataName = $contentDispositionMap['name'] ?? null;
+                                $fileName = $contentDispositionMap['filename'] ?? null;
+                                if (!$fileName && !$formDataName) {
+                                    throw new ResponseException(HttpStatus::BAD_REQUEST, 'Missing name or filename in Content-Disposition');
+                                }
+
+                                if ($fileName) {
+                                    // TODO: make dir and prefix configurable
+                                    $tmpFilePath = tempnam(sys_get_temp_dir(), 'swow_');
+                                    $tmpFile = fopen($tmpFilePath, 'wb+');
+                                } else {
+                                    // TODO: not hard code here?
+                                    $formDataValue = new Buffer(256);
+                                }
                                 break;
                             }
                             case HttpParser::EVENT_MULTIPART_BODY:
                             {
-                                if ($fileError === UPLOAD_ERR_OK) {
-                                    $dataOffset = $parser->getDataOffset();
-                                    $dataLength = $parser->getDataLength();
+                                $dataOffset = $parser->getDataOffset();
+                                $dataLength = $parser->getDataLength();
+                                if (isset($formDataValue)) {
+                                    $formDataValue->write($buffer->toString(), $dataOffset, $dataLength);
+                                } else {
+                                    if ($fileError !== UPLOAD_ERR_OK) {
+                                        break;
+                                    }
                                     if ($dataOffset === 0) {
                                         $nWrite = fwrite($tmpFile, $buffer->toString(), $dataLength);
                                     } else {
@@ -291,36 +323,29 @@ trait ReceiverTrait
                             }
                             case HttpParser::EVENT_MULTIPART_DATA_END:
                             {
-                                $contentDispositionParts = array_map(static function (string $s) {
-                                    return trim($s, ' ;');
-                                }, explode(';', $multipartHeaders['content-disposition'] ?? ''));
-                                if (($contentDispositionParts[0] ?? '') !== 'form-data') {
-                                    throw new ResponseException(HttpStatus::BAD_REQUEST, "Unsupported Content-Disposition type '{$contentDispositionParts[0]}'");
+                                if (isset($formDataValue)) {
+                                    $formDataValue->rewind();
+                                    $formData[$formDataName] = $formDataValue->toString();
+                                    // reset for the next parts
+                                    $formDataName = '';
+                                    $formDataValue = null;
+                                } else {
+                                    $uploadedFile = new RawUploadedFile();
+                                    $uploadedFile->name = $fileName;
+                                    $uploadedFile->type = $multipartHeaders['content-type'] ?? MimeType::TXT;
+                                    $uploadedFile->tmp_name = $tmpFilePath;
+                                    $uploadedFile->error = $fileError;
+                                    $uploadedFile->size = $tmpFileSize;
+                                    $uploadedFiles[] = $uploadedFile;
+                                    // reset for the next parts
+                                    $multiPartHeadersComplete = false;
+                                    $multipartHeaderName = '';
+                                    $multipartHeaders = [];
+                                    $tmpFilePath = '';
+                                    $tmpFile = null;
+                                    $tmpFileSize = 0;
+                                    $fileError = UPLOAD_ERR_OK;
                                 }
-                                $fileName = null;
-                                foreach ($contentDispositionParts as $contentDispositionPart) {
-                                    if (str_starts_with($contentDispositionPart, 'filename=')) {
-                                        $fileName = trim(substr($contentDispositionPart, strlen('filename=')), '"');
-                                    }
-                                }
-                                if (!$fileName) {
-                                    throw new ResponseException(HttpStatus::BAD_REQUEST, 'Missing filename in Content-Disposition');
-                                }
-                                $uploadedFile = new RawUploadedFile();
-                                $uploadedFile->name = $fileName;
-                                $uploadedFile->type = $multipartHeaders['content-type'] ?? MimeType::TXT;
-                                $uploadedFile->tmp_name = $tmpFilePath;
-                                $uploadedFile->error = $fileError;
-                                $uploadedFile->size = $tmpFileSize;
-                                $uploadedFiles[] = $uploadedFile;
-                                // reset for the next parts
-                                $multiPartHeadersComplete = false;
-                                $multipartHeaderName = '';
-                                $multipartHeaders = [];
-                                $tmpFilePath = '';
-                                $tmpFile = null;
-                                $tmpFileSize = 0;
-                                $fileError = UPLOAD_ERR_OK;
                             }
                         }
                     } else {
@@ -383,6 +408,7 @@ trait ReceiverTrait
                 $result->method = $parser->getMethod();
                 $result->uri = $uriOrReasonPhrase;
                 $result->isUpgrade = $parser->isUpgrade();
+                $result->formData = $formData;
                 $result->uploadedFiles = $uploadedFiles;
             } else {
                 $result->statusCode = $parser->getStatusCode();
