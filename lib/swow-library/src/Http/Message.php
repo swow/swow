@@ -29,8 +29,8 @@ class Message implements MessageInterface, Stringable
     /** @var array<string, array<string>> */
     protected array $headers = [];
 
-    /** @var array<string>|null */
-    protected ?array $headerNames = null;
+    /** @var array<string> */
+    protected array $headerNames = [];
 
     protected bool $keepAlive = true;
 
