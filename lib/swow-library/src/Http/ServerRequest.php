@@ -29,7 +29,7 @@ class ServerRequest extends Request implements ServerRequestInterface
     public const UPGRADE_UNKNOWN = 1 << 31;
 
     /**
-     * @var bool Keep the Host header (The server may verifies its legitimacy)
+     * @var bool Keep the Host header (The server may verify its legitimacy)
      */
     protected const PRESERVE_HOST = true;
 
