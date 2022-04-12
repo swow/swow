@@ -34,7 +34,7 @@ class Message implements MessageInterface, Stringable
 
     protected bool $keepAlive = true;
 
-    protected ?\Swow\Http\Buffer $body = null;
+    protected ?Buffer $body = null;
 
     /**
      * @param array<string, array<string>|string> $headers Request headers
@@ -216,7 +216,7 @@ class Message implements MessageInterface, Stringable
 
     public function hasBody(): bool
     {
-        return $this->body !== null;
+        return isset($this->body);
     }
 
     public function getBody(): Buffer
@@ -226,7 +226,7 @@ class Message implements MessageInterface, Stringable
 
     public function getBodyAsString(): string
     {
-        return $this->body ? $this->body->toString() : '';
+        return isset($this->body) ? $this->body->toString() : '';
     }
 
     /** @Notice MUST clone the object before you change the body's content */
@@ -239,7 +239,7 @@ class Message implements MessageInterface, Stringable
 
     public function withBody(StreamInterface $body): static
     {
-        if ($body === $this->body) {
+        if ($body === ($this->body ?? null)) {
             return $this;
         }
 
