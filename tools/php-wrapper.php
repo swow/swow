@@ -39,10 +39,14 @@ declare(strict_types=1);
         pcntl_waitpid(proc_get_status($proc)['pid'], $status);
         $exitCode = pcntl_wexitstatus($status);
     } else {
-        while (proc_get_status($proc)['running']) {
+        while (true) {
+            $status = proc_get_status($proc);
+            if (!$status['running']) {
+                $exitCode = $status['exitcode'];
+                break;
+            }
             usleep(1000);
         }
-        $exitCode = proc_get_status($proc)['exitcode'];
         proc_close($proc);
     }
     exit($exitCode);
