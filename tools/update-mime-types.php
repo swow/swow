@@ -88,9 +88,17 @@ if (!$skeletonSource) {
 info('update Mime source file...');
 
 $escapeConstantName = static function (string $constantName): string {
-    return str_replace(['-'], ['_'],
-        (!preg_match('/^[a-zA-Z_\x80-\xff]$/', $constantName[0]) ? '_' : '') . strtoupper($constantName)
-    );
+    $constantName = strtoupper($constantName);
+    $constantName = str_replace(['-'], ['_'], $constantName);
+    if (
+        !preg_match('/^[a-zA-Z_\x80-\xff]$/', $constantName[0]) ||
+        $constantName === 'CLASS'
+    ) {
+        $prefix = '_';
+    } else {
+        $prefix = '';
+    }
+    return $prefix . $constantName;
 };
 
 /* update mime constants */

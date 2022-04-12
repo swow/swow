@@ -334,7 +334,7 @@ class MimeType
     public const ISUP = 'application/isup';
     public const ITS = 'application/its+xml';
     public const SER = 'application/java-serialized-object';
-    public const CLASS = 'application/java-vm';
+    public const _CLASS = 'application/java-vm';
     public const JF2FEED_JSON = 'application/jf2feed+json';
     public const JOSE = 'application/jose';
     public const JOSE_JSON = 'application/jose+json';
@@ -2593,7 +2593,7 @@ class MimeType
         'ipfix' => self::IPFIX,
         'its' => self::ITS,
         'ser' => self::SER,
-        'class' => self::class,
+        'class' => self::_CLASS,
         'mjs' => self::MJS,
         'map' => self::JSON,
         'json5' => self::JSON5,
