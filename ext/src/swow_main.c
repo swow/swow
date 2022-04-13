@@ -271,9 +271,6 @@ PHP_RINIT_FUNCTION(swow)
 PHP_RSHUTDOWN_FUNCTION(swow)
 {
     static const swow_shutdown_function_t rshutdown_functions[] = {
-#ifdef CAT_HAVE_CURL
-        swow_curl_runtime_shutdown,
-#endif
 #ifdef CAT_OS_WAIT
         swow_proc_open_runtime_shutdown,
 #endif
@@ -334,6 +331,11 @@ static zend_result swow_post_deactivate(void)
     } while (0);
 
     static const swow_close_function_t rclose_functions[] = {
+#ifdef CAT_HAVE_CURL
+        /* Some cURL object may freed after rshutdown due to global/static ref,
+         * so we need to run checks in post_deactivate here. */
+        swow_curl_runtime_close,
+#endif
         swow_event_runtime_close,
     };
 

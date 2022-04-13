@@ -500,11 +500,11 @@ zend_result swow_curl_runtime_init(INIT_FUNC_ARGS)
     return SUCCESS;
 }
 
-zend_result swow_curl_runtime_shutdown(INIT_FUNC_ARGS)
+zend_result swow_curl_runtime_close(void)
 {
     SWOW_CURL_CHECK_MODULE();
 
-    if (!cat_curl_runtime_shutdown()) {
+    if (!cat_curl_runtime_close()) {
         return FAILURE;
     }
 
