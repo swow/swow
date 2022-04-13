@@ -31,7 +31,7 @@ class BodyParser
     /** @return array<mixed> */
     public static function parse(StreamInterface $stream, string $contentType = MimeType::X_WWW_FORM_URLENCODED): array
     {
-        $contents = $stream->getContents();
+        $contents = (string) $stream;
         if (!$contents) {
             return [];
         }
