@@ -179,14 +179,17 @@ trait ReceiverTrait
                     if ($event === HttpParser::EVENT_MESSAGE_COMPLETE) {
                         if ($isChunked) {
                             // Remove 'chunked' field from Transfer-Encoding header because we combined the chunked body
+                            $contentLengthName = 'Content-Length';
                             foreach ($headers as $headerName => $headerValue) {
                                 if (strlen($headerName) === strlen('transfer-encoding') && strcasecmp($headerName, 'transfer-encoding') === 0) {
                                     $headers[$headerName] = implode(', ', array_filter(array_map('trim', explode(',', $headerValue)), static function (string $value): bool {
                                         return strcasecmp($value, 'chunked') !== 0;
                                     }));
-                                    break;
+                                } elseif (strlen($headerName) === strlen('content-length') && strcasecmp($headerName, 'content-length') === 0) {
+                                    $contentLengthName = $headerName;
                                 }
                             }
+                            $headers[$contentLengthName] = $body ? (string) $body->getLength() : '0';
                             if ($body && $body->getLength() < ($body->getSize() / 2)) {
                                 $body->mallocTrim();
                             }
