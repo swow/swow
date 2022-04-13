@@ -20,6 +20,10 @@ use function array_key_exists;
 use function implode;
 use function preg_match;
 use function strcasecmp;
+use function strpos;
+use function strtolower;
+use function substr;
+use function trim;
 
 class ServerRequest extends Request implements ServerRequestInterface
 {
@@ -129,10 +133,32 @@ class ServerRequest extends Request implements ServerRequestInterface
         return static::UPGRADE_UNKNOWN;
     }
 
+    public function detectContentType(): string
+    {
+        $contentTypeLine = $this->getHeaderLine('content-type');
+        if (($pos = strpos($contentTypeLine, ';')) !== false) {
+            // e.g. application/json; charset=UTF-8
+            $contentType = strtolower(trim(substr($contentTypeLine, 0, $pos)));
+        } else {
+            $contentType = strtolower($contentTypeLine);
+        }
+
+        return $this->contentType = $contentType;
+    }
+
+    public function getContentType(): string
+    {
+        if (!isset($this->contentType)) {
+            return $this->detectContentType();
+        }
+
+        return $this->contentType;
+    }
+
     /** @return array<mixed>|object|null */
     public function getParsedBody(): null|array|object
     {
-        return $this->parsedBody ??= BodyParser::parse($this);
+        return $this->parsedBody ??= BodyParser::parse($this->getBody(), $this->getContentType());
     }
 
     /** @param array<mixed>|object|null $data */
