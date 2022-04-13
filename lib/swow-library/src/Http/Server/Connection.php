@@ -26,11 +26,14 @@ use Swow\Http\WebSocketTrait;
 use Swow\Socket;
 use Swow\SocketException;
 use Swow\WebSocket;
+use TypeError;
 use function base64_encode;
+use function get_debug_type;
 use function is_array;
 use function is_int;
 use function is_string;
 use function sha1;
+use function sprintf;
 use function strlen;
 use function Swow\Http\packResponse;
 
@@ -114,7 +117,6 @@ class Connection extends Socket implements ProtocolTypeInterface
             $result->uri,
             $result->protocolVersion,
             $result->headers,
-            $result->headerNames,
             $result->shouldKeepAlive,
             $result->contentLength,
             $result->isUpgrade,
@@ -179,6 +181,8 @@ class Connection extends Socket implements ProtocolTypeInterface
                         $statusCode = $arg;
                     } elseif (is_array($arg)) {
                         $headers = $arg;
+                    } else {
+                        throw new TypeError(sprintf('Unsupported argument type %s', get_debug_type($arg)));
                     }
                 }
                 $headers += $this->generateResponseHeaders($body);
