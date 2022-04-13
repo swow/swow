@@ -16,12 +16,15 @@ namespace Swow\Http;
 use Psr\Http\Message\MessageInterface;
 use Psr\Http\Message\StreamInterface;
 use Stringable;
+use Swow\Object\DupTrait;
 use function implode;
 use function is_array;
 use function strtolower;
 
 class Message implements MessageInterface, Stringable
 {
+    use DupTrait;
+
     public const DEFAULT_PROTOCOL_VERSION = '1.1';
 
     protected string $protocolVersion = self::DEFAULT_PROTOCOL_VERSION;
