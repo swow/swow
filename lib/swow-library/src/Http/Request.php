@@ -113,6 +113,7 @@ class Request extends Message implements RequestInterface
         $this->headerNames['host'] = 'Host';
     }
 
+    /** @return Uri */
     public function getUri(): UriInterface
     {
         if ($this->uri === null) {
@@ -122,7 +123,7 @@ class Request extends Message implements RequestInterface
         return $this->uri;
     }
 
-    public function setUri(UriInterface $uri, ?bool $preserveHost = null): Message
+    public function setUri(UriInterface $uri, ?bool $preserveHost = null): static
     {
         $this->uri = $uri;
         $this->uriString = '';
@@ -221,13 +222,8 @@ class Request extends Message implements RequestInterface
             $this->getMethod(),
             $this->getUriAsString(),
             $this->getStandardHeaders(),
-            !$headOnly ? ($body === null ? $this->getBodyAsString() : $body) : '',
+            !$headOnly ?  $this->getBodyAsString() : '',
             $this->getProtocolVersion()
         );
-    }
-
-    public function toString(bool $headOnly = false): string
-    {
-        return $this->toStringEx($headOnly);
     }
 }
