@@ -15,11 +15,15 @@ namespace Swow\Http;
 
 use Swow\Http\Parser as HttpParser;
 use Swow\Http\Status as HttpStatus;
+use function array_filter;
+use function array_map;
 use function count;
 use function explode;
 use function fopen;
 use function fwrite;
+use function implode;
 use function in_array;
+use function strcasecmp;
 use function strlen;
 use function strtolower;
 use function sys_get_temp_dir;
@@ -174,8 +178,15 @@ trait ReceiverTrait
                     }
                     if ($event === HttpParser::EVENT_MESSAGE_COMPLETE) {
                         if ($isChunked) {
-                            // TODO: Several values can be listed, separated by a comma. (Transfer-Encoding: gzip, chunked)
-                            unset($headers[$headerNames['transfer-encoding']], $headerNames['transfer-encoding']);
+                            // Remove 'chunked' field from Transfer-Encoding header because we combined the chunked body
+                            foreach ($headers as $headerName => $headerValue) {
+                                if (strlen($headerName) === strlen('transfer-encoding') && strcasecmp($headerName, 'transfer-encoding') === 0) {
+                                    $headers[$headerName] = implode(', ', array_filter(array_map('trim', explode(',', $headerValue)), static function (string $value): bool {
+                                        return strcasecmp($value, 'chunked') !== 0;
+                                    }));
+                                    break;
+                                }
+                            }
                             if ($body && $body->getLength() < ($body->getSize() / 2)) {
                                 $body->mallocTrim();
                             }
