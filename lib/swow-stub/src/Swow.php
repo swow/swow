@@ -1213,6 +1213,8 @@ namespace Swow
         /** @var int $timeout [optional] = $this->getConnectTimeout() */
         public function connect(string $name, int $port = 0, ?int $timeout = null): static { }
 
+        public function enableCrypto(?\Swow\Socket\CryptoOptions $connection = null): static { }
+
         public function getSockAddress(): string { }
 
         public function getSockPort(): int { }

@@ -487,6 +487,32 @@ static PHP_METHOD(Swow_Socket, connect)
     RETURN_THIS();
 }
 
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_enableCrypto, 0, 0, IS_STATIC, 0)
+    ZEND_ARG_OBJ_INFO_WITH_DEFAULT_VALUE(0, connection, Swow\\Socket\\CryptoOptions, 1, "null")
+ZEND_END_ARG_INFO()
+
+static PHP_METHOD(Swow_Socket, enableCrypto)
+{
+    SWOW_SOCKET_GETTER(ssocket, socket);
+    cat_bool_t ret;
+
+    ZEND_PARSE_PARAMETERS_NONE();
+    // ZEND_PARSE_PARAMETERS_START(0, 1)
+        // Z_PARAM_OPTIONAL
+        // TODO: Support crypto structure
+        // Z_PARAM_OBJ_OF_CLASS()
+    // ZEND_PARSE_PARAMETERS_END();
+
+    ret = cat_socket_enable_crypto(socket, NULL);
+
+    if (UNEXPECTED(!ret)) {
+        swow_throw_exception_with_last(swow_socket_exception_ce);
+        RETURN_THROWS();
+    }
+
+    RETURN_THIS();
+}
+
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_getAddress, ZEND_RETURN_VALUE, 0, IS_STRING, 0)
 ZEND_END_ARG_INFO()
 
@@ -1683,6 +1709,7 @@ static const zend_function_entry swow_socket_methods[] = {
     PHP_ME(Swow_Socket, accept,                    arginfo_class_Swow_Socket_accept,              ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Socket, acceptTo,                  arginfo_class_Swow_Socket_acceptTo,            ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Socket, connect,                   arginfo_class_Swow_Socket_connect,             ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Socket, enableCrypto,              arginfo_class_Swow_Socket_enableCrypto,        ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Socket, getSockAddress,            arginfo_class_Swow_Socket_getAddress,          ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Socket, getSockPort,               arginfo_class_Swow_Socket_getPort,             ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Socket, getPeerAddress,            arginfo_class_Swow_Socket_getAddress,          ZEND_ACC_PUBLIC)
