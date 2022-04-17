@@ -422,6 +422,7 @@ trait ReceiverTrait
                 $result->method = $parser->getMethod();
                 $result->uri = $uriOrReasonPhrase;
                 $result->isUpgrade = $parser->isUpgrade();
+                $result->isMultipart = $isMultipart;
                 $result->formData = $formData;
                 $result->uploadedFiles = $uploadedFiles;
             } else {

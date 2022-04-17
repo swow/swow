@@ -21,6 +21,8 @@ class RawRequest extends RawResult
 
     public bool $isUpgrade = false;
 
+    public bool $isMultipart = false;
+
     /** @var array<string, string> */
     public array $formData = [];
 
