@@ -16,7 +16,9 @@ namespace Swow\Http;
 use InvalidArgumentException;
 use Psr\Http\Message\UriInterface;
 use Stringable;
+use function http_build_query;
 use function ltrim;
+use function parse_str;
 use function parse_url;
 use function preg_replace_callback;
 use function rawurlencode;
@@ -40,6 +42,8 @@ class Uri implements UriInterface, Stringable
     protected string $path = '';
 
     protected string $query = '';
+
+    protected ?array $queryParams = null;
 
     protected string $fragment = '';
 
@@ -287,11 +291,6 @@ class Uri implements UriInterface, Stringable
         return $new;
     }
 
-    public function getQuery(): string
-    {
-        return $this->query;
-    }
-
     protected function filterQueryAndFragment(string $string): string
     {
         return preg_replace_callback(
@@ -301,9 +300,15 @@ class Uri implements UriInterface, Stringable
         );
     }
 
+    public function getQuery(): string
+    {
+        return $this->query;
+    }
+
     public function setQuery(string $query): static
     {
         $this->query = $this->filterQueryAndFragment($query);
+        $this->queryParams = null;
 
         return $this;
     }
@@ -320,6 +325,37 @@ class Uri implements UriInterface, Stringable
 
         $new = clone $this;
         $new->query = $query;
+        $new->queryParams = null;
+
+        return $new;
+    }
+
+    public function getQueryParams(): array
+    {
+        if (!isset($this->queryParams)) {
+            $query = $this->query;
+            if ($query === '') {
+                $this->queryParams = [];
+            } else {
+                parse_str($query, $this->queryParams);
+            }
+        }
+
+        return $this->queryParams;
+    }
+
+    public function setQueryParams(array $queryParams): static
+    {
+        $this->query = http_build_query($queryParams);
+        $this->queryParams = $queryParams;
+
+        return $this;
+    }
+
+    public function withQueryParams(array $queryParams): static
+    {
+        $new = clone $this;
+        $new->setQueryParams($queryParams);
 
         return $new;
     }
