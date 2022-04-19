@@ -390,41 +390,28 @@ class Uri implements UriInterface, Stringable
 
     public static function build(string $scheme, string $authority, string $path, string $query, string $fragment): string
     {
-        $uri = '';
-        if ($scheme !== '') {
-            $uri .= $scheme . ':';
-        }
-
-        if ($authority !== '') {
-            $uri .= '//' . $authority;
-        }
-
+        $schemeSuffix = $scheme !== '' ? ':' : '';
+        $authorityPrefix = $authority !== '' ? '//' : '';
+        $pathPrefix = '';
         if ($path !== '') {
             if ($path[0] !== '/') {
                 if ($authority !== '') {
                     // If the path is rootless and an authority is present, the path MUST be prefixed by "/"
-                    $path = '/' . $path;
+                    $pathPrefix = '/';
                 }
             } elseif (isset($path[1]) && $path[1] === '/') {
                 if ($authority === '') {
                     // If the path is starting with more than one "/" and no authority is present, the
                     // starting slashes MUST be reduced to one.
-                    $path = '/' . ltrim($path, '/');
+                    $pathPrefix = '/';
+                    $path = ltrim($path, '/');
                 }
             }
-
-            $uri .= $path;
         }
+        $queryPrefix = $query !== '' ? '?' : '';
+        $fragmentPrefix = $fragment !== '' ? '#' : '';
 
-        if ($query !== '') {
-            $uri .= '?' . $query;
-        }
-
-        if ($fragment !== '') {
-            $uri .= '#' . $fragment;
-        }
-
-        return $uri;
+        return $scheme . $schemeSuffix . $authorityPrefix . $authority . $pathPrefix . $path . $queryPrefix . $query . $fragmentPrefix . $fragment;
     }
 
     public function toString(): string
