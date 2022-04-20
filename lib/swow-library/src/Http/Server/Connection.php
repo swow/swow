@@ -83,7 +83,7 @@ class Connection extends Socket implements ProtocolTypeInterface
      */
     public function getServer(): Server
     {
-        return $this->server ?? throw new SocketException(message: 'Connection is shut down', code: Errno::EBADF);
+        return $this->server ?? throw new SocketException('Connection is shut down', Errno::EBADF);
     }
 
     public function getProtocolType(): int
