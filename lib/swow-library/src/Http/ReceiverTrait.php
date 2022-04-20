@@ -193,6 +193,16 @@ trait ReceiverTrait
                             if ($body && $body->getLength() < ($body->getSize() / 2)) {
                                 $body->mallocTrim();
                             }
+                        } elseif ($isMultipart && !$this->preserveBodyData) {
+                            $contentLengthName = null;
+                            foreach ($headers as $headerName => $headerValue) {
+                                if (strlen($headerName) === strlen('content-length') && strcasecmp($headerName, 'content-length') === 0) {
+                                    $contentLengthName = $headerName;
+                                }
+                            }
+                            if ($contentLengthName) {
+                                unset($headers[$contentLengthName]);
+                            }
                         }
                         break 2;
                     }
