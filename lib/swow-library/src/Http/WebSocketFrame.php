@@ -26,6 +26,7 @@ class WebSocketFrame extends WebSocket\Frame
             return $payloadData;
         }
 
+        /* @Notice this Buffer::for()  is to suppress the inconsistent type error */
         return Buffer::for(parent::getPayloadData());
     }
 
