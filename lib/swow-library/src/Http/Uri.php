@@ -47,6 +47,15 @@ class Uri implements UriInterface, Stringable
 
     protected string $fragment = '';
 
+    public static function from(UriInterface|string $uri): static
+    {
+        if ($uri instanceof static) {
+            return $uri;
+        }
+
+        return new static((string) $uri);
+    }
+
     public function __construct(string $uri = '')
     {
         if ($uri !== '') {
