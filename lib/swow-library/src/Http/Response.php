@@ -77,7 +77,7 @@ class Response extends Message implements ResponseInterface
         return packResponse(
             $this->getStatusCode(),
             $this->getStandardHeaders(),
-            !$headOnly ? $this->getBodyAsString() : '',
+            (!$headOnly && $this->hasBody()) ? (string) $this->getBody() : '',
             $this->getReasonPhrase(),
             $this->getProtocolVersion()
         );

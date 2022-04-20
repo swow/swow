@@ -19,7 +19,10 @@ use Stringable;
 use Swow\Object\DupTrait;
 use function implode;
 use function is_array;
+use function strpos;
 use function strtolower;
+use function substr;
+use function trim;
 
 class Message implements MessageInterface, Stringable
 {
@@ -29,10 +32,18 @@ class Message implements MessageInterface, Stringable
 
     protected string $protocolVersion = self::DEFAULT_PROTOCOL_VERSION;
 
-    /** @var array<string, array<string>> */
+    /**
+     * headers holder format like `[ 'X-Header' => [ 'value 1', 'value 2' ] ]`
+     *
+     * @var array<string, array<string>>
+     */
     protected array $headers = [];
 
-    /** @var array<string> */
+    /**
+     * headers names holder format like `[ 'x-header' => 'X-Header' ]`
+     *
+     * @var array<string, string>
+     */
     protected array $headerNames = [];
 
     protected bool $keepAlive = true;
@@ -53,7 +64,7 @@ class Message implements MessageInterface, Stringable
 
         // If we got no body, defer initialization of the stream until getBody()
         if ($body !== null && $body !== '') {
-            $this->setBody(Buffer::for($body));
+            $this->setBody($body);
         }
     }
 
@@ -117,45 +128,6 @@ class Message implements MessageInterface, Stringable
         return $this;
     }
 
-    /** @return array<string, array<string>> $headers */
-    public function getHeaders(): array
-    {
-        return $this->headers;
-    }
-
-    /** @return array<string, array<string>> $headers */
-    public function getStandardHeaders(): array
-    {
-        $headers = $this->getHeaders();
-        if (!$this->hasHeader('connection')) {
-            $headers['Connection'] = [$this->getKeepAlive() ? 'keep-alive' : 'close'];
-        }
-        if (!$this->hasHeader('content-length')) {
-            $headers['Content-Length'] = [(string) $this->detectContentLength()];
-        }
-
-        return $headers;
-    }
-
-    /** @param array<string, array<string>|string> $headers */
-    public function setHeaders(array $headers): static
-    {
-        foreach ($headers as $name => $value) {
-            $this->setHeader($name, $value);
-        }
-
-        return $this;
-    }
-
-    /** @param array<string, array<string>|string> $headers */
-    public function withHeaders(array $headers): static
-    {
-        $new = clone $this;
-        $new->setHeaders($headers);
-
-        return $new;
-    }
-
     /**
      * @param string $name
      * @param string|string[] $value
@@ -195,6 +167,65 @@ class Message implements MessageInterface, Stringable
         return $new;
     }
 
+    /** @return array<string, array<string>> $headers */
+    public function getHeaders(): array
+    {
+        return $this->headers;
+    }
+
+    /** @return array<string, array<string>> $headers */
+    public function getStandardHeaders(): array
+    {
+        $headers = $this->getHeaders();
+        if (!$this->hasHeader('connection')) {
+            $headers['Connection'] = [$this->getKeepAlive() ? 'keep-alive' : 'close'];
+        }
+        if (!$this->hasHeader('content-length')) {
+            $headers['Content-Length'] = [(string) $this->getContentLength()];
+        }
+
+        return $headers;
+    }
+
+    /** @param array<string, array<string>|string> $headers */
+    public function setHeaders(array $headers): static
+    {
+        foreach ($headers as $name => $value) {
+            $this->setHeader($name, $value);
+        }
+
+        return $this;
+    }
+
+    /** @param array<string, array<string>|string> $headers */
+    public function withHeaders(array $headers): static
+    {
+        $new = clone $this;
+        $new->setHeaders($headers);
+
+        return $new;
+    }
+
+    public function getContentLength(): int
+    {
+        return $this->hasHeader('content-length') ?
+            (int) $this->getHeaderLine('content-length') :
+            $this->getBody()->getLength();
+    }
+
+    public function getContentType(): string
+    {
+        $contentTypeLine = $this->getHeaderLine('content-type');
+        if (($pos = strpos($contentTypeLine, ';')) !== false) {
+            // e.g. application/json; charset=UTF-8
+            $contentType = strtolower(trim(substr($contentTypeLine, 0, $pos)));
+        } else {
+            $contentType = strtolower($contentTypeLine);
+        }
+
+        return $contentType;
+    }
+
     public function getKeepAlive(): bool
     {
         return $this->keepAlive;
@@ -207,47 +238,32 @@ class Message implements MessageInterface, Stringable
         return $this;
     }
 
-    public function detectContentLength(): int
-    {
-        return $this->getBodyLength();
-    }
-
-    public function getContentLength(): int
-    {
-        return (int) $this->getHeaderLine('content-length');
-    }
-
     public function hasBody(): bool
     {
-        return isset($this->body);
+        return isset($this->body) && !$this->body->isEmpty();
     }
 
     public function getBody(): Buffer
     {
-        return $this->body ?? ($this->body = new Buffer(0));
-    }
-
-    public function getBodyAsString(): string
-    {
-        return isset($this->body) ? $this->body->toString() : '';
+        return $this->body ??= new Buffer(0);
     }
 
     /** @Notice MUST clone the object before you change the body's content */
-    public function setBody(?Buffer $body): static
+    public function setBody(StreamInterface $body): static
     {
-        $this->body = $body;
+        $this->body = Buffer::for($body);
 
         return $this;
     }
 
     public function withBody(StreamInterface $body): static
     {
-        if ($body === ($this->body ?? null)) {
+        if ($body === $this->body) {
             return $this;
         }
 
         $new = clone $this;
-        $new->setBody(Buffer::for($body));
+        $new->setBody($body);
 
         return $new;
     }
@@ -256,7 +272,7 @@ class Message implements MessageInterface, Stringable
     {
         return packMessage(
             $this->getHeaders(),
-            !$headOnly ? $this->getBodyAsString() : ''
+            (!$headOnly && $this->hasBody()) ? (string) $this->getBody() : ''
         );
     }
 

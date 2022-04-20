@@ -71,7 +71,7 @@ final class ServerTest extends TestCase
             ->getBody()
             ->write(json_encode(['address' => $client->getSockAddress(), 'port' => $client->getSockPort()]));
         $response = $client->sendRequest($request);
-        $this->assertSame($query, unserialize($response->getBodyAsString()));
+        $this->assertSame($query, unserialize((string) $response->getBody()));
 
         $wr::wait($wr);
     }
@@ -102,7 +102,7 @@ final class ServerTest extends TestCase
         $response = $client
             ->connect($server->getSockAddress(), $server->getSockPort())
             ->sendRequest($request);
-        $this->assertSame('Hello Swow', $response->getBodyAsString());
+        $this->assertSame('Hello Swow', (string) $response->getBody());
 
         /* WebSocket */
         $request = new HttpRequest('GET', '/chat');

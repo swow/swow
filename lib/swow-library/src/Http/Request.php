@@ -222,7 +222,7 @@ class Request extends Message implements RequestInterface
             $this->getMethod(),
             $this->getUriAsString(),
             $this->getStandardHeaders(),
-            !$headOnly ?  $this->getBodyAsString() : '',
+            (!$headOnly && $this->hasBody()) ? (string) $this->getBody() : '',
             $this->getProtocolVersion()
         );
     }
