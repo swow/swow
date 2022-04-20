@@ -179,29 +179,18 @@ trait ReceiverTrait
                     if ($event === HttpParser::EVENT_MESSAGE_COMPLETE) {
                         if ($isChunked) {
                             // Remove 'chunked' field from Transfer-Encoding header because we combined the chunked body
-                            $contentLengthName = 'Content-Length';
-                            foreach ($headers as $headerName => $headerValue) {
-                                if (strlen($headerName) === strlen('transfer-encoding') && strcasecmp($headerName, 'transfer-encoding') === 0) {
-                                    $headers[$headerName] = implode(', ', array_filter(array_map('trim', explode(',', $headerValue)), static function (string $value): bool {
-                                        return strcasecmp($value, 'chunked') !== 0;
-                                    }));
-                                } elseif (strlen($headerName) === strlen('content-length') && strcasecmp($headerName, 'content-length') === 0) {
-                                    $contentLengthName = $headerName;
-                                }
-                            }
-                            $headers[$contentLengthName] = $body ? (string) $body->getLength() : '0';
+                            $transferEncodingIndex = $headerNames['transfer-encoding'];
+                            $headers[$transferEncodingIndex] = implode(', ', array_filter(array_map('trim', explode(',', $headers[$transferEncodingIndex])), static function (string $value): bool {
+                                return strcasecmp($value, 'chunked') !== 0;
+                            }));
+                            $headers[$headerNames['content-length']] = $body ? (string) $body->getLength() : '0';
                             if ($body && $body->getLength() < ($body->getSize() / 2)) {
                                 $body->mallocTrim();
                             }
                         } elseif ($isMultipart && !$this->preserveBodyData) {
-                            $contentLengthName = null;
-                            foreach ($headers as $headerName => $headerValue) {
-                                if (strlen($headerName) === strlen('content-length') && strcasecmp($headerName, 'content-length') === 0) {
-                                    $contentLengthName = $headerName;
-                                }
-                            }
-                            if ($contentLengthName) {
-                                unset($headers[$contentLengthName]);
+                            $contentLengthIndex = $headerNames['content-length'] ?? null;
+                            if ($contentLengthIndex) {
+                                unset($headers[$contentLengthIndex]);
                             }
                         }
                         break 2;
