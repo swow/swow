@@ -15,8 +15,6 @@ namespace Swow\Http;
 
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\UriInterface;
-use TypeError;
-use function is_string;
 
 class Request extends Message implements RequestInterface
 {
@@ -24,37 +22,17 @@ class Request extends Message implements RequestInterface
 
     protected string $method = 'GET';
 
-    protected ?UriInterface $uri = null;
-
-    protected string $uriString = '';
+    protected UriInterface $uri;
 
     protected ?string $requestTarget = null;
 
-    /**
-     * @param string $method HTTP method
-     * @param string|UriInterface $uri URI
-     * @param array<string, array<string>|string> $headers Request headers
-     * @param mixed $body Request body
-     * @param string $protocolVersion Protocol version
-     */
-    public function __construct(string $method = '', $uri = '', array $headers = [], mixed $body = '', string $protocolVersion = self::DEFAULT_PROTOCOL_VERSION)
+    /** @param array<string, array<string>|string> $headers */
+    public function __construct(string $method = '', string|UriInterface $uri = '', array $headers = [], mixed $body = '', string $protocolVersion = self::DEFAULT_PROTOCOL_VERSION)
     {
         if ($method !== '') {
             $this->setMethod($method);
         }
-
-        if ($uri !== '') {
-            if (is_string($uri)) {
-                $this->setUriString($uri);
-            } elseif ($uri instanceof UriInterface) {
-                $this->setUri($uri);
-            } else {
-                throw new TypeError(sprintf(
-                    'Argument #2 (\$uri) must be of type %s|string, array given',
-                    UriInterface::class
-                ));
-            }
-        }
+        $this->setUri($uri);
 
         parent::__construct($headers, $body, $protocolVersion);
     }
@@ -116,17 +94,12 @@ class Request extends Message implements RequestInterface
     /** @return Uri */
     public function getUri(): UriInterface
     {
-        if ($this->uri === null) {
-            $this->setUri(new Uri($this->uriString));
-        }
-
         return $this->uri;
     }
 
-    public function setUri(UriInterface $uri, ?bool $preserveHost = null): static
+    public function setUri(string|UriInterface $uri, ?bool $preserveHost = null): static
     {
-        $this->uri = $uri;
-        $this->uriString = '';
+        $this->uri = Uri::from($uri);
 
         if (!($preserveHost ?? static::PRESERVE_HOST) || !$this->hasHeader('host')) {
             $this->updateHostFromUri();
@@ -135,7 +108,7 @@ class Request extends Message implements RequestInterface
         return $this;
     }
 
-    public function withUri(UriInterface $uri, $preserveHost = null): Message
+    public function withUri(string|UriInterface $uri, $preserveHost = null): static
     {
         if ($uri === $this->uri) {
             return $this;
@@ -145,23 +118,6 @@ class Request extends Message implements RequestInterface
         $new->setUri($uri, $preserveHost);
 
         return $new;
-    }
-
-    public function setUriString(string $uriString): static
-    {
-        $this->uriString = $uriString;
-        $this->uri = null;
-
-        return $this;
-    }
-
-    public function getUriAsString(): string
-    {
-        if ($this->uri !== null) {
-            return (string) $this->uri;
-        }
-
-        return $this->uriString;
     }
 
     /**
@@ -220,7 +176,7 @@ class Request extends Message implements RequestInterface
     {
         return packRequest(
             $this->getMethod(),
-            $this->getUriAsString(),
+            (string) $this->getUri(),
             $this->getStandardHeaders(),
             (!$headOnly && $this->hasBody()) ? (string) $this->getBody() : '',
             $this->getProtocolVersion()
