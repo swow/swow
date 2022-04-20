@@ -828,7 +828,7 @@ namespace Swow
         /**
          * evaluate code in specified scope
          *
-         * @todo string $string? why not rename it to $code
+         * @TODO string $string? why not rename it to $code
          * @param string $string code to evaluate
          * @see Coroutine::getTrace() for `$level` params usage
          */

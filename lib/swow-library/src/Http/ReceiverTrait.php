@@ -93,7 +93,7 @@ trait ReceiverTrait
     }
 
     /**
-     * @todo The options must be managed in a unified way
+     * @TODO The options must be managed in a unified way
      * @phan-return T
      * @phpstan-return T
      * @psalm-return T
