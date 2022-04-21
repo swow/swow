@@ -158,7 +158,7 @@ static PHP_METHOD(Swow_Http_Parser, execute)
     ZEND_PARSE_PARAMETERS_START(1, 2)
         Z_PARAM_OBJ_OF_CLASS(buffer_object, swow_buffer_ce)
         Z_PARAM_OPTIONAL
-        Z_PARAM_ZVAL_EX(zdata, 0, 1)
+        Z_PARAM_ZVAL(zdata)
     ZEND_PARSE_PARAMETERS_END();
 
     sbuffer = swow_buffer_get_from_object(buffer_object);
@@ -177,8 +177,7 @@ static PHP_METHOD(Swow_Http_Parser, execute)
     sparser->data_offset = parser->data - sbuffer->buffer.value;
 
     if (zdata != NULL && (parser->event & CAT_HTTP_PARSER_EVENT_FLAG_DATA)) {
-        zval_ptr_dtor(zdata);
-        ZVAL_STRINGL(zdata, parser->data, parser->data_length);
+        ZEND_TRY_ASSIGN_REF_STRINGL(zdata, parser->data, parser->data_length);
     }
 
     RETURN_LONG(parser->event);

@@ -606,8 +606,8 @@ static PHP_METHOD_EX(Swow_Socket, _read, zend_bool once, zend_bool may_address, 
         Z_PARAM_OPTIONAL
         Z_PARAM_LONG(size)
         if (may_address) {
-            Z_PARAM_ZVAL_EX(zaddress, 0, 1)
-            Z_PARAM_ZVAL_EX(zport, 0, 1)
+            Z_PARAM_ZVAL(zaddress)
+            Z_PARAM_ZVAL(zport)
         }
         if (!peek) {
             Z_PARAM_LONG_OR_NULL(timeout, timeout_is_null)
@@ -664,16 +664,14 @@ static PHP_METHOD_EX(Swow_Socket, _read, zend_bool once, zend_bool may_address, 
             ret = cat_socket_peek_from(socket, ptr, size, address, &address_length, &port);
         }
         if (zaddress != NULL) {
-            zval_ptr_dtor(zaddress);
             if (address_length == 0 || address_length > sizeof(address) /* error */) {
-                ZVAL_EMPTY_STRING(zaddress);
+                ZEND_TRY_ASSIGN_REF_EMPTY_STRING(zaddress);
             } else {
-                ZVAL_STRINGL(zaddress, address, address_length);
+                ZEND_TRY_ASSIGN_REF_STRINGL(zaddress, address, address_length);
             }
         }
         if (zport != NULL) {
-            zval_ptr_dtor(zport);
-            ZVAL_LONG(zport, port);
+            ZEND_TRY_ASSIGN_REF_LONG(zport, port);
         }
     }
 
@@ -799,8 +797,8 @@ static PHP_METHOD_EX(Swow_Socket, _readString, zend_bool once, zend_bool may_add
         Z_PARAM_OPTIONAL
         Z_PARAM_LONG(size)
         if (may_address) {
-            Z_PARAM_ZVAL_EX(zaddress, 0, 1)
-            Z_PARAM_ZVAL_EX(zport, 0, 1)
+            Z_PARAM_ZVAL(zaddress)
+            Z_PARAM_ZVAL(zport)
         }
         if (!peek) {
             Z_PARAM_LONG_OR_NULL(timeout, timeout_is_null)
@@ -844,16 +842,14 @@ static PHP_METHOD_EX(Swow_Socket, _readString, zend_bool once, zend_bool may_add
             ret = cat_socket_peek_from(socket, ptr, size, address, &address_length, &port);
         }
         if (zaddress != NULL) {
-            zval_ptr_dtor(zaddress);
             if (address_length == 0 || address_length > sizeof(address)) {
-                ZVAL_EMPTY_STRING(zaddress);
+                ZEND_TRY_ASSIGN_REF_EMPTY_STRING(zaddress);
             } else {
-                ZVAL_STRINGL(zaddress, address, address_length);
+                ZEND_TRY_ASSIGN_REF_STRINGL(zaddress, address, address_length);
             }
         }
         if (zport != NULL) {
-            zval_ptr_dtor(zport);
-            ZVAL_LONG(zport, port);
+            ZEND_TRY_ASSIGN_REF_LONG(zport, port);
         }
     }
 

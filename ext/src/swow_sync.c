@@ -75,25 +75,24 @@ static zend_object *swow_sync_wait_group_create_object(zend_class_entry *ce)
 }
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Sync_WaitReference_wait, 0, 1, IS_VOID, 0)
-    ZEND_ARG_OBJ_INFO(1, waitReference, Swow\\Sync\\WaitReference, 0)
+    ZEND_ARG_OBJ_INFO(1, wr, Swow\\Sync\\WaitReference, 0)
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, timeout, IS_LONG, 0, "-1")
 ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Sync_WaitReference, wait)
 {
     swow_sync_wait_reference_t *swr;
-    zval *zwf;
+    zval *zwr = ZEND_CALL_ARG(execute_data, 1);
     zend_object *wr;
     zend_long timeout = -1;
     cat_bool_t ret;
 
     ZEND_PARSE_PARAMETERS_START(1, 2)
-        Z_PARAM_OBJECT_OF_CLASS_EX(zwf, swow_sync_wait_reference_ce, 0, 1)
+        Z_PARAM_OBJ_OF_CLASS_EX(wr, swow_sync_wait_reference_ce, 0, 1)
         Z_PARAM_OPTIONAL
         Z_PARAM_LONG(timeout)
     ZEND_PARSE_PARAMETERS_END();
 
-    wr = Z_OBJ_P(zwf);
     swr = swow_sync_wait_reference_get_from_object(wr);
     if (UNEXPECTED(swr->scoroutine != NULL)) {
         zend_throw_error(NULL, "WaitReference can not be reused before previous wait has returned");
@@ -104,8 +103,12 @@ static PHP_METHOD(Swow_Sync_WaitReference, wait)
     ret = GC_REFCOUNT(wr) != 1;
 
     /* eq to unset() */
-    ZVAL_NULL(zwf);
-    zend_object_release(wr);
+    ZEND_TRY_ASSIGN_REF_NULL(zwr);
+
+    if (UNEXPECTED(!ZVAL_IS_NULL(Z_REFVAL_P(zwr)))) {
+        // assign failed
+        RETURN_THROWS();
+    }
 
     /* if object has been released, just return */
     if (UNEXPECTED(!ret)) {
