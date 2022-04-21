@@ -398,10 +398,10 @@ static void swow_channel_selector_free_object(zend_object *object)
 
 #define getThisSelector() swow_channel_selector_get_from_object(Z_OBJ_P(ZEND_THIS))
 
-static PHP_METHOD_EX(Swow_Channel_Selector, add, zval *zchannel, zval *zdata)
+static PHP_METHOD_EX(Swow_Channel_Selector, add, zend_object *channel_object, zval *zdata)
 {
     swow_channel_selector_t *selector = getThisSelector();
-    swow_channel_t *schannel = swow_channel_get_from_object(Z_OBJ_P(zchannel));
+    swow_channel_t *schannel = swow_channel_get_from_object(channel_object);
     cat_channel_t *channel = &schannel->channel;
     cat_channel_select_request_t *requests, *request;
     zval *zstorage, *zbucket;
@@ -460,14 +460,15 @@ ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Channel_Selector, push)
 {
-    zval *zchannel, *zdata;
+    zend_object *channel_object;
+    zval *zdata;
 
     ZEND_PARSE_PARAMETERS_START(2, 2)
-        Z_PARAM_OBJECT_OF_CLASS(zchannel, swow_channel_ce)
+        Z_PARAM_OBJ_OF_CLASS(channel_object, swow_channel_ce)
         Z_PARAM_ZVAL(zdata)
     ZEND_PARSE_PARAMETERS_END();
 
-    PHP_METHOD_CALL(Swow_Channel_Selector, add, zchannel, zdata);
+    PHP_METHOD_CALL(Swow_Channel_Selector, add, channel_object, zdata);
 }
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Channel_Selector_pop, 0, 1, IS_STATIC, 0)
@@ -476,13 +477,13 @@ ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Channel_Selector, pop)
 {
-    zval *zchannel;
+    zend_object *channel_object;
 
     ZEND_PARSE_PARAMETERS_START(1, 1)
-        Z_PARAM_OBJECT_OF_CLASS(zchannel, swow_channel_ce)
+        Z_PARAM_OBJ_OF_CLASS(channel_object, swow_channel_ce)
     ZEND_PARSE_PARAMETERS_END();
 
-    PHP_METHOD_CALL(Swow_Channel_Selector, add, zchannel, NULL);
+    PHP_METHOD_CALL(Swow_Channel_Selector, add, channel_object, NULL);
 }
 
 ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_class_Swow_Channel_Selector_commit, 0, 0, Swow\\Channel, 0)

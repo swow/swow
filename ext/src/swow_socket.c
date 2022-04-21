@@ -424,18 +424,18 @@ static PHP_METHOD(Swow_Socket, acceptTo)
     SWOW_SOCKET_GETTER(sserver, server);
     zend_long timeout;
     zend_bool timeout_is_null = 1;
-    zval *zconnection;
+    zend_object *connection_object;
     swow_socket_t *sconnection;
     cat_socket_t *connection;
     cat_bool_t ret;
 
     ZEND_PARSE_PARAMETERS_START(1, 2)
-        Z_PARAM_OBJECT_OF_CLASS(zconnection, swow_socket_ce)
+        Z_PARAM_OBJ_OF_CLASS(connection_object, swow_socket_ce)
         Z_PARAM_OPTIONAL
         Z_PARAM_LONG_OR_NULL(timeout, timeout_is_null)
     ZEND_PARSE_PARAMETERS_END();
 
-    sconnection = swow_socket_get_from_object(Z_OBJ_P(zconnection));
+    sconnection = swow_socket_get_from_object(connection_object);
     connection = &sconnection->socket;
     if (timeout_is_null) {
         timeout = cat_socket_get_accept_timeout(server);
@@ -582,7 +582,7 @@ static PHP_METHOD_EX(Swow_Socket, _read, zend_bool once, zend_bool may_address, 
 {
     SWOW_SOCKET_GETTER(ssocket, socket);
     uint32_t max_num_args;
-    zval *zbuffer;
+    zend_object *buffer_object;
     zend_long size = -1;
     zval *zaddress = NULL, *zport = NULL;
     zend_long timeout;
@@ -602,7 +602,7 @@ static PHP_METHOD_EX(Swow_Socket, _read, zend_bool once, zend_bool may_address, 
     }
 
     ZEND_PARSE_PARAMETERS_START(1, max_num_args)
-        Z_PARAM_OBJECT_OF_CLASS(zbuffer, swow_buffer_ce)
+        Z_PARAM_OBJ_OF_CLASS(buffer_object, swow_buffer_ce)
         Z_PARAM_OPTIONAL
         Z_PARAM_LONG(size)
         if (may_address) {
@@ -615,7 +615,7 @@ static PHP_METHOD_EX(Swow_Socket, _read, zend_bool once, zend_bool may_address, 
     ZEND_PARSE_PARAMETERS_END();
 
     /* check args and initialize */
-    sbuffer = swow_buffer_get_from_object(Z_OBJ_P(zbuffer));
+    sbuffer = swow_buffer_get_from_object(buffer_object);
     writable_size = swow_buffer_get_writable_space(sbuffer, &ptr);
     if (EXPECTED(size == -1)) {
         size = writable_size;
@@ -947,7 +947,7 @@ static PHP_METHOD_EX(Swow_Socket, _write, zend_bool single, zend_bool may_addres
 {
     SWOW_SOCKET_GETTER(ssocket, socket);
     uint32_t max_num_args;
-    zval *zbuffer = NULL;
+    zend_object *buffer_object = NULL;
     zend_string *string = NULL;
     zend_long offset = 0;
     zend_long length = -1;
@@ -1072,7 +1072,7 @@ static PHP_METHOD_EX(Swow_Socket, _write, zend_bool single, zend_bool may_addres
                             ZEND_HASH_FOREACH_VAL(vector_array, ztmp) {
                                 ZEND_ASSERT(index == 0 || index == 1);
                                 if (index == 0) {
-                                    if (!zend_parse_arg_object(ztmp, &zbuffer, swow_buffer_ce, 0)) {
+                                    if (!zend_parse_arg_obj(ztmp, &buffer_object, swow_buffer_ce, 0)) {
                                         if (Z_TYPE_P(ztmp) == IS_OBJECT) {
                                             goto _maybe_stringable_object;
                                         }
@@ -1088,7 +1088,7 @@ static PHP_METHOD_EX(Swow_Socket, _write, zend_bool single, zend_bool may_addres
                                 index++;
                             } ZEND_HASH_FOREACH_END();
                         }
-                    } else if (zend_parse_arg_object(ztmp, &zbuffer, swow_buffer_ce, 0)) {
+                    } else if (zend_parse_arg_obj(ztmp, &buffer_object, swow_buffer_ce, 0)) {
                         /* buffer object (do othing) */
                     } else {
                         /* stringable object  */
@@ -1105,8 +1105,8 @@ static PHP_METHOD_EX(Swow_Socket, _write, zend_bool single, zend_bool may_addres
                         }
                         ptr = ZSTR_VAL(string) + offset;
                     } else {
-                        ZEND_ASSERT(zbuffer != NULL);
-                        sbuffer = swow_buffer_get_from_object(Z_OBJ_P(zbuffer));
+                        ZEND_ASSERT(buffer_object != NULL);
+                        sbuffer = swow_buffer_get_from_object(buffer_object);
                         readable_length = swow_buffer_get_readable_space(sbuffer, &ptr);
                         if (EXPECTED(length == -1)) {
                             length = readable_length;
@@ -1129,7 +1129,7 @@ static PHP_METHOD_EX(Swow_Socket, _write, zend_bool single, zend_bool may_addres
                     vector_count++;
                     _next:
                     /* reset arguments */
-                    zbuffer = NULL;
+                    buffer_object = NULL;
                     string = NULL;
                     offset = 0;
                     length = -1;
@@ -1142,7 +1142,7 @@ static PHP_METHOD_EX(Swow_Socket, _write, zend_bool single, zend_bool may_addres
             Z_PARAM_OPTIONAL
         } else {
             vector_count++;
-            Z_PARAM_OBJECT_OF_CLASS(zbuffer, swow_buffer_ce)
+            Z_PARAM_OBJ_OF_CLASS(buffer_object, swow_buffer_ce)
             Z_PARAM_OPTIONAL
             Z_PARAM_LONG(length)
         }
@@ -1155,7 +1155,7 @@ static PHP_METHOD_EX(Swow_Socket, _write, zend_bool single, zend_bool may_addres
 
     /* check args and initialize */
     if (single) {
-        sbuffer = swow_buffer_get_from_object(Z_OBJ_P(zbuffer));
+        sbuffer = swow_buffer_get_from_object(buffer_object);
         readable_length = swow_buffer_get_readable_space(sbuffer, &ptr);
         if (EXPECTED(length == -1)) {
             length = readable_length;
@@ -1332,7 +1332,7 @@ ZEND_END_ARG_INFO()
 static PHP_METHOD(Swow_Socket, sendHandle)
 {
     SWOW_SOCKET_GETTER(ssocket, socket);
-    zval *zhandle;
+    zend_object *handle_object;
     zend_long timeout;
     zend_bool timeout_is_null = 1;
     swow_socket_t *shandle;
@@ -1340,12 +1340,12 @@ static PHP_METHOD(Swow_Socket, sendHandle)
     cat_bool_t ret;
 
     ZEND_PARSE_PARAMETERS_START(1, 2)
-        Z_PARAM_OBJECT_OF_CLASS(zhandle, swow_socket_ce)
+        Z_PARAM_OBJ_OF_CLASS(handle_object, swow_socket_ce)
         Z_PARAM_OPTIONAL
         Z_PARAM_LONG_OR_NULL(timeout, timeout_is_null)
     ZEND_PARSE_PARAMETERS_END();
 
-    shandle = swow_socket_get_from_object(Z_OBJ_P(zhandle));
+    shandle = swow_socket_get_from_object(handle_object);
     handle = &shandle->socket;
     if (timeout_is_null) {
         timeout = cat_socket_get_write_timeout(socket);

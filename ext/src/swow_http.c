@@ -148,7 +148,7 @@ ZEND_END_ARG_INFO()
 static PHP_METHOD(Swow_Http_Parser, execute)
 {
     SWOW_HTTP_PARSER_GETTER(sparser, parser);
-    zval *zbuffer;
+    zend_object *buffer_object;
     swow_buffer_t *sbuffer;
     const char *buffer;
     size_t length;
@@ -156,12 +156,12 @@ static PHP_METHOD(Swow_Http_Parser, execute)
     ssize_t ret;
 
     ZEND_PARSE_PARAMETERS_START(1, 2)
-        Z_PARAM_OBJECT_OF_CLASS(zbuffer, swow_buffer_ce)
+        Z_PARAM_OBJ_OF_CLASS(buffer_object, swow_buffer_ce)
         Z_PARAM_OPTIONAL
         Z_PARAM_ZVAL_EX(zdata, 0, 1)
     ZEND_PARSE_PARAMETERS_END();
 
-    sbuffer = swow_buffer_get_from_object(Z_OBJ_P(zbuffer));
+    sbuffer = swow_buffer_get_from_object(buffer_object);
     length = swow_buffer_get_readable_space(sbuffer, &buffer);
 
     ret = cat_http_parser_execute(parser, buffer, length);

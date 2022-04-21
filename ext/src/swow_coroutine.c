@@ -1913,13 +1913,13 @@ ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Coroutine, throw)
 {
-    zval *zexception;
+    zend_object *exception_object;
 
     ZEND_PARSE_PARAMETERS_START(1, 1)
-        Z_PARAM_OBJECT_OF_CLASS(zexception, zend_ce_throwable)
+        Z_PARAM_OBJ_OF_CLASS(exception_object, zend_ce_throwable)
     ZEND_PARSE_PARAMETERS_END();
 
-    if (UNEXPECTED(!swow_coroutine_throw(getThisCoroutine(), Z_OBJ_P(zexception), return_value))) {
+    if (UNEXPECTED(!swow_coroutine_throw(getThisCoroutine(), exception_object, return_value))) {
         swow_throw_exception_with_last(swow_coroutine_exception_ce);
         RETURN_THROWS();
     }
