@@ -14,7 +14,7 @@ $foo = new class {
     public function __destruct()
     {
         static $socket;
-        $socket = new Socket;
+        $socket = new Socket(Socket::TYPE_TCP);
     }
 };
 

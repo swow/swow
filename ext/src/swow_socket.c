@@ -66,22 +66,21 @@ static void swow_socket_free_object(zend_object *object)
     zend_object_std_dtor(&ssocket->std);
 }
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_class_Swow_Socket___construct, 0, 0, 0)
-    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, type, IS_LONG, 0, "Swow\\Socket::TYPE_TCP")
+ZEND_BEGIN_ARG_INFO_EX(arginfo_class_Swow_Socket___construct, 0, 0, 1)
+    ZEND_ARG_TYPE_INFO(0, type, IS_LONG, 0)
 ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Socket, __construct)
 {
     SWOW_SOCKET_GETTER(ssocket, socket);
-    zend_long type = CAT_SOCKET_TYPE_TCP;
+    zend_long type;
 
     if (UNEXPECTED(cat_socket_is_available(socket))) {
         zend_throw_error(NULL, "%s can be constructed only once", ZEND_THIS_NAME);
         RETURN_THROWS();
     }
 
-    ZEND_PARSE_PARAMETERS_START(0, 1)
-        Z_PARAM_OPTIONAL
+    ZEND_PARSE_PARAMETERS_START(1, 1)
         Z_PARAM_LONG(type)
     ZEND_PARSE_PARAMETERS_END();
 

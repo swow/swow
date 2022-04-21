@@ -1154,7 +1154,7 @@ namespace Swow
         public const BIND_FLAG_REUSEADDR = 2;
         public const BIND_FLAG_REUSEPORT = 4;
 
-        public function __construct(int $type = self::TYPE_TCP) { }
+        public function __construct(int $type) { }
 
         public function getId(): int { }
 
