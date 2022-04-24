@@ -283,11 +283,10 @@ CAT_API int cat_fs_scandir(const char *path, cat_dirent_t **namelist,
         return -1;
     }
 
-    int ret = -1;
     cat_dirent_t dirent, *tmp = NULL;
     int cnt = 0, len = 0;
 
-    while ((ret = uv_fs_scandir_next(req, &dirent)) == 0) {
+    while (uv_fs_scandir_next(req, &dirent) == 0) {
         if (filter && !filter(&dirent)) {
             continue;
         }

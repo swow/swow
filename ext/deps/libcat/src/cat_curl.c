@@ -289,7 +289,7 @@ CAT_API cat_bool_t cat_curl_runtime_init(void)
     return cat_true;
 }
 
-CAT_API cat_bool_t cat_curl_runtime_shutdown(void)
+CAT_API cat_bool_t cat_curl_runtime_close(void)
 {
     CAT_ASSERT(cat_queue_empty(&CAT_CURL_G(multi_map)));
 

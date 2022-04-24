@@ -1937,10 +1937,16 @@ CAT_API cat_bool_t cat_socket_enable_crypto_ex(cat_socket_t *socket, const cat_s
                 break;
             }
         }
+#if 0   /* FIXME: Disable it for now because we do not sure that whether it still works now,
+         * and it make SSL handshake hang on recv() forever on Linux. */
         /* Notice: if it's client and it write something to the server,
          * it means server will response something later, so, we need to recv it then returns,
          * otherwise it will lead errors on Windows */
-        if (ssl_ret == CAT_SSL_RET_OK && !(n > 0 && ioptions.is_client)) {
+#define CAT_SOCKET_SSL_HANDSHAKE_WORKAROUND_FOR_WINDOWS() !(n > 0 && ioptions.is_client)
+#else
+#define CAT_SOCKET_SSL_HANDSHAKE_WORKAROUND_FOR_WINDOWS() 1
+#endif
+        if (ssl_ret == CAT_SSL_RET_OK && CAT_SOCKET_SSL_HANDSHAKE_WORKAROUND_FOR_WINDOWS()) {
             CAT_LOG_DEBUG(SOCKET, "Socket SSL handshake completed");
             ret = cat_true;
             break;
