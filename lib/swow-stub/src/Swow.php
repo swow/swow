@@ -691,6 +691,8 @@ namespace Swow
 
         public function isAlive(): bool { }
 
+        public function isExecuting(): bool { }
+
         /**
          * get current executed code file name
          *

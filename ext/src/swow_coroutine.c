@@ -1686,6 +1686,15 @@ static PHP_METHOD(Swow_Coroutine, isAlive)
     RETURN_BOOL(swow_coroutine_is_alive(getThisCoroutine()));
 }
 
+#define arginfo_class_Swow_Coroutine_isExecuting arginfo_class_Swow_Coroutine_isAvailable
+
+static PHP_METHOD(Swow_Coroutine, isExecuting)
+{
+    ZEND_PARSE_PARAMETERS_NONE();
+
+    RETURN_BOOL(swow_coroutine_is_executing(getThisCoroutine()));
+}
+
 #define SWOW_COROUTINE_GET_EXECUTED_INFO_PARAMETERS_PARSER() \
     zend_long level = 0; \
     ZEND_PARSE_PARAMETERS_START(0, 1) \
@@ -2112,6 +2121,7 @@ static const zend_function_entry swow_coroutine_methods[] = {
     PHP_ME(Swow_Coroutine, getExitStatus,           arginfo_class_Swow_Coroutine_getExitStatus,           ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Coroutine, isAvailable,             arginfo_class_Swow_Coroutine_isAvailable,             ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Coroutine, isAlive,                 arginfo_class_Swow_Coroutine_isAlive,                 ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Coroutine, isExecuting,             arginfo_class_Swow_Coroutine_isExecuting,             ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Coroutine, getExecutedFilename,     arginfo_class_Swow_Coroutine_getExecutedFilename,     ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Coroutine, getExecutedLineno,       arginfo_class_Swow_Coroutine_getExecutedLineno,       ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Coroutine, getExecutedFunctionName, arginfo_class_Swow_Coroutine_getExecutedFunctionName, ZEND_ACC_PUBLIC)
