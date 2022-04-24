@@ -133,7 +133,9 @@ static void swow_coroutine_dtor_object(zend_object *object)
 
     if (UNEXPECTED(swow_coroutine_is_alive(scoroutine))) {
         /* not finished, should be discard */
-        if (UNEXPECTED(!swow_coroutine_kill(scoroutine))) {
+        if (UNEXPECTED(SWOW_COROUTINE_G(bailout))) {
+            swow_coroutine_schedule(scoroutine, COROUTINE, "Destruct object whiling bailout");
+        } else if (UNEXPECTED(!swow_coroutine_kill(scoroutine))) {
             CAT_CORE_ERROR(COROUTINE, "Kill coroutine failed when destruct object, reason: %s", cat_get_last_error_message());
         }
     }
@@ -214,6 +216,17 @@ static CAT_COLD void swow_coroutine_function_handle_exception(void)
     }
 }
 
+static ZEND_COLD zend_never_inline void swow_coroutine_bailout_handler(swow_coroutine_t *scoroutine)
+{
+    scoroutine->coroutine.flags |= SWOW_COROUTINE_FLAG_BAILOUT;
+    if (!SWOW_COROUTINE_G(bailout)) {
+        // it's the first zend_bailout() on a user coroutine
+        SWOW_COROUTINE_G(bailout) = cat_true;
+        // bailout main coroutine to kill all coroutines
+        swow_coroutine_schedule(swow_coroutine_get_main(), COROUTINE, "Bailout main from a user coroutine to exit gracefully while fatal error occurred");
+    }
+}
+
 static zval *swow_coroutine_function(zval *zdata)
 {
     swow_coroutine_t *scoroutine = swow_coroutine_get_current();
@@ -223,49 +236,54 @@ static zval *swow_coroutine_function(zval *zdata)
 
     ZEND_ASSERT(executor != NULL);
 
-    /* add to scoroutines map (we can not add before run otherwise refcount would never be 0) */
-    swow_coroutine_add_to_map(scoroutine, SWOW_COROUTINE_G(map));
+    zend_try {
+        /* add to scoroutines map (we can not add before run otherwise refcount would never be 0) */
+        swow_coroutine_add_to_map(scoroutine, SWOW_COROUTINE_G(map));
 
-    /* clear accept zval data flag (it was set in constructor) */
-    scoroutine->coroutine.flags ^= SWOW_COROUTINE_FLAG_ACCEPT_ZDATA;
-    /* prepare function call info */
-    fci.size = sizeof(fci);
-    ZVAL_UNDEF(&fci.function_name);
-    fci.object = NULL;
-    /* params will be copied by zend_call_function */
-    if (likely(zdata == NULL)) {
-        fci.param_count = 0;
-    } else if (Z_TYPE_P(zdata) != IS_PTR) {
-        Z_TRY_DELREF_P(zdata);
-        fci.param_count = 1;
-        fci.params = zdata;
-    } else {
-        zend_fcall_info *fci_ptr = (zend_fcall_info *) Z_PTR_P(zdata);
-        fci.param_count = fci_ptr->param_count;
-        fci.params = fci_ptr->params;
-    }
-    fci.named_params = NULL;
-    fci.retval = &retval;
+        /* clear accept zval data flag (it was set in constructor) */
+        scoroutine->coroutine.flags ^= SWOW_COROUTINE_FLAG_ACCEPT_ZDATA;
+        /* prepare function call info */
+        fci.size = sizeof(fci);
+        ZVAL_UNDEF(&fci.function_name);
+        fci.object = NULL;
+        /* params will be copied by zend_call_function */
+        if (likely(zdata == NULL)) {
+            fci.param_count = 0;
+        } else if (Z_TYPE_P(zdata) != IS_PTR) {
+            Z_TRY_DELREF_P(zdata);
+            fci.param_count = 1;
+            fci.params = zdata;
+        } else {
+            zend_fcall_info *fci_ptr = (zend_fcall_info *) Z_PTR_P(zdata);
+            fci.param_count = fci_ptr->param_count;
+            fci.params = fci_ptr->params;
+        }
+        fci.named_params = NULL;
+        fci.retval = &retval;
 
-    /* call function */
-    (void) zend_call_function(&fci, &executor->fcall.fcc);
-    if (UNEXPECTED(EG(exception) != NULL)) {
-        swow_coroutine_function_handle_exception();
-    }
-
-    /* discard all possible resources (e.g. variable by "use" in zend_closure) */
-    swow_fcall_storage_release(&executor->fcall);
-    if (UNEXPECTED(EG(exception) != NULL)) {
-        swow_coroutine_function_handle_exception();
-    }
-
-    /* call __destruct() first here (prevent destructing in scheduler) */
-    if (scoroutine->std.ce->destructor != NULL) {
-        zend_objects_destroy_object(&scoroutine->std);
+        /* call function */
+        (void) zend_call_function(&fci, &executor->fcall.fcc);
         if (UNEXPECTED(EG(exception) != NULL)) {
             swow_coroutine_function_handle_exception();
         }
-    }
+
+        /* discard all possible resources (e.g. variable by "use" in zend_closure) */
+        swow_fcall_storage_release(&executor->fcall);
+        if (UNEXPECTED(EG(exception) != NULL)) {
+            swow_coroutine_function_handle_exception();
+        }
+
+        /* call __destruct() first here (prevent destructing in scheduler) */
+        if (scoroutine->std.ce->destructor != NULL) {
+            zend_objects_destroy_object(&scoroutine->std);
+            if (UNEXPECTED(EG(exception) != NULL)) {
+                swow_coroutine_function_handle_exception();
+            }
+        }
+    } zend_catch {
+        swow_coroutine_bailout_handler(scoroutine);
+    } zend_end_try();
+
     /* do not call __destruct() anymore  */
     GC_ADD_FLAGS(&scoroutine->std, IS_OBJ_DESTRUCTOR_CALLED);
 
@@ -466,18 +484,20 @@ static void swow_coroutine_main_dtor_object(zend_object *object)
     ZEND_ASSERT(EG(objects_store).top > 1);
 
     ZEND_HASH_FOREACH_VAL(map, zval *zscoroutine) {
-        zend_object *object = Z_OBJ_P(zscoroutine);
-        if (IS_OBJ_VALID(object)) {
-            if (!(OBJ_FLAGS(object) & IS_OBJ_DESTRUCTOR_CALLED)) {
-                GC_ADD_FLAGS(object, IS_OBJ_DESTRUCTOR_CALLED);
-                if (object->handlers->dtor_obj != zend_objects_destroy_object ||
-                    object->ce->destructor) {
-                    GC_ADDREF(object);
-                    object->handlers->dtor_obj(object);
-                    GC_DELREF(object);
-                }
-            }
+        zend_object *coroutine_object = Z_OBJ_P(zscoroutine);
+        if (coroutine_object == object) {
+            continue;
         }
+        /* Real destructor is called at the end of coroutine function,
+         * we always call dtor_obj here to make sure that all coroutines were killed.
+         * And in a special case that when fatal error occurred,
+         * zend_objects_store_mark_destructed() would be called,
+         * this is the PHP kernel in order to prevent more user PHP code
+         * from being executed in the dtor after fatal error,
+         * but it will make our dtors unavailable, so we hooked then error_cb,
+         * and recover the IS_OBJ_DESTRUCTOR_CALLED of main coroutine in error_cb,
+         * then call all dtors of coroutines here. */
+        coroutine_object->handlers->dtor_obj(coroutine_object);
     } ZEND_HASH_FOREACH_END();
 }
 
@@ -753,15 +773,22 @@ static void swow_coroutine_jump_standard(cat_coroutine_t *coroutine, cat_data_t 
         /* delete it from global map
          * (we can not delete it in coroutine_function, object maybe released during deletion) */
         swow_coroutine_remove_from_map(scoroutine, SWOW_COROUTINE_G(map));
-    } else {
-        swow_coroutine_executor_t *executor = current_scoroutine->executor;
-        if (executor != NULL) {
-            /* handle cross exception */
-            if (UNEXPECTED(SWOW_COROUTINE_G(exception) != NULL)) {
-                swow_coroutine_handle_cross_exception(SWOW_COROUTINE_G(exception));
-                SWOW_COROUTINE_G(exception) = NULL;
-            }
+    } else if (UNEXPECTED(SWOW_COROUTINE_G(bailout))) {
+        if (
+            /* coroutine without executor (e.g. scheduler) can not bailout */
+            current_scoroutine->executor != NULL &&
+            /* the bailoutted coroutine need not bailout again */
+            !(current_scoroutine->coroutine.flags & SWOW_COROUTINE_FLAG_BAILOUT)
+        ) {
+            current_scoroutine->coroutine.flags |= SWOW_COROUTINE_FLAG_BAILOUT;
+            zend_bailout();
         }
+    } else if (UNEXPECTED(SWOW_COROUTINE_G(exception) != NULL)) {
+        /* coroutine without executor (e.g. scheduler) can not handle exception */
+        ZEND_ASSERT(current_scoroutine->executor != NULL);
+        /* handle cross exception */
+        swow_coroutine_handle_cross_exception(SWOW_COROUTINE_G(exception));
+        SWOW_COROUTINE_G(exception) = NULL;
     }
 }
 
@@ -1324,6 +1351,13 @@ SWOW_API cat_bool_t swow_coroutine_kill(swow_coroutine_t *scoroutine)
         zval_ptr_dtor(&retval); // TODO: __destruct may lead coroutine switch
         if (UNEXPECTED(swow_coroutine_is_alive(scoroutine))) {
             if (scoroutine == swow_coroutine_get_current()) {
+                break;
+            }
+            if (scoroutine == swow_coroutine_get_main() &&
+                !swow_coroutine_is_executing(scoroutine)) {
+                /* main coroutine now is in php_request_shutdown() and
+                 * it will kill(=recover) all coroutines,
+                 * so we do not need to kill it again because it is not in executing */
                 break;
             }
             continue;
@@ -2148,10 +2182,13 @@ static void swow_call_original_zend_error_cb(int type, ZEND_ERROR_CB_FILENAME_T 
 static void swow_call_original_zend_error_cb_safe(int type, ZEND_ERROR_CB_FILENAME_T *error_filename, const uint32_t error_lineno, zend_string *message)
 {
     zend_try {
-        original_zend_error_cb(type, error_filename, error_lineno, message);
+        swow_call_original_zend_error_cb(type, error_filename, error_lineno, message);
     } zend_catch {
-        // TODO: kill all coroutines?
-        exit(EG(exit_status));
+        /* we should delete IS_OBJ_DESTRUCTOR_CALLED flag from main coroutine
+         * otherwise main coroutine dtor will not be triggered because of zend_objects_store_mark_destructed() */
+        GC_DEL_FLAGS(&swow_coroutine_get_main()->std, IS_OBJ_DESTRUCTOR_CALLED);
+        /* recall bailout */
+        zend_bailout();
     } zend_end_try();
 }
 
@@ -2223,13 +2260,15 @@ static void swow_coroutine_error_cb(int type, ZEND_ERROR_CB_FILENAME_T *error_fi
             zend_string_release(trace);
         }
     }
-    if (UNEXPECTED(type & E_FATAL_ERRORS)) {
+    if (UNEXPECTED((type & E_FATAL_ERRORS) && !(type & E_DONT_BAIL))) {
         /* update executor for backtrace */
         if (EG(current_execute_data) != NULL) {
             swow_coroutine_executor_save(swow_coroutine_get_current()->executor);
         }
+        swow_call_original_zend_error_cb_safe(type, error_filename, error_lineno, message);
+    } else {
+        swow_call_original_zend_error_cb(type, error_filename, error_lineno, message);
     }
-    swow_call_original_zend_error_cb_safe(type, error_filename, error_lineno, message);
     if (new_message != NULL) {
         zend_string_release(new_message);
     }
@@ -2465,6 +2504,7 @@ zend_result swow_coroutine_runtime_init(INIT_FUNC_ARGS)
     SWOW_COROUTINE_G(runtime_state) = SWOW_COROUTINE_RUNTIME_STATE_RUNNING;
 
     SWOW_COROUTINE_G(exception) = NULL;
+    SWOW_COROUTINE_G(bailout) = false;
 
     /* create scoroutine map */
     do {

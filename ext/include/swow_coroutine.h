@@ -54,6 +54,7 @@ typedef enum swow_coroutine_flag_e {
     SWOW_COROUTINE_FLAG_ACCEPT_ZDATA = CAT_COROUTINE_FLAG_USR1,
     SWOW_COROUTINE_FLAG_DEBUGGING = CAT_COROUTINE_FLAG_USR2,
     SWOW_COROUTINE_FLAG_KILLED = CAT_COROUTINE_FLAG_USR3,
+    SWOW_COROUTINE_FLAG_BAILOUT = CAT_COROUTINE_FLAG_USR4,
 } swow_coroutine_flag_t;
 
 /*
@@ -123,6 +124,7 @@ CAT_GLOBALS_STRUCT_BEGIN(swow_coroutine)
     cat_coroutine_t *original_main;
     zval ztransfer_data;
     zend_object *exception;
+    cat_bool_t bailout;
 CAT_GLOBALS_STRUCT_END(swow_coroutine)
 
 typedef zval *(*swow_coroutine_resume_t)(swow_coroutine_t *scoroutine, zval *zdata);
