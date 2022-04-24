@@ -277,9 +277,9 @@ if test "${PHP_SWOW}" != "no"; then
     return 0
   }
   if swow_check_git ; then
-     SWOW_GIT_VERSION_CFLAG=-DSWOW_GIT_VERSION=\\\"'-"`'"$SWOW_GIT --work-tree=${ext_srcdir}/.. --git-dir=${ext_srcdir}/../.git describe --always --abbrev=8 --dirty 2>&-"'`"'\\\"
+    SWOW_GIT_VERSION_CFLAG=-DSWOW_GIT_VERSION=\\\"'-"`'"$SWOW_GIT --work-tree=${ext_srcdir}/.. --git-dir=${ext_srcdir}/../.git describe --always --abbrev=8 --dirty 2>&-"'`"'\\\"
   else
-     SWOW_GIT_VERSION_CFLAG=
+    SWOW_GIT_VERSION_CFLAG=
   fi
   PHP_SUBST(SWOW_GIT_VERSION_CFLAG)
 
@@ -349,8 +349,8 @@ EOF
     fi
 
     if test "$PHP_SWOW_MEMORY_SANITIZER" = "yes" &&
-       test "$PHP_SWOW_ADDRESS_SANITIZER" = "yes"; then
-       AC_MSG_ERROR([MemorySanitizer and AddressSanitizer are mutually exclusive])
+      test "$PHP_SWOW_ADDRESS_SANITIZER" = "yes"; then
+      AC_MSG_ERROR([MemorySanitizer and AddressSanitizer are mutually exclusive])
     fi
 
     if test "$PHP_SWOW_MEMORY_SANITIZER" = "yes"; then
@@ -368,10 +368,10 @@ EOF
     fi
 
     if test "$PHP_SWOW_MEMORY_SANITIZER" = "yes" ||
-       test "$PHP_SWOW_ADDRESS_SANITIZER" = "yes" ||
-       test "$PHP_SWOW_UNDEFINED_SANITIZER" = "yes"; then
-        CFLAGS="$CFLAGS -fno-omit-frame-pointer"
-        CXXFLAGS="$CXXFLAGS -fno-omit-frame-pointer"
+      test "$PHP_SWOW_ADDRESS_SANITIZER" = "yes" ||
+      test "$PHP_SWOW_UNDEFINED_SANITIZER" = "yes"; then
+      CFLAGS="$CFLAGS -fno-omit-frame-pointer"
+      CXXFLAGS="$CXXFLAGS -fno-omit-frame-pointer"
     fi
 
     SWOW_CAT_INCLUDES="${SWOW_CAT_INCLUDES} -I${ext_srcdir}/include -I${ext_srcdir}/deps/libcat/include"
