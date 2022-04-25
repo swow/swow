@@ -154,3 +154,8 @@ function skip_if_max_open_files_less_than(int $number): void
         skip("Max open files should be greater than or equal to {$number}, but it is {$n} now");
     }
 }
+
+function skip_if_offline(): void
+{
+    skip('Internet connection required', getenv('OFFLINE'));
+}
