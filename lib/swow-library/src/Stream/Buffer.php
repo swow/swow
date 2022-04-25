@@ -23,7 +23,7 @@ class Buffer extends \Swow\Buffer
         /* @phpstan-ignore-next-line */
         $buffer = $body === null ? new static(0) : new static();
         if ($body !== '') {
-            $buffer->write((string) $body)->rewind();
+            $buffer->copy((string) $body);
         }
 
         return $buffer;
