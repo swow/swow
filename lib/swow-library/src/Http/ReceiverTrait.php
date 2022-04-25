@@ -337,7 +337,6 @@ trait ReceiverTrait
                             case HttpParser::EVENT_MULTIPART_DATA_END:
                             {
                                 if (isset($formDataValue)) {
-                                    $formDataValue->rewind();
                                     $formData[$formDataName] = $formDataValue->toString();
                                     // reset for the next parts
                                     $formDataName = '';
