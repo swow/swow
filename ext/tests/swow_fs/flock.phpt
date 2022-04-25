@@ -3,7 +3,7 @@ swow_fs: flock basic functionality
 --SKIPIF--
 <?php
 require __DIR__ . '/../include/skipif.php';
-skip('close(2) syscall behaves strange on macOS', PHP_OS_FAMILY === 'Darwin');
+skip_if_darwin('close(2) syscall behaves strange on macOS');
 skip_if_cannot_make_subprocess();
 ?>
 --FILE--

@@ -3,7 +3,7 @@ swow_misc: trig deprecation and errors in coroutine
 --SKIPIF--
 <?php
 require __DIR__ . '/../include/skipif.php';
-skip('no proper deprecation in this version of PHP', PHP_VERSION_ID >= 80200 || PHP_VERSION_ID < 70200);
+skip_if(PHP_VERSION_ID >= 80200 || PHP_VERSION_ID < 70200, 'no proper deprecation in this version of PHP');
 ?>
 --FILE--
 <?php

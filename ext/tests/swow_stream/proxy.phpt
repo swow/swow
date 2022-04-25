@@ -5,7 +5,10 @@ swow_stream: proxy
 require __DIR__ . '/../include/skipif.php';
 skip_if_offline();
 require __DIR__ . '/../include/bootstrap.php';
-skip('Proxy is not available', httpRequest('https://github.com', timeoutSeconds: 10, proxy: true)['status'] !== 200);
+skip_if(
+    ($response = httpRequest('https://github.com', timeoutSeconds: 3, proxy: true, doNotThrow: true)) === false || $response['status'] !== 200,
+    'Proxy is not available'
+);
 ?>
 --FILE--
 <?php

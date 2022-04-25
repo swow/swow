@@ -15,10 +15,15 @@ if (!extension_loaded('swow')) {
     skip('Swow extension is required');
 }
 
-function skip(string $reason, bool $condition = true): void
+function skip(string $reason): void
+{
+    exit("skip {$reason}");
+}
+
+function skip_if(bool $condition, string $reason)
 {
     if ($condition) {
-        exit("skip {$reason}");
+        skip($reason);
     }
 }
 
@@ -46,67 +51,67 @@ function skip_if_ini_bool_equal_to(string $name, bool $value): void
 
 function skip_if_constant_not_defined(string $constant_name): void
 {
-    skip("{$constant_name} is not defined", !defined($constant_name));
+    skip_if(!defined($constant_name), "{$constant_name} is not defined");
 }
 
 function skip_if_function_not_exist(string $function_name): void
 {
-    skip("{$function_name} not exist", !function_exists($function_name));
+    skip_if(!function_exists($function_name), "{$function_name} not exist");
 }
 
 function skip_if_class_not_exist(string $class_name): void
 {
-    skip("{$class_name} not exist", !class_exists($class_name, false));
+    skip_if(!class_exists($class_name, false), "{$class_name} not exist");
 }
 
 function skip_if_extension_not_exist(string $extension_name): void
 {
-    skip("{$extension_name} not exist", !extension_loaded($extension_name));
+    skip_if(!extension_loaded($extension_name), "{$extension_name} not exist");
 }
 
 function skip_if_file_not_exist(string $filename): void
 {
-    skip("file {$filename} is not exist", !file_exists($filename));
+    skip_if(!file_exists($filename), "file {$filename} is not exist");
 }
 
-function skip_linux_only(): void
+function skip_linux_only(string $reason = 'Linux only'): void
 {
-    skip('Linux only', PHP_OS_FAMILY !== 'Linux');
+    skip_if(PHP_OS_FAMILY !== 'Linux', $reason);
 }
 
-function skip_if_win(): void
+function skip_if_win(string $reason = 'Not support on Windows'): void
 {
-    skip('Not support on Windows', PHP_OS_FAMILY === 'Windows');
+    skip_if(PHP_OS_FAMILY === 'Windows', $reason);
 }
 
-function skip_if_darwin(): void
+function skip_if_darwin(string $reason = 'Not support on Darwin'): void
 {
-    skip('Not support on Darwin', PHP_OS_FAMILY === 'Darwin');
+    skip_if(PHP_OS_FAMILY === 'Darwin', $reason);
 }
 
-function skip_if_musl_libc(): void
+function skip_if_musl_libc(string $reason = 'Not support when use musl libc'): void
 {
-    skip('Not support when use musl libc', !empty(shell_exec('ldd 2>&1 | grep -i musl')));
+    skip_if(!empty(shell_exec('ldd 2>&1 | grep -i musl')), $reason);
 }
 
-function skip_if_in_valgrind(string $reason = 'valgrind is too slow'): void
+function skip_if_in_valgrind(string $reason = 'Valgrind is too slow'): void
 {
-    skip($reason, getenv('USE_ZEND_ALLOC') === '0');
+    skip_if(getenv('USE_ZEND_ALLOC') === '0', $reason);
 }
 
-function skip_if_in_travis(string $reason = 'not support in travis'): void
+function skip_if_in_travis(string $reason = 'Not support in travis'): void
 {
-    skip($reason, file_exists('/.travisenv'));
+    skip_if(file_exists('/.travisenv'), $reason);
 }
 
-function skip_if_in_docker(string $reason = 'not support in docker'): void
+function skip_if_in_docker(string $reason = 'Not support in docker'): void
 {
-    skip($reason, file_exists('/.dockerenv'));
+    skip_if(file_exists('/.dockerenv'), $reason);
 }
 
-function skip_unsupported(string $message = ''): void
+function skip_unsupported(string $reason = 'This test cannot continue to work for some implementation reasons'): void
 {
-    skip($message ?: 'the test cannot continue to work for some implementation reasons');
+    skip($reason);
 }
 
 function skip_if_c_function_not_exist(string $def, ?string $lib = null): void
@@ -126,7 +131,7 @@ function skip_if_c_function_not_exist(string $def, ?string $lib = null): void
 
 function skip_if_cannot_make_subprocess(): void
 {
-    skip('shell_exec is not callable', (!is_callable('shell_exec')) || (!is_callable('popen')));
+    skip_if((!is_callable('shell_exec')) || (!is_callable('popen')), 'shell_exec is not callable');
     $loaded_modules = shell_exec(PHP_BINARY . ' -m');
     if (!str_contains($loaded_modules, Swow::class)) {
         $loaded_modules = shell_exec(PHP_BINARY . ' -dextension=swow --ri swow');
@@ -157,5 +162,5 @@ function skip_if_max_open_files_less_than(int $number): void
 
 function skip_if_offline(): void
 {
-    skip('Internet connection required', getenv('OFFLINE'));
+    skip_if(getenv('OFFLINE'), 'Internet connection required');
 }
