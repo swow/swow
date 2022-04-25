@@ -124,7 +124,7 @@ function skip_if_c_function_not_exist(string $def, ?string $lib = null): void
     }
 }
 
-function skip_if_cannot_make_subprocess()
+function skip_if_cannot_make_subprocess(): void
 {
     skip('shell_exec is not callable', (!is_callable('shell_exec')) || (!is_callable('popen')));
     $loaded_modules = shell_exec(PHP_BINARY . ' -m');
@@ -139,7 +139,7 @@ function skip_if_cannot_make_subprocess()
     }
 }
 
-function skip_if_max_open_files_less_than(int $number)
+function skip_if_max_open_files_less_than(int $number): void
 {
     $n = null;
     if (PHP_OS_FAMILY === 'Windows') {
