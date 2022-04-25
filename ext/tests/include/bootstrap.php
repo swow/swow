@@ -174,3 +174,61 @@ function php_proc_with_swow(array $args, callable $handler, array $options = [])
     $handler($proc, $pipes);
     return proc_close($proc);
 }
+
+function getHttpProxyUri(): string
+{
+    $proxy = str_replace('http://', 'tcp://', getenv('https_proxy') ?: getenv('http_proxy') ?: getenv('all_proxy') ?: '', $count);
+    if ($proxy && $count === 0) {
+        $proxy = "tcp://{$proxy}";
+    }
+    return $proxy;
+}
+
+function httpRequest(string $url, string $method = 'GET', string $content = '', array $headers = [], ?int $timeoutSeconds = null, bool|string $proxy = false, bool $doNotThrow = false): array|false
+{
+    if ($proxy === true) {
+        $proxy = getHttpProxyUri();
+    }
+    $headers += [
+        'User-Agent' => 'curl',
+        'Accept' => '*/*',
+    ];
+    $headerLines = [];
+    foreach ($headers as $name => $value) {
+        $headerLines[] = "{$name}: {$value}";
+    }
+    $header = implode("\r\n", $headerLines);
+    $content = @file_get_contents(
+        filename: $url,
+        context: stream_context_create([
+            'http' => [
+                'method' => $method,
+                'header' => $header,
+                ...($content ? ['content' => $content] : []),
+                ...($timeoutSeconds !== null ? ['timeout' => $timeoutSeconds] : []),
+                ...($proxy ? ['proxy' => $proxy] : []),
+                'request_fulluri' => true,
+            ],
+        ])
+    );
+    if (!$content && empty($http_response_header)) {
+        if ($doNotThrow) {
+            return false;
+        }
+        throw new RuntimeException(sprintf("Failed to download from {$url} (%s)", error_get_last()['message']));
+    }
+    $headers = [];
+    foreach ($http_response_header as $headerLine) {
+        $parts = explode(':', $headerLine, 2);
+        if (count($parts) === 1) {
+            $status = explode(' ', trim($parts[0]), 3)[1];
+        } else {
+            $headers[strtolower(trim($parts[0]))] = trim($parts[1]);
+        }
+    }
+    return [
+        'status' => (int) $status,
+        'headers' => $headers,
+        'body' => $content ?: '',
+    ];
+}
