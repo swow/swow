@@ -96,7 +96,7 @@ final class ServerTest extends TestCase
         $client = new HttpClient();
         $request = new HttpRequest();
         $request
-            ->setUriString('/echo')
+            ->setUri('/echo')
             ->getBody()
             ->write('Hello Swow');
         $response = $client

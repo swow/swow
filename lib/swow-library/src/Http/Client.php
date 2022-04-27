@@ -17,6 +17,7 @@ use Exception;
 use Psr\Http\Client\ClientExceptionInterface;
 use Psr\Http\Client\ClientInterface;
 use Psr\Http\Message\RequestInterface;
+use Psr\Http\Message\ResponseInterface;
 use Swow\Http\Client\NetworkException;
 use Swow\Http\Client\RequestException;
 use Swow\Http\Parser as HttpParser;
@@ -94,7 +95,7 @@ class Client extends Socket implements ClientInterface, ProtocolTypeInterface
         );
     }
 
-    public function sendRequest(RequestInterface $request): Response
+    public function sendRequest(RequestInterface $request, ?ResponseInterface $response = null): ResponseInterface
     {
         try {
             $headers = $request->getHeaders();
@@ -117,32 +118,54 @@ class Client extends Socket implements ClientInterface, ProtocolTypeInterface
                 $request->getProtocolVersion()
             )->recvRaw();
 
-            return new Response(
-                $result->statusCode,
-                $result->headers,
-                $result->body,
-                $result->reasonPhrase,
-                $result->protocolVersion
-            );
+            // TODO: Repackage into util methods
+            if ($response === null || $response instanceof Response) {
+                $response ??= new Response(
+                    $result->statusCode,
+                    $result->headers,
+                    $result->body,
+                    $result->reasonPhrase,
+                    $result->protocolVersion
+                );
+            } else {
+                $response = $response
+                    ->withProtocolVersion($result->protocolVersion)
+                    ->withStatus($result->statusCode, $result->reasonPhrase)
+                    ->withBody($result->body);
+                foreach ($result->headers as $headerName => $headerParts) {
+                    $response = $response->withHeader($headerName, $headerParts);
+                }
+            }
+            return $response;
         } catch (Exception $exception) {
             throw $this->convertToClientException($exception, $request);
         }
     }
 
-    public function upgradeToWebSocket(Request $request): Response
+    public function upgradeToWebSocket(RequestInterface $request, ?ResponseInterface $response = null): ResponseInterface
     {
         $secWebSocketKey = base64_encode(random_bytes(16));
-        $request = $request->withHeaders([
+        $upgradeHeaders = [
             'Connection' => 'Upgrade',
             'Upgrade' => 'websocket',
             'Sec-WebSocket-Key' => $secWebSocketKey,
             'Sec-WebSocket-Version' => (string) WebSocket::VERSION,
-        ]);
+        ];
+        // TODO: Repackage into util methods
+        if ($request instanceof Request) {
+            $request = $request->withHeaders($upgradeHeaders);
+        } else {
+            foreach ($upgradeHeaders as $upgradeHeaderName => $upgradeHeaderValue) {
+                $request = $request->withHeader($upgradeHeaderName, $upgradeHeaderValue);
+            }
+        }
+
         try {
-            $response = $this->sendRequest($request);
+            $response = $this->sendRequest($request, $response);
         } catch (Exception $exception) {
             throw $this->convertToClientException($exception, $request);
         }
+
         if ($response->getStatusCode() !== HttpStatus::SWITCHING_PROTOCOLS) {
             throw new RequestException($request, $response->getReasonPhrase(), $response->getStatusCode());
         }

@@ -15,9 +15,16 @@ namespace Swow\Http;
 
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\UriInterface;
+use function strcasecmp;
+use function strlen;
 
 class Request extends Message implements RequestInterface
 {
+    public const UPGRADE_NONE = 0;
+    public const UPGRADE_WEBSOCKET = 1 << 0;
+    public const UPGRADE_H2C = 1 << 1;
+    public const UPGRADE_UNKNOWN = 1 << 31;
+
     protected const PRESERVE_HOST = false;
 
     protected string $method = 'GET';
@@ -91,10 +98,9 @@ class Request extends Message implements RequestInterface
         $this->headerNames['host'] = 'Host';
     }
 
-    /** @return Uri */
-    public function getUri(): UriInterface
+    public function getUri(): Uri
     {
-        return $this->uri;
+        return $this->uri ??= new Uri();
     }
 
     public function setUri(string|UriInterface $uri, ?bool $preserveHost = null): static
@@ -172,7 +178,24 @@ class Request extends Message implements RequestInterface
         return $new;
     }
 
-    protected function toStringEx(bool $headOnly = false, ?string $body = null): string
+    public function getUpgrade(): int
+    {
+        $upgrade = $this->getHeaderLine('upgrade');
+        if ($upgrade === '') {
+            $upgrade = static::UPGRADE_NONE;
+        }
+        if (strlen($upgrade) === strlen('websocket') && strcasecmp($upgrade, 'websocket') === 0) {
+            $upgrade = static::UPGRADE_WEBSOCKET;
+        } elseif (strlen($upgrade) === strlen('h2c') && strcasecmp($upgrade, 'h2c') === 0) {
+            $upgrade = static::UPGRADE_H2C;
+        } else {
+            $upgrade = static::UPGRADE_UNKNOWN;
+        }
+
+        return $upgrade;
+    }
+
+    public function toString(bool $headOnly = false): string
     {
         return packRequest(
             $this->getMethod(),

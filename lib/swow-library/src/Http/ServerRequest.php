@@ -15,23 +15,11 @@ namespace Swow\Http;
 
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\UploadedFileInterface;
-use RuntimeException;
 use function array_key_exists;
-use function implode;
-use function preg_match;
-use function strcasecmp;
-use function strpos;
-use function strtolower;
-use function substr;
-use function trim;
+use function parse_str;
 
 class ServerRequest extends Request implements ServerRequestInterface
 {
-    public const UPGRADE_NONE = 0;
-    public const UPGRADE_WEBSOCKET = 1 << 0;
-    public const UPGRADE_H2C = 1 << 1;
-    public const UPGRADE_UNKNOWN = 1 << 31;
-
     /**
      * @var bool Keep the Host header (The server may verify its legitimacy)
      */
@@ -44,10 +32,16 @@ class ServerRequest extends Request implements ServerRequestInterface
     protected array $cookieParams = [];
 
     /** @var array<string, string> */
-    protected array $queryParams = [];
+    protected ?array $queryParams = null;
 
-    /** @var array<mixed>|object|null */
-    protected null|array|object $parsedBody;
+    /** @var array<mixed>|object */
+    protected array|object $parsedBody;
+
+    protected ?int $contentLength = null;
+
+    protected ?string $contentType = null;
+
+    protected ?int $upgrade = null;
 
     /**
      * @var UploadedFileInterface[]
@@ -74,7 +68,7 @@ class ServerRequest extends Request implements ServerRequestInterface
     /** @return array<string, string> */
     public function getQueryParams(): array
     {
-        return $this->queryParams;
+        return $this->queryParams ??= $this->getUri()->getQueryParams();
     }
 
     /** @param array<string, string> $query */
@@ -117,42 +111,19 @@ class ServerRequest extends Request implements ServerRequestInterface
         return $new;
     }
 
-    public function getUpgrade(): int
+    public function getContentLength(): int
     {
-        $upgrade = $this->getHeaderLine('upgrade');
-        if ($upgrade === '') {
-            return static::UPGRADE_NONE;
-        }
-        if (strcasecmp($upgrade, 'websocket') === 0) {
-            return static::UPGRADE_WEBSOCKET;
-        }
-        if (strcasecmp($upgrade, 'h2c') === 0) {
-            return static::UPGRADE_H2C;
-        }
-
-        return static::UPGRADE_UNKNOWN;
-    }
-
-    public function detectContentType(): string
-    {
-        $contentTypeLine = $this->getHeaderLine('content-type');
-        if (($pos = strpos($contentTypeLine, ';')) !== false) {
-            // e.g. application/json; charset=UTF-8
-            $contentType = strtolower(trim(substr($contentTypeLine, 0, $pos)));
-        } else {
-            $contentType = strtolower($contentTypeLine);
-        }
-
-        return $this->contentType = $contentType;
+        return $this->contentLength ??= parent::getContentLength();
     }
 
     public function getContentType(): string
     {
-        if (!isset($this->contentType)) {
-            return $this->detectContentType();
-        }
+        return $this->contentType ??= parent::getContentType();
+    }
 
-        return $this->contentType;
+    public function getUpgrade(): int
+    {
+        return $this->upgrade ??= parent::getUpgrade();
     }
 
     /** @return array<mixed>|object|null */
@@ -264,25 +235,53 @@ class ServerRequest extends Request implements ServerRequestInterface
         return $new;
     }
 
-    public function toStringEx(bool $headOnly = false, ?string $body = null): string
+    /**
+     * @param array<string, array<string>> $headers
+     * @param array<string, string> $serverParams
+     */
+    public function constructFromRawRequest(RawRequest $request): static
     {
-        if (!$headOnly) {
-            $uploadedFiles = $this->getUploadedFiles();
-            if ($uploadedFiles !== [] && $this->getBody()->isEmpty()) {
-                $contentType = $this->getHeaderLine('content-type');
-                if (!preg_match('/boundary(?: *)?=(?: *)?\"?([a-zA-Z0-9\'\(\)+_,-.\/:=? ]*)(?<! )\"?/', $contentType, $matches)) {
-                    throw new RuntimeException('Can not find boundary in Content-Type header');
-                }
-                $boundary = $matches[1];
-                $parts = [];
-                foreach ($uploadedFiles as $uploadedFile) {
-                    $stream = $uploadedFile->getStream();
-                    $parts[] = "--{$boundary}\r\nContent-Disposition: form-data; name=\"{$uploadedFile->getClientFilename()}\"\r\n\r\n{$stream->getContents()}\r\n";
-                }
-                $parts[] = "--{$boundary}--\r\n";
-                $body = implode('', $parts);
-            }
+        $this->protocolVersion = $request->protocolVersion;
+        $this->uri = Uri::from($request->uri);
+        $this->method = $request->method;
+        $this->headers = $request->headers;
+        $this->headerNames = $request->headerNames;
+        $this->keepAlive = $request->shouldKeepAlive;
+        $this->contentLength = $request->contentLength;
+        if (!$request->isUpgrade) {
+            $this->upgrade = static::UPGRADE_NONE;
         }
-        return parent::toStringEx($headOnly, $body);
+        $this->serverParams = $request->serverParams;
+        if ($this->hasHeader('cookie')) {
+            // FIXME: it this reliable?
+            parse_str(
+                strtr($this->getHeaderLine('cookie'), ['&' => '%26', '+' => '%2B', ';' => '&']),
+                $this->cookieParams
+            );
+        }
+        if ($request->body) {
+            $this->setBody($request->body);
+        }
+        if ($request->formData) {
+            $this->setParsedBody($request->formData);
+        }
+        if ($request->isMultipart) {
+            // TODO
+        }
+        if ($request->uploadedFiles) {
+            $uploadedFiles = [];
+            foreach ($request->uploadedFiles as $rawUploadedFile) {
+                $uploadedFiles[] = new UploadFile(
+                    $rawUploadedFile->tmp_name,
+                    $rawUploadedFile->size,
+                    $rawUploadedFile->error,
+                    $rawUploadedFile->name,
+                    $rawUploadedFile->type
+                );
+            }
+            $this->setUploadedFiles($uploadedFiles);
+        }
+
+        return $this;
     }
 }

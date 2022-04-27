@@ -13,7 +13,11 @@ declare(strict_types=1);
 
 namespace Swow\Http\Server;
 
+use Psr\Http\Message\RequestInterface;
+use Psr\Http\Message\ResponseInterface;
+use Stringable;
 use Swow\Errno;
+use Swow\Http\Buffer;
 use Swow\Http\Parser as HttpParser;
 use Swow\Http\ProtocolTypeInterface;
 use Swow\Http\ProtocolTypeTrait;
@@ -21,7 +25,6 @@ use Swow\Http\ReceiverTrait;
 use Swow\Http\ResponseException;
 use Swow\Http\Server;
 use Swow\Http\Status as HttpStatus;
-use Swow\Http\UploadFile;
 use Swow\Http\WebSocketTrait;
 use Swow\Socket;
 use Swow\SocketException;
@@ -101,7 +104,7 @@ class Connection extends Socket implements ProtocolTypeInterface
         return $this->recvHttpRequestTo(new Request());
     }
 
-    public function recvHttpRequestTo(Request $request): Request
+    public function recvHttpRequestTo(RequestInterface $request): Request
     {
         $result = $this->receiverExecute(
             $this->server->getMaxHeaderLength(),
@@ -112,41 +115,36 @@ class Connection extends Socket implements ProtocolTypeInterface
             'remote_port' => $this->getPeerPort(),
         ]);
 
-        $request->setHead(
-            $result->method,
-            $result->uri,
-            $result->protocolVersion,
-            $result->headers,
-            $result->shouldKeepAlive,
-            $result->contentLength,
-            $result->isUpgrade,
-            $result->serverParams,
-        )->setBody($result->body);
-        if ($result->formData) {
-            $request->setParsedBody($result->formData);
+        // TODO: Repackage into util methods
+        if ($request instanceof Request) {
+            $request->constructFromRawRequest($result);
         }
-        if ($result->uploadedFiles) {
-            $uploadedFiles = [];
-            foreach ($result->uploadedFiles as $rawUploadedFile) {
-                $uploadedFiles[] = new UploadFile(
-                    $rawUploadedFile->tmp_name,
-                    $rawUploadedFile->size,
-                    $rawUploadedFile->error,
-                    $rawUploadedFile->name,
-                    $rawUploadedFile->type
-                );
-            }
-            $request->setUploadedFiles($uploadedFiles);
-        }
+        // TODO: support the other kinds of Psr7 Request
 
         return $request;
     }
 
-    public function sendHttpResponse(Response $response): static
+    public function sendHttpResponse(ResponseInterface $response): static
     {
+        // TODO: Repackage into util methods
+        if ($response instanceof \Swow\Http\Response) {
+            return $this->write([
+                $response->toString(true),
+                (string) $response->getBody(),
+            ]);
+        }
+        if ($response instanceof Stringable &&
+            $response->getBody()->getSize() <= Buffer::PAGE_SIZE) {
+            return $this->sendString((string) $response);
+        }
         return $this->write([
-            $response->toString(true),
-            $response->getBodyAsString(),
+            packResponse(
+                $response->getStatusCode(),
+                $response->getHeaders(),
+                $response->getReasonPhrase(),
+                $response->getProtocolVersion()
+            ),
+            (string) $response->getBody(),
         ]);
     }
 
@@ -220,7 +218,7 @@ class Connection extends Socket implements ProtocolTypeInterface
         }
     }
 
-    public function upgradeToWebSocket(Request $request, ?Response $response = null): static
+    public function upgradeToWebSocket(RequestInterface $request, ?ResponseInterface $response = null): static
     {
         $secWebSocketKey = $request->getHeaderLine('sec-websocket-key');
         if (strlen($secWebSocketKey) !== WebSocket::SECRET_KEY_ENCODED_LENGTH) {
@@ -229,17 +227,24 @@ class Connection extends Socket implements ProtocolTypeInterface
         $key = base64_encode(sha1($secWebSocketKey . WebSocket::GUID, true));
 
         $statusCode = HttpStatus::SWITCHING_PROTOCOLS;
-        $headers = [
+        $upgradeHeaders = [
             'Connection' => 'Upgrade',
             'Upgrade' => 'websocket',
             'Sec-WebSocket-Accept' => $key,
             'Sec-WebSocket-Version' => (string) WebSocket::VERSION,
         ];
 
+        // TODO: Repackage into util methods
         if ($response === null) {
-            $this->respond($statusCode, $headers);
+            $this->respond($statusCode, $upgradeHeaders);
+        } elseif ($response instanceof \Swow\Http\Response) {
+            $this->sendHttpResponse($response->dup()->setStatus($statusCode)->setHeaders($upgradeHeaders));
         } else {
-            $this->sendHttpResponse($response->setStatus($statusCode)->setHeaders($headers));
+            $response = $response->withStatus($statusCode);
+            foreach ($upgradeHeaders as $upgradeHeaderName => $upgradeHeaderValue) {
+                $response = $response->withHeader($upgradeHeaderName, $upgradeHeaderValue);
+            }
+            $this->sendHttpResponse($response);
         }
 
         $this->upgraded(static::PROTOCOL_TYPE_WEBSOCKET);

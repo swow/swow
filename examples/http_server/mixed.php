@@ -41,7 +41,7 @@ while (true) {
                     $request = null;
                     try {
                         $request = $connection->recvHttpRequest();
-                        switch ($request->getPath()) {
+                        switch ($request->getUri()->getPath()) {
                             case '/':
                                 $connection->respond();
                                 break;
@@ -49,7 +49,7 @@ while (true) {
                                 $connection->respond('Hello Swow');
                                 break;
                             case '/echo':
-                                $connection->respond($request->getBodyAsString());
+                                $connection->respond((string) $request->getBody());
                                 break;
                             case '/echo_all':
                                 $connection->respond($request->toString());
