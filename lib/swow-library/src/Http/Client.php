@@ -100,11 +100,13 @@ class Client extends Socket implements ClientInterface, ProtocolTypeInterface
         try {
             $headers = $request->getHeaders();
             $body = (string) $request->getBody();
+            // TODO: add standardize util function to do that?
             if (!$request->hasHeader('host')) {
                 $headers['Host'] = $this->host;
             }
-            if (!$request->hasHeader('content-length')) {
-                $headers['Content-Length'] = strlen($body);
+            $contentLength = strlen($body);
+            if ($contentLength !== 0 && !$request->hasHeader('content-length')) {
+                $headers['Content-Length'] = $contentLength;
             }
             if (!$request->hasHeader('connection')) {
                 $headers['Connection'] = 'keep-alive';
