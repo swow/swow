@@ -75,7 +75,7 @@ static zend_object *swow_sync_wait_group_create_object(zend_class_entry *ce)
 }
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Sync_WaitReference_wait, 0, 1, IS_VOID, 0)
-    ZEND_ARG_OBJ_INFO(1, wr, Swow\\Sync\\WaitReference, 0)
+    ZEND_ARG_OBJ_INFO(1, ref, Swow\\Sync\\WaitReference, 0)
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, timeout, IS_LONG, 0, "-1")
 ZEND_END_ARG_INFO()
 
