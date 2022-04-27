@@ -87,7 +87,7 @@ class LengthStream extends Socket
         }
         $writableSize = $buffer->getWritableSize();
         if ($writableSize < $length) {
-            $buffer->realloc($length - $writableSize);
+            $buffer->realloc($buffer->getSize() + ($length - $writableSize));
         }
         $this->read($buffer, $length, $timeout);
 
