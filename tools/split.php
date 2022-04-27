@@ -16,6 +16,7 @@ require __DIR__ . '/autoload.php';
 
 use function Swow\Util\check;
 use function Swow\Util\error;
+use function Swow\Util\log;
 use function Swow\Util\passthru;
 use function Swow\Util\success;
 
@@ -50,7 +51,12 @@ foreach ($repoInfo as $repoName => $repoPath) {
         error("Repo {$repoName}'s path '{$repoPath}' is unavailable");
     }
     passthru("git remote add {$repoName} git@github.com:swow/{$repoName}.git >/dev/null 2>&1");
-    $sha1 = trim(shell_exec("splitsh-lite --prefix={$repoPath} 2>/dev/null"));
+    $sha1GetCommand = "splitsh-lite --prefix={$repoPath} 2>/dev/null";
+    log("> {$sha1GetCommand}");
+    $sha1 = trim((string) shell_exec($sha1GetCommand));
+    if (preg_match('/^[a-fA-F0-9]{40}$/', $sha1) !== 1) {
+        error("splitsh failed with [{$repoName}]({$repoPath})");
+    }
     $status = passthru("git push {$repoName} {$sha1}:refs/heads/{$targetBranch} -f 2>&1");
     passthru("git remote rm {$repoName} >/dev/null 2>&1");
     check($status === 0, "Update {$repoName}");
