@@ -30,5 +30,8 @@ class RawRequest extends RawResult
     public array $uploadedFiles = [];
 
     /** @var array{'remote_addr': string, 'remote_port': int} */
-    public array $serverParams = [];
+    public array $serverParams = [
+        'remote_addr' => '0.0.0.0',
+        'remote_port' => 0,
+    ];
 }
