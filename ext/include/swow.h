@@ -24,6 +24,9 @@ extern "C" {
 
 #include "cat.h"
 
+#define SWOW_MODULE_NAME "Swow"
+#define SWOW_MODULE_NAME_LC "swow"
+
 /* version */
 
 #define SWOW_MAJOR_VERSION      0

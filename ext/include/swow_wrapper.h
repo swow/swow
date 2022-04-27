@@ -87,8 +87,6 @@ SWOW_API zend_string* ZEND_FASTCALL zend_ulong_to_str(zend_ulong num);
 
 /* modules */
 
-#define SWOW_MODULE_NAME "swow"
-
 #define SWOW_MODULES_CHECK_PRE_START() do { \
     const char *_pre_modules[] =
 
@@ -97,7 +95,7 @@ SWOW_API zend_string* ZEND_FASTCALL zend_ulong_to_str(zend_ulong num);
     cat_bool_t _loaded = cat_false; \
     zend_string *_module_name; \
     ZEND_HASH_FOREACH_STR_KEY(&module_registry, _module_name) { \
-        if (memcmp(ZSTR_VAL(_module_name), ZEND_STRL(SWOW_MODULE_NAME)) == 0) { \
+        if (memcmp(ZSTR_VAL(_module_name), ZEND_STRL(SWOW_MODULE_NAME_LC)) == 0) { \
             _loaded = cat_true; \
         } else { \
             size_t _n = 0; \

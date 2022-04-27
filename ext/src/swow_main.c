@@ -572,7 +572,7 @@ zend_result swow_runtime_shutdown(INIT_FUNC_ARGS)
  */
 SWOW_API zend_module_entry swow_module_entry = {
     STANDARD_MODULE_HEADER,
-    "Swow",                      /* Extension name */
+    SWOW_MODULE_NAME,            /* Extension name */
     swow_functions,              /* zend_function_entry */
     PHP_MINIT(swow),             /* PHP_MINIT - Module initialization */
     PHP_MSHUTDOWN(swow),         /* PHP_MSHUTDOWN - Module shutdown */
