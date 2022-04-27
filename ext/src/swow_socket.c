@@ -492,6 +492,7 @@ ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Socket, enableCrypto)
 {
+#ifdef CAT_SSL
     SWOW_SOCKET_GETTER(ssocket, socket);
     cat_bool_t ret;
 
@@ -510,6 +511,11 @@ static PHP_METHOD(Swow_Socket, enableCrypto)
     }
 
     RETURN_THIS();
+#else
+    zend_throw_error(NULL, "SSL support is not enabled, "
+        "`--enable-" SWOW_MODULE_NAME_LC "-ssl` must be configured while compiling %s extension", SWOW_MODULE_NAME);
+    RETURN_THROWS();
+#endif
 }
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_getAddress, ZEND_RETURN_VALUE, 0, IS_STRING, 0)
