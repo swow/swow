@@ -186,9 +186,6 @@ function getHttpProxyUri(): string
 
 function httpRequest(string $url, string $method = 'GET', string $content = '', array $headers = [], ?int $timeoutSeconds = null, bool|string $proxy = false, bool $doNotThrow = false): array|false
 {
-    if ($proxy === true) {
-        $proxy = getHttpProxyUri();
-    }
     $headers += [
         'User-Agent' => 'curl',
         'Accept' => '*/*',
@@ -198,17 +195,27 @@ function httpRequest(string $url, string $method = 'GET', string $content = '', 
         $headerLines[] = "{$name}: {$value}";
     }
     $header = implode("\r\n", $headerLines);
+    if ($proxy === true) {
+        $proxy = getHttpProxyUri();
+    }
+    $httpContext = [
+        'method' => $method,
+        'header' => $header,
+        'request_fulluri' => true,
+    ];
+    if ($content) {
+        $httpContext['content'] = $content;
+    }
+    if ($timeoutSeconds !== null) {
+        $httpContext['timeout'] = $timeoutSeconds;
+    }
+    if ($proxy) {
+        $httpContext['proxy'] = $proxy;
+    }
     $content = @file_get_contents(
         filename: $url,
         context: stream_context_create([
-            'http' => [
-                'method' => $method,
-                'header' => $header,
-                ...($content ? ['content' => $content] : []),
-                ...($timeoutSeconds !== null ? ['timeout' => $timeoutSeconds] : []),
-                ...($proxy ? ['proxy' => $proxy] : []),
-                'request_fulluri' => true,
-            ],
+            'http' => $httpContext
         ])
     );
     if (!$content && empty($http_response_header)) {
