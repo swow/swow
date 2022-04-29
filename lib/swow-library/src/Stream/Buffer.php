@@ -20,10 +20,10 @@ class Buffer extends \Swow\Buffer
         if ($body instanceof static) {
             return $body;
         }
-        /* @phpstan-ignore-next-line */
-        $buffer = $body === null ? new static(0) : new static();
-        if ($body !== '') {
-            $buffer->copy((string) $body);
+        /* @phpstan-ignore-next-line (Unsafe usage of new static()) */
+        $buffer = new static(0);
+        if ($body !== null && $body !== '') {
+            $buffer->write((string) $body)->rewind();
         }
 
         return $buffer;

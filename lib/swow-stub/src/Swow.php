@@ -1061,23 +1061,6 @@ namespace Swow
          */
         public function write($string, int $offset = 0, int $length = -1): static { }
 
-        /**
-         * write `$string` to buffer, not change buffer position
-         *
-         * `$offset` and `$length` is for input `$string`
-         *
-         * @throws \ValueError when specified `$offset` not in range [0, string length - 1]
-         * @throws \ValueError when specified `$length` not in range [-1, available string length]
-         * @param string $string data to write
-         * @phpstan-param int<0, max> $offset
-         * @psalm-param int<0, max> $offset
-         * @param int $offset starting offset in bytes
-         * @phpstan-param int<-1, max> $length
-         * @psalm-param int<-1, max> $length
-         * @param int $length max length in bytes
-         */
-        public function copy(string $string, int $offset = 0, int $length = -1): static { }
-
         public function truncate(int $length = -1): static { }
 
         /** @var int $offset [optional] = $this->getOffset() */
