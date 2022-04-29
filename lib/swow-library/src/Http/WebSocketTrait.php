@@ -42,11 +42,11 @@ trait WebSocketTrait
                 $payloadData = $frame->getPayloadData();
                 $writableSize = $payloadData->getWritableSize();
                 if ($writableSize < $payloadLength) {
-                    $payloadData->realloc($payloadData->tell() + $payloadLength);
+                    $payloadData->realloc($payloadData->getSize() - $writableSize + $payloadLength);
                 }
                 if (!$buffer->eof()) {
                     $copyLength = min($buffer->getReadableLength(), $payloadLength);
-                    $payloadData->copy($buffer->toString(), $buffer->tell(), $copyLength);
+                    $payloadData->write($buffer->toString(), $buffer->tell(), $copyLength);
                     $buffer->seek($copyLength, SEEK_CUR);
                     $payloadLength -= $copyLength;
                 }
@@ -58,6 +58,7 @@ trait WebSocketTrait
                 } /* else {
                     // TODO: bad frame
                 } */
+                $payloadData->rewind();
             }
             /* truncate buffer if offset is equal to length (so buffer can be truncated without memory copies),
              * or buffer offset is too big (waste), we must truncate it right now */
