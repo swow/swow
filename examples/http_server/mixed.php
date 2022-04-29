@@ -18,6 +18,7 @@ require __DIR__ . '/../autoload.php';
 use Swow\Coroutine;
 use Swow\CoroutineException;
 use Swow\Errno;
+use Swow\Http\Client;
 use Swow\Http\ResponseException;
 use Swow\Http\Server as HttpServer;
 use Swow\Http\Status as HttpStatus;
@@ -53,6 +54,16 @@ while (true) {
                                 break;
                             case '/echo_all':
                                 $connection->respond($request->toString());
+                                break;
+                            case '/httpbin':
+                                /* proxy request to httpbin */
+                                $connection->sendHttpResponse(
+                                    ($httpBin ??= new Client())
+                                        ->connect('httpbin.org', 80)
+                                        ->sendRequest(
+                                            $request->withUri('http://httpbin.org/anything', false)
+                                        )
+                                );
                                 break;
                             case '/chat':
                                 if ($upgrade = $request->getUpgrade()) {

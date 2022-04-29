@@ -10,7 +10,7 @@ require __DIR__ . '/../include/bootstrap.php';
 
 use Swow\Buffer;
 
-const CUSTOM_SIZE = Buffer::DEFAULT_SIZE + 3 * Buffer::PAGE_SIZE;
+const CUSTOM_SIZE = Buffer::COMMON_SIZE + 3 * Buffer::PAGE_SIZE;
 
 $buffer = new Buffer(CUSTOM_SIZE);
 Assert::same($buffer->getSize(), CUSTOM_SIZE);

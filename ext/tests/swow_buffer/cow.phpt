@@ -8,7 +8,9 @@ require __DIR__ . '/../include/skipif.php';
 <?php
 require __DIR__ . '/../include/bootstrap.php';
 
-$buffer = new Swow\Buffer(0);
+use Swow\Buffer;
+
+$buffer = new Buffer(0);
 echo 'write(\'interned string\')' . PHP_LF;
 $buffer->write('interned string');
 var_dump($buffer);

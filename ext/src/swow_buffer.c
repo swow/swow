@@ -175,11 +175,10 @@ static PHP_METHOD(Swow_Buffer, alignSize)
 static PHP_METHOD_EX(Swow_Buffer, create, zend_bool return_this)
 {
     SWOW_BUFFER_GETTER(sbuffer, buffer);
-    zend_long size = CAT_BUFFER_DEFAULT_SIZE;
+    zend_long size;
     cat_bool_t ret;
 
-    ZEND_PARSE_PARAMETERS_START(0, 1)
-        Z_PARAM_OPTIONAL
+    ZEND_PARSE_PARAMETERS_START(1, 1)
         Z_PARAM_LONG(size)
     ZEND_PARSE_PARAMETERS_END();
 
@@ -200,8 +199,8 @@ static PHP_METHOD_EX(Swow_Buffer, create, zend_bool return_this)
     }
 }
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_class_Swow_Buffer___construct, 0, 0, 0)
-    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, size, IS_LONG, 0, "Swow\\Buffer::DEFAULT_SIZE")
+ZEND_BEGIN_ARG_INFO_EX(arginfo_class_Swow_Buffer___construct, 0, 0, 1)
+    ZEND_ARG_TYPE_INFO(0, size, IS_LONG, 0)
 ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Buffer, __construct)
@@ -209,8 +208,8 @@ static PHP_METHOD(Swow_Buffer, __construct)
     PHP_METHOD_CALL(Swow_Buffer, create, 0);
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Buffer_alloc, 0, 0, IS_STATIC, 0)
-    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, size, IS_LONG, 0, "Swow\\Buffer::DEFAULT_SIZE")
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Buffer_alloc, 0, 1, IS_STATIC, 0)
+    ZEND_ARG_TYPE_INFO(0, size, IS_LONG, 0)
 ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Buffer, alloc)
@@ -1018,7 +1017,7 @@ zend_result swow_buffer_module_init(INIT_FUNC_ARGS)
     swow_buffer_handlers.clone_obj = swow_buffer_clone_object;
 
     zend_declare_class_constant_long(swow_buffer_ce, ZEND_STRL("PAGE_SIZE"), cat_getpagesize());
-    zend_declare_class_constant_long(swow_buffer_ce, ZEND_STRL("DEFAULT_SIZE"), CAT_BUFFER_DEFAULT_SIZE);
+    zend_declare_class_constant_long(swow_buffer_ce, ZEND_STRL("COMMON_SIZE"), CAT_BUFFER_COMMON_SIZE);
 
     swow_buffer_exception_ce = swow_register_internal_class(
         "Swow\\BufferException", swow_exception_ce, NULL, NULL, NULL, cat_true, cat_true, NULL, NULL, 0

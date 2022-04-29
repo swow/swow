@@ -781,7 +781,7 @@ static PHP_METHOD_EX(Swow_Socket, _readString, zend_bool once, zend_bool may_add
     SWOW_SOCKET_GETTER(ssocket, socket);
     uint32_t max_num_args;
     zend_string *string;
-    zend_long size = CAT_BUFFER_DEFAULT_SIZE;
+    zend_long size = CAT_BUFFER_COMMON_SIZE;
     zval *zaddress = NULL, *zport = NULL;
     zend_long timeout;
     zend_bool timeout_is_null = 1;
@@ -877,7 +877,7 @@ static PHP_METHOD_EX(Swow_Socket, _readString, zend_bool once, zend_bool may_add
 }
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_readString, 0, 0, IS_STRING, 0)
-    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, length, IS_LONG, 0, "Swow\\Buffer::DEFAULT_SIZE")
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, length, IS_LONG, 0, "Swow\\Buffer::COMMON_SIZE")
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, timeout, IS_LONG, 1, "null")
 ZEND_END_ARG_INFO()
 
@@ -887,7 +887,7 @@ static PHP_METHOD(Swow_Socket, readString)
 }
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_recvString, 0, 0, IS_STRING, 0)
-    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, size, IS_LONG, 0, "Swow\\Buffer::DEFAULT_SIZE")
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, size, IS_LONG, 0, "Swow\\Buffer::COMMON_SIZE")
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, timeout, IS_LONG, 1, "null")
 ZEND_END_ARG_INFO()
 
@@ -905,7 +905,7 @@ static PHP_METHOD(Swow_Socket, recvStringData)
 }
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_recvStringFrom, 0, 0, IS_STRING, 0)
-    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, size, IS_LONG, 0, "Swow\\Buffer::DEFAULT_SIZE")
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, size, IS_LONG, 0, "Swow\\Buffer::COMMON_SIZE")
     ZEND_ARG_INFO_WITH_DEFAULT_VALUE(1, address, "null")
     ZEND_ARG_INFO_WITH_DEFAULT_VALUE(1, port, "null")
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, timeout, IS_LONG, 1, "null")
@@ -925,7 +925,7 @@ static PHP_METHOD(Swow_Socket, recvStringDataFrom)
 }
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_peekString, 0, 0, IS_STRING, 0)
-    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, size, IS_LONG, 0, "Swow\\Buffer::DEFAULT_SIZE")
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, size, IS_LONG, 0, "Swow\\Buffer::COMMON_SIZE")
 ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Socket, peekString)
@@ -934,7 +934,7 @@ static PHP_METHOD(Swow_Socket, peekString)
 }
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_peekStringFrom, 0, 0, IS_STRING, 0)
-    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, size, IS_LONG, 0, "Swow\\Buffer::DEFAULT_SIZE")
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, size, IS_LONG, 0, "Swow\\Buffer::COMMON_SIZE")
     ZEND_ARG_INFO_WITH_DEFAULT_VALUE(1, address, "null")
     ZEND_ARG_INFO_WITH_DEFAULT_VALUE(1, port, "null")
 ZEND_END_ARG_INFO()

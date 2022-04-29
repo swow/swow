@@ -8,13 +8,14 @@ require __DIR__ . '/../include/skipif.php';
 <?php
 require __DIR__ . '/../include/bootstrap.php';
 
+use Swow\Buffer;
 use Swow\Channel;
 use Swow\Coroutine;
 use Swow\Socket;
 use Swow\Sync\WaitReference;
 
-$buffer = new Swow\Buffer();
-$buffer->write("HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: 0\r\n\r\n");
+$buffer = (new Buffer(0))
+    ->write("HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: 0\r\n\r\n");
 $httpAssign = static function (object $storage) use ($buffer): bool {
     try {
         $parser = new Swow\Http\Parser();

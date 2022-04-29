@@ -15,8 +15,8 @@ $buffer = new Buffer(0);
 Assert::same($buffer->toString(), '');
 Assert::same($buffer->fetchString(), '');
 
-$buffer = new Buffer();
-Assert::same($buffer->getSize(), Buffer::DEFAULT_SIZE);
+$buffer = new Buffer(Buffer::COMMON_SIZE);
+Assert::same($buffer->getSize(), Buffer::COMMON_SIZE);
 Assert::same($buffer->getLength(), 0);
 // write should return self
 Assert::same($buffer->write('foo'), $buffer);

@@ -39,7 +39,7 @@ class EofStream extends Socket
     protected function __selfConstruct(string $eof = "\r\n"): void
     {
         $this->eof = $eof;
-        $this->internalBuffer = new Buffer();
+        $this->internalBuffer = new Buffer(Buffer::COMMON_SIZE);
     }
 
     public function getEof(): string

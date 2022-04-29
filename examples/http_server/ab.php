@@ -21,7 +21,7 @@ $server->bind('127.0.0.1', 9764)->listen();
 while (true) {
     $connection = $server->accept();
     Coroutine::run(static function () use ($connection): void {
-        $buffer = new Buffer();
+        $buffer = new Buffer(Buffer::COMMON_SIZE);
         try {
             while (true) {
                 $length = $connection->recv($buffer);

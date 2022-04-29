@@ -45,7 +45,7 @@ trait ReceiverTrait
 
     protected ?Parser $httpParser = null;
 
-    protected int $maxBufferSize = Buffer::DEFAULT_SIZE;
+    protected int $maxBufferSize = Buffer::COMMON_SIZE;
 
     protected bool $preserveBodyData = false;
 
@@ -53,7 +53,7 @@ trait ReceiverTrait
 
     protected function __construct(int $type, int $events)
     {
-        $this->buffer = new Buffer();
+        $this->buffer = new Buffer(Buffer::COMMON_SIZE);
         $requiredEvents =
             HttpParser::EVENT_URL |
             HttpParser::EVENT_HEADER_FIELD |
@@ -372,7 +372,7 @@ trait ReceiverTrait
                                     if ($currentChunkLength < 0) {
                                         throw new ParserException('Unexpected body data (chunk overflow)');
                                     }
-                                    ($body ??= new Buffer())->write($data, $dataOffset, $dataLength);
+                                    ($body ??= new Buffer(Buffer::COMMON_SIZE))->write($data, $dataOffset, $dataLength);
                                     break;
                                 }
                                 $body = new Buffer($contentLength);

@@ -950,13 +950,13 @@ namespace Swow
          * At Linux mips64 and macOS arm64 platforms, this constant may have a value `16384`
          */
         public const PAGE_SIZE = 4096;
-        public const DEFAULT_SIZE = 8192;
+        public const COMMON_SIZE = 8192;
 
         public static function alignSize(int $size = 0, int $alignment = 0): int { }
 
-        public function __construct(int $size = self::DEFAULT_SIZE) { }
+        public function __construct(int $size) { }
 
-        public function alloc(int $size = self::DEFAULT_SIZE): static { }
+        public function alloc(int $size): static { }
 
         public function getSize(): int { }
 
@@ -1353,7 +1353,7 @@ namespace Swow
          * @param int|null $timeout timeout in microseconds or null for using {@see Socket::getReadTimeout()} value
          * @return string data received in string
          */
-        public function readString(int $length = \Swow\Buffer::DEFAULT_SIZE, ?int $timeout = null): string { }
+        public function readString(int $length = \Swow\Buffer::COMMON_SIZE, ?int $timeout = null): string { }
 
         /**
          * read at max `$size` bytes data from socket as string,
@@ -1369,7 +1369,7 @@ namespace Swow
          * @param int|null $timeout timeout in microseconds or null for using {@see Socket::getReadTimeout()} value
          * @return string data received in string
          */
-        public function recvString(int $size = \Swow\Buffer::DEFAULT_SIZE, ?int $timeout = null): string { }
+        public function recvString(int $size = \Swow\Buffer::COMMON_SIZE, ?int $timeout = null): string { }
 
         /**
          * read at max `$size` bytes data from socket as string,
@@ -1386,7 +1386,7 @@ namespace Swow
          * @param int|null $timeout timeout in microseconds or null for using {@see Socket::getReadTimeout()} value
          * @return string data received in string
          */
-        public function recvStringData(int $size = \Swow\Buffer::DEFAULT_SIZE, ?int $timeout = null): string { }
+        public function recvStringData(int $size = \Swow\Buffer::COMMON_SIZE, ?int $timeout = null): string { }
 
         /**
          * read at max `$size` bytes data from socket as string,
@@ -1407,7 +1407,7 @@ namespace Swow
          * @param int|null $timeout timeout in microseconds or null for using {@see Socket::getReadTimeout()} value
          * @return string data received in string
          */
-        public function recvStringFrom(int $size = \Swow\Buffer::DEFAULT_SIZE, &$address = null, &$port = null, ?int $timeout = null): string { }
+        public function recvStringFrom(int $size = \Swow\Buffer::COMMON_SIZE, &$address = null, &$port = null, ?int $timeout = null): string { }
 
         /**
          * read at max `$size` bytes data from socket as string,
@@ -1429,7 +1429,7 @@ namespace Swow
          * @param int|null $timeout timeout in microseconds or null for using {@see Socket::getReadTimeout()} value
          * @return string data received in string
          */
-        public function recvStringDataFrom(int $size = \Swow\Buffer::DEFAULT_SIZE, &$address = null, &$port = null, ?int $timeout = null): string { }
+        public function recvStringDataFrom(int $size = \Swow\Buffer::COMMON_SIZE, &$address = null, &$port = null, ?int $timeout = null): string { }
 
         /**
          * read at max `$size` bytes data from socket as string without removing the read data from socket,
@@ -1442,7 +1442,7 @@ namespace Swow
          * @param int $size -1 meaning not limited, otherwise buffer size in bytes.
          * @return string data received in string
          */
-        public function peekString(int $size = \Swow\Buffer::DEFAULT_SIZE): string { }
+        public function peekString(int $size = \Swow\Buffer::COMMON_SIZE): string { }
 
         /**
          * read at max `$size` bytes data from socket as string without removing the read data from socket,
@@ -1460,7 +1460,7 @@ namespace Swow
          * @param int &$port peer address
          * @return string data received in string
          */
-        public function peekStringFrom(int $size = \Swow\Buffer::DEFAULT_SIZE, &$address = null, &$port = null): string { }
+        public function peekStringFrom(int $size = \Swow\Buffer::COMMON_SIZE, &$address = null, &$port = null): string { }
 
         /**
          * write io vector to socket

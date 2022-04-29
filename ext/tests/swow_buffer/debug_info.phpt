@@ -14,7 +14,7 @@ use Swow\Socket;
 
 class MyBuffer extends Buffer
 {
-    public function __construct(int $size = Buffer::DEFAULT_SIZE)
+    public function __construct(int $size = Buffer::COMMON_SIZE)
     {
         var_dump($this);
         parent::__construct($size);

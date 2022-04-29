@@ -37,7 +37,7 @@ while (true) {
         break;
     }
     Coroutine::run(static function () use ($connection): void {
-        $buffer = new Buffer();
+        $buffer = new Buffer(Buffer::COMMON_SIZE);
         $parser = (new Parser())->setType(Parser::TYPE_REQUEST)->setEvents(Parser::EVENT_BODY);
         $body = null;
         try {
@@ -50,7 +50,7 @@ while (true) {
                     $event = $parser->execute($buffer);
                     if ($event === Parser::EVENT_BODY) {
                         if ($body === null) {
-                            $body = new Buffer();
+                            $body = new Buffer(Buffer::COMMON_SIZE);
                         }
                         $body->write($buffer->toString(), $parser->getDataOffset(), $parser->getDataLength());
                     }
