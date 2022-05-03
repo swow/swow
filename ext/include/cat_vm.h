@@ -81,3 +81,7 @@ typedef struct cat_globals_info_s {
 #endif /* CAT_TSRMG_FAST */
 
 #endif /* CAT_THREAD_SAFE */
+
+/* Extra module types for log */
+
+#define CAT_MODULE_TYPE_PHP CAT_MODULE_TYPE_USR1
