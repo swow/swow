@@ -32,6 +32,7 @@
 #include "swow_stream.h"
 #include "swow_signal.h"
 #include "swow_watchdog.h"
+#include "swow_closure.h"
 #include "swow_http.h"
 #include "swow_websocket.h"
 #include "swow_proc_open.h"
@@ -149,6 +150,7 @@ PHP_MINIT_FUNCTION(swow)
         swow_stream_module_init,
         swow_signal_module_init,
         swow_watchdog_module_init,
+        swow_closure_module_init,
         swow_http_module_init,
         swow_websocket_module_init,
 #ifdef CAT_OS_WAIT

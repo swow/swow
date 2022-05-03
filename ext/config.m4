@@ -317,6 +317,8 @@ EOF
     swow_stream_wrapper.c \
     swow_signal.c \
     swow_watchdog.c \
+    swow_closure.c \
+    swow_tokenizer.c \
     swow_http.c \
     swow_websocket.c \
     swow_proc_open.c \
