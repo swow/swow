@@ -1468,6 +1468,8 @@ static PHP_METHOD(Swow_Coroutine, run)
         RETURN_THROWS();
     }
 
+    // TODO: call user constructor here
+
     SWOW_COROUTINE_HANDLE_RESUME_TRANSFER(zdata);
     if (UNEXPECTED(!swow_coroutine_resume(scoroutine, zdata, NULL))) {
         /* impossible? */
