@@ -55,7 +55,7 @@ SWOW_API zend_class_entry *swow_register_internal_class(
         parent_ce->ce_flags |= ZEND_ACC_FINAL;
     }
     if (!serializable) {
-#ifdef ZEND_ACC_NOT_SERIALIZABLE
+#ifdef ZEND_ACC_NOT_SERIALIZABLE /* PHP_VERSION_ID >= 80100 */
         ce->ce_flags |= ZEND_ACC_NOT_SERIALIZABLE;
 #else
         ce->serialize = zend_class_serialize_deny;
