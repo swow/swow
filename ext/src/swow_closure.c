@@ -345,8 +345,10 @@ static PHP_METHOD(Swow_Closure, __unserialize)
         zend_destroy_static_vars(op_array);
         destroy_op_array(op_array);
         efree_size(op_array, sizeof(zend_op_array));
-    } else {
-        zend_throw_error(NULL, "Failed to compile code");
+    }
+    if (op_array == NULL || Z_TYPE(retval) != IS_OBJECT || !instanceof_function(Z_OBJCE(retval), zend_ce_closure)) {
+        zend_throw_error(NULL, "Closure compilation failed");
+        RETURN_THROWS();
     }
 
     ZEND_ASSERT(Z_TYPE(retval) == IS_OBJECT && instanceof_function(Z_OBJCE(retval), zend_ce_closure));
