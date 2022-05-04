@@ -34,9 +34,32 @@ extern SWOW_API CAT_GLOBALS_DECLARE(swow_closure)
 
 #define SWOW_CLOSURE_G(x) CAT_GLOBALS_GET(swow_closure, x)
 
+/* helper functions */
+
+static zend_always_inline bool swow_function_is_anonymous(const zend_function *function)
+{
+    return (function->common.fn_flags & (ZEND_ACC_CLOSURE | ZEND_ACC_FAKE_CLOSURE)) == ZEND_ACC_CLOSURE;
+}
+
+static zend_always_inline bool swow_function_is_user_anonymous(const zend_function *function)
+{
+    return function->type == ZEND_USER_FUNCTION &&
+           function->common.function_name != NULL && swow_function_is_anonymous(function);
+}
+
+static zend_always_inline bool swow_function_is_named(const zend_function *function)
+{
+    return function->common.function_name != NULL && !swow_function_is_anonymous(function);
+}
+
 /* loader */
 
 zend_result swow_closure_module_init(INIT_FUNC_ARGS);
+
+/* APIs */
+
+SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_user_anonymous_function(zend_function *function);
+SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_named_function(zend_function *function);
 
 #ifdef __cplusplus
 }

@@ -62,29 +62,22 @@ static void swow_closure_construct_from_another_closure(swow_closure_t *this_clo
     ZEND_ASSERT(swow_closure_get_from_object(Z_OBJ(result)) == this_closure);
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Closure___serialize, 0, 0, IS_ARRAY, 0)
-ZEND_END_ARG_INFO()
-
-static PHP_METHOD(Swow_Closure, __serialize)
+SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_user_anonymous_function(zend_function *function)
 {
-    ZEND_PARSE_PARAMETERS_NONE();
-
-    swow_closure_t *closure = swow_closure_get_from_object(Z_OBJ_P(ZEND_THIS));
-    zend_function *function = &closure->func;
-
-    do {
-        zval* closure_this = zend_get_closure_this_ptr(ZEND_THIS);
-        if (!Z_ISUNDEF_P(closure_this)) {
-            zend_throw_error(NULL, "Closure with bound '$this' cannot be serialized, it is recommended to add the 'static' modifier");
-            RETURN_THROWS();
-        }
-    } while (0);
-
     zend_string *filename = function->op_array.filename;
     uint32_t line_start = function->op_array.line_start;
     uint32_t line_end = function->op_array.line_end;
     zend_string *doc_comment = function->op_array.doc_comment;
     zval z_static_variables, z_references;
+
+    if (!swow_function_is_user_anonymous(function)) {
+        zend_value_error(NULL, "Closure is not a user anonymous function");
+        return NULL;
+    }
+    if (filename == NULL) {
+        zend_throw_error(NULL, "Closure with no filename cannot be serialized");
+        return NULL;
+    }
 
     ZVAL_EMPTY_ARRAY(&z_static_variables);
     ZVAL_EMPTY_ARRAY(&z_references);
@@ -128,18 +121,10 @@ static PHP_METHOD(Swow_Closure, __serialize)
     CAT_LOG_DEBUG_V3(PHP, "Closure { filename=%s, line_start=%u, line_end=%u }",
         ZSTR_VAL(filename), line_start, line_end);
 
-    /* file operations can generate E_WARNINGs which we want to promote to exceptions */
-    zend_error_handling error_handling;
-    zend_replace_error_handling(EH_THROW, spl_ce_RuntimeException, &error_handling);
+    zend_string *contents = swow_file_get_contents(filename);
 
-    php_stream *stream = php_stream_open_wrapper_ex(ZSTR_VAL(filename), "rb", REPORT_ERRORS, NULL, NULL);
-    if (stream == NULL) {
-        goto _fs_open_error;
-    }
-
-    zend_string *contents = php_stream_copy_to_mem(stream, -1, 0);
     if (contents == NULL) {
-        goto _fs_read_error;
+        return NULL;
     }
 
     php_token_list_t *token_list = php_tokenize(contents);
@@ -232,7 +217,7 @@ static PHP_METHOD(Swow_Closure, __serialize)
                 zend_string *key;
                 zval *z_val;
                 bool use_references = false;
-                smart_str_appends(&buffer, "return (function () ");
+                smart_str_appends(&buffer, "return (static function () ");
                 ZEND_HASH_FOREACH_VAL(Z_ARRVAL(z_references), z_val) {
                     CAT_LOG_DEBUG_WITH_LEVEL(PHP, 5, "Use reference for $%.*s", (int) Z_STRLEN_P(z_val), Z_STRVAL_P(z_val));
                     if (!use_references) {
@@ -247,7 +232,7 @@ static PHP_METHOD(Swow_Closure, __serialize)
                 if (use_references) {
                     smart_str_appends(&buffer, ") ");
                 }
-                smart_str_appends(&buffer, "{ ");
+                smart_str_appends(&buffer, ": \\Closure { ");
                 ZEND_HASH_FOREACH_STR_KEY_VAL(Z_ARRVAL(z_static_variables), key, z_val) {
                     smart_str_appendc(&buffer, '$');
                     smart_str_append(&buffer, key);
@@ -277,34 +262,99 @@ static PHP_METHOD(Swow_Closure, __serialize)
     CAT_LOG_DEBUG_WITH_LEVEL(PHP, 5, "Serialized-Content (%zu): <<<PHP\n\"%.*s\"\nPHP;",
         ZSTR_LEN(buffer.s), (int) ZSTR_LEN(buffer.s), ZSTR_VAL(buffer.s));
 
-    array_init(return_value);
-    zval ztmp;
-    ZVAL_STR_COPY(&ztmp, filename);
-    zend_hash_update(Z_ARRVAL_P(return_value), ZSTR_KNOWN(ZEND_STR_FILE), &ztmp);
-    ZVAL_STR(&ztmp, buffer.s);
-    zend_hash_update(Z_ARRVAL_P(return_value), ZSTR_KNOWN(ZEND_STR_CODE), &ztmp);
-    if (doc_comment != NULL) {
-        ZVAL_STR(&ztmp, zend_string_copy(doc_comment));
-        zend_hash_str_update(Z_ARRVAL_P(return_value), ZEND_STRL("doc_comment"), &ztmp);
-    }
-
     zval_ptr_dtor(&z_references);
     zval_ptr_dtor(&z_static_variables);
-    // smart_str_free(&buffer);
     php_token_list_free(token_list);
     zend_string_release(contents);
-    php_stream_close(stream);
-    zend_restore_error_handling(&error_handling);
 
-    return;
-    _fs_read_error:
-    php_stream_close(stream);
-    _fs_open_error:
+    HashTable *ht = zend_new_array(3);
+    zval ztmp;
+    ZVAL_STR_COPY(&ztmp, filename);
+    zend_hash_update(ht, ZSTR_KNOWN(ZEND_STR_FILE), &ztmp);
+    ZVAL_STR(&ztmp, buffer.s);
+    zend_hash_update(ht, ZSTR_KNOWN(ZEND_STR_CODE), &ztmp);
+    if (doc_comment != NULL) {
+        ZVAL_STR(&ztmp, zend_string_copy(doc_comment));
+        zend_hash_str_update(ht, ZEND_STRL("doc_comment"), &ztmp);
+    }
+
+    return ht;
+
     _serialize_use_error:
+    zval_ptr_dtor(&z_references);
     zval_ptr_dtor(&z_static_variables);
-    zend_restore_error_handling(&error_handling);
-    
-    RETURN_THROWS();
+
+    return NULL;
+}
+
+SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_named_function(zend_function *function)
+{
+    zend_string *function_name = function->op_array.function_name;
+    zend_class_entry *scope = function->common.scope;
+
+    if (!swow_function_is_named(function)) {
+        zend_value_error(NULL, "Closure is not a named function");
+        return NULL;
+    }
+
+    smart_str buffer = {0};
+    smart_str_appends(&buffer, "<?php return Closure::fromCallable(");
+    if (scope != NULL) {
+        smart_str_appendc(&buffer, '[');
+        smart_str_append(&buffer, scope->name);
+        smart_str_appends(&buffer, "::class, '");
+        smart_str_append(&buffer, function_name);
+        smart_str_appends(&buffer, "']");
+    } else {
+        smart_str_appendc(&buffer, '\'');
+        smart_str_append(&buffer, function_name);
+        smart_str_appendc(&buffer, '\'');
+    }
+    smart_str_appends(&buffer, ");");
+    smart_str_0(&buffer);
+
+    HashTable *ht = zend_new_array(1);
+    zval ztmp;
+    ZVAL_STR(&ztmp, buffer.s);
+    zend_hash_update(ht, ZSTR_KNOWN(ZEND_STR_CODE), &ztmp);
+
+    return ht;
+}
+
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Closure___serialize, 0, 0, IS_ARRAY, 0)
+ZEND_END_ARG_INFO()
+
+static PHP_METHOD(Swow_Closure, __serialize)
+{
+    ZEND_PARSE_PARAMETERS_NONE();
+
+    swow_closure_t *closure = swow_closure_get_from_object(Z_OBJ_P(ZEND_THIS));
+    zend_function *function = &closure->func;
+    bool is_user_anonymous_function = swow_function_is_user_anonymous(function);
+    bool is_named_function = !is_user_anonymous_function && swow_function_is_named(function);
+
+    if (!is_user_anonymous_function && !is_named_function) {
+        zend_throw_error(NULL, "Closure which is not user-defined anonymous function and has no name cannot be serialized");
+        RETURN_THROWS();
+    }
+    do {
+        zval* closure_this = zend_get_closure_this_ptr(ZEND_THIS);
+        if (!Z_ISUNDEF_P(closure_this)) {
+            zend_throw_error(NULL, "Closure with bound '$this' cannot be serialized, it is recommended to add the 'static' modifier");
+            RETURN_THROWS();
+        }
+    } while (0);
+
+    HashTable *data;
+    if (is_user_anonymous_function) {
+        data = swow_serialize_user_anonymous_function(function);
+    } else /* if (is_named_function) */ {
+        data = swow_serialize_named_function(function);
+    }
+    if (data == NULL) {
+        RETURN_THROWS();
+    }
+    RETURN_ARR(data);
 }
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Closure___unserialize, 0, 1, IS_VOID, 0)
@@ -320,13 +370,13 @@ static PHP_METHOD(Swow_Closure, __unserialize)
     ZEND_PARSE_PARAMETERS_END();
 
     zval *z_file = zend_hash_find_known_hash(data, ZSTR_KNOWN(ZEND_STR_FILE));
-    if (Z_TYPE_P(z_file) != IS_STRING) {
+    if (z_file != NULL && Z_TYPE_P(z_file) != IS_STRING) {
         zend_value_error("Expected string for key 'file', got %s", zend_zval_type_name(z_file));
         RETURN_THROWS();
     }
     zval *z_code = zend_hash_find_known_hash(data, ZSTR_KNOWN(ZEND_STR_CODE));
-    if (Z_TYPE_P(z_file) != IS_STRING) {
-        zend_value_error("Expected string for key 'code', got %s", zend_zval_type_name(z_code));
+    if (z_code == NULL || Z_TYPE_P(z_code) != IS_STRING) {
+        zend_value_error("Expected string for key 'code', got %s", z_code == NULL ? "null" : zend_zval_type_name(z_code));
         RETURN_THROWS();
     }
     zval *z_doc_comment = zend_hash_str_find(data, ZEND_STRL("doc_comment"));
@@ -335,10 +385,10 @@ static PHP_METHOD(Swow_Closure, __unserialize)
         RETURN_THROWS();
     }
     zval retval;
-    zend_string *file = Z_STR_P(z_file);
+    zend_string *file = z_file != NULL ? Z_STR_P(z_file) : NULL;
     zend_string *code = Z_STR_P(z_code);
     zend_string *doc_comment = z_doc_comment != NULL ? Z_STR_P(z_doc_comment) : NULL;
-    zend_op_array *op_array = zend_compile_string(code, ZSTR_VAL(file), ZEND_COMPILE_POSITION_AT_SHEBANG);
+    zend_op_array *op_array = zend_compile_string(code, file != NULL ? ZSTR_VAL(file) : "Closure::__unserialize()", ZEND_COMPILE_POSITION_AT_SHEBANG);
     if (op_array) {
         zend_execute(op_array, &retval);
         zend_exception_restore();
@@ -351,7 +401,6 @@ static PHP_METHOD(Swow_Closure, __unserialize)
         RETURN_THROWS();
     }
 
-    ZEND_ASSERT(Z_TYPE(retval) == IS_OBJECT && instanceof_function(Z_OBJCE(retval), zend_ce_closure));
     swow_closure_t *this_closure = swow_closure_get_from_object(Z_OBJ_P(ZEND_THIS)), *closure = swow_closure_get_from_object(Z_OBJ(retval));
     swow_closure_construct_from_another_closure(this_closure, closure);
     zval_ptr_dtor(&retval);
@@ -359,8 +408,6 @@ static PHP_METHOD(Swow_Closure, __unserialize)
     if (doc_comment != NULL) {
         this_closure->func.op_array.doc_comment = zend_string_copy(doc_comment);
     }
-
-
 }
 
 static const zend_function_entry swow_closure_methods[] = {
