@@ -96,34 +96,31 @@ static PHP_METHOD(Swow_Closure, __serialize)
             ZEND_MAP_PTR_SET(function->op_array.static_variables_ptr, ht);
         }
         zend_string *key;
-        zval *z_val;
+        zval *z_val, z_tmp;
         ZEND_HASH_MAP_FOREACH_STR_KEY_VAL(ht, key, z_val) {
             if (Z_ISREF_P(z_val)) {
                 if (Z_ARR(z_references) == &zend_empty_array) {
                     array_init(&z_references);
                 }
-                add_next_index_str(&z_references, key);
+                add_next_index_str(&z_references, zend_string_copy(key));
+                continue;
             }
             if (UNEXPECTED(zval_update_constant_ex(z_val, function->common.scope) != SUCCESS)) {
                 goto _serialize_use_error;
             }
-        } ZEND_HASH_FOREACH_END();
-        zend_hash_copy(Z_ARRVAL(z_static_variables), ht, zval_add_ref);
-        ZEND_HASH_MAP_FOREACH_VAL(Z_ARRVAL(z_static_variables), z_val) {
-            php_serialize_data_t var_hash;
-            smart_str serialized_data = {0};
-            PHP_VAR_SERIALIZE_INIT(var_hash);
-            php_var_serialize(&serialized_data, z_val, &var_hash);
-            PHP_VAR_SERIALIZE_DESTROY(var_hash);
-            if (EG(exception)) {
-                smart_str_free(&serialized_data);
-                goto _serialize_use_error;
-            }
-            if (serialized_data.s) {
-                zval_ptr_dtor(z_val);
-                ZVAL_STR(z_val, serialized_data.s);
-            } else {
-                ZEND_ASSERT(0 && "Unexpected empty serialized value");
+            /* if (!Z_ISREF_P(z_val)) */ {
+                php_serialize_data_t var_hash;
+                smart_str serialized_data = {0};
+                PHP_VAR_SERIALIZE_INIT(var_hash);
+                php_var_serialize(&serialized_data, z_val, &var_hash);
+                PHP_VAR_SERIALIZE_DESTROY(var_hash);
+                if (EG(exception)) {
+                    smart_str_free(&serialized_data);
+                    goto _serialize_use_error;
+                }
+                ZEND_ASSERT(serialized_data.s && "Unexpected empty serialized value");
+                ZVAL_STR(&z_tmp, serialized_data.s);
+                zend_hash_update(Z_ARRVAL(z_static_variables), key, &z_tmp);
             }
         } ZEND_HASH_FOREACH_END();
     }
