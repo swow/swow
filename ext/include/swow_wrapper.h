@@ -113,6 +113,15 @@ SWOW_API zend_string* ZEND_FASTCALL zend_ulong_to_str(zend_ulong num);
 
 /* array */
 
+#if PHP_VERSION_ID < 80200
+#define ZEND_HASH_PACKED_FOREACH          ZEND_HASH_FOREACH
+#define ZEND_HASH_PACKED_FOREACH_VAL      ZEND_HASH_FOREACH_VAL
+#define ZEND_HASH_MAP_FOREACH             ZEND_HASH_FOREACH
+#define ZEND_HASH_MAP_FOREACH_STR_KEY     ZEND_HASH_FOREACH_STR_KEY
+#define ZEND_HASH_MAP_FOREACH_VAL         ZEND_HASH_FOREACH_VAL
+#define ZEND_HASH_MAP_FOREACH_STR_KEY_VAL ZEND_HASH_FOREACH_STR_KEY_VAL
+#endif
+
 #ifndef add_assoc_string_fast
 static zend_always_inline void add_next_index_string_fast(zval *arg, const char *str)
 {
