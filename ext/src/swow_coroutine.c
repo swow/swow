@@ -331,7 +331,7 @@ static cat_bool_t swow_coroutine_construct(swow_coroutine_t *scoroutine, zval *z
     /* init executor */
     do {
         zend_vm_stack vm_stack;
-        coroutine->flags |= SWOW_COROUTINE_FLAG_ACCEPT_ZDATA;
+        coroutine->flags |= SWOW_COROUTINE_FLAG_HAS_EXECUTOR | SWOW_COROUTINE_FLAG_ACCEPT_ZDATA;
         /* align stack page size */
         stack_page_size = swow_coroutine_align_stack_page_size(stack_page_size);
         /* alloc vm stack memory */
@@ -436,6 +436,7 @@ static void swow_coroutine_main_create(void)
     /* register first (sync coroutine info) */
     SWOW_COROUTINE_G(original_main) = cat_coroutine_register_main(&scoroutine->coroutine);
 
+    scoroutine->coroutine.flags |= SWOW_COROUTINE_FLAG_HAS_EXECUTOR;
     scoroutine->executor = ecalloc(1, sizeof(*scoroutine->executor));
     scoroutine->executor->root_execute_data = (zend_execute_data *) EG(vm_stack)->top;
     // memset(&scoroutine->executor->fcall, 0, sizeof(scoroutine->executor->fcall));

@@ -43,7 +43,7 @@ static void swow_log_standard(CAT_LOG_PARAMATERS)
 
     /* Zend put()/error() may call PHP callbacks,
      * we can not do it in a pure C or interned coroutine */
-    if (swow_coroutine_get_current()->executor == NULL) {
+    if (!(swow_coroutine_get_current()->coroutine.flags & SWOW_COROUTINE_FLAG_HAS_EXECUTOR)) {
         cat_log_standard(type, module_type, module_name CAT_SOURCE_POSITION_RELAY_CC, code, "%s", message);
         cat_free(message);
         return;
