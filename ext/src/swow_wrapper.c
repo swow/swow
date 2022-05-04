@@ -231,6 +231,28 @@ SWOW_API void swow_output_globals_shutdown(void)
     } SWOW_OUTPUT_GLOBALS_MODIFY_END();
 }
 
+/* file */
+
+SWOW_API SWOW_MAY_THROW zend_string *swow_file_get_contents(zend_string *filename)
+{
+    zend_string *contents = NULL;
+
+    /* file operations can generate E_WARNINGs which we want to promote to exceptions */
+    zend_error_handling error_handling;
+    zend_replace_error_handling(EH_THROW, spl_ce_RuntimeException, &error_handling);
+    do {
+        php_stream *stream = php_stream_open_wrapper_ex(ZSTR_VAL(filename), "rb", REPORT_ERRORS, NULL, NULL);
+        if (stream == NULL) {
+            break;
+        }
+        contents = php_stream_copy_to_mem(stream, -1, 0);
+        php_stream_close(stream);
+    } while (0);
+    zend_restore_error_handling(&error_handling);
+
+    return contents;
+}
+
 /* wrapper init/shutdown */
 
 void swow_wrapper_init(void)

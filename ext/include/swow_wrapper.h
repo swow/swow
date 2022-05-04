@@ -393,9 +393,9 @@ static zend_always_inline void swow_output_globals_fast_shutdown(void)
     *output_ptr = ret == SUCCESS ? Z_STR(zoutput) : NULL; \
 } while (0);
 
-#if PHP_VERSION_ID >= 80200
-#define zend_forbid_dynamic_call(x) zend_forbid_dynamic_call()
-#endif
+/* file */
+
+SWOW_API SWOW_MAY_THROW zend_string *swow_file_get_contents(zend_string *filename);
 
 #ifdef __cplusplus
 }
