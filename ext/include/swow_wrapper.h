@@ -50,6 +50,12 @@ SWOW_API zend_string* ZEND_FASTCALL zend_ulong_to_str(zend_ulong num);
 #endif
 /* }}} */
 
+/* PHP 8.2+ compatibility macro {{{*/
+#if PHP_VERSION_ID >= 80200
+#define zend_forbid_dynamic_call(x) zend_forbid_dynamic_call()
+#endif
+/* }}} */
+
 /* ZTS */
 
 #ifdef ZTS
