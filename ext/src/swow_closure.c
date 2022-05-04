@@ -233,7 +233,7 @@ static PHP_METHOD(Swow_Closure, __serialize)
                 zval *z_val;
                 bool use_references = false;
                 smart_str_appends(&buffer, "return (function () ");
-                ZEND_HASH_PACKED_FOREACH_VAL(Z_ARRVAL(z_references), z_val) {
+                ZEND_HASH_FOREACH_VAL(Z_ARRVAL(z_references), z_val) {
                     CAT_LOG_DEBUG_WITH_LEVEL(PHP, 5, "Use reference for $%.*s", (int) Z_STRLEN_P(z_val), Z_STRVAL_P(z_val));
                     if (!use_references) {
                         smart_str_appends(&buffer, "use (");
@@ -248,7 +248,7 @@ static PHP_METHOD(Swow_Closure, __serialize)
                     smart_str_appends(&buffer, ") ");
                 }
                 smart_str_appends(&buffer, "{ ");
-                ZEND_HASH_MAP_FOREACH_STR_KEY_VAL(Z_ARRVAL(z_static_variables), key, z_val) {
+                ZEND_HASH_FOREACH_STR_KEY_VAL(Z_ARRVAL(z_static_variables), key, z_val) {
                     smart_str_appendc(&buffer, '$');
                     smart_str_append(&buffer, key);
                     smart_str_appends(&buffer, " = unserialize('");
