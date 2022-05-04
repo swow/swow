@@ -283,6 +283,10 @@ static PHP_METHOD(Swow_Closure, __serialize)
     zend_hash_update(Z_ARRVAL_P(return_value), ZSTR_KNOWN(ZEND_STR_FILE), &ztmp);
     ZVAL_STR(&ztmp, buffer.s);
     zend_hash_update(Z_ARRVAL_P(return_value), ZSTR_KNOWN(ZEND_STR_CODE), &ztmp);
+    if (doc_comment != NULL) {
+        ZVAL_STR(&ztmp, zend_string_copy(doc_comment));
+        zend_hash_str_update(Z_ARRVAL_P(return_value), ZEND_STRL("doc_comment"), &ztmp);
+    }
 
     zval_ptr_dtor(&z_references);
     zval_ptr_dtor(&z_static_variables);
@@ -325,9 +329,15 @@ static PHP_METHOD(Swow_Closure, __unserialize)
         zend_value_error("Expected string for key 'code', got %s", zend_zval_type_name(z_code));
         RETURN_THROWS();
     }
+    zval *z_doc_comment = zend_hash_str_find(data, ZEND_STRL("doc_comment"));
+    if (z_doc_comment != NULL && Z_TYPE_P(z_doc_comment) != IS_STRING) {
+        zend_value_error("Expected string for key 'doc_comment', got %s", zend_zval_type_name(z_code));
+        RETURN_THROWS();
+    }
     zval retval;
     zend_string *file = Z_STR_P(z_file);
     zend_string *code = Z_STR_P(z_code);
+    zend_string *doc_comment = z_doc_comment != NULL ? Z_STR_P(z_doc_comment) : NULL;
     zend_op_array *op_array = zend_compile_string(code, ZSTR_VAL(file), ZEND_COMPILE_POSITION_AT_SHEBANG);
     if (op_array) {
         zend_execute(op_array, &retval);
@@ -343,6 +353,12 @@ static PHP_METHOD(Swow_Closure, __unserialize)
     swow_closure_t *this_closure = swow_closure_get_from_object(Z_OBJ_P(ZEND_THIS)), *closure = swow_closure_get_from_object(Z_OBJ(retval));
     swow_closure_construct_from_another_closure(this_closure, closure);
     zval_ptr_dtor(&retval);
+
+    if (doc_comment != NULL) {
+        this_closure->func.op_array.doc_comment = zend_string_copy(doc_comment);
+    }
+
+
 }
 
 static const zend_function_entry swow_closure_methods[] = {
