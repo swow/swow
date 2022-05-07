@@ -1281,6 +1281,8 @@ SWOW_API void swow_coroutine_dump_all_to_file(const char *filename)
     }
     (void) fwrite(ZSTR_VAL(output), sizeof(char), ZSTR_LEN(output), file);
     (void) fclose(file);
+
+    zend_string_release(output);
 }
 
 /* exception */
