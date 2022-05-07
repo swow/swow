@@ -310,6 +310,11 @@ typedef uint32_t cat_socket_option_flags_t;
     XX(ALLOCATED,           1 << 0) \
     XX(CLOSED,              1 << 1) \
     XX(UNRECOVERABLE_ERROR, 1 << 2) \
+    /* for user (16 ~ 31) */ \
+    XX(USR1,  1 << 16) XX(USR2,  1 << 17) XX(USR3,  1 << 18) XX(USR4,  1 << 19) \
+    XX(USR5,  1 << 20) XX(USR6,  1 << 21) XX(USR7,  1 << 22) XX(USR8,  1 << 23) \
+    XX(USR9,  1 << 24) XX(USR10, 1 << 25) XX(USR11, 1 << 26) XX(USR12, 1 << 27) \
+    XX(USR13, 1 << 28) XX(USR14, 1 << 29) XX(USR15, 1 << 30) XX(USR16, 1 << 31) \
 
 typedef enum cat_socket_flag_e {
 #define CAT_SOCKET_FLAG_GEN(name, value) CAT_ENUM_GEN(CAT_SOCKET_FLAG_, name, value)
@@ -317,7 +322,7 @@ typedef enum cat_socket_flag_e {
 #undef CAT_SOCKET_FLAG_GEN
 } cat_socket_flag_t;
 
-typedef uint8_t cat_socket_flags_t;
+typedef uint32_t cat_socket_flags_t;
 
 #define CAT_SOCKET_INTERNAL_FLAG_MAP(XX) \
     XX(NONE,                   0) \

@@ -24,7 +24,7 @@ extern "C" {
 
 #include "cat.h"
 
-#define CAT_BUFFER_DEFAULT_SIZE 8192
+#define CAT_BUFFER_COMMON_SIZE 8192
 
 typedef struct cat_buffer_s {
     /* public readonly */

@@ -561,7 +561,7 @@ CAT_API cat_coroutine_t *cat_coroutine_create_ex(cat_coroutine_t *coroutine, cat
     CAT_LOG_DEBUG(COROUTINE, "Create R" CAT_COROUTINE_ID_FMT " "
         "with stack = %p, stack_size = %zu, function = %p, "
         "virtual_memory = %p, virtual_memory_size = %zu",
-        coroutine->id, stack, stack_size, function, 
+        coroutine->id, stack, stack_size, function,
         virtual_memory, virtual_memory_size);
 #else
     CAT_LOG_DEBUG(COROUTINE, "Create R" CAT_COROUTINE_ID_FMT " "

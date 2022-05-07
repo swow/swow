@@ -323,7 +323,7 @@ static cat_pid_t cat_os__wait(cat_pid_t pid, int *status, int options, void *rus
         waitpid_task->waiter_count++;
         cat_queue_push_back(&waitpid_task->waiters, &CAT_COROUTINE_G(current)->waiter.node);
     }
-    
+
     cat_bool_t ret = cat_time_wait(timeout);
 
     if (pid < 0) {

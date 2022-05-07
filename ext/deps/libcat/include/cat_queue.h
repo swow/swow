@@ -98,4 +98,20 @@ typedef void *cat_queue_node_t[2];
     } CAT_QUEUE_FOREACH_END(); \
 } while (0)
 
+#define CAT_QUEUE_REVERSE_FOREACH(queue, node) do { \
+  cat_queue_t *_queue = queue, *node; \
+  for ((node) = cat_queue_prev(_queue); (node) != (_queue); (node) = cat_queue_prev(node))
+
+#define CAT_QUEUE_REVERSE_FOREACH_END() \
+} while (0)
+
+#define CAT_QUEUE_REVERSE_FOREACH_DATA_START(queue, type, field, name) do { \
+    type *name; \
+    CAT_QUEUE_REVERSE_FOREACH(queue, _node) { \
+        name = cat_queue_data(_node, type, field); \
+
+#define CAT_QUEUE_REVERSE_FOREACH_DATA_END() \
+    } CAT_QUEUE_REVERSE_FOREACH_END(); \
+} while (0)
+
 #endif /* CAT_QUEUE_H_ */
