@@ -18,6 +18,7 @@
 
 #include "swow_closure.h"
 
+#include "swow_known_strings.h"
 #include "swow_tokenizer.h"
 
 #include <zend_language_parser.h>
@@ -35,6 +36,12 @@ typedef struct swow_closure_s {
 } swow_closure_t;
 
 static swow_object_create_t original_closure_create_object = NULL;
+
+#define SWOW_CLOSURE_KNOWN_STRING_MAP(XX) \
+    XX(doc_comment) \
+    XX(static_variables) \
+
+SWOW_CLOSURE_KNOWN_STRING_MAP(SWOW_KNOWN_STRING_STORAGE_GEN)
 
 static zend_always_inline swow_closure_t *swow_closure_get_from_object(zend_object *object)
 {
