@@ -147,9 +147,17 @@ SWOW_API php_token_list_t *php_tokenize(zend_string *source)
 SWOW_API const char *php_token_get_name(int type)
 {
     if (type < 256) {
-        static char chars[256];
-        chars[type] = (char) type;
-        return &chars[type];
+        static char text_map[256 + 256];
+        static bool initialized = false;
+        if (!initialized) {
+            for (int i = 0; i < 256; i++) {
+                char *p = text_map + (i + i);
+                *p = (char) i;
+                *(p + 1) = '\0';
+            }
+            initialized = true;
+        }
+        return &text_map[type + type];
     }
     switch (type) {
         case T_LNUMBER: return "T_LNUMBER";
