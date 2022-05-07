@@ -348,6 +348,17 @@ SWOW_API int swow_call_function_anyway(zend_fcall_info *fci, zend_fcall_info_cac
 #define swow_call_method_with_2_params(zobject, object_ce, fn_ptr_ptr, fn_name, retval, v1, v2) \
         zend_call_method_with_2_params(Z_OBJ_P(zobject), object_ce, fn_ptr_ptr, fn_name, retval, v1, v2)
 
+/* var_dump */
+
+SWOW_API void swow_var_dump_string(zend_string *string);
+SWOW_API void swow_var_dump_string_ex(zend_string *string, int level);
+
+SWOW_API void swow_var_dump_array(zend_array *array);
+SWOW_API void swow_var_dump_array_ex(zend_array *array, int level);
+
+SWOW_API void swow_var_dump_object(zend_object *object);
+SWOW_API void swow_var_dump_object_ex(zend_object *object, int level);
+
 /* output globals */
 
 #if PHP_VERSION_ID >= 80100

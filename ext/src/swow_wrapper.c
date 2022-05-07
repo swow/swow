@@ -193,6 +193,44 @@ SWOW_API int swow_call_function_anyway(zend_fcall_info *fci, zend_fcall_info_cac
     return ret;
 }
 
+/* var_dump */
+
+SWOW_API void swow_var_dump_string(zend_string *string)
+{
+    swow_var_dump_string_ex(string, 0);
+}
+
+SWOW_API void swow_var_dump_string_ex(zend_string *string, int level)
+{
+    zval z_tmp;
+    ZVAL_STR(&z_tmp, string);
+    php_var_dump(&z_tmp, level);
+}
+
+SWOW_API void swow_var_dump_array(zend_array *array)
+{
+    swow_var_dump_array_ex(array, 0);
+}
+
+SWOW_API void swow_var_dump_array_ex(zend_array *array, int level)
+{
+    zval z_tmp;
+    ZVAL_ARR(&z_tmp, array);
+    php_var_dump(&z_tmp, level);
+}
+
+SWOW_API void swow_var_dump_object(zend_object *object)
+{
+    swow_var_dump_object_ex(object, 0);
+}
+
+SWOW_API void swow_var_dump_object_ex(zend_object *object, int level)
+{
+    zval z_tmp;
+    ZVAL_OBJ(&z_tmp, object);
+    php_var_dump(&z_tmp, level);
+}
+
 /* output globals */
 
 #include "SAPI.h"

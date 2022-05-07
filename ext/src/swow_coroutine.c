@@ -1242,17 +1242,12 @@ SWOW_API zval *swow_coroutine_get_zval_by_id(cat_coroutine_id_t id)
 
 SWOW_API void swow_coroutine_dump(swow_coroutine_t *scoroutine)
 {
-    zval zscoroutine;
-
-    ZVAL_OBJ(&zscoroutine, &scoroutine->std);
-    php_var_dump(&zscoroutine, 0);
+    swow_var_dump_object(&scoroutine->std);
 }
 
 SWOW_API void swow_coroutine_dump_current(void)
 {
-    zval zscoroutine;
-    ZVAL_OBJ(&zscoroutine, &swow_coroutine_get_current()->std);
-    php_var_dump(&zscoroutine, 0);
+    swow_var_dump_object(&swow_coroutine_get_current()->std);
 }
 
 SWOW_API void swow_coroutine_dump_by_id(cat_coroutine_id_t id)
