@@ -141,7 +141,7 @@ static PHP_FUNCTION(Swow_defer)
         Z_PARAM_ZVAL(ztask)
     ZEND_PARSE_PARAMETERS_END();
 
-    if (UNEXPECTED(zend_forbid_dynamic_call("Swow\\defer()") != SUCCESS)) {
+    if (UNEXPECTED(swow_forbid_dynamic_call() != SUCCESS)) {
         RETURN_THROWS();
     }
 

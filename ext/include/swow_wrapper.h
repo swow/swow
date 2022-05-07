@@ -50,12 +50,6 @@ SWOW_API zend_string* ZEND_FASTCALL zend_ulong_to_str(zend_ulong num);
 #endif
 /* }}} */
 
-/* PHP 8.2+ compatibility macro {{{*/
-#if PHP_VERSION_ID >= 80200
-#define zend_forbid_dynamic_call(x) zend_forbid_dynamic_call()
-#endif
-/* }}} */
-
 /* ZTS */
 
 #ifdef ZTS
@@ -334,6 +328,23 @@ SWOW_API void swow_fcall_storage_release(swow_fcall_storage_t *fcall);
 } while (0);
 
 /* function caller */
+
+static zend_always_inline zend_result swow_forbid_dynamic_call_at_frame(zend_execute_data *execute_data)
+{
+    ZEND_ASSERT(execute_data != NULL && execute_data->func != NULL);
+    if (ZEND_CALL_INFO(execute_data) & ZEND_CALL_DYNAMIC) {
+        zend_string *function_or_method_name = get_active_function_or_method_name();
+        zend_throw_error(NULL, "Cannot call %.*s() dynamically",
+            (int) ZSTR_LEN(function_or_method_name), ZSTR_VAL(function_or_method_name));
+        return FAILURE;
+    }
+    return SUCCESS;
+}
+
+static zend_always_inline zend_result swow_forbid_dynamic_call(void)
+{
+    return swow_forbid_dynamic_call_at_frame(EG(current_execute_data));
+}
 
 SWOW_API int swow_call_function_anyway(zend_fcall_info *fci, zend_fcall_info_cache *fci_cache);
 
