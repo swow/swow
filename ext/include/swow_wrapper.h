@@ -190,6 +190,13 @@ static zend_always_inline void add_assoc_object_ex(zval *arg, const char *key, s
 }
 #endif /* PHP_VERSION_ID < 80100 (add_array, add_object) */
 
+static zend_always_inline void zend_array_release_gc(HashTable *ht)
+{
+    zval z_tmp;
+    ZVAL_ARR(&z_tmp, ht);
+    zval_ptr_dtor(&z_tmp);
+}
+
 /* class */
 
 typedef zend_object *(*swow_object_create_t)(zend_class_entry *class_type);

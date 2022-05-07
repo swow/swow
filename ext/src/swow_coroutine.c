@@ -2567,7 +2567,7 @@ zend_result swow_coroutine_runtime_shutdown(SHUTDOWN_FUNC_ARGS)
     swow_coroutine_main_close();
 
     /* destroy map */
-    zend_array_destroy(SWOW_COROUTINE_G(map));
+    zend_array_release_gc(SWOW_COROUTINE_G(map));
     SWOW_COROUTINE_G(map) = NULL;
 
     /* recover resume */
