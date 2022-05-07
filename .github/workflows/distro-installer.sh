@@ -60,7 +60,7 @@ installdnf()
     if dnf install -yy epel-release 'dnf-command(config-manager)'
     then
         dnf config-manager --enable epel
-        dnf config-manager --enable powertools 
+        dnf config-manager --enable powertools
     fi
 
     dnf groupinstall -yy "Development Tools"

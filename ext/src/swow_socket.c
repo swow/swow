@@ -1006,7 +1006,7 @@ static PHP_METHOD_EX(Swow_Socket, _write, zend_bool single, zend_bool may_addres
                         /* array include paramaters */
                         HashTable *vector_array = Z_ARR_P(ztmp);
                         uint32_t vector_array_count = zend_hash_num_elements(vector_array);
-						zend_bool maybe_stringable_object = 0;
+                        zend_bool maybe_stringable_object = 0;
 #if PHP_VERSION_ID < 80100
 # define _ARG_POS(x)
 #else
@@ -1037,10 +1037,10 @@ static PHP_METHOD_EX(Swow_Socket, _write, zend_bool single, zend_bool may_addres
                         if (0) {
                             _string_offset_length:;
                             /* [string|stringableObject, offset, length] */
-							if (0) {
-								_maybe_stringable_object:
-								maybe_stringable_object = 1;
-							}
+                            if (0) {
+                                _maybe_stringable_object:
+                                maybe_stringable_object = 1;
+                            }
                             uint32_t index = 0;
                             ZEND_HASH_FOREACH_VAL(vector_array, ztmp) {
                                 ZEND_ASSERT(index == 0 || index == 1 || index == 2);

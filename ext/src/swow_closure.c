@@ -64,8 +64,8 @@ static void swow_closure_construct_from_another_closure(swow_closure_t *this_clo
     zval result;
     SWOW_CLOSURE_G(current_object) = &this_closure->std;
     zend_ce_closure->create_object = swow_closure_create_object_for_unserialization;
-	zend_create_closure(&result, &closure->func,
-		closure->func.common.scope, closure->called_scope, &closure->this_ptr);
+    zend_create_closure(&result, &closure->func,
+        closure->func.common.scope, closure->called_scope, &closure->this_ptr);
     ZEND_ASSERT(swow_closure_get_from_object(Z_OBJ(result)) == this_closure);
 }
 
