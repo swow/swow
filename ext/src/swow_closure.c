@@ -75,7 +75,8 @@ SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_user_anonymous_function(zend_f
     uint32_t line_start = function->op_array.line_start;
     uint32_t line_end = function->op_array.line_end;
     zend_string *doc_comment = function->op_array.doc_comment;
-    zval z_static_variables, z_references;
+    zval z_static_variables, z_references, z_tmp;
+    HashTable *ht = NULL;
 
     if (!swow_function_is_user_anonymous(function)) {
         zend_value_error(NULL, "Closure is not a user anonymous function");
@@ -86,8 +87,8 @@ SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_user_anonymous_function(zend_f
         return NULL;
     }
 
-    ZVAL_EMPTY_ARRAY(&z_static_variables);
-    ZVAL_EMPTY_ARRAY(&z_references);
+    ZVAL_NULL(&z_static_variables);
+    ZVAL_NULL(&z_references);
     if (function->op_array.static_variables != NULL) {
         array_init(&z_static_variables);
         HashTable *ht = ZEND_MAP_PTR_GET(function->op_array.static_variables_ptr);
@@ -96,12 +97,13 @@ SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_user_anonymous_function(zend_f
             ZEND_MAP_PTR_SET(function->op_array.static_variables_ptr, ht);
         }
         zend_string *key;
-        zval *z_val, z_tmp;
+        zval *z_val;
         ZEND_HASH_MAP_FOREACH_STR_KEY_VAL(ht, key, z_val) {
             if (Z_ISREF_P(z_val)) {
-                if (Z_ARR(z_references) == &zend_empty_array) {
+                if (ZVAL_IS_NULL(&z_references)) {
                     array_init(&z_references);
                 }
+                CAT_LOG_DEBUG_WITH_LEVEL(PHP, 6, "Use reference $%.*s", (int) ZSTR_LEN(key), ZSTR_VAL(key));
                 add_next_index_str(&z_references, zend_string_copy(key));
                 continue;
             }
@@ -109,18 +111,9 @@ SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_user_anonymous_function(zend_f
                 goto _serialize_use_error;
             }
             /* if (!Z_ISREF_P(z_val)) */ {
-                php_serialize_data_t var_hash;
-                smart_str serialized_data = {0};
-                PHP_VAR_SERIALIZE_INIT(var_hash);
-                php_var_serialize(&serialized_data, z_val, &var_hash);
-                PHP_VAR_SERIALIZE_DESTROY(var_hash);
-                if (EG(exception)) {
-                    smart_str_free(&serialized_data);
-                    goto _serialize_use_error;
-                }
-                ZEND_ASSERT(serialized_data.s && "Unexpected empty serialized value");
-                ZVAL_STR(&z_tmp, serialized_data.s);
-                zend_hash_update(Z_ARRVAL(z_static_variables), key, &z_tmp);
+                CAT_LOG_DEBUG_WITH_LEVEL(PHP, 6, "Use variable $%.*s", (int) ZSTR_LEN(key), ZSTR_VAL(key));
+                Z_TRY_ADDREF_P(z_val);
+                zend_hash_update(Z_ARRVAL(z_static_variables), key, z_val);
             }
         } ZEND_HASH_FOREACH_END();
     }
@@ -141,12 +134,14 @@ SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_user_anonymous_function(zend_f
         CLOSURE_PARSER_STATE_USE,
         CLOSURE_PARSER_STATE_FUNCTION_START,
         CLOSURE_PARSER_STATE_FUNCTION_FIND_CLOSE_BRACE,
-        CLOSURE_PARSER_STATE_FUNCTION_END,
-        CLOSURE_PARSER_STATE_FN_START,
+        CLOSURE_PARSER_STATE_FN_FIND_SEMICOLON,
+        CLOSURE_PARSER_STATE_END,
     } parser_state = CLOSURE_PARSER_STATE_PARSING;
     uint32_t current_line = 1;
     uint32_t brace_level = 0;
     bool previous_is_inline_html = false;
+    bool is_arrow_function = false;
+    bool use_extra_function_wrapper = false;
 
     smart_str buffer = {0};
 
@@ -175,29 +170,26 @@ SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_user_anonymous_function(zend_f
             }
             case CLOSURE_PARSER_STATE_FUNCTION_START: {
                 if (token->type == '{') {
-                    brace_level++;
+                    ZEND_ASSERT(brace_level == 0);
+                    brace_level = 1;
                     parser_state = CLOSURE_PARSER_STATE_FUNCTION_FIND_CLOSE_BRACE;
                 }
                 goto _append;
-            }
-            case CLOSURE_PARSER_STATE_FUNCTION_END: {
-                smart_str_appends(&buffer, "; })()");
-                if (function->common.scope != NULL) {
-                    smart_str_appends(&buffer, "->bindTo(null, \\");
-                    smart_str_append(&buffer, function->common.scope->name);
-                    smart_str_appends(&buffer, "::class)");
-                }
-                smart_str_appendc(&buffer, ';');
-                smart_str_0(&buffer);
-                goto _resolve_token_done;
             }
             case CLOSURE_PARSER_STATE_FUNCTION_FIND_CLOSE_BRACE: {
                 if (token->type == '{') {
                     brace_level++;
                 } else if (token->type == '}') {
                     if (brace_level-- == 1) {
-                        parser_state = CLOSURE_PARSER_STATE_FUNCTION_END;
+                        parser_state = CLOSURE_PARSER_STATE_END;
                     }
+                }
+                goto _append;
+            }
+            case CLOSURE_PARSER_STATE_FN_FIND_SEMICOLON: {
+                if (token->type == ';') {
+                    parser_state = CLOSURE_PARSER_STATE_END;
+                    goto _next;
                 }
                 goto _append;
             }
@@ -221,40 +213,58 @@ SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_user_anonymous_function(zend_f
                 if (token->line != line_start) {
                     break;
                 }
-                zend_string *key;
-                zval *z_val;
-                bool use_references = false;
-                smart_str_appends(&buffer, "return (static function () ");
-                ZEND_HASH_FOREACH_VAL(Z_ARRVAL(z_references), z_val) {
-                    CAT_LOG_DEBUG_WITH_LEVEL(PHP, 5, "Use reference for $%.*s", (int) Z_STRLEN_P(z_val), Z_STRVAL_P(z_val));
-                    if (!use_references) {
-                        smart_str_appends(&buffer, "use (");
-                        use_references = true;
-                    } else {
-                        smart_str_appends(&buffer, ", ");
-                    }
-                    smart_str_appends(&buffer, "&$");
-                    smart_str_append(&buffer, Z_STR_P(z_val));
-                } ZEND_HASH_FOREACH_END();
-                if (use_references) {
-                    smart_str_appends(&buffer, ") ");
+                if (token->type == T_FN) {
+                    is_arrow_function = true;
                 }
-                smart_str_appends(&buffer, ": \\Closure { ");
-                ZEND_HASH_FOREACH_STR_KEY_VAL(Z_ARRVAL(z_static_variables), key, z_val) {
-                    smart_str_appendc(&buffer, '$');
-                    smart_str_append(&buffer, key);
-                    smart_str_appends(&buffer, " = unserialize('");
-                    smart_str_append(&buffer, Z_STR_P(z_val));
-                    smart_str_appends(&buffer, "'); ");
-                } ZEND_HASH_FOREACH_END();
+                if (!is_arrow_function) {
+                    if (!ZVAL_IS_NULL(&z_static_variables) || !ZVAL_IS_NULL(&z_references)) {
+                        use_extra_function_wrapper = true;
+                    }
+                } else {
+                    if (!ZVAL_IS_NULL(&z_static_variables)) {
+                        use_extra_function_wrapper = true;
+                    }
+                }
+                /* Solve function use (start) */
+                if (use_extra_function_wrapper) {
+                    zend_string *key;
+                    zval *z_val;
+                    smart_str_appends(&buffer, "return (static function () ");
+                    if (!ZVAL_IS_NULL(&z_references)) {
+                        bool first = true;
+                        smart_str_appends(&buffer, "use (");
+                        ZEND_HASH_PACKED_FOREACH_VAL(Z_ARRVAL(z_references), z_val) {
+                            CAT_LOG_DEBUG_WITH_LEVEL(PHP, 6, "Use reference for $%.*s", (int) Z_STRLEN_P(z_val), Z_STRVAL_P(z_val));
+                            if (first) {
+                                first = false;
+                            } else {
+                                smart_str_appends(&buffer, ", ");
+                            }
+                            smart_str_appends(&buffer, "&$");
+                            smart_str_append(&buffer, Z_STR_P(z_val));
+                        } ZEND_HASH_FOREACH_END();
+                        smart_str_appends(&buffer, ") ");
+                    }
+                    smart_str_appends(&buffer, "{ ");
+                    if (!ZVAL_IS_NULL(&z_static_variables)) {
+                        ZEND_HASH_MAP_FOREACH_STR_KEY_VAL(Z_ARRVAL(z_static_variables), key, z_val) {
+                            smart_str_appendc(&buffer, '$');
+                            smart_str_append(&buffer, key);
+                            smart_str_appends(&buffer, " = NULL; ");
+                        } ZEND_HASH_FOREACH_END();
+                    }
+                }
                 smart_str_appends(&buffer, "return ");
+                if (!use_extra_function_wrapper && function->common.scope != NULL) {
+                    smart_str_appendc(&buffer, '(');
+                }
                 if (function->common.fn_flags & ZEND_ACC_STATIC) {
                     smart_str_appends(&buffer, "static ");
                 }
-                if (token->type == T_FUNCTION) {
+                if (!is_arrow_function) {
                     parser_state = CLOSURE_PARSER_STATE_FUNCTION_START;
-                } else /* if (token->type == T_FN) */ {
-                    parser_state = CLOSURE_PARSER_STATE_FN_START;
+                } else {
+                    parser_state = CLOSURE_PARSER_STATE_FN_FIND_SEMICOLON;
                 }
                 goto _append;
             }
@@ -263,35 +273,60 @@ SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_user_anonymous_function(zend_f
             _append:
             smart_str_appendl(&buffer, token->text.data, token->text.length);
         }
+        _next:
+        if (parser_state == CLOSURE_PARSER_STATE_END) {
+            /* Solve function use (end) */
+            if (!use_extra_function_wrapper) {
+                if (function->common.scope != NULL) {
+                    smart_str_appendc(&buffer, ')');
+                }
+            } else {
+                smart_str_appends(&buffer, "; })()");
+            }
+            /* Solve scope */
+            if (function->common.scope != NULL) {
+                smart_str_appends(&buffer, "->bindTo(null, \\");
+                smart_str_append(&buffer, function->common.scope->name);
+                smart_str_appends(&buffer, "::class)");
+            }
+            smart_str_appendc(&buffer, ';');
+            smart_str_0(&buffer);
+            break;
+        }
     } CAT_QUEUE_FOREACH_DATA_END();
-    _resolve_token_done:
 
-    CAT_LOG_DEBUG_WITH_LEVEL(PHP, 5, "Serialized-Content (%zu): <<<PHP\n\"%.*s\"\nPHP;",
-        ZSTR_LEN(buffer.s), (int) ZSTR_LEN(buffer.s), ZSTR_VAL(buffer.s));
-
-    zval_ptr_dtor(&z_references);
-    zval_ptr_dtor(&z_static_variables);
-    php_token_list_free(token_list);
-    zend_string_release(contents);
-
-    HashTable *ht = zend_new_array(3);
-    zval ztmp;
-    ZVAL_STR_COPY(&ztmp, filename);
-    zend_hash_update(ht, ZSTR_KNOWN(ZEND_STR_FILE), &ztmp);
-    ZVAL_STR(&ztmp, buffer.s);
-    zend_hash_update(ht, ZSTR_KNOWN(ZEND_STR_CODE), &ztmp);
+    ht = zend_new_array(3);
+    ZVAL_STR_COPY(&z_tmp, filename);
+    zend_hash_update(ht, ZSTR_KNOWN(ZEND_STR_FILE), &z_tmp);
+    ZVAL_STR(&z_tmp, buffer.s);
+    zend_hash_update(ht, ZSTR_KNOWN(ZEND_STR_CODE), &z_tmp);
     if (doc_comment != NULL) {
-        ZVAL_STR(&ztmp, zend_string_copy(doc_comment));
-        zend_hash_str_update(ht, ZEND_STRL("doc_comment"), &ztmp);
+        ZVAL_STR(&z_tmp, zend_string_copy(doc_comment));
+        zend_hash_update(ht, SWOW_KNOWN_STRING(doc_comment), &z_tmp);
+    }
+    if (!ZVAL_IS_NULL(&z_static_variables)) {
+        Z_TRY_ADDREF(z_static_variables);
+        zend_hash_update(ht, SWOW_KNOWN_STRING(static_variables), &z_static_variables);
     }
 
-    return ht;
+    CAT_LOG_DEBUG_SCOPE_START_WITH_LEVEL(PHP, 5) {
+        zend_string *output;
+        ZVAL_ARR(&z_tmp, ht);
+        SWOW_OB_START(output) {
+            php_var_dump(&z_tmp, 0);
+        } SWOW_OB_END();
+        CAT_LOG_DEBUG_D(PHP, "Closure hash: <<<DUMP\n%.*s}}}\nDUMP;",
+            (int) ZSTR_LEN(output), ZSTR_VAL(output));
+        zend_string_release(output);
+    } CAT_LOG_DEBUG_SCOPE_END();
 
+    php_token_list_free(token_list);
+    zend_string_release(contents);
     _serialize_use_error:
     zval_ptr_dtor(&z_references);
     zval_ptr_dtor(&z_static_variables);
 
-    return NULL;
+    return ht;
 }
 
 SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_named_function(zend_function *function)
@@ -321,9 +356,9 @@ SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_named_function(zend_function *
     smart_str_0(&buffer);
 
     HashTable *ht = zend_new_array(1);
-    zval ztmp;
-    ZVAL_STR(&ztmp, buffer.s);
-    zend_hash_update(ht, ZSTR_KNOWN(ZEND_STR_CODE), &ztmp);
+    zval z_tmp;
+    ZVAL_STR(&z_tmp, buffer.s);
+    zend_hash_update(ht, ZSTR_KNOWN(ZEND_STR_CODE), &z_tmp);
 
     return ht;
 }
@@ -386,34 +421,63 @@ static PHP_METHOD(Swow_Closure, __unserialize)
         zend_value_error("Expected string for key 'code', got %s", z_code == NULL ? "null" : zend_zval_type_name(z_code));
         RETURN_THROWS();
     }
-    zval *z_doc_comment = zend_hash_str_find(data, ZEND_STRL("doc_comment"));
+    zval *z_doc_comment = zend_hash_find(data, SWOW_KNOWN_STRING(doc_comment));
     if (z_doc_comment != NULL && Z_TYPE_P(z_doc_comment) != IS_STRING) {
         zend_value_error("Expected string for key 'doc_comment', got %s", zend_zval_type_name(z_code));
+        RETURN_THROWS();
+    }
+    zval *z_static_variables = zend_hash_find(data, SWOW_KNOWN_STRING(static_variables));
+    if (z_static_variables != NULL && (Z_TYPE_P(z_static_variables) != IS_ARRAY || HT_IS_PACKED(Z_ARR_P(z_static_variables)))) {
+        zend_value_error("Expected assoc array for key 'static_variables', got %s", zend_zval_type_name(z_code));
         RETURN_THROWS();
     }
     zval retval;
     zend_string *file = z_file != NULL ? Z_STR_P(z_file) : NULL;
     zend_string *code = Z_STR_P(z_code);
     zend_string *doc_comment = z_doc_comment != NULL ? Z_STR_P(z_doc_comment) : NULL;
+    HashTable *static_variables = z_static_variables != NULL ? Z_ARR_P(z_static_variables) : NULL;
+
+    /* compile code */
     zend_op_array *op_array = zend_compile_string(code, file != NULL ? ZSTR_VAL(file) : "Closure::__unserialize()", ZEND_COMPILE_POSITION_AT_SHEBANG);
-    if (op_array) {
-        zend_execute(op_array, &retval);
-        zend_exception_restore();
-        zend_destroy_static_vars(op_array);
-        destroy_op_array(op_array);
-        efree_size(op_array, sizeof(zend_op_array));
-    }
-    if (op_array == NULL || Z_TYPE(retval) != IS_OBJECT || !instanceof_function(Z_OBJCE(retval), zend_ce_closure)) {
+    if (op_array == NULL) {
         zend_throw_error(NULL, "Closure compilation failed");
         RETURN_THROWS();
     }
 
-    swow_closure_t *this_closure = swow_closure_get_from_object(Z_OBJ_P(ZEND_THIS)), *closure = swow_closure_get_from_object(Z_OBJ(retval));
+    /* execute code to generate a closure instance */
+    zend_execute(op_array, &retval);
+    zend_exception_restore();
+    zend_destroy_static_vars(op_array);
+    destroy_op_array(op_array);
+    efree_size(op_array, sizeof(zend_op_array));
+
+    /* check whether return value is valid */
+    if (Z_TYPE(retval) != IS_OBJECT || !instanceof_function(Z_OBJCE(retval), zend_ce_closure)) {
+        zend_throw_error(NULL, "Expected Closure instance, got %s", zend_zval_type_name(&retval));
+        zval_ptr_dtor(&retval);
+        RETURN_THROWS();
+    }
+
+    swow_closure_t *this_closure = swow_closure_get_from_object(Z_OBJ_P(ZEND_THIS));
+    swow_closure_t *closure = swow_closure_get_from_object(Z_OBJ(retval));
     swow_closure_construct_from_another_closure(this_closure, closure);
     zval_ptr_dtor(&retval);
 
     if (doc_comment != NULL) {
         this_closure->func.op_array.doc_comment = zend_string_copy(doc_comment);
+    }
+    if (static_variables != NULL) {
+        HashTable *this_closure_static_variables = ZEND_MAP_PTR_GET(this_closure->func.op_array.static_variables_ptr);
+        if (this_closure_static_variables == NULL) {
+            zend_throw_error(NULL, "Closure should have static variables");
+            RETURN_THROWS();
+        }
+        zend_string *key;
+        zval *z_val;
+        ZEND_HASH_MAP_FOREACH_STR_KEY_VAL(static_variables, key, z_val) {
+            Z_TRY_ADDREF_P(z_val);
+            zend_hash_update(this_closure_static_variables, key, z_val);
+        } ZEND_HASH_FOREACH_END();
     }
 }
 
@@ -427,6 +491,8 @@ static const zend_function_entry swow_closure_methods[] = {
 zend_result swow_closure_module_init(INIT_FUNC_ARGS)
 {
     CAT_GLOBALS_REGISTER(swow_closure, CAT_GLOBALS_CTOR(swow_closure), NULL);
+
+    SWOW_CLOSURE_KNOWN_STRING_MAP(SWOW_KNOWN_STRING_INIT_GEN);
 
     original_closure_create_object = zend_ce_closure->create_object;
 #ifdef ZEND_ACC_NOT_SERIALIZABLE /* >= PHP_VERSION_ID >= 80100 */
