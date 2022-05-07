@@ -2559,7 +2559,7 @@ zend_result swow_coroutine_runtime_shutdown(SHUTDOWN_FUNC_ARGS)
         /* kill all coroutines */
         swow_coroutine_remove_from_map(swow_coroutine_get_main(), map_copy);
         map_copy->pDestructor = swow_coroutines_kill_destructor;
-        zend_array_destroy(map_copy);
+        zend_hash_destroy(map_copy);
     } while (zend_hash_num_elements(map) != 1);
 #endif
 
