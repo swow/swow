@@ -302,17 +302,22 @@ SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_user_anonymous_function(zend_f
                 smart_str_appends(&buffer, "::class)");
             }
             smart_str_appendc(&buffer, ';');
-            smart_str_0(&buffer);
             break;
         }
         _next:
         continue;
     } CAT_QUEUE_FOREACH_DATA_END();
+    smart_str_0(&buffer);
+    if (parser_state != CLOSURE_PARSER_STATE_END) {
+        zend_throw_error(NULL, "Failure to parse tokens");
+        goto _token_parse_error;
+    }
+
 
     ht = zend_new_array(3);
     ZVAL_STR_COPY(&z_tmp, filename);
     zend_hash_update(ht, ZSTR_KNOWN(ZEND_STR_FILE), &z_tmp);
-    ZVAL_STR(&z_tmp, buffer.s);
+    ZVAL_STR_COPY(&z_tmp, buffer.s);
     zend_hash_update(ht, ZSTR_KNOWN(ZEND_STR_CODE), &z_tmp);
     if (doc_comment != NULL) {
         ZVAL_STR(&z_tmp, zend_string_copy(doc_comment));
@@ -334,8 +339,14 @@ SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_user_anonymous_function(zend_f
         zend_string_release(output);
     } CAT_LOG_DEBUG_SCOPE_END();
 
+    if (0) {
+        _token_parse_error:;
+        CAT_LOG_DEBUG_WITH_LEVEL(PHP, 5, "Closure serialization code: <<<DUMP\n%.*s}}}\nDUMP;",
+            (int) ZSTR_LEN(buffer.s), ZSTR_VAL(buffer.s));
+    }
+    zend_string_release_ex(buffer.s, false);
     php_token_list_free(token_list);
-    zend_string_release(contents);
+    zend_string_release_ex(contents, false);
     _serialize_use_error:
     zval_ptr_dtor(&z_references);
     zval_ptr_dtor(&z_static_variables);
