@@ -155,6 +155,15 @@ SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_user_anonymous_function(zend_f
             current_line++;
             goto _append;
         }
+        if (token->type == T_INLINE_HTML) {
+            if (cat_queue_next(&token->node) != &token_list->queue) {
+                php_token_t *next_token = cat_queue_data(cat_queue_next(&token->node), php_token_t, node);
+                for (uint32_t i = 0; i < next_token->line - token->line; i++) {
+                    smart_str_appendc(&buffer, '\n');
+                }
+            }
+            goto _next;
+        }
         if (parser_state == CLOSURE_PARSER_STATE_FIND_OPEN_TAG) {
             if (token->type == T_OPEN_TAG) {
                 parser_state = original_parser_state;
