@@ -108,6 +108,7 @@ SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_user_anonymous_function(zend_f
                 continue;
             }
             if (UNEXPECTED(zval_update_constant_ex(z_val, function->common.scope) != SUCCESS)) {
+                zend_throw_error(NULL, "Failed to solve static variable %.*s", (int) ZSTR_LEN(key), ZSTR_VAL(key));
                 goto _serialize_use_error;
             }
             /* if (!Z_ISREF_P(z_val)) */ {
