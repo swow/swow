@@ -144,7 +144,12 @@ SWOW_API php_token_list_t *php_tokenize(zend_string *source)
 
 /* data */
 
-SWOW_API const char *php_token_get_name(int type)
+SWOW_API const char *php_token_get_name(const php_token_t *token)
+{
+    return php_token_get_name_from_type(token->type);
+}
+
+SWOW_API const char *php_token_get_name_from_type(int type)
 {
     if (type < 256) {
         static char text_map[256 + 256];

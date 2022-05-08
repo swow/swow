@@ -147,7 +147,7 @@ SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_user_anonymous_function(zend_f
 
     CAT_QUEUE_FOREACH_DATA_START(&token_list->queue, php_token_t, node, token) {
         CAT_LOG_DEBUG_V3(PHP, "token { type=%s, text='%.*s', line=%u, offset=%u }",
-            php_token_get_name(token->type), (int) token->text.length, token->text.data, token->line, token->offset);
+            php_token_get_name(token), (int) token->text.length, token->text.data, token->line, token->offset);
         if (token->line > current_line && token->type == T_WHITESPACE && token->text.data[0] == '\n') {
             current_line++;
             goto _append;

@@ -47,7 +47,8 @@ SWOW_API void php_token_list_add(php_token_list_t *token_list, int token_type, c
 SWOW_API void php_token_list_clear(php_token_list_t *token_list);
 SWOW_API void php_token_list_free(php_token_list_t *token_list);
 
-SWOW_API const char *php_token_get_name(int type);
+SWOW_API const char *php_token_get_name(const php_token_t *token);
+SWOW_API const char *php_token_get_name_from_type(int type);
 
 #ifdef __cplusplus
 }
