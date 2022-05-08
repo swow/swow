@@ -89,6 +89,7 @@ void tokenizer_on_language_scanner_event(
             } CAT_QUEUE_REVERSE_FOREACH_DATA_END();
             ZEND_ASSERT(target_token != NULL);
             target_token->type = token_type;
+            break;
         }
         case ON_STOP:
             if (LANG_SCNG(yy_cursor) != LANG_SCNG(yy_limit)) {
