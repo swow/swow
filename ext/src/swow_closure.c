@@ -129,7 +129,8 @@ SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_user_anonymous_function(zend_f
     }
 
     php_token_list_t *token_list = php_tokenize(contents);
-    enum {
+    enum parser_state_e {
+        CLOSURE_PARSER_STATE_FIND_OPEN_TAG,
         CLOSURE_PARSER_STATE_PARSING,
         CLOSURE_PARSER_STATE_NAMESPACE,
         CLOSURE_PARSER_STATE_USE,
@@ -137,10 +138,11 @@ SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_user_anonymous_function(zend_f
         CLOSURE_PARSER_STATE_FUNCTION_FIND_CLOSE_BRACE,
         CLOSURE_PARSER_STATE_FN_FIND_SEMICOLON,
         CLOSURE_PARSER_STATE_END,
-    } parser_state = CLOSURE_PARSER_STATE_PARSING;
+    };
+    enum parser_state_e parser_state = CLOSURE_PARSER_STATE_FIND_OPEN_TAG;
+    enum parser_state_e original_parser_state = CLOSURE_PARSER_STATE_PARSING;
     uint32_t current_line = 1;
     uint32_t brace_level = 0;
-    bool previous_is_inline_html = false;
     bool is_arrow_function = false;
     bool use_extra_function_wrapper = false;
 
@@ -153,13 +155,16 @@ SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_user_anonymous_function(zend_f
             current_line++;
             goto _append;
         }
-        if (previous_is_inline_html) {
-            smart_str_appends(&buffer, "?>");
-            previous_is_inline_html = false;
+        if (parser_state == CLOSURE_PARSER_STATE_FIND_OPEN_TAG) {
+            if (token->type == T_OPEN_TAG) {
+                parser_state = original_parser_state;
+            }
+            goto _next;
         }
-        if (token->type == T_INLINE_HTML) {
-            smart_str_appends(&buffer, "<?php");
-            previous_is_inline_html = true;
+        if (token->type == T_CLOSE_TAG) {
+            original_parser_state = parser_state;
+            parser_state = CLOSURE_PARSER_STATE_FIND_OPEN_TAG;
+            goto _next;
         }
         switch (parser_state) {
             case CLOSURE_PARSER_STATE_NAMESPACE:
@@ -190,7 +195,7 @@ SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_user_anonymous_function(zend_f
             case CLOSURE_PARSER_STATE_FN_FIND_SEMICOLON: {
                 if (token->type == ';') {
                     parser_state = CLOSURE_PARSER_STATE_END;
-                    goto _next;
+                    goto _end;
                 }
                 goto _append;
             }
@@ -198,9 +203,6 @@ SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_user_anonymous_function(zend_f
                 break;
         }
         switch (token->type) {
-            case T_OPEN_TAG: {
-                goto _append;
-            }
             case T_NAMESPACE: {
                 parser_state = CLOSURE_PARSER_STATE_NAMESPACE;
                 goto _append;
@@ -274,8 +276,8 @@ SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_user_anonymous_function(zend_f
             _append:
             smart_str_appendl(&buffer, token->text.data, token->text.length);
         }
-        _next:
         if (parser_state == CLOSURE_PARSER_STATE_END) {
+            _end:
             /* Solve function use (end) */
             if (!use_extra_function_wrapper) {
                 if (function->common.scope != NULL) {
@@ -294,6 +296,8 @@ SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_user_anonymous_function(zend_f
             smart_str_0(&buffer);
             break;
         }
+        _next:
+        continue;
     } CAT_QUEUE_FOREACH_DATA_END();
 
     ht = zend_new_array(3);
