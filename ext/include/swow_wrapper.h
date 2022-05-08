@@ -46,6 +46,7 @@ void swow_wrapper_shutdown(void);
 
 /* PHP 8.1 compatibility {{{*/
 #if PHP_VERSION_ID < 80100
+#define zend_hash_find_known_hash _zend_hash_find_known_hash
 SWOW_API zend_string* ZEND_FASTCALL zend_ulong_to_str(zend_ulong num);
 #endif
 /* }}} */
