@@ -365,7 +365,7 @@ SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_named_function(zend_function *
     }
 
     smart_str buffer = {0};
-    smart_str_appends(&buffer, "<?php return Closure::fromCallable(");
+    smart_str_appends(&buffer, "return Closure::fromCallable(");
     if (scope != NULL) {
         smart_str_appendc(&buffer, '[');
         smart_str_append(&buffer, scope->name);
@@ -463,7 +463,7 @@ static PHP_METHOD(Swow_Closure, __unserialize)
     HashTable *static_variables = z_static_variables != NULL ? Z_ARR_P(z_static_variables) : NULL;
 
     /* compile code */
-    zend_op_array *op_array = zend_compile_string(code, file != NULL ? ZSTR_VAL(file) : "Closure::__unserialize()", ZEND_COMPILE_POSITION_AT_SHEBANG);
+    zend_op_array *op_array = swow_compile_string(code, file != NULL ? ZSTR_VAL(file) : "Closure::__unserialize()");
     if (op_array == NULL) {
         zend_throw_error(NULL, "Closure compilation failed");
         RETURN_THROWS();
