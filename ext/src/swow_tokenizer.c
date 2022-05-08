@@ -115,7 +115,11 @@ SWOW_API php_token_list_t *php_tokenize(zend_string *source)
     CG(in_compilation) = 1;
     zend_save_lexical_state(&original_lex_state);
 
+#if PHP_VERSION_ID < 80100
+    zend_prepare_string_for_scanning(&source_zval, "");
+#else
     zend_prepare_string_for_scanning(&source_zval, ZSTR_EMPTY_ALLOC());
+#endif
 
     ctx.token_list = php_token_list_alloc();
 
