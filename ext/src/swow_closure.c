@@ -79,7 +79,7 @@ SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_user_anonymous_function(zend_f
     HashTable *ht = NULL;
 
     if (!swow_function_is_user_anonymous(function)) {
-        zend_value_error(NULL, "Closure is not a user anonymous function");
+        zend_value_error( "Closure is not a user anonymous function");
         return NULL;
     }
     if (filename == NULL) {
@@ -335,7 +335,7 @@ SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_named_function(zend_function *
     zend_class_entry *scope = function->common.scope;
 
     if (!swow_function_is_named(function)) {
-        zend_value_error(NULL, "Closure is not a named function");
+        zend_value_error("Closure is not a named function");
         return NULL;
     }
 
@@ -500,8 +500,8 @@ zend_result swow_closure_module_init(INIT_FUNC_ARGS)
 #ifdef ZEND_ACC_NOT_SERIALIZABLE /* >= PHP_VERSION_ID >= 80100 */
     zend_ce_closure->ce_flags ^= ZEND_ACC_NOT_SERIALIZABLE;
 #else
-    ce->serialize = NULL;
-    ce->unserialize = NULL;
+    zend_ce_closure->serialize = NULL;
+    zend_ce_closure->unserialize = NULL;
 #endif
     zend_register_functions(zend_ce_closure, swow_closure_methods, &zend_ce_closure->function_table, EG(current_module)->type);
 
