@@ -44,10 +44,24 @@ extern "C" {
 void swow_wrapper_init(void);
 void swow_wrapper_shutdown(void);
 
-/* PHP 8.1 compatibility macro {{{*/
+/* PHP 8.1 compatibility {{{*/
 #if PHP_VERSION_ID < 80100
 SWOW_API zend_string* ZEND_FASTCALL zend_ulong_to_str(zend_ulong num);
 #endif
+/* }}} */
+
+/* PHP 8.2 compatibility {{{*/
+#if PHP_VERSION_ID < 80200
+typedef enum _zend_compile_position {
+    ZEND_COMPILE_POSITION_AT_SHEBANG = 0,
+    ZEND_COMPILE_POSITION_AT_OPEN_TAG,
+    ZEND_COMPILE_POSITION_AFTER_OPEN_TAG
+} zend_compile_position;
+#else
+#define SWOW_COMPILE_STRING_SUPPORT_POSITION
+#endif
+SWOW_API zend_op_array *swow_compile_string(zend_string *source_string, const char *filename);
+SWOW_API zend_op_array *swow_compile_string_ex(zend_string *source_string, const char *filename, zend_compile_position position);
 /* }}} */
 
 /* ZTS */

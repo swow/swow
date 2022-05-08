@@ -18,7 +18,7 @@
 
 #include "swow.h"
 
-/* PHP 8.1 compatibility macro {{{*/
+/* PHP 8.1 compatibility {{{*/
 #if PHP_VERSION_ID < 80100
 SWOW_API zend_string* ZEND_FASTCALL zend_ulong_to_str(zend_ulong num)
 {
@@ -31,6 +31,27 @@ SWOW_API zend_string* ZEND_FASTCALL zend_ulong_to_str(zend_ulong num)
     }
 }
 #endif
+/* }}} */
+
+/* PHP 8.2 compatibility {{{*/
+
+SWOW_API zend_op_array *swow_compile_string(zend_string *source_string, const char *filename)
+{
+    return swow_compile_string_ex(source_string, filename, ZEND_COMPILE_POSITION_AFTER_OPEN_TAG);
+}
+
+SWOW_API zend_op_array *swow_compile_string_ex(zend_string *source_string, const char *filename, zend_compile_position position)
+{
+#if PHP_VERSION_ID < 80200
+    if (position != ZEND_COMPILE_POSITION_AFTER_OPEN_TAG) {
+        zend_throw_error(NULL, "Compile position require PHP-8.2+");
+        return NULL;
+    }
+    return zend_compile_string(source_string, filename);
+#else
+    return zend_compile_string(source_string, filename, position);
+#endif
+}
 /* }}} */
 
 /* class */
