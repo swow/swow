@@ -447,7 +447,9 @@ static PHP_METHOD(Swow_Closure, __unserialize)
     /* execute code to generate a closure instance */
     zend_execute(op_array, &retval);
     zend_exception_restore();
+#if PHP_VERSION_ID >= 80100
     zend_destroy_static_vars(op_array);
+#endif
     destroy_op_array(op_array);
     efree_size(op_array, sizeof(zend_op_array));
 
