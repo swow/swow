@@ -141,29 +141,28 @@ SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_user_anonymous_function(zend_f
     };
     enum parser_state_e parser_state = CLOSURE_PARSER_STATE_FIND_OPEN_TAG;
     enum parser_state_e original_parser_state = CLOSURE_PARSER_STATE_PARSING;
-    uint32_t current_line = 1;
     uint32_t brace_level = 0;
+    bool captured = false;
     bool is_arrow_function = false;
     bool use_extra_function_wrapper = false;
 
     smart_str buffer = {0};
 
     CAT_QUEUE_FOREACH_DATA_START(&token_list->queue, php_token_t, node, token) {
-        CAT_LOG_DEBUG_V3(PHP, "token { type=%s, text='%.*s', line=%u, offset=%u }",
-            php_token_get_name(token), (int) token->text.length, token->text.data, token->line, token->offset);
-        if (token->line > current_line && token->type == T_WHITESPACE && token->text.data[0] == '\n') {
-            current_line++;
-            goto _append;
-        }
-        if (token->type == T_INLINE_HTML) {
-            if (cat_queue_next(&token->node) != &token_list->queue) {
-                php_token_t *next_token = cat_queue_data(cat_queue_next(&token->node), php_token_t, node);
-                for (uint32_t i = 0; i < next_token->line - token->line; i++) {
+        bool previous_was_captured = captured;
+        captured = false;
+        if (!previous_was_captured && cat_queue_prev(&token->node) != &token_list->queue) {
+            php_token_t *prev_token = cat_queue_data(cat_queue_prev(&token->node), php_token_t, node);
+            if (token->line > prev_token->line) {
+                uint32_t line_diff = token->line - prev_token->line;
+                CAT_LOG_DEBUG_WITH_LEVEL(PHP, 6, "Insert %u new lines", line_diff);
+                for (uint32_t i = 0; i < line_diff; i++) {
                     smart_str_appendc(&buffer, '\n');
                 }
             }
-            goto _next;
         }
+        CAT_LOG_DEBUG_V3(PHP, "token { type=%s, text='%.*s', line=%u, offset=%u }",
+            php_token_get_name(token), (int) token->text.length, token->text.data, token->line, token->offset);
         if (parser_state == CLOSURE_PARSER_STATE_FIND_OPEN_TAG) {
             if (token->type == T_OPEN_TAG) {
                 parser_state = original_parser_state;
@@ -181,7 +180,7 @@ SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_user_anonymous_function(zend_f
                 if (token->type == ';') {
                     parser_state = CLOSURE_PARSER_STATE_PARSING;
                 }
-                goto _append;
+                goto _capture;
             }
             case CLOSURE_PARSER_STATE_FUNCTION_START: {
                 if (token->type == '{') {
@@ -189,7 +188,7 @@ SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_user_anonymous_function(zend_f
                     brace_level = 1;
                     parser_state = CLOSURE_PARSER_STATE_FUNCTION_FIND_CLOSE_BRACE;
                 }
-                goto _append;
+                goto _capture;
             }
             case CLOSURE_PARSER_STATE_FUNCTION_FIND_CLOSE_BRACE: {
                 if (token->type == '{') {
@@ -199,14 +198,14 @@ SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_user_anonymous_function(zend_f
                         parser_state = CLOSURE_PARSER_STATE_END;
                     }
                 }
-                goto _append;
+                goto _capture;
             }
             case CLOSURE_PARSER_STATE_FN_FIND_SEMICOLON: {
                 if (token->type == ';') {
                     parser_state = CLOSURE_PARSER_STATE_END;
                     goto _end;
                 }
-                goto _append;
+                goto _capture;
             }
             default:
                 break;
@@ -214,11 +213,11 @@ SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_user_anonymous_function(zend_f
         switch (token->type) {
             case T_NAMESPACE: {
                 parser_state = CLOSURE_PARSER_STATE_NAMESPACE;
-                goto _append;
+                goto _capture;
             }
             case T_USE: {
                 parser_state = CLOSURE_PARSER_STATE_USE;
-                goto _append;
+                goto _capture;
             }
             case T_FUNCTION:
             case T_FN: {
@@ -278,12 +277,13 @@ SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_user_anonymous_function(zend_f
                 } else {
                     parser_state = CLOSURE_PARSER_STATE_FN_FIND_SEMICOLON;
                 }
-                goto _append;
+                goto _capture;
             }
         }
         if (0) {
-            _append:
+            _capture:
             smart_str_appendl(&buffer, token->text.data, token->text.length);
+            captured = true;
         }
         if (parser_state == CLOSURE_PARSER_STATE_END) {
             _end:
