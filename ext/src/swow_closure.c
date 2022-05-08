@@ -167,12 +167,12 @@ SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_user_anonymous_function(zend_f
             if (token->type == T_OPEN_TAG) {
                 parser_state = original_parser_state;
             }
-            goto _next;
+            continue;
         }
         if (token->type == T_CLOSE_TAG) {
             original_parser_state = parser_state;
             parser_state = CLOSURE_PARSER_STATE_FIND_OPEN_TAG;
-            goto _next;
+            continue;
         }
         switch (parser_state) {
             case CLOSURE_PARSER_STATE_NAMESPACE:
@@ -304,8 +304,6 @@ SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_user_anonymous_function(zend_f
             smart_str_appendc(&buffer, ';');
             break;
         }
-        _next:
-        continue;
     } CAT_QUEUE_FOREACH_DATA_END();
     smart_str_0(&buffer);
     if (parser_state != CLOSURE_PARSER_STATE_END) {
