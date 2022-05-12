@@ -69,6 +69,114 @@ static void swow_closure_construct_from_another_closure(swow_closure_t *this_clo
     ZEND_ASSERT(swow_closure_get_from_object(Z_OBJ(result)) == this_closure);
 }
 
+static void ast_generate_use_elem(zend_ast *ast, smart_str *str, cat_bool_t use_comma) {
+    zend_ast_zval *name, *asname;
+
+    CAT_ASSERT(ast->kind == ZEND_AST_USE_ELEM);
+    name = (zend_ast_zval *)ast->child[0];
+    asname = (zend_ast_zval *)ast->child[1];
+    CAT_ASSERT(name->kind == ZEND_AST_ZVAL);
+    CAT_ASSERT(Z_TYPE(name->val) == IS_STRING);
+    if (use_comma) {
+        smart_str_appendc(str, ',');
+    }
+    smart_str_appends(str, name->val.value.str->val);
+    if (asname) {
+        CAT_ASSERT(asname->kind == ZEND_AST_ZVAL);
+        CAT_ASSERT(Z_TYPE(asname->val) == IS_STRING);
+        smart_str_appends(str, " as ");
+        smart_str_appends(str, asname->val.value.str->val);
+    }
+}
+
+static void ast_generate_use(zend_ast *ast, smart_str *str) {
+    zend_ast_list *list;
+    cat_bool_t use_comma = cat_false;
+
+    CAT_ASSERT(ast->kind == ZEND_AST_USE);
+    list = (zend_ast_list *)ast;
+
+    // note: zend_ast_export_ex case ZEND_AST_USE is wrong, see Zend/zend_language_parser.y near L412 use_type:
+    smart_str_appends(str, "use ");
+    if (ast->attr == ZEND_SYMBOL_FUNCTION) {
+        smart_str_appends(str, "function ");
+    } else if (ast->attr == ZEND_SYMBOL_CONST) {
+        smart_str_appends(str, "const ");
+    }
+
+    for (int i = 0; i < list->children; i++) {
+        zend_ast *elem = list->child[i];
+        ast_generate_use_elem(elem, str, use_comma);
+        if (!use_comma) {
+            use_comma = cat_true;
+        }
+    }
+    smart_str_appendc(str, ';');
+}
+
+static void ast_generate_group_use(zend_ast *ast, smart_str *str) {
+    zend_ast_list *list;
+    zend_ast_zval *nsname;
+    cat_bool_t use_comma = cat_false;
+
+    CAT_ASSERT(ast->kind == ZEND_AST_GROUP_USE);
+
+    list = (zend_ast_list *)ast->child[1];
+    nsname = (zend_ast_zval *)ast->child[0];
+
+    CAT_ASSERT(nsname->kind == ZEND_AST_ZVAL);
+    CAT_ASSERT(Z_TYPE(nsname->val) == IS_STRING);
+
+    smart_str_appends(str, "use ");
+    smart_str_appends(str, nsname->val.value.str->val);
+    smart_str_appends(str, "\\{");
+
+    for (int i = 0; i < list->children; i++) {
+        zend_ast *elem = list->child[i];
+        ast_generate_use_elem(elem, str, use_comma);
+        if (!use_comma) {
+            use_comma = cat_true;
+        }
+    }
+
+    smart_str_appends(str, "};");
+}
+
+struct ast_walk_context {
+    zend_ast *root;
+    smart_str *str;
+};
+
+static int enter_node(zend_ast *node, zend_ast *parent, int children, zend_ast **child, struct ast_walk_context *context)
+{
+    //printf("entering %s\n", ast_kind_name(node->kind));
+    if (!parent) {
+        // walk root ast
+        return AST_WALK_CONTINUE;
+    }
+    if (parent != context->root) {
+        // only on top statementl    
+        return AST_WALK_SKIP;
+    }
+    switch (node->kind) {
+        case ZEND_AST_USE:
+            ast_generate_use(node, context->str);
+            break;
+        case ZEND_AST_GROUP_USE:
+            ast_generate_group_use(node, context->str);
+            break;
+    }
+    return AST_WALK_SKIP;
+}
+
+static int ast_callback(zend_ast *ast, smart_str *str) {
+    struct ast_walk_context ctx = {
+        .root = ast,
+        .str = str,
+    };
+    return swow_walk_ast(ast, NULL, (ast_walk_callback)enter_node, NULL, &ctx);
+}
+
 SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_user_anonymous_function(zend_function *function)
 {
     zend_string *filename = function->op_array.filename;
@@ -128,12 +236,15 @@ SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_user_anonymous_function(zend_f
         return NULL;
     }
 
-    php_token_list_t *token_list = php_tokenize(contents);
+    smart_str buffer = {0};
+
+    php_token_list_t *token_list = php_tokenize(contents, (int (*)(zend_ast *, void *))ast_callback, &buffer);
+
     enum parser_state_e {
         CLOSURE_PARSER_STATE_FIND_OPEN_TAG,
         CLOSURE_PARSER_STATE_PARSING,
         CLOSURE_PARSER_STATE_NAMESPACE,
-        CLOSURE_PARSER_STATE_USE,
+        //CLOSURE_PARSER_STATE_USE,
         CLOSURE_PARSER_STATE_FUNCTION_START,
         CLOSURE_PARSER_STATE_FUNCTION_FIND_CLOSE_BRACE,
         CLOSURE_PARSER_STATE_FN_FIND_SEMICOLON,
@@ -145,8 +256,6 @@ SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_user_anonymous_function(zend_f
     bool captured = false;
     bool is_arrow_function = false;
     bool use_extra_function_wrapper = false;
-
-    smart_str buffer = {0};
 
     CAT_QUEUE_FOREACH_DATA_START(&token_list->queue, php_token_t, node, token) {
         bool previous_was_captured = captured;
@@ -176,12 +285,12 @@ SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_user_anonymous_function(zend_f
         }
         switch (parser_state) {
             case CLOSURE_PARSER_STATE_NAMESPACE:
-            case CLOSURE_PARSER_STATE_USE: {
-                if (token->type == ';') {
-                    parser_state = CLOSURE_PARSER_STATE_PARSING;
-                }
-                goto _capture;
-            }
+            // case CLOSURE_PARSER_STATE_USE: {
+            //     if (token->type == ';') {
+            //         parser_state = CLOSURE_PARSER_STATE_PARSING;
+            //     }
+            //     goto _capture;
+            // }
             case CLOSURE_PARSER_STATE_FUNCTION_START: {
                 if (token->type == '{') {
                     ZEND_ASSERT(brace_level == 0);
@@ -215,10 +324,10 @@ SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_user_anonymous_function(zend_f
                 parser_state = CLOSURE_PARSER_STATE_NAMESPACE;
                 goto _capture;
             }
-            case T_USE: {
-                parser_state = CLOSURE_PARSER_STATE_USE;
-                goto _capture;
-            }
+            // case T_USE: {
+            //     parser_state = CLOSURE_PARSER_STATE_USE;
+            //     goto _capture;
+            // }
             case T_FUNCTION:
             case T_FN: {
                 if (token->line != line_start) {

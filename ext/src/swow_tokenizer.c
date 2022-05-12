@@ -102,9 +102,7 @@ void tokenizer_on_language_scanner_event(
     }
 }
 
-
-
-static const char *ast_kind_name(int kind) {
+SWOW_API const char *ast_kind_name(int kind) {
     switch (kind)
     {
         case ZEND_AST_ZVAL:
@@ -360,85 +358,16 @@ static const char *ast_kind_name(int kind) {
     }
 }
 
-typedef enum
-{
-    AST_WALK_CONTINUE = 0,
-    AST_WALK_STOP,
-    AST_WALK_SKIP,
-    AST_WALK_ERROR,
-} AST_WALK_RESULT;
-
-typedef int (*ast_callback)(zend_ast *node, zend_ast *parent, int children, zend_ast **child, void *context);
-
-int showin(zend_ast *node, zend_ast *parent, int children, zend_ast **child, void *context)
-{
-    printf("entering %s\n", ast_kind_name(node->kind));
-    return AST_WALK_CONTINUE;
-}
-
-int showout(zend_ast *node, zend_ast *parent, int children, zend_ast **child, void *context)
-{
-    printf("leaving %s\n", ast_kind_name(node->kind));
-    return AST_WALK_CONTINUE;
-}
-
-int enter_use(zend_ast *node, zend_ast *parent, int children, zend_ast **child, smart_str *buf)
-{
-    showin(node, parent, children, child, NULL);   
-    switch (node->kind) {
-        case ZEND_AST_USE:
-        {
-            zend_string *exported = zend_ast_export("", node, ";");
-            printf("%s\n", exported->val);
-            return AST_WALK_SKIP;
-        }
-        case ZEND_AST_GROUP_USE:
-        {
-            zend_ast_zval *nsname = (zend_ast_zval *)child[0];
-            zend_ast_list *uses = (zend_ast_list *)child[1];
-            if (!nsname || !uses) {
-                // TODO: fixme: baogecuo
-                printf("????\n");
-                break;
-            }
-            CAT_ASSERT(uses->kind == ZEND_AST_USE);
-    
-            // a little hacky here
-            // this is a fake single element use statment
-            struct ast_2_elem {
-                zend_ast ast;
-                zend_ast* elem2;
-            };
-            struct ast_2_elem _fake_use_ast_elem = {{0}};
-            zend_ast* fake_use_ast_elem = (zend_ast*)&_fake_use_ast_elem;
-            fake_use_ast_elem->kind = ZEND_AST_USE_ELEM;
-            fake_use_ast_elem->child[0] = (zend_ast *)nsname;
-
-            smart_str str = {NULL};
-            zend_string *exported = zend_ast_export("use ", fake_use_ast_elem, "\\{");
-            smart_str_appends(&str, exported->val);
-            cat_bool_t comma = cat_false;
-            for (int i = 0; i < uses->children; i++) {
-                CAT_ASSERT(uses->child[i]->kind == ZEND_AST_USE_ELEM);
-                CAT_ASSERT(uses->child[i]->child[0]->kind == ZEND_AST_ZVAL);
-                CAT_ASSERT(((zend_ast_zval *)uses->child[i]->child[0])->val.u1.type_info == IS_STRING);
-                if (comma) {
-                    smart_str_appendc(&str, ',');
-                } else {
-                    comma = cat_true;
-                }
-                smart_str_appends(&str, ((zend_ast_zval *)uses->child[i]->child[0])->val.value.str->val);
-            }
-            smart_str_appends(&str, "};");
-
-            printf("%s\n", str.s->val);
-            return AST_WALK_SKIP;
+SWOW_API int ast_walk_callbacks(zend_ast *node, zend_ast *parent, int children, zend_ast **child, ast_walk_callbacks_aggregate *callbacks) {
+    int ret;
+    for (int i = 0; i < callbacks->len; i++) {
+        if ((ret = callbacks->callbacks[i].callback(node, parent, children, child, callbacks->callbacks[i].context)) != AST_WALK_CONTINUE) {
+            return ret;
         }
     }
-    return AST_WALK_CONTINUE;
 }
 
-static int swow_walk_ast(zend_ast *node, zend_ast *parent, ast_callback enter, ast_callback leave, void *context)
+SWOW_API int swow_walk_ast(zend_ast *node, zend_ast *parent, ast_walk_callback enter, ast_walk_callback leave, void *context)
 {
     int children;
     zend_ast **child;
@@ -511,7 +440,7 @@ static int swow_walk_ast(zend_ast *node, zend_ast *parent, ast_callback enter, a
     return AST_WALK_CONTINUE;
 }
 
-SWOW_API php_token_list_t *php_tokenize(zend_string *source)
+SWOW_API php_token_list_t *php_tokenize(zend_string *source, int (*ast_callback)(zend_ast *, void *), void *ast_callback_context)
 {
     zval source_zval;
     tokenizer_event_context_t ctx;
@@ -543,7 +472,9 @@ SWOW_API php_token_list_t *php_tokenize(zend_string *source)
         return NULL;
     }
 
-    swow_walk_ast(CG(ast), NULL, enter_use, showout, NULL);
+    if (ast_callback) {
+        ast_callback(CG(ast), ast_callback_context);
+    }
 
     zend_ast_destroy(CG(ast));
     zend_arena_destroy(CG(ast_arena));
