@@ -10,7 +10,7 @@ require __DIR__ . '/../include/bootstrap.php';
 
 $anonymous = function () {
   var_dump(
-    $_SERVER['argv'],
+    $_SERVER['argv'][0],
     $_POST,
     STDIN,
     STDOUT,
@@ -25,26 +25,20 @@ $anonymousUnserialized();
 $arrow = fn () => $anonymous();
 
 $arrowString = serialize($arrow);
-var_dump($arrowString);
+//var_dump($arrowString);
 $arrowUnserialized = unserialize($arrowString);
 $arrowUnserialized();
 
 echo 'Done' . PHP_LF;
 ?>
 --EXPECTF--
-array(1) {
-[0]=>
-string(%d) "%sbuiltin_constants.phpt"
-}
+string(%d) "%sbuiltin_constants.php"
 array(0) {
 }
 resource(%d) of type (stream)
 resource(%d) of type (stream)
 resource(%d) of type (stream)
-array(1) {
-[0]=>
-string(%d) "%sbuiltin_constants.phpt"
-}
+string(%d) "%sbuiltin_constants.php"
 array(0) {
 }
 resource(%d) of type (stream)
