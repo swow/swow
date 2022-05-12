@@ -1,0 +1,53 @@
+--TEST--
+swow_closure: builtin constants
+--SKIPIF--
+<?php
+require __DIR__ . '/../include/skipif.php';
+?>
+--FILE--
+<?php
+require __DIR__ . '/../include/bootstrap.php';
+
+$anonymous = function () {
+  var_dump(
+    $_SERVER['argv'],
+    $_POST,
+    STDIN,
+    STDOUT,
+    STDERR,
+  );
+};
+
+$anonymousString = serialize($anonymous);
+$anonymousUnserialized = unserialize($anonymousString);
+$anonymousUnserialized();
+
+$arrow = fn () => $anonymous();
+
+$arrowString = serialize($arrow);
+var_dump($arrowString);
+$arrowUnserialized = unserialize($arrowString);
+$arrowUnserialized();
+
+echo 'Done' . PHP_LF;
+?>
+--EXPECTF--
+array(1) {
+[0]=>
+string(%d) "%sbuiltin_constants.phpt"
+}
+array(0) {
+}
+resource(%d) of type (stream)
+resource(%d) of type (stream)
+resource(%d) of type (stream)
+array(1) {
+[0]=>
+string(%d) "%sbuiltin_constants.phpt"
+}
+array(0) {
+}
+resource(%d) of type (stream)
+resource(%d) of type (stream)
+resource(%d) of type (stream)
+Done
