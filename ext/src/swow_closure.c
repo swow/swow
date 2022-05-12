@@ -80,6 +80,11 @@ static void ast_generate_use_elem(zend_ast *ast, smart_str *str, cat_bool_t use_
     if (use_comma) {
         smart_str_appendc(str, ',');
     }
+    if (ast->attr == ZEND_SYMBOL_FUNCTION) {
+        smart_str_appends(str, "function ");
+    } else if (ast->attr == ZEND_SYMBOL_CONST) {
+        smart_str_appends(str, "const ");
+    }
     smart_str_appends(str, name->val.value.str->val);
     if (asname) {
         CAT_ASSERT(asname->kind == ZEND_AST_ZVAL);
@@ -128,6 +133,11 @@ static void ast_generate_group_use(zend_ast *ast, smart_str *str) {
     CAT_ASSERT(Z_TYPE(nsname->val) == IS_STRING);
 
     smart_str_appends(str, "use ");
+    if (ast->attr == ZEND_SYMBOL_FUNCTION) {
+        smart_str_appends(str, "function ");
+    } else if (ast->attr == ZEND_SYMBOL_CONST) {
+        smart_str_appends(str, "const ");
+    }
     smart_str_appends(str, nsname->val.value.str->val);
     smart_str_appends(str, "\\{");
 
