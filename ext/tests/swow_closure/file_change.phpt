@@ -98,6 +98,10 @@ Assert::throws(function () use ($anonymous) {
 
 echo 'Done' . PHP_LF;
 ?>
+--CLEAN--
+<?php
+@unlink(__DIR__ . '/file_change.inc');
+?>
 --EXPECTF--
 hello1
 hello1
