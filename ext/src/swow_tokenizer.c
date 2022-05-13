@@ -86,7 +86,7 @@ void tokenizer_on_language_scanner_event(
                 if (target_token) {
                     break;
                 }
-            } CAT_QUEUE_REVERSE_FOREACH_DATA_END();
+            } CAT_QUEUE_FOREACH_DATA_END();
             ZEND_ASSERT(target_token != NULL);
             target_token->type = token_type;
             break;
