@@ -102,15 +102,16 @@ void tokenizer_on_language_scanner_event(
     }
 }
 
-SWOW_API int swow_ast_children(zend_ast *node, zend_ast ***child) {
+SWOW_API int swow_ast_children(zend_ast *node, zend_ast ***child)
+{
     int children;
 
     // get all children
     if (node->kind & (1 << ZEND_AST_IS_LIST_SHIFT)) {
         // is list
-        children = ((zend_ast_list *)node)->children;
-        *child = (zend_ast **)(((zend_ast_list *)node)->child);
-        //printf("list size %d\n", children);
+        children = ((zend_ast_list *) node)->children;
+        *child = (zend_ast **) (((zend_ast_list *) node)->child);
+        // printf("list size %d\n", children);
     } else if (node->kind & (1 << ZEND_AST_SPECIAL_SHIFT)) {
         // is special
         CAT_ASSERT(node->kind != ZEND_AST_ZNODE);
@@ -126,7 +127,7 @@ SWOW_API int swow_ast_children(zend_ast *node, zend_ast ***child) {
             case ZEND_AST_CLASS:
             case ZEND_AST_ARROW_FUNC:
                 children = 5;
-                *child = (zend_ast **)(((zend_ast_decl *)node)->child);
+                *child = (zend_ast **) (((zend_ast_decl *) node)->child);
                 break;
             default:
                 CAT_NEVER_HERE("unknown ast kind");
