@@ -73,45 +73,53 @@ typedef void *cat_queue_node_t[2];
     cat_queue_prev(queue) = (node); \
 } while (0)
 
-#define cat_queue_pop_front(queue) cat_queue_remove(cat_queue_next(queue))
-
-#define cat_queue_pop_back(queue)  cat_queue_remove(cat_queue_prev(queue))
-
 #define cat_queue_remove(node) do { \
     cat_queue_prev_next(node) = cat_queue_next(node); \
     cat_queue_next_prev(node) = cat_queue_prev(node); \
 } while (0)
 
-#define CAT_QUEUE_FOREACH(queue, node) do { \
+/* foreach */
+
+#define _CAT_QUEUE_FOREACH_START(queue, from, node, action) do { \
   cat_queue_t *_queue = queue, *node; \
-  for ((node) = cat_queue_next(_queue); (node) != (_queue); (node) = cat_queue_next(node))
+  for ((node) = (from); (node) != (_queue); (node) = action(node)) \
+
+#define CAT_QUEUE_FOREACH_START_FROM(queue, from, node) \
+       _CAT_QUEUE_FOREACH_START(queue, from, node, cat_queue_next)
+
+#define CAT_QUEUE_FOREACH_START(queue, node) \
+        CAT_QUEUE_FOREACH_START_FROM(queue, cat_queue_next(queue), node)
 
 #define CAT_QUEUE_FOREACH_END() \
 } while (0)
 
-#define CAT_QUEUE_FOREACH_DATA_START(queue, type, field, name) do { \
+#define CAT_QUEUE_REVERSE_FOREACH_START_FROM(queue, from, node)  \
+       _CAT_QUEUE_FOREACH_START(queue, from, node, cat_queue_prev)
+
+#define CAT_QUEUE_REVERSE_FOREACH_START(queue, node) \
+        CAT_QUEUE_REVERSE_FOREACH_START_FROM(queue, cat_queue_prev(queue), node)
+
+/* foreach data */
+
+#define _CAT_QUEUE_FOREACH_DATA_START(queue, from, type, field, name, parent) do { \
     type *name; \
-    CAT_QUEUE_FOREACH(queue, _node) { \
+    parent(queue, from, _node) { \
         name = cat_queue_data(_node, type, field); \
+
+#define CAT_QUEUE_FOREACH_DATA_START_FROM(queue, from, type, field, name) \
+       _CAT_QUEUE_FOREACH_DATA_START(queue, from, type, field, name, CAT_QUEUE_FOREACH_START_FROM)
+
+#define CAT_QUEUE_FOREACH_DATA_START(queue, type, field, name) \
+        CAT_QUEUE_FOREACH_DATA_START_FROM(queue, cat_queue_next(queue), type, field, name)
+
+#define CAT_QUEUE_REVERSE_FOREACH_DATA_START_FROM(queue, from, type, field, name) \
+       _CAT_QUEUE_FOREACH_DATA_START(queue, from, type, field, name, CAT_QUEUE_REVERSE_FOREACH_START_FROM)
+
+#define CAT_QUEUE_REVERSE_FOREACH_DATA_START(queue, type, field, name) \
+        CAT_QUEUE_REVERSE_FOREACH_DATA_START_FROM(queue, cat_queue_prev(queue), type, field, name)
 
 #define CAT_QUEUE_FOREACH_DATA_END() \
     } CAT_QUEUE_FOREACH_END(); \
-} while (0)
-
-#define CAT_QUEUE_REVERSE_FOREACH(queue, node) do { \
-  cat_queue_t *_queue = queue, *node; \
-  for ((node) = cat_queue_prev(_queue); (node) != (_queue); (node) = cat_queue_prev(node))
-
-#define CAT_QUEUE_REVERSE_FOREACH_END() \
-} while (0)
-
-#define CAT_QUEUE_REVERSE_FOREACH_DATA_START(queue, type, field, name) do { \
-    type *name; \
-    CAT_QUEUE_REVERSE_FOREACH(queue, _node) { \
-        name = cat_queue_data(_node, type, field); \
-
-#define CAT_QUEUE_REVERSE_FOREACH_DATA_END() \
-    } CAT_QUEUE_REVERSE_FOREACH_END(); \
 } while (0)
 
 #endif /* CAT_QUEUE_H_ */

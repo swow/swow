@@ -226,6 +226,6 @@ extern CAT_API cat_log_t cat_log_function CAT_LOG_ATTRIBUTES;
 CAT_API void cat_log_standard(CAT_LOG_PARAMATERS);
 
 /* Notice: n will be limited to CAT_G(log_str_size) if it exceed CAT_G(log_str_size) */
-CAT_API const char *cat_log_buffer_quote(const char *buffer, ssize_t n, char **tmp_str); CAT_FREE
+CAT_API const char *cat_log_buffer_quote(const char *buffer, size_t n, char **tmp_str); CAT_FREE
 /* Notice: n will not be limited anyway */
-CAT_API const char *cat_log_buffer_quote_unlimited(const char *buffer, ssize_t n, char **tmp_str); CAT_FREE
+CAT_API const char *cat_log_buffer_quote_unlimited(const char *buffer, size_t n, char **tmp_str); CAT_FREE

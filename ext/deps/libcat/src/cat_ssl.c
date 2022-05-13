@@ -1028,7 +1028,7 @@ static cat_bool_t cat_ssl_encrypt_buffered(cat_ssl_t *ssl, const char *in, size_
 
         CAT_LOG_DEBUG_SCOPE_START_EX(SSL, char *tmp) {
             CAT_LOG_DEBUG_D(SSL, "SSL_write(%p, %s, %zu) = %d",
-                ssl, cat_log_buffer_quote(in + nwrite, n, &tmp), in_size - nwrite, n);
+                ssl, cat_log_buffer_quote(in + nwrite, n < 0 ? 0 : n, &tmp), in_size - nwrite, n);
         } CAT_LOG_DEBUG_SCOPE_END_EX(cat_free(tmp));
 
         if (unlikely(n <= 0)) {
@@ -1188,7 +1188,7 @@ CAT_API cat_bool_t cat_ssl_decrypt(cat_ssl_t *ssl, char *out, size_t *out_length
 
         CAT_LOG_DEBUG_SCOPE_START_EX(SSL, char *tmp) {
             CAT_LOG_DEBUG_D(SSL, "SSL_read(%p, %s, %zu) = %d",
-                ssl, cat_log_buffer_quote(out + nread, n, &tmp), out_size - nread, n);
+                ssl, cat_log_buffer_quote(out + nread, n < 0 ? 0 : n, &tmp), out_size - nread, n);
         } CAT_LOG_DEBUG_SCOPE_END_EX(cat_free(tmp));
 
         if (unlikely(n <= 0)) {
