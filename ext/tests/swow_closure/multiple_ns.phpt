@@ -34,33 +34,141 @@ $anonymousUnserialized();
 echo 'Done' . PHP_LF;
 ?>
 --EXPECT--
-use.inc.inc: class B:__construct
 NamespaceA\$anonymous()
-string(21) "NamespaceA\SOME_CONST"
-NamespaceA\SomeClass::__construct
-NamespaceA\someFunc()
 use.inc.inc: class B:__construct
-NamespaceA\$anonymous()
-string(21) "NamespaceA\SOME_CONST"
-NamespaceA\SomeClass::__construct
-NamespaceA\someFunc()
 use.inc.inc: class C:__construct
-NamespaceB\$anonymous()
-string(21) "NamespaceB\SOME_CONST"
-NamespaceB\SomeClass::__construct
-NamespaceB\someFunc()
-use.inc.inc: class C:__construct
-NamespaceB\$anonymous()
-string(21) "NamespaceB\SOME_CONST"
-NamespaceB\SomeClass::__construct
-NamespaceB\someFunc()
 use.inc.inc: class D:__construct
+use.inc.inc: func E
+use.inc.inc: func F
+string(7) "const G"
+string(7) "const H"
+use.inc.inc: class I:__construct
+use.inc.inc: class J:__construct
+use.inc.inc: class K:__construct
+use.inc.inc: class N:__construct
+use.inc.inc: class O:__construct
+use.inc.inc: func P
+use.inc.inc: func Q
+string(7) "const R"
+string(7) "const S"
+string(7) "const T"
+use.inc.inc: func U
+use.inc.inc: class V:__construct
+string(21) "NamespaceA\SOME_CONST"
+NamespaceA\SomeClass::__construct
+NamespaceA\someFunc()
+NamespaceA\$anonymous()
+use.inc.inc: class B:__construct
+use.inc.inc: class C:__construct
+use.inc.inc: class D:__construct
+use.inc.inc: func E
+use.inc.inc: func F
+string(7) "const G"
+string(7) "const H"
+use.inc.inc: class I:__construct
+use.inc.inc: class J:__construct
+use.inc.inc: class K:__construct
+use.inc.inc: class N:__construct
+use.inc.inc: class O:__construct
+use.inc.inc: func P
+use.inc.inc: func Q
+string(7) "const R"
+string(7) "const S"
+string(7) "const T"
+use.inc.inc: func U
+use.inc.inc: class V:__construct
+string(21) "NamespaceA\SOME_CONST"
+NamespaceA\SomeClass::__construct
+NamespaceA\someFunc()
+NamespaceB\$anonymous()
+use.inc.inc: class B:__construct
+use.inc.inc: class C:__construct
+use.inc.inc: class D:__construct
+use.inc.inc: func E
+use.inc.inc: func F
+string(7) "const G"
+string(7) "const H"
+use.inc.inc: class I:__construct
+use.inc.inc: class J:__construct
+use.inc.inc: class K:__construct
+use.inc.inc: class N:__construct
+use.inc.inc: class O:__construct
+use.inc.inc: func P
+use.inc.inc: func Q
+string(7) "const R"
+string(7) "const S"
+string(7) "const T"
+use.inc.inc: func U
+use.inc.inc: class V:__construct
+string(21) "NamespaceB\SOME_CONST"
+NamespaceB\SomeClass::__construct
+NamespaceB\someFunc()
+NamespaceB\$anonymous()
+use.inc.inc: class B:__construct
+use.inc.inc: class C:__construct
+use.inc.inc: class D:__construct
+use.inc.inc: func E
+use.inc.inc: func F
+string(7) "const G"
+string(7) "const H"
+use.inc.inc: class I:__construct
+use.inc.inc: class J:__construct
+use.inc.inc: class K:__construct
+use.inc.inc: class N:__construct
+use.inc.inc: class O:__construct
+use.inc.inc: func P
+use.inc.inc: func Q
+string(7) "const R"
+string(7) "const S"
+string(7) "const T"
+use.inc.inc: func U
+use.inc.inc: class V:__construct
+string(21) "NamespaceB\SOME_CONST"
+NamespaceB\SomeClass::__construct
+NamespaceB\someFunc()
 \$anonymous()
+use.inc.inc: class B:__construct
+use.inc.inc: class C:__construct
+use.inc.inc: class D:__construct
+use.inc.inc: func E
+use.inc.inc: func F
+string(7) "const G"
+string(7) "const H"
+use.inc.inc: class I:__construct
+use.inc.inc: class J:__construct
+use.inc.inc: class K:__construct
+use.inc.inc: class N:__construct
+use.inc.inc: class O:__construct
+use.inc.inc: func P
+use.inc.inc: func Q
+string(7) "const R"
+string(7) "const S"
+string(7) "const T"
+use.inc.inc: func U
+use.inc.inc: class V:__construct
 string(11) "\SOME_CONST"
 SomeClass::__construct
 \someFunc()
-use.inc.inc: class D:__construct
 \$anonymous()
+use.inc.inc: class B:__construct
+use.inc.inc: class C:__construct
+use.inc.inc: class D:__construct
+use.inc.inc: func E
+use.inc.inc: func F
+string(7) "const G"
+string(7) "const H"
+use.inc.inc: class I:__construct
+use.inc.inc: class J:__construct
+use.inc.inc: class K:__construct
+use.inc.inc: class N:__construct
+use.inc.inc: class O:__construct
+use.inc.inc: func P
+use.inc.inc: func Q
+string(7) "const R"
+string(7) "const S"
+string(7) "const T"
+use.inc.inc: func U
+use.inc.inc: class V:__construct
 string(11) "\SOME_CONST"
 SomeClass::__construct
 \someFunc()
