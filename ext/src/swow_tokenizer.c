@@ -102,6 +102,46 @@ void tokenizer_on_language_scanner_event(
     }
 }
 
+SWOW_API int swow_ast_children(zend_ast *node, zend_ast ***child) {
+    int children;
+
+    // get all children
+    if (node->kind & (1 << ZEND_AST_IS_LIST_SHIFT)) {
+        // is list
+        children = ((zend_ast_list *)node)->children;
+        *child = (zend_ast **)(((zend_ast_list *)node)->child);
+        //printf("list size %d\n", children);
+    } else if (node->kind & (1 << ZEND_AST_SPECIAL_SHIFT)) {
+        // is special
+        CAT_ASSERT(node->kind != ZEND_AST_ZNODE);
+        switch (node->kind) {
+            case ZEND_AST_ZVAL:
+            case ZEND_AST_CONSTANT:
+                children = 0;
+                *child = NULL;
+                break;
+            case ZEND_AST_FUNC_DECL:
+            case ZEND_AST_CLOSURE:
+            case ZEND_AST_METHOD:
+            case ZEND_AST_CLASS:
+            case ZEND_AST_ARROW_FUNC:
+                children = 5;
+                *child = (zend_ast **)(((zend_ast_decl *)node)->child);
+                break;
+            default:
+                CAT_NEVER_HERE("unknown ast kind");
+                return -1;
+        }
+    } else {
+        children = (node->kind >> ZEND_AST_NUM_CHILDREN_SHIFT) & 7;
+        *child = node->child;
+    }
+
+    return children;
+}
+
+#if 0
+
 SWOW_API const char *ast_kind_name(int kind) {
     switch (kind)
     {
@@ -359,12 +399,13 @@ SWOW_API const char *ast_kind_name(int kind) {
 }
 
 SWOW_API int ast_walk_callbacks(zend_ast *node, zend_ast *parent, int children, zend_ast **child, ast_walk_callbacks_aggregate *callbacks) {
-    int ret;
+    int ret = AST_WALK_CONTINUE;
     for (int i = 0; i < callbacks->len; i++) {
         if ((ret = callbacks->callbacks[i].callback(node, parent, children, child, callbacks->callbacks[i].context)) != AST_WALK_CONTINUE) {
             return ret;
         }
     }
+    return ret;
 }
 
 SWOW_API int swow_walk_ast(zend_ast *node, zend_ast *parent, ast_walk_callback enter, ast_walk_callback leave, void *context)
@@ -372,37 +413,8 @@ SWOW_API int swow_walk_ast(zend_ast *node, zend_ast *parent, ast_walk_callback e
     int children;
     zend_ast **child;
 
-    // get all children
-    if (node->kind & (1 << ZEND_AST_IS_LIST_SHIFT)) {
-        // is list
-        children = ((zend_ast_list *)node)->children;
-        child = (zend_ast **)(((zend_ast_list *)node)->child);
-        //printf("list size %d\n", children);
-    } else if (node->kind & (1 << ZEND_AST_SPECIAL_SHIFT)) {
-        // is special
-        CAT_ASSERT(node->kind != ZEND_AST_ZNODE);
-        switch (node->kind) {
-            case ZEND_AST_ZVAL:
-            case ZEND_AST_CONSTANT:
-                children = 0;
-                child = NULL;
-                break;
-            case ZEND_AST_FUNC_DECL:
-            case ZEND_AST_CLOSURE:
-            case ZEND_AST_METHOD:
-            case ZEND_AST_CLASS:
-            case ZEND_AST_ARROW_FUNC:
-                children = 5;
-                child = (zend_ast **)(((zend_ast_decl *)node)->child);
-                break;
-            default:
-                CAT_NEVER_HERE("unknown ast kind");
-                return AST_WALK_ERROR;
-        }
-    } else {
-        children = (node->kind >> ZEND_AST_NUM_CHILDREN_SHIFT) & 7;
-        child = node->child;
-    }
+    children = swow_ast_children(node, &child);
+    CAT_ASSERT(children >= 0);
 
 #define parse_result(stmt) do { \
     switch (stmt) { \
@@ -439,6 +451,8 @@ SWOW_API int swow_walk_ast(zend_ast *node, zend_ast *parent, ast_walk_callback e
 
     return AST_WALK_CONTINUE;
 }
+
+#endif
 
 SWOW_API php_token_list_t *php_tokenize(zend_string *source, int (*ast_callback)(zend_ast *, void *), void *ast_callback_context)
 {

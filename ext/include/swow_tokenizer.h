@@ -42,21 +42,14 @@ typedef struct php_token_list_s {
     zend_string *source;
 } php_token_list_t;
 
-
-typedef enum {
-    /* continue walk */
-    AST_WALK_CONTINUE = 0,
-    /* stop walk normally */
-    AST_WALK_STOP,
-    /* skip child nodes, only used in entering node callback */
-    AST_WALK_SKIP,
-    /* stop walk because of error */
-    AST_WALK_ERROR,
-} AST_WALK_RESULT;
+#if 0
 
 typedef int (*ast_walk_callback)(zend_ast *node, zend_ast *parent, int children, zend_ast **child, void *context);
 
-/* REMOVABLE FROM HERE */
+/*
+ * walk ast, enter will be invoked at entering this node, leave wille be invoked when leaving
+ */
+SWOW_API int swow_walk_ast(zend_ast *node, zend_ast *parent, ast_walk_callback enter, ast_walk_callback leave, void *context);
 
 typedef struct _ast_walk_callback_with_context {
     ast_walk_callback callback;
@@ -84,16 +77,14 @@ typedef struct _ast_walk_callbacks_aggregate {
  */
 SWOW_API int ast_walk_callbacks(zend_ast *node, zend_ast *parent, int children, zend_ast **child, ast_walk_callbacks_aggregate *callbacks);
 
-/* REMOVABLE ENDS HERE */
-
 /*
  * ast kind int to name
  */
 SWOW_API const char *ast_kind_name(int kind);
-/*
- * walk ast, enter will be invoked at entering this node, leave wille be invoked when leaving
- */
-SWOW_API int swow_walk_ast(zend_ast *node, zend_ast *parent, ast_walk_callback enter, ast_walk_callback leave, void *context);
+
+#endif
+
+SWOW_API int swow_ast_children(zend_ast *node, zend_ast ***child);
 
 SWOW_API php_token_list_t *php_tokenize(zend_string *source, int (*ast_callback)(zend_ast *, void *), void *ast_callback_context);
 
