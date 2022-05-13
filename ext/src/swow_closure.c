@@ -173,7 +173,7 @@ static int ast_callback(zend_ast *ast, struct ast_walk_context *ctx)
 {
     CAT_ASSERT(ast->kind == ZEND_AST_STMT_LIST);
     zend_ast **child;
-    int children = swow_ast_children(ast, &child);
+    int children = swow_zend_ast_children(ast, &child);
     CAT_ASSERT(children >= 0);
 
     for (int i = 0; i < children; i++) {
@@ -236,7 +236,7 @@ static int ast_callback(zend_ast *ast, struct ast_walk_context *ctx)
                 ctx->namespace_state = AST_NS_OK;
 
                 zend_ast **namespaced_child;
-                int namespaced_children = swow_ast_children((zend_ast *) stmts, &namespaced_child);
+                int namespaced_children = swow_zend_ast_children((zend_ast *) stmts, &namespaced_child);
 
                 for (int j = 0; j < namespaced_children; j++) {
                     zend_ast *s = namespaced_child[j];

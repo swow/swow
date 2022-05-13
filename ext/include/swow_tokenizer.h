@@ -28,6 +28,8 @@ extern "C" {
 
 // TODO: add swow_ prefix
 
+/* Tokenizer */
+
 typedef struct php_token_s {
     cat_queue_t node;
     int type;
@@ -42,50 +44,6 @@ typedef struct php_token_list_s {
     zend_string *source;
 } php_token_list_t;
 
-#if 0
-
-typedef int (*ast_walk_callback)(zend_ast *node, zend_ast *parent, int children, zend_ast **child, void *context);
-
-/*
- * walk ast, enter will be invoked at entering this node, leave wille be invoked when leaving
- */
-SWOW_API int swow_walk_ast(zend_ast *node, zend_ast *parent, ast_walk_callback enter, ast_walk_callback leave, void *context);
-
-typedef struct _ast_walk_callback_with_context {
-    ast_walk_callback callback;
-    void *context;
-} ast_walk_callback_with_context;
-
-typedef struct _ast_walk_callbacks_aggregate {
-    size_t len;
-    ast_walk_callback_with_context callbacks[1];
-} ast_walk_callbacks_aggregate;
-
-/*
- * aggregates callbacks
- *
- * usage:
- *      ast_walk_callbacks_aggregate *callbacks = calloc(8, 1 + 2 * 2);
- *      callbacks->len = 2;
- *      callbacks->callbacks[0].callback = enter_node_1;
- *      callbacks->callbacks[0].context = (void *)contenxt1;
- *      callbacks->callbacks[1].callback = enter_node_2;
- *      callbacks->callbacks[1].context = (void *)contenxt2;
- *      swow_walk_ast(node, NULL, (ast_walk_callback)ast_walk_callbacks, NULL, callbacks);
- *      or use as leaving node callbacks
- *      swow_walk_ast(node, NULL, NULL, (ast_walk_callback)ast_walk_callbacks, callbacks);
- */
-SWOW_API int ast_walk_callbacks(zend_ast *node, zend_ast *parent, int children, zend_ast **child, ast_walk_callbacks_aggregate *callbacks);
-
-/*
- * ast kind int to name
- */
-SWOW_API const char *ast_kind_name(int kind);
-
-#endif
-
-SWOW_API int swow_ast_children(zend_ast *node, zend_ast ***child);
-
 SWOW_API php_token_list_t *php_tokenize(zend_string *source, int (*ast_callback)(zend_ast *, void *), void *ast_callback_context);
 
 SWOW_API php_token_list_t *php_token_list_alloc(void);
@@ -95,6 +53,10 @@ SWOW_API void php_token_list_free(php_token_list_t *token_list);
 
 SWOW_API const char *php_token_get_name(const php_token_t *token);
 SWOW_API const char *php_token_get_name_from_type(int type);
+
+/* AST */
+
+SWOW_API int swow_zend_ast_children(zend_ast *node, zend_ast ***child);
 
 #ifdef __cplusplus
 }
