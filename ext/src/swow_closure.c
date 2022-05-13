@@ -156,7 +156,15 @@ struct ast_walk_context {
     smart_str *str;
     const char *required_namespace;
     size_t required_namespace_len;
+    int namespace_state;
 };
+
+typedef enum {
+    AST_NS_OK = 0,
+    AST_NS_NOT_PROCESSED,
+    AST_NS_SOURCE_IS_IN_ROOT,
+    AST_NS_NOT_FOUND,
+} AST_CALLBACK_STATE;
 
 static int ast_callback(zend_ast *ast, struct ast_walk_context *ctx) {
     CAT_ASSERT(ast->kind == ZEND_AST_STMT_LIST);
@@ -178,9 +186,10 @@ static int ast_callback(zend_ast *ast, struct ast_walk_context *ctx) {
                 if (!stmts) {
                     // single namespace <T_STRING>; statement
                     if (!nsname) {
+                        // TODO: fixme: is this possible?
                         if (ctx->required_namespace_len != 0) {
-                            // TODO: fixme: throw serializing error
-                            printf("function is namespaced, but target file contains empty namespace.\n");
+                            //printf("function is namespaced, but target file contains empty namespace.\n");
+                            ctx->namespace_state = AST_NS_SOURCE_IS_IN_ROOT;
                             return -1;
                         }
                     } else {
@@ -189,14 +198,15 @@ static int ast_callback(zend_ast *ast, struct ast_walk_context *ctx) {
                         namespace = Z_STR(nsname->val);
 
                         if (ZSTR_LEN(namespace) != ctx->required_namespace_len || strncasecmp(ZSTR_VAL(namespace), ctx->required_namespace, ZSTR_LEN(namespace))) {
-                            // TODO: fixme: throw serializing error
-                            printf("function is namespaced, but target file contains another namespace.\n");
+                            // printf("function is namespaced, but target file contains another namespace.\n");
+                            ctx->namespace_state = AST_NS_NOT_FOUND;
                             return -1;
                         }
                         smart_str_appends(ctx->str, "namespace ");
                         smart_str_appendl(ctx->str, ZSTR_VAL(namespace), ZSTR_LEN(namespace));
                         smart_str_appendc(ctx->str, ';');
                     }
+                    ctx->namespace_state = AST_NS_OK;
                     // continue to find next top statement
                     continue;
                 } else {
@@ -220,6 +230,7 @@ static int ast_callback(zend_ast *ast, struct ast_walk_context *ctx) {
                         smart_str_appendl(ctx->str, ZSTR_VAL(namespace), ZSTR_LEN(namespace));
                         smart_str_appendc(ctx->str, ';');
                     }
+                    ctx->namespace_state = AST_NS_OK;
                     
                     zend_ast **namespaced_child;
                     int namespaced_children = swow_ast_children((zend_ast *)stmts, &namespaced_child);
@@ -316,6 +327,7 @@ SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_user_anonymous_function(zend_f
     struct ast_walk_context ctx = {
         .str = &buffer,
         .required_namespace = ZSTR_VAL(function->op_array.function_name),
+        .namespace_state = AST_NS_NOT_PROCESSED,
     };
     if (ZSTR_LEN(function->op_array.function_name) > 10) {
         ctx.required_namespace_len = ZSTR_LEN(function->op_array.function_name) - 10;
@@ -324,6 +336,24 @@ SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_user_anonymous_function(zend_f
     }
 
     php_token_list_t *token_list = php_tokenize(contents, (int (*)(zend_ast *, void *))ast_callback, &ctx);
+
+    switch (ctx.namespace_state) {
+        case AST_NS_NOT_PROCESSED:
+            if (ctx.required_namespace_len == 0) {
+                break;
+            }
+            ZEND_FALLTHROUGH;
+        case AST_NS_NOT_FOUND:
+            zend_throw_error(NULL, "Closure is in namespace \"%.*s\", but its source file do not have this namespace", (int)ctx.required_namespace_len, ctx.required_namespace);
+            goto _token_parse_error;
+        case AST_NS_SOURCE_IS_IN_ROOT:
+            zend_throw_error(NULL, "Closure is in namespace \"%.*s\", but its source file do not have namespace", (int)ctx.required_namespace_len, ctx.required_namespace);
+            goto _token_parse_error;
+        case AST_NS_OK:
+            break;
+        default:
+            CAT_NEVER_HERE("strange state");
+    }
 
     enum parser_state_e {
         CLOSURE_PARSER_STATE_FIND_OPEN_TAG,
@@ -532,11 +562,15 @@ SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_user_anonymous_function(zend_f
     } CAT_LOG_DEBUG_SCOPE_END();
 
     if (0) {
-        _token_parse_error:;
-        CAT_LOG_DEBUG_WITH_LEVEL(PHP, 5, "Closure serialization code: <<<DUMP\n%.*s}}}\nDUMP;",
-            (int) ZSTR_LEN(buffer.s), ZSTR_VAL(buffer.s));
+        _token_parse_error:
+        if (buffer.s) {
+            CAT_LOG_DEBUG_WITH_LEVEL(PHP, 5, "Closure serialization code: <<<DUMP\n%.*s}}}\nDUMP;",
+                (int) ZSTR_LEN(buffer.s), ZSTR_VAL(buffer.s));
+        }
     }
-    zend_string_release_ex(buffer.s, false);
+    if (buffer.s) {
+        zend_string_release_ex(buffer.s, false);
+    }
     php_token_list_free(token_list);
     zend_string_release_ex(contents, false);
     _serialize_use_error:
@@ -611,6 +645,7 @@ static PHP_METHOD(Swow_Closure, __serialize)
         data = swow_serialize_named_function(function);
     }
     if (data == NULL) {
+        zend_throw_error(NULL, "Closure source code is corrupt");
         RETURN_THROWS();
     }
     RETURN_ARR(data);
