@@ -105,7 +105,7 @@ void tokenizer_on_language_scanner_event(
 SWOW_API php_token_list_t *php_tokenize(zend_string *source, int (*ast_callback)(zend_ast *, void *), void *ast_callback_context)
 {
     zval source_zval;
-    tokenizer_event_context_t ctx;
+    tokenizer_event_context_t context;
     zend_lex_state original_lex_state;
     bool original_in_compilation;
 
@@ -121,16 +121,16 @@ SWOW_API php_token_list_t *php_tokenize(zend_string *source, int (*ast_callback)
     zend_prepare_string_for_scanning(&source_zval, ZSTR_EMPTY_ALLOC());
 #endif
 
-    ctx.token_list = php_token_list_alloc();
+    context.token_list = php_token_list_alloc();
 
     CG(ast) = NULL;
     CG(ast_arena) = zend_arena_create(32 * 1024);
     LANG_SCNG(yy_state) = yycINITIAL;
     LANG_SCNG(on_event) = tokenizer_on_language_scanner_event;
-    LANG_SCNG(on_event_context) = &ctx;
+    LANG_SCNG(on_event_context) = &context;
 
     if (zendparse() != SUCCESS) {
-        php_token_list_free(ctx.token_list);
+        php_token_list_free(context.token_list);
         return NULL;
     }
 
@@ -146,9 +146,9 @@ SWOW_API php_token_list_t *php_tokenize(zend_string *source, int (*ast_callback)
     CG(in_compilation) = original_in_compilation;
 
     ZEND_ASSERT(Z_TYPE(source_zval) == IS_STRING);
-    ctx.token_list->source = Z_STR(source_zval);
+    context.token_list->source = Z_STR(source_zval);
 
-    return ctx.token_list;
+    return context.token_list;
 }
 
 SWOW_API int swow_zend_ast_children(zend_ast *node, zend_ast ***child)

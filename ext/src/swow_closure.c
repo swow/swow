@@ -71,11 +71,11 @@ static void swow_closure_construct_from_another_closure(swow_closure_t *this_clo
 
 static void ast_generate_use_elem(zend_ast *ast, smart_str *str, cat_bool_t use_comma)
 {
-    zend_ast_zval *name, *asname;
+    zend_ast_zval *name, *as_name;
 
     ZEND_ASSERT(ast->kind == ZEND_AST_USE_ELEM);
     name = (zend_ast_zval *) ast->child[0];
-    asname = (zend_ast_zval *) ast->child[1];
+    as_name = (zend_ast_zval *) ast->child[1];
     ZEND_ASSERT(name->kind == ZEND_AST_ZVAL);
     ZEND_ASSERT(Z_TYPE(name->val) == IS_STRING);
     if (use_comma) {
@@ -87,11 +87,11 @@ static void ast_generate_use_elem(zend_ast *ast, smart_str *str, cat_bool_t use_
         smart_str_appends(str, "const ");
     }
     smart_str_append(str, name->val.value.str);
-    if (asname) {
-        ZEND_ASSERT(asname->kind == ZEND_AST_ZVAL);
-        ZEND_ASSERT(Z_TYPE(asname->val) == IS_STRING);
+    if (as_name) {
+        ZEND_ASSERT(as_name->kind == ZEND_AST_ZVAL);
+        ZEND_ASSERT(Z_TYPE(as_name->val) == IS_STRING);
         smart_str_appends(str, " as ");
-        smart_str_append(str, asname->val.value.str);
+        smart_str_append(str, as_name->val.value.str);
     }
 }
 
@@ -124,16 +124,16 @@ static void ast_generate_use(zend_ast *ast, smart_str *str)
 static void ast_generate_group_use(zend_ast *ast, smart_str *str)
 {
     zend_ast_list *list;
-    zend_ast_zval *nsname;
+    zend_ast_zval *namespace_name;
     cat_bool_t use_comma = cat_false;
 
     ZEND_ASSERT(ast->kind == ZEND_AST_GROUP_USE);
 
     list = (zend_ast_list *) ast->child[1];
-    nsname = (zend_ast_zval *) ast->child[0];
+    namespace_name = (zend_ast_zval *) ast->child[0];
 
-    ZEND_ASSERT(nsname->kind == ZEND_AST_ZVAL);
-    ZEND_ASSERT(Z_TYPE(nsname->val) == IS_STRING);
+    ZEND_ASSERT(namespace_name->kind == ZEND_AST_ZVAL);
+    ZEND_ASSERT(Z_TYPE(namespace_name->val) == IS_STRING);
 
     smart_str_appends(str, "use ");
     if (ast->attr == ZEND_SYMBOL_FUNCTION) {
@@ -141,7 +141,7 @@ static void ast_generate_group_use(zend_ast *ast, smart_str *str)
     } else if (ast->attr == ZEND_SYMBOL_CONST) {
         smart_str_appends(str, "const ");
     }
-    smart_str_append(str, nsname->val.value.str);
+    smart_str_append(str, Z_STR(namespace_name->val));
     smart_str_appends(str, "\\{");
 
     for (int i = 0; i < list->children; i++) {
@@ -155,21 +155,21 @@ static void ast_generate_group_use(zend_ast *ast, smart_str *str)
     smart_str_appends(str, "};");
 }
 
-struct ast_walk_context {
+typedef enum swow_zend_ast_walk_state_e {
+    SWOW_ZEND_AST_WALK_STATE_OK = 0,
+    SWOW_ZEND_AST_WALK_STATE_NOT_PROCESSED,
+    // SWOW_ZEND_AST_WALK_STATE_SOURCE_IS_IN_ROOT,
+    SWOW_ZEND_AST_WALK_STATE_NOT_FOUND,
+} swow_zend_ast_walk_state_t;
+
+typedef struct swow_zend_ast_walk_context_s {
     smart_str *str;
     const char *required_namespace;
-    size_t required_namespace_len;
-    int namespace_state;
-};
+    size_t required_namespace_length;
+    swow_zend_ast_walk_state_t state;
+} swow_zend_ast_walk_context_t;
 
-typedef enum {
-    AST_NS_OK = 0,
-    AST_NS_NOT_PROCESSED,
-    //AST_NS_SOURCE_IS_IN_ROOT,
-    AST_NS_NOT_FOUND,
-} AST_CALLBACK_STATE;
-
-static int ast_callback(zend_ast *ast, struct ast_walk_context *ctx)
+static int ast_callback(zend_ast *ast, swow_zend_ast_walk_context_t *context)
 {
     ZEND_ASSERT(ast->kind == ZEND_AST_STMT_LIST);
     zend_ast **child;
@@ -183,28 +183,28 @@ static int ast_callback(zend_ast *ast, struct ast_walk_context *ctx)
         }
         switch (stmt->kind) {
             case ZEND_AST_NAMESPACE: {
-                zend_ast_zval *nsname = (zend_ast_zval *) stmt->child[0];
+                zend_ast_zval *namespace_name = (zend_ast_zval *) stmt->child[0];
                 zend_ast_list *stmts = (zend_ast_list *) stmt->child[1];
                 zend_string *namespace = NULL;
 
                 if (!stmts) {
                     // single namespace <T_STRING>; statement
                     // see Zend/zend_language_parser.y near L369 top_statement syntax
-                    ZEND_ASSERT(nsname);
-                    ZEND_ASSERT(nsname->kind == ZEND_AST_ZVAL);
-                    ZEND_ASSERT(Z_TYPE(nsname->val) == IS_STRING);
-                    namespace = Z_STR(nsname->val);
+                    ZEND_ASSERT(namespace_name);
+                    ZEND_ASSERT(namespace_name->kind == ZEND_AST_ZVAL);
+                    ZEND_ASSERT(Z_TYPE(namespace_name->val) == IS_STRING);
+                    namespace = Z_STR(namespace_name->val);
 
-                    if (ZSTR_LEN(namespace) != ctx->required_namespace_len ||
-                        strncasecmp(ZSTR_VAL(namespace), ctx->required_namespace, ZSTR_LEN(namespace))) {
+                    if (ZSTR_LEN(namespace) != context->required_namespace_length ||
+                        strncasecmp(ZSTR_VAL(namespace), context->required_namespace, ZSTR_LEN(namespace))) {
                         CAT_LOG_DEBUG_WITH_LEVEL(PHP, 10, "Function is namespaced, but target file contains another namespace");
-                        ctx->namespace_state = AST_NS_NOT_FOUND;
+                        context->state = SWOW_ZEND_AST_WALK_STATE_NOT_FOUND;
                         return -1;
                     }
-                    smart_str_appends(ctx->str, "namespace ");
-                    smart_str_appendl(ctx->str, ZSTR_VAL(namespace), ZSTR_LEN(namespace));
-                    smart_str_appendc(ctx->str, ';');
-                    ctx->namespace_state = AST_NS_OK;
+                    smart_str_appends(context->str, "namespace ");
+                    smart_str_appendl(context->str, ZSTR_VAL(namespace), ZSTR_LEN(namespace));
+                    smart_str_appendc(context->str, ';');
+                    context->state = SWOW_ZEND_AST_WALK_STATE_OK;
                     // continue to find next top statement
                     break;
                 }
@@ -213,52 +213,52 @@ static int ast_callback(zend_ast *ast, struct ast_walk_context *ctx)
                 // see Zend/zend_language_parser.y near L369 top_statement syntax
 
                 ZEND_ASSERT(stmts->kind == ZEND_AST_STMT_LIST);
-                if (!nsname) {
+                if (!namespace_name) {
                     // at root namespace
-                    if (ctx->required_namespace_len != 0) {
+                    if (context->required_namespace_length != 0) {
                         // not the required namespace, continue to find next top statement
                         continue;
                     }
                 } else {
-                    ZEND_ASSERT(nsname->kind == ZEND_AST_ZVAL);
-                    ZEND_ASSERT(Z_TYPE(nsname->val) == IS_STRING);
-                    namespace = Z_STR(nsname->val);
+                    ZEND_ASSERT(namespace_name->kind == ZEND_AST_ZVAL);
+                    ZEND_ASSERT(Z_TYPE(namespace_name->val) == IS_STRING);
+                    namespace = Z_STR(namespace_name->val);
 
-                    if (ZSTR_LEN(namespace) != ctx->required_namespace_len ||
-                        strncasecmp(ZSTR_VAL(namespace), ctx->required_namespace, ZSTR_LEN(namespace))) {
+                    if (ZSTR_LEN(namespace) != context->required_namespace_length ||
+                        strncasecmp(ZSTR_VAL(namespace), context->required_namespace, ZSTR_LEN(namespace))) {
                         // not the required namespace, continue to find next top statement
                         continue;
                     }
-                    smart_str_appends(ctx->str, "namespace ");
-                    smart_str_appendl(ctx->str, ZSTR_VAL(namespace), ZSTR_LEN(namespace));
-                    smart_str_appendc(ctx->str, ';');
+                    smart_str_appends(context->str, "namespace ");
+                    smart_str_appendl(context->str, ZSTR_VAL(namespace), ZSTR_LEN(namespace));
+                    smart_str_appendc(context->str, ';');
                 }
-                ctx->namespace_state = AST_NS_OK;
+                context->state = SWOW_ZEND_AST_WALK_STATE_OK;
 
                 zend_ast **namespaced_child;
                 int namespaced_children = swow_zend_ast_children((zend_ast *) stmts, &namespaced_child);
 
                 for (int j = 0; j < namespaced_children; j++) {
-                    zend_ast *s = namespaced_child[j];
-                    if (!s) {
+                    zend_ast *ast = namespaced_child[j];
+                    if (!ast) {
                         continue;
                     }
-                    switch (s->kind) {
+                    switch (ast->kind) {
                         case ZEND_AST_USE:
-                            ast_generate_use(s, ctx->str);
+                            ast_generate_use(ast, context->str);
                             break;
                         case ZEND_AST_GROUP_USE:
-                            ast_generate_group_use(s, ctx->str);
+                            ast_generate_group_use(ast, context->str);
                             break;
                     }
                 }
                 break;
             }
             case ZEND_AST_USE:
-                ast_generate_use(stmt, ctx->str);
+                ast_generate_use(stmt, context->str);
                 break;
             case ZEND_AST_GROUP_USE:
-                ast_generate_group_use(stmt, ctx->str);
+                ast_generate_group_use(stmt, context->str);
                 break;
         }
     }
@@ -327,32 +327,30 @@ SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_user_anonymous_function(zend_f
     smart_str buffer = {0};
     CAT_LOG_DEBUG_WITH_LEVEL(PHP, 10, "Closure function name = [%zu] '%.*s'\n",
         ZSTR_LEN(function->op_array.function_name), (int) ZSTR_LEN(function->op_array.function_name), ZSTR_VAL(function->op_array.function_name));
-    struct ast_walk_context ctx = {
+    swow_zend_ast_walk_context_t context = {
         .str = &buffer,
         .required_namespace = ZSTR_VAL(function->op_array.function_name),
-        .namespace_state = AST_NS_NOT_PROCESSED,
+        .state = SWOW_ZEND_AST_WALK_STATE_NOT_PROCESSED,
     };
     if (ZSTR_LEN(function->op_array.function_name) > 10) {
-        ctx.required_namespace_len = ZSTR_LEN(function->op_array.function_name) - 10;
+        context.required_namespace_length = ZSTR_LEN(function->op_array.function_name) - 10;
     } else {
-        ctx.required_namespace_len = 0;
+        context.required_namespace_length = 0;
     }
 
-    php_token_list_t *token_list = php_tokenize(contents, (int (*)(zend_ast *, void *)) ast_callback, &ctx);
+    php_token_list_t *token_list = php_tokenize(contents, (int (*)(zend_ast *, void *)) ast_callback, &context);
 
-    switch (ctx.namespace_state) {
-        case AST_NS_NOT_PROCESSED:
-            if (ctx.required_namespace_len == 0) {
+    switch (context.state) {
+        case SWOW_ZEND_AST_WALK_STATE_NOT_PROCESSED:
+            if (context.required_namespace_length == 0) {
                 break;
             }
             ZEND_FALLTHROUGH;
-        case AST_NS_NOT_FOUND:
-            zend_throw_error(NULL,
-                "Closure is in namespace \"%.*s\", but its source file do not have this namespace",
-                (int) ctx.required_namespace_len,
-                ctx.required_namespace);
+        case SWOW_ZEND_AST_WALK_STATE_NOT_FOUND:
+            zend_throw_error(NULL, "Closure is in namespace \"%.*s\", but its source file do not have this namespace",
+                (int) context.required_namespace_length, context.required_namespace);
             goto _token_parse_error;
-        case AST_NS_OK:
+        case SWOW_ZEND_AST_WALK_STATE_OK:
             break;
         default:
             CAT_NEVER_HERE("strange ast parsing state");
