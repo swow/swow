@@ -151,16 +151,16 @@ SWOW_API php_token_list_t *php_tokenize(zend_string *source, int (*ast_callback)
     return context.token_list;
 }
 
-SWOW_API int swow_ast_children(zend_ast *node, zend_ast ***child)
+SWOW_API uint32_t swow_ast_children(zend_ast *node, zend_ast ***child)
 {
-    int children;
+    uint32_t children;
 
     // get all children
     if (node->kind & (1 << ZEND_AST_IS_LIST_SHIFT)) {
         // is list
         children = ((zend_ast_list *) node)->children;
         *child = (zend_ast **) (((zend_ast_list *) node)->child);
-        CAT_LOG_DEBUG_WITH_LEVEL(PHP, 10, "Children list size %d", children);
+        CAT_LOG_DEBUG_WITH_LEVEL(PHP, 10, "Children list size %u", children);
     } else if (node->kind & (1 << ZEND_AST_SPECIAL_SHIFT)) {
         // is special
         ZEND_ASSERT(node->kind != ZEND_AST_ZNODE);

@@ -110,7 +110,7 @@ static void swow_ast_generate_use(zend_ast *ast, smart_str *str)
         smart_str_appends(str, "const ");
     }
 
-    for (int i = 0; i < list->children; i++) {
+    for (uint32_t i = 0; i < list->children; i++) {
         zend_ast *elem = list->child[i];
         swow_ast_generate_use_elem(elem, str, i != 0);
     }
@@ -139,7 +139,7 @@ static void swow_ast_generate_group_use(zend_ast *ast, smart_str *str)
     smart_str_append(str, Z_STR(namespace_name->val));
     smart_str_appends(str, "\\{");
 
-    for (int i = 0; i < list->children; i++) {
+    for (uint32_t i = 0; i < list->children; i++) {
         zend_ast *elem = list->child[i];
         swow_ast_generate_use_elem(elem, str, i != 0);
     }
@@ -165,10 +165,10 @@ static int ast_callback(zend_ast *ast, swow_ast_walk_context_t *context)
 {
     ZEND_ASSERT(ast->kind == ZEND_AST_STMT_LIST);
     zend_ast **child;
-    int children = swow_ast_children(ast, &child);
+    uint32_t children = swow_ast_children(ast, &child);
     ZEND_ASSERT(children >= 0);
 
-    for (int i = 0; i < children; i++) {
+    for (uint32_t i = 0; i < children; i++) {
         zend_ast *stmt = child[i];
         if (!stmt) {
             continue;
@@ -228,9 +228,9 @@ static int ast_callback(zend_ast *ast, swow_ast_walk_context_t *context)
                 context->state = SWOW_ZEND_AST_WALK_STATE_OK;
 
                 zend_ast **namespaced_child;
-                int namespaced_children = swow_ast_children((zend_ast *) stmts, &namespaced_child);
+                uint32_t namespaced_children = swow_ast_children((zend_ast *) stmts, &namespaced_child);
 
-                for (int j = 0; j < namespaced_children; j++) {
+                for (uint32_t j = 0; j < namespaced_children; j++) {
                     zend_ast *ast = namespaced_child[j];
                     if (!ast) {
                         continue;
