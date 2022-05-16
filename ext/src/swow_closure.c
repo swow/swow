@@ -552,9 +552,7 @@ SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_user_anonymous_function(zend_f
                 (int) ZSTR_LEN(buffer.s), ZSTR_VAL(buffer.s));
         }
     }
-    if (buffer.s) {
-        zend_string_release_ex(buffer.s, false);
-    }
+    smart_str_free_ex(&buffer, false);
     php_token_list_free(token_list);
     zend_string_release_ex(contents, false);
     _serialize_use_error:
