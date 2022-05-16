@@ -536,12 +536,10 @@ zend_result swow_module_init(INIT_FUNC_ARGS)
     );
 #define SWOW_MODULE_TYPE_GEN(name, value) \
     zend_declare_class_constant_long(swow_module_ce, ZEND_STRL("TYPE_" #name), (value));
-    CAT_MODULE_TYPE_MAP(SWOW_MODULE_TYPE_GEN)
+    CAT_MODULE_BUILTIN_TYPE_MAP(SWOW_MODULE_TYPE_GEN)
 #undef SWOW_MODULE_TYPE_GEN
-#define SWOW_MODULE_UNION_TYPE_GEN(name, value) \
-    zend_declare_class_constant_long(swow_module_ce, ZEND_STRL("TYPES_" #name), (value));
-    CAT_MODULE_UNION_TYPE_MAP(SWOW_MODULE_UNION_TYPE_GEN)
-#undef SWOW_MODULE_UNION_TYPE_GEN
+    // TODO: extension usr types
+    zend_declare_class_constant_long(swow_module_ce, ZEND_STRL("TYPES_ALL"), CAT_MODULE_TYPES_ALL);
 
     return SUCCESS;
 }
