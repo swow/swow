@@ -176,23 +176,29 @@ PHP_ARG_ENABLE([swow-curl],
 
 if test "${PHP_SWOW}" != "no"; then
   dnl check if this php version we support
-  AC_MSG_CHECKING([Check for supported PHP versions])
-  if test -z "$PHP_VERSION"; then
-    if test -z "$PHP_CONFIG"; then
-      AC_MSG_ERROR([php-config not found])
+  AC_MSG_CHECKING([Check for supported PHP version number])
+  if test -n "$PHP_VERSION"; then
+    SWOW_PHP_VERSION="$PHP_VERSION"
+  else
+    if test -n "$PHP_CONFIG"; then
+      SWOW_PHP_VERSION=`$PHP_CONFIG --version`
+    else
+      SWOW_PHP_VERSION=""
     fi
-    PHP_VERSION=`$PHP_CONFIG --version`
   fi
 
-  if test -z "$PHP_VERSION"; then
+  if test -n "$PHP_VERSION_ID"; then
+    SWOW_PHP_VERSION_ID="$PHP_VERSION_ID"
+  elif test -n "$SWOW_PHP_VERSION"; then
+    SWOW_PHP_VERSION_ID=`echo "${SWOW_PHP_VERSION}" | $AWK 'BEGIN { FS = "."; } { printf "%d", ([$]1 * 100 + [$]2) * 100 + [$]3;}'`
+  else
     AC_MSG_ERROR([failed to detect PHP version, please report])
   fi
-  PHP_VERSION_ID=`echo "${PHP_VERSION}" | $AWK 'BEGIN { FS = "."; } { printf "%d", ([$]1 * 100 + [$]2) * 100 + [$]3;}'`
 
-  if test "${PHP_VERSION_ID}" -lt "80000" || test "${PHP_VERSION_ID}" -gt "80200"; then
-    AC_MSG_ERROR([not supported. Need a PHP version >= 8.0.0 and <= 8.2.0 (found $PHP_VERSION)])
+  if test "${SWOW_PHP_VERSION_ID}" -lt "80000" || test "${SWOW_PHP_VERSION_ID}" -gt "80200"; then
+    AC_MSG_ERROR([not supported. Need a PHP version >= 8.0.0 and <= 8.2.0 (found $SWOW_PHP_VERSION_ID)])
   else
-    AC_MSG_RESULT([supported ($PHP_VERSION)])
+    AC_MSG_RESULT([supported ($SWOW_PHP_VERSION_ID)])
   fi
 
   AC_DEFINE([HAVE_SWOW], 1, [Have Swow])
