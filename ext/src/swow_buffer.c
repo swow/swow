@@ -862,7 +862,7 @@ static PHP_METHOD(Swow_Buffer, __debugInfo)
             chunk = cat_sprintf("%.*s...", maxlen, buffer->value);
         }
         if (chunk != NULL) {
-            add_assoc_string(&zdebug_info, "value", chunk);
+            add_assoc_stringl(&zdebug_info, "value", chunk, maxlen);
             cat_free(chunk);
         } else {
             zend_string *string = swow_buffer_fetch_string(sbuffer);
