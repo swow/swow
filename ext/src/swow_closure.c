@@ -69,7 +69,7 @@ static void swow_closure_construct_from_another_closure(swow_closure_t *this_clo
     ZEND_ASSERT(swow_closure_get_from_object(Z_OBJ(result)) == this_closure);
 }
 
-static void swow_ast_generate_use_elem(zend_ast *ast, smart_str *str, cat_bool_t use_comma)
+static void swow_ast_generate_use_elem(zend_ast *ast, smart_str *str, bool use_comma)
 {
     zend_ast_zval *name, *as_name;
 
@@ -98,7 +98,7 @@ static void swow_ast_generate_use_elem(zend_ast *ast, smart_str *str, cat_bool_t
 static void swow_ast_generate_use(zend_ast *ast, smart_str *str)
 {
     zend_ast_list *list;
-    cat_bool_t use_comma = cat_false;
+    bool use_comma = false;
 
     ZEND_ASSERT(ast->kind == ZEND_AST_USE);
     list = (zend_ast_list *) ast;
@@ -115,7 +115,7 @@ static void swow_ast_generate_use(zend_ast *ast, smart_str *str)
         zend_ast *elem = list->child[i];
         swow_ast_generate_use_elem(elem, str, use_comma);
         if (!use_comma) {
-            use_comma = cat_true;
+            use_comma = true;
         }
     }
     smart_str_appendc(str, ';');
@@ -125,7 +125,7 @@ static void swow_ast_generate_group_use(zend_ast *ast, smart_str *str)
 {
     zend_ast_list *list;
     zend_ast_zval *namespace_name;
-    cat_bool_t use_comma = cat_false;
+    bool use_comma = false;
 
     ZEND_ASSERT(ast->kind == ZEND_AST_GROUP_USE);
 
@@ -148,7 +148,7 @@ static void swow_ast_generate_group_use(zend_ast *ast, smart_str *str)
         zend_ast *elem = list->child[i];
         swow_ast_generate_use_elem(elem, str, use_comma);
         if (!use_comma) {
-            use_comma = cat_true;
+            use_comma = true;
         }
     }
 
