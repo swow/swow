@@ -345,7 +345,7 @@ SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_user_anonymous_function(zend_f
             if (ctx.required_namespace_len == 0) {
                 break;
             }
-            CAT_FALLTHROUGH;
+            ZEND_FALLTHROUGH;
         case AST_NS_NOT_FOUND:
             zend_throw_error(NULL,
                 "Closure is in namespace \"%.*s\", but its source file do not have this namespace",
