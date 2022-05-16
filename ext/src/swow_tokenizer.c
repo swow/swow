@@ -160,7 +160,7 @@ SWOW_API int swow_zend_ast_children(zend_ast *node, zend_ast ***child)
         // is list
         children = ((zend_ast_list *) node)->children;
         *child = (zend_ast **) (((zend_ast_list *) node)->child);
-        // printf("list size %d\n", children);
+        CAT_LOG_DEBUG_WITH_LEVEL(PHP, 10, "Children list size %d", children);
     } else if (node->kind & (1 << ZEND_AST_SPECIAL_SHIFT)) {
         // is special
         ZEND_ASSERT(node->kind != ZEND_AST_ZNODE);

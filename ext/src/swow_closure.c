@@ -197,7 +197,7 @@ static int ast_callback(zend_ast *ast, struct ast_walk_context *ctx)
 
                     if (ZSTR_LEN(namespace) != ctx->required_namespace_len ||
                         strncasecmp(ZSTR_VAL(namespace), ctx->required_namespace, ZSTR_LEN(namespace))) {
-                        // printf("function is namespaced, but target file contains another namespace.\n");
+                        CAT_LOG_DEBUG_WITH_LEVEL(PHP, 10, "Function is namespaced, but target file contains another namespace");
                         ctx->namespace_state = AST_NS_NOT_FOUND;
                         return -1;
                     }
@@ -325,7 +325,8 @@ SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_user_anonymous_function(zend_f
     }
 
     smart_str buffer = {0};
-    //printf("[%d]%.*s\n",ZSTR_LEN(function->op_array.function_name),ZSTR_LEN(function->op_array.function_name),ZSTR_VAL(function->op_array.function_name));
+    CAT_LOG_DEBUG_WITH_LEVEL(PHP, 10, "Closure function name = [%zu] '%.*s'\n",
+        ZSTR_LEN(function->op_array.function_name), (int) ZSTR_LEN(function->op_array.function_name), ZSTR_VAL(function->op_array.function_name));
     struct ast_walk_context ctx = {
         .str = &buffer,
         .required_namespace = ZSTR_VAL(function->op_array.function_name),
