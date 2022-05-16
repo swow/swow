@@ -151,7 +151,7 @@ SWOW_API php_token_list_t *php_tokenize(zend_string *source, int (*ast_callback)
     return context.token_list;
 }
 
-SWOW_API int swow_zend_ast_children(zend_ast *node, zend_ast ***child)
+SWOW_API int swow_ast_children(zend_ast *node, zend_ast ***child)
 {
     int children;
 
