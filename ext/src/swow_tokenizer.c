@@ -163,7 +163,7 @@ SWOW_API int swow_zend_ast_children(zend_ast *node, zend_ast ***child)
         // printf("list size %d\n", children);
     } else if (node->kind & (1 << ZEND_AST_SPECIAL_SHIFT)) {
         // is special
-        CAT_ASSERT(node->kind != ZEND_AST_ZNODE);
+        ZEND_ASSERT(node->kind != ZEND_AST_ZNODE);
         switch (node->kind) {
             case ZEND_AST_ZVAL:
             case ZEND_AST_CONSTANT:

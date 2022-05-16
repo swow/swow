@@ -73,11 +73,11 @@ static void ast_generate_use_elem(zend_ast *ast, smart_str *str, cat_bool_t use_
 {
     zend_ast_zval *name, *asname;
 
-    CAT_ASSERT(ast->kind == ZEND_AST_USE_ELEM);
+    ZEND_ASSERT(ast->kind == ZEND_AST_USE_ELEM);
     name = (zend_ast_zval *) ast->child[0];
     asname = (zend_ast_zval *) ast->child[1];
-    CAT_ASSERT(name->kind == ZEND_AST_ZVAL);
-    CAT_ASSERT(Z_TYPE(name->val) == IS_STRING);
+    ZEND_ASSERT(name->kind == ZEND_AST_ZVAL);
+    ZEND_ASSERT(Z_TYPE(name->val) == IS_STRING);
     if (use_comma) {
         smart_str_appendc(str, ',');
     }
@@ -88,8 +88,8 @@ static void ast_generate_use_elem(zend_ast *ast, smart_str *str, cat_bool_t use_
     }
     smart_str_append(str, name->val.value.str);
     if (asname) {
-        CAT_ASSERT(asname->kind == ZEND_AST_ZVAL);
-        CAT_ASSERT(Z_TYPE(asname->val) == IS_STRING);
+        ZEND_ASSERT(asname->kind == ZEND_AST_ZVAL);
+        ZEND_ASSERT(Z_TYPE(asname->val) == IS_STRING);
         smart_str_appends(str, " as ");
         smart_str_append(str, asname->val.value.str);
     }
@@ -100,7 +100,7 @@ static void ast_generate_use(zend_ast *ast, smart_str *str)
     zend_ast_list *list;
     cat_bool_t use_comma = cat_false;
 
-    CAT_ASSERT(ast->kind == ZEND_AST_USE);
+    ZEND_ASSERT(ast->kind == ZEND_AST_USE);
     list = (zend_ast_list *) ast;
 
     // note: zend_ast_export_ex case ZEND_AST_USE is wrong, see Zend/zend_language_parser.y near L412 use_type:
@@ -127,13 +127,13 @@ static void ast_generate_group_use(zend_ast *ast, smart_str *str)
     zend_ast_zval *nsname;
     cat_bool_t use_comma = cat_false;
 
-    CAT_ASSERT(ast->kind == ZEND_AST_GROUP_USE);
+    ZEND_ASSERT(ast->kind == ZEND_AST_GROUP_USE);
 
     list = (zend_ast_list *) ast->child[1];
     nsname = (zend_ast_zval *) ast->child[0];
 
-    CAT_ASSERT(nsname->kind == ZEND_AST_ZVAL);
-    CAT_ASSERT(Z_TYPE(nsname->val) == IS_STRING);
+    ZEND_ASSERT(nsname->kind == ZEND_AST_ZVAL);
+    ZEND_ASSERT(Z_TYPE(nsname->val) == IS_STRING);
 
     smart_str_appends(str, "use ");
     if (ast->attr == ZEND_SYMBOL_FUNCTION) {
@@ -171,10 +171,10 @@ typedef enum {
 
 static int ast_callback(zend_ast *ast, struct ast_walk_context *ctx)
 {
-    CAT_ASSERT(ast->kind == ZEND_AST_STMT_LIST);
+    ZEND_ASSERT(ast->kind == ZEND_AST_STMT_LIST);
     zend_ast **child;
     int children = swow_zend_ast_children(ast, &child);
-    CAT_ASSERT(children >= 0);
+    ZEND_ASSERT(children >= 0);
 
     for (int i = 0; i < children; i++) {
         zend_ast *stmt = child[i];
@@ -190,9 +190,9 @@ static int ast_callback(zend_ast *ast, struct ast_walk_context *ctx)
                 if (!stmts) {
                     // single namespace <T_STRING>; statement
                     // see Zend/zend_language_parser.y near L369 top_statement syntax
-                    CAT_ASSERT(nsname);
-                    CAT_ASSERT(nsname->kind == ZEND_AST_ZVAL);
-                    CAT_ASSERT(Z_TYPE(nsname->val) == IS_STRING);
+                    ZEND_ASSERT(nsname);
+                    ZEND_ASSERT(nsname->kind == ZEND_AST_ZVAL);
+                    ZEND_ASSERT(Z_TYPE(nsname->val) == IS_STRING);
                     namespace = Z_STR(nsname->val);
 
                     if (ZSTR_LEN(namespace) != ctx->required_namespace_len ||
@@ -212,7 +212,7 @@ static int ast_callback(zend_ast *ast, struct ast_walk_context *ctx)
                 // namespace <T_STRING> { STMT_LIST }; statement
                 // see Zend/zend_language_parser.y near L369 top_statement syntax
 
-                CAT_ASSERT(stmts->kind == ZEND_AST_STMT_LIST);
+                ZEND_ASSERT(stmts->kind == ZEND_AST_STMT_LIST);
                 if (!nsname) {
                     // at root namespace
                     if (ctx->required_namespace_len != 0) {
@@ -220,8 +220,8 @@ static int ast_callback(zend_ast *ast, struct ast_walk_context *ctx)
                         continue;
                     }
                 } else {
-                    CAT_ASSERT(nsname->kind == ZEND_AST_ZVAL);
-                    CAT_ASSERT(Z_TYPE(nsname->val) == IS_STRING);
+                    ZEND_ASSERT(nsname->kind == ZEND_AST_ZVAL);
+                    ZEND_ASSERT(Z_TYPE(nsname->val) == IS_STRING);
                     namespace = Z_STR(nsname->val);
 
                     if (ZSTR_LEN(namespace) != ctx->required_namespace_len ||
