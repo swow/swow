@@ -202,7 +202,7 @@ static int ast_callback(zend_ast *ast, swow_zend_ast_walk_context_t *context)
                         return -1;
                     }
                     smart_str_appends(context->str, "namespace ");
-                    smart_str_appendl(context->str, ZSTR_VAL(namespace), ZSTR_LEN(namespace));
+                    smart_str_append(context->str, namespace);
                     smart_str_appendc(context->str, ';');
                     context->state = SWOW_ZEND_AST_WALK_STATE_OK;
                     // continue to find next top statement
@@ -230,7 +230,7 @@ static int ast_callback(zend_ast *ast, swow_zend_ast_walk_context_t *context)
                         continue;
                     }
                     smart_str_appends(context->str, "namespace ");
-                    smart_str_appendl(context->str, ZSTR_VAL(namespace), ZSTR_LEN(namespace));
+                    smart_str_append(context->str, namespace);
                     smart_str_appendc(context->str, ';');
                 }
                 context->state = SWOW_ZEND_AST_WALK_STATE_OK;
