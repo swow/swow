@@ -360,8 +360,6 @@ SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_user_anonymous_function(zend_f
     enum parser_state_e {
         CLOSURE_PARSER_STATE_FIND_OPEN_TAG,
         CLOSURE_PARSER_STATE_PARSING,
-        //CLOSURE_PARSER_STATE_NAMESPACE,
-        //CLOSURE_PARSER_STATE_USE,
         CLOSURE_PARSER_STATE_FUNCTION_START,
         CLOSURE_PARSER_STATE_FUNCTION_FIND_CLOSE_BRACE,
         CLOSURE_PARSER_STATE_FN_FIND_SEMICOLON,
@@ -401,13 +399,6 @@ SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_user_anonymous_function(zend_f
             continue;
         }
         switch (parser_state) {
-            // case CLOSURE_PARSER_STATE_NAMESPACE:
-            // case CLOSURE_PARSER_STATE_USE: {
-            //     if (token->type == ';') {
-            //         parser_state = CLOSURE_PARSER_STATE_PARSING;
-            //     }
-            //     goto _capture;
-            // }
             case CLOSURE_PARSER_STATE_FUNCTION_START: {
                 if (token->type == '{') {
                     ZEND_ASSERT(brace_level == 0);
@@ -437,14 +428,6 @@ SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_user_anonymous_function(zend_f
                 break;
         }
         switch (token->type) {
-            // case T_NAMESPACE: {
-            //     parser_state = CLOSURE_PARSER_STATE_NAMESPACE;
-            //     goto _capture;
-            // }
-            // case T_USE: {
-            //     parser_state = CLOSURE_PARSER_STATE_USE;
-            //     goto _capture;
-            // }
             case T_FUNCTION:
             case T_FN: {
                 if (token->line != line_start) {
@@ -536,7 +519,6 @@ SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_user_anonymous_function(zend_f
         zend_throw_error(NULL, "Failure to parse tokens");
         goto _token_parse_error;
     }
-
 
     ht = zend_new_array(3);
     ZVAL_STR_COPY(&z_tmp, filename);
