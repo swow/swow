@@ -98,7 +98,6 @@ static void swow_ast_generate_use_elem(zend_ast *ast, smart_str *str, bool use_c
 static void swow_ast_generate_use(zend_ast *ast, smart_str *str)
 {
     zend_ast_list *list;
-    bool use_comma = false;
 
     ZEND_ASSERT(ast->kind == ZEND_AST_USE);
     list = (zend_ast_list *) ast;
@@ -113,10 +112,7 @@ static void swow_ast_generate_use(zend_ast *ast, smart_str *str)
 
     for (int i = 0; i < list->children; i++) {
         zend_ast *elem = list->child[i];
-        swow_ast_generate_use_elem(elem, str, use_comma);
-        if (!use_comma) {
-            use_comma = true;
-        }
+        swow_ast_generate_use_elem(elem, str, i != 0);
     }
     smart_str_appendc(str, ';');
 }
@@ -125,7 +121,6 @@ static void swow_ast_generate_group_use(zend_ast *ast, smart_str *str)
 {
     zend_ast_list *list;
     zend_ast_zval *namespace_name;
-    bool use_comma = false;
 
     ZEND_ASSERT(ast->kind == ZEND_AST_GROUP_USE);
 
@@ -146,10 +141,7 @@ static void swow_ast_generate_group_use(zend_ast *ast, smart_str *str)
 
     for (int i = 0; i < list->children; i++) {
         zend_ast *elem = list->child[i];
-        swow_ast_generate_use_elem(elem, str, use_comma);
-        if (!use_comma) {
-            use_comma = true;
-        }
+        swow_ast_generate_use_elem(elem, str, i != 0);
     }
 
     smart_str_appends(str, "};");
