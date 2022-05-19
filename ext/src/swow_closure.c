@@ -161,8 +161,9 @@ typedef struct swow_ast_walk_context_s {
     swow_ast_walk_state_t state;
 } swow_ast_walk_context_t;
 
-static int ast_callback(zend_ast *ast, swow_ast_walk_context_t *context)
+static void swow_closure_ast_callback(zend_ast *ast, void *context_ptr)
 {
+    swow_ast_walk_context_t *context = (swow_ast_walk_context_t *) context_ptr;
     ZEND_ASSERT(ast->kind == ZEND_AST_STMT_LIST);
     zend_ast **child;
     uint32_t children = swow_ast_children(ast, &child);
@@ -191,7 +192,7 @@ static int ast_callback(zend_ast *ast, swow_ast_walk_context_t *context)
                         strncasecmp(ZSTR_VAL(namespace), context->required_namespace, ZSTR_LEN(namespace))) {
                         CAT_LOG_DEBUG_WITH_LEVEL(PHP, 10, "Function is namespaced, but target file contains another namespace");
                         context->state = SWOW_ZEND_AST_WALK_STATE_NOT_FOUND;
-                        return -1;
+                        return;
                     }
                     smart_str_appends(context->str, "namespace ");
                     smart_str_append(context->str, namespace);
@@ -254,7 +255,7 @@ static int ast_callback(zend_ast *ast, swow_ast_walk_context_t *context)
                 break;
         }
     }
-    return 0;
+    return;
 }
 
 SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_user_anonymous_function(zend_function *function)
@@ -330,7 +331,7 @@ SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_user_anonymous_function(zend_f
         context.required_namespace_length = 0;
     }
 
-    php_token_list_t *token_list = php_tokenize(contents, (int (*)(zend_ast *, void *)) ast_callback, &context);
+    php_token_list_t *token_list = php_tokenize(contents, swow_closure_ast_callback, &context);
 
     switch (context.state) {
         case SWOW_ZEND_AST_WALK_STATE_NOT_PROCESSED:

@@ -44,7 +44,9 @@ typedef struct php_token_list_s {
     zend_string *source;
 } php_token_list_t;
 
-SWOW_API php_token_list_t *php_tokenize(zend_string *source, int (*ast_callback)(zend_ast *, void *), void *ast_callback_context);
+typedef void (*swow_closure_ast_callback_t)(zend_ast *ast, void *context);
+
+SWOW_API php_token_list_t *php_tokenize(zend_string *source, swow_closure_ast_callback_t ast_callback, void *ast_callback_context);
 
 SWOW_API php_token_list_t *php_token_list_alloc(void);
 SWOW_API void php_token_list_add(php_token_list_t *token_list, int token_type, const char *text, size_t text_length, int line);

@@ -102,7 +102,7 @@ void tokenizer_on_language_scanner_event(
     }
 }
 
-SWOW_API php_token_list_t *php_tokenize(zend_string *source, int (*ast_callback)(zend_ast *, void *), void *ast_callback_context)
+SWOW_API php_token_list_t *php_tokenize(zend_string *source, swow_closure_ast_callback_t ast_callback, void *ast_callback_context)
 {
     zval source_zval;
     tokenizer_event_context_t context;
