@@ -11,7 +11,7 @@ require __DIR__ . '/use.inc';
 
 [$file, $line] = $anonymous();
 $anonymousString = serialize($anonymous);
-//var_dump($anonymousString);
+phpt_var_dump($anonymousString);
 $anonymousUnserialized = unserialize($anonymousString);
 [$fileUnserialized, $lineUnserialized] = $anonymousUnserialized();
 Assert::same($fileUnserialized, $file);
@@ -19,7 +19,7 @@ Assert::same($lineUnserialized, $line);
 
 [$file, $line] = $arrow();
 $arrowString = serialize($arrow);
-//var_dump($arrowString);
+phpt_var_dump($arrowString);
 $arrowUnserialized = unserialize($arrowString);
 [$fileUnserialized, $lineUnserialized] = $arrowUnserialized();
 Assert::same($fileUnserialized, $file);
