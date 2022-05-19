@@ -69,7 +69,7 @@ static void swow_closure_construct_from_another_closure(swow_closure_t *this_clo
     ZEND_ASSERT(swow_closure_get_from_object(Z_OBJ(result)) == this_closure);
 }
 
-static void swow_ast_generate_use_elem(zend_ast *ast, smart_str *str, bool use_comma)
+static void swow_ast_generate_use_elem(zend_ast *ast, smart_str *str, bool append_comma_space)
 {
     zend_ast_zval *name, *as_name;
 
@@ -78,8 +78,8 @@ static void swow_ast_generate_use_elem(zend_ast *ast, smart_str *str, bool use_c
     as_name = (zend_ast_zval *) ast->child[1];
     ZEND_ASSERT(name->kind == ZEND_AST_ZVAL);
     ZEND_ASSERT(Z_TYPE(name->val) == IS_STRING);
-    if (use_comma) {
-        smart_str_appendc(str, ',');
+    if (append_comma_space) {
+        smart_str_appends(str, ", ");
     }
     if (ast->attr == ZEND_SYMBOL_FUNCTION) {
         smart_str_appends(str, "function ");
@@ -147,6 +147,23 @@ static void swow_ast_generate_group_use(zend_ast *ast, smart_str *str)
     smart_str_appends(str, "};");
 }
 
+static void swow_ast_generate_kinds_of_use(zend_ast *ast, smart_str *str, bool append_space)
+{
+    if (append_space) {
+        smart_str_appendc(str, ' ');
+    }
+    switch (ast->kind) {
+        case ZEND_AST_USE:
+            swow_ast_generate_use(ast, str);
+            break;
+        case ZEND_AST_GROUP_USE:
+            swow_ast_generate_group_use(ast, str);
+            break;
+        default:
+            ZEND_UNREACHABLE();
+    }
+}
+
 typedef enum swow_ast_walk_state_e {
     SWOW_ZEND_AST_WALK_STATE_OK = 0,
     SWOW_ZEND_AST_WALK_STATE_NOT_PROCESSED,
@@ -163,11 +180,12 @@ typedef struct swow_ast_walk_context_s {
 
 static void swow_closure_ast_callback(zend_ast *ast, void *context_ptr)
 {
-    swow_ast_walk_context_t *context = (swow_ast_walk_context_t *) context_ptr;
     ZEND_ASSERT(ast->kind == ZEND_AST_STMT_LIST);
+    swow_ast_walk_context_t *context = (swow_ast_walk_context_t *) context_ptr;
     zend_ast **child;
     uint32_t children = swow_ast_children(ast, &child);
     ZEND_ASSERT(children >= 0);
+    bool has_use = false;
 
     for (uint32_t i = 0; i < children; i++) {
         zend_ast *stmt = child[i];
@@ -238,20 +256,18 @@ static void swow_closure_ast_callback(zend_ast *ast, void *context_ptr)
                     }
                     switch (ast->kind) {
                         case ZEND_AST_USE:
-                            swow_ast_generate_use(ast, context->str);
-                            break;
                         case ZEND_AST_GROUP_USE:
-                            swow_ast_generate_group_use(ast, context->str);
+                            swow_ast_generate_kinds_of_use(ast, context->str, has_use);
+                            has_use = true;
                             break;
                     }
                 }
                 break;
             }
             case ZEND_AST_USE:
-                swow_ast_generate_use(stmt, context->str);
-                break;
             case ZEND_AST_GROUP_USE:
-                swow_ast_generate_group_use(stmt, context->str);
+                swow_ast_generate_kinds_of_use(stmt, context->str, has_use);
+                has_use = true;
                 break;
         }
     }
