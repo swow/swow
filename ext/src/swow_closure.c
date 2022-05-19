@@ -175,6 +175,7 @@ typedef struct swow_ast_walk_context_s {
     smart_str *str;
     const char *required_namespace;
     size_t required_namespace_length;
+    uint32_t line_end;
     swow_ast_walk_state_t state;
 } swow_ast_walk_context_t;
 
@@ -189,7 +190,7 @@ static void swow_closure_ast_callback(zend_ast *ast, void *context_ptr)
 
     for (uint32_t i = 0; i < children; i++) {
         zend_ast *stmt = child[i];
-        if (!stmt) {
+        if (!stmt || stmt->lineno > context->line_end) {
             continue;
         }
         switch (stmt->kind) {
@@ -251,7 +252,7 @@ static void swow_closure_ast_callback(zend_ast *ast, void *context_ptr)
 
                 for (uint32_t j = 0; j < namespaced_children; j++) {
                     zend_ast *ast = namespaced_child[j];
-                    if (!ast) {
+                    if (!ast || ast->lineno > context->line_end) {
                         continue;
                     }
                     switch (ast->kind) {
@@ -339,6 +340,7 @@ SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_user_anonymous_function(zend_f
     swow_ast_walk_context_t context = {
         .str = &buffer,
         .required_namespace = ZSTR_VAL(function->op_array.function_name),
+        .line_end = line_end,
         .state = SWOW_ZEND_AST_WALK_STATE_NOT_PROCESSED,
     };
     if (ZSTR_LEN(function->op_array.function_name) > 10) {

@@ -80,6 +80,10 @@ class SomeClass2 {
     }
 }
 
+class Taint {
+
+}
+
 $anonymous = function () use ($argv) {
     echo "use.inc: \$a\n";
     new B();
@@ -98,8 +102,11 @@ $anonymous = function () use ($argv) {
     var_dump(RR, SS, TT);
     UU();
     new VV();
+    Assert::throws(fn() => new NotExist(), Error::class);
 
     return [__FILE__, __LINE__];
 };
 
 $arrow = fn () => $anonymous();
+
+use Taint as NotExist;
