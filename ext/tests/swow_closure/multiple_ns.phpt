@@ -7,8 +7,8 @@ require __DIR__ . '/../include/skipif.php';
 --FILE--
 <?php
 require __DIR__ . '/../include/bootstrap.php';
-require_once __DIR__ . '/multiple_ns.inc';
-require_once __DIR__ . '/use.inc.inc';
+require __DIR__ . '/multiple_ns.inc';
+require __DIR__ . '/use.inc.inc';
 
 $anonymous = NamespaceA\getAnonymous();
 

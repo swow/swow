@@ -56,7 +56,7 @@ $code6 = '';
 
 file_put_contents(__DIR__ . '/file_change.inc', $code1);
 
-require_once(__DIR__ . '/file_change.inc');
+require __DIR__ . '/file_change.inc';
 
 $anonymous(); // hello1
 // at first, hello is hello1

@@ -7,7 +7,7 @@ require __DIR__ . '/../include/skipif.php';
 --FILE--
 <?php
 require __DIR__ . '/../include/bootstrap.php';
-require_once __DIR__ . '/use.inc';
+require __DIR__ . '/use.inc';
 
 [$file, $line] = $anonymous();
 $anonymousString = serialize($anonymous);

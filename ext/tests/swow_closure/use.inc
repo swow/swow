@@ -3,7 +3,7 @@
 // all usage of T_USE is here
 // please keep this file format for confusing parser
 
-require_once __DIR__ . '/use.inc.inc';
+require __DIR__ . '/use.inc.inc';
 
 use \A\B;
 use \A\C,\A\D;
