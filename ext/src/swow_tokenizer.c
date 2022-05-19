@@ -61,11 +61,12 @@ static php_token_t *tokenizer_extract_token_to_replace_id(php_token_t *token, co
     return NULL;
 }
 
-void tokenizer_on_language_scanner_event(
-        zend_php_scanner_event event, int token_type, int line,
-        const char *text, size_t length, void *event_context)
+static void swow_tokenizer_on_language_scanner_event(
+    zend_php_scanner_event event, int token_type, int line,
+    const char *text, size_t length, void *context_ptr
+)
 {
-    tokenizer_event_context_t *context = event_context;
+    tokenizer_event_context_t *context = (tokenizer_event_context_t *) context_ptr;
 
     switch (event) {
         case ON_TOKEN:
@@ -126,7 +127,7 @@ SWOW_API php_token_list_t *php_tokenize(zend_string *source, swow_closure_ast_ca
     CG(ast) = NULL;
     CG(ast_arena) = zend_arena_create(32 * 1024);
     LANG_SCNG(yy_state) = yycINITIAL;
-    LANG_SCNG(on_event) = tokenizer_on_language_scanner_event;
+    LANG_SCNG(on_event) = swow_tokenizer_on_language_scanner_event;
     LANG_SCNG(on_event_context) = &context;
 
     if (zendparse() != SUCCESS) {
