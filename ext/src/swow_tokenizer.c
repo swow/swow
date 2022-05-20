@@ -191,7 +191,104 @@ SWOW_API uint32_t swow_ast_children(zend_ast *node, zend_ast ***child)
     return children;
 }
 
-/* data */
+/* AST export */
+
+static void swow_ast_export_use_children(zend_ast *ast, smart_str *str, bool append_comma_space)
+{
+    zend_ast_zval *name, *as_name;
+
+    ZEND_ASSERT(ast->kind == ZEND_AST_USE_ELEM);
+    name = (zend_ast_zval *) ast->child[0];
+    as_name = (zend_ast_zval *) ast->child[1];
+    ZEND_ASSERT(name->kind == ZEND_AST_ZVAL);
+    ZEND_ASSERT(Z_TYPE(name->val) == IS_STRING);
+    if (append_comma_space) {
+        smart_str_appends(str, ", ");
+    }
+    if (ast->attr == ZEND_SYMBOL_FUNCTION) {
+        smart_str_appends(str, "function ");
+    } else if (ast->attr == ZEND_SYMBOL_CONST) {
+        smart_str_appends(str, "const ");
+    }
+    smart_str_append(str, name->val.value.str);
+    if (as_name) {
+        ZEND_ASSERT(as_name->kind == ZEND_AST_ZVAL);
+        ZEND_ASSERT(Z_TYPE(as_name->val) == IS_STRING);
+        smart_str_appends(str, " as ");
+        smart_str_append(str, as_name->val.value.str);
+    }
+}
+
+static void swow_ast_export_use(zend_ast *ast, smart_str *str)
+{
+    zend_ast_list *list;
+
+    ZEND_ASSERT(ast->kind == ZEND_AST_USE);
+    list = (zend_ast_list *) ast;
+
+    // note: zend_ast_export_ex case ZEND_AST_USE is wrong, see Zend/zend_language_parser.y near L412 use_type:
+    smart_str_appends(str, "use ");
+    if (ast->attr == ZEND_SYMBOL_FUNCTION) {
+        smart_str_appends(str, "function ");
+    } else if (ast->attr == ZEND_SYMBOL_CONST) {
+        smart_str_appends(str, "const ");
+    }
+
+    for (uint32_t i = 0; i < list->children; i++) {
+        zend_ast *child = list->child[i];
+        swow_ast_export_use_children(child, str, i != 0);
+    }
+    smart_str_appendc(str, ';');
+}
+
+static void swow_ast_export_group_use(zend_ast *ast, smart_str *str)
+{
+    zend_ast_list *list;
+    zend_ast_zval *namespace_name;
+
+    ZEND_ASSERT(ast->kind == ZEND_AST_GROUP_USE);
+
+    list = (zend_ast_list *) ast->child[1];
+    namespace_name = (zend_ast_zval *) ast->child[0];
+
+    ZEND_ASSERT(namespace_name->kind == ZEND_AST_ZVAL);
+    ZEND_ASSERT(Z_TYPE(namespace_name->val) == IS_STRING);
+
+    smart_str_appends(str, "use ");
+    if (ast->attr == ZEND_SYMBOL_FUNCTION) {
+        smart_str_appends(str, "function ");
+    } else if (ast->attr == ZEND_SYMBOL_CONST) {
+        smart_str_appends(str, "const ");
+    }
+    smart_str_append(str, Z_STR(namespace_name->val));
+    smart_str_appends(str, "\\{");
+
+    for (uint32_t i = 0; i < list->children; i++) {
+        zend_ast *elem = list->child[i];
+        swow_ast_export_use_children(elem, str, i != 0);
+    }
+
+    smart_str_appends(str, "};");
+}
+
+SWOW_API void swow_ast_export_kinds_of_use(zend_ast *ast, smart_str *str, bool append_space)
+{
+    if (append_space) {
+        smart_str_appendc(str, ' ');
+    }
+    switch (ast->kind) {
+        case ZEND_AST_USE:
+            swow_ast_export_use(ast, str);
+            break;
+        case ZEND_AST_GROUP_USE:
+            swow_ast_export_group_use(ast, str);
+            break;
+        default:
+            ZEND_UNREACHABLE();
+    }
+}
+
+/* token data */
 
 SWOW_API const char *php_token_get_name(const php_token_t *token)
 {

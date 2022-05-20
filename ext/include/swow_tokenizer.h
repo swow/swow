@@ -59,6 +59,7 @@ SWOW_API const char *php_token_get_name_from_type(int type);
 /* AST */
 
 SWOW_API uint32_t swow_ast_children(zend_ast *node, zend_ast ***child);
+SWOW_API void swow_ast_export_kinds_of_use(zend_ast *ast, smart_str *str, bool append_space);
 
 #ifdef __cplusplus
 }
