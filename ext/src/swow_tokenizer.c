@@ -1,3 +1,22 @@
+/*
+  +--------------------------------------------------------------------------+
+  | Swow                                                                     |
+  +--------------------------------------------------------------------------+
+  | Licensed under the Apache License, Version 2.0 (the "License");          |
+  | you may not use this file except in compliance with the License.         |
+  | You may obtain a copy of the License at                                  |
+  | http://www.apache.org/licenses/LICENSE-2.0                               |
+  | Unless required by applicable law or agreed to in writing, software      |
+  | distributed under the License is distributed on an "AS IS" BASIS,        |
+  | WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. |
+  | See the License for the specific language governing permissions and      |
+  | limitations under the License. See accompanying LICENSE file.            |
+  +--------------------------------------------------------------------------+
+  | Author: Twosee <twosee@php.net>                                          |
+  |         dixyes <dixyes@gmail.com>                                        |
+  +--------------------------------------------------------------------------+
+ */
+
 #include "swow_tokenizer.h"
 
 #include "zend_language_scanner.h"
@@ -61,11 +80,12 @@ static php_token_t *tokenizer_extract_token_to_replace_id(php_token_t *token, co
     return NULL;
 }
 
-void tokenizer_on_language_scanner_event(
-        zend_php_scanner_event event, int token_type, int line,
-        const char *text, size_t length, void *event_context)
+static void swow_tokenizer_on_language_scanner_event(
+    zend_php_scanner_event event, int token_type, int line,
+    const char *text, size_t length, void *context_ptr
+)
 {
-    tokenizer_event_context_t *context = event_context;
+    tokenizer_event_context_t *context = (tokenizer_event_context_t *) context_ptr;
 
     switch (event) {
         case ON_TOKEN:
@@ -102,10 +122,10 @@ void tokenizer_on_language_scanner_event(
     }
 }
 
-SWOW_API php_token_list_t *php_tokenize(zend_string *source)
+SWOW_API php_token_list_t *php_tokenize(zend_string *source, swow_closure_ast_callback_t ast_callback, void *ast_callback_context)
 {
     zval source_zval;
-    tokenizer_event_context_t ctx;
+    tokenizer_event_context_t context;
     zend_lex_state original_lex_state;
     bool original_in_compilation;
 
@@ -121,17 +141,21 @@ SWOW_API php_token_list_t *php_tokenize(zend_string *source)
     zend_prepare_string_for_scanning(&source_zval, ZSTR_EMPTY_ALLOC());
 #endif
 
-    ctx.token_list = php_token_list_alloc();
+    context.token_list = php_token_list_alloc();
 
     CG(ast) = NULL;
     CG(ast_arena) = zend_arena_create(32 * 1024);
     LANG_SCNG(yy_state) = yycINITIAL;
-    LANG_SCNG(on_event) = tokenizer_on_language_scanner_event;
-    LANG_SCNG(on_event_context) = &ctx;
+    LANG_SCNG(on_event) = swow_tokenizer_on_language_scanner_event;
+    LANG_SCNG(on_event_context) = &context;
 
     if (zendparse() != SUCCESS) {
-        php_token_list_free(ctx.token_list);
+        php_token_list_free(context.token_list);
         return NULL;
+    }
+
+    if (ast_callback) {
+        ast_callback(CG(ast), ast_callback_context);
     }
 
     zend_ast_destroy(CG(ast));
@@ -142,12 +166,148 @@ SWOW_API php_token_list_t *php_tokenize(zend_string *source)
     CG(in_compilation) = original_in_compilation;
 
     ZEND_ASSERT(Z_TYPE(source_zval) == IS_STRING);
-    ctx.token_list->source = Z_STR(source_zval);
+    context.token_list->source = Z_STR(source_zval);
 
-    return ctx.token_list;
+    return context.token_list;
 }
 
-/* data */
+SWOW_API uint32_t swow_ast_children(zend_ast *node, zend_ast ***child)
+{
+    uint32_t children;
+
+    // get all children
+    if (node->kind & (1 << ZEND_AST_IS_LIST_SHIFT)) {
+        // is list
+        children = ((zend_ast_list *) node)->children;
+        *child = (zend_ast **) (((zend_ast_list *) node)->child);
+        CAT_LOG_DEBUG_WITH_LEVEL(PHP, 10, "Children list size %u", children);
+    } else if (node->kind & (1 << ZEND_AST_SPECIAL_SHIFT)) {
+        // is special
+        ZEND_ASSERT(node->kind != ZEND_AST_ZNODE);
+        switch (node->kind) {
+            case ZEND_AST_ZVAL:
+            case ZEND_AST_CONSTANT:
+                children = 0;
+                *child = NULL;
+                break;
+            case ZEND_AST_FUNC_DECL:
+            case ZEND_AST_CLOSURE:
+            case ZEND_AST_METHOD:
+            case ZEND_AST_CLASS:
+            case ZEND_AST_ARROW_FUNC:
+                children = 5;
+                *child = (zend_ast **) (((zend_ast_decl *) node)->child);
+                break;
+            default:
+                CAT_NEVER_HERE("unknown ast kind");
+                return -1;
+        }
+    } else {
+        children = (node->kind >> ZEND_AST_NUM_CHILDREN_SHIFT) & 7;
+        *child = node->child;
+    }
+
+    return children;
+}
+
+/* AST export */
+
+static void swow_ast_export_use_elem(zend_ast *ast, smart_str *str, bool append_comma_space)
+{
+    zend_ast_zval *name, *as_name;
+
+    ZEND_ASSERT(ast->kind == ZEND_AST_USE_ELEM);
+    name = (zend_ast_zval *) ast->child[0];
+    as_name = (zend_ast_zval *) ast->child[1];
+    ZEND_ASSERT(name->kind == ZEND_AST_ZVAL);
+    ZEND_ASSERT(Z_TYPE(name->val) == IS_STRING);
+    if (append_comma_space) {
+        smart_str_appends(str, ", ");
+    }
+    if (ast->attr == ZEND_SYMBOL_FUNCTION) {
+        smart_str_appends(str, "function ");
+    } else if (ast->attr == ZEND_SYMBOL_CONST) {
+        smart_str_appends(str, "const ");
+    }
+    smart_str_append(str, name->val.value.str);
+    if (as_name) {
+        ZEND_ASSERT(as_name->kind == ZEND_AST_ZVAL);
+        ZEND_ASSERT(Z_TYPE(as_name->val) == IS_STRING);
+        smart_str_appends(str, " as ");
+        smart_str_append(str, as_name->val.value.str);
+    }
+}
+
+static void swow_ast_export_use(zend_ast *ast, smart_str *str)
+{
+    zend_ast_list *list;
+
+    ZEND_ASSERT(ast->kind == ZEND_AST_USE);
+    list = (zend_ast_list *) ast;
+
+    // note: zend_ast_export_ex case ZEND_AST_USE is wrong, see Zend/zend_language_parser.y near L412 use_type:
+    smart_str_appends(str, "use ");
+    if (ast->attr == ZEND_SYMBOL_FUNCTION) {
+        smart_str_appends(str, "function ");
+    } else if (ast->attr == ZEND_SYMBOL_CONST) {
+        smart_str_appends(str, "const ");
+    }
+
+    for (uint32_t i = 0; i < list->children; i++) {
+        zend_ast *child = list->child[i];
+        swow_ast_export_use_elem(child, str, i != 0);
+    }
+    smart_str_appendc(str, ';');
+}
+
+static void swow_ast_export_group_use(zend_ast *ast, smart_str *str)
+{
+    zend_ast_list *list;
+    zend_ast_zval *namespace_name;
+
+    ZEND_ASSERT(ast->kind == ZEND_AST_GROUP_USE);
+
+    list = (zend_ast_list *) ast->child[1];
+    namespace_name = (zend_ast_zval *) ast->child[0];
+
+    ZEND_ASSERT(namespace_name->kind == ZEND_AST_ZVAL);
+    ZEND_ASSERT(Z_TYPE(namespace_name->val) == IS_STRING);
+
+    smart_str_appends(str, "use ");
+    if (ast->attr == ZEND_SYMBOL_FUNCTION) {
+        smart_str_appends(str, "function ");
+    } else if (ast->attr == ZEND_SYMBOL_CONST) {
+        smart_str_appends(str, "const ");
+    }
+    smart_str_append(str, Z_STR(namespace_name->val));
+    smart_str_appends(str, "\\{");
+
+    for (uint32_t i = 0; i < list->children; i++) {
+        zend_ast *elem = list->child[i];
+        swow_ast_export_use_elem(elem, str, i != 0);
+    }
+
+    smart_str_appends(str, "};");
+}
+
+SWOW_API void swow_ast_export_kinds_of_use(zend_ast *ast, smart_str *str, bool append_space)
+{
+    if (append_space) {
+        smart_str_appendc(str, ' ');
+    }
+    switch (ast->kind) {
+        case ZEND_AST_USE:
+            swow_ast_export_use(ast, str);
+            break;
+        case ZEND_AST_GROUP_USE:
+            swow_ast_export_group_use(ast, str);
+            break;
+        default:
+            ZEND_UNREACHABLE();
+    }
+}
+
+/* token data */
 
 SWOW_API const char *php_token_get_name(const php_token_t *token)
 {
