@@ -6,7 +6,7 @@ dnl to solve this, we have to re-implement this macro here
 
 dnl from acinclude.m4 or build/php.m4
 dnl
-dnl SWOW_ADD_SOURCES_X(source-path, sources[, special-flags[, target-var[, shared[, special-post-flags]]]])
+dnl SWOW_ADD_SOURCES_X(source-path, sources[, special-flags[, target-var[, shared[, dependencies]]]])
 dnl
 dnl Additional to SWOW_ADD_SOURCES (see below), this lets you set the name of the
 dnl array target-var directly, as well as whether shared objects will be built
@@ -39,18 +39,28 @@ dnl Append to the array which has been dynamically chosen at m4 time.
 
 dnl Choose the right compiler/flags/etc. for the source-file.
       case $ac_src in
-        *.c[)] ac_comp="$b_c_pre $3 $ac_inc $b_c_meta -c $ac_srcdir$ac_src -o $ac_bdir$ac_obj.$b_lo $6$b_c_post" ;;
-        *.s[)] ac_comp="$b_c_pre $3 $ac_inc $b_c_meta -c $ac_srcdir$ac_src -o $ac_bdir$ac_obj.$b_lo $6$b_c_post" ;;
-        *.S[)] ac_comp="$b_c_pre $3 $ac_inc $b_c_meta -c $ac_srcdir$ac_src -o $ac_bdir$ac_obj.$b_lo $6$b_c_post" ;;
-        *.cpp|*.cc|*.cxx[)] ac_comp="$b_cxx_pre $3 $ac_inc $b_cxx_meta -c $ac_srcdir$ac_src -o $ac_bdir$ac_obj.$b_lo $6$b_cxx_post" ;;
+        *.c[)] ac_comp="$b_c_pre $ac_inc $b_c_meta $3 -c $ac_srcdir$ac_src -o $ac_bdir$ac_obj.$b_lo $b_c_post" ;;
+        *.s[)] ac_comp="$b_c_pre $ac_inc $b_c_meta $3 -c $ac_srcdir$ac_src -o $ac_bdir$ac_obj.$b_lo $b_c_post" ;;
+        *.S[)] ac_comp="$b_c_pre $ac_inc $b_c_meta $3 -c $ac_srcdir$ac_src -o $ac_bdir$ac_obj.$b_lo $b_c_post" ;;
+        *.cpp|*.cc|*.cxx[)] ac_comp="$b_cxx_pre $ac_inc $b_cxx_meta $3 -c $ac_srcdir$ac_src -o $ac_bdir$ac_obj.$b_lo $b_cxx_post" ;;
       esac
 
-dnl note: this tab is necessary for generated Makefile
+dnl Generate Makefiles with dependencies
+      ac_comp="$ac_comp -MMD -MF $ac_bdir$ac_obj.dep -MT $ac_bdir[$]ac_obj.lo"
+
+
 dnl Create a rule for the object/source combo.
     cat >>Makefile.objects<<EOF
+-include $ac_bdir[$]ac_obj.dep
 $ac_bdir[$]ac_obj.lo: $ac_srcdir[$]ac_src
+dnl note: this tab is necessary for generated Makefile
 	$ac_comp
 EOF
+dnl add dependency
+ifelse($6,,,
+    cat >>Makefile.objects<<EOF
+$ac_bdir[$]ac_obj.lo: $6
+EOF)
   done
 ])
 dnl
@@ -69,9 +79,9 @@ AC_DEFUN([SWOW_ADD_SOURCES],[
     swow_extra="${swow_extra}"' $('$4')'
   fi
   if test $ext_shared = "yes"; then
-    SWOW_ADD_SOURCES_X(PHP_EXT_DIR(swow)/$1, $2, $swow_extra, shared_objects_swow, yes)
+    SWOW_ADD_SOURCES_X(PHP_EXT_DIR(swow)/$1, $2, $swow_extra, shared_objects_swow, yes, $5)
   else
-    SWOW_ADD_SOURCES_X(PHP_EXT_DIR(swow)/$1, $2, $swow_extra, PHP_GLOBAL_OBJS)
+    SWOW_ADD_SOURCES_X(PHP_EXT_DIR(swow)/$1, $2, $swow_extra, PHP_GLOBAL_OBJS,, $5)
   fi
 ])
 
@@ -324,11 +334,16 @@ EOF
     swow_signal.c \
     swow_watchdog.c \
     swow_closure.c \
-    swow_tokenizer.c \
     swow_http.c \
     swow_websocket.c \
     swow_proc_open.c \
     , SWOW_INCLUDES, SWOW_CFLAGS)
+  dnl if we do in-tree build, zend_language_scanner_defs.h may be not exist, add dependencies
+  if test x"${PHP_PECL_EXTENSION}" = x"swow"; then
+    SWOW_ADD_SOURCES(src, swow_tokenizer.c, SWOW_INCLUDES, SWOW_CFLAGS)
+  else
+    SWOW_ADD_SOURCES(src, swow_tokenizer.c, SWOW_INCLUDES, SWOW_CFLAGS, [\$(top_srcdir)/Zend/zend_language_parser.c \$(top_srcdir)/Zend/zend_language_scanner.c])
+  fi
 
   dnl TODO: may use separate libcat
   if test "libcat" != ""; then
