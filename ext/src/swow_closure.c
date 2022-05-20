@@ -107,7 +107,7 @@ static void swow_closure_ast_callback(zend_ast *ast, void *context_ptr)
                 if (!stmts) {
                     // single namespace <T_STRING>; statement
                     // see Zend/zend_language_parser.y near L369 top_statement syntax
-                    ZEND_ASSERT(namespace_name);
+                    ZEND_ASSERT(namespace_name != NULL);
                     ZEND_ASSERT(namespace_name->kind == ZEND_AST_ZVAL);
                     ZEND_ASSERT(Z_TYPE(namespace_name->val) == IS_STRING);
                     namespace = Z_STR(namespace_name->val);
@@ -118,9 +118,6 @@ static void swow_closure_ast_callback(zend_ast *ast, void *context_ptr)
                         context->state = SWOW_ZEND_AST_WALK_STATE_NOT_FOUND;
                         return;
                     }
-                    smart_str_appends(context->str, "namespace ");
-                    smart_str_append(context->str, namespace);
-                    smart_str_appendc(context->str, ';');
                     context->state = SWOW_ZEND_AST_WALK_STATE_OK;
                     // continue to find next top statement
                     break;
@@ -146,9 +143,6 @@ static void swow_closure_ast_callback(zend_ast *ast, void *context_ptr)
                         // not the required namespace, continue to find next top statement
                         continue;
                     }
-                    smart_str_appends(context->str, "namespace ");
-                    smart_str_append(context->str, namespace);
-                    smart_str_appendc(context->str, ';');
                 }
                 context->state = SWOW_ZEND_AST_WALK_STATE_OK;
 
@@ -240,18 +234,16 @@ SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_user_anonymous_function(zend_f
     }
 
     smart_str buffer = {0};
-    CAT_LOG_DEBUG_WITH_LEVEL(PHP, 10, "Closure function name = [%zu] '%.*s'\n",
-        ZSTR_LEN(function->op_array.function_name), (int) ZSTR_LEN(function->op_array.function_name), ZSTR_VAL(function->op_array.function_name));
-    swow_ast_walk_context_t context = {
-        .str = &buffer,
-        .required_namespace = ZSTR_VAL(function->op_array.function_name),
-        .line_end = line_end,
-        .state = SWOW_ZEND_AST_WALK_STATE_NOT_PROCESSED,
-    };
-    if (ZSTR_LEN(function->op_array.function_name) > 10) {
-        context.required_namespace_length = ZSTR_LEN(function->op_array.function_name) - 10;
-    } else {
-        context.required_namespace_length = 0;
+    swow_ast_walk_context_t context;
+    context.state = SWOW_ZEND_AST_WALK_STATE_NOT_PROCESSED;
+    context.str = &buffer;
+    context.required_namespace = swow_function_get_namespace_name(function, &context.required_namespace_length);
+    context.line_end = line_end;
+
+    if (context.required_namespace_length != 0) {
+        smart_str_appends(&buffer, "namespace ");
+        smart_str_appendl(&buffer, context.required_namespace, context.required_namespace_length);
+        smart_str_appends(&buffer, "; ");
     }
 
     php_token_list_t *token_list = php_tokenize(contents, swow_closure_ast_callback, &context);
@@ -521,7 +513,10 @@ static PHP_METHOD(Swow_Closure, __serialize)
     swow_closure_t *closure = swow_closure_get_from_object(Z_OBJ_P(ZEND_THIS));
     zend_function *function = &closure->func;
     bool is_user_anonymous_function = swow_function_is_user_anonymous(function);
-    bool is_named_function = !is_user_anonymous_function && swow_function_is_named(function);
+    bool is_named_function = swow_function_is_named(function);
+
+    CAT_LOG_DEBUG_WITH_LEVEL(PHP, 10, "Closure function name = [%zu] '%.*s'\n",
+        ZSTR_LEN(function->op_array.function_name), (int) ZSTR_LEN(function->op_array.function_name), ZSTR_VAL(function->op_array.function_name));
 
     if (!is_user_anonymous_function && !is_named_function) {
         zend_throw_error(NULL, "Closure which is not user-defined anonymous function and has no name cannot be serialized");
