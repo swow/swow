@@ -212,7 +212,7 @@ SWOW_API uint32_t swow_ast_children(zend_ast *node, zend_ast ***child)
 
 /* AST export */
 
-static void swow_ast_export_use_children(zend_ast *ast, smart_str *str, bool append_comma_space)
+static void swow_ast_export_use_elem(zend_ast *ast, smart_str *str, bool append_comma_space)
 {
     zend_ast_zval *name, *as_name;
 
@@ -255,7 +255,7 @@ static void swow_ast_export_use(zend_ast *ast, smart_str *str)
 
     for (uint32_t i = 0; i < list->children; i++) {
         zend_ast *child = list->child[i];
-        swow_ast_export_use_children(child, str, i != 0);
+        swow_ast_export_use_elem(child, str, i != 0);
     }
     smart_str_appendc(str, ';');
 }
@@ -284,7 +284,7 @@ static void swow_ast_export_group_use(zend_ast *ast, smart_str *str)
 
     for (uint32_t i = 0; i < list->children; i++) {
         zend_ast *elem = list->child[i];
-        swow_ast_export_use_children(elem, str, i != 0);
+        swow_ast_export_use_elem(elem, str, i != 0);
     }
 
     smart_str_appends(str, "};");
