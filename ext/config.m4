@@ -316,7 +316,7 @@ EOF
     swow_wrapper.c \
     swow_errno.c \
     swow_log.c \
-    swow_exceptions.c \
+    swow_exception.c \
     swow_debug.c \
     swow_util.c \
     swow_hook.c \

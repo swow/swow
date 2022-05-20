@@ -16,7 +16,7 @@
   +--------------------------------------------------------------------------+
  */
 
-#include "swow_exceptions.h"
+#include "swow_exception.h"
 
 SWOW_API zend_class_entry *swow_exception_ce;
 SWOW_API zend_class_entry *swow_call_exception_ce;

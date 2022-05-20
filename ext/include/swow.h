@@ -44,7 +44,7 @@ extern "C" {
 #define SWOW_MAY_THROW
 
 #include "swow_wrapper.h"
-#include "swow_exceptions.h"
+#include "swow_exception.h"
 
 #if PHP_VERSION_ID < 80000
 #error "require PHP version 8.0 or later"
