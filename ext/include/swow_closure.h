@@ -13,6 +13,7 @@
   | limitations under the License. See accompanying LICENSE file.            |
   +--------------------------------------------------------------------------+
   | Author: Twosee <twosee@php.net>                                          |
+  |         dixyes <dixyes@gmail.com>                                        |
   +--------------------------------------------------------------------------+
  */
 
