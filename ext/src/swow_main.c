@@ -168,6 +168,7 @@ PHP_MINIT_FUNCTION(swow)
     }
 
     SWOW_NTS_G(cli) = strcmp(sapi_module.name, "cli") != 0 &&
+                      strcmp(sapi_module.name, "micro") != 0 &&
                       strcmp(sapi_module.name, "phpdbg") != 0;
 
     return SUCCESS;
