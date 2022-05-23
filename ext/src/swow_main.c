@@ -77,7 +77,7 @@ typedef zend_result (*swow_close_function_t)(void);
 /* {{{ PHP_GINIT_FUNCTION */
 static PHP_GINIT_FUNCTION(swow)
 {
-#if defined(COMPILE_DL_BCMATH) && defined(ZTS)
+#if defined(COMPILE_DL_SWOW) && defined(ZTS)
     ZEND_TSRMLS_CACHE_UPDATE();
 #endif
     memset(swow_globals, 0, sizeof(*swow_globals));
