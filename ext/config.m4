@@ -219,6 +219,11 @@ if test "${PHP_SWOW}" != "no"; then
   SWOW_STD_CFLAGS="${SWOW_STD_CFLAGS} -fvisibility=hidden -std=gnu99"
   SWOW_STD_CFLAGS="${SWOW_STD_CFLAGS} -Wall -Wextra -Wstrict-prototypes"
   SWOW_STD_CFLAGS="${SWOW_STD_CFLAGS} -Wno-unused-parameter"
+  AC_MSG_CHECKING([for ZTS])
+  if test "$PHP_THREAD_SAFETY" != "no"; then
+    AC_MSG_RESULT([whether to enable Swow multi-thread support... yes])
+    SWOW_STD_CFLAGS="${SWOW_STD_CFLAGS} -DZEND_ENABLE_STATIC_TSRMLS_CACHE=1"
+  fi
 
   PHP_SUBST(SWOW_STD_CFLAGS)
 
