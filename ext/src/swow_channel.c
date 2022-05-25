@@ -357,7 +357,7 @@ static void swow_channel_selector_release_requests(swow_channel_selector_t *sele
 
     for (n = 0, request = selector->requests; n < selector->count; n++, request++) {
         zend_object_release(&(swow_channel_get_from_handle(request->channel)->std));
-        if (request->opcode == CAT_CHANNEL_OPCODE_PUSH) {
+        if (request->opcode == CAT_CHANNEL_SELECT_EVENT_PUSH) {
             zval_ptr_dtor((zval *) request->data.common);
         }
     }
@@ -377,7 +377,7 @@ static zend_object *swow_channel_selector_create_object(zend_class_entry *ce)
     selector->count = 0;
     selector->requests = selector->_requests;
     selector->size = CAT_ARRAY_SIZE(selector->_requests);
-    selector->last_opcode = CAT_CHANNEL_OPCODE_PUSH;
+    selector->last_opcode = CAT_CHANNEL_SELECT_EVENT_PUSH;
     ZVAL_NULL(&selector->zdata);
 
     return &selector->std;
@@ -439,11 +439,11 @@ static PHP_METHOD_EX(Swow_Channel_Selector, add, zend_object *channel_object, zv
     request->channel = channel;
     /* solve data */
     if (zdata != NULL) {
-        request->opcode = CAT_CHANNEL_OPCODE_PUSH;
+        request->opcode = CAT_CHANNEL_SELECT_EVENT_PUSH;
         ZVAL_COPY(zbucket, zdata);
         request->data.in = zbucket;
     } else {
-        request->opcode = CAT_CHANNEL_OPCODE_POP;
+        request->opcode = CAT_CHANNEL_SELECT_EVENT_POP;
         ZVAL_UNDEF(zbucket);
         request->data.out = zbucket;
     }
@@ -513,12 +513,12 @@ static PHP_METHOD(Swow_Channel_Selector, commit)
         GC_ADDREF(channel);
         RETVAL_OBJ(channel);
         selector->last_opcode = response->opcode;
-        if (response->opcode == CAT_CHANNEL_OPCODE_PUSH) {
+        if (response->opcode == CAT_CHANNEL_SELECT_EVENT_PUSH) {
             ZVAL_UNDEF(&selector->zdata);
         } else {
             ZVAL_COPY_VALUE(&selector->zdata, zdata);
         }
-        /* data has been comsumed or copied */
+        /* data has been consumed or copied */
         ZVAL_UNDEF(zdata);
     } else {
         ZVAL_UNDEF(&selector->zdata);
@@ -590,7 +590,7 @@ static HashTable *swow_channel_selector_get_gc(zend_object *object, zval **gc_da
 
     /* request */
     for (n = 0, request = selector->requests; n < selector->count; n++, request++) {
-        if (request->opcode == CAT_CHANNEL_OPCODE_PUSH) {
+        if (request->opcode == CAT_CHANNEL_SELECT_EVENT_PUSH) {
             zend_get_gc_buffer_add_zval(zgc_buffer, (zval *) request->data.common);
         }
     }
@@ -617,9 +617,6 @@ zend_result swow_channel_module_init(INIT_FUNC_ARGS)
     swow_channel_handlers.get_gc = swow_channel_get_gc;
     swow_channel_handlers.dtor_obj = swow_channel_dtor_object;
 
-    zend_declare_class_constant_long(swow_channel_ce, ZEND_STRL("OPCODE_PUSH"), CAT_CHANNEL_OPCODE_PUSH);
-    zend_declare_class_constant_long(swow_channel_ce, ZEND_STRL("OPCODE_POP"), CAT_CHANNEL_OPCODE_POP);
-
     swow_channel_exception_ce = swow_register_internal_class(
         "Swow\\ChannelException", swow_exception_ce, NULL, NULL, NULL, cat_true, cat_true, NULL, NULL, 0
     );
@@ -635,6 +632,9 @@ zend_result swow_channel_module_init(INIT_FUNC_ARGS)
         XtOffsetOf(swow_channel_selector_t, std)
     );
     swow_channel_selector_handlers.get_gc = swow_channel_selector_get_gc;
+
+    zend_declare_class_constant_long(swow_channel_selector_ce, ZEND_STRL("EVENT_PUSH"), CAT_CHANNEL_SELECT_EVENT_PUSH);
+    zend_declare_class_constant_long(swow_channel_selector_ce, ZEND_STRL("EVENT_POP"), CAT_CHANNEL_SELECT_EVENT_POP);
 
     swow_channel_selector_exception_ce = swow_register_internal_class(
         "Swow\\Channel\\SelectorException", swow_call_exception_ce, NULL, NULL, NULL, cat_true, cat_true, NULL, NULL, 0

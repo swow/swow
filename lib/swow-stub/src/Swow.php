@@ -873,9 +873,6 @@ namespace Swow
      */
     class Channel
     {
-        public const OPCODE_PUSH = 0;
-        public const OPCODE_POP = 1;
-
         public function __construct(int $capacity = 0) { }
 
         /**
@@ -2009,6 +2006,9 @@ namespace Swow\Channel
      */
     class Selector
     {
+        public const EVENT_PUSH = 0;
+        public const EVENT_POP = 1;
+
         /**
          * add a "pushing a `T` into `$channel`" action into selector
          *

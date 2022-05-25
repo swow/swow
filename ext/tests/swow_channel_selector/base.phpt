@@ -46,7 +46,7 @@ for ($n = 3; $n--;) {
     } else {
         Assert::false('impossible');
     }
-    Assert::same($s->getLastOpcode(), Channel::OPCODE_POP);
+    Assert::same($s->getLastOpcode(), Selector::EVENT_POP);
     echo $data . PHP_LF;
 }
 
