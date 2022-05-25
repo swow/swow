@@ -551,7 +551,7 @@ SWOW_API void swow_coroutine_switch_executor(swow_coroutine_t *current_scoroutin
         swow_coroutine_executor_recover(target_executor);
         swow_coroutine_relink_executor_linkedlist_node(target_scoroutine, target_executor);
     } else {
-        zend_executor_globals *eg = SWOW_GLOBALS_FAST_PTR(executor_globals);
+        zend_executor_globals *eg = ZEND_GLOBALS_FAST_PTR(executor_globals);
         eg->current_execute_data = NULL; /* make the log stack trace empty */
         eg->exception = NULL;            /* or maybe thrown in zend_error() (TODO: confirm it) */
     }
@@ -559,7 +559,7 @@ SWOW_API void swow_coroutine_switch_executor(swow_coroutine_t *current_scoroutin
 
 SWOW_API void swow_coroutine_executor_save(swow_coroutine_executor_t *executor)
 {
-    zend_executor_globals *eg = SWOW_GLOBALS_FAST_PTR(executor_globals);
+    zend_executor_globals *eg = ZEND_GLOBALS_FAST_PTR(executor_globals);
     executor->bailout = eg->bailout;
     executor->vm_stack_top = eg->vm_stack_top;
     executor->vm_stack_end = eg->vm_stack_end;
@@ -588,7 +588,7 @@ SWOW_API void swow_coroutine_executor_save(swow_coroutine_executor_t *executor)
 #endif
 #ifdef SWOW_COROUTINE_SWAP_OUTPUT_GLOBALS
     do {
-        zend_output_globals *og = SWOW_GLOBALS_PTR(output_globals);
+        zend_output_globals *og = ZEND_GLOBALS_PTR(output_globals);
         if (UNEXPECTED(og->handlers.elements != NULL)) {
             if (UNEXPECTED(executor->output_globals == NULL)) {
                 executor->output_globals = (zend_output_globals *) emalloc(sizeof(zend_output_globals));
@@ -612,7 +612,7 @@ SWOW_API void swow_coroutine_executor_save(swow_coroutine_executor_t *executor)
 
 SWOW_API void swow_coroutine_executor_recover(swow_coroutine_executor_t *executor)
 {
-    zend_executor_globals *eg = SWOW_GLOBALS_FAST_PTR(executor_globals);
+    zend_executor_globals *eg = ZEND_GLOBALS_FAST_PTR(executor_globals);
     eg->bailout = executor->bailout;
     eg->vm_stack_top = executor->vm_stack_top;
     eg->vm_stack_end = executor->vm_stack_end;
@@ -642,7 +642,7 @@ SWOW_API void swow_coroutine_executor_recover(swow_coroutine_executor_t *executo
         if (UNEXPECTED(og != NULL)) {
             if (UNEXPECTED(og->handlers.elements != NULL)) {
                 SWOW_OUTPUT_GLOBALS_MODIFY_START() {
-                    memcpy(SWOW_GLOBALS_PTR(output_globals), og, sizeof(zend_output_globals));
+                    memcpy(ZEND_GLOBALS_PTR(output_globals), og, sizeof(zend_output_globals));
                     og->handlers.elements = NULL; /* clear state */
                 } SWOW_OUTPUT_GLOBALS_MODIFY_END();
             }
@@ -2440,8 +2440,6 @@ zend_result swow_coroutine_module_init(INIT_FUNC_ARGS)
     }
 
     CAT_GLOBALS_REGISTER(swow_coroutine, CAT_GLOBALS_CTOR(swow_coroutine), NULL);
-
-    SWOW_COROUTINE_G(runtime_state) = SWOW_COROUTINE_RUNTIME_STATE_NONE;
 
     swow_coroutine_ce = swow_register_internal_class(
         "Swow\\Coroutine", NULL, swow_coroutine_methods,
