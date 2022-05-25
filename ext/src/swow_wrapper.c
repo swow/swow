@@ -296,18 +296,14 @@ SWOW_API SWOW_MAY_THROW zend_string *swow_file_get_contents(zend_string *filenam
 {
     zend_string *contents = NULL;
 
-    /* file operations can generate E_WARNINGs which we want to promote to exceptions */
-    zend_error_handling error_handling;
-    zend_replace_error_handling(EH_THROW, spl_ce_RuntimeException, &error_handling);
-    do {
+    SWOW_THROW_ON_ERROR_START() {
         php_stream *stream = php_stream_open_wrapper_ex(ZSTR_VAL(filename), "rb", REPORT_ERRORS, NULL, NULL);
         if (stream == NULL) {
             break;
         }
         contents = php_stream_copy_to_mem(stream, -1, 0);
         php_stream_close(stream);
-    } while (0);
-    zend_restore_error_handling(&error_handling);
+    } SWOW_THROW_ON_ERROR_END();
 
     return contents;
 }

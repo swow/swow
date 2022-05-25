@@ -1472,10 +1472,10 @@ namespace Swow
          * ```php
          * $s = new Socket(Socket::TYPE_STDOUT);
          * $s->write([
-         * (new Buffer())->write('1234567890')->seek(6),
+         * (new Buffer(0))->write('1234567890')->seek(6),
          * 'abc',
          * ['1234567890', 1, 2],
-         * [(new Buffer())->write('1234567890')->seek(4), 2],
+         * [(new Buffer(0))->write('1234567890')->seek(4), 2],
          * ]);
          * ```
          * string `"7890abc2356"` will be written to the socket.

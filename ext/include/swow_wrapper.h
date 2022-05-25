@@ -382,6 +382,17 @@ SWOW_API int swow_call_function_anyway(zend_fcall_info *fci, zend_fcall_info_cac
 #define swow_call_method_with_2_params(zobject, object_ce, fn_ptr_ptr, fn_name, retval, v1, v2) \
         zend_call_method_with_2_params(Z_OBJ_P(zobject), object_ce, fn_ptr_ptr, fn_name, retval, v1, v2)
 
+/* exception */
+
+#define SWOW_THROW_ON_ERROR_START() do { \
+    /* convert E_WARNINGs to exceptions */ \
+    zend_error_handling _error_handling; \
+    zend_replace_error_handling(EH_THROW, spl_ce_RuntimeException, &_error_handling); \
+
+#define SWOW_THROW_ON_ERROR_END() \
+    zend_restore_error_handling(&_error_handling); \
+} while (0)
+
 /* var_dump */
 
 SWOW_API void swow_var_dump_string(zend_string *string);
