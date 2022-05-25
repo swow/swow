@@ -58,7 +58,7 @@ typedef struct cat_globals_info_s {
 } cat_globals_info_t;
 
 #define CAT_GLOBALS_INFO(name)                    name##_globals_info
-#define CAT_GLOBALS_DECLARE(name)                 cat_globals_info_t CAT_GLOBALS_INFO(name);
+#define CAT_GLOBALS_DECLARE(name)                 cat_globals_info_t CAT_GLOBALS_INFO(name)
 
 #ifdef CAT_TSRMG_FAST
 #if ZEND_ENABLE_STATIC_TSRMLS_CACHE
@@ -67,7 +67,10 @@ typedef struct cat_globals_info_s {
 #define CAT_GLOBALS_BULK(name)                    TSRMG_FAST_BULK(CAT_GLOBALS_INFO(name).offset, CAT_GLOBALS_TYPE(name) *)
 #endif
 #define CAT_GLOBALS_GET(name, value)              (CAT_GLOBALS_BULK(name)->value)
-#define CAT_GLOBALS_REGISTER(name, ctor, dtor)    ts_allocate_fast_id(&CAT_GLOBALS_INFO(name).id, &CAT_GLOBALS_INFO(name).offset, sizeof(CAT_GLOBALS_TYPE(name)), (ts_allocate_ctor) ctor, (ts_allocate_dtor) dtor);
+#define CAT_GLOBALS_REGISTER(name)                do { \
+    ts_allocate_fast_id(&CAT_GLOBALS_INFO(name).id, &CAT_GLOBALS_INFO(name).offset, sizeof(CAT_GLOBALS_TYPE(name)), NULL, NULL); \
+    CAT_GLOBALS_BZERO(name); \
+} while (0)
 
 #else
 
@@ -77,8 +80,13 @@ typedef struct cat_globals_info_s {
 #define CAT_GLOBALS_BULK(name)                    TSRMG_BULK(CAT_GLOBALS_INFO(name).id, CAT_GLOBALS_TYPE(name) *)
 #endif
 #define CAT_GLOBALS_GET(name, value)              (CAT_GLOBALS_BULK(name)->value)
-#define CAT_GLOBALS_REGISTER(name, ctor, dtor)    ts_allocate_id(&CAT_GLOBALS_INFO(name).id, sizeof(CAT_GLOBALS_TYPE(name)), (ts_allocate_ctor) ctor, (ts_allocate_dtor) dtor);
+#define CAT_GLOBALS_REGISTER(name)                do { \
+    ts_allocate_id(&CAT_GLOBALS_INFO(name).id, sizeof(CAT_GLOBALS_TYPE(name)), NULL, NULL); \
+    CAT_GLOBALS_BZERO(name); \
+} while (0)
 #endif /* CAT_TSRMG_FAST */
+
+#define CAT_GLOBALS_UNREGISTER(name)              ts_free_id(CAT_GLOBALS_INFO(name).id)
 
 #endif /* CAT_THREAD_SAFE */
 

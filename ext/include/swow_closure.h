@@ -27,11 +27,11 @@ extern "C" {
 
 /* globals */
 
-CAT_GLOBALS_STRUCT_BEGIN(swow_closure)
+CAT_GLOBALS_STRUCT_BEGIN(swow_closure) {
     zend_object *current_object;
-CAT_GLOBALS_STRUCT_END(swow_closure)
+} CAT_GLOBALS_STRUCT_END(swow_closure);
 
-extern SWOW_API CAT_GLOBALS_DECLARE(swow_closure)
+extern SWOW_API CAT_GLOBALS_DECLARE(swow_closure);
 
 #define SWOW_CLOSURE_G(x) CAT_GLOBALS_GET(swow_closure, x)
 

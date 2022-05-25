@@ -24,9 +24,7 @@
 
 #include <zend_language_parser.h>
 
-SWOW_API CAT_GLOBALS_DECLARE(swow_closure)
-
-CAT_GLOBALS_CTOR_DECLARE_SZ(swow_closure)
+SWOW_API CAT_GLOBALS_DECLARE(swow_closure);
 
 typedef struct swow_closure_s {
     zend_object       std;
@@ -636,7 +634,7 @@ static const zend_function_entry swow_closure_methods[] = {
 
 zend_result swow_closure_module_init(INIT_FUNC_ARGS)
 {
-    CAT_GLOBALS_REGISTER(swow_closure, CAT_GLOBALS_CTOR(swow_closure), NULL);
+    CAT_GLOBALS_REGISTER(swow_closure);
 
     SWOW_CLOSURE_KNOWN_STRING_MAP(SWOW_KNOWN_STRING_INIT_GEN);
 

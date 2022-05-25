@@ -46,13 +46,13 @@ zend_result swow_stream_runtime_init(INIT_FUNC_ARGS);
 zend_result swow_stream_runtime_shutdown(INIT_FUNC_ARGS);
 zend_result swow_stream_module_shutdown(INIT_FUNC_ARGS);
 
-CAT_GLOBALS_STRUCT_BEGIN(swow_stream)
+CAT_GLOBALS_STRUCT_BEGIN(swow_stream) {
     cat_bool_t hooking_stdio_ops;
     cat_bool_t hooking_plain_wrapper;
     cat_socket_t *tty_sockets[3];
-CAT_GLOBALS_STRUCT_END(swow_stream)
+} CAT_GLOBALS_STRUCT_END(swow_stream);
 
-extern CAT_GLOBALS_DECLARE(swow_stream)
+extern CAT_GLOBALS_DECLARE(swow_stream);
 
 #define SWOW_STREAM_G(x) CAT_GLOBALS_GET(swow_stream, x)
 

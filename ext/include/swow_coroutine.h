@@ -111,7 +111,7 @@ typedef enum swow_coroutine_runtime_state_e {
     SWOW_COROUTINE_RUNTIME_STATE_IN_SHUTDOWN
 } swow_coroutine_runtime_state_t;
 
-CAT_GLOBALS_STRUCT_BEGIN(swow_coroutine)
+CAT_GLOBALS_STRUCT_BEGIN(swow_coroutine) {
     /* ini */
     size_t default_stack_page_size;
     cat_bool_t classic_error_handler;
@@ -126,12 +126,12 @@ CAT_GLOBALS_STRUCT_BEGIN(swow_coroutine)
     zval ztransfer_data;
     zend_object *exception;
     cat_bool_t bailout;
-CAT_GLOBALS_STRUCT_END(swow_coroutine)
+} CAT_GLOBALS_STRUCT_END(swow_coroutine);
 
 typedef zval *(*swow_coroutine_resume_t)(swow_coroutine_t *scoroutine, zval *zdata);
 typedef zval *(*swow_coroutine_yield_t)(zval *zdata);
 
-extern SWOW_API CAT_GLOBALS_DECLARE(swow_coroutine)
+extern SWOW_API CAT_GLOBALS_DECLARE(swow_coroutine);
 
 #define SWOW_COROUTINE_G(x) CAT_GLOBALS_GET(swow_coroutine, x)
 

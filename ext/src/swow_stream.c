@@ -36,9 +36,7 @@
 # include <sys/un.h>
 #endif
 
-CAT_GLOBALS_DECLARE(swow_stream)
-
-CAT_GLOBALS_CTOR_DECLARE_SZ(swow_stream)
+CAT_GLOBALS_DECLARE(swow_stream);
 
 /* $Id: f078bca729f4ab1bc2d60370e83bfa561f86b88d $ */
 
@@ -1930,7 +1928,7 @@ zend_result swow_stream_module_init(INIT_FUNC_ARGS)
     } SWOW_MODULES_CHECK_PRE_END();
 #endif
 
-    CAT_GLOBALS_REGISTER(swow_stream, CAT_GLOBALS_CTOR(swow_stream), NULL);
+    CAT_GLOBALS_REGISTER(swow_stream);
 
     if (!swow_hook_internal_functions(swow_stream_functions)) {
         return FAILURE;

@@ -56,9 +56,7 @@ static zend_class_entry *swow_coroutine_unwind_exit_ce;
 
 static zend_function swow_coroutine_internal_function;
 
-SWOW_API CAT_GLOBALS_DECLARE(swow_coroutine)
-
-CAT_GLOBALS_CTOR_DECLARE_SZ(swow_coroutine)
+SWOW_API CAT_GLOBALS_DECLARE(swow_coroutine);
 
 #define SWOW_COROUTINE_SHOULD_BE_IN_EXECUTING(scoroutine, update_last_error, failure) do { \
     if (UNEXPECTED(!swow_coroutine_is_executing(scoroutine))) { \
@@ -2439,7 +2437,7 @@ zend_result swow_coroutine_module_init(INIT_FUNC_ARGS)
         return FAILURE;
     }
 
-    CAT_GLOBALS_REGISTER(swow_coroutine, CAT_GLOBALS_CTOR(swow_coroutine), NULL);
+    CAT_GLOBALS_REGISTER(swow_coroutine);
 
     swow_coroutine_ce = swow_register_internal_class(
         "Swow\\Coroutine", NULL, swow_coroutine_methods,

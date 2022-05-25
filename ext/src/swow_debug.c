@@ -478,9 +478,7 @@ static const zend_function_entry swow_debug_functions[] = {
     PHP_FE_END
 };
 
-SWOW_API CAT_GLOBALS_DECLARE(swow_debug)
-
-CAT_GLOBALS_CTOR_DECLARE_SZ(swow_debug)
+SWOW_API CAT_GLOBALS_DECLARE(swow_debug);
 
 static user_opcode_handler_t original_zend_ext_stmt_handler;
 
@@ -520,7 +518,7 @@ static int swow_debug_ext_stmt_handler(zend_execute_data *execute_data)
 
 zend_result swow_debug_module_init(INIT_FUNC_ARGS)
 {
-    CAT_GLOBALS_REGISTER(swow_debug, CAT_GLOBALS_CTOR(swow_debug), NULL);
+    CAT_GLOBALS_REGISTER(swow_debug);
 
     if (zend_register_functions(NULL, swow_debug_functions, NULL, type) != SUCCESS) {
         return FAILURE;
