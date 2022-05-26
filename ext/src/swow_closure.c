@@ -649,3 +649,10 @@ zend_result swow_closure_module_init(INIT_FUNC_ARGS)
 
     return SUCCESS;
 }
+
+zend_result swow_closure_module_shutdown(INIT_FUNC_ARGS)
+{
+    CAT_GLOBALS_UNREGISTER(swow_closure);
+
+    return SUCCESS;
+}

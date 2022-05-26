@@ -1819,6 +1819,15 @@ zend_result swow_socket_module_init(INIT_FUNC_ARGS)
     return SUCCESS;
 }
 
+zend_result swow_socket_module_shutdown(INIT_FUNC_ARGS)
+{
+    if (!cat_socket_module_shutdown()) {
+        return FAILURE;
+    }
+
+    return SUCCESS;
+}
+
 zend_result swow_socket_runtime_init(INIT_FUNC_ARGS)
 {
     if (!cat_socket_runtime_init()) {

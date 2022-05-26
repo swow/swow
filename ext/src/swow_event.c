@@ -89,6 +89,15 @@ zend_result swow_event_module_init(INIT_FUNC_ARGS)
     return SUCCESS;
 }
 
+zend_result swow_event_module_shutdown(INIT_FUNC_ARGS)
+{
+    if (!cat_event_module_shutdown()) {
+        return FAILURE;
+    }
+
+    return SUCCESS;
+}
+
 zend_result swow_event_runtime_init(INIT_FUNC_ARGS)
 {
     if (!cat_event_runtime_init()) {

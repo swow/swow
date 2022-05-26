@@ -240,6 +240,15 @@ zend_result swow_watchdog_module_init(INIT_FUNC_ARGS)
     return SUCCESS;
 }
 
+zend_result swow_watchdog_module_shutdown(INIT_FUNC_ARGS)
+{
+    if (!cat_watchdog_module_shutdown()) {
+        return FAILURE;
+    }
+
+    return SUCCESS;
+}
+
 zend_result swow_watchdog_runtime_init(INIT_FUNC_ARGS)
 {
     if (!cat_watchdog_runtime_init()) {

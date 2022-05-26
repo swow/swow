@@ -109,6 +109,15 @@ zend_result swow_proc_open_module_init(INIT_FUNC_ARGS)
     return SUCCESS;
 }
 
+zend_result swow_proc_open_module_shutdown(INIT_FUNC_ARGS)
+{
+    if (!cat_os_wait_module_shutdown()) {
+        return FAILURE;
+    }
+
+    return SUCCESS;
+}
+
 zend_result swow_proc_open_runtime_init(INIT_FUNC_ARGS)
 {
     if (!cat_os_wait_runtime_init()) {

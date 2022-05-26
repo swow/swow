@@ -2027,5 +2027,7 @@ zend_result swow_stream_module_shutdown(INIT_FUNC_ARGS)
     // unhook plain wrapper
     memcpy(&php_plain_files_wrapper, &swow_plain_files_wrapper_sync, sizeof(php_plain_files_wrapper));
 
+    CAT_GLOBALS_UNREGISTER(swow_stream);
+
     return SUCCESS;
 }

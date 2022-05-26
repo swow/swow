@@ -29,6 +29,7 @@ extern "C" {
 #ifdef CAT_OS_WAIT
 
 zend_result swow_proc_open_module_init(INIT_FUNC_ARGS);
+zend_result swow_proc_open_module_shutdown(INIT_FUNC_ARGS);
 zend_result swow_proc_open_runtime_init(INIT_FUNC_ARGS);
 zend_result swow_proc_open_runtime_shutdown(INIT_FUNC_ARGS);
 

@@ -2493,6 +2493,17 @@ zend_result swow_coroutine_module_init(INIT_FUNC_ARGS)
     return SUCCESS;
 }
 
+zend_result swow_coroutine_module_shutdown(INIT_FUNC_ARGS)
+{
+    CAT_GLOBALS_UNREGISTER(swow_coroutine);
+
+    if (!cat_coroutine_module_shutdown()) {
+        return FAILURE;
+    }
+
+    return SUCCESS;
+}
+
 zend_result swow_coroutine_runtime_init(INIT_FUNC_ARGS)
 {
     if (!cat_coroutine_runtime_init()) {

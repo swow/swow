@@ -530,6 +530,13 @@ zend_result swow_debug_module_init(INIT_FUNC_ARGS)
     return SUCCESS;
 }
 
+zend_result swow_debug_module_shutdown(INIT_FUNC_ARGS)
+{
+    CAT_GLOBALS_UNREGISTER(swow_debug);
+
+    return SUCCESS;
+}
+
 zend_result swow_debug_runtime_init(INIT_FUNC_ARGS)
 {
     cat_queue_init(&SWOW_DEBUG_G(extended_statement_handlers));

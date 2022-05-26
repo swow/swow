@@ -68,6 +68,7 @@ static zend_always_inline const char *swow_function_get_namespace_name(const zen
 /* loader */
 
 zend_result swow_closure_module_init(INIT_FUNC_ARGS);
+zend_result swow_closure_module_shutdown(INIT_FUNC_ARGS);
 
 /* APIs */
 

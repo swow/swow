@@ -31,6 +31,7 @@ extern SWOW_API zend_class_entry *swow_event_ce;
 extern SWOW_API zend_object_handlers swow_event_handlers;
 
 zend_result swow_event_module_init(INIT_FUNC_ARGS);
+zend_result swow_event_module_shutdown(INIT_FUNC_ARGS);
 zend_result swow_event_runtime_init(INIT_FUNC_ARGS);
 zend_result swow_event_runtime_shutdown(SHUTDOWN_FUNC_ARGS);
 zend_result swow_event_runtime_close(void);

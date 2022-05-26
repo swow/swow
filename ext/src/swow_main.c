@@ -202,6 +202,16 @@ PHP_MSHUTDOWN_FUNCTION(swow)
 #ifdef CAT_HAVE_CURL
         swow_curl_module_shutdown,
 #endif
+#ifdef CAT_OS_WAIT
+        swow_proc_open_module_shutdown,
+#endif
+        swow_closure_module_shutdown,
+        swow_watchdog_module_shutdown,
+        swow_stream_module_shutdown,
+        swow_socket_module_shutdown,
+        swow_event_module_shutdown,
+        swow_coroutine_module_shutdown,
+        swow_debug_module_shutdown,
         swow_stream_module_shutdown,
         swow_module_shutdown,
     };
