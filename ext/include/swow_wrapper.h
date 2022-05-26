@@ -41,6 +41,9 @@ extern "C" {
 #pragma GCC diagnostic pop
 #endif
 
+/* Just to be compatible with different ZEND_API versions */
+#define SWOW_WRAPPER_API SWOW_API
+
 void swow_wrapper_init(void);
 void swow_wrapper_shutdown(void);
 
@@ -48,7 +51,7 @@ void swow_wrapper_shutdown(void);
 #if PHP_VERSION_ID < 80100
 #define ZEND_FALLTHROUGH CAT_FALLTHROUGH
 #define zend_hash_find_known_hash _zend_hash_find_known_hash
-SWOW_API zend_string* ZEND_FASTCALL zend_ulong_to_str(zend_ulong num);
+SWOW_WRAPPER_API zend_string* ZEND_FASTCALL zend_ulong_to_str(zend_ulong num);
 #endif
 /* }}} */
 
