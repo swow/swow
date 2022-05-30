@@ -29,9 +29,9 @@
 
 #define CAT_ALLOC_NEVER_RETURNS_NULL
 
-#define cat_malloc     emalloc
-#define cat_calloc     ecalloc
-#define cat_realloc    erealloc
+#define cat_malloc  emalloc
+#define cat_calloc  ecalloc
+#define cat_realloc erealloc
 #define cat_free(ptr)  do { \
     void *__ptr = ptr; \
     if (__ptr != NULL) { \
@@ -52,41 +52,39 @@
 
 typedef struct cat_globals_info_s {
     ts_rsrc_id id;
-#ifdef TSRMG_FAST
+#ifdef CAT_TSRMG_FAST
     size_t offset;
 #endif
 } cat_globals_info_t;
 
-#define CAT_GLOBALS_INFO(name)                    name##_globals_info
-#define CAT_GLOBALS_DECLARE(name)                 cat_globals_info_t CAT_GLOBALS_INFO(name)
+#define CAT_GLOBALS_INFO(name) name##_globals_info
+#define CAT_GLOBALS_DECLARE(name) cat_globals_info_t CAT_GLOBALS_INFO(name)
 
 #ifdef CAT_TSRMG_FAST
-#if ZEND_ENABLE_STATIC_TSRMLS_CACHE
-#define CAT_GLOBALS_BULK(name)                    TSRMG_FAST_BULK_STATIC(CAT_GLOBALS_INFO(name).offset, CAT_GLOBALS_TYPE(name) *)
-#else
-#define CAT_GLOBALS_BULK(name)                    TSRMG_FAST_BULK(CAT_GLOBALS_INFO(name).offset, CAT_GLOBALS_TYPE(name) *)
-#endif
-#define CAT_GLOBALS_GET(name, value)              (CAT_GLOBALS_BULK(name)->value)
-#define CAT_GLOBALS_REGISTER(name)                do { \
+# if ZEND_ENABLE_STATIC_TSRMLS_CACHE
+#  define CAT_GLOBALS_BULK(name) TSRMG_FAST_BULK_STATIC(CAT_GLOBALS_INFO(name).offset, CAT_GLOBALS_TYPE(name) *)
+# else
+#  define CAT_GLOBALS_BULK(name) TSRMG_FAST_BULK(CAT_GLOBALS_INFO(name).offset, CAT_GLOBALS_TYPE(name) *)
+# endif
+# define CAT_GLOBALS_REGISTER(name) do { \
     ts_allocate_fast_id(&CAT_GLOBALS_INFO(name).id, &CAT_GLOBALS_INFO(name).offset, sizeof(CAT_GLOBALS_TYPE(name)), NULL, NULL); \
     CAT_GLOBALS_BZERO(name); \
 } while (0)
 
 #else
 
-#if ZEND_ENABLE_STATIC_TSRMLS_CACHE
-#define CAT_GLOBALS_BULK(name)                    TSRMG_BULK_STATIC(CAT_GLOBALS_INFO(name).id, CAT_GLOBALS_TYPE(name) *)
-#else
-#define CAT_GLOBALS_BULK(name)                    TSRMG_BULK(CAT_GLOBALS_INFO(name).id, CAT_GLOBALS_TYPE(name) *)
-#endif
-#define CAT_GLOBALS_GET(name, value)              (CAT_GLOBALS_BULK(name)->value)
-#define CAT_GLOBALS_REGISTER(name)                do { \
+# if ZEND_ENABLE_STATIC_TSRMLS_CACHE
+#  define CAT_GLOBALS_BULK(name) TSRMG_BULK_STATIC(CAT_GLOBALS_INFO(name).id, CAT_GLOBALS_TYPE(name) *)
+# else
+#  define CAT_GLOBALS_BULK(name) TSRMG_BULK(CAT_GLOBALS_INFO(name).id, CAT_GLOBALS_TYPE(name) *)
+# endif
+# define CAT_GLOBALS_REGISTER(name) do { \
     ts_allocate_id(&CAT_GLOBALS_INFO(name).id, sizeof(CAT_GLOBALS_TYPE(name)), NULL, NULL); \
     CAT_GLOBALS_BZERO(name); \
 } while (0)
 #endif /* CAT_TSRMG_FAST */
 
-#define CAT_GLOBALS_UNREGISTER(name)              ts_free_id(CAT_GLOBALS_INFO(name).id)
+#define CAT_GLOBALS_UNREGISTER(name) ts_free_id(CAT_GLOBALS_INFO(name).id)
 
 #endif /* CAT_THREAD_SAFE */
 
