@@ -45,6 +45,7 @@ Get-ChildItem . | Sort-Object -Property Name | ForEach-Object -Process {
     if($_.Name.EndsWith(".dll")){
         $fn = $_.Name
         $jsonfn = "${fn}.json"
+        $pdbfn = $fn.replace('.dll', '.pdb')
         if (Test-Path $jsonfn -Type Leaf){
             info "Read information from $jsonfn"
             $data = Get-Content $jsonfn | ConvertFrom-Json
@@ -88,6 +89,17 @@ Get-ChildItem . | Sort-Object -Property Name | ForEach-Object -Process {
                 -InFile $fn
             if(-Not $ret){
                 warn "Failed to upload $fn"
+                continue
+            }
+            info "Uploading file $pdbfn"
+            $ret = Invoke-WebRequest `
+                -Uri "$uploadUrl$pdbfn" `
+                -Method "POST" `
+                -ContentType "application/zip" `
+                -Headers $headers `
+                -InFile $pdbfn
+            if(-Not $ret){
+                warn "Failed to upload $pdbfn"
                 continue
             }
             $size = $data.size

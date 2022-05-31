@@ -27,7 +27,7 @@ jobs:
     env:
       deps: openssl,libcurl,zlib,libssh2,nghttp2
       tools_path: C:\tools\phpdev
-      dllname: "php_swow-php${{ matrix.php-version }}-${{ matrix.arch }}-${{ (matrix.ts == '0') && 'n' || '' }}ts-VS16.dll"
+      dllname: "php_swow-php${{ matrix.php-version }}-${{ matrix.arch }}-${{ (matrix.ts == '0') && 'n' || '' }}ts-VS16"
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -110,7 +110,7 @@ jobs:
           phpts: ${{ matrix.ts }}
           phparch: ${{ matrix.arch }}
           install: "0"
-          conf-args: "--enable-swow-ssl --enable-swow-curl"
+          conf-args: "--enable-swow-ssl --enable-swow-curl --enable-debug-pack"
       - name: Prepare php for test
         id: php-inst
         continue-on-error: true
@@ -147,8 +147,9 @@ jobs:
       - name: Generate information about this dll
         shell: powershell
         run: |
-          $fn = "${{ env.dllname }}"
+          $fn = "${{ env.dllname }}.dll"
           Copy-Item ext\${{ matrix.arch }}\Release${{ matrix.ts == 1 && '_TS' || '' }}\php_swow.dll $fn
+          Copy-Item ext\${{ matrix.arch }}\Release${{ matrix.ts == 1 && '_TS' || '' }}\php_swow.pdb "${{ env.dllname }}.pdb"
           @{
             "name" = $fn;
             "size" = (Get-Item $fn).Length;
@@ -162,8 +163,9 @@ jobs:
         with:
           name: "${{ steps.getref.outputs.ref }}"
           path: |
-            ${{ env.dllname }}
-            ${{ env.dllname }}.json
+            ${{ env.dllname }}.dll
+            ${{ env.dllname }}.pdb
+            ${{ env.dllname }}.dll.json
       # see notes at cache step
       # TODO: remove this step when upstream fixed the bug
       - name: Remove ini and dll to avoid them being cached
