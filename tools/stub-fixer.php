@@ -2,10 +2,9 @@
 <?php
 /**
  * This file is part of Swow
- * OS-arch-dependent constant fixer and stub formatter
  *
- * @link     https://github.com/swow/swow
- * @contact  twosee <twosee@php.net>
+ * @link    https://github.com/swow/swow
+ * @contact twosee <twosee@php.net>
  *
  * For the full copyright and license information,
  * please view the LICENSE file that was distributed with this source code
@@ -19,6 +18,8 @@ use PhpParser\Comment\Doc;
 use PhpParser\Node;
 use PhpParser\NodeTraverser;
 use PhpParser\ParserFactory;
+use function array_slice;
+use const STDERR;
 
 require __DIR__ . '/autoload.php';
 
@@ -155,7 +156,7 @@ $swowModifier = function (
                 uasort($newStmts, static fn ($x, $y) => $x['value'] - $y['value'] === 0 ? strcmp($x['name'], $y['name']) : $x['value'] - $y['value']);
 
                 // prepend to original class
-                //print_r(array_values($newStmts));
+                // print_r(array_values($newStmts));
                 $node->stmts = [...array_map(static fn ($x) => $x['stmt'], $newStmts), ...$node->stmts];
             } elseif (
                 $node instanceof Node\Stmt\Class_ &&
@@ -274,7 +275,7 @@ $swowModifier = function (
                 $name = $const->name->name;
 
                 if (!($constantDefinition = $this->constantDefinitions["UV_{$name}"] ?? null)) {
-                    //printf("cannot find errno %s\n", $name);
+                    // printf("cannot find errno %s\n", $name);
                     return null;
                 }
                 // replace it with fixed value
@@ -305,7 +306,7 @@ $swowModifier = function (
 
 (static function () use ($argv, $swowModifier): void {
     $options = getopt('hn', ['help', 'dry-run'], $restIndex);
-    $argv = \array_slice($argv, $restIndex);
+    $argv = array_slice($argv, $restIndex);
     $filename = $argv[0] ?? '';
     $dryRun = false;
     if (isset($options['h']) || isset($options['help']) || empty($filename)) {
@@ -320,12 +321,12 @@ Options:
 Environments:
     https_proxy: specify used proxy when download headers from github
 HELP;
-        fprintf(\STDERR, '%s', $msg);
+        fprintf(STDERR, '%s', $msg);
         exit(1);
     }
 
     if (!is_file($filename)) {
-        fprintf(\STDERR, "target '%s' is not a file\n", $filename);
+        fprintf(STDERR, "target '%s' is not a file\n", $filename);
         exit(1);
     }
 

@@ -25,10 +25,10 @@ abstract class ConstantDefinitionsFetcherAbstract implements ConstantDefinitions
     protected function httpGet(string $uri): string
     {
         if (array_key_exists($uri, static::$httpCache)) {
-            //printf("cache hit %s\n", $uri);
+            // printf("cache hit %s\n", $uri);
             return static::$httpCache[$uri];
         }
-        //printf("cache miss %s\n", $uri);
+        // printf("cache miss %s\n", $uri);
         return static::$httpCache[$uri] = httpGet($uri);
     }
 }

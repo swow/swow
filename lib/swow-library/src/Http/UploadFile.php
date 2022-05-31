@@ -143,7 +143,7 @@ class UploadFile extends SplFileInfo implements UploadedFileInterface, Stringabl
         return $this->moved;
     }
 
-    /** @return array{'name': null|string, 'type': null|string, 'tmp_file': null|string, 'error': int, 'size': int|false} */
+    /** @return array{'name': string|null, 'type': string|null, 'tmp_file': string|null, 'error': int, 'size': int|false} */
     public function toArray(): array
     {
         return [

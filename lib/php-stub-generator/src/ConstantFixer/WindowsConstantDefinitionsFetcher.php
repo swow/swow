@@ -44,7 +44,7 @@ class WindowsConstantDefinitionsFetcher extends ConstantDefinitionsFetcherAbstra
         $errno = $this->httpGet($this->baseUrl . static::ERRNO_HEADER_URL);
         preg_match_all(static::ERRNO_RE, $errno, $matches);
         foreach ($matches['name'] as $index => $name) {
-            //printf("got %s = %d %s".PHP_EOL, $name, $matches['value'][$index], $matches['comment'][$index]);
+            // printf("got %s = %d %s".PHP_EOL, $name, $matches['value'][$index], $matches['comment'][$index]);
             $ret[$name] = new ConstantDefinition(
                 value: (int) $matches['value'][$index],
             );
@@ -58,7 +58,7 @@ class WindowsConstantDefinitionsFetcher extends ConstantDefinitionsFetcherAbstra
         preg_match_all(static::SIGNAL_RE, $signalGeneric, $matches);
         foreach ($matches['name'] as $index => $name) {
             $comment = trim($matches['comment'][$index]);
-            //printf("got %s = %d %s" . PHP_EOL, $name, $matches['value'][$index], $comment);
+            // printf("got %s = %d %s" . PHP_EOL, $name, $matches['value'][$index], $comment);
             $ret[$name] = new ConstantDefinition(
                 value: (int) $matches['value'][$index],
                 comment: $comment,

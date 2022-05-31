@@ -34,7 +34,7 @@ declare(strict_types=1);
     do {
         echo @fread($pipes[1], 8192);
     } while (!feof($pipes[1]));
-    /* FIXME: workaround for some platforms  */
+    /* FIXME: workaround for some platforms */
     if (function_exists('pcntl_waitpid')) {
         $status = proc_get_status($proc);
         if ($status['running']) {

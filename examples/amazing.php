@@ -66,7 +66,7 @@ for ($c = C / 2; $c--;) {
 }
 for ($c = C / 2; $c--;) {
     Coroutine::run(static function () use ($wr): void {
-        $mysqli = new Mysqli('127.0.0.1', 'root', 'root', 'mysql');
+        $mysqli = new mysqli('127.0.0.1', 'root', 'root', 'mysql');
         $statement = $mysqli->prepare('SELECT `User` FROM `user`');
         for ($n = N; $n--;) {
             $statement->bind_result($user);

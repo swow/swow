@@ -117,7 +117,7 @@ class ConstantDefinitionsMerger
                 value: $value,
                 comment: $comment
             );
-            //printf('%s: %d===%s===' . PHP_EOL, $name, $ret[$name]->value, $ret[$name]->comment);
+            // printf('%s: %d===%s===' . PHP_EOL, $name, $ret[$name]->value, $ret[$name]->comment);
         }
 
         return $ret;
