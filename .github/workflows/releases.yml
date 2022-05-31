@@ -58,7 +58,7 @@ jobs:
               "content-type"="application/json";
               "authorization"="Bearer ${{ secrets.GITHUB_TOKEN }}";
             }
-            $info = fetchjson -Uri "https://api.github.com/repos/microsoft/php-sdk-binary-tools/git/ref/heads/master" -Headers $headers
+            $info = fetchjson -Uri "https://api.github.com/repos/php/php-sdk-binary-tools/git/ref/heads/master" -Headers $headers
             if (!$info) {
               warn "Cannot fetch php-sdk-binary-tools info from api.github.com"
             } else {
