@@ -779,7 +779,8 @@ static int swow_stream_enable_crypto(php_stream *stream,
         GET_VER_OPT_STRING("capath", options.ca_path);
         if (options.ca_file == NULL) {
             options.ca_file = zend_ini_string((char *) ZEND_STRL("openssl.cafile"), 0);
-            options.ca_file = strlen(options.ca_file) != 0 ? options.ca_file : NULL;
+            // note: we must check if zend_ini_string returns NULL because we donot register "openssl.cafile" ini option 
+            options.ca_file = (options.ca_file != NULL && strlen(options.ca_file) != 0) ? options.ca_file : NULL;
             options.no_client_ca_list = cat_true;
         }
         GET_VER_OPT_STRING("passphrase", options.passphrase);
