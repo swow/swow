@@ -5,10 +5,9 @@ swow_stream: proxy
 require __DIR__ . '/../include/skipif.php';
 skip_if_offline();
 require __DIR__ . '/../include/bootstrap.php';
-skip_if(
-    ($response = httpRequest('https://github.com', timeoutSeconds: 3, proxy: true, doNotThrow: true)) === false || $response['status'] !== 200,
-    'Proxy is not available'
-);
+if (!(getenv('https_proxy') || getenv('http_proxy') || getenv('all_proxy'))) {
+    skip('Proxy environment (http(s)_proxy/all_proxy) is not set');
+}
 ?>
 --FILE--
 <?php
