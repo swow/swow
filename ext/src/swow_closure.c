@@ -91,7 +91,6 @@ static void swow_closure_ast_callback(zend_ast *ast, void *context_ptr)
     swow_ast_walk_context_t *context = (swow_ast_walk_context_t *) context_ptr;
     zend_ast **child;
     uint32_t children = swow_ast_children(ast, &child);
-    ZEND_ASSERT(children >= 0);
     bool has_use = false;
 
     for (uint32_t i = 0; i < children; i++) {
