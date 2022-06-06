@@ -27,19 +27,7 @@ Assert::same($socket->getWriteTimeout(), 1);
 
 $socket->close();
 
-try {
-    $socket = new Socket(Socket::TYPE_TCP);
-    // a class E reserved ip that cannot be reached
-    $socket->setConnectTimeout(1);
-    Assert::same($socket->getConnectTimeout(), 1);
-    $socket->connect('244.0.0.1', 1234);
-    echo "Connect should not success\n";
-} catch (SocketException $e) {
-    Assert::same($e->getCode(), Errno::ETIMEDOUT);
-} finally {
-    $socket->close();
-}
-
+phpt_var_dump('start dns timeout');
 try {
     $socket = new Socket(Socket::TYPE_TCP);
     $socket->setDnsTimeout(1);
@@ -52,12 +40,29 @@ try {
 } finally {
     $socket->close();
 }
+phpt_var_dump('end dns timeout');
+
+phpt_var_dump('start connect timeout');
+try {
+    $socket = new Socket(Socket::TYPE_TCP);
+    // a class E reserved ip that cannot be reached
+    $socket->setConnectTimeout(1);
+    Assert::same($socket->getConnectTimeout(), 1);
+    $socket->connect('244.0.0.1', 1234);
+    echo "Connect should not success\n";
+} catch (SocketException $e) {
+    Assert::same($e->getCode(), Errno::ETIMEDOUT);
+} finally {
+    $socket->close();
+}
+phpt_var_dump('end connect timeout');
 
 $noticer = new Channel(0);
 
 // dummy server with delay
 $server = new Socket(Socket::TYPE_TCP);
 Coroutine::run(function () use ($noticer, $server) {
+    phpt_var_dump('start write dummy server');
     $server->bind('127.0.0.1')->listen();
     $conn = $server->accept();
     $conn->setRecvBufferSize(0);
@@ -65,8 +70,10 @@ Coroutine::run(function () use ($noticer, $server) {
     // never reads
     $conn->close();
     $server->close();
+    phpt_var_dump('end write dummy server');
 });
 
+phpt_var_dump('start write timeout');
 try {
     $socket = new Socket(Socket::TYPE_TCP);
     $socket->setWriteTimeout(1);
@@ -82,17 +89,21 @@ try {
 } finally {
     $noticer->push(1);
 }
+phpt_var_dump('end write timeout');
 
 // dummy server with delay
 $server = new Socket(Socket::TYPE_TCP);
 Coroutine::run(function () use ($noticer, $server) {
+    phpt_var_dump('start read dummy server');
     $server->bind('127.0.0.1')->listen();
     $conn = $server->accept();
     $noticer->pop();
     $conn->close();
     $server->close();
+    phpt_var_dump('end read dummy server');
 });
 
+phpt_var_dump('start read timeout');
 try {
     $socket = new Socket(Socket::TYPE_TCP);
     $socket->setReadTimeout(1);
@@ -106,10 +117,12 @@ try {
     $noticer->push(1);
     $socket->close();
 }
+phpt_var_dump('end read timeout');
 
 $server = new Socket(Socket::TYPE_TCP);
 $server->bind('127.0.0.1')->listen();
 
+phpt_var_dump('start accept timeout');
 try {
     $server->setAcceptTimeout(1);
     Assert::same($server->getAcceptTimeout(), 1);
@@ -119,6 +132,7 @@ try {
 } finally {
     $server->close();
 }
+phpt_var_dump('end accept timeout');
 
 echo 'Done' . PHP_LF;
 ?>
