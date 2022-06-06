@@ -457,7 +457,7 @@ class Assert
         static::reportInvalidArgument(sprintf(
             $message ?: 'Expected an instance of any of %2$s. Got: %s',
             static::typeToString($value),
-            implode(', ', array_map(['static', 'valueToString'], $classes))
+            implode(', ', array_map([static::class, 'valueToString'], $classes))
         ));
 
         return false;
@@ -758,7 +758,7 @@ class Assert
             static::reportInvalidArgument(sprintf(
                 $message ?: 'Expected one of: %2$s. Got: %s',
                 static::valueToString($value),
-                implode(', ', array_map(['static', 'valueToString'], $values))
+                implode(', ', array_map([static::class, 'valueToString'], $values))
             ));
 
             return false;
@@ -1408,7 +1408,7 @@ class Assert
         if (str_starts_with($name, 'nullOr')) {
             if ($arguments[0] !== null) {
                 $method = lcfirst(substr($name, 6));
-                if (!call_user_func_array(['static', $method], $arguments)) {
+                if (!call_user_func_array([static::class, $method], $arguments)) {
                     return false;
                 }
             }
@@ -1426,7 +1426,7 @@ class Assert
 
             foreach ($arguments[0] as $entry) {
                 $args[0] = $entry;
-                if (!call_user_func_array(['static', $method], $args)) {
+                if (!call_user_func_array([static::class, $method], $args)) {
                     return false;
                 }
             }
