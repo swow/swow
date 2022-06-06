@@ -48,7 +48,8 @@ try {
     // a class E reserved ip that cannot be reached
     $socket->setConnectTimeout(1);
     Assert::same($socket->getConnectTimeout(), 1);
-    $socket->connect('244.0.0.1', 1234);
+    // always unreachable according to RFC-7335
+    $socket->connect('192.0.0.1', 1234);
     echo "Connect should not success\n";
 } catch (SocketException $e) {
     Assert::same($e->getCode(), Errno::ETIMEDOUT);
