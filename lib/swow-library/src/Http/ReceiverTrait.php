@@ -350,14 +350,15 @@ trait ReceiverTrait
                                     $uploadedFile->size = $tmpFileSize;
                                     $uploadedFiles[] = $uploadedFile;
                                     // reset for the next parts
-                                    $multiPartHeadersComplete = false;
-                                    $multipartHeaderName = '';
-                                    $multipartHeaders = [];
                                     $tmpFilePath = '';
                                     $tmpFile = null;
                                     $tmpFileSize = 0;
                                     $fileError = UPLOAD_ERR_OK;
                                 }
+                                // reset for the next parts
+                                $multiPartHeadersComplete = false;
+                                $multipartHeaderName = '';
+                                $multipartHeaders = [];
                             }
                         }
                     } else {
