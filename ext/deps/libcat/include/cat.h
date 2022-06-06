@@ -78,7 +78,7 @@ extern "C" {
 
 /* global */
 
-CAT_GLOBALS_STRUCT_BEGIN(cat)
+CAT_GLOBALS_STRUCT_BEGIN(cat) {
     cat_bool_t runtime;
     cat_log_types_t log_types;
     cat_module_types_t log_module_types;
@@ -93,9 +93,9 @@ CAT_GLOBALS_STRUCT_BEGIN(cat)
 #ifdef CAT_DEBUG
     unsigned int log_debug_level;
 #endif
-CAT_GLOBALS_STRUCT_END(cat)
+} CAT_GLOBALS_STRUCT_END(cat);
 
-extern CAT_API CAT_GLOBALS_DECLARE(cat)
+extern CAT_API CAT_GLOBALS_DECLARE(cat);
 
 #define CAT_G(x) CAT_GLOBALS_GET(cat, x)
 

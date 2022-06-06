@@ -18,9 +18,7 @@
 
 #include "cat.h"
 
-CAT_API CAT_GLOBALS_DECLARE(cat)
-
-CAT_GLOBALS_CTOR_DECLARE_SZ(cat)
+CAT_API CAT_GLOBALS_DECLARE(cat);
 
 static cat_bool_t cat_args_registered = cat_false;
 
@@ -36,7 +34,7 @@ void cat_bug_detector_callback(int signum)
     "You can read How to report a bug doc before submitting any bug reports:\n" \
     ">> https://github.com/libcat/libcat/blob/master/.github/ISSUE.md \n"
 #endif
-    fprintf(CAT_G(error_log), CAT_BUG_REPORT);
+    fprintf(stderr, CAT_BUG_REPORT);
     abort();
 }
 #endif
@@ -58,7 +56,7 @@ CAT_API cat_bool_t cat_module_init(void)
     );
 #endif
 
-    CAT_GLOBALS_REGISTER(cat, CAT_GLOBALS_CTOR(cat), NULL);
+    CAT_GLOBALS_REGISTER(cat);
 
 #if CAT_USE_BUG_DETECTOR
     if (cat_env_is_true("CAT_BUG_DETECTOR", cat_true)) {
@@ -71,6 +69,8 @@ CAT_API cat_bool_t cat_module_init(void)
 
 CAT_API cat_bool_t cat_module_shutdown(void)
 {
+    CAT_GLOBALS_UNREGISTER(cat);
+
     return cat_true;
 }
 

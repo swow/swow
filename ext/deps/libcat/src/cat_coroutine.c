@@ -141,13 +141,17 @@ static cat_coroutine_stack_size_t cat_coroutine_align_stack_size(size_t size)
     return (cat_coroutine_stack_size_t) size;
 }
 
-CAT_API CAT_GLOBALS_DECLARE(cat_coroutine)
-
-CAT_GLOBALS_CTOR_DECLARE_SZ(cat_coroutine)
+CAT_API CAT_GLOBALS_DECLARE(cat_coroutine);
 
 CAT_API cat_bool_t cat_coroutine_module_init(void)
 {
-    CAT_GLOBALS_REGISTER(cat_coroutine, CAT_GLOBALS_CTOR(cat_coroutine), NULL);
+    CAT_GLOBALS_REGISTER(cat_coroutine);
+    return cat_true;
+}
+
+CAT_API cat_bool_t cat_coroutine_module_shutdown(void)
+{
+    CAT_GLOBALS_UNREGISTER(cat_coroutine);
     return cat_true;
 }
 
@@ -754,27 +758,33 @@ CAT_API cat_bool_t cat_coroutine_resume(cat_coroutine_t *coroutine, cat_data_t *
 
     CAT_COROUTINE_SWITCH_LOG(resume, coroutine);
 
-    /* resume flow:
+    /* 1. common resume flow:
     * +------+  +------+       +------+
     * | co-1 +->| co-2 +-here->| co-3 |
     * +------+  +------+       +------+
-    * resume previous
+    * then it becomes:
+    * +------+  +------+      +------+
+    * | co-1 +->| co-2 +----->| co-3 |
+    * +------+  +------+      +------+
+    * =================================
+    * 2. resume previous flow:
     * +------+  +------+       +------+
     * | co-1 +->| co-2 +------>| co-3 |
     * +------+  +--^---+       +---+--+
     *              |               |
     *              +-----here------+
-    * then it becomes:
+    * co-2 went to the back of co-3:
     * +------+  +------+      +------+
     * | co-1 +->| co-3 +----->| co-2 |
     * +------+  +------+      +------+
-    * or cross resume flow:
+    * =================================
+    * 3. cross resume flow:
     * +------+  +------+      +------+
     * | co-1 +->| co-2 +----->| co-3 |
     * +--^---+  +------+      +---+--+
     *   |                        |
     *   +----- here-we-are-------+
-    * then it becomes:
+    * co-1 went to the back of co-3:
     * +------+  +------+      +------+
     * | co-2 +->| co-3 +----->| co-1 |
     * +------+  +------+      +------+
@@ -821,7 +831,7 @@ CAT_API cat_bool_t cat_coroutine_yield(cat_data_t *data, cat_data_t **retval)
     * +------+  +------+       +------+
     * | co-1 +->| co-2 +<-here-| co-3 |
     * +------+  +------+       +------+
-    * then it becomes:
+    * co-3 hang in the void:
     * +------+  +------+       +------+
     * | co-1 +->| co-2 |       | co-3 |:(waiting)
     * +------+  +------+       +------+

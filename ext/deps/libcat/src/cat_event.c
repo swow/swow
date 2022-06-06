@@ -18,13 +18,18 @@
 
 #include "cat_event.h"
 
-CAT_API CAT_GLOBALS_DECLARE(cat_event)
-
-CAT_GLOBALS_CTOR_DECLARE_SZ(cat_event)
+CAT_API CAT_GLOBALS_DECLARE(cat_event);
 
 CAT_API cat_bool_t cat_event_module_init(void)
 {
-    CAT_GLOBALS_REGISTER(cat_event, CAT_GLOBALS_CTOR(cat_event), NULL);
+    CAT_GLOBALS_REGISTER(cat_event);
+
+    return cat_true;
+}
+
+CAT_API cat_bool_t cat_event_module_shutdown(void)
+{
+    CAT_GLOBALS_UNREGISTER(cat_event);
 
     return cat_true;
 }

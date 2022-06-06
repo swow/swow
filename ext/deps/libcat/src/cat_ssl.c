@@ -1337,6 +1337,10 @@ static int cat_ssl_get_error(const cat_ssl_t *ssl, int ret_code)
     return error;
 }
 
+#if OPENSSL_VERSION_NUMBER < 0x30000000L && !defined(ERR_peek_error_data)
+# define ERR_peek_error_data(data, flags) ERR_peek_error_line_data(NULL, NULL, data, flags)
+#endif
+
 CAT_API CAT_COLD char *cat_ssl_get_error_reason(void)
 {
     char *errstr = NULL, *errstr2;
@@ -1345,7 +1349,7 @@ CAT_API CAT_COLD char *cat_ssl_get_error_reason(void)
 
     if (ERR_peek_error()) {
         while (1) {
-            unsigned long n = ERR_peek_error_line_data(NULL, NULL, &data, &flags);
+            unsigned long n = ERR_peek_error_data(&data, &flags);
             if (n == 0) {
                 break;
             }

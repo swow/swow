@@ -63,7 +63,7 @@ typedef struct cat_os_child_process_stat_s {
 
 RB_HEAD(cat_os_child_process_stat_tree_s, cat_os_child_process_stat_s);
 
-CAT_GLOBALS_STRUCT_BEGIN(cat_os_wait)
+CAT_GLOBALS_STRUCT_BEGIN(cat_os_wait) {
     size_t sigchld_watcher_count;
     uv_signal_t sigchld_watcher;
     /* coroutines that hangs on os_wait() */
@@ -72,11 +72,9 @@ CAT_GLOBALS_STRUCT_BEGIN(cat_os_wait)
     struct cat_os_waitpid_task_tree_s waitpid_task_tree;
     /* those child processes that are recycled */
     struct cat_os_child_process_stat_tree_s child_process_state_tree;
-CAT_GLOBALS_STRUCT_END(cat_os_wait)
+} CAT_GLOBALS_STRUCT_END(cat_os_wait);
 
-CAT_GLOBALS_DECLARE(cat_os_wait)
-
-CAT_GLOBALS_CTOR_DECLARE_SZ(cat_os_wait)
+CAT_GLOBALS_DECLARE(cat_os_wait);
 
 #define CAT_OS_WAIT_G(x) CAT_GLOBALS_GET(cat_os_wait, x)
 
@@ -448,7 +446,14 @@ CAT_API cat_pid_t cat_os_wait4_ex(cat_pid_t pid, int *status, int options, struc
 
 CAT_API cat_bool_t cat_os_wait_module_init(void)
 {
-    CAT_GLOBALS_REGISTER(cat_os_wait, CAT_GLOBALS_CTOR(cat_os_wait), NULL);
+    CAT_GLOBALS_REGISTER(cat_os_wait);
+
+    return cat_true;
+}
+
+CAT_API cat_bool_t cat_os_wait_module_shutdown(void)
+{
+    CAT_GLOBALS_UNREGISTER(cat_os_wait);
 
     return cat_true;
 }

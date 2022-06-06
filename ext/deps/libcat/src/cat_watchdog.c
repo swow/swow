@@ -18,9 +18,7 @@
 
 #include "cat_watchdog.h"
 
-CAT_API CAT_GLOBALS_DECLARE(cat_watchdog)
-
-CAT_GLOBALS_CTOR_DECLARE_SZ(cat_watchdog)
+CAT_API CAT_GLOBALS_DECLARE(cat_watchdog);
 
 static cat_timeout_t cat_watchdog_align_quantum(cat_timeout_t quantum)
 {
@@ -101,7 +99,13 @@ static void cat_watchdog_loop(void* arg)
 
 CAT_API cat_bool_t cat_watchdog_module_init(void)
 {
-    CAT_GLOBALS_REGISTER(cat_watchdog, CAT_GLOBALS_CTOR(cat_watchdog), NULL);
+    CAT_GLOBALS_REGISTER(cat_watchdog);
+    return cat_true;
+}
+
+CAT_API cat_bool_t cat_watchdog_module_shutdown(void)
+{
+    CAT_GLOBALS_UNREGISTER(cat_watchdog);
     return cat_true;
 }
 

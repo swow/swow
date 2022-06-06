@@ -162,7 +162,7 @@ typedef uint32_t cat_coroutine_count_t;
 
 typedef void (*cat_coroutine_deadlock_callback_t)(void);
 
-CAT_GLOBALS_STRUCT_BEGIN(cat_coroutine)
+CAT_GLOBALS_STRUCT_BEGIN(cat_coroutine) {
     /* options */
     cat_coroutine_stack_size_t default_stack_size;
     cat_log_type_t deadlock_log_type;
@@ -184,14 +184,15 @@ CAT_GLOBALS_STRUCT_BEGIN(cat_coroutine)
     cat_coroutine_count_t peak_count;
     /* for watchdog */
     cat_coroutine_round_t round;
-CAT_GLOBALS_STRUCT_END(cat_coroutine)
+} CAT_GLOBALS_STRUCT_END(cat_coroutine);
 
-extern CAT_API CAT_GLOBALS_DECLARE(cat_coroutine)
+extern CAT_API CAT_GLOBALS_DECLARE(cat_coroutine);
 
 #define CAT_COROUTINE_G(x) CAT_GLOBALS_GET(cat_coroutine, x)
 
 /* module initializers */
 CAT_API cat_bool_t cat_coroutine_module_init(void);
+CAT_API cat_bool_t cat_coroutine_module_shutdown(void);
 CAT_API cat_bool_t cat_coroutine_runtime_init(void);
 CAT_API cat_bool_t cat_coroutine_runtime_shutdown(void);
 

@@ -500,7 +500,7 @@ struct cat_socket_s
 
 /* globals */
 
-CAT_GLOBALS_STRUCT_BEGIN(cat_socket)
+CAT_GLOBALS_STRUCT_BEGIN(cat_socket) {
     /* socket */
     cat_socket_id_t last_id;
     struct {
@@ -509,15 +509,16 @@ CAT_GLOBALS_STRUCT_BEGIN(cat_socket)
     } options;
     /* dns */
     // TODO: dns_cache (we should implement lru_cache)
-CAT_GLOBALS_STRUCT_END(cat_socket)
+} CAT_GLOBALS_STRUCT_END(cat_socket);
 
-extern CAT_API CAT_GLOBALS_DECLARE(cat_socket)
+extern CAT_API CAT_GLOBALS_DECLARE(cat_socket);
 
 #define CAT_SOCKET_G(x) CAT_GLOBALS_GET(cat_socket, x)
 
 /* module initialization */
 
 CAT_API cat_bool_t cat_socket_module_init(void);
+CAT_API cat_bool_t cat_socket_module_shutdown(void);
 CAT_API cat_bool_t cat_socket_runtime_init(void);
 
 /* common methods */

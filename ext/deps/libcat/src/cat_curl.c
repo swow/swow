@@ -48,15 +48,13 @@ typedef struct cat_curl_pollfd_s {
     int action;
 } cat_curl_pollfd_t;
 
-CAT_GLOBALS_STRUCT_BEGIN(cat_curl)
+CAT_GLOBALS_STRUCT_BEGIN(cat_curl) {
     cat_queue_t multi_map;
-CAT_GLOBALS_STRUCT_END(cat_curl)
+} CAT_GLOBALS_STRUCT_END(cat_curl);
 
-CAT_GLOBALS_DECLARE(cat_curl)
+CAT_GLOBALS_DECLARE(cat_curl);
 
 #define CAT_CURL_G(x) CAT_GLOBALS_GET(cat_curl, x)
-
-CAT_GLOBALS_CTOR_DECLARE_SZ(cat_curl)
 
 static cat_always_inline void cat_curl_multi_configure(CURLM *multi, void *socket_function, void *timer_function, void *context)
 {
@@ -265,7 +263,7 @@ static void cat_curl_multi_close_context(CURLM *multi)
 
 CAT_API cat_bool_t cat_curl_module_init(void)
 {
-    CAT_GLOBALS_REGISTER(cat_curl, CAT_GLOBALS_CTOR(cat_curl), NULL);
+    CAT_GLOBALS_REGISTER(cat_curl);
 
     if (curl_global_init(CURL_GLOBAL_DEFAULT) != CURLE_OK) {
         CAT_WARN_WITH_REASON(EXT, CAT_UNKNOWN, "Curl init failed");
@@ -278,6 +276,8 @@ CAT_API cat_bool_t cat_curl_module_init(void)
 CAT_API cat_bool_t cat_curl_module_shutdown(void)
 {
     curl_global_cleanup();
+
+    CAT_GLOBALS_UNREGISTER(cat_curl);
 
     return cat_true;
 }

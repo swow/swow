@@ -88,10 +88,10 @@ CAT_API void cat_channel_close(cat_channel_t *channel);
 
 /* select */
 
-typedef enum cat_channel_opcode_e {
-    CAT_CHANNEL_OPCODE_PUSH,
-    CAT_CHANNEL_OPCODE_POP,
-} cat_channel_opcode_t;
+typedef enum cat_channel_select_event_e {
+    CAT_CHANNEL_SELECT_EVENT_PUSH,
+    CAT_CHANNEL_SELECT_EVENT_POP,
+} cat_channel_select_event_t;
 
 typedef struct cat_channel_select_message_s {
     cat_channel_t *channel;
@@ -100,7 +100,7 @@ typedef struct cat_channel_select_message_s {
         const cat_data_t *in;
         cat_data_t *out;
     } data;
-    cat_channel_opcode_t opcode;
+    cat_channel_select_event_t opcode;
     cat_bool_t error;
 } cat_channel_select_message_t;
 

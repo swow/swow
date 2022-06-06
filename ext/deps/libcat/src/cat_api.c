@@ -56,6 +56,13 @@ CAT_API cat_bool_t cat_module_shutdown_all(void)
 {
     cat_bool_t ret = cat_true;
 
+    ret = cat_watchdog_module_shutdown() && ret;
+#ifdef CAT_OS_WAIT
+    ret = cat_os_wait_module_shutdown() && ret;
+#endif
+    ret = cat_socket_module_shutdown() && ret;
+    ret = cat_event_module_shutdown() && ret;
+    ret = cat_coroutine_module_shutdown() && ret;
     ret = cat_module_shutdown() && ret;
 
     return ret;

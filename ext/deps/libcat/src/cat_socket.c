@@ -429,9 +429,7 @@ CAT_API cat_bool_t cat_sockaddr_check(const cat_sockaddr_t *address, cat_socklen
     return cat_true;
 }
 
-CAT_API CAT_GLOBALS_DECLARE(cat_socket)
-
-CAT_GLOBALS_CTOR_DECLARE_SZ(cat_socket)
+CAT_API CAT_GLOBALS_DECLARE(cat_socket);
 
 static const cat_socket_timeout_options_t cat_socket_default_global_timeout_options = {
     CAT_TIMEOUT_FOREVER,
@@ -457,7 +455,13 @@ CAT_STATIC_ASSERT(6 == CAT_SOCKET_TIMEOUT_OPTIONS_COUNT);
 
 CAT_API cat_bool_t cat_socket_module_init(void)
 {
-    CAT_GLOBALS_REGISTER(cat_socket, CAT_GLOBALS_CTOR(cat_socket), NULL);
+    CAT_GLOBALS_REGISTER(cat_socket);
+    return cat_true;
+}
+
+CAT_API cat_bool_t cat_socket_module_shutdown(void)
+{
+    CAT_GLOBALS_UNREGISTER(cat_socket);
     return cat_true;
 }
 
