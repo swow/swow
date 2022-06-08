@@ -102,8 +102,6 @@ SWOW_API zend_op_array *swow_compile_string_ex(zend_string *source_string, const
 
 /* memory */
 
-#define SWOW_IS_OUT_OF_MEMORY() (CG(unclean_shutdown) && PG(last_error_type) == E_ERROR && (size_t) PG(memory_limit) < zend_memory_usage(1))
-
 /* modules */
 
 #define SWOW_MODULES_CHECK_PRE_START() do { \

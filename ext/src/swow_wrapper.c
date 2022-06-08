@@ -277,11 +277,7 @@ SWOW_API void swow_output_globals_shutdown(void)
 #endif
 
         if (OG(active)) {
-            if (UNEXPECTED(SWOW_IS_OUT_OF_MEMORY())) {
-                php_output_discard_all();
-            } else {
-                php_output_end_all();
-            }
+            php_output_end_all();
         }
         php_output_deactivate();
         php_output_activate();
