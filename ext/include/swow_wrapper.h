@@ -102,6 +102,8 @@ SWOW_API zend_op_array *swow_compile_string_ex(zend_string *source_string, const
 
 /* memory */
 
+SWOW_API ZEND_COLD ZEND_NORETURN void swow_out_of_memory(void);
+
 /* modules */
 
 #define SWOW_MODULES_CHECK_PRE_START() do { \

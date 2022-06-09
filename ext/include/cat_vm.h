@@ -39,6 +39,8 @@
     } \
 } while (0)
 
+#define cat_out_of_memory swow_out_of_memory
+
 /* thread safe */
 
 #ifdef ZTS
