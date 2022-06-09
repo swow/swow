@@ -27,7 +27,7 @@
 
 /* memory */
 
-#define CAT_ALLOC_NEVER_RETURNS_NULL
+#define CAT_ALLOC_HANDLE_ERRORS 0
 
 #define cat_malloc  emalloc
 #define cat_calloc  ecalloc
