@@ -77,7 +77,7 @@ Swow和Opcache非常相似，两者都允许开发者在几乎不改变代码的
 
 Swow支持在PHP的ZTS（Zend Thread Safety）版本下运行，即基于内存隔离的多线程支持。
 
-这意味着它可以和[parallel](https://www.php.net/manual/book.parallel.php)、[pthreads](https://www.php.net/manual/book.pthreads.php)等多线程扩展很好地结合使用，但Swow本身不会提供任何多线程支持。
+这意味着它可以和[parallel](https://www.php.net/manual/book.parallel.php)、[pthreads](https://www.php.net/manual/book.pthreads.php)等多线程扩展很好地结合使用。
 
 ## 🐣 学习成本
 
@@ -136,7 +136,7 @@ composer require swow/swow:dev-develop
 
 安装程序也会提供类似于以下的运行命令：
 
-`/usr/bin/env php -n -d extension=/path/to/vendor/swow/swow/ext/modules/swow.so --ri swow`
+`/usr/bin/env php -d extension=/path/to/vendor/swow/swow/ext/modules/swow.so --ri swow`
 
 即扩展的so文件输出到了你项目的vendor目录下，相当于扩展也拥有了版本控制，你可以为你的每个项目指定不同版本的Swow，而无需全局使用同一个扩展so。
 

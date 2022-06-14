@@ -77,7 +77,7 @@ In addition, even if it is a traditional synchronous blocking application, you c
 
 Swow supports running under the ZTS (Zend Thread Safety) version of PHP, that is, multi-thread support based on memory isolation.
 
-This means that it can be used well with [parallel](https://www.php.net/manual/book.parallel.php), [pthreads](https://www.php.net/manual/book.pthreads.php), and other multi-threaded extensions. But Swow itself does not provide any multi-threading support.
+This means that it can be used well with [parallel](https://www.php.net/manual/book.parallel.php), [pthreads](https://www.php.net/manual/book.pthreads.php), and other multi-threaded extensions.
 
 ## 🐣 Learning cost
 
@@ -137,7 +137,7 @@ When installing in this way, the last step of the program will try using `sudo` 
 
 It may also prompt commands like:
 
-`/usr/bin/env php -n -d extension=/path/to/vendor/swow/swow/ext/modules/swow.so --ri swow`
+`/usr/bin/env php -d extension=/path/to/vendor/swow/swow/ext/modules/swow.so --ri swow`
 
 That is, the \*.so file is output to the vendor directory of your project, which means that the extension also has version control. You can specify different versions of Swow for each of your projects without using the same \*.so globally.
 
