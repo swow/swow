@@ -271,7 +271,7 @@ class ServerRequest extends Request implements ServerRequestInterface
         if ($request->uploadedFiles) {
             $uploadedFiles = [];
             foreach ($request->uploadedFiles as $formDataName => $rawUploadedFile) {
-                $uploadedFiles[$formDataName] = new UploadFile(
+                $uploadedFiles[$formDataName] = new UploadedFile(
                     $rawUploadedFile->tmp_name,
                     $rawUploadedFile->size,
                     $rawUploadedFile->error,

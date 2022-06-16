@@ -41,7 +41,7 @@ use const UPLOAD_ERR_NO_TMP_DIR;
 use const UPLOAD_ERR_OK;
 use const UPLOAD_ERR_PARTIAL;
 
-class UploadFile extends SplFileInfo implements UploadedFileInterface, Stringable
+class UploadedFile extends SplFileInfo implements UploadedFileInterface, Stringable
 {
     /** @var array<int> */
     protected static array $errors = [
