@@ -151,13 +151,13 @@ class ServerRequest extends Request implements ServerRequestInterface
         return $new;
     }
 
-    /** @return array<UploadedFileInterface> */
+    /** @return array<string, UploadedFileInterface> */
     public function getUploadedFiles(): array
     {
         return $this->uploadedFiles;
     }
 
-    /** @param array<UploadedFileInterface> $uploadedFiles */
+    /** @param array<string, UploadedFileInterface> $uploadedFiles */
     public function setUploadedFiles(array $uploadedFiles): static
     {
         $this->uploadedFiles = $uploadedFiles;
@@ -270,8 +270,8 @@ class ServerRequest extends Request implements ServerRequestInterface
         }
         if ($request->uploadedFiles) {
             $uploadedFiles = [];
-            foreach ($request->uploadedFiles as $rawUploadedFile) {
-                $uploadedFiles[] = new UploadFile(
+            foreach ($request->uploadedFiles as $formDataName => $rawUploadedFile) {
+                $uploadedFiles[$formDataName] = new UploadFile(
                     $rawUploadedFile->tmp_name,
                     $rawUploadedFile->size,
                     $rawUploadedFile->error,

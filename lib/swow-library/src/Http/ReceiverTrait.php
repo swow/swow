@@ -348,7 +348,7 @@ trait ReceiverTrait
                                     $uploadedFile->tmp_name = $tmpFilePath;
                                     $uploadedFile->error = $fileError;
                                     $uploadedFile->size = $tmpFileSize;
-                                    $uploadedFiles[] = $uploadedFile;
+                                    $uploadedFiles[$formDataName] = $uploadedFile;
                                     // reset for the next parts
                                     $tmpFilePath = '';
                                     $tmpFile = null;
