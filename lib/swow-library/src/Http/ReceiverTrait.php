@@ -324,6 +324,7 @@ trait ReceiverTrait
                                     if ($dataOffset === 0) {
                                         $nWrite = fwrite($tmpFile, $buffer->toString(), $dataLength);
                                     } else {
+                                        // TODO: maybe we should have something like fwrite_ex() to gain more performance?
                                         $nWrite = fwrite($tmpFile, $buffer->peekFrom($dataOffset, $dataLength));
                                     }
                                     if ($nWrite !== $dataLength) {
