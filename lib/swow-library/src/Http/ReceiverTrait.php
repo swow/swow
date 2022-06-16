@@ -326,7 +326,7 @@ trait ReceiverTrait
                                     } else {
                                         $nWrite = fwrite($tmpFile, $buffer->peekFrom($dataOffset, $dataLength));
                                     }
-                                    if ($nWrite !== strlen($data)) {
+                                    if ($nWrite !== $dataLength) {
                                         $fileError = UPLOAD_ERR_CANT_WRITE;
                                     } else {
                                         $tmpFileSize += $nWrite;
