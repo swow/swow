@@ -386,11 +386,7 @@ if (PHP_SWOW != 'no') (function(){
     ADD_FLAG("SWOW_GLOBAL_OBJS", "$(SWOW_MULTIPART_PARSER_GLOBAL_OBJS)");
     ADD_FLAG("LIBS_SWOW", "$(SWOW_MULTIPART_PARSER_GLOBAL_OBJS_RESP)");
 
-    var shared = PHP_SWOW;
-    if(PHP_SWOW.replace(/static/,"") != PHP_SWOW){
-        shared = null;
-    }
-    EXTENSION('swow', 'swow.c', shared, git_cflags, "php_swow.dll");
+    EXTENSION('swow', 'swow.c', PHP_SWOW_SHARED, git_cflags, "php_swow.dll");
     //ADD_FLAG("PHP_SWOW_SWOW", "asmobjs");
 
 
