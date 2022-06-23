@@ -88,4 +88,9 @@ typedef struct cat_globals_info_s {
 
 #define CAT_GLOBALS_UNREGISTER(name) ts_free_id(CAT_GLOBALS_INFO(name).id)
 
+#define CAT_GLOBALS_MODULE_INIT()
+#define CAT_GLOBALS_MODULE_SHUTDOWN()
+#define CAT_GLOBALS_RUNTIME_INIT()
+#define CAT_GLOBALS_RUNTIME_CLOSE()
+
 #endif /* CAT_THREAD_SAFE */
