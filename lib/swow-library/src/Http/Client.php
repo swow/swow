@@ -183,9 +183,9 @@ class Client extends Socket implements ClientInterface, ProtocolTypeInterface
     protected function convertToClientException(Exception $exception, RequestInterface $request): ClientExceptionInterface
     {
         if ($exception instanceof SocketException) {
-            return new NetworkException($request, $exception->getMessage(), $exception->getCode());
+            return new NetworkException($request, $exception->getMessage(), $exception->getCode(), $exception);
         }
 
-        return new RequestException($request, $exception->getMessage(), $exception->getCode());
+        return new RequestException($request, $exception->getMessage(), $exception->getCode(), $exception);
     }
 }
