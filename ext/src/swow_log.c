@@ -44,7 +44,7 @@ static void swow_log_standard(CAT_LOG_PARAMATERS)
     /* Zend put()/error() may call PHP callbacks,
      * we can not do it in a pure C or interned coroutine */
     if (!(swow_coroutine_get_current()->coroutine.flags & SWOW_COROUTINE_FLAG_HAS_EXECUTOR)) {
-        cat_log_standard(type, module_type, module_name CAT_SOURCE_POSITION_RELAY_CC, code, "%s", message);
+        cat_log_standard(type, module_name CAT_SOURCE_POSITION_RELAY_CC, code, "%s", message);
         cat_free(message);
         return;
     }
@@ -163,37 +163,9 @@ static PHP_METHOD(Swow_Log, setTypes)
     CAT_G(log_types) = types;
 }
 
-#define arginfo_class_Swow_Log_getModuleTypes arginfo_class_Swow_Log_getTypes
-
-static PHP_METHOD(Swow_Log, getModuleTypes)
-{
-    RETURN_LONG(CAT_G(log_module_types));
-}
-
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Log_setModuleTypes, 0, 1, IS_VOID, 0)
-    ZEND_ARG_TYPE_INFO(0, moduleTypes, IS_LONG, 0)
-ZEND_END_ARG_INFO()
-
-static PHP_METHOD(Swow_Log, setModuleTypes)
-{
-    zend_long module_types;
-
-    ZEND_PARSE_PARAMETERS_START(1, 1)
-        Z_PARAM_LONG(module_types)
-    ZEND_PARSE_PARAMETERS_END();
-
-    if (UNEXPECTED((module_types & ~CAT_MODULE_TYPES_ALL) != 0)) {
-        zend_argument_value_error(1, "is unrecognized");
-        RETURN_THROWS();
-    }
-    CAT_G(log_module_types) = module_types;
-}
-
 static const zend_function_entry swow_log_methods[] = {
     PHP_ME(Swow_Log, getTypes,       arginfo_class_Swow_Log_getTypes,       ZEND_ACC_STATIC | ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Log, setTypes,       arginfo_class_Swow_Log_setTypes,       ZEND_ACC_STATIC | ZEND_ACC_PUBLIC)
-    PHP_ME(Swow_Log, getModuleTypes, arginfo_class_Swow_Log_getModuleTypes, ZEND_ACC_STATIC | ZEND_ACC_PUBLIC)
-    PHP_ME(Swow_Log, setModuleTypes, arginfo_class_Swow_Log_setModuleTypes, ZEND_ACC_STATIC | ZEND_ACC_PUBLIC)
     PHP_FE_END
 };
 

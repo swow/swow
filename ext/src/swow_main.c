@@ -64,8 +64,6 @@
 
 SWOW_API zend_class_entry *swow_ce;
 
-SWOW_API zend_class_entry *swow_module_ce;
-
 ZEND_DECLARE_MODULE_GLOBALS(swow)
 
 SWOW_API swow_nts_globals_t swow_nts_globals;
@@ -538,19 +536,6 @@ zend_result swow_module_init(INIT_FUNC_ARGS)
     zend_declare_class_constant_##type(swow_ce, ZEND_STRL(#name), (cast) SWOW_##name);
     SWOW_VERSION_MAP(SWOW_VERSION_GEN)
 #undef SWOW_VERSION_GEN
-
-    /* Module class with constants */
-    swow_module_ce = swow_register_internal_class(
-        "Swow\\Module", NULL, NULL,
-        NULL, NULL, cat_false, cat_false,
-        swow_create_object_deny, NULL, 0
-    );
-#define SWOW_MODULE_TYPE_GEN(name, value) \
-    zend_declare_class_constant_long(swow_module_ce, ZEND_STRL("TYPE_" #name), (value));
-    CAT_MODULE_BUILTIN_TYPE_MAP(SWOW_MODULE_TYPE_GEN)
-#undef SWOW_MODULE_TYPE_GEN
-    // TODO: extension usr types
-    zend_declare_class_constant_long(swow_module_ce, ZEND_STRL("TYPES_ALL"), CAT_MODULE_TYPES_ALL);
 
     return SUCCESS;
 }

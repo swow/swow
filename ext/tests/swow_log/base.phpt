@@ -14,10 +14,6 @@ $types = Log::getTypes();
 Assert::integer($types);
 Log::setTypes($types);
 
-$types = Log::getModuleTypes();
-Assert::integer($types);
-Log::setModuleTypes($types);
-
 echo 'Done' . PHP_LF;
 ?>
 --EXPECT--

@@ -89,7 +89,3 @@ typedef struct cat_globals_info_s {
 #define CAT_GLOBALS_UNREGISTER(name) ts_free_id(CAT_GLOBALS_INFO(name).id)
 
 #endif /* CAT_THREAD_SAFE */
-
-/* Extra module types for log */
-
-#define CAT_MODULE_TYPE_PHP CAT_MODULE_TYPE_USR1

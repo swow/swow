@@ -22,7 +22,6 @@ foreach ([
     'Swow',
     'Swow\\Http\\Status',
     'Swow\\Log',
-    'Swow\\Module',
     'Swow\\Signal',
     'Swow\\WatchDog',
     'Swow\\WebSocket\\Opcode',

@@ -168,8 +168,8 @@ SWOW_API void swow_coroutine_switch_executor(swow_coroutine_t *current_scoroutin
 SWOW_API cat_bool_t swow_coroutine_resume(swow_coroutine_t *scoroutine, zval *zdata, zval *retval);
 SWOW_API cat_bool_t swow_coroutine_yield(zval *zdata, zval *retval);
 
-#define swow_coroutine_schedule(scoroutine, module_type, name, ...) \
-        cat_coroutine_schedule(&scoroutine->coroutine, module_type, name, ##__VA_ARGS__);
+#define swow_coroutine_schedule(scoroutine, module_name, name, ...) \
+        cat_coroutine_schedule(&scoroutine->coroutine, module_name, name, ##__VA_ARGS__);
 
 /* basic info */
 SWOW_API cat_bool_t swow_coroutine_is_available(const swow_coroutine_t *scoroutine);

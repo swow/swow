@@ -411,7 +411,6 @@ EOF
       cat_memory.c \
       cat_string.c \
       cat_error.c \
-      cat_module.c \
       cat_log.c \
       cat_env.c \
       cat.c \

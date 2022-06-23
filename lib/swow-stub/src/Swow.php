@@ -24,44 +24,6 @@ namespace
 
 namespace Swow
 {
-    class Module
-    {
-        public const TYPE_CORE = 1;
-        public const TYPE_COROUTINE = 2;
-        public const TYPE_CHANNEL = 4;
-        public const TYPE_SYNC = 8;
-        public const TYPE_EVENT = 16;
-        public const TYPE_TIME = 32;
-        public const TYPE_SOCKET = 64;
-        public const TYPE_DNS = 128;
-        public const TYPE_WORK = 256;
-        public const TYPE_BUFFER = 512;
-        public const TYPE_FS = 1024;
-        public const TYPE_SIGNAL = 2048;
-        public const TYPE_PROCESS = 4096;
-        public const TYPE_THREAD = 8192;
-        public const TYPE_OS = 16384;
-        public const TYPE_WATCH_DOG = 131072;
-        public const TYPE_PROTOCOL = 262144;
-        public const TYPE_SSL = 2097152;
-        public const TYPE_EXT = 4194304;
-        public const TYPE_TEST = 8388608;
-        public const TYPE_USR1 = 16777216;
-        public const TYPE_USR2 = 33554432;
-        public const TYPE_USR3 = 67108864;
-        public const TYPE_USR4 = 134217728;
-        public const TYPE_USR5 = 268435456;
-        public const TYPE_USR6 = 536870912;
-        public const TYPE_USR7 = 1073741824;
-        public const TYPE_USR8 = -2147483648;
-        public const TYPES_BUILTIN = 15106047;
-        public const TYPES_USR = -16777216;
-        public const TYPES_ALL = -1671169;
-    }
-}
-
-namespace Swow
-{
     class Errno
     {
         /**
@@ -618,10 +580,6 @@ namespace Swow
         public static function getTypes(): int { }
 
         public static function setTypes(int $types): void { }
-
-        public static function getModuleTypes(): int { }
-
-        public static function setModuleTypes(int $moduleTypes): void { }
     }
 }
 
