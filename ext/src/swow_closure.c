@@ -439,7 +439,7 @@ SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_user_anonymous_function(zend_f
         zend_hash_update(ht, SWOW_KNOWN_STRING(static_variables), &z_static_variables);
     }
 
-    CAT_LOG_DEBUG_SCOPE_START_WITH_LEVEL(PHP, 5) {
+    CAT_LOG_DEBUG_VA_WITH_LEVEL(PHP, 5, {
         zend_string *output;
         ZVAL_ARR(&z_tmp, ht);
         SWOW_OB_START(output) {
@@ -448,7 +448,7 @@ SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_user_anonymous_function(zend_f
         CAT_LOG_DEBUG_D(PHP, "Closure hash: <<<DUMP\n%.*s}}}\nDUMP;",
             (int) ZSTR_LEN(output), ZSTR_VAL(output));
         zend_string_release(output);
-    } CAT_LOG_DEBUG_SCOPE_END();
+    });
 
     if (0) {
         _token_parse_error:
