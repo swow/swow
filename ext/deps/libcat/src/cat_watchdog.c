@@ -52,11 +52,17 @@ static void cat_improve_timer_resolution(void)
     ) = NULL;
     // prove NtSetTimerResolution
     if (NULL == NtSetTimerResolution) {
+#ifdef _MSC_VER /* FIXME: workaround for MSVC bug */
+# pragma warning(disable:4191)
+#endif
         if (NULL == (NtSetTimerResolution =
             (NTSTATUS (NTAPI *)(ULONG, BOOLEAN, PULONG)) GetProcAddress(
                 GetModuleHandleW(L"ntdll.dll"), "NtSetTimerResolution"))) {
             return;
         }
+#ifdef _MSC_VER /* FIXME: workaround for MSVC bug */
+# pragma warning(default:4191)
+#endif
     }
     // TODO: get current at first called, record it, then recover it
     ULONG dummy;

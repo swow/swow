@@ -56,34 +56,44 @@
 #  define CAT_GLOBALS_DECLARE(name) CAT_THREAD_LOCAL CAT_GLOBALS_TYPE(name) CAT_GLOBALS(name)
 # endif /* CAT_THREAD_LOCAL */
 # define CAT_GLOBALS_BULK(name)     (&CAT_GLOBALS(name))
+
+# define CAT_GLOBALS_MODULE_INIT()
+# define CAT_GLOBALS_MODULE_SHUTDOWN()
+# define CAT_GLOBALS_RUNTIME_INIT()
+# define CAT_GLOBALS_RUNTIME_CLOSE()
+
 # define CAT_GLOBALS_REGISTER(name)
 # define CAT_GLOBALS_UNREGISTER(name)
 #endif /* CAT_USE_COMMON_GLOBAL_ACCESSOR */
 
 #ifdef CAT_USE_THREAD_KEY
-# define CAT_GLOBALS_KEY(name)     name##_key
-# define CAT_GLOBALS_DECLARE(name) uv_key_t CAT_GLOBALS_KEY(name)
-# define CAT_GLOBALS_BULK(name)    ((CAT_GLOBALS_TYPE(name) *) uv_key_get(&CAT_GLOBALS_KEY(name)))
+# define CAT_GLOBALS_OFFSET(name)  name##_offset
+# define CAT_GLOBALS_DECLARE(name) size_t CAT_GLOBALS_OFFSET(name)
+# define CAT_GLOBALS_BULK(name)    ((CAT_GLOBALS_TYPE(name) *) cat_globals_get_by_offset(CAT_GLOBALS_OFFSET(name)))
 
-static cat_always_inline void cat_globals_register(uv_key_t *key, size_t size)
+extern CAT_API uv_key_t cat_globals_key;
+extern CAT_API size_t cat_globals_size;
+
+static cat_always_inline void *cat_globals_get_by_offset(size_t offset)
 {
-    int error = uv_key_create(key);
-    if (error != 0) {
-        fprintf(stderr, "Globals register failed when creating key, reason: %s", cat_strerror(error));
-        abort();
-    }
-    void *globals = cat_sys_calloc(1, size);
-    uv_key_set(key, globals);
+    return ((char *) uv_key_get(&cat_globals_key)) + offset;
 }
 
-static cat_always_inline void cat_globals_unregister(uv_key_t *key)
-{
-    cat_sys_free(uv_key_get(key));
-    uv_key_delete(key);
-}
+CAT_API void cat_globals_module_init(void);
+CAT_API void cat_globals_module_shutdown(void);
+CAT_API void cat_globals_runtime_init(void);
+CAT_API void cat_globals_runtime_close(void);
 
-# define CAT_GLOBALS_REGISTER(name)   cat_globals_register(&CAT_GLOBALS_KEY(name), sizeof(CAT_GLOBALS_TYPE(name)))
-# define CAT_GLOBALS_UNREGISTER(name) cat_globals_unregister(&CAT_GLOBALS_KEY(name))
+CAT_API void cat_globals_register(size_t size, size_t *offset);
+CAT_API void cat_globals_unregister(size_t size, size_t *offset);
+
+# define CAT_GLOBALS_MODULE_INIT()     cat_globals_module_init()
+# define CAT_GLOBALS_MODULE_SHUTDOWN() cat_globals_module_shutdown()
+# define CAT_GLOBALS_RUNTIME_INIT()    cat_globals_runtime_init()
+# define CAT_GLOBALS_RUNTIME_CLOSE()   cat_globals_runtime_close()
+
+# define CAT_GLOBALS_REGISTER(name)   cat_globals_register(sizeof(CAT_GLOBALS_TYPE(name)), &CAT_GLOBALS_OFFSET(name))
+# define CAT_GLOBALS_UNREGISTER(name) cat_globals_unregister(sizeof(CAT_GLOBALS_TYPE(name)), &CAT_GLOBALS_OFFSET(name))
 #endif /* CAT_USE_THREAD_KEY */
 
 #endif /* CAT_THREAD_SAFE */

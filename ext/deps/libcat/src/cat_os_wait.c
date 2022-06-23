@@ -112,7 +112,7 @@ static size_t cat_os_wait_dispatch(void)
 {
     size_t new_count = 0;
 
-    CAT_LOG_DEBUG(OS, "waitpid dispatch");
+    CAT_LOG_DEBUG(OS_WAIT, "waitpid dispatch");
     while (1) {
         int status;
 #ifdef CAT_OS_WAIT_HAVE_RUSAGE
@@ -125,12 +125,12 @@ static size_t cat_os_wait_dispatch(void)
         if (pid <= 0) {
             break;
         }
-        CAT_LOG_DEBUG(OS,
+        CAT_LOG_DEBUG(OS_WAIT,
             "dispatcher: waitpid() = %d, exited=%u, exit_status=%d, if_signaled=%u, termsig=%d, if_stopped=%u, stopsig=%d",
             pid, WIFEXITED(status), WEXITSTATUS(status), WIFSIGNALED(status), WTERMSIG(status), WIFSTOPPED(status), WSTOPSIG(status)
         );
 #ifdef CAT_OS_WAIT_HAVE_RUSAGE
-        CAT_LOG_DEBUG_V3(OS,
+        CAT_LOG_DEBUG_V3(OS_WAIT,
             "rusage {\n"
             "    user: %llu sec %llu microsec;\n"
             "    system: %llu sec %llu microsec;\n"
@@ -159,7 +159,7 @@ static size_t cat_os_wait_dispatch(void)
 #ifdef CAT_OS_WAIT_HAVE_RUSAGE
                     waitpid_task->rusage = rusage;
 #endif
-                    CAT_LOG_DEBUG(OS, "Notify a waitpid() waiter");
+                    CAT_LOG_DEBUG(OS_WAIT, "Notify a waitpid() waiter");
                     cat_coroutine_schedule(coroutine, OS, "WaitPid");
                     /* Ensure that newly joined waiters will not be woken up (pid maybe reused) */
                     if (--waiter_count == 0) {
@@ -177,12 +177,12 @@ static size_t cat_os_wait_dispatch(void)
 #ifdef CAT_OS_WAIT_HAVE_RUSAGE
                 wait_task->rusage = rusage;
 #endif
-                CAT_LOG_DEBUG(OS, "Notify a wait() waiter");
+                CAT_LOG_DEBUG(OS_WAIT, "Notify a wait() waiter");
                 cat_coroutine_schedule(wait_task->coroutine, OS, "Wait");
                 break;
             }
             /* save status info if nobody cares */
-            CAT_LOG_DEBUG(OS, "Stat info will be saved");
+            CAT_LOG_DEBUG(OS_WAIT, "Stat info will be saved");
             cat_os_child_process_stat_t *child_process_state = (cat_os_child_process_stat_t *) cat_malloc(sizeof(*child_process_state));
             if (unlikely(child_process_state == NULL)) {
                 CAT_SYSCALL_FAILURE(WARNING, OS, "Malloc for OS child process state failed");
@@ -204,7 +204,7 @@ static size_t cat_os_wait_dispatch(void)
 static void cat_os_wait_sigchld_handler(uv_signal_t* handle, int signum)
 {
     CAT_ASSERT(signum == CAT_SIGCHLD);
-    CAT_LOG_DEBUG(OS, "SIGCHLD received");
+    CAT_LOG_DEBUG(OS_WAIT, "SIGCHLD received");
     (void) cat_os_wait_dispatch();
 }
 
@@ -369,15 +369,15 @@ static cat_pid_t cat_os__wait_wrapper(cat_pid_t pid, int *status, int options, v
 #define CAT_OS_WAIT_LOG_WAIT4_OR_WAITPID_FMT "%s(pid=%d, options=%d, timeout=" CAT_TIMEOUT_FMT ")"
 #define CAT_OS_WAIT_LOG_WAIT4_OR_WAITPID_ARGS cat_os_wait_type_name(type), pid, options, timeout
 
-    CAT_LOG_DEBUG_SCOPE_START(OS) {
+    CAT_LOG_DEBUG_VA(OS_WAIT, {
         if (type == CAT_OS_WAIT_TYPE_WAIT) {
-            CAT_LOG_DEBUG_D(OS, CAT_OS_WAIT_LOG_WAIT_FMT, CAT_OS_WAIT_LOG_WAIT_ARGS);
+            CAT_LOG_DEBUG_D(OS_WAIT, CAT_OS_WAIT_LOG_WAIT_FMT, CAT_OS_WAIT_LOG_WAIT_ARGS);
         } else if (type == CAT_OS_WAIT_TYPE_WAITPID || type == CAT_OS_WAIT_TYPE_WAIT4) {
-            CAT_LOG_DEBUG_D(OS, CAT_OS_WAIT_LOG_WAIT4_OR_WAITPID_FMT, CAT_OS_WAIT_LOG_WAIT4_OR_WAITPID_ARGS);
+            CAT_LOG_DEBUG_D(OS_WAIT, CAT_OS_WAIT_LOG_WAIT4_OR_WAITPID_FMT, CAT_OS_WAIT_LOG_WAIT4_OR_WAITPID_ARGS);
         } else if (type == CAT_OS_WAIT_TYPE_WAIT3) {
-            CAT_LOG_DEBUG_D(OS, CAT_OS_WAIT_LOG_WAIT3_FMT, CAT_OS_WAIT_LOG_WAIT3_ARGS);
+            CAT_LOG_DEBUG_D(OS_WAIT, CAT_OS_WAIT_LOG_WAIT3_FMT, CAT_OS_WAIT_LOG_WAIT3_ARGS);
         } else CAT_NEVER_HERE("Unknown type");
-    } CAT_LOG_DEBUG_SCOPE_END();
+    });
 
     pid = cat_os__wait(pid, status, options, rusage, timeout, type);
 
@@ -385,15 +385,15 @@ static cat_pid_t cat_os__wait_wrapper(cat_pid_t pid, int *status, int options, v
 #define CAT_OS_WAIT_LOG_RETURN_VALUE_FMT " = %d"
 #define CAT_OS_WAIT_LOG_RETURN_VALUE_ARGS pid
 
-    CAT_LOG_DEBUG_SCOPE_START(OS) {
+    CAT_LOG_DEBUG_VA(OS_WAIT, {
         if (type == CAT_OS_WAIT_TYPE_WAIT) {
-            CAT_LOG_DEBUG_D(OS, CAT_OS_WAIT_LOG_WAIT_FMT CAT_OS_WAIT_LOG_RETURN_VALUE_FMT, CAT_OS_WAIT_LOG_WAIT_ARGS, CAT_OS_WAIT_LOG_RETURN_VALUE_ARGS);
+            CAT_LOG_DEBUG_D(OS_WAIT, CAT_OS_WAIT_LOG_WAIT_FMT CAT_OS_WAIT_LOG_RETURN_VALUE_FMT, CAT_OS_WAIT_LOG_WAIT_ARGS, CAT_OS_WAIT_LOG_RETURN_VALUE_ARGS);
         } else if (type == CAT_OS_WAIT_TYPE_WAITPID || type == CAT_OS_WAIT_TYPE_WAIT4) {
-            CAT_LOG_DEBUG_D(OS, CAT_OS_WAIT_LOG_WAIT4_OR_WAITPID_FMT CAT_OS_WAIT_LOG_RETURN_VALUE_FMT, CAT_OS_WAIT_LOG_WAIT4_OR_WAITPID_ARGS, CAT_OS_WAIT_LOG_RETURN_VALUE_ARGS);
+            CAT_LOG_DEBUG_D(OS_WAIT, CAT_OS_WAIT_LOG_WAIT4_OR_WAITPID_FMT CAT_OS_WAIT_LOG_RETURN_VALUE_FMT, CAT_OS_WAIT_LOG_WAIT4_OR_WAITPID_ARGS, CAT_OS_WAIT_LOG_RETURN_VALUE_ARGS);
         } else if (type == CAT_OS_WAIT_TYPE_WAIT3) {
-            CAT_LOG_DEBUG_D(OS, CAT_OS_WAIT_LOG_WAIT3_FMT CAT_OS_WAIT_LOG_RETURN_VALUE_FMT, CAT_OS_WAIT_LOG_WAIT3_ARGS, CAT_OS_WAIT_LOG_RETURN_VALUE_ARGS);
+            CAT_LOG_DEBUG_D(OS_WAIT, CAT_OS_WAIT_LOG_WAIT3_FMT CAT_OS_WAIT_LOG_RETURN_VALUE_FMT, CAT_OS_WAIT_LOG_WAIT3_ARGS, CAT_OS_WAIT_LOG_RETURN_VALUE_ARGS);
         } else CAT_NEVER_HERE("Unknown type");
-    } CAT_LOG_DEBUG_SCOPE_END();
+    });
 
     cat_os_wait_sigchld_watcher_end();
 

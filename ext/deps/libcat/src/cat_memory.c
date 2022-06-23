@@ -18,6 +18,14 @@
 
 #include "cat.h"
 
+#ifndef cat_out_of_memory
+CAT_API CAT_COLD CAT_NORETURN void cat_out_of_memory(void)
+{
+	fprintf(stderr, "Out of memory\n");
+	cat_abort();
+}
+#endif
+
 #ifdef CAT_USE_DYNAMIC_ALLOCATOR
 CAT_API cat_allocator_t cat_allocator;
 static const cat_allocator_t cat_sys_allocator = { cat_sys_malloc, cat_sys_calloc, cat_sys_realloc, cat_sys_free };
@@ -44,8 +52,8 @@ CAT_API cat_bool_t cat_register_allocator(const cat_allocator_t *allocator)
 CAT_API char *cat_sys_strdup(const char *string)
 {
     size_t size = strlen(string) + 1;
-    char *ptr = (char *) malloc(size);
-#ifndef CAT_SYS_ALLOC_NEVER_RETURNS_NULL
+    char *ptr = (char *) cat_sys_malloc(size);
+#if CAT_SYS_ALLOC_HANDLE_ERRORS
     if (unlikely(ptr == NULL)) {
         return NULL;
     }
@@ -57,8 +65,8 @@ CAT_API char *cat_sys_strndup(const char *string, size_t length)
 {
     char *ptr;
     length = cat_strnlen(string, length);
-    ptr = (char *) malloc(length + 1);
-#ifndef CAT_SYS_ALLOC_NEVER_RETURNS_NULL
+    ptr = (char *) cat_sys_malloc(length + 1);
+#if CAT_SYS_ALLOC_HANDLE_ERRORS
     if (unlikely(ptr == NULL)) {
         return NULL;
     }

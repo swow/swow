@@ -1026,10 +1026,12 @@ static cat_bool_t cat_ssl_encrypt_buffered(cat_ssl_t *ssl, const char *in, size_
 
         n = SSL_write(ssl->connection, in + nwrite, (int) (in_size - nwrite));
 
-        CAT_LOG_DEBUG_SCOPE_START_EX(SSL, char *tmp) {
+        CAT_LOG_DEBUG_VA(SSL, {
+            char *s;
             CAT_LOG_DEBUG_D(SSL, "SSL_write(%p, %s, %zu) = %d",
-                ssl, cat_log_buffer_quote(in + nwrite, n < 0 ? 0 : n, &tmp), in_size - nwrite, n);
-        } CAT_LOG_DEBUG_SCOPE_END_EX(cat_free(tmp));
+                ssl, cat_log_buffer_quote(in + nwrite, n < 0 ? 0 : n, &s), in_size - nwrite, n);
+            cat_free(s);
+        });
 
         if (unlikely(n <= 0)) {
             int error = cat_ssl_get_error(ssl, n);
@@ -1186,10 +1188,12 @@ CAT_API cat_bool_t cat_ssl_decrypt(cat_ssl_t *ssl, char *out, size_t *out_length
 
         n = SSL_read(ssl->connection, out + nread, (int) (out_size - nread));
 
-        CAT_LOG_DEBUG_SCOPE_START_EX(SSL, char *tmp) {
+        CAT_LOG_DEBUG_VA(SSL, {
+            char *s;
             CAT_LOG_DEBUG_D(SSL, "SSL_read(%p, %s, %zu) = %d",
-                ssl, cat_log_buffer_quote(out + nread, n < 0 ? 0 : n, &tmp), out_size - nread, n);
-        } CAT_LOG_DEBUG_SCOPE_END_EX(cat_free(tmp));
+                ssl, cat_log_buffer_quote(out + nread, n < 0 ? 0 : n, &s), out_size - nread, n);
+            cat_free(s);
+        });
 
         if (unlikely(n <= 0)) {
             int error = cat_ssl_get_error(ssl, n);
@@ -1211,6 +1215,11 @@ CAT_API cat_bool_t cat_ssl_decrypt(cat_ssl_t *ssl, char *out, size_t *out_length
                 cat_ssl_unrecoverable_error(ssl);
                 break;
             }
+            if (!have_encrypted_data) {
+                /* need more encrypted data */
+                ret = cat_true;
+                break;
+            }
         } else {
             nread += n;
             if (nread == out_size) {
@@ -1218,12 +1227,6 @@ CAT_API cat_bool_t cat_ssl_decrypt(cat_ssl_t *ssl, char *out, size_t *out_length
                 ret = cat_true;
                 break;
             }
-        }
-
-        if (!have_encrypted_data) {
-            /* need more encrypted data */
-            ret = cat_true;
-            break;
         }
     }
 

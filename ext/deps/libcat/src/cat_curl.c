@@ -125,7 +125,7 @@ static int cat_curl_easy_socket_function(CURL *ch, curl_socket_t sockfd, int act
 {
     (void) ch;
     (void) unused;
-    CAT_LOG_DEBUG(EXT, "curl_easy_socket_function(multi=%p, sockfd=%d, action=%s), timeout=%ld",
+    CAT_LOG_DEBUG(CURL, "curl_easy_socket_function(multi=%p, sockfd=%d, action=%s), timeout=%ld",
         context->multi, sockfd, cat_curl_translate_action_name(action), context->timeout);
 
     context->sockfd = sockfd;
@@ -137,7 +137,7 @@ static int cat_curl_easy_socket_function(CURL *ch, curl_socket_t sockfd, int act
 static int cat_curl_easy_timeout_function(CURLM *multi, long timeout, cat_curl_easy_context_t *context)
 {
     (void) multi;
-    CAT_LOG_DEBUG(EXT, "curl_easy_timeout_function(multi=%p, timeout=%ld)", multi, timeout);
+    CAT_LOG_DEBUG(CURL, "curl_easy_timeout_function(multi=%p, timeout=%ld)", multi, timeout);
 
     context->timeout = timeout;
 
@@ -151,7 +151,7 @@ static int cat_curl_multi_socket_function(
     (void) ch;
     CURLM *multi = context->multi;
 
-    CAT_LOG_DEBUG(EXT, "curl_multi_socket_function(multi=%p, sockfd=%d, action=%s), nfds=%zu, timeout=%ld",
+    CAT_LOG_DEBUG(CURL, "curl_multi_socket_function(multi=%p, sockfd=%d, action=%s), nfds=%zu, timeout=%ld",
         multi, sockfd, cat_curl_translate_action_name(action), (size_t) context->nfds, context->timeout);
 
     if (action != CURL_POLL_REMOVE) {
@@ -181,7 +181,7 @@ static int cat_curl_multi_socket_function(
 static int cat_curl_multi_timeout_function(CURLM *multi, long timeout, cat_curl_multi_context_t *context)
 {
     (void) multi;
-    CAT_LOG_DEBUG(EXT, "curl_multi_timeout_function(multi=%p, timeout=%ld)", multi, timeout);
+    CAT_LOG_DEBUG(CURL, "curl_multi_timeout_function(multi=%p, timeout=%ld)", multi, timeout);
 
     context->timeout = timeout;
 
@@ -192,7 +192,7 @@ static cat_curl_multi_context_t *cat_curl_multi_create_context(CURLM *multi)
 {
     cat_curl_multi_context_t *context;
 
-    CAT_LOG_DEBUG(EXT, "curl_multi_context_create(multi=%p)", multi);
+    CAT_LOG_DEBUG(CURL, "curl_multi_context_create(multi=%p)", multi);
 
     context = (cat_curl_multi_context_t *) cat_malloc(sizeof(*context));
 #if CAT_ALLOC_HANDLE_ERRORS
@@ -363,10 +363,11 @@ CAT_API CURLcode cat_curl_easy_perform(CURL *ch)
         if (message != NULL) {
             CAT_ASSERT(message->msg == CURLMSG_DONE);
             CAT_ASSERT(running_handles == 0);
-            CAT_LOG_DEBUG_SCOPE_START_EX(EXT, char *done_url;
-                curl_easy_getinfo(message->easy_handle, CURLINFO_EFFECTIVE_URL, &done_url)) {
-                CAT_LOG_DEBUG(EXT, "curl_easy_perform(multi=%p, url='%s') DONE", context.multi, done_url);
-            } CAT_LOG_DEBUG_SCOPE_END();
+            CAT_LOG_DEBUG_VA(CURL, {
+                char *done_url;
+                curl_easy_getinfo(message->easy_handle, CURLINFO_EFFECTIVE_URL, &done_url);
+                CAT_LOG_DEBUG(CURL, "curl_easy_perform(multi=%p, url='%s') DONE", context.multi, done_url);
+            });
             code = message->data.result;
             break;
         }
@@ -427,7 +428,7 @@ static CURLMcode cat_curl_multi_exec(
     cat_timeout_t timeout = timeout_ms; /* maybe reduced in the loop */
     int ret = 0, _running_handles;
 
-    CAT_LOG_DEBUG(EXT, "curl_multi_wait(multi=%p, timeout_ms=%d)", multi, timeout_ms);
+    CAT_LOG_DEBUG(CURL, "curl_multi_wait(multi=%p, timeout_ms=%d)", multi, timeout_ms);
 
     /* TODO: Support it? */
     CAT_ASSERT(extra_fds == NULL && "Not support yet");
@@ -445,12 +446,12 @@ static CURLMcode cat_curl_multi_exec(
         if (context->nfds == 0) {
             cat_timeout_t op_timeout = cat_curl_timeout_min(context->timeout, timeout);
             cat_ret_t ret;
-            CAT_LOG_DEBUG(EXT, "curl_time_delay(multi=%p, timeout=" CAT_TIMEOUT_FMT ")", multi, op_timeout);
+            CAT_LOG_DEBUG(CURL, "curl_time_delay(multi=%p, timeout=" CAT_TIMEOUT_FMT ")", multi, op_timeout);
             ret = cat_time_delay(op_timeout);
             if (unlikely(ret != CAT_RET_OK)) {
                 goto _out;
             }
-            CAT_LOG_DEBUG(EXT, "curl_multi_socket_action(multi=%p, CURL_SOCKET_TIMEOUT) after delay", multi);
+            CAT_LOG_DEBUG(CURL, "curl_multi_socket_action(multi=%p, CURL_SOCKET_TIMEOUT) after delay", multi);
             mcode = curl_multi_socket_action(multi, CURL_SOCKET_TIMEOUT, 0, running_handles);
             if (unlikely(mcode != CURLM_OK) || *running_handles == 0) {
                 goto _out;
@@ -484,7 +485,7 @@ static CURLMcode cat_curl_multi_exec(
                         continue;
                     }
                     action = cat_curl_translate_poll_flags_from_sys(fd->revents);
-                    CAT_LOG_DEBUG(EXT, "curl_multi_socket_action(multi=%p, fd=%d, %s) after poll", multi, fd->fd, cat_curl_translate_action_name(action));
+                    CAT_LOG_DEBUG(CURL, "curl_multi_socket_action(multi=%p, fd=%d, %s) after poll", multi, fd->fd, cat_curl_translate_action_name(action));
                     mcode = curl_multi_socket_action(multi, fd->fd, action, running_handles);
                     if (unlikely(mcode != CURLM_OK)) {
                         continue; // shall we handle it?
@@ -494,7 +495,7 @@ static CURLMcode cat_curl_multi_exec(
                     }
                 }
             } else {
-                CAT_LOG_DEBUG(EXT, "curl_multi_socket_action(multi=%p, CURL_SOCKET_TIMEOUT) after poll return 0", multi);
+                CAT_LOG_DEBUG(CURL, "curl_multi_socket_action(multi=%p, CURL_SOCKET_TIMEOUT) after poll return 0", multi);
                 mcode = curl_multi_socket_action(multi, CURL_SOCKET_TIMEOUT, 0, running_handles);
                 if (unlikely(mcode != CURLM_OK) || *running_handles == 0) {
                     goto _out;
@@ -514,7 +515,7 @@ static CURLMcode cat_curl_multi_exec(
     }
 
     _out:
-    CAT_LOG_DEBUG(EXT, "curl_multi_wait(multi=%p, timeout_ms=%d) = %d, numfds=%d", multi, timeout_ms, mcode, ret);
+    CAT_LOG_DEBUG(CURL, "curl_multi_wait(multi=%p, timeout_ms=%d) = %d, numfds=%d", multi, timeout_ms, mcode, ret);
     if (fds != NULL) {
         cat_free(fds);
     }
@@ -526,7 +527,7 @@ static CURLMcode cat_curl_multi_exec(
 
 CAT_API CURLMcode cat_curl_multi_perform(CURLM *multi, int *running_handles)
 {
-    CAT_LOG_DEBUG(EXT, "curl_multi_perform(multi=%p)", multi);
+    CAT_LOG_DEBUG(CURL, "curl_multi_perform(multi=%p)", multi);
 
     /* this way even can solve the problem of CPU 100% if we perform in while loop */
     return cat_curl_multi_exec(multi, NULL, 0, 0, NULL, running_handles);

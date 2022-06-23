@@ -41,7 +41,6 @@ CAT_API void cat_log_standard(CAT_LOG_PARAMATERS)
     const char *type_string;
     char *message;
     FILE *output;
-    (void) module_type;
 
     switch (type) {
         case CAT_LOG_TYPE_DEBUG : {

@@ -197,7 +197,7 @@ CAT_API cat_bool_t cat_event_do_defer_tasks(void)
     cat_queue_t *tasks = &CAT_EVENT_G(defer_tasks);
     cat_event_task_t *task;
     /* only tasks of the current round will be called */
-    size_t count = CAT_EVENT_G(defer_task_count);
+    uint32_t count = CAT_EVENT_G(defer_task_count);
 
     while (count--) {
         task = cat_queue_front_data(tasks, cat_event_task_t, node);

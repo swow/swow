@@ -94,9 +94,9 @@ CAT_API void cat_show_last_error(void)
 }
 
 #ifndef CAT_IDE_HELPER
-CAT_API CAT_NORETURN void cat_abort(void)
+CAT_API CAT_COLD CAT_NORETURN void cat_abort(void)
 {
-    exit(233);
+    abort();
 }
 #endif
 

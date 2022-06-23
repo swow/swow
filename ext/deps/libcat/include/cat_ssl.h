@@ -30,6 +30,10 @@ extern "C" {
 
 #include "cat_buffer.h"
 
+#ifdef _MSC_VER
+# pragma warning(disable:4191) /* FIXME: workaround for MSVC bug */
+#endif
+
 #include <openssl/opensslv.h>
 
 #if OPENSSL_VERSION_NUMBER < 0x10002000L
@@ -56,6 +60,10 @@ extern "C" {
 #include <openssl/x509.h>
 #include <openssl/x509v3.h>
 #include <openssl/ossl_typ.h>
+
+#ifdef _MSC_VER
+# pragma warning(default:4191) /* FIXME: workaround for MSVC bug */
+#endif
 
 #ifdef CAT_OS_WIN
 #include <Wincrypt.h>

@@ -16,62 +16,49 @@
   +--------------------------------------------------------------------------+
  */
 
-enum cat_bool_e {
-    cat_false = 0,
-    cat_true = 1
-};
+#include "cat.h"
 
-#ifdef CAT_IDE_HELPER
-#ifdef __cplusplus
-typedef bool cat_bool_t;
-#define cat_true true
-#define cat_false false
-#else
-typedef enum cat_bool_e cat_bool_t;
+#ifdef CAT_USE_THREAD_KEY
+
+CAT_API uv_key_t cat_globals_key;
+CAT_API size_t cat_globals_size;
+
+CAT_API void cat_globals_module_init(void)
+{
+    int error = uv_key_create(&cat_globals_key);
+    if (error != 0) {
+        fprintf(stderr, "Globals register failed when creating key, reason: %s", cat_strerror(error));
+        abort();
+    }
+    cat_globals_size = 0;
+}
+
+CAT_API void cat_globals_module_shutdown(void)
+{
+    uv_key_delete(&cat_globals_key);
+}
+
+CAT_API void cat_globals_runtime_init(void)
+{
+    void *globals = cat_sys_calloc_unrecoverable(1, cat_globals_size);
+    uv_key_set(&cat_globals_key, globals);
+}
+
+CAT_API void cat_globals_runtime_close(void)
+{
+    cat_sys_free(uv_key_get(&cat_globals_key));
+}
+
+CAT_API void cat_globals_register(size_t size, size_t *offset)
+{
+    *offset = cat_globals_size;
+    cat_globals_size += size;
+}
+
+CAT_API void cat_globals_unregister(size_t size, size_t *offset)
+{
+    cat_globals_size -= size;
+    *offset = (size_t) -1;
+}
+
 #endif
-#else
-#define cat_bool_t uint8_t
-#endif
-
-typedef void *cat_ptr_t;
-
-typedef void cat_data_t;
-typedef void (*cat_data_callback_t)(cat_data_t *data);
-typedef void (*cat_data_dtor_t)(cat_data_t *data);
-
-#ifndef SIZE_MAX
-#define SIZE_MAX ((size_t) ~0)
-#endif
-
-#if defined(__x86_64__) || defined(__LP64__) || defined(_LP64) || defined(_WIN64)
-#define CAT_L64 1
-#endif
-#ifndef PRId64
-#define PRId64 "lld"
-#endif
-#ifndef PRIu64
-#define PRIu64 "llu"
-#endif
-#ifndef PRIx64
-#define PRIx64 "llx"
-#endif
-
-/* time */
-
-typedef uint64_t cat_nsec_t;
-#define CAT_NSEC_FMT "%" PRIu64
-#define CAT_NSEC_FMT_SPEC PRIu64
-
-typedef uint64_t cat_usec_t;
-#define CAT_USEC_FMT "%" PRIu64
-#define CAT_USEC_FMT_SPEC PRIu64
-
-typedef uint64_t cat_msec_t;
-#define CAT_MSEC_FMT "%" PRIu64
-#define CAT_MSEC_FMT_SPEC PRIu64
-
-typedef int64_t cat_timeout_t;
-#define CAT_TIMEOUT_FMT "%" PRId64
-#define CAT_TIMEOUT_FMT_SPEC PRId64
-#define CAT_TIMEOUT_FOREVER -1
-#define CAT_TIMEOUT_INVALID INT64_MIN

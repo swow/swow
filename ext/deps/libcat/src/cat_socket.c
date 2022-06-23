@@ -2534,7 +2534,7 @@ static ssize_t cat_socket_internal_read_decrypted(
         size_t out_length = size - nread;
         ssize_t n;
 
-        if (!cat_ssl_decrypt(ssl, buffer, &out_length, &eof)) {
+        if (!cat_ssl_decrypt(ssl, buffer + nread, &out_length, &eof)) {
             cat_update_last_error_with_previous("Socket SSL decrypt failed");
             goto _error;
         }

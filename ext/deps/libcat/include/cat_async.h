@@ -16,8 +16,8 @@
   +--------------------------------------------------------------------------+
  */
 
-#ifndef CAT_THREAD_H
-#define CAT_THREAD_H
+#ifndef CAT_ASYNC_H
+#define CAT_ASYNC_H
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -53,4 +53,4 @@ CAT_API cat_bool_t cat_async_close(cat_async_t *async, cat_async_cleanup_callbac
 #ifdef __cplusplus
 }
 #endif
-#endif /* CAT_THREAD_H */
+#endif /* CAT_ASYNC_H */

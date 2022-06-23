@@ -53,8 +53,6 @@ extern "C" {
 #include "cat_error.h"
 /* thread safe */
 #include "cat_tsrm.h"
-/* module */
-#include "cat_module.h"
 /* log */
 #include "cat_log.h"
 /* debug */
@@ -81,7 +79,6 @@ extern "C" {
 CAT_GLOBALS_STRUCT_BEGIN(cat) {
     cat_bool_t runtime;
     cat_log_types_t log_types;
-    cat_module_types_t log_module_types;
     cat_error_t last_error;
     FILE *error_log;
     cat_const_string_t exepath;
@@ -107,6 +104,7 @@ CAT_API cat_bool_t cat_module_init(void);
 CAT_API cat_bool_t cat_module_shutdown(void);
 CAT_API cat_bool_t cat_runtime_init(void);
 CAT_API cat_bool_t cat_runtime_shutdown(void);
+CAT_API cat_bool_t cat_runtime_close(void);
 
 /* it may take ownership of the memory that argv points to */
 CAT_API char **cat_setup_args(int argc, char** argv);
