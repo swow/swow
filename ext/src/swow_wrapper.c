@@ -54,13 +54,6 @@ SWOW_API zend_op_array *swow_compile_string_ex(zend_string *source_string, const
 }
 /* }}} */
 
-/* memory */
-
-SWOW_API ZEND_COLD ZEND_NORETURN void swow_out_of_memory(void)
-{
-    zend_error_noreturn(E_ERROR, "Out of memory");
-}
-
 /* class */
 
 SWOW_API zend_class_entry *swow_register_internal_class(

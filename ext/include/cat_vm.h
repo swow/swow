@@ -39,7 +39,7 @@
     } \
 } while (0)
 
-#define cat_out_of_memory swow_out_of_memory
+#define cat_out_of_memory() zend_error_noreturn(E_ERROR, "Out of memory")
 
 /* thread safe */
 
