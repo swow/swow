@@ -24,7 +24,6 @@ use function fwrite;
 use function implode;
 use function in_array;
 use function strcasecmp;
-use function strlen;
 use function strtolower;
 use function sys_get_temp_dir;
 use function tempnam;
