@@ -372,11 +372,18 @@ trait ReceiverTrait
                                 $dataOffset = $parser->getDataOffset();
                                 $dataLength = $parser->getDataLength();
                                 if ($isChunked) {
-                                    $currentChunkLength -= $dataLength;
-                                    if ($currentChunkLength < 0) {
-                                        throw new ParserException('Unexpected body data (chunk overflow)');
-                                    }
+                                    $neededLength = $currentChunkLength - $dataLength;
                                     ($body ??= new Buffer(Buffer::COMMON_SIZE))->write($data, $dataOffset, $dataLength);
+                                    if ($neededLength > 0) {
+                                        if ($body->getWritableSize() < $neededLength) {
+                                            $body->extend($body->getLength() + $neededLength);
+                                        }
+                                        $this->read($body, $neededLength);
+                                        $event = $parser->execute($body);
+                                        if ($event !== HttpParser::EVENT_BODY) {
+                                            throw new ParserException('Unexpected chunk body');
+                                        }
+                                    }
                                     break;
                                 }
                                 $body = new Buffer($contentLength);
@@ -405,13 +412,17 @@ trait ReceiverTrait
                             }
                             case HttpParser::EVENT_CHUNK_COMPLETE:
                             {
-                                if ($currentChunkLength !== 0) {
-                                    throw new ParserException('Unexpected chunk eof');
+                                if ($currentChunkLength === 0) {
+                                    $event = $parser->execute($buffer);
+                                    if ($event !== HttpParser::EVENT_MESSAGE_COMPLETE) {
+                                        throw new ParserException('Unexpected chunk eof');
+                                    }
+                                    break 3; /* end */
                                 }
                                 break;
                             }
                             default:
-                                throw new ParserException('Unexpected Http-Parser event');
+                                throw new ParserException("Unexpected HttpParser event: {$parser->getEventName()}");
                         }
                     }
                 }
