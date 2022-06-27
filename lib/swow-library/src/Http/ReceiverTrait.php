@@ -179,10 +179,13 @@ trait ReceiverTrait
                         if ($isChunked) {
                             // Remove 'chunked' field from Transfer-Encoding header because we combined the chunked body
                             $transferEncodingIndex = $headerNames['transfer-encoding'];
-                            $headers[$transferEncodingIndex] = implode(', ', array_filter(array_map('trim', explode(',', $headers[$transferEncodingIndex])), static function (string $value): bool {
-                                return strcasecmp($value, 'chunked') !== 0;
-                            }));
-                            $headers[$headerNames['content-length']] = $body ? (string) $body->getLength() : '0';
+                            $headers[$transferEncodingIndex] = implode(', ', array_filter(
+                                array_map('trim', explode(',', implode(',', $headers[$transferEncodingIndex]))),
+                                static function (string $value): bool {
+                                    return strcasecmp($value, 'chunked') !== 0;
+                                })
+                            );
+                            $headers[$headerNames['content-length'] ??= 'Content-Length'] = $body ? (string) $body->getLength() : '0';
                             if ($body && $body->getLength() < ($body->getSize() / 2)) {
                                 $body->mallocTrim();
                             }
