@@ -31,11 +31,12 @@ static swow_interrupt_function_t original_zend_interrupt_function = (swow_interr
 SWOW_API void swow_watchdog_alert_standard(cat_watchdog_t *watchdog)
 {
     swow_watchdog_t *swatchdog = swow_watchdog_get_from_handle(watchdog);
-    zend_bool vm_interrupted = swatchdog->vm_interrupted;
+    cat_bool_t vm_interrupted;
 
     // CPU starvation (and we should try to schedule the coroutine)
-    swatchdog->vm_interrupted = 0;
-    *swatchdog->vm_interrupt_ptr = 1;
+
+    vm_interrupted = cat_atomic_bool_exchange(&swatchdog->vm_interrupted, cat_false);
+    zend_atomic_bool_store(swatchdog->vm_interrupt_ptr, 1);
 
     if (
         watchdog->alert_count > 1 &&
@@ -59,7 +60,8 @@ static void swow_watchdog_interrupt_function(zend_execute_data *execute_data)
     if (cat_watchdog_is_running()) {
         swow_watchdog_t *swatchdog = swow_watchdog_get_current();
         cat_watchdog_t *watchdog = &swatchdog->watchdog;
-        swatchdog->vm_interrupted = 1;
+
+        cat_atomic_bool_store(&swatchdog->vm_interrupted, cat_true);
         /* re-check if current round still equal to last_round  */
         if (CAT_COROUTINE_G(round) == watchdog->last_round) {
             if (swatchdog->alerter.function_handler == NULL) {
@@ -117,6 +119,7 @@ SWOW_API cat_bool_t swow_watchdog_run(cat_timeout_t quantum, cat_timeout_t thres
     }
 
     swatchdog = (swow_watchdog_t *) emalloc(sizeof(*swatchdog));
+    cat_atomic_bool_init(&swatchdog->vm_interrupted, cat_false);
     swatchdog->vm_interrupt_ptr = &EG(vm_interrupt);
     swatchdog->delay = delay;
     swatchdog->alerter = fcc;
@@ -130,6 +133,7 @@ SWOW_API cat_bool_t swow_watchdog_run(cat_timeout_t quantum, cat_timeout_t thres
 
     if (!ret) {
         Z_TRY_DELREF(swatchdog->zalerter);
+        cat_atomic_bool_destroy(&swatchdog->vm_interrupted);
         efree(swatchdog);
         return cat_false;
     }
@@ -148,6 +152,7 @@ SWOW_API cat_bool_t swow_watchdog_stop(void)
         return cat_false;
     }
 
+    cat_atomic_bool_destroy(&swatchdog->vm_interrupted);
     zval_ptr_dtor(&swatchdog->zalerter);
     efree(swatchdog);
 

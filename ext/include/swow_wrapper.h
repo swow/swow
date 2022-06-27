@@ -67,6 +67,13 @@ typedef enum _zend_compile_position {
 #endif
 SWOW_API zend_op_array *swow_compile_string(zend_string *source_string, const char *filename);
 SWOW_API zend_op_array *swow_compile_string_ex(zend_string *source_string, const char *filename, zend_compile_position position);
+
+#if PHP_VERSION_ID < 80200
+# define zend_atomic_bool zend_bool
+# define zend_atomic_bool_init(atomic, desired) (*atomic = desired)
+# define zend_atomic_bool_store(atomic, desired) (*atomic = desired)
+# define zend_atomic_bool_load(atomic) (*atomic)
+#endif
 /* }}} */
 
 /* ZTS */

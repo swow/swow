@@ -25,6 +25,7 @@ extern "C" {
 #include "swow.h"
 
 #include "cat_watchdog.h"
+#include "cat_atomic.h"
 
 extern SWOW_API zend_class_entry *swow_watchdog_ce;
 
@@ -32,8 +33,8 @@ extern SWOW_API zend_class_entry *swow_watchdog_exception_ce;
 
 typedef struct swow_watchdog_s {
     cat_watchdog_t watchdog;
-    zend_bool vm_interrupted;
-    zend_bool *vm_interrupt_ptr;
+    cat_atomic_bool_t vm_interrupted;
+    zend_atomic_bool *vm_interrupt_ptr;
     cat_timeout_t delay;
     zval zalerter;
     zend_fcall_info_cache alerter;
