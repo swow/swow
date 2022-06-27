@@ -106,7 +106,7 @@ class Message implements MessageInterface, Stringable
 
     public function getHeaderLine($name): string
     {
-        return implode(',', $this->getHeader($name));
+        return implode(', ', $this->getHeader($name));
     }
 
     /** @param string|array<string>|null $value */
