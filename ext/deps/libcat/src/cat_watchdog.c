@@ -85,7 +85,7 @@ static void cat_watchdog_loop(void* arg)
         uv_mutex_lock(&watchdog->mutex);
         uv_cond_timedwait(&watchdog->cond, &watchdog->mutex, watchdog->quantum);
         uv_mutex_unlock(&watchdog->mutex);
-        if (watchdog->stop) {
+        if (cat_atomic_bool_load(&watchdog->stop)) {
             return;
         }
         /* Notice: globals info maybe changed during check,
@@ -166,7 +166,7 @@ CAT_API cat_bool_t cat_watchdog_run(cat_watchdog_t *watchdog, cat_timeout_t quan
     watchdog->threshold = cat_watchdog_align_threshold(threshold);
     watchdog->alerter = alerter != NULL ? alerter : cat_watchdog_alert_standard;
     watchdog->alert_count = 0;
-    watchdog->stop = cat_false;
+    cat_atomic_bool_init(&watchdog->stop, cat_false);
     watchdog->pid = uv_os_getpid();
     watchdog->globals = CAT_GLOBALS_BULK(cat_coroutine);
     watchdog->last_round = 0;
@@ -213,6 +213,7 @@ CAT_API cat_bool_t cat_watchdog_run(cat_watchdog_t *watchdog, cat_timeout_t quan
     _cond_init_failed:
     uv_sem_destroy(&sem);
     _sem_init_failed:
+    cat_atomic_bool_destroy(&watchdog->stop);
     if (watchdog->allocated) {
         cat_free(watchdog);
     }
@@ -229,7 +230,7 @@ CAT_API cat_bool_t cat_watchdog_stop(void)
         return cat_false;
     }
 
-    watchdog->stop = cat_true;
+    cat_atomic_bool_store(&watchdog->stop, cat_true);
     uv_mutex_lock(&watchdog->mutex);
     uv_cond_signal(&watchdog->cond);
     uv_mutex_unlock(&watchdog->mutex);
@@ -244,6 +245,7 @@ CAT_API cat_bool_t cat_watchdog_stop(void)
     uv_mutex_destroy(&watchdog->mutex);
     uv_cond_destroy(&watchdog->cond);
     CAT_ASSERT(watchdog->sem == NULL);
+    cat_atomic_bool_destroy(&watchdog->stop);
 
     if (watchdog->allocated) {
         cat_free(watchdog);

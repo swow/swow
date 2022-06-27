@@ -23,7 +23,9 @@ extern "C" {
 #endif
 
 #include "cat.h"
+
 #include "cat_coroutine.h"
+#include "cat_atomic.h"
 
 #define CAT_WATCH_DOG_DEFAULT_QUANTUM    (5 * 1000 * 1000)
 #define CAT_WATCH_DOG_DEFAULT_THRESHOLD  (10 * 1000 * 1000)
@@ -62,7 +64,7 @@ struct cat_watchdog_s
     /* private */
     cat_alert_count_t alert_count;
     cat_bool_t allocated;
-    cat_bool_t stop;
+    cat_atomic_bool_t stop;
     uv_pid_t pid; /* TODO: cat_pid_t */
     CAT_GLOBALS_TYPE(cat_coroutine) *globals;
     cat_coroutine_round_t last_round;
