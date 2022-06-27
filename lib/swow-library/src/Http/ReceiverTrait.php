@@ -416,9 +416,9 @@ trait ReceiverTrait
                     }
                 }
             }
-        } catch (ParserException) {
+        } catch (ParserException $parserException) {
             /* TODO: get bad request */
-            throw new ResponseException(HttpStatus::BAD_REQUEST, 'Protocol Parsing Error');
+            throw new ResponseException(HttpStatus::BAD_REQUEST, 'Protocol Parsing Error', $parserException);
         } finally {
             if ($isRequest) {
                 $result->method = $parser->getMethod();

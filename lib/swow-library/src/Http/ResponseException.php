@@ -13,10 +13,12 @@ declare(strict_types=1);
 
 namespace Swow\Http;
 
+use Throwable;
+
 class ResponseException extends \Swow\Exception
 {
-    public function __construct(int $statusCode, string $reasonPhrase = '')
+    public function __construct(int $statusCode, string $reasonPhrase = '', ?Throwable $previous = null)
     {
-        parent::__construct($reasonPhrase ?: Status::getReasonPhraseFor($statusCode), $statusCode);
+        parent::__construct($reasonPhrase ?: Status::getReasonPhraseFor($statusCode), $statusCode, $previous);
     }
 }
