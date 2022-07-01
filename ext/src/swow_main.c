@@ -93,8 +93,6 @@ static PHP_GSHUTDOWN_FUNCTION(swow)
  */
 PHP_MINIT_FUNCTION(swow)
 {
-    size_t i;
-
     /* Conflict extensions check */
     if (zend_hash_str_find_ptr(&module_registry, ZEND_STRL("swoole"))) {
         zend_error(E_WARNING, "Swow is incompatible with Swoole "
@@ -109,7 +107,7 @@ PHP_MINIT_FUNCTION(swow)
     smart_str str;
     memset(&str, 0, sizeof(str));
 #endif
-    for (i = 0; i < CAT_ARRAY_SIZE(debug_extension_names); i++) {
+    for (size_t i = 0; i < CAT_ARRAY_SIZE(debug_extension_names); i++) {
         const char *name = debug_extension_names[i];
         if (zend_hash_str_find_ptr(&module_registry, name, strlen(name))) {
 #ifndef SWOW_COROUTINE_MOCK_FIBER_CONTEXT
@@ -159,7 +157,7 @@ PHP_MINIT_FUNCTION(swow)
 #endif
     };
 
-    for (i = 0; i < CAT_ARRAY_SIZE(minit_functions); i++) {
+    for (size_t i = 0; i < CAT_ARRAY_SIZE(minit_functions); i++) {
         if (minit_functions[i](INIT_FUNC_ARGS_PASSTHRU) != SUCCESS) {
             return FAILURE;
         }
@@ -214,8 +212,7 @@ PHP_MSHUTDOWN_FUNCTION(swow)
         swow_module_shutdown,
     };
 
-    size_t i = 0;
-    for (; i < CAT_ARRAY_SIZE(mshutdown_functions); i++) {
+    for (size_t i = 0; i < CAT_ARRAY_SIZE(mshutdown_functions); i++) {
         if (mshutdown_functions[i](SHUTDOWN_FUNC_ARGS_PASSTHRU) != SUCCESS) {
             return FAILURE;
         }
@@ -264,8 +261,7 @@ PHP_RINIT_FUNCTION(swow)
 
     SWOW_G(runtime_state) = SWOW_RUNTIME_STATE_INIT;
 
-    size_t i = 0;
-    for (; i < CAT_ARRAY_SIZE(rinit_functions); i++) {
+    for (size_t i = 0; i < CAT_ARRAY_SIZE(rinit_functions); i++) {
         if (rinit_functions[i](INIT_FUNC_ARGS_PASSTHRU) != SUCCESS) {
             return FAILURE;
         }
@@ -301,8 +297,7 @@ PHP_RSHUTDOWN_FUNCTION(swow)
 
     SWOW_G(runtime_state) = SWOW_RUNTIME_STATE_SHUTDOWN;
 
-    size_t i = 0;
-    for (; i < CAT_ARRAY_SIZE(rshutdown_functions); i++) {
+    for (size_t i = 0; i < CAT_ARRAY_SIZE(rshutdown_functions); i++) {
         if (rshutdown_functions[i](SHUTDOWN_FUNC_ARGS_PASSTHRU) != SUCCESS) {
             return FAILURE;
         }
@@ -350,8 +345,7 @@ static zend_result swow_post_deactivate(void)
         swow_event_runtime_close,
     };
 
-    size_t i = 0;
-    for (; i < CAT_ARRAY_SIZE(rclose_functions); i++) {
+    for (size_t i = 0; i < CAT_ARRAY_SIZE(rclose_functions); i++) {
         if (rclose_functions[i]() != SUCCESS) {
             return FAILURE;
         }
