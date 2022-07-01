@@ -109,6 +109,7 @@ trait ReceiverTrait
             /* all data has been parsed, clear them */
             $buffer->clear();
         }
+        $event = HttpParser::EVENT_NONE;
         $data = '';
         $uriOrReasonPhrase = '';
         $headerName = '';
@@ -143,7 +144,6 @@ trait ReceiverTrait
                     $this->recvData($buffer);
                     // TODO: call $parser->finished() if connection error?
                 }
-                $event = HttpParser::EVENT_NONE;
                 while (true) {
                     $previousEvent = $event;
                     if (!$headersComplete || ($isMultipart && !$multiPartHeadersComplete)) {
@@ -151,6 +151,12 @@ trait ReceiverTrait
                     } else {
                         $event = $parser->execute($buffer);
                     }
+                    if ($event === $previousEvent && $parser->getParsedLength() === 0) {
+                        $expectMore = true;
+                        $buffer->clear();
+                        break;
+                    } /* else in case of request/response with empty body,
+                       * we should continue here to get MESSAGE_COMPLETE after HEADERS_COMPLETE */
                     if (!$headersComplete) {
                         $headerLength += $parser->getParsedLength();
                         if ($headerLength > $maxHeaderLength) {
