@@ -144,6 +144,27 @@ SWOW_API zend_op_array *swow_compile_string_ex(zend_string *source_string, const
 #define ZEND_HASH_MAP_FOREACH_STR_KEY_VAL ZEND_HASH_FOREACH_STR_KEY_VAL
 #endif
 
+#define swow_hash_str_fetch_bool(ht, str, ret) do { \
+    zval *z_tmp = zend_hash_str_find(ht, str, strlen(str)); \
+    if (z_tmp != NULL) { \
+        *(ret) = zval_is_true(z_tmp); \
+    } \
+} while (0)
+
+#define swow_hash_str_fetch_long(ht, str, ret) do { \
+    zval *z_tmp = zend_hash_str_find(ht, str, strlen(str)); \
+    if (z_tmp != NULL) { \
+        *(ret) = Z_LVAL_P(z_tmp); \
+    } \
+} while (0)
+
+#define swow_hash_str_fetch_str(ht, str, ret) do { \
+    zval *z_tmp = zend_hash_str_find(ht, str, strlen(str)); \
+    if (z_tmp != NULL && try_convert_to_string(z_tmp)) { \
+        *(ret) = Z_STRVAL_P(z_tmp); \
+    } \
+} while (0)
+
 #ifndef add_assoc_string_fast
 static zend_always_inline void add_next_index_string_fast(zval *arg, const char *str)
 {

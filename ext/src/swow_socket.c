@@ -494,7 +494,7 @@ static PHP_METHOD(Swow_Socket, enableCrypto)
 {
 #ifdef CAT_SSL
     SWOW_SOCKET_GETTER(ssocket, socket);
-    HashTable *options_array;
+    HashTable *options_array = NULL;
     cat_socket_crypto_options_t options;
     cat_bool_t is_client = !cat_socket_is_server_connection(socket);
     cat_bool_t ret;
@@ -507,70 +507,27 @@ static PHP_METHOD(Swow_Socket, enableCrypto)
 
     cat_socket_crypto_options_init(&options, is_client);
     if (options_array != NULL) {
-        zval *z_tmp;
-        z_tmp = zend_hash_str_find(options_array, ZEND_STRL("verify_peer"));
-        if (z_tmp != NULL && !zend_is_true(z_tmp)) {
-            options.verify_peer = cat_false;
-        }
-        z_tmp = zend_hash_str_find(options_array, ZEND_STRL("verify_peer_name"));
-        if (z_tmp != NULL && !zend_is_true(z_tmp)) {
-            options.verify_peer_name = cat_false;
-        }
-        z_tmp = zend_hash_str_find(options_array, ZEND_STRL("allow_self_signed"));
-        if (z_tmp != NULL && zend_is_true(z_tmp)) {
-            options.allow_self_signed = cat_true;
-        }
-        z_tmp = zend_hash_str_find(options_array, ZEND_STRL("verify_depth"));
-        if (z_tmp != NULL) {
-            options.verify_depth = zval_get_long(z_tmp);
-        }
-        z_tmp = zend_hash_str_find(options_array, ZEND_STRL("ca_file"));
-        if (z_tmp != NULL && try_convert_to_string(z_tmp)) {
-            options.ca_file = Z_STRVAL_P(z_tmp);
-        }
-        z_tmp = zend_hash_str_find(options_array, ZEND_STRL("ca_path"));
-        if (z_tmp != NULL && try_convert_to_string(z_tmp)) {
-            options.ca_path = Z_STRVAL_P(z_tmp);
-        }
+        swow_hash_str_fetch_bool(options_array, "verify_peer", &options.verify_peer);
+        swow_hash_str_fetch_bool(options_array, "verify_peer_name", &options.verify_peer_name);
+        swow_hash_str_fetch_bool(options_array, "allow_self_signed", &options.allow_self_signed);
+        swow_hash_str_fetch_long(options_array, "verify_depth", &options.verify_depth);
+        swow_hash_str_fetch_str(options_array, "ca_file", &options.ca_file);
+        swow_hash_str_fetch_str(options_array, "ca_path", &options.ca_path);
         if (options.ca_file == NULL) {
             options.ca_file = zend_ini_string((char *) ZEND_STRL("openssl.cafile"), 0);
             // note: we must check if zend_ini_string returns NULL because we donot register "openssl.cafile" ini option
             options.ca_file = (options.ca_file != NULL && strlen(options.ca_file) != 0) ? options.ca_file : NULL;
             options.no_client_ca_list = cat_true;
         }
-        z_tmp = zend_hash_str_find(options_array, ZEND_STRL("passphrase"));
-        if (z_tmp != NULL && try_convert_to_string(z_tmp)) {
-            options.passphrase = Z_STRVAL_P(z_tmp);
-        }
-        z_tmp = zend_hash_str_find(options_array, ZEND_STRL("certificate"));
-        if (z_tmp != NULL && try_convert_to_string(z_tmp)) {
-            options.certificate = Z_STRVAL_P(z_tmp);
-        }
-        z_tmp = zend_hash_str_find(options_array, ZEND_STRL("certificate_key"));
-        if (z_tmp != NULL && try_convert_to_string(z_tmp)) {
-            options.certificate_key = Z_STRVAL_P(z_tmp);
-        }
-        z_tmp = zend_hash_str_find(options_array, ZEND_STRL("no_ticket"));
-        if (z_tmp != NULL && zend_is_true(z_tmp)) {
-            options.no_ticket = cat_true;
-        }
-        z_tmp = zend_hash_str_find(options_array, ZEND_STRL("no_compression"));
-        if (z_tmp == NULL || zend_is_true(z_tmp)) {
-            options.no_compression = cat_true;
-        }
-        z_tmp = zend_hash_str_find(options_array, ZEND_STRL("passphrase"));
-        if (z_tmp != NULL && try_convert_to_string(z_tmp)) {
-            options.passphrase = Z_STRVAL_P(z_tmp);
-        }
+        swow_hash_str_fetch_str(options_array, "passphrase", &options.passphrase);
+        swow_hash_str_fetch_str(options_array, "certificate", &options.certificate);
+        swow_hash_str_fetch_str(options_array, "certificate_key", &options.certificate_key);
+        swow_hash_str_fetch_bool(options_array, "no_ticket", &options.no_ticket);
+        swow_hash_str_fetch_bool(options_array, "no_compression", &options.no_compression);
+        swow_hash_str_fetch_str(options_array, "passphrase", &options.passphrase);
+        // TODO: SNI related things
         if (is_client) {
-            /* If SNI is explicitly disabled we're finished here */
-            z_tmp = zend_hash_str_find(options_array, ZEND_STRL("SNI_enabled"));
-            if (z_tmp == NULL || zend_is_true(z_tmp)) {
-                z_tmp = zend_hash_str_find(options_array, ZEND_STRL("peer_name"));
-                if (z_tmp != NULL && try_convert_to_string(z_tmp)) {
-                    options.peer_name = Z_STRVAL_P(z_tmp);
-                }
-            }
+            swow_hash_str_fetch_str(options_array, "peer_name", &options.peer_name);
         }
     }
 
