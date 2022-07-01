@@ -790,7 +790,7 @@ static int swow_stream_enable_crypto(php_stream *stream,
         if (!GET_VER_OPT("disable_compression") || zend_is_true(val)) {
             options.no_compression = cat_true;
         }
-        GET_VER_OPT_STRING("peer_name", options.passphrase);
+        GET_VER_OPT_STRING("peer_name", options.peer_name);
         if (is_client) {
             /* If SNI is explicitly disabled we're finished here */
             if (!GET_VER_OPT("SNI_enabled") || zend_is_true(val)) {
