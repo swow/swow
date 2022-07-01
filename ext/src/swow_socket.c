@@ -487,23 +487,94 @@ static PHP_METHOD(Swow_Socket, connect)
 }
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_enableCrypto, 0, 0, IS_STATIC, 0)
-    ZEND_ARG_OBJ_INFO_WITH_DEFAULT_VALUE(0, connection, Swow\\Socket\\CryptoOptions, 1, "null")
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, options, IS_ARRAY, 1, "null")
 ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Socket, enableCrypto)
 {
 #ifdef CAT_SSL
     SWOW_SOCKET_GETTER(ssocket, socket);
+    HashTable *options_array;
+    cat_socket_crypto_options_t options;
+    cat_bool_t is_client = !cat_socket_is_server_connection(socket);
     cat_bool_t ret;
 
-    ZEND_PARSE_PARAMETERS_NONE();
-    // ZEND_PARSE_PARAMETERS_START(0, 1)
-        // Z_PARAM_OPTIONAL
-        // TODO: Support crypto structure
-        // Z_PARAM_OBJ_OF_CLASS()
-    // ZEND_PARSE_PARAMETERS_END();
+    ZEND_PARSE_PARAMETERS_START(0, 1)
+        Z_PARAM_OPTIONAL
+        // TODO: Support crypto options object
+        Z_PARAM_ARRAY_HT(options_array)
+    ZEND_PARSE_PARAMETERS_END();
 
-    ret = cat_socket_enable_crypto(socket, NULL);
+    cat_socket_crypto_options_init(&options, is_client);
+    if (options_array != NULL) {
+        zval *z_tmp;
+        z_tmp = zend_hash_str_find(options_array, ZEND_STRL("verify_peer"));
+        if (z_tmp != NULL && !zend_is_true(z_tmp)) {
+            options.verify_peer = cat_false;
+        }
+        z_tmp = zend_hash_str_find(options_array, ZEND_STRL("verify_peer_name"));
+        if (z_tmp != NULL && !zend_is_true(z_tmp)) {
+            options.verify_peer_name = cat_false;
+        }
+        z_tmp = zend_hash_str_find(options_array, ZEND_STRL("allow_self_signed"));
+        if (z_tmp != NULL && zend_is_true(z_tmp)) {
+            options.allow_self_signed = cat_true;
+        }
+        z_tmp = zend_hash_str_find(options_array, ZEND_STRL("verify_depth"));
+        if (z_tmp != NULL) {
+            options.verify_depth = zval_get_long(z_tmp);
+        }
+        z_tmp = zend_hash_str_find(options_array, ZEND_STRL("ca_file"));
+        if (z_tmp != NULL && try_convert_to_string(z_tmp)) {
+            options.ca_file = Z_STRVAL_P(z_tmp);
+        }
+        z_tmp = zend_hash_str_find(options_array, ZEND_STRL("ca_path"));
+        if (z_tmp != NULL && try_convert_to_string(z_tmp)) {
+            options.ca_path = Z_STRVAL_P(z_tmp);
+        }
+        if (options.ca_file == NULL) {
+            options.ca_file = zend_ini_string((char *) ZEND_STRL("openssl.cafile"), 0);
+            // note: we must check if zend_ini_string returns NULL because we donot register "openssl.cafile" ini option
+            options.ca_file = (options.ca_file != NULL && strlen(options.ca_file) != 0) ? options.ca_file : NULL;
+            options.no_client_ca_list = cat_true;
+        }
+        z_tmp = zend_hash_str_find(options_array, ZEND_STRL("passphrase"));
+        if (z_tmp != NULL && try_convert_to_string(z_tmp)) {
+            options.passphrase = Z_STRVAL_P(z_tmp);
+        }
+        z_tmp = zend_hash_str_find(options_array, ZEND_STRL("certificate"));
+        if (z_tmp != NULL && try_convert_to_string(z_tmp)) {
+            options.certificate = Z_STRVAL_P(z_tmp);
+        }
+        z_tmp = zend_hash_str_find(options_array, ZEND_STRL("certificate_key"));
+        if (z_tmp != NULL && try_convert_to_string(z_tmp)) {
+            options.certificate_key = Z_STRVAL_P(z_tmp);
+        }
+        z_tmp = zend_hash_str_find(options_array, ZEND_STRL("no_ticket"));
+        if (z_tmp != NULL && zend_is_true(z_tmp)) {
+            options.no_ticket = cat_true;
+        }
+        z_tmp = zend_hash_str_find(options_array, ZEND_STRL("no_compression"));
+        if (z_tmp == NULL || zend_is_true(z_tmp)) {
+            options.no_compression = cat_true;
+        }
+        z_tmp = zend_hash_str_find(options_array, ZEND_STRL("passphrase"));
+        if (z_tmp != NULL && try_convert_to_string(z_tmp)) {
+            options.passphrase = Z_STRVAL_P(z_tmp);
+        }
+        if (is_client) {
+            /* If SNI is explicitly disabled we're finished here */
+            z_tmp = zend_hash_str_find(options_array, ZEND_STRL("SNI_enabled"));
+            if (z_tmp == NULL || zend_is_true(z_tmp)) {
+                z_tmp = zend_hash_str_find(options_array, ZEND_STRL("peer_name"));
+                if (z_tmp != NULL && try_convert_to_string(z_tmp)) {
+                    options.peer_name = Z_STRVAL_P(z_tmp);
+                }
+            }
+        }
+    }
+
+    ret = cat_socket_enable_crypto(socket, &options);
 
     if (UNEXPECTED(!ret)) {
         swow_throw_exception_with_last(swow_socket_exception_ce);
