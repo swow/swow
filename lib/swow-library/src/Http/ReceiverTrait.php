@@ -104,13 +104,18 @@ trait ReceiverTrait
         $isRequest = $parser->getType() === Parser::TYPE_REQUEST;
         $result = $isRequest ? new RawRequest() : new RawResponse();
 
+        /* Socket IO related values {{{ */
         $expectMore = $buffer->eof();
         if ($expectMore) {
             /* all data has been parsed, clear them */
             $buffer->clear();
         }
+        /* }}} */
+        /* HTTP parser related values {{{ */
         $event = HttpParser::EVENT_NONE;
         $data = '';
+        /* }}} */
+        /* HTTP related values {{{ */
         $uriOrReasonPhrase = '';
         $headerName = '';
         $formDataName = '';
@@ -126,6 +131,7 @@ trait ReceiverTrait
         $isChunked = false;
         $currentChunkLength = 0;
         $body = null;
+        /* }}} */
         /* multipart related values {{{ */
         $isMultipart = false;
         $multiPartHeadersComplete = false;
