@@ -125,7 +125,7 @@ return (new PhpCsFixer\Config())
         'linebreak_after_opening_tag' => true,
         'lowercase_static_reference' => true,
         'multiline_comment_opening_closing' => true,
-        'no_useless_else' => true,
+        'no_useless_else' => false,
         'no_unused_imports' => true,
         'no_unneeded_curly_braces' => false,
         'not_operator_with_space' => false,
