@@ -91,6 +91,11 @@ trait ReceiverTrait
         return $this;
     }
 
+    public function getKeepAlive(): ?bool
+    {
+        return $this->keepAlive;
+    }
+
     /**
      * @TODO The options must be managed in a unified way
      * @phan-return T

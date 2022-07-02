@@ -17,6 +17,11 @@ trait ProtocolTypeTrait
 {
     protected int $protocolType = self::PROTOCOL_TYPE_HTTP;
 
+    public function getProtocolType(): int
+    {
+        return $this->protocolType;
+    }
+
     protected function upgraded(int $protocolType): void
     {
         $this->protocolType = $protocolType;
