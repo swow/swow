@@ -1905,6 +1905,14 @@ namespace Swow
 {
     class Watchdog
     {
+        /**
+         * @param int $quantum If the blocking time exceeds the quantum, alerter will be triggered.
+         * @param int $threshold If the blocking time exceeds the threshold (means the alerter does not alleviate the CPU starvation), it is considered that the system call blocking occurred.
+         * @param callable|int|float|null $alerter When it is callable, it will be called when blocking occurred, the developer can choose to suspend the coroutine or kill the coroutine;
+         *                                         when it is numeric, Coroutine will be delayed to run with sleep() in millisecond to alleviate CPU starvation;
+         *                                         when it is null, Coroutine will be delayed to run at the next round of the event loop starts to alleviate CPU starvation.
+         * @return void
+         */
         public static function run(int $quantum = 0, int $threshold = 0, callable|int|float|null $alerter = null): void { }
 
         public static function stop(): void { }
