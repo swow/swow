@@ -108,7 +108,7 @@ TEXT;
 
     protected int $currentFrameIndex = 0;
 
-    protected SplFileObject $currentSourceFile;
+    protected ?SplFileObject $currentSourceFile = null;
 
     protected int $currentSourceFileLine = 0;
 
