@@ -23,7 +23,7 @@ foreach ([
     'Swow\\Http\\Status',
     'Swow\\Log',
     'Swow\\Signal',
-    'Swow\\WatchDog',
+    'Swow\\Watchdog',
     'Swow\\WebSocket\\Opcode',
     'Swow\\WebSocket\\Status',
 ] as $class) {

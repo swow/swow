@@ -10,7 +10,7 @@ skip_if_in_valgrind();
 require __DIR__ . '/../include/bootstrap.php';
 
 use Swow\Coroutine;
-use Swow\WatchDog;
+use Swow\Watchdog;
 
 final class CoroutineContext
 {
@@ -28,10 +28,10 @@ final class CoroutineContextManager
     }
 }
 
-Assert::false(WatchDog::isRunning());
+Assert::false(Watchdog::isRunning());
 
-WatchDog::run(1 * 1000 * 1000, 0, function () {
-    Assert::true(WatchDog::isRunning());
+Watchdog::run(1 * 1000 * 1000, 0, function () {
+    Assert::true(Watchdog::isRunning());
     $coroutine = Coroutine::getCurrent();
     $context = CoroutineContextManager::getContext($coroutine);
     $context->alertCount++;

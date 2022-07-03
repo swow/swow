@@ -1903,7 +1903,7 @@ namespace Swow
 
 namespace Swow
 {
-    class WatchDog
+    class Watchdog
     {
         public static function run(int $quantum = 0, int $threshold = 0, callable|int|float|null $alerter = null): void { }
 
@@ -1915,7 +1915,7 @@ namespace Swow
 
 namespace Swow
 {
-    class WatchDogException extends \Swow\Exception { }
+    class WatchdogException extends \Swow\Exception { }
 }
 
 namespace Swow

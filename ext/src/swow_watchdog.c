@@ -69,7 +69,7 @@ static void swow_watchdog_interrupt_function(zend_execute_data *execute_data)
                     !cat_time_wait(swatchdog->delay) &&
                     cat_get_last_error_code() != CAT_ETIMEDOUT
                 ) {
-                    CAT_CORE_ERROR_WITH_LAST(WATCH_DOG, "WatchDog interrupt schedule failed");
+                    CAT_CORE_ERROR_WITH_LAST(WATCH_DOG, "Watchdog interrupt schedule failed");
                 }
             } else {
                 zend_fcall_info fci;
@@ -109,7 +109,7 @@ SWOW_API cat_bool_t swow_watchdog_run(cat_timeout_t quantum, cat_timeout_t thres
             default: {
                 char *error;
                 if (!zend_is_callable_ex(zalerter, NULL, 0, NULL, &fcc, &error)) {
-                    cat_update_last_error(CAT_EMISUSE, "WatchDog alerter must be numeric or callable, %s", error);
+                    cat_update_last_error(CAT_EMISUSE, "Watchdog alerter must be numeric or callable, %s", error);
                     efree(error);
                     return cat_false;
                 }
@@ -159,13 +159,13 @@ SWOW_API cat_bool_t swow_watchdog_stop(void)
     return cat_true;
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_WatchDog_run, 0, 0, IS_VOID, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Watchdog_run, 0, 0, IS_VOID, 0)
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, quantum, IS_LONG, 0, "0")
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, threshold, IS_LONG, 0, "0")
     ZEND_ARG_TYPE_MASK(0, alerter, MAY_BE_CALLABLE | MAY_BE_LONG | MAY_BE_DOUBLE | MAY_BE_NULL, "null")
 ZEND_END_ARG_INFO()
 
-static PHP_METHOD(Swow_WatchDog, run)
+static PHP_METHOD(Swow_Watchdog, run)
 {
     zend_long quantum = 0;
     zend_long threshold = 0;
@@ -192,10 +192,10 @@ static PHP_METHOD(Swow_WatchDog, run)
     }
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_WatchDog_stop, 0, 0, IS_VOID, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Watchdog_stop, 0, 0, IS_VOID, 0)
 ZEND_END_ARG_INFO()
 
-static PHP_METHOD(Swow_WatchDog, stop)
+static PHP_METHOD(Swow_Watchdog, stop)
 {
     cat_bool_t ret;
 
@@ -209,10 +209,10 @@ static PHP_METHOD(Swow_WatchDog, stop)
     }
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_WatchDog_isRunning, 0, 0, _IS_BOOL, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Watchdog_isRunning, 0, 0, _IS_BOOL, 0)
 ZEND_END_ARG_INFO()
 
-static PHP_METHOD(Swow_WatchDog, isRunning)
+static PHP_METHOD(Swow_Watchdog, isRunning)
 {
     ZEND_PARSE_PARAMETERS_NONE();
 
@@ -220,9 +220,9 @@ static PHP_METHOD(Swow_WatchDog, isRunning)
 }
 
 static const zend_function_entry swow_watchdog_methods[] = {
-    PHP_ME(Swow_WatchDog, run,       arginfo_class_Swow_WatchDog_run,       ZEND_ACC_STATIC | ZEND_ACC_PUBLIC)
-    PHP_ME(Swow_WatchDog, stop,      arginfo_class_Swow_WatchDog_stop,      ZEND_ACC_STATIC | ZEND_ACC_PUBLIC)
-    PHP_ME(Swow_WatchDog, isRunning, arginfo_class_Swow_WatchDog_isRunning, ZEND_ACC_STATIC | ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Watchdog, run,       arginfo_class_Swow_Watchdog_run,       ZEND_ACC_STATIC | ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Watchdog, stop,      arginfo_class_Swow_Watchdog_stop,      ZEND_ACC_STATIC | ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Watchdog, isRunning, arginfo_class_Swow_Watchdog_isRunning, ZEND_ACC_STATIC | ZEND_ACC_PUBLIC)
     PHP_FE_END
 };
 
@@ -233,13 +233,13 @@ zend_result swow_watchdog_module_init(INIT_FUNC_ARGS)
     }
 
     swow_watchdog_ce = swow_register_internal_class(
-        "Swow\\WatchDog", NULL, swow_watchdog_methods,
+        "Swow\\Watchdog", NULL, swow_watchdog_methods,
         NULL, NULL, cat_false, cat_false,
         swow_create_object_deny, NULL, 0
     );
 
     swow_watchdog_exception_ce = swow_register_internal_class(
-        "Swow\\WatchDogException", swow_exception_ce, NULL, NULL, NULL, cat_true, cat_true, NULL, NULL, 0
+        "Swow\\WatchdogException", swow_exception_ce, NULL, NULL, NULL, cat_true, cat_true, NULL, NULL, 0
     );
 
     return SUCCESS;
@@ -266,7 +266,7 @@ zend_result swow_watchdog_runtime_init(INIT_FUNC_ARGS)
 zend_result swow_watchdog_runtime_shutdown(INIT_FUNC_ARGS)
 {
     if (cat_watchdog_is_running() && !swow_watchdog_stop()) {
-        CAT_CORE_ERROR_WITH_LAST(WATCH_DOG, "WatchDog stop failed");
+        CAT_CORE_ERROR_WITH_LAST(WATCH_DOG, "Watchdog stop failed");
     }
 
     if (!cat_watchdog_runtime_shutdown()) {

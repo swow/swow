@@ -10,13 +10,13 @@ skip_if_in_valgrind();
 require __DIR__ . '/../include/bootstrap.php';
 
 use Swow\Coroutine;
-use Swow\WatchDog;
+use Swow\Watchdog;
 
-Assert::false(WatchDog::isRunning());
+Assert::false(Watchdog::isRunning());
 
-WatchDog::run();
+Watchdog::run();
 
-Assert::true(WatchDog::isRunning());
+Assert::true(Watchdog::isRunning());
 
 $coroutine = Coroutine::getCurrent();
 $count = 0;

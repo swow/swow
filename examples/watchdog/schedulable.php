@@ -14,10 +14,10 @@
 declare(strict_types=1);
 
 use Swow\Coroutine;
-use Swow\WatchDog;
+use Swow\Watchdog;
 
 // 0.1s/t
-WatchDog::run(quantum: 100 * 1000 * 1000, alerter: static function (): void {
+Watchdog::run(quantum: 100 * 1000 * 1000, alerter: static function (): void {
     $coroutine = Coroutine::getCurrent();
     $coroutine->__alert_count = ($coroutine->__alert_count ?? 0) + 1;
     echo 'CPU starvation occurred, suspend this coroutine...' . PHP_EOL;

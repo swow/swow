@@ -14,7 +14,7 @@ if (PHP_OS_FAMILY !== 'Windows') {
 require __DIR__ . '/../include/bootstrap.php';
 
 use Swow\Coroutine;
-use Swow\WatchDog;
+use Swow\Watchdog;
 
 function ffi_sleep(int $ns): void
 {
@@ -68,15 +68,15 @@ switch (PHP_OS_FAMILY) {
 $threshold = 5 * $quantum; // 5 times quantum to bite
 $blocking_time = 100 * $quantum; // 100 times quantum
 
-Assert::false(WatchDog::isRunning());
+Assert::false(Watchdog::isRunning());
 
-WatchDog::run($quantum, $threshold);
+Watchdog::run($quantum, $threshold);
 
-Assert::true(WatchDog::isRunning());
+Assert::true(Watchdog::isRunning());
 
 $watcher = Coroutine::run(function () {
     Coroutine::yield();
-    WatchDog::stop();
+    Watchdog::stop();
     echo 'I am back' . PHP_LF;
 });
 
@@ -89,5 +89,5 @@ echo 'Done' . PHP_LF;
 
 ?>
 --EXPECTREGEX--
-(?:Warning: <(?:WatchDog)> [\S ]+\n)+I am back
+(?:Warning: <(?:Watchdog)> [\S ]+\n)+I am back
 Done

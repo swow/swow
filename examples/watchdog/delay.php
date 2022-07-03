@@ -13,10 +13,10 @@ declare(strict_types=1);
 
 use Swow\Coroutine;
 use Swow\Sync\WaitReference;
-use Swow\WatchDog;
+use Swow\Watchdog;
 
 /* if CPU starvation occurred, kill the coroutine */
-WatchDog::run(alerter: static function (): void { exit; });
+Watchdog::run(alerter: static function (): void { exit; });
 
 $wf = new WaitReference();
 Coroutine::run(static function () use ($wf): void {
