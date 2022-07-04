@@ -52,4 +52,28 @@ final class ClientTest extends TestCase
 
         $wr::wait($wr);
     }
+
+    public function testConnectionClosedByPeer(): void
+    {
+        $server = new Socket(Socket::TYPE_TCP);
+        $server->bind('127.0.0.1')->listen();
+
+        $wr = new WaitReference();
+        Coroutine::run(static function () use ($server, $wr): void {
+            $connection = $server->accept();
+            $connection->close();
+        });
+
+        $client = new HttpClient();
+        $client->connect($server->getSockAddress(), $server->getSockPort());
+        try {
+            $client->sendRequest(new HttpRequest());
+            $this->fail('Never here');
+        } catch (HttpClient\NetworkException $exception) {
+            /* ExceptionFaker works */
+            $this->assertNull($exception->getPrevious());
+        }
+
+        $wr::wait($wr);
+    }
 }

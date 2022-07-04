@@ -13,8 +13,10 @@ declare(strict_types=1);
 
 namespace Swow\Http\Client;
 
-use Psr\Http\Client\NetworkExceptionInterface;
+use Psr\Http\Message\RequestInterface;
+use Throwable;
 
-class NetworkException extends ClientExceptionAbstract implements NetworkExceptionInterface
+interface ClientExceptionInterface extends \Psr\Http\Client\ClientExceptionInterface
 {
+    public function __construct(RequestInterface $request, string $message = '', int $code = 0, ?Throwable $previous = null);
 }

@@ -13,13 +13,15 @@ declare(strict_types=1);
 
 namespace Swow\Http\Client;
 
-use Psr\Http\Client\ClientExceptionInterface;
+use Exception;
 use Psr\Http\Message\RequestInterface;
-use Swow\SocketException;
+use Swow\Exception\ExceptionFakerTrait;
 use Throwable;
 
-class ClientException extends SocketException implements ClientExceptionInterface
+abstract class ClientExceptionAbstract extends \Swow\Exception implements ClientExceptionInterface
 {
+    use ExceptionFakerTrait;
+
     public function __construct(protected RequestInterface $request, string $message = '', int $code = 0, ?Throwable $previous = null)
     {
         parent::__construct($message, $code, $previous);
@@ -28,5 +30,15 @@ class ClientException extends SocketException implements ClientExceptionInterfac
     public function getRequest(): RequestInterface
     {
         return $this->request;
+    }
+
+    public static function fromException(Exception $exception, RequestInterface $request): static
+    {
+        return (new static(
+            $request,
+            $exception->getMessage(),
+            $exception->getCode(),
+            $exception->getPrevious()
+        ))->cloneInternalPropertiesFrom($exception);
     }
 }

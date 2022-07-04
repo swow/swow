@@ -33,6 +33,7 @@ class Client extends Socket implements ClientInterface, ProtocolTypeInterface
 {
     use ConfigTrait;
     use ProtocolTypeTrait;
+
     /*
      * @use ReceiverTrait<RawResponse>
      */
@@ -162,11 +163,7 @@ class Client extends Socket implements ClientInterface, ProtocolTypeInterface
             }
         }
 
-        try {
-            $response = $this->sendRequest($request, $response);
-        } catch (Exception $exception) {
-            throw $this->convertToClientException($exception, $request);
-        }
+        $response = $this->sendRequest($request, $response);
 
         if ($response->getStatusCode() !== HttpStatus::SWITCHING_PROTOCOLS) {
             throw new RequestException($request, $response->getReasonPhrase(), $response->getStatusCode());
@@ -183,9 +180,9 @@ class Client extends Socket implements ClientInterface, ProtocolTypeInterface
     protected function convertToClientException(Exception $exception, RequestInterface $request): ClientExceptionInterface
     {
         if ($exception instanceof SocketException) {
-            return new NetworkException($request, $exception->getMessage(), $exception->getCode(), $exception);
+            return NetworkException::fromException($exception, $request);
+        } else {
+            return RequestException::fromException($exception, $request);
         }
-
-        return new RequestException($request, $exception->getMessage(), $exception->getCode(), $exception);
     }
 }
