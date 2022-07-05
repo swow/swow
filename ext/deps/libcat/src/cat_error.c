@@ -18,6 +18,10 @@
 
 #include "cat.h"
 
+#ifdef CAT_IDE_HELPER
+#include "cat_error.h"
+#endif
+
 CAT_API cat_errno_t cat_get_last_error_code(void)
 {
     return CAT_G(last_error).code;

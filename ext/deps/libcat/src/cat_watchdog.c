@@ -125,7 +125,7 @@ CAT_API cat_bool_t cat_watchdog_runtime_init(void)
 CAT_API cat_bool_t cat_watchdog_runtime_shutdown(void)
 {
     if (cat_watchdog_is_running() && !cat_watchdog_stop()) {
-        CAT_CORE_ERROR(WATCH_DOG, "WatchDog close failed during rshutdown");
+        CAT_CORE_ERROR(WATCH_DOG, "Watchdog close failed during rshutdown");
     }
 
     return cat_true;
@@ -133,7 +133,7 @@ CAT_API cat_bool_t cat_watchdog_runtime_shutdown(void)
 
 CAT_API void cat_watchdog_alert_standard(cat_watchdog_t *watchdog)
 {
-    fprintf(stderr, "Warning: <WatchDog> Syscall blocking or CPU starvation may occur in " CAT_WATCH_DOG_ROLE_NAME " %d, "
+    fprintf(stderr, "Warning: <Watchdog> Syscall blocking or CPU starvation may occur in " CAT_WATCH_DOG_ROLE_NAME " %d, "
                     "it has been blocked for more than " CAT_TIMEOUT_FMT  " ns" CAT_EOL,
                     watchdog->pid, watchdog->quantum * watchdog->alert_count);
 }
@@ -173,17 +173,17 @@ CAT_API cat_bool_t cat_watchdog_run(cat_watchdog_t *watchdog, cat_timeout_t quan
 
     error = uv_sem_init(&sem, 0);
     if (error != 0) {
-        cat_update_last_error_with_reason(error, "WatchDog init sem failed");
+        cat_update_last_error_with_reason(error, "Watchdog init sem failed");
         goto _sem_init_failed;
     }
     error = uv_cond_init(&watchdog->cond);
     if (error != 0) {
-        cat_update_last_error_with_reason(error, "WatchDog init cond failed");
+        cat_update_last_error_with_reason(error, "Watchdog init cond failed");
         goto _cond_init_failed;
     }
     error = uv_mutex_init(&watchdog->mutex);
     if (error != 0) {
-        cat_update_last_error_with_reason(error, "WatchDog init mutex failed");
+        cat_update_last_error_with_reason(error, "Watchdog init mutex failed");
         goto _mutex_init_failed;
     }
 
@@ -194,7 +194,7 @@ CAT_API cat_bool_t cat_watchdog_run(cat_watchdog_t *watchdog, cat_timeout_t quan
     error = uv_thread_create_ex(&watchdog->thread, &options, cat_watchdog_loop, watchdog);
 
     if (error != 0) {
-        cat_update_last_error_with_reason(error, "WatchDog create thread failed");
+        cat_update_last_error_with_reason(error, "Watchdog create thread failed");
         goto _thread_create_failed;
     }
 
@@ -226,7 +226,7 @@ CAT_API cat_bool_t cat_watchdog_stop(void)
     int error;
 
     if (watchdog == NULL) {
-        cat_update_last_error(CAT_EMISUSE, "WatchDog is not running");
+        cat_update_last_error(CAT_EMISUSE, "Watchdog is not running");
         return cat_false;
     }
 
@@ -238,7 +238,7 @@ CAT_API cat_bool_t cat_watchdog_stop(void)
     error = uv_thread_join(&watchdog->thread);
 
     if (error != 0) {
-        cat_update_last_error_with_reason(error, "WatchDog close thread failed");
+        cat_update_last_error_with_reason(error, "Watchdog close thread failed");
         return cat_false;
     }
 

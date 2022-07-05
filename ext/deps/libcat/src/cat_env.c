@@ -18,6 +18,10 @@
 
 #include "cat.h"
 
+#ifdef CAT_IDE_HELPER
+#include "cat_env.h"
+#endif
+
 CAT_API char *cat_env_get(const char *name)
 {
     return cat_env_get_ex(name, NULL, NULL);

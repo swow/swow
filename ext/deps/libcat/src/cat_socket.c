@@ -1961,6 +1961,9 @@ CAT_API cat_bool_t cat_socket_enable_crypto_ex(cat_socket_t *socket, const cat_s
                 nread = cat_socket_recv_ex(socket, buffer->value, buffer->size, timeout);
             } CAT_TIME_WAIT_END(timeout);
             if (unlikely(nread <= 0)) {
+                if (nread == 0) {
+                    cat_update_last_error_by_code(CAT_ECONNRESET);
+                }
                 break;
             }
             nwrite = cat_ssl_write_encrypted_bytes(ssl, buffer->value, nread);

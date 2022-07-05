@@ -17,6 +17,11 @@
  */
 
 #include "cat.h"
+
+#ifdef CAT_IDE_HELPER
+#include "cat_log.h"
+#endif
+
 #include "cat_coroutine.h" /* for coroutine id (TODO: need to decouple it?) */
 
 CAT_API cat_log_t cat_log_function;

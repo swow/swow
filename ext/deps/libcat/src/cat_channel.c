@@ -122,11 +122,12 @@ static cat_always_inline void cat_channel_resume_waiter(cat_coroutine_t *corouti
     cat_coroutine_schedule(coroutine, CHANNEL, "%s", name);
 }
 
-static cat_always_inline cat_bool_t cat_channel_wait(cat_queue_t *queue, cat_timeout_t timeout)
+static cat_always_inline cat_bool_t cat_channel_wait_on(cat_channel_t *channel, cat_queue_t *queue, cat_timeout_t timeout)
 {
     cat_queue_node_t *waiter = &CAT_COROUTINE_G(current)->waiter.node;
     cat_bool_t ret;
 
+    (void) channel;
     cat_queue_push_back(queue, waiter);
     ret = cat_time_wait(timeout);
     cat_queue_remove(waiter);
@@ -206,7 +207,7 @@ static cat_bool_t cat_channel_unbuffered_push(cat_channel_t *channel, const cat_
 {
     /* if it is unwritable, just wait */
     if (!cat_channel__has_consumers(channel)) {
-        if (unlikely(!cat_channel_wait(&channel->producers, timeout))) {
+        if (unlikely(!cat_channel_wait_on(channel, &channel->producers, timeout))) {
             /* sleep failed or timedout */
             cat_update_last_error_with_previous("Channel wait consumer failed");
             return cat_false;
@@ -233,7 +234,7 @@ static cat_bool_t cat_channel_unbuffered_pop(cat_channel_t *channel, cat_data_t 
 {
     /* if it is unreadable, just wait */
     if (!cat_channel__has_producers(channel)) {
-        if (unlikely(!cat_channel_wait(&channel->consumers, timeout))) {
+        if (unlikely(!cat_channel_wait_on(channel, &channel->consumers, timeout))) {
             /* sleep failed or timedout */
             cat_update_last_error_with_previous("Channel wait producer failed");
             return cat_false;
@@ -331,7 +332,7 @@ static cat_bool_t cat_channel_buffered_push(cat_channel_t *channel, const cat_da
 {
     /* if it is full, just wait */
     if (cat_channel__is_full(channel)) {
-        if (unlikely(!cat_channel_wait(&channel->producers, timeout))) {
+        if (unlikely(!cat_channel_wait_on(channel, &channel->producers, timeout))) {
             /* sleep failed or timedout */
             cat_update_last_error_with_previous("Channel wait consumer failed");
             return cat_false;
@@ -364,7 +365,7 @@ static cat_bool_t cat_channel_buffered_pop(cat_channel_t *channel, cat_data_t *d
 {
     /* if it is empty, just wait */
     if (cat_channel__is_empty(channel)) {
-        if (unlikely(!cat_channel_wait(&channel->consumers, timeout))) {
+        if (unlikely(!cat_channel_wait_on(channel, &channel->consumers, timeout))) {
             /* sleep failed or timedout */
             cat_update_last_error_with_previous("Channel wait producer failed");
             return cat_false;

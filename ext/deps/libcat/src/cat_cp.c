@@ -18,6 +18,10 @@
 
 #include "cat.h"
 
+#ifdef CAT_IDE_HELPER
+#include "cat_cp.h"
+#endif
+
 /* sleep */
 
 #ifdef CAT_OS_WIN

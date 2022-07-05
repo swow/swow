@@ -18,6 +18,10 @@
 
 #include "cat.h"
 
+#ifdef CAT_IDE_HELPER
+#include "cat_memory.h"
+#endif
+
 #ifndef cat_out_of_memory
 CAT_API CAT_COLD CAT_NORETURN void cat_out_of_memory(void)
 {

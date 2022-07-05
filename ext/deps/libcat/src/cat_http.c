@@ -793,16 +793,16 @@ CAT_API cat_bool_t cat_http_parser_execute(cat_http_parser_t *parser, const char
     CAT_LOG_DEBUG_VA_WITH_LEVEL(HTTP, 2, {
         if (parser->event & CAT_HTTP_PARSER_EVENT_FLAG_DATA) {
             char *s;
-            CAT_LOG_DEBUG_D(HTTP, "http_parser_execute() parsed %-2zu return %-12s [%zu] %s",
-                parser->parsed_length, cat_http_parser_get_event_name(parser),
+            CAT_LOG_DEBUG_D(HTTP, "http_parser_execute(length=%-4zu) parsed %-4zu return %-12s [%2zu] %s",
+                length, parser->parsed_length, cat_http_parser_get_event_name(parser),
                 parser->data_length, cat_log_buffer_quote(parser->data, parser->data_length, &s));
             cat_free(s);
         } else  if ((parser->event & CAT_HTTP_PARSER_EVENT_CHUNK_HEADER) == CAT_HTTP_PARSER_EVENT_CHUNK_HEADER) {
-            CAT_LOG_DEBUG_D(HTTP, "http_parser_execute() parsed %-2zu return %-12s with chunk_length=%" PRIu64,
-                parser->parsed_length, cat_http_parser_get_event_name(parser), cat_http_parser_get_current_chunk_length(parser));
+            CAT_LOG_DEBUG_D(HTTP, "http_parser_execute(length=%-4zu) parsed %-4zu return %-12s with chunk_length=%" PRIu64,
+                length, parser->parsed_length, cat_http_parser_get_event_name(parser), cat_http_parser_get_current_chunk_length(parser));
         } else {
-            CAT_LOG_DEBUG_D(HTTP, "http_parser_execute() parsed %-2zu return %-12s",
-                parser->parsed_length, cat_http_parser_get_event_name(parser));
+            CAT_LOG_DEBUG_D(HTTP, "http_parser_execute(length=%-4zu) parsed %-4zu return %-12s",
+                length, parser->parsed_length, cat_http_parser_get_event_name(parser));
         }
     });
 

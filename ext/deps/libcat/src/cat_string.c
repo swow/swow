@@ -18,6 +18,10 @@
 
 #include "cat.h"
 
+#ifdef CAT_IDE_HELPER
+#include "cat_string.h"
+#endif
+
 CAT_API size_t cat_strnlen(const char *s, size_t n)
 {
     const char *p = memchr(s, 0, n);
