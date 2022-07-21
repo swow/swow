@@ -226,7 +226,7 @@ class StubGenerator
     protected static function convertValueToString(mixed $value): string
     {
         return match (true) {
-            is_int($value), is_float($value) => (string) ($value),
+            is_int($value), is_float($value) => (string) $value,
             is_null($value) => 'null',
             is_bool($value) => $value ? 'true' : 'false',
             is_string($value) => '\'' . (ctype_print($value) ? $value : bin2hex($value)) . '\'',
@@ -451,7 +451,7 @@ class StubGenerator
             }
             if ($function instanceof ReflectionFunction) {
                 $fullName = $function->getName();
-            } else /* if ($function instanceof ReflectionMethod) */ {
+            } else { /* if ($function instanceof ReflectionMethod) */
                 $operator = $function->isStatic() ? '::' : '->';
                 $fullName = "{$function->getDeclaringClass()->getName()}{$operator}{$function->getShortName()}";
             }

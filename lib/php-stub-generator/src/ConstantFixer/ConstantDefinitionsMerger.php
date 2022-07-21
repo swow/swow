@@ -25,7 +25,6 @@ class ConstantDefinitionsMerger
 {
     /**
      * @param array<ConstantDefinitionMap> $constDefinitionMaps
-     * @param string|int $reference
      */
     public function __construct(
         private array $constDefinitionMaps,

@@ -76,7 +76,7 @@ class Server extends Socket
                 if (isset($filter[$target->getId()])) {
                     continue;
                 }
-            } else /* if (is_callable($filter)) */ {
+            } else { /* if (is_callable($filter)) */
                 if (!$filter($target)) {
                     continue;
                 }

@@ -218,8 +218,7 @@ trait ReceiverTrait
                     }
                     if (!$headersComplete) {
                         switch ($event) {
-                            case HttpParser::EVENT_HEADER_FIELD:
-                            {
+                            case HttpParser::EVENT_HEADER_FIELD: {
                                 if ($event !== $previousEvent) {
                                     $headerName = $data;
                                 } else {
@@ -227,8 +226,7 @@ trait ReceiverTrait
                                 }
                                 break;
                             }
-                            case HttpParser::EVENT_HEADER_VALUE:
-                            {
+                            case HttpParser::EVENT_HEADER_VALUE: {
                                 if ($event !== $previousEvent) {
                                     $headers[$headerName][] = $data;
                                     $headerNames[strtolower($headerName)] = $headerName;
@@ -238,8 +236,7 @@ trait ReceiverTrait
                                 break;
                             }
                             case HttpParser::EVENT_URL:
-                            case HttpParser::EVENT_STATUS:
-                            {
+                            case HttpParser::EVENT_STATUS: {
                                 if ($event !== $previousEvent) {
                                     $uriOrReasonPhrase = $data;
                                 } else {
@@ -247,8 +244,7 @@ trait ReceiverTrait
                                 }
                                 break;
                             }
-                            case HttpParser::EVENT_HEADERS_COMPLETE:
-                            {
+                            case HttpParser::EVENT_HEADERS_COMPLETE: {
                                 $defaultKeepAlive = $parser->getMajorVersion() !== 1 || $parser->getMinorVersion() !== 0;
                                 $shouldKeepAlive = $parser->shouldKeepAlive();
                                 $this->keepAlive = $shouldKeepAlive !== $defaultKeepAlive ? $shouldKeepAlive : null;
@@ -280,8 +276,7 @@ trait ReceiverTrait
                         }
                     } elseif ($isMultipart) {
                         switch ($event) {
-                            case HttpParser::EVENT_MULTIPART_HEADER_FIELD:
-                            {
+                            case HttpParser::EVENT_MULTIPART_HEADER_FIELD: {
                                 if ($event !== $previousEvent) {
                                     $multipartHeaderName = strtolower($data);
                                 } else {
@@ -289,8 +284,7 @@ trait ReceiverTrait
                                 }
                                 break;
                             }
-                            case HttpParser::EVENT_MULTIPART_HEADER_VALUE:
-                            {
+                            case HttpParser::EVENT_MULTIPART_HEADER_VALUE: {
                                 if ($event !== $previousEvent) {
                                     $multipartHeaders[$multipartHeaderName] = $data;
                                 } else {
@@ -298,8 +292,7 @@ trait ReceiverTrait
                                 }
                                 break;
                             }
-                            case HttpParser::EVENT_MULTIPART_HEADERS_COMPLETE:
-                            {
+                            case HttpParser::EVENT_MULTIPART_HEADERS_COMPLETE: {
                                 $multiPartHeadersComplete = true;
 
                                 /* parse Content-Disposition */
@@ -332,8 +325,7 @@ trait ReceiverTrait
                                 }
                                 break;
                             }
-                            case HttpParser::EVENT_MULTIPART_BODY:
-                            {
+                            case HttpParser::EVENT_MULTIPART_BODY: {
                                 $dataOffset = $parser->getDataOffset();
                                 $dataLength = $parser->getDataLength();
                                 if (isset($formDataValue)) {
@@ -356,8 +348,7 @@ trait ReceiverTrait
                                 }
                                 break;
                             }
-                            case HttpParser::EVENT_MULTIPART_DATA_END:
-                            {
+                            case HttpParser::EVENT_MULTIPART_DATA_END: {
                                 if (isset($formDataValue)) {
                                     $formData[$formDataName] = $formDataValue->toString();
                                     // reset for the next parts
@@ -385,8 +376,7 @@ trait ReceiverTrait
                         }
                     } else {
                         switch ($event) {
-                            case HttpParser::EVENT_BODY:
-                            {
+                            case HttpParser::EVENT_BODY: {
                                 $data = $buffer->toString();
                                 $dataOffset = $parser->getDataOffset();
                                 $dataLength = $parser->getDataLength();
@@ -420,8 +410,7 @@ trait ReceiverTrait
                                 }
                                 break 3; /* end */
                             }
-                            case HttpParser::EVENT_CHUNK_HEADER:
-                            {
+                            case HttpParser::EVENT_CHUNK_HEADER: {
                                 $currentChunkLength = $parser->getCurrentChunkLength();
                                 $contentLength += $currentChunkLength;
                                 if ($contentLength > $maxContentLength) {
@@ -429,8 +418,7 @@ trait ReceiverTrait
                                 }
                                 break;
                             }
-                            case HttpParser::EVENT_CHUNK_COMPLETE:
-                            {
+                            case HttpParser::EVENT_CHUNK_COMPLETE: {
                                 if ($currentChunkLength === 0) {
                                     $event = $parser->execute($buffer);
                                     if ($event !== HttpParser::EVENT_MESSAGE_COMPLETE) {

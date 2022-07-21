@@ -426,8 +426,7 @@ TEXT;
                 return 'null';
             case is_bool($value):
                 return $value ? 'true' : 'false';
-            case is_string($value):
-            {
+            case is_string($value): {
                 // TODO: how to display binary content?
                 // if (!ctype_print($value)) {
                 //     $value = bin2hex($value);

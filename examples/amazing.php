@@ -162,7 +162,7 @@ for ($c = C; $c--;) {
             for ($n = 0; $n < N; $n++) {
                 fwrite($fp, "Client: Hello #{$n}");
                 $recv = fread($fp, 1024);
-                [$address, $port] = explode(':', (stream_socket_get_name($fp, true)));
+                [$address, $port] = explode(':', stream_socket_get_name($fp, true));
                 assert($address === '127.0.0.1' && ((int) $port) === 9503);
                 assert($recv === "Server: Hello #{$n}");
             }

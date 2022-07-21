@@ -158,8 +158,7 @@ class Connection extends Socket implements ProtocolTypeInterface
     public function respond(mixed ...$args): void
     {
         switch ($this->protocolType) {
-            case static::PROTOCOL_TYPE_HTTP:
-            {
+            case static::PROTOCOL_TYPE_HTTP: {
                 $statusCode = HttpStatus::OK;
                 $headers = [];
                 $body = '';
@@ -178,8 +177,7 @@ class Connection extends Socket implements ProtocolTypeInterface
                 $this->write([packResponse($statusCode, $headers), $body]);
                 break;
             }
-            case static::PROTOCOL_TYPE_WEBSOCKET:
-            {
+            case static::PROTOCOL_TYPE_WEBSOCKET: {
                 // TODO: impl
                 break;
             }
@@ -189,8 +187,7 @@ class Connection extends Socket implements ProtocolTypeInterface
     public function error(int $code, string $message = ''): void
     {
         switch ($this->protocolType) {
-            case static::PROTOCOL_TYPE_HTTP:
-            {
+            case static::PROTOCOL_TYPE_HTTP: {
                 if ($message === '') {
                     $message = HttpStatus::getReasonPhraseFor($code);
                 }
@@ -201,8 +198,7 @@ class Connection extends Socket implements ProtocolTypeInterface
                 ]);
                 break;
             }
-            case static::PROTOCOL_TYPE_WEBSOCKET:
-            {
+            case static::PROTOCOL_TYPE_WEBSOCKET: {
                 // TODO: impl
                 break;
             }
