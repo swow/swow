@@ -78,7 +78,7 @@ final class ServerTest extends TestCase
         $wr::wait($wr);
     }
 
-    public function testMixedServer(): void
+    public function getMixedServer(): HttpServer
     {
         $mixedServerFile = __DIR__ . '/../../../../examples/http_server/mixed.php';
         if (!file_exists($mixedServerFile)) {
@@ -90,10 +90,19 @@ final class ServerTest extends TestCase
         // so hacky ^^
         /** @var HttpServer $server */
         $server = $serverCoroutine->eval('$this');
+        if (!$server instanceof HttpServer) {
+            throw new RuntimeException(sprintf('$server expect type of %s, got %s', HttpServer::class, $server::class));
+        }
+
+        return $server;
+    }
+
+    public function testMixedServer(): void
+    {
+        $server = $this->getMixedServer();
         defer(static function () use ($server): void {
             $server->close();
         });
-
         /* HTTP */
         $client = new HttpClient();
         $request = new HttpRequest();
