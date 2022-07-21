@@ -30,6 +30,7 @@ use Swow\Socket;
 use Swow\SocketException;
 use Swow\WebSocket;
 use TypeError;
+
 use function base64_encode;
 use function get_debug_type;
 use function is_array;

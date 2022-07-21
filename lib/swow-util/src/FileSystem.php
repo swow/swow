@@ -18,6 +18,7 @@ use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 use SplFileInfo;
 use Swow\Util\FileSystem\IOException;
+
 use function array_filter;
 use function array_values;
 use function array_walk;

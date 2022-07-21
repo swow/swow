@@ -25,6 +25,7 @@ use Swow\Socket;
 use Swow\Util\Handler;
 use Throwable;
 use WeakMap;
+
 use function array_filter;
 use function array_shift;
 use function array_sum;
@@ -61,6 +62,7 @@ use function strlen;
 use function substr;
 use function trim;
 use function usleep;
+
 use const JSON_THROW_ON_ERROR;
 use const PHP_INT_MAX;
 

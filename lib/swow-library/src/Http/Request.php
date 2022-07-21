@@ -15,6 +15,7 @@ namespace Swow\Http;
 
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\UriInterface;
+
 use function strcasecmp;
 use function strlen;
 

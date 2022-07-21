@@ -18,6 +18,7 @@ use Swow\Http\Status;
 use Swow\SocketException;
 use Swow\Stream\VarStream;
 use Swow\Sync\WaitReference;
+
 use function Swow\Debug\var_dump_return;
 
 $wr = new WaitReference();

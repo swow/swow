@@ -14,6 +14,7 @@ declare(strict_types=1);
 namespace Swow\Http;
 
 use function min;
+
 use const SEEK_CUR;
 
 trait WebSocketTrait

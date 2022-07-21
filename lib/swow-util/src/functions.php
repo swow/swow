@@ -14,6 +14,7 @@ declare(strict_types=1);
 namespace Swow\Util;
 
 use RuntimeException;
+
 use function array_shift;
 use function error_get_last;
 use function feof;
@@ -32,6 +33,7 @@ use function str_replace;
 use function stream_context_create;
 use function strlen;
 use function trim;
+
 use const PATHINFO_FILENAME;
 use const PHP_EOL;
 use const STDIN;

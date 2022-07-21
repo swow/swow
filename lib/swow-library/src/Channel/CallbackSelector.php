@@ -15,6 +15,7 @@ namespace Swow\Channel;
 
 use Closure;
 use Swow\Channel;
+
 use function spl_object_id;
 
 class CallbackSelector extends Selector

@@ -20,7 +20,9 @@ use Swow\SocketException;
 use Swow\Stream\EofStream;
 use Swow\Stream\MessageTooLargeException;
 use Swow\Sync\WaitReference;
+
 use function getRandomBytes;
+
 use const TEST_MAX_CONCURRENCY_LOW;
 use const TEST_MAX_LENGTH;
 use const TEST_MAX_REQUESTS_MID;

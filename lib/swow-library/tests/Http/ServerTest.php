@@ -24,6 +24,7 @@ use Swow\Http\Uri;
 use Swow\Http\WebSocketFrame;
 use Swow\Sync\WaitReference;
 use Swow\WebSocket\Opcode;
+
 use function file_exists;
 use function getRandomBytes;
 use function http_build_query;
@@ -32,6 +33,7 @@ use function serialize;
 use function Swow\defer;
 use function unserialize;
 use function usleep;
+
 use const TEST_MAX_REQUESTS;
 
 /**

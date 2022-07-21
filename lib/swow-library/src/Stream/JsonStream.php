@@ -14,6 +14,7 @@ declare(strict_types=1);
 namespace Swow\Stream;
 
 use Swow\Pack\Format;
+
 use function json_decode;
 use function json_encode;
 

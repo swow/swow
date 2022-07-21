@@ -26,6 +26,7 @@ use ReflectionProperty;
 use ReflectionUnionType;
 use Reflector;
 use RuntimeException;
+
 use function array_map;
 use function array_merge;
 use function array_pop;

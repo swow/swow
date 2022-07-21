@@ -16,6 +16,7 @@ namespace Swow\Http;
 use InvalidArgumentException;
 use Psr\Http\Message\UriInterface;
 use Stringable;
+
 use function http_build_query;
 use function ltrim;
 use function parse_str;

@@ -15,6 +15,7 @@ declare(strict_types=1);
 namespace Swow\StubUtils\ConstantFixer;
 
 use function count;
+
 use const SORT_REGULAR;
 
 /**

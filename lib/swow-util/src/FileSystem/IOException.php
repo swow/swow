@@ -16,6 +16,7 @@ namespace Swow\Util\FileSystem;
 use ReflectionProperty;
 use Swow\Exception;
 use Throwable;
+
 use function error_get_last;
 
 class IOException extends Exception

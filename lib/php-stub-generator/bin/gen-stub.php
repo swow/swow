@@ -22,6 +22,7 @@ foreach ([0, 2] as $level) {
 }
 
 use Swow\StubUtils\StubGenerator;
+
 use function Swow\Util\processExecute;
 
 $genStub = static function (): void {

@@ -19,6 +19,7 @@ use Swow\Http\Server\Connection;
 use Swow\Server\ConnectionManagerTrait;
 use Swow\Socket;
 use Swow\SocketException;
+
 use function is_array;
 use function is_callable;
 use function is_string;

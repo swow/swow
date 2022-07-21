@@ -16,6 +16,7 @@ namespace Swow\Debug;
 use Swow\Coroutine;
 use Swow\Util\FileSystem\IOException;
 use Swow\Util\Handler;
+
 use function debug_backtrace;
 use function fclose;
 use function fgets;
@@ -26,6 +27,7 @@ use function ob_start;
 use function rtrim;
 use function sprintf;
 use function var_dump;
+
 use const DEBUG_BACKTRACE_IGNORE_ARGS;
 use const PHP_EOL;
 use const STDERR;

@@ -16,6 +16,7 @@ namespace Swow\StubUtils\ConstantFixer;
 
 use PhpParser\Node\Stmt;
 use PhpParser\PrettyPrinter\Standard as StandardPrinter;
+
 use function count;
 
 class StubPrettierPrinter extends StandardPrinter

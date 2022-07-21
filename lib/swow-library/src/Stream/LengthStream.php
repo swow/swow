@@ -16,6 +16,7 @@ namespace Swow\Stream;
 use InvalidArgumentException;
 use Swow\Pack\Format;
 use Swow\Socket;
+
 use function pack;
 use function strlen;
 use function unpack;

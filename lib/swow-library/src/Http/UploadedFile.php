@@ -20,6 +20,7 @@ use RuntimeException;
 use SplFileInfo;
 use Stringable;
 use Swow\Stream\Psr7Stream;
+
 use function fopen;
 use function in_array;
 use function is_string;
@@ -29,6 +30,7 @@ use function move_uploaded_file;
 use function pathinfo;
 use function rename;
 use function sprintf;
+
 use const JSON_THROW_ON_ERROR;
 use const PATHINFO_EXTENSION;
 use const PHP_SAPI;

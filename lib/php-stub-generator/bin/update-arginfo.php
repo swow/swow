@@ -22,6 +22,7 @@ foreach ([0, 2] as $level) {
 }
 
 use Swow\Util\FileSystem;
+
 use function Swow\Util\debug;
 use function Swow\Util\error;
 use function Swow\Util\httpDownload;

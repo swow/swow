@@ -25,6 +25,7 @@ use Swow\Http\Status as HttpStatus;
 use Swow\Socket;
 use Swow\SocketException;
 use Swow\WebSocket;
+
 use function base64_encode;
 use function random_bytes;
 use function strlen;

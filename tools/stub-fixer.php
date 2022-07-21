@@ -18,7 +18,9 @@ use PhpParser\Comment\Doc;
 use PhpParser\Node;
 use PhpParser\NodeTraverser;
 use PhpParser\ParserFactory;
+
 use function array_slice;
+
 use const STDERR;
 
 require __DIR__ . '/autoload.php';

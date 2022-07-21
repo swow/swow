@@ -15,8 +15,10 @@ namespace Swow\Stream;
 
 use InvalidArgumentException;
 use Swow\Socket;
+
 use function strlen;
 use function strpos;
+
 use const SEEK_CUR;
 
 class EofStream extends Socket

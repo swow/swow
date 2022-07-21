@@ -16,12 +16,14 @@ namespace Swow\Http;
 use InvalidArgumentException;
 use Psr\Http\Message\StreamInterface;
 use SimpleXMLElement;
+
 use function is_array;
 use function json_decode;
 use function json_last_error;
 use function json_last_error_msg;
 use function parse_str;
 use function simplexml_load_string;
+
 use const JSON_ERROR_NONE;
 use const LIBXML_NOCDATA;
 use const LIBXML_NOERROR;

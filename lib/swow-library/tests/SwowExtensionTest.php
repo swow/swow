@@ -14,6 +14,7 @@ declare(strict_types=1);
 namespace SwowTest;
 
 use PHPUnit\Framework\TestCase;
+
 use function defined;
 use function extension_loaded;
 

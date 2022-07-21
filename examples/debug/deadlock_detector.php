@@ -15,6 +15,7 @@ require __DIR__ . '/../autoload.php';
 
 use Swow\Channel;
 use Swow\Coroutine;
+
 use function Swow\Debug\registerDeadlockDetectorHandler;
 use function Swow\Sync\waitAll;
 
