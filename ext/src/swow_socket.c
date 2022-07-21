@@ -711,7 +711,7 @@ static PHP_METHOD_EX(Swow_Socket, _read, zend_bool once, zend_bool may_address, 
     SWOW_BUFFER_UNLOCK(sbuffer);
 
     if (EXPECTED(ret > 0)) {
-        swow_buffer_virtual_write_no_seek(sbuffer, ret);
+        swow_buffer_virtual_write(sbuffer, ret);
     }
 
     /* also for socket exception getReturnValue */

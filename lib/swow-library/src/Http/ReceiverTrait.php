@@ -156,6 +156,9 @@ trait ReceiverTrait
                 if ($expectMore) {
                     $this->recvData($buffer);
                     // TODO: call $parser->finished() if connection error?
+                    /* We should rewind buffer here because the parser
+                     * needs to parse the data again from the beginning soon */
+                    $buffer->rewind();
                 }
                 while (true) {
                     $previousEvent = $event;

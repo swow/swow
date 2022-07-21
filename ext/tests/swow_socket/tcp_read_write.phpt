@@ -240,7 +240,7 @@ class TestMethod
                     }
                 }
                 // clean receiver buffer
-                $socket->recv($testBuffer);
+                $socket->recv((clone $testBuffer)->rewind());
                 break;
             case static::PEEKFROM:
                 while ($timeout-- > 0) {
@@ -252,7 +252,7 @@ class TestMethod
                     }
                 }
                 // clean receiver buffer
-                $socket->recv($testBuffer);
+                $socket->recv((clone $testBuffer)->rewind());
                 break;
             case static::PEEKSTRING:
                 $received_str = '';

@@ -73,7 +73,7 @@ SWOW_API void swow_buffer_virtual_read(swow_buffer_t *sbuffer, size_t length)
     sbuffer->offset += length;
 }
 
-static zend_always_inline void swow_buffer__virtual_write(swow_buffer_t *sbuffer, size_t length)
+SWOW_API void swow_buffer_virtual_write(swow_buffer_t *sbuffer, size_t length)
 {
     CAT_BUFFER_GETTER(sbuffer, buffer);
     zend_string *string = swow_buffer_get_string_from_handle(buffer);
@@ -82,17 +82,8 @@ static zend_always_inline void swow_buffer__virtual_write(swow_buffer_t *sbuffer
     if (EXPECTED(new_length > buffer->length)) {
         ZSTR_VAL(string)[ZSTR_LEN(string) = (buffer->length = new_length)] = '\0';
     }
-}
 
-SWOW_API void swow_buffer_virtual_write(swow_buffer_t *sbuffer, size_t length)
-{
-    swow_buffer__virtual_write(sbuffer, length);
     sbuffer->offset += length;
-}
-
-SWOW_API void swow_buffer_virtual_write_no_seek(swow_buffer_t *sbuffer, size_t length)
-{
-    swow_buffer__virtual_write(sbuffer, length);
 }
 
 static zend_always_inline void swow_buffer_reset(swow_buffer_t *sbuffer)
