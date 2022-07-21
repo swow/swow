@@ -30,6 +30,7 @@ use function sys_get_temp_dir;
 use function tempnam;
 use function trim;
 
+use const SEEK_END;
 use const UPLOAD_ERR_CANT_WRITE;
 use const UPLOAD_ERR_OK;
 
@@ -182,8 +183,11 @@ trait ReceiverTrait
                     if ($event === HttpParser::EVENT_NONE) {
                         $expectMore = true;
                         if (!$buffer->eof()) {
-                            /* make sure we have moved the left data to the head */
-                            $buffer->truncateFrom();
+                            /* make sure we have moved the remaining data to the head,
+                             * and seek to the end for the next recvData() call. */
+                            $buffer
+                                ->truncateFrom()
+                                ->seek(0, SEEK_END);
                             if ($buffer->isFull()) {
                                 $newSize = $buffer->getSize() * 2;
                                 /* we need bigger buffer to handle the large filed (or throw error) */

@@ -14,12 +14,17 @@ declare(strict_types=1);
 namespace SwowTest\Http;
 
 use PHPUnit\Framework\TestCase;
+use Psr\Http\Message\UploadedFileInterface;
+use ReflectionProperty;
+use RuntimeException;
 use Swow\Channel;
 use Swow\Coroutine;
 use Swow\Http\Client as HttpClient;
 use Swow\Http\MimeType;
+use Swow\Http\ReceiverTrait;
 use Swow\Http\Request as HttpRequest;
 use Swow\Http\Server as HttpServer;
+use Swow\Http\Status;
 use Swow\Http\Uri;
 use Swow\Http\WebSocketFrame;
 use Swow\Sync\WaitReference;
@@ -30,6 +35,9 @@ use function getRandomBytes;
 use function http_build_query;
 use function json_encode;
 use function serialize;
+use function sprintf;
+use function str_repeat;
+use function strlen;
 use function Swow\defer;
 use function unserialize;
 use function usleep;
@@ -152,5 +160,59 @@ final class ServerTest extends TestCase
         $heartBeater->kill();
         $worker->kill();
         $this->assertGreaterThan(0, $heartBeatCount);
+    }
+
+    public function testUploadFileWithCR(): void
+    {
+        $server = new HttpServer();
+        $server->bind('127.0.0.1')->listen();
+
+        $boundary = getRandomBytes(24);
+        $headFormat =
+            "POST /echo_all HTTP/1.1\r\n" .
+            "Accept: */*\r\n" .
+            "Host: {$server->getSockAddress()}:{$server->getSockPort()}\r\n" .
+            "Connection: keep-alive\r\n" .
+            "Content-Type: multipart/form-data; boundary=--------------------------{$boundary}\r\n" .
+            "Content-Length: %d\r\n" .
+            "\r\n";
+        $bodyFormat =
+            "----------------------------{$boundary}\r\n" .
+            "Content-Disposition: form-data; name=\"img\"; filename=\"img.jpg\"\r\n" .
+            "Content-Type: image/jpeg\r\n" .
+            "\r\n" .
+            '%s' .
+            "\r\n" .
+            "----------------------------{$boundary}--\r\n";
+
+        $maxBufferSize = (new ReflectionProperty(ReceiverTrait::class, 'maxBufferSize'))->getDefaultValue();
+        $fileData = str_repeat('0', 2 * $maxBufferSize);
+        $body = sprintf($bodyFormat, $fileData);
+        $request = sprintf($headFormat, strlen($body)) . $body;
+        $request[2 * $maxBufferSize - 1] = "\r";
+
+        $wr = new WaitReference();
+        $channel = new Channel();
+        Coroutine::run(static function () use ($server, $channel, $wr): void {
+            $connection = $server->acceptConnection();
+            $request = $connection->recvHttpRequest();
+            $channel->push($request->getUploadedFiles());
+            $connection->respond(Status::OK);
+        });
+
+        $client = new HttpClient();
+        $client->connect($server->getSockAddress(), $server->getSockPort());
+        $client->sendString($request);
+        /** @var array<string, UploadedFileInterface> $uploadedFiles */
+        $uploadedFiles = $channel->pop();
+        $this->assertCount(1, $uploadedFiles);
+        foreach ($uploadedFiles as $uploadedFile) {
+            $this->assertSame(strlen($fileData), $uploadedFile->getSize());
+            break;
+        }
+        $response = $client->recvRaw();
+        $this->assertSame(Status::OK, $response->statusCode);
+
+        $wr::wait($wr);
     }
 }
