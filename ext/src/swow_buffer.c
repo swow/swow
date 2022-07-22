@@ -611,9 +611,8 @@ static PHP_METHOD(Swow_Buffer, write)
 
     if (buffer->value == NULL && offset == 0 && (size_t) length == ZSTR_LEN(string)) {
         ZEND_ASSERT(sbuffer->offset == 0);
-        /* Notice: string maybe interned, so we must use zend_string_addref() here */
-        zend_string_addref(string);
-        buffer->value = ZSTR_VAL(string);
+        /* Notice: string maybe interned, so we must use zend_string_copy() here */
+        buffer->value = ZSTR_VAL(zend_string_copy(string));
         buffer->size = buffer->length = ZSTR_LEN(string);
         sbuffer->shared = cat_true;
     } else {
@@ -919,17 +918,16 @@ static const zend_function_entry swow_buffer_methods[] = {
 static zend_object *swow_buffer_clone_object(zend_object *object)
 {
     swow_buffer_t *sbuffer, *new_sbuffer;
-    zend_string *string, *new_string;
+    zend_string *string;
 
     sbuffer = swow_buffer_get_from_object(object);
     string = swow_buffer_get_string(sbuffer);
     new_sbuffer = swow_buffer_get_from_object(swow_object_create(sbuffer->std.ce));
     memcpy(new_sbuffer, sbuffer, offsetof(swow_buffer_t, std));
     if (string != NULL) {
-        new_string = zend_string_alloc(sbuffer->buffer.size, 0);
-        memcpy(ZSTR_VAL(new_string), ZSTR_VAL(string), ZSTR_LEN(string));
-        ZSTR_VAL(new_string)[ZSTR_LEN(new_string) = ZSTR_LEN(string)] = '\0';
-        new_sbuffer->buffer.value = ZSTR_VAL(new_string);
+        /* Notice: string maybe interned, so we must use zend_string_copy() here */
+        new_sbuffer->buffer.value = ZSTR_VAL(zend_string_copy(string));
+        new_sbuffer->shared = cat_true;
     }
 
     zend_objects_clone_members(&new_sbuffer->std, object);
