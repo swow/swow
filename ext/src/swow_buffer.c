@@ -127,6 +127,12 @@ static void swow_buffer_free_object(zend_object *object)
 static zend_never_inline void swow_buffer_separate(swow_buffer_t *sbuffer)
 {
     cat_buffer_t new_buffer;
+    CAT_LOG_DEBUG_VA_WITH_LEVEL(BUFFER, 5, {
+        char *s;
+        CAT_LOG_DEBUG_D(HTTP, "Buffer separate occurred (length=%zu, value=%s)",
+            sbuffer->buffer.length, cat_log_buffer_quote(sbuffer->buffer.value, sbuffer->buffer.length, &s));
+        cat_free(s);
+    });
     cat_buffer_dup(&sbuffer->buffer, &new_buffer);
     cat_buffer_close(&sbuffer->buffer);
     sbuffer->buffer = new_buffer;
@@ -843,6 +849,7 @@ static PHP_METHOD(Swow_Buffer, __debugInfo)
     ZEND_PARSE_PARAMETERS_NONE();
 
     array_init(&zdebug_info);
+    // TODO: support configure it to use str_quote() and maxlen
     if (buffer->value == NULL) {
         add_assoc_str(&zdebug_info, "value", zend_empty_string);
     } else {
