@@ -29,9 +29,7 @@ $resp_lines = [
     '',
     $payload,
 ];
-//var_dump(implode("\r\n", $resp_lines));
 $buffer->write(implode("\r\n", $resp_lines));
-$buffer->rewind();
 
 // create parser
 $parser = new Parser();
@@ -46,9 +44,15 @@ $headers = [];
 
 // parse it
 // Parser::execute reads from buffer, then generate an event if subscribed
-while (Parser::EVENT_MESSAGE_COMPLETE !== ($event = $parser->execute($buffer))) {
-    Assert::same($event, $parser->getEvent());
+$parsedOffset = 0;
+while (true) {
+    $parsedOffset += $parser->execute($buffer->toString(), $parsedOffset);
+    if (Parser::EVENT_MESSAGE_COMPLETE === ($event = $parser->getEvent())) {
+        break;
+    }
+    Assert::integer($event);
     Assert::string($parser->getEventName());
+    Assert::same($parser::getEventNameFor($event), $parser->getEventName());
     //var_dump($parser->getEventName());
     // read data from buffer according to parser
     $data = '';

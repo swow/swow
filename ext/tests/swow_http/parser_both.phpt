@@ -33,11 +33,9 @@ $req_lines = [
     '',
     $payload,
 ];
-//var_dump(implode("\r\n", $req_lines));
 $buffer->write(implode("\r\n", $req_lines));
-$buffer->rewind();
 
-$parser->execute($buffer);
+$parser->execute($buffer->toString());
 Assert::same($parser->getType(), Parser::TYPE_REQUEST);
 
 $parser->reset();
@@ -62,9 +60,8 @@ $resp_lines = [
 ];
 //var_dump(implode("\r\n", $resp_lines));
 $buffer->write(implode("\r\n", $resp_lines));
-$buffer->rewind();
 
-$parser->execute($buffer);
+$parser->execute($buffer->toString());
 Assert::same($parser->getType(), Parser::TYPE_RESPONSE);
 
 $parser->finish();

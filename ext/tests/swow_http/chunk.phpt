@@ -2,7 +2,6 @@
 swow_http: chunked encoding
 --SKIPIF--
 <?php
-
 require __DIR__ . '/../include/skipif.php';
 ?>
 --FILE--
@@ -36,7 +35,6 @@ $resp_lines = [
     'message_start2',
 ];
 $buffer->write(implode("\r\n", $resp_lines));
-$buffer->rewind();
 
 // create parser
 $parser = new Parser();
@@ -49,16 +47,21 @@ Assert::same($parser->getEvents(), Parser::EVENTS_ALL);
 
 $headers = [];
 
-$body = "";
+$body = '';
 
 $i = 0;
 
 // parse it
 // Parser::execute reads from buffer, then generate an event if subscribed
-while (Parser::EVENT_MESSAGE_COMPLETE !== ($event = $parser->execute($buffer))) {
-    Assert::same($event, $parser->getEvent());
+$parsedOffset = 0;
+while (true) {
+    $parsedOffset += $parser->execute($buffer->toString(), $parsedOffset);
+    if (Parser::EVENT_MESSAGE_COMPLETE === ($event = $parser->getEvent())) {
+        break;
+    }
+    Assert::integer($event);
     Assert::string($parser->getEventName());
-    //var_dump($parser->getEventName());
+    Assert::same($parser::getEventNameFor($event), $parser->getEventName());
     // read data from buffer according to parser
     $data = '';
     if (Parser::EVENT_FLAG_DATA & $event) {
@@ -69,8 +72,8 @@ while (Parser::EVENT_MESSAGE_COMPLETE !== ($event = $parser->execute($buffer))) 
             // parse status
             $status_str = $data;
             Assert::same($parser->getStatusCode(), 200);
-            Assert::same($parser->getReasonPhrase(), "OK");
-            Assert::same($status_str, "OK");
+            Assert::same($parser->getReasonPhrase(), 'OK');
+            Assert::same($status_str, 'OK');
             break;
         case Parser::EVENT_HEADER_FIELD:
             // start parse headers
@@ -97,12 +100,9 @@ while (Parser::EVENT_MESSAGE_COMPLETE !== ($event = $parser->execute($buffer))) 
             }
             break;
     }
-    if ($buffer->getReadableLength() === 0) {
-        $now = $buffer->tell();
+    if ($parsedOffset === $buffer->getLength()) {
         $new = $randoms[$i - 2];
-        $buffer->seek(0, SEEK_END);
-        $buffer->write("\r\n" . sprintf("%x", strlen($new)) . "\r\n" . $new);
-        $buffer->seek($now, SEEK_SET);
+        $buffer->write("\r\n" . sprintf('%x', strlen($new)) . "\r\n" . $new);
     }
 }
 

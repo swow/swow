@@ -39,6 +39,7 @@ while (true) {
     Coroutine::run(static function () use ($connection): void {
         $buffer = new Buffer(Buffer::COMMON_SIZE);
         $parser = (new Parser())->setType(Parser::TYPE_REQUEST)->setEvents(Parser::EVENT_BODY);
+        $parsedOffset = 0;
         $body = null;
         try {
             while (true) {
@@ -47,11 +48,14 @@ while (true) {
                     break;
                 }
                 while (true) {
-                    $event = $parser->execute($buffer);
-                    if ($event === Parser::EVENT_BODY) {
-                        if ($body === null) {
-                            $body = new Buffer(Buffer::COMMON_SIZE);
-                        }
+                    $parsedOffset += $parser->execute($buffer->toString(), $parsedOffset);
+                    if ($parser->getEvent() === $parser::EVENT_NONE) {
+                        $buffer->truncateFrom($parsedOffset);
+                        $parsedOffset = 0;
+                        break; /* goto recv more data */
+                    }
+                    if ($parser->getEvent() === Parser::EVENT_BODY) {
+                        $body ??= new Buffer(Buffer::COMMON_SIZE);
                         $body->write($buffer->toString(), $parser->getDataOffset(), $parser->getDataLength());
                     }
                     if ($parser->isCompleted()) {
@@ -65,10 +69,8 @@ while (true) {
                             $body ? $body->toString() : ''
                         );
                         $connection->sendString($response);
-                        if ($body !== null) {
-                            $body->clear();
-                        }
-                        break;
+                        $body?->clear();
+                        break; /* goto recv more data */
                     }
                 }
                 if (!$parser->shouldKeepAlive()) {

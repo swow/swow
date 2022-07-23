@@ -141,46 +141,41 @@ static PHP_METHOD(Swow_Http_Parser, setEvents)
 }
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Http_Parser_execute, 0, 1, IS_LONG, 0)
-    ZEND_ARG_OBJ_INFO(0, buffer, Swow\\Buffer, 0)
-    ZEND_ARG_INFO_WITH_DEFAULT_VALUE(1, data, "null")
+    ZEND_ARG_TYPE_INFO(0, data, IS_STRING, 0)
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, offset, IS_LONG, 0, "0")
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, length, IS_LONG, 0, "-1")
 ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Http_Parser, execute)
 {
     SWOW_HTTP_PARSER_GETTER(sparser, parser);
-    zend_object *buffer_object;
-    swow_buffer_t *sbuffer;
-    const char *buffer;
-    size_t length;
-    zval *zdata = NULL;
+    zend_string *string;
+    zend_long offset = 0;
+    zend_long length = -1;
+    const char *ptr;
     ssize_t ret;
 
-    ZEND_PARSE_PARAMETERS_START(1, 2)
-        Z_PARAM_OBJ_OF_CLASS(buffer_object, swow_buffer_ce)
+    ZEND_PARSE_PARAMETERS_START(1, 3)
+        Z_PARAM_STR(string)
         Z_PARAM_OPTIONAL
-        Z_PARAM_ZVAL(zdata)
+        Z_PARAM_LONG(offset)
+        Z_PARAM_LONG(length)
     ZEND_PARSE_PARAMETERS_END();
 
-    sbuffer = swow_buffer_get_from_object(buffer_object);
-    length = swow_buffer_get_readable_space(sbuffer, &buffer);
+    /* check args and initialize */
+    SWOW_BUFFER_CHECK_STRING_SCOPE(string, offset, length);
+    ptr = ZSTR_VAL(string) + offset;
 
-    ret = cat_http_parser_execute(parser, buffer, length);
-
-    /* anyway, update the parsed length */
-    swow_buffer_virtual_read(sbuffer, cat_http_parser_get_parsed_length(parser));
+    ret = cat_http_parser_execute(parser, ptr, length);
 
     if (UNEXPECTED(!ret)) {
         swow_throw_exception_with_last(swow_http_parser_exception_ce);
         RETURN_THROWS();
     }
 
-    sparser->data_offset = parser->data - sbuffer->buffer.value;
+    sparser->data_offset = parser->data - ZSTR_VAL(string);
 
-    if (zdata != NULL && (parser->event & CAT_HTTP_PARSER_EVENT_FLAG_DATA)) {
-        ZEND_TRY_ASSIGN_REF_STRINGL(zdata, parser->data, parser->data_length);
-    }
-
-    RETURN_LONG(parser->event);
+    RETURN_LONG(parser->parsed_length);
 }
 
 #define arginfo_class_Swow_Http_Parser_getEvent arginfo_class_Swow_Http_Parser_getType

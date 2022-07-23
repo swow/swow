@@ -8,38 +8,10 @@ require __DIR__ . '/../include/skipif.php';
 <?php
 require __DIR__ . '/../include/bootstrap.php';
 
-use Swow\Buffer;
 use Swow\Channel;
 use Swow\Coroutine;
 use Swow\Socket;
 use Swow\Sync\WaitReference;
-
-$buffer = (new Buffer(0))
-    ->write("HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: 0\r\n\r\n");
-$httpAssign = static function (object $storage) use ($buffer): bool {
-    try {
-        $parser = new Swow\Http\Parser();
-        $parser->setEvents($parser::EVENTS_ALL);
-        $buffer->rewind();
-        while (!$parser->isCompleted()) {
-            $parser->execute($buffer, $storage->data);
-            echo $parser->getEventName(), ': ';
-            var_dump($storage->data);
-        }
-    } finally {
-        echo "\n";
-    }
-    return true;
-};
-Assert::throws(fn() => $httpAssign(new class {
-    public int $data = 0;
-}), TypeError::class);
-Assert::true($httpAssign(new class {
-    public string $data = '';
-}));
-Assert::true($httpAssign(new class {
-    public int|string|array $data = '';
-}));
 
 $waitReferenceAssign = static function (object $storage): bool {
     $storage->wr = new WaitReference();
@@ -86,26 +58,6 @@ var_dump(get_object_vars($readFromAssign(new class {
 
 ?>
 --EXPECTF--
-MESSAGE_BEGIN: int(0)
-
-MESSAGE_BEGIN: string(0) ""
-STATUS: string(2) "OK"
-HEADER_FIELD: string(12) "Content-Type"
-HEADER_VALUE: string(16) "application/json"
-HEADER_FIELD: string(14) "Content-Length"
-HEADER_VALUE: string(1) "0"
-HEADERS_COMPLETE: string(1) "0"
-MESSAGE_COMPLETE: string(1) "0"
-
-MESSAGE_BEGIN: string(0) ""
-STATUS: string(2) "OK"
-HEADER_FIELD: string(12) "Content-Type"
-HEADER_VALUE: string(16) "application/json"
-HEADER_FIELD: string(14) "Content-Length"
-HEADER_VALUE: string(1) "0"
-HEADERS_COMPLETE: string(1) "0"
-MESSAGE_COMPLETE: string(1) "0"
-
 array(2) {
   ["address"]=>
   string(9) "127.0.0.1"

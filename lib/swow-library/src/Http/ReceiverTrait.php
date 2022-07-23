@@ -24,13 +24,13 @@ use function fopen;
 use function fwrite;
 use function implode;
 use function in_array;
+use function sprintf;
 use function strcasecmp;
 use function strtolower;
 use function sys_get_temp_dir;
 use function tempnam;
 use function trim;
 
-use const SEEK_END;
 use const UPLOAD_ERR_CANT_WRITE;
 use const UPLOAD_ERR_OK;
 
@@ -46,6 +46,8 @@ trait ReceiverTrait
     protected Buffer $buffer;
 
     protected ?Parser $httpParser = null;
+
+    protected int $parsedOffset = 0;
 
     protected int $maxBufferSize = Buffer::COMMON_SIZE;
 
@@ -107,20 +109,18 @@ trait ReceiverTrait
      */
     protected function execute(int $maxHeaderLength, int $maxContentLength): RawRequest|RawResponse
     {
-        $parser = $this->httpParser;
         $buffer = $this->buffer;
+        $parser = $this->httpParser;
+        $parsedOffset = $this->parsedOffset;
         $isRequest = $parser->getType() === Parser::TYPE_REQUEST;
         $result = $isRequest ? new RawRequest() : new RawResponse();
 
         /* Socket IO related values {{{ */
-        $expectMore = $buffer->eof();
-        if ($expectMore) {
-            /* all data has been parsed, clear them */
-            $buffer->clear();
-        }
+        $expectMore = false;
         /* }}} */
         /* HTTP parser related values {{{ */
         $event = HttpParser::EVENT_NONE;
+        $dataOffset = $dataLength = 0;
         $data = '';
         /* }}} */
         /* HTTP related values {{{ */
@@ -157,48 +157,44 @@ trait ReceiverTrait
                 if ($expectMore) {
                     $this->recvData($buffer);
                     // TODO: call $parser->finished() if connection error?
-                    /* We should rewind buffer here because the parser
-                     * needs to parse the data again from the beginning soon */
-                    $buffer->rewind();
                 }
                 while (true) {
                     $previousEvent = $event;
-                    if (!$headersComplete || ($isMultipart && !$multiPartHeadersComplete)) {
-                        $event = $parser->execute($buffer, $data);
-                    } else {
-                        $event = $parser->execute($buffer);
+                    $parsedLength = $parser->execute($buffer->toString(), $parsedOffset);
+                    $parsedOffset += $parsedLength;
+                    $event = $parser->getEvent();
+                    if ($event & HttpParser::EVENT_FLAG_DATA) {
+                        $dataOffset = $parser->getDataOffset();
+                        $dataLength = $parser->getDataLength();
+                        if (!$headersComplete || ($isMultipart && !$multiPartHeadersComplete)) {
+                            $data = $buffer->peekFrom($dataOffset, $dataLength);
+                        }
                     }
-                    if ($event === $previousEvent && $parser->getParsedLength() === 0) {
+                    if ($event === $previousEvent && $parsedLength === 0) {
                         $expectMore = true;
-                        $buffer->clear();
+                        $buffer->truncateFrom($parsedOffset);
+                        $parsedOffset = 0;
                         break;
                     } /* else in case of request/response with empty body,
                        * we should continue here to get MESSAGE_COMPLETE after HEADERS_COMPLETE */
                     if (!$headersComplete) {
-                        $headerLength += $parser->getParsedLength();
+                        $headerLength += $parsedLength;
                         if ($headerLength > $maxHeaderLength) {
                             throw new ResponseException(HttpStatus::REQUEST_HEADER_FIELDS_TOO_LARGE);
                         }
                     }
                     if ($event === HttpParser::EVENT_NONE) {
                         $expectMore = true;
-                        if (!$buffer->eof()) {
-                            /* make sure we have moved the remaining data to the head,
-                             * and seek to the end for the next recvData() call. */
-                            $buffer
-                                ->truncateFrom()
-                                ->seek(0, SEEK_END);
-                            if ($buffer->isFull()) {
-                                $newSize = $buffer->getSize() * 2;
-                                /* we need bigger buffer to handle the large filed (or throw error) */
-                                if ($newSize > $this->maxBufferSize) {
-                                    throw new ResponseException(empty($uriOrReasonPhrase) ? HttpStatus::REQUEST_URI_TOO_LARGE : HttpStatus::REQUEST_HEADER_FIELDS_TOO_LARGE);
-                                }
-                                $buffer->realloc($newSize);
+                        $buffer->truncateFrom($parsedOffset);
+                        if ($buffer->isFull()) {
+                            $newSize = $buffer->getSize() * 2;
+                            /* we need bigger buffer to handle the large filed (or throw error) */
+                            if ($newSize > $this->maxBufferSize) {
+                                throw new ResponseException(empty($uriOrReasonPhrase) ? HttpStatus::REQUEST_URI_TOO_LARGE : HttpStatus::REQUEST_HEADER_FIELDS_TOO_LARGE);
                             }
-                        } else {
-                            $buffer->clear();
+                            $buffer->realloc($newSize);
                         }
+                        $parsedOffset = 0;
                         break;
                     }
                     if ($event === HttpParser::EVENT_MESSAGE_COMPLETE) {
@@ -268,7 +264,7 @@ trait ReceiverTrait
                                     $isMultipart = true;
                                     if ($this->preserveBodyData) {
                                         $body = new Buffer($contentLength);
-                                        $body->write($buffer->toString(), $buffer->tell());
+                                        $body->write($buffer->toString(), $parsedOffset);
                                         $neededLength = $contentLength - $body->getLength();
                                         if ($neededLength > 0) {
                                             $this->read($body, $neededLength);
@@ -324,7 +320,7 @@ trait ReceiverTrait
 
                                 if ($fileName) {
                                     // TODO: make dir and prefix configurable
-                                    $tmpFilePath = tempnam(sys_get_temp_dir(), 'swow_');
+                                    $tmpFilePath = tempnam(sys_get_temp_dir(), 'swow_uploaded_file_');
                                     $tmpFile = fopen($tmpFilePath, 'wb+');
                                 } else {
                                     // TODO: not hard code here?
@@ -333,8 +329,6 @@ trait ReceiverTrait
                                 break;
                             }
                             case HttpParser::EVENT_MULTIPART_BODY: {
-                                $dataOffset = $parser->getDataOffset();
-                                $dataLength = $parser->getDataLength();
                                 if (isset($formDataValue)) {
                                     $formDataValue->write($buffer->toString(), $dataOffset, $dataLength);
                                 } else {
@@ -384,36 +378,57 @@ trait ReceiverTrait
                     } else {
                         switch ($event) {
                             case HttpParser::EVENT_BODY: {
-                                $data = $buffer->toString();
-                                $dataOffset = $parser->getDataOffset();
-                                $dataLength = $parser->getDataLength();
                                 if ($isChunked) {
+                                    ($body ??= new Buffer(Buffer::COMMON_SIZE))->write($buffer->toString(), $dataOffset, $dataLength);
                                     $neededLength = $currentChunkLength - $dataLength;
-                                    ($body ??= new Buffer(Buffer::COMMON_SIZE))->write($data, $dataOffset, $dataLength);
                                     if ($neededLength > 0) {
+                                        $bodyParsedOffset = $body->getLength();
                                         if ($body->getWritableSize() < $neededLength) {
-                                            $body->extend($body->getLength() + $neededLength);
+                                            $body->extend($bodyParsedOffset + $neededLength);
                                         }
                                         $this->read($body, $neededLength);
-                                        $event = $parser->execute($body);
-                                        if ($event !== HttpParser::EVENT_BODY) {
-                                            throw new ParserException('Unexpected chunk body');
+                                        $bodyParsedOffset += $parser->execute($body->toString(), $bodyParsedOffset);
+                                        if ($parser->getEvent() !== HttpParser::EVENT_BODY) {
+                                            throw new ParserException(sprintf(
+                                                'Expected EVENT_BODY for chunked message, got %s',
+                                                $parser->getEventName()
+                                            ));
+                                        }
+                                        if ($bodyParsedOffset !== $body->getLength()) {
+                                            throw new ParserException(sprintf(
+                                                'Expected all data of chunked body was parsed, but got %d/%d',
+                                                $bodyParsedOffset, $body->getLength()
+                                            ));
                                         }
                                     }
                                     break;
                                 }
                                 $body = new Buffer($contentLength);
-                                $body->write($data, $dataOffset, $dataLength);
+                                $body->write($buffer->toString(), $dataOffset, $dataLength);
                                 $neededLength = $contentLength - $body->getLength();
+                                $bodyParsedOffset = $body->getLength();
                                 if ($neededLength > 0) {
+                                    /* receive all body data at once here (for performance) */
                                     $this->read($body, $neededLength);
+                                    $bodyParsedOffset += $parser->execute($body->toString(), $bodyParsedOffset);
+                                    if ($parser->getEvent() !== HttpParser::EVENT_BODY) {
+                                        throw new ParserException(sprintf('Expected EVENT_BODY, got %s', $parser->getEventName()));
+                                    }
+                                    if ($bodyParsedOffset !== $body->getLength()) {
+                                        throw new ParserException(sprintf(
+                                            'Expected all data of body was parsed, but got %d/%d',
+                                            $bodyParsedOffset, $body->getLength()
+                                        ));
+                                    }
                                 }
-                                $event = $parser->execute($body);
-                                if ($event === HttpParser::EVENT_BODY) {
-                                    $event = $parser->execute($body);
+                                /* execute again to trigger MESSAGE_COMPLETE event */
+                                $parsedLength = $parser->execute($body->toString(), $bodyParsedOffset);
+                                if ($parsedLength !== 0) {
+                                    throw new ParserException('Expected 0 parsed length for MESSAGE_COMPLETE, got %d', $parsedLength);
                                 }
+                                $event = $parser->getEvent();
                                 if ($event !== HttpParser::EVENT_MESSAGE_COMPLETE) {
-                                    throw new ParserException('Unexpected body eof');
+                                    throw new ParserException(sprintf('Expected MESSAGE_COMPLETE, got %s', $parser->getEventName()));
                                 }
                                 break 3; /* end */
                             }
@@ -427,9 +442,12 @@ trait ReceiverTrait
                             }
                             case HttpParser::EVENT_CHUNK_COMPLETE: {
                                 if ($currentChunkLength === 0) {
-                                    $event = $parser->execute($buffer);
-                                    if ($event !== HttpParser::EVENT_MESSAGE_COMPLETE) {
-                                        throw new ParserException('Unexpected chunk eof');
+                                    $parsedOffset += $parser->execute($buffer->toString(), $parsedOffset);
+                                    if ($parser->getEvent() !== HttpParser::EVENT_MESSAGE_COMPLETE) {
+                                        throw new ParserException(sprintf(
+                                            'Expected MESSAGE_COMPLETE for chunked message, got %s',
+                                            $parser->getEventName()
+                                        ));
                                     }
                                     break 3; /* end */
                                 }
@@ -442,7 +460,8 @@ trait ReceiverTrait
                 }
             }
         } catch (ParserException $parserException) {
-            /* TODO: get bad request */
+            /* TODO: Get bad request */
+            /* FIXME: Just throw it without ResponseException? Connection should be reset, it's an unrecoverable error. */
             throw new ResponseException(HttpStatus::BAD_REQUEST, 'Protocol Parsing Error', $parserException);
         } finally {
             if ($isRequest) {
@@ -463,6 +482,19 @@ trait ReceiverTrait
             $result->contentLength = $contentLength;
             $result->shouldKeepAlive = $shouldKeepAlive;
             $parser->reset();
+            if (
+                /* All data has been parsed, clear them */
+                $buffer->getLength() === $parsedOffset ||
+                /* More than half of the data has been parsed,
+                 * prefer to move the remaining data to the front of buffer.
+                 * Otherwise, the length of data received next time may be a little less,
+                 * this will result in more socket reads. */
+                ($parsedOffset > $buffer->getSize() / 2)
+            ) {
+                $buffer->truncateFrom($parsedOffset);
+                $parsedOffset = 0;
+            }
+            $this->parsedOffset = $parsedOffset;
         }
 
         return $result;

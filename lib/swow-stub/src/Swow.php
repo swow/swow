@@ -2221,8 +2221,8 @@ namespace Swow\Http
 
         public function setEvents(int $events): static { }
 
-        /** @param mixed $data */
-        public function execute(\Swow\Buffer $buffer, &$data = null): int { }
+        /** @return int the length of the data which was parsed, same with $this->getParsedLength() */
+        public function execute(string $data, int $offset = 0, int $length = -1): int { }
 
         public function getEvent(): int { }
 
