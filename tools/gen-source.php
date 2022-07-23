@@ -34,15 +34,15 @@ use Swow\Util\FileSystem;
     $result = '';
     $templatesFiles = FileSystem::scanDir(__DIR__ . '/templates');
     foreach ($templatesFiles as $filename) {
-        $content = file_get_contents($filename);
+        $contents = file_get_contents($filename);
         foreach ($replacement as $name => $value) {
-            $content = str_replace("{{{$name}}}", $value, $content);
+            $contents = str_replace("{{{$name}}}", $value, $contents);
         }
         $result .= sprintf(
             "[%s]\n%s\n%s\n\n",
             basename($filename),
             str_repeat('-', 64),
-            $content
+            $contents
         );
     }
     echo $result;

@@ -670,23 +670,23 @@ class StubGenerator
     /**
      * @param non-empty-string|null $eol
      */
-    protected static function indent(string $content, int $level, ?string $eol = null): string
+    protected static function indent(string $contents, int $level, ?string $eol = null): string
     {
         $eol ??= "\n";
         $spaces = str_repeat(static::INDENT, $level);
-        $lines = explode($eol, $content);
-        $content = '';
+        $lines = explode($eol, $contents);
+        $contents = '';
         foreach ($lines as $line) {
             if ($line === '') {
-                $content .= $eol;
+                $contents .= $eol;
             } else {
-                $content .= $spaces . $line . $eol;
+                $contents .= $spaces . $line . $eol;
             }
         }
-        if ($content !== '') {
-            $content = substr($content, 0, strlen($content) - strlen($eol));
+        if ($contents !== '') {
+            $contents = substr($contents, 0, strlen($contents) - strlen($eol));
         }
 
-        return $content;
+        return $contents;
     }
 }

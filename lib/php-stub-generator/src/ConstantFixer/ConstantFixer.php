@@ -59,14 +59,14 @@ class ConstantFixer
         string $fileName,
         bool $dryRun = true,
     ): void {
-        $content = file_get_contents($fileName);
+        $contents = file_get_contents($fileName);
         foreach ($this->modifiers as $modifier) {
-            $content = $modifier($content, $this->constantDefinitions);
+            $contents = $modifier($contents, $this->constantDefinitions);
         }
         if ($dryRun) {
-            echo $content;
+            echo $contents;
             return;
         }
-        file_put_contents($fileName, $content);
+        file_put_contents($fileName, $contents);
     }
 }
