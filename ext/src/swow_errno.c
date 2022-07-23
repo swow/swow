@@ -20,7 +20,7 @@
 
 SWOW_API zend_class_entry *swow_errno_ce;
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_Swow_Errno_getDescriptionFor, 0, 1, IS_STRING, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Errno_getDescriptionFor, 0, 1, IS_STRING, 0)
     ZEND_ARG_TYPE_INFO(0, error, IS_LONG, 0)
 ZEND_END_ARG_INFO()
 
@@ -42,7 +42,7 @@ static PHP_METHOD(Swow_Errno, getDescriptionFor)
 }
 
 static const zend_function_entry swow_errno_methods[] = {
-    PHP_ME(Swow_Errno, getDescriptionFor, arginfo_Swow_Errno_getDescriptionFor, ZEND_ACC_STATIC | ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Errno, getDescriptionFor, arginfo_class_Swow_Errno_getDescriptionFor, ZEND_ACC_STATIC | ZEND_ACC_PUBLIC)
     PHP_FE_END
 };
 
