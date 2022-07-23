@@ -222,7 +222,7 @@ function httpRequest(string $url, string $method = 'GET', string $content = '', 
         if ($doNotThrow) {
             return false;
         }
-        throw new RuntimeException(sprintf("Failed to download from {$url} (%s)", error_get_last()['message']));
+        throw new RuntimeException(sprintf('Failed to download from %s (%s)', $url, error_get_last()['message']));
     }
     $headers = [];
     foreach ($http_response_header as $headerLine) {

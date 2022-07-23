@@ -302,7 +302,7 @@ function httpGet(string $url): string
     }
     $response = @file_get_contents(...$requestArgs);
     if (!$response) {
-        throw new RuntimeException(sprintf("Failed to download from {$url} (%s)", error_get_last()['message']));
+        throw new RuntimeException(sprintf('Failed to download from %s (%s)', $url, error_get_last()['message']));
     }
 
     return $response;
@@ -329,6 +329,6 @@ function httpDownload(string $from, string $to): void
 {
     $contents = httpGet($from);
     if (!@file_put_contents($to, $contents)) {
-        throw new RuntimeException(sprintf("Failed to put content to {$to} (%s)", error_get_last()['message']));
+        throw new RuntimeException(sprintf('Failed to put content to %s (%s)', $to, error_get_last()['message']));
     }
 }
