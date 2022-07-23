@@ -327,8 +327,8 @@ function httpGetCached(string $url): string
 
 function httpDownload(string $from, string $to): void
 {
-    $content = httpGet($from);
-    if (!@file_put_contents($to, $content)) {
+    $contents = httpGet($from);
+    if (!@file_put_contents($to, $contents)) {
         throw new RuntimeException(sprintf("Failed to put content to {$to} (%s)", error_get_last()['message']));
     }
 }

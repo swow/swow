@@ -753,19 +753,19 @@ TEXT;
         if (!isset($lineContent)) {
             throw new DebuggerException('File Line not found');
         }
-        $content = [];
+        $contents = [];
         for ($i++; $i < $startLine + $lineCount; $i++) {
             if ($file->eof()) {
                 break;
             }
             $lineContent = $file->fgets();
-            $content[] = [
+            $contents[] = [
                 'line' => $i === $line ? "{$i}->" : $i,
-                'content' => rtrim($lineContent),
+                'contents' => rtrim($lineContent),
             ];
         }
 
-        return $content;
+        return $contents;
     }
 
     /**
@@ -848,18 +848,18 @@ TEXT;
         int $lineCount = self::SOURCE_FILE_DEFAULT_LINE_COUNT,
         int $offset = self::SOURCE_FILE_CONTENT_PADDING
     ): array {
-        $content = [];
+        $contents = [];
         for ($i = $startLine + $offset + 1; $i < $startLine + $offset + $lineCount; $i++) {
             if ($sourceFile->eof()) {
                 break;
             }
-            $content[] = [
+            $contents[] = [
                 'line' => $i,
-                'content' => rtrim($sourceFile->fgets()),
+                'contents' => rtrim($sourceFile->fgets()),
             ];
         }
 
-        return $content;
+        return $contents;
     }
 
     protected function showFollowingSourceFileContent(int $lineCount = self::SOURCE_FILE_DEFAULT_LINE_COUNT): static
