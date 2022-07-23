@@ -14,26 +14,34 @@ declare(strict_types=1);
 namespace Swow\Util;
 
 use RuntimeException;
+use Swow;
 
 use function array_shift;
 use function error_get_last;
 use function feof;
 use function fgets;
+use function file_exists;
 use function file_get_contents;
 use function file_put_contents;
 use function fread;
 use function getenv;
 use function implode;
 use function is_numeric;
+use function md5;
 use function passthru as native_passthru;
 use function proc_close;
 use function proc_get_status;
 use function proc_open;
+use function sprintf;
 use function str_replace;
 use function stream_context_create;
 use function strlen;
+use function strtolower;
+use function sys_get_temp_dir;
+use function trigger_error;
 use function trim;
 
+use const E_USER_WARNING;
 use const PATHINFO_FILENAME;
 use const PHP_EOL;
 use const STDIN;
@@ -298,6 +306,23 @@ function httpGet(string $url): string
     }
 
     return $response;
+}
+
+function httpGetCached(string $url): string
+{
+    $tmpFilePath = sprintf('%s/%s_%s_%s', sys_get_temp_dir(), strtolower(Swow::class), 'http_get_cache', md5($url));
+    if (file_exists($tmpFilePath)) {
+        $contents = @file_get_contents($tmpFilePath);
+        if ($contents !== false) {
+            return $contents;
+        }
+        trigger_error(sprintf('Failed to load cache from %s (%s)', $tmpFilePath, error_get_last()['message']), E_USER_WARNING);
+    }
+    $contents = httpGet($url);
+    if (!@file_put_contents($tmpFilePath, $contents)) {
+        trigger_error(sprintf('Failed to cache HTTP response to %s (%s)', $tmpFilePath, error_get_last()['message']), E_USER_WARNING);
+    }
+    return $contents;
 }
 
 function httpDownload(string $from, string $to): void

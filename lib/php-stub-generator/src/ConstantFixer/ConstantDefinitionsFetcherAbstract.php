@@ -15,7 +15,7 @@ declare(strict_types=1);
 namespace Swow\StubUtils\ConstantFixer;
 
 use function array_key_exists;
-use function Swow\Util\httpGet;
+use function Swow\Util\httpGetCached;
 
 abstract class ConstantDefinitionsFetcherAbstract implements ConstantDefinitionsFetcher
 {
@@ -29,6 +29,6 @@ abstract class ConstantDefinitionsFetcherAbstract implements ConstantDefinitions
             return static::$httpCache[$uri];
         }
         // printf("cache miss %s\n", $uri);
-        return static::$httpCache[$uri] = httpGet($uri);
+        return static::$httpCache[$uri] = httpGetCached($uri);
     }
 }
