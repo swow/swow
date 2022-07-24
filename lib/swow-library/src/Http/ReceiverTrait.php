@@ -142,9 +142,6 @@ trait ReceiverTrait
         $isRequest = $parser->getType() === Parser::TYPE_REQUEST;
         $result = $isRequest ? new RawRequest() : new RawResponse();
 
-        /* Socket IO related values {{{ */
-        $expectMore = false;
-        /* }}} */
         /* HTTP parser related values {{{ */
         $event = HttpParser::EVENT_NONE;
         $dataOffset = $dataLength = 0;
@@ -181,10 +178,8 @@ trait ReceiverTrait
         /* }}} */
         try {
             while (true) {
-                if ($expectMore) {
-                    $this->recvData($buffer);
-                    // TODO: call $parser->finished() if connection error?
-                }
+                $this->recvData($buffer);
+                // TODO: call $parser->finished() if connection error?
                 while (true) {
                     $previousEvent = $event;
                     $parsedLength = $parser->execute($buffer->toString(), $parsedOffset);
@@ -197,13 +192,6 @@ trait ReceiverTrait
                             $data = $buffer->peekFrom($dataOffset, $dataLength);
                         }
                     }
-                    if ($event === $previousEvent && $parsedLength === 0) {
-                        $expectMore = true;
-                        $buffer->truncateFrom($parsedOffset);
-                        $parsedOffset = 0;
-                        break;
-                    } /* else in case of request/response with empty body,
-                       * we should continue here to get MESSAGE_COMPLETE after HEADERS_COMPLETE */
                     if (!$headersComplete) {
                         $headerLength += $parsedLength;
                         if ($headerLength > $maxHeaderLength) {
@@ -211,18 +199,12 @@ trait ReceiverTrait
                         }
                     }
                     if ($event === HttpParser::EVENT_NONE) {
-                        $expectMore = true;
                         $buffer->truncateFrom($parsedOffset);
                         if ($buffer->isFull()) {
-                            $newSize = $buffer->getSize() * 2;
-                            /* we need bigger buffer to handle the large filed (or throw error) */
-                            if ($newSize > $this->maxBufferSize) {
-                                throw new ResponseException(empty($uriOrReasonPhrase) ? HttpStatus::REQUEST_URI_TOO_LARGE : HttpStatus::REQUEST_HEADER_FIELDS_TOO_LARGE);
-                            }
-                            $buffer->realloc($newSize);
+                            throw new ParserException('Buffer is full and unable to continue parsing');
                         }
                         $parsedOffset = 0;
-                        break;
+                        break; /* goto recv more data */
                     }
                     if ($event === HttpParser::EVENT_MESSAGE_COMPLETE) {
                         if ($isChunked) {
