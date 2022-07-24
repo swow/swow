@@ -78,22 +78,30 @@ SWOW_API void swow_buffer_cow(swow_buffer_t *sbuffer);
 
 SWOW_INTERNAL
 #define SWOW_BUFFER_CHECK_STRING_SCOPE_EX(string, offset, length, failure) do { \
-    if (length == -1) { \
-        length = ZSTR_LEN(string) - offset; \
-    } \
     if (UNEXPECTED(offset < 0)) { \
         zend_value_error("String offset can not be negative"); \
         failure; \
     } \
-    if (UNEXPECTED(length < 0)) { \
-        zend_value_error("String length should be greater than or equal to -1 (unlimited)"); \
+    if (UNEXPECTED(((size_t) offset) > ZSTR_LEN(string))) { \
+        zend_value_error("String offset overflow"); \
         failure; \
+    } \
+    if (length == -1) { \
+        length = ZSTR_LEN(string) - offset; \
     } \
     if (UNEXPECTED(((size_t) (offset + length)) > ZSTR_LEN(string))) { \
         zend_value_error("String scope overflow"); \
         failure; \
     } \
+    if (UNEXPECTED(length < 0)) { \
+        zend_value_error("String length should be greater than 0 or equal to -1 (unlimited)"); \
+        failure; \
+    } \
 } while (0)
+
+SWOW_INTERNAL
+#define SWOW_BUFFER_CHECK_STRING_SCOPE(string, offset, length) \
+        SWOW_BUFFER_CHECK_STRING_SCOPE_EX(string, offset, length, RETURN_THROWS())
 
 static zend_always_inline zend_bool swow_buffer_is_locked(const swow_buffer_t *sbuffer)
 {
@@ -119,10 +127,6 @@ static zend_always_inline zend_bool swow_buffer_is_locked(const swow_buffer_t *s
         SWOW_BUFFER_CHECK_LOCK(sbuffer); \
     } \
 } while (0)
-
-SWOW_INTERNAL
-#define SWOW_BUFFER_CHECK_STRING_SCOPE(string, offset, length) \
-        SWOW_BUFFER_CHECK_STRING_SCOPE_EX(string, offset, length, RETURN_THROWS())
 
 SWOW_INTERNAL
 #define SWOW_BUFFER_LOCK_EX(sbuffer, failure) do { \
