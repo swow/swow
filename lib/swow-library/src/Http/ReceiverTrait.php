@@ -80,8 +80,14 @@ trait ReceiverTrait
         return $this->maxBufferSize;
     }
 
-    public function setMaxBufferSize(mixed $maxBufferSize): static
+    public function setMaxBufferSize(int $maxBufferSize): static
     {
+        if (($maxBufferSize % Buffer::PAGE_SIZE) !== 0) {
+            throw new ValueError(sprintf(
+                '%s(): Argument#1 ($maxBufferSize) should be multiple of memory page size (%d)',
+                __METHOD__, Buffer::PAGE_SIZE
+            ));
+        }
         $this->maxBufferSize = $maxBufferSize;
 
         return $this;
