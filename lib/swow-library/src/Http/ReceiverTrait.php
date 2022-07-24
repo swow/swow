@@ -180,7 +180,7 @@ trait ReceiverTrait
                     if (!$headersComplete) {
                         $headerLength += $parser->getParsedLength();
                         if ($headerLength > $maxHeaderLength) {
-                            throw new ResponseException(HttpStatus::REQUEST_HEADER_FIELDS_TOO_LARGE);
+                            throw new ResponseException(empty($headerName) ? HttpStatus::REQUEST_URI_TOO_LARGE : HttpStatus::REQUEST_HEADER_FIELDS_TOO_LARGE);
                         }
                     }
                     if ($event === HttpParser::EVENT_NONE) {
