@@ -2269,6 +2269,10 @@ namespace Swow\Http
 
         public function getEventName(): string { }
 
+        public function getPreviousEvent(): int { }
+
+        public function getPreviousEventName(): string { }
+
         public function getDataOffset(): int { }
 
         public function getDataLength(): int { }
@@ -2304,6 +2308,8 @@ namespace Swow\Http
         public function finish(): static { }
 
         public function reset(): static { }
+
+        public static function getEventNameFor(int $event): string { }
     }
 }
 
