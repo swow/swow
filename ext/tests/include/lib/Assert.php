@@ -1379,7 +1379,7 @@ class Assert
         return true;
     }
 
-    public static function throws(Closure $expression, $class = 'Exception', $message = ''): bool
+    public static function throws(Closure $expression, $class = 'Exception', ?int $expectCode = null, ?string $expectMessage = null): bool
     {
         static::string($class);
 
@@ -1390,11 +1390,35 @@ class Assert
         } catch (Throwable $e) {
             $actual = $e::class;
             if ($e instanceof $class) {
+                if ($expectCode !== null && $e->getCode() !== $expectCode) {
+                    static::reportInvalidArgument(sprintf(
+                        'Expected to throw "%s" with code %d, got %d',
+                        $class, $expectCode, $e->getCode()
+                    ));
+                    return false;
+                }
+                if ($expectMessage !== null) {
+                    if (
+                        (str_starts_with($expectMessage, '/') && str_ends_with($expectMessage, '/')) ||
+                        (str_starts_with($expectMessage, '#') && str_ends_with($expectMessage, '#'))
+                    ) {
+                        $messageExpected = preg_match($expectMessage, $e->getMessage()) > 0;
+                    } else {
+                        $messageExpected = $e->getMessage() === $expectMessage;
+                    }
+                    if (!$messageExpected) {
+                        static::reportInvalidArgument(sprintf(
+                            'Expected to throw "%s" with message "%s", got "%s"',
+                            $class, $expectMessage, $e->getMessage()
+                        ));
+                        return false;
+                    }
+                }
                 return true;
             }
         }
 
-        static::reportInvalidArgument($message ?: sprintf(
+        static::reportInvalidArgument(sprintf(
             'Expected to throw "%s", got "%s"',
             $class,
             $actual
