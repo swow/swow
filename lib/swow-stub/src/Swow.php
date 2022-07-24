@@ -27,37 +27,9 @@ namespace
     /**
      * sleep milliseconds
      *
-     * @param integer $milli_seconds time to sleep, in ms
+     * @param int $milli_seconds time to sleep, in ms
      */
     function msleep(int $milli_seconds): int { }
-}
-
-namespace Swow
-{
-    class Module
-    {
-        public const TYPE_CORE = 1;
-        public const TYPE_COROUTINE = 2;
-        public const TYPE_CHANNEL = 4;
-        public const TYPE_SYNC = 8;
-        public const TYPE_EVENT = 16;
-        public const TYPE_TIME = 32;
-        public const TYPE_SOCKET = 64;
-        public const TYPE_DNS = 128;
-        public const TYPE_WORK = 256;
-        public const TYPE_BUFFER = 512;
-        public const TYPE_FS = 1024;
-        public const TYPE_SIGNAL = 2048;
-        public const TYPE_PROCESS = 4096;
-        public const TYPE_THREAD = 8192;
-        public const TYPE_OS = 16384;
-        public const TYPE_WATCH_DOG = 131072;
-        public const TYPE_PROTOCOL = 262144;
-        public const TYPE_SSL = 2097152;
-        public const TYPE_EXT = 4194304;
-        public const TYPE_TEST = 8388608;
-        public const TYPES_ALL = -1671169;
-    }
 }
 
 namespace Swow
@@ -618,20 +590,16 @@ namespace Swow
         /**
          * get enabled log types
          *
-         * @return integer the log type flag
+         * @return int the log type flag
          */
         public static function getTypes(): int { }
 
         /**
          * set logging types
          *
-         * @param integer $types the log type flag
+         * @param int $types the log type flag
          */
         public static function setTypes(int $types): void { }
-
-        public static function getModuleTypes(): int { }
-
-        public static function setModuleTypes(int $moduleTypes): void { }
     }
 }
 
@@ -693,9 +661,6 @@ namespace Swow
          * Resume coroutine execution
          *
          * @note context swap happens here when success
-         *
-         * @param mixed ...$data
-         * @return mixed
          */
         public function resume(mixed ...$data): mixed { }
 
@@ -703,16 +668,11 @@ namespace Swow
          * Yield from current coroutine
          *
          * @note context swap happens here when success
-         *
-         * @param mixed $data
-         * @return mixed
          */
         public static function yield(mixed $data = null): mixed { }
 
         /**
          * Get unique coroutine id
-         *
-         * @return integer
          */
         public function getId(): int { }
 
@@ -724,15 +684,13 @@ namespace Swow
 
         /**
          * Get previous coroutine
-         *
-         * @return self|static
          */
         public function getPrevious(): self|static { }
 
         /**
          * Get coroutine state
          *
-         * @return integer the enumurate number: static::STATE_
+         * @return int the enum number: static::STATE_*
          */
         public function getState(): int { }
 
@@ -1256,7 +1214,7 @@ namespace Swow
         /** @var int $timeout [optional] = $this->getConnectTimeout() */
         public function connect(string $name, int $port = 0, ?int $timeout = null): static { }
 
-        public function enableCrypto(?Swow\Socket\CryptoOptions $connection = null): static { }
+        public function enableCrypto(?array $options = null): static { }
 
         public function getSockAddress(): string { }
 
@@ -2006,12 +1964,13 @@ namespace Swow
 
 namespace Swow
 {
-    class WatchDog
+    class Watchdog
     {
         /**
          * @param int $quantum If the blocking time exceeds the quantum, alerter will be triggered.
          * @param int $threshold If the blocking time exceeds the threshold (means the alerter does not alleviate the CPU starvation), it is considered that the system call blocking occurred.
-         * @param callable|int|float|null $alerter When it is callable, it will be called when blocking occurred, the developer can choose to suspend the coroutine or kill the coroutine;
+         * @param callable|int|float|null $alerter
+         * When it is callable, it will be called when blocking occurred, the developer can choose to suspend the coroutine or kill the coroutine;
          * when it is numeric, Coroutine will be delayed to run with sleep() in millisecond to alleviate CPU starvation;
          * when it is null, Coroutine will be delayed to run at the next round of the event loop starts to alleviate CPU starvation.
          * @return void
@@ -2026,7 +1985,7 @@ namespace Swow
 
 namespace Swow
 {
-    class WatchDogException extends \Swow\Exception { }
+    class WatchdogException extends \Swow\Exception { }
 }
 
 namespace Swow
