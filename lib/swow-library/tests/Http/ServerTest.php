@@ -23,10 +23,12 @@ use Swow\Http\Client as HttpClient;
 use Swow\Http\MimeType;
 use Swow\Http\ReceiverTrait;
 use Swow\Http\Request as HttpRequest;
+use Swow\Http\ResponseException;
 use Swow\Http\Server as HttpServer;
 use Swow\Http\Status;
 use Swow\Http\Uri;
 use Swow\Http\WebSocketFrame;
+use Swow\Socket;
 use Swow\Sync\WaitReference;
 use Swow\WebSocket\Opcode;
 
@@ -39,6 +41,7 @@ use function sprintf;
 use function str_repeat;
 use function strlen;
 use function Swow\defer;
+use function Swow\Http\packRequest;
 use function unserialize;
 use function usleep;
 
@@ -212,6 +215,47 @@ final class ServerTest extends TestCase
         }
         $response = $client->recvRaw();
         $this->assertSame(Status::OK, $response->statusCode);
+
+        $wr::wait($wr);
+    }
+
+    public function testRequestUriOrHeaderFieldsTooLarge(): void
+    {
+        $maxBufferSize = (new ReflectionProperty(ReceiverTrait::class, 'maxBufferSize'))->getDefaultValue();
+
+        $server = new HttpServer();
+        $server->bind('127.0.0.1')->listen();
+
+        $wr = new WaitReference();
+        $channel = new Channel();
+        Coroutine::run(static function () use ($server, $channel, $wr): void {
+            for ($i = 2; $i--;) {
+                $connection = $server->acceptConnection();
+                try {
+                    $connection->recvHttpRequest();
+                    $channel->push(null);
+                } catch (ResponseException $responseException) {
+                    $channel->push($responseException->getCode());
+                } finally {
+                    $connection->close();
+                }
+            }
+        });
+
+        $client = new Socket(Socket::TYPE_TCP);
+        $client
+            ->connect($server->getSockAddress(), $server->getSockPort())
+            ->sendString(packRequest('GET', '/' . str_repeat('x', $maxBufferSize + 1)));
+        $this->assertSame(Status::REQUEST_URI_TOO_LARGE, $channel->pop());
+
+        $client = new Socket(Socket::TYPE_TCP);
+        $client
+            ->connect($server->getSockAddress(), $server->getSockPort())
+            ->sendString(packRequest('GET', '/', [
+                'foo' => str_repeat('x', $maxBufferSize)
+            ]));
+        $this->assertSame(Status::REQUEST_HEADER_FIELDS_TOO_LARGE, $channel->pop());
+
 
         $wr::wait($wr);
     }
