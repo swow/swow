@@ -16,6 +16,7 @@ namespace Swow\Http;
 use Swow\Http\Parser as HttpParser;
 use Swow\Http\Status as HttpStatus;
 
+use ValueError;
 use function array_filter;
 use function array_map;
 use function count;
@@ -51,6 +52,8 @@ trait ReceiverTrait
 
     protected int $maxBufferSize = Buffer::COMMON_SIZE;
 
+    protected float $bufferLoadFactor = 0.75;
+
     protected bool $preserveBodyData = false;
 
     protected ?bool $keepAlive = false;
@@ -80,6 +83,24 @@ trait ReceiverTrait
     public function setMaxBufferSize(mixed $maxBufferSize): static
     {
         $this->maxBufferSize = $maxBufferSize;
+
+        return $this;
+    }
+
+    public function getBufferLoadFactor(): float
+    {
+        return $this->bufferLoadFactor;
+    }
+
+    public function setBufferLoadFactor(float $bufferLoadFactor): static
+    {
+        if ($bufferLoadFactor < 0 || $bufferLoadFactor > 1) {
+            throw new ValueError(sprintf(
+                '%s(): Argument#1 ($bufferLoadFactor) should be between 0 and 1',
+                __METHOD__
+            ));
+        }
+        $this->bufferLoadFactor = $bufferLoadFactor;
 
         return $this;
     }
@@ -485,11 +506,11 @@ trait ReceiverTrait
             if (
                 /* All data has been parsed, clear them */
                 $buffer->getLength() === $parsedOffset ||
-                /* More than half of the data has been parsed,
+                /* More than size * load_factor of the data has been parsed,
                  * prefer to move the remaining data to the front of buffer.
                  * Otherwise, the length of data received next time may be a little less,
                  * this will result in more socket reads. */
-                ($parsedOffset > $buffer->getSize() / 2)
+                $parsedOffset > ($buffer->getSize() * $this->bufferLoadFactor)
             ) {
                 $buffer->truncateFrom($parsedOffset);
                 $parsedOffset = 0;
