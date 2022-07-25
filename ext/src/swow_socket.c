@@ -1152,6 +1152,7 @@ static PHP_METHOD_EX(Swow_Socket, _write, zend_bool single, zend_bool may_addres
                         }
                         SWOW_BUFFER_LOCK_EX(sbuffer, goto _error);
                         sbuffers[buffer_count++] = sbuffer;
+                        swow_buffer_virtual_read(sbuffer, length);
                     }
                     vector[vector_count].base = ptr;
                     vector[vector_count].length = length;
@@ -1198,6 +1199,7 @@ static PHP_METHOD_EX(Swow_Socket, _write, zend_bool single, zend_bool may_addres
         }
         SWOW_BUFFER_LOCK_EX(sbuffer, goto _error);
         sbuffers[buffer_count++] = sbuffer;
+        swow_buffer_virtual_read(sbuffer, length);
         vector[0].base = ptr;
         vector[0].length = length;
     }
