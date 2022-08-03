@@ -953,11 +953,17 @@ static char *swow_buffer_alloc_standard(size_t size)
 
 static char *swow_buffer_realloc_standard(char *old_value, size_t new_size)
 {
+    zend_string *old_string = old_value != NULL ? swow_buffer_get_string_from_value(old_value) : NULL;
     zend_string *new_string;
 
-    new_string = zend_string_alloc(new_size, 0);
-    if (old_value != NULL) {
-        zend_string *old_string = swow_buffer_get_string_from_value(old_value);
+    if (old_string == NULL) {
+        /* zend string do not support realloc from NULL */
+        new_string = zend_string_alloc(new_size, false);
+        ZSTR_VAL(new_string)[0] = '\0';
+    } else if (GC_FLAGS(old_string) & IS_STR_PERSISTENT) {
+        /* realloc on persistent, it means buffer is shared,
+         * we should allocate a new non-persistent string */
+        new_string = zend_string_alloc(new_size, false);
         size_t old_length = ZSTR_LEN(old_string);
         if (old_length > 0) {
             if (unlikely(new_size < old_length)) {
@@ -966,8 +972,10 @@ static char *swow_buffer_realloc_standard(char *old_value, size_t new_size)
             memcpy(ZSTR_VAL(new_string), ZSTR_VAL(old_string), old_length);
             ZSTR_VAL(new_string)[ZSTR_LEN(new_string) = old_length] = '\0';
         }
-        /* Notice: string maybe interned or persistent, so we should use zend_string_release() here */
-        zend_string_release(old_string);
+        zend_string_release_ex(old_string, true);
+    } else {
+        /* zend will detect whether refcount is 1 to decide whether to allocate a new string */
+        new_string = zend_string_realloc(old_string, new_size, false);
     }
 
     return ZSTR_VAL(new_string);
