@@ -50,27 +50,172 @@ SWOW_API zend_string *swow_buffer_get_string(swow_buffer_t *sbuffer)
     return swow_buffer_get_string_from_handle(buffer);
 }
 
-SWOW_API size_t swow_buffer_get_readable_space(swow_buffer_t *sbuffer, const char **ptr)
+#define VECTOR_POSITION_FMT "[%u][%u] "
+#define VECTOR_POSTION_C    vector_index, arg_num - 1
+
+static ZEND_COLD zend_never_inline void swow_buffer_unallocated_argument_error(uint32_t vector_arg_num, uint32_t vector_index, uint32_t arg_num)
 {
-    CAT_BUFFER_GETTER_NOT_EMPTY(sbuffer, buffer, return 0);
-
-    *ptr = buffer->value + sbuffer->offset;
-
-    return buffer->length - sbuffer->offset;
+#define BUFFER_IS_UNALLOCATED_FMT "buffer is not unallocated"
+    if (vector_arg_num == 0) {
+        zend_argument_value_error(arg_num, BUFFER_IS_UNALLOCATED_FMT);
+    } else {
+        zend_argument_value_error(vector_arg_num, VECTOR_POSITION_FMT "($buffer) " BUFFER_IS_UNALLOCATED_FMT, VECTOR_POSTION_C);
+    }
+#undef BUFFER_IS_UNALLOCATED_FMT
 }
 
-SWOW_API size_t swow_buffer_get_writable_space(swow_buffer_t *sbuffer, char **ptr)
+static ZEND_COLD zend_never_inline void swow_buffer_argument_offset_can_not_be_negative_error(uint32_t vector_arg_num, uint32_t vector_index, uint32_t arg_num, zend_long arg)
 {
-    CAT_BUFFER_GETTER_NOT_EMPTY(sbuffer, buffer, return 0);
-
-    *ptr = buffer->value + sbuffer->offset;
-
-    return buffer->size - sbuffer->offset;
+#define CAN_NOT_BE_NEGATIVE_FMT "can not be negative"
+    if (vector_arg_num == 0) {
+        zend_argument_value_error(arg_num + 0, CAN_NOT_BE_NEGATIVE_FMT);
+    } else {
+        zend_argument_value_error(vector_arg_num, VECTOR_POSITION_FMT "($offset = " ZEND_LONG_FMT ")" CAN_NOT_BE_NEGATIVE_FMT, VECTOR_POSTION_C, arg);
+    }
+#undef CAN_NOT_BE_NEGATIVE_FMT
 }
 
-SWOW_API void swow_buffer_virtual_read(swow_buffer_t *sbuffer, size_t length)
+static ZEND_COLD zend_never_inline void swow_buffer_argument_offset_can_not_be_greater_than_buffer_length_error(uint32_t vector_arg_num, uint32_t vector_index, uint32_t arg_num, zend_long user_offset, size_t buffer_length)
 {
-    sbuffer->offset += length;
+#define CAN_NOT_BE_GREATER_THAN_BUFFER_LENGTH_FMT "can not be greater than buffer length (%zu)"
+    if (vector_arg_num == 0) {
+        zend_argument_value_error(arg_num + 0, CAN_NOT_BE_GREATER_THAN_BUFFER_LENGTH_FMT, buffer_length);
+    } else {
+        zend_argument_value_error(vector_arg_num, VECTOR_POSITION_FMT "($offset = " ZEND_LONG_FMT ")" CAN_NOT_BE_GREATER_THAN_BUFFER_LENGTH_FMT, VECTOR_POSTION_C, user_offset, buffer_length);
+    }
+#undef CAN_NOT_BE_GREATER_THAN_BUFFER_LENGTH_FMT
+}
+
+static ZEND_COLD zend_never_inline void swow_buffer_argument_can_only_be_minus_1_to_refer_to_unlimited_when_it_is_negative_error(uint32_t vector_arg_num, uint32_t vector_index, uint32_t arg_num, const char *arg_name, zend_long arg)
+{
+#define CAN_ONLY_BE_MINUS_1_TO_REFER_TO_UNLIMITED_WHEN_IT_IS_NEGATIVE_FMT "can only be -1 to refer to unlimited when it is negative"
+    if (vector_arg_num == 0) {
+        zend_argument_value_error(arg_num, CAN_ONLY_BE_MINUS_1_TO_REFER_TO_UNLIMITED_WHEN_IT_IS_NEGATIVE_FMT);
+    } else {
+        zend_argument_value_error(vector_arg_num, VECTOR_POSITION_FMT "($%s = " ZEND_LONG_FMT ")"  CAN_ONLY_BE_MINUS_1_TO_REFER_TO_UNLIMITED_WHEN_IT_IS_NEGATIVE_FMT, VECTOR_POSTION_C, arg_name, arg);
+    }
+#undef CAN_ONLY_BE_MINUS_1_TO_REFER_TO_UNLIMITED_WHEN_IT_IS_NEGATIVE_FMT
+}
+
+static ZEND_COLD zend_never_inline void swow_buffer_argument_length_or_size_can_not_be_zero_error(uint32_t vector_arg_num, uint32_t vector_index, uint32_t arg_num, bool is_length)
+{
+#define NO_ENOUGH_WRITABLE_BUFFER_SPACE_FMT "can not be 0, no enough buffer %s space"
+    const char *type = is_length ? "readable" : "writable";
+    if (vector_arg_num == 0) {
+        zend_argument_value_error(arg_num, NO_ENOUGH_WRITABLE_BUFFER_SPACE_FMT, type);
+    } else {
+        zend_argument_value_error(
+            vector_arg_num, VECTOR_POSITION_FMT "($%s)" NO_ENOUGH_WRITABLE_BUFFER_SPACE_FMT,
+            VECTOR_POSTION_C, is_length ? "length" : "size", type
+        );
+    }
+#undef NO_ENOUGH_WRITABLE_BUFFER_SPACE_FMT
+}
+
+static ZEND_COLD zend_never_inline void swow_buffer_argument_length_or_size_overflow_error(uint32_t vector_arg_num, uint32_t vector_index, uint32_t arg_num, zend_long arg, bool is_length, size_t available_n)
+{
+#define LENGTH_OR_SIZE_OVERFLOW_FMT "with offset can not be greater than buffer %s (%zu)"
+    const char *compared_type = is_length ? "readable length" : "writable size";
+    if (vector_arg_num == 0) {
+        zend_argument_value_error(arg_num, LENGTH_OR_SIZE_OVERFLOW_FMT, compared_type, available_n);
+    } else {
+        zend_argument_value_error(
+            vector_arg_num, VECTOR_POSITION_FMT "($%s = " ZEND_LONG_FMT ")" LENGTH_OR_SIZE_OVERFLOW_FMT,
+            vector_index, arg_num, is_length ? "length" : "size", arg, compared_type, available_n
+        );
+    }
+#undef LENGTH_OR_SIZE_OVERFLOW_FMT
+}
+
+#undef VECTOR_POSTION_C
+#undef VECTOR_POSITION_FMT
+
+static zend_always_inline bool swow_buffer__check_readable_space(const char *type, size_t buffer_length, zend_long user_offset, zend_long *user_length_ptr, uint32_t vector_arg_num, uint32_t vector_index, uint32_t base_arg_num)
+{
+    if (UNEXPECTED(user_offset < 0)) {
+        swow_buffer_argument_offset_can_not_be_negative_error(vector_arg_num, vector_index, base_arg_num, user_offset);
+        return false;
+    }
+    if (UNEXPECTED(((size_t) user_offset) > buffer_length)) {
+        swow_buffer_argument_offset_can_not_be_greater_than_buffer_length_error(vector_arg_num, vector_index, base_arg_num, user_offset, buffer_length);
+        return false;
+    }
+    zend_long user_length = *user_length_ptr;
+    if (user_length == -1) {
+        *user_length_ptr = user_length = buffer_length - user_offset;
+    }
+    if (UNEXPECTED(user_length < 0)) {
+        swow_buffer_argument_length_or_size_can_not_be_zero_error(vector_arg_num, vector_index, base_arg_num + 1, true);
+        return false;
+    }
+    if (UNEXPECTED(((size_t) (user_offset + user_length)) > buffer_length)) {
+        swow_buffer_argument_length_or_size_overflow_error(vector_arg_num, vector_index, base_arg_num + 1, user_length, true, buffer_length - user_offset);
+        return false;
+    }
+    return true;
+}
+
+static zend_always_inline bool swow_buffer__check_writable_space(size_t buffer_size, size_t buffer_length, zend_long user_offset, zend_long *user_size_ptr, uint32_t vector_arg_num, uint32_t vector_index, uint32_t base_arg_num)
+{
+    if (UNEXPECTED(user_offset < 0)) {
+        swow_buffer_argument_offset_can_not_be_negative_error(vector_arg_num, vector_index, base_arg_num, user_offset);
+        return false;
+    }
+    if (UNEXPECTED(((size_t) user_offset) > buffer_length)) {
+        ZEND_ASSERT(buffer_length < buffer_size);
+        /* we do not expect user to read uninitialized memory */
+        swow_buffer_argument_offset_can_not_be_greater_than_buffer_length_error(vector_arg_num, vector_index, base_arg_num, user_offset, buffer_length);
+        return false;
+    }
+    zend_long user_size = *user_size_ptr;
+    if (user_size == -1) {
+        *user_size_ptr = user_size = buffer_size - user_offset;
+    }
+    if (UNEXPECTED(user_size < 0)) {
+        swow_buffer_argument_can_only_be_minus_1_to_refer_to_unlimited_when_it_is_negative_error(vector_arg_num, vector_index, base_arg_num + 1, "size", user_size);
+        return false;
+    }
+    if (UNEXPECTED(user_size == 0)) {
+        swow_buffer_argument_length_or_size_can_not_be_zero_error(vector_arg_num, vector_index, base_arg_num + 1, false);
+        return false;
+    }
+    if (UNEXPECTED(((size_t) (user_offset + user_size)) > buffer_size)) {
+        swow_buffer_argument_length_or_size_overflow_error(vector_arg_num, vector_index, base_arg_num + 1, user_size, false, buffer_size - user_offset);
+        return false;
+    }
+    return true;
+}
+
+SWOW_API char *swow_string_get_readable_space_v(zend_string *string, zend_long offset, zend_long *length, uint32_t vector_arg_num, uint32_t vector_index, uint32_t base_arg_num)
+{
+    if (!swow_buffer__check_readable_space("string", ZSTR_LEN(string), offset, length, vector_arg_num, vector_index, base_arg_num + 1)) {
+        return NULL;
+    }
+    return ZSTR_VAL(string) + offset;
+}
+
+SWOW_API char *swow_buffer_get_readable_space_v(swow_buffer_t *s_buffer, zend_long offset, zend_long *length, uint32_t vector_arg_num, uint32_t vector_index, uint32_t base_arg_num)
+{
+    if (UNEXPECTED(s_buffer->buffer.value == NULL)) {
+        swow_buffer_unallocated_argument_error(vector_arg_num, vector_index, base_arg_num);
+        return NULL;
+    }
+    if (!swow_buffer__check_readable_space("buffer", s_buffer->buffer.length, offset, length, vector_arg_num, vector_index, base_arg_num + 1)) {
+        return NULL;
+    }
+    return s_buffer->buffer.value + offset;
+}
+
+SWOW_API char *swow_buffer_get_writable_space_v(swow_buffer_t *s_buffer, zend_long offset, zend_long *size, uint32_t vector_arg_num, uint32_t vector_index, uint32_t base_arg_num)
+{
+    if (UNEXPECTED(s_buffer->buffer.value == NULL)) {
+        swow_buffer_unallocated_argument_error(vector_arg_num, vector_index, base_arg_num);
+        return NULL;
+    }
+    if (!swow_buffer__check_writable_space(s_buffer->buffer.size, s_buffer->buffer.length, offset, size, vector_arg_num, vector_index, base_arg_num + 1)) {
+        return NULL;
+    }
+    return s_buffer->buffer.value + offset;
 }
 
 SWOW_API void swow_buffer_virtual_write(swow_buffer_t *sbuffer, size_t length)
@@ -82,8 +227,6 @@ SWOW_API void swow_buffer_virtual_write(swow_buffer_t *sbuffer, size_t length)
     if (EXPECTED(new_length > buffer->length)) {
         ZSTR_VAL(string)[ZSTR_LEN(string) = (buffer->length = new_length)] = '\0';
     }
-
-    sbuffer->offset += length;
 }
 
 static zend_always_inline void swow_buffer_reset(swow_buffer_t *sbuffer)

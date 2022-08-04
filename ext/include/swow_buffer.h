@@ -69,10 +69,19 @@ static zend_always_inline swow_buffer_t *swow_buffer_get_from_object(zend_object
 /* internal use */
 
 SWOW_API zend_string *swow_buffer_get_string(swow_buffer_t *sbuffer);
-SWOW_API size_t swow_buffer_get_readable_space(swow_buffer_t *sbuffer, const char **ptr); SWOW_INTERNAL
-SWOW_API size_t swow_buffer_get_writable_space(swow_buffer_t *sbuffer, char **ptr);       SWOW_INTERNAL
-SWOW_API void swow_buffer_virtual_read(swow_buffer_t *sbuffer, size_t length);            SWOW_INTERNAL SWOW_UNSAFE
-SWOW_API void swow_buffer_virtual_write(swow_buffer_t *sbuffer, size_t length);           SWOW_INTERNAL SWOW_UNSAFE
+
+#define swow_string_get_readable_space(string, offset, length, arg_num) \
+        swow_string_get_readable_space_v(string, offset, length, arg_num, 1, arg_num)
+#define swow_buffer_get_readable_space(s_buffer, offset, length, arg_num) \
+        swow_buffer_get_readable_space_v(s_buffer, offset, length, arg_num, 1, arg_num)
+#define swow_buffer_get_writable_space(s_buffer, offset, size, arg_num) \
+        swow_buffer_get_writable_space_v(s_buffer, offset, size, arg_num, 1, arg_num)
+
+SWOW_API char *swow_string_get_readable_space_v(zend_string *string, zend_long offset, zend_long *length, uint32_t vector_arg_num, uint32_t vector_count, uint32_t base_arg_num);
+SWOW_API char *swow_buffer_get_readable_space_v(swow_buffer_t *s_buffer, zend_long offset, zend_long *length, uint32_t vector_arg_num, uint32_t vector_count, uint32_t base_arg_num);
+SWOW_API char *swow_buffer_get_writable_space_v(swow_buffer_t *s_buffer, zend_long offset, zend_long *size, uint32_t vector_arg_num, uint32_t vector_count, uint32_t base_arg_num);
+
+SWOW_API void swow_buffer_virtual_write(swow_buffer_t *sbuffer, size_t length); SWOW_INTERNAL SWOW_UNSAFE
 /* this API should be called before write data to the buffer */
 SWOW_API void swow_buffer_cow(swow_buffer_t *sbuffer);
 
