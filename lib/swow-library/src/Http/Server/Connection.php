@@ -132,6 +132,7 @@ class Connection extends Socket implements ProtocolTypeInterface
             packResponse(
                 $response->getStatusCode(),
                 $response->getHeaders(),
+                '',
                 $response->getReasonPhrase(),
                 $response->getProtocolVersion()
             ),
