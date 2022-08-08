@@ -577,7 +577,14 @@ class StubGenerator
 
         $constantDeclarations = [];
         if (!$this->genArginfoMode) {
-            foreach ($class->getConstants() as $constantName => $constantValue) {
+            foreach ($class->getReflectionConstants() as $constantReflection) {
+                [$constantName, $constantValue] = [$constantReflection->getName(), $constantReflection->getValue()];
+                $parentConstantReflection = ($class->getParentClass() ?: null)?->getReflectionConstant($constantName);
+                if ($parentConstantReflection &&
+                    $parentConstantReflection->getValue() === $constantValue &&
+                    $parentConstantReflection->getModifiers() === $constantReflection->getModifiers()) {
+                    continue;
+                }
                 $userComment = $this->userCommentMap["{$class->getName()}::{$constantName}"] ?? null;
                 $comment = $userComment ? static::genComment(static::solveRawUserComment($userComment)) : '';
                 $constantDeclarations[] = sprintf(
