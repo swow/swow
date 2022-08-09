@@ -85,6 +85,8 @@ SWOW_API zend_class_entry *swow_register_internal_class(
     }
     if (create_object != NULL) {
         ce->create_object = create_object;
+    } else if (parent_ce != NULL) {
+        ce->create_object = parent_ce->create_object;
     }
     if (handlers) {
         ZEND_ASSERT((
@@ -110,6 +112,7 @@ SWOW_API zend_class_entry *swow_register_internal_class(
             }
         }
     } else {
+        ZEND_ASSERT(parent_handlers == NULL);
         ZEND_ASSERT(create_object == swow_create_object_deny || cloneable);
         ZEND_ASSERT(free_object == NULL);
         ZEND_ASSERT(offset == 0);
