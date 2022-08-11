@@ -47,10 +47,6 @@ use function usleep;
 
 use const TEST_MAX_REQUESTS;
 
-/**
- * @internal
- * @coversNothing
- */
 final class ServerTest extends TestCase
 {
     public function testHttpServer(): void

@@ -26,10 +26,6 @@ use function getRandomBytes;
 use const TEST_MAX_CONCURRENCY_LOW;
 use const TEST_MAX_REQUESTS_MID;
 
-/**
- * @internal
- * @coversNothing
- */
 final class VarStreamTest extends TestCase
 {
     public function testServer(): void

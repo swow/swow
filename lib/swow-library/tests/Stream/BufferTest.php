@@ -16,10 +16,6 @@ namespace SwowTest\Stream;
 use PHPUnit\Framework\TestCase;
 use Swow\Stream\Buffer;
 
-/**
- * @internal
- * @coversNothing
- */
 final class BufferTest extends TestCase
 {
     public function testCreateBuffer(): void
