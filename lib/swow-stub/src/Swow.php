@@ -1931,14 +1931,14 @@ namespace Swow
         public const SECRET_KEY_LENGTH = 16;
         public const SECRET_KEY_ENCODED_LENGTH = 24;
         public const GUID = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11';
-        public const HEADER_LENGTH = 2;
-        public const EXT16_LENGTH = 126;
-        public const EXT64_LENGTH = 127;
+        public const HEADER_MIN_SIZE = 2;
+        public const HEADER_MAX_SIZE = 14;
+        public const EXT16_PAYLOAD_LENGTH = 126;
+        public const EXT64_PAYLOAD_LENGTH = 127;
         public const EXT8_MAX_LENGTH = 125;
         public const EXT16_MAX_LENGTH = 65535;
         public const MASK_KEY_LENGTH = 4;
         public const EMPTY_MASK_KEY = '';
-        public const HEADER_BUFFER_SIZE = 128;
     }
 }
 
@@ -2283,14 +2283,14 @@ namespace Swow\WebSocket
 
 namespace Swow\WebSocket
 {
-    class Frame implements \Stringable
+    class Header extends \Swow\Buffer
     {
         public const PING = '8900';
         public const PONG = '8a00';
 
-        public function unpackHeader(\Swow\Buffer $buffer): int { }
+        public function __construct(int $opcode = \Swow\WebSocket\Opcode::TEXT, int $payloadLength = 0, bool $fin = true, string $maskKey = '') { }
 
-        public function resetHeader(): static { }
+        public function getHeaderSize(): int { }
 
         public function getOpcode(): int { }
 
@@ -2298,21 +2298,19 @@ namespace Swow\WebSocket
 
         public function getFin(): bool { }
 
-        public function setFin(int $fin): static { }
+        public function setFin(bool $fin): static { }
 
         public function getRSV1(): bool { }
 
-        public function setRSV1(int $rsv1): static { }
+        public function setRSV1(bool $rsv1): static { }
 
         public function getRSV2(): bool { }
 
-        public function setRSV2(int $rsv2): static { }
+        public function setRSV2(bool $rsv2): static { }
 
         public function getRSV3(): bool { }
 
-        public function setRSV3(int $rsv3): static { }
-
-        public function getHeaderLength(): int { }
+        public function setRSV3(bool $rsv3): static { }
 
         public function getPayloadLength(): int { }
 
@@ -2320,25 +2318,11 @@ namespace Swow\WebSocket
 
         public function getMask(): bool { }
 
-        public function setMask(bool $mask): static { }
-
         public function getMaskKey(): string { }
 
         public function setMaskKey(string $maskKey): static { }
 
-        public function hasPayloadData(): bool { }
-
-        public function getPayloadData(): \Swow\Buffer { }
-
-        public function getPayloadDataAsString(): string { }
-
-        public function setPayloadData(?\Swow\Buffer $buffer): static { }
-
-        public function unmaskPayloadData(): static { }
-
-        public function toString(bool $headerOnly = false): string { }
-
-        public function __toString(): string { }
+        public function setPayloadInfo(int $payloadLength, string $maskKey = ''): static { }
 
         /** @return array<string, mixed> debug information for var_dump */
         public function __debugInfo(): array { }

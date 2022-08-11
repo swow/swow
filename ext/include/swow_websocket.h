@@ -28,30 +28,13 @@ extern "C" {
 #include "cat_websocket.h"
 
 extern SWOW_API zend_class_entry *swow_websocket_ce;
-
 extern SWOW_API zend_class_entry *swow_websocket_opcode_ce;
-
 extern SWOW_API zend_class_entry *swow_websocket_status_ce;
-
-extern SWOW_API zend_class_entry *swow_websocket_frame_ce;
-extern SWOW_API zend_object_handlers swow_websocket_frame_handlers;
-
-typedef struct swow_websocket_frame_s {
-    cat_websocket_header_t header;
-    zend_object *payload_data;
-    zend_object std;
-} swow_websocket_frame_t;
+extern SWOW_API zend_class_entry *swow_websocket_header_ce;
 
 /* loader */
 
 zend_result swow_websocket_module_init(INIT_FUNC_ARGS);
-
-/* helper*/
-
-static zend_always_inline swow_websocket_frame_t* swow_websocket_frame_get_from_object(zend_object *object)
-{
-    return cat_container_of(object, swow_websocket_frame_t, std);
-}
 
 #ifdef __cplusplus
 }
