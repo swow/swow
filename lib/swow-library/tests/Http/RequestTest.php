@@ -18,10 +18,6 @@ use Swow\Http\Request;
 use Swow\Http\Server\Request as ServerRequest;
 use Swow\Http\Uri;
 
-/**
- * @internal
- * @coversNothing
- */
 final class RequestTest extends TestCase
 {
     public function testGetRequestTarget(): void

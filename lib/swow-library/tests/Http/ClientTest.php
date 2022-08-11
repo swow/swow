@@ -23,10 +23,6 @@ use Swow\Sync\WaitReference;
 
 use function usleep;
 
-/**
- * @internal
- * @coversNothing
- */
 final class ClientTest extends TestCase
 {
     /** This causes HttpParser fall into dead-loop before */
