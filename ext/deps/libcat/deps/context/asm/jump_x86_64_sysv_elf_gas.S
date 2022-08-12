@@ -23,13 +23,18 @@
  *  ----------------------------------------------------------------------------------  *
  *                                                                                      *
  ****************************************************************************************/
-
+# if defined __CET__
+#  include <cet.h>
+# else
+#  define _CET_ENDBR
+# endif
 .file "jump_x86_64_sysv_elf_gas.S"
 .text
 .globl cat_coroutine_context_jump
 .type cat_coroutine_context_jump,@function
 .align 16
 cat_coroutine_context_jump:
+    _CET_ENDBR
     leaq  -0x38(%rsp), %rsp /* prepare stack */
 
 #if !defined(CAT_USE_TSX)

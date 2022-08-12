@@ -202,6 +202,8 @@ typedef struct cat_http_parser_s {
     cat_http_parser_events_t events;
     /* public readonly: current event */
     cat_http_parser_event_t event;
+    /* public readonly: previous event */
+    cat_http_parser_event_t previous_event;
     /* public readonly: current data pos */
     const char *data;
     /* public readonly: current data length */
@@ -276,7 +278,7 @@ CAT_API cat_bool_t cat_http_parser_execute(cat_http_parser_t *parser, const char
 /*
 * get parser event name string for event code
 */
-CAT_API const char *cat_http_parser_event_name(cat_http_parser_event_t event);
+CAT_API const char *cat_http_parser_event_get_name(cat_http_parser_event_t event);
 /*
 * get event code of parser
 */
@@ -285,6 +287,16 @@ CAT_API cat_http_parser_event_t cat_http_parser_get_event(const cat_http_parser_
 * get event name string for event code of parser
 */
 CAT_API const char* cat_http_parser_get_event_name(const cat_http_parser_t *parser);
+/*
+* get previous event code of parser.
+* usage: if the current data event is the same as the previous data event,
+* we should append data to the previous one, otherwise, it's a new independent data part.
+*/
+CAT_API cat_http_parser_event_t cat_http_parser_get_previous_event(const cat_http_parser_t *parser);
+/*
+* get event name string for previous event code of parser
+*/
+CAT_API const char* cat_http_parser_get_previous_event_name(const cat_http_parser_t *parser);
 /*
 * get data for data event
 * when a data event emitted, parser.data is pointed to data start

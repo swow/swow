@@ -195,7 +195,9 @@ CAT_API cat_bool_t cat_coroutine_runtime_init(void)
         main_coroutine->transfer_data = NULL;
 #endif
 #ifdef CAT_COROUTINE_USE_THREAD_CONTEXT
-        CAT_SHOULD_BE(uv_sem_init(&main_coroutine->sem, 0) == 0);
+        if (uv_sem_init(&main_coroutine->sem, 0) != 0) {
+            abort();
+        }
 #endif
 #ifdef CAT_HAVE_VALGRIND
         main_coroutine->valgrind_stack_id = UINT32_MAX;

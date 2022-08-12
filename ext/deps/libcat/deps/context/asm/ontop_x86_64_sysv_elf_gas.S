@@ -23,13 +23,18 @@
  *  ----------------------------------------------------------------------------------  *
  *                                                                                      *
  ****************************************************************************************/
-
+# if defined __CET__
+#  include <cet.h>
+# else
+#  define _CET_ENDBR
+# endif
 .file "ontop_x86_64_sysv_elf_gas.S"
 .text
 .globl cat_coroutine_context_ontop
 .type cat_coroutine_context_ontop,@function
 .align 16
 cat_coroutine_context_ontop:
+    _CET_ENDBR
     /* preserve ontop-function in R8 */
     movq  %rdx, %r8
 

@@ -23,13 +23,18 @@
  *  ----------------------------------------------------------------------------------  *
  *                                                                                      *
  ****************************************************************************************/
-
+# if defined __CET__
+#  include <cet.h>
+# else
+#  define _CET_ENDBR
+# endif
 .file "make_x86_64_sysv_elf_gas.S"
 .text
 .globl cat_coroutine_context_make
 .type cat_coroutine_context_make,@function
 .align 16
 cat_coroutine_context_make:
+    _CET_ENDBR
     /* first arg of cat_coroutine_context_make() == top of context-stack */
     movq  %rdi, %rax
 
@@ -64,6 +69,7 @@ cat_coroutine_context_make:
     ret /* return pointer to context-data */
 
 trampoline:
+    _CET_ENDBR
     /* store return address on stack */
     /* fix stack alignment */
     push %rbp
@@ -71,6 +77,7 @@ trampoline:
     jmp *%rbx
 
 finish:
+    _CET_ENDBR
     /* exit code is zero */
     xorq  %rdi, %rdi
     /* exit application */

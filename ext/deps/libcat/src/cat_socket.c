@@ -71,7 +71,7 @@
 CAT_STATIC_ASSERT(AF_LOCAL == AF_UNIX);
 #endif
 
-CAT_API const char* cat_sockaddr_af_name(cat_sa_family_t af)
+CAT_API const char* cat_sockaddr_af_get_name(cat_sa_family_t af)
 {
     switch (af) {
         case AF_UNSPEC:
@@ -1011,7 +1011,7 @@ CAT_API cat_socket_t *cat_socket_create_ex(cat_socket_t *socket, cat_socket_type
     _type_error:
     cat_update_last_error_with_reason(error, "Socket %s with type %s failed",
         !(ioptions.flags & CAT_SOCKET_CREATION_OPEN_FLAGS) ? "create" : "open",
-        cat_socket_type_name(type));
+        cat_socket_type_get_name(type));
 #if CAT_ALLOC_HANDLE_ERRORS
     _malloc_internal_error:
 #endif
@@ -1046,7 +1046,7 @@ CAT_API cat_socket_type_t cat_socket_type_simplify(cat_socket_type_t type)
     return type &= ~(CAT_SOCKET_TYPE_FLAG_IPV4 | CAT_SOCKET_TYPE_FLAG_IPV6);
 }
 
-CAT_API const char *cat_socket_type_name(cat_socket_type_t type)
+CAT_API const char *cat_socket_type_get_name(cat_socket_type_t type)
 {
     if ((type & CAT_SOCKET_TYPE_TCP) == CAT_SOCKET_TYPE_TCP) {
         if (type & CAT_SOCKET_TYPE_FLAG_IPV4) {
@@ -1121,12 +1121,12 @@ CAT_API cat_socket_type_t cat_socket_get_simple_type(const cat_socket_t *socket)
 
 CAT_API const char *cat_socket_get_type_name(const cat_socket_t *socket)
 {
-    return cat_socket_type_name(cat_socket_get_type(socket));
+    return cat_socket_type_get_name(cat_socket_get_type(socket));
 }
 
 CAT_API const char *cat_socket_get_simple_type_name(const cat_socket_t *socket)
 {
-    return cat_socket_type_name(cat_socket_get_simple_type(socket));
+    return cat_socket_type_get_name(cat_socket_get_simple_type(socket));
 }
 
 static cat_always_inline cat_sa_family_t cat_socket_internal_get_af(const cat_socket_internal_t *isocket)
@@ -1438,7 +1438,7 @@ static cat_bool_t cat_socket_internal_accept(
         cat_socket_type_t connection_type = iconnection->type;
         if (unlikely((server_type & connection_type) != server_type)) {
             cat_update_last_error(CAT_EINVAL, "Socket accept connection type mismatch, expect %s but got %s",
-                cat_socket_type_name(server_type), cat_socket_type_name(connection_type));
+                cat_socket_type_get_name(server_type), cat_socket_type_get_name(connection_type));
             return cat_false;
         }
     }
@@ -3612,7 +3612,7 @@ static cat_bool_t cat_socket_internal_recv_handle(cat_socket_internal_t *isocket
         cat_socket_type_t handle_type = ihandle->type;
         if (unlikely(server_type != handle_type)) {
             cat_update_last_error(CAT_EINVAL, "Socket accept handle type mismatch, expect %s but got %s",
-                cat_socket_type_name(server_type), cat_socket_type_name(handle_type));
+                cat_socket_type_get_name(server_type), cat_socket_type_get_name(handle_type));
             goto _recoverable_error;
         }
     } while (0);

@@ -34,9 +34,9 @@ static char *cat_buffer_alloc_standard(size_t size)
     return value;
 }
 
-static char *cat_buffer_realloc_standard(char *old_value, size_t old_length, size_t new_size)
+static char *cat_buffer_realloc_standard(char *old_value, size_t new_size)
 {
-    char *new_value = (char *) cat_malloc(new_size);
+    char *new_value = (char *) cat_realloc(old_value, new_size);
 
 #if CAT_ALLOC_HANDLE_ERRORS
     if (unlikely(new_value == NULL)) {
@@ -44,15 +44,6 @@ static char *cat_buffer_realloc_standard(char *old_value, size_t old_length, siz
         return NULL;
     }
 #endif
-    if (old_value != NULL) {
-        if (old_length > 0) {
-            if (unlikely(new_size < old_length)) {
-                old_length = new_size;
-            }
-            memcpy(new_value, old_value, old_length);
-        }
-        cat_free(old_value);
-    }
 
     return new_value;
 }
@@ -172,7 +163,7 @@ CAT_API cat_bool_t cat_buffer_realloc(cat_buffer_t *buffer, size_t new_size)
         return cat_true;
     }
 
-    new_value = cat_buffer_allocator.realloc_function(buffer->value, buffer->length, new_size);
+    new_value = cat_buffer_allocator.realloc_function(buffer->value, new_size);
 
     if (unlikely(new_value == NULL)) {
         return cat_false;
@@ -254,8 +245,9 @@ CAT_API void cat_buffer_truncate_from(cat_buffer_t *buffer, size_t offset, size_
         cat_buffer_clear(buffer);
         return;
     }
-    if (length > buffer->length - offset) {
-        length = buffer->length - offset;
+    size_t readable_size = buffer->length - offset;
+    if (length > readable_size) {
+        length = readable_size;
     }
     if (offset != 0) {
         memmove(buffer->value, buffer->value + offset, length);

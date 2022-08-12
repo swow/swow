@@ -761,8 +761,10 @@ CAT_API cat_ssl_ret_t cat_ssl_handshake(cat_ssl_t *ssl)
 
     int error = cat_ssl_get_error(ssl, n);
 
-    CAT_SHOULD_BE(error != SSL_ERROR_WANT_WRITE &&
-        "SSL handshake should never return SSL_ERROR_WANT_WRITE with BIO mode.");
+    if (error == SSL_ERROR_WANT_WRITE) {
+        fprintf(stderr, "SSL handshake should never return SSL_ERROR_WANT_WRITE with BIO mode.");
+        abort();
+    }
     if (error == SSL_ERROR_WANT_READ) {
         CAT_LOG_DEBUG(SSL, "SSL_ERROR_WANT_READ");
         return CAT_SSL_RET_WANT_IO;

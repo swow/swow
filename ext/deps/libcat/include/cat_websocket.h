@@ -54,7 +54,7 @@ enum cat_websocket_opcode_e
 
 typedef uint8_t cat_websocket_opcode_t;
 
-CAT_API const char* cat_websocket_opcode_name(cat_websocket_opcode_t opcode);
+CAT_API const char* cat_websocket_opcode_get_name(cat_websocket_opcode_t opcode);
 
 #define CAT_WEBSOCKET_STATUS_MAP(XX) \
     XX(NORMAL_CLOSURE, 1000, "Normal closure; the connection successfully completed whatever purpose for which it was created") \

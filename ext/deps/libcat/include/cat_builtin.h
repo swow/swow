@@ -63,18 +63,6 @@
 #define CAT_ASSERT(x) CAT_ASSUME(x)
 #endif
 
-#ifdef CAT_DEBUG
-#define CAT_SHOULD_BE(x) CAT_ASSERT(x)
-#else
-#ifndef CAT_NO_ASSUME
-#define CAT_SHOULD_BE(x) CAT_ASSUME(x)
-#else
-#define CAT_SHOULD_BE(x) do { \
-    if (unlikely(!(x))) { abort(); } \
-} while (0)
-#endif
-#endif
-
 #ifndef CAT_IDE_HELPER
 #define CAT_STATIC_ASSERT(expression) void cat_static_assert(int static_assert_failed[1 - 2 * !(expression)])
 #else

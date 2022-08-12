@@ -485,6 +485,14 @@ static int cat_http_parser_on_##name(llhttp_t *llhttp, const char *at, size_t le
 { \
     cat_http_parser_t *parser = cat_http_parser_get_from_handle(llhttp); \
     \
+    if (parser->previous_event == CAT_HTTP_PARSER_EVENT_##NAME && length == 0) { \
+        /* Event will be re-triggered with 0 length when we pass 0 length data,
+         * it means that the parser need more data from socket;
+         * or previous execute stopped right at the end of an event data.
+         * Do not pause parser at those cases, just continue by return OK. */ \
+        return CAT_HTTP_PARSER_E_OK; \
+    } \
+    \
     parser->event = CAT_HTTP_PARSER_EVENT_##NAME; \
     parser->data = at; \
     parser->data_length = length;
@@ -703,7 +711,7 @@ static cat_bool_t cat_http_parser_multipart_parser_execute(cat_http_parser_t *pa
 
     CAT_LOG_DEBUG_VA_WITH_LEVEL(HTTP, 3, {
         char *s;
-        CAT_LOG_DEBUG_D(HTTP, "multipart_parser_execute() returns %zu, parsed \"%s\"",
+        CAT_LOG_DEBUG_D(HTTP, "multipart_parser_execute() returns %zu, parsed %s",
             parsed_length, cat_log_buffer_quote(data, parsed_length, &s));
         cat_free(s);
     });
@@ -759,6 +767,8 @@ CAT_API cat_bool_t cat_http_parser_execute(cat_http_parser_t *parser, const char
     cat_http_parser_errno_t error = CAT_HTTP_PARSER_E_OK;
     cat_bool_t ret;
 
+    parser->previous_event = parser->event;
+
     if (likely(parser->multipart_state != CAT_HTTP_MULTIPART_STATE_IN_BODY)) {
         // if not in multipart body
         error = cat_http_parser_llhttp_execute(parser, data, length);
@@ -809,7 +819,7 @@ CAT_API cat_bool_t cat_http_parser_execute(cat_http_parser_t *parser, const char
     return cat_true;
 }
 
-CAT_API const char *cat_http_parser_event_name(cat_http_parser_event_t event)
+CAT_API const char *cat_http_parser_event_get_name(cat_http_parser_event_t event)
 {
     switch (event) {
 #define CAT_HTTP_PARSER_EVENT_NAME_GEN(name, unused1) case CAT_HTTP_PARSER_EVENT_##name: return #name;
@@ -831,7 +841,17 @@ CAT_API cat_http_parser_event_t cat_http_parser_get_event(const cat_http_parser_
 
 CAT_API const char* cat_http_parser_get_event_name(const cat_http_parser_t *parser)
 {
-    return cat_http_parser_event_name(parser->event);
+    return cat_http_parser_event_get_name(parser->event);
+}
+
+CAT_API cat_http_parser_event_t cat_http_parser_get_previous_event(const cat_http_parser_t *parser)
+{
+    return parser->previous_event;
+}
+
+CAT_API const char* cat_http_parser_get_previous_event_name(const cat_http_parser_t *parser)
+{
+    return cat_http_parser_event_get_name(parser->previous_event);
 }
 
 CAT_API const char* cat_http_parser_get_data(const cat_http_parser_t *parser)

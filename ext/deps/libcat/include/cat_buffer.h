@@ -34,7 +34,7 @@ typedef struct cat_buffer_s {
 } cat_buffer_t;
 
 typedef char *(*cat_buffer_alloc_function_t)(size_t size);
-typedef char *(*cat_buffer_realloc_function_t)(char *old_value, size_t old_length, size_t new_size);
+typedef char *(*cat_buffer_realloc_function_t)(char *old_value, size_t new_size);
 typedef void (*cat_buffer_update_function_t)(char *value, size_t new_length);
 typedef void (*cat_buffer_free_function_t)(char *value);
 

@@ -18,7 +18,7 @@
 
 #include "cat_websocket.h"
 
-CAT_API const char* cat_websocket_opcode_name(cat_websocket_opcode_t opcode)
+CAT_API const char* cat_websocket_opcode_get_name(cat_websocket_opcode_t opcode)
 {
     switch(opcode) {
 #define CAT_WEBSOCKET_OPCODE_NAME_GEN(name, value) case value: return #name;
@@ -154,14 +154,14 @@ CAT_API void cat_websocket_mask(char *to, char *from, uint64_t length, const cha
 #ifndef CAT_L64
     uint64_t i = 0;
 #else
-    uint64_t i, chunk = length / 8;
+    uint64_t i, chunk = length / sizeof(uint64_t);
     if (chunk > 0) {
         uint64_t mask_key_u64 = ((uint64_t) (*((uint32_t *) mask_key)) << 32) | *((uint32_t *) mask_key);
         for (i = 0; i < chunk; i++) {
             ((uint64_t *) to)[i] = ((uint64_t *) from)[i] ^ mask_key_u64;
         }
     }
-    i = chunk * 8;
+    i = chunk * sizeof(uint64_t);
 #endif
     for (; i < length; i++) {
         to[i] = from[i] ^ mask_key[i % CAT_WEBSOCKET_MASK_KEY_LENGTH];
@@ -176,14 +176,14 @@ CAT_API void cat_websocket_unmask(char *data, uint64_t length, const char *mask_
 #ifndef CAT_L64
     uint64_t i = 0;
 #else
-    uint64_t i, chunk = length / 8;
+    uint64_t i, chunk = length / sizeof(uint64_t);
     if (chunk > 0) {
         uint64_t mask_key_u64 = ((uint64_t) (*((uint32_t *) mask_key)) << 32) | *((uint32_t *) mask_key);
         for (i = 0; i < chunk; i++) {
             ((uint64_t *) data)[i] ^= mask_key_u64;
         }
     }
-    i = chunk * 8;
+    i = chunk * sizeof(uint64_t);
 #endif
     for (; i < length; i++) {
         data[i] ^= mask_key[i % CAT_WEBSOCKET_MASK_KEY_LENGTH];

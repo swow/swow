@@ -104,7 +104,7 @@ typedef struct cat_sockaddr_info_s {
     cat_sockaddr_union_t address;
 } cat_sockaddr_info_t;
 
-CAT_API const char* cat_sockaddr_af_name(cat_sa_family_t af);
+CAT_API const char* cat_sockaddr_af_get_name(cat_sa_family_t af);
 
 /* Notice: input buffer_size is size of buffer (not length)
  * and if ENOSPC, *buffer_size will be the minimum required buffer **size**, otherwise, *buffer_size will be strlen(buffer)
@@ -532,7 +532,7 @@ CAT_API cat_socket_t *cat_socket_open_os_fd(cat_socket_t *socket, cat_socket_typ
 CAT_API cat_socket_t *cat_socket_open_os_socket(cat_socket_t *socket, cat_socket_type_t type, cat_os_socket_t os_socket);
 
 CAT_API cat_socket_type_t cat_socket_type_simplify(cat_socket_type_t type);
-CAT_API const char *cat_socket_type_name(cat_socket_type_t type);
+CAT_API const char *cat_socket_type_get_name(cat_socket_type_t type);
 CAT_API cat_sa_family_t cat_socket_type_to_af(cat_socket_type_t type);
 
 CAT_API cat_socket_id_t cat_socket_get_id(const cat_socket_t *socket);
