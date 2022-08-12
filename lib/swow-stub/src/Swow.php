@@ -1209,7 +1209,7 @@ namespace Swow
          * @param int|null $timeout timeout in microseconds or null for using {@see Socket::getReadTimeout()} value
          * @return int bytes received
          */
-        public function read(\Swow\Buffer $buffer, int $length = -1, ?int $timeout = null): int { }
+        public function read(\Swow\Buffer $buffer, int $offset = 0, int $length = -1, ?int $timeout = null): int { }
 
         /**
          * read at max `$size` bytes data into buffer from socket,
@@ -1226,7 +1226,7 @@ namespace Swow
          * @param int|null $timeout timeout in microseconds or null for using {@see Socket::getReadTimeout()} value
          * @return int bytes received
          */
-        public function recv(\Swow\Buffer $buffer, int $size = -1, ?int $timeout = null): int { }
+        public function recv(\Swow\Buffer $buffer, int $offset = 0, int $size = -1, ?int $timeout = null): int { }
 
         /**
          * read at max `$size` bytes data into buffer from socket,
@@ -1243,7 +1243,7 @@ namespace Swow
          * @param int $size -1 meaning not limited, otherwise buffer size in bytes. only `$size` bytes data will be read from socket if there are more data than `$size` bytes, extra data will be kept in socket for further reading options
          * @param int|null $timeout timeout in microseconds or null for using {@see Socket::getReadTimeout()} value
          */
-        public function recvData(\Swow\Buffer $buffer, int $size = -1, ?int $timeout = null): int { }
+        public function recvData(\Swow\Buffer $buffer, int $offset = 0, int $size = -1, ?int $timeout = null): int { }
 
         /**
          * read at max `$size` bytes data into buffer from socket,
@@ -1265,7 +1265,7 @@ namespace Swow
          * @param int|null $timeout timeout in microseconds or null for using {@see Socket::getReadTimeout()} value
          * @return int bytes received
          */
-        public function recvFrom(\Swow\Buffer $buffer, int $size = -1, &$address = null, &$port = null, ?int $timeout = null): int { }
+        public function recvFrom(\Swow\Buffer $buffer, int $offset = 0, int $size = -1, &$address = null, &$port = null, ?int $timeout = null): int { }
 
         /**
          * read at max `$size` bytes data into buffer from socket,
@@ -1288,7 +1288,7 @@ namespace Swow
          * @param int|null $timeout timeout in microseconds or null for using {@see Socket::getReadTimeout()} value
          * @return int bytes received
          */
-        public function recvDataFrom(\Swow\Buffer $buffer, int $size = -1, &$address = null, &$port = null, ?int $timeout = null): int { }
+        public function recvDataFrom(\Swow\Buffer $buffer, int $offset = 0, int $size = -1, &$address = null, &$port = null, ?int $timeout = null): int { }
 
         /**
          * read at max `$size` bytes data into buffer from socket without removing the read data from socket,
@@ -1302,7 +1302,7 @@ namespace Swow
          * @param int $size -1 meaning not limited, otherwise buffer size in bytes.
          * @return int bytes received
          */
-        public function peek(\Swow\Buffer $buffer, int $size = -1): int { }
+        public function peek(\Swow\Buffer $buffer, int $offset = 0, int $size = -1): int { }
 
         /**
          * read at max `$size` bytes data into buffer from socket without removing the read data from socket,
@@ -1321,7 +1321,7 @@ namespace Swow
          * @param int &$port peer address
          * @return int bytes received
          */
-        public function peekFrom(\Swow\Buffer $buffer, int $size = -1, &$address = null, &$port = null): int { }
+        public function peekFrom(\Swow\Buffer $buffer, int $offset = 0, int $size = -1, &$address = null, &$port = null): int { }
 
         /**
          * read `$length` bytes data from socket as string,
@@ -1472,9 +1472,9 @@ namespace Swow
          *
          * @throws SocketException when timed out
          * @throws SocketException when write failed
-         * @phan-param non-empty-array<string|\Stringable|Buffer|array{0: string|\Stringable, 1: int, 2?: int}|array{0: Buffer, 1: int}|null> $vector
-         * @phpstan-param non-empty-array<string|\Stringable|Buffer|array{0: string|\Stringable, 1: int, 2?: int}|array{0: Buffer, 1: int}|null> $vector
-         * @psalm-param non-empty-array<string|\Stringable|Buffer|array{0: string|\Stringable, 1: int, 2?: int}|array{0: Buffer, 1: int}|null> $vector
+         * @phan-param non-empty-array<string|\Stringable|Buffer|array{0: string|\Stringable|Buffer, 1?: int, 2?: int}|null> $vector
+         * @phpstan-param non-empty-array<string|\Stringable|Buffer|array{0: string|\Stringable|Buffer, 1?: int, 2?: int}|null> $vector
+         * @psalm-param non-empty-array<string|\Stringable|Buffer|array{0: string|\Stringable|Buffer, 1?: int, 2?: int}|null> $vector
          * @param array<string|\Stringable|Buffer|array|null> $vector
          * @param int|null $timeout timeout in microseconds or null for using {@see Socket::getWriteTimeout()} value
          */
@@ -1489,9 +1489,9 @@ namespace Swow
          *
          * @throws SocketException when timed out
          * @throws SocketException when write failed
-         * @phan-param non-empty-array<string|\Stringable|Buffer|array{0: string|\Stringable, 1: int, 2?: int}|array{0: Buffer, 1: int}|null> $vector
-         * @phpstan-param non-empty-array<string|\Stringable|Buffer|array{0: string|\Stringable, 1: int, 2?: int}|array{0: Buffer, 1: int}|null> $vector
-         * @psalm-param non-empty-array<string|\Stringable|Buffer|array{0: string|\Stringable, 1: int, 2?: int}|array{0: Buffer, 1: int}|null> $vector
+         * @phan-param non-empty-array<string|\Stringable|Buffer|array{0: string|\Stringable|Buffer, 1?: int, 2?: int}|null> $vector
+         * @phpstan-param non-empty-array<string|\Stringable|Buffer|array{0: string|\Stringable|Buffer, 1?: int, 2?: int}|null> $vector
+         * @psalm-param non-empty-array<string|\Stringable|Buffer|array{0: string|\Stringable|Buffer, 1?: int, 2?: int}|null> $vector
          * @param array<string|\Stringable|Buffer|array|null> $vector
          * @param string|null $address address to send to, may be ip or domain or path (for UNIX/UDG type)
          * @phpstan-param int<0, 65535>|null $port
@@ -1511,7 +1511,7 @@ namespace Swow
          * @param int $length length of data to be sent, -1 meaning remaining data in buffer, otherwise length in bytes.
          * @param int|null $timeout timeout in microseconds or null for using {@see Socket::getWriteTimeout()} value
          */
-        public function send(\Swow\Buffer $buffer, int $length = -1, ?int $timeout = null): static { }
+        public function send(\Swow\Buffer|string $data, int $start = 0, int $length = -1, ?int $timeout = null): static { }
 
         /**
          * write buffer to specified address (and port if protocol needs port) from buffer current position with `$length` bytes
@@ -1527,41 +1527,7 @@ namespace Swow
          * @psalm-param int<0, 65535>|null $port
          * @param int|null $port port to send to
          */
-        public function sendTo(\Swow\Buffer $buffer, int $length = -1, ?string $address = null, ?int $port = null, ?int $timeout = null): static { }
-
-        /**
-         * write `$length` bytes of string into socket from `$offset` byte
-         *
-         * @throws SocketException when timed out
-         * @throws SocketException when write failed
-         * @param int|null $timeout timeout in microseconds or null for using {@see Socket::getWriteTimeout()} value
-         * @phpstan-param int<0, max> $offset
-         * @psalm-param int<0, max> $offset
-         * @param int $offset indexed string starts from 0: `sendString('1234567890', offset: 2, length: 2)` will write `'34'` into socket
-         * @phpstan-param int<-1, max> $length
-         * @psalm-param int<-1, max> $length
-         * @param int $length length of data to be sent, -1 meaning remaining data, otherwise length in bytes.
-         */
-        public function sendString(string $string, ?int $timeout = null, int $offset = 0, int $length = -1): static { }
-
-        /**
-         * write `$length` bytes string to specified address (and port if protocol needs port) from `$offset` byte
-         *
-         * @throws SocketException when timed out
-         * @throws SocketException when write failed
-         * @param string|null $address address to send to, may be ip or domain or path (for UNIX/UDG type)
-         * @phpstan-param int<0, 65535>|null $port
-         * @psalm-param int<0, 65535>|null $port
-         * @param int|null $port port to send to
-         * @param int|null $timeout timeout in microseconds or null for using {@see Socket::getWriteTimeout()} value
-         * @phpstan-param int<0, max> $offset
-         * @psalm-param int<0, max> $offset
-         * @param int $offset indexed string starts from 0: `sendStringTo('1234567890', offset: 2, length: 2, ...)` will write `'34'` into socket
-         * @phpstan-param int<-1, max> $length
-         * @psalm-param int<-1, max> $length
-         * @param int $length length of data to be sent, -1 meaning remaining data, otherwise length in bytes.
-         */
-        public function sendStringTo(string $string, ?string $address = null, ?int $port = null, ?int $timeout = null, int $offset = 0, int $length = -1): static { }
+        public function sendTo(\Swow\Buffer|string $data, int $start = 0, int $length = -1, ?string $address = null, ?int $port = null, ?int $timeout = null): static { }
 
         /** @var int $timeout [optional] = $this->getWriteTimeout() */
         public function sendHandle(self $handle, ?int $timeout = null): static { }
