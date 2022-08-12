@@ -19,6 +19,6 @@ class ResponseException extends \Swow\Exception
 {
     public function __construct(int $statusCode, string $reasonPhrase = '', ?Throwable $previous = null)
     {
-        parent::__construct($reasonPhrase ?: Status::getReasonPhraseFor($statusCode), $statusCode, $previous);
+        parent::__construct($reasonPhrase ?: Status::getReasonPhraseOf($statusCode), $statusCode, $previous);
     }
 }

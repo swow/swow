@@ -190,7 +190,7 @@ class Connection extends Socket implements ProtocolTypeInterface
         switch ($this->protocolType) {
             case static::PROTOCOL_TYPE_HTTP: {
                 if ($message === '') {
-                    $message = HttpStatus::getReasonPhraseFor($code);
+                    $message = HttpStatus::getReasonPhraseOf($code);
                 }
                 $message = "<html lang=\"en\"><body><h2>HTTP {$code} {$message}</h2><hr><i>Powered by Swow</i></body></html>";
                 $this->write([

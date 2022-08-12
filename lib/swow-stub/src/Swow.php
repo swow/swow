@@ -568,7 +568,7 @@ namespace Swow
         public const ECERT = -9753;
         public const ECHILD = -9752;
 
-        public static function getDescriptionFor(int $error): string { }
+        public static function getDescriptionOf(int $error): string { }
     }
 }
 
@@ -2175,7 +2175,7 @@ namespace Swow\Http
         public const NOT_EXTENDED = 510;
         public const NETWORK_AUTHENTICATION_REQUIRED = 511;
 
-        public static function getReasonPhraseFor(int $statusCode): string { }
+        public static function getReasonPhraseOf(int $statusCode): string { }
     }
 }
 
@@ -2318,7 +2318,7 @@ namespace Swow\WebSocket
         public const PING = 9;
         public const PONG = 10;
 
-        public static function getNameFor(int $opcode): int { }
+        public static function getNameOf(int $opcode): int { }
     }
 }
 
@@ -2342,7 +2342,7 @@ namespace Swow\WebSocket
         public const BAD_GATEWAY = 1014;
         public const TLS_HANDSHAKE = 1015;
 
-        public static function getDescriptionFor(int $code): int { }
+        public static function getDescriptionOf(int $code): int { }
     }
 }
 
