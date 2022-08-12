@@ -955,13 +955,14 @@ static char *swow_buffer_alloc_standard(size_t size)
     return ZSTR_VAL(string);
 }
 
-static char *swow_buffer_realloc_standard(char *old_value, size_t old_length, size_t new_size)
+static char *swow_buffer_realloc_standard(char *old_value, size_t new_size)
 {
     zend_string *new_string;
 
     new_string = zend_string_alloc(new_size, 0);
     if (old_value != NULL) {
         zend_string *old_string = swow_buffer_get_string_from_value(old_value);
+        size_t old_length = ZSTR_LEN(old_string);
         if (old_length > 0) {
             if (unlikely(new_size < old_length)) {
                 old_length = new_size;

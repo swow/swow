@@ -40,7 +40,7 @@ static PHP_METHOD(Swow_WebSocket_Opcode, getNameFor)
         Z_PARAM_LONG(opcode)
     ZEND_PARSE_PARAMETERS_END();
 
-    name = cat_websocket_opcode_name(opcode);
+    name = cat_websocket_opcode_get_name(opcode);
 
     RETURN_STRING(name);
 }

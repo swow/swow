@@ -196,7 +196,7 @@ static PHP_METHOD(Swow_Socket, typeName)
         Z_PARAM_LONG(type)
     ZEND_PARSE_PARAMETERS_END();
 
-    RETURN_STRING(cat_socket_type_name(type));
+    RETURN_STRING(cat_socket_type_get_name(type));
 }
 
 #define arginfo_class_Swow_Socket_getGlobalTimeout arginfo_class_Swow_Socket_getLong
