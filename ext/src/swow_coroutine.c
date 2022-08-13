@@ -354,6 +354,9 @@ static cat_bool_t swow_coroutine_construct(swow_coroutine_t *scoroutine, zval *z
         } while (0);
         executor->current_execute_data = executor->root_execute_data;
         executor->exception = NULL;
+        /* we may save exception before zend_call_function() and restore exception after it,
+         * and coroutine switching may happen during function executing. */
+        executor->prev_exception = NULL;
 #ifdef SWOW_COROUTINE_SWAP_ERROR_HANDING
         executor->error_handling = EH_NORMAL;
         executor->exception_class = NULL;
@@ -565,6 +568,7 @@ SWOW_API void swow_coroutine_executor_save(swow_coroutine_executor_t *executor)
     executor->vm_stack_page_size = eg->vm_stack_page_size;
     executor->current_execute_data = eg->current_execute_data;
     executor->exception = eg->exception;
+    executor->prev_exception = eg->prev_exception;
 #ifdef SWOW_COROUTINE_SWAP_ERROR_HANDING
     executor->error_handling = eg->error_handling;
     executor->exception_class = eg->exception_class;
@@ -618,6 +622,7 @@ SWOW_API void swow_coroutine_executor_recover(swow_coroutine_executor_t *executo
     eg->vm_stack_page_size = executor->vm_stack_page_size;
     eg->current_execute_data = executor->current_execute_data;
     eg->exception = executor->exception;
+    eg->prev_exception = executor->prev_exception;
 #ifdef SWOW_COROUTINE_SWAP_ERROR_HANDING
     eg->error_handling = executor->error_handling;
     eg->exception_class = executor->exception_class;
