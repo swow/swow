@@ -396,7 +396,7 @@ static zend_always_inline zend_result swow_forbid_dynamic_call(void)
     return swow_forbid_dynamic_call_at_frame(EG(current_execute_data));
 }
 
-SWOW_API int swow_call_function_anyway(zend_fcall_info *fci, zend_fcall_info_cache *fci_cache);
+SWOW_API zend_result swow_call_function_anyway(zend_fcall_info *fci, zend_fcall_info_cache *fci_cache);
 
 /* method caller */
 

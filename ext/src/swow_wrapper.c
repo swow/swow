@@ -200,17 +200,11 @@ SWOW_API void swow_fcall_storage_release(swow_fcall_storage_t *fcall)
 
 /* function caller */
 
-SWOW_API int swow_call_function_anyway(zend_fcall_info *fci, zend_fcall_info_cache *fci_cache)
+SWOW_API zend_result swow_call_function_anyway(zend_fcall_info *fci, zend_fcall_info_cache *fci_cache)
 {
-    zend_object *exception = EG(exception);
-    if (exception) {
-        EG(exception) = NULL;
-    }
-    int ret = zend_call_function(fci, fci_cache);
-    /* FIXME: handle exceptions here, it may leak now */
-    if (exception) {
-        EG(exception) = exception;
-    }
+    zend_exception_save();
+    zend_result ret = zend_call_function(fci, fci_cache);
+    zend_exception_restore();
     return ret;
 }
 
