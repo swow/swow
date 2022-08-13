@@ -1327,6 +1327,14 @@ SWOW_API cat_bool_t swow_coroutine_throw(swow_coroutine_t *scoroutine, zend_obje
 
 static ZEND_COLD void swow_coroutine_throw_unwind_exit(void)
 {
+    if (EG(exception) != NULL) {
+        /* this occurred when yield in [finally scope / defer function] to main and main is ended
+         * or yield to another coroutine which want to kill this coroutine,
+         * at that time, the exception is not totally handled by this coroutine, if we continue to throw unwind exit,
+         * the exception will be the previous of unwind_exception, it's invalid. */
+        swow_coroutine_get_current()->coroutine.flags |= SWOW_COROUTINE_FLAG_PARTIALLY_KILLED;
+        return;
+    }
     swow_coroutine_get_current()->coroutine.flags |= SWOW_COROUTINE_FLAG_KILLED;
 #ifndef SWOW_NATIVE_UNWIND_EXIT_SUPPORT
     zend_throw_exception(swow_coroutine_unwind_exit_ce, NULL, 0);
