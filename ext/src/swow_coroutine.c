@@ -51,8 +51,8 @@ SWOW_API zend_class_entry *swow_coroutine_exception_ce;
 #ifndef SWOW_NATIVE_UNWIND_EXIT_SUPPORT
 static zend_class_entry *swow_coroutine_unwind_exit_ce;
 #endif
-#define SWOW_COROUTINE_UNWIND_EXIT_MAGIC               ((zend_object *) -1)
-#define SWOW_COROUTINE_IS_UNWIND_EXIT_MAGIC(exception) (exception == SWOW_COROUTINE_UNWIND_EXIT_MAGIC)
+#define SWOW_COROUTINE_THROW_KILL_MAGIC               ((zend_object *) -1)
+#define SWOW_COROUTINE_IS_THROW_KILL_MAGIC(exception) (exception == SWOW_COROUTINE_THROW_KILL_MAGIC)
 
 static zend_function swow_coroutine_internal_function;
 
@@ -71,7 +71,7 @@ SWOW_API CAT_GLOBALS_DECLARE(swow_coroutine);
 static cat_bool_t swow_coroutine_construct(swow_coroutine_t *scoroutine, zval *zcallable, size_t stack_page_size, size_t c_stack_size);
 static void swow_coroutine_shutdown(swow_coroutine_t *scoroutine);
 static ZEND_COLD void swow_coroutine_handle_cross_exception(zend_object *cross_exception);
-static ZEND_COLD void swow_coroutine_throw_unwind_exit(void);
+static ZEND_COLD void swow_coroutine_throw_kill(void);
 static zend_always_inline zend_bool swow_coroutine_has_unwind_exit(zend_object *exception);
 
 static zend_always_inline size_t swow_coroutine_align_stack_page_size(size_t size)
@@ -1292,8 +1292,8 @@ SWOW_API void swow_coroutine_dump_all_to_file(const char *filename)
 
 static ZEND_COLD void swow_coroutine_handle_cross_exception(zend_object *exception)
 {
-    if (SWOW_COROUTINE_IS_UNWIND_EXIT_MAGIC(exception)) {
-        swow_coroutine_throw_unwind_exit();
+    if (SWOW_COROUTINE_IS_THROW_KILL_MAGIC(exception)) {
+        swow_coroutine_throw_kill();
     } else {
         /* for throw method success */
         GC_ADDREF(exception);
@@ -1303,15 +1303,15 @@ static ZEND_COLD void swow_coroutine_handle_cross_exception(zend_object *excepti
 
 SWOW_API cat_bool_t swow_coroutine_throw(swow_coroutine_t *scoroutine, zend_object *exception, zval *retval)
 {
-    if (!SWOW_COROUTINE_IS_UNWIND_EXIT_MAGIC(exception) &&
+    if (!SWOW_COROUTINE_IS_THROW_KILL_MAGIC(exception) &&
         UNEXPECTED(!instanceof_function(exception->ce, zend_ce_throwable))) {
         cat_update_last_error(CAT_EMISUSE, "Instance of %s is not throwable", ZSTR_VAL(exception->ce->name));
         return cat_false;
     }
 
     if (UNEXPECTED(scoroutine == swow_coroutine_get_current())) {
-        if (SWOW_COROUTINE_IS_UNWIND_EXIT_MAGIC(exception)) {
-            swow_coroutine_throw_unwind_exit();
+        if (SWOW_COROUTINE_IS_THROW_KILL_MAGIC(exception)) {
+            swow_coroutine_throw_kill();
         } else {
             GC_ADDREF(exception);
             zend_throw_exception_internal(exception);
@@ -1330,7 +1330,10 @@ SWOW_API cat_bool_t swow_coroutine_throw(swow_coroutine_t *scoroutine, zend_obje
     return cat_true;
 }
 
-static ZEND_COLD void swow_coroutine_throw_unwind_exit(void)
+/* @Notice this function should only be called by kill(),
+ * do not use it for something like EXIT opcode handler,
+ * because this function will set COROUTINE_FLAG_KILLED flag */
+static ZEND_COLD void swow_coroutine_throw_kill(void)
 {
     if (EG(exception) != NULL) {
         /* this occurred when yield in [finally scope / defer function] to main and main is ended
@@ -1352,7 +1355,7 @@ SWOW_API cat_bool_t swow_coroutine_kill(swow_coroutine_t *scoroutine)
 {
     while (1) {
         zval retval;
-        cat_bool_t success = swow_coroutine_throw(scoroutine, SWOW_COROUTINE_UNWIND_EXIT_MAGIC, &retval);
+        cat_bool_t success = swow_coroutine_throw(scoroutine, SWOW_COROUTINE_THROW_KILL_MAGIC, &retval);
         if (!success) {
             cat_update_last_error_with_previous("Kill coroutine " CAT_COROUTINE_ID_FMT " failed", scoroutine->coroutine.id);
             return cat_false;
