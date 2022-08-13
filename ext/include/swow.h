@@ -79,6 +79,8 @@ ZEND_EXTERN_MODULE_GLOBALS(swow)
 typedef struct {
     zend_bool cli;
     zend_bool has_debug_extension;
+    // TODO: add it to ini and make it work
+    zend_bool observer_enabled;
 } swow_nts_globals_t;
 
 extern SWOW_API swow_nts_globals_t swow_nts_globals;
