@@ -29,7 +29,7 @@
         "psr/http-message": "^1.0"
     },
     "require-dev": {
-        "friendsofphp/php-cs-fixer": "^3.7.0",
+        "friendsofphp/php-cs-fixer": "^3.9",
         "phan/phan": "^5.3",
         "phpstan/phpstan": "^1.4",
         "phpunit/phpunit": "=9.5.16",
@@ -58,6 +58,7 @@
     },
     "autoload-dev": {
         "psr-4": {
+            "Swow\\PhpCsFixer\\": "lib/swow-php-cs-fixer-config/src/",
             "SwowTest\\": "lib/swow-library/tests"
         },
         "classmap": [

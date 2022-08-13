@@ -25,6 +25,7 @@ $repoInfo = [
     'swow-stub' => 'lib/swow-stub',
     'swow-library' => 'lib/swow-library',
     'swow-util' => 'lib/swow-util',
+    'swow-php-cs-fixer-config' => 'lib/swow-php-cs-fixer-config',
     'php-stub-generator' => 'lib/php-stub-generator',
 ];
 

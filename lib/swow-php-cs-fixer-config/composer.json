@@ -1,0 +1,31 @@
+{
+    "name": "swow/swow-php-cs-fixer-config",
+    "description": "Config file of php-cs-fixer which is used by Swow",
+    "keywords": [
+        "swow",
+        "php",
+        "php-cs-fixer",
+        "code-style",
+        "code-format",
+        "config"
+    ],
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "twose",
+            "email": "twosee@php.net"
+        }
+    ],
+    "support": {
+        "issues": "https://github.com/swow/swow-php-cs-fixer-config"
+    },
+    "require": {
+        "php": ">=8.0",
+        "friendsofphp/php-cs-fixer": "^3.9"
+    },
+    "autoload": {
+        "psr-4": {
+            "Swow\\PhpCsFixer\\": "src/"
+        }
+    }
+}
