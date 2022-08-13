@@ -18,10 +18,15 @@
 
 #include "swow_defer.h"
 
+#include "swow_known_strings.h"
+
 SWOW_API zend_class_entry *swow_defer_ce;
 SWOW_API zend_object_handlers swow_defer_handlers;
 
-#define SWOW_DEFER_MAGIC_NAME "Swow\\Defer"
+#define SWOW_DEFER_KNOWN_STRING_MAP(XX) \
+    XX(defer_magic_name, "\0Swow\\Defer") \
+
+SWOW_DEFER_KNOWN_STRING_MAP(SWOW_KNOWN_STRING_STORAGE_GEN)
 
 SWOW_API cat_bool_t swow_defer(zval *zcallable)
 {
@@ -49,13 +54,12 @@ SWOW_API cat_bool_t swow_defer(zval *zcallable)
 
         ZEND_ASSERT(symbol_table && "A symbol table should always be available here");
 
-        zdefer = zend_hash_str_find(symbol_table, ZEND_STRL(SWOW_DEFER_MAGIC_NAME));
+        zdefer = zend_hash_find(symbol_table, SWOW_KNOWN_STRING(defer_magic_name));
         if (zdefer == NULL) {
             zend_object *defer = swow_object_create(swow_defer_ce);
             zval zdefer;
             ZVAL_OBJ(&zdefer, defer);
-            /* zend_hash_str_add_new is macro on PHP-7.x, so we can not use ZEND_STRL here */
-            zend_hash_str_add_new(symbol_table, SWOW_DEFER_MAGIC_NAME, sizeof(SWOW_DEFER_MAGIC_NAME) - 1, &zdefer);
+            zend_set_local_var(SWOW_KNOWN_STRING(defer_magic_name), &zdefer, true);
             sdefer = swow_defer_get_from_object(defer);
         } else {
             ZEND_ASSERT(Z_TYPE_P(zdefer) == IS_OBJECT && instanceof_function(Z_OBJCE_P(zdefer), swow_defer_ce));
@@ -92,7 +96,7 @@ SWOW_API void swow_defer_do_tasks(swow_defer_t *sdefer)
 
 SWOW_API void swow_defer_do_main_tasks(void)
 {
-    zval *zdefer = zend_hash_str_find(&EG(symbol_table), ZEND_STRL(SWOW_DEFER_MAGIC_NAME));
+    zval *zdefer = zend_hash_find_known_hash(&EG(symbol_table), SWOW_KNOWN_STRING(defer_magic_name));
     if (zdefer != NULL) {
         swow_defer_t *sdefer = swow_defer_get_from_object(Z_OBJ_P(zdefer));
         swow_defer_do_tasks(sdefer);
@@ -160,6 +164,8 @@ static const zend_function_entry swow_defer_functions[] = {
 
 zend_result swow_defer_module_init(INIT_FUNC_ARGS)
 {
+    SWOW_DEFER_KNOWN_STRING_MAP(SWOW_KNOWN_STRING_INIT_STRL_GEN);
+
     swow_defer_ce = swow_register_internal_class(
         "Swow\\Defer", NULL, swow_defer_methods,
         &swow_defer_handlers, NULL,

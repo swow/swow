@@ -26,13 +26,15 @@ extern "C" {
 
 #define SWOW_KNOWN_STRING(name) swow_known_string_##name
 
-#define SWOW_KNOWN_STRING_INIT(name) do { \
-    SWOW_KNOWN_STRING(name) = zend_new_interned_string(zend_string_init(ZEND_STRL(#name), true)); \
+#define SWOW_KNOWN_STRING_INIT(name)           SWOW_KNOWN_STRING_INIT_STRL(name, #name)
+#define SWOW_KNOWN_STRING_INIT_STRL(name, str) do { \
+    SWOW_KNOWN_STRING(name) = zend_new_interned_string(zend_string_init(ZEND_STRL(str), true)); \
 } while (0)
 
-#define SWOW_KNOWN_STRING_STORAGE_GEN(name)     SWOW_API zend_string *SWOW_KNOWN_STRING(name);
-#define SWOW_KNOWN_STRING_DECLARATION_GEN(name) extern SWOW_KNOWN_STRING_STORAGE_GEN(name)
-#define SWOW_KNOWN_STRING_INIT_GEN(name)        SWOW_KNOWN_STRING_INIT(name);
+#define SWOW_KNOWN_STRING_STORAGE_GEN(name, ...)        SWOW_API zend_string *SWOW_KNOWN_STRING(name);
+#define SWOW_KNOWN_STRING_DECLARATION_GEN(name, ...)    extern SWOW_KNOWN_STRING_STORAGE_GEN(name)
+#define SWOW_KNOWN_STRING_INIT_GEN(name)                SWOW_KNOWN_STRING_INIT(name);
+#define SWOW_KNOWN_STRING_INIT_STRL_GEN(name, str)      SWOW_KNOWN_STRING_INIT_STRL(name, str);
 
 #ifdef __cplusplus
 }
