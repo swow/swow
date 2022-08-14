@@ -715,6 +715,7 @@ zend_result swow_websocket_module_init(INIT_FUNC_ARGS)
         frame.opcode = CAT_WEBSOCKET_OPCODE_PING;
         zend_declare_class_constant_stringl(swow_websocket_frame_ce, ZEND_STRL("PING"), (const char *) &frame, CAT_WEBSOCKET_HEADER_LENGTH);
         frame.opcode = CAT_WEBSOCKET_OPCODE_PONG;
+        frame.mask = true;
         zend_declare_class_constant_stringl(swow_websocket_frame_ce, ZEND_STRL("PONG"), (const char *) &frame, CAT_WEBSOCKET_HEADER_LENGTH);
     } while (0);
 
