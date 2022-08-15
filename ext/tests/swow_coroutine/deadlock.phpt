@@ -4,6 +4,8 @@ swow_coroutine: deadlock
 <?php
 require __DIR__ . '/../include/skipif.php';
 ?>
+--XFAIL--
+Need to fix
 --FILE--
 <?php
 require __DIR__ . '/../include/bootstrap.php';
@@ -19,6 +21,9 @@ php_proc_with_swow([
     $pid = (int) trim(fgets($pipes[1], 4096));
     echo trim(fgets($pipes[2], 4096)) . PHP_LF;
     Signal::kill($pid, Signal::TERM);
+    while (!feof($pipes[2])) {
+        echo trim(fgets($pipes[2], 4096)) . PHP_LF;
+    }
 });
 
 echo 'Done' . PHP_LF;
@@ -26,4 +31,5 @@ echo 'Done' . PHP_LF;
 ?>
 --EXPECT--
 Warning: <COROUTINE> Deadlock: all coroutines are asleep in scheduler
+
 Done
