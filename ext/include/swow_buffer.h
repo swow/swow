@@ -68,7 +68,7 @@ static zend_always_inline swow_buffer_t *swow_buffer_get_from_object(zend_object
 
 /* internal use */
 
-SWOW_API zend_string *swow_buffer_fetch_string(swow_buffer_t *sbuffer);
+SWOW_API zend_string *swow_buffer_get_string(swow_buffer_t *sbuffer);
 SWOW_API size_t swow_buffer_get_readable_space(swow_buffer_t *sbuffer, const char **ptr); SWOW_INTERNAL
 SWOW_API size_t swow_buffer_get_writable_space(swow_buffer_t *sbuffer, char **ptr);       SWOW_INTERNAL
 SWOW_API void swow_buffer_virtual_read(swow_buffer_t *sbuffer, size_t length);            SWOW_INTERNAL SWOW_UNSAFE
