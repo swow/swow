@@ -131,7 +131,7 @@ TEXT;
 
     protected function __construct()
     {
-        $this->input = new Socket(Socket::TYPE_STDIN);
+        $this->input = (new Socket(Socket::TYPE_STDIN))->setReadTimeout(-1);
         $this->output = new Socket(Socket::TYPE_STDOUT);
         $this->error = new Socket(Socket::TYPE_STDERR);
         $this
