@@ -70,12 +70,7 @@ extern "C" {
 #include "uv/version.h"
 #include <stddef.h>
 #include <stdio.h>
-
-#if defined(_MSC_VER) && _MSC_VER < 1600
-# include "uv/stdint-msvc2008.h"
-#else
-# include <stdint.h>
-#endif
+#include <stdint.h>
 
 #if defined(_WIN32)
 # include "uv/win.h"
@@ -405,8 +400,13 @@ UV_EXTERN int uv_run(uv_loop_t*, uv_run_mode mode);
 UV_EXTERN void uv_stop(uv_loop_t*);
 
 #ifdef HAVE_LIBCAT
-typedef int (*uv_defer_callback_t)(uv_loop_t* loop);
-UV_EXTERN int uv_crun(uv_loop_t* loop, uv_defer_callback_t defer);
+typedef int (*uv_loop_alive_cb)(uv_loop_t* loop);
+typedef void (*uv_defer_cb)(uv_loop_t* loop);
+typedef struct uv_run_options_s {
+    uv_loop_alive_cb alive_cb;
+    uv_defer_cb defer_cb;
+} uv_run_options_t;
+UV_EXTERN int uv_crun(uv_loop_t* loop, const uv_run_options_t *context);
 #endif
 
 UV_EXTERN void uv_ref(uv_handle_t*);

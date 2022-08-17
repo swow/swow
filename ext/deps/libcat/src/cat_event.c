@@ -47,7 +47,6 @@ CAT_API cat_bool_t cat_event_runtime_init(void)
 
     cat_queue_init(&CAT_EVENT_G(runtime_shutdown_tasks));
     cat_queue_init(&CAT_EVENT_G(defer_tasks));
-    CAT_EVENT_G(defer_task_count) = 0;
 
     return cat_true;
 }
@@ -68,7 +67,6 @@ CAT_API cat_bool_t cat_event_runtime_shutdown(void)
     /* we must call run to close all handles and clear defer tasks */
     cat_event_schedule();
     CAT_ASSERT(cat_queue_empty(&CAT_EVENT_G(defer_tasks)));
-    CAT_ASSERT(CAT_EVENT_G(defer_task_count) == 0);
 
     return cat_true;
 }
@@ -92,46 +90,49 @@ CAT_API cat_bool_t cat_event_runtime_close(void)
     return cat_true;
 }
 
-static void cat_event_deadlock_unlock(uv_timer_t *deadlock)
+static void cat_event_do_defer_tasks(void)
 {
-    uv_timer_stop(deadlock);
-    uv_close((uv_handle_t *) deadlock, NULL);
+    uint64_t current_round = CAT_EVENT_G(loop).round;
+    cat_queue_t *tasks = &CAT_EVENT_G(defer_tasks);
+    cat_event_task_t *task;
+
+    while ((task = cat_queue_front_data(tasks, cat_event_task_t, node)) != NULL) {
+        if (task->round == current_round) {
+            /* must be triggered in the next round */
+            break;
+        }
+        cat_queue_remove(&task->node);
+        task->callback(task->data);
+        cat_free(task);
+    }
 }
 
-static void cat_event_deadlock_unlock_callback(cat_data_t *data)
-{
-    cat_event_deadlock_unlock((uv_timer_t *) data);
-}
-
-static void cat_event_deadlock_callback(uv_timer_t *deadlock)
-{
-    uv_timer_again(deadlock);
-}
-
-CAT_API void cat_event_deadlock(void)
-{
-    uv_timer_t *deadlock = &CAT_EVENT_G(deadlock);
-    (void) uv_timer_init(&CAT_EVENT_G(loop), deadlock);
-    (void) uv_timer_start(deadlock, cat_event_deadlock_callback, UINT64_MAX, UINT64_MAX);
-    (void) cat_event_defer(cat_event_deadlock_unlock_callback, deadlock);
-}
-
-static int cat_event_defer_callback(uv_loop_t *loop)
+static int cat_event_alive_callback(uv_loop_t *loop)
 {
     (void) loop;
-    return cat_event_do_defer_tasks();
+    return !cat_queue_empty(&CAT_EVENT_G(defer_tasks));
+}
+
+static void cat_event_defer_callback(uv_loop_t *loop)
+{
+    (void) loop;
+    cat_event_do_defer_tasks();
 }
 
 CAT_API void cat_event_schedule(void)
 {
-    (void) uv_crun(&CAT_EVENT_G(loop), cat_event_defer_callback);
+    const uv_run_options_t options = {
+        cat_event_alive_callback,
+        cat_event_defer_callback
+    };
+    (void) uv_crun(&CAT_EVENT_G(loop), &options);
 }
 
 CAT_API cat_coroutine_t *cat_event_scheduler_run(cat_coroutine_t *coroutine)
 {
     const cat_coroutine_scheduler_t scheduler = {
         cat_event_schedule,
-        cat_event_deadlock
+        NULL
     };
 
     return cat_coroutine_scheduler_run(coroutine, &scheduler);
@@ -180,6 +181,7 @@ CAT_API cat_bool_t cat_event_defer_ex(cat_data_callback_t callback, cat_data_t *
         return cat_false;
     }
 #endif
+    task->round = CAT_EVENT_G(loop).round;
     task->callback = callback;
     task->data = data;
     if (unlikely(high_priority)) {
@@ -187,27 +189,8 @@ CAT_API cat_bool_t cat_event_defer_ex(cat_data_callback_t callback, cat_data_t *
     } else {
         cat_queue_push_back(&CAT_EVENT_G(defer_tasks), &task->node);
     }
-    CAT_EVENT_G(defer_task_count)++;
 
     return cat_true;
-}
-
-CAT_API cat_bool_t cat_event_do_defer_tasks(void)
-{
-    cat_queue_t *tasks = &CAT_EVENT_G(defer_tasks);
-    cat_event_task_t *task;
-    /* only tasks of the current round will be called */
-    uint32_t count = CAT_EVENT_G(defer_task_count);
-
-    while (count--) {
-        task = cat_queue_front_data(tasks, cat_event_task_t, node);
-        cat_queue_remove(&task->node);
-        CAT_EVENT_G(defer_task_count)--;
-        task->callback(task->data);
-        cat_free(task);
-    }
-
-    return CAT_EVENT_G(defer_task_count) > 0;
 }
 
 CAT_API void cat_event_fork(void)
@@ -221,4 +204,27 @@ CAT_API void cat_event_fork(void)
 #else
     CAT_ERROR(EVENT, "Function fork() is disabled for internal reasons when using thread-context");
 #endif
+}
+
+static FILE *cat_event_get_fp_from_fd(cat_os_fd_t fd)
+{
+    FILE* fp;
+    if (fd == STDOUT_FILENO) {
+        fp = stdout;
+    } else if (fd == STDERR_FILENO) {
+        fp = stderr;
+    } else {
+        fp = stdout;
+    }
+    return fp;
+}
+
+CAT_API void cat_event_print_all_handles(cat_os_fd_t output)
+{
+    uv_print_all_handles(&CAT_EVENT_G(loop), cat_event_get_fp_from_fd(output));
+}
+
+CAT_API void cat_event_print_active_handles(cat_os_fd_t output)
+{
+    uv_print_active_handles(&CAT_EVENT_G(loop), cat_event_get_fp_from_fd(output));
 }

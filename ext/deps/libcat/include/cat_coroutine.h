@@ -179,6 +179,7 @@ CAT_GLOBALS_STRUCT_BEGIN(cat_coroutine) {
     cat_coroutine_jump_t jump;
     cat_bool_t switch_denied;
     /* info */
+    cat_bool_t deadlocked;
     cat_coroutine_id_t last_id;
     cat_coroutine_count_t count;
     cat_coroutine_count_t peak_count;
@@ -297,6 +298,10 @@ CAT_API const char *cat_coroutine_get_current_role_name(void);
 
 /* helper */
 CAT_API cat_coroutine_t *cat_coroutine_run(cat_coroutine_t *coroutine, cat_coroutine_function_t function, cat_data_t *data);
+
+/* debug */
+CAT_API cat_bool_t cat_coroutine_is_deadlocked(void);
+CAT_API void cat_coroutine_unlock_deadlock(void);
 
 #ifdef __cplusplus
 }

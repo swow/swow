@@ -960,12 +960,17 @@ static void cat_coroutine_deadlock(cat_coroutine_deadlock_function_t deadlock)
 {
     CAT_LOG_WITH_TYPE(CAT_COROUTINE_G(deadlock_log_type), COROUTINE, CAT_EDEADLK, "Deadlock: all coroutines are asleep");
 
+    CAT_COROUTINE_G(deadlocked) = cat_true;
     if (deadlock != NULL) {
         deadlock();
-    } else while (cat_sys_usleep(999999) == 0);
+    } else while (CAT_COROUTINE_G(deadlocked)) {
+        cat_sys_sleep(1);
+    }
+    /* deadlock failed or it was broken by some magic ways */
+    CAT_COROUTINE_G(deadlocked) = cat_false;
 }
 
-static cat_always_inline cat_bool_t cat_coroutine_is_deadlocked(void)
+static cat_always_inline cat_bool_t cat_coroutine_is_unfinished(void)
 {
     return CAT_COROUTINE_G(count) - CAT_COROUTINE_G(waiter_count) > 0;
 }
@@ -984,11 +989,11 @@ static cat_data_t *cat_coroutine_scheduler_function(cat_data_t *data)
 
         scheduler.schedule();
 
-        if (cat_coroutine_is_deadlocked()) {
+        if (cat_coroutine_is_unfinished()) {
             if (CAT_COROUTINE_G(deadlock_callback) != NULL) {
                 CAT_COROUTINE_G(deadlock_callback)();
                 scheduler.schedule(); // There is only one chance
-                if (!cat_coroutine_is_deadlocked()) {
+                if (!cat_coroutine_is_unfinished()) {
                     continue;
                 }
             }
@@ -996,7 +1001,6 @@ static cat_data_t *cat_coroutine_scheduler_function(cat_data_t *data)
              * but there are still coroutines that have not finished
              * so we try to trigger the deadlock */
             cat_coroutine_deadlock(scheduler.deadlock);
-            /* deadlock failed or it was broken by some magic ways */
             continue;
         }
 
@@ -1150,4 +1154,16 @@ CAT_API cat_coroutine_t *cat_coroutine_run(cat_coroutine_t *coroutine, cat_corou
     }
 
     return coroutine;
+}
+
+/* debug */
+
+CAT_API cat_bool_t cat_coroutine_is_deadlocked(void)
+{
+    return CAT_COROUTINE_G(deadlocked);
+}
+
+CAT_API void cat_coroutine_unlock_deadlock(void)
+{
+    CAT_COROUTINE_G(deadlocked) = cat_false;
 }

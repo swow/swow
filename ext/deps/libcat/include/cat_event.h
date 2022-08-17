@@ -27,6 +27,7 @@ extern "C" {
 
 typedef struct cat_event_task_s {
     cat_queue_node_t node;
+    uint64_t round;
     cat_data_callback_t callback;
     cat_data_t *data;
 } cat_event_task_t;
@@ -36,7 +37,6 @@ CAT_GLOBALS_STRUCT_BEGIN(cat_event) {
     uv_timer_t deadlock;
     cat_queue_t runtime_shutdown_tasks;
     cat_queue_t defer_tasks;
-    uint32_t defer_task_count;
 } CAT_GLOBALS_STRUCT_END(cat_event);
 
 extern CAT_API CAT_GLOBALS_DECLARE(cat_event);
@@ -50,7 +50,6 @@ CAT_API cat_bool_t cat_event_runtime_shutdown(void);
 CAT_API cat_bool_t cat_event_runtime_close(void);
 
 CAT_API void cat_event_schedule(void)  CAT_INTERNAL;
-CAT_API void cat_event_deadlock(void) CAT_INTERNAL;
 
 CAT_API cat_coroutine_t *cat_event_scheduler_run(cat_coroutine_t *coroutine);
 CAT_API cat_coroutine_t *cat_event_scheduler_close(void);
@@ -61,9 +60,11 @@ CAT_API void cat_event_unregister_runtime_shutdown_task(cat_event_task_t *task);
 
 CAT_API cat_bool_t cat_event_defer(cat_data_callback_t callback, cat_data_t *data);
 CAT_API cat_bool_t cat_event_defer_ex(cat_data_callback_t callback, cat_data_t *data, cat_bool_t high_priority);
-CAT_API cat_bool_t cat_event_do_defer_tasks(void);
 
 CAT_API void cat_event_fork(void);
+
+CAT_API void cat_event_print_all_handles(cat_os_fd_t output);
+CAT_API void cat_event_print_active_handles(cat_os_fd_t output);
 
 #ifdef __cplusplus
 }

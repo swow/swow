@@ -59,12 +59,7 @@ typedef struct pollfd {
 #include <signal.h>
 #include <fcntl.h>
 #include <sys/stat.h>
-
-#if defined(_MSC_VER) && _MSC_VER < 1600
-# include "uv/stdint-msvc2008.h"
-#else
-# include <stdint.h>
-#endif
+#include <stdint.h>
 
 #include "uv/tree.h"
 #include "uv/threadpool.h"
@@ -385,6 +380,12 @@ typedef struct {
       OVERLAPPED overlapped;                                                  \
       size_t queued_bytes;                                                    \
     } io;                                                                     \
+    /* in v2, we can move these to the UV_CONNECT_PRIVATE_FIELDS */           \
+    struct {                                                                  \
+      ULONG_PTR result; /* overlapped.Internal is reused to hold the result */\
+      HANDLE pipeHandle;                                                      \
+      DWORD duplex_flags;                                                     \
+    } connect;                                                                \
   } u;                                                                        \
   struct uv_req_s* next_req;
 

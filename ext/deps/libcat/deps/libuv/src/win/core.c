@@ -620,6 +620,11 @@ int uv_run(uv_loop_t *loop, uv_run_mode mode) {
     else
       uv__poll_wine(loop, timeout);
 
+    /* Process immediate callbacks (e.g. write_cb) a small fixed number of
+     * times to avoid loop starvation.*/
+    for (r = 0; r < 8 && loop->pending_reqs_tail != NULL; r++)
+      uv__process_reqs(loop);
+
     /* Run one final update on the provider_idle_time in case uv__poll*
      * returned because the timeout expired, but no events were received. This
      * call will be ignored if the provider_entry_time was either never set (if
@@ -659,37 +664,39 @@ int uv_run(uv_loop_t *loop, uv_run_mode mode) {
 
 
 #ifdef HAVE_LIBCAT
-int uv_crun(uv_loop_t *loop, uv_defer_callback_t defer) {
-  int r, d;
+int uv_crun(uv_loop_t* loop, const uv_run_options_t *options) {
+  int r;
 
-  r = uv__loop_alive(loop);
-  d = 1;
-  uv_update_time(loop);
-
-  while (r || d) {
-    if (r) {
-      uv__process_reqs(loop);
-      uv__idle_invoke(loop);
-      uv__prepare_invoke(loop);
-
-      if (pGetQueuedCompletionStatusEx)
-        uv__poll(loop, uv_backend_timeout(loop));
-      else
-        uv__poll_wine(loop, uv_backend_timeout(loop));
-      uv__metrics_update_idle_time(loop);
-
-      uv__check_invoke(loop);
-      uv__process_endgames(loop);
-    }
-
-    loop->round++;
+  r = uv__loop_alive(loop) ||
+      (options->alive_cb && options->alive_cb(loop));
+  if (!r)
     uv_update_time(loop);
-    d = defer(loop);
 
-    if (r)
-      uv__run_timers(loop);
+  while (r) {
+    loop->round++;
+    uv__process_reqs(loop);
+    uv__idle_invoke(loop);
+    uv__prepare_invoke(loop);
 
-    r = uv__loop_alive(loop) && !loop->stop_flag;
+    if (pGetQueuedCompletionStatusEx)
+      uv__poll(loop, uv_backend_timeout(loop));
+    else
+      uv__poll_wine(loop, uv_backend_timeout(loop));
+    uv__metrics_update_idle_time(loop);
+
+    uv__check_invoke(loop);
+    uv__process_endgames(loop);
+
+    uv_update_time(loop);
+
+    if (options->defer_cb)
+      options->defer_cb(loop);
+    uv__run_timers(loop);
+
+    r = !loop->stop_flag && (
+      uv__loop_alive(loop) ||
+      (options->alive_cb && options->alive_cb(loop))
+    );
   }
 
   if (loop->stop_flag)
