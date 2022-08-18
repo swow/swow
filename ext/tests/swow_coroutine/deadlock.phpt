@@ -4,8 +4,6 @@ swow_coroutine: deadlock
 <?php
 require __DIR__ . '/../include/skipif.php';
 ?>
---XFAIL--
-Need to fix
 --FILE--
 <?php
 require __DIR__ . '/../include/bootstrap.php';
