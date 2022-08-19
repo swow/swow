@@ -113,17 +113,17 @@ class Message implements MessageInterface, Stringable
     /** @param string|array<string>|null $value */
     public function setHeader(string $name, mixed $value): static
     {
-        $lowerCaseName = strtolower($name);
-        $rawName = $this->headerNames[$lowerCaseName] ?? null;
+        $lowercaseName = strtolower($name);
+        $rawName = $this->headerNames[$lowercaseName] ?? null;
         if ($rawName !== null) {
             unset($this->headers[$rawName]);
         }
 
         if ($value !== null) {
             $this->headers[$name] = is_array($value) ? $value : [(string) $value];
-            $this->headerNames[$lowerCaseName] = $name;
+            $this->headerNames[$lowercaseName] = $name;
         } else {
-            unset($this->headerNames[$lowerCaseName]);
+            unset($this->headerNames[$lowercaseName]);
         }
 
         return $this;
