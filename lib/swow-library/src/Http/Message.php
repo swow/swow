@@ -18,6 +18,7 @@ use Psr\Http\Message\StreamInterface;
 use Stringable;
 use Swow\Object\DupTrait;
 
+use function array_merge;
 use function implode;
 use function is_array;
 use function strpos;
@@ -141,6 +142,25 @@ class Message implements MessageInterface, Stringable
         return $new;
     }
 
+    /** @param string|array<string>|null $value */
+    public function addHeader(string $name, mixed $value): static
+    {
+        $lowercaseName = strtolower($name);
+        $rawName = $this->headerNames[$lowercaseName] ?? null;
+
+        if ($rawName !== null) {
+            if (is_array($value)) {
+                $this->headers[$rawName] = array_merge($this->headers[$rawName], $value);
+            } else {
+                $this->headers[$rawName][] = $value;
+            }
+        } else {
+            $this->headers[$rawName] = is_array($value) ? $value : [(string) $value];
+        }
+
+        return $this;
+    }
+
     /**
      * @param string $name
      * @param string|string[] $value
@@ -155,6 +175,11 @@ class Message implements MessageInterface, Stringable
         $new->setHeader($name, $value);
 
         return $new;
+    }
+
+    public function unsetHeader(string $name): static
+    {
+        return $this->setHeader($name, null);
     }
 
     /**
