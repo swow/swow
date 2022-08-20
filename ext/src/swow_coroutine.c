@@ -2556,37 +2556,11 @@ zend_result swow_coroutine_runtime_init(INIT_FUNC_ARGS)
     return SUCCESS;
 }
 
-// TODO: killall API
-#ifdef CAT_DONT_OPTIMIZE
-static void swow_coroutines_kill_destructor(zval *zscoroutine)
-{
-    swow_coroutine_t *scoroutine = swow_coroutine_get_from_object(Z_OBJ_P(zscoroutine));
-    ZEND_ASSERT(swow_coroutine_is_alive(scoroutine));
-    if (UNEXPECTED(!swow_coroutine_kill(scoroutine))) {
-        CAT_CORE_ERROR(COROUTINE, "Execute kill destructor failed, reason: %s", cat_get_last_error_message());
-    }
-    swow_coroutine_close(scoroutine);
-}
-#endif
-
 zend_result swow_coroutine_runtime_shutdown(SHUTDOWN_FUNC_ARGS)
 {
     SWOW_COROUTINE_G(runtime_state) = SWOW_COROUTINE_RUNTIME_STATE_IN_SHUTDOWN;
 
     swow_util_handlers_release(&SWOW_COROUTINE_G(deadlock_handlers));
-
-#ifdef CAT_DONT_OPTIMIZE /* the optimization deps on event scheduler */
-    /* destruct active scoroutines */
-    HashTable *map = SWOW_COROUTINE_G(map);
-    do {
-        /* kill first (for memory safety) */
-        HashTable *map_copy = zend_array_dup(map);
-        /* kill all coroutines */
-        swow_coroutine_remove_from_map(swow_coroutine_get_main(), map_copy);
-        map_copy->pDestructor = swow_coroutines_kill_destructor;
-        zend_hash_destroy(map_copy);
-    } while (zend_hash_num_elements(map) != 1);
-#endif
 
     /* close main scoroutine */
     swow_coroutine_main_close();
