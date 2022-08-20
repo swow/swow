@@ -101,10 +101,10 @@ typedef enum cat_log_union_types_e {
         CAT_LOG_NORETURN(type, module_name, code, ##__VA_ARGS__) /* make MSVC happy */
 
 #define CAT_LOG_WITH_REASON(type, module_name, code, reason, format, ...) \
-        CAT_LOG_V(type, module_name, code, format ", reason: %s", reason, ##__VA_ARGS__)
+        CAT_LOG_V(type, module_name, code, format ", reason: %s", ##__VA_ARGS__, reason)
 
 #define CAT_LOG_WITH_REASON_NORETURN(type, module_name, code, reason, format, ...) \
-        CAT_LOG_NORETURN_V(type, module_name, code, format ", reason: %s", reason, ##__VA_ARGS__)
+        CAT_LOG_NORETURN_V(type, module_name, code, format ", reason: %s", ##__VA_ARGS__, reason)
 
 #ifndef CAT_ENABLE_DEBUG_LOG
 # define CAT_LOG_DEBUG_VA(module_name, ...)
