@@ -130,11 +130,15 @@ static void swow_coroutine_dtor_object(zend_object *object)
     swow_coroutine_t *scoroutine = swow_coroutine_get_from_object(object);
 
     if (UNEXPECTED(swow_coroutine_is_alive(scoroutine))) {
-        /* not finished, should be discard */
-        if (UNEXPECTED(SWOW_COROUTINE_G(bailout))) {
-            swow_coroutine_schedule(scoroutine, COROUTINE, "Destruct object whiling bailout");
-        } else if (UNEXPECTED(!swow_coroutine_kill(scoroutine))) {
-            CAT_CORE_ERROR(COROUTINE, "Kill coroutine failed when destruct object, reason: %s", cat_get_last_error_message());
+        if (UNEXPECTED(scoroutine->coroutine.flags & SWOW_COROUTINE_FLAG_BAILOUT)) {
+            CAT_LOG_DEBUG(COROUTINE, "Coroutine#" CAT_COROUTINE_ID_FMT " was flagged as bailout, schedule to recycle it", scoroutine->coroutine.id);
+            swow_coroutine_schedule(scoroutine, COROUTINE, "Destruct object which has already called bailout()");
+        } else {
+            CAT_LOG_DEBUG(COROUTINE, "Coroutine#" CAT_COROUTINE_ID_FMT " is still alive, force kill it", scoroutine->coroutine.id);
+            /* not finished, should be discard */
+            if (UNEXPECTED(!swow_coroutine_kill(scoroutine))) {
+                CAT_CORE_ERROR_WITH_LAST(COROUTINE, "Kill Coroutine#" CAT_COROUTINE_ID_FMT " failed when destruct object", scoroutine->coroutine.id);
+            }
         }
     }
 }
@@ -220,8 +224,10 @@ static ZEND_COLD zend_never_inline void swow_coroutine_bailout_handler(swow_coro
     if (!SWOW_COROUTINE_G(bailout)) {
         // it's the first zend_bailout() on a user coroutine
         SWOW_COROUTINE_G(bailout) = cat_true;
-        // bailout main coroutine to kill all coroutines
-        swow_coroutine_schedule(swow_coroutine_get_main(), COROUTINE, "Bailout main from a user coroutine to exit gracefully while fatal error occurred");
+        // kill main coroutine to kill all coroutines
+        if (unlikely(!swow_coroutine_kill(swow_coroutine_get_main()))) {
+            CAT_CORE_ERROR_WITH_LAST(COROUTINE, "Error occurred when kill main from a bailout coroutine");
+        }
     }
 }
 
@@ -484,6 +490,8 @@ static void swow_coroutine_main_dtor_object(zend_object *object)
 
     ZEND_ASSERT(EG(flags) & EG_FLAGS_OBJECT_STORE_NO_REUSE);
     ZEND_ASSERT(EG(objects_store).top > 1);
+
+    CAT_LOG_DEBUG(COROUTINE, "Main Coroutine exited, destruct all coroutines");
 
     ZEND_HASH_FOREACH_VAL(map, zval *zscoroutine) {
         zend_object *coroutine_object = Z_OBJ_P(zscoroutine);
@@ -777,16 +785,6 @@ static void swow_coroutine_jump_standard(cat_coroutine_t *coroutine, cat_data_t 
         /* delete it from global map
          * (we can not delete it in coroutine_function, object maybe released during deletion) */
         swow_coroutine_remove_from_map(scoroutine, SWOW_COROUTINE_G(map));
-    } else if (UNEXPECTED(SWOW_COROUTINE_G(bailout))) {
-        if (
-            /* coroutine without executor (e.g. scheduler) can not bailout */
-            current_scoroutine->executor != NULL &&
-            /* the bailoutted coroutine need not bailout again */
-            !(current_scoroutine->coroutine.flags & SWOW_COROUTINE_FLAG_BAILOUT)
-        ) {
-            current_scoroutine->coroutine.flags |= SWOW_COROUTINE_FLAG_BAILOUT;
-            zend_bailout();
-        }
     } else if (UNEXPECTED(SWOW_COROUTINE_G(exception) != NULL)) {
         /* coroutine without executor (e.g. scheduler) can not handle exception */
         ZEND_ASSERT(current_scoroutine->executor != NULL);
