@@ -24,6 +24,7 @@ use function parse_url;
 use function preg_replace_callback;
 use function rawurlencode;
 use function sprintf;
+use function strtolower;
 
 /**
  * PSR-7 URI implementation (https://github.com/Nyholm/psr7/blob/master/src/Uri.php)
@@ -127,10 +128,7 @@ class Uri implements UriInterface, Stringable
             return $this;
         }
 
-        $new = clone $this;
-        $new->setScheme($scheme);
-
-        return $new;
+        return (clone $this)->setScheme($scheme);
     }
 
     public function getAuthority(): string
@@ -156,16 +154,16 @@ class Uri implements UriInterface, Stringable
         return $this->userInfo;
     }
 
-    public function setUserInfo(string $user, string $password = ''): static
-    {
-        $this->userInfo = $password === '' ? $user : "{$user}:{$password}";
-
-        return $this;
-    }
-
     public function filterUserInfo(string $user, string $password = ''): string
     {
         return $password === '' ? $user : "{$user}:{$password}";
+    }
+
+    public function setUserInfo(string $user, string $password = ''): static
+    {
+        $this->userInfo = $this->filterUserInfo($user, $password);
+
+        return $this;
     }
 
     /**
@@ -197,25 +195,17 @@ class Uri implements UriInterface, Stringable
         return $this;
     }
 
-    public function filterHost(string $host): string
-    {
-        return strtolower($host);
-    }
-
     /**
      * @param string $host
      */
     public function withHost($host): static
     {
-        $host = $this->filterHost($host);
+        $host = strtolower($host);
         if ($host === $this->host) {
             return $this;
         }
 
-        $new = clone $this;
-        $new->host = $host;
-
-        return $new;
+        return (clone $this)->setHost($host);
     }
 
     public function getPort(): ?int
@@ -364,10 +354,7 @@ class Uri implements UriInterface, Stringable
 
     public function withQueryParams(array $queryParams): static
     {
-        $new = clone $this;
-        $new->setQueryParams($queryParams);
-
-        return $new;
+        return (clone $this)->setQueryParams($queryParams);
     }
 
     public function getFragment(): string

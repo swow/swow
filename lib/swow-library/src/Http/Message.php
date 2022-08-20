@@ -136,10 +136,7 @@ class Message implements MessageInterface, Stringable
      */
     public function withHeader($name, $value): static
     {
-        $new = clone $this;
-        $new->setHeader($name, $value);
-
-        return $new;
+        return (clone $this)->setHeader($name, $value);
     }
 
     /** @param string|array<string>|null $value */
@@ -167,14 +164,7 @@ class Message implements MessageInterface, Stringable
      */
     public function withAddedHeader($name, $value): static
     {
-        $new = clone $this;
-        $header = $new->getHeaderLine($name);
-        if ($header !== '') {
-            $value = $header . ', ' . $value;
-        }
-        $new->setHeader($name, $value);
-
-        return $new;
+        return (clone $this)->addHeader($name, $value);
     }
 
     public function unsetHeader(string $name): static
@@ -187,10 +177,7 @@ class Message implements MessageInterface, Stringable
      */
     public function withoutHeader($name): static
     {
-        $new = clone $this;
-        $new->setHeader($name, null);
-
-        return $new;
+        return (clone $this)->setHeader($name, null);
     }
 
     /** @return array<string, array<string>> $headers */
@@ -226,10 +213,7 @@ class Message implements MessageInterface, Stringable
     /** @param array<string, array<string>|string> $headers */
     public function withHeaders(array $headers): static
     {
-        $new = clone $this;
-        $new->setHeaders($headers);
-
-        return $new;
+        return (clone $this)->setHeaders($headers);
     }
 
     public function getContentLength(): int
@@ -288,10 +272,7 @@ class Message implements MessageInterface, Stringable
             return $this;
         }
 
-        $new = clone $this;
-        $new->setBody($body);
-
-        return $new;
+        return (clone $this)->setBody($body);
     }
 
     public function toString(bool $headOnly = false): string

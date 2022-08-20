@@ -66,10 +66,7 @@ class Request extends Message implements RequestInterface
             return $this;
         }
 
-        $new = clone $this;
-        $new->setMethod($method);
-
-        return $new;
+        return (clone $this)->setMethod($method);
     }
 
     protected function getHostFromUri(): string
@@ -121,10 +118,7 @@ class Request extends Message implements RequestInterface
             return $this;
         }
 
-        $new = clone $this;
-        $new->setUri($uri, $preserveHost);
-
-        return $new;
+        return (clone $this)->setUri($uri, $preserveHost);
     }
 
     /**
@@ -173,10 +167,7 @@ class Request extends Message implements RequestInterface
      */
     public function withRequestTarget($requestTarget): static
     {
-        $new = clone $this;
-        $new->setRequestTarget($requestTarget);
-
-        return $new;
+        return (clone $this)->setRequestTarget($requestTarget);
     }
 
     public function getUpgrade(): int

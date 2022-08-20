@@ -127,14 +127,14 @@ class ServerRequest extends Request implements ServerRequestInterface
         return $this->upgrade ??= parent::getUpgrade();
     }
 
-    /** @return array<mixed>|object|null */
-    public function getParsedBody(): null|array|object
+    /** @return array<mixed>|object */
+    public function getParsedBody(): array|object
     {
         return $this->parsedBody ??= BodyParser::parse($this->getBody(), $this->getContentType());
     }
 
-    /** @param array<mixed>|object|null $data */
-    public function setParsedBody(null|array|object $data): static
+    /** @param array<mixed>|object $data */
+    public function setParsedBody(array|object $data): static
     {
         $this->parsedBody = $data;
 
@@ -142,14 +142,11 @@ class ServerRequest extends Request implements ServerRequestInterface
     }
 
     /**
-     * @param array<mixed>|object|null $data
+     * @param array<mixed>|object $data
      */
     public function withParsedBody($data): static
     {
-        $new = clone $this;
-        $new->setParsedBody($data);
-
-        return $new;
+        return (clone $this)->setParsedBody($data);
     }
 
     /** @return array<string, UploadedFileInterface> */
@@ -202,23 +199,20 @@ class ServerRequest extends Request implements ServerRequestInterface
         return $this;
     }
 
-    public function unsetAttribute(string $name): static
-    {
-        unset($this->attributes[$name]);
-
-        return $this;
-    }
-
     /**
      * @param string $name
      * @param mixed $value
      */
     public function withAttribute($name, $value): static
     {
-        $new = clone $this;
-        $new->setAttribute($name, $value);
+        return (clone $this)->setAttribute($name, $value);
+    }
 
-        return $new;
+    public function unsetAttribute(string $name): static
+    {
+        unset($this->attributes[$name]);
+
+        return $this;
     }
 
     /**
@@ -230,10 +224,7 @@ class ServerRequest extends Request implements ServerRequestInterface
             return $this;
         }
 
-        $new = clone $this;
-        $new->unsetAttribute($name);
-
-        return $new;
+        return (clone $this)->unsetAttribute($name);
     }
 
     /**

@@ -66,10 +66,7 @@ class Response extends Message implements ResponseInterface
             return $this;
         }
 
-        $new = clone $this;
-        $new->setStatus($code, $reasonPhrase);
-
-        return $new;
+        return (clone $this)->setStatus($code, $reasonPhrase);
     }
 
     public function toString(bool $headOnly = false): string
