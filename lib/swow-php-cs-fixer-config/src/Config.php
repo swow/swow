@@ -22,7 +22,8 @@ class Config extends \PhpCsFixer\Config
     public function __construct(string $name = 'default')
     {
         parent::__construct($name);
-        $this->setUsingCache(false)
+        $this
+            ->setUsingCache((bool) (getenv('PHP_CS_FIXER_USE_CACHE') ?: false))
             ->setRiskyAllowed(true)
             ->setRules([
                 '@PSR2' => true,
