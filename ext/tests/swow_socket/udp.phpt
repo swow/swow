@@ -32,7 +32,7 @@ Coroutine::run(function () use ($server, $client, $randoms, $wr) {
         Assert::keyExists($randoms, $index);
         $random = substr($packet, 4);
         Assert::same($random, $randoms[$index]);
-        $server->sendStringTo($packet, $ip, $port);
+        $server->sendTo($packet, address: $ip, port: $port);
     }
 });
 
@@ -40,7 +40,7 @@ Coroutine::run(function () use ($server, $client, $randoms, $wr) {
 Coroutine::run(function () use ($server, $client, $randoms, $wr) {
     foreach ($randoms as $n => $random) {
         $index_bin = pack('N', $n);
-        $client->sendStringTo($index_bin . $random, $server->getSockAddress(), $server->getSockPort());
+        $client->sendTo($index_bin . $random, address: $server->getSockAddress(), port: $server->getSockPort());
     }
 });
 

@@ -83,7 +83,7 @@ try {
     $socket->setSendBufferSize(0);
     while (true) {
         // send a 16k string to overflow buffer
-        $socket->sendString(str_repeat('Hello SwowSocket', 1024));
+        $socket->send(str_repeat('Hello SwowSocket', 1024));
     }
 } catch (SocketException $e) {
     Assert::same($e->getCode(), Errno::ETIMEDOUT);

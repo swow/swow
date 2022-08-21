@@ -31,7 +31,7 @@ $tcpServer->bind('127.0.0.1')->listen();
 Coroutine::run(function () use ($tcpServer, $wr) {
     $connection = $tcpServer->accept();
     echo $connection->recvString() . PHP_LF;
-    $connection->sendString('Hello Client');
+    $connection->send('Hello Client');
 });
 // prepare handle
 $mainClient = new Socket(Socket::TYPE_TCP);
@@ -41,7 +41,7 @@ $mainSocket->sendHandle($mainClient);
 $workerClient = new Socket(Socket::TYPE_TCP);
 $workerChannel->acceptTo($workerClient);
 // testing on received handle
-echo $workerClient->sendString('Hello Server')->recvString() . PHP_LF;
+echo $workerClient->send('Hello Server')->recvString() . PHP_LF;
 $wr::wait($wr);
 
 echo 'Done' . PHP_LF;

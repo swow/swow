@@ -1,5 +1,5 @@
 --TEST--
-swow_socket: sendString
+swow_socket: send string
 --SKIPIF--
 <?php
 require __DIR__ . '/../include/skipif.php';
@@ -15,8 +15,8 @@ $request =
     "Host: {$host}\n" .
     "\rFOO";
 $socket->connect($host, 80)
-    ->sendString($request, $socket->getWriteTimeout(), 0, strlen($request) - 3)
-    ->sendString("\n");
+    ->send($request, length: strlen($request) - 3, timeout: $socket->getWriteTimeout())
+    ->send("\n");
 $result = $socket->recvString();
 phpt_var_dump($result);
 Assert::contains($result, 'HTTP/1.1');

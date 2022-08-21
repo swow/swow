@@ -40,7 +40,7 @@ Coroutine::run(function () use ($server, $random, $wr) {
 Coroutine::run(function () use ($server, $random, $wr) {
     $client = new Socket(Socket::TYPE_TCP);
     $client->connect($server->getSockAddress(), $server->getSockPort());
-    $client->sendString($random);
+    $client->send($random);
     $client->close();
     $server->close();
 });

@@ -36,7 +36,7 @@ foreach ([false, true] as $useConnect) {
                 if (!$message) {
                     break;
                 }
-                $server->sendStringTo($message, $address);
+                $server->sendTo($message, address: $address);
             }
         } catch (SocketException $exception) {
             Assert::same($exception->getCode(), Errno::ECANCELED);
@@ -63,9 +63,9 @@ foreach ([false, true] as $useConnect) {
     });
     for ($n = 0; $n < TEST_MAX_REQUESTS; $n++) {
         if ($useConnect) {
-            $client->sendString($randoms[$n]);
+            $client->send($randoms[$n]);
         } else {
-            $client->sendStringTo($randoms[$n], $server->getSockAddress());
+            $client->sendTo($randoms[$n], address: $server->getSockAddress());
         }
     }
 

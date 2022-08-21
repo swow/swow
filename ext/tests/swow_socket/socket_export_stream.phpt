@@ -69,7 +69,7 @@ Coroutine::run(function () use ($server) {
     $server->bind('127.0.0.1')->listen();
     $connection = $server->accept();
     $red = $connection->recvString(TEST_MAX_LENGTH);
-    $connection->sendString($red);
+    $connection->send($red);
     $connection->close();
     $server->close();
 });
@@ -81,7 +81,7 @@ Coroutine::run(function () use ($server, $random) {
     $server->bind('127.0.0.1');
     $red = $server->recvStringFrom(TEST_MAX_LENGTH, $addr, $port);
     //var_dump($red, $addr, $port);
-    $server->sendStringTo($red, $addr, $port);
+    $server->sendTo($red, address: $addr, port: $port);
     $server->close();
 });
 test('udp', $server, $random);
@@ -93,7 +93,7 @@ if (PHP_OS_FAMILY != 'Windows') {
         $server->bind(SERVER_SOCK1)->listen();
         $connection = $server->accept();
         $red = $connection->recvString(TEST_MAX_LENGTH, 0);
-        $connection->sendString($red);
+        $connection->send($red);
         $connection->close();
         $server->close();
     });
@@ -105,7 +105,7 @@ if (PHP_OS_FAMILY != 'Windows') {
         $server->bind(SERVER_SOCK3)->listen();
         $connection = $server->accept();
         $red = $connection->recvString(TEST_MAX_LENGTH, 0);
-        $connection->sendString($red);
+        $connection->send($red);
         $connection->close();
         $server->close();
     });
@@ -116,7 +116,7 @@ if (PHP_OS_FAMILY != 'Windows') {
     Coroutine::run(function () use ($server, $random) {
         $server->bind(SERVER_SOCK2);
         $red = $server->recvStringFrom(TEST_MAX_LENGTH, $addr);
-        $server->sendStringTo($red, $addr);
+        $server->sendTo($red, address: $addr);
         $server->close();
     });
     test('udg', $server, $random);

@@ -47,7 +47,7 @@ function testMultiClient(string $name, callable $function)
             $client = new Socket(Socket::TYPE_UDP);
             $client->bind('127.0.0.1');
             pseudo_random_sleep();
-            $client->sendStringTo(pack('N2', $client->getSockPort(), $server->getSockPort()), $server->getSockAddress(), $server->getSockPort());
+            $client->sendTo(pack('N2', $client->getSockPort(), $server->getSockPort()), address: $server->getSockAddress(), port: $server->getSockPort());
             $client->close();
         });
     }
@@ -61,28 +61,25 @@ function testMultiClient(string $name, callable $function)
 
 testMultiClient('recvFrom', function (Socket $server) {
     $buffer = new Buffer(8192);
-    $server->recvFrom($buffer, -1, $addr_from, $port_from);
-    $buffer->rewind();
+    $server->recvFrom($buffer, address: $addr_from, port: $port_from);
 
-    return [$buffer->read(), $port_from];
+    return [$buffer->toString(), $port_from];
 });
 
 testMultiClient('peekFrom', function (Socket $server) {
     $buffer = new Buffer(8192);
-    while (8 > $server->peekFrom($buffer, 8, $addr_from, $port_from)) {
+    while (8 > $server->peekFrom($buffer, size: 8, address: $addr_from, port: $port_from)) {
         msleep(1);
     }
-    $buffer->rewind();
 
-    return [$buffer->read(), $port_from];
+    return [$buffer->toString(), $port_from];
 });
 
 testMultiClient('recvDataFrom', function (Socket $server) {
     $buffer = new Buffer(8192);
-    $server->recvDataFrom($buffer, -1, $addr_from, $port_from);
-    $buffer->rewind();
+    $server->recvDataFrom($buffer, address: $addr_from, port: $port_from);
 
-    return [$buffer->read(), $port_from];
+    return [$buffer->toString(), $port_from];
 });
 
 testMultiClient('recvStringFrom', function (Socket $server) {
@@ -147,7 +144,7 @@ function testMultiServer(string $name, callable $function)
 }
 
 testMultiServer('sendStringTo', function (Socket $client, Socket $server) {
-    $client->sendStringTo(pack('N2', $client->getSockPort(), $server->getSockPort()), $server->getSockAddress(), $server->getSockPort());
+    $client->sendTo(pack('N2', $client->getSockPort(), $server->getSockPort()), address: $server->getSockAddress(), port: $server->getSockPort());
 });
 
 testMultiServer('writeTo', function (Socket $client, Socket $server) {
@@ -167,10 +164,9 @@ testMultiServer('writeTo', function (Socket $client, Socket $server) {
 
 testMultiServer('sendTo', function (Socket $client, Socket $server) {
     $buffer = new Buffer(8192);
-    $buffer->write(pack('N', $client->getSockPort()));
-    $buffer->write(pack('N', $server->getSockPort()));
-    $buffer->rewind();
-    $client->sendTo($buffer, -1, $server->getSockAddress(), $server->getSockPort());
+    $buffer->append(pack('N', $client->getSockPort()));
+    $buffer->append(pack('N', $server->getSockPort()));
+    $client->sendTo($buffer, address: $server->getSockAddress(), port: $server->getSockPort());
 });
 
 echo 'Done' . PHP_LF;

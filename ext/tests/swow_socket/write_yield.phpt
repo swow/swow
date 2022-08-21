@@ -24,7 +24,7 @@ Coroutine::run(function () use ($server, $wrServer) {
             Coroutine::run(function () use ($connection, $wrServer) {
                 try {
                     while (true) {
-                        $connection->sendString($connection->readString(TEST_MAX_LENGTH_HIGH));
+                        $connection->send($connection->readString(TEST_MAX_LENGTH_HIGH));
                     }
                 } catch (SocketException $exception) {
                     Assert::same($exception->getCode(), Errno::ECONNRESET);
@@ -47,7 +47,7 @@ Coroutine::run(function () use ($server, $client, $randoms, $wrClient) {
     }
 });
 for ($n = 0; $n < TEST_MAX_REQUESTS_LOW; $n++) {
-    $client->sendString($randoms[$n]);
+    $client->send($randoms[$n]);
 }
 WaitReference::wait($wrClient);
 $client->close();
