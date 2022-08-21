@@ -626,11 +626,14 @@ static PHP_METHOD_EX(Swow_Socket, _read, zend_bool once, zend_bool may_address, 
     cat_bool_t want_address;
     ssize_t ret;
 
-    max_num_args = 2;
+    // buffer, offset, size
+    max_num_args = 3;
     if (!peek) {
+        // timeout
         max_num_args += 1;
     }
     if (may_address) {
+        // address, port
         max_num_args += 2;
     }
 
@@ -994,11 +997,14 @@ static PHP_METHOD_EX(Swow_Socket, _write, zend_bool single, zend_bool may_addres
     uint32_t buffer_count = 0;
     cat_bool_t ret;
 
+    // vector, timeout / buffer or string, timeout
     max_num_args = 2;
     if (single) {
-        max_num_args += 1;
+        // start, length
+        max_num_args += 2;
     }
     if (may_address) {
+        // address, port
         max_num_args += 2;
     }
 
