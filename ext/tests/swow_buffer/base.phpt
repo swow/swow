@@ -18,46 +18,37 @@ Assert::same($buffer->fetchString(), '');
 $buffer = new Buffer(Buffer::COMMON_SIZE);
 Assert::same($buffer->getSize(), Buffer::COMMON_SIZE);
 Assert::same($buffer->getLength(), 0);
-// write should return self
-Assert::same($buffer->write('foo'), $buffer);
+// write should return number of write bytes
+Assert::same($buffer->write(0,'foo'), strlen('foo'));
 // so it can be chained
-$buffer
-    ->write('bar')
-    ->write('baz');
+$buffer->append('bar');
+$buffer->append('baz');
 Assert::same($buffer->getLength(), 9);
 
-Assert::same($buffer->rewind(), $buffer);
-Assert::same($buffer->read(3), 'foo');
-Assert::same($buffer->read(6), 'barbaz');
-Assert::same($buffer->seek(-6, SEEK_END)->read(), 'barbaz');
-Assert::same($buffer->tell(), 9);
-// getContents is read without arguments
-Assert::same($buffer->seek(-6, SEEK_END)->getContents(), 'barbaz');
-Assert::same($buffer->tell(), 9);
-// peek do not change pointer
-// if peek or peekFrom length is larger than available, it returns available
-Assert::same($buffer->seek(-3, SEEK_END)->peek(6), 'baz');
-Assert::same($buffer->tell(), 6);
-// peekFrom can set a start offset
-Assert::same($buffer->seek(-3, SEEK_END)->peekFrom(3, 9), 'barbaz');
-Assert::same($buffer->tell(), 6);
-// like peek, depString reads all buffer, do not change pointer
-Assert::same($buffer->seek(-3, SEEK_END)->dupString(), 'foobarbaz');
-Assert::same($buffer->tell(), 6);
+Assert::same($buffer->read(0, 3), 'foo');
+Assert::same($buffer->read(3,6), 'barbaz');
 
-// copy string is not affected by original buffer
-$_buffer = (string) $buffer; /* eq to __toString */
-Assert::same($_buffer, 'foobarbaz');
-$buffer->clear();
-Assert::same($_buffer, 'foobarbaz');
-Assert::same((string) $buffer, '');
-
-// copy string is not affected by original buffer
-$buffer->write('bazbarfoo');
-Assert::same($_buffer = $buffer->fetchString(), 'bazbarfoo');
-$buffer->clear();
-Assert::same($_buffer, 'bazbarfoo');
-Assert::same($buffer->fetchString(), '');
+// string dup or fetched string are not affected by original buffer
+foreach (['stringify', 'fetch'] as $type) {
+    $buffer = new Buffer(0);
+    $buffer->append('foobarbaz');
+    if ($type === 'stringify') {
+        $_buffer = (string) $buffer; /* eq to __toString */
+    } else {
+        $_buffer = $buffer->fetchString();
+    }
+    Assert::same($_buffer, 'foobarbaz');
+    $buffer->write(0, 'xoo');
+    Assert::same($_buffer, 'foobarbaz');
+    if ($type === 'stringify') {
+        Assert::same((string) $buffer, 'xoobarbaz');
+    } else {
+        Assert::same((string) $buffer, 'xoo');
+    }
+    $buffer->clear();
+    Assert::same((string) $buffer, '');
+    Assert::same($_buffer, 'foobarbaz');
+}
 
 echo 'Done' . PHP_LF;
 ?>

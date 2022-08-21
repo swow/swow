@@ -25,7 +25,8 @@ $buffer = new MyBuffer(0);
 // empty buffer
 var_dump($buffer);
 // shared buffer
-var_dump($buffer->write('a string that is referenced by this buffer'));
+$buffer->append('a interned string that is referenced by this buffer');
+debug_zval_dump($buffer);
 
 $buffer = new Buffer(8192);
 
@@ -51,8 +52,6 @@ object(MyBuffer)#%d (%d) {
   int(0)
   ["length"]=>
   int(0)
-  ["offset"]=>
-  int(0)
 }
 object(MyBuffer)#%d (%d) {
   ["value"]=>
@@ -61,20 +60,14 @@ object(MyBuffer)#%d (%d) {
   int(0)
   ["length"]=>
   int(0)
-  ["offset"]=>
-  int(0)
 }
-object(MyBuffer)#%d (%d) {
+object(MyBuffer)#%d (%d) refcount(%d){
   ["value"]=>
-  string(42) "a string that is referenced by this buffer"
+  string(51) "a interned string that is referenced by this buffer" interned
   ["size"]=>
-  int(42)
+  int(51)
   ["length"]=>
-  int(42)
-  ["offset"]=>
-  int(42)
-  ["shared"]=>
-  bool(true)
+  int(51)
 }
 object(Swow\Buffer)#%d (%d) {
   ["value"]=>
@@ -83,9 +76,22 @@ object(Swow\Buffer)#%d (%d) {
   int(8192)
   ["length"]=>
   int(0)
-  ["offset"]=>
-  int(0)
-  ["locked"]=>
-  bool(true)
+  ["locker"]=>
+  object(Swow\Coroutine)#%d (%d) {
+    ["id"]=>
+    int(%d)
+    ["state"]=>
+    string(7) "waiting"
+    ["round"]=>
+    int(%d)
+    ["elapsed"]=>
+    string(3) "%s"
+    ["trace"]=>
+    string(%s) "
+#0 %s(%d): Swow\Socket->recvFrom(Object(Swow\Buffer))
+#1 [internal function]: {closure}()
+#2 {main}
+"
+  }
 }
 Done

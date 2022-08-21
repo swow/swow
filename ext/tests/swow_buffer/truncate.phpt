@@ -15,7 +15,7 @@ $buffer = new Buffer(0);
 // allocated with 4k
 $buffer->alloc(4096);
 // write 1k data
-$buffer->write(str_repeat('test', 256));
+$buffer->append(str_repeat('test', 256));
 // keep only head 512
 $buffer->truncate(512);
 Assert::same($buffer->getLength(), 512);
