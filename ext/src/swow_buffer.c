@@ -936,28 +936,36 @@ static char *swow_buffer_realloc_standard(char *old_value, size_t new_size)
 {
     zend_string *old_string = old_value != NULL ? swow_buffer_get_string_from_value(old_value) : NULL;
     zend_string *new_string;
+    size_t old_length = old_string != NULL ? ZSTR_LEN(old_string) : 0;
+    size_t new_length = MIN(old_length, new_size);
+    zend_bool do_erealloc;
 
-    if (old_string == NULL) {
+    if (
         /* zend string do not support realloc from NULL */
-        new_string = zend_string_alloc(new_size, false);
-        ZSTR_VAL(new_string)[0] = '\0';
-    } else if (GC_FLAGS(old_string) & IS_STR_PERSISTENT) {
-        size_t old_length = ZSTR_LEN(old_string);
-        /* realloc on persistent, it means buffer is shared,
+        old_string != NULL &&
+        /* realloc on persistent or interned, it means buffer is shared,
          * we should allocate a new non-persistent string */
-        new_string = zend_string_alloc(new_size, false);
-        if (old_length > 0) {
-            if (unlikely(new_size < old_length)) {
-                old_length = new_size;
-            }
-            memcpy(ZSTR_VAL(new_string), ZSTR_VAL(old_string), old_length);
-            ZSTR_VAL(new_string)[ZSTR_LEN(new_string) = old_length] = '\0';
-        }
-        zend_string_release_ex(old_string, true);
+        !(GC_FLAGS(old_string) & IS_STR_PERSISTENT) &&
+        !ZSTR_IS_INTERNED(old_string) &&
+        /* COW can be skipped */
+        GC_REFCOUNT(old_string) == 1
+    ) {
+        do_erealloc = true;
     } else {
-        /* zend will detect whether refcount is 1 to decide whether to allocate a new string */
-        new_string = zend_string_realloc(old_string, new_size, false);
+        do_erealloc = false;
     }
+
+    if (do_erealloc) {
+        new_string = (zend_string *) erealloc(old_string, ZEND_MM_ALIGNED_SIZE(_ZSTR_STRUCT_SIZE(new_size)));
+        zend_string_forget_hash_val(new_string);
+    } else {
+        new_string = zend_string_alloc(new_size, false);
+        memcpy(ZSTR_VAL(new_string), ZSTR_VAL(old_string), new_length);
+        if (old_string != NULL && !ZSTR_IS_INTERNED(old_string)) {
+            GC_DELREF(old_string);
+        }
+    }
+    ZSTR_VAL(new_string)[ZSTR_LEN(new_string) = new_length] = '\0';
 
     return ZSTR_VAL(new_string);
 }
