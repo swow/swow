@@ -40,152 +40,207 @@ CAT_API const char* cat_websocket_status_get_description(cat_websocket_status_co
     return "Unknown websocket status code";
 }
 
+CAT_API uint8_t cat_websocket_calculate_mask_key_offset(uint64_t payload_length)
+{
+    uint8_t header_size = CAT_WEBSOCKET_HEADER_MIN_SIZE;
+
+    if (payload_length <= CAT_WEBSOCKET_EXT8_MAX_LENGTH) {
+        // header_length += 0;
+    } else if (payload_length <= CAT_WEBSOCKET_EXT16_MAX_LENGTH) {
+        header_size += sizeof(uint16_t);
+    } else {
+        header_size += sizeof(uint64_t);
+    }
+
+    return header_size;
+}
+
+CAT_API uint8_t cat_websocket_calculate_header_size(uint64_t payload_length, cat_bool_t mask)
+{
+    uint8_t header_size = cat_websocket_calculate_mask_key_offset(payload_length);
+
+    if (mask) {
+        header_size += CAT_WEBSOCKET_MASK_KEY_LENGTH;
+    }
+
+    return header_size;
+}
+
 CAT_API void cat_websocket_header_init(cat_websocket_header_t *header)
 {
-    memset(header, 0, sizeof(*header));
-    header->opcode = CAT_WEBSOCKET_OPCODE_TEXT;
-    header->fin = 1;
+    memset(header, 0, CAT_WEBSOCKET_HEADER_MIN_SIZE);
 }
 
-CAT_API uint8_t cat_websocket_header_get_length(const cat_websocket_header_t *header)
+static cat_always_inline uint64_t cat_websocket_header_get_mask_key_offset(const cat_websocket_header_t *header)
 {
-    uint8_t header_length = CAT_WEBSOCKET_HEADER_LENGTH;
-    uint64_t payload_length = header->payload_length;
+    uint8_t header_size = CAT_WEBSOCKET_HEADER_MIN_SIZE;
 
-    if (likely(payload_length <= CAT_WEBSOCKET_EXT8_MAX_LENGTH)) {
+    if (header->payload_length < CAT_WEBSOCKET_EXT16_PAYLOAD_LENGTH) {
         // header_length += 0;
+    } else if (header->payload_length == CAT_WEBSOCKET_EXT16_PAYLOAD_LENGTH) {
+        header_size += sizeof(uint16_t);
+    } else {
+        CAT_ASSERT(header->payload_length == CAT_WEBSOCKET_EXT64_PAYLOAD_LENGTH);
+        header_size += sizeof(uint64_t);
+    }
+
+    return header_size;
+}
+
+CAT_API uint64_t cat_websocket_header_get_size(const cat_websocket_header_t *header)
+{
+    uint8_t header_size = cat_websocket_header_get_mask_key_offset(header);
+
+    if (header->mask) {
+        header_size += CAT_WEBSOCKET_MASK_KEY_LENGTH;
+    }
+
+    return header_size;
+}
+
+CAT_API uint64_t cat_websocket_header_get_payload_length(const cat_websocket_header_t *header)
+{
+    if (header->payload_length < CAT_WEBSOCKET_EXT16_PAYLOAD_LENGTH) {
+        return header->payload_length;
+    } else if (header->payload_length == CAT_WEBSOCKET_EXT16_PAYLOAD_LENGTH) {
+        return ntohs(*((uint16_t *) &header->extended_payload_length));
+    } else {
+        CAT_ASSERT(header->payload_length == CAT_WEBSOCKET_EXT64_PAYLOAD_LENGTH);
+        return cat_ntoh64(*((uint64_t *) &header->extended_payload_length));
+    }
+}
+
+CAT_API const char *cat_websocket_header_get_mask_key(const cat_websocket_header_t *header)
+{
+    const char *p = NULL;
+    if (header->mask) {
+        p = (const char *) header;
+        p += cat_websocket_header_get_mask_key_offset(header);
+    }
+    return p;
+}
+
+CAT_API void cat_websocket_header_set_payload_length(cat_websocket_header_t *header, uint64_t payload_length)
+{
+    if (header->mask) {
+        char *p = ((char *) header) + cat_websocket_header_get_mask_key_offset(header);
+        char *new_p = ((char *) header) + cat_websocket_calculate_mask_key_offset(payload_length);
+        memmove(new_p, p, CAT_WEBSOCKET_MASK_KEY_LENGTH);
+    }
+    if (likely(payload_length <= CAT_WEBSOCKET_EXT8_MAX_LENGTH)) {
+        header->payload_length = (uint8_t) payload_length;
     } else if (likely(payload_length <= CAT_WEBSOCKET_EXT16_MAX_LENGTH)) {
-        header_length += sizeof(uint16_t);
+        header->payload_length = CAT_WEBSOCKET_EXT16_PAYLOAD_LENGTH;
+        *((uint16_t *) &header->extended_payload_length) = (uint16_t) htons((uint16_t) payload_length);
     } else {
-        header_length += sizeof(uint64_t);
+        header->payload_length = CAT_WEBSOCKET_EXT64_PAYLOAD_LENGTH;
+        *((uint64_t *) &header->extended_payload_length) = cat_hton64(payload_length);
     }
-
-    if (header->mask) {
-        header_length += CAT_WEBSOCKET_MASK_KEY_LENGTH;
-    }
-
-    return header_length;
 }
 
-CAT_API uint8_t cat_websocket_header_pack(cat_websocket_header_t *header, char *buffer, size_t size)
+
+CAT_API void cat_websocket_header_set_mask_key(cat_websocket_header_t *header, const char *mask_key)
 {
-    char *p, *pe;
-
-    if (unlikely(size < CAT_WEBSOCKET_HEADER_LENGTH)) {
-        return 0;
-    }
-
-    p = buffer + CAT_WEBSOCKET_HEADER_LENGTH;
-    pe = buffer + size;
-
-    if (likely(header->payload_length <= CAT_WEBSOCKET_EXT8_MAX_LENGTH)) {
-        header->len = (unsigned int) header->payload_length;
-    } else if (likely(header->payload_length <= CAT_WEBSOCKET_EXT16_MAX_LENGTH)) {
-        if (unlikely(p + sizeof(uint16_t) > pe)) {
-            return 0;
-        }
-        header->len = CAT_WEBSOCKET_EXT16_LENGTH;
-        *((uint16_t *) p) = (uint16_t) htons((uint16_t) header->payload_length);
-        p += sizeof(uint16_t);
+    if (mask_key == NULL) {
+        header->mask = cat_false;
     } else {
-        if (unlikely(p + sizeof(uint64_t) > pe)) {
-            return 0;
-        }
-        header->len = CAT_WEBSOCKET_EXT64_LENGTH;
-        *((uint64_t *) p) = cat_hton64(header->payload_length);
-        p += sizeof(uint64_t);
+        char *p = ((char *) header);
+        p += cat_websocket_header_get_mask_key_offset(header);
+        memcpy(p, mask_key, CAT_WEBSOCKET_MASK_KEY_LENGTH);
+        header->mask = cat_true;
     }
-    memcpy(buffer, header, CAT_WEBSOCKET_HEADER_LENGTH);
-
-    if (header->mask) {
-        if (unlikely(p + CAT_WEBSOCKET_MASK_KEY_LENGTH > pe)) {
-            return 0;
-        }
-        memcpy(p, header->mask_key, CAT_WEBSOCKET_MASK_KEY_LENGTH);
-        p += CAT_WEBSOCKET_MASK_KEY_LENGTH;
-    }
-
-    return (uint8_t) (p - buffer);
 }
 
-CAT_API uint8_t cat_websocket_header_unpack(cat_websocket_header_t *header, const char *data, size_t length)
+CAT_API void cat_websocket_header_set_payload_info(cat_websocket_header_t *header, uint64_t payload_length, const char *mask_key)
 {
-    const char *p, *pe;
-
-    if (unlikely(length < CAT_WEBSOCKET_HEADER_LENGTH)) {
-        return 0;
-    }
-    memcpy(header, data, CAT_WEBSOCKET_HEADER_LENGTH);
-    p = data + CAT_WEBSOCKET_HEADER_LENGTH;
-    pe = data + length;
-
-    if (header->len < CAT_WEBSOCKET_EXT16_LENGTH) {
-        header->payload_length = header->len;
-    } else if (header->len != CAT_WEBSOCKET_EXT64_LENGTH) {
-        if (unlikely(p + sizeof(uint16_t) > pe)) {
-            return 0;
-        }
-        header->payload_length = ntohs(*((uint16_t *) p));
-        p += sizeof(uint16_t);
-    } else {
-        if (unlikely(p + sizeof(uint64_t) > pe)) {
-            return 0;
-        }
-        header->payload_length = cat_ntoh64(*((uint64_t *) p));
-        p += sizeof(uint64_t);
-    }
-
-    if (header->mask) {
-        if (unlikely(p + CAT_WEBSOCKET_MASK_KEY_LENGTH > pe)) {
-            return 0;
-        }
-        memcpy(header->mask_key, p, CAT_WEBSOCKET_MASK_KEY_LENGTH);
-        p += CAT_WEBSOCKET_MASK_KEY_LENGTH;
-    }
-
-    return (uint8_t) (p - data);
+    CAT_ASSERT(mask_key != header->mask_key && "it leads to memory overlap");
+    header->mask = cat_false; // skip mask_key check in set_payload_length()
+    cat_websocket_header_set_payload_length(header, payload_length);
+    cat_websocket_header_set_mask_key(header, mask_key);
 }
 
-CAT_API void cat_websocket_mask(char *to, char *from, uint64_t length, const char *mask_key)
+/* The difference between mask1 and mask2 is that
+ * mask1 only needs to do calculate for the p++,
+ * but mask2 should not only calculate for the from++, but also for the to++,
+ * and for very large data, the amount of calculation is relatively reduced.
+ *
+ * @notice x % (2 ^ k) is equivalent to x & (2 ^ k - 1)
+ */
+static void cat_websocket_mask1(char *data, uint64_t length, const char *mask_key, uint64_t index)
 {
-    if (memcmp(mask_key, CAT_STRS(CAT_WEBSOCKET_EMPTY_MASK_KEY)) == 0) {
-        return;
-    }
-#ifndef CAT_L64
-    uint64_t i = 0;
-#else
-    uint64_t i, chunk = length / sizeof(uint64_t);
-    if (chunk > 0) {
+    char *p = data;
+    const char *pe = p + length;
+#ifdef CAT_L64
+    if (p + sizeof(uint64_t) <= pe) {
+        for (; p < pe && ((index & (sizeof(uint64_t) - 1)) != 0); p++, index++) {
+            *p ^= mask_key[index & (CAT_WEBSOCKET_MASK_KEY_LENGTH - 1)];
+        }
         uint64_t mask_key_u64 = ((uint64_t) (*((uint32_t *) mask_key)) << 32) | *((uint32_t *) mask_key);
-        for (i = 0; i < chunk; i++) {
-            ((uint64_t *) to)[i] = ((uint64_t *) from)[i] ^ mask_key_u64;
+        uint64_t unmasked_length_of_u64 = pe - p;
+        unmasked_length_of_u64 = unmasked_length_of_u64 - (unmasked_length_of_u64 & (sizeof(uint64_t) - 1));
+        index += unmasked_length_of_u64;
+        const char *pe_of_u64 = p + unmasked_length_of_u64;
+        for (; p < pe_of_u64; p += sizeof(uint64_t)) {
+            *((uint64_t *) p) ^= mask_key_u64;
         }
     }
-    i = chunk * sizeof(uint64_t);
 #endif
-    for (; i < length; i++) {
-        to[i] = from[i] ^ mask_key[i % CAT_WEBSOCKET_MASK_KEY_LENGTH];
+    for (; p < pe; index++, p++) {
+        *p ^= mask_key[index & (CAT_WEBSOCKET_MASK_KEY_LENGTH - 1)];
     }
+}
+
+static void cat_websocket_mask2(const char *from, char *to, uint64_t length, const char *mask_key, uint64_t index)
+{
+    const char *to_end = to + length;
+#ifdef CAT_L64
+    if (to + sizeof(uint64_t) <= to_end) {
+        for (; to < to_end && ((index & (sizeof(uint64_t) - 1)) != 0); from++, to++, index++) {
+            *to = *from ^ mask_key[index & (CAT_WEBSOCKET_MASK_KEY_LENGTH - 1)];
+        }
+        uint64_t mask_key_u64 = ((uint64_t) (*((uint32_t *) mask_key)) << 32) | *((uint32_t *) mask_key);
+        uint64_t unmasked_length_of_u64 = to_end - to;
+        unmasked_length_of_u64 = unmasked_length_of_u64 - (unmasked_length_of_u64 & (sizeof(uint64_t) - 1));
+        index += unmasked_length_of_u64;
+        const char *to_end_of_u64 = to + unmasked_length_of_u64;
+        for (; to < to_end_of_u64; to += sizeof(uint64_t), from += sizeof(uint64_t)) {
+            *((uint64_t *) to) = *((uint64_t *) from) ^ mask_key_u64;
+        }
+    }
+#endif
+    for (; to < to_end; index++, to++, from++) {
+        *to = *from ^ mask_key[index & (CAT_WEBSOCKET_MASK_KEY_LENGTH - 1)];
+    }
+}
+
+CAT_API void cat_websocket_mask(const char *from, char *to, uint64_t length, const char *mask_key)
+{
+    cat_websocket_mask_ex(from, to, length, mask_key, 0);
 }
 
 CAT_API void cat_websocket_unmask(char *data, uint64_t length, const char *mask_key)
 {
-    if (memcmp(mask_key, CAT_STRS(CAT_WEBSOCKET_EMPTY_MASK_KEY)) == 0) {
-        return;
-    }
-#ifndef CAT_L64
-    uint64_t i = 0;
-#else
-    uint64_t i, chunk = length / sizeof(uint64_t);
-    if (chunk > 0) {
-        uint64_t mask_key_u64 = ((uint64_t) (*((uint32_t *) mask_key)) << 32) | *((uint32_t *) mask_key);
-        for (i = 0; i < chunk; i++) {
-            ((uint64_t *) data)[i] ^= mask_key_u64;
+    cat_websocket_unmask_ex(data, length, mask_key, 0);
+}
+
+CAT_API void cat_websocket_mask_ex(const char *from, char *to, uint64_t length, const char *mask_key, uint64_t index)
+{
+    cat_bool_t mask_key_is_empty = mask_key == NULL || memcmp(mask_key, CAT_STRS(CAT_WEBSOCKET_EMPTY_MASK_KEY)) == 0;
+
+    if (from == to) {
+        if (!mask_key_is_empty) {
+            cat_websocket_mask1(to, length, mask_key, index);
+        }
+    } else {
+        if (mask_key_is_empty) {
+            memmove(to, from, length);
+        } else {
+            cat_websocket_mask2(from, to, length, mask_key, index);
         }
     }
-    i = chunk * sizeof(uint64_t);
-#endif
-    for (; i < length; i++) {
-        data[i] ^= mask_key[i % CAT_WEBSOCKET_MASK_KEY_LENGTH];
-    }
+}
+
+CAT_API void cat_websocket_unmask_ex(char *data, uint64_t length, const char *mask_key, uint64_t index)
+{
+    cat_websocket_mask_ex(data, data, length, mask_key, index);
 }

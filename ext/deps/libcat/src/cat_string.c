@@ -88,30 +88,43 @@ CAT_API char *cat_sprintf(const char *format, ...)
     return string;
 }
 
-CAT_API char *cat_hexprint(const char *data, size_t length)
+CAT_API cat_bool_t cat_str_is_print(const char *string, size_t length)
+{
+    size_t i;
+    for (i = 0; i < length; i++) {
+        if (!isprint(string[i])) {
+            return cat_false;
+        }
+    }
+    return cat_true;
+}
+
+CAT_API char *cat_hex_dump(const char *data, size_t length)
 {
     const size_t width = 5;
-    char *buffer;
-    size_t size = width * length, offset, offsetx;
+    char *escaped;
+    size_t size = width * length;
+    size_t index, escaped_index;
     int n;
 
-    buffer = (char *) cat_malloc(size + 1);
+    escaped = (char *) cat_malloc(size + 1);
 #if CAT_ALLOC_HANDLE_ERRORS
-    if (unlikely(buffer == NULL)) {
+    if (unlikely(escaped == NULL)) {
+        cat_update_last_error_of_syscall("Malloc for escaped string failed");
         return NULL;
     }
 #endif
-    for (offset = 0, offsetx = 0; offset < length; offset++)
-    {
-        n = snprintf(buffer + offsetx, size - offsetx, "0x%02X ", data[offset] & 0xff);
+    for (index = 0, escaped_index = 0; index < length; index++, escaped_index += width) {
+        n = snprintf(escaped + escaped_index, size - escaped_index, "0x%02X ", data[index] & 0xff);
         if (unlikely(n < 0 || (size_t) n != width)) {
-            break;
+            cat_update_last_error_of_syscall("Snprintf() for escaped string failed");
+            cat_free(escaped);
+            return NULL;
         }
-        offsetx += width;
     }
-    buffer[size] = '\0';
+    escaped[size] = '\0';
 
-    return buffer;
+    return escaped;
 }
 
 CAT_API char *cat_srand(char *buffer, size_t count)

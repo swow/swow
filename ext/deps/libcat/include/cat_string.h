@@ -97,7 +97,8 @@ CAT_API char *cat_stpcpy(char *dest, const char *src);
 CAT_API char *cat_vsprintf(const char *format, va_list args); CAT_FREE
 CAT_API char *cat_sprintf(const char *format, ...)            CAT_FREE CAT_ATTRIBUTE_FORMAT(printf, 1, 2);
 
-CAT_API char *cat_hexprint(const char *data, size_t length); CAT_FREE
+CAT_API cat_bool_t cat_str_is_print(const char *string, size_t length);
+CAT_API char *cat_hex_dump(const char *data, size_t length); CAT_FREE
 
 CAT_API char *cat_srand(char *buffer, size_t count);  CAT_MAY_FREE
 CAT_API char *cat_snrand(char *buffer, size_t count); CAT_MAY_FREE
