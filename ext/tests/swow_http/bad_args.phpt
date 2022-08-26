@@ -19,7 +19,7 @@ Assert::throws(function () {
 // bad method or protocol name in Parser::execute
 Assert::throws(function () {
     $buffer = new Swow\Buffer(4096);
-    $buffer->write("BREW /pot-2 HTCPCP/1.0\r\nAccept-Additions: Cream\r\n\r\n");
+    $buffer->append("BREW /pot-2 HTCPCP/1.0\r\nAccept-Additions: Cream\r\n\r\n");
     $parser = new Swow\Http\Parser();
     $parser->execute($buffer->toString());
 }, ParserException::class, expectMessage: '/Invalid method encountered/');
@@ -27,7 +27,7 @@ Assert::throws(function () {
 // bad status code in Parser::execute
 Assert::throws(function () {
     $buffer = new Swow\Buffer(4096);
-    $buffer->write("HTTP/1.1 12450 Blocked by 12dora\r\ncontent-type: coffee\r\n\r\n");
+    $buffer->append("HTTP/1.1 12450 Blocked by 12dora\r\ncontent-type: coffee\r\n\r\n");
     $parser = new Swow\Http\Parser();
     $parser->execute($buffer->toString());
 }, ParserException::class, expectMessage: '/Response overflow/');
@@ -35,7 +35,7 @@ Assert::throws(function () {
 // bad EOF in Parser::finish
 Assert::throws(function () {
     $buffer = new Swow\Buffer(4096);
-    $buffer->write("HTTP/1.0 201 Created\r\ncontent-type: application/json\r\ncontent-len");
+    $buffer->append("HTTP/1.0 201 Created\r\ncontent-type: application/json\r\ncontent-len");
     $parser = new Swow\Http\Parser();
     $parsedOffset = 0;
     while ($parsedOffset !== $buffer->getLength()) {

@@ -34,7 +34,7 @@ $resp_lines = [
     'E',
     'message_start2',
 ];
-$buffer->write(implode("\r\n", $resp_lines));
+$buffer->append(implode("\r\n", $resp_lines));
 
 // create parser
 $parser = new Parser();
@@ -65,7 +65,7 @@ while (true) {
     // read data from buffer according to parser
     $data = '';
     if (Parser::EVENT_FLAG_DATA & $event) {
-        $data = $buffer->peekFrom($parser->getDataOffset(), $parser->getDataLength());
+        $data = $buffer->read($parser->getDataOffset(), $parser->getDataLength());
     }
     switch ($event) {
         case Parser::EVENT_STATUS:
@@ -102,7 +102,7 @@ while (true) {
     }
     if ($parsedOffset === $buffer->getLength()) {
         $new = $randoms[$i - 2];
-        $buffer->write("\r\n" . sprintf('%x', strlen($new)) . "\r\n" . $new);
+        $buffer->append("\r\n" . sprintf('%x', strlen($new)) . "\r\n" . $new);
     }
 }
 

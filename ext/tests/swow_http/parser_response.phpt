@@ -29,7 +29,7 @@ $resp_lines = [
     '',
     $payload,
 ];
-$buffer->write(implode("\r\n", $resp_lines));
+$buffer->append(implode("\r\n", $resp_lines));
 
 // create parser
 $parser = new Parser();
@@ -57,7 +57,7 @@ while (true) {
     // read data from buffer according to parser
     $data = '';
     if (Parser::EVENT_FLAG_DATA & $event) {
-        $data = $buffer->peekFrom($parser->getDataOffset(), $parser->getDataLength());
+        $data = $buffer->read($parser->getDataOffset(), $parser->getDataLength());
     }
     switch ($event) {
         case Parser::EVENT_STATUS:
