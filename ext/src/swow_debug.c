@@ -443,7 +443,7 @@ static PHP_FUNCTION(Swow_Debug_buildTraceAsString)
     RETURN_STR(swow_debug_build_trace_as_string(trace));
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_Swow_Debug_registerExtendedStatementHandler, 0, 1, Swow\x5cUtil\\Handler, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_Swow_Debug_registerExtendedStatementHandler, 0, 1, Swow\\\125til\\Handler, 0)
     ZEND_ARG_TYPE_INFO(0, handler, IS_CALLABLE, 0)
 ZEND_END_ARG_INFO()
 

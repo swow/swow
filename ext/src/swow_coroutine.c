@@ -2092,7 +2092,7 @@ static PHP_METHOD(Swow_Coroutine, __debugInfo)
     RETURN_DEBUG_INFO_WITH_PROPERTIES(&zdebug_info);
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_class_Swow_Coroutine_registerDeadlockHandler, 0, 1, Swow\x5cUtil\\Handler, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_class_Swow_Coroutine_registerDeadlockHandler, 0, 1, Swow\\\125til\\Handler, 0)
     ZEND_ARG_TYPE_INFO(0, callable, IS_CALLABLE, 0)
 ZEND_END_ARG_INFO()
 
