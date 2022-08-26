@@ -11,16 +11,16 @@ require __DIR__ . '/../include/bootstrap.php';
 use Swow\Coroutine;
 
 Assert::throws(function () {
-    $coro = Coroutine::run('I am NOT a callable');
+    $coro = Coroutine::run('I am NOT a callable'); // for Coroutine::run()
     echo 'Never Here' . PHP_LF;
     var_dump($coro);
-}, Error::class, 'Coroutine function must be callable, function "I am NOT a callable" not found or invalid function name');
+}, Error::class, expectMessage: '/Argument #1 \(\$callable\) must be a valid callback, function "I am NOT a callable" not found or invalid function name/');
 
 Assert::throws(function () {
-    $coro = new Coroutine('I am NOT a callable');
+    $coro = new Coroutine('I am NOT a callable'); // for new Coroutine()
     echo 'Never Here' . PHP_LF;
     var_dump($coro);
-}, Error::class, 'Coroutine function must be callable, function "I am NOT a callable" not found or invalid function name');
+}, Error::class, expectMessage: '/Argument #1 \(\$callable\) must be a valid callback, function "I am NOT a callable" not found or invalid function name/');
 
 $coro = new Coroutine(function () {
     Coroutine::yield();
@@ -28,19 +28,13 @@ $coro = new Coroutine(function () {
 
 $coro->resume();
 
-try {
+Assert::throws(function () use ($coro) {
     $ret = $coro->call('I am NOT a callable');
     echo 'Never Here' . PHP_LF;
     var_dump($ret);
-} catch (Throwable $e) {
-} finally {
-    $coro->resume();
-}
+}, Error::class, expectMessage: '/Argument #1 \(\$callable\) must be a valid callback, function "I am NOT a callable" not found or invalid function name/');
 
-if (isset($e)) {
-    Assert::isInstanceOf($e, Error::class);
-    //Assert::same($e->getMessage(), 'Coroutine::call() only accept callable parameter, function "I am NOT a callable" not found or invalid function name');
-}
+$coro->resume();
 
 echo 'Done' . PHP_LF;
 
