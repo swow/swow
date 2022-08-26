@@ -40,7 +40,7 @@ $readFromAssign = static function (object $storage): object {
         $channel->push($throwable ?? null);
     });
     $client = new Socket(Socket::TYPE_UDP);
-    $client->sendStringTo('X', $server->getSockAddress(), $server->getSockPort());
+    $client->sendTo('X', address: $server->getSockAddress(), port: $server->getSockPort());
     $throwable = $channel->pop();
     if ($throwable) {
         throw $throwable;
