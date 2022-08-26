@@ -68,7 +68,7 @@ Coroutine::run(function () use ($server, $wrServer) {
                 '',
                 $payload,
             ];
-            $connection->sendString(implode("\r\n", $response));
+            $connection->send(implode("\r\n", $response));
             $connection->close();
         });
     }
