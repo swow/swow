@@ -85,7 +85,7 @@ object(Swow\Buffer)#%d (%d) {
     ["round"]=>
     int(%d)
     ["elapsed"]=>
-    string(3) "%s"
+    string(%d) "%s"
     ["trace"]=>
     string(%s) "
 #0 %s(%d): Swow\Socket->recvFrom(Object(Swow\Buffer))
