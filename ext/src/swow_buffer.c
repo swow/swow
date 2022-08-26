@@ -196,7 +196,7 @@ SWOW_API zend_string *swow_buffer_get_string(swow_buffer_t *sbuffer)
     return swow_buffer_get_string_from_handle(buffer);
 }
 
-SWOW_API char *swow_string_get_readable_space_v(zend_string *string, zend_long start, zend_long *length, uint32_t vector_arg_num, uint32_t vector_index, uint32_t base_arg_num)
+SWOW_API const char *swow_string_get_readable_space_v(zend_string *string, zend_long start, zend_long *length, uint32_t vector_arg_num, uint32_t vector_index, uint32_t base_arg_num)
 {
     if (!swow_buffer__check_readable_space("string", ZSTR_LEN(string), start, length, vector_arg_num, vector_index, base_arg_num + 1)) {
         return NULL;
@@ -204,7 +204,7 @@ SWOW_API char *swow_string_get_readable_space_v(zend_string *string, zend_long s
     return ZSTR_VAL(string) + start;
 }
 
-SWOW_API char *swow_buffer_get_readable_space_v(swow_buffer_t *s_buffer, zend_long start, zend_long *length, uint32_t vector_arg_num, uint32_t vector_index, uint32_t base_arg_num)
+SWOW_API const char *swow_buffer_get_readable_space_v(swow_buffer_t *s_buffer, zend_long start, zend_long *length, uint32_t vector_arg_num, uint32_t vector_index, uint32_t base_arg_num)
 {
     if (UNEXPECTED(s_buffer->buffer.value == NULL)) {
         swow_buffer_unallocated_argument_error(vector_arg_num, vector_index, base_arg_num);

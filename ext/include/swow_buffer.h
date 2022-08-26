@@ -67,16 +67,16 @@ static zend_always_inline swow_buffer_t *swow_buffer_get_from_object(zend_object
 
 SWOW_API zend_string *swow_buffer_get_string(swow_buffer_t *s_buffer);
 
-SWOW_API char *swow_string_get_readable_space_v(zend_string *string, zend_long start, zend_long *length, uint32_t vector_arg_num, uint32_t vector_index, uint32_t base_arg_num);
-SWOW_API char *swow_buffer_get_readable_space_v(swow_buffer_t *s_buffer, zend_long start, zend_long *length, uint32_t vector_arg_num, uint32_t vector_index, uint32_t base_arg_num);
+SWOW_API const char *swow_string_get_readable_space_v(zend_string *string, zend_long start, zend_long *length, uint32_t vector_arg_num, uint32_t vector_index, uint32_t base_arg_num);
+SWOW_API const char *swow_buffer_get_readable_space_v(swow_buffer_t *s_buffer, zend_long start, zend_long *length, uint32_t vector_arg_num, uint32_t vector_index, uint32_t base_arg_num);
 SWOW_API char *swow_buffer_get_writable_space_v(swow_buffer_t *s_buffer, zend_long offset, zend_long *size, uint32_t vector_arg_num, uint32_t vector_index, uint32_t base_arg_num);
 
-static zend_always_inline char *swow_string_get_readable_space(zend_string *string, zend_long start, zend_long *length, uint32_t arg_num)
+static zend_always_inline const char *swow_string_get_readable_space(zend_string *string, zend_long start, zend_long *length, uint32_t arg_num)
 {
     return swow_string_get_readable_space_v(string, start, length, 0, 0, arg_num);
 }
 
-static zend_always_inline char *swow_buffer_get_readable_space(swow_buffer_t *s_buffer, zend_long start, zend_long *length, uint32_t arg_num)
+static zend_always_inline const char *swow_buffer_get_readable_space(swow_buffer_t *s_buffer, zend_long start, zend_long *length, uint32_t arg_num)
 {
     return swow_buffer_get_readable_space_v(s_buffer, start, length, 0, 0, arg_num);
 }
