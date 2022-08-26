@@ -8,16 +8,17 @@ require __DIR__ . '/../include/skipif.php';
 <?php
 require __DIR__ . '/../include/bootstrap.php';
 
-use Swow\WebSocket\Frame;
+use Swow\WebSocket\Header;
 
-$frame = new Frame();
-$frame->setMaskKey('');
+$frame = new Header();
+$frame->setPayloadInfo(payloadLength: 0, maskKey: '1234');
+$frame->setPayloadInfo(payloadLength: 0, maskKey: "\0\0\0\0");
 Assert::throws(function () use ($frame) {
-    $frame->setMaskKey('1');
-}, ValueError::class);
+    $frame->setPayloadInfo(payloadLength: 0, maskKey: '1');
+}, ValueError::class, expectMessage: '/Argument #\d \(\$maskKey\) length should be 0 or 4/');
 Assert::throws(function () use ($frame) {
-    $frame->setMaskKey('12345');
-}, ValueError::class);
+    $frame->setPayloadInfo(payloadLength: 0, maskKey: '12345');
+}, ValueError::class, expectMessage: '/Argument #\d \(\$maskKey\) length should be 0 or 4/');
 
 echo 'Done' . PHP_LF;
 
