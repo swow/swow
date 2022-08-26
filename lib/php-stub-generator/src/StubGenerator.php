@@ -27,12 +27,14 @@ use ReflectionUnionType;
 use Reflector;
 use RuntimeException;
 
+use function addslashes;
 use function array_map;
 use function array_merge;
 use function array_pop;
 use function array_slice;
 use function array_walk;
 use function bin2hex;
+use function chunk_split;
 use function class_exists;
 use function count;
 use function ctype_print;
@@ -53,6 +55,7 @@ use function is_resource;
 use function is_string;
 use function ltrim;
 use function method_exists;
+use function preg_match;
 use function sprintf;
 use function str_contains;
 use function str_repeat;
@@ -223,13 +226,35 @@ class StubGenerator
         }
     }
 
+    protected static function escapeString(string $string): string
+    {
+        if ($string && !ctype_print($string)) {
+            $slashedString = addslashes($string);
+            if (ctype_print($slashedString)) {
+                return $slashedString;
+            }
+            return '\\x' . substr(chunk_split(bin2hex($string), 2, '\\x'), 0, -2);
+        }
+        return $string;
+    }
+
+    protected static function quoteString(string $string)
+    {
+        $string = static::escapeString($string);
+        if (!preg_match('/(?<!\\\\)(?:\\\\{2})*\\\\(?!["$\\\\])/', $string)) {
+            return sprintf("'%s'", str_replace(['\\"', '\\$', '\''], ['"', '$', '\\\''], $string));
+        } else {
+            return sprintf('"%s"', $string);
+        }
+    }
+
     protected static function convertValueToString(mixed $value): string
     {
         return match (true) {
             is_int($value), is_float($value) => (string) $value,
             is_null($value) => 'null',
             is_bool($value) => $value ? 'true' : 'false',
-            is_string($value) => '\'' . (ctype_print($value) ? $value : bin2hex($value)) . '\'',
+            is_string($value) => static::quoteString($value),
             is_array($value) => '[]',
             default => var_export($value, true),
         };
@@ -439,11 +464,11 @@ class StubGenerator
                 $defaultParamValue = $param->getDefaultValue();
                 $defaultParamConstantName = $param->getDefaultValueConstantName();
                 $defaultParamValueString = $this::convertValueToString($defaultParamValue);
-                if (is_string($defaultParamValue) && ($paramTypeName !== 'string' || preg_match('/[\W]/', $defaultParamValue) > 0)) {
+                /* if (is_string($defaultParamValue) && ($paramTypeName !== 'string' || preg_match('/[\W]/', $defaultParamValue) > 0)) {
                     $defaultParamValueTip = 'null';
                     $defaultParamValueTipOnDoc = trim($defaultParamValueString, '\'');
                     $hasSpecialDefaultParamValue = true;
-                } else {
+                } else */ {
                     if (is_string($defaultParamConstantName) && $defaultParamConstantName !== '') {
                         $defaultParamValueTip = "\\{$defaultParamConstantName}";
                         if (!$this->genArginfoMode && str_contains($defaultParamValueTip, '::')) {
