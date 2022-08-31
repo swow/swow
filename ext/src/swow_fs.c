@@ -35,7 +35,7 @@
 #include "cat_work.h"
 #include "cat_time.h"
 
-// from main/streams/plain_wrapper.c @ aec08cc841a436a9a28468ce420e2f39adc3515a
+// from main/streams/plain_wrapper.c @ e2bd3b1e999b62cb0b6135f7c6a5a237a1200077
 
 #include "php.h"
 #include "php_globals.h"
@@ -298,7 +298,7 @@ static inline int swow_fs_stat_mock(const char *path, zend_stat_t *statbuf, int 
 }
 #undef COPY_MEMBER
 
-// from win32/winutil.c @ 01b3fc03c30c6cb85038250bb5640be3a09c6a32
+// from win32/winutil.c @ 9e80947e343b253e078abfc9d1d4f800342c26f8
 #ifdef PHP_WIN32
 static int swow_win32_check_trailing_space(const char *path, const size_t path_len)
 {
@@ -317,7 +317,7 @@ static int swow_win32_check_trailing_space(const char *path, const size_t path_l
 }
 #endif
 
-// from main/streams/cast.c @ 01b3fc03c30c6cb85038250bb5640be3a09c6a32
+// from main/streams/cast.c @ 067df263448ee26013cddee1065bc9c1f028bd23
 static void swow_stream_mode_sanitize_fdopen_fopencookie(php_stream *stream, char *result)
 {
     /* replace modes not supported by fdopen and fopencookie, but supported
@@ -845,7 +845,7 @@ static php_stream *_swow_stream_fopen_from_file_int(FILE *file, const char *mode
     return php_stream_alloc_rel(&php_stream_stdio_ops, self, 0, mode);
 }
 
-// from main/php_open_temporary_file.c
+// from main/php_open_temporary_file.c @ 01b3fc03c30c6cb85038250bb5640be3a09c6a32
 static int swow_do_open_temporary_file(const char *path, const char *pfx, zend_string **opened_path_p)
 {
     char opened_path[MAXPATHLEN];
@@ -899,7 +899,6 @@ static int swow_do_open_temporary_file(const char *path, const char *pfx, zend_s
     return fd;
 }
 
-// from main/php_open_temporary_file.c
 static int swow_open_temporary_fd(const char *dir, const char *pfx, zend_string **opened_path_p)
 {
     int fd;
@@ -993,7 +992,7 @@ static void detect_is_seekable(swow_stdio_stream_data *self) {
 #endif
 }
 
-static php_stream *_swow_stream_fopen_from_fd(int fd, const char *mode, const char *persistent_id STREAMS_DC)
+static php_stream *_swow_stream_fopen_from_fd(int fd, const char *mode, const char *persistent_id, bool zero_position STREAMS_DC)
 {
     php_stream *stream = swow_stream_fopen_from_fd_int_rel(fd, mode, persistent_id);
 
@@ -1004,6 +1003,9 @@ static php_stream *_swow_stream_fopen_from_fd(int fd, const char *mode, const ch
         if (!self->is_seekable) {
             stream->flags |= PHP_STREAM_FLAG_NO_SEEK;
             stream->position = -1;
+        } else if (zero_position) {
+            ZEND_ASSERT(zend_lseek(self->fd, 0, SEEK_CUR) == 0);
+            stream->position = 0;
         } else {
             stream->position = cat_fs_lseek(self->fd, 0, SEEK_CUR);
             UPDATE_ERRNO_FROM_CAT();
@@ -1594,7 +1596,11 @@ static int swow_stdiop_fs_set_option(php_stream *stream, int option, int value, 
                             size_t rounded_offset = (range->offset / gran) * gran;
                             delta = (DWORD)(range->offset - rounded_offset);
                             loffs = (DWORD)rounded_offset;
+#ifdef _WIN64
                             hoffs = (DWORD)(rounded_offset >> 32);
+#else
+                            hoffs = 0;
+#endif
                         }
 
                         /* MapViewOfFile()ing zero bytes would map to the end of the file; match *nix behavior instead */
@@ -1862,7 +1868,7 @@ SWOW_API  php_stream *_swow_stream_fopen(const char *filename, const char *mode,
                     //TODO: avoid reallocation???
                     *opened_path = zend_string_init(realpath, strlen(realpath), 0);
                 }
-                /* fall through */
+                ZEND_FALLTHROUGH;
 
             case PHP_STREAM_PERSISTENT_FAILURE:
                 efree(persistent_id);
@@ -1871,7 +1877,14 @@ SWOW_API  php_stream *_swow_stream_fopen(const char *filename, const char *mode,
     }
     fd = swow_fs_open(realpath, open_flags, 0666);
     if (fd != -1)    {
-        ret = _swow_stream_fopen_from_fd(fd, mode, persistent_id STREAMS_REL_CC);
+        // if (options & STREAM_OPEN_FOR_INCLUDE) never be true (filtered out on start)
+        /* skip the lseek(SEEK_CUR) system call to
+         * determine the current offset because we
+         * know newly opened files are at offset zero
+         * (unless the file has been opened in
+         * O_APPEND mode) */
+        /* ret = php_stream_fopen_from_fd_rel(fd, mode, persistent_id, (open_flags & O_APPEND) == 0); */
+        ret = _swow_stream_fopen_from_fd(fd, mode, persistent_id, (open_flags & O_APPEND) == 0 STREAMS_REL_CC);
 
         if (ret)    {
             if (opened_path) {
