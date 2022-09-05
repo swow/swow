@@ -1140,13 +1140,13 @@ namespace Swow
 
         /**
          * @var int $timeout [optional] = $this->getAcceptTimeout()
-         * @retrun static Notice: it returns a new un-constructed connection instead of returning itself
+         * @return static Notice: it returns a new un-constructed connection instead of returning itself
          */
         public function accept(?int $timeout = null): static { }
 
         /**
          * @var int $timeout [optional] = $this->getAcceptTimeout()
-         * @retrun $this Notice: it does not return the connection, but returns itself
+         * @return $this Notice: it does not return the connection, but returns itself
          */
         public function acceptTo(self $connection, ?int $timeout = null): static { }
 
