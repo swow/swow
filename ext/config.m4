@@ -205,8 +205,8 @@ if test "${PHP_SWOW}" != "no"; then
     AC_MSG_ERROR([failed to detect PHP version, please report])
   fi
 
-  if test "${SWOW_PHP_VERSION_ID}" -lt "80000" || test "${SWOW_PHP_VERSION_ID}" -gt "80200"; then
-    AC_MSG_ERROR([not supported. Need a PHP version >= 8.0.0 and <= 8.2.0 (found $SWOW_PHP_VERSION_ID)])
+  if test "${SWOW_PHP_VERSION_ID}" -lt "80000"; then
+    AC_MSG_ERROR([not supported. Need a PHP version >= 8.0.0 (found $SWOW_PHP_VERSION_ID)])
   else
     AC_MSG_RESULT([supported ($SWOW_PHP_VERSION_ID)])
   fi
