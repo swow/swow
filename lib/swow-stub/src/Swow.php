@@ -12,13 +12,22 @@ namespace
         public const EXTRA_VERSION = '';
         public const VERSION = '0.1.0';
         public const VERSION_ID = 100;
-
+        /**
+         * Return if this Swow extension is built with library specified by $lib
+         *
+         * @param string $lib the library name, can be 'curl' or 'openssl' now
+         */
         public static function isBuiltWith(string $lib): bool { }
     }
 }
 
 namespace
 {
+    /**
+     * sleep milliseconds
+     *
+     * @param integer $milli_seconds time to sleep, in ms
+     */
     function msleep(int $milli_seconds): int { }
 }
 
@@ -577,8 +586,18 @@ namespace Swow
         public const TYPES_ABNORMAL = 60;
         public const TYPES_UNFILTERABLE = 48;
 
+        /**
+         * get enabled log types
+         *
+         * @return integer the log type flag
+         */
         public static function getTypes(): int { }
 
+        /**
+         * set logging types
+         *
+         * @param integer $types the log type flag
+         */
         public static function setTypes(int $types): void { }
     }
 }
@@ -608,6 +627,15 @@ namespace Swow
 
 namespace Swow
 {
+    /**
+     * Coroutine class is the abstract of [coroutine](https://en.wikipedia.org/wiki/Coroutine).
+     * 
+     * A coroutine is a subroutine actively suspend itself, and get resumed when there is no other running coroutines, it's co-operative so it was called co-routine. 
+     * 
+     * We call suspending self "yield", when yielding form a coroutine, the coroutine suspends its execution, the scheduler will find and execute another coroutine can continue.
+     * 
+     * Swow have hooked most of IO operation functions in PHP, an IO coroutine will yield when calling these functions. When the IO operation is done, and current coroutine yield, the scheduler may continue the fore-mentioned IO coroutine. This is how Swow make IO concurrency.
+     */
     class Coroutine
     {
         public const STATE_NONE = 0;
@@ -617,20 +645,66 @@ namespace Swow
 
         public function __construct(callable $callable) { }
 
+        /**
+         * Create a coroutine and run it immediately
+         * 
+         * @note context swap happens here
+         *
+         * @param callable $callable the coroutine body
+         * @param mixed ...$data arguments passed to the callable
+         * @return static the new created coroutine
+         */
         public static function run(callable $callable, mixed ...$data): static { }
 
+        /**
+         * Resume coroutine execution
+         *
+         * @note context swap happens here when success
+         * 
+         * @param mixed ...$data
+         * @return mixed
+         */
         public function resume(mixed ...$data): mixed { }
 
+        /**
+         * Yield from current coroutine
+         *
+         * @note context swap happens here when success
+         * 
+         * @param mixed $data
+         * @return mixed
+         */
         public static function yield(mixed $data = null): mixed { }
 
+        /**
+         * Get unique coroutine id
+         *
+         * @return integer
+         */
         public function getId(): int { }
 
+        /**
+         * Get current coroutine
+         */
         public static function getCurrent(): self|static { }
 
+        /**
+         * Get main (the most outter) coroutine
+         */
         public static function getMain(): self|static { }
 
+        /**
+         * Get previous coroutine
+         *
+         * @return self|static
+         */
         public function getPrevious(): self|static { }
 
+        /**
+         * Get coroutine state
+         *
+         * @return integer the enumurate number: static::STATE_*
+         */
         public function getState(): int { }
 
         public function getStateName(): string { }
