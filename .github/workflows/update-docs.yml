@@ -1,0 +1,18 @@
+name: Update docs
+
+on:
+  push:
+
+jobs:
+  call:
+    name: Call docs repository workflow
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call update
+        uses: peter-evans/repository-dispatch@v2
+        with:
+          token: ${{ secrets.DOCS_TOKEN }}
+          event-type: update
+          repository: 'toastrun/docs.toast.run'
+          client-payload:
+            swow_ref: ${{ github.sha }}
