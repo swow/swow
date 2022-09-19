@@ -379,7 +379,21 @@ class StubGenerator
         $name = ltrim(str_replace($function->getNamespaceName(), '', $function->getName(), $isInNamespace), '\\');
         $scope = $function instanceof ReflectionMethod ? $function->getDeclaringClass()->getName() : '';
 
+        // prepare comments
         $comment = [];
+        if ($function instanceof ReflectionFunction) {
+            $fullName = $function->getName();
+        } else { /* if ($function instanceof ReflectionMethod) */
+            $operator = $function->isStatic() ? '::' : '->';
+            $fullName = "{$function->getDeclaringClass()->getName()}{$operator}{$function->getShortName()}";
+        }
+        if (!$this->genArginfoMode) {
+            $userComment = $this->userCommentMap[$fullName] ?? '';
+            if ($userComment) {
+                $comment = static::solveRawUserComment($userComment);
+            }
+        }
+
         $paramsDeclarations = [];
         $params = $function->getParameters();
         foreach ($params as $param) {
@@ -449,27 +463,16 @@ class StubGenerator
             } catch (ReflectionException) {
                 $defaultParamValueTip = $defaultParamValueTipOnDoc = '';
             }
-            if ($function instanceof ReflectionFunction) {
-                $fullName = $function->getName();
-            } else { /* if ($function instanceof ReflectionMethod) */
-                $operator = $function->isStatic() ? '::' : '->';
-                $fullName = "{$function->getDeclaringClass()->getName()}{$operator}{$function->getShortName()}";
-            }
-            if (!$this->genArginfoMode) {
-                $userComment = $this->userCommentMap[$fullName] ?? '';
-                if ($userComment) {
-                    $comment = static::solveRawUserComment($userComment);
-                } elseif ($hasSpecialDefaultParamValue) {
-                    $comment[] = sprintf(
-                        '@param %s%s%s$%s%s%s',
-                        $paramTypeName,
-                        $paramTypeName ? ' ' : '',
-                        $variadic,
-                        $param->getName(),
-                        !$variadic ? ($param->isOptional() ? ' [optional]' : ' [required]') : '',
-                        $defaultParamValueTipOnDoc !== '' ? " = {$defaultParamValueTipOnDoc}" : ''
-                    );
-                }
+            if (!$this->genArginfoMode && $hasSpecialDefaultParamValue) {
+                $comment[] = sprintf(
+                    '@param %s%s%s$%s%s%s',
+                    $paramTypeName,
+                    $paramTypeName ? ' ' : '',
+                    $variadic,
+                    $param->getName(),
+                    !$variadic ? ($param->isOptional() ? ' [optional]' : ' [required]') : '',
+                    $defaultParamValueTipOnDoc !== '' ? " = {$defaultParamValueTipOnDoc}" : ''
+                );
             }
             $paramsDeclarations[] = sprintf(
                 '%s%s%s%s$%s%s',
