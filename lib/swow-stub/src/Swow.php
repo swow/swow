@@ -12,6 +12,7 @@ namespace
         public const EXTRA_VERSION = '';
         public const VERSION = '0.1.0';
         public const VERSION_ID = 100;
+
         /**
          * Return if this Swow extension is built with library specified by $lib
          *
@@ -29,6 +30,34 @@ namespace
      * @param integer $milli_seconds time to sleep, in ms
      */
     function msleep(int $milli_seconds): int { }
+}
+
+namespace Swow
+{
+    class Module
+    {
+        public const TYPE_CORE = 1;
+        public const TYPE_COROUTINE = 2;
+        public const TYPE_CHANNEL = 4;
+        public const TYPE_SYNC = 8;
+        public const TYPE_EVENT = 16;
+        public const TYPE_TIME = 32;
+        public const TYPE_SOCKET = 64;
+        public const TYPE_DNS = 128;
+        public const TYPE_WORK = 256;
+        public const TYPE_BUFFER = 512;
+        public const TYPE_FS = 1024;
+        public const TYPE_SIGNAL = 2048;
+        public const TYPE_PROCESS = 4096;
+        public const TYPE_THREAD = 8192;
+        public const TYPE_OS = 16384;
+        public const TYPE_WATCH_DOG = 131072;
+        public const TYPE_PROTOCOL = 262144;
+        public const TYPE_SSL = 2097152;
+        public const TYPE_EXT = 4194304;
+        public const TYPE_TEST = 8388608;
+        public const TYPES_ALL = -1671169;
+    }
 }
 
 namespace Swow
@@ -599,6 +628,10 @@ namespace Swow
          * @param integer $types the log type flag
          */
         public static function setTypes(int $types): void { }
+
+        public static function getModuleTypes(): int { }
+
+        public static function setModuleTypes(int $moduleTypes): void { }
     }
 }
 
@@ -629,11 +662,11 @@ namespace Swow
 {
     /**
      * Coroutine class is the abstract of [coroutine](https://en.wikipedia.org/wiki/Coroutine).
-     * 
-     * A coroutine is a subroutine actively suspend itself, and get resumed when there is no other running coroutines, it's co-operative so it was called co-routine. 
-     * 
+     *
+     * A coroutine is a subroutine actively suspend itself, and get resumed when there is no other running coroutines, it's co-operative so it was called co-routine.
+     *
      * We call suspending self "yield", when yielding form a coroutine, the coroutine suspends its execution, the scheduler will find and execute another coroutine can continue.
-     * 
+     *
      * Swow have hooked most of IO operation functions in PHP, an IO coroutine will yield when calling these functions. When the IO operation is done, and current coroutine yield, the scheduler may continue the fore-mentioned IO coroutine. This is how Swow make IO concurrency.
      */
     class Coroutine
@@ -647,7 +680,7 @@ namespace Swow
 
         /**
          * Create a coroutine and run it immediately
-         * 
+         *
          * @note context swap happens here
          *
          * @param callable $callable the coroutine body
@@ -660,7 +693,7 @@ namespace Swow
          * Resume coroutine execution
          *
          * @note context swap happens here when success
-         * 
+         *
          * @param mixed ...$data
          * @return mixed
          */
@@ -670,7 +703,7 @@ namespace Swow
          * Yield from current coroutine
          *
          * @note context swap happens here when success
-         * 
+         *
          * @param mixed $data
          * @return mixed
          */
@@ -683,14 +716,10 @@ namespace Swow
          */
         public function getId(): int { }
 
-        /**
-         * Get current coroutine
-         */
+        /** Get current coroutine */
         public static function getCurrent(): self|static { }
 
-        /**
-         * Get main (the most outter) coroutine
-         */
+        /** Get main (the most outter) coroutine */
         public static function getMain(): self|static { }
 
         /**
@@ -703,7 +732,7 @@ namespace Swow
         /**
          * Get coroutine state
          *
-         * @return integer the enumurate number: static::STATE_*
+         * @return integer the enumurate number: static::STATE_
          */
         public function getState(): int { }
 
@@ -1227,7 +1256,7 @@ namespace Swow
         /** @var int $timeout [optional] = $this->getConnectTimeout() */
         public function connect(string $name, int $port = 0, ?int $timeout = null): static { }
 
-        public function enableCrypto(?array $options = null): static { }
+        public function enableCrypto(?Swow\Socket\CryptoOptions $connection = null): static { }
 
         public function getSockAddress(): string { }
 
@@ -1977,14 +2006,14 @@ namespace Swow
 
 namespace Swow
 {
-    class Watchdog
+    class WatchDog
     {
         /**
          * @param int $quantum If the blocking time exceeds the quantum, alerter will be triggered.
          * @param int $threshold If the blocking time exceeds the threshold (means the alerter does not alleviate the CPU starvation), it is considered that the system call blocking occurred.
          * @param callable|int|float|null $alerter When it is callable, it will be called when blocking occurred, the developer can choose to suspend the coroutine or kill the coroutine;
-         *                                         when it is numeric, Coroutine will be delayed to run with sleep() in millisecond to alleviate CPU starvation;
-         *                                         when it is null, Coroutine will be delayed to run at the next round of the event loop starts to alleviate CPU starvation.
+         * when it is numeric, Coroutine will be delayed to run with sleep() in millisecond to alleviate CPU starvation;
+         * when it is null, Coroutine will be delayed to run at the next round of the event loop starts to alleviate CPU starvation.
          * @return void
          */
         public static function run(int $quantum = 0, int $threshold = 0, callable|int|float|null $alerter = null): void { }
@@ -1997,7 +2026,7 @@ namespace Swow
 
 namespace Swow
 {
-    class WatchdogException extends \Swow\Exception { }
+    class WatchDogException extends \Swow\Exception { }
 }
 
 namespace Swow
