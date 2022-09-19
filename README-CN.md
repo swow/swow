@@ -158,7 +158,7 @@ sudo make install
 
 #### Windows安装
 
-手动构建见[文档](https://wiki.s-wow.com/#/zh-cn/install?id=%e7%bc%96%e8%af%91%e5%ae%89%e8%a3%85-windows)，你也可以考虑使用官方DLL发布。
+手动构建见[文档](https://docs.toast.run/swow/chs/install.html#%E7%BC%96%E8%AF%91%E5%AE%89%E8%A3%85-windows)，你也可以考虑使用官方DLL发布。
 
 ## ℹ️ IDE助手
 
@@ -180,7 +180,8 @@ Swow的[PHP源代码](lib)也是良好的示例，Swow是为PHP语言和网络�
 
 ## 🛠 开发 & 讨论
 
-- **中文文档**：[https://wiki.s-wow.com](https://wiki.s-wow.com)（尚未完成，敬请期待）
+- **Wiki**：[https://docs.toast.run/swow/chs/](https://docs.toast.run/swow/chs/)（尚未完成，敬请期待）
+- **API文档**：[https://docs.toast.run/swow-api/ci.html](https://docs.toast.run/swow-api/ci.html)（从代码自动生成）
 - **计划列表**：[https://github.com/swow/swow/projects](https://github.com/swow/swow/projects)
 
 [license-badge]: https://img.shields.io/badge/license-apache2-blue.svg

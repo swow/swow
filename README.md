@@ -159,7 +159,7 @@ sudo make install
 
 #### On Windows
 
-There is [document(CN)](https://wiki.s-wow.com/#/zh-cn/install?id=%e7%bc%96%e8%af%91%e5%ae%89%e8%a3%85-windows) for manual build, you can also use official DLL releases.
+There is [document](https://docs.toast.run/swow/en/install.html#manually-build-and-install-windows) for manual build, you can also use official DLL releases.
 
 ## ℹ️ IDE helper
 
@@ -181,7 +181,8 @@ Swow's [PHP library codes](lib) are good examples. Swow is an incredible tool fo
 
 ## 🛠 Development & Discussion
 
-- **Chinese Document**：[https://wiki.s-wow.com](https://wiki.s-wow.com)（Not yet completed, so stay tuned）
+- **Wiki**：[https://docs.toast.run/swow/en/](https://docs.toast.run/swow/en/) (Not yet completed, so stay tuned)
+- **API Reference**：[https://docs.toast.run/swow-api/ci.html](https://docs.toast.run/swow-api/ci.html) (Automatically generated from source code)
 - **TODO**：[https://github.com/swow/swow/projects](https://github.com/swow/swow/projects)
 
 [license-badge]: https://img.shields.io/badge/license-apache2-blue.svg
