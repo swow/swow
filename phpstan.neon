@@ -1,11 +1,11 @@
 parameters:
     level: 6
     paths:
+        - examples
         - lib
+        - tools
     stubFiles:
         - lib/swow-stub/src/Swow.php
-    scanFiles:
-        - ext/tests/include/bootstrap.php
     bootstrapFiles:
         - lib/swow-stub/src/Swow.php
     checkGenericClassInNonGenericObjectType: false

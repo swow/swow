@@ -11,28 +11,28 @@
 
 declare(strict_types=1);
 
-ini_set('memory_limit', '1G');
-
-require __DIR__ . '/../autoload.php';
-
 use Swow\Coroutine;
 use Swow\CoroutineException;
 use Swow\Errno;
 use Swow\Http\Status as HttpStatus;
 use Swow\Psr7\Client;
 use Swow\Psr7\ResponseException;
-use Swow\Psr7\Server as HttpServer;
+use Swow\Psr7\Server as Psr7Server;
 use Swow\Psr7\ServerRequest;
 use Swow\Psr7\WebSocketFrame;
 use Swow\Socket;
 use Swow\SocketException;
 use Swow\WebSocket\Opcode as WebSocketOpcode;
 
+require __DIR__ . '/../autoload.php';
+
+ini_set('memory_limit', '1G');
+
 $host = getenv('SERVER_HOST') ?: '127.0.0.1';
 $port = (int) (getenv('SERVER_PORT') ?: 9764);
 $backlog = (int) (getenv('SERVER_BACKLOG') ?: Socket::DEFAULT_BACKLOG);
 
-$server = new HttpServer();
+$server = new Psr7Server();
 $server->bind($host, $port)->listen($backlog);
 while (true) {
     try {

@@ -10,12 +10,3 @@
  */
 
 declare(strict_types=1);
-
-(static function (): void {
-    $bootstrap = __DIR__ . '/../../../ext/tests/include/bootstrap.php';
-    if (file_exists($bootstrap)) {
-        require $bootstrap;
-    } else {
-        throw new RuntimeException('Bootstrap file not found');
-    }
-})();
