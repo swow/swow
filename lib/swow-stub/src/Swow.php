@@ -2288,7 +2288,7 @@ namespace Swow\WebSocket
         public const PING = '8900';
         public const PONG = '8a00';
 
-        public function __construct(int $opcode = \Swow\WebSocket\Opcode::TEXT, int $payloadLength = 0, bool $fin = true, string $maskKey = '') { }
+        public function __construct(bool $fin = true, bool $rsv1 = false, bool $rsv2 = false, bool $rsv3 = false, int $opcode = \Swow\WebSocket\Opcode::TEXT, int $payloadLength = 0, string $maskKey = '') { }
 
         public function getHeaderSize(): int { }
 

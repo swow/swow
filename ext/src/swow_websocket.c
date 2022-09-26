@@ -103,47 +103,46 @@ static zend_object *swow_websocket_header_create_object(zend_class_entry *ce)
     } \
 } while (0)
 
-
 ZEND_BEGIN_ARG_INFO_EX(arginfo_class_Swow_WebSocket_Header___construct, 0, 0, 0)
-    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, opcode, IS_LONG, 0, "Swow\\WebSocket\\Opcode::TEXT")
-    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, payloadLength, IS_LONG, 0, "0")
-    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, maskKey, IS_STRING, 0, "\'\'")
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, fin, _IS_BOOL, 0, "true")
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, rsv1, _IS_BOOL, 0, "false")
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, rsv2, _IS_BOOL, 0, "false")
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, rsv3, _IS_BOOL, 0, "false")
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, opcode, IS_LONG, 0, "Swow\\WebSocket\\Opcode::TEXT")
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, payloadLength, IS_LONG, 0, "0")
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, maskKey, IS_STRING, 0, "\'\'")
 ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_WebSocket_Header, __construct)
 {
     SWOW_WEBSOCKET_HEADER_GETTER(s_header, header);
-    zend_long opcode = CAT_WEBSOCKET_OPCODE_TEXT;
-    zend_long payload_length = 0;
-    zend_string *mask_key = NULL;
     zend_bool fin = true;
     zend_bool rsv1 = false;
     zend_bool rsv2 = false;
     zend_bool rsv3 = false;
+    zend_long opcode = CAT_WEBSOCKET_OPCODE_TEXT;
+    zend_long payload_length = 0;
+    zend_string *mask_key = NULL;
 
     ZEND_PARSE_PARAMETERS_START(0, 7)
         Z_PARAM_OPTIONAL
-        Z_PARAM_LONG(opcode)
-        Z_PARAM_LONG(payload_length)
-        Z_PARAM_STR(mask_key)
         Z_PARAM_BOOL(fin)
         Z_PARAM_BOOL(rsv1)
         Z_PARAM_BOOL(rsv2)
         Z_PARAM_BOOL(rsv3)
+        Z_PARAM_LONG(opcode)
+        Z_PARAM_LONG(payload_length)
+        Z_PARAM_STR(mask_key)
     ZEND_PARSE_PARAMETERS_END();
 
     SWOW_WEBSOCKET_HEADER_MASK_KEY_CHECK(mask_key, 3);
 
     cat_websocket_header_init(header);
-    header->opcode = opcode;
     header->fin = fin;
     header->rsv1 = rsv1;
     header->rsv2 = rsv2;
     header->rsv3 = rsv3;
+    header->opcode = opcode;
     cat_websocket_header_set_payload_info(
         header,
         payload_length,
@@ -368,7 +367,7 @@ static PHP_METHOD(Swow_WebSocket_Header, setPayloadInfo)
         Z_PARAM_STR(mask_key)
     ZEND_PARSE_PARAMETERS_END();
 
-    SWOW_WEBSOCKET_HEADER_MASK_KEY_CHECK(mask_key);
+    SWOW_WEBSOCKET_HEADER_MASK_KEY_CHECK(mask_key, 2);
 
     cat_websocket_header_set_payload_info(
         header,
