@@ -439,13 +439,20 @@ static PHP_METHOD(Swow_WebSocket_Header, __debugInfo)
     add_assoc_bool(&zdebug_info, "mask", header->mask);
     add_assoc_long(&zdebug_info, "payload_length", cat_websocket_header_get_payload_length(header));
     do {
-        char *mask_key = (char *) cat_websocket_header_get_mask_key(header);
+        const char *mask_key = cat_websocket_header_get_mask_key(header);
         if (mask_key == NULL) {
             break;
         }
-        mask_key = cat_hexprint(mask_key, CAT_WEBSOCKET_MASK_KEY_LENGTH);
-        add_assoc_string(&zdebug_info, "mask_key", mask_key);
-        cat_free(mask_key);
+        char *escaped_mask_key;
+        size_t escaped_mask_key_length;
+        cat_str_quote_ex(
+            mask_key, CAT_WEBSOCKET_MASK_KEY_LENGTH,
+            &escaped_mask_key, &escaped_mask_key_length,
+            CAT_STR_QUOTE_STYLE_FLAG_OMIT_LEADING_TRAILING_QUOTES | CAT_STR_QUOTE_STYLE_FLAG_PRINT_NON_ASCILL_STRINGS_IN_HEX,
+            NULL, NULL
+        );
+        add_assoc_stringl(&zdebug_info, "mask_key", escaped_mask_key, escaped_mask_key_length);
+        cat_free(escaped_mask_key);
     } while (0);
 
     RETURN_DEBUG_INFO_WITH_PROPERTIES(&zdebug_info);
