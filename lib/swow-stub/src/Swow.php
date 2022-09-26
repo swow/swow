@@ -1939,6 +1939,10 @@ namespace Swow
         public const EXT16_MAX_LENGTH = 65535;
         public const MASK_KEY_LENGTH = 4;
         public const EMPTY_MASK_KEY = '';
+
+        public static function mask(string $data, int $start = 0, int $length = -1, string $maskKey = '', int $index = 0): string { }
+
+        public static function unmask(\Swow\Buffer $data, int $start = 0, int $length = -1, string $maskKey = '', int $index = 0): void { }
     }
 }
 

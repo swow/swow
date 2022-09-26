@@ -481,10 +481,87 @@ static const zend_function_entry swow_websocket_header_methods[] = {
     PHP_FE_END
 };
 
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_WebSocket_mask, 0, 1, IS_STRING, 0)
+    ZEND_ARG_TYPE_INFO(0, data, IS_STRING, 0)
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, start, IS_LONG, 0, "0")
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, length, IS_LONG, 0, "-1")
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, maskKey, IS_STRING, 0, "\'\'")
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, index, IS_LONG, 0, "0")
+ZEND_END_ARG_INFO()
+
+static PHP_METHOD(Swow_WebSocket, mask)
+{
+    zend_string *mask_key = NULL, *data, *masked_data;
+    zend_long start = 0;
+    zend_long length = -1;
+    zend_long index = 0;
+    const char *ptr;
+
+    ZEND_PARSE_PARAMETERS_START(1, 5)
+        Z_PARAM_STR(data)
+        Z_PARAM_OPTIONAL
+        Z_PARAM_LONG(start)
+        Z_PARAM_LONG(length)
+        Z_PARAM_STR(mask_key)
+        Z_PARAM_LONG(index)
+    ZEND_PARSE_PARAMETERS_END();
+
+    SWOW_WEBSOCKET_HEADER_MASK_KEY_CHECK(mask_key, 4);
+
+    ptr = swow_string_get_readable_space(data, start, &length, 1);
+
+    masked_data = zend_string_alloc(length, false);
+    cat_websocket_mask_ex(ptr, ZSTR_VAL(masked_data), length, mask_key != NULL ? ZSTR_VAL(mask_key) : NULL, index);
+    ZSTR_VAL(masked_data)[length] = '\0';
+
+    RETURN_STR(masked_data);
+}
+
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_WebSocket_unmask, 0, 1, IS_VOID, 0)
+    ZEND_ARG_OBJ_INFO(0, data, Swow\\Buffer, 0)
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, start, IS_LONG, 0, "0")
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, length, IS_LONG, 0, "-1")
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, maskKey, IS_STRING, 0, "\'\'")
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, index, IS_LONG, 0, "0")
+ZEND_END_ARG_INFO()
+
+static PHP_METHOD(Swow_WebSocket, unmask)
+{
+    zend_object *buffer_object;
+    zend_string *mask_key = NULL;
+    swow_buffer_t *data;
+    zend_long start = 0;
+    zend_long length = -1;
+    zend_long index = 0;
+    char *ptr;
+
+    ZEND_PARSE_PARAMETERS_START(1, 5)
+        Z_PARAM_OBJ_OF_CLASS(buffer_object, swow_buffer_ce)
+        Z_PARAM_OPTIONAL
+        Z_PARAM_LONG(start)
+        Z_PARAM_LONG(length)
+        Z_PARAM_STR(mask_key)
+        Z_PARAM_LONG(index)
+    ZEND_PARSE_PARAMETERS_END();
+
+    SWOW_WEBSOCKET_HEADER_MASK_KEY_CHECK(mask_key, 4);
+
+    data = swow_buffer_get_from_object(buffer_object);
+    ptr = (char *) swow_buffer_get_readable_space(data, start, &length, 1);
+
+    cat_websocket_unmask_ex(ptr, length, mask_key != NULL ? ZSTR_VAL(mask_key) : NULL, index);
+}
+
+static const zend_function_entry swow_websocket_methods[] = {
+    PHP_ME(Swow_WebSocket, mask,   arginfo_class_Swow_WebSocket_mask,   ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    PHP_ME(Swow_WebSocket, unmask, arginfo_class_Swow_WebSocket_unmask, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    PHP_FE_END
+};
+
 zend_result swow_websocket_module_init(INIT_FUNC_ARGS)
 {
     swow_websocket_ce = swow_register_internal_class(
-        "Swow\\WebSocket", NULL, NULL,
+        "Swow\\WebSocket", NULL, swow_websocket_methods,
         NULL, NULL, cat_false, cat_false,
         swow_create_object_deny, NULL, 0
     );
