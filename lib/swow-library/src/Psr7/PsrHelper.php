@@ -216,7 +216,7 @@ class PsrHelper
      */
     public static function withHeaders(MessageInterface &$message, array $headers): void
     {
-        if ($message instanceof Message) {
+        if ($message instanceof MessagePlusInterface) {
             $message = $message->withHeaders($headers);
         } else {
             foreach ($headers as $headerName => $headerValue) {
@@ -233,7 +233,7 @@ class PsrHelper
      */
     public static function convertResponseToVector(ResponseInterface $response): array
     {
-        if ($response instanceof Response) {
+        if ($response instanceof ResponsePlusInterface) {
             return [
                 $response->toString(true),
                 (string) $response->getBody(),
