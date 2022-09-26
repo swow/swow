@@ -22,6 +22,7 @@ use Swow\Psr7\ServerRequest;
 use Swow\Psr7\WebSocketFrame;
 use Swow\Socket;
 use Swow\SocketException;
+use Swow\WebSocket;
 use Swow\WebSocket\Opcode as WebSocketOpcode;
 
 require __DIR__ . '/../autoload.php';
@@ -77,7 +78,7 @@ while (true) {
                                             $opcode = $frame->getOpcode();
                                             switch ($opcode) {
                                                 case WebSocketOpcode::PING:
-                                                    $connection->send(WebSocketFrame::PONG);
+                                                    $connection->send(WebSocket::PONG_FRAME);
                                                     break;
                                                 case WebSocketOpcode::PONG:
                                                     break;

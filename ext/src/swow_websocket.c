@@ -587,6 +587,17 @@ zend_result swow_websocket_module_init(INIT_FUNC_ARGS)
     SWOW_WEBSOCKET_REGISTER_LONG_CONSTANT(MASK_KEY_LENGTH);
     SWOW_WEBSOCKET_REGISTER_STRING_CONSTANT(EMPTY_MASK_KEY);
 
+    do {
+        cat_websocket_header_t header;
+        cat_websocket_header_init(&header);
+        header.fin = 1;
+        header.opcode = CAT_WEBSOCKET_OPCODE_PING;
+        zend_declare_class_constant_stringl(swow_websocket_ce, ZEND_STRL("PING_FRAME"), (const char *) &header, cat_websocket_header_get_size(&header));
+        header.opcode = CAT_WEBSOCKET_OPCODE_PONG;
+        cat_websocket_header_set_payload_info(&header, 0, CAT_WEBSOCKET_EMPTY_MASK_KEY);
+        zend_declare_class_constant_stringl(swow_websocket_ce, ZEND_STRL("PONG_FRAME"), (const char *) &header, cat_websocket_header_get_size(&header));
+    } while (0);
+
     swow_websocket_opcode_ce = swow_register_internal_class(
         "Swow\\WebSocket\\Opcode", NULL, swow_websocket_opcode_methods,
         NULL, NULL, cat_false, cat_false,
@@ -609,17 +620,6 @@ zend_result swow_websocket_module_init(INIT_FUNC_ARGS)
         "Swow\\WebSocket\\Header", swow_buffer_ce, swow_websocket_header_methods,
         NULL, NULL, cat_true, cat_false, swow_websocket_header_create_object, NULL, 0
     );
-
-    do {
-        cat_websocket_header_t header;
-        cat_websocket_header_init(&header);
-        header.fin = 1;
-        header.opcode = CAT_WEBSOCKET_OPCODE_PING;
-        zend_declare_class_constant_stringl(swow_websocket_header_ce, ZEND_STRL("PING"), (const char *) &header, cat_websocket_header_get_size(&header));
-        header.opcode = CAT_WEBSOCKET_OPCODE_PONG;
-        cat_websocket_header_set_payload_info(&header, 0, CAT_WEBSOCKET_EMPTY_MASK_KEY);
-        zend_declare_class_constant_stringl(swow_websocket_header_ce, ZEND_STRL("PONG"), (const char *) &header, cat_websocket_header_get_size(&header));
-    } while (0);
 
     return SUCCESS;
 }

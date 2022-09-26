@@ -1951,6 +1951,8 @@ namespace Swow
         public const EXT16_MAX_LENGTH = 65535;
         public const MASK_KEY_LENGTH = 4;
         public const EMPTY_MASK_KEY = '';
+        public const PING_FRAME = "\x89\x00";
+        public const PONG_FRAME = "\x8a\x80\x00\x00\x00\x00";
 
         public static function mask(string $data, int $start = 0, int $length = -1, string $maskKey = '', int $index = 0): string { }
 
@@ -2271,9 +2273,6 @@ namespace Swow\WebSocket
 {
     class Header extends \Swow\Buffer
     {
-        public const PING = "\x89\x00";
-        public const PONG = "\x8a\x80\x00\x00\x00\x00";
-
         public function __construct(bool $fin = true, bool $rsv1 = false, bool $rsv2 = false, bool $rsv3 = false, int $opcode = \Swow\WebSocket\Opcode::TEXT, int $payloadLength = 0, string $maskKey = '') { }
 
         public function getHeaderSize(): int { }

@@ -31,6 +31,7 @@ use Swow\Psr7\Uri;
 use Swow\Psr7\WebSocketFrame;
 use Swow\Socket;
 use Swow\Sync\WaitReference;
+use Swow\WebSocket;
 use Swow\WebSocket\Opcode;
 
 use function file_exists;
@@ -147,7 +148,7 @@ final class ServerTest extends TestCase
             static function () use ($client, &$heartBeatCount): void {
                 /* @phpstan-ignore-next-line */
                 while (true) {
-                    $client->send(WebSocketFrame::PING);
+                    $client->send(WebSocket::PING_FRAME);
                     $heartBeatCount++;
                     usleep(1000);
                 }
