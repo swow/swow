@@ -13,4 +13,9 @@
     <testsuite name="Testsuite">
         <directory>tests</directory>
     </testsuite>
+    <coverage>
+        <include>
+            <directory suffix=".php">src</directory>
+        </include>
+    </coverage>
 </phpunit>

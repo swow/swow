@@ -19,15 +19,15 @@ use ReflectionProperty;
 use RuntimeException;
 use Swow\Channel;
 use Swow\Coroutine;
-use Swow\Http\Client as HttpClient;
 use Swow\Http\MimeType;
 use Swow\Http\ReceiverTrait;
-use Swow\Http\Request as HttpRequest;
-use Swow\Http\ResponseException;
-use Swow\Http\Server as HttpServer;
 use Swow\Http\Status;
-use Swow\Http\Uri;
-use Swow\Http\WebSocketFrame;
+use Swow\Psr7\Client as HttpClient;
+use Swow\Psr7\Request as HttpRequest;
+use Swow\Psr7\ResponseException;
+use Swow\Psr7\Server as HttpServer;
+use Swow\Psr7\Uri;
+use Swow\Psr7\WebSocketFrame;
 use Swow\Socket;
 use Swow\Sync\WaitReference;
 use Swow\WebSocket\Opcode;
@@ -47,6 +47,10 @@ use function usleep;
 
 use const TEST_MAX_REQUESTS;
 
+/**
+ * @internal
+ * @coversNothing
+ */
 final class ServerTest extends TestCase
 {
     public function testHttpServer(): void
@@ -143,7 +147,7 @@ final class ServerTest extends TestCase
             static function () use ($client, &$heartBeatCount): void {
                 /* @phpstan-ignore-next-line */
                 while (true) {
-                    $client->sendString(WebSocketFrame::PING);
+                    $client->send(WebSocketFrame::PING);
                     $heartBeatCount++;
                     usleep(1000);
                 }
@@ -153,8 +157,9 @@ final class ServerTest extends TestCase
             $message = new WebSocketFrame();
             $message->getPayloadData()->write("Hello Swow {$n}");
             $client->sendWebSocketFrame($message);
+            /** @var WebSocketFrame $reply */
             $reply = $messageChannel->pop($client->getReadTimeout());
-            $this->assertStringContainsString("Hello Swow {$n}", $reply->getPayloadDataAsString());
+            $this->assertStringContainsString("Hello Swow {$n}", (string) $reply->getPayloadData());
         }
         $heartBeater->kill();
         $worker->kill();
@@ -201,7 +206,7 @@ final class ServerTest extends TestCase
 
         $client = new HttpClient();
         $client->connect($server->getSockAddress(), $server->getSockPort());
-        $client->sendString($request);
+        $client->send($request);
         /** @var array<string, UploadedFileInterface> $uploadedFiles */
         $uploadedFiles = $channel->pop();
         $this->assertCount(1, $uploadedFiles);
@@ -209,7 +214,7 @@ final class ServerTest extends TestCase
             $this->assertSame(strlen($fileData), $uploadedFile->getSize());
             break;
         }
-        $response = $client->recvRaw();
+        $response = $client->recvResponseEntity();
         $this->assertSame(Status::OK, $response->statusCode);
 
         $wr::wait($wr);
@@ -241,17 +246,16 @@ final class ServerTest extends TestCase
         $client = new Socket(Socket::TYPE_TCP);
         $client
             ->connect($server->getSockAddress(), $server->getSockPort())
-            ->sendString(packRequest('GET', '/' . str_repeat('x', $maxBufferSize + 1)));
+            ->send(packRequest('GET', '/' . str_repeat('x', $maxBufferSize + 1)));
         $this->assertSame(Status::REQUEST_URI_TOO_LARGE, $channel->pop());
 
         $client = new Socket(Socket::TYPE_TCP);
         $client
             ->connect($server->getSockAddress(), $server->getSockPort())
-            ->sendString(packRequest('GET', '/', [
-                'foo' => str_repeat('x', $maxBufferSize)
+            ->send(packRequest('GET', '/', [
+                'foo' => str_repeat('x', $maxBufferSize),
             ]));
         $this->assertSame(Status::REQUEST_HEADER_FIELDS_TOO_LARGE, $channel->pop());
-
 
         $wr::wait($wr);
     }

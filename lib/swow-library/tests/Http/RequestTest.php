@@ -14,10 +14,14 @@ declare(strict_types=1);
 namespace SwowTest\Http;
 
 use PHPUnit\Framework\TestCase;
-use Swow\Http\Request;
-use Swow\Http\Server\Request as ServerRequest;
-use Swow\Http\Uri;
+use Swow\Psr7\Request;
+use Swow\Psr7\ServerRequest;
+use Swow\Psr7\Uri;
 
+/**
+ * @internal
+ * @coversNothing
+ */
 final class RequestTest extends TestCase
 {
     public function testGetRequestTarget(): void

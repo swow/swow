@@ -15,14 +15,19 @@ namespace SwowTest\Http;
 
 use PHPUnit\Framework\TestCase;
 use Swow\Coroutine;
-use Swow\Http\Client as HttpClient;
-use Swow\Http\Request as HttpRequest;
 use Swow\Http\Status;
+use Swow\Psr7\Client as HttpClient;
+use Swow\Psr7\ClientNetworkException;
+use Swow\Psr7\Request as HttpRequest;
 use Swow\Socket;
 use Swow\Sync\WaitReference;
 
 use function usleep;
 
+/**
+ * @covers \HttpClient
+ * @internal
+ */
 final class ClientTest extends TestCase
 {
     /** This causes HttpParser fall into dead-loop before */
@@ -35,11 +40,11 @@ final class ClientTest extends TestCase
         Coroutine::run(static function () use ($server, $wr): void {
             $connection = $server->accept();
             $connection->recvString();
-            $connection->sendString("HTTP/1.1 200 OK\r\nContent-Length: ");
+            $connection->send("HTTP/1.1 200 OK\r\nContent-Length: ");
             usleep(10 * 1000);
-            $connection->sendString("0\r\nConnection");
+            $connection->send("0\r\nConnection");
             usleep(10 * 1000);
-            $connection->sendString(": closed\r\n\r\n");
+            $connection->send(": closed\r\n\r\n");
         });
 
         $client = new HttpClient();
@@ -66,7 +71,7 @@ final class ClientTest extends TestCase
         try {
             $client->sendRequest(new HttpRequest());
             $this->fail('Never here');
-        } catch (HttpClient\NetworkException $exception) {
+        } catch (ClientNetworkException $exception) {
             /* ExceptionFaker works */
             $this->assertNull($exception->getPrevious());
         }

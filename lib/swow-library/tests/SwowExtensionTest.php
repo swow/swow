@@ -18,6 +18,10 @@ use PHPUnit\Framework\TestCase;
 use function defined;
 use function extension_loaded;
 
+/**
+ * @internal
+ * @coversNothing
+ */
 final class SwowExtensionTest extends TestCase
 {
     public function testSwowExtension(): void
