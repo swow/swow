@@ -13,7 +13,7 @@
         }
     ],
     "support": {
-        "issues": "https://github.com/swow/php-stub-generator"
+        "issues": "https://github.com/swow/swow"
     },
     "require": {
         "php": ">=8.0",

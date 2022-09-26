@@ -17,7 +17,7 @@
         }
     ],
     "support": {
-        "issues": "https://github.com/swow/swow-php-cs-fixer-config"
+        "issues": "https://github.com/swow/swow"
     },
     "require": {
         "php": ">=8.0",
