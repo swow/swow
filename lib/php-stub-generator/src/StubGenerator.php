@@ -115,6 +115,7 @@ class StubGenerator
                 'PhpInconsistentReturnPointsInspection',
                 'PhpMissingParentConstructorInspection',
                 'PhpReturnDocTypeMismatchInspection',
+                'PhpMixedReturnTypeCanBeReducedInspection',
             ] : [];
         } else {
             $this->noinspection = $enable;
