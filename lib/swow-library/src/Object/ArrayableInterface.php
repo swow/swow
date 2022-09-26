@@ -11,13 +11,9 @@
 
 declare(strict_types=1);
 
-namespace Swow\Http\Server;
+namespace Swow\Object;
 
-class Request extends \Swow\Http\ServerRequest
+interface ArrayableInterface
 {
-    /** @noinspection PhpMissingParentConstructorInspection */
-    public function __construct()
-    {
-        // do not construct it, it will be constructed by Server
-    }
+    public function toArray(): array;
 }
