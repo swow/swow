@@ -11,18 +11,11 @@
 
 declare(strict_types=1);
 
-namespace Swow\Psr7;
+namespace Swow\Http;
 
-class MimeType
+class RequestEntity extends MessageEntity
 {
-{{constants}}
+    public string $uri = '';
 
-    protected const EXTENSION_MAP = [
-{{extension_map}}
-    ];
-
-    public static function fromExtension(string $extension): string
-    {
-        return self::EXTENSION_MAP[$extension] ?? static::BIN;
-    }
+    public string $method = '';
 }

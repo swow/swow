@@ -13,16 +13,13 @@ declare(strict_types=1);
 
 namespace Swow\Psr7;
 
-class MimeType
+use Swow\Http\Status;
+use Throwable;
+
+class ResponseException extends \Swow\Exception
 {
-{{constants}}
-
-    protected const EXTENSION_MAP = [
-{{extension_map}}
-    ];
-
-    public static function fromExtension(string $extension): string
+    public function __construct(int $statusCode, string $reasonPhrase = '', ?Throwable $previous = null)
     {
-        return self::EXTENSION_MAP[$extension] ?? static::BIN;
+        parent::__construct($reasonPhrase ?: Status::getReasonPhraseOf($statusCode), $statusCode, $previous);
     }
 }

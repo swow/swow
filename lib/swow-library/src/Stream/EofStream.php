@@ -129,7 +129,7 @@ class EofStream extends Socket
 
     public function recvMessageString(?int $timeout = null): string
     {
-        $buffer = Buffer::for();
+        $buffer = new Buffer(0);
         $this->recvMessage($buffer, $timeout);
 
         return $buffer->toString();

@@ -13,16 +13,10 @@ declare(strict_types=1);
 
 namespace Swow\Psr7;
 
-class MimeType
+use Psr\Http\Message\RequestInterface;
+use Throwable;
+
+interface ClientExceptionInterface extends \Psr\Http\Client\ClientExceptionInterface
 {
-{{constants}}
-
-    protected const EXTENSION_MAP = [
-{{extension_map}}
-    ];
-
-    public static function fromExtension(string $extension): string
-    {
-        return self::EXTENSION_MAP[$extension] ?? static::BIN;
-    }
+    public function __construct(RequestInterface $request, string $message = '', int $code = 0, ?Throwable $previous = null);
 }

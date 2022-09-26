@@ -18,11 +18,12 @@ require __DIR__ . '/../autoload.php';
 use Swow\Coroutine;
 use Swow\CoroutineException;
 use Swow\Errno;
-use Swow\Http\Client;
-use Swow\Http\ResponseException;
-use Swow\Http\Server as HttpServer;
 use Swow\Http\Status as HttpStatus;
-use Swow\Http\WebSocketFrame;
+use Swow\Psr7\Client;
+use Swow\Psr7\ResponseException;
+use Swow\Psr7\Server as HttpServer;
+use Swow\Psr7\ServerRequest;
+use Swow\Psr7\WebSocketFrame;
 use Swow\Socket;
 use Swow\SocketException;
 use Swow\WebSocket\Opcode as WebSocketOpcode;
@@ -41,6 +42,7 @@ while (true) {
                 while (true) {
                     $request = null;
                     try {
+                        /** @var ServerRequest $request */
                         $request = $connection->recvHttpRequest();
                         switch ($request->getUri()->getPath()) {
                             case '/':
@@ -75,15 +77,16 @@ while (true) {
                                             $opcode = $frame->getOpcode();
                                             switch ($opcode) {
                                                 case WebSocketOpcode::PING:
-                                                    $connection->sendString(WebSocketFrame::PONG);
+                                                    $connection->send(WebSocketFrame::PONG);
                                                     break;
                                                 case WebSocketOpcode::PONG:
                                                     break;
                                                 case WebSocketOpcode::CLOSE:
                                                     break 2;
                                                 default:
-                                                    $frame->getPayloadData()->rewind()->write("You said: {$frame->getPayloadData()}");
-                                                    $connection->sendWebSocketFrame($frame);
+                                                    $connection->sendWebSocketFrame(
+                                                        new WebSocketFrame(payloadData: "You said: {$frame->getPayloadData()}")
+                                                    );
                                             }
                                         }
                                         break;
@@ -98,7 +101,7 @@ while (true) {
                     } catch (ResponseException $exception) {
                         $connection->error($exception->getCode(), $exception->getMessage());
                     }
-                    if (!$request || !$request->getKeepAlive()) {
+                    if (!$request || !$request->shouldKeepAlive()) {
                         break;
                     }
                 }

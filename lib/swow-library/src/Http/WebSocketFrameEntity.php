@@ -11,18 +11,12 @@
 
 declare(strict_types=1);
 
-namespace Swow\Psr7;
+namespace Swow\Http;
 
-class MimeType
+use Swow\Buffer;
+use Swow\WebSocket\Header;
+
+class WebSocketFrameEntity extends Header
 {
-{{constants}}
-
-    protected const EXTENSION_MAP = [
-{{extension_map}}
-    ];
-
-    public static function fromExtension(string $extension): string
-    {
-        return self::EXTENSION_MAP[$extension] ?? static::BIN;
-    }
+    public ?Buffer $payloadData = null;
 }

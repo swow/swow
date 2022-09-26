@@ -13,9 +13,9 @@ declare(strict_types=1);
 
 require __DIR__ . '/../autoload.php';
 
-use Swow\Http\Client as HttpClient;
-use Swow\Http\Request;
-use Swow\Http\WebSocketFrame;
+use Swow\Psr7\Client as HttpClient;
+use Swow\Psr7\Request;
+use Swow\Psr7\WebSocketFrame;
 
 $client = new HttpClient();
 

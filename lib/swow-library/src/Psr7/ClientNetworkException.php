@@ -13,16 +13,8 @@ declare(strict_types=1);
 
 namespace Swow\Psr7;
 
-class MimeType
+use Psr\Http\Client\NetworkExceptionInterface;
+
+class ClientNetworkException extends ClientExceptionAbstract implements NetworkExceptionInterface
 {
-{{constants}}
-
-    protected const EXTENSION_MAP = [
-{{extension_map}}
-    ];
-
-    public static function fromExtension(string $extension): string
-    {
-        return self::EXTENSION_MAP[$extension] ?? static::BIN;
-    }
 }
