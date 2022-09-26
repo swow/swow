@@ -13,9 +13,8 @@ declare(strict_types=1);
 
 namespace Swow\Psr7;
 
+use Swow\Http;
 use Swow\Http\Status;
-
-use function Swow\Http\packResponse;
 
 class Response extends Message implements ResponsePlusInterface
 {
@@ -56,7 +55,7 @@ class Response extends Message implements ResponsePlusInterface
 
     public function toString(bool $withoutBody = false): string
     {
-        return packResponse(
+        return Http::packResponse(
             $this->getStatusCode(),
             $this->getStandardHeaders(),
             (!$withoutBody && $this->hasBody()) ? (string) $this->getBody() : '',

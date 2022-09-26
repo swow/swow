@@ -1925,6 +1925,18 @@ namespace Swow
 
 namespace Swow
 {
+    class Http
+    {
+        public static function packMessage(array $headers = [], string $body = ''): string { }
+
+        public static function packRequest(string $method = '', string $url = '', array $headers = [], string $body = '', string $protocolVersion = ''): string { }
+
+        public static function packResponse(int $statusCode = 0, array $headers = [], string $body = '', string $reasonPhrase = '', string $protocolVersion = ''): string { }
+    }
+}
+
+namespace Swow
+{
     class WebSocket
     {
         public const VERSION = 13;
@@ -2214,36 +2226,6 @@ namespace Swow\Http
 namespace Swow\Http
 {
     class ParserException extends \Swow\Exception { }
-}
-
-namespace Swow\Http
-{
-    /**
-     * pack up message into string without method line or status code line
-     *
-     * @param array<string, string|array<string>> $headers values indexed by fields
-     */
-    function packMessage(array $headers = [], string $body = ''): string { }
-}
-
-namespace Swow\Http
-{
-    /**
-     * pack up request into string
-     *
-     * @param array<string, string|array<string>> $headers values indexed by fields
-     */
-    function packRequest(string $method = '', string $url = '', array $headers = [], string $body = '', string $protocolVersion = ''): string { }
-}
-
-namespace Swow\Http
-{
-    /**
-     * pack up response into string
-     *
-     * @param array<string, string|array<string>> $headers values indexed by fields
-     */
-    function packResponse(int $statusCode = 0, array $headers = [], string $body = '', string $reasonPhrase = '', string $protocolVersion = ''): string { }
 }
 
 namespace Swow\WebSocket

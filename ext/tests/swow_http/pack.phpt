@@ -22,9 +22,9 @@ $headers = [
     $payload,
 ];
 
-var_dump(Http\packMessage($headers, $payload));
-var_dump(Http\packRequest('GET', '/some#path?a=b&c=d', $headers, $payload));
-var_dump(Http\packResponse(418, $headers, $payload, "I'm apt, not apk", '1.0'));
+var_dump(Http::packMessage($headers, $payload));
+var_dump(Http::packRequest('GET', '/some#path?a=b&c=d', $headers, $payload));
+var_dump(Http::packResponse(418, $headers, $payload, "I'm apt, not apk", '1.0'));
 
 echo 'Done' . PHP_LF;
 ?>

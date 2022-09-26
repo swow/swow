@@ -14,10 +14,10 @@ declare(strict_types=1);
 namespace Swow\Psr7;
 
 use Psr\Http\Message\UriInterface;
+use Swow\Http;
 
 use function strcasecmp;
 use function strlen;
-use function Swow\Http\packRequest;
 
 class Request extends Message implements RequestPlusInterface
 {
@@ -179,7 +179,7 @@ class Request extends Message implements RequestPlusInterface
 
     public function toString(bool $withoutBody = false): string
     {
-        return packRequest(
+        return Http::packRequest(
             $this->getMethod(),
             (string) $this->getUri(),
             $this->getStandardHeaders(),

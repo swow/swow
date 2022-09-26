@@ -20,6 +20,8 @@
 
 #include "swow_buffer.h"
 
+SWOW_API zend_class_entry *swow_http_ce;
+
 SWOW_API zend_class_entry *swow_http_status_ce;
 
 SWOW_API zend_class_entry *swow_http_parser_ce;
@@ -574,12 +576,12 @@ static zend_always_inline char *swow_http_pack_message(char *p, HashTable *heade
     return p;
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_Swow_Http_packMessage, 0, 0, IS_STRING, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Http_packMessage, 0, 0, IS_STRING, 0)
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, headers, IS_ARRAY, 0, "[]")
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, body, IS_STRING, 0, "\'\'")
 ZEND_END_ARG_INFO()
 
-static PHP_FUNCTION(Swow_Http_packMessage)
+static PHP_METHOD(Swow_Http, packMessage)
 {
     zend_string *message = zend_empty_string;
     /* arguments */
@@ -611,7 +613,7 @@ static PHP_FUNCTION(Swow_Http_packMessage)
     RETURN_STR(message);
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_Swow_Http_packRequest, 0, 0, IS_STRING, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Http_packRequest, 0, 0, IS_STRING, 0)
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, method, IS_STRING, 0, "\'\'")
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, url, IS_STRING, 0, "\'\'")
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, headers, IS_ARRAY, 0, "[]")
@@ -619,7 +621,7 @@ ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_Swow_Http_packRequest, 0, 0, IS_
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, protocolVersion, IS_STRING, 0, "\'\'")
 ZEND_END_ARG_INFO()
 
-static PHP_FUNCTION(Swow_Http_packRequest)
+static PHP_METHOD(Swow_Http, packRequest)
 {
     zend_string *request;
     /* arguments */
@@ -663,7 +665,7 @@ static PHP_FUNCTION(Swow_Http_packRequest)
     RETURN_STR(request);
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_Swow_Http_packResponse, 0, 0, IS_STRING, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Http_packResponse, 0, 0, IS_STRING, 0)
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, statusCode, IS_LONG, 0, "0")
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, headers, IS_ARRAY, 0, "[]")
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, body, IS_STRING, 0, "\'\'")
@@ -671,7 +673,7 @@ ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_Swow_Http_packResponse, 0, 0, IS
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, protocolVersion, IS_STRING, 0, "\'\'")
 ZEND_END_ARG_INFO()
 
-static PHP_FUNCTION(Swow_Http_packResponse)
+static PHP_METHOD(Swow_Http, packResponse)
 {
     zend_string *response;
     /* arguments */
@@ -728,15 +730,22 @@ static PHP_FUNCTION(Swow_Http_packResponse)
     RETURN_STR(response);
 }
 
-static const zend_function_entry swow_http_functions[] = {
-    PHP_FENTRY(Swow\\Http\\packMessage,  PHP_FN(Swow_Http_packMessage),  arginfo_Swow_Http_packMessage,  0)
-    PHP_FENTRY(Swow\\Http\\packRequest,  PHP_FN(Swow_Http_packRequest),  arginfo_Swow_Http_packRequest,  0)
-    PHP_FENTRY(Swow\\Http\\packResponse, PHP_FN(Swow_Http_packResponse), arginfo_Swow_Http_packResponse, 0)
+static const zend_function_entry swow_http_methods[] = {
+    PHP_ME(Swow_Http, packMessage,  arginfo_class_Swow_Http_packMessage,  ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    PHP_ME(Swow_Http, packRequest,  arginfo_class_Swow_Http_packRequest,  ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    PHP_ME(Swow_Http, packResponse, arginfo_class_Swow_Http_packResponse, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
     PHP_FE_END
 };
 
 zend_result swow_http_module_init(INIT_FUNC_ARGS)
 {
+    /* Packer */
+    swow_http_ce = swow_register_internal_class(
+        "Swow\\Http", NULL, swow_http_methods,
+        NULL, NULL, cat_false, cat_false,
+        swow_create_object_deny, NULL, 0
+    );
+
     /* Status */
     swow_http_status_ce = swow_register_internal_class(
         "Swow\\Http\\Status", NULL, swow_http_status_methods,
@@ -770,10 +779,6 @@ zend_result swow_http_module_init(INIT_FUNC_ARGS)
     swow_http_parser_exception_ce = swow_register_internal_class(
         "Swow\\Http\\ParserException", swow_exception_ce, NULL, NULL, NULL, cat_true, cat_true, NULL, NULL, 0
     );
-
-    if (zend_register_functions(NULL, swow_http_functions, NULL, type) != SUCCESS) {
-        return FAILURE;
-    }
 
     return SUCCESS;
 }

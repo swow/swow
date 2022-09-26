@@ -17,6 +17,7 @@ use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Swow\Errno;
+use Swow\Http;
 use Swow\Http\Parser as HttpParser;
 use Swow\Http\ProtocolTypeInterface;
 use Swow\Http\ProtocolTypeTrait;
@@ -36,7 +37,6 @@ use function is_string;
 use function sha1;
 use function sprintf;
 use function strlen;
-use function Swow\Http\packResponse;
 
 class ServerConnection extends Socket implements ProtocolTypeInterface
 {
@@ -155,7 +155,7 @@ class ServerConnection extends Socket implements ProtocolTypeInterface
                         }
                     }
                     $headers += $this->generateResponseHeaders($body);
-                    $this->write([packResponse($statusCode, $headers), $body]);
+                    $this->write([Http::packResponse($statusCode, $headers), $body]);
                     break;
                 }
             case static::PROTOCOL_TYPE_WEBSOCKET:
@@ -176,7 +176,7 @@ class ServerConnection extends Socket implements ProtocolTypeInterface
                     }
                     $message = "<html lang=\"en\"><body><h2>HTTP {$code} {$message}</h2><hr><i>Powered by Swow</i></body></html>";
                     $this->write([
-                        packResponse($code, $this->generateResponseHeaders($message)),
+                        Http::packResponse($code, $this->generateResponseHeaders($message)),
                         $message,
                     ]);
                     break;

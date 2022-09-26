@@ -26,6 +26,8 @@ extern "C" {
 
 #include "cat_http.h"
 
+extern SWOW_API zend_class_entry *swow_http_ce;
+
 extern SWOW_API zend_class_entry *swow_http_status_ce;
 
 extern SWOW_API zend_class_entry *swow_http_parser_ce;

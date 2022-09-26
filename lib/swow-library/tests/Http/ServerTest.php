@@ -19,6 +19,7 @@ use ReflectionProperty;
 use RuntimeException;
 use Swow\Channel;
 use Swow\Coroutine;
+use Swow\Http;
 use Swow\Http\MimeType;
 use Swow\Http\ReceiverTrait;
 use Swow\Http\Status;
@@ -41,7 +42,6 @@ use function sprintf;
 use function str_repeat;
 use function strlen;
 use function Swow\defer;
-use function Swow\Http\packRequest;
 use function unserialize;
 use function usleep;
 
@@ -246,13 +246,13 @@ final class ServerTest extends TestCase
         $client = new Socket(Socket::TYPE_TCP);
         $client
             ->connect($server->getSockAddress(), $server->getSockPort())
-            ->send(packRequest('GET', '/' . str_repeat('x', $maxBufferSize + 1)));
+            ->send(Http::packRequest('GET', '/' . str_repeat('x', $maxBufferSize + 1)));
         $this->assertSame(Status::REQUEST_URI_TOO_LARGE, $channel->pop());
 
         $client = new Socket(Socket::TYPE_TCP);
         $client
             ->connect($server->getSockAddress(), $server->getSockPort())
-            ->send(packRequest('GET', '/', [
+            ->send(Http::packRequest('GET', '/', [
                 'foo' => str_repeat('x', $maxBufferSize),
             ]));
         $this->assertSame(Status::REQUEST_HEADER_FIELDS_TOO_LARGE, $channel->pop());

@@ -14,6 +14,7 @@ declare(strict_types=1);
 namespace Swow\Psr7;
 
 use Psr\Http\Message\StreamInterface;
+use Swow\Http;
 use Swow\Object\DupTrait;
 use Swow\Object\StringableTrait;
 
@@ -23,7 +24,6 @@ use function is_array;
 use function strpos;
 use function strtolower;
 use function substr;
-use function Swow\Http\packMessage;
 use function trim;
 
 class Message implements MessagePlusInterface
@@ -271,7 +271,7 @@ class Message implements MessagePlusInterface
 
     public function toString(bool $withoutBody = false): string
     {
-        return packMessage(
+        return Http::packMessage(
             $this->getHeaders(),
             (!$withoutBody && $this->hasBody()) ? (string) $this->getBody() : ''
         );
