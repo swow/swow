@@ -99,7 +99,7 @@ class Client extends Socket implements ClientInterface, ProtocolTypeInterface
         return $this->recvMessageEntity();
     }
 
-    public function sendRequest(RequestInterface $request, ?ResponseInterface $response = null): ResponseInterface
+    public function sendRequest(RequestInterface $request): ResponseInterface
     {
         try {
             $headers = $request->getHeaders();
@@ -130,7 +130,7 @@ class Client extends Socket implements ClientInterface, ProtocolTypeInterface
         }
     }
 
-    public function upgradeToWebSocket(RequestInterface $request, ?ResponseInterface $response = null): ResponseInterface
+    public function upgradeToWebSocket(RequestInterface $request): ResponseInterface
     {
         $secWebSocketKey = base64_encode(random_bytes(16));
         $upgradeHeaders = [
@@ -141,7 +141,7 @@ class Client extends Socket implements ClientInterface, ProtocolTypeInterface
         ];
         PsrHelper::withHeaders($request, $upgradeHeaders);
 
-        $response = $this->sendRequest($request, $response);
+        $response = $this->sendRequest($request);
 
         if ($response->getStatusCode() !== HttpStatus::SWITCHING_PROTOCOLS) {
             throw new ClientRequestException($request, $response->getReasonPhrase(), $response->getStatusCode());
