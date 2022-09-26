@@ -2289,8 +2289,8 @@ namespace Swow\WebSocket
 {
     class Header extends \Swow\Buffer
     {
-        public const PING = '8900';
-        public const PONG = '8a00';
+        public const PING = "\x89\x00";
+        public const PONG = "\x8a\x80\x00\x00\x00\x00";
 
         public function __construct(bool $fin = true, bool $rsv1 = false, bool $rsv2 = false, bool $rsv3 = false, int $opcode = \Swow\WebSocket\Opcode::TEXT, int $payloadLength = 0, string $maskKey = '') { }
 

@@ -611,13 +611,14 @@ zend_result swow_websocket_module_init(INIT_FUNC_ARGS)
     );
 
     do {
-        cat_websocket_header_t header = { 0 };
+        cat_websocket_header_t header;
+        cat_websocket_header_init(&header);
         header.fin = 1;
         header.opcode = CAT_WEBSOCKET_OPCODE_PING;
-        zend_declare_class_constant_stringl(swow_websocket_header_ce, ZEND_STRL("PING"), (const char *) &header, CAT_WEBSOCKET_HEADER_MIN_SIZE);
+        zend_declare_class_constant_stringl(swow_websocket_header_ce, ZEND_STRL("PING"), (const char *) &header, cat_websocket_header_get_size(&header));
         header.opcode = CAT_WEBSOCKET_OPCODE_PONG;
-        header.mask = true;
-        zend_declare_class_constant_stringl(swow_websocket_header_ce, ZEND_STRL("PONG"), (const char *) &header, CAT_WEBSOCKET_HEADER_MIN_SIZE);
+        cat_websocket_header_set_payload_info(&header, 0, CAT_WEBSOCKET_EMPTY_MASK_KEY);
+        zend_declare_class_constant_stringl(swow_websocket_header_ce, ZEND_STRL("PONG"), (const char *) &header, cat_websocket_header_get_size(&header));
     } while (0);
 
     return SUCCESS;
