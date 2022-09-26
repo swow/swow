@@ -1,6 +1,6 @@
 <?php
 
-/** @noinspection PhpUnused, PhpInconsistentReturnPointsInspection, PhpMissingParentConstructorInspection, PhpReturnDocTypeMismatchInspection */
+/** @noinspection PhpUnused, PhpInconsistentReturnPointsInspection, PhpMissingParentConstructorInspection, PhpReturnDocTypeMismatchInspection, PhpMixedReturnTypeCanBeReducedInspection */
 
 namespace
 {
