@@ -94,11 +94,11 @@ static zend_object *swow_websocket_header_create_object(zend_class_entry *ce)
         } \
     } while (0)
 
-#define SWOW_WEBSOCKET_HEADER_MASK_KEY_CHECK(mask_key) do { \
+#define SWOW_WEBSOCKET_HEADER_MASK_KEY_CHECK(mask_key, arg_num) do { \
     if (mask_key == NULL || ZSTR_LEN(mask_key) == 0) { \
         mask_key = NULL; \
     } else if (UNEXPECTED(ZSTR_LEN(mask_key) != CAT_WEBSOCKET_MASK_KEY_LENGTH)) { \
-        zend_argument_value_error(1, "length should be %u", CAT_WEBSOCKET_MASK_KEY_LENGTH); \
+        zend_argument_value_error(arg_num, "length should be 0 or %u", CAT_WEBSOCKET_MASK_KEY_LENGTH); \
         RETURN_THROWS(); \
     } \
 } while (0)
@@ -136,7 +136,7 @@ static PHP_METHOD(Swow_WebSocket_Header, __construct)
         Z_PARAM_BOOL(rsv3)
     ZEND_PARSE_PARAMETERS_END();
 
-    SWOW_WEBSOCKET_HEADER_MASK_KEY_CHECK(mask_key);
+    SWOW_WEBSOCKET_HEADER_MASK_KEY_CHECK(mask_key, 3);
 
     cat_websocket_header_init(header);
     header->opcode = opcode;
