@@ -11,21 +11,21 @@
 
 declare(strict_types=1);
 
-namespace SwowTest\Http;
+namespace Swow\Tests\Psr7\Client;
 
 use PHPUnit\Framework\TestCase;
 use Swow\Coroutine;
 use Swow\Http\Status;
-use Swow\Psr7\Client as HttpClient;
-use Swow\Psr7\ClientNetworkException;
-use Swow\Psr7\Request as HttpRequest;
+use Swow\Psr7\Client\Client;
+use Swow\Psr7\Client\ClientNetworkException;
+use Swow\Psr7\Message\Request as HttpRequest;
 use Swow\Socket;
 use Swow\Sync\WaitReference;
 
 use function usleep;
 
 /**
- * @covers \HttpClient
+ * @covers \Swow\Psr7\Client\Client
  * @internal
  */
 final class ClientTest extends TestCase
@@ -47,7 +47,7 @@ final class ClientTest extends TestCase
             $connection->send(": closed\r\n\r\n");
         });
 
-        $client = new HttpClient();
+        $client = new Client();
         $client->connect($server->getSockAddress(), $server->getSockPort());
         $response = $client->sendRequest(new HttpRequest());
         $this->assertSame($response->getStatusCode(), Status::OK);
@@ -66,7 +66,7 @@ final class ClientTest extends TestCase
             $connection->close();
         });
 
-        $client = new HttpClient();
+        $client = new Client();
         $client->connect($server->getSockAddress(), $server->getSockPort());
         try {
             $client->sendRequest(new HttpRequest());

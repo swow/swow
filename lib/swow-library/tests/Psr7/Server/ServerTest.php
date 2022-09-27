@@ -11,7 +11,7 @@
 
 declare(strict_types=1);
 
-namespace SwowTest\Http;
+namespace Swow\Tests\Psr7\Server;
 
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\UploadedFileInterface;
@@ -23,12 +23,12 @@ use Swow\Http;
 use Swow\Http\MimeType;
 use Swow\Http\ReceiverTrait;
 use Swow\Http\Status;
-use Swow\Psr7\Client as HttpClient;
-use Swow\Psr7\Request as HttpRequest;
-use Swow\Psr7\ResponseException;
-use Swow\Psr7\Server as HttpServer;
-use Swow\Psr7\Uri;
-use Swow\Psr7\WebSocketFrame;
+use Swow\Psr7\Client\Client;
+use Swow\Psr7\Message\Request;
+use Swow\Psr7\Message\ResponseException;
+use Swow\Psr7\Message\Uri;
+use Swow\Psr7\Message\WebSocketFrame;
+use Swow\Psr7\Server\Server;
 use Swow\Socket;
 use Swow\Sync\WaitReference;
 use Swow\WebSocket;
@@ -59,7 +59,7 @@ final class ServerTest extends TestCase
         $randomBytes = getRandomBytes();
         $query = ['foo' => 'bar', 'baz' => $randomBytes];
 
-        $server = new HttpServer();
+        $server = new Server();
         $server->bind('127.0.0.1')->listen();
         $wr = new WaitReference();
         Coroutine::run(function () use ($server, $query, $wr): void {
@@ -67,14 +67,14 @@ final class ServerTest extends TestCase
             $request = $connection->recvHttpRequest();
             $this->assertSame($query, $request->getQueryParams());
             $this->assertSame($request->getHeaderLine('content-type'), MimeType::JSON);
-            self::assertSame($request->getCookieParams(), ['foo' => 'bar', 'bar' => 'baz']);
+            $this->assertSame($request->getCookieParams(), ['foo' => 'bar', 'bar' => 'baz']);
             $this->assertSame($request->getServerParams()['remote_addr'], $request->getParsedBody()['address']);
             $this->assertSame($request->getServerParams()['remote_port'], $request->getParsedBody()['port']);
             $connection->respond(serialize($query));
         });
 
-        $client = new HttpClient();
-        $request = new HttpRequest();
+        $client = new Client();
+        $request = new Request();
         $uri = (new Uri('/'))->setQuery(http_build_query($query));
         $client
             ->connect($server->getSockAddress(), $server->getSockPort());
@@ -90,7 +90,7 @@ final class ServerTest extends TestCase
         $wr::wait($wr);
     }
 
-    public function getMixedServer(): HttpServer
+    public function getMixedServer(): Server
     {
         $mixedServerFile = __DIR__ . '/../../../../examples/http_server/mixed.php';
         if (!file_exists($mixedServerFile)) {
@@ -100,10 +100,10 @@ final class ServerTest extends TestCase
             require $mixedServerFile;
         });
         // so hacky ^^
-        /** @var HttpServer $server */
+        /** @var Server $server */
         $server = $serverCoroutine->eval('$this');
-        if (!$server instanceof HttpServer) {
-            throw new RuntimeException(sprintf('$server expect type of %s, got %s', HttpServer::class, $server::class));
+        if (!$server instanceof Server) {
+            throw new RuntimeException(sprintf('$server expect type of %s, got %s', Server::class, $server::class));
         }
 
         return $server;
@@ -116,8 +116,8 @@ final class ServerTest extends TestCase
             $server->close();
         });
         /* HTTP */
-        $client = new HttpClient();
-        $request = new HttpRequest();
+        $client = new Client();
+        $request = new Request();
         $request
             ->setUri('/echo')
             ->getBody()
@@ -128,7 +128,7 @@ final class ServerTest extends TestCase
         $this->assertSame('Hello Swow', (string) $response->getBody());
 
         /* WebSocket */
-        $request = new HttpRequest('GET', '/chat');
+        $request = (new Request())->setMethod('GET')->setUri('/chat');
         $client->upgradeToWebSocket($request);
         $messageChannel = new Channel();
         $worker = Coroutine::run(
@@ -169,7 +169,7 @@ final class ServerTest extends TestCase
 
     public function testUploadFileWithCR(): void
     {
-        $server = new HttpServer();
+        $server = new Server();
         $server->bind('127.0.0.1')->listen();
 
         $boundary = getRandomBytes(24);
@@ -205,7 +205,7 @@ final class ServerTest extends TestCase
             $connection->respond(Status::OK);
         });
 
-        $client = new HttpClient();
+        $client = new Client();
         $client->connect($server->getSockAddress(), $server->getSockPort());
         $client->send($request);
         /** @var array<string, UploadedFileInterface> $uploadedFiles */
@@ -225,7 +225,7 @@ final class ServerTest extends TestCase
     {
         $maxBufferSize = (new ReflectionProperty(ReceiverTrait::class, 'maxBufferSize'))->getDefaultValue();
 
-        $server = new HttpServer();
+        $server = new Server();
         $server->bind('127.0.0.1')->listen();
 
         $wr = new WaitReference();

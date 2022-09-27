@@ -11,12 +11,12 @@
 
 declare(strict_types=1);
 
-namespace SwowTest\Http;
+namespace Swow\Tests\Psr7\Message;
 
 use PHPUnit\Framework\TestCase;
-use Swow\Psr7\Request;
-use Swow\Psr7\ServerRequest;
-use Swow\Psr7\Uri;
+use Swow\Psr7\Message\Request;
+use Swow\Psr7\Message\ServerRequest;
+use Swow\Psr7\Message\Uri;
 
 /**
  * @internal

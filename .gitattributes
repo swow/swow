@@ -2,7 +2,7 @@
 /benchmark export-ignore
 /examples export-ignore
 /ext/tests export-ignore
-/lib/tests export-ignore
+/lib/*/tests export-ignore
 /tools export-ignore
 /.php-cs-fixer.dist.php export-ignore
 /codecov.yml export-ignore

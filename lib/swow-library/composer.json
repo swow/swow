@@ -35,7 +35,7 @@
     },
     "autoload-dev": {
         "psr-4": {
-            "SwowTest\\": "tests/"
+            "Swow\\Tests\\": "tests/"
         }
     },
     "config": {

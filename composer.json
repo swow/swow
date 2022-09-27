@@ -60,11 +60,9 @@
     "autoload-dev": {
         "psr-4": {
             "Swow\\PhpCsFixer\\": "lib/swow-php-cs-fixer-config/src/",
-            "SwowTest\\": "lib/swow-library/tests"
-        },
-        "classmap": [
-            "lib/php-stub-generator/src"
-        ]
+            "Swow\\StubUtils\\": "lib/php-stub-generator/src/",
+            "Swow\\Tests\\": "lib/swow-library/tests/"
+        }
     },
     "config": {
         "process-timeout": 0,
