@@ -15,11 +15,11 @@ use Swow\Coroutine;
 use Swow\CoroutineException;
 use Swow\Errno;
 use Swow\Http\Status as HttpStatus;
-use Swow\Psr7\Client;
-use Swow\Psr7\ResponseException;
-use Swow\Psr7\Server as Psr7Server;
-use Swow\Psr7\ServerRequest;
-use Swow\Psr7\WebSocketFrame;
+use Swow\Psr7\Client\Client;
+use Swow\Psr7\Message\ResponseException;
+use Swow\Psr7\Message\ServerRequest;
+use Swow\Psr7\Message\WebSocketFrame;
+use Swow\Psr7\Server\Server;
 use Swow\Socket;
 use Swow\SocketException;
 use Swow\WebSocket;
@@ -33,7 +33,7 @@ $host = getenv('SERVER_HOST') ?: '127.0.0.1';
 $port = (int) (getenv('SERVER_PORT') ?: 9764);
 $backlog = (int) (getenv('SERVER_BACKLOG') ?: Socket::DEFAULT_BACKLOG);
 
-$server = new Psr7Server();
+$server = new Server();
 $server->bind($host, $port)->listen($backlog);
 while (true) {
     try {

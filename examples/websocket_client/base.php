@@ -13,11 +13,10 @@ declare(strict_types=1);
 
 require __DIR__ . '/../autoload.php';
 
-use Swow\Psr7\Client as HttpClient;
-use Swow\Psr7\Request;
-use Swow\Psr7\WebSocketFrame;
+use Swow\Psr7\Message\Request;
+use Swow\Psr7\Message\WebSocketFrame;
 
-$client = new HttpClient();
+$client = new Client();
 
 /* do handshake */
 $request = new Request('GET', '/chat');

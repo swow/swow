@@ -16,7 +16,7 @@ namespace Swow\Http;
 use Swow\Buffer;
 use Swow\Http\Parser as HttpParser;
 use Swow\Http\Status as HttpStatus;
-use Swow\Psr7\ResponseException;
+use Swow\Psr7\Message\ResponseException;
 use Swow\WebSocket;
 use ValueError;
 

@@ -11,8 +11,8 @@
 
 declare(strict_types=1);
 
-use Swow\Psr7\Client;
-use Swow\Psr7\Request;
+use Swow\Psr7\Client\Client;
+use Swow\Psr7\Message\Request;
 
 require __DIR__ . '/../autoload.php';
 
