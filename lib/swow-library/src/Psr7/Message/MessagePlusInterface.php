@@ -49,7 +49,10 @@ interface MessagePlusInterface extends MessageInterface, StringableInterface
     /** @return array<string, array<string>> $headers */
     public function getHeaders(): array;
 
-    /** @return array<string, array<string>> */
+    /**
+     * TODO: consider whether it's needed
+     * @return array<string, array<string>>
+     */
     public function getStandardHeaders(): array;
 
     /** @param array<string, array<string>|string> $headers */
