@@ -1,0 +1,23 @@
+{
+    "name": "swow/swow-extension",
+    "description": "Swow PHP extension",
+    "keywords": [
+        "swow",
+        "php",
+        "extension"
+    ],
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "twose",
+            "email": "twosee@php.net"
+        }
+    ],
+    "support": {
+        "issues": "https://github.com/swow/swow"
+    },
+    "require": {
+        "php": ">=8.0",
+        "swow/swow-utils": ">=0.2.0"
+    }
+}
