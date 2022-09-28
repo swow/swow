@@ -15,6 +15,7 @@ namespace Swow\Debug;
 
 use Stringable;
 use Swow\Coroutine;
+use Swow\Debug\Debugger\Debugger;
 use Swow\Utils\FileSystem\IOException;
 use Swow\Utils\Handler;
 

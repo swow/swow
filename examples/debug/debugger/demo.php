@@ -15,7 +15,7 @@ require __DIR__ . '/../../autoload.php';
 
 use Swow\Channel;
 use Swow\Coroutine;
-use Swow\Debug\Debugger;
+use Swow\Debug\Debugger\Debugger;
 
 use function Swow\Sync\waitAll;
 

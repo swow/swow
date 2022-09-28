@@ -11,14 +11,13 @@
 
 declare(strict_types=1);
 
-namespace Swow\Debug;
+namespace Swow\Debug\Debugger;
 
 use Error;
 use SplFileObject;
 use Swow\Channel;
 use Swow\ChannelException;
 use Swow\Coroutine;
-use Swow\Debug\Debugger\DebugContext;
 use Swow\Errno;
 use Swow\Signal;
 use Swow\Socket;
@@ -60,6 +59,8 @@ use function str_repeat;
 use function str_replace;
 use function strlen;
 use function substr;
+use function Swow\Debug\registerExtendedStatementHandler;
+use function Swow\Debug\var_dump_return;
 use function trim;
 use function usleep;
 

@@ -11,7 +11,7 @@
 
 declare(strict_types=1);
 
-namespace Swow\Debug;
+namespace Swow\Debug\Debugger;
 
 use Swow\Exception;
 
