@@ -1991,7 +1991,7 @@ namespace Swow
 
 namespace Swow\Utils
 {
-    class Handler
+    final class Handler
     {
         protected function __construct() { }
 
