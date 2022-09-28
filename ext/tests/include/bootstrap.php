@@ -2,8 +2,8 @@
 /**
  * This file is part of Swow
  *
- * @link     https://github.com/swow/swow
- * @contact  twosee <twosee@php.net>
+ * @link    https://github.com/swow/swow
+ * @contact twosee <twosee@php.net>
  *
  * For the full copyright and license information,
  * please view the LICENSE file that was distributed with this source code
@@ -34,7 +34,7 @@ define('TEST_PRESSURE_MID', 3);
 define('TEST_PRESSURE_NORMAL', 4);
 define(
     'TEST_PRESSURE_LEVEL',
-    (getenv('TEST_PRESSURE_DEBUG') == 1) ? TEST_PRESSURE_DEBUG :
+    (getenv('TEST_PRESSURE_DEBUG') === '1') ? TEST_PRESSURE_DEBUG :
         (USE_VALGRIND ? TEST_PRESSURE_LOW :
             ((0) ? TEST_PRESSURE_MID : TEST_PRESSURE_NORMAL))
 );
@@ -98,7 +98,7 @@ function isInTest(): bool
 {
     global $argv;
 
-    return !(str_ends_with($argv[0], '.phpt'));
+    return !str_ends_with($argv[0], '.phpt');
 }
 
 function phpt_sprint(...$args): void
@@ -183,6 +183,7 @@ function getHttpProxyUri(): string
     return $proxy;
 }
 
+/** @return array<array{'status': int, 'headers': array<string, string>, 'body': string}> */
 function httpRequest(string $url, string $method = 'GET', string $content = '', array $headers = [], ?int $timeoutSeconds = null, bool|string $proxy = false, bool $doNotThrow = false): array|false
 {
     $headers += [
@@ -214,7 +215,7 @@ function httpRequest(string $url, string $method = 'GET', string $content = '', 
     $content = @file_get_contents(
         filename: $url,
         context: stream_context_create([
-            'http' => $httpContext
+            'http' => $httpContext,
         ])
     );
     if (!$content && empty($http_response_header)) {
@@ -223,6 +224,7 @@ function httpRequest(string $url, string $method = 'GET', string $content = '', 
         }
         throw new RuntimeException(sprintf('Failed to download from %s (%s)', $url, error_get_last()['message']));
     }
+    $status = 0;
     $headers = [];
     foreach ($http_response_header as $headerLine) {
         $parts = explode(':', $headerLine, 2);
