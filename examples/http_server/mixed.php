@@ -22,8 +22,8 @@ use Swow\Psr7\Message\WebSocketFrame;
 use Swow\Psr7\Server\Server;
 use Swow\Socket;
 use Swow\SocketException;
-use Swow\WebSocket;
 use Swow\WebSocket\Opcode as WebSocketOpcode;
+use Swow\WebSocket\WebSocket;
 
 require __DIR__ . '/../autoload.php';
 

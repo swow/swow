@@ -17,7 +17,7 @@ use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Swow\Errno;
-use Swow\Http;
+use Swow\Http\Http;
 use Swow\Http\Parser as HttpParser;
 use Swow\Http\ProtocolTypeInterface;
 use Swow\Http\ProtocolTypeTrait;
@@ -30,7 +30,7 @@ use Swow\Psr7\Message\WebSocketTrait;
 use Swow\Psr7\Psr7;
 use Swow\Socket;
 use Swow\SocketException;
-use Swow\WebSocket;
+use Swow\WebSocket\WebSocket;
 use TypeError;
 
 use function base64_encode;

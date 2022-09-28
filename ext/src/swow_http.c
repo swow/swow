@@ -739,9 +739,9 @@ static const zend_function_entry swow_http_methods[] = {
 
 zend_result swow_http_module_init(INIT_FUNC_ARGS)
 {
-    /* Packer */
+    /* Http */
     swow_http_ce = swow_register_internal_class(
-        "Swow\\Http", NULL, swow_http_methods,
+        "Swow\\Http\\Http", NULL, swow_http_methods,
         NULL, NULL, cat_false, cat_false,
         swow_create_object_deny, NULL, 0
     );

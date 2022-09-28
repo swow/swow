@@ -1925,43 +1925,6 @@ namespace Swow
 
 namespace Swow
 {
-    class Http
-    {
-        public static function packMessage(array $headers = [], string $body = ''): string { }
-
-        public static function packRequest(string $method = '', string $url = '', array $headers = [], string $body = '', string $protocolVersion = ''): string { }
-
-        public static function packResponse(int $statusCode = 0, array $headers = [], string $body = '', string $reasonPhrase = '', string $protocolVersion = ''): string { }
-    }
-}
-
-namespace Swow
-{
-    class WebSocket
-    {
-        public const VERSION = 13;
-        public const SECRET_KEY_LENGTH = 16;
-        public const SECRET_KEY_ENCODED_LENGTH = 24;
-        public const GUID = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11';
-        public const HEADER_MIN_SIZE = 2;
-        public const HEADER_MAX_SIZE = 14;
-        public const EXT16_PAYLOAD_LENGTH = 126;
-        public const EXT64_PAYLOAD_LENGTH = 127;
-        public const EXT8_MAX_LENGTH = 125;
-        public const EXT16_MAX_LENGTH = 65535;
-        public const MASK_KEY_LENGTH = 4;
-        public const EMPTY_MASK_KEY = '';
-        public const PING_FRAME = "\x89\x00";
-        public const PONG_FRAME = "\x8a\x80\x00\x00\x00\x00";
-
-        public static function mask(string $data, int $start = 0, int $length = -1, string $maskKey = '', int $index = 0): string { }
-
-        public static function unmask(\Swow\Buffer $data, int $start = 0, int $length = -1, string $maskKey = '', int $index = 0): void { }
-    }
-}
-
-namespace Swow
-{
     function defer(callable $tasks): void { }
 }
 
@@ -2061,6 +2024,18 @@ namespace Swow\Sync
 namespace Swow\Sync
 {
     function waitAll(int $timeout = -1): void { }
+}
+
+namespace Swow\Http
+{
+    class Http
+    {
+        public static function packMessage(array $headers = [], string $body = ''): string { }
+
+        public static function packRequest(string $method = '', string $url = '', array $headers = [], string $body = '', string $protocolVersion = ''): string { }
+
+        public static function packResponse(int $statusCode = 0, array $headers = [], string $body = '', string $reasonPhrase = '', string $protocolVersion = ''): string { }
+    }
 }
 
 namespace Swow\Http
@@ -2228,6 +2203,31 @@ namespace Swow\Http
 namespace Swow\Http
 {
     class ParserException extends \Swow\Exception { }
+}
+
+namespace Swow\WebSocket
+{
+    class WebSocket
+    {
+        public const VERSION = 13;
+        public const SECRET_KEY_LENGTH = 16;
+        public const SECRET_KEY_ENCODED_LENGTH = 24;
+        public const GUID = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11';
+        public const HEADER_MIN_SIZE = 2;
+        public const HEADER_MAX_SIZE = 14;
+        public const EXT16_PAYLOAD_LENGTH = 126;
+        public const EXT64_PAYLOAD_LENGTH = 127;
+        public const EXT8_MAX_LENGTH = 125;
+        public const EXT16_MAX_LENGTH = 65535;
+        public const MASK_KEY_LENGTH = 4;
+        public const EMPTY_MASK_KEY = '';
+        public const PING_FRAME = "\x89\x00";
+        public const PONG_FRAME = "\x8a\x80\x00\x00\x00\x00";
+
+        public static function mask(string $data, int $start = 0, int $length = -1, string $maskKey = '', int $index = 0): string { }
+
+        public static function unmask(\Swow\Buffer $data, int $start = 0, int $length = -1, string $maskKey = '', int $index = 0): void { }
+    }
 }
 
 namespace Swow\WebSocket

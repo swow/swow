@@ -13,7 +13,7 @@ declare(strict_types=1);
 
 namespace Swow\Psr7\Message;
 
-use Swow\Http;
+use Swow\Http\Http;
 use Swow\Http\Status;
 
 class Response extends Message implements ResponsePlusInterface

@@ -19,7 +19,7 @@ use ReflectionProperty;
 use RuntimeException;
 use Swow\Channel;
 use Swow\Coroutine;
-use Swow\Http;
+use Swow\Http\Http;
 use Swow\Http\MimeType;
 use Swow\Http\ReceiverTrait;
 use Swow\Http\Status;
@@ -31,8 +31,8 @@ use Swow\Psr7\Message\WebSocketFrame;
 use Swow\Psr7\Server\Server;
 use Swow\Socket;
 use Swow\Sync\WaitReference;
-use Swow\WebSocket;
 use Swow\WebSocket\Opcode;
+use Swow\WebSocket\WebSocket;
 
 use function file_exists;
 use function getRandomBytes;

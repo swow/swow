@@ -17,7 +17,7 @@ use Swow\Buffer;
 use Swow\Http\Parser as HttpParser;
 use Swow\Http\Status as HttpStatus;
 use Swow\Psr7\Message\ResponseException;
-use Swow\WebSocket;
+use Swow\WebSocket\WebSocket;
 use ValueError;
 
 use function array_filter;

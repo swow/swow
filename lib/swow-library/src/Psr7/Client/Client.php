@@ -18,8 +18,8 @@ use Psr\Http\Client\ClientExceptionInterface;
 use Psr\Http\Client\ClientInterface;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
-use Swow\Http;
 use Swow\Http\ConfigTrait;
+use Swow\Http\Http;
 use Swow\Http\Parser;
 use Swow\Http\Parser as HttpParser;
 use Swow\Http\ProtocolTypeInterface;
@@ -33,7 +33,7 @@ use Swow\Psr7\Message\WebSocketTrait;
 use Swow\Psr7\Psr7;
 use Swow\Socket;
 use Swow\SocketException;
-use Swow\WebSocket;
+use Swow\WebSocket\WebSocket;
 
 use function base64_encode;
 use function random_bytes;

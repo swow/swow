@@ -561,7 +561,7 @@ static const zend_function_entry swow_websocket_methods[] = {
 zend_result swow_websocket_module_init(INIT_FUNC_ARGS)
 {
     swow_websocket_ce = swow_register_internal_class(
-        "Swow\\WebSocket", NULL, swow_websocket_methods,
+        "Swow\\WebSocket\\WebSocket", NULL, swow_websocket_methods,
         NULL, NULL, cat_false, cat_false,
         swow_create_object_deny, NULL, 0
     );

@@ -14,7 +14,7 @@ declare(strict_types=1);
 namespace Swow\Psr7\Message;
 
 use Psr\Http\Message\UriInterface;
-use Swow\Http;
+use Swow\Http\Http;
 
 use function strcasecmp;
 use function strlen;

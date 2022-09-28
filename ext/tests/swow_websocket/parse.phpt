@@ -8,8 +8,7 @@ require __DIR__ . '/../include/skipif.php';
 <?php
 require __DIR__ . '/../include/bootstrap.php';
 
-use Swow\Buffer;
-use Swow\WebSocket;
+use Swow\WebSocket\WebSocket;
 use Swow\WebSocket\Header;
 
 const FIN = 1 << 7;

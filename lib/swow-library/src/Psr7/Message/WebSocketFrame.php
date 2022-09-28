@@ -16,9 +16,9 @@ namespace Swow\Psr7\Message;
 use Psr\Http\Message\StreamInterface;
 use Swow\Object\DupTrait;
 use Swow\Psr7\Psr7;
-use Swow\WebSocket;
+use Swow\WebSocket\Header as WebSocketHeader;
 
-class WebSocketFrame extends WebSocket\Header
+class WebSocketFrame extends WebSocketHeader
 {
     use DupTrait;
 

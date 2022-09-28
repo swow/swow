@@ -14,7 +14,7 @@ declare(strict_types=1);
 namespace Swow\Psr7\Message;
 
 use Psr\Http\Message\StreamInterface;
-use Swow\Http;
+use Swow\Http\Http;
 use Swow\Object\DupTrait;
 use Swow\Object\StringableTrait;
 use Swow\Psr7\Psr7;

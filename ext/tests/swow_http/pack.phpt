@@ -8,7 +8,7 @@ require __DIR__ . '/../include/skipif.php';
 <?php
 require __DIR__ . '/../include/bootstrap.php';
 
-use Swow\Http;
+use Swow\Http\Http;
 
 $payload = 'hello world';
 $headers = [

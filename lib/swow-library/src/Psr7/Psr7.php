@@ -25,7 +25,7 @@ use Psr\Http\Message\UploadedFileInterface;
 use Psr\Http\Message\UriFactoryInterface;
 use Psr\Http\Message\UriInterface;
 use Swow\Buffer;
-use Swow\Http;
+use Swow\Http\Http;
 use Swow\Http\ResponseEntity;
 use Swow\Http\ServerRequestEntity;
 use Swow\Http\UploadedFileEntity;
