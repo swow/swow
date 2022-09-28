@@ -11,11 +11,11 @@
 
 declare(strict_types=1);
 
-namespace Swow\Http;
+namespace Swow\Http\Message;
 
-class ResponseEntity extends MessageEntity
+class RequestEntity extends MessageEntity
 {
-    public int $statusCode = 0;
+    public string $uri = '';
 
-    public string $reasonPhrase = '';
+    public string $method = '';
 }

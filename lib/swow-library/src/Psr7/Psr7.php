@@ -26,9 +26,8 @@ use Psr\Http\Message\UriFactoryInterface;
 use Psr\Http\Message\UriInterface;
 use Swow\Buffer;
 use Swow\Http\Http;
-use Swow\Http\ResponseEntity;
-use Swow\Http\ServerRequestEntity;
-use Swow\Http\UploadedFileEntity;
+use Swow\Http\Message\ResponseEntity;
+use Swow\Http\Message\ServerRequestEntity;
 use Swow\Psr7\Message\MessagePlusInterface;
 use Swow\Psr7\Message\Psr17Factory;
 use Swow\Psr7\Message\ResponsePlusInterface;
@@ -119,7 +118,7 @@ class Psr7
     }
 
     /**
-     * @param array<UploadedFileEntity> $uploadedFileEntities
+     * @param array<\Swow\Http\Message\UploadedFileEntity> $uploadedFileEntities
      * @return array<UploadedFileInterface>
      */
     public static function createUploadedFilesFromEntity(array $uploadedFileEntities, ?StreamFactoryInterface $streamFactory = null, ?UploadedFileFactoryInterface $uploadedFileFactory = null): array

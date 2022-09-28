@@ -11,12 +11,11 @@
 
 declare(strict_types=1);
 
-namespace Swow\Http;
+namespace Swow\Http\Message;
 
-use Swow\Buffer;
-use Swow\WebSocket\Header;
-
-class WebSocketFrameEntity extends Header
+class ResponseEntity extends MessageEntity
 {
-    public ?Buffer $payloadData = null;
+    public int $statusCode = 0;
+
+    public string $reasonPhrase = '';
 }

@@ -11,7 +11,7 @@
 
 declare(strict_types=1);
 
-namespace Swow\Http;
+namespace Swow\Http\Message;
 
 use Swow\Buffer;
 

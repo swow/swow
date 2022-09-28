@@ -17,7 +17,7 @@ use Psr\Http\Message\StreamFactoryInterface;
 use Psr\Http\Message\UploadedFileFactoryInterface;
 use Psr\Http\Message\UploadedFileInterface;
 use Psr\Http\Message\UriFactoryInterface;
-use Swow\Http\ServerRequestEntity;
+use Swow\Http\Message\ServerRequestEntity;
 use Swow\Psr7\Psr7;
 
 use function array_key_exists;

@@ -18,11 +18,11 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Swow\Errno;
 use Swow\Http\Http;
+use Swow\Http\Message\ServerRequestEntity;
 use Swow\Http\Parser as HttpParser;
 use Swow\Http\ProtocolTypeInterface;
 use Swow\Http\ProtocolTypeTrait;
 use Swow\Http\ReceiverTrait;
-use Swow\Http\ServerRequestEntity;
 use Swow\Http\Status as HttpStatus;
 use Swow\Psr7\Message\Response;
 use Swow\Psr7\Message\ResponseException;
@@ -128,8 +128,8 @@ class ServerConnection extends Socket implements ProtocolTypeInterface
     {
         $headers = [];
         $headers['Server'] = 'swow';
-        if ($this->keepAlive !== null) {
-            $headers['Connection'] = $this->keepAlive ? 'keep-alive' : 'close';
+        if ($this->shouldKeepAlive !== null) {
+            $headers['Connection'] = $this->shouldKeepAlive ? 'keep-alive' : 'close';
         }
         $headers['Content-Length'] = (string) strlen($body);
 
