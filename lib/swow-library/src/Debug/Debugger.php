@@ -22,7 +22,7 @@ use Swow\Debug\Debugger\DebugContext;
 use Swow\Errno;
 use Swow\Signal;
 use Swow\Socket;
-use Swow\Util\Handler;
+use Swow\Utils\Handler;
 use Throwable;
 use WeakMap;
 

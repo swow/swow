@@ -24,7 +24,7 @@ extern "C" {
 
 #include "swow.h"
 
-#include "swow_util.h"
+#include "swow_utils.h"
 
 CAT_GLOBALS_STRUCT_BEGIN(swow_debug) {
     cat_queue_t extended_statement_handlers;

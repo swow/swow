@@ -14,17 +14,17 @@ declare(strict_types=1);
 
 require __DIR__ . '/autoload.php';
 
-use function Swow\Util\check;
-use function Swow\Util\error;
-use function Swow\Util\log;
-use function Swow\Util\passthru;
-use function Swow\Util\success;
+use function Swow\Utils\check;
+use function Swow\Utils\error;
+use function Swow\Utils\log;
+use function Swow\Utils\passthru;
+use function Swow\Utils\success;
 
 $repoInfo = [
     'swow-examples' => 'examples',
     'swow-stub' => 'lib/swow-stub',
     'swow-library' => 'lib/swow-library',
-    'swow-util' => 'lib/swow-util',
+    'swow-utils' => 'lib/swow-utils',
     'swow-php-cs-fixer-config' => 'lib/swow-php-cs-fixer-config',
     'php-stub-generator' => 'lib/php-stub-generator',
 ];

@@ -21,17 +21,17 @@ foreach ([0, 2] as $level) {
     }
 }
 
-use Swow\Util\FileSystem;
+use Swow\Utils\FileSystem\FileSystem;
 
-use function Swow\Util\debug;
-use function Swow\Util\error;
-use function Swow\Util\httpDownload;
-use function Swow\Util\info;
-use function Swow\Util\notice;
-use function Swow\Util\ok;
-use function Swow\Util\processExecute;
-use function Swow\Util\success;
-use function Swow\Util\warn;
+use function Swow\Utils\debug;
+use function Swow\Utils\error;
+use function Swow\Utils\httpDownload;
+use function Swow\Utils\info;
+use function Swow\Utils\notice;
+use function Swow\Utils\ok;
+use function Swow\Utils\processExecute;
+use function Swow\Utils\success;
+use function Swow\Utils\warn;
 
 /**
  * @var array<string, string> $options

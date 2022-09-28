@@ -11,7 +11,7 @@
 
 declare(strict_types=1);
 
-namespace Swow\Util\FileSystem;
+namespace Swow\Utils\FileSystem;
 
 use ReflectionProperty;
 use Swow\Exception;
@@ -19,9 +19,11 @@ use Throwable;
 
 use function error_get_last;
 
-class IOException extends Exception
+final class IOException extends Exception
 {
-    final public function __construct(string $message, int $code = 0, ?Throwable $previous = null, protected string $path = 'Unknown')
+    protected string $path = 'Unknown';
+
+    public function __construct(string $message, int $code = 0, ?Throwable $previous = null)
     {
         parent::__construct($message, $code, $previous);
     }
@@ -31,10 +33,10 @@ class IOException extends Exception
         return $this->path;
     }
 
-    public static function getLast(): static
+    public static function createFromLastError(): self
     {
         $lastError = error_get_last();
-        $exception = new static($lastError['message']);
+        $exception = new self($lastError['message']);
 
         $rp = new ReflectionProperty(Exception::class, 'file');
         $rp->setAccessible(true);

@@ -17,15 +17,15 @@ foreach ([__DIR__ . '/../vendor/autoload.php', __DIR__ . '/../../../autoload.php
     }
 }
 
-use function Swow\Util\askBool;
-use function Swow\Util\br;
-use function Swow\Util\error;
-use function Swow\Util\notice;
-use function Swow\Util\log;
-use function Swow\Util\ok;
-use function Swow\Util\success;
-use function Swow\Util\warn;
-use function Swow\Util\passthru;
+use function Swow\Utils\askBool;
+use function Swow\Utils\br;
+use function Swow\Utils\error;
+use function Swow\Utils\notice;
+use function Swow\Utils\log;
+use function Swow\Utils\ok;
+use function Swow\Utils\success;
+use function Swow\Utils\warn;
+use function Swow\Utils\passthru;
 
 if (PHP_OS_FAMILY === 'Windows') {
     error(

@@ -20,7 +20,7 @@
 #include "swow_errno.h"
 #include "swow_log.h"
 #include "swow_debug.h"
-#include "swow_util.h"
+#include "swow_utils.h"
 #include "swow_defer.h"
 #include "swow_coroutine.h"
 #include "swow_channel.h"

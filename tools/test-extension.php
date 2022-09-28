@@ -12,12 +12,12 @@
 
 declare(strict_types=1);
 
-use function Swow\Util\br;
-use function Swow\Util\error;
-use function Swow\Util\httpDownload;
-use function Swow\Util\notice;
-use function Swow\Util\passthru;
-use function Swow\Util\warn;
+use function Swow\Utils\br;
+use function Swow\Utils\error;
+use function Swow\Utils\httpDownload;
+use function Swow\Utils\notice;
+use function Swow\Utils\passthru;
+use function Swow\Utils\warn;
 
 require __DIR__ . '/autoload.php';
 

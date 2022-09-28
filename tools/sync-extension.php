@@ -12,13 +12,13 @@
 
 declare(strict_types=1);
 
-use Swow\Util\FileSystem;
+use Swow\Utils\FileSystem\FileSystem;
 
-use function Swow\Util\defer;
-use function Swow\Util\error;
-use function Swow\Util\log;
-use function Swow\Util\notice;
-use function Swow\Util\ok;
+use function Swow\Utils\defer;
+use function Swow\Utils\error;
+use function Swow\Utils\log;
+use function Swow\Utils\notice;
+use function Swow\Utils\ok;
 
 require __DIR__ . '/autoload.php';
 

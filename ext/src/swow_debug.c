@@ -443,13 +443,13 @@ static PHP_FUNCTION(Swow_Debug_buildTraceAsString)
     RETURN_STR(swow_debug_build_trace_as_string(trace));
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_Swow_Debug_registerExtendedStatementHandler, 0, 1, Swow\\\125til\\Handler, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_Swow_Debug_registerExtendedStatementHandler, 0, 1, Swow\\\125tils\\Handler, 0)
     ZEND_ARG_TYPE_INFO(0, handler, IS_CALLABLE, 0)
 ZEND_END_ARG_INFO()
 
 static PHP_FUNCTION(Swow_Debug_registerExtendedStatementHandler)
 {
-    swow_util_handler_t *handler;
+    swow_utils_handler_t *handler;
     swow_fcall_storage_t fcall;
     zval zfcall;
 
@@ -463,10 +463,10 @@ static PHP_FUNCTION(Swow_Debug_registerExtendedStatementHandler)
     }
 
     ZVAL_PTR(&zfcall, &fcall);
-    handler = swow_util_handler_create(&zfcall);
+    handler = swow_utils_handler_create(&zfcall);
     ZEND_ASSERT(handler != NULL);
 
-    swow_util_handler_push_back_to(handler, &SWOW_DEBUG_G(extended_statement_handlers));
+    swow_utils_handler_push_back_to(handler, &SWOW_DEBUG_G(extended_statement_handlers));
 
     RETURN_OBJ_COPY(&handler->std);
 }
@@ -500,7 +500,7 @@ static int swow_debug_ext_stmt_handler(zend_execute_data *execute_data)
 
         scoroutine->coroutine.flags |= SWOW_COROUTINE_FLAG_DEBUGGING;
 
-        CAT_QUEUE_FOREACH_DATA_START(&SWOW_DEBUG_G(extended_statement_handlers), swow_util_handler_t, node, handler) {
+        CAT_QUEUE_FOREACH_DATA_START(&SWOW_DEBUG_G(extended_statement_handlers), swow_utils_handler_t, node, handler) {
             (void) zend_call_function(&fci, &handler->fcall.fcc);
         } CAT_QUEUE_FOREACH_DATA_END();
 
@@ -546,7 +546,7 @@ zend_result swow_debug_runtime_init(INIT_FUNC_ARGS)
 
 zend_result swow_debug_runtime_shutdown(INIT_FUNC_ARGS)
 {
-    swow_util_handlers_release(&SWOW_DEBUG_G(extended_statement_handlers));
+    swow_utils_handlers_release(&SWOW_DEBUG_G(extended_statement_handlers));
 
     return SUCCESS;
 }

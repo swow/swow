@@ -15,8 +15,8 @@ namespace Swow\Debug;
 
 use Stringable;
 use Swow\Coroutine;
-use Swow\Util\FileSystem\IOException;
-use Swow\Util\Handler;
+use Swow\Utils\FileSystem\IOException;
+use Swow\Utils\Handler;
 
 use function debug_backtrace;
 use function fclose;
@@ -107,7 +107,7 @@ function showExecutedSourceLines(bool $all = false): Handler
         $file = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 1)[0]['file'] ?? '';
         $fp = @fopen($file, 'rb');
         if ($fp === false) {
-            throw IOException::getLast();
+            throw IOException::createFromLastError();
         }
         $lines = [];
         while (($line = fgets($fp)) !== false) {

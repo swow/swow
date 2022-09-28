@@ -323,7 +323,7 @@ EOF
     swow_log.c \
     swow_exception.c \
     swow_debug.c \
-    swow_util.c \
+    swow_utils.c \
     swow_hook.c \
     swow_defer.c \
     swow_coroutine.c \

@@ -12,9 +12,9 @@
 
 declare(strict_types=1);
 
-use function Swow\Util\httpGet;
-use function Swow\Util\info;
-use function Swow\Util\success;
+use function Swow\Utils\httpGet;
+use function Swow\Utils\info;
+use function Swow\Utils\success;
 
 require __DIR__ . '/autoload.php';
 

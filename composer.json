@@ -40,7 +40,7 @@
     "replace": {
         "swow/swow-library": "*",
         "swow/swow-stub": "*",
-        "swow/swow-util": "*",
+        "swow/swow-utils": "*",
         "swow/php-stub-generator": "*"
     },
     "suggest": {
@@ -49,12 +49,12 @@
     "autoload": {
         "psr-4": {
             "Swow\\": "lib/swow-library/src/",
-            "Swow\\Util\\": "lib/swow-util/src/"
+            "Swow\\Utils\\": "lib/swow-utils/src/"
         },
         "files": [
             "lib/swow-library/src/functions.php",
             "lib/swow-library/src/Debug/functions.php",
-            "lib/swow-util/src/functions.php"
+            "lib/swow-utils/src/functions.php"
         ]
     },
     "autoload-dev": {

@@ -1,5 +1,5 @@
 {
-    "name": "swow/swow-util",
+    "name": "swow/swow-utils",
     "description": "Util functions and classes",
     "keywords": [
         "swow",
@@ -20,7 +20,7 @@
     },
     "autoload": {
         "psr-4": {
-            "Swow\\Util\\": "src/"
+            "Swow\\Utils\\": "src/"
         },
         "files": [
             "src/functions.php"

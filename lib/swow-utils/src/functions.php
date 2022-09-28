@@ -11,7 +11,7 @@
 
 declare(strict_types=1);
 
-namespace Swow\Util;
+namespace Swow\Utils;
 
 use RuntimeException;
 use Swow;

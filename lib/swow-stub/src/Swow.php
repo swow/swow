@@ -872,7 +872,7 @@ namespace Swow
         /** @return array<string, mixed> debug information for var_dump */
         public function __debugInfo(): array { }
 
-        public static function registerDeadlockHandler(callable $callable): Util\Handler { }
+        public static function registerDeadlockHandler(callable $callable): Utils\Handler { }
     }
 }
 
@@ -1989,7 +1989,7 @@ namespace Swow
     function defer(callable $tasks): void { }
 }
 
-namespace Swow\Util
+namespace Swow\Utils
 {
     class Handler
     {
@@ -2327,5 +2327,5 @@ namespace Swow\Debug
 
 namespace Swow\Debug
 {
-    function registerExtendedStatementHandler(callable $handler): \Swow\Util\Handler { }
+    function registerExtendedStatementHandler(callable $handler): \Swow\Utils\Handler { }
 }

@@ -11,13 +11,12 @@
 
 declare(strict_types=1);
 
-namespace Swow\Util;
+namespace Swow\Utils\FileSystem;
 
 use FilesystemIterator;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 use SplFileInfo;
-use Swow\Util\FileSystem\IOException;
 
 use function array_filter;
 use function array_values;
@@ -45,7 +44,7 @@ class FileSystem
     {
         $files = @scandir($dir);
         if ($files === false) {
-            throw IOException::getLast();
+            throw IOException::createFromLastError();
         }
         $files = array_filter($files, static fn (string $file) => $file[0] !== '.');
         array_walk($files, static function (&$file) use ($dir): void { $file = "{$dir}/{$file}"; });
@@ -60,7 +59,7 @@ class FileSystem
     {
         if (!is_dir($path) || is_link($path)) {
             if (@unlink($path) === false) {
-                throw IOException::getLast();
+                throw IOException::createFromLastError();
             }
 
             return;
@@ -68,7 +67,7 @@ class FileSystem
 
         if (!$recursive) {
             if (@rmdir($path) === false) {
-                throw IOException::getLast();
+                throw IOException::createFromLastError();
             }
 
             return;
@@ -81,7 +80,7 @@ class FileSystem
             static::remove($file->getRealPath(), false);
         }
         if (@rmdir($path) === false) {
-            throw IOException::getLast();
+            throw IOException::createFromLastError();
         }
     }
 
@@ -126,7 +125,7 @@ class FileSystem
     {
         if (is_file($source)) {
             if (!static::copyFile($source, $destination)) {
-                throw IOException::getLast();
+                throw IOException::createFromLastError();
             }
 
             return [];
@@ -134,7 +133,7 @@ class FileSystem
 
         $errors = [];
         if (!static::touchDir($source, $destination)) {
-            throw IOException::getLast();
+            throw IOException::createFromLastError();
         }
 
         $iterator = new RecursiveDirectoryIterator(
@@ -165,7 +164,7 @@ class FileSystem
                 if ($ignoreErrors) {
                     $errors[] = error_get_last();
                 } else {
-                    throw IOException::getLast();
+                    throw IOException::createFromLastError();
                 }
             }
         }

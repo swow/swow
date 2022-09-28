@@ -15,7 +15,7 @@ declare(strict_types=1);
 namespace Swow\StubUtils\ConstantFixer;
 
 use function array_key_exists;
-use function Swow\Util\httpGetCached;
+use function Swow\Utils\httpGetCached;
 
 abstract class ConstantDefinitionsFetcherAbstract implements ConstantDefinitionsFetcher
 {

@@ -2092,13 +2092,13 @@ static PHP_METHOD(Swow_Coroutine, __debugInfo)
     RETURN_DEBUG_INFO_WITH_PROPERTIES(&zdebug_info);
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_class_Swow_Coroutine_registerDeadlockHandler, 0, 1, Swow\\\125til\\Handler, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_class_Swow_Coroutine_registerDeadlockHandler, 0, 1, Swow\\\125tils\\Handler, 0)
     ZEND_ARG_TYPE_INFO(0, callable, IS_CALLABLE, 0)
 ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Coroutine, registerDeadlockHandler)
 {
-    swow_util_handler_t *handler;
+    swow_utils_handler_t *handler;
     swow_fcall_storage_t fcall;
     zval zfcall;
 
@@ -2107,10 +2107,10 @@ static PHP_METHOD(Swow_Coroutine, registerDeadlockHandler)
     ZEND_PARSE_PARAMETERS_END();
 
     ZVAL_PTR(&zfcall, &fcall);
-    handler = swow_util_handler_create(&zfcall);
+    handler = swow_utils_handler_create(&zfcall);
     ZEND_ASSERT(handler != NULL);
 
-    swow_util_handler_push_back_to(handler, &SWOW_COROUTINE_G(deadlock_handlers));
+    swow_utils_handler_push_back_to(handler, &SWOW_COROUTINE_G(deadlock_handlers));
 
     RETURN_OBJ_COPY(&handler->std);
 }
@@ -2425,7 +2425,7 @@ static int swow_coroutine_end_silence_handler(zend_execute_data *execute_data)
 
 static void swow_coroutine_deadlock_callback(void)
 {
-    CAT_QUEUE_FOREACH_DATA_START(&SWOW_COROUTINE_G(deadlock_handlers), swow_util_handler_t, node, handler) {
+    CAT_QUEUE_FOREACH_DATA_START(&SWOW_COROUTINE_G(deadlock_handlers), swow_utils_handler_t, node, handler) {
         swow_coroutine_t *scoroutine;
         zval zfcall;
         ZVAL_PTR(&zfcall, &handler->fcall);
@@ -2558,7 +2558,7 @@ zend_result swow_coroutine_runtime_shutdown(SHUTDOWN_FUNC_ARGS)
 {
     SWOW_COROUTINE_G(runtime_state) = SWOW_COROUTINE_RUNTIME_STATE_IN_SHUTDOWN;
 
-    swow_util_handlers_release(&SWOW_COROUTINE_G(deadlock_handlers));
+    swow_utils_handlers_release(&SWOW_COROUTINE_G(deadlock_handlers));
 
     /* close main scoroutine */
     swow_coroutine_main_close();

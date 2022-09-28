@@ -14,7 +14,7 @@ declare(strict_types=1);
 
 require __DIR__ . '/autoload.php';
 
-use Swow\Util\FileSystem;
+use Swow\Utils\FileSystem\FileSystem;
 
 (static function (): void {
     global $argv;

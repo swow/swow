@@ -26,20 +26,20 @@ extern "C" {
 
 #include "cat_queue.h"
 
-extern SWOW_API zend_class_entry *swow_util_handler_ce;
-extern SWOW_API zend_object_handlers swow_util_handler_handlers;
+extern SWOW_API zend_class_entry *swow_utils_handler_ce;
+extern SWOW_API zend_object_handlers swow_utils_handler_handlers;
 
-typedef struct swow_util_handler_s {
+typedef struct swow_utils_handler_s {
     cat_queue_t node;
     swow_fcall_storage_t fcall;
     zend_object std;
-} swow_util_handler_t;
+} swow_utils_handler_t;
 
 /* helper */
 
-static zend_always_inline swow_util_handler_t *swow_util_handler_get_from_object(zend_object *object)
+static zend_always_inline swow_utils_handler_t *swow_utils_handler_get_from_object(zend_object *object)
 {
-    return cat_container_of(object, swow_util_handler_t, std);
+    return cat_container_of(object, swow_utils_handler_t, std);
 }
 
 /* loader */
@@ -48,11 +48,11 @@ zend_result swow_util_module_init(INIT_FUNC_ARGS);
 
 /* APIs */
 
-SWOW_API swow_util_handler_t *swow_util_handler_create(zval *zcallable);
-SWOW_API void swow_util_handler_push_back_to(swow_util_handler_t *handler, cat_queue_t *queue);
-SWOW_API void swow_util_handler_remove(swow_util_handler_t *handler);
+SWOW_API swow_utils_handler_t *swow_utils_handler_create(zval *zcallable);
+SWOW_API void swow_utils_handler_push_back_to(swow_utils_handler_t *handler, cat_queue_t *queue);
+SWOW_API void swow_utils_handler_remove(swow_utils_handler_t *handler);
 
-SWOW_API void swow_util_handlers_release(cat_queue_t *handlers);
+SWOW_API void swow_utils_handlers_release(cat_queue_t *handlers);
 
 #ifdef __cplusplus
 }
