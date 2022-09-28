@@ -62,7 +62,7 @@ class Server extends Socket
 
     /**
      * @param ServerConnection[] $targets
-     * @param array<int, \Swow\Psr7\Message\ServerConnection>|callable $filter
+     * @param array<int, ServerConnection>|callable $filter
      * @return SocketException[]|static
      * @psalm-todo: this is not correct: flags can be bitwise combined things
      * @psalm-return $flags is self::BROADCAST_FLAG_RECORD_EXCEPTIONS ? array<SocketException> : static
@@ -70,7 +70,7 @@ class Server extends Socket
     public function broadcastMessage(WebSocketFrame $frame, ?array $targets = null, array|callable $filter = [], int $flags = self::BROADCAST_FLAG_NONE): static|array
     {
         if ($targets === null) {
-            /** @var \Swow\Psr7\Message\ServerConnection[] $targets */
+            /** @var ServerConnection[] $targets */
             $targets = $this->connections;
         }
         if ($frame->getPayloadLength() <= Buffer::PAGE_SIZE) {
@@ -95,7 +95,7 @@ class Server extends Socket
             }
             try {
                 if (is_string($frame)) {
-                    $target->sendString($frame);
+                    $target->send($frame);
                 } else {
                     $target->sendWebSocketFrame($frame);
                 }

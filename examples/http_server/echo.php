@@ -43,7 +43,7 @@ while (true) {
         $body = null;
         try {
             while (true) {
-                $length = $connection->recv($buffer);
+                $length = $connection->recv($buffer, $buffer->getLength());
                 if ($length === 0) {
                     break;
                 }
@@ -56,7 +56,7 @@ while (true) {
                     }
                     if ($parser->getEvent() === Parser::EVENT_BODY) {
                         $body ??= new Buffer(Buffer::COMMON_SIZE);
-                        $body->write($buffer->toString(), $parser->getDataOffset(), $parser->getDataLength());
+                        $body->write(0, $buffer->toString(), $parser->getDataOffset(), $parser->getDataLength());
                     }
                     if ($parser->isCompleted()) {
                         $response = sprintf(
@@ -68,7 +68,7 @@ while (true) {
                             $body ? $body->getLength() : 0,
                             $body ? $body->toString() : ''
                         );
-                        $connection->sendString($response);
+                        $connection->send($response);
                         $body?->clear();
                         break; /* goto recv more data */
                     }

@@ -148,7 +148,7 @@ Coroutine::run(static function () use ($wr): void {
             $client_uid = "{$address}:{$port}";
             $id = $client_map[$client_uid] = ($client_map[$client_uid] ?? -1) + 1;
             assert($recv === "Client: Hello #{$id}");
-            $socket->sendStringTo("Server: Hello #{$id}", $address, $port);
+            $socket->sendTo("Server: Hello #{$id}", $address, $port);
         }
     }
     $socket->close();

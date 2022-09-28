@@ -37,7 +37,7 @@ while (true) {
             echo "No.{$connection->getFd()} closed" . PHP_EOL;
         } catch (SocketException $exception) {
             if ($exception->getCode() === Errno::ETIMEDOUT) {
-                $connection->sendString("Server has kicked you out\r\n");
+                $connection->send("Server has kicked you out\r\n");
             }
             echo "No.{$connection->getFd()} goaway! {$exception->getMessage()}" . PHP_EOL;
         }

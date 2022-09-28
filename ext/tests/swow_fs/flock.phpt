@@ -50,7 +50,7 @@ $conn = $sock->accept(10000);
 function tellchild($char)
 {
     global $conn;
-    $conn->sendString($char);
+    $conn->send($char);
 }
 function waitchild($char)
 {

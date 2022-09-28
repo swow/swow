@@ -24,27 +24,22 @@ while (true) {
         $buffer = new Buffer(Buffer::COMMON_SIZE);
         try {
             while (true) {
-                $length = $connection->recv($buffer);
+                $length = $connection->recv($buffer, $buffer->getLength());
                 if ($length === 0) {
                     break;
                 }
-                $offset = 0;
                 while (true) {
-                    $eof = strpos($buffer->toString(), "\r\n\r\n", $offset);
+                    $eof = strpos($buffer->toString(), "\r\n\r\n");
                     if ($eof === false) {
                         break;
                     }
-                    $connection->sendString(
+                    $connection->send(
                         "HTTP/1.1 200 OK\r\n" .
                         "Connection: keep-alive\r\n" .
                         "Content-Length: 0\r\n\r\n"
                     );
                     $requestLength = $eof + strlen("\r\n\r\n");
-                    if ($requestLength === $length) {
-                        $buffer->clear();
-                        break;
-                    }  /* < */
-                    $offset += $requestLength;
+                    $buffer->truncateFrom($requestLength);
                 }
             }
         } catch (SocketException $exception) {

@@ -189,7 +189,7 @@ TEXT;
 
     public function clear(): static
     {
-        $this->output->sendString("\033c");
+        $this->output->send("\033c");
 
         return $this;
     }
