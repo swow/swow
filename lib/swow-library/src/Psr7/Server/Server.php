@@ -18,7 +18,7 @@ use Swow\Buffer;
 use Swow\Http\Config\LimitationTrait;
 use Swow\Psr7\Message\ServerPsr17FactoryTrait;
 use Swow\Psr7\Message\WebSocketFrame;
-use Swow\Server\ConnectionManagerTrait;
+use Swow\Psr7\Server\ConnectionManagerTrait;
 use Swow\Socket;
 use Swow\SocketException;
 

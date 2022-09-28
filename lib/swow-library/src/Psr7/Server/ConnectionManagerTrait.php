@@ -11,7 +11,7 @@
 
 declare(strict_types=1);
 
-namespace Swow\Server;
+namespace Swow\Psr7\Server;
 
 use Swow\Socket;
 
