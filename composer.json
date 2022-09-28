@@ -77,7 +77,7 @@
         "phpstan": [ "@php vendor/bin/phpstan analyse --memory-limit 4G -c phpstan.neon" ],
         "psalm": [ "@php vendor/bin/psalm" ],
         "sync-extension": [ "@php -n tools/sync-extension.php" ],
-        "build-extension": [ "@php bin/swow-builder" ],
+        "build-extension": [ "@php ext/swow-builder" ],
         "rebuild-extension": [ "@build-extension --rebuild" ],
         "rebuild-debug-extension": [ "@build-extension --rebuild --debug" ],
         "install-extension": [ "@build-extension --install" ],
@@ -96,6 +96,6 @@
         "split": [ "@php -n tools/split.php" ]
     },
     "bin": [
-        "bin/swow-builder"
+        "ext/swow-builder"
     ]
 }

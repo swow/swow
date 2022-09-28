@@ -3,14 +3,20 @@
 /**
  * This file is part of Swow
  *
- * @link     https://github.com/swow/swow
- * @contact  twosee <twosee@php.net>
+ * @link    https://github.com/swow/swow
+ * @contact twosee <twosee@php.net>
  *
  * For the full copyright and license information,
  * please view the LICENSE file that was distributed with this source code
  */
 
-foreach ([__DIR__ . '/../vendor/autoload.php', __DIR__ . '/../../../autoload.php',] as $file) {
+foreach (
+    [
+        __DIR__ . '/vendor/autoload.php',
+        __DIR__ . '/../vendor/autoload.php',
+        __DIR__ . '/../../../autoload.php',
+    ] as $file
+) {
     if (file_exists($file)) {
         require $file;
         break;
@@ -20,12 +26,12 @@ foreach ([__DIR__ . '/../vendor/autoload.php', __DIR__ . '/../../../autoload.php
 use function Swow\Utils\askBool;
 use function Swow\Utils\br;
 use function Swow\Utils\error;
-use function Swow\Utils\notice;
 use function Swow\Utils\log;
+use function Swow\Utils\notice;
 use function Swow\Utils\ok;
+use function Swow\Utils\passthru;
 use function Swow\Utils\success;
 use function Swow\Utils\warn;
-use function Swow\Utils\passthru;
 
 if (PHP_OS_FAMILY === 'Windows') {
     error(
@@ -40,7 +46,7 @@ $workSpace = dirname(__DIR__) . '/ext';
 $swowSo = "{$workSpace}/.libs/swow.so";
 $options = getopt('', ['sudo', 'install', 'rebuild', 'clean', 'show-log', 'debug', 'thread-context', 'msan', 'asan', 'ubsan', 'enable::']);
 
-$commandExecutor = function (string $name, array $commands) use ($workSpace): void {
+$commandExecutor = static function (string $name, array $commands) use ($workSpace): void {
     if (!$commands) {
         return;
     }
@@ -91,7 +97,7 @@ if (!file_exists("{$workSpace}/Makefile") || isset($options['rebuild'])) {
 $commandExecutor('Configure', $configureCommands);
 
 // TODO: use Swow\Cpu module
-$cpuCount = (int) `{$workSpace}/deps/libcat/tools/cpu_count.sh`;
+$cpuCount = (int) shell_exec("{$workSpace}/deps/libcat/tools/cpu_count.sh");
 if ($cpuCount <= 0) {
     $cpuCount = 4;
 }
@@ -110,7 +116,7 @@ $swowInfo = ob_get_clean();
 if ($status === 0) {
     log($swowInfo);
 } else {
-    warn("Get extension info failed");
+    warn('Get extension info failed');
 }
 
 $expectInstall = isset($options['install']);

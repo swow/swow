@@ -22,7 +22,6 @@ return (new Config())
     )->setFinder(
         PhpCsFixer\Finder::create()
             ->in([
-                __DIR__ . '/bin',
                 __DIR__ . '/benchmark',
                 __DIR__ . '/examples',
                 __DIR__ . '/lib',
@@ -33,5 +32,6 @@ return (new Config())
             ])
             ->append([
                 __FILE__,
+                __DIR__ . '/ext/swow-builder',
             ])
     );
