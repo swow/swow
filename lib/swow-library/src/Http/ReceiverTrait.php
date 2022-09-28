@@ -64,7 +64,7 @@ trait ReceiverTrait
 
     protected bool $preserveBodyData = false;
 
-    protected ?bool $keepAlive = false;
+    protected ?bool $shouldKeepAlive = false;
 
     protected function __constructReceiver(int $type, int $events): void
     {
@@ -132,9 +132,9 @@ trait ReceiverTrait
         return $this;
     }
 
-    public function getKeepAlive(): ?bool
+    public function shouldKeepAlive(): ?bool
     {
-        return $this->keepAlive;
+        return $this->shouldKeepAlive;
     }
 
     /**
@@ -281,7 +281,7 @@ trait ReceiverTrait
                                 {
                                     $defaultKeepAlive = $parser->getMajorVersion() !== 1 || $parser->getMinorVersion() !== 0;
                                     $shouldKeepAlive = $parser->shouldKeepAlive();
-                                    $this->keepAlive = $shouldKeepAlive !== $defaultKeepAlive ? $shouldKeepAlive : null;
+                                    $this->shouldKeepAlive = $shouldKeepAlive !== $defaultKeepAlive ? $shouldKeepAlive : null;
                                     if ($parser->isChunked()) {
                                         $isChunked = true;
                                     } else {
