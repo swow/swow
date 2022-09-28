@@ -26,7 +26,7 @@ use Swow\Http\Protocol\ReceiverTrait;
 use Swow\Http\Status as HttpStatus;
 use Swow\Psr7\Message\Response;
 use Swow\Psr7\Message\ResponseException;
-use Swow\Psr7\Message\WebSocketTrait;
+use Swow\Psr7\Protocol\WebSocketTrait;
 use Swow\Psr7\Psr7;
 use Swow\Socket;
 use Swow\SocketException;

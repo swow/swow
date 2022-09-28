@@ -11,7 +11,9 @@
 
 declare(strict_types=1);
 
-namespace Swow\Psr7\Message;
+namespace Swow\Psr7\Protocol;
+
+use Swow\Psr7\Message\WebSocketFrame;
 
 trait WebSocketTrait
 {
