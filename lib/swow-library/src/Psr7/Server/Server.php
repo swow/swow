@@ -15,10 +15,9 @@ namespace Swow\Psr7\Server;
 
 use Closure;
 use Swow\Buffer;
-use Swow\Http\Config\LimitationTrait;
+use Swow\Psr7\Config\LimitationTrait;
 use Swow\Psr7\Message\ServerPsr17FactoryTrait;
 use Swow\Psr7\Message\WebSocketFrame;
-use Swow\Psr7\Server\ConnectionManagerTrait;
 use Swow\Socket;
 use Swow\SocketException;
 
@@ -28,17 +27,18 @@ use function is_string;
 
 class Server extends Socket
 {
-    use ConnectionManagerTrait;
-
     use LimitationTrait;
 
     use ServerConnectionFactoryTrait;
+
+    use ServerConnectionManagerTrait;
 
     use ServerPsr17FactoryTrait;
 
     public function __construct(int $type = self::TYPE_TCP)
     {
         parent::__construct($type);
+        $this->__constructServerConnectionManager();
         $this->__constructServerConnectionFactory();
         $this->__constructServerPsr17Factory();
     }
@@ -55,6 +55,19 @@ class Server extends Socket
         ]);
 
         return $connection;
+    }
+
+    public function close(): bool
+    {
+        $ret = parent::close();
+        $this->closeConnections();
+
+        return $ret;
+    }
+
+    public function __destruct()
+    {
+        $this->closeConnections();
     }
 
     protected const BROADCAST_FLAG_NONE = 0;

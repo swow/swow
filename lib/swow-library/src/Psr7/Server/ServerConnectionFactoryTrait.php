@@ -19,7 +19,7 @@ trait ServerConnectionFactoryTrait
 {
     protected ServerConnectionFactoryInterface $serverConnectionFactory;
 
-    public function __constructServerConnectionFactory(?ServerConnectionFactoryInterface $serverConnectionFactory = null): void
+    protected function __constructServerConnectionFactory(?ServerConnectionFactoryInterface $serverConnectionFactory = null): void
     {
         $this->serverConnectionFactory = $serverConnectionFactory ?? Psr17Factory::getInstance();
     }

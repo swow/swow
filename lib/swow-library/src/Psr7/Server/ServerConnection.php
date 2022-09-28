@@ -230,7 +230,7 @@ class ServerConnection extends Socket implements ProtocolTypeInterface
     protected function offline(): void
     {
         if ($this->server) {
-            $this->server->offline($this->getId());
+            $this->server->offline($this);
             $this->server = null;
         }
     }

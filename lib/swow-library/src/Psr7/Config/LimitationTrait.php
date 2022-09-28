@@ -11,7 +11,7 @@
 
 declare(strict_types=1);
 
-namespace Swow\Http\Config;
+namespace Swow\Psr7\Config;
 
 trait LimitationTrait
 {
