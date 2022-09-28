@@ -20,7 +20,7 @@ require __DIR__ . '/autoload.php';
 
 $nginxDbUri = 'https://raw.githubusercontent.com/nginx/nginx/master/conf/mime.types';
 $jsHttpDbUri = 'https://raw.githubusercontent.com/jshttp/mime-db/master/db.json';
-$sourceFilePathWithoutExtension = dirname(__DIR__) . '/lib/swow-library/src/Http/MimeType';
+$sourceFilePathWithoutExtension = dirname(__DIR__) . '/lib/swow-library/src/Http/Mime/Mime';
 $indent = 4;
 
 $extensionMap = [];

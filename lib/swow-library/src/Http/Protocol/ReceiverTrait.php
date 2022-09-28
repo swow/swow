@@ -11,14 +11,16 @@
 
 declare(strict_types=1);
 
-namespace Swow\Http;
+namespace Swow\Http\Protocol;
 
 use Swow\Buffer;
 use Swow\Http\Message\ResponseEntity;
 use Swow\Http\Message\ServerRequestEntity;
 use Swow\Http\Message\UploadedFileEntity;
 use Swow\Http\Message\WebSocketFrameEntity;
+use Swow\Http\Mime\MimeType;
 use Swow\Http\Parser as HttpParser;
+use Swow\Http\ParserException;
 use Swow\Http\Status as HttpStatus;
 use Swow\Psr7\Message\ResponseException;
 use Swow\WebSocket\WebSocket;

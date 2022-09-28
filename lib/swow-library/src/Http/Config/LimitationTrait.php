@@ -11,9 +11,9 @@
 
 declare(strict_types=1);
 
-namespace Swow\Http;
+namespace Swow\Http\Config;
 
-trait ConfigTrait
+trait LimitationTrait
 {
     protected int $maxHeaderLength = 8192;
 

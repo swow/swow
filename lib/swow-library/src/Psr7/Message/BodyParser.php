@@ -16,7 +16,7 @@ namespace Swow\Psr7\Message;
 use InvalidArgumentException;
 use Psr\Http\Message\StreamInterface;
 use SimpleXMLElement;
-use Swow\Http\MimeType;
+use Swow\Http\Mime\MimeType;
 
 use function is_array;
 use function json_decode;

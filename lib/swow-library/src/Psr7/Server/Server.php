@@ -15,7 +15,7 @@ namespace Swow\Psr7\Server;
 
 use Closure;
 use Swow\Buffer;
-use Swow\Http\ConfigTrait;
+use Swow\Http\Config\LimitationTrait;
 use Swow\Psr7\Message\ServerPsr17FactoryTrait;
 use Swow\Psr7\Message\WebSocketFrame;
 use Swow\Server\ConnectionManagerTrait;
@@ -28,9 +28,9 @@ use function is_string;
 
 class Server extends Socket
 {
-    use ConfigTrait;
-
     use ConnectionManagerTrait;
+
+    use LimitationTrait;
 
     use ServerConnectionFactoryTrait;
 

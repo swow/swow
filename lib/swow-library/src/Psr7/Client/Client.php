@@ -18,14 +18,14 @@ use Psr\Http\Client\ClientExceptionInterface;
 use Psr\Http\Client\ClientInterface;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
-use Swow\Http\ConfigTrait;
+use Swow\Http\Config\LimitationTrait;
 use Swow\Http\Http;
 use Swow\Http\Message\ResponseEntity;
 use Swow\Http\Parser;
 use Swow\Http\Parser as HttpParser;
-use Swow\Http\ProtocolTypeInterface;
-use Swow\Http\ProtocolTypeTrait;
-use Swow\Http\ReceiverTrait;
+use Swow\Http\Protocol\ProtocolTypeInterface;
+use Swow\Http\Protocol\ProtocolTypeTrait;
+use Swow\Http\Protocol\ReceiverTrait;
 use Swow\Http\Status as HttpStatus;
 use Swow\Psr7\Message\ClientPsr17FactoryTrait;
 use Swow\Psr7\Message\Request;
@@ -42,7 +42,7 @@ use function strlen;
 class Client extends Socket implements ClientInterface, ProtocolTypeInterface
 {
     use ClientPsr17FactoryTrait;
-    use ConfigTrait;
+    use LimitationTrait;
 
     use ProtocolTypeTrait;
 
