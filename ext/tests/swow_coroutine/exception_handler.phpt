@@ -13,20 +13,20 @@ require __DIR__ . '/../include/bootstrap.php';
 use Swow\Coroutine;
 
 set_exception_handler(function (Throwable $e) {
-    echo 'outer handler ' . $e->getMessage() . PHP_LF;
+    echo 'outer handler ' . $e->getMessage() . "\n";
 });
 
 $coro = Coroutine::run(function () use (&$inner_coro) {
     $inner_coro = Coroutine::run(function () {
         Coroutine::yield();
         set_exception_handler(function (Throwable $e) {
-            echo 'inner handler ' . $e->getMessage() . PHP_LF;
+            echo 'inner handler ' . $e->getMessage() . "\n";
         });
         throw new Exception('inner exception');
     });
 
     set_exception_handler(function (Throwable $e) {
-        echo 'in-coro handler ' . $e->getMessage() . PHP_LF;
+        echo 'in-coro handler ' . $e->getMessage() . "\n";
     });
     throw new Exception('in-coro exception');
 });

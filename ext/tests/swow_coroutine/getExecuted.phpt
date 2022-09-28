@@ -89,7 +89,7 @@ register_shutdown_function($closure);
 register_tick_function($closure);
 set_error_handler($closure);
 
-echo 'Done' . PHP_LF;
+echo "Done\n";
 ?>
 --EXPECT--
 Done

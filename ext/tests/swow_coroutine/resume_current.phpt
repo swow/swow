@@ -12,16 +12,16 @@ use Swow\Coroutine;
 use Swow\CoroutineException;
 
 $coroutine = new Coroutine(function () use (&$coroutine) {
-    echo 'In' . PHP_LF;
+    echo "In\n";
     Assert::throws(function () use ($coroutine) {
         $coroutine->resume();
     }, CoroutineException::class);
-    echo 'Out' . PHP_LF;
+    echo "Out\n";
 });
-echo 'Resume' . PHP_LF;
+echo "Resume\n";
 $coroutine->resume();
 
-echo 'Done' . PHP_LF;
+echo "Done\n";
 
 ?>
 --EXPECT--

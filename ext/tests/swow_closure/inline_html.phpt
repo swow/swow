@@ -14,7 +14,7 @@ $anonymousString = serialize($anonymous);
 $anonymousUnserialized = unserialize($anonymousString);
 $anonymousUnserialized();
 
-echo 'Done' . PHP_LF;
+echo "Done\n";
 ?>
 --EXPECTF--
 hello world

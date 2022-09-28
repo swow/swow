@@ -44,7 +44,7 @@ Assert::throws(function () {
     $parser->finish();
 }, ParserException::class, expectMessage: '/Invalid EOF state/');
 
-echo 'Done' . PHP_LF;
+echo "Done\n";
 
 ?>
 --EXPECT--

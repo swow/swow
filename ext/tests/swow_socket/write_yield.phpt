@@ -54,7 +54,7 @@ $client->close();
 $server->close();
 WaitReference::wait($wrServer);
 
-echo 'Done' . PHP_LF;
+echo "Done\n";
 
 ?>
 --EXPECT--

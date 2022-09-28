@@ -30,7 +30,7 @@ $tcpServer = new Socket(Socket::TYPE_TCP);
 $tcpServer->bind('127.0.0.1')->listen();
 Coroutine::run(function () use ($tcpServer, $wr) {
     $connection = $tcpServer->accept();
-    echo $connection->recvString() . PHP_LF;
+    echo $connection->recvString() . "\n";
     $connection->send('Hello Client');
 });
 // prepare handle
@@ -41,10 +41,10 @@ $mainSocket->sendHandle($mainClient);
 $workerClient = new Socket(Socket::TYPE_TCP);
 $workerChannel->acceptTo($workerClient);
 // testing on received handle
-echo $workerClient->send('Hello Server')->recvString() . PHP_LF;
+echo $workerClient->send('Hello Server')->recvString() . "\n";
 $wr::wait($wr);
 
-echo 'Done' . PHP_LF;
+echo "Done\n";
 ?>
 --EXPECT--
 Hello Server

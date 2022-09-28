@@ -57,7 +57,7 @@ try {
 Assert::same($coro->getState(), Coroutine::STATE_DEAD);
 Assert::same($coro->getStateName(), 'dead');
 
-echo 'Done' . PHP_LF;
+echo "Done\n";
 ?>
 --EXPECT--
 Done

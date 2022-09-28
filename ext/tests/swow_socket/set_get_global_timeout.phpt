@@ -30,7 +30,7 @@ Assert::same($socket->getAcceptTimeout(), 1);
 
 $socket->close();
 
-echo 'Done' . PHP_LF;
+echo "Done\n";
 ?>
 --EXPECT--
 Done

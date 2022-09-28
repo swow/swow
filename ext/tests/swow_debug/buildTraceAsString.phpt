@@ -84,7 +84,7 @@ Assert::throws(function () {
 
 var_dump(buildTraceAsString(debug_backtrace()));
 
-echo 'Done' . PHP_LF;
+echo "Done\n";
 ?>
 --EXPECTF--
 string(%d) "#0 [internal function]: {closure}(%s)

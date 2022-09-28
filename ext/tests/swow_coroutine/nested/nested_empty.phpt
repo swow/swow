@@ -9,12 +9,12 @@ require __DIR__ . '/../../include/skipif.php';
 require __DIR__ . '/../../include/bootstrap.php';
 
 Swow\Coroutine::run(function () {
-    echo 'coroutine[1] start' . PHP_LF;
+    echo "coroutine[1] start\n";
     Swow\Coroutine::run(function () {
-        echo 'coroutine[2] start' . PHP_LF;
-        echo 'coroutine[2] exit' . PHP_LF;
+        echo "coroutine[2] start\n";
+        echo "coroutine[2] exit\n";
     });
-    echo 'coroutine[1] exit' . PHP_LF;
+    echo "coroutine[1] exit\n";
 });
 
 ?>

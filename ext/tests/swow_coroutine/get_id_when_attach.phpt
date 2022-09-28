@@ -24,7 +24,7 @@ $coroutine->eval(<<<PHP
 PHP
 );
 
-echo 'Done' . PHP_LF;
+echo "Done\n";
 ?>
 --EXPECT--
 Done

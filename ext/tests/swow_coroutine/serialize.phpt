@@ -12,7 +12,7 @@ $coroutine = new Swow\Coroutine(function () { });
 try {
     serialize($coroutine);
 } catch (Exception $exception) {
-    echo $exception->getMessage() . PHP_LF;
+    echo $exception->getMessage() . "\n";
 }
 
 class TestCoroutine extends Swow\Coroutine
@@ -27,10 +27,10 @@ $coroutine = new TestCoroutine(function () { });
 try {
     serialize($coroutine);
 } catch (Exception $exception) {
-    echo $exception->getMessage() . PHP_LF;
+    echo $exception->getMessage() . "\n";
 }
 
-echo 'Done' . PHP_LF;
+echo "Done\n";
 
 ?>
 --EXPECT--

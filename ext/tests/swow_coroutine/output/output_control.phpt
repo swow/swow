@@ -54,7 +54,7 @@ Swow\Coroutine::run(function () use ($wr) {
 Assert::same(ob_get_clean(), 'main');
 
 WaitReference::wait($wr);
-echo 'Done' . PHP_LF;
+echo "Done\n";
 
 ?>
 --EXPECT--

@@ -24,7 +24,7 @@ $closure = function () {
 try {
     // call a closure in remote
     $remote_coro->call($closure);
-    echo 'Never here' . PHP_LF;
+    echo "Never here\n";
 } catch (Throwable $e) {
 } finally {
     $remote_coro->resume();
@@ -41,7 +41,7 @@ $remote_coro = Coroutine::run(function () use ($closure) {
 try {
     // cannot issue a context switch via eval
     $remote_coro->eval('\Swow\Coroutine::yield();');
-    echo 'Never here' . PHP_LF;
+    echo "Never here\n";
 } catch (Throwable $e) {
 } finally {
     $remote_coro->resume();
@@ -58,7 +58,7 @@ $remote_coro = Coroutine::run(function () use ($closure) {
 try {
     // cannot create a coroutine in eval
     $remote_coro->eval('$coro_denied = new \Swow\Coroutine(function(){});');
-    echo 'Never here' . PHP_LF;
+    echo "Never here\n";
 } catch (Throwable $e) {
 } finally {
     $remote_coro->resume();
@@ -67,7 +67,7 @@ try {
 Assert::isInstanceOf($e, Error::class);
 Assert::same($e->getMessage(), 'The object of Swow\Coroutine can not be created for security reasons');
 
-echo 'Done' . PHP_LF;
+echo "Done\n";
 
 ?>
 --EXPECT--

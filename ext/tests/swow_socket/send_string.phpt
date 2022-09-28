@@ -21,7 +21,7 @@ $result = $socket->recvString();
 phpt_var_dump($result);
 Assert::contains($result, 'HTTP/1.1');
 
-echo 'Done' . PHP_LF;
+echo "Done\n";
 ?>
 --EXPECT--
 Done

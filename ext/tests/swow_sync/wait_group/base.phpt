@@ -17,13 +17,13 @@ while ($n--) {
     Coroutine::run(function () use ($wg, $n) {
         // mock doing some tasks consuming times
         pseudo_random_sleep();
-        echo $n . PHP_LF;
+        echo $n . "\n";
         $wg->done();
     });
 }
-echo 'Start WG' . PHP_LF;
+echo "Start WG\n";
 $wg->wait();
-echo 'Done' . PHP_LF;
+echo "Done\n";
 
 ?>
 --EXPECT--

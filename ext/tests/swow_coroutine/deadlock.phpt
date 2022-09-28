@@ -17,14 +17,14 @@ php_proc_with_swow([
         'fwrite(STDERR, "Never here" . PHP_EOL);'
 ], function ($proc, array $pipes) {
     $pid = (int) trim(fgets($pipes[1], 4096));
-    echo trim(fgets($pipes[2], 4096)) . PHP_LF;
+    echo trim(fgets($pipes[2], 4096)) . "\n";
     Signal::kill($pid, Signal::TERM);
     while (!feof($pipes[2])) {
-        echo trim(fgets($pipes[2], 4096)) . PHP_LF;
+        echo trim(fgets($pipes[2], 4096)) . "\n";
     }
 });
 
-echo 'Done' . PHP_LF;
+echo "Done\n";
 
 ?>
 --EXPECT--

@@ -28,7 +28,7 @@ foreach ([false, true] as $sleep) {
         $channel->push(false);
     }
 }
-echo 'Done' . PHP_LF;
+echo "Done\n";
 
 ?>
 --EXPECT--

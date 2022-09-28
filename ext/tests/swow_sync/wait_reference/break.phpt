@@ -23,14 +23,14 @@ Coroutine::run(function () use ($wr) {
 $waiting_coro = Coroutine::run(function ($wr) {
     try {
         WaitReference::wait($wr);
-        echo 'wait should not success' . PHP_LF;
+        echo "wait should not success\n";
     } catch (SyncException $e) {
         Assert::same($e->getCode(), Errno::ECANCELED);
     }
 }, $wr);
 $waiting_coro->resume();
 unset($wr);
-echo 'Done' . PHP_LF;
+echo "Done\n";
 
 ?>
 --EXPECT--

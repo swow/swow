@@ -29,7 +29,7 @@ foreach ($coroutines as $coro) {
     $coro->resume();
 }
 
-echo 'Done' . PHP_LF;
+echo "Done\n";
 
 ?>
 --EXPECT--

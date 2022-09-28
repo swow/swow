@@ -22,7 +22,7 @@ $coroutine->resume();
 
 var_dump($trace);
 
-echo 'Done' . PHP_LF;
+echo "Done\n";
 ?>
 --EXPECTF--
 array(5) {

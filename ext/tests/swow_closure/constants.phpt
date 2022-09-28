@@ -67,7 +67,7 @@ $arrowString = serialize($arrow);
 $arrowUnserialized = unserialize($arrowString);
 $arrowUnserialized();
 
-echo 'Done' . PHP_LF;
+echo "Done\n";
 ?>
 --EXPECT--
 string(9) "anonymous"

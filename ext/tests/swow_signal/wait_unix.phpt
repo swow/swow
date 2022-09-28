@@ -24,7 +24,7 @@ Assert::throws(function () {
     Signal::wait(Signal::TERM, 10);
 }, SignalException::class);
 
-echo 'Done' . PHP_LF;
+echo "Done\n";
 ?>
 --EXPECTREGEX--
 wait OK

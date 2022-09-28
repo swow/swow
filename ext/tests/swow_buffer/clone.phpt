@@ -38,7 +38,7 @@ unset($buffer);
 
 Assert::false($clone->isEmpty());
 
-echo 'Done' . PHP_LF;
+echo "Done\n";
 
 ?>
 --EXPECT--

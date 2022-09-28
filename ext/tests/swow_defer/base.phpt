@@ -12,24 +12,24 @@ use function Swow\defer;
 
 defer(function () {
     defer(function () {
-        echo 'a' . PHP_LF;
+        echo "a\n";
     });
     defer(function () {
-        echo 'b' . PHP_LF;
+        echo "b\n";
     });
     defer(function () {
-        echo 'c' . PHP_LF;
+        echo "c\n";
     });
-    echo '1' . PHP_LF;
+    echo "1\n";
 });
 defer(function () {
-    echo '2' . PHP_LF;
+    echo "2\n";
 });
 defer(function () {
-    echo '3' . PHP_LF;
+    echo "3\n";
 });
 
-echo 'Done' . PHP_LF;
+echo "Done\n";
 
 ?>
 --EXPECT--

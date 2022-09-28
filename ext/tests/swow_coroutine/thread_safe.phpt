@@ -32,7 +32,7 @@ class Corker extends Thread
             $b = Coroutine::yield();
             return $a . ' ' . $b;
         }, 'hello');
-        echo $coroutine->resume('world') . ' #' . $this->id . PHP_LF;
+        echo $coroutine->resume('world') . ' #' . $this->id . "\n";
     }
 }
 
@@ -47,7 +47,7 @@ foreach ($workers as $worker) {
     $worker->join();
 }
 
-echo 'Done' . PHP_LF;
+echo "Done\n";
 
 ?>
 --EXPECTF--

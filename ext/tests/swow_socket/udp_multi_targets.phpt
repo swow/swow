@@ -19,7 +19,7 @@ Socket::setGlobalReadTimeout(1000);
 
 function testMultiClient(string $name, callable $function)
 {
-    echo "{$name} start" . PHP_LF;
+    echo "{$name} start\n";
     $wr = new WaitReference();
 
     $server = new Socket(Socket::TYPE_UDP);
@@ -56,7 +56,7 @@ function testMultiClient(string $name, callable $function)
     $server->close();
 
     Assert::greaterThan($count, 0);
-    echo "{$name} verified {$count} times" . PHP_LF;
+    echo "{$name} verified {$count} times\n";
 }
 
 testMultiClient('recvFrom', function (Socket $server) {
@@ -104,7 +104,7 @@ testMultiClient('recvStringDataFrom', function (Socket $server) {
 
 function testMultiServer(string $name, callable $function)
 {
-    echo "{$name} start" . PHP_LF;
+    echo "{$name} start\n";
 
     $wr = new WaitReference();
 
@@ -140,7 +140,7 @@ function testMultiServer(string $name, callable $function)
         $server->close();
     }
     Assert::greaterThan($count, 0);
-    echo "{$name} verified {$count} times" . PHP_LF;
+    echo "{$name} verified {$count} times\n";
 }
 
 testMultiServer('sendTo(string)', function (Socket $client, Socket $server) {
@@ -169,7 +169,7 @@ testMultiServer('sendTo(buffer)', function (Socket $client, Socket $server) {
     $client->sendTo($buffer, address: $server->getSockAddress(), port: $server->getSockPort());
 });
 
-echo 'Done' . PHP_LF;
+echo "Done\n";
 ?>
 --EXPECTF--
 recvFrom start

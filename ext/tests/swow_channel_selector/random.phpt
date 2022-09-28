@@ -45,7 +45,7 @@ for ($n = TEST_MAX_REQUESTS; $n--;) {
     }
 }
 
-echo 'Done' . PHP_LF;
+echo "Done\n";
 
 ?>
 --EXPECT--

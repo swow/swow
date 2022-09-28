@@ -14,21 +14,21 @@ use Swow\Coroutine;
 $channel = new Channel();
 $n = 10;
 Coroutine::run(function () use ($channel, $n) {
-    echo 'Pop start' . PHP_LF;
+    echo "Pop start\n";
     for ($i = 1; $i <= $n; $i++) {
         $ret = $channel->pop();
-        echo "Pop #{$i} then return " . var_export($ret, true) . PHP_LF;
+        echo "Pop #{$i} then return " . var_export($ret, true) . "\n";
     }
 });
 Coroutine::run(function () use ($channel, $n) {
-    echo 'Push start' . PHP_LF;
+    echo "Push start\n";
     for ($i = 1; $i <= $n; $i++) {
         $channel->push($i * $i);
-        echo "Push#{$i} done" . PHP_LF;
+        echo "Push#{$i} done" . "\n";
     }
 });
 
-echo 'Done' . PHP_LF;
+echo "Done\n";
 
 ?>
 --EXPECT--

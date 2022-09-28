@@ -106,7 +106,7 @@ $header = new Header(
 Assert::same($header->getHeaderSize(), 14);
 Assert::same($header->toString(), "\x92\xff\x00\x00\x00\x00\x00\x01\x00\x00swow");
 
-echo 'Done' . PHP_LF;
+echo "Done\n";
 ?>
 --EXPECT--
 Done

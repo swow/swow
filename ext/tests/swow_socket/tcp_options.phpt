@@ -26,7 +26,7 @@ Assert::same($socket->setTcpKeepAlive(true, 1000), $socket);
 
 $socket->close();
 
-echo 'Done' . PHP_LF;
+echo "Done\n";
 
 ?>
 --EXPECT--

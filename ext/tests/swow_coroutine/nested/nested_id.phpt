@@ -31,7 +31,7 @@ Swow\Coroutine::run(function () use ($wr) {
                 Assert::same(Swow\Coroutine::getCurrent()->getId(), TEST_COROUTINE_MAIN_ID + 5);
                 msleep(1);
                 Assert::same(Swow\Coroutine::getCurrent()->getId(), TEST_COROUTINE_MAIN_ID + 5);
-                echo 'Done' . PHP_LF;
+                echo "Done\n";
             });
             Assert::same(Swow\Coroutine::getCurrent()->getId(), TEST_COROUTINE_MAIN_ID + 4);
         });

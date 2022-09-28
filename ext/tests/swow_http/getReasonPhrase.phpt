@@ -14,7 +14,7 @@ Assert::same(Swow\Http\Status::getReasonPhraseOf(404), 'Not Found');
 Assert::same(Swow\Http\Status::getReasonPhraseOf(502), 'Bad Gateway');
 Assert::same(Swow\Http\Status::getReasonPhraseOf(418), "I'm a teapot");
 
-echo 'Done' . PHP_LF;
+echo "Done\n";
 ?>
 --EXPECT--
 Done

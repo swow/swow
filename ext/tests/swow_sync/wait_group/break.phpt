@@ -23,7 +23,7 @@ Coroutine::run(function () use ($wg) {
 $waiting_coro = Coroutine::run(function () use ($wg) {
     try {
         $wg->wait();
-        echo 'wait should not success' . PHP_LF;
+        echo "wait should not success\n";
     } catch (SyncException $e) {
         Assert::same($e->getCode(), Errno::ECANCELED);
     }
@@ -32,7 +32,7 @@ $waiting_coro = Coroutine::run(function () use ($wg) {
 $waiting_coro->resume();
 // clear wg to avoid deadlock
 $wg->done();
-echo 'Done' . PHP_LF;
+echo "Done\n";
 
 ?>
 --EXPECT--

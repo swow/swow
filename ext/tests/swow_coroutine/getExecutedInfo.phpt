@@ -63,7 +63,7 @@ class TestGetExecutedInfoFunctions
 
 TestGetExecutedInfoFunctions::a();
 
-echo 'Done' . PHP_LF;
+echo "Done\n";
 ?>
 --EXPECTF--
 

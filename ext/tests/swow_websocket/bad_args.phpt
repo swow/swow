@@ -29,7 +29,7 @@ Assert::throws(function () use ($frame) {
     $frame->setPayloadInfo(payloadLength: 0, maskKey: '12345');
 }, ValueError::class, expectMessage: '/Argument #\d \(\$maskKey\) length should be 0 or 4/');
 
-echo 'Done' . PHP_LF;
+echo "Done\n";
 
 ?>
 --EXPECT--

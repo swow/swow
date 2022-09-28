@@ -9,11 +9,11 @@ require __DIR__ . '/../include/skipif.php';
 require __DIR__ . '/../include/bootstrap.php';
 
 $coroutine = new Swow\Coroutine(function () {
-    echo 'Hello Swow' . PHP_LF;
+    echo "Hello Swow\n";
 });
-echo 'Resume' . PHP_LF;
+echo "Resume\n";
 $coroutine->resume();
-echo 'Done' . PHP_LF;
+echo "Done\n";
 
 ?>
 --EXPECT--

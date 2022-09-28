@@ -22,11 +22,11 @@ $list = [
 
 $coro = new Coroutine(function () use ($list) {
     array_walk($list, function (array $v, string $k) {
-        echo "{$k} => [ k => {$v['k']} ]" . PHP_LF;
+        echo "{$k} => [ k => {$v['k']} ]\n";
         Coroutine::yield(true);
     });
     array_walk_recursive($list, function (string $v, string $k) {
-        echo "{$k} => {$v}" . PHP_LF;
+        echo "{$k} => {$v}\n";
         Coroutine::yield(true);
     });
     Coroutine::yield(false);
@@ -35,7 +35,7 @@ $coro = new Coroutine(function () use ($list) {
 while ($coro->resume());
 $coro->resume();
 
-echo 'Done' . PHP_LF;
+echo "Done\n";
 
 ?>
 --EXPECT--

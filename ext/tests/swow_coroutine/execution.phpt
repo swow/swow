@@ -41,37 +41,37 @@ $coroutine = Coroutine::run(function () {
     TestGetExecution::test();
 });
 
-echo $coroutine->getTraceDepth(), PHP_LF, PHP_LF;
+echo $coroutine->getTraceDepth(), "\n\n";
 
-echo $coroutine->getTraceAsString(), PHP_LF, PHP_LF;
+echo $coroutine->getTraceAsString(), "\n\n";
 
 $traceDepth = $coroutine->getTraceDepth();
 
 for ($n = 0; $n < $traceDepth - 1; $n++) {
-    echo $coroutine->eval('$tip', $n), PHP_LF;
+    echo $coroutine->eval('$tip', $n), "\n";
 }
 for ($n = 0; $n < $traceDepth - 1; $n++) {
     Assert::same($coroutine->getDefinedVars($n)['tip'], $coroutine->eval('$tip', $n));
 }
 
-echo PHP_LF;
+echo "\n";
 
 for ($n = 1; $n < $traceDepth - 1; $n++) {
     $coroutine->setLocalVar('tip2', "I am #{$n}", $n);
 }
 for ($n = 1; $n < $traceDepth - 1; $n++) {
-    echo $coroutine->eval('$tip  . \', and \' . $tip2', $n), PHP_LF;
+    echo $coroutine->eval('$tip  . \', and \' . $tip2', $n), "\n";
 }
 for ($n = 1; $n < $traceDepth - 1; $n++) {
     Assert::same($coroutine->getDefinedVars($n)['tip2'], $coroutine->eval('$tip2', $n));
 }
 
-echo PHP_LF;
+echo "\n";
 
 $coroutine->resume();
 
 
-echo 'Done' . PHP_LF;
+echo "Done\n";
 
 ?>
 --EXPECTF--

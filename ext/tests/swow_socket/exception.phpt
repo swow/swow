@@ -47,7 +47,7 @@ Coroutine::run(function () use ($server, $random, $wr) {
 
 WaitReference::wait($wr);
 
-echo 'Done' . PHP_LF;
+echo "Done\n";
 
 ?>
 --EXPECT--

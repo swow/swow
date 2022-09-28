@@ -27,7 +27,7 @@ try {
     // call a closure in remote
     $remote_coro->call($closure);
 } catch (Throwable $e) {
-    echo 'caught throwable' . PHP_LF;
+    echo "caught throwable\n";
     var_dump($e);
 } finally {
     $remote_coro->resume();
@@ -44,13 +44,13 @@ try {
     // eval a statement
     $remote_coro->eval('$a++;');
 } catch (Throwable $e) {
-    echo 'caught throwable' . PHP_LF;
+    echo "caught throwable\n";
     var_dump($e);
 } finally {
     $remote_coro->resume();
 }
 
-echo 'Done' . PHP_LF;
+echo "Done\n";
 
 ?>
 --EXPECT--

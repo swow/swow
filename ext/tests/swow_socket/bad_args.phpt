@@ -330,7 +330,7 @@ $conn->close();
 $server->close();
 $client->close();
 
-echo 'Done' . PHP_LF;
+echo "Done\n";
 
 ?>
 --EXPECT--

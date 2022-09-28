@@ -14,7 +14,7 @@ $channel = new class extends Swow\Channel {
 };
 $channel->push(true);
 
-echo 'Never here' . PHP_LF;
+echo "Never here\n";
 
 ?>
 --EXPECTF--

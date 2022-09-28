@@ -13,19 +13,19 @@ use Swow\Sync\WaitReference;
 $wr = new WaitReference();
 
 Swow\Coroutine::run(function () use ($wr) {
-    echo 'coroutine[1] start' . PHP_LF;
+    echo "coroutine[1] start\n";
     Swow\Coroutine::run(function () use ($wr) {
-        echo 'coroutine[2] start' . PHP_LF;
+        echo "coroutine[2] start\n";
         msleep(2);
-        echo 'coroutine[2] exit' . PHP_LF;
+        echo "coroutine[2] exit\n";
     });
     msleep(1);
-    echo 'coroutine[1] exit' . PHP_LF;
+    echo "coroutine[1] exit\n";
 });
-echo 'end' . PHP_LF;
+echo "end\n";
 
 WaitReference::wait($wr);
-echo 'done' . PHP_LF;
+echo "done\n";
 
 ?>
 --EXPECT--

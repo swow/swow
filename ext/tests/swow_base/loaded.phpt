@@ -8,8 +8,8 @@ require __DIR__ . '/../include/skipif.php';
 <?php
 require __DIR__ . '/../include/bootstrap.php';
 
-echo 'The extension "swow" is available' . PHP_LF;
+echo "The extension \"Swow\" is available\n";
 
 ?>
 --EXPECT--
-The extension "swow" is available
+The extension "Swow" is available

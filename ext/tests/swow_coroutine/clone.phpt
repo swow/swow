@@ -12,7 +12,7 @@ $coroutine = new Swow\Coroutine(function () { });
 try {
     $coroutine = clone $coroutine;
 } catch (Error $exception) {
-    echo $exception->getMessage() . PHP_LF;
+    echo $exception->getMessage() . "\n";
 }
 
 class TestCoroutine extends Swow\Coroutine
@@ -27,7 +27,7 @@ $coroutine = new TestCoroutine(function () { });
 try {
     $coroutine = clone $coroutine;
 } catch (Error $exception) {
-    echo $exception->getMessage() . PHP_LF;
+    echo $exception->getMessage() . "\n";
 }
 
 ?>

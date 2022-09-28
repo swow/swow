@@ -23,7 +23,7 @@ trigger_error('foo', E_USER_WARNING);
 
 $coroutine->resume();
 
-echo 'Done' . PHP_LF;
+echo "Done\n";
 ?>
 --EXPECTF--
 Warning: [Warning in main] %s

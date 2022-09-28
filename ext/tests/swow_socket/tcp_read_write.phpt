@@ -269,7 +269,7 @@ Coroutine::run(function () use ($channel, $tester, $server, $wr) {
     try {
         for ($type = TestMethod::RECV_TYPE_START; $type <= TestMethod::RECV_TYPE_END; $type++) {
             while (($remote_type = $channel->pop()) !== 'end round') {
-                echo 'server ' . TestMethod::parseType($type) . ', client ' . TestMethod::parseType($remote_type) . PHP_LF;
+                echo 'server ' . TestMethod::parseType($type) . ', client ' . TestMethod::parseType($remote_type) . "\n";
                 $tester->recv($connection, $type);
             }
         }
@@ -299,7 +299,7 @@ Coroutine::run(function () use ($tester, $channel, $server, $client, $wr) {
         }
         for ($type = TestMethod::RECV_TYPE_START; $type <= TestMethod::RECV_TYPE_END; $type++) {
             while (($remote_type = $channel->pop()) !== 'end round') {
-                echo 'client ' . TestMethod::parseType($type) . ', server ' . TestMethod::parseType($remote_type) . PHP_LF;
+                echo 'client ' . TestMethod::parseType($type) . ', server ' . TestMethod::parseType($remote_type) . "\n";
                 $tester->recv($connection, $type);
             }
         }
@@ -313,7 +313,7 @@ WaitReference::wait($wr);
 // $server->close();
 // $client->close();
 
-echo 'Done' . PHP_LF;
+echo "Done\n";
 
 ?>
 --EXPECT--

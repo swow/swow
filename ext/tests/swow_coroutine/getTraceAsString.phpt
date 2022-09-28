@@ -31,10 +31,10 @@ $coroutine = Swow\Coroutine::run(function () {
         })($resource, $object, $null, $array, $true, $false, $string, $long_string, $long, $double);
     })();
 });
-echo $coroutine->getTraceAsString() . PHP_LF;
+echo $coroutine->getTraceAsString() . "\n";
 $coroutine->resume();
 
-echo 'Done' . PHP_LF;
+echo "Done\n";
 
 ?>
 --EXPECTF--

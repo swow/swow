@@ -34,7 +34,7 @@ Assert::true($buffer->isAvailable());
 Assert::false($buffer->isEmpty());
 Assert::true($buffer->isFull());
 
-echo 'Done' . PHP_LF;
+echo "Done\n";
 ?>
 --EXPECT--
 Done

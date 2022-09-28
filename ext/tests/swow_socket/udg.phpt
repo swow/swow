@@ -76,7 +76,7 @@ foreach ([false, true] as $useConnect) {
     WaitReference::wait($wrs); /* wait server closed */
 }
 
-echo 'Done' . PHP_LF;
+echo "Done\n";
 
 ?>
 --EXPECT--

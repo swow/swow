@@ -15,18 +15,18 @@ $wr = new WaitReference();
 $o1 = new class {
     public function __destruct()
     {
-        echo 'Destruct in main' . PHP_LF;
+        echo "Destruct in main\n";
         usleep(1000);
-        echo 'Everything is done' . PHP_LF;
+        echo "Everything is done\n";
         Assert::greaterThan(Coroutine::getCurrent()->getId(), 0);
     }
 };
 $o2 = new class {
     public function __destruct()
     {
-        echo 'Destructor in sub' . PHP_LF;
+        echo "Destructor in sub\n";
         usleep(1000);
-        echo 'Never here because coroutine will be killed in shutdown dtor' . PHP_LF;
+        echo "Never here because coroutine will be killed in shutdown dtor\n";
     }
 }; // Notice: o2 will be bound to coroutine#2
 
@@ -42,9 +42,9 @@ Coroutine::run(function () use ($wr, $o2) {
 
         public function __destruct()
         {
-            echo 'Sleeping...' . PHP_LF;
+            echo "Sleeping...\n";
             usleep(1000);
-            echo 'Sleep done' . PHP_LF;
+            echo "Sleep done\n";
         }
     };
 });
@@ -52,7 +52,7 @@ Coroutine::run(function () use ($wr, $o2) {
 unset($o2);
 WaitReference::wait($wr);
 
-echo 'Exit now' . PHP_LF;
+echo "Exit now\n";
 
 ?>
 --EXPECT--

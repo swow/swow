@@ -60,7 +60,7 @@ $co->resume();
 $end = microtime(true);
 Assert::lessThan($end - $start, LONG_TIME * 1000);
 
-echo 'Done' . PHP_LF;
+echo "Done\n";
 ?>
 --EXPECT--
 start sleep(5)

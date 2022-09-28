@@ -39,7 +39,7 @@ Coroutine::run(function () use ($wg) {
 });
 // clear wg to avoid deadlock
 $wg->done();
-echo 'Done 1' . PHP_LF;
+echo "Done 1\n";
 
 $wg = new WaitGroup();
 $wg->add(1);
@@ -54,7 +54,7 @@ Coroutine::run(function () use ($wg) {
 });
 // clear wg to avoid deadlock
 $wg->done();
-echo 'Done 2' . PHP_LF;
+echo "Done 2\n";
 
 ?>
 --EXPECT--

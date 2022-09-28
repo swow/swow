@@ -14,9 +14,9 @@ Swow\Coroutine::run(function () {
     ob_start();
     echo 'bbb';
     sleep(0);
-    echo ob_get_clean() . PHP_LF;
+    echo ob_get_clean() . "\n";
 });
-echo ob_get_clean() . PHP_LF;
+echo ob_get_clean() . "\n";
 
 // TODO: WaitGroup
 

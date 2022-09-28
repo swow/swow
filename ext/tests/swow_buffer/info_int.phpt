@@ -40,7 +40,7 @@ Assert::same(Buffer::alignSize(25, 8), 32);
 // 0 aligned to 32 is 32
 Assert::same(Buffer::alignSize(0, 32), 32);
 
-echo 'Done' . PHP_LF;
+echo "Done\n";
 ?>
 --EXPECT--
 Done

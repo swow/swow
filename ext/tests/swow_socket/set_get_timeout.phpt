@@ -135,7 +135,7 @@ try {
 }
 phpt_var_dump('end accept timeout');
 
-echo 'Done' . PHP_LF;
+echo "Done\n";
 ?>
 --EXPECT--
 Done

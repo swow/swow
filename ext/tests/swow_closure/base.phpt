@@ -9,7 +9,7 @@ require __DIR__ . '/../include/skipif.php';
 require __DIR__ . '/../include/bootstrap.php';
 
 $anonymous = function () {
-    echo 'anonymous' . PHP_LF;
+    echo "anonymous\n";
 };
 
 var_dump($anonymous);
@@ -18,7 +18,7 @@ var_dump($anonymousString);
 $anonymousUnserialized = unserialize($anonymousString);
 $anonymousUnserialized();
 
-$arrow = fn () => print('arrow' . PHP_LF);
+$arrow = fn () => print("arrow\n");
 
 var_dump($arrow);
 $arrowString = serialize($arrow);
@@ -26,7 +26,7 @@ var_dump($arrowString);
 $arrowUnserialized = unserialize($arrowString);
 $arrowUnserialized();
 
-echo 'Done' . PHP_LF;
+echo "Done\n";
 ?>
 --EXPECTF--
 object(Closure)#%d (%d) {

@@ -25,7 +25,7 @@ $arrowUnserialized = unserialize($arrowString);
 Assert::same($fileUnserialized, $file);
 Assert::same($lineUnserialized, $line);
 
-echo 'Done' . PHP_LF;
+echo "Done\n";
 ?>
 --EXPECT--
 use.inc: $a

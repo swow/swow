@@ -15,7 +15,7 @@ $channel = new Channel();
 Coroutine::run(function () use ($channel) {
     $channel->push('Hello Swow');
 });
-echo $channel->pop() . PHP_LF;
+echo $channel->pop() . "\n";
 
 ?>
 --EXPECT--

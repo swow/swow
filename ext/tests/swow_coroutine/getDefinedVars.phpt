@@ -20,7 +20,7 @@ try {
     var_dump($remote_coro->getDefinedVars());
 } finally {
     $remote_coro->resume();
-    echo 'Done' . PHP_LF;
+    echo "Done\n";
 }
 
 ?>

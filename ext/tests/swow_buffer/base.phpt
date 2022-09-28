@@ -50,7 +50,7 @@ foreach (['stringify', 'fetch'] as $type) {
     Assert::same($_buffer, 'foobarbaz');
 }
 
-echo 'Done' . PHP_LF;
+echo "Done\n";
 ?>
 --EXPECT--
 Done

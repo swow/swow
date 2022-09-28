@@ -55,7 +55,7 @@ $client->close();
 // closed
 var_dump($server);
 
-echo 'Done' . PHP_LF;
+echo "Done\n";
 
 ?>
 --EXPECTF--

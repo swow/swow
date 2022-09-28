@@ -19,7 +19,7 @@ foreach (
     Assert::same($func[0](...$func[1]), $func[2]);
 }
 
-echo 'Done' . PHP_LF;
+echo "Done\n";
 ?>
 --EXPECT--
 Done

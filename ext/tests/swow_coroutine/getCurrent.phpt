@@ -16,9 +16,9 @@ $coroutine = new Swow\Coroutine(function () use (&$coroutine) {
     }
     return 'Failed';
 });
-echo 'Resume' . PHP_LF;
-echo $coroutine->resume() . PHP_LF;
-echo 'Done' . PHP_LF;
+echo "Resume\n";
+echo $coroutine->resume() . "\n";
+echo "Done\n";
 
 ?>
 --EXPECT--

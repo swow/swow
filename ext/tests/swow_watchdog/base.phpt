@@ -32,7 +32,7 @@ while (true) {
     $count++;
 }
 
-echo 'Never here' . PHP_LF;
+echo "Never here\n";
 
 ?>
 --EXPECTF--

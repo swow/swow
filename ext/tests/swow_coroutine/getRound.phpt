@@ -28,7 +28,7 @@ $remote_coro = new Coroutine(function () use ($coro) {
 $remote_coro->resume();
 $remote_coro->resume();
 
-echo 'Done' . PHP_LF;
+echo "Done\n";
 ?>
 --EXPECT--
 Done

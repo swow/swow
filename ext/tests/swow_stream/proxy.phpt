@@ -19,7 +19,7 @@ $response = httpRequest('https://github.com', timeoutSeconds: 10, proxy: true);
 Assert::same($response['status'], Status::OK);
 Assert::contains($response['body'], 'github');
 
-echo 'Done' . PHP_LF;
+echo "Done\n";
 
 ?>
 --EXPECT--

@@ -21,7 +21,7 @@ $foo = new class
     }
 };
 
-echo 'Done' . PHP_LF;
+echo "Done\n";
 ?>
 --EXPECT--
 Done

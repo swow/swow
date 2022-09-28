@@ -15,13 +15,13 @@ $coroutine = Coroutine::run(function () {
     try {
         (new Channel())->pop();
     } catch (Exception $exception) {
-        echo 'Never here' . PHP_LF;
+        echo "Never here\n";
     }
 });
 
 $coroutine->kill();
 
-echo 'Done' . PHP_LF;
+echo "Done\n";
 
 ?>
 --EXPECT--

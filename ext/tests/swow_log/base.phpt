@@ -14,7 +14,7 @@ $types = Log::getTypes();
 Assert::integer($types);
 Log::setTypes($types);
 
-echo 'Done' . PHP_LF;
+echo "Done\n";
 ?>
 --EXPECT--
 Done

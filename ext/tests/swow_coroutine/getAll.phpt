@@ -25,7 +25,7 @@ for ($n = N + 1; $n--;) {
     Assert::count($coroutines, N);
 }
 
-echo 'Done' . PHP_LF;
+echo "Done\n";
 
 ?>
 --EXPECT--

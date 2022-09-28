@@ -33,7 +33,7 @@ $coro->eval('$a=1;', PHP_INT_MAX);
 $coro->getDefinedVars(PHP_INT_MAX);
 $coro->setLocalVar('a', 'b', PHP_INT_MAX);
 
-echo 'Done' . PHP_LF;
+echo "Done\n";
 ?>
 --EXPECT--
 Done

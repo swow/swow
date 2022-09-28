@@ -136,7 +136,7 @@ if ($count != TEST_THREADS) {
     fprintf(STDERR, "not all coro done, that's impossible\n");
 }
 
-echo 'Done' . PHP_LF;
+echo "Done\n";
 ?>
 --CLEAN--
 <?php

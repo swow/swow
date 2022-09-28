@@ -17,27 +17,27 @@ $coroutine = Coroutine::run(function () {
 $subCoroutine = $coroutine->call(function (): Coroutine {
     try {
         Coroutine::run(function () {
-            echo 'Never here' . PHP_LF;
+            echo "Never here\n";
         });
     } catch (Error $error) {
         Assert::same($error->getCode(), Errno::EMISUSE);
     }
     return new Coroutine(function () {
-        echo 'Here I am' . PHP_LF;
+        echo "Here I am\n";
     });
 });
 Coroutine::run(function () {
-    echo 'It\'s OK' . PHP_LF;
+    echo "It's OK\n";
 });
 Coroutine::getCurrent()->call(function () {
     Coroutine::run(function () {
-        echo 'Create new coroutine in $currentCoroutine->call() is allowed' . PHP_LF;
+        echo "Create new coroutine in \$currentCoroutine->call() is allowed\n";
     });
 });
 $subCoroutine->resume();
 $coroutine->resume();
 
-echo 'Done' . PHP_LF;
+echo "Done\n";
 ?>
 --EXPECT--
 It's OK

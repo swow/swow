@@ -27,13 +27,13 @@ Coroutine::run(function ($wr) {
     // double wait is not allowed
     try {
         WaitReference::wait($wr);
-        echo 'double wait success' . PHP_LF;
+        echo "double wait success\n";
     } catch (Error$e) {
         Assert::same($e->getMessage(), 'WaitReference can not be reused before previous wait has returned');
     }
 }, $wr);
 unset($wr);
-echo 'Done 1' . PHP_LF;
+echo "Done 1\n";
 
 $wr = new WaitReference();
 // normal done
@@ -46,14 +46,14 @@ Coroutine::run(function ($wr) {
     try {
         // will time out immediately
         WaitReference::wait($wr, 0);
-        echo 'wait should not success' . PHP_LF;
+        echo "wait should not success\n";
     } catch (SyncException $e) {
         Assert::same($e->getCode(), Errno::ETIMEDOUT);
     }
 }, $wr);
 msleep(10);
 unset($wr);
-echo 'Done 2' . PHP_LF;
+echo "Done 2\n";
 
 ?>
 --EXPECT--

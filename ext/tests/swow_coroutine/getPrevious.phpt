@@ -11,17 +11,17 @@ require __DIR__ . '/../include/bootstrap.php';
 $main = Swow\Coroutine::getCurrent();
 $coroutine = new Swow\Coroutine(function () use ($main, &$coroutine) {
     if ($main === $coroutine->getPrevious()) {
-        echo 'Success' . PHP_LF;
+        echo "Success\n";
     }
-    echo 'Yield' . PHP_LF;
+    echo "Yield\n";
     $main->resume();
-    echo 'End' . PHP_LF;
+    echo "End\n";
 });
-echo 'Resume-1' . PHP_LF;
+echo "Resume-1\n";
 $coroutine->resume();
-echo 'Resume-2' . PHP_LF;
+echo "Resume-2\n";
 $coroutine->resume();
-echo 'Done' . PHP_LF;
+echo "Done\n";
 
 ?>
 --EXPECT--

@@ -53,7 +53,7 @@ foreach ($randoms as $_) {
 }
 
 WaitReference::wait($wr);
-echo 'Done' . PHP_LF;
+echo "Done\n";
 
 ?>
 --EXPECT--

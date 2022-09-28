@@ -124,7 +124,7 @@ foreach($expected as $k => $expected_values){
     Assert::same($real_values, $expected_values);
 }
 
-echo 'Done' . PHP_LF;
+echo "Done\n";
 ?>
 --EXPECT--
 Done

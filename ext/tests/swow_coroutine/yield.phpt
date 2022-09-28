@@ -9,15 +9,15 @@ require __DIR__ . '/../include/skipif.php';
 require __DIR__ . '/../include/bootstrap.php';
 
 $coroutine = new Swow\Coroutine(function () {
-    echo 'In' . PHP_LF;
+    echo "In\n";
     Swow\Coroutine::yield();
-    echo 'End' . PHP_LF;
+    echo "End\n";
 });
-echo 'Resume' . PHP_LF;
+echo "Resume\n";
 $coroutine->resume();
-echo 'Out' . PHP_LF;
+echo "Out\n";
 $coroutine->resume();
-echo 'Done' . PHP_LF;
+echo "Done\n";
 
 ?>
 --EXPECT--

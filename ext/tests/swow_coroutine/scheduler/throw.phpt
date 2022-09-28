@@ -22,7 +22,7 @@ Coroutine::run(function () use ($wr) {
 
 WaitReference::wait($wr);
 
-echo 'Done' . PHP_LF;
+echo "Done\n";
 
 ?>
 --EXPECT--

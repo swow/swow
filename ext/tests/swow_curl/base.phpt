@@ -138,7 +138,7 @@ curl_multi_close($mh);
 $server->close();
 WaitReference::wait($wrServer);
 
-echo 'Done' . PHP_LF;
+echo "Done\n";
 ?>
 --EXPECT--
 Done

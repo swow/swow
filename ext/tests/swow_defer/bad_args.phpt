@@ -29,7 +29,7 @@ Assert::throws(function () {
     new Swow\Defer();
 }, Error::class);
 
-echo 'Done' . PHP_LF;
+echo "Done\n";
 ?>
 --EXPECT--
 Done

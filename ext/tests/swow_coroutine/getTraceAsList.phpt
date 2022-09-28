@@ -21,7 +21,7 @@ $trace = $coroutine->getTraceAsList();
 var_dump($trace);
 $coroutine->resume();
 
-echo 'Done' . PHP_LF;
+echo "Done\n";
 ?>
 --EXPECTF--
 array(6) {

@@ -24,7 +24,6 @@ error_reporting(E_ALL);
 
 # constants
 
-define('PHP_LF', "\n");
 /* ============== Env =============== */
 define('USE_VALGRIND', getenv('USE_ZEND_ALLOC') === '0');
 /* ============== Pressure ============== */

@@ -16,7 +16,7 @@ $socket = stream_socket_client("tcp://{$name}");
 
 fclose($server);
 
-echo 'Done' . PHP_LF;
+echo "Done\n";
 
 ?>
 --EXPECT--

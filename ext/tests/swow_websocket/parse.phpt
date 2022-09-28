@@ -178,7 +178,7 @@ Assert::same($header->getHeaderSize(), 14);
 Assert::same($header->getLength(), $header->getHeaderSize() + 65536);
 WebSocket::unmask($header, $header->getHeaderSize(), maskKey: $header->getMaskKey());
 Assert::same($header->read($header->getHeaderSize()), str_repeat("\xf0\x0f\xc7\xc8\x2f\x90\x2f\x90", 8192));
-echo 'Done' . PHP_LF;
+echo "Done\n";
 
 ?>
 --EXPECTF--

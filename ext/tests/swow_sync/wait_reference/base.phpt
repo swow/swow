@@ -24,12 +24,12 @@ for ($n = 9; $n >= 0; $n--) {
     Coroutine::run(function () use ($wr, $n) {
         // mock doing some tasks consuming times
         pseudo_random_sleep();
-        echo $n . PHP_LF;
+        echo $n . "\n";
     });
 }
-echo 'Start WR 1' . PHP_LF;
+echo "Start WR 1\n";
 WaitReference::wait($wr);
-echo 'Done 1' . PHP_LF;
+echo "Done 1\n";
 
 // uncommon WaitReference usage: create and wait it on different scope
 $wr = new WaitReference();
@@ -37,20 +37,20 @@ for ($n = 9; $n >= 0; $n--) {
     Coroutine::run(function () use ($wr, $n) {
         // mock a time-consuming action
         pseudo_random_sleep();
-        echo $n . PHP_LF;
+        echo $n . "\n";
     });
 }
 // wait it on another coroutine
 // note: DO NOT "use ($wr)" here, the Callable will add reference in main scope
 //       pass $wr via arguments instead.
 Coroutine::run(function ($wr) {
-    echo 'Start WR 2' . PHP_LF;
+    echo "Start WR 2\n";
     WaitReference::wait($wr);
-    echo 'Done 2' . PHP_LF;
+    echo "Done 2\n";
 }, $wr);
 // decline reference in main coroutine
 unset($wr);
-echo 'Done main 2' . PHP_LF;
+echo "Done main 2\n";
 
 while (Coroutine::count() !== 1) {
     sleep(0);

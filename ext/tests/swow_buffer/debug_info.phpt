@@ -34,7 +34,7 @@ Coroutine::run(function () use ($buffer) {
     $socket = new Socket(Socket::TYPE_UDP);
     $socket->bind('127.0.0.1');
     $socket->recvFrom($buffer);
-    echo 'Never here' . PHP_LF;
+    echo "Never here\n";
 });
 
 // locked buffer

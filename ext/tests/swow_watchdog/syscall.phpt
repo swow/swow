@@ -77,7 +77,7 @@ Assert::true(Watchdog::isRunning());
 $watcher = Coroutine::run(function () {
     Coroutine::yield();
     Watchdog::stop();
-    echo 'I am back' . PHP_LF;
+    echo "I am back\n";
 });
 
 // mock blocking
@@ -85,7 +85,7 @@ ffi_sleep($blocking_time);
 
 $watcher->resume();
 
-echo 'Done' . PHP_LF;
+echo "Done\n";
 
 ?>
 --EXPECTREGEX--

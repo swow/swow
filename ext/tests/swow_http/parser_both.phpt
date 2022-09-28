@@ -66,7 +66,7 @@ Assert::same($parser->getType(), Parser::TYPE_RESPONSE);
 
 $parser->finish();
 
-echo 'Done' . PHP_LF;
+echo "Done\n";
 ?>
 --EXPECT--
 Done

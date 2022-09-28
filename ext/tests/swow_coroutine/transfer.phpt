@@ -21,12 +21,12 @@ $coroutine = new Coroutine(function ($a, $b) {
     return $d . ' ' . $c;
 });
 
-echo $coroutine->resume(1, 2) . PHP_LF;
+echo $coroutine->resume(1, 2) . "\n";
 try {
-    echo $coroutine->resume('hello', 'world') . PHP_LF;
+    echo $coroutine->resume('hello', 'world') . "\n";
 } catch (Error $error) {
-    echo $coroutine->resume('world') . PHP_LF;
-    echo $coroutine->resume('hello') . PHP_LF;
+    echo $coroutine->resume('world') . "\n";
+    echo $coroutine->resume('hello') . "\n";
 }
 
 ?>

@@ -96,7 +96,7 @@ Assert::throws(function () use ($anonymous) {
     serialize($anonymous);
 }, 'Error'); // TODO: a normalized error
 
-echo 'Done' . PHP_LF;
+echo "Done\n";
 ?>
 --CLEAN--
 <?php

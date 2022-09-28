@@ -25,7 +25,7 @@ $buffer->truncateFrom(18, 256);
 Assert::same($buffer->getLength(), 256);
 Assert::same((string) $buffer, str_repeat('stte', 64));
 
-echo 'Done' . PHP_LF;
+echo "Done\n";
 ?>
 --EXPECT--
 Done

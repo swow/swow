@@ -47,7 +47,7 @@ for ($n = 3; $n--;) {
         Assert::false('impossible');
     }
     Assert::same($s->getLastEvent(), Selector::EVENT_POP);
-    echo $data . PHP_LF;
+    echo $data . "\n";
 }
 
 ?>

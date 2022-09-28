@@ -14,7 +14,7 @@ $buffer = new Buffer(0);
 $buffer->realloc(256);
 var_dump($buffer);
 
-echo 'Done' . PHP_LF;
+echo "Done\n";
 ?>
 --EXPECTF--
 object(Swow\Buffer)#%d (%d) {
