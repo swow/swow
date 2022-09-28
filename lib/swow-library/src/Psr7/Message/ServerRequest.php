@@ -55,6 +55,10 @@ class ServerRequest extends Request implements ServerRequestPlusInterface
     /** @var array<string, mixed> */
     protected array $attributes = [];
 
+    final public function __construct()
+    {
+    }
+
     /** @return array<string, mixed> */
     public function getServerParams(): array
     {

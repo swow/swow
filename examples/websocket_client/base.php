@@ -13,6 +13,7 @@ declare(strict_types=1);
 
 require __DIR__ . '/../autoload.php';
 
+use Swow\Psr7\Client\Client;
 use Swow\Psr7\Message\Request;
 use Swow\Psr7\Message\WebSocketFrame;
 

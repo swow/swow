@@ -239,7 +239,7 @@ class StubGenerator
         return $string;
     }
 
-    protected static function quoteString(string $string)
+    protected static function quoteString(string $string): string
     {
         $string = static::escapeString($string);
         if (!preg_match('/(?<!\\\\)(?:\\\\{2})*\\\\(?!["$\\\\])/', $string)) {
@@ -461,7 +461,7 @@ class StubGenerator
                 $paramTypeName = "?{$paramTypeName}";
             }
             try {
-                $hasSpecialDefaultParamValue = false;
+                /* $hasSpecialDefaultParamValue = false; */
                 $defaultParamValue = $param->getDefaultValue();
                 $defaultParamConstantName = $param->getDefaultValueConstantName();
                 $defaultParamValueString = $this::convertValueToString($defaultParamValue);
@@ -489,6 +489,7 @@ class StubGenerator
             } catch (ReflectionException) {
                 $defaultParamValueTip = $defaultParamValueTipOnDoc = '';
             }
+            /*
             if (!$this->genArginfoMode && $hasSpecialDefaultParamValue) {
                 $comment[] = sprintf(
                     '@param %s%s%s$%s%s%s',
@@ -500,6 +501,7 @@ class StubGenerator
                     $defaultParamValueTipOnDoc !== '' ? " = {$defaultParamValueTipOnDoc}" : ''
                 );
             }
+            */
             $paramsDeclarations[] = sprintf(
                 '%s%s%s%s$%s%s',
                 $paramTypeName,

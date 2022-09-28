@@ -15,5 +15,6 @@ namespace Swow\Object;
 
 interface ArrayableInterface
 {
+    /** @return array<mixed, mixed> */
     public function toArray(): array;
 }

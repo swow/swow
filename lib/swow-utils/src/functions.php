@@ -23,6 +23,7 @@ use function fgets;
 use function file_exists;
 use function file_get_contents;
 use function file_put_contents;
+use function filesize;
 use function fread;
 use function getenv;
 use function implode;
@@ -35,7 +36,6 @@ use function proc_open;
 use function sprintf;
 use function str_replace;
 use function stream_context_create;
-use function strlen;
 use function strtolower;
 use function sys_get_temp_dir;
 use function trigger_error;
@@ -208,12 +208,20 @@ function executeAndCheck(array $commands): void
     echo '=========== Finish Done ============' . PHP_EOL . PHP_EOL;
 }
 
-function fileSize(string $filename, int $decimals = 2): string
+function formatSize(int $size, $precision = 2)
 {
-    $bytes = filesize($filename);
-    $units = ['B', 'K', 'M', 'G', 'T', 'P'];
-    $factor = (int) floor((strlen($bytes) - 1) / 3);
-    return sprintf("%.{$decimals}f", $bytes / 1024 ** $factor) . $units[$factor];
+    $units = ['B', 'KB', 'MB', 'GB', 'TB'];
+    $level = 0;
+    while ($size > 1024) {
+        $size /= 1024;
+        $level++;
+    }
+    return round($size, $precision) . ' ' . $units[$level];
+}
+
+function fileFormattedSize(string $filename, int $precision = 2): string
+{
+    return formatSize(filesize($filename), $precision);
 }
 
 /**

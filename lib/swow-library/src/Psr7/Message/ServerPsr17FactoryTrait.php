@@ -18,6 +18,7 @@ use Psr\Http\Message\ServerRequestFactoryInterface;
 use Psr\Http\Message\StreamFactoryInterface;
 use Psr\Http\Message\UploadedFileFactoryInterface;
 use Psr\Http\Message\UriFactoryInterface;
+use Swow\Psr7\Psr7;
 
 trait ServerPsr17FactoryTrait
 {
@@ -35,9 +36,9 @@ trait ServerPsr17FactoryTrait
         ?UploadedFileFactoryInterface $uploadedFileFactory = null
     ): void {
         $this->__constructMessagePsr17Factory($uriFactory, $streamFactory);
-        $this->serverRequestFactory = $serverRequestFactory ?? Psr17Factory::getInstance();
-        $this->responseFactory = $responseFactory ?? Psr17Factory::getInstance();
-        $this->uploadedFileFactory = $uploadedFileFactory ?? Psr17Factory::getInstance();
+        $this->serverRequestFactory = $serverRequestFactory ?? Psr7::getDefaultPsr17Factory();
+        $this->responseFactory = $responseFactory ?? Psr7::getDefaultPsr17Factory();
+        $this->uploadedFileFactory = $uploadedFileFactory ?? Psr7::getDefaultPsr17Factory();
     }
 
     public function getServerRequestFactory(): ServerRequestFactoryInterface

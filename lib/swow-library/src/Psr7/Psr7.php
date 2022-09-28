@@ -30,6 +30,7 @@ use Swow\Http\Message\ResponseEntity;
 use Swow\Http\Message\ServerRequestEntity;
 use Swow\Psr7\Message\MessagePlusInterface;
 use Swow\Psr7\Message\Psr17Factory;
+use Swow\Psr7\Message\Psr17PlusFactoryInterface;
 use Swow\Psr7\Message\ResponsePlusInterface;
 use Swow\Psr7\Message\ServerRequest;
 
@@ -38,20 +39,27 @@ use function parse_str;
 
 class Psr7
 {
+    protected static Psr17PlusFactoryInterface $psr17Factory;
+
+    public static function getDefaultPsr17Factory(): Psr17PlusFactoryInterface
+    {
+        return self::$psr17Factory ??= new Psr17Factory();
+    }
+
     public static function createUriFromString(string $uri, ?UriFactoryInterface $uriFactory = null): UriInterface
     {
-        $uriFactory ??= Psr17Factory::getInstance();
+        $uriFactory ??= static::getDefaultPsr17Factory();
         return $uriFactory->createUri($uri);
     }
 
     public static function createStream(string $data = '', ?StreamFactoryInterface $streamFactory = null): StreamInterface
     {
-        return ($streamFactory ?? Psr17Factory::getInstance())->createStream($data);
+        return ($streamFactory ?? static::getDefaultPsr17Factory())->createStream($data);
     }
 
     public static function createStreamFromBuffer(Buffer $buffer, ?StreamFactoryInterface $streamFactory = null): StreamInterface
     {
-        $streamFactory ??= Psr17Factory::getInstance();
+        $streamFactory ??= static::getDefaultPsr17Factory();
         if ($streamFactory instanceof Psr17Factory) {
             return $streamFactory->createStreamFromBuffer($buffer);
         } else {
@@ -64,7 +72,7 @@ class Psr7
         if ($data instanceof StreamInterface) {
             return $data;
         }
-        $streamFactory ??= Psr17Factory::getInstance();
+        $streamFactory ??= static::getDefaultPsr17Factory();
         if (is_resource($data)) {
             return $streamFactory->createStreamFromResource($data);
         }
@@ -77,7 +85,7 @@ class Psr7
 
     public static function createResponseFromEntity(ResponseEntity $responseEntity, ?ResponseFactoryInterface $responseFactory = null, ?StreamFactoryInterface $streamFactory = null): ResponseInterface
     {
-        $responseFactory ??= Psr17Factory::getInstance();
+        $responseFactory ??= static::getDefaultPsr17Factory();
         $body = $responseEntity->body;
         if ($body) {
             $bodyStream = static::createStreamFromBuffer($body, $streamFactory);
@@ -123,8 +131,8 @@ class Psr7
      */
     public static function createUploadedFilesFromEntity(array $uploadedFileEntities, ?StreamFactoryInterface $streamFactory = null, ?UploadedFileFactoryInterface $uploadedFileFactory = null): array
     {
-        $streamFactory ??= Psr17Factory::getInstance();
-        $uploadedFileFactory ??= Psr17Factory::getInstance();
+        $streamFactory ??= static::getDefaultPsr17Factory();
+        $uploadedFileFactory ??= static::getDefaultPsr17Factory();
         $uploadedFiles = [];
         foreach ($uploadedFileEntities as $formDataName => $uploadedFileEntity) {
             $uploadedFileStream = $streamFactory->createStreamFromResource($uploadedFileEntity->tmpFile);
@@ -146,7 +154,7 @@ class Psr7
         ?StreamFactoryInterface $streamFactory = null,
         ?UploadedFileFactoryInterface $uploadedFileFactory = null
     ): ServerRequestInterface {
-        $serverRequestFactory ??= Psr17Factory::getInstance();
+        $serverRequestFactory ??= static::getDefaultPsr17Factory();
         $serverRequest = $serverRequestFactory->createServerRequest(
             $serverRequestEntity->method,
             static::createUriFromString($serverRequestEntity->uri, $uriFactory),

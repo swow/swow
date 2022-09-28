@@ -15,9 +15,9 @@ namespace Swow\Psr7\Message;
 
 trait WebSocketTrait
 {
-    public function sendWebSocketFrame(WebSocketFrame $frame): void
+    public function sendWebSocketFrame(WebSocketFrame $frame): static
     {
-        $this->write([
+        return $this->write([
             $frame->toString(true),
             (string) $frame->getPayloadData(),
         ]);

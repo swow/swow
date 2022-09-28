@@ -92,7 +92,7 @@ final class ServerTest extends TestCase
 
     public function getMixedServer(): Server
     {
-        $mixedServerFile = __DIR__ . '/../../../../examples/http_server/mixed.php';
+        $mixedServerFile = __DIR__ . '/../../../../../examples/http_server/mixed.php';
         if (!file_exists($mixedServerFile)) {
             $this->markTestSkipped('unable to find mixed server example file');
         }

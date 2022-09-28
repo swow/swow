@@ -15,6 +15,7 @@ namespace Swow\Psr7\Message;
 
 use Psr\Http\Message\StreamFactoryInterface;
 use Psr\Http\Message\UriFactoryInterface;
+use Swow\Psr7\Psr7;
 
 trait MessagePsr17FactoryTrait
 {
@@ -23,8 +24,8 @@ trait MessagePsr17FactoryTrait
 
     protected function __constructMessagePsr17Factory(?UriFactoryInterface $uriFactory = null, ?StreamFactoryInterface $streamFactory = null): void
     {
-        $this->uriFactory = $uriFactory ?? Psr17Factory::getInstance();
-        $this->streamFactory = $streamFactory ?? Psr17Factory::getInstance();
+        $this->uriFactory = $uriFactory ?? Psr7::getDefaultPsr17Factory();
+        $this->streamFactory = $streamFactory ?? Psr7::getDefaultPsr17Factory();
     }
 
     public function getUriFactory(): UriFactoryInterface

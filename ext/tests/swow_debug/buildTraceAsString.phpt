@@ -19,7 +19,7 @@ class A
 {
     public static self $instance;
 
-    /** @var callable $callable */
+    /** @var callable */
     private $callable;
 
     private Generator $generator;

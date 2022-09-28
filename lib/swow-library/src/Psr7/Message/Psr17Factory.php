@@ -13,20 +13,13 @@ declare(strict_types=1);
 
 namespace Swow\Psr7\Message;
 
-use Psr\Http\Message\RequestFactoryInterface;
-use Psr\Http\Message\ResponseFactoryInterface;
-use Psr\Http\Message\ServerRequestFactoryInterface;
 use Psr\Http\Message\ServerRequestInterface;
-use Psr\Http\Message\StreamFactoryInterface;
 use Psr\Http\Message\StreamInterface;
-use Psr\Http\Message\UploadedFileFactoryInterface;
-use Psr\Http\Message\UriFactoryInterface;
 use RuntimeException;
 use Swow\Buffer;
 use Swow\Http\Status;
 use Swow\Psr7\Server\Server;
 use Swow\Psr7\Server\ServerConnection;
-use Swow\Psr7\Server\ServerConnectionFactoryInterface;
 
 use function error_get_last;
 use function fopen;
@@ -35,15 +28,8 @@ use function strlen;
 
 use const UPLOAD_ERR_OK;
 
-class Psr17Factory implements UriFactoryInterface, StreamFactoryInterface, RequestFactoryInterface, ResponseFactoryInterface, ServerRequestFactoryInterface, UploadedFileFactoryInterface, ServerConnectionFactoryInterface
+class Psr17Factory implements Psr17PlusFactoryInterface
 {
-    protected static self $instance;
-
-    public static function getInstance(): static
-    {
-        return self::$instance ??= new static();
-    }
-
     public function createUri(string $uri = ''): Uri
     {
         return new Uri($uri);

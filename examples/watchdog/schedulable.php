@@ -16,13 +16,16 @@ declare(strict_types=1);
 use Swow\Coroutine;
 use Swow\Watchdog;
 
+$alertCountMap = new WeakMap();
+
 // 0.1s/t
-Watchdog::run(quantum: 100 * 1000 * 1000, alerter: static function (): void {
+Watchdog::run(quantum: 100 * 1000 * 1000, alerter: static function () use ($alertCountMap): void {
     $coroutine = Coroutine::getCurrent();
-    $coroutine->__alert_count = ($coroutine->__alert_count ?? 0) + 1;
+    $alertCount = ($alertCountMap[$coroutine] ??= 0) + 1;
+    $alertCountMap[$coroutine] = $alertCount;
     echo 'CPU starvation occurred, suspend this coroutine...' . PHP_EOL;
     sleep(0);
-    if ($coroutine->__alert_count > 5) {
+    if ($alertCount > 5) {
         echo 'Kill the bad guy' . PHP_EOL;
         $coroutine->kill();
     }

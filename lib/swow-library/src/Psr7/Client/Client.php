@@ -31,6 +31,7 @@ use Swow\Psr7\Message\ClientPsr17FactoryTrait;
 use Swow\Psr7\Message\Request;
 use Swow\Psr7\Message\WebSocketTrait;
 use Swow\Psr7\Psr7;
+use Swow\Psr7\Server\ServerParamsTrait;
 use Swow\Socket;
 use Swow\SocketException;
 use Swow\WebSocket\WebSocket;
@@ -42,6 +43,7 @@ use function strlen;
 class Client extends Socket implements ClientInterface, ProtocolTypeInterface
 {
     use ClientPsr17FactoryTrait;
+
     use LimitationTrait;
 
     use ProtocolTypeTrait;
@@ -50,6 +52,8 @@ class Client extends Socket implements ClientInterface, ProtocolTypeInterface
      * @use ReceiverTrait<ResponseEntity>
      */
     use ReceiverTrait;
+
+    use ServerParamsTrait;
 
     use WebSocketTrait;
 

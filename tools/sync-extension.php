@@ -13,6 +13,7 @@
 declare(strict_types=1);
 
 use Swow\Utils\FileSystem\FileSystem;
+use Swow\Utils\FileSystem\IOException;
 
 use function Swow\Utils\defer;
 use function Swow\Utils\error;
@@ -73,7 +74,7 @@ $sync = static function (string $name, string $url, string $sourceDir, string $t
     if (file_exists($targetDir)) {
         try {
             FileSystem::move($targetDir, $tmpBackupDir);
-        } catch (FileSystem\IOException $exception) {
+        } catch (IOException $exception) {
             throw new RuntimeException("Backup from '{$targetDir}' to '{$tmpBackupDir}' failed: {$exception->getMessage()}");
         }
     }
@@ -86,7 +87,7 @@ $sync = static function (string $name, string $url, string $sourceDir, string $t
             $targetFile = "{$targetDir}/{$require}";
             try {
                 FileSystem::move($tmpSourceFile, $targetFile);
-            } catch (FileSystem\IOException $exception) {
+            } catch (IOException $exception) {
                 throw new RuntimeException("Update dep files from '{$tmpSourceFile}' to {$targetFile} failed: {$exception->getMessage()}");
             }
         }
@@ -99,7 +100,7 @@ $sync = static function (string $name, string $url, string $sourceDir, string $t
         }
         try {
             FileSystem::move($tmpSourceDir, $targetDir);
-        } catch (FileSystem\IOException $exception) {
+        } catch (IOException $exception) {
             throw new RuntimeException("Update dep files from '{$tmpSourceDir}' to {$targetDir} failed: {$exception->getMessage()}");
         }
     }

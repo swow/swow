@@ -18,9 +18,10 @@ require __DIR__ . '/../autoload.php';
 
 $client = new Client();
 $domain = 'www.baidu.com';
-$request = new Request('GET', '/', [
-    'Host' => $domain,
-]);
+$request = (new Request())
+    ->setMethod('GET')
+    ->setUri('/')
+    ->setHeader('Host', $domain);
 $response = $client
     ->connect($domain, 80)
     ->sendRequest($request);

@@ -18,13 +18,18 @@ use function array_merge;
 trait ServerParamsTrait
 {
     /** @var array{'remote_addr': string, 'remote_port': int} */
-    protected array $serverParams = [];
+    protected array $serverParams = [
+        'remote_addr' => '0.0.0.0',
+        'remote_port' => 0,
+    ];
 
+    /** @return array{'remote_addr': string, 'remote_port': int} */
     public function getServerParams(): array
     {
         return $this->serverParams;
     }
 
+    /** @param array $serverParams array<string, mixed> */
     public function setServerParams(array $serverParams): static
     {
         $this->serverParams = $serverParams;
@@ -39,6 +44,7 @@ trait ServerParamsTrait
         return $this;
     }
 
+    /** @param array $serverParams array<string, mixed> */
     public function addServerParams(array $serverParams): static
     {
         $this->serverParams = array_merge($this->serverParams, $serverParams);

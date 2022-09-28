@@ -17,6 +17,7 @@ use Psr\Http\Message\RequestFactoryInterface;
 use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\StreamFactoryInterface;
 use Psr\Http\Message\UriFactoryInterface;
+use Swow\Psr7\Psr7;
 
 trait ClientPsr17FactoryTrait
 {
@@ -32,8 +33,8 @@ trait ClientPsr17FactoryTrait
         ?ResponseFactoryInterface $responseFactory = null
     ): void {
         $this->__constructMessagePsr17Factory($uriFactory, $streamFactory);
-        $this->requestFactory = $requestFactory ?? Psr17Factory::getInstance();
-        $this->responseFactory = $responseFactory ?? Psr17Factory::getInstance();
+        $this->requestFactory = $requestFactory ?? Psr7::getDefaultPsr17Factory();
+        $this->responseFactory = $responseFactory ?? Psr7::getDefaultPsr17Factory();
     }
 
     public function getRequestFactory(): RequestFactoryInterface

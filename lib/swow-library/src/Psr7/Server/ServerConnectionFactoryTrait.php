@@ -13,7 +13,7 @@ declare(strict_types=1);
 
 namespace Swow\Psr7\Server;
 
-use Swow\Psr7\Message\Psr17Factory;
+use Swow\Psr7\Psr7;
 
 trait ServerConnectionFactoryTrait
 {
@@ -21,7 +21,7 @@ trait ServerConnectionFactoryTrait
 
     protected function __constructServerConnectionFactory(?ServerConnectionFactoryInterface $serverConnectionFactory = null): void
     {
-        $this->serverConnectionFactory = $serverConnectionFactory ?? Psr17Factory::getInstance();
+        $this->serverConnectionFactory = $serverConnectionFactory ?? Psr7::getDefaultPsr17Factory();
     }
 
     public function getServerConnectionFactory(): ServerConnectionFactoryInterface

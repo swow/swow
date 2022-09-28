@@ -47,6 +47,7 @@ class Uri implements UriPlusInterface, StringableInterface
 
     protected string $query = '';
 
+    /** @var array<string, string>|null */
     protected ?array $queryParams = null;
 
     protected string $fragment = '';
