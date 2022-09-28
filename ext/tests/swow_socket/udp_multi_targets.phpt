@@ -143,7 +143,7 @@ function testMultiServer(string $name, callable $function)
     echo "{$name} verified {$count} times" . PHP_LF;
 }
 
-testMultiServer('sendStringTo', function (Socket $client, Socket $server) {
+testMultiServer('sendTo(string)', function (Socket $client, Socket $server) {
     $client->sendTo(pack('N2', $client->getSockPort(), $server->getSockPort()), address: $server->getSockAddress(), port: $server->getSockPort());
 });
 
@@ -162,7 +162,7 @@ testMultiServer('writeTo', function (Socket $client, Socket $server) {
     ], $server->getSockAddress(), $server->getSockPort());
 });
 
-testMultiServer('sendTo', function (Socket $client, Socket $server) {
+testMultiServer('sendTo(buffer)', function (Socket $client, Socket $server) {
     $buffer = new Buffer(8192);
     $buffer->append(pack('N', $client->getSockPort()));
     $buffer->append(pack('N', $server->getSockPort()));
@@ -184,10 +184,10 @@ peekStringFrom start
 peekStringFrom verified %d times
 recvStringDataFrom start
 recvStringDataFrom verified %d times
-sendStringTo start
-sendStringTo verified %d times
+sendTo(string) start
+sendTo(string) verified %d times
 writeTo start
 writeTo verified %d times
-sendTo start
-sendTo verified %d times
+sendTo(buffer) start
+sendTo(buffer) verified %d times
 Done
