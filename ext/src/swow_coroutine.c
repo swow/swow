@@ -2479,7 +2479,7 @@ zend_result swow_coroutine_module_init(INIT_FUNC_ARGS)
 #ifndef SWOW_NATIVE_UNWIND_EXIT_SUPPORT
     /* implement UnwindExit by ourself (temporarily) */
     swow_coroutine_unwind_exit_ce = swow_register_internal_class(
-        "Swow\\Coroutine\\UnwindExit", swow_coroutine_exception_ce, NULL, NULL, NULL, cat_true, cat_true, NULL, NULL, 0
+        "Swow\\CoroutineUnwindExit", swow_coroutine_exception_ce, NULL, NULL, NULL, cat_true, cat_true, NULL, NULL, 0
     );
     swow_coroutine_unwind_exit_ce->ce_flags |= ZEND_ACC_FINAL;
 #endif
