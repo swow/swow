@@ -14,7 +14,7 @@ use Swow\Sync\WaitReference;
 
 $wr = new WaitReference();
 
-Coroutine::run(function () use ($wr) {
+Coroutine::run(function () use ($wr): void {
     // E_DEPRECATED
     if (PHP_VERSION_ID < 80200) {
         hexdec('bad_arg-1');

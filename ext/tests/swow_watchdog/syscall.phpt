@@ -74,7 +74,7 @@ Watchdog::run($quantum, $threshold);
 
 Assert::true(Watchdog::isRunning());
 
-$watcher = Coroutine::run(function () {
+$watcher = Coroutine::run(static function (): void {
     Coroutine::yield();
     Watchdog::stop();
     echo "I am back\n";

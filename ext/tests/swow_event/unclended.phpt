@@ -10,7 +10,7 @@ require __DIR__ . '/../include/bootstrap.php';
 
 use Swow\Socket;
 
-$foo = new class {
+$foo = new class() {
     public function __destruct()
     {
         global $socket;

@@ -30,7 +30,7 @@ debug_zval_dump($buffer);
 
 $buffer = new Buffer(8192);
 
-Coroutine::run(function () use ($buffer) {
+Coroutine::run(static function () use ($buffer): void {
     $socket = new Socket(Socket::TYPE_UDP);
     $socket->bind('127.0.0.1');
     $socket->recvFrom($buffer);

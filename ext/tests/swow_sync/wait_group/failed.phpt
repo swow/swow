@@ -14,26 +14,26 @@ use Swow\Sync\WaitGroup;
 
 $wg = new WaitGroup();
 // done without add is not allowed
-Assert::throws(function () use ($wg) {
+Assert::throws(static function () use ($wg): void {
     $wg->done();
 }, Error::class, expectMessage: 'WaitGroup counter can not be negative');
 $wg->add(2);
 // normal done
-Coroutine::run(function () use ($wg) {
+Coroutine::run(static function () use ($wg): void {
     $wg->done();
 });
 // wait it
-Coroutine::run(function () use ($wg) {
+Coroutine::run(static function () use ($wg): void {
     $wg->wait();
 });
-Coroutine::run(function () use ($wg) {
+Coroutine::run(static function () use ($wg): void {
     // add on wait is not allowed
-    Assert::throws(function () use ($wg) {
+    Assert::throws(static function () use ($wg): void {
         $wg->add(1);
     }, Error::class, expectMessage: 'WaitGroup add called concurrently with wait');
 
     // double wait is not allowed
-    Assert::throws(function () use ($wg) {
+    Assert::throws(static function () use ($wg): void {
         $wg->wait();
     }, Error::class, expectMessage: 'WaitGroup can not be reused before previous wait has returned');
 });
@@ -44,7 +44,7 @@ echo "Done 1\n";
 $wg = new WaitGroup();
 $wg->add(1);
 // wait it time out
-Coroutine::run(function () use ($wg) {
+Coroutine::run(static function () use ($wg): void {
     try {
         // will time out immediately
         $wg->wait(0);

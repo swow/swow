@@ -8,24 +8,24 @@ require __DIR__ . '/../include/skipif.php';
 <?php
 require __DIR__ . '/../include/bootstrap.php';
 
-$anonymous = function () {
-  var_dump(
-    $_SERVER['argv'][0],
-    $_POST,
-    STDIN,
-    STDOUT,
-    STDERR,
-  );
+$anonymous = static function (): void {
+    var_dump(
+        $_SERVER['argv'][0],
+        $_POST,
+        STDIN,
+        STDOUT,
+        STDERR,
+    );
 };
 
 $anonymousString = serialize($anonymous);
 $anonymousUnserialized = unserialize($anonymousString);
 $anonymousUnserialized();
 
-$arrow = fn () => $anonymous();
+$arrow = static fn () => $anonymous();
 
 $arrowString = serialize($arrow);
-//var_dump($arrowString);
+// var_dump($arrowString);
 $arrowUnserialized = unserialize($arrowString);
 $arrowUnserialized();
 

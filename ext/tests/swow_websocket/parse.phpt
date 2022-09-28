@@ -8,8 +8,8 @@ require __DIR__ . '/../include/skipif.php';
 <?php
 require __DIR__ . '/../include/bootstrap.php';
 
-use Swow\WebSocket\WebSocket;
 use Swow\WebSocket\Header;
+use Swow\WebSocket\WebSocket;
 
 const FIN = 1 << 7;
 const RSV1 = 1 << 6;
@@ -20,7 +20,7 @@ const OPCODE_TEXT = 1;
 const OPCODE_BIN = 2;
 const OPCODE_CLOSE = 8;
 const OPCODE_PING = 9;
-const OPCODE_PONG = 0xa;
+const OPCODE_PONG = 0xA;
 
 const MASK_BIT = 1 << 7;
 
@@ -70,7 +70,7 @@ Assert::true($header->getFin());
 Assert::false($header->getRSV1());
 Assert::false($header->getRSV2());
 Assert::false($header->getRSV3());
-Assert::same($header->getOpcode(), 0xa);
+Assert::same($header->getOpcode(), 0xA);
 Assert::false($header->getMask());
 Assert::same($header->getMaskKey(), '');
 Assert::same($header->getPayloadLength(), 0);
@@ -127,7 +127,7 @@ Assert::same($header->read($header->getHeaderSize()), 'the data sent 16');
 
 // rsv2, binary message, masked, len=256, payload = '\xca\xfe\xba\xbe\xde\xad\xbe\xef' * 32
 $header->clear();
-$header->append(pack('C2', RSV2 | OPCODE_BIN, MASK_BIT | 0x7e));
+$header->append(pack('C2', RSV2 | OPCODE_BIN, MASK_BIT | 0x7E));
 $header->append(pack('n', 256));
 $header->append("\x10\x21\x32\x44");
 $message = '';
@@ -154,13 +154,13 @@ Assert::same($header->read($header->getHeaderSize()), str_repeat("\xca\xfe\xba\x
 
 // fin, rsv3, binary message, len=65536, payload = '\xf0\x0f\xc7\xc8\x2f\x90\x2f\x90' * 8192
 $header->clear();
-$header->append(pack('C2', FIN | RSV3 | OPCODE_BIN, MASK_BIT | 0x7f));
+$header->append(pack('C2', FIN | RSV3 | OPCODE_BIN, MASK_BIT | 0x7F));
 $header->append(pack('J', 65536));
 $header->append('swow');
 $message = '';
 $parts = unpack('N*', str_repeat("\xf0\x0f\xc7\xc8\x2f\x90\x2f\x90", 8192));
 foreach ($parts as $part) {
-    $message .= pack('N', $part ^ 0x73776f77);
+    $message .= pack('N', $part ^ 0x73776F77);
 }
 $header->append($message);
 // debugInfo

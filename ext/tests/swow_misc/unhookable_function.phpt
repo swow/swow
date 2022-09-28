@@ -9,7 +9,7 @@ disable_functions=dummyOne, msleep,dummy_2, usleep
 --FILE--
 <?php
 require __DIR__ . '/../include/bootstrap.php';
-set_error_handler(function (...$_) {
+set_error_handler(static function (...$_): void {
     echo "caught a PHP7 warning\n";
 });
 

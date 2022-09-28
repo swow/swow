@@ -25,7 +25,7 @@ if (PHP_OS_FAMILY !== 'Windows') {
     define('CLIENT_SOCK', '\\\\?\\pipe\\swow_client_' . getRandomBytes(8));
 }
 
-function test($type, $server, $msg)
+function test($type, $server, $msg): void
 {
     switch ($type) {
         case 'tcp':
@@ -45,7 +45,7 @@ function test($type, $server, $msg)
             throw new Exception('not supported protocol');
     }
     Assert::notSame($sock, false);
-    if ('unix' === $type || 'udg' === $type || 'pipe' === $type) {
+    if ($type === 'unix' || $type === 'udg' || $type === 'pipe') {
         Assert::true(socket_bind($sock, CLIENT_SOCK));
         Assert::true(socket_connect($sock, $server->getSockAddress()));
     } else {
@@ -57,7 +57,7 @@ function test($type, $server, $msg)
     sleep(0);
     Assert::same(fread($stream, strlen($msg)), $msg);
     socket_close($sock);
-    if ('unix' === $type || 'udg' === $type || 'pipe' === $type) {
+    if ($type === 'unix' || $type === 'udg' || $type === 'pipe') {
         ASSERT::true(unlink(CLIENT_SOCK));
     }
     echo "{$type} done\n";
@@ -65,7 +65,7 @@ function test($type, $server, $msg)
 
 // TCP test
 $server = new Socket(Socket::TYPE_TCP);
-Coroutine::run(function () use ($server) {
+Coroutine::run(static function () use ($server): void {
     $server->bind('127.0.0.1')->listen();
     $connection = $server->accept();
     $red = $connection->recvString(TEST_MAX_LENGTH);
@@ -77,19 +77,19 @@ test('tcp', $server, $random);
 
 // UDP test
 $server = new Socket(Socket::TYPE_UDP);
-Coroutine::run(function () use ($server, $random) {
+Coroutine::run(static function () use ($server, $random): void {
     $server->bind('127.0.0.1');
     $red = $server->recvStringFrom(TEST_MAX_LENGTH, $addr, $port);
-    //var_dump($red, $addr, $port);
+    // var_dump($red, $addr, $port);
     $server->sendTo($red, address: $addr, port: $port);
     $server->close();
 });
 test('udp', $server, $random);
 
-if (PHP_OS_FAMILY != 'Windows') {
+if (PHP_OS_FAMILY !== 'Windows') {
     // UNIX test
     $server = new Socket(Socket::TYPE_UNIX);
-    Coroutine::run(function () use ($server, $random) {
+    Coroutine::run(static function () use ($server, $random): void {
         $server->bind(SERVER_SOCK1)->listen();
         $connection = $server->accept();
         $red = $connection->recvString(TEST_MAX_LENGTH, 0);
@@ -101,7 +101,7 @@ if (PHP_OS_FAMILY != 'Windows') {
 
     // PIPE test
     $server = new Socket(Socket::TYPE_PIPE);
-    Coroutine::run(function () use ($server, $random) {
+    Coroutine::run(static function () use ($server, $random): void {
         $server->bind(SERVER_SOCK3)->listen();
         $connection = $server->accept();
         $red = $connection->recvString(TEST_MAX_LENGTH, 0);
@@ -113,7 +113,7 @@ if (PHP_OS_FAMILY != 'Windows') {
 
     // UDG test
     $server = new Socket(Socket::TYPE_UDG);
-    Coroutine::run(function () use ($server, $random) {
+    Coroutine::run(static function () use ($server, $random): void {
         $server->bind(SERVER_SOCK2);
         $red = $server->recvStringFrom(TEST_MAX_LENGTH, $addr);
         $server->sendTo($red, address: $addr);

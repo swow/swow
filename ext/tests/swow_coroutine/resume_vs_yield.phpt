@@ -10,9 +10,9 @@ require __DIR__ . '/../include/bootstrap.php';
 
 use Swow\Coroutine;
 
-Coroutine::run(function () {
+Coroutine::run(static function (): void {
     echo "1\n";
-    Coroutine::run(function () {
+    Coroutine::run(static function (): void {
         echo "2\n";
         Coroutine::getCurrent()->getPrevious()->resume();
         echo "4\n";
@@ -23,9 +23,9 @@ echo "5\n";
 
 echo "\n";
 
-Coroutine::run(function () {
+Coroutine::run(static function (): void {
     echo "1\n";
-    $coroutine = Coroutine::run(function () {
+    $coroutine = Coroutine::run(static function (): void {
         echo "2\n";
         Coroutine::yield();
         echo "4\n";

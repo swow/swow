@@ -12,8 +12,8 @@ class A
 {
 }
 
-$coroutine = Swow\Coroutine::run(function () {
-    (function () {
+$coroutine = Swow\Coroutine::run(static function (): void {
+    (static function (): void {
         $resource = STDIN;
         $object = new A();
         $null = null;
@@ -22,10 +22,10 @@ $coroutine = Swow\Coroutine::run(function () {
         $false = false;
         $string = 'string';
         $long_string = 'a string that is very very very very very long';
-        $long = 0x5f3759df;
+        $long = 0x5F3759DF;
         $double = 0.0072973526;
-        (function ($resource, $object, $null, $array, $true, $false, $string, $long_string, $long, $double) {
-            (function () {
+        (static function ($resource, $object, $null, $array, $true, $false, $string, $long_string, $long, $double): void {
+            (static function (): void {
                 Swow\Coroutine::yield();
             })();
         })($resource, $object, $null, $array, $true, $false, $string, $long_string, $long, $double);

@@ -14,7 +14,7 @@ use Swow\Coroutine;
 foreach ([false, true] as $sleep) {
     foreach ([0, 1, 100] as $c) {
         $channel = new Channel($c);
-        Coroutine::run(function () use ($channel, $sleep) {
+        Coroutine::run(static function () use ($channel, $sleep): void {
             if ($sleep) {
                 sleep(0);
             }

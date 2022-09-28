@@ -8,9 +8,11 @@ require __DIR__ . '/../include/skipif.php';
 <?php
 require __DIR__ . '/../include/bootstrap.php';
 
-$channel = new class extends Swow\Channel {
+$channel = new class() extends Swow\Channel {
     /** @noinspection PhpMissingParentConstructorInspection */
-    public function __construct() { }
+    public function __construct()
+    {
+    }
 };
 $channel->push(true);
 

@@ -43,21 +43,21 @@ if (!$p) {
 }
 
 // wait for child connect
-//printf("wait connecting in\n");
+// printf("wait connecting in\n");
 $conn = $sock->accept(10000);
-//printf("accepted\n");
+// printf("accepted\n");
 
-function tellchild($char)
+function tellchild($char): void
 {
     global $conn;
     $conn->send($char);
 }
-function waitchild($char)
+function waitchild($char): void
 {
     global $conn;
     $red = $conn->readString(1);
     var_dump($char);
-    if (strncmp($char, $red, 1) != 0) {
+    if (strncmp($char, $red, 1) !== 0) {
         throw new Exception('child failed continue');
     }
 }
@@ -72,7 +72,7 @@ $badresult = false;
 $coros = [];
 // lock nb tests: should fail
 for ($i = 0; $i < TEST_THREADS; $i++) {
-    $coros[$i] = Swow\Coroutine::run(function () use (&$badresult, $wr, $fd) {
+    $coros[$i] = Swow\Coroutine::run(static function () use (&$badresult, $wr, $fd): void {
         $ret = flock($fd, LOCK_EX | LOCK_NB);
         if ($ret) {
             fprintf(STDERR, "LOCK_EX success, but it should not\n");
@@ -100,7 +100,7 @@ $count = 0;
 $wr = new WaitReference();
 // make stuck threads
 for ($i = 0; $i < TEST_THREADS; $i++) {
-    $coros[$i] = Swow\Coroutine::run(function () use (&$count, $wr, $fd) {
+    $coros[$i] = Swow\Coroutine::run(static function () use (&$count, $wr, $fd): void {
         $ret = flock($fd, LOCK_EX); // always stuck here
         flock($fd, LOCK_UN);
         $count++;
@@ -109,7 +109,7 @@ for ($i = 0; $i < TEST_THREADS; $i++) {
 
 $wr2 = new WaitReference();
 // test any fs coro
-$coros[$i] = Swow\Coroutine::run(function () use (&$badresult, $wr2) {
+$coros[$i] = Swow\Coroutine::run(static function () use (&$badresult, $wr2): void {
     stat(TEST_LOCKNAME);
 });
 
@@ -132,7 +132,7 @@ try {
     throw $e;
 }
 
-if ($count != TEST_THREADS) {
+if ($count !== TEST_THREADS) {
     fprintf(STDERR, "not all coro done, that's impossible\n");
 }
 

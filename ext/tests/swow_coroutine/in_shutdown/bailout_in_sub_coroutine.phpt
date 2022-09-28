@@ -9,21 +9,22 @@ require __DIR__ . '/../../include/skipif.php';
 require __DIR__ . '/../../include/bootstrap.php';
 
 use Swow\Coroutine;
+
 use function Swow\Sync\waitAll;
 
-register_shutdown_function(function () {
+register_shutdown_function(static function (): void {
     Assert::same(Coroutine::count(), TEST_MAX_CONCURRENCY + 2);
     echo sprintf("\nCoroutine count: %d\n", Coroutine::count());
 });
 
 for ($c = 0; $c < TEST_MAX_CONCURRENCY; $c++) {
-    Coroutine::run(function () {
+    Coroutine::run(static function (): void {
         Coroutine::yield();
         echo "Never here\n";
     });
 }
 
-Coroutine::run(function () {
+Coroutine::run(static function (): void {
     echo str_repeat('X', 128 * 1024 * 1024);
 });
 

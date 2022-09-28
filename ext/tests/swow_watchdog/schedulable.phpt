@@ -21,7 +21,7 @@ final class CoroutineContextManager
 {
     private static WeakMap $map;
 
-    final public static function getContext(Coroutine $coroutine)
+    public static function getContext(Coroutine $coroutine)
     {
         self::$map ??= new WeakMap();
         return self::$map[$coroutine] ??= new CoroutineContext();
@@ -30,7 +30,7 @@ final class CoroutineContextManager
 
 Assert::false(Watchdog::isRunning());
 
-Watchdog::run(1 * 1000 * 1000, 0, function () {
+Watchdog::run(1 * 1000 * 1000, 0, static function (): void {
     Assert::true(Watchdog::isRunning());
     $coroutine = Coroutine::getCurrent();
     $context = CoroutineContextManager::getContext($coroutine);
@@ -44,7 +44,7 @@ Watchdog::run(1 * 1000 * 1000, 0, function () {
 $coroutine = Coroutine::getCurrent();
 $count = 0;
 
-Coroutine::run(function () use ($coroutine, &$count) {
+Coroutine::run(static function () use ($coroutine, &$count): void {
     do {
         var_dump($count);
         sleep(0);

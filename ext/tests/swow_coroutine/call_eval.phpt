@@ -10,12 +10,12 @@ require __DIR__ . '/../include/bootstrap.php';
 
 use Swow\Coroutine;
 
-$remote_coro = Coroutine::run(function () {
+$remote_coro = Coroutine::run(static function (): void {
     // yield first to test call
     Coroutine::yield('nonce');
 });
 
-$closure = function () {
+$closure = static function (): void {
     $upper_frame = debug_backtrace()[1];
     Assert::same($upper_frame['function'], 'yield');
     Assert::same($upper_frame['class'], 'Swow\\Coroutine');
@@ -33,7 +33,7 @@ try {
     $remote_coro->resume();
 }
 
-$remote_coro = Coroutine::run(function () use ($closure) {
+$remote_coro = Coroutine::run(static function () use ($closure): void {
     // yield to test eval
     $a = 0;
     Coroutine::yield('nonce2');

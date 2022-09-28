@@ -8,34 +8,34 @@ require __DIR__ . '/../include/skipif.php';
 <?php
 require __DIR__ . '/../include/bootstrap.php';
 
-$coroutine = Swow\Coroutine::run(function () {
+$coroutine = Swow\Coroutine::run(static function (): void {
     echo "0\n";
     exit;
-    /** @noinspection PhpUnreachableStatementInspection */
+    /* @noinspection PhpUnreachableStatementInspection */
     echo "Never here\n";
 });
 Assert::same($coroutine->getExitStatus(), 0);
 
-$coroutine = Swow\Coroutine::run(function () {
+$coroutine = Swow\Coroutine::run(static function (): void {
     echo "1\n";
     exit(0);
-    /** @noinspection PhpUnreachableStatementInspection */
+    /* @noinspection PhpUnreachableStatementInspection */
     echo "Never here\n";
 });
 Assert::same($coroutine->getExitStatus(), 0);
 
-$coroutine = Swow\Coroutine::run(function () {
+$coroutine = Swow\Coroutine::run(static function (): void {
     echo "2\n";
     exit(null);
-    /** @noinspection PhpUnreachableStatementInspection */
+    /* @noinspection PhpUnreachableStatementInspection */
     echo "Never here\n";
 });
 Assert::same($coroutine->getExitStatus(), 0);
 
-$coroutine = Swow\Coroutine::run(function () {
+$coroutine = Swow\Coroutine::run(static function (): void {
     echo "3\n";
     exit(1);
-    /** @noinspection PhpUnreachableStatementInspection */
+    /* @noinspection PhpUnreachableStatementInspection */
     echo "Never here\n";
 });
 Assert::same($coroutine->getExitStatus(), 1);

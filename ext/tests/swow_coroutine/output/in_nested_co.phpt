@@ -9,10 +9,10 @@ require __DIR__ . '/../../include/skipif.php';
 require __DIR__ . '/../../include/bootstrap.php';
 
 // FIXME: memory leak
-Swow\Coroutine::run(function () {
+Swow\Coroutine::run(static function (): void {
     ob_start();
     echo "2\n"; // [#1] yield
-    Swow\Coroutine::run(function () {
+    Swow\Coroutine::run(static function (): void {
         echo "1\n"; // [#2] output: 1
         sleep(0); // yield
         // [#4] resume

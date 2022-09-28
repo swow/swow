@@ -8,13 +8,13 @@ require __DIR__ . '/../../include/skipif.php';
 <?php
 require __DIR__ . '/../../include/bootstrap.php';
 
-use Swow\Sync\WaitGroup;
 use Swow\Coroutine;
+use Swow\Sync\WaitGroup;
 
 $wg = new WaitGroup();
 $wg->add($n = 10);
 while ($n--) {
-    Coroutine::run(function () use ($wg, $n) {
+    Coroutine::run(static function () use ($wg, $n): void {
         // mock doing some tasks consuming times
         pseudo_random_sleep();
         echo $n . "\n";

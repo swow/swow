@@ -1,13 +1,21 @@
 <?php
 /**
- * Forked from the repository webmozart/assert
+ * This file is part of Swow
  *
- * (c) Bernhard Schussek <bschussek@gmail.com>
+ * @link    https://github.com/swow/swow
+ * @contact twosee <twosee@php.net>
+ *
+ * For the full copyright and license information,
+ * please view the LICENSE file that was distributed with this source code
  */
 
 declare(strict_types=1);
 
 /**
+ * Forked from the repository webmozart/assert
+ *
+ * (c) Bernhard Schussek <bschussek@gmail.com>
+ *
  * Efficient assertions to validate the input/output of your methods.
  *
  * @method static bool nullOrString($value, $message = '')
@@ -177,7 +185,7 @@ class Assert
 
     protected static int $maxStringLength = 64;
 
-    public static function setThrowException(bool $b)
+    public static function setThrowException(bool $b): void
     {
         static::$throwException = $b;
     }
@@ -228,7 +236,7 @@ class Assert
 
     public static function integerish($value, $message = ''): bool
     {
-        if (!is_numeric($value) || $value != (int) $value) {
+        if (!is_numeric($value) || $value !== (int) $value) {
             static::reportInvalidArgument(sprintf(
                 $message ?: 'Expected an integerish value. Got: %s',
                 static::typeToString($value)
@@ -597,7 +605,7 @@ class Assert
             static::reportInvalidArgument(sprintf(
                 $message ?: 'Expected an array of unique values, but %s of them %s duplicated',
                 $difference,
-                ($difference === 1 ? 'is' : 'are')
+                $difference === 1 ? 'is' : 'are'
             ));
 
             return false;
@@ -608,7 +616,7 @@ class Assert
 
     public static function eq($value, $expect, $message = ''): bool
     {
-        if ($expect != $value) {
+        if ($expect !== $value) {
             static::reportInvalidArgument(sprintf(
                 $message ?: 'Expected a value equal to %2$s. Got: %s',
                 static::valueToString($value),
@@ -623,7 +631,7 @@ class Assert
 
     public static function notEq($value, $expect, $message = ''): bool
     {
-        if ($expect == $value) {
+        if ($expect === $value) {
             static::reportInvalidArgument(sprintf(
                 $message ?: 'Expected a different value than %s.',
                 static::valueToString($expect)
@@ -1173,7 +1181,7 @@ class Assert
 
     public static function implementsInterface($value, $interface, $message = ''): bool
     {
-        if (!in_array($interface, class_implements($value))) {
+        if (!in_array($interface, class_implements($value), true)) {
             static::reportInvalidArgument(sprintf(
                 $message ?: 'Expected an implementation of %2$s. Got: %s',
                 static::valueToString($value),
@@ -1514,14 +1522,14 @@ class Assert
             return strlen($value);
         }
 
-        if (false === $encoding = mb_detect_encoding($value)) {
+        if (false === $encoding = mb_detect_encoding($value, mb_detect_order(), true)) {
             return strlen($value);
         }
 
         return mb_strwidth($value, $encoding);
     }
 
-    protected static function reportInvalidArgument(string $message = '')
+    protected static function reportInvalidArgument(string $message = ''): void
     {
         throw new AssertException($message);
     }

@@ -35,8 +35,8 @@ $socket->close();
 $socket = new Socket(Socket::TYPE_TCP);
 
 // lazy init here, if socket is not listening or connected, fd will not be accessible
-//Assert::false($socket->isAvailable());
-//Assert::lessThan($socket->getFd(), 0);
+// Assert::false($socket->isAvailable());
+// Assert::lessThan($socket->getFd(), 0);
 
 Assert::same($socket->getType(), Socket::TYPE_TCP);
 Assert::same($socket->getTypeName(), 'TCP');
@@ -64,7 +64,7 @@ Assert::string($socket->getSockAddress());
 Assert::greaterThan($socket->getSockPort(), 0);
 
 $noticer = new Channel(0);
-Coroutine::run(function () use ($noticer, $socket) {
+Coroutine::run(static function () use ($noticer, $socket): void {
     $client = new Socket(Socket::TYPE_TCP);
     Assert::false($client->isOpen());
     $client->connect($socket->getSockAddress(), $socket->getSockPort());
@@ -75,7 +75,7 @@ Coroutine::run(function () use ($noticer, $socket) {
 });
 
 $connection = $socket->accept();
-//Assert::same($connection->getConnectionError(), 0);
+// Assert::same($connection->getConnectionError(), 0);
 
 try {
     Assert::true($connection->isOpen());
@@ -106,7 +106,7 @@ Assert::false($connection->isEstablished());
 $socket->close();
 
 $socket = new Socket(Socket::TYPE_TCP);
-Coroutine::run(function () use ($socket) {
+Coroutine::run(static function () use ($socket): void {
     $socket->setConnectTimeout(1000);
     // a class E reserved ip that cannot be reached
     try {

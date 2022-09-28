@@ -12,7 +12,7 @@ use Swow\Channel;
 use Swow\Coroutine;
 
 $channel = new Channel();
-Coroutine::run(function () use ($channel) {
+Coroutine::run(static function () use ($channel): void {
     $channel->push('Hello Swow');
 });
 echo $channel->pop() . "\n";

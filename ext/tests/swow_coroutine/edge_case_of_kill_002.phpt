@@ -10,7 +10,7 @@ require __DIR__ . '/../include/bootstrap.php';
 
 use Swow\Coroutine;
 
-$worker = Coroutine::run(function () {
+$worker = Coroutine::run(static function (): void {
     while (true) {
         sleep(1);
     }

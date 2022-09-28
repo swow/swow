@@ -10,20 +10,20 @@ require __DIR__ . '/../../include/bootstrap.php';
 
 use Swow\Coroutine;
 use Swow\Errno;
-use Swow\SyncException;
 use Swow\Sync\WaitReference;
+use Swow\SyncException;
 
 $wr = new WaitReference();
 // normal done
-Coroutine::run(function () use ($wr) {
+Coroutine::run(static function () use ($wr): void {
     // do nothing
     pseudo_random_sleep();
 });
 // wait it
-Coroutine::run(function ($wr) {
+Coroutine::run(static function ($wr): void {
     WaitReference::wait($wr);
 }, $wr);
-Coroutine::run(function ($wr) {
+Coroutine::run(static function ($wr): void {
     // double wait is not allowed
     try {
         WaitReference::wait($wr);
@@ -37,12 +37,12 @@ echo "Done 1\n";
 
 $wr = new WaitReference();
 // normal done
-Coroutine::run(function () use ($wr) {
+Coroutine::run(static function () use ($wr): void {
     // do nothing
     pseudo_random_sleep();
 });
 // wait it
-Coroutine::run(function ($wr) {
+Coroutine::run(static function ($wr): void {
     try {
         // will time out immediately
         WaitReference::wait($wr, 0);

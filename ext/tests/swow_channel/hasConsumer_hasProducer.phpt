@@ -28,10 +28,10 @@ class Consumer
         $this->chan = $chan;
     }
 
-    public function consume()
+    public function consume(): void
     {
         $this->running = true;
-        Coroutine::run(function () {
+        Coroutine::run(function (): void {
             while ($this->running) {
                 try {
                     $good = $this->chan->pop();
@@ -47,7 +47,7 @@ class Consumer
         });
     }
 
-    public function stop()
+    public function stop(): void
     {
         $this->running = false;
         // wait coro
@@ -72,10 +72,10 @@ class Producer
         $this->chan = $chan;
     }
 
-    public function produce()
+    public function produce(): void
     {
         $this->running = true;
-        Coroutine::run(function () {
+        Coroutine::run(function (): void {
             while ($this->running) {
                 try {
                     $this->chan->push('good');
@@ -89,7 +89,7 @@ class Producer
         });
     }
 
-    public function stop()
+    public function stop(): void
     {
         $this->running = false;
         // wait coro

@@ -12,7 +12,7 @@ use Swow\Coroutine;
 use Swow\Sync\WaitReference;
 
 $wr = new WaitReference();
-$o1 = new class {
+$o1 = new class() {
     public function __destruct()
     {
         echo "Destruct in main\n";
@@ -21,7 +21,7 @@ $o1 = new class {
         Assert::greaterThan(Coroutine::getCurrent()->getId(), 0);
     }
 };
-$o2 = new class {
+$o2 = new class() {
     public function __destruct()
     {
         echo "Destructor in sub\n";
@@ -30,7 +30,7 @@ $o2 = new class {
     }
 }; // Notice: o2 will be bound to coroutine#2
 
-Coroutine::run(function () use ($wr, $o2) {
+Coroutine::run(function () use ($wr, $o2): void {
     /** @noinspection PhpUnusedLocalVariableInspection */
     $sleeper = new class(Coroutine::getCurrent()->getPrevious()) {
         public Coroutine $coroutine;

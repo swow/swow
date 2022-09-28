@@ -10,12 +10,14 @@ require __DIR__ . '/../include/bootstrap.php';
 
 use Swow\Coroutine;
 
-spl_autoload_register(function (string $class) {
+spl_autoload_register(static function (string $class): void {
     Assert::same($class, TestGetExecutedInfo::class);
 
     class TestGetExecutedInfo
     {
-        public static function doNothing(): void { }
+        public static function doNothing(): void
+        {
+        }
     }
 
     echo Coroutine::getCurrent()->getTraceAsString(), "\n\n";
@@ -42,19 +44,19 @@ spl_autoload_register(function (string $class) {
 
 class TestGetExecutedInfoFunctions
 {
-    public static function a()
+    public static function a(): void
     {
         $tip = 'I am ' . strtoupper(__FUNCTION__);
         static::b();
     }
 
-    public static function b()
+    public static function b(): void
     {
         $tip = 'I am ' . strtoupper(__FUNCTION__);
         static::c();
     }
 
-    public static function c()
+    public static function c(): void
     {
         $tip = 'I am ' . strtoupper(__FUNCTION__);
         require __DIR__ . '/getExecutedInfo.inc';

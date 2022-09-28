@@ -25,7 +25,7 @@ $proc = proc_open(
     $pipes,
 );
 
-$pid = (int)trim(fgets($pipes[1]));
+$pid = (int) trim(fgets($pipes[1]));
 
 Signal::kill($pid, Signal::TERM);
 

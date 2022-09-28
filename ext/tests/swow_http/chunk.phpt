@@ -19,7 +19,7 @@ for ($i = 0; $i < 32; $i++) {
     $chunk = random_bytes($seed);
     array_unshift($randoms, $chunk);
 }
-$body_full = "message_start1message_start2" . implode('', $randoms);
+$body_full = 'message_start1message_start2' . implode('', $randoms);
 
 // generate a buffer holds our fake response
 $buffer = new Buffer(4096);
@@ -90,7 +90,7 @@ while (true) {
             Assert::same($parser->getMajorVersion(), 1);
             Assert::same($parser->getMinorVersion(), 1);
             Assert::false($parser->isUpgrade());
-            //Assert::false($parser->shouldKeepAlive());
+            // Assert::false($parser->shouldKeepAlive());
             break;
         case Parser::EVENT_BODY:
             $i++;
@@ -117,7 +117,7 @@ $expected = [
     'Transfer-Encoding' => ['chunked'],
 ];
 
-foreach($expected as $k => $expected_values){
+foreach ($expected as $k => $expected_values) {
     $real_values = $headers[$k];
     sort($real_values);
     sort($expected_values);

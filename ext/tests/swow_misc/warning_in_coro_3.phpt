@@ -12,7 +12,7 @@ memory_limit=128M
 require __DIR__ . '/../include/bootstrap.php';
 use Swow\Coroutine;
 
-Coroutine::run(function () {
+Coroutine::run(static function (): void {
     // E_ERROR
     $_ = str_repeat('the quick brown twosee jumps over the lazy black dixyes', 128 * 1048576);
 });

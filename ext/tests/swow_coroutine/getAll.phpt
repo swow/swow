@@ -11,7 +11,7 @@ require __DIR__ . '/../include/bootstrap.php';
 const N = 1;
 
 for ($n = N; $n--;) {
-    Swow\Coroutine::run(function () {
+    Swow\Coroutine::run(static function (): void {
         usleep(1000);
     });
 }

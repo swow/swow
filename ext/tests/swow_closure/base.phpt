@@ -8,7 +8,7 @@ require __DIR__ . '/../include/skipif.php';
 <?php
 require __DIR__ . '/../include/bootstrap.php';
 
-$anonymous = function () {
+$anonymous = static function (): void {
     echo "anonymous\n";
 };
 
@@ -18,7 +18,7 @@ var_dump($anonymousString);
 $anonymousUnserialized = unserialize($anonymousString);
 $anonymousUnserialized();
 
-$arrow = fn () => print("arrow\n");
+$arrow = static fn () => print "arrow\n";
 
 var_dump($arrow);
 $arrowString = serialize($arrow);

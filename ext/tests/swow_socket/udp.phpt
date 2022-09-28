@@ -21,7 +21,7 @@ $server = new Socket(Socket::TYPE_UDP);
 $client = new Socket(Socket::TYPE_UDP);
 
 // a simple udp echo server
-Coroutine::run(function () use ($server, $client, $randoms, $wr) {
+Coroutine::run(static function () use ($server, $client, $randoms, $wr): void {
     $server->bind('127.0.0.1');
     foreach ($randoms as $_) {
         $packet = $server->recvStringFrom(TEST_MAX_LENGTH_LOW + 4, $ip, $port);
@@ -37,7 +37,7 @@ Coroutine::run(function () use ($server, $client, $randoms, $wr) {
 });
 
 // use coroutine to avoid buffer exhaust and packet drop
-Coroutine::run(function () use ($server, $client, $randoms, $wr) {
+Coroutine::run(static function () use ($server, $client, $randoms, $wr): void {
     foreach ($randoms as $n => $random) {
         $index_bin = pack('N', $n);
         $client->sendTo($index_bin . $random, address: $server->getSockAddress(), port: $server->getSockPort());

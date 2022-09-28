@@ -14,8 +14,8 @@ php_proc_with_swow([
     '-r',
     'echo getmypid() . PHP_EOL;' .
         'Swow\Coroutine::yield();' .
-        'fwrite(STDERR, "Never here" . PHP_EOL);'
-], function ($proc, array $pipes) {
+        'fwrite(STDERR, "Never here" . PHP_EOL);',
+], static function ($proc, array $pipes): void {
     $pid = (int) trim(fgets($pipes[1], 4096));
     echo trim(fgets($pipes[2], 4096)) . "\n";
     Signal::kill($pid, Signal::TERM);

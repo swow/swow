@@ -28,7 +28,7 @@ if (PHP_OS_FAMILY === 'Linux' && mt_rand(0, 1)) {
 foreach ([false, true] as $useConnect) {
     $wrs = new WaitReference();
     $server = new Socket(Socket::TYPE_UDG);
-    Coroutine::run(function () use ($server, $wrs) {
+    Coroutine::run(static function () use ($server, $wrs): void {
         $server->bind(SERVER_SOCK);
         try {
             while (true) {
@@ -50,7 +50,7 @@ foreach ([false, true] as $useConnect) {
         $client->connect($server->getSockAddress());
     }
     $randoms = getRandomBytesArray(TEST_MAX_REQUESTS, TEST_MAX_LENGTH);
-    Coroutine::run(function () use ($server, $client, $randoms, $useConnect, $wr) {
+    Coroutine::run(static function () use ($server, $client, $randoms, $useConnect, $wr): void {
         for ($n = 0; $n < TEST_MAX_REQUESTS; $n++) {
             if ($useConnect) {
                 $packet = $client->recvString(TEST_MAX_LENGTH);

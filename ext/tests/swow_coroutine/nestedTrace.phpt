@@ -15,12 +15,12 @@ $wr = new WaitReference();
 
 global $coroutine;
 
-Coroutine::run(function () use ($wr) {
-    Coroutine::run(function () use ($wr) {
-        Coroutine::run(function () use ($wr) {
-            Coroutine::run(function () use ($wr) {
+Coroutine::run(static function () use ($wr): void {
+    Coroutine::run(static function () use ($wr): void {
+        Coroutine::run(static function () use ($wr): void {
+            Coroutine::run(static function () use ($wr): void {
                 global $coroutine;
-                $coroutine = Coroutine::run(function () use ($wr) {
+                $coroutine = Coroutine::run(static function () use ($wr): void {
                     echo Coroutine::getCurrent()->getTraceAsString() . "\n\n";
                     Coroutine::yield();
                     echo Coroutine::getCurrent()->getTraceAsString() . "\n\n";

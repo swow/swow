@@ -17,7 +17,7 @@ use Swow\SocketException;
 $socket = new Socket(Socket::TYPE_TCP);
 $socket->setTimeout(1);
 // setTimeout is not setting accept timeout
-//Assert::notSame($socket->getAcceptTimeout(), 1);
+// Assert::notSame($socket->getAcceptTimeout(), 1);
 // others will be set
 Assert::same($socket->getDnsTimeout(), 1);
 Assert::same($socket->getConnectTimeout(), 1);
@@ -62,7 +62,7 @@ $noticer = new Channel(0);
 
 // dummy server with delay
 $server = new Socket(Socket::TYPE_TCP);
-Coroutine::run(function () use ($noticer, $server) {
+Coroutine::run(static function () use ($noticer, $server): void {
     phpt_var_dump('start write dummy server');
     $server->bind('127.0.0.1')->listen();
     $conn = $server->accept();
@@ -94,7 +94,7 @@ phpt_var_dump('end write timeout');
 
 // dummy server with delay
 $server = new Socket(Socket::TYPE_TCP);
-Coroutine::run(function () use ($noticer, $server) {
+Coroutine::run(static function () use ($noticer, $server): void {
     phpt_var_dump('start read dummy server');
     $server->bind('127.0.0.1')->listen();
     $conn = $server->accept();

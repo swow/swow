@@ -13,13 +13,13 @@ use Swow\Coroutine;
 
 $coros = [];
 
-$coros['stuck'] = Coroutine::run(function () {
+$coros['stuck'] = Coroutine::run(static function (): void {
     // mock long blocking
     sleep(10);
     echo "This should be killed\n";
 });
 
-$coros['normal'] = Coroutine::run(function () {
+$coros['normal'] = Coroutine::run(static function (): void {
     // mock busy coroutine
     for ($i = 0; $i < 10000; $i++) {
         msleep(1);
@@ -27,13 +27,13 @@ $coros['normal'] = Coroutine::run(function () {
     echo "This should be killed\n";
 });
 
-$coros['yield'] = Coroutine::run(function () {
+$coros['yield'] = Coroutine::run(static function (): void {
     Coroutine::yield();
     echo "This should be killed\n";
 });
 
 $chan = new Channel(0);
-$coros['pop'] = Coroutine::run(function () use ($chan) {
+$coros['pop'] = Coroutine::run(static function () use ($chan): void {
     $chan->pop();
     echo "This should be killed\n";
 });

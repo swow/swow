@@ -10,8 +10,8 @@ require __DIR__ . '/../../include/bootstrap.php';
 
 use Swow\Coroutine;
 
-register_shutdown_function(function () {
-    Coroutine::run(function () {
+register_shutdown_function(static function (): void {
+    Coroutine::run(static function (): void {
         var_dump(file_get_contents('http://www.baidu.com'));
     });
 });

@@ -103,7 +103,7 @@ $expected = [
     'Content-Length' => [(string) strlen($payload)],
 ];
 
-foreach($expected as $k => $expected_values){
+foreach ($expected as $k => $expected_values) {
     $real_values = $headers[$k];
     sort($real_values);
     sort($expected_values);

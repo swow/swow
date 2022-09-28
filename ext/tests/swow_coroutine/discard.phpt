@@ -8,10 +8,10 @@ require __DIR__ . '/../include/skipif.php';
 <?php
 require __DIR__ . '/../include/bootstrap.php';
 
-(function () {
-    $function = function () {
+(static function (): void {
+    $function = static function (): void {
         echo "In\n";
-        $leak = new stdClass;
+        $leak = new stdClass();
         Swow\Coroutine::yield();
         echo "Never here\n";
         var_dump($leak);

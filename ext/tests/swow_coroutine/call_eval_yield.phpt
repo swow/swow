@@ -11,12 +11,12 @@ require __DIR__ . '/../include/bootstrap.php';
 
 use Swow\Coroutine;
 
-$remote_coro = Coroutine::run(function () {
+$remote_coro = Coroutine::run(static function (): void {
     // yield first to test call
     Coroutine::yield();
 });
 
-$closure = function () {
+$closure = static function (): void {
     // context switching is forbidden in called functions
     Coroutine::yield();
 };
@@ -33,7 +33,7 @@ try {
 Assert::isInstanceOf($e, Error::class);
 Assert::same($e->getMessage(), 'Unexpected coroutine switching');
 
-$remote_coro = Coroutine::run(function () use ($closure) {
+$remote_coro = Coroutine::run(static function () use ($closure): void {
     // yield to test eval
     Coroutine::yield();
 });
@@ -50,7 +50,7 @@ try {
 Assert::isInstanceOf($e, Error::class);
 Assert::same($e->getMessage(), 'Unexpected coroutine switching');
 
-$remote_coro = Coroutine::run(function () use ($closure) {
+$remote_coro = Coroutine::run(static function () use ($closure): void {
     // yield to test eval
     Coroutine::yield();
 });

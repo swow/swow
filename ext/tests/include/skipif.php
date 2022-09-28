@@ -2,8 +2,8 @@
 /**
  * This file is part of Swow
  *
- * @link     https://github.com/swow/swow
- * @contact  twosee <twosee@php.net>
+ * @link    https://github.com/swow/swow
+ * @contact twosee <twosee@php.net>
  *
  * For the full copyright and license information,
  * please view the LICENSE file that was distributed with this source code
@@ -20,7 +20,7 @@ function skip(string $reason): void
     exit("skip {$reason}");
 }
 
-function skip_if(bool $condition, string $reason)
+function skip_if(bool $condition, string $reason): void
 {
     if ($condition) {
         skip($reason);

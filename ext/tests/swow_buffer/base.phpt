@@ -19,14 +19,14 @@ $buffer = new Buffer(Buffer::COMMON_SIZE);
 Assert::same($buffer->getSize(), Buffer::COMMON_SIZE);
 Assert::same($buffer->getLength(), 0);
 // write should return number of write bytes
-Assert::same($buffer->write(0,'foo'), strlen('foo'));
+Assert::same($buffer->write(0, 'foo'), strlen('foo'));
 // so it can be chained
 $buffer->append('bar');
 $buffer->append('baz');
 Assert::same($buffer->getLength(), 9);
 
 Assert::same($buffer->read(0, 3), 'foo');
-Assert::same($buffer->read(3,6), 'barbaz');
+Assert::same($buffer->read(3, 6), 'barbaz');
 
 // string dup or fetched string are not affected by original buffer
 foreach (['stringify', 'fetch'] as $type) {

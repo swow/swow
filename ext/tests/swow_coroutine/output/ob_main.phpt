@@ -10,7 +10,7 @@ require __DIR__ . '/../../include/bootstrap.php';
 
 ob_start();
 echo 'aaa';
-Swow\Coroutine::run(function () {
+Swow\Coroutine::run(static function (): void {
     ob_start();
     echo 'bbb';
     sleep(0);

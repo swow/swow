@@ -15,7 +15,7 @@ function sub1()
     return Coroutine::yield(1);
 }
 
-$coroutine = new Coroutine(function ($a, $b) {
+$coroutine = new Coroutine(static function ($a, $b) {
     $c = Coroutine::yield($a + $b);
     $d = sub1();
     return $d . ' ' . $c;

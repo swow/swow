@@ -10,17 +10,17 @@ require __DIR__ . '/../../include/bootstrap.php';
 
 use Swow\Coroutine;
 use Swow\Errno;
-use Swow\SyncException;
 use Swow\Sync\WaitGroup;
+use Swow\SyncException;
 
 $wg = new WaitGroup();
 $wg->add(2);
 // normal done
-Coroutine::run(function () use ($wg) {
+Coroutine::run(static function () use ($wg): void {
     $wg->done();
 });
 // wait it
-$waiting_coro = Coroutine::run(function () use ($wg) {
+$waiting_coro = Coroutine::run(static function () use ($wg): void {
     try {
         $wg->wait();
         echo "wait should not success\n";

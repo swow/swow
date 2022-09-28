@@ -25,12 +25,12 @@ if (PHP_OS_FAMILY !== 'Windows') {
 
 $wrServer = new WaitReference();
 $server = new Socket(Socket::TYPE_PIPE);
-Coroutine::run(function () use ($server, $wrServer){
+Coroutine::run(static function () use ($server, $wrServer): void {
     $server->bind(SERVER_SOCK)->listen(TEST_MAX_CONCURRENCY * 2);
     try {
         while (true) {
             $connection = $server->accept();
-            Coroutine::run(function () use ($connection, $wrServer) {
+            Coroutine::run(static function () use ($connection, $wrServer): void {
                 try {
                     while (true) {
                         $connection->send($connection->readString(TEST_MAX_LENGTH));
@@ -47,7 +47,7 @@ Coroutine::run(function () use ($server, $wrServer){
 
 $wrClient = new WaitReference();
 for ($c = 0; $c < TEST_MAX_CONCURRENCY_LOW; $c++) {
-    Coroutine::run(function () use ($server, $wrClient) {
+    Coroutine::run(static function () use ($server, $wrClient): void {
         /* @var $client Socket */
         for ($r = TEST_MAX_REQUESTS; $r--;) {
             try {
@@ -66,7 +66,7 @@ for ($c = 0; $c < TEST_MAX_CONCURRENCY_LOW; $c++) {
             }
         }
         $randoms = getRandomBytesArray(TEST_MAX_REQUESTS, TEST_MAX_LENGTH);
-        Coroutine::run(function () use ($client, $randoms, $wrClient) {
+        Coroutine::run(static function () use ($client, $randoms, $wrClient): void {
             for ($n = 0; $n < TEST_MAX_REQUESTS; $n++) {
                 $packet = $client->readString(TEST_MAX_LENGTH);
                 Assert::same($packet, $randoms[$n]);

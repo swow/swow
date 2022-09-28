@@ -13,7 +13,7 @@ use Swow\Coroutine;
 $coro = Coroutine::getCurrent();
 Assert::same(Coroutine::getCurrentRound(), $coro->getRound());
 
-$remote_coro = new Coroutine(function () use ($coro) {
+$remote_coro = new Coroutine(static function () use ($coro): void {
     $remote_coro = Coroutine::getCurrent();
     $current_round = Coroutine::getCurrentRound();
     try {

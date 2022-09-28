@@ -11,7 +11,7 @@ require __DIR__ . '/../include/bootstrap.php';
 use Swow\Channel;
 use Swow\Coroutine;
 
-$coroutine = Coroutine::run(function () {
+$coroutine = Coroutine::run(static function (): void {
     try {
         (new Channel())->pop();
     } catch (Exception $exception) {

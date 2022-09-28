@@ -21,7 +21,7 @@ Assert::true(Watchdog::isRunning());
 $coroutine = Coroutine::getCurrent();
 $count = 0;
 
-Coroutine::run(function () use ($coroutine, &$count) {
+Coroutine::run(static function () use ($coroutine, &$count): void {
     sleep(0);
     Assert::greaterThan($count, 0);
     var_dump($count);

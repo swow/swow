@@ -13,14 +13,14 @@ use Swow\Coroutine;
 
 $channel = new Channel();
 $n = 10;
-Coroutine::run(function () use ($channel, $n) {
+Coroutine::run(static function () use ($channel, $n): void {
     echo "Pop start\n";
     for ($i = 1; $i <= $n; $i++) {
         $ret = $channel->pop();
         echo "Pop #{$i} then return " . var_export($ret, true) . "\n";
     }
 });
-Coroutine::run(function () use ($channel, $n) {
+Coroutine::run(static function () use ($channel, $n): void {
     echo "Push start\n";
     for ($i = 1; $i <= $n; $i++) {
         $channel->push($i * $i);

@@ -4,7 +4,7 @@ swow_curl: base
 <?php
 require __DIR__ . '/../include/skipif.php';
 skip_if_extension_not_exist('curl');
-skip_if(php_sapi_name() !== 'cli', 'only for cli');
+skip_if(PHP_SAPI !== 'cli', 'only for cli');
 skip_if(!Swow::isBuiltWith('curl'), 'extension must be built with libcurl');
 ?>
 --FILE--
@@ -19,7 +19,7 @@ use Swow\Sync\WaitReference;
 // on-shot http server
 $wrServer = new WaitReference();
 $server = new Socket(Socket::TYPE_TCP);
-Coroutine::run(function () use ($server, $wrServer) {
+Coroutine::run(static function () use ($server, $wrServer): void {
     $server->bind('127.0.0.1')->listen();
     while (true) {
         try {
@@ -27,7 +27,7 @@ Coroutine::run(function () use ($server, $wrServer) {
         } catch (SocketException) {
             break;
         }
-        Coroutine::run(function () use ($connection) {
+        Coroutine::run(static function () use ($connection): void {
             $request = '';
             $uri = '';
             $headers = [];
@@ -52,13 +52,13 @@ Coroutine::run(function () use ($server, $wrServer) {
             $query = $parsedUri['query'];
             parse_str($query, $parsedQuery);
             $name = $parsedQuery['name'] ?? 'foreigner';
-            //var_dump($name);
+            // var_dump($name);
             $requestPayload = json_decode($body, true);
             // build respond
             $payload = json_encode([
-                    'code' => 0,
-                    'msg' => "Hello {$name}",
-                ] + $requestPayload);
+                'code' => 0,
+                'msg' => "Hello {$name}",
+            ] + $requestPayload);
             $response = [
                 'HTTP/1.0 200 OK',
                 'server: Swow/' . Swow::VERSION,
@@ -76,7 +76,7 @@ Coroutine::run(function () use ($server, $wrServer) {
 
 // init ch
 
-$chInit = function () use ($server) {
+$chInit = static function () use ($server) {
     $ch = curl_init();
     Assert::notSame($ch, false);
     Assert::same(curl_setopt_array($ch, [
@@ -95,7 +95,7 @@ $chInit = function () use ($server) {
     return $ch;
 };
 
-$chResponseVerify = function (string $response) {
+$chResponseVerify = static function (string $response): void {
     $ret = json_decode($response, true);
     Assert::same($ret['code'], 0);
     Assert::same($ret['msg'], 'Hello Swow');
@@ -105,7 +105,7 @@ $chResponseVerify = function (string $response) {
 // curl it
 $wrClient = new WaitReference();
 for ($c = 0; $c < TEST_MAX_CONCURRENCY; $c++) {
-    Coroutine::run(function () use ($server, $chInit, $chResponseVerify, $wrClient) {
+    Coroutine::run(static function () use ($server, $chInit, $chResponseVerify, $wrClient): void {
         $ch = $chInit();
         $response = curl_exec($ch);
         $chResponseVerify($response);
@@ -126,7 +126,7 @@ do {
     if ($active) {
         curl_multi_select($mh);
     }
-} while ($active && $status == CURLM_OK);
+} while ($active && $status === CURLM_OK);
 foreach ($chs as $ch) {
     $response = curl_multi_getcontent($ch);
     $chResponseVerify($response);

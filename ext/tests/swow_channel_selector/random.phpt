@@ -9,8 +9,8 @@ require __DIR__ . '/../include/skipif.php';
 require __DIR__ . '/../include/bootstrap.php';
 
 use Swow\Channel;
-use Swow\Selector;
 use Swow\Coroutine;
+use Swow\Selector;
 
 $s = new Selector();
 
@@ -23,7 +23,7 @@ for ($n = TEST_MAX_REQUESTS; $n--;) {
     $targetChannel = $channels[array_rand($channels)];
     $opcode = mt_rand(0, 1) ? Selector::EVENT_PUSH : Selector::EVENT_POP;
     $randomBytes = getRandomBytes();
-    Coroutine::run(function () use ($targetChannel, $opcode, $randomBytes) {
+    Coroutine::run(static function () use ($targetChannel, $opcode, $randomBytes): void {
         if ($opcode === Selector::EVENT_POP) {
             $targetChannel->push($randomBytes);
         } else {

@@ -86,7 +86,7 @@ $buffer->clear();
 $message = str_repeat("\xf0\x0f\xc7\xc8\x2f\x90\x2f\x90", 8192);
 $maskedMessage = '';
 foreach (unpack('N*', $message) as $part) {
-    $maskedMessage .= pack('N', 0x73776f77 ^ $part);
+    $maskedMessage .= pack('N', 0x73776F77 ^ $part);
 }
 $buffer->append($message);
 $header = new Header();

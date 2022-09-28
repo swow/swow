@@ -15,19 +15,19 @@ define('TEST_COROUTINE_MAIN_ID', Swow\Coroutine::getMain()->getId());
 $wr = new WaitReference();
 
 Assert::same(Swow\Coroutine::getCurrent()->getId(), TEST_COROUTINE_MAIN_ID);
-Swow\Coroutine::run(function () use ($wr) {
+Swow\Coroutine::run(static function () use ($wr): void {
     Assert::same(Swow\Coroutine::getCurrent()->getId(), TEST_COROUTINE_MAIN_ID + 1);
     msleep(1);
     Assert::same(Swow\Coroutine::getCurrent()->getId(), TEST_COROUTINE_MAIN_ID + 1);
 });
 Assert::same(Swow\Coroutine::getCurrent()->getId(), TEST_COROUTINE_MAIN_ID);
-Swow\Coroutine::run(function () use ($wr) {
+Swow\Coroutine::run(static function () use ($wr): void {
     Assert::same(Swow\Coroutine::getCurrent()->getId(), TEST_COROUTINE_MAIN_ID + 2);
-    Swow\Coroutine::run(function () use ($wr) {
+    Swow\Coroutine::run(static function () use ($wr): void {
         Assert::same(Swow\Coroutine::getCurrent()->getId(), TEST_COROUTINE_MAIN_ID + 3);
-        Swow\Coroutine::run(function () use ($wr) {
+        Swow\Coroutine::run(static function () use ($wr): void {
             Assert::same(Swow\Coroutine::getCurrent()->getId(), TEST_COROUTINE_MAIN_ID + 4);
-            Swow\Coroutine::run(function () use ($wr) {
+            Swow\Coroutine::run(static function () use ($wr): void {
                 Assert::same(Swow\Coroutine::getCurrent()->getId(), TEST_COROUTINE_MAIN_ID + 5);
                 msleep(1);
                 Assert::same(Swow\Coroutine::getCurrent()->getId(), TEST_COROUTINE_MAIN_ID + 5);

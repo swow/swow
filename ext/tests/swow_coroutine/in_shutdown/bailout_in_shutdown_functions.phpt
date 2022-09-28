@@ -9,22 +9,23 @@ require __DIR__ . '/../../include/skipif.php';
 require __DIR__ . '/../../include/bootstrap.php';
 
 use Swow\Coroutine;
+
 use function Swow\Sync\waitAll;
 
-register_shutdown_function(function () {
+register_shutdown_function(static function (): void {
     Assert::same(Coroutine::count(), TEST_MAX_CONCURRENCY + 2);
     echo sprintf("\nCoroutine count: %d\n", Coroutine::count());
     echo str_repeat('X', 128 * 1024 * 1024 + 1);
 });
 
 for ($c = 0; $c < TEST_MAX_CONCURRENCY; $c++) {
-    Coroutine::run(function () {
+    Coroutine::run(static function (): void {
         Coroutine::yield();
         echo "Never here\n";
     });
 }
 
-Coroutine::run(function () {
+Coroutine::run(static function (): void {
     echo str_repeat('X', 128 * 1024 * 1024);
 });
 
@@ -47,4 +48,4 @@ Stack trace:
 #0 %sbailout_in_shutdown_functions.php(%d): str_repeat('X', 134217729)
 #1 [internal function]: {closure}()
 #2 {main}
-  triggered in %sbailout_in_shutdown_functions.php on line 10
+  triggered in %sbailout_in_shutdown_functions.php on line %d

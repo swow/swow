@@ -8,7 +8,7 @@ require __DIR__ . '/../include/skipif.php';
 <?php
 require __DIR__ . '/../include/bootstrap.php';
 
-register_shutdown_function(function (){
+register_shutdown_function(static function (): void {
     echo "Done\n";
 });
 

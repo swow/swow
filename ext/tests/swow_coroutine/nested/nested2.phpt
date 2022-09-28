@@ -12,9 +12,9 @@ use Swow\Sync\WaitReference;
 
 $wr = new WaitReference();
 
-Swow\Coroutine::run(function () use ($wr) {
+Swow\Coroutine::run(static function () use ($wr): void {
     echo "coroutine[1] start\n";
-    Swow\Coroutine::run(function () use ($wr) {
+    Swow\Coroutine::run(static function () use ($wr): void {
         echo "coroutine[2] start\n";
         msleep(2);
         echo "coroutine[2] exit\n";

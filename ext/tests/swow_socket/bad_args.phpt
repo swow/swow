@@ -22,7 +22,7 @@ class MySocket1 extends Socket
         parent::__construct($type);
     }
 }
-Assert::throws(function () {
+Assert::throws(static function (): void {
     new MySocket1();
 }, Error::class, expectMessage: '/MySocket1 can be constructed only once/');
 
@@ -42,8 +42,8 @@ class MySocket2 extends Socket
             'setRecvBufferSize',
             'setSendBufferSize',
         ] as $function) {
-            Assert::throws(function () use ($function) {
-                $this->$function(-1);
+            Assert::throws(function () use ($function): void {
+                $this->{$function}(-1);
             }, Error::class, expectMessage: '/Socket has not been constructed/');
         }
         foreach ([
@@ -56,26 +56,26 @@ class MySocket2 extends Socket
             'getSockPort',
             'recvString',
         ] as $function) {
-            Assert::throws(function () use ($function) {
-                $this->$function();
+            Assert::throws(function () use ($function): void {
+                $this->{$function}();
             }, Error::class, expectMessage: '/Socket has not been constructed/');
         }
-        Assert::throws(function () {
+        Assert::throws(function (): void {
             $this->bind('127.0.0.1');
         }, Error::class, expectMessage: '/Socket has not been constructed/');
-        Assert::throws(function () {
+        Assert::throws(function (): void {
             $this->connect('127.0.0.1', 1234);
         }, Error::class, expectMessage: '/Socket has not been constructed/');
-        Assert::throws(function () {
+        Assert::throws(function (): void {
             $this->send('dasd');
         }, Error::class, expectMessage: '/Socket has not been constructed/');
-        Assert::throws(function () {
+        Assert::throws(function (): void {
             $this->setTcpNodelay(false);
         }, Error::class, expectMessage: '/Socket has not been constructed/');
-        Assert::throws(function () {
+        Assert::throws(function (): void {
             $this->setTcpAcceptBalance(false);
         }, Error::class, expectMessage: '/Socket has not been constructed/');
-        Assert::throws(function () {
+        Assert::throws(function (): void {
             $this->setTcpKeepAlive(true, 1);
         }, Error::class, expectMessage: '/Socket has not been constructed/');
         parent::__construct($type);
@@ -90,8 +90,8 @@ foreach ([
     'getPeerPort',
     'getSockPort',
 ] as $function) {
-    Assert::throws(function () use ($function, $socket) {
-        $socket->$function();
+    Assert::throws(static function () use ($function, $socket): void {
+        $socket->{$function}();
     }, Error::class, expectMessage: '/Local socket has no port/');
 }
 // cannot accept before binding
@@ -99,14 +99,14 @@ foreach ([
     'accept',
     // 'acceptTo',
 ] as $function) {
-    Assert::throws(function () use ($function, $socket) {
-        $socket->$function();
+    Assert::throws(static function () use ($function, $socket): void {
+        $socket->{$function}();
     }, Error::class, expectMessage: '/Socket is not listening for connections/');
 }
 
 $server = new Socket(Socket::TYPE_TCP);
 
-Assert::throws(function () use ($server) {
+Assert::throws(static function () use ($server): void {
     // delay should be positive
     $server->setTcpKeepAlive(enable: false, delay: -234);
 }, ValueError::class, expectMessage: '/Argument #\d \(\$delay\) must be greater than 0 and less than or equal to \d+/');
@@ -116,11 +116,11 @@ $client = new Socket(Socket::TYPE_TCP);
 $server->bind('127.0.0.1')->listen();
 $wr = new WaitReference();
 
-Coroutine::run(function () use ($wr, $server, &$conn) {
+Coroutine::run(static function () use ($wr, $server, &$conn): void {
     $conn = $server->accept();
 });
 
-Coroutine::run(function () use ($wr, $client, $server) {
+Coroutine::run(static function () use ($wr, $client, $server): void {
     $client->connect($server->getSockAddress(), $server->getSockPort());
 });
 
@@ -137,8 +137,8 @@ foreach ([
     'peekString',
     'peekStringFrom',
 ] as $function) {
-    Assert::throws(function () use ($function, $conn) {
-        $conn->$function(-1);
+    Assert::throws(static function () use ($function, $conn): void {
+        $conn->{$function}(-1);
     }, ValueError::class, expectMessage: '/Argument #\d \(\$\w+\) must be greater than 0/');
 }
 
@@ -147,20 +147,20 @@ foreach ([
 foreach ([
     'read',
 ] as $function) {
-    Assert::throws(function () use ($buffer, $function, $conn) {
-        $conn->$function($buffer, offset: -123);
+    Assert::throws(static function () use ($buffer, $function, $conn): void {
+        $conn->{$function}($buffer, offset: -123);
     }, ValueError::class, expectMessage: '/Argument #\d \(\$offset\) can not be negative/');
-    Assert::throws(function () use ($buffer, $function, $conn) {
-        $conn->$function($buffer, offset: PHP_INT_MAX);
+    Assert::throws(static function () use ($buffer, $function, $conn): void {
+        $conn->{$function}($buffer, offset: PHP_INT_MAX);
     }, ValueError::class, expectMessage: '/Argument #\d \(\$offset\) can not be greater than buffer length \(\d+\)/');
-    Assert::throws(function () use ($buffer, $function, $conn) {
-        $conn->$function($buffer, length: 0);
+    Assert::throws(static function () use ($buffer, $function, $conn): void {
+        $conn->{$function}($buffer, length: 0);
     }, ValueError::class, expectMessage: '/Argument #\d \(\$length\) can not be 0/');
-    Assert::throws(function () use ($buffer, $function, $conn) {
-        $conn->$function($buffer, length: -123);
+    Assert::throws(static function () use ($buffer, $function, $conn): void {
+        $conn->{$function}($buffer, length: -123);
     }, ValueError::class, expectMessage: '/Argument #\d \(\$length\) can only be -1 to refer to unlimited when it is negative/');
-    Assert::throws(function () use ($buffer, $function, $conn) {
-        $conn->$function($buffer, length: PHP_INT_MAX);
+    Assert::throws(static function () use ($buffer, $function, $conn): void {
+        $conn->{$function}($buffer, length: PHP_INT_MAX);
     }, ValueError::class, expectMessage: '/Argument #\d \(\$length\) with offset \(\d+\) can not be greater than buffer size \(\d+\)/');
 }
 foreach ([
@@ -171,20 +171,20 @@ foreach ([
     'peek',
     'peekFrom',
 ] as $function) {
-    Assert::throws(function () use ($buffer, $function, $conn) {
-        $conn->$function($buffer, offset: -123);
+    Assert::throws(static function () use ($buffer, $function, $conn): void {
+        $conn->{$function}($buffer, offset: -123);
     }, ValueError::class, expectMessage: '/Argument #\d \(\$offset\) can not be negative/');
-    Assert::throws(function () use ($buffer, $function, $conn) {
-        $conn->$function($buffer, offset: PHP_INT_MAX);
+    Assert::throws(static function () use ($buffer, $function, $conn): void {
+        $conn->{$function}($buffer, offset: PHP_INT_MAX);
     }, ValueError::class, expectMessage: '/Argument #\d \(\$offset\) can not be greater than buffer length \(\d+\)/');
-    Assert::throws(function () use ($buffer, $function, $conn) {
-        $conn->$function($buffer, size: 0);
+    Assert::throws(static function () use ($buffer, $function, $conn): void {
+        $conn->{$function}($buffer, size: 0);
     }, ValueError::class, expectMessage: '/Argument #\d \(\$size\) can not be 0/');
-    Assert::throws(function () use ($buffer, $function, $conn) {
-        $conn->$function($buffer, size: -123);
+    Assert::throws(static function () use ($buffer, $function, $conn): void {
+        $conn->{$function}($buffer, size: -123);
     }, ValueError::class, expectMessage: '/Argument #\d \(\$size\) can only be -1 to refer to unlimited when it is negative/');
-    Assert::throws(function () use ($buffer, $function, $conn) {
-        $conn->$function($buffer, size: PHP_INT_MAX);
+    Assert::throws(static function () use ($buffer, $function, $conn): void {
+        $conn->{$function}($buffer, size: PHP_INT_MAX);
     }, ValueError::class, expectMessage: '/Argument #\d \(\$size\) with offset \(\d+\) can not be greater than buffer size \(\d+\)/');
 }
 
@@ -195,12 +195,12 @@ foreach ([
     'send',
     'sendTo',
 ] as $function) {
-    $conn->$function($buffer, 0);
-    Assert::throws(function () use ($buffer, $function, $conn) {
-        $conn->$function($buffer, start: -123);
+    $conn->{$function}($buffer, 0);
+    Assert::throws(static function () use ($buffer, $function, $conn): void {
+        $conn->{$function}($buffer, start: -123);
     }, ValueError::class, expectMessage: '/Argument #\d \(\$start\) can not be negative/');
-    Assert::throws(function () use ($buffer, $function, $conn) {
-        $conn->$function($buffer, length: -123);
+    Assert::throws(static function () use ($buffer, $function, $conn): void {
+        $conn->{$function}($buffer, length: -123);
     }, ValueError::class, expectMessage: '/Argument #\d \(\$length\) can only be -1 to refer to unlimited when it is negative/');
 }
 
@@ -209,120 +209,125 @@ foreach ([
     'send',
     'sendTo',
 ] as $function) {
-    Assert::throws(function () use ($buffer, $function, $conn) {
-        $conn->$function($buffer, 54321);
+    Assert::throws(static function () use ($buffer, $function, $conn): void {
+        $conn->{$function}($buffer, 54321);
     }, ValueError::class, expectMessage: '/Argument #\d \(\$start\) can not be greater than buffer length \(\d+\)/');
 }
 
 // buffer readable length should greater than or equal to send length
-Assert::throws(function () use ($buffer, $function, $conn) {
+Assert::throws(static function () use ($buffer, $function, $conn): void {
     $conn->send('a short string', length: 54321);
 }, ValueError::class, expectMessage: '/Argument #\d \(\$length\) with start \(\d+\) can not be greater than string length \(\d+\)/');
-Assert::throws(function () use ($buffer, $function, $conn) {
+Assert::throws(static function () use ($buffer, $function, $conn): void {
     $conn->send('a short string', start: 199, length: 2);
 }, ValueError::class, expectMessage: '/Argument #\d \(\$start\) can not be greater than string length \(\d+\)/');
-Assert::throws(function () use ($buffer, $function, $conn) {
+Assert::throws(static function () use ($buffer, $function, $conn): void {
     $conn->sendTo('a short string', length: 54321);
 }, ValueError::class, expectMessage: '/Argument #\d \(\$length\) with start \(\d+\) can not be greater than string length \(\d+\)/');
-Assert::throws(function () use ($buffer, $function, $conn) {
+Assert::throws(static function () use ($buffer, $function, $conn): void {
     $conn->sendTo('a short string', start: 199, length: 2);
 }, ValueError::class, expectMessage: '/Argument #\d \(\$start\) can not be greater than string length \(\d+\)/');
 
 // writev arguments checks
 foreach (['write', 'writeTo'] as $function) {
     $notString = new class('im not a string-ish') {
-        public function __construct(private string $string) { }
+        public function __construct(private string $string)
+        {
+        }
     };
     $stringable = new class('stringable') {
-        public function __construct(private string $string) { }
+        public function __construct(private string $string)
+        {
+        }
+
         public function __toString(): string
         {
             return $this->string;
         }
     };
-    Assert::throws(function () use ($function, $conn) {
+    Assert::throws(static function () use ($function, $conn): void {
         // empty buffers
-        $conn->$function([]);
+        $conn->{$function}([]);
     }, ValueError::class, expectMessage: '/Argument #1 \(\$vector\) can not be empty/');
 
-    Assert::throws(function () use ($notString, $function, $conn) {
+    Assert::throws(static function () use ($notString, $function, $conn): void {
         // bad buffer spec
-        $conn->$function([/* buffer spec */ $notString]);
+        $conn->{$function}([/* buffer spec */ $notString]);
     }, TypeError::class, expectMessage: '/Argument #1 \(\$vector\) \[0\] \(\$stringable\) must be of type string, array or [\w\\\\]+, class@anonymous given/');
 
-    Assert::throws(function () use ($notString, $function, $conn) {
+    Assert::throws(static function () use ($notString, $function, $conn): void {
         // bad buffer spec
-        $conn->$function([[/* buffer-ish */ $notString]]);
+        $conn->{$function}([[/* buffer-ish */ $notString]]);
     }, TypeError::class, expectMessage: '/Argument #1 \(\$vector\) \[0\]\[0\] \(\$data\) must be of type string or [\w\\\\]+, class@anonymous given/');
 
-    Assert::throws(function () use ($buffer, $function, $conn) {
+    Assert::throws(static function () use ($buffer, $function, $conn): void {
         // bad buffer spec
-        $conn->$function([/* buffer spec */ []]);
+        $conn->{$function}([/* buffer spec */ []]);
     }, ValueError::class, expectMessage: '/Argument #1 \(\$vector\) \[0\] must have 1 to 3 elements, 0 given/');
 
-    Assert::throws(function () use ($buffer, $function, $conn) {
+    Assert::throws(static function () use ($buffer, $function, $conn): void {
         // bad buffer spec
-        $conn->$function([[/* buffer-ish: strange things */ []]]);
+        $conn->{$function}([[/* buffer-ish: strange things */ []]]);
     }, TypeError::class, expectMessage: '/Argument #1 \(\$vector\) \[0\]\[0\] \(\$data\) must be of type string or [\w\\\\]+, array given/');
 
-    Assert::throws(function () use ($buffer, $function, $conn) {
+    Assert::throws(static function () use ($buffer, $function, $conn): void {
         // bad buffer spec
-        $conn->$function([[/* buffer-ish: buffer */ $buffer, /* start */ 2, /* send length */ 3, /* ?? */ 4]]);
+        $conn->{$function}([[/* buffer-ish: buffer */ $buffer, /* start */ 2, /* send length */ 3, /* ?? */ 4]]);
     }, ValueError::class, expectMessage: '/Argument #1 \(\$vector\) \[0\] must have 1 to 3 elements, 4 given/');
 
-    Assert::throws(function () use ($buffer, $function, $conn) {
+    Assert::throws(static function () use ($buffer, $function, $conn): void {
         // send buffer overflow
-        $conn->$function([[/* buffer-ish: buffer */ $buffer, /* start */ 0, /* send length */ 99999]]);
+        $conn->{$function}([[/* buffer-ish: buffer */ $buffer, /* start */ 0, /* send length */ 99999]]);
     }, ValueError::class, expectMessage: '/Argument #1 \(\$vector\) \[0\]\[2\] \(\$length = 99999\) with start \(0\) can not be greater than buffer length \(4096\)/');
 
-    Assert::throws(function () use ($buffer, $notString, $function, $conn) {
+    Assert::throws(static function () use ($buffer, $notString, $function, $conn): void {
         // send buffer overflow
-        $conn->$function([[/* buffer-ish: buffer */ $buffer, /* start */ 0, /* send length */ $notString]]);
+        $conn->{$function}([[/* buffer-ish: buffer */ $buffer, /* start */ 0, /* send length */ $notString]]);
     }, TypeError::class, expectMessage: '/Argument #1 \(\$vector\) \[0\]\[2\] \(\$length\) must be of type int, class@anonymous given/');
 
-    Assert::throws(function () use ($buffer, $function, $conn) {
+    Assert::throws(static function () use ($buffer, $function, $conn): void {
         // send buffer overflow
-        $conn->$function([[/* buffer-ish: buffer */ $buffer, /* start */ -1, /* send length */ 2]]);
+        $conn->{$function}([[/* buffer-ish: buffer */ $buffer, /* start */ -1, /* send length */ 2]]);
     }, Throwable::class, expectMessage: '/Argument #1 \(\$vector\) \[0\]\[1\] \(\$start = -1\) can not be negative/');
 
-    Assert::throws(function () use ($buffer, $function, $conn) {
+    Assert::throws(static function () use ($buffer, $function, $conn): void {
         // send buffer overflow
-        $conn->$function([[/* buffer-ish: buffer */ $buffer, /* start */ 0, /* send length */ -123]]);
+        $conn->{$function}([[/* buffer-ish: buffer */ $buffer, /* start */ 0, /* send length */ -123]]);
     }, ValueError::class, expectMessage: '/Argument #1 \(\$vector\) \[0\]\[2\] \(\$length = -123\) can only be -1 to refer to unlimited when it is negative/');
 
-    Assert::throws(function () use ($function, $conn) {
+    Assert::throws(static function () use ($function, $conn): void {
         // send buffer overflow
-        $conn->$function([[/* buffer-ish: string */ 'im a short string', /* start */ 99999, /* send length */ 2]]);
+        $conn->{$function}([[/* buffer-ish: string */ 'im a short string', /* start */ 99999, /* send length */ 2]]);
     }, Throwable::class, expectMessage: '/Argument #1 \(\$vector\) \[0\]\[1\] \(\$start = 99999\) can not be greater than string length \(\d+\)/');
 
-    Assert::throws(function () use ($function, $conn) {
+    Assert::throws(static function () use ($function, $conn): void {
         // send buffer overflow
-        $conn->$function([[/* buffer-ish: string */ 'im a short string', /* start */ 0, /* send length */ 29999]]);
+        $conn->{$function}([[/* buffer-ish: string */ 'im a short string', /* start */ 0, /* send length */ 29999]]);
     }, Throwable::class, expectMessage: '/Argument #1 \(\$vector\) \[0\]\[2\] \(\$length = 29999\) with start \(0\) can not be greater than string length \(\d+\)/');
 
-    Assert::throws(function () use ($notString, $function, $conn) {
+    Assert::throws(static function () use ($notString, $function, $conn): void {
         // send buffer overflow
-        $conn->$function([[/* buffer-ish: string */ 'im a short string', /* start */ $notString, /* send length */ 2]]);
+        $conn->{$function}([[/* buffer-ish: string */ 'im a short string', /* start */ $notString, /* send length */ 2]]);
     }, Throwable::class, expectMessage: '/Argument #1 \(\$vector\) \[0\]\[1\] \(\$start\) must be of type int, class@anonymous given/');
 
-    Assert::throws(function () use ($notString, $function, $conn) {
+    Assert::throws(static function () use ($notString, $function, $conn): void {
         // send buffer overflow
-        $conn->$function([[/* buffer-ish: string */ 'im a short string', /* start */ 0, /* send length */ $notString]]);
+        $conn->{$function}([[/* buffer-ish: string */ 'im a short string', /* start */ 0, /* send length */ $notString]]);
     }, Throwable::class, expectMessage: '/Argument #1 \(\$vector\) \[0\]\[2\] \(\$length\) must be of type int, class@anonymous given/');
 
-    Assert::throws(function () use ($function, $conn) {
+    Assert::throws(static function () use ($function, $conn): void {
         // send buffer overflow
-        $conn->$function([[/* buffer-ish: string */ 'im a short string', /* start */ -1, /* send length */ 2]]);
+        $conn->{$function}([[/* buffer-ish: string */ 'im a short string', /* start */ -1, /* send length */ 2]]);
     }, Throwable::class, expectMessage: '/Argument #1 \(\$vector\) \[0\]\[1\] \(\$start = -1\) can not be negative/');
 
-    Assert::throws(function () use ($function, $conn) {
+    Assert::throws(static function () use ($function, $conn): void {
         // send buffer overflow
-        $conn->$function([[/* buffer-ish: string */ 'im a short string', /* start */ 0, /* send length */ -123]]);
+        $conn->{$function}([[/* buffer-ish: string */ 'im a short string', /* start */ 0, /* send length */ -123]]);
     }, ValueError::class, expectMessage: '/Argument #1 \(\$vector\) \[0\]\[2\] \(\$length = -123\) can only be -1 to refer to unlimited when it is negative/');
 
-    Assert::throws(function () use ($buffer, $function, $conn) {
+    Assert::throws(static function () use ($buffer, $function, $conn): void {
         // bad buffer spec
-        $conn->$function([[/* buffer-ish: buffer */ $buffer, /* start */ 0, /* send length */ 1, /* ?? */ 2]]);
+        $conn->{$function}([[/* buffer-ish: buffer */ $buffer, /* start */ 0, /* send length */ 1, /* ?? */ 2]]);
     }, ValueError::class, expectMessage: '/Argument #1 \(\$vector\) \[0\] must have 1 to 3 elements, 4 given/');
 }
 

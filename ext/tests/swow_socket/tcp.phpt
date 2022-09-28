@@ -17,12 +17,12 @@ use Swow\Sync\WaitReference;
 
 $wrServer = new WaitReference();
 $server = new Socket(Socket::TYPE_TCP);
-Coroutine::run(function () use ($server, $wrServer) {
+Coroutine::run(static function () use ($server, $wrServer): void {
     $server->bind('127.0.0.1')->listen(TEST_MAX_CONCURRENCY * 2);
     try {
         while (true) {
             $connection = $server->accept();
-            Coroutine::run(function () use ($connection, $wrServer) {
+            Coroutine::run(static function () use ($connection, $wrServer): void {
                 try {
                     while (true) {
                         $connection->send($connection->readString(TEST_MAX_LENGTH));
@@ -40,7 +40,7 @@ Coroutine::run(function () use ($server, $wrServer) {
 $wrClient = new WaitReference();
 $randoms = getRandomBytesArray(TEST_MAX_REQUESTS, TEST_MAX_LENGTH);
 for ($c = 0; $c < TEST_MAX_CONCURRENCY; $c++) {
-    Coroutine::run(function () use ($server, $randoms, $wrClient) {
+    Coroutine::run(static function () use ($server, $randoms, $wrClient): void {
         /* @var $client Socket */
         for ($r = TEST_MAX_REQUESTS; $r--;) {
             try {
@@ -57,7 +57,7 @@ for ($c = 0; $c < TEST_MAX_CONCURRENCY; $c++) {
                 usleep(1000);
             }
         }
-        Coroutine::run(function () use ($client, $randoms, $wrClient) {
+        Coroutine::run(static function () use ($client, $randoms, $wrClient): void {
             for ($n = 0; $n < TEST_MAX_REQUESTS; $n++) {
                 $packet = $client->readString(TEST_MAX_LENGTH);
                 Assert::same($packet, $randoms[$n]);

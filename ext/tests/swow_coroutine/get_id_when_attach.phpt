@@ -12,14 +12,14 @@ require __DIR__ . '/../include/bootstrap.php';
 
 use Swow\Coroutine;
 
-$coroutine = Coroutine::run(function () {
+$coroutine = Coroutine::run(static function (): void {
     usleep(0);
 });
 Assert::same(Coroutine::getCurrent()->getId(), Coroutine::getMain()->getId());
-$coroutine->call(function () {
+$coroutine->call(static function (): void {
     Assert::same(Coroutine::getCurrent()->getId(), Coroutine::getMain()->getId() + 1);
 });
-$coroutine->eval(<<<PHP
+$coroutine->eval(<<<'PHP'
     Assert::same(Swow\Coroutine::getCurrent()->getId(), Swow\Coroutine::getMain()->getId() + 1);
 PHP
 );

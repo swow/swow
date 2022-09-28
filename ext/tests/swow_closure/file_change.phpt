@@ -74,13 +74,13 @@ $anonymousUnserialized(); // hello2
 
 file_put_contents(__DIR__ . '/file_change.inc', $code3);
 // this will fail, because line changed
-Assert::throws(function () use ($anonymous) {
+Assert::throws(static function () use ($anonymous): void {
     serialize($anonymous);
 }, 'Error'); // TODO: a normalized error
 
 file_put_contents(__DIR__ . '/file_change.inc', $code4);
 // this will fail, because namespace changed
-Assert::throws(function () use ($anonymous) {
+Assert::throws(static function () use ($anonymous): void {
     serialize($anonymous);
 }, 'Error'); // TODO: a normalized error
 
@@ -92,7 +92,7 @@ $anonymousUnserialized(); // hello5
 
 file_put_contents(__DIR__ . '/file_change.inc', $code6);
 // this will fail
-Assert::throws(function () use ($anonymous) {
+Assert::throws(static function () use ($anonymous): void {
     serialize($anonymous);
 }, 'Error'); // TODO: a normalized error
 

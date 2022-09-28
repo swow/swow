@@ -16,7 +16,7 @@ foreach ([
     'sleep' => LONG_TIME,
     'msleep' => LONG_TIME * 1000,
 ] as $func => $arg) {
-    $co = Coroutine::run(function () use ($func, $arg) {
+    $co = Coroutine::run(static function () use ($func, $arg): void {
         echo "start {$func}({$arg})\n";
         $ret = $func($arg);
         // fixme: KNOWN BC here
@@ -27,7 +27,7 @@ foreach ([
 }
 
 $start = microtime(true);
-$co = Coroutine::run(function () {
+$co = Coroutine::run(static function (): void {
     $usleep_time = LONG_TIME * 1000 * 1000;
     echo "start usleep({$usleep_time})\n";
     usleep($usleep_time);
@@ -37,7 +37,7 @@ $end = microtime(true);
 Assert::lessThan($end - $start, LONG_TIME * 1000);
 
 $start = microtime(true);
-$co = Coroutine::run(function () {
+$co = Coroutine::run(static function (): void {
     echo 'start time_nanosleep(' . LONG_TIME . ", 0)\n";
     $ret = time_nanosleep(LONG_TIME, 0);
     Assert::integer($ret['seconds']);
@@ -50,7 +50,7 @@ $end = microtime(true);
 Assert::lessThan($end - $start, LONG_TIME * 1000);
 
 $start = microtime(true);
-$co = Coroutine::run(function () use ($start) {
+$co = Coroutine::run(static function () use ($start): void {
     $sleep_ms = LONG_TIME * 1000;
     echo "start time_sleep_until(now + {$sleep_ms})\n";
     $ret = time_sleep_until($start + $sleep_ms);

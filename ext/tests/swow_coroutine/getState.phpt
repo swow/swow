@@ -21,9 +21,9 @@ class InitialCoroutine extends Coroutine
         parent::__construct($callable);
     }
 }
-$coro = new InitialCoroutine(function () {});
+$coro = new InitialCoroutine(static function (): void {});
 
-$coro = new Coroutine(function () {
+$coro = new Coroutine(static function (): void {
     // when it's started, Coroutine::STATE_RUNNING as state
     $coro = Coroutine::getCurrent();
     try {

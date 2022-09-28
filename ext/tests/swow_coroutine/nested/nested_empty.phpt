@@ -8,9 +8,9 @@ require __DIR__ . '/../../include/skipif.php';
 <?php
 require __DIR__ . '/../../include/bootstrap.php';
 
-Swow\Coroutine::run(function () {
+Swow\Coroutine::run(static function (): void {
     echo "coroutine[1] start\n";
-    Swow\Coroutine::run(function () {
+    Swow\Coroutine::run(static function (): void {
         echo "coroutine[2] start\n";
         echo "coroutine[2] exit\n";
     });

@@ -15,7 +15,7 @@ const N = 10;
 $coroutines = [];
 
 for ($n = N; $n--;) {
-    $coroutines[] = new Coroutine(function () {
+    $coroutines[] = new Coroutine(static function (): void {
         Coroutine::yield(Coroutine::getCurrent()->getId());
     });
 }

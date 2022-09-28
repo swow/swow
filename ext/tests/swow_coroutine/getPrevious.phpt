@@ -9,7 +9,7 @@ require __DIR__ . '/../include/skipif.php';
 require __DIR__ . '/../include/bootstrap.php';
 
 $main = Swow\Coroutine::getCurrent();
-$coroutine = new Swow\Coroutine(function () use ($main, &$coroutine) {
+$coroutine = new Swow\Coroutine(static function () use ($main, &$coroutine): void {
     if ($main === $coroutine->getPrevious()) {
         echo "Success\n";
     }

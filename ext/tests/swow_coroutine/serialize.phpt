@@ -8,7 +8,7 @@ require __DIR__ . '/../include/skipif.php';
 <?php
 require __DIR__ . '/../include/bootstrap.php';
 
-$coroutine = new Swow\Coroutine(function () { });
+$coroutine = new Swow\Coroutine(static function (): void { });
 try {
     serialize($coroutine);
 } catch (Exception $exception) {
@@ -23,7 +23,7 @@ class TestCoroutine extends Swow\Coroutine
     }
 }
 
-$coroutine = new TestCoroutine(function () { });
+$coroutine = new TestCoroutine(static function (): void { });
 try {
     serialize($coroutine);
 } catch (Exception $exception) {

@@ -19,7 +19,7 @@ foreach ([Signal::INT, Signal::TERM] as $signal) {
     });
 }
 
-$worker = Coroutine::run(function () {
+$worker = Coroutine::run(static function (): void {
     while (true) {
         sleep(1);
     }

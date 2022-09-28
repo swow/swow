@@ -21,7 +21,7 @@ Assert::null($wr);
 // common WaitReference usage: create and wait it on same scope
 $wr = new WaitReference();
 for ($n = 9; $n >= 0; $n--) {
-    Coroutine::run(function () use ($wr, $n) {
+    Coroutine::run(static function () use ($wr, $n): void {
         // mock doing some tasks consuming times
         pseudo_random_sleep();
         echo $n . "\n";
@@ -34,7 +34,7 @@ echo "Done 1\n";
 // uncommon WaitReference usage: create and wait it on different scope
 $wr = new WaitReference();
 for ($n = 9; $n >= 0; $n--) {
-    Coroutine::run(function () use ($wr, $n) {
+    Coroutine::run(static function () use ($wr, $n): void {
         // mock a time-consuming action
         pseudo_random_sleep();
         echo $n . "\n";
@@ -43,7 +43,7 @@ for ($n = 9; $n >= 0; $n--) {
 // wait it on another coroutine
 // note: DO NOT "use ($wr)" here, the Callable will add reference in main scope
 //       pass $wr via arguments instead.
-Coroutine::run(function ($wr) {
+Coroutine::run(static function ($wr): void {
     echo "Start WR 2\n";
     WaitReference::wait($wr);
     echo "Done 2\n";

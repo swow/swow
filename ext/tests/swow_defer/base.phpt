@@ -10,22 +10,22 @@ require __DIR__ . '/../include/bootstrap.php';
 
 use function Swow\defer;
 
-defer(function () {
-    defer(function () {
+defer(static function (): void {
+    defer(static function (): void {
         echo "a\n";
     });
-    defer(function () {
+    defer(static function (): void {
         echo "b\n";
     });
-    defer(function () {
+    defer(static function (): void {
         echo "c\n";
     });
     echo "1\n";
 });
-defer(function () {
+defer(static function (): void {
     echo "2\n";
 });
-defer(function () {
+defer(static function (): void {
     echo "3\n";
 });
 

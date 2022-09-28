@@ -19,7 +19,7 @@ class A
 {
     public static self $instance;
 
-    /* @var $callable */
+    /** @var callable $callable */
     private $callable;
 
     private Generator $generator;
@@ -48,9 +48,9 @@ class A
         return $this();
     }
 
-    public static function callStatic(callable $callable)
+    public static function callStatic(callable $callable): void
     {
-        array_map(function ($e) use ($callable) {
+        array_map(static function ($e) use ($callable) {
             if (!isset(self::$instance)) {
                 self::$instance = new self($callable);
             }
@@ -64,18 +64,18 @@ class A
 class MyWarningException extends ErrorException
 {
 }
-set_error_handler(function ($errno, $errstr, $errfile, $errline) {
+set_error_handler(static function ($errno, $errstr, $errfile, $errline): void {
     var_dump(buildTraceAsString(debug_backtrace()));
     throw new MyWarningException($errstr, $errno, 1, $errfile, $errline);
 }, E_WARNING);
 
 // frame should be an array from debug_backtrace
-Assert::throws(function () {
+Assert::throws(static function (): void {
     buildTraceAsString(['im a bad frame']);
 }, MyWarningException::class);
 
-(function () {
-    A::callStatic(function () {
+(static function (): void {
+    A::callStatic(static function () {
         var_dump(buildTraceAsString(debug_backtrace()));
 
         return 1;

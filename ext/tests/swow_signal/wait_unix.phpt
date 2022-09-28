@@ -13,13 +13,13 @@ use Swow\Coroutine;
 use Swow\Signal;
 use Swow\SignalException;
 
-Coroutine::run(function () {
+Coroutine::run(static function (): void {
     Signal::wait(Signal::INT, 1000);
     echo "wait OK\n";
 });
 Signal::kill(getmypid(), Signal::INT);
 
-Assert::throws(function () {
+Assert::throws(static function (): void {
     // timeout situation
     Signal::wait(Signal::TERM, 10);
 }, SignalException::class);

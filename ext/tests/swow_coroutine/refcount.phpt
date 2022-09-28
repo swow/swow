@@ -8,10 +8,10 @@ require __DIR__ . '/../include/skipif.php';
 <?php
 require __DIR__ . '/../include/bootstrap.php';
 
-(function () {
-    $function = function () {
+(static function (): void {
+    $function = static function () {
         echo "In\n";
-        $coroutine = new Swow\Coroutine(function () {
+        $coroutine = new Swow\Coroutine(static function (): void {
             echo "In sub\n";
             Swow\Coroutine::yield();
             echo "Out of sub\n";

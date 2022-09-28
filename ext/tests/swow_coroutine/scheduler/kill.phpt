@@ -12,10 +12,10 @@ use Swow\Sync\WaitReference;
 
 $wr = new WaitReference();
 
-Coroutine::run(function () use ($wr) {
+Coroutine::run(static function () use ($wr): void {
     usleep(1000);
     $eventScheduler = Coroutine::getCurrent()->getPrevious();
-    Assert::throws(function () use ($eventScheduler) {
+    Assert::throws(static function () use ($eventScheduler): void {
         $eventScheduler->kill();
     }, CoroutineException::class);
 });

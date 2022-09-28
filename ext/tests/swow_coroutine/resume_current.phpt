@@ -11,9 +11,9 @@ require __DIR__ . '/../include/bootstrap.php';
 use Swow\Coroutine;
 use Swow\CoroutineException;
 
-$coroutine = new Coroutine(function () use (&$coroutine) {
+$coroutine = new Coroutine(static function () use (&$coroutine): void {
     echo "In\n";
-    Assert::throws(function () use ($coroutine) {
+    Assert::throws(static function () use ($coroutine): void {
         $coroutine->resume();
     }, CoroutineException::class);
     echo "Out\n";

@@ -16,12 +16,12 @@ use Swow\Sync\WaitReference;
 
 $wrServer = new WaitReference();
 $server = new Socket(Socket::TYPE_TCP);
-Coroutine::run(function () use ($server, $wrServer) {
+Coroutine::run(static function () use ($server, $wrServer): void {
     $server->bind('127.0.0.1')->listen();
     try {
         while (true) {
             $connection = $server->accept();
-            Coroutine::run(function () use ($connection, $wrServer) {
+            Coroutine::run(static function () use ($connection, $wrServer): void {
                 try {
                     while (true) {
                         $connection->send($connection->readString(TEST_MAX_LENGTH_HIGH));
@@ -40,7 +40,7 @@ $wrClient = new WaitReference();
 $client = new Socket(Socket::TYPE_TCP);
 $client->connect($server->getSockAddress(), $server->getSockPort());
 $randoms = getRandomBytesArray(TEST_MAX_REQUESTS_LOW, TEST_MAX_LENGTH_HIGH);
-Coroutine::run(function () use ($server, $client, $randoms, $wrClient) {
+Coroutine::run(static function () use ($server, $client, $randoms, $wrClient): void {
     for ($n = 0; $n < TEST_MAX_REQUESTS_LOW; $n++) {
         $packet = $client->readString(TEST_MAX_LENGTH_HIGH);
         Assert::same($packet, $randoms[$n]);

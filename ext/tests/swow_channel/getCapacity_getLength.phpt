@@ -35,11 +35,10 @@ $bucket->pop();
 Assert::same($bucket->getLength(), 0);
 Assert::same($bucket->getCapacity(), 2);
 
-
 $fruits = ['apple', 'pear', 'orange', 'banana', 'grape'];
 
-array_map(function ($fruit) use ($bucket) {
-    Coroutine::run(function () use ($fruit, $bucket) {
+array_map(static function ($fruit) use ($bucket): void {
+    Coroutine::run(static function () use ($fruit, $bucket): void {
         // "wash it"
         pseudo_random_sleep();
         $bucket->push("washed {$fruit}");
@@ -50,7 +49,7 @@ for ($i = 0; $i < count($fruits); $i++) {
     $washed_fruit = $bucket->pop();
     [$washed, $fruit] = explode(' ', $washed_fruit);
     Assert::same($washed, 'washed');
-    Assert::true(in_array($fruit, $fruits));
+    Assert::true(in_array($fruit, $fruits, true));
     Assert::same($bucket->getCapacity(), 2);
 }
 

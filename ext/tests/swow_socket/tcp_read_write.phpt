@@ -18,7 +18,7 @@ final class TestMethod
 {
     private static string $testString;
 
-    public static function init()
+    public static function init(): void
     {
         self::$testString = getRandomBytes();
     }
@@ -112,7 +112,7 @@ final class TestMethod
     /**
      * @throws Exception
      */
-    public function send(Socket $socket, int $type)
+    public function send(Socket $socket, int $type): void
     {
         $testBuffer = new Buffer(strlen(self::$testString));
         $testBuffer->append(self::$testString);
@@ -149,7 +149,7 @@ final class TestMethod
     /**
      * @throws Exception
      */
-    public function recv(Socket $socket, int $type)
+    public function recv(Socket $socket, int $type): void
     {
         $testBuffer = new Buffer(strlen(self::$testString));
         $length = strlen(self::$testString) - $this->start;
@@ -264,7 +264,7 @@ $tester = new TestMethod();
 $channel = new Channel(0);
 $server = new Socket(Socket::TYPE_TCP);
 $server->bind('127.0.0.1')->listen();
-Coroutine::run(function () use ($channel, $tester, $server, $wr) {
+Coroutine::run(static function () use ($channel, $tester, $server, $wr): void {
     $connection = $server->accept();
     try {
         for ($type = TestMethod::RECV_TYPE_START; $type <= TestMethod::RECV_TYPE_END; $type++) {
@@ -287,7 +287,7 @@ Coroutine::run(function () use ($channel, $tester, $server, $wr) {
 });
 
 $client = new Socket(Socket::TYPE_TCP);
-Coroutine::run(function () use ($tester, $channel, $server, $client, $wr) {
+Coroutine::run(static function () use ($tester, $channel, $server, $client, $wr): void {
     $connection = $client->connect($server->getSockAddress(), $server->getSockPort());
     try {
         for ($_ = TestMethod::RECV_TYPE_START; $_ <= TestMethod::RECV_TYPE_END; $_++) {

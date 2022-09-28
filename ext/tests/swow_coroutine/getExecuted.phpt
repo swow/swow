@@ -46,14 +46,14 @@ class SomeStrangeClass
     }
 }
 
-$closure = function (...$_) {
+$closure = static function (...$_): void {
     $coro = Coroutine::getCurrent();
     Assert::same($coro->getExecutedFunctionName(1), '{closure}');
     Assert::same($coro->getExecutedFilename(1), __FILE__);
     Assert::same($coro->getExecutedLineno(1), __LINE__);
 };
 
-$closure_yield = function (bool $yield) {
+$closure_yield = static function (bool $yield): void {
     $coro = Coroutine::getCurrent();
     Assert::same($coro->getExecutedFunctionName(1), '{closure}');
     Assert::same($coro->getExecutedFilename(1), __FILE__);
@@ -72,7 +72,7 @@ foreach ([
     [$someStrangeObject, 'PfUNC'],
 ] as $callable) {
     $callable(false);
-    $remote_coro = new Coroutine(function () use ($callable) {
+    $remote_coro = new Coroutine(static function () use ($callable): void {
         $callable(true);
     });
     [$line, $file, $function] = $remote_coro->resume();

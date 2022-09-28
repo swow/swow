@@ -23,12 +23,12 @@ class Corker extends Thread
         $this->id = static::$num++;
     }
 
-    public function run()
+    public function run(): void
     {
         if ($this->id === 6) {
             usleep(10000);
         }
-        $coroutine = Coroutine::run(function ($a) {
+        $coroutine = Coroutine::run(static function ($a) {
             $b = Coroutine::yield();
             return $a . ' ' . $b;
         }, 'hello');
@@ -38,7 +38,7 @@ class Corker extends Thread
 
 $workers = [];
 for ($i = 0; $i < 10; $i++) {
-    $worker = new Corker;
+    $worker = new Corker();
     if ($worker->start()) {
         $workers[] = $worker;
     }

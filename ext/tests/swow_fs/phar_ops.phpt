@@ -26,7 +26,7 @@ phar.readonly=0
 --FILE--
 <?php
 
-set_error_handler(function ($errno, $errstr, $errfile, $errline) {
+set_error_handler(static function ($errno, $errstr, $errfile, $errline): void {
     var_dump($errno, $errstr, $errfile, $errline);
     exit(1);
 });

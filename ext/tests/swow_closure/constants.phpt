@@ -22,13 +22,13 @@ define($name, '9');
 
 class DummyClass
 {
-    const CONSTANT1 = 5 + 5;
-    const CONSTANT2 = self::CONSTANT1 + 5;
-    const CONSTANT3 = CONSTANT2 + 5;
-    const CONSTANT4 = \DummyNamespace2\DummyClass::class . \DummyNamespace1\DummyClass::CONSTANT4;
+    public const CONSTANT1 = 5 + 5;
+    public const CONSTANT2 = self::CONSTANT1 + 5;
+    public const CONSTANT3 = CONSTANT2 + 5;
+    public const CONSTANT4 = \DummyNamespace2\DummyClass::class . \DummyNamespace1\DummyClass::CONSTANT4;
 }
 
-$anonymous = function () {
+$anonymous = static function (): void {
     var_dump(
         'anonymous',
         CONSTANT1,
@@ -61,7 +61,7 @@ $anonymousString = serialize($anonymous);
 $anonymousUnserialized = unserialize($anonymousString);
 $anonymousUnserialized();
 
-$arrow = fn () => $anonymous();
+$arrow = static fn () => $anonymous();
 
 $arrowString = serialize($arrow);
 $arrowUnserialized = unserialize($arrowString);

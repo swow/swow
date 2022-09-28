@@ -33,12 +33,12 @@ $server->bind('127.0.0.1')->listen();
 // bound
 var_dump($server);
 
-$server_coro = Coroutine::run(function () use ($server, &$conn, $wr) {
+$server_coro = Coroutine::run(static function () use ($server, &$conn, $wr): void {
     $conn = $server->accept();
 });
 
 $client = new Socket(Socket::TYPE_TCP);
-$client_coro = Coroutine::run(function () use ($client, $server, $wr) {
+$client_coro = Coroutine::run(static function () use ($client, $server, $wr): void {
     $client->connect($server->getSockAddress(), $server->getSockPort());
 });
 

@@ -8,7 +8,7 @@ require __DIR__ . '/../include/skipif.php';
 <?php
 require __DIR__ . '/../include/bootstrap.php';
 
-$coroutine = new Swow\Coroutine(function () {
+$coroutine = new Swow\Coroutine(static function (): void {
     echo "In\n";
     Swow\Coroutine::yield();
     echo "End\n";

@@ -21,17 +21,23 @@ return (new Config())
         contactMail: 'twosee@php.net'
     )->setFinder(
         PhpCsFixer\Finder::create()
+            ->name([
+                '*.php',
+                '*.phpt',
+            ])
             ->in([
+                __DIR__ . '/.phan',
                 __DIR__ . '/benchmark',
                 __DIR__ . '/examples',
+                __DIR__ . '/ext/',
                 __DIR__ . '/lib',
                 __DIR__ . '/tools',
             ])
             ->notName([
                 'Swow.php',
+                'run-tests*.php',
             ])
             ->append([
                 __FILE__,
-                __DIR__ . '/ext/swow-builder',
             ])
     );

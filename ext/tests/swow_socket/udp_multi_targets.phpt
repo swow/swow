@@ -17,7 +17,7 @@ use Swow\Sync\WaitReference;
 
 Socket::setGlobalReadTimeout(1000);
 
-function testMultiClient(string $name, callable $function)
+function testMultiClient(string $name, callable $function): void
 {
     echo "{$name} start\n";
     $wr = new WaitReference();
@@ -27,7 +27,7 @@ function testMultiClient(string $name, callable $function)
 
     $count = 0;
 
-    Coroutine::run(function () use (&$count, $server, $function, $wr) {
+    Coroutine::run(static function () use (&$count, $server, $function, $wr): void {
         for ($i = 0; $i < TEST_MAX_REQUESTS; $i++) {
             try {
                 [$data, $peer_port] = $function($server);
@@ -43,7 +43,7 @@ function testMultiClient(string $name, callable $function)
     });
 
     for ($i = 0; $i < TEST_MAX_REQUESTS; $i++) {
-        Coroutine::run(function () use ($server, $wr) {
+        Coroutine::run(static function () use ($server, $wr): void {
             $client = new Socket(Socket::TYPE_UDP);
             $client->bind('127.0.0.1');
             pseudo_random_sleep();
@@ -59,14 +59,14 @@ function testMultiClient(string $name, callable $function)
     echo "{$name} verified {$count} times\n";
 }
 
-testMultiClient('recvFrom', function (Socket $server) {
+testMultiClient('recvFrom', static function (Socket $server) {
     $buffer = new Buffer(8192);
     $server->recvFrom($buffer, address: $addr_from, port: $port_from);
 
     return [$buffer->toString(), $port_from];
 });
 
-testMultiClient('peekFrom', function (Socket $server) {
+testMultiClient('peekFrom', static function (Socket $server) {
     $buffer = new Buffer(8192);
     while (8 > $server->peekFrom($buffer, size: 8, address: $addr_from, port: $port_from)) {
         msleep(1);
@@ -75,20 +75,20 @@ testMultiClient('peekFrom', function (Socket $server) {
     return [$buffer->toString(), $port_from];
 });
 
-testMultiClient('recvDataFrom', function (Socket $server) {
+testMultiClient('recvDataFrom', static function (Socket $server) {
     $buffer = new Buffer(8192);
     $server->recvDataFrom($buffer, address: $addr_from, port: $port_from);
 
     return [$buffer->toString(), $port_from];
 });
 
-testMultiClient('recvStringFrom', function (Socket $server) {
+testMultiClient('recvStringFrom', static function (Socket $server) {
     $ret = $server->recvStringFrom(8192, $addr_from, $port_from);
 
     return [$ret, $port_from];
 });
 
-testMultiClient('peekStringFrom', function (Socket $server) {
+testMultiClient('peekStringFrom', static function (Socket $server) {
     while (($ret = $server->peekStringFrom(8192, $addr_from, $port_from)) === '') {
         msleep(1);
     }
@@ -96,13 +96,13 @@ testMultiClient('peekStringFrom', function (Socket $server) {
     return [$ret, $port_from];
 });
 
-testMultiClient('recvStringDataFrom', function (Socket $server) {
+testMultiClient('recvStringDataFrom', static function (Socket $server) {
     $ret = $server->recvStringDataFrom(8192, $addr_from, $port_from);
 
     return [$ret, $port_from];
 });
 
-function testMultiServer(string $name, callable $function)
+function testMultiServer(string $name, callable $function): void
 {
     echo "{$name} start\n";
 
@@ -113,7 +113,7 @@ function testMultiServer(string $name, callable $function)
     $servers = [];
     for ($i = 0; $i < TEST_MAX_REQUESTS; $i++) {
         $server = $servers[] = new Socket(Socket::TYPE_UDP);
-        Coroutine::run(function () use (&$count, $server, $wr) {
+        Coroutine::run(static function () use (&$count, $server, $wr): void {
             $server->bind('127.0.0.1');
             try {
                 $data = $server->recvStringDataFrom(8192, $_, $peer_port);
@@ -143,11 +143,11 @@ function testMultiServer(string $name, callable $function)
     echo "{$name} verified {$count} times\n";
 }
 
-testMultiServer('sendTo(string)', function (Socket $client, Socket $server) {
+testMultiServer('sendTo(string)', static function (Socket $client, Socket $server): void {
     $client->sendTo(pack('N2', $client->getSockPort(), $server->getSockPort()), address: $server->getSockAddress(), port: $server->getSockPort());
 });
 
-testMultiServer('writeTo', function (Socket $client, Socket $server) {
+testMultiServer('writeTo', static function (Socket $client, Socket $server): void {
     $client->writeTo([
         [
             /* buffer */ pack('N', $client->getSockPort()),
@@ -162,7 +162,7 @@ testMultiServer('writeTo', function (Socket $client, Socket $server) {
     ], $server->getSockAddress(), $server->getSockPort());
 });
 
-testMultiServer('sendTo(buffer)', function (Socket $client, Socket $server) {
+testMultiServer('sendTo(buffer)', static function (Socket $client, Socket $server): void {
     $buffer = new Buffer(8192);
     $buffer->append(pack('N', $client->getSockPort()));
     $buffer->append(pack('N', $server->getSockPort()));

@@ -19,11 +19,11 @@ $wr = new WaitReference();
 $random = getRandomBytes(TEST_MAX_LENGTH_LOW);
 
 $server = new Socket(Socket::TYPE_TCP);
-Coroutine::run(function () use ($server, $random, $wr) {
+Coroutine::run(static function () use ($server, $random, $wr): void {
     $server->bind('127.0.0.1')->listen();
     try {
         $connection = $server->accept();
-        Coroutine::run(function () use ($connection, $random, $wr) {
+        Coroutine::run(static function () use ($connection, $random, $wr): void {
             try {
                 $connection->readString(TEST_MAX_LENGTH_LOW + 1);
                 Assert::assert(0 && 'never here');
@@ -37,7 +37,7 @@ Coroutine::run(function () use ($server, $random, $wr) {
     }
 });
 
-Coroutine::run(function () use ($server, $random, $wr) {
+Coroutine::run(static function () use ($server, $random, $wr): void {
     $client = new Socket(Socket::TYPE_TCP);
     $client->connect($server->getSockAddress(), $server->getSockPort());
     $client->send($random);

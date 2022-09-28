@@ -10,12 +10,12 @@ require __DIR__ . '/../include/bootstrap.php';
 
 use Swow\Coroutine;
 
-function foo()
+function foo(): void
 {
     Coroutine::yield();
 }
 
-$coroutine = Coroutine::run(function () {
+$coroutine = Coroutine::run(static function (): void {
     @foo();
 });
 

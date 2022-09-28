@@ -53,7 +53,7 @@ while (true) {
     Assert::integer($event);
     Assert::string($parser->getEventName());
     Assert::same($parser::getEventNameFor($event), $parser->getEventName());
-    //var_dump($parser->getEventName());
+    // var_dump($parser->getEventName());
     // read data from buffer according to parser
     $data = '';
     if (Parser::EVENT_FLAG_DATA & $event) {
@@ -103,7 +103,7 @@ $expected = [
     'Content-Length' => [(string) strlen($payload)],
 ];
 
-foreach($expected as $k => $expected_values){
+foreach ($expected as $k => $expected_values) {
     $real_values = $headers[$k];
     sort($real_values);
     sort($expected_values);

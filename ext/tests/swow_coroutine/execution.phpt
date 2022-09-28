@@ -37,7 +37,7 @@ class TestGetExecution
     }
 }
 
-$coroutine = Coroutine::run(function () {
+$coroutine = Coroutine::run(static function (): void {
     TestGetExecution::test();
 });
 
@@ -69,7 +69,6 @@ for ($n = 1; $n < $traceDepth - 1; $n++) {
 echo "\n";
 
 $coroutine->resume();
-
 
 echo "Done\n";
 

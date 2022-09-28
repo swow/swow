@@ -8,7 +8,7 @@ require __DIR__ . '/../include/skipif.php';
 <?php
 require __DIR__ . '/../include/bootstrap.php';
 
-Swow\Coroutine::run(function () {
+Swow\Coroutine::run(static function (): void {
     $main = Swow\Coroutine::getCurrent()->getPrevious();
     usleep(1000);
     echo "Kill main\n";

@@ -15,14 +15,14 @@ $wr = new WaitReference();
 ob_start();
 echo 'main';
 // #co1
-Swow\Coroutine::run(function () use ($wr) {
+Swow\Coroutine::run(static function () use ($wr): void {
     ob_start();
     echo "foo\n";
-    $ob_1 = (ob_get_status(true));
+    $ob_1 = ob_get_status(true);
     // yield and it will switch to #co2
     msleep(2);
     // resume to ob_1
-    Assert::same($ob_1, (ob_get_status(true)));
+    Assert::same($ob_1, ob_get_status(true));
     ob_start(); // ob_2
     echo "bar\n";
     Assert::same(ob_get_status()['level'], 1);
@@ -39,17 +39,17 @@ Swow\Coroutine::run(function () use ($wr) {
 });
 
 // #co2
-Swow\Coroutine::run(function () use ($wr) {
-    Assert::same(ob_get_status(true), []); //empty
+Swow\Coroutine::run(static function () use ($wr): void {
+    Assert::same(ob_get_status(true), []); // empty
     Assert::assert(!ob_get_contents());
     msleep(1);
     Assert::assert(!ob_get_clean());
 });
 
 // #co3
-Swow\Coroutine::run(function () use ($wr) {
+Swow\Coroutine::run(static function () use ($wr): void {
     msleep(3);
-    Assert::same(ob_get_status(true), []); //empty
+    Assert::same(ob_get_status(true), []); // empty
 });
 Assert::same(ob_get_clean(), 'main');
 
