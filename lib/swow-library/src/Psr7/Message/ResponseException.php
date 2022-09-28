@@ -16,6 +16,9 @@ namespace Swow\Psr7\Message;
 use Swow\Http\Status;
 use Throwable;
 
+/**
+ * FIXME: this class should be removed
+ */
 class ResponseException extends \Swow\Exception
 {
     public function __construct(int $statusCode, string $reasonPhrase = '', ?Throwable $previous = null)
