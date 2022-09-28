@@ -87,6 +87,9 @@ class Config extends \PhpCsFixer\Config
                     'only_booleans' => true,
                     'position' => 'end',
                 ],
+                'class_definition' => [
+                    'single_line' => false,
+                ],
                 'class_attributes_separation' => [
                     'elements' => [
                         'method' => 'one',
@@ -129,6 +132,7 @@ class Config extends \PhpCsFixer\Config
                         'phpstan-ignore-next-line',
                     ],
                 ],
+                'error_suppression' => false,
                 'is_null' => false, /* To keep aligned with other is_xxx */
                 'native_constant_invocation' => [
                     'scope' => 'namespaced',
