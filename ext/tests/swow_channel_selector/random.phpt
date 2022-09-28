@@ -1,5 +1,5 @@
 --TEST--
-swow_channel_selector: random
+swow_selector: random
 --SKIPIF--
 <?php
 require __DIR__ . '/../include/skipif.php';
@@ -9,7 +9,7 @@ require __DIR__ . '/../include/skipif.php';
 require __DIR__ . '/../include/bootstrap.php';
 
 use Swow\Channel;
-use Swow\Channel\Selector;
+use Swow\Selector;
 use Swow\Coroutine;
 
 $s = new Selector();
@@ -39,7 +39,7 @@ for ($n = TEST_MAX_REQUESTS; $n--;) {
     }
     $channel = $s->commit();
     Assert::same($channel, $targetChannel);
-    Assert::same($s->getLastOpcode(), $opcode);
+    Assert::same($s->getLastEvent(), $opcode);
     if ($opcode === Selector::EVENT_POP) {
         Assert::same($s->fetch(), $randomBytes);
     }

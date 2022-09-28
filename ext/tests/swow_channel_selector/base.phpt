@@ -1,5 +1,5 @@
 --TEST--
-swow_channel_selector: base
+swow_selector: base
 --SKIPIF--
 <?php
 require __DIR__ . '/../include/skipif.php';
@@ -9,7 +9,7 @@ require __DIR__ . '/../include/skipif.php';
 require __DIR__ . '/../include/bootstrap.php';
 
 use Swow\Channel;
-use Swow\Channel\Selector;
+use Swow\Selector;
 use Swow\Coroutine;
 
 $channel1 = new Channel();
@@ -46,7 +46,7 @@ for ($n = 3; $n--;) {
     } else {
         Assert::false('impossible');
     }
-    Assert::same($s->getLastOpcode(), Selector::EVENT_POP);
+    Assert::same($s->getLastEvent(), Selector::EVENT_POP);
     echo $data . PHP_LF;
 }
 

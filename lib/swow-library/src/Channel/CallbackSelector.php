@@ -16,6 +16,7 @@ namespace Swow\Channel;
 use Closure;
 use Swow\Channel;
 
+use Swow\Selector;
 use function spl_object_id;
 
 class CallbackSelector extends Selector
@@ -44,7 +45,7 @@ class CallbackSelector extends Selector
     {
         $channel = $this->commit($timeout);
         $id = spl_object_id($channel);
-        if ($this->getLastOpcode() === Channel::OPCODE_PUSH) {
+        if ($this->getLastEvent() === static::EVENT_PUSH) {
             $this->pushCallbacks[$id]();
         } else {
             $this->popCallbacks[$id]($this->fetch());

@@ -953,6 +953,67 @@ namespace Swow
 
 namespace Swow
 {
+    /**
+     * channel selector selects any action done
+     * which action can be "pushing/poping `T` into/from (may be different) channel"
+     *
+     * @phan-template T
+     * @phpstan-template T
+     * @psalm-template T
+     */
+    class Selector
+    {
+        public const EVENT_PUSH = 0;
+        public const EVENT_POP = 1;
+
+        /**
+         * add a "pushing a `T` into `$channel`" action into selector
+         *
+         * @phan-param \Swow\Channel<T> $channel
+         * @phpstan-param \Swow\Channel<T> $channel
+         * @psalm-param \Swow\Channel<T> $channel
+         * @phan-param T $data
+         * @phpstan-param T $data
+         * @psalm-param T $data
+         */
+        public function push(\Swow\Channel $channel, mixed $data): static { }
+
+        /**
+         * add a "popping a `T` from `$channel`" action into selector
+         *
+         * @phan-param \Swow\Channel<T> $channel
+         * @phpstan-param \Swow\Channel<T> $channel
+         * @psalm-param \Swow\Channel<T> $channel
+         */
+        public function pop(\Swow\Channel $channel): static { }
+
+        /**
+         * do select
+         *
+         * any actions in selector will make this return
+         *
+         * @note content switching may happen here
+         *
+         * @param int $timeout timeout in microseconds
+         * @phan-return \Swow\Channel<T>
+         * @phpstan-return \Swow\Channel<T>
+         * @psalm-return \Swow\Channel<T>
+         */
+        public function commit(int $timeout = -1): Channel { }
+
+        public function fetch(): mixed { }
+
+        public function getLastEvent(): int { }
+    }
+}
+
+namespace Swow
+{
+    class SelectorException extends \Swow\CallException { }
+}
+
+namespace Swow
+{
     class SyncException extends \Swow\Exception { }
 }
 
@@ -1936,67 +1997,6 @@ namespace Swow\Util
 
         public function remove(): void { }
     }
-}
-
-namespace Swow\Channel
-{
-    /**
-     * channel selector selects any action done
-     * which action can be "pushing/poping `T` into/from (may be different) channel"
-     *
-     * @phan-template T
-     * @phpstan-template T
-     * @psalm-template T
-     */
-    class Selector
-    {
-        public const EVENT_PUSH = 0;
-        public const EVENT_POP = 1;
-
-        /**
-         * add a "pushing a `T` into `$channel`" action into selector
-         *
-         * @phan-param \Swow\Channel<T> $channel
-         * @phpstan-param \Swow\Channel<T> $channel
-         * @psalm-param \Swow\Channel<T> $channel
-         * @phan-param T $data
-         * @phpstan-param T $data
-         * @psalm-param T $data
-         */
-        public function push(\Swow\Channel $channel, mixed $data): static { }
-
-        /**
-         * add a "popping a `T` from `$channel`" action into selector
-         *
-         * @phan-param \Swow\Channel<T> $channel
-         * @phpstan-param \Swow\Channel<T> $channel
-         * @psalm-param \Swow\Channel<T> $channel
-         */
-        public function pop(\Swow\Channel $channel): static { }
-
-        /**
-         * do select
-         *
-         * any actions in selector will make this return
-         *
-         * @note content switching may happen here
-         *
-         * @param int $timeout timeout in microseconds
-         * @phan-return \Swow\Channel<T>
-         * @phpstan-return \Swow\Channel<T>
-         * @psalm-return \Swow\Channel<T>
-         */
-        public function commit(int $timeout = -1): \Swow\Channel { }
-
-        public function fetch(): mixed { }
-
-        public function getLastOpcode(): int { }
-    }
-}
-
-namespace Swow\Channel
-{
-    class SelectorException extends \Swow\CallException { }
 }
 
 namespace Swow\Sync

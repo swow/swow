@@ -20,12 +20,11 @@
 
 SWOW_API zend_class_entry *swow_channel_ce;
 SWOW_API zend_object_handlers swow_channel_handlers;
-
-SWOW_API zend_class_entry *swow_channel_selector_ce;
-SWOW_API zend_object_handlers swow_channel_selector_handlers;
-
 SWOW_API zend_class_entry *swow_channel_exception_ce;
-SWOW_API zend_class_entry *swow_channel_selector_exception_ce;
+
+SWOW_API zend_class_entry *swow_selector_ce;
+SWOW_API zend_object_handlers swow_selector_handlers;
+SWOW_API zend_class_entry *swow_selector_exception_ce;
 
 #define SWOW_CHANNEL_GETTER_INTERNAL(object, schannel, channel) \
     swow_channel_t *schannel = swow_channel_get_from_object(object); \
@@ -350,7 +349,7 @@ static HashTable *swow_channel_get_gc(zend_object *object, zval **gc_data, int *
 
 /* select */
 
-static void swow_channel_selector_release_requests(swow_channel_selector_t *selector)
+static void swow_selector_release_requests(swow_selector_t *selector)
 {
     cat_channel_select_request_t *request;
     uint32_t n;
@@ -365,42 +364,42 @@ static void swow_channel_selector_release_requests(swow_channel_selector_t *sele
     selector->count = 0;
 }
 
-static void swow_channel_selector_release_response(swow_channel_selector_t *selector)
+static void swow_selector_release_response(swow_selector_t *selector)
 {
     zval_ptr_dtor(&selector->zdata);
 }
 
-static zend_object *swow_channel_selector_create_object(zend_class_entry *ce)
+static zend_object *swow_selector_create_object(zend_class_entry *ce)
 {
-    swow_channel_selector_t *selector = swow_object_alloc(swow_channel_selector_t, ce, swow_channel_selector_handlers);
+    swow_selector_t *selector = swow_object_alloc(swow_selector_t, ce, swow_selector_handlers);
 
     selector->count = 0;
     selector->requests = selector->_requests;
     selector->size = CAT_ARRAY_SIZE(selector->_requests);
-    selector->last_opcode = CAT_CHANNEL_SELECT_EVENT_PUSH;
+    selector->last_event = CAT_CHANNEL_SELECT_EVENT_PUSH;
     ZVAL_NULL(&selector->zdata);
 
     return &selector->std;
 }
 
-static void swow_channel_selector_free_object(zend_object *object)
+static void swow_selector_free_object(zend_object *object)
 {
-    swow_channel_selector_t *selector = swow_channel_selector_get_from_object(object);
+    swow_selector_t *selector = swow_selector_get_from_object(object);
 
-    swow_channel_selector_release_requests(selector);
+    swow_selector_release_requests(selector);
     if (selector->requests != selector->_requests) {
         efree(selector->requests);
     }
-    swow_channel_selector_release_response(selector);
+    swow_selector_release_response(selector);
 
     zend_object_std_dtor(&selector->std);
 }
 
-#define getThisSelector() swow_channel_selector_get_from_object(Z_OBJ_P(ZEND_THIS))
+#define getThisSelector() swow_selector_get_from_object(Z_OBJ_P(ZEND_THIS))
 
-static PHP_METHOD_EX(Swow_Channel_Selector, add, zend_object *channel_object, zval *zdata)
+static PHP_METHOD_EX(Swow_Selector, add, zend_object *channel_object, zval *zdata)
 {
-    swow_channel_selector_t *selector = getThisSelector();
+    swow_selector_t *selector = getThisSelector();
     swow_channel_t *schannel = swow_channel_get_from_object(channel_object);
     cat_channel_t *channel = &schannel->channel;
     cat_channel_select_request_t *requests, *request;
@@ -453,12 +452,12 @@ static PHP_METHOD_EX(Swow_Channel_Selector, add, zend_object *channel_object, zv
     RETURN_THIS();
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Channel_Selector_push, 0, 2, IS_STATIC, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Selector_push, 0, 2, IS_STATIC, 0)
     ZEND_ARG_OBJ_INFO(0, channel, Swow\\Channel, 0)
     ZEND_ARG_TYPE_INFO(0, data, IS_MIXED, 0)
 ZEND_END_ARG_INFO()
 
-static PHP_METHOD(Swow_Channel_Selector, push)
+static PHP_METHOD(Swow_Selector, push)
 {
     zend_object *channel_object;
     zval *zdata;
@@ -468,14 +467,14 @@ static PHP_METHOD(Swow_Channel_Selector, push)
         Z_PARAM_ZVAL(zdata)
     ZEND_PARSE_PARAMETERS_END();
 
-    PHP_METHOD_CALL(Swow_Channel_Selector, add, channel_object, zdata);
+    PHP_METHOD_CALL(Swow_Selector, add, channel_object, zdata);
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Channel_Selector_pop, 0, 1, IS_STATIC, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Selector_pop, 0, 1, IS_STATIC, 0)
     ZEND_ARG_OBJ_INFO(0, channel, Swow\\Channel, 0)
 ZEND_END_ARG_INFO()
 
-static PHP_METHOD(Swow_Channel_Selector, pop)
+static PHP_METHOD(Swow_Selector, pop)
 {
     zend_object *channel_object;
 
@@ -483,16 +482,16 @@ static PHP_METHOD(Swow_Channel_Selector, pop)
         Z_PARAM_OBJ_OF_CLASS(channel_object, swow_channel_ce)
     ZEND_PARSE_PARAMETERS_END();
 
-    PHP_METHOD_CALL(Swow_Channel_Selector, add, channel_object, NULL);
+    PHP_METHOD_CALL(Swow_Selector, add, channel_object, NULL);
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_class_Swow_Channel_Selector_commit, 0, 0, Swow\\Channel, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_class_Swow_Selector_commit, 0, 0, Swow\\Channel, 0)
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, timeout, IS_LONG, 0, "-1")
 ZEND_END_ARG_INFO()
 
-static PHP_METHOD(Swow_Channel_Selector, commit)
+static PHP_METHOD(Swow_Selector, commit)
 {
-    swow_channel_selector_t *selector = getThisSelector();
+    swow_selector_t *selector = getThisSelector();
     zend_long timeout = -1;
     cat_channel_select_response_t *response;
 
@@ -504,7 +503,7 @@ static PHP_METHOD(Swow_Channel_Selector, commit)
     response = cat_channel_select(selector->requests, selector->count, timeout);
 
     /* release the last response */
-    swow_channel_selector_release_response(selector);
+    swow_selector_release_response(selector);
 
     /* update the response info */
     if (EXPECTED(response != NULL)) {
@@ -512,7 +511,7 @@ static PHP_METHOD(Swow_Channel_Selector, commit)
         zval *zdata = (zval *) response->data.common;
         GC_ADDREF(channel);
         RETVAL_OBJ(channel);
-        selector->last_opcode = response->opcode;
+        selector->last_event = response->opcode;
         if (response->opcode == CAT_CHANNEL_SELECT_EVENT_PUSH) {
             ZVAL_UNDEF(&selector->zdata);
         } else {
@@ -525,21 +524,21 @@ static PHP_METHOD(Swow_Channel_Selector, commit)
     }
 
     /* reset */
-    swow_channel_selector_release_requests(selector);
+    swow_selector_release_requests(selector);
 
     /* handle error */
     if (UNEXPECTED(response == NULL || response->error)) {
-        swow_throw_call_exception_with_last(swow_channel_selector_exception_ce);
+        swow_throw_call_exception_with_last(swow_selector_exception_ce);
         RETURN_THROWS();
     }
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Channel_Selector_fetch, 0, 0, IS_MIXED, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Selector_fetch, 0, 0, IS_MIXED, 0)
 ZEND_END_ARG_INFO()
 
-static PHP_METHOD(Swow_Channel_Selector, fetch)
+static PHP_METHOD(Swow_Selector, fetch)
 {
-    swow_channel_selector_t *selector = getThisSelector();
+    swow_selector_t *selector = getThisSelector();
     zval *zdata = &selector->zdata;
 
     ZEND_PARSE_PARAMETERS_NONE();
@@ -554,29 +553,29 @@ static PHP_METHOD(Swow_Channel_Selector, fetch)
     ZVAL_UNDEF(zdata);
 }
 
-#define arginfo_class_Swow_Channel_Selector_getLastOpcode arginfo_class_Swow_Channel_getCapacity
+#define arginfo_class_Swow_Selector_getLastEvent arginfo_class_Swow_Channel_getCapacity
 
-static PHP_METHOD(Swow_Channel_Selector, getLastOpcode)
+static PHP_METHOD(Swow_Selector, getLastEvent)
 {
-    swow_channel_selector_t *selector = getThisSelector();
+    swow_selector_t *selector = getThisSelector();
 
     ZEND_PARSE_PARAMETERS_NONE();
 
-    RETURN_LONG(selector->last_opcode);
+    RETURN_LONG(selector->last_event);
 }
 
-static const zend_function_entry swow_channel_selector_methods[] = {
-    PHP_ME(Swow_Channel_Selector, push,          arginfo_class_Swow_Channel_Selector_push,          ZEND_ACC_PUBLIC)
-    PHP_ME(Swow_Channel_Selector, pop,           arginfo_class_Swow_Channel_Selector_pop,           ZEND_ACC_PUBLIC)
-    PHP_ME(Swow_Channel_Selector, commit,        arginfo_class_Swow_Channel_Selector_commit,        ZEND_ACC_PUBLIC)
-    PHP_ME(Swow_Channel_Selector, fetch,         arginfo_class_Swow_Channel_Selector_fetch,         ZEND_ACC_PUBLIC)
-    PHP_ME(Swow_Channel_Selector, getLastOpcode, arginfo_class_Swow_Channel_Selector_getLastOpcode, ZEND_ACC_PUBLIC)
+static const zend_function_entry swow_selector_methods[] = {
+    PHP_ME(Swow_Selector, push,         arginfo_class_Swow_Selector_push,         ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Selector, pop,          arginfo_class_Swow_Selector_pop,          ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Selector, commit,       arginfo_class_Swow_Selector_commit,       ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Selector, fetch,        arginfo_class_Swow_Selector_fetch,        ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Selector, getLastEvent, arginfo_class_Swow_Selector_getLastEvent, ZEND_ACC_PUBLIC)
     PHP_FE_END
 };
 
-static HashTable *swow_channel_selector_get_gc(zend_object *object, zval **gc_data, int *gc_count)
+static HashTable *swow_selector_get_gc(zend_object *object, zval **gc_data, int *gc_count)
 {
-    swow_channel_selector_t *selector = swow_channel_selector_get_from_object(object);
+    swow_selector_t *selector = swow_selector_get_from_object(object);
     cat_channel_select_request_t *request;
     uint32_t n;
 
@@ -623,21 +622,21 @@ zend_result swow_channel_module_init(INIT_FUNC_ARGS)
 
     /* selector */
 
-    swow_channel_selector_ce = swow_register_internal_class(
-        "Swow\\Channel\\Selector", NULL, swow_channel_selector_methods,
-        &swow_channel_selector_handlers, NULL,
+    swow_selector_ce = swow_register_internal_class(
+        "Swow\\Selector", NULL, swow_selector_methods,
+        &swow_selector_handlers, NULL,
         cat_false, cat_false,
-        swow_channel_selector_create_object,
-        swow_channel_selector_free_object,
-        XtOffsetOf(swow_channel_selector_t, std)
+        swow_selector_create_object,
+        swow_selector_free_object,
+        XtOffsetOf(swow_selector_t, std)
     );
-    swow_channel_selector_handlers.get_gc = swow_channel_selector_get_gc;
+    swow_selector_handlers.get_gc = swow_selector_get_gc;
 
-    zend_declare_class_constant_long(swow_channel_selector_ce, ZEND_STRL("EVENT_PUSH"), CAT_CHANNEL_SELECT_EVENT_PUSH);
-    zend_declare_class_constant_long(swow_channel_selector_ce, ZEND_STRL("EVENT_POP"), CAT_CHANNEL_SELECT_EVENT_POP);
+    zend_declare_class_constant_long(swow_selector_ce, ZEND_STRL("EVENT_PUSH"), CAT_CHANNEL_SELECT_EVENT_PUSH);
+    zend_declare_class_constant_long(swow_selector_ce, ZEND_STRL("EVENT_POP"), CAT_CHANNEL_SELECT_EVENT_POP);
 
-    swow_channel_selector_exception_ce = swow_register_internal_class(
-        "Swow\\Channel\\SelectorException", swow_call_exception_ce, NULL, NULL, NULL, cat_true, cat_true, NULL, NULL, 0
+    swow_selector_exception_ce = swow_register_internal_class(
+        "Swow\\SelectorException", swow_call_exception_ce, NULL, NULL, NULL, cat_true, cat_true, NULL, NULL, 0
     );
 
     return SUCCESS;

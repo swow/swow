@@ -12,8 +12,8 @@
 declare(strict_types=1);
 
 use Swow\Channel;
-use Swow\Channel\Selector;
 use Swow\Coroutine;
+use Swow\Selector;
 
 $channel1 = new Channel();
 $channel2 = new Channel();
