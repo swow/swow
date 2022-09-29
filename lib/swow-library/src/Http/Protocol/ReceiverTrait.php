@@ -14,6 +14,7 @@ declare(strict_types=1);
 namespace Swow\Http\Protocol;
 
 use Swow\Buffer;
+use Swow\Http\Message\HttpException;
 use Swow\Http\Message\ResponseEntity;
 use Swow\Http\Message\ServerRequestEntity;
 use Swow\Http\Message\UploadedFileEntity;
@@ -22,7 +23,6 @@ use Swow\Http\Mime\MimeType;
 use Swow\Http\Parser as HttpParser;
 use Swow\Http\ParserException;
 use Swow\Http\Status as HttpStatus;
-use Swow\Psr7\Message\ResponseException;
 use Swow\WebSocket\WebSocket;
 use ValueError;
 
@@ -215,7 +215,7 @@ trait ReceiverTrait
                     if (!$headersComplete) {
                         $headerLength += $parsedLength;
                         if ($headerLength > $maxHeaderLength) {
-                            throw new ResponseException(empty($headerName) ? HttpStatus::REQUEST_URI_TOO_LARGE : HttpStatus::REQUEST_HEADER_FIELDS_TOO_LARGE);
+                            throw new HttpException(empty($headerName) ? HttpStatus::REQUEST_URI_TOO_LARGE : HttpStatus::REQUEST_HEADER_FIELDS_TOO_LARGE);
                         }
                     }
                     if ($event === HttpParser::EVENT_NONE) {
@@ -289,7 +289,7 @@ trait ReceiverTrait
                                     } else {
                                         $contentLength = $parser->getContentLength();
                                         if ($contentLength > $maxContentLength) {
-                                            throw new ResponseException(HttpStatus::REQUEST_ENTITY_TOO_LARGE);
+                                            throw new HttpException(HttpStatus::REQUEST_ENTITY_TOO_LARGE);
                                         }
                                     }
                                     $headersComplete = true;
@@ -345,7 +345,7 @@ trait ReceiverTrait
                                     $contentDispositionType = $contentDispositionParts[0];
                                     // FIXME: is inline/attachment valid?
                                     if (!in_array($contentDispositionType, ['form-data', 'inline', 'attachment'], true)) {
-                                        throw new ResponseException(HttpStatus::BAD_REQUEST, "Unsupported Content-Disposition type '{$contentDispositionParts[0]}'");
+                                        throw new HttpException(HttpStatus::BAD_REQUEST, "Unsupported Content-Disposition type '{$contentDispositionParts[0]}'");
                                     }
                                     $contentDispositionParts = explode(';', $contentDispositionParts[1] ?? '');
                                     $contentDispositionMap = [];
@@ -356,7 +356,7 @@ trait ReceiverTrait
                                     $formDataName = $contentDispositionMap['name'] ?? null;
                                     $fileName = $contentDispositionMap['filename'] ?? null;
                                     if (!$fileName && !$formDataName) {
-                                        throw new ResponseException(HttpStatus::BAD_REQUEST, 'Missing name or filename in Content-Disposition');
+                                        throw new HttpException(HttpStatus::BAD_REQUEST, 'Missing name or filename in Content-Disposition');
                                     }
 
                                     if ($fileName) {
@@ -488,7 +488,7 @@ trait ReceiverTrait
                                     $currentChunkLength = $parser->getCurrentChunkLength();
                                     $contentLength += $currentChunkLength;
                                     if ($contentLength > $maxContentLength) {
-                                        throw new ResponseException(HttpStatus::REQUEST_ENTITY_TOO_LARGE);
+                                        throw new HttpException(HttpStatus::REQUEST_ENTITY_TOO_LARGE);
                                     }
                                     break;
                                 }
@@ -513,9 +513,9 @@ trait ReceiverTrait
                 }
             }
         } catch (ParserException $parserException) {
-            /* TODO: Get bad request */
-            /* FIXME: Just throw it without ResponseException? Connection should be reset, it's an unrecoverable error. */
-            throw new ResponseException(HttpStatus::BAD_REQUEST, 'Protocol Parsing Error', $parserException);
+            /* TODO: Get bad request? */
+            /* Note: Connection should be reset, it's an unrecoverable error. */
+            throw new HttpException(HttpStatus::BAD_REQUEST, 'Protocol Parsing Error', $parserException);
         } finally {
             if ($isServerRequest) {
                 $messageEntity->method = $parser->getMethod();
@@ -587,7 +587,7 @@ trait ReceiverTrait
             /* recv payload data */
             $payloadLength = $header->getPayloadLength();
             if ($payloadLength > $maxContentLength) {
-                throw new ResponseException(HttpStatus::REQUEST_ENTITY_TOO_LARGE); // FIXME
+                throw new HttpException(HttpStatus::REQUEST_ENTITY_TOO_LARGE); // FIXME
             }
             if ($payloadLength > 0) {
                 $payloadData = new Buffer(0);

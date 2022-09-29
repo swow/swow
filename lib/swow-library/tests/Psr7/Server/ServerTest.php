@@ -20,12 +20,12 @@ use RuntimeException;
 use Swow\Channel;
 use Swow\Coroutine;
 use Swow\Http\Http;
+use Swow\Http\Message\HttpException;
 use Swow\Http\Mime\MimeType;
 use Swow\Http\Protocol\ReceiverTrait;
 use Swow\Http\Status;
 use Swow\Psr7\Client\Client;
 use Swow\Psr7\Message\Request;
-use Swow\Psr7\Message\ResponseException;
 use Swow\Psr7\Message\Uri;
 use Swow\Psr7\Message\WebSocketFrame;
 use Swow\Psr7\Server\Server;
@@ -236,7 +236,7 @@ final class ServerTest extends TestCase
                 try {
                     $connection->recvHttpRequest();
                     $channel->push(null);
-                } catch (ResponseException $responseException) {
+                } catch (HttpException $responseException) {
                     $channel->push($responseException->getCode());
                 } finally {
                     $connection->close();

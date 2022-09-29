@@ -18,6 +18,7 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Swow\Errno;
 use Swow\Http\Http;
+use Swow\Http\Message\HttpException;
 use Swow\Http\Message\ServerRequestEntity;
 use Swow\Http\Parser as HttpParser;
 use Swow\Http\Protocol\ProtocolTypeInterface;
@@ -25,7 +26,6 @@ use Swow\Http\Protocol\ProtocolTypeTrait;
 use Swow\Http\Protocol\ReceiverTrait;
 use Swow\Http\Status as HttpStatus;
 use Swow\Psr7\Message\Response;
-use Swow\Psr7\Message\ResponseException;
 use Swow\Psr7\Protocol\WebSocketTrait;
 use Swow\Psr7\Psr7;
 use Swow\Socket;
@@ -197,7 +197,7 @@ class ServerConnection extends Socket implements ProtocolTypeInterface
     {
         $secWebSocketKey = $request->getHeaderLine('sec-websocket-key');
         if (strlen($secWebSocketKey) !== WebSocket::SECRET_KEY_ENCODED_LENGTH) {
-            throw new ResponseException(HttpStatus::BAD_REQUEST, 'Invalid Secret Key');
+            throw new HttpException(HttpStatus::BAD_REQUEST, 'Invalid Secret Key');
         }
         $key = base64_encode(sha1($secWebSocketKey . WebSocket::GUID, true));
 

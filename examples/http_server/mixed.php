@@ -14,9 +14,9 @@ declare(strict_types=1);
 use Swow\Coroutine;
 use Swow\CoroutineException;
 use Swow\Errno;
+use Swow\Http\Message\HttpException;
 use Swow\Http\Status as HttpStatus;
 use Swow\Psr7\Client\Client;
-use Swow\Psr7\Message\ResponseException;
 use Swow\Psr7\Message\ServerRequest;
 use Swow\Psr7\Message\WebSocketFrame;
 use Swow\Psr7\Server\Server;
@@ -92,14 +92,14 @@ while (true) {
                                         }
                                         break;
                                     }
-                                    throw new ResponseException(HttpStatus::BAD_REQUEST, 'Unsupported Upgrade Type');
+                                    throw new HttpException(HttpStatus::BAD_REQUEST, 'Unsupported Upgrade Type');
                                 }
                                 $connection->respond(file_get_contents(__DIR__ . '/chat.html'));
                                 break;
                             default:
                                 $connection->error(HttpStatus::NOT_FOUND);
                         }
-                    } catch (ResponseException $exception) {
+                    } catch (HttpException $exception) {
                         $connection->error($exception->getCode(), $exception->getMessage());
                     }
                     if (!$request || !$request->shouldKeepAlive()) {
