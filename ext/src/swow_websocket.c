@@ -20,7 +20,7 @@
 
 #include "swow_buffer.h"
 
-SWOW_API zend_class_entry *swow_websocket_ce;
+SWOW_API zend_class_entry *swow_websocket_websocket_ce;
 SWOW_API zend_class_entry *swow_websocket_opcode_ce;
 SWOW_API zend_class_entry *swow_websocket_status_ce;
 SWOW_API zend_class_entry *swow_websocket_header_ce;
@@ -481,7 +481,7 @@ static const zend_function_entry swow_websocket_header_methods[] = {
     PHP_FE_END
 };
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_WebSocket_mask, 0, 1, IS_STRING, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_WebSocket_WebSocket_mask, 0, 1, IS_STRING, 0)
     ZEND_ARG_TYPE_INFO(0, data, IS_STRING, 0)
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, start, IS_LONG, 0, "0")
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, length, IS_LONG, 0, "-1")
@@ -489,7 +489,7 @@ ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_WebSocket_mask, 0, 1,
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, index, IS_LONG, 0, "0")
 ZEND_END_ARG_INFO()
 
-static PHP_METHOD(Swow_WebSocket, mask)
+static PHP_METHOD(Swow_WebSocket_WebSocket, mask)
 {
     zend_string *mask_key = NULL, *data, *masked_data;
     zend_long start = 0;
@@ -517,7 +517,7 @@ static PHP_METHOD(Swow_WebSocket, mask)
     RETURN_STR(masked_data);
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_WebSocket_unmask, 0, 1, IS_VOID, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_WebSocket_WebSocket_unmask, 0, 1, IS_VOID, 0)
     ZEND_ARG_OBJ_INFO(0, data, Swow\\Buffer, 0)
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, start, IS_LONG, 0, "0")
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, length, IS_LONG, 0, "-1")
@@ -525,7 +525,7 @@ ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_WebSocket_unmask, 0, 
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, index, IS_LONG, 0, "0")
 ZEND_END_ARG_INFO()
 
-static PHP_METHOD(Swow_WebSocket, unmask)
+static PHP_METHOD(Swow_WebSocket_WebSocket, unmask)
 {
     zend_object *buffer_object;
     zend_string *mask_key = NULL;
@@ -552,26 +552,26 @@ static PHP_METHOD(Swow_WebSocket, unmask)
     cat_websocket_unmask_ex(ptr, length, mask_key != NULL ? ZSTR_VAL(mask_key) : NULL, index);
 }
 
-static const zend_function_entry swow_websocket_methods[] = {
-    PHP_ME(Swow_WebSocket, mask,   arginfo_class_Swow_WebSocket_mask,   ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-    PHP_ME(Swow_WebSocket, unmask, arginfo_class_Swow_WebSocket_unmask, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+static const zend_function_entry swow_websocket_websocket_methods[] = {
+    PHP_ME(Swow_WebSocket_WebSocket, mask,   arginfo_class_Swow_WebSocket_WebSocket_mask,   ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    PHP_ME(Swow_WebSocket_WebSocket, unmask, arginfo_class_Swow_WebSocket_WebSocket_unmask, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
     PHP_FE_END
 };
 
 zend_result swow_websocket_module_init(INIT_FUNC_ARGS)
 {
-    swow_websocket_ce = swow_register_internal_class(
-        "Swow\\WebSocket\\WebSocket", NULL, swow_websocket_methods,
+    swow_websocket_websocket_ce = swow_register_internal_class(
+        "Swow\\WebSocket\\WebSocket", NULL, swow_websocket_websocket_methods,
         NULL, NULL, cat_false, cat_false,
         swow_create_object_deny, NULL, 0
     );
 
 #define SWOW_WEBSOCKET_REGISTER_LONG_CONSTANT(name) do { \
-    zend_declare_class_constant_long(swow_websocket_ce, ZEND_STRL(#name), CAT_WEBSOCKET_##name); \
+    zend_declare_class_constant_long(swow_websocket_websocket_ce, ZEND_STRL(#name), CAT_WEBSOCKET_##name); \
 } while (0);
 
 #define SWOW_WEBSOCKET_REGISTER_STRING_CONSTANT(name) do { \
-    zend_declare_class_constant_string(swow_websocket_ce, ZEND_STRL(#name), CAT_WEBSOCKET_##name); \
+    zend_declare_class_constant_string(swow_websocket_websocket_ce, ZEND_STRL(#name), CAT_WEBSOCKET_##name); \
 } while (0);
 
     SWOW_WEBSOCKET_REGISTER_LONG_CONSTANT(VERSION);
@@ -592,10 +592,10 @@ zend_result swow_websocket_module_init(INIT_FUNC_ARGS)
         cat_websocket_header_init(&header);
         header.fin = 1;
         header.opcode = CAT_WEBSOCKET_OPCODE_PING;
-        zend_declare_class_constant_stringl(swow_websocket_ce, ZEND_STRL("PING_FRAME"), (const char *) &header, cat_websocket_header_get_size(&header));
+        zend_declare_class_constant_stringl(swow_websocket_websocket_ce, ZEND_STRL("PING_FRAME"), (const char *) &header, cat_websocket_header_get_size(&header));
         header.opcode = CAT_WEBSOCKET_OPCODE_PONG;
         cat_websocket_header_set_payload_info(&header, 0, CAT_WEBSOCKET_EMPTY_MASK_KEY);
-        zend_declare_class_constant_stringl(swow_websocket_ce, ZEND_STRL("PONG_FRAME"), (const char *) &header, cat_websocket_header_get_size(&header));
+        zend_declare_class_constant_stringl(swow_websocket_websocket_ce, ZEND_STRL("PONG_FRAME"), (const char *) &header, cat_websocket_header_get_size(&header));
     } while (0);
 
     swow_websocket_opcode_ce = swow_register_internal_class(
