@@ -38,12 +38,10 @@ use function base64_encode;
 use function get_debug_type;
 use function is_array;
 use function is_int;
-use function is_string;
 use function sha1;
 use function sprintf;
 use function strlen;
 use function Swow\Debug\isStrictStringable;
-use function Swow\Debug\isStringable;
 
 class ServerConnection extends Socket implements ProtocolTypeInterface
 {

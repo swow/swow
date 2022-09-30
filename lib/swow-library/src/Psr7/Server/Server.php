@@ -14,7 +14,6 @@ declare(strict_types=1);
 namespace Swow\Psr7\Server;
 
 use Closure;
-use Swow\Buffer;
 use Swow\Psr7\Config\LimitationTrait;
 use Swow\Psr7\Message\ServerPsr17FactoryTrait;
 use Swow\Psr7\Message\WebSocketFrame;
@@ -23,7 +22,6 @@ use Swow\SocketException;
 
 use function is_array;
 use function is_callable;
-use function is_string;
 
 class Server extends Socket
 {
