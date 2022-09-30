@@ -81,7 +81,6 @@ class Server extends Socket
     public function broadcastMessage(WebSocketFrame $frame, ?array $targets = null, array|callable $filter = [], int $flags = self::BROADCAST_FLAG_NONE): static|array
     {
         if ($targets === null) {
-            /** @var ServerConnection[] $targets */
             $targets = $this->connections;
         }
         if (is_callable($filter)) {
