@@ -96,15 +96,15 @@ SWOW_API zend_op_array *swow_compile_string_ex(zend_string *source_string, const
 /* the way to get zend globals ptr */
 
 #ifdef ZTS
-# define ZEND_GLOBALS_PTR(name)          SWOW_TSRMG_BULK(name##_id, zend_##name *)
+# define ZEND_GLOBALS_PTR(name)       SWOW_TSRMG_BULK(name##_id, zend_##name *)
 # ifdef TSRMG_FAST
-#  define ZEND_GLOBALS_FAST_PTR(name)    SWOW_TSRMG_FAST_BULK(name##_offset, zend_##name *)
+#  define ZEND_GLOBALS_FAST_PTR(name) SWOW_TSRMG_FAST_BULK(name##_offset, zend_##name *)
 # else
-#  define ZEND_GLOBALS_FAST_PTR(name)    ZEND_GLOBALS_PTR(name)
+#  define ZEND_GLOBALS_FAST_PTR(name) ZEND_GLOBALS_PTR(name)
 # endif
 #else
-# define ZEND_GLOBALS_PTR(name)         (&name)
-# define ZEND_GLOBALS_FAST_PTR(name)    (&name)
+# define ZEND_GLOBALS_PTR(name)       (&name)
+# define ZEND_GLOBALS_FAST_PTR(name)  (&name)
 #endif
 
 /* modules */
