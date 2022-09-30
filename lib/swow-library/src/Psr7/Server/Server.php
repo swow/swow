@@ -86,9 +86,6 @@ class Server extends Socket
             /** @var ServerConnection[] $targets */
             $targets = $this->connections;
         }
-        if ($frame->getPayloadLength() <= Buffer::PAGE_SIZE) {
-            $frame = $frame->toString();
-        }
         if (is_callable($filter)) {
             $filter = Closure::fromCallable($filter);
         }
@@ -107,11 +104,7 @@ class Server extends Socket
                 }
             }
             try {
-                if (is_string($frame)) {
-                    $target->send($frame);
-                } else {
-                    $target->sendWebSocketFrame($frame);
-                }
+                $target->sendWebSocketFrame($frame);
             } catch (SocketException $exception) {
                 if ($flags & static::BROADCAST_FLAG_RECORD_EXCEPTIONS) {
                     /* record it and ignore */
