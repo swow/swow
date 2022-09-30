@@ -28,6 +28,7 @@ use Swow\Psr7\Client\Client;
 use Swow\Psr7\Message\Request;
 use Swow\Psr7\Message\Uri;
 use Swow\Psr7\Message\WebSocketFrame;
+use Swow\Psr7\Psr7;
 use Swow\Psr7\Server\Server;
 use Swow\Socket;
 use Swow\Sync\WaitReference;
@@ -78,12 +79,13 @@ final class ServerTest extends TestCase
         $uri = (new Uri('/'))->setQuery(http_build_query($query));
         $client
             ->connect($server->getSockAddress(), $server->getSockPort());
-        $request
-            ->setUri($uri)
-            ->setHeader('Content-Type', MimeType::JSON)
-            ->setHeader('Cookie', 'foo=bar; bar=baz')
-            ->getBody()
-            ->write(json_encode(['address' => $client->getSockAddress(), 'port' => $client->getSockPort()]));
+        $request = Psr7::createRequest('GET', $uri, [
+            'Content-Type' => MimeType::JSON,
+            'Cookie' => 'foo=bar; bar=baz',
+        ], Psr7::createStream(json_encode([
+            'address' => $client->getSockAddress(),
+            'port' => $client->getSockPort(),
+        ])));
         $response = $client->sendRequest($request);
         $this->assertSame($query, unserialize((string) $response->getBody()));
 
@@ -117,18 +119,18 @@ final class ServerTest extends TestCase
         });
         /* HTTP */
         $client = new Client();
-        $request = new Request();
-        $request
-            ->setUri('/echo')
-            ->getBody()
-            ->write('Hello Swow');
+        $request = Psr7::createRequest(
+            method: 'GET',
+            uri: '/echo',
+            body: Psr7::createStream('Hello Swow')
+        );
         $response = $client
             ->connect($server->getSockAddress(), $server->getSockPort())
             ->sendRequest($request);
         $this->assertSame('Hello Swow', (string) $response->getBody());
 
         /* WebSocket */
-        $request = (new Request())->setMethod('GET')->setUri('/chat');
+        $request = Psr7::createRequest(method: 'GET', uri: '/chat');
         $client->upgradeToWebSocket($request);
         $messageChannel = new Channel();
         $worker = Coroutine::run(

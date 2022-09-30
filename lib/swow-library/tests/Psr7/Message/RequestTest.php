@@ -14,9 +14,7 @@ declare(strict_types=1);
 namespace Swow\Tests\Psr7\Message;
 
 use PHPUnit\Framework\TestCase;
-use Swow\Psr7\Message\Request;
-use Swow\Psr7\Message\ServerRequest;
-use Swow\Psr7\Message\Uri;
+use Swow\Psr7\Psr7;
 
 /**
  * @internal
@@ -26,16 +24,11 @@ final class RequestTest extends TestCase
 {
     public function testGetRequestTarget(): void
     {
-        $request = new Request();
-        $this->assertSame('/', $request->getRequestTarget());
+        $request = Psr7::createRequest('GET', '/request');
+        $this->assertSame('/request', $request->getRequestTarget());
 
-        $request = new ServerRequest();
-        $this->assertSame('/', $request->getRequestTarget());
-
-        $request = new Request('GET', '/index');
-        $this->assertSame('/index', $request->getRequestTarget());
-
-        $request = new Request('GET', new Uri('/test'));
+        $request = Psr7::createRequest('POST', Psr7::createUriFromString('/test'));
+        $this->assertSame('POST', $request->getMethod());
         $this->assertSame('/test', $request->getRequestTarget());
     }
 }

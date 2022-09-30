@@ -13,7 +13,6 @@ declare(strict_types=1);
 
 namespace Swow\Psr7\Message;
 
-use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\StreamInterface;
 use RuntimeException;
 use Swow\Buffer;

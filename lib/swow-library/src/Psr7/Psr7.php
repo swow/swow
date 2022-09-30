@@ -108,6 +108,53 @@ class Psr7
         }
     }
 
+    /**
+     * @param array<string, array<string>|string> $headers
+     * @return RequestInterface|Request
+     */
+    public static function createRequest(
+        string $method,
+        mixed $uri,
+        array $headers = [],
+        mixed $body = null,
+        ?RequestFactoryInterface $requestFactory = null
+    ): RequestInterface {
+        $requestFactory ??= static::getDefaultPsr17Factory();
+        $request = $requestFactory->createRequest($method, $uri);
+        if ($headers) {
+            static::setHeaders($request, $headers);
+        }
+        if ($body) {
+            static::setBody($request, $body);
+        }
+        return $request;
+    }
+
+    /**
+     * @param array<string, array<string>|string> $headers
+     * @return ResponseInterface|ResponsePlusInterface|Response
+     */
+    public static function createResponse(
+        int $code = Status::OK,
+        string $reasonPhrase = '',
+        array $headers = [],
+        mixed $body = null,
+        ?ResponseFactoryInterface $responseFactory = null
+    ): ResponseInterface {
+        $responseFactory ??= static::getDefaultPsr17Factory();
+        $response = $responseFactory->createResponse($code, $reasonPhrase);
+        if ($headers) {
+            static::setHeaders($response, $headers);
+        }
+        if ($body) {
+            static::setBody($response, $body);
+        }
+        return $response;
+    }
+
+    /**
+     * @return ResponseInterface|ResponsePlusInterface|Response
+     */
     public static function createResponseFromEntity(ResponseEntity $responseEntity, ?ResponseFactoryInterface $responseFactory = null, ?StreamFactoryInterface $streamFactory = null): ResponseInterface
     {
         $responseFactory ??= static::getDefaultPsr17Factory();
@@ -172,6 +219,33 @@ class Psr7
         return $uploadedFiles;
     }
 
+    /**
+     * @param array<string, array<string>|string> $headers
+     * @param array<string, string> $serverParams
+     * @return ServerRequestInterface|ServerRequestPlusInterface|ServerRequest
+     */
+    public static function createServerRequest(
+        string $method,
+        mixed $uri,
+        array $serverParams,
+        array $headers = [],
+        mixed $body = null,
+        ?ServerRequestFactoryInterface $serverRequestFactory = null
+    ): ServerRequestInterface {
+        $serverRequestFactory ??= static::getDefaultPsr17Factory();
+        $serverRequest = $serverRequestFactory->createServerRequest($method, $uri, $serverParams);
+        if ($headers) {
+            static::setHeaders($serverRequest, $headers);
+        }
+        if ($body) {
+            static::setBody($serverRequest, $body);
+        }
+        return $serverRequest;
+    }
+
+    /**
+     * @return ServerRequestInterface|ServerRequestPlusInterface|ServerRequest
+     */
     public static function createServerRequestFromEntity(
         ServerRequestEntity $serverRequestEntity,
         ?ServerRequestFactoryInterface $serverRequestFactory = null,
@@ -247,9 +321,17 @@ class Psr7
         return $serverRequest;
     }
 
-    /**
-     * @param array<string, string> $headers
-     */
+    /** @param array<string, array<string>|string> $headers */
+    public static function setHeaders(MessageInterface &$message, array $headers): void
+    {
+        if ($message instanceof MessagePlusInterface) {
+            $message->setHeaders($headers);
+        } else {
+            static::withHeaders($message, $headers);
+        }
+    }
+
+    /** @param array<string, array<string>|string> $headers */
     public static function withHeaders(MessageInterface &$message, array $headers): void
     {
         if ($message instanceof MessagePlusInterface) {
@@ -258,6 +340,15 @@ class Psr7
             foreach ($headers as $headerName => $headerValue) {
                 $message = $message->withHeader($headerName, $headerValue);
             }
+        }
+    }
+
+    public static function setBody(MessageInterface &$message, mixed $body): void
+    {
+        if ($message instanceof MessagePlusInterface) {
+            $message->setBody($body);
+        } else {
+            $message = $message->withBody($body);
         }
     }
 
