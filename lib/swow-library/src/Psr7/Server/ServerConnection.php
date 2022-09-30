@@ -27,6 +27,8 @@ use Swow\Http\Protocol\ProtocolTypeTrait;
 use Swow\Http\Protocol\ReceiverTrait;
 use Swow\Http\Status as HttpStatus;
 use Swow\Psr7\Message\Response;
+use Swow\Psr7\Message\ServerRequest;
+use Swow\Psr7\Message\ServerRequestPlusInterface;
 use Swow\Psr7\Protocol\WebSocketTrait;
 use Swow\Psr7\Psr7;
 use Swow\Socket;
@@ -108,6 +110,9 @@ class ServerConnection extends Socket implements ProtocolTypeInterface
         return $this->recvMessageEntity();
     }
 
+    /**
+     * @return ServerRequestInterface|ServerRequestPlusInterface|ServerRequest
+     */
     public function recvHttpRequest(): ServerRequestInterface
     {
         return Psr7::createServerRequestFromEntity(

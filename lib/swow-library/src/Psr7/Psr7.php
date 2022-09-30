@@ -14,6 +14,8 @@ declare(strict_types=1);
 namespace Swow\Psr7;
 
 use Psr\Http\Message\MessageInterface;
+use Psr\Http\Message\RequestFactoryInterface;
+use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestFactoryInterface;
@@ -28,11 +30,22 @@ use Swow\Buffer;
 use Swow\Http\Http;
 use Swow\Http\Message\ResponseEntity;
 use Swow\Http\Message\ServerRequestEntity;
+use Swow\Http\Status;
+use Swow\Psr7\Message\BufferStream;
 use Swow\Psr7\Message\MessagePlusInterface;
+use Swow\Psr7\Message\PhpStream;
 use Swow\Psr7\Message\Psr17Factory;
 use Swow\Psr7\Message\Psr17PlusFactoryInterface;
+use Swow\Psr7\Message\Request;
+use Swow\Psr7\Message\Response;
 use Swow\Psr7\Message\ResponsePlusInterface;
 use Swow\Psr7\Message\ServerRequest;
+use Swow\Psr7\Message\ServerRequestPlusInterface;
+use Swow\Psr7\Message\StreamPlusInterface;
+use Swow\Psr7\Message\UploadedFile;
+use Swow\Psr7\Message\UploadedFilePlusInterface;
+use Swow\Psr7\Message\Uri;
+use Swow\Psr7\Message\UriPlusInterface;
 
 use function is_resource;
 use function parse_str;
@@ -46,17 +59,26 @@ class Psr7
         return self::$psr17Factory ??= new Psr17Factory();
     }
 
+    /**
+     * @return UriInterface|UriPlusInterface|Uri
+     */
     public static function createUriFromString(string $uri, ?UriFactoryInterface $uriFactory = null): UriInterface
     {
         $uriFactory ??= static::getDefaultPsr17Factory();
         return $uriFactory->createUri($uri);
     }
 
+    /**
+     * @return StreamInterface|StreamPlusInterface|BufferStream
+     */
     public static function createStream(string $data = '', ?StreamFactoryInterface $streamFactory = null): StreamInterface
     {
         return ($streamFactory ?? static::getDefaultPsr17Factory())->createStream($data);
     }
 
+    /**
+     * @return StreamInterface|StreamPlusInterface|BufferStream
+     */
     public static function createStreamFromBuffer(Buffer $buffer, ?StreamFactoryInterface $streamFactory = null): StreamInterface
     {
         $streamFactory ??= static::getDefaultPsr17Factory();
@@ -67,6 +89,9 @@ class Psr7
         }
     }
 
+    /**
+     * @return StreamInterface|StreamPlusInterface|BufferStream|PhpStream
+     */
     public static function createStreamFromAny(mixed $data = '', ?StreamFactoryInterface $streamFactory = null): StreamInterface
     {
         if ($data instanceof StreamInterface) {
@@ -127,7 +152,7 @@ class Psr7
 
     /**
      * @param array<\Swow\Http\Message\UploadedFileEntity> $uploadedFileEntities
-     * @return array<UploadedFileInterface>
+     * @return array<UploadedFileInterface|UploadedFilePlusInterface|UploadedFile>
      */
     public static function createUploadedFilesFromEntity(array $uploadedFileEntities, ?StreamFactoryInterface $streamFactory = null, ?UploadedFileFactoryInterface $uploadedFileFactory = null): array
     {

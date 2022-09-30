@@ -17,7 +17,6 @@ use Swow\Errno;
 use Swow\Http\Message\HttpException;
 use Swow\Http\Status as HttpStatus;
 use Swow\Psr7\Client\Client;
-use Swow\Psr7\Message\ServerRequest;
 use Swow\Psr7\Message\WebSocketFrame;
 use Swow\Psr7\Server\Server;
 use Swow\Socket;
@@ -43,7 +42,6 @@ while (true) {
                 while (true) {
                     $request = null;
                     try {
-                        /** @var ServerRequest $request */
                         $request = $connection->recvHttpRequest();
                         switch ($request->getUri()->getPath()) {
                             case '/':
