@@ -201,7 +201,7 @@ trait ReceiverTrait
                 // TODO: call $parser->finished() if connection error?
                 while (true) {
                     $previousEvent = $event;
-                    $parsedLength = $parser->execute($buffer->toString(), $parsedOffset);
+                    $parsedLength = $parser->execute($buffer, $parsedOffset);
                     $parsedOffset += $parsedLength;
                     $event = $parser->getEvent();
                     if ($event & HttpParser::EVENT_FLAG_DATA) {
@@ -299,9 +299,9 @@ trait ReceiverTrait
                                             $body = new Buffer($contentLength);
                                             $unparsedLength = $buffer->getLength() - $parsedOffset;
                                             if ($contentLength < $parsedLength) {
-                                                $body->append($buffer->toString(), $parsedOffset, $contentLength);
+                                                $body->append($buffer, $parsedOffset, $contentLength);
                                             } else {
-                                                $body->append($buffer->toString(), $parsedOffset, $unparsedLength);
+                                                $body->append($buffer, $parsedOffset, $unparsedLength);
                                                 $neededLength = $contentLength - $unparsedLength;
                                                 if ($neededLength > 0) {
                                                     $this->read($body, $unparsedLength, $neededLength);
@@ -372,7 +372,7 @@ trait ReceiverTrait
                             case HttpParser::EVENT_MULTIPART_BODY:
                                 {
                                     if (isset($formDataValue)) {
-                                        $formDataValue->append($buffer->toString(), $dataOffset, $dataLength);
+                                        $formDataValue->append($buffer, $dataOffset, $dataLength);
                                     } else {
                                         if ($fileError !== UPLOAD_ERR_OK) {
                                             break;
@@ -432,7 +432,7 @@ trait ReceiverTrait
                                                 $body->extend($bodyParsedOffset + $neededLength);
                                             }
                                             $this->read($body, $bodyParsedOffset, $neededLength);
-                                            $bodyParsedOffset += $parser->execute($body->toString(), $bodyParsedOffset);
+                                            $bodyParsedOffset += $parser->execute($body, $bodyParsedOffset);
                                             if ($parser->getEvent() !== HttpParser::EVENT_BODY) {
                                                 throw new ParserException(sprintf(
                                                     'Expected EVENT_BODY for chunked message, got %s',
@@ -449,7 +449,7 @@ trait ReceiverTrait
                                         break;
                                     }
                                     $body = new Buffer($contentLength);
-                                    $body->append($buffer->toString(), $dataOffset, $dataLength);
+                                    $body->append($buffer, $dataOffset, $dataLength);
                                     $neededLength = $contentLength - $dataLength;
                                     $bodyParsedOffset = $dataLength;
                                     if ($neededLength > 0) {
@@ -461,7 +461,7 @@ trait ReceiverTrait
                                         }
                                         /* receive all body data at once here (for performance) */
                                         $this->read($body, $bodyParsedOffset, $neededLength);
-                                        $bodyParsedOffset += $parser->execute($body->toString(), $bodyParsedOffset);
+                                        $bodyParsedOffset += $parser->execute($body, $bodyParsedOffset);
                                         if ($parser->getEvent() !== HttpParser::EVENT_BODY) {
                                             throw new ParserException(sprintf('Expected EVENT_BODY, got %s', $parser->getEventName()));
                                         }
@@ -473,7 +473,7 @@ trait ReceiverTrait
                                         }
                                     }
                                     /* execute again to trigger MESSAGE_COMPLETE event */
-                                    $parsedLength = $parser->execute($body->toString(), $bodyParsedOffset);
+                                    $parsedLength = $parser->execute($body, $bodyParsedOffset);
                                     if ($parsedLength !== 0) {
                                         throw new ParserException('Expected 0 parsed length for MESSAGE_COMPLETE, got %d', $parsedLength);
                                     }
@@ -495,7 +495,7 @@ trait ReceiverTrait
                             case HttpParser::EVENT_CHUNK_COMPLETE:
                                 {
                                     if ($currentChunkLength === 0) {
-                                        $parsedOffset += $parser->execute($buffer->toString(), $parsedOffset);
+                                        $parsedOffset += $parser->execute($buffer, $parsedOffset);
                                         if ($parser->getEvent() !== HttpParser::EVENT_MESSAGE_COMPLETE) {
                                             throw new ParserException(sprintf(
                                                 'Expected MESSAGE_COMPLETE for chunked message, got %s',
@@ -568,7 +568,7 @@ trait ReceiverTrait
             }
             $header->write(
                 offset: 0,
-                string: $buffer->toString(),
+                string: $buffer,
                 start: $parsedOffset,
                 length: WebSocket::HEADER_MIN_SIZE
             );
@@ -578,7 +578,7 @@ trait ReceiverTrait
             }
             $header->write(
                 offset: WebSocket::HEADER_MIN_SIZE,
-                string: $buffer->toString(),
+                string: $buffer,
                 start: $parsedOffset + WebSocket::HEADER_MIN_SIZE,
                 length: $headerSize - WebSocket::HEADER_MIN_SIZE
             );
@@ -592,9 +592,9 @@ trait ReceiverTrait
             if ($payloadLength > 0) {
                 $payloadData = new Buffer(0);
                 if ($unparsedLength >= $payloadLength) {
-                    $payloadData->append($buffer->toString(), $parsedOffset, $payloadLength);
+                    $payloadData->append($buffer, $parsedOffset, $payloadLength);
                 } else {
-                    $payloadData->append($buffer->toString(), $parsedOffset, $unparsedLength);
+                    $payloadData->append($buffer, $parsedOffset, $unparsedLength);
                     $this->read(
                         buffer: $payloadData,
                         offset: $unparsedLength,

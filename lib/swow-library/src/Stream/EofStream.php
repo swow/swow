@@ -101,7 +101,7 @@ class EofStream extends Socket
             }
             if ($internalBuffer->isFull()) {
                 if ($eofOffset > 0) {
-                    $buffer->write($internalBuffer->toString(), 0, $eofOffset);
+                    $buffer->write($internalBuffer, 0, $eofOffset);
                     $length += $eofOffset;
                     if ($length > $maxMessageLength) {
                         throw new MessageTooLargeException($length, $maxMessageLength);
@@ -119,7 +119,7 @@ class EofStream extends Socket
             throw new MessageTooLargeException($length, $maxMessageLength);
         }
         $buffer
-            ->write($internalBuffer->toString(), 0, $pos)
+            ->write($internalBuffer, 0, $pos)
             ->seek($bufferPreviousOffset);
         /* next packet data maybe received */
         $internalBuffer->truncateFrom($pos + strlen($eof));
@@ -152,7 +152,7 @@ class EofStream extends Socket
                 $nread = $this->recvData($buffer, -1, $timeout);
                 $buffer->seek($nread, SEEK_CUR);
             } else {
-                $buffer->write($internalBuffer->toString());
+                $buffer->write($internalBuffer);
                 $internalBuffer->clear();
             }
             $pos = strpos($buffer->toString(), $eof, $eofOffset);

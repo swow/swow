@@ -1085,7 +1085,7 @@ namespace Swow
          * @psalm-param int<-1, max> $length
          * @param int $length meaning write all available data from string to buffer, otherwise max length in byte to write
          */
-        public function write(int $offset, string $string, int $start = 0, int $length = -1): int { }
+        public function write(int $offset, \Stringable|string $string, int $start = 0, int $length = -1): int { }
 
         /**
          * append `$string` to the end of buffer
@@ -1101,7 +1101,7 @@ namespace Swow
          * @psalm-param int<-1, max> $length
          * @param int $length -1 meaning write all available data from string to buffer, otherwise max length in byte to write
          */
-        public function append(string $string, int $start = 0, int $length = -1): int { }
+        public function append(\Stringable|string $string, int $start = 0, int $length = -1): int { }
 
         public function truncate(int $length): int { }
 
@@ -1572,7 +1572,7 @@ namespace Swow
          * @param int $length length of data to be sent, -1 meaning remaining data in buffer, otherwise length in bytes.
          * @param int|null $timeout timeout in microseconds or null for using {@see Socket::getWriteTimeout()} value
          */
-        public function send(\Swow\Buffer|string $data, int $start = 0, int $length = -1, ?int $timeout = null): static { }
+        public function send(\Stringable|string $data, int $start = 0, int $length = -1, ?int $timeout = null): static { }
 
         /**
          * write buffer to specified address (and port if protocol needs port) from buffer current position with `$length` bytes
@@ -1588,7 +1588,7 @@ namespace Swow
          * @psalm-param int<0, 65535>|null $port
          * @param int|null $port port to send to
          */
-        public function sendTo(\Swow\Buffer|string $data, int $start = 0, int $length = -1, ?string $address = null, ?int $port = null, ?int $timeout = null): static { }
+        public function sendTo(\Stringable|string $data, int $start = 0, int $length = -1, ?string $address = null, ?int $port = null, ?int $timeout = null): static { }
 
         /** @var int $timeout [optional] = $this->getWriteTimeout() */
         public function sendHandle(self $handle, ?int $timeout = null): static { }
@@ -2030,11 +2030,11 @@ namespace Swow\Http
 {
     class Http
     {
-        public static function packMessage(array $headers = [], string $body = ''): string { }
+        public static function packMessage(array $headers = [], \Stringable|string $body = ''): string { }
 
-        public static function packRequest(string $method = '', string $url = '', array $headers = [], string $body = '', string $protocolVersion = ''): string { }
+        public static function packRequest(string $method = '', \Stringable|string $url = '', array $headers = [], \Stringable|string $body = '', string $protocolVersion = ''): string { }
 
-        public static function packResponse(int $statusCode = 0, array $headers = [], string $body = '', string $reasonPhrase = '', string $protocolVersion = ''): string { }
+        public static function packResponse(int $statusCode = 0, array $headers = [], \Stringable|string $body = '', string $reasonPhrase = '', string $protocolVersion = ''): string { }
     }
 }
 
@@ -2150,7 +2150,7 @@ namespace Swow\Http
         public function setEvents(int $events): static { }
 
         /** @return int the length of the data which was parsed, same with $this->getParsedLength() */
-        public function execute(string $data, int $start = 0, int $length = -1): int { }
+        public function execute(\Stringable|string $data, int $start = 0, int $length = -1): int { }
 
         public function getEvent(): int { }
 
@@ -2224,7 +2224,7 @@ namespace Swow\WebSocket
         public const PING_FRAME = "\x89\x00";
         public const PONG_FRAME = "\x8a\x80\x00\x00\x00\x00";
 
-        public static function mask(string $data, int $start = 0, int $length = -1, string $maskKey = '', int $index = 0): string { }
+        public static function mask(\Stringable|string $data, int $start = 0, int $length = -1, string $maskKey = '', int $index = 0): string { }
 
         public static function unmask(\Swow\Buffer $data, int $start = 0, int $length = -1, string $maskKey = '', int $index = 0): void { }
     }

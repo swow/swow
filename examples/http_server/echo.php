@@ -48,7 +48,7 @@ while (true) {
                     break;
                 }
                 while (true) {
-                    $parsedOffset += $parser->execute($buffer->toString(), $parsedOffset);
+                    $parsedOffset += $parser->execute($buffer, $parsedOffset);
                     if ($parser->getEvent() === $parser::EVENT_NONE) {
                         $buffer->truncateFrom($parsedOffset);
                         $parsedOffset = 0;
@@ -56,7 +56,7 @@ while (true) {
                     }
                     if ($parser->getEvent() === Parser::EVENT_BODY) {
                         $body ??= new Buffer(Buffer::COMMON_SIZE);
-                        $body->write(0, $buffer->toString(), $parser->getDataOffset(), $parser->getDataLength());
+                        $body->write(0, $buffer, $parser->getDataOffset(), $parser->getDataLength());
                     }
                     if ($parser->isCompleted()) {
                         $response = sprintf(
@@ -66,7 +66,7 @@ while (true) {
                             '%s',
                             $parser->shouldKeepAlive() ? 'Keep-Alive' : 'Closed',
                             $body ? $body->getLength() : 0,
-                            $body ? $body->toString() : ''
+                            $body ?: ''
                         );
                         $connection->send($response);
                         $body?->clear();

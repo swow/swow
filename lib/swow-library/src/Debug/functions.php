@@ -25,6 +25,7 @@ use function fgets;
 use function fopen;
 use function fwrite;
 use function is_scalar;
+use function is_string;
 use function ob_get_clean;
 use function ob_start;
 use function rtrim;
@@ -38,6 +39,11 @@ use const STDERR;
 function isStringable(mixed $value): bool
 {
     return $value === null || is_scalar($value) || $value instanceof Stringable;
+}
+
+function isStrictStringable(mixed $value): bool
+{
+    return is_string($value) || $value instanceof Stringable;
 }
 
 function var_dump_return(mixed ...$expressions): string

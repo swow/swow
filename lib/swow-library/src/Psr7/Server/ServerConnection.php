@@ -16,6 +16,7 @@ namespace Swow\Psr7\Server;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
+use Stringable;
 use Swow\Errno;
 use Swow\Http\Http;
 use Swow\Http\Message\HttpException;
@@ -41,6 +42,8 @@ use function is_string;
 use function sha1;
 use function sprintf;
 use function strlen;
+use function Swow\Debug\isStrictStringable;
+use function Swow\Debug\isStringable;
 
 class ServerConnection extends Socket implements ProtocolTypeInterface
 {
@@ -137,7 +140,7 @@ class ServerConnection extends Socket implements ProtocolTypeInterface
     }
 
     /**
-     * @param int|string|array<string, string>|array<string, array<string>> $args
+     * @param int|string|Stringable|array<string, string>|array<string, array<string>> $args
      */
     public function respond(mixed ...$args): void
     {
@@ -148,8 +151,8 @@ class ServerConnection extends Socket implements ProtocolTypeInterface
                     $headers = [];
                     $body = '';
                     foreach ($args as $arg) {
-                        if (is_string($arg)) {
-                            $body = $arg;
+                        if (isStrictStringable($arg)) {
+                            $body = (string) $arg;
                         } elseif (is_int($arg)) {
                             $statusCode = $arg;
                         } elseif (is_array($arg)) {

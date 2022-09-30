@@ -133,6 +133,26 @@ SWOW_API zend_op_array *swow_compile_string_ex(zend_string *source_string, const
     } ZEND_HASH_FOREACH_END(); \
 } while (0)
 
+/* string */
+
+#define SWOW_PARAM_STRINGABLE(dest_string)  \
+    Z_PARAM_PROLOGUE(0, 0); \
+    if (UNEXPECTED(!swow_parse_arg_stringable(_arg, &dest_string, _i))) { \
+        _expected_type = Z_EXPECTED_STRING; \
+        _error_code = ZPP_ERROR_WRONG_ARG; \
+        break; \
+    }
+
+static zend_always_inline bool swow_parse_arg_stringable(zval *arg, zend_string **dest_string, uint32_t arg_num)
+{
+    if (EXPECTED(Z_TYPE_P(arg) == IS_STRING)) {
+        *dest_string = Z_STR_P(arg);
+        return true;
+    }
+    /* use weak to handle stringable object even if we are in strict mode */
+    return zend_parse_arg_str_weak(arg, dest_string, arg_num);
+}
+
 /* array */
 
 #if PHP_VERSION_ID < 80200

@@ -482,7 +482,7 @@ static const zend_function_entry swow_websocket_header_methods[] = {
 };
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_WebSocket_WebSocket_mask, 0, 1, IS_STRING, 0)
-    ZEND_ARG_TYPE_INFO(0, data, IS_STRING, 0)
+    ZEND_ARG_OBJ_TYPE_MASK(0, data, Stringable, MAY_BE_STRING, NULL)
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, start, IS_LONG, 0, "0")
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, length, IS_LONG, 0, "-1")
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, maskKey, IS_STRING, 0, "\'\'")
@@ -498,7 +498,7 @@ static PHP_METHOD(Swow_WebSocket_WebSocket, mask)
     const char *ptr;
 
     ZEND_PARSE_PARAMETERS_START(1, 5)
-        Z_PARAM_STR(data)
+        SWOW_PARAM_STRINGABLE_EXPECT_BUFFER_FOR_READING(data)
         Z_PARAM_OPTIONAL
         Z_PARAM_LONG(start)
         Z_PARAM_LONG(length)

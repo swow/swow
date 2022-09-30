@@ -29,7 +29,7 @@ trait WebSocketTrait
     {
         $frameEntity = $this->recvWebSocketFrameEntity();
         $frame = new WebSocketFrame();
-        $frame->write(0, $frameEntity->toString());
+        $frame->write(0, $frameEntity);
         if ($frameEntity->payloadData) {
             $frame->setPayloadData($frameEntity->payloadData);
         }

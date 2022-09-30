@@ -143,7 +143,7 @@ static PHP_METHOD(Swow_Http_Parser, setEvents)
 }
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Http_Parser_execute, 0, 1, IS_LONG, 0)
-    ZEND_ARG_TYPE_INFO(0, data, IS_STRING, 0)
+    ZEND_ARG_OBJ_TYPE_MASK(0, data, Stringable, MAY_BE_STRING, NULL)
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, start, IS_LONG, 0, "0")
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, length, IS_LONG, 0, "-1")
 ZEND_END_ARG_INFO()
@@ -158,7 +158,7 @@ static PHP_METHOD(Swow_Http_Parser, execute)
     ssize_t ret;
 
     ZEND_PARSE_PARAMETERS_START(1, 3)
-        Z_PARAM_STR(string)
+        SWOW_PARAM_STRINGABLE_EXPECT_BUFFER_FOR_READING(string)
         Z_PARAM_OPTIONAL
         Z_PARAM_LONG(start)
         Z_PARAM_LONG(length)
@@ -578,7 +578,7 @@ static zend_always_inline char *swow_http_pack_message(char *p, HashTable *heade
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Http_Http_packMessage, 0, 0, IS_STRING, 0)
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, headers, IS_ARRAY, 0, "[]")
-    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, body, IS_STRING, 0, "\'\'")
+    ZEND_ARG_OBJ_TYPE_MASK(0, body, Stringable, MAY_BE_STRING, "\'\'")
 ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Http_Http, packMessage)
@@ -595,7 +595,7 @@ static PHP_METHOD(Swow_Http_Http, packMessage)
     ZEND_PARSE_PARAMETERS_START(0, 2)
         Z_PARAM_OPTIONAL
         Z_PARAM_ARRAY(zheaders)
-        Z_PARAM_STR(body)
+        SWOW_PARAM_STRINGABLE_EXPECT_BUFFER_FOR_READING(body)
     ZEND_PARSE_PARAMETERS_END();
 
     if (zheaders != NULL) {
@@ -615,9 +615,9 @@ static PHP_METHOD(Swow_Http_Http, packMessage)
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Http_Http_packRequest, 0, 0, IS_STRING, 0)
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, method, IS_STRING, 0, "\'\'")
-    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, url, IS_STRING, 0, "\'\'")
+    ZEND_ARG_OBJ_TYPE_MASK(0, url, Stringable, MAY_BE_STRING, "\'\'")
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, headers, IS_ARRAY, 0, "[]")
-    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, body, IS_STRING, 0, "\'\'")
+    ZEND_ARG_OBJ_TYPE_MASK(0, body, Stringable, MAY_BE_STRING, "\'\'")
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, protocolVersion, IS_STRING, 0, "\'\'")
 ZEND_END_ARG_INFO()
 
@@ -638,9 +638,9 @@ static PHP_METHOD(Swow_Http_Http, packRequest)
     ZEND_PARSE_PARAMETERS_START(0, 5)
         Z_PARAM_OPTIONAL
         Z_PARAM_STR(method)
-        Z_PARAM_STR(url)
+        SWOW_PARAM_STRINGABLE_EXPECT_BUFFER_FOR_READING(url)
         Z_PARAM_ARRAY_HT(headers)
-        Z_PARAM_STR(body)
+        SWOW_PARAM_STRINGABLE_EXPECT_BUFFER_FOR_READING(body)
         Z_PARAM_STRING(protocol_version, protocol_version_length)
     ZEND_PARSE_PARAMETERS_END();
 
@@ -668,7 +668,7 @@ static PHP_METHOD(Swow_Http_Http, packRequest)
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Http_Http_packResponse, 0, 0, IS_STRING, 0)
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, statusCode, IS_LONG, 0, "0")
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, headers, IS_ARRAY, 0, "[]")
-    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, body, IS_STRING, 0, "\'\'")
+    ZEND_ARG_OBJ_TYPE_MASK(0, body, Stringable, MAY_BE_STRING, "\'\'")
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, reasonPhrase, IS_STRING, 0, "\'\'")
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, protocolVersion, IS_STRING, 0, "\'\'")
 ZEND_END_ARG_INFO()
@@ -695,7 +695,7 @@ static PHP_METHOD(Swow_Http_Http, packResponse)
         Z_PARAM_OPTIONAL
         Z_PARAM_LONG(status_code)
         Z_PARAM_ARRAY_HT(headers)
-        Z_PARAM_STR(body)
+        SWOW_PARAM_STRINGABLE_EXPECT_BUFFER_FOR_READING(body)
         Z_PARAM_STRING(reason_phrase, reason_phrase_length)
         Z_PARAM_STRING(protocol_version, protocol_version_length)
     ZEND_PARSE_PARAMETERS_END();

@@ -23,16 +23,6 @@ SWOW_API zend_object_handlers swow_buffer_handlers;
 
 SWOW_API zend_class_entry *swow_buffer_exception_ce;
 
-static zend_always_inline zend_string *swow_buffer_get_string_from_value(char *value)
-{
-    return (zend_string *) (value - offsetof(zend_string, val));
-}
-
-static zend_always_inline zend_string *swow_buffer_get_string_from_handle(cat_buffer_t *buffer) SWOW_UNSAFE
-{
-    return swow_buffer_get_string_from_value(buffer->value);
-}
-
 #define VECTOR_POSITION_FMT "[%u][%u] "
 #define VECTOR_POSTION_C    vector_index, arg_num - 1
 #define ZEND_LONG_ARG_FMT   "($%s = " ZEND_LONG_FMT ") "
@@ -187,15 +177,6 @@ static zend_always_inline bool swow_buffer__check_writable_space(size_t buffer_s
     return true;
 }
 
-SWOW_API zend_string *swow_buffer_get_string(swow_buffer_t *sbuffer)
-{
-    cat_buffer_t *buffer = &sbuffer->buffer;
-    if (UNEXPECTED(buffer->value == NULL)) {
-        return NULL;
-    }
-    return swow_buffer_get_string_from_handle(buffer);
-}
-
 SWOW_API const char *swow_string_get_readable_space_v(zend_string *string, zend_long start, zend_long *length, uint32_t vector_arg_num, uint32_t vector_index, uint32_t base_arg_num)
 {
     if (!swow_buffer__check_readable_space("string", ZSTR_LEN(string), start, length, vector_arg_num, vector_index, base_arg_num + 1)) {
@@ -206,9 +187,10 @@ SWOW_API const char *swow_string_get_readable_space_v(zend_string *string, zend_
 
 SWOW_API const char *swow_buffer_get_readable_space_v(swow_buffer_t *s_buffer, zend_long start, zend_long *length, uint32_t vector_arg_num, uint32_t vector_index, uint32_t base_arg_num)
 {
+    // Note: This seems reasonable for get readable space on unallocated buffer and got a empty string
     if (UNEXPECTED(s_buffer->buffer.value == NULL)) {
-        swow_buffer_unallocated_argument_error(vector_arg_num, vector_index, base_arg_num);
-        return NULL;
+        *length = 0;
+        return "";
     }
     if (!swow_buffer__check_readable_space("buffer", s_buffer->buffer.length, start, length, vector_arg_num, vector_index, base_arg_num + 1)) {
         return NULL;
@@ -544,7 +526,7 @@ static PHP_METHOD_EX(Swow_Buffer, _write, const zend_bool append)
         if (!append) {
             Z_PARAM_LONG(offset)
         }
-        Z_PARAM_STR(string)
+        SWOW_PARAM_STRINGABLE_EXPECT_BUFFER_FOR_READING(string)
         Z_PARAM_OPTIONAL
         /* where to start copying strings */
         Z_PARAM_LONG(start)
@@ -591,7 +573,7 @@ static PHP_METHOD_EX(Swow_Buffer, _write, const zend_bool append)
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Buffer_write, 0, 2, IS_LONG, 0)
     ZEND_ARG_TYPE_INFO(0, offset, IS_LONG, 0)
-    ZEND_ARG_TYPE_INFO(0, string, IS_STRING, 0)
+    ZEND_ARG_OBJ_TYPE_MASK(0, string, Stringable, MAY_BE_STRING, NULL)
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, start, IS_LONG, 0, "0")
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, length, IS_LONG, 0, "-1")
 ZEND_END_ARG_INFO()
@@ -602,7 +584,7 @@ static PHP_METHOD(Swow_Buffer, write)
 }
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Buffer_append, 0, 1, IS_LONG, 0)
-    ZEND_ARG_TYPE_INFO(0, string, IS_STRING, 0)
+    ZEND_ARG_OBJ_TYPE_MASK(0, string, Stringable, MAY_BE_STRING, NULL)
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, start, IS_LONG, 0, "0")
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, length, IS_LONG, 0, "-1")
 ZEND_END_ARG_INFO()

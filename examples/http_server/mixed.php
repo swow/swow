@@ -53,10 +53,10 @@ while (true) {
                                 $connection->respond('Hello Swow');
                                 break;
                             case '/echo':
-                                $connection->respond((string) $request->getBody());
+                                $connection->respond($request->getBody());
                                 break;
                             case '/echo_all':
-                                $connection->respond($request->toString());
+                                $connection->respond($request);
                                 break;
                             case '/httpbin':
                                 /* proxy request to httpbin */
