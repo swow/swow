@@ -905,6 +905,18 @@ static zend_object *swow_buffer_clone_object(zend_object *object)
     return &new_sbuffer->std;
 }
 
+static zend_result swow_buffer_cast_object(zend_object *object, zval *result, int type)
+{
+    /* __toString() function maybe rewritten on PHP layer */
+    if (EXPECTED(type == IS_STRING && object->ce->__tostring == swow_buffer_ce->__tostring)) {
+        swow_buffer_t *s_buffer = swow_buffer_get_from_object(object);
+        ZVAL_STR_COPY(result, swow_buffer_get_string_for_reading(s_buffer));
+        return SUCCESS;
+    }
+
+    return zend_std_cast_object_tostring(object, result, type);
+}
+
 static char *swow_buffer_alloc_standard(size_t size)
 {
     zend_string *string = zend_string_alloc(size, 0);
@@ -991,6 +1003,7 @@ zend_result swow_buffer_module_init(INIT_FUNC_ARGS)
         XtOffsetOf(swow_buffer_t, std)
     );
     swow_buffer_handlers.clone_obj = swow_buffer_clone_object;
+    swow_buffer_handlers.cast_object = swow_buffer_cast_object;
 
     zend_declare_class_constant_long(swow_buffer_ce, ZEND_STRL("PAGE_SIZE"), cat_getpagesize());
     zend_declare_class_constant_long(swow_buffer_ce, ZEND_STRL("COMMON_SIZE"), CAT_BUFFER_COMMON_SIZE);
