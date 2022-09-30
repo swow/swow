@@ -29,7 +29,7 @@ return (new Config())
                 __DIR__ . '/.phan',
                 __DIR__ . '/benchmark',
                 __DIR__ . '/examples',
-                __DIR__ . '/ext/',
+                __DIR__ . '/ext',
                 __DIR__ . '/lib',
                 __DIR__ . '/tools',
             ])
@@ -37,6 +37,13 @@ return (new Config())
                 'Swow.php',
                 'run-tests*.php',
             ])
+            ->filter(static function (Symfony\Component\Finder\SplFileInfo $fileInfo): bool {
+                $pathname = $fileInfo->getPathname();
+                if (preg_match('/ext\/tests\/.+\.php$/', $pathname)) {
+                    return false;
+                }
+                return true;
+            })
             ->append([
                 __FILE__,
             ])
