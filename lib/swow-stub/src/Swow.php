@@ -671,9 +671,7 @@ namespace Swow
          */
         public static function yield(mixed $data = null): mixed { }
 
-        /**
-         * Get unique coroutine id
-         */
+        /** Get unique coroutine id */
         public function getId(): int { }
 
         /** Get current coroutine */
@@ -682,15 +680,13 @@ namespace Swow
         /** Get main (the most outter) coroutine */
         public static function getMain(): self|static { }
 
-        /**
-         * Get previous coroutine
-         */
+        /** Get previous coroutine */
         public function getPrevious(): self|static { }
 
         /**
          * Get coroutine state
          *
-         * @return int the enum number: static::STATE_*
+         * @return int the enum number: static::STATE_* constnts
          */
         public function getState(): int { }
 
