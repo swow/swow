@@ -64,7 +64,7 @@ class Psr17Factory implements Psr17PlusFactoryInterface
         return new PhpStream($resource);
     }
 
-    public function createRequest(string $method, $uri): Request
+    public function createRequest(string $method, mixed $uri): Request
     {
         return (new Request())->setMethod($method)->setUri($uri);
     }
@@ -79,7 +79,7 @@ class Psr17Factory implements Psr17PlusFactoryInterface
     /**
      * @param array<string, string> $serverParams
      */
-    public function createServerRequest(string $method, mixed $uri, array $serverParams = []): ServerRequestInterface
+    public function createServerRequest(string $method, mixed $uri, array $serverParams = []): ServerRequest
     {
         return (new ServerRequest())->setMethod($method)->setUri($uri)->setServerParams($serverParams);
     }

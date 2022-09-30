@@ -68,7 +68,7 @@ class UploadedFile implements UploadedFilePlusInterface, ArrayableInterface
     protected bool $moved = false;
 
     /**
-     * @param string|resource|StreamPlusInterface $streamOrFile
+     * @param string|resource|StreamInterface $streamOrFile
      */
     public function __construct(mixed $streamOrFile, ?int $size = null, int $error = UPLOAD_ERR_OK, ?string $clientFilename = null, ?string $clientMediaType = null)
     {
