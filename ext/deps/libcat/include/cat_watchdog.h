@@ -58,7 +58,7 @@ struct cat_watchdog_s
     /* public (options, readonly) */
     /* alert if blocking time is greater than quantum (nano secondes) */
     cat_timeout_t quantum;
-    /* do something if blocking time is greate than threshold (nano secondes) */
+    /* do something if blocking time is greater than threshold (nano secondes) */
     cat_timeout_t threshold;
     cat_watchdog_alerter_t alerter;
     /* private */

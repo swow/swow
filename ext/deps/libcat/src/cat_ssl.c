@@ -726,14 +726,14 @@ CAT_API cat_bool_t cat_ssl_set_sni_server_name(cat_ssl_t *ssl, const char *name)
 
 CAT_API cat_bool_t cat_ssl_is_established(const cat_ssl_t *ssl)
 {
-    return ssl->flags & CAT_SSL_FLAG_HANDSHAKED;
+    return ssl->flags & CAT_SSL_FLAG_HANDSHAKE_OK;
 }
 
 CAT_API cat_ssl_ret_t cat_ssl_handshake(cat_ssl_t *ssl)
 {
     cat_ssl_connection_t *connection = ssl->connection;
 
-    if (ssl->flags & CAT_SSL_FLAG_HANDSHAKED) {
+    if (ssl->flags & CAT_SSL_FLAG_HANDSHAKE_OK) {
         return CAT_SSL_RET_OK;
     }
 
@@ -743,7 +743,7 @@ CAT_API cat_ssl_ret_t cat_ssl_handshake(cat_ssl_t *ssl)
 
     CAT_LOG_DEBUG(SSL, "SSL_do_handshake(%p): %d", ssl, n);
     if (n == 1) {
-        ssl->flags |= CAT_SSL_FLAG_HANDSHAKED;
+        ssl->flags |= CAT_SSL_FLAG_HANDSHAKE_OK;
         cat_ssl_handshake_log(ssl);
 #ifndef SSL_OP_NO_RENEGOTIATION
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
@@ -1067,22 +1067,22 @@ static cat_bool_t cat_ssl_encrypt_buffered(cat_ssl_t *ssl, const char *in, size_
 
 CAT_API cat_bool_t cat_ssl_encrypt(
     cat_ssl_t *ssl,
-    const cat_io_vector_t *vin, unsigned int vin_count,
-    cat_io_vector_t *vout, unsigned int *vout_count
+    const cat_io_vector_t *vector_in, unsigned int vector_in_count,
+    cat_io_vector_t *vector_out, unsigned int *vector_out_count
 )
 {
-    const cat_io_vector_t *v = vin, *ve = v + vin_count;
-    size_t vin_length = cat_io_vector_length(vin, vin_count);
-    unsigned int vout_counted = 0, vout_size = *vout_count;
+    const cat_io_vector_t *v = vector_in, *ve = v + vector_in_count;
+    size_t vector_in_length = cat_io_vector_length(vector_in, vector_in_count);
+    unsigned int vector_out_counted = 0, vector_out_size = *vector_out_count;
     char *buffer;
     size_t length = 0;
     size_t size;
 
-    CAT_ASSERT(vout_size > 0);
+    CAT_ASSERT(vector_out_size > 0);
 
-    *vout_count = 0;
+    *vector_out_count = 0;
 
-    size = cat_ssl_encrypted_size(vin_length);
+    size = cat_ssl_encrypted_size(vector_in_length);
     if (unlikely(size >  ssl->write_buffer.size)) {
         buffer = (char *) cat_malloc(size);
 #if CAT_ALLOC_HANDLE_ERRORS
@@ -1105,13 +1105,13 @@ CAT_API cat_bool_t cat_ssl_encrypt(
         length += out_length;
         if (unlikely(!ret)) {
             /* save current */
-            vout->base = buffer;
-            vout->length = (cat_io_vector_length_t) length;
-            vout_counted++;
+            vector_out->base = buffer;
+            vector_out->length = (cat_io_vector_length_t) length;
+            vector_out_counted++;
             if (cat_get_last_error_code() == CAT_ENOBUFS) {
                 CAT_ASSERT(length == size);
                 CAT_LOG_DEBUG(SSL, "SSL encrypt buffer extend");
-                if (vout_counted == vout_size) {
+                if (vector_out_counted == vector_out_size) {
                     cat_update_last_error(CAT_ENOBUFS, "Unexpected vector count (too many)");
                     goto _unrecoverable_error;
                 }
@@ -1123,7 +1123,7 @@ CAT_API cat_bool_t cat_ssl_encrypt(
                 }
 #endif
                 /* switch to the next */
-                vout++;
+                vector_out++;
                 continue;
             }
             goto _error;
@@ -1133,16 +1133,16 @@ CAT_API cat_bool_t cat_ssl_encrypt(
         }
     }
 
-    vout->base = buffer;
-    vout->length = (cat_io_vector_length_t) length;
-    *vout_count = vout_counted + 1;
+    vector_out->base = buffer;
+    vector_out->length = (cat_io_vector_length_t) length;
+    *vector_out_count = vector_out_counted + 1;
 
     return cat_true;
 
     _unrecoverable_error:
     cat_ssl_unrecoverable_error(ssl);
     _error:
-    cat_ssl_encrypted_vector_free(ssl, vout, vout_counted);
+    cat_ssl_encrypted_vector_free(ssl, vector_out, vector_out_counted);
     return cat_false;
 }
 
@@ -1436,7 +1436,7 @@ static void cat_ssl_info_callback(const cat_ssl_connection_t *connection, int wh
 #ifndef SSL_OP_NO_RENEGOTIATION
     if ((where & SSL_CB_HANDSHAKE_START) && SSL_is_server((SSL *) connection)) {
         cat_ssl_t *ssl = cat_ssl_get_from_connection(connection);
-        if (ssl->flags & CAT_SSL_FLAG_HANDSHAKED) {
+        if (ssl->flags & CAT_SSL_FLAG_HANDSHAKE_OK) {
             ssl->flags |= CAT_SSL_FLAG_RENEGOTIATION;
             CAT_LOG_DEBUG(SSL, "SSL#(%p) renegotiation", ssl);
         }

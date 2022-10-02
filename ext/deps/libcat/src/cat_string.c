@@ -193,7 +193,7 @@ CAT_API cat_bool_t cat_str_quote_ex2(
     use_hex = 0;
     if (style & CAT_STR_QUOTE_STYLE_FLAG_PRINT_ALL_STRINGS_IN_HEX) {
         use_hex = 1;
-    } else if (style & CAT_STR_QUOTE_STYLE_FLAG_PRINT_NON_ASCILL_STRINGS_IN_HEX) {
+    } else if (style & CAT_STR_QUOTE_STYLE_FLAG_PRINT_NON_ASCII_STRINGS_IN_HEX) {
         /* Check for presence of symbol which require
            to hex-quote the whole string. */
         for (i = 0; i < length; ++i) {

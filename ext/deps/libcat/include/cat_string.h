@@ -129,7 +129,7 @@ typedef enum cat_string_quote_style_flag_e {
     /** Print ellipsis if the last character is not '\0' */
     CAT_STR_QUOTE_STYLE_FLAG_EXPECT_TRAILING_0 = 1 << 3,
     /* Print non-ascii strings in hex */
-    CAT_STR_QUOTE_STYLE_FLAG_PRINT_NON_ASCILL_STRINGS_IN_HEX = 1 << 4,
+    CAT_STR_QUOTE_STYLE_FLAG_PRINT_NON_ASCII_STRINGS_IN_HEX = 1 << 4,
     /* Print all strings in hex (using '\xHH' notation) */
     CAT_STR_QUOTE_STYLE_FLAG_PRINT_ALL_STRINGS_IN_HEX = 1 << 5,
     /** Enclose the string in C comment syntax. */

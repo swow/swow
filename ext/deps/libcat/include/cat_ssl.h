@@ -99,7 +99,7 @@ typedef enum cat_ssl_flag_e {
     CAT_SSL_FLAG_ALLOC                 = 1 << 0,
     CAT_SSL_FLAG_ACCEPT_STATE          = 1 << 1,
     CAT_SSL_FLAG_CONNECT_STATE         = 1 << 2,
-    CAT_SSL_FLAG_HANDSHAKED            = 1 << 3,
+    CAT_SSL_FLAG_HANDSHAKE_OK          = 1 << 3,
     CAT_SSL_FLAG_RENEGOTIATION         = 1 << 4,
     CAT_SSL_FLAG_HANDSHAKE_BUFFER_SET  = 1 << 5,
     CAT_SSL_FLAG_UNRECOVERABLE_ERROR   = 1 << 31,
@@ -218,7 +218,11 @@ CAT_API int cat_ssl_read_encrypted_bytes(cat_ssl_t *ssl, char *buffer, size_t si
 CAT_API int cat_ssl_write_encrypted_bytes(cat_ssl_t *ssl, const char *buffer, size_t length);
 
 CAT_API size_t cat_ssl_encrypted_size(size_t length);
-CAT_API cat_bool_t cat_ssl_encrypt(cat_ssl_t *ssl, const cat_io_vector_t *vin, unsigned int vin_count, cat_io_vector_t *vout, unsigned int *vout_count);
+CAT_API cat_bool_t cat_ssl_encrypt(
+    cat_ssl_t *ssl,
+    const cat_io_vector_t *vector_in, unsigned int vector_in_count,
+    cat_io_vector_t *vector_out, unsigned int *vector_out_count
+);
 CAT_API void cat_ssl_encrypted_vector_free(cat_ssl_t *ssl, cat_io_vector_t *vector, unsigned int vector_count);
 CAT_API cat_bool_t cat_ssl_decrypt(cat_ssl_t *ssl, char *out, size_t *out_length, cat_bool_t *eof);
 

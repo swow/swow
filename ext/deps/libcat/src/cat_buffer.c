@@ -321,20 +321,20 @@ CAT_API size_t cat_buffer_get_length(const cat_buffer_t *buffer)
     return buffer->length;
 }
 
-CAT_API cat_bool_t cat_buffer_make_pair(cat_buffer_t *rbuffer, size_t rsize, cat_buffer_t *wbuffer, size_t wsize)
+CAT_API cat_bool_t cat_buffer_make_pair(cat_buffer_t *read_buffer, size_t rsize, cat_buffer_t *write_buffer, size_t wsize)
 {
     cat_bool_t ret;
 
-    ret = cat_buffer_create(rbuffer, rsize);
+    ret = cat_buffer_create(read_buffer, rsize);
 
     if (unlikely(!ret)) {
         return cat_false;
     }
 
-    ret = cat_buffer_create(wbuffer, wsize);
+    ret = cat_buffer_create(write_buffer, wsize);
 
     if (unlikely(!ret)) {
-        cat_buffer_close(rbuffer);
+        cat_buffer_close(read_buffer);
         return cat_false;
     }
 
