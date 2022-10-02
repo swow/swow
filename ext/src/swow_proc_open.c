@@ -76,20 +76,20 @@ static int swow_proc_open_rsrc_close(php_process_handle *proc)
 /* {{{ Close a process opened by `proc_open` */
 PHP_FUNCTION(swow_proc_close)
 {
-    zval *zproc;
+    zval *z_proc;
     php_process_handle *proc;
 
     ZEND_PARSE_PARAMETERS_START(1, 1)
-        Z_PARAM_RESOURCE(zproc)
+        Z_PARAM_RESOURCE(z_proc)
     ZEND_PARSE_PARAMETERS_END();
 
-    proc = (php_process_handle *) zend_fetch_resource(Z_RES_P(zproc), "process", le_proc_open);
+    proc = (php_process_handle *) zend_fetch_resource(Z_RES_P(z_proc), "process", le_proc_open);
     if (proc == NULL) {
         RETURN_THROWS();
     }
 
     int status = swow_proc_open_rsrc_close(proc);
-    zend_list_close(Z_RES_P(zproc));
+    zend_list_close(Z_RES_P(z_proc));
     RETURN_LONG(status);
 }
 /* }}} */

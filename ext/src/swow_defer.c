@@ -28,14 +28,14 @@ SWOW_API zend_object_handlers swow_defer_handlers;
 
 SWOW_DEFER_KNOWN_STRING_MAP(SWOW_KNOWN_STRING_STORAGE_GEN)
 
-SWOW_API cat_bool_t swow_defer(zval *zcallable)
+SWOW_API cat_bool_t swow_defer(zval *z_callable)
 {
     swow_defer_task_t *task = (swow_defer_task_t *) emalloc(sizeof(*task));
 
     /* check callable and fetch the fcc */
     do {
         char *error;
-        if (!zend_is_callable_ex(zcallable, NULL, 0, NULL, &task->fcc, &error)) {
+        if (!zend_is_callable_ex(z_callable, NULL, 0, NULL, &task->fcc, &error)) {
             cat_update_last_error(CAT_EMISUSE, "Defer task must be callable, %s", error);
             efree(error);
             efree(task);
@@ -44,36 +44,36 @@ SWOW_API cat_bool_t swow_defer(zval *zcallable)
         efree(error);
     } while (0);
     /* copy callable (addref) */
-    ZVAL_COPY(&task->zcallable, zcallable);
+    ZVAL_COPY(&task->z_callable, z_callable);
 
     /* get or new defer object on symbol table, and push the task to it */
     do {
         zend_array *symbol_table = zend_rebuild_symbol_table();
-        swow_defer_t *sdefer;
-        zval *zdefer;
+        swow_defer_t *s_defer;
+        zval *z_defer;
 
         ZEND_ASSERT(symbol_table && "A symbol table should always be available here");
 
-        zdefer = zend_hash_find(symbol_table, SWOW_KNOWN_STRING(defer_magic_name));
-        if (zdefer == NULL) {
+        z_defer = zend_hash_find(symbol_table, SWOW_KNOWN_STRING(defer_magic_name));
+        if (z_defer == NULL) {
             zend_object *defer = swow_object_create(swow_defer_ce);
-            zval zdefer;
-            ZVAL_OBJ(&zdefer, defer);
-            zend_set_local_var(SWOW_KNOWN_STRING(defer_magic_name), &zdefer, true);
-            sdefer = swow_defer_get_from_object(defer);
+            zval z_defer;
+            ZVAL_OBJ(&z_defer, defer);
+            zend_set_local_var(SWOW_KNOWN_STRING(defer_magic_name), &z_defer, true);
+            s_defer = swow_defer_get_from_object(defer);
         } else {
-            ZEND_ASSERT(Z_TYPE_P(zdefer) == IS_OBJECT && instanceof_function(Z_OBJCE_P(zdefer), swow_defer_ce));
-            sdefer = swow_defer_get_from_object(Z_OBJ_P(zdefer));
+            ZEND_ASSERT(Z_TYPE_P(z_defer) == IS_OBJECT && instanceof_function(Z_OBJCE_P(z_defer), swow_defer_ce));
+            s_defer = swow_defer_get_from_object(Z_OBJ_P(z_defer));
         }
-        cat_queue_push_back(&sdefer->tasks, &task->node);
+        cat_queue_push_back(&s_defer->tasks, &task->node);
     } while (0);
 
     return cat_true;
 }
 
-SWOW_API void swow_defer_do_tasks(swow_defer_t *sdefer)
+SWOW_API void swow_defer_do_tasks(swow_defer_t *s_defer)
 {
-    cat_queue_t *tasks = &sdefer->tasks;
+    cat_queue_t *tasks = &s_defer->tasks;
     swow_defer_task_t *task;
 
     /* must be FILO */
@@ -89,34 +89,34 @@ SWOW_API void swow_defer_do_tasks(swow_defer_t *sdefer)
         fci.retval = &retval;
         (void) swow_call_function_anyway(&fci, &task->fcc);
         zval_ptr_dtor(&retval);
-        zval_ptr_dtor(&task->zcallable);
+        zval_ptr_dtor(&task->z_callable);
         efree(task);
     }
 }
 
 SWOW_API void swow_defer_do_main_tasks(void)
 {
-    zval *zdefer = zend_hash_find_known_hash(&EG(symbol_table), SWOW_KNOWN_STRING(defer_magic_name));
-    if (zdefer != NULL) {
-        swow_defer_t *sdefer = swow_defer_get_from_object(Z_OBJ_P(zdefer));
-        swow_defer_do_tasks(sdefer);
+    zval *z_defer = zend_hash_find_known_hash(&EG(symbol_table), SWOW_KNOWN_STRING(defer_magic_name));
+    if (z_defer != NULL) {
+        swow_defer_t *s_defer = swow_defer_get_from_object(Z_OBJ_P(z_defer));
+        swow_defer_do_tasks(s_defer);
     }
 }
 
 static zend_object *swow_defer_create_object(zend_class_entry *ce)
 {
-    swow_defer_t *sdefer = swow_object_alloc(swow_defer_t, ce, swow_defer_handlers);
+    swow_defer_t *s_defer = swow_object_alloc(swow_defer_t, ce, swow_defer_handlers);
 
-    cat_queue_init(&sdefer->tasks);
+    cat_queue_init(&s_defer->tasks);
 
-    return &sdefer->std;
+    return &s_defer->std;
 }
 
 static void swow_defer_dtor_object(zend_object *object)
 {
-    swow_defer_t *sdefer = swow_defer_get_from_object(object);
+    swow_defer_t *s_defer = swow_defer_get_from_object(object);
 
-    swow_defer_do_tasks(sdefer);
+    swow_defer_do_tasks(s_defer);
 }
 
 ZEND_BEGIN_ARG_INFO_EX(arginfo_class_Swow_Defer___construct, 0, 0, 0)
@@ -138,18 +138,18 @@ ZEND_END_ARG_INFO()
 
 static PHP_FUNCTION(Swow_defer)
 {
-    zval *ztask;
+    zval *z_task;
     cat_bool_t ret;
 
     ZEND_PARSE_PARAMETERS_START(1, -1)
-        Z_PARAM_ZVAL(ztask)
+        Z_PARAM_ZVAL(z_task)
     ZEND_PARSE_PARAMETERS_END();
 
     if (UNEXPECTED(swow_forbid_dynamic_call() != SUCCESS)) {
         RETURN_THROWS();
     }
 
-    ret = swow_defer(ztask);
+    ret = swow_defer(z_task);
 
     if (UNEXPECTED(!ret)) {
         zend_throw_error(NULL, "%s", cat_get_last_error_message());

@@ -23,32 +23,32 @@
 
 static cat_bool_t swow_event_scheduler_run(void)
 {
-    swow_coroutine_t *scoroutine;
+    swow_coroutine_t *s_coroutine;
     cat_coroutine_t *coroutine;
 
     /* Notice: if object id is 0, its destructor will never be called */
     do {
         uint32_t top = EG(objects_store).top;
         EG(objects_store).top = 0;
-        scoroutine = swow_coroutine_get_from_object(
+        s_coroutine = swow_coroutine_get_from_object(
             swow_object_create(swow_coroutine_ce)
         );
         EG(objects_store).top = top;
         EG(objects_store).object_buckets[0] = NULL;
-        scoroutine->std.handle = UINT32_MAX;
+        s_coroutine->std.handle = UINT32_MAX;
     } while (0);
 
-    /* do not call __destruct() on scheduler scoroutine (but unnecessary here) */
-    // GC_ADD_FLAGS(&scoroutine->std, IS_OBJ_DESTRUCTOR_CALLED);
+    /* do not call __destruct() on scheduler s_coroutine (but unnecessary here) */
+    // GC_ADD_FLAGS(&s_coroutine->std, IS_OBJ_DESTRUCTOR_CALLED);
 
-    coroutine = cat_event_scheduler_run(&scoroutine->coroutine);
+    coroutine = cat_event_scheduler_run(&s_coroutine->coroutine);
 
     return coroutine != NULL;
 }
 
 static cat_bool_t swow_event_scheduler_close(void)
 {
-    swow_coroutine_t *scoroutine;
+    swow_coroutine_t *s_coroutine;
     cat_coroutine_t *coroutine;
 
     coroutine = cat_event_scheduler_close();
@@ -59,9 +59,9 @@ static cat_bool_t swow_event_scheduler_close(void)
     }
 
     do {
-        scoroutine = swow_coroutine_get_from_handle(coroutine);
-        scoroutine->std.handle = 0;
-        swow_coroutine_close(scoroutine);
+        s_coroutine = swow_coroutine_get_from_handle(coroutine);
+        s_coroutine->std.handle = 0;
+        swow_coroutine_close(s_coroutine);
         EG(objects_store).object_buckets[0] = NULL;
     } while (0);
 

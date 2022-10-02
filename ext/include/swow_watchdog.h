@@ -36,7 +36,7 @@ typedef struct swow_watchdog_s {
     cat_atomic_bool_t vm_interrupted;
     zend_atomic_bool *vm_interrupt_ptr;
     cat_timeout_t delay;
-    zval zalerter;
+    zval z_alerter;
     zend_fcall_info_cache alerter;
 } swow_watchdog_t;
 
@@ -62,7 +62,7 @@ static zend_always_inline swow_watchdog_t *swow_watchdog_get_current(void)
 
 /* APIs */
 
-SWOW_API cat_bool_t swow_watchdog_run(cat_timeout_t quantum, cat_timeout_t threshold, zval *zalerter);
+SWOW_API cat_bool_t swow_watchdog_run(cat_timeout_t quantum, cat_timeout_t threshold, zval *z_alerter);
 SWOW_API cat_bool_t swow_watchdog_stop(void);
 
 SWOW_API void swow_watchdog_alert_standard(cat_watchdog_t *watchdog);

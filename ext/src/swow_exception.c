@@ -25,15 +25,15 @@ SWOW_API swow_object_create_t swow_exception_create_object;
 
 SWOW_API CAT_COLD void swow_exception_set_properties(zend_object *exception, const char *message, zend_long code)
 {
-    zval ztmp;
+    zval z_tmp;
     if (message != NULL) {
-        ZVAL_STRING(&ztmp, message);
-        Z_SET_REFCOUNT(ztmp, 0);
-        zend_update_property_ex(exception->ce, exception, ZSTR_KNOWN(ZEND_STR_MESSAGE), &ztmp);
+        ZVAL_STRING(&z_tmp, message);
+        Z_SET_REFCOUNT(z_tmp, 0);
+        zend_update_property_ex(exception->ce, exception, ZSTR_KNOWN(ZEND_STR_MESSAGE), &z_tmp);
     }
     if (code != (zend_long) ~0) {
-        ZVAL_LONG(&ztmp, code);
-        zend_update_property_ex(exception->ce, exception, ZSTR_KNOWN(ZEND_STR_CODE), &ztmp);
+        ZVAL_LONG(&z_tmp, code);
+        zend_update_property_ex(exception->ce, exception, ZSTR_KNOWN(ZEND_STR_CODE), &z_tmp);
     }
 }
 

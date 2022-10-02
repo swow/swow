@@ -57,21 +57,21 @@ SWOW_API zend_class_entry *swow_sync_exception_ce;
 
 static zend_object *swow_sync_wait_reference_create_object(zend_class_entry *ce)
 {
-    swow_sync_wait_reference_t *swr = swow_object_alloc(swow_sync_wait_reference_t, ce, swow_sync_wait_reference_handlers);
+    swow_sync_wait_reference_t *s_wr = swow_object_alloc(swow_sync_wait_reference_t, ce, swow_sync_wait_reference_handlers);
 
-    swr->scoroutine = NULL;
-    swr->done = cat_false;
+    s_wr->s_coroutine = NULL;
+    s_wr->done = cat_false;
 
-    return &swr->std;
+    return &s_wr->std;
 }
 
 static zend_object *swow_sync_wait_group_create_object(zend_class_entry *ce)
 {
-    swow_sync_wait_group_t *swg = swow_object_alloc(swow_sync_wait_group_t, ce, swow_sync_wait_group_handlers);
+    swow_sync_wait_group_t *s_wg = swow_object_alloc(swow_sync_wait_group_t, ce, swow_sync_wait_group_handlers);
 
-    (void) cat_sync_wait_group_create(&swg->wg);
+    (void) cat_sync_wait_group_create(&s_wg->wg);
 
-    return &swg->std;
+    return &s_wg->std;
 }
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Sync_WaitReference_wait, 0, 1, IS_VOID, 0)
@@ -81,7 +81,7 @@ ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Sync_WaitReference, wait)
 {
-    swow_sync_wait_reference_t *swr;
+    swow_sync_wait_reference_t *s_wr;
     zval *zwr = ZEND_CALL_ARG(execute_data, 1);
     zend_object *wr;
     zend_long timeout = -1;
@@ -93,8 +93,8 @@ static PHP_METHOD(Swow_Sync_WaitReference, wait)
         Z_PARAM_LONG(timeout)
     ZEND_PARSE_PARAMETERS_END();
 
-    swr = swow_sync_wait_reference_get_from_object(wr);
-    if (UNEXPECTED(swr->scoroutine != NULL)) {
+    s_wr = swow_sync_wait_reference_get_from_object(wr);
+    if (UNEXPECTED(s_wr->s_coroutine != NULL)) {
         zend_throw_error(NULL, "WaitReference can not be reused before previous wait has returned");
         RETURN_THROWS();
     }
@@ -115,15 +115,15 @@ static PHP_METHOD(Swow_Sync_WaitReference, wait)
         return;
     }
 
-    swr->scoroutine = swow_coroutine_get_current();
+    s_wr->s_coroutine = swow_coroutine_get_current();
     ret = cat_time_wait(timeout);
-    swr->scoroutine = NULL;
+    s_wr->s_coroutine = NULL;
 
     if (UNEXPECTED(!ret)) {
         swow_throw_exception_with_last_as_reason(swow_sync_exception_ce, "WaitReference waiting for completion failed");
         RETURN_THROWS();
     }
-    if (UNEXPECTED(!swr->done)) {
+    if (UNEXPECTED(!s_wr->done)) {
         swow_throw_exception(swow_sync_exception_ce, CAT_ECANCELED, "WaitReference waiting has been canceled");
         RETURN_THROWS();
     }
@@ -136,11 +136,11 @@ ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Sync_WaitReference, __destruct)
 {
-    swow_sync_wait_reference_t *swr = getThisWR();
+    swow_sync_wait_reference_t *s_wr = getThisWR();
 
-    if (swr->scoroutine != NULL) {
-        swr->done = cat_true;
-        if (UNEXPECTED(!swow_coroutine_resume(swr->scoroutine, NULL, NULL))) {
+    if (s_wr->s_coroutine != NULL) {
+        s_wr->done = cat_true;
+        if (UNEXPECTED(!swow_coroutine_resume(s_wr->s_coroutine, NULL, NULL))) {
             CAT_CORE_ERROR(SYNC, "Resume waiting coroutine failed, reason: %s", cat_get_last_error_message());
         }
     }
@@ -160,7 +160,7 @@ ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Sync_WaitGroup, add)
 {
-    swow_sync_wait_group_t *swg = getThisWG();
+    swow_sync_wait_group_t *s_wg = getThisWG();
     zend_long delta = 1;
     cat_bool_t ret;
 
@@ -169,7 +169,7 @@ static PHP_METHOD(Swow_Sync_WaitGroup, add)
         Z_PARAM_LONG(delta)
     ZEND_PARSE_PARAMETERS_END();
 
-    ret = cat_sync_wait_group_add(&swg->wg, delta);
+    ret = cat_sync_wait_group_add(&s_wg->wg, delta);
 
     if (UNEXPECTED(!ret)) {
         swow_throw_exception_with_last(swow_sync_exception_ce);
@@ -181,7 +181,7 @@ static PHP_METHOD(Swow_Sync_WaitGroup, add)
 
 static PHP_METHOD(Swow_Sync_WaitGroup, wait)
 {
-    swow_sync_wait_group_t *swg = getThisWG();
+    swow_sync_wait_group_t *s_wg = getThisWG();
     zend_long timeout = -1;
     cat_bool_t ret;
 
@@ -190,7 +190,7 @@ static PHP_METHOD(Swow_Sync_WaitGroup, wait)
         Z_PARAM_LONG(timeout)
     ZEND_PARSE_PARAMETERS_END();
 
-    ret = cat_sync_wait_group_wait(&swg->wg, timeout);
+    ret = cat_sync_wait_group_wait(&s_wg->wg, timeout);
 
     if (UNEXPECTED(!ret)) {
         swow_throw_exception_with_last(swow_sync_exception_ce);
@@ -203,12 +203,12 @@ ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Sync_WaitGroup, done)
 {
-    swow_sync_wait_group_t *swg = getThisWG();
+    swow_sync_wait_group_t *s_wg = getThisWG();
     cat_bool_t ret;
 
     ZEND_PARSE_PARAMETERS_NONE();
 
-    ret = cat_sync_wait_group_done(&swg->wg);
+    ret = cat_sync_wait_group_done(&s_wg->wg);
 
     if (UNEXPECTED(!ret)) {
         swow_throw_exception_with_last(swow_sync_exception_ce);

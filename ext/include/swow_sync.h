@@ -36,7 +36,7 @@ extern SWOW_API zend_object_handlers swow_sync_wait_group_handlers;
 extern SWOW_API zend_class_entry *swow_sync_exception_ce;
 
 typedef struct swow_sync_wait_reference_s {
-    swow_coroutine_t *scoroutine;
+    swow_coroutine_t *s_coroutine;
     cat_bool_t done;
     zend_object std;
 } swow_sync_wait_reference_t;

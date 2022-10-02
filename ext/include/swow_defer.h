@@ -31,7 +31,7 @@ extern SWOW_API zend_object_handlers swow_defer_handlers;
 
 typedef struct swow_defer_task_s {
     cat_queue_node_t node;
-    zval zcallable;
+    zval z_callable;
     zend_fcall_info_cache fcc;
 } swow_defer_task_t;
 
@@ -46,8 +46,8 @@ zend_result swow_defer_module_init(INIT_FUNC_ARGS);
 
 /* functions */
 
-SWOW_API cat_bool_t swow_defer(zval *zcallable);
-SWOW_API void swow_defer_do_tasks(swow_defer_t *sdefer);
+SWOW_API cat_bool_t swow_defer(zval *z_callable);
+SWOW_API void swow_defer_do_tasks(swow_defer_t *s_defer);
 SWOW_API void swow_defer_do_main_tasks(void); SWOW_INTERNAL
 
 /* helper*/

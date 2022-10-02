@@ -518,7 +518,7 @@ zend_result swow_module_init(INIT_FUNC_ARGS)
         NULL, NULL, cat_false, cat_false,
         swow_create_object_deny, NULL, 0
     );
-    /* Version constants (TODO: remove type cast if we no longger support PHP 7.x) */
+    /* Version constants (TODO: remove type cast if we no longer support PHP 7.x) */
 #define SWOW_VERSION_MAP(XX) \
     XX(MAJOR_VERSION, long, zend_long) \
     XX(MINOR_VERSION, long, zend_long) \

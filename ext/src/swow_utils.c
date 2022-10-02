@@ -26,7 +26,7 @@ static zend_object *swow_utils_handler_create_object(zend_class_entry *ce)
     swow_utils_handler_t *handler = swow_object_alloc(swow_utils_handler_t, ce, swow_utils_handler_handlers);
 
     cat_queue_init(&handler->node);
-    ZVAL_NULL(&handler->fcall.zcallable);
+    ZVAL_NULL(&handler->fcall.z_callable);
 
     return &handler->std;
 }
@@ -41,13 +41,13 @@ static void swow_utils_handler_free_object(zend_object *object)
     zend_object_std_dtor(&handler->std);
 }
 
-SWOW_API swow_utils_handler_t *swow_utils_handler_create(zval *zcallable)
+SWOW_API swow_utils_handler_t *swow_utils_handler_create(zval *z_callable)
 {
     swow_utils_handler_t *handler = swow_utils_handler_get_from_object(
         swow_utils_handler_create_object(swow_utils_handler_ce)
     );
 
-    if (!swow_fcall_storage_create(&handler->fcall, zcallable)) {
+    if (!swow_fcall_storage_create(&handler->fcall, z_callable)) {
         cat_update_last_error_with_previous("Util handler create failed");
         return NULL;
     }
@@ -103,11 +103,11 @@ static HashTable *swow_utils_handler_get_gc(zend_object *object, zval **gc_data,
 {
     swow_utils_handler_t *handler = swow_utils_handler_get_from_object(object);
 
-    if (ZVAL_IS_NULL(&handler->fcall.zcallable)) {
+    if (ZVAL_IS_NULL(&handler->fcall.z_callable)) {
         *gc_data = NULL;
         *gc_count = 0;
     } else {
-        *gc_data = &handler->fcall.zcallable;
+        *gc_data = &handler->fcall.z_callable;
         *gc_count = 1;
     }
 

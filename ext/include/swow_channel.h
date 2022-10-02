@@ -47,9 +47,9 @@ typedef struct swow_selector_s {
     cat_channel_select_request_t _requests[4];
     /* response */
     cat_channel_select_event_t last_event;
-    zval zdata;
+    zval z_data;
     /* internal */
-    zval zstorage[4];
+    zval z_storage[4];
     zend_object std;
 } swow_selector_t;
 

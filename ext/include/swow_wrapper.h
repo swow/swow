@@ -348,10 +348,10 @@ static zend_always_inline zend_object* swow_object_create(zend_class_entry *ce)
 } while (0)
 
 #define RETVAL_THIS_PROPERTY(name) do { \
-    zval *zproperty, zretval; \
-    zproperty = zend_read_property(Z_OBJCE_P(ZEND_THIS), Z_OBJ_P(ZEND_THIS), ZEND_STRL(name), 1, &zretval); \
-    ZVAL_DEREF(zproperty); \
-    ZVAL_COPY(return_value, zproperty); \
+    zval *z_property, retval; \
+    z_property = zend_read_property(Z_OBJCE_P(ZEND_THIS), Z_OBJ_P(ZEND_THIS), ZEND_STRL(name), 1, &retval); \
+    ZVAL_DEREF(z_property); \
+    ZVAL_COPY(return_value, z_property); \
 } while (0)
 
 #define RETURN_THIS_PROPERTY(name) do { \
@@ -359,9 +359,9 @@ static zend_always_inline zend_object* swow_object_create(zend_class_entry *ce)
     return; \
 } while (0)
 
-#define RETURN_DEBUG_INFO_WITH_PROPERTIES(zdebug_info) do { \
-    php_array_merge(Z_ARR_P(zdebug_info), Z_OBJ_P(ZEND_THIS)->handlers->get_properties(Z_OBJ_P(ZEND_THIS))); \
-    RETURN_ZVAL(zdebug_info, 0, 0); \
+#define RETURN_DEBUG_INFO_WITH_PROPERTIES(z_debug_info) do { \
+    php_array_merge(Z_ARR_P(z_debug_info), Z_OBJ_P(ZEND_THIS)->handlers->get_properties(Z_OBJ_P(ZEND_THIS))); \
+    RETURN_ZVAL(z_debug_info, 0, 0); \
 } while (0)
 
 #define ZEND_ASSERT_HAS_EXCEPTION() do { \
@@ -383,18 +383,18 @@ typedef struct swow_fcall_s {
 } swow_fcall_info_t;
 
 typedef struct swow_fcall_storage_s {
-    zval zcallable;
+    zval z_callable;
     zend_fcall_info_cache fcc;
 } swow_fcall_storage_t;
 
 SWOW_API zend_bool swow_fcall_storage_is_available(const swow_fcall_storage_t *fcall);
-SWOW_API zend_bool swow_fcall_storage_create(swow_fcall_storage_t *fcall, zval *zcallable);
+SWOW_API zend_bool swow_fcall_storage_create(swow_fcall_storage_t *fcall, zval *z_callable);
 SWOW_API void swow_fcall_storage_release(swow_fcall_storage_t *fcall);
 
 #define SWOW_PARAM_FCALL(fcall) \
     zend_fcall_info _fci; \
     Z_PARAM_FUNC(_fci, fcall.fcc) \
-    fcall.zcallable = *_arg;
+    fcall.z_callable = *_arg;
 
 /* function caller */
 
@@ -484,15 +484,15 @@ static zend_always_inline void swow_output_globals_fast_shutdown(void)
 }
 
 #define SWOW_OB_START(output) do { \
-    zval zoutput; \
+    zval z_output; \
     zend_string **output_ptr = &output; \
     zend_result ret; \
     php_output_start_user(NULL, 0, PHP_OUTPUT_HANDLER_STDFLAGS); \
 
 #define SWOW_OB_END() \
-    ret = php_output_get_contents(&zoutput); \
+    ret = php_output_get_contents(&z_output); \
     php_output_discard(); \
-    *output_ptr = ret == SUCCESS ? Z_STR(zoutput) : NULL; \
+    *output_ptr = ret == SUCCESS ? Z_STR(z_output) : NULL; \
 } while (0);
 
 /* file */

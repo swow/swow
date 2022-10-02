@@ -54,12 +54,12 @@ static const zend_function_entry swow_http_status_methods[] = {
 
 static zend_object *swow_http_parser_create_object(zend_class_entry *ce)
 {
-    swow_http_parser_t *sparser = swow_object_alloc(swow_http_parser_t, ce, swow_http_parser_handlers);
+    swow_http_parser_t *s_parser = swow_object_alloc(swow_http_parser_t, ce, swow_http_parser_handlers);
 
-    cat_http_parser_init(&sparser->parser);
-    sparser->data_offset = 0;
+    cat_http_parser_init(&s_parser->parser);
+    s_parser->data_offset = 0;
 
-    return &sparser->std;
+    return &s_parser->std;
 }
 
 #define getThisParser() (swow_http_parser_get_from_object(Z_OBJ_P(ZEND_THIS)))
@@ -73,7 +73,7 @@ ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Http_Parser, getType)
 {
-    SWOW_HTTP_PARSER_GETTER(sparser, parser);
+    SWOW_HTTP_PARSER_GETTER(s_parser, parser);
 
     ZEND_PARSE_PARAMETERS_NONE();
 
@@ -86,7 +86,7 @@ ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Http_Parser, setType)
 {
-    SWOW_HTTP_PARSER_GETTER(sparser, parser);
+    SWOW_HTTP_PARSER_GETTER(s_parser, parser);
     zend_long ptype;
     cat_http_parser_type_t type;
 
@@ -117,7 +117,7 @@ static PHP_METHOD(Swow_Http_Parser, setType)
 
 static PHP_METHOD(Swow_Http_Parser, getEvents)
 {
-    SWOW_HTTP_PARSER_GETTER(sparser, parser);
+    SWOW_HTTP_PARSER_GETTER(s_parser, parser);
 
     ZEND_PARSE_PARAMETERS_NONE();
 
@@ -130,7 +130,7 @@ ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Http_Parser, setEvents)
 {
-    SWOW_HTTP_PARSER_GETTER(sparser, parser);
+    SWOW_HTTP_PARSER_GETTER(s_parser, parser);
     zend_long events;
 
     ZEND_PARSE_PARAMETERS_START(1, 1)
@@ -150,7 +150,7 @@ ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Http_Parser, execute)
 {
-    SWOW_HTTP_PARSER_GETTER(sparser, parser);
+    SWOW_HTTP_PARSER_GETTER(s_parser, parser);
     zend_string *string;
     zend_long start = 0;
     zend_long length = -1;
@@ -178,7 +178,7 @@ static PHP_METHOD(Swow_Http_Parser, execute)
         RETURN_THROWS();
     }
 
-    sparser->data_offset = parser->data - ZSTR_VAL(string);
+    s_parser->data_offset = parser->data - ZSTR_VAL(string);
 
     RETURN_LONG(parser->parsed_length);
 }
@@ -187,7 +187,7 @@ static PHP_METHOD(Swow_Http_Parser, execute)
 
 static PHP_METHOD(Swow_Http_Parser, getEvent)
 {
-    SWOW_HTTP_PARSER_GETTER(sparser, parser);
+    SWOW_HTTP_PARSER_GETTER(s_parser, parser);
 
     ZEND_PARSE_PARAMETERS_NONE();
 
@@ -199,7 +199,7 @@ ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Http_Parser, getEventName)
 {
-    SWOW_HTTP_PARSER_GETTER(sparser, parser);
+    SWOW_HTTP_PARSER_GETTER(s_parser, parser);
 
     ZEND_PARSE_PARAMETERS_NONE();
 
@@ -211,7 +211,7 @@ static PHP_METHOD(Swow_Http_Parser, getEventName)
 
 static PHP_METHOD(Swow_Http_Parser, getPreviousEvent)
 {
-    SWOW_HTTP_PARSER_GETTER(sparser, parser);
+    SWOW_HTTP_PARSER_GETTER(s_parser, parser);
 
     ZEND_PARSE_PARAMETERS_NONE();
 
@@ -222,7 +222,7 @@ static PHP_METHOD(Swow_Http_Parser, getPreviousEvent)
 
 static PHP_METHOD(Swow_Http_Parser, getPreviousEventName)
 {
-    SWOW_HTTP_PARSER_GETTER(sparser, parser);
+    SWOW_HTTP_PARSER_GETTER(s_parser, parser);
 
     ZEND_PARSE_PARAMETERS_NONE();
 
@@ -243,7 +243,7 @@ static PHP_METHOD(Swow_Http_Parser, getDataOffset)
 
 static PHP_METHOD(Swow_Http_Parser, getDataLength)
 {
-    SWOW_HTTP_PARSER_GETTER(sparser, parser);
+    SWOW_HTTP_PARSER_GETTER(s_parser, parser);
 
     ZEND_PARSE_PARAMETERS_NONE();
 
@@ -254,7 +254,7 @@ static PHP_METHOD(Swow_Http_Parser, getDataLength)
 
 static PHP_METHOD(Swow_Http_Parser, getParsedLength)
 {
-    SWOW_HTTP_PARSER_GETTER(sparser, parser);
+    SWOW_HTTP_PARSER_GETTER(s_parser, parser);
 
     ZEND_PARSE_PARAMETERS_NONE();
 
@@ -266,7 +266,7 @@ ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Http_Parser, isCompleted)
 {
-    SWOW_HTTP_PARSER_GETTER(sparser, parser);
+    SWOW_HTTP_PARSER_GETTER(s_parser, parser);
 
     ZEND_PARSE_PARAMETERS_NONE();
 
@@ -277,7 +277,7 @@ static PHP_METHOD(Swow_Http_Parser, isCompleted)
 
 static PHP_METHOD(Swow_Http_Parser, shouldKeepAlive)
 {
-    SWOW_HTTP_PARSER_GETTER(sparser, parser);
+    SWOW_HTTP_PARSER_GETTER(s_parser, parser);
 
     ZEND_PARSE_PARAMETERS_NONE();
 
@@ -288,7 +288,7 @@ static PHP_METHOD(Swow_Http_Parser, shouldKeepAlive)
 
 static PHP_METHOD(Swow_Http_Parser, getMethod)
 {
-    SWOW_HTTP_PARSER_GETTER(sparser, parser);
+    SWOW_HTTP_PARSER_GETTER(s_parser, parser);
 
     ZEND_PARSE_PARAMETERS_NONE();
 
@@ -299,7 +299,7 @@ static PHP_METHOD(Swow_Http_Parser, getMethod)
 
 static PHP_METHOD(Swow_Http_Parser, getMajorVersion)
 {
-    SWOW_HTTP_PARSER_GETTER(sparser, parser);
+    SWOW_HTTP_PARSER_GETTER(s_parser, parser);
 
     ZEND_PARSE_PARAMETERS_NONE();
 
@@ -310,7 +310,7 @@ static PHP_METHOD(Swow_Http_Parser, getMajorVersion)
 
 static PHP_METHOD(Swow_Http_Parser, getMinorVersion)
 {
-    SWOW_HTTP_PARSER_GETTER(sparser, parser);
+    SWOW_HTTP_PARSER_GETTER(s_parser, parser);
 
     ZEND_PARSE_PARAMETERS_NONE();
 
@@ -321,7 +321,7 @@ static PHP_METHOD(Swow_Http_Parser, getMinorVersion)
 
 static PHP_METHOD(Swow_Http_Parser, getProtocolVersion)
 {
-    SWOW_HTTP_PARSER_GETTER(sparser, parser);
+    SWOW_HTTP_PARSER_GETTER(s_parser, parser);
 
     ZEND_PARSE_PARAMETERS_NONE();
 
@@ -332,7 +332,7 @@ static PHP_METHOD(Swow_Http_Parser, getProtocolVersion)
 
 static PHP_METHOD(Swow_Http_Parser, getStatusCode)
 {
-    SWOW_HTTP_PARSER_GETTER(sparser, parser);
+    SWOW_HTTP_PARSER_GETTER(s_parser, parser);
 
     ZEND_PARSE_PARAMETERS_NONE();
 
@@ -343,7 +343,7 @@ static PHP_METHOD(Swow_Http_Parser, getStatusCode)
 
 static PHP_METHOD(Swow_Http_Parser, getReasonPhrase)
 {
-    SWOW_HTTP_PARSER_GETTER(sparser, parser);
+    SWOW_HTTP_PARSER_GETTER(s_parser, parser);
 
     ZEND_PARSE_PARAMETERS_NONE();
 
@@ -354,7 +354,7 @@ static PHP_METHOD(Swow_Http_Parser, getReasonPhrase)
 
 static PHP_METHOD(Swow_Http_Parser, getContentLength)
 {
-    SWOW_HTTP_PARSER_GETTER(sparser, parser);
+    SWOW_HTTP_PARSER_GETTER(s_parser, parser);
 
     ZEND_PARSE_PARAMETERS_NONE();
 
@@ -365,7 +365,7 @@ static PHP_METHOD(Swow_Http_Parser, getContentLength)
 
 static PHP_METHOD(Swow_Http_Parser, getCurrentChunkLength)
 {
-    SWOW_HTTP_PARSER_GETTER(sparser, parser);
+    SWOW_HTTP_PARSER_GETTER(s_parser, parser);
 
     ZEND_PARSE_PARAMETERS_NONE();
 
@@ -376,7 +376,7 @@ static PHP_METHOD(Swow_Http_Parser, getCurrentChunkLength)
 
 static PHP_METHOD(Swow_Http_Parser, isChunked)
 {
-    SWOW_HTTP_PARSER_GETTER(sparser, parser);
+    SWOW_HTTP_PARSER_GETTER(s_parser, parser);
 
     ZEND_PARSE_PARAMETERS_NONE();
 
@@ -387,7 +387,7 @@ static PHP_METHOD(Swow_Http_Parser, isChunked)
 
 static PHP_METHOD(Swow_Http_Parser, isMultipart)
 {
-    SWOW_HTTP_PARSER_GETTER(sparser, parser);
+    SWOW_HTTP_PARSER_GETTER(s_parser, parser);
 
     ZEND_PARSE_PARAMETERS_NONE();
 
@@ -398,7 +398,7 @@ static PHP_METHOD(Swow_Http_Parser, isMultipart)
 
 static PHP_METHOD(Swow_Http_Parser, isUpgrade)
 {
-    SWOW_HTTP_PARSER_GETTER(sparser, parser);
+    SWOW_HTTP_PARSER_GETTER(s_parser, parser);
 
     ZEND_PARSE_PARAMETERS_NONE();
 
@@ -410,7 +410,7 @@ ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Http_Parser, finish)
 {
-    SWOW_HTTP_PARSER_GETTER(sparser, parser);
+    SWOW_HTTP_PARSER_GETTER(s_parser, parser);
     cat_bool_t ret;
 
     ZEND_PARSE_PARAMETERS_NONE();
@@ -429,12 +429,12 @@ static PHP_METHOD(Swow_Http_Parser, finish)
 
 static PHP_METHOD(Swow_Http_Parser, reset)
 {
-    SWOW_HTTP_PARSER_GETTER(sparser, parser);
+    SWOW_HTTP_PARSER_GETTER(s_parser, parser);
 
     ZEND_PARSE_PARAMETERS_NONE();
 
     cat_http_parser_reset(parser);
-    sparser->data_offset = 0;
+    s_parser->data_offset = 0;
 
     RETURN_THIS();
 }
@@ -488,12 +488,12 @@ static const zend_function_entry swow_http_parser_methods[] = {
     PHP_FE_END
 };
 
-static zend_always_inline size_t swow_http_get_header_length(zend_string *header_name, zval *zheader_value)
+static zend_always_inline size_t swow_http_get_header_length(zend_string *header_name, zval *z_header_value)
 {
     zend_string *header_value, *tmp_header_value;
     size_t size;
 
-    header_value = zval_get_tmp_string(zheader_value, &tmp_header_value);
+    header_value = zval_get_tmp_string(z_header_value, &tmp_header_value);
     size = ZSTR_LEN(header_name) + CAT_STRLEN(": ") + ZSTR_LEN(header_value) + CAT_STRLEN("\r\n");
     zend_tmp_string_release(tmp_header_value);
 
@@ -503,18 +503,18 @@ static zend_always_inline size_t swow_http_get_header_length(zend_string *header
 static zend_always_inline size_t swow_http_get_message_length(HashTable *headers, zend_string *body)
 {
     zend_string *header_name;
-    zval *zheader_value;
+    zval *z_header_value;
     size_t size = 0;
 
-    ZEND_HASH_FOREACH_STR_KEY_VAL(headers, header_name, zheader_value) {
+    ZEND_HASH_FOREACH_STR_KEY_VAL(headers, header_name, z_header_value) {
         if (UNEXPECTED(header_name == NULL)) {
             continue;
         }
-        if (Z_TYPE_P(zheader_value) != IS_ARRAY) {
-            size += swow_http_get_header_length(header_name, zheader_value);
+        if (Z_TYPE_P(z_header_value) != IS_ARRAY) {
+            size += swow_http_get_header_length(header_name, z_header_value);
         } else {
-            ZEND_HASH_FOREACH_VAL(Z_ARR_P(zheader_value), zheader_value) {
-                size += swow_http_get_header_length(header_name, zheader_value);
+            ZEND_HASH_FOREACH_VAL(Z_ARR_P(z_header_value), z_header_value) {
+                size += swow_http_get_header_length(header_name, z_header_value);
             } ZEND_HASH_FOREACH_END();
         }
     } ZEND_HASH_FOREACH_END();
@@ -526,11 +526,11 @@ static zend_always_inline size_t swow_http_get_message_length(HashTable *headers
     return size;
 }
 
-static zend_always_inline char *swow_http_pack_header(char *p, zend_string *header_name, zval *zheader_value)
+static zend_always_inline char *swow_http_pack_header(char *p, zend_string *header_name, zval *z_header_value)
 {
     zend_string *header_value, *tmp_header_value;
 
-    header_value = zval_get_tmp_string(zheader_value, &tmp_header_value);
+    header_value = zval_get_tmp_string(z_header_value, &tmp_header_value);
     p = cat_strnappend(p, ZSTR_VAL(header_name), ZSTR_LEN(header_name));
     p = cat_strnappend(p, CAT_STRL(": "));
     p = cat_strnappend(p, ZSTR_VAL(header_value), ZSTR_LEN(header_value));
@@ -543,17 +543,17 @@ static zend_always_inline char *swow_http_pack_header(char *p, zend_string *head
 static zend_always_inline char *swow_http_pack_headers(char *p, HashTable *headers)
 {
     zend_string *header_name;
-    zval *zheader_value;
+    zval *z_header_value;
 
-    ZEND_HASH_FOREACH_STR_KEY_VAL(headers, header_name, zheader_value) {
+    ZEND_HASH_FOREACH_STR_KEY_VAL(headers, header_name, z_header_value) {
         if (UNEXPECTED(header_name == NULL)) {
             continue;
         }
-        if (Z_TYPE_P(zheader_value) != IS_ARRAY) {
-            p = swow_http_pack_header(p, header_name, zheader_value);
+        if (Z_TYPE_P(z_header_value) != IS_ARRAY) {
+            p = swow_http_pack_header(p, header_name, z_header_value);
         } else {
-            ZEND_HASH_FOREACH_VAL(Z_ARR_P(zheader_value), zheader_value) {
-                p = swow_http_pack_header(p, header_name, zheader_value);
+            ZEND_HASH_FOREACH_VAL(Z_ARR_P(z_header_value), z_header_value) {
+                p = swow_http_pack_header(p, header_name, z_header_value);
             } ZEND_HASH_FOREACH_END();
         }
     } ZEND_HASH_FOREACH_END();
@@ -585,7 +585,7 @@ static PHP_METHOD(Swow_Http_Http, packMessage)
 {
     zend_string *message = zend_empty_string;
     /* arguments */
-    zval *zheaders = NULL;
+    zval *z_headers = NULL;
     HashTable *headers = (HashTable *) &zend_empty_array;
     zend_string *body = zend_empty_string;
     /* pack */
@@ -594,12 +594,12 @@ static PHP_METHOD(Swow_Http_Http, packMessage)
 
     ZEND_PARSE_PARAMETERS_START(0, 2)
         Z_PARAM_OPTIONAL
-        Z_PARAM_ARRAY(zheaders)
+        Z_PARAM_ARRAY(z_headers)
         SWOW_PARAM_STRINGABLE_EXPECT_BUFFER_FOR_READING(body)
     ZEND_PARSE_PARAMETERS_END();
 
-    if (zheaders != NULL) {
-        headers = Z_ARR_P(zheaders);
+    if (z_headers != NULL) {
+        headers = Z_ARR_P(z_headers);
     }
 
     size = swow_http_get_message_length(headers, body);

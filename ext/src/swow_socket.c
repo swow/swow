@@ -24,19 +24,19 @@ SWOW_API zend_object_handlers swow_socket_handlers;
 
 SWOW_API zend_class_entry *swow_socket_exception_ce;
 
-#define SWOW_SOCKET_GETTER_INTERNAL(_object, _ssocket, _socket) \
-    swow_socket_t *_ssocket = swow_socket_get_from_object(_object); \
-    cat_socket_t *_socket = &_ssocket->socket
+#define SWOW_SOCKET_GETTER_INTERNAL(_object, _s_socket, _socket) \
+    swow_socket_t *_s_socket = swow_socket_get_from_object(_object); \
+    cat_socket_t *_socket = &_s_socket->socket
 
-#define SWOW_SOCKET_GETTER(_ssocket, _socket) SWOW_SOCKET_GETTER_INTERNAL(Z_OBJ_P(ZEND_THIS), _ssocket, _socket)
+#define SWOW_SOCKET_GETTER(_s_socket, _socket) SWOW_SOCKET_GETTER_INTERNAL(Z_OBJ_P(ZEND_THIS), _s_socket, _socket)
 
 static zend_object *swow_socket_create_object(zend_class_entry *ce)
 {
-    swow_socket_t *ssocket = swow_object_alloc(swow_socket_t, ce, swow_socket_handlers);
+    swow_socket_t *s_socket = swow_object_alloc(swow_socket_t, ce, swow_socket_handlers);
 
-    cat_socket_init(&ssocket->socket);
+    cat_socket_init(&s_socket->socket);
 
-    return &ssocket->std;
+    return &s_socket->std;
 }
 
 static void swow_socket_dtor_object(zend_object *object)
@@ -45,7 +45,7 @@ static void swow_socket_dtor_object(zend_object *object)
     zend_objects_destroy_object(object);
 
     /* force close the socket */
-    SWOW_SOCKET_GETTER_INTERNAL(object, ssocket, socket);
+    SWOW_SOCKET_GETTER_INTERNAL(object, s_socket, socket);
 
     if (cat_socket_is_available(socket)) {
         cat_socket_close(socket);
@@ -57,13 +57,13 @@ static void swow_socket_free_object(zend_object *object)
     /* __destruct will not be called if fatal error occurred */
 
     /* force close the socket */
-    SWOW_SOCKET_GETTER_INTERNAL(object, ssocket, socket);
+    SWOW_SOCKET_GETTER_INTERNAL(object, s_socket, socket);
 
     if (cat_socket_is_available(socket)) {
         cat_socket_close(socket);
     }
 
-    zend_object_std_dtor(&ssocket->std);
+    zend_object_std_dtor(&s_socket->std);
 }
 
 ZEND_BEGIN_ARG_INFO_EX(arginfo_class_Swow_Socket___construct, 0, 0, 1)
@@ -72,7 +72,7 @@ ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Socket, __construct)
 {
-    SWOW_SOCKET_GETTER(ssocket, socket);
+    SWOW_SOCKET_GETTER(s_socket, socket);
     zend_long type;
 
     if (UNEXPECTED(cat_socket_is_available(socket))) {
@@ -106,7 +106,7 @@ ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Socket, getId)
 {
-    SWOW_SOCKET_GETTER(ssocket, socket);
+    SWOW_SOCKET_GETTER(s_socket, socket);
 
     ZEND_PARSE_PARAMETERS_NONE();
 
@@ -117,7 +117,7 @@ static PHP_METHOD(Swow_Socket, getId)
 
 static PHP_METHOD(Swow_Socket, getType)
 {
-    SWOW_SOCKET_GETTER(ssocket, socket);
+    SWOW_SOCKET_GETTER(s_socket, socket);
 
     ZEND_PARSE_PARAMETERS_NONE();
 
@@ -128,7 +128,7 @@ static PHP_METHOD(Swow_Socket, getType)
 
 static PHP_METHOD(Swow_Socket, getSimpleType)
 {
-    SWOW_SOCKET_GETTER(ssocket, socket);
+    SWOW_SOCKET_GETTER(s_socket, socket);
 
     ZEND_PARSE_PARAMETERS_NONE();
 
@@ -140,7 +140,7 @@ ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Socket, getTypeName)
 {
-    SWOW_SOCKET_GETTER(ssocket, socket);
+    SWOW_SOCKET_GETTER(s_socket, socket);
 
     ZEND_PARSE_PARAMETERS_NONE();
 
@@ -151,7 +151,7 @@ static PHP_METHOD(Swow_Socket, getTypeName)
 
 static PHP_METHOD(Swow_Socket, getSimpleTypeName)
 {
-    SWOW_SOCKET_GETTER(ssocket, socket);
+    SWOW_SOCKET_GETTER(s_socket, socket);
 
     ZEND_PARSE_PARAMETERS_NONE();
 
@@ -162,7 +162,7 @@ static PHP_METHOD(Swow_Socket, getSimpleTypeName)
 
 static PHP_METHOD(Swow_Socket, getFd)
 {
-    SWOW_SOCKET_GETTER(ssocket, socket);
+    SWOW_SOCKET_GETTER(s_socket, socket);
 
     ZEND_PARSE_PARAMETERS_NONE();
 
@@ -224,7 +224,7 @@ ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Socket, setTimeout)
 {
-    SWOW_SOCKET_GETTER(ssocket, socket);
+    SWOW_SOCKET_GETTER(s_socket, socket);
     zend_long timeout;
     cat_bool_t ret;
 
@@ -264,7 +264,7 @@ static PHP_METHOD(Swow_Socket, setGlobal##Type##Timeout) \
 \
 static PHP_METHOD(Swow_Socket, get##Type##Timeout) \
 { \
-    SWOW_SOCKET_GETTER(ssocket, socket); \
+    SWOW_SOCKET_GETTER(s_socket, socket); \
     cat_timeout_t timeout; \
     \
     ZEND_PARSE_PARAMETERS_NONE(); \
@@ -281,7 +281,7 @@ static PHP_METHOD(Swow_Socket, get##Type##Timeout) \
 \
 static PHP_METHOD(Swow_Socket, set##Type##Timeout) \
 { \
-    SWOW_SOCKET_GETTER(ssocket, socket); \
+    SWOW_SOCKET_GETTER(s_socket, socket); \
     zend_long timeout; \
     cat_bool_t ret; \
     \
@@ -316,7 +316,7 @@ ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Socket, bind)
 {
-    SWOW_SOCKET_GETTER(ssocket, socket);
+    SWOW_SOCKET_GETTER(s_socket, socket);
     zend_string *name;
     zend_long port = 0;
     zend_long flags = CAT_SOCKET_BIND_FLAG_NONE;
@@ -345,7 +345,7 @@ ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Socket, listen)
 {
-    SWOW_SOCKET_GETTER(ssocket, socket);
+    SWOW_SOCKET_GETTER(s_socket, socket);
     zend_long backlog = CAT_SOCKET_DEFAULT_BACKLOG;
     cat_bool_t ret;
 
@@ -370,11 +370,11 @@ ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Socket, accept)
 {
-    SWOW_SOCKET_GETTER(sserver, server);
+    SWOW_SOCKET_GETTER(s_server, server);
     cat_socket_type_t server_type = cat_socket_get_simple_type(server);
     zend_long timeout;
     zend_bool timeout_is_null = 1;
-    swow_socket_t *sconnection;
+    swow_socket_t *s_connection;
     cat_socket_t *connection;
     cat_bool_t ret;
 
@@ -383,10 +383,10 @@ static PHP_METHOD(Swow_Socket, accept)
         Z_PARAM_LONG_OR_NULL(timeout, timeout_is_null)
     ZEND_PARSE_PARAMETERS_END();
 
-    sconnection = swow_socket_get_from_object(
+    s_connection = swow_socket_get_from_object(
         swow_socket_create_object(Z_OBJCE_P(ZEND_THIS))
     );
-    connection = &sconnection->socket;
+    connection = &s_connection->socket;
     if (timeout_is_null) {
         timeout = cat_socket_get_accept_timeout(server);
     }
@@ -405,12 +405,12 @@ static PHP_METHOD(Swow_Socket, accept)
             cat_socket_close(connection);
         }
         _creation_error:
-        zend_object_release(&sconnection->std);
+        zend_object_release(&s_connection->std);
         swow_throw_exception_with_last(swow_socket_exception_ce);
         RETURN_THROWS();
     }
 
-    RETURN_OBJ(&sconnection->std);
+    RETURN_OBJ(&s_connection->std);
 }
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_acceptTo, 0, 1, IS_STATIC, 0)
@@ -420,11 +420,11 @@ ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Socket, acceptTo)
 {
-    SWOW_SOCKET_GETTER(sserver, server);
+    SWOW_SOCKET_GETTER(s_server, server);
     zend_long timeout;
     zend_bool timeout_is_null = 1;
     zend_object *connection_object;
-    swow_socket_t *sconnection;
+    swow_socket_t *s_connection;
     cat_socket_t *connection;
     cat_bool_t ret;
 
@@ -434,8 +434,8 @@ static PHP_METHOD(Swow_Socket, acceptTo)
         Z_PARAM_LONG_OR_NULL(timeout, timeout_is_null)
     ZEND_PARSE_PARAMETERS_END();
 
-    sconnection = swow_socket_get_from_object(connection_object);
-    connection = &sconnection->socket;
+    s_connection = swow_socket_get_from_object(connection_object);
+    connection = &s_connection->socket;
     if (timeout_is_null) {
         timeout = cat_socket_get_accept_timeout(server);
     }
@@ -458,7 +458,7 @@ ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Socket, connect)
 {
-    SWOW_SOCKET_GETTER(ssocket, socket);
+    SWOW_SOCKET_GETTER(s_socket, socket);
     zend_string *name;
     zend_long port = 0;
     zend_long timeout;
@@ -493,7 +493,7 @@ ZEND_END_ARG_INFO()
 static PHP_METHOD(Swow_Socket, enableCrypto)
 {
 #ifdef CAT_SSL
-    SWOW_SOCKET_GETTER(ssocket, socket);
+    SWOW_SOCKET_GETTER(s_socket, socket);
     HashTable *options_array = NULL;
     cat_socket_crypto_options_t options;
     cat_bool_t is_client = !cat_socket_is_server_connection(socket);
@@ -515,7 +515,7 @@ static PHP_METHOD(Swow_Socket, enableCrypto)
         swow_hash_str_fetch_str(options_array, "ca_path", &options.ca_path);
         if (options.ca_file == NULL) {
             options.ca_file = zend_ini_string((char *) ZEND_STRL("openssl.cafile"), 0);
-            // note: we must check if zend_ini_string returns NULL because we donot register "openssl.cafile" ini option
+            // note: we must check if zend_ini_string returns NULL because we do not register "openssl.cafile" ini option
             options.ca_file = (options.ca_file != NULL && strlen(options.ca_file) != 0) ? options.ca_file : NULL;
             options.no_client_ca_list = cat_true;
         }
@@ -551,7 +551,7 @@ ZEND_END_ARG_INFO()
 
 static PHP_METHOD_EX(Swow_Socket, getAddress, zend_bool is_peer)
 {
-    SWOW_SOCKET_GETTER(ssocket, socket);
+    SWOW_SOCKET_GETTER(s_socket, socket);
     char buffer[CAT_SOCKADDR_MAX_PATH];
     size_t buffer_length = sizeof(buffer);
     cat_bool_t ret;
@@ -572,7 +572,7 @@ static PHP_METHOD_EX(Swow_Socket, getAddress, zend_bool is_peer)
 
 static PHP_METHOD_EX(Swow_Socket, getPort, zend_bool is_peer)
 {
-    SWOW_SOCKET_GETTER(ssocket, socket);
+    SWOW_SOCKET_GETTER(s_socket, socket);
     zend_long port;
 
     ZEND_PARSE_PARAMETERS_NONE();
@@ -613,15 +613,15 @@ static PHP_METHOD(Swow_Socket, getPeerPort)
 
 static PHP_METHOD_EX(Swow_Socket, _read, zend_bool once, zend_bool may_address, zend_bool peek)
 {
-    SWOW_SOCKET_GETTER(ssocket, socket);
+    SWOW_SOCKET_GETTER(s_socket, socket);
     uint32_t max_num_args;
     zend_object *buffer_object;
     zend_long offset = 0;
     zend_long size = -1;
-    zval *zaddress = NULL, *zport = NULL;
+    zval *z_address = NULL, *z_port = NULL;
     zend_long timeout;
     zend_bool timeout_is_null = 1;
-    swow_buffer_t *sbuffer;
+    swow_buffer_t *s_buffer;
     char *ptr;
     cat_bool_t want_address;
     ssize_t ret;
@@ -643,8 +643,8 @@ static PHP_METHOD_EX(Swow_Socket, _read, zend_bool once, zend_bool may_address, 
         Z_PARAM_LONG(offset)
         Z_PARAM_LONG(size)
         if (may_address) {
-            Z_PARAM_ZVAL(zaddress)
-            Z_PARAM_ZVAL(zport)
+            Z_PARAM_ZVAL(z_address)
+            Z_PARAM_ZVAL(z_port)
         }
         if (!peek) {
             Z_PARAM_LONG_OR_NULL(timeout, timeout_is_null)
@@ -652,8 +652,8 @@ static PHP_METHOD_EX(Swow_Socket, _read, zend_bool once, zend_bool may_address, 
     ZEND_PARSE_PARAMETERS_END();
 
     /* check args and initialize */
-    sbuffer = swow_buffer_get_from_object(buffer_object);
-    ptr = swow_buffer_get_writable_space(sbuffer, offset, &size, 1);
+    s_buffer = swow_buffer_get_from_object(buffer_object);
+    ptr = swow_buffer_get_writable_space(s_buffer, offset, &size, 1);
     if (UNEXPECTED(ptr == NULL)) {
         RETURN_THROWS();
     }
@@ -663,14 +663,14 @@ static PHP_METHOD_EX(Swow_Socket, _read, zend_bool once, zend_bool may_address, 
     if (!may_address) {
         want_address = cat_false;
     } else {
-        want_address = zaddress != NULL || zport != NULL;
+        want_address = z_address != NULL || z_port != NULL;
     }
 
-    SWOW_BUFFER_LOCK(sbuffer);
+    SWOW_BUFFER_LOCK(s_buffer);
 
     /* Read on socket is the same as write on Buffer,
      * so we should call COW here */
-    swow_buffer_cow(sbuffer);
+    swow_buffer_cow(s_buffer);
 
     /* read */
     if (!want_address) {
@@ -693,22 +693,22 @@ static PHP_METHOD_EX(Swow_Socket, _read, zend_bool once, zend_bool may_address, 
         } else {
             ret = cat_socket_peek_from(socket, ptr, size, address, &address_length, &port);
         }
-        if (zaddress != NULL) {
+        if (z_address != NULL) {
             if (address_length == 0 || address_length > sizeof(address) /* error */) {
-                ZEND_TRY_ASSIGN_REF_EMPTY_STRING(zaddress);
+                ZEND_TRY_ASSIGN_REF_EMPTY_STRING(z_address);
             } else {
-                ZEND_TRY_ASSIGN_REF_STRINGL(zaddress, address, address_length);
+                ZEND_TRY_ASSIGN_REF_STRINGL(z_address, address, address_length);
             }
         }
-        if (zport != NULL) {
-            ZEND_TRY_ASSIGN_REF_LONG(zport, port);
+        if (z_port != NULL) {
+            ZEND_TRY_ASSIGN_REF_LONG(z_port, port);
         }
     }
 
-    SWOW_BUFFER_UNLOCK(sbuffer);
+    SWOW_BUFFER_UNLOCK(s_buffer);
 
     if (EXPECTED(ret > 0)) {
-        swow_buffer_virtual_write(sbuffer, offset, ret);
+        swow_buffer_virtual_write(s_buffer, offset, ret);
     }
 
     /* also for socket exception getReturnValue */
@@ -808,11 +808,11 @@ static PHP_METHOD(Swow_Socket, peekFrom)
 
 static PHP_METHOD_EX(Swow_Socket, _readString, zend_bool once, zend_bool may_address, zend_bool peek)
 {
-    SWOW_SOCKET_GETTER(ssocket, socket);
+    SWOW_SOCKET_GETTER(s_socket, socket);
     uint32_t max_num_args;
     zend_string *string;
     zend_long size = CAT_BUFFER_COMMON_SIZE;
-    zval *zaddress = NULL, *zport = NULL;
+    zval *z_address = NULL, *z_port = NULL;
     zend_long timeout;
     zend_bool timeout_is_null = 1;
     char *ptr;
@@ -832,8 +832,8 @@ static PHP_METHOD_EX(Swow_Socket, _readString, zend_bool once, zend_bool may_add
         Z_PARAM_OPTIONAL
         Z_PARAM_LONG(size)
         if (may_address) {
-            Z_PARAM_ZVAL(zaddress)
-            Z_PARAM_ZVAL(zport)
+            Z_PARAM_ZVAL(z_address)
+            Z_PARAM_ZVAL(z_port)
         }
         if (!peek) {
             Z_PARAM_LONG_OR_NULL(timeout, timeout_is_null)
@@ -852,7 +852,7 @@ static PHP_METHOD_EX(Swow_Socket, _readString, zend_bool once, zend_bool may_add
     if (!may_address) {
         want_address = cat_false;
     } else {
-        want_address = zaddress != NULL || zport != NULL;
+        want_address = z_address != NULL || z_port != NULL;
     }
 
     ptr = ZSTR_VAL(string);
@@ -876,15 +876,15 @@ static PHP_METHOD_EX(Swow_Socket, _readString, zend_bool once, zend_bool may_add
         } else {
             ret = cat_socket_peek_from(socket, ptr, size, address, &address_length, &port);
         }
-        if (zaddress != NULL) {
+        if (z_address != NULL) {
             if (address_length == 0 || address_length > sizeof(address)) {
-                ZEND_TRY_ASSIGN_REF_EMPTY_STRING(zaddress);
+                ZEND_TRY_ASSIGN_REF_EMPTY_STRING(z_address);
             } else {
-                ZEND_TRY_ASSIGN_REF_STRINGL(zaddress, address, address_length);
+                ZEND_TRY_ASSIGN_REF_STRINGL(z_address, address, address_length);
             }
         }
-        if (zport != NULL) {
-            ZEND_TRY_ASSIGN_REF_LONG(zport, port);
+        if (z_port != NULL) {
+            ZEND_TRY_ASSIGN_REF_LONG(z_port, port);
         }
     }
 
@@ -976,7 +976,7 @@ static PHP_METHOD(Swow_Socket, peekStringFrom)
 
 static PHP_METHOD_EX(Swow_Socket, _write, zend_bool single, zend_bool may_address)
 {
-    SWOW_SOCKET_GETTER(ssocket, socket);
+    SWOW_SOCKET_GETTER(s_socket, socket);
     uint32_t max_num_args;
     swow_buffer_t *s_buffer = NULL;
     zend_string *string = NULL;
@@ -1026,17 +1026,17 @@ static PHP_METHOD_EX(Swow_Socket, _write, zend_bool single, zend_bool may_addres
                 strings = strings_on_heap = emalloc(vector_list_array_count * sizeof(*strings));
             }
             do {
-                zval *ztmp;
+                zval *z_tmp;
                 uint32_t vector_list_array_index = 0;
-                ZEND_HASH_FOREACH_VAL(vector_list_array, ztmp) {
+                ZEND_HASH_FOREACH_VAL(vector_list_array, z_tmp) {
                     /* the last one can be null */
-                    if (ZVAL_IS_NULL(ztmp)) {
+                    if (ZVAL_IS_NULL(z_tmp)) {
                         break;
                     }
                     /* [array|string|Stringable|Buffer] */
-                    if (Z_TYPE_P(ztmp) == IS_ARRAY) {
+                    if (Z_TYPE_P(z_tmp) == IS_ARRAY) {
                         /* array include parameters */
-                        HashTable *vector_elements_array = Z_ARR_P(ztmp);
+                        HashTable *vector_elements_array = Z_ARR_P(z_tmp);
                         uint32_t vector_elements_array_count = zend_hash_num_elements(vector_elements_array);
 #if PHP_VERSION_ID < 80100
 # define _ARG_POS(x)
@@ -1049,28 +1049,28 @@ static PHP_METHOD_EX(Swow_Socket, _write, zend_bool single, zend_bool may_addres
                         }
                         uint32_t index = 0;
                         /* [string|Stringable|Buffer, start, length] */
-                        ZEND_HASH_FOREACH_VAL(vector_elements_array, ztmp) {
+                        ZEND_HASH_FOREACH_VAL(vector_elements_array, z_tmp) {
                             ZEND_ASSERT(index == 0 || index == 1 || index == 2);
                             if (index == 0) {
-                                if (UNEXPECTED(!swow_parse_arg_buffer_or_stringable_for_reading(ztmp, &s_buffer, &string _ARG_POS(1)))) {
-                                    zend_argument_type_error(1, "[%u][0] ($data) must be of type string or %s, %s given", vector_list_array_index, ZSTR_VAL(swow_buffer_ce->name), zend_zval_type_name(ztmp));
+                                if (UNEXPECTED(!swow_parse_arg_buffer_or_stringable_for_reading(z_tmp, &s_buffer, &string _ARG_POS(1)))) {
+                                    zend_argument_type_error(1, "[%u][0] ($data) must be of type string or %s, %s given", vector_list_array_index, ZSTR_VAL(swow_buffer_ce->name), zend_zval_type_name(z_tmp));
                                     goto _error;
                                 }
                             } else if (index == 1) {
-                                if (UNEXPECTED(ztmp != NULL && !zend_parse_arg_long(ztmp, &start, NULL, false _ARG_POS(1)))) {
-                                    zend_argument_type_error(1, "[%u][1] ($start) must be of type int, %s given", vector_list_array_index, zend_zval_type_name(ztmp));
+                                if (UNEXPECTED(z_tmp != NULL && !zend_parse_arg_long(z_tmp, &start, NULL, false _ARG_POS(1)))) {
+                                    zend_argument_type_error(1, "[%u][1] ($start) must be of type int, %s given", vector_list_array_index, zend_zval_type_name(z_tmp));
                                     goto _error;
                                 }
                             } else if (index == 2) {
-                                if (UNEXPECTED(ztmp != NULL && !zend_parse_arg_long(ztmp, &length, NULL, false _ARG_POS(1)))) {
-                                    zend_argument_type_error(1, "[%u][2] ($length) must be of type int, %s given", vector_list_array_index, zend_zval_type_name(ztmp));
+                                if (UNEXPECTED(z_tmp != NULL && !zend_parse_arg_long(z_tmp, &length, NULL, false _ARG_POS(1)))) {
+                                    zend_argument_type_error(1, "[%u][2] ($length) must be of type int, %s given", vector_list_array_index, zend_zval_type_name(z_tmp));
                                     goto _error;
                                 }
                             }
                             index++;
                         } ZEND_HASH_FOREACH_END();
-                    } else if (!swow_parse_arg_buffer_or_stringable_for_reading(ztmp, &s_buffer, &string _ARG_POS(1))) {
-                        zend_argument_type_error(1, "[%u] ($stringable) must be of type string, array or %s, %s given", vector_list_array_index, ZSTR_VAL(swow_buffer_ce->name), zend_zval_type_name(ztmp));
+                    } else if (!swow_parse_arg_buffer_or_stringable_for_reading(z_tmp, &s_buffer, &string _ARG_POS(1))) {
+                        zend_argument_type_error(1, "[%u] ($stringable) must be of type string, array or %s, %s given", vector_list_array_index, ZSTR_VAL(swow_buffer_ce->name), zend_zval_type_name(z_tmp));
                         goto _error;
                     }
 #undef _ARG_POS
@@ -1218,11 +1218,11 @@ ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Socket, sendHandle)
 {
-    SWOW_SOCKET_GETTER(ssocket, socket);
+    SWOW_SOCKET_GETTER(s_socket, socket);
     zend_object *handle_object;
     zend_long timeout;
     zend_bool timeout_is_null = 1;
-    swow_socket_t *shandle;
+    swow_socket_t *s_handle;
     cat_socket_t *handle;
     cat_bool_t ret;
 
@@ -1232,8 +1232,8 @@ static PHP_METHOD(Swow_Socket, sendHandle)
         Z_PARAM_LONG_OR_NULL(timeout, timeout_is_null)
     ZEND_PARSE_PARAMETERS_END();
 
-    shandle = swow_socket_get_from_object(handle_object);
-    handle = &shandle->socket;
+    s_handle = swow_socket_get_from_object(handle_object);
+    handle = &s_handle->socket;
     if (timeout_is_null) {
         timeout = cat_socket_get_write_timeout(socket);
     }
@@ -1253,7 +1253,7 @@ ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Socket, close)
 {
-    SWOW_SOCKET_GETTER(ssocket, socket);
+    SWOW_SOCKET_GETTER(s_socket, socket);
     cat_bool_t ret;
 
     ZEND_PARSE_PARAMETERS_NONE();
@@ -1268,7 +1268,7 @@ static PHP_METHOD(Swow_Socket, close)
 #define SWOW_SOCKET_IS_XXX_API_GEN(Name, name) \
 static PHP_METHOD(Swow_Socket, is##Name) \
 { \
-    SWOW_SOCKET_GETTER(ssocket, socket); \
+    SWOW_SOCKET_GETTER(s_socket, socket); \
     \
     ZEND_PARSE_PARAMETERS_NONE(); \
     \
@@ -1303,7 +1303,7 @@ SWOW_SOCKET_IS_XXX_API_GEN(Client, client)
 
 static PHP_METHOD(Swow_Socket, getConnectionError)
 {
-    SWOW_SOCKET_GETTER(ssocket, socket);
+    SWOW_SOCKET_GETTER(s_socket, socket);
 
     ZEND_PARSE_PARAMETERS_NONE();
 
@@ -1315,7 +1315,7 @@ ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Socket, checkLiveness)
 {
-    SWOW_SOCKET_GETTER(ssocket, socket);
+    SWOW_SOCKET_GETTER(s_socket, socket);
     cat_bool_t ret;
 
     ZEND_PARSE_PARAMETERS_NONE();
@@ -1334,7 +1334,7 @@ static PHP_METHOD(Swow_Socket, checkLiveness)
 
 static PHP_METHOD(Swow_Socket, getIoState)
 {
-    SWOW_SOCKET_GETTER(ssocket, socket);
+    SWOW_SOCKET_GETTER(s_socket, socket);
 
     ZEND_PARSE_PARAMETERS_NONE();
 
@@ -1345,7 +1345,7 @@ static PHP_METHOD(Swow_Socket, getIoState)
 
 static PHP_METHOD(Swow_Socket, getIoStateName)
 {
-    SWOW_SOCKET_GETTER(ssocket, socket);
+    SWOW_SOCKET_GETTER(s_socket, socket);
 
     ZEND_PARSE_PARAMETERS_NONE();
 
@@ -1356,7 +1356,7 @@ static PHP_METHOD(Swow_Socket, getIoStateName)
 
 static PHP_METHOD(Swow_Socket, getIoStateNaming)
 {
-    SWOW_SOCKET_GETTER(ssocket, socket);
+    SWOW_SOCKET_GETTER(s_socket, socket);
 
     ZEND_PARSE_PARAMETERS_NONE();
 
@@ -1367,7 +1367,7 @@ static PHP_METHOD(Swow_Socket, getIoStateNaming)
 
 static PHP_METHOD(Swow_Socket, getRecvBufferSize)
 {
-    SWOW_SOCKET_GETTER(ssocket, socket);
+    SWOW_SOCKET_GETTER(s_socket, socket);
 
     ZEND_PARSE_PARAMETERS_NONE();
 
@@ -1378,7 +1378,7 @@ static PHP_METHOD(Swow_Socket, getRecvBufferSize)
 
 static PHP_METHOD(Swow_Socket, getSendBufferSize)
 {
-    SWOW_SOCKET_GETTER(ssocket, socket);
+    SWOW_SOCKET_GETTER(s_socket, socket);
 
     ZEND_PARSE_PARAMETERS_NONE();
 
@@ -1393,7 +1393,7 @@ ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Socket, setRecvBufferSize)
 {
-    SWOW_SOCKET_GETTER(ssocket, socket);
+    SWOW_SOCKET_GETTER(s_socket, socket);
     zend_long size;
     int error;
 
@@ -1415,7 +1415,7 @@ static PHP_METHOD(Swow_Socket, setRecvBufferSize)
 
 static PHP_METHOD(Swow_Socket, setSendBufferSize)
 {
-    SWOW_SOCKET_GETTER(ssocket, socket);
+    SWOW_SOCKET_GETTER(s_socket, socket);
     zend_long size;
     int error;
 
@@ -1439,7 +1439,7 @@ ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Socket, setTcpNodelay)
 {
-    SWOW_SOCKET_GETTER(ssocket, socket);
+    SWOW_SOCKET_GETTER(s_socket, socket);
     zend_bool enable = cat_true;
     cat_bool_t ret;
 
@@ -1465,7 +1465,7 @@ ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Socket, setTcpKeepAlive)
 {
-    SWOW_SOCKET_GETTER(ssocket, socket);
+    SWOW_SOCKET_GETTER(s_socket, socket);
     zend_bool enable = cat_true;
     zend_long delay = 0;
     cat_bool_t ret;
@@ -1495,7 +1495,7 @@ static PHP_METHOD(Swow_Socket, setTcpKeepAlive)
 
 static PHP_METHOD(Swow_Socket, setTcpAcceptBalance)
 {
-    SWOW_SOCKET_GETTER(ssocket, socket);
+    SWOW_SOCKET_GETTER(s_socket, socket);
     zend_bool enable = cat_true;
     cat_bool_t ret;
 
@@ -1519,55 +1519,55 @@ ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Socket, __debugInfo)
 {
-    SWOW_SOCKET_GETTER(ssocket, socket);
-    zval zdebug_info;
+    SWOW_SOCKET_GETTER(s_socket, socket);
+    zval z_debug_info;
     int n;
 
     ZEND_PARSE_PARAMETERS_NONE();
 
-    array_init(&zdebug_info);
-    add_assoc_string(&zdebug_info, "type", cat_socket_get_type_name(socket));
-    add_assoc_long(&zdebug_info, "fd", (zend_long) cat_socket_get_fd_fast(socket));
+    array_init(&z_debug_info);
+    add_assoc_string(&z_debug_info, "type", cat_socket_get_type_name(socket));
+    add_assoc_long(&z_debug_info, "fd", (zend_long) cat_socket_get_fd_fast(socket));
     if (!cat_socket_is_available(socket)) {
         goto _return;
     }
     do {
-        zval ztimeout;
-        array_init(&ztimeout);
-        add_assoc_long(&ztimeout, "dns", cat_socket_get_dns_timeout(socket));
-        add_assoc_long(&ztimeout, "accept", cat_socket_get_accept_timeout(socket));
-        add_assoc_long(&ztimeout, "connect", cat_socket_get_connect_timeout(socket));
-        add_assoc_long(&ztimeout, "handshake", cat_socket_get_handshake_timeout(socket));
-        add_assoc_long(&ztimeout, "read", cat_socket_get_read_timeout(socket));
-        add_assoc_long(&ztimeout, "write", cat_socket_get_write_timeout(socket));
-        add_assoc_zval(&zdebug_info, "timeout", &ztimeout);
+        zval z_timeout;
+        array_init(&z_timeout);
+        add_assoc_long(&z_timeout, "dns", cat_socket_get_dns_timeout(socket));
+        add_assoc_long(&z_timeout, "accept", cat_socket_get_accept_timeout(socket));
+        add_assoc_long(&z_timeout, "connect", cat_socket_get_connect_timeout(socket));
+        add_assoc_long(&z_timeout, "handshake", cat_socket_get_handshake_timeout(socket));
+        add_assoc_long(&z_timeout, "read", cat_socket_get_read_timeout(socket));
+        add_assoc_long(&z_timeout, "write", cat_socket_get_write_timeout(socket));
+        add_assoc_zval(&z_debug_info, "timeout", &z_timeout);
     } while (0);
-    add_assoc_bool(&zdebug_info, "established", cat_socket_is_established(socket));
-    add_assoc_string(&zdebug_info, "role", cat_socket_get_role_name(socket));
+    add_assoc_bool(&z_debug_info, "established", cat_socket_is_established(socket));
+    add_assoc_string(&z_debug_info, "role", cat_socket_get_role_name(socket));
     for (n = 2; n--;) {
         cat_bool_t is_peer = !n;
-        zval zname;
+        zval z_name;
         if (cat_socket_getname_fast(socket, is_peer) != NULL) {
             char address[CAT_SOCKADDR_MAX_PATH];
             size_t address_length = sizeof(address);
             cat_bool_t ret;
-            array_init(&zname);
+            array_init(&z_name);
             ret = cat_socket_get_address(socket, address, &address_length, is_peer);
             if (unlikely(!ret || address_length == 0)) {
-                add_assoc_str(&zname, "address", zend_empty_string);
+                add_assoc_str(&z_name, "address", zend_empty_string);
             } else {
-                add_assoc_string(&zname, "address", address);
+                add_assoc_string(&z_name, "address", address);
             }
-            add_assoc_long(&zname, "port", cat_socket_get_port(socket, is_peer));
+            add_assoc_long(&z_name, "port", cat_socket_get_port(socket, is_peer));
         } else {
-            ZVAL_NULL(&zname);
+            ZVAL_NULL(&z_name);
         }
-        add_assoc_zval(&zdebug_info, !is_peer ? "sockname" : "peername", &zname);
+        add_assoc_zval(&z_debug_info, !is_peer ? "sockname" : "peername", &z_name);
     }
-    add_assoc_string(&zdebug_info, "io_state", cat_socket_get_io_state_naming(socket));
+    add_assoc_string(&z_debug_info, "io_state", cat_socket_get_io_state_naming(socket));
 
     _return:
-    RETURN_DEBUG_INFO_WITH_PROPERTIES(&zdebug_info);
+    RETURN_DEBUG_INFO_WITH_PROPERTIES(&z_debug_info);
 }
 
 static const zend_function_entry swow_socket_methods[] = {

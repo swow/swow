@@ -341,15 +341,15 @@ static void swow_debug_build_trace_string(smart_str *str, HashTable *ht, uint32_
 SWOW_API smart_str *swow_debug_build_trace_as_smart_str(smart_str *str, HashTable *trace)
 {
     zend_ulong index;
-    zval *zframe;
+    zval *z_frame;
     uint32_t num = 0;
 
-    ZEND_HASH_FOREACH_NUM_KEY_VAL(trace, index, zframe) {
-        if (Z_TYPE_P(zframe) != IS_ARRAY) {
+    ZEND_HASH_FOREACH_NUM_KEY_VAL(trace, index, z_frame) {
+        if (Z_TYPE_P(z_frame) != IS_ARRAY) {
             zend_error(E_WARNING, "Expected array for frame " ZEND_ULONG_FMT, index);
             continue;
         }
-        swow_debug_build_trace_string(str, Z_ARRVAL_P(zframe), num++, 0);
+        swow_debug_build_trace_string(str, Z_ARRVAL_P(z_frame), num++, 0);
     } ZEND_HASH_FOREACH_END();
 
     smart_str_appendc(str, '#');
@@ -404,26 +404,26 @@ SWOW_API HashTable *swow_debug_get_trace_as_list(zend_long options, zend_long li
 {
     HashTable *trace, *list;
     zend_ulong index;
-    zval *zframe, zline;
+    zval *z_frame, z_line;
 
     trace = swow_debug_get_trace(options, limit);
     list = zend_new_array(zend_hash_num_elements(trace));
 
-    ZEND_HASH_FOREACH_NUM_KEY_VAL(trace, index, zframe) {
+    ZEND_HASH_FOREACH_NUM_KEY_VAL(trace, index, z_frame) {
         smart_str str = {0};
-        if (Z_TYPE_P(zframe) != IS_ARRAY) {
+        if (Z_TYPE_P(z_frame) != IS_ARRAY) {
             zend_error(E_WARNING, "Expected array for frame " ZEND_ULONG_FMT, index);
             continue;
         }
-        swow_debug_build_trace_string(&str, Z_ARRVAL_P(zframe), 0, 1);
+        swow_debug_build_trace_string(&str, Z_ARRVAL_P(z_frame), 0, 1);
         smart_str_0(&str);
-        ZVAL_STR(&zline, str.s);
-        zend_hash_next_index_insert(list, &zline);
+        ZVAL_STR(&z_line, str.s);
+        zend_hash_next_index_insert(list, &z_line);
     } ZEND_HASH_FOREACH_END();
     zend_array_destroy(trace);
 
-    ZVAL_STRING(&zline, "{main}");
-    zend_hash_next_index_insert(list, &zline);
+    ZVAL_STRING(&z_line, "{main}");
+    zend_hash_next_index_insert(list, &z_line);
 
     return list;
 }
@@ -451,7 +451,7 @@ static PHP_FUNCTION(Swow_Debug_registerExtendedStatementHandler)
 {
     swow_utils_handler_t *handler;
     swow_fcall_storage_t fcall;
-    zval zfcall;
+    zval z_fcall;
 
     ZEND_PARSE_PARAMETERS_START(1, 1)
         SWOW_PARAM_FCALL(fcall)
@@ -462,8 +462,8 @@ static PHP_FUNCTION(Swow_Debug_registerExtendedStatementHandler)
         RETURN_THROWS();
     }
 
-    ZVAL_PTR(&zfcall, &fcall);
-    handler = swow_utils_handler_create(&zfcall);
+    ZVAL_PTR(&z_fcall, &fcall);
+    handler = swow_utils_handler_create(&z_fcall);
     ZEND_ASSERT(handler != NULL);
 
     swow_utils_handler_push_back_to(handler, &SWOW_DEBUG_G(extended_statement_handlers));
@@ -484,10 +484,10 @@ static user_opcode_handler_t original_zend_ext_stmt_handler;
 
 static int swow_debug_ext_stmt_handler(zend_execute_data *execute_data)
 {
-    swow_coroutine_t *scoroutine = swow_coroutine_get_current();
+    swow_coroutine_t *s_coroutine = swow_coroutine_get_current();
 
     if (!cat_queue_empty(&SWOW_DEBUG_G(extended_statement_handlers)) &&
-        !(scoroutine->coroutine.flags & SWOW_COROUTINE_FLAG_DEBUGGING)) {
+        !(s_coroutine->coroutine.flags & SWOW_COROUTINE_FLAG_DEBUGGING)) {
         zend_fcall_info fci;
         zval retval;
 
@@ -498,13 +498,13 @@ static int swow_debug_ext_stmt_handler(zend_execute_data *execute_data)
         fci.named_params = NULL;
         fci.retval = &retval;
 
-        scoroutine->coroutine.flags |= SWOW_COROUTINE_FLAG_DEBUGGING;
+        s_coroutine->coroutine.flags |= SWOW_COROUTINE_FLAG_DEBUGGING;
 
         CAT_QUEUE_FOREACH_DATA_START(&SWOW_DEBUG_G(extended_statement_handlers), swow_utils_handler_t, node, handler) {
             (void) zend_call_function(&fci, &handler->fcall.fcc);
         } CAT_QUEUE_FOREACH_DATA_END();
 
-        scoroutine->coroutine.flags ^= SWOW_COROUTINE_FLAG_DEBUGGING;
+        s_coroutine->coroutine.flags ^= SWOW_COROUTINE_FLAG_DEBUGGING;
 
         zval_ptr_dtor(&retval);
     }

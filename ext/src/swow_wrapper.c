@@ -173,23 +173,23 @@ SWOW_API zend_object *swow_custom_object_clone(zend_object *object)
 
 SWOW_API zend_bool swow_fcall_storage_is_available(const swow_fcall_storage_t *fcall)
 {
-    return Z_TYPE(fcall->zcallable) != IS_UNDEF;
+    return Z_TYPE(fcall->z_callable) != IS_UNDEF;
 }
 
-SWOW_API zend_bool swow_fcall_storage_create(swow_fcall_storage_t *fcall, zval *zcallable)
+SWOW_API zend_bool swow_fcall_storage_create(swow_fcall_storage_t *fcall, zval *z_callable)
 {
-    if (Z_TYPE_P(zcallable) == IS_PTR) {
-        *fcall = *((swow_fcall_storage_t *) Z_PTR_P(zcallable));
-        Z_TRY_ADDREF(fcall->zcallable);
+    if (Z_TYPE_P(z_callable) == IS_PTR) {
+        *fcall = *((swow_fcall_storage_t *) Z_PTR_P(z_callable));
+        Z_TRY_ADDREF(fcall->z_callable);
     } else {
         char *error;
-        if (!zend_is_callable_ex(zcallable, NULL, 0, NULL, &fcall->fcc, &error)) {
+        if (!zend_is_callable_ex(z_callable, NULL, 0, NULL, &fcall->fcc, &error)) {
             cat_update_last_error(CAT_EMISUSE, "The argument passed in is not callable (%s)", error);
             efree(error);
             return false;
         }
         ZEND_ASSERT(!error);
-        ZVAL_COPY(&fcall->zcallable, zcallable);
+        ZVAL_COPY(&fcall->z_callable, z_callable);
     }
 
     return true;
@@ -197,8 +197,8 @@ SWOW_API zend_bool swow_fcall_storage_create(swow_fcall_storage_t *fcall, zval *
 
 SWOW_API void swow_fcall_storage_release(swow_fcall_storage_t *fcall)
 {
-    zval_ptr_dtor(&fcall->zcallable);
-    ZVAL_UNDEF(&fcall->zcallable);
+    zval_ptr_dtor(&fcall->z_callable);
+    ZVAL_UNDEF(&fcall->z_callable);
 }
 
 /* function caller */

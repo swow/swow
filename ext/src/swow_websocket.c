@@ -426,18 +426,18 @@ ZEND_END_ARG_INFO()
 static PHP_METHOD(Swow_WebSocket_Header, __debugInfo)
 {
     SWOW_WEBSOCKET_HEADER_GETTER(s_header, header);
-    zval zdebug_info;
+    zval z_debug_info;
 
     ZEND_PARSE_PARAMETERS_NONE();
 
-    array_init(&zdebug_info);
-    add_assoc_long(&zdebug_info, "opcode", header->opcode);
-    add_assoc_bool(&zdebug_info, "fin", header->fin);
-    add_assoc_bool(&zdebug_info, "rsv1", header->rsv1);
-    add_assoc_bool(&zdebug_info, "rsv2", header->rsv2);
-    add_assoc_bool(&zdebug_info, "rsv3", header->rsv3);
-    add_assoc_bool(&zdebug_info, "mask", header->mask);
-    add_assoc_long(&zdebug_info, "payload_length", cat_websocket_header_get_payload_length(header));
+    array_init(&z_debug_info);
+    add_assoc_long(&z_debug_info, "opcode", header->opcode);
+    add_assoc_bool(&z_debug_info, "fin", header->fin);
+    add_assoc_bool(&z_debug_info, "rsv1", header->rsv1);
+    add_assoc_bool(&z_debug_info, "rsv2", header->rsv2);
+    add_assoc_bool(&z_debug_info, "rsv3", header->rsv3);
+    add_assoc_bool(&z_debug_info, "mask", header->mask);
+    add_assoc_long(&z_debug_info, "payload_length", cat_websocket_header_get_payload_length(header));
     do {
         const char *mask_key = cat_websocket_header_get_mask_key(header);
         if (mask_key == NULL) {
@@ -448,14 +448,14 @@ static PHP_METHOD(Swow_WebSocket_Header, __debugInfo)
         cat_str_quote_ex(
             mask_key, CAT_WEBSOCKET_MASK_KEY_LENGTH,
             &escaped_mask_key, &escaped_mask_key_length,
-            CAT_STR_QUOTE_STYLE_FLAG_OMIT_LEADING_TRAILING_QUOTES | CAT_STR_QUOTE_STYLE_FLAG_PRINT_NON_ASCILL_STRINGS_IN_HEX,
+            CAT_STR_QUOTE_STYLE_FLAG_OMIT_LEADING_TRAILING_QUOTES | CAT_STR_QUOTE_STYLE_FLAG_PRINT_NON_ASCII_STRINGS_IN_HEX,
             NULL, NULL
         );
-        add_assoc_stringl(&zdebug_info, "mask_key", escaped_mask_key, escaped_mask_key_length);
+        add_assoc_stringl(&z_debug_info, "mask_key", escaped_mask_key, escaped_mask_key_length);
         cat_free(escaped_mask_key);
     } while (0);
 
-    RETURN_DEBUG_INFO_WITH_PROPERTIES(&zdebug_info);
+    RETURN_DEBUG_INFO_WITH_PROPERTIES(&z_debug_info);
 }
 
 static const zend_function_entry swow_websocket_header_methods[] = {

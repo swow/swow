@@ -402,7 +402,7 @@ static inline int swow_stream_bind(php_stream *stream, swow_netstream_data_t *sw
     const char *host;
     size_t host_len;
     int port = 0;
-    zval *tmpzval = NULL;
+    zval *z_tmp = NULL;
     int ret;
 
     if (!(type & CAT_SOCKET_TYPE_FLAG_LOCAL)) {
@@ -418,17 +418,17 @@ static inline int swow_stream_bind(php_stream *stream, swow_netstream_data_t *sw
 
         if (
             PHP_STREAM_CONTEXT(stream) &&
-            (tmpzval = php_stream_context_get_option(PHP_STREAM_CONTEXT(stream), "socket", "ipv6_v6only")) != NULL &&
-            Z_TYPE_P(tmpzval) != IS_NULL &&
-            zend_is_true(tmpzval)
+            (z_tmp = php_stream_context_get_option(PHP_STREAM_CONTEXT(stream), "socket", "ipv6_v6only")) != NULL &&
+            Z_TYPE_P(z_tmp) != IS_NULL &&
+            zend_is_true(z_tmp)
         ) {
             bind_flags |= CAT_SOCKET_BIND_FLAG_IPV6ONLY;
         }
 
         if (
             PHP_STREAM_CONTEXT(stream) &&
-            (tmpzval = php_stream_context_get_option(PHP_STREAM_CONTEXT(stream), "socket", "so_reuseport")) != NULL &&
-            zend_is_true(tmpzval)
+            (z_tmp = php_stream_context_get_option(PHP_STREAM_CONTEXT(stream), "socket", "so_reuseport")) != NULL &&
+            zend_is_true(z_tmp)
         ) {
             bind_flags |= CAT_SOCKET_BIND_FLAG_REUSEPORT;
         }
@@ -455,8 +455,8 @@ static inline int swow_stream_bind(php_stream *stream, swow_netstream_data_t *sw
     if (
         stream->ops == &swow_stream_udp_socket_ops && /* SO_BROADCAST is only applicable for UDP */
         PHP_STREAM_CONTEXT(stream) &&
-        (tmpzval = php_stream_context_get_option(PHP_STREAM_CONTEXT(stream), "socket", "so_broadcast")) != NULL &&
-        zend_is_true(tmpzval)
+        (z_tmp = php_stream_context_get_option(PHP_STREAM_CONTEXT(stream), "socket", "so_broadcast")) != NULL &&
+        zend_is_true(z_tmp)
     ) {
         (void) cat_socket_set_udp_broadcast(socket, cat_true);
     }
@@ -488,7 +488,7 @@ static inline int swow_stream_accept(php_stream *stream, swow_netstream_data_t *
     cat_socket_t *server, *client;
     const cat_sockaddr_info_t *address_info;
     zend_bool tcp_nodelay = 1;
-    zval *tmpzval = NULL;
+    zval *z_tmp = NULL;
     cat_bool_t ret;
 
     client_sock = (swow_netstream_data_t *) ecalloc(1, sizeof(*client_sock));
@@ -499,8 +499,8 @@ static inline int swow_stream_accept(php_stream *stream, swow_netstream_data_t *
     xparam->outputs.client = NULL;
 
     if ((NULL != PHP_STREAM_CONTEXT(stream)) &&
-        (tmpzval = php_stream_context_get_option(PHP_STREAM_CONTEXT(stream), "socket", "tcp_nodelay")) != NULL &&
-        !zend_is_true(tmpzval)) {
+        (z_tmp = php_stream_context_get_option(PHP_STREAM_CONTEXT(stream), "socket", "tcp_nodelay")) != NULL &&
+        !zend_is_true(z_tmp)) {
         tcp_nodelay = 0;
     }
 
@@ -589,7 +589,7 @@ static int swow_stream_connect(php_stream *stream, swow_netstream_data_t *swow_s
     cat_socket_t *socket = &swow_sock->socket;
     char *host = NULL, *bind_host = NULL;
     int port, bind_port = 0;
-    zval *ztmp = NULL;
+    zval *z_tmp = NULL;
 
     if (type & CAT_SOCKET_TYPE_FLAG_LOCAL) {
         socket = cat_socket_create(socket, type);
@@ -613,15 +613,15 @@ static int swow_stream_connect(php_stream *stream, swow_netstream_data_t *swow_s
         return -1;
     }
 
-    if (PHP_STREAM_CONTEXT(stream) && (ztmp = php_stream_context_get_option(PHP_STREAM_CONTEXT(stream), "socket", "bindto")) != NULL) {
-        if (Z_TYPE_P(ztmp) != IS_STRING) {
+    if (PHP_STREAM_CONTEXT(stream) && (z_tmp = php_stream_context_get_option(PHP_STREAM_CONTEXT(stream), "socket", "bindto")) != NULL) {
+        if (Z_TYPE_P(z_tmp) != IS_STRING) {
             if (xparam->want_errortext) {
                 xparam->outputs.error_text = strpprintf(0, "local_addr context option is not a string.");
             }
             efree(host);
             return -1;
         }
-        bind_host = swow_stream_parse_ip_address_ex(Z_STRVAL_P(ztmp), Z_STRLEN_P(ztmp), &bind_port, xparam->want_errortext, &xparam->outputs.error_text);
+        bind_host = swow_stream_parse_ip_address_ex(Z_STRVAL_P(z_tmp), Z_STRLEN_P(z_tmp), &bind_port, xparam->want_errortext, &xparam->outputs.error_text);
     }
 
     socket = cat_socket_create(socket, type);
@@ -640,16 +640,16 @@ static int swow_stream_connect(php_stream *stream, swow_netstream_data_t *swow_s
 
     if (stream->ops == &swow_stream_udp_socket_ops && /* SO_BROADCAST is only applicable for UDP */
         PHP_STREAM_CONTEXT(stream) &&
-        (ztmp = php_stream_context_get_option(PHP_STREAM_CONTEXT(stream), "socket", "so_broadcast")) != NULL &&
-        zend_is_true(ztmp)
+        (z_tmp = php_stream_context_get_option(PHP_STREAM_CONTEXT(stream), "socket", "so_broadcast")) != NULL &&
+        zend_is_true(z_tmp)
     ) {
         (void) cat_socket_set_udp_broadcast(socket, cat_true);
     }
     if (
         stream->ops == &swow_stream_tcp_socket_ops && /* TCP_NODELAY is only applicable for TCP */
         PHP_STREAM_CONTEXT(stream)  &&
-        (ztmp = php_stream_context_get_option(PHP_STREAM_CONTEXT(stream), "socket", "tcp_nodelay")) != NULL &&
-        !zend_is_true(ztmp)
+        (z_tmp = php_stream_context_get_option(PHP_STREAM_CONTEXT(stream), "socket", "tcp_nodelay")) != NULL &&
+        !zend_is_true(z_tmp)
     ) {
         (void) cat_socket_set_tcp_nodelay(socket, cat_false);
     }
@@ -777,7 +777,7 @@ static int swow_stream_enable_crypto(php_stream *stream,
         GET_VER_OPT_STRING("capath", options.ca_path);
         if (options.ca_file == NULL) {
             options.ca_file = zend_ini_string((char *) ZEND_STRL("openssl.cafile"), 0);
-            // note: we must check if zend_ini_string returns NULL because we donot register "openssl.cafile" ini option
+            // note: we must check if zend_ini_string returns NULL because we do not register "openssl.cafile" ini option
             options.ca_file = (options.ca_file != NULL && strlen(options.ca_file) != 0) ? options.ca_file : NULL;
             options.no_client_ca_list = cat_true;
         }

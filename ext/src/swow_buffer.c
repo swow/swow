@@ -210,9 +210,9 @@ SWOW_API char *swow_buffer_get_writable_space_v(swow_buffer_t *s_buffer, zend_lo
     return s_buffer->buffer.value + offset;
 }
 
-SWOW_API void swow_buffer_virtual_write(swow_buffer_t *sbuffer, size_t offset, size_t length)
+SWOW_API void swow_buffer_virtual_write(swow_buffer_t *s_buffer, size_t offset, size_t length)
 {
-    cat_buffer_t *buffer = &sbuffer->buffer;
+    cat_buffer_t *buffer = &s_buffer->buffer;
     zend_string *string = swow_buffer_get_string_from_handle(buffer);
     size_t new_length = offset + length;
 
@@ -221,70 +221,70 @@ SWOW_API void swow_buffer_virtual_write(swow_buffer_t *sbuffer, size_t offset, s
     }
 }
 
-SWOW_API void swow_buffer_update(swow_buffer_t *sbuffer, size_t length)
+SWOW_API void swow_buffer_update(swow_buffer_t *s_buffer, size_t length)
 {
-    cat_buffer_t *buffer = &sbuffer->buffer;
+    cat_buffer_t *buffer = &s_buffer->buffer;
     zend_string *string = swow_buffer_get_string_from_handle(buffer);
 
     ZSTR_VAL(string)[ZSTR_LEN(string) = (buffer->length = length)] = '\0';
 }
 
-static zend_always_inline void swow_buffer_reset(swow_buffer_t *sbuffer)
+static zend_always_inline void swow_buffer_reset(swow_buffer_t *s_buffer)
 {
-    ZEND_ASSERT(sbuffer->locker == NULL);
+    ZEND_ASSERT(s_buffer->locker == NULL);
 }
 
-static zend_always_inline void swow_buffer_close(swow_buffer_t *sbuffer)
+static zend_always_inline void swow_buffer_close(swow_buffer_t *s_buffer)
 {
-    cat_buffer_close(&sbuffer->buffer);
-    swow_buffer_reset(sbuffer);
+    cat_buffer_close(&s_buffer->buffer);
+    swow_buffer_reset(s_buffer);
 }
 
 static zend_object *swow_buffer_create_object(zend_class_entry *ce)
 {
-    swow_buffer_t *sbuffer = swow_object_alloc(swow_buffer_t, ce, swow_buffer_handlers);
+    swow_buffer_t *s_buffer = swow_object_alloc(swow_buffer_t, ce, swow_buffer_handlers);
 
-    cat_buffer_init(&sbuffer->buffer);
-    sbuffer->locker = NULL;
+    cat_buffer_init(&s_buffer->buffer);
+    s_buffer->locker = NULL;
 
-    return &sbuffer->std;
+    return &s_buffer->std;
 }
 
 static void swow_buffer_free_object(zend_object *object)
 {
-    swow_buffer_t *sbuffer = swow_buffer_get_from_object(object);
+    swow_buffer_t *s_buffer = swow_buffer_get_from_object(object);
 
-    cat_buffer_close(&sbuffer->buffer);
+    cat_buffer_close(&s_buffer->buffer);
 
-    zend_object_std_dtor(&sbuffer->std);
+    zend_object_std_dtor(&s_buffer->std);
 }
 
 #define getThisBuffer() (swow_buffer_get_from_object(Z_OBJ_P(ZEND_THIS)))
 
-#define SWOW_BUFFER_GETTER(_sbuffer, _buffer) \
-    swow_buffer_t *_sbuffer = getThisBuffer(); \
-    cat_buffer_t *buffer = &sbuffer->buffer; \
+#define SWOW_BUFFER_GETTER(_s_buffer, _buffer) \
+    swow_buffer_t *_s_buffer = getThisBuffer(); \
+    cat_buffer_t *buffer = &s_buffer->buffer; \
 
-static zend_never_inline void swow_buffer_separate(swow_buffer_t *sbuffer)
+static zend_never_inline void swow_buffer_separate(swow_buffer_t *s_buffer)
 {
     cat_buffer_t new_buffer;
     CAT_LOG_DEBUG_VA_WITH_LEVEL(BUFFER, 5, {
         char *s;
         CAT_LOG_DEBUG_D(HTTP, "Buffer separate occurred (length=%zu, value=%s)",
-            sbuffer->buffer.length, cat_log_buffer_quote(sbuffer->buffer.value, sbuffer->buffer.length, &s));
+            s_buffer->buffer.length, cat_log_buffer_quote(s_buffer->buffer.value, s_buffer->buffer.length, &s));
         cat_free(s);
     });
-    (void) cat_buffer_dup(&sbuffer->buffer, &new_buffer);
-    cat_buffer_close(&sbuffer->buffer);
-    sbuffer->buffer = new_buffer;
+    (void) cat_buffer_dup(&s_buffer->buffer, &new_buffer);
+    cat_buffer_close(&s_buffer->buffer);
+    s_buffer->buffer = new_buffer;
 }
 
-SWOW_API void swow_buffer_cow(swow_buffer_t *sbuffer)
+SWOW_API void swow_buffer_cow(swow_buffer_t *s_buffer)
 {
-    if (sbuffer->buffer.value != NULL) {
-        zend_string *string = swow_buffer_get_string_from_handle(&sbuffer->buffer);
+    if (s_buffer->buffer.value != NULL) {
+        zend_string *string = swow_buffer_get_string_from_handle(&s_buffer->buffer);
         if (GC_REFCOUNT(string) != 1 || ZSTR_IS_INTERNED(string) || (GC_FLAGS(string) & IS_STR_PERSISTENT)) {
-            swow_buffer_separate(sbuffer);
+            swow_buffer_separate(s_buffer);
         }
     }
 }
@@ -311,7 +311,7 @@ static PHP_METHOD(Swow_Buffer, alignSize)
 
 static PHP_METHOD_EX(Swow_Buffer, create)
 {
-    SWOW_BUFFER_GETTER(sbuffer, buffer);
+    SWOW_BUFFER_GETTER(s_buffer, buffer);
     zend_long size;
     cat_bool_t ret;
 
@@ -355,7 +355,7 @@ ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Buffer, getSize)
 {
-    SWOW_BUFFER_GETTER(sbuffer, buffer);
+    SWOW_BUFFER_GETTER(s_buffer, buffer);
 
     ZEND_PARSE_PARAMETERS_NONE();
 
@@ -366,7 +366,7 @@ static PHP_METHOD(Swow_Buffer, getSize)
 
 static PHP_METHOD(Swow_Buffer, getLength)
 {
-    SWOW_BUFFER_GETTER(sbuffer, buffer);
+    SWOW_BUFFER_GETTER(s_buffer, buffer);
 
     ZEND_PARSE_PARAMETERS_NONE();
 
@@ -377,7 +377,7 @@ static PHP_METHOD(Swow_Buffer, getLength)
 
 static PHP_METHOD(Swow_Buffer, getAvailableSize)
 {
-    SWOW_BUFFER_GETTER(sbuffer, buffer);
+    SWOW_BUFFER_GETTER(s_buffer, buffer);
 
     ZEND_PARSE_PARAMETERS_NONE();
 
@@ -390,7 +390,7 @@ ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Buffer, isAvailable)
 {
-    SWOW_BUFFER_GETTER(sbuffer, buffer);
+    SWOW_BUFFER_GETTER(s_buffer, buffer);
 
     ZEND_PARSE_PARAMETERS_NONE();
 
@@ -401,7 +401,7 @@ static PHP_METHOD(Swow_Buffer, isAvailable)
 
 static PHP_METHOD(Swow_Buffer, isEmpty)
 {
-    SWOW_BUFFER_GETTER(sbuffer, buffer);
+    SWOW_BUFFER_GETTER(s_buffer, buffer);
 
     ZEND_PARSE_PARAMETERS_NONE();
 
@@ -412,7 +412,7 @@ static PHP_METHOD(Swow_Buffer, isEmpty)
 
 static PHP_METHOD(Swow_Buffer, isFull)
 {
-    SWOW_BUFFER_GETTER(sbuffer, buffer);
+    SWOW_BUFFER_GETTER(s_buffer, buffer);
 
     ZEND_PARSE_PARAMETERS_NONE();
 
@@ -423,8 +423,8 @@ static PHP_METHOD(Swow_Buffer, isFull)
 
 static PHP_METHOD(Swow_Buffer, realloc)
 {
-    SWOW_BUFFER_GETTER(sbuffer, buffer);
-    SWOW_BUFFER_CHECK_LOCK(sbuffer);
+    SWOW_BUFFER_GETTER(s_buffer, buffer);
+    SWOW_BUFFER_CHECK_LOCK(s_buffer);
     zend_long size;
 
     ZEND_PARSE_PARAMETERS_START(1, 1)
@@ -445,8 +445,8 @@ ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Buffer, extend)
 {
-    SWOW_BUFFER_GETTER(sbuffer, buffer);
-    SWOW_BUFFER_CHECK_LOCK(sbuffer);
+    SWOW_BUFFER_GETTER(s_buffer, buffer);
+    SWOW_BUFFER_CHECK_LOCK(s_buffer);
     zend_long recommend_size = 0;
 
     ZEND_PARSE_PARAMETERS_START(0, 1)
@@ -470,8 +470,8 @@ ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Buffer, mallocTrim)
 {
-    SWOW_BUFFER_GETTER(sbuffer, buffer);
-    SWOW_BUFFER_CHECK_LOCK(sbuffer);
+    SWOW_BUFFER_GETTER(s_buffer, buffer);
+    SWOW_BUFFER_CHECK_LOCK(s_buffer);
     cat_bool_t ret;
 
     ZEND_PARSE_PARAMETERS_NONE();
@@ -493,7 +493,7 @@ ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Buffer, read)
 {
-    swow_buffer_t *sbuffer = getThisBuffer();
+    swow_buffer_t *s_buffer = getThisBuffer();
     zend_long length = -1;
     zend_long start = 0;
 
@@ -503,7 +503,7 @@ static PHP_METHOD(Swow_Buffer, read)
         Z_PARAM_LONG(length)
     ZEND_PARSE_PARAMETERS_END();
 
-    const char *ptr = swow_buffer_get_readable_space(sbuffer, start, &length, 1);
+    const char *ptr = swow_buffer_get_readable_space(s_buffer, start, &length, 1);
 
     if (UNEXPECTED(ptr == NULL)) {
         RETURN_THROWS();
@@ -514,8 +514,8 @@ static PHP_METHOD(Swow_Buffer, read)
 
 static PHP_METHOD_EX(Swow_Buffer, _write, const zend_bool append)
 {
-    SWOW_BUFFER_GETTER(sbuffer, buffer);
-    SWOW_BUFFER_CHECK_LOCK(sbuffer);
+    SWOW_BUFFER_GETTER(s_buffer, buffer);
+    SWOW_BUFFER_CHECK_LOCK(s_buffer);
     zend_string *string;
     zend_long offset = append ? buffer->length : 0;
     zend_long start = 0;
@@ -556,7 +556,7 @@ static PHP_METHOD_EX(Swow_Buffer, _write, const zend_bool append)
     }
 
     if (offset == 0 && start == 0 && (size_t) length == ZSTR_LEN(string) && length >= buffer->size) {
-        swow_buffer_close(sbuffer);
+        swow_buffer_close(s_buffer);
         /* Notice: string maybe interned, so we must use zend_string_copy() here */
         buffer->value = ZSTR_VAL(zend_string_copy(string));
         buffer->size = buffer->length = ZSTR_LEN(string);
@@ -564,7 +564,7 @@ static PHP_METHOD_EX(Swow_Buffer, _write, const zend_bool append)
         /* TODO: Optimized COW: it's not required to always copy string,
          * if we just write to offset which is not the end of buffer,
          * it maybe better that only copy the data that doesn't change. */
-        swow_buffer_cow(sbuffer);
+        swow_buffer_cow(s_buffer);
         (void) cat_buffer_write(buffer, offset, ptr, length);
     }
 
@@ -600,8 +600,8 @@ ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Buffer, truncate)
 {
-    SWOW_BUFFER_GETTER(sbuffer, buffer);
-    SWOW_BUFFER_CHECK_LOCK(sbuffer);
+    SWOW_BUFFER_GETTER(s_buffer, buffer);
+    SWOW_BUFFER_CHECK_LOCK(s_buffer);
     zend_long length;
 
     ZEND_PARSE_PARAMETERS_START(1, 1)
@@ -613,7 +613,7 @@ static PHP_METHOD(Swow_Buffer, truncate)
         RETURN_THROWS();
     }
 
-    swow_buffer_cow(sbuffer);
+    swow_buffer_cow(s_buffer);
 
     cat_buffer_truncate(buffer, length);
 
@@ -627,8 +627,8 @@ ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Buffer, truncateFrom)
 {
-    SWOW_BUFFER_GETTER(sbuffer, buffer);
-    SWOW_BUFFER_CHECK_LOCK(sbuffer);
+    SWOW_BUFFER_GETTER(s_buffer, buffer);
+    SWOW_BUFFER_CHECK_LOCK(s_buffer);
     zend_long offset = 0;
     zend_long length = -1;
 
@@ -649,7 +649,7 @@ static PHP_METHOD(Swow_Buffer, truncateFrom)
         RETURN_THROWS();
     }
 
-    swow_buffer_cow(sbuffer);
+    swow_buffer_cow(s_buffer);
 
     cat_buffer_truncate_from(buffer, offset, length);
 
@@ -660,15 +660,15 @@ static PHP_METHOD(Swow_Buffer, truncateFrom)
 
 static PHP_METHOD(Swow_Buffer, clear)
 {
-    SWOW_BUFFER_GETTER(sbuffer, buffer);
-    SWOW_BUFFER_CHECK_LOCK(sbuffer);
+    SWOW_BUFFER_GETTER(s_buffer, buffer);
+    SWOW_BUFFER_CHECK_LOCK(s_buffer);
 
     ZEND_PARSE_PARAMETERS_NONE();
 
-    swow_buffer_cow(sbuffer);
+    swow_buffer_cow(s_buffer);
 
     cat_buffer_clear(buffer);
-    swow_buffer_reset(sbuffer);
+    swow_buffer_reset(s_buffer);
 }
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Buffer_fetchString, 0, 0, IS_STRING, 0)
@@ -677,8 +677,8 @@ ZEND_END_ARG_INFO()
 /* different from __toString , it transfers ownership to return_value */
 static PHP_METHOD(Swow_Buffer, fetchString)
 {
-    SWOW_BUFFER_GETTER(sbuffer, buffer);
-    SWOW_BUFFER_CHECK_LOCK(sbuffer);
+    SWOW_BUFFER_GETTER(s_buffer, buffer);
+    SWOW_BUFFER_CHECK_LOCK(s_buffer);
     char *value;
 
     ZEND_PARSE_PARAMETERS_NONE();
@@ -689,7 +689,7 @@ static PHP_METHOD(Swow_Buffer, fetchString)
         RETURN_EMPTY_STRING();
     }
 
-    swow_buffer_reset(sbuffer);
+    swow_buffer_reset(s_buffer);
 
     RETURN_STR((zend_string *) (value - offsetof(zend_string, val)));
 }
@@ -699,7 +699,7 @@ static PHP_METHOD(Swow_Buffer, fetchString)
 /* return string copy immediately */
 static PHP_METHOD(Swow_Buffer, dupString)
 {
-    SWOW_BUFFER_GETTER(sbuffer, buffer);
+    SWOW_BUFFER_GETTER(s_buffer, buffer);
 
     ZEND_PARSE_PARAMETERS_NONE();
 
@@ -729,11 +729,11 @@ static PHP_METHOD(Swow_Buffer, toString)
 
 static PHP_METHOD(Swow_Buffer, isLocked)
 {
-    swow_buffer_t *sbuffer = getThisBuffer();
+    swow_buffer_t *s_buffer = getThisBuffer();
 
     ZEND_PARSE_PARAMETERS_NONE();
 
-    RETURN_BOOL(swow_buffer_get_locker(sbuffer) != NULL);
+    RETURN_BOOL(swow_buffer_get_locker(s_buffer) != NULL);
 }
 
 ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_class_Swow_Buffer_getLocker, 0, 0, Swow\\Coroutine, 0)
@@ -741,11 +741,11 @@ ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Buffer, getLocker)
 {
-    swow_buffer_t *sbuffer = getThisBuffer();
+    swow_buffer_t *s_buffer = getThisBuffer();
 
     ZEND_PARSE_PARAMETERS_NONE();
 
-    swow_coroutine_t *locker = swow_buffer_get_locker(sbuffer);
+    swow_coroutine_t *locker = swow_buffer_get_locker(s_buffer);
 
     if (UNEXPECTED(locker == NULL)) {
         RETURN_NULL();
@@ -758,15 +758,15 @@ static PHP_METHOD(Swow_Buffer, getLocker)
 
 static PHP_METHOD(Swow_Buffer, tryLock)
 {
-    swow_buffer_t *sbuffer = getThisBuffer();
+    swow_buffer_t *s_buffer = getThisBuffer();
 
     ZEND_PARSE_PARAMETERS_NONE();
 
-    if (UNEXPECTED(swow_buffer_get_locker(sbuffer) != NULL)) {
+    if (UNEXPECTED(swow_buffer_get_locker(s_buffer) != NULL)) {
         RETURN_FALSE;
     }
 
-    bool ret = swow_buffer_lock(sbuffer);
+    bool ret = swow_buffer_lock(s_buffer);
     ZEND_ASSERT(ret);
 
     RETURN_BOOL(ret);
@@ -776,11 +776,11 @@ static PHP_METHOD(Swow_Buffer, tryLock)
 
 static PHP_METHOD(Swow_Buffer, lock)
 {
-    swow_buffer_t *sbuffer = getThisBuffer();
+    swow_buffer_t *s_buffer = getThisBuffer();
 
     ZEND_PARSE_PARAMETERS_NONE();
 
-    if (UNEXPECTED(!swow_buffer_lock(sbuffer))) {
+    if (UNEXPECTED(!swow_buffer_lock(s_buffer))) {
         RETURN_THROWS();
     }
 }
@@ -789,11 +789,11 @@ static PHP_METHOD(Swow_Buffer, lock)
 
 static PHP_METHOD(Swow_Buffer, unlock)
 {
-    swow_buffer_t *sbuffer = getThisBuffer();
+    swow_buffer_t *s_buffer = getThisBuffer();
 
     ZEND_PARSE_PARAMETERS_NONE();
 
-    if (UNEXPECTED(!swow_buffer_unlock(sbuffer))) {
+    if (UNEXPECTED(!swow_buffer_unlock(s_buffer))) {
         RETURN_THROWS();
     }
 }
@@ -802,12 +802,12 @@ static PHP_METHOD(Swow_Buffer, unlock)
 
 static PHP_METHOD(Swow_Buffer, close)
 {
-    swow_buffer_t *sbuffer = getThisBuffer();
-    SWOW_BUFFER_CHECK_LOCK(sbuffer);
+    swow_buffer_t *s_buffer = getThisBuffer();
+    SWOW_BUFFER_CHECK_LOCK(s_buffer);
 
     ZEND_PARSE_PARAMETERS_NONE();
 
-    swow_buffer_close(sbuffer);
+    swow_buffer_close(s_buffer);
 }
 
 #define arginfo_class_Swow_Buffer___toString arginfo_class_Swow_Buffer_fetchString
@@ -819,15 +819,15 @@ ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Buffer, __debugInfo)
 {
-    SWOW_BUFFER_GETTER(sbuffer, buffer);
-    zval zdebug_info;
+    SWOW_BUFFER_GETTER(s_buffer, buffer);
+    zval z_debug_info;
 
     ZEND_PARSE_PARAMETERS_NONE();
 
-    array_init(&zdebug_info);
+    array_init(&z_debug_info);
     // TODO: support configure it to use str_quote() and maxlen
     if (buffer->value == NULL) {
-        add_assoc_str(&zdebug_info, "value", zend_empty_string);
+        add_assoc_str(&z_debug_info, "value", zend_empty_string);
     } else {
         const int maxlen = -1;
         char *chunk = NULL;
@@ -835,21 +835,21 @@ static PHP_METHOD(Swow_Buffer, __debugInfo)
             chunk = cat_sprintf("%.*s...", maxlen, buffer->value);
         }
         if (chunk != NULL) {
-            add_assoc_stringl(&zdebug_info, "value", chunk, maxlen);
+            add_assoc_stringl(&z_debug_info, "value", chunk, maxlen);
             cat_free(chunk);
         } else {
-            zend_string *string = swow_buffer_get_string(sbuffer);
-            add_assoc_str(&zdebug_info, "value", zend_string_copy(string));
+            zend_string *string = swow_buffer_get_string(s_buffer);
+            add_assoc_str(&z_debug_info, "value", zend_string_copy(string));
         }
     }
-    add_assoc_long(&zdebug_info, "size", buffer->size);
-    add_assoc_long(&zdebug_info, "length", buffer->length);
-    if (sbuffer->locker) {
-        GC_ADDREF(&sbuffer->locker->std);
-        add_assoc_object(&zdebug_info, "locker", &sbuffer->locker->std);
+    add_assoc_long(&z_debug_info, "size", buffer->size);
+    add_assoc_long(&z_debug_info, "length", buffer->length);
+    if (s_buffer->locker) {
+        GC_ADDREF(&s_buffer->locker->std);
+        add_assoc_object(&z_debug_info, "locker", &s_buffer->locker->std);
     }
 
-    RETURN_DEBUG_INFO_WITH_PROPERTIES(&zdebug_info);
+    RETURN_DEBUG_INFO_WITH_PROPERTIES(&z_debug_info);
 }
 
 static const zend_function_entry swow_buffer_methods[] = {
@@ -888,21 +888,21 @@ static const zend_function_entry swow_buffer_methods[] = {
 
 static zend_object *swow_buffer_clone_object(zend_object *object)
 {
-    swow_buffer_t *sbuffer, *new_sbuffer;
+    swow_buffer_t *s_buffer, *new_s_buffer;
     zend_string *string;
 
-    sbuffer = swow_buffer_get_from_object(object);
-    string = swow_buffer_get_string(sbuffer);
-    new_sbuffer = swow_buffer_get_from_object(swow_object_create(sbuffer->std.ce));
-    memcpy(new_sbuffer, sbuffer, offsetof(swow_buffer_t, std));
+    s_buffer = swow_buffer_get_from_object(object);
+    string = swow_buffer_get_string(s_buffer);
+    new_s_buffer = swow_buffer_get_from_object(swow_object_create(s_buffer->std.ce));
+    memcpy(new_s_buffer, s_buffer, offsetof(swow_buffer_t, std));
     if (string != NULL) {
         /* Notice: string maybe interned, so we must use zend_string_copy() here */
-        new_sbuffer->buffer.value = ZSTR_VAL(zend_string_copy(string));
+        new_s_buffer->buffer.value = ZSTR_VAL(zend_string_copy(string));
     }
 
-    zend_objects_clone_members(&new_sbuffer->std, object);
+    zend_objects_clone_members(&new_s_buffer->std, object);
 
-    return &new_sbuffer->std;
+    return &new_s_buffer->std;
 }
 
 static zend_result swow_buffer_cast_object(zend_object *object, zval *result, int type)

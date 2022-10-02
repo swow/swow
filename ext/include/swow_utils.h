@@ -48,7 +48,7 @@ zend_result swow_util_module_init(INIT_FUNC_ARGS);
 
 /* APIs */
 
-SWOW_API swow_utils_handler_t *swow_utils_handler_create(zval *zcallable);
+SWOW_API swow_utils_handler_t *swow_utils_handler_create(zval *z_callable);
 SWOW_API void swow_utils_handler_push_back_to(swow_utils_handler_t *handler, cat_queue_t *queue);
 SWOW_API void swow_utils_handler_remove(swow_utils_handler_t *handler);
 
