@@ -219,7 +219,7 @@ class ServerConnection extends Socket implements ProtocolTypeInterface
             $this->respond($statusCode, $upgradeHeaders);
         } else {
             if ($response instanceof Response) {
-                $response = $response->dup()->setStatus($statusCode)->setHeaders($upgradeHeaders);
+                $response = (clone $response)->setStatus($statusCode)->setHeaders($upgradeHeaders);
             } else {
                 $response = $response->withStatus($statusCode);
                 foreach ($upgradeHeaders as $upgradeHeaderName => $upgradeHeaderValue) {

@@ -14,14 +14,11 @@ declare(strict_types=1);
 namespace Swow\Psr7\Message;
 
 use Psr\Http\Message\StreamInterface;
-use Swow\Object\DupTrait;
 use Swow\Psr7\Psr7;
 use Swow\WebSocket\Header as WebSocketHeader;
 
 class WebSocketFrame extends WebSocketHeader
 {
-    use DupTrait;
-
     protected ?StreamInterface $payloadData = null;
 
     public function __construct(

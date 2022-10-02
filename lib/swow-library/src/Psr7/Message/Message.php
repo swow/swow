@@ -15,7 +15,6 @@ namespace Swow\Psr7\Message;
 
 use Psr\Http\Message\StreamInterface;
 use Swow\Http\Http;
-use Swow\Object\DupTrait;
 use Swow\Object\StringableTrait;
 use Swow\Psr7\Psr7;
 
@@ -29,8 +28,6 @@ use function trim;
 
 class Message implements MessagePlusInterface
 {
-    use DupTrait;
-
     use StringableTrait;
 
     protected string $protocolVersion = self::DEFAULT_PROTOCOL_VERSION;
