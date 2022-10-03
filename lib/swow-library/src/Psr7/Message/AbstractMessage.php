@@ -13,8 +13,8 @@ declare(strict_types=1);
 
 namespace Swow\Psr7\Message;
 
+use Error;
 use Psr\Http\Message\StreamInterface;
-use Swow\Http\Http;
 use Swow\Object\StringableTrait;
 use Swow\Psr7\Psr7;
 
@@ -26,7 +26,7 @@ use function strtolower;
 use function substr;
 use function trim;
 
-class Message implements MessagePlusInterface
+abstract class AbstractMessage implements MessagePlusInterface
 {
     use StringableTrait;
 
@@ -269,9 +269,6 @@ class Message implements MessagePlusInterface
 
     public function toString(bool $withoutBody = false): string
     {
-        return Http::packMessage(
-            $this->getHeaders(),
-            (!$withoutBody && $this->hasBody()) ? (string) $this->getBody() : ''
-        );
+        throw new Error('This should be implemented in child classes');
     }
 }

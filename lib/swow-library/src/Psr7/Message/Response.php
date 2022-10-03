@@ -16,7 +16,7 @@ namespace Swow\Psr7\Message;
 use Swow\Http\Http;
 use Swow\Http\Status;
 
-class Response extends Message implements ResponsePlusInterface
+class Response extends AbstractMessage implements ResponsePlusInterface
 {
     protected int $statusCode = Status::OK;
 

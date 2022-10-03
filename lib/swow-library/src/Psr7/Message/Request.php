@@ -16,10 +16,7 @@ namespace Swow\Psr7\Message;
 use Psr\Http\Message\UriInterface;
 use Swow\Http\Http;
 
-use function strcasecmp;
-use function strlen;
-
-class Request extends Message implements RequestPlusInterface
+class Request extends AbstractMessage implements RequestPlusInterface
 {
     public const UPGRADE_NONE = 0;
     public const UPGRADE_WEBSOCKET = 1 << 0;
