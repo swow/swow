@@ -25,7 +25,7 @@ interface RequestPlusInterface extends MessagePlusInterface, \Psr\Http\Message\R
 
     public function getUri(): UriInterface;
 
-    public function setUri(UriInterface $uri, ?bool $preserveHost = null): static;
+    public function setUri(UriInterface|string $uri, ?bool $preserveHost = null): static;
 
     public function withUri(UriInterface $uri, $preserveHost = null): static;
 

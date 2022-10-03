@@ -45,7 +45,7 @@ class ServerRequest extends Request implements ServerRequestPlusInterface
 
     protected ?string $contentType = null;
 
-    protected ?int $upgrade = null;
+    protected bool $isUpgrade = false;
 
     /**
      * @var UploadedFileInterface[]
@@ -138,9 +138,9 @@ class ServerRequest extends Request implements ServerRequestPlusInterface
         return $this->contentType ??= parent::getContentType();
     }
 
-    public function getUpgrade(): int
+    public function isUpgrade(): bool
     {
-        return $this->upgrade ??= parent::getUpgrade();
+        return $this->isUpgrade;
     }
 
     /** @return array<mixed>|object */
@@ -263,9 +263,7 @@ class ServerRequest extends Request implements ServerRequestPlusInterface
         $serverRequest->headerNames = $serverRequestEntity->headerNames;
         $serverRequest->shouldKeepAlive = $serverRequestEntity->shouldKeepAlive;
         $serverRequest->contentLength = $serverRequestEntity->contentLength;
-        if (!$serverRequestEntity->isUpgrade) {
-            $serverRequest->upgrade = static::UPGRADE_NONE;
-        }
+        $serverRequest->isUpgrade = $serverRequestEntity->isUpgrade;
         $serverRequest->cookieParams = $serverRequestEntity->cookies;
         $serverRequest->serverParams = $serverRequestEntity->serverParams;
         if ($serverRequestEntity->body) {

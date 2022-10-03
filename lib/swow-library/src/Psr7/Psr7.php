@@ -31,12 +31,14 @@ use Swow\Http\Http;
 use Swow\Http\Message\ResponseEntity;
 use Swow\Http\Message\ServerRequestEntity;
 use Swow\Http\Status;
+use Swow\Psr7\Message\AbstractMessage;
 use Swow\Psr7\Message\BufferStream;
 use Swow\Psr7\Message\MessagePlusInterface;
 use Swow\Psr7\Message\PhpStream;
 use Swow\Psr7\Message\Psr17Factory;
 use Swow\Psr7\Message\Psr17PlusFactoryInterface;
 use Swow\Psr7\Message\Request;
+use Swow\Psr7\Message\RequestPlusInterface;
 use Swow\Psr7\Message\Response;
 use Swow\Psr7\Message\ResponsePlusInterface;
 use Swow\Psr7\Message\ServerRequest;
@@ -46,9 +48,16 @@ use Swow\Psr7\Message\UploadedFile;
 use Swow\Psr7\Message\UploadedFilePlusInterface;
 use Swow\Psr7\Message\Uri;
 use Swow\Psr7\Message\UriPlusInterface;
+use Swow\Psr7\Message\WebSocketFrame;
+use Swow\WebSocket\Opcode;
+use Swow\WebSocket\WebSocket;
 
+use function explode;
 use function is_resource;
+use function method_exists;
 use function parse_str;
+use function strcasecmp;
+use function strlen;
 
 class Psr7
 {
@@ -122,10 +131,10 @@ class Psr7
         $requestFactory ??= static::getDefaultPsr17Factory();
         $request = $requestFactory->createRequest($method, $uri);
         if ($headers) {
-            static::setHeaders($request, $headers);
+            $request = static::setHeaders($request, $headers);
         }
         if ($body) {
-            static::setBody($request, $body);
+            $request = static::setBody($request, $body);
         }
         return $request;
     }
@@ -144,10 +153,10 @@ class Psr7
         $responseFactory ??= static::getDefaultPsr17Factory();
         $response = $responseFactory->createResponse($code, $reasonPhrase);
         if ($headers) {
-            static::setHeaders($response, $headers);
+            $response = static::setHeaders($response, $headers);
         }
         if ($body) {
-            static::setBody($response, $body);
+            $response = static::setBody($response, $body);
         }
         return $response;
     }
@@ -235,10 +244,10 @@ class Psr7
         $serverRequestFactory ??= static::getDefaultPsr17Factory();
         $serverRequest = $serverRequestFactory->createServerRequest($method, $uri, $serverParams);
         if ($headers) {
-            static::setHeaders($serverRequest, $headers);
+            $serverRequest = static::setHeaders($serverRequest, $headers);
         }
         if ($body) {
-            static::setBody($serverRequest, $body);
+            $serverRequest = static::setBody($serverRequest, $body);
         }
         return $serverRequest;
     }
@@ -321,18 +330,29 @@ class Psr7
         return $serverRequest;
     }
 
-    /** @param array<string, array<string>|string> $headers */
-    public static function setHeaders(MessageInterface &$message, array $headers): void
+    /**
+     * @template T of MessageInterface
+     * @param T $message
+     * @param array<string, array<string>|string> $headers
+     * @return T
+     */
+    public static function setHeaders(MessageInterface $message, array $headers): MessageInterface
     {
         if ($message instanceof MessagePlusInterface) {
             $message->setHeaders($headers);
         } else {
-            static::withHeaders($message, $headers);
+            $message = static::withHeaders($message, $headers);
         }
+        return $message;
     }
 
-    /** @param array<string, array<string>|string> $headers */
-    public static function withHeaders(MessageInterface &$message, array $headers): void
+    /**
+     * @template T of MessageInterface
+     * @param T $message
+     * @param array<string, array<string>|string> $headers
+     * @return T
+     */
+    public static function withHeaders(MessageInterface $message, array $headers): MessageInterface
     {
         if ($message instanceof MessagePlusInterface) {
             $message = $message->withHeaders($headers);
@@ -341,15 +361,32 @@ class Psr7
                 $message = $message->withHeader($headerName, $headerValue);
             }
         }
+        return $message;
     }
 
-    public static function setBody(MessageInterface &$message, mixed $body): void
+    /**
+     * @template T of MessageInterface
+     * @param T $message
+     * @return T
+     */
+    public static function setBody(MessageInterface $message, mixed $body): MessageInterface
     {
         if ($message instanceof MessagePlusInterface) {
             $message->setBody($body);
         } else {
-            $message = $message->withBody($body);
+            $message = $message->withBody(static::createStreamFromAny($body));
         }
+        return $message;
+    }
+
+    /**
+     * @template T of MessageInterface
+     * @param T $message
+     * @return T
+     */
+    public static function withBody(MessageInterface $message, mixed $body): MessageInterface
+    {
+        return $message->withBody(static::createStreamFromAny($body));
     }
 
     /**
@@ -375,5 +412,85 @@ class Psr7
             ),
             (string) $response->getBody(),
         ];
+    }
+
+    public static function stringifyRequest(RequestInterface $request, bool $withoutBody = false): string
+    {
+        if ($request instanceof RequestPlusInterface) {
+            return $request->toString($withoutBody);
+        }
+        return Http::packRequest(
+            method: $request->getMethod(),
+            uri: (string) $request->getUri(),
+            headers: $request->getHeaders(),
+            body: $withoutBody ? '' : (string) $request->getBody(),
+            protocolVersion: $request->getProtocolVersion()
+        );
+    }
+
+    public static function stringifyResponse(ResponseInterface $response, bool $withoutBody = false): string
+    {
+        if ($response instanceof ResponsePlusInterface) {
+            return $response->toString($withoutBody);
+        }
+        return Http::packResponse(
+            statusCode: $response->getStatusCode(),
+            reasonPhrase: $response->getReasonPhrase(),
+            headers: $response->getHeaders(),
+            body: $withoutBody ? '' : (string) $response->getBody(),
+            protocolVersion: $response->getProtocolVersion()
+        );
+    }
+
+    public static function detectShouldKeepAlive(MessageInterface $message): bool
+    {
+        if (
+            $message instanceof AbstractMessage ||
+            method_exists($message, 'should' . 'keep' . 'alive')
+        ) {
+            return $message->shouldKeepAlive();
+        }
+        $protocolVersion = $message->getProtocolVersion();
+        $parts = explode('.', $protocolVersion, 2);
+        $majorVersion = (int) $parts[0];
+        $minorVersion = (int) $parts[1];
+        $connection = $message->getHeaderLine('connection');
+        if ($majorVersion > 0 && $minorVersion > 0) {
+            /* HTTP/1.1+ */
+            if (strlen($connection) === strlen('close') && strcasecmp($connection, 'close') === 0) {
+                return false;
+            }
+        } else {
+            /* HTTP/1.0 or earlier */
+            if (strlen($connection) !== strlen('keep-alive') || strcasecmp($connection, 'keep-alive') !== 0) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public const UPGRADE_TYPE_NONE = 0;
+    public const UPGRADE_TYPE_WEBSOCKET = 1 << 0;
+    public const UPGRADE_TYPE_H2C = 1 << 1;
+    public const UPGRADE_TYPE_UNKNOWN = 1 << 31;
+
+    public static function detectUpgradeType(MessageInterface $message): int
+    {
+        if ($message instanceof ServerRequest && !$message->isUpgrade()) {
+            return static::UPGRADE_TYPE_NONE;
+        }
+        $upgrade = $message->getHeaderLine('upgrade');
+        if ($upgrade === '') {
+            $upgrade = static::UPGRADE_TYPE_NONE;
+        }
+        if (strlen($upgrade) === strlen('websocket') && strcasecmp($upgrade, 'websocket') === 0) {
+            $upgrade = static::UPGRADE_TYPE_WEBSOCKET;
+        } elseif (strlen($upgrade) === strlen('h2c') && strcasecmp($upgrade, 'h2c') === 0) {
+            $upgrade = static::UPGRADE_TYPE_H2C;
+        } else {
+            $upgrade = static::UPGRADE_TYPE_UNKNOWN;
+        }
+
+        return $upgrade;
     }
 }

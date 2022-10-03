@@ -18,11 +18,6 @@ use Swow\Http\Http;
 
 class Request extends AbstractMessage implements RequestPlusInterface
 {
-    public const UPGRADE_NONE = 0;
-    public const UPGRADE_WEBSOCKET = 1 << 0;
-    public const UPGRADE_H2C = 1 << 1;
-    public const UPGRADE_UNKNOWN = 1 << 31;
-
     protected const PRESERVE_HOST = false;
 
     protected string $method = 'GET';
@@ -155,23 +150,6 @@ class Request extends AbstractMessage implements RequestPlusInterface
     public function withRequestTarget(mixed $requestTarget): static
     {
         return (clone $this)->setRequestTarget($requestTarget);
-    }
-
-    public function getUpgrade(): int
-    {
-        $upgrade = $this->getHeaderLine('upgrade');
-        if ($upgrade === '') {
-            $upgrade = static::UPGRADE_NONE;
-        }
-        if (strlen($upgrade) === strlen('websocket') && strcasecmp($upgrade, 'websocket') === 0) {
-            $upgrade = static::UPGRADE_WEBSOCKET;
-        } elseif (strlen($upgrade) === strlen('h2c') && strcasecmp($upgrade, 'h2c') === 0) {
-            $upgrade = static::UPGRADE_H2C;
-        } else {
-            $upgrade = static::UPGRADE_UNKNOWN;
-        }
-
-        return $upgrade;
     }
 
     public function toString(bool $withoutBody = false): string

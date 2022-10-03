@@ -85,16 +85,16 @@ class Client extends Socket implements ClientInterface, ProtocolTypeInterface
 
     /** @param array<string, array<string>> $headers */
     public function sendPackedRequestAsync(
-        string $protocolVersion = Request::DEFAULT_PROTOCOL_VERSION,
-        string $method = 'GET',
-        string $url = '/',
+        string $method,
+        string $uri,
         array $headers = [],
         string $body = '',
+        string $protocolVersion = Request::DEFAULT_PROTOCOL_VERSION,
     ): static {
         return $this->write([
             Http::packRequest(
                 method: $method,
-                uri: $url,
+                uri: $uri,
                 headers: $headers,
                 protocolVersion: $protocolVersion
             ),
@@ -125,11 +125,11 @@ class Client extends Socket implements ClientInterface, ProtocolTypeInterface
             }
 
             $responseEntity = $this->sendPackedRequestAsync(
-                protocolVersion: $request->getProtocolVersion(),
                 method: $request->getMethod(),
-                url: $request->getRequestTarget(),
+                uri: $request->getRequestTarget(),
                 headers: $headers,
                 body: $body,
+                protocolVersion: $request->getProtocolVersion(),
             )->recvResponseEntity();
 
             return Psr7::createResponseFromEntity($responseEntity, $this->responseFactory, $this->streamFactory);
@@ -147,7 +147,7 @@ class Client extends Socket implements ClientInterface, ProtocolTypeInterface
             'Sec-WebSocket-Key' => $secWebSocketKey,
             'Sec-WebSocket-Version' => (string) WebSocket::VERSION,
         ];
-        Psr7::withHeaders($request, $upgradeHeaders);
+        $request = Psr7::withHeaders($request, $upgradeHeaders);
 
         $response = $this->sendRequest($request);
 

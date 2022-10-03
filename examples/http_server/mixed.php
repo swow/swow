@@ -17,7 +17,7 @@ use Swow\Errno;
 use Swow\Http\Message\HttpException;
 use Swow\Http\Status as HttpStatus;
 use Swow\Psr7\Client\Client;
-use Swow\Psr7\Message\WebSocketFrame;
+use Swow\Psr7\Psr7;
 use Swow\Psr7\Server\Server;
 use Swow\Socket;
 use Swow\SocketException;
@@ -48,13 +48,13 @@ while (true) {
                                 $connection->respond();
                                 break;
                             case '/greeter':
-                                $connection->respond('Hello Swow');
+                                $connection->respond(sprintf('Hello %s', Swow::class));
                                 break;
                             case '/echo':
                                 $connection->respond($request->getBody());
                                 break;
                             case '/echo_all':
-                                $connection->respond($request);
+                                $connection->respond(Psr7::stringifyRequest($request));
                                 break;
                             case '/httpbin':
                                 /* proxy request to httpbin */
@@ -62,37 +62,43 @@ while (true) {
                                     ($httpBin ??= new Client())
                                         ->connect('httpbin.org', 80)
                                         ->sendRequest(
-                                            $request->withUri('http://httpbin.org/anything', false)
+                                            $request->withUri(Psr7::createUriFromString(
+                                                'http://httpbin.org/anything'
+                                            ), preserveHost: false)
                                         )
                                 );
                                 break;
                             case '/chat':
-                                if ($upgrade = $request->getUpgrade()) {
-                                    if ($upgrade === $request::UPGRADE_WEBSOCKET) {
-                                        $connection->upgradeToWebSocket($request);
-                                        $request = null;
-                                        while (true) {
-                                            $frame = $connection->recvWebSocketFrame();
-                                            $opcode = $frame->getOpcode();
-                                            switch ($opcode) {
-                                                case WebSocketOpcode::PING:
-                                                    $connection->send(WebSocket::PONG_FRAME);
-                                                    break;
-                                                case WebSocketOpcode::PONG:
-                                                    break;
-                                                case WebSocketOpcode::CLOSE:
-                                                    break 2;
-                                                default:
-                                                    $connection->sendWebSocketFrame(
-                                                        new WebSocketFrame(payloadData: "You said: {$frame->getPayloadData()}")
-                                                    );
-                                            }
-                                        }
-                                        break;
-                                    }
+                                $upgrade = Psr7::detectUpgradeType($request);
+                                if (!$upgrade) {
+                                    static $chatHtml;
+                                    $connection->respond($chatHtml ??= file_get_contents(__DIR__ . '/chat.html'));
+                                    break;
+                                }
+                                if ($upgrade !== Psr7::UPGRADE_TYPE_WEBSOCKET) {
                                     throw new HttpException(HttpStatus::BAD_REQUEST, 'Unsupported Upgrade Type');
                                 }
-                                $connection->respond(file_get_contents(__DIR__ . '/chat.html'));
+                                $connection->upgradeToWebSocket($request);
+                                $request = null;
+                                while (true) {
+                                    $frame = $connection->recvWebSocketFrame();
+                                    $opcode = $frame->getOpcode();
+                                    switch ($opcode) {
+                                        case WebSocketOpcode::PING:
+                                            $connection->send(WebSocket::PONG_FRAME);
+                                            break;
+                                        case WebSocketOpcode::PONG:
+                                            break;
+                                        case WebSocketOpcode::CLOSE:
+                                            break 2;
+                                        default:
+                                            $connection->sendWebSocketFrame(
+                                                Psr7::createWebSocketTextFrame(
+                                                    payloadData: "You said: {$frame->getPayloadData()}"
+                                                )
+                                            );
+                                    }
+                                }
                                 break;
                             default:
                                 $connection->error(HttpStatus::NOT_FOUND);
@@ -100,7 +106,7 @@ while (true) {
                     } catch (HttpException $exception) {
                         $connection->error($exception->getCode(), $exception->getMessage());
                     }
-                    if (!$request || !$request->shouldKeepAlive()) {
+                    if (!$request || Psr7::detectShouldKeepAlive($request)) {
                         break;
                     }
                 }

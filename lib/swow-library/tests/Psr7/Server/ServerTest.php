@@ -75,11 +75,9 @@ final class ServerTest extends TestCase
         });
 
         $client = new Client();
-        $request = new Request();
-        $uri = (new Uri('/'))->setQuery(http_build_query($query));
         $client
             ->connect($server->getSockAddress(), $server->getSockPort());
-        $request = Psr7::createRequest('GET', $uri, [
+        $request = Psr7::createRequest('GET', '/?' . http_build_query($query), [
             'Content-Type' => MimeType::JSON,
             'Cookie' => 'foo=bar; bar=baz',
         ], Psr7::createStream(json_encode([
