@@ -2026,11 +2026,11 @@ namespace Swow\Http
 {
     class Http
     {
-        public static function packMessage(array $headers = [], \Stringable|string $body = ''): string { }
+        public const DEFAULT_PROTOCOL_VERSION = '1.1';
 
-        public static function packRequest(string $method = '', \Stringable|string $url = '', array $headers = [], \Stringable|string $body = '', string $protocolVersion = ''): string { }
+        public static function packRequest(string $method, \Stringable|string $uri, array $headers = [], \Stringable|string $body = '', string $protocolVersion = self::DEFAULT_PROTOCOL_VERSION): string { }
 
-        public static function packResponse(int $statusCode = 0, array $headers = [], \Stringable|string $body = '', string $reasonPhrase = '', string $protocolVersion = ''): string { }
+        public static function packResponse(int $statusCode, string $reasonPhrase = '', array $headers = [], \Stringable|string $body = '', string $protocolVersion = self::DEFAULT_PROTOCOL_VERSION): string { }
     }
 }
 

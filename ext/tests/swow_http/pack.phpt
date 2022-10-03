@@ -22,22 +22,12 @@ $headers = [
     $payload,
 ];
 
-var_dump(Http::packMessage($headers, $payload));
 var_dump(Http::packRequest('GET', '/some#path?a=b&c=d', $headers, $payload));
-var_dump(Http::packResponse(418, $headers, $payload, "I'm apt, not apk", '1.0'));
+var_dump(Http::packResponse(418, "I'm apt, not apk", $headers, $payload, '1.0'));
 
 echo "Done\n";
 ?>
 --EXPECT--
-string(183) "Server: alpine-linux.local
-Connection: close
-Accept-Additions: Cream
-X-Test-Header: value1
-X-Test-Header: value2
-Content-Type: application/json
-Content-Length: 11
-
-hello world"
 string(216) "GET /some#path?a=b&c=d HTTP/1.1
 Server: alpine-linux.local
 Connection: close

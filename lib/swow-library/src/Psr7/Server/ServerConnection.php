@@ -149,48 +149,51 @@ class ServerConnection extends Socket implements ProtocolTypeInterface
     {
         switch ($this->protocolType) {
             case static::PROTOCOL_TYPE_HTTP:
-                {
-                    $statusCode = HttpStatus::OK;
-                    $headers = [];
-                    $body = '';
-                    foreach ($args as $arg) {
-                        if (isStrictStringable($arg)) {
-                            $body = (string) $arg;
-                        } elseif (is_int($arg)) {
-                            $statusCode = $arg;
-                        } elseif (is_array($arg)) {
-                            $headers = $arg;
-                        } else {
-                            throw new TypeError(sprintf('Unsupported argument type %s', get_debug_type($arg)));
-                        }
+                $statusCode = HttpStatus::OK;
+                $headers = [];
+                $body = '';
+                foreach ($args as $arg) {
+                    if (isStrictStringable($arg)) {
+                        $body = (string) $arg;
+                    } elseif (is_int($arg)) {
+                        $statusCode = $arg;
+                    } elseif (is_array($arg)) {
+                        $headers = $arg;
+                    } else {
+                        throw new TypeError(sprintf('Unsupported argument type %s', get_debug_type($arg)));
                     }
-                    $headers += $this->generateResponseHeaders($body);
-                    $this->write([Http::packResponse($statusCode, $headers), $body]);
-                    break;
                 }
+                $headers += $this->generateResponseHeaders($body);
+                $this->write([
+                    Http::packResponse(
+                        statusCode: $statusCode,
+                        headers: $headers
+                    ),
+                    $body,
+                ]);
+                break;
             case static::PROTOCOL_TYPE_WEBSOCKET:
-                {
-                    // TODO: impl
-                    break;
-                }
+                // TODO: impl
+                break;
         }
     }
 
-    public function error(int $code, string $message = ''): void
+    public function error(int $statusCode, string $message = ''): void
     {
         switch ($this->protocolType) {
             case static::PROTOCOL_TYPE_HTTP:
-                {
-                    if ($message === '') {
-                        $message = HttpStatus::getReasonPhraseOf($code);
-                    }
-                    $message = "<html lang=\"en\"><body><h2>HTTP {$code} {$message}</h2><hr><i>Powered by Swow</i></body></html>";
-                    $this->write([
-                        Http::packResponse($code, $this->generateResponseHeaders($message)),
-                        $message,
-                    ]);
-                    break;
+                if ($message === '') {
+                    $message = HttpStatus::getReasonPhraseOf($statusCode);
                 }
+                $message = "<html lang=\"en\"><body><h2>HTTP {$statusCode} {$message}</h2><hr><i>Powered by Swow</i></body></html>";
+                $this->write([
+                    Http::packResponse(
+                        statusCode: $statusCode,
+                        headers: $this->generateResponseHeaders($message)
+                    ),
+                    $message,
+                ]);
+                break;
             case static::PROTOCOL_TYPE_WEBSOCKET:
                 {
                     // TODO: impl

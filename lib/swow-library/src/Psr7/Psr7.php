@@ -368,11 +368,10 @@ class Psr7
         }
         return [
             Http::packResponse(
-                $response->getStatusCode(),
-                $response->getHeaders(),
-                '',
-                $response->getReasonPhrase(),
-                $response->getProtocolVersion()
+                statusCode: $response->getStatusCode(),
+                reasonPhrase: $response->getReasonPhrase(),
+                headers: $response->getHeaders(),
+                protocolVersion: $response->getProtocolVersion()
             ),
             (string) $response->getBody(),
         ];

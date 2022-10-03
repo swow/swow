@@ -94,7 +94,7 @@ class Client extends Socket implements ClientInterface, ProtocolTypeInterface
         return $this->write([
             Http::packRequest(
                 method: $method,
-                url: $url,
+                uri: $url,
                 headers: $headers,
                 protocolVersion: $protocolVersion
             ),

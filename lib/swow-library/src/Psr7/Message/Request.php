@@ -180,11 +180,11 @@ class Request extends Message implements RequestPlusInterface
     public function toString(bool $withoutBody = false): string
     {
         return Http::packRequest(
-            $this->getMethod(),
-            (string) $this->getUri(),
-            $this->getStandardHeaders(),
-            (!$withoutBody && $this->hasBody()) ? (string) $this->getBody() : '',
-            $this->getProtocolVersion()
+            method: $this->getMethod(),
+            uri: (string) $this->getUri(),
+            headers: $this->getStandardHeaders(),
+            body: (!$withoutBody && $this->hasBody()) ? (string) $this->getBody() : '',
+            protocolVersion: $this->getProtocolVersion()
         );
     }
 }
