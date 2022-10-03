@@ -59,7 +59,7 @@ class Response extends AbstractMessage implements ResponsePlusInterface
             statusCode: $this->getStatusCode(),
             reasonPhrase: $this->getReasonPhrase(),
             headers: $this->getStandardHeaders(),
-            body: (!$withoutBody && $this->hasBody()) ? (string) $this->getBody() : '',
+            body: $withoutBody ? '' : (string) $this->getBody(),
             protocolVersion: $this->getProtocolVersion()
         );
     }

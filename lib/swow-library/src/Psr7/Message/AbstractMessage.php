@@ -240,11 +240,6 @@ abstract class AbstractMessage implements MessagePlusInterface
         return $this;
     }
 
-    public function hasBody(): bool
-    {
-        return isset($this->body) && $this->body->getSize() !== 0;
-    }
-
     public function getBody(): StreamInterface
     {
         return $this->body ??= Psr7::createStream();

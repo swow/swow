@@ -158,7 +158,7 @@ class Request extends AbstractMessage implements RequestPlusInterface
             method: $this->getMethod(),
             uri: (string) $this->getUri(),
             headers: $this->getStandardHeaders(),
-            body: (!$withoutBody && $this->hasBody()) ? (string) $this->getBody() : '',
+            body: $withoutBody ? '' : (string) $this->getBody(),
             protocolVersion: $this->getProtocolVersion()
         );
     }
