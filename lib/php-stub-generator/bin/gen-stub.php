@@ -61,7 +61,7 @@ TEXT;
             'constants' => $constantMap,
             'declarations' => $declarationMap,
         ]);
-        $userCommentMap = processExecute([
+        $userCommentMapSerialized = processExecute([
             PHP_BINARY,
             '-n',
             __FILE__,
@@ -69,7 +69,13 @@ TEXT;
             $options['stub-file'],
             $data,
         ]);
-        $userCommentMap = unserialize($userCommentMap);
+        $userCommentMap = @unserialize($userCommentMapSerialized);
+        if (!$userCommentMap) {
+            throw new RuntimeException(sprintf(
+                'Failed to unserialize user comment map \'%s\': %s',
+                $userCommentMapSerialized, error_get_last()['message'] ?? 'unknown error'
+            ));
+        }
         $g->setUserCommentMap($userCommentMap);
     }
     if (isset($options['gen-arginfo-mode'])) {
