@@ -29,10 +29,10 @@ use const JSON_ERROR_NONE;
 use const LIBXML_NOCDATA;
 use const LIBXML_NOERROR;
 
-class BodyParser
+class BodyDecoder
 {
     /** @return array<mixed> */
-    public static function parse(StreamInterface $stream, string $contentType = MimeType::X_WWW_FORM_URLENCODED): array
+    public static function decode(StreamInterface $stream, string $contentType = MimeType::X_WWW_FORM_URLENCODED): array
     {
         $contents = (string) $stream;
         if (!$contents) {
