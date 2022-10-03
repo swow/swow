@@ -34,22 +34,24 @@ class BufferStream implements StreamPlusInterface
     protected int $offset = 0;
 
     /**
-     * @param scalar|Buffer $buffer
+     * @param scalar|Buffer $data
      */
-    public function __construct(mixed $buffer)
+    public function __construct(mixed $data)
     {
-        if (!($buffer instanceof Buffer)) {
-            if (!isStringable($buffer)) {
-                throw new TypeError(sprintf(
-                    '%s(): Argument#1 ($buffer) must be of type scalar or implement %s, %s given',
-                    __METHOD__, Stringable::class, get_debug_type($buffer)
-                ));
-            }
-            $buffer = new Buffer(0);
-            $data = (string) $buffer;
-            if ($data !== '') {
-                $buffer->append($data);
-            }
+        if ($data instanceof Buffer) {
+            $this->buffer = $data;
+            return;
+        }
+        if (!isStringable($data)) {
+            throw new TypeError(sprintf(
+                '%s(): Argument#1 ($buffer) must be of type scalar or implement %s, %s given',
+                __METHOD__, Stringable::class, get_debug_type($data)
+            ));
+        }
+        $data = (string) $data;
+        $buffer = new Buffer(0);
+        if ($data !== '') {
+            $buffer->append($data);
         }
         $this->buffer = $buffer;
     }
