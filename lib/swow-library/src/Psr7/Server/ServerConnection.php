@@ -195,10 +195,8 @@ class ServerConnection extends Socket implements ProtocolTypeInterface
                 ]);
                 break;
             case static::PROTOCOL_TYPE_WEBSOCKET:
-                {
-                    // TODO: impl
-                    break;
-                }
+                // TODO: impl
+                break;
         }
     }
 

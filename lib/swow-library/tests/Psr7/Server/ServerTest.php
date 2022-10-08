@@ -25,8 +25,6 @@ use Swow\Http\Mime\MimeType;
 use Swow\Http\Protocol\ReceiverTrait;
 use Swow\Http\Status;
 use Swow\Psr7\Client\Client;
-use Swow\Psr7\Message\Request;
-use Swow\Psr7\Message\Uri;
 use Swow\Psr7\Message\WebSocketFrame;
 use Swow\Psr7\Psr7;
 use Swow\Psr7\Server\Server;
