@@ -24,8 +24,8 @@ trait MessagePsr17FactoryTrait
 
     protected function __constructMessagePsr17Factory(?UriFactoryInterface $uriFactory = null, ?StreamFactoryInterface $streamFactory = null): void
     {
-        $this->uriFactory = $uriFactory ?? Psr7::getDefaultPsr17Factory();
-        $this->streamFactory = $streamFactory ?? Psr7::getDefaultPsr17Factory();
+        $this->uriFactory = $uriFactory ?? Psr7::getDefaultUriFactory();
+        $this->streamFactory = $streamFactory ?? Psr7::getDefaultStreamFactory();
     }
 
     public function getUriFactory(): UriFactoryInterface

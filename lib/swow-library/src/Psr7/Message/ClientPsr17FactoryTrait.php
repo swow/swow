@@ -33,8 +33,8 @@ trait ClientPsr17FactoryTrait
         ?ResponseFactoryInterface $responseFactory = null
     ): void {
         $this->__constructMessagePsr17Factory($uriFactory, $streamFactory);
-        $this->requestFactory = $requestFactory ?? Psr7::getDefaultPsr17Factory();
-        $this->responseFactory = $responseFactory ?? Psr7::getDefaultPsr17Factory();
+        $this->requestFactory = $requestFactory ?? Psr7::getDefaultRequestFactory();
+        $this->responseFactory = $responseFactory ?? Psr7::getDefaultResponseFactory();
     }
 
     public function getRequestFactory(): RequestFactoryInterface

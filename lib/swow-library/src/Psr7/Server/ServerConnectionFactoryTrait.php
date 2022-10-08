@@ -21,7 +21,7 @@ trait ServerConnectionFactoryTrait
 
     protected function __constructServerConnectionFactory(?ServerConnectionFactoryInterface $serverConnectionFactory = null): void
     {
-        $this->serverConnectionFactory = $serverConnectionFactory ?? Psr7::getDefaultPsr17Factory();
+        $this->serverConnectionFactory = $serverConnectionFactory ?? Psr7::getDefaultServerConnectionFactory();
     }
 
     public function getServerConnectionFactory(): ServerConnectionFactoryInterface

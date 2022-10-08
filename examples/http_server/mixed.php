@@ -17,6 +17,7 @@ use Swow\Errno;
 use Swow\Http\Message\HttpException;
 use Swow\Http\Status as HttpStatus;
 use Swow\Psr7\Client\Client;
+use Swow\Psr7\Message\UpgradeType;
 use Swow\Psr7\Psr7;
 use Swow\Psr7\Server\Server;
 use Swow\Socket;
@@ -69,13 +70,13 @@ while (true) {
                                 );
                                 break;
                             case '/chat':
-                                $upgrade = Psr7::detectUpgradeType($request);
-                                if (!$upgrade) {
+                                $upgradeType = Psr7::detectUpgradeType($request);
+                                if (!$upgradeType) {
                                     static $chatHtml;
                                     $connection->respond($chatHtml ??= file_get_contents(__DIR__ . '/chat.html'));
                                     break;
                                 }
-                                if ($upgrade !== Psr7::UPGRADE_TYPE_WEBSOCKET) {
+                                if (($upgradeType & UpgradeType::UPGRADE_TYPE_WEBSOCKET) === 0) {
                                     throw new HttpException(HttpStatus::BAD_REQUEST, 'Unsupported Upgrade Type');
                                 }
                                 $connection->upgradeToWebSocket($request);

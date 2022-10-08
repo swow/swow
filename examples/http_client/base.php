@@ -23,5 +23,5 @@ $response = $client
     ->connect($domain, 80)
     ->sendRequest($request);
 
-echo 'Request', PHP_EOL, str_repeat('-', 40), PHP_EOL, $request;
-echo 'Response', PHP_EOL, str_repeat('-', 40), PHP_EOL, $response;
+echo 'Request', PHP_EOL, str_repeat('-', 40), PHP_EOL, Psr7::stringifyRequest($request);
+echo 'Response', PHP_EOL, str_repeat('-', 40), PHP_EOL, Psr7::stringifyResponse($response);

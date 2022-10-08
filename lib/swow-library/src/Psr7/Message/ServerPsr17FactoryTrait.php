@@ -36,9 +36,9 @@ trait ServerPsr17FactoryTrait
         ?UploadedFileFactoryInterface $uploadedFileFactory = null
     ): void {
         $this->__constructMessagePsr17Factory($uriFactory, $streamFactory);
-        $this->serverRequestFactory = $serverRequestFactory ?? Psr7::getDefaultPsr17Factory();
-        $this->responseFactory = $responseFactory ?? Psr7::getDefaultPsr17Factory();
-        $this->uploadedFileFactory = $uploadedFileFactory ?? Psr7::getDefaultPsr17Factory();
+        $this->serverRequestFactory = $serverRequestFactory ?? Psr7::getDefaultServerRequestFactory();
+        $this->responseFactory = $responseFactory ?? Psr7::getDefaultResponseFactory();
+        $this->uploadedFileFactory = $uploadedFileFactory ?? Psr7::getDefaultUploadedFileFactory();
     }
 
     public function getServerRequestFactory(): ServerRequestFactoryInterface
