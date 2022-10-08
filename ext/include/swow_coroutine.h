@@ -138,6 +138,7 @@ CAT_GLOBALS_STRUCT_BEGIN(swow_coroutine) {
     zval z_transfer_data;
     zend_object *exception;
     cat_bool_t bailout;
+    HashTable *in_autoload;
 } CAT_GLOBALS_STRUCT_END(swow_coroutine);
 
 typedef zval *(*swow_coroutine_resume_t)(swow_coroutine_t *s_coroutine, zval *z_data);

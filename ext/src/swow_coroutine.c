@@ -2567,6 +2567,66 @@ static cat_msec_t swow_coroutine_msec_time(void)
                         (((cat_msec_t) tp.tv_usec) / 1000));
 }
 
+/* hook autoload */
+
+static zend_class_entry *(*original_zend_autoload)(zend_string *name, zend_string *lc_name);
+
+typedef struct swow_coroutine_autoload_pending_head_s {
+    cat_queue_t queue;
+    cat_coroutine_t *coroutine;
+    zend_class_entry *ce;
+} swow_coroutine_autoload_head_t;
+
+typedef struct swow_coroutine_autoload_pending_node_s {
+    cat_queue_node_t node;
+    cat_coroutine_t *coroutine;
+} swow_coroutine_autoload_pending_node_t;
+
+static zend_class_entry *swow_coroutine_autoload(zend_string *name, zend_string *lc_name)
+{
+    ZEND_ASSERT(EG(in_autoload) != NULL);
+
+    cat_coroutine_t *current_coroutine = CAT_COROUTINE_G(current);
+    zend_hash_del(EG(in_autoload), lc_name);
+
+    if (UNEXPECTED(SWOW_COROUTINE_G(in_autoload) == NULL)) {
+        ALLOC_HASHTABLE(SWOW_COROUTINE_G(in_autoload));
+        zend_hash_init(SWOW_COROUTINE_G(in_autoload), 8, NULL, NULL, 0);
+    }
+    zval *z_queue = zend_hash_find(SWOW_COROUTINE_G(in_autoload), lc_name);
+    if (z_queue != NULL) {
+        swow_coroutine_autoload_head_t *head = (swow_coroutine_autoload_head_t *) Z_PTR_P(z_queue);
+        /* only head will call original_zend_autoload(),
+         * so nested loops will not occur in other coroutines. */
+        if (head->coroutine == current_coroutine) {
+            return NULL;
+        }
+        cat_queue_node_t *pending_node = &current_coroutine->waiter.node;
+        cat_queue_push_back(&head->queue, pending_node);
+        cat_coroutine_yield(NULL, NULL);
+        cat_queue_remove(pending_node);
+        /* @note: only need to add it back once at the exit of the head:
+         * zend_hash_add_empty_element(EG(in_autoload), lc_name); */
+        return head->ce;
+    }
+    swow_coroutine_autoload_head_t head;
+    cat_queue_init(&head.queue);
+    head.coroutine = current_coroutine;
+    head.ce = NULL;
+
+    zend_hash_add_ptr(SWOW_COROUTINE_G(in_autoload), lc_name, &head);
+    head.ce = original_zend_autoload(name, lc_name);
+    zend_hash_del(SWOW_COROUTINE_G(in_autoload), lc_name);
+
+    cat_coroutine_t *pending_coroutine = NULL;
+    while ((pending_coroutine = cat_queue_front_data(&head.queue, cat_coroutine_t, waiter.node)) != NULL) {
+        cat_coroutine_schedule(pending_coroutine, COROUTINE, "Autoload");
+    }
+
+    zend_hash_add_empty_element(EG(in_autoload), lc_name);
+    return head.ce;
+}
+
 zend_result swow_coroutine_module_init(INIT_FUNC_ARGS)
 {
     if (!cat_coroutine_module_init()) {
@@ -2627,6 +2687,10 @@ zend_result swow_coroutine_module_init(INIT_FUNC_ARGS)
     /* hook opcode catch */
     zend_set_user_opcode_handler(ZEND_CATCH, swow_coroutine_catch_handler);
 # endif
+
+    /* hook autoload */
+    original_zend_autoload = zend_autoload;
+    zend_autoload = swow_coroutine_autoload;
 
 #ifdef SWOW_COROUTINE_MOCK_FIBER_CONTEXT
     memset(&swow_coroutine_dummy_execute_data_for_internal, 0, sizeof(swow_coroutine_dummy_execute_data_for_internal));
@@ -2690,6 +2754,12 @@ zend_result swow_coroutine_runtime_init(INIT_FUNC_ARGS)
 zend_result swow_coroutine_runtime_shutdown(SHUTDOWN_FUNC_ARGS)
 {
     SWOW_COROUTINE_G(runtime_state) = SWOW_COROUTINE_RUNTIME_STATE_IN_SHUTDOWN;
+
+    if (SWOW_COROUTINE_G(in_autoload)) {
+        zend_hash_destroy(SWOW_COROUTINE_G(in_autoload));
+        FREE_HASHTABLE(SWOW_COROUTINE_G(in_autoload));
+        SWOW_COROUTINE_G(in_autoload) = NULL;
+    }
 
     swow_utils_handlers_release(&SWOW_COROUTINE_G(deadlock_handlers));
 
