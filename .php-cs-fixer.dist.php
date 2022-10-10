@@ -39,6 +39,9 @@ return (new Config())
             ])
             ->filter(static function (Symfony\Component\Finder\SplFileInfo $fileInfo): bool {
                 $pathname = $fileInfo->getPathname();
+                if (str_contains($pathname, 'ext/build')) {
+                    return false;
+                }
                 if (preg_match('/ext\/tests\/.+\.php$/', $pathname)) {
                     return false;
                 }
