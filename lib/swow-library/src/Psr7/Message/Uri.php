@@ -18,12 +18,12 @@ use Swow\Object\StringableInterface;
 use Swow\Object\StringableTrait;
 
 use function http_build_query;
-use function ltrim;
 use function parse_str;
 use function parse_url;
 use function preg_replace_callback;
 use function rawurlencode;
 use function sprintf;
+use function str_starts_with;
 use function strtolower;
 
 /**
@@ -373,20 +373,9 @@ class Uri implements UriPlusInterface, StringableInterface
         $schemeSuffix = $scheme !== '' ? ':' : '';
         $authorityPrefix = $authority !== '' ? '//' : '';
         $pathPrefix = '';
-        if ($path !== '') {
-            if ($path[0] !== '/') {
-                if ($authority !== '') {
-                    // If the path is rootless and an authority is present, the path MUST be prefixed by "/"
-                    $pathPrefix = '/';
-                }
-            } elseif (isset($path[1]) && $path[1] === '/') {
-                if ($authority === '') {
-                    // If the path is starting with more than one "/" and no authority is present, the
-                    // starting slashes MUST be reduced to one.
-                    $pathPrefix = '/';
-                    $path = ltrim($path, '/');
-                }
-            }
+        if ($path !== '' && !str_starts_with($path, '/') && $authority !== '') {
+            // If the path is rootless and an authority is present, the path MUST be prefixed by "/"
+            $pathPrefix = '/';
         }
         $queryPrefix = $query !== '' ? '?' : '';
         $fragmentPrefix = $fragment !== '' ? '#' : '';
