@@ -170,7 +170,7 @@ static zend_always_inline void swow_coroutine_add_to_map(swow_coroutine_t *s_cor
     GC_ADDREF(&s_coroutine->std);
 }
 
-static zend_always_inline void swow_coroutine_remove_from_map(swow_coroutine_t *s_coroutine, HashTable *map)
+static zend_always_inline void swow_coroutine_del_from_map(swow_coroutine_t *s_coroutine, HashTable *map)
 {
     zend_hash_index_del(map, s_coroutine->coroutine.id);
 }
@@ -784,7 +784,7 @@ static void swow_coroutine_jump_standard(cat_coroutine_t *coroutine, cat_data_t 
         swow_coroutine_shutdown(s_coroutine);
         /* delete it from global map
          * (we can not delete it in coroutine_function, object maybe released during deletion) */
-        swow_coroutine_remove_from_map(s_coroutine, SWOW_COROUTINE_G(map));
+        swow_coroutine_del_from_map(s_coroutine, SWOW_COROUTINE_G(map));
     } else if (UNEXPECTED(SWOW_COROUTINE_G(exception) != NULL)) {
         /* coroutine without executor (e.g. scheduler) can not handle exception */
         ZEND_ASSERT(current_s_coroutine->executor != NULL);
