@@ -1359,7 +1359,7 @@ namespace Swow
          * @param int $size -1 meaning not limited, otherwise buffer size in bytes.
          * @return int bytes received
          */
-        public function peek(\Swow\Buffer $buffer, int $offset = 0, int $size = -1): int { }
+        public function peek(\Swow\Buffer $buffer, int $offset = 0, int $size = -1, ?int $timeout = 0): int { }
 
         /**
          * read at max `$size` bytes data into buffer from socket without removing the read data from socket,
@@ -1378,7 +1378,7 @@ namespace Swow
          * @param int &$port peer address
          * @return int bytes received
          */
-        public function peekFrom(\Swow\Buffer $buffer, int $offset = 0, int $size = -1, &$address = null, &$port = null): int { }
+        public function peekFrom(\Swow\Buffer $buffer, int $offset = 0, int $size = -1, &$address = null, &$port = null, ?int $timeout = 0): int { }
 
         /**
          * read `$length` bytes data from socket as string,
@@ -1484,7 +1484,7 @@ namespace Swow
          * @param int $size -1 meaning not limited, otherwise buffer size in bytes.
          * @return string data received in string
          */
-        public function peekString(int $size = \Swow\Buffer::COMMON_SIZE): string { }
+        public function peekString(int $size = \Swow\Buffer::COMMON_SIZE, ?int $timeout = 0): string { }
 
         /**
          * read at max `$size` bytes data from socket as string without removing the read data from socket,
@@ -1502,7 +1502,7 @@ namespace Swow
          * @param int &$port peer address
          * @return string data received in string
          */
-        public function peekStringFrom(int $size = \Swow\Buffer::COMMON_SIZE, &$address = null, &$port = null): string { }
+        public function peekStringFrom(int $size = \Swow\Buffer::COMMON_SIZE, &$address = null, &$port = null, ?int $timeout = 0): string { }
 
         /**
          * write io vector to socket

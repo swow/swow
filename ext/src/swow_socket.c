@@ -620,21 +620,20 @@ static PHP_METHOD_EX(Swow_Socket, _read, zend_bool once, zend_bool may_address, 
     zend_long size = -1;
     zval *z_address = NULL, *z_port = NULL;
     zend_long timeout;
-    zend_bool timeout_is_null = 1;
+    zend_bool timeout_is_null = !peek;
     swow_buffer_t *s_buffer;
     char *ptr;
     cat_bool_t want_address;
     ssize_t ret;
 
-    // buffer, offset, size
-    max_num_args = 3;
-    if (!peek) {
-        // timeout
-        max_num_args += 1;
-    }
+    // buffer, offset, size, timeout
+    max_num_args = 4;
     if (may_address) {
         // address, port
         max_num_args += 2;
+    }
+    if (peek) {
+        timeout = 0;
     }
 
     ZEND_PARSE_PARAMETERS_START(1, max_num_args)
@@ -646,9 +645,7 @@ static PHP_METHOD_EX(Swow_Socket, _read, zend_bool once, zend_bool may_address, 
             Z_PARAM_ZVAL(z_address)
             Z_PARAM_ZVAL(z_port)
         }
-        if (!peek) {
-            Z_PARAM_LONG_OR_NULL(timeout, timeout_is_null)
-        }
+        Z_PARAM_LONG_OR_NULL(timeout, timeout_is_null)
     ZEND_PARSE_PARAMETERS_END();
 
     /* check args and initialize */
@@ -681,7 +678,7 @@ static PHP_METHOD_EX(Swow_Socket, _read, zend_bool once, zend_bool may_address, 
                 ret = cat_socket_recv_ex(socket, ptr, size, timeout);
             }
         } else {
-            ret = cat_socket_peek(socket, ptr, size);
+            ret = cat_socket_peek_ex(socket, ptr, size, timeout);
         }
     } else {
         char address[CAT_SOCKADDR_MAX_PATH];
@@ -691,7 +688,7 @@ static PHP_METHOD_EX(Swow_Socket, _read, zend_bool once, zend_bool may_address, 
             ZEND_ASSERT(once);
             ret = cat_socket_recv_from_ex(socket, ptr, size, address, &address_length, &port, timeout);
         } else {
-            ret = cat_socket_peek_from(socket, ptr, size, address, &address_length, &port);
+            ret = cat_socket_peek_from_ex(socket, ptr, size, address, &address_length, &port, timeout);
         }
         if (z_address != NULL) {
             if (address_length == 0 || address_length > sizeof(address) /* error */) {
@@ -786,6 +783,7 @@ ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_peek, 0, 1, IS
     ZEND_ARG_OBJ_INFO(0, buffer, Swow\\Buffer, 0)
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, offset, IS_LONG, 0, "0")
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, size, IS_LONG, 0, "-1")
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, timeout, IS_LONG, 1, "0")
 ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Socket, peek)
@@ -799,6 +797,7 @@ ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_peekFrom, 0, 1
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, size, IS_LONG, 0, "-1")
     ZEND_ARG_INFO_WITH_DEFAULT_VALUE(1, address, "null")
     ZEND_ARG_INFO_WITH_DEFAULT_VALUE(1, port, "null")
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, timeout, IS_LONG, 1, "0")
 ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Socket, peekFrom)
@@ -814,18 +813,17 @@ static PHP_METHOD_EX(Swow_Socket, _readString, zend_bool once, zend_bool may_add
     zend_long size = CAT_BUFFER_COMMON_SIZE;
     zval *z_address = NULL, *z_port = NULL;
     zend_long timeout;
-    zend_bool timeout_is_null = 1;
+    zend_bool timeout_is_null = !peek;
     char *ptr;
     cat_bool_t want_address;
     ssize_t ret;
 
-    if (peek) {
-        max_num_args = 1;
-    } else {
-        max_num_args = 2;
-    }
+    max_num_args = 2;
     if (may_address) {
         max_num_args += 2;
+    }
+    if (peek) {
+        timeout = 0;
     }
 
     ZEND_PARSE_PARAMETERS_START(0, max_num_args)
@@ -835,9 +833,7 @@ static PHP_METHOD_EX(Swow_Socket, _readString, zend_bool once, zend_bool may_add
             Z_PARAM_ZVAL(z_address)
             Z_PARAM_ZVAL(z_port)
         }
-        if (!peek) {
-            Z_PARAM_LONG_OR_NULL(timeout, timeout_is_null)
-        }
+        Z_PARAM_LONG_OR_NULL(timeout, timeout_is_null)
     ZEND_PARSE_PARAMETERS_END();
 
     /* check args and initialize */
@@ -856,36 +852,39 @@ static PHP_METHOD_EX(Swow_Socket, _readString, zend_bool once, zend_bool may_add
     }
 
     ptr = ZSTR_VAL(string);
-    if (!want_address) {
-        if (!peek) {
-            if (!once) {
-                ret = cat_socket_read_ex(socket, ptr, size, timeout);
+    while (1) {
+        if (!want_address) {
+            if (!peek) {
+                if (!once) {
+                    ret = cat_socket_read_ex(socket, ptr, size, timeout);
+                } else {
+                    ret = cat_socket_recv_ex(socket, ptr, size, timeout);
+                }
             } else {
-                ret = cat_socket_recv_ex(socket, ptr, size, timeout);
+                ret = cat_socket_peek_ex(socket, ptr, size, timeout);
             }
         } else {
-            ret = cat_socket_peek(socket, ptr, size);
-        }
-    } else {
-        char address[CAT_SOCKADDR_MAX_PATH];
-        size_t address_length = sizeof(address);
-        int port;
-        if (!peek) {
-            ZEND_ASSERT(once);
-            ret = cat_socket_recv_from_ex(socket, ptr, size, address, &address_length, &port, timeout);
-        } else {
-            ret = cat_socket_peek_from(socket, ptr, size, address, &address_length, &port);
-        }
-        if (z_address != NULL) {
-            if (address_length == 0 || address_length > sizeof(address)) {
-                ZEND_TRY_ASSIGN_REF_EMPTY_STRING(z_address);
+            char address[CAT_SOCKADDR_MAX_PATH];
+            size_t address_length = sizeof(address);
+            int port;
+            if (!peek) {
+                ZEND_ASSERT(once);
+                ret = cat_socket_recv_from_ex(socket, ptr, size, address, &address_length, &port, timeout);
             } else {
-                ZEND_TRY_ASSIGN_REF_STRINGL(z_address, address, address_length);
+                ret = cat_socket_peek_from_ex(socket, ptr, size, address, &address_length, &port, timeout);
+            }
+            if (z_address != NULL) {
+                if (address_length == 0 || address_length > sizeof(address)) {
+                    ZEND_TRY_ASSIGN_REF_EMPTY_STRING(z_address);
+                } else {
+                    ZEND_TRY_ASSIGN_REF_STRINGL(z_address, address, address_length);
+                }
+            }
+            if (z_port != NULL) {
+                ZEND_TRY_ASSIGN_REF_LONG(z_port, port);
             }
         }
-        if (z_port != NULL) {
-            ZEND_TRY_ASSIGN_REF_LONG(z_port, port);
-        }
+        break;
     }
 
     /* solve string return value */
@@ -956,6 +955,7 @@ static PHP_METHOD(Swow_Socket, recvStringDataFrom)
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_peekString, 0, 0, IS_STRING, 0)
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, size, IS_LONG, 0, "Swow\\Buffer::COMMON_SIZE")
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, timeout, IS_LONG, 1, "0")
 ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Socket, peekString)
@@ -967,6 +967,7 @@ ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_peekStringFrom
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, size, IS_LONG, 0, "Swow\\Buffer::COMMON_SIZE")
     ZEND_ARG_INFO_WITH_DEFAULT_VALUE(1, address, "null")
     ZEND_ARG_INFO_WITH_DEFAULT_VALUE(1, port, "null")
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, timeout, IS_LONG, 1, "0")
 ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Socket, peekStringFrom)

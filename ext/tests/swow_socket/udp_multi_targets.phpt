@@ -75,6 +75,16 @@ testMultiClient('peekFrom', static function (Socket $server) {
     return [$buffer->toString(), $port_from];
 });
 
+testMultiClient('peekFrom(with-timeout)', static function (Socket $server) {
+    $buffer = new Buffer(8192);
+    while (true) {
+        if (8 <= $server->peekFrom($buffer, size: 8, address: $addr_from, port: $port_from, timeout: -1)) {
+            break;
+        }
+    }
+    return [$buffer->toString(), $port_from];
+});
+
 testMultiClient('recvDataFrom', static function (Socket $server) {
     $buffer = new Buffer(8192);
     $server->recvDataFrom($buffer, address: $addr_from, port: $port_from);
@@ -176,6 +186,8 @@ recvFrom start
 recvFrom verified %d times
 peekFrom start
 peekFrom verified %d times
+peekFrom(with-timeout) start
+peekFrom(with-timeout) verified 128 times
 recvDataFrom start
 recvDataFrom verified %d times
 recvStringFrom start
