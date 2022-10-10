@@ -15,6 +15,7 @@ namespace Swow\Psr7\Message;
 
 use Psr\Http\Message\UriInterface;
 use Swow\Http\Http;
+use Swow\Psr7\Psr7;
 
 class Request extends AbstractMessage implements RequestPlusInterface
 {
@@ -79,13 +80,13 @@ class Request extends AbstractMessage implements RequestPlusInterface
 
     public function getUri(): UriInterface
     {
-        return $this->uri ??= new Uri();
+        return $this->uri ??= Psr7::createUriFromString('/');
     }
 
     public function setUri(string|UriInterface $uri, ?bool $preserveHost = null): static
     {
         if (!($uri instanceof UriInterface)) {
-            $uri = new Uri($uri);
+            $uri = Psr7::createUriFromString($uri);
         }
         $this->uri = $uri;
 
