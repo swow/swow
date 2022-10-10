@@ -46,6 +46,7 @@ typedef uint8_t cat_channel_data_size_t;
 
 typedef void (*cat_channel_data_dtor_t)(const cat_data_t *data);
 
+/* Note: this should be public, it's used by channel_get_storage() */
 typedef struct cat_channel_bucket_s {
     cat_queue_node_t node;
     char data[1];

@@ -34,12 +34,11 @@ extern "C" {
 # define CAT_HAVE_SYNC_ATOMIC 1
 #elif defined(CAT_OS_WIN)
 # define CAT_HAVE_INTERLOCK_ATOMIC 1
-#elif 1
+#elif !defined(CAT_NO_MUTEX_ATOMIC)
 # warning "No atomics support detected, mutex used (with poor performance)"
 # define CAT_USE_MUTEX_ATOMIC 1
 #else
-# warning "No atomics support detected, that's terrible!"
-# define CAT_HAVE_NO_ATOMIC 1
+# error "No atomics support detected, that's terrible!"
 #endif
 
 #ifdef CAT_HAVE_INTERLOCK_ATOMIC

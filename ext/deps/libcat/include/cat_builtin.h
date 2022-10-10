@@ -18,62 +18,62 @@
 
 /* GCC x.y.z supplies __GNUC__ = x and __GNUC_MINOR__ = y */
 #ifdef __GNUC__
-#define CAT_GCC_VERSION (__GNUC__ * 1000 + __GNUC_MINOR__)
+# define CAT_GCC_VERSION (__GNUC__ * 1000 + __GNUC_MINOR__)
 #else
-#define CAT_GCC_VERSION 0
+# define CAT_GCC_VERSION 0
 #endif
 
 /* compatibility with non-clang compilers */
 #ifndef __has_attribute
-#define __has_attribute(x) 0
+# define __has_attribute(x) 0
 #endif
 #ifndef __has_builtin
-#define __has_builtin(x) 0
+# define __has_builtin(x) 0
 #endif
 #ifndef __has_feature
-#define __has_feature(x) 0
+# define __has_feature(x) 0
 #endif
 
 /* built-in */
 
 #if !defined(__GNUC__) || __GNUC__ < 3
-#define __builtin_expect(x, expected_value) (x)
+# define __builtin_expect(x, expected_value) (x)
 #endif
 #ifndef likely
-#define likely(x) __builtin_expect(!!(x), 1)
+# define likely(x) __builtin_expect(!!(x), 1)
 #endif
 #ifndef unlikely
-#define unlikely(x) __builtin_expect(!!(x), 0)
+# define unlikely(x) __builtin_expect(!!(x), 0)
 #endif
 
 #if defined(CAT_OS_WIN) && !defined(__clang__)
-#define CAT_ASSUME(x) __assume(x)
+# define CAT_ASSUME(x) __assume(x)
 #elif ((defined(__GNUC__) && CAT_GCC_VERSION >= 4005) || __has_builtin(__builtin_unreachable))
-#define CAT_ASSUME(x) do { \
+# define CAT_ASSUME(x) do { \
     if (unlikely(!(x))) { __builtin_unreachable(); } \
 } while (0)
 #else
-#define CAT_NO_ASSUME
-#define CAT_ASSUME(x)
+# define CAT_NO_ASSUME
+# define CAT_ASSUME(x)
 #endif
 
 #ifdef CAT_DEBUG
-#define CAT_ASSERT(x) assert(x)
+# define CAT_ASSERT(x) assert(x)
 #else
-#define CAT_ASSERT(x) CAT_ASSUME(x)
+# define CAT_ASSERT(x) CAT_ASSUME(x)
 #endif
 
 #ifndef CAT_IDE_HELPER
-#define CAT_STATIC_ASSERT(expression) void cat_static_assert(int static_assert_failed[1 - 2 * !(expression)])
+# define CAT_STATIC_ASSERT(expression) void cat_static_assert(int static_assert_failed[1 - 2 * !(expression)])
 #else
 /* make IDE happy (unused function) */
-#define CAT_STATIC_ASSERT(expression) int static_assert_failed[1 - 2 * !(expression)]
+# define CAT_STATIC_ASSERT(expression) int static_assert_failed[1 - 2 * !(expression)]
 #endif
 
 #if !defined(CAT_OS_WIN) && !defined(CAT_IDE_HELPER)
-#define CAT_NEVER_HERE(reason) CAT_ASSERT(0 && reason)
+# define CAT_NEVER_HERE(reason) CAT_ASSERT(0 && reason)
 #else
-#define CAT_NEVER_HERE(reason) abort()
+# define CAT_NEVER_HERE(reason) abort()
 #endif
 
 /* pseudo fallthrough keyword; */
@@ -86,62 +86,56 @@
 /* function prefix */
 
 #ifdef CAT_DEBUG
-#  define cat_always_inline inline
-#  define cat_never_inline
+# define cat_always_inline inline
+# define cat_never_inline
 #else
-#  ifdef CAT_OS_WIN
-#    ifdef inline
-#      undef inline
-#    endif
-#    define inline __inline
-#  endif
-#  if defined(__GNUC__)
-#    if __GNUC__ >= 3
-#      define cat_always_inline inline __attribute__((always_inline))
-#      define cat_never_inline __attribute__((noinline))
-#    else
-#      define cat_always_inline inline
-#      define cat_never_inline
-#    endif
-#  elif defined(_MSC_VER)
-#    define cat_always_inline __forceinline
-#    define cat_never_inline __declspec(noinline)
+# if defined(__GNUC__)
+#  if __GNUC__ >= 3
+#   define cat_always_inline inline __attribute__((always_inline))
+#   define cat_never_inline __attribute__((noinline))
 #  else
-#    if __has_attribute(always_inline)
-#      define cat_always_inline inline __attribute__((always_inline))
-#    else
-#      define cat_always_inline inline
-#    endif
-#    if __has_attribute(noinline)
-#      define cat_never_inline __attribute__((noinline))
-#    else
-#      define cat_never_inline
-#    endif
+#   define cat_always_inline inline
+#   define cat_never_inline
 #  endif
+# elif defined(_MSC_VER)
+#  define cat_always_inline __forceinline
+#  define cat_never_inline __declspec(noinline)
+# else
+#  if __has_attribute(always_inline)
+#   define cat_always_inline inline __attribute__((always_inline))
+#  else
+#   define cat_always_inline inline
+#  endif
+#  if __has_attribute(noinline)
+#   define cat_never_inline __attribute__((noinline))
+#  else
+#   define cat_never_inline
+#  endif
+# endif
 #endif /* CAT_DEBUG */
 
 #if defined(CAT_SHARED_BUILD) && defined(CAT_SHARED_USE)
-#error "Define either CAT_SHARED_BUILD or CAT_SHARED_USE, not both"
+# error "Define either CAT_SHARED_BUILD or CAT_SHARED_USE, not both"
 #endif
 
 #ifndef CAT_OS_WIN
-#  if defined(__GNUC__) && __GNUC__ >= 4
-#    define CAT_API __attribute__ ((visibility("default")))
-#  else
-#    define CAT_API
-#  endif
+# if defined(__GNUC__) && __GNUC__ >= 4
+#  define CAT_API __attribute__ ((visibility("default")))
+# else
+#  define CAT_API
+# endif
 #else
-   /* Windows - set up dll import/export decorators */
-#  if defined(CAT_SHARED_BUILD)
-     /* Building shared library */
-#    define CAT_API __declspec(dllexport)
-#  elif defined(CAT_SHARED_USE)
-     /* Using shared library */
-#    define CAT_API __declspec(dllimport)
-#  else
-     /* Building static library */
-#    define CAT_API /* nothing */
-#  endif
+  /* Windows - set up dll import/export decorators */
+# if defined(CAT_SHARED_BUILD)
+   /* Building shared library */
+#  define CAT_API __declspec(dllexport)
+# elif defined(CAT_SHARED_USE)
+   /* Using shared library */
+#  define CAT_API __declspec(dllimport)
+# else
+   /* Building static library */
+#  define CAT_API /* nothing */
+# endif
 #endif
 
 #if CAT_GCC_VERSION >= 4003 || __has_attribute(unused)
@@ -151,20 +145,20 @@
 # endif
 
 #if defined(__GNUC__) && CAT_GCC_VERSION >= 4003
-#define CAT_COLD __attribute__((cold))
-#define CAT_HOT __attribute__((hot))
-#ifdef __OPTIMIZE__
+# define CAT_COLD __attribute__((cold))
+# define CAT_HOT __attribute__((hot))
+# ifdef __OPTIMIZE__
 #  define CAT_OPT_SIZE  __attribute__((optimize("Os")))
 #  define CAT_OPT_SPEED __attribute__((optimize("Ofast")))
-#else
+# else
 #  define CAT_OPT_SIZE
 #  define CAT_OPT_SPEED
-#endif
+# endif
 #else
-#define CAT_COLD
-#define CAT_HOT
-#define CAT_OPT_SIZE
-#define CAT_OPT_SPEED
+# define CAT_COLD
+# define CAT_HOT
+# define CAT_OPT_SIZE
+# define CAT_OPT_SPEED
 #endif
 
 #if defined(__GNUC__) && CAT_GCC_VERSION >= 5000
@@ -188,19 +182,19 @@
 #endif
 
 #if (defined(__GNUC__) && __GNUC__ >= 3 && !defined(__INTEL_COMPILER) && !defined(DARWIN) && !defined(__hpux) && !defined(_AIX) && !defined(__osf__)) || __has_attribute(noreturn)
-#define CAT_HAVE_NORETURN
-#define CAT_NORETURN __attribute__((noreturn))
+# define CAT_HAVE_NORETURN
+# define CAT_NORETURN __attribute__((noreturn))
 #elif defined(CAT_WIN32)
-#define CAT_HAVE_NORETURN
-#define CAT_NORETURN __declspec(noreturn)
+# define CAT_HAVE_NORETURN
+# define CAT_NORETURN __declspec(noreturn)
 #else
-#define CAT_NORETURN
+# define CAT_NORETURN
 #endif
 
 #ifdef __GNUC__  /* Also covers __clang__ and __INTEL_COMPILER */
-#define CAT_DESTRUCTOR __attribute__((destructor))
+# define CAT_DESTRUCTOR __attribute__((destructor))
 #else
-#define CAT_DESTRUCTOR
+# define CAT_DESTRUCTOR
 #endif
 
 /* function special suffix */
@@ -213,46 +207,46 @@
 /* function suffix attributes */
 
 #if CAT_GCC_VERSION >= 2007 || __has_attribute(format)
-#define CAT_ATTRIBUTE_FORMAT(type, idx, first) __attribute__ ((format(type, idx, first)))
+# define CAT_ATTRIBUTE_FORMAT(type, idx, first) __attribute__ ((format(type, idx, first)))
 #else
-#define CAT_ATTRIBUTE_FORMAT(type, idx, first)
+# define CAT_ATTRIBUTE_FORMAT(type, idx, first)
 #endif
 
 #if (CAT_GCC_VERSION >= 3001 && !defined(__INTEL_COMPILER)) || __has_attribute(format)
-#define CAT_ATTRIBUTE_PTR_FORMAT(type, idx, first) __attribute__ ((format(type, idx, first)))
+# define CAT_ATTRIBUTE_PTR_FORMAT(type, idx, first) __attribute__ ((format(type, idx, first)))
 #else
-#define CAT_ATTRIBUTE_PTR_FORMAT(type, idx, first)
+# define CAT_ATTRIBUTE_PTR_FORMAT(type, idx, first)
 #endif
 
 /* source position */
 
 #ifdef CAT_DEBUG
-#define CAT_SOURCE_POSITION             1
-#ifndef CAT_DISABLE___FUNCTION__
-#define CAT_SOURCE_POSITION_D           const char *function, const char *file, const unsigned int line
-#define CAT_SOURCE_POSITION_RELAY_C     function, file, line
-#define CAT_SOURCE_POSITION_C           __FUNCTION__, __FILE__, __LINE__
-#define CAT_SOURCE_POSITION_FMT         "in %s in %s on line %d"
-#define CAT_SOURCE_POSITION_STRUCT_D    const char *function; const char *file; const unsigned int line;
+# define CAT_SOURCE_POSITION             1
+# ifndef CAT_DISABLE___FUNCTION__
+#  define CAT_SOURCE_POSITION_D           const char *function, const char *file, const unsigned int line
+#  define CAT_SOURCE_POSITION_RELAY_C     function, file, line
+#  define CAT_SOURCE_POSITION_C           __FUNCTION__, __FILE__, __LINE__
+#  define CAT_SOURCE_POSITION_FMT         "in %s in %s on line %d"
+#  define CAT_SOURCE_POSITION_STRUCT_D    const char *function; const char *file; const unsigned int line;
+# else
+#  define CAT_SOURCE_POSITION_D           const char *file, const unsigned int line
+#  define CAT_SOURCE_POSITION_RELAY_C     file, line
+#  define CAT_SOURCE_POSITION_C           __FILE__, __LINE__
+#  define CAT_SOURCE_POSITION_FMT         "in %s on line %d"
+#  define CAT_SOURCE_POSITION_STRUCT_D    const char *file; const unsigned int line;
+# endif
+# define CAT_SOURCE_POSITION_DC          , CAT_SOURCE_POSITION_D
+# define CAT_SOURCE_POSITION_RELAY_CC    , CAT_SOURCE_POSITION_RELAY_C
+# define CAT_SOURCE_POSITION_CC          , CAT_SOURCE_POSITION_C
 #else
-#define CAT_SOURCE_POSITION_D           const char *file, const unsigned int line
-#define CAT_SOURCE_POSITION_RELAY_C     file, line
-#define CAT_SOURCE_POSITION_C           __FILE__, __LINE__
-#define CAT_SOURCE_POSITION_FMT         "in %s on line %d"
-#define CAT_SOURCE_POSITION_STRUCT_D    const char *file; const unsigned int line;
-#endif
-#define CAT_SOURCE_POSITION_DC          , CAT_SOURCE_POSITION_D
-#define CAT_SOURCE_POSITION_RELAY_CC    , CAT_SOURCE_POSITION_RELAY_C
-#define CAT_SOURCE_POSITION_CC          , CAT_SOURCE_POSITION_C
-#else
-#define CAT_SOURCE_POSITION_D
-#define CAT_SOURCE_POSITION_DC
-#define CAT_SOURCE_POSITION_RELAY_C
-#define CAT_SOURCE_POSITION_RELAY_CC
-#define CAT_SOURCE_POSITION_C
-#define CAT_SOURCE_POSITION_CC
-#define CAT_SOURCE_POSITION_FMT
-#define CAT_SOURCE_POSITION_STRUCT_D
+# define CAT_SOURCE_POSITION_D
+# define CAT_SOURCE_POSITION_DC
+# define CAT_SOURCE_POSITION_RELAY_C
+# define CAT_SOURCE_POSITION_RELAY_CC
+# define CAT_SOURCE_POSITION_C
+# define CAT_SOURCE_POSITION_CC
+# define CAT_SOURCE_POSITION_FMT
+# define CAT_SOURCE_POSITION_STRUCT_D
 #endif
 
 /* code generator */
@@ -263,5 +257,5 @@
 /* sanitizer */
 
 #if defined(__SANITIZE_ADDRESS__) || __has_feature(address_sanitizer)
-#define CAT_HAVE_ASAN 1
+# define CAT_HAVE_ASAN 1
 #endif

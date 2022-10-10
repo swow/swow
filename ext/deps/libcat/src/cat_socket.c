@@ -3456,7 +3456,8 @@ CAT_API ssize_t cat_socket_try_send_to(cat_socket_t *socket, const char *buffer,
 static ssize_t cat_socket_internal_peekfrom(
     const cat_socket_internal_t *isocket,
     char *buffer, size_t size,
-    cat_sockaddr_t *address, cat_socklen_t *address_length
+    cat_sockaddr_t *address, cat_socklen_t *address_length,
+    cat_timeout_t timeout
 )
 {
     CAT_SOCKET_INTERNAL_FD_GETTER(isocket, fd, return cat_false);
@@ -3467,30 +3468,44 @@ static ssize_t cat_socket_internal_peekfrom(
             *address_length = 0;
         }
     }
+    while (1) {
 #ifdef CAT_OS_UNIX_LIKE
-    do {
+        do {
 #endif
-        nread = recvfrom(
-            fd,
-            buffer, (cat_socket_recv_length_t) size,
-            MSG_PEEK,
-            address, address_length
-        );
+            nread = recvfrom(
+                fd,
+                buffer, (cat_socket_recv_length_t) size,
+                MSG_PEEK,
+                address, address_length
+            );
 #ifdef CAT_OS_UNIX_LIKE
-    } while (unlikely(nread < 0 && errno == EINTR));
+        } while (unlikely(nread < 0 && errno == EINTR));
 #endif
-    if (nread < 0) {
-        cat_errno_t error = cat_translate_sys_error(cat_sys_errno);
-        if (unlikely(error != CAT_EAGAIN && error != CAT_EMSGSIZE)) {
-            /* there was an unrecoverable error */
-            cat_update_last_error_of_syscall("Socket peek failed");
-        } else {
-            /* not real error */
-            nread = 0;
+        if (nread < 0) {
+            cat_errno_t error = cat_translate_sys_error(cat_sys_errno);
+            if (unlikely(error != CAT_EAGAIN && error != CAT_EMSGSIZE)) {
+                /* there was an unrecoverable error */
+                cat_update_last_error_of_syscall("Socket peek failed");
+            } else {
+                /* not real error */
+                nread = 0;
+                if (timeout != 0) {
+                    /* wait for readable when timeout is not 0 */
+                    cat_ret_t ret = cat_poll_one(fd, POLLIN, NULL, timeout);
+                    if (ret == CAT_RET_OK) {
+                        continue;
+                    } else if (ret == CAT_RET_NONE) {
+                        cat_update_last_error(CAT_ETIMEDOUT, "Socket peek wait readable timedout");
+                    } else {
+                        cat_update_last_error_with_previous("Socket peek wait readable failed");
+                    }
+                }
+            }
+            if (address_length != NULL) {
+                *address_length = 0;
+            }
         }
-        if (address_length != NULL) {
-            *address_length = 0;
-        }
+        break;
     }
 
     return nread;
@@ -3498,23 +3513,38 @@ static ssize_t cat_socket_internal_peekfrom(
 
 CAT_API ssize_t cat_socket_peek(const cat_socket_t *socket, char *buffer, size_t size)
 {
-    return cat_socket_peekfrom(socket, buffer, size, NULL, NULL);
+    return cat_socket_peek_ex(socket, buffer, size, 0);
+}
+
+CAT_API ssize_t cat_socket_peek_ex(const cat_socket_t *socket, char *buffer, size_t size, cat_timeout_t timeout)
+{
+    return cat_socket_peekfrom_ex(socket, buffer, size, NULL, NULL, timeout);
 }
 
 CAT_API ssize_t cat_socket_peekfrom(const cat_socket_t *socket, char *buffer, size_t size, cat_sockaddr_t *address, cat_socklen_t *address_length)
 {
+    return cat_socket_peekfrom_ex(socket, buffer, size, address, address_length, 0);
+}
+
+CAT_API ssize_t cat_socket_peekfrom_ex(const cat_socket_t *socket, char *buffer, size_t size, cat_sockaddr_t *address, cat_socklen_t *address_length, cat_timeout_t timeout)
+{
     CAT_SOCKET_INTERNAL_GETTER(socket, isocket, return cat_false);
 
-    return cat_socket_internal_peekfrom(isocket, buffer, size, address, address_length);
+    return cat_socket_internal_peekfrom(isocket, buffer, size, address, address_length, timeout);
 }
 
 CAT_API ssize_t cat_socket_peek_from(const cat_socket_t *socket, char *buffer, size_t size, char *name, size_t *name_length, int *port)
+{
+    return cat_socket_peek_from_ex(socket, buffer, size, name, name_length, port, 0);
+}
+
+CAT_API ssize_t cat_socket_peek_from_ex(const cat_socket_t *socket, char *buffer, size_t size, char *name, size_t *name_length, int *port, cat_timeout_t timeout)
 {
     CAT_SOCKET_INTERNAL_GETTER(socket, isocket, return cat_false);
     CAT_SOCKET_READ_ADDRESS_CONTEXT(address, name, name_length, port);
     ssize_t nread;
 
-    nread = cat_socket_internal_peekfrom(isocket, buffer, size, address, address_length);
+    nread = cat_socket_internal_peekfrom(isocket, buffer, size, address, address_length, timeout);
 
     CAT_SOCKET_READ_ADDRESS_TO_NAME(address, name, name_length, port);
 

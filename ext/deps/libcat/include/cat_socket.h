@@ -664,8 +664,11 @@ CAT_API ssize_t cat_socket_try_writeto(cat_socket_t *socket, const cat_socket_wr
 CAT_API ssize_t cat_socket_try_write_to(cat_socket_t *socket, const cat_socket_write_vector_t *vector, unsigned int vector_count, const char *name, size_t name_length, int port);
 
 CAT_API ssize_t cat_socket_peek(const cat_socket_t *socket, char *buffer, size_t size);
+CAT_API ssize_t cat_socket_peek_ex(const cat_socket_t *socket, char *buffer, size_t size, cat_timeout_t timeout);
 CAT_API ssize_t cat_socket_peekfrom(const cat_socket_t *socket, char *buffer, size_t size, cat_sockaddr_t *address, cat_socklen_t *address_length);
+CAT_API ssize_t cat_socket_peekfrom_ex(const cat_socket_t *socket, char *buffer, size_t size, cat_sockaddr_t *address, cat_socklen_t *address_length, cat_timeout_t timeout);
 CAT_API ssize_t cat_socket_peek_from(const cat_socket_t *socket, char *buffer, size_t size, char *name, size_t *name_length, int *port);
+CAT_API ssize_t cat_socket_peek_from_ex(const cat_socket_t *socket, char *buffer, size_t size, char *name, size_t *name_length, int *port, cat_timeout_t timeout);
 
 CAT_API cat_bool_t cat_socket_send_handle(cat_socket_t *socket, cat_socket_t *handle);
 CAT_API cat_bool_t cat_socket_send_handle_ex(cat_socket_t *socket, cat_socket_t *handle, cat_timeout_t timeout);
