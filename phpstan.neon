@@ -2,6 +2,7 @@ parameters:
     level: 6
     paths:
         - examples
+        - ext/tests
         - lib
         - tools
     stubFiles:
