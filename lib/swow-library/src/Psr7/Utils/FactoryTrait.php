@@ -19,10 +19,12 @@ use Psr\Http\Message\ServerRequestFactoryInterface;
 use Psr\Http\Message\StreamFactoryInterface;
 use Psr\Http\Message\UploadedFileFactoryInterface;
 use Psr\Http\Message\UriFactoryInterface;
+use Swow\Psr7\Message\Psr17Factory;
 use Swow\Psr7\Server\ServerConnectionFactoryInterface;
 
 trait FactoryTrait
 {
+    protected static Psr17Factory $builtinPsr17Factory;
     protected static UriFactoryInterface $uriFactory;
     protected static StreamFactoryInterface $streamFactory;
     protected static RequestFactoryInterface $requestFactory;
@@ -31,9 +33,14 @@ trait FactoryTrait
     protected static UploadedFileFactoryInterface $uploadedFileFactory;
     protected static ServerConnectionFactoryInterface $serverConnectionFactory;
 
+    public static function getBuiltinPsr17Factory(): Psr17Factory
+    {
+        return static::$builtinPsr17Factory ??= new Psr17Factory();
+    }
+
     public static function getDefaultUriFactory(): UriFactoryInterface
     {
-        return static::$uriFactory;
+        return static::$uriFactory ??= static::getBuiltinPsr17Factory();
     }
 
     public static function setDefaultUriFactory(UriFactoryInterface $uriFactory): void
@@ -43,7 +50,7 @@ trait FactoryTrait
 
     public static function getDefaultStreamFactory(): StreamFactoryInterface
     {
-        return static::$streamFactory;
+        return static::$streamFactory ??= static::getBuiltinPsr17Factory();
     }
 
     public static function setDefaultStreamFactory(StreamFactoryInterface $streamFactory): void
@@ -53,7 +60,7 @@ trait FactoryTrait
 
     public static function getDefaultRequestFactory(): RequestFactoryInterface
     {
-        return static::$requestFactory;
+        return static::$requestFactory ??= static::getBuiltinPsr17Factory();
     }
 
     public static function setDefaultRequestFactory(RequestFactoryInterface $requestFactory): void
@@ -63,7 +70,7 @@ trait FactoryTrait
 
     public static function getDefaultResponseFactory(): ResponseFactoryInterface
     {
-        return static::$responseFactory;
+        return static::$responseFactory ??= static::getBuiltinPsr17Factory();
     }
 
     public static function setDefaultResponseFactory(ResponseFactoryInterface $responseFactory): void
@@ -73,7 +80,7 @@ trait FactoryTrait
 
     public static function getDefaultServerRequestFactory(): ServerRequestFactoryInterface
     {
-        return static::$serverRequestFactory;
+        return static::$serverRequestFactory ??= static::getBuiltinPsr17Factory();
     }
 
     public static function setDefaultServerRequestFactory(ServerRequestFactoryInterface $serverRequestFactory): void
@@ -83,7 +90,7 @@ trait FactoryTrait
 
     public static function getDefaultUploadedFileFactory(): UploadedFileFactoryInterface
     {
-        return static::$uploadedFileFactory;
+        return static::$uploadedFileFactory ??= static::getBuiltinPsr17Factory();
     }
 
     public static function setDefaultUploadedFileFactory(UploadedFileFactoryInterface $uploadedFileFactory): void
@@ -93,7 +100,7 @@ trait FactoryTrait
 
     public static function getDefaultServerConnectionFactory(): ServerConnectionFactoryInterface
     {
-        return static::$serverConnectionFactory;
+        return static::$serverConnectionFactory ??= static::getBuiltinPsr17Factory();
     }
 
     public static function setDefaultServerConnectionFactory(ServerConnectionFactoryInterface $serverConnectionFactory): void
