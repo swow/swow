@@ -1315,10 +1315,10 @@ namespace Swow
          * @phan-param int<-1, max> $size
          * @psalm-param int<-1, max> $size
          * @param int $size -1 meaning not limited, otherwise buffer size in bytes. only `$size` bytes data will be read from socket if there are more data than `$size` bytes, extra data will be kept in socket for further reading options
-         * @param string &$address peer address in string
-         * @phpstan-param int<0,65535>|null &$address
-         * @psalm-param int<0,65535>|null &$address
-         * @param int &$port peer address
+         * @param-out string &$address peer address in string
+         * @phpstan-param int<0,65535>|null &$port
+         * @psalm-param int<0,65535>|null &$port
+         * @param-out int &$port peer address
          * @param int|null $timeout timeout in microseconds or null for using {@see Socket::getReadTimeout()} value
          * @return int bytes received
          */
@@ -1338,10 +1338,10 @@ namespace Swow
          * @phan-param int<-1, max> $size
          * @psalm-param int<-1, max> $size
          * @param int $size -1 meaning not limited, otherwise buffer size in bytes. only `$size` bytes data will be read from socket if there are more data than `$size` bytes, extra data will be kept in socket for further reading options
-         * @param string &$address peer address in string
-         * @phpstan-param int<0,65535>|null &$address
-         * @psalm-param int<0,65535>|null &$address
-         * @param int &$port peer address
+         * @param-out string &$address peer address in string
+         * @phpstan-param int<0,65535>|null &$port
+         * @psalm-param int<0,65535>|null &$port
+         * @param-out int &$port peer address
          * @param int|null $timeout timeout in microseconds or null for using {@see Socket::getReadTimeout()} value
          * @return int bytes received
          */
@@ -1372,10 +1372,10 @@ namespace Swow
          * @phan-param int<-1, max> $size
          * @psalm-param int<-1, max> $size
          * @param int $size -1 meaning not limited, otherwise buffer size in bytes.
-         * @param string &$address peer address in string
-         * @phpstan-param int<0,65535>|null &$address
-         * @psalm-param int<0,65535>|null &$address
-         * @param int &$port peer address
+         * @param-out string &$address peer address in string
+         * @phpstan-param int<0,65535>|null &$port
+         * @psalm-param int<0,65535>|null &$port
+         * @param-out int &$port peer address
          * @return int bytes received
          */
         public function peekFrom(\Swow\Buffer $buffer, int $offset = 0, int $size = -1, &$address = null, &$port = null, ?int $timeout = 0): int { }
@@ -1442,10 +1442,10 @@ namespace Swow
          * @phan-param int<-1, max> $size
          * @psalm-param int<-1, max> $size
          * @param int $size -1 meaning not limited, otherwise buffer size in bytes. only `$size` bytes data will be read from socket if there are more data than `$size` bytes, extra data will be kept in socket for further reading options
-         * @param string &$address peer address in string
-         * @phpstan-param int<0,65535>|null &$address
-         * @psalm-param int<0,65535>|null &$address
-         * @param int &$port peer address
+         * @param-out string &$address peer address in string
+         * @phpstan-param int<0,65535>|null &$port
+         * @psalm-param int<0,65535>|null &$port
+         * @param-out int &$port peer address
          * @param int|null $timeout timeout in microseconds or null for using {@see Socket::getReadTimeout()} value
          * @return string data received in string
          */
@@ -1464,10 +1464,10 @@ namespace Swow
          * @phan-param int<-1, max> $size
          * @psalm-param int<-1, max> $size
          * @param int $size -1 meaning not limited, otherwise buffer size in bytes. only `$size` bytes data will be read from socket if there are more data than `$size` bytes, extra data will be kept in socket for further reading options
-         * @param string &$address peer address in string
-         * @phpstan-param int<0,65535>|null &$address
-         * @psalm-param int<0,65535>|null &$address
-         * @param int &$port peer address
+         * @param-out string &$address peer address in string
+         * @phpstan-param int<0,65535>|null &$port
+         * @psalm-param int<0,65535>|null &$port
+         * @param-out int &$port peer address
          * @param int|null $timeout timeout in microseconds or null for using {@see Socket::getReadTimeout()} value
          * @return string data received in string
          */
@@ -1496,10 +1496,10 @@ namespace Swow
          * @phan-param int<-1, max> $size
          * @psalm-param int<-1, max> $size
          * @param int $size -1 meaning not limited, otherwise buffer size in bytes.
-         * @param string &$address peer address in string
-         * @phpstan-param int<0,65535>|null &$address
-         * @psalm-param int<0,65535>|null &$address
-         * @param int &$port peer address
+         * @param-out string &$address peer address in string
+         * @phpstan-param int<0,65535>|null &$port
+         * @psalm-param int<0,65535>|null &$port
+         * @param-out int &$port peer address
          * @return string data received in string
          */
         public function peekStringFrom(int $size = \Swow\Buffer::COMMON_SIZE, &$address = null, &$port = null, ?int $timeout = 0): string { }
