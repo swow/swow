@@ -303,19 +303,6 @@ PHP_RSHUTDOWN_FUNCTION(swow)
         }
     }
 
-    /* Notice: some PHP resources still have not been released
-     * (e.g. static vars or set global vars on __destruct or circular references),
-     * so we must re-create C coroutine env to finish them
-     * In other words, now we are in pure C coroutine env instead of PHP runtime */
-
-    if (!cat_runtime_init_all()) {
-        return FAILURE;
-    }
-
-    if (!cat_run(CAT_RUN_EASY)) {
-        return FAILURE;
-    }
-
     SWOW_G(runtime_state) = SWOW_RUNTIME_STATE_NONE;
 
     return SUCCESS;
@@ -324,17 +311,8 @@ PHP_RSHUTDOWN_FUNCTION(swow)
 
 static zend_result swow_post_deactivate(void)
 {
-    do {
-        cat_bool_t ret = cat_true;
-
-        ret = cat_stop();
-
-        ret = cat_runtime_shutdown_all() && ret;
-
-        if (!ret) {
-            return FAILURE;
-        }
-    } while (0);
+    /* make sure all closed handles will be cleaned up totally */
+    cat_event_schedule();
 
     static const swow_close_function_t rclose_functions[] = {
 #ifdef CAT_HAVE_CURL
