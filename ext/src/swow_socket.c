@@ -1083,7 +1083,10 @@ static PHP_METHOD_EX(Swow_Socket, _write, zend_bool single, zend_bool may_addres
                         goto _next;
                     }
                     if (s_buffer != NULL) {
-                        strings[buffer_count++] = zend_string_copy(swow_buffer_get_string(s_buffer));
+                        zend_string *buffer_string = swow_buffer_get_string(s_buffer);
+                        if (buffer_string != NULL) {
+                            strings[buffer_count++] = zend_string_copy(buffer_string);
+                        }
                     }
                     vector[vector_count].base = ptr;
                     vector[vector_count].length = length;
@@ -1122,11 +1125,11 @@ static PHP_METHOD_EX(Swow_Socket, _write, zend_bool single, zend_bool may_addres
         if (UNEXPECTED(ptr == NULL)) {
             goto _error;
         }
-        if (length == 0) {
-            goto _next;
-        }
         if (s_buffer != NULL) {
-            strings[buffer_count++] = zend_string_copy(swow_buffer_get_string(s_buffer));
+            zend_string *buffer_string = swow_buffer_get_string(s_buffer);
+            if (buffer_string != NULL) {
+                strings[buffer_count++] = zend_string_copy(buffer_string);
+            }
         }
         vector[0].base = ptr;
         vector[0].length = length;

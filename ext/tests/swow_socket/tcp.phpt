@@ -9,6 +9,7 @@ skip_if_max_open_files_less_than(256);
 <?php
 require __DIR__ . '/../include/bootstrap.php';
 
+use Swow\Buffer;
 use Swow\Coroutine;
 use Swow\Errno;
 use Swow\Socket;
@@ -41,7 +42,6 @@ $wrClient = new WaitReference();
 $randoms = getRandomBytesArray(TEST_MAX_REQUESTS, TEST_MAX_LENGTH);
 for ($c = 0; $c < TEST_MAX_CONCURRENCY; $c++) {
     Coroutine::run(static function () use ($server, $randoms, $wrClient): void {
-        /* @var $client Socket */
         for ($r = TEST_MAX_REQUESTS; $r--;) {
             try {
                 $client = new Socket(Socket::TYPE_TCP);
@@ -57,6 +57,9 @@ for ($c = 0; $c < TEST_MAX_CONCURRENCY; $c++) {
                 usleep(1000);
             }
         }
+        if (!isset($client)) {
+            throw new RuntimeException('Failed to connect');
+        }
         Coroutine::run(static function () use ($client, $randoms, $wrClient): void {
             for ($n = 0; $n < TEST_MAX_REQUESTS; $n++) {
                 $packet = $client->readString(TEST_MAX_LENGTH);
@@ -64,6 +67,8 @@ for ($c = 0; $c < TEST_MAX_CONCURRENCY; $c++) {
             }
         });
         for ($n = 0; $n < TEST_MAX_REQUESTS; $n++) {
+            // test send empty string/buffer here
+            mt_rand(0, 1) ? $client->send('') : $client->send(new Buffer(0));
             $client->send($randoms[$n]);
         }
     });
