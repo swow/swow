@@ -454,9 +454,9 @@ static void swow_coroutine_main_create(void)
 
     /* add main s_coroutine to the map */
     do {
-        zval zs_coroutine;
-        ZVAL_OBJ(&zs_coroutine, &s_coroutine->std);
-        zend_hash_index_update(SWOW_COROUTINE_G(map), s_coroutine->coroutine.id, &zs_coroutine);
+        zval z_coroutine;
+        ZVAL_OBJ(&z_coroutine, &s_coroutine->std);
+        zend_hash_index_update(SWOW_COROUTINE_G(map), s_coroutine->coroutine.id, &z_coroutine);
         /* Notice: we have 1 ref by create */
         GC_ADDREF(&s_coroutine->std);
     } while (0);
@@ -493,8 +493,8 @@ static void swow_coroutine_main_dtor_object(zend_object *object)
 
     CAT_LOG_DEBUG(COROUTINE, "Main Coroutine exited, destruct all coroutines");
 
-    ZEND_HASH_FOREACH_VAL(map, zval *zs_coroutine) {
-        zend_object *coroutine_object = Z_OBJ_P(zs_coroutine);
+    ZEND_HASH_FOREACH_VAL(map, zval *z_coroutine) {
+        zend_object *coroutine_object = Z_OBJ_P(z_coroutine);
         if (coroutine_object == object) {
             continue;
         }
@@ -1216,11 +1216,11 @@ SWOW_API cat_bool_t swow_coroutine_call(swow_coroutine_t *s_coroutine, zval *z_c
 
 SWOW_API swow_coroutine_t *swow_coroutine_get_by_id(cat_coroutine_id_t id)
 {
-    zval *zs_coroutine = zend_hash_index_find(SWOW_COROUTINE_G(map), id);
+    zval *z_coroutine = zend_hash_index_find(SWOW_COROUTINE_G(map), id);
     swow_coroutine_t *s_coroutine;
 
-    if (zs_coroutine != NULL) {
-        s_coroutine = swow_coroutine_get_from_object(Z_OBJ_P(zs_coroutine));
+    if (z_coroutine != NULL) {
+        s_coroutine = swow_coroutine_get_from_object(Z_OBJ_P(z_coroutine));
     } else {
         s_coroutine = NULL;
     }
@@ -1230,15 +1230,15 @@ SWOW_API swow_coroutine_t *swow_coroutine_get_by_id(cat_coroutine_id_t id)
 
 SWOW_API zval *swow_coroutine_get_zval_by_id(cat_coroutine_id_t id)
 {
-    zval *zs_coroutine = zend_hash_index_find(SWOW_COROUTINE_G(map), id);
+    zval *z_coroutine = zend_hash_index_find(SWOW_COROUTINE_G(map), id);
     static zval z_tmp;
 
-    if (zs_coroutine == NULL) {
+    if (z_coroutine == NULL) {
         ZVAL_NULL(&z_tmp);
-        zs_coroutine = &z_tmp;
+        z_coroutine = &z_tmp;
     }
 
-    return zs_coroutine;
+    return z_coroutine;
 }
 
 SWOW_API void swow_coroutine_dump(swow_coroutine_t *s_coroutine)
@@ -1385,8 +1385,8 @@ SWOW_API cat_bool_t swow_coroutine_kill_all(void)
 
     do {
         try_again = cat_false;
-        ZEND_HASH_FOREACH_VAL(map, zval *zs_coroutine) {
-            swow_coroutine_t *s_coroutine = swow_coroutine_get_from_object(Z_OBJ_P(zs_coroutine));
+        ZEND_HASH_FOREACH_VAL(map, zval *z_coroutine) {
+            swow_coroutine_t *s_coroutine = swow_coroutine_get_from_object(Z_OBJ_P(z_coroutine));
             if (s_coroutine == swow_coroutine_get_current()) {
                 continue;
             }
