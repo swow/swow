@@ -55,10 +55,10 @@ jobs:
         with:
           php-version: ${{ matrix.php-version }}
           tools: phpize
-          # ini-values: pcov.directory=lib
-          # coverage: pcov
-          coverage: none
-          extensions: curl,openssl,sockets,ffi
+          ini-values: pcov.enabled = 1
+          coverage: pcov
+          # coverage: none
+          extensions: curl,openssl,sockets,ffi,pcov
         #env:
           #phpts: ${{ matrix.ts }}
 
@@ -91,7 +91,7 @@ jobs:
       - name: Run library tests
         id: test-library
         continue-on-error: true
-        run: composer test-library
+        run: php --ri pcov && composer test-library
 
       - name: Fail if test-extension failed
         if: steps.test-extension.outcome != 'success'
@@ -101,7 +101,7 @@ jobs:
         if: steps.test-library.outcome != 'success'
         run: exit 1
 
-      - name: Coverage tests
+      - name: Coverage ext tests
         shell: bash
         run: |
           lcov \
@@ -118,6 +118,13 @@ jobs:
           curl -s https://codecov.io/bash -o codecov.sh &&
           chmod +x codecov.sh &&
           ./codecov.sh -f coverage.info
+
+      - name: Coverage phpunit tests
+        shell: bash
+        run: |
+          curl -s https://codecov.io/bash -o codecov.sh &&
+          chmod +x codecov.sh &&
+          ./codecov.sh -f ./lib/swow-library/build/coverage.xml
 
   windows-tests:
     name: PHP ${{ matrix.php-version }} ${{ matrix.ts }} Test on windows-2019
