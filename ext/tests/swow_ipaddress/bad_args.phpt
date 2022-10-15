@@ -9,6 +9,7 @@ require __DIR__ . '/../include/skipif.php';
 require __DIR__ . '/../include/bootstrap.php';
 
 use Swow\IpAddress;
+use Swow\IpAddressException;
 
 $testCases = [
     // domain
@@ -22,11 +23,11 @@ foreach ($testCases as $case) {
     //new IpAddress($case[0]);
     Assert::throws(function () use ($case) {
         $addr = new IpAddress($case[0]);
-    }, Swow\IpAddressException::class);
+    }, IpAddressException::class);
     $addr = new IpAddress();
     Assert::throws(function () use ($addr, $case) {
         $addr->setIp($case[0]);
-    }, Swow\IpAddressException::class);
+    }, IpAddressException::class);
 }
 
 // bad port
@@ -59,6 +60,26 @@ Assert::throws(function () use ($addr) {
 Assert::throws(function () use ($addr) {
     $addr->setMaskLen(33);
 }, ValueError::class);
+
+$addr = new IpAddress('1.2.3.4');
+$cidr = new IpAddress('1.0.0.0/20');
+$cidr6 = new IpAddress('::/20');
+
+Assert::throws(function () use ($addr, $cidr) {
+    $cidr->in($addr);
+}, IpAddressException::class);
+
+Assert::throws(function () use ($addr, $cidr) {
+    $addr->covers($cidr);
+}, IpAddressException::class);
+
+Assert::throws(function () use ($addr, $cidr) {
+    $addr->in($cidr6);
+}, IpAddressException::class);
+
+Assert::throws(function () use ($addr, $cidr) {
+    $cidr6->covers($addr);
+}, IpAddressException::class);
 
 echo "Done\n";
 ?>
