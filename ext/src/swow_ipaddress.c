@@ -54,7 +54,7 @@ static void swow_ipv6_parse_diag(ipv6_diag_event_t event, const ipv6_diag_info_t
 static cat_bool_t swow_parse_ipaddress(const char* address, size_t address_len, ipv6_address_full_t *dest)
 {
     swow_ipv6_parse_error error = { NULL };
-    cat_bool_t ret = (cat_bool_t)ipv6_from_str_diag(address, address_len, dest, swow_ipv6_parse_diag, &error);
+    cat_bool_t ret = (cat_bool_t)ipv6_from_str_diag(address, address_len, dest, (ipv6_diag_func_t)swow_ipv6_parse_diag, &error);
     if (!ret) {
         char *buffer;
         swow_throw_exception(
@@ -271,7 +271,7 @@ static PHP_METHOD(Swow_IpAddress, setFlags)
         swow_throw_exception(
             zend_ce_value_error,
             0,
-            "%d is not a valid flag",
+            "%ld is not a valid flag",
             flags
         );
     }
@@ -346,7 +346,7 @@ static PHP_METHOD(Swow_IpAddress, setPort)
         swow_throw_exception(
             zend_ce_value_error,
             0,
-            "%d is not a valid port number (range: 0-65535)",
+            "%ld is not a valid port number (range: 0-65535)",
             port
         );
     }
@@ -378,7 +378,7 @@ static PHP_METHOD(Swow_IpAddress, setMaskLen)
         swow_throw_exception(
             zend_ce_value_error,
             0,
-            "%d is not a valid mask length for %s (range: 0-%d)",
+            "%ld is not a valid mask length for %s (range: 0-%ld)",
             maskLen,
             addrType,
             max
