@@ -73,11 +73,11 @@ Assert::throws(function () use ($addr, $cidr) {
     $addr->covers($cidr);
 }, IpAddressException::class);
 
-Assert::throws(function () use ($addr, $cidr) {
+Assert::throws(function () use ($addr, $cidr6) {
     $addr->in($cidr6);
 }, IpAddressException::class);
 
-Assert::throws(function () use ($addr, $cidr) {
+Assert::throws(function () use ($addr, $cidr6) {
     $cidr6->covers($addr);
 }, IpAddressException::class);
 
