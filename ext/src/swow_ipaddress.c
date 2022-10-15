@@ -87,6 +87,7 @@ static cat_bool_t swow_parse_ipaddress(const char* address, size_t address_len, 
     }
     return cat_true;
 }
+
 #endif
 
 static cat_bool_t swow_ipaddress_in(swow_ipaddress_t *s_address, swow_ipaddress_t *s_cidr)
@@ -99,7 +100,7 @@ static cat_bool_t swow_ipaddress_in(swow_ipaddress_t *s_address, swow_ipaddress_
         swow_throw_exception(
             swow_ipaddress_exception_ce,
             0,
-            "the range is not a cidr"
+            "The range is not a cidr"
         );
         return cat_false;
     }
@@ -108,7 +109,7 @@ static cat_bool_t swow_ipaddress_in(swow_ipaddress_t *s_address, swow_ipaddress_
         swow_throw_exception(
             swow_ipaddress_exception_ce,
             0,
-            "address and range addr family mismatch"
+            "Address and range addr family mismatch"
         );
         return cat_false;
     }
@@ -185,7 +186,33 @@ static PHP_METHOD(Swow_IpAddress, getFull)
 
     char *buffer = emalloc(IPV6_STRING_SIZE);
 
+    uint32_t flags = s_address->ipv6_address.flags;
+
+    if (
+        (s_address->ipv6_address.flags & IPV6_FLAG_IPV4_COMPAT) &&
+        (s_address->ipv6_address.flags & IPV6_FLAG_HAS_MASK)
+    ) {
+        // upstream bug? here
+        // no standard for how to generate a IPV4 CIDR with port
+        // so we make it here
+        size_t ret = snprintf(
+            buffer,
+            IPV6_STRING_SIZE,
+            "%d.%d.%d.%d/%d",
+            s_address->ipv6_address.address.components[0] >> 8,
+            s_address->ipv6_address.address.components[0] & 0xff,
+            s_address->ipv6_address.address.components[1] >> 8,
+            s_address->ipv6_address.address.components[1] & 0xff,
+            s_address->ipv6_address.mask
+        );
+
+        RETURN_STRINGL_FAST(buffer, ret);
+    }
+
+    // clean flags to generate ip/mask part only
+    s_address->ipv6_address.flags &= ~(IPV6_FLAG_HAS_PORT);
     size_t ret = ipv6_to_str(&s_address->ipv6_address, buffer, IPV6_STRING_SIZE);
+    s_address->ipv6_address.flags = flags;
     
     RETURN_STRINGL_FAST(buffer, ret);
 }
