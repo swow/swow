@@ -143,16 +143,6 @@ SWOW_API zend_op_array *swow_compile_string_ex(zend_string *source_string, const
         break; \
     }
 
-static zend_always_inline bool swow_parse_arg_stringable(zval *arg, zend_string **dest_string, uint32_t arg_num)
-{
-    if (EXPECTED(Z_TYPE_P(arg) == IS_STRING)) {
-        *dest_string = Z_STR_P(arg);
-        return true;
-    }
-    /* use weak to handle stringable object even if we are in strict mode */
-    return zend_parse_arg_str_weak(arg, dest_string, arg_num);
-}
-
 /* array */
 
 #if PHP_VERSION_ID < 80200
@@ -328,6 +318,38 @@ static zend_always_inline zend_object* swow_object_create(zend_class_entry *ce)
 #define ZEND_METHOD_CALL(classname, name, ...)  PHP_MN(classname##_##name)(INTERNAL_FUNCTION_PARAM_PASSTHRU, ##__VA_ARGS__)
 #define PHP_FUNCTION_CALL                       ZEND_FUNCTION_CALL
 #define PHP_METHOD_CALL                         ZEND_METHOD_CALL
+
+/* ZPP */
+
+#if PHP_VERSION_ID < 80100
+# define _ARG_POS(x)
+#else
+# define _ARG_POS(x) , x
+#endif
+
+static zend_always_inline bool swow_parse_arg_long(zval *arg, zend_long *dest, bool *is_null, bool check_null, uint32_t arg_num)
+{
+    return zend_parse_arg_long(arg, dest, is_null, check_null _ARG_POS(arg_num));
+}
+
+static zend_always_inline bool swow_parse_arg_str_weak(zval *arg, zend_string **dest, uint32_t arg_num) /* {{{ */
+{
+    return zend_parse_arg_str_weak(arg, dest _ARG_POS(arg_num));
+}
+
+static zend_always_inline bool swow_parse_arg_stringable(zval *arg, zend_string **dest, uint32_t arg_num)
+{
+    if (EXPECTED(Z_TYPE_P(arg) == IS_STRING)) {
+        *dest = Z_STR_P(arg);
+        return true;
+    }
+    /* use weak to handle stringable object even if we are in strict mode */
+    return swow_parse_arg_str_weak(arg, dest, arg_num);
+}
+
+#undef _ARG_POS
+
+/* return_value */
 
 #define RETVAL_STATIC() do { \
     RETVAL_OBJ(swow_object_create(zend_get_executed_scope())); \

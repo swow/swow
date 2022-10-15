@@ -248,7 +248,7 @@ static zend_always_inline bool swow_parse_arg_buffer_or_stringable_for_reading(
             return true;
         }
         /* use weak to handle stringable object even if we are in strict mode */
-        return zend_parse_arg_str_weak(arg, dest_string, arg_num);
+        return swow_parse_arg_str_weak(arg, dest_string, arg_num);
     }
 
     *dest_s_buffer = NULL;
@@ -273,7 +273,7 @@ static zend_always_inline bool swow_parse_arg_stringable_expect_buffer_for_readi
             return true;
         }
         /* use weak to handle stringable object even if we are in strict mode */
-        return zend_parse_arg_str_weak(arg, dest_string, arg_num);
+        return swow_parse_arg_str_weak(arg, dest_string, arg_num);
     }
 
     return swow_parse_arg_stringable(arg, dest_string, arg_num);

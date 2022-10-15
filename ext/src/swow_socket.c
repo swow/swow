@@ -1039,11 +1039,6 @@ static PHP_METHOD_EX(Swow_Socket, _write, zend_bool single, zend_bool may_addres
                         /* array include parameters */
                         HashTable *vector_elements_array = Z_ARR_P(z_tmp);
                         uint32_t vector_elements_array_count = zend_hash_num_elements(vector_elements_array);
-#if PHP_VERSION_ID < 80100
-# define _ARG_POS(x)
-#else
-# define _ARG_POS(x) , x
-#endif
                         if (UNEXPECTED(vector_elements_array_count < 1 || vector_elements_array_count > 3)) {
                             zend_argument_value_error(1, "[%u] must have 1 to 3 elements, %u given", vector_list_array_index, vector_elements_array_count);
                             goto _error;
@@ -1053,28 +1048,27 @@ static PHP_METHOD_EX(Swow_Socket, _write, zend_bool single, zend_bool may_addres
                         ZEND_HASH_FOREACH_VAL(vector_elements_array, z_tmp) {
                             ZEND_ASSERT(index == 0 || index == 1 || index == 2);
                             if (index == 0) {
-                                if (UNEXPECTED(!swow_parse_arg_buffer_or_stringable_for_reading(z_tmp, &s_buffer, &string _ARG_POS(1)))) {
+                                if (UNEXPECTED(!swow_parse_arg_buffer_or_stringable_for_reading(z_tmp, &s_buffer, &string, 1))) {
                                     zend_argument_type_error(1, "[%u][0] ($data) must be of type string or %s, %s given", vector_list_array_index, ZSTR_VAL(swow_buffer_ce->name), zend_zval_type_name(z_tmp));
                                     goto _error;
                                 }
                             } else if (index == 1) {
-                                if (UNEXPECTED(z_tmp != NULL && !zend_parse_arg_long(z_tmp, &start, NULL, false _ARG_POS(1)))) {
+                                if (UNEXPECTED(z_tmp != NULL && !swow_parse_arg_long(z_tmp, &start, NULL, false, 1))) {
                                     zend_argument_type_error(1, "[%u][1] ($start) must be of type int, %s given", vector_list_array_index, zend_zval_type_name(z_tmp));
                                     goto _error;
                                 }
                             } else if (index == 2) {
-                                if (UNEXPECTED(z_tmp != NULL && !zend_parse_arg_long(z_tmp, &length, NULL, false _ARG_POS(1)))) {
+                                if (UNEXPECTED(z_tmp != NULL && !swow_parse_arg_long(z_tmp, &length, NULL, false, 1))) {
                                     zend_argument_type_error(1, "[%u][2] ($length) must be of type int, %s given", vector_list_array_index, zend_zval_type_name(z_tmp));
                                     goto _error;
                                 }
                             }
                             index++;
                         } ZEND_HASH_FOREACH_END();
-                    } else if (!swow_parse_arg_buffer_or_stringable_for_reading(z_tmp, &s_buffer, &string _ARG_POS(1))) {
+                    } else if (!swow_parse_arg_buffer_or_stringable_for_reading(z_tmp, &s_buffer, &string, 1)) {
                         zend_argument_type_error(1, "[%u] ($stringable) must be of type string, array or %s, %s given", vector_list_array_index, ZSTR_VAL(swow_buffer_ce->name), zend_zval_type_name(z_tmp));
                         goto _error;
                     }
-#undef _ARG_POS
                     ptr = swow_buffer_or_string_get_readable_space_v(s_buffer, string, start, &length, 1, vector_list_array_index, 1);
                     if (UNEXPECTED(ptr == NULL)) {
                         goto _error;
