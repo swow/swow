@@ -271,7 +271,7 @@ static zend_never_inline void swow_buffer_separate(swow_buffer_t *s_buffer)
     CAT_LOG_DEBUG_VA_WITH_LEVEL(BUFFER, 5, {
         char *s;
         CAT_LOG_DEBUG_D(HTTP, "Buffer separate occurred (length=%zu, value=%s)",
-            s_buffer->buffer.length, cat_log_buffer_quote(s_buffer->buffer.value, s_buffer->buffer.length, &s));
+            s_buffer->buffer.length, cat_log_str_quote(s_buffer->buffer.value, s_buffer->buffer.length, &s));
         cat_free(s);
     });
     (void) cat_buffer_dup(&s_buffer->buffer, &new_buffer);
