@@ -80,7 +80,7 @@ static long CAT_HTTP_MULTIPART_CB_FNAME(name)(multipart_parser *p, const char *a
     CAT_LOG_DEBUG_VA_WITH_LEVEL(HTTP, 3, { \
         char *s; \
         CAT_LOG_DEBUG_D(HTTP, "HTTP multipart parser data on_" # name ": [%zu] %s", \
-            length, cat_log_buffer_quote(at, length, &s)); \
+            length, cat_log_str_quote(at, length, &s)); \
         cat_free(s); \
     }); \
     if (((cat_http_parser_event_t) (parser->events & parser->event)) == parser->event) { \
@@ -712,7 +712,7 @@ static cat_bool_t cat_http_parser_multipart_parser_execute(cat_http_parser_t *pa
     CAT_LOG_DEBUG_VA_WITH_LEVEL(HTTP, 3, {
         char *s;
         CAT_LOG_DEBUG_D(HTTP, "multipart_parser_execute() returns %zu, parsed %s",
-            parsed_length, cat_log_buffer_quote(data, parsed_length, &s));
+            parsed_length, cat_log_str_quote(data, parsed_length, &s));
         cat_free(s);
     });
     CAT_ASSERT((!(parser->event & CAT_HTTP_PARSER_EVENT_FLAG_DATA)) || parser->data_length <= parsed_length);
@@ -805,7 +805,7 @@ CAT_API cat_bool_t cat_http_parser_execute(cat_http_parser_t *parser, const char
             char *s;
             CAT_LOG_DEBUG_D(HTTP, "http_parser_execute(length=%-4zu) parsed %-4zu return %-12s [%2zu] %s",
                 length, parser->parsed_length, cat_http_parser_get_event_name(parser),
-                parser->data_length, cat_log_buffer_quote(parser->data, parser->data_length, &s));
+                parser->data_length, cat_log_str_quote(parser->data, parser->data_length, &s));
             cat_free(s);
         } else  if ((parser->event & CAT_HTTP_PARSER_EVENT_CHUNK_HEADER) == CAT_HTTP_PARSER_EVENT_CHUNK_HEADER) {
             CAT_LOG_DEBUG_D(HTTP, "http_parser_execute(length=%-4zu) parsed %-4zu return %-12s with chunk_length=%" PRIu64,

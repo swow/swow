@@ -116,6 +116,8 @@ CAT_API const cat_const_string_t *cat_exepath(void);
 CAT_API char *cat_get_process_title(char* buffer, size_t size); CAT_MAY_FREE
 CAT_API cat_bool_t cat_set_process_title(const char* title);
 
+CAT_API cat_bool_t cat_is_main_thread(void);
+
 #ifdef __cplusplus
 }
 #endif

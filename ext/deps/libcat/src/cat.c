@@ -22,6 +22,8 @@ CAT_API CAT_GLOBALS_DECLARE(cat);
 
 static cat_bool_t cat_args_registered = cat_false;
 
+static uv_thread_t cat_main_thread_tid;
+
 #if CAT_USE_BUG_DETECTOR
 void cat_bug_detector_callback(int signum)
 {
@@ -41,6 +43,8 @@ void cat_bug_detector_callback(int signum)
 
 CAT_API cat_bool_t cat_module_init(void)
 {
+    cat_main_thread_tid = uv_thread_self();
+
     cat_log_function = cat_log_standard;
 
 #ifdef CAT_USE_DYNAMIC_ALLOCATOR
@@ -235,4 +239,10 @@ CAT_API cat_bool_t cat_set_process_title(const char* title)
     }
 
     return cat_true;
+}
+
+CAT_API cat_bool_t cat_is_main_thread(void)
+{
+    uv_thread_t current_thread = uv_thread_self();
+    return uv_thread_equal(&cat_main_thread_tid, &current_thread);
 }
