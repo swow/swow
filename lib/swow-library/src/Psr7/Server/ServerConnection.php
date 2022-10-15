@@ -26,7 +26,6 @@ use Swow\Http\Protocol\ProtocolTypeInterface;
 use Swow\Http\Protocol\ProtocolTypeTrait;
 use Swow\Http\Protocol\ReceiverTrait;
 use Swow\Http\Status as HttpStatus;
-use Swow\Psr7\Message\Response;
 use Swow\Psr7\Message\ServerRequest;
 use Swow\Psr7\Message\ServerRequestPlusInterface;
 use Swow\Psr7\Protocol\WebSocketTrait;
@@ -219,14 +218,8 @@ class ServerConnection extends Socket implements ProtocolTypeInterface
         if ($response === null) {
             $this->respond($statusCode, $upgradeHeaders);
         } else {
-            if ($response instanceof Response) {
-                $response = (clone $response)->setStatus($statusCode)->setHeaders($upgradeHeaders);
-            } else {
-                $response = $response->withStatus($statusCode);
-                foreach ($upgradeHeaders as $upgradeHeaderName => $upgradeHeaderValue) {
-                    $response = $response->withHeader($upgradeHeaderName, $upgradeHeaderValue);
-                }
-            }
+            Psr7::setStatus($response, $statusCode);
+            Psr7::setHeaders($response, $upgradeHeaders);
             $this->sendHttpResponse($response);
         }
         $this->upgraded(static::PROTOCOL_TYPE_WEBSOCKET);

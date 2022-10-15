@@ -13,12 +13,7 @@ declare(strict_types=1);
 
 namespace Swow\Psr7\Message;
 
-use Psr\Http\Message\StreamFactoryInterface;
-use Psr\Http\Message\UploadedFileFactoryInterface;
 use Psr\Http\Message\UploadedFileInterface;
-use Psr\Http\Message\UriFactoryInterface;
-use Swow\Http\Message\ServerRequestEntity;
-use Swow\Psr7\Psr7;
 
 use function array_key_exists;
 
@@ -45,7 +40,7 @@ class ServerRequest extends Request implements ServerRequestPlusInterface
 
     protected ?string $contentType = null;
 
-    protected bool $isUpgrade = false;
+    protected ?bool $isUpgrade = null;
 
     /**
      * @var UploadedFileInterface[]
@@ -138,9 +133,16 @@ class ServerRequest extends Request implements ServerRequestPlusInterface
         return $this->contentType ??= parent::getContentType();
     }
 
-    public function isUpgrade(): bool
+    public function isUpgrade(): ?bool
     {
         return $this->isUpgrade;
+    }
+
+    public function setIsUpgrade(bool $isUpgrade): static
+    {
+        $this->isUpgrade = $isUpgrade;
+
+        return $this;
     }
 
     /** @return array<mixed>|object */
@@ -236,51 +238,5 @@ class ServerRequest extends Request implements ServerRequestPlusInterface
         }
 
         return (clone $this)->unsetAttribute($name);
-    }
-
-    /**
-     * @param array<string, string> $serverParams
-     */
-    public static function create(string $method, mixed $uri, array $serverParams = []): static
-    {
-        return (new static())
-            ->setMethod($method)
-            ->setUri($uri)
-            ->setServerParams($serverParams);
-    }
-
-    public static function createFromEntity(
-        ServerRequestEntity $serverRequestEntity,
-        ?UriFactoryInterface $uriFactory = null,
-        ?StreamFactoryInterface $streamFactory = null,
-        ?UploadedFileFactoryInterface $uploadedFileFactory = null
-    ): static {
-        $serverRequest = new static();
-        $serverRequest->protocolVersion = $serverRequestEntity->protocolVersion;
-        $serverRequest->uri = Psr7::createUriFromString($serverRequestEntity->uri, $uriFactory);
-        $serverRequest->method = $serverRequestEntity->method;
-        $serverRequest->headers = $serverRequestEntity->headers;
-        $serverRequest->headerNames = $serverRequestEntity->headerNames;
-        $serverRequest->shouldKeepAlive = $serverRequestEntity->shouldKeepAlive;
-        $serverRequest->contentLength = $serverRequestEntity->contentLength;
-        $serverRequest->isUpgrade = $serverRequestEntity->isUpgrade;
-        $serverRequest->cookieParams = $serverRequestEntity->cookies;
-        $serverRequest->serverParams = $serverRequestEntity->serverParams;
-        if ($serverRequestEntity->body) {
-            $serverRequest->body = Psr7::createStreamFromBuffer(
-                $serverRequestEntity->body, $streamFactory
-            );
-        }
-        if ($serverRequestEntity->formData) {
-            $serverRequest->parsedBody = $serverRequestEntity->formData;
-        }
-        if ($serverRequestEntity->uploadedFiles) {
-            $serverRequest->uploadedFiles = Psr7::createUploadedFilesFromEntity(
-                $serverRequestEntity->uploadedFiles,
-                $streamFactory, $uploadedFileFactory
-            );
-        }
-
-        return $serverRequest;
     }
 }

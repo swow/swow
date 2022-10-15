@@ -156,11 +156,11 @@ trait CreatorTrait
         } else {
             $bodyStream = null;
         }
-        if ($responseFactory instanceof Psr17Factory) {
-            $response = $responseFactory->createResponse(
-                $responseEntity->statusCode,
-                $responseEntity->reasonPhrase
-            );
+        $response = $responseFactory->createResponse(
+            $responseEntity->statusCode,
+            $responseEntity->reasonPhrase
+        );
+        if ($response instanceof ResponsePlusInterface) {
             $response
                 ->setProtocolVersion($responseEntity->protocolVersion)
                 ->setHeadersAndHeaderNames(
@@ -170,14 +170,12 @@ trait CreatorTrait
             if ($bodyStream) {
                 $response->setBody($bodyStream);
             }
-            if (!$responseEntity->shouldKeepAlive) {
-                $response->setShouldKeepAlive(false);
+            if ($response instanceof Response) {
+                if (!$responseEntity->shouldKeepAlive) {
+                    $response->setShouldKeepAlive(false);
+                }
             }
         } else {
-            $response = $responseFactory->createResponse(
-                $responseEntity->statusCode,
-                $responseEntity->reasonPhrase
-            );
             $response = $response->withProtocolVersion($responseEntity->protocolVersion);
             foreach ($responseEntity->headers as $headerName => $headerValue) {
                 $response = $response->withHeader($headerName, $headerValue);
@@ -270,7 +268,7 @@ trait CreatorTrait
         } else {
             $uploadedFiles = null;
         }
-        if ($serverRequest instanceof ServerRequest) {
+        if ($serverRequest instanceof ServerRequestPlusInterface) {
             if ($queryParams) {
                 $serverRequest->setQueryParams($queryParams);
             }
@@ -289,6 +287,12 @@ trait CreatorTrait
             }
             if ($uploadedFiles) {
                 $serverRequest->setUploadedFiles($uploadedFiles);
+            }
+            if ($serverRequest instanceof ServerRequest) {
+                $serverRequest->setShouldKeepAlive($serverRequestEntity->shouldKeepAlive);
+                if ($serverRequestEntity->isUpgrade) {
+                    $serverRequest->setIsUpgrade(true);
+                }
             }
         } else {
             if ($queryParams) {

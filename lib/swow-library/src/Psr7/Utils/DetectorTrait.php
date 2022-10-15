@@ -54,7 +54,7 @@ trait DetectorTrait
 
     public static function detectUpgradeType(MessageInterface $message): int
     {
-        if ($message instanceof ServerRequest && !$message->isUpgrade()) {
+        if ($message instanceof ServerRequest && $message->isUpgrade() === false) {
             return UpgradeType::UPGRADE_TYPE_NONE;
         }
         return UpgradeType::fromString($message->getHeaderLine('upgrade'));

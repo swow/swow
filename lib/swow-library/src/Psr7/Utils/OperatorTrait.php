@@ -14,7 +14,9 @@ declare(strict_types=1);
 namespace Swow\Psr7\Utils;
 
 use Psr\Http\Message\MessageInterface;
+use Psr\Http\Message\ResponseInterface;
 use Swow\Psr7\Message\MessagePlusInterface;
+use Swow\Psr7\Message\ResponsePlusInterface;
 
 trait OperatorTrait
 {
@@ -75,5 +77,20 @@ trait OperatorTrait
     public static function withBody(MessageInterface $message, mixed $body): MessageInterface
     {
         return $message->withBody(static::createStreamFromAny($body));
+    }
+
+    /**
+     * @template T of ResponseInterface
+     * @param T $response
+     * @return T
+     */
+    public static function setStatus(ResponseInterface $response, int $code, string $reasonPhrase = ''): ResponseInterface
+    {
+        if ($response instanceof ResponsePlusInterface) {
+            $response->setStatus($code, $reasonPhrase);
+        } else {
+            $response = $response->withStatus($code, $reasonPhrase);
+        }
+        return $response;
     }
 }
