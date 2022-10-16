@@ -313,7 +313,7 @@ SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_user_anonymous_function(zend_f
                 goto _capture;
             }
             case CLOSURE_PARSER_STATE_FUNCTION_FIND_CLOSE_BRACE: {
-                if (token->type == '{') {
+                if (token->type == '{' || token->type == T_CURLY_OPEN) {
                     brace_level++;
                 } else if (token->type == '}') {
                     if (brace_level-- == 1) {
