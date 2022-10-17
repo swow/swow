@@ -389,6 +389,24 @@ static PHP_METHOD(Swow_IpAddress, setMaskLen)
     RETURN_THIS();
 }
 
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_IpAddress_isMappedIpv4, 0, 0, _IS_BOOL, 0)
+ZEND_END_ARG_INFO()
+
+static PHP_METHOD(Swow_IpAddress, isMappedIpv4)
+{
+    swow_ipaddress_t *s_address = getThisAddr();
+
+    if (
+        !(s_address->ipv6_address.flags & IPV6_FLAG_IPV4_COMPAT) &&
+        // mapped ipv4
+        memcmp(&s_address->ipv6_address.address, "\0\0\0\0\0\0\0\0\0\0\xff\xff", 12) == 0
+    ) {
+        RETURN_TRUE;
+    }
+
+    RETURN_FALSE;
+}
+
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_IpAddress_isIpv4OrMappedIpv4, 0, 0, _IS_BOOL, 0)
 ZEND_END_ARG_INFO()
 
@@ -534,6 +552,78 @@ static PHP_METHOD(Swow_IpAddress, covers)
     RETVAL_BOOL((zend_bool) ret);
 }
 
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_IpAddress_convertToMappedIpv4, 0, 0, IS_STATIC, 0)
+ZEND_END_ARG_INFO()
+
+static PHP_METHOD(Swow_IpAddress, convertToMappedIpv4)
+{
+    swow_ipaddress_t *s_address = getThisAddr();
+
+    if (!(s_address->ipv6_address.flags & IPV6_FLAG_IPV4_COMPAT)) {
+        swow_throw_exception(
+            swow_ipaddress_exception_ce,
+            0,
+            "This is not an IPv4 address"
+            );
+        RETURN_THROWS();
+    }
+
+    s_address->ipv6_address.flags = IPV6_FLAG_IPV4_EMBED | (s_address->ipv6_address.flags & (IPV6_FLAG_HAS_MASK | IPV6_FLAG_HAS_PORT));
+    if (s_address->ipv6_address.flags & IPV6_FLAG_HAS_MASK) {
+        s_address->ipv6_address.mask += 96;
+    }
+
+    s_address->ipv6_address.address.components[6] = s_address->ipv6_address.address.components[0];
+    s_address->ipv6_address.address.components[7] = s_address->ipv6_address.address.components[1];
+    memcpy(&s_address->ipv6_address.address, "\0\0\0\0\0\0\0\0\0\0\xff\xff", 12);
+
+    RETURN_THIS();
+}
+
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_IpAddress_convertToIpv4, 0, 0, IS_STATIC, 0)
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, force, _IS_BOOL, 0, "false")
+ZEND_END_ARG_INFO()
+
+static PHP_METHOD(Swow_IpAddress, convertToIpv4)
+{
+    swow_ipaddress_t *s_address = getThisAddr();
+    zend_bool force = false;
+    ZEND_PARSE_PARAMETERS_START(0, 1)
+        Z_PARAM_OPTIONAL
+        Z_PARAM_BOOL(force)
+    ZEND_PARSE_PARAMETERS_END();
+
+    if (s_address->ipv6_address.flags & IPV6_FLAG_IPV4_COMPAT) {
+        RETURN_THIS();
+    }
+
+    if (!force && memcmp(&s_address->ipv6_address.address, "\0\0\0\0\0\0\0\0\0\0\xff\xff", 12)) {
+        swow_throw_exception(
+            swow_ipaddress_exception_ce,
+            0,
+            "This is not an IPv6 address with mapped IPv4"
+            );
+        RETURN_THROWS();
+    }
+
+    s_address->ipv6_address.flags = IPV6_FLAG_IPV4_COMPAT | (s_address->ipv6_address.flags & (IPV6_FLAG_HAS_MASK | IPV6_FLAG_HAS_PORT));
+
+    if (s_address->ipv6_address.mask > 96) {
+        s_address->ipv6_address.mask -= 96;
+    } else {
+        s_address->ipv6_address.mask = 0;
+    }
+
+    uint16_t a,b;
+    a = s_address->ipv6_address.address.components[6];
+    b = s_address->ipv6_address.address.components[7];
+    memset(&s_address->ipv6_address.address, 0, 16);
+    s_address->ipv6_address.address.components[0] = a;
+    s_address->ipv6_address.address.components[1] = b;
+
+    RETURN_THIS();
+}
+
 
 static const zend_function_entry swow_ipaddress_methods[] = {
     PHP_ME(Swow_IpAddress, __construct, arginfo_class_Swow_IpAddress__construct, ZEND_ACC_PUBLIC)
@@ -547,11 +637,14 @@ static const zend_function_entry swow_ipaddress_methods[] = {
     PHP_ME(Swow_IpAddress, setIp, arginfo_class_Swow_IpAddress_setIp, ZEND_ACC_PUBLIC)
     PHP_ME(Swow_IpAddress, setPort, arginfo_class_Swow_IpAddress_setPort, ZEND_ACC_PUBLIC)
     PHP_ME(Swow_IpAddress, setMaskLen, arginfo_class_Swow_IpAddress_setMaskLen, ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_IpAddress, isMappedIpv4, arginfo_class_Swow_IpAddress_isMappedIpv4, ZEND_ACC_PUBLIC)
     PHP_ME(Swow_IpAddress, isIpv4OrMappedIpv4, arginfo_class_Swow_IpAddress_isIpv4OrMappedIpv4, ZEND_ACC_PUBLIC)
     PHP_ME(Swow_IpAddress, isLocal, arginfo_class_Swow_IpAddress_isLocal, ZEND_ACC_PUBLIC)
     PHP_ME(Swow_IpAddress, isLoopback, arginfo_class_Swow_IpAddress_isLoopback, ZEND_ACC_PUBLIC)
     PHP_ME(Swow_IpAddress, in, arginfo_class_Swow_IpAddress_in, ZEND_ACC_PUBLIC)
     PHP_ME(Swow_IpAddress, covers, arginfo_class_Swow_IpAddress_covers, ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_IpAddress, convertToMappedIpv4, arginfo_class_Swow_IpAddress_convertToMappedIpv4, ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_IpAddress, convertToIpv4, arginfo_class_Swow_IpAddress_convertToIpv4, ZEND_ACC_PUBLIC)
     PHP_FE_END
 };
 

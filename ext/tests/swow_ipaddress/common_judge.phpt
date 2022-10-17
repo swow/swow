@@ -11,6 +11,11 @@ require __DIR__ . '/../include/bootstrap.php';
 use Swow\IpAddress;
 
 $testCases = [
+    // isMappedIpv4
+    ['0.0.0.0', 'isMappedIpv4', false],
+    ['::ffff:0.0.0.0', 'isMappedIpv4', true],
+    ['::0.0.0.0', 'isMappedIpv4', false],
+    ['123d::0.0.0.0', 'isMappedIpv4', false],
     // isIpv4OrMappedIpv4
     ['0.0.0.0', 'isIpv4OrMappedIpv4', true],
     ['::ffff:0.0.0.0', 'isIpv4OrMappedIpv4', true],
