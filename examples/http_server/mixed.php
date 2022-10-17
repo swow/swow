@@ -107,7 +107,7 @@ while (true) {
                     } catch (HttpException $exception) {
                         $connection->error($exception->getCode(), $exception->getMessage());
                     }
-                    if (!$request || Psr7::detectShouldKeepAlive($request)) {
+                    if (!$request || !Psr7::detectShouldKeepAlive($request)) {
                         break;
                     }
                 }
