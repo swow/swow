@@ -339,6 +339,7 @@ EOF
     swow_signal.c \
     swow_watchdog.c \
     swow_closure.c \
+    swow_ipaddress.c \
     swow_http.c \
     swow_websocket.c \
     swow_proc_open.c \
@@ -696,6 +697,16 @@ EOF
     PHP_SUBST(SWOW_MULTIPART_PARSER_CFLAGS)
     SWOW_ADD_SOURCES(deps/libcat/deps/multipart_parser,
       multipart_parser.c, SWOW_MULTIPART_PARSER_INCLUDES, SWOW_MULTIPART_PARSER_CFLAGS)
+
+    dnl add ipv6-parse sources
+
+    SWOW_IPV6_PARSE_INCLUDES="-I${ext_srcdir}/deps/ipv6-parse"
+    SWOW_IPV6_PARSE_CFLAGS="${SWOW_IPV6_PARSE_CFLAGS} \$(SWOW_STD_CFLAGS)"
+    SWOW_INCLUDES="${SWOW_INCLUDES} \$(SWOW_IPV6_PARSE_INCLUDES)"
+    PHP_SUBST(SWOW_IPV6_PARSE_INCLUDES)
+    PHP_SUBST(SWOW_IPV6_PARSE_CFLAGS)
+    SWOW_ADD_SOURCES(deps/ipv6-parse,
+      ipv6.c, SWOW_IPV6_PARSE_INCLUDES, SWOW_IPV6_PARSE_CFLAGS)
 
     dnl prepare pkg-config
     if test -z "$PKG_CONFIG"; then

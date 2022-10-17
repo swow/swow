@@ -200,6 +200,7 @@ if (PHP_SWOW != 'no') (function(){
 
     // header dependencies
     var LIBCAT_DIR = "deps\\libcat";
+    var IPV6_PARSE_DIR = "deps\\ipv6-parse";
     var UV_DIR = LIBCAT_DIR + "\\deps\\libuv";
     var LLHTTP_DIR = LIBCAT_DIR + "\\deps\\llhttp";
     var MULTIPART_PARSER_DIR = LIBCAT_DIR + "\\deps\\multipart_parser";
@@ -237,6 +238,10 @@ if (PHP_SWOW != 'no') (function(){
     // multipart-parser uses self
     ADD_FLAG('CFLAGS_SWOW_LLHTTP_OBJ', '$(CFLAGS_SWOW_COMMON)');
     ADD_FLAG('CFLAGS_SWOW_MULTIPART_PARSER_OBJ', '/I "' + configure_module_dirname + '\\' + MULTIPART_PARSER_DIR + '"');
+    // swow uses ipv6-parse
+    ADD_FLAG('CFLAGS_SWOW', '/I "' + configure_module_dirname + '\\' + IPV6_PARSE_DIR + '"');
+    // ipv6-parse uses self
+    ADD_FLAG('CFLAGS_SWOW_IPV6_PARSE_OBJ', '/I "' + configure_module_dirname + '\\' + IPV6_PARSE_DIR + '"');
 
     // sources
     var SWOW_SRC_DIR='src';
@@ -264,6 +269,7 @@ if (PHP_SWOW != 'no') (function(){
         'swow_watchdog.c',
         'swow_closure.c',
         'swow_tokenizer.c',
+        'swow_ipaddress.c',
         'swow_http.c',
         'swow_websocket.c' // <-- wsh donot support comma here!
     ];
@@ -421,6 +427,11 @@ if (PHP_SWOW != 'no') (function(){
     ADD_SOURCES(configure_module_dirname + '\\' + MULTIPART_PARSER_DIR, "multipart_parser.c", "swow_multipart_parser");
     ADD_FLAG("SWOW_GLOBAL_OBJS", "$(SWOW_MULTIPART_PARSER_GLOBAL_OBJS)");
     ADD_FLAG("LIBS_SWOW", "$(SWOW_MULTIPART_PARSER_GLOBAL_OBJS_RESP)");
+
+    // ipv6-parse sources
+    ADD_SOURCES(configure_module_dirname + '\\' + IPV6_PARSE_DIR, "ipv6.c", "swow_ipv6_parse");
+    ADD_FLAG("SWOW_GLOBAL_OBJS", "$(SWOW_IPV6_PARSE_GLOBAL_OBJS)");
+    ADD_FLAG("LIBS_SWOW", "$(SWOW_IPV6_PARSE_GLOBAL_OBJS_RESP)");
 
     EXTENSION('swow', 'swow.c', PHP_SWOW_SHARED, git_cflags, "php_swow.dll");
     //ADD_FLAG("PHP_SWOW_SWOW", "asmobjs");
