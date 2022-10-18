@@ -61,7 +61,7 @@ static cat_bool_t swow_parse_ipaddress(const char* address, size_t address_len, 
             swow_ipaddress_exception_ce,
             error.event,
             "Failed to parse ip address %s: %s",
-            cat_log_buffer_quote_unlimited(address, address_len, &buffer),
+            cat_log_str_quote_unlimited(address, address_len, &buffer),
             error.message ? error.message : "unknown"
             );
         cat_free(buffer);
@@ -184,7 +184,7 @@ static PHP_METHOD(Swow_IpAddress, getFull)
 {
     swow_ipaddress_t *s_address = getThisAddr();
 
-    char *buffer = emalloc(IPV6_STRING_SIZE);
+    char buffer[IPV6_STRING_SIZE];
 
     uint32_t flags = s_address->ipv6_address.flags;
 
@@ -224,7 +224,7 @@ static PHP_METHOD(Swow_IpAddress, getIp)
 {
     swow_ipaddress_t *s_address = getThisAddr();
 
-    char *buffer = emalloc(IPV6_STRING_SIZE);
+    char buffer[IPV6_STRING_SIZE];
 
     uint32_t flags = s_address->ipv6_address.flags;
     // clean flags to generate ip part only
@@ -435,7 +435,7 @@ static PHP_METHOD(Swow_IpAddress, isLocal)
     uint32_t beIpv4;
 
     // char * _;
-    // printf("???? %s\n", cat_log_buffer_quote(s_address->ipv6_address.address.components, 16, &_));
+    // printf("???? %s\n", cat_log_str_quote_unlimited(s_address->ipv6_address.address.components, 16, &_));
 
     if (
         // real ipv4
@@ -487,7 +487,7 @@ static PHP_METHOD(Swow_IpAddress, isLoopback)
     uint32_t beIpv4;
 
     // char * _;
-    // printf("???? %s\n", cat_log_buffer_quote(s_address->ipv6_address.address.components, 16, &_));
+    // printf("???? %s\n", cat_log_str_quote_unlimited(s_address->ipv6_address.address.components, 16, &_));
 
     if (
         // real ipv4
