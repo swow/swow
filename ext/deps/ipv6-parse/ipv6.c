@@ -32,9 +32,7 @@
 // Original core address RFC 3513: https://tools.ietf.org/html/rfc3513
 // Replacement address RFC 4291: https://tools.ietf.org/html/rfc4291
 
-const uint32_t IPV6_STRING_SIZE =
-    sizeof "[1234:1234:1234:1234:1234:1234:1234:1234/128%longinterface]:65535";
-#define IPV4_STRING_SIZE (sizeof "255.255.255.255:65535")
+// !! mod here: use macro instead in ipv6.h
 
 //
 // Distinct states of parsing an address

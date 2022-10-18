@@ -56,7 +56,8 @@ extern "C" {
 
 
 /// Maximum size of a IPV
-extern const uint32_t IPV6_STRING_SIZE;
+#define IPV6_STRING_SIZE (sizeof "[1234:1234:1234:1234:1234:1234:1234:1234/128%longinterface]:65535")
+#define IPV4_STRING_SIZE (sizeof "255.255.255.255:65535")
 
 // ### ipv6_flag_t
 //
