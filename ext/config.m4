@@ -333,6 +333,7 @@ EOF
     swow_time.c \
     swow_buffer.c \
     swow_socket.c \
+    swow_dns.c \
     swow_fs.c \
     swow_stream.c \
     swow_stream_wrapper.c \

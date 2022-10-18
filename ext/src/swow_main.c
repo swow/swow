@@ -29,6 +29,7 @@
 #include "swow_time.h"
 #include "swow_buffer.h"
 #include "swow_socket.h"
+#include "swow_dns.h"
 #include "swow_stream.h"
 #include "swow_signal.h"
 #include "swow_watchdog.h"
@@ -144,6 +145,7 @@ PHP_MINIT_FUNCTION(swow)
         swow_time_module_init,
         swow_buffer_module_init,
         swow_socket_module_init,
+        swow_dns_module_init,
         swow_stream_module_init,
         swow_signal_module_init,
         swow_watchdog_module_init,
