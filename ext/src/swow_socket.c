@@ -1094,8 +1094,7 @@ static PHP_METHOD_EX(Swow_Socket, _write, zend_bool single, zend_bool may_addres
                     vector_list_array_index++;
                 } ZEND_HASH_FOREACH_END();
                 if (UNEXPECTED(vector_count == 0)) {
-                    zend_argument_value_error(1, "must contain at least one string or buffer");
-                    goto _error;
+                    goto _return;
                 }
             } while (0);
             Z_PARAM_OPTIONAL
@@ -1144,6 +1143,7 @@ static PHP_METHOD_EX(Swow_Socket, _write, zend_bool single, zend_bool may_addres
         goto _error;
     }
 
+    _return:
     RETVAL_THIS();
 
     if (0) {
