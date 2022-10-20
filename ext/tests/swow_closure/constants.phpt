@@ -15,7 +15,7 @@ const CONSTANT4 = [
     '4' => 'four',
 ];
 define('CONSTANT5', '5');
-define('CONSTANT' . '6', '6');
+define('CONSTANT' . substr(str_repeat('6', 1), 0, 1), '6');
 define('CONSTANT7', define('CONSTANT8', '8') ? '7' : 'failed');
 $name = 'CONSTANT9';
 define($name, '9');

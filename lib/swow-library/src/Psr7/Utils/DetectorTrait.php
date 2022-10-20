@@ -29,7 +29,7 @@ trait DetectorTrait
     {
         if (
             $message instanceof AbstractMessage ||
-            method_exists($message, 'should' . 'keep' . 'alive')
+            method_exists($message, 'shouldkeepalive')
         ) {
             return $message->shouldKeepAlive();
         }

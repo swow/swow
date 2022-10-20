@@ -24,7 +24,7 @@ Coroutine::run(static function () use ($channel, $n): void {
     echo "Push start\n";
     for ($i = 1; $i <= $n; $i++) {
         $channel->push($i * $i);
-        echo "Push#{$i} done" . "\n";
+        echo "Push#{$i} done\n";
     }
 });
 

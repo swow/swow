@@ -598,7 +598,7 @@ class StubGenerator
             }
         }
         if (count($interfaceNames) > 0) {
-            $implements = ' implements ' . '\\' . implode(', \\', $interfaceNames);
+            $implements = ' implements \\' . implode(', \\', $interfaceNames);
         } else {
             $implements = '';
         }
