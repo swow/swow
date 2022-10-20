@@ -86,6 +86,18 @@ static const zend_function_entry swow_dns_functions[] = {
     PHP_FE_END
 };
 
+static bool has_sockets_extension = false;
+static bool af_constants_checked = false;
+
+#define SWOW_OBTAIN_CONSTANT_OWNERSHIP(name) swow_obtain_constant_ownership(ZEND_STRL(name), module_number)
+
+static void swow_obtain_constant_ownership(const char *name, size_t name_length, int module_number)
+{
+    zend_constant *c = (zend_constant *) zend_hash_str_find_ptr(EG(zend_constants), name, name_length);
+    ZEND_ASSERT(c != NULL);
+    ZEND_CONSTANT_SET_FLAGS(c, ZEND_CONSTANT_FLAGS(c), module_number);
+}
+
 zend_result swow_dns_module_init(INIT_FUNC_ARGS)
 {
     if (!swow_hook_internal_functions(swow_dns_functions)) {
@@ -97,6 +109,21 @@ zend_result swow_dns_module_init(INIT_FUNC_ARGS)
         REGISTER_LONG_CONSTANT("AF_INET", AF_INET, CONST_PERSISTENT);
         REGISTER_LONG_CONSTANT("AF_INET6", AF_INET6, CONST_PERSISTENT);
         // TODO: others?
+    } else {
+        has_sockets_extension = true;
+    }
+
+    return SUCCESS;
+}
+
+zend_result swow_dns_runtime_init(INIT_FUNC_ARGS)
+{
+    if (!af_constants_checked) {
+        if (has_sockets_extension) {
+            SWOW_OBTAIN_CONSTANT_OWNERSHIP("AF_INET");
+            SWOW_OBTAIN_CONSTANT_OWNERSHIP("AF_INET6");
+        }
+        af_constants_checked = true;
     }
 
     return SUCCESS;

@@ -29,10 +29,7 @@ extern "C" {
 /* loader */
 
 zend_result swow_dns_module_init(INIT_FUNC_ARGS);
-
-/* functions */
-
-/* helper*/
+zend_result swow_dns_runtime_init(INIT_FUNC_ARGS);
 
 #ifdef __cplusplus
 }

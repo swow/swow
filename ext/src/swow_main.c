@@ -246,6 +246,7 @@ PHP_RINIT_FUNCTION(swow)
         swow_coroutine_runtime_init,
         swow_event_runtime_init,
         swow_socket_runtime_init,
+        swow_dns_runtime_init,
         swow_stream_runtime_init,
         swow_watchdog_runtime_init,
 #ifdef CAT_OS_WAIT
