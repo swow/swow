@@ -2003,7 +2003,7 @@ namespace Swow
 
         public function __construct(string $address = '') { }
 
-        public function getFlags(): string { }
+        public function getFlags(): int { }
 
         public function getFull(): string { }
 

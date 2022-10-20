@@ -161,7 +161,7 @@ static PHP_METHOD(Swow_IpAddress, __construct)
     }
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_IpAddress_getFlags, 0, 0, IS_STRING, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_IpAddress_getFlags, 0, 0, IS_LONG, 0)
 ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_IpAddress, getFlags)
@@ -173,7 +173,8 @@ static PHP_METHOD(Swow_IpAddress, getFlags)
     RETURN_LONG(s_address->ipv6_address.flags);
 }
 
-#define arginfo_class_Swow_IpAddress_getFull arginfo_class_Swow_IpAddress_getFlags
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_IpAddress_getFull, 0, 0, IS_STRING, 0)
+ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_IpAddress, getFull)
 {
@@ -212,7 +213,7 @@ static PHP_METHOD(Swow_IpAddress, getFull)
     RETURN_STRINGL(buffer, ret);
 }
 
-#define arginfo_class_Swow_IpAddress_getIp arginfo_class_Swow_IpAddress_getFlags
+#define arginfo_class_Swow_IpAddress_getIp arginfo_class_Swow_IpAddress_getFull
 
 static PHP_METHOD(Swow_IpAddress, getIp)
 {
@@ -230,8 +231,7 @@ static PHP_METHOD(Swow_IpAddress, getIp)
     RETURN_STRINGL(buffer, ret);
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_IpAddress_getPort, 0, 0, IS_LONG, 0)
-ZEND_END_ARG_INFO()
+#define arginfo_class_Swow_IpAddress_getPort arginfo_class_Swow_IpAddress_getFlags
 
 static PHP_METHOD(Swow_IpAddress, getPort)
 {
@@ -240,7 +240,7 @@ static PHP_METHOD(Swow_IpAddress, getPort)
     RETURN_LONG(s_address->ipv6_address.port);
 }
 
-#define arginfo_class_Swow_IpAddress_getMaskLen arginfo_class_Swow_IpAddress_getPort
+#define arginfo_class_Swow_IpAddress_getMaskLen arginfo_class_Swow_IpAddress_getFlags
 
 static PHP_METHOD(Swow_IpAddress, getMaskLen)
 {
