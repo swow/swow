@@ -4,6 +4,13 @@
 
 namespace
 {
+    !defined('AF_INET') && define('AF_INET', 2);
+    !defined('AF_INET6') && define('AF_INET6', 30);
+    !defined('AF_UNSPEC') && define('AF_UNSPEC', 0);
+}
+
+namespace
+{
     class Swow
     {
         public const MAJOR_VERSION = 0;

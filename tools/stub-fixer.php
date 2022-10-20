@@ -20,6 +20,7 @@ use PhpParser\NodeTraverser;
 use PhpParser\ParserFactory;
 
 use function array_slice;
+use function preg_replace;
 
 use const STDERR;
 
@@ -41,6 +42,14 @@ $swowModifier = function (
     string $content,
     array $constantDefinitions,
 ): string {
+    {
+        // replace "const AF_*" to define() way,
+        // this can make static analysis tools happy
+        $replacement = <<<'PHP'
+!defined('$1') && define('$1', $2);
+PHP;
+        $content = preg_replace('/const (AF_\w+) = (\d+);/', $replacement, $content);
+    }
     $parser = (new ParserFactory())->create(ParserFactory::PREFER_PHP7);
     $ast = $parser->parse($content);
     $traverser = new NodeTraverser();
