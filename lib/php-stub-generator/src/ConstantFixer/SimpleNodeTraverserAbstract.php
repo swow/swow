@@ -19,6 +19,8 @@ use PhpParser\NodeVisitorAbstract;
 
 abstract class SimpleNodeTraverserAbstract extends NodeVisitorAbstract
 {
+    protected const GLOBAL_NAMESPACE_MAGIC = '!GLOBAL!';
+
     protected ?string $namespace = null;
     protected ?string $class = null;
 
@@ -30,7 +32,7 @@ abstract class SimpleNodeTraverserAbstract extends NodeVisitorAbstract
                 if ($node->name && $node->name->parts) {
                     $this->namespace = implode('\\', $node->name->parts);
                 } else {
-                    $this->namespace = '!GLOBAL!';
+                    $this->namespace = static::GLOBAL_NAMESPACE_MAGIC;
                 }
                 break;
             case $node instanceof Node\Stmt\Class_:
@@ -52,6 +54,11 @@ abstract class SimpleNodeTraverserAbstract extends NodeVisitorAbstract
                 break;
         }
         return null;
+    }
+
+    protected function inGlobalNamespace(): bool
+    {
+        return $this->namespace === static::GLOBAL_NAMESPACE_MAGIC;
     }
 
     protected function inNamespace(string $namespace): bool
