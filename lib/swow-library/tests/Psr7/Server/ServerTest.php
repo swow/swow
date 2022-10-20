@@ -30,11 +30,11 @@ use Swow\Psr7\Psr7;
 use Swow\Psr7\Server\Server;
 use Swow\Socket;
 use Swow\Sync\WaitReference;
+use Swow\TestUtils\Testing;
 use Swow\WebSocket\Opcode;
 use Swow\WebSocket\WebSocket;
 
 use function file_exists;
-use function getRandomBytes;
 use function http_build_query;
 use function json_encode;
 use function serialize;
@@ -42,10 +42,9 @@ use function sprintf;
 use function str_repeat;
 use function strlen;
 use function Swow\defer;
+use function Swow\TestUtils\getRandomBytes;
 use function unserialize;
 use function usleep;
-
-use const TEST_MAX_REQUESTS;
 
 /**
  * @internal
@@ -152,7 +151,7 @@ final class ServerTest extends TestCase
                 }
             });
         /* chat */
-        for ($n = 1; $n <= TEST_MAX_REQUESTS; $n++) {
+        for ($n = 1; $n <= Testing::$maxRequests; $n++) {
             $message = new WebSocketFrame();
             $message->getPayloadData()->write("Hello Swow {$n}");
             $client->sendWebSocketFrame($message);

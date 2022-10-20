@@ -11,7 +11,7 @@
 
 declare(strict_types=1);
 
-namespace SwowTest;
+namespace Swow\Tests;
 
 use PHPUnit\Framework\TestCase;
 
@@ -22,7 +22,7 @@ use function extension_loaded;
  * @internal
  * @coversNothing
  */
-final class SwowExtensionTest extends TestCase
+final class SwowTest extends TestCase
 {
     public function testSwowExtension(): void
     {
