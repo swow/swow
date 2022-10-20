@@ -29,6 +29,7 @@ static PHP_FUNCTION_EX(_swow_gethostbyname, zend_bool is_v2)
     char *hostname;
     size_t hostname_len;
     zend_long af = AF_INET;
+
     ZEND_PARSE_PARAMETERS_START(1, (is_v2 ? 2 : 1))
         Z_PARAM_PATH(hostname, hostname_len)
         if (is_v2) {
@@ -48,9 +49,10 @@ static PHP_FUNCTION_EX(_swow_gethostbyname, zend_bool is_v2)
         }
     }
 
-    char buffer[CAT_SOCKET_IPV6_BUFFER_SIZE];
-    cat_bool_t ret = cat_dns_get_ip(buffer, sizeof(buffer), hostname, af);
+    zend_string *buffer = zend_string_alloc(af == AF_INET ? CAT_SOCKET_IPV4_BUFFER_SIZE : CAT_SOCKET_IPV6_BUFFER_SIZE, false);
+    cat_bool_t ret = cat_dns_get_ip(ZSTR_VAL(buffer), ZSTR_LEN(buffer), hostname, af);
     if (!ret) {
+        zend_string_release_ex(buffer, false);
         if (is_v2) {
             swow_throw_exception_with_last_as_reason(spl_ce_RuntimeException, "Failed get address info for host \"%s\"", hostname);
             RETURN_THROWS();
@@ -58,7 +60,9 @@ static PHP_FUNCTION_EX(_swow_gethostbyname, zend_bool is_v2)
             RETURN_STRINGL(hostname, hostname_len);
         }
     }
-    RETURN_STRING_FAST(buffer);
+    ZSTR_VAL(buffer)[ZSTR_LEN(buffer) = strlen(ZSTR_VAL(buffer))] = '\0';
+
+    RETURN_STR(buffer);
 }
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_swow_gethostbyname, 0, 1, IS_STRING, 0)
