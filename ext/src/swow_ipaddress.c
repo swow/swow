@@ -173,7 +173,7 @@ ZEND_END_ARG_INFO()
 static PHP_METHOD(Swow_IpAddress, getFlags)
 {
     swow_ipaddress_t *s_address = getThisAddr();
-    
+
     RETURN_LONG(s_address->ipv6_address.flags);
 }
 
@@ -213,7 +213,7 @@ static PHP_METHOD(Swow_IpAddress, getFull)
     s_address->ipv6_address.flags &= ~(IPV6_FLAG_HAS_PORT);
     size_t ret = ipv6_to_str(&s_address->ipv6_address, buffer, IPV6_STRING_SIZE);
     s_address->ipv6_address.flags = flags;
-    
+
     RETURN_STRINGL_FAST(buffer, ret);
 }
 
@@ -231,7 +231,7 @@ static PHP_METHOD(Swow_IpAddress, getIp)
     s_address->ipv6_address.flags &= ~(IPV6_FLAG_HAS_PORT | IPV6_FLAG_HAS_MASK | IPV6_FLAG_IPV4_EMBED);
     size_t ret = ipv6_to_str(&s_address->ipv6_address, buffer, IPV6_STRING_SIZE);
     s_address->ipv6_address.flags = flags;
-    
+
     RETURN_STRINGL_FAST(buffer, ret);
 }
 
@@ -271,7 +271,7 @@ static PHP_METHOD(Swow_IpAddress, setFlags)
         swow_throw_exception(
             zend_ce_value_error,
             0,
-            "%ld is not a valid flag",
+            ZEND_LONG_FMT " is not a valid flag",
             flags
         );
     }
@@ -346,7 +346,7 @@ static PHP_METHOD(Swow_IpAddress, setPort)
         swow_throw_exception(
             zend_ce_value_error,
             0,
-            "%ld is not a valid port number (range: 0-65535)",
+            ZEND_LONG_FMT " is not a valid port number (range: 0-65535)",
             port
         );
     }
@@ -378,7 +378,7 @@ static PHP_METHOD(Swow_IpAddress, setMaskLen)
         swow_throw_exception(
             zend_ce_value_error,
             0,
-            "%ld is not a valid mask length for %s (range: 0-%ld)",
+            ZEND_LONG_FMT " is not a valid mask length for %s (range: 0-" ZEND_LONG_FMT ")",
             maskLen,
             addrType,
             max
@@ -526,7 +526,7 @@ static PHP_METHOD(Swow_IpAddress, in)
 {
     swow_ipaddress_t *s_address = getThisAddr();
     zend_object *cidr_object;
-    
+
     ZEND_PARSE_PARAMETERS_START(1, 1)
         Z_PARAM_OBJ_OF_CLASS(cidr_object, swow_ipaddress_ce)
     ZEND_PARSE_PARAMETERS_END();
@@ -543,7 +543,7 @@ static PHP_METHOD(Swow_IpAddress, covers)
 {
     swow_ipaddress_t *s_address = getThisAddr();
     zend_object *addr_object;
-    
+
     ZEND_PARSE_PARAMETERS_START(1, 1)
         Z_PARAM_OBJ_OF_CLASS(addr_object, swow_ipaddress_ce)
     ZEND_PARSE_PARAMETERS_END();
@@ -668,5 +668,3 @@ zend_result swow_ipaddress_init(INIT_FUNC_ARGS)
 
     return SUCCESS;
 }
-
-
