@@ -133,7 +133,6 @@ SWOW_API cat_bool_t swow_watchdog_run(cat_timeout_t quantum, cat_timeout_t thres
 
     if (!ret) {
         Z_TRY_DELREF(s_watchdog->z_alerter);
-        cat_atomic_bool_destroy(&s_watchdog->vm_interrupted);
         efree(s_watchdog);
         return cat_false;
     }
@@ -152,7 +151,6 @@ SWOW_API cat_bool_t swow_watchdog_stop(void)
         return cat_false;
     }
 
-    cat_atomic_bool_destroy(&s_watchdog->vm_interrupted);
     zval_ptr_dtor(&s_watchdog->z_alerter);
     efree(s_watchdog);
 
