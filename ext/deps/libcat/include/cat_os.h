@@ -18,28 +18,28 @@
 
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(WIN64) || defined(_WIN64) || defined(__WIN64__) || defined(__NT__)
 /* WIN {{{ */
-#define CAT_OS_FAMILY    "Windows"
-#define CAT_OS_WIN       1
+# define CAT_OS_FAMILY    "Windows"
+# define CAT_OS_WIN       1
 /* }}} WIN */
 #else
 /* UNIX {{{ */
-#include <unistd.h>
-#define CAT_OS_UNIX_LIKE 1
-#if defined(__APPLE__) || defined(__MACH__)
-#define CAT_OS_FAMILY    "Darwin"
-#define CAT_OS_DARWIN    1
-#elif defined(BSD) || defined(__DragonFly__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
-#define CAT_OS_FAMILY    "BSD"
-#define CAT_OS_BSD       1
-#elif defined(__sun__)
-#define CAT_OS_FAMILY    "Solaris"
-#define CAT_OS_SOLARIS   1
-#elif defined(__linux__)
-#define CAT_OS_FAMILY    "Linux"
-#define CAT_OS_LINUX     1
-#else
-#define CAT_OS_FAMILY    "Unknown"
-#endif
+# include <unistd.h>
+# define CAT_OS_UNIX_LIKE 1
+# if defined(__APPLE__) || defined(__MACH__)
+#  define CAT_OS_FAMILY    "Darwin"
+#  define CAT_OS_DARWIN    1
+# elif defined(BSD) || defined(__DragonFly__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
+#  define CAT_OS_FAMILY    "BSD"
+#  define CAT_OS_BSD       1
+# elif defined(__sun__)
+#  define CAT_OS_FAMILY    "Solaris"
+#  define CAT_OS_SOLARIS   1
+# elif defined(__linux__)
+#  define CAT_OS_FAMILY    "Linux"
+#  define CAT_OS_LINUX     1
+# else
+#  define CAT_OS_FAMILY    "Unknown"
+# endif
 /* }}} UNIX */
 #endif
 
@@ -48,11 +48,11 @@
 #define CAT_CRLF   "\r\n"
 
 #ifdef CAT_OS_WIN
-#define CAT_DIR_SEPARATOR '\\'
-#define CAT_EOL "\r\n"
+# define CAT_DIR_SEPARATOR '\\'
+# define CAT_EOL "\r\n"
 #else
-#define CAT_DIR_SEPARATOR '/'
-#define CAT_EOL "\n"
+# define CAT_DIR_SEPARATOR '/'
+# define CAT_EOL "\n"
 #endif
 
 /* always be int (same with uv_file) */
@@ -64,29 +64,45 @@ typedef int cat_os_fd_t;
 /* on UNIX is int, on Windows is SOCKET */
 typedef uv_os_sock_t cat_os_socket_t;
 #ifndef CAT_OS_WIN
-#define CAT_OS_SOCKET_FMT "%d"
-#define CAT_OS_SOCKET_FMT_SPEC "d"
+# define CAT_OS_SOCKET_FMT "%d"
+# define CAT_OS_SOCKET_FMT_SPEC "d"
 #else
-#define CAT_OS_SOCKET_FMT "%p"
-#define CAT_OS_SOCKET_FMT_SPEC "p"
+# define CAT_OS_SOCKET_FMT "%p"
+# define CAT_OS_SOCKET_FMT_SPEC "p"
 #endif
 #ifndef CAT_OS_WIN
-#define CAT_OS_INVALID_SOCKET -1
+# define CAT_OS_INVALID_SOCKET -1
 #else
-#define CAT_OS_INVALID_SOCKET INVALID_SOCKET
+# define CAT_OS_INVALID_SOCKET INVALID_SOCKET
 #endif
 
 /* on UNIX is int, on Windows is HANDLE */
 typedef uv_os_fd_t cat_os_handle_t;
 #ifndef CAT_OS_WIN
-#define CAT_OS_HANDLE_FMT "%d"
-#define CAT_OS_HANDLE_FMT_SPEC "d"
+# define CAT_OS_HANDLE_FMT "%d"
+# define CAT_OS_HANDLE_FMT_SPEC "d"
 #else
-#define CAT_OS_HANDLE_FMT "%p"
-#define CAT_OS_HANDLE_FMT_SPEC "p"
+# define CAT_OS_HANDLE_FMT "%p"
+# define CAT_OS_HANDLE_FMT_SPEC "p"
 #endif
 #ifndef CAT_OS_WIN
-#define CAT_OS_INVALID_HANDLE -1
+# define CAT_OS_INVALID_HANDLE -1
 #else
-#define CAT_OS_INVALID_HANDLE INVALID_HANDLE_VALUE
+# define CAT_OS_INVALID_HANDLE INVALID_HANDLE_VALUE
+#endif
+
+#ifndef STDIN_FILENO
+# define CAT_STDIN_FILENO  0 /* standard input file descriptor */
+# else
+# define CAT_STDIN_FILENO  STDIN_FILENO
+#endif
+#ifndef STDOUT_FILENO
+# define CAT_STDOUT_FILENO 1 /* standard output file descriptor */
+#else
+# define CAT_STDOUT_FILENO STDOUT_FILENO
+#endif
+#ifndef STDERR_FILENO
+# define CAT_STDERR_FILENO 2 /* standard error file descriptor */
+#else
+# define CAT_STDERR_FILENO STDERR_FILENO
 #endif

@@ -244,5 +244,5 @@ CAT_API cat_bool_t cat_set_process_title(const char* title)
 CAT_API cat_bool_t cat_is_main_thread(void)
 {
     uv_thread_t current_thread = uv_thread_self();
-    return uv_thread_equal(&cat_main_thread_tid, &current_thread);
+    return !!uv_thread_equal(&cat_main_thread_tid, &current_thread);
 }

@@ -79,9 +79,10 @@
 #ifdef CAT_COROUTINE_USE_ASAN
 // for warning -Wstrict-prototypes/C4255
 # define __sanitizer_acquire_crash_state() __sanitizer_acquire_crash_state(void)
-# ifndef _MSC_VER
+# if !defined(_MSC_VER) || _MSC_VER >= 1933
 #  include <sanitizer/common_interface_defs.h>
 # else // workaround
+// should be fixed in VS 2022: https://developercommunity.visualstudio.com/t/ASan-API-headers-not-in-include-path-whe/1517192
 #  include <../crt/src/sanitizer/common_interface_defs.h>
 # endif
 #endif

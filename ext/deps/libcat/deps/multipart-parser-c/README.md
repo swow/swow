@@ -1,5 +1,11 @@
 ## Multipart form data parser
 
+### Modify
+
+This version of multipart-parser-c is modified for llhttp PAUSE mode, the original `MPPE_OK` mode may not work (It may work but was not tested).
+
+This version is tested by simple fuzz with honggfuzz, used in [swow](https://github.com/swow/swow) and [swoole](https://github.com/swoole/swoole-src).
+
 ### Features
 * No dependencies
 * Works with chunks of a data - no need to buffer the whole request

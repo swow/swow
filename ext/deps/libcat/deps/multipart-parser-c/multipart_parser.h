@@ -29,6 +29,7 @@ enum multipart_error
     MPPE_INVALID_HEADER_VALUE_CHAR,
     MPPE_BAD_PART_END,
     MPPE_END_BOUNDARY_NO_DASH,
+    MPPE_EARLY_EOF,
 };
 
 #ifdef SIZE_MAX
@@ -50,19 +51,19 @@ typedef void (*multipart_free_func)(void *ptr);
 * data callback called at events, return MPE_OK to continue parser,
 * MPE_PAUSED for making parser paused
 */
-typedef long (*multipart_data_cb) (multipart_parser*, const char *at, size_t length);
+typedef long (*multipart_data_cb) (multipart_parser *p, const char *at, size_t length);
 /*
 * notification callback called at events, return MPE_OK to continue parser,
 * MPE_PAUSED for making parser paused
 */
-typedef long (*multipart_notify_cb) (multipart_parser*);
+typedef long (*multipart_notify_cb) (multipart_parser *p);
 
 // from RFC2046
 #define BOUNDARY_MAX_LEN 70
 
 struct multipart_parser {
     /* private holder for callbacks */
-    const multipart_parser_settings* settings;
+    const multipart_parser_settings *settings;
     /* private internal index for matching boundary */
     size_t index;
     /* public error unexpected char index */
@@ -79,6 +80,8 @@ struct multipart_parser {
     char error_expected;
     /* public error unexpected char */
     char error_unexpected;
+    /* public triggered */
+    char event_triggered;
 };
 
 struct multipart_parser_settings {

@@ -40,9 +40,17 @@ extern "C" {
 
 #define CAT_SOCKET_DEFAULT_BACKLOG  511
 
-#define CAT_SOCKET_IPV4_BUFFER_SIZE 16  /* >= 16 */
-#define CAT_SOCKET_IPV6_BUFFER_SIZE 48  /* >= 46 */
-#define CAT_SOCKET_IP_BUFFER_SIZE   CAT_SOCKET_IPV6_BUFFER_SIZE
+#ifdef INET_ADDRSTRLEN
+# define CAT_SOCKET_IPV4_BUFFER_SIZE INET_ADDRSTRLEN
+#else
+# define CAT_SOCKET_IPV4_BUFFER_SIZE 22 /* Linux >= 16, Windows >= 22 */
+#endif
+#ifdef INET6_ADDRSTRLEN
+# define CAT_SOCKET_IPV6_BUFFER_SIZE INET6_ADDRSTRLEN
+#else
+# define CAT_SOCKET_IPV6_BUFFER_SIZE 65 /* Linux >= 46, Windows >= 65 */
+#endif
+#define CAT_SOCKET_IP_BUFFER_SIZE CAT_SOCKET_IPV6_BUFFER_SIZE
 
 #ifndef AF_LOCAL
 #define AF_LOCAL AF_UNIX
@@ -136,18 +144,6 @@ typedef cat_os_socket_t cat_socket_fd_t;
 #define CAT_SOCKET_FD_FMT CAT_OS_SOCKET_FMT
 #define CAT_SOCKET_FD_FMT_SPEC CAT_OS_SOCKET_FMT_SPEC
 #define CAT_SOCKET_INVALID_FD CAT_OS_INVALID_SOCKET
-
-/* stdio os fd */
-
-#ifndef STDIN_FILENO
-#define STDIN_FILENO  0 /* standard input file descriptor */
-#endif
-#ifndef STDOUT_FILENO
-#define STDOUT_FILENO 1 /* standard output file descriptor */
-#endif
-#ifndef STDERR_FILENO
-#define STDERR_FILENO 2 /* standard error file descriptor */
-#endif
 
 /* socket length */
 

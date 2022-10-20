@@ -48,7 +48,6 @@ enum state
     s_part_data,
     s_part_data_almost_boundary,
     s_part_data_boundary,
-    s_part_data_almost_almost_end,
     s_part_data_almost_end,
     s_part_data_end,
     s_part_data_final_hyphen,
@@ -386,23 +385,20 @@ do { \
                     }
                 }
                 if ((++p->index) == p->boundary_length) {
-                    p->state = s_part_data_almost_almost_end;
+                    p->state = s_part_data_almost_end;
                     EMIT_DATA_CB(part_data, i + 1, buf + mark, i + 1 - p->boundary_length - 2 - mark);
                 }
                 break;
-            case s_part_data_almost_almost_end:
-                multipart_log_c("s_part_data_almost_almost_end");
-                p->state = s_part_data_almost_end;
-                NOTIFY_CB(part_data_end, i);
-                /* fallthrough */
             case s_part_data_almost_end:
                 multipart_log_c("s_part_data_almost_end");
                 if (c == '-') {
                     p->state = s_part_data_final_hyphen;
+                    NOTIFY_CB(part_data_end, i + 1);
                     break;
                 }
                 if (c == CR) {
                     p->state = s_part_data_end;
+                    NOTIFY_CB(part_data_end, i + 1);
                     break;
                 }
                 // should be end or another part

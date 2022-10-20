@@ -584,18 +584,53 @@ CAT_HTTP_PARSER_ON_EVENT_BEGIN(chunk_header, CHUNK_HEADER) {
 CAT_HTTP_PARSER_ON_EVENT(chunk_complete,   CHUNK_COMPLETE  )
 CAT_HTTP_PARSER_ON_EVENT(message_complete, MESSAGE_COMPLETE)
 
+// TODO: dynamic change with event flags
 static const llhttp_settings_t cat_http_parser_settings = {
+    /* Possible return values 0, -1, `HPE_PAUSED` */
     cat_http_parser_on_message_begin,
+
+    /* Possible return values 0, -1, HPE_USER */
     cat_http_parser_on_url,
     cat_http_parser_on_status,
+    NULL, // cat_http_parser_on_method,
+    NULL, // cat_http_parser_on_version,
     cat_http_parser_on_header_field,
     cat_http_parser_on_header_value,
+    NULL, // cat_http_parser_on_chunk_extension_name,
+    NULL, // cat_http_parser_on_chunk_extension_value,
+
+    /* Possible return values:
+     * 0  - Proceed normally
+     * 1  - Assume that request/response has no body, and proceed to parsing the
+     *      next message
+     * 2  - Assume absence of body (as above) and make `llhttp_execute()` return
+     *      `HPE_PAUSED_UPGRADE`
+     * -1 - Error
+     * `HPE_PAUSED`
+     */
     cat_http_parser_on_headers_complete,
+
+    /* Possible return values 0, -1, HPE_USER */
     cat_http_parser_on_body,
+
+    /* Possible return values 0, -1, `HPE_PAUSED` */
     cat_http_parser_on_message_complete,
+    NULL, // cat_http_parser_on_url_complete,
+    NULL, // cat_http_parser_on_status_complete,
+    NULL, // cat_http_parser_on_method_complete,
+    NULL, // cat_http_parser_on_version_complete,
+    NULL, // cat_http_parser_on_header_field_complete,
+    NULL, // cat_http_parser_on_header_value_complete, /* it's fake, from old version */
+    NULL, // cat_http_parser_on_chunk_extension_name_complete,
+    NULL, // cat_http_parser_on_chunk_extension_value_complete,
+
+    /* When on_chunk_header is called, the current chunk length is stored
+     * in parser->content_length.
+     * Possible return values 0, -1, `HPE_PAUSED`
+     */
     cat_http_parser_on_chunk_header,
     cat_http_parser_on_chunk_complete,
-    NULL, NULL, NULL, NULL,
+    NULL, // cat_http_parser_on_reset,
 };
 
 static cat_always_inline void cat_http_parser__init(cat_http_parser_t *parser)

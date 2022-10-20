@@ -71,7 +71,7 @@ CAT_API void cat_websocket_header_init(cat_websocket_header_t *header)
     memset(header, 0, CAT_WEBSOCKET_HEADER_MIN_SIZE);
 }
 
-static cat_always_inline uint64_t cat_websocket_header_get_mask_key_offset(const cat_websocket_header_t *header)
+static cat_always_inline uint8_t cat_websocket_header_get_mask_key_offset(const cat_websocket_header_t *header)
 {
     uint8_t header_size = CAT_WEBSOCKET_HEADER_MIN_SIZE;
 

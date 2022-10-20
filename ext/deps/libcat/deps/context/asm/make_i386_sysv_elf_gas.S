@@ -12,14 +12,14 @@
  *  ----------------------------------------------------------------------------------  *
  *  |   0x0   |   0x4   |   0x8   |   0xc   |   0x10   |   0x14  |   0x18  |   0x1c  |  *
  *  ----------------------------------------------------------------------------------  *
- *  | fc_mxcsr|fc_x87_cw|   EDI   |   ESI   |   EBX    |   EBP   |   EIP   |  hidden |  *
+ *  | fc_mxcsr|fc_x87_cw|  guard  |   EDI   |   ESI    |   EBX   |   EBP   |   EIP   |  *
  *  ----------------------------------------------------------------------------------  *
  *  ----------------------------------------------------------------------------------  *
  *  |    8    |    9    |    10   |    11   |    12    |    13   |    14   |    15   |  *
  *  ----------------------------------------------------------------------------------  *
- *  |   0x20  |   0x24  |                                                            |  *
+ *  |   0x20  |   0x24  |   0x28  |                                                  |  *
  *  ----------------------------------------------------------------------------------  *
- *  |    to   |   data  |                                                            |  *
+ *  |  hidden |    to   |   data  |                                                  |  *
  *  ----------------------------------------------------------------------------------  *
  *                                                                                      *
  ****************************************************************************************/
@@ -41,22 +41,28 @@ cat_coroutine_context_make:
     andl  $-16, %eax
 
     /* reserve space for context-data on context-stack */
-    leal  -0x28(%eax), %eax
+    leal  -0x2c(%eax), %eax
 
     /* third arg of cat_coroutine_context_make() == address of context-function */
     /* stored in EBX */
     movl  0xc(%esp), %ecx
-    movl  %ecx, 0x10(%eax)
+    movl  %ecx, 0x14(%eax)
 
     /* save MMX control- and status-word */
     stmxcsr (%eax)
     /* save x87 control-word */
     fnstcw  0x4(%eax)
 
+#if defined(BOOST_CONTEXT_TLS_STACK_PROTECTOR)
+    /* save stack guard */
+    movl  %gs:0x14, %ecx    /* read stack guard from TLS record */
+    movl  %ecx, 0x8(%eax)   /* save stack guard */
+#endif
+
     /* return transport_t */
     /* FCTX == EDI, DATA == ESI */
-    leal  0x8(%eax), %ecx
-    movl  %ecx, 0x1c(%eax)
+    leal  0xc(%eax), %ecx
+    movl  %ecx, 0x20(%eax)
 
     /* compute abs address of label trampoline */
     call  1f
@@ -66,7 +72,7 @@ cat_coroutine_context_make:
     addl  $trampoline-1b, %ecx
     /* save address of trampoline as return address */
     /* will be entered after calling cat_coroutine_context_jump() first time */
-    movl  %ecx, 0x18(%eax)
+    movl  %ecx, 0x1c(%eax)
 
     /* compute abs address of label finish */
     call  2f
@@ -76,7 +82,7 @@ cat_coroutine_context_make:
     addl  $finish-2b, %ecx
     /* save address of finish as return-address for context-function */
     /* will be entered after context-function returns */
-    movl  %ecx, 0x14(%eax) 
+    movl  %ecx, 0x18(%eax)
 
     ret /* return pointer to context-data */
 

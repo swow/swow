@@ -893,19 +893,19 @@ CAT_API cat_socket_t *cat_socket_create_ex(cat_socket_t *socket, cat_socket_type
         }
         if (os_fd == CAT_OS_INVALID_FD) {
             if (type & CAT_SOCKET_TYPE_FLAG_STDIN) {
-                os_fd = STDIN_FILENO;
+                os_fd = CAT_STDIN_FILENO;
             } else if (type & CAT_SOCKET_TYPE_FLAG_STDOUT) {
-                os_fd = STDOUT_FILENO;
+                os_fd = CAT_STDOUT_FILENO;
             } else if (type & CAT_SOCKET_TYPE_FLAG_STDERR) {
-                os_fd = STDERR_FILENO;
+                os_fd = CAT_STDERR_FILENO;
             }
         }
         type &= ~(CAT_SOCKET_TYPE_FLAG_STDIN | CAT_SOCKET_TYPE_FLAG_STDOUT | CAT_SOCKET_TYPE_FLAG_STDERR);
-        if (os_fd == STDIN_FILENO) {
+        if (os_fd == CAT_STDIN_FILENO) {
             type |= CAT_SOCKET_TYPE_FLAG_STDIN;
-        } else if (os_fd == STDOUT_FILENO) {
+        } else if (os_fd == CAT_STDOUT_FILENO) {
             type |= CAT_SOCKET_TYPE_FLAG_STDOUT;
-        } else if (os_fd == STDERR_FILENO) {
+        } else if (os_fd == CAT_STDERR_FILENO) {
             type |= CAT_SOCKET_TYPE_FLAG_STDERR;
         } else {
             os_fd = CAT_OS_INVALID_FD;

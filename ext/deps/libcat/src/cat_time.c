@@ -22,10 +22,10 @@
 
 #ifndef CAT_OS_WIN
 #include "../deps/libuv/src/unix/internal.h"
-#include "unistd.h"
+#include <unistd.h>
 #else
 #include "../deps/libuv/src/win/internal.h"
-#include "windows.h"
+#include <windows.h>
 #endif
 
 CAT_API cat_nsec_t cat_time_nsec(void)

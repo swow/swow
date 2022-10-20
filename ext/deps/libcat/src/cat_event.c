@@ -209,9 +209,9 @@ CAT_API void cat_event_fork(void)
 static FILE *cat_event_get_fp_from_fd(cat_os_fd_t fd)
 {
     FILE* fp;
-    if (fd == STDOUT_FILENO) {
+    if (fd == CAT_STDOUT_FILENO) {
         fp = stdout;
-    } else if (fd == STDERR_FILENO) {
+    } else if (fd == CAT_STDERR_FILENO) {
         fp = stderr;
     } else {
         fp = stdout;

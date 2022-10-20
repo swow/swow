@@ -3,7 +3,8 @@ __DIR__=$(cd "$(dirname "$0")" || exit 1; pwd); [ -z "${__DIR__}" ] && exit 1
 
 BOOST_CONTEXT_VERSION="develop"
 LIBUV_VERSION="develop"
-LLHTTP_VERSION="v6.0.9"
+LLHTTP_VERSION="v8.1.0"
+MULTIPART_PARSER_C_VERSION="master"
 
 sync(){ "${__DIR__}/../tools/dm.sh" "${__DIR__}/../" "$@"; }
 
@@ -85,6 +86,31 @@ if sync_llhttp ; then
   cp -r "${__DIR__}/_llhttp/src" "${__DIR__}/llhttp/src" && \
   cp -r "${__DIR__}/_llhttp/LICENSE-MIT" "${__DIR__}/llhttp/LICENSE-MIT" && \
   rm -rf "${__DIR__}/_llhttp"
+fi
+
+# ====== multipart-parser-c ======
+
+sync_multipart_parser_c()
+{
+  sync \
+  "libcat" \
+  "multipart-parser-c" \
+  "https://github.com/libcat/multipart-parser-c.git" \
+  "${MULTIPART_PARSER_C_VERSION}" \
+  "multipart-parser-c" \
+  "${__DIR__}/multipart-parser-c"
+}
+
+if sync_multipart_parser_c ; then
+  mv "${__DIR__}/multipart-parser-c" "${__DIR__}/_multipart-parser-c" && \
+  mkdir -p "${__DIR__}/multipart-parser-c" && \
+  cp "${__DIR__}/_multipart-parser-c/multipart_parser.c" \
+     "${__DIR__}/multipart-parser-c/multipart_parser.c" && \
+  cp "${__DIR__}/_multipart-parser-c/multipart_parser.h" \
+     "${__DIR__}/multipart-parser-c/multipart_parser.h" && \
+  cp "${__DIR__}/_multipart-parser-c/README.md" \
+     "${__DIR__}/multipart-parser-c/README.md" && \
+  rm -rf "${__DIR__}/_multipart-parser-c"
 fi
 
 cd "${__DIR__}" && \
