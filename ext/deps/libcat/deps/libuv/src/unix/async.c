@@ -26,7 +26,11 @@
 #include "internal.h"
 
 #include <errno.h>
+#ifdef HAVE_LIBCAT
+#include "../hat_atomic.h"
+#else
 #include <stdatomic.h>
+#endif
 #include <stdio.h>  /* snprintf() */
 #include <assert.h>
 #include <stdlib.h>
@@ -52,7 +56,11 @@ int uv_async_init(uv_loop_t* loop, uv_async_t* handle, uv_async_cb async_cb) {
 
   uv__handle_init(loop, (uv_handle_t*)handle, UV_ASYNC);
   handle->async_cb = async_cb;
+#ifdef HAVE_LIBCAT
+  hat_atomic_int32_init((hat_atomic_int32_t *) &handle->pending, 0);
+#else
   handle->pending = 0;
+#endif
 
   QUEUE_INSERT_TAIL(&loop->async_handles, &handle->queue);
   uv__handle_start(handle);
@@ -62,18 +70,34 @@ int uv_async_init(uv_loop_t* loop, uv_async_t* handle, uv_async_cb async_cb) {
 
 
 int uv_async_send(uv_async_t* handle) {
+#ifdef HAVE_LIBCAT
+  hat_atomic_int32_t *pending;
+#else
   _Atomic int* pending;
+#endif
   int expected;
 
+#ifdef HAVE_LIBCAT
+  pending = (hat_atomic_int32_t *) &handle->pending;
+#else
   pending = (_Atomic int*) &handle->pending;
+#endif
 
   /* Do a cheap read first. */
+#ifdef HAVE_LIBCAT
+  if (hat_atomic_int32_load(pending) != 0)
+#else
   if (atomic_load_explicit(pending, memory_order_relaxed) != 0)
+#endif
     return 0;
 
   /* Tell the other thread we're busy with the handle. */
   expected = 0;
+#ifdef HAVE_LIBCAT
+  if (!hat_atomic_int32_compare_exchange_strong(pending, &expected, 1))
+#else
   if (!atomic_compare_exchange_strong(pending, &expected, 1))
+#endif
     return 0;
 
   /* Wake up the other thread's event loop. */
@@ -81,7 +105,11 @@ int uv_async_send(uv_async_t* handle) {
 
   /* Tell the other thread we're done. */
   expected = 1;
+#ifdef HAVE_LIBCAT
+  if (!hat_atomic_int32_compare_exchange_strong(pending, &expected, 2))
+#else
   if (!atomic_compare_exchange_strong(pending, &expected, 2))
+#endif
     abort();
 
   return 0;
@@ -90,11 +118,19 @@ int uv_async_send(uv_async_t* handle) {
 
 /* Only call this from the event loop thread. */
 static int uv__async_spin(uv_async_t* handle) {
+#ifdef HAVE_LIBCAT
+  hat_atomic_int32_t *pending;
+#else
   _Atomic int* pending;
+#endif
   int expected;
   int i;
 
+#ifdef HAVE_LIBCAT
+  pending = (hat_atomic_int32_t *) &handle->pending;
+#else
   pending = (_Atomic int*) &handle->pending;
+#endif
 
   for (;;) {
     /* 997 is not completely chosen at random. It's a prime number, acyclical
@@ -106,7 +142,11 @@ static int uv__async_spin(uv_async_t* handle) {
        * rc=2 -- handle is pending, other thread is done.
        */
       expected = 2;
+#ifdef HAVE_LIBCAT
+      hat_atomic_int32_compare_exchange_strong(pending, &expected, 0);
+#else
       atomic_compare_exchange_strong(pending, &expected, 0);
+#endif
 
       if (expected != 1)
         return expected;

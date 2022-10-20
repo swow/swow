@@ -213,7 +213,6 @@ CAT_API cat_bool_t cat_watchdog_run(cat_watchdog_t *watchdog, cat_timeout_t quan
     _cond_init_failed:
     uv_sem_destroy(&sem);
     _sem_init_failed:
-    cat_atomic_bool_destroy(&watchdog->stop);
     if (watchdog->allocated) {
         cat_free(watchdog);
     }
@@ -245,7 +244,6 @@ CAT_API cat_bool_t cat_watchdog_stop(void)
     uv_mutex_destroy(&watchdog->mutex);
     uv_cond_destroy(&watchdog->cond);
     CAT_ASSERT(watchdog->sem == NULL);
-    cat_atomic_bool_destroy(&watchdog->stop);
 
     if (watchdog->allocated) {
         cat_free(watchdog);

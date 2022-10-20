@@ -22,7 +22,11 @@
 #include "uv.h"
 #include "internal.h"
 
+#ifdef HAVE_LIBCAT
+#include "../hat_atomic.h"
+#else
 #include <stdatomic.h>
+#endif
 #include <stdlib.h>
 #include <assert.h>
 #include <unistd.h>
@@ -52,7 +56,7 @@
  */
 static int isreallyatty(int file) {
   int rc;
- 
+
   rc = !ioctl(file, TXISATTY + 0x81, NULL);
   if (!rc && errno != EBADF)
       errno = ENOTTY;
@@ -64,7 +68,11 @@ static int isreallyatty(int file) {
 
 static int orig_termios_fd = -1;
 static struct termios orig_termios;
+#ifdef HAVE_LIBCAT
+static hat_atomic_int32_t termios_spinlock;
+#else
 static _Atomic int termios_spinlock;
+#endif
 
 int uv__tcsetattr(int fd, int how, const struct termios *term) {
   int rc;
@@ -299,14 +307,22 @@ int uv_tty_set_mode(uv_tty_t* tty, uv_tty_mode_t mode) {
     /* This is used for uv_tty_reset_mode() */
     do
       expected = 0;
+#ifdef HAVE_LIBCAT
+    while (!hat_atomic_int32_compare_exchange_strong(&termios_spinlock, &expected, 1));
+#else
     while (!atomic_compare_exchange_strong(&termios_spinlock, &expected, 1));
+#endif
 
     if (orig_termios_fd == -1) {
       orig_termios = tty->orig_termios;
       orig_termios_fd = fd;
     }
 
+#ifdef HAVE_LIBCAT
+    hat_atomic_int32_store(&termios_spinlock, 0);
+#else
     atomic_store(&termios_spinlock, 0);
+#endif
   }
 
   tmp = tty->orig_termios;
@@ -451,14 +467,22 @@ int uv_tty_reset_mode(void) {
 
   saved_errno = errno;
 
+#ifdef HAVE_LIBCAT
+  if (hat_atomic_int32_exchange(&termios_spinlock, 1))
+#else
   if (atomic_exchange(&termios_spinlock, 1))
+#endif
     return UV_EBUSY;  /* In uv_tty_set_mode(). */
 
   err = 0;
   if (orig_termios_fd != -1)
     err = uv__tcsetattr(orig_termios_fd, TCSANOW, &orig_termios);
 
+#ifdef HAVE_LIBCAT
+  hat_atomic_int32_store(&termios_spinlock, 0);
+#else
   atomic_store(&termios_spinlock, 0);
+#endif
   errno = saved_errno;
 
   return err;
