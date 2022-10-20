@@ -576,7 +576,7 @@ static zend_always_inline char *swow_http_pack_message(char *p, HashTable *heade
     return p;
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Http_Http_packRequest, 0, 0, IS_STRING, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Http_Http_packRequest, 0, 2, IS_STRING, 0)
     ZEND_ARG_TYPE_INFO(0, method, IS_STRING, 0)
     ZEND_ARG_OBJ_TYPE_MASK(0, uri, Stringable, MAY_BE_STRING, NULL)
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, headers, IS_ARRAY, 0, "[]")
@@ -629,7 +629,7 @@ static PHP_METHOD(Swow_Http_Http, packRequest)
     RETURN_STR(request);
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Http_Http_packResponse, 0, 0, IS_STRING, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Http_Http_packResponse, 0, 1, IS_STRING, 0)
     ZEND_ARG_TYPE_INFO(0, statusCode, IS_LONG, 0)
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, reasonPhrase, IS_STRING, 0, "\'\'")
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, headers, IS_ARRAY, 0, "[]")
