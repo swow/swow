@@ -24,12 +24,6 @@ SWOW_API zend_object_handlers swow_ipaddress_handlers;
 
 SWOW_API zend_class_entry *swow_ipaddress_exception_ce;
 
-//SWOW_API CAT_GLOBALS_DECLARE(swow_thread)
-
-//CAT_GLOBALS_CTOR_DECLARE_SZ(swow_thread)
-
-#define getThisAddr() (swow_ipaddress_get_from_object(Z_OBJ_P(ZEND_THIS)))
-
 static zend_object *swow_ipaddress_create_object(zend_class_entry *ce)
 {
     swow_ipaddress_t *s_address = swow_object_alloc(swow_ipaddress_t, ce, swow_ipaddress_handlers);
@@ -40,7 +34,7 @@ static zend_object *swow_ipaddress_create_object(zend_class_entry *ce)
 #ifdef CAT_DEBUG
 
 typedef struct {
-    char * message;
+    char *message;
     ipv6_diag_event_t event;
 } swow_ipv6_parse_error;
 
@@ -51,10 +45,10 @@ static void swow_ipv6_parse_diag(ipv6_diag_event_t event, const ipv6_diag_info_t
     return;
 }
 
-static cat_bool_t swow_parse_ipaddress(const char* address, size_t address_len, ipv6_address_full_t *dest)
+static bool swow_parse_ipaddress(const char* address, size_t address_len, ipv6_address_full_t *dest)
 {
     swow_ipv6_parse_error error = { NULL };
-    cat_bool_t ret = (cat_bool_t)ipv6_from_str_diag(address, address_len, dest, (ipv6_diag_func_t)swow_ipv6_parse_diag, &error);
+    bool ret = (bool) ipv6_from_str_diag(address, address_len, dest, (ipv6_diag_func_t) swow_ipv6_parse_diag, &error);
     if (!ret) {
         char *buffer;
         swow_throw_exception(
@@ -63,7 +57,7 @@ static cat_bool_t swow_parse_ipaddress(const char* address, size_t address_len, 
             "Failed to parse ip address %s: %s",
             cat_log_str_quote_unlimited(address, address_len, &buffer),
             error.message ? error.message : "unknown"
-            );
+        );
         cat_free(buffer);
     }
     if (error.message) {
@@ -74,51 +68,47 @@ static cat_bool_t swow_parse_ipaddress(const char* address, size_t address_len, 
 
 #else
 
-static cat_bool_t swow_parse_ipaddress(const char* address, size_t address_len, ipv6_address_full_t *dest)
+static bool swow_parse_ipaddress(const char* address, size_t address_len, ipv6_address_full_t *dest)
 {
     bool ret = ipv6_from_str(address, address_len, dest);
     if (!ret) {
         swow_throw_exception(
             swow_ipaddress_exception_ce,
-            0,
-            "Failed to parse ip address"
-            );
-        return cat_false;
+            0, "Failed to parse ip address"
+        );
+        return false;
     }
-    return cat_true;
+    return true;
 }
 
 #endif
 
-static cat_bool_t swow_ipaddress_in(swow_ipaddress_t *s_address, swow_ipaddress_t *s_cidr)
+static bool swow_ipaddress_in(swow_ipaddress_t *s_address, swow_ipaddress_t *s_cidr)
 {
-
     ipv6_address_full_t *addr = &s_address->ipv6_address;
     ipv6_address_full_t *cidr = &s_cidr->ipv6_address;
 
     if (!(cidr->flags & IPV6_FLAG_HAS_MASK)) {
         swow_throw_exception(
             swow_ipaddress_exception_ce,
-            0,
-            "The range is not a cidr"
+            0, "The range is not a cidr"
         );
-        return cat_false;
+        return false;
     }
 
     if ((addr->flags & IPV6_FLAG_IPV4_COMPAT) != (cidr->flags & IPV6_FLAG_IPV4_COMPAT)) {
         swow_throw_exception(
             swow_ipaddress_exception_ce,
-            0,
-            "Address and range addr family mismatch"
+            0, "Address and range addr family mismatch"
         );
-        return cat_false;
+        return false;
     }
 
     uint32_t maskLen = (addr->flags & IPV6_FLAG_HAS_MASK) ? addr->mask : ((addr->flags & IPV6_FLAG_IPV4_COMPAT) ? 32 : 128);
     if (cidr->mask > maskLen) {
         // cannot cover a bigger cidr
         // printf("%d %d\n", cidr->mask, maskLen);
-        return cat_false;
+        return false;
     }
     if (addr->flags & IPV6_FLAG_IPV4_COMPAT) {
         // ipv4
@@ -126,7 +116,7 @@ static cat_bool_t swow_ipaddress_in(swow_ipaddress_t *s_address, swow_ipaddress_
         uint32_t beIpv4Cidr = cidr->address.components[1] + (cidr->address.components[0] << 16);
         uint32_t mask = ((1 << cidr->mask) - 1) << (32 - cidr->mask);
         // printf("%08x %08x %08x\n", beIpv4Addr, beIpv4Cidr, mask);
-        return (cat_bool_t) ((beIpv4Addr & mask) == (beIpv4Cidr & mask));
+        return (bool) ((beIpv4Addr & mask) == (beIpv4Cidr & mask));
     } else {
         // ipv6
         uint32_t sameComponents = cidr->mask / 16;
@@ -134,17 +124,19 @@ static cat_bool_t swow_ipaddress_in(swow_ipaddress_t *s_address, swow_ipaddress_
         uint32_t i = 0;
         for (; i < sameComponents; i++) {
             if (addr->address.components[i] != cidr->address.components[i]) {
-                return cat_false;
+                return false;
             }
         }
         uint32_t mask = ((1 << remainingMaskLen) - 1) << (16 - remainingMaskLen);
         if ((addr->address.components[i] & mask) != (cidr->address.components[i] & mask)) {
-            return cat_false;
+            return false;
         }
 
-        return cat_true;
+        return true;
     }
 }
+
+#define getThisAddr() (swow_ipaddress_get_from_object(Z_OBJ_P(ZEND_THIS)))
 
 ZEND_BEGIN_ARG_INFO_EX(arginfo_class_Swow_IpAddress___construct, 0, 0, 0)
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, address, IS_STRING, 0, "\'\'")
@@ -153,14 +145,16 @@ ZEND_END_ARG_INFO()
 static PHP_METHOD(Swow_IpAddress, __construct)
 {
     zend_string *address = zend_empty_string;
+
     ZEND_PARSE_PARAMETERS_START(0, 1)
         Z_PARAM_OPTIONAL
         Z_PARAM_STR_OR_NULL(address)
     ZEND_PARSE_PARAMETERS_END();
 
     swow_ipaddress_t *s_address = getThisAddr();
+
     if (ZSTR_LEN(address)) {
-        cat_bool_t ret = swow_parse_ipaddress(ZSTR_VAL(address), ZSTR_LEN(address), &s_address->ipv6_address);
+        bool ret = swow_parse_ipaddress(ZSTR_VAL(address), ZSTR_LEN(address), &s_address->ipv6_address);
         if (!ret) {
             RETURN_THROWS();
         }
@@ -172,6 +166,8 @@ ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_IpAddress, getFlags)
 {
+    ZEND_PARSE_PARAMETERS_NONE();
+
     swow_ipaddress_t *s_address = getThisAddr();
 
     RETURN_LONG(s_address->ipv6_address.flags);
@@ -181,11 +177,10 @@ static PHP_METHOD(Swow_IpAddress, getFlags)
 
 static PHP_METHOD(Swow_IpAddress, getFull)
 {
+    ZEND_PARSE_PARAMETERS_NONE();
+
     swow_ipaddress_t *s_address = getThisAddr();
-
     char buffer[IPV6_STRING_SIZE];
-
-    uint32_t flags = s_address->ipv6_address.flags;
 
     if (
         (s_address->ipv6_address.flags & IPV6_FLAG_IPV4_COMPAT) &&
@@ -196,7 +191,7 @@ static PHP_METHOD(Swow_IpAddress, getFull)
         // so we make it here
         size_t ret = snprintf(
             buffer,
-            IPV6_STRING_SIZE,
+            sizeof(buffer),
             "%d.%d.%d.%d/%d",
             s_address->ipv6_address.address.components[0] >> 8,
             s_address->ipv6_address.address.components[0] & 0xff,
@@ -205,15 +200,16 @@ static PHP_METHOD(Swow_IpAddress, getFull)
             s_address->ipv6_address.mask
         );
 
-        RETURN_STRINGL_FAST(buffer, ret);
+        RETURN_STRINGL(buffer, ret);
     }
 
+    uint32_t flags = s_address->ipv6_address.flags;
     // clean flags to generate ip/mask part only
     s_address->ipv6_address.flags &= ~(IPV6_FLAG_HAS_PORT);
-    size_t ret = ipv6_to_str(&s_address->ipv6_address, buffer, IPV6_STRING_SIZE);
+    size_t ret = ipv6_to_str(&s_address->ipv6_address, ZEND_STRS(buffer));
     s_address->ipv6_address.flags = flags;
 
-    RETURN_STRINGL_FAST(buffer, ret);
+    RETURN_STRINGL(buffer, ret);
 }
 
 #define arginfo_class_Swow_IpAddress_getIp arginfo_class_Swow_IpAddress_getFlags
@@ -221,16 +217,17 @@ static PHP_METHOD(Swow_IpAddress, getFull)
 static PHP_METHOD(Swow_IpAddress, getIp)
 {
     swow_ipaddress_t *s_address = getThisAddr();
-
     char buffer[IPV6_STRING_SIZE];
+
+    ZEND_PARSE_PARAMETERS_NONE();
 
     uint32_t flags = s_address->ipv6_address.flags;
     // clean flags to generate ip part only
     s_address->ipv6_address.flags &= ~(IPV6_FLAG_HAS_PORT | IPV6_FLAG_HAS_MASK | IPV6_FLAG_IPV4_EMBED);
-    size_t ret = ipv6_to_str(&s_address->ipv6_address, buffer, IPV6_STRING_SIZE);
+    size_t ret = ipv6_to_str(&s_address->ipv6_address, ZEND_STRS(buffer));
     s_address->ipv6_address.flags = flags;
 
-    RETURN_STRINGL_FAST(buffer, ret);
+    RETURN_STRINGL(buffer, ret);
 }
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_IpAddress_getPort, 0, 0, IS_LONG, 0)
@@ -258,11 +255,13 @@ ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_IpAddress, setFlags)
 {
-    swow_ipaddress_t *s_address = getThisAddr();
     zend_long flags;
+
     ZEND_PARSE_PARAMETERS_START(1, 1)
         Z_PARAM_LONG(flags)
     ZEND_PARSE_PARAMETERS_END();
+
+    swow_ipaddress_t *s_address = getThisAddr();
 
     if (flags & (~(IPV6_FLAG_HAS_MASK | IPV6_FLAG_HAS_PORT | IPV6_FLAG_IPV4_COMPAT | IPV6_FLAG_IPV4_EMBED))) {
         swow_throw_exception(
@@ -284,13 +283,15 @@ ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_IpAddress, setFull)
 {
-    swow_ipaddress_t *s_address = getThisAddr();
     zend_string *address;
+
     ZEND_PARSE_PARAMETERS_START(1, 1)
         Z_PARAM_STR(address)
     ZEND_PARSE_PARAMETERS_END();
 
-    cat_bool_t ret = swow_parse_ipaddress(ZSTR_VAL(address), ZSTR_LEN(address), &s_address->ipv6_address);
+    swow_ipaddress_t *s_address = getThisAddr();
+
+    bool ret = swow_parse_ipaddress(ZSTR_VAL(address), ZSTR_LEN(address), &s_address->ipv6_address);
     if (!ret) {
         RETURN_THROWS();
     }
@@ -302,15 +303,16 @@ static PHP_METHOD(Swow_IpAddress, setFull)
 
 static PHP_METHOD(Swow_IpAddress, setIp)
 {
-    swow_ipaddress_t *s_address = getThisAddr();
     zend_string *address;
+
     ZEND_PARSE_PARAMETERS_START(1, 1)
         Z_PARAM_STR(address)
     ZEND_PARSE_PARAMETERS_END();
 
+    swow_ipaddress_t *s_address = getThisAddr();
     ipv6_address_full_t addr;
 
-    cat_bool_t ret = swow_parse_ipaddress(ZSTR_VAL(address), ZSTR_LEN(address), &addr);
+    bool ret = swow_parse_ipaddress(ZSTR_VAL(address), ZSTR_LEN(address), &addr);
     if (!ret) {
         RETURN_THROWS();
     }
@@ -331,11 +333,13 @@ ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_IpAddress, setPort)
 {
-    swow_ipaddress_t *s_address = getThisAddr();
     zend_long port;
+
     ZEND_PARSE_PARAMETERS_START(1, 1)
         Z_PARAM_LONG(port)
     ZEND_PARSE_PARAMETERS_END();
+
+    swow_ipaddress_t *s_address = getThisAddr();
 
     if (port < 0 || port > UINT16_MAX) {
         swow_throw_exception(
@@ -357,11 +361,13 @@ ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_IpAddress, setMaskLen)
 {
-    swow_ipaddress_t *s_address = getThisAddr();
     zend_long maskLen;
+
     ZEND_PARSE_PARAMETERS_START(1, 1)
         Z_PARAM_LONG(maskLen)
     ZEND_PARSE_PARAMETERS_END();
+
+    swow_ipaddress_t *s_address = getThisAddr();
 
     const char *addrType = "ipv6";
     zend_long max = 128;
@@ -389,6 +395,8 @@ ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_IpAddress, isMappedIpv4)
 {
+    ZEND_PARSE_PARAMETERS_NONE();
+
     swow_ipaddress_t *s_address = getThisAddr();
 
     if (
@@ -406,6 +414,8 @@ static PHP_METHOD(Swow_IpAddress, isMappedIpv4)
 
 static PHP_METHOD(Swow_IpAddress, isIpv4OrMappedIpv4)
 {
+    ZEND_PARSE_PARAMETERS_NONE();
+
     swow_ipaddress_t *s_address = getThisAddr();
 
     if (
@@ -424,6 +434,8 @@ static PHP_METHOD(Swow_IpAddress, isIpv4OrMappedIpv4)
 
 static PHP_METHOD(Swow_IpAddress, isLocal)
 {
+    ZEND_PARSE_PARAMETERS_NONE();
+
     swow_ipaddress_t *s_address = getThisAddr();
     uint32_t beIpv4;
 
@@ -475,6 +487,8 @@ static PHP_METHOD(Swow_IpAddress, isLocal)
 
 static PHP_METHOD(Swow_IpAddress, isLoopback)
 {
+    ZEND_PARSE_PARAMETERS_NONE();
+
     swow_ipaddress_t *s_address = getThisAddr();
     uint32_t beIpv4;
 
@@ -516,15 +530,15 @@ ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_IpAddress, in)
 {
-    swow_ipaddress_t *s_address = getThisAddr();
     zend_object *cidr_object;
 
     ZEND_PARSE_PARAMETERS_START(1, 1)
         Z_PARAM_OBJ_OF_CLASS(cidr_object, swow_ipaddress_ce)
     ZEND_PARSE_PARAMETERS_END();
 
-    cat_bool_t ret = swow_ipaddress_in(s_address, swow_ipaddress_get_from_object(cidr_object));
-    RETVAL_BOOL((zend_bool) ret);
+    swow_ipaddress_t *s_address = getThisAddr();
+    bool ret = swow_ipaddress_in(s_address, swow_ipaddress_get_from_object(cidr_object));
+    RETURN_BOOL(ret);
 }
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_IpAddress_covers, 0, 1, _IS_BOOL, 0)
@@ -533,15 +547,15 @@ ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_IpAddress, covers)
 {
-    swow_ipaddress_t *s_address = getThisAddr();
     zend_object *addr_object;
 
     ZEND_PARSE_PARAMETERS_START(1, 1)
         Z_PARAM_OBJ_OF_CLASS(addr_object, swow_ipaddress_ce)
     ZEND_PARSE_PARAMETERS_END();
 
-    cat_bool_t ret = swow_ipaddress_in(swow_ipaddress_get_from_object(addr_object), s_address);
-    RETVAL_BOOL((zend_bool) ret);
+    swow_ipaddress_t *s_address = getThisAddr();
+    bool ret = swow_ipaddress_in(swow_ipaddress_get_from_object(addr_object), s_address);
+    RETURN_BOOL(ret);
 }
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_IpAddress_convertToMappedIpv4, 0, 0, IS_STATIC, 0)
@@ -549,14 +563,15 @@ ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_IpAddress, convertToMappedIpv4)
 {
+    ZEND_PARSE_PARAMETERS_NONE();
+
     swow_ipaddress_t *s_address = getThisAddr();
 
     if (!(s_address->ipv6_address.flags & IPV6_FLAG_IPV4_COMPAT)) {
         swow_throw_exception(
             swow_ipaddress_exception_ce,
-            0,
-            "This is not an IPv4 address"
-            );
+            0, "This is not an IPv4 address"
+        );
         RETURN_THROWS();
     }
 
@@ -578,12 +593,14 @@ ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_IpAddress, convertToIpv4)
 {
-    swow_ipaddress_t *s_address = getThisAddr();
-    zend_bool force = false;
+    bool force = false;
+
     ZEND_PARSE_PARAMETERS_START(0, 1)
         Z_PARAM_OPTIONAL
         Z_PARAM_BOOL(force)
     ZEND_PARSE_PARAMETERS_END();
+
+    swow_ipaddress_t *s_address = getThisAddr();
 
     if (s_address->ipv6_address.flags & IPV6_FLAG_IPV4_COMPAT) {
         RETURN_THIS();
@@ -592,9 +609,8 @@ static PHP_METHOD(Swow_IpAddress, convertToIpv4)
     if (!force && memcmp(&s_address->ipv6_address.address, "\0\0\0\0\0\0\0\0\0\0\xff\xff", 12)) {
         swow_throw_exception(
             swow_ipaddress_exception_ce,
-            0,
-            "This is not an IPv6 address with mapped IPv4"
-            );
+            0, "This is not an IPv6 address with mapped IPv4"
+        );
         RETURN_THROWS();
     }
 
@@ -645,7 +661,7 @@ zend_result swow_ipaddress_init(INIT_FUNC_ARGS)
     swow_ipaddress_ce = swow_register_internal_class(
         "Swow\\IpAddress", NULL, swow_ipaddress_methods,
         &swow_ipaddress_handlers, NULL,
-        cat_true, cat_false,
+        true, false,
         swow_ipaddress_create_object, NULL,
         XtOffsetOf(swow_ipaddress_t, std)
     );
@@ -655,7 +671,7 @@ zend_result swow_ipaddress_init(INIT_FUNC_ARGS)
     zend_declare_class_constant_long(swow_ipaddress_ce, ZEND_STRL("IPV4_EMBED"), IPV6_FLAG_IPV4_EMBED);
 
     swow_ipaddress_exception_ce = swow_register_internal_class(
-        "Swow\\IpAddressException", swow_exception_ce, NULL, NULL, NULL, cat_true, cat_true, NULL, NULL, 0
+        "Swow\\IpAddressException", swow_exception_ce, NULL, NULL, NULL, true, true, NULL, NULL, 0
     );
 
     return SUCCESS;
