@@ -32,6 +32,11 @@ namespace
     function msleep(int $milli_seconds): int { }
 }
 
+namespace
+{
+    function gethostbyname2(string $hostname, int $address_family = \AF_INET): string { }
+}
+
 namespace Swow
 {
     class Errno
