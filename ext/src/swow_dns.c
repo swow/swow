@@ -24,7 +24,7 @@
 # define MAXFQDNLEN 255
 #endif
 
-static PHP_FUNCTION_EX(_gethostbyname, zend_bool is_v2)
+static PHP_FUNCTION_EX(_swow_gethostbyname, zend_bool is_v2)
 {
     char *hostname;
     size_t hostname_len;
@@ -61,28 +61,28 @@ static PHP_FUNCTION_EX(_gethostbyname, zend_bool is_v2)
     RETURN_STRING_FAST(buffer);
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_gethostbyname, 0, 1, IS_STRING, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_swow_gethostbyname, 0, 1, IS_STRING, 0)
     ZEND_ARG_TYPE_INFO(0, hostname, IS_STRING, 0)
 ZEND_END_ARG_INFO()
 
-static PHP_FUNCTION(gethostbyname)
+static PHP_FUNCTION(swow_gethostbyname)
 {
-    PHP_FUNCTION_CALL(_gethostbyname, false);
+    PHP_FUNCTION_CALL(_swow_gethostbyname, false);
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_gethostbyname2, 0, 1, IS_STRING, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_swow_gethostbyname2, 0, 1, IS_STRING, 0)
     ZEND_ARG_TYPE_INFO(0, hostname, IS_STRING, 0)
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, address_family, IS_LONG, 0, "AF_INET")
 ZEND_END_ARG_INFO()
 
-static PHP_FUNCTION(gethostbyname2)
+static PHP_FUNCTION(swow_gethostbyname2)
 {
-    PHP_FUNCTION_CALL(_gethostbyname, true);
+    PHP_FUNCTION_CALL(_swow_gethostbyname, true);
 }
 
 static const zend_function_entry swow_dns_functions[] = {
-    PHP_FENTRY(gethostbyname, PHP_FN(gethostbyname), arginfo_gethostbyname, 0)
-    PHP_FENTRY(gethostbyname2, PHP_FN(gethostbyname2), arginfo_gethostbyname2, 0)
+    PHP_FENTRY(gethostbyname, PHP_FN(swow_gethostbyname), arginfo_swow_gethostbyname, 0)
+    PHP_FENTRY(gethostbyname2, PHP_FN(swow_gethostbyname2), arginfo_swow_gethostbyname2, 0)
     PHP_FE_END
 };
 
