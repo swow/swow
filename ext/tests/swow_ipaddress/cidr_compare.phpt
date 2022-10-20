@@ -30,8 +30,8 @@ $testCases = [
 foreach ($testCases as $case) {
     $addr = new IpAddress($case[0]);
     $cidr = new IpAddress($case[1]);
-    Assert::eq($addr->in($cidr), $case[2], "'{$case[0]}'->in('{$case[1]}') should be " . ($case[2] ? "true" : "false"));
-    Assert::eq($cidr->covers($addr), $case[2], "'{$case[1]}'->covers('{$case[0]}') should be " . ($case[2] ? "true" : "false"));
+    Assert::same($addr->in($cidr), $case[2], "'{$case[0]}'->in('{$case[1]}') should be " . ($case[2] ? 'true' : 'false'));
+    Assert::same($cidr->covers($addr), $case[2], "'{$case[1]}'->covers('{$case[0]}') should be " . ($case[2] ? 'true' : 'false'));
 }
 
 echo "Done\n";

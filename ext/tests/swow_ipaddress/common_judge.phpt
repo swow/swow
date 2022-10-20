@@ -45,7 +45,7 @@ $testCases = [
 
 foreach ($testCases as $case) {
     $addr = new IpAddress($case[0]);
-    Assert::eq([$addr, $case[1]](), $case[2], "'{$case[0]}'->{$case[1]}() should be" . ($case[2] ? "true" : "false"));
+    Assert::same([$addr, $case[1]](), $case[2], "'{$case[0]}'->{$case[1]}() should be" . ($case[2] ? 'true' : 'false'));
 }
 
 echo "Done\n";
