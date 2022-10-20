@@ -564,13 +564,10 @@ EOF
           PHP_ADD_LIBRARY(rt)
           SWOW_ADD_SOURCES(deps/libcat/deps/libuv/src/unix,
             proctitle.c \
-            linux-core.c \
-            linux-inotify.c \
-            linux-syscalls.c \
+            linux.c \
             procfs-exepath.c \
             random-getrandom.c \
-            random-sysctl-linux.c \
-            epoll.c, SWOW_UV_INCLUDES, SWOW_UV_CFLAGS)
+            random-sysctl-linux.c, SWOW_UV_INCLUDES, SWOW_UV_CFLAGS)
         ],
         [freebsd*], [
           SWOW_ADD_SOURCES(deps/libcat/deps/libuv/src/unix,
