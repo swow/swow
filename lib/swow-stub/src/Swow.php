@@ -14,11 +14,11 @@ namespace
     class Swow
     {
         public const MAJOR_VERSION = 0;
-        public const MINOR_VERSION = 1;
+        public const MINOR_VERSION = 2;
         public const RELEASE_VERSION = 0;
-        public const EXTRA_VERSION = '';
-        public const VERSION = '0.1.0';
-        public const VERSION_ID = 100;
+        public const EXTRA_VERSION = 'dev';
+        public const VERSION = '0.2.0-dev';
+        public const VERSION_ID = 200;
 
         /**
          * Return if this Swow extension is built with library specified by $lib
