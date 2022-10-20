@@ -1994,6 +1994,60 @@ namespace Swow
 
 namespace Swow
 {
+    class IpAddress
+    {
+        public const IPV4 = 8;
+        public const HAS_PORT = 1;
+        public const HAS_MASK = 2;
+        public const IPV4_EMBED = 4;
+
+        public function __construct(string $address = '') { }
+
+        public function getFlags(): string { }
+
+        public function getFull(): string { }
+
+        public function getIp(): string { }
+
+        public function getPort(): int { }
+
+        public function getMaskLen(): int { }
+
+        public function setFlags(int $setFlags): static { }
+
+        public function setFull(string $address): static { }
+
+        public function setIp(string $address): static { }
+
+        public function setPort(int $port): static { }
+
+        public function setMaskLen(int $maskLen): static { }
+
+        public function isMappedIpv4(): bool { }
+
+        public function isIpv4OrMappedIpv4(): bool { }
+
+        public function isLocal(): bool { }
+
+        public function isLoopback(): bool { }
+
+        public function in(self $range): bool { }
+
+        public function covers(self $addr): bool { }
+
+        public function convertToMappedIpv4(): static { }
+
+        public function convertToIpv4(bool $force = false): static { }
+    }
+}
+
+namespace Swow
+{
+    class IpAddressException extends \Swow\Exception { }
+}
+
+namespace Swow
+{
     function defer(callable $tasks): void { }
 }
 
