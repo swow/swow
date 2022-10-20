@@ -402,7 +402,7 @@ static PHP_METHOD(Swow_IpAddress, isMappedIpv4)
     if (
         !(s_address->ipv6_address.flags & IPV6_FLAG_IPV4_COMPAT) &&
         // mapped ipv4
-        memcmp(&s_address->ipv6_address.address, "\0\0\0\0\0\0\0\0\0\0\xff\xff", 12) == 0
+        memcmp(&s_address->ipv6_address.address, ZEND_STRL("\0\0\0\0\0\0\0\0\0\0\xff\xff")) == 0
     ) {
         RETURN_TRUE;
     }
@@ -422,7 +422,7 @@ static PHP_METHOD(Swow_IpAddress, isIpv4OrMappedIpv4)
         // real ipv4
         (s_address->ipv6_address.flags & IPV6_FLAG_IPV4_COMPAT) ||
         // mapped ipv4
-        memcmp(&s_address->ipv6_address.address, "\0\0\0\0\0\0\0\0\0\0\xff\xff", 12) == 0
+        memcmp(&s_address->ipv6_address.address, ZEND_STRL("\0\0\0\0\0\0\0\0\0\0\xff\xff")) == 0
     ) {
         RETURN_TRUE;
     }
@@ -450,7 +450,7 @@ static PHP_METHOD(Swow_IpAddress, isLocal)
         goto v4;
     } else if (
         // mapped ipv4
-        memcmp(&s_address->ipv6_address.address, "\0\0\0\0\0\0\0\0\0\0\xff\xff", 12) == 0
+        memcmp(&s_address->ipv6_address.address, ZEND_STRL("\0\0\0\0\0\0\0\0\0\0\xff\xff")) == 0
     ) {
         beIpv4 = s_address->ipv6_address.address.components[7] + (s_address->ipv6_address.address.components[6] << 16);
         v4:
@@ -503,7 +503,7 @@ static PHP_METHOD(Swow_IpAddress, isLoopback)
         goto v4;
     } else if (
         // mapped ipv4
-        memcmp(&s_address->ipv6_address.address, "\0\0\0\0\0\0\0\0\0\0\xff\xff", 12) == 0
+        memcmp(&s_address->ipv6_address.address, ZEND_STRL("\0\0\0\0\0\0\0\0\0\0\xff\xff")) == 0
     ) {
         beIpv4 = s_address->ipv6_address.address.components[7] + (s_address->ipv6_address.address.components[6] << 16);
         v4:
@@ -515,7 +515,7 @@ static PHP_METHOD(Swow_IpAddress, isLoopback)
         RETURN_FALSE;
     } else {
         if (
-            memcmp(&s_address->ipv6_address.address, "\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 14) == 0 &&
+            memcmp(&s_address->ipv6_address.address, ZEND_STRL("\0\0\0\0\0\0\0\0\0\0\0\0\0\0")) == 0 &&
             s_address->ipv6_address.address.components[7] == 1
         ) {
             RETURN_TRUE;
@@ -582,7 +582,7 @@ static PHP_METHOD(Swow_IpAddress, convertToMappedIpv4)
 
     s_address->ipv6_address.address.components[6] = s_address->ipv6_address.address.components[0];
     s_address->ipv6_address.address.components[7] = s_address->ipv6_address.address.components[1];
-    memcpy(&s_address->ipv6_address.address, "\0\0\0\0\0\0\0\0\0\0\xff\xff", 12);
+    memcpy(&s_address->ipv6_address.address, ZEND_STRL("\0\0\0\0\0\0\0\0\0\0\xff\xff"));
 
     RETURN_THIS();
 }
@@ -606,7 +606,7 @@ static PHP_METHOD(Swow_IpAddress, convertToIpv4)
         RETURN_THIS();
     }
 
-    if (!force && memcmp(&s_address->ipv6_address.address, "\0\0\0\0\0\0\0\0\0\0\xff\xff", 12)) {
+    if (!force && memcmp(&s_address->ipv6_address.address, ZEND_STRL("\0\0\0\0\0\0\0\0\0\0\xff\xff"))) {
         swow_throw_exception(
             swow_ipaddress_exception_ce,
             0, "This is not an IPv6 address with mapped IPv4"
