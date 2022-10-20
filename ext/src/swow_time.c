@@ -183,10 +183,6 @@ static const zend_function_entry swow_time_functions[] = {
 
 zend_result swow_time_module_init(INIT_FUNC_ARGS)
 {
-    SWOW_MODULES_CHECK_PRE_START() {
-        "core"
-    } SWOW_MODULES_CHECK_PRE_END();
-
     if (!swow_hook_internal_functions(swow_time_functions)) {
         return FAILURE;
     }
