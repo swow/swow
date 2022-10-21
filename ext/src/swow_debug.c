@@ -187,7 +187,7 @@ _skip_frame:
         if (!prev) {
             break;
         }
-        if (UNEXPECTED((ZEND_CALL_INFO(call) & ZEND_CALL_TOP_FUNCTION) != 0) && !fake_frame &&
+        if (UNEXPECTED(ZEND_CALL_INFO(call) == ZEND_CALL_TOP_FUNCTION) && !fake_frame &&
             swow_debug_is_user_call(prev) && prev->opline->opcode == ZEND_INCLUDE_OR_EVAL) {
             fake_frame = 1;
         } else {
