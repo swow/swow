@@ -91,7 +91,7 @@ jobs:
       - name: Run library tests
         id: test-library
         continue-on-error: true
-        run: php --ri pcov && composer test-library-coverage
+        run: php --ri pcov && composer test-library-with-pcov
 
       - name: Fail if test-extension failed
         if: steps.test-extension.outcome != 'success'
