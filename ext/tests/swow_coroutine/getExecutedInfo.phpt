@@ -11,7 +11,8 @@ require __DIR__ . '/../include/bootstrap.php';
 use Swow\Coroutine;
 
 spl_autoload_register(static function (string $class): void {
-    Assert::same($class, TestGetExecutedInfo::class);
+    var_dump($class);
+    echo "\n";
 
     class TestGetExecutedInfo
     {
@@ -22,12 +23,13 @@ spl_autoload_register(static function (string $class): void {
 
     echo Coroutine::getCurrent()->getTraceAsString(), "\n\n";
 
-    Assert::same(Coroutine::getCurrent()->getDefinedVars(0)['class'], TestGetExecutedInfo::class);
-    Assert::isEmpty(Coroutine::getCurrent()->getDefinedVars(1));
-    Assert::same(Coroutine::getCurrent()->getDefinedVars(2)['tip'], 'I am C');
-    Assert::same(Coroutine::getCurrent()->getDefinedVars(3)['tip'], 'I am C');
-    Assert::same(Coroutine::getCurrent()->getDefinedVars(4)['tip'], 'I am B');
-    Assert::same(Coroutine::getCurrent()->getDefinedVars(5)['tip'], 'I am A');
+    var_dump(Coroutine::getCurrent()->getDefinedVars(0)['class']);
+    var_dump(Coroutine::getCurrent()->getDefinedVars(1));
+    var_dump(Coroutine::getCurrent()->getDefinedVars(2)['tip']);
+    var_dump(Coroutine::getCurrent()->getDefinedVars(3)['tip']);
+    var_dump(Coroutine::getCurrent()->getDefinedVars(4)['tip']);
+    var_dump(Coroutine::getCurrent()->getDefinedVars(5)['tip']);
+    echo "\n";
 
     $depth = Coroutine::getCurrent()->getTraceDepth();
     for ($n = 0; $n < $depth; $n++) {
@@ -68,6 +70,7 @@ TestGetExecutedInfoFunctions::a();
 echo "Done\n";
 ?>
 --EXPECTF--
+string(19) "TestGetExecutedInfo"
 
 #0 %sgetExecutedInfo.php(%d): Swow\Coroutine->getTraceAsString()
 #1 %sgetExecutedInfo.inc(%d): {closure}('TestGetExecuted...')
@@ -76,6 +79,14 @@ echo "Done\n";
 #4 %sgetExecutedInfo.php(%d): TestGetExecutedInfoFunctions::b()
 #5 %sgetExecutedInfo.php(%d): TestGetExecutedInfoFunctions::a()
 #6 {main}
+
+string(19) "TestGetExecutedInfo"
+array(0) {
+}
+string(6) "I am C"
+string(6) "I am C"
+string(6) "I am B"
+string(6) "I am A"
 
 #0 %sgetExecutedInfo.php(%d): Swow\Coroutine::getExecutedFunctionName()
 #1 %sgetExecutedInfo.inc(%d): {closure}()
