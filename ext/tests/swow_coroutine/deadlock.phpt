@@ -17,6 +17,7 @@ php_proc_with_swow([
         'fwrite(STDERR, "Never here" . PHP_EOL);',
 ], static function ($proc, array $pipes): void {
     $pid = (int) trim(fgets($pipes[1], 4096));
+    Assert::notSame($pid, 0);
     echo trim(fgets($pipes[2], 4096)) . "\n";
     Signal::kill($pid, Signal::TERM);
     while (!feof($pipes[2])) {
