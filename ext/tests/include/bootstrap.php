@@ -149,10 +149,47 @@ function php_options_with_swow(): array
         '-d', 'track_errors=0',
     ];
 
-    if (!str_contains(shell_exec(real_php_path() . ' -m') ?? '', Swow::class)) {
-        $options[] = '-d';
-        $options[] = 'extension=swow';
+    // guessing
+    $try_args = match (PHP_OS_FAMILY) {
+        'Windows' => [
+            // installed, enabled
+            [],
+            // installed
+            ['-d', 'extension=swow'],
+            // made
+            [
+                '-d',
+                'extension_dir=x64\\' .
+                    (PHP_DEBUG ? 'Debug' : 'Release') .
+                    (PHP_ZTS ? '' : '_TS'),
+                '-d',
+                'extension=swow',
+            ],
+        ],
+        default => [
+            // installed, enabled
+            [],
+            // installed
+            ['-d', 'extension=swow'],
+            // made in phpize
+            ['-d', 'extension=.libs/swow' . (PHP_OS_FAMILY === 'Darwin' ? '.dylib' : '.so')],
+            // made in-tree
+            ['-d', 'extension=modules/swow' . (PHP_OS_FAMILY === 'Darwin' ? '.dylib' : '.so')],
+        ]
+    };
+
+    $ext_args = null;
+    foreach ($try_args as $args) {
+        $is_swow_enabled = shell_exec(real_php_path() . ' --ri swow ' . implode(' ', $args) . ' 2>&1');
+        if (!str_contains($is_swow_enabled, 'not present')) {
+            $ext_args = $args;
+        }
     }
+    if ($ext_args === null) {
+        throw new Exception('cannot find installed swow, have you built/installed swow?');
+    }
+
+    $options = [...$options, ...$ext_args];
 
     return $options;
 }

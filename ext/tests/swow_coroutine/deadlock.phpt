@@ -12,7 +12,7 @@ use Swow\Signal;
 
 php_proc_with_swow([
     '-r',
-    'echo getmypid() . PHP_EOL;' .
+    'printf("%d" . PHP_EOL, getmypid());' .
         'Swow\Coroutine::yield();' .
         'fwrite(STDERR, "Never here" . PHP_EOL);',
 ], static function ($proc, array $pipes): void {
