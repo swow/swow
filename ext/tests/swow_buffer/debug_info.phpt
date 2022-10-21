@@ -28,6 +28,15 @@ var_dump($buffer);
 $buffer->append('a interned string that is referenced by this buffer');
 debug_zval_dump($buffer);
 
+ob_start();
+debug_zval_dump($buffer);
+$debugZvalDump = ob_get_clean();
+if (PHP_VERSION_ID >= 80100) {
+    Assert::endsWith(explode("\n", $debugZvalDump)[2], ' interned');
+} else {
+    Assert::endsWith(explode("\n", $debugZvalDump)[2], ' refcount(1)');
+}
+
 $buffer = new Buffer(8192);
 
 Coroutine::run(static function () use ($buffer): void {
