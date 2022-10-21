@@ -453,7 +453,7 @@ trait ReceiverTrait
                                     $neededLength = $contentLength - $dataLength;
                                     $bodyParsedOffset = $dataLength;
                                     if ($neededLength > 0) {
-                                        if ($bodyParsedOffset !== $buffer->getLength()) {
+                                        if ($dataOffset + $dataLength !== $buffer->getLength()) {
                                             throw new ParserException(sprintf(
                                                 'Expected all data has been parsed for body, got %d remaining bytes',
                                                 $buffer->getLength() - $bodyParsedOffset
