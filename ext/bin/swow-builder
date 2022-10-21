@@ -12,9 +12,9 @@
 
 foreach (
     [
-        __DIR__ . '/vendor/autoload.php',
-        __DIR__ . '/../vendor/autoload.php',
-        __DIR__ . '/../../../autoload.php',
+        dirname(__DIR__) . '/vendor/autoload.php',
+        dirname(__DIR__, 2) . '/vendor/autoload.php',
+        dirname(__DIR__, 3) . '/autoload.php',
     ] as $file
 ) {
     if (file_exists($file)) {
@@ -41,7 +41,7 @@ if (PHP_OS_FAMILY === 'Windows') {
     );
 }
 
-$workSpace = realpath(dirname(__DIR__) . '/..');
+$workSpace = dirname(__DIR__);
 
 $swowSo = "{$workSpace}/.libs/swow.so";
 $options = getopt('', ['sudo', 'install', 'rebuild', 'clean', 'show-log', 'debug', 'thread-context', 'msan', 'asan', 'ubsan', 'enable::']);
@@ -59,7 +59,7 @@ $commandExecutor = static function (string $name, array $commands) use ($workSpa
 $cleanCommands = [];
 if (isset($options['rebuild']) || isset($options['clean'])) {
     if (file_exists("{$workSpace}/Makefile")) {
-        $cleanCommands[] = './clean.sh';
+        $cleanCommands[] = "{$workSpace}/deps/libcat/tools/cleaner.sh {$workSpace}";
     }
 }
 if (isset($options['rebuild'])) {

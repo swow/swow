@@ -21,6 +21,6 @@
         "swow/swow-utils": ">=0.2.0"
     },
     "bin": [
-        "scripts/swow-builder"
+        "bin/swow-builder"
     ]
 }
