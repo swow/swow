@@ -41,7 +41,7 @@ if (PHP_OS_FAMILY === 'Windows') {
     );
 }
 
-$workSpace = dirname(__DIR__) . '/ext';
+$workSpace = realpath(dirname(__DIR__) . '/..');
 
 $swowSo = "{$workSpace}/.libs/swow.so";
 $options = getopt('', ['sudo', 'install', 'rebuild', 'clean', 'show-log', 'debug', 'thread-context', 'msan', 'asan', 'ubsan', 'enable::']);
