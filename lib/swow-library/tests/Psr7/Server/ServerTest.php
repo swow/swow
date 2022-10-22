@@ -48,7 +48,7 @@ use function usleep;
 
 /**
  * @internal
- * @coversNothing
+ * @covers \Swow\Psr7\Server\Server
  */
 final class ServerTest extends TestCase
 {

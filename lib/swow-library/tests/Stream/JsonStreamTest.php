@@ -19,21 +19,18 @@ use Swow\Errno;
 use Swow\SocketException;
 use Swow\Stream\JsonStream;
 use Swow\Sync\WaitReference;
+use Swow\TestUtils\Testing;
 
-use function getRandomBytes;
-
-use const TEST_MAX_CONCURRENCY_LOW;
-use const TEST_MAX_REQUESTS_MID;
+use function Swow\TestUtils\getRandomBytes;
 
 /**
  * @internal
- * @coversNothing
+ * @covers \Swow\Stream\JsonStream
  */
 final class JsonStreamTest extends TestCase
 {
     public function testServer(): void
     {
-        $this->markTestIncomplete('Need to fix');
         $wr = new WaitReference();
         $server = new JsonStream();
         Coroutine::run(function () use ($server, $wr): void {
@@ -58,12 +55,12 @@ final class JsonStreamTest extends TestCase
                 $this->assertSame(Errno::ECANCELED, $exception->getCode());
             }
         });
-        for ($c = 0; $c < TEST_MAX_CONCURRENCY_LOW; $c++) {
+        for ($c = 0; $c < Testing::$maxConcurrencyLow; $c++) {
             $wrc = new WaitReference();
             Coroutine::run(function () use ($server, $wrc): void {
                 $client = new JsonStream();
                 $client->connect($server->getSockAddress(), $server->getSockPort());
-                for ($n = 0; $n < TEST_MAX_REQUESTS_MID; $n++) {
+                for ($n = 0; $n < Testing::$maxRequestsMid; $n++) {
                     $random = getRandomBytes();
                     $client->sendJson(['query' => $random]);
                     $response = $client->recvJson();

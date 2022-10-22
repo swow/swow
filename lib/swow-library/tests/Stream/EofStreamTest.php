@@ -20,22 +20,19 @@ use Swow\SocketException;
 use Swow\Stream\EofStream;
 use Swow\Stream\MessageTooLargeException;
 use Swow\Sync\WaitReference;
+use Swow\TestUtils\Testing;
 
-use function getRandomBytes;
-
-use const TEST_MAX_CONCURRENCY_LOW;
-use const TEST_MAX_LENGTH;
-use const TEST_MAX_REQUESTS_MID;
+use function str_repeat;
+use function Swow\TestUtils\getRandomBytes;
 
 /**
  * @internal
- * @coversNothing
+ * @covers \Swow\Stream\EofStream
  */
 final class EofStreamTest extends TestCase
 {
-    public function testServer(): void
+    public function testBase(): void
     {
-        $this->markTestIncomplete('Need to fix');
         foreach (['recvMessageString', 'recvMessageStringFast'] as $recvMethod) {
             $wr = new WaitReference();
             $server = new EofStream();
@@ -49,7 +46,7 @@ final class EofStreamTest extends TestCase
                                 /* @phpstan-ignore-next-line */
                                 while (true) {
                                     $message = $connection->{$recvMethod}();
-                                    $connection->sendMessageString($message);
+                                    $connection->sendMessage($message);
                                 }
                             } catch (SocketException $exception) {
                                 $this->assertContains($exception->getCode(), [0, Errno::ECONNRESET]);
@@ -60,14 +57,14 @@ final class EofStreamTest extends TestCase
                     $this->assertSame(Errno::ECANCELED, $exception->getCode());
                 }
             });
-            for ($c = 0; $c < TEST_MAX_CONCURRENCY_LOW; $c++) {
+            for ($c = 0; $c < Testing::$maxConcurrencyLow; $c++) {
                 $wrc = new WaitReference();
                 Coroutine::run(function () use ($server, $recvMethod, $wrc): void {
                     $client = new EofStream();
                     $client->connect($server->getSockAddress(), $server->getSockPort());
-                    for ($n = 0; $n < TEST_MAX_REQUESTS_MID; $n++) {
+                    for ($n = 0; $n < Testing::$maxRequestsMid; $n++) {
                         $random = getRandomBytes();
-                        $client->sendMessageString($random);
+                        $client->sendMessage($random);
                         $response = $client->{$recvMethod}();
                         $this->assertSame($response, $random);
                     }
@@ -82,38 +79,39 @@ final class EofStreamTest extends TestCase
 
     public function testMaxMessageLength(): void
     {
-        $this->markTestIncomplete('Need to fix');
-        $wr = new WaitReference();
-        $server = new EofStream();
-        Coroutine::run(function () use ($server, $wr): void {
-            $server
-                ->setMaxMessageLength(TEST_MAX_LENGTH / 2)
-                ->bind('127.0.0.1')->listen();
-            try {
-                $connection = $server->accept();
+        foreach (['recvMessageString', 'recvMessageStringFast'] as $recvMethod) {
+            $wr = new WaitReference();
+            $server = new EofStream();
+            Coroutine::run(function () use ($server, $recvMethod, $wr): void {
+                $server
+                    ->setMaxMessageLength(Testing::$maxLength / 2)
+                    ->bind('127.0.0.1')->listen();
                 try {
-                    $message = $connection->recvMessageString();
-                    $connection->sendMessageString($message);
-                } catch (SocketException $exception) {
-                    $this->assertContains($exception->getCode(), [0, Errno::ECONNRESET]);
+                    $connection = $server->accept();
+                    try {
+                        $message = $connection->{$recvMethod}();
+                        $connection->sendMessage($message);
+                    } catch (SocketException $exception) {
+                        $this->assertContains($exception->getCode(), [0, Errno::ECONNRESET]);
+                    }
+                } catch (MessageTooLargeException) {
+                    // ignore
                 }
-            } catch (MessageTooLargeException) {
+            });
+            $client = new EofStream();
+            $client->connect($server->getSockAddress(), $server->getSockPort());
+            $bigMessage = str_repeat('X', Testing::$maxLength);
+            $client->sendMessage($bigMessage);
+            $response = null;
+            try {
+                $response = $client->{$recvMethod}();
+            } catch (SocketException) {
                 // ignore
             }
-        });
-        $client = new EofStream();
-        $client->connect($server->getSockAddress(), $server->getSockPort());
-        $random = getRandomBytes(TEST_MAX_LENGTH);
-        $client->sendMessageString($random);
-        $response = null;
-        try {
-            $response = $client->recvMessageString();
-        } catch (SocketException) {
-            // ignore
+            $this->assertNull($response);
+            $client->close();
+            $server->close();
+            WaitReference::wait($wr);
         }
-        $this->assertNull($response);
-        $client->close();
-        $server->close();
-        WaitReference::wait($wr);
     }
 }

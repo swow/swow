@@ -27,7 +27,7 @@ while (true) {
             while (true) {
                 $message = $connection->recvMessageString();
                 echo "Stream<fd={$connection->getFd()}>: \"{$message}\"" . PHP_EOL;
-                $connection->sendMessageString($message);
+                $connection->sendMessage($message);
             }
         } catch (SocketException $exception) {
             echo "Stream<fd={$connection->getFd()}> goaway, reason: {$exception->getMessage()}" . PHP_EOL;

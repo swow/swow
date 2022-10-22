@@ -14,12 +14,13 @@ declare(strict_types=1);
 namespace Swow\Stream;
 
 use InvalidArgumentException;
+use Stringable;
+use Swow\Buffer;
 use Swow\Socket;
 
+use function is_array;
 use function strlen;
 use function strpos;
-
-use const SEEK_CUR;
 
 class EofStream extends Socket
 {
@@ -35,11 +36,6 @@ class EofStream extends Socket
             throw new InvalidArgumentException('Socket type should be a kind of streams');
         }
         parent::__construct($type);
-        $this->__selfConstruct($eof);
-    }
-
-    protected function __selfConstruct(string $eof = "\r\n"): void
-    {
         $this->eof = $eof;
         $this->internalBuffer = new Buffer(Buffer::COMMON_SIZE);
     }
@@ -49,47 +45,45 @@ class EofStream extends Socket
         return $this->eof;
     }
 
+    public function setEof(string $eof): static
+    {
+        $this->eof = $eof;
+        return $this;
+    }
+
     public function accept(?int $timeout = null): static
     {
         $connection = parent::accept($timeout);
-        $connection->__selfConstruct($this->eof);
+        $connection->eof = $this->eof;
         $connection->maxMessageLength = $this->maxMessageLength;
+        $connection->internalBuffer = new Buffer(Buffer::COMMON_SIZE);
 
         return $connection;
     }
 
-    public function acceptTo(Socket $connection, ?int $timeout = null): static
-    {
-        $ret = parent::acceptTo($connection, $timeout);
-        if ($connection instanceof self) {
-            $connection->eof = $this->eof;
-            $connection->maxMessageLength = $this->maxMessageLength;
-        }
-
-        return $ret;
-    }
-
     /**
+     * @param ?int $offset default value is $buffer->getLength()
      * @return int message length
      */
-    public function recvMessage(Buffer $buffer, ?int $timeout = null)
+    public function recvMessage(Buffer $buffer, ?int $offset = null, ?int $timeout = null)
     {
-        $bufferPreviousOffset = $buffer->tell();
+        $offset ??= $buffer->getLength();
         $internalBuffer = $this->internalBuffer;
         $eof = $this->eof;
         $eofOffset = 0;
         $maxMessageLength = $this->maxMessageLength;
-        $length = 0;
+        $nWrite = 0;
         $expectMore = $internalBuffer->isEmpty();
         while (true) {
             if ($expectMore) {
                 try {
                     $buffer->lock();
-                    $nread = $this->recvData($internalBuffer, -1, $timeout);
+                    $this->recvData($internalBuffer, $internalBuffer->getLength(), -1, $timeout);
                 } finally {
                     $buffer->unlock();
                 }
-                $internalBuffer->seek($nread, SEEK_CUR);
+            } else {
+                $expectMore = true;
             }
             $pos = strpos($internalBuffer->toString(), $eof, $eofOffset);
             if ($pos !== false) {
@@ -101,10 +95,9 @@ class EofStream extends Socket
             }
             if ($internalBuffer->isFull()) {
                 if ($eofOffset > 0) {
-                    $buffer->write($internalBuffer, 0, $eofOffset);
-                    $length += $eofOffset;
-                    if ($length > $maxMessageLength) {
-                        throw new MessageTooLargeException($length, $maxMessageLength);
+                    $nWrite += $buffer->write($offset + $nWrite, $internalBuffer, length: $eofOffset);
+                    if ($nWrite > $maxMessageLength) {
+                        throw new MessageTooLargeException($nWrite, $maxMessageLength);
                     }
                     $internalBuffer->truncateFrom($eofOffset);
                     $eofOffset = 0;
@@ -112,19 +105,15 @@ class EofStream extends Socket
                     $internalBuffer->extend();
                 }
             }
-            $expectMore = true;
         }
-        $length += $pos;
-        if ($length > $maxMessageLength) {
-            throw new MessageTooLargeException($length, $maxMessageLength);
+        if ($nWrite + $pos > $maxMessageLength) {
+            throw new MessageTooLargeException($nWrite, $maxMessageLength);
         }
-        $buffer
-            ->write($internalBuffer, 0, $pos)
-            ->seek($bufferPreviousOffset);
+        $nWrite += $buffer->write($offset + $nWrite, $internalBuffer, length: $pos);
         /* next packet data maybe received */
         $internalBuffer->truncateFrom($pos + strlen($eof));
 
-        return $length;
+        return $nWrite;
     }
 
     public function recvMessageString(?int $timeout = null): string
@@ -138,25 +127,30 @@ class EofStream extends Socket
     /**
      * It's faster, but it may consume more memory when message is small.
      * Use it when expect a big package.
+     * @param ?int $offset default value is $buffer->getLength()
      * @return int message length
      */
-    public function recvMessageFast(Buffer $buffer, ?int $timeout = null): int
+    public function recvMessageFast(Buffer $buffer, ?int $offset = null, ?int $timeout = null): int
     {
-        $bufferPreviousOffset = $buffer->tell();
+        $offset ??= $buffer->getLength();
         $internalBuffer = $this->internalBuffer;
         $eof = $this->eof;
-        $eofOffset = 0;
+        $eofOffset = $offset;
         $maxMessageLength = $this->maxMessageLength;
         while (true) {
             if ($internalBuffer->isEmpty()) {
-                $nread = $this->recvData($buffer, -1, $timeout);
-                $buffer->seek($nread, SEEK_CUR);
+                $this->recvData($buffer, timeout: $timeout);
             } else {
-                $buffer->write($internalBuffer);
+                $buffer->write($offset, $internalBuffer);
                 $internalBuffer->clear();
             }
             $pos = strpos($buffer->toString(), $eof, $eofOffset);
             if ($pos !== false) {
+                $length = $pos - $offset;
+                if ($length > $maxMessageLength) {
+                    throw new MessageTooLargeException($eofOffset, $maxMessageLength);
+                }
+                $internalBuffer->append($buffer, $pos + strlen($eof));
                 $buffer->truncate($pos);
                 break;
             }
@@ -171,9 +165,6 @@ class EofStream extends Socket
                 $buffer->extend();
             }
         }
-        $length = $buffer->tell() - $bufferPreviousOffset;
-        $buffer->seek($bufferPreviousOffset);
-
         return $length;
     }
 
@@ -185,16 +176,35 @@ class EofStream extends Socket
         return $buffer->toString();
     }
 
-    public function sendMessageString(string $message, ?int $timeout = null): static
+    public function sendMessage(string|Stringable $message, int $start = 0, int $length = -1, ?int $timeout = null): static
     {
-        return $this->write([$message, $this->eof], $timeout);
+        return $this->write([[$message, $start, $length], $this->eof], $timeout);
     }
 
-    /** @param array<mixed> $messages */
-    public function writeMessages(array $messages, ?int $timeout = null): static
+    /** @param non-empty-array<string|Stringable|Buffer|array{0: string|Stringable|Buffer, 1?: int, 2?: int}|null> $chunks */
+    public function sendMessageChunks(array $chunks, ?int $timeout = null): static
     {
-        $messages[] = $this->eof;
+        $chunks[] = $this->eof;
 
-        return $this->write($messages, $timeout);
+        return $this->write($chunks, $timeout);
+    }
+
+    /** @param non-empty-array<string|Stringable|Buffer|array{0: string|Stringable|Buffer, 1?: int, 2?: int}|array<non-empty-array<string|Stringable|Buffer|array{0: string|Stringable|Buffer, 1?: int, 2?: int}|null>>|null> $messages */
+    public function sendMessages(array $messages, ?int $timeout = null): static
+    {
+        $eof = $this->eof;
+        $_messages = [];
+        foreach ($messages as $message) {
+            if (is_array($message)) {
+                foreach ($message as $chunk) {
+                    $_messages[] = $chunk;
+                }
+            } else {
+                $_messages[] = $message;
+            }
+            $_messages[] = $eof;
+        }
+        /** @var non-empty-array<string|Stringable|Buffer|array{0: string|Stringable|Buffer, 1?: int, 2?: int}|null> $_messages */
+        return $this->write($_messages, $timeout);
     }
 }
