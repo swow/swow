@@ -26,11 +26,9 @@ $buffer = new MyBuffer(0);
 var_dump($buffer);
 // shared buffer
 $buffer->append('a interned string that is referenced by this buffer');
-debug_zval_dump($buffer);
-
 ob_start();
 debug_zval_dump($buffer);
-$debugZvalDump = ob_get_clean();
+$debugZvalDump = ob_get_flush();
 if (PHP_VERSION_ID >= 80100) {
     Assert::endsWith(explode("\n", $debugZvalDump)[2], ' interned');
 } else {
@@ -72,7 +70,7 @@ object(MyBuffer)#%d (%d) {
 }
 object(MyBuffer)#%d (%d) refcount(%d){
   ["value"]=>
-  string(51) "a interned string that is referenced by this buffer" interned
+  string(51) "a interned string that is referenced by this buffer" %s
   ["size"]=>
   int(51)
   ["length"]=>
