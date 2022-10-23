@@ -17,7 +17,7 @@ use WeakMap;
 
 trait ServerConnectionManagerTrait
 {
-    /** @var WeakMap<ServerConnection> */
+    /** @var WeakMap<ServerConnection, bool> */
     protected WeakMap $connections;
 
     protected function __constructServerConnectionManager(): void
@@ -25,14 +25,14 @@ trait ServerConnectionManagerTrait
         $this->connections = new WeakMap();
     }
 
-    public function getConnections(): WeakMap
+    public function getConnections(): ServerConnections
     {
-        return $this->connections;
+        return new ServerConnections($this->connections->getIterator());
     }
 
     protected function online(ServerConnection $connection): void
     {
-        $this->connections[$connection] = $connection;
+        $this->connections[$connection] = $connection->getId();
     }
 
     public function offline(ServerConnection $connection): void
@@ -42,9 +42,10 @@ trait ServerConnectionManagerTrait
 
     public function closeConnections(): void
     {
-        foreach ($this->connections as $connection) {
+        $connections = $this->getConnections();
+        $this->connections = new WeakMap();
+        foreach ($connections as $connection) {
             $connection->close();
         }
-        $this->connections = new WeakMap();
     }
 }
