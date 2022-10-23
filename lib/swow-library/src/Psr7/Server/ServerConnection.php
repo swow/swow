@@ -96,12 +96,12 @@ class ServerConnection extends Socket implements ProtocolTypeInterface
 
     public function getMaxHeaderLength(): int
     {
-        return $this->server->getMaxHeaderLength();
+        return $this->getServer()->getMaxHeaderLength();
     }
 
     public function getMaxContentLength(): int
     {
-        return $this->server->getMaxContentLength();
+        return $this->getServer()->getMaxContentLength();
     }
 
     public function recvServerRequestEntity(): ServerRequestEntity
@@ -116,10 +116,10 @@ class ServerConnection extends Socket implements ProtocolTypeInterface
     {
         return Psr7::createServerRequestFromEntity(
             $this->recvServerRequestEntity(),
-            $this->server->getServerRequestFactory(),
-            $this->server->getUriFactory(),
-            $this->server->getStreamFactory(),
-            $this->server->getUploadedFileFactory()
+            $this->getServer()->getServerRequestFactory(),
+            $this->getServer()->getUriFactory(),
+            $this->getServer()->getStreamFactory(),
+            $this->getServer()->getUploadedFileFactory()
         );
     }
 
@@ -229,9 +229,10 @@ class ServerConnection extends Socket implements ProtocolTypeInterface
 
     protected function offline(): void
     {
-        if ($this->server) {
-            $this->server->offline($this);
+        $server = $this->server;
+        if ($server) {
             $this->server = null;
+            $server->offline($this);
         }
     }
 
