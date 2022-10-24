@@ -13,6 +13,7 @@ declare(strict_types=1);
 
 namespace Swow\Psr7\Server;
 
+use Closure;
 use WeakMap;
 
 trait ServerConnectionManagerTrait
@@ -25,9 +26,29 @@ trait ServerConnectionManagerTrait
         $this->connections = new WeakMap();
     }
 
-    public function getConnections(): ServerConnections
+    public function getConnections(): ServerConnectionIteratorInterface
     {
-        return new ServerConnections($this->connections->getIterator());
+        return new ServerConnectionIterator($this->connections->getIterator());
+    }
+
+    /** @param Closure(ServerConnection): bool $filter */
+    public function getFilteredConnections(Closure $filter)
+    {
+        return new FilteredServerConnectionIterator($this->connections->getIterator(), $filter);
+    }
+
+    public function getHttpConnections(): ServerConnectionIteratorInterface
+    {
+        return $this->getFilteredConnections(static function (ServerConnection $connection) {
+            return $connection->getProtocolType() === $connection::PROTOCOL_TYPE_HTTP;
+        });
+    }
+
+    public function getWebSocketConnections(): ServerConnectionIteratorInterface
+    {
+        return $this->getFilteredConnections(static function (ServerConnection $connection) {
+            return $connection->getProtocolType() === $connection::PROTOCOL_TYPE_WEBSOCKET;
+        });
     }
 
     protected function online(ServerConnection $connection): void

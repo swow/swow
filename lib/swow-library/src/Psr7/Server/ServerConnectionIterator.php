@@ -15,7 +15,7 @@ namespace Swow\Psr7\Server;
 
 use Iterator;
 
-class ServerConnections implements Iterator
+final class ServerConnectionIterator implements ServerConnectionIteratorInterface
 {
     /**
      * @param Iterator<ServerConnection, int> $iterator
