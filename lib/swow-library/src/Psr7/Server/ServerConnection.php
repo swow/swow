@@ -91,7 +91,7 @@ class ServerConnection extends Socket implements ProtocolTypeInterface
      */
     public function getServer(): Server
     {
-        return $this->server ?? throw new SocketException('Connection is shut down', Errno::EBADF);
+        return $this->server ?? throw new SocketException('Connection has been closed', Errno::EBADF);
     }
 
     public function getMaxHeaderLength(): int
@@ -114,12 +114,13 @@ class ServerConnection extends Socket implements ProtocolTypeInterface
      */
     public function recvHttpRequest(): ServerRequestInterface
     {
+        $server = $this->getServer();
         return Psr7::createServerRequestFromEntity(
             $this->recvServerRequestEntity(),
-            $this->getServer()->getServerRequestFactory(),
-            $this->getServer()->getUriFactory(),
-            $this->getServer()->getStreamFactory(),
-            $this->getServer()->getUploadedFileFactory()
+            $server->getServerRequestFactory(),
+            $server->getUriFactory(),
+            $server->getStreamFactory(),
+            $server->getUploadedFileFactory()
         );
     }
 
@@ -241,10 +242,5 @@ class ServerConnection extends Socket implements ProtocolTypeInterface
         $this->offline();
 
         return parent::close();
-    }
-
-    public function __destruct()
-    {
-        $this->offline();
     }
 }
