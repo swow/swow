@@ -1195,6 +1195,10 @@ namespace Swow
 
         public function __construct(int $type) { }
 
+        /**
+         * @FIXME may cause error on 32-bit env
+         * @return int 64-bit auto-incrementing ID, never repeat in the same process
+         */
         public function getId(): int { }
 
         public function getType(): int { }
@@ -1205,6 +1209,7 @@ namespace Swow
 
         public function getSimpleTypeName(): string { }
 
+        /** @return int real file descriptor number */
         public function getFd(): int { }
 
         public function getDnsTimeout(): int { }
