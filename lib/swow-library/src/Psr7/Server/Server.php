@@ -63,11 +63,6 @@ class Server extends Socket
         return $ret;
     }
 
-    public function __destruct()
-    {
-        $this->closeConnections();
-    }
-
     protected const BROADCAST_FLAG_NONE = 0;
     protected const BROADCAST_FLAG_RECORD_EXCEPTIONS = 1 << 0;
 
