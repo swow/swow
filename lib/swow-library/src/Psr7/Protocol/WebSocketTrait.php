@@ -14,10 +14,11 @@ declare(strict_types=1);
 namespace Swow\Psr7\Protocol;
 
 use Swow\Psr7\Message\WebSocketFrame;
+use Swow\Psr7\Message\WebSocketFrameInterface;
 
 trait WebSocketTrait
 {
-    public function sendWebSocketFrame(WebSocketFrame $frame): static
+    public function sendWebSocketFrame(WebSocketFrameInterface $frame): static
     {
         return $this->write([
             $frame->toString(true),
@@ -25,7 +26,7 @@ trait WebSocketTrait
         ]);
     }
 
-    public function recvWebSocketFrame(): WebSocketFrame
+    public function recvWebSocketFrame(): WebSocketFrameInterface
     {
         $frameEntity = $this->recvWebSocketFrameEntity();
         $frame = new WebSocketFrame();

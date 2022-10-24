@@ -16,7 +16,7 @@ namespace Swow\Psr7\Server;
 use Closure;
 use Swow\Psr7\Config\LimitationTrait;
 use Swow\Psr7\Message\ServerPsr17FactoryTrait;
-use Swow\Psr7\Message\WebSocketFrame;
+use Swow\Psr7\Message\WebSocketFrameInterface;
 use Swow\Socket;
 use Swow\SocketException;
 
@@ -78,7 +78,7 @@ class Server extends Socket
      * @psalm-todo: this is not correct: flags can be bitwise combined things
      * @psalm-return $flags is self::BROADCAST_FLAG_RECORD_EXCEPTIONS ? array<SocketException> : static
      */
-    public function broadcastMessage(WebSocketFrame $frame, ?array $targets = null, array|callable $filter = [], int $flags = self::BROADCAST_FLAG_NONE): static|array
+    public function broadcastMessage(WebSocketFrameInterface $frame, ?array $targets = null, array|callable $filter = [], int $flags = self::BROADCAST_FLAG_NONE): static|array
     {
         if ($targets === null) {
             $targets = $this->connections;
