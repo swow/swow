@@ -21,7 +21,6 @@ use Swow\Socket;
 use Swow\SocketException;
 
 use function is_array;
-use function is_callable;
 
 class Server extends Socket
 {
@@ -68,29 +67,21 @@ class Server extends Socket
 
     /**
      * @param ServerConnection[] $targets
-     * @param array<int, ServerConnection>|callable $filter
+     * @param array<int, ServerConnection>|Closure(ServerConnection): bool $filter
      * @return SocketException[]|static
      * @psalm-todo: this is not correct: flags can be bitwise combined things
-     * @psalm-return $flags is self::BROADCAST_FLAG_RECORD_EXCEPTIONS ? array<SocketException> : static
+     * @psalm-return $flags is self::BROADCAST_FLAG_RECORD_EXCEPTIONS ? array<int, SocketException> : static
      */
-    public function broadcastMessage(WebSocketFrameInterface $frame, ?array $targets = null, array|callable $filter = [], int $flags = self::BROADCAST_FLAG_NONE): static|array
+    public function broadcastWebSocketFrame(WebSocketFrameInterface $frame, ?array $targets = null, array|Closure $filter = [], int $flags = self::BROADCAST_FLAG_NONE): static|array
     {
-        if ($targets === null) {
-            $targets = $this->connections;
-        }
-        if (is_callable($filter)) {
-            $filter = Closure::fromCallable($filter);
-        }
+        $targets ??= $this->getWebSocketConnections();
         $exceptions = [];
         foreach ($targets as $target) {
-            if ($target->getProtocolType() !== $target::PROTOCOL_TYPE_WEBSOCKET) {
-                continue;
-            }
             if (is_array($filter)) {
                 if (isset($filter[$target->getId()])) {
                     continue;
                 }
-            } else { /* if (is_callable($filter)) */
+            } else { /* if ($filter instanceof Closure) */
                 if (!$filter($target)) {
                     continue;
                 }

@@ -25,6 +25,7 @@ use Swow\Http\Mime\MimeType;
 use Swow\Http\Protocol\ReceiverTrait;
 use Swow\Http\Status;
 use Swow\Psr7\Client\Client;
+use Swow\Psr7\Message\UpgradeType;
 use Swow\Psr7\Message\WebSocketFrame;
 use Swow\Psr7\Psr7;
 use Swow\Psr7\Server\Server;
@@ -37,6 +38,7 @@ use Swow\WebSocket\WebSocket;
 use function file_exists;
 use function http_build_query;
 use function json_encode;
+use function mt_rand;
 use function putenv;
 use function serialize;
 use function sprintf;
@@ -117,7 +119,7 @@ final class ServerTest extends TestCase
         /* HTTP */
         $client = new Client();
         $request = Psr7::createRequest(
-            method: 'GET',
+            method: 'POST',
             uri: '/echo',
             body: Psr7::createStream('Hello Swow')
         );
@@ -257,6 +259,54 @@ final class ServerTest extends TestCase
             ]));
         $this->assertSame(Status::REQUEST_HEADER_FIELDS_TOO_LARGE, $channel->pop());
 
+        $wr::wait($wr);
+    }
+
+    public function testBroadcastWebSocketFrame(): void
+    {
+        $server = new Server();
+        $server->bind('127.0.0.1')->listen();
+        $random = getRandomBytes();
+        $wr = new WaitReference();
+        for ($c = 0; $c < Testing::$maxConcurrencyMid; $c++) {
+            Coroutine::run(function () use ($server, $random, $wr): void {
+                $client = new Client();
+                $client->connect($server->getSockAddress(), $server->getSockPort());
+                if (mt_rand(0, 1)) {
+                    $request = Psr7::createRequest(method: 'GET', uri: '/chat');
+                    $response = $client->upgradeToWebSocket($request);
+                    $this->assertSame(Status::SWITCHING_PROTOCOLS, $response->getStatusCode());
+                    for ($n = 0; $n < 2; $n++) {
+                        $frame = $client->recvWebSocketFrame();
+                        $this->assertSame($random, (string) $frame->getPayloadData());
+                    }
+                } else {
+                    $request = Psr7::createRequest(
+                        method: 'POST',
+                        uri: '/',
+                        body: Psr7::createStream($random)
+                    );
+                    $response = $client->sendRequest($request);
+                    $this->assertSame($random, (string) $response->getBody());
+                }
+            });
+        }
+        $wrUpgrade = new WaitReference();
+        $connections = [];
+        for ($c = 0; $c < Testing::$maxConcurrencyMid; $c++) {
+            $connections[] = $connection = $server->acceptConnection();
+            Coroutine::run(static function () use ($connection): void {
+                $request = $connection->recvHttpRequest();
+                if (Psr7::detectUpgradeType($request) === UpgradeType::UPGRADE_TYPE_WEBSOCKET) {
+                    $connection->upgradeToWebSocket($request);
+                } else {
+                    $connection->respond($request->getBody());
+                }
+            });
+        }
+        $wrUpgrade::wait($wrUpgrade);
+        $server->broadcastWebSocketFrame(frame: Psr7::createWebSocketTextFrame($random));
+        $server->broadcastWebSocketFrame(frame: Psr7::createWebSocketTextFrame($random), targets: $connections);
         $wr::wait($wr);
     }
 }
