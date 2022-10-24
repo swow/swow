@@ -30,7 +30,7 @@ require __DIR__ . '/../autoload.php';
 ini_set('memory_limit', '1G');
 
 $host = getenv('SERVER_HOST') ?: '127.0.0.1';
-$port = (int) (getenv('SERVER_PORT') ?: 9764);
+$port = (int) ((($port = getenv('SERVER_PORT')) !== '' && $port !== false) ? $port : 9764);
 $backlog = (int) (getenv('SERVER_BACKLOG') ?: Socket::DEFAULT_BACKLOG);
 
 $server = new Server();

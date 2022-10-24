@@ -37,6 +37,7 @@ use Swow\WebSocket\WebSocket;
 use function file_exists;
 use function http_build_query;
 use function json_encode;
+use function putenv;
 use function serialize;
 use function sprintf;
 use function str_repeat;
@@ -89,6 +90,7 @@ final class ServerTest extends TestCase
 
     public function getMixedServer(): Server
     {
+        putenv('SERVER_PORT=0');
         $mixedServerFile = __DIR__ . '/../../../../../examples/http_server/mixed.php';
         if (!file_exists($mixedServerFile)) {
             $this->markTestSkipped('unable to find mixed server example file');
