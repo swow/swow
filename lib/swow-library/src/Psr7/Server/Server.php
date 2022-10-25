@@ -14,13 +14,12 @@ declare(strict_types=1);
 namespace Swow\Psr7\Server;
 
 use Closure;
+use Exception;
 use Swow\Psr7\Config\LimitationTrait;
 use Swow\Psr7\Message\ServerPsr17FactoryTrait;
 use Swow\Psr7\Message\WebSocketFrameInterface;
 use Swow\Socket;
-use Swow\SocketException;
-
-use function is_array;
+use WeakMap;
 
 class Server extends Socket
 {
@@ -66,36 +65,35 @@ class Server extends Socket
     protected const BROADCAST_FLAG_RECORD_EXCEPTIONS = 1 << 0;
 
     /**
-     * @param ServerConnection[] $targets
-     * @param array<int, ServerConnection>|Closure(ServerConnection): bool $filter
-     * @return SocketException[]|static
-     * @psalm-todo: this is not correct: flags can be bitwise combined things
-     * @psalm-return $flags is self::BROADCAST_FLAG_RECORD_EXCEPTIONS ? array<int, SocketException> : static
+     * @param iterable<ServerConnection> $targets
+     * @param ?Closure(ServerConnection): bool $filter
      */
-    public function broadcastWebSocketFrame(WebSocketFrameInterface $frame, ?array $targets = null, array|Closure $filter = [], int $flags = self::BROADCAST_FLAG_NONE): static|array
+    public function broadcastWebSocketFrame(WebSocketFrameInterface $frame, ?iterable $targets = null, ?Closure $filter = null, int $flags = self::BROADCAST_FLAG_NONE): BroadcastResult
     {
-        $targets ??= $this->getWebSocketConnections();
-        $exceptions = [];
+        $targets ??= $this->getConnections();
+        $count = $failureCount = 0;
+        $exceptions = null;
         foreach ($targets as $target) {
-            if (is_array($filter)) {
-                if (isset($filter[$target->getId()])) {
-                    continue;
-                }
-            } else { /* if ($filter instanceof Closure) */
-                if (!$filter($target)) {
-                    continue;
-                }
+            if ($target->getProtocolType() !== $target::PROTOCOL_TYPE_WEBSOCKET) {
+                continue;
             }
+            if ($filter && !$filter($target)) {
+                continue;
+            }
+            $count++;
             try {
                 $target->sendWebSocketFrame($frame);
-            } catch (SocketException $exception) {
+            } catch (Exception $exception) {
                 if ($flags & static::BROADCAST_FLAG_RECORD_EXCEPTIONS) {
                     /* record it and ignore */
-                    $exceptions[$target->getId()] = $exception;
+                    /** @var ?WeakMap<ServerConnection, Exception> $exceptions */
+                    $exceptions ??= new WeakMap();
+                    $exceptions[$target] = $exception;
                 }
+                $failureCount++;
             }
         }
 
-        return $flags & static::BROADCAST_FLAG_RECORD_EXCEPTIONS ? $exceptions : $this;
+        return new BroadcastResult($count, $failureCount, $exceptions);
     }
 }

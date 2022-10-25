@@ -267,14 +267,16 @@ final class ServerTest extends TestCase
         $server = new Server();
         $server->bind('127.0.0.1')->listen();
         $random = getRandomBytes();
+        $upgradedWebSocketCount = 0;
         $wr = new WaitReference();
         for ($c = 0; $c < Testing::$maxConcurrencyMid; $c++) {
-            Coroutine::run(function () use ($server, $random, $wr): void {
+            Coroutine::run(function () use ($server, $random, &$upgradedWebSocketCount, $wr): void {
                 $client = new Client();
                 $client->connect($server->getSockAddress(), $server->getSockPort());
                 if (pseudoRandom() % 2) {
-                    $request = Psr7::createRequest(method: 'GET', uri: '/chat');
+                    $request = Psr7::createRequest(method: 'GET', uri: '/');
                     $response = $client->upgradeToWebSocket($request);
+                    $upgradedWebSocketCount++;
                     $this->assertSame(Status::SWITCHING_PROTOCOLS, $response->getStatusCode());
                     for ($n = 0; $n < 2; $n++) {
                         $frame = $client->recvWebSocketFrame();
@@ -293,20 +295,31 @@ final class ServerTest extends TestCase
         }
         $wrUpgrade = new WaitReference();
         $connections = [];
+        $acceptedWebSocketCount = 0;
         for ($c = 0; $c < Testing::$maxConcurrencyMid; $c++) {
             $connections[] = $connection = $server->acceptConnection();
-            Coroutine::run(static function () use ($connection, $wrUpgrade): void {
+            Coroutine::run(static function () use ($connection, &$acceptedWebSocketCount, $wrUpgrade): void {
                 $request = $connection->recvHttpRequest();
                 if (Psr7::detectUpgradeType($request) === UpgradeType::UPGRADE_TYPE_WEBSOCKET) {
                     $connection->upgradeToWebSocket($request);
+                    $acceptedWebSocketCount++;
                 } else {
                     $connection->respond($request->getBody());
                 }
             });
         }
         $wrUpgrade::wait($wrUpgrade);
-        $server->broadcastWebSocketFrame(frame: Psr7::createWebSocketTextFrame($random));
-        $server->broadcastWebSocketFrame(frame: Psr7::createWebSocketTextFrame($random), targets: $connections);
+        $result1 = $server->broadcastWebSocketFrame(frame: Psr7::createWebSocketTextFrame($random));
+        $result2 = $server->broadcastWebSocketFrame(frame: Psr7::createWebSocketTextFrame($random), targets: $connections);
         $wr::wait($wr);
+        $this->assertSame($acceptedWebSocketCount, $upgradedWebSocketCount);
+        $this->assertSame($acceptedWebSocketCount, $result1->getCount());
+        $this->assertSame($acceptedWebSocketCount, $result1->getSuccessCount());
+        $this->assertSame(0, $result1->getFailureCount());
+        $this->assertNull($result1->getExceptions());
+        $this->assertSame($acceptedWebSocketCount, $result2->getCount());
+        $this->assertSame($acceptedWebSocketCount, $result2->getSuccessCount());
+        $this->assertSame(0, $result2->getFailureCount());
+        $this->assertNull($result2->getExceptions());
     }
 }
