@@ -19,6 +19,14 @@ namespace Swow\TestUtils {
     use function str_replace;
     use function substr;
 
+    function pseudoRandom(): int
+    {
+        static $seed = 42;
+        // simple LCG with fixed seed
+        $seed = (75 * $seed + 74) % 65537;
+        return $seed;
+    }
+
     function getRandomBytes(int $length = 64): string
     {
         if (\function_exists('openssl_random_pseudo_bytes')) {

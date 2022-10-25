@@ -38,7 +38,6 @@ use Swow\WebSocket\WebSocket;
 use function file_exists;
 use function http_build_query;
 use function json_encode;
-use function mt_rand;
 use function putenv;
 use function serialize;
 use function sprintf;
@@ -46,6 +45,7 @@ use function str_repeat;
 use function strlen;
 use function Swow\defer;
 use function Swow\TestUtils\getRandomBytes;
+use function Swow\TestUtils\pseudoRandom;
 use function unserialize;
 use function usleep;
 
@@ -272,7 +272,7 @@ final class ServerTest extends TestCase
             Coroutine::run(function () use ($server, $random, $wr): void {
                 $client = new Client();
                 $client->connect($server->getSockAddress(), $server->getSockPort());
-                if (mt_rand(0, 1)) {
+                if (pseudoRandom() % 2) {
                     $request = Psr7::createRequest(method: 'GET', uri: '/chat');
                     $response = $client->upgradeToWebSocket($request);
                     $this->assertSame(Status::SWITCHING_PROTOCOLS, $response->getStatusCode());
