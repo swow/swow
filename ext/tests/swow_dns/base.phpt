@@ -13,9 +13,12 @@ require __DIR__ . '/../include/bootstrap.php';
 Assert::notSame(gethostbyname('www.apple.com'), 'www.apple.com');
 // ipv4 only
 Assert::notSame(gethostbyname2('4.donot.help', AF_UNSPEC), '4.donot.help');
-Assert::throws(static function (): void {
-    gethostbyname2('4.donot.help', AF_INET6);
-}, RuntimeException::class);
+if (PHP_OS_FAMILY !== 'Darwin') {
+    // macos specified bug: you may get a mapped v4 for A-record-only domain
+    Assert::throws(static function (): void {
+        gethostbyname2('4.donot.help', AF_INET6);
+    }, RuntimeException::class);
+}
 Assert::notSame(gethostbyname2('4.donot.help', AF_INET), '4.donot.help');
 // dual stack
 Assert::notSame(gethostbyname2('dualstack.donot.help', AF_UNSPEC), 'dualstack.donot.help');
