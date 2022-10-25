@@ -18,11 +18,12 @@ use WeakMap;
 
 class BroadcastResult
 {
-    /**
-     * @param ?WeakMap<ServerConnection, Exception> $exceptions
-     */
-    public function __construct(protected int $count, protected int $failureCount, protected ?WeakMap $exceptions = null)
-    {
+    public function __construct(
+        protected int $count,
+        protected int $failureCount,
+        /** @var ?WeakMap<ServerConnection, Exception> $exceptions */
+        protected ?WeakMap $exceptions = null
+    ) {
     }
 
     public function getCount(): int
