@@ -48,5 +48,5 @@ if(!$ret){
     }
 }
 
-Write-Host ("::set-output name=upload_url::" + $ret."upload_url")
-Write-Host ("::set-output name=id::" + $ret."id")
+Write-Output ("upload_url=" + $ret."upload_url") | Out-File "${env:GITHUB_OUTPUT}" -Append
+Write-Output ("id=" + $ret."id") | Out-File "${env:GITHUB_OUTPUT}" -Append

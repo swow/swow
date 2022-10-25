@@ -57,7 +57,7 @@ if($info.$PhpVer.$phpvar){
     $latest = $info.$PhpVer.$phpvar."zip"
     # if we are in github workflows, set ver as output
     if(${env:CI} -Eq "true"){
-        Write-Host ('::set-output name=phpver::' + $info.$PhpVer."version")
+        Write-Output ("phpver=" + $info.$PhpVer."version") | Out-File "${env:GITHUB_OUTPUT}" -Append
     }
     if($DryRun){
         return
@@ -108,7 +108,7 @@ if($info.$PhpVer.$phpvar){
     }
     # if we are in github workflows, set ver as output
     if(${env:CI} -Eq "true"){
-        Write-Host "::set-output name=phpver::$ver"
+        Write-Output "phpver=$ver" | Out-File "${env:GITHUB_OUTPUT}" -Append
     }
     if($DryRun){
         return

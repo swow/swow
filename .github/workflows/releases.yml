@@ -38,7 +38,7 @@ jobs:
         shell: powershell
         run: |
           $ref = git rev-parse HEAD
-          Write-Host "::set-output name=ref::$ref"
+          Write-Output "ref=$ref" | Out-File "${env:GITHUB_OUTPUT}" -Append
       - name: Prepare caches
         id: cacheprepare
         env:
@@ -63,7 +63,7 @@ jobs:
               warn "Cannot fetch php-sdk-binary-tools info from api.github.com"
             } else {
               $ver = $info."object"."sha"
-              Write-Host "::set-output name=phpsdkver::$ver"
+              Write-Output "phpsdkver=$ver" | Out-File "${env:GITHUB_OUTPUT}" -Append
             }
           }
           info "Using $PhpVCVer"

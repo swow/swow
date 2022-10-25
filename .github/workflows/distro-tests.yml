@@ -75,7 +75,10 @@ jobs:
           then
             echo ::warning::PHP version ${{ matrix.php-version }} is not found in releases, it may not be released.
           else
-            echo "::set-output name=phpfn::"$(echo "${infojson}" | jq -r '.source[] | select( .filename | endswith("tar.xz")) | .filename')
+            echo phpfn="$(
+              echo "${infojson}" |
+                jq -r '.source[] |select( .filename | endswith("tar.xz")) | .filename'
+            )" >> $GITHUB_OUTPUT
           fi
       - name: Cache PHP codes
         if: steps.cacheprepare.outputs.phpfn

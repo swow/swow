@@ -91,7 +91,7 @@ runs:
         } else {
           $PhpVCVer = "vc15"
         }
-        Write-Host "::set-output name=vcver::$PhpVCVer"
+        Write-Output "vcver=$PhpVCVer" | Out-File "${env:GITHUB_OUTPUT}" -Append
         Write-Host "::group::Fetching deps from windows.php.net"
         ${{github.action_path}}/deps.ps1 `
           ${{ inputs.deps }} `
