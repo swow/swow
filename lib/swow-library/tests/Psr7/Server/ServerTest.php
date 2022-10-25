@@ -295,7 +295,7 @@ final class ServerTest extends TestCase
         $connections = [];
         for ($c = 0; $c < Testing::$maxConcurrencyMid; $c++) {
             $connections[] = $connection = $server->acceptConnection();
-            Coroutine::run(static function () use ($connection): void {
+            Coroutine::run(static function () use ($connection, $wrUpgrade): void {
                 $request = $connection->recvHttpRequest();
                 if (Psr7::detectUpgradeType($request) === UpgradeType::UPGRADE_TYPE_WEBSOCKET) {
                     $connection->upgradeToWebSocket($request);
