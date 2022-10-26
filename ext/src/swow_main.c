@@ -44,6 +44,7 @@
 
 #include "SAPI.h"
 
+#include "zend_extensions.h"
 #include "zend_smart_str.h"
 
 #include "ext/standard/info.h"
@@ -111,7 +112,10 @@ PHP_MINIT_FUNCTION(swow)
 #endif
     for (size_t i = 0; i < CAT_ARRAY_SIZE(debug_extension_names); i++) {
         const char *name = debug_extension_names[i];
-        if (zend_hash_str_find_ptr(&module_registry, name, strlen(name))) {
+        if (
+            zend_get_extension(name) ||
+            zend_hash_str_find_ptr(&module_registry, name, strlen(name))
+        ) {
 #ifndef SWOW_COROUTINE_MOCK_FIBER_CONTEXT
             smart_str_appends(&str, name);
             smart_str_appends(&str, ", ");
