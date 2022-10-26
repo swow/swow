@@ -105,20 +105,26 @@ PHP_MINIT_FUNCTION(swow)
     }
 
     /* Debug extensions check */
-    static const char *debug_extension_names[] = { "xdebug", "ddtrace" };
+    static const char *debug_zend_extension_names[] = { "Xdebug" };
+    static const char *debug_php_extension_names[] = { "ddtrace" };
 #ifndef SWOW_COROUTINE_MOCK_FIBER_CONTEXT
     smart_str str;
     memset(&str, 0, sizeof(str));
 #endif
-    for (size_t i = 0; i < CAT_ARRAY_SIZE(debug_extension_names); i++) {
-        const char *name = debug_extension_names[i];
-        if (
-            zend_get_extension(name) ||
-            zend_hash_str_find_ptr(&module_registry, name, strlen(name))
-        ) {
+    for (size_t i = 0; i < CAT_ARRAY_SIZE(debug_zend_extension_names); i++) {
+        const char *name = debug_zend_extension_names[i];
+        if (zend_get_extension(name) != NULL) {
 #ifndef SWOW_COROUTINE_MOCK_FIBER_CONTEXT
-            smart_str_appends(&str, name);
-            smart_str_appends(&str, ", ");
+            smart_str_append_printf(&str, "%s, ", name);
+#endif
+            SWOW_NTS_G(has_debug_extension) = 1;
+        }
+    }
+    for (size_t i = 0; i < CAT_ARRAY_SIZE(debug_php_extension_names); i++) {
+        const char *name = debug_php_extension_names[i];
+        if (zend_hash_str_find_ptr(&module_registry, name, strlen(name))) {
+#ifndef SWOW_COROUTINE_MOCK_FIBER_CONTEXT
+            smart_str_append_printf(&str, "%s, ", name);
 #endif
             SWOW_NTS_G(has_debug_extension) = 1;
         }
