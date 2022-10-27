@@ -450,6 +450,7 @@ static void swow_coroutine_main_create(void)
 #ifdef SWOW_COROUTINE_MOCK_FIBER_CONTEXT
     efree(s_coroutine->fiber_context);
     s_coroutine->fiber_context = EG(main_fiber_context);
+    s_coroutine->coroutine.flags |= SWOW_COROUTINE_FLAG_FIBER_INIT_NOTIFIED;
 #endif
 
     /* add main s_coroutine to the map */
@@ -706,6 +707,10 @@ static void swow_coroutine_handle_not_null_zval_data(
 
 #ifdef SWOW_COROUTINE_MOCK_FIBER_CONTEXT
 
+static zend_execute_data swow_coroutine_dummy_execute_data_for_internal;
+static zend_function swow_coroutine_dummy_function_for_internal;
+static zend_op swow_coroutine_dummy_op_for_internal;
+
 static zend_always_inline zend_fiber_status swow_coroutine_get_fiber_status(const swow_coroutine_t *s_coroutine)
 {
     switch (s_coroutine->coroutine.state) {
@@ -735,12 +740,26 @@ static zend_never_inline void swow_coroutine_fiber_context_switch_notify(swow_co
     from_context->status = swow_coroutine_get_fiber_status(from);
     to_context->status = swow_coroutine_get_fiber_status(to);
 
+    if (EG(current_execute_data) == NULL) {
+        /* Xdebug did not support execute notify callback in non-php-stack env */
+        EG(current_execute_data) = &swow_coroutine_dummy_execute_data_for_internal;
+    }
+    if (!(to->coroutine.flags & SWOW_COROUTINE_FLAG_FIBER_INIT_NOTIFIED)) {
+        to_context->status = ZEND_FIBER_STATUS_INIT;
+    }
     if (to_context->status == ZEND_FIBER_STATUS_INIT) {
+        /* some coroutines (e.g. scheduler) are created in runtime_init(),
+         * but some debug extensions (e.g. Xdebug) did not support execute notify callback before runtime,
+         * so we have to make init_notify() lazy. */
+        to->coroutine.flags |= SWOW_COROUTINE_FLAG_FIBER_INIT_NOTIFIED;
         zend_observer_fiber_init_notify(to_context);
     } else if (from_context->status == ZEND_FIBER_STATUS_DEAD) {
         zend_observer_fiber_destroy_notify(from_context);
     }
     zend_observer_fiber_switch_notify(from_context, to_context);
+    if (EG(current_execute_data) == &swow_coroutine_dummy_execute_data_for_internal) {
+        EG(current_execute_data) = NULL;
+    }
 }
 
 static zend_always_inline void swow_coroutine_fiber_context_switch_try_notify(swow_coroutine_t *from, swow_coroutine_t *to)
@@ -2503,6 +2522,15 @@ zend_result swow_coroutine_module_init(INIT_FUNC_ARGS)
     /* hook opcode catch */
     zend_set_user_opcode_handler(ZEND_CATCH, swow_coroutine_catch_handler);
 # endif
+
+#ifdef SWOW_COROUTINE_MOCK_FIBER_CONTEXT
+    memset(&swow_coroutine_dummy_execute_data_for_internal, 0, sizeof(swow_coroutine_dummy_execute_data_for_internal));
+    memset(&swow_coroutine_dummy_function_for_internal, 0, sizeof(swow_coroutine_dummy_function_for_internal));
+    memset(&swow_coroutine_dummy_op_for_internal, 0, sizeof(swow_coroutine_dummy_op_for_internal));
+    swow_coroutine_dummy_execute_data_for_internal.func = &swow_coroutine_dummy_function_for_internal;
+    swow_coroutine_dummy_execute_data_for_internal.opline = &swow_coroutine_dummy_op_for_internal;
+    swow_coroutine_dummy_function_for_internal.op_array.filename = zend_string_init_interned(ZEND_STRL("@swow/internal"), true);
+#endif
 
     return SUCCESS;
 }
