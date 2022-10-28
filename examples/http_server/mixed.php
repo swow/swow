@@ -14,7 +14,7 @@ declare(strict_types=1);
 use Swow\Coroutine;
 use Swow\CoroutineException;
 use Swow\Errno;
-use Swow\Http\Message\HttpException;
+use Swow\Http\Protocol\ProtocolException as HttpProtocolException;
 use Swow\Http\Status as HttpStatus;
 use Swow\Psr7\Client\Client;
 use Swow\Psr7\Message\UpgradeType;
@@ -78,7 +78,7 @@ while (true) {
                                     break;
                                 }
                                 if (($upgradeType & UpgradeType::UPGRADE_TYPE_WEBSOCKET) === 0) {
-                                    throw new HttpException(HttpStatus::BAD_REQUEST, 'Unsupported Upgrade Type');
+                                    throw new HttpProtocolException(HttpStatus::BAD_REQUEST, 'Unsupported Upgrade Type');
                                 }
                                 $connection->upgradeToWebSocket($request);
                                 $request = null;
@@ -105,8 +105,9 @@ while (true) {
                             default:
                                 $connection->error(HttpStatus::NOT_FOUND);
                         }
-                    } catch (HttpException $exception) {
+                    } catch (HttpProtocolException $exception) {
                         $connection->error($exception->getCode(), $exception->getMessage());
+                        break;
                     }
                     if (!$request || !Psr7::detectShouldKeepAlive($request)) {
                         break;

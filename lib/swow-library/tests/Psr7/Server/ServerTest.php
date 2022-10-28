@@ -20,8 +20,8 @@ use RuntimeException;
 use Swow\Channel;
 use Swow\Coroutine;
 use Swow\Http\Http;
-use Swow\Http\Message\HttpException;
 use Swow\Http\Mime\MimeType;
+use Swow\Http\Protocol\ProtocolException as HttpProtocolException;
 use Swow\Http\Protocol\ReceiverTrait;
 use Swow\Http\Status;
 use Swow\Psr7\Client\Client;
@@ -237,8 +237,8 @@ final class ServerTest extends TestCase
                 try {
                     $connection->recvHttpRequest();
                     $channel->push(null);
-                } catch (HttpException $responseException) {
-                    $channel->push($responseException->getCode());
+                } catch (HttpProtocolException $protocolException) {
+                    $channel->push($protocolException->getCode());
                 } finally {
                     $connection->close();
                 }
