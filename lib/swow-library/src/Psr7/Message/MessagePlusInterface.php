@@ -61,6 +61,8 @@ interface MessagePlusInterface extends MessageInterface, StringableInterface
     /** @param array<string, array<string>|string> $headers */
     public function withHeaders(array $headers): static;
 
+    public function shouldKeepAlive(): bool;
+
     public function getBody(): StreamInterface;
 
     public function setBody(StreamInterface $body): static;

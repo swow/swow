@@ -14,12 +14,11 @@ declare(strict_types=1);
 namespace Swow\Psr7\Utils;
 
 use Psr\Http\Message\MessageInterface;
-use Swow\Psr7\Message\AbstractMessage;
+use Swow\Psr7\Message\MessagePlusInterface;
 use Swow\Psr7\Message\ServerRequest;
 use Swow\Psr7\Message\UpgradeType;
 
 use function explode;
-use function method_exists;
 use function strcasecmp;
 use function strlen;
 
@@ -27,10 +26,7 @@ trait DetectorTrait
 {
     public static function detectShouldKeepAlive(MessageInterface $message): bool
     {
-        if (
-            $message instanceof AbstractMessage ||
-            method_exists($message, 'shouldkeepalive')
-        ) {
+        if ($message instanceof MessagePlusInterface) {
             return $message->shouldKeepAlive();
         }
         $protocolVersion = $message->getProtocolVersion();
