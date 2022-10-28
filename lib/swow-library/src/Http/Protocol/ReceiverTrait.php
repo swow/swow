@@ -65,7 +65,7 @@ trait ReceiverTrait
 
     protected bool $preserveBodyData = false;
 
-    protected ?bool $shouldKeepAlive = false;
+    protected bool $shouldKeepAlive = false;
 
     protected function __constructReceiver(int $type, int $events): void
     {
@@ -133,7 +133,7 @@ trait ReceiverTrait
         return $this;
     }
 
-    public function shouldKeepAlive(): ?bool
+    public function shouldKeepAlive(): bool
     {
         return $this->shouldKeepAlive;
     }
@@ -280,9 +280,7 @@ trait ReceiverTrait
                                 }
                             case HttpParser::EVENT_HEADERS_COMPLETE:
                                 {
-                                    $defaultKeepAlive = $parser->getMajorVersion() !== 1 || $parser->getMinorVersion() !== 0;
                                     $shouldKeepAlive = $parser->shouldKeepAlive();
-                                    $this->shouldKeepAlive = $shouldKeepAlive !== $defaultKeepAlive ? $shouldKeepAlive : null;
                                     if ($parser->isChunked()) {
                                         $isChunked = true;
                                     } else {
@@ -513,7 +511,7 @@ trait ReceiverTrait
             }
         } catch (ParserException $parserException) {
             /* Note: Connection should be reset, it's an unrecoverable error. */
-            $this->shouldKeepAlive = false;
+            $shouldKeepAlive = false;
             throw new ProtocolException(HttpStatus::BAD_REQUEST, 'Protocol Parsing Error', $parserException);
         } finally {
             if ($isServerRequest) {
@@ -543,6 +541,7 @@ trait ReceiverTrait
             $messageEntity->headerNames = $headerNames;
             $messageEntity->contentLength = $contentLength;
             $messageEntity->shouldKeepAlive = $shouldKeepAlive;
+            $this->shouldKeepAlive = $shouldKeepAlive;
         }
         $parser->reset();
         $this->updateParsedOffsetAndRecycleBufferSpace($buffer, $parsedOffset);

@@ -38,6 +38,7 @@ use TypeError;
 use function base64_encode;
 use function get_debug_type;
 use function is_array;
+use function is_bool;
 use function is_int;
 use function sha1;
 use function sprintf;
@@ -130,20 +131,18 @@ class ServerConnection extends Socket implements ProtocolTypeInterface
     }
 
     /** @return array<string, string> */
-    protected function generateResponseHeaders(string $body): array
+    protected function generateResponseHeaders(string $body, ?bool $close): array
     {
         $headers = [];
-        $headers['Server'] = 'swow';
-        if ($this->shouldKeepAlive !== null) {
-            $headers['Connection'] = $this->shouldKeepAlive ? 'keep-alive' : 'close';
-        }
+        $close ??= !$this->shouldKeepAlive;
+        $headers['Connection'] = $close ? 'close' : 'keep-alive';
         $headers['Content-Length'] = (string) strlen($body);
 
         return $headers;
     }
 
     /**
-     * @param int|string|Stringable|array<string, string>|array<string, array<string>> $args
+     * @param int|string|Stringable|array<string, string>|array<string, array<string>>|bool $args
      */
     public function respond(mixed ...$args): void
     {
@@ -152,6 +151,7 @@ class ServerConnection extends Socket implements ProtocolTypeInterface
                 $statusCode = HttpStatus::OK;
                 $headers = [];
                 $body = '';
+                $close = null;
                 foreach ($args as $arg) {
                     if (isStrictStringable($arg)) {
                         $body = (string) $arg;
@@ -159,11 +159,13 @@ class ServerConnection extends Socket implements ProtocolTypeInterface
                         $statusCode = $arg;
                     } elseif (is_array($arg)) {
                         $headers = $arg;
+                    } elseif (is_bool($arg)) {
+                        $close = $arg;
                     } else {
                         throw new TypeError(sprintf('Unsupported argument type %s', get_debug_type($arg)));
                     }
                 }
-                $headers += $this->generateResponseHeaders($body);
+                $headers += $this->generateResponseHeaders($body, $close);
                 $this->write([
                     Http::packResponse(
                         statusCode: $statusCode,
@@ -178,7 +180,7 @@ class ServerConnection extends Socket implements ProtocolTypeInterface
         }
     }
 
-    public function error(int $statusCode, string $message = ''): void
+    public function error(int $statusCode, string $message = '', ?bool $close = null): void
     {
         switch ($this->protocolType) {
             case static::PROTOCOL_TYPE_HTTP:
@@ -189,7 +191,7 @@ class ServerConnection extends Socket implements ProtocolTypeInterface
                 $this->write([
                     Http::packResponse(
                         statusCode: $statusCode,
-                        headers: $this->generateResponseHeaders($message)
+                        headers: $this->generateResponseHeaders($message, $close)
                     ),
                     $message,
                 ]);

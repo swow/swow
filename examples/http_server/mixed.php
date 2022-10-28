@@ -106,10 +106,10 @@ while (true) {
                                 $connection->error(HttpStatus::NOT_FOUND);
                         }
                     } catch (HttpProtocolException $exception) {
-                        $connection->error($exception->getCode(), $exception->getMessage());
+                        $connection->error($exception->getCode(), $exception->getMessage(), close: true);
                         break;
                     }
-                    if (!$request || !Psr7::detectShouldKeepAlive($request)) {
+                    if (!$connection->shouldKeepAlive()) {
                         break;
                     }
                 }
