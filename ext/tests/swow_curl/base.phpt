@@ -5,7 +5,7 @@ swow_curl: base
 require __DIR__ . '/../include/skipif.php';
 skip_if_extension_not_exist('curl');
 skip_if(PHP_SAPI !== 'cli', 'only for cli');
-skip_if(!Swow::isBuiltWith('curl'), 'extension must be built with libcurl');
+skip_if(!Swow\Extension::isBuiltWith('curl'), 'extension must be built with libcurl');
 ?>
 --FILE--
 <?php
@@ -61,7 +61,7 @@ Coroutine::run(static function () use ($server, $wrServer): void {
             ] + $requestPayload);
             $response = [
                 'HTTP/1.0 200 OK',
-                'server: Swow/' . Swow::VERSION,
+                'server: Swow/' . Swow\Extension::VERSION,
                 'content-length: ' . strlen($payload),
                 'content-type: application/json',
                 'connection: close',

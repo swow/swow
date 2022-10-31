@@ -29,12 +29,12 @@ extern "C" {
 
 /* version */
 
+#define SWOW_VERSION            "0.2.0-alpha"
+#define SWOW_VERSION_ID         200
 #define SWOW_MAJOR_VERSION      0
 #define SWOW_MINOR_VERSION      2
 #define SWOW_RELEASE_VERSION    0
-#define SWOW_EXTRA_VERSION      "dev"
-#define SWOW_VERSION            "0.2.0-dev"
-#define SWOW_VERSION_ID         200
+#define SWOW_EXTRA_VERSION      "alpha"
 
 /* compiler */
 
@@ -92,6 +92,7 @@ ZEND_TSRMLS_CACHE_EXTERN()
 #endif
 
 extern SWOW_API zend_class_entry *swow_ce;
+extern SWOW_API zend_class_entry *swow_extension_ce;
 
 zend_result swow_module_init(INIT_FUNC_ARGS);
 zend_result swow_module_shutdown(INIT_FUNC_ARGS);

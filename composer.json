@@ -25,6 +25,7 @@
     },
     "require": {
         "php": ">=8.0",
+        "composer/semver": "^3.3",
         "psr/http-client": "^1.0",
         "psr/http-factory": "^1.0",
         "psr/http-message": "^1.0"
@@ -52,7 +53,7 @@
             "Swow\\Utils\\": "lib/swow-utils/src/"
         },
         "files": [
-            "lib/swow-library/src/functions.php",
+            "lib/swow-library/src/bootstrap.php",
             "lib/swow-library/src/Debug/functions.php",
             "lib/swow-utils/src/functions.php"
         ]

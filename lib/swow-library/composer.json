@@ -29,7 +29,7 @@
             "Swow\\": "src/"
         },
         "files": [
-            "src/functions.php",
+            "src/bootstrap.php",
             "src/Debug/functions.php"
         ]
     },

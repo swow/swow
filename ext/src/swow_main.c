@@ -66,6 +66,7 @@
 #endif
 
 SWOW_API zend_class_entry *swow_ce;
+SWOW_API zend_class_entry *swow_extension_ce;
 
 ZEND_DECLARE_MODULE_GLOBALS(swow)
 
@@ -424,11 +425,41 @@ static const zend_function_entry swow_functions[] = {
     PHP_FE_END
 };
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_isBuiltWith, 0, 1, _IS_BOOL, 0)
+#include "swow_known_strings.h"
+
+#define SWOW_MAIN_KNOWN_STRING_MAP(XX) \
+    XX(swow_library, "swow\\library") \
+
+SWOW_MAIN_KNOWN_STRING_MAP(SWOW_KNOWN_STRING_STORAGE_GEN)
+
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_isLibraryLoaded, 0, 0, _IS_BOOL, 0)
+ZEND_END_ARG_INFO()
+
+static PHP_METHOD(Swow, isLibraryLoaded)
+{
+    ZEND_PARSE_PARAMETERS_NONE();
+
+    zend_class_entry *ce;
+
+    ce = zend_lookup_class(SWOW_KNOWN_STRING(swow_library));
+
+    RETURN_BOOL(
+        ce != NULL &&
+        ((ce->ce_flags & ZEND_ACC_LINKED) == ZEND_ACC_LINKED) &&
+        !(ce->ce_flags & (ZEND_ACC_INTERFACE | ZEND_ACC_TRAIT))
+    );
+}
+
+static const zend_function_entry swow_methods[] = {
+    PHP_ME(Swow, isLibraryLoaded, arginfo_class_Swow_isLibraryLoaded, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    PHP_FE_END
+};
+
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Extension_isBuiltWith, 0, 1, _IS_BOOL, 0)
     ZEND_ARG_TYPE_INFO(0, lib, IS_STRING, 0)
 ZEND_END_ARG_INFO()
 
-static PHP_METHOD(Swow, isBuiltWith)
+static PHP_METHOD(Swow_Extension, isBuiltWith)
 {
     zend_string *lib;
     zend_bool ret = 0;
@@ -473,8 +504,8 @@ static PHP_METHOD(Swow, isBuiltWith)
     RETURN_BOOL(ret);
 }
 
-static const zend_function_entry swow_methods[] = {
-    PHP_ME(Swow, isBuiltWith, arginfo_class_Swow_isBuiltWith, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+static const zend_function_entry swow_extension_methods[] = {
+    PHP_ME(Swow_Extension, isBuiltWith, arginfo_class_Swow_Extension_isBuiltWith, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
     PHP_FE_END
 };
 
@@ -505,22 +536,30 @@ zend_result swow_module_init(INIT_FUNC_ARGS)
 
     cat_module_init();
 
+    SWOW_MAIN_KNOWN_STRING_MAP(SWOW_KNOWN_STRING_INIT_STRL_GEN);
+
     /* Swow class is reserved  */
     swow_ce = swow_register_internal_class(
         "Swow", NULL, swow_methods,
         NULL, NULL, cat_false, cat_false,
         swow_create_object_deny, NULL, 0
     );
+
+    swow_extension_ce = swow_register_internal_class(
+        "Swow\\Extension", NULL, swow_extension_methods,
+        NULL, NULL, cat_false, cat_false,
+        swow_create_object_deny, NULL, 0
+    );
     /* Version constants (TODO: remove type cast if we no longer support PHP 7.x) */
 #define SWOW_VERSION_MAP(XX) \
+    XX(VERSION, string, char *) \
+    XX(VERSION_ID, long, zend_long) \
     XX(MAJOR_VERSION, long, zend_long) \
     XX(MINOR_VERSION, long, zend_long) \
     XX(RELEASE_VERSION, long, zend_long) \
-    XX(EXTRA_VERSION, string, char *) \
-    XX(VERSION, string, char *) \
-    XX(VERSION_ID, long, zend_long)
+    XX(EXTRA_VERSION, string, char *)
 #define SWOW_VERSION_GEN(name, type, cast) \
-    zend_declare_class_constant_##type(swow_ce, ZEND_STRL(#name), (cast) SWOW_##name);
+    zend_declare_class_constant_##type(swow_extension_ce, ZEND_STRL(#name), (cast) SWOW_##name);
     SWOW_VERSION_MAP(SWOW_VERSION_GEN)
 #undef SWOW_VERSION_GEN
 

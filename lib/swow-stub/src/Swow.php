@@ -13,19 +13,7 @@ namespace
 {
     class Swow
     {
-        public const MAJOR_VERSION = 0;
-        public const MINOR_VERSION = 2;
-        public const RELEASE_VERSION = 0;
-        public const EXTRA_VERSION = 'dev';
-        public const VERSION = '0.2.0-dev';
-        public const VERSION_ID = 200;
-
-        /**
-         * Return if this Swow extension is built with library specified by $lib
-         *
-         * @param string $lib the library name, can be 'curl' or 'openssl' now
-         */
-        public static function isBuiltWith(string $lib): bool { }
+        public static function isLibraryLoaded(): bool { }
     }
 }
 
@@ -42,6 +30,21 @@ namespace
 namespace
 {
     function gethostbyname2(string $hostname, int $address_family = \AF_INET): string { }
+}
+
+namespace Swow
+{
+    class Extension
+    {
+        public const VERSION = '0.2.0-alpha';
+        public const VERSION_ID = 200;
+        public const MAJOR_VERSION = 0;
+        public const MINOR_VERSION = 2;
+        public const RELEASE_VERSION = 0;
+        public const EXTRA_VERSION = 'alpha';
+
+        public static function isBuiltWith(string $lib): bool { }
+    }
 }
 
 namespace Swow
