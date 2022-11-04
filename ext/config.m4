@@ -185,6 +185,12 @@ PHP_ARG_ENABLE([swow-curl],
   [yes], [no]
 )
 
+PHP_ARG_ENABLE([swow-pdo-pgsql],
+  [whether to enable Swow PDO_PGSQL support],
+  [AS_HELP_STRING([--enable-swow-pdo-pgsql], [Enable Swow PDO_PGSQL support])],
+  [yes], [no]
+)
+
 if test "${PHP_SWOW}" != "no"; then
   dnl check if this php version we support
   AC_MSG_CHECKING([Check for supported PHP version number])
@@ -739,6 +745,23 @@ EOF
         SWOW_ADD_SOURCES(src, swow_curl.c, SWOW_INCLUDES, SWOW_CFLAGS)
       ],[
         AC_MSG_WARN([Swow cURL support not enabled: libcurl not found])
+      ])
+    fi
+
+    dnl add curl sources
+    if test "x${PHP_SWOW_PDO_PGSQL}" != "xno" ; then
+      SWOW_PKG_CHECK_MODULES([PQ], libpq, 14.3, [PHP_SWOW_PDO_PGSQL], [
+        if test "x${PHP_PDO_PGSQL}" = "xno" ; then
+          AC_MSG_WARN([Swow PDO_PGSQL support is enabled but PDO_PGSQL PHP extension is not enabled])
+        fi
+        dnl make changes
+        AC_DEFINE([CAT_HAVE_PQ], 1, [Enable libcat cURL])
+        PHP_EVAL_LIBLINE($PQ_LIBS, SWOW_SHARED_LIBADD)
+        SWOW_CAT_INCLUDES="$SWOW_CAT_INCLUDES $PQ_INCL"
+        SWOW_ADD_SOURCES(deps/libcat/src, cat_pq.c, SWOW_CAT_INCLUDES, SWOW_CAT_CFLAGS)
+        SWOW_ADD_SOURCES(src, swow_pgsql_driver.c swow_pgsql_statement.c, SWOW_INCLUDES, SWOW_CFLAGS)
+      ],[
+        AC_MSG_WARN([Swow PDO_PGSQL support not enabled: libpq not found])
       ])
     fi
 

@@ -39,6 +39,7 @@
 #include "swow_websocket.h"
 #include "swow_proc_open.h"
 #include "swow_curl.h"
+#include "swow_pgsql.h"
 
 #include "cat_api.h"
 
@@ -194,6 +195,7 @@ PHP_MINIT_FUNCTION(swow)
 #ifdef CAT_HAVE_CURL
         swow_curl_module_init,
 #endif
+        swow_pgsql_module_init,
     };
 
     for (size_t i = 0; i < CAT_ARRAY_SIZE(minit_functions); i++) {
