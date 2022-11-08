@@ -12,12 +12,21 @@
 
 declare(strict_types=1);
 
-foreach ([0, 2] as $level) {
-    foreach ([dirname(__DIR__, 1 + $level) . '/vendor/autoload.php', dirname(__DIR__, 3 + $level) . '/autoload.php'] as $file) {
-        if (file_exists($file)) {
-            require $file;
-            break;
-        }
+foreach (
+    [
+        dirname(__DIR__, 5) . '/autoload.php', // for user on swow/swow
+        dirname(__DIR__, 3) . '/vendor/autoload.php', // for maintainer on swow/swow
+        dirname(__DIR__, 3) . '/autoload.php', // for user on swow/php-stub-generator
+        dirname(__DIR__) . '/vendor/autoload.php', // for maintainer on swow/php-stub-generator
+        null,
+    ] as $file
+) {
+    if ($file === null) {
+        throw new RuntimeException('Unable to locate autoload.php');
+    }
+    if (file_exists($file)) {
+        require $file;
+        break;
     }
 }
 

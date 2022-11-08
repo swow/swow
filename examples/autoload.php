@@ -11,7 +11,16 @@
 
 declare(strict_types=1);
 
-foreach ([__DIR__ . '/../vendor/autoload.php', __DIR__ . '/../../../autoload.php'] as $file) {
+foreach (
+    [
+        __DIR__ . '/../vendor/autoload.php',
+        __DIR__ . '/../../../autoload.php',
+        null,
+    ] as $file
+) {
+    if ($file === null) {
+        throw new RuntimeException('Unable to locate autoload.php');
+    }
     if (file_exists($file)) {
         require $file;
         break;
