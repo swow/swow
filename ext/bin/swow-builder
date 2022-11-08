@@ -12,9 +12,10 @@
 
 foreach (
     [
-        dirname(__DIR__) . '/vendor/autoload.php',
-        dirname(__DIR__, 2) . '/vendor/autoload.php',
-        dirname(__DIR__, 3) . '/autoload.php',
+        dirname(__DIR__, 4) . '/autoload.php', // for user on swow/swow
+        dirname(__DIR__, 2) . '/vendor/autoload.php', // for maintainer on swow/swow
+        dirname(__DIR__, 3) . '/autoload.php', // for user on swow/swow-extension
+        dirname(__DIR__) . '/vendor/autoload.php', // for maintainer on swow/swow-extension
     ] as $file
 ) {
     if (file_exists($file)) {
