@@ -92,7 +92,7 @@ while (true) {
                                         case WebSocketOpcode::PONG:
                                             break;
                                         case WebSocketOpcode::CLOSE:
-                                            break 2;
+                                            break 4;
                                         default:
                                             $connection->sendWebSocketFrame(
                                                 Psr7::createWebSocketTextFrame(
@@ -101,7 +101,6 @@ while (true) {
                                             );
                                     }
                                 }
-                                break;
                             default:
                                 $connection->error(HttpStatus::NOT_FOUND);
                         }
