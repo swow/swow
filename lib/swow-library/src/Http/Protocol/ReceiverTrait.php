@@ -600,6 +600,10 @@ trait ReceiverTrait
                     );
                 }
                 $parsedOffset += $payloadLength;
+                if ($header->getMask()) {
+                    // TODO: tests needed
+                    WebSocket::unmask($payloadData, maskingKey: $header->getMaskingKey());
+                }
             }
         } finally {
             $frame->payloadData = $payloadData;
