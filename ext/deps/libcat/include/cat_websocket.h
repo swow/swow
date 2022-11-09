@@ -29,13 +29,13 @@ extern "C" {
 #define CAT_WEBSOCKET_SECRET_KEY_ENCODED_LENGTH (((CAT_WEBSOCKET_SECRET_KEY_LENGTH + 2) / 3) * 4)
 #define CAT_WEBSOCKET_GUID                      "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
 #define CAT_WEBSOCKET_HEADER_MIN_SIZE           2
-#define CAT_WEBSOCKET_HEADER_MAX_SIZE           14 /* HEADER_MIN_SIZE + sizeof(uint64_t) + MASK_KEY_LENGTH */
+#define CAT_WEBSOCKET_HEADER_MAX_SIZE           14 /* HEADER_MIN_SIZE + sizeof(uint64_t) + MASKING_KEY_LENGTH */
 #define CAT_WEBSOCKET_EXT16_PAYLOAD_LENGTH      126
 #define CAT_WEBSOCKET_EXT64_PAYLOAD_LENGTH      127
 #define CAT_WEBSOCKET_EXT8_MAX_LENGTH           125
 #define CAT_WEBSOCKET_EXT16_MAX_LENGTH          65535
-#define CAT_WEBSOCKET_MASK_KEY_LENGTH           4
-#define CAT_WEBSOCKET_EMPTY_MASK_KEY            "\0\0\0\0"
+#define CAT_WEBSOCKET_MASKING_KEY_LENGTH        4
+#define CAT_WEBSOCKET_EMPTY_MASKING_KEY         "\0\0\0\0"
 
 #define CAT_WEBSOCKET_OPCODE_MAP(XX) \
     XX(CONTINUATION, 0x0) \
@@ -109,7 +109,7 @@ CAT_API const char* cat_websocket_status_get_description(cat_websocket_status_co
  +---------------------------------------------------------------+
  */
 
-CAT_API uint8_t cat_websocket_calculate_mask_key_offset(uint64_t payload_length);
+CAT_API uint8_t cat_websocket_calculate_masking_key_offset(uint64_t payload_length);
 CAT_API uint8_t cat_websocket_calculate_header_size(uint64_t payload_length, cat_bool_t mask);
 
 typedef struct cat_websocket_header_s {
@@ -123,7 +123,7 @@ typedef struct cat_websocket_header_s {
     uint8_t payload_length :7;
     uint8_t mask :1;
     uint8_t extended_payload_length[8];
-    char mask_key[CAT_WEBSOCKET_MASK_KEY_LENGTH];
+    char masking_key[CAT_WEBSOCKET_MASKING_KEY_LENGTH];
 } cat_websocket_header_t;
 
 CAT_STATIC_ASSERT(sizeof(cat_websocket_header_t) == CAT_WEBSOCKET_HEADER_MAX_SIZE);
@@ -131,10 +131,10 @@ CAT_STATIC_ASSERT(sizeof(cat_websocket_header_t) == CAT_WEBSOCKET_HEADER_MAX_SIZ
 CAT_API void cat_websocket_header_init(cat_websocket_header_t *header);
 CAT_API uint64_t cat_websocket_header_get_size(const cat_websocket_header_t *header);
 CAT_API uint64_t cat_websocket_header_get_payload_length(const cat_websocket_header_t *header);
-CAT_API const char *cat_websocket_header_get_mask_key(const cat_websocket_header_t *header);
+CAT_API const char *cat_websocket_header_get_masking_key(const cat_websocket_header_t *header);
 CAT_API void cat_websocket_header_set_payload_length(cat_websocket_header_t *header, uint64_t payload_length);
-CAT_API void cat_websocket_header_set_mask_key(cat_websocket_header_t *header, const char *mask_key);
-CAT_API void cat_websocket_header_set_payload_info(cat_websocket_header_t *header, uint64_t payload_length, const char *mask_key);
+CAT_API void cat_websocket_header_set_masking_key(cat_websocket_header_t *header, const char *masking_key);
+CAT_API void cat_websocket_header_set_payload_info(cat_websocket_header_t *header, uint64_t payload_length, const char *masking_key);
 
 /**
  * To convert masked data into unmasked data, or vice versa,
@@ -150,11 +150,11 @@ CAT_API void cat_websocket_header_set_payload_info(cat_websocket_header_t *heade
  * param index is the index to the payload_data[0]
  */
 
-CAT_API void cat_websocket_mask(const char *from, char *to, uint64_t length, const char *mask_key);
-CAT_API void cat_websocket_mask_ex(const char *from, char *to, uint64_t length, const char *mask_key, uint64_t index);
+CAT_API void cat_websocket_mask(const char *from, char *to, uint64_t length, const char *masking_key);
+CAT_API void cat_websocket_mask_ex(const char *from, char *to, uint64_t length, const char *masking_key, uint64_t index);
 
-CAT_API void cat_websocket_unmask(char *data, uint64_t length, const char *mask_key);
-CAT_API void cat_websocket_unmask_ex(char *data, uint64_t length, const char *mask_key, uint64_t index);
+CAT_API void cat_websocket_unmask(char *data, uint64_t length, const char *masking_key);
+CAT_API void cat_websocket_unmask_ex(char *data, uint64_t length, const char *masking_key, uint64_t index);
 
 #ifdef __cplusplus
 }
