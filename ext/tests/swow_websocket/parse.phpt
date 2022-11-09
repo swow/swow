@@ -37,7 +37,7 @@ Assert::false($header->getRSV2());
 Assert::false($header->getRSV3());
 Assert::same($header->getOpcode(), 8);
 Assert::false($header->getMask());
-Assert::same($header->getMaskKey(), '');
+Assert::same($header->getMaskingKey(), '');
 Assert::same($header->getPayloadLength(), 0);
 Assert::same($header->getHeaderSize(), 2);
 Assert::same($header->getLength(), $header->getHeaderSize());
@@ -55,7 +55,7 @@ Assert::false($header->getRSV2());
 Assert::false($header->getRSV3());
 Assert::same($header->getOpcode(), 9);
 Assert::false($header->getMask());
-Assert::same($header->getMaskKey(), '');
+Assert::same($header->getMaskingKey(), '');
 Assert::same($header->getPayloadLength(), 0);
 Assert::same($header->getHeaderSize(), 2);
 Assert::same($header->getLength(), $header->getHeaderSize());
@@ -72,7 +72,7 @@ Assert::false($header->getRSV2());
 Assert::false($header->getRSV3());
 Assert::same($header->getOpcode(), 0xA);
 Assert::false($header->getMask());
-Assert::same($header->getMaskKey(), '');
+Assert::same($header->getMaskingKey(), '');
 Assert::same($header->getPayloadLength(), 0);
 Assert::same($header->getHeaderSize(), 2);
 Assert::same($header->getLength(), $header->getHeaderSize());
@@ -90,7 +90,7 @@ Assert::false($header->getRSV2());
 Assert::false($header->getRSV3());
 Assert::same($header->getOpcode(), 1);
 Assert::false($header->getMask());
-Assert::same($header->getMaskKey(), '');
+Assert::same($header->getMaskingKey(), '');
 Assert::same($payloadLength = $header->getPayloadLength(), 16);
 Assert::same($header->getHeaderSize(), 2);
 Assert::same($header->getLength(), $header->getHeaderSize() + 16);
@@ -118,11 +118,11 @@ Assert::false($header->getRSV2());
 Assert::false($header->getRSV3());
 Assert::same($header->getOpcode(), 1);
 Assert::true($header->getMask());
-Assert::same($header->getMaskKey(), "\x80\x81\x82\x84");
+Assert::same($header->getMaskingKey(), "\x80\x81\x82\x84");
 Assert::same($payloadLength = $header->getPayloadLength(), 16);
 Assert::same($header->getHeaderSize(), 6);
 Assert::same($header->getLength(), $header->getHeaderSize() + 16);
-WebSocket::unmask($header, $header->getHeaderSize(), maskKey: $header->getMaskKey());
+WebSocket::unmask($header, $header->getHeaderSize(), maskingKey: $header->getMaskingKey());
 Assert::same($header->read($header->getHeaderSize()), 'the data sent 16');
 
 // rsv2, binary message, masked, len=256, payload = '\xca\xfe\xba\xbe\xde\xad\xbe\xef' * 32
@@ -145,11 +145,11 @@ Assert::true($header->getRSV2());
 Assert::false($header->getRSV3());
 Assert::same($header->getOpcode(), 2);
 Assert::true($header->getMask());
-Assert::same($header->getMaskKey(), "\x10\x21\x32\x44");
+Assert::same($header->getMaskingKey(), "\x10\x21\x32\x44");
 Assert::same($payloadLength = $header->getPayloadLength(), 256);
 Assert::same($header->getHeaderSize(), 8);
 Assert::same($header->getLength(), $header->getHeaderSize() + 256);
-WebSocket::unmask($header, $header->getHeaderSize(), maskKey: $header->getMaskKey());
+WebSocket::unmask($header, $header->getHeaderSize(), maskingKey: $header->getMaskingKey());
 Assert::same($header->read($header->getHeaderSize()), str_repeat("\xca\xfe\xba\xbe\xde\xad\xbe\xef", 32));
 
 // fin, rsv3, binary message, len=65536, payload = '\xf0\x0f\xc7\xc8\x2f\x90\x2f\x90' * 8192
@@ -172,11 +172,11 @@ Assert::false($header->getRSV2());
 Assert::true($header->getRSV3());
 Assert::same($header->getOpcode(), 2);
 Assert::true($header->getMask());
-Assert::same($header->getMaskKey(), 'swow');
+Assert::same($header->getMaskingKey(), 'swow');
 Assert::same($payloadLength = $header->getPayloadLength(), 65536);
 Assert::same($header->getHeaderSize(), 14);
 Assert::same($header->getLength(), $header->getHeaderSize() + 65536);
-WebSocket::unmask($header, $header->getHeaderSize(), maskKey: $header->getMaskKey());
+WebSocket::unmask($header, $header->getHeaderSize(), maskingKey: $header->getMaskingKey());
 Assert::same($header->read($header->getHeaderSize()), str_repeat("\xf0\x0f\xc7\xc8\x2f\x90\x2f\x90", 8192));
 echo "Done\n";
 
@@ -277,7 +277,7 @@ object(Swow\WebSocket\Header)#%d (8) {
   bool(true)
   ["payload_length"]=>
   int(16)
-  ["mask_key"]=>
+  ["masking_key"]=>
   string(16) "\x80\x81\x82\x84"
 }
 object(Swow\WebSocket\Header)#%d (8) {
@@ -295,7 +295,7 @@ object(Swow\WebSocket\Header)#%d (8) {
   bool(true)
   ["payload_length"]=>
   int(256)
-  ["mask_key"]=>
+  ["masking_key"]=>
   string(16) "\x10\x21\x32\x44"
 }
 object(Swow\WebSocket\Header)#%d (8) {
@@ -313,7 +313,7 @@ object(Swow\WebSocket\Header)#%d (8) {
   bool(true)
   ["payload_length"]=>
   int(65536)
-  ["mask_key"]=>
+  ["masking_key"]=>
   string(4) "swow"
 }
 Done

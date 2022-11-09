@@ -56,11 +56,11 @@ interface WebSocketFrameInterface extends Stringable
 
     public function getMask(): bool;
 
-    public function getMaskKey(): string;
+    public function getMaskingKey(): string;
 
-    public function setMaskKey(string $maskKey): static;
+    public function setMaskingKey(string $maskingKey): static;
 
-    public function withMaskKey(string $maskKey): static;
+    public function withMaskingKey(string $maskingKey): static;
 
     public function getPayloadData(): StreamInterface;
 

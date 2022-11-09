@@ -2289,14 +2289,14 @@ namespace Swow\WebSocket
         public const EXT64_PAYLOAD_LENGTH = 127;
         public const EXT8_MAX_LENGTH = 125;
         public const EXT16_MAX_LENGTH = 65535;
-        public const MASK_KEY_LENGTH = 4;
-        public const EMPTY_MASK_KEY = '';
+        public const MASKING_KEY_LENGTH = 4;
+        public const EMPTY_MASKING_KEY = '';
         public const PING_FRAME = "\x89\x00";
         public const PONG_FRAME = "\x8a\x80\x00\x00\x00\x00";
 
-        public static function mask(\Stringable|string $data, int $start = 0, int $length = -1, string $maskKey = '', int $index = 0): string { }
+        public static function mask(\Stringable|string $data, int $start = 0, int $length = -1, string $maskingKey = '', int $index = 0): string { }
 
-        public static function unmask(\Swow\Buffer $data, int $start = 0, int $length = -1, string $maskKey = '', int $index = 0): void { }
+        public static function unmask(\Swow\Buffer $data, int $start = 0, int $length = -1, string $maskingKey = '', int $index = 0): void { }
     }
 }
 
@@ -2343,7 +2343,7 @@ namespace Swow\WebSocket
 {
     class Header extends \Swow\Buffer
     {
-        public function __construct(bool $fin = true, bool $rsv1 = false, bool $rsv2 = false, bool $rsv3 = false, int $opcode = \Swow\WebSocket\Opcode::TEXT, int $payloadLength = 0, string $maskKey = '') { }
+        public function __construct(bool $fin = true, bool $rsv1 = false, bool $rsv2 = false, bool $rsv3 = false, int $opcode = \Swow\WebSocket\Opcode::TEXT, int $payloadLength = 0, string $maskingKey = '') { }
 
         public function getHeaderSize(): int { }
 
@@ -2373,11 +2373,11 @@ namespace Swow\WebSocket
 
         public function getMask(): bool { }
 
-        public function getMaskKey(): string { }
+        public function getMaskingKey(): string { }
 
-        public function setMaskKey(string $maskKey): static { }
+        public function setMaskingKey(string $maskingKey): static { }
 
-        public function setPayloadInfo(int $payloadLength, string $maskKey = ''): static { }
+        public function setPayloadInfo(int $payloadLength, string $maskingKey = ''): static { }
 
         /** @return array<string, mixed> debug information for var_dump */
         public function __debugInfo(): array { }

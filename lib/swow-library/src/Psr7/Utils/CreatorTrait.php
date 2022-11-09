@@ -321,7 +321,7 @@ trait CreatorTrait
     {
         $frame = new WebSocketFrame(fin: $fin, opcode: $opcode, payloadData: $payloadData);
         if ($mask) {
-            $frame->setMaskKey(WebSocket::EMPTY_MASK_KEY);
+            $frame->setMaskingKey(WebSocket::EMPTY_MASKING_KEY);
         }
         return $frame;
     }

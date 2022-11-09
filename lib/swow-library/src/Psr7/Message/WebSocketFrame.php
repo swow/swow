@@ -32,10 +32,10 @@ class WebSocketFrame extends WebSocketHeader implements WebSocketFrameInterface
         bool $rsv3 = false,
         int $opcode = Opcode::TEXT,
         int $payloadLength = 0,
-        string $maskKey = '',
+        string $maskingKey = '',
         mixed $payloadData = '',
     ) {
-        parent::__construct($fin, $rsv1, $rsv2, $rsv3, $opcode, $payloadLength, $maskKey);
+        parent::__construct($fin, $rsv1, $rsv2, $rsv3, $opcode, $payloadLength, $maskingKey);
         if ($payloadData !== null && $payloadData !== '') {
             $this->setPayloadData($payloadData);
         }
@@ -71,9 +71,9 @@ class WebSocketFrame extends WebSocketHeader implements WebSocketFrameInterface
         return (clone $this)->setPayloadLength($payloadLength);
     }
 
-    public function withMaskKey(string $maskKey): static
+    public function withMaskingKey(string $maskingKey): static
     {
-        return (clone $this)->setMaskKey($maskKey);
+        return (clone $this)->setMaskingKey($maskingKey);
     }
 
     protected function updateHeader(): void

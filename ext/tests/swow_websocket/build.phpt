@@ -61,7 +61,7 @@ $header
     ->setFin(true)
     ->setRSV1(true)
     ->setOpcode(Opcode::TEXT)
-    ->setPayloadInfo(payloadLength: $buffer->getLength(), maskKey: "\x80\x81\x82\x84");
+    ->setPayloadInfo(payloadLength: $buffer->getLength(), maskingKey: "\x80\x81\x82\x84");
 Assert::same($header->getHeaderSize(), 6);
 Assert::same($header->toString(), "\xC1\x90\x80\x81\x82\x84");
 $buffer->clear();
@@ -77,7 +77,7 @@ $header = new Header();
 $header
     ->setRSV2(true)
     ->setOpcode(Opcode::BINARY)
-    ->setPayloadInfo(payloadLength: $buffer->getLength(), maskKey: "\x10\x21\x32\x44");
+    ->setPayloadInfo(payloadLength: $buffer->getLength(), maskingKey: "\x10\x21\x32\x44");
 Assert::same($header->getHeaderSize(), 8);
 Assert::same($header->toString(), "\xA2\xfe\x01\x00\x10\x21\x32\x44");
 $buffer->clear();
@@ -94,13 +94,13 @@ $header
     ->setFin(true)
     ->setRSV3(true)
     ->setOpcode(Opcode::BINARY)
-    ->setPayloadInfo(payloadLength: $buffer->getLength(), maskKey: strtolower(Swow::class));
+    ->setPayloadInfo(payloadLength: $buffer->getLength(), maskingKey: strtolower(Swow::class));
 Assert::same($header->getHeaderSize(), 14);
 Assert::same($header->toString(), "\x92\xff\x00\x00\x00\x00\x00\x01\x00\x00swow");
 $header = new Header(
     opcode: Opcode::BINARY,
     payloadLength: $buffer->getLength(),
-    maskKey: strtolower(Swow::class),
+    maskingKey: strtolower(Swow::class),
     fin: true, rsv3: true
 );
 Assert::same($header->getHeaderSize(), 14);
