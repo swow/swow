@@ -101,6 +101,7 @@ while (true) {
                                             );
                                     }
                                 }
+                                // no break
                             default:
                                 $connection->error(HttpStatus::NOT_FOUND);
                         }
