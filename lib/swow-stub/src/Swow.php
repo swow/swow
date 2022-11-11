@@ -562,6 +562,7 @@ namespace Swow
          * At Windows platform, this constant may have a value `-4025`
          */
         public const ESOCKTNOSUPPORT = -94;
+        public const ENODATA = -61;
         /**
          * This constant holds UV_ESTALE value, it's platform-dependent.
          *
@@ -1611,10 +1612,16 @@ namespace Swow
 
         public function close(): bool { }
 
+        /** @return bool Whether the socket has been constructed and has not been closed */
         public function isAvailable(): bool { }
 
+        /** @return bool Whether the socket has been opened with exact type and file descriptor is valid */
         public function isOpen(): bool { }
 
+        /**
+         * @return bool Whether the socket has connected (including SSL handshake if it's on SSL)
+         * @note this method may return true even if the connection is broken, use {@see Socket::checkLiveness()} to check if the connection is broken
+         */
         public function isEstablished(): bool { }
 
         public function isServer(): bool { }
@@ -1623,8 +1630,13 @@ namespace Swow
 
         public function isClient(): bool { }
 
+        /**
+         * @return int return Errno constants if the socket is broken, zero otherwise,
+         * it's a silent version of {@see Socket::checkLiveness()}
+         */
         public function getConnectionError(): int { }
 
+        /** @throws SocketException when the socket connection is broken */
         public function checkLiveness(): static { }
 
         public function getIoState(): int { }
