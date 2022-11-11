@@ -239,9 +239,9 @@ function gitFiles(string $root = '.'): array
 /**
  * defer execute
  *
- * @param mixed $any reference to any variable used for defer
+ * @param-out \stdClass $any reference to any variable used for defer
  */
-function defer(&$any, callable $callback): void
+function defer(mixed &$any, callable $callback): void
 {
     if (!$any) {
         $any = new class() {
