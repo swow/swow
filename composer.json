@@ -98,6 +98,7 @@
             "@php tools/stub-fixer.php lib/swow-stub/src/Swow.php"
         ],
         "update-arginfo": [ "@php -n lib/php-stub-generator/bin/update-arginfo.php --cache-path=ext/build --stub-file=lib/swow-stub/src/Swow.php swow ext/src ext/build" ],
+        "update-version": [ "@php tools/update-version.php" ],
         "update-mime-types": [ "@php -n tools/update-mime-types.php" ],
         "split": [ "@php -n tools/split.php" ]
     },
