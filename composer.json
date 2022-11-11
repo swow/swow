@@ -77,7 +77,7 @@
         "phan": [ "@swow-php vendor/bin/phan" ],
         "phpstan": [ "@php vendor/bin/phpstan analyse --memory-limit 4G -c phpstan.neon" ],
         "psalm": [ "@php vendor/bin/psalm" ],
-        "sync-extension": [ "@php -n tools/sync-extension.php" ],
+        "sync-dependencies": [ "@php -n tools/sync-dependencies.php" ],
         "build-extension": [ "@php ext/bin/swow-builder" ],
         "build-debug-extension": [ "@php ext/bin/swow-builder --debug" ],
         "rebuild-extension": [ "@build-extension --rebuild" ],
