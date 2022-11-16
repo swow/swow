@@ -97,7 +97,7 @@ if (!file_exists("{$workSpace}/Makefile") || isset($options['rebuild'])) {
         $configureOptions[] = $options['enable'];
     }
     if (isset($options['with-php-config'])) {
-        $configureOptions[] = '--with-php-config='.$options['with-php-config'];
+        $configureOptions[] = '--with-php-config=' . $options['with-php-config'];
     }
     $configureOptions = implode(' ', $configureOptions);
     $configureCommands[] = "./configure {$configureOptions}";
