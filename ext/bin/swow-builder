@@ -49,7 +49,7 @@ if (PHP_OS_FAMILY === 'Windows') {
 $workSpace = dirname(__DIR__);
 
 $swowSo = "{$workSpace}/.libs/swow.so";
-$options = getopt('', ['sudo', 'install', 'rebuild', 'clean', 'show-log', 'debug', 'thread-context', 'msan', 'asan', 'ubsan', 'enable::']);
+$options = getopt('', ['sudo', 'install', 'rebuild', 'clean', 'show-log', 'debug', 'thread-context', 'msan', 'asan', 'ubsan', 'enable::','with-php-config::']);
 
 $commandExecutor = static function (string $name, array $commands) use ($workSpace): void {
     if (!$commands) {
@@ -95,6 +95,9 @@ if (!file_exists("{$workSpace}/Makefile") || isset($options['rebuild'])) {
     }
     if (isset($options['enable'])) {
         $configureOptions[] = $options['enable'];
+    }
+    if (isset($options['with-php-config'])) {
+        $configureOptions[] = '--with-php-config=' . $options['with-php-config'];
     }
     $configureOptions = implode(' ', $configureOptions);
     $configureCommands[] = "./configure {$configureOptions}";
