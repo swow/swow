@@ -49,7 +49,14 @@ if (PHP_OS_FAMILY === 'Windows') {
 $workSpace = dirname(__DIR__);
 
 $swowSo = "{$workSpace}/.libs/swow.so";
-$options = getopt('', ['sudo', 'install', 'rebuild', 'clean', 'show-log', 'debug', 'thread-context', 'msan', 'asan', 'ubsan', 'enable::','with-php-config::']);
+$options = getopt('', [
+    ...['sudo', 'show-log'],
+    ...['install', 'rebuild', 'clean'],
+    ...['with-php-config::'],
+    ...['debug', 'msan', 'asan', 'ubsan', 'gcov', 'valgrind'],
+    ...['thread-context'],
+    ...['ssl::', 'curl::'],
+]);
 
 $commandExecutor = static function (string $name, array $commands) use ($workSpace): void {
     if (!$commands) {
@@ -78,11 +85,11 @@ if (!file_exists("{$workSpace}/configure") || isset($options['rebuild'])) {
 }
 if (!file_exists("{$workSpace}/Makefile") || isset($options['rebuild'])) {
     $configureOptions = [];
+    if (isset($options['php-config'])) {
+        $configureOptions[] = '--with-php-config=' . $options['with-php-config'];
+    }
     if (isset($options['debug'])) {
         $configureOptions[] = '--enable-swow-debug';
-    }
-    if (isset($options['thread-context'])) {
-        $configureOptions[] = '--enable-swow-thread-context';
     }
     if (isset($options['msan'])) {
         $configureOptions[] = '--enable-swow-memory-sanitizer';
@@ -93,11 +100,20 @@ if (!file_exists("{$workSpace}/Makefile") || isset($options['rebuild'])) {
     if (isset($options['ubsan'])) {
         $configureOptions[] = '--enable-swow-undefined-sanitizer';
     }
-    if (isset($options['enable'])) {
-        $configureOptions[] = $options['enable'];
+    if (isset($options['gcov'])) {
+        $configureOptions[] = '--enable-swow-gcov';
     }
-    if (isset($options['with-php-config'])) {
-        $configureOptions[] = '--with-php-config=' . $options['with-php-config'];
+    if (isset($options['valgrind'])) {
+        $configureOptions[] = '--enable-swow-valgrind';
+    }
+    if (isset($options['thread-context'])) {
+        $configureOptions[] = '--enable-swow-thread-context';
+    }
+    if (isset($options['ssl'])) {
+        $configureOptions[] = '--enable-swow-ssl' . (is_string($options['ssl']) ? "={$options['ssl']}" : '');
+    }
+    if (isset($options['curl'])) {
+        $configureOptions[] = '--enable-swow-curl' . (is_string($options['curl']) ? "={$options['curl']}" : '');
     }
     $configureOptions = implode(' ', $configureOptions);
     $configureCommands[] = "./configure {$configureOptions}";
