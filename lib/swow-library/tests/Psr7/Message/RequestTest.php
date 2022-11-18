@@ -18,7 +18,8 @@ use Swow\Psr7\Psr7;
 
 /**
  * @internal
- * @covers \Swow\Psr7\Psr7, \Swow\Psr7\Message\Request
+ * @covers \Swow\Psr7\Message\Request
+ * @covers \Swow\Psr7\Psr7
  */
 final class RequestTest extends TestCase
 {
