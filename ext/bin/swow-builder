@@ -50,19 +50,21 @@ $workSpace = dirname(__DIR__);
 $swowSo = "{$workSpace}/.libs/swow.so";
 
 $mappedOptions = [
-    ...['php-config' => 'with-php-config'],
+    'php-config' => 'with-php-config',
 ];
 $enableOptions = [
-    ...[
-        'debug',
-        'msan' => 'memory-sanitizer',
-        'asan' => 'address-sanitizer',
-        'ubsan' => 'undefined-sanitizer',
-        'gcov',
-        'valgrind',
-    ],
-    ...['thread-context'],
-    ...['ssl', 'curl'],
+    /* debug */
+    'debug',
+    'msan' => 'memory-sanitizer',
+    'asan' => 'address-sanitizer',
+    'ubsan' => 'undefined-sanitizer',
+    'gcov',
+    'valgrind',
+    /* coroutine */
+    'thread-context',
+    /* 3rd */
+    'ssl',
+    'curl',
 ];
 $_enableOptions = [];
 foreach ($enableOptions as $enableOptionAlias => $enableOption) {
