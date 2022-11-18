@@ -31,12 +31,12 @@
         "psr/http-message": "^1.0"
     },
     "require-dev": {
-        "friendsofphp/php-cs-fixer": "^3.9",
-        "phan/phan": "^5.3",
-        "phpstan/phpstan": "^1.4",
-        "phpunit/phpunit": "^9.5.16",
-        "rector/rector": "^0.12.8",
-        "vimeo/psalm": "^4.22"
+        "friendsofphp/php-cs-fixer": "^3.13",
+        "phan/phan": "^5.4.1",
+        "phpstan/phpstan": "^1.9.2",
+        "phpunit/phpunit": "^9.5.26",
+        "rector/rector": "^0.12.23",
+        "vimeo/psalm": "^4.30.0"
     },
     "replace": {
         "swow/swow-library": "*",
