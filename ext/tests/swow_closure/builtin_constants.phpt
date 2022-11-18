@@ -22,7 +22,7 @@ $anonymousString = serialize($anonymous);
 $anonymousUnserialized = unserialize($anonymousString);
 $anonymousUnserialized();
 
-$arrow = static fn () => $anonymous();
+$arrow = static fn() => $anonymous();
 
 $arrowString = serialize($arrow);
 // var_dump($arrowString);

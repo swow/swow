@@ -352,7 +352,7 @@ class StubGenerator
                 if (count($comment) === 1) {
                     $comment = ['/** ' . trim($comment[0], ' *') . ' */'];
                 } else {
-                    $comment = ['/**', ...array_map(static fn (string $line): string => empty($line) ? ' *' : " * {$line}", $comment), ' */'];
+                    $comment = ['/**', ...array_map(static fn(string $line): string => empty($line) ? ' *' : " * {$line}", $comment), ' */'];
                 }
                 $comment = implode("\n", $comment);
             } else {
@@ -374,7 +374,7 @@ class StubGenerator
             $comment = trim($userComment);
         } else {
             $userCommentLines = array_slice($userCommentLines, 1, count($userCommentLines) - 2);
-            $comment = array_map(static fn (string $line) => trim($line, '/* '), $userCommentLines);
+            $comment = array_map(static fn(string $line) => trim($line, '/* '), $userCommentLines);
         }
 
         return $comment;

@@ -18,7 +18,7 @@ var_dump($anonymousString);
 $anonymousUnserialized = unserialize($anonymousString);
 $anonymousUnserialized();
 
-$arrow = static fn () => print "arrow\n";
+$arrow = static fn() => print "arrow\n";
 
 var_dump($arrow);
 $arrowString = serialize($arrow);

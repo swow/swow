@@ -65,7 +65,7 @@ TEXT;
     if (isset($options['stub-file'])) {
         $constantMap = $g->getConstantMap();
         $declarationMap = $g->getExtensionFunctionAndClassReflectionsGroupByNamespace();
-        $declarationMap = array_map(static fn (array $reflections) => array_keys($reflections), $declarationMap);
+        $declarationMap = array_map(static fn(array $reflections) => array_keys($reflections), $declarationMap);
         $data = serialize([
             'constants' => $constantMap,
             'declarations' => $declarationMap,

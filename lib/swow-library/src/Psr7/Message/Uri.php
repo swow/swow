@@ -251,7 +251,7 @@ class Uri implements UriPlusInterface, StringableInterface
     {
         return preg_replace_callback(
             '/[^a-zA-Z0-9_\-.~!&\'()*+,;=%:@\/]++|%(?![A-Fa-f0-9]{2})/',
-            static fn (array $match): string => rawurlencode($match[0]),
+            static fn(array $match): string => rawurlencode($match[0]),
             $path
         );
     }
@@ -281,7 +281,7 @@ class Uri implements UriPlusInterface, StringableInterface
     {
         return preg_replace_callback(
             '/[^a-zA-Z0-9_\-.~!&\'()*+,;=%:@\/?]++|%(?![A-Fa-f0-9]{2})/',
-            static fn (array $match): string => rawurlencode($match[0]),
+            static fn(array $match): string => rawurlencode($match[0]),
             $string
         );
     }

@@ -122,7 +122,7 @@ PHP;
                             'comments' => [
                                 new Doc(
                                     text: "/**\n * This constant holds SIG{$name} value, it's platform-dependent.\n *" .
-                                        implode("\n *", array_map(static fn ($x) => $x === '' ? $x : " {$x}", explode("\n", $constantDefinition->comment))) .
+                                        implode("\n *", array_map(static fn($x) => $x === '' ? $x : " {$x}", explode("\n", $constantDefinition->comment))) .
                                         "\n */",
                                 ),
                             ],
@@ -151,7 +151,7 @@ PHP;
                             'comments' => [
                                 new Doc(
                                     text: "/**\n * This constant holds SIG{$name} value, it's platform-dependent.\n *" .
-                                        implode("\n *", array_map(static fn ($x) => $x === '' ? $x : " {$x}", explode("\n", $constantDefinition->comment))) .
+                                        implode("\n *", array_map(static fn($x) => $x === '' ? $x : " {$x}", explode("\n", $constantDefinition->comment))) .
                                         "\n */",
                                 ),
                             ],
@@ -164,11 +164,11 @@ PHP;
                     ];
                 }
                 // sort all signals
-                uasort($newStmts, static fn ($x, $y) => $x['value'] - $y['value'] === 0 ? strcmp($x['name'], $y['name']) : $x['value'] - $y['value']);
+                uasort($newStmts, static fn($x, $y) => $x['value'] - $y['value'] === 0 ? strcmp($x['name'], $y['name']) : $x['value'] - $y['value']);
 
                 // prepend to original class
                 // print_r(array_values($newStmts));
-                $node->stmts = [...array_map(static fn ($x) => $x['stmt'], $newStmts), ...$node->stmts];
+                $node->stmts = [...array_map(static fn($x) => $x['stmt'], $newStmts), ...$node->stmts];
             } elseif (
                 $node instanceof Node\Stmt\Class_ &&
                 $this->inNamespaceClass('Swow', 'Socket')
@@ -270,7 +270,7 @@ PHP;
                         [
                             new Doc(
                                 text: "/**\n * This constant holds page size of this machine, it's platform-dependent.\n *" .
-                                    implode("\n *", array_map(static fn ($x) => $x === '' ? $x : " {$x}", explode("\n", $constantDefinition->comment))) .
+                                    implode("\n *", array_map(static fn($x) => $x === '' ? $x : " {$x}", explode("\n", $constantDefinition->comment))) .
                                     "\n */",
                             ),
                         ]
@@ -299,7 +299,7 @@ PHP;
                         [
                             new Doc(
                                 text: "/**\n * This constant holds UV_{$name} value, it's platform-dependent.\n *" .
-                                    implode("\n *", array_map(static fn ($x) => $x === '' ? $x : " {$x}", explode("\n", $constantDefinition->comment))) .
+                                    implode("\n *", array_map(static fn($x) => $x === '' ? $x : " {$x}", explode("\n", $constantDefinition->comment))) .
                                     "\n */",
                             ),
                         ],

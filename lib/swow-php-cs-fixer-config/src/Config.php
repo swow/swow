@@ -102,6 +102,9 @@ class Config extends \PhpCsFixer\Config
                     'import_constants' => true,
                     'import_functions' => true,
                 ],
+                'function_declaration' => [
+                    'closure_fn_spacing' => 'none',
+                ],
                 // NOTE: this is for anonymous functions using WaitReference, maybe there's better solution
                 'lambda_not_used_import' => false,
                 'linebreak_after_opening_tag' => true,
