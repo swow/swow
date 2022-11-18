@@ -26,6 +26,7 @@ use function sprintf;
 use function unlink;
 
 use const PHP_BINARY;
+use const PHP_OS_FAMILY;
 
 /**
  * @coversNothing
@@ -38,6 +39,9 @@ final class BuilderTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        if (PHP_OS_FAMILY === 'Windows') {
+            $this->markTestSkipped('Unable to run on Windows');
+        }
         if (!file_exists(self::$builderPath ??= dirname(__DIR__, 4) . '/ext/bin/swow-builder')) {
             $this->markTestSkipped('Unable to detect builder binary file');
         }
