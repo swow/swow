@@ -47,73 +47,90 @@ if (PHP_OS_FAMILY === 'Windows') {
 }
 
 $workSpace = dirname(__DIR__);
-
 $swowSo = "{$workSpace}/.libs/swow.so";
-$options = getopt('', [
-    ...['sudo', 'show-log'],
-    ...['install', 'rebuild', 'clean'],
-    ...['with-php-config::'],
-    ...['debug', 'msan', 'asan', 'ubsan', 'gcov', 'valgrind'],
-    ...['thread-context'],
-    ...['ssl::', 'curl::'],
-]);
 
-$commandExecutor = static function (string $name, array $commands) use ($workSpace): void {
+$mappedOptions = [
+    ...['php-config' => 'with-php-config'],
+];
+$enableOptions = [
+    ...[
+        'debug',
+        'msan' => 'memory-sanitizer',
+        'asan' => 'address-sanitizer',
+        'ubsan' => 'undefined-sanitizer',
+        'gcov',
+        'valgrind',
+    ],
+    ...['thread-context'],
+    ...['ssl', 'curl'],
+];
+$_enableOptions = [];
+foreach ($enableOptions as $enableOptionAlias => $enableOption) {
+    if (is_numeric($enableOptionAlias)) {
+        $enableOptionAlias = $enableOption;
+    }
+    $_enableOptions[$enableOptionAlias] = $enableOption;
+}
+$enableOptions = $_enableOptions;
+$longOptionsConverterFn = static fn(string $option) => "{$option}::";
+$shortOptions = 'q';
+$longOptions = [
+    ...['sudo', 'show-log', 'quiet'],
+    ...['help', 'dry-run'],
+    ...['install', 'rebuild', 'clean'],
+    ...array_map($longOptionsConverterFn, array_keys($mappedOptions)),
+    ...array_map($longOptionsConverterFn, array_keys($enableOptions)),
+];
+$options = getopt($shortOptions, $longOptions);
+$expectSudo = isset($options['sudo']);
+$showLog = isset($options['show-log']);
+$dryRun = isset($options['dry-run']);
+$expectInstall = isset($options['install']);
+$rebuild = isset($options['rebuild']);
+$clean = isset($options['clean']);
+$noInteraction = isset($options['q']) || isset($options['quiet']);
+
+$commandExecutor = static function (string $name, array $commands) use ($workSpace, $dryRun): void {
     if (!$commands) {
         return;
     }
     array_unshift($commands, "cd {$workSpace}");
-    passthru(...$commands) && error("{$name} failed");
-    ok("{$name} complete");
+    if (!$dryRun) {
+        passthru(...$commands) && error("{$name} failed");
+    } else {
+        $command = implode(" && \\\n", $commands);
+        log("> {$command}");
+    }
+    ok("{$name} done");
     br();
 };
 
 $cleanCommands = [];
-if (isset($options['rebuild']) || isset($options['clean'])) {
+if ($rebuild || $clean) {
     if (file_exists("{$workSpace}/Makefile")) {
         $cleanCommands[] = "{$workSpace}/deps/libcat/tools/cleaner.sh {$workSpace}";
     }
 }
-if (isset($options['rebuild'])) {
+if ($rebuild) {
     $cleanCommands[] = 'phpize --clean';
 }
 $commandExecutor('Clean', $cleanCommands);
 
 $configureCommands = [];
-if (!file_exists("{$workSpace}/configure") || isset($options['rebuild'])) {
+if (!file_exists("{$workSpace}/configure") || $rebuild) {
     $configureCommands[] = 'phpize';
 }
-if (!file_exists("{$workSpace}/Makefile") || isset($options['rebuild'])) {
+if (!file_exists("{$workSpace}/Makefile") || $rebuild) {
     $configureOptions = [];
-    if (isset($options['php-config'])) {
-        $configureOptions[] = '--with-php-config=' . $options['with-php-config'];
+    foreach ($mappedOptions as $mappedOptionAlias => $mappedOption) {
+        if (isset($options[$mappedOptionAlias])) {
+            $configureOptions[] = '--with-php-config=' . $options[$mappedOptionAlias];
+        }
     }
-    if (isset($options['debug'])) {
-        $configureOptions[] = '--enable-swow-debug';
-    }
-    if (isset($options['msan'])) {
-        $configureOptions[] = '--enable-swow-memory-sanitizer';
-    }
-    if (isset($options['asan'])) {
-        $configureOptions[] = '--enable-swow-address-sanitizer';
-    }
-    if (isset($options['ubsan'])) {
-        $configureOptions[] = '--enable-swow-undefined-sanitizer';
-    }
-    if (isset($options['gcov'])) {
-        $configureOptions[] = '--enable-swow-gcov';
-    }
-    if (isset($options['valgrind'])) {
-        $configureOptions[] = '--enable-swow-valgrind';
-    }
-    if (isset($options['thread-context'])) {
-        $configureOptions[] = '--enable-swow-thread-context';
-    }
-    if (isset($options['ssl'])) {
-        $configureOptions[] = '--enable-swow-ssl' . (is_string($options['ssl']) ? "={$options['ssl']}" : '');
-    }
-    if (isset($options['curl'])) {
-        $configureOptions[] = '--enable-swow-curl' . (is_string($options['curl']) ? "={$options['curl']}" : '');
+    foreach ($enableOptions as $enableOptionAlias => $enableOption) {
+        if (isset($options[$enableOptionAlias])) {
+            $configureOptions[] = "--enable-swow-{$enableOption}" . (is_string($options[$enableOptionAlias]) ? "={$options[$enableOptionAlias]}" : '');
+        }
     }
     $configureOptions = implode(' ', $configureOptions);
     $configureCommands[] = "./configure {$configureOptions}";
@@ -127,36 +144,40 @@ if ($cpuCount <= 0) {
 }
 // TODO: CFLAGS/CXXFLAGS Werror
 $makeCommand = "make -j{$cpuCount}";
-if (!isset($options['show-log'])) {
+if (!$showLog) {
     $makeCommand .= ' > /dev/null';
     notice('Please be patient while compiling in silent mode...');
 }
 $commandExecutor('Make', [$makeCommand]);
 
 $checkCommand = "/usr/bin/env php -n -d extension={$swowSo} --ri swow";
-ob_start();
-$status = passthru($checkCommand);
-$swowInfo = ob_get_clean();
-if ($status === 0) {
-    log($swowInfo);
+if (!$dryRun) {
+    ob_start();
+    $status = passthru($checkCommand);
+    $swowInfo = ob_get_clean();
+    if ($status === 0) {
+        log($swowInfo);
+    } else {
+        warn('Get extension info failed');
+    }
 } else {
-    warn('Get extension info failed');
+    log("> {$checkCommand}");
+    ok('Get extension info done');
+    br();
 }
 
-$expectInstall = isset($options['install']);
 if (!$expectInstall) {
-    $expectInstall = askBool('Do you want to install it right now?');
+    $expectInstall = $noInteraction || askBool('Do you want to install it right now?');
 }
 if ($expectInstall) {
     $haveSudo = getmyuid() !== 0;
-    $expectSudo = isset($options['sudo']);
     if ($expectSudo && $haveSudo) {
         notice('Install the extension to your system requires root privileges');
-        $sudo = 'sudo';
+        $sudo = 'sudo ';
     } else {
         $sudo = '';
     }
-    $commandExecutor('Install', ["{$sudo} make install"]);
+    $commandExecutor('Install', ["{$sudo}make install"]);
 }
 
 success('All tasks have been completed');
