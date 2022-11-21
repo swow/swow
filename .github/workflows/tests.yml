@@ -55,10 +55,10 @@ jobs:
         with:
           php-version: ${{ matrix.php-version }}
           tools: phpize
-          ini-values: pcov.enabled = 1
+          ini-values: pcov.enabled = 0
           coverage: pcov
           # coverage: none
-          extensions: curl,openssl,sockets,ffi,pcov
+          extensions: curl,openssl,sockets,ffi
         #env:
           #phpts: ${{ matrix.ts }}
 
@@ -91,7 +91,7 @@ jobs:
       - name: Run library tests
         id: test-library
         continue-on-error: true
-        run: php --ri pcov && composer test-library
+        run: php --ri pcov && composer test-library-with-pcov
 
       - name: Fail if test-extension failed
         if: steps.test-extension.outcome != 'success'

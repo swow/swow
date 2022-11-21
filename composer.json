@@ -92,6 +92,7 @@
         "install-clean-debug-extension": [ "@install-debug-extension --clean" ],
         "test-extension": [ "@php tools/test-extension.php" ],
         "test-library": [ "@swow-php vendor/bin/phpunit --configuration lib/swow-library lib/swow-library" ],
+        "test-library-with-pcov": [ "@swow-php -dextension=pcov -dpcov.enabled=1 vendor/bin/phpunit --configuration lib/swow-library lib/swow-library" ],
         "test": [ "@test-extension", "@test-library" ],
         "gen-stub": [
             "@swow-php lib/php-stub-generator/bin/gen-stub.php --noinspection --stub-file=lib/swow-stub/src/Swow.php swow lib/swow-stub/src/Swow.php",
