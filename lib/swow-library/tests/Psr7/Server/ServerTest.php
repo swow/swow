@@ -43,6 +43,7 @@ use function serialize;
 use function sprintf;
 use function str_repeat;
 use function strlen;
+use function substr;
 use function Swow\defer;
 use function Swow\TestUtils\getRandomBytes;
 use function Swow\TestUtils\pseudoRandom;
@@ -321,5 +322,33 @@ final class ServerTest extends TestCase
         $this->assertSame($acceptedWebSocketCount, $result2->getSuccessCount());
         $this->assertSame(0, $result2->getFailureCount());
         $this->assertNull($result2->getExceptions());
+    }
+
+    public function testEventNone(): void
+    {
+        $server = new Server();
+        $server->bind('127.0.0.1')->listen();
+
+        $wr = new WaitReference();
+        Coroutine::run(static function () use ($server, $wr): void {
+            $connection = $server->acceptConnection();
+            $connection->recvHttpRequest();
+            $connection->respond(Status::OK);
+        });
+
+        $request = Psr7::createRequest(
+            'GET', '/test', [
+                'Host' => "{$server->getSockAddress()}:{$server->getSockPort()}",
+            ]);
+        $request = Psr7::stringifyRequest($request);
+        $client = new Client();
+        $client->connect($server->getSockAddress(), $server->getSockPort());
+        $client->send(substr($request, 0, (int) (strlen($request) / 2)));
+        usleep(1);
+        $client->send(substr($request, (int) (strlen($request) / 2)));
+        $response = $client->recvResponseEntity();
+        $this->assertSame(Status::OK, $response->statusCode);
+
+        $wr::wait($wr);
     }
 }

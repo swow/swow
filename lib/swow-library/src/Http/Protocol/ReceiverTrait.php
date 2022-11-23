@@ -209,7 +209,6 @@ trait ReceiverTrait
                         if (!$headersComplete || ($isMultipart && !$multiPartHeadersComplete)) {
                             $data = $buffer->read($dataOffset, $dataLength);
                         }
-                        $expectMoreData = true;
                     }
                     if (!$headersComplete) {
                         $headerLength += $parsedLength;
@@ -223,6 +222,7 @@ trait ReceiverTrait
                             throw new ParserException('Buffer is full and unable to continue parsing');
                         }
                         $parsedOffset = 0;
+                        $expectMoreData = true;
                         break; /* goto recv more data */
                     }
                     if ($event === HttpParser::EVENT_MESSAGE_COMPLETE) {
