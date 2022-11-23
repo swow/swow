@@ -549,13 +549,13 @@ static PHP_METHOD_EX(Swow_Buffer, _write, const zend_bool append)
             zend_argument_value_error(1, "can not be negative");
             RETURN_THROWS();
         }
-        if (UNEXPECTED(offset > buffer->length)) {
+        if (UNEXPECTED((size_t) offset > buffer->length)) {
             zend_argument_value_error(1, "can not be greater than current buffer length");
             RETURN_THROWS();
         }
     }
 
-    if (offset == 0 && start == 0 && (size_t) length == ZSTR_LEN(string) && length >= buffer->size) {
+    if (offset == 0 && start == 0 && (size_t) length == ZSTR_LEN(string) && (size_t) length >= buffer->size) {
         swow_buffer_close(s_buffer);
         /* Notice: string maybe interned, so we must use zend_string_copy() here */
         buffer->value = ZSTR_VAL(zend_string_copy(string));
