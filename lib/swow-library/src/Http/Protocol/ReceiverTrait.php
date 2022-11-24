@@ -174,14 +174,14 @@ trait ReceiverTrait
         $shouldKeepAlive = false;
         $contentLength = 0;
         $headerLength = 0;
-        $headersComplete = false;
+        $headersCompleted = false;
         $isChunked = false;
         $currentChunkLength = 0;
         $body = null;
         /* }}} */
         /* multipart related values {{{ */
         $isMultipart = false;
-        $multiPartHeadersComplete = false;
+        $multiPartHeadersCompleted = false;
         $multipartHeaderName = '';
         $multipartHeaders = [];
         $tmpName = '';
@@ -206,11 +206,11 @@ trait ReceiverTrait
                     if ($event & HttpParser::EVENT_FLAG_DATA) {
                         $dataOffset = $parser->getDataOffset();
                         $dataLength = $parser->getDataLength();
-                        if (!$headersComplete || ($isMultipart && !$multiPartHeadersComplete)) {
+                        if (!$headersCompleted || ($isMultipart && !$multiPartHeadersCompleted)) {
                             $data = $buffer->read($dataOffset, $dataLength);
                         }
                     }
-                    if (!$headersComplete) {
+                    if (!$headersCompleted) {
                         $headerLength += $parsedLength;
                         if ($headerLength > $maxHeaderLength) {
                             throw new ProtocolException(empty($headerName) ? HttpStatus::REQUEST_URI_TOO_LARGE : HttpStatus::REQUEST_HEADER_FIELDS_TOO_LARGE);
@@ -247,7 +247,7 @@ trait ReceiverTrait
                         }
                         break 2;
                     }
-                    if (!$headersComplete) {
+                    if (!$headersCompleted) {
                         switch ($event) {
                             case HttpParser::EVENT_HEADER_FIELD:
                                 {
@@ -289,7 +289,7 @@ trait ReceiverTrait
                                             throw new ProtocolException(HttpStatus::REQUEST_ENTITY_TOO_LARGE);
                                         }
                                     }
-                                    $headersComplete = true;
+                                    $headersCompleted = true;
                                     if ($parser->isMultipart()) {
                                         $isMultipart = true;
                                         if ($this->preserveBodyData) {
@@ -335,7 +335,7 @@ trait ReceiverTrait
                                 }
                             case HttpParser::EVENT_MULTIPART_HEADERS_COMPLETE:
                                 {
-                                    $multiPartHeadersComplete = true;
+                                    $multiPartHeadersCompleted = true;
                                     /* parse Content-Disposition */
                                     $contentDisposition = $multipartHeaders['content-disposition'] ?? '';
                                     $contentDispositionParts = explode(';', $contentDisposition, 2);
@@ -411,7 +411,7 @@ trait ReceiverTrait
                                         $fileError = UPLOAD_ERR_OK;
                                     }
                                     // reset for the next parts
-                                    $multiPartHeadersComplete = false;
+                                    $multiPartHeadersCompleted = false;
                                     $multipartHeaderName = '';
                                     $multipartHeaders = [];
                                 }
