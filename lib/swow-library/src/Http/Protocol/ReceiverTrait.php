@@ -22,6 +22,7 @@ use Swow\Http\Mime\MimeType;
 use Swow\Http\Parser as HttpParser;
 use Swow\Http\ParserException;
 use Swow\Http\Status as HttpStatus;
+use Swow\SocketException;
 use Swow\WebSocket\WebSocket;
 use ValueError;
 
@@ -195,6 +196,7 @@ trait ReceiverTrait
             while (true) {
                 if ($expectMoreData) {
                     $this->recvData($buffer, $buffer->getLength());
+                    /** @noinspection PhpUnusedLocalVariableInspection (on the safe-side) */
                     $expectMoreData = false;
                 }
                 // TODO: call $parser->finished() if connection error?
@@ -513,6 +515,18 @@ trait ReceiverTrait
             /* Note: Connection should be reset, it's an unrecoverable error. */
             $shouldKeepAlive = false;
             throw new ProtocolException(HttpStatus::BAD_REQUEST, 'Protocol Parsing Error', $parserException);
+        } catch (SocketException $socketException) {
+            $shouldKeepAlive = false;
+            try {
+                $parser->finish();
+            } catch (ParserException) {
+                // try to finish failed, re-throw socket exception
+                throw $socketException;
+            }
+            if (!$headersCompleted) {
+                // headers are incomplete, re-throw socket exception
+                throw $socketException;
+            }
         } finally {
             if ($isServerRequest) {
                 $messageEntity->method = $parser->getMethod();
