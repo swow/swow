@@ -40,9 +40,17 @@ extern "C" {
 
 #define CAT_SOCKET_DEFAULT_BACKLOG  511
 
-#define CAT_SOCKET_IPV4_BUFFER_SIZE 16  /* >= 16 */
-#define CAT_SOCKET_IPV6_BUFFER_SIZE 48  /* >= 46 */
-#define CAT_SOCKET_IP_BUFFER_SIZE   CAT_SOCKET_IPV6_BUFFER_SIZE
+#ifdef INET_ADDRSTRLEN
+# define CAT_SOCKET_IPV4_BUFFER_SIZE INET_ADDRSTRLEN
+#else
+# define CAT_SOCKET_IPV4_BUFFER_SIZE 22 /* Linux >= 16, Windows >= 22 */
+#endif
+#ifdef INET6_ADDRSTRLEN
+# define CAT_SOCKET_IPV6_BUFFER_SIZE INET6_ADDRSTRLEN
+#else
+# define CAT_SOCKET_IPV6_BUFFER_SIZE 65 /* Linux >= 46, Windows >= 65 */
+#endif
+#define CAT_SOCKET_IP_BUFFER_SIZE CAT_SOCKET_IPV6_BUFFER_SIZE
 
 #ifndef AF_LOCAL
 #define AF_LOCAL AF_UNIX
@@ -104,7 +112,7 @@ typedef struct cat_sockaddr_info_s {
     cat_sockaddr_union_t address;
 } cat_sockaddr_info_t;
 
-CAT_API const char* cat_sockaddr_af_name(cat_sa_family_t af);
+CAT_API const char* cat_sockaddr_af_get_name(cat_sa_family_t af);
 
 /* Notice: input buffer_size is size of buffer (not length)
  * and if ENOSPC, *buffer_size will be the minimum required buffer **size**, otherwise, *buffer_size will be strlen(buffer)
@@ -136,18 +144,6 @@ typedef cat_os_socket_t cat_socket_fd_t;
 #define CAT_SOCKET_FD_FMT CAT_OS_SOCKET_FMT
 #define CAT_SOCKET_FD_FMT_SPEC CAT_OS_SOCKET_FMT_SPEC
 #define CAT_SOCKET_INVALID_FD CAT_OS_INVALID_SOCKET
-
-/* stdio os fd */
-
-#ifndef STDIN_FILENO
-#define STDIN_FILENO  0 /* standard input file descriptor */
-#endif
-#ifndef STDOUT_FILENO
-#define STDOUT_FILENO 1 /* standard output file descriptor */
-#endif
-#ifndef STDERR_FILENO
-#define STDERR_FILENO 2 /* standard error file descriptor */
-#endif
 
 /* socket length */
 
@@ -310,6 +306,11 @@ typedef uint32_t cat_socket_option_flags_t;
     XX(ALLOCATED,           1 << 0) \
     XX(CLOSED,              1 << 1) \
     XX(UNRECOVERABLE_ERROR, 1 << 2) \
+    /* for user (16 ~ 31) */ \
+    XX(USR1,  1 << 16) XX(USR2,  1 << 17) XX(USR3,  1 << 18) XX(USR4,  1 << 19) \
+    XX(USR5,  1 << 20) XX(USR6,  1 << 21) XX(USR7,  1 << 22) XX(USR8,  1 << 23) \
+    XX(USR9,  1 << 24) XX(USR10, 1 << 25) XX(USR11, 1 << 26) XX(USR12, 1 << 27) \
+    XX(USR13, 1 << 28) XX(USR14, 1 << 29) XX(USR15, 1 << 30) XX(USR16, 1 << 31) \
 
 typedef enum cat_socket_flag_e {
 #define CAT_SOCKET_FLAG_GEN(name, value) CAT_ENUM_GEN(CAT_SOCKET_FLAG_, name, value)
@@ -317,7 +318,7 @@ typedef enum cat_socket_flag_e {
 #undef CAT_SOCKET_FLAG_GEN
 } cat_socket_flag_t;
 
-typedef uint8_t cat_socket_flags_t;
+typedef uint32_t cat_socket_flags_t;
 
 #define CAT_SOCKET_INTERNAL_FLAG_MAP(XX) \
     XX(NONE,                   0) \
@@ -495,7 +496,7 @@ struct cat_socket_s
 
 /* globals */
 
-CAT_GLOBALS_STRUCT_BEGIN(cat_socket)
+CAT_GLOBALS_STRUCT_BEGIN(cat_socket) {
     /* socket */
     cat_socket_id_t last_id;
     struct {
@@ -504,15 +505,16 @@ CAT_GLOBALS_STRUCT_BEGIN(cat_socket)
     } options;
     /* dns */
     // TODO: dns_cache (we should implement lru_cache)
-CAT_GLOBALS_STRUCT_END(cat_socket)
+} CAT_GLOBALS_STRUCT_END(cat_socket);
 
-extern CAT_API CAT_GLOBALS_DECLARE(cat_socket)
+extern CAT_API CAT_GLOBALS_DECLARE(cat_socket);
 
 #define CAT_SOCKET_G(x) CAT_GLOBALS_GET(cat_socket, x)
 
 /* module initialization */
 
 CAT_API cat_bool_t cat_socket_module_init(void);
+CAT_API cat_bool_t cat_socket_module_shutdown(void);
 CAT_API cat_bool_t cat_socket_runtime_init(void);
 
 /* common methods */
@@ -526,7 +528,7 @@ CAT_API cat_socket_t *cat_socket_open_os_fd(cat_socket_t *socket, cat_socket_typ
 CAT_API cat_socket_t *cat_socket_open_os_socket(cat_socket_t *socket, cat_socket_type_t type, cat_os_socket_t os_socket);
 
 CAT_API cat_socket_type_t cat_socket_type_simplify(cat_socket_type_t type);
-CAT_API const char *cat_socket_type_name(cat_socket_type_t type);
+CAT_API const char *cat_socket_type_get_name(cat_socket_type_t type);
 CAT_API cat_sa_family_t cat_socket_type_to_af(cat_socket_type_t type);
 
 CAT_API cat_socket_id_t cat_socket_get_id(const cat_socket_t *socket);
@@ -658,8 +660,11 @@ CAT_API ssize_t cat_socket_try_writeto(cat_socket_t *socket, const cat_socket_wr
 CAT_API ssize_t cat_socket_try_write_to(cat_socket_t *socket, const cat_socket_write_vector_t *vector, unsigned int vector_count, const char *name, size_t name_length, int port);
 
 CAT_API ssize_t cat_socket_peek(const cat_socket_t *socket, char *buffer, size_t size);
+CAT_API ssize_t cat_socket_peek_ex(const cat_socket_t *socket, char *buffer, size_t size, cat_timeout_t timeout);
 CAT_API ssize_t cat_socket_peekfrom(const cat_socket_t *socket, char *buffer, size_t size, cat_sockaddr_t *address, cat_socklen_t *address_length);
+CAT_API ssize_t cat_socket_peekfrom_ex(const cat_socket_t *socket, char *buffer, size_t size, cat_sockaddr_t *address, cat_socklen_t *address_length, cat_timeout_t timeout);
 CAT_API ssize_t cat_socket_peek_from(const cat_socket_t *socket, char *buffer, size_t size, char *name, size_t *name_length, int *port);
+CAT_API ssize_t cat_socket_peek_from_ex(const cat_socket_t *socket, char *buffer, size_t size, char *name, size_t *name_length, int *port, cat_timeout_t timeout);
 
 CAT_API cat_bool_t cat_socket_send_handle(cat_socket_t *socket, cat_socket_t *handle);
 CAT_API cat_bool_t cat_socket_send_handle_ex(cat_socket_t *socket, cat_socket_t *handle, cat_timeout_t timeout);

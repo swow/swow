@@ -1,5 +1,5 @@
 --TEST--
-swow_channel_selector: random
+swow_selector: random
 --SKIPIF--
 <?php
 require __DIR__ . '/../include/skipif.php';
@@ -9,8 +9,8 @@ require __DIR__ . '/../include/skipif.php';
 require __DIR__ . '/../include/bootstrap.php';
 
 use Swow\Channel;
-use Swow\Channel\Selector;
 use Swow\Coroutine;
+use Swow\Selector;
 
 $s = new Selector();
 
@@ -21,17 +21,17 @@ for ($l = TEST_MAX_LENGTH; $l--;) {
 
 for ($n = TEST_MAX_REQUESTS; $n--;) {
     $targetChannel = $channels[array_rand($channels)];
-    $opcode = mt_rand(0, 1) ? Channel::OPCODE_PUSH : Channel::OPCODE_POP;
+    $opcode = mt_rand(0, 1) ? Selector::EVENT_PUSH : Selector::EVENT_POP;
     $randomBytes = getRandomBytes();
-    Coroutine::run(function () use ($targetChannel, $opcode, $randomBytes) {
-        if ($opcode === Channel::OPCODE_POP) {
+    Coroutine::run(static function () use ($targetChannel, $opcode, $randomBytes): void {
+        if ($opcode === Selector::EVENT_POP) {
             $targetChannel->push($randomBytes);
         } else {
             Assert::same($targetChannel->pop(), $randomBytes);
         }
     });
     foreach ($channels as $channel) {
-        if ($opcode === Channel::OPCODE_PUSH) {
+        if ($opcode === Selector::EVENT_PUSH) {
             $s->push($channel, $randomBytes);
         } else {
             $s->pop($channel);
@@ -39,13 +39,13 @@ for ($n = TEST_MAX_REQUESTS; $n--;) {
     }
     $channel = $s->commit();
     Assert::same($channel, $targetChannel);
-    Assert::same($s->getLastOpcode(), $opcode);
-    if ($opcode === Channel::OPCODE_POP) {
+    Assert::same($s->getLastEvent(), $opcode);
+    if ($opcode === Selector::EVENT_POP) {
         Assert::same($s->fetch(), $randomBytes);
     }
 }
 
-echo 'Done' . PHP_LF;
+echo "Done\n";
 
 ?>
 --EXPECT--

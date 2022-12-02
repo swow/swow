@@ -34,16 +34,25 @@ declare(strict_types=1);
     do {
         echo @fread($pipes[1], 8192);
     } while (!feof($pipes[1]));
-    /* FIXME: workaround for some platforms  */
+    /* FIXME: workaround for some platforms */
     if (function_exists('pcntl_waitpid')) {
-        pcntl_waitpid(proc_get_status($proc)['pid'], $status);
-        $exitCode = pcntl_wexitstatus($status);
+        $status = proc_get_status($proc);
+        if ($status['running']) {
+            pcntl_waitpid($status['pid'], $wStatus);
+            $exitCode = pcntl_wexitstatus($wStatus);
+        } else {
+            $exitCode = $status['exitcode'];
+        }
     } else {
-        while (proc_get_status($proc)['running']) {
+        while (true) {
+            $status = proc_get_status($proc);
+            if (!$status['running']) {
+                $exitCode = $status['exitcode'];
+                break;
+            }
             usleep(1000);
         }
-        $exitCode = proc_get_status($proc)['exitcode'];
-        proc_close($proc);
     }
+    proc_close($proc);
     exit($exitCode);
 })();

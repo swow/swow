@@ -187,7 +187,7 @@ _skip_frame:
         if (!prev) {
             break;
         }
-        if (UNEXPECTED((ZEND_CALL_INFO(call) & ZEND_CALL_TOP_FUNCTION) != 0) && !fake_frame &&
+        if (UNEXPECTED(ZEND_CALL_INFO(call) == ZEND_CALL_TOP_FUNCTION) && !fake_frame &&
             swow_debug_is_user_call(prev) && prev->opline->opcode == ZEND_INCLUDE_OR_EVAL) {
             fake_frame = 1;
         } else {
@@ -341,15 +341,15 @@ static void swow_debug_build_trace_string(smart_str *str, HashTable *ht, uint32_
 SWOW_API smart_str *swow_debug_build_trace_as_smart_str(smart_str *str, HashTable *trace)
 {
     zend_ulong index;
-    zval *zframe;
+    zval *z_frame;
     uint32_t num = 0;
 
-    ZEND_HASH_FOREACH_NUM_KEY_VAL(trace, index, zframe) {
-        if (Z_TYPE_P(zframe) != IS_ARRAY) {
+    ZEND_HASH_FOREACH_NUM_KEY_VAL(trace, index, z_frame) {
+        if (Z_TYPE_P(z_frame) != IS_ARRAY) {
             zend_error(E_WARNING, "Expected array for frame " ZEND_ULONG_FMT, index);
             continue;
         }
-        swow_debug_build_trace_string(str, Z_ARRVAL_P(zframe), num++, 0);
+        swow_debug_build_trace_string(str, Z_ARRVAL_P(z_frame), num++, 0);
     } ZEND_HASH_FOREACH_END();
 
     smart_str_appendc(str, '#');
@@ -404,26 +404,26 @@ SWOW_API HashTable *swow_debug_get_trace_as_list(zend_long options, zend_long li
 {
     HashTable *trace, *list;
     zend_ulong index;
-    zval *zframe, zline;
+    zval *z_frame, z_line;
 
     trace = swow_debug_get_trace(options, limit);
     list = zend_new_array(zend_hash_num_elements(trace));
 
-    ZEND_HASH_FOREACH_NUM_KEY_VAL(trace, index, zframe) {
+    ZEND_HASH_FOREACH_NUM_KEY_VAL(trace, index, z_frame) {
         smart_str str = {0};
-        if (Z_TYPE_P(zframe) != IS_ARRAY) {
+        if (Z_TYPE_P(z_frame) != IS_ARRAY) {
             zend_error(E_WARNING, "Expected array for frame " ZEND_ULONG_FMT, index);
             continue;
         }
-        swow_debug_build_trace_string(&str, Z_ARRVAL_P(zframe), 0, 1);
+        swow_debug_build_trace_string(&str, Z_ARRVAL_P(z_frame), 0, 1);
         smart_str_0(&str);
-        ZVAL_STR(&zline, str.s);
-        zend_hash_next_index_insert(list, &zline);
+        ZVAL_STR(&z_line, str.s);
+        zend_hash_next_index_insert(list, &z_line);
     } ZEND_HASH_FOREACH_END();
     zend_array_destroy(trace);
 
-    ZVAL_STRING(&zline, "{main}");
-    zend_hash_next_index_insert(list, &zline);
+    ZVAL_STRING(&z_line, "{main}");
+    zend_hash_next_index_insert(list, &z_line);
 
     return list;
 }
@@ -443,15 +443,15 @@ static PHP_FUNCTION(Swow_Debug_buildTraceAsString)
     RETURN_STR(swow_debug_build_trace_as_string(trace));
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_Swow_Debug_registerExtendedStatementHandler, 0, 1, Swow\x5cUtil\\Handler, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_Swow_Debug_registerExtendedStatementHandler, 0, 1, Swow\\\125tils\\Handler, 0)
     ZEND_ARG_TYPE_INFO(0, handler, IS_CALLABLE, 0)
 ZEND_END_ARG_INFO()
 
 static PHP_FUNCTION(Swow_Debug_registerExtendedStatementHandler)
 {
-    swow_util_handler_t *handler;
+    swow_utils_handler_t *handler;
     swow_fcall_storage_t fcall;
-    zval zfcall;
+    zval z_fcall;
 
     ZEND_PARSE_PARAMETERS_START(1, 1)
         SWOW_PARAM_FCALL(fcall)
@@ -462,11 +462,11 @@ static PHP_FUNCTION(Swow_Debug_registerExtendedStatementHandler)
         RETURN_THROWS();
     }
 
-    ZVAL_PTR(&zfcall, &fcall);
-    handler = swow_util_handler_create(&zfcall);
+    ZVAL_PTR(&z_fcall, &fcall);
+    handler = swow_utils_handler_create(&z_fcall);
     ZEND_ASSERT(handler != NULL);
 
-    swow_util_handler_push_back_to(handler, &SWOW_DEBUG_G(extended_statement_handlers));
+    swow_utils_handler_push_back_to(handler, &SWOW_DEBUG_G(extended_statement_handlers));
 
     RETURN_OBJ_COPY(&handler->std);
 }
@@ -478,18 +478,16 @@ static const zend_function_entry swow_debug_functions[] = {
     PHP_FE_END
 };
 
-SWOW_API CAT_GLOBALS_DECLARE(swow_debug)
-
-CAT_GLOBALS_CTOR_DECLARE_SZ(swow_debug)
+SWOW_API CAT_GLOBALS_DECLARE(swow_debug);
 
 static user_opcode_handler_t original_zend_ext_stmt_handler;
 
 static int swow_debug_ext_stmt_handler(zend_execute_data *execute_data)
 {
-    swow_coroutine_t *scoroutine = swow_coroutine_get_current();
+    swow_coroutine_t *s_coroutine = swow_coroutine_get_current();
 
     if (!cat_queue_empty(&SWOW_DEBUG_G(extended_statement_handlers)) &&
-        !(scoroutine->coroutine.flags & SWOW_COROUTINE_FLAG_DEBUGGING)) {
+        !(s_coroutine->coroutine.flags & SWOW_COROUTINE_FLAG_DEBUGGING)) {
         zend_fcall_info fci;
         zval retval;
 
@@ -500,13 +498,13 @@ static int swow_debug_ext_stmt_handler(zend_execute_data *execute_data)
         fci.named_params = NULL;
         fci.retval = &retval;
 
-        scoroutine->coroutine.flags |= SWOW_COROUTINE_FLAG_DEBUGGING;
+        s_coroutine->coroutine.flags |= SWOW_COROUTINE_FLAG_DEBUGGING;
 
-        CAT_QUEUE_FOREACH_DATA_START(&SWOW_DEBUG_G(extended_statement_handlers), swow_util_handler_t, node, handler) {
+        CAT_QUEUE_FOREACH_DATA_START(&SWOW_DEBUG_G(extended_statement_handlers), swow_utils_handler_t, node, handler) {
             (void) zend_call_function(&fci, &handler->fcall.fcc);
         } CAT_QUEUE_FOREACH_DATA_END();
 
-        scoroutine->coroutine.flags ^= SWOW_COROUTINE_FLAG_DEBUGGING;
+        s_coroutine->coroutine.flags ^= SWOW_COROUTINE_FLAG_DEBUGGING;
 
         zval_ptr_dtor(&retval);
     }
@@ -520,7 +518,7 @@ static int swow_debug_ext_stmt_handler(zend_execute_data *execute_data)
 
 zend_result swow_debug_module_init(INIT_FUNC_ARGS)
 {
-    CAT_GLOBALS_REGISTER(swow_debug, CAT_GLOBALS_CTOR(swow_debug), NULL);
+    CAT_GLOBALS_REGISTER(swow_debug);
 
     if (zend_register_functions(NULL, swow_debug_functions, NULL, type) != SUCCESS) {
         return FAILURE;
@@ -528,6 +526,13 @@ zend_result swow_debug_module_init(INIT_FUNC_ARGS)
 
     original_zend_ext_stmt_handler = zend_get_user_opcode_handler(ZEND_EXT_STMT);
     (void) zend_set_user_opcode_handler(ZEND_EXT_STMT, swow_debug_ext_stmt_handler);
+
+    return SUCCESS;
+}
+
+zend_result swow_debug_module_shutdown(INIT_FUNC_ARGS)
+{
+    CAT_GLOBALS_UNREGISTER(swow_debug);
 
     return SUCCESS;
 }
@@ -541,7 +546,7 @@ zend_result swow_debug_runtime_init(INIT_FUNC_ARGS)
 
 zend_result swow_debug_runtime_shutdown(INIT_FUNC_ARGS)
 {
-    swow_util_handlers_release(&SWOW_DEBUG_G(extended_statement_handlers));
+    swow_utils_handlers_release(&SWOW_DEBUG_G(extended_statement_handlers));
 
     return SUCCESS;
 }

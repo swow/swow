@@ -15,10 +15,10 @@ class Foo
     public function __debugInfo()
     {
         for ($level = -3; $level < 3; $level++) {
-            for ($limit = $level < 0 ? -$level : ($level > 0 ? 3 - $level : 3) ; $limit >= -1; $limit--) {
-                echo sprintf('level=%d, limit=%d', $level, $limit) . PHP_LF;
-                echo Coroutine::getCurrent()->getTraceAsString($level, $limit) . PHP_LF;
-                echo PHP_LF;
+            for ($limit = $level < 0 ? -$level : ($level > 0 ? 3 - $level : 3); $limit >= -1; $limit--) {
+                echo sprintf("level=%d, limit=%d\n", $level, $limit);
+                echo Coroutine::getCurrent()->getTraceAsString($level, $limit) . "\n";
+                echo "\n";
             }
         }
 
@@ -26,9 +26,9 @@ class Foo
     }
 }
 
-var_dump(new Foo);
+var_dump(new Foo());
 
-echo 'Done' . PHP_LF;
+echo "Done\n";
 
 ?>
 --EXPECTF--

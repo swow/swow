@@ -20,7 +20,7 @@
 #include "swow_errno.h"
 #include "swow_log.h"
 #include "swow_debug.h"
-#include "swow_util.h"
+#include "swow_utils.h"
 #include "swow_defer.h"
 #include "swow_coroutine.h"
 #include "swow_channel.h"
@@ -29,9 +29,12 @@
 #include "swow_time.h"
 #include "swow_buffer.h"
 #include "swow_socket.h"
+#include "swow_dns.h"
 #include "swow_stream.h"
 #include "swow_signal.h"
 #include "swow_watchdog.h"
+#include "swow_closure.h"
+#include "swow_ipaddress.h"
 #include "swow_http.h"
 #include "swow_websocket.h"
 #include "swow_proc_open.h"
@@ -41,6 +44,7 @@
 
 #include "SAPI.h"
 
+#include "zend_extensions.h"
 #include "zend_smart_str.h"
 
 #include "ext/standard/info.h"
@@ -62,8 +66,7 @@
 #endif
 
 SWOW_API zend_class_entry *swow_ce;
-
-SWOW_API zend_class_entry *swow_module_ce;
+SWOW_API zend_class_entry *swow_extension_ce;
 
 ZEND_DECLARE_MODULE_GLOBALS(swow)
 
@@ -76,7 +79,7 @@ typedef zend_result (*swow_close_function_t)(void);
 /* {{{ PHP_GINIT_FUNCTION */
 static PHP_GINIT_FUNCTION(swow)
 {
-#if defined(COMPILE_DL_BCMATH) && defined(ZTS)
+#if defined(COMPILE_DL_SWOW) && defined(ZTS)
     ZEND_TSRMLS_CACHE_UPDATE();
 #endif
     memset(swow_globals, 0, sizeof(*swow_globals));
@@ -94,8 +97,6 @@ static PHP_GSHUTDOWN_FUNCTION(swow)
  */
 PHP_MINIT_FUNCTION(swow)
 {
-    size_t i;
-
     /* Conflict extensions check */
     if (zend_hash_str_find_ptr(&module_registry, ZEND_STRL("swoole"))) {
         zend_error(E_WARNING, "Swow is incompatible with Swoole "
@@ -105,17 +106,26 @@ PHP_MINIT_FUNCTION(swow)
     }
 
     /* Debug extensions check */
-    static const char *debug_extension_names[] = { "xdebug", "ddtrace" };
+    static const char *debug_zend_extension_names[] = { "Xdebug" };
+    static const char *debug_php_extension_names[] = { "ddtrace" };
 #ifndef SWOW_COROUTINE_MOCK_FIBER_CONTEXT
     smart_str str;
     memset(&str, 0, sizeof(str));
 #endif
-    for (i = 0; i < CAT_ARRAY_SIZE(debug_extension_names); i++) {
-        const char *name = debug_extension_names[i];
+    for (size_t i = 0; i < CAT_ARRAY_SIZE(debug_zend_extension_names); i++) {
+        const char *name = debug_zend_extension_names[i];
+        if (zend_get_extension(name) != NULL) {
+#ifndef SWOW_COROUTINE_MOCK_FIBER_CONTEXT
+            smart_str_append_printf(&str, "%s, ", name);
+#endif
+            SWOW_NTS_G(has_debug_extension) = 1;
+        }
+    }
+    for (size_t i = 0; i < CAT_ARRAY_SIZE(debug_php_extension_names); i++) {
+        const char *name = debug_php_extension_names[i];
         if (zend_hash_str_find_ptr(&module_registry, name, strlen(name))) {
 #ifndef SWOW_COROUTINE_MOCK_FIBER_CONTEXT
-            smart_str_appends(&str, name);
-            smart_str_appends(&str, ", ");
+            smart_str_append_printf(&str, "%s, ", name);
 #endif
             SWOW_NTS_G(has_debug_extension) = 1;
         }
@@ -146,9 +156,12 @@ PHP_MINIT_FUNCTION(swow)
         swow_time_module_init,
         swow_buffer_module_init,
         swow_socket_module_init,
+        swow_dns_module_init,
         swow_stream_module_init,
         swow_signal_module_init,
         swow_watchdog_module_init,
+        swow_closure_module_init,
+        swow_ipaddress_init,
         swow_http_module_init,
         swow_websocket_module_init,
 #ifdef CAT_OS_WAIT
@@ -159,13 +172,14 @@ PHP_MINIT_FUNCTION(swow)
 #endif
     };
 
-    for (i = 0; i < CAT_ARRAY_SIZE(minit_functions); i++) {
+    for (size_t i = 0; i < CAT_ARRAY_SIZE(minit_functions); i++) {
         if (minit_functions[i](INIT_FUNC_ARGS_PASSTHRU) != SUCCESS) {
             return FAILURE;
         }
     }
 
     SWOW_NTS_G(cli) = strcmp(sapi_module.name, "cli") != 0 &&
+                      strcmp(sapi_module.name, "micro") != 0 &&
                       strcmp(sapi_module.name, "phpdbg") != 0;
 
     return SUCCESS;
@@ -199,12 +213,21 @@ PHP_MSHUTDOWN_FUNCTION(swow)
 #ifdef CAT_HAVE_CURL
         swow_curl_module_shutdown,
 #endif
+#ifdef CAT_OS_WAIT
+        swow_proc_open_module_shutdown,
+#endif
+        swow_closure_module_shutdown,
+        swow_watchdog_module_shutdown,
+        swow_stream_module_shutdown,
+        swow_socket_module_shutdown,
+        swow_event_module_shutdown,
+        swow_coroutine_module_shutdown,
+        swow_debug_module_shutdown,
         swow_stream_module_shutdown,
         swow_module_shutdown,
     };
 
-    size_t i = 0;
-    for (; i < CAT_ARRAY_SIZE(mshutdown_functions); i++) {
+    for (size_t i = 0; i < CAT_ARRAY_SIZE(mshutdown_functions); i++) {
         if (mshutdown_functions[i](SHUTDOWN_FUNC_ARGS_PASSTHRU) != SUCCESS) {
             return FAILURE;
         }
@@ -234,6 +257,7 @@ PHP_RINIT_FUNCTION(swow)
         swow_coroutine_runtime_init,
         swow_event_runtime_init,
         swow_socket_runtime_init,
+        swow_dns_runtime_init,
         swow_stream_runtime_init,
         swow_watchdog_runtime_init,
 #ifdef CAT_OS_WAIT
@@ -253,8 +277,7 @@ PHP_RINIT_FUNCTION(swow)
 
     SWOW_G(runtime_state) = SWOW_RUNTIME_STATE_INIT;
 
-    size_t i = 0;
-    for (; i < CAT_ARRAY_SIZE(rinit_functions); i++) {
+    for (size_t i = 0; i < CAT_ARRAY_SIZE(rinit_functions); i++) {
         if (rinit_functions[i](INIT_FUNC_ARGS_PASSTHRU) != SUCCESS) {
             return FAILURE;
         }
@@ -271,9 +294,6 @@ PHP_RINIT_FUNCTION(swow)
 PHP_RSHUTDOWN_FUNCTION(swow)
 {
     static const swow_shutdown_function_t rshutdown_functions[] = {
-#ifdef CAT_HAVE_CURL
-        swow_curl_runtime_shutdown,
-#endif
 #ifdef CAT_OS_WAIT
         swow_proc_open_runtime_shutdown,
 #endif
@@ -293,24 +313,10 @@ PHP_RSHUTDOWN_FUNCTION(swow)
 
     SWOW_G(runtime_state) = SWOW_RUNTIME_STATE_SHUTDOWN;
 
-    size_t i = 0;
-    for (; i < CAT_ARRAY_SIZE(rshutdown_functions); i++) {
+    for (size_t i = 0; i < CAT_ARRAY_SIZE(rshutdown_functions); i++) {
         if (rshutdown_functions[i](SHUTDOWN_FUNC_ARGS_PASSTHRU) != SUCCESS) {
             return FAILURE;
         }
-    }
-
-    /* Notice: some PHP resources still have not been released
-     * (e.g. static vars or set global vars on __destruct or circular references),
-     * so we must re-create C coroutine env to finish them
-     * In other words, now we are in pure C coroutine env instead of PHP runtime */
-
-    if (!cat_runtime_init_all()) {
-        return FAILURE;
-    }
-
-    if (!cat_run(CAT_RUN_EASY)) {
-        return FAILURE;
     }
 
     SWOW_G(runtime_state) = SWOW_RUNTIME_STATE_NONE;
@@ -321,24 +327,19 @@ PHP_RSHUTDOWN_FUNCTION(swow)
 
 static zend_result swow_post_deactivate(void)
 {
-    do {
-        cat_bool_t ret = cat_true;
-
-        ret = cat_stop();
-
-        ret = cat_runtime_shutdown_all() && ret;
-
-        if (!ret) {
-            return FAILURE;
-        }
-    } while (0);
+    /* make sure all closed handles will be cleaned up totally */
+    cat_event_schedule();
 
     static const swow_close_function_t rclose_functions[] = {
+#ifdef CAT_HAVE_CURL
+        /* Some cURL object may freed after rshutdown due to global/static ref,
+         * so we need to run checks in post_deactivate here. */
+        swow_curl_runtime_close,
+#endif
         swow_event_runtime_close,
     };
 
-    size_t i = 0;
-    for (; i < CAT_ARRAY_SIZE(rclose_functions); i++) {
+    for (size_t i = 0; i < CAT_ARRAY_SIZE(rclose_functions); i++) {
         if (rclose_functions[i]() != SUCCESS) {
             return FAILURE;
         }
@@ -424,11 +425,41 @@ static const zend_function_entry swow_functions[] = {
     PHP_FE_END
 };
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_isBuiltWith, 0, 1, _IS_BOOL, 0)
+#include "swow_known_strings.h"
+
+#define SWOW_MAIN_KNOWN_STRING_MAP(XX) \
+    XX(swow_library, "swow\\library") \
+
+SWOW_MAIN_KNOWN_STRING_MAP(SWOW_KNOWN_STRING_STORAGE_GEN)
+
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_isLibraryLoaded, 0, 0, _IS_BOOL, 0)
+ZEND_END_ARG_INFO()
+
+static PHP_METHOD(Swow, isLibraryLoaded)
+{
+    ZEND_PARSE_PARAMETERS_NONE();
+
+    zend_class_entry *ce;
+
+    ce = zend_lookup_class(SWOW_KNOWN_STRING(swow_library));
+
+    RETURN_BOOL(
+        ce != NULL &&
+        ((ce->ce_flags & ZEND_ACC_LINKED) == ZEND_ACC_LINKED) &&
+        !(ce->ce_flags & (ZEND_ACC_INTERFACE | ZEND_ACC_TRAIT))
+    );
+}
+
+static const zend_function_entry swow_methods[] = {
+    PHP_ME(Swow, isLibraryLoaded, arginfo_class_Swow_isLibraryLoaded, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    PHP_FE_END
+};
+
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Extension_isBuiltWith, 0, 1, _IS_BOOL, 0)
     ZEND_ARG_TYPE_INFO(0, lib, IS_STRING, 0)
 ZEND_END_ARG_INFO()
 
-static PHP_METHOD(Swow, isBuiltWith)
+static PHP_METHOD(Swow_Extension, isBuiltWith)
 {
     zend_string *lib;
     zend_bool ret = 0;
@@ -473,8 +504,8 @@ static PHP_METHOD(Swow, isBuiltWith)
     RETURN_BOOL(ret);
 }
 
-static const zend_function_entry swow_methods[] = {
-    PHP_ME(Swow, isBuiltWith, arginfo_class_Swow_isBuiltWith, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+static const zend_function_entry swow_extension_methods[] = {
+    PHP_ME(Swow_Extension, isBuiltWith, arginfo_class_Swow_Extension_isBuiltWith, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
     PHP_FE_END
 };
 
@@ -505,39 +536,32 @@ zend_result swow_module_init(INIT_FUNC_ARGS)
 
     cat_module_init();
 
+    SWOW_MAIN_KNOWN_STRING_MAP(SWOW_KNOWN_STRING_INIT_STRL_GEN);
+
     /* Swow class is reserved  */
     swow_ce = swow_register_internal_class(
         "Swow", NULL, swow_methods,
         NULL, NULL, cat_false, cat_false,
         swow_create_object_deny, NULL, 0
     );
-    /* Version constants (TODO: remove type cast if we no longger support PHP 7.x) */
-#define SWOW_VERSION_MAP(XX) \
-    XX(MAJOR_VERSION, long, zend_long) \
-    XX(MINOR_VERSION, long, zend_long) \
-    XX(RELEASE_VERSION, long, zend_long) \
-    XX(EXTRA_VERSION, string, char *) \
-    XX(VERSION, string, char *) \
-    XX(VERSION_ID, long, zend_long)
-#define SWOW_VERSION_GEN(name, type, cast) \
-    zend_declare_class_constant_##type(swow_ce, ZEND_STRL(#name), (cast) SWOW_##name);
-    SWOW_VERSION_MAP(SWOW_VERSION_GEN)
-#undef SWOW_VERSION_GEN
 
-    /* Module class with constants */
-    swow_module_ce = swow_register_internal_class(
-        "Swow\\Module", NULL, NULL,
+    swow_extension_ce = swow_register_internal_class(
+        "Swow\\Extension", NULL, swow_extension_methods,
         NULL, NULL, cat_false, cat_false,
         swow_create_object_deny, NULL, 0
     );
-#define SWOW_MODULE_TYPE_GEN(name, value) \
-    zend_declare_class_constant_long(swow_module_ce, ZEND_STRL("TYPE_" #name), (value));
-    CAT_MODULE_TYPE_MAP(SWOW_MODULE_TYPE_GEN)
-#undef SWOW_MODULE_TYPE_GEN
-#define SWOW_MODULE_UNION_TYPE_GEN(name, value) \
-    zend_declare_class_constant_long(swow_module_ce, ZEND_STRL("TYPES_" #name), (value));
-    CAT_MODULE_UNION_TYPE_MAP(SWOW_MODULE_UNION_TYPE_GEN)
-#undef SWOW_MODULE_UNION_TYPE_GEN
+    /* Version constants (TODO: remove type cast if we no longer support PHP 7.x) */
+#define SWOW_VERSION_MAP(XX) \
+    XX(VERSION, string, char *) \
+    XX(VERSION_ID, long, zend_long) \
+    XX(MAJOR_VERSION, long, zend_long) \
+    XX(MINOR_VERSION, long, zend_long) \
+    XX(RELEASE_VERSION, long, zend_long) \
+    XX(EXTRA_VERSION, string, char *)
+#define SWOW_VERSION_GEN(name, type, cast) \
+    zend_declare_class_constant_##type(swow_extension_ce, ZEND_STRL(#name), (cast) SWOW_##name);
+    SWOW_VERSION_MAP(SWOW_VERSION_GEN)
+#undef SWOW_VERSION_GEN
 
     return SUCCESS;
 }
@@ -570,7 +594,7 @@ zend_result swow_runtime_shutdown(INIT_FUNC_ARGS)
  */
 SWOW_API zend_module_entry swow_module_entry = {
     STANDARD_MODULE_HEADER,
-    "Swow",                      /* Extension name */
+    SWOW_MODULE_NAME,            /* Extension name */
     swow_functions,              /* zend_function_entry */
     PHP_MINIT(swow),             /* PHP_MINIT - Module initialization */
     PHP_MSHUTDOWN(swow),         /* PHP_MSHUTDOWN - Module shutdown */

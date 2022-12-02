@@ -47,24 +47,16 @@ installdnf()
 {
     info Installing dependencies using dnf
     dnf update -yy
-    openssl_pkg="openssl-devel"
-    openssl_ver=$(dnf list -qq openssl-devel | awk '(NR==2){split($2,a,":");split(a[2],b,".");print(b[1])}')
-    if [ "$openssl_ver" = "3" ] && [ "${SUPPORTS_OPENSSL3}" != "yes" ]
-    then
-        # rawhide is now using openssl 3
-        # so it's need to be downgraded when building php 8.0
-        openssl_pkg="openssl1.1-devel"
-    fi
 
-    # for el8 things
+    # for el8/9 things
     if dnf install -yy epel-release 'dnf-command(config-manager)'
     then
         dnf config-manager --enable epel
-        dnf config-manager --enable powertools 
+        dnf config-manager --enable powertools || :
     fi
 
     dnf groupinstall -yy "Development Tools"
-    dnf install -yy sqlite-devel libxml2-devel libcurl-devel ${openssl_pkg} re2c bison autoconf
+    dnf install -yy sqlite-devel libxml2-devel libcurl-devel openssl-devel re2c bison autoconf
 }
 
 installapt()
@@ -99,6 +91,8 @@ buildphp()
 {
 
     cd "${PHP_SRC}"
+    # patch php for openssl3.0
+    sed -i '/REGISTER_LONG_CONSTANT\s*(\s*"OPENSSL_SSLV23_PADDING"/d' ext/openssl/openssl.c
     if [ ! -f ./configure ]
     then
         info Autoconf PHP
@@ -134,14 +128,6 @@ buildswow()
 
 mian()
 {
-
-    if [ -f "${PHP_SRC}/ext/openssl/php_openssl.h" ] &&
-        [ -n "$(grep -e '#define PHP_OPENSSL_API_VERSION 0x30000' "${PHP_SRC}/ext/openssl/php_openssl.h")" ]
-    then
-        info this version of PHP supports OpenSSL 3
-        SUPPORTS_OPENSSL3="yes"
-    fi
-
     # install dependencies
     case $1 in
         "yum") installyum ;;

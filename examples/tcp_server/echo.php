@@ -23,7 +23,7 @@ while (true) {
     $connection = $server->accept();
     Coroutine::run(static function () use ($connection): void {
         echo "No.{$connection->getFd()} established" . PHP_EOL;
-        $buffer = new Buffer();
+        $buffer = new Buffer(Buffer::COMMON_SIZE);
         try {
             while (true) {
                 $length = $connection->recv($buffer);

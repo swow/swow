@@ -29,7 +29,7 @@ Swow实现了一套有史以来最完整的PHP协程模型，它全面释放了P
 
 现在协程可以使得PHP虚拟机像一个迷你操作系统一样，其中运行的协程近似于操作系统的进程/线程，开发者能够以超细粒度任意操控这些协程，如查看所有协程的运行状态、attach进入协程、单步调试跟踪、查看协程栈乃至每个栈帧、查看或修改协程内变量、中断协程或杀死协程等。
 
-基于这样的可控性，开发者还可以借助WatchDog组件对陷入死循环或处于IO阻塞的协程进行警报、中断、让出甚至杀死等多种处理，以避免个别协程影响到程序整体稳定性。
+基于这样的可控性，开发者还可以借助Watchdog组件对陷入死循环或处于IO阻塞的协程进行警报、中断、让出甚至杀死等多种处理，以避免个别协程影响到程序整体稳定性。
 
 并且，其与进程设计哲学的契合性，也决定了协程应用的健壮性极佳。正如单个进程的崩溃不会导致整个系统的崩溃一样，单个协程的崩溃也不会导致整个进程的崩溃，并且得益于PHP强大的异常机制和资源管理能力，与协程绑定的相关资源都能被安全地释放。你无需再为未捕获的异常殚精竭力，也不要再去捕获Throwable，遇到未知的错误请Let it crash。
 
@@ -77,7 +77,7 @@ Swow和Opcache非常相似，两者都允许开发者在几乎不改变代码的
 
 Swow支持在PHP的ZTS（Zend Thread Safety）版本下运行，即基于内存隔离的多线程支持。
 
-这意味着它可以和[parallel](https://www.php.net/manual/book.parallel.php)、[pthreads](https://www.php.net/manual/book.pthreads.php)等多线程扩展很好地结合使用，但Swow本身不会提供任何多线程支持。
+这意味着它可以和[parallel](https://www.php.net/manual/book.parallel.php)、[pthreads](https://www.php.net/manual/book.pthreads.php)等多线程扩展很好地结合使用。
 
 ## 🐣 学习成本
 
@@ -136,7 +136,7 @@ composer require swow/swow:dev-develop
 
 安装程序也会提供类似于以下的运行命令：
 
-`/usr/bin/env php -n -d extension=/path/to/vendor/swow/swow/ext/modules/swow.so --ri swow`
+`/usr/bin/env php -d extension=/path/to/vendor/swow/swow/ext/modules/swow.so --ri swow`
 
 即扩展的so文件输出到了你项目的vendor目录下，相当于扩展也拥有了版本控制，你可以为你的每个项目指定不同版本的Swow，而无需全局使用同一个扩展so。
 
@@ -158,13 +158,13 @@ sudo make install
 
 #### Windows安装
 
-手动构建见[文档](https://wiki.s-wow.com/#/zh-cn/install?id=%e7%bc%96%e8%af%91%e5%ae%89%e8%a3%85-windows)，你也可以考虑使用官方DLL发布。
+手动构建见[文档](https://docs.toast.run/swow/chs/install.html#%E7%BC%96%E8%AF%91%E5%AE%89%E8%A3%85-windows)，你也可以考虑使用官方DLL发布。
 
 ## ℹ️ IDE助手
 
 得益于Swow完善的强类型声明和PHP8对于内置函数、方法声明信息的完备支持，仅通过Composer安装Swow即可在你的项目中获得绝佳的内置类、函数、方法的IDE提示支持，编程体验远超以往。
 
-你可以自行阅览[内置类、函数、方法](lib/src/Swow.php)的声明文件，它是由反射工具**自动生成**的，但其质量远超其他同类扩展通过自动化生成方式生成的声明质量，你甚至可以在IDE中借助其看到内置函数、方法的参数默认值。
+你可以自行阅览[内置类、函数、方法](lib/swow-stub/src/Swow.php)的声明文件，它是由[反射工具](lib/php-stub-generator),**自动生成**的，但其质量远超其他同类扩展通过自动化生成方式生成的声明质量，你甚至可以在IDE中借助其看到内置函数、方法的参数默认值。
 
 当然，更详细的API文档会在文档中不断完善。
 
@@ -176,11 +176,12 @@ sudo make install
 
 或是用不超过一百行代码写出一个百K级QPS的[HTTP+WebSocket混合服务器](examples/http_server/mixed.php)，整个示例纯同步、零异步回调，还通过异常捕获很轻松地处理了各种错误情况。
 
-Swow的[PHP源代码](lib/src/Swow)也是良好的示例，Swow是为PHP语言和网络编程开发爱好者打造的神兵利器，曾经不可见的底层实现代码，现在都能以PHP代码的形式展现在开发者的眼前，并且你可以自由修改它们，打造出专属于你的定制化HTTP服务器。
+Swow的[PHP源代码](lib)也是良好的示例，Swow是为PHP语言和网络编程开发爱好者打造的神兵利器，曾经不可见的底层实现代码，现在都能以PHP代码的形式展现在开发者的眼前，并且你可以自由修改它们，打造出专属于你的定制化HTTP服务器。
 
 ## 🛠 开发 & 讨论
 
-- **中文文档**：[https://wiki.s-wow.com](https://wiki.s-wow.com)（尚未完成，敬请期待）
+- **Wiki**：[https://docs.toast.run/swow/chs/](https://docs.toast.run/swow/chs/)（尚未完成，敬请期待）
+- **API文档**：[https://docs.toast.run/swow-api/ci.html](https://docs.toast.run/swow-api/ci.html)（从代码自动生成）
 - **计划列表**：[https://github.com/swow/swow/projects](https://github.com/swow/swow/projects)
 
 [license-badge]: https://img.shields.io/badge/license-apache2-blue.svg
@@ -192,6 +193,6 @@ Swow的[PHP源代码](lib/src/Swow)也是良好的示例，Swow是为PHP语言�
 [release-badge]: https://img.shields.io/github/release/swow/swow.svg?style=flat-square
 [release-link]: https://github.com/swow/swow/releases
 [made-with-love-badge]: https://img.shields.io/badge/made%20with-%E2%9D%A4-f00
-[supported-php-versions-badge]: https://img.shields.io/badge/php-8.0--8.2-royalblue.svg
+[supported-php-versions-badge]: https://img.shields.io/badge/php-8.0--8.3-royalblue.svg
 [supported-platforms-badge]: https://img.shields.io/badge/platform-Win32%20|%20GNU/Linux%20|%20macOS%20|%20FreeBSD%20-gold
 [supported-architectures-badge]: https://img.shields.io/badge/architecture-x86--64%20|%20ARM64%20|%20mips64el%20|%20riscv64%20-maroon

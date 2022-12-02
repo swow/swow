@@ -18,7 +18,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        php-version: ["8.1","8.0"]
+        php-version: ["8.2", "8.1", "8.0"]
         arch: ["x64"]
         ts: ["0", "1"]
       max-parallel: 8
@@ -27,7 +27,7 @@ jobs:
     env:
       deps: openssl,libcurl,zlib,libssh2,nghttp2
       tools_path: C:\tools\phpdev
-      dllname: "php_swow-php${{ matrix.php-version }}-${{ matrix.arch }}-${{ (matrix.ts == '0') && 'n' || '' }}ts-VS16.dll"
+      dllname: "php_swow-php${{ matrix.php-version }}-${{ matrix.arch }}-${{ (matrix.ts == '0') && 'n' || '' }}ts-VS16"
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -38,7 +38,7 @@ jobs:
         shell: powershell
         run: |
           $ref = git rev-parse HEAD
-          Write-Host "::set-output name=ref::$ref"
+          Write-Output "ref=$ref" | Out-File "${env:GITHUB_OUTPUT}" -Append
       - name: Prepare caches
         id: cacheprepare
         env:
@@ -46,7 +46,7 @@ jobs:
         run: |
           . "./.github/workflows/winext/utils.ps1" -ToolName "cacheprepare" -MaxTry 3
           $phpver = "${{ matrix.php-version }}"
-          if ($phpver.Equals("8.1") -Or $phpver.Equals("8.0")) {
+          if ($phpver.Equals("8.2") -Or $phpver.Equals("8.1") -Or $phpver.Equals("8.0")) {
             $PhpVCVer = "VS16"
           } else {
             Write-Host "::error::Bad version"
@@ -58,12 +58,12 @@ jobs:
               "content-type"="application/json";
               "authorization"="Bearer ${{ secrets.GITHUB_TOKEN }}";
             }
-            $info = fetchjson -Uri "https://api.github.com/repos/microsoft/php-sdk-binary-tools/git/ref/heads/master" -Headers $headers
+            $info = fetchjson -Uri "https://api.github.com/repos/php/php-sdk-binary-tools/git/ref/heads/master" -Headers $headers
             if (!$info) {
               warn "Cannot fetch php-sdk-binary-tools info from api.github.com"
             } else {
               $ver = $info."object"."sha"
-              Write-Host "::set-output name=phpsdkver::$ver"
+              Write-Output "phpsdkver=$ver" | Out-File "${env:GITHUB_OUTPUT}" -Append
             }
           }
           info "Using $PhpVCVer"
@@ -110,7 +110,7 @@ jobs:
           phpts: ${{ matrix.ts }}
           phparch: ${{ matrix.arch }}
           install: "0"
-          conf-args: "--enable-swow-ssl --enable-swow-curl"
+          conf-args: "--enable-swow-ssl --enable-swow-curl --enable-debug-pack"
       - name: Prepare php for test
         id: php-inst
         continue-on-error: true
@@ -147,8 +147,9 @@ jobs:
       - name: Generate information about this dll
         shell: powershell
         run: |
-          $fn = "${{ env.dllname }}"
+          $fn = "${{ env.dllname }}.dll"
           Copy-Item ext\${{ matrix.arch }}\Release${{ matrix.ts == 1 && '_TS' || '' }}\php_swow.dll $fn
+          Copy-Item ext\${{ matrix.arch }}\Release${{ matrix.ts == 1 && '_TS' || '' }}\php_swow.pdb "${{ env.dllname }}.pdb"
           @{
             "name" = $fn;
             "size" = (Get-Item $fn).Length;
@@ -162,8 +163,9 @@ jobs:
         with:
           name: "${{ steps.getref.outputs.ref }}"
           path: |
-            ${{ env.dllname }}
-            ${{ env.dllname }}.json
+            ${{ env.dllname }}.dll
+            ${{ env.dllname }}.pdb
+            ${{ env.dllname }}.dll.json
       # see notes at cache step
       # TODO: remove this step when upstream fixed the bug
       - name: Remove ini and dll to avoid them being cached

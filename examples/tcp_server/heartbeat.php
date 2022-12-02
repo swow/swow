@@ -11,6 +11,7 @@
 
 declare(strict_types=1);
 
+use Swow\Buffer;
 use Swow\Coroutine;
 use Swow\Errno;
 use Swow\Socket;
@@ -23,7 +24,7 @@ echo "$ telnet 127.0.0.1 9764\n\n";
 while (true) {
     Coroutine::run(static function (Socket $connection): void {
         echo "No.{$connection->getFd()} established" . PHP_EOL;
-        $buffer = new Swow\Buffer();
+        $buffer = new Buffer(Buffer::COMMON_SIZE);
         try {
             while (true) {
                 $length = $connection->recv($buffer);
@@ -36,7 +37,7 @@ while (true) {
             echo "No.{$connection->getFd()} closed" . PHP_EOL;
         } catch (SocketException $exception) {
             if ($exception->getCode() === Errno::ETIMEDOUT) {
-                $connection->sendString("Server has kicked you out\r\n");
+                $connection->send("Server has kicked you out\r\n");
             }
             echo "No.{$connection->getFd()} goaway! {$exception->getMessage()}" . PHP_EOL;
         }

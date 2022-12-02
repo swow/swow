@@ -9,7 +9,7 @@
     <projectFiles>
         <directory name="lib/php-stub-generator" />
         <directory name="lib/swow-library" />
-        <directory name="lib/swow-util" />
+        <directory name="lib/swow-utils" />
         <directory name="tools" />
         <ignoreFiles>
             <directory name="vendor" />

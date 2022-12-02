@@ -29,9 +29,7 @@ $resp_lines = [
     '',
     $payload,
 ];
-//var_dump(implode("\r\n", $resp_lines));
-$buffer->write(implode("\r\n", $resp_lines));
-$buffer->rewind();
+$buffer->append(implode("\r\n", $resp_lines));
 
 // create parser
 $parser = new Parser();
@@ -46,14 +44,20 @@ $headers = [];
 
 // parse it
 // Parser::execute reads from buffer, then generate an event if subscribed
-while (Parser::EVENT_MESSAGE_COMPLETE !== ($event = $parser->execute($buffer))) {
-    Assert::same($event, $parser->getEvent());
+$parsedOffset = 0;
+while (true) {
+    $parsedOffset += $parser->execute($buffer->toString(), $parsedOffset);
+    if (Parser::EVENT_MESSAGE_COMPLETE === ($event = $parser->getEvent())) {
+        break;
+    }
+    Assert::integer($event);
     Assert::string($parser->getEventName());
-    //var_dump($parser->getEventName());
+    Assert::same($parser::getEventNameFor($event), $parser->getEventName());
+    // var_dump($parser->getEventName());
     // read data from buffer according to parser
     $data = '';
     if (Parser::EVENT_FLAG_DATA & $event) {
-        $data = $buffer->peekFrom($parser->getDataOffset(), $parser->getDataLength());
+        $data = $buffer->read($parser->getDataOffset(), $parser->getDataLength());
     }
     switch ($event) {
         case Parser::EVENT_STATUS:
@@ -99,14 +103,14 @@ $expected = [
     'Content-Length' => [(string) strlen($payload)],
 ];
 
-foreach($expected as $k => $expected_values){
+foreach ($expected as $k => $expected_values) {
     $real_values = $headers[$k];
     sort($real_values);
     sort($expected_values);
     Assert::same($real_values, $expected_values);
 }
 
-echo 'Done' . PHP_LF;
+echo "Done\n";
 ?>
 --EXPECT--
 Done

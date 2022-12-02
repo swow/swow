@@ -9,12 +9,12 @@ require __DIR__ . '/../include/skipif.php';
 require __DIR__ . '/../include/bootstrap.php';
 use Swow\Coroutine;
 
-Coroutine::run(function () {
+Coroutine::run(function (): void {
     // E_PARSE
     eval(/* @lang text */ "i'm a bad expression");
 });
 
-Coroutine::run(function () {
+Coroutine::run(static function (): void {
     trigger_error('running run-tests.php to test php is deprecated', E_USER_DEPRECATED);
     trigger_error('running run-tests.php to test swow is deprecated', E_USER_NOTICE);
     trigger_error('running run-tests.php to test twosee is deprecated', E_USER_WARNING);

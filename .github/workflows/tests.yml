@@ -13,7 +13,7 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: 8.0
+          php-version: 8.1
 
       - name: Coding Standards Check
         shell: bash
@@ -31,7 +31,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest]
         #os: [macos-latest]
-        php-version: ['8.1', '8.0']
+        php-version: ['8.2', '8.1', '8.0']
         #php-version: ['8.0']
         #ts: ['nts', 'ts']
       max-parallel: 8
@@ -55,9 +55,9 @@ jobs:
         with:
           php-version: ${{ matrix.php-version }}
           tools: phpize
-          # ini-values: pcov.directory=lib
-          # coverage: pcov
-          coverage: none
+          ini-values: pcov.enabled = 0
+          coverage: pcov
+          # coverage: none
           extensions: curl,openssl,sockets,ffi
         #env:
           #phpts: ${{ matrix.ts }}
@@ -84,19 +84,24 @@ jobs:
           ${{ runner.os == 'Linux' && 'sudo' || ''}} make install-modules
 
       - name: Run extension tests
-        id: ext-test
+        id: test-extension
         continue-on-error: true
-        run: |
-          composer test-extension
+        run: composer test-extension
 
       - name: Run library tests
-        run: composer test-library
+        id: test-library
+        continue-on-error: true
+        run: php --ri pcov && composer test-library-with-pcov
 
-      - name: Fail if anything failed
-        if: steps.ext-test.outcome != 'success'
+      - name: Fail if test-extension failed
+        if: steps.test-extension.outcome != 'success'
         run: exit 1
 
-      - name: Coverage tests
+      - name: Fail if test-library failed
+        if: steps.test-library.outcome != 'success'
+        run: exit 1
+
+      - name: Coverage ext tests
         shell: bash
         run: |
           lcov \
@@ -114,13 +119,20 @@ jobs:
           chmod +x codecov.sh &&
           ./codecov.sh -f coverage.info
 
+      - name: Coverage phpunit tests
+        shell: bash
+        run: |
+          curl -s https://codecov.io/bash -o codecov.sh &&
+          chmod +x codecov.sh &&
+          ./codecov.sh -f ./lib/swow-library/build/coverage.xml
+
   windows-tests:
     name: PHP ${{ matrix.php-version }} ${{ matrix.ts }} Test on windows-2019
     runs-on: windows-2019
     strategy:
       fail-fast: false
       matrix:
-        php-version: ["8.1", "8.0"]
+        php-version: ["8.2", "8.1", "8.0"]
         ts: [ 'nts', 'ts' ]
       max-parallel: 8
     steps:
@@ -200,7 +212,7 @@ jobs:
 
       - name: Run extension tests
         shell: pwsh
-        id: ext-test
+        id: test-extension
         continue-on-error: true
         run: |
           & C:\OpenCppCoverage\OpenCppCoverage.exe `
@@ -217,6 +229,8 @@ jobs:
 
       - name: Run library tests
         shell: pwsh
+        id: test-library
+        continue-on-error: true
         run: |
           & C:\OpenCppCoverage\OpenCppCoverage.exe `
             --export_type binary:lib_test.cov `
@@ -230,8 +244,12 @@ jobs:
             --modules php_swow.dll `
             -- C:\tools\php\php.exe C:\tools\php\composer.phar test-library
 
-      - name: Fail if anything failed
-        if: steps.ext-test.outcome != 'success'
+      - name: Fail if test-extension failed
+        if: steps.test-extension.outcome != 'success'
+        run: exit 1
+
+      - name: Fail if test-library failed
+        if: steps.test-library.outcome != 'success'
         run: exit 1
 
       - name: Upload coverage tests results

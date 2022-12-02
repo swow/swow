@@ -103,6 +103,9 @@ CAT_API CAT_NORETURN void cat_abort(void);
 #define cat_abort abort /* make IDE happy */
 #endif
 
+#define cat_update_last_error_by_code(code) \
+       cat_update_last_error(code, "%s", cat_strerror(code))
+
 #define cat_update_last_error_with_previous(format, ...) \
        cat_update_last_error(cat_get_last_error_code(), format ", reason: %s", ##__VA_ARGS__, cat_get_last_error_message())
 

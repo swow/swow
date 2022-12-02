@@ -37,22 +37,26 @@ while (true) {
         break;
     }
     Coroutine::run(static function () use ($connection): void {
-        $buffer = new Buffer();
+        $buffer = new Buffer(Buffer::COMMON_SIZE);
         $parser = (new Parser())->setType(Parser::TYPE_REQUEST)->setEvents(Parser::EVENT_BODY);
+        $parsedOffset = 0;
         $body = null;
         try {
             while (true) {
-                $length = $connection->recv($buffer);
+                $length = $connection->recv($buffer, $buffer->getLength());
                 if ($length === 0) {
                     break;
                 }
                 while (true) {
-                    $event = $parser->execute($buffer);
-                    if ($event === Parser::EVENT_BODY) {
-                        if ($body === null) {
-                            $body = new Buffer();
-                        }
-                        $body->write($buffer->toString(), $parser->getDataOffset(), $parser->getDataLength());
+                    $parsedOffset += $parser->execute($buffer, $parsedOffset);
+                    if ($parser->getEvent() === $parser::EVENT_NONE) {
+                        $buffer->truncateFrom($parsedOffset);
+                        $parsedOffset = 0;
+                        break; /* goto recv more data */
+                    }
+                    if ($parser->getEvent() === Parser::EVENT_BODY) {
+                        $body ??= new Buffer(Buffer::COMMON_SIZE);
+                        $body->write(0, $buffer, $parser->getDataOffset(), $parser->getDataLength());
                     }
                     if ($parser->isCompleted()) {
                         $response = sprintf(
@@ -62,13 +66,11 @@ while (true) {
                             '%s',
                             $parser->shouldKeepAlive() ? 'Keep-Alive' : 'Closed',
                             $body ? $body->getLength() : 0,
-                            $body ? $body->toString() : ''
+                            $body ?: ''
                         );
-                        $connection->sendString($response);
-                        if ($body !== null) {
-                            $body->clear();
-                        }
-                        break;
+                        $connection->send($response);
+                        $body?->clear();
+                        break; /* goto recv more data */
                     }
                 }
                 if (!$parser->shouldKeepAlive()) {

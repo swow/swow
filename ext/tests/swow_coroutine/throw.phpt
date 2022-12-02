@@ -8,7 +8,7 @@ require __DIR__ . '/../include/skipif.php';
 <?php
 require __DIR__ . '/../include/bootstrap.php';
 
-$coroutine = Swow\Coroutine::run(function () {
+$coroutine = Swow\Coroutine::run(static function () {
     try {
         Swow\Coroutine::yield();
         return 'Never here';
@@ -16,7 +16,7 @@ $coroutine = Swow\Coroutine::run(function () {
         return get_class($throwable);
     }
 });
-var_dump($coroutine->throw(new Exception));
+var_dump($coroutine->throw(new Exception()));
 
 ?>
 --EXPECT--

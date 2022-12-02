@@ -24,24 +24,27 @@ extern "C" {
 
 #include "cat.h"
 
+#define SWOW_MODULE_NAME "Swow"
+#define SWOW_MODULE_NAME_LC "swow"
+
 /* version */
 
+#define SWOW_VERSION            "0.3.2-dev"
+#define SWOW_VERSION_ID         302
 #define SWOW_MAJOR_VERSION      0
-#define SWOW_MINOR_VERSION      1
-#define SWOW_RELEASE_VERSION    0
-#define SWOW_EXTRA_VERSION      ""
-#define SWOW_VERSION            "0.1.0"
-#define SWOW_VERSION_ID         100
+#define SWOW_MINOR_VERSION      3
+#define SWOW_RELEASE_VERSION    2
+#define SWOW_EXTRA_VERSION      "dev"
 
 /* compiler */
 
 #define SWOW_API           CAT_API
 #define SWOW_INTERNAL      CAT_INTERNAL
 #define SWOW_UNSAFE        CAT_UNSAFE
-#define SWOW_MAY_EXCEPTION
+#define SWOW_MAY_THROW
 
 #include "swow_wrapper.h"
-#include "swow_exceptions.h"
+#include "swow_exception.h"
 
 #if PHP_VERSION_ID < 80000
 #error "require PHP version 8.0 or later"
@@ -76,6 +79,8 @@ ZEND_EXTERN_MODULE_GLOBALS(swow)
 typedef struct {
     zend_bool cli;
     zend_bool has_debug_extension;
+    // TODO: add it to ini and make it work
+    zend_bool observer_enabled;
 } swow_nts_globals_t;
 
 extern SWOW_API swow_nts_globals_t swow_nts_globals;
@@ -87,8 +92,7 @@ ZEND_TSRMLS_CACHE_EXTERN()
 #endif
 
 extern SWOW_API zend_class_entry *swow_ce;
-
-extern SWOW_API zend_class_entry *swow_module_ce;
+extern SWOW_API zend_class_entry *swow_extension_ce;
 
 zend_result swow_module_init(INIT_FUNC_ARGS);
 zend_result swow_module_shutdown(INIT_FUNC_ARGS);

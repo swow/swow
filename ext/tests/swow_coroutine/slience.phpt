@@ -10,12 +10,12 @@ require __DIR__ . '/../include/bootstrap.php';
 
 use Swow\Coroutine;
 
-function foo()
+function foo(): void
 {
     Coroutine::yield();
 }
 
-$coroutine = Coroutine::run(function () {
+$coroutine = Coroutine::run(static function (): void {
     @foo();
 });
 
@@ -23,7 +23,7 @@ trigger_error('foo', E_USER_WARNING);
 
 $coroutine->resume();
 
-echo 'Done' . PHP_LF;
+echo "Done\n";
 ?>
 --EXPECTF--
 Warning: [Warning in main] %s

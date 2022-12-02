@@ -17,6 +17,11 @@
  */
 
 #include "cat.h"
+
+#ifdef CAT_IDE_HELPER
+#include "cat_log.h"
+#endif
+
 #include "cat_coroutine.h" /* for coroutine id (TODO: need to decouple it?) */
 
 CAT_API cat_log_t cat_log_function;
@@ -41,7 +46,6 @@ CAT_API void cat_log_standard(CAT_LOG_PARAMATERS)
     const char *type_string;
     char *message;
     FILE *output;
-    (void) module_type;
 
     switch (type) {
         case CAT_LOG_TYPE_DEBUG : {
@@ -130,19 +134,15 @@ CAT_API void cat_log_standard(CAT_LOG_PARAMATERS)
     }
 }
 
-CAT_API const char *cat_log_buffer_quote(const char *buffer, ssize_t n, char **tmp_str)
+CAT_API const char *cat_log_str_quote(const char *str, size_t n, char **tmp_str)
 {
-    return cat_log_buffer_quote_unlimited(buffer, CAT_MIN((size_t) n, CAT_G(log_str_size)), tmp_str);
+    return cat_log_str_quote_unlimited(str, CAT_MIN(n, CAT_G(log_str_size)), tmp_str);
 }
 
-CAT_API const char *cat_log_buffer_quote_unlimited(const char *buffer, ssize_t n, char **tmp_str)
+CAT_API const char *cat_log_str_quote_unlimited(const char *str, size_t n, char **tmp_str)
 {
-    if (n > 0) {
-        char *quoted_data;
-        cat_str_quote(buffer, n, &quoted_data, NULL);
-        *tmp_str = quoted_data;
-        return quoted_data;
-    }
-
-    return *tmp_str = cat_sprintf("%p", buffer);
+    char *quoted_data;
+    cat_str_quote(str, n, &quoted_data, NULL);
+    *tmp_str = quoted_data;
+    return quoted_data;
 }

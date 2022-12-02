@@ -15,6 +15,7 @@ declare(strict_types=1);
 namespace Swow\StubUtils\ConstantFixer;
 
 use Exception;
+
 use function array_key_exists;
 
 /**
@@ -71,7 +72,7 @@ class LinuxConstantDefinitionsFetcher extends ConstantDefinitionsFetcherAbstract
         $errnoBase = $this->httpGet($this->baseUrl . static::ERRNO_BASE_HEADER_URL);
         preg_match_all(static::ERRNO_RE, $errnoBase, $matches);
         foreach ($matches['name'] as $index => $name) {
-            //printf("got %s = %d".PHP_EOL, $name, $matches['value'][$index]);
+            // printf("got %s = %d".PHP_EOL, $name, $matches['value'][$index]);
             $ret[$name] = new ConstantDefinition(
                 value: (int) $matches['value'][$index],
                 comment: $matches['comment'][$index],
@@ -83,7 +84,7 @@ class LinuxConstantDefinitionsFetcher extends ConstantDefinitionsFetcherAbstract
         $errno = $this->httpGet($this->baseUrl . static::ERRNO_HEADER_URL);
         preg_match_all(static::ERRNO_RE, $errno, $matches);
         foreach ($matches['name'] as $index => $name) {
-            //printf("got %s = %d".PHP_EOL, $name, $matches['value'][$index]);
+            // printf("got %s = %d".PHP_EOL, $name, $matches['value'][$index]);
             $ret[$name] = new ConstantDefinition(
                 value: (int) $matches['value'][$index],
                 comment: $matches['comment'][$index],
@@ -97,7 +98,7 @@ class LinuxConstantDefinitionsFetcher extends ConstantDefinitionsFetcherAbstract
         $signalGeneric = $this->httpGet($this->baseUrl . static::SIGNAL_HEADER_URL);
         preg_match_all(static::SIGNAL_RE, $signalGeneric, $matches);
         foreach ($matches['name'] as $index => $name) {
-            //printf("got %s = %d".PHP_EOL, $name, $matches['value'][$index]);
+            // printf("got %s = %d".PHP_EOL, $name, $matches['value'][$index]);
             $ret[$name] = new ConstantDefinition(
                 value: (int) $matches['value'][$index],
             );
@@ -111,7 +112,7 @@ class LinuxConstantDefinitionsFetcher extends ConstantDefinitionsFetcherAbstract
         $signalGeneric = $this->httpGet($this->baseUrl . static::SIGNAL_HEADER_URLS[$this->arch]);
         preg_match_all(static::SIGNAL_RE, $signalGeneric, $matches);
         foreach ($matches['name'] as $index => $name) {
-            //printf("got %s = %d".PHP_EOL, $name, $matches['value'][$index]);
+            // printf("got %s = %d".PHP_EOL, $name, $matches['value'][$index]);
             $ret[$name] = new ConstantDefinition(
                 value: (int) $matches['value'][$index],
             );

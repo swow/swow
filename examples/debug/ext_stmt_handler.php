@@ -14,6 +14,7 @@ declare(strict_types=1);
 namespace Swow\Example\Debug\Debugger\ExtendedStatementHandler;
 
 use Swow\Coroutine;
+
 use function Swow\Debug\registerExtendedStatementHandler;
 
 registerExtendedStatementHandler(static function (): void {

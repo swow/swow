@@ -108,7 +108,7 @@ foreach ($depname in $DllDeps) {
 # if we are in github workflows, set downloaded as output
 if(${env:CI} -Eq "true"){
     $s = ( $downloadeddeps | Sort-Object ) -Join "_"
-    Write-Host "::set-output name=downloadeddeps::$s"
+    Write-Output "downloadeddeps=$s" | Out-File "${env:GITHUB_OUTPUT}" -Append
 }
 
 info "Done."

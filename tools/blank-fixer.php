@@ -40,8 +40,8 @@ declare(strict_types=1);
     $lines[] = ''; // the last empty line
     fclose($fp);
 
-    $content = implode("\n", $lines);
-    if (!@file_put_contents($filename, $content)) {
+    $contents = implode("\n", $lines);
+    if (!@file_put_contents($filename, $contents)) {
         throw new RuntimeException(error_get_last()['message']);
     }
 })();

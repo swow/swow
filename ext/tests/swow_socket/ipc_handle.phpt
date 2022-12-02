@@ -17,7 +17,7 @@ $mainSocket = new Socket(Socket::TYPE_IPCC);
 $workerSocket = new Socket(Socket::TYPE_PIPE);
 $workerSocket->bind($pipePath)->listen();
 $wr = new WaitReference();
-Coroutine::run(function () use ($mainSocket, $pipePath, $wr) {
+Coroutine::run(static function () use ($mainSocket, $pipePath, $wr): void {
     $mainSocket->connect($pipePath);
 });
 $workerChannel = new Socket(Socket::TYPE_IPCC);
@@ -28,10 +28,10 @@ $wr::wait($wr);
 $wr = new WaitReference();
 $tcpServer = new Socket(Socket::TYPE_TCP);
 $tcpServer->bind('127.0.0.1')->listen();
-Coroutine::run(function () use ($tcpServer, $wr) {
+Coroutine::run(static function () use ($tcpServer, $wr): void {
     $connection = $tcpServer->accept();
-    echo $connection->recvString() . PHP_LF;
-    $connection->sendString('Hello Client');
+    echo $connection->recvString() . "\n";
+    $connection->send('Hello Client');
 });
 // prepare handle
 $mainClient = new Socket(Socket::TYPE_TCP);
@@ -41,10 +41,10 @@ $mainSocket->sendHandle($mainClient);
 $workerClient = new Socket(Socket::TYPE_TCP);
 $workerChannel->acceptTo($workerClient);
 // testing on received handle
-echo $workerClient->sendString('Hello Server')->recvString() . PHP_LF;
+echo $workerClient->send('Hello Server')->recvString() . "\n";
 $wr::wait($wr);
 
-echo 'Done' . PHP_LF;
+echo "Done\n";
 ?>
 --EXPECT--
 Hello Server

@@ -13,7 +13,7 @@
         }
     ],
     "support": {
-        "issues": "https://github.com/swow/php-stub-generator"
+        "issues": "https://github.com/swow/swow"
     },
     "require": {
         "php": ">=8.0",
@@ -21,8 +21,7 @@
     },
     "autoload": {
         "psr-4": {
-            "Swow\\StubUtils": "src/",
-            "Swow\\StubUtils\\ConstantFixer": "src/ConstantFixer"
+            "Swow\\StubUtils": "src/"
         }
     },
     "config": {

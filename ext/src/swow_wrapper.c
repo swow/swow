@@ -18,7 +18,7 @@
 
 #include "swow.h"
 
-/* PHP 8.1 compatibility macro {{{*/
+/* PHP 8.1 compatibility {{{*/
 #if PHP_VERSION_ID < 80100
 SWOW_API zend_string* ZEND_FASTCALL zend_ulong_to_str(zend_ulong num)
 {
@@ -31,6 +31,27 @@ SWOW_API zend_string* ZEND_FASTCALL zend_ulong_to_str(zend_ulong num)
     }
 }
 #endif
+/* }}} */
+
+/* PHP 8.2 compatibility {{{*/
+
+SWOW_API zend_op_array *swow_compile_string(zend_string *source_string, const char *filename)
+{
+    return swow_compile_string_ex(source_string, filename, ZEND_COMPILE_POSITION_AFTER_OPEN_TAG);
+}
+
+SWOW_API zend_op_array *swow_compile_string_ex(zend_string *source_string, const char *filename, zend_compile_position position)
+{
+#if PHP_VERSION_ID < 80200
+    if (position != ZEND_COMPILE_POSITION_AFTER_OPEN_TAG) {
+        zend_throw_error(NULL, "Compile position require PHP-8.2+");
+        return NULL;
+    }
+    return zend_compile_string(source_string, filename);
+#else
+    return zend_compile_string(source_string, filename, position);
+#endif
+}
 /* }}} */
 
 /* class */
@@ -55,7 +76,7 @@ SWOW_API zend_class_entry *swow_register_internal_class(
         parent_ce->ce_flags |= ZEND_ACC_FINAL;
     }
     if (!serializable) {
-#ifdef ZEND_ACC_NOT_SERIALIZABLE
+#ifdef ZEND_ACC_NOT_SERIALIZABLE /* PHP_VERSION_ID >= 80100 */
         ce->ce_flags |= ZEND_ACC_NOT_SERIALIZABLE;
 #else
         ce->serialize = zend_class_serialize_deny;
@@ -64,6 +85,8 @@ SWOW_API zend_class_entry *swow_register_internal_class(
     }
     if (create_object != NULL) {
         ce->create_object = create_object;
+    } else if (parent_ce != NULL) {
+        ce->create_object = parent_ce->create_object;
     }
     if (handlers) {
         ZEND_ASSERT((
@@ -89,6 +112,7 @@ SWOW_API zend_class_entry *swow_register_internal_class(
             }
         }
     } else {
+        ZEND_ASSERT(parent_handlers == NULL);
         ZEND_ASSERT(create_object == swow_create_object_deny || cloneable);
         ZEND_ASSERT(free_object == NULL);
         ZEND_ASSERT(offset == 0);
@@ -149,23 +173,23 @@ SWOW_API zend_object *swow_custom_object_clone(zend_object *object)
 
 SWOW_API zend_bool swow_fcall_storage_is_available(const swow_fcall_storage_t *fcall)
 {
-    return Z_TYPE(fcall->zcallable) != IS_UNDEF;
+    return Z_TYPE(fcall->z_callable) != IS_UNDEF;
 }
 
-SWOW_API zend_bool swow_fcall_storage_create(swow_fcall_storage_t *fcall, zval *zcallable)
+SWOW_API zend_bool swow_fcall_storage_create(swow_fcall_storage_t *fcall, zval *z_callable)
 {
-    if (Z_TYPE_P(zcallable) == IS_PTR) {
-        *fcall = *((swow_fcall_storage_t *) Z_PTR_P(zcallable));
-        Z_TRY_ADDREF(fcall->zcallable);
+    if (Z_TYPE_P(z_callable) == IS_PTR) {
+        *fcall = *((swow_fcall_storage_t *) Z_PTR_P(z_callable));
+        Z_TRY_ADDREF(fcall->z_callable);
     } else {
         char *error;
-        if (!zend_is_callable_ex(zcallable, NULL, 0, NULL, &fcall->fcc, &error)) {
+        if (!zend_is_callable_ex(z_callable, NULL, 0, NULL, &fcall->fcc, &error)) {
             cat_update_last_error(CAT_EMISUSE, "The argument passed in is not callable (%s)", error);
             efree(error);
             return false;
         }
         ZEND_ASSERT(!error);
-        ZVAL_COPY(&fcall->zcallable, zcallable);
+        ZVAL_COPY(&fcall->z_callable, z_callable);
     }
 
     return true;
@@ -173,24 +197,56 @@ SWOW_API zend_bool swow_fcall_storage_create(swow_fcall_storage_t *fcall, zval *
 
 SWOW_API void swow_fcall_storage_release(swow_fcall_storage_t *fcall)
 {
-    zval_ptr_dtor(&fcall->zcallable);
-    ZVAL_UNDEF(&fcall->zcallable);
+    zval_ptr_dtor(&fcall->z_callable);
+    ZVAL_UNDEF(&fcall->z_callable);
 }
 
 /* function caller */
 
-SWOW_API int swow_call_function_anyway(zend_fcall_info *fci, zend_fcall_info_cache *fci_cache)
+SWOW_API zend_result swow_call_function_anyway(zend_fcall_info *fci, zend_fcall_info_cache *fci_cache)
 {
-    zend_object *exception = EG(exception);
-    if (exception) {
-        EG(exception) = NULL;
-    }
-    int ret = zend_call_function(fci, fci_cache);
-    /* FIXME: handle exceptions here, it may leak now */
-    if (exception) {
-        EG(exception) = exception;
-    }
+    zend_exception_save();
+    zend_result ret = zend_call_function(fci, fci_cache);
+    zend_exception_restore();
     return ret;
+}
+
+/* var_dump */
+
+SWOW_API void swow_var_dump_string(zend_string *string)
+{
+    swow_var_dump_string_ex(string, 0);
+}
+
+SWOW_API void swow_var_dump_string_ex(zend_string *string, int level)
+{
+    zval z_tmp;
+    ZVAL_STR(&z_tmp, string);
+    php_var_dump(&z_tmp, level);
+}
+
+SWOW_API void swow_var_dump_array(zend_array *array)
+{
+    swow_var_dump_array_ex(array, 0);
+}
+
+SWOW_API void swow_var_dump_array_ex(zend_array *array, int level)
+{
+    zval z_tmp;
+    ZVAL_ARR(&z_tmp, array);
+    php_var_dump(&z_tmp, level);
+}
+
+SWOW_API void swow_var_dump_object(zend_object *object)
+{
+    swow_var_dump_object_ex(object, 0);
+}
+
+SWOW_API void swow_var_dump_object_ex(zend_object *object, int level)
+{
+    zval z_tmp;
+    ZVAL_OBJ(&z_tmp, object);
+    php_var_dump(&z_tmp, level);
 }
 
 /* output globals */
@@ -218,17 +274,31 @@ SWOW_API void swow_output_globals_shutdown(void)
 #endif
 
         if (OG(active)) {
-            if (UNEXPECTED(SWOW_IS_OUT_OF_MEMORY())) {
-                php_output_discard_all();
-            } else {
-                php_output_end_all();
-            }
+            php_output_end_all();
         }
         php_output_deactivate();
         php_output_activate();
 
         SG(request_info).no_headers = no_headers;
     } SWOW_OUTPUT_GLOBALS_MODIFY_END();
+}
+
+/* file */
+
+SWOW_API SWOW_MAY_THROW zend_string *swow_file_get_contents(zend_string *filename)
+{
+    zend_string *contents = NULL;
+
+    SWOW_THROW_ON_ERROR_START() {
+        php_stream *stream = php_stream_open_wrapper_ex(ZSTR_VAL(filename), "rb", REPORT_ERRORS, NULL, NULL);
+        if (stream == NULL) {
+            break;
+        }
+        contents = php_stream_copy_to_mem(stream, -1, 0);
+        php_stream_close(stream);
+    } SWOW_THROW_ON_ERROR_END();
+
+    return contents;
 }
 
 /* wrapper init/shutdown */

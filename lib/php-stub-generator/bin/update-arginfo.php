@@ -3,8 +3,8 @@
 /**
  * This file is part of Swow
  *
- * @link     https://github.com/swow/swow
- * @contact  twosee <twosee@php.net>
+ * @link    https://github.com/swow/swow
+ * @contact twosee <twosee@php.net>
  *
  * For the full copyright and license information,
  * please view the LICENSE file that was distributed with this source code
@@ -12,25 +12,35 @@
 
 declare(strict_types=1);
 
-foreach ([0, 2] as $level) {
-    foreach ([dirname(__DIR__, 1 + $level) . '/vendor/autoload.php', dirname(__DIR__, 3 + $level) . '/autoload.php'] as $file) {
-        if (file_exists($file)) {
-            require $file;
-            break;
-        }
+foreach (
+    [
+        dirname(__DIR__, 5) . '/autoload.php', // for user on swow/swow
+        dirname(__DIR__, 3) . '/vendor/autoload.php', // for maintainer on swow/swow
+        dirname(__DIR__, 3) . '/autoload.php', // for user on swow/php-stub-generator
+        dirname(__DIR__) . '/vendor/autoload.php', // for maintainer on swow/php-stub-generator
+        null,
+    ] as $file
+) {
+    if ($file === null) {
+        throw new RuntimeException('Unable to locate autoload.php');
+    }
+    if (file_exists($file)) {
+        require $file;
+        break;
     }
 }
 
-use Swow\Util\FileSystem;
-use function Swow\Util\debug;
-use function Swow\Util\error;
-use function Swow\Util\httpDownload;
-use function Swow\Util\info;
-use function Swow\Util\notice;
-use function Swow\Util\ok;
-use function Swow\Util\processExecute;
-use function Swow\Util\success;
-use function Swow\Util\warn;
+use Swow\Utils\FileSystem\FileSystem;
+
+use function Swow\Utils\debug;
+use function Swow\Utils\error;
+use function Swow\Utils\httpDownload;
+use function Swow\Utils\info;
+use function Swow\Utils\notice;
+use function Swow\Utils\ok;
+use function Swow\Utils\processExecute;
+use function Swow\Utils\success;
+use function Swow\Utils\warn;
 
 /**
  * @var array<string, string> $options

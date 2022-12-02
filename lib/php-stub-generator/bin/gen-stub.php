@@ -3,8 +3,8 @@
 /**
  * This file is part of Swow
  *
- * @link     https://github.com/swow/swow
- * @contact  twosee <twosee@php.net>
+ * @link    https://github.com/swow/swow
+ * @contact twosee <twosee@php.net>
  *
  * For the full copyright and license information,
  * please view the LICENSE file that was distributed with this source code
@@ -12,17 +12,27 @@
 
 declare(strict_types=1);
 
-foreach ([0, 2] as $level) {
-    foreach ([dirname(__DIR__, 1 + $level) . '/vendor/autoload.php', dirname(__DIR__, 3 + $level) . '/autoload.php'] as $file) {
-        if (file_exists($file)) {
-            require $file;
-            break;
-        }
+foreach (
+    [
+        dirname(__DIR__, 5) . '/autoload.php', // for user on swow/swow
+        dirname(__DIR__, 3) . '/vendor/autoload.php', // for maintainer on swow/swow
+        dirname(__DIR__, 3) . '/autoload.php', // for user on swow/php-stub-generator
+        dirname(__DIR__) . '/vendor/autoload.php', // for maintainer on swow/php-stub-generator
+        null,
+    ] as $file
+) {
+    if ($file === null) {
+        throw new RuntimeException('Unable to locate autoload.php');
+    }
+    if (file_exists($file)) {
+        require $file;
+        break;
     }
 }
 
 use Swow\StubUtils\StubGenerator;
-use function Swow\Util\processExecute;
+
+use function Swow\Utils\processExecute;
 
 $genStub = static function (): void {
     global $argv;
@@ -55,12 +65,12 @@ TEXT;
     if (isset($options['stub-file'])) {
         $constantMap = $g->getConstantMap();
         $declarationMap = $g->getExtensionFunctionAndClassReflectionsGroupByNamespace();
-        $declarationMap = array_map(static fn (array $reflections) => array_keys($reflections), $declarationMap);
+        $declarationMap = array_map(static fn(array $reflections) => array_keys($reflections), $declarationMap);
         $data = serialize([
             'constants' => $constantMap,
             'declarations' => $declarationMap,
         ]);
-        $userCommentMap = processExecute([
+        $userCommentMapSerialized = processExecute([
             PHP_BINARY,
             '-n',
             __FILE__,
@@ -68,7 +78,13 @@ TEXT;
             $options['stub-file'],
             $data,
         ]);
-        $userCommentMap = unserialize($userCommentMap);
+        $userCommentMap = @unserialize($userCommentMapSerialized);
+        if (!$userCommentMap) {
+            throw new RuntimeException(sprintf(
+                'Failed to unserialize user comment map \'%s\': %s',
+                $userCommentMapSerialized, error_get_last()['message'] ?? 'unknown error'
+            ));
+        }
         $g->setUserCommentMap($userCommentMap);
     }
     if (isset($options['gen-arginfo-mode'])) {

@@ -8,20 +8,20 @@ require __DIR__ . '/../include/skipif.php';
 <?php
 require __DIR__ . '/../include/bootstrap.php';
 
-$coroutine = Swow\Coroutine::run(function (...$data) {
-    echo implode('', $data) . PHP_LF;
+$coroutine = Swow\Coroutine::run(static function (...$data): void {
+    echo implode('', $data) . "\n";
     var_dump(Swow\Coroutine::getCurrent());
-    $leak = new stdClass;
-    echo 'Out' . PHP_LF;
+    $leak = new stdClass();
+    echo "Out\n";
     Swow\Coroutine::yield($leak); // no one received (should use Channel)
-    echo 'Never here' . PHP_LF;
+    echo "Never here\n";
     var_dump($leak);
 }, 'I', 'n');
 var_dump($coroutine);
-echo 'Kill' . PHP_LF;
+echo "Kill\n";
 $coroutine->kill();
 var_dump($coroutine);
-echo 'Done' . PHP_LF;
+echo "Done\n";
 
 ?>
 --EXPECTF--

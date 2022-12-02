@@ -25,21 +25,23 @@
     },
     "require": {
         "php": ">=8.0",
+        "composer/semver": "^3.3",
         "psr/http-client": "^1.0",
+        "psr/http-factory": "^1.0",
         "psr/http-message": "^1.0"
     },
     "require-dev": {
-        "friendsofphp/php-cs-fixer": "3.4.*",
-        "phan/phan": "^5.3",
-        "phpstan/phpstan": "^1.4",
-        "phpunit/phpunit": "=9.5.16",
-        "rector/rector": "^0.12.8",
-        "vimeo/psalm": "^4.22"
+        "friendsofphp/php-cs-fixer": "^3.13",
+        "phan/phan": "^5.4.1",
+        "phpstan/phpstan": "^1.9.2",
+        "phpunit/phpunit": "^9.5.26",
+        "rector/rector": "^0.12.23",
+        "vimeo/psalm": "^4.30.0"
     },
     "replace": {
         "swow/swow-library": "*",
         "swow/swow-stub": "*",
-        "swow/swow-util": "*",
+        "swow/swow-utils": "*",
         "swow/php-stub-generator": "*"
     },
     "suggest": {
@@ -48,21 +50,20 @@
     "autoload": {
         "psr-4": {
             "Swow\\": "lib/swow-library/src/",
-            "Swow\\Util\\": "lib/swow-util/src/"
+            "Swow\\Utils\\": "lib/swow-utils/src/"
         },
         "files": [
-            "lib/swow-library/src/functions.php",
+            "lib/swow-library/src/bootstrap.php",
             "lib/swow-library/src/Debug/functions.php",
-            "lib/swow-util/src/functions.php"
+            "lib/swow-utils/src/functions.php"
         ]
     },
     "autoload-dev": {
         "psr-4": {
-            "SwowTest\\": "lib/swow-library/tests"
-        },
-        "classmap": [
-            "lib/php-stub-generator/src"
-        ]
+            "Swow\\PhpCsFixer\\": "lib/swow-php-cs-fixer-config/src/",
+            "Swow\\StubUtils\\": "lib/php-stub-generator/src/",
+            "Swow\\Tests\\": "lib/swow-library/tests/"
+        }
     },
     "config": {
         "process-timeout": 0,
@@ -76,26 +77,33 @@
         "phan": [ "@swow-php vendor/bin/phan" ],
         "phpstan": [ "@php vendor/bin/phpstan analyse --memory-limit 4G -c phpstan.neon" ],
         "psalm": [ "@php vendor/bin/psalm" ],
-        "sync-extension": [ "@php -n tools/sync-extension.php" ],
-        "build-extension": [ "@php bin/swow-builder" ],
+        "sync-dependencies": [ "@php -n tools/sync-dependencies.php" ],
+        "build-extension": [ "@php ext/bin/swow-builder" ],
+        "build-debug-extension": [ "@php ext/bin/swow-builder --debug" ],
         "rebuild-extension": [ "@build-extension --rebuild" ],
-        "rebuild-debug-extension": [ "@build-extension --rebuild --debug" ],
+        "rebuild-debug-extension": [ "@build-debug-extension --rebuild" ],
         "install-extension": [ "@build-extension --install" ],
         "install-debug-extension": [ "@install-extension --debug" ],
         "reinstall-extension": [ "@rebuild-extension --install" ],
         "reinstall-debug-extension": [ "@rebuild-debug-extension --install" ],
+        "build-clean-extension": [ "@build-extension --clean" ],
+        "build-clean-debug-extension": [ "@build-debug-extension --clean" ],
+        "install-clean-extension": [ "@install-extension --clean" ],
+        "install-clean-debug-extension": [ "@install-debug-extension --clean" ],
         "test-extension": [ "@php tools/test-extension.php" ],
         "test-library": [ "@swow-php vendor/bin/phpunit --configuration lib/swow-library lib/swow-library" ],
+        "test-library-with-pcov": [ "@swow-php -dextension=pcov -dpcov.enabled=1 vendor/bin/phpunit --configuration lib/swow-library lib/swow-library" ],
         "test": [ "@test-extension", "@test-library" ],
-        "gen-stub": [ 
+        "gen-stub": [
             "@swow-php lib/php-stub-generator/bin/gen-stub.php --noinspection --stub-file=lib/swow-stub/src/Swow.php swow lib/swow-stub/src/Swow.php",
             "@php tools/stub-fixer.php lib/swow-stub/src/Swow.php"
         ],
         "update-arginfo": [ "@php -n lib/php-stub-generator/bin/update-arginfo.php --cache-path=ext/build --stub-file=lib/swow-stub/src/Swow.php swow ext/src ext/build" ],
+        "update-version": [ "@php tools/update-version.php" ],
         "update-mime-types": [ "@php -n tools/update-mime-types.php" ],
         "split": [ "@php -n tools/split.php" ]
     },
     "bin": [
-        "bin/swow-builder"
+        "ext/bin/swow-builder"
     ]
 }

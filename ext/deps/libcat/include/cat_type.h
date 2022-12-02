@@ -33,6 +33,8 @@ typedef enum cat_bool_e cat_bool_t;
 #define cat_bool_t uint8_t
 #endif
 
+typedef void *cat_ptr_t;
+
 typedef void cat_data_t;
 typedef void (*cat_data_callback_t)(cat_data_t *data);
 typedef void (*cat_data_dtor_t)(cat_data_t *data);

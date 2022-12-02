@@ -3,8 +3,8 @@
 /**
  * This file is part of Swow
  *
- * @link     https://github.com/swow/swow
- * @contact  twosee <twosee@php.net>
+ * @link    https://github.com/swow/swow
+ * @contact twosee <twosee@php.net>
  *
  * For the full copyright and license information,
  * please view the LICENSE file that was distributed with this source code
@@ -12,12 +12,12 @@
 
 declare(strict_types=1);
 
-use function Swow\Util\br;
-use function Swow\Util\error;
-use function Swow\Util\httpDownload;
-use function Swow\Util\notice;
-use function Swow\Util\passthru;
-use function Swow\Util\warn;
+use function Swow\Utils\br;
+use function Swow\Utils\error;
+use function Swow\Utils\httpDownload;
+use function Swow\Utils\notice;
+use function Swow\Utils\passthru;
+use function Swow\Utils\warn;
 
 require __DIR__ . '/autoload.php';
 

@@ -7,8 +7,29 @@ ARG_ENABLE('swow-curl', 'Enable Swow cURL support', 'yes');
 
 if (PHP_SWOW != 'no') (function(){
 
-    // TODO: arch specified
-    var SWOW_ASSEMBLER = PATH_PROG('ML64');
+    var SWOW_TARGET_ARCH = 'x64';
+    try {
+        if (TARGET_ARCH) {
+            SWOW_TARGET_ARCH = TARGET_ARCH;
+        }
+    } catch (_) {
+        // do nothing
+    }
+
+    var SWOW_ASSEMBLER = PATH_PROG({
+        'x64':'ML64',
+        'x86':'ML',
+        'arm64':'ARMASM64'
+    }[SWOW_TARGET_ARCH]);
+
+    try {
+        if (PHP_ASSEMBLER) {
+            SWOW_ASSEMBLER = PHP_ASSEMBLER;
+        }
+    } catch (_) {
+        // do nothing
+    }
+
     function swow_map(arr, func){
         var ret = [];
         if(typeof arr == 'object' && arr instanceof Array){
@@ -30,7 +51,7 @@ if (PHP_SWOW != 'no') (function(){
 
     // check ml64
     if(!SWOW_ASSEMBLER){
-        WARNING('Swow not enabled; assembler(ML64.exe) not found');
+        WARNING('Swow not enabled; assembler not found');
         return;
     }
 
@@ -179,9 +200,10 @@ if (PHP_SWOW != 'no') (function(){
 
     // header dependencies
     var LIBCAT_DIR = "deps\\libcat";
+    var IPV6_PARSE_DIR = "deps\\ipv6-parse";
     var UV_DIR = LIBCAT_DIR + "\\deps\\libuv";
     var LLHTTP_DIR = LIBCAT_DIR + "\\deps\\llhttp";
-    var MULTIPART_PARSER_DIR = LIBCAT_DIR + "\\deps\\multipart_parser";
+    var MULTIPART_PARSER_C_DIR = LIBCAT_DIR + "\\deps\\multipart-parser-c";
 
     // swow uses self
     ADD_FLAG('CFLAGS_SWOW', '/I "' + configure_module_dirname + '\\include"');
@@ -189,7 +211,7 @@ if (PHP_SWOW != 'no') (function(){
     ADD_FLAG('CFLAGS_SWOW', '/I "' + configure_module_dirname + '\\' + LIBCAT_DIR + '\\include"');
     ADD_FLAG('CFLAGS_SWOW', '/I "' + configure_module_dirname + '\\' + UV_DIR + '/include"');
     ADD_FLAG('CFLAGS_SWOW', '/I "' + configure_module_dirname + '\\' + LLHTTP_DIR + '/include"');
-    ADD_FLAG('CFLAGS_SWOW', '/I "' + configure_module_dirname + '\\' + MULTIPART_PARSER_DIR + '"');
+    ADD_FLAG('CFLAGS_SWOW', '/I "' + configure_module_dirname + '\\' + MULTIPART_PARSER_C_DIR + '"');
     // libcat uses cat_vm.h from swow
     ADD_FLAG('CFLAGS_SWOW_LIBCAT_OBJ', '/I "' + configure_module_dirname + '\\include"');
     // libcat uses self
@@ -200,7 +222,7 @@ if (PHP_SWOW != 'no') (function(){
     // libcat uses llhttp
     ADD_FLAG('CFLAGS_SWOW_LIBCAT_OBJ', '/I "' + configure_module_dirname + '\\' + LLHTTP_DIR + '/include"');
     // libcat uses multipart-parser
-    ADD_FLAG('CFLAGS_SWOW_LIBCAT_OBJ', '/I "' + configure_module_dirname + '\\' + MULTIPART_PARSER_DIR + '"');
+    ADD_FLAG('CFLAGS_SWOW_LIBCAT_OBJ', '/I "' + configure_module_dirname + '\\' + MULTIPART_PARSER_C_DIR + '"');
     // libuv uses self
     ADD_FLAG('CFLAGS_SWOW_LIBUV_OBJ', '$(CFLAGS_SWOW_COMMON)');
     ADD_FLAG('CFLAGS_SWOW_LIBUV_OBJ', '/wd4090');
@@ -215,7 +237,11 @@ if (PHP_SWOW != 'no') (function(){
     ADD_FLAG('CFLAGS_SWOW_LLHTTP_OBJ', '/I "' + configure_module_dirname + '\\' + LLHTTP_DIR + '/include"');
     // multipart-parser uses self
     ADD_FLAG('CFLAGS_SWOW_LLHTTP_OBJ', '$(CFLAGS_SWOW_COMMON)');
-    ADD_FLAG('CFLAGS_SWOW_MULTIPART_PARSER_OBJ', '/I "' + configure_module_dirname + '\\' + MULTIPART_PARSER_DIR + '"');
+    ADD_FLAG('CFLAGS_SWOW_MULTIPART_PARSER_C_OBJ', '/I "' + configure_module_dirname + '\\' + MULTIPART_PARSER_C_DIR + '"');
+    // swow uses ipv6-parse
+    ADD_FLAG('CFLAGS_SWOW', '/I "' + configure_module_dirname + '\\' + IPV6_PARSE_DIR + '"');
+    // ipv6-parse uses self
+    ADD_FLAG('CFLAGS_SWOW_IPV6_PARSE_OBJ', '/I "' + configure_module_dirname + '\\' + IPV6_PARSE_DIR + '"');
 
     // sources
     var SWOW_SRC_DIR='src';
@@ -224,9 +250,9 @@ if (PHP_SWOW != 'no') (function(){
         'swow_wrapper.c',
         'swow_errno.c',
         'swow_log.c',
-        'swow_exceptions.c',
+        'swow_exception.c',
         'swow_debug.c',
-        'swow_util.c',
+        'swow_utils.c',
         'swow_hook.c',
         'swow_defer.c',
         'swow_coroutine.c',
@@ -236,11 +262,15 @@ if (PHP_SWOW != 'no') (function(){
         'swow_time.c',
         'swow_buffer.c',
         'swow_socket.c',
+        'swow_dns.c',
         'swow_fs.c',
         'swow_stream.c',
         'swow_stream_wrapper.c',
         'swow_signal.c',
         'swow_watchdog.c',
+        'swow_closure.c',
+        'swow_tokenizer.c',
+        'swow_ipaddress.c',
         'swow_http.c',
         'swow_websocket.c' // <-- wsh donot support comma here!
     ];
@@ -262,7 +292,6 @@ if (PHP_SWOW != 'no') (function(){
         'cat_memory.c',
         'cat_string.c',
         'cat_error.c',
-        'cat_module.c',
         'cat_log.c',
         'cat_env.c',
         'cat.c',
@@ -298,7 +327,18 @@ if (PHP_SWOW != 'no') (function(){
     // TODO: arch specified
     DEFINE('SWOW_ASSEMBLER', SWOW_ASSEMBLER);
     var CAT_CONTEXT_ASM_DIR = LIBCAT_DIR + '\\deps\\context\\asm';
-    var CAT_CONTEXT_FILENAMES = ['jump_x86_64_ms_pe_masm.asm', 'make_x86_64_ms_pe_masm.asm'];
+    var CAT_CONTEXT_FILENAMES;
+    switch (SWOW_TARGET_ARCH) {
+        case 'x64':
+            CAT_CONTEXT_FILENAMES = ['jump_x86_64_ms_pe_masm.asm', 'make_x86_64_ms_pe_masm.asm'];
+            break;
+        case 'x86':
+            CAT_CONTEXT_FILENAMES = ['jump_i386_ms_pe_masm.asm', 'make_i386_ms_pe_masm.asm'];
+            break;
+        case 'arm64':
+            CAT_CONTEXT_FILENAMES = ['jump_arm64_aapcs_pe_armasm.asm', 'make_arm64_aapcs_pe_armasm.asm'];
+            break;
+    }
     swow_map(CAT_CONTEXT_FILENAMES, function(e){
         // $(BUILD_DIR)/ext/swow/ may cause problem,
         // however, no solution for this yet
@@ -317,7 +357,11 @@ if (PHP_SWOW != 'no') (function(){
         MFO.WriteLine(obj + ': ' + src);
         var objdir = obj.replace(/\\[^\\]+$/, "");
         MFO.WriteLine('    @IF NOT EXIST ' + objdir + ' MKDIR ' + objdir);
-        MFO.WriteLine('    @$(SWOW_ASSEMBLER) /nologo ' + '/Fo' + obj + ' /c ' + src); // dont know why /Fo broken
+        if (SWOW_TARGET_ARCH == 'arm64') {
+            MFO.WriteLine('    @$(SWOW_ASSEMBLER) -nologo -machine ARM64 -o ' + obj + ' ' + src);
+        } else {
+            MFO.WriteLine('    @$(SWOW_ASSEMBLER) /nologo ' + '/Fo' + obj + ' /c ' + src); // dont know why /Fo broken
+        }
     });
 
     // libuv sources
@@ -381,19 +425,20 @@ if (PHP_SWOW != 'no') (function(){
     ADD_FLAG("LIBS_SWOW", "$(SWOW_LLHTTP_GLOBAL_OBJS_RESP)");
 
     // multipart-parser sources
-    ADD_SOURCES(configure_module_dirname + '\\' + MULTIPART_PARSER_DIR, "multipart_parser.c", "swow_multipart_parser");
+    ADD_SOURCES(configure_module_dirname + '\\' + MULTIPART_PARSER_C_DIR, "multipart_parser.c", "swow_multipart_parser");
     ADD_FLAG("SWOW_GLOBAL_OBJS", "$(SWOW_MULTIPART_PARSER_GLOBAL_OBJS)");
     ADD_FLAG("LIBS_SWOW", "$(SWOW_MULTIPART_PARSER_GLOBAL_OBJS_RESP)");
 
-    var shared = PHP_SWOW;
-    if(PHP_SWOW.replace(/static/,"") != PHP_SWOW){
-        shared = null;
-    }
-    EXTENSION('swow', 'swow.c', shared, git_cflags, "php_swow.dll");
+    // ipv6-parse sources
+    ADD_SOURCES(configure_module_dirname + '\\' + IPV6_PARSE_DIR, "ipv6.c", "swow_ipv6_parse");
+    ADD_FLAG("SWOW_GLOBAL_OBJS", "$(SWOW_IPV6_PARSE_GLOBAL_OBJS)");
+    ADD_FLAG("LIBS_SWOW", "$(SWOW_IPV6_PARSE_GLOBAL_OBJS_RESP)");
+
+    EXTENSION('swow', 'swow.c', PHP_SWOW_SHARED, git_cflags, "php_swow.dll");
     //ADD_FLAG("PHP_SWOW_SWOW", "asmobjs");
 
 
     //PHP_INSTALL_HEADERS("ext/swow", "include/cat_vm.h include/swow.h include/swow_api.h include/swow_buffer.h include/swow_channel.h include/swow_coroutine.h include/swow_debug.h include/swow_defer.h include/swow_event.h include/swow_exceptions.h include/swow_hook.h include/swow_http.h include/swow_log.h include/swow_signal.h include/swow_socket.h include/swow_stream.h include/swow_sync.h include/swow_time.h include/swow_watchdog.h include/swow_websocket.h include/swow_wrapper.h")
-    //ADD_FLAG('CFLAGS_SWOW', "/I ext/swow/deps/libcat/deps/libuv/src /I ext/swow/include /I deps/libcat/include /I deps/libcat/include/cat /I deps/libcat/deps/multipart_parser /I deps/libcat/deps/libuv/include /I deps/libcat/deps/llhttp/include/");
+    //ADD_FLAG('CFLAGS_SWOW', "/I ext/swow/deps/libcat/deps/libuv/src /I ext/swow/include /I deps/libcat/include /I deps/libcat/include/cat /I deps/libcat/deps/multipart-parser-c /I deps/libcat/deps/libuv/include /I deps/libcat/deps/llhttp/include/");
 
 })();

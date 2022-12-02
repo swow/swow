@@ -8,16 +8,16 @@ require __DIR__ . '/../include/skipif.php';
 <?php
 require __DIR__ . '/../include/bootstrap.php';
 
-Swow\Coroutine::run(function () {
+Swow\Coroutine::run(static function (): void {
     $main = Swow\Coroutine::getCurrent()->getPrevious();
     usleep(1000);
-    echo 'Kill main' . PHP_LF;
+    echo "Kill main\n";
     $main->kill();
-    echo 'Never here' . PHP_LF;
+    echo "Never here\n";
 });
 
 usleep(1000 + 1);
-echo 'Never here' . PHP_LF;
+echo "Never here\n";
 
 ?>
 --EXPECT--

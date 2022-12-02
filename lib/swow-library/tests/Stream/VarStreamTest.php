@@ -20,13 +20,13 @@ use Swow\Errno;
 use Swow\SocketException;
 use Swow\Stream\VarStream;
 use Swow\Sync\WaitReference;
-use function getRandomBytes;
-use const TEST_MAX_CONCURRENCY_LOW;
-use const TEST_MAX_REQUESTS_MID;
+use Swow\TestUtils\Testing;
+
+use function Swow\TestUtils\getRandomBytes;
 
 /**
  * @internal
- * @coversNothing
+ * @covers \Swow\Stream\VarStream
  */
 final class VarStreamTest extends TestCase
 {
@@ -57,12 +57,12 @@ final class VarStreamTest extends TestCase
                 $this->assertSame(Errno::ECANCELED, $exception->getCode());
             }
         });
-        for ($c = 0; $c < TEST_MAX_CONCURRENCY_LOW; $c++) {
+        for ($c = 0; $c < Testing::$maxConcurrencyLow; $c++) {
             $wrc = new WaitReference();
             Coroutine::run(function () use ($server, $wrc): void {
                 $client = new VarStream();
                 $client->connect($server->getSockAddress(), $server->getSockPort());
-                for ($n = 0; $n < TEST_MAX_REQUESTS_MID; $n++) {
+                for ($n = 0; $n < Testing::$maxRequestsMid; $n++) {
                     $random = getRandomBytes();
                     $request = new stdClass();
                     $request->query = $random;

@@ -10,27 +10,27 @@ require __DIR__ . '/../../include/bootstrap.php';
 
 use Swow\Coroutine;
 use Swow\Errno;
-use Swow\SyncException;
 use Swow\Sync\WaitReference;
+use Swow\SyncException;
 
 $wr = new WaitReference();
 // normal done
-Coroutine::run(function () use ($wr) {
+Coroutine::run(static function () use ($wr): void {
     // do nothing
     pseudo_random_sleep();
 });
 // wait it
-$waiting_coro = Coroutine::run(function ($wr) {
+$waiting_coro = Coroutine::run(static function ($wr): void {
     try {
         WaitReference::wait($wr);
-        echo 'wait should not success' . PHP_LF;
+        echo "wait should not success\n";
     } catch (SyncException $e) {
         Assert::same($e->getCode(), Errno::ECANCELED);
     }
 }, $wr);
 $waiting_coro->resume();
 unset($wr);
-echo 'Done' . PHP_LF;
+echo "Done\n";
 
 ?>
 --EXPECT--

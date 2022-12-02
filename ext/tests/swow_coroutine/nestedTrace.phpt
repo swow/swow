@@ -15,17 +15,17 @@ $wr = new WaitReference();
 
 global $coroutine;
 
-Coroutine::run(function () use ($wr) {
-    Coroutine::run(function () use ($wr) {
-        Coroutine::run(function () use ($wr) {
-            Coroutine::run(function () use ($wr) {
+Coroutine::run(static function () use ($wr): void {
+    Coroutine::run(static function () use ($wr): void {
+        Coroutine::run(static function () use ($wr): void {
+            Coroutine::run(static function () use ($wr): void {
                 global $coroutine;
-                $coroutine = Coroutine::run(function () use ($wr) {
-                    echo Coroutine::getCurrent()->getTraceAsString() . PHP_LF . PHP_LF;
+                $coroutine = Coroutine::run(static function () use ($wr): void {
+                    echo Coroutine::getCurrent()->getTraceAsString() . "\n\n";
                     Coroutine::yield();
-                    echo Coroutine::getCurrent()->getTraceAsString() . PHP_LF . PHP_LF;
+                    echo Coroutine::getCurrent()->getTraceAsString() . "\n\n";
                     usleep(1);
-                    echo Coroutine::getCurrent()->getTraceAsString() . PHP_LF . PHP_LF;
+                    echo Coroutine::getCurrent()->getTraceAsString() . "\n\n";
                 });
             });
         });
@@ -35,7 +35,7 @@ Coroutine::run(function () use ($wr) {
 $coroutine->resume();
 WaitReference::wait($wr);
 
-echo 'Done' . PHP_LF;
+echo "Done\n";
 
 ?>
 --EXPECTF--

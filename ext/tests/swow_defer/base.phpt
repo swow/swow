@@ -10,26 +10,26 @@ require __DIR__ . '/../include/bootstrap.php';
 
 use function Swow\defer;
 
-defer(function () {
-    defer(function () {
-        echo 'a' . PHP_LF;
+defer(static function (): void {
+    defer(static function (): void {
+        echo "a\n";
     });
-    defer(function () {
-        echo 'b' . PHP_LF;
+    defer(static function (): void {
+        echo "b\n";
     });
-    defer(function () {
-        echo 'c' . PHP_LF;
+    defer(static function (): void {
+        echo "c\n";
     });
-    echo '1' . PHP_LF;
+    echo "1\n";
 });
-defer(function () {
-    echo '2' . PHP_LF;
+defer(static function (): void {
+    echo "2\n";
 });
-defer(function () {
-    echo '3' . PHP_LF;
+defer(static function (): void {
+    echo "3\n";
 });
 
-echo 'Done' . PHP_LF;
+echo "Done\n";
 
 ?>
 --EXPECT--

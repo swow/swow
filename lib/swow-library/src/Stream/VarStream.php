@@ -14,6 +14,7 @@ declare(strict_types=1);
 namespace Swow\Stream;
 
 use Swow\Pack\Format;
+
 use function serialize;
 use function unserialize;
 
@@ -34,6 +35,6 @@ class VarStream extends LengthStream
 
     public function sendVar(mixed $var, ?int $timeout = null): static
     {
-        return $this->sendMessageString(serialize($var), $timeout);
+        return $this->sendMessage(serialize($var), timeout: $timeout);
     }
 }

@@ -9,13 +9,14 @@ require __DIR__ . '/../include/skipif.php';
 require __DIR__ . '/../include/bootstrap.php';
 
 use Swow\Coroutine;
+
 use function Swow\defer;
 
-Coroutine::run(function(){
-    defer(function () {
+Coroutine::run(static function (): void {
+    defer(static function (): void {
         echo '1' . PHP_EOL;
     });
-    defer(function () {
+    defer(static function (): void {
         echo '2' . PHP_EOL;
     });
     exit;

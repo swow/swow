@@ -35,6 +35,7 @@ extern "C" {
 # define CAT_OS_WAIT_HAVE_RUSAGE 1
 
 CAT_API cat_bool_t cat_os_wait_module_init(void);
+CAT_API cat_bool_t cat_os_wait_module_shutdown(void);
 CAT_API cat_bool_t cat_os_wait_runtime_init(void);
 CAT_API cat_bool_t cat_os_wait_runtime_shutdown(void);
 

@@ -10,9 +10,9 @@ require __DIR__ . '/../include/bootstrap.php';
 
 use Swow\Socket;
 
-$socket = (new Socket)->bind('127.0.0.1')->listen();
+$socket = (new Socket(Socket::TYPE_TCP))->bind('127.0.0.1')->listen();
 
-echo 'Done' . PHP_LF;
+echo "Done\n";
 
 ?>
 --EXPECT--

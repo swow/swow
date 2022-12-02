@@ -457,6 +457,12 @@
 # define UV__ESOCKTNOSUPPORT (-4025)
 #endif
 
+#if defined(ENODATA) && !defined(_WIN32)
+# define UV__ENODATA UV__ERR(ENODATA)
+#else
+# define UV__ENODATA (-4024)
+#endif
+
 #if defined(ESTALE) && !defined(_WIN32)
 # define UV__ESTALE UV__ERR(ESTALE)
 #else

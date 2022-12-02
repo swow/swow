@@ -9,91 +9,61 @@ require __DIR__ . '/../include/skipif.php';
 require __DIR__ . '/../include/bootstrap.php';
 
 use Swow\Buffer;
-use Swow\BufferException;
 
-Assert::throws(function () {
+Assert::throws(static function (): void {
     // buffer size must > 0
     new Buffer(-1);
-}, ValueError::class);
+}, ValueError::class, expectMessage: '/\$size/');
 
-Assert::throws(function () {
+Assert::throws(static function (): void {
     $buffer = new Buffer(0);
     // buffer size must > 0
     $buffer->realloc(-1);
-}, ValueError::class);
+}, ValueError::class, expectMessage: '/\$size/');
 
 $buffer = new Buffer(4096);
-Assert::throws(function () use ($buffer) {
+Assert::throws(static function () use ($buffer): void {
     // buffer size must > 0
     $buffer->extend(-1);
-}, ValueError::class);
+}, ValueError::class, expectMessage: '/\$recommendSize/');
 
-Assert::throws(function () use ($buffer) {
+Assert::throws(static function () use ($buffer): void {
     // extend size must > now size
     $buffer->extend(2048);
-}, ValueError::class);
+}, ValueError::class, expectMessage: '/\$recommendSize/');
 
-Assert::throws(function () use ($buffer) {
-    // unknown whence
-    $buffer->seek(0, -1);
-}, ValueError::class);
+$buffer->write(0, 'cafe');
+$buffer->append('babe');
 
-Assert::throws(function () use ($buffer) {
-    // out of range
-    $buffer->seek(123, SEEK_END);
-}, Throwable::class);
-
-$buffer->write('cafebabe');
-
-Assert::throws(function () use ($buffer) {
+Assert::throws(static function () use ($buffer): void {
     // read length must >= -1
     $buffer->read(-8);
-}, ValueError::class);
+}, ValueError::class, expectMessage: '/\$length/');
 
-Assert::throws(function () use ($buffer) {
-    // offset must > 0
-    $buffer->peekFrom(-1, 8);
-}, ValueError::class);
-
-Assert::throws(function () use ($buffer) {
-    // length must >= -1
-    $buffer->peekFrom(0, -8);
-}, ValueError::class);
-
-Assert::throws(function () use ($buffer) {
-    // bad range
-    $buffer->peekFrom(9, 23);
-}, BufferException::class);
-
-Assert::throws(function () use ($buffer) {
-    // bad range
-    $buffer->peekFrom(9, 111111);
-}, BufferException::class);
-
-Assert::throws(function () use ($buffer) {
-    // length must >= -1
-    $buffer->peek(-8);
-}, ValueError::class);
-
-Assert::throws(function () use ($buffer) {
+Assert::throws(static function () use ($buffer): void {
     // offset must >= 0
-    $buffer->write('nope', -1);
-}, ValueError::class);
+    $buffer->write(-1, 'nope');
+}, ValueError::class, expectMessage: '/\$offset/');
 
-Assert::throws(function () use ($buffer) {
+Assert::throws(static function () use ($buffer): void {
+    // start must >= 0
+    $buffer->write(0, 'nope', -1);
+}, ValueError::class, expectMessage: '/\$start/');
+
+Assert::throws(static function () use ($buffer): void {
     // length must >= -1
     $buffer->truncate(-123);
-}, ValueError::class);
+}, ValueError::class, expectMessage: '/\$length/');
 
-Assert::throws(function () use ($buffer) {
+Assert::throws(static function () use ($buffer): void {
     // offset must > 0
     $buffer->truncateFrom(-1, 1);
-}, ValueError::class);
+}, ValueError::class, expectMessage: '/\$offset/');
 
-Assert::throws(function () use ($buffer) {
+Assert::throws(static function () use ($buffer): void {
     // length must >= -1
     $buffer->truncateFrom(1, -123);
-}, ValueError::class);
+}, ValueError::class, expectMessage: '/\$length/');
 
 // these are OK
 $buffer->truncateFrom(9, 10);

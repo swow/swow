@@ -17,8 +17,8 @@
  */
 
 #define CAT_MAJOR_VERSION      0
-#define CAT_MINOR_VERSION      1
+#define CAT_MINOR_VERSION      2
 #define CAT_RELEASE_VERSION    0
-#define CAT_EXTRA_VERSION      ""
-#define CAT_VERSION            "0.1.0"
-#define CAT_VERSION_ID         100
+#define CAT_EXTRA_VERSION      "dev"
+#define CAT_VERSION            "0.2.0-dev"
+#define CAT_VERSION_ID         200

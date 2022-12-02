@@ -8,7 +8,7 @@ require __DIR__ . '/../include/skipif.php';
 <?php
 require __DIR__ . '/../include/bootstrap.php';
 
-set_error_handler(function (...$_) {
+set_error_handler(static function (...$_): void {
     throw new ValueError('converted ValueError');
 });
 
@@ -26,13 +26,13 @@ foreach (
     ] as $func => $args_set
 ) {
     foreach ($args_set as $args) {
-        Assert::throws(function () use ($func, $args) {
+        Assert::throws(static function () use ($func, $args): void {
             $func(...$args);
         }, ValueError::class);
     }
 }
 
-echo 'Done' . PHP_LF;
+echo "Done\n";
 ?>
 --EXPECT--
 Done

@@ -63,7 +63,7 @@ runs:
         IF NOT EXIST ${{ inputs.tools-path }} ( MKDIR ${{ inputs.tools-path }} )
         IF NOT EXIST ${{ inputs.tools-path }}\php-sdk-binary-tools (
           ECHO ::group::Fetching php-sdk-binary-tools from Github
-          git clone --single-branch --depth=1 https://github.com/Microsoft/php-sdk-binary-tools ${{ inputs.tools-path }}\php-sdk-binary-tools || EXIT /B 1
+          git clone --single-branch --depth=1 https://github.com/php/php-sdk-binary-tools ${{ inputs.tools-path }}\php-sdk-binary-tools || EXIT /B 1
           ECHO ::endgroup::
         )
         git --git-dir=${{ inputs.tools-path }}\php-sdk-binary-tools\.git --work-tree=${{ inputs.tools-path }}\php-sdk-binary-tools pull || EXIT /B 1
@@ -85,13 +85,13 @@ runs:
         if ($PhpVer.Equals("8.2")) {
           # using master
           $master = "master"
-          $PhpVCVer = "vs16"
-        } elseif ($PhpVer.Equals("8.1") -Or $PhpVer.Equals("8.0")) {
+        }
+        if ($PhpVer.Equals("8.2") -Or $PhpVer.Equals("8.1") -Or $PhpVer.Equals("8.0")) {
           $PhpVCVer = "vs16"
         } else {
           $PhpVCVer = "vc15"
         }
-        Write-Host "::set-output name=vcver::$PhpVCVer"
+        Write-Output "vcver=$PhpVCVer" | Out-File "${env:GITHUB_OUTPUT}" -Append
         Write-Host "::group::Fetching deps from windows.php.net"
         ${{github.action_path}}/deps.ps1 `
           ${{ inputs.deps }} `

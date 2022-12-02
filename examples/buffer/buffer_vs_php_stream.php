@@ -28,7 +28,7 @@ $bigString = str_repeat('A', 10 * 1024 * 1024);
 (static function () use ($bigString): void {
     $buffer = new Swow\Buffer(0);
     $m = memory_get_usage();
-    $buffer->write($bigString);
+    $buffer->append($bigString);
     $dupString = $buffer->toString();
     $m = memory_get_usage() - $m;
     var_dump($m);

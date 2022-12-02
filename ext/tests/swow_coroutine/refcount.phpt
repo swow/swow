@@ -8,26 +8,26 @@ require __DIR__ . '/../include/skipif.php';
 <?php
 require __DIR__ . '/../include/bootstrap.php';
 
-(function () {
-    $function = function () {
-        echo 'In' . PHP_LF;
-        $coroutine = new Swow\Coroutine(function () {
-            echo 'In sub' . PHP_LF;
+(static function (): void {
+    $function = static function () {
+        echo "In\n";
+        $coroutine = new Swow\Coroutine(static function (): void {
+            echo "In sub\n";
             Swow\Coroutine::yield();
-            echo 'Out of sub' . PHP_LF;
+            echo "Out of sub\n";
         });
-        echo 'Resume sub 1' . PHP_LF;
+        echo "Resume sub 1\n";
         $coroutine->resume();
         Swow\Coroutine::yield();
-        echo 'Resume sub 2' . PHP_LF;
+        echo "Resume sub 2\n";
         $coroutine->resume();
         return 'Done';
     };
     $coroutine = new Swow\Coroutine($function);
-    echo 'Resume 1' . PHP_LF;
+    echo "Resume 1\n";
     $coroutine->resume();
-    echo 'Resume 2' . PHP_LF;
-    echo $coroutine->resume() . PHP_LF;
+    echo "Resume 2\n";
+    echo $coroutine->resume() . "\n";
 })();
 
 ?>

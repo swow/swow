@@ -13,22 +13,38 @@ declare(strict_types=1);
 
 namespace Swow\Debug;
 
+use Stringable;
 use Swow\Coroutine;
-use Swow\Util\FileSystem\IOException;
-use Swow\Util\Handler;
+use Swow\Debug\Debugger\Debugger;
+use Swow\Utils\FileSystem\IOException;
+use Swow\Utils\Handler;
+
 use function debug_backtrace;
 use function fclose;
 use function fgets;
 use function fopen;
 use function fwrite;
+use function is_scalar;
+use function is_string;
 use function ob_get_clean;
 use function ob_start;
 use function rtrim;
 use function sprintf;
 use function var_dump;
+
 use const DEBUG_BACKTRACE_IGNORE_ARGS;
 use const PHP_EOL;
 use const STDERR;
+
+function isStringable(mixed $value): bool
+{
+    return $value === null || is_scalar($value) || $value instanceof Stringable;
+}
+
+function isStrictStringable(mixed $value): bool
+{
+    return is_string($value) || $value instanceof Stringable;
+}
 
 function var_dump_return(mixed ...$expressions): string
 {
@@ -98,7 +114,7 @@ function showExecutedSourceLines(bool $all = false): Handler
         $file = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 1)[0]['file'] ?? '';
         $fp = @fopen($file, 'rb');
         if ($fp === false) {
-            throw IOException::getLast();
+            throw IOException::createFromLastError();
         }
         $lines = [];
         while (($line = fgets($fp)) !== false) {

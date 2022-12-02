@@ -68,7 +68,7 @@ Assert::true($chan->isAvailable());
 $chan->close();
 Assert::false($chan->isAvailable());
 
-echo 'Done' . PHP_LF;
+echo "Done\n";
 
 ?>
 --EXPECT--

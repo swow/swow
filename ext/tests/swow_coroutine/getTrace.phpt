@@ -8,10 +8,10 @@ require __DIR__ . '/../include/skipif.php';
 <?php
 require __DIR__ . '/../include/bootstrap.php';
 
-$coroutine = Swow\Coroutine::run(function () {
-    (function () {
-        (function () {
-            (function () {
+$coroutine = Swow\Coroutine::run(static function (): void {
+    (static function (): void {
+        (static function (): void {
+            (static function (): void {
                 Swow\Coroutine::yield();
             })();
         })();
@@ -22,7 +22,7 @@ $coroutine->resume();
 
 var_dump($trace);
 
-echo 'Done' . PHP_LF;
+echo "Done\n";
 ?>
 --EXPECTF--
 array(5) {

@@ -25,7 +25,9 @@ modules
 *.deps
 *.libs
 *.log
-Makefile*
+Makefile
+Makefile.fragments
+Makefile.objects
 tmp-php.ini
 x64/**
 x86/**

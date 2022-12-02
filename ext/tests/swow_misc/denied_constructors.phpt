@@ -12,7 +12,7 @@ function try_create(string $class): void
 {
     try {
         $ret = new $class();
-        echo "{$class} should not be created" . PHP_LF;
+        echo "{$class} should not be created\n";
         var_dump($ret);
     } catch (Error $e) {
         Assert::same($e->getMessage(), "The object of {$class} can not be created for security reasons");
@@ -22,9 +22,8 @@ foreach ([
     'Swow',
     'Swow\\Http\\Status',
     'Swow\\Log',
-    'Swow\\Module',
     'Swow\\Signal',
-    'Swow\\WatchDog',
+    'Swow\\Watchdog',
     'Swow\\WebSocket\\Opcode',
     'Swow\\WebSocket\\Status',
 ] as $class) {

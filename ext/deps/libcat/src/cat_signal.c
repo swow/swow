@@ -41,7 +41,7 @@ typedef union {
     uv_signal_t signal;
 } cat_signal_t;
 
-void cat_signal_callback(uv_signal_t* handle, int signum)
+static void cat_signal_callback(uv_signal_t* handle, int signum)
 {
     (void) signum;
     cat_signal_t *signal = (cat_signal_t *) handle;
@@ -50,6 +50,12 @@ void cat_signal_callback(uv_signal_t* handle, int signum)
     signal->coroutine = NULL;
 
     cat_coroutine_schedule(coroutine, SIGNAL, "Signal");
+}
+
+static void cat_signal_close_callback(uv_handle_t *handle)
+{
+    cat_signal_t *signal = cat_container_of(handle, cat_signal_t, handle);
+    cat_free(signal);
 }
 
 CAT_API cat_bool_t cat_signal_wait(int signum, cat_timeout_t timeout)
@@ -73,12 +79,12 @@ CAT_API cat_bool_t cat_signal_wait(int signum, cat_timeout_t timeout)
     error = uv_signal_start_oneshot(&signal->signal, cat_signal_callback, signum);
     if (unlikely(error != 0)) {
         cat_update_last_error_with_reason(error, "Signal(%d) start failed", signum);
-        uv_close(&signal->handle, (uv_close_cb) cat_free_function);
+        uv_close(&signal->handle, cat_signal_close_callback);
         return cat_false;
     }
     signal->coroutine = CAT_COROUTINE_G(current);
     ret = cat_time_wait(timeout);
-    uv_close(&signal->handle, (uv_close_cb) cat_free_function);
+    uv_close(&signal->handle, cat_signal_close_callback);
     if (unlikely(!ret)) {
         cat_update_last_error_with_previous("Signal(%d) wait failed", signum);
         return cat_false;

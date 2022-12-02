@@ -1,13 +1,21 @@
 <?php
 /**
- * Forked from the repository webmozart/assert
+ * This file is part of Swow
  *
- * (c) Bernhard Schussek <bschussek@gmail.com>
+ * @link    https://github.com/swow/swow
+ * @contact twosee <twosee@php.net>
+ *
+ * For the full copyright and license information,
+ * please view the LICENSE file that was distributed with this source code
  */
 
 declare(strict_types=1);
 
 /**
+ * Forked from the repository webmozart/assert
+ *
+ * (c) Bernhard Schussek <bschussek@gmail.com>
+ *
  * Efficient assertions to validate the input/output of your methods.
  *
  * @method static bool nullOrString($value, $message = '')
@@ -177,7 +185,7 @@ class Assert
 
     protected static int $maxStringLength = 64;
 
-    public static function setThrowException(bool $b)
+    public static function setThrowException(bool $b): void
     {
         static::$throwException = $b;
     }
@@ -228,7 +236,7 @@ class Assert
 
     public static function integerish($value, $message = ''): bool
     {
-        if (!is_numeric($value) || $value != (int) $value) {
+        if (!is_numeric($value) || $value !== (int) $value) {
             static::reportInvalidArgument(sprintf(
                 $message ?: 'Expected an integerish value. Got: %s',
                 static::typeToString($value)
@@ -457,7 +465,7 @@ class Assert
         static::reportInvalidArgument(sprintf(
             $message ?: 'Expected an instance of any of %2$s. Got: %s',
             static::typeToString($value),
-            implode(', ', array_map(['static', 'valueToString'], $classes))
+            implode(', ', array_map([static::class, 'valueToString'], $classes))
         ));
 
         return false;
@@ -597,7 +605,7 @@ class Assert
             static::reportInvalidArgument(sprintf(
                 $message ?: 'Expected an array of unique values, but %s of them %s duplicated',
                 $difference,
-                ($difference === 1 ? 'is' : 'are')
+                $difference === 1 ? 'is' : 'are'
             ));
 
             return false;
@@ -608,7 +616,7 @@ class Assert
 
     public static function eq($value, $expect, $message = ''): bool
     {
-        if ($expect != $value) {
+        if ($expect !== $value) {
             static::reportInvalidArgument(sprintf(
                 $message ?: 'Expected a value equal to %2$s. Got: %s',
                 static::valueToString($value),
@@ -623,7 +631,7 @@ class Assert
 
     public static function notEq($value, $expect, $message = ''): bool
     {
-        if ($expect == $value) {
+        if ($expect === $value) {
             static::reportInvalidArgument(sprintf(
                 $message ?: 'Expected a different value than %s.',
                 static::valueToString($expect)
@@ -758,7 +766,7 @@ class Assert
             static::reportInvalidArgument(sprintf(
                 $message ?: 'Expected one of: %2$s. Got: %s',
                 static::valueToString($value),
-                implode(', ', array_map(['static', 'valueToString'], $values))
+                implode(', ', array_map([static::class, 'valueToString'], $values))
             ));
 
             return false;
@@ -1173,7 +1181,7 @@ class Assert
 
     public static function implementsInterface($value, $interface, $message = ''): bool
     {
-        if (!in_array($interface, class_implements($value))) {
+        if (!in_array($interface, class_implements($value), true)) {
             static::reportInvalidArgument(sprintf(
                 $message ?: 'Expected an implementation of %2$s. Got: %s',
                 static::valueToString($value),
@@ -1379,7 +1387,7 @@ class Assert
         return true;
     }
 
-    public static function throws(Closure $expression, $class = 'Exception', $message = ''): bool
+    public static function throws(Closure $expression, $class = 'Exception', ?int $expectCode = null, ?string $expectMessage = null): bool
     {
         static::string($class);
 
@@ -1390,11 +1398,35 @@ class Assert
         } catch (Throwable $e) {
             $actual = $e::class;
             if ($e instanceof $class) {
+                if ($expectCode !== null && $e->getCode() !== $expectCode) {
+                    static::reportInvalidArgument(sprintf(
+                        'Expected to throw "%s" with code %d, got %d',
+                        $class, $expectCode, $e->getCode()
+                    ));
+                    return false;
+                }
+                if ($expectMessage !== null) {
+                    if (
+                        (str_starts_with($expectMessage, '/') && str_ends_with($expectMessage, '/')) ||
+                        (str_starts_with($expectMessage, '#') && str_ends_with($expectMessage, '#'))
+                    ) {
+                        $messageExpected = preg_match($expectMessage, $e->getMessage()) > 0;
+                    } else {
+                        $messageExpected = $e->getMessage() === $expectMessage;
+                    }
+                    if (!$messageExpected) {
+                        static::reportInvalidArgument(sprintf(
+                            'Expected to throw "%s" with message "%s", got "%s"',
+                            $class, $expectMessage, $e->getMessage()
+                        ));
+                        return false;
+                    }
+                }
                 return true;
             }
         }
 
-        static::reportInvalidArgument($message ?: sprintf(
+        static::reportInvalidArgument(sprintf(
             'Expected to throw "%s", got "%s"',
             $class,
             $actual
@@ -1408,7 +1440,7 @@ class Assert
         if (str_starts_with($name, 'nullOr')) {
             if ($arguments[0] !== null) {
                 $method = lcfirst(substr($name, 6));
-                if (!call_user_func_array(['static', $method], $arguments)) {
+                if (!call_user_func_array([static::class, $method], $arguments)) {
                     return false;
                 }
             }
@@ -1426,7 +1458,7 @@ class Assert
 
             foreach ($arguments[0] as $entry) {
                 $args[0] = $entry;
-                if (!call_user_func_array(['static', $method], $args)) {
+                if (!call_user_func_array([static::class, $method], $args)) {
                     return false;
                 }
             }
@@ -1490,14 +1522,14 @@ class Assert
             return strlen($value);
         }
 
-        if (false === $encoding = mb_detect_encoding($value)) {
+        if (false === $encoding = mb_detect_encoding($value, mb_detect_order(), true)) {
             return strlen($value);
         }
 
         return mb_strwidth($value, $encoding);
     }
 
-    protected static function reportInvalidArgument(string $message = '')
+    protected static function reportInvalidArgument(string $message = ''): void
     {
         throw new AssertException($message);
     }

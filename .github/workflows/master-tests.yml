@@ -63,16 +63,21 @@ jobs:
           ${{ runner.os == 'Linux' && 'sudo' || ''}} make install-modules
 
       - name: Run extension tests
-        id: ext-test
+        id: test-extension
         continue-on-error: true
-        run: |
-          composer test-extension
+        run: composer test-extension
 
       - name: Run library tests
+        id: test-library
+        continue-on-error: true
         run: composer test-library
 
-      - name: Fail if anything failed
-        if: steps.ext-test.outcome != 'success'
+      - name: Fail if test-extension failed
+        if: steps.test-extension.outcome != 'success'
+        run: exit 1
+
+      - name: Fail if test-library failed
+        if: steps.test-library.outcome != 'success'
         run: exit 1
 
   windows-tests:
@@ -118,14 +123,20 @@ jobs:
 
       - name: Run extension tests
         shell: cmd
-        id: ext-test
+        id: test-extension
         continue-on-error: true
-        run: |
-          composer test-extension
+        run: composer test-extension
 
       - name: Run library tests
+        shell: cmd
+        id: test-library
+        continue-on-error: true
         run: composer test-library
 
-      - name: Fail if anything failed
-        if: steps.ext-test.outcome != 'success'
+      - name: Fail if test-extension failed
+        if: steps.test-extension.outcome != 'success'
+        run: exit 1
+
+      - name: Fail if test-library failed
+        if: steps.test-library.outcome != 'success'
         run: exit 1

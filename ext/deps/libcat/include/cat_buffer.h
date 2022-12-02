@@ -24,7 +24,7 @@ extern "C" {
 
 #include "cat.h"
 
-#define CAT_BUFFER_DEFAULT_SIZE 8192
+#define CAT_BUFFER_COMMON_SIZE 8192
 
 typedef struct cat_buffer_s {
     /* public readonly */
@@ -34,7 +34,7 @@ typedef struct cat_buffer_s {
 } cat_buffer_t;
 
 typedef char *(*cat_buffer_alloc_function_t)(size_t size);
-typedef char *(*cat_buffer_realloc_function_t)(char *old_value, size_t old_length, size_t new_size);
+typedef char *(*cat_buffer_realloc_function_t)(char *old_value, size_t new_size);
 typedef void (*cat_buffer_update_function_t)(char *value, size_t new_length);
 typedef void (*cat_buffer_free_function_t)(char *value);
 
@@ -72,7 +72,7 @@ CAT_API char *cat_buffer_get_value(const cat_buffer_t *buffer);
 CAT_API size_t cat_buffer_get_size(const cat_buffer_t *buffer);
 CAT_API size_t cat_buffer_get_length(const cat_buffer_t *buffer);
 
-CAT_API cat_bool_t cat_buffer_make_pair(cat_buffer_t *rbuffer, size_t rsize, cat_buffer_t *wbuffer, size_t wsize);
+CAT_API cat_bool_t cat_buffer_make_pair(cat_buffer_t *read_buffer, size_t rsize, cat_buffer_t *write_buffer, size_t wsize);
 CAT_API void cat_buffer_dump(cat_buffer_t *buffer);
 
 #ifdef __cplusplus

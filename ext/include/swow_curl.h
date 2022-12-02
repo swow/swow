@@ -28,7 +28,7 @@ extern "C" {
 zend_result swow_curl_module_init(INIT_FUNC_ARGS);
 zend_result swow_curl_module_shutdown(INIT_FUNC_ARGS);
 zend_result swow_curl_runtime_init(INIT_FUNC_ARGS);
-zend_result swow_curl_runtime_shutdown(INIT_FUNC_ARGS);
+zend_result swow_curl_runtime_close(void);
 #endif
 
 #ifdef __cplusplus

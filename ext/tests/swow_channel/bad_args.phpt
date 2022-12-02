@@ -11,12 +11,12 @@ require __DIR__ . '/../include/bootstrap.php';
 use Swow\Channel;
 
 $chan = new Channel(0);
-Assert::throws(function () use ($chan) {
+Assert::throws(static function () use ($chan): void {
     // Swow\Channel can be constructed only once
     $chan->__construct();
 }, Error::class);
 
-Assert::throws(function () {
+Assert::throws(static function (): void {
     // Swow\Channel::__construct(): Argument #1 ($capacity) can not be negative
     new Channel(-999);
 }, ValueError::class);

@@ -25,7 +25,7 @@ $proc = proc_open(
     $pipes,
 );
 
-$pid = (int)trim(fgets($pipes[1]));
+$pid = (int) trim(fgets($pipes[1]));
 
 Signal::kill($pid, Signal::TERM);
 
@@ -34,7 +34,7 @@ $exitStatus = proc_close($proc);
 // "If PHP has been compiled with --enable-sigchild, the return value of this function is undefined."
 Assert::same($exitStatus, PHP_OS_FAMILY === 'Windows' ? 1 : Signal::TERM);
 
-echo 'Done' . PHP_LF;
+echo "Done\n";
 ?>
 --EXPECT--
 Done

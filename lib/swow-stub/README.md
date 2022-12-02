@@ -1,3 +1,3 @@
 # Swow stub
 
-Extension stub files of Swow.
+Stub files for [Swow extension](https://swow.dev).

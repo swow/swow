@@ -20,11 +20,17 @@ jobs:
           #- name: CentOS 8
           #  image: centos:8
           #  pkg: yum
-          - name: AlmaLinux
-            image: almalinux
+          - name: AlmaLinux 8
+            image: almalinux:8
             pkg: dnf
-          - name: Rocky Linux
-            image: rockylinux
+          - name: Rocky Linux 8
+            image: rockylinux:8
+            pkg: dnf
+          - name: AlmaLinux 9
+            image: almalinux:9
+            pkg: dnf
+          - name: Rocky Linux 9
+            image: rockylinux:9
             pkg: dnf
           - name: Fedora
             image: fedora
@@ -69,7 +75,10 @@ jobs:
           then
             echo ::warning::PHP version ${{ matrix.php-version }} is not found in releases, it may not be released.
           else
-            echo "::set-output name=phpfn::"$(echo "${infojson}" | jq -r '.source[] | select( .filename | endswith("tar.xz")) | .filename')
+            echo phpfn="$(
+              echo "${infojson}" |
+                jq -r '.source[] |select( .filename | endswith("tar.xz")) | .filename'
+            )" >> $GITHUB_OUTPUT
           fi
       - name: Cache PHP codes
         if: steps.cacheprepare.outputs.phpfn

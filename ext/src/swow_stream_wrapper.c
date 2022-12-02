@@ -248,7 +248,7 @@ static php_stream *swow_proxy_dir_opener(php_stream_wrapper *wrapper,
     // printf("orig wrapper %p\n", orig_wrapper);
     php_stream *ret =
         orig_wrapper->wops->dir_opener(wrapper, filename, mode, options, opened_path, context STREAMS_REL_CC);
-    // printf("returnnig wrp %p\n", ret->wrapper);
+    // printf("returning wrp %p\n", ret->wrapper);
     SWOW_REHOOK();
     if (!ret || !ret->ops || !ret->ops->label) {
         // if operation failed, exit

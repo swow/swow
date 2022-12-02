@@ -18,6 +18,10 @@
 
 #include "cat.h"
 
+#ifdef CAT_IDE_HELPER
+#include "cat_error.h"
+#endif
+
 CAT_API cat_errno_t cat_get_last_error_code(void)
 {
     return CAT_G(last_error).code;
@@ -94,9 +98,9 @@ CAT_API void cat_show_last_error(void)
 }
 
 #ifndef CAT_IDE_HELPER
-CAT_API CAT_NORETURN void cat_abort(void)
+CAT_API CAT_COLD CAT_NORETURN void cat_abort(void)
 {
-    exit(233);
+    abort();
 }
 #endif
 

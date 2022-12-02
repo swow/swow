@@ -2,7 +2,6 @@
 swow_http: chunked encoding
 --SKIPIF--
 <?php
-
 require __DIR__ . '/../include/skipif.php';
 ?>
 --FILE--
@@ -20,7 +19,7 @@ for ($i = 0; $i < 32; $i++) {
     $chunk = random_bytes($seed);
     array_unshift($randoms, $chunk);
 }
-$body_full = "message_start1message_start2" . implode('', $randoms);
+$body_full = 'message_start1message_start2' . implode('', $randoms);
 
 // generate a buffer holds our fake response
 $buffer = new Buffer(4096);
@@ -35,8 +34,7 @@ $resp_lines = [
     'E',
     'message_start2',
 ];
-$buffer->write(implode("\r\n", $resp_lines));
-$buffer->rewind();
+$buffer->append(implode("\r\n", $resp_lines));
 
 // create parser
 $parser = new Parser();
@@ -49,28 +47,33 @@ Assert::same($parser->getEvents(), Parser::EVENTS_ALL);
 
 $headers = [];
 
-$body = "";
+$body = '';
 
 $i = 0;
 
 // parse it
 // Parser::execute reads from buffer, then generate an event if subscribed
-while (Parser::EVENT_MESSAGE_COMPLETE !== ($event = $parser->execute($buffer))) {
-    Assert::same($event, $parser->getEvent());
+$parsedOffset = 0;
+while (true) {
+    $parsedOffset += $parser->execute($buffer->toString(), $parsedOffset);
+    if (Parser::EVENT_MESSAGE_COMPLETE === ($event = $parser->getEvent())) {
+        break;
+    }
+    Assert::integer($event);
     Assert::string($parser->getEventName());
-    //var_dump($parser->getEventName());
+    Assert::same($parser::getEventNameFor($event), $parser->getEventName());
     // read data from buffer according to parser
     $data = '';
     if (Parser::EVENT_FLAG_DATA & $event) {
-        $data = $buffer->peekFrom($parser->getDataOffset(), $parser->getDataLength());
+        $data = $buffer->read($parser->getDataOffset(), $parser->getDataLength());
     }
     switch ($event) {
         case Parser::EVENT_STATUS:
             // parse status
             $status_str = $data;
             Assert::same($parser->getStatusCode(), 200);
-            Assert::same($parser->getReasonPhrase(), "OK");
-            Assert::same($status_str, "OK");
+            Assert::same($parser->getReasonPhrase(), 'OK');
+            Assert::same($status_str, 'OK');
             break;
         case Parser::EVENT_HEADER_FIELD:
             // start parse headers
@@ -87,7 +90,7 @@ while (Parser::EVENT_MESSAGE_COMPLETE !== ($event = $parser->execute($buffer))) 
             Assert::same($parser->getMajorVersion(), 1);
             Assert::same($parser->getMinorVersion(), 1);
             Assert::false($parser->isUpgrade());
-            //Assert::false($parser->shouldKeepAlive());
+            // Assert::false($parser->shouldKeepAlive());
             break;
         case Parser::EVENT_BODY:
             $i++;
@@ -97,12 +100,9 @@ while (Parser::EVENT_MESSAGE_COMPLETE !== ($event = $parser->execute($buffer))) 
             }
             break;
     }
-    if ($buffer->getReadableLength() === 0) {
-        $now = $buffer->tell();
+    if ($parsedOffset === $buffer->getLength()) {
         $new = $randoms[$i - 2];
-        $buffer->seek(0, SEEK_END);
-        $buffer->write("\r\n" . sprintf("%x", strlen($new)) . "\r\n" . $new);
-        $buffer->seek($now, SEEK_SET);
+        $buffer->append("\r\n" . sprintf('%x', strlen($new)) . "\r\n" . $new);
     }
 }
 
@@ -117,14 +117,14 @@ $expected = [
     'Transfer-Encoding' => ['chunked'],
 ];
 
-foreach($expected as $k => $expected_values){
+foreach ($expected as $k => $expected_values) {
     $real_values = $headers[$k];
     sort($real_values);
     sort($expected_values);
     Assert::same($real_values, $expected_values);
 }
 
-echo 'Done' . PHP_LF;
+echo "Done\n";
 ?>
 --EXPECT--
 Done

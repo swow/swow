@@ -15,7 +15,7 @@ const N = 10;
 $coroutines = [];
 
 for ($n = N; $n--;) {
-    $coroutines[] = new Coroutine(function () {
+    $coroutines[] = new Coroutine(static function (): void {
         Coroutine::yield(Coroutine::getCurrent()->getId());
     });
 }
@@ -29,7 +29,7 @@ foreach ($coroutines as $coro) {
     $coro->resume();
 }
 
-echo 'Done' . PHP_LF;
+echo "Done\n";
 
 ?>
 --EXPECT--

@@ -23,7 +23,9 @@ extern "C" {
 #endif
 
 #include "cat.h"
+
 #include "cat_coroutine.h"
+#include "cat_atomic.h"
 
 #define CAT_WATCH_DOG_DEFAULT_QUANTUM    (5 * 1000 * 1000)
 #define CAT_WATCH_DOG_DEFAULT_THRESHOLD  (10 * 1000 * 1000)
@@ -43,11 +45,11 @@ typedef struct cat_watchdog_s cat_watchdog_t;
 
 typedef void (*cat_watchdog_alerter_t)(cat_watchdog_t *watchdog);
 
-CAT_GLOBALS_STRUCT_BEGIN(cat_watchdog)
+CAT_GLOBALS_STRUCT_BEGIN(cat_watchdog) {
     cat_watchdog_t *watchdog;
-CAT_GLOBALS_STRUCT_END(cat_watchdog)
+} CAT_GLOBALS_STRUCT_END(cat_watchdog);
 
-extern CAT_API CAT_GLOBALS_DECLARE(cat_watchdog)
+extern CAT_API CAT_GLOBALS_DECLARE(cat_watchdog);
 
 #define CAT_WATCH_DOG_G(x) CAT_GLOBALS_GET(cat_watchdog, x)
 
@@ -56,13 +58,13 @@ struct cat_watchdog_s
     /* public (options, readonly) */
     /* alert if blocking time is greater than quantum (nano secondes) */
     cat_timeout_t quantum;
-    /* do something if blocking time is greate than threshold (nano secondes) */
+    /* do something if blocking time is greater than threshold (nano secondes) */
     cat_timeout_t threshold;
     cat_watchdog_alerter_t alerter;
     /* private */
     cat_alert_count_t alert_count;
     cat_bool_t allocated;
-    cat_bool_t stop;
+    cat_atomic_bool_t stop;
     uv_pid_t pid; /* TODO: cat_pid_t */
     CAT_GLOBALS_TYPE(cat_coroutine) *globals;
     cat_coroutine_round_t last_round;
@@ -73,6 +75,7 @@ struct cat_watchdog_s
 };
 
 CAT_API cat_bool_t cat_watchdog_module_init(void);
+CAT_API cat_bool_t cat_watchdog_module_shutdown(void);
 CAT_API cat_bool_t cat_watchdog_runtime_init(void);
 CAT_API cat_bool_t cat_watchdog_runtime_shutdown(void);
 

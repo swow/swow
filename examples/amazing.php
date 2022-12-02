@@ -66,7 +66,7 @@ for ($c = C / 2; $c--;) {
 }
 for ($c = C / 2; $c--;) {
     Coroutine::run(static function () use ($wr): void {
-        $mysqli = new Mysqli('127.0.0.1', 'root', 'root', 'mysql');
+        $mysqli = new mysqli('127.0.0.1', 'root', 'root', 'mysql');
         $statement = $mysqli->prepare('SELECT `User` FROM `user`');
         for ($n = N; $n--;) {
             $statement->bind_result($user);
@@ -148,7 +148,7 @@ Coroutine::run(static function () use ($wr): void {
             $client_uid = "{$address}:{$port}";
             $id = $client_map[$client_uid] = ($client_map[$client_uid] ?? -1) + 1;
             assert($recv === "Client: Hello #{$id}");
-            $socket->sendStringTo("Server: Hello #{$id}", $address, $port);
+            $socket->sendTo("Server: Hello #{$id}", $address, $port);
         }
     }
     $socket->close();
@@ -162,7 +162,7 @@ for ($c = C; $c--;) {
             for ($n = 0; $n < N; $n++) {
                 fwrite($fp, "Client: Hello #{$n}");
                 $recv = fread($fp, 1024);
-                [$address, $port] = explode(':', (stream_socket_get_name($fp, true)));
+                [$address, $port] = explode(':', stream_socket_get_name($fp, true));
                 assert($address === '127.0.0.1' && ((int) $port) === 9503);
                 assert($recv === "Server: Hello #{$n}");
             }

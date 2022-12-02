@@ -8,13 +8,15 @@ require __DIR__ . '/../include/skipif.php';
 <?php
 require __DIR__ . '/../include/bootstrap.php';
 
-class TestCoroutine extends Swow\Coroutine { }
+class TestCoroutine extends Swow\Coroutine
+{
+}
 
-$coroutine = TestCoroutine::run(function () {
+$coroutine = TestCoroutine::run(static function (): void {
     var_dump(get_class(Swow\Coroutine::getCurrent()));
 });
 
-echo 'Done' . PHP_LF;
+echo "Done\n";
 ?>
 --EXPECT--
 string(13) "TestCoroutine"

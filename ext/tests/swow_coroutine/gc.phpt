@@ -10,17 +10,16 @@ require __DIR__ . '/../include/bootstrap.php';
 
 use Swow\Coroutine;
 
-$foo = new class
-{
+$foo = new class() {
     public Coroutine $coroutine;
 
     public function __construct()
     {
-        $this->coroutine = new Coroutine(function () { });
+        $this->coroutine = new Coroutine(static function (): void { });
     }
 };
 
-echo 'Done' . PHP_LF;
+echo "Done\n";
 
 ?>
 --EXPECT--

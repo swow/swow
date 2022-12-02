@@ -8,13 +8,13 @@ require __DIR__ . '/../include/skipif.php';
 <?php
 require __DIR__ . '/../include/bootstrap.php';
 
-register_shutdown_function(function (){
-    echo 'Done' . PHP_LF;
+register_shutdown_function(static function (): void {
+    echo "Done\n";
 });
 
 Swow\Coroutine::getCurrent()->kill();
 
-echo 'Never here' . PHP_LF;
+echo "Never here\n";
 
 ?>
 --EXPECT--

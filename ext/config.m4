@@ -6,7 +6,7 @@ dnl to solve this, we have to re-implement this macro here
 
 dnl from acinclude.m4 or build/php.m4
 dnl
-dnl SWOW_ADD_SOURCES_X(source-path, sources[, special-flags[, target-var[, shared[, special-post-flags]]]])
+dnl SWOW_ADD_SOURCES_X(source-path, sources[, special-flags[, target-var[, shared[, dependencies]]]])
 dnl
 dnl Additional to SWOW_ADD_SOURCES (see below), this lets you set the name of the
 dnl array target-var directly, as well as whether shared objects will be built
@@ -39,18 +39,28 @@ dnl Append to the array which has been dynamically chosen at m4 time.
 
 dnl Choose the right compiler/flags/etc. for the source-file.
       case $ac_src in
-        *.c[)] ac_comp="$b_c_pre $3 $ac_inc $b_c_meta -c $ac_srcdir$ac_src -o $ac_bdir$ac_obj.$b_lo $6$b_c_post" ;;
-        *.s[)] ac_comp="$b_c_pre $3 $ac_inc $b_c_meta -c $ac_srcdir$ac_src -o $ac_bdir$ac_obj.$b_lo $6$b_c_post" ;;
-        *.S[)] ac_comp="$b_c_pre $3 $ac_inc $b_c_meta -c $ac_srcdir$ac_src -o $ac_bdir$ac_obj.$b_lo $6$b_c_post" ;;
-        *.cpp|*.cc|*.cxx[)] ac_comp="$b_cxx_pre $3 $ac_inc $b_cxx_meta -c $ac_srcdir$ac_src -o $ac_bdir$ac_obj.$b_lo $6$b_cxx_post" ;;
+        *.c[)] ac_comp="$b_c_pre $ac_inc $b_c_meta $3 -c $ac_srcdir$ac_src -o $ac_bdir$ac_obj.$b_lo $b_c_post" ;;
+        *.s[)] ac_comp="$b_c_pre $ac_inc $b_c_meta $3 -c $ac_srcdir$ac_src -o $ac_bdir$ac_obj.$b_lo $b_c_post" ;;
+        *.S[)] ac_comp="$b_c_pre $ac_inc $b_c_meta $3 -c $ac_srcdir$ac_src -o $ac_bdir$ac_obj.$b_lo $b_c_post" ;;
+        *.cpp|*.cc|*.cxx[)] ac_comp="$b_cxx_pre $ac_inc $b_cxx_meta $3 -c $ac_srcdir$ac_src -o $ac_bdir$ac_obj.$b_lo $b_cxx_post" ;;
       esac
 
-dnl note: this tab is necessary for generated Makefile
+dnl Generate Makefiles with dependencies
+      ac_comp="$ac_comp -MMD -MF $ac_bdir$ac_obj.dep -MT $ac_bdir[$]ac_obj.lo"
+
+
 dnl Create a rule for the object/source combo.
     cat >>Makefile.objects<<EOF
+-include $ac_bdir[$]ac_obj.dep
 $ac_bdir[$]ac_obj.lo: $ac_srcdir[$]ac_src
+dnl note: this tab is necessary for generated Makefile
 	$ac_comp
 EOF
+dnl add dependency
+ifelse($6,,,
+    cat >>Makefile.objects<<EOF
+$ac_bdir[$]ac_obj.lo: $6
+EOF)
   done
 ])
 dnl
@@ -69,9 +79,9 @@ AC_DEFUN([SWOW_ADD_SOURCES],[
     swow_extra="${swow_extra}"' $('$4')'
   fi
   if test $ext_shared = "yes"; then
-    SWOW_ADD_SOURCES_X(PHP_EXT_DIR(swow)/$1, $2, $swow_extra, shared_objects_swow, yes)
+    SWOW_ADD_SOURCES_X(PHP_EXT_DIR(swow)/$1, $2, $swow_extra, shared_objects_swow, yes, $5)
   else
-    SWOW_ADD_SOURCES_X(PHP_EXT_DIR(swow)/$1, $2, $swow_extra, PHP_GLOBAL_OBJS)
+    SWOW_ADD_SOURCES_X(PHP_EXT_DIR(swow)/$1, $2, $swow_extra, PHP_GLOBAL_OBJS,, $5)
   fi
 ])
 
@@ -176,23 +186,29 @@ PHP_ARG_ENABLE([swow-curl],
 
 if test "${PHP_SWOW}" != "no"; then
   dnl check if this php version we support
-  AC_MSG_CHECKING([Check for supported PHP versions])
-  if test -z "$PHP_VERSION"; then
-    if test -z "$PHP_CONFIG"; then
-      AC_MSG_ERROR([php-config not found])
+  AC_MSG_CHECKING([Check for supported PHP version number])
+  if test -n "$PHP_VERSION"; then
+    SWOW_PHP_VERSION="$PHP_VERSION"
+  else
+    if test -n "$PHP_CONFIG"; then
+      SWOW_PHP_VERSION=`$PHP_CONFIG --version`
+    else
+      SWOW_PHP_VERSION=""
     fi
-    PHP_VERSION=`$PHP_CONFIG --version`
   fi
 
-  if test -z "$PHP_VERSION"; then
+  if test -n "$PHP_VERSION_ID"; then
+    SWOW_PHP_VERSION_ID="$PHP_VERSION_ID"
+  elif test -n "$SWOW_PHP_VERSION"; then
+    SWOW_PHP_VERSION_ID=`echo "${SWOW_PHP_VERSION}" | $AWK 'BEGIN { FS = "."; } { printf "%d", ([$]1 * 100 + [$]2) * 100 + [$]3;}'`
+  else
     AC_MSG_ERROR([failed to detect PHP version, please report])
   fi
-  PHP_VERSION_ID=`echo "${PHP_VERSION}" | $AWK 'BEGIN { FS = "."; } { printf "%d", ([$]1 * 100 + [$]2) * 100 + [$]3;}'`
 
-  if test "${PHP_VERSION_ID}" -lt "80000" || test "${PHP_VERSION_ID}" -gt "80200"; then
-    AC_MSG_ERROR([not supported. Need a PHP version >= 8.0.0 and <= 8.2.0 (found $PHP_VERSION)])
+  if test "${SWOW_PHP_VERSION_ID}" -lt "80000"; then
+    AC_MSG_ERROR([not supported. Need a PHP version >= 8.0.0 (found $SWOW_PHP_VERSION_ID)])
   else
-    AC_MSG_RESULT([supported ($PHP_VERSION)])
+    AC_MSG_RESULT([supported ($SWOW_PHP_VERSION_ID)])
   fi
 
   AC_DEFINE([HAVE_SWOW], 1, [Have Swow])
@@ -203,6 +219,11 @@ if test "${PHP_SWOW}" != "no"; then
   SWOW_STD_CFLAGS="${SWOW_STD_CFLAGS} -fvisibility=hidden -std=gnu99"
   SWOW_STD_CFLAGS="${SWOW_STD_CFLAGS} -Wall -Wextra -Wstrict-prototypes"
   SWOW_STD_CFLAGS="${SWOW_STD_CFLAGS} -Wno-unused-parameter"
+  AC_MSG_CHECKING([for ZTS])
+  if test "$PHP_THREAD_SAFETY" != "no"; then
+    AC_MSG_RESULT([whether to enable Swow multi-thread support... yes])
+    SWOW_STD_CFLAGS="${SWOW_STD_CFLAGS} -DZEND_ENABLE_STATIC_TSRMLS_CACHE=1"
+  fi
 
   PHP_SUBST(SWOW_STD_CFLAGS)
 
@@ -277,9 +298,9 @@ if test "${PHP_SWOW}" != "no"; then
     return 0
   }
   if swow_check_git ; then
-     SWOW_GIT_VERSION_CFLAG=-DSWOW_GIT_VERSION=\\\"'-"`'"$SWOW_GIT --work-tree=${ext_srcdir}/.. --git-dir=${ext_srcdir}/../.git describe --always --abbrev=8 --dirty 2>&-"'`"'\\\"
+    SWOW_GIT_VERSION_CFLAG=-DSWOW_GIT_VERSION=\\\"'-"`'"$SWOW_GIT --work-tree=${ext_srcdir}/.. --git-dir=${ext_srcdir}/../.git describe --always --abbrev=8 --dirty 2>&-"'`"'\\\"
   else
-     SWOW_GIT_VERSION_CFLAG=
+    SWOW_GIT_VERSION_CFLAG=
   fi
   PHP_SUBST(SWOW_GIT_VERSION_CFLAG)
 
@@ -300,9 +321,9 @@ EOF
     swow_wrapper.c \
     swow_errno.c \
     swow_log.c \
-    swow_exceptions.c \
+    swow_exception.c \
     swow_debug.c \
-    swow_util.c \
+    swow_utils.c \
     swow_hook.c \
     swow_defer.c \
     swow_coroutine.c \
@@ -312,15 +333,24 @@ EOF
     swow_time.c \
     swow_buffer.c \
     swow_socket.c \
+    swow_dns.c \
     swow_fs.c \
     swow_stream.c \
     swow_stream_wrapper.c \
     swow_signal.c \
     swow_watchdog.c \
+    swow_closure.c \
+    swow_ipaddress.c \
     swow_http.c \
     swow_websocket.c \
     swow_proc_open.c \
     , SWOW_INCLUDES, SWOW_CFLAGS)
+  dnl if we do in-tree build, zend_language_scanner_defs.h may be not exist, add dependencies
+  if test x"${PHP_PECL_EXTENSION}" = x"swow"; then
+    SWOW_ADD_SOURCES(src, swow_tokenizer.c, SWOW_INCLUDES, SWOW_CFLAGS)
+  else
+    SWOW_ADD_SOURCES(src, swow_tokenizer.c, SWOW_INCLUDES, SWOW_CFLAGS, [\$(top_srcdir)/Zend/zend_language_parser.c \$(top_srcdir)/Zend/zend_language_scanner.c])
+  fi
 
   dnl TODO: may use separate libcat
   if test "libcat" != ""; then
@@ -349,8 +379,8 @@ EOF
     fi
 
     if test "$PHP_SWOW_MEMORY_SANITIZER" = "yes" &&
-       test "$PHP_SWOW_ADDRESS_SANITIZER" = "yes"; then
-       AC_MSG_ERROR([MemorySanitizer and AddressSanitizer are mutually exclusive])
+      test "$PHP_SWOW_ADDRESS_SANITIZER" = "yes"; then
+      AC_MSG_ERROR([MemorySanitizer and AddressSanitizer are mutually exclusive])
     fi
 
     if test "$PHP_SWOW_MEMORY_SANITIZER" = "yes"; then
@@ -368,10 +398,10 @@ EOF
     fi
 
     if test "$PHP_SWOW_MEMORY_SANITIZER" = "yes" ||
-       test "$PHP_SWOW_ADDRESS_SANITIZER" = "yes" ||
-       test "$PHP_SWOW_UNDEFINED_SANITIZER" = "yes"; then
-        CFLAGS="$CFLAGS -fno-omit-frame-pointer"
-        CXXFLAGS="$CXXFLAGS -fno-omit-frame-pointer"
+      test "$PHP_SWOW_ADDRESS_SANITIZER" = "yes" ||
+      test "$PHP_SWOW_UNDEFINED_SANITIZER" = "yes"; then
+      CFLAGS="$CFLAGS -fno-omit-frame-pointer"
+      CXXFLAGS="$CXXFLAGS -fno-omit-frame-pointer"
     fi
 
     SWOW_CAT_INCLUDES="${SWOW_CAT_INCLUDES} -I${ext_srcdir}/include -I${ext_srcdir}/deps/libcat/include"
@@ -383,7 +413,6 @@ EOF
       cat_memory.c \
       cat_string.c \
       cat_error.c \
-      cat_module.c \
       cat_log.c \
       cat_env.c \
       cat.c \
@@ -535,13 +564,10 @@ EOF
           PHP_ADD_LIBRARY(rt)
           SWOW_ADD_SOURCES(deps/libcat/deps/libuv/src/unix,
             proctitle.c \
-            linux-core.c \
-            linux-inotify.c \
-            linux-syscalls.c \
+            linux.c \
             procfs-exepath.c \
             random-getrandom.c \
-            random-sysctl-linux.c \
-            epoll.c, SWOW_UV_INCLUDES, SWOW_UV_CFLAGS)
+            random-sysctl-linux.c, SWOW_UV_INCLUDES, SWOW_UV_CFLAGS)
         ],
         [freebsd*], [
           SWOW_ADD_SOURCES(deps/libcat/deps/libuv/src/unix,
@@ -662,13 +688,23 @@ EOF
 
     dnl add multipart-parser sources
 
-    SWOW_MULTIPART_PARSER_INCLUDES="-I${ext_srcdir}/deps/libcat/deps/multipart_parser"
-    SWOW_CAT_INCLUDES="${SWOW_CAT_INCLUDES} \$(SWOW_MULTIPART_PARSER_INCLUDES)"
-    SWOW_MULTIPART_PARSER_CFLAGS="${SWOW_MULTIPART_PARSER_CFLAGS} \$(SWOW_STD_CFLAGS)"
-    PHP_SUBST(SWOW_MULTIPART_PARSER_INCLUDES)
-    PHP_SUBST(SWOW_MULTIPART_PARSER_CFLAGS)
-    SWOW_ADD_SOURCES(deps/libcat/deps/multipart_parser,
-      multipart_parser.c, SWOW_MULTIPART_PARSER_INCLUDES, SWOW_MULTIPART_PARSER_CFLAGS)
+    SWOW_MULTIPART_PARSER_C_INCLUDES="-I${ext_srcdir}/deps/libcat/deps/multipart-parser-c"
+    SWOW_CAT_INCLUDES="${SWOW_CAT_INCLUDES} \$(SWOW_MULTIPART_PARSER_C_INCLUDES)"
+    SWOW_MULTIPART_PARSER_C_CFLAGS="${SWOW_MULTIPART_PARSER_C_CFLAGS} \$(SWOW_STD_CFLAGS)"
+    PHP_SUBST(SWOW_MULTIPART_PARSER_C_INCLUDES)
+    PHP_SUBST(SWOW_MULTIPART_PARSER_C_CFLAGS)
+    SWOW_ADD_SOURCES(deps/libcat/deps/multipart-parser-c,
+      multipart_parser.c, SWOW_MULTIPART_PARSER_C_INCLUDES, SWOW_MULTIPART_PARSER_C_CFLAGS)
+
+    dnl add ipv6-parse sources
+
+    SWOW_IPV6_PARSE_INCLUDES="-I${ext_srcdir}/deps/ipv6-parse"
+    SWOW_IPV6_PARSE_CFLAGS="${SWOW_IPV6_PARSE_CFLAGS} \$(SWOW_STD_CFLAGS)"
+    SWOW_INCLUDES="${SWOW_INCLUDES} \$(SWOW_IPV6_PARSE_INCLUDES)"
+    PHP_SUBST(SWOW_IPV6_PARSE_INCLUDES)
+    PHP_SUBST(SWOW_IPV6_PARSE_CFLAGS)
+    SWOW_ADD_SOURCES(deps/ipv6-parse,
+      ipv6.c, SWOW_IPV6_PARSE_INCLUDES, SWOW_IPV6_PARSE_CFLAGS)
 
     dnl prepare pkg-config
     if test -z "$PKG_CONFIG"; then

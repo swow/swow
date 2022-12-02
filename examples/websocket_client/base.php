@@ -13,14 +13,14 @@ declare(strict_types=1);
 
 require __DIR__ . '/../autoload.php';
 
-use Swow\Http\Client as HttpClient;
-use Swow\Http\Request;
-use Swow\Http\WebSocketFrame;
+use Swow\Psr7\Client\Client;
+use Swow\Psr7\Message\WebSocketFrame;
+use Swow\Psr7\Psr7;
 
-$client = new HttpClient();
+$client = new Client();
 
 /* do handshake */
-$request = new Request('GET', '/chat');
+$request = Psr7::createRequest('GET', '/chat');
 $response = $client
     ->connect('127.0.0.1', 9764)
     ->upgradeToWebSocket($request);

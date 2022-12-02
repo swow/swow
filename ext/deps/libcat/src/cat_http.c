@@ -77,10 +77,12 @@ static long CAT_HTTP_MULTIPART_CB_FNAME(name)(multipart_parser *p, const char *a
     parser->event = CAT_HTTP_PARSER_EVENT_##NAME; \
     parser->data = at; \
     parser->data_length = length; \
-    CAT_LOG_DEBUG_SCOPE_START_WITH_LEVEL_EX(PROTOCOL, 3, char *tmp) { \
-        CAT_LOG_DEBUG_D(PROTOCOL, "HTTP multipart parser data on_" # name ": [%zu] %s", \
-            length, cat_log_buffer_quote_unlimited(at, length, &tmp)); \
-    } CAT_LOG_DEBUG_SCOPE_END_WITH_LEVEL_EX(cat_free(tmp)); \
+    CAT_LOG_DEBUG_VA_WITH_LEVEL(HTTP, 3, { \
+        char *s; \
+        CAT_LOG_DEBUG_D(HTTP, "HTTP multipart parser data on_" # name ": [%zu] %s", \
+            length, cat_log_str_quote(at, length, &s)); \
+        cat_free(s); \
+    }); \
     if (((cat_http_parser_event_t) (parser->events & parser->event)) == parser->event) { \
         return MPPE_PAUSED; \
     } \
@@ -92,7 +94,7 @@ static long CAT_HTTP_MULTIPART_CB_FNAME(name)(multipart_parser *p) \
 { \
     cat_http_parser_t* parser = cat_container_of(p, cat_http_parser_t, multipart); \
     parser->event = CAT_HTTP_PARSER_EVENT_##NAME; \
-    CAT_LOG_DEBUG_V2(PROTOCOL, "HTTP multipart parser notify on_" # name ); \
+    CAT_LOG_DEBUG_V2(HTTP, "HTTP multipart parser notify on_" # name ); \
     if (((cat_http_parser_event_t) (parser->events & parser->event)) == parser->event) { \
         return MPPE_PAUSED; \
     } \
@@ -113,7 +115,7 @@ static long CAT_HTTP_MULTIPART_CB_FNAME(body_end)(multipart_parser *p)
     // escape mp parser
     parser->event = CAT_HTTP_PARSER_EVENT_MULTIPART_BODY_END;
     parser->multipart_state = CAT_HTTP_MULTIPART_STATE_NOT_MULTIPART;
-    CAT_LOG_DEBUG_V2(PROTOCOL, "HTTP multipart parser data on_body_end");
+    CAT_LOG_DEBUG_V2(HTTP, "HTTP multipart parser data on_body_end");
     return MPPE_OK;
 }
 
@@ -174,7 +176,7 @@ static int cat_http_parser_multipart_parse_content_type(cat_http_parser_t *parse
     const char *mp_c;
     cat_bool_t mp_bool;
 #define DEBUG_STATE(name) do { \
-    CAT_LOG_DEBUG_V3(PROTOCOL, "multipart_parser state at " #name " [%zu] %.*s", mp_length, (int) mp_length, mp_at); \
+    CAT_LOG_DEBUG_V3(HTTP, "multipart_parser state at " #name " [%zu] %.*s", mp_length, (int) mp_length, mp_at); \
 } while(0)
 // consume specified length
 #define CONSUME_BUF(len) do { \
@@ -397,7 +399,7 @@ static cat_bool_t cat_http_parser_multipart_parser_init(cat_http_parser_t *parse
     if (0 != multipart_parser_init(&parser->multipart, NULL, 0, &cat_http_multipart_parser_settings)) {
         cat_http_parser_throw_error(return cat_false, CAT_HTTP_PARSER_E_MULTIPART_HEADER, "Multipart parser init failed");
     }
-    CAT_LOG_DEBUG_V3(PROTOCOL, "multipart boundary is [%u] \"%.*s\"",
+    CAT_LOG_DEBUG_V3(HTTP, "multipart boundary is [%u] \"%.*s\"",
         parser->multipart.boundary_length, (int) parser->multipart.boundary_length, parser->multipart.multipart_boundary);
     parser->multipart_state = CAT_HTTP_MULTIPART_STATE_BOUNDARY_OK;
 
@@ -483,6 +485,14 @@ static int cat_http_parser_on_##name(llhttp_t *llhttp, const char *at, size_t le
 { \
     cat_http_parser_t *parser = cat_http_parser_get_from_handle(llhttp); \
     \
+    if (parser->previous_event == CAT_HTTP_PARSER_EVENT_##NAME && length == 0) { \
+        /* Event will be re-triggered with 0 length when we pass 0 length data,
+         * it means that the parser need more data from socket;
+         * or previous execute stopped right at the end of an event data.
+         * Do not pause parser at those cases, just continue by return OK. */ \
+        return CAT_HTTP_PARSER_E_OK; \
+    } \
+    \
     parser->event = CAT_HTTP_PARSER_EVENT_##NAME; \
     parser->data = at; \
     parser->data_length = length;
@@ -525,7 +535,7 @@ CAT_HTTP_PARSER_ON_DATA_BEGIN(header_value, HEADER_VALUE) {
                 if (parser->multipart_state != CAT_HTTP_MULTIPART_STATE_UNINIT) {
                     cat_http_parser_throw_error(return -1, CAT_HTTP_PARSER_E_DUPLICATE_CONTENT_TYPE, "Duplicate Content-Type header");
                 }
-                CAT_LOG_DEBUG_V3(PROTOCOL, "multipart_parser on_header_field_complete found Content-Type");
+                CAT_LOG_DEBUG_V3(HTTP, "multipart_parser on_header_field_complete found Content-Type");
                 parser->multipart_state = CAT_HTTP_MULTIPART_STATE_IN_CONTENT_TYPE;
             }
             parser->multipart_header_index = 0;
@@ -535,7 +545,7 @@ CAT_HTTP_PARSER_ON_DATA_BEGIN(header_value, HEADER_VALUE) {
             parser->multipart_state >= CAT_HTTP_MULTIPART_STATE_IN_CONTENT_TYPE &&
             parser->multipart_state < CAT_HTTP_MULTIPART_STATE_OUT_CONTENT_TYPE
         ) {
-            CAT_LOG_DEBUG_V3(PROTOCOL, "multipart_parser Content-Type state %d", parser->multipart_state);
+            CAT_LOG_DEBUG_V3(HTTP, "multipart_parser Content-Type state %d", parser->multipart_state);
             error = cat_http_parser_multipart_parse_content_type(parser, at, length);
             if (CAT_HTTP_PARSER_E_OK != error) {
                 return -1;
@@ -574,18 +584,53 @@ CAT_HTTP_PARSER_ON_EVENT_BEGIN(chunk_header, CHUNK_HEADER) {
 CAT_HTTP_PARSER_ON_EVENT(chunk_complete,   CHUNK_COMPLETE  )
 CAT_HTTP_PARSER_ON_EVENT(message_complete, MESSAGE_COMPLETE)
 
+// TODO: dynamic change with event flags
 static const llhttp_settings_t cat_http_parser_settings = {
+    /* Possible return values 0, -1, `HPE_PAUSED` */
     cat_http_parser_on_message_begin,
+
+    /* Possible return values 0, -1, HPE_USER */
     cat_http_parser_on_url,
     cat_http_parser_on_status,
+    NULL, // cat_http_parser_on_method,
+    NULL, // cat_http_parser_on_version,
     cat_http_parser_on_header_field,
     cat_http_parser_on_header_value,
+    NULL, // cat_http_parser_on_chunk_extension_name,
+    NULL, // cat_http_parser_on_chunk_extension_value,
+
+    /* Possible return values:
+     * 0  - Proceed normally
+     * 1  - Assume that request/response has no body, and proceed to parsing the
+     *      next message
+     * 2  - Assume absence of body (as above) and make `llhttp_execute()` return
+     *      `HPE_PAUSED_UPGRADE`
+     * -1 - Error
+     * `HPE_PAUSED`
+     */
     cat_http_parser_on_headers_complete,
+
+    /* Possible return values 0, -1, HPE_USER */
     cat_http_parser_on_body,
+
+    /* Possible return values 0, -1, `HPE_PAUSED` */
     cat_http_parser_on_message_complete,
+    NULL, // cat_http_parser_on_url_complete,
+    NULL, // cat_http_parser_on_status_complete,
+    NULL, // cat_http_parser_on_method_complete,
+    NULL, // cat_http_parser_on_version_complete,
+    NULL, // cat_http_parser_on_header_field_complete,
+    NULL, // cat_http_parser_on_header_value_complete, /* it's fake, from old version */
+    NULL, // cat_http_parser_on_chunk_extension_name_complete,
+    NULL, // cat_http_parser_on_chunk_extension_value_complete,
+
+    /* When on_chunk_header is called, the current chunk length is stored
+     * in parser->content_length.
+     * Possible return values 0, -1, `HPE_PAUSED`
+     */
     cat_http_parser_on_chunk_header,
     cat_http_parser_on_chunk_complete,
-    NULL, NULL, NULL, NULL,
+    NULL, // cat_http_parser_on_reset,
 };
 
 static cat_always_inline void cat_http_parser__init(cat_http_parser_t *parser)
@@ -699,10 +744,12 @@ static cat_bool_t cat_http_parser_multipart_parser_execute(cat_http_parser_t *pa
         cat_http_parser_throw_error(return cat_false, CAT_HTTP_PARSER_E_MULTIPART_BODY, "Failed to parse multipart body: \"%.*s\"", error_length, error_buffer);
     }
 
-    CAT_LOG_DEBUG_SCOPE_START_WITH_LEVEL_EX(PROTOCOL, 3, char *tmp) {
-        CAT_LOG_DEBUG_D(PROTOCOL, "multipart_parser_execute() returns %zu, parsed \"%s\"",
-            parsed_length, cat_log_buffer_quote_unlimited(data, parsed_length, &tmp));
-    } CAT_LOG_DEBUG_SCOPE_END_WITH_LEVEL_EX(cat_free(tmp));
+    CAT_LOG_DEBUG_VA_WITH_LEVEL(HTTP, 3, {
+        char *s;
+        CAT_LOG_DEBUG_D(HTTP, "multipart_parser_execute() returns %zu, parsed %s",
+            parsed_length, cat_log_str_quote(data, parsed_length, &s));
+        cat_free(s);
+    });
     CAT_ASSERT((!(parser->event & CAT_HTTP_PARSER_EVENT_FLAG_DATA)) || parser->data_length <= parsed_length);
     CAT_ASSERT(parser->event & CAT_HTTP_PARSER_EVENT_FLAG_MULTIPART || parser->event == CAT_HTTP_PARSER_EVENT_NONE);
 
@@ -755,6 +802,8 @@ CAT_API cat_bool_t cat_http_parser_execute(cat_http_parser_t *parser, const char
     cat_http_parser_errno_t error = CAT_HTTP_PARSER_E_OK;
     cat_bool_t ret;
 
+    parser->previous_event = parser->event;
+
     if (likely(parser->multipart_state != CAT_HTTP_MULTIPART_STATE_IN_BODY)) {
         // if not in multipart body
         error = cat_http_parser_llhttp_execute(parser, data, length);
@@ -786,22 +835,26 @@ CAT_API cat_bool_t cat_http_parser_execute(cat_http_parser_t *parser, const char
         parser->multipart.boundary_length = 0;
     }
 
-#ifdef CAT_DEBUG
-    if (!(parser->event & CAT_HTTP_PARSER_EVENT_FLAG_DATA)) {
-        CAT_LOG_DEBUG_V2(PROTOCOL, "http_parser_execute() parsed %-2zu return %-12s",
-            parser->parsed_length, cat_http_parser_get_event_name(parser));
-    } else {
-        CAT_LOG_DEBUG_SCOPE_START_WITH_LEVEL_EX(PROTOCOL, 2, char *tmp) {
-            CAT_LOG_DEBUG_D(PROTOCOL, "http_parser_execute() parsed %-2zu return %-12s [%zu] %s",
-                parser->parsed_length, cat_http_parser_get_event_name(parser),
-                parser->data_length, cat_log_buffer_quote_unlimited(parser->data, parser->data_length, &tmp));
-        } CAT_LOG_DEBUG_SCOPE_END_WITH_LEVEL_EX(cat_free(tmp));
-    }
-#endif
+    CAT_LOG_DEBUG_VA_WITH_LEVEL(HTTP, 2, {
+        if (parser->event & CAT_HTTP_PARSER_EVENT_FLAG_DATA) {
+            char *s;
+            CAT_LOG_DEBUG_D(HTTP, "http_parser_execute(length=%-4zu) parsed %-4zu return %-12s [%2zu] %s",
+                length, parser->parsed_length, cat_http_parser_get_event_name(parser),
+                parser->data_length, cat_log_str_quote(parser->data, parser->data_length, &s));
+            cat_free(s);
+        } else  if ((parser->event & CAT_HTTP_PARSER_EVENT_CHUNK_HEADER) == CAT_HTTP_PARSER_EVENT_CHUNK_HEADER) {
+            CAT_LOG_DEBUG_D(HTTP, "http_parser_execute(length=%-4zu) parsed %-4zu return %-12s with chunk_length=%" PRIu64,
+                length, parser->parsed_length, cat_http_parser_get_event_name(parser), cat_http_parser_get_current_chunk_length(parser));
+        } else {
+            CAT_LOG_DEBUG_D(HTTP, "http_parser_execute(length=%-4zu) parsed %-4zu return %-12s",
+                length, parser->parsed_length, cat_http_parser_get_event_name(parser));
+        }
+    });
+
     return cat_true;
 }
 
-CAT_API const char *cat_http_parser_event_name(cat_http_parser_event_t event)
+CAT_API const char *cat_http_parser_event_get_name(cat_http_parser_event_t event)
 {
     switch (event) {
 #define CAT_HTTP_PARSER_EVENT_NAME_GEN(name, unused1) case CAT_HTTP_PARSER_EVENT_##name: return #name;
@@ -823,7 +876,17 @@ CAT_API cat_http_parser_event_t cat_http_parser_get_event(const cat_http_parser_
 
 CAT_API const char* cat_http_parser_get_event_name(const cat_http_parser_t *parser)
 {
-    return cat_http_parser_event_name(parser->event);
+    return cat_http_parser_event_get_name(parser->event);
+}
+
+CAT_API cat_http_parser_event_t cat_http_parser_get_previous_event(const cat_http_parser_t *parser)
+{
+    return parser->previous_event;
+}
+
+CAT_API const char* cat_http_parser_get_previous_event_name(const cat_http_parser_t *parser)
+{
+    return cat_http_parser_event_get_name(parser->previous_event);
 }
 
 CAT_API const char* cat_http_parser_get_data(const cat_http_parser_t *parser)
@@ -846,7 +909,10 @@ CAT_API cat_bool_t cat_http_parser_finish(cat_http_parser_t *parser)
     llhttp_errno_t error;
 
     error = llhttp_finish(&parser->llhttp);
-    if (unlikely(error != HPE_OK)) {
+    if (unlikely(
+        error != CAT_HTTP_PARSER_E_OK &&
+        error != CAT_HTTP_PARSER_E_PAUSED /* on_message_complete may return E_PAUSED */
+    )) {
         cat_update_last_error(error, "HTTP-Parser finish failed: %s", llhttp_get_error_reason(&parser->llhttp));
         return cat_false;
     }

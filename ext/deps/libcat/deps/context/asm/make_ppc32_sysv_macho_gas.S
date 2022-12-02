@@ -77,61 +77,61 @@
 .globl _cat_coroutine_context_make
 .align 2
 _cat_coroutine_context_make:
-    # save return address into R6
+    ; save return address into R6
     mflr  r6
 
-    # first arg of cat_coroutine_context_make() == top address of context-function
-    # shift address in R3 to lower 16 byte boundary
+    ; first arg of cat_coroutine_context_make() == top address of context-function
+    ; shift address in R3 to lower 16 byte boundary
     clrrwi  r3, r3, 4
 
-    # reserve space for context-data on context-stack
-    # including 64 byte of linkage + parameter area (R1  16 == 0)
+    ; reserve space for context-data on context-stack
+    ; including 64 byte of linkage + parameter area (R1  16 == 0)
     subi  r3, r3, 336
 
-    # third arg of cat_coroutine_context_make() == address of context-function
+    ; third arg of cat_coroutine_context_make() == address of context-function
     stw  r5, 240(r3)
 
-    # set back-chain to zero
+    ; set back-chain to zero
     li   r0, 0
     stw  r0, 244(r3)
 
-    mffs  f0  # load FPSCR
-    stfd  f0, 144(r3)  # save FPSCR
+    mffs  f0  ; load FPSCR
+    stfd  f0, 144(r3)  ; save FPSCR
 
-    # compute address of returned transfer_t
+    ; compute address of returned transfer_t
     addi  r0, r3, 252
     mr    r4, r0 
     stw   r4, 228(r3) 
 
-    # load LR
+    ; load LR
     mflr  r0
-    # jump to label 1
-    bl  1f
-1:
-    # load LR into R4
+    ; jump to label 1
+    bl  l1
+l1:
+    ; load LR into R4
     mflr  r4
-    # compute abs address of label finish
-    addi  r4, r4, finish - 1b
-    # restore LR
+    ; compute abs address of label finish
+    addi  r4, r4, lo16((finish - .) + 4)
+    ; restore LR
     mtlr  r0
-    # save address of finish as return-address for context-function
-    # will be entered after context-function returns
+    ; save address of finish as return-address for context-function
+    ; will be entered after context-function returns
     stw  r4, 236(r3)
 
-    # restore return address from R6
+    ; restore return address from R6
     mtlr  r6
 
-    blr  # return pointer to context-data
+    blr  ; return pointer to context-data
 
 finish:
-    # save return address into R0
+    ; save return address into R0
     mflr  r0
-    # save return address on stack, set up stack frame
+    ; save return address on stack, set up stack frame
     stw  r0, 4(r1)
-    # allocate stack space, R1  16 == 0
+    ; allocate stack space, R1  16 == 0
     stwu  r1, -16(r1)
 
-    # exit code is zero
+    ; exit code is zero
     li  r3, 0
-    # exit application
-    bl  _exit@plt
+    ; exit application
+    bl  _exit

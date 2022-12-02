@@ -11,17 +11,17 @@ require __DIR__ . '/../include/bootstrap.php';
 use Swow\Coroutine;
 use Swow\CoroutineException;
 
-$coroutine = new Coroutine(function () use (&$coroutine) {
-    echo 'In' . PHP_LF;
-    Assert::throws(function () use ($coroutine) {
+$coroutine = new Coroutine(static function () use (&$coroutine): void {
+    echo "In\n";
+    Assert::throws(static function () use ($coroutine): void {
         $coroutine->resume();
     }, CoroutineException::class);
-    echo 'Out' . PHP_LF;
+    echo "Out\n";
 });
-echo 'Resume' . PHP_LF;
+echo "Resume\n";
 $coroutine->resume();
 
-echo 'Done' . PHP_LF;
+echo "Done\n";
 
 ?>
 --EXPECT--

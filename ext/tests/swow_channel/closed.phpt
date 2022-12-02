@@ -20,7 +20,7 @@ try {
 } catch (ChannelException $exception) {
     Assert::same($exception->getCode(), Errno::ECLOSED);
 }
-echo 'Done' . PHP_LF;
+echo "Done\n";
 
 ?>
 --EXPECT--

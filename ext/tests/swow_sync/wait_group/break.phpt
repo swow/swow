@@ -10,20 +10,20 @@ require __DIR__ . '/../../include/bootstrap.php';
 
 use Swow\Coroutine;
 use Swow\Errno;
-use Swow\SyncException;
 use Swow\Sync\WaitGroup;
+use Swow\SyncException;
 
 $wg = new WaitGroup();
 $wg->add(2);
 // normal done
-Coroutine::run(function () use ($wg) {
+Coroutine::run(static function () use ($wg): void {
     $wg->done();
 });
 // wait it
-$waiting_coro = Coroutine::run(function () use ($wg) {
+$waiting_coro = Coroutine::run(static function () use ($wg): void {
     try {
         $wg->wait();
-        echo 'wait should not success' . PHP_LF;
+        echo "wait should not success\n";
     } catch (SyncException $e) {
         Assert::same($e->getCode(), Errno::ECANCELED);
     }
@@ -32,7 +32,7 @@ $waiting_coro = Coroutine::run(function () use ($wg) {
 $waiting_coro->resume();
 // clear wg to avoid deadlock
 $wg->done();
-echo 'Done' . PHP_LF;
+echo "Done\n";
 
 ?>
 --EXPECT--

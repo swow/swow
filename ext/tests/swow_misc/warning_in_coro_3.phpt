@@ -3,7 +3,7 @@ swow_misc: trig deprecation and errors in coroutine
 --SKIPIF--
 <?php
 require __DIR__ . '/../include/skipif.php';
-skip('no proper deprecation in this version of PHP', PHP_VERSION_ID >= 80200 || PHP_VERSION_ID < 70200);
+skip_if(PHP_VERSION_ID >= 80200 || PHP_VERSION_ID < 70200, 'no proper deprecation in this version of PHP');
 ?>
 --INI--
 memory_limit=128M
@@ -12,7 +12,7 @@ memory_limit=128M
 require __DIR__ . '/../include/bootstrap.php';
 use Swow\Coroutine;
 
-Coroutine::run(function () {
+Coroutine::run(static function (): void {
     // E_ERROR
     $_ = str_repeat('the quick brown twosee jumps over the lazy black dixyes', 128 * 1048576);
 });

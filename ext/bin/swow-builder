@@ -1,0 +1,185 @@
+#!/usr/bin/env php
+<?php
+/**
+ * This file is part of Swow
+ *
+ * @link    https://github.com/swow/swow
+ * @contact twosee <twosee@php.net>
+ *
+ * For the full copyright and license information,
+ * please view the LICENSE file that was distributed with this source code
+ */
+
+foreach (
+    [
+        dirname(__DIR__, 4) . '/autoload.php', // for user on swow/swow
+        dirname(__DIR__, 2) . '/vendor/autoload.php', // for maintainer on swow/swow
+        dirname(__DIR__, 3) . '/autoload.php', // for user on swow/swow-extension
+        dirname(__DIR__) . '/vendor/autoload.php', // for maintainer on swow/swow-extension
+        null,
+    ] as $file
+) {
+    if ($file === null) {
+        throw new RuntimeException('Unable to locate autoload.php');
+    }
+    if (file_exists($file)) {
+        require $file;
+        break;
+    }
+}
+
+use function Swow\Utils\askBool;
+use function Swow\Utils\br;
+use function Swow\Utils\error;
+use function Swow\Utils\log;
+use function Swow\Utils\notice;
+use function Swow\Utils\ok;
+use function Swow\Utils\passthru;
+use function Swow\Utils\success;
+use function Swow\Utils\warn;
+
+if (PHP_OS_FAMILY === 'Windows') {
+    error(
+        'This script only provides Linux build support. ' . PHP_EOL .
+        'Please download the official DLL (https://github.com/swow/swow/releases), ' .
+        'or build it yourself on Windows.'
+    );
+}
+
+$workSpace = dirname(__DIR__);
+$swowSo = "{$workSpace}/.libs/swow.so";
+
+$mappedOptions = [
+    'php-config' => 'with-php-config',
+];
+$enableOptions = [
+    /* debug */
+    'debug',
+    'msan' => 'memory-sanitizer',
+    'asan' => 'address-sanitizer',
+    'ubsan' => 'undefined-sanitizer',
+    'gcov',
+    'valgrind',
+    /* coroutine */
+    'thread-context',
+    /* 3rd */
+    'ssl',
+    'curl',
+];
+$_enableOptions = [];
+foreach ($enableOptions as $enableOptionAlias => $enableOption) {
+    if (is_numeric($enableOptionAlias)) {
+        $enableOptionAlias = $enableOption;
+    }
+    $_enableOptions[$enableOptionAlias] = $enableOption;
+}
+$enableOptions = $_enableOptions;
+$longOptionsConverterFn = static fn(string $option) => "{$option}::";
+$shortOptions = 'q';
+$longOptions = [
+    ...['sudo', 'show-log', 'quiet'],
+    ...['help', 'dry-run'],
+    ...['install', 'rebuild', 'clean'],
+    ...array_map($longOptionsConverterFn, array_keys($mappedOptions)),
+    ...array_map($longOptionsConverterFn, array_keys($enableOptions)),
+];
+$options = getopt($shortOptions, $longOptions);
+$expectSudo = isset($options['sudo']);
+$showLog = isset($options['show-log']);
+$dryRun = isset($options['dry-run']);
+$expectInstall = isset($options['install']);
+$rebuild = isset($options['rebuild']);
+$clean = isset($options['clean']);
+$noInteraction = isset($options['q']) || isset($options['quiet']);
+
+$commandExecutor = static function (string $name, array $commands) use ($workSpace, $dryRun): void {
+    if (!$commands) {
+        return;
+    }
+    array_unshift($commands, "cd {$workSpace}");
+    if (!$dryRun) {
+        passthru(...$commands) && error("{$name} failed");
+    } else {
+        $command = implode(" && \\\n", $commands);
+        log("> {$command}");
+    }
+    ok("{$name} done");
+    br();
+};
+
+$cleanCommands = [];
+if ($rebuild || $clean) {
+    if (file_exists("{$workSpace}/Makefile")) {
+        $cleanCommands[] = "{$workSpace}/deps/libcat/tools/cleaner.sh {$workSpace}";
+    }
+}
+if ($rebuild) {
+    $cleanCommands[] = 'phpize --clean';
+}
+$commandExecutor('Clean', $cleanCommands);
+
+$configureCommands = [];
+if (!file_exists("{$workSpace}/configure") || $rebuild) {
+    $configureCommands[] = 'phpize';
+}
+if (!file_exists("{$workSpace}/Makefile") || $rebuild) {
+    $configureOptions = [];
+    foreach ($mappedOptions as $mappedOptionAlias => $mappedOption) {
+        if (isset($options[$mappedOptionAlias])) {
+            $configureOptions[] = '--with-php-config=' . $options[$mappedOptionAlias];
+        }
+    }
+    foreach ($enableOptions as $enableOptionAlias => $enableOption) {
+        if (isset($options[$enableOptionAlias])) {
+            $configureOptions[] = "--enable-swow-{$enableOption}" . (is_string($options[$enableOptionAlias]) ? "={$options[$enableOptionAlias]}" : '');
+        }
+    }
+    $configureOptions = implode(' ', $configureOptions);
+    $configureCommands[] = "./configure {$configureOptions}";
+}
+$commandExecutor('Configure', $configureCommands);
+
+// TODO: use Swow\Cpu module
+$cpuCount = (int) shell_exec("{$workSpace}/deps/libcat/tools/cpu_count.sh");
+if ($cpuCount <= 0) {
+    $cpuCount = 4;
+}
+// TODO: CFLAGS/CXXFLAGS Werror
+$makeCommand = "make -j{$cpuCount}";
+if (!$showLog) {
+    $makeCommand .= ' > /dev/null';
+    notice('Please be patient while compiling in silent mode...');
+}
+$commandExecutor('Make', [$makeCommand]);
+
+$checkCommand = "/usr/bin/env php -n -d extension={$swowSo} --ri swow";
+if (!$dryRun) {
+    ob_start();
+    $status = passthru($checkCommand);
+    $swowInfo = ob_get_clean();
+    if ($status === 0) {
+        log($swowInfo);
+    } else {
+        warn('Get extension info failed');
+    }
+} else {
+    log("> {$checkCommand}");
+    ok('Get extension info done');
+    br();
+}
+
+if (!$expectInstall) {
+    $expectInstall = $noInteraction || askBool('Do you want to install it right now?');
+}
+if ($expectInstall) {
+    $haveSudo = getmyuid() !== 0;
+    if ($expectSudo && $haveSudo) {
+        notice('Install the extension to your system requires root privileges');
+        $sudo = 'sudo ';
+    } else {
+        $sudo = '';
+    }
+    $commandExecutor('Install', ["{$sudo}make install"]);
+}
+
+success('All tasks have been completed');

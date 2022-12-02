@@ -79,9 +79,10 @@
 #ifdef CAT_COROUTINE_USE_ASAN
 // for warning -Wstrict-prototypes/C4255
 # define __sanitizer_acquire_crash_state() __sanitizer_acquire_crash_state(void)
-# ifndef _MSC_VER
+# if !defined(_MSC_VER) || _MSC_VER >= 1933
 #  include <sanitizer/common_interface_defs.h>
 # else // workaround
+// should be fixed in VS 2022: https://developercommunity.visualstudio.com/t/ASan-API-headers-not-in-include-path-whe/1517192
 #  include <../crt/src/sanitizer/common_interface_defs.h>
 # endif
 #endif
@@ -141,13 +142,17 @@ static cat_coroutine_stack_size_t cat_coroutine_align_stack_size(size_t size)
     return (cat_coroutine_stack_size_t) size;
 }
 
-CAT_API CAT_GLOBALS_DECLARE(cat_coroutine)
-
-CAT_GLOBALS_CTOR_DECLARE_SZ(cat_coroutine)
+CAT_API CAT_GLOBALS_DECLARE(cat_coroutine);
 
 CAT_API cat_bool_t cat_coroutine_module_init(void)
 {
-    CAT_GLOBALS_REGISTER(cat_coroutine, CAT_GLOBALS_CTOR(cat_coroutine), NULL);
+    CAT_GLOBALS_REGISTER(cat_coroutine);
+    return cat_true;
+}
+
+CAT_API cat_bool_t cat_coroutine_module_shutdown(void)
+{
+    CAT_GLOBALS_UNREGISTER(cat_coroutine);
     return cat_true;
 }
 
@@ -191,7 +196,9 @@ CAT_API cat_bool_t cat_coroutine_runtime_init(void)
         main_coroutine->transfer_data = NULL;
 #endif
 #ifdef CAT_COROUTINE_USE_THREAD_CONTEXT
-        CAT_SHOULD_BE(uv_sem_init(&main_coroutine->sem, 0) == 0);
+        if (uv_sem_init(&main_coroutine->sem, 0) != 0) {
+            abort();
+        }
 #endif
 #ifdef CAT_HAVE_VALGRIND
         main_coroutine->valgrind_stack_id = UINT32_MAX;
@@ -482,7 +489,7 @@ CAT_API cat_coroutine_t *cat_coroutine_create_ex(cat_coroutine_t *coroutine, cat
 #elif defined(CAT_COROUTINE_USE_VIRTUAL_ALLOC)
     virtual_memory = VirtualAlloc(0, virtual_memory_size, MEM_COMMIT, PAGE_READWRITE);
 #else // if defined(CAT_COROUTINE_USE_SYS_MALLOC)
-    virtual_memory = cat_sys_malloc(virtual_memory_size);
+    virtual_memory = cat_sys_malloc_recoverable(virtual_memory_size);
 #endif
     if (unlikely(virtual_memory == CAT_COROUTINE_MEMORY_INVALID)) {
         cat_update_last_error_of_syscall("Allocate virtual memory for coroutine stack failed with size %zu", virtual_memory_size);
@@ -561,7 +568,7 @@ CAT_API cat_coroutine_t *cat_coroutine_create_ex(cat_coroutine_t *coroutine, cat
     CAT_LOG_DEBUG(COROUTINE, "Create R" CAT_COROUTINE_ID_FMT " "
         "with stack = %p, stack_size = %zu, function = %p, "
         "virtual_memory = %p, virtual_memory_size = %zu",
-        coroutine->id, stack, stack_size, function, 
+        coroutine->id, stack, stack_size, function,
         virtual_memory, virtual_memory_size);
 #else
     CAT_LOG_DEBUG(COROUTINE, "Create R" CAT_COROUTINE_ID_FMT " "
@@ -735,14 +742,14 @@ static cat_always_inline cat_bool_t cat_coroutine_check_resumability(const cat_c
 
 static cat_always_inline void cat_coroutine_switch_log(const char *action, const cat_coroutine_t *coroutine)
 {
-    CAT_LOG_DEBUG_SCOPE_START(COROUTINE) {
+    CAT_LOG_DEBUG_VA(COROUTINE, {
         const char *name = cat_coroutine_get_role_name(coroutine);
         if (name != NULL) {
             CAT_LOG_DEBUG_D(COROUTINE, "%s to %s", action, name);
         } else {
             CAT_LOG_DEBUG_D(COROUTINE, "%s to R" CAT_COROUTINE_ID_FMT, action, coroutine->id);
         }
-    } CAT_LOG_DEBUG_SCOPE_END();
+    });
 }
 
 CAT_API cat_bool_t cat_coroutine_resume(cat_coroutine_t *coroutine, cat_data_t *data, cat_data_t **retval)
@@ -754,27 +761,33 @@ CAT_API cat_bool_t cat_coroutine_resume(cat_coroutine_t *coroutine, cat_data_t *
 
     CAT_COROUTINE_SWITCH_LOG(resume, coroutine);
 
-    /* resume flow:
+    /* 1. common resume flow:
     * +------+  +------+       +------+
     * | co-1 +->| co-2 +-here->| co-3 |
     * +------+  +------+       +------+
-    * resume previous
+    * then it becomes:
+    * +------+  +------+      +------+
+    * | co-1 +->| co-2 +----->| co-3 |
+    * +------+  +------+      +------+
+    * =================================
+    * 2. resume previous flow:
     * +------+  +------+       +------+
     * | co-1 +->| co-2 +------>| co-3 |
     * +------+  +--^---+       +---+--+
     *              |               |
     *              +-----here------+
-    * then it becomes:
+    * co-2 went to the back of co-3:
     * +------+  +------+      +------+
     * | co-1 +->| co-3 +----->| co-2 |
     * +------+  +------+      +------+
-    * or cross resume flow:
+    * =================================
+    * 3. cross resume flow:
     * +------+  +------+      +------+
     * | co-1 +->| co-2 +----->| co-3 |
     * +--^---+  +------+      +---+--+
     *   |                        |
     *   +----- here-we-are-------+
-    * then it becomes:
+    * co-1 went to the back of co-3:
     * +------+  +------+      +------+
     * | co-2 +->| co-3 +----->| co-1 |
     * +------+  +------+      +------+
@@ -821,7 +834,7 @@ CAT_API cat_bool_t cat_coroutine_yield(cat_data_t *data, cat_data_t **retval)
     * +------+  +------+       +------+
     * | co-1 +->| co-2 +<-here-| co-3 |
     * +------+  +------+       +------+
-    * then it becomes:
+    * co-3 hang in the void:
     * +------+  +------+       +------+
     * | co-1 +->| co-2 |       | co-3 |:(waiting)
     * +------+  +------+       +------+
@@ -948,12 +961,17 @@ static void cat_coroutine_deadlock(cat_coroutine_deadlock_function_t deadlock)
 {
     CAT_LOG_WITH_TYPE(CAT_COROUTINE_G(deadlock_log_type), COROUTINE, CAT_EDEADLK, "Deadlock: all coroutines are asleep");
 
+    CAT_COROUTINE_G(deadlocked) = cat_true;
     if (deadlock != NULL) {
         deadlock();
-    } else while (cat_sys_usleep(999999) == 0);
+    } else while (CAT_COROUTINE_G(deadlocked)) {
+        cat_sys_sleep(1);
+    }
+    /* deadlock failed or it was broken by some magic ways */
+    CAT_COROUTINE_G(deadlocked) = cat_false;
 }
 
-static cat_always_inline cat_bool_t cat_coroutine_is_deadlocked(void)
+static cat_always_inline cat_bool_t cat_coroutine_is_unfinished(void)
 {
     return CAT_COROUTINE_G(count) - CAT_COROUTINE_G(waiter_count) > 0;
 }
@@ -972,11 +990,11 @@ static cat_data_t *cat_coroutine_scheduler_function(cat_data_t *data)
 
         scheduler.schedule();
 
-        if (cat_coroutine_is_deadlocked()) {
+        if (cat_coroutine_is_unfinished()) {
             if (CAT_COROUTINE_G(deadlock_callback) != NULL) {
                 CAT_COROUTINE_G(deadlock_callback)();
                 scheduler.schedule(); // There is only one chance
-                if (!cat_coroutine_is_deadlocked()) {
+                if (!cat_coroutine_is_unfinished()) {
                     continue;
                 }
             }
@@ -984,7 +1002,6 @@ static cat_data_t *cat_coroutine_scheduler_function(cat_data_t *data)
              * but there are still coroutines that have not finished
              * so we try to trigger the deadlock */
             cat_coroutine_deadlock(scheduler.deadlock);
-            /* deadlock failed or it was broken by some magic ways */
             continue;
         }
 
@@ -1138,4 +1155,16 @@ CAT_API cat_coroutine_t *cat_coroutine_run(cat_coroutine_t *coroutine, cat_corou
     }
 
     return coroutine;
+}
+
+/* debug */
+
+CAT_API cat_bool_t cat_coroutine_is_deadlocked(void)
+{
+    return CAT_COROUTINE_G(deadlocked);
+}
+
+CAT_API void cat_coroutine_unlock_deadlock(void)
+{
+    CAT_COROUTINE_G(deadlocked) = cat_false;
 }

@@ -18,6 +18,7 @@ use Swow\Http\Status;
 use Swow\SocketException;
 use Swow\Stream\VarStream;
 use Swow\Sync\WaitReference;
+
 use function Swow\Debug\var_dump_return;
 
 $wr = new WaitReference();
@@ -38,7 +39,7 @@ Coroutine::run(static function () use ($server, $wr): void {
                             $connection->getFd(),
                             var_dump_return($variable)
                         );
-                        $connection->sendVar(['code' => Status::OK, 'message' => Status::getReasonPhraseFor(Status::OK)]);
+                        $connection->sendVar(['code' => Status::OK, 'message' => Status::getReasonPhraseOf(Status::OK)]);
                     }
                 } catch (SocketException $exception) {
                     echo "Connection<fd={$connection->getFd()}> goaway, reason: {$exception->getMessage()}" . PHP_EOL;

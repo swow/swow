@@ -58,7 +58,7 @@ class XNUConstantDefinitionsFetcher extends ConstantDefinitionsFetcherAbstract
         $errno = $this->httpGet($this->baseUrl . static::ERRNO_HEADER_URL);
         preg_match_all(static::ERRNO_RE, $errno, $matches);
         foreach ($matches['name'] as $index => $name) {
-            //printf("got %s = %d %s".PHP_EOL, $name, $matches['value'][$index], $matches['comment'][$index]);
+            // printf("got %s = %d %s".PHP_EOL, $name, $matches['value'][$index], $matches['comment'][$index]);
             $ret[$name] = new ConstantDefinition(
                 value: (int) $matches['value'][$index],
                 comment: $matches['comment'][$index],
@@ -73,7 +73,7 @@ class XNUConstantDefinitionsFetcher extends ConstantDefinitionsFetcherAbstract
         preg_match_all(static::SIGNAL_RE, $signalGeneric, $matches);
         foreach ($matches['name'] as $index => $name) {
             $comment = $matches['comment'][$index];
-            //printf("got %s = %d %s" . PHP_EOL, $name, $matches['value'][$index], $matches['comment'][$index]);
+            // printf("got %s = %d %s" . PHP_EOL, $name, $matches['value'][$index], $matches['comment'][$index]);
             $ret[$name] = new ConstantDefinition(
                 value: (int) $matches['value'][$index],
                 comment: $comment,

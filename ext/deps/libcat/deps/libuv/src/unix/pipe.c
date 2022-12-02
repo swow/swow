@@ -79,7 +79,9 @@ int uv_pipe_bind(uv_pipe_t* handle, const char* name) {
   if (uv__stream_fd(handle) >= 0)
     return UV_EINVAL;
 #endif
-
+  if (uv__is_closing(handle)) {
+    return UV_EINVAL;
+  }
   /* Make a copy of the file name, it outlives this function's scope. */
 #ifdef HAVE_LIBCAT
   if (name_length > 0 && !uv_pipe_is_linux_abstract_name(name)) {
@@ -457,7 +459,7 @@ int uv_pipe_chmod(uv_pipe_t* handle, int mode) {
   }
 
   /* stat must be used as fstat has a bug on Darwin */
-  if (stat(name_buffer, &pipe_stat) == -1) {
+  if (uv__stat(name_buffer, &pipe_stat) == -1) {
     uv__free(name_buffer);
     return -errno;
   }

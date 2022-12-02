@@ -20,22 +20,23 @@ $list = [
     ],
 ];
 
-$coro = new Coroutine(function () use ($list) {
-    array_walk($list, function (array $v, string $k) {
-        echo "{$k} => [ k => {$v['k']} ]" . PHP_LF;
+$coro = new Coroutine(static function () use ($list): void {
+    array_walk($list, static function (array $v, string $k): void {
+        echo "{$k} => [ k => {$v['k']} ]\n";
         Coroutine::yield(true);
     });
-    array_walk_recursive($list, function (string $v, string $k) {
-        echo "{$k} => {$v}" . PHP_LF;
+    array_walk_recursive($list, static function (string $v, string $k): void {
+        echo "{$k} => {$v}\n";
         Coroutine::yield(true);
     });
     Coroutine::yield(false);
 });
 
-while ($coro->resume());
+while ($coro->resume()) {
+}
 $coro->resume();
 
-echo 'Done' . PHP_LF;
+echo "Done\n";
 
 ?>
 --EXPECT--

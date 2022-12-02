@@ -28,7 +28,7 @@ if (PHP_OS_FAMILY === 'Linux' && mt_rand(0, 1)) {
 foreach ([false, true] as $useConnect) {
     $wrs = new WaitReference();
     $server = new Socket(Socket::TYPE_UDG);
-    Coroutine::run(function () use ($server, $wrs) {
+    Coroutine::run(static function () use ($server, $wrs): void {
         $server->bind(SERVER_SOCK);
         try {
             while (true) {
@@ -36,7 +36,7 @@ foreach ([false, true] as $useConnect) {
                 if (!$message) {
                     break;
                 }
-                $server->sendStringTo($message, $address);
+                $server->sendTo($message, address: $address);
             }
         } catch (SocketException $exception) {
             Assert::same($exception->getCode(), Errno::ECANCELED);
@@ -50,7 +50,7 @@ foreach ([false, true] as $useConnect) {
         $client->connect($server->getSockAddress());
     }
     $randoms = getRandomBytesArray(TEST_MAX_REQUESTS, TEST_MAX_LENGTH);
-    Coroutine::run(function () use ($server, $client, $randoms, $useConnect, $wr) {
+    Coroutine::run(static function () use ($server, $client, $randoms, $useConnect, $wr): void {
         for ($n = 0; $n < TEST_MAX_REQUESTS; $n++) {
             if ($useConnect) {
                 $packet = $client->recvString(TEST_MAX_LENGTH);
@@ -63,9 +63,9 @@ foreach ([false, true] as $useConnect) {
     });
     for ($n = 0; $n < TEST_MAX_REQUESTS; $n++) {
         if ($useConnect) {
-            $client->sendString($randoms[$n]);
+            $client->send($randoms[$n]);
         } else {
-            $client->sendStringTo($randoms[$n], $server->getSockAddress());
+            $client->sendTo($randoms[$n], address: $server->getSockAddress());
         }
     }
 
@@ -76,7 +76,7 @@ foreach ([false, true] as $useConnect) {
     WaitReference::wait($wrs); /* wait server closed */
 }
 
-echo 'Done' . PHP_LF;
+echo "Done\n";
 
 ?>
 --EXPECT--

@@ -18,11 +18,11 @@
 
 #include "cat.h"
 
-CAT_API CAT_GLOBALS_DECLARE(cat)
-
-CAT_GLOBALS_CTOR_DECLARE_SZ(cat)
+CAT_API CAT_GLOBALS_DECLARE(cat);
 
 static cat_bool_t cat_args_registered = cat_false;
+
+static uv_thread_t cat_main_thread_tid;
 
 #if CAT_USE_BUG_DETECTOR
 void cat_bug_detector_callback(int signum)
@@ -36,13 +36,15 @@ void cat_bug_detector_callback(int signum)
     "You can read How to report a bug doc before submitting any bug reports:\n" \
     ">> https://github.com/libcat/libcat/blob/master/.github/ISSUE.md \n"
 #endif
-    fprintf(CAT_G(error_log), CAT_BUG_REPORT);
+    fprintf(stderr, CAT_BUG_REPORT);
     abort();
 }
 #endif
 
 CAT_API cat_bool_t cat_module_init(void)
 {
+    cat_main_thread_tid = uv_thread_self();
+
     cat_log_function = cat_log_standard;
 
 #ifdef CAT_USE_DYNAMIC_ALLOCATOR
@@ -58,7 +60,8 @@ CAT_API cat_bool_t cat_module_init(void)
     );
 #endif
 
-    CAT_GLOBALS_REGISTER(cat, CAT_GLOBALS_CTOR(cat), NULL);
+    CAT_GLOBALS_MODULE_INIT();
+    CAT_GLOBALS_REGISTER(cat);
 
 #if CAT_USE_BUG_DETECTOR
     if (cat_env_is_true("CAT_BUG_DETECTOR", cat_true)) {
@@ -71,15 +74,19 @@ CAT_API cat_bool_t cat_module_init(void)
 
 CAT_API cat_bool_t cat_module_shutdown(void)
 {
+    CAT_GLOBALS_UNREGISTER(cat);
+    CAT_GLOBALS_MODULE_SHUTDOWN();
+
     return cat_true;
 }
 
 CAT_API cat_bool_t cat_runtime_init(void)
 {
+    CAT_GLOBALS_RUNTIME_INIT();
+
     srand((unsigned int) time(NULL));
 
     CAT_G(log_types) = CAT_LOG_TYPES_DEFAULT;
-    CAT_G(log_module_types) = CAT_MODULE_TYPES_ALL;
     CAT_G(error_log) = stderr;
     CAT_G(show_last_error) = cat_false;
     cat_const_string_init(&CAT_G(exepath));
@@ -109,7 +116,6 @@ do {
     if (CAT_G(log_debug_level) > 0) {
         /* enable all log types and log module types */
         CAT_G(log_types) = CAT_LOG_TYPES_ALL;
-        CAT_G(log_module_types) = CAT_MODULE_TYPES_ALL;
         /* enable SLE if there is no env to set it explicitly */
         if (!cat_env_exists("CAT_SLE")) {
             CAT_G(show_last_error) = cat_true;
@@ -123,12 +129,6 @@ do {
 #endif
 } while (0);
 #endif
-    /* log module types */
-    if (cat_env_exists("CAT_LOG_MODULE_TYPES")) {
-        char *names = cat_env_get("CAT_LOG_MODULE_TYPES");
-        CAT_G(log_module_types) = cat_module_get_types_from_names(names);
-        cat_free(names);
-    }
 
     CAT_G(runtime) = cat_true;
 
@@ -143,6 +143,13 @@ CAT_API cat_bool_t cat_runtime_shutdown(void)
         cat_free((void *) CAT_G(exepath).data);
     }
     CAT_G(runtime) = cat_false;
+
+    return cat_true;
+}
+
+CAT_API cat_bool_t cat_runtime_close(void)
+{
+    CAT_GLOBALS_RUNTIME_CLOSE();
 
     return cat_true;
 }
@@ -232,4 +239,10 @@ CAT_API cat_bool_t cat_set_process_title(const char* title)
     }
 
     return cat_true;
+}
+
+CAT_API cat_bool_t cat_is_main_thread(void)
+{
+    uv_thread_t current_thread = uv_thread_self();
+    return !!uv_thread_equal(&cat_main_thread_tid, &current_thread);
 }

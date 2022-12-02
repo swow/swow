@@ -103,14 +103,11 @@ CAT_API cat_bool_t cat_dns_get_ip(char *buffer, size_t buffer_size, const char *
 
 CAT_API cat_bool_t cat_dns_get_ip_ex(char *buffer, size_t buffer_size, const char *name, int af, cat_timeout_t timeout)
 {
-    struct addrinfo hints;
+    struct addrinfo hints = {0};
     struct addrinfo *response;
     int error;
 
     hints.ai_family = af;
-    hints.ai_socktype = SOCK_STREAM;
-    hints.ai_protocol = IPPROTO_TCP;
-    hints.ai_flags = 0;
     response = cat_dns_getaddrinfo_ex(name, NULL, &hints, timeout);
     if (unlikely(response == NULL)) {
         cat_update_last_error_with_previous("DNS get ip failed");

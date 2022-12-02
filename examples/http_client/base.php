@@ -11,19 +11,17 @@
 
 declare(strict_types=1);
 
-use Swow\Http\Client;
-use Swow\Http\Request;
+use Swow\Psr7\Client\Client;
+use Swow\Psr7\Psr7;
 
 require __DIR__ . '/../autoload.php';
 
 $client = new Client();
 $domain = 'www.baidu.com';
-$request = new Request('GET', '/', [
-    'Host' => $domain,
-]);
+$request = Psr7::createRequest(method: 'GET', uri: '/');
 $response = $client
     ->connect($domain, 80)
     ->sendRequest($request);
 
-echo 'Request', PHP_EOL, str_repeat('-', 40), PHP_EOL, $request;
-echo 'Response', PHP_EOL, str_repeat('-', 40), PHP_EOL, $response;
+echo 'Request', PHP_EOL, str_repeat('-', 40), PHP_EOL, Psr7::stringifyRequest($request);
+echo 'Response', PHP_EOL, str_repeat('-', 40), PHP_EOL, Psr7::stringifyResponse($response);

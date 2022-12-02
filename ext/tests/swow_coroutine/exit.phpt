@@ -8,39 +8,39 @@ require __DIR__ . '/../include/skipif.php';
 <?php
 require __DIR__ . '/../include/bootstrap.php';
 
-$coroutine = Swow\Coroutine::run(function () {
-    echo '0' . PHP_LF;
+$coroutine = Swow\Coroutine::run(static function (): void {
+    echo "0\n";
     exit;
-    /** @noinspection PhpUnreachableStatementInspection */
-    echo 'Never here' . PHP_LF;
+    /* @noinspection PhpUnreachableStatementInspection */
+    echo "Never here\n";
 });
 Assert::same($coroutine->getExitStatus(), 0);
 
-$coroutine = Swow\Coroutine::run(function () {
-    echo '1' . PHP_LF;
+$coroutine = Swow\Coroutine::run(static function (): void {
+    echo "1\n";
     exit(0);
-    /** @noinspection PhpUnreachableStatementInspection */
-    echo 'Never here' . PHP_LF;
+    /* @noinspection PhpUnreachableStatementInspection */
+    echo "Never here\n";
 });
 Assert::same($coroutine->getExitStatus(), 0);
 
-$coroutine = Swow\Coroutine::run(function () {
-    echo '2' . PHP_LF;
+$coroutine = Swow\Coroutine::run(static function (): void {
+    echo "2\n";
     exit(null);
-    /** @noinspection PhpUnreachableStatementInspection */
-    echo 'Never here' . PHP_LF;
+    /* @noinspection PhpUnreachableStatementInspection */
+    echo "Never here\n";
 });
 Assert::same($coroutine->getExitStatus(), 0);
 
-$coroutine = Swow\Coroutine::run(function () {
-    echo '3' . PHP_LF;
+$coroutine = Swow\Coroutine::run(static function (): void {
+    echo "3\n";
     exit(1);
-    /** @noinspection PhpUnreachableStatementInspection */
-    echo 'Never here' . PHP_LF;
+    /* @noinspection PhpUnreachableStatementInspection */
+    echo "Never here\n";
 });
 Assert::same($coroutine->getExitStatus(), 1);
 
-echo 'Done' . PHP_LF;
+echo "Done\n";
 
 ?>
 --EXPECTF--

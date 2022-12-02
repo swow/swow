@@ -71,6 +71,11 @@ typedef struct {
     php_curl_read     *read;
     zval               std_err;
     php_curl_callback *progress;
+#if PHP_VERSION_ID >= 80200
+# if LIBCURL_VERSION_NUM >= 0x072000
+    php_curl_callback  *xferinfo;
+# endif
+#endif
 #if LIBCURL_VERSION_NUM >= 0x071500 /* Available since 7.21.0 */
     php_curl_callback *fnmatch;
 #endif
@@ -495,11 +500,11 @@ zend_result swow_curl_runtime_init(INIT_FUNC_ARGS)
     return SUCCESS;
 }
 
-zend_result swow_curl_runtime_shutdown(INIT_FUNC_ARGS)
+zend_result swow_curl_runtime_close(void)
 {
     SWOW_CURL_CHECK_MODULE();
 
-    if (!cat_curl_runtime_shutdown()) {
+    if (!cat_curl_runtime_close()) {
         return FAILURE;
     }
 

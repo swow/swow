@@ -10,8 +10,7 @@ require __DIR__ . '/../include/bootstrap.php';
 
 use Swow\Channel;
 
-$foo = new class
-{
+$foo = new class() {
     public Channel $channel;
 
     public function __construct()
@@ -21,7 +20,7 @@ $foo = new class
     }
 };
 
-echo 'Done' . PHP_LF;
+echo "Done\n";
 ?>
 --EXPECT--
 Done

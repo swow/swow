@@ -58,7 +58,7 @@ function fetchdevpack(){
         $latest = $info.$PhpVer.$phpvar."devel_pack"
         # if we are in github workflows, set ver as output
         if(${env:CI} -Eq "true"){
-            Write-Host ('::set-output name=devpackver::' + $info.$PhpVer."version")
+            Write-Output ("devpackver=" + $info.$PhpVer."version") | Out-File "${env:GITHUB_OUTPUT}" -Append
         }
         if($DryRun){
             return
@@ -109,7 +109,7 @@ function fetchdevpack(){
             $fn = 'php-devel-pack-' + $PhpVer + '.' + $used + $dashnts +'-Win32-' + $PhpVCVer + '-' + $PhpArch + '.zip'
             # if we are in github workflows, set ver as output
             if(${env:CI} -Eq "true"){
-                Write-Host "::set-output name=devpackver::$PhpVer.$used"
+                Write-Output "devpackver=$PhpVer.$used" | Out-File "${env:GITHUB_OUTPUT}" -Append
             }
         }catch [System.Net.WebException],[System.IO.IOException]{
             warn "Cannot fetch archives list, use oldest instead"
@@ -117,7 +117,7 @@ function fetchdevpack(){
             $fn = 'php-devel-pack-' + $PhpVer + '.0' + $dashnts +'-Win32-' + $PhpVCVer + '-' + $PhpArch + '.zip'
             # if we are in github workflows, set ver as output
             if(${env:CI} -Eq "true"){
-                Write-Host "::set-output name=devpackver::$PhpVer.0"
+                Write-Output "devpackver=$PhpVer.0" | Out-File "${env:GITHUB_OUTPUT}" -Append
             }
         }
         if($DryRun){

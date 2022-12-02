@@ -8,19 +8,19 @@ require __DIR__ . '/../include/skipif.php';
 <?php
 require __DIR__ . '/../include/bootstrap.php';
 
-(function () {
-    $function = function () {
-        echo 'In' . PHP_LF;
-        $leak = new stdClass;
+(static function (): void {
+    $function = static function (): void {
+        echo "In\n";
+        $leak = new stdClass();
         Swow\Coroutine::yield();
-        echo 'Never here' . PHP_LF;
+        echo "Never here\n";
         var_dump($leak);
     };
     $coroutine = new Swow\Coroutine($function);
     $coroutine->resume();
     $coroutine->kill();
 })();
-echo 'Done' . PHP_LF;
+echo "Done\n";
 
 ?>
 --EXPECT--

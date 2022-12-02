@@ -20,7 +20,7 @@ $conn = $sock->connect($argv[1]);
 
 function tellpar($char){
     global $conn;
-    $conn->sendString($char);
+    $conn->send($char);
 }
 function waitpar($char){
     global $conn;

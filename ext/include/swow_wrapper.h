@@ -41,53 +41,73 @@ extern "C" {
 #pragma GCC diagnostic pop
 #endif
 
+/* Just to be compatible with different ZEND_API versions */
+#define SWOW_WRAPPER_API SWOW_API
+
 void swow_wrapper_init(void);
 void swow_wrapper_shutdown(void);
 
-/* PHP 8.1 compatibility macro {{{*/
+/* PHP 8.1 compatibility {{{*/
 #if PHP_VERSION_ID < 80100
-SWOW_API zend_string* ZEND_FASTCALL zend_ulong_to_str(zend_ulong num);
+#define ZEND_FALLTHROUGH CAT_FALLTHROUGH
+#define zend_hash_find_known_hash _zend_hash_find_known_hash
+SWOW_WRAPPER_API zend_string* ZEND_FASTCALL zend_ulong_to_str(zend_ulong num);
+#endif
+/* }}} */
+
+/* PHP 8.2 compatibility {{{*/
+#if PHP_VERSION_ID < 80200
+typedef enum _zend_compile_position {
+    ZEND_COMPILE_POSITION_AT_SHEBANG = 0,
+    ZEND_COMPILE_POSITION_AT_OPEN_TAG,
+    ZEND_COMPILE_POSITION_AFTER_OPEN_TAG
+} zend_compile_position;
+#else
+#define SWOW_COMPILE_STRING_SUPPORT_POSITION
+#endif
+SWOW_API zend_op_array *swow_compile_string(zend_string *source_string, const char *filename);
+SWOW_API zend_op_array *swow_compile_string_ex(zend_string *source_string, const char *filename, zend_compile_position position);
+
+#if PHP_VERSION_ID < 80200
+# define zend_atomic_bool zend_bool
+# define zend_atomic_bool_init(atomic, desired) (*atomic = desired)
+# define zend_atomic_bool_store(atomic, desired) (*atomic = desired)
+# define zend_atomic_bool_load(atomic) (*atomic)
 #endif
 /* }}} */
 
 /* ZTS */
 
 #ifdef ZTS
-#ifdef TSRMG_FAST
-#ifdef ZEND_ENABLE_STATIC_TSRMLS_CACHE
-#define SWOW_TSRMG_FAST_BULK TSRMG_FAST_BULK_STATIC
-#else
-#define SWOW_TSRMG_FAST_BULK TSRMG_FAST_BULK
-#endif
-#endif
-#ifdef ZEND_ENABLE_STATIC_TSRMLS_CACHE
-#define SWOW_TSRMG_BULK TSRMG_BULK_STATIC
-#else
-#define SWOW_TSRMG_BULK TSRMG_BULK
-#endif
+# ifdef TSRMG_FAST
+# ifdef ZEND_ENABLE_STATIC_TSRMLS_CACHE
+#  define SWOW_TSRMG_FAST_BULK TSRMG_FAST_BULK_STATIC
+# else
+#  define SWOW_TSRMG_FAST_BULK TSRMG_FAST_BULK
+# endif
+# endif
+# ifdef ZEND_ENABLE_STATIC_TSRMLS_CACHE
+#  define SWOW_TSRMG_BULK TSRMG_BULK_STATIC
+# else
+#  define SWOW_TSRMG_BULK TSRMG_BULK
+# endif
 #endif
 
 /* the way to get zend globals ptr */
 
 #ifdef ZTS
-#define SWOW_GLOBALS_PTR(name)         SWOW_TSRMG_BULK(name##_id, zend_##name *)
-#ifdef TSRMG_FAST
-#define SWOW_GLOBALS_FAST_PTR(name)    SWOW_TSRMG_FAST_BULK(name##_offset, zend_##name *)
+# define ZEND_GLOBALS_PTR(name)       SWOW_TSRMG_BULK(name##_id, zend_##name *)
+# ifdef TSRMG_FAST
+#  define ZEND_GLOBALS_FAST_PTR(name) SWOW_TSRMG_FAST_BULK(name##_offset, zend_##name *)
+# else
+#  define ZEND_GLOBALS_FAST_PTR(name) ZEND_GLOBALS_PTR(name)
+# endif
 #else
-#define SWOW_GLOBALS_FAST_PTR(name)    SWOW_GLOBALS_PTR(name)
+# define ZEND_GLOBALS_PTR(name)       (&name)
+# define ZEND_GLOBALS_FAST_PTR(name)  (&name)
 #endif
-#else
-#define SWOW_GLOBALS_PTR(name)         (&name)
-#define SWOW_GLOBALS_FAST_PTR(name)    (&name)
-#endif
-
-/* memory */
-
-#define SWOW_IS_OUT_OF_MEMORY() (CG(unclean_shutdown) && PG(last_error_type) == E_ERROR && (size_t) PG(memory_limit) < zend_memory_usage(1))
 
 /* modules */
-
-#define SWOW_MODULE_NAME "swow"
 
 #define SWOW_MODULES_CHECK_PRE_START() do { \
     const char *_pre_modules[] =
@@ -97,7 +117,7 @@ SWOW_API zend_string* ZEND_FASTCALL zend_ulong_to_str(zend_ulong num);
     cat_bool_t _loaded = cat_false; \
     zend_string *_module_name; \
     ZEND_HASH_FOREACH_STR_KEY(&module_registry, _module_name) { \
-        if (memcmp(ZSTR_VAL(_module_name), ZEND_STRL(SWOW_MODULE_NAME)) == 0) { \
+        if (memcmp(ZSTR_VAL(_module_name), ZEND_STRL(SWOW_MODULE_NAME_LC)) == 0) { \
             _loaded = cat_true; \
         } else { \
             size_t _n = 0; \
@@ -113,7 +133,47 @@ SWOW_API zend_string* ZEND_FASTCALL zend_ulong_to_str(zend_ulong num);
     } ZEND_HASH_FOREACH_END(); \
 } while (0)
 
+/* string */
+
+#define SWOW_PARAM_STRINGABLE(dest_string)  \
+    Z_PARAM_PROLOGUE(0, 0); \
+    if (UNEXPECTED(!swow_parse_arg_stringable(_arg, &dest_string, _i))) { \
+        _expected_type = Z_EXPECTED_STRING; \
+        _error_code = ZPP_ERROR_WRONG_ARG; \
+        break; \
+    }
+
 /* array */
+
+#if PHP_VERSION_ID < 80200
+#define ZEND_HASH_PACKED_FOREACH          ZEND_HASH_FOREACH
+#define ZEND_HASH_PACKED_FOREACH_VAL      ZEND_HASH_FOREACH_VAL
+#define ZEND_HASH_MAP_FOREACH             ZEND_HASH_FOREACH
+#define ZEND_HASH_MAP_FOREACH_STR_KEY     ZEND_HASH_FOREACH_STR_KEY
+#define ZEND_HASH_MAP_FOREACH_VAL         ZEND_HASH_FOREACH_VAL
+#define ZEND_HASH_MAP_FOREACH_STR_KEY_VAL ZEND_HASH_FOREACH_STR_KEY_VAL
+#endif
+
+#define swow_hash_str_fetch_bool(ht, str, ret) do { \
+    zval *z_tmp = zend_hash_str_find(ht, str, strlen(str)); \
+    if (z_tmp != NULL) { \
+        *(ret) = zval_is_true(z_tmp); \
+    } \
+} while (0)
+
+#define swow_hash_str_fetch_long(ht, str, ret) do { \
+    zval *z_tmp = zend_hash_str_find(ht, str, strlen(str)); \
+    if (z_tmp != NULL) { \
+        *(ret) = Z_LVAL_P(z_tmp); \
+    } \
+} while (0)
+
+#define swow_hash_str_fetch_str(ht, str, ret) do { \
+    zval *z_tmp = zend_hash_str_find(ht, str, strlen(str)); \
+    if (z_tmp != NULL && try_convert_to_string(z_tmp)) { \
+        *(ret) = Z_STRVAL_P(z_tmp); \
+    } \
+} while (0)
 
 #ifndef add_assoc_string_fast
 static zend_always_inline void add_next_index_string_fast(zval *arg, const char *str)
@@ -182,6 +242,13 @@ static zend_always_inline void add_assoc_object_ex(zval *arg, const char *key, s
     zend_symtable_str_update(Z_ARRVAL_P(arg), key, key_len, &tmp);
 }
 #endif /* PHP_VERSION_ID < 80100 (add_array, add_object) */
+
+static zend_always_inline void zend_array_release_gc(HashTable *ht)
+{
+    zval z_tmp;
+    ZVAL_ARR(&z_tmp, ht);
+    zval_ptr_dtor(&z_tmp);
+}
 
 /* class */
 
@@ -252,6 +319,38 @@ static zend_always_inline zend_object* swow_object_create(zend_class_entry *ce)
 #define PHP_FUNCTION_CALL                       ZEND_FUNCTION_CALL
 #define PHP_METHOD_CALL                         ZEND_METHOD_CALL
 
+/* ZPP */
+
+#if PHP_VERSION_ID < 80100
+# define _ARG_POS(x)
+#else
+# define _ARG_POS(x) , x
+#endif
+
+static zend_always_inline bool swow_parse_arg_long(zval *arg, zend_long *dest, bool *is_null, bool check_null, uint32_t arg_num)
+{
+    return zend_parse_arg_long(arg, dest, is_null, check_null _ARG_POS(arg_num));
+}
+
+static zend_always_inline bool swow_parse_arg_str_weak(zval *arg, zend_string **dest, uint32_t arg_num) /* {{{ */
+{
+    return zend_parse_arg_str_weak(arg, dest _ARG_POS(arg_num));
+}
+
+static zend_always_inline bool swow_parse_arg_stringable(zval *arg, zend_string **dest, uint32_t arg_num)
+{
+    if (EXPECTED(Z_TYPE_P(arg) == IS_STRING)) {
+        *dest = Z_STR_P(arg);
+        return true;
+    }
+    /* use weak to handle stringable object even if we are in strict mode */
+    return swow_parse_arg_str_weak(arg, dest, arg_num);
+}
+
+#undef _ARG_POS
+
+/* return_value */
+
 #define RETVAL_STATIC() do { \
     RETVAL_OBJ(swow_object_create(zend_get_executed_scope())); \
 } while (0)
@@ -271,10 +370,10 @@ static zend_always_inline zend_object* swow_object_create(zend_class_entry *ce)
 } while (0)
 
 #define RETVAL_THIS_PROPERTY(name) do { \
-    zval *zproperty, zretval; \
-    zproperty = zend_read_property(Z_OBJCE_P(ZEND_THIS), Z_OBJ_P(ZEND_THIS), ZEND_STRL(name), 1, &zretval); \
-    ZVAL_DEREF(zproperty); \
-    ZVAL_COPY(return_value, zproperty); \
+    zval *z_property, retval; \
+    z_property = zend_read_property(Z_OBJCE_P(ZEND_THIS), Z_OBJ_P(ZEND_THIS), ZEND_STRL(name), 1, &retval); \
+    ZVAL_DEREF(z_property); \
+    ZVAL_COPY(return_value, z_property); \
 } while (0)
 
 #define RETURN_THIS_PROPERTY(name) do { \
@@ -282,9 +381,9 @@ static zend_always_inline zend_object* swow_object_create(zend_class_entry *ce)
     return; \
 } while (0)
 
-#define RETURN_DEBUG_INFO_WITH_PROPERTIES(zdebug_info) do { \
-    php_array_merge(Z_ARR_P(zdebug_info), Z_OBJ_P(ZEND_THIS)->handlers->get_properties(Z_OBJ_P(ZEND_THIS))); \
-    RETURN_ZVAL(zdebug_info, 0, 0); \
+#define RETURN_DEBUG_INFO_WITH_PROPERTIES(z_debug_info) do { \
+    php_array_merge(Z_ARR_P(z_debug_info), Z_OBJ_P(ZEND_THIS)->handlers->get_properties(Z_OBJ_P(ZEND_THIS))); \
+    RETURN_ZVAL(z_debug_info, 0, 0); \
 } while (0)
 
 #define ZEND_ASSERT_HAS_EXCEPTION() do { \
@@ -306,23 +405,39 @@ typedef struct swow_fcall_s {
 } swow_fcall_info_t;
 
 typedef struct swow_fcall_storage_s {
-    zval zcallable;
+    zval z_callable;
     zend_fcall_info_cache fcc;
 } swow_fcall_storage_t;
 
 SWOW_API zend_bool swow_fcall_storage_is_available(const swow_fcall_storage_t *fcall);
-SWOW_API zend_bool swow_fcall_storage_create(swow_fcall_storage_t *fcall, zval *zcallable);
+SWOW_API zend_bool swow_fcall_storage_create(swow_fcall_storage_t *fcall, zval *z_callable);
 SWOW_API void swow_fcall_storage_release(swow_fcall_storage_t *fcall);
 
-#define SWOW_PARAM_FCALL(fcall) do { \
+#define SWOW_PARAM_FCALL(fcall) \
     zend_fcall_info _fci; \
     Z_PARAM_FUNC(_fci, fcall.fcc) \
-    fcall.zcallable = *_arg; \
-} while (0);
+    fcall.z_callable = *_arg;
 
 /* function caller */
 
-SWOW_API int swow_call_function_anyway(zend_fcall_info *fci, zend_fcall_info_cache *fci_cache);
+static zend_always_inline zend_result swow_forbid_dynamic_call_at_frame(zend_execute_data *execute_data)
+{
+    ZEND_ASSERT(execute_data != NULL && execute_data->func != NULL);
+    if (ZEND_CALL_INFO(execute_data) & ZEND_CALL_DYNAMIC) {
+        zend_string *function_or_method_name = get_active_function_or_method_name();
+        zend_throw_error(NULL, "Cannot call %.*s() dynamically",
+            (int) ZSTR_LEN(function_or_method_name), ZSTR_VAL(function_or_method_name));
+        return FAILURE;
+    }
+    return SUCCESS;
+}
+
+static zend_always_inline zend_result swow_forbid_dynamic_call(void)
+{
+    return swow_forbid_dynamic_call_at_frame(EG(current_execute_data));
+}
+
+SWOW_API zend_result swow_call_function_anyway(zend_fcall_info *fci, zend_fcall_info_cache *fci_cache);
 
 /* method caller */
 
@@ -334,6 +449,28 @@ SWOW_API int swow_call_function_anyway(zend_fcall_info *fci, zend_fcall_info_cac
 
 #define swow_call_method_with_2_params(zobject, object_ce, fn_ptr_ptr, fn_name, retval, v1, v2) \
         zend_call_method_with_2_params(Z_OBJ_P(zobject), object_ce, fn_ptr_ptr, fn_name, retval, v1, v2)
+
+/* exception */
+
+#define SWOW_THROW_ON_ERROR_START() do { \
+    /* convert E_WARNINGs to exceptions */ \
+    zend_error_handling _error_handling; \
+    zend_replace_error_handling(EH_THROW, spl_ce_RuntimeException, &_error_handling); \
+
+#define SWOW_THROW_ON_ERROR_END() \
+    zend_restore_error_handling(&_error_handling); \
+} while (0)
+
+/* var_dump */
+
+SWOW_API void swow_var_dump_string(zend_string *string);
+SWOW_API void swow_var_dump_string_ex(zend_string *string, int level);
+
+SWOW_API void swow_var_dump_array(zend_array *array);
+SWOW_API void swow_var_dump_array_ex(zend_array *array, int level);
+
+SWOW_API void swow_var_dump_object(zend_object *object);
+SWOW_API void swow_var_dump_object_ex(zend_object *object, int level);
 
 /* output globals */
 
@@ -369,20 +506,20 @@ static zend_always_inline void swow_output_globals_fast_shutdown(void)
 }
 
 #define SWOW_OB_START(output) do { \
-    zval zoutput; \
+    zval z_output; \
     zend_string **output_ptr = &output; \
     zend_result ret; \
     php_output_start_user(NULL, 0, PHP_OUTPUT_HANDLER_STDFLAGS); \
 
 #define SWOW_OB_END() \
-    ret = php_output_get_contents(&zoutput); \
+    ret = php_output_get_contents(&z_output); \
     php_output_discard(); \
-    *output_ptr = ret == SUCCESS ? Z_STR(zoutput) : NULL; \
+    *output_ptr = ret == SUCCESS ? Z_STR(z_output) : NULL; \
 } while (0);
 
-#if PHP_VERSION_ID >= 80200
-#define zend_forbid_dynamic_call(x) zend_forbid_dynamic_call()
-#endif
+/* file */
+
+SWOW_API SWOW_MAY_THROW zend_string *swow_file_get_contents(zend_string *filename);
 
 #ifdef __cplusplus
 }

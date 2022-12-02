@@ -2,8 +2,8 @@
 /**
  * This file is part of Swow
  *
- * @link     https://github.com/swow/swow
- * @contact  twosee <twosee@php.net>
+ * @link    https://github.com/swow/swow
+ * @contact twosee <twosee@php.net>
  *
  * For the full copyright and license information,
  * please view the LICENSE file that was distributed with this source code
@@ -24,7 +24,6 @@ error_reporting(E_ALL);
 
 # constants
 
-define('PHP_LF', "\n");
 /* ============== Env =============== */
 define('USE_VALGRIND', getenv('USE_ZEND_ALLOC') === '0');
 /* ============== Pressure ============== */
@@ -35,7 +34,7 @@ define('TEST_PRESSURE_MID', 3);
 define('TEST_PRESSURE_NORMAL', 4);
 define(
     'TEST_PRESSURE_LEVEL',
-    (getenv('TEST_PRESSURE_DEBUG') == 1) ? TEST_PRESSURE_DEBUG :
+    (getenv('TEST_PRESSURE_DEBUG') === '1') ? TEST_PRESSURE_DEBUG :
         (USE_VALGRIND ? TEST_PRESSURE_LOW :
             ((0) ? TEST_PRESSURE_MID : TEST_PRESSURE_NORMAL))
 );
@@ -99,7 +98,7 @@ function isInTest(): bool
 {
     global $argv;
 
-    return !(str_ends_with($argv[0], '.phpt'));
+    return !str_ends_with($argv[0], '.phpt');
 }
 
 function phpt_sprint(...$args): void
@@ -150,10 +149,47 @@ function php_options_with_swow(): array
         '-d', 'track_errors=0',
     ];
 
-    if (!str_contains(shell_exec(real_php_path() . ' -m') ?? '', Swow::class)) {
-        $options []= '-d';
-        $options []= 'extension=swow';
+    // guessing
+    $try_args = match (PHP_OS_FAMILY) {
+        'Windows' => [
+            // installed, enabled
+            [],
+            // installed
+            ['-d', 'extension=swow'],
+            // made
+            [
+                '-d',
+                'extension_dir=x64\\' .
+                    (PHP_DEBUG ? 'Debug' : 'Release') .
+                    (PHP_ZTS ? '' : '_TS'),
+                '-d',
+                'extension=swow',
+            ],
+        ],
+        default => [
+            // installed, enabled
+            [],
+            // installed
+            ['-d', 'extension=swow'],
+            // made in phpize
+            ['-d', 'extension=.libs/swow' . (PHP_OS_FAMILY === 'Darwin' ? '.dylib' : '.so')],
+            // made in-tree
+            ['-d', 'extension=modules/swow' . (PHP_OS_FAMILY === 'Darwin' ? '.dylib' : '.so')],
+        ]
+    };
+
+    $ext_args = null;
+    foreach ($try_args as $args) {
+        $is_swow_enabled = shell_exec(real_php_path() . ' --ri swow ' . implode(' ', $args) . ' 2>&1');
+        if (!str_contains($is_swow_enabled, 'not present')) {
+            $ext_args = $args;
+        }
     }
+    if ($ext_args === null) {
+        throw new Exception('cannot find installed swow, have you built/installed swow?');
+    }
+
+    $options = [...$options, ...$ext_args];
 
     return $options;
 }
@@ -173,4 +209,71 @@ function php_proc_with_swow(array $args, callable $handler, array $options = [])
     ], $pipes, null, null);
     $handler($proc, $pipes);
     return proc_close($proc);
+}
+
+function getHttpProxyUri(): string
+{
+    $proxy = str_replace('http://', 'tcp://', getenv('https_proxy') ?: getenv('http_proxy') ?: getenv('all_proxy') ?: '', $count);
+    if ($proxy && $count === 0) {
+        $proxy = "tcp://{$proxy}";
+    }
+    return $proxy;
+}
+
+/** @return array<array{'status': int, 'headers': array<string, string>, 'body': string}> */
+function httpRequest(string $url, string $method = 'GET', string $content = '', array $headers = [], ?int $timeoutSeconds = null, bool|string $proxy = false, bool $doNotThrow = false): array|false
+{
+    $headers += [
+        'User-Agent' => 'curl',
+        'Accept' => '*/*',
+    ];
+    $headerLines = [];
+    foreach ($headers as $name => $value) {
+        $headerLines[] = "{$name}: {$value}";
+    }
+    $header = implode("\r\n", $headerLines);
+    if ($proxy === true) {
+        $proxy = getHttpProxyUri();
+    }
+    $httpContext = [
+        'method' => $method,
+        'header' => $header,
+        'request_fulluri' => true,
+    ];
+    if ($content) {
+        $httpContext['content'] = $content;
+    }
+    if ($timeoutSeconds !== null) {
+        $httpContext['timeout'] = $timeoutSeconds;
+    }
+    if ($proxy) {
+        $httpContext['proxy'] = $proxy;
+    }
+    $content = @file_get_contents(
+        filename: $url,
+        context: stream_context_create([
+            'http' => $httpContext,
+        ])
+    );
+    if (!$content && empty($http_response_header)) {
+        if ($doNotThrow) {
+            return false;
+        }
+        throw new RuntimeException(sprintf('Failed to download from %s (%s)', $url, error_get_last()['message']));
+    }
+    $status = 0;
+    $headers = [];
+    foreach ($http_response_header as $headerLine) {
+        $parts = explode(':', $headerLine, 2);
+        if (count($parts) === 1) {
+            $status = explode(' ', trim($parts[0]), 3)[1];
+        } else {
+            $headers[strtolower(trim($parts[0]))] = trim($parts[1]);
+        }
+    }
+    return [
+        'status' => (int) $status,
+        'headers' => $headers,
+        'body' => $content ?: '',
+    ];
 }

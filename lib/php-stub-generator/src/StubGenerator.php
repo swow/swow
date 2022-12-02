@@ -26,12 +26,15 @@ use ReflectionProperty;
 use ReflectionUnionType;
 use Reflector;
 use RuntimeException;
+
+use function addslashes;
 use function array_map;
 use function array_merge;
 use function array_pop;
 use function array_slice;
 use function array_walk;
 use function bin2hex;
+use function chunk_split;
 use function class_exists;
 use function count;
 use function ctype_print;
@@ -52,6 +55,7 @@ use function is_resource;
 use function is_string;
 use function ltrim;
 use function method_exists;
+use function preg_match;
 use function sprintf;
 use function str_contains;
 use function str_repeat;
@@ -111,6 +115,7 @@ class StubGenerator
                 'PhpInconsistentReturnPointsInspection',
                 'PhpMissingParentConstructorInspection',
                 'PhpReturnDocTypeMismatchInspection',
+                'PhpMixedReturnTypeCanBeReducedInspection',
             ] : [];
         } else {
             $this->noinspection = $enable;
@@ -222,13 +227,35 @@ class StubGenerator
         }
     }
 
+    protected static function escapeString(string $string): string
+    {
+        if ($string && !ctype_print($string)) {
+            $slashedString = addslashes($string);
+            if (ctype_print($slashedString)) {
+                return $slashedString;
+            }
+            return '\\x' . substr(chunk_split(bin2hex($string), 2, '\\x'), 0, -2);
+        }
+        return $string;
+    }
+
+    protected static function quoteString(string $string): string
+    {
+        $string = static::escapeString($string);
+        if (!preg_match('/(?<!\\\\)(?:\\\\{2})*\\\\(?!["$\\\\])/', $string)) {
+            return sprintf("'%s'", str_replace(['\\"', '\\$', '\''], ['"', '$', '\\\''], $string));
+        } else {
+            return sprintf('"%s"', $string);
+        }
+    }
+
     protected static function convertValueToString(mixed $value): string
     {
         return match (true) {
-            is_int($value), is_float($value) => (string) ($value),
+            is_int($value), is_float($value) => (string) $value,
             is_null($value) => 'null',
             is_bool($value) => $value ? 'true' : 'false',
-            is_string($value) => '\'' . (ctype_print($value) ? $value : bin2hex($value)) . '\'',
+            is_string($value) => static::quoteString($value),
             is_array($value) => '[]',
             default => var_export($value, true),
         };
@@ -325,7 +352,7 @@ class StubGenerator
                 if (count($comment) === 1) {
                     $comment = ['/** ' . trim($comment[0], ' *') . ' */'];
                 } else {
-                    $comment = ['/**', ...array_map(static fn (string $line): string => empty($line) ? ' *' : " * {$line}", $comment), ' */'];
+                    $comment = ['/**', ...array_map(static fn(string $line): string => empty($line) ? ' *' : " * {$line}", $comment), ' */'];
                 }
                 $comment = implode("\n", $comment);
             } else {
@@ -347,7 +374,7 @@ class StubGenerator
             $comment = trim($userComment);
         } else {
             $userCommentLines = array_slice($userCommentLines, 1, count($userCommentLines) - 2);
-            $comment = array_map(static fn (string $line) => trim($line, '/* '), $userCommentLines);
+            $comment = array_map(static fn(string $line) => trim($line, '/* '), $userCommentLines);
         }
 
         return $comment;
@@ -378,7 +405,21 @@ class StubGenerator
         $name = ltrim(str_replace($function->getNamespaceName(), '', $function->getName(), $isInNamespace), '\\');
         $scope = $function instanceof ReflectionMethod ? $function->getDeclaringClass()->getName() : '';
 
+        // prepare comments
         $comment = [];
+        if ($function instanceof ReflectionFunction) {
+            $fullName = $function->getName();
+        } else { /* if ($function instanceof ReflectionMethod) */
+            $operator = $function->isStatic() ? '::' : '->';
+            $fullName = "{$function->getDeclaringClass()->getName()}{$operator}{$function->getShortName()}";
+        }
+        if (!$this->genArginfoMode) {
+            $userComment = $this->userCommentMap[$fullName] ?? '';
+            if ($userComment) {
+                $comment = static::solveRawUserComment($userComment);
+            }
+        }
+
         $paramsDeclarations = [];
         $params = $function->getParameters();
         foreach ($params as $param) {
@@ -420,15 +461,15 @@ class StubGenerator
                 $paramTypeName = "?{$paramTypeName}";
             }
             try {
-                $hasSpecialDefaultParamValue = false;
+                /* $hasSpecialDefaultParamValue = false; */
                 $defaultParamValue = $param->getDefaultValue();
                 $defaultParamConstantName = $param->getDefaultValueConstantName();
                 $defaultParamValueString = $this::convertValueToString($defaultParamValue);
-                if (is_string($defaultParamValue) && ($paramTypeName !== 'string' || preg_match('/[\W]/', $defaultParamValue) > 0)) {
+                /* if (is_string($defaultParamValue) && ($paramTypeName !== 'string' || preg_match('/[\W]/', $defaultParamValue) > 0)) {
                     $defaultParamValueTip = 'null';
                     $defaultParamValueTipOnDoc = trim($defaultParamValueString, '\'');
                     $hasSpecialDefaultParamValue = true;
-                } else {
+                } else */ {
                     if (is_string($defaultParamConstantName) && $defaultParamConstantName !== '') {
                         $defaultParamValueTip = "\\{$defaultParamConstantName}";
                         if (!$this->genArginfoMode && str_contains($defaultParamValueTip, '::')) {
@@ -448,28 +489,19 @@ class StubGenerator
             } catch (ReflectionException) {
                 $defaultParamValueTip = $defaultParamValueTipOnDoc = '';
             }
-            if ($function instanceof ReflectionFunction) {
-                $fullName = $function->getName();
-            } else /* if ($function instanceof ReflectionMethod) */ {
-                $operator = $function->isStatic() ? '::' : '->';
-                $fullName = "{$function->getDeclaringClass()->getName()}{$operator}{$function->getShortName()}";
+            /*
+            if (!$this->genArginfoMode && $hasSpecialDefaultParamValue) {
+                $comment[] = sprintf(
+                    '@param %s%s%s$%s%s%s',
+                    $paramTypeName,
+                    $paramTypeName ? ' ' : '',
+                    $variadic,
+                    $param->getName(),
+                    !$variadic ? ($param->isOptional() ? ' [optional]' : ' [required]') : '',
+                    $defaultParamValueTipOnDoc !== '' ? " = {$defaultParamValueTipOnDoc}" : ''
+                );
             }
-            if (!$this->genArginfoMode) {
-                $userComment = $this->userCommentMap[$fullName] ?? '';
-                if ($userComment) {
-                    $comment = static::solveRawUserComment($userComment);
-                } elseif ($hasSpecialDefaultParamValue) {
-                    $comment[] = sprintf(
-                        '@param %s%s%s$%s%s%s',
-                        $paramTypeName,
-                        $paramTypeName ? ' ' : '',
-                        $variadic,
-                        $param->getName(),
-                        !$variadic ? ($param->isOptional() ? ' [optional]' : ' [required]') : '',
-                        $defaultParamValueTipOnDoc !== '' ? " = {$defaultParamValueTipOnDoc}" : ''
-                    );
-                }
-            }
+            */
             $paramsDeclarations[] = sprintf(
                 '%s%s%s%s$%s%s',
                 $paramTypeName,
@@ -566,14 +598,21 @@ class StubGenerator
             }
         }
         if (count($interfaceNames) > 0) {
-            $implements = ' implements ' . '\\' . implode(', \\', $interfaceNames);
+            $implements = ' implements \\' . implode(', \\', $interfaceNames);
         } else {
             $implements = '';
         }
 
         $constantDeclarations = [];
         if (!$this->genArginfoMode) {
-            foreach ($class->getConstants() as $constantName => $constantValue) {
+            foreach ($class->getReflectionConstants() as $constantReflection) {
+                [$constantName, $constantValue] = [$constantReflection->getName(), $constantReflection->getValue()];
+                $parentConstantReflection = ($class->getParentClass() ?: null)?->getReflectionConstant($constantName);
+                if ($parentConstantReflection &&
+                    $parentConstantReflection->getValue() === $constantValue &&
+                    $parentConstantReflection->getModifiers() === $constantReflection->getModifiers()) {
+                    continue;
+                }
                 $userComment = $this->userCommentMap["{$class->getName()}::{$constantName}"] ?? null;
                 $comment = $userComment ? static::genComment(static::solveRawUserComment($userComment)) : '';
                 $constantDeclarations[] = sprintf(
@@ -666,23 +705,23 @@ class StubGenerator
     /**
      * @param non-empty-string|null $eol
      */
-    protected static function indent(string $content, int $level, ?string $eol = null): string
+    protected static function indent(string $contents, int $level, ?string $eol = null): string
     {
         $eol ??= "\n";
         $spaces = str_repeat(static::INDENT, $level);
-        $lines = explode($eol, $content);
-        $content = '';
+        $lines = explode($eol, $contents);
+        $contents = '';
         foreach ($lines as $line) {
             if ($line === '') {
-                $content .= $eol;
+                $contents .= $eol;
             } else {
-                $content .= $spaces . $line . $eol;
+                $contents .= $spaces . $line . $eol;
             }
         }
-        if ($content !== '') {
-            $content = substr($content, 0, strlen($content) - strlen($eol));
+        if ($contents !== '') {
+            $contents = substr($contents, 0, strlen($contents) - strlen($eol));
         }
 
-        return $content;
+        return $contents;
     }
 }

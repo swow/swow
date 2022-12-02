@@ -15,6 +15,7 @@ declare(strict_types=1);
 namespace Swow\StubUtils\ConstantFixer;
 
 use function count;
+
 use const SORT_REGULAR;
 
 /**
@@ -24,7 +25,6 @@ class ConstantDefinitionsMerger
 {
     /**
      * @param array<ConstantDefinitionMap> $constDefinitionMaps
-     * @param string|int $reference
      */
     public function __construct(
         private array $constDefinitionMaps,
@@ -76,7 +76,7 @@ class ConstantDefinitionsMerger
                     $hasValue = $def->value !== $value ? " may have a value `{$def->value}`" : '';
                     $meaning = $def->comment !== '' ? " means \"{$def->comment}\"" : '';
                     $comments["this constant{$hasValue}{$meaning}"][] = [$os, $arch];
-                    $remainingCouples = array_filter($remainingCouples, static fn ($x) => !($x[0] === $os && $x[1] === $arch));
+                    $remainingCouples = array_filter($remainingCouples, static fn($x) => !($x[0] === $os && $x[1] === $arch));
                 }
             }
             foreach ($remainingCouples as $couple) {
@@ -94,15 +94,15 @@ class ConstantDefinitionsMerger
                 $plats = array_unique($plats, SORT_REGULAR);
                 $newPlats = [];
                 foreach ($osArchs as $os => $osPlats) {
-                    $a = array_map(static fn ($x) => $x[0] . $x[1], $osPlats);
-                    $b = array_map(static fn ($x) => $x[0] . $x[1], $plats);
+                    $a = array_map(static fn($x) => $x[0] . $x[1], $osPlats);
+                    $b = array_map(static fn($x) => $x[0] . $x[1], $plats);
                     if (count(array_intersect($a, $b)) === count($a)) {
                         // all arches is the same
                         $newPlats[] = $os;
-                        $plats = array_filter($plats, static fn ($x) => $x[0] !== $os);
+                        $plats = array_filter($plats, static fn($x) => $x[0] !== $os);
                     }
                 }
-                $newPlats = [...$newPlats, ...array_map(static fn ($x) => $x[0] . ' ' . $x[1], $plats)];
+                $newPlats = [...$newPlats, ...array_map(static fn($x) => $x[0] . ' ' . $x[1], $plats)];
 
                 if (count($newPlats) === 1) {
                     $comment .= "\nAt " . $newPlats[0] . " platform, {$c}";
@@ -117,7 +117,7 @@ class ConstantDefinitionsMerger
                 value: $value,
                 comment: $comment
             );
-            //printf('%s: %d===%s===' . PHP_EOL, $name, $ret[$name]->value, $ret[$name]->comment);
+            // printf('%s: %d===%s===' . PHP_EOL, $name, $ret[$name]->value, $ret[$name]->comment);
         }
 
         return $ret;

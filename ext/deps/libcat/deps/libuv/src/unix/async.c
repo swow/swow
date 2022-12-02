@@ -24,9 +24,13 @@
 
 #include "uv.h"
 #include "internal.h"
-#include "atomic-ops.h"
 
 #include <errno.h>
+#ifdef HAVE_LIBCAT
+#include "../hat_atomic.h"
+#else
+#include <stdatomic.h>
+#endif
 #include <stdio.h>  /* snprintf() */
 #include <assert.h>
 #include <stdlib.h>
@@ -40,6 +44,7 @@
 
 static void uv__async_send(uv_loop_t* loop);
 static int uv__async_start(uv_loop_t* loop);
+static void uv__cpu_relax(void);
 
 
 int uv_async_init(uv_loop_t* loop, uv_async_t* handle, uv_async_cb async_cb) {
@@ -51,7 +56,11 @@ int uv_async_init(uv_loop_t* loop, uv_async_t* handle, uv_async_cb async_cb) {
 
   uv__handle_init(loop, (uv_handle_t*)handle, UV_ASYNC);
   handle->async_cb = async_cb;
+#ifdef HAVE_LIBCAT
+  hat_atomic_int32_init((hat_atomic_int32_t *) &handle->pending, 0);
+#else
   handle->pending = 0;
+#endif
 
   QUEUE_INSERT_TAIL(&loop->async_handles, &handle->queue);
   uv__handle_start(handle);
@@ -61,19 +70,46 @@ int uv_async_init(uv_loop_t* loop, uv_async_t* handle, uv_async_cb async_cb) {
 
 
 int uv_async_send(uv_async_t* handle) {
+#ifdef HAVE_LIBCAT
+  hat_atomic_int32_t *pending;
+#else
+  _Atomic int* pending;
+#endif
+  int expected;
+
+#ifdef HAVE_LIBCAT
+  pending = (hat_atomic_int32_t *) &handle->pending;
+#else
+  pending = (_Atomic int*) &handle->pending;
+#endif
+
   /* Do a cheap read first. */
-  if (ACCESS_ONCE(int, handle->pending) != 0)
+#ifdef HAVE_LIBCAT
+  if (hat_atomic_int32_load(pending) != 0)
+#else
+  if (atomic_load_explicit(pending, memory_order_relaxed) != 0)
+#endif
     return 0;
 
   /* Tell the other thread we're busy with the handle. */
-  if (cmpxchgi(&handle->pending, 0, 1) != 0)
+  expected = 0;
+#ifdef HAVE_LIBCAT
+  if (!hat_atomic_int32_compare_exchange_strong(pending, &expected, 1))
+#else
+  if (!atomic_compare_exchange_strong(pending, &expected, 1))
+#endif
     return 0;
 
   /* Wake up the other thread's event loop. */
   uv__async_send(handle->loop);
 
   /* Tell the other thread we're done. */
-  if (cmpxchgi(&handle->pending, 1, 2) != 1)
+  expected = 1;
+#ifdef HAVE_LIBCAT
+  if (!hat_atomic_int32_compare_exchange_strong(pending, &expected, 2))
+#else
+  if (!atomic_compare_exchange_strong(pending, &expected, 2))
+#endif
     abort();
 
   return 0;
@@ -82,8 +118,19 @@ int uv_async_send(uv_async_t* handle) {
 
 /* Only call this from the event loop thread. */
 static int uv__async_spin(uv_async_t* handle) {
+#ifdef HAVE_LIBCAT
+  hat_atomic_int32_t *pending;
+#else
+  _Atomic int* pending;
+#endif
+  int expected;
   int i;
-  int rc;
+
+#ifdef HAVE_LIBCAT
+  pending = (hat_atomic_int32_t *) &handle->pending;
+#else
+  pending = (_Atomic int*) &handle->pending;
+#endif
 
   for (;;) {
     /* 997 is not completely chosen at random. It's a prime number, acyclical
@@ -94,13 +141,18 @@ static int uv__async_spin(uv_async_t* handle) {
        * rc=1 -- handle is pending, other thread is still working with it.
        * rc=2 -- handle is pending, other thread is done.
        */
-      rc = cmpxchgi(&handle->pending, 2, 0);
+      expected = 2;
+#ifdef HAVE_LIBCAT
+      hat_atomic_int32_compare_exchange_strong(pending, &expected, 0);
+#else
+      atomic_compare_exchange_strong(pending, &expected, 0);
+#endif
 
-      if (rc != 1)
-        return rc;
+      if (expected != 1)
+        return expected;
 
       /* Other thread is busy with this handle, spin until it's done. */
-      cpu_relax();
+      uv__cpu_relax();
     }
 
     /* Yield the CPU. We may have preempted the other thread while it's
@@ -250,4 +302,17 @@ void uv__async_stop(uv_loop_t* loop) {
   uv__io_stop(loop, &loop->async_io_watcher, POLLIN);
   uv__close(loop->async_io_watcher.fd);
   loop->async_io_watcher.fd = -1;
+}
+
+
+static void uv__cpu_relax(void) {
+#if defined(__i386__) || defined(__x86_64__)
+  __asm__ __volatile__ ("rep; nop" ::: "memory");  /* a.k.a. PAUSE */
+#elif (defined(__arm__) && __ARM_ARCH >= 7) || defined(__aarch64__)
+  __asm__ __volatile__ ("yield" ::: "memory");
+#elif (defined(__ppc__) || defined(__ppc64__)) && defined(__APPLE__)
+  __asm volatile ("" : : : "memory");
+#elif !defined(__APPLE__) && (defined(__powerpc64__) || defined(__ppc64__) || defined(__PPC64__))
+  __asm__ __volatile__ ("or 1,1,1; or 2,2,2" ::: "memory");
+#endif
 }

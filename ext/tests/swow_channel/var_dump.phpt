@@ -8,7 +8,7 @@ require __DIR__ . '/../include/skipif.php';
 <?php
 require __DIR__ . '/../include/bootstrap.php';
 
-$channel = new Swow\Channel;
+$channel = new Swow\Channel();
 var_dump($channel);
 
 $channel = new Swow\Channel(8);

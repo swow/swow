@@ -25,6 +25,7 @@ extern "C" {
 #include "swow.h"
 
 #include "cat_watchdog.h"
+#include "cat_atomic.h"
 
 extern SWOW_API zend_class_entry *swow_watchdog_ce;
 
@@ -32,16 +33,17 @@ extern SWOW_API zend_class_entry *swow_watchdog_exception_ce;
 
 typedef struct swow_watchdog_s {
     cat_watchdog_t watchdog;
-    zend_bool vm_interrupted;
-    zend_bool *vm_interrupt_ptr;
+    cat_atomic_bool_t vm_interrupted;
+    zend_atomic_bool *vm_interrupt_ptr;
     cat_timeout_t delay;
-    zval zalerter;
+    zval z_alerter;
     zend_fcall_info_cache alerter;
 } swow_watchdog_t;
 
 /* loader */
 
 zend_result swow_watchdog_module_init(INIT_FUNC_ARGS);
+zend_result swow_watchdog_module_shutdown(INIT_FUNC_ARGS);
 zend_result swow_watchdog_runtime_init(INIT_FUNC_ARGS);
 zend_result swow_watchdog_runtime_shutdown(INIT_FUNC_ARGS);
 
@@ -60,7 +62,7 @@ static zend_always_inline swow_watchdog_t *swow_watchdog_get_current(void)
 
 /* APIs */
 
-SWOW_API cat_bool_t swow_watchdog_run(cat_timeout_t quantum, cat_timeout_t threshold, zval *zalerter);
+SWOW_API cat_bool_t swow_watchdog_run(cat_timeout_t quantum, cat_timeout_t threshold, zval *z_alerter);
 SWOW_API cat_bool_t swow_watchdog_stop(void);
 
 SWOW_API void swow_watchdog_alert_standard(cat_watchdog_t *watchdog);

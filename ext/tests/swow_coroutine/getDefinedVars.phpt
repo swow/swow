@@ -10,7 +10,7 @@ require __DIR__ . '/../include/bootstrap.php';
 
 use Swow\Coroutine;
 
-$remote_coro = Coroutine::run(function () {
+$remote_coro = Coroutine::run(static function (): void {
     $var_a = 1;
     $var_b = 'string';
     Coroutine::yield();
@@ -20,7 +20,7 @@ try {
     var_dump($remote_coro->getDefinedVars());
 } finally {
     $remote_coro->resume();
-    echo 'Done' . PHP_LF;
+    echo "Done\n";
 }
 
 ?>

@@ -14,6 +14,7 @@ declare(strict_types=1);
 namespace Swow\Stream;
 
 use Swow\Pack\Format;
+
 use function json_decode;
 use function json_encode;
 
@@ -35,6 +36,6 @@ class JsonStream extends LengthStream
     /** @param array<mixed> $json */
     public function sendJson(array $json, int $flags = 0, int $depth = 512, ?int $timeout = null): static
     {
-        return $this->sendMessageString(json_encode($json, $flags, $depth), $timeout);
+        return $this->sendMessage(json_encode($json, $flags, $depth), timeout: $timeout);
     }
 }

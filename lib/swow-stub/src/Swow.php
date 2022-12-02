@@ -1,62 +1,49 @@
 <?php
 
-/** @noinspection PhpUnused, PhpInconsistentReturnPointsInspection, PhpMissingParentConstructorInspection, PhpReturnDocTypeMismatchInspection */
+/** @noinspection PhpUnused, PhpInconsistentReturnPointsInspection, PhpMissingParentConstructorInspection, PhpReturnDocTypeMismatchInspection, PhpMixedReturnTypeCanBeReducedInspection */
+
+namespace
+{
+    !defined('AF_INET') && define('AF_INET', 2);
+    !defined('AF_INET6') && define('AF_INET6', 30);
+    !defined('AF_UNSPEC') && define('AF_UNSPEC', 0);
+}
 
 namespace
 {
     class Swow
     {
-        public const MAJOR_VERSION = 0;
-        public const MINOR_VERSION = 1;
-        public const RELEASE_VERSION = 0;
-        public const EXTRA_VERSION = '';
-        public const VERSION = '0.1.0';
-        public const VERSION_ID = 100;
-
-        public static function isBuiltWith(string $lib): bool { }
+        public static function isLibraryLoaded(): bool { }
     }
 }
 
 namespace
 {
+    /**
+     * sleep milliseconds
+     *
+     * @param int $milli_seconds time to sleep, in ms
+     */
     function msleep(int $milli_seconds): int { }
+}
+
+namespace
+{
+    function gethostbyname2(string $hostname, int $address_family = \AF_INET): string { }
 }
 
 namespace Swow
 {
-    class Module
+    class Extension
     {
-        public const TYPE_CORE = 1;
-        public const TYPE_COROUTINE = 2;
-        public const TYPE_CHANNEL = 4;
-        public const TYPE_SYNC = 8;
-        public const TYPE_EVENT = 16;
-        public const TYPE_TIME = 32;
-        public const TYPE_SOCKET = 64;
-        public const TYPE_DNS = 128;
-        public const TYPE_WORK = 256;
-        public const TYPE_BUFFER = 512;
-        public const TYPE_FS = 1024;
-        public const TYPE_SIGNAL = 2048;
-        public const TYPE_PROCESS = 4096;
-        public const TYPE_THREAD = 8192;
-        public const TYPE_OS = 16384;
-        public const TYPE_WATCH_DOG = 131072;
-        public const TYPE_PROTOCOL = 262144;
-        public const TYPE_SSL = 2097152;
-        public const TYPE_EXT = 4194304;
-        public const TYPE_TEST = 8388608;
-        public const TYPE_USR1 = 16777216;
-        public const TYPE_USR2 = 33554432;
-        public const TYPE_USR3 = 67108864;
-        public const TYPE_USR4 = 134217728;
-        public const TYPE_USR5 = 268435456;
-        public const TYPE_USR6 = 536870912;
-        public const TYPE_USR7 = 1073741824;
-        public const TYPE_USR8 = -2147483648;
-        public const TYPES_BUILTIN = 15106047;
-        public const TYPES_USR = -16777216;
-        public const TYPES_ALL = -1671169;
+        public const VERSION = '0.3.2-dev';
+        public const VERSION_ID = 302;
+        public const MAJOR_VERSION = 0;
+        public const MINOR_VERSION = 3;
+        public const RELEASE_VERSION = 2;
+        public const EXTRA_VERSION = 'dev';
+
+        public static function isBuiltWith(string $lib): bool { }
     }
 }
 
@@ -575,6 +562,7 @@ namespace Swow
          * At Windows platform, this constant may have a value `-4025`
          */
         public const ESOCKTNOSUPPORT = -94;
+        public const ENODATA = -61;
         /**
          * This constant holds UV_ESTALE value, it's platform-dependent.
          *
@@ -596,7 +584,7 @@ namespace Swow
         public const ECERT = -9753;
         public const ECHILD = -9752;
 
-        public static function getDescriptionFor(int $error): string { }
+        public static function getDescriptionOf(int $error): string { }
     }
 }
 
@@ -615,13 +603,19 @@ namespace Swow
         public const TYPES_ABNORMAL = 60;
         public const TYPES_UNFILTERABLE = 48;
 
+        /**
+         * get enabled log types
+         *
+         * @return int the log type flag
+         */
         public static function getTypes(): int { }
 
+        /**
+         * set logging types
+         *
+         * @param int $types the log type flag
+         */
         public static function setTypes(int $types): void { }
-
-        public static function getModuleTypes(): int { }
-
-        public static function setModuleTypes(int $moduleTypes): void { }
     }
 }
 
@@ -650,6 +644,15 @@ namespace Swow
 
 namespace Swow
 {
+    /**
+     * Coroutine class is the abstract of [coroutine](https://en.wikipedia.org/wiki/Coroutine).
+     *
+     * A coroutine is a subroutine actively suspend itself, and get resumed when there is no other running coroutines, it's co-operative so it was called co-routine.
+     *
+     * We call suspending self "yield", when yielding form a coroutine, the coroutine suspends its execution, the scheduler will find and execute another coroutine can continue.
+     *
+     * Swow have hooked most of IO operation functions in PHP, an IO coroutine will yield when calling these functions. When the IO operation is done, and current coroutine yield, the scheduler may continue the fore-mentioned IO coroutine. This is how Swow make IO concurrency.
+     */
     class Coroutine
     {
         public const STATE_NONE = 0;
@@ -659,20 +662,48 @@ namespace Swow
 
         public function __construct(callable $callable) { }
 
+        /**
+         * Create a coroutine and run it immediately
+         *
+         * @note context swap happens here
+         *
+         * @param callable $callable the coroutine body
+         * @param mixed ...$data arguments passed to the callable
+         * @return static the new created coroutine
+         */
         public static function run(callable $callable, mixed ...$data): static { }
 
+        /**
+         * Resume coroutine execution
+         *
+         * @note context swap happens here when success
+         */
         public function resume(mixed ...$data): mixed { }
 
+        /**
+         * Yield from current coroutine
+         *
+         * @note context swap happens here when success
+         */
         public static function yield(mixed $data = null): mixed { }
 
+        /** Get unique coroutine id */
         public function getId(): int { }
 
+        /** Get current coroutine */
         public static function getCurrent(): self|static { }
 
+        /** Get main (the most outter) coroutine */
         public static function getMain(): self|static { }
 
+        /** Get previous coroutine */
         public function getPrevious(): self|static { }
 
+        /**
+         * Get coroutine state
+         *
+         * @return int the enum number: static::STATE_* constnts
+         */
         public function getState(): int { }
 
         public function getStateName(): string { }
@@ -690,6 +721,8 @@ namespace Swow
         public function isAvailable(): bool { }
 
         public function isAlive(): bool { }
+
+        public function isExecuting(): bool { }
 
         /**
          * get current executed code file name
@@ -828,7 +861,7 @@ namespace Swow
         /**
          * evaluate code in specified scope
          *
-         * @todo string $string? why not rename it to $code
+         * @TODO string $string? why not rename it to $code
          * @param string $string code to evaluate
          * @see Coroutine::getTrace() for `$level` params usage
          */
@@ -851,7 +884,7 @@ namespace Swow
         /** @return array<string, mixed> debug information for var_dump */
         public function __debugInfo(): array { }
 
-        public static function registerDeadlockHandler(callable $callable): Util\Handler { }
+        public static function registerDeadlockHandler(callable $callable): Utils\Handler { }
     }
 }
 
@@ -871,9 +904,6 @@ namespace Swow
      */
     class Channel
     {
-        public const OPCODE_PUSH = 0;
-        public const OPCODE_POP = 1;
-
         public function __construct(int $capacity = 0) { }
 
         /**
@@ -935,6 +965,67 @@ namespace Swow
 
 namespace Swow
 {
+    /**
+     * channel selector selects any action done
+     * which action can be "pushing/poping `T` into/from (may be different) channel"
+     *
+     * @phan-template T
+     * @phpstan-template T
+     * @psalm-template T
+     */
+    class Selector
+    {
+        public const EVENT_PUSH = 0;
+        public const EVENT_POP = 1;
+
+        /**
+         * add a "pushing a `T` into `$channel`" action into selector
+         *
+         * @phan-param \Swow\Channel<T> $channel
+         * @phpstan-param \Swow\Channel<T> $channel
+         * @psalm-param \Swow\Channel<T> $channel
+         * @phan-param T $data
+         * @phpstan-param T $data
+         * @psalm-param T $data
+         */
+        public function push(\Swow\Channel $channel, mixed $data): static { }
+
+        /**
+         * add a "popping a `T` from `$channel`" action into selector
+         *
+         * @phan-param \Swow\Channel<T> $channel
+         * @phpstan-param \Swow\Channel<T> $channel
+         * @psalm-param \Swow\Channel<T> $channel
+         */
+        public function pop(\Swow\Channel $channel): static { }
+
+        /**
+         * do select
+         *
+         * any actions in selector will make this return
+         *
+         * @note content switching may happen here
+         *
+         * @param int $timeout timeout in microseconds
+         * @phan-return \Swow\Channel<T>
+         * @phpstan-return \Swow\Channel<T>
+         * @psalm-return \Swow\Channel<T>
+         */
+        public function commit(int $timeout = -1): Channel { }
+
+        public function fetch(): mixed { }
+
+        public function getLastEvent(): int { }
+    }
+}
+
+namespace Swow
+{
+    class SelectorException extends \Swow\CallException { }
+}
+
+namespace Swow
+{
     class SyncException extends \Swow\Exception { }
 }
 
@@ -948,13 +1039,13 @@ namespace Swow
          * At Linux mips64 and macOS arm64 platforms, this constant may have a value `16384`
          */
         public const PAGE_SIZE = 4096;
-        public const DEFAULT_SIZE = 8192;
+        public const COMMON_SIZE = 8192;
 
         public static function alignSize(int $size = 0, int $alignment = 0): int { }
 
-        public function __construct(int $size = self::DEFAULT_SIZE) { }
+        public function __construct(int $size) { }
 
-        public function alloc(int $size = self::DEFAULT_SIZE): static { }
+        public function alloc(int $size): void { }
 
         public function getSize(): int { }
 
@@ -962,126 +1053,74 @@ namespace Swow
 
         public function getAvailableSize(): int { }
 
-        public function getReadableLength(): int { }
-
-        public function getWritableSize(): int { }
-
-        public function isReadable(): bool { }
-
-        public function isWritable(): bool { }
-
-        public function isSeekable(): bool { }
-
         public function isAvailable(): bool { }
 
         public function isEmpty(): bool { }
 
         public function isFull(): bool { }
 
-        public function realloc(int $newSize): static { }
+        public function realloc(int $size): void { }
 
         /** @var int $recommendSize [optional] = $this->getSize() * 2 */
-        public function extend(?int $recommendSize = null): static { }
+        public function extend(int $recommendSize = 0): void { }
 
-        public function mallocTrim(): static { }
-
-        public function tell(): int { }
-
-        public function rewind(): static { }
-
-        public function eof(): bool { }
+        public function mallocTrim(): void { }
 
         /**
-         * set the buffer position by `$offset` and `$whence`
+         * read at max `$length` bytes data from start
          *
-         * if `$whence` is
-         *
-         * - SEEK_SET: sets position to `$offset` from the buffer begin
-         * - SEEK_CUR: sets position to `$offset` from the current buffer position, `$offset` can be negative to seek forward
-         * - SEEK_END: sets position to `$offset` from the buffer end, `$offset` should be negative or 0
-         *
-         * @throws BufferException when new buffer position overflow (out of postion 0 to buffer size - 1)
-         * @param int $offset offset by `$whence`
-         * @param int $whence SEEK_SET or SEEK_CUR or SEEK_END
-         */
-        public function seek($offset, $whence = \SEEK_SET): static { }
-
-        /**
-         * read at max `$length` bytes data from current position, set buffer position to next unread byte
-         *
-         * @throws \ValueError when specified `$length` not in range [-1, max]
+         * @throws \ValueError when specified `$start` and `$length` not in range
+         * @phpstan-param int<0, max> $start
+         * @psalm-param int<0, max> $start
+         * @param int $start where to start reading
          * @phpstan-param int<-1, max> $length
          * @psalm-param int<-1, max> $length
          * @param int $length -1 meaning read all available, otherwise max length in byte to read
          */
-        public function read($length = -1): string { }
+        public function read(int $start = 0, int $length = -1): string { }
 
         /**
-         * read at max `$length` bytes data from current position, not change buffer position
+         * write `$string` to buffer
          *
-         * @throws \ValueError when specified `$length` not in range [-1, max]
-         * @phpstan-param int<-1, max> $length
-         * @psalm-param int<-1, max> $length
-         * @see Buffer::read() for param usage
-         */
-        public function peek($length = -1): string { }
-
-        /**
-         * read at max `$length` bytes data from specified position, not change buffer position
+         * `$start` and `$length` is for input `$string`
+         * `$offset` is for output `$buffer`
          *
-         * @throws BufferException when specified `$offset` not in range [0, buffer length - 1]
-         * @throws \ValueError when specified `$length` not in range [-1, max]
-         * @phpstan-param int<0, max>|null $offset
-         * @psalm-param int<0, max>|null $offset
-         * @param int|null $offset starting position in bytes or null for using {@see Buffer::getOffset()} value
-         * @phpstan-param int<-1, max> $length
-         * @psalm-param int<-1, max> $length
-         * @param int $length -1 meaning read all available, otherwise max length in byte to read
-         */
-        public function peekFrom(?int $offset = null, int $length = -1): string { }
-
-        public function getContents(): string { }
-
-        /**
-         * write `$string` to buffer, set buffer position to the end of written string
-         *
-         * `$offset` and `$length` is for input `$string`
-         *
-         * @throws \ValueError when specified `$offset` not in range [0, string length - 1]
-         * @throws \ValueError when specified `$length` not in range [-1, available string length]
+         * @throws \ValueError when specified `$start`, `$offset` or `$length` not in range
          * @param string $string data to write
+         * @phpstan-param int<0, max> $start
+         * @psalm-param int<0, max> $start
+         * @param int $start where to start copying data from string
          * @phpstan-param int<0, max> $offset
          * @psalm-param int<0, max> $offset
-         * @param int $offset starting offset in bytes
+         * @param int $offset where to write data to buffer
          * @phpstan-param int<-1, max> $length
          * @psalm-param int<-1, max> $length
-         * @param int $length max length in bytes
+         * @param int $length meaning write all available data from string to buffer, otherwise max length in byte to write
          */
-        public function write($string, int $offset = 0, int $length = -1): static { }
+        public function write(int $offset, \Stringable|string $string, int $start = 0, int $length = -1): int { }
 
         /**
-         * write `$string` to buffer, not change buffer position
+         * append `$string` to the end of buffer
          *
-         * `$offset` and `$length` is for input `$string`
+         * `$start` and `$length` is for input `$string`
          *
-         * @throws \ValueError when specified `$offset` not in range [0, string length - 1]
-         * @throws \ValueError when specified `$length` not in range [-1, available string length]
+         * @throws \ValueError when specified `$start`, `$offset` or `$length` not in range
          * @param string $string data to write
-         * @phpstan-param int<0, max> $offset
-         * @psalm-param int<0, max> $offset
-         * @param int $offset starting offset in bytes
+         * @phpstan-param int<0, max> $start
+         * @psalm-param int<0, max> $start
+         * @param int $start where to start copying data from string
          * @phpstan-param int<-1, max> $length
          * @psalm-param int<-1, max> $length
-         * @param int $length max length in bytes
+         * @param int $length -1 meaning write all available data from string to buffer, otherwise max length in byte to write
          */
-        public function copy(string $string, int $offset = 0, int $length = -1): static { }
+        public function append(\Stringable|string $string, int $start = 0, int $length = -1): int { }
 
-        public function truncate(int $length = -1): static { }
+        public function truncate(int $length): int { }
 
         /** @var int $offset [optional] = $this->getOffset() */
-        public function truncateFrom(?int $offset = null, int $length = -1): static { }
+        public function truncateFrom(int $offset = 0, int $length = -1): int { }
 
-        public function clear(): static { }
+        public function clear(): void { }
 
         public function fetchString(): string { }
 
@@ -1089,9 +1128,13 @@ namespace Swow
 
         public function toString(): string { }
 
-        public function lock(): void { }
+        public function isLocked(): bool { }
+
+        public function getLocker(): Coroutine { }
 
         public function tryLock(): bool { }
+
+        public function lock(): void { }
 
         public function unlock(): void { }
 
@@ -1154,8 +1197,12 @@ namespace Swow
         public const BIND_FLAG_REUSEADDR = 2;
         public const BIND_FLAG_REUSEPORT = 4;
 
-        public function __construct(int $type = self::TYPE_TCP) { }
+        public function __construct(int $type) { }
 
+        /**
+         * @FIXME may cause error on 32-bit env
+         * @return int 64-bit auto-incrementing ID, never repeat in the same process
+         */
         public function getId(): int { }
 
         public function getType(): int { }
@@ -1166,6 +1213,7 @@ namespace Swow
 
         public function getSimpleTypeName(): string { }
 
+        /** @return int real file descriptor number */
         public function getFd(): int { }
 
         public function getDnsTimeout(): int { }
@@ -1200,18 +1248,20 @@ namespace Swow
 
         /**
          * @var int $timeout [optional] = $this->getAcceptTimeout()
-         * @retrun static Notice: it returns a new un-constructed connection instead of returning itself
+         * @return static Notice: it returns a new un-constructed connection instead of returning itself
          */
         public function accept(?int $timeout = null): static { }
 
         /**
          * @var int $timeout [optional] = $this->getAcceptTimeout()
-         * @retrun $this Notice: it does not return the connection, but returns itself
+         * @return $this Notice: it does not return the connection, but returns itself
          */
         public function acceptTo(self $connection, ?int $timeout = null): static { }
 
         /** @var int $timeout [optional] = $this->getConnectTimeout() */
         public function connect(string $name, int $port = 0, ?int $timeout = null): static { }
+
+        public function enableCrypto(?array $options = null): static { }
 
         public function getSockAddress(): string { }
 
@@ -1237,7 +1287,7 @@ namespace Swow
          * @param int|null $timeout timeout in microseconds or null for using {@see Socket::getReadTimeout()} value
          * @return int bytes received
          */
-        public function read(\Swow\Buffer $buffer, int $length = -1, ?int $timeout = null): int { }
+        public function read(\Swow\Buffer $buffer, int $offset = 0, int $length = -1, ?int $timeout = null): int { }
 
         /**
          * read at max `$size` bytes data into buffer from socket,
@@ -1254,7 +1304,7 @@ namespace Swow
          * @param int|null $timeout timeout in microseconds or null for using {@see Socket::getReadTimeout()} value
          * @return int bytes received
          */
-        public function recv(\Swow\Buffer $buffer, int $size = -1, ?int $timeout = null): int { }
+        public function recv(\Swow\Buffer $buffer, int $offset = 0, int $size = -1, ?int $timeout = null): int { }
 
         /**
          * read at max `$size` bytes data into buffer from socket,
@@ -1271,7 +1321,7 @@ namespace Swow
          * @param int $size -1 meaning not limited, otherwise buffer size in bytes. only `$size` bytes data will be read from socket if there are more data than `$size` bytes, extra data will be kept in socket for further reading options
          * @param int|null $timeout timeout in microseconds or null for using {@see Socket::getReadTimeout()} value
          */
-        public function recvData(\Swow\Buffer $buffer, int $size = -1, ?int $timeout = null): int { }
+        public function recvData(\Swow\Buffer $buffer, int $offset = 0, int $size = -1, ?int $timeout = null): int { }
 
         /**
          * read at max `$size` bytes data into buffer from socket,
@@ -1286,14 +1336,14 @@ namespace Swow
          * @phan-param int<-1, max> $size
          * @psalm-param int<-1, max> $size
          * @param int $size -1 meaning not limited, otherwise buffer size in bytes. only `$size` bytes data will be read from socket if there are more data than `$size` bytes, extra data will be kept in socket for further reading options
-         * @param string &$address peer address in string
-         * @phpstan-param int<0,65535>|null &$address
-         * @psalm-param int<0,65535>|null &$address
-         * @param int &$port peer address
+         * @param-out string &$address peer address in string
+         * @phpstan-param int<0,65535>|null &$port
+         * @psalm-param int<0,65535>|null &$port
+         * @param-out int &$port peer address
          * @param int|null $timeout timeout in microseconds or null for using {@see Socket::getReadTimeout()} value
          * @return int bytes received
          */
-        public function recvFrom(\Swow\Buffer $buffer, int $size = -1, &$address = null, &$port = null, ?int $timeout = null): int { }
+        public function recvFrom(\Swow\Buffer $buffer, int $offset = 0, int $size = -1, &$address = null, &$port = null, ?int $timeout = null): int { }
 
         /**
          * read at max `$size` bytes data into buffer from socket,
@@ -1309,14 +1359,14 @@ namespace Swow
          * @phan-param int<-1, max> $size
          * @psalm-param int<-1, max> $size
          * @param int $size -1 meaning not limited, otherwise buffer size in bytes. only `$size` bytes data will be read from socket if there are more data than `$size` bytes, extra data will be kept in socket for further reading options
-         * @param string &$address peer address in string
-         * @phpstan-param int<0,65535>|null &$address
-         * @psalm-param int<0,65535>|null &$address
-         * @param int &$port peer address
+         * @param-out string &$address peer address in string
+         * @phpstan-param int<0,65535>|null &$port
+         * @psalm-param int<0,65535>|null &$port
+         * @param-out int &$port peer address
          * @param int|null $timeout timeout in microseconds or null for using {@see Socket::getReadTimeout()} value
          * @return int bytes received
          */
-        public function recvDataFrom(\Swow\Buffer $buffer, int $size = -1, &$address = null, &$port = null, ?int $timeout = null): int { }
+        public function recvDataFrom(\Swow\Buffer $buffer, int $offset = 0, int $size = -1, &$address = null, &$port = null, ?int $timeout = null): int { }
 
         /**
          * read at max `$size` bytes data into buffer from socket without removing the read data from socket,
@@ -1330,7 +1380,7 @@ namespace Swow
          * @param int $size -1 meaning not limited, otherwise buffer size in bytes.
          * @return int bytes received
          */
-        public function peek(\Swow\Buffer $buffer, int $size = -1): int { }
+        public function peek(\Swow\Buffer $buffer, int $offset = 0, int $size = -1, ?int $timeout = 0): int { }
 
         /**
          * read at max `$size` bytes data into buffer from socket without removing the read data from socket,
@@ -1343,13 +1393,13 @@ namespace Swow
          * @phan-param int<-1, max> $size
          * @psalm-param int<-1, max> $size
          * @param int $size -1 meaning not limited, otherwise buffer size in bytes.
-         * @param string &$address peer address in string
-         * @phpstan-param int<0,65535>|null &$address
-         * @psalm-param int<0,65535>|null &$address
-         * @param int &$port peer address
+         * @param-out string &$address peer address in string
+         * @phpstan-param int<0,65535>|null &$port
+         * @psalm-param int<0,65535>|null &$port
+         * @param-out int &$port peer address
          * @return int bytes received
          */
-        public function peekFrom(\Swow\Buffer $buffer, int $size = -1, &$address = null, &$port = null): int { }
+        public function peekFrom(\Swow\Buffer $buffer, int $offset = 0, int $size = -1, &$address = null, &$port = null, ?int $timeout = 0): int { }
 
         /**
          * read `$length` bytes data from socket as string,
@@ -1366,7 +1416,7 @@ namespace Swow
          * @param int|null $timeout timeout in microseconds or null for using {@see Socket::getReadTimeout()} value
          * @return string data received in string
          */
-        public function readString(int $length = \Swow\Buffer::DEFAULT_SIZE, ?int $timeout = null): string { }
+        public function readString(int $length = \Swow\Buffer::COMMON_SIZE, ?int $timeout = null): string { }
 
         /**
          * read at max `$size` bytes data from socket as string,
@@ -1382,7 +1432,7 @@ namespace Swow
          * @param int|null $timeout timeout in microseconds or null for using {@see Socket::getReadTimeout()} value
          * @return string data received in string
          */
-        public function recvString(int $size = \Swow\Buffer::DEFAULT_SIZE, ?int $timeout = null): string { }
+        public function recvString(int $size = \Swow\Buffer::COMMON_SIZE, ?int $timeout = null): string { }
 
         /**
          * read at max `$size` bytes data from socket as string,
@@ -1399,7 +1449,7 @@ namespace Swow
          * @param int|null $timeout timeout in microseconds or null for using {@see Socket::getReadTimeout()} value
          * @return string data received in string
          */
-        public function recvStringData(int $size = \Swow\Buffer::DEFAULT_SIZE, ?int $timeout = null): string { }
+        public function recvStringData(int $size = \Swow\Buffer::COMMON_SIZE, ?int $timeout = null): string { }
 
         /**
          * read at max `$size` bytes data from socket as string,
@@ -1413,14 +1463,14 @@ namespace Swow
          * @phan-param int<-1, max> $size
          * @psalm-param int<-1, max> $size
          * @param int $size -1 meaning not limited, otherwise buffer size in bytes. only `$size` bytes data will be read from socket if there are more data than `$size` bytes, extra data will be kept in socket for further reading options
-         * @param string &$address peer address in string
-         * @phpstan-param int<0,65535>|null &$address
-         * @psalm-param int<0,65535>|null &$address
-         * @param int &$port peer address
+         * @param-out string &$address peer address in string
+         * @phpstan-param int<0,65535>|null &$port
+         * @psalm-param int<0,65535>|null &$port
+         * @param-out int &$port peer address
          * @param int|null $timeout timeout in microseconds or null for using {@see Socket::getReadTimeout()} value
          * @return string data received in string
          */
-        public function recvStringFrom(int $size = \Swow\Buffer::DEFAULT_SIZE, &$address = null, &$port = null, ?int $timeout = null): string { }
+        public function recvStringFrom(int $size = \Swow\Buffer::COMMON_SIZE, &$address = null, &$port = null, ?int $timeout = null): string { }
 
         /**
          * read at max `$size` bytes data from socket as string,
@@ -1435,14 +1485,14 @@ namespace Swow
          * @phan-param int<-1, max> $size
          * @psalm-param int<-1, max> $size
          * @param int $size -1 meaning not limited, otherwise buffer size in bytes. only `$size` bytes data will be read from socket if there are more data than `$size` bytes, extra data will be kept in socket for further reading options
-         * @param string &$address peer address in string
-         * @phpstan-param int<0,65535>|null &$address
-         * @psalm-param int<0,65535>|null &$address
-         * @param int &$port peer address
+         * @param-out string &$address peer address in string
+         * @phpstan-param int<0,65535>|null &$port
+         * @psalm-param int<0,65535>|null &$port
+         * @param-out int &$port peer address
          * @param int|null $timeout timeout in microseconds or null for using {@see Socket::getReadTimeout()} value
          * @return string data received in string
          */
-        public function recvStringDataFrom(int $size = \Swow\Buffer::DEFAULT_SIZE, &$address = null, &$port = null, ?int $timeout = null): string { }
+        public function recvStringDataFrom(int $size = \Swow\Buffer::COMMON_SIZE, &$address = null, &$port = null, ?int $timeout = null): string { }
 
         /**
          * read at max `$size` bytes data from socket as string without removing the read data from socket,
@@ -1455,7 +1505,7 @@ namespace Swow
          * @param int $size -1 meaning not limited, otherwise buffer size in bytes.
          * @return string data received in string
          */
-        public function peekString(int $size = \Swow\Buffer::DEFAULT_SIZE): string { }
+        public function peekString(int $size = \Swow\Buffer::COMMON_SIZE, ?int $timeout = 0): string { }
 
         /**
          * read at max `$size` bytes data from socket as string without removing the read data from socket,
@@ -1467,13 +1517,13 @@ namespace Swow
          * @phan-param int<-1, max> $size
          * @psalm-param int<-1, max> $size
          * @param int $size -1 meaning not limited, otherwise buffer size in bytes.
-         * @param string &$address peer address in string
-         * @phpstan-param int<0,65535>|null &$address
-         * @psalm-param int<0,65535>|null &$address
-         * @param int &$port peer address
+         * @param-out string &$address peer address in string
+         * @phpstan-param int<0,65535>|null &$port
+         * @psalm-param int<0,65535>|null &$port
+         * @param-out int &$port peer address
          * @return string data received in string
          */
-        public function peekStringFrom(int $size = \Swow\Buffer::DEFAULT_SIZE, &$address = null, &$port = null): string { }
+        public function peekStringFrom(int $size = \Swow\Buffer::COMMON_SIZE, &$address = null, &$port = null, ?int $timeout = 0): string { }
 
         /**
          * write io vector to socket
@@ -1488,10 +1538,10 @@ namespace Swow
          * ```php
          * $s = new Socket(Socket::TYPE_STDOUT);
          * $s->write([
-         * (new Buffer())->write('1234567890')->seek(6),
+         * (new Buffer(0))->write('1234567890')->seek(6),
          * 'abc',
          * ['1234567890', 1, 2],
-         * [(new Buffer())->write('1234567890')->seek(4), 2],
+         * [(new Buffer(0))->write('1234567890')->seek(4), 2],
          * ]);
          * ```
          * string `"7890abc2356"` will be written to the socket.
@@ -1500,9 +1550,9 @@ namespace Swow
          *
          * @throws SocketException when timed out
          * @throws SocketException when write failed
-         * @phan-param non-empty-array<string|\Stringable|Buffer|array{0: string|\Stringable, 1: int, 2?: int}|array{0: Buffer, 1: int}|null> $vector
-         * @phpstan-param non-empty-array<string|\Stringable|Buffer|array{0: string|\Stringable, 1: int, 2?: int}|array{0: Buffer, 1: int}|null> $vector
-         * @psalm-param non-empty-array<string|\Stringable|Buffer|array{0: string|\Stringable, 1: int, 2?: int}|array{0: Buffer, 1: int}|null> $vector
+         * @phan-param non-empty-array<string|\Stringable|Buffer|array{0: string|\Stringable|Buffer, 1?: int, 2?: int}|null> $vector
+         * @phpstan-param non-empty-array<string|\Stringable|Buffer|array{0: string|\Stringable|Buffer, 1?: int, 2?: int}|null> $vector
+         * @psalm-param non-empty-array<string|\Stringable|Buffer|array{0: string|\Stringable|Buffer, 1?: int, 2?: int}|null> $vector
          * @param array<string|\Stringable|Buffer|array|null> $vector
          * @param int|null $timeout timeout in microseconds or null for using {@see Socket::getWriteTimeout()} value
          */
@@ -1517,9 +1567,9 @@ namespace Swow
          *
          * @throws SocketException when timed out
          * @throws SocketException when write failed
-         * @phan-param non-empty-array<string|\Stringable|Buffer|array{0: string|\Stringable, 1: int, 2?: int}|array{0: Buffer, 1: int}|null> $vector
-         * @phpstan-param non-empty-array<string|\Stringable|Buffer|array{0: string|\Stringable, 1: int, 2?: int}|array{0: Buffer, 1: int}|null> $vector
-         * @psalm-param non-empty-array<string|\Stringable|Buffer|array{0: string|\Stringable, 1: int, 2?: int}|array{0: Buffer, 1: int}|null> $vector
+         * @phan-param non-empty-array<string|\Stringable|Buffer|array{0: string|\Stringable|Buffer, 1?: int, 2?: int}|null> $vector
+         * @phpstan-param non-empty-array<string|\Stringable|Buffer|array{0: string|\Stringable|Buffer, 1?: int, 2?: int}|null> $vector
+         * @psalm-param non-empty-array<string|\Stringable|Buffer|array{0: string|\Stringable|Buffer, 1?: int, 2?: int}|null> $vector
          * @param array<string|\Stringable|Buffer|array|null> $vector
          * @param string|null $address address to send to, may be ip or domain or path (for UNIX/UDG type)
          * @phpstan-param int<0, 65535>|null $port
@@ -1539,7 +1589,7 @@ namespace Swow
          * @param int $length length of data to be sent, -1 meaning remaining data in buffer, otherwise length in bytes.
          * @param int|null $timeout timeout in microseconds or null for using {@see Socket::getWriteTimeout()} value
          */
-        public function send(\Swow\Buffer $buffer, int $length = -1, ?int $timeout = null): static { }
+        public function send(\Stringable|string $data, int $start = 0, int $length = -1, ?int $timeout = null): static { }
 
         /**
          * write buffer to specified address (and port if protocol needs port) from buffer current position with `$length` bytes
@@ -1555,51 +1605,23 @@ namespace Swow
          * @psalm-param int<0, 65535>|null $port
          * @param int|null $port port to send to
          */
-        public function sendTo(\Swow\Buffer $buffer, int $length = -1, ?string $address = null, ?int $port = null, ?int $timeout = null): static { }
-
-        /**
-         * write `$length` bytes of string into socket from `$offset` byte
-         *
-         * @throws SocketException when timed out
-         * @throws SocketException when write failed
-         * @param int|null $timeout timeout in microseconds or null for using {@see Socket::getWriteTimeout()} value
-         * @phpstan-param int<0, max> $offset
-         * @psalm-param int<0, max> $offset
-         * @param int $offset indexed string starts from 0: `sendString('1234567890', offset: 2, length: 2)` will write `'34'` into socket
-         * @phpstan-param int<-1, max> $length
-         * @psalm-param int<-1, max> $length
-         * @param int $length length of data to be sent, -1 meaning remaining data, otherwise length in bytes.
-         */
-        public function sendString(string $string, ?int $timeout = null, int $offset = 0, int $length = -1): static { }
-
-        /**
-         * write `$length` bytes string to specified address (and port if protocol needs port) from `$offset` byte
-         *
-         * @throws SocketException when timed out
-         * @throws SocketException when write failed
-         * @param string|null $address address to send to, may be ip or domain or path (for UNIX/UDG type)
-         * @phpstan-param int<0, 65535>|null $port
-         * @psalm-param int<0, 65535>|null $port
-         * @param int|null $port port to send to
-         * @param int|null $timeout timeout in microseconds or null for using {@see Socket::getWriteTimeout()} value
-         * @phpstan-param int<0, max> $offset
-         * @psalm-param int<0, max> $offset
-         * @param int $offset indexed string starts from 0: `sendStringTo('1234567890', offset: 2, length: 2, ...)` will write `'34'` into socket
-         * @phpstan-param int<-1, max> $length
-         * @psalm-param int<-1, max> $length
-         * @param int $length length of data to be sent, -1 meaning remaining data, otherwise length in bytes.
-         */
-        public function sendStringTo(string $string, ?string $address = null, ?int $port = null, ?int $timeout = null, int $offset = 0, int $length = -1): static { }
+        public function sendTo(\Stringable|string $data, int $start = 0, int $length = -1, ?string $address = null, ?int $port = null, ?int $timeout = null): static { }
 
         /** @var int $timeout [optional] = $this->getWriteTimeout() */
         public function sendHandle(self $handle, ?int $timeout = null): static { }
 
         public function close(): bool { }
 
+        /** @return bool Whether the socket has been constructed and has not been closed */
         public function isAvailable(): bool { }
 
+        /** @return bool Whether the socket has been opened with exact type and file descriptor is valid */
         public function isOpen(): bool { }
 
+        /**
+         * @return bool Whether the socket has connected (including SSL handshake if it's on SSL)
+         * @note this method may return true even if the connection is broken, use {@see Socket::checkLiveness()} to check if the connection is broken
+         */
         public function isEstablished(): bool { }
 
         public function isServer(): bool { }
@@ -1608,8 +1630,13 @@ namespace Swow
 
         public function isClient(): bool { }
 
+        /**
+         * @return int return Errno constants if the socket is broken, zero otherwise,
+         * it's a silent version of {@see Socket::checkLiveness()}
+         */
         public function getConnectionError(): int { }
 
+        /** @throws SocketException when the socket connection is broken */
         public function checkLiveness(): static { }
 
         public function getIoState(): int { }
@@ -1961,8 +1988,17 @@ namespace Swow
 
 namespace Swow
 {
-    class WatchDog
+    class Watchdog
     {
+        /**
+         * @param int $quantum If the blocking time exceeds the quantum, alerter will be triggered.
+         * @param int $threshold If the blocking time exceeds the threshold (means the alerter does not alleviate the CPU starvation), it is considered that the system call blocking occurred.
+         * @param callable|int|float|null $alerter
+         * When it is callable, it will be called when blocking occurred, the developer can choose to suspend the coroutine or kill the coroutine;
+         * when it is numeric, Coroutine will be delayed to run with sleep() in millisecond to alleviate CPU starvation;
+         * when it is null, Coroutine will be delayed to run at the next round of the event loop starts to alleviate CPU starvation.
+         * @return void
+         */
         public static function run(int $quantum = 0, int $threshold = 0, callable|int|float|null $alerter = null): void { }
 
         public static function stop(): void { }
@@ -1973,26 +2009,61 @@ namespace Swow
 
 namespace Swow
 {
-    class WatchDogException extends \Swow\Exception { }
+    class WatchdogException extends \Swow\Exception { }
 }
 
 namespace Swow
 {
-    class WebSocket
+    class IpAddress
     {
-        public const VERSION = 13;
-        public const SECRET_KEY_LENGTH = 16;
-        public const SECRET_KEY_ENCODED_LENGTH = 24;
-        public const GUID = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11';
-        public const HEADER_LENGTH = 2;
-        public const EXT16_LENGTH = 126;
-        public const EXT64_LENGTH = 127;
-        public const EXT8_MAX_LENGTH = 125;
-        public const EXT16_MAX_LENGTH = 65535;
-        public const MASK_KEY_LENGTH = 4;
-        public const EMPTY_MASK_KEY = '';
-        public const HEADER_BUFFER_SIZE = 128;
+        public const IPV4 = 8;
+        public const HAS_PORT = 1;
+        public const HAS_MASK = 2;
+        public const IPV4_EMBED = 4;
+
+        public function __construct(string $address = '') { }
+
+        public function getFlags(): int { }
+
+        public function getFull(): string { }
+
+        public function getIp(): string { }
+
+        public function getPort(): int { }
+
+        public function getMaskLen(): int { }
+
+        public function setFlags(int $setFlags): static { }
+
+        public function setFull(string $address): static { }
+
+        public function setIp(string $address): static { }
+
+        public function setPort(int $port): static { }
+
+        public function setMaskLen(int $maskLen): static { }
+
+        public function isMappedIpv4(): bool { }
+
+        public function isIpv4OrMappedIpv4(): bool { }
+
+        public function isLocal(): bool { }
+
+        public function isLoopback(): bool { }
+
+        public function in(self $range): bool { }
+
+        public function covers(self $addr): bool { }
+
+        public function convertToMappedIpv4(): static { }
+
+        public function convertToIpv4(bool $force = false): static { }
     }
+}
+
+namespace Swow
+{
+    class IpAddressException extends \Swow\Exception { }
 }
 
 namespace Swow
@@ -2000,9 +2071,9 @@ namespace Swow
     function defer(callable $tasks): void { }
 }
 
-namespace Swow\Util
+namespace Swow\Utils
 {
-    class Handler
+    final class Handler
     {
         protected function __construct() { }
 
@@ -2010,69 +2081,11 @@ namespace Swow\Util
     }
 }
 
-namespace Swow\Channel
-{
-    /**
-     * channel selector selects any action done
-     * which action can be "pushing/poping `T` into/from (may be different) channel"
-     *
-     * @phan-template T
-     * @phpstan-template T
-     * @psalm-template T
-     */
-    class Selector
-    {
-        /**
-         * add a "pushing a `T` into `$channel`" action into selector
-         *
-         * @phan-param \Swow\Channel<T> $channel
-         * @phpstan-param \Swow\Channel<T> $channel
-         * @psalm-param \Swow\Channel<T> $channel
-         * @phan-param T $data
-         * @phpstan-param T $data
-         * @psalm-param T $data
-         */
-        public function push(\Swow\Channel $channel, mixed $data): static { }
-
-        /**
-         * add a "popping a `T` from `$channel`" action into selector
-         *
-         * @phan-param \Swow\Channel<T> $channel
-         * @phpstan-param \Swow\Channel<T> $channel
-         * @psalm-param \Swow\Channel<T> $channel
-         */
-        public function pop(\Swow\Channel $channel): static { }
-
-        /**
-         * do select
-         *
-         * any actions in selector will make this return
-         *
-         * @note content switching may happen here
-         *
-         * @param int $timeout timeout in microseconds
-         * @phan-return \Swow\Channel<T>
-         * @phpstan-return \Swow\Channel<T>
-         * @psalm-return \Swow\Channel<T>
-         */
-        public function commit(int $timeout = -1): \Swow\Channel { }
-
-        public function fetch(): mixed { }
-
-        public function getLastOpcode(): int { }
-    }
-}
-
-namespace Swow\Channel
-{
-    class SelectorException extends \Swow\CallException { }
-}
-
 namespace Swow\Sync
 {
     class WaitReference
     {
-        public static function wait(self &$waitReference, int $timeout = -1): void { }
+        public static function wait(self &$ref, int $timeout = -1): void { }
 
         public function __destruct() { }
     }
@@ -2093,6 +2106,18 @@ namespace Swow\Sync
 namespace Swow\Sync
 {
     function waitAll(int $timeout = -1): void { }
+}
+
+namespace Swow\Http
+{
+    class Http
+    {
+        public const DEFAULT_PROTOCOL_VERSION = '1.1';
+
+        public static function packRequest(string $method, \Stringable|string $uri, array $headers = [], \Stringable|string $body = '', string $protocolVersion = self::DEFAULT_PROTOCOL_VERSION): string { }
+
+        public static function packResponse(int $statusCode, string $reasonPhrase = '', array $headers = [], \Stringable|string $body = '', string $protocolVersion = self::DEFAULT_PROTOCOL_VERSION): string { }
+    }
 }
 
 namespace Swow\Http
@@ -2160,7 +2185,7 @@ namespace Swow\Http
         public const NOT_EXTENDED = 510;
         public const NETWORK_AUTHENTICATION_REQUIRED = 511;
 
-        public static function getReasonPhraseFor(int $statusCode): string { }
+        public static function getReasonPhraseOf(int $statusCode): string { }
     }
 }
 
@@ -2206,12 +2231,16 @@ namespace Swow\Http
 
         public function setEvents(int $events): static { }
 
-        /** @param mixed $data */
-        public function execute(\Swow\Buffer $buffer, &$data = null): int { }
+        /** @return int the length of the data which was parsed, same with $this->getParsedLength() */
+        public function execute(\Stringable|string $data, int $start = 0, int $length = -1): int { }
 
         public function getEvent(): int { }
 
         public function getEventName(): string { }
+
+        public function getPreviousEvent(): int { }
+
+        public function getPreviousEventName(): string { }
 
         public function getDataOffset(): int { }
 
@@ -2248,6 +2277,8 @@ namespace Swow\Http
         public function finish(): static { }
 
         public function reset(): static { }
+
+        public static function getEventNameFor(int $event): string { }
     }
 }
 
@@ -2256,34 +2287,29 @@ namespace Swow\Http
     class ParserException extends \Swow\Exception { }
 }
 
-namespace Swow\Http
+namespace Swow\WebSocket
 {
-    /**
-     * pack up message into string without method line or status code line
-     *
-     * @param array<string, string|array<string>> $headers values indexed by fields
-     */
-    function packMessage(array $headers = [], string $body = ''): string { }
-}
+    class WebSocket
+    {
+        public const VERSION = 13;
+        public const SECRET_KEY_LENGTH = 16;
+        public const SECRET_KEY_ENCODED_LENGTH = 24;
+        public const GUID = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11';
+        public const HEADER_MIN_SIZE = 2;
+        public const HEADER_MAX_SIZE = 14;
+        public const EXT16_PAYLOAD_LENGTH = 126;
+        public const EXT64_PAYLOAD_LENGTH = 127;
+        public const EXT8_MAX_LENGTH = 125;
+        public const EXT16_MAX_LENGTH = 65535;
+        public const MASKING_KEY_LENGTH = 4;
+        public const EMPTY_MASKING_KEY = '';
+        public const PING_FRAME = "\x89\x00";
+        public const PONG_FRAME = "\x8a\x80\x00\x00\x00\x00";
 
-namespace Swow\Http
-{
-    /**
-     * pack up request into string
-     *
-     * @param array<string, string|array<string>> $headers values indexed by fields
-     */
-    function packRequest(string $method = '', string $url = '', array $headers = [], string $body = '', string $protocolVersion = ''): string { }
-}
+        public static function mask(\Stringable|string $data, int $start = 0, int $length = -1, string $maskingKey = '', int $index = 0): string { }
 
-namespace Swow\Http
-{
-    /**
-     * pack up response into string
-     *
-     * @param array<string, string|array<string>> $headers values indexed by fields
-     */
-    function packResponse(int $statusCode = 0, array $headers = [], string $body = '', string $reasonPhrase = '', string $protocolVersion = ''): string { }
+        public static function unmask(\Swow\Buffer $data, int $start = 0, int $length = -1, string $maskingKey = '', int $index = 0): void { }
+    }
 }
 
 namespace Swow\WebSocket
@@ -2297,7 +2323,7 @@ namespace Swow\WebSocket
         public const PING = 9;
         public const PONG = 10;
 
-        public static function getNameFor(int $opcode): int { }
+        public static function getNameOf(int $opcode): int { }
     }
 }
 
@@ -2321,20 +2347,17 @@ namespace Swow\WebSocket
         public const BAD_GATEWAY = 1014;
         public const TLS_HANDSHAKE = 1015;
 
-        public static function getDescriptionFor(int $code): int { }
+        public static function getDescriptionOf(int $code): int { }
     }
 }
 
 namespace Swow\WebSocket
 {
-    class Frame implements \Stringable
+    class Header extends \Swow\Buffer
     {
-        public const PING = '8900';
-        public const PONG = '8a00';
+        public function __construct(bool $fin = true, bool $rsv1 = false, bool $rsv2 = false, bool $rsv3 = false, int $opcode = \Swow\WebSocket\Opcode::TEXT, int $payloadLength = 0, string $maskingKey = '') { }
 
-        public function unpackHeader(\Swow\Buffer $buffer): int { }
-
-        public function resetHeader(): static { }
+        public function getHeaderSize(): int { }
 
         public function getOpcode(): int { }
 
@@ -2342,21 +2365,19 @@ namespace Swow\WebSocket
 
         public function getFin(): bool { }
 
-        public function setFin(int $fin): static { }
+        public function setFin(bool $fin): static { }
 
         public function getRSV1(): bool { }
 
-        public function setRSV1(int $rsv1): static { }
+        public function setRSV1(bool $rsv1): static { }
 
         public function getRSV2(): bool { }
 
-        public function setRSV2(int $rsv2): static { }
+        public function setRSV2(bool $rsv2): static { }
 
         public function getRSV3(): bool { }
 
-        public function setRSV3(int $rsv3): static { }
-
-        public function getHeaderLength(): int { }
+        public function setRSV3(bool $rsv3): static { }
 
         public function getPayloadLength(): int { }
 
@@ -2364,25 +2385,11 @@ namespace Swow\WebSocket
 
         public function getMask(): bool { }
 
-        public function setMask(bool $mask): static { }
+        public function getMaskingKey(): string { }
 
-        public function getMaskKey(): string { }
+        public function setMaskingKey(string $maskingKey): static { }
 
-        public function setMaskKey(string $maskKey): static { }
-
-        public function hasPayloadData(): bool { }
-
-        public function getPayloadData(): \Swow\Buffer { }
-
-        public function getPayloadDataAsString(): string { }
-
-        public function setPayloadData(?\Swow\Buffer $buffer): static { }
-
-        public function unmaskPayloadData(): static { }
-
-        public function toString(bool $headerOnly = false): string { }
-
-        public function __toString(): string { }
+        public function setPayloadInfo(int $payloadLength, string $maskingKey = ''): static { }
 
         /** @return array<string, mixed> debug information for var_dump */
         public function __debugInfo(): array { }
@@ -2402,5 +2409,5 @@ namespace Swow\Debug
 
 namespace Swow\Debug
 {
-    function registerExtendedStatementHandler(callable $handler): \Swow\Util\Handler { }
+    function registerExtendedStatementHandler(callable $handler): \Swow\Utils\Handler { }
 }
