@@ -879,6 +879,7 @@ namespace Swow
 
         public static function get(int $id): ?static { }
 
+        /** @return array<int, Coroutine> */
         public static function getAll(): array { }
 
         /** @return array<string, mixed> debug information for var_dump */
