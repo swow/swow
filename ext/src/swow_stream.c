@@ -1850,6 +1850,86 @@ PHP_FUNCTION(swow_stream_select)
 }
 /* }}} */
 
+/* {{{ stream_poll_one related functions */
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_swow_stream_poll_one, 0, 2, IS_LONG, 0)
+    ZEND_ARG_INFO(0, stream)
+    ZEND_ARG_TYPE_INFO(0, events, IS_LONG, 0)
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, timeout, IS_LONG, 0, "-1")
+ZEND_END_ARG_INFO()
+
+PHP_FUNCTION(swow_stream_poll_one)
+{
+    zval *z_stream;
+    php_stream *stream;
+    zend_long events;
+    zend_long timeout = -1;
+
+    ZEND_PARSE_PARAMETERS_START(2, 3)
+        Z_PARAM_RESOURCE(z_stream)
+        Z_PARAM_LONG(events)
+        Z_PARAM_OPTIONAL
+        Z_PARAM_LONG(timeout)
+    ZEND_PARSE_PARAMETERS_END();
+
+    php_stream_from_zval(stream, z_stream);
+
+    if (timeout < -1) {
+        zend_argument_value_error(3, "must be greater than or equal to -1");
+        RETURN_THROWS();
+    }
+    if (events &~ (POLLIN | POLLOUT | POLLERR | POLLHUP | POLLNVAL)) {
+        zend_argument_value_error(2, "must be a valid combination of POLLIN, POLLOUT, POLLERR, POLLHUP, POLLNVAL");
+        RETURN_THROWS();
+    }
+
+    php_stream_from_zval_no_verify(stream, z_stream);
+    if (stream == NULL) {
+        RETURN_THROWS();
+    }
+
+    if ((events & POLLIN) && (stream->writepos - stream->readpos) > 0) {
+        /* allow readable non-descriptor based streams to participate in stream_poll_one.
+         * Non-descriptor streams will only "work" if they have previously buffered the
+         * data.  Not ideal, but better than nothing.
+         * This branch of code also allows blocking streams with buffered data to
+         * operate correctly in stream_poll_one.
+         * */
+        RETURN_LONG(POLLIN);
+    }
+
+    /* Temporary int fd is needed for the STREAM data type on windows, passing this_fd directly to php_stream_cast()
+        would eventually bring a wrong result on x64. php_stream_cast() casts to int internally, and this will leave
+        the higher bits of a SOCKET variable uninitialized on systems with little endian. */
+    php_socket_t this_fd;
+
+    /* get the fd.
+     * NB: Most other code will NOT use the PHP_STREAM_CAST_INTERNAL flag
+     * when casting.  It is only used here so that the buffered data warning
+     * is not displayed.
+     * */
+    if (
+        SUCCESS != php_stream_cast(
+            stream, PHP_STREAM_AS_FD_FOR_SELECT | PHP_STREAM_CAST_INTERNAL, (void *) &this_fd, 1) ||
+        this_fd == -1
+    ) {
+        zend_argument_value_error(1, "must be a valid stream resource");
+        RETURN_THROWS();
+    }
+
+    cat_pollfd_events_t revents;
+    cat_ret_t ret = cat_poll_one(this_fd, events, &revents, timeout);
+    if (ret == CAT_RET_ERROR) {
+        swow_throw_exception_with_last(swow_exception_ce);
+        RETURN_THROWS();
+    }
+    if (ret == CAT_RET_NONE) {
+        // means timeout
+        RETURN_LONG(POLLNONE);
+    }
+    RETURN_LONG(revents);
+}
+/* }}} */
+
 static zif_handler PHP_FN(original_socket_export_stream) = (zif_handler) -1;
 
 /* hook for socket_export_stream */
@@ -1913,6 +1993,7 @@ static PHP_FUNCTION(swow_socket_export_stream)
 static const zend_function_entry swow_stream_functions[] = {
     PHP_FENTRY(stream_socket_sendto, PHP_FN(swow_stream_socket_sendto), arginfo_swow_stream_socket_sendto, 0)
     PHP_FENTRY(stream_select, PHP_FN(swow_stream_select), arginfo_swow_stream_select, 0)
+    PHP_FENTRY(stream_poll_one, PHP_FN(swow_stream_poll_one), arginfo_swow_stream_poll_one, 0)
     PHP_FE_END
 };
 
@@ -1929,6 +2010,14 @@ zend_result swow_stream_module_init(INIT_FUNC_ARGS)
 #endif
 
     CAT_GLOBALS_REGISTER(swow_stream);
+
+    REGISTER_LONG_CONSTANT("STREAM_POLLNONE", POLLNONE, CONST_PERSISTENT);
+    REGISTER_LONG_CONSTANT("STREAM_POLLIN", POLLIN, CONST_PERSISTENT);
+    REGISTER_LONG_CONSTANT("STREAM_POLLPRI", POLLPRI, CONST_PERSISTENT);
+    REGISTER_LONG_CONSTANT("STREAM_POLLOUT", POLLOUT, CONST_PERSISTENT);
+    REGISTER_LONG_CONSTANT("STREAM_POLLERR", POLLERR, CONST_PERSISTENT);
+    REGISTER_LONG_CONSTANT("STREAM_POLLHUP", POLLHUP, CONST_PERSISTENT);
+    REGISTER_LONG_CONSTANT("STREAM_POLLNVAL", POLLNVAL, CONST_PERSISTENT);
 
     if (!swow_hook_internal_functions(swow_stream_functions)) {
         return FAILURE;

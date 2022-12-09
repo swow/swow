@@ -7,6 +7,13 @@ namespace
     !defined('AF_INET') && define('AF_INET', 2);
     !defined('AF_INET6') && define('AF_INET6', 30);
     !defined('AF_UNSPEC') && define('AF_UNSPEC', 0);
+    const STREAM_POLLNONE = 0;
+    const STREAM_POLLIN = 1;
+    const STREAM_POLLPRI = 2;
+    const STREAM_POLLOUT = 4;
+    const STREAM_POLLERR = 8;
+    const STREAM_POLLHUP = 16;
+    const STREAM_POLLNVAL = 32;
 }
 
 namespace
@@ -30,6 +37,16 @@ namespace
 namespace
 {
     function gethostbyname2(string $hostname, int $address_family = \AF_INET): string { }
+}
+
+namespace
+{
+    /**
+     * poll one stream for events
+     * @param int $events flags: STREAM_POLL* constants combinations
+     * @return int flags: STREAM_POLL* constants combinations, STREAM_POLLNONE means timeout
+     */
+    function stream_poll_one($stream, int $events, int $timeout = -1): int { }
 }
 
 namespace Swow
@@ -702,7 +719,7 @@ namespace Swow
         /**
          * Get coroutine state
          *
-         * @return int the enum number: static::STATE_* constnts
+         * @return int the enum number: static::STATE_* constants
          */
         public function getState(): int { }
 
