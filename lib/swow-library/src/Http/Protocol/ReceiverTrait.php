@@ -283,6 +283,7 @@ trait ReceiverTrait
                                 }
                             case HttpParser::EVENT_HEADERS_COMPLETE:
                                 {
+                                    $headersCompleted = true;
                                     $shouldKeepAlive = $parser->shouldKeepAlive();
                                     if ($parser->isChunked()) {
                                         $isChunked = true;
@@ -292,7 +293,6 @@ trait ReceiverTrait
                                             throw new ProtocolException(HttpStatus::REQUEST_ENTITY_TOO_LARGE);
                                         }
                                     }
-                                    $headersCompleted = true;
                                     if ($parser->isMultipart()) {
                                         $isMultipart = true;
                                         if ($this->preserveBodyData) {
