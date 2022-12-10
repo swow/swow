@@ -45,6 +45,7 @@ namespace
      * poll one stream for events
      * @param int $events flags: STREAM_POLL* constants combinations
      * @return int flags: STREAM_POLL* constants combinations, STREAM_POLLNONE means timeout
+     * @throws RuntimeException on runtime error, e.g. poll has been cancelled or poll failed
      */
     function stream_poll_one($stream, int $events, int $timeout = -1): int { }
 }

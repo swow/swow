@@ -1919,7 +1919,7 @@ PHP_FUNCTION(swow_stream_poll_one)
     cat_pollfd_events_t revents;
     cat_ret_t ret = cat_poll_one(this_fd, events, &revents, timeout);
     if (ret == CAT_RET_ERROR) {
-        swow_throw_exception_with_last(swow_exception_ce);
+        swow_throw_exception_with_last(spl_ce_RuntimeException);
         RETURN_THROWS();
     }
     if (ret == CAT_RET_NONE) {
