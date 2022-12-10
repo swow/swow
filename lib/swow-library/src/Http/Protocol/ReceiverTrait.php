@@ -14,6 +14,7 @@ declare(strict_types=1);
 namespace Swow\Http\Protocol;
 
 use Swow\Buffer;
+use Swow\Exception\ExceptionEditor;
 use Swow\Http\Message\ResponseEntity;
 use Swow\Http\Message\ServerRequestEntity;
 use Swow\Http\Message\UploadedFileEntity;
@@ -519,12 +520,26 @@ trait ReceiverTrait
             $shouldKeepAlive = false;
             try {
                 $parser->finish();
-            } catch (ParserException) {
+            } catch (ParserException $parserException) {
                 // try to finish failed, re-throw socket exception
+                ExceptionEditor::setMessage(
+                    $socketException,
+                    sprintf(
+                        '%s, and parser finish failed with %s',
+                        $socketException->getMessage(), $parserException->getMessage()
+                    )
+                );
                 throw $socketException;
             }
             if (!$headersCompleted) {
                 // headers are incomplete, re-throw socket exception
+                ExceptionEditor::setMessage(
+                    $socketException,
+                    sprintf(
+                        '%s, and headers are incomplete',
+                        $socketException->getMessage()
+                    )
+                );
                 throw $socketException;
             }
         } finally {
