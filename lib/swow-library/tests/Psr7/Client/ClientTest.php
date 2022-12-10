@@ -19,6 +19,7 @@ use Swow\Http\Status;
 use Swow\Psr7\Client\Client;
 use Swow\Psr7\Client\ClientNetworkException;
 use Swow\Psr7\Message\Request as HttpRequest;
+use Swow\Psr7\Server\Server;
 use Swow\Socket;
 use Swow\Sync\WaitReference;
 
@@ -81,12 +82,13 @@ final class ClientTest extends TestCase
 
     public function testFinishWithNoContentLength(): void
     {
-        $server = new Socket(Socket::TYPE_TCP);
+        $server = new Server();
         $server->bind('127.0.0.1')->listen();
 
         $wr = new WaitReference();
         Coroutine::run(static function () use ($server, $wr): void {
-            $connection = $server->accept();
+            $connection = $server->acceptConnection();
+            $connection->recvHttpRequest();
             $connection->send(
                 "HTTP/1.1 200 OK\r\n" .
                 "Host: {$server->getSockAddress()}:{$server->getSockPort()}\r\n" .
