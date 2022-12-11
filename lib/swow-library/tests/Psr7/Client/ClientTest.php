@@ -19,6 +19,7 @@ use Swow\Http\Status;
 use Swow\Psr7\Client\Client;
 use Swow\Psr7\Client\ClientNetworkException;
 use Swow\Psr7\Message\Request as HttpRequest;
+use Swow\Psr7\Server\Server;
 use Swow\Socket;
 use Swow\Sync\WaitReference;
 
@@ -75,6 +76,33 @@ final class ClientTest extends TestCase
             /* ExceptionFaker works */
             $this->assertNull($exception->getPrevious());
         }
+
+        $wr::wait($wr);
+    }
+
+    public function testFinishWithNoContentLength(): void
+    {
+        $server = new Server();
+        $server->bind('127.0.0.1')->listen();
+
+        $wr = new WaitReference();
+        Coroutine::run(static function () use ($server, $wr): void {
+            $connection = $server->acceptConnection();
+            $connection->recvHttpRequest();
+            $connection->send(
+                "HTTP/1.1 200 OK\r\n" .
+                "Host: {$server->getSockAddress()}:{$server->getSockPort()}\r\n" .
+                "Connection: close\r\n" .
+                "Content-type: text/html; charset=UTF-8\r\n" .
+                "\r\n"
+            );
+            $connection->close();
+        });
+
+        $client = new Client();
+        $client->connect($server->getSockAddress(), $server->getSockPort());
+        $response = $client->sendRequest(new HttpRequest());
+        $this->assertSame(Status::OK, $response->getStatusCode());
 
         $wr::wait($wr);
     }

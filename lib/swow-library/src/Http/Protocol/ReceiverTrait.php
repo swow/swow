@@ -14,6 +14,7 @@ declare(strict_types=1);
 namespace Swow\Http\Protocol;
 
 use Swow\Buffer;
+use Swow\Exception\ExceptionEditor;
 use Swow\Http\Message\ResponseEntity;
 use Swow\Http\Message\ServerRequestEntity;
 use Swow\Http\Message\UploadedFileEntity;
@@ -282,6 +283,7 @@ trait ReceiverTrait
                                 }
                             case HttpParser::EVENT_HEADERS_COMPLETE:
                                 {
+                                    $headersCompleted = true;
                                     $shouldKeepAlive = $parser->shouldKeepAlive();
                                     if ($parser->isChunked()) {
                                         $isChunked = true;
@@ -291,7 +293,6 @@ trait ReceiverTrait
                                             throw new ProtocolException(HttpStatus::REQUEST_ENTITY_TOO_LARGE);
                                         }
                                     }
-                                    $headersCompleted = true;
                                     if ($parser->isMultipart()) {
                                         $isMultipart = true;
                                         if ($this->preserveBodyData) {
@@ -519,12 +520,26 @@ trait ReceiverTrait
             $shouldKeepAlive = false;
             try {
                 $parser->finish();
-            } catch (ParserException) {
+            } catch (ParserException $parserException) {
                 // try to finish failed, re-throw socket exception
+                ExceptionEditor::setMessage(
+                    $socketException,
+                    sprintf(
+                        '%s, and parser finish failed with %s',
+                        $socketException->getMessage(), $parserException->getMessage()
+                    )
+                );
                 throw $socketException;
             }
             if (!$headersCompleted) {
                 // headers are incomplete, re-throw socket exception
+                ExceptionEditor::setMessage(
+                    $socketException,
+                    sprintf(
+                        '%s, and headers are incomplete',
+                        $socketException->getMessage()
+                    )
+                );
                 throw $socketException;
             }
         } finally {
