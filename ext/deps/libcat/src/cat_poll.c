@@ -207,7 +207,7 @@ CAT_API cat_ret_t cat_poll_one(cat_os_socket_t fd, cat_pollfd_events_t events, c
                 if (poll->status == CAT_ECANCELED) {
                     cat_update_last_error(CAT_ECANCELED, "Poll has been canceled");
                 } else {
-                    cat_update_last_error(poll->status, "Poll failed");
+                    cat_update_last_error_with_reason(poll->status, "Poll failed");
                     *revents = cat_poll_translate_error_to_revents(events, poll->status);
                 }
                 ret = CAT_RET_ERROR;
