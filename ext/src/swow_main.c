@@ -509,6 +509,23 @@ static const zend_function_entry swow_extension_methods[] = {
     PHP_FE_END
 };
 
+#if CAT_USE_BUG_DETECTOR
+void swow_bug_detector_callback(int signum)
+{
+    (void) signum;
+#ifndef SWOW_BUG_REPORT
+#define SWOW_BUG_REPORT \
+    "A bug occurred in swow-v" SWOW_VERSION", please report it.\n" \
+    "The swow developers probably don't know about it,\n" \
+    "and unless you report it, chances are it won't be fixed.\n" \
+    "You can report it by creating a bug report issue on following page:\n" \
+    ">> https://github.com/swow/swow/issues/new/choose \n"
+#endif
+    fprintf(stderr, SWOW_BUG_REPORT);
+    abort();
+}
+#endif
+
 zend_result swow_module_init(INIT_FUNC_ARGS)
 {
 #ifdef SWOW_DISABLE_SESSION
@@ -535,6 +552,13 @@ zend_result swow_module_init(INIT_FUNC_ARGS)
 #endif
 
     cat_module_init();
+
+#if CAT_USE_BUG_DETECTOR
+    if (cat_env_is_true("CAT_BUG_DETECTOR", cat_true)) {
+        // override the default libcat signal handler
+        (void) signal(SIGSEGV, swow_bug_detector_callback);
+    }
+#endif
 
     SWOW_MAIN_KNOWN_STRING_MAP(SWOW_KNOWN_STRING_INIT_STRL_GEN);
 
