@@ -86,7 +86,7 @@ static void swow_log_standard(CAT_LOG_PARAMATERS)
             ZEND_PUTS(output);
             cat_free(output);
 #ifdef CAT_SOURCE_POSITION
-            if (CAT_G(log_source_postion)) {
+            if (CAT_LOG_G(show_source_postion)) {
                 output = cat_sprintf("CSP: in %s on line %u" PHP_EOL, file, line);
                 if (likely(output != NULL)) {
                     ZEND_PUTS(output);
@@ -141,7 +141,7 @@ ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Log, getTypes)
 {
-    RETURN_LONG(CAT_G(log_types));
+    RETURN_LONG(CAT_LOG_G(types));
 }
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Log_setTypes, 0, 1, IS_VOID, 0)
@@ -160,7 +160,7 @@ static PHP_METHOD(Swow_Log, setTypes)
         zend_argument_value_error(1, "is unrecognized");
         RETURN_THROWS();
     }
-    CAT_G(log_types) = types;
+    CAT_LOG_G(types) = types;
 }
 
 static const zend_function_entry swow_log_methods[] = {
