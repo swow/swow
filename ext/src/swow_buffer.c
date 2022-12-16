@@ -465,6 +465,28 @@ static PHP_METHOD(Swow_Buffer, extend)
     (void) cat_buffer_extend(buffer, recommend_size);
 }
 
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Buffer_prepare, 0, 1, IS_VOID, 0)
+    ZEND_ARG_TYPE_INFO(0, appendLength, IS_LONG, 0)
+ZEND_END_ARG_INFO()
+
+static PHP_METHOD(Swow_Buffer, prepare)
+{
+    SWOW_BUFFER_GETTER(s_buffer, buffer);
+    SWOW_BUFFER_CHECK_LOCK(s_buffer);
+    zend_long append_length;
+
+    ZEND_PARSE_PARAMETERS_START(1, 1)
+        Z_PARAM_LONG(append_length)
+    ZEND_PARSE_PARAMETERS_END();
+
+    if (UNEXPECTED(append_length < 0)) {
+        zend_argument_value_error(1, "can not be negative");
+        RETURN_THROWS();
+    }
+
+    (void) cat_buffer_prepare(buffer, append_length);
+}
+
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Buffer_mallocTrim, 0, 0, IS_VOID, 0)
 ZEND_END_ARG_INFO()
 
@@ -864,6 +886,7 @@ static const zend_function_entry swow_buffer_methods[] = {
     PHP_ME(Swow_Buffer, isFull,            arginfo_class_Swow_Buffer_isFull,            ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Buffer, realloc,           arginfo_class_Swow_Buffer_realloc,           ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Buffer, extend,            arginfo_class_Swow_Buffer_extend,            ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Buffer, prepare,           arginfo_class_Swow_Buffer_prepare,           ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Buffer, mallocTrim,        arginfo_class_Swow_Buffer_mallocTrim,        ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Buffer, read,              arginfo_class_Swow_Buffer_read,              ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Buffer, write,             arginfo_class_Swow_Buffer_write,             ZEND_ACC_PUBLIC)
