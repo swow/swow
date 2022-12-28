@@ -370,6 +370,10 @@ static cat_bool_t swow_coroutine_construct(swow_coroutine_t *s_coroutine, zval *
 #ifdef SWOW_COROUTINE_SWAP_JIT_GLOBALS
         executor->jit_trace_num = 0;
 #endif
+#ifdef ZEND_CHECK_STACK_LIMIT
+        executor->stack_base = swow_coroutine_get_stack_base(s_coroutine);
+        executor->stack_limit = swow_coroutine_get_stack_limit(s_coroutine);
+#endif
 #ifdef SWOW_COROUTINE_SWAP_BASIC_GLOBALS
         executor->array_walk_context = NULL;
 #endif
@@ -585,6 +589,10 @@ SWOW_API void swow_coroutine_executor_save(swow_coroutine_executor_t *executor)
 #ifdef SWOW_COROUTINE_SWAP_JIT_GLOBALS
     executor->jit_trace_num = eg->jit_trace_num;
 #endif
+#ifdef ZEND_CHECK_STACK_LIMIT
+    executor->stack_base = eg->stack_base;
+    executor->stack_limit = eg->stack_limit;
+#endif
 #ifdef SWOW_COROUTINE_SWAP_BASIC_GLOBALS
     do {
         swow_fcall_info_t *fcall = (swow_fcall_info_t *) &BG(array_walk_fci);
@@ -638,6 +646,10 @@ SWOW_API void swow_coroutine_executor_recover(swow_coroutine_executor_t *executo
 #endif
 #ifdef SWOW_COROUTINE_SWAP_JIT_GLOBALS
     eg->jit_trace_num = executor->jit_trace_num;
+#endif
+#ifdef ZEND_CHECK_STACK_LIMIT
+    eg->stack_base = executor->stack_base;
+    eg->stack_limit = executor->stack_limit;
 #endif
 #ifdef SWOW_COROUTINE_SWAP_BASIC_GLOBALS
     do {
@@ -904,6 +916,31 @@ SWOW_API swow_coroutine_t *swow_coroutine_get_previous(const swow_coroutine_t *s
 {
     return swow_coroutine_get_from_handle(s_coroutine->coroutine.previous);
 }
+
+#ifdef ZEND_CHECK_STACK_LIMIT
+SWOW_API void *swow_coroutine_get_stack_base(const swow_coroutine_t *s_coroutine)
+{
+    return (void *) ((uintptr_t) s_coroutine->coroutine.virtual_memory +
+                                 s_coroutine->coroutine.virtual_memory_size);
+}
+
+SWOW_API void* swow_coroutine_get_stack_limit(const swow_coroutine_t *s_coroutine)
+{
+    zend_ulong reserve = EG(reserved_stack_size);
+
+#ifdef __APPLE__
+    /* On Apple Clang, the stack probing function ___chkstk_darwin incorrectly
+     * probes a location that is twice the entered function's stack usage away
+     * from the stack pointer, when using an alternative stack.
+     * https://openradar.appspot.com/radar?id=5497722702397440
+     */
+    reserve = reserve + reserve;
+#endif
+
+    /* stack->pointer is the end of the stack */
+    return (int8_t *) s_coroutine->coroutine.virtual_memory + reserve;
+}
+#endif
 
 /* globals (options) */
 

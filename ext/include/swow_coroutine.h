@@ -44,6 +44,10 @@ extern "C" {
 #define SWOW_COROUTINE_SWAP_OUTPUT_GLOBALS  1
 #define SWOW_COROUTINE_SWAP_SILENCE_CONTEXT 1
 
+#if defined(ZEND_CHECK_STACK_LIMIT) && defined(CAT_COROUTINE_USE_THREAD_CONTEXT)
+#error "Unable to use thread-context for Coroutine when ZEND_CHECK_STACK_LIMIT is enabled"
+#endif
+
 extern SWOW_API zend_class_entry *swow_coroutine_ce;
 extern SWOW_API zend_object_handlers swow_coroutine_handlers;
 extern SWOW_API zend_object_handlers swow_coroutine_main_handlers;
@@ -95,6 +99,10 @@ typedef struct swow_coroutine_executor_s {
 #endif
 #ifdef SWOW_COROUTINE_SWAP_JIT_GLOBALS
     uint32_t jit_trace_num;
+#endif
+#ifdef ZEND_CHECK_STACK_LIMIT
+    void *stack_base;
+	void *stack_limit;
 #endif
 } swow_coroutine_executor_t;
 
@@ -181,6 +189,8 @@ SWOW_API cat_bool_t swow_coroutine_is_alive(const swow_coroutine_t *s_coroutine)
 SWOW_API cat_bool_t swow_coroutine_is_executing(const swow_coroutine_t *s_coroutine);
 SWOW_API swow_coroutine_t *swow_coroutine_get_from(const swow_coroutine_t *s_coroutine); SWOW_UNSAFE
 SWOW_API swow_coroutine_t *swow_coroutine_get_previous(const swow_coroutine_t *s_coroutine);
+SWOW_API void *swow_coroutine_get_stack_base(const swow_coroutine_t *s_coroutine);
+SWOW_API void* swow_coroutine_get_stack_limit(const swow_coroutine_t *s_coroutine);
 
 /* globals (options) */
 SWOW_API size_t swow_coroutine_set_default_stack_page_size(size_t size);
