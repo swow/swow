@@ -223,7 +223,6 @@ PHP_MSHUTDOWN_FUNCTION(swow)
         swow_event_module_shutdown,
         swow_coroutine_module_shutdown,
         swow_debug_module_shutdown,
-        swow_stream_module_shutdown,
         swow_module_shutdown,
     };
 
