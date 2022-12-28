@@ -509,12 +509,11 @@ static PHP_METHOD(Swow_Selector, commit)
     if (EXPECTED(response != NULL)) {
         zend_object *channel = &(swow_channel_get_from_handle(response->channel)->std);
         zval *z_data = (zval *) response->data.common;
-        GC_ADDREF(channel);
-        RETVAL_OBJ(channel);
+        RETVAL_OBJ_COPY(channel);
         selector->last_event = response->opcode;
         if (response->opcode == CAT_CHANNEL_SELECT_EVENT_PUSH) {
             ZVAL_UNDEF(&selector->z_data);
-        } else {
+        } else /* if (response->opcode == CAT_CHANNEL_SELECT_EVENT_POP) */ {
             ZVAL_COPY_VALUE(&selector->z_data, z_data);
         }
         /* data has been consumed or copied */
