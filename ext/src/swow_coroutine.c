@@ -1713,7 +1713,7 @@ static PHP_METHOD(Swow_Coroutine, getElapsedAsString)
 
     ZEND_PARSE_PARAMETERS_NONE();
 
-    elapsed = cat_coroutine_get_elapsed_as_string(&getThisCoroutine()->coroutine);
+    elapsed = cat_coroutine_get_elapsed_str(&getThisCoroutine()->coroutine);
 
     RETVAL_STRING(elapsed);
 
@@ -2125,7 +2125,7 @@ static PHP_METHOD(Swow_Coroutine, __debugInfo)
         add_assoc_string(&z_debug_info, "role", const_tmp);
     }
     add_assoc_string(&z_debug_info, "state", cat_coroutine_get_state_name(coroutine));
-    tmp = cat_coroutine_get_elapsed_as_string(coroutine);
+    tmp = cat_coroutine_get_elapsed_str(coroutine);
     add_assoc_long(&z_debug_info, "round", coroutine->round);
     add_assoc_string(&z_debug_info, "elapsed", tmp);
     cat_free(tmp);

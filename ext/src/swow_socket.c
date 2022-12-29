@@ -329,7 +329,7 @@ static PHP_METHOD(Swow_Socket, bind)
         Z_PARAM_LONG(flags)
     ZEND_PARSE_PARAMETERS_END();
 
-    ret = cat_socket_bind_ex(socket, ZSTR_VAL(name), ZSTR_LEN(name), port, flags);
+    ret = cat_socket_bind_to_ex(socket, ZSTR_VAL(name), ZSTR_LEN(name), port, flags);
 
     if (UNEXPECTED(!ret)) {
         swow_throw_exception_with_last(swow_socket_exception_ce);
@@ -476,7 +476,7 @@ static PHP_METHOD(Swow_Socket, connect)
         timeout = cat_socket_get_connect_timeout(socket);
     }
 
-    ret = cat_socket_connect_ex(socket, ZSTR_VAL(name), ZSTR_LEN(name), port, timeout);
+    ret = cat_socket_connect_to_ex(socket, ZSTR_VAL(name), ZSTR_LEN(name), port, timeout);
 
     if (UNEXPECTED(!ret)) {
         swow_throw_exception_with_last(swow_socket_exception_ce);
