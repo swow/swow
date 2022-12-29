@@ -74,27 +74,23 @@ extern "C" {
 #define CAT_EXEPATH_MAX 32768
 #endif
 
-/* global */
+/* globals */
 
 CAT_GLOBALS_STRUCT_BEGIN(cat) {
     cat_bool_t runtime;
-    cat_log_types_t log_types;
-    cat_error_t last_error;
-    FILE *error_log;
-    cat_const_string_t exepath;
     cat_bool_t show_last_error;
-#ifdef CAT_SOURCE_POSITION
-    cat_bool_t log_source_postion;
-#endif
-    size_t log_str_size;
-#ifdef CAT_DEBUG
-    unsigned int log_debug_level;
-#endif
+    cat_error_t last_error;
+    cat_const_string_t exepath;
+    cat_log_globals_t log_globals;
 } CAT_GLOBALS_STRUCT_END(cat);
 
 extern CAT_API CAT_GLOBALS_DECLARE(cat);
 
 #define CAT_G(x) CAT_GLOBALS_GET(cat, x)
+
+#define CAT_LOG_G(x) CAT_G(log_globals).x
+
+/* special constants */
 
 #define CAT_MAGIC_NUMBER 9764
 

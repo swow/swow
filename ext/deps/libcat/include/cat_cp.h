@@ -78,3 +78,8 @@ typedef struct cat_io_vector_s {
 #endif
 
 CAT_API size_t cat_io_vector_length(const cat_io_vector_t *vector, unsigned int vector_count);
+
+/* clock_gettime() */
+
+CAT_API int cat_clock_gettime_realtime(struct timespec *tp);
+CAT_API int cat_clock_gettime_monotonic(struct timespec *tp);

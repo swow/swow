@@ -206,11 +206,20 @@ CAT_API cat_ret_t cat_poll_one(cat_os_socket_t fd, cat_pollfd_events_t events, c
             if (unlikely(poll->status < 0)) {
                 if (poll->status == CAT_ECANCELED) {
                     cat_update_last_error(CAT_ECANCELED, "Poll has been canceled");
-                } else {
+                    ret = CAT_RET_ERROR;
+                }
+#ifndef CAT_OS_WIN
+                else if (poll->status == CAT_EBADF) {
+                    /* see: https://github.com/libuv/libuv/pull/1040#discussion_r80087447 */
+                    *revents = POLLERR;
+                    ret = CAT_RET_OK;
+                }
+#endif
+                else {
                     cat_update_last_error_with_reason(poll->status, "Poll failed");
                     *revents = cat_poll_translate_error_to_revents(events, poll->status);
+                    ret = CAT_RET_ERROR;
                 }
-                ret = CAT_RET_ERROR;
             } else {
                 ret = CAT_RET_OK;
                 *revents = cat_poll_translate_to_sysno(poll->revents);
@@ -394,7 +403,15 @@ CAT_API int cat_poll(cat_pollfd_t *fds, cat_nfds_t nfds, cat_timeout_t timeout)
         if (unlikely(ret == CAT_RET_NONE && poll->status < 0)) {
             if (poll->status == CAT_ECANCELED) {
                 fd->revents = POLLNONE;
-            } else {
+            }
+#ifndef CAT_OS_WIN
+            else if (poll->status == CAT_EBADF) {
+                /* see: https://github.com/libuv/libuv/pull/1040#discussion_r80087447 */
+                fd->revents = POLLERR;
+                n++;
+            }
+#endif
+            else {
                 fd->revents = cat_poll_translate_error_to_revents(fd->events, poll->status);
                 n++;
             }

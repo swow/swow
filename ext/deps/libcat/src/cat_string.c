@@ -49,7 +49,7 @@ CAT_API char *cat_stpcpy(char *dest, const char *src)
     return dest;
 }
 
-CAT_API char *cat_vsprintf(const char *format, va_list args)
+CAT_API char *cat_vslprintf(const char *format, size_t *length, va_list args)
 {
     va_list _args;
     size_t size;
@@ -64,6 +64,9 @@ CAT_API char *cat_vsprintf(const char *format, va_list args)
         /* no need to update error message, we even have no mem to sprintf,
            so we may also have no mem to update error message */
         cat_update_last_error(cat_translate_sys_error(cat_sys_errno), NULL);
+        if (length != NULL) {
+            *length = 0;
+        }
         return NULL;
     }
 #endif
@@ -72,6 +75,26 @@ CAT_API char *cat_vsprintf(const char *format, va_list args)
         return NULL;
     }
     string[size - 1] = '\0';
+    if (length != NULL) {
+        *length = size - 1;
+    }
+
+    return string;
+}
+
+CAT_API char *cat_vsprintf(const char *format, va_list args)
+{
+    return cat_vslprintf(format, NULL, args);
+}
+
+CAT_API char *cat_slprintf(const char *format, size_t *length, ...)
+{
+    va_list args;
+    char *string;
+
+    va_start(args, length);
+    string = cat_vslprintf(format, length, args);
+    va_end(args);
 
     return string;
 }
@@ -82,7 +105,7 @@ CAT_API char *cat_sprintf(const char *format, ...)
     char *string;
 
     va_start(args, format);
-    string = cat_vsprintf(format, args);
+    string = cat_vslprintf(format, NULL, args);
     va_end(args);
 
     return string;
@@ -161,6 +184,37 @@ CAT_API char *cat_snrand(char *buffer, size_t count)
     return buffer;
 }
 
+CAT_API cat_bool_t cat_str_list_contains_ci(const char *haystack, const char *needle, size_t needle_length)
+{
+    const char *s = NULL, *e = haystack;
+
+    while (1) {
+        if (*e == ' ' || *e == ',' || *e == '\0') {
+            if (s) {
+                if ((size_t) (e - s) == needle_length && cat_strncasecmp(s, needle, needle_length) == 0) {
+                    return cat_true;
+                }
+                s = NULL;
+            }
+        } else {
+            if (!s) {
+                s = e;
+            }
+        }
+        if (*e == '\0') {
+            break;
+        }
+        e++;
+    }
+
+    return cat_false;
+}
+
+CAT_API size_t cat_str_quote_size(size_t length, cat_str_quote_style_flags_t style)
+{
+    return (4 * length) + (style & CAT_STR_QUOTE_STYLE_FLAG_OMIT_LEADING_TRAILING_QUOTES ? 1 : 3);
+}
+
 /*
  * Quote string `in' of `length'
  * Write up to (3 + `length' * 4) bytes to `out' buffer.
@@ -179,7 +233,7 @@ CAT_API char *cat_snrand(char *buffer, size_t count)
  */
 CAT_API cat_bool_t cat_str_quote_ex2(
     const char *in, size_t length, char *out, size_t *out_length,
-    cat_string_quote_style_flags_t style, const char *escape_chars
+    cat_str_quote_style_flags_t style, const char *escape_chars
 )
 {
     const unsigned char *p = (const unsigned char *) in;
@@ -345,11 +399,11 @@ _done:
 CAT_API cat_bool_t cat_str_quote_ex(
     const char *str, size_t length,
     char **new_str_ptr, size_t *new_length_ptr,
-    cat_string_quote_style_flags_t style, const char *escape_chars,
+    cat_str_quote_style_flags_t style, const char *escape_chars,
     cat_bool_t *is_complete
 )
 {
-    size_t new_size = (4 * length) + (style & CAT_STR_QUOTE_STYLE_FLAG_OMIT_LEADING_TRAILING_QUOTES ? 1 : 3);
+    size_t new_size = cat_str_quote_size(length, style);
     char *new_str = cat_malloc(new_size);
 #if CAT_ALLOC_HANDLE_ERRORS
     if (unlikely(new_str == NULL)) {

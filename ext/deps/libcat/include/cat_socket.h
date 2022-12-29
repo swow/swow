@@ -136,7 +136,10 @@ CAT_API cat_bool_t cat_sockaddr_check(const cat_sockaddr_t *address, cat_socklen
 
 /* socket id */
 
-typedef uint64_t cat_socket_id_t;
+typedef int64_t cat_socket_id_t;
+#define CAT_SOCKET_ID_FMT "%" PRId64
+#define CAT_SOCKET_ID_FMT_SPEC PRId64
+#define CAT_SOCKET_INVALID_ID -1
 
 /* socket fd */
 
@@ -187,6 +190,7 @@ static cat_always_inline cat_socket_write_vector_t cat_socket_write_vector_init(
 }
 
 CAT_API size_t cat_socket_write_vector_length(const cat_socket_write_vector_t *vector, unsigned int vector_count);
+CAT_API char *cat_socket_write_vector_str(const cat_socket_write_vector_t *vector, unsigned int vector_count);
 
 /* socket */
 
@@ -570,22 +574,22 @@ CAT_API cat_bool_t cat_socket_set_handshake_timeout(cat_socket_t *socket, cat_ti
 CAT_API cat_bool_t cat_socket_set_read_timeout(cat_socket_t *socket, cat_timeout_t timeout);
 CAT_API cat_bool_t cat_socket_set_write_timeout(cat_socket_t *socket, cat_timeout_t timeout);
 
-CAT_API cat_bool_t cat_socket_bind(cat_socket_t *socket, const char *name, size_t name_length, int port);
-CAT_API cat_bool_t cat_socket_bind_ex(cat_socket_t *socket, const char *name, size_t name_length, int port, cat_socket_bind_flags_t flags);
-CAT_API cat_bool_t cat_socket_bind_to(cat_socket_t *socket, const cat_sockaddr_t *address, cat_socklen_t address_length);
-CAT_API cat_bool_t cat_socket_bind_to_ex(cat_socket_t *socket, const cat_sockaddr_t *address, cat_socklen_t address_length, cat_socket_bind_flags_t flags);
+CAT_API cat_bool_t cat_socket_bind(cat_socket_t *socket, const cat_sockaddr_t *address, cat_socklen_t address_length);
+CAT_API cat_bool_t cat_socket_bind_ex(cat_socket_t *socket, const cat_sockaddr_t *address, cat_socklen_t address_length, cat_socket_bind_flags_t flags);
+CAT_API cat_bool_t cat_socket_bind_to(cat_socket_t *socket, const char *name, size_t name_length, int port);
+CAT_API cat_bool_t cat_socket_bind_to_ex(cat_socket_t *socket, const char *name, size_t name_length, int port, cat_socket_bind_flags_t flags);
 CAT_API cat_bool_t cat_socket_listen(cat_socket_t *socket, int backlog);
 CAT_API cat_bool_t cat_socket_accept(cat_socket_t *server, cat_socket_t *client);
 CAT_API cat_bool_t cat_socket_accept_ex(cat_socket_t *server, cat_socket_t *client, cat_timeout_t timeout);
 
-CAT_API cat_bool_t cat_socket_connect(cat_socket_t *socket, const char *name, size_t name_length, int port);
-CAT_API cat_bool_t cat_socket_connect_ex(cat_socket_t *socket, const char *name, size_t name_length, int port, cat_timeout_t timeout);
-CAT_API cat_bool_t cat_socket_connect_to(cat_socket_t *socket, const cat_sockaddr_t *address, cat_socklen_t address_length);
-CAT_API cat_bool_t cat_socket_connect_to_ex(cat_socket_t *socket, const cat_sockaddr_t *address, cat_socklen_t address_length, cat_timeout_t timeout);
+CAT_API cat_bool_t cat_socket_connect(cat_socket_t *socket, const cat_sockaddr_t *address, cat_socklen_t address_length);
+CAT_API cat_bool_t cat_socket_connect_ex(cat_socket_t *socket, const cat_sockaddr_t *address, cat_socklen_t address_length, cat_timeout_t timeout);
+CAT_API cat_bool_t cat_socket_connect_to(cat_socket_t *socket, const char *name, size_t name_length, int port);
+CAT_API cat_bool_t cat_socket_connect_to_ex(cat_socket_t *socket, const char *name, size_t name_length, int port, cat_timeout_t timeout);
 
 /* Notice: it returns true even if it's in progress, we should check it by socket_is_established() to get real state of it */
-CAT_API cat_bool_t cat_socket_try_connect(cat_socket_t *socket, const char *name, size_t name_length, int port);
-CAT_API cat_bool_t cat_socket_try_connect_to(cat_socket_t *socket, const cat_sockaddr_t *address, cat_socklen_t address_length);
+CAT_API cat_bool_t cat_socket_try_connect(cat_socket_t *socket, const cat_sockaddr_t *address, cat_socklen_t address_length);
+CAT_API cat_bool_t cat_socket_try_connect_to(cat_socket_t *socket, const char *name, size_t name_length, int port);
 
 #ifdef CAT_SSL
 typedef struct cat_socket_crypto_options_s {
@@ -669,6 +673,7 @@ CAT_API ssize_t cat_socket_peek_from_ex(const cat_socket_t *socket, char *buffer
 CAT_API cat_bool_t cat_socket_send_handle(cat_socket_t *socket, cat_socket_t *handle);
 CAT_API cat_bool_t cat_socket_send_handle_ex(cat_socket_t *socket, cat_socket_t *handle, cat_timeout_t timeout);
 
+/* @note last_error will not be updated when close failed,  */
 CAT_API cat_bool_t cat_socket_close(cat_socket_t *socket);
 
 /* getter */

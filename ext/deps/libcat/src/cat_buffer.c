@@ -197,6 +197,15 @@ CAT_API cat_bool_t cat_buffer_extend(cat_buffer_t *buffer, size_t recommend_size
     return cat_buffer_realloc(buffer, new_size);
 }
 
+CAT_API cat_bool_t cat_buffer_prepare(cat_buffer_t *buffer, size_t append_length)
+{
+    size_t expected_size = buffer->length + append_length;
+    if (unlikely(expected_size > buffer->size)) {
+        return cat_buffer_extend(buffer, expected_size);
+    }
+    return cat_true;
+}
+
 CAT_API cat_bool_t cat_buffer_malloc_trim(cat_buffer_t *buffer)
 {
     if (unlikely(buffer->length == buffer->size)) {
@@ -206,7 +215,7 @@ CAT_API cat_bool_t cat_buffer_malloc_trim(cat_buffer_t *buffer)
     return cat_buffer_realloc(buffer, buffer->length);
 }
 
-CAT_API cat_bool_t cat_buffer_write(cat_buffer_t *buffer, size_t offset, const char *ptr, size_t length)
+CAT_API cat_bool_t cat_buffer_write(cat_buffer_t *buffer, size_t offset, const void *ptr, size_t length)
 {
     size_t new_length = offset + length;
 
@@ -215,8 +224,8 @@ CAT_API cat_bool_t cat_buffer_write(cat_buffer_t *buffer, size_t offset, const c
             return cat_false;
         }
     }
-    if (length > 0) {
-        // Do not use memcpy, ptr maybe at the same scope with dest
+    if (likely(length > 0)) {
+        // do not use memcpy, ptr maybe at the same scope with dest
         memmove(buffer->value + offset, ptr, length);
         if (new_length > buffer->length) {
             cat_buffer__update(buffer, new_length);
@@ -226,9 +235,26 @@ CAT_API cat_bool_t cat_buffer_write(cat_buffer_t *buffer, size_t offset, const c
     return cat_true;
 }
 
-CAT_API cat_bool_t cat_buffer_append(cat_buffer_t *buffer, const char *ptr, size_t length)
+CAT_API cat_bool_t cat_buffer_append(cat_buffer_t *buffer, const void *ptr, size_t length)
 {
-    return cat_buffer_write(buffer, buffer->length, ptr, length);
+    size_t new_length = buffer->length + length;
+
+    if (new_length > buffer->size) {
+        if (unlikely(!cat_buffer_extend(buffer, new_length))) {
+            return cat_false;
+        }
+    }
+    if (likely(length > 0)) {
+        // make sure that memory is not overlapped
+        CAT_ASSERT(
+            (const char *) ptr > buffer->value + buffer->length + length ||
+            (const char *) ptr < buffer->value + buffer->length
+        );
+        memcpy(buffer->value + buffer->length, ptr, length);
+        cat_buffer__update(buffer, new_length);
+    }
+
+    return cat_true;
 }
 
 CAT_API void cat_buffer_truncate(cat_buffer_t *buffer, size_t length)
@@ -356,4 +382,108 @@ CAT_API void cat_buffer_dump(cat_buffer_t *buffer)
         buffer->length,
         buffer->size
     );
+}
+
+/* smart_str-like APIs */
+
+CAT_API cat_bool_t cat_buffer_append_unsigned(cat_buffer_t *buffer, size_t value)
+{
+    char tmp[32];
+    size_t length = snprintf(tmp, sizeof(tmp), "%zu", value);
+    return cat_buffer_append(buffer, tmp, length);
+}
+
+CAT_API cat_bool_t cat_buffer_append_signed(cat_buffer_t *buffer, ssize_t value)
+{
+    intmax_t i = (intmax_t) value;
+    char tmp[32];
+    size_t length = snprintf(tmp, sizeof(tmp), "%jd", i);
+    return cat_buffer_append(buffer, tmp, length);
+}
+
+CAT_API cat_bool_t cat_buffer_append_double(cat_buffer_t *buffer, double value)
+{
+    char tmp[32];
+    size_t length = snprintf(tmp, sizeof(tmp), "%f", value);
+    return cat_buffer_append(buffer, tmp, length);
+}
+
+CAT_API cat_bool_t cat_buffer_append_char(cat_buffer_t *buffer, char c)
+{
+    return cat_buffer_append(buffer, &c, 1);
+}
+
+CAT_API cat_bool_t cat_buffer_append_str(cat_buffer_t *buffer, const char *str)
+{
+    return cat_buffer_append(buffer, str, strlen(str));
+}
+
+CAT_API cat_bool_t cat_buffer_append_vprintf(cat_buffer_t *buffer, const char *format, va_list args)
+{
+    va_list _args;
+    size_t length;
+
+    va_copy(_args, args);
+    length = vsnprintf(NULL, 0, format, _args);
+    va_end(_args);
+
+    /* TODO: drop +1 will lead coredump, figure out why */
+    if (unlikely(!cat_buffer_prepare(buffer, length + 1))) {
+        return cat_false;
+    }
+    if (unlikely(
+        vsnprintf(buffer->value + buffer->length,
+                  buffer->size - buffer->length,
+                  format, args) < 0)) {
+        return cat_false;
+    }
+    buffer->length += length;
+
+    return cat_true;
+}
+
+CAT_API cat_bool_t cat_buffer_append_printf(cat_buffer_t *buffer, const char *format, ...)
+{
+    va_list args;
+    va_start(args, format);
+    cat_bool_t ret = cat_buffer_append_vprintf(buffer, format, args);
+    va_end(args);
+    return ret;
+}
+
+CAT_API cat_bool_t cat_buffer_zero_terminate(cat_buffer_t *buffer)
+{
+    cat_bool_t ret = cat_buffer_append_char(buffer, '\0');
+    if (unlikely(!ret)) {
+        return cat_false;
+    }
+    buffer->length--;
+    return cat_true;
+}
+
+CAT_API cat_bool_t cat_buffer_append_with_padding(cat_buffer_t *buffer, const void *ptr, size_t length, const char padding_char, size_t width)
+{
+    ssize_t padding_length = width - length;
+    size_t padding_left = padding_length / 2;
+    size_t padding_right = padding_length - padding_left;
+    size_t i;
+
+    if (!cat_buffer_prepare(buffer, length + padding_length)) {
+        return cat_false;
+    }
+
+    for (i = 0; i < padding_left; i++) {
+        (void) cat_buffer_append_char(buffer, padding_char);
+    }
+    (void) cat_buffer_append(buffer, ptr, length);
+    for (i = 0; i < padding_right; i++) {
+        (void) cat_buffer_append_char(buffer, padding_char);
+    }
+
+    return cat_true;
+}
+
+CAT_API cat_bool_t cat_buffer_append_str_with_padding(cat_buffer_t *buffer, const char *str, const char padding_char, size_t width)
+{
+    return cat_buffer_append_with_padding(buffer, str, strlen(str), padding_char, width);
 }

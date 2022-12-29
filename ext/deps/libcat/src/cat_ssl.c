@@ -68,7 +68,7 @@ CAT_API cat_bool_t cat_ssl_module_init(void)
     /* SSL library initialisation */
 #if OPENSSL_VERSION_NUMBER >= 0x10100003L
     if (OPENSSL_init_ssl(OPENSSL_INIT_LOAD_CONFIG | OPENSSL_INIT_SSL_DEFAULT | OPENSSL_INIT_ADD_ALL_CIPHERS, NULL) == 0) {
-        ERR_print_errors_fp(CAT_G(error_log));
+        ERR_print_errors_fp(CAT_LOG_G(error_output));
         CAT_CORE_ERROR(SSL, "OPENSSL_init_ssl() failed");
     }
 #else
@@ -95,12 +95,12 @@ CAT_API cat_bool_t cat_ssl_module_init(void)
 
     cat_ssl_index = SSL_get_ex_new_index(0, NULL, NULL, NULL, NULL);
     if (cat_ssl_index == -1) {
-        ERR_print_errors_fp(CAT_G(error_log));
+        ERR_print_errors_fp(CAT_LOG_G(error_output));
         CAT_CORE_ERROR(SSL, "SSL_get_ex_new_index() failed");
     }
     cat_ssl_context_index = SSL_CTX_get_ex_new_index(0, NULL, NULL, NULL, NULL);
     if (cat_ssl_context_index == -1) {
-        ERR_print_errors_fp(CAT_G(error_log));
+        ERR_print_errors_fp(CAT_LOG_G(error_output));
         CAT_CORE_ERROR(SSL, "SSL_CTX_get_ex_new_index() failed");
     }
 
@@ -1366,7 +1366,7 @@ CAT_API CAT_COLD char *cat_ssl_get_error_reason(void)
             } else {
                 errstr2 = cat_sprintf("%s (SSL: %s:%s)", errstr, ERR_error_string(n, NULL), data);
                 if (unlikely(errstr2 == NULL)) {
-                    ERR_print_errors_fp(CAT_G(error_log));
+                    ERR_print_errors_fp(CAT_LOG_G(error_output));
                     break;
                 }
                 cat_free(errstr);
@@ -1389,7 +1389,7 @@ CAT_API CAT_COLD void cat_ssl_update_last_error(cat_errno_t error, const char *f
     va_end(args);
 
     if (unlikely(message == NULL)) {
-        ERR_print_errors_fp(CAT_G(error_log));
+        ERR_print_errors_fp(CAT_LOG_G(error_output));
         return;
     }
 
@@ -1484,7 +1484,7 @@ static void cat_ssl_handshake_log(cat_ssl_t *ssl)
             if (*s == ' ' && *d == ' ') {
                 continue;
             }
-            if (*s == CAT_LF || *s == CAT_CR) {
+            if (*s == '\n' || *s == '\r') {
                 continue;
             }
             *++d = *s;
@@ -1499,5 +1499,26 @@ static void cat_ssl_handshake_log(cat_ssl_t *ssl)
         ssl, SSL_get_version(ssl->connection), CAT_LOG_STRING_OR_NULL_PARAM(cipher_str), !!SSL_session_reused(ssl->connection));
 }
 #endif
+
+/* utils */
+
+CAT_API char *cat_ssl_protocols_str(cat_ssl_protocols_t protocols)
+{
+    cat_buffer_t buffer;
+    cat_buffer_create(&buffer, 32);
+#define CAT_SSL_PROTOCOL_APPEND_GEN(name, value) \
+    if (protocols & value) { \
+        cat_buffer_append_str(&buffer, #name "|"); \
+    }
+    CAT_SSL_PROTOCOL_MAP(CAT_SSL_PROTOCOL_APPEND_GEN)
+#undef CAT_SSL_PROTOCOL_APPEND_GEN
+    if (buffer.length == 0) {
+        cat_buffer_append_str(&buffer, "NONE");
+    } else {
+        buffer.length--;
+    }
+    cat_buffer_zero_terminate(&buffer);
+    return buffer.value;
+}
 
 #endif /* CAT_SSL */

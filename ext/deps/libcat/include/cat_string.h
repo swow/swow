@@ -23,6 +23,21 @@
 #define CAT_TO_STR_NAKED(str)    #str
 #define CAT_TO_STR(str)          CAT_TO_STR_NAKED(str)
 
+#define CAT_NULLABLE_STR_C(str) \
+    (str == NULL ? "" : str)
+
+#define CAT_CENTERED_STRING_FMT "%*s%s%*s"
+
+#define CAT_CENTERED_STRING_D(var_name, length, width) \
+    int _##var_name##_length = length; \
+    int _##var_name##_padding_length = width > _##var_name##_length ? width - _##var_name##_length : 0; \
+    int _##var_name##_padding_left = _##var_name##_padding_length / 2; \
+    int _##var_name##_padding_right = _##var_name##_padding_length - _##var_name##_padding_left
+
+#define CAT_CENTERED_STRING_C(var_name) \
+    _##var_name##_padding_left, "", var_name, _##var_name##_padding_right, ""
+
+
 static cat_always_inline cat_bool_t cat_str_is_empty(const char *str)
 {
     return str == NULL || str[0] == '\0';
@@ -95,13 +110,18 @@ CAT_API const char *cat_strlchr(const char *s, const char *last, char c);
 CAT_API char *cat_stpcpy(char *dest, const char *src);
 
 CAT_API char *cat_vsprintf(const char *format, va_list args); CAT_FREE
-CAT_API char *cat_sprintf(const char *format, ...)            CAT_FREE CAT_ATTRIBUTE_FORMAT(printf, 1, 2);
+CAT_API char *cat_sprintf(const char *format, ...) CAT_ATTRIBUTE_FORMAT(printf, 1, 2); CAT_FREE
+
+CAT_API char *cat_vslprintf(const char *format, size_t *length, va_list args); CAT_FREE
+CAT_API char *cat_slprintf(const char *format, size_t *length, ...) CAT_ATTRIBUTE_FORMAT(printf, 1, 3); CAT_FREE
 
 CAT_API cat_bool_t cat_str_is_print(const char *string, size_t length);
 CAT_API char *cat_hex_dump(const char *data, size_t length); CAT_FREE
 
 CAT_API char *cat_srand(char *buffer, size_t count);  CAT_MAY_FREE
 CAT_API char *cat_snrand(char *buffer, size_t count); CAT_MAY_FREE
+
+CAT_API cat_bool_t cat_str_list_contains_ci(const char *haystack, const char *needle, size_t needle_length);
 
 /* Note: `quote` related code are borrowed from the `strace` project */
 
@@ -118,7 +138,7 @@ static cat_always_inline cat_bool_t cat_byte_is_printable(uint8_t c)
     return (c >= ' ') && (c < 0x7f);
 }
 
-typedef enum cat_string_quote_style_flag_e {
+typedef enum cat_str_quote_style_flag_e {
     CAT_STR_QUOTE_STYLE_FLAG_NONE = 0,
     /** String is '\0'-terminated. */
     CAT_STR_QUOTE_STYLE_FLAG_ZERO_TERMINATED = 1 << 0,
@@ -136,7 +156,7 @@ typedef enum cat_string_quote_style_flag_e {
     CAT_STR_QUOTE_STYLE_FLAG_EMIT_COMMENT = 1 << 6,
 } cat_str_quote_style_flag_t;
 
-typedef uint8_t cat_string_quote_style_flags_t;
+typedef uint8_t cat_str_quote_style_flags_t;
 
 CAT_API cat_bool_t cat_str_quote(
     const char *str, size_t length,
@@ -146,15 +166,17 @@ CAT_API cat_bool_t cat_str_quote(
 CAT_API cat_bool_t cat_str_quote_ex(
     const char *str, size_t length,
     char **new_str_ptr, size_t *new_length_ptr,
-    cat_string_quote_style_flags_t style, const char *escape_chars,
+    cat_str_quote_style_flags_t style, const char *escape_chars,
     cat_bool_t *is_complete
 ); CAT_MAY_FREE
 
 CAT_API cat_bool_t cat_str_quote_ex2(
     const char *in, size_t length, char *out,
-    size_t *out_length, cat_string_quote_style_flags_t style,
+    size_t *out_length, cat_str_quote_style_flags_t style,
     const char *escape_chars
 );
+
+CAT_API size_t cat_str_quote_size(size_t length, cat_str_quote_style_flags_t style);
 
 /* magic */
 

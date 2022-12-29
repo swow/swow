@@ -43,10 +43,6 @@
 /* }}} UNIX */
 #endif
 
-#define CAT_LF     '\n'
-#define CAT_CR     '\r'
-#define CAT_CRLF   "\r\n"
-
 #ifdef CAT_OS_WIN
 # define CAT_DIR_SEPARATOR '\\'
 # define CAT_EOL "\r\n"
