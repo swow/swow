@@ -26,11 +26,10 @@ SWOW_API zend_class_entry *swow_selector_ce;
 SWOW_API zend_object_handlers swow_selector_handlers;
 SWOW_API zend_class_entry *swow_selector_exception_ce;
 
-#define SWOW_CHANNEL_GETTER_INTERNAL(object, s_channel, channel) \
-    swow_channel_t *s_channel = swow_channel_get_from_object(object); \
-    cat_channel_t *channel = &s_channel->channel
-
-#define CHANNEL_HAS_CONSTRUCTED(channel) ((channel)->dtor == (cat_channel_data_dtor_t) zval_ptr_dtor)
+static zend_always_inline bool swow_channel_has_constructed(swow_channel_t *s_channel)
+{
+    return s_channel->channel.dtor == (cat_channel_data_dtor_t) zval_ptr_dtor;
+}
 
 static zend_object *swow_channel_create_object(zend_class_entry *ce)
 {
@@ -43,32 +42,34 @@ static zend_object *swow_channel_create_object(zend_class_entry *ce)
 
 static void swow_channel_dtor_object(zend_object *object)
 {
+    swow_channel_t *s_channel = swow_channel_get_from_object(object);
+
     /* try to call __destruct first */
     zend_objects_destroy_object(object);
 
     /* force close the channel (as far as possible before free_obj) */
-    SWOW_CHANNEL_GETTER_INTERNAL(object, s_channel, channel);
-
-    if (UNEXPECTED(!CHANNEL_HAS_CONSTRUCTED(channel))) {
-        return;
+    if (EXPECTED(swow_channel_has_constructed(s_channel))) {
+        cat_channel_close(&s_channel->channel);
     }
-
-    cat_channel_close(channel);
 }
 
 static void swow_channel_free_object(zend_object *object)
 {
-    SWOW_CHANNEL_GETTER_INTERNAL(object, s_channel, channel);
+    swow_channel_t *s_channel = swow_channel_get_from_object(object);
 
-    if (EXPECTED(CHANNEL_HAS_CONSTRUCTED(channel))) {
-        cat_channel_close(channel);
+    if (EXPECTED(swow_channel_has_constructed(s_channel))) {
+        cat_channel_cleanup(&s_channel->channel);
     }
 
     zend_object_std_dtor(&s_channel->std);
 }
 
-#define SWOW_CHANNEL_CHECK(channel) do { \
-    if (UNEXPECTED(!CHANNEL_HAS_CONSTRUCTED(channel))) { \
+#define SWOW_CHANNEL_GETTER_INTERNAL(object, s_channel, channel) \
+    swow_channel_t *s_channel = swow_channel_get_from_object(object); \
+    cat_channel_t *channel = &s_channel->channel
+
+#define SWOW_CHANNEL_CHECK(s_channel) do { \
+    if (UNEXPECTED(!swow_channel_has_constructed(s_channel))) { \
         zend_throw_error(NULL, "%s must construct first", ZEND_THIS_NAME); \
         RETURN_THROWS(); \
     } \
@@ -79,7 +80,7 @@ static void swow_channel_free_object(zend_object *object)
 
 #define SWOW_CHANNEL_GETTER_CONSTRUCTED(s_channel, channel) \
         SWOW_CHANNEL_GETTER(s_channel, channel); \
-        SWOW_CHANNEL_CHECK(channel)
+        SWOW_CHANNEL_CHECK(s_channel)
 
 ZEND_BEGIN_ARG_INFO_EX(arginfo_class_Swow_Channel___construct, 0, 0, 0)
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, capacity, IS_LONG, 0, "0")
@@ -90,7 +91,7 @@ static PHP_METHOD(Swow_Channel, __construct)
     SWOW_CHANNEL_GETTER(s_channel, channel);
     zend_long capacity = 0;
 
-    if (UNEXPECTED(CHANNEL_HAS_CONSTRUCTED(channel))) {
+    if (UNEXPECTED(swow_channel_has_constructed(s_channel))) {
         zend_throw_error(NULL, "%s can be constructed only once", ZEND_THIS_NAME);
         RETURN_THROWS();
     }
@@ -174,10 +175,16 @@ ZEND_END_ARG_INFO()
 static PHP_METHOD(Swow_Channel, close)
 {
     SWOW_CHANNEL_GETTER_CONSTRUCTED(s_channel, channel);
+    cat_bool_t ret;
 
     ZEND_PARSE_PARAMETERS_NONE();
 
-    cat_channel_close(channel);
+    ret = cat_channel_close(channel);
+
+    if (UNEXPECTED(!ret)) {
+        swow_throw_exception_with_last(swow_channel_exception_ce);
+        RETURN_THROWS();
+    }
 }
 
 /* status */
@@ -293,7 +300,7 @@ static PHP_METHOD(Swow_Channel, __debugInfo)
 
     ZEND_PARSE_PARAMETERS_NONE();
 
-    if (UNEXPECTED(!CHANNEL_HAS_CONSTRUCTED(channel))) {
+    if (UNEXPECTED(!swow_channel_has_constructed(s_channel))) {
         return;
     }
 
@@ -405,7 +412,7 @@ static PHP_METHOD_EX(Swow_Selector, add, zend_object *channel_object, zval *z_da
     cat_channel_select_request_t *requests, *request;
     zval *z_storage, *z_bucket;
 
-    SWOW_CHANNEL_CHECK(channel);
+    SWOW_CHANNEL_CHECK(s_channel);
 
     requests = selector->requests;
     if (requests == selector->_requests) {
