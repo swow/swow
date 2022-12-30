@@ -23,6 +23,61 @@
 
 SWOW_API zend_class_entry *swow_log_ce;
 
+static void swow_log_abnormal_raw(cat_log_type_t type, const char *module_name, int code, const char *format, va_list args)
+{
+    smart_str str;
+    memset(&str, 0, sizeof(str));
+    switch (type) {
+        case CAT_LOG_TYPE_NOTICE: {
+            smart_str_appends(&str, "Notice");
+            break;
+        }
+        case CAT_LOG_TYPE_WARNING: {
+            smart_str_appends(&str, "Warning");
+            break;
+        }
+        case CAT_LOG_TYPE_ERROR: {
+            smart_str_appends(&str, "Error");
+            break;
+        }
+        case CAT_LOG_TYPE_CORE_ERROR: {
+            smart_str_appends(&str, "Core Error");
+            break;
+        }
+        default:
+            CAT_NEVER_HERE("Unknown log type");
+    }
+    smart_str_appends(&str, ": <");
+    smart_str_appends(&str, module_name);
+    smart_str_appends(&str, "> ");
+    php_printf_to_smart_str(&str, format, args);
+    smart_str_appends(&str, " in ");
+    do {
+        const char *name = cat_coroutine_get_current_role_name();
+        if (name == NULL) {
+            smart_str_appendc(&str, 'R');
+            smart_str_append_long(&str, cat_coroutine_get_current_id());
+        } else {
+            smart_str_appends(&str, name);
+        }
+    } while (0);
+    smart_str_appends(&str, "\n");
+    smart_str_0(&str);
+    cat_set_last_error(code, ZSTR_VAL(str.s));
+    /* Write CLI/CGI errors to stderr if display_errors = "stderr" */
+    if ((!strcmp(sapi_module.name, "cli") ||
+            !strcmp(sapi_module.name, "micro") ||
+            !strcmp(sapi_module.name, "cgi") ||
+            !strcmp(sapi_module.name, "phpdbg")) &&
+        PG(display_errors) == PHP_DISPLAY_ERRORS_STDERR
+    ) {
+        cat_log_fwrite(stderr, ZSTR_VAL(str.s), ZSTR_LEN(str.s));
+    } else {
+        cat_log_fwrite(stdout, ZSTR_VAL(str.s), ZSTR_LEN(str.s));
+    }
+    smart_str_free(&str);
+}
+
 static void swow_log_va_standard(CAT_LOG_VA_PARAMETERS)
 {
 #ifndef CAT_ENABLE_DEBUG_LOG
@@ -38,58 +93,7 @@ static void swow_log_va_standard(CAT_LOG_VA_PARAMETERS)
         if (!(type & CAT_LOG_TYPES_ABNORMAL)) {
             cat_log_va_standard(type, module_name CAT_SOURCE_POSITION_RELAY_CC, code, format, args);
         } else {
-            smart_str str;
-            memset(&str, 0, sizeof(str));
-            switch (type) {
-                case CAT_LOG_TYPE_NOTICE: {
-                    smart_str_appends(&str, "Notice");
-                    break;
-                }
-                case CAT_LOG_TYPE_WARNING: {
-                    smart_str_appends(&str, "Warning");
-                    break;
-                }
-                case CAT_LOG_TYPE_ERROR: {
-                    smart_str_appends(&str, "Error");
-                    break;
-                }
-                case CAT_LOG_TYPE_CORE_ERROR: {
-                    smart_str_appends(&str, "Core Error");
-                    break;
-                }
-                default:
-                    CAT_NEVER_HERE("Unknown log type");
-            }
-            smart_str_appends(&str, ": ");
-            php_printf_to_smart_str(&str, format, args);
-            smart_str_appends(&str, " in ");
-            do {
-                const char *name = cat_coroutine_get_current_role_name();
-                if (name == NULL) {
-                    smart_str_appendc(&str, 'R');
-                    smart_str_append_long(&str, cat_coroutine_get_current_id());
-                } else {
-                    smart_str_appends(&str, name);
-                }
-            } while (0);
-            smart_str_appends(&str, "\n");
-            smart_str_0(&str);
-            cat_set_last_error(code, ZSTR_VAL(str.s));
-            /* Write CLI/CGI errors to stderr if display_errors = "stderr" */
-            if ((!strcmp(sapi_module.name, "cli") ||
-                 !strcmp(sapi_module.name, "micro") ||
-                 !strcmp(sapi_module.name, "cgi") ||
-                 !strcmp(sapi_module.name, "phpdbg")) &&
-                PG(display_errors) == PHP_DISPLAY_ERRORS_STDERR
-            ) {
-                cat_log_fwrite(stderr, ZSTR_VAL(str.s), ZSTR_LEN(str.s));
-#ifdef PHP_WIN32
-                fflush(stderr);
-#endif
-            } else {
-                cat_log_fwrite(stdout, ZSTR_VAL(str.s), ZSTR_LEN(str.s));
-            }
-            smart_str_free(&str);
+            swow_log_abnormal_raw(type, module_name, code, format, args);
         }
         return;
     }
