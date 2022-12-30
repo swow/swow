@@ -282,7 +282,6 @@ Coroutine::run(static function () use ($channel, $tester, $server, $wr): void {
         }
     } finally {
         $connection->close();
-        $channel->close();
     }
 });
 
