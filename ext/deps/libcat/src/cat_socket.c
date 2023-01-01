@@ -18,6 +18,8 @@
 
 #include "cat_socket.h"
 
+#include "cat_buffer.h"
+
 #include "cat_event.h"
 #include "cat_time.h"
 #include "cat_poll.h"

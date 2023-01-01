@@ -1183,7 +1183,6 @@ static void cat_fs_readdir_cb(cat_data_t *ptr)
             data->ret.error.val.error = errno;
         } else  {
             data->ret.error.type = CAT_FS_ERROR_EOF;
-            data->ret.error.val.error = 0;
         }
         return;
     }
