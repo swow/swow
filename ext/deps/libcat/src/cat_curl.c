@@ -74,6 +74,9 @@ static cat_always_inline int cat_curl_translate_poll_flags_from_sys(int revents)
     if (revents & POLLOUT) {
         action |= CURL_CSELECT_OUT;
     }
+    if (revents & POLLERR) {
+        action |= CURL_CSELECT_ERR;
+    }
 
     return action;
 }
@@ -128,7 +131,10 @@ static int cat_curl_easy_socket_function(CURL *ch, curl_socket_t sockfd, int act
     CAT_LOG_DEBUG(CURL, "curl_easy_socket_function(multi=%p, sockfd=%d, action=%s), timeout=%ld",
         context->multi, sockfd, cat_curl_translate_action_name(action), context->timeout);
 
-    context->sockfd = sockfd;
+    /* make sure only 1 sockfd will be added */
+    CAT_ASSERT(context->sockfd == CURL_SOCKET_BAD || context->sockfd == sockfd);
+
+    context->sockfd = action != CURL_POLL_REMOVE ? sockfd : CURL_SOCKET_BAD;
     context->events = cat_curl_translate_poll_flags_to_sys(action);
 
     return 0;
@@ -222,8 +228,6 @@ static cat_curl_multi_context_t *cat_curl_multi_create_context(CURLM *multi)
 
 static cat_curl_multi_context_t *cat_curl_multi_get_context(CURLM *multi)
 {
-    size_t i = 0;
-
     CAT_QUEUE_FOREACH_DATA_START(&CAT_CURL_G(multi_map), cat_curl_multi_context_t, node, context) {
         if (context->multi == NULL) {
             return NULL; // eof
@@ -231,7 +235,6 @@ static cat_curl_multi_context_t *cat_curl_multi_get_context(CURLM *multi)
         if (context->multi == multi) {
             return context; // hit
         }
-        i++;
     } CAT_QUEUE_FOREACH_DATA_END();
 
     return NULL;
@@ -309,7 +312,7 @@ CAT_API CURLcode cat_curl_easy_perform(CURL *ch)
         return CURLE_OUT_OF_MEMORY;
     }
     context.coroutine = CAT_COROUTINE_G(current);
-    context.sockfd = -1;
+    context.sockfd = CURL_SOCKET_BAD;
     context.timeout = -1;
     context.events = POLLNONE;
     cat_curl_multi_configure(
@@ -408,7 +411,7 @@ CAT_API CURLMcode cat_curl_multi_cleanup(CURLM *multi)
     CURLMcode mcode;
 
     mcode = curl_multi_cleanup(multi);
-    /* we do not know whether libcurl would do somthing during cleanup,
+    /* we do not know whether libcurl would do something during cleanup,
      * so we close the context later */
     cat_curl_multi_close_context(multi);
 
@@ -455,6 +458,18 @@ static CURLMcode cat_curl_multi_exec(
             mcode = curl_multi_socket_action(multi, CURL_SOCKET_TIMEOUT, 0, running_handles);
             if (unlikely(mcode != CURLM_OK) || *running_handles == 0) {
                 goto _out;
+            }
+            if (unlikely(context->nfds == 0)) {
+                /* workaround for alpine bug <hyperf-dockerfile:8.1-alpine-3.17-swow-0.3.2-alpha>
+                 * (version_number: 481024, version: 7.87.0, host: x86_64-alpine-linux-musl, with OpenSSL/3.0.7) */
+                mcode = curl_multi_perform(multi, running_handles);
+                if (unlikely(mcode != CURLM_OK) || *running_handles == 0) {
+                    goto _out;
+                }
+                if (unlikely(context->nfds == 0)) {
+                    mcode = CURLM_INTERNAL_ERROR;
+                    goto _out;
+                }
             }
         } else {
             cat_nfds_t i;

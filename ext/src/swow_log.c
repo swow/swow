@@ -19,9 +19,66 @@
 #include "swow_log.h"
 #include "swow_coroutine.h" /* for coroutine id (TODO: need to decouple it?) */
 
+#include "SAPI.h"
+
 SWOW_API zend_class_entry *swow_log_ce;
 
-static void swow_log_standard(CAT_LOG_PARAMATERS)
+static void swow_log_abnormal_raw(cat_log_type_t type, const char *module_name, int code, const char *format, va_list args)
+{
+    smart_str str;
+    memset(&str, 0, sizeof(str));
+    switch (type) {
+        case CAT_LOG_TYPE_NOTICE: {
+            smart_str_appends(&str, "Notice");
+            break;
+        }
+        case CAT_LOG_TYPE_WARNING: {
+            smart_str_appends(&str, "Warning");
+            break;
+        }
+        case CAT_LOG_TYPE_ERROR: {
+            smart_str_appends(&str, "Error");
+            break;
+        }
+        case CAT_LOG_TYPE_CORE_ERROR: {
+            smart_str_appends(&str, "Core Error");
+            break;
+        }
+        default:
+            CAT_NEVER_HERE("Unknown log type");
+    }
+    smart_str_appends(&str, ": <");
+    smart_str_appends(&str, module_name);
+    smart_str_appends(&str, "> ");
+    php_printf_to_smart_str(&str, format, args);
+    smart_str_appends(&str, " in ");
+    do {
+        const char *name = cat_coroutine_get_current_role_name();
+        if (name == NULL) {
+            smart_str_appendc(&str, 'R');
+            smart_str_append_long(&str, cat_coroutine_get_current_id());
+        } else {
+            smart_str_appends(&str, name);
+        }
+    } while (0);
+    smart_str_appends(&str, "\n");
+    smart_str_0(&str);
+    cat_set_last_error(code, ZSTR_VAL(str.s));
+    /* Write CLI/CGI errors to stderr if display_errors = "stderr" */
+    if ((!strcmp(sapi_module.name, "cli") ||
+            !strcmp(sapi_module.name, "micro") ||
+            !strcmp(sapi_module.name, "cgi") ||
+            !strcmp(sapi_module.name, "phpdbg")) &&
+        PG(display_errors) == PHP_DISPLAY_ERRORS_STDERR
+    ) {
+        cat_log_fwrite(stderr, ZSTR_VAL(str.s), ZSTR_LEN(str.s));
+    } else {
+        cat_log_fwrite(stdout, ZSTR_VAL(str.s), ZSTR_LEN(str.s));
+    }
+    smart_str_free(&str);
+}
+
+static void swow_log_va_standard(CAT_LOG_VA_PARAMETERS)
 {
 #ifndef CAT_ENABLE_DEBUG_LOG
     if (type == CAT_LOG_TYPE_DEBUG) {
@@ -29,81 +86,31 @@ static void swow_log_standard(CAT_LOG_PARAMATERS)
     }
 #endif
 
-    char *message;
-    do {
-        va_list args;
-        va_start(args, format);
-        message = cat_vsprintf(format, args);
-        if (unlikely(message == NULL)) {
-            fprintf(stderr, "Sprintf log message failed" CAT_EOL);
-            return;
-        }
-        va_end(args);
-    } while (0);
-
     /* Zend put()/error() may call PHP callbacks,
      * we can not do it in a pure C or interned coroutine */
-    if (!(swow_coroutine_get_current()->coroutine.flags & SWOW_COROUTINE_FLAG_HAS_EXECUTOR)) {
-        cat_log_standard(type, module_name CAT_SOURCE_POSITION_RELAY_CC, code, "%s", message);
-        cat_free(message);
+    bool has_executor = swow_coroutine_get_current()->coroutine.flags & SWOW_COROUTINE_FLAG_HAS_EXECUTOR;
+    if (!has_executor) {
+        if (!(type & CAT_LOG_TYPES_ABNORMAL)) {
+            cat_log_va_standard(type, module_name CAT_SOURCE_POSITION_RELAY_CC, code, format, args);
+        } else {
+            swow_log_abnormal_raw(type, module_name, code, format, args);
+        }
         return;
     }
 
     if (!(type & CAT_LOG_TYPES_ABNORMAL)) {
-        char *output;
-        const char *type_string = "Unknown";
-        cat_bool_t failed = cat_false;
-        switch (type) {
-#ifdef CAT_ENABLE_DEBUG_LOG
-            case CAT_LOG_TYPE_DEBUG:
-                type_string = "Debug";
-                break;
-#endif
-            case CAT_LOG_TYPE_INFO:
-                type_string = "Info";
-                break;
-            default:
-                CAT_NEVER_HERE("Unknown log type");
-        }
-        /* stdout */
-        do {
-            const char *name = cat_coroutine_get_current_role_name();
-            if (name != NULL) {
-                output = cat_sprintf(
-                    "%s: <%s> %s in %s in %s on line %u" PHP_EOL,
-                    type_string, module_name, message, name,
-                    zend_get_executed_filename(), zend_get_executed_lineno()
-                );
-            } else {
-                output = cat_sprintf(
-                    "%s: <%s> %s in R" CAT_COROUTINE_ID_FMT " in %s on line %u" PHP_EOL,
-                    type_string, module_name, message, cat_coroutine_get_current_id(),
-                    zend_get_executed_filename(), zend_get_executed_lineno()
-                );
-            }
-        } while (0);
-        if (likely(output != NULL)) {
-            ZEND_PUTS(output);
-            cat_free(output);
-#ifdef CAT_SOURCE_POSITION
-            if (CAT_G(log_source_postion)) {
-                output = cat_sprintf("CSP: in %s on line %u" PHP_EOL, file, line);
-                if (likely(output != NULL)) {
-                    ZEND_PUTS(output);
-                    cat_free(output);
-                } else {
-                    failed = cat_true;
-                }
-            }
-#endif
-        } else {
-            failed = cat_true;
-        }
-        cat_free(message);
-        if (unlikely(failed)) {
-            fprintf(stderr, "Sprintf log output failed" CAT_EOL);
-        }
+        smart_str str;
+        memset(&str, 0, sizeof(str));
+        php_printf_to_smart_str(&str, format, args);
+        smart_str_append_printf(&str, " in %s:%u", zend_get_executed_filename(), zend_get_executed_lineno());
+        smart_str_0(&str);
+        cat_log_standard(type, module_name CAT_SOURCE_POSITION_RELAY_CC, code, "%s", ZSTR_VAL(str.s));
     } else {
+        char *message = cat_vsprintf(format, args);
+        if (unlikely(message == NULL)) {
+            fprintf(stderr, "Sprintf log message failed\n");
+            return;
+        }
         cat_set_last_error(code, message);
         switch (type) {
             case CAT_LOG_TYPE_NOTICE: {
@@ -133,7 +140,18 @@ static void swow_log_standard(CAT_LOG_PARAMATERS)
             default:
                 CAT_NEVER_HERE("Unknown log type");
         }
+        cat_free(message);
     }
+}
+
+static void swow_log_standard(CAT_LOG_PARAMETERS)
+{
+    va_list args;
+    va_start(args, format);
+
+    swow_log_va_standard(type, module_name CAT_SOURCE_POSITION_RELAY_CC, code, format, args);
+
+    va_end(args);
 }
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Log_getTypes, 0, 0, IS_LONG, 0)
@@ -141,7 +159,7 @@ ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Log, getTypes)
 {
-    RETURN_LONG(CAT_G(log_types));
+    RETURN_LONG(CAT_LOG_G(types));
 }
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Log_setTypes, 0, 1, IS_VOID, 0)
@@ -160,7 +178,7 @@ static PHP_METHOD(Swow_Log, setTypes)
         zend_argument_value_error(1, "is unrecognized");
         RETURN_THROWS();
     }
-    CAT_G(log_types) = types;
+    CAT_LOG_G(types) = types;
 }
 
 static const zend_function_entry swow_log_methods[] = {

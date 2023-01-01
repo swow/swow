@@ -14,14 +14,14 @@ php_proc_with_swow([
     '-r',
     'printf("%d" . PHP_EOL, getmypid());' .
         'Swow\Coroutine::yield();' .
-        'fwrite(STDERR, "Never here" . PHP_EOL);',
+        'fwrite(STDOUT, "Never here" . PHP_EOL);',
 ], static function ($proc, array $pipes): void {
     $pid = (int) trim(fgets($pipes[1], 4096));
     Assert::notSame($pid, 0);
-    echo trim(fgets($pipes[2], 4096)) . "\n";
+    echo trim(fgets($pipes[1], 4096)) . "\n";
     Signal::kill($pid, Signal::TERM);
-    while (!feof($pipes[2])) {
-        echo trim(fgets($pipes[2], 4096)) . "\n";
+    while (!feof($pipes[1])) {
+        echo trim(fgets($pipes[1], 4096)) . "\n";
     }
 });
 

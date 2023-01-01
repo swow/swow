@@ -86,49 +86,74 @@ CAT_API cat_bool_t cat_runtime_init(void)
 
     srand((unsigned int) time(NULL));
 
-    CAT_G(log_types) = CAT_LOG_TYPES_DEFAULT;
-    CAT_G(error_log) = stderr;
-    CAT_G(show_last_error) = cat_false;
     cat_const_string_init(&CAT_G(exepath));
+
+    CAT_LOG_G(types) = CAT_LOG_TYPES_DEFAULT;
+    CAT_LOG_G(error_output) = stderr;
 #ifdef CAT_SOURCE_POSITION
-    CAT_G(log_source_postion) = cat_false;
+    CAT_LOG_G(show_source_postion) = cat_false;
 #endif
+    CAT_G(show_last_error) = cat_false;
     memset(&CAT_G(last_error), 0, sizeof(CAT_G(last_error)));
 
     /* error log */
-    if (cat_env_exists("CAT_ERROR_LOG")) {
-        char *error_log = cat_env_get("CAT_ERROR_LOG");
+    if (!cat_env_is_empty("CAT_LOG_ERROR_OUTPUT")) {
+        char *error_log = cat_env_get_silent("CAT_LOG_ERROR_OUTPUT", NULL);
         if (cat_strcasecmp(error_log, "stdout") == 0) {
-            CAT_G(error_log) = stdout;
+            CAT_LOG_G(error_output) = stdout;
         } else if (cat_strcasecmp(error_log, "stderr") == 0) {
-            CAT_G(error_log) = stderr;
+            CAT_LOG_G(error_output) = stderr;
         }  /* TODO: log file support */
         cat_free(error_log);
     }
-    /* show last error */
-    if (cat_env_is_true("CAT_SLE", cat_false)) {
-        CAT_G(show_last_error) = cat_true;
+    /* log str size */
+    CAT_LOG_G(str_size) = (size_t) cat_env_get_i("CAT_LOG_STR_SIZE", 32);
+    /* log module name filter */
+    if (!cat_env_is_empty("CAT_LOG_MODULE_NAME_FILTER")) {
+        CAT_LOG_G(module_name_filter) = cat_env_get_silent("CAT_LOG_MODULE_NAME_FILTER", NULL);
+    } else {
+        CAT_LOG_G(module_name_filter) = NULL;
     }
-    CAT_G(log_str_size) = (size_t) cat_env_get_i("CAT_LOG_STR_SIZE", 32);
+    CAT_LOG_G(show_timestamps) = (unsigned int) cat_env_get_i("CAT_LOG_SHOW_TIMESTAMPS", 0);
+    CAT_LOG_G(timestamps_format) = "%F %T";
+    CAT_LOG_G(show_timestamps_as_relative) = cat_false;
+    do {
+        char *timestamps_format = cat_env_get_silent("CAT_LOG_TIMESTAMPS_FORMAT", NULL);
+        if (timestamps_format != NULL) {
+            if (cat_strcasecmp(timestamps_format, "time") == 0) {
+                CAT_LOG_G(timestamps_format) = "%T";
+            } else if (cat_strcasecmp(timestamps_format, "unix") == 0) {
+                CAT_LOG_G(timestamps_format) = "%s";
+            }
+        } else {
+            cat_free(timestamps_format);
+        }
+    } while (0);
+    if (cat_env_is_true("CAT_LOG_SHOW_TIMESTAMPS_AS_RELATIVE", cat_false)) {
+        CAT_LOG_G(show_timestamps_as_relative) = cat_true;
+    }
 #ifdef CAT_DEBUG
-do {
-    CAT_G(log_debug_level) = (unsigned int) cat_env_get_i("CAT_DEBUG", 0);
-    if (CAT_G(log_debug_level) > 0) {
+    CAT_LOG_G(last_debug_log_level) = 0;
+    CAT_LOG_G(debug_level) = (unsigned int) cat_env_get_i("CAT_DEBUG", 0);
+    if (CAT_LOG_G(debug_level) > 0) {
         /* enable all log types and log module types */
-        CAT_G(log_types) = CAT_LOG_TYPES_ALL;
+        CAT_LOG_G(types) = CAT_LOG_TYPES_ALL;
         /* enable SLE if there is no env to set it explicitly */
-        if (!cat_env_exists("CAT_SLE")) {
+        if (!cat_env_exists("CAT_SHOW_LAST_ERROR")) {
             CAT_G(show_last_error) = cat_true;
         }
     }
-#ifdef CAT_SOURCE_POSITION
+# ifdef CAT_SOURCE_POSITION
     /* show source position */
-    if (cat_env_is_true("CAT_SP", cat_false)) {
-        CAT_G(log_source_postion) = cat_true;
+    if (cat_env_is_true("CAT_LOG_SHOW_SOURCE_POSITION", cat_false)) {
+        CAT_LOG_G(show_source_postion) = cat_true;
     }
+# endif
 #endif
-} while (0);
-#endif
+    /* show last error */
+    if (cat_env_is_true("CAT_SHOW_LAST_ERROR", cat_false)) {
+        CAT_G(show_last_error) = cat_true;
+    }
 
     CAT_G(runtime) = cat_true;
 
@@ -139,6 +164,9 @@ CAT_API cat_bool_t cat_runtime_shutdown(void)
 {
     cat_clear_last_error();
 
+    if (CAT_LOG_G(module_name_filter) != NULL) {
+        cat_free(CAT_LOG_G(module_name_filter));
+    }
     if (CAT_G(exepath).data != NULL) {
         cat_free((void *) CAT_G(exepath).data);
     }

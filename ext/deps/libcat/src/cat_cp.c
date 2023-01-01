@@ -22,6 +22,10 @@
 #include "cat_cp.h"
 #endif
 
+#ifdef CAT_OS_WIN
+#include <windows.h>
+#endif
+
 /* sleep */
 
 #ifdef CAT_OS_WIN
@@ -97,3 +101,68 @@ CAT_API size_t cat_io_vector_length(const cat_io_vector_t *vector, unsigned int 
 
     return nbytes;
 }
+
+/* clock_gettime()
+ * based on: https://stackoverflow.com/a/51974214/13695422 */
+
+#ifndef CAT_OS_WIN
+CAT_API int cat_clock_gettime_monotonic(struct timespec *tp)
+{
+    return clock_gettime(CLOCK_MONOTONIC, tp);
+}
+
+CAT_API int cat_clock_gettime_realtime(struct timespec *tp)
+{
+    return clock_gettime(CLOCK_REALTIME, tp);
+}
+#else
+#define MS_PER_SEC      1000ULL     // MS = milliseconds
+#define US_PER_MS       1000ULL     // US = microseconds
+#define HNS_PER_US      10ULL       // HNS = hundred-nanoseconds (e.g., 1 hns = 100 ns)
+#define NS_PER_US       1000ULL
+
+#define HNS_PER_SEC     (MS_PER_SEC * US_PER_MS * HNS_PER_US)
+#define NS_PER_HNS      (100ULL)    // NS = nanoseconds
+#define NS_PER_SEC      (MS_PER_SEC * US_PER_MS * NS_PER_US)
+
+CAT_API int cat_clock_gettime_realtime(struct timespec *tp)
+{
+    FILETIME ft;
+    ULARGE_INTEGER hnsTime;
+
+    GetSystemTimeAsFileTime(&ft);
+
+    hnsTime.LowPart = ft.dwLowDateTime;
+    hnsTime.HighPart = ft.dwHighDateTime;
+
+    // To get POSIX Epoch as baseline, subtract the number of hns intervals from Jan 1, 1601 to Jan 1, 1970.
+    hnsTime.QuadPart -= (11644473600ULL * HNS_PER_SEC);
+
+    // modulus by hns intervals per second first, then convert to ns, as not to lose resolution
+    tp->tv_nsec = (long) ((hnsTime.QuadPart % HNS_PER_SEC) * NS_PER_HNS);
+    tp->tv_sec = (long) (hnsTime.QuadPart / HNS_PER_SEC);
+
+    return 0;
+}
+
+CAT_API int cat_clock_gettime_monotonic(struct timespec *tp)
+{
+    static LARGE_INTEGER ticksPerSec;
+    LARGE_INTEGER ticks;
+
+    if (!ticksPerSec.QuadPart) {
+        QueryPerformanceFrequency(&ticksPerSec);
+        if (!ticksPerSec.QuadPart) {
+            errno = ENOTSUP;
+            return -1;
+        }
+    }
+
+    QueryPerformanceCounter(&ticks);
+
+    tp->tv_sec = (long)(ticks.QuadPart / ticksPerSec.QuadPart);
+    tp->tv_nsec = (long)(((ticks.QuadPart % ticksPerSec.QuadPart) * NS_PER_SEC) / ticksPerSec.QuadPart);
+
+    return 0;
+}
+#endif

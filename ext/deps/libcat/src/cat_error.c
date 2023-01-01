@@ -22,6 +22,9 @@
 #include "cat_error.h"
 #endif
 
+#undef ERROR /* on Windows ERROR was defined as number, it will cause conflict for module_name */
+#undef cat_show_last_error
+
 CAT_API cat_errno_t cat_get_last_error_code(void)
 {
     return CAT_G(last_error).code;
@@ -60,7 +63,7 @@ CAT_API void cat_update_last_error(cat_errno_t code, const char *format, ...)
         message = cat_vsprintf(format, args);
         va_end(args);
         if (unlikely(message == NULL)) {
-            fprintf(CAT_G(error_log), "Sprintf last error message failed" CAT_EOL);
+            fprintf(CAT_LOG_G(error_output), "Sprintf last error message failed\n");
             return;
         }
     }
@@ -71,6 +74,13 @@ CAT_API void cat_update_last_error(cat_errno_t code, const char *format, ...)
 CAT_API void cat_set_last_error_code(cat_errno_t code)
 {
     CAT_G(last_error).code = code;
+
+    if (CAT_G(show_last_error)) {
+        CAT_LOG_INFO(
+            ERROR,  "last_error.code = %s",
+            cat_strerrno(cat_get_last_error_code())
+        );
+    }
 }
 
 CAT_API void cat_set_last_error(cat_errno_t code, char *message)
@@ -84,7 +94,6 @@ CAT_API void cat_set_last_error(cat_errno_t code, char *message)
         cat_free(last_error_message);
     }
     if (CAT_G(show_last_error)) {
-#undef cat_show_last_error
         cat_show_last_error();
     }
 }
@@ -92,8 +101,8 @@ CAT_API void cat_set_last_error(cat_errno_t code, char *message)
 CAT_API void cat_show_last_error(void)
 {
     CAT_LOG_INFO(
-        CORE,  "Last-error: code=" CAT_ERRNO_FMT ", message=%s",
-        cat_get_last_error_code(), cat_get_last_error_message()
+        ERROR,  "last_error = { code: %s, message: '%s' }",
+        cat_strerrno(cat_get_last_error_code()), cat_get_last_error_message()
     );
 }
 
@@ -117,6 +126,19 @@ CAT_API const char *cat_strerror(cat_errno_t error)
     }
 #undef CAT_STRERROR_GEN
     return "Unknown error";
+}
+
+CAT_API const char *cat_strerrno(cat_errno_t error)
+{
+    if (error > 0) {
+        error = cat_translate_sys_error(error);
+    }
+#define CAT_STRERRNO_GEN(name, msg) case UV_ ## name: return #name;
+    switch (error) {
+        CAT_ERRNO_MAP(CAT_STRERRNO_GEN)
+    }
+#undef CAT_STRERRNO_GEN
+    return "UNKNOWN";
 }
 
 #ifndef E2BIG

@@ -906,9 +906,9 @@ CAT_API cat_bool_t cat_http_parser_should_keep_alive(const cat_http_parser_t *pa
 
 CAT_API cat_bool_t cat_http_parser_finish(cat_http_parser_t *parser)
 {
-    llhttp_errno_t error;
+    cat_http_parser_errno_t error;
 
-    error = llhttp_finish(&parser->llhttp);
+    error = (cat_http_parser_errno_t) llhttp_finish(&parser->llhttp);
     if (unlikely(
         error != CAT_HTTP_PARSER_E_OK &&
         error != CAT_HTTP_PARSER_E_PAUSED /* on_message_complete may return E_PAUSED */

@@ -125,16 +125,16 @@ CAT_API cat_bool_t cat_stop(void)
 #ifdef CAT_DEBUG
 CAT_API void cat_enable_debug_mode(void)
 {
-    CAT_G(log_types) = CAT_LOG_TYPES_ALL;
+    CAT_LOG_G(types) = CAT_LOG_TYPES_ALL;
 }
 #endif
 
 CAT_API FILE *cat_get_error_log(void)
 {
-    return CAT_G(error_log);
+    return CAT_LOG_G(error_output);
 }
 
 CAT_API void cat_set_error_log(FILE *file)
 {
-    CAT_G(error_log) = file;
+    CAT_LOG_G(error_output) = file;
 }

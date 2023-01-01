@@ -227,8 +227,11 @@ if (PHP_SWOW != 'no') (function(){
     ADD_FLAG('CFLAGS_SWOW_LIBUV_OBJ', '$(CFLAGS_SWOW_COMMON)');
     ADD_FLAG('CFLAGS_SWOW_LIBUV_OBJ', '/wd4090');
     ADD_FLAG('CFLAGS_SWOW_LIBUV_OBJ', '/wd4267');
-    ADD_FLAG('CFLAGS_SWOW_LIBUV_OBJ', '/wd4819');
+    // C4334: https://learn.microsoft.com/en-us/cpp/error-messages/compiler-warnings/compiler-warning-level-3-c4334?view=msvc-170
+    // for code like: `procmask & (1 << i)`, `threadmask |= 1 << i`
+    ADD_FLAG('CFLAGS_SWOW_LIBUV_OBJ', '/wd4334');
     ADD_FLAG('CFLAGS_SWOW_LIBUV_OBJ', '/wd4548');
+    ADD_FLAG('CFLAGS_SWOW_LIBUV_OBJ', '/wd4819');
     ADD_FLAG('CFLAGS_SWOW_LIBUV_OBJ', '/wd4996');
     ADD_FLAG('CFLAGS_SWOW_LIBUV_OBJ', '/I "' + configure_module_dirname + '\\' + UV_DIR + '/include"');
     ADD_FLAG('CFLAGS_SWOW_LIBUV_OBJ', '/I "' + configure_module_dirname + '\\' + UV_DIR + '/src"');

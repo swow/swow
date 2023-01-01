@@ -112,7 +112,7 @@ static void swow_closure_ast_callback(zend_ast *ast, void *context_ptr)
 
                     if (ZSTR_LEN(namespace) != context->required_namespace_length ||
                         strncasecmp(ZSTR_VAL(namespace), context->required_namespace, ZSTR_LEN(namespace))) {
-                        CAT_LOG_DEBUG_WITH_LEVEL(CLOSURE, 10, "Function is namespaced, but target file contains another namespace");
+                        CAT_LOG_DEBUG_WITH_LEVEL(CLOSURE, 5, "Function is namespaced, but target file contains another namespace");
                         context->state = SWOW_ZEND_AST_WALK_STATE_NOT_FOUND;
                         return;
                     }
@@ -206,7 +206,7 @@ SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_user_anonymous_function(zend_f
                 if (ZVAL_IS_NULL(&z_references)) {
                     array_init(&z_references);
                 }
-                CAT_LOG_DEBUG_WITH_LEVEL(CLOSURE, 6, "Use reference $%.*s", (int) ZSTR_LEN(key), ZSTR_VAL(key));
+                CAT_LOG_DEBUG_WITH_LEVEL(CLOSURE, 5, "Use reference $%.*s", (int) ZSTR_LEN(key), ZSTR_VAL(key));
                 add_next_index_str(&z_references, zend_string_copy(key));
                 continue;
             }
@@ -215,7 +215,7 @@ SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_user_anonymous_function(zend_f
                 goto _serialize_use_error;
             }
             /* if (!Z_ISREF_P(z_val)) */ {
-                CAT_LOG_DEBUG_WITH_LEVEL(CLOSURE, 6, "Use variable $%.*s", (int) ZSTR_LEN(key), ZSTR_VAL(key));
+                CAT_LOG_DEBUG_WITH_LEVEL(CLOSURE, 5, "Use variable $%.*s", (int) ZSTR_LEN(key), ZSTR_VAL(key));
                 Z_TRY_ADDREF_P(z_val);
                 zend_hash_update(Z_ARRVAL(z_static_variables), key, z_val);
             }
@@ -284,7 +284,7 @@ SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_user_anonymous_function(zend_f
             php_token_t *prev_token = cat_queue_data(cat_queue_prev(&token->node), php_token_t, node);
             if (token->line > prev_token->line) {
                 uint32_t line_diff = token->line - prev_token->line;
-                CAT_LOG_DEBUG_WITH_LEVEL(CLOSURE, 6, "Insert %u new lines", line_diff);
+                CAT_LOG_DEBUG_WITH_LEVEL(CLOSURE, 5, "Insert %u new lines", line_diff);
                 for (uint32_t i = 0; i < line_diff; i++) {
                     smart_str_appendc(&buffer, '\n');
                 }
@@ -359,7 +359,7 @@ SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_user_anonymous_function(zend_f
                         bool first = true;
                         smart_str_appends(&buffer, "use (");
                         ZEND_HASH_PACKED_FOREACH_VAL(Z_ARRVAL(z_references), z_val) {
-                            CAT_LOG_DEBUG_WITH_LEVEL(CLOSURE, 6, "Use reference for $%.*s", (int) Z_STRLEN_P(z_val), Z_STRVAL_P(z_val));
+                            CAT_LOG_DEBUG_WITH_LEVEL(CLOSURE, 5, "Use reference for $%.*s", (int) Z_STRLEN_P(z_val), Z_STRVAL_P(z_val));
                             if (first) {
                                 first = false;
                             } else {
@@ -513,7 +513,7 @@ static PHP_METHOD(Swow_Closure, __serialize)
     bool is_user_anonymous_function = swow_function_is_user_anonymous(function);
     bool is_named_function = swow_function_is_named(function);
 
-    CAT_LOG_DEBUG_WITH_LEVEL(CLOSURE, 10, "Closure function name = [%zu] '%.*s'\n",
+    CAT_LOG_DEBUG_WITH_LEVEL(CLOSURE, 5, "Closure function name = [%zu] '%.*s'\n",
         ZSTR_LEN(function->op_array.function_name), (int) ZSTR_LEN(function->op_array.function_name), ZSTR_VAL(function->op_array.function_name));
 
     if (!is_user_anonymous_function && !is_named_function) {

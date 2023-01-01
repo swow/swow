@@ -468,7 +468,7 @@ CAT_API cat_coroutine_t *cat_coroutine_create_ex(cat_coroutine_t *coroutine, cat
     }
 #endif
 
-#ifdef  CAT_COROUTINE_USE_USER_STACK
+#ifdef CAT_COROUTINE_USE_USER_STACK
     void *virtual_memory;
     size_t virtual_memory_size;
     size_t padding_size = cat_getpagesize() * CAT_COROUTINE_STACK_PADDING_PAGE_COUNT;
@@ -738,19 +738,15 @@ static cat_always_inline cat_bool_t cat_coroutine_check_resumability(const cat_c
     return cat_true;
 }
 
-#define CAT_COROUTINE_SWITCH_LOG(action, to) cat_coroutine_switch_log(#action, to)
-
-static cat_always_inline void cat_coroutine_switch_log(const char *action, const cat_coroutine_t *coroutine)
-{
-    CAT_LOG_DEBUG_VA(COROUTINE, {
-        const char *name = cat_coroutine_get_role_name(coroutine);
-        if (name != NULL) {
-            CAT_LOG_DEBUG_D(COROUTINE, "%s to %s", action, name);
-        } else {
-            CAT_LOG_DEBUG_D(COROUTINE, "%s to R" CAT_COROUTINE_ID_FMT, action, coroutine->id);
-        }
+#define CAT_COROUTINE_SWITCH_LOG(action, to) \
+    CAT_LOG_DEBUG_VA(COROUTINE, { \
+        const char *name = cat_coroutine_get_role_name(to); \
+        if (name != NULL) { \
+            CAT_LOG_DEBUG_D(COROUTINE, "%s to %s", #action, name); \
+        } else { \
+            CAT_LOG_DEBUG_D(COROUTINE, "%s to R" CAT_COROUTINE_ID_FMT, #action, to->id); \
+        } \
     });
-}
 
 CAT_API cat_bool_t cat_coroutine_resume(cat_coroutine_t *coroutine, cat_data_t *data, cat_data_t **retval)
 {
@@ -950,7 +946,7 @@ CAT_API cat_msec_t cat_coroutine_get_elapsed(const cat_coroutine_t *coroutine)
     return cat_time_msec() - coroutine->start_time;
 }
 
-CAT_API char *cat_coroutine_get_elapsed_as_string(const cat_coroutine_t *coroutine)
+CAT_API char *cat_coroutine_get_elapsed_str(const cat_coroutine_t *coroutine)
 {
     return cat_time_format_msec(cat_coroutine_get_elapsed(coroutine));
 }
@@ -1133,6 +1129,30 @@ CAT_API const char *cat_coroutine_get_current_role_name(void)
     }
 
     return cat_coroutine_get_role_name(coroutine);
+}
+
+CAT_API const char *cat_coroutine_get_role_name_in_uppercase(const cat_coroutine_t *coroutine)
+{
+    switch (coroutine->id) {
+        case CAT_COROUTINE_MAIN_ID:
+            return "MAIN";
+        case CAT_COROUTINE_SCHEDULER_ID:
+            return "SCHEDULER";
+        default:
+            return NULL;
+    }
+}
+
+CAT_API const char *cat_coroutine_get_current_role_name_in_uppercase(void)
+{
+    const cat_coroutine_t *coroutine = CAT_COROUTINE_G(current);
+
+    if (unlikely(coroutine == NULL)) {
+        /* may be called out of runtime (usually in log) */
+        return "MAIN";
+    }
+
+    return cat_coroutine_get_role_name_in_uppercase(coroutine);
 }
 
 /* helper */

@@ -38,6 +38,23 @@ typedef enum cat_log_union_types_e {
     CAT_LOG_TYPES_UNFILTERABLE    = CAT_LOG_TYPE_ERROR | CAT_LOG_TYPE_CORE_ERROR,
 } cat_log_union_types_t;
 
+typedef struct cat_log_globals_s {
+    cat_log_types_t types;
+    FILE *error_output;
+    size_t str_size;
+    char *module_name_filter;
+    unsigned int show_timestamps;
+    const char *timestamps_format;
+    cat_bool_t show_timestamps_as_relative;
+#ifdef CAT_DEBUG
+    unsigned int debug_level;
+    unsigned int last_debug_log_level;
+#endif
+#ifdef CAT_SOURCE_POSITION
+    cat_bool_t show_source_postion;
+#endif
+} cat_log_globals_t;
+
 #define CAT_LOG_STRING_OR_X_PARAM(string, x) \
         (string != NULL ? "\"" : ""), (string != NULL ? string : x), (string != NULL ? "\"" : "")
 
@@ -57,8 +74,15 @@ typedef enum cat_log_union_types_e {
  * [XXX_D] macros means log directly without checking user config */
 
 #define CAT_LOG_SCOPE_WITH_TYPE_START(type, module_name) do { \
-    if ((((type) & CAT_G(log_types)) == (type)) || \
-        unlikely((type) & CAT_LOG_TYPES_UNFILTERABLE)) {
+    if (( \
+            ((type) & CAT_LOG_G(types)) == (type) && \
+            ( \
+                likely(CAT_LOG_G(module_name_filter) == NULL) || \
+                cat_str_list_contains_ci(CAT_LOG_G(module_name_filter), #module_name, strlen(#module_name)) \
+            ) \
+        ) || \
+        unlikely(((int) (type)) & CAT_LOG_TYPES_UNFILTERABLE) \
+    ) {
 
 #define CAT_LOG_SCOPE_WITH_TYPE_END() \
     } \
@@ -116,7 +140,8 @@ typedef enum cat_log_union_types_e {
 # define CAT_LOG_DEBUG_D(module_name, format, ...)
 #else
 # define CAT_LOG_DEBUG_LEVEL_SCOPE_START(level) do { \
-    if (CAT_G(log_debug_level) >= level) {
+    if (CAT_LOG_G(debug_level) >= level) { \
+        CAT_LOG_G(last_debug_log_level) = level; \
 
 # define CAT_LOG_DEBUG_LEVEL_SCOPE_END() \
     } \
@@ -177,9 +202,15 @@ typedef enum cat_log_union_types_e {
     CAT_LOG_V(type, module_name, _error, format " (syscall failure " CAT_ERRNO_FMT ": %s)", ##__VA_ARGS__, _error, cat_strerror(_error)); \
 } while (0)
 
-#define CAT_LOG_PARAMATERS \
+#define CAT_LOG_PARAMETERS_WITHOUT_ARGS \
     cat_log_type_t type, const char *module_name \
-    CAT_SOURCE_POSITION_DC, int code, const char *format, ...
+    CAT_SOURCE_POSITION_DC, int code, const char *format
+
+#define CAT_LOG_PARAMETERS \
+    CAT_LOG_PARAMETERS_WITHOUT_ARGS, ...
+
+#define CAT_LOG_VA_PARAMETERS \
+    CAT_LOG_PARAMETERS_WITHOUT_ARGS, va_list args
 
 #ifdef CAT_SOURCE_POSITION
 #ifndef CAT_DISABLE___FUNCTION__
@@ -191,13 +222,39 @@ typedef enum cat_log_union_types_e {
 #define CAT_LOG_ATTRIBUTES CAT_ATTRIBUTE_PTR_FORMAT(printf, 4, 5)
 #endif
 
-typedef void (*cat_log_t)(CAT_LOG_PARAMATERS);
+#define CAT_LOG_UNFINISHED_FMT "<unfinished ...>"
+
+typedef void (*cat_log_t)(CAT_LOG_PARAMETERS);
 
 extern CAT_API cat_log_t cat_log_function CAT_LOG_ATTRIBUTES;
 
-CAT_API void cat_log_standard(CAT_LOG_PARAMATERS);
+CAT_API cat_bool_t cat_log_fwrite(FILE *file, const char *str, size_t length);
 
-/* Notice: n will be limited to CAT_G(log_str_size) if it exceed CAT_G(log_str_size) */
-CAT_API const char *cat_log_str_quote(const char *buffer, size_t n, char **tmp_str); CAT_FREE
+CAT_API void cat_log_va_standard(CAT_LOG_VA_PARAMETERS);
+CAT_API void cat_log_standard(CAT_LOG_PARAMETERS);
+
+/* Notice: n will be limited to CAT_LOG_G(str_size) if it exceed CAT_LOG_G(str_size) */
+CAT_API const char *cat_log_str_quote(const char *str, size_t n, char **tmp_str); CAT_FREE
 /* Notice: n will not be limited anyway */
-CAT_API const char *cat_log_str_quote_unlimited(const char *buffer, size_t n, char **tmp_str); CAT_FREE
+CAT_API const char *cat_log_str_quote_unlimited(const char *str, size_t n, char **tmp_str); CAT_FREE
+
+#define CAT_LOG_STRERRNO_FMT "%s%s%s"
+#define CAT_LOG_STRERRNO_C(ret, error) \
+            (ret) ? "" : " (", \
+                (ret) ? "" : cat_strerrno(error), \
+            (ret) ? "" : ")"
+
+#define CAT_LOG_BOOL_RET_FMT "%s" CAT_LOG_STRERRNO_FMT
+#define CAT_LOG_BOOL_RET_C(ret) \
+        cat_bool_str(ret), \
+        CAT_LOG_STRERRNO_C(ret, cat_get_last_error_code())
+
+#define CAT_LOG_ERROR_RET_FMT CAT_ERRNO_FMT CAT_LOG_STRERRNO_FMT
+#define CAT_LOG_ERROR_RET_C(error) \
+            error, \
+            CAT_LOG_STRERRNO_C(error == 0, error)
+
+#define CAT_LOG_SSIZE_RET_FMT "%zd" CAT_LOG_STRERRNO_FMT
+#define CAT_LOG_SSIZE_RET_C(n) \
+            n, \
+            CAT_LOG_STRERRNO_C(n >= 0, cat_get_last_error_code())

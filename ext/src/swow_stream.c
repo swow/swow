@@ -444,7 +444,7 @@ static inline int swow_stream_bind(php_stream *stream, swow_netstream_data_t *sw
         goto _error;
     }
 
-    ret = cat_socket_bind_ex(socket, host, host_len, port, bind_flags) ? 0 : -1;
+    ret = cat_socket_bind_to_ex(socket, host, host_len, port, bind_flags) ? 0 : -1;
 
     if (UNEXPECTED(ret != 0)) {
         goto _error;
@@ -577,9 +577,9 @@ static inline int swow_stream_accept(php_stream *stream, swow_netstream_data_t *
 static zend_always_inline zend_bool swow_stream_socket_connect(cat_socket_t *socket, const char *name, size_t name_length, int port, const struct timeval *timeout, zend_bool asynchronous)
 {
     if (!asynchronous) {
-        return cat_socket_connect_ex(socket, name, name_length, port, cat_time_tv2to(timeout));
+        return cat_socket_connect_to_ex(socket, name, name_length, port, cat_time_tv2to(timeout));
     } else {
-        return cat_socket_try_connect(socket, name, name_length, port);
+        return cat_socket_try_connect_to(socket, name, name_length, port);
     }
 }
 
@@ -630,7 +630,7 @@ static int swow_stream_connect(php_stream *stream, swow_netstream_data_t *swow_s
     }
 
     if (bind_host) {
-        if (UNEXPECTED(!cat_socket_bind(socket, bind_host, strlen(bind_host), bind_port))) {
+        if (UNEXPECTED(!cat_socket_bind_to(socket, bind_host, strlen(bind_host), bind_port))) {
             goto _error;
         }
     }

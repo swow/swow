@@ -33,6 +33,11 @@ typedef enum cat_bool_e cat_bool_t;
 #define cat_bool_t uint8_t
 #endif
 
+static cat_always_inline const char *cat_bool_str(cat_bool_t b)
+{
+    return b ? "true" : "false";
+}
+
 typedef void *cat_ptr_t;
 
 typedef void cat_data_t;
