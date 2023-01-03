@@ -11,8 +11,6 @@ English | [中文](./README-CN.md)
 ![platform][supported-platforms-badge]
 ![architecture][supported-architectures-badge]
 
-> ⚠️ Preview version, not yet production-ready. Use it with care.
-
 **Swow is a high-performance pure coroutine network communication engine, which based on PHP and C.**
 
 It is committed to using the smallest C core and most of the PHP code to support PHP high-performance network programming.
