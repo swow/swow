@@ -105,6 +105,7 @@ static void swow_log_va_standard(CAT_LOG_VA_PARAMETERS)
         smart_str_append_printf(&str, " in %s:%u", zend_get_executed_filename(), zend_get_executed_lineno());
         smart_str_0(&str);
         cat_log_standard(type, module_name CAT_SOURCE_POSITION_RELAY_CC, code, "%s", ZSTR_VAL(str.s));
+        smart_str_free(&str);
     } else {
         char *message = cat_vsprintf(format, args);
         if (unlikely(message == NULL)) {
