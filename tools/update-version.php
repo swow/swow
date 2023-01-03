@@ -24,9 +24,9 @@ $versions = [
     ],
 ];
 
-require __DIR__ . '/autoload.php';
-
 putenv('SKIP_SWOW_REQUIRED_EXTENSION_CHECK=1');
+
+require __DIR__ . '/autoload.php';
 
 $convertVersionStringPartsToNumeric = static function (string $major, string $minor, string $release): int {
     return (int) (
@@ -62,7 +62,7 @@ $swowHeaderContents = preg_replace('/(SWOW_VERSION_ID[ ]+)[^\n]+/', "\${1}{$swow
 $swowHeaderContents = preg_replace('/(SWOW_MAJOR_VERSION[ ]+)[^\n]+/', "\${1}{$swowExtensionVersionInfo['major_version']}", $swowHeaderContents);
 $swowHeaderContents = preg_replace('/(SWOW_MINOR_VERSION[ ]+)[^\n]+/', "\${1}{$swowExtensionVersionInfo['minor_version']}", $swowHeaderContents);
 $swowHeaderContents = preg_replace('/(SWOW_RELEASE_VERSION[ ]+)[^\n]+/', "\${1}{$swowExtensionVersionInfo['release_version']}", $swowHeaderContents);
-$swowHeaderContents = preg_replace('/(SWOW_EXTRA_VERSION[ ]+")[^"]+(")/', "\${1}{$swowExtensionVersionInfo['extra_version']}\${2}", $swowHeaderContents);
+$swowHeaderContents = preg_replace('/(SWOW_EXTRA_VERSION[ ]+")[^"]*(")/', "\${1}{$swowExtensionVersionInfo['extra_version']}\${2}", $swowHeaderContents);
 if (!@file_put_contents($swowHeaderPath, $swowHeaderContents)) {
     throw new RuntimeException(sprintf('Failed to put content to %s (%s)', $swowHeaderPath, error_get_last()['message']));
 }
@@ -74,7 +74,7 @@ $extensionStubContents = preg_replace('/(\bVERSION_ID[ ]+=[ ]+)[^;]+/', "\${1}{$
 $extensionStubContents = preg_replace('/(\bMAJOR_VERSION[ ]+=[ ]+)[^;]+/', "\${1}{$swowExtensionVersionInfo['major_version']}", $extensionStubContents);
 $extensionStubContents = preg_replace('/(\bMINOR_VERSION[ ]+=[ ]+)[^;]+/', "\${1}{$swowExtensionVersionInfo['minor_version']}", $extensionStubContents);
 $extensionStubContents = preg_replace('/(\bRELEASE_VERSION[ ]+=[ ]+)[^;]+/', "\${1}{$swowExtensionVersionInfo['release_version']}", $extensionStubContents);
-$extensionStubContents = preg_replace('/(\bEXTRA_VERSION[ ]+=[ ]+\')[^\']+(\')/', "\${1}{$swowExtensionVersionInfo['extra_version']}\${2}", $extensionStubContents);
+$extensionStubContents = preg_replace('/(\bEXTRA_VERSION[ ]+=[ ]+\')[^\']*(\')/', "\${1}{$swowExtensionVersionInfo['extra_version']}\${2}", $extensionStubContents);
 if (!@file_put_contents($extensionStubPath, $extensionStubContents)) {
     throw new RuntimeException(sprintf('Failed to put content to %s (%s)', $swowHeaderPath, error_get_last()['message']));
 }
@@ -88,7 +88,7 @@ $libraryPhpContents = preg_replace('/(\bVERSION_ID[ ]+=[ ]+)[^;]+/', "\${1}{$swo
 $libraryPhpContents = preg_replace('/(\bMAJOR_VERSION[ ]+=[ ]+)[^;]+/', "\${1}{$swowLibraryVersionInfo['major_version']}", $libraryPhpContents);
 $libraryPhpContents = preg_replace('/(\bMINOR_VERSION[ ]+=[ ]+)[^;]+/', "\${1}{$swowLibraryVersionInfo['minor_version']}", $libraryPhpContents);
 $libraryPhpContents = preg_replace('/(\bRELEASE_VERSION[ ]+=[ ]+)[^;]+/', "\${1}{$swowLibraryVersionInfo['release_version']}", $libraryPhpContents);
-$libraryPhpContents = preg_replace('/(\bEXTRA_VERSION[ ]+=[ ]+\')[^\']+(\')/', "\${1}{$swowLibraryVersionInfo['extra_version']}\${2}", $libraryPhpContents);
+$libraryPhpContents = preg_replace('/(\bEXTRA_VERSION[ ]+=[ ]+\')[^\']*(\')/', "\${1}{$swowLibraryVersionInfo['extra_version']}\${2}", $libraryPhpContents);
 $libraryPhpContents = preg_replace('/(\bREQUIRED_EXTENSION_VERSION[ ]+=[ ]+\')[^\']+(\')/', "\${1}{$swowLibraryVersionInfo['required_extension_version']}\${2}", $libraryPhpContents);
 if (!@file_put_contents($libraryPhpPath, $libraryPhpContents)) {
     throw new RuntimeException(sprintf('Failed to put content to %s (%s)', $swowHeaderPath, error_get_last()['message']));
