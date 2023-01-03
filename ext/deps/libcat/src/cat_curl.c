@@ -459,17 +459,13 @@ static CURLMcode cat_curl_multi_exec(
             if (unlikely(mcode != CURLM_OK) || *running_handles == 0) {
                 goto _out;
             }
-            if (unlikely(context->nfds == 0)) {
-                /* workaround for alpine bug <hyperf-dockerfile:8.1-alpine-3.17-swow-0.3.2-alpha>
-                 * (version_number: 481024, version: 7.87.0, host: x86_64-alpine-linux-musl, with OpenSSL/3.0.7) */
-                mcode = curl_multi_perform(multi, running_handles);
-                if (unlikely(mcode != CURLM_OK) || *running_handles == 0) {
-                    goto _out;
-                }
-                if (unlikely(context->nfds == 0)) {
-                    mcode = CURLM_INTERNAL_ERROR;
-                    goto _out;
-                }
+            /* workaround for alpine bug <hyperf-dockerfile:8.1-alpine-3.17-swow-0.3.2-alpha>
+             * (version_number: 481024, version: 7.87.0, host: x86_64-alpine-linux-musl, with OpenSSL/3.0.7)
+             * TODO: optimize it, do not always do that... */
+            CAT_LOG_DEBUG(CURL, "curl_multi_perform(multi=%p) workaround", multi);
+            mcode = curl_multi_perform(multi, running_handles);
+            if (unlikely(mcode != CURLM_OK) || *running_handles == 0) {
+                goto _out;
             }
         } else {
             cat_nfds_t i;
