@@ -594,13 +594,12 @@ namespace Swow
         public const EMISUSE = -9761;
         public const EVALUE = -9760;
         public const ELOCKED = -9759;
-        public const ECLOSING = -9758;
-        public const ECLOSED = -9757;
-        public const EDEADLK = -9756;
-        public const ESSL = -9755;
-        public const ENOCERT = -9754;
-        public const ECERT = -9753;
-        public const ECHILD = -9752;
+        public const ECLOSED = -9758;
+        public const EDEADLK = -9757;
+        public const ESSL = -9756;
+        public const ENOCERT = -9755;
+        public const ECERT = -9754;
+        public const ECHILD = -9753;
 
         public static function getDescriptionOf(int $error): string { }
     }
@@ -1082,6 +1081,8 @@ namespace Swow
 
         /** @var int $recommendSize [optional] = $this->getSize() * 2 */
         public function extend(int $recommendSize = 0): void { }
+
+        public function prepare(int $appendLength): void { }
 
         public function mallocTrim(): void { }
 
