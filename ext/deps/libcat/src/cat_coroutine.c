@@ -171,7 +171,7 @@ CAT_API cat_bool_t cat_coroutine_runtime_init(void)
     CAT_COROUTINE_G(last_id) = 0;
     CAT_COROUTINE_G(count) = 0;
     CAT_COROUTINE_G(peak_count) = 0;
-    CAT_COROUTINE_G(round) = 0;
+    CAT_COROUTINE_G(switches) = 0;
 
     /* init main coroutine properties */
     do {
@@ -181,7 +181,7 @@ CAT_API cat_bool_t cat_coroutine_runtime_init(void)
         main_coroutine->end_time = 0;
         main_coroutine->flags = CAT_COROUTINE_FLAG_NONE;
         main_coroutine->state = CAT_COROUTINE_STATE_RUNNING;
-        main_coroutine->round = ++CAT_COROUTINE_G(round);
+        main_coroutine->switches = 0;
         main_coroutine->from = NULL;
         main_coroutine->previous = NULL;
         main_coroutine->next = NULL;
@@ -358,9 +358,9 @@ CAT_API cat_coroutine_count_t cat_coroutine_get_peak_count(void)
     return CAT_COROUTINE_G(peak_count);
 }
 
-CAT_API cat_coroutine_round_t cat_coroutine_get_current_round(void)
+CAT_API cat_coroutine_switches_t cat_coroutine_get_global_switches(void)
 {
-    return CAT_COROUTINE_G(round);
+    return CAT_COROUTINE_G(switches);
 }
 
 static void cat_coroutine_context_function(cat_coroutine_transfer_t transfer)
@@ -540,7 +540,7 @@ CAT_API cat_coroutine_t *cat_coroutine_create_ex(cat_coroutine_t *coroutine, cat
     coroutine->id = CAT_COROUTINE_G(last_id)++;
     coroutine->flags = flags | CAT_COROUTINE_FLAG_ACCEPT_DATA;
     coroutine->state = CAT_COROUTINE_STATE_WAITING;
-    coroutine->round = 0;
+    coroutine->switches = 0;
     coroutine->from = NULL;
     coroutine->previous = NULL;
     coroutine->next = NULL;
@@ -643,6 +643,10 @@ CAT_API void cat_coroutine_jump_standard(cat_coroutine_t *coroutine, cat_data_t 
 
     CAT_ASSERT((data == NULL || (coroutine->flags & CAT_COROUTINE_FLAG_ACCEPT_DATA)) && "Coroutine does not accept data");
 
+    /* global switches++ */
+    CAT_COROUTINE_G(switches)++;
+    /* current switches++ */
+    current_coroutine->switches++;
     /* swap ptr */
     CAT_COROUTINE_G(current) = coroutine;
     /* update from */
@@ -654,8 +658,6 @@ CAT_API void cat_coroutine_jump_standard(cat_coroutine_t *coroutine, cat_data_t 
     }
     /* update state */
     coroutine->state = CAT_COROUTINE_STATE_RUNNING;
-    /* round++ */
-    coroutine->round = ++CAT_COROUTINE_G(round);
     /* accept-data check */
     if (retval != NULL) {
         current_coroutine->flags |= CAT_COROUTINE_FLAG_ACCEPT_DATA;
@@ -920,9 +922,9 @@ CAT_API const char *cat_coroutine_get_state_name(const cat_coroutine_t *coroutin
     return cat_coroutine_state_name(coroutine->state);
 }
 
-CAT_API cat_coroutine_round_t cat_coroutine_get_round(const cat_coroutine_t *coroutine)
+CAT_API cat_coroutine_switches_t cat_coroutine_get_switches(const cat_coroutine_t *coroutine)
 {
-    return coroutine->round;
+    return coroutine->switches;
 }
 
 CAT_API cat_msec_t cat_coroutine_get_start_time(const cat_coroutine_t *coroutine)

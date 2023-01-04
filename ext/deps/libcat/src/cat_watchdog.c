@@ -81,7 +81,7 @@ static void cat_watchdog_loop(void* arg)
     uv_sem_post(watchdog->sem);
 
     while (1) {
-        watchdog->last_round = watchdog->globals->round;
+        watchdog->last_switches = watchdog->globals->switches;
         uv_mutex_lock(&watchdog->mutex);
         uv_cond_timedwait(&watchdog->cond, &watchdog->mutex, watchdog->quantum);
         uv_mutex_unlock(&watchdog->mutex);
@@ -91,7 +91,7 @@ static void cat_watchdog_loop(void* arg)
         /* Notice: globals info maybe changed during check,
          * but it is usually acceptable to us.
          * In other words, there is a certain probability of false alert. */
-        if (watchdog->globals->round == watchdog->last_round &&
+        if (watchdog->globals->switches == watchdog->last_switches &&
             watchdog->globals->current != watchdog->globals->scheduler &&
             watchdog->globals->count > 1
         ) {
@@ -169,7 +169,7 @@ CAT_API cat_bool_t cat_watchdog_run(cat_watchdog_t *watchdog, cat_timeout_t quan
     cat_atomic_bool_init(&watchdog->stop, cat_false);
     watchdog->pid = uv_os_getpid();
     watchdog->globals = CAT_GLOBALS_BULK(cat_coroutine);
-    watchdog->last_round = 0;
+    watchdog->last_switches = 0;
 
     error = uv_sem_init(&sem, 0);
     if (error != 0) {

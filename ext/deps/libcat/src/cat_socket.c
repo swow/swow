@@ -1320,7 +1320,8 @@ CAT_SOCKET_TIMEOUT_API_GEN(write)
 
 #undef CAT_SOCKET_TIMEOUT_API_GEN
 
-static char *cat_socket_bind_flags_str(cat_socket_bind_flags_t flags)
+#ifdef CAT_ENABLE_DEBUG_LOG
+static CAT_BUFFER_STR_FREE char *cat_socket_bind_flags_str(cat_socket_bind_flags_t flags)
 {
     cat_buffer_t buffer;
     cat_buffer_create(&buffer, 32);
@@ -1335,9 +1336,9 @@ static char *cat_socket_bind_flags_str(cat_socket_bind_flags_t flags)
     } else {
         buffer.length--;
     }
-    cat_buffer_zero_terminate(&buffer);
-    return buffer.value;
+    return cat_buffer_export_str(&buffer);
 }
+#endif
 
 static cat_bool_t cat_socket_internal_bind(
     cat_socket_internal_t *socket_i,
@@ -1433,7 +1434,7 @@ static cat_bool_t cat_socket_bind_to_impl(cat_socket_t *socket, const char *name
         char *bind_flags = cat_socket_bind_flags_str(flags);
         CAT_LOG_DEBUG_D(SOCKET, "bind(" CAT_SOCKET_ID_FMT ", \"%.*s\", %d, %s) = " CAT_LOG_UNFINISHED_FMT,
             socket->id, (int) name_length, name, port, bind_flags);
-        cat_free(bind_flags);
+        cat_buffer_str_free(bind_flags);
     });
 
     /* resolve address (DNS query may be triggered) */
@@ -1474,7 +1475,7 @@ CAT_API cat_bool_t cat_socket_bind_ex(cat_socket_t *socket, const cat_sockaddr_t
         char *flags_string = cat_socket_bind_flags_str(flags);
         CAT_LOG_DEBUG_D(SOCKET, "bind_to(" CAT_SOCKET_ID_FMT ", \"%.*s\", %d, %s) = " CAT_LOG_BOOL_RET_FMT,
             socket->id, (int) name_length, name, port, flags_string, CAT_LOG_BOOL_RET_C(ret));
-        cat_free(flags_string);
+        cat_buffer_str_free(flags_string);
     });
 
     return ret;
@@ -1493,7 +1494,7 @@ CAT_API cat_bool_t cat_socket_bind_to_ex(cat_socket_t *socket, const char *name,
         char *flags_string = cat_socket_bind_flags_str(flags);
         CAT_LOG_DEBUG_D(SOCKET, "bind(" CAT_SOCKET_ID_FMT ", \"%.*s\", %d, %s) = " CAT_LOG_BOOL_RET_FMT,
             socket->id, (int) name_length, name, port, flags_string, CAT_LOG_BOOL_RET_C(ret));
-        cat_free(flags_string);
+        cat_buffer_str_free(flags_string);
     });
 
     return ret;
@@ -2263,7 +2264,7 @@ CAT_API cat_bool_t cat_socket_enable_crypto_ex(cat_socket_t *socket, const cat_s
         CAT_LOG_DEBUG_D(SOCKET, "enable_crypto(" CAT_SOCKET_ID_FMT ", " \
             "options: " CAT_SOCKET_CRYPTO_OPTIONS_FMT ", " CAT_TIMEOUT_FMT ") = " CAT_LOG_BOOL_RET_FMT,
             socket->id, CAT_SOCKET_CRYPTO_OPTIONS_C(log_options, protocols_str), timeout, CAT_LOG_BOOL_RET_C(ret));
-        cat_free(protocols_str);
+        cat_buffer_str_free(protocols_str);
     });
 
     return ret;
@@ -2937,7 +2938,7 @@ CAT_API size_t cat_socket_write_vector_length(const cat_socket_write_vector_t *v
     return cat_io_vector_length((const cat_io_vector_t *) vector, vector_count);
 }
 
-CAT_API char *cat_socket_write_vector_str(const cat_socket_write_vector_t *vector, unsigned int vector_count)
+CAT_API CAT_BUFFER_STR_FREE char *cat_socket_write_vector_str(const cat_socket_write_vector_t *vector, unsigned int vector_count)
 {
     cat_buffer_t buffer;
     unsigned int i;
@@ -2960,8 +2961,7 @@ CAT_API char *cat_socket_write_vector_str(const cat_socket_write_vector_t *vecto
         cat_buffer_append_char(&buffer, '}');
     }
     cat_buffer_append_char(&buffer, ']');
-    cat_buffer_zero_terminate(&buffer);
-    return buffer.value;
+    return cat_buffer_export_str(&buffer);
 }
 
 /* IOCP/io_uring may not support wait writable */
@@ -3636,7 +3636,7 @@ CAT_API cat_bool_t cat_socket_write_ex(cat_socket_t *socket, const cat_socket_wr
     CAT_LOG_DEBUG_VA(SOCKET, {
         CAT_LOG_DEBUG_D(SOCKET, "write(" CAT_SOCKET_ID_FMT ", %s, " CAT_TIMEOUT_FMT ") = " CAT_LOG_BOOL_RET_FMT,
             socket->id, vector_quoted, timeout, CAT_LOG_BOOL_RET_C(ret));
-        cat_free(vector_quoted);
+        cat_buffer_str_free(vector_quoted);
     });
 
     return ret;
@@ -3650,7 +3650,7 @@ CAT_API ssize_t cat_socket_try_write(cat_socket_t *socket, const cat_socket_writ
         char *vector_quoted = cat_socket_write_vector_str(vector, vector_count);
         CAT_LOG_DEBUG_D(SOCKET, "try_write(" CAT_SOCKET_ID_FMT ", %s) = " CAT_LOG_SSIZE_RET_FMT,
             socket->id, vector_quoted, CAT_LOG_SSIZE_RET_C(n));
-        cat_free(vector_quoted);
+        cat_buffer_str_free(vector_quoted);
     });
 
     return n;
@@ -3683,7 +3683,7 @@ CAT_API cat_bool_t cat_socket_writeto_ex(cat_socket_t *socket, const cat_socket_
     CAT_LOG_DEBUG_VA(SOCKET, {
         CAT_LOG_DEBUG_D(SOCKET, "writeto(" CAT_SOCKET_ID_FMT ", %s, \"%.*s\", %d, " CAT_TIMEOUT_FMT ") = " CAT_LOG_BOOL_RET_FMT,
             socket->id, vector_quoted, (int) name_length, name, port, timeout, CAT_LOG_BOOL_RET_C(ret));
-        cat_free(vector_quoted);
+        cat_buffer_str_free(vector_quoted);
     });
 
     return ret;
@@ -3704,7 +3704,7 @@ CAT_API ssize_t cat_socket_try_writeto(cat_socket_t *socket, const cat_socket_wr
         vector_quoted = cat_socket_write_vector_str(vector, vector_count);
         CAT_LOG_DEBUG_D(SOCKET, "try_writeto(" CAT_SOCKET_ID_FMT ", %s, \"%.*s\", %d) = " CAT_LOG_SSIZE_RET_FMT,
             socket->id, vector_quoted, (int) name_length, name, port, CAT_LOG_SSIZE_RET_C(n));
-        cat_free(vector_quoted);
+        cat_buffer_str_free(vector_quoted);
     });
 
     return n;
@@ -3731,7 +3731,7 @@ CAT_API cat_bool_t cat_socket_write_to_ex(cat_socket_t *socket, const cat_socket
     CAT_LOG_DEBUG_VA(SOCKET, {
         CAT_LOG_DEBUG_D(SOCKET, "write_to(" CAT_SOCKET_ID_FMT ", %s, \"%.*s\", %d, " CAT_TIMEOUT_FMT ") = " CAT_LOG_BOOL_RET_FMT,
             socket->id, vector_quoted, (int) name_length, name, port, timeout, CAT_LOG_BOOL_RET_C(ret));
-        cat_free(vector_quoted);
+        cat_buffer_str_free(vector_quoted);
     });
 
     return ret;
@@ -3745,7 +3745,7 @@ CAT_API ssize_t cat_socket_try_write_to(cat_socket_t *socket, const cat_socket_w
         char *vector_quoted = cat_socket_write_vector_str(vector, vector_count);
         CAT_LOG_DEBUG_D(SOCKET, "try_write_to(" CAT_SOCKET_ID_FMT ", %s, \"%.*s\", %d) = " CAT_LOG_SSIZE_RET_FMT,
             socket->id, vector_quoted, (int) name_length, name, port, CAT_LOG_SSIZE_RET_C(n));
-        cat_free(vector_quoted);
+        cat_buffer_str_free(vector_quoted);
     });
 
     return n;
@@ -4433,14 +4433,19 @@ static void cat_socket_internal_close(cat_socket_internal_t *socket_i, cat_bool_
 static cat_always_inline cat_bool_t cat_socket_close_impl(cat_socket_t *socket)
 {
     cat_socket_internal_t *socket_i = socket->internal;
+    cat_bool_t is_unrecoverable_error = socket->flags & CAT_SOCKET_FLAG_UNRECOVERABLE_ERROR;
     cat_bool_t ret = cat_true;
 
     /* native EBADF will be reported from now on */
     socket->flags &= ~CAT_SOCKET_FLAG_UNRECOVERABLE_ERROR;
 
     if (socket_i == NULL) {
-        cat_update_last_error(CAT_EBADF, NULL);
-        ret = cat_false;
+         /* unrecoverable error is triggered by internal,
+          * do not re-trigger EBADF when user call close(). */
+        if (!is_unrecoverable_error) {
+            cat_update_last_error(CAT_EBADF, NULL);
+            ret = cat_false;
+        }
     } else {
         cat_socket_internal_close_impl(socket_i, cat_false);
     }

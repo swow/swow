@@ -98,9 +98,9 @@ typedef enum cat_coroutine_state_e {
 #undef CAT_COROUTINE_STATE_GEN
 } cat_coroutine_state_t;
 
-typedef uint64_t cat_coroutine_round_t;
-#define CAT_COROUTINE_ROUND_FMT "%" PRIu64
-#define CAT_COROUTINE_ROUND_FMT_SPEC PRIu64
+typedef uint64_t cat_coroutine_switches_t;
+#define CAT_COROUTINE_SWITCHES_FMT "%" PRIu64
+#define CAT_COROUTINE_SWITCHES_FMT_SPEC PRIu64
 
 typedef uint32_t cat_coroutine_stack_size_t;
 #define CAT_COROUTINE_STACK_SIZE_FMT "%u"
@@ -124,7 +124,7 @@ struct cat_coroutine_s
     cat_coroutine_flags_t flags;
     /* runtime info (readonly) */
     cat_coroutine_state_t state;
-    cat_coroutine_round_t round;
+    cat_coroutine_switches_t switches;
     cat_coroutine_t *from CAT_UNSAFE;
     cat_coroutine_t *previous;
     cat_coroutine_t *next;
@@ -183,8 +183,8 @@ CAT_GLOBALS_STRUCT_BEGIN(cat_coroutine) {
     cat_coroutine_id_t last_id;
     cat_coroutine_count_t count;
     cat_coroutine_count_t peak_count;
-    /* for watchdog */
-    cat_coroutine_round_t round;
+    /* global switches (for watchdog) */
+    cat_coroutine_switches_t switches;
 } CAT_GLOBALS_STRUCT_END(cat_coroutine);
 
 extern CAT_API CAT_GLOBALS_DECLARE(cat_coroutine);
@@ -223,7 +223,7 @@ CAT_API cat_coroutine_id_t cat_coroutine_get_last_id(void);
 CAT_API cat_coroutine_count_t cat_coroutine_get_count(void);
 CAT_API cat_coroutine_count_t cat_coroutine_get_real_count(void);
 CAT_API cat_coroutine_count_t cat_coroutine_get_peak_count(void);
-CAT_API cat_coroutine_round_t cat_coroutine_get_current_round(void);
+CAT_API cat_coroutine_switches_t cat_coroutine_get_global_switches(void);
 
 /* ctor and dtor */
 CAT_API cat_coroutine_t *cat_coroutine_create(cat_coroutine_t *coroutine, cat_coroutine_function_t function);
@@ -254,7 +254,7 @@ CAT_API cat_coroutine_flags_t cat_coroutine_get_flags(const cat_coroutine_t *cor
 CAT_API void cat_coroutine_set_flags(cat_coroutine_t *coroutine, cat_coroutine_flags_t flags);
 CAT_API cat_coroutine_state_t cat_coroutine_get_state(const cat_coroutine_t *coroutine);
 CAT_API const char *cat_coroutine_get_state_name(const cat_coroutine_t *coroutine);
-CAT_API cat_coroutine_round_t cat_coroutine_get_round(const cat_coroutine_t *coroutine);
+CAT_API cat_coroutine_switches_t cat_coroutine_get_switches(const cat_coroutine_t *coroutine);
 CAT_API cat_msec_t cat_coroutine_get_start_time(const cat_coroutine_t *coroutine);
 CAT_API cat_msec_t cat_coroutine_get_end_time(const cat_coroutine_t *coroutine);
 CAT_API cat_msec_t cat_coroutine_get_elapsed(const cat_coroutine_t *coroutine);

@@ -67,7 +67,7 @@ struct cat_watchdog_s
     cat_atomic_bool_t stop;
     uv_pid_t pid; /* TODO: cat_pid_t */
     CAT_GLOBALS_TYPE(cat_coroutine) *globals;
-    cat_coroutine_round_t last_round;
+    cat_coroutine_switches_t last_switches;
     uv_thread_t thread;
     uv_sem_t *sem;
     uv_cond_t cond;

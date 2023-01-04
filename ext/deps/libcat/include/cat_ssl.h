@@ -250,7 +250,7 @@ CAT_API CAT_COLD void cat_ssl_unrecoverable_error(cat_ssl_t *ssl);
 
 /* utils */
 
-CAT_API char *cat_ssl_protocols_str(cat_ssl_protocols_t protocols);
+CAT_API CAT_BUFFER_STR_FREE char *cat_ssl_protocols_str(cat_ssl_protocols_t protocols);
 
 #endif /* CAT_HAVE_OPENSSL */
 #ifdef __cplusplus

@@ -1517,8 +1517,7 @@ CAT_API char *cat_ssl_protocols_str(cat_ssl_protocols_t protocols)
     } else {
         buffer.length--;
     }
-    cat_buffer_zero_terminate(&buffer);
-    return buffer.value;
+    return cat_buffer_export_str(&buffer);
 }
 
 #endif /* CAT_SSL */

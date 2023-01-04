@@ -25,6 +25,10 @@ extern "C" {
 #include "cat.h"
 #include "cat_coroutine.h"
 
+typedef uint64_t cat_event_round_t;
+#define CAT_EVENT_ROUND_FMT "%" PRIu64
+#define CAT_EVENT_ROUND_FMT_SPEC PRIu64
+
 typedef struct cat_event_task_s {
     cat_queue_node_t node;
     uint64_t round;
@@ -50,6 +54,8 @@ CAT_API cat_bool_t cat_event_runtime_shutdown(void);
 CAT_API cat_bool_t cat_event_runtime_close(void);
 
 CAT_API void cat_event_schedule(void)  CAT_INTERNAL;
+
+CAT_API cat_event_round_t cat_event_get_round(void);
 
 CAT_API cat_coroutine_t *cat_event_scheduler_run(cat_coroutine_t *coroutine);
 CAT_API cat_coroutine_t *cat_event_scheduler_close(void);

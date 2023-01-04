@@ -128,6 +128,11 @@ CAT_API void cat_event_schedule(void)
     (void) uv_crun(&CAT_EVENT_G(loop), &options);
 }
 
+CAT_API cat_event_round_t cat_event_get_round(void)
+{
+    return CAT_EVENT_G(loop).round;
+}
+
 CAT_API cat_coroutine_t *cat_event_scheduler_run(cat_coroutine_t *coroutine)
 {
     const cat_coroutine_scheduler_t scheduler = {

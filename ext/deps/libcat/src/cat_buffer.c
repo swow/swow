@@ -487,3 +487,16 @@ CAT_API cat_bool_t cat_buffer_append_str_with_padding(cat_buffer_t *buffer, cons
 {
     return cat_buffer_append_with_padding(buffer, str, strlen(str), padding_char, width);
 }
+
+/* buffer_str */
+
+CAT_API CAT_BUFFER_STR_FREE char *cat_buffer_export_str(cat_buffer_t *buffer)
+{
+    cat_buffer_zero_terminate(buffer);
+    return buffer->value;
+}
+
+CAT_API void cat_buffer_str_free(char *str)
+{
+    cat_buffer_allocator.free_function(str);
+}

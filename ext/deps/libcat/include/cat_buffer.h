@@ -90,6 +90,13 @@ CAT_API cat_bool_t cat_buffer_zero_terminate(cat_buffer_t *buffer);
 CAT_API cat_bool_t cat_buffer_append_with_padding(cat_buffer_t *buffer, const void *ptr, size_t length, const char padding_char, size_t width);
 CAT_API cat_bool_t cat_buffer_append_str_with_padding(cat_buffer_t *buffer, const char *str, const char padding_char, size_t width);
 
+/* buffer str */
+
+#define CAT_BUFFER_STR_FREE /* return value should be free'd by buffer_str_free() */
+
+CAT_API CAT_BUFFER_STR_FREE char *cat_buffer_export_str(cat_buffer_t *buffer);
+CAT_API void cat_buffer_str_free(char *str);
+
 #ifdef __cplusplus
 }
 #endif
