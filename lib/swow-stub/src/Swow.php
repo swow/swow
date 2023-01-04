@@ -726,9 +726,9 @@ namespace Swow
 
         public function getStateName(): string { }
 
-        public function getRound(): int { }
+        public function getSwitches(): int { }
 
-        public static function getCurrentRound(): int { }
+        public static function getGlobalSwitches(): int { }
 
         public function getElapsed(): int { }
 

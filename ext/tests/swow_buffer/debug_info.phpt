@@ -89,7 +89,7 @@ object(Swow\Buffer)#%d (%d) {
     int(%d)
     ["state"]=>
     string(7) "waiting"
-    ["round"]=>
+    ["switches"]=>
     int(%d)
     ["elapsed"]=>
     string(%d) "%s"

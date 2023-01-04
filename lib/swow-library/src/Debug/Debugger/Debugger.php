@@ -641,7 +641,7 @@ TEXT;
      * @return array{
      *     'id': int,
      *     'state': string,
-     *     'round': int,
+     *     'switches': int,
      *     'elapsed': string,
      *     'executing': string|null,
      *     'source position': string|null,
@@ -649,14 +649,14 @@ TEXT;
      * @psalm-return ($whatAreYouDoing is true ?array{
      *     'id': int,
      *     'state': string,
-     *     'round': int,
+     *     'switches': int,
      *     'elapsed': string,
      *     'executing': string,
      *     'source position': string,
      * } : array{
      *     'id': int,
      *     'state': string,
-     *     'round': int,
+     *     'switches': int,
      *     'elapsed': string,
      * }) $simpleInfo
      */
@@ -665,7 +665,7 @@ TEXT;
         $info = [
             'id' => $coroutine->getId(),
             'state' => static::getStateNameOfCoroutine($coroutine),
-            'round' => $coroutine->getRound(),
+            'switches' => $coroutine->getSwitches(),
             'elapsed' => $coroutine->getElapsedAsString(),
         ];
         if ($whatAreYouDoing) {
@@ -1215,19 +1215,14 @@ TEXT;
                                 throw new DebuggerException('Argument[1]: Time must be numeric');
                             }
                             $this->out("Scanning zombie coroutines ({$time}s)...");
-                            $roundMap = [];
+                            $switchesMap = new WeakMap();
                             foreach (Coroutine::getAll() as $coroutine) {
-                                $roundMap[$coroutine->getId()] = $coroutine->getRound();
+                                $switchesMap[$coroutine] = $coroutine->getSwitches();
                             }
                             usleep((int) ($time * 1000 * 1000));
-                            $coroutines = Coroutine::getAll();
                             $zombies = [];
-                            foreach ($roundMap as $id => $round) {
-                                $coroutine = $coroutines[$id] ?? null;
-                                if (!$coroutine) {
-                                    continue;
-                                }
-                                if ($coroutine->getRound() === $round) {
+                            foreach ($switchesMap as $coroutine => $switches) {
+                                if ($coroutine->getSwitches() === $switches) {
                                     $zombies[] = $coroutine;
                                 }
                             }

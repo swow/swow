@@ -1670,22 +1670,22 @@ static PHP_METHOD(Swow_Coroutine, getStateName)
     RETURN_STRING(cat_coroutine_get_state_name(&getThisCoroutine()->coroutine));
 }
 
-#define arginfo_class_Swow_Coroutine_getRound arginfo_class_Swow_Coroutine_getId
+#define arginfo_class_Swow_Coroutine_getSwitches arginfo_class_Swow_Coroutine_getId
 
-static PHP_METHOD(Swow_Coroutine, getRound)
+static PHP_METHOD(Swow_Coroutine, getSwitches)
 {
     ZEND_PARSE_PARAMETERS_NONE();
 
-    RETURN_LONG(getThisCoroutine()->coroutine.round);
+    RETURN_LONG(getThisCoroutine()->coroutine.switches);
 }
 
-#define arginfo_class_Swow_Coroutine_getCurrentRound arginfo_class_Swow_Coroutine_getId
+#define arginfo_class_Swow_Coroutine_getGlobalSwitches arginfo_class_Swow_Coroutine_getId
 
-static PHP_METHOD(Swow_Coroutine, getCurrentRound)
+static PHP_METHOD(Swow_Coroutine, getGlobalSwitches)
 {
     ZEND_PARSE_PARAMETERS_NONE();
 
-    RETURN_LONG(CAT_COROUTINE_G(round));
+    RETURN_LONG(CAT_COROUTINE_G(switches));
 }
 
 #define arginfo_class_Swow_Coroutine_getElapsed arginfo_class_Swow_Coroutine_getId
@@ -2126,7 +2126,7 @@ static PHP_METHOD(Swow_Coroutine, __debugInfo)
     }
     add_assoc_string(&z_debug_info, "state", cat_coroutine_get_state_name(coroutine));
     tmp = cat_coroutine_get_elapsed_str(coroutine);
-    add_assoc_long(&z_debug_info, "round", coroutine->round);
+    add_assoc_long(&z_debug_info, "switches", coroutine->switches);
     add_assoc_string(&z_debug_info, "elapsed", tmp);
     cat_free(tmp);
     if (swow_coroutine_is_executing(s_coroutine)) {
@@ -2182,8 +2182,8 @@ static const zend_function_entry swow_coroutine_methods[] = {
     PHP_ME(Swow_Coroutine, getPrevious,             arginfo_class_Swow_Coroutine_getPrevious,             ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Coroutine, getState,                arginfo_class_Swow_Coroutine_getState,                ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Coroutine, getStateName,            arginfo_class_Swow_Coroutine_getStateName,            ZEND_ACC_PUBLIC)
-    PHP_ME(Swow_Coroutine, getRound,                arginfo_class_Swow_Coroutine_getRound,                ZEND_ACC_PUBLIC)
-    PHP_ME(Swow_Coroutine, getCurrentRound,         arginfo_class_Swow_Coroutine_getCurrentRound,         ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    PHP_ME(Swow_Coroutine, getSwitches,             arginfo_class_Swow_Coroutine_getSwitches,             ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Coroutine, getGlobalSwitches,       arginfo_class_Swow_Coroutine_getGlobalSwitches,       ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
     PHP_ME(Swow_Coroutine, getElapsed,              arginfo_class_Swow_Coroutine_getElapsed,              ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Coroutine, getElapsedAsString,      arginfo_class_Swow_Coroutine_getElapsedAsString,      ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Coroutine, getExitStatus,           arginfo_class_Swow_Coroutine_getExitStatus,           ZEND_ACC_PUBLIC)

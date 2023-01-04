@@ -62,8 +62,8 @@ static void swow_watchdog_interrupt_function(zend_execute_data *execute_data)
         cat_watchdog_t *watchdog = &s_watchdog->watchdog;
 
         cat_atomic_bool_store(&s_watchdog->vm_interrupted, cat_true);
-        /* re-check if current round still equal to last_round  */
-        if (CAT_COROUTINE_G(round) == watchdog->last_round) {
+        /* re-check if current switches still equal to last_switches  */
+        if (CAT_COROUTINE_G(switches) == watchdog->last_switches) {
             if (s_watchdog->alerter.function_handler == NULL) {
                 if (
                     !cat_time_wait(s_watchdog->delay) &&
