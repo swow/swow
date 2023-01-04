@@ -108,11 +108,12 @@ static void swow_log_va_standard(CAT_LOG_VA_PARAMETERS)
         smart_str_free(&str);
     } else {
         char *message = cat_vsprintf(format, args);
+        /* set error anyway even if message is NULL */
+        cat_set_last_error(code, message);
         if (unlikely(message == NULL)) {
             fprintf(stderr, "Sprintf log message failed\n");
             return;
         }
-        cat_set_last_error(code, message);
         switch (type) {
             case CAT_LOG_TYPE_NOTICE: {
                 zend_error(E_NOTICE, "%s", message);
