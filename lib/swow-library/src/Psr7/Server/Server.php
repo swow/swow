@@ -53,14 +53,6 @@ class Server extends Socket
         return $connection;
     }
 
-    public function close(): bool
-    {
-        $ret = parent::close();
-        $this->closeConnections();
-
-        return $ret;
-    }
-
     protected const BROADCAST_FLAG_NONE = 0;
     protected const BROADCAST_FLAG_RECORD_EXCEPTIONS = 1 << 0;
 
