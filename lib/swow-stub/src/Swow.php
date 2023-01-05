@@ -1262,6 +1262,7 @@ namespace Swow
 
         public function setWriteTimeout(int $timeout): static { }
 
+        /** @param int $flags self::BIND_FLAG_* constants combinations */
         public function bind(string $name, int $port = 0, int $flags = self::BIND_FLAG_NONE): static { }
 
         public function listen(int $backlog = self::DEFAULT_BACKLOG): static { }
@@ -1659,6 +1660,7 @@ namespace Swow
         /** @throws SocketException when the socket connection is broken */
         public function checkLiveness(): static { }
 
+        /** @return int self::IO_FLAG_* constants combinations */
         public function getIoState(): int { }
 
         public function getIoStateName(): string { }
