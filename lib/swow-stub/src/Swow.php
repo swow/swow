@@ -1995,9 +1995,9 @@ namespace Swow
          */
         public const SYS = 31;
 
-        public static function wait(int $num, int $timeout = -1): void { }
+        public static function wait(int $signal, int $timeout = -1): void { }
 
-        public static function kill(int $pid, int $signum): void { }
+        public static function kill(int $pid, int $signal): void { }
     }
 }
 
