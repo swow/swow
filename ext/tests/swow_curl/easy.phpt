@@ -13,8 +13,6 @@ skip_if(stripos(@file_get_contents('https://www.baidu.com/'), 'baidu') === false
 <?php
 require __DIR__ . '/../include/bootstrap.php';
 
-use Swow\Http\Status;
-
 $ch1 = curl_init();
 $ch2 = curl_init();
 
