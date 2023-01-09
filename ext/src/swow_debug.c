@@ -480,7 +480,9 @@ static const zend_function_entry swow_debug_functions[] = {
 
 SWOW_API CAT_GLOBALS_DECLARE(swow_debug);
 
-static user_opcode_handler_t original_zend_ext_stmt_handler;
+static bool is_zend_compile_extended_info_checked = false;
+static bool is_zend_ext_stmt_handler_hooked = false;
+static user_opcode_handler_t original_zend_ext_stmt_handler = NULL;
 
 static int swow_debug_ext_stmt_handler(zend_execute_data *execute_data)
 {
@@ -524,9 +526,6 @@ zend_result swow_debug_module_init(INIT_FUNC_ARGS)
         return FAILURE;
     }
 
-    original_zend_ext_stmt_handler = zend_get_user_opcode_handler(ZEND_EXT_STMT);
-    (void) zend_set_user_opcode_handler(ZEND_EXT_STMT, swow_debug_ext_stmt_handler);
-
     return SUCCESS;
 }
 
@@ -541,12 +540,26 @@ zend_result swow_debug_runtime_init(INIT_FUNC_ARGS)
 {
     cat_queue_init(&SWOW_DEBUG_G(extended_statement_handlers));
 
+    /* ZEND_COMPILE_EXTENDED_INFO is set after MINIT, so we can only check it in RINIT */
+    if (!is_zend_compile_extended_info_checked) {
+        if (CG(compiler_options) & ZEND_COMPILE_EXTENDED_INFO) {
+            original_zend_ext_stmt_handler = zend_get_user_opcode_handler(ZEND_EXT_STMT);
+            (void) zend_set_user_opcode_handler(ZEND_EXT_STMT, swow_debug_ext_stmt_handler);
+            is_zend_ext_stmt_handler_hooked = true;
+        }
+        is_zend_compile_extended_info_checked = true;
+    }
+
     return SUCCESS;
 }
 
 zend_result swow_debug_runtime_shutdown(INIT_FUNC_ARGS)
 {
     swow_utils_handlers_release(&SWOW_DEBUG_G(extended_statement_handlers));
+
+    if (is_zend_ext_stmt_handler_hooked) {
+        (void) zend_set_user_opcode_handler(ZEND_EXT_STMT, original_zend_ext_stmt_handler);
+    }
 
     return SUCCESS;
 }
