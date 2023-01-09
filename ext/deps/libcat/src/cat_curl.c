@@ -539,11 +539,11 @@ static CURLMcode cat_curl_multi_wait_impl(
         do {
             cat_msec_t new_start_line = cat_time_msec_cached();
             timeout -= (new_start_line - start_line);
-            start_line = new_start_line;
             if (timeout <= 0) {
                 /* timeout */
                 goto _out;
             }
+            start_line = new_start_line;
         } while (0);
     }
 
@@ -581,15 +581,17 @@ CAT_API CURLMcode cat_curl_multi_wait(
 )
 {
     int _numfds = -1;
+    int _running_handles = -1;
+    int *running_handles = &_running_handles;
     if (numfds == NULL) {
         numfds = &_numfds;
     }
 
     CAT_LOG_DEBUG(CURL, "multi_wait(multi: %p, timeout_ms: %d, numfds: %d) = " CAT_LOG_UNFINISHED_FMT, multi, timeout_ms, *numfds);
 
-    CURLMcode mcode = cat_curl_multi_wait_impl(multi, extra_fds, extra_nfds, timeout_ms, numfds, NULL);
+    CURLMcode mcode = cat_curl_multi_wait_impl(multi, extra_fds, extra_nfds, timeout_ms, numfds, running_handles);
 
-    CAT_LOG_DEBUG(CURL, "multi_wait(multi: %p, timeout_ms: %d, numfds: %d) = %d (%s)", multi, timeout_ms, *numfds, mcode, curl_multi_strerror(mcode));
+    CAT_LOG_DEBUG(CURL, "multi_wait(multi: %p, timeout_ms: %d, numfds: %d, running_handles: %d) = %d (%s)", multi, timeout_ms, *numfds, *running_handles, mcode, curl_multi_strerror(mcode));
 
     return mcode;
 }
