@@ -78,7 +78,7 @@ static void swow_log_abnormal_raw(cat_log_type_t type, const char *module_name, 
     smart_str_free(&str);
 }
 
-static void swow_log_va_standard(CAT_LOG_VA_PARAMETERS)
+static void swow_log_va_list_standard(CAT_LOG_VA_LIST_PARAMETERS)
 {
 #ifndef CAT_ENABLE_DEBUG_LOG
     if (type == CAT_LOG_TYPE_DEBUG) {
@@ -91,7 +91,7 @@ static void swow_log_va_standard(CAT_LOG_VA_PARAMETERS)
     bool has_executor = swow_coroutine_get_current()->coroutine.flags & SWOW_COROUTINE_FLAG_HAS_EXECUTOR;
     if (!has_executor) {
         if (!(type & CAT_LOG_TYPES_ABNORMAL)) {
-            cat_log_va_standard(type, module_name CAT_SOURCE_POSITION_RELAY_CC, code, format, args);
+            cat_log_va_list_standard(type, module_name CAT_SOURCE_POSITION_RELAY_CC, code, format, args);
         } else {
             swow_log_abnormal_raw(type, module_name, code, format, args);
         }
@@ -151,7 +151,7 @@ static void swow_log_standard(CAT_LOG_PARAMETERS)
     va_list args;
     va_start(args, format);
 
-    swow_log_va_standard(type, module_name CAT_SOURCE_POSITION_RELAY_CC, code, format, args);
+    swow_log_va_list_standard(type, module_name CAT_SOURCE_POSITION_RELAY_CC, code, format, args);
 
     va_end(args);
 }
