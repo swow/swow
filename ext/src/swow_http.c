@@ -20,6 +20,8 @@
 
 #include "swow_buffer.h"
 
+#include "swow_errno.h" /* for errno register */
+
 SWOW_API zend_class_entry *swow_http_http_ce;
 
 SWOW_API zend_class_entry *swow_http_status_ce;
@@ -703,6 +705,10 @@ static const zend_function_entry swow_http_http_methods[] = {
 
 zend_result swow_http_module_init(INIT_FUNC_ARGS)
 {
+    if (!cat_http_module_init()) {
+        return FAILURE;
+    }
+
     /* Http */
     swow_http_http_ce = swow_register_internal_class(
         "Swow\\Http\\Http", NULL, swow_http_http_methods,
@@ -744,6 +750,12 @@ zend_result swow_http_module_init(INIT_FUNC_ARGS)
     swow_http_parser_exception_ce = swow_register_internal_class(
         "Swow\\Http\\ParserException", swow_exception_ce, NULL, NULL, NULL, cat_true, cat_true, NULL, NULL, 0
     );
+
+#define SWOW_HTTP_PARSER_ERRNO_GEN(code, name, string) do { \
+    zend_declare_class_constant_long(swow_errno_ce, ZEND_STRL("EHP_" #name), CAT_EHP_##name); \
+} while (0);
+    CAT_HTTP_PARSER_ERRNO_MAP(SWOW_HTTP_PARSER_ERRNO_GEN)
+#undef SWOW_HTTP_PARSER_ERRNO_GEN
 
     return SUCCESS;
 }
