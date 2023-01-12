@@ -99,6 +99,13 @@ zend_result swow_module_shutdown(INIT_FUNC_ARGS);
 zend_result swow_runtime_init(INIT_FUNC_ARGS);
 zend_result swow_runtime_shutdown(INIT_FUNC_ARGS);
 
+SWOW_API const char *swow_version(void);
+SWOW_API int swow_version_id(void);
+SWOW_API int swow_major_version(void);
+SWOW_API int swow_minor_version(void);
+SWOW_API int swow_release_version(void);
+SWOW_API const char *swow_extra_version(void);
+
 #ifdef __cplusplus
 }
 #endif

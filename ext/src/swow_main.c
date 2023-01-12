@@ -613,6 +613,36 @@ zend_result swow_runtime_shutdown(INIT_FUNC_ARGS)
     return SUCCESS;
 }
 
+SWOW_API const char *swow_version(void)
+{
+    return SWOW_VERSION;
+}
+
+SWOW_API int swow_version_id(void)
+{
+    return SWOW_VERSION_ID;
+}
+
+SWOW_API int swow_major_version(void)
+{
+    return SWOW_MAJOR_VERSION;
+}
+
+SWOW_API int swow_minor_version(void)
+{
+    return SWOW_MINOR_VERSION;
+}
+
+SWOW_API int swow_release_version(void)
+{
+    return SWOW_RELEASE_VERSION;
+}
+
+SWOW_API const char *swow_extra_version(void)
+{
+    return SWOW_EXTRA_VERSION;
+}
+
 /* {{{ swow_module_entry
  */
 SWOW_API zend_module_entry swow_module_entry = {
