@@ -69,11 +69,15 @@ CAT_API cat_bool_t cat_module_init(void)
     }
 #endif
 
+    cat_error_module_init();
+
     return cat_true;
 }
 
 CAT_API cat_bool_t cat_module_shutdown(void)
 {
+    cat_error_module_shutdown();
+
     CAT_GLOBALS_UNREGISTER(cat);
     CAT_GLOBALS_MODULE_SHUTDOWN();
 

@@ -1432,7 +1432,7 @@ static cat_bool_t cat_socket_bind_to_impl(cat_socket_t *socket, const char *name
             break;
         }
         char *bind_flags = cat_socket_bind_flags_str(flags);
-        CAT_LOG_DEBUG_D(SOCKET, "bind(" CAT_SOCKET_ID_FMT ", \"%.*s\", %d, %s) = " CAT_LOG_UNFINISHED_FMT,
+        CAT_LOG_DEBUG_D(SOCKET, "bind(" CAT_SOCKET_ID_FMT ", \"%.*s\", %d, %s) = " CAT_LOG_UNFINISHED_STR,
             socket->id, (int) name_length, name, port, bind_flags);
         cat_buffer_str_free(bind_flags);
     });
@@ -1636,7 +1636,7 @@ CAT_API cat_bool_t cat_socket_accept(cat_socket_t *server, cat_socket_t *connect
 
 CAT_API cat_bool_t cat_socket_accept_ex(cat_socket_t *server, cat_socket_t *connection, cat_timeout_t timeout)
 {
-    CAT_LOG_DEBUG(SOCKET, "accept(" CAT_SOCKET_ID_FMT ", " CAT_TIMEOUT_FMT ") = "  CAT_LOG_UNFINISHED_FMT,
+    CAT_LOG_DEBUG(SOCKET, "accept(" CAT_SOCKET_ID_FMT ", " CAT_TIMEOUT_FMT ") = "  CAT_LOG_UNFINISHED_STR,
         server->id, timeout);
 
     cat_bool_t ret = cat_socket_accept_impl(server, connection, timeout);
@@ -1904,7 +1904,7 @@ CAT_API cat_bool_t cat_socket_connect_ex(cat_socket_t *socket, const cat_sockadd
         if (cat_sockaddr_to_name_silent(address, address_length, name, &name_length, &port) != 0) {
             break;
         }
-        CAT_LOG_DEBUG_D(SOCKET, "connect(" CAT_SOCKET_ID_FMT ", \"%.*s\", %d, " CAT_TIMEOUT_FMT ") = " CAT_LOG_UNFINISHED_FMT,
+        CAT_LOG_DEBUG_D(SOCKET, "connect(" CAT_SOCKET_ID_FMT ", \"%.*s\", %d, " CAT_TIMEOUT_FMT ") = " CAT_LOG_UNFINISHED_STR,
             socket->id, (int) name_length, name, port, timeout);
     });
 
@@ -1926,7 +1926,7 @@ CAT_API cat_bool_t cat_socket_connect_to(cat_socket_t *socket, const char *name,
 
 CAT_API cat_bool_t cat_socket_connect_to_ex(cat_socket_t *socket, const char *name, size_t name_length, int port, cat_timeout_t timeout)
 {
-    CAT_LOG_DEBUG(SOCKET, "connect_to(" CAT_SOCKET_ID_FMT ", \"%.*s\", %d, " CAT_TIMEOUT_FMT ") = " CAT_LOG_UNFINISHED_FMT,
+    CAT_LOG_DEBUG(SOCKET, "connect_to(" CAT_SOCKET_ID_FMT ", \"%.*s\", %d, " CAT_TIMEOUT_FMT ") = " CAT_LOG_UNFINISHED_STR,
         socket->id, (int) name_length, name, port, timeout);
 
     cat_bool_t ret = cat_socket_connect_to_impl(socket, name, name_length, port, timeout, cat_false);
@@ -1949,7 +1949,7 @@ CAT_API cat_bool_t cat_socket_try_connect(cat_socket_t *socket, const cat_sockad
         if (cat_sockaddr_to_name_silent(address, address_length, name, &name_length, &port) != 0) {
             break;
         }
-        CAT_LOG_DEBUG_D(SOCKET, "try_connect_to(" CAT_SOCKET_ID_FMT ", \"%.*s\", %d) = " CAT_LOG_UNFINISHED_FMT,
+        CAT_LOG_DEBUG_D(SOCKET, "try_connect_to(" CAT_SOCKET_ID_FMT ", \"%.*s\", %d) = " CAT_LOG_UNFINISHED_STR,
             socket->id, (int) name_length, name, port);
     });
 
@@ -1965,7 +1965,7 @@ CAT_API cat_bool_t cat_socket_try_connect(cat_socket_t *socket, const cat_sockad
 
 CAT_API cat_bool_t cat_socket_try_connect_to(cat_socket_t *socket, const char *name, size_t name_length, int port)
 {
-    CAT_LOG_DEBUG(SOCKET, "try_connect(" CAT_SOCKET_ID_FMT ", \"%.*s\", %d) = " CAT_LOG_UNFINISHED_FMT,
+    CAT_LOG_DEBUG(SOCKET, "try_connect(" CAT_SOCKET_ID_FMT ", \"%.*s\", %d) = " CAT_LOG_UNFINISHED_STR,
         socket->id, (int) name_length, name, port);
 
     cat_bool_t ret = cat_socket_connect_to_impl(socket, name, name_length, port, CAT_TIMEOUT_INVALID, cat_true);
@@ -2254,7 +2254,7 @@ CAT_API cat_bool_t cat_socket_enable_crypto_ex(cat_socket_t *socket, const cat_s
         }
         protocols_str = cat_ssl_protocols_str(log_options.protocols);
         CAT_LOG_DEBUG_D(SOCKET, "enable_crypto(" CAT_SOCKET_ID_FMT ", " \
-            "options: " CAT_SOCKET_CRYPTO_OPTIONS_FMT ", " CAT_TIMEOUT_FMT ") = " CAT_LOG_UNFINISHED_FMT,
+            "options: " CAT_SOCKET_CRYPTO_OPTIONS_FMT ", " CAT_TIMEOUT_FMT ") = " CAT_LOG_UNFINISHED_STR,
             socket->id, CAT_SOCKET_CRYPTO_OPTIONS_C(log_options, protocols_str), timeout);
     });
 
@@ -2950,7 +2950,7 @@ CAT_API CAT_BUFFER_STR_FREE char *cat_socket_write_vector_str(const cat_socket_w
         if (i > 0) {
             cat_buffer_append_str(&buffer, ", ");
         }
-        cat_buffer_append_str(&buffer, "{");
+        cat_buffer_append_char(&buffer, '{');
         if (cat_buffer_prepare(&buffer, need_size)) {
             size_t length = buffer.size - buffer.length;
             cat_str_quote_ex2(vector[i].base, show_length, buffer.value + buffer.length, &length, CAT_STR_QUOTE_STYLE_FLAG_NONE, NULL);
@@ -3600,7 +3600,7 @@ CAT_API ssize_t cat_socket_read(cat_socket_t *socket, char *buffer, size_t lengt
 
 CAT_API ssize_t cat_socket_read_ex(cat_socket_t *socket, char *buffer, size_t length, cat_timeout_t timeout)
 {
-    CAT_LOG_DEBUG(SOCKET, "read(" CAT_SOCKET_ID_FMT ", %p, %zu, " CAT_TIMEOUT_FMT ") = " CAT_LOG_UNFINISHED_FMT,
+    CAT_LOG_DEBUG(SOCKET, "read(" CAT_SOCKET_ID_FMT ", %p, %zu, " CAT_TIMEOUT_FMT ") = " CAT_LOG_UNFINISHED_STR,
         socket->id, buffer, length, timeout);
 
     ssize_t n = cat_socket_read_impl(socket, buffer, length, 0, NULL, timeout, cat_false);
@@ -3627,7 +3627,7 @@ CAT_API cat_bool_t cat_socket_write_ex(cat_socket_t *socket, const cat_socket_wr
 #endif
     CAT_LOG_DEBUG_VA(SOCKET, {
         vector_quoted = cat_socket_write_vector_str(vector, vector_count);
-        CAT_LOG_DEBUG_D(SOCKET, "write(" CAT_SOCKET_ID_FMT ", %s, " CAT_TIMEOUT_FMT ") = " CAT_LOG_UNFINISHED_FMT,
+        CAT_LOG_DEBUG_D(SOCKET, "write(" CAT_SOCKET_ID_FMT ", %s, " CAT_TIMEOUT_FMT ") = " CAT_LOG_UNFINISHED_STR,
             socket->id, vector_quoted, timeout);
     });
 
@@ -3674,7 +3674,7 @@ CAT_API cat_bool_t cat_socket_writeto_ex(cat_socket_t *socket, const cat_socket_
             break;
         }
         vector_quoted = cat_socket_write_vector_str(vector, vector_count);
-        CAT_LOG_DEBUG_D(SOCKET, "writeto(" CAT_SOCKET_ID_FMT ", %s, \"%.*s\", %d, " CAT_TIMEOUT_FMT ") = " CAT_LOG_UNFINISHED_FMT,
+        CAT_LOG_DEBUG_D(SOCKET, "writeto(" CAT_SOCKET_ID_FMT ", %s, \"%.*s\", %d, " CAT_TIMEOUT_FMT ") = " CAT_LOG_UNFINISHED_STR,
             socket->id, vector_quoted, (int) name_length, name, port, timeout);
     });
 
@@ -3722,7 +3722,7 @@ CAT_API cat_bool_t cat_socket_write_to_ex(cat_socket_t *socket, const cat_socket
 #endif
     CAT_LOG_DEBUG_VA(SOCKET, {
         vector_quoted = cat_socket_write_vector_str(vector, vector_count);
-        CAT_LOG_DEBUG_D(SOCKET, "write_to(" CAT_SOCKET_ID_FMT ", %s, \"%.*s\", %d, " CAT_TIMEOUT_FMT ") = " CAT_LOG_UNFINISHED_FMT,
+        CAT_LOG_DEBUG_D(SOCKET, "write_to(" CAT_SOCKET_ID_FMT ", %s, \"%.*s\", %d, " CAT_TIMEOUT_FMT ") = " CAT_LOG_UNFINISHED_STR,
             socket->id, vector_quoted, (int) name_length, name, port, timeout);
     });
 
@@ -3758,7 +3758,7 @@ CAT_API ssize_t cat_socket_recv(cat_socket_t *socket, char *buffer, size_t size)
 
 CAT_API ssize_t cat_socket_recv_ex(cat_socket_t *socket, char *buffer, size_t size, cat_timeout_t timeout)
 {
-    CAT_LOG_DEBUG(SOCKET, "recv(" CAT_SOCKET_ID_FMT ", %p, %zu, " CAT_TIMEOUT_FMT ") = " CAT_LOG_UNFINISHED_FMT,
+    CAT_LOG_DEBUG(SOCKET, "recv(" CAT_SOCKET_ID_FMT ", %p, %zu, " CAT_TIMEOUT_FMT ") = " CAT_LOG_UNFINISHED_STR,
         socket->id, buffer, size, timeout);
 
     ssize_t n = cat_socket_read_impl(socket, buffer, size, 0, NULL, timeout, cat_true);
@@ -3794,7 +3794,7 @@ CAT_API ssize_t cat_socket_recvfrom(cat_socket_t *socket, char *buffer, size_t s
 
 CAT_API ssize_t cat_socket_recvfrom_ex(cat_socket_t *socket, char *buffer, size_t size, cat_sockaddr_t *address, cat_socklen_t *address_length, cat_timeout_t timeout)
 {
-    CAT_LOG_DEBUG(SOCKET, "recvfrom(" CAT_SOCKET_ID_FMT ", %p, %zu, %p, %d, " CAT_TIMEOUT_FMT ") = " CAT_LOG_UNFINISHED_FMT,
+    CAT_LOG_DEBUG(SOCKET, "recvfrom(" CAT_SOCKET_ID_FMT ", %p, %zu, %p, %d, " CAT_TIMEOUT_FMT ") = " CAT_LOG_UNFINISHED_STR,
         socket->id, buffer, size, address, address_length != NULL ? *address_length: 0, timeout);
 
     ssize_t n = cat_socket_read_impl(socket, buffer, size, address, address_length, timeout, cat_true);
@@ -3842,7 +3842,7 @@ CAT_API ssize_t cat_socket_recv_from(cat_socket_t *socket, char *buffer, size_t 
 
 CAT_API ssize_t cat_socket_recv_from_ex(cat_socket_t *socket, char *buffer, size_t size, char *name, size_t *name_length, int *port, cat_timeout_t timeout)
 {
-    CAT_LOG_DEBUG(SOCKET, "recv_from(" CAT_SOCKET_ID_FMT ", %p, %zu, %p, %zu, " CAT_TIMEOUT_FMT ") = " CAT_LOG_UNFINISHED_FMT,
+    CAT_LOG_DEBUG(SOCKET, "recv_from(" CAT_SOCKET_ID_FMT ", %p, %zu, %p, %zu, " CAT_TIMEOUT_FMT ") = " CAT_LOG_UNFINISHED_STR,
         socket->id, buffer, size, name, name_length != NULL ? *name_length: 0, timeout);
 
     ssize_t n = cat_socket_recv_from_impl(socket, buffer, size, name, name_length, port, timeout);
@@ -3884,7 +3884,7 @@ CAT_API cat_bool_t cat_socket_send_ex(cat_socket_t *socket, const char *buffer, 
     char *buffer_quoted = NULL;
 #endif
     CAT_LOG_DEBUG_VA(SOCKET, {
-        CAT_LOG_DEBUG_D(SOCKET, "send(" CAT_SOCKET_ID_FMT ", %s, " CAT_TIMEOUT_FMT ") = " CAT_LOG_UNFINISHED_FMT,
+        CAT_LOG_DEBUG_D(SOCKET, "send(" CAT_SOCKET_ID_FMT ", %s, " CAT_TIMEOUT_FMT ") = " CAT_LOG_UNFINISHED_STR,
             socket->id, cat_log_str_quote(buffer, length, &buffer_quoted), timeout);
     });
 
@@ -3934,7 +3934,7 @@ CAT_API cat_bool_t cat_socket_sendto_ex(cat_socket_t *socket, const char *buffer
         if (cat_sockaddr_to_name_silent(address, address_length, name, &name_length, &port) != 0) {
             break;
         }
-        CAT_LOG_DEBUG_D(SOCKET, "sendto(" CAT_SOCKET_ID_FMT ", %s, \"%.*s\", %d, " CAT_TIMEOUT_FMT ") = " CAT_LOG_UNFINISHED_FMT,
+        CAT_LOG_DEBUG_D(SOCKET, "sendto(" CAT_SOCKET_ID_FMT ", %s, \"%.*s\", %d, " CAT_TIMEOUT_FMT ") = " CAT_LOG_UNFINISHED_STR,
             socket->id, cat_log_str_quote(buffer, length, &buffer_quoted), (int) name_length, name, port, timeout);
     });
 
@@ -3984,7 +3984,7 @@ CAT_API cat_bool_t cat_socket_send_to_ex(cat_socket_t *socket, const char *buffe
     char *buffer_quoted = NULL;
 #endif
     CAT_LOG_DEBUG_VA(SOCKET, {
-        CAT_LOG_DEBUG_D(SOCKET, "send_to(" CAT_SOCKET_ID_FMT ", %s, \"%.*s\", %d, " CAT_TIMEOUT_FMT ") = " CAT_LOG_UNFINISHED_FMT,
+        CAT_LOG_DEBUG_D(SOCKET, "send_to(" CAT_SOCKET_ID_FMT ", %s, \"%.*s\", %d, " CAT_TIMEOUT_FMT ") = " CAT_LOG_UNFINISHED_STR,
             socket->id, cat_log_str_quote(buffer, length, &buffer_quoted), (int) name_length, name, port, timeout);
     });
 
@@ -4101,7 +4101,7 @@ CAT_API ssize_t cat_socket_peek(const cat_socket_t *socket, char *buffer, size_t
 CAT_API ssize_t cat_socket_peek_ex(const cat_socket_t *socket, char *buffer, size_t size, cat_timeout_t timeout)
 {
     CAT_LOG_DEBUG_VA(SOCKET, if (timeout != 0) {
-        CAT_LOG_DEBUG_D(SOCKET, "peek(" CAT_SOCKET_ID_FMT ", %p, %zu, " CAT_TIMEOUT_FMT ") = " CAT_LOG_UNFINISHED_FMT,
+        CAT_LOG_DEBUG_D(SOCKET, "peek(" CAT_SOCKET_ID_FMT ", %p, %zu, " CAT_TIMEOUT_FMT ") = " CAT_LOG_UNFINISHED_STR,
             socket->id, buffer, size, timeout);
     });
 
@@ -4125,7 +4125,7 @@ CAT_API ssize_t cat_socket_peekfrom(const cat_socket_t *socket, char *buffer, si
 CAT_API ssize_t cat_socket_peekfrom_ex(const cat_socket_t *socket, char *buffer, size_t size, cat_sockaddr_t *address, cat_socklen_t *address_length, cat_timeout_t timeout)
 {
     CAT_LOG_DEBUG_VA(SOCKET, if (timeout != 0) {
-        CAT_LOG_DEBUG_D(SOCKET, "peekfrom(" CAT_SOCKET_ID_FMT ", %p, %zu, %p, %d, " CAT_TIMEOUT_FMT ") = " CAT_LOG_UNFINISHED_FMT,
+        CAT_LOG_DEBUG_D(SOCKET, "peekfrom(" CAT_SOCKET_ID_FMT ", %p, %zu, %p, %d, " CAT_TIMEOUT_FMT ") = " CAT_LOG_UNFINISHED_STR,
             socket->id, buffer, size, address, address_length != NULL ? *address_length: 0, timeout);
     });
 
@@ -4155,7 +4155,7 @@ CAT_API ssize_t cat_socket_peek_from(const cat_socket_t *socket, char *buffer, s
 CAT_API ssize_t cat_socket_peek_from_ex(const cat_socket_t *socket, char *buffer, size_t size, char *name, size_t *name_length, int *port, cat_timeout_t timeout)
 {
     CAT_LOG_DEBUG_VA(SOCKET, if (timeout != 0) {
-        CAT_LOG_DEBUG_D(SOCKET, "peek_from(" CAT_SOCKET_ID_FMT ", %p, %zu, %p, %zu, " CAT_TIMEOUT_FMT ") = " CAT_LOG_UNFINISHED_FMT,
+        CAT_LOG_DEBUG_D(SOCKET, "peek_from(" CAT_SOCKET_ID_FMT ", %p, %zu, %p, %zu, " CAT_TIMEOUT_FMT ") = " CAT_LOG_UNFINISHED_STR,
             socket->id, buffer, size, name, name_length != NULL ? *name_length: 0, timeout);
     });
 
@@ -4220,7 +4220,7 @@ CAT_API cat_bool_t cat_socket_send_handle(cat_socket_t *socket, cat_socket_t *ha
 
 CAT_API cat_bool_t cat_socket_send_handle_ex(cat_socket_t *socket, cat_socket_t *handle, cat_timeout_t timeout)
 {
-    CAT_LOG_DEBUG(SOCKET, "send_handle(" CAT_SOCKET_ID_FMT ", " CAT_SOCKET_ID_FMT ", " CAT_TIMEOUT_FMT ") = " CAT_LOG_UNFINISHED_FMT,
+    CAT_LOG_DEBUG(SOCKET, "send_handle(" CAT_SOCKET_ID_FMT ", " CAT_SOCKET_ID_FMT ", " CAT_TIMEOUT_FMT ") = " CAT_LOG_UNFINISHED_STR,
         socket->id, handle->id, timeout);
 
     cat_bool_t ret = cat_socket_send_handle_impl(socket, handle, timeout);

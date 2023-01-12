@@ -38,6 +38,26 @@ static cat_always_inline const char *cat_bool_str(cat_bool_t b)
     return b ? "true" : "false";
 }
 
+typedef enum cat_ret_e {
+    CAT_RET_ERROR = -1,
+    CAT_RET_NONE = 0,
+    CAT_RET_OK = 1,
+} cat_ret_t;
+
+static cat_always_inline const char *cat_ret_str(cat_ret_t ret)
+{
+    switch (ret) {
+        case CAT_RET_ERROR:
+            return "ERROR";
+        case CAT_RET_NONE:
+            return "NONE";
+        case CAT_RET_OK:
+            return "OK";
+        default:
+            CAT_NEVER_HERE("Unknown return value");
+    }
+}
+
 typedef void *cat_ptr_t;
 
 typedef void cat_data_t;

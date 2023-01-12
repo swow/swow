@@ -199,6 +199,16 @@ static CURLcode cat_curl_easy_perform_impl(CURL *ch)
     }
 
     while (1) {
+        /* workaround for cURL with OpenSSL 3.0 bug... */
+        mcode = curl_multi_perform(context.multi, &running_handles);
+        CAT_LOG_DEBUG(CURL, "curl_multi_perform(ch: %p, running_handles: %d) = %d (%s) workaround",
+            ch, running_handles, mcode, curl_multi_strerror(mcode));
+        if (unlikely(mcode != CURLM_OK)) {
+            goto _error;
+        }
+        if (running_handles == 0) {
+            break;
+        }
         if (context.sockfd == CURL_SOCKET_BAD) {
             CAT_LOG_DEBUG(CURL, "curl_time_delay(ch: %p, timeout: %ld) when sockfd is BAD", ch, context.timeout);
             cat_ret_t ret = cat_time_delay(context.timeout);
@@ -208,16 +218,6 @@ static CURLcode cat_curl_easy_perform_impl(CURL *ch)
             mcode = curl_multi_socket_action(context.multi, CURL_SOCKET_TIMEOUT, 0, &running_handles);
             CAT_LOG_DEBUG(CURL, "curl_multi_socket_action(ch: %p, CURL_SOCKET_TIMEOUT) = %d (%s) after delay",
                 ch, mcode, curl_multi_strerror(mcode));
-            if (running_handles == 0) {
-                break;
-            }
-            /* workaround for cURL with OpenSSL 3.0 bug... */
-            mcode = curl_multi_perform(context.multi, &running_handles);
-            CAT_LOG_DEBUG(CURL, "curl_multi_perform(ch: %p, running_handles: %d) = %d (%s) workaround",
-                ch, running_handles, mcode, curl_multi_strerror(mcode));
-            if (unlikely(mcode != CURLM_OK)) {
-                goto _error;
-            }
             if (running_handles == 0) {
                 break;
             }
@@ -272,7 +272,7 @@ static CURLcode cat_curl_easy_perform_impl(CURL *ch)
 
 CAT_API CURLcode cat_curl_easy_perform(CURL *ch)
 {
-    CAT_LOG_DEBUG(CURL, "easy_perform(ch: %p) = " CAT_LOG_UNFINISHED_FMT, ch);
+    CAT_LOG_DEBUG(CURL, "easy_perform(ch: %p) = " CAT_LOG_UNFINISHED_STR, ch);
 
     CURLcode code = cat_curl_easy_perform_impl(ch);
 
@@ -458,6 +458,15 @@ static CURLMcode cat_curl_multi_wait_impl(
     CAT_ASSERT(context != NULL);
 
     while (1) {
+        /* workaround for alpine bug <hyperf-dockerfile:8.1-alpine-3.17-swow-0.3.2-alpha>
+         * (version_number: 481024, version: 7.87.0, host: x86_64-alpine-linux-musl, with OpenSSL/3.0.7)
+         * TODO: optimize it, do not always do that... */
+        mcode = curl_multi_perform(multi, running_handles);
+        CAT_LOG_DEBUG(CURL, "curl_multi_perform(multi: %p, running_handles: %d) = %d (%s) (workaround)",
+            multi, *running_handles, mcode, curl_multi_strerror(mcode));
+        if (unlikely(mcode != CURLM_OK) || *running_handles == 0) {
+            goto _out;
+        }
         if (context->nfds == 0) {
             cat_timeout_t op_timeout = cat_curl_timeout_min(context->timeout, timeout);
             cat_ret_t ret;
@@ -469,15 +478,6 @@ static CURLMcode cat_curl_multi_wait_impl(
             mcode = curl_multi_socket_action(multi, CURL_SOCKET_TIMEOUT, 0, running_handles);
             CAT_LOG_DEBUG(CURL, "curl_multi_socket_action(multi: %p, CURL_SOCKET_TIMEOUT) = %d (%s) after delay",
                 multi, mcode, curl_multi_strerror(mcode));
-            if (unlikely(mcode != CURLM_OK) || *running_handles == 0) {
-                goto _out;
-            }
-            /* workaround for alpine bug <hyperf-dockerfile:8.1-alpine-3.17-swow-0.3.2-alpha>
-             * (version_number: 481024, version: 7.87.0, host: x86_64-alpine-linux-musl, with OpenSSL/3.0.7)
-             * TODO: optimize it, do not always do that... */
-            mcode = curl_multi_perform(multi, running_handles);
-            CAT_LOG_DEBUG(CURL, "curl_multi_perform(multi: %p, running_handles: %d) = %d (%s) (workaround)",
-                multi, *running_handles, mcode, curl_multi_strerror(mcode));
             if (unlikely(mcode != CURLM_OK) || *running_handles == 0) {
                 goto _out;
             }
@@ -564,7 +564,7 @@ CAT_API CURLMcode cat_curl_multi_perform(CURLM *multi, int *running_handles)
         running_handles = &_running_handles;
     }
 
-    CAT_LOG_DEBUG(CURL, "multi_perform(multi: %p, running_handles: %d) = " CAT_LOG_UNFINISHED_FMT, multi, *running_handles);
+    CAT_LOG_DEBUG(CURL, "multi_perform(multi: %p, running_handles: %d) = " CAT_LOG_UNFINISHED_STR, multi, *running_handles);
 
     /* this way even can solve the problem of CPU 100% if we perform in while loop */
     CURLMcode code = cat_curl_multi_wait_impl(multi, NULL, 0, 0, NULL, running_handles);
@@ -587,7 +587,7 @@ CAT_API CURLMcode cat_curl_multi_wait(
         numfds = &_numfds;
     }
 
-    CAT_LOG_DEBUG(CURL, "multi_wait(multi: %p, timeout_ms: %d, numfds: %d) = " CAT_LOG_UNFINISHED_FMT, multi, timeout_ms, *numfds);
+    CAT_LOG_DEBUG(CURL, "multi_wait(multi: %p, timeout_ms: %d, numfds: %d) = " CAT_LOG_UNFINISHED_STR, multi, timeout_ms, *numfds);
 
     CURLMcode mcode = cat_curl_multi_wait_impl(multi, extra_fds, extra_nfds, timeout_ms, numfds, running_handles);
 
@@ -602,9 +602,13 @@ CAT_API cat_bool_t cat_curl_module_init(void)
 {
     CAT_GLOBALS_REGISTER(cat_curl);
 
+    curl_version_info_data *curl_vid = curl_version_info(CURLVERSION_NOW);
+    if (curl_vid->version_num != LIBCURL_VERSION_NUM) {
+        CAT_CORE_ERROR(CURL, "Curl version mismatch, compiled: %s, linked: %s", LIBCURL_VERSION, curl_vid->version);
+    }
+
     if (curl_global_init(CURL_GLOBAL_DEFAULT) != CURLE_OK) {
-        CAT_WARN_WITH_REASON(EXT, CAT_UNKNOWN, "Curl init failed");
-        return cat_false;
+        CAT_CORE_ERROR(CURL, "Curl init failed");
     }
 
     return cat_true;

@@ -178,7 +178,7 @@ CAT_API cat_bool_t cat_log_fwrite(FILE *file, const char *str, size_t length)
     return cat_true;
 }
 
-CAT_API void cat_log_va_standard(CAT_LOG_VA_PARAMETERS)
+CAT_API void cat_log_va_list_standard(CAT_LOG_VA_LIST_PARAMETERS)
 {
     cat_buffer_t buffer;
     cat_bool_t ret;
@@ -298,7 +298,7 @@ CAT_API void cat_log_standard(CAT_LOG_PARAMETERS)
     va_list args;
     va_start(args, format);
 
-    cat_log_va_standard(type, module_name CAT_SOURCE_POSITION_RELAY_CC, code, format, args);
+    cat_log_va_list_standard(type, module_name CAT_SOURCE_POSITION_RELAY_CC, code, format, args);
 
     va_end(args);
 }

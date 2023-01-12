@@ -65,6 +65,11 @@ static cat_always_inline cat_ssl_context_t *cat_ssl_context_get_from_ctx(const c
 
 CAT_API cat_bool_t cat_ssl_module_init(void)
 {
+    if (OpenSSL_version_num() != OPENSSL_VERSION_NUMBER) {
+        CAT_CORE_ERROR(SSL, "OpenSSL version mismatch, compiled: %s, linked: %s",
+            OPENSSL_VERSION_TEXT, OpenSSL_version(OPENSSL_VERSION));
+    }
+
     /* SSL library initialisation */
 #if OPENSSL_VERSION_NUMBER >= 0x10100003L
     if (OPENSSL_init_ssl(OPENSSL_INIT_LOAD_CONFIG | OPENSSL_INIT_SSL_DEFAULT | OPENSSL_INIT_ADD_ALL_CIPHERS, NULL) == 0) {
@@ -1346,37 +1351,44 @@ static int cat_ssl_get_error(const cat_ssl_t *ssl, int ret_code)
 # define ERR_peek_error_data(data, flags) ERR_peek_error_line_data(NULL, NULL, data, flags)
 #endif
 
-CAT_API CAT_COLD char *cat_ssl_get_error_reason(void)
+static CAT_COLD char *cat_ssl_get_error_reason(void)
 {
-    char *errstr = NULL, *errstr2;
-    const char *data;
-    int flags;
+    char *error_str = NULL;
 
-    if (ERR_peek_error()) {
-        while (1) {
-            unsigned long n = ERR_peek_error_data(&data, &flags);
-            if (n == 0) {
-                break;
-            }
-            if (*data || !(flags & ERR_TXT_STRING)) {
-                data = "NULL";
-            }
-            if (errstr == NULL) {
-                errstr = cat_sprintf(" (SSL: %s:%s)", ERR_error_string(n, NULL), data);
-            } else {
-                errstr2 = cat_sprintf("%s (SSL: %s:%s)", errstr, ERR_error_string(n, NULL), data);
-                if (unlikely(errstr2 == NULL)) {
-                    ERR_print_errors_fp(CAT_LOG_G(error_output));
-                    break;
-                }
-                cat_free(errstr);
-                errstr = errstr2;
-            }
-            (void) ERR_get_error();
-        }
+    if (!ERR_peek_error()) {
+        return NULL;
     }
 
-    return errstr;
+    while (1) {
+        char buffer[1024];
+        char *tmp_str;
+        const char *data;
+        int flags;
+        unsigned long n = ERR_peek_error_data(&data, &flags);
+        if (n == 0) {
+            break;
+        }
+        if (!(flags & ERR_TXT_STRING) || !*data) {
+            data = NULL;
+        }
+        buffer[0] = '\0';
+        ERR_error_string_n(n, buffer, sizeof(buffer));
+        tmp_str = cat_sprintf("%s (SSL: %s%s%s)",
+            error_str != NULL ? error_str : "",
+            buffer,
+            data != NULL ? ":" : "",
+            data != NULL ? data : ""
+        );
+        if (unlikely(tmp_str == NULL)) {
+            ERR_print_errors_fp(CAT_LOG_G(error_output));
+            break;
+        }
+        cat_free(error_str);
+        error_str = tmp_str;
+        (void) ERR_get_error();
+    }
+
+    return error_str;
 }
 
 CAT_API CAT_COLD void cat_ssl_update_last_error(cat_errno_t error, const char *format, ...)
@@ -1411,7 +1423,7 @@ static void cat_ssl_clear_error(void)
 {
     while (unlikely(ERR_peek_error())) {
         char *reason = cat_ssl_get_error_reason();
-        CAT_NOTICE(SSL, "Ignoring stale global SSL error %s", reason != NULL ? reason : "");
+        CAT_NOTICE(SSL, "Ignoring stale global SSL error%s", reason != NULL ? reason : " (SSL: Unknown)");
         if (reason != NULL) {
             cat_free(reason);
         }

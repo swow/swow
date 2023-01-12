@@ -29,6 +29,8 @@ extern "C" {
 
 #include "multipart_parser.h"
 
+CAT_API cat_bool_t cat_http_module_init(void);
+
 #define CAT_HTTP_METHOD_MAP HTTP_METHOD_MAP
 
 enum cat_http_method_e
@@ -119,15 +121,20 @@ CAT_API const char *cat_http_status_get_reason(cat_http_status_code_t status);
 
 /* parser */
 
+#define HPE_MAX 64
+
+#define CAT_HTTP_PARSER_STANDARD_ERRNO_START \
+    -((('H' - 'A' + 1) * 100 * 1000) + (('P' - 'A' + 1) * 1000))
+
 #define CAT_HTTP_PARSER_ERRNO_MAP(XX) \
     HTTP_ERRNO_MAP(XX) \
-    XX(HPE_USER + 1, NOMEM, NOMEM) \
-    XX(HPE_USER + 2, MULTIPART_HEADER, MULTIPART_HEADER) \
-    XX(HPE_USER + 3, DUPLICATE_CONTENT_TYPE, DUPLICATE_CONTENT_TYPE) \
-    XX(HPE_USER + 4, MULTIPART_BODY, MULTIPART_BODY) \
+    XX(HPE_MAX + 1, NOMEM, NOMEM) \
+    XX(HPE_MAX + 2, MULTIPART_HEADER, MULTIPART_HEADER) \
+    XX(HPE_MAX + 3, DUPLICATE_CONTENT_TYPE, DUPLICATE_CONTENT_TYPE) \
+    XX(HPE_MAX + 4, MULTIPART_BODY, MULTIPART_BODY) \
 
-typedef enum cat_http_parser_errno_e {
-#define CAT_HTTP_PARSER_ERRNO_GEN(code, name, description) CAT_HTTP_PARSER_E_##name = code,
+typedef enum cat_http_parser_standard_errno_e {
+#define CAT_HTTP_PARSER_ERRNO_GEN(code, name, string) CAT_EHP_ ## name = CAT_HTTP_PARSER_STANDARD_ERRNO_START - (code),
     CAT_HTTP_PARSER_ERRNO_MAP(CAT_HTTP_PARSER_ERRNO_GEN)
 #undef CAT_HTTP_PARSER_ERRNO_GEN
 } cat_http_parser_errno_t;

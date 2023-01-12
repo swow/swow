@@ -50,18 +50,15 @@ CAT_API void cat_clear_last_error(void)
     }
 }
 
-CAT_API void cat_update_last_error(cat_errno_t code, const char *format, ...)
+CAT_API void cat_update_last_error_va_list(cat_errno_t code, const char *format, va_list args)
 {
-    va_list args;
     char *message;
 
     if (format == NULL) {
         message = NULL;
     } else {
         /* Notice: new message maybe relying on the previous message */
-        va_start(args, format);
         message = cat_vsprintf(format, args);
-        va_end(args);
         if (unlikely(message == NULL)) {
             fprintf(CAT_LOG_G(error_output), "Sprintf last error message failed\n");
             return;
@@ -69,6 +66,18 @@ CAT_API void cat_update_last_error(cat_errno_t code, const char *format, ...)
     }
 
     cat_set_last_error(code, message);
+}
+
+CAT_API void cat_update_last_error(cat_errno_t code, const char *format, ...)
+{
+    if (format == NULL) {
+        cat_set_last_error(code, NULL);
+    } else {
+        va_list args;
+        va_start(args, format);
+        cat_update_last_error_va_list(code, format, args);
+        va_end(args);
+    }
 }
 
 CAT_API void cat_set_last_error_code(cat_errno_t code)
@@ -100,9 +109,10 @@ CAT_API void cat_set_last_error(cat_errno_t code, char *message)
 
 CAT_API void cat_show_last_error(void)
 {
+    cat_errno_t code = cat_get_last_error_code();
     CAT_LOG_INFO(
-        ERROR,  "last_error = { code: %s, message: '%s' }",
-        cat_strerrno(cat_get_last_error_code()), cat_get_last_error_message()
+        ERROR,  "last_error = { code: " CAT_ERRNO_FMT " (%s), message: '%s' }",
+        code, cat_strerrno(code), cat_get_last_error_message()
     );
 }
 
@@ -113,7 +123,20 @@ CAT_API CAT_COLD CAT_NORETURN void cat_abort(void)
 }
 #endif
 
-/* sys error (uv style) */
+/* error stringify */
+
+#include "cat_queue.h"
+
+typedef struct cat_strerror_handler_s {
+    cat_queue_t node;
+    cat_error_stringify_t stringify;
+} cat_error_stringify_handler_t;
+
+typedef cat_error_stringify_handler_t cat_strerror_handler_t;
+typedef cat_error_stringify_handler_t cat_strerrno_handler_t;
+
+CAT_API cat_queue_t cat_strerror_handlers;
+CAT_API cat_queue_t cat_strerrno_handlers;
 
 CAT_API const char *cat_strerror(cat_errno_t error)
 {
@@ -125,6 +148,12 @@ CAT_API const char *cat_strerror(cat_errno_t error)
         CAT_ERRNO_MAP(CAT_STRERROR_GEN)
     }
 #undef CAT_STRERROR_GEN
+    CAT_QUEUE_FOREACH_DATA_START(&cat_strerror_handlers, cat_strerror_handler_t, node, handler) {
+        const char *message = handler->stringify(error);
+        if (message != NULL) {
+            return message;
+        }
+    } CAT_QUEUE_FOREACH_DATA_END();
     return "Unknown error";
 }
 
@@ -138,8 +167,51 @@ CAT_API const char *cat_strerrno(cat_errno_t error)
         CAT_ERRNO_MAP(CAT_STRERRNO_GEN)
     }
 #undef CAT_STRERRNO_GEN
+    CAT_QUEUE_FOREACH_DATA_START(&cat_strerrno_handlers, cat_strerrno_handler_t, node, handler) {
+        const char *message = handler->stringify(error);
+        if (message != NULL) {
+            return message;
+        }
+    } CAT_QUEUE_FOREACH_DATA_END();
     return "UNKNOWN";
 }
+
+CAT_API void cat_strerror_handler_register(cat_strerror_t function)
+{
+    cat_strerror_handler_t *handler = (cat_strerror_handler_t *) cat_sys_malloc_unrecoverable(sizeof(*handler));
+    handler->stringify = function;
+    cat_queue_push_back(&cat_strerror_handlers, &handler->node);
+}
+
+CAT_API void cat_strerrno_handler_register(cat_strerrno_t function)
+{
+    cat_strerrno_handler_t *handler = (cat_strerrno_handler_t *) cat_sys_malloc_unrecoverable(sizeof(*handler));
+    handler->stringify = function;
+    cat_queue_push_back(&cat_strerrno_handlers, &handler->node);
+}
+
+/* internal module init */
+
+void cat_error_module_init(void)
+{
+    cat_queue_init(&cat_strerror_handlers);
+    cat_queue_init(&cat_strerrno_handlers);
+}
+
+void cat_error_module_shutdown(void)
+{
+    cat_strerror_handler_t *handler;
+    while ((handler = cat_queue_front_data(&cat_strerror_handlers, cat_strerror_handler_t, node))) {
+        cat_queue_remove(&handler->node);
+        cat_sys_free(handler);
+    }
+    while ((handler = cat_queue_front_data(&cat_strerrno_handlers, cat_strerror_handler_t, node))) {
+        cat_queue_remove(&handler->node);
+        cat_sys_free(handler);
+    }
+}
+
+/* ori sys error */
 
 #ifndef E2BIG
 #define E2BIG 7

@@ -41,15 +41,29 @@ CAT_API const char *cat_http_status_get_reason(cat_http_status_code_t status)
 
 /* http parser definations */
 
+typedef enum cat_http_parser_errno_e {
+#define CAT_HTTP_PARSER_ERRNO_GEN(code, name, string) CAT_HTTP_PARSER_E_##name = code,
+    CAT_HTTP_PARSER_ERRNO_MAP(CAT_HTTP_PARSER_ERRNO_GEN)
+#undef CAT_HTTP_PARSER_ERRNO_GEN
+} cat_http_parser_internal_errno_t;
+
 CAT_STRCASECMP_FAST_FUNCTION(content_type, "content-type", "       \0    ");
 CAT_STRCASECMP_FAST_FUNCTION(multipart_dash, "multipart/", "         \0");
 CAT_STRCASECMP_FAST_FUNCTION(boundary_eq, "boundary=", "        \0");
 
 #define cat_http_parser_throw_error(action, code, fmt, ...) do { \
     parser->internal_flags |= CAT_HTTP_PARSER_INTERNAL_FLAG_HAS_PREVIOUS_ERROR; \
+    cat_http_parser_update_last_error(code, fmt, ##__VA_ARGS__); \
+    action; \
+} while (0)
+
+#define cat_http_parser_throw_std_error(action, code, fmt, ...) do { \
+    parser->internal_flags |= CAT_HTTP_PARSER_INTERNAL_FLAG_HAS_PREVIOUS_ERROR; \
     cat_update_last_error(code, fmt, ##__VA_ARGS__); \
     action; \
 } while (0)
+
+static void cat_http_parser_update_last_error(cat_http_parser_internal_errno_t error, const char *format, ...);
 
 /* multipart parser things */
 
@@ -705,12 +719,12 @@ CAT_API void cat_http_parser_set_events(cat_http_parser_t *parser, cat_http_pars
     parser->events = (events & CAT_HTTP_PARSER_EVENTS_ALL);
 }
 
-static cat_http_parser_errno_t cat_http_parser_llhttp_execute(cat_http_parser_t *parser, const char *data, size_t length)
+static cat_http_parser_internal_errno_t cat_http_parser_llhttp_execute(cat_http_parser_t *parser, const char *data, size_t length)
 {
-    cat_http_parser_errno_t error;
+    cat_http_parser_internal_errno_t error;
 
     parser->event = CAT_HTTP_PARSER_EVENT_NONE;
-    error = (cat_http_parser_errno_t) llhttp_execute(&parser->llhttp, data, length);
+    error = (cat_http_parser_internal_errno_t) llhttp_execute(&parser->llhttp, data, length);
     if (error != CAT_HTTP_PARSER_E_OK) {
         parser->parsed_length = llhttp_get_error_pos(&parser->llhttp) - data;
         if (unlikely(error != CAT_HTTP_PARSER_E_PAUSED)) {
@@ -779,7 +793,7 @@ static cat_bool_t cat_http_parser_solve_multipart_body(cat_http_parser_t *parser
     if (parser->content_length == 0 && cat_http_parser_get_type(parser) == CAT_HTTP_PARSER_TYPE_RESPONSE) {
         // TODO: implement full support for multipart/byterange
         llhttp_finish(&parser->llhttp);
-        cat_http_parser_throw_error(return cat_false, CAT_ENOTSUP, "Unsupported type: multipart/byterange");
+        cat_http_parser_throw_std_error(return cat_false, CAT_ENOTSUP, "Unsupported type: multipart/byterange");
     }
     ret = cat_http_parser_llhttp_execute(parser, NULL, parser->content_length - parser->data_length) == CAT_HTTP_PARSER_E_OK;
     CAT_ASSERT(ret && "Never fail");
@@ -799,7 +813,7 @@ static cat_bool_t cat_http_parser_solve_multipart_body(cat_http_parser_t *parser
 
 CAT_API cat_bool_t cat_http_parser_execute(cat_http_parser_t *parser, const char *data, size_t length)
 {
-    cat_http_parser_errno_t error = CAT_HTTP_PARSER_E_OK;
+    cat_http_parser_internal_errno_t error = CAT_HTTP_PARSER_E_OK;
     cat_bool_t ret;
 
     parser->previous_event = parser->event;
@@ -817,7 +831,7 @@ CAT_API cat_bool_t cat_http_parser_execute(cat_http_parser_t *parser, const char
     }
     if (unlikely(!ret)) {
         if (!(parser->internal_flags & CAT_HTTP_PARSER_INTERNAL_FLAG_HAS_PREVIOUS_ERROR)) {
-            cat_update_last_error(error, "HTTP-Parser execute failed: %s", llhttp_get_error_reason(&parser->llhttp));
+            cat_http_parser_update_last_error(error, "HTTP-Parser execute failed: %s", llhttp_get_error_reason(&parser->llhttp));
         } else {
             cat_update_last_error_with_previous("HTTP-Parser execute failed");
             parser->internal_flags ^= CAT_HTTP_PARSER_INTERNAL_FLAG_HAS_PREVIOUS_ERROR;
@@ -906,14 +920,14 @@ CAT_API cat_bool_t cat_http_parser_should_keep_alive(const cat_http_parser_t *pa
 
 CAT_API cat_bool_t cat_http_parser_finish(cat_http_parser_t *parser)
 {
-    cat_http_parser_errno_t error;
+    cat_http_parser_internal_errno_t error;
 
-    error = (cat_http_parser_errno_t) llhttp_finish(&parser->llhttp);
+    error = (cat_http_parser_internal_errno_t) llhttp_finish(&parser->llhttp);
     if (unlikely(
         error != CAT_HTTP_PARSER_E_OK &&
         error != CAT_HTTP_PARSER_E_PAUSED /* on_message_complete may return E_PAUSED */
     )) {
-        cat_update_last_error(error, "HTTP-Parser finish failed: %s", llhttp_get_error_reason(&parser->llhttp));
+        cat_http_parser_update_last_error(error, "HTTP-Parser finish failed: %s", llhttp_get_error_reason(&parser->llhttp));
         return cat_false;
     }
 
@@ -1024,4 +1038,31 @@ CAT_API cat_bool_t cat_http_parser_is_upgrade(const cat_http_parser_t *parser)
 CAT_API cat_bool_t cat_http_parser_is_multipart(const cat_http_parser_t *parser)
 {
     return parser->multipart_state >= CAT_HTTP_MULTIPART_STATE_BOUNDARY_OK;
+}
+
+/* module */
+
+static void cat_http_parser_update_last_error(cat_http_parser_internal_errno_t error, const char *format, ...)
+{
+    va_list args;
+    va_start(args, format);
+    cat_update_last_error_va_list(CAT_HTTP_PARSER_STANDARD_ERRNO_START - error, format, args);
+    va_end(args);
+}
+
+static const char *cat_http_parser_strerrno_function(cat_errno_t error)
+{
+#define CAT_HTTP_PARSER_STRERROR_GEN(code, name, string) case CAT_EHP_ ## name: return "EHP_" #name;
+    switch (error) {
+        CAT_HTTP_PARSER_ERRNO_MAP(CAT_HTTP_PARSER_STRERROR_GEN)
+    }
+#undef CAT_HTTP_PARSER_STRERROR_GEN
+    return NULL;
+}
+
+CAT_API cat_bool_t cat_http_module_init(void)
+{
+    cat_strerrno_handler_register(cat_http_parser_strerrno_function);
+
+    return cat_true;
 }
