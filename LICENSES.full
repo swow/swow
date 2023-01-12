@@ -1,11 +1,11 @@
-This is licenses of softwares which swow used
+This is licenses of software which Swow used
 
 License of libcat:
 
 Copyright 2020 Qihao Chencao <twosee@php.net>
 Copyright 2020 Yun Dou <dixyes@gmail.com>
 Copyright 2020 Hantao Huang <codinghuang@qq.com>
-Copyright 2020 The Libcat Contributers
+Copyright 2020 The libcat project contributors
 
                                  Apache License
                            Version 2.0, January 2004
@@ -335,7 +335,7 @@ Copyright 2012 Igor Afonov
 Copyright 2012 Daniel T. Wagner
 Copyright 2012 James McLaughlin
 Copyright 2013 Jay Miller
-Copyright 2022 the libcat contributers
+Copyright 2022 the libcat contributors
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 
@@ -372,7 +372,7 @@ License of Swow's PHP libraries:
 Copyright 2020 Qihao Chencao <twosee@php.net>
 Copyright 2020 Yun Dou <dixyes@gmail.com>
 Copyright 2020 Hantao Huang <codinghuang@qq.com>
-Copyright 2020 The Swow Contributers
+Copyright 2020 The Swow project Contributors
 
                                  Apache License
                            Version 2.0, January 2004
@@ -650,12 +650,12 @@ please see <http://www.php.net>.
 PHP includes the Zend Engine, freely available at
 <http://www.zend.com>.
 
-License of swow itself:
+License of Swow itself:
 
 Copyright 2020 Qihao Chencao <twosee@php.net>
 Copyright 2020 Yun Dou <dixyes@gmail.com>
 Copyright 2020 Hantao Huang <codinghuang@qq.com>
-Copyright 2020 The Swow Contributers
+Copyright 2020 the Swow project Contributors
 
                                  Apache License
                            Version 2.0, January 2004
