@@ -602,10 +602,13 @@ CAT_API cat_bool_t cat_curl_module_init(void)
 {
     CAT_GLOBALS_REGISTER(cat_curl);
 
+#ifdef CAT_DEBUG
     curl_version_info_data *curl_vid = curl_version_info(CURLVERSION_NOW);
     if (curl_vid->version_num != LIBCURL_VERSION_NUM) {
-        CAT_CORE_ERROR(CURL, "Curl version mismatch, compiled: %s, linked: %s", LIBCURL_VERSION, curl_vid->version);
+        CAT_CORE_ERROR(CURL, "Curl version mismatch, built with \"%s\", but running with \"%s\"",
+            curl_vid->version, curl_version());
     }
+#endif
 
     if (curl_global_init(CURL_GLOBAL_DEFAULT) != CURLE_OK) {
         CAT_CORE_ERROR(CURL, "Curl init failed");

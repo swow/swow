@@ -65,10 +65,12 @@ static cat_always_inline cat_ssl_context_t *cat_ssl_context_get_from_ctx(const c
 
 CAT_API cat_bool_t cat_ssl_module_init(void)
 {
+#ifdef CAT_DEBUG
     if (OpenSSL_version_num() != OPENSSL_VERSION_NUMBER) {
-        CAT_CORE_ERROR(SSL, "OpenSSL version mismatch, compiled: %s, linked: %s",
-            OPENSSL_VERSION_TEXT, OpenSSL_version(OPENSSL_VERSION));
+        CAT_CORE_ERROR(SSL, "OpenSSL version mismatch, built with \"%s\", but running with \"%s\"",
+            OPENSSL_VERSION_TEXT, cat_ssl_version());
     }
+#endif
 
     /* SSL library initialisation */
 #if OPENSSL_VERSION_NUMBER >= 0x10100003L
