@@ -2938,7 +2938,7 @@ CAT_API size_t cat_socket_write_vector_length(const cat_socket_write_vector_t *v
     return cat_io_vector_length((const cat_io_vector_t *) vector, vector_count);
 }
 
-CAT_API CAT_BUFFER_STR_FREE char *cat_socket_write_vector_str(const cat_socket_write_vector_t *vector, unsigned int vector_count)
+static CAT_BUFFER_STR_FREE char *cat_socket_write_vector_str(const cat_socket_write_vector_t *vector, unsigned int vector_count)
 {
     cat_buffer_t buffer;
     unsigned int i;
