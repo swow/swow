@@ -401,20 +401,28 @@ PHP_MINFO_FUNCTION(swow)
     php_info_print_table_row(2, "Sanitizers", ZSTR_VAL(str.s));
     smart_str_free(&str);
 #endif
-#if defined(CAT_HAVE_CURL) || defined(CAT_HAVE_OPENSSL)
-    memset(&str, 0, sizeof(str));
-# ifdef CAT_HAVE_OPENSSL
-    smart_str_append_printf(&str, "%s, ", cat_ssl_version());
-# endif
-# ifdef CAT_HAVE_CURL
+#ifdef CAT_HAVE_OPENSSL
+    if (strcmp(cat_ssl_version(), OPENSSL_VERSION_TEXT) == 0) {
+        php_info_print_table_row(2, "SSL", cat_ssl_version());
+    } else {
+        memset(&str, 0, sizeof(str));
+        smart_str_append_printf(&str, "%s (built with %s)", cat_ssl_version(), OPENSSL_VERSION_TEXT);
+        smart_str_0(&str);
+        php_info_print_table_row(2, "SSL", ZSTR_VAL(str.s));
+        smart_str_free(&str);
+    }
+#endif
+#ifdef CAT_HAVE_CURL
     curl_version_info_data *curl_vid = curl_version_info(CURLVERSION_NOW);
-    smart_str_append_printf(&str, "cURL %s, ", curl_vid->version);
-# endif
-    ZEND_ASSERT(str.s != NULL && ZSTR_LEN(str.s) > 1);
-    ZSTR_LEN(str.s) -= CAT_STRLEN(", "); // rtrim(&str, ", ")
-    smart_str_0(&str);
-    php_info_print_table_row(2, "With", ZSTR_VAL(str.s));
-    smart_str_free(&str);
+    if (LIBCURL_VERSION_NUM == curl_vid->version_num) {
+        php_info_print_table_row(2, "cURL", curl_version());
+    } else {
+        memset(&str, 0, sizeof(str));
+        smart_str_append_printf(&str, "%s (built with %s)", curl_version(), LIBCURL_VERSION);
+        smart_str_0(&str);
+        php_info_print_table_row(2, "cURL", ZSTR_VAL(str.s));
+        smart_str_free(&str);
+    }
 #endif
     php_info_print_table_end();
 }
