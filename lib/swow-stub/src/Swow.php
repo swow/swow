@@ -600,6 +600,46 @@ namespace Swow
         public const ENOCERT = -9755;
         public const ECERT = -9754;
         public const ECHILD = -9753;
+        public const EHP_OK = -816000;
+        public const EHP_INTERNAL = -816001;
+        public const EHP_STRICT = -816002;
+        public const EHP_CR_EXPECTED = -816025;
+        public const EHP_LF_EXPECTED = -816003;
+        public const EHP_UNEXPECTED_CONTENT_LENGTH = -816004;
+        public const EHP_UNEXPECTED_SPACE = -816030;
+        public const EHP_CLOSED_CONNECTION = -816005;
+        public const EHP_INVALID_METHOD = -816006;
+        public const EHP_INVALID_URL = -816007;
+        public const EHP_INVALID_CONSTANT = -816008;
+        public const EHP_INVALID_VERSION = -816009;
+        public const EHP_INVALID_HEADER_TOKEN = -816010;
+        public const EHP_INVALID_CONTENT_LENGTH = -816011;
+        public const EHP_INVALID_CHUNK_SIZE = -816012;
+        public const EHP_INVALID_STATUS = -816013;
+        public const EHP_INVALID_EOF_STATE = -816014;
+        public const EHP_INVALID_TRANSFER_ENCODING = -816015;
+        public const EHP_CB_MESSAGE_BEGIN = -816016;
+        public const EHP_CB_HEADERS_COMPLETE = -816017;
+        public const EHP_CB_MESSAGE_COMPLETE = -816018;
+        public const EHP_CB_CHUNK_HEADER = -816019;
+        public const EHP_CB_CHUNK_COMPLETE = -816020;
+        public const EHP_PAUSED = -816021;
+        public const EHP_PAUSED_UPGRADE = -816022;
+        public const EHP_PAUSED_H2_UPGRADE = -816023;
+        public const EHP_USER = -816024;
+        public const EHP_CB_URL_COMPLETE = -816026;
+        public const EHP_CB_STATUS_COMPLETE = -816027;
+        public const EHP_CB_METHOD_COMPLETE = -816032;
+        public const EHP_CB_VERSION_COMPLETE = -816033;
+        public const EHP_CB_HEADER_FIELD_COMPLETE = -816028;
+        public const EHP_CB_HEADER_VALUE_COMPLETE = -816029;
+        public const EHP_CB_CHUNK_EXTENSION_NAME_COMPLETE = -816034;
+        public const EHP_CB_CHUNK_EXTENSION_VALUE_COMPLETE = -816035;
+        public const EHP_CB_RESET = -816031;
+        public const EHP_NOMEM = -816065;
+        public const EHP_MULTIPART_HEADER = -816066;
+        public const EHP_DUPLICATE_CONTENT_TYPE = -816067;
+        public const EHP_MULTIPART_BODY = -816068;
 
         public static function getDescriptionOf(int $error): string { }
     }
