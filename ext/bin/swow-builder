@@ -36,7 +36,8 @@ use function Swow\Utils\notice;
 use function Swow\Utils\ok;
 use function Swow\Utils\passthru;
 use function Swow\Utils\success;
-use function Swow\Utils\warn;
+
+/* check */
 
 if (PHP_OS_FAMILY === 'Windows') {
     error(
@@ -45,6 +46,8 @@ if (PHP_OS_FAMILY === 'Windows') {
         'or build it yourself on Windows.'
     );
 }
+
+/* prepare */
 
 $workSpace = dirname(__DIR__);
 $swowSo = "{$workSpace}/.libs/swow.so";
@@ -107,6 +110,8 @@ $commandExecutor = static function (string $name, array $commands) use ($workSpa
     br();
 };
 
+/* build */
+
 $cleanCommands = [];
 if ($rebuild || $clean) {
     if (file_exists("{$workSpace}/Makefile")) {
@@ -157,10 +162,9 @@ if (!$dryRun) {
     ob_start();
     $status = passthru($checkCommand);
     $swowInfo = ob_get_clean();
-    if ($status === 0) {
-        log($swowInfo);
-    } else {
-        warn('Get extension info failed');
+    log($swowInfo);
+    if ($status !== 0) {
+        error('Get extension info failed');
     }
 } else {
     log("> {$checkCommand}");
