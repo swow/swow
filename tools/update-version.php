@@ -16,10 +16,10 @@ use function Swow\Utils\success;
 
 $versions = [
     'swow-extension' => [
-        'version' => '1.1.0-dev',
+        'version' => '1.1.0',
     ],
     'swow-library' => [
-        'version' => '1.1.0-dev',
+        'version' => '1.1.0',
         'required_extension_version' => '^1.1.0',
     ],
 ];
