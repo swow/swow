@@ -43,7 +43,6 @@ use function trim;
 
 use const E_USER_WARNING;
 use const PATHINFO_FILENAME;
-use const PHP_EOL;
 use const STDIN;
 
 const COLOR_NONE = 0;
@@ -62,12 +61,12 @@ function dye(string $string, int $color): string
 
 function log(string $message, int $color = COLOR_NONE): void
 {
-    echo dye($message, $color) . PHP_EOL;
+    echo dye($message, $color) . "\n";
 }
 
 function br(): void
 {
-    echo PHP_EOL;
+    echo "\n";
 }
 
 const EMOJI_WARN = '⚠️';
@@ -183,7 +182,7 @@ function printAsMultiLines(string $title = '', int $length = 32): void
     if ($length % 2 !== 0) {
         $length += 1;
     }
-    echo "< {$title} > " . str_repeat('=', $length) . PHP_EOL;
+    echo "< {$title} > " . str_repeat('=', $length) . "\n";
 }
 
 /**
@@ -194,21 +193,21 @@ function printAsMultiLines(string $title = '', int $length = 32): void
 function executeAndCheck(array $commands): void
 {
     $basename = pathinfo($commands[1] ?? '', PATHINFO_FILENAME);
-    echo "[{$basename}]" . PHP_EOL;
-    echo '===========  Execute  ==============' . PHP_EOL;
+    echo "[{$basename}]\n";
+    echo "===========  Execute  ==============\n";
     $command = implode(' ', $commands);
     exec($command, $output, $return_var);
     if (str_starts_with($output[0] ?? '', '#!')) {
         array_shift($output);
     }
-    echo '> ' . implode("\n> ", $output) . '' . PHP_EOL;
+    echo '> ' . implode("\n> ", $output) . "\n";
     if ($return_var !== 0) {
         error("Exec {$command} failed with code {$return_var}!");
     }
-    echo '=========== Finish Done ============' . PHP_EOL . PHP_EOL;
+    echo "=========== Finish Done ============\n\n";
 }
 
-function formatSize(int $size, $precision = 2)
+function formatSize(int $size, $precision = 2): string
 {
     $units = ['B', 'KB', 'MB', 'GB', 'TB'];
     $level = 0;
@@ -229,11 +228,11 @@ function fileFormattedSize(string $filename, int $precision = 2): string
  */
 function gitFiles(string $root = '.'): array
 {
-    if (is_dir("{$root}/.git")) {
-        return explode(PHP_EOL, shell_exec("git --git-dir={$root}/.git ls-files"));
+    $gitDir = "{$root}/.git";
+    if (!is_dir($gitDir)) {
+        $gitDir = $root;
     }
-
-    return explode(PHP_EOL, shell_exec("git --git-dir={$root} ls-files"));
+    return explode("\n", shell_exec("git --git-dir={$gitDir} ls-files"));
 }
 
 /**
@@ -268,15 +267,15 @@ function defer(mixed &$any, callable $callback): void
 /**
  * @param array<string> $command
  * @param array{
- *              'command': string,
- *              'pid': int,
- *              'running': bool,
- *              'signaled':bool,
- *              'stopped': bool,
- *              'exitcode':int,
- *              'termsig':int,
- *              'stopsig': int
- *        }|false $status
+ *     'command': string,
+ *     'pid': int,
+ *     'running': bool,
+ *     'signaled':bool,
+ *     'stopped': bool,
+ *     'exitcode':int,
+ *     'termsig':int,
+ *     'stopsig': int
+ * }|false $status
  */
 function processExecute(array $command, &$status = null): string
 {
