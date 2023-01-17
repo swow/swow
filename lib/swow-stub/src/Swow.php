@@ -54,12 +54,12 @@ namespace Swow
 {
     class Extension
     {
-        public const VERSION = '1.1.0';
-        public const VERSION_ID = 10100;
+        public const VERSION = '1.1.1-dev';
+        public const VERSION_ID = 10101;
         public const MAJOR_VERSION = 1;
         public const MINOR_VERSION = 1;
-        public const RELEASE_VERSION = 0;
-        public const EXTRA_VERSION = '';
+        public const RELEASE_VERSION = 1;
+        public const EXTRA_VERSION = 'dev';
 
         public static function isBuiltWith(string $lib): bool { }
     }
