@@ -1665,6 +1665,11 @@ zend_result swow_socket_module_init(INIT_FUNC_ARGS)
     if (!cat_socket_module_init()) {
         return FAILURE;
     }
+#ifdef CAT_SSL
+    if (!cat_ssl_module_init()) {
+        return FAILURE;
+    }
+#endif
 
     swow_socket_ce = swow_register_internal_class(
         "Swow\\Socket", NULL, swow_socket_methods,
