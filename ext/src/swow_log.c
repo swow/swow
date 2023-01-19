@@ -87,8 +87,10 @@ static void swow_log_va_list_standard(CAT_LOG_VA_LIST_PARAMETERS)
 #endif
 
     /* Zend put()/error() may call PHP callbacks,
-     * we can not do it in a pure C or interned coroutine */
-    bool has_executor = swow_coroutine_get_current()->coroutine.flags & SWOW_COROUTINE_FLAG_HAS_EXECUTOR;
+     * we can not do it in a pure C or interned coroutine or when we are in module init */
+    swow_coroutine_t *current_s_coroutine = swow_coroutine_get_current();
+    bool has_executor = current_s_coroutine != NULL &&
+        current_s_coroutine->coroutine.flags & SWOW_COROUTINE_FLAG_HAS_EXECUTOR;
     if (!has_executor) {
         if (!(type & CAT_LOG_TYPES_ABNORMAL)) {
             cat_log_va_list_standard(type, module_name CAT_SOURCE_POSITION_RELAY_CC, code, format, args);
