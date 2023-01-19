@@ -19,7 +19,9 @@ if (!class_exists(Extension::class)) {
     return;
 }
 
-if (!getenv('SKIP_SWOW_REQUIRED_EXTENSION_CHECK')) {
+if (!getenv('SKIP_SWOW_REQUIRED_EXTENSION_CHECK') &&
+    /* for test-extension.php, it can run without 3rd packages... */
+    class_exists(Semver::class)) {
     if (!Semver::satisfies(Extension::VERSION, Library::REQUIRED_EXTENSION_VERSION)) {
         throw new Error(sprintf(
             '%s extension version mismatch, required: %s, actual: %s',
