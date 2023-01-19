@@ -24,6 +24,10 @@
 # include "zend_observer.h"
 #endif
 
+#ifdef PHP_WIN32
+#include "win32/time.h"
+#endif
+
 #ifdef SWOW_COROUTINE_SWAP_SILENCE_CONTEXT
 # define E_MAGIC (1 << 31)
 #endif
@@ -1688,6 +1692,40 @@ static PHP_METHOD(Swow_Coroutine, getGlobalSwitches)
     RETURN_LONG(CAT_COROUTINE_G(switches));
 }
 
+#define arginfo_class_Swow_Coroutine_getStartTime arginfo_class_Swow_Coroutine_getId
+
+static PHP_METHOD(Swow_Coroutine, getStartTime)
+{
+    cat_msec_t start_time;
+
+    ZEND_PARSE_PARAMETERS_NONE();
+
+    start_time = getThisCoroutine()->coroutine.start_time;
+
+    if (start_time > ZEND_LONG_MAX) {
+        RETURN_STR(zend_ulong_to_str(start_time));
+    }
+
+    RETURN_LONG(start_time);
+}
+
+#define arginfo_class_Swow_Coroutine_getEndTime arginfo_class_Swow_Coroutine_getId
+
+static PHP_METHOD(Swow_Coroutine, getEndTime)
+{
+    cat_msec_t end_time;
+
+    ZEND_PARSE_PARAMETERS_NONE();
+
+    end_time = getThisCoroutine()->coroutine.end_time;
+
+    if (end_time > ZEND_LONG_MAX) {
+        RETURN_STR(zend_ulong_to_str(end_time));
+    }
+
+    RETURN_LONG(end_time);
+}
+
 #define arginfo_class_Swow_Coroutine_getElapsed arginfo_class_Swow_Coroutine_getId
 
 static PHP_METHOD(Swow_Coroutine, getElapsed)
@@ -2184,6 +2222,8 @@ static const zend_function_entry swow_coroutine_methods[] = {
     PHP_ME(Swow_Coroutine, getStateName,            arginfo_class_Swow_Coroutine_getStateName,            ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Coroutine, getSwitches,             arginfo_class_Swow_Coroutine_getSwitches,             ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Coroutine, getGlobalSwitches,       arginfo_class_Swow_Coroutine_getGlobalSwitches,       ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    PHP_ME(Swow_Coroutine, getStartTime,            arginfo_class_Swow_Coroutine_getStartTime,            ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Coroutine, getEndTime,              arginfo_class_Swow_Coroutine_getEndTime,              ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Coroutine, getElapsed,              arginfo_class_Swow_Coroutine_getElapsed,              ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Coroutine, getElapsedAsString,      arginfo_class_Swow_Coroutine_getElapsedAsString,      ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Coroutine, getExitStatus,           arginfo_class_Swow_Coroutine_getExitStatus,           ZEND_ACC_PUBLIC)
@@ -2501,6 +2541,19 @@ static void swow_coroutine_deadlock_callback(void)
     CAT_WARN_WITH_LAST(COROUTINE, "Deadlock handler call failed");
 }
 
+/* msec time function */
+
+static cat_msec_t swow_coroutine_msec_time(void)
+{
+    struct timeval tp = {0};
+
+    if (gettimeofday(&tp, NULL)) {
+        ZEND_ASSERT(0 && "gettimeofday() can't fail");
+    }
+
+    return (cat_msec_t) ((tp.tv_sec * 1000) + (tp.tv_usec / 1000));
+}
+
 zend_result swow_coroutine_module_init(INIT_FUNC_ARGS)
 {
     if (!cat_coroutine_module_init()) {
@@ -2508,6 +2561,8 @@ zend_result swow_coroutine_module_init(INIT_FUNC_ARGS)
     }
 
     CAT_GLOBALS_REGISTER(swow_coroutine);
+
+    cat_coroutine_set_msec_time_function(swow_coroutine_msec_time);
 
     swow_coroutine_ce = swow_register_internal_class(
         "Swow\\Coroutine", NULL, swow_coroutine_methods,

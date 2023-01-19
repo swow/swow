@@ -769,6 +769,10 @@ namespace Swow
 
         public static function getGlobalSwitches(): int { }
 
+        public function getStartTime(): int { }
+
+        public function getEndTime(): int { }
+
         public function getElapsed(): int { }
 
         public function getElapsedAsString(): string { }
