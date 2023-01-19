@@ -147,6 +147,7 @@ CAT_API CAT_GLOBALS_DECLARE(cat_coroutine);
 CAT_API cat_bool_t cat_coroutine_module_init(void)
 {
     CAT_GLOBALS_REGISTER(cat_coroutine);
+    cat_coroutine_msec_time = cat_time_msec;
     return cat_true;
 }
 
@@ -177,7 +178,7 @@ CAT_API cat_bool_t cat_coroutine_runtime_init(void)
     do {
         cat_coroutine_t *main_coroutine = &CAT_COROUTINE_G(_main);
         main_coroutine->id = CAT_COROUTINE_MAIN_ID;
-        main_coroutine->start_time = cat_time_msec();
+        main_coroutine->start_time = cat_coroutine_msec_time();
         main_coroutine->end_time = 0;
         main_coroutine->flags = CAT_COROUTINE_FLAG_NONE;
         main_coroutine->state = CAT_COROUTINE_STATE_RUNNING;
@@ -256,6 +257,13 @@ CAT_API cat_coroutine_deadlock_callback_t cat_coroutine_set_deadlock_callback(ca
     cat_coroutine_deadlock_callback_t original_callback = CAT_COROUTINE_G(deadlock_callback);
     CAT_COROUTINE_G(deadlock_callback) = callback;
     return original_callback;
+}
+
+CAT_API cat_coroutine_msec_time_function_t cat_coroutine_set_msec_time_function(cat_coroutine_msec_time_function_t function)
+{
+    cat_coroutine_msec_time_function_t original_function = cat_coroutine_msec_time;
+    cat_coroutine_msec_time = function;
+    return original_function;
 }
 
 CAT_API cat_coroutine_jump_t cat_coroutine_register_jump(cat_coroutine_jump_t jump)
@@ -397,11 +405,11 @@ static void cat_coroutine_context_function(cat_coroutine_transfer_t transfer)
     data = coroutine->transfer_data;
 #endif
     /* start time */
-    coroutine->start_time = cat_time_msec();
+    coroutine->start_time = cat_coroutine_msec_time();
     /* execute function */
     data = coroutine->function(data);
     /* end time */
-    coroutine->end_time = cat_time_msec();
+    coroutine->end_time = cat_coroutine_msec_time();
     /* finished */
     CAT_COROUTINE_G(count)--;
     CAT_LOG_DEBUG(COROUTINE, "Finished (count=" CAT_COROUTINE_COUNT_FMT ")", CAT_COROUTINE_G(count));
@@ -945,7 +953,7 @@ CAT_API cat_msec_t cat_coroutine_get_elapsed(const cat_coroutine_t *coroutine)
     if (unlikely(coroutine->end_time != 0)) {
         return coroutine->end_time - coroutine->start_time;
     }
-    return cat_time_msec() - coroutine->start_time;
+    return cat_coroutine_msec_time() - coroutine->start_time;
 }
 
 CAT_API char *cat_coroutine_get_elapsed_str(const cat_coroutine_t *coroutine)

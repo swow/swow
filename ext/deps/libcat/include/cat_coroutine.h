@@ -162,6 +162,10 @@ typedef uint32_t cat_coroutine_count_t;
 
 typedef void (*cat_coroutine_deadlock_callback_t)(void);
 
+typedef cat_msec_t (*cat_coroutine_msec_time_function_t)(void);
+
+static cat_coroutine_msec_time_function_t cat_coroutine_msec_time = NULL;
+
 CAT_GLOBALS_STRUCT_BEGIN(cat_coroutine) {
     /* options */
     cat_coroutine_stack_size_t default_stack_size;
@@ -209,8 +213,10 @@ CAT_API cat_coroutine_t *cat_coroutine_register_main(cat_coroutine_t *coroutine)
 CAT_API cat_coroutine_stack_size_t cat_coroutine_set_default_stack_size(size_t size);
 /* It is recommended to set to error or warning */
 CAT_API cat_log_type_t cat_coroutine_set_deadlock_log_type(cat_log_type_t type);
-/* callback will be called before deadlock() */
+/* callback will be called before deadlock() (thread-safe) */
 CAT_API cat_coroutine_deadlock_callback_t cat_coroutine_set_deadlock_callback(cat_coroutine_deadlock_callback_t callback);
+/* function will be used for coroutine_get_start_time()/coroutine_get_end_time() (non-thread-safe) */
+CAT_API cat_coroutine_msec_time_function_t cat_coroutine_set_msec_time_function(cat_coroutine_msec_time_function_t callback);
 
 /* globals */
 CAT_API cat_coroutine_stack_size_t cat_coroutine_get_default_stack_size(void);
