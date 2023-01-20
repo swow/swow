@@ -164,8 +164,6 @@ typedef void (*cat_coroutine_deadlock_callback_t)(void);
 
 typedef cat_msec_t (*cat_coroutine_msec_time_function_t)(void);
 
-static cat_coroutine_msec_time_function_t cat_coroutine_msec_time = NULL;
-
 CAT_GLOBALS_STRUCT_BEGIN(cat_coroutine) {
     /* options */
     cat_coroutine_stack_size_t default_stack_size;

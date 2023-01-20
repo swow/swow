@@ -126,6 +126,8 @@ cat_coroutine_transfer_t cat_coroutine_context_jump(cat_coroutine_context_t cons
 
 /* coroutine */
 
+static cat_coroutine_msec_time_function_t cat_coroutine_msec_time = NULL;
+
 static cat_coroutine_stack_size_t cat_coroutine_align_stack_size(size_t size)
 {
     if (size == 0) {

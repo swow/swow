@@ -66,8 +66,10 @@ static cat_always_inline cat_ssl_context_t *cat_ssl_context_get_from_ctx(const c
 CAT_API cat_bool_t cat_ssl_module_init(void)
 {
 #ifdef CAT_DEBUG
-    if (OpenSSL_version_num() != OPENSSL_VERSION_NUMBER) {
-        CAT_CORE_ERROR(SSL, "OpenSSL version mismatch, built with \"%s\", but running with \"%s\"",
+    // change one/both of the first two digits, which can break compatibility with previous versions
+    if (OPENSSL_version_major() != OPENSSL_VERSION_MAJOR ||
+        OPENSSL_version_minor() != OPENSSL_VERSION_MINOR) {
+        CAT_MODULE_ERROR(SSL, "OpenSSL version mismatch, built with \"%s\", but running with \"%s\"",
             OPENSSL_VERSION_TEXT, cat_ssl_version());
     }
 #endif
@@ -76,7 +78,7 @@ CAT_API cat_bool_t cat_ssl_module_init(void)
 #if OPENSSL_VERSION_NUMBER >= 0x10100003L
     if (OPENSSL_init_ssl(OPENSSL_INIT_LOAD_CONFIG | OPENSSL_INIT_SSL_DEFAULT | OPENSSL_INIT_ADD_ALL_CIPHERS, NULL) == 0) {
         ERR_print_errors_fp(CAT_LOG_G(error_output));
-        CAT_CORE_ERROR(SSL, "OPENSSL_init_ssl() failed");
+        CAT_MODULE_ERROR(SSL, "OPENSSL_init_ssl() failed");
     }
 #else
     OPENSSL_config(NULL);
@@ -103,12 +105,12 @@ CAT_API cat_bool_t cat_ssl_module_init(void)
     cat_ssl_index = SSL_get_ex_new_index(0, NULL, NULL, NULL, NULL);
     if (cat_ssl_index == -1) {
         ERR_print_errors_fp(CAT_LOG_G(error_output));
-        CAT_CORE_ERROR(SSL, "SSL_get_ex_new_index() failed");
+        CAT_MODULE_ERROR(SSL, "SSL_get_ex_new_index() failed");
     }
     cat_ssl_context_index = SSL_CTX_get_ex_new_index(0, NULL, NULL, NULL, NULL);
     if (cat_ssl_context_index == -1) {
         ERR_print_errors_fp(CAT_LOG_G(error_output));
-        CAT_CORE_ERROR(SSL, "SSL_CTX_get_ex_new_index() failed");
+        CAT_MODULE_ERROR(SSL, "SSL_CTX_get_ex_new_index() failed");
     }
 
     return cat_true;

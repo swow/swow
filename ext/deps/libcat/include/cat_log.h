@@ -197,6 +197,12 @@ typedef struct cat_log_globals_s {
 #define CAT_CORE_ERROR_WITH_LAST(module_name, format, ...)         CAT_LOG_WITH_REASON_NORETURN(CORE_ERROR, module_name, cat_get_last_error_code(), cat_get_last_error_message(), format, ##__VA_ARGS__); abort() /* make IDE happy */
 #define CAT_CORE_ERROR_WITH_REASON(module_name, code, format, ...) CAT_LOG_WITH_REASON_NORETURN(CORE_ERROR, module_name, code, cat_strerror(code), format, ##__VA_ARGS__); abort() /* make IDE happy */
 
+/* log function is only available on runtime */
+#define CAT_MODULE_ERROR(module_name, format, ...) do { \
+    fprintf(stderr, "Module Error: <" #module_name "> " format "\n", ##__VA_ARGS__); \
+    abort(); \
+} while (0)
+
 #define CAT_SYSCALL_FAILURE(type, module_name, format, ...) do { \
     cat_errno_t _error = cat_translate_sys_error(cat_sys_errno); \
     CAT_LOG_V(type, module_name, _error, format " (syscall failure " CAT_ERRNO_FMT ": %s)", ##__VA_ARGS__, _error, cat_strerror(_error)); \
