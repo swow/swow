@@ -97,9 +97,10 @@ AC_DEFUN([SWOW_PKG_CHECK_MODULES],[
     $5
   elif test -x "$PKG_CONFIG" ; then
 dnl find pkg using pkg-config cli tool
-    SWOW_PKG_FIND_PATH=${$4}/lib/pkgconfig
     if test "xyes" = "x${$4}" ; then
       SWOW_PKG_FIND_PATH=/lib/pkgconfig
+    else
+      SWOW_PKG_FIND_PATH=${$4}/lib/pkgconfig
     fi
 
     if test "x" != "x$PKG_CONFIG_PATH"; then

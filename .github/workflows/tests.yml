@@ -65,6 +65,14 @@ jobs:
       - name: Setup composer dependencies
         run: composer update -o --ignore-platform-reqs
 
+      - name: Detect dependencies path from php-config
+        run: |
+          if [ ${{ runner.os }} = 'macOS' ]
+          then
+            php -r "preg_match('/--ldflags[^\\[]+\\[.+-L(.+openssl.*?)\\/lib/', shell_exec('php-config'), \$matches); echo \"SWOW_OPENSSL_PATH={\$matches[1]}\n\";" >> $GITHUB_ENV
+            php -r "preg_match('/--ldflags[^\\[]+\\[.+-L(.+curl.*?)\\/lib/', shell_exec('php-config'), \$matches); echo \"SWOW_CURL_PATH={\$matches[1]}\n\";" >> $GITHUB_ENV
+          fi
+
       - name: Build Swow extension
         run: |
           cd ext
@@ -74,8 +82,8 @@ jobs:
           ./configure --enable-swow\
             --enable-swow-debug \
             --enable-swow-gcov \
-            --enable-swow-ssl=${{ runner.os == 'Linux' && 'yes' || '/usr/local/opt/openssl' }} \
-            --enable-swow-curl=${{ runner.os == 'Linux' && 'yes' || '/usr/local/opt/curl' }}
+            --enable-swow-ssl=${{ runner.os == 'Linux' && 'yes' || env.SWOW_OPENSSL_PATH }} \
+            --enable-swow-curl=${{ runner.os == 'Linux' && 'yes' || env.SWOW_CURL_PATH }}
           printf "\033[1mStart build Swow\033[0m\n"
           make -j`${{ runner.os == 'Linux' && 'nproc' || 'sysctl -n hw.logicalcpu' }}`
           printf "\033[1mDone build Swow\033[0m\n"
