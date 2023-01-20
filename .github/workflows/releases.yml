@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       ref:
-        description: 'Using Swow commmit'
+        description: 'Using Swow commit'
         required: false
   push:
     tags:
