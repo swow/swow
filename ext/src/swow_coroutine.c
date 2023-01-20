@@ -2551,7 +2551,8 @@ static cat_msec_t swow_coroutine_msec_time(void)
         ZEND_ASSERT(0 && "gettimeofday() can't fail");
     }
 
-    return (cat_msec_t) ((tp.tv_sec * 1000) + (tp.tv_usec / 1000));
+    return (cat_msec_t) ((((cat_msec_t) tp.tv_sec) * 1000) +
+                        (((cat_msec_t) tp.tv_usec) / 1000));
 }
 
 zend_result swow_coroutine_module_init(INIT_FUNC_ARGS)
