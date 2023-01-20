@@ -2,6 +2,7 @@ name: Update docs
 
 on:
   push:
+    branches: [ 'develop', 'ci' ]
 
 jobs:
   call:
