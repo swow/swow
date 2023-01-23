@@ -87,7 +87,7 @@ jobs:
           ($ret = 0 | Out-Null)
           exit $ret
       - name: Cache build environments
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           # this should be ok, but there's a bug, excluding not work properly
           # see https://github.com/actions/cache/issues/494
@@ -181,7 +181,7 @@ jobs:
     runs-on: windows-2019
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Create Release
         id: create_release
         run: |

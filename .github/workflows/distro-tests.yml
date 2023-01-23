@@ -82,7 +82,7 @@ jobs:
           fi
       - name: Cache PHP codes
         if: steps.cacheprepare.outputs.phpfn
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           key: phpcode-v2-${{steps.cacheprepare.outputs.phpfn}}
           path: |
