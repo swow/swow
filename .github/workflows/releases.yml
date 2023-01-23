@@ -30,7 +30,7 @@ jobs:
       dllname: "php_swow-php${{ matrix.php-version }}-${{ matrix.arch }}-${{ (matrix.ts == '0') && 'n' || '' }}ts-VS16"
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           ref: ${{ (github.event.inputs && github.event.inputs.ref) || github.ref }}
       - name: Get git commit ref hash
