@@ -5,6 +5,7 @@ on:
 
 jobs:
   call:
+    if: github.repository_owner == 'swow'
     name: Call docs repository workflow
     runs-on: ubuntu-latest
     steps:
