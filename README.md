@@ -54,7 +54,7 @@ After you update the source code of Swow, you should use the `rebuild` option to
 ./vendor/bin/swow-builder --rebuild --install
 ```
 
-More information about `swow-builder` can be found in [Extension installation document - By Composer](https://docs.toast.run/jekyll/swow/en/install.html).
+More information about `swow-builder` can be found in [Extension installation document - By Composer](https://docs.toast.run/swow/en/install.html).
 
 ### 🐧 Manual installation (UNIX-like)
 
@@ -92,7 +92,7 @@ You may contribute in the following ways:
 
 * [Report issues and feedback](https://github.com/swow/swow/issues)
 * [Submit fixes, features via Pull Request](https://github.com/swow/swow/pulls)
-* [Write/polish documentation via Github](https://github.com/toastrun/docs.toast.run)
+* [Write/polish documentation via GitHub](https://github.com/toastrun/docs.toast.run)
 
 ## ❤️ Contributors
 
