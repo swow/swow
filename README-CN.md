@@ -89,7 +89,7 @@ sudo make install
 
 * [报告问题与反馈](https://github.com/swow/swow/issues)
 * [通过 Pull Request 提交修复补丁或新的特性实现](https://github.com/swow/swow/pulls)
-* [帮助我们完善文档 (通过 Github 贡献)](https://github.com/toastrun/docs.toast.run)
+* [帮助我们完善文档 (通过 GitHub 贡献)](https://github.com/toastrun/docs.toast.run)
 
 ## ❤️ 贡献者
 
