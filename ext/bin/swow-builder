@@ -10,6 +10,8 @@
  * please view the LICENSE file that was distributed with this source code
  */
 
+putenv('SKIP_SWOW_REQUIRED_EXTENSION_CHECK=1');
+
 foreach (
     [
         dirname(__DIR__, 4) . '/autoload.php', // for user on swow/swow
