@@ -104,9 +104,9 @@ if (is_file($phpConfig)) {
     ok("Find {$phpBinary}");
 
     log("> {$phpConfig} --prefix");
-    $phpBinary = trim(shell_exec("{$phpConfig} --prefix"));
-    if (is_file("{$phpBinary}/bin/phpize")) {
-        $phpize = "{$phpBinary}/bin/phpize";
+    $phpPrefix = trim(shell_exec("{$phpConfig} --prefix"));
+    if (is_file("{$phpPrefix}/bin/phpize")) {
+        $phpize = "{$phpPrefix}/bin/phpize";
         ok("Find {$phpize}");
     }
 }
