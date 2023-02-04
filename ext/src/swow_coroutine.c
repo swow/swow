@@ -333,6 +333,7 @@ static cat_bool_t swow_coroutine_construct(swow_coroutine_t *s_coroutine, zval *
         c_stack_size
     );
     if (UNEXPECTED(coroutine == NULL)) {
+        swow_fcall_storage_release(&fcall);
         return cat_false;
     }
 
