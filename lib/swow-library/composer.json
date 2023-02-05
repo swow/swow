@@ -1,6 +1,6 @@
 {
     "name": "swow/swow-library",
-    "description": "Coroutine-based concurrency library for PHP",
+    "description": "Coroutine-based multi-platform support library with a focus on concurrent I/O",
     "keywords": [
         "swow",
         "library"
