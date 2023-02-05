@@ -294,9 +294,9 @@ TEXT;
         return $this->currentFrameIndex;
     }
 
-    public function getCurrentFrameIndexExtended(): int
+    public function getCurrentFrameIndexExtendedForExecution(): int
     {
-        return $this->currentFrameIndex + static::getExtendedLevelOfCoroutine($this->getCurrentCoroutine());
+        return $this->currentFrameIndex + static::getExtendedLevelOfCoroutineForExecution($this->getCurrentCoroutine());
     }
 
     protected function setCurrentFrameIndex(int $index): static
@@ -561,16 +561,21 @@ TEXT;
         return $state;
     }
 
-    protected static function getExtendedLevelOfCoroutine(Coroutine $coroutine): int
+    protected static function getExtendedLevelOfCoroutineForTrace(Coroutine $coroutine): int
     {
         if (static::getDebugContextOfCoroutine($coroutine)->stopped) {
             // skip extended statement handler
-            $level = static::getCoroutineTraceDiffLevel($coroutine, 'getExtendedLevelOfCoroutine');
+            $level = static::getCoroutineTraceDiffLevel($coroutine, __FUNCTION__);
         } else {
             $level = 0;
         }
 
         return $level;
+    }
+
+    protected static function getExtendedLevelOfCoroutineForExecution(Coroutine $coroutine): int
+    {
+        return static::getExtendedLevelOfCoroutineForTrace($coroutine) + 1;
     }
 
     /**
@@ -607,7 +612,7 @@ TEXT;
      */
     protected static function getTraceOfCoroutine(Coroutine $coroutine, ?int $index = null): array
     {
-        $level = static::getExtendedLevelOfCoroutine($coroutine);
+        $level = static::getExtendedLevelOfCoroutineForTrace($coroutine);
         if ($index !== null) {
             $level += $index;
             $limit = 1;
@@ -932,7 +937,7 @@ TEXT;
 
         if ($context->stop) {
             $traceDepth = $coroutine->getTraceDepth();
-            $traceDiffLevel = static::getCoroutineTraceDiffLevel($coroutine, 'breakPointHandler');
+            $traceDiffLevel = static::getCoroutineTraceDiffLevel($coroutine, __FUNCTION__);
             if ($traceDepth - $traceDiffLevel <= $debugger->lastTraceDepth) {
                 static::break();
             }
@@ -1135,6 +1140,7 @@ TEXT;
                         case 'next':
                         case 's':
                         case 'step':
+                        case 'step_in':
                         case 'c':
                         case 'continue':
                             $coroutine = $this->getCurrentCoroutine();
@@ -1196,14 +1202,14 @@ TEXT;
                                 $result = var_dump_return($transfer->pop());
                             } else {
                                 $coroutine = $this->getCurrentCoroutine();
-                                $index = $this->getCurrentFrameIndexExtended();
+                                $index = $this->getCurrentFrameIndexExtendedForExecution();
                                 $result = var_dump_return($coroutine->eval($expression, $index));
                             }
                             $this->out($result, false);
                             break;
                         case 'vars':
                             $coroutine = $this->getCurrentCoroutine();
-                            $index = $this->getCurrentFrameIndexExtended();
+                            $index = $this->getCurrentFrameIndexExtendedForExecution();
                             $result = var_dump_return($coroutine->getDefinedVars($index));
                             $this->out($result, false);
                             break;
