@@ -97,6 +97,22 @@ $rebuild = isset($options['rebuild']);
 $clean = isset($options['clean']);
 $noInteraction = isset($options['q']) || isset($options['quiet']);
 
+$phpBinary = PHP_BINARY;
+$phpize = 'phpize';
+$phpConfig = $options['php-config'] ?? '';
+if (is_file($phpConfig)) {
+    log("> {$phpConfig} --php-binary");
+    $phpBinary = trim(shell_exec("{$phpConfig} --php-binary"));
+    ok("Find {$phpBinary}");
+
+    log("> {$phpConfig} --prefix");
+    $phpPrefix = trim(shell_exec("{$phpConfig} --prefix"));
+    if (is_file("{$phpPrefix}/bin/phpize")) {
+        $phpize = "{$phpPrefix}/bin/phpize";
+        ok("Find {$phpize}");
+    }
+}
+
 $commandExecutor = static function (string $name, array $commands) use ($workSpace, $dryRun): void {
     if (!$commands) {
         return;
@@ -121,13 +137,13 @@ if ($rebuild || $clean) {
     }
 }
 if ($rebuild) {
-    $cleanCommands[] = 'phpize --clean';
+    $cleanCommands[] = "{$phpize} --clean";
 }
 $commandExecutor('Clean', $cleanCommands);
 
 $configureCommands = [];
 if (!file_exists("{$workSpace}/configure") || $rebuild) {
-    $configureCommands[] = 'phpize';
+    $configureCommands[] = $phpize;
 }
 if (!file_exists("{$workSpace}/Makefile") || $rebuild) {
     $configureOptions = [];
@@ -159,7 +175,7 @@ if (!$showLog) {
 }
 $commandExecutor('Make', [$makeCommand]);
 
-$checkCommand = "/usr/bin/env php -n -d extension={$swowSo} --ri swow";
+$checkCommand = "/usr/bin/env {$phpBinary} -n -d extension={$swowSo} --ri swow";
 if (!$dryRun) {
     ob_start();
     $status = passthru($checkCommand);
