@@ -141,12 +141,6 @@ static cat_timer_t *cat_timer_wait(cat_msec_t msec)
     (void) uv_timer_init(&CAT_EVENT_G(loop), &timer->timer);
     (void) uv_timer_start(&timer->timer, cat_timer_callback, msec, 0);
 
-    CAT_LOG_DEBUG_VA(TIME, {
-        char *s = cat_time_format_msec(msec);
-        CAT_LOG_DEBUG_D(TIME, "Sleep %s", s);
-        cat_free(s);
-    });
-
     timer->coroutine = CAT_COROUTINE_G(current);
 
     ret = cat_coroutine_yield(NULL, NULL);
@@ -161,7 +155,7 @@ static cat_timer_t *cat_timer_wait(cat_msec_t msec)
     return timer;
 }
 
-CAT_API cat_bool_t cat_time_wait(cat_timeout_t timeout)
+static cat_always_inline cat_bool_t cat_time_wait_impl(cat_timeout_t timeout)
 {
     if (timeout < 0) {
         return cat_coroutine_yield(NULL, NULL);
@@ -182,7 +176,18 @@ CAT_API cat_bool_t cat_time_wait(cat_timeout_t timeout)
     return cat_true;
 }
 
-CAT_API cat_ret_t cat_time_delay(cat_timeout_t timeout)
+CAT_API cat_bool_t cat_time_wait(cat_timeout_t timeout)
+{
+    CAT_LOG_DEBUG(TIME, "time_wait(" CAT_TIMEOUT_FMT ") = " CAT_LOG_UNFINISHED_STR, timeout);
+
+    cat_bool_t ret = cat_time_wait_impl(timeout);
+
+    CAT_LOG_DEBUG(TIME, "time_wait(" CAT_TIMEOUT_FMT ") = " CAT_LOG_BOOL_RET_FMT, timeout, CAT_LOG_BOOL_RET_C(ret));
+
+    return ret;
+}
+
+static cat_always_inline cat_ret_t cat_time_delay_impl(cat_timeout_t timeout)
 {
     if (timeout < 0) {
         cat_coroutine_yield(NULL, NULL);
@@ -202,12 +207,18 @@ CAT_API cat_ret_t cat_time_delay(cat_timeout_t timeout)
     return CAT_RET_NONE;
 }
 
-CAT_API unsigned int cat_time_sleep(unsigned int seconds)
+CAT_API cat_ret_t cat_time_delay(cat_timeout_t timeout)
 {
-    return (unsigned int) cat_time_msleep((cat_msec_t) (seconds * 1000)) / 1000;
+    CAT_LOG_DEBUG(TIME, "time_delay(" CAT_TIMEOUT_FMT ") = " CAT_LOG_UNFINISHED_STR, timeout);
+
+    cat_ret_t ret = cat_time_delay_impl(timeout);
+
+    CAT_LOG_DEBUG(TIME, "time_delay(" CAT_TIMEOUT_FMT ") = " CAT_LOG_RET_RET_FMT, timeout, CAT_LOG_RET_RET_C(ret));
+
+    return ret;
 }
 
-CAT_API cat_msec_t cat_time_msleep(cat_msec_t msec)
+static cat_always_inline cat_msec_t cat_time_msleep_impl(cat_msec_t msec)
 {
     cat_timer_t *timer;
 
@@ -230,25 +241,67 @@ CAT_API cat_msec_t cat_time_msleep(cat_msec_t msec)
     return 0;
 }
 
-CAT_API int cat_time_usleep(cat_usec_t microseconds)
+CAT_API unsigned int cat_time_sleep(unsigned int seconds)
 {
-    return cat_time_msleep((cat_msec_t) (((double) microseconds) / 1000)) == 0 ? 0 : -1;
+    CAT_LOG_DEBUG(TIME, "time_sleep(%u) = " CAT_LOG_UNFINISHED_STR, seconds);
+
+    unsigned int ret = (unsigned int) cat_time_msleep_impl((cat_msec_t) (seconds * 1000)) / 1000;
+
+    CAT_LOG_DEBUG(TIME, "time_sleep(%u) = %u" CAT_LOG_STRERRNO_FMT, seconds, ret,
+        CAT_LOG_STRERRNO_C(ret == 0, cat_get_last_error_code()));
+
+    return ret;
 }
 
-CAT_API int cat_time_nanosleep(const struct cat_timespec *req, struct cat_timespec *rem)
+CAT_API cat_msec_t cat_time_msleep(cat_msec_t millisecond)
+{
+    CAT_LOG_DEBUG(TIME, "time_msleep(" CAT_MSEC_FMT ") = " CAT_LOG_UNFINISHED_STR, millisecond);
+
+    cat_msec_t ret = cat_time_msleep_impl(millisecond);
+
+    CAT_LOG_DEBUG(TIME, "time_msleep(" CAT_MSEC_FMT ") = " CAT_MSEC_FMT, millisecond, ret);
+
+    return ret;
+}
+
+CAT_API int cat_time_usleep(cat_usec_t microseconds)
+{
+    CAT_LOG_DEBUG(TIME, "time_usleep(" CAT_USEC_FMT ") = " CAT_LOG_UNFINISHED_STR, microseconds);
+
+    int ret = cat_time_msleep_impl((cat_msec_t) (((double) microseconds) / 1000)) == 0 ? 0 : -1;
+
+    CAT_LOG_DEBUG(TIME, "time_usleep(" CAT_USEC_FMT ") = " CAT_LOG_INT_RET_FMT, microseconds, CAT_LOG_INT_RET_C(ret));
+
+    return ret;
+}
+
+static cat_always_inline int cat_time_nanosleep_impl(const struct cat_timespec *req, struct cat_timespec *rem)
 {
     if (unlikely(req->tv_sec < 0 || req->tv_nsec < 0 || req->tv_nsec > 999999999)) {
         cat_update_last_error(CAT_EINVAL, "The value in the tv_nsec field was not in the range 0 to 999999999 or tv_sec was negative");
         return -1;
     } else {
         cat_msec_t msec = (uint64_t) (req->tv_sec * 1000 + (((double) req->tv_nsec) / (1000 * 1000)));
-        cat_msec_t rmsec = cat_time_msleep(msec);
+        cat_msec_t rmsec = cat_time_msleep_impl(msec);
         if (rmsec > 0 && rem) {
             rem->tv_sec = (rmsec - (rmsec % 1000)) / 1000;
             rem->tv_nsec = (rmsec % 1000) * 1000 * 1000;
         }
         return rmsec == 0 ? 0 : -1;
     }
+}
+
+CAT_API int cat_time_nanosleep(const struct cat_timespec *req, struct cat_timespec *rem)
+{
+    CAT_LOG_DEBUG(TIME, "time_nanosleep({ tv_sec: %jd, tv_nsec: %jd }) = " CAT_LOG_UNFINISHED_STR,
+        ((intmax_t) req->tv_sec), ((intmax_t) req->tv_nsec));
+
+    int ret = cat_time_nanosleep_impl(req, rem);
+
+    CAT_LOG_DEBUG(TIME, "time_nanosleep({ tv_sec: %jd, tv_nsec: %jd }) = " CAT_LOG_INT_RET_FMT,
+        ((intmax_t) req->tv_sec), ((intmax_t) req->tv_nsec), CAT_LOG_INT_RET_C(ret));
+
+    return ret;
 }
 
 CAT_API cat_timeout_t cat_time_tv2to(const struct timeval *tv)

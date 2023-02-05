@@ -31,9 +31,9 @@ typedef uint64_t cat_event_round_t;
 
 typedef struct cat_event_task_s {
     cat_queue_node_t node;
-    uint64_t round;
     cat_data_callback_t callback;
     cat_data_t *data;
+    uint64_t round;
 } cat_event_task_t;
 
 CAT_GLOBALS_STRUCT_BEGIN(cat_event) {
@@ -41,6 +41,7 @@ CAT_GLOBALS_STRUCT_BEGIN(cat_event) {
     uv_timer_t deadlock;
     cat_queue_t runtime_shutdown_tasks;
     cat_queue_t defer_tasks;
+    cat_queue_t io_defer_tasks;
 } CAT_GLOBALS_STRUCT_END(cat_event);
 
 extern CAT_API CAT_GLOBALS_DECLARE(cat_event);
@@ -64,8 +65,13 @@ CAT_API cat_coroutine_t *cat_event_scheduler_close(void);
 CAT_API cat_event_task_t *cat_event_register_runtime_shutdown_task(cat_data_callback_t callback, cat_data_t *data);
 CAT_API void cat_event_unregister_runtime_shutdown_task(cat_event_task_t *task);
 
+/* defer task callback will be called in the next event loop,
+ * it's useful to free memory later. */
 CAT_API cat_bool_t cat_event_defer(cat_data_callback_t callback, cat_data_t *data);
-CAT_API cat_bool_t cat_event_defer_ex(cat_data_callback_t callback, cat_data_t *data, cat_bool_t high_priority);
+
+/* io defer task callback will be called after all io event callbacks were called,
+ * it's useful to merge multiple io events to improve performance. */
+CAT_API cat_bool_t cat_event_io_defer(cat_data_callback_t callback, cat_data_t *data);
 
 CAT_API void cat_event_fork(void);
 

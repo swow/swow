@@ -58,7 +58,7 @@ CAT_API cat_ret_t cat_time_delay(cat_timeout_t timeout);
 
 CAT_API unsigned int cat_time_sleep(unsigned int seconds);
 /* behaviour is same with sleep() but use msec */
-CAT_API cat_msec_t cat_time_msleep(cat_msec_t msec);
+CAT_API cat_msec_t cat_time_msleep(cat_msec_t millisecond);
 CAT_API int cat_time_usleep(cat_usec_t microseconds);
 CAT_API int cat_time_nanosleep(const struct cat_timespec *req, struct cat_timespec *rem);
 

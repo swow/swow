@@ -470,6 +470,9 @@ CAT_API cat_bool_t cat_os_wait_runtime_shutdown(void)
 {
     uv_close((uv_handle_t *) &CAT_OS_WAIT_G(sigchld_watcher), NULL);
 
+    CAT_ASSERT(RB_MIN(cat_os_waitpid_task_tree_s, &CAT_OS_WAIT_G(waitpid_task_tree)) == NULL);
+    CAT_ASSERT(RB_MIN(cat_os_child_process_stat_tree_s, &CAT_OS_WAIT_G(child_process_state_tree)) == NULL);
+
     return cat_true;
 }
 

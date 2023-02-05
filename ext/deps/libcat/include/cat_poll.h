@@ -52,7 +52,6 @@ typedef SHORT cat_pollfd_events_t;
 #endif
 
 #define CAT_POLLFD_EVENT_MAP(XX) \
-    XX(NONE) \
     XX(IN) \
     XX(PRI) \
     XX(OUT) \

@@ -620,6 +620,8 @@ static cat_always_inline cat_bool_t cat_socket_internal_is_established(cat_socke
     } \
 } while (0)
 
+static cat_always_inline cat_socket_fd_t cat_socket_internal_get_fd_fast(const cat_socket_internal_t *socket_i);
+
 static void cat_socket_internal_close(cat_socket_internal_t *socket_i, cat_bool_t unrecoverable_error);
 
 static CAT_COLD void cat_socket_internal_unrecoverable_io_error(cat_socket_internal_t *socket_i);
@@ -762,6 +764,7 @@ static cat_always_inline void cat_socket_internal_on_open(cat_socket_internal_t 
         return;
     }
     socket_i->flags |= CAT_SOCKET_INTERNAL_FLAG_OPENED;
+    CAT_LOG_DEBUG(SOCKET, "on_open(fd: " CAT_SOCKET_FD_FMT ")", cat_socket_internal_get_fd_fast(socket_i));
     if ((socket_i->type & CAT_SOCKET_TYPE_TCP) == CAT_SOCKET_TYPE_TCP) {
         if (!(socket_i->option_flags & CAT_SOCKET_OPTION_FLAG_TCP_DELAY)) {
             /* TCP always nodelay by default */

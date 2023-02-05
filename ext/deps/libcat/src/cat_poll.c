@@ -35,6 +35,21 @@
 #  endif
 #endif
 
+#define UV_EVENT_MAP(XX) \
+    XX(READABLE) \
+    XX(WRITABLE) \
+    XX(DISCONNECT) \
+    XX(PRIORITIZED)
+
+typedef enum uv_event_e {
+    UV_EVENT_NONE = 0,
+#define UV_EVENT_GEN(name) UV_EVENT_##name = UV_##name,
+    UV_EVENT_MAP(UV_EVENT_GEN)
+#undef UV_EVENT_GEN
+} uv_event_t;
+
+typedef int uv_events_t;
+
 /* poll event will never be triggered if timeout is 0 on Windows,
  * because uv__poll() treats 0 timeout specially.
  * TODO: could we fix it in libuv?  */
@@ -48,56 +63,44 @@
 } while (0)
 #endif
 
-/* TODO: Optimize dup() in poll() (can not find a better way temporarily) */
-
-typedef struct cat_poll_one_s {
-    union {
-        cat_coroutine_t *coroutine;
-        uv_handle_t handle;
-        uv_poll_t poll;
-    } u;
-    int status;
-    int revents;
-} cat_poll_one_t;
-
-static cat_always_inline cat_pollfd_events_t cat_poll_translate_to_sysno(int uv_revents)
+static cat_always_inline cat_pollfd_events_t cat_poll_translate_uv_events_to_sys_events(uv_events_t uv_events)
 {
     cat_pollfd_events_t revents = 0;
 
-    if (uv_revents & UV_READABLE) {
+    if (uv_events & UV_EVENT_READABLE) {
         revents |= POLLIN;
     }
-    if (uv_revents & UV_WRITABLE) {
+    if (uv_events & UV_EVENT_WRITABLE) {
         revents |= POLLOUT;
     }
-    if (uv_revents & UV_DISCONNECT) {
+    if (uv_events & UV_EVENT_DISCONNECT) {
         revents |= POLLHUP;
     }
-    if (uv_revents & UV_PRIORITIZED) {
+    if (uv_events & UV_EVENT_PRIORITIZED) {
         revents |= POLLPRI;
     }
 
     return revents;
 }
 
-static cat_always_inline int cat_poll_translate_from_sysno(int ievents)
+static cat_always_inline int cat_poll_translate_sys_events_to_uv_events(cat_pollfd_events_t sys_events)
 {
-    int uv_events = 0;
+    uv_events_t uv_events = 0;
 
-    if (ievents & POLLIN) {
-        uv_events |= (UV_READABLE | UV_DISCONNECT);
+    if (sys_events & POLLIN) {
+        uv_events |= (UV_EVENT_READABLE | UV_EVENT_DISCONNECT);
     }
-    if (ievents & POLLOUT) {
-        uv_events |= (UV_WRITABLE | UV_DISCONNECT);
+    if (sys_events & POLLOUT) {
+        uv_events |= (UV_EVENT_WRITABLE | UV_EVENT_DISCONNECT);
     }
-    if (ievents & POLLPRI) {
-        uv_events |= UV_PRIORITIZED;
+    if (sys_events & POLLPRI) {
+        uv_events |= UV_EVENT_PRIORITIZED;
     }
 
     return uv_events;
 }
 
-static CAT_COLD cat_pollfd_events_t cat_poll_translate_error_to_revents(cat_pollfd_events_t events, int error)
+static CAT_COLD cat_pollfd_events_t cat_poll_translate_error_to_sys_events(cat_pollfd_events_t input_events, int error)
 {
     switch (error) {
         case CAT_EBADF:
@@ -108,7 +111,7 @@ static CAT_COLD cat_pollfd_events_t cat_poll_translate_error_to_revents(cat_poll
         case CAT_ENOTSOCK:
             /* File descriptors associated with regular files shall always select true
              * for ready to read, ready to write, and error conditions. */
-            return (events & (POLLIN | POLLOUT)) | POLLERR;
+            return (input_events & (POLLIN | POLLOUT)) | POLLERR;
         default:
             return POLLERR;
     }
@@ -127,6 +130,24 @@ static CAT_COLD int cat_poll_filter_init_error(int error)
 }
 
 #ifdef CAT_ENABLE_DEBUG_LOG
+static CAT_BUFFER_STR_FREE char *cat_poll_uv_events_str(uv_events_t events)
+{
+    cat_buffer_t buffer;
+    cat_buffer_create(&buffer, 64);
+#define UV_EVENT_STR_GEN(name) \
+    if (events & UV_EVENT_##name) { \
+        cat_buffer_append_str(&buffer, #name "|"); \
+    }
+    UV_EVENT_MAP(UV_EVENT_STR_GEN)
+#undef UV_EVENT_STR_GEN
+    if (buffer.length == 0) {
+        cat_buffer_append_str(&buffer, "NONE");
+    } else {
+        buffer.length--;
+    }
+    return cat_buffer_export_str(&buffer);
+}
+
 static CAT_BUFFER_STR_FREE char *cat_pollfd_events_str(cat_pollfd_events_t events)
 {
     cat_buffer_t buffer;
@@ -146,14 +167,52 @@ static CAT_BUFFER_STR_FREE char *cat_pollfd_events_str(cat_pollfd_events_t event
 }
 #endif
 
-static void cat_poll_one_callback(uv_poll_t* handle, int status, int events)
+/* TODO: Optimize dup() in poll() (can not find a better way temporarily) */
+
+typedef struct cat_poll_one_s {
+    union {
+        cat_coroutine_t *coroutine;
+        uv_handle_t handle;
+        uv_poll_t poll;
+    } u;
+#ifdef CAT_ENABLE_DEBUG_LOG
+    cat_os_socket_t fd;
+#endif
+    struct {
+        int status; // uv status
+        uv_events_t events; // uv events, e.g UV_EVENT_READABLE, UV_EVENT_WRITABLE...
+    } ret;
+    cat_bool_t deferred_done_callback;
+} cat_poll_one_t;
+
+static void cat_poll_one_done_callback(cat_data_t *data)
+{
+    cat_poll_one_t *poll = (cat_poll_one_t *) data;
+
+    cat_coroutine_schedule(poll->u.coroutine, EVENT, "Poll one");
+}
+
+static void cat_poll_one_callback(uv_poll_t* handle, int status, uv_events_t events)
 {
     cat_poll_one_t *poll = (cat_poll_one_t *) handle;
 
-    poll->status = status;
-    poll->revents = events;
+    CAT_LOG_DEBUG_VA_WITH_LEVEL(POLL, 2, {
+        char *events_str = cat_poll_uv_events_str(events);
+        CAT_LOG_DEBUG_D(POLL, "poll_one_callback(fd: " CAT_OS_SOCKET_FMT ", status: %d" CAT_LOG_STRERRNO_FMT ", events: %s)",
+            poll->fd, status, CAT_LOG_STRERRNO_C(status == 0, status), events_str);
+        cat_buffer_str_free(events_str);
+    });
 
-    cat_coroutine_schedule(poll->u.coroutine, EVENT, "Poll one");
+    poll->ret.status = status;
+    /* Note: uv may return multi events in multi callbacks */
+    poll->ret.events |= events;
+
+    /* Note: for get all revents at once,
+     * we should schedule coroutine in io defer callback */
+    if (!poll->deferred_done_callback) {
+        (void) cat_event_io_defer(cat_poll_one_done_callback, poll);
+        poll->deferred_done_callback = cat_true;
+    }
 }
 
 static void cat_poll_one_close_callback(uv_handle_t *handle)
@@ -166,6 +225,7 @@ static cat_ret_t cat_poll_one_impl(cat_os_socket_t fd, cat_pollfd_events_t event
 {
     CAT_POLL_CHECK_TIMEOUT(timeout);
     cat_poll_one_t *poll;
+    cat_os_socket_t _fd = fd;
     cat_ret_t ret;
     int error;
 
@@ -178,42 +238,45 @@ static cat_ret_t cat_poll_one_impl(cat_os_socket_t fd, cat_pollfd_events_t event
         return CAT_RET_ERROR;
     }
 #endif
+    _fd = fd;
 #ifdef CAT_OS_UNIX_LIKE
-    cat_bool_t is_dup = cat_false;
     if (unlikely(uv__fd_exists(&CAT_EVENT_G(loop), fd))) {
-        fd = dup(fd);
-        if (unlikely(fd == CAT_OS_INVALID_SOCKET)) {
+        _fd = dup(fd);
+        if (unlikely(_fd == CAT_OS_INVALID_SOCKET)) {
             cat_update_last_error_of_syscall("Dup for poll_one() failed");
             cat_free(poll);
             return CAT_RET_ERROR;
         }
-        is_dup = cat_true;
         /* uv_poll_init_socket() and uv_poll_start() must return success if fd exists */
     }
 #endif
-    error = uv_poll_init_socket(&CAT_EVENT_G(loop), &poll->u.poll, fd);
+    error = uv_poll_init_socket(&CAT_EVENT_G(loop), &poll->u.poll, _fd);
     if (unlikely(error != 0)) {
         cat_update_last_error_with_reason(error, "Poll init failed");
         cat_free(poll);
-        *revents = cat_poll_translate_error_to_revents(events, cat_poll_filter_init_error(error));
+        *revents = cat_poll_translate_error_to_sys_events(events, cat_poll_filter_init_error(error));
         return CAT_RET_ERROR;
     }
-    error = uv_poll_start(&poll->u.poll, cat_poll_translate_from_sysno(events), cat_poll_one_callback);
+    error = uv_poll_start(&poll->u.poll, cat_poll_translate_sys_events_to_uv_events(events), cat_poll_one_callback);
     if (unlikely(error != 0)) {
         cat_update_last_error_with_reason(error, "Poll start failed");
         uv_close(&poll->u.handle, cat_poll_one_close_callback);
-        *revents = cat_poll_translate_error_to_revents(events, error);
+        *revents = cat_poll_translate_error_to_sys_events(events, error);
         return CAT_RET_ERROR;
     }
-    poll->status = CAT_ECANCELED;
-    poll->revents = 0;
+#ifdef CAT_ENABLE_DEBUG_LOG
+    poll->fd = fd;
+#endif
+    poll->ret.status = CAT_ECANCELED;
+    poll->ret.events = UV_EVENT_NONE;
     poll->u.coroutine = CAT_COROUTINE_G(current);
+    poll->deferred_done_callback = cat_false;
 
     ret = cat_time_delay(timeout);
 
 #ifdef CAT_OS_UNIX_LIKE
-    if (is_dup) {
-        uv__close(fd);
+    if (_fd != fd) {
+        uv__close(_fd);
     }
 #endif
     uv_close(&poll->u.handle, cat_poll_one_close_callback);
@@ -221,26 +284,26 @@ static cat_ret_t cat_poll_one_impl(cat_os_socket_t fd, cat_pollfd_events_t event
     switch (ret) {
         /* delay cancelled */
         case CAT_RET_NONE: {
-            if (unlikely(poll->status < 0)) {
-                if (poll->status == CAT_ECANCELED) {
+            if (unlikely(poll->ret.status < 0)) {
+                if (poll->ret.status == CAT_ECANCELED) {
                     cat_update_last_error(CAT_ECANCELED, "Poll has been canceled");
                     ret = CAT_RET_ERROR;
                 }
 #ifndef CAT_OS_WIN
-                else if (poll->status == CAT_EBADF) {
+                else if (poll->ret.status == CAT_EBADF) {
                     /* see: https://github.com/libuv/libuv/pull/1040#discussion_r80087447 */
                     *revents = POLLERR;
                     ret = CAT_RET_OK;
                 }
 #endif
                 else {
-                    cat_update_last_error_with_reason(poll->status, "Poll failed");
-                    *revents = cat_poll_translate_error_to_revents(events, poll->status);
+                    cat_update_last_error_with_reason(poll->ret.status, "Poll failed");
+                    *revents = cat_poll_translate_error_to_sys_events(events, poll->ret.status);
                     ret = CAT_RET_ERROR;
                 }
             } else {
                 ret = CAT_RET_OK;
-                *revents = cat_poll_translate_to_sysno(poll->revents);
+                *revents = cat_poll_translate_uv_events_to_sys_events(poll->ret.events);
             }
             break;
         }
@@ -268,7 +331,7 @@ CAT_API cat_ret_t cat_poll_one(cat_os_socket_t fd, cat_pollfd_events_t events, c
 
     CAT_LOG_DEBUG_VA(POLL, {
         char *events_str = cat_pollfd_events_str(events);
-        CAT_LOG_DEBUG_D(POLL, "poll_one(fd=" CAT_OS_SOCKET_FMT ", events=%s, *revents=" CAT_LOG_UNFILLED_STR ", timeout=" CAT_TIMEOUT_FMT ") = " CAT_LOG_UNFINISHED_STR,
+        CAT_LOG_DEBUG_D(POLL, "poll_one(fd: " CAT_OS_SOCKET_FMT ", events: %s, *revents: " CAT_LOG_UNFILLED_STR ", timeout: " CAT_TIMEOUT_FMT ") = " CAT_LOG_UNFINISHED_STR,
             fd, events_str, timeout);
         cat_buffer_str_free(events_str);
     });
@@ -278,7 +341,7 @@ CAT_API cat_ret_t cat_poll_one(cat_os_socket_t fd, cat_pollfd_events_t events, c
     CAT_LOG_DEBUG_VA(POLL, {
         char *events_str = cat_pollfd_events_str(events);
         char *revents_str = cat_pollfd_events_str(*revents);
-        CAT_LOG_DEBUG_D(POLL, "poll_one(fd=" CAT_OS_SOCKET_FMT ", events=%s, *revents=%s, timeout=" CAT_TIMEOUT_FMT ") = " CAT_LOG_RET_RET_FMT,
+        CAT_LOG_DEBUG_D(POLL, "poll_one(fd: " CAT_OS_SOCKET_FMT ", events: %s, *revents: %s, timeout: " CAT_TIMEOUT_FMT ") = " CAT_LOG_RET_RET_FMT,
             fd, events_str, revents_str, timeout, CAT_LOG_RET_RET_C(ret));
         cat_buffer_str_free(revents_str);
         cat_buffer_str_free(events_str);
@@ -300,19 +363,28 @@ typedef struct {
         uv_handle_t handle;
         uv_poll_t poll;
     } u;
-    int status;
-    int revents;
+#ifdef CAT_ENABLE_DEBUG_LOG
+    cat_os_socket_t fd;
+#endif
+    struct {
+        int status; // uv status
+        uv_events_t events; // uv events, e.g UV_EVENT_READABLE, UV_EVENT_WRITABLE...
+    } ret;
     cat_bool_t initialized;
 #ifdef CAT_OS_UNIX_LIKE
     cat_os_fd_t fd_dup;
 #endif
 } cat_poll_t;
 
-/* double defer here to avoid use-after-free */
-
 static void cat_poll_free_callback(void *data)
 {
-    cat_event_defer(cat_free_function, data);
+    /** @record: previously, we double defer here to avoid use-after-free,
+     * but after we refactor defer mechanism in uv_crun(), it seems that
+     * we do not need double defer again, but it had to be verified, just
+     * let us try to remove the double defer for now.
+     *
+     * code before: `cat_event_defer(cat_free_function, data);` */
+    cat_free(data);
 }
 
 static void cat_poll_close_callback(uv_handle_t *handle)
@@ -342,16 +414,26 @@ static void cat_poll_done_callback(cat_data_t *data)
     cat_coroutine_schedule(context->coroutine, EVENT, "Poll");
 }
 
-static void cat_poll_callback(uv_poll_t* handle, int status, int revents)
+static void cat_poll_callback(uv_poll_t* handle, int status, uv_events_t events)
 {
     cat_poll_t *poll = (cat_poll_t *) handle;
     cat_poll_context_t *context = poll->u.context;
 
-    poll->status = status;
-    poll->revents = revents;
+    CAT_LOG_DEBUG_VA_WITH_LEVEL(POLL, 2, {
+        char *events_str = cat_poll_uv_events_str(events);
+        CAT_LOG_DEBUG_D(POLL, "poll_callback(fd: " CAT_OS_SOCKET_FMT ", status: %d" CAT_LOG_STRERRNO_FMT ", events: %s)",
+            poll->fd, status, CAT_LOG_STRERRNO_C(status == 0, status), events_str);
+        cat_buffer_str_free(events_str);
+    });
 
+    poll->ret.status = status;
+    /* Note: uv may return multi events in multi callbacks */
+    poll->ret.events |= events;
+
+    /* Note: for get all revents of all pollfd at once,
+     * we should schedule coroutine in io defer callback */
     if (!context->deferred_done_callback) {
-        (void) cat_event_defer_ex(cat_poll_done_callback, context, cat_true);
+        (void) cat_event_io_defer(cat_poll_done_callback, context);
         context->deferred_done_callback = cat_true;
     }
 }
@@ -382,8 +464,11 @@ static int cat_poll_impl(cat_pollfd_t *fds, cat_nfds_t nfds, cat_timeout_t timeo
         cat_pollfd_t *fd = &fds[i];
         cat_poll_t *poll = &polls[i];
         fd->revents = POLLNONE; // clear it
+#ifdef CAT_ENABLE_DEBUG_LOG
+        poll->fd = fd->fd;
+#endif
         poll->initialized = cat_false;
-        poll->revents = 0;
+        poll->ret.events = UV_EVENT_NONE;
         poll->u.context = context;
         do {
             cat_os_socket_t fd_no = fd->fd;
@@ -393,7 +478,7 @@ static int cat_poll_impl(cat_pollfd_t *fds, cat_nfds_t nfds, cat_timeout_t timeo
                 /* uv_poll_init_socket() and uv_poll_start() will return error if fd exists */
                 poll->fd_dup = dup(fd->fd);
                 if (unlikely(fd->fd == CAT_OS_INVALID_SOCKET)) {
-                    poll->status = cat_translate_sys_error(cat_sys_errno);
+                    poll->ret.status = cat_translate_sys_error(cat_sys_errno);
                     e++;
                     break;
                 }
@@ -403,7 +488,7 @@ static int cat_poll_impl(cat_pollfd_t *fds, cat_nfds_t nfds, cat_timeout_t timeo
             error = uv_poll_init_socket(&CAT_EVENT_G(loop), &poll->u.poll, fd_no);
             if (unlikely(error != 0)) {
                 /* ENOTSOCK means it maybe a regular file */
-                poll->status = cat_poll_filter_init_error(error);
+                poll->ret.status = cat_poll_filter_init_error(error);
                 e++;
                 break;
             }
@@ -412,13 +497,13 @@ static int cat_poll_impl(cat_pollfd_t *fds, cat_nfds_t nfds, cat_timeout_t timeo
                 /* fast return without starting handle */
                 break;
             }
-            error = uv_poll_start(&poll->u.poll, cat_poll_translate_from_sysno(fd->events), cat_poll_callback);
+            error = uv_poll_start(&poll->u.poll, cat_poll_translate_sys_events_to_uv_events(fd->events), cat_poll_callback);
             if (unlikely(error != 0)) {
-                poll->status = error;
+                poll->ret.status = error;
                 e++;
                 break;
             }
-            poll->status = CAT_ECANCELED;
+            poll->ret.status = CAT_ECANCELED;
         } while (0);
         i++;
     }
@@ -442,23 +527,23 @@ static int cat_poll_impl(cat_pollfd_t *fds, cat_nfds_t nfds, cat_timeout_t timeo
         if (poll->initialized) {
             uv_close(&poll->u.handle, cat_poll_close_callback);
         }
-        if (unlikely(ret == CAT_RET_NONE && poll->status < 0)) {
-            if (poll->status == CAT_ECANCELED) {
+        if (unlikely(ret == CAT_RET_NONE && poll->ret.status < 0)) {
+            if (poll->ret.status == CAT_ECANCELED) {
                 fd->revents = POLLNONE;
             }
 #ifndef CAT_OS_WIN
-            else if (poll->status == CAT_EBADF) {
+            else if (poll->ret.status == CAT_EBADF) {
                 /* see: https://github.com/libuv/libuv/pull/1040#discussion_r80087447 */
                 fd->revents = POLLERR;
                 n++;
             }
 #endif
             else {
-                fd->revents = cat_poll_translate_error_to_revents(fd->events, poll->status);
+                fd->revents = cat_poll_translate_error_to_sys_events(fd->events, poll->ret.status);
                 n++;
             }
         } else {
-            fd->revents = cat_poll_translate_to_sysno(poll->revents);
+            fd->revents = cat_poll_translate_uv_events_to_sys_events(poll->ret.events);
             if (fd->revents != POLLNONE) {
                 n++;
             }
@@ -515,7 +600,7 @@ CAT_API int cat_poll(cat_pollfd_t *fds, cat_nfds_t nfds, cat_timeout_t timeout)
 {
     CAT_LOG_DEBUG_VA(POLL, {
         char *fds_str = cat_pollfds_str(fds, nfds, cat_false);
-        CAT_LOG_DEBUG_D(POLL, "poll(fds=%s, nfds=%zu, timeout=" CAT_TIMEOUT_FMT ") = " CAT_LOG_UNFINISHED_STR, fds_str, (size_t) nfds, timeout);
+        CAT_LOG_DEBUG_D(POLL, "poll(fds: %s, nfds: %zu, timeout: " CAT_TIMEOUT_FMT ") = " CAT_LOG_UNFINISHED_STR, fds_str, (size_t) nfds, timeout);
         cat_buffer_str_free(fds_str);
     });
 
@@ -523,8 +608,8 @@ CAT_API int cat_poll(cat_pollfd_t *fds, cat_nfds_t nfds, cat_timeout_t timeout)
 
     CAT_LOG_DEBUG_VA(POLL, {
         char *fds_str = cat_pollfds_str(fds, nfds, cat_true);
-        CAT_LOG_DEBUG_D(POLL, "poll(fds=%p, nfds=%zu, timeout=" CAT_TIMEOUT_FMT ") = " CAT_LOG_INT_RET_FMT,
-            fds, (size_t) nfds, timeout, CAT_LOG_INT_RET_C(ret));
+        CAT_LOG_DEBUG_D(POLL, "poll(fds: %s, nfds: %zu, timeout: " CAT_TIMEOUT_FMT ") = " CAT_LOG_INT_RET_FMT,
+            fds_str, (size_t) nfds, timeout, CAT_LOG_INT_RET_C(ret));
         cat_buffer_str_free(fds_str);
     });
 

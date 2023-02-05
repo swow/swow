@@ -47,6 +47,7 @@ CAT_API cat_bool_t cat_event_runtime_init(void)
 
     cat_queue_init(&CAT_EVENT_G(runtime_shutdown_tasks));
     cat_queue_init(&CAT_EVENT_G(defer_tasks));
+    cat_queue_init(&CAT_EVENT_G(io_defer_tasks));
 
     return cat_true;
 }
@@ -67,6 +68,7 @@ CAT_API cat_bool_t cat_event_runtime_shutdown(void)
     /* we must call run to close all handles and clear defer tasks */
     cat_event_schedule();
     CAT_ASSERT(cat_queue_empty(&CAT_EVENT_G(defer_tasks)));
+    CAT_ASSERT(cat_queue_empty(&CAT_EVENT_G(io_defer_tasks)));
 
     return cat_true;
 }
@@ -94,7 +96,15 @@ static void cat_event_do_defer_tasks(void)
 {
     uint64_t current_round = CAT_EVENT_G(loop).round;
     cat_queue_t *tasks = &CAT_EVENT_G(defer_tasks);
+    cat_queue_t *io_tasks = &CAT_EVENT_G(io_defer_tasks);
     cat_event_task_t *task;
+
+    while ((task = cat_queue_front_data(io_tasks, cat_event_task_t, node)) != NULL) {
+        /* ignore round, do task after all io done */
+        cat_queue_remove(&task->node);
+        task->callback(task->data);
+        cat_free(task);
+    }
 
     while ((task = cat_queue_front_data(tasks, cat_event_task_t, node)) != NULL) {
         if (task->round == current_round) {
@@ -110,7 +120,9 @@ static void cat_event_do_defer_tasks(void)
 static int cat_event_alive_callback(uv_loop_t *loop)
 {
     (void) loop;
-    return !cat_queue_empty(&CAT_EVENT_G(defer_tasks));
+    return
+        !cat_queue_empty(&CAT_EVENT_G(io_defer_tasks)) ||
+        !cat_queue_empty(&CAT_EVENT_G(defer_tasks));
 }
 
 static void cat_event_defer_callback(uv_loop_t *loop)
@@ -171,12 +183,7 @@ CAT_API void cat_event_unregister_runtime_shutdown_task(cat_event_task_t *task)
     cat_free(task);
 }
 
-CAT_API cat_bool_t cat_event_defer(cat_data_callback_t callback, cat_data_t *data)
-{
-    return cat_event_defer_ex(callback, data, cat_false);
-}
-
-CAT_API cat_bool_t cat_event_defer_ex(cat_data_callback_t callback, cat_data_t *data, cat_bool_t high_priority)
+static cat_bool_t cat_event_defer_impl(cat_queue_t *queue, cat_data_callback_t callback, cat_data_t *data)
 {
     cat_event_task_t *task = (cat_event_task_t *) cat_malloc(sizeof(*task));
 
@@ -189,13 +196,19 @@ CAT_API cat_bool_t cat_event_defer_ex(cat_data_callback_t callback, cat_data_t *
     task->round = CAT_EVENT_G(loop).round;
     task->callback = callback;
     task->data = data;
-    if (unlikely(high_priority)) {
-        cat_queue_push_front(&CAT_EVENT_G(defer_tasks), &task->node);
-    } else {
-        cat_queue_push_back(&CAT_EVENT_G(defer_tasks), &task->node);
-    }
+    cat_queue_push_back(queue, &task->node);
 
     return cat_true;
+}
+
+CAT_API cat_bool_t cat_event_defer(cat_data_callback_t callback, cat_data_t *data)
+{
+    return cat_event_defer_impl(&CAT_EVENT_G(defer_tasks), callback, data);
+}
+
+CAT_API cat_bool_t cat_event_io_defer(cat_data_callback_t callback, cat_data_t *data)
+{
+    return cat_event_defer_impl(&CAT_EVENT_G(io_defer_tasks), callback, data);
 }
 
 CAT_API void cat_event_fork(void)
