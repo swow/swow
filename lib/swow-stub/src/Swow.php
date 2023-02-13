@@ -1675,6 +1675,8 @@ namespace Swow
         /** @var int $timeout [optional] = $this->getWriteTimeout() */
         public function sendHandle(self $handle, ?int $timeout = null): static { }
 
+        public function sendFile(string $filename, int $offset = 0, int $length = 0, ?int $timeout = null): static { }
+
         public function close(): bool { }
 
         /** @return bool Whether the socket has been constructed and has not been closed */
