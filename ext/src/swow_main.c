@@ -318,6 +318,10 @@ PHP_RSHUTDOWN_FUNCTION(swow)
         }
     }
 
+    /* Notice: some PHP resources still have not been released
+     * (e.g. zend_resource, php_stream, user stream wrapper (which is hard to fix),
+     * see shutdown_executor() -> zend_shutdown_executor_values() -> zend_close_rsrc_list()) */
+
     SWOW_G(runtime_state) = SWOW_RUNTIME_STATE_NONE;
 
     return SUCCESS;
