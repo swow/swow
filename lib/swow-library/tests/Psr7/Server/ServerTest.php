@@ -351,4 +351,28 @@ final class ServerTest extends TestCase
 
         $wr::wait($wr);
     }
+
+    public function testWebSocketUnmask(): void
+    {
+        $server = $this->getMixedServer();
+        defer(static function () use ($server): void {
+            $server->close();
+        });
+        $client = new Client();
+        $client->connect($server->getSockAddress(), $server->getSockPort());
+        $request = Psr7::createRequest(method: 'GET', uri: '/chat');
+        $client->upgradeToWebSocket($request);
+        for ($n = 0; $n < Testing::$maxRequests; $n++) {
+            $random = getRandomBytes();
+            $sentFrame = Psr7::createWebSocketTextMaskedFrame($random);
+            $this->assertTrue($sentFrame->getMask());
+            $this->assertNotEmpty($sentFrame->getMaskingKey());
+            $this->assertNotSame((string) $sentFrame->getPayloadData(), $random);
+            $client->sendWebSocketFrame($sentFrame);
+            $receivedFrame = $client->recvWebSocketFrame();
+            $this->assertFalse($receivedFrame->getMask());
+            $this->assertEmpty($receivedFrame->getMaskingKey());
+            $this->assertSame(substr((string) $receivedFrame->getPayloadData(), -strlen($random)), $random);
+        }
+    }
 }
