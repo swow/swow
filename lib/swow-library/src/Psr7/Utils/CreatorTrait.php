@@ -47,6 +47,7 @@ use Swow\WebSocket\Opcode;
 use Swow\WebSocket\WebSocket;
 
 use function is_resource;
+use function is_string;
 use function parse_str;
 
 trait CreatorTrait
@@ -317,13 +318,15 @@ trait CreatorTrait
         return $serverRequest;
     }
 
-    public static function createWebSocketFrame(int $opcode, mixed $payloadData, bool $fin = true, bool $mask = false): WebSocketFrame
+    public static function createWebSocketFrame(int $opcode, mixed $payloadData, bool $fin = true, bool|string $mask = false): WebSocketFrame
     {
-        $frame = new WebSocketFrame(fin: $fin, opcode: $opcode, payloadData: $payloadData);
         if ($mask) {
-            $frame->setMaskingKey(WebSocket::EMPTY_MASKING_KEY);
+            $maskingKey = is_string($mask) ? $mask : WebSocket::DEFAULT_MASKING_KEY;
+            $payloadData = WebSocket::mask((string) $payloadData, maskingKey: $maskingKey);
+        } else {
+            $maskingKey = '';
         }
-        return $frame;
+        return new WebSocketFrame(fin: $fin, opcode: $opcode, maskingKey: $maskingKey, payloadData: $payloadData);
     }
 
     public static function createWebSocketTextFrame(mixed $payloadData, bool $fin = true, bool $mask = false): WebSocketFrame
