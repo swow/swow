@@ -578,6 +578,9 @@ trait ReceiverTrait
         return $messageEntity;
     }
 
+    /**
+     * @note This method will unmask masked payloadData and clear the masking key automatically
+     */
     public function recvWebSocketFrameEntity(): WebSocketFrameEntity
     {
         $buffer = $this->buffer;
@@ -632,6 +635,7 @@ trait ReceiverTrait
                 if ($header->getMask()) {
                     // TODO: tests needed
                     WebSocket::unmask($payloadData, maskingKey: $header->getMaskingKey());
+                    $header->setMaskingKey(''); // drop mask and masking key
                 }
             }
         } finally {
