@@ -67,6 +67,8 @@ trait ReceiverTrait
 
     protected bool $preserveBodyData = false;
 
+    protected bool $autoUnmask = true;
+
     protected bool $shouldKeepAlive = false;
 
     protected function __constructReceiver(int $type, int $events): void
@@ -128,9 +130,27 @@ trait ReceiverTrait
         return $this->preserveBodyData;
     }
 
-    public function setPreserveBodyData(bool $value): static
+    public function setPreserveBodyData(bool $enable): static
     {
-        $this->preserveBodyData = $value;
+        $this->preserveBodyData = $enable;
+
+        return $this;
+    }
+
+    /**
+     * @return bool Whether unmask WebSocket payload data automatically
+     */
+    public function isAutoUnmask(): bool
+    {
+        return $this->autoUnmask;
+    }
+
+    /**
+     * @param bool $enable If true, WebSocket payload data will be unmasked automatically
+     */
+    public function setAutoUnmask(bool $enable): static
+    {
+        $this->autoUnmask = $enable;
 
         return $this;
     }
@@ -632,7 +652,7 @@ trait ReceiverTrait
                     );
                 }
                 $parsedOffset += $payloadLength;
-                if ($header->getMask()) {
+                if ($header->getMask() && $this->autoUnmask) {
                     WebSocket::unmask($payloadData, maskingKey: $header->getMaskingKey());
                     $header->setMaskingKey(''); // drop mask and masking key
                 }
