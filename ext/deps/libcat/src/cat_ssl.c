@@ -67,15 +67,15 @@ CAT_API cat_bool_t cat_ssl_module_init(void)
 {
 #ifdef CAT_DEBUG
     // change one/both of the first two digits, which can break compatibility with previous versions
-    if (OPENSSL_version_major() != OPENSSL_VERSION_MAJOR ||
-        OPENSSL_version_minor() != OPENSSL_VERSION_MINOR) {
+    if (cat_ssl_version_major() != CAT_SSL_VERSION_MAJOR ||
+        cat_ssl_version_minor() != CAT_SSL_VERSION_MINOR) {
         CAT_MODULE_ERROR(SSL, "OpenSSL version mismatch, built with \"%s\", but running with \"%s\"",
             OPENSSL_VERSION_TEXT, cat_ssl_version());
     }
 #endif
 
     /* SSL library initialisation */
-#if OPENSSL_VERSION_NUMBER >= 0x10100003L
+#if CAT_SSL_VERSION_NUMBER >= 0x10100003L
     if (OPENSSL_init_ssl(OPENSSL_INIT_LOAD_CONFIG | OPENSSL_INIT_SSL_DEFAULT | OPENSSL_INIT_ADD_ALL_CIPHERS, NULL) == 0) {
         ERR_print_errors_fp(CAT_LOG_G(error_output));
         CAT_MODULE_ERROR(SSL, "OPENSSL_init_ssl() failed");
@@ -394,7 +394,7 @@ static int cat_ssl_win_cert_verify_callback(X509_STORE_CTX *x509_store_ctx, void
     (void) data;
     PCCERT_CONTEXT cert_ctx = NULL;
     PCCERT_CHAIN_CONTEXT cert_chain_ctx = NULL;
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
+#if CAT_SSL_VERSION_NUMBER < 0x10100000L
     X509 *cert = x509_store_ctx->cert;
 #else
     X509 *cert = X509_STORE_CTX_get0_cert(x509_store_ctx);
@@ -755,7 +755,7 @@ CAT_API cat_ssl_ret_t cat_ssl_handshake(cat_ssl_t *ssl)
         ssl->flags |= CAT_SSL_FLAG_HANDSHAKE_OK;
         cat_ssl_handshake_log(ssl);
 #ifndef SSL_OP_NO_RENEGOTIATION
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
+#if CAT_SSL_VERSION_NUMBER < 0x10100000L
 #ifdef SSL3_FLAGS_NO_RENEGOTIATE_CIPHERS
         /* initial handshake done, disable renegotiation (CVE-2009-3555) */
         if (connection->s3 && SSL_is_server((SSL *) connection)) {
@@ -1351,7 +1351,7 @@ static int cat_ssl_get_error(const cat_ssl_t *ssl, int ret_code)
     return error;
 }
 
-#if OPENSSL_VERSION_NUMBER < 0x30000000L && !defined(ERR_peek_error_data)
+#if CAT_SSL_VERSION_NUMBER < 0x30000000L && !defined(ERR_peek_error_data)
 # define ERR_peek_error_data(data, flags) ERR_peek_error_line_data(NULL, NULL, data, flags)
 #endif
 
@@ -1490,7 +1490,7 @@ static void cat_ssl_handshake_log(cat_ssl_t *ssl)
 {
     const char *cipher_str = NULL;
     char buf[129], *s, *d;
-#if OPENSSL_VERSION_NUMBER >= 0x10000000L
+#if CAT_SSL_VERSION_NUMBER >= 0x10000000L
     const
 #endif
     SSL_CIPHER *cipher = SSL_get_current_cipher(ssl->connection);

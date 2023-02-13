@@ -126,6 +126,9 @@ CAT_API cat_bool_t cat_stop(void)
 CAT_API void cat_enable_debug_mode(void)
 {
     CAT_LOG_G(types) = CAT_LOG_TYPES_ALL;
+    if (CAT_LOG_G(debug_level) == 0) {
+        CAT_LOG_G(debug_level) = (unsigned int) -1;
+    }
 }
 #endif
 

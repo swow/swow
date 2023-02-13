@@ -672,6 +672,9 @@ CAT_API ssize_t cat_socket_peek_from_ex(const cat_socket_t *socket, char *buffer
 CAT_API cat_bool_t cat_socket_send_handle(cat_socket_t *socket, cat_socket_t *handle);
 CAT_API cat_bool_t cat_socket_send_handle_ex(cat_socket_t *socket, cat_socket_t *handle, cat_timeout_t timeout);
 
+CAT_API cat_bool_t cat_socket_send_file(cat_socket_t *socket, const char *filename, size_t offset, size_t length);
+CAT_API cat_bool_t cat_socket_send_file_ex(cat_socket_t *socket, const char *filename, size_t offset, size_t length, cat_timeout_t timeout);
+
 /* @note last_error will not be updated when close failed,  */
 CAT_API cat_bool_t cat_socket_close(cat_socket_t *socket);
 
@@ -721,8 +724,6 @@ CAT_API cat_bool_t cat_socket_set_tcp_nodelay(cat_socket_t *socket, cat_bool_t e
 CAT_API cat_bool_t cat_socket_get_tcp_keepalive(const cat_socket_t *socket);
 CAT_API unsigned int cat_socket_get_tcp_keepalive_delay(const cat_socket_t *socket);
 CAT_API cat_bool_t cat_socket_set_tcp_keepalive(cat_socket_t *socket, cat_bool_t enable, unsigned int delay);
-
-CAT_API cat_bool_t cat_socket_set_tcp_accept_balance(cat_socket_t *socket, cat_bool_t enable);
 
 CAT_API cat_bool_t cat_socket_get_udp_broadcast(const cat_socket_t *socket);
 CAT_API cat_bool_t cat_socket_set_udp_broadcast(cat_socket_t *socket, cat_bool_t enable);

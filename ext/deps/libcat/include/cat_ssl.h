@@ -73,6 +73,7 @@ extern "C" {
 #undef X509_EXTENSIONS
 #endif
 
+/* fixup OPENSSL_VERSION_NUMBER first */
 #if (defined LIBRESSL_VERSION_NUMBER && OPENSSL_VERSION_NUMBER == 0x20000000L)
 #undef OPENSSL_VERSION_NUMBER
 #if (LIBRESSL_VERSION_NUMBER >= 0x2080000fL)
@@ -82,20 +83,28 @@ extern "C" {
 #endif
 #endif
 
+/* full version macro/API support */
+#define CAT_SSL_VERSION_NUMBER OPENSSL_VERSION_NUMBER
+#define CAT_SSL_VERSION_TEXT OPENSSL_VERSION_TEXT
 #if OPENSSL_VERSION_NUMBER < 0x30000000L && !defined(OPENSSL_VERSION_MAJOR)
-#define OPENSSL_VERSION_MAJOR (OPENSSL_VERSION_NUMBER >> 28)
-#define OPENSSL_VERSION_MINOR ((OPENSSL_VERSION_NUMBER >> 20) & 0xff)
-#define OPENSSL_VERSION_PATCH ((OPENSSL_VERSION_NUMBER >> 12) & 0xff)
-#define OPENSSL_version_major() (OpenSSL_version_num() >> 28)
-#define OPENSSL_version_minor() ((OpenSSL_version_num() >> 20) & 0xff)
-#define OPENSSL_version_patch() ((OpenSSL_version_num() >> 12) & 0xff)
+#define CAT_SSL_VERSION_MAJOR (CAT_SSL_VERSION_NUMBER >> 28)
+#define CAT_SSL_VERSION_MINOR ((CAT_SSL_VERSION_NUMBER >> 20) & 0xff)
+#define CAT_SSL_VERSION_PATCH ((CAT_SSL_VERSION_NUMBER >> 12) & 0xff)
+#else
+#define CAT_SSL_VERSION_MAJOR OPENSSL_VERSION_MAJOR
+#define CAT_SSL_VERSION_MINOR OPENSSL_VERSION_MINOR
+#define CAT_SSL_VERSION_PATCH OPENSSL_VERSION_PATCH
 #endif
-
 #if (OPENSSL_VERSION_NUMBER >= 0x10100001L)
 #define cat_ssl_version() OpenSSL_version(OPENSSL_VERSION)
+#define cat_ssl_version_num() OpenSSL_version_num()
 #else
 #define cat_ssl_version() SSLeay_version(SSLEAY_VERSION)
+#define cat_ssl_version_num() SSLeay()
 #endif
+#define cat_ssl_version_major() (cat_ssl_version_num() >> 28)
+#define cat_ssl_version_minor() ((cat_ssl_version_num() >> 20) & 0xff)
+#define cat_ssl_version_patch() ((cat_ssl_version_num() >> 12) & 0xff)
 
 #define CAT_SSL_DEFAULT_STREAM_VERIFY_DEPTH 9
 
