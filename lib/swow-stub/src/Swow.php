@@ -2371,6 +2371,7 @@ namespace Swow\WebSocket
         public const EXT16_MAX_LENGTH = 65535;
         public const MASKING_KEY_LENGTH = 4;
         public const EMPTY_MASKING_KEY = '';
+        public const DEFAULT_MASKING_KEY = '258E';
         public const PING_FRAME = "\x89\x00";
         public const PONG_FRAME = "\x8a\x80\x00\x00\x00\x00";
 
