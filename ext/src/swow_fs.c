@@ -2038,7 +2038,7 @@ static int swow_plain_files_rename(php_stream_wrapper *wrapper, const char *url_
 
     if (ret == -1) {
 #ifndef PHP_WIN32
-# ifdef CAT_EXDEV
+// # ifdef CAT_EXDEV // CAT_EXDEV is a enum and it always exists
         if (cat_get_last_error_code() == CAT_EXDEV) {
             zend_stat_t sb;
 # if !defined(ZTS) && !defined(TSRM_WIN32)
@@ -2087,7 +2087,7 @@ static int swow_plain_files_rename(php_stream_wrapper *wrapper, const char *url_
 #  endif
             return success;
         }
-# endif
+// # endif
 #endif
 
 #ifdef PHP_WIN32
