@@ -508,8 +508,14 @@ static PHP_METHOD(Swow_WebSocket_WebSocket, mask)
 
     SWOW_WEBSOCKET_HEADER_MASKING_KEY_CHECK(masking_key, 4);
 
+    if (UNEXPECTED(masking_key == NULL ||
+        memcmp(masking_key, CAT_STRS(CAT_WEBSOCKET_EMPTY_MASKING_KEY)) == 0)) {
+        RETURN_STR_COPY(data);
+    }
     ptr = swow_string_get_readable_space(data, start, &length, 1);
-
+    if (UNEXPECTED(length == 0)) {
+        RETURN_EMPTY_STRING();
+    }
     masked_data = zend_string_alloc(length, false);
     cat_websocket_mask_ex(ptr, ZSTR_VAL(masked_data), length, masking_key != NULL ? ZSTR_VAL(masking_key) : NULL, index);
     ZSTR_VAL(masked_data)[length] = '\0';
