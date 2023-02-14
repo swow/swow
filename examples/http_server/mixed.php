@@ -102,6 +102,31 @@ while (true) {
                                     }
                                 }
                                 // no break
+                            case '/event-stream':
+                                if ($request->getQueryParams()['subscribe'] ?? false) {
+                                    $request = null;
+                                    $connection->respond([
+                                        'Cache-Control' => 'no-store',
+                                        'Content-Type' => 'text/event-stream',
+                                        'Content-Length' => null,
+                                    ]);
+                                    $id = 0;
+                                    for ($i = 0; $i < 30; $i++) {
+                                        $connection->send(sprintf(
+                                            "id: %d\nevent: clock\ndata: %s\n\n",
+                                            $id++, json_encode(['date' => date('Y-m-d H:i:s')])
+                                        ));
+                                        sleep(1);
+                                    }
+                                } else {
+                                    $connection->respond(<<<'JS'
+                                        <script> new EventSource('http://127.0.0.1:9764/event-stream?subscribe=1').addEventListener('clock', function(event) {
+                                            document.write('<p>#', parseInt(event.lastEventId) + 1, ': ', '[', event.type, '] ', event.data, "</p>")
+                                        }); </script>
+JS
+                                    );
+                                }
+                                break;
                             default:
                                 $connection->error(HttpStatus::NOT_FOUND);
                         }
