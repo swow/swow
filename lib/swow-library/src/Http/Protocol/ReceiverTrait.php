@@ -640,7 +640,7 @@ trait ReceiverTrait
                 throw new ProtocolException(HttpStatus::REQUEST_ENTITY_TOO_LARGE);
             }
             if ($payloadLength > 0) {
-                $payloadData = new Buffer(0);
+                $payloadData = new Buffer($payloadLength);
                 if ($unparsedLength >= $payloadLength) {
                     $payloadData->append($buffer, $parsedOffset, $payloadLength);
                 } else {

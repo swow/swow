@@ -375,4 +375,26 @@ final class ServerTest extends TestCase
             $this->assertSame(substr((string) $receivedFrame->getPayloadData(), -strlen($random)), $random);
         }
     }
+
+    public function testWebSocketBigData(): void
+    {
+        $server = new Server();
+        $server->bind('127.0.0.1')->listen();
+        $random = str_repeat(getRandomBytes(1024), 1024);
+        $wr = new WaitReference();
+        Coroutine::run(static function () use ($server, $random, $wr): void {
+            $connection = $server->acceptConnection();
+            $connection->upgradeToWebSocket($connection->recvHttpRequest());
+            $frame = $connection->recvWebSocketFrame();
+            $connection->sendWebSocketFrame($frame);
+        });
+        $client = new Client();
+        $client->connect($server->getSockAddress(), $server->getSockPort());
+        $request = Psr7::createRequest(method: 'GET', uri: '/chat');
+        $client->upgradeToWebSocket($request);
+        $client->sendWebSocketFrame(Psr7::createWebSocketTextFrame($random));
+        $frame = $client->recvWebSocketFrame();
+        $this->assertSame((string) $frame->getPayloadData(), $random);
+        $wr::wait($wr);
+    }
 }
