@@ -91,7 +91,12 @@ abstract class AbstractMessage implements MessagePlusInterface
         return implode(', ', $this->getHeader($name));
     }
 
-    /** @param string|array<string>|null $value */
+    /**
+     * @note header will be unset when value is NULL,
+     *  since headerValue must be an array,
+     *  we can't use NULL to mean that this header should not been sent.
+     * @param string|array<string>|null $value
+     */
     public function setHeader(string $name, mixed $value): static
     {
         $lowercaseName = strtolower($name);
