@@ -73,9 +73,6 @@ class MySocket2 extends Socket
             $this->setTcpNodelay(false);
         }, Error::class, expectMessage: '/Socket has not been constructed/');
         Assert::throws(function (): void {
-            $this->setTcpAcceptBalance(false);
-        }, Error::class, expectMessage: '/Socket has not been constructed/');
-        Assert::throws(function (): void {
             $this->setTcpKeepAlive(true, 1);
         }, Error::class, expectMessage: '/Socket has not been constructed/');
         parent::__construct($type);

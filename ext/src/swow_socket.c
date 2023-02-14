@@ -1528,29 +1528,6 @@ static PHP_METHOD(Swow_Socket, setTcpKeepAlive)
     RETURN_THIS();
 }
 
-#define arginfo_class_Swow_Socket_setTcpAcceptBalance arginfo_class_Swow_Socket_setTcpNodelay
-
-static PHP_METHOD(Swow_Socket, setTcpAcceptBalance)
-{
-    SWOW_SOCKET_GETTER(s_socket, socket);
-    zend_bool enable = cat_true;
-    cat_bool_t ret;
-
-    ZEND_PARSE_PARAMETERS_START(0, 1)
-        Z_PARAM_OPTIONAL
-        Z_PARAM_BOOL(enable)
-    ZEND_PARSE_PARAMETERS_END();
-
-    ret = cat_socket_set_tcp_accept_balance(socket, enable);
-
-    if (UNEXPECTED(!ret)) {
-        swow_throw_exception_with_last(swow_socket_exception_ce);
-        RETURN_THROWS();
-    }
-
-    RETURN_THIS();
-}
-
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket___debugInfo, 0, 0, IS_ARRAY, 0)
 ZEND_END_ARG_INFO()
 
@@ -1678,7 +1655,6 @@ static const zend_function_entry swow_socket_methods[] = {
     PHP_ME(Swow_Socket, setSendBufferSize,         arginfo_class_Swow_Socket_setSendBufferSize,   ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Socket, setTcpNodelay,             arginfo_class_Swow_Socket_setTcpNodelay,       ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Socket, setTcpKeepAlive,           arginfo_class_Swow_Socket_setTcpKeepAlive,     ZEND_ACC_PUBLIC)
-    PHP_ME(Swow_Socket, setTcpAcceptBalance,       arginfo_class_Swow_Socket_setTcpAcceptBalance, ZEND_ACC_PUBLIC)
     /* magic */
     PHP_ME(Swow_Socket, __debugInfo,               arginfo_class_Swow_Socket___debugInfo,         ZEND_ACC_PUBLIC)
     /* globals */

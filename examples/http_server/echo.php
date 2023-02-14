@@ -26,7 +26,6 @@ $bindFlag = Socket::BIND_FLAG_NONE;
 
 $server = new Socket(Socket::TYPE_TCP);
 if ($multi) {
-    $server->setTcpAcceptBalance(true);
     $bindFlag |= Socket::BIND_FLAG_REUSEPORT;
 }
 $server->bind($host, $port, $bindFlag)->listen($backlog);

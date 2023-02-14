@@ -1725,8 +1725,6 @@ namespace Swow
 
         public function setTcpKeepAlive(bool $enable, int $delay): static { }
 
-        public function setTcpAcceptBalance(bool $enable): static { }
-
         /** @return array<string, mixed> debug information for var_dump */
         public function __debugInfo(): array { }
 
