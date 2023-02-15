@@ -406,7 +406,8 @@ typedef int (*uv_loop_alive_cb)(uv_loop_t* loop);
 typedef void (*uv_defer_cb)(uv_loop_t* loop);
 typedef struct uv_run_options_s {
     uv_loop_alive_cb alive_cb;
-    uv_defer_cb defer_cb;
+    uv_defer_cb loop_defer_cb;
+    uv_defer_cb io_defer_cb;
 } uv_run_options_t;
 UV_EXTERN int uv_crun(uv_loop_t* loop, const uv_run_options_t *context);
 #endif

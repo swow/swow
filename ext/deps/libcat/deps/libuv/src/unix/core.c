@@ -460,21 +460,24 @@ int uv_crun(uv_loop_t* loop, const uv_run_options_t *options) {
     uv__update_time(loop);
 
   while (r) {
-    loop->round++;
     uv__run_pending(loop);
     uv__run_idle(loop);
     uv__run_prepare(loop);
 
     uv__io_poll(loop, uv_backend_timeout(loop));
+    if (options->io_defer_cb)
+      options->io_defer_cb(loop);
     uv__metrics_update_idle_time(loop);
 
     uv__run_check(loop);
     uv__run_closing_handles(loop);
 
-    uv__update_time(loop);
+    loop->round++;
 
-    if (options->defer_cb)
-      options->defer_cb(loop);
+    if (options->loop_defer_cb)
+      options->loop_defer_cb(loop);
+
+    uv__update_time(loop);
     uv__run_timers(loop);
 
     r = !loop->stop_flag && (

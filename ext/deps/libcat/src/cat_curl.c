@@ -43,6 +43,7 @@ typedef struct cat_curl_multi_context_s {
     cat_queue_t fds;
     cat_nfds_t nfds;
     long timeout;
+    cat_bool_t waiting;
 } cat_curl_multi_context_t;
 
 RB_HEAD(cat_curl_multi_context_tree_s, cat_curl_multi_context_s);
@@ -286,6 +287,7 @@ static cat_curl_multi_context_t *cat_curl_multi_create_context(CURLM *multi)
     cat_queue_init(&context->fds);
     context->nfds = 0;
     context->timeout = -1;
+    context->waiting = cat_false;
     /* following is outdated comment, but I didn't understand
      * the specific meaning, so I won't remove it yet:
      *   latest multi has higher priority
@@ -419,7 +421,6 @@ static CURLMcode cat_curl_multi_wait_impl(
 {
     cat_curl_multi_context_t *context;
     cat_queue_t *waiters;
-    cat_bool_t queued;
     cat_pollfd_t *fds = NULL;
     cat_bool_t use_stacked_fds = cat_false;
     CURLMcode mcode = CURLM_OK;
@@ -441,22 +442,27 @@ static CURLMcode cat_curl_multi_wait_impl(
         goto _fast_out;
     }
 
-    queued = !cat_queue_empty(waiters);
-    cat_queue_push_back(waiters, &CAT_COROUTINE_G(current)->waiter.node);
-    if (queued) {
+    /** @note we should only push coroutine node to waiters when time_wait(),
+     * even if poll APIs would not modify queue node, but cURL callback functions
+     * may be called in cURL action calls, then user may call any coroutine related
+     * APIs in the callback functions, which may cause the queue node to be modified. */
+    if (context->waiting) {
         cat_bool_t wait_ret;
+        cat_queue_push_back(waiters, &CAT_COROUTINE_G(current)->waiter.node);
         CAT_TIME_WAIT_START() {
             wait_ret = cat_time_wait(timeout);
         } CAT_TIME_WAIT_END(timeout);
+        cat_queue_remove(&CAT_COROUTINE_G(current)->waiter.node);
         if (unlikely(!wait_ret)) {
             // timedout
-            goto _queue_out;
+            goto _fast_out;
         }
         if (cat_queue_front_data(waiters, cat_coroutine_t, waiter.node) != CAT_COROUTINE_G(current)) {
             // canceled
-            goto _queue_out;
+            goto _fast_out;
         }
     }
+    context->waiting = cat_true;
 
     while (1) {
         cat_timeout_t op_timeout = cat_curl_multi_timeout_solve(context->timeout, timeout);
@@ -572,13 +578,12 @@ static CURLMcode cat_curl_multi_wait_impl(
             start_line = new_start_line;
         }
     }
-
     _out:
     if (fds != NULL && !use_stacked_fds) {
         cat_free(fds);
     }
-    _queue_out:
-    cat_queue_remove(&CAT_COROUTINE_G(current)->waiter.node);
+
+    context->waiting = cat_false;
     if (!cat_queue_empty(waiters)) {
         /* resume the next queued coroutine */
         cat_coroutine_t *waiter = cat_queue_front_data(waiters, cat_coroutine_t, waiter.node);

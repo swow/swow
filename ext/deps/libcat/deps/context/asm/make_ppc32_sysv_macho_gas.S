@@ -85,11 +85,12 @@ _cat_coroutine_context_make:
     clrrwi  r3, r3, 4
 
     ; reserve space for context-data on context-stack
-    ; including 64 byte of linkage + parameter area (R1  16 == 0)
+    ; including 64 byte of linkage + parameter area (R1 % 16 == 0)
     subi  r3, r3, 336
 
     ; third arg of cat_coroutine_context_make() == address of context-function
-    stw  r5, 240(r3)
+    ; store as trampoline's R31
+    stw  r5, 224(r3)
 
     ; set back-chain to zero
     li   r0, 0
@@ -106,12 +107,15 @@ _cat_coroutine_context_make:
     ; load LR
     mflr  r0
     ; jump to label 1
-    bl  l1
-l1:
+    bcl  20, 31, L1
+L1:
     ; load LR into R4
     mflr  r4
+    ; compute abs address of trampoline, use as PC
+    addi  r5, r4, lo16(Ltrampoline - L1)
+    stw  r5, 240(r3)
     ; compute abs address of label finish
-    addi  r4, r4, lo16((finish - .) + 4)
+    addi  r4, r4, lo16(Lfinish - L1)
     ; restore LR
     mtlr  r0
     ; save address of finish as return-address for context-function
@@ -123,15 +127,28 @@ l1:
 
     blr  ; return pointer to context-data
 
-finish:
-    ; save return address into R0
-    mflr  r0
-    ; save return address on stack, set up stack frame
-    stw  r0, 4(r1)
-    ; allocate stack space, R1  16 == 0
-    stwu  r1, -16(r1)
+Ltrampoline:
+    ; We get R31 = context-function, R3 = address of transfer_t,
+    ; but we need to pass R3:R4 = transfer_t.
+    mtctr  r31
+    lwz  r4, 4(r3)
+    lwz  r3, 0(r3)
+    bctr
 
+Lfinish:
+    ; load address of _exit into CTR
+    bcl  20, 31, L2
+L2:
+    mflr  r4
+    addis  r4, r4, ha16(Lexitp - L2)
+    lwz  r4, lo16(Lexitp - L2)(r4)
+    mtctr  r4
     ; exit code is zero
     li  r3, 0
     ; exit application
-    bl  _exit
+    bctr
+
+.const_data
+.align 2
+Lexitp:
+    .long  __exit

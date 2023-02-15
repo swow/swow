@@ -59,16 +59,20 @@ typedef SHORT cat_pollfd_events_t;
     XX(HUP) \
     XX(NVAL) \
 
-/* OK: events triggered, NONE: timedout, ERROR: error ocurred */
+/** OK: events triggered, NONE: timedout, ERROR: error ocurred.
+ * @note: it does not always return ERROR when it was cancelled,
+ * because poll() operation may be partially done. */
 CAT_API cat_ret_t cat_poll_one(cat_os_socket_t fd, cat_pollfd_events_t events, cat_pollfd_events_t *revents, cat_timeout_t timeout);
 
-/* same with poll(),
+/** same with poll(),
  * returns the number of descriptors that are ready for I/O, or -1 if an error occurred.
- * If the time limit expires, poll() returns 0. */
+ * If the time limit expires, poll() returns 0.
+ * @see: same with poll_one() note. */
 CAT_API int cat_poll(cat_pollfd_t *fds, cat_nfds_t nfds, cat_timeout_t timeout);
 
-/* same with select(),
- * but we can not use it for file IO */
+/** same with select(),
+ * but we can not use it for file IO.
+ * @see: same with poll_one() note. */
 CAT_API int cat_select(int max_fd, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout);
 
 #ifdef __cplusplus

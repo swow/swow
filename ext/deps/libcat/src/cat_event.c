@@ -18,6 +18,32 @@
 
 #include "cat_event.h"
 
+struct cat_event_shutdown_task_s {
+    cat_queue_node_t node;
+    cat_data_callback_t callback;
+    cat_data_t *data;
+};
+
+struct cat_event_loop_defer_task_s {
+    cat_queue_node_t node;
+    cat_event_loop_defer_callback_t callback;
+    cat_data_t *data;
+    cat_bool_t allocated;
+    /* this can be optimized by cat_queue_empty(),
+     * but it's not necessarily. */
+    cat_bool_t cancelable;
+    cat_event_round_t round;
+};
+
+struct cat_event_io_defer_task_s {
+    cat_queue_node_t node;
+    cat_event_io_defer_callback_t callback;
+    cat_data_t *data;
+    cat_bool_t allocated;
+    /** @see: same with event_defer_task_t. */
+    cat_bool_t cancelable;
+};
+
 CAT_API CAT_GLOBALS_DECLARE(cat_event);
 
 CAT_API cat_bool_t cat_event_module_init(void)
@@ -56,17 +82,18 @@ CAT_API cat_bool_t cat_event_runtime_shutdown(void)
 {
     do {
         cat_queue_t *shutdown_tasks = &CAT_EVENT_G(runtime_shutdown_tasks);
-        cat_event_task_t *task;
+        cat_event_shutdown_task_t *shutdown_task;
         /* call shutdown tasks */
-        while ((task = cat_queue_front_data(shutdown_tasks, cat_event_task_t, node))) {
-            cat_queue_remove(&task->node);
-            task->callback(task->data);
-            cat_free(task);
+        while ((shutdown_task = cat_queue_front_data(shutdown_tasks, cat_event_shutdown_task_t, node))) {
+            cat_queue_remove(&shutdown_task->node);
+            shutdown_task->callback(shutdown_task->data);
+            cat_free(shutdown_task);
         }
     } while (0);
 
     /* we must call run to close all handles and clear defer tasks */
     cat_event_schedule();
+    CAT_ASSERT(cat_queue_empty(&CAT_EVENT_G(runtime_shutdown_tasks)));
     CAT_ASSERT(cat_queue_empty(&CAT_EVENT_G(defer_tasks)));
     CAT_ASSERT(cat_queue_empty(&CAT_EVENT_G(io_defer_tasks)));
 
@@ -92,50 +119,66 @@ CAT_API cat_bool_t cat_event_runtime_close(void)
     return cat_true;
 }
 
+static int cat_event_alive_callback(uv_loop_t *loop)
+{
+    (void) loop;
+    return !cat_queue_empty(&CAT_EVENT_G(defer_tasks)) ||
+           !cat_queue_empty(&CAT_EVENT_G(io_defer_tasks));
+}
+
 static void cat_event_do_defer_tasks(void)
 {
-    uint64_t current_round = CAT_EVENT_G(loop).round;
+    cat_event_round_t current_round = CAT_EVENT_G(loop).round;
     cat_queue_t *tasks = &CAT_EVENT_G(defer_tasks);
-    cat_queue_t *io_tasks = &CAT_EVENT_G(io_defer_tasks);
-    cat_event_task_t *task;
+    cat_event_loop_defer_task_t *task;
 
-    while ((task = cat_queue_front_data(io_tasks, cat_event_task_t, node)) != NULL) {
-        /* ignore round, do task after all io done */
-        cat_queue_remove(&task->node);
-        task->callback(task->data);
-        cat_free(task);
-    }
-
-    while ((task = cat_queue_front_data(tasks, cat_event_task_t, node)) != NULL) {
+    /* execute tasks of current round */
+    while ((task = cat_queue_front_data(tasks, cat_event_loop_defer_task_t, node)) != NULL) {
         if (task->round == current_round) {
             /* must be triggered in the next round */
             break;
         }
         cat_queue_remove(&task->node);
-        task->callback(task->data);
-        cat_free(task);
+        task->cancelable = cat_false;
+        task->callback(task, task->data);
+        /* note: do not access the task anymore,
+         * it may be free'd in callback. */
     }
 }
 
-static int cat_event_alive_callback(uv_loop_t *loop)
+static void cat_event_do_io_defer_tasks(void)
 {
-    (void) loop;
-    return
-        !cat_queue_empty(&CAT_EVENT_G(io_defer_tasks)) ||
-        !cat_queue_empty(&CAT_EVENT_G(defer_tasks));
+    cat_queue_t *tasks = &CAT_EVENT_G(io_defer_tasks);
+    cat_event_io_defer_task_t *task;
+
+    /* execute tasks of current round */
+    while ((task = cat_queue_front_data(tasks, cat_event_io_defer_task_t, node)) != NULL) {
+        cat_queue_remove(&task->node);
+        task->cancelable = cat_false;
+        task->callback(task, task->data);
+        /* note: do not access the task anymore,
+         * it may be free'd in callback. */
+    }
 }
 
-static void cat_event_defer_callback(uv_loop_t *loop)
+static void cat_event_loop_defer_callback(uv_loop_t *loop)
 {
     (void) loop;
     cat_event_do_defer_tasks();
+}
+
+static void cat_event_io_defer_callback(uv_loop_t *loop)
+{
+    (void) loop;
+    cat_event_do_io_defer_tasks();
 }
 
 CAT_API void cat_event_schedule(void)
 {
     const uv_run_options_t options = {
         cat_event_alive_callback,
-        cat_event_defer_callback
+        cat_event_loop_defer_callback,
+        cat_event_io_defer_callback,
     };
     (void) uv_crun(&CAT_EVENT_G(loop), &options);
 }
@@ -160,13 +203,13 @@ CAT_API cat_coroutine_t *cat_event_scheduler_close(void)
     return cat_coroutine_scheduler_close();
 }
 
-CAT_API cat_event_task_t *cat_event_register_runtime_shutdown_task(cat_data_callback_t callback, cat_data_t *data)
+CAT_API cat_event_shutdown_task_t *cat_event_register_runtime_shutdown_task(cat_event_shutdown_callback_t callback, cat_data_t *data)
 {
-    cat_event_task_t *task = (cat_event_task_t *) cat_malloc(sizeof(*task));
+    cat_event_shutdown_task_t *task = (cat_event_shutdown_task_t *) cat_malloc(sizeof(*task));
 
 #if CAT_ALLOC_HANDLE_ERRORS
     if (unlikely(task == NULL)) {
-        cat_update_last_error_of_syscall("Malloc for defer task failed");
+        cat_update_last_error_of_syscall("Malloc for runtime shutdown task failed");
         return NULL;
     }
 #endif
@@ -177,38 +220,67 @@ CAT_API cat_event_task_t *cat_event_register_runtime_shutdown_task(cat_data_call
     return task;
 }
 
-CAT_API void cat_event_unregister_runtime_shutdown_task(cat_event_task_t *task)
+CAT_API void cat_event_unregister_runtime_shutdown_task(cat_event_shutdown_task_t *task)
 {
     cat_queue_remove(&task->node);
     cat_free(task);
 }
 
-static cat_bool_t cat_event_defer_impl(cat_queue_t *queue, cat_data_callback_t callback, cat_data_t *data)
-{
-    cat_event_task_t *task = (cat_event_task_t *) cat_malloc(sizeof(*task));
-
-#if CAT_ALLOC_HANDLE_ERRORS
-    if (unlikely(task == NULL)) {
-        cat_update_last_error_of_syscall("Malloc for defer task failed");
-        return cat_false;
+CAT_API cat_event_loop_defer_task_t *cat_event_loop_defer_task_create(
+    cat_event_loop_defer_task_t *task,
+    cat_event_loop_defer_callback_t callback,
+    cat_data_t *data
+) {
+    if (task == NULL) {
+        task = (cat_event_loop_defer_task_t *) cat_malloc_unrecoverable(sizeof(*task));
+        task->allocated = cat_true;
+    } else {
+        task->allocated = cat_false;
     }
-#endif
-    task->round = CAT_EVENT_G(loop).round;
     task->callback = callback;
     task->data = data;
-    cat_queue_push_back(queue, &task->node);
-
-    return cat_true;
+    task->cancelable = cat_true;
+    task->round = CAT_EVENT_G(loop).round;
+    cat_queue_push_back(&CAT_EVENT_G(defer_tasks), &task->node);
+    return task;
 }
 
-CAT_API cat_bool_t cat_event_defer(cat_data_callback_t callback, cat_data_t *data)
+CAT_API void cat_event_loop_defer_task_close(cat_event_loop_defer_task_t *task)
 {
-    return cat_event_defer_impl(&CAT_EVENT_G(defer_tasks), callback, data);
+    if (task->cancelable) {
+        cat_queue_remove(&task->node);
+    }
+    if (task->allocated) {
+        cat_free(task);
+    }
 }
 
-CAT_API cat_bool_t cat_event_io_defer(cat_data_callback_t callback, cat_data_t *data)
+CAT_API cat_event_io_defer_task_t *cat_event_io_defer_task_create(
+    cat_event_io_defer_task_t *task,
+    cat_event_io_defer_callback_t callback,
+    cat_data_t *data
+) {
+    if (task == NULL) {
+        task = (cat_event_io_defer_task_t *) cat_malloc_unrecoverable(sizeof(*task));
+        task->allocated = cat_true;
+    } else {
+        task->allocated = cat_false;
+    }
+    task->callback = callback;
+    task->data = data;
+    task->cancelable = cat_true;
+    cat_queue_push_back(&CAT_EVENT_G(io_defer_tasks), &task->node);
+    return task;
+}
+
+CAT_API void cat_event_io_defer_task_close(cat_event_io_defer_task_t *task)
 {
-    return cat_event_defer_impl(&CAT_EVENT_G(io_defer_tasks), callback, data);
+    if (task->cancelable) {
+        cat_queue_remove(&task->node);
+    }
+    if (task->allocated) {
+        cat_free(task);
+    }
 }
 
 CAT_API void cat_event_fork(void)

@@ -670,7 +670,6 @@ int uv_crun(uv_loop_t* loop, const uv_run_options_t *options) {
     uv_update_time(loop);
 
   while (r) {
-    loop->round++;
     uv__process_reqs(loop);
     uv__idle_invoke(loop);
     uv__prepare_invoke(loop);
@@ -679,15 +678,19 @@ int uv_crun(uv_loop_t* loop, const uv_run_options_t *options) {
       uv__poll(loop, uv_backend_timeout(loop));
     else
       uv__poll_wine(loop, uv_backend_timeout(loop));
+    if (options->io_defer_cb)
+      options->io_defer_cb(loop);
     uv__metrics_update_idle_time(loop);
 
     uv__check_invoke(loop);
     uv__process_endgames(loop);
 
-    uv_update_time(loop);
+    loop->round++;
 
-    if (options->defer_cb)
-      options->defer_cb(loop);
+    if (options->loop_defer_cb)
+      options->loop_defer_cb(loop);
+
+    uv_update_time(loop);
     uv__run_timers(loop);
 
     r = !loop->stop_flag && (

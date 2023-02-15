@@ -1528,6 +1528,9 @@ static cat_always_inline cat_bool_t cat_socket_listen_impl(cat_socket_t *socket,
         cat_update_last_error_with_reason(error, "Socket listen(%d) failed", backlog);
         return cat_false;
     }
+#ifdef CAT_OS_UNIX_LIKE
+    uv__io_stop(socket_i->u.stream.loop, &socket_i->u.stream.io_watcher, POLLIN);
+#endif
     uv_unref(&socket_i->u.handle);
     socket_i->flags |= CAT_SOCKET_INTERNAL_FLAG_SERVER;
 
@@ -1576,12 +1579,18 @@ static cat_bool_t cat_socket_internal_accept(
             break;
         }
         uv_ref(&iserver->u.handle);
+#ifdef CAT_OS_UNIX_LIKE
+        uv__io_start(iserver->u.stream.loop, &iserver->u.stream.io_watcher, POLLIN);
+#endif
         iserver->context.accept.data.status = CAT_ECANCELED;
         iserver->context.accept.coroutine = CAT_COROUTINE_G(current);
         iserver->io_flags = CAT_SOCKET_IO_FLAG_ACCEPT;
         ret = cat_time_wait(timeout);
         iserver->io_flags = CAT_SOCKET_IO_FLAG_NONE;
         iserver->context.accept.coroutine = NULL;
+#ifdef CAT_OS_UNIX_LIKE
+        uv__io_stop(iserver->u.stream.loop, &iserver->u.stream.io_watcher, POLLIN);
+#endif
         uv_unref(&iserver->u.handle);
         if (unlikely(!ret)) {
             cat_update_last_error_with_previous("Socket accept wait failed");
@@ -3010,16 +3019,16 @@ static cat_never_inline cat_bool_t cat_socket_internal_udg_write(
 {
     cat_socket_fd_t fd = cat_socket_internal_get_fd_fast(socket_i);
     cat_queue_t *queue = &socket_i->context.io.write.coroutines;
-    cat_bool_t ret = cat_false, queued = !!(socket_i->io_flags & CAT_SOCKET_IO_FLAG_WRITE);
+    cat_bool_t ret = cat_false;
     ssize_t error;
 
-    socket_i->io_flags |= CAT_SOCKET_IO_FLAG_WRITE;
-    cat_queue_push_back(queue, &CAT_COROUTINE_G(current)->waiter.node);
-    if (queued) {
+    if (socket_i->io_flags & CAT_SOCKET_IO_FLAG_WRITE) {
         cat_bool_t wait_ret;
+        cat_queue_push_back(queue, &CAT_COROUTINE_G(current)->waiter.node);
         CAT_TIME_WAIT_START() {
             wait_ret = cat_time_wait(timeout);
         } CAT_TIME_WAIT_END(timeout);
+        cat_queue_remove(&CAT_COROUTINE_G(current)->waiter.node);
         if (unlikely(!wait_ret)) {
             cat_update_last_error_with_previous("Socket write failed");
             return cat_false;
@@ -3029,6 +3038,7 @@ static cat_never_inline cat_bool_t cat_socket_internal_udg_write(
             return cat_false;
         }
     }
+    socket_i->io_flags |= CAT_SOCKET_IO_FLAG_WRITE;
 
     while (1) {
         struct msghdr msg;
@@ -3068,10 +3078,8 @@ static cat_never_inline cat_bool_t cat_socket_internal_udg_write(
         break;
     }
 
-    cat_queue_remove(&CAT_COROUTINE_G(current)->waiter.node);
-    if (cat_queue_empty(queue)) {
-        socket_i->io_flags ^= CAT_SOCKET_IO_FLAG_WRITE;
-    } else {
+    socket_i->io_flags ^= CAT_SOCKET_IO_FLAG_WRITE;
+    if (!cat_queue_empty(queue)) {
         /* resume queued coroutines */
         cat_coroutine_t *waiter = cat_queue_front_data(queue, cat_coroutine_t, waiter.node);
         cat_coroutine_schedule(waiter, SOCKET, "UDG write");
@@ -4333,18 +4341,26 @@ static cat_bool_t cat_socket_internal_recv_handle(cat_socket_internal_t *socket_
 #endif
 
 #ifdef CAT_SOCKET_NATIVE_SENDFILE
-static cat_always_inline cat_bool_t cat_socket_internal_native_sendfile(cat_socket_internal_t *socket_i, cat_file_t file, size_t offset, size_t length, cat_timeout_t timeout)
+static cat_always_inline cat_bool_t cat_socket_internal_native_sendfile(cat_socket_internal_t *socket_i, cat_file_t file, int64_t offset, size_t length, cat_timeout_t timeout)
 {
+    /** @see: https://github.com/torvalds/linux/blob/38f8ccde04a3fa317b51b05e63c3cb57e1641931/include/linux/fs.h#L996 */
+    const size_t max_non_lfs = ((1UL << 31) - 1);
     size_t remain = length;
-    size_t start = offset;
+    int64_t start = offset;
 
     // TODO: support timeout?
     (void) timeout;
     while (remain > 0) {
-        int written = cat_fs_sendfile(cat_socket_internal_get_fd_fast(socket_i), file, start, remain);
+        int written = cat_fs_sendfile(
+            cat_socket_internal_get_fd_fast(socket_i),
+            file, start, CAT_MIN(remain, max_non_lfs)
+        );
         if (unlikely(written < 0)) {
             cat_update_last_error_with_previous("Socket sendfile failed when sendfile");
             goto _io_error;
+        }
+        if (written == 0) {
+            break;
         }
         start += written;
         remain -= written;
@@ -4361,7 +4377,7 @@ static cat_always_inline cat_bool_t cat_socket_internal_native_sendfile(cat_sock
 #endif
 
 #ifdef CAT_SOCKET_MOCK_SENDFILE
-static cat_always_inline cat_bool_t cat_socket_mock_sendfile(cat_socket_t *socket, cat_file_t file, size_t offset, size_t length, cat_timeout_t timeout)
+static cat_always_inline cat_bool_t cat_socket_mock_sendfile(cat_socket_t *socket, cat_file_t file, int64_t offset, size_t length, cat_timeout_t timeout)
 {
     cat_socket_internal_t *socket_i = socket->internal;
     CAT_ASSERT(socket_i != NULL);
@@ -4390,8 +4406,8 @@ static cat_always_inline cat_bool_t cat_socket_mock_sendfile(cat_socket_t *socke
             goto _io_error;
         }
         if (unlikely(read_n == 0)) {
-            cat_update_last_error(CAT_EBADF, "Socket sendfile failed when read file, unexpected EOF");
-            goto _io_error;
+            // EOF
+            break;
         }
         cat_bool_t written;
         CAT_TIME_WAIT_START() {
@@ -4418,7 +4434,7 @@ static cat_always_inline cat_bool_t cat_socket_mock_sendfile(cat_socket_t *socke
 }
 #endif
 
-static cat_always_inline cat_bool_t cat_socket_send_file_impl(cat_socket_t *socket, const char *filename, size_t offset, size_t length, cat_timeout_t timeout)
+static cat_always_inline cat_bool_t cat_socket_send_file_impl(cat_socket_t *socket, const char *filename, int64_t offset, size_t length, cat_timeout_t timeout)
 {
     // we use IO_FLAG_WRITE instead of IO_FLAG_NONE here, because sendfile includes multi operations
     CAT_SOCKET_IO_CHECK(socket, socket_i, CAT_SOCKET_IO_FLAG_WRITE, return cat_false);
@@ -4429,19 +4445,6 @@ static cat_always_inline cat_bool_t cat_socket_send_file_impl(cat_socket_t *sock
     if (unlikely(file < 0)) {
         cat_update_last_error_with_previous("Socket sendfile failed when open file");
         return cat_false;
-    }
-
-    if (length == 0) {
-        cat_stat_t statbuf;
-        if (unlikely(cat_fs_fstat(file, &statbuf) != 0)) {
-            cat_update_last_error_with_previous("Socket sendfile failed when stat file");
-            goto _out;
-        }
-        if (offset > (size_t) statbuf.st_size) {
-            cat_update_last_error(CAT_EINVAL, "Socket sendfile failed, reason: offset is out of range");
-            goto _out;
-        }
-        length = statbuf.st_size - offset;
     }
 
 #ifdef CAT_SOCKET_NATIVE_SENDFILE
@@ -4461,24 +4464,23 @@ static cat_always_inline cat_bool_t cat_socket_send_file_impl(cat_socket_t *sock
     }
 #endif
 
-    _out:
     cat_fs_close(file);
     return ret;
 }
 
-CAT_API cat_bool_t cat_socket_send_file(cat_socket_t *socket, const char *filename, size_t offset, size_t length)
+CAT_API cat_bool_t cat_socket_send_file(cat_socket_t *socket, const char *filename, int64_t offset, size_t length)
 {
     return cat_socket_send_file_ex(socket, filename, offset, length, cat_socket_get_write_timeout_fast(socket));
 }
 
-CAT_API cat_bool_t cat_socket_send_file_ex(cat_socket_t *socket, const char *filename, size_t offset, size_t length, cat_timeout_t timeout)
+CAT_API cat_bool_t cat_socket_send_file_ex(cat_socket_t *socket, const char *filename, int64_t offset, size_t length, cat_timeout_t timeout)
 {
-    CAT_LOG_DEBUG(SOCKET, "send_file(" CAT_SOCKET_ID_FMT ", \"%s\", %zu, %zu, " CAT_TIMEOUT_FMT ") = " CAT_LOG_UNFINISHED_STR,
+    CAT_LOG_DEBUG(SOCKET, "send_file(" CAT_SOCKET_ID_FMT ", \"%s\", %" PRId64 ", %zu, " CAT_TIMEOUT_FMT ") = " CAT_LOG_UNFINISHED_STR,
         socket->id, filename, offset, length, timeout);
 
     cat_bool_t ret = cat_socket_send_file_impl(socket, filename, offset, length, timeout);
 
-    CAT_LOG_DEBUG(SOCKET, "send_file(" CAT_SOCKET_ID_FMT ", \"%s\", %zu, %zu, " CAT_TIMEOUT_FMT ") = " CAT_LOG_BOOL_RET_FMT,
+    CAT_LOG_DEBUG(SOCKET, "send_file(" CAT_SOCKET_ID_FMT ", \"%s\", %" PRId64 ", %zu, " CAT_TIMEOUT_FMT ") = " CAT_LOG_BOOL_RET_FMT,
         socket->id, filename, offset, length, timeout, CAT_LOG_BOOL_RET_C(ret));
 
     return ret;

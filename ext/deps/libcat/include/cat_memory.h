@@ -131,6 +131,28 @@ static cat_always_inline void *cat_sys_realloc_unrecoverable(void *ptr, size_t s
     return ptr;
 }
 
+static cat_always_inline void *cat_malloc_unrecoverable(size_t size)
+{
+    void *ptr = cat_malloc(size);
+#if CAT_ALLOC_HANDLE_ERRORS
+    if (unlikely(ptr == NULL && size != 0)) {
+        cat_out_of_memory();
+    }
+#endif
+    return ptr;
+}
+
+static cat_always_inline void *cat_calloc_unrecoverable(size_t count, size_t size)
+{
+    void *ptr = cat_calloc(count, size);
+#if CAT_ALLOC_HANDLE_ERRORS
+    if (unlikely(ptr == NULL && count != 0 && size != 0)) {
+        cat_out_of_memory();
+    }
+#endif
+    return ptr;
+}
+
 #ifdef CAT_USE_DYNAMIC_ALLOCATOR
 typedef void *(*cat_malloc_function_t)(size_t size);
 typedef void *(*cat_calloc_function_t)(size_t count, size_t size);

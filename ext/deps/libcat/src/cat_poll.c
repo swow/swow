@@ -182,13 +182,27 @@ typedef struct cat_poll_one_s {
         int status; // uv status
         uv_events_t events; // uv events, e.g UV_EVENT_READABLE, UV_EVENT_WRITABLE...
     } ret;
-    cat_bool_t deferred_done_callback;
+    cat_event_io_defer_task_t *done_task;
 } cat_poll_one_t;
 
-static void cat_poll_one_done_callback(cat_data_t *data)
+static void cat_poll_one_close_callback(uv_handle_t *handle)
+{
+    cat_poll_one_t *poll = cat_container_of(handle, cat_poll_one_t, u.handle);
+    /** @see poll_free_callback() comments.  */
+    cat_free(poll);
+}
+
+static void cat_poll_one_done_callback(cat_event_io_defer_task_t *task, cat_data_t *data)
 {
     cat_poll_one_t *poll = (cat_poll_one_t *) data;
 
+    /** @note: we can recognize cancel operation via
+     * close task and set task to NULL, but  it's not necessary. */
+    (void) task;
+    /** @note coroutine maybe force resumed when poll_callback() was called
+     * but poll_done_callback() has not been called, before, we have to check
+     * whether it exists here, but now we are using event_defer_task_close()
+     * to cancel this callback, so schedule is always safe. */
     cat_coroutine_schedule(poll->u.coroutine, EVENT, "Poll one");
 }
 
@@ -208,17 +222,12 @@ static void cat_poll_one_callback(uv_poll_t* handle, int status, uv_events_t eve
     poll->ret.events |= events;
 
     /* Note: for get all revents at once,
-     * we should schedule coroutine in io defer callback */
-    if (!poll->deferred_done_callback) {
-        (void) cat_event_io_defer(cat_poll_one_done_callback, poll);
-        poll->deferred_done_callback = cat_true;
+     * we should schedule coroutine in io defer callback,
+     * and callback may be called multiple times,
+     * so we must check whether defer task has been registered here. */
+    if (poll->done_task == NULL) {
+        poll->done_task = cat_event_io_defer_task_create(NULL, cat_poll_one_done_callback, poll);
     }
-}
-
-static void cat_poll_one_close_callback(uv_handle_t *handle)
-{
-    cat_poll_one_t *poll = cat_container_of(handle, cat_poll_one_t, u.handle);
-    cat_free(poll);
 }
 
 static cat_ret_t cat_poll_one_impl(cat_os_socket_t fd, cat_pollfd_events_t events, cat_pollfd_events_t *revents, cat_timeout_t timeout)
@@ -270,9 +279,13 @@ static cat_ret_t cat_poll_one_impl(cat_os_socket_t fd, cat_pollfd_events_t event
     poll->ret.status = CAT_ECANCELED;
     poll->ret.events = UV_EVENT_NONE;
     poll->u.coroutine = CAT_COROUTINE_G(current);
-    poll->deferred_done_callback = cat_false;
+    poll->done_task = NULL;
 
     ret = cat_time_delay(timeout);
+
+    if (poll->done_task != NULL) {
+        cat_event_io_defer_task_close(poll->done_task);
+    }
 
 #ifdef CAT_OS_UNIX_LIKE
     if (_fd != fd) {
@@ -282,7 +295,7 @@ static cat_ret_t cat_poll_one_impl(cat_os_socket_t fd, cat_pollfd_events_t event
     uv_close(&poll->u.handle, cat_poll_one_close_callback);
 
     switch (ret) {
-        /* delay cancelled */
+        /* delay canceled */
         case CAT_RET_NONE: {
             if (unlikely(poll->ret.status < 0)) {
                 if (poll->ret.status == CAT_ECANCELED) {
@@ -352,9 +365,8 @@ CAT_API cat_ret_t cat_poll_one(cat_os_socket_t fd, cat_pollfd_events_t events, c
 
 typedef struct cat_poll_context_s {
     cat_coroutine_t *coroutine;
-    cat_bool_t done;
-    cat_bool_t deferred_done_callback;
-    cat_bool_t deferred_free_callback;
+    cat_event_io_defer_task_t *done_task;
+    cat_event_loop_defer_task_t *free_task;
 } cat_poll_context_t;
 
 typedef struct {
@@ -376,15 +388,23 @@ typedef struct {
 #endif
 } cat_poll_t;
 
-static void cat_poll_free_callback(void *data)
+static void cat_poll_free_callback(cat_event_loop_defer_task_t *task, cat_data_t *data)
 {
-    /** @record: previously, we double defer here to avoid use-after-free,
+    cat_poll_context_t *context = (cat_poll_context_t *) data;
+    /** @record: (2) we should guarantee that poll_free_callback() is called
+     * after poll_done_callback(), otherwise, we may got a free'd context
+     * in poll_done_callback(). previously, we use double defer because we
+     * can not guarantee that free_callback is always after done_callback,
+     * now we use defer() with delay 1 instead of defer() with delay 0 to
+     * guarantee free_callback is always after done_callback. */
+    /** @record: (1) previously, we double defer here to avoid use-after-free,
      * but after we refactor defer mechanism in uv_crun(), it seems that
      * we do not need double defer again, but it had to be verified, just
      * let us try to remove the double defer for now.
      *
-     * code before: `cat_event_defer(cat_free_function, data);` */
-    cat_free(data);
+     * code before: `cat_event_defer(cat_free_function, context);` */
+    cat_free(context);
+    cat_event_loop_defer_task_close(task);
 }
 
 static void cat_poll_close_callback(uv_handle_t *handle)
@@ -397,20 +417,27 @@ static void cat_poll_close_callback(uv_handle_t *handle)
         uv__close(poll->fd_dup);
     }
 #endif
-    if (!context->deferred_free_callback) {
-        (void) cat_event_defer(cat_poll_free_callback, context);
-        context->deferred_free_callback = cat_true;
+    /* multi polls uses the same context,
+     * check if other poll has been deferred the free callback */
+    if (context->free_task == NULL) {
+        context->free_task = cat_event_loop_defer_task_create(
+            NULL, cat_poll_free_callback, context
+        );
     }
 }
 
-static void cat_poll_done_callback(cat_data_t *data)
+static void cat_poll_done_callback(cat_event_io_defer_task_t *task, cat_data_t *data)
 {
     cat_poll_context_t *context = (cat_poll_context_t *) data;
 
-    if (unlikely(context->done)) {
-        // done
-        return;
-    }
+    /** @note: we can recognize cancel operation via
+     * event_defer_task_close(context->done_task) + context->done_task = NULL,
+     * but it is not necessary. */
+    (void) task;
+    /** @note coroutine maybe force resumed when poll_callback() was called
+     * but poll_done_callback() has not been called, so we have to check
+     * if it is done here before, but now we are using event_defer_task_close()
+     * to cancel this callback, so schedule is always safe. */
     cat_coroutine_schedule(context->coroutine, EVENT, "Poll");
 }
 
@@ -432,9 +459,8 @@ static void cat_poll_callback(uv_poll_t* handle, int status, uv_events_t events)
 
     /* Note: for get all revents of all pollfd at once,
      * we should schedule coroutine in io defer callback */
-    if (!context->deferred_done_callback) {
-        (void) cat_event_io_defer(cat_poll_done_callback, context);
-        context->deferred_done_callback = cat_true;
+    if (context->done_task == NULL) {
+        context->done_task = cat_event_io_defer_task_create(NULL, cat_poll_done_callback, context);
     }
 }
 
@@ -443,10 +469,12 @@ static int cat_poll_impl(cat_pollfd_t *fds, cat_nfds_t nfds, cat_timeout_t timeo
     CAT_POLL_CHECK_TIMEOUT(timeout);
     cat_poll_context_t *context;
     cat_poll_t *polls;
-    cat_nfds_t i, n = 0, e = 0;
+    cat_nfds_t i = 0, e = 0, r = 0;
     cat_ret_t ret;
+    int n = 0; // use int instead, because nfds_t maybe unsigned, can not be -1 (ERROR)
     int error = 0;
 
+    /** @note: context memory includes poll objects. */
     context = (cat_poll_context_t *) cat_malloc(sizeof(*context) + sizeof(*polls) * nfds);
 #if CAT_ALLOC_HANDLE_ERRORS
     if (unlikely(context == NULL)) {
@@ -457,10 +485,9 @@ static int cat_poll_impl(cat_pollfd_t *fds, cat_nfds_t nfds, cat_timeout_t timeo
     polls = (cat_poll_t *) (((char *) context) + sizeof(*context));
 
     context->coroutine = CAT_COROUTINE_G(current);
-    context->done = cat_false;
-    context->deferred_done_callback = cat_false;
-    context->deferred_free_callback = cat_false;
-    for (i = 0; i < nfds;) {
+    context->done_task = NULL;
+    context->free_task = NULL;
+    for (; i < nfds; i++) {
         cat_pollfd_t *fd = &fds[i];
         cat_poll_t *poll = &polls[i];
         fd->revents = POLLNONE; // clear it
@@ -493,6 +520,7 @@ static int cat_poll_impl(cat_pollfd_t *fds, cat_nfds_t nfds, cat_timeout_t timeo
                 break;
             }
             poll->initialized = cat_true;
+            r++;
             if (e > 0) {
                 /* fast return without starting handle */
                 break;
@@ -505,27 +533,32 @@ static int cat_poll_impl(cat_pollfd_t *fds, cat_nfds_t nfds, cat_timeout_t timeo
             }
             poll->ret.status = CAT_ECANCELED;
         } while (0);
-        i++;
     }
 
     if (e > 0) {
         /* fast return without waiting */
         ret = CAT_RET_NONE;
+        CAT_ASSERT(context->done_task == NULL);
     } else {
         ret = cat_time_delay(timeout);
         if (unlikely(ret == CAT_RET_ERROR)) {
+            CAT_ASSERT(context->done_task == NULL);
             cat_update_last_error_with_previous("Poll wait failed");
-            goto _error;
+            n = CAT_RET_ERROR;
+        } else if (context->done_task != NULL) {
+            cat_event_io_defer_task_close(context->done_task);
         }
     }
-
-    context->done = cat_true; // let defer know it was done
 
     for (; i-- > 0;) {
         cat_pollfd_t *fd = &fds[i];
         cat_poll_t *poll = &polls[i];
         if (poll->initialized) {
             uv_close(&poll->u.handle, cat_poll_close_callback);
+        }
+        if (unlikely(ret == CAT_RET_ERROR)) {
+            /* just close handle and go to the next one */
+            continue;
         }
         if (unlikely(ret == CAT_RET_NONE && poll->ret.status < 0)) {
             if (poll->ret.status == CAT_ECANCELED) {
@@ -550,25 +583,13 @@ static int cat_poll_impl(cat_pollfd_t *fds, cat_nfds_t nfds, cat_timeout_t timeo
         }
     }
 
-    if (!(nfds > e)) {
+    if (r == 0) {
+        /* no handle is initialized, close callback will never
+         * be called, so free context directly here. */
         cat_free(context);
     }
 
     return n;
-
-    _error:
-    CAT_ASSERT(!context->deferred_done_callback);
-    if (nfds > e) {
-        for (; i > 0; i--) {
-            cat_poll_t *poll = &polls[i];
-            if (poll->initialized) {
-                uv_close(&poll->u.handle, cat_poll_close_callback);
-            }
-        }
-    } else {
-        cat_free(context);
-    }
-    return CAT_RET_ERROR;
 }
 
 #ifdef CAT_ENABLE_DEBUG_LOG

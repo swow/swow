@@ -284,9 +284,9 @@ static cat_always_inline cat_bool_t cat_coroutine__schedule(cat_coroutine_t *cor
     return ret;
 }
 
-#define cat_coroutine_schedule(coroutine, module_name, name, ...) do { \
+#define cat_coroutine_schedule(coroutine, module_name, fmt, ...) do { \
     if (unlikely(!cat_coroutine__schedule(coroutine))) { \
-        CAT_CORE_ERROR_WITH_LAST(module_name, name " schedule failed", ##__VA_ARGS__); \
+        CAT_CORE_ERROR_WITH_LAST(module_name, fmt " schedule failed", ##__VA_ARGS__); \
     } \
 } while (0)
 

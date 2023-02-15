@@ -177,7 +177,7 @@ _cat_coroutine_context_ontop:
     lwz  r29, 216(r1)  ; restore R29
     lwz  r30, 220(r1)  ; restore R30
     lwz  r31, 224(r1)  ; restore R31
-    lwz  r4,  228(r1)  ; restore hidden
+    lwz  r3,  228(r1)  ; restore hidden
 
     ; restore CR
     lwz   r0, 232(r1)
@@ -190,12 +190,12 @@ _cat_coroutine_context_ontop:
     ; adjust stack
     addi  r1, r1, 244
 
-    ; return transfer_t 
-    stw  r7, 0(r4)
-    stw  r5, 4(r4)
-
-    ; restore CTR
-    mtctr r6
-
-    ; jump to ontop-function
-    bctr
+    ; Need to pass ontop_fcontext_tail(
+    ;   hidden R3,
+    ;   R4 = ignore,
+    ;   R5 = data,
+    ;   R6 = ontop-function,
+    ;   R7 = fcontext_t
+    ; )
+    ; All of these registers are correctly set at this point
+    b _ontop_fcontext_tail

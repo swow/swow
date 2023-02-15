@@ -29,12 +29,14 @@ typedef uint64_t cat_event_round_t;
 #define CAT_EVENT_ROUND_FMT "%" PRIu64
 #define CAT_EVENT_ROUND_FMT_SPEC PRIu64
 
-typedef struct cat_event_task_s {
-    cat_queue_node_t node;
-    cat_data_callback_t callback;
-    cat_data_t *data;
-    uint64_t round;
-} cat_event_task_t;
+typedef cat_data_callback_t cat_event_shutdown_callback_t;
+typedef struct cat_event_shutdown_task_s cat_event_shutdown_task_t;
+
+typedef struct cat_event_loop_defer_task_s cat_event_loop_defer_task_t;
+typedef void (*cat_event_loop_defer_callback_t)(cat_event_loop_defer_task_t *task, cat_data_t *data);
+
+typedef struct cat_event_io_defer_task_s cat_event_io_defer_task_t;
+typedef void (*cat_event_io_defer_callback_t)(cat_event_io_defer_task_t *task, cat_data_t *data);
 
 CAT_GLOBALS_STRUCT_BEGIN(cat_event) {
     uv_loop_t loop;
@@ -61,17 +63,30 @@ CAT_API cat_event_round_t cat_event_get_round(void);
 CAT_API cat_coroutine_t *cat_event_scheduler_run(cat_coroutine_t *coroutine);
 CAT_API cat_coroutine_t *cat_event_scheduler_close(void);
 
-/* Notice: we should not call any event related APIs in shutdown task */
-CAT_API cat_event_task_t *cat_event_register_runtime_shutdown_task(cat_data_callback_t callback, cat_data_t *data);
-CAT_API void cat_event_unregister_runtime_shutdown_task(cat_event_task_t *task);
+/* Note: we should not call any event related APIs in shutdown task */
+CAT_API cat_event_shutdown_task_t *cat_event_register_runtime_shutdown_task(cat_event_shutdown_callback_t callback, cat_data_t *data);
+/* Note: it can only be called before shutdown. */
+CAT_API void cat_event_unregister_runtime_shutdown_task(cat_event_shutdown_task_t *task);
 
-/* defer task callback will be called in the next event loop,
- * it's useful to free memory later. */
-CAT_API cat_bool_t cat_event_defer(cat_data_callback_t callback, cat_data_t *data);
+/* defer task callbacks will be called in the current_round + 1 event loop,
+ * it's useful to free memory later safely.  */
+CAT_API cat_event_loop_defer_task_t *cat_event_loop_defer_task_create(
+    cat_event_loop_defer_task_t *task,
+    cat_event_loop_defer_callback_t callback,
+    cat_data_t *data
+);
+/** tasks that have not yet run will be canceled. */
+CAT_API void cat_event_loop_defer_task_close(cat_event_loop_defer_task_t *task);
 
-/* io defer task callback will be called after all io event callbacks were called,
- * it's useful to merge multiple io events to improve performance. */
-CAT_API cat_bool_t cat_event_io_defer(cat_data_callback_t callback, cat_data_t *data);
+/* io defer task callbacks will be called after all io events in the current_round,
+ * it's useful to merge multiple io events.  */
+CAT_API cat_event_io_defer_task_t *cat_event_io_defer_task_create(
+    cat_event_io_defer_task_t *task,
+    cat_event_io_defer_callback_t callback,
+    cat_data_t *data
+);
+/** tasks that have not yet run will be canceled. */
+CAT_API void cat_event_io_defer_task_close(cat_event_io_defer_task_t *task);
 
 CAT_API void cat_event_fork(void);
 

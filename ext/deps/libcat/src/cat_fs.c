@@ -1798,7 +1798,7 @@ typedef struct cat_fs_flock_data_s {
     cat_bool_t done; /* new thread finished */
     uv_thread_t tid;
     cat_async_t async;
-    cat_event_task_t *shutdown_task;
+    cat_event_shutdown_task_t *shutdown_task;
 } cat_fs_flock_data_t;
 
 /*
