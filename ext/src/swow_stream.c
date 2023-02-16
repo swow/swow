@@ -2079,6 +2079,9 @@ zend_result swow_stream_runtime_init(INIT_FUNC_ARGS)
     SWOW_STREAM_G(hooking_stdio_ops) = cat_true;
     SWOW_STREAM_G(hooking_plain_wrapper) = cat_true;
 
+    // prepare tty sockets (FIXME: Why won't Zend bzero() it when we are in ZTS?)
+    memset(SWOW_STREAM_G(tty_sockets), 0, sizeof(SWOW_STREAM_G(tty_sockets)));
+
     if (PHP_FN(original_socket_export_stream) == (zif_handler) -1) {
         (void) swow_hook_internal_function_handler_ex(
             ZEND_STRL("socket_export_stream"),
