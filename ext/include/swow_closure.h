@@ -37,6 +37,16 @@ extern SWOW_API CAT_GLOBALS_DECLARE(swow_closure);
 
 /* helper functions */
 
+static zend_always_inline bool swow_object_is_closure(zend_object *object)
+{
+    return instanceof_function(object->ce, zend_ce_closure);
+}
+
+static zend_always_inline bool swow_zval_is_closure(zval *z_value)
+{
+    return Z_TYPE_P(z_value) == IS_OBJECT && swow_object_is_closure(Z_OBJ_P(z_value));
+}
+
 static zend_always_inline bool swow_function_is_anonymous(const zend_function *function)
 {
     return (function->common.fn_flags & (ZEND_ACC_CLOSURE | ZEND_ACC_FAKE_CLOSURE)) == ZEND_ACC_CLOSURE;
