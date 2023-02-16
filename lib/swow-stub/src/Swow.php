@@ -1345,7 +1345,10 @@ namespace Swow
          * @throws SocketException when got eof without enough data received
          * @throws SocketException when timed out
          * @throws SocketException when socket read failed
-         * @param Buffer $buffer buffer to write in, data will be written from buffer current position
+         * @param Buffer $buffer buffer to write in, data will be written from offset to offset + length
+         * @phan-param int<0, max> $offset
+         * @psalm-param int<0, max> $offset
+         * @param int $offset offset is the start position to write in buffer
          * @phan-param int<-1, max> $length
          * @psalm-param int<-1, max> $length
          * @param int $length -1 meaning not limited, receive until eof, otherwise length in bytes
@@ -1362,7 +1365,10 @@ namespace Swow
          *
          * @throws SocketException when timed out
          * @throws SocketException when socket read failed
-         * @param Buffer $buffer buffer to write in, data will be written from buffer current position
+         * @param Buffer $buffer buffer to write in, data will be written from offset to offset + length
+         * @phan-param int<0, max> $offset
+         * @psalm-param int<0, max> $offset
+         * @param int $offset offset is the start position to write in buffer
          * @phan-param int<-1, max> $size
          * @psalm-param int<-1, max> $size
          * @param int $size -1 meaning not limited, otherwise buffer size in bytes. only `$size` bytes data will be read from socket if there are more data than `$size` bytes, extra data will be kept in socket for further reading options
@@ -1380,7 +1386,10 @@ namespace Swow
          * @throws SocketException when no data received
          * @throws SocketException when timed out
          * @throws SocketException when socket read failed
-         * @param Buffer $buffer buffer to write in, data will be written from buffer current position
+         * @param Buffer $buffer buffer to write in, data will be written from offset to offset + length
+         * @phan-param int<0, max> $offset
+         * @psalm-param int<0, max> $offset
+         * @param int $offset offset is the start position to write in buffer
          * @phan-param int<-1, max> $size
          * @psalm-param int<-1, max> $size
          * @param int $size -1 meaning not limited, otherwise buffer size in bytes. only `$size` bytes data will be read from socket if there are more data than `$size` bytes, extra data will be kept in socket for further reading options
@@ -1397,7 +1406,10 @@ namespace Swow
          *
          * @throws SocketException when timed out
          * @throws SocketException when socket read failed
-         * @param Buffer $buffer buffer to write in, data will be written from buffer current position
+         * @param Buffer $buffer buffer to write in, data will be written from offset to offset + length
+         * @phan-param int<0, max> $offset
+         * @psalm-param int<0, max> $offset
+         * @param int $offset offset is the start position to write in buffer
          * @phan-param int<-1, max> $size
          * @psalm-param int<-1, max> $size
          * @param int $size -1 meaning not limited, otherwise buffer size in bytes. only `$size` bytes data will be read from socket if there are more data than `$size` bytes, extra data will be kept in socket for further reading options
@@ -1420,7 +1432,10 @@ namespace Swow
          * @throws SocketException when no data received
          * @throws SocketException when timed out
          * @throws SocketException when socket read failed
-         * @param Buffer $buffer buffer to write in, data will be written from buffer current position
+         * @param Buffer $buffer buffer to write in, data will be written from offset to offset + length
+         * @phan-param int<0, max> $offset
+         * @psalm-param int<0, max> $offset
+         * @param int $offset offset is the start position to write in buffer
          * @phan-param int<-1, max> $size
          * @psalm-param int<-1, max> $size
          * @param int $size -1 meaning not limited, otherwise buffer size in bytes. only `$size` bytes data will be read from socket if there are more data than `$size` bytes, extra data will be kept in socket for further reading options
@@ -1439,7 +1454,10 @@ namespace Swow
          * returns immediately.
          *
          * @throws SocketException when socket read failed
-         * @param Buffer $buffer buffer to write in, data will be written from buffer current position
+         * @param Buffer $buffer buffer to write in, data will be written from offset to offset + length
+         * @phan-param int<0, max> $offset
+         * @psalm-param int<0, max> $offset
+         * @param int $offset offset is the start position to write in buffer
          * @phan-param int<-1, max> $size
          * @psalm-param int<-1, max> $size
          * @param int $size -1 meaning not limited, otherwise buffer size in bytes.
@@ -1454,7 +1472,10 @@ namespace Swow
          * returns immediately.
          *
          * @throws SocketException when socket read failed
-         * @param Buffer $buffer buffer to write in, data will be written from buffer current position
+         * @param Buffer $buffer buffer to write in, data will be written from offset to offset + length
+         * @phan-param int<0, max> $offset
+         * @psalm-param int<0, max> $offset
+         * @param int $offset offset is the start position to write in buffer
          * @phan-param int<-1, max> $size
          * @psalm-param int<-1, max> $size
          * @param int $size -1 meaning not limited, otherwise buffer size in bytes.
@@ -1594,19 +1615,20 @@ namespace Swow
          * write io vector to socket
          *
          * vector is an array for all contents to write, elements in it maybe
-         * - `Buffer`: write full text from current position
-         * - `string|Stringable`: write full text from start
-         * - `array[Buffer $content, int $length]`: write it from current position, with length `$length`
-         * - `array[string|Stringable $content, int $offset, ?int $length]`: write the string from index `$offset`, with length `$length`
+         * - `Buffer`: write full text from start `$start`
+         * - `string|Stringable`: write full text from start `$start`
+         * - `array[Buffer $content, int $start, int $length]`: write it from start `$start`, with length `$length`
+         * - `array[string|Stringable $content, int $start, int $offset, ?int $length]`:
+         *      write the string from start `$start`, with length `$length`, and offset `$offset` in the string
          *
          * for code
          * ```php
          * $s = new Socket(Socket::TYPE_STDOUT);
          * $s->write([
-         * (new Buffer(0))->write('1234567890')->seek(6),
-         * 'abc',
-         * ['1234567890', 1, 2],
-         * [(new Buffer(0))->write('1234567890')->seek(4), 2],
+         *     (new Buffer(0))->write('1234567890', start: 6),
+         *     'abc',
+         *     ['1234567890', 1, 2],
+         *     [(new Buffer(0))->write('1234567890', start: 4), 2],
          * ]);
          * ```
          * string `"7890abc2356"` will be written to the socket.
@@ -1645,25 +1667,31 @@ namespace Swow
         public function writeTo(array $vector, ?string $address = null, ?int $port = null, ?int $timeout = null): static { }
 
         /**
-         * write buffer into socket from buffer current position with `$length` bytes
+         * write data into socket from `$start` of data with `$length` bytes
          *
          * @throws SocketException when timed out
          * @throws SocketException when write failed
+         * @phpstan-param int<0, max> $start
+         * @psalm-param int<0, max> $start
+         * @param int $start where to start reading from $data
          * @phpstan-param int<-1, max> $length
          * @psalm-param int<-1, max> $length
-         * @param int $length length of data to be sent, -1 meaning remaining data in buffer, otherwise length in bytes.
+         * @param int $length length of data to be sent, -1 meaning remaining data in $data, otherwise length in bytes.
          * @param int|null $timeout timeout in microseconds or null for using {@see Socket::getWriteTimeout()} value
          */
         public function send(\Stringable|string $data, int $start = 0, int $length = -1, ?int $timeout = null): static { }
 
         /**
-         * write buffer to specified address (and port if protocol needs port) from buffer current position with `$length` bytes
+         * write data to specified address (and port if protocol needs port) from `$start` of data with `$length` bytes
          *
          * @throws SocketException when timed out
          * @throws SocketException when write failed
+         * @phpstan-param int<0, max> $start
+         * @psalm-param int<0, max> $start
+         * @param int $start where to start reading from $data
          * @phpstan-param int<-1, max> $length
          * @psalm-param int<-1, max> $length
-         * @param int $length length of data to be sent, -1 meaning remaining data in buffer, otherwise length in bytes.
+         * @param int $length length of data to be sent, -1 meaning remaining data in $data, otherwise length in bytes.
          * @param int|null $timeout timeout in microseconds or null for using {@see Socket::getWriteTimeout()} value
          * @param string|null $address address to send to, may be ip or domain or path (for UNIX/UDG type)
          * @phpstan-param int<0, 65535>|null $port
@@ -1672,9 +1700,17 @@ namespace Swow
          */
         public function sendTo(\Stringable|string $data, int $start = 0, int $length = -1, ?string $address = null, ?int $port = null, ?int $timeout = null): static { }
 
-        /** @var int $timeout [optional] = $this->getWriteTimeout() */
+        /**
+         * Send a socket handle to peer via pipe socket
+         * @var int $timeout [optional] = $this->getWriteTimeout()
+         */
         public function sendHandle(self $handle, ?int $timeout = null): static { }
 
+        /**
+         * Send file without memory allocation or memory copy
+         * @var int $offset [optional] = 0
+         * @var int $timeout [optional] = $this->getWriteTimeout()
+         */
         public function sendFile(string $filename, int $offset = 0, int $length = 0, ?int $timeout = null): static { }
 
         public function close(): bool { }
