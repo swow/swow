@@ -1258,7 +1258,7 @@ static PHP_METHOD(Swow_Socket, sendFile)
     SWOW_SOCKET_GETTER(s_socket, socket);
     zend_string *filename;
     zend_long offset = 0;
-    zend_long length = 0;
+    zend_long length = -1;
     zend_long timeout;
     zend_bool timeout_is_null = 1;
     cat_bool_t ret;
@@ -1271,6 +1271,9 @@ static PHP_METHOD(Swow_Socket, sendFile)
         Z_PARAM_LONG_OR_NULL(timeout, timeout_is_null)
     ZEND_PARSE_PARAMETERS_END();
 
+    if (length < 0) {
+        length = CAT_SOCKET_SEND_FILE_MAX_LENGTH;
+    }
     if (timeout_is_null) {
         timeout = cat_socket_get_write_timeout(socket);
     }
