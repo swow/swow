@@ -26,6 +26,7 @@ return (new Config())
                 '*.phpt',
             ])
             ->in([
+                __DIR__ . '/.github',
                 __DIR__ . '/.phan',
                 __DIR__ . '/benchmark',
                 __DIR__ . '/examples',
