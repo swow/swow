@@ -137,7 +137,8 @@ abstract class AbstractMessage implements MessagePlusInterface
                 $this->headers[$rawName][] = $value;
             }
         } else {
-            $this->headers[$rawName] = is_array($value) ? $value : [(string) $value];
+            $this->headerNames[$lowercaseName] = $name;
+            $this->headers[$name] = is_array($value) ? $value : [(string) $value];
         }
 
         return $this;
