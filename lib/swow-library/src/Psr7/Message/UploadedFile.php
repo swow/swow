@@ -25,6 +25,7 @@ use function is_resource;
 use function is_string;
 use function pathinfo;
 use function sprintf;
+use function Swow\Debug\isStringable;
 
 use const PATHINFO_EXTENSION;
 use const PHP_SAPI;
@@ -130,7 +131,7 @@ class UploadedFile implements UploadedFilePlusInterface, ArrayableInterface
 
     public function moveTo(mixed $targetPath): void
     {
-        if (!is_string($targetPath)) {
+        if (!isStringable($targetPath)) {
             throw new TypeError(sprintf('%s(): Argument#1 ($targetPath) must be a string, %s given', __METHOD__, get_debug_type($targetPath)));
         }
         $targetPath = (string) $targetPath;
