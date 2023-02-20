@@ -3,6 +3,10 @@ name: tests
 #on: [gollum]
 on: [push, pull_request]
 
+env:
+  SWOW_HAVE_SSL: 1
+  SWOW_HAVE_CURL: 1
+
 jobs:
   cs-check:
     name: Library coding style check

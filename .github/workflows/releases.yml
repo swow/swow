@@ -10,6 +10,10 @@ on:
     tags:
     - 'v*'
 
+env:
+  SWOW_HAVE_SSL: 1
+  SWOW_HAVE_CURL: 1
+
 jobs:
   builddlls:
     # this name is used after, change it with cautious

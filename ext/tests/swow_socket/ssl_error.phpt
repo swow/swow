@@ -3,6 +3,7 @@ swow_socket: SSL error
 --SKIPIF--
 <?php
 require __DIR__ . '/../include/skipif.php';
+skip_if(!getenv('SWOW_HAVE_SSL') && !Swow\Extension::isBuiltWith('ssl'), 'extension must be built with libcurl');
 ?>
 --FILE--
 <?php

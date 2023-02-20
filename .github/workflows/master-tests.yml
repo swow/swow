@@ -8,6 +8,10 @@ on:
     # upstream shivammathur/php-builder* run at 23:30+0000 per day
     - cron:  '42 3 * * *'
 
+env:
+  SWOW_HAVE_SSL: 1
+  SWOW_HAVE_CURL: 1
+
 jobs:
   unix-tests:
     name: PHP latest Test on ${{ matrix.os }}
