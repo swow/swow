@@ -30,6 +30,13 @@ jobs:
   unix-tests:
     name: PHP ${{ matrix.php-version }} ${{ matrix.ts }} Test on ${{ matrix.os }}
     runs-on: "${{ matrix.os }}"
+    services:
+      postgres:
+        image: postgres
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+            - 5432:5432
     strategy:
       fail-fast: false
       matrix:
