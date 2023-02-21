@@ -99,6 +99,7 @@ jobs:
           printf "\033[1mStart build Swow\033[0m\n"
           make -j`${{ runner.os == 'Linux' && 'nproc' || 'sysctl -n hw.logicalcpu' }}`
           printf "\033[1mDone build Swow\033[0m\n"
+          php -m
           php -n -d extension=.libs/swow.so --ri swow
           printf "\033[1mInstall Swow\033[0m\n"
           ${{ runner.os == 'Linux' && 'sudo' || ''}} make install-modules
