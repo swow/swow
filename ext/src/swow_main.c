@@ -683,7 +683,7 @@ SWOW_API const char *swow_extra_version(void)
 
 static const zend_module_dep swow_deps[] = {
 #ifdef CAT_HAVE_PQ
-    ZEND_MOD_REQUIRED("pdo")
+    ZEND_MOD_REQUIRED("PDO")
 #endif
     ZEND_MOD_END
 };
