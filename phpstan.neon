@@ -7,8 +7,6 @@ parameters:
         - tools
     stubFiles:
         - lib/swow-stub/src/Swow.php
-    bootstrapFiles:
-        - lib/swow-stub/src/Swow.php
     checkGenericClassInNonGenericObjectType: false
     ignoreErrors:
         - '/Anonymous function has an unused use \$wr[\w]*\./'
