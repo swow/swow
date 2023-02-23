@@ -83,3 +83,11 @@ CAT_API size_t cat_io_vector_length(const cat_io_vector_t *vector, unsigned int 
 
 CAT_API int cat_clock_gettime_realtime(struct timespec *tp);
 CAT_API int cat_clock_gettime_monotonic(struct timespec *tp);
+
+/* select */
+
+#ifndef CAT_OS_WIN
+# define cat_sys_select(nfds, readfds, writefds, errorfds, timeout) select(nfds, readfds, writefds, errorfds, timeout)
+#else
+CAT_API int cat_sys_select(cat_os_socket_t max_fd, fd_set *rfds, fd_set *wfds, fd_set *efds, struct timeval *tv);
+#endif

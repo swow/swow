@@ -457,9 +457,20 @@ static const cat_socket_timeout_options_t cat_socket_default_timeout_options = {
 
 CAT_STATIC_ASSERT(6 == CAT_SOCKET_TIMEOUT_OPTIONS_COUNT);
 
+static cat_ret_t cat_socket_poll_one_emulate(cat_os_socket_t fd, cat_pollfd_events_t events, cat_pollfd_events_t *revents);
+static int cat_socket_poll_emulate(cat_pollfd_t *fds, cat_nfds_t nfds);
+static cat_poll_one_emulate_t original_cat_poll_one_emulate;
+static cat_poll_emulate_t original_cat_poll_emulate;
+
 CAT_API cat_bool_t cat_socket_module_init(void)
 {
     CAT_GLOBALS_REGISTER(cat_socket);
+
+    original_cat_poll_one_emulate = cat_poll_one_emulate;
+    original_cat_poll_emulate = cat_poll_emulate;
+    cat_poll_one_emulate = cat_socket_poll_one_emulate;
+    cat_poll_emulate = cat_socket_poll_emulate;
+
     return cat_true;
 }
 
@@ -630,6 +641,23 @@ static CAT_COLD void cat_socket_internal_unrecoverable_io_error(cat_socket_inter
 #ifdef CAT_SSL
 static cat_always_inline void cat_socket_internal_ssl_recoverability_check(cat_socket_internal_t *socket_i);
 #endif
+
+static int cat_socket__internal_compare(cat_socket_internal_t* socket_i_1, cat_socket_internal_t* socket_i_2)
+{
+    cat_socket_fd_t fd_1 = cat_socket_internal_get_fd_fast(socket_i_1);
+    cat_socket_fd_t fd_2 = cat_socket_internal_get_fd_fast(socket_i_2);
+    if (fd_1 < fd_2) {
+        return -1;
+    }
+    if (fd_1 > fd_2) {
+        return 1;
+    }
+    return 0;
+}
+
+RB_GENERATE_STATIC(cat_socket_internal_tree_s,
+                   cat_socket_internal_s, tree_entry,
+                   cat_socket__internal_compare);
 
 #ifdef CAT_OS_UNIX_LIKE
 static int socket_create(int domain, int type, int protocol)
@@ -1507,12 +1535,12 @@ CAT_API cat_bool_t cat_socket_bind_to_ex(cat_socket_t *socket, const char *name,
 
 static void cat_socket_accept_connection_callback(uv_stream_t *stream, int status)
 {
-    cat_socket_internal_t *iserver = cat_container_of(stream, cat_socket_internal_t, u.stream);
+    cat_socket_internal_t *server_i = cat_container_of(stream, cat_socket_internal_t, u.stream);
 
-    if (iserver->io_flags == CAT_SOCKET_IO_FLAG_ACCEPT) {
-        cat_coroutine_t *coroutine = iserver->context.accept.coroutine;
+    if (server_i->io_flags == CAT_SOCKET_IO_FLAG_ACCEPT) {
+        cat_coroutine_t *coroutine = server_i->context.accept.coroutine;
         CAT_ASSERT(coroutine != NULL);
-        iserver->context.accept.data.status = status;
+        server_i->context.accept.data.status = status;
         cat_coroutine_schedule(coroutine, SOCKET, "Accept");
     }
     // else we can call uv_accept to get it later
@@ -1528,11 +1556,10 @@ static cat_always_inline cat_bool_t cat_socket_listen_impl(cat_socket_t *socket,
         cat_update_last_error_with_reason(error, "Socket listen(%d) failed", backlog);
         return cat_false;
     }
-#ifdef CAT_OS_UNIX_LIKE
-    uv__io_stop(socket_i->u.stream.loop, &socket_i->u.stream.io_watcher, POLLIN);
-#endif
     uv_unref(&socket_i->u.handle);
     socket_i->flags |= CAT_SOCKET_INTERNAL_FLAG_SERVER;
+
+    RB_INSERT(cat_socket_internal_tree_s, &CAT_SOCKET_G(internal_tree), socket_i);
 
     return cat_true;
 }
@@ -1548,14 +1575,14 @@ CAT_API cat_bool_t cat_socket_listen(cat_socket_t *socket, int backlog)
 }
 
 static cat_bool_t cat_socket_internal_accept(
-    cat_socket_internal_t *iserver, cat_socket_internal_t *iconnection,
+    cat_socket_internal_t *server_i, cat_socket_internal_t *connection_i,
     cat_socket_inheritance_info_t *handle_info, cat_timeout_t timeout
 ) {
     int error;
 
     if (handle_info == NULL) {
-        cat_socket_type_t server_type = cat_socket_type_simplify(iserver->type);
-        cat_socket_type_t connection_type = iconnection->type;
+        cat_socket_type_t server_type = cat_socket_type_simplify(server_i->type);
+        cat_socket_type_t connection_type = connection_i->type;
         if (unlikely((server_type & connection_type) != server_type)) {
             cat_update_last_error(CAT_EINVAL, "Socket accept connection type mismatch, expect %s but got %s",
                 cat_socket_type_get_name(server_type), cat_socket_type_get_name(connection_type));
@@ -1565,38 +1592,32 @@ static cat_bool_t cat_socket_internal_accept(
 
     while (1) {
         cat_bool_t ret;
-        error = uv_accept(&iserver->u.stream, &iconnection->u.stream);
+        error = uv_accept(&server_i->u.stream, &connection_i->u.stream);
         if (error == 0) {
             /* init client properties */
-            iconnection->flags |= (CAT_SOCKET_INTERNAL_FLAG_ESTABLISHED | CAT_SOCKET_INTERNAL_FLAG_SERVER_CONNECTION);
+            connection_i->flags |= (CAT_SOCKET_INTERNAL_FLAG_ESTABLISHED | CAT_SOCKET_INTERNAL_FLAG_SERVER_CONNECTION);
             /* TODO: socket_extends() ? */
-            memcpy(&iconnection->options, handle_info == NULL ? &iserver->options : &handle_info->options, sizeof(iconnection->options));
-            cat_socket_internal_on_open(iconnection, cat_socket_type_to_af(handle_info == NULL ? iserver->type : handle_info->type));
+            memcpy(&connection_i->options, handle_info == NULL ? &server_i->options : &handle_info->options, sizeof(connection_i->options));
+            cat_socket_internal_on_open(connection_i, cat_socket_type_to_af(handle_info == NULL ? server_i->type : handle_info->type));
             return cat_true;
         }
         if (unlikely(error != CAT_EAGAIN)) {
             cat_update_last_error_with_reason(error, "Socket accept failed");
             break;
         }
-        uv_ref(&iserver->u.handle);
-#ifdef CAT_OS_UNIX_LIKE
-        uv__io_start(iserver->u.stream.loop, &iserver->u.stream.io_watcher, POLLIN);
-#endif
-        iserver->context.accept.data.status = CAT_ECANCELED;
-        iserver->context.accept.coroutine = CAT_COROUTINE_G(current);
-        iserver->io_flags = CAT_SOCKET_IO_FLAG_ACCEPT;
+        uv_ref(&server_i->u.handle);
+        server_i->context.accept.data.status = CAT_ECANCELED;
+        server_i->context.accept.coroutine = CAT_COROUTINE_G(current);
+        server_i->io_flags = CAT_SOCKET_IO_FLAG_ACCEPT;
         ret = cat_time_wait(timeout);
-        iserver->io_flags = CAT_SOCKET_IO_FLAG_NONE;
-        iserver->context.accept.coroutine = NULL;
-#ifdef CAT_OS_UNIX_LIKE
-        uv__io_stop(iserver->u.stream.loop, &iserver->u.stream.io_watcher, POLLIN);
-#endif
-        uv_unref(&iserver->u.handle);
+        server_i->io_flags = CAT_SOCKET_IO_FLAG_NONE;
+        server_i->context.accept.coroutine = NULL;
+        uv_unref(&server_i->u.handle);
         if (unlikely(!ret)) {
             cat_update_last_error_with_previous("Socket accept wait failed");
             break;
         }
-        if (unlikely(iserver->context.accept.data.status == CAT_ECANCELED)) {
+        if (unlikely(server_i->context.accept.data.status == CAT_ECANCELED)) {
             cat_update_last_error(CAT_ECANCELED, "Socket accept has been canceled");
             break;
         }
@@ -1609,12 +1630,12 @@ static cat_bool_t cat_socket_internal_recv_handle(cat_socket_internal_t *socket_
 
 static cat_always_inline cat_bool_t cat_socket_accept_impl(cat_socket_t *server, cat_socket_t *connection, cat_timeout_t timeout)
 {
-    CAT_SOCKET_INTERNAL_GETTER_WITH_IO(server, iserver, CAT_SOCKET_IO_FLAG_ACCEPT, return cat_false);
-    if (!(iserver->type & CAT_SOCKET_TYPE_FLAG_IPC)) {
-        CAT_SOCKET_INTERNAL_SERVER_ONLY(iserver, return cat_false);
+    CAT_SOCKET_INTERNAL_GETTER_WITH_IO(server, server_i, CAT_SOCKET_IO_FLAG_ACCEPT, return cat_false);
+    if (!(server_i->type & CAT_SOCKET_TYPE_FLAG_IPC)) {
+        CAT_SOCKET_INTERNAL_SERVER_ONLY(server_i, return cat_false);
     }
 
-    CAT_SOCKET_INTERNAL_GETTER_SILENT(connection, iconnection, {
+    CAT_SOCKET_INTERNAL_GETTER_SILENT(connection, connection_i, {
         cat_update_last_error(CAT_EINVAL, "Socket accept can not act on an unavailable socket");
         return cat_false;
     });
@@ -1623,11 +1644,11 @@ static cat_always_inline cat_bool_t cat_socket_accept_impl(cat_socket_t *server,
         return cat_false;
     }
 
-    if (!(iserver->type & CAT_SOCKET_TYPE_FLAG_IPC)) {
-        return cat_socket_internal_accept(iserver, iconnection, NULL, timeout);
+    if (!(server_i->type & CAT_SOCKET_TYPE_FLAG_IPC)) {
+        return cat_socket_internal_accept(server_i, connection_i, NULL, timeout);
     } else {
         CAT_LOG_DEBUG_V2(SOCKET, "accept() via IPC");
-        return cat_socket_internal_recv_handle(iserver, iconnection, timeout);
+        return cat_socket_internal_recv_handle(server_i, connection_i, timeout);
     }
 }
 
@@ -4540,6 +4561,9 @@ static void cat_socket_internal_close_impl(cat_socket_internal_t *socket_i, cat_
     /* unbind */
     socket->internal = NULL;
     socket_i->u.socket = NULL;
+    if (socket_i->flags & CAT_SOCKET_INTERNAL_FLAG_SERVER) {
+        RB_REMOVE(cat_socket_internal_tree_s, &CAT_SOCKET_G(internal_tree), socket_i);
+    }
 
     /* unref in listen (references are idempotent) */
     if (unlikely(cat_socket_is_server(socket))) {
@@ -5255,4 +5279,71 @@ CAT_API cat_bool_t cat_pipe(cat_os_fd_t fds[2], cat_pipe_flags read_flags, cat_p
     }
 
     return cat_true;
+}
+
+/* for poll emulation */
+
+static cat_bool_t cat_socket_fd_has_accepted_fd(cat_socket_fd_t fd)
+{
+    cat_socket_internal_t lookup;
+    cat_socket_internal_t *socket_i;
+    lookup.cache.fd = fd;
+    socket_i = RB_FIND(cat_socket_internal_tree_s, &CAT_SOCKET_G(internal_tree), &lookup);
+    if (socket_i == NULL) {
+        return cat_false;
+    }
+#ifndef CAT_OS_WIN
+    if (socket_i->type & CAT_SOCKET_TYPE_FLAG_STREAM) {
+        return socket_i->u.stream.accepted_fd != -1;
+    }
+#else
+    if ((socket_i->type & CAT_SOCKET_TYPE_TCP) == CAT_SOCKET_TYPE_TCP) {
+        uv_tcp_accept_t* req = socket_i->u.tcp.tcp.serv.pending_accepts;
+        return req != NULL && req->accept_socket != INVALID_SOCKET;
+    } else if ((socket_i->type & CAT_SOCKET_TYPE_PIPE) == CAT_SOCKET_TYPE_PIPE) {
+        uv_pipe_accept_t* req = socket_i->u.pipe.pipe.serv.pending_accepts;
+        if (socket_i->u.pipe.ipc) {
+            return uv_pipe_pending_count(&socket_i->u.pipe) > 0;
+        } else {
+            return req != NULL;
+        }
+    }
+#endif
+    return cat_false;
+}
+
+static cat_ret_t cat_socket_poll_one_emulate(cat_os_socket_t fd, cat_pollfd_events_t events, cat_pollfd_events_t *revents)
+{
+    if (original_cat_poll_one_emulate != NULL) {
+        cat_ret_t ret = original_cat_poll_one_emulate(fd, events, revents);
+        if (ret != CAT_RET_NONE) {
+            return ret;
+        }
+    }
+    if ((events & POLLIN) && cat_socket_fd_has_accepted_fd(fd)) {
+        *revents = POLLIN;
+        return CAT_RET_OK;
+    }
+    return CAT_RET_NONE;
+}
+
+static int cat_socket_poll_emulate(cat_pollfd_t *fds, cat_nfds_t nfds)
+{
+    if (original_cat_poll_emulate != NULL) {
+        int ret = original_cat_poll_emulate(fds, nfds);
+        if (ret != 0) {
+            return ret;
+        }
+    }
+    cat_nfds_t i;
+    int n = 0;
+    for (i = 0; i < nfds; i++) {
+        cat_pollfd_t *fd = &fds[i];
+        if ((fd->events & POLLIN) &&
+            cat_socket_fd_has_accepted_fd(fd->fd)) {
+            fd->revents = POLLIN;
+            n++;
+        }
+    }
+    return n;
 }

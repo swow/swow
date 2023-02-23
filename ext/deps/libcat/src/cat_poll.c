@@ -230,8 +230,20 @@ static void cat_poll_one_callback(uv_poll_t* handle, int status, uv_events_t eve
     }
 }
 
+#define CAT_POLL_ONE_EMULATE(fd, events, revents) do { \
+    if (cat_poll_one_emulate != NULL) { \
+        cat_ret_t ret = cat_poll_one_emulate(fd, events, revents); \
+        if (ret != CAT_RET_NONE) { \
+            return ret; \
+        } \
+    } \
+} while (0)
+
+CAT_API cat_poll_one_emulate_t cat_poll_one_emulate;
+
 static cat_ret_t cat_poll_one_impl(cat_os_socket_t fd, cat_pollfd_events_t events, cat_pollfd_events_t *revents, cat_timeout_t timeout)
 {
+    CAT_POLL_ONE_EMULATE(fd, events, revents);
     CAT_POLL_CHECK_TIMEOUT(timeout);
     cat_poll_one_t *poll;
     cat_os_socket_t _fd = fd;
@@ -247,7 +259,6 @@ static cat_ret_t cat_poll_one_impl(cat_os_socket_t fd, cat_pollfd_events_t event
         return CAT_RET_ERROR;
     }
 #endif
-    _fd = fd;
 #ifdef CAT_OS_UNIX_LIKE
     if (unlikely(uv__fd_exists(&CAT_EVENT_G(loop), fd))) {
         _fd = dup(fd);
@@ -464,8 +475,21 @@ static void cat_poll_callback(uv_poll_t* handle, int status, uv_events_t events)
     }
 }
 
+#define CAT_POLL_EMULATE(fds, nfds) do { \
+    if (cat_poll_emulate != NULL) { \
+        int n; \
+        n = cat_poll_emulate(fds, nfds); \
+        if (n != 0) { \
+            return n; \
+        } \
+    } \
+} while (0)
+
+CAT_API cat_poll_emulate_t cat_poll_emulate;
+
 static int cat_poll_impl(cat_pollfd_t *fds, cat_nfds_t nfds, cat_timeout_t timeout)
 {
+    CAT_POLL_EMULATE(fds, nfds);
     CAT_POLL_CHECK_TIMEOUT(timeout);
     cat_poll_context_t *context;
     cat_poll_t *polls;

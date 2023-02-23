@@ -475,6 +475,7 @@ CAT_API cat_bool_t cat_os_wait_runtime_shutdown(void)
         cat_os_child_process_stat_t *child_process_state;
         cat_os_child_process_stat_t* tmp_child_process_state_iterator;
         RB_FOREACH_SAFE(child_process_state, cat_os_child_process_stat_tree_s, &CAT_OS_WAIT_G(child_process_state_tree), tmp_child_process_state_iterator) {
+            RB_REMOVE(cat_os_child_process_stat_tree_s, &CAT_OS_WAIT_G(child_process_state_tree), child_process_state);
             cat_free(child_process_state);
         }
     } while (0);

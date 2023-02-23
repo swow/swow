@@ -75,6 +75,13 @@ CAT_API int cat_poll(cat_pollfd_t *fds, cat_nfds_t nfds, cat_timeout_t timeout);
  * @see: same with poll_one() note. */
 CAT_API int cat_select(int max_fd, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout);
 
+/** poll emulation APIs */
+typedef int (*cat_poll_one_emulate_t)(cat_os_socket_t fd, cat_pollfd_events_t events, cat_pollfd_events_t *revents);
+typedef int (*cat_poll_emulate_t)(cat_pollfd_t *fds, cat_nfds_t nfds);
+
+extern CAT_API cat_poll_one_emulate_t cat_poll_one_emulate;
+extern CAT_API cat_poll_emulate_t cat_poll_emulate;
+
 #ifdef __cplusplus
 }
 #endif

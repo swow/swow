@@ -36,6 +36,8 @@ extern "C" {
 #include <winsock2.h>
 #endif
 
+#include "uv/tree.h"
+
 /* sockaddr */
 
 #define CAT_SOCKET_DEFAULT_BACKLOG  511
@@ -475,6 +477,8 @@ struct cat_socket_internal_s
     cat_ssl_t *ssl;
     char *ssl_peer_name;
 #endif
+    /* tree */
+    RB_ENTRY(cat_socket_internal_s) tree_entry;
     /* u must be the last one (due to dynamic alloc) */
     union {
         cat_socket_t *socket;
@@ -497,6 +501,10 @@ struct cat_socket_s
     cat_socket_internal_t *internal;
 };
 
+/* tree */
+
+RB_HEAD(cat_socket_internal_tree_s, cat_socket_internal_s);
+
 /* globals */
 
 CAT_GLOBALS_STRUCT_BEGIN(cat_socket) {
@@ -506,6 +514,7 @@ CAT_GLOBALS_STRUCT_BEGIN(cat_socket) {
         cat_socket_timeout_options_t timeout;
         unsigned int tcp_keepalive_delay;
     } options;
+    struct cat_socket_internal_tree_s internal_tree;
     /* dns */
     // TODO: dns_cache (we should implement lru_cache)
 } CAT_GLOBALS_STRUCT_END(cat_socket);
