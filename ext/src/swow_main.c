@@ -93,10 +93,34 @@ static PHP_GSHUTDOWN_FUNCTION(swow)
 }
 /* }}} */
 
+PHP_INI_BEGIN()
+STD_PHP_INI_ENTRY("swow.async_threads", "0", PHP_INI_ALL, OnUpdateLong, ini.async_threads, zend_swow_globals, swow_globals)
+STD_ZEND_INI_BOOLEAN("swow.async_file", "On", PHP_INI_ALL, OnUpdateBool, ini.async_file, zend_swow_globals, swow_globals)
+STD_ZEND_INI_BOOLEAN("swow.async_stdio", "On", PHP_INI_ALL, OnUpdateBool, ini.async_stdio, zend_swow_globals, swow_globals)
+PHP_INI_END()
+
+static void swow_globals_ctor(zend_swow_globals *g)
+{
+    g->runtime_state = SWOW_RUNTIME_STATE_NONE;
+    g->ini.async_threads = 0;
+    g->ini.async_file = true;
+    g->ini.async_stdio = true;
+}
+
 /* {{{ PHP_MINIT_FUNCTION
  */
 PHP_MINIT_FUNCTION(swow)
 {
+    ZEND_INIT_MODULE_GLOBALS(swow, swow_globals_ctor, NULL);
+    REGISTER_INI_ENTRIES();
+    if (SWOW_G(ini.async_threads) > 0) {
+        if (SWOW_G(ini.async_threads) > 1024) {
+            SWOW_G(ini.async_threads) = 1024;
+        }
+        char buffer[sizeof("1024")];
+        (void) uv_os_setenv("CAT_TPS", zend_print_ulong_to_buf(buffer + sizeof(buffer) - 1, SWOW_G(ini.async_threads)));
+    }
+
     /* Conflict extensions check */
     if (zend_hash_str_find_ptr(&module_registry, ZEND_STRL("swoole"))) {
         zend_error(E_WARNING, "Swow is incompatible with Swoole "

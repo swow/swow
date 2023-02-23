@@ -2057,18 +2057,21 @@ zend_result swow_stream_module_init(INIT_FUNC_ARGS)
 #endif
 
     // backup blocking stdio operators (for include/require)
-    memcpy(&swow_stream_stdio_ops_sync, &php_stream_stdio_ops, sizeof(php_stream_stdio_ops));
-    // hook std ops
-    memcpy(&php_stream_stdio_ops, &swow_stream_stdio_ops_proxy, sizeof(php_stream_stdio_ops));
-    // backup blocking plain files wrapper
-    memcpy(&swow_plain_files_wrapper_sync, &php_plain_files_wrapper, sizeof(php_plain_files_wrapper));
-    // hook plain wrapper
-    memcpy(&php_plain_files_wrapper, &swow_plain_files_wrapper_proxy, sizeof(php_plain_files_wrapper));
-    // prepare tty sockets
-    memset(SWOW_STREAM_G(tty_sockets), 0, sizeof(SWOW_STREAM_G(tty_sockets)));
-
-    if ("phar unhook") {
-        swow_unhook_stream_wrapper();
+    if (SWOW_G(ini.async_stdio)) {
+        memcpy(&swow_stream_stdio_ops_sync, &php_stream_stdio_ops, sizeof(php_stream_stdio_ops));
+        // hook std ops
+        memcpy(&php_stream_stdio_ops, &swow_stream_stdio_ops_proxy, sizeof(php_stream_stdio_ops));
+        // prepare tty sockets
+        memset(SWOW_STREAM_G(tty_sockets), 0, sizeof(SWOW_STREAM_G(tty_sockets)));
+    }
+    if (SWOW_G(ini.async_file)) {
+        // backup blocking plain files wrapper
+        memcpy(&swow_plain_files_wrapper_sync, &php_plain_files_wrapper, sizeof(php_plain_files_wrapper));
+        // hook plain wrapper
+        memcpy(&php_plain_files_wrapper, &swow_plain_files_wrapper_proxy, sizeof(php_plain_files_wrapper));
+        if ("phar unhook") {
+            swow_unhook_stream_wrapper();
+        }
     }
 
     return SUCCESS;
@@ -2076,11 +2079,14 @@ zend_result swow_stream_module_init(INIT_FUNC_ARGS)
 
 zend_result swow_stream_runtime_init(INIT_FUNC_ARGS)
 {
-    SWOW_STREAM_G(hooking_stdio_ops) = cat_true;
-    SWOW_STREAM_G(hooking_plain_wrapper) = cat_true;
-
-    // prepare tty sockets (FIXME: Why won't Zend bzero() it when we are in ZTS?)
-    memset(SWOW_STREAM_G(tty_sockets), 0, sizeof(SWOW_STREAM_G(tty_sockets)));
+    if (SWOW_G(ini.async_stdio)) {
+        // prepare tty sockets (FIXME: Why won't Zend bzero() it when we are in ZTS?)
+        memset(SWOW_STREAM_G(tty_sockets), 0, sizeof(SWOW_STREAM_G(tty_sockets)));
+        SWOW_STREAM_G(hooking_stdio_ops) = cat_true;
+    }
+    if (SWOW_G(ini.async_file)) {
+        SWOW_STREAM_G(hooking_plain_wrapper) = cat_true;
+    }
 
     if (PHP_FN(original_socket_export_stream) == (zif_handler) -1) {
         (void) swow_hook_internal_function_handler_ex(
@@ -2095,15 +2101,16 @@ zend_result swow_stream_runtime_init(INIT_FUNC_ARGS)
 
 zend_result swow_stream_runtime_shutdown(INIT_FUNC_ARGS)
 {
-    size_t i;
-
-    SWOW_STREAM_G(hooking_plain_wrapper) = cat_false;
-    SWOW_STREAM_G(hooking_stdio_ops) = cat_false;
-
-    for (i = 0; i < CAT_ARRAY_SIZE(SWOW_STREAM_G(tty_sockets)); i++) {
-        cat_socket_t *socket = SWOW_STREAM_G(tty_sockets)[i];
-        if (socket != NULL && socket != INVALID_TTY_SOCKET) {
-            cat_socket_close(socket);
+    if (SWOW_G(ini.async_file)) {
+        SWOW_STREAM_G(hooking_plain_wrapper) = cat_false;
+    }
+    if (SWOW_G(ini.async_stdio)) {
+        SWOW_STREAM_G(hooking_stdio_ops) = cat_false;
+        for (size_t i = 0; i < CAT_ARRAY_SIZE(SWOW_STREAM_G(tty_sockets)); i++) {
+            cat_socket_t *socket = SWOW_STREAM_G(tty_sockets)[i];
+            if (socket != NULL && socket != INVALID_TTY_SOCKET) {
+                cat_socket_close(socket);
+            }
         }
     }
 
@@ -2112,12 +2119,15 @@ zend_result swow_stream_runtime_shutdown(INIT_FUNC_ARGS)
 
 zend_result swow_stream_module_shutdown(INIT_FUNC_ARGS)
 {
-    swow_rehook_stream_wrappers();
-
-    // unhook std ops
-    memcpy(&php_stream_stdio_ops, &swow_stream_stdio_ops_sync, sizeof(php_stream_stdio_ops));
-    // unhook plain wrapper
-    memcpy(&php_plain_files_wrapper, &swow_plain_files_wrapper_sync, sizeof(php_plain_files_wrapper));
+    if (SWOW_G(ini.async_file)) {
+        swow_rehook_stream_wrappers();
+        // unhook plain wrapper
+        memcpy(&php_plain_files_wrapper, &swow_plain_files_wrapper_sync, sizeof(php_plain_files_wrapper));
+    }
+    if (SWOW_G(ini.async_stdio)) {
+        // unhook std ops
+        memcpy(&php_stream_stdio_ops, &swow_stream_stdio_ops_sync, sizeof(php_stream_stdio_ops));
+    }
 
     CAT_GLOBALS_UNREGISTER(swow_stream);
 
