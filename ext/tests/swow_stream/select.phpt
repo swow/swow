@@ -4,8 +4,6 @@ swow_stream: select
 <?php
 require __DIR__ . '/../include/skipif.php';
 ?>
---XFAIL--
-Need to fix on Windows
 --FILE--
 <?php
 require_once __DIR__ . '/../include/bootstrap.php';
