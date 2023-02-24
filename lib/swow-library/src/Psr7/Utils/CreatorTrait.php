@@ -329,7 +329,7 @@ trait CreatorTrait
         return new WebSocketFrame(fin: $fin, opcode: $opcode, maskingKey: $maskingKey, payloadData: $payloadData);
     }
 
-    public static function createWebSocketTextFrame(mixed $payloadData, bool $fin = true, bool $mask = false): WebSocketFrame
+    public static function createWebSocketTextFrame(mixed $payloadData, bool $fin = true, bool|string $mask = false): WebSocketFrame
     {
         return static::createWebSocketFrame(opcode: Opcode::TEXT, payloadData: $payloadData, fin: $fin, mask: $mask);
     }
@@ -339,7 +339,7 @@ trait CreatorTrait
         return static::createWebSocketFrame(opcode: Opcode::TEXT, payloadData: $payloadData, fin: $fin, mask: true);
     }
 
-    public static function createWebSocketBinaryFrame(mixed $payloadData, bool $fin = true, bool $mask = false): WebSocketFrame
+    public static function createWebSocketBinaryFrame(mixed $payloadData, bool $fin = true, bool|string $mask = false): WebSocketFrame
     {
         return static::createWebSocketFrame(opcode: Opcode::BINARY, payloadData: $payloadData, fin: $fin, mask: $mask);
     }
