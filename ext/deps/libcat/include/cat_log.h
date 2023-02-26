@@ -275,3 +275,7 @@ CAT_API const char *cat_log_str_quote_unlimited(const char *str, size_t n, char 
 #define CAT_LOG_SSIZE_RET_C(n) \
             n, \
             CAT_LOG_STRERRNO_C(n >= 0, cat_get_last_error_code())
+
+#define CAT_LOG_READ_BUFFER_FMT "%s"
+#define CAT_LOG_READ_BUFFER_C(buffer) \
+            buffer == NULL ? "NULL" : CAT_LOG_UNFILLED_STR

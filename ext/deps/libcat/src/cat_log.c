@@ -335,13 +335,19 @@ CAT_API void cat_log_standard(CAT_LOG_PARAMETERS)
 
 CAT_API const char *cat_log_str_quote(const char *str, size_t n, char **tmp_str)
 {
-    return cat_log_str_quote_unlimited(str, CAT_MIN(n, CAT_LOG_G(str_size)), tmp_str);
+    cat_str_quote_style_flag_t style = CAT_STR_QUOTE_STYLE_FLAG_NONE;
+    char *quoted_data;
+    if (n > CAT_LOG_G(str_size)) {
+        n = CAT_LOG_G(str_size);
+        style |= CAT_STR_QUOTE_STYLE_FLAG_ELLIPSIS;
+    }
+    cat_str_quote_ex(str, n, &quoted_data, NULL, style, NULL, NULL);
+    return *tmp_str = quoted_data;
 }
 
 CAT_API const char *cat_log_str_quote_unlimited(const char *str, size_t n, char **tmp_str)
 {
     char *quoted_data;
     cat_str_quote(str, n, &quoted_data, NULL);
-    *tmp_str = quoted_data;
-    return quoted_data;
+    return *tmp_str = quoted_data;
 }

@@ -154,9 +154,13 @@ typedef enum cat_str_quote_style_flag_e {
     CAT_STR_QUOTE_STYLE_FLAG_PRINT_ALL_STRINGS_IN_HEX = 1 << 5,
     /** Enclose the string in C comment syntax. */
     CAT_STR_QUOTE_STYLE_FLAG_EMIT_COMMENT = 1 << 6,
+    /** Append ellipsis. */
+    CAT_STR_QUOTE_STYLE_FLAG_ELLIPSIS = 1 << 7,
 } cat_str_quote_style_flag_t;
 
 typedef uint8_t cat_str_quote_style_flags_t;
+
+CAT_API size_t cat_str_quote_size(size_t length, cat_str_quote_style_flags_t style);
 
 CAT_API cat_bool_t cat_str_quote(
     const char *str, size_t length,
@@ -175,8 +179,6 @@ CAT_API cat_bool_t cat_str_quote_ex2(
     size_t *out_length, cat_str_quote_style_flags_t style,
     const char *escape_chars
 );
-
-CAT_API size_t cat_str_quote_size(size_t length, cat_str_quote_style_flags_t style);
 
 /* magic */
 

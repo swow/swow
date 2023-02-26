@@ -212,7 +212,10 @@ CAT_API cat_bool_t cat_str_list_contains_ci(const char *haystack, const char *ne
 
 CAT_API size_t cat_str_quote_size(size_t length, cat_str_quote_style_flags_t style)
 {
-    return (4 * length) + (style & CAT_STR_QUOTE_STYLE_FLAG_OMIT_LEADING_TRAILING_QUOTES ? 1 : 3);
+    return
+        (4 * length) +
+        (style & CAT_STR_QUOTE_STYLE_FLAG_OMIT_LEADING_TRAILING_QUOTES ? 1 : 3) +
+        (style & CAT_STR_QUOTE_STYLE_FLAG_ELLIPSIS ? 3 : 0);
 }
 
 /*
@@ -364,6 +367,9 @@ CAT_API cat_bool_t cat_str_quote_ex2(
 
 _string_ended:
     if (!(style & CAT_STR_QUOTE_STYLE_FLAG_OMIT_LEADING_TRAILING_QUOTES)) {
+        if (style & CAT_STR_QUOTE_STYLE_FLAG_ELLIPSIS) {
+            s = cat_stpcpy(s, "...");
+        }
         *s++ = '\"';
     }
     if (style & CAT_STR_QUOTE_STYLE_FLAG_EMIT_COMMENT) {
@@ -380,6 +386,9 @@ _string_ended:
 
 _asciz_ended:
     if (!(style & CAT_STR_QUOTE_STYLE_FLAG_OMIT_LEADING_TRAILING_QUOTES)) {
+        if (style & CAT_STR_QUOTE_STYLE_FLAG_ELLIPSIS) {
+            s = cat_stpcpy(s, "...");
+        }
         *s++ = '\"';
     }
     if (style & CAT_STR_QUOTE_STYLE_FLAG_EMIT_COMMENT) {

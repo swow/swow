@@ -1347,7 +1347,7 @@ static const char *cat_ssl_error_to_str(int error)
 static int cat_ssl_get_error(const cat_ssl_t *ssl, int ret_code)
 {
     int error = SSL_get_error(ssl->connection, ret_code);
-    CAT_LOG_DEBUG(SSL, "SSL_get_error(%p, %d) = %d [%s]", ssl, ret_code, error, cat_ssl_error_to_str(error));
+    CAT_LOG_DEBUG(SSL, "SSL_get_error(%p, %d) = %d (%s)", ssl, ret_code, error, cat_ssl_error_to_str(error));
     return error;
 }
 
