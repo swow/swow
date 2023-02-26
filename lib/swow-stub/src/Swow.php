@@ -1318,8 +1318,10 @@ namespace Swow
         public function accept(?int $timeout = null): static { }
 
         /**
-         * @var int $timeout [optional] = $this->getAcceptTimeout()
-         * @return $this Notice: it does not return the connection, but returns itself
+         * @template T of static
+         * @param T $connection
+         * @param int $timeout [optional] = $this->getAcceptTimeout()
+         * @return T Notice: it does not return the connection, but returns itself
          */
         public function acceptTo(self $connection, ?int $timeout = null): static { }
 
