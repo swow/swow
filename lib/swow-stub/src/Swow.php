@@ -1711,7 +1711,7 @@ namespace Swow
          * @var int $offset [optional] = 0
          * @var int $timeout [optional] = $this->getWriteTimeout()
          */
-        public function sendFile(string $filename, int $offset = 0, int $length = 0, ?int $timeout = null): static { }
+        public function sendFile(string $filename, int $offset = 0, int $length = 0, ?int $timeout = null): int { }
 
         public function close(): bool { }
 
