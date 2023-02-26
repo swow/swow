@@ -374,7 +374,34 @@ class StubGenerator
             $comment = trim($userComment);
         } else {
             $userCommentLines = array_slice($userCommentLines, 1, count($userCommentLines) - 2);
-            $comment = array_map(static fn(string $line) => trim($line, '/* '), $userCommentLines);
+            $comment = array_map(static function (string $line): string {
+                $lReduce = $rReduce = 0;
+                for ($i = 0; $i < strlen($line); $i++) {
+                    if ($line[$i] === ' ') {
+                        $lReduce++;
+                    } else {
+                        break;
+                    }
+                }
+                for ($i = $lReduce; $i < strlen($line); $i++) {
+                    if ($line[$i] === '*') {
+                        $lReduce++;
+                    } else {
+                        break;
+                    }
+                }
+                if (($line[$lReduce] ?? '') === ' ') {
+                    $lReduce++;
+                }
+                for ($i = strlen($line) - 1; $i >= 0; $i--) {
+                    if ($line[$i] === ' ') {
+                        $rReduce++;
+                    } else {
+                        break;
+                    }
+                }
+                return substr($line, $lReduce, strlen($line) - $lReduce - $rReduce);
+            }, $userCommentLines);
         }
 
         return $comment;
