@@ -1123,7 +1123,7 @@ namespace Swow
 
         public function realloc(int $size): void { }
 
-        /** @var int $recommendSize [optional] = $this->getSize() * 2 */
+        /** @param int $recommendSize [optional] = $this->getSize() * 2 */
         public function extend(int $recommendSize = 0): void { }
 
         public function prepare(int $appendLength): void { }
@@ -1181,7 +1181,7 @@ namespace Swow
 
         public function truncate(int $length): int { }
 
-        /** @var int $offset [optional] = $this->getOffset() */
+        /** @param int $offset [optional] = $this->getOffset() */
         public function truncateFrom(int $offset = 0, int $length = -1): int { }
 
         public function clear(): void { }
@@ -1312,7 +1312,7 @@ namespace Swow
         public function listen(int $backlog = self::DEFAULT_BACKLOG): static { }
 
         /**
-         * @var int $timeout [optional] = $this->getAcceptTimeout()
+         * @param int $timeout [optional] = $this->getAcceptTimeout()
          * @return static Notice: it returns a new un-constructed connection instead of returning itself
          */
         public function accept(?int $timeout = null): static { }
@@ -1325,7 +1325,7 @@ namespace Swow
          */
         public function acceptTo(self $connection, ?int $timeout = null): static { }
 
-        /** @var int $timeout [optional] = $this->getConnectTimeout() */
+        /** @param int $timeout [optional] = $this->getConnectTimeout() */
         public function connect(string $name, int $port = 0, ?int $timeout = null): static { }
 
         public function enableCrypto(?array $options = null): static { }
@@ -1704,14 +1704,14 @@ namespace Swow
 
         /**
          * Send a socket handle to peer via pipe socket
-         * @var int $timeout [optional] = $this->getWriteTimeout()
+         * @param int $timeout [optional] = $this->getWriteTimeout()
          */
         public function sendHandle(self $handle, ?int $timeout = null): static { }
 
         /**
          * Send file without memory allocation or memory copy
-         * @var int $offset [optional] = 0
-         * @var int $timeout [optional] = $this->getWriteTimeout()
+         * @param int $offset [optional] = 0
+         * @param int $timeout [optional] = $this->getWriteTimeout()
          */
         public function sendFile(string $filename, int $offset = 0, int $length = 0, ?int $timeout = null): int { }
 
