@@ -22,8 +22,8 @@ use function Swow\Utils\success;
 
 $repoInfo = [
     'swow-examples' => 'examples',
-    'swow-extension' => 'examples',
-    'swow-stub' => 'ext',
+    'swow-extension' => 'ext',
+    'swow-stub' => 'lib/swow-stub',
     'swow-library' => 'lib/swow-library',
     'swow-utils' => 'lib/swow-utils',
     'swow-php-cs-fixer-config' => 'lib/swow-php-cs-fixer-config',
