@@ -72,7 +72,7 @@ jobs:
           ini-values: pcov.enabled = 0
           coverage: pcov
           # coverage: none
-          extensions: curl,openssl,sockets,ffi,pdo_pgsql
+          extensions: curl,openssl,sockets,ffi,pdo_pgsql,pdo
         #env:
           #phpts: ${{ matrix.ts }}
 
