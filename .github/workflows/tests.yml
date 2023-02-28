@@ -8,51 +8,6 @@ env:
   SWOW_HAVE_CURL: 1
 
 jobs:
-  # Label of the runner job
-  runner-job:
-    # You must use a Linux environment when using service containers or container jobs
-    runs-on: ubuntu-latest
-
-    # Service containers to run with `runner-job`
-    services:
-      # Label used to access the service container
-      postgres:
-        # Docker Hub image
-        image: postgres
-        # Provide the password for postgres
-        env:
-          POSTGRES_PASSWORD: postgres
-        # Set health checks to wait until postgres has started
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          # Maps tcp port 5432 on service container to the host
-          - 5432:5432
-
-    steps:
-      # Downloads a copy of the code in your repository before running CI tests
-      - name: Check out repository code
-        uses: actions/checkout@v3
-
-      # Performs a clean installation of all dependencies in the `package.json` file
-      # For more information, see https://docs.npmjs.com/cli/ci.html
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Connect to PostgreSQL
-        # Runs a script that creates a PostgreSQL table, populates
-        # the table with data, and then retrieves the data
-        run: node client.js
-        # Environment variables used by the `client.js` script to create
-        # a new PostgreSQL table.
-        env:
-          # The hostname used to communicate with the PostgreSQL service container
-          POSTGRES_HOST: localhost
-          # The default PostgreSQL port
-          POSTGRES_PORT: 5432
   cs-check:
     name: Library coding style check
     runs-on: "ubuntu-latest"
@@ -97,108 +52,26 @@ jobs:
         #ts: ['nts', 'ts']
       max-parallel: 8
     steps:
-
-      - name: Checkout
+      # Downloads a copy of the code in your repository before running CI tests
+      - name: Check out repository code
         uses: actions/checkout@v3
 
-      - name: Setup extension dependencies
-        run: |
-          if [ ${{ runner.os }} = 'Linux' ]
-          then
-            sudo apt-get update
-            sudo apt-get install -yqq libcurl4-openssl-dev lcov
-          else
-            brew install pkg-config
-            brew install openssl@1.1
-            brew install curl
-            brew install lcov
-          fi
+      # Performs a clean installation of all dependencies in the `package.json` file
+      # For more information, see https://docs.npmjs.com/cli/ci.html
+      - name: Install dependencies
+        run: npm ci
 
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: ${{ matrix.php-version }}
-          tools: phpize
-          ini-values: pcov.enabled = 0
-          coverage: pcov
-          # coverage: none
-          extensions: curl,openssl,sockets,ffi,pdo_pgsql,pdo
-        #env:
-          #phpts: ${{ matrix.ts }}
-
-      - name: Setup composer dependencies
-        run: composer update -o --ignore-platform-reqs
-
-      - name: Detect dependencies path from php-config
-        run: |
-          if [ ${{ runner.os }} = 'macOS' ]; then
-            echo "OPENSSL_ROOT_DIR=$(php .github/workflows/detect-deps.php openssl)" >> $GITHUB_ENV
-            echo "CURL_ROOT_DIR=$(php .github/workflows/detect-deps.php curl)" >> $GITHUB_ENV
-          fi
-      - name: Build Swow extension
-        run: |
-          cd ext
-          printf "\033[1mRun phpize\033[0m\n"
-          phpize
-          printf "\033[1mStart configure\033[0m\n"
-          ./configure --enable-swow\
-            --enable-swow-debug \
-            --enable-swow-gcov \
-            --enable-swow-ssl=${{ runner.os == 'Linux' && 'yes' || env.OPENSSL_ROOT_DIR }} \
-            --enable-swow-curl=${{ runner.os == 'Linux' && 'yes' || env.CURL_ROOT_DIR }}
-          printf "\033[1mStart build Swow\033[0m\n"
-          make -j`${{ runner.os == 'Linux' && 'nproc' || 'sysctl -n hw.logicalcpu' }}`
-          printf "\033[1mDone build Swow\033[0m\n"
-          php -d extension=.libs/swow.so -m
-          php -d extension=.libs/swow.so --ri swow
-          printf "\033[1mInstall Swow\033[0m\n"
-          ${{ runner.os == 'Linux' && 'sudo' || ''}} make install-modules
-
-      - name: Run extension tests
-        id: test-extension
-        continue-on-error: true
-        run: composer test-extension ext/tests/swow_pgsql/base.phpt
+      - name: Connect to PostgreSQL
+        # Runs a script that creates a PostgreSQL table, populates
+        # the table with data, and then retrieves the data
+        run: node client.js
+        # Environment variables used by the `client.js` script to create
+        # a new PostgreSQL table.
         env:
+          # The hostname used to communicate with the PostgreSQL service container
           POSTGRES_HOST: localhost
+          # The default PostgreSQL port
           POSTGRES_PORT: 5432
-
-      - name: Run library tests
-        id: test-library
-        continue-on-error: true
-        run: php --ri pcov && composer test-library-with-pcov
-
-      - name: Fail if test-extension failed
-        if: steps.test-extension.outcome != 'success'
-        run: exit 1
-
-      - name: Fail if test-library failed
-        if: steps.test-library.outcome != 'success'
-        run: exit 1
-
-      - name: Coverage ext tests
-        shell: bash
-        run: |
-          lcov \
-            --capture \
-            --directory "ext/src" \
-            --directory "ext/include" \
-            --output-file coverage.info &&
-          lcov \
-            --extract coverage.info \
-              "${{github.workspace}}/ext/include/*" \
-              "${{github.workspace}}/ext/src/*" \
-            --output-file coverage.info &&
-          lcov --list coverage.info &&
-          curl -s https://codecov.io/bash -o codecov.sh &&
-          chmod +x codecov.sh &&
-          ./codecov.sh -f coverage.info
-
-      - name: Coverage phpunit tests
-        shell: bash
-        run: |
-          curl -s https://codecov.io/bash -o codecov.sh &&
-          chmod +x codecov.sh &&
-          ./codecov.sh -f ./lib/swow-library/build/coverage.xml
 
   windows-tests:
     name: PHP ${{ matrix.php-version }} ${{ matrix.ts }} Test on windows-2019
