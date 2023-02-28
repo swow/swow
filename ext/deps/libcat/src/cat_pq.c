@@ -67,6 +67,8 @@ static PGresult *cat_pq_get_result(PGconn *conn)
 
 static cat_bool_t cat_pq_poll_connection(PGconn *conn)
 {
+    printf("----------------cat_pq_poll_connection----------------");
+
     int r;
 
     while ((r = PQconnectPoll(conn)) && r != PGRES_POLLING_OK) {
@@ -85,7 +87,9 @@ static cat_bool_t cat_pq_poll_connection(PGconn *conn)
             return cat_false;
         }
 
+        printf("----------------start cat_poll_one----------------");
         cat_ret_t ret = cat_poll_one(PQsocket(conn), events, NULL, -1);
+        printf("----------------end cat_poll_one----------------");
         if (unlikely(ret == CAT_RET_ERROR)) {
             return cat_false;
         }
