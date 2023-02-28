@@ -1281,6 +1281,11 @@ const pdo_driver_t swow_pdo_pgsql_driver = {
 // 这里改成hook的方式
 zend_result swow_pgsql_module_init(INIT_FUNC_ARGS)
 {
+	SWOW_MODULES_CHECK_PRE_START() {
+        "pdo",
+		"pdo_pgsql",
+    } SWOW_MODULES_CHECK_PRE_END();
+
 	if (!cat_pq_module_init()) {
         return FAILURE;
     }

@@ -681,19 +681,10 @@ SWOW_API const char *swow_extra_version(void)
     return SWOW_EXTRA_VERSION;
 }
 
-static const zend_module_dep swow_deps[] = {
-#ifdef CAT_HAVE_PQ
-    ZEND_MOD_REQUIRED("PDO")
-#endif
-    ZEND_MOD_END
-};
-
 /* {{{ swow_module_entry
  */
 SWOW_API zend_module_entry swow_module_entry = {
-    STANDARD_MODULE_HEADER_EX,
-    NULL,
-    swow_deps,
+    STANDARD_MODULE_HEADER,
     SWOW_MODULE_NAME,            /* Extension name */
     swow_functions,              /* zend_function_entry */
     PHP_MINIT(swow),             /* PHP_MINIT - Module initialization */

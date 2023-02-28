@@ -19,6 +19,8 @@
 #ifndef PHP_PDO_PGSQL_INT_H
 #define PHP_PDO_PGSQL_INT_H
 
+#include "swow.h"
+
 #include "php.h"
 #include "pdo/php_pdo_driver.h"
 
