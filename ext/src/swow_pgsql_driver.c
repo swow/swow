@@ -1289,8 +1289,8 @@ zend_result swow_pgsql_module_init(INIT_FUNC_ARGS)
 	if (!cat_pq_module_init()) {
 		return FAILURE;
 	}
-	php_pdo_unregister_driver(&pdo_pgsql_driver);
-	php_pdo_register_driver(&swow_pdo_pgsql_driver);
+	// php_pdo_unregister_driver(&pdo_pgsql_driver);
+	// php_pdo_register_driver(&swow_pdo_pgsql_driver);
 
 	return SUCCESS;
 }
