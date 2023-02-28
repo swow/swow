@@ -18,6 +18,8 @@ $user = TEST_POSTGRES_USER;
 $password = TEST_POSTGRES_PASSWORD;
 $dbname = TEST_POSTGRES_DBNAME;
 
+var_dump($host, $port, $user, $password, $dbname);
+
 $dsn = "pgsql:host={$host};port={$port};dbname={$dbname}";
 
 Coroutine::run(static function () use ($dsn, $user, $password): void {
