@@ -40,6 +40,8 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+        ports:
+          - 5432:5432
     strategy:
       fail-fast: false
       matrix:
@@ -112,7 +114,7 @@ jobs:
         continue-on-error: true
         run: composer test-extension ext/tests/swow_pgsql/base.phpt
         env:
-          POSTGRES_HOST: postgres
+          POSTGRES_HOST: localhost
           POSTGRES_PORT: 5432
 
       - name: Run library tests
