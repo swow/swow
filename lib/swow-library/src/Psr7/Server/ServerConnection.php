@@ -16,10 +16,12 @@ namespace Swow\Psr7\Server;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
+use SplFileInfo;
 use Stringable;
 use Swow\Errno;
 use Swow\Http\Http;
 use Swow\Http\Message\ServerRequestEntity;
+use Swow\Http\Mime\MimeType;
 use Swow\Http\Parser as HttpParser;
 use Swow\Http\Protocol\ProtocolException;
 use Swow\Http\Protocol\ProtocolTypeInterface;
@@ -244,5 +246,24 @@ class ServerConnection extends Socket implements ProtocolTypeInterface
         $this->offline();
 
         return parent::close();
+    }
+
+    public function sendHttpFile(ResponseInterface $response, string $filename, int $offset = 0, int $length = -1, ?int $timeout = null): int
+    {
+
+        if (! $response->hasHeader('Content-Type')) {
+            $file = new SplFileInfo($filename);
+            $response = $response->withHeader('Content-Type', MimeType::fromExtension($file->getExtension()));
+        }
+
+        $headers = $response->getHeaders();
+
+        $headers['Content-Length'] = filesize($filename);
+        $this->send(Http::packResponse(
+            statusCode: HttpStatus::OK,
+            headers: $headers
+        ));
+
+        return $this->sendFile($filename, $offset, $length, $timeout);
     }
 }
