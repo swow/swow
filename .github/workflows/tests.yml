@@ -116,7 +116,6 @@ jobs:
         env:
           POSTGRES_HOST: localhost
           POSTGRES_PORT: 5432
-          CAT_DEBUG: -1
 
       - name: Run library tests
         id: test-library

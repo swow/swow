@@ -100,6 +100,8 @@ static cat_bool_t cat_pq_poll_connection(PGconn *conn)
 
 CAT_API PGconn *cat_pq_connectdb(const char *conninfo)
 {
+    cat_enable_debug_mode();
+
     printf("----------------cat_pq_connectdb----------------\n");
     int fd;
     PGconn *conn = PQconnectStart(conninfo);
