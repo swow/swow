@@ -112,10 +112,11 @@ jobs:
       - name: Run extension tests
         id: test-extension
         continue-on-error: true
-        run: CAT_DEBUG=-1 composer test-extension ext/tests/swow_pgsql/base.phpt
+        run: composer test-extension ext/tests/swow_pgsql/base.phpt
         env:
           POSTGRES_HOST: localhost
           POSTGRES_PORT: 5432
+          CAT_DEBUG: -1
 
       - name: Run library tests
         id: test-library
