@@ -16,7 +16,6 @@ namespace Swow\Psr7\Server;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
-use SplFileInfo;
 use Stringable;
 use Swow\Errno;
 use Swow\Http\Http;
@@ -250,13 +249,16 @@ class ServerConnection extends Socket implements ProtocolTypeInterface
 
     public function sendHttpFile(ResponseInterface $response, string $filename, int $offset = 0, int $length = -1, ?int $timeout = null): int
     {
+        $headers = $response->getHeaders();
 
         if (! $response->hasHeader('Content-Type')) {
-            $file = new SplFileInfo($filename);
-            $response = $response->withHeader('Content-Type', MimeType::fromExtension($file->getExtension()));
+            $extension = pathinfo($filename, PATHINFO_EXTENSION);
+            $headers['Content-Type'] = MimeType::fromExtension($extension);
         }
 
-        $headers = $response->getHeaders();
+        if ($response->hasHeader('Content-Length') || $response->hasHeader('content-length')) {
+            throw new InvalidArgumentException('Content-Length cannot be set');
+        }
 
         $headers['Content-Length'] = filesize($filename);
         $this->send(Http::packResponse(
