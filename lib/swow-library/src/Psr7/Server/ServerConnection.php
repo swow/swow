@@ -256,7 +256,7 @@ class ServerConnection extends Socket implements ProtocolTypeInterface
             $headers['Content-Type'] = MimeType::fromExtension($extension);
         }
 
-        if ($response->hasHeader('Content-Length') || $response->hasHeader('content-length')) {
+        if ($response->hasHeader('Content-Length')) {
             throw new InvalidArgumentException('Content-Length cannot be set');
         }
 
