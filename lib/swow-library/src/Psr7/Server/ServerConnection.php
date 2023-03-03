@@ -249,18 +249,18 @@ class ServerConnection extends Socket implements ProtocolTypeInterface
 
     public function sendHttpFile(ResponseInterface $response, string $filename, int $offset = 0, int $length = -1, ?int $timeout = null): int
     {
-        $headers = $response->getHeaders();
-
-        if (! $response->hasHeader('Content-Type')) {
-            $extension = pathinfo($filename, PATHINFO_EXTENSION);
-            $headers['Content-Type'] = MimeType::fromExtension($extension);
-        }
-
         if ($response->hasHeader('Content-Length')) {
             throw new InvalidArgumentException('Content-Length cannot be set');
         }
 
-        $headers['Content-Length'] = filesize($filename);
+        $headers = $response->getHeaders();
+        
+        if (!$response->hasHeader('Content-Type')) {
+            $extension = pathinfo($filename, PATHINFO_EXTENSION);
+            $headers['Content-Type'] = MimeType::fromExtension($extension);
+        }
+
+        $headers['Content-Length'] = $headers['Content-Length'] = $length > 0 ? filesize($filename) : $length;
         $this->send(Http::packResponse(
             statusCode: HttpStatus::OK,
             headers: $headers
