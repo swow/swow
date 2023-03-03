@@ -13,6 +13,7 @@ declare(strict_types=1);
 
 namespace Swow\Psr7\Server;
 
+use InvalidArgumentException;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
