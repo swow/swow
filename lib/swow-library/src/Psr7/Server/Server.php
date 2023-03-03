@@ -19,6 +19,7 @@ use Swow\Psr7\Config\LimitationTrait;
 use Swow\Psr7\Message\ServerPsr17FactoryTrait;
 use Swow\Psr7\Message\WebSocketFrameInterface;
 use Swow\Socket;
+use Swow\SocketException;
 use WeakMap;
 
 class Server extends Socket
@@ -41,14 +42,25 @@ class Server extends Socket
 
     public function acceptConnection(?int $timeout = null): ServerConnection
     {
-        $connection = $this->serverConnectionFactory->createServerConnection($this);
-        $this
-            ->acceptTo($connection, $timeout)
-            ->online($connection);
-        $connection->addServerParams([
-            'remote_addr' => $connection->getPeerAddress(),
-            'remote_port' => $connection->getPeerPort(),
-        ]);
+        while (true) {
+            $connection = $this->serverConnectionFactory->createServerConnection($this);
+            $this->acceptTo($connection, $timeout);
+            try {
+                $connection->addServerParams([
+                    'remote_addr' => $connection->getPeerAddress(),
+                    'remote_port' => $connection->getPeerPort(),
+                ]);
+            } catch (SocketException) {
+                /* FIXME: workaround for ENOTCONN error.
+                 * getpeername() may return ENOTCONN in some edge cases,
+                 * it may be caused by the client-side sent RST packet,
+                 * we can not verify this behaviour because it is incidental,
+                 * we ignore it and continue to accept next connection for now. */
+                continue;
+            }
+            $this->online($connection);
+            break;
+        }
 
         return $connection;
     }
