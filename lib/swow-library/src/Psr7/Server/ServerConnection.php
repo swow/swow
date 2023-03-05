@@ -261,7 +261,7 @@ class ServerConnection extends Socket implements ProtocolTypeInterface
             $headers['Content-Type'] = MimeType::fromExtension($extension);
         }
 
-        $headers['Content-Length'] = $length > 0 ? filesize($filename) : $length;
+        $headers['Content-Length'] = $length < 0 ? filesize($filename) : $length;
         $this->send(Http::packResponse(
             statusCode: HttpStatus::OK,
             headers: $headers
