@@ -681,7 +681,6 @@ CAT_API ssize_t cat_socket_peek_from_ex(const cat_socket_t *socket, char *buffer
 CAT_API cat_bool_t cat_socket_send_handle(cat_socket_t *socket, cat_socket_t *handle);
 CAT_API cat_bool_t cat_socket_send_handle_ex(cat_socket_t *socket, cat_socket_t *handle, cat_timeout_t timeout);
 
-#define CAT_SOCKET_SEND_FILE_MAX_LENGTH ((size_t) -1)
 CAT_API ssize_t cat_socket_send_file(cat_socket_t *socket, const char *filename, int64_t offset, size_t length);
 CAT_API ssize_t cat_socket_send_file_ex(cat_socket_t *socket, const char *filename, int64_t offset, size_t length, cat_timeout_t timeout);
 

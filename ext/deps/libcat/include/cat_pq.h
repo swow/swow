@@ -12,30 +12,39 @@
   | See the License for the specific language governing permissions and      |
   | limitations under the License. See accompanying LICENSE file.            |
   +--------------------------------------------------------------------------+
-  | Author: Twosee <twosee@php.net>                                          |
+  | Author: Codinghuang <codinghuang@qq.com>                                 |
   +--------------------------------------------------------------------------+
  */
 
-/* Some content in the header file depends on each other,
- * for example, we can not declare os_is_windows() in os.h,
- * because always_inline macro has not been defined yet at that time,
- * and always_inline macro rely on OS_WIN macro,
- * so we must declare os_is_windows() here (delay). */
-
-static cat_always_inline cat_bool_t cat_os_is_windows(void)
-{
-#ifndef CAT_OS_WIN
-    return cat_false;
-#else
-    return cat_true;
+#ifndef CAT_PQ_H
+#define CAT_PQ_H
+#ifdef __cplusplus
+extern "C" {
 #endif
-}
 
-static cat_always_inline cat_bool_t cat_os_is_linux(void)
-{
-#ifndef CAT_OS_LINUX
-    return cat_false;
-#else
-    return cat_true;
-#endif
+#include "cat.h"
+
+#ifdef CAT_HAVE_PQ
+#define CAT_PQ 1
+
+#include <libpq-fe.h>
+#include <libpq/libpq-fs.h>
+// #include <libpq-int.h>
+
+CAT_API cat_bool_t cat_pq_runtime_init(void);
+CAT_API cat_bool_t cat_pq_runtime_close(void);
+
+CAT_API PGconn *cat_pq_connectdb(const char *conninfo);
+CAT_API PGresult *cat_pq_prepare(PGconn *conn, const char *stmt_name, const char *query, int n_params, const Oid *param_types);
+CAT_API PGresult *cat_pq_exec_prepared(PGconn *conn, const char *stmt_name, int n_params, 
+    const char *const *param_values, const int *param_lengths, const int *param_formats, int result_format);
+CAT_API PGresult *cat_pq_exec(PGconn *conn, const char *query);
+CAT_API PGresult *cat_pq_exec_params(PGconn *conn, const char *command, int n_params,
+    const Oid *param_types, const char *const *param_values, const int *param_lengths, const int *param_formats, int result_format);
+
+#endif /* CAT_HAVE_PQ */
+
+#ifdef __cplusplus
 }
+#endif
+#endif /* CAT_PQ_H */

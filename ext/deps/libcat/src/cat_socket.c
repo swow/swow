@@ -4368,12 +4368,16 @@ static cat_always_inline ssize_t cat_socket_internal_native_sendfile(cat_socket_
 {
     /** @see: https://github.com/torvalds/linux/blob/38f8ccde04a3fa317b51b05e63c3cb57e1641931/include/linux/fs.h#L996 */
     const size_t max_non_lfs = ((1UL << 31) - 1);
-    size_t remain = length;
-    int64_t start = offset;
     cat_socket_fd_t fd = cat_socket_internal_get_fd_fast(socket_i);
+    int64_t start = offset;
+    size_t remain;
 
     // TODO: support timeout?
     (void) timeout;
+    if (length == 0) {
+        length = SIZE_MAX;
+    }
+    remain = length;
     while (remain > 0) {
         int written = cat_fs_sendfile(
             fd, file, start, CAT_MIN(remain, max_non_lfs)
@@ -4423,11 +4427,16 @@ static cat_always_inline ssize_t cat_socket_mock_sendfile(cat_socket_t *socket, 
 {
     cat_socket_internal_t *socket_i = socket->internal;
     CAT_ASSERT(socket_i != NULL);
-    size_t remain = length;
     char *buffer = NULL;
     /* TODO: libuv uses 64K, we may use a better value in the future */
     const size_t max_buffer_size = 65536;
+    size_t remain;
     size_t n;
+
+    if (length == 0) {
+        length = SIZE_MAX;
+    }
+    remain = length;
 
     if (unlikely(cat_fs_lseek(file, (off_t) offset, SEEK_SET) != (off_t) offset)) {
         cat_update_last_error_with_previous("Socket sendfile failed when seek file");
@@ -4451,11 +4460,11 @@ static cat_always_inline ssize_t cat_socket_mock_sendfile(cat_socket_t *socket, 
             // EOF
             break;
         }
-        cat_bool_t written;
+        cat_bool_t ret;
         CAT_TIME_WAIT_START() {
-            written = cat_socket_send_ex(socket, buffer, read_n, timeout);
+            ret = cat_socket_send_ex(socket, buffer, read_n, timeout);
         } CAT_TIME_WAIT_END(timeout);
-        if (unlikely(!written)) {
+        if (unlikely(!ret)) {
             cat_update_last_error_with_previous("Socket sendfile failed when send data");
             goto _io_error;
         }
