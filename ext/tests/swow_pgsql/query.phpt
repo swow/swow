@@ -29,7 +29,6 @@ for ($i = 0; $i < 3; $i++) {
 Coroutine::run(static function (): void {
     $pdo = PDOUtil::create();
     $statement = $pdo->query("select * from users where id = 1");
-    $statement->execute();
     var_dump($statement->fetchAll(PDO::FETCH_ASSOC));
 });
 
@@ -38,7 +37,6 @@ var_dump('wait');
 Coroutine::run(static function (): void {
     $pdo = PDOUtil::create();
     $statement = $pdo->query("select * from users where id = 2");
-    $statement->execute();
     var_dump($statement->fetchAll(PDO::FETCH_ASSOC));
 });
 
