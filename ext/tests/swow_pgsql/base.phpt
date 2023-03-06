@@ -24,10 +24,10 @@ Coroutine::run(static function (): void {
 var_dump('wait');
 
 Coroutine::run(static function (): void {
-  $pdo = PDOFactoryTest::create();
-  $statement = $pdo->prepare('SELECT * FROM pg_catalog.pg_tables limit 1');
-  $statement->execute();
-  var_dump($statement->fetchAll(PDO::FETCH_COLUMN));
+    $pdo = PDOFactoryTest::create();
+    $statement = $pdo->prepare('SELECT * FROM pg_catalog.pg_tables limit 1');
+    $statement->execute();
+    var_dump($statement->fetchAll(PDO::FETCH_COLUMN));
 });
 
 waitAll();
