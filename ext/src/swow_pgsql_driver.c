@@ -20,6 +20,9 @@
 #include "config.h"
 #endif
 
+#include "swow_pdo_pgsql_int.h"
+#include "swow_pgsql_driver_arginfo.h"
+
 #include "cat_pq.h"
 
 #include "php.h"
@@ -32,9 +35,7 @@
 #include "pdo/php_pdo_error.h"
 #include "ext/standard/file.h"
 #undef SIZEOF_OFF_T
-#include "swow_pdo_pgsql_int.h"
 #include "zend_exceptions.h"
-#include "swow_pgsql_driver_arginfo.h"
 
 static bool pgsql_handle_in_transaction(pdo_dbh_t *dbh);
 

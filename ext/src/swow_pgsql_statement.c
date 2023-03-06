@@ -20,6 +20,8 @@
 #include "config.h"
 #endif
 
+#include "swow_pdo_pgsql_int.h"
+
 #include "cat_pq.h"
 
 #include "php.h"
@@ -27,7 +29,6 @@
 #include "ext/standard/info.h"
 #include "pdo/php_pdo.h"
 #include "pdo/php_pdo_driver.h"
-#include "swow_pdo_pgsql_int.h"
 #ifdef HAVE_NETINET_IN_H
 #include <netinet/in.h>
 #endif
