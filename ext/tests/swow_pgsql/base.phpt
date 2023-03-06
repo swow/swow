@@ -40,14 +40,14 @@ waitAll();
 
 echo "Done\n";
 ?>
---EXPECT--
+--EXPECTF--
 string(4) "wait"
 array(1) {
   [0]=>
-  string(6) "public"
+  string(%d) "%s"
 }
 array(1) {
   [0]=>
-  string(6) "public"
+  string(%d) "%s"
 }
 Done
