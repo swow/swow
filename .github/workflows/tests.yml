@@ -47,7 +47,6 @@ jobs:
       - name: Start service containers
         shell: bash
         if: runner.os == 'Linux'
-        working-directory: libcat
         run: |
           docker compose -f ${{github.workspace}}/.github/docker-compose.yml up -d
 
