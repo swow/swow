@@ -88,6 +88,10 @@ AC_DEFUN([SWOW_ADD_SOURCES],[
 dnl
 dnl SWOW_PKG_CHECK_MODULES($varname, $libname, $ver, $search_path, $if_found, $if_not_found)
 dnl
+SWOW_PKG_FIND_PATH="/lib/pkgconfig"
+if test "x" != "x$PKG_CONFIG_PATH"; then
+  SWOW_PKG_FIND_PATH="$SWOW_PKG_FIND_PATH:$PKG_CONFIG_PATH"
+fi
 AC_DEFUN([SWOW_PKG_CHECK_MODULES],[
   AC_MSG_CHECKING(for $2 $3 or greater)
   if test "x${$1_LIBS+set}" = "xset" || test "x${$1_INCLUDES+set}" = "xset"; then
@@ -98,24 +102,14 @@ AC_DEFUN([SWOW_PKG_CHECK_MODULES],[
   elif test -x "$PKG_CONFIG" ; then
 dnl find pkg using pkg-config cli tool
     AC_MSG_RESULT([................................. ${$4} .................................])
-    if test "xyes" = "x${$4}" ; then
-      SWOW_PKG_FIND_PATH=/lib/pkgconfig
-      AC_MSG_RESULT([11111111 .................................])
-    else
-      SWOW_PKG_FIND_PATH=${$4}/lib/pkgconfig
-      AC_MSG_RESULT([22222222 .................................])
-    fi
-
-    if test "x" != "x$PKG_CONFIG_PATH"; then
-      SWOW_PKG_FIND_PATH="$SWOW_PKG_FIND_PATH:$PKG_CONFIG_PATH"
-      AC_MSG_RESULT([33333333 .................................])
+    if test "xyes" != "x${$4}" ; then
+      SWOW_PKG_FIND_PATH="${$4}/lib/pkgconfig:$SWOW_PKG_FIND_PATH"
     fi
 
     AC_MSG_RESULT([$SWOW_PKG_FIND_PATH ................................. $SWOW_PKG_FIND_PATH])
 
     if env PKG_CONFIG_PATH=${SWOW_PKG_FIND_PATH} $PKG_CONFIG --atleast-version $3 $2; then
       $2_version_full=`env PKG_CONFIG_PATH=${SWOW_PKG_FIND_PATH} $PKG_CONFIG --modversion $2`
-      AC_MSG_RESULT([here .................................])
       AC_MSG_RESULT(${$2_version_full})
       $1_LIBS=`env PKG_CONFIG_PATH=${SWOW_PKG_FIND_PATH} $PKG_CONFIG --libs   $2`
       $1_INCL=`env PKG_CONFIG_PATH=${SWOW_PKG_FIND_PATH} $PKG_CONFIG --cflags $2`
