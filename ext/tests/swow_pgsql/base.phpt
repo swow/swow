@@ -12,10 +12,12 @@ use Swow\Coroutine;
 use function Swow\Sync\waitAll;
 
 require __DIR__ . '/../include/bootstrap.php';
-require __DIR__ . '/PDOFactoryTest.inc';
+require __DIR__ . '/PDOUtil.inc';
+
+PDOUtil::init();
 
 Coroutine::run(static function (): void {
-    $pdo = PDOFactoryTest::create();
+    $pdo = PDOUtil::create();
     $statement = $pdo->prepare('SELECT * FROM pg_catalog.pg_tables limit 1');
     $statement->execute();
     var_dump($statement->fetchAll(PDO::FETCH_COLUMN));
@@ -24,7 +26,7 @@ Coroutine::run(static function (): void {
 var_dump('wait');
 
 Coroutine::run(static function (): void {
-    $pdo = PDOFactoryTest::create();
+    $pdo = PDOUtil::create();
     $statement = $pdo->prepare('SELECT * FROM pg_catalog.pg_tables limit 1');
     $statement->execute();
     var_dump($statement->fetchAll(PDO::FETCH_COLUMN));
