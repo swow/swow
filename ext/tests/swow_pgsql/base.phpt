@@ -3,6 +3,7 @@ swow_pgsql: test hook pgsql
 --SKIPIF--
 <?php
 require __DIR__ . '/../include/skipif.php';
+skip_if_env_not_defined('TEST_SWOW_POSTGRESQL');
 ?>
 --FILE--
 <?php
