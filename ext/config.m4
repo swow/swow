@@ -90,6 +90,8 @@ dnl SWOW_PKG_CHECK_MODULES($varname, $libname, $ver, $search_path, $if_found, $i
 dnl
 AC_DEFUN([SWOW_PKG_CHECK_MODULES],[
   AC_MSG_CHECKING(for $2 $3 or greater)
+  AC_MSG_RESULT([$1_LIBS ................................. $1_LIBS])
+  AC_MSG_RESULT([$1_CFLAGS ................................. $1_CFLAGS])
   if test "x${$1_LIBS+set}" = "xset" || test "x${$1_INCLUDES+set}" = "xset"; then
     AC_MSG_RESULT([using $1_CFLAGS and $1_LIBS])
     $1_LIBS=${$1_CFLAGS}
