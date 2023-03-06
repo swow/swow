@@ -33,6 +33,9 @@ if ($argv[1] === 'openssl') {
 } elseif ($argv[1] === 'curl') {
     // maybe: /usr/local/Cellar/curl/7.87.0
     echo $getFullPath('curl');
+} elseif ($argv[1] === 'libpq') {
+    // maybe: /usr/local/opt/libpq/lib
+    echo $getFullPath('libpq');
 } else {
     echo "Unknown argument: {$argv[1]}";
     exit(1);

@@ -84,6 +84,7 @@ jobs:
           if [ ${{ runner.os }} = 'macOS' ]; then
             echo "OPENSSL_ROOT_DIR=$(php .github/workflows/detect-deps.php openssl)" >> $GITHUB_ENV
             echo "CURL_ROOT_DIR=$(php .github/workflows/detect-deps.php curl)" >> $GITHUB_ENV
+            echo "PGSQL_ROOT_DIR=$(php .github/workflows/detect-deps.php pgsql)" >> $GITHUB_ENV
           fi
       - name: Build Swow extension
         run: |
@@ -95,7 +96,8 @@ jobs:
             --enable-swow-debug \
             --enable-swow-gcov \
             --enable-swow-ssl=${{ runner.os == 'Linux' && 'yes' || env.OPENSSL_ROOT_DIR }} \
-            --enable-swow-curl=${{ runner.os == 'Linux' && 'yes' || env.CURL_ROOT_DIR }}
+            --enable-swow-curl=${{ runner.os == 'Linux' && 'yes' || env.CURL_ROOT_DIR }} \
+            --enable-swow-pdo-pgsql=${{ runner.os == 'Linux' && 'yes' || env.PGSQL_ROOT_DIR }}
           printf "\033[1mStart build Swow\033[0m\n"
           make -j`${{ runner.os == 'Linux' && 'nproc' || 'sysctl -n hw.logicalcpu' }}`
           printf "\033[1mDone build Swow\033[0m\n"
