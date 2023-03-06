@@ -4,15 +4,14 @@ class PDOUtil {
     static public function init()
     {
         $pdo = self::create();
-        if (self::tableExists($pdo, 'users')) {
-            $pdo->exec('DROP TABLE IF EXISTS users');
+        if (! self::tableExists($pdo, 'test_swow_pgsql_users')) {
+            $pdo->exec('CREATE TABLE test_swow_pgsql_users (
+                id SERIAL primary key NOT NULL,
+                name character varying(32),
+                age integer)');
         }
 
-        $pdo->exec('CREATE TABLE users (
-            id SERIAL primary key NOT NULL,
-            name character varying(32),
-            age integer)'
-        );
+        $pdo->exec('TRUNCATE test_swow_pgsql_users');
     }
 
     static public function tableExists($pdo, $table) {

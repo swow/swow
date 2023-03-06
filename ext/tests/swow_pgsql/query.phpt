@@ -18,7 +18,7 @@ PDOUtil::init();
 
 $pdo = PDOUtil::create();
 
-$stmt = $pdo->prepare('INSERT INTO users (name, age) values (?, ?)');
+$stmt = $pdo->prepare('INSERT INTO test_swow_pgsql_users (name, age) values (?, ?)');
 
 for ($i = 0; $i < 3; $i++) {
     $stmt->bindValue(1, base64_encode(random_bytes(8)));
@@ -28,7 +28,7 @@ for ($i = 0; $i < 3; $i++) {
 
 Coroutine::run(static function (): void {
     $pdo = PDOUtil::create();
-    $statement = $pdo->query("select * from users where id = 1");
+    $statement = $pdo->query("select * from test_swow_pgsql_users where id = 1");
     var_dump($statement->fetchAll(PDO::FETCH_ASSOC));
 });
 
@@ -36,7 +36,7 @@ var_dump('wait');
 
 Coroutine::run(static function (): void {
     $pdo = PDOUtil::create();
-    $statement = $pdo->query("select * from users where id = 2");
+    $statement = $pdo->query("select * from test_swow_pgsql_users where id = 2");
     var_dump($statement->fetchAll(PDO::FETCH_ASSOC));
 });
 

@@ -18,7 +18,7 @@ PDOUtil::init();
 
 $pdo = PDOUtil::create();
 
-$stmt = $pdo->prepare('INSERT INTO users (name, age) values (?, ?)');
+$stmt = $pdo->prepare('INSERT INTO test_swow_pgsql_users (name, age) values (?, ?)');
 $stmt->bindValue(1, base64_encode(random_bytes(8)));
 $stmt->bindValue(2, random_int(18, 35));
 $stmt->execute();
@@ -28,7 +28,7 @@ Coroutine::run(static function (): void {
     try {
         $pdo->beginTransaction();
 
-        $pdo->exec("DROP TABLE IF EXISTS users");
+        $pdo->exec("DROP TABLE IF EXISTS test_swow_pgsql_users");
         throw new Exception("interrupt!!!");
         $pdo->commit();
     } catch (\Exception $e) {
@@ -40,14 +40,14 @@ Coroutine::run(static function (): void {
 var_dump('wait1');
 waitAll();
 
-var_dump(PDOUtil::tableExists($pdo, 'users'));
+var_dump(PDOUtil::tableExists($pdo, 'test_swow_pgsql_users'));
 
 Coroutine::run(static function (): void {
     $pdo = PDOUtil::create();
     try {
         $pdo->beginTransaction();
 
-        $pdo->exec("DROP TABLE IF EXISTS users");
+        $pdo->exec("DROP TABLE IF EXISTS test_swow_pgsql_users");
         $pdo->commit();
     } catch (\Exception $e) {
         $pdo->rollBack();
@@ -57,7 +57,7 @@ Coroutine::run(static function (): void {
 
 var_dump('wait2');
 waitAll();
-var_dump(PDOUtil::tableExists($pdo, 'users'));
+var_dump(PDOUtil::tableExists($pdo, 'test_swow_pgsql_users'));
 
 echo "Done\n";
 ?>
