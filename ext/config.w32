@@ -94,10 +94,10 @@ if (PHP_SWOW != 'no') (function(){
     var use_pgsql = 0;
     if('no' !== PHP_SWOW_PDO_PGSQL){
         if (CHECK_LIB("libpq.lib", "swow", PHP_SWOW) &&
+            CHECK_HEADER_ADD_INCLUDE("libpq-fe.h", "CFLAGS_SWOW") &&
             SETUP_OPENSSL("swow", PHP_SWOW) > 0)
             {
             ADD_FLAG("CFLAGS_SWOW_COMMON", "/D CAT_HAVE_PQ");
-            ADD_FLAG("CFLAGS_SWOW_COMMON", "/D PQ_STATICLIB");
             use_pgsql = 1;
         } else {
             WARNING("Swow PDO_PGSQL support not enabled; libraries and headers not found");
