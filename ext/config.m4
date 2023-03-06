@@ -755,10 +755,6 @@ EOF
         fi
         dnl make changes
         AC_DEFINE([CAT_HAVE_PQ], 1, [Enable libcat PostgreSQL])
-        AC_MSG_RESULT([PostgreSQL_LIBS..................................................])
-        AC_MSG_RESULT($PostgreSQL_LIBS)
-        AC_MSG_RESULT([PostgreSQL_INCL..................................................])
-        AC_MSG_RESULT($PostgreSQL_INCL)
         PHP_EVAL_LIBLINE($PostgreSQL_LIBS, SWOW_SHARED_LIBADD)
         SWOW_CAT_INCLUDES="$SWOW_CAT_INCLUDES $PostgreSQL_INCL"
         SWOW_ADD_SOURCES(deps/libcat/src, cat_pq.c, SWOW_CAT_INCLUDES, SWOW_CAT_CFLAGS)
