@@ -185,9 +185,9 @@ jobs:
         with:
           ext-path: ./ext
           tools-path: C:\tools\phpdev
-          conf-args: --enable-swow-debug --enable-swow-ssl --enable-swow-curl --enable-debug-pack
+          conf-args: --enable-swow-debug --enable-swow-ssl --enable-swow-curl --enable-debug-pack --enable-swow-pdo-pgsql
           ext-name: swow
-          deps: openssl,libcurl,libssh2,zlib,nghttp2
+          deps: openssl,libcurl,libssh2,zlib,nghttp2,libpq
 
       - name: Prepare coverage dependencies
         shell: powershell
