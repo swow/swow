@@ -4,14 +4,15 @@ class PDOUtil {
     static public function init()
     {
         $pdo = self::create();
-        if (! self::tableExists($pdo, 'users')) {
-            $pdo->exec('CREATE TABLE users (
-                id SERIAL primary key NOT NULL,
-                name character varying(32),
-                age integer,
-                date date)'
-            );
+        if (self::tableExists($pdo, 'users')) {
+            $pdo->exec('DROP TABLE IF EXISTS users');
         }
+
+        $pdo->exec('CREATE TABLE users (
+            id SERIAL primary key NOT NULL,
+            name character varying(32),
+            age integer)'
+        );
     }
 
     static private function tableExists($pdo, $table) {
