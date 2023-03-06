@@ -4,6 +4,7 @@ ARG_ENABLE('swow', 'Enable Swow support', 'yes');
 ARG_ENABLE('swow-debug', 'Enable Swow debug build flags', 'no');
 ARG_ENABLE('swow-ssl', 'Enable Swow OpenSSL support', 'yes');
 ARG_ENABLE('swow-curl', 'Enable Swow cURL support', 'yes');
+ARG_ENABLE('swow-pdo-pgsql', 'Enable Swow PDO_PGSQL support', 'yes');
 
 if (PHP_SWOW != 'no') (function(){
 
@@ -86,6 +87,23 @@ if (PHP_SWOW != 'no') (function(){
             WARNING("To enable Swow cURL support using offical pre-built deps and dlls,\r\n"+
                 "you need deps curl,openssl,zlib,libssh2,nghttp2.\r\n"+
                 "You may also want build curl yourself and add it into search path using --with-php-build=\r\n"+
+                "See PHP offical documents for Windows build for detail.");
+        }
+    }
+
+    var use_pgsql = 0;
+    if('no' !== PHP_SWOW_PDO_PGSQL){
+        if (CHECK_LIB("libpq.lib", "swow", PHP_SWOW) &&
+            SETUP_OPENSSL("swow", PHP_SWOW) > 0)
+            {
+            ADD_FLAG("CFLAGS_SWOW_COMMON", "/D CAT_HAVE_PQ");
+            ADD_FLAG("CFLAGS_SWOW_COMMON", "/D PQ_STATICLIB");
+            use_pgsql = 1;
+        } else {
+            WARNING("Swow PDO_PGSQL support not enabled; libraries and headers not found");
+            WARNING("To enable Swow PDO_PGSQL support using offical pre-built deps and dlls,\r\n"+
+                "you need deps openssl.\r\n"+
+                "You may also want build PDO_PGSQL yourself and add it into search path using --with-php-build=\r\n"+
                 "See PHP offical documents for Windows build for detail.");
         }
     }
