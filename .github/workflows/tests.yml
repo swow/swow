@@ -55,7 +55,7 @@ jobs:
           if [ ${{ runner.os }} = 'Linux' ]
           then
             sudo apt-get update
-            sudo apt-get install -yqq libcurl4-openssl-dev lcov libpq-dev postgresql-server-dev-all
+            sudo apt-get install -yqq libcurl4-openssl-dev lcov
           else
             brew install pkg-config
             brew install openssl@1.1

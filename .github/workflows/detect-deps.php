@@ -20,8 +20,8 @@ if (empty($argv[1])) {
     exit(1);
 }
 $getFullPath = static function (string $name): string {
-    preg_match("/--ldflags[^\\[]+\\[.+-L(.+{$name}.*?)\\/([^\\/]+)\\/lib/", shell_exec('php-config'), $matches);
-    $fullPath = sprintf('%s/%s', $prefixPath = $matches[1], $matches[2]);
+    preg_match("/--ldflags[^\\[]+\\[.+-L(.+{$name}.*?)\\/?([^\\/]+)?\\/lib/", shell_exec('php-config'), $matches);
+    $fullPath = sprintf('%s%s%s', $prefixPath = $matches[1], isset($matches[2]) ? '/' : '', $matches[2] ?? '');
     if (!is_dir($fullPath)) {
         $fullPath = sprintf('%s/%s', $prefixPath, trim(explode("\n", shell_exec("ls {$matches[1]}"))[0]));
     }
@@ -34,7 +34,7 @@ if ($argv[1] === 'openssl') {
     // maybe: /usr/local/Cellar/curl/7.87.0
     echo $getFullPath('curl');
 } elseif ($argv[1] === 'libpq') {
-    // maybe: /usr/local/opt/libpq/lib
+    // maybe: /usr/local/opt/libpq
     echo $getFullPath('libpq');
 } else {
     echo "Unknown argument: {$argv[1]}";
