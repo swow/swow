@@ -12,17 +12,10 @@ use Swow\Coroutine;
 use function Swow\Sync\waitAll;
 
 require __DIR__ . '/../include/bootstrap.php';
+require __DIR__ . '/PDOFactoryTest.inc';
 
-$host = TEST_POSTGRES_HOST;
-$port = TEST_POSTGRES_PORT;
-$user = TEST_POSTGRES_USER;
-$password = TEST_POSTGRES_PASSWORD;
-$dbname = TEST_POSTGRES_DBNAME;
-
-$dsn = "pgsql:host={$host};port={$port};dbname={$dbname}";
-
-Coroutine::run(static function () use ($dsn, $user, $password): void {
-    $pdo = new PDO($dsn, $user, $password);
+Coroutine::run(static function (): void {
+    $pdo = PDOFactoryTest::create();
     $statement = $pdo->prepare('SELECT * FROM pg_catalog.pg_tables limit 1');
     $statement->execute();
     var_dump($statement->fetchAll(PDO::FETCH_COLUMN));
@@ -30,8 +23,8 @@ Coroutine::run(static function () use ($dsn, $user, $password): void {
 
 var_dump('wait');
 
-Coroutine::run(static function () use ($dsn, $user, $password): void {
-  $pdo = new PDO($dsn, $user, $password);
+Coroutine::run(static function (): void {
+  $pdo = PDOFactoryTest::create();
   $statement = $pdo->prepare('SELECT * FROM pg_catalog.pg_tables limit 1');
   $statement->execute();
   var_dump($statement->fetchAll(PDO::FETCH_COLUMN));

@@ -112,9 +112,6 @@ jobs:
         run: |
           ${{ runner.os == 'Linux' && 'export TEST_CAT_POSTGRESQL="1"' || '' }}
           composer test-extension ext/tests/swow_pgsql/base.phpt
-        env:
-          POSTGRES_HOST: localhost
-          POSTGRES_PORT: 5432
 
       - name: Run library tests
         id: test-library
