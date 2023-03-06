@@ -30,18 +30,6 @@ jobs:
   unix-tests:
     name: PHP ${{ matrix.php-version }} ${{ matrix.ts }} Test on ${{ matrix.os }}
     runs-on: "${{ matrix.os }}"
-    services:
-      postgres:
-        image: postgres
-        env:
-          POSTGRES_PASSWORD: postgres
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 5432:5432
     strategy:
       fail-fast: false
       matrix:
@@ -55,6 +43,13 @@ jobs:
 
       - name: Checkout
         uses: actions/checkout@v3
+
+      - name: Start service containers
+        shell: bash
+        if: runner.os == 'Linux'
+        working-directory: libcat
+        run: |
+          docker compose -f ${{github.workspace}}/.github/docker-compose.yml up -d
 
       - name: Setup extension dependencies
         run: |
@@ -112,7 +107,9 @@ jobs:
       - name: Run extension tests
         id: test-extension
         continue-on-error: true
-        run: composer test-extension ext/tests/swow_pgsql/base.phpt
+        run: |
+          ${{ runner.os == 'Linux' && 'export TEST_CAT_POSTGRESQL="true"' || '' }}
+          composer test-extension ext/tests/swow_pgsql/base.phpt
         env:
           POSTGRES_HOST: localhost
           POSTGRES_PORT: 5432
