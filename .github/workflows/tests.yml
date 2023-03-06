@@ -111,7 +111,7 @@ jobs:
         continue-on-error: true
         run: |
           ${{ runner.os == 'Linux' && 'export TEST_SWOW_POSTGRESQL="1"' || '' }}
-          composer test-extension ext/tests/swow_pgsql/base.phpt
+          composer test-extension ext/tests/swow_pgsql
 
       - name: Run library tests
         id: test-library
