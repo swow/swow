@@ -88,6 +88,7 @@ AC_DEFUN([SWOW_ADD_SOURCES],[
 dnl
 dnl SWOW_PKG_CHECK_MODULES($varname, $libname, $ver, $search_path, $if_found, $if_not_found)
 dnl
+dnl pkg-config will check dependencies(eg: pgsql relies on openssl), so SWOW_PKG_FIND_PATH is appended, may be can ignore dependencies?
 SWOW_PKG_FIND_PATH="/lib/pkgconfig"
 if test "x" != "x$PKG_CONFIG_PATH"; then
   SWOW_PKG_FIND_PATH="$SWOW_PKG_FIND_PATH:$PKG_CONFIG_PATH"
@@ -103,10 +104,8 @@ AC_DEFUN([SWOW_PKG_CHECK_MODULES],[
 dnl find pkg using pkg-config cli tool
     AC_MSG_RESULT([................................. ${$4} .................................])
     if test "xyes" != "x${$4}" ; then
-      SWOW_PKG_FIND_PATH="${$4}/lib/pkgconfig:$SWOW_PKG_FIND_PATH"
+      SWOW_PKG_FIND_PATH="$SWOW_PKG_FIND_PATH:${$4}/lib/pkgconfig"
     fi
-
-    AC_MSG_RESULT([$SWOW_PKG_FIND_PATH ................................. $SWOW_PKG_FIND_PATH])
 
     if env PKG_CONFIG_PATH=${SWOW_PKG_FIND_PATH} $PKG_CONFIG --atleast-version $3 $2; then
       $2_version_full=`env PKG_CONFIG_PATH=${SWOW_PKG_FIND_PATH} $PKG_CONFIG --modversion $2`

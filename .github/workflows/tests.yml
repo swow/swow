@@ -85,11 +85,6 @@ jobs:
             echo "OPENSSL_ROOT_DIR=$(php .github/workflows/detect-deps.php openssl)" >> $GITHUB_ENV
             echo "CURL_ROOT_DIR=$(php .github/workflows/detect-deps.php curl)" >> $GITHUB_ENV
             echo "PGSQL_ROOT_DIR=$(php .github/workflows/detect-deps.php libpq)" >> $GITHUB_ENV
-            ls /usr/local/opt/libpq/lib/pkgconfig
-            cat /usr/local/opt/libpq/lib/pkgconfig/libpq.pc
-            export PKG_CONFIG_PATH=/usr/local/opt/libpq/lib/pkgconfig:$PKG_CONFIG_PATH
-            export PKG_CONFIG_PATH=/usr/local/Cellar/openssl@1.1/1.1.1t/lib/pkgconfig:$PKG_CONFIG_PATH
-            pkg-config --atleast-version 14.3 libpq
           fi
       - name: Build Swow extension
         run: |
