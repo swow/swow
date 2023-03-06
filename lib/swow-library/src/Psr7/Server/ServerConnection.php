@@ -47,6 +47,8 @@ use function sprintf;
 use function strlen;
 use function Swow\Debug\isStrictStringable;
 
+use const PATHINFO_EXTENSION;
+
 class ServerConnection extends Socket implements ProtocolTypeInterface
 {
     use ProtocolTypeTrait;
@@ -255,7 +257,7 @@ class ServerConnection extends Socket implements ProtocolTypeInterface
         }
 
         $headers = $response->getHeaders();
-        
+
         if (!$response->hasHeader('Content-Type')) {
             $extension = pathinfo($filename, PATHINFO_EXTENSION);
             $headers['Content-Type'] = MimeType::fromExtension($extension);
