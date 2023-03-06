@@ -82,10 +82,9 @@ jobs:
       - name: Detect dependencies path from php-config
         run: |
           if [ ${{ runner.os }} = 'macOS' ]; then
-            php-config
             echo "OPENSSL_ROOT_DIR=$(php .github/workflows/detect-deps.php openssl)" >> $GITHUB_ENV
             echo "CURL_ROOT_DIR=$(php .github/workflows/detect-deps.php curl)" >> $GITHUB_ENV
-            echo "PGSQL_ROOT_DIR=$(php .github/workflows/detect-deps.php pgsql)" >> $GITHUB_ENV
+            echo "PGSQL_ROOT_DIR=$(php .github/workflows/detect-deps.php libpq)" >> $GITHUB_ENV
           fi
       - name: Build Swow extension
         run: |
