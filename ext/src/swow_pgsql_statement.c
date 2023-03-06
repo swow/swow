@@ -20,8 +20,6 @@
 #include "config.h"
 #endif
 
-#include "swow_pgsql.h"
-
 #include "cat_pq.h"
 
 #include "php.h"
@@ -29,6 +27,7 @@
 #include "ext/standard/info.h"
 #include "pdo/php_pdo.h"
 #include "pdo/php_pdo_driver.h"
+#include "swow_pdo_pgsql_int.h"
 #ifdef HAVE_NETINET_IN_H
 #include <netinet/in.h>
 #endif
@@ -53,6 +52,8 @@
 #define TIMESTAMPOID   1114
 #define VARCHARLABEL "varchar"
 #define VARCHAROID   1043
+
+
 
 static int pgsql_stmt_dtor(pdo_stmt_t *stmt)
 {
@@ -133,6 +134,8 @@ static int pgsql_stmt_execute(pdo_stmt_t *stmt)
 	pdo_pgsql_stmt *S = (pdo_pgsql_stmt*)stmt->driver_data;
 	pdo_pgsql_db_handle *H = S->H;
 	ExecStatusType status;
+
+	bool in_trans = stmt->dbh->methods->in_transaction(stmt->dbh);
 
 	/* ensure that we free any previous unfetched results */
 	if(S->result) {
@@ -250,6 +253,10 @@ stmt_retry:
 		H->pgoid = PQoidValue(S->result);
 	} else {
 		stmt->row_count = (zend_long)PQntuples(S->result);
+	}
+
+	if (in_trans && !stmt->dbh->methods->in_transaction(stmt->dbh)) {
+		pdo_pgsql_close_lob_streams(stmt->dbh);
 	}
 
 	return 1;

@@ -21,11 +21,11 @@
 
 #include "swow.h"
 
-#include "php.h"
 #include "pdo/php_pdo_driver.h"
 
 #include <libpq-fe.h>
 #include <libpq/libpq-fs.h>
+#include <php.h>
 
 #define PHP_PDO_PGSQL_CONNECTION_FAILURE_SQLSTATE "08006"
 
@@ -49,6 +49,7 @@ typedef struct {
 	bool		emulate_prepares;
 	bool		disable_native_prepares; /* deprecated since 5.6 */
 	bool		disable_prepares;
+	HashTable       *lob_streams;
 } pdo_pgsql_db_handle;
 
 typedef struct {
@@ -110,6 +111,7 @@ php_stream *pdo_pgsql_create_lob_stream(zval *pdh, int lfd, Oid oid);
 extern const php_stream_ops pdo_pgsql_lob_stream_ops;
 
 void pdo_libpq_version(char *buf, size_t len);
+void pdo_pgsql_close_lob_streams(pdo_dbh_t *dbh);
 
 extern pdo_driver_t *pdo_find_driver(const char *name, int namelen);
 zend_result swow_pgsql_module_init(INIT_FUNC_ARGS);

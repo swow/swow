@@ -44,10 +44,10 @@ echo "Done\n";
 string(4) "wait"
 array(1) {
   [0]=>
-  string(10) "pg_catalog"
+  string(6) "public"
 }
 array(1) {
   [0]=>
-  string(10) "pg_catalog"
+  string(6) "public"
 }
 Done

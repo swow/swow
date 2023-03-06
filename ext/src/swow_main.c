@@ -39,7 +39,7 @@
 #include "swow_websocket.h"
 #include "swow_proc_open.h"
 #include "swow_curl.h"
-#include "swow_pgsql.h"
+#include "swow_pdo_pgsql_int.h"
 
 #include "cat_api.h"
 
