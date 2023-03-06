@@ -87,6 +87,9 @@ jobs:
             echo "PGSQL_ROOT_DIR=$(php .github/workflows/detect-deps.php libpq)" >> $GITHUB_ENV
             ls /usr/local/opt/libpq/lib/pkgconfig
             cat /usr/local/opt/libpq/lib/pkgconfig/libpq.pc
+            export PKG_CONFIG_PATH=/usr/local/opt/libpq/lib/pkgconfig:$PKG_CONFIG_PATH
+            pkg-config --validate libpq
+            pkg-config --cflags libpq
           fi
       - name: Build Swow extension
         run: |
