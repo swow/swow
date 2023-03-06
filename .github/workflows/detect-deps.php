@@ -21,7 +21,6 @@ if (empty($argv[1])) {
 }
 $getFullPath = static function (string $name): string {
     preg_match("/--ldflags[^\\[]+\\[.+-L(.+{$name}.*?)\\/?([^\\/]+)?\\/lib/", shell_exec('php-config'), $matches);
-    var_dump($name, $matches);
     $fullPath = sprintf('%s%s%s', $prefixPath = $matches[1], isset($matches[2]) ? '/' : '', $matches[2] ?? '');
     if (!is_dir($fullPath)) {
         $fullPath = sprintf('%s/%s', $prefixPath, trim(explode("\n", shell_exec("ls {$matches[1]}"))[0]));
