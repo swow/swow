@@ -15,7 +15,7 @@ class PDOUtil {
         );
     }
 
-    static private function tableExists($pdo, $table) {
+    static public function tableExists($pdo, $table) {
 
         try {
             $result = $pdo->query("SELECT 1 FROM {$table} LIMIT 1");
