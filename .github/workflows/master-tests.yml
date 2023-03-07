@@ -128,7 +128,7 @@ jobs:
           # ini-values: pcov.directory=lib
           # coverage: pcov
           coverage: none
-          extensions: curl,openssl,,pdo,pdo_pgsql
+          extensions: curl,openssl,pdo,pdo_pgsql
         env:
           phpts: ${{ matrix.ts }}
 
