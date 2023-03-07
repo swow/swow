@@ -28,8 +28,8 @@ Coroutine::run(static function (): void {
     try {
         $pdo->beginTransaction();
 
-        $pdo->exec("DROP TABLE IF EXISTS test_swow_pgsql_users");
-        throw new Exception("interrupt!!!");
+        $pdo->exec('DROP TABLE IF EXISTS test_swow_pgsql_users');
+        throw new Exception('interrupt!!!');
         $pdo->commit();
     } catch (\Exception $e) {
         $pdo->rollBack();
@@ -47,7 +47,7 @@ Coroutine::run(static function (): void {
     try {
         $pdo->beginTransaction();
 
-        $pdo->exec("DROP TABLE IF EXISTS test_swow_pgsql_users");
+        $pdo->exec('DROP TABLE IF EXISTS test_swow_pgsql_users');
         $pdo->commit();
     } catch (\Exception $e) {
         $pdo->rollBack();
