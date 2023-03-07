@@ -98,6 +98,11 @@ if (PHP_SWOW != 'no') (function(){
             SETUP_OPENSSL("swow", PHP_SWOW) > 0)
             {
             ADD_FLAG("CFLAGS_SWOW_COMMON", "/D CAT_HAVE_PQ");
+            if (PHP_SWOW_PDO_PGSQL != 'yes' && PHP_SWOW_PDO_PGSQL != 'no') {
+                ADD_FLAG("CFLAGS_SWOW_COMMON", "/I " + PHP_SWOW_PDO_PGSQL + "\\include");
+            }
+            ADD_FLAG("CFLAGS_SWOW_COMMON", "/I " + PHP_PHP_BUILD + "\\include\\pgsql");
+            ADD_FLAG("CFLAGS_SWOW_COMMON", "/I " + PHP_PHP_BUILD + "\\include\\libpq");
             use_pgsql = 1;
         } else {
             WARNING("Swow PDO_PGSQL support not enabled; libraries and headers not found");
