@@ -25,6 +25,7 @@
 
 #include "cat_pq.h"
 
+/* Git hash: php/php-src@0e45ed772df304c58f151d75d75f4ab5d9192c5b */
 #if PHP_VERSION_ID < 80100
 #include "php.h"
 #include "php_ini.h"
@@ -1314,6 +1315,7 @@ const pdo_driver_t pdo_pgsql_driver = {
 	pdo_pgsql_handle_factory
 };
 
+/* Git hash: php/php-src@22c9e7e27ea4396f43c4496cce6c058937976e90 */
 #elif PHP_VERSION_ID >= 80100
 #include "php.h"
 #include "php_ini.h"

@@ -22,6 +22,7 @@
 #include "swow.h"
 #include "pdo/php_pdo_driver.h"
 
+/* Git hash: php/php-src@0e45ed772df304c58f151d75d75f4ab5d9192c5b */
 #if PHP_VERSION_ID < 80100
 #include <libpq-fe.h>
 #include <libpq/libpq-fs.h>
@@ -116,6 +117,7 @@ extern const php_stream_ops pdo_pgsql_lob_stream_ops;
 void pdo_libpq_version(char *buf, size_t len);
 void pdo_pgsql_close_lob_streams(pdo_dbh_t *dbh);
 
+/* Git hash: php/php-src@22c9e7e27ea4396f43c4496cce6c058937976e90 */
 #elif PHP_VERSION_ID >= 80100
 
 #include <libpq-fe.h>
