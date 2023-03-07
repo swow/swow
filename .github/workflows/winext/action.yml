@@ -147,15 +147,6 @@ runs:
           ${{ inputs.conf-args }} || EXIT /b 1
         ECHO ::endgroup::
 
-    - name: Tmp
-      shell: cmd /c ECHO ::group::Tmp && %TOOLS_PATH%\env.bat {0}
-      env:
-        TOOLS_PATH: ${{ inputs.tools-path }}
-        UNIX_COLOR: "1"
-        FIX_PICKLE: ${{ inputs.fix-pickle != '0' && '1' || '0' }}
-      run: |
-        pg_config
-
     - name: Install extension
       shell: cmd /c ECHO ::group::Start install extension && %TOOLS_PATH%\env.bat {0}
       env:
