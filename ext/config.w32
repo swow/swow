@@ -93,10 +93,8 @@ if (PHP_SWOW != 'no') (function(){
 
     var use_pgsql = 0;
     if('no' !== PHP_SWOW_PDO_PGSQL){
-        STDOUT.WriteLine(PHP_SWOW);
-        STDOUT.WriteLine(PHP_PHP_BUILD);
         if (CHECK_LIB("libpq.lib", "swow", PHP_SWOW) &&
-            CHECK_HEADER_ADD_INCLUDE("libpq-fe.h", "CFLAGS_SWOW", PHP_PHP_BUILD + "\\include\\libpq;") &&
+            CHECK_HEADER_ADD_INCLUDE("libpq-fe.h", "CFLAGS_SWOW", PHP_SWOW_PDO_PGSQL + "\\include;" + PHP_PHP_BUILD + "\\include\\pgsql;" + PHP_PHP_BUILD + "\\include\\libpq;") &&
             SETUP_OPENSSL("swow", PHP_SWOW) > 0)
             {
             ADD_FLAG("CFLAGS_SWOW_COMMON", "/D CAT_HAVE_PQ");
