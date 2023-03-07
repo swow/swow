@@ -195,7 +195,9 @@ PHP_MINIT_FUNCTION(swow)
 #ifdef CAT_HAVE_CURL
         swow_curl_module_init,
 #endif
+#ifdef CAT_HAVE_PQ
         swow_pgsql_module_init,
+#endif
     };
 
     for (size_t i = 0; i < CAT_ARRAY_SIZE(minit_functions); i++) {
