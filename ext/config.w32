@@ -343,6 +343,9 @@ if (PHP_SWOW != 'no') (function(){
     if(use_curl){
         CAT_SOURCE_FILENAMES.push('cat_curl.c');
     }
+    if(use_pgsql){
+        CAT_SOURCE_FILENAMES.push('cat_pq.c');
+    }
     ADD_SOURCES(configure_module_dirname + '\\' + LIBCAT_DIR + '\\src', CAT_SOURCE_FILENAMES.join(' '), 'swow_libcat');
     ADD_FLAG("SWOW_GLOBAL_OBJS", "$(SWOW_LIBCAT_GLOBAL_OBJS)");
     ADD_FLAG("LIBS_SWOW", "$(SWOW_LIBCAT_GLOBAL_OBJS_RESP)");
