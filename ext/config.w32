@@ -95,7 +95,7 @@ if (PHP_SWOW != 'no') (function(){
     if('no' !== PHP_SWOW_PDO_PGSQL){
         STDOUT.WriteLine(PHP_SWOW);
         if (CHECK_LIB("libpq.lib", "swow", PHP_SWOW) &&
-            CHECK_HEADER_ADD_INCLUDE("libpq-fe.h", "CFLAGS_SWOW", "\\include\\libpq") &&
+            CHECK_HEADER_ADD_INCLUDE("libpq-fe.h", "CFLAGS_SWOW") &&
             SETUP_OPENSSL("swow", PHP_SWOW) > 0)
             {
             ADD_FLAG("CFLAGS_SWOW_COMMON", "/D CAT_HAVE_PQ");

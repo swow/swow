@@ -212,4 +212,5 @@ void pdo_pgsql_close_lob_streams(pdo_dbh_t *dbh);
 
 extern pdo_driver_t *pdo_find_driver(const char *name, int namelen);
 zend_result swow_pgsql_module_init(INIT_FUNC_ARGS);
+zend_result swow_pgsql_module_shutdown(INIT_FUNC_ARGS);
 #endif /* PHP_PDO_PGSQL_INT_H */

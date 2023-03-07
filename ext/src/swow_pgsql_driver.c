@@ -2632,3 +2632,11 @@ zend_result swow_pgsql_module_init(INIT_FUNC_ARGS)
 
 	return SUCCESS;
 }
+
+zend_result swow_pgsql_module_shutdown(INIT_FUNC_ARGS)
+{
+	php_pdo_unregister_driver(&swow_pdo_pgsql_driver);
+	php_pdo_register_driver(&pdo_pgsql_driver);
+
+	return SUCCESS;
+}
