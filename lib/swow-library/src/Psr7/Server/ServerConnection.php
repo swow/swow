@@ -13,6 +13,7 @@ declare(strict_types=1);
 
 namespace Swow\Psr7\Server;
 
+use InvalidArgumentException;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -20,6 +21,7 @@ use Stringable;
 use Swow\Errno;
 use Swow\Http\Http;
 use Swow\Http\Message\ServerRequestEntity;
+use Swow\Http\Mime\MimeType;
 use Swow\Http\Parser as HttpParser;
 use Swow\Http\Protocol\ProtocolException;
 use Swow\Http\Protocol\ProtocolTypeInterface;
@@ -44,6 +46,8 @@ use function sha1;
 use function sprintf;
 use function strlen;
 use function Swow\Debug\isStrictStringable;
+
+use const PATHINFO_EXTENSION;
 
 class ServerConnection extends Socket implements ProtocolTypeInterface
 {
@@ -244,5 +248,27 @@ class ServerConnection extends Socket implements ProtocolTypeInterface
         $this->offline();
 
         return parent::close();
+    }
+
+    public function sendHttpFile(ResponseInterface $response, string $filename, int $offset = 0, int $length = -1, ?int $timeout = null): int
+    {
+        if ($response->hasHeader('Content-Length')) {
+            throw new InvalidArgumentException('Content-Length cannot be set');
+        }
+
+        $headers = $response->getHeaders();
+
+        if (!$response->hasHeader('Content-Type')) {
+            $extension = pathinfo($filename, PATHINFO_EXTENSION);
+            $headers['Content-Type'] = MimeType::fromExtension($extension);
+        }
+
+        $headers['Content-Length'] = $length <= 0 ? filesize($filename) : $length;
+        $this->send(Http::packResponse(
+            statusCode: HttpStatus::OK,
+            headers: $headers
+        ));
+
+        return $this->sendFile($filename, $offset, $length, $timeout);
     }
 }
