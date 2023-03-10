@@ -54,6 +54,11 @@ function skip_if_constant_not_defined(string $constant_name): void
     skip_if(!defined($constant_name), "{$constant_name} is not defined");
 }
 
+function skip_if_env_not_true(string $env_name): void
+{
+    skip_if(!filter_var(getenv($env_name), FILTER_VALIDATE_BOOLEAN), "{$env_name} is not true");
+}
+
 function skip_if_function_not_exist(string $function_name): void
 {
     skip_if(!function_exists($function_name), "{$function_name} not exist");

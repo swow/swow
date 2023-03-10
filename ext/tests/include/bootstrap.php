@@ -26,6 +26,11 @@ error_reporting(E_ALL);
 
 /* ============== Env =============== */
 define('USE_VALGRIND', getenv('USE_ZEND_ALLOC') === '0');
+define('TEST_POSTGRES_HOST', getenv('POSTGRES_HOST') ?: '127.0.0.1');
+define('TEST_POSTGRES_PORT', getenv('POSTGRES_PORT') ?: 5432);
+define('TEST_POSTGRES_USER', getenv('POSTGRES_USER') ?: 'postgres');
+define('TEST_POSTGRES_PASSWORD', getenv('POSTGRES_PASSWORD') ?: 'postgres');
+define('TEST_POSTGRES_DBNAME', getenv('POSTGRES_DBNAME') ?: 'postgres');
 /* ============== Pressure ============== */
 define('TEST_PRESSURE_DEBUG', 0);
 define('TEST_PRESSURE_MIN', 1);

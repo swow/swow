@@ -4,6 +4,7 @@ ARG_ENABLE('swow', 'Enable Swow support', 'yes');
 ARG_ENABLE('swow-debug', 'Enable Swow debug build flags', 'no');
 ARG_ENABLE('swow-ssl', 'Enable Swow OpenSSL support', 'yes');
 ARG_ENABLE('swow-curl', 'Enable Swow cURL support', 'yes');
+ARG_ENABLE('swow-pdo-pgsql', 'Enable Swow PDO_PGSQL support', 'yes');
 
 if (PHP_SWOW != 'no') (function(){
 
@@ -86,6 +87,28 @@ if (PHP_SWOW != 'no') (function(){
             WARNING("To enable Swow cURL support using offical pre-built deps and dlls,\r\n"+
                 "you need deps curl,openssl,zlib,libssh2,nghttp2.\r\n"+
                 "You may also want build curl yourself and add it into search path using --with-php-build=\r\n"+
+                "See PHP offical documents for Windows build for detail.");
+        }
+    }
+
+    var use_pgsql = 0;
+    if('no' !== PHP_SWOW_PDO_PGSQL){
+        if (CHECK_LIB("libpq.lib", "swow", PHP_SWOW) &&
+            CHECK_HEADER_ADD_INCLUDE("libpq-fe.h", "CFLAGS_SWOW", PHP_SWOW_PDO_PGSQL + "\\include;" + PHP_PHP_BUILD + "\\include\\pgsql;" + PHP_PHP_BUILD + "\\include\\libpq;") &&
+            SETUP_OPENSSL("swow", PHP_SWOW) > 0)
+            {
+            ADD_FLAG("CFLAGS_SWOW_COMMON", "/D CAT_HAVE_PQ");
+            if (PHP_SWOW_PDO_PGSQL != 'yes' && PHP_SWOW_PDO_PGSQL != 'no') {
+                ADD_FLAG("CFLAGS_SWOW_COMMON", "/I " + PHP_SWOW_PDO_PGSQL + "\\include");
+            }
+            ADD_FLAG("CFLAGS_SWOW_COMMON", "/I " + PHP_PHP_BUILD + "\\include\\pgsql");
+            ADD_FLAG("CFLAGS_SWOW_COMMON", "/I " + PHP_PHP_BUILD + "\\include\\libpq");
+            use_pgsql = 1;
+        } else {
+            WARNING("Swow PDO_PGSQL support not enabled; libraries and headers not found");
+            WARNING("To enable Swow PDO_PGSQL support using offical pre-built deps and dlls,\r\n"+
+                "you need deps openssl.\r\n"+
+                "You may also want build PDO_PGSQL yourself and add it into search path using --with-php-build=\r\n"+
                 "See PHP offical documents for Windows build for detail.");
         }
     }
@@ -285,6 +308,9 @@ if (PHP_SWOW != 'no') (function(){
     if(use_curl){
         SWOW_SOURCE_FILENAMES.push('swow_curl.c');
     }
+    if(use_pgsql){
+        SWOW_SOURCE_FILENAMES.push('swow_pgsql_driver.c', 'swow_pgsql_statement.c');
+    }
     ADD_SOURCES(configure_module_dirname + '\\' + SWOW_SRC_DIR, SWOW_SOURCE_FILENAMES.join(' '), 'swow');
 
     // dependecies
@@ -321,6 +347,9 @@ if (PHP_SWOW != 'no') (function(){
     }
     if(use_curl){
         CAT_SOURCE_FILENAMES.push('cat_curl.c');
+    }
+    if(use_pgsql){
+        CAT_SOURCE_FILENAMES.push('cat_pq.c');
     }
     ADD_SOURCES(configure_module_dirname + '\\' + LIBCAT_DIR + '\\src', CAT_SOURCE_FILENAMES.join(' '), 'swow_libcat');
     ADD_FLAG("SWOW_GLOBAL_OBJS", "$(SWOW_LIBCAT_GLOBAL_OBJS)");

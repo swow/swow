@@ -88,6 +88,11 @@ AC_DEFUN([SWOW_ADD_SOURCES],[
 dnl
 dnl SWOW_PKG_CHECK_MODULES($varname, $libname, $ver, $search_path, $if_found, $if_not_found)
 dnl
+dnl pkg-config will check dependencies(eg: pgsql relies on openssl), so SWOW_PKG_FIND_PATH is appended, may be can ignore dependencies?
+SWOW_PKG_FIND_PATH="/lib/pkgconfig"
+if test "x" != "x$PKG_CONFIG_PATH"; then
+  SWOW_PKG_FIND_PATH="$SWOW_PKG_FIND_PATH:$PKG_CONFIG_PATH"
+fi
 AC_DEFUN([SWOW_PKG_CHECK_MODULES],[
   AC_MSG_CHECKING(for $2 $3 or greater)
   if test "x${$1_LIBS+set}" = "xset" || test "x${$1_INCLUDES+set}" = "xset"; then
@@ -97,14 +102,8 @@ AC_DEFUN([SWOW_PKG_CHECK_MODULES],[
     $5
   elif test -x "$PKG_CONFIG" ; then
 dnl find pkg using pkg-config cli tool
-    if test "xyes" = "x${$4}" ; then
-      SWOW_PKG_FIND_PATH=/lib/pkgconfig
-    else
-      SWOW_PKG_FIND_PATH=${$4}/lib/pkgconfig
-    fi
-
-    if test "x" != "x$PKG_CONFIG_PATH"; then
-      SWOW_PKG_FIND_PATH="$SWOW_PKG_FIND_PATH:$PKG_CONFIG_PATH"
+    if test "xyes" != "x${$4}" ; then
+      SWOW_PKG_FIND_PATH="$SWOW_PKG_FIND_PATH:${$4}/lib/pkgconfig"
     fi
 
     if env PKG_CONFIG_PATH=${SWOW_PKG_FIND_PATH} $PKG_CONFIG --atleast-version $3 $2; then
@@ -182,6 +181,12 @@ PHP_ARG_ENABLE([swow-ssl],
 PHP_ARG_ENABLE([swow-curl],
   [whether to enable Swow cURL support],
   [AS_HELP_STRING([--enable-swow-curl], [Enable Swow cURL support])],
+  [yes], [no]
+)
+
+PHP_ARG_ENABLE([swow-pdo-pgsql],
+  [whether to enable Swow PDO_PGSQL support],
+  [AS_HELP_STRING([--enable-swow-pdo-pgsql], [Enable Swow PDO_PGSQL support])],
   [yes], [no]
 )
 
@@ -739,6 +744,23 @@ EOF
         SWOW_ADD_SOURCES(src, swow_curl.c, SWOW_INCLUDES, SWOW_CFLAGS)
       ],[
         AC_MSG_WARN([Swow cURL support not enabled: libcurl not found])
+      ])
+    fi
+
+    dnl add postgresql sources
+    if test "x${PHP_SWOW_PDO_PGSQL}" != "xno" ; then
+      SWOW_PKG_CHECK_MODULES([PostgreSQL], libpq, 14.3, [PHP_SWOW_PDO_PGSQL], [
+        if test "x${PHP_PDO_PGSQL}" = "xno" ; then
+          AC_MSG_WARN([Swow PDO_PGSQL support is enabled but PDO_PGSQL PHP extension is not enabled])
+        fi
+        dnl make changes
+        AC_DEFINE([CAT_HAVE_PQ], 1, [Enable libcat PostgreSQL])
+        PHP_EVAL_LIBLINE($PostgreSQL_LIBS, SWOW_SHARED_LIBADD)
+        SWOW_CAT_INCLUDES="$SWOW_CAT_INCLUDES $PostgreSQL_INCL"
+        SWOW_ADD_SOURCES(deps/libcat/src, cat_pq.c, SWOW_CAT_INCLUDES, SWOW_CAT_CFLAGS)
+        SWOW_ADD_SOURCES(src, swow_pgsql_driver.c swow_pgsql_statement.c, SWOW_INCLUDES, SWOW_CFLAGS)
+      ],[
+        AC_MSG_WARN([Swow PDO_PGSQL support not enabled: libpq not found])
       ])
     fi
 
