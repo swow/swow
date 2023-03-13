@@ -2047,7 +2047,7 @@ static int swow_plain_files_rename(php_stream_wrapper *wrapper, const char *url_
 # endif
             int success = 0;
             if (php_copy_file(url_from, url_to) == SUCCESS) {
-                if (swow_virtual_stat(url_from, &sb)) {
+                if (swow_virtual_stat(url_from, &sb) == 0) {
                     success = 1;
 #  ifndef TSRM_WIN32
                     /*
