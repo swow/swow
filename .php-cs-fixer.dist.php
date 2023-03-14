@@ -46,6 +46,7 @@ return (new Config())
                         [
                             __DIR__ . '/ext/tests/swow_closure/use.inc',
                             __DIR__ . '/ext/tests/swow_closure/use.inc.inc',
+                            __DIR__ . '/ext/tests/swow_closure/multiple_ns.inc',
                         ] as $excludeFilePath
                     ) {
                         $GLOBALS['exclude_file_path_list'][] = substr($excludeFilePath, strlen(__DIR__) + strlen('/'));
