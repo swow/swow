@@ -41,6 +41,7 @@
 #include "swow_curl.h"
 
 #ifdef CAT_HAVE_PQ
+#include <libpq-fe.h>
 zend_result swow_pgsql_module_init(INIT_FUNC_ARGS);
 zend_result swow_pgsql_module_shutdown(INIT_FUNC_ARGS);
 #endif
@@ -463,6 +464,22 @@ PHP_MINFO_FUNCTION(swow)
         smart_str_free(&str);
     }
 #endif
+#ifdef CAT_HAVE_PQ
+    do {
+        char pgsql_libpq_version[16];
+        int version = PQlibVersion();
+        int major = version / 10000;
+        if (major >= 10) {
+            int minor = version % 10000;
+            snprintf(pgsql_libpq_version, sizeof(pgsql_libpq_version), "libpq/%d.%d", major, minor);
+        } else {
+            int minor = version / 100 % 100;
+            int revision = version % 100;
+            snprintf(pgsql_libpq_version, sizeof(pgsql_libpq_version), "libpq/%d.%d.%d", major, minor, revision);
+        }
+        php_info_print_table_row(2, "PostgreSQL", pgsql_libpq_version);
+    } while (0);
+#endif
     php_info_print_table_end();
 }
 /* }}} */
@@ -543,6 +560,11 @@ static PHP_METHOD(Swow_Extension, isBuiltWith)
 #endif
 #ifdef CAT_HAVE_CURL
     else if (zend_string_equals_literal_ci(lib, "curl")) {
+        ret = 1;
+    }
+#endif
+#ifdef CAT_HAVE_PQ
+    else if (zend_string_equals_literal_ci(lib, "pgsql")) {
         ret = 1;
     }
 #endif
