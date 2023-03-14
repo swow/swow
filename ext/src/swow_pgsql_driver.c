@@ -1004,7 +1004,7 @@ PHP_METHOD(PDO_PGSql_Ext, pgsqlLOBOpen)
 	int lfd;
 	char *oidstr;
 	size_t oidstrlen;
-	char *modestr = "rb";
+	char *modestr = (char *) "rb";
 	size_t modestrlen;
 	int mode = INV_READ;
 	char *end_ptr;
@@ -2298,7 +2298,7 @@ PHP_METHOD(PDO_PGSql_Ext, pgsqlLOBOpen)
 	int lfd;
 	char *oidstr;
 	size_t oidstrlen;
-	char *modestr = "rb";
+	char *modestr = (char *) "rb";
 	size_t modestrlen;
 	int mode = INV_READ;
 	char *end_ptr;

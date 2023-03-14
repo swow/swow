@@ -386,7 +386,7 @@ static int pgsql_stmt_param_hook(pdo_stmt_t *stmt, struct pdo_bound_param_data *
 						S->param_values[param->paramno] = NULL;
 						S->param_lengths[param->paramno] = 0;
 					} else if (Z_TYPE_P(parameter) == IS_FALSE || Z_TYPE_P(parameter) == IS_TRUE) {
-						S->param_values[param->paramno] = Z_TYPE_P(parameter) == IS_TRUE ? "t" : "f";
+						S->param_values[param->paramno] = (char *) (Z_TYPE_P(parameter) == IS_TRUE ? "t" : "f");
 						S->param_lengths[param->paramno] = 1;
 						S->param_formats[param->paramno] = 0;
 					} else {
@@ -1099,7 +1099,7 @@ static int pgsql_stmt_param_hook(pdo_stmt_t *stmt, struct pdo_bound_param_data *
 						S->param_values[param->paramno] = NULL;
 						S->param_lengths[param->paramno] = 0;
 					} else if (Z_TYPE_P(parameter) == IS_FALSE || Z_TYPE_P(parameter) == IS_TRUE) {
-						S->param_values[param->paramno] = Z_TYPE_P(parameter) == IS_TRUE ? "t" : "f";
+						S->param_values[param->paramno] = (char *) (Z_TYPE_P(parameter) == IS_TRUE ? "t" : "f");
 						S->param_lengths[param->paramno] = 1;
 						S->param_formats[param->paramno] = 0;
 					} else {
