@@ -16,14 +16,11 @@
   +----------------------------------------------------------------------+
 */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
-#include "swow_pdo_pgsql_int.h"
-#include "swow_pgsql_driver_arginfo.h"
-
 #include "cat_pq.h"
+
+#ifdef CAT_PQ
+
+#include "php_version.h"
 
 /* Git hash: php/php-src@0e45ed772df304c58f151d75d75f4ab5d9192c5b */
 #if PHP_VERSION_ID < 80100
@@ -37,7 +34,9 @@
 #include "pdo/php_pdo_error.h"
 #include "ext/standard/file.h"
 #undef SIZEOF_OFF_T
+#include "swow_pdo_pgsql_int.h"
 #include "zend_exceptions.h"
+#include "swow_pgsql_driver_arginfo.h"
 
 static int pgsql_handle_in_transaction(pdo_dbh_t *dbh);
 
@@ -1327,7 +1326,9 @@ const pdo_driver_t pdo_pgsql_driver = {
 #include "pdo/php_pdo_error.h"
 #include "ext/standard/file.h"
 #undef SIZEOF_OFF_T
+#include "swow_pdo_pgsql_int.h"
 #include "zend_exceptions.h"
+#include "swow_pgsql_driver_arginfo.h"
 
 static bool pgsql_handle_in_transaction(pdo_dbh_t *dbh);
 
@@ -2621,7 +2622,8 @@ const pdo_driver_t swow_pdo_pgsql_driver = {
 	pdo_pgsql_handle_factory
 };
 
-// 这里改成hook的方式
+#include "swow.h"
+
 zend_result swow_pgsql_module_init(INIT_FUNC_ARGS)
 {
 	SWOW_MODULES_CHECK_PRE_START() {
@@ -2642,3 +2644,5 @@ zend_result swow_pgsql_module_shutdown(INIT_FUNC_ARGS)
 
 	return SUCCESS;
 }
+
+#endif /* CAT_PQ */

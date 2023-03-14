@@ -39,7 +39,11 @@
 #include "swow_websocket.h"
 #include "swow_proc_open.h"
 #include "swow_curl.h"
-#include "swow_pdo_pgsql_int.h"
+
+#ifdef CAT_HAVE_PQ
+zend_result swow_pgsql_module_init(INIT_FUNC_ARGS);
+zend_result swow_pgsql_module_shutdown(INIT_FUNC_ARGS);
+#endif
 
 #include "cat_api.h"
 

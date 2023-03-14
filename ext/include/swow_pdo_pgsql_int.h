@@ -19,9 +19,6 @@
 #ifndef PHP_PDO_PGSQL_INT_H
 #define PHP_PDO_PGSQL_INT_H
 
-#include "swow.h"
-#include "pdo/php_pdo_driver.h"
-
 /* Git hash: php/php-src@0e45ed772df304c58f151d75d75f4ab5d9192c5b */
 #if PHP_VERSION_ID < 80100
 #include <libpq-fe.h>
@@ -213,6 +210,4 @@ void pdo_pgsql_close_lob_streams(pdo_dbh_t *dbh);
 #endif
 
 extern pdo_driver_t *pdo_find_driver(const char *name, int namelen);
-zend_result swow_pgsql_module_init(INIT_FUNC_ARGS);
-zend_result swow_pgsql_module_shutdown(INIT_FUNC_ARGS);
 #endif /* PHP_PDO_PGSQL_INT_H */

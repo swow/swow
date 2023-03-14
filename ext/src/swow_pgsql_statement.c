@@ -16,13 +16,11 @@
   +----------------------------------------------------------------------+
 */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
-#include "swow_pdo_pgsql_int.h"
-
 #include "cat_pq.h"
+
+#ifdef CAT_PQ
+
+#include "php_version.h"
 
 /* Git hash: php/php-src@0e45ed772df304c58f151d75d75f4ab5d9192c5b */
 #if PHP_VERSION_ID < 80100
@@ -31,6 +29,7 @@
 #include "ext/standard/info.h"
 #include "pdo/php_pdo.h"
 #include "pdo/php_pdo_driver.h"
+#include "swow_pdo_pgsql_int.h"
 #ifdef HAVE_NETINET_IN_H
 #include <netinet/in.h>
 #endif
@@ -743,6 +742,7 @@ const struct pdo_stmt_methods pgsql_stmt_methods = {
 #include "ext/standard/info.h"
 #include "pdo/php_pdo.h"
 #include "pdo/php_pdo_driver.h"
+#include "swow_pdo_pgsql_int.h"
 #ifdef HAVE_NETINET_IN_H
 #include <netinet/in.h>
 #endif
@@ -1413,3 +1413,5 @@ const struct pdo_stmt_methods pgsql_stmt_methods = {
 	pdo_pgsql_stmt_cursor_closer
 };
 #endif
+
+#endif /* CAT_PQ */
