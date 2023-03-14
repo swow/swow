@@ -1,44 +1,54 @@
 <?php
+/**
+ * This file is part of Swow
+ *
+ * @link    https://github.com/swow/swow
+ * @contact twosee <twosee@php.net>
+ *
+ * For the full copyright and license information,
+ * please view the LICENSE file that was distributed with this source code
+ */
+
+declare(strict_types=1);
 
 namespace NamespaceA {
-    use \A\B as SomeImportedClass;
-    use \A\C,\A\D;
-    use function \A\E, \A\F;
-    use const \A\G as constG, \A\H as constH;
-    use \A\{I,};
-    use \A\{J,K};
-    use \A\L\M\{
-        N as NN,
-        O as OO,
-    };
-    use function \A\L\M\{
-        P as PP,
-        Q as QQ,
-    };
-    use const \A\L\M\{
-        R as RR,
-        S as SS,
-    };
-    use \A\L\M\{
-        const T as TT,
-        function U as UU,
-        V as VV,
-    };
-    const SOME_CONST = __NAMESPACE__ . '\SOME_CONST';
+    use A\B as SomeImportedClass;
+    use A\C;
+    use A\D;
+    use A\J;
+    use A\K;
+    use A\L\M\N as NN;
+    use A\L\M\O as OO;
+    use A\L\M\V as VV;
+    use A\{I};
+
+use function A\E;
+    use function A\F;
+use function A\L\M\P as PP;
+    use function A\L\M\Q as QQ;
+use function A\L\M\U as UU;
+
+use const A\G as constG;
+use const A\H as constH;
+    use const A\L\M\R as RR;
+use const A\L\M\S as SS;
+use const A\L\M\T as TT;
+
+const SOME_CONST = __NAMESPACE__ . '\SOME_CONST';
     class SomeClass
     {
-        function __construct()
+        public function __construct()
         {
             echo static::class . "::__construct\n";
         }
     }
-    function someFunc()
+    function someFunc(): void
     {
         echo __NAMESPACE__ . "\\someFunc()\n";
     }
     function getAnonymous()
     {
-        return function () {
+        return static function (): void {
             echo __NAMESPACE__ . "\\\$anonymous()\n";
             new SomeImportedClass();
             new C();
@@ -64,44 +74,43 @@ namespace NamespaceA {
 }
 
 namespace NamespaceB {
-    use \A\C as SomeImportedClass;
-    use \A\B,\A\D;
-    use function \A\E, \A\F;
-    use const \A\G as constG, \A\H as constH;
-    use \A\{I,};
-    use \A\{J,K};
-    use \A\L\M\{
-        N as NN,
-        O as OO,
-    };
-    use function \A\L\M\{
-        P as PP,
-        Q as QQ,
-    };
-    use const \A\L\M\{
-        R as RR,
-        S as SS,
-    };
-    use \A\L\M\{
-        const T as TT,
-        function U as UU,
-        V as VV,
-    };
-    const SOME_CONST = __NAMESPACE__ . '\SOME_CONST';
+    use A\B;
+    use A\C as SomeImportedClass;
+    use A\D;
+    use A\J;
+    use A\K;
+    use A\L\M\N as NN;
+    use A\L\M\O as OO;
+    use A\L\M\V as VV;
+    use A\{I};
+
+use function A\E;
+    use function A\F;
+use function A\L\M\P as PP;
+    use function A\L\M\Q as QQ;
+use function A\L\M\U as UU;
+
+use const A\G as constG;
+use const A\H as constH;
+    use const A\L\M\R as RR;
+use const A\L\M\S as SS;
+use const A\L\M\T as TT;
+
+const SOME_CONST = __NAMESPACE__ . '\SOME_CONST';
     class SomeClass
     {
-        function __construct()
+        public function __construct()
         {
             echo static::class . "::__construct\n";
         }
     }
-    function someFunc()
+    function someFunc(): void
     {
         echo __NAMESPACE__ . "\\someFunc()\n";
     }
     function getAnonymous()
     {
-        return function () {
+        return static function (): void {
             echo __NAMESPACE__ . "\\\$anonymous()\n";
             new B();
             new SomeImportedClass();
@@ -127,44 +136,43 @@ namespace NamespaceB {
 }
 
 namespace {
-    use \A\D as SomeImportedClass;
-    use \A\B,\A\C;
-    use function \A\E, \A\F;
-    use const \A\G as constG, \A\H as constH;
-    use \A\{I,};
-    use \A\{J,K};
-    use \A\L\M\{
-        N as NN,
-        O as OO,
-    };
-    use function \A\L\M\{
-        P as PP,
-        Q as QQ,
-    };
-    use const \A\L\M\{
-        R as RR,
-        S as SS,
-    };
-    use \A\L\M\{
-        const T as TT,
-        function U as UU,
-        V as VV,
-    };
-    const SOME_CONST = __NAMESPACE__ . '\SOME_CONST';
+    use A\B;
+    use A\C;
+    use A\D as SomeImportedClass;
+    use A\J;
+    use A\K;
+    use A\L\M\N as NN;
+    use A\L\M\O as OO;
+    use A\L\M\V as VV;
+    use A\{I};
+
+use function A\E;
+    use function A\F;
+use function A\L\M\P as PP;
+    use function A\L\M\Q as QQ;
+use function A\L\M\U as UU;
+
+use const A\G as constG;
+use const A\H as constH;
+    use const A\L\M\R as RR;
+use const A\L\M\S as SS;
+use const A\L\M\T as TT;
+
+const SOME_CONST = __NAMESPACE__ . '\SOME_CONST';
     class SomeClass
     {
-        function __construct()
+        public function __construct()
         {
             echo static::class . "::__construct\n";
         }
     }
-    function someFunc()
+    function someFunc(): void
     {
         echo __NAMESPACE__ . "\\someFunc()\n";
     }
     function getAnonymous()
     {
-        return function () {
+        return static function (): void {
             echo __NAMESPACE__ . "\\\$anonymous()\n";
             new B();
             new C();

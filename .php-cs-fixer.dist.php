@@ -24,6 +24,7 @@ return (new Config())
             ->name([
                 '*.php',
                 '*.phpt',
+                '*.inc',
             ])
             ->in([
                 __DIR__ . '/.github',
@@ -40,6 +41,21 @@ return (new Config())
             ])
             ->filter(static function (Symfony\Component\Finder\SplFileInfo $fileInfo): bool {
                 $pathname = $fileInfo->getPathname();
+                if (empty($GLOBALS['exclude_file_path_list'])) {
+                    foreach (
+                        [
+                            __DIR__ . '/ext/tests/swow_closure/use.inc',
+                            __DIR__ . '/ext/tests/swow_closure/use.inc.inc',
+                        ] as $excludeFilePath
+                    ) {
+                        $GLOBALS['exclude_file_path_list'][] = substr($excludeFilePath, strlen(__DIR__) + strlen('/'));
+                    }
+                }
+                foreach ($GLOBALS['exclude_file_path_list'] as $excludeFilePath) {
+                    if (strrpos($pathname, $excludeFilePath) !== false) {
+                        return false;
+                    }
+                }
                 if (str_contains($pathname, 'ext/build')) {
                     return false;
                 }

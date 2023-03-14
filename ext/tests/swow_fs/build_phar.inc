@@ -2,8 +2,8 @@
 /**
  * This file is part of Swow
  *
- * @link     https://github.com/swow/swow
- * @contact  twosee <twosee@php.net>
+ * @link    https://github.com/swow/swow
+ * @contact twosee <twosee@php.net>
  *
  * For the full copyright and license information,
  * please view the LICENSE file that was distributed with this source code
@@ -117,7 +117,7 @@ const TEST_AUTOLOAD = 0;
 const TEST_INCLUDE = 1;
 const TEST_REQUIRE = 2;
 
-function build_phar($pharFile = __DIR__ . '/phartest.phar', $test_type = TEST_AUTOLOAD)
+function build_phar($pharFile = __DIR__ . '/phartest.phar', $test_type = TEST_AUTOLOAD): void
 {
     if (file_exists($pharFile)) {
         unlink($pharFile);
