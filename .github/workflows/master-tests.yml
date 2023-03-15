@@ -201,10 +201,14 @@ jobs:
         run: composer update -o --ignore-platform-reqs
 
       - name: Run extension tests
-        shell: cmd
+        shell: pwsh
         id: test-extension
         continue-on-error: true
-        run: composer test-extension
+        run: |
+          & "${env:PGBIN}\initdb.exe" --locale=C -E UTF-8 -U postgres "C:\pgsqldata"
+          & "${env:PGBIN}\pg_ctl.exe" -D "C:\pgsqldata" start
+          ${env:TEST_SWOW_POSTGRESQL} = "1"
+          composer test-extension
 
       - name: Run library tests
         shell: cmd

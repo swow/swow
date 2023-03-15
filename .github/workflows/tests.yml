@@ -335,6 +335,9 @@ jobs:
         id: test-extension
         continue-on-error: true
         run: |
+          & "${env:PGBIN}\initdb.exe" --locale=C -E UTF-8 -U postgres "C:\pgsqldata"
+          & "${env:PGBIN}\pg_ctl.exe" -D "C:\pgsqldata" start
+          ${env:TEST_SWOW_POSTGRESQL} = "1"
           & C:\OpenCppCoverage\OpenCppCoverage.exe `
             --export_type binary:ext_test.cov `
             --sources ext\include `
