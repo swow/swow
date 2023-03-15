@@ -158,7 +158,7 @@ function skip_if_max_open_files_less_than(int $number): void
         if (function_exists('posix_getrlimit')) {
             $n = posix_getrlimit()['soft openfiles'] ?? null;
         }
-        $n ??= (int) shell_exec('ulmit -n');
+        $n ??= (int) shell_exec('ulimit -n');
     }
     if ($n < $number) {
         skip("Max open files should be greater than or equal to {$number}, but it is {$n} now");
