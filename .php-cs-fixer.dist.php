@@ -61,6 +61,9 @@ return (new Config())
                     return false;
                 }
                 if (preg_match('/ext\/tests\/.+\.php$/', $pathname)) {
+                    if (strrpos($pathname, 'ext/tests/include') !== false) {
+                        return true;
+                    }
                     return false;
                 }
                 return true;
