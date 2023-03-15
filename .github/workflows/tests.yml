@@ -39,16 +39,20 @@ jobs:
         #php-version: ['8.0']
         #ts: ['nts', 'ts']
       max-parallel: 8
+
+    services:
+      postgres:
+        image: postgres
+        ports:
+          - 5432:5432
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+
     steps:
 
       - name: Checkout
         uses: actions/checkout@v3
-
-      - name: Start service containers
-        shell: bash
-        if: runner.os == 'Linux'
-        run: |
-          docker compose -f ${{github.workspace}}/.github/docker-compose.yml up -d
 
       - name: Setup extension dependencies
         run: |
