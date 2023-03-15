@@ -4,6 +4,7 @@ swow_pgsql: test hook pgsql
 <?php
 require __DIR__ . '/../include/skipif.php';
 skip_if_env_not_true('TEST_SWOW_POSTGRESQL');
+skip_if_extension_not_exist('pdo_pgsql');
 ?>
 --FILE--
 <?php
