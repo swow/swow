@@ -749,14 +749,11 @@ EOF
 
     dnl add postgresql sources
     if test "x${PHP_SWOW_PDO_PGSQL}" != "xno" ; then
-      SWOW_PKG_CHECK_MODULES([PostgreSQL], libpq, 14.3, [PHP_SWOW_PDO_PGSQL], [
-        if test "x${PHP_PDO_PGSQL}" = "xno" ; then
-          AC_MSG_WARN([Swow PDO_PGSQL support is enabled but PDO_PGSQL PHP extension is not enabled])
-        fi
+      SWOW_PKG_CHECK_MODULES([POSTGRESQL], libpq, 14.3, [PHP_SWOW_PDO_PGSQL], [
         dnl make changes
         AC_DEFINE([CAT_HAVE_PQ], 1, [Enable libcat PostgreSQL])
-        PHP_EVAL_LIBLINE($PostgreSQL_LIBS, SWOW_SHARED_LIBADD)
-        SWOW_CAT_INCLUDES="$SWOW_CAT_INCLUDES $PostgreSQL_INCL"
+        PHP_EVAL_LIBLINE($POSTGRESQL_LIBS, SWOW_SHARED_LIBADD)
+        SWOW_CAT_INCLUDES="$SWOW_CAT_INCLUDES $POSTGRESQL_INCL"
         SWOW_ADD_SOURCES(deps/libcat/src, cat_pq.c, SWOW_CAT_INCLUDES, SWOW_CAT_CFLAGS)
         SWOW_ADD_SOURCES(src, swow_pgsql_driver.c swow_pgsql_statement.c, SWOW_INCLUDES, SWOW_CFLAGS)
       ],[
