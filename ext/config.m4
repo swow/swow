@@ -191,6 +191,8 @@ PHP_ARG_ENABLE([swow-pdo-pgsql],
 )
 
 if test "${PHP_SWOW}" != "no"; then
+  AC_LANG_PUSH(C)
+
   dnl check if this php version we support
   AC_MSG_CHECKING([Check for supported PHP version number])
   if test -n "$PHP_VERSION"; then
@@ -227,11 +229,40 @@ if test "${PHP_SWOW}" != "no"; then
   SWOW_STD_CFLAGS="${SWOW_STD_CFLAGS} -Wno-unused-parameter"
   AC_MSG_CHECKING([for ZTS])
   if test "$PHP_THREAD_SAFETY" != "no"; then
-    AC_MSG_RESULT([whether to enable Swow multi-thread support... yes])
+    AC_MSG_RESULT([yes])
     SWOW_STD_CFLAGS="${SWOW_STD_CFLAGS} -DZEND_ENABLE_STATIC_TSRMLS_CACHE=1"
+  else
+    AC_MSG_RESULT([no])
   fi
 
   PHP_SUBST(SWOW_STD_CFLAGS)
+
+  dnl check if weak symbol works
+  AC_MSG_CHECKING([whether $CC supports weak symbol alias])
+  AC_CACHE_VAL(
+    [ac_cv_cc_attribute_weak_alias],[
+      AC_COMPILE_IFELSE([
+        AC_LANG_PROGRAM(
+        [
+          extern int somesymbol __attribute__ ((weak, alias("notfound")));
+          int notfound = 0xcafebabe;
+        ],
+        [
+          if (notfound != 0xcafebabe) {
+            return 1;
+          }
+        ])
+      ],
+      [
+        AC_MSG_RESULT(yes)
+        AC_DEFINE([HAVE_SYS_WEAK_ALIAS_ATTRIBUTE], 1, [Define this if weak aliases may be created with __attribute__])
+        ac_cv_cc_attribute_weak=yes
+      ],
+      [
+        AC_MSG_RESULT(no)
+        ac_cv_cc_attribute_weak=no
+      ])
+  ])
 
   if test "${PHP_SWOW_DEBUG}" = "yes"; then
     dnl Remove all optimization flags from CFLAGS.
@@ -356,6 +387,10 @@ EOF
     SWOW_ADD_SOURCES(src, swow_tokenizer.c, SWOW_INCLUDES, SWOW_CFLAGS)
   else
     SWOW_ADD_SOURCES(src, swow_tokenizer.c, SWOW_INCLUDES, SWOW_CFLAGS, [\$(top_srcdir)/Zend/zend_language_parser.c \$(top_srcdir)/Zend/zend_language_scanner.c])
+  fi
+
+  if test x"${ac_cv_cc_attribute_weak}" = x"yes"; then
+    SWOW_ADD_SOURCES(src, swow_weak_symbol.c, SWOW_INCLUDES, SWOW_CFLAGS)
   fi
 
   dnl TODO: may use separate libcat
@@ -756,7 +791,10 @@ EOF
           SWOW_PKG_CHECK_MODULES([POSTGRESQL], libpq, 14.3, [PHP_SWOW_PDO_PGSQL], [
             dnl make changes
             AC_DEFINE([CAT_HAVE_PQ], 1, [Enable libcat PostgreSQL])
-            PHP_EVAL_LIBLINE($POSTGRESQL_LIBS, SWOW_SHARED_LIBADD)
+            dnl use weak symbol to provide this
+            if test x"${ac_cv_cc_attribute_weak}" != x"yes"; then
+              PHP_EVAL_LIBLINE($POSTGRESQL_LIBS, SWOW_SHARED_LIBADD)
+            fi
             SWOW_CAT_INCLUDES="$SWOW_CAT_INCLUDES $POSTGRESQL_INCL"
             SWOW_ADD_SOURCES(deps/libcat/src, cat_pq.c, SWOW_CAT_INCLUDES, SWOW_CAT_CFLAGS)
             SWOW_ADD_SOURCES(src, swow_pgsql_driver.c swow_pgsql_statement.c, SWOW_INCLUDES, SWOW_CFLAGS)
@@ -782,4 +820,5 @@ EOF
   PHP_SUBST(SWOW_INCLUDES)
   PHP_SUBST(SWOW_CFLAGS)
   PHP_SUBST(SWOW_SHARED_LIBADD)
+  AC_LANG_POP()
 fi
