@@ -2624,23 +2624,52 @@ const pdo_driver_t swow_pdo_pgsql_driver = {
 
 #include "swow.h"
 
+static cat_bool_t swow_pgsql_hooked = cat_false;
+
 zend_result swow_pgsql_module_init(INIT_FUNC_ARGS)
 {
+	cat_bool_t pdo_enabled;
+
 	SWOW_MODULES_CHECK_PRE_START() {
 		"pdo",
-		"pdo_pgsql",
-	} SWOW_MODULES_CHECK_PRE_END();
+	} SWOW_MODULES_CHECK_PRE_END_OPTIONAL(pdo_enabled);
+
+	if (!pdo_enabled) {
+		//php_error_docref(NULL, E_WARNING, "Swow pdo_pgsql hook not enabled, pdo extension not enabled or bad loading order");
+		return SUCCESS;
+	}
+
+#ifdef COMPILE_DL_SWOW
+# ifdef __GNUC__
+	void* dummy_handle = dlopen("libpq.so", RTLD_LAZY | RTLD_DEEPBIND | RTLD_GLOBAL);
+	if (!dummy_handle) {
+		//php_error_docref(NULL, E_WARNING, "Swow pdo_pgsql hook not enabled, libpq not found");
+		return SUCCESS;
+	}
+# endif // __GNUC__
+#endif // COMPILE_DL_SWOW
+
+	int version = PQlibVersion();
+	if (version < 140000) {
+		//php_error_docref(NULL, E_WARNING, "Swow pdo_pgsql hook not enabled, libpq is too old (%d < 140000)", version);
+		return SUCCESS;
+	}
 
 	php_pdo_unregister_driver(&pdo_pgsql_driver);
-	php_pdo_register_driver(&swow_pdo_pgsql_driver);
+	if (php_pdo_register_driver(&swow_pdo_pgsql_driver) == SUCCESS) {
+		swow_pgsql_hooked = cat_true;
+	}
 
 	return SUCCESS;
 }
 
 zend_result swow_pgsql_module_shutdown(INIT_FUNC_ARGS)
 {
-	php_pdo_unregister_driver(&swow_pdo_pgsql_driver);
-	php_pdo_register_driver(&pdo_pgsql_driver);
+	if (swow_pgsql_hooked) {
+		php_pdo_unregister_driver(&swow_pdo_pgsql_driver);
+		php_pdo_register_driver(&pdo_pgsql_driver);
+		swow_pgsql_hooked = cat_false;
+	}
 
 	return SUCCESS;
 }
