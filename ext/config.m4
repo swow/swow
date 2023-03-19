@@ -255,7 +255,6 @@ if test "${PHP_SWOW}" != "no"; then
       ],
       [
         AC_MSG_RESULT(yes)
-        AC_DEFINE([HAVE_SYS_WEAK_ALIAS_ATTRIBUTE], 1, [Define this if weak aliases may be created with __attribute__])
         ac_cv_cc_attribute_weak=yes
       ],
       [
@@ -263,6 +262,10 @@ if test "${PHP_SWOW}" != "no"; then
         ac_cv_cc_attribute_weak=no
       ])
   ])
+  if test "${ac_cv_cc_attribute_weak}" = "yes"; then
+    AC_DEFINE([HAVE_SYS_WEAK_ALIAS_ATTRIBUTE], 1, [Define this if weak aliases may be created with __attribute__])
+  fi
+
 
   if test "${PHP_SWOW_DEBUG}" = "yes"; then
     dnl Remove all optimization flags from CFLAGS.
