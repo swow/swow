@@ -152,7 +152,7 @@ class ServerRequest extends Request implements ServerRequestPlusInterface
     }
 
     /** @param array<mixed>|object $data */
-    public function setParsedBody(array|object $data): static
+    public function setParsedBody(null|array|object $data): static
     {
         $this->parsedBody = $data;
 
