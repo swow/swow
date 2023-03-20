@@ -65,6 +65,7 @@ void swow_PQclear_resolver(void *res) {
         abort();
     } 
 
+    PQclear(res);
     return;
 }
 void (*swow_PQclear_resolved)(void *res) = swow_PQclear_resolver;
@@ -225,6 +226,7 @@ void swow_PQfinish_resolver(void *conn) {
         abort();
     } 
 
+    PQfinish(conn);
     return;
 }
 void (*swow_PQfinish_resolved)(void *conn) = swow_PQfinish_resolver;
@@ -305,6 +307,7 @@ void swow_PQfreemem_resolver(void *ptr) {
         abort();
     } 
 
+    PQfreemem(ptr);
     return;
 }
 void (*swow_PQfreemem_resolved)(void *ptr) = swow_PQfreemem_resolver;
@@ -945,6 +948,7 @@ void swow_pdo_handle_error_resolver(void *dbh, void *stmt) {
         abort();
     } 
 
+    pdo_handle_error(dbh, stmt);
     return;
 }
 void (*swow_pdo_handle_error_resolved)(void *dbh, void *stmt) = swow_pdo_handle_error_resolver;
@@ -985,6 +989,7 @@ void swow_pdo_throw_exception_resolver(unsigned int driver_errcode, char *driver
         abort();
     } 
 
+    pdo_throw_exception(driver_errcode, driver_errmsg, pdo_error);
     return;
 }
 void (*swow_pdo_throw_exception_resolved)(unsigned int driver_errcode, char *driver_errmsg, void *pdo_error) = swow_pdo_throw_exception_resolver;
@@ -1025,6 +1030,7 @@ void swow_php_pdo_unregister_driver_resolver(const void *driver) {
         abort();
     } 
 
+    php_pdo_unregister_driver(driver);
     return;
 }
 void (*swow_php_pdo_unregister_driver_resolved)(const void *driver) = swow_php_pdo_unregister_driver_resolver;

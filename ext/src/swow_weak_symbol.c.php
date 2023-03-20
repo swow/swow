@@ -36,7 +36,7 @@ declare(strict_types=1);
 <?php
 
 function weak(string $name, string $ret, string $argsSign, string $argsPassthruSign) {
-    $return = $ret === "void" ? ";" : " $name($argsPassthruSign);";
+    $return = $ret === "void" ? "$name($argsPassthruSign);\n    return;" : "return $name($argsPassthruSign);";
     echo <<<C
 
 
@@ -53,7 +53,7 @@ $ret swow_{$name}_resolver($argsSign) {
         abort();
     } 
 
-    return$return
+    $return
 }
 $ret (*swow_{$name}_resolved)($argsSign) = swow_{$name}_resolver;
 $ret swow_{$name}_redirect($argsSign) {
