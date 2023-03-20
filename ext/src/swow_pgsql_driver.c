@@ -2640,7 +2640,8 @@ zend_result swow_pgsql_module_init(INIT_FUNC_ARGS)
 		return SUCCESS;
 	}
 
-	// php_pdo_register_driver will overwrite original driver
+	// php_pdo_register_driver will unregister swow_pdo_pgsql_driver->driver_name i.e. "pdo_pgsql"
+	php_pdo_unregister_driver(&swow_pdo_pgsql_driver);
 	if (php_pdo_register_driver(&swow_pdo_pgsql_driver) == SUCCESS) {
 		swow_pgsql_hooked = cat_true;
 	}
