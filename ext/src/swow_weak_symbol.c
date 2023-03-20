@@ -27,11 +27,11 @@
 #include <dlfcn.h>
 #endif
 
+#include "php_version.h"
+
 #include "config.h"
 
 #ifdef CAT_HAVE_PQ
-
-
 // weak function pointer for PQbackendPID
 __attribute__((weak, alias("swow_PQbackendPID_redirect"))) extern int PQbackendPID(const void *conn);
 // resolved function holder
@@ -915,6 +915,7 @@ unsigned char * swow_PQunescapeBytea_redirect(const unsigned char *strtext, size
     return swow_PQunescapeBytea_resolved(strtext, retbuflen);
 }
 
+
 // weak function pointer for pdo_get_bool_param
 __attribute__((weak, alias("swow_pdo_get_bool_param_redirect"))) extern bool pdo_get_bool_param(bool *bval, void *value);
 // resolved function holder
@@ -956,6 +957,28 @@ void swow_pdo_handle_error_redirect(void *dbh, void *stmt) {
     return swow_pdo_handle_error_resolved(dbh, stmt);
 }
 
+#if PHP_VERSION_ID < 80100
+// weak function pointer for pdo_parse_params
+__attribute__((weak, alias("swow_pdo_parse_params_redirect"))) extern int pdo_parse_params(void *stmt, void *inquery, size_t inquery_len, void *outquery, void *outquery_len);
+// resolved function holder
+int (*swow_pdo_parse_params_resolved)(void *stmt, void *inquery, size_t inquery_len, void *outquery, void *outquery_len);
+// resolver for pdo_parse_params
+int swow_pdo_parse_params_resolver(void *stmt, void *inquery, size_t inquery_len, void *outquery, void *outquery_len) {
+    swow_pdo_parse_params_resolved = (int (*)(void *stmt, void *inquery, size_t inquery_len, void *outquery, void *outquery_len))dlsym(NULL, "pdo_parse_params");
+
+    if (swow_pdo_parse_params_resolved == NULL) {
+        fprintf(stderr, "failed resolve pdo_parse_params: %s\n", dlerror());
+        abort();
+    } 
+
+    return pdo_parse_params(stmt, inquery, inquery_len, outquery, outquery_len);
+}
+int (*swow_pdo_parse_params_resolved)(void *stmt, void *inquery, size_t inquery_len, void *outquery, void *outquery_len) = swow_pdo_parse_params_resolver;
+int swow_pdo_parse_params_redirect(void *stmt, void *inquery, size_t inquery_len, void *outquery, void *outquery_len) {
+    return swow_pdo_parse_params_resolved(stmt, inquery, inquery_len, outquery, outquery_len);
+}
+
+#else
 // weak function pointer for pdo_parse_params
 __attribute__((weak, alias("swow_pdo_parse_params_redirect"))) extern int pdo_parse_params(void *stmt, void *inquery, void *outquery);
 // resolved function holder
@@ -976,6 +999,7 @@ int swow_pdo_parse_params_redirect(void *stmt, void *inquery, void *outquery) {
     return swow_pdo_parse_params_resolved(stmt, inquery, outquery);
 }
 
+#endif
 // weak function pointer for pdo_throw_exception
 __attribute__((weak, alias("swow_pdo_throw_exception_redirect"))) extern void pdo_throw_exception(unsigned int driver_errcode, char *driver_errmsg, void *pdo_error);
 // resolved function holder
@@ -1037,4 +1061,6 @@ void (*swow_php_pdo_unregister_driver_resolved)(const void *driver) = swow_php_p
 void swow_php_pdo_unregister_driver_redirect(const void *driver) {
     return swow_php_pdo_unregister_driver_resolved(driver);
 }
+
+
 #endif

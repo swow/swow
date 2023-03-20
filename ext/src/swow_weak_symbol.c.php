@@ -32,14 +32,14 @@ declare(strict_types=1);
 #include <dlfcn.h>
 #endif
 
+#include "php_version.h"
+
 #include "config.h"
 <?php
 
 function weak(string $name, string $ret, string $argsSign, string $argsPassthruSign) {
     $return = $ret === "void" ? "$name($argsPassthruSign);\n    return;" : "return $name($argsPassthruSign);";
     echo <<<C
-
-
 // weak function pointer for $name
 __attribute__((weak, alias("swow_{$name}_redirect"))) extern $ret $name($argsSign);
 // resolved function holder
@@ -59,6 +59,8 @@ $ret (*swow_{$name}_resolved)($argsSign) = swow_{$name}_resolver;
 $ret swow_{$name}_redirect($argsSign) {
     return swow_{$name}_resolved($argsPassthruSign);
 }
+
+
 C;
 }
 
@@ -67,6 +69,7 @@ function weaks(string $signs) {
     foreach (explode("\n", $signs) as $line) {
         preg_match("/^(?P<ret_name>[^(]+)\((?P<args>.+)\);$/", $line, $match);
         if (!$match) {
+            echo "$line\n";
             continue;
         }
 
@@ -145,7 +148,11 @@ unsigned char *PQunescapeBytea(const unsigned char *strtext, size_t *retbuflen);
 
 bool pdo_get_bool_param(bool *bval, void *value);
 void pdo_handle_error(void *dbh, void *stmt);
+#if PHP_VERSION_ID < 80100
+int pdo_parse_params(void *stmt, void *inquery, size_t inquery_len, void *outquery, void *outquery_len);
+#else
 int pdo_parse_params(void *stmt, void *inquery, void *outquery);
+#endif
 void pdo_throw_exception(unsigned int driver_errcode, char *driver_errmsg, void *pdo_error);
 int php_pdo_register_driver(const void *driver);
 void php_pdo_unregister_driver(const void *driver);
