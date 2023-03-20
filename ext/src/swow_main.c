@@ -749,7 +749,7 @@ static const zend_module_dep swow_module_deps[] = {
 SWOW_API zend_module_entry swow_module_entry = {
     STANDARD_MODULE_HEADER_EX,
     NULL,                        /* ini_entries */
-    &swow_module_deps,           /* module dependencies */
+    swow_module_deps,           /* module dependencies */
     SWOW_MODULE_NAME,            /* Extension name */
     swow_functions,              /* zend_function_entry */
     PHP_MINIT(swow),             /* PHP_MINIT - Module initialization */
