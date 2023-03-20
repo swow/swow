@@ -309,7 +309,7 @@ if (PHP_SWOW != 'no') (function(){
         SWOW_SOURCE_FILENAMES.push('swow_curl.c');
     }
     if(use_pgsql){
-        SWOW_SOURCE_FILENAMES.push('swow_pgsql_driver.c', 'swow_pgsql_statement.c');
+        SWOW_SOURCE_FILENAMES.push('swow_pgsql_driver.c', 'swow_pgsql_statement.c', 'swow_pgsql_version.c');
     }
     ADD_SOURCES(configure_module_dirname + '\\' + SWOW_SRC_DIR, SWOW_SOURCE_FILENAMES.join(' '), 'swow');
 
