@@ -112,7 +112,7 @@ SWOW_API zend_op_array *swow_compile_string_ex(zend_string *source_string, const
 #define SWOW_MODULES_CHECK_PRE_START() do { \
     const char *_pre_modules[] =
 
-#define SWOW_MODULES_CHECK_PRE_END() ; \
+#define SWOW_MODULES_CHECK_PRE_END_EX(notfulfilled) ; \
     size_t _pre_modules_length = CAT_ARRAY_SIZE(_pre_modules); \
     cat_bool_t _loaded = cat_false; \
     zend_string *_module_name; \
@@ -120,11 +120,12 @@ SWOW_API zend_op_array *swow_compile_string_ex(zend_string *source_string, const
         if (ZSTR_LEN(_module_name) == CAT_STRLEN(SWOW_MODULE_NAME_LC) && memcmp(ZSTR_VAL(_module_name), ZEND_STRL(SWOW_MODULE_NAME_LC)) == 0) { \
             _loaded = cat_true; \
         } else { \
-            for (size_t _n = 0; _n < _pre_modules_length; _n++) { \
+            size_t _n = 0; \
+            for (; _n < _pre_modules_length; _n++) { \
                 const char *_pre_module = _pre_modules[_n]; \
                 if (ZSTR_LEN(_module_name) == strlen(_pre_module) && memcmp(ZSTR_VAL(_module_name), _pre_module, strlen(_pre_module)) == 0) { \
                     if (_loaded) { \
-                        CAT_CORE_ERROR(CORE, "Module %s must be loaded before " SWOW_MODULE_NAME, _pre_module); \
+                        { notfulfilled } \
                     } \
                 } \
             } \
@@ -132,38 +133,7 @@ SWOW_API zend_op_array *swow_compile_string_ex(zend_string *source_string, const
     } ZEND_HASH_FOREACH_END(); \
 } while (0)
 
-#define SWOW_MODULES_CHECK_PRE_END_OPTIONAL(fulfilled) ; \
-    size_t _pre_modules_length = CAT_ARRAY_SIZE(_pre_modules); \
-    cat_bool_t _loaded = cat_false; \
-    zend_string *_module_name; \
-    zval *dummy; \
-    for (size_t _n = 0; _n < _pre_modules_length; _n++) { \
-        dummy = zend_hash_str_find(&module_registry, _pre_modules[_n], strlen(_pre_modules[_n])); \
-        if (!dummy) { \
-            break; \
-        } \
-    } \
-    if (!dummy) { \
-        fulfilled = cat_false; \
-        break; \
-    } \
-    ZEND_HASH_FOREACH_STR_KEY(&module_registry, _module_name) { \
-        if (ZSTR_LEN(_module_name) == CAT_STRLEN(SWOW_MODULE_NAME_LC) && memcmp(ZSTR_VAL(_module_name), ZEND_STRL(SWOW_MODULE_NAME_LC)) == 0) { \
-            _loaded = cat_true; \
-        } else { \
-            for (size_t _n = 0; _n < _pre_modules_length; _n++) { \
-                const char *_pre_module = _pre_modules[_n]; \
-                if (ZSTR_LEN(_module_name) == strlen(_pre_module) && memcmp(ZSTR_VAL(_module_name), _pre_module, strlen(_pre_module)) == 0) { \
-                    if (_loaded) { \
-                        fulfilled = cat_false; \
-                        break; \
-                    } \
-                } \
-            } \
-        } \
-    } ZEND_HASH_FOREACH_END(); \
-    fulfilled = cat_true; \
-} while (0)
+#define SWOW_MODULES_CHECK_PRE_END() SWOW_MODULES_CHECK_PRE_END_EX({CAT_CORE_ERROR(CORE, "Module %s must be loaded before " SWOW_MODULE_NAME, _pre_module);})
 
 /* string */
 
