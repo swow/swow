@@ -29,6 +29,7 @@
 #endif
 
 #include "php_version.h"
+#include "php.h"
 
 #include "config.h"
 
@@ -39,10 +40,10 @@ __attribute__((weak, alias("swow_PQbackendPID_redirect"))) extern int PQbackendP
 int (*swow_PQbackendPID_resolved)(const void *conn);
 // resolver for PQbackendPID
 int swow_PQbackendPID_resolver(const void *conn) {
-    swow_PQbackendPID_resolved = (int (*)(const void *conn))dlsym(NULL, "PQbackendPID");
+    swow_PQbackendPID_resolved = (int (*)(const void *conn))DL_FETCH_SYMBOL(NULL, "PQbackendPID");
 
     if (swow_PQbackendPID_resolved == NULL) {
-        fprintf(stderr, "failed resolve PQbackendPID: %s\n", dlerror());
+        fprintf(stderr, "failed resolve PQbackendPID: %s\n", DL_ERROR());
         abort();
     } 
 
@@ -59,10 +60,10 @@ __attribute__((weak, alias("swow_PQclear_redirect"))) extern void PQclear(void *
 void (*swow_PQclear_resolved)(void *res);
 // resolver for PQclear
 void swow_PQclear_resolver(void *res) {
-    swow_PQclear_resolved = (void (*)(void *res))dlsym(NULL, "PQclear");
+    swow_PQclear_resolved = (void (*)(void *res))DL_FETCH_SYMBOL(NULL, "PQclear");
 
     if (swow_PQclear_resolved == NULL) {
-        fprintf(stderr, "failed resolve PQclear: %s\n", dlerror());
+        fprintf(stderr, "failed resolve PQclear: %s\n", DL_ERROR());
         abort();
     } 
 
@@ -80,10 +81,10 @@ __attribute__((weak, alias("swow_PQcmdTuples_redirect"))) extern char * PQcmdTup
 char * (*swow_PQcmdTuples_resolved)(void *res);
 // resolver for PQcmdTuples
 char * swow_PQcmdTuples_resolver(void *res) {
-    swow_PQcmdTuples_resolved = (char * (*)(void *res))dlsym(NULL, "PQcmdTuples");
+    swow_PQcmdTuples_resolved = (char * (*)(void *res))DL_FETCH_SYMBOL(NULL, "PQcmdTuples");
 
     if (swow_PQcmdTuples_resolved == NULL) {
-        fprintf(stderr, "failed resolve PQcmdTuples: %s\n", dlerror());
+        fprintf(stderr, "failed resolve PQcmdTuples: %s\n", DL_ERROR());
         abort();
     } 
 
@@ -100,10 +101,10 @@ __attribute__((weak, alias("swow_PQconnectPoll_redirect"))) extern int PQconnect
 int (*swow_PQconnectPoll_resolved)(void *conn);
 // resolver for PQconnectPoll
 int swow_PQconnectPoll_resolver(void *conn) {
-    swow_PQconnectPoll_resolved = (int (*)(void *conn))dlsym(NULL, "PQconnectPoll");
+    swow_PQconnectPoll_resolved = (int (*)(void *conn))DL_FETCH_SYMBOL(NULL, "PQconnectPoll");
 
     if (swow_PQconnectPoll_resolved == NULL) {
-        fprintf(stderr, "failed resolve PQconnectPoll: %s\n", dlerror());
+        fprintf(stderr, "failed resolve PQconnectPoll: %s\n", DL_ERROR());
         abort();
     } 
 
@@ -120,10 +121,10 @@ __attribute__((weak, alias("swow_PQconnectStart_redirect"))) extern void * PQcon
 void * (*swow_PQconnectStart_resolved)(const char *conninfo);
 // resolver for PQconnectStart
 void * swow_PQconnectStart_resolver(const char *conninfo) {
-    swow_PQconnectStart_resolved = (void * (*)(const char *conninfo))dlsym(NULL, "PQconnectStart");
+    swow_PQconnectStart_resolved = (void * (*)(const char *conninfo))DL_FETCH_SYMBOL(NULL, "PQconnectStart");
 
     if (swow_PQconnectStart_resolved == NULL) {
-        fprintf(stderr, "failed resolve PQconnectStart: %s\n", dlerror());
+        fprintf(stderr, "failed resolve PQconnectStart: %s\n", DL_ERROR());
         abort();
     } 
 
@@ -140,10 +141,10 @@ __attribute__((weak, alias("swow_PQconsumeInput_redirect"))) extern int PQconsum
 int (*swow_PQconsumeInput_resolved)(void *conn);
 // resolver for PQconsumeInput
 int swow_PQconsumeInput_resolver(void *conn) {
-    swow_PQconsumeInput_resolved = (int (*)(void *conn))dlsym(NULL, "PQconsumeInput");
+    swow_PQconsumeInput_resolved = (int (*)(void *conn))DL_FETCH_SYMBOL(NULL, "PQconsumeInput");
 
     if (swow_PQconsumeInput_resolved == NULL) {
-        fprintf(stderr, "failed resolve PQconsumeInput: %s\n", dlerror());
+        fprintf(stderr, "failed resolve PQconsumeInput: %s\n", DL_ERROR());
         abort();
     } 
 
@@ -160,10 +161,10 @@ __attribute__((weak, alias("swow_PQerrorMessage_redirect"))) extern char * PQerr
 char * (*swow_PQerrorMessage_resolved)(const void *conn);
 // resolver for PQerrorMessage
 char * swow_PQerrorMessage_resolver(const void *conn) {
-    swow_PQerrorMessage_resolved = (char * (*)(const void *conn))dlsym(NULL, "PQerrorMessage");
+    swow_PQerrorMessage_resolved = (char * (*)(const void *conn))DL_FETCH_SYMBOL(NULL, "PQerrorMessage");
 
     if (swow_PQerrorMessage_resolved == NULL) {
-        fprintf(stderr, "failed resolve PQerrorMessage: %s\n", dlerror());
+        fprintf(stderr, "failed resolve PQerrorMessage: %s\n", DL_ERROR());
         abort();
     } 
 
@@ -180,10 +181,10 @@ __attribute__((weak, alias("swow_PQescapeByteaConn_redirect"))) extern unsigned 
 unsigned char * (*swow_PQescapeByteaConn_resolved)(void *conn, const unsigned char *from, size_t from_length, size_t *to_length);
 // resolver for PQescapeByteaConn
 unsigned char * swow_PQescapeByteaConn_resolver(void *conn, const unsigned char *from, size_t from_length, size_t *to_length) {
-    swow_PQescapeByteaConn_resolved = (unsigned char * (*)(void *conn, const unsigned char *from, size_t from_length, size_t *to_length))dlsym(NULL, "PQescapeByteaConn");
+    swow_PQescapeByteaConn_resolved = (unsigned char * (*)(void *conn, const unsigned char *from, size_t from_length, size_t *to_length))DL_FETCH_SYMBOL(NULL, "PQescapeByteaConn");
 
     if (swow_PQescapeByteaConn_resolved == NULL) {
-        fprintf(stderr, "failed resolve PQescapeByteaConn: %s\n", dlerror());
+        fprintf(stderr, "failed resolve PQescapeByteaConn: %s\n", DL_ERROR());
         abort();
     } 
 
@@ -200,10 +201,10 @@ __attribute__((weak, alias("swow_PQescapeStringConn_redirect"))) extern size_t P
 size_t (*swow_PQescapeStringConn_resolved)(void *conn, char *to, const char *from, size_t length, int *error);
 // resolver for PQescapeStringConn
 size_t swow_PQescapeStringConn_resolver(void *conn, char *to, const char *from, size_t length, int *error) {
-    swow_PQescapeStringConn_resolved = (size_t (*)(void *conn, char *to, const char *from, size_t length, int *error))dlsym(NULL, "PQescapeStringConn");
+    swow_PQescapeStringConn_resolved = (size_t (*)(void *conn, char *to, const char *from, size_t length, int *error))DL_FETCH_SYMBOL(NULL, "PQescapeStringConn");
 
     if (swow_PQescapeStringConn_resolved == NULL) {
-        fprintf(stderr, "failed resolve PQescapeStringConn: %s\n", dlerror());
+        fprintf(stderr, "failed resolve PQescapeStringConn: %s\n", DL_ERROR());
         abort();
     } 
 
@@ -220,10 +221,10 @@ __attribute__((weak, alias("swow_PQfinish_redirect"))) extern void PQfinish(void
 void (*swow_PQfinish_resolved)(void *conn);
 // resolver for PQfinish
 void swow_PQfinish_resolver(void *conn) {
-    swow_PQfinish_resolved = (void (*)(void *conn))dlsym(NULL, "PQfinish");
+    swow_PQfinish_resolved = (void (*)(void *conn))DL_FETCH_SYMBOL(NULL, "PQfinish");
 
     if (swow_PQfinish_resolved == NULL) {
-        fprintf(stderr, "failed resolve PQfinish: %s\n", dlerror());
+        fprintf(stderr, "failed resolve PQfinish: %s\n", DL_ERROR());
         abort();
     } 
 
@@ -241,10 +242,10 @@ __attribute__((weak, alias("swow_PQflush_redirect"))) extern int PQflush(void *c
 int (*swow_PQflush_resolved)(void *conn);
 // resolver for PQflush
 int swow_PQflush_resolver(void *conn) {
-    swow_PQflush_resolved = (int (*)(void *conn))dlsym(NULL, "PQflush");
+    swow_PQflush_resolved = (int (*)(void *conn))DL_FETCH_SYMBOL(NULL, "PQflush");
 
     if (swow_PQflush_resolved == NULL) {
-        fprintf(stderr, "failed resolve PQflush: %s\n", dlerror());
+        fprintf(stderr, "failed resolve PQflush: %s\n", DL_ERROR());
         abort();
     } 
 
@@ -261,10 +262,10 @@ __attribute__((weak, alias("swow_PQfmod_redirect"))) extern int PQfmod(const voi
 int (*swow_PQfmod_resolved)(const void *res, int field_num);
 // resolver for PQfmod
 int swow_PQfmod_resolver(const void *res, int field_num) {
-    swow_PQfmod_resolved = (int (*)(const void *res, int field_num))dlsym(NULL, "PQfmod");
+    swow_PQfmod_resolved = (int (*)(const void *res, int field_num))DL_FETCH_SYMBOL(NULL, "PQfmod");
 
     if (swow_PQfmod_resolved == NULL) {
-        fprintf(stderr, "failed resolve PQfmod: %s\n", dlerror());
+        fprintf(stderr, "failed resolve PQfmod: %s\n", DL_ERROR());
         abort();
     } 
 
@@ -281,10 +282,10 @@ __attribute__((weak, alias("swow_PQfname_redirect"))) extern char * PQfname(cons
 char * (*swow_PQfname_resolved)(const void *res, int field_num);
 // resolver for PQfname
 char * swow_PQfname_resolver(const void *res, int field_num) {
-    swow_PQfname_resolved = (char * (*)(const void *res, int field_num))dlsym(NULL, "PQfname");
+    swow_PQfname_resolved = (char * (*)(const void *res, int field_num))DL_FETCH_SYMBOL(NULL, "PQfname");
 
     if (swow_PQfname_resolved == NULL) {
-        fprintf(stderr, "failed resolve PQfname: %s\n", dlerror());
+        fprintf(stderr, "failed resolve PQfname: %s\n", DL_ERROR());
         abort();
     } 
 
@@ -301,10 +302,10 @@ __attribute__((weak, alias("swow_PQfreemem_redirect"))) extern void PQfreemem(vo
 void (*swow_PQfreemem_resolved)(void *ptr);
 // resolver for PQfreemem
 void swow_PQfreemem_resolver(void *ptr) {
-    swow_PQfreemem_resolved = (void (*)(void *ptr))dlsym(NULL, "PQfreemem");
+    swow_PQfreemem_resolved = (void (*)(void *ptr))DL_FETCH_SYMBOL(NULL, "PQfreemem");
 
     if (swow_PQfreemem_resolved == NULL) {
-        fprintf(stderr, "failed resolve PQfreemem: %s\n", dlerror());
+        fprintf(stderr, "failed resolve PQfreemem: %s\n", DL_ERROR());
         abort();
     } 
 
@@ -322,10 +323,10 @@ __attribute__((weak, alias("swow_PQfsize_redirect"))) extern int PQfsize(const v
 int (*swow_PQfsize_resolved)(const void *res, int field_num);
 // resolver for PQfsize
 int swow_PQfsize_resolver(const void *res, int field_num) {
-    swow_PQfsize_resolved = (int (*)(const void *res, int field_num))dlsym(NULL, "PQfsize");
+    swow_PQfsize_resolved = (int (*)(const void *res, int field_num))DL_FETCH_SYMBOL(NULL, "PQfsize");
 
     if (swow_PQfsize_resolved == NULL) {
-        fprintf(stderr, "failed resolve PQfsize: %s\n", dlerror());
+        fprintf(stderr, "failed resolve PQfsize: %s\n", DL_ERROR());
         abort();
     } 
 
@@ -342,10 +343,10 @@ __attribute__((weak, alias("swow_PQftable_redirect"))) extern unsigned int PQfta
 unsigned int (*swow_PQftable_resolved)(const void *res, int field_num);
 // resolver for PQftable
 unsigned int swow_PQftable_resolver(const void *res, int field_num) {
-    swow_PQftable_resolved = (unsigned int (*)(const void *res, int field_num))dlsym(NULL, "PQftable");
+    swow_PQftable_resolved = (unsigned int (*)(const void *res, int field_num))DL_FETCH_SYMBOL(NULL, "PQftable");
 
     if (swow_PQftable_resolved == NULL) {
-        fprintf(stderr, "failed resolve PQftable: %s\n", dlerror());
+        fprintf(stderr, "failed resolve PQftable: %s\n", DL_ERROR());
         abort();
     } 
 
@@ -362,10 +363,10 @@ __attribute__((weak, alias("swow_PQftype_redirect"))) extern unsigned int PQftyp
 unsigned int (*swow_PQftype_resolved)(const void *res, int field_num);
 // resolver for PQftype
 unsigned int swow_PQftype_resolver(const void *res, int field_num) {
-    swow_PQftype_resolved = (unsigned int (*)(const void *res, int field_num))dlsym(NULL, "PQftype");
+    swow_PQftype_resolved = (unsigned int (*)(const void *res, int field_num))DL_FETCH_SYMBOL(NULL, "PQftype");
 
     if (swow_PQftype_resolved == NULL) {
-        fprintf(stderr, "failed resolve PQftype: %s\n", dlerror());
+        fprintf(stderr, "failed resolve PQftype: %s\n", DL_ERROR());
         abort();
     } 
 
@@ -382,10 +383,10 @@ __attribute__((weak, alias("swow_PQgetCopyData_redirect"))) extern int PQgetCopy
 int (*swow_PQgetCopyData_resolved)(void *conn, char **buffer, int async);
 // resolver for PQgetCopyData
 int swow_PQgetCopyData_resolver(void *conn, char **buffer, int async) {
-    swow_PQgetCopyData_resolved = (int (*)(void *conn, char **buffer, int async))dlsym(NULL, "PQgetCopyData");
+    swow_PQgetCopyData_resolved = (int (*)(void *conn, char **buffer, int async))DL_FETCH_SYMBOL(NULL, "PQgetCopyData");
 
     if (swow_PQgetCopyData_resolved == NULL) {
-        fprintf(stderr, "failed resolve PQgetCopyData: %s\n", dlerror());
+        fprintf(stderr, "failed resolve PQgetCopyData: %s\n", DL_ERROR());
         abort();
     } 
 
@@ -402,10 +403,10 @@ __attribute__((weak, alias("swow_PQgetisnull_redirect"))) extern int PQgetisnull
 int (*swow_PQgetisnull_resolved)(const void *res, int tup_num, int field_num);
 // resolver for PQgetisnull
 int swow_PQgetisnull_resolver(const void *res, int tup_num, int field_num) {
-    swow_PQgetisnull_resolved = (int (*)(const void *res, int tup_num, int field_num))dlsym(NULL, "PQgetisnull");
+    swow_PQgetisnull_resolved = (int (*)(const void *res, int tup_num, int field_num))DL_FETCH_SYMBOL(NULL, "PQgetisnull");
 
     if (swow_PQgetisnull_resolved == NULL) {
-        fprintf(stderr, "failed resolve PQgetisnull: %s\n", dlerror());
+        fprintf(stderr, "failed resolve PQgetisnull: %s\n", DL_ERROR());
         abort();
     } 
 
@@ -422,10 +423,10 @@ __attribute__((weak, alias("swow_PQgetlength_redirect"))) extern int PQgetlength
 int (*swow_PQgetlength_resolved)(const void *res, int tup_num, int field_num);
 // resolver for PQgetlength
 int swow_PQgetlength_resolver(const void *res, int tup_num, int field_num) {
-    swow_PQgetlength_resolved = (int (*)(const void *res, int tup_num, int field_num))dlsym(NULL, "PQgetlength");
+    swow_PQgetlength_resolved = (int (*)(const void *res, int tup_num, int field_num))DL_FETCH_SYMBOL(NULL, "PQgetlength");
 
     if (swow_PQgetlength_resolved == NULL) {
-        fprintf(stderr, "failed resolve PQgetlength: %s\n", dlerror());
+        fprintf(stderr, "failed resolve PQgetlength: %s\n", DL_ERROR());
         abort();
     } 
 
@@ -442,10 +443,10 @@ __attribute__((weak, alias("swow_PQgetResult_redirect"))) extern void * PQgetRes
 void * (*swow_PQgetResult_resolved)(void *conn);
 // resolver for PQgetResult
 void * swow_PQgetResult_resolver(void *conn) {
-    swow_PQgetResult_resolved = (void * (*)(void *conn))dlsym(NULL, "PQgetResult");
+    swow_PQgetResult_resolved = (void * (*)(void *conn))DL_FETCH_SYMBOL(NULL, "PQgetResult");
 
     if (swow_PQgetResult_resolved == NULL) {
-        fprintf(stderr, "failed resolve PQgetResult: %s\n", dlerror());
+        fprintf(stderr, "failed resolve PQgetResult: %s\n", DL_ERROR());
         abort();
     } 
 
@@ -462,10 +463,10 @@ __attribute__((weak, alias("swow_PQgetvalue_redirect"))) extern char * PQgetvalu
 char * (*swow_PQgetvalue_resolved)(const void *res, int tup_num, int field_num);
 // resolver for PQgetvalue
 char * swow_PQgetvalue_resolver(const void *res, int tup_num, int field_num) {
-    swow_PQgetvalue_resolved = (char * (*)(const void *res, int tup_num, int field_num))dlsym(NULL, "PQgetvalue");
+    swow_PQgetvalue_resolved = (char * (*)(const void *res, int tup_num, int field_num))DL_FETCH_SYMBOL(NULL, "PQgetvalue");
 
     if (swow_PQgetvalue_resolved == NULL) {
-        fprintf(stderr, "failed resolve PQgetvalue: %s\n", dlerror());
+        fprintf(stderr, "failed resolve PQgetvalue: %s\n", DL_ERROR());
         abort();
     } 
 
@@ -482,10 +483,10 @@ __attribute__((weak, alias("swow_PQlibVersion_redirect"))) extern int PQlibVersi
 int (*swow_PQlibVersion_resolved)(void);
 // resolver for PQlibVersion
 int swow_PQlibVersion_resolver(void) {
-    swow_PQlibVersion_resolved = (int (*)(void))dlsym(NULL, "PQlibVersion");
+    swow_PQlibVersion_resolved = (int (*)(void))DL_FETCH_SYMBOL(NULL, "PQlibVersion");
 
     if (swow_PQlibVersion_resolved == NULL) {
-        fprintf(stderr, "failed resolve PQlibVersion: %s\n", dlerror());
+        fprintf(stderr, "failed resolve PQlibVersion: %s\n", DL_ERROR());
         abort();
     } 
 
@@ -502,10 +503,10 @@ __attribute__((weak, alias("swow_PQnfields_redirect"))) extern int PQnfields(con
 int (*swow_PQnfields_resolved)(const void *res);
 // resolver for PQnfields
 int swow_PQnfields_resolver(const void *res) {
-    swow_PQnfields_resolved = (int (*)(const void *res))dlsym(NULL, "PQnfields");
+    swow_PQnfields_resolved = (int (*)(const void *res))DL_FETCH_SYMBOL(NULL, "PQnfields");
 
     if (swow_PQnfields_resolved == NULL) {
-        fprintf(stderr, "failed resolve PQnfields: %s\n", dlerror());
+        fprintf(stderr, "failed resolve PQnfields: %s\n", DL_ERROR());
         abort();
     } 
 
@@ -522,10 +523,10 @@ __attribute__((weak, alias("swow_PQntuples_redirect"))) extern int PQntuples(con
 int (*swow_PQntuples_resolved)(const void *res);
 // resolver for PQntuples
 int swow_PQntuples_resolver(const void *res) {
-    swow_PQntuples_resolved = (int (*)(const void *res))dlsym(NULL, "PQntuples");
+    swow_PQntuples_resolved = (int (*)(const void *res))DL_FETCH_SYMBOL(NULL, "PQntuples");
 
     if (swow_PQntuples_resolved == NULL) {
-        fprintf(stderr, "failed resolve PQntuples: %s\n", dlerror());
+        fprintf(stderr, "failed resolve PQntuples: %s\n", DL_ERROR());
         abort();
     } 
 
@@ -542,10 +543,10 @@ __attribute__((weak, alias("swow_PQnotifies_redirect"))) extern void * PQnotifie
 void * (*swow_PQnotifies_resolved)(void *conn);
 // resolver for PQnotifies
 void * swow_PQnotifies_resolver(void *conn) {
-    swow_PQnotifies_resolved = (void * (*)(void *conn))dlsym(NULL, "PQnotifies");
+    swow_PQnotifies_resolved = (void * (*)(void *conn))DL_FETCH_SYMBOL(NULL, "PQnotifies");
 
     if (swow_PQnotifies_resolved == NULL) {
-        fprintf(stderr, "failed resolve PQnotifies: %s\n", dlerror());
+        fprintf(stderr, "failed resolve PQnotifies: %s\n", DL_ERROR());
         abort();
     } 
 
@@ -562,10 +563,10 @@ __attribute__((weak, alias("swow_PQoidValue_redirect"))) extern unsigned int PQo
 unsigned int (*swow_PQoidValue_resolved)(const void *res);
 // resolver for PQoidValue
 unsigned int swow_PQoidValue_resolver(const void *res) {
-    swow_PQoidValue_resolved = (unsigned int (*)(const void *res))dlsym(NULL, "PQoidValue");
+    swow_PQoidValue_resolved = (unsigned int (*)(const void *res))DL_FETCH_SYMBOL(NULL, "PQoidValue");
 
     if (swow_PQoidValue_resolved == NULL) {
-        fprintf(stderr, "failed resolve PQoidValue: %s\n", dlerror());
+        fprintf(stderr, "failed resolve PQoidValue: %s\n", DL_ERROR());
         abort();
     } 
 
@@ -582,10 +583,10 @@ __attribute__((weak, alias("swow_PQparameterStatus_redirect"))) extern const cha
 const char * (*swow_PQparameterStatus_resolved)(const void *conn, const char *paramName);
 // resolver for PQparameterStatus
 const char * swow_PQparameterStatus_resolver(const void *conn, const char *paramName) {
-    swow_PQparameterStatus_resolved = (const char * (*)(const void *conn, const char *paramName))dlsym(NULL, "PQparameterStatus");
+    swow_PQparameterStatus_resolved = (const char * (*)(const void *conn, const char *paramName))DL_FETCH_SYMBOL(NULL, "PQparameterStatus");
 
     if (swow_PQparameterStatus_resolved == NULL) {
-        fprintf(stderr, "failed resolve PQparameterStatus: %s\n", dlerror());
+        fprintf(stderr, "failed resolve PQparameterStatus: %s\n", DL_ERROR());
         abort();
     } 
 
@@ -602,10 +603,10 @@ __attribute__((weak, alias("swow_PQprotocolVersion_redirect"))) extern int PQpro
 int (*swow_PQprotocolVersion_resolved)(const void *conn);
 // resolver for PQprotocolVersion
 int swow_PQprotocolVersion_resolver(const void *conn) {
-    swow_PQprotocolVersion_resolved = (int (*)(const void *conn))dlsym(NULL, "PQprotocolVersion");
+    swow_PQprotocolVersion_resolved = (int (*)(const void *conn))DL_FETCH_SYMBOL(NULL, "PQprotocolVersion");
 
     if (swow_PQprotocolVersion_resolved == NULL) {
-        fprintf(stderr, "failed resolve PQprotocolVersion: %s\n", dlerror());
+        fprintf(stderr, "failed resolve PQprotocolVersion: %s\n", DL_ERROR());
         abort();
     } 
 
@@ -622,10 +623,10 @@ __attribute__((weak, alias("swow_PQputCopyData_redirect"))) extern int PQputCopy
 int (*swow_PQputCopyData_resolved)(void *conn, const char *buffer, int nbytes);
 // resolver for PQputCopyData
 int swow_PQputCopyData_resolver(void *conn, const char *buffer, int nbytes) {
-    swow_PQputCopyData_resolved = (int (*)(void *conn, const char *buffer, int nbytes))dlsym(NULL, "PQputCopyData");
+    swow_PQputCopyData_resolved = (int (*)(void *conn, const char *buffer, int nbytes))DL_FETCH_SYMBOL(NULL, "PQputCopyData");
 
     if (swow_PQputCopyData_resolved == NULL) {
-        fprintf(stderr, "failed resolve PQputCopyData: %s\n", dlerror());
+        fprintf(stderr, "failed resolve PQputCopyData: %s\n", DL_ERROR());
         abort();
     } 
 
@@ -642,10 +643,10 @@ __attribute__((weak, alias("swow_PQputCopyEnd_redirect"))) extern int PQputCopyE
 int (*swow_PQputCopyEnd_resolved)(void *conn, const char *errormsg);
 // resolver for PQputCopyEnd
 int swow_PQputCopyEnd_resolver(void *conn, const char *errormsg) {
-    swow_PQputCopyEnd_resolved = (int (*)(void *conn, const char *errormsg))dlsym(NULL, "PQputCopyEnd");
+    swow_PQputCopyEnd_resolved = (int (*)(void *conn, const char *errormsg))DL_FETCH_SYMBOL(NULL, "PQputCopyEnd");
 
     if (swow_PQputCopyEnd_resolved == NULL) {
-        fprintf(stderr, "failed resolve PQputCopyEnd: %s\n", dlerror());
+        fprintf(stderr, "failed resolve PQputCopyEnd: %s\n", DL_ERROR());
         abort();
     } 
 
@@ -662,10 +663,10 @@ __attribute__((weak, alias("swow_PQreset_redirect"))) extern void PQreset(void *
 void (*swow_PQreset_resolved)(void *conn);
 // resolver for PQreset
 void swow_PQreset_resolver(void *conn) {
-    swow_PQreset_resolved = (void (*)(void *conn))dlsym(NULL, "PQreset");
+    swow_PQreset_resolved = (void (*)(void *conn))DL_FETCH_SYMBOL(NULL, "PQreset");
 
     if (swow_PQreset_resolved == NULL) {
-        fprintf(stderr, "failed resolve PQreset: %s\n", dlerror());
+        fprintf(stderr, "failed resolve PQreset: %s\n", DL_ERROR());
         abort();
     } 
 
@@ -683,10 +684,10 @@ __attribute__((weak, alias("swow_PQresetStart_redirect"))) extern int PQresetSta
 int (*swow_PQresetStart_resolved)(void *conn);
 // resolver for PQresetStart
 int swow_PQresetStart_resolver(void *conn) {
-    swow_PQresetStart_resolved = (int (*)(void *conn))dlsym(NULL, "PQresetStart");
+    swow_PQresetStart_resolved = (int (*)(void *conn))DL_FETCH_SYMBOL(NULL, "PQresetStart");
 
     if (swow_PQresetStart_resolved == NULL) {
-        fprintf(stderr, "failed resolve PQresetStart: %s\n", dlerror());
+        fprintf(stderr, "failed resolve PQresetStart: %s\n", DL_ERROR());
         abort();
     } 
 
@@ -703,10 +704,10 @@ __attribute__((weak, alias("swow_PQresultErrorField_redirect"))) extern char * P
 char * (*swow_PQresultErrorField_resolved)(const void *res, int fieldcode);
 // resolver for PQresultErrorField
 char * swow_PQresultErrorField_resolver(const void *res, int fieldcode) {
-    swow_PQresultErrorField_resolved = (char * (*)(const void *res, int fieldcode))dlsym(NULL, "PQresultErrorField");
+    swow_PQresultErrorField_resolved = (char * (*)(const void *res, int fieldcode))DL_FETCH_SYMBOL(NULL, "PQresultErrorField");
 
     if (swow_PQresultErrorField_resolved == NULL) {
-        fprintf(stderr, "failed resolve PQresultErrorField: %s\n", dlerror());
+        fprintf(stderr, "failed resolve PQresultErrorField: %s\n", DL_ERROR());
         abort();
     } 
 
@@ -723,10 +724,10 @@ __attribute__((weak, alias("swow_PQresultStatus_redirect"))) extern int PQresult
 int (*swow_PQresultStatus_resolved)(const void *res);
 // resolver for PQresultStatus
 int swow_PQresultStatus_resolver(const void *res) {
-    swow_PQresultStatus_resolved = (int (*)(const void *res))dlsym(NULL, "PQresultStatus");
+    swow_PQresultStatus_resolved = (int (*)(const void *res))DL_FETCH_SYMBOL(NULL, "PQresultStatus");
 
     if (swow_PQresultStatus_resolved == NULL) {
-        fprintf(stderr, "failed resolve PQresultStatus: %s\n", dlerror());
+        fprintf(stderr, "failed resolve PQresultStatus: %s\n", DL_ERROR());
         abort();
     } 
 
@@ -743,10 +744,10 @@ __attribute__((weak, alias("swow_PQsendPrepare_redirect"))) extern int PQsendPre
 int (*swow_PQsendPrepare_resolved)(void *conn, const char *stmtName, const char *query, int nParams, const unsigned int *paramTypes);
 // resolver for PQsendPrepare
 int swow_PQsendPrepare_resolver(void *conn, const char *stmtName, const char *query, int nParams, const unsigned int *paramTypes) {
-    swow_PQsendPrepare_resolved = (int (*)(void *conn, const char *stmtName, const char *query, int nParams, const unsigned int *paramTypes))dlsym(NULL, "PQsendPrepare");
+    swow_PQsendPrepare_resolved = (int (*)(void *conn, const char *stmtName, const char *query, int nParams, const unsigned int *paramTypes))DL_FETCH_SYMBOL(NULL, "PQsendPrepare");
 
     if (swow_PQsendPrepare_resolved == NULL) {
-        fprintf(stderr, "failed resolve PQsendPrepare: %s\n", dlerror());
+        fprintf(stderr, "failed resolve PQsendPrepare: %s\n", DL_ERROR());
         abort();
     } 
 
@@ -763,10 +764,10 @@ __attribute__((weak, alias("swow_PQsendQuery_redirect"))) extern int PQsendQuery
 int (*swow_PQsendQuery_resolved)(void *conn, const char *query);
 // resolver for PQsendQuery
 int swow_PQsendQuery_resolver(void *conn, const char *query) {
-    swow_PQsendQuery_resolved = (int (*)(void *conn, const char *query))dlsym(NULL, "PQsendQuery");
+    swow_PQsendQuery_resolved = (int (*)(void *conn, const char *query))DL_FETCH_SYMBOL(NULL, "PQsendQuery");
 
     if (swow_PQsendQuery_resolved == NULL) {
-        fprintf(stderr, "failed resolve PQsendQuery: %s\n", dlerror());
+        fprintf(stderr, "failed resolve PQsendQuery: %s\n", DL_ERROR());
         abort();
     } 
 
@@ -783,10 +784,10 @@ __attribute__((weak, alias("swow_PQsendQueryParams_redirect"))) extern int PQsen
 int (*swow_PQsendQueryParams_resolved)(void *conn, const char *command, int nParams,  const unsigned int *paramTypes, const char *const *paramValues, const int *paramLengths, const int *paramFormats, int resultFormat);
 // resolver for PQsendQueryParams
 int swow_PQsendQueryParams_resolver(void *conn, const char *command, int nParams,  const unsigned int *paramTypes, const char *const *paramValues, const int *paramLengths, const int *paramFormats, int resultFormat) {
-    swow_PQsendQueryParams_resolved = (int (*)(void *conn, const char *command, int nParams,  const unsigned int *paramTypes, const char *const *paramValues, const int *paramLengths, const int *paramFormats, int resultFormat))dlsym(NULL, "PQsendQueryParams");
+    swow_PQsendQueryParams_resolved = (int (*)(void *conn, const char *command, int nParams,  const unsigned int *paramTypes, const char *const *paramValues, const int *paramLengths, const int *paramFormats, int resultFormat))DL_FETCH_SYMBOL(NULL, "PQsendQueryParams");
 
     if (swow_PQsendQueryParams_resolved == NULL) {
-        fprintf(stderr, "failed resolve PQsendQueryParams: %s\n", dlerror());
+        fprintf(stderr, "failed resolve PQsendQueryParams: %s\n", DL_ERROR());
         abort();
     } 
 
@@ -803,10 +804,10 @@ __attribute__((weak, alias("swow_PQsendQueryPrepared_redirect"))) extern int PQs
 int (*swow_PQsendQueryPrepared_resolved)(void *conn, const char *stmtName, int nParams, const char *const *paramValues, const int *paramLengths, const int *paramFormats, int resultFormat);
 // resolver for PQsendQueryPrepared
 int swow_PQsendQueryPrepared_resolver(void *conn, const char *stmtName, int nParams, const char *const *paramValues, const int *paramLengths, const int *paramFormats, int resultFormat) {
-    swow_PQsendQueryPrepared_resolved = (int (*)(void *conn, const char *stmtName, int nParams, const char *const *paramValues, const int *paramLengths, const int *paramFormats, int resultFormat))dlsym(NULL, "PQsendQueryPrepared");
+    swow_PQsendQueryPrepared_resolved = (int (*)(void *conn, const char *stmtName, int nParams, const char *const *paramValues, const int *paramLengths, const int *paramFormats, int resultFormat))DL_FETCH_SYMBOL(NULL, "PQsendQueryPrepared");
 
     if (swow_PQsendQueryPrepared_resolved == NULL) {
-        fprintf(stderr, "failed resolve PQsendQueryPrepared: %s\n", dlerror());
+        fprintf(stderr, "failed resolve PQsendQueryPrepared: %s\n", DL_ERROR());
         abort();
     } 
 
@@ -823,10 +824,10 @@ __attribute__((weak, alias("swow_PQsetnonblocking_redirect"))) extern int PQsetn
 int (*swow_PQsetnonblocking_resolved)(void *conn, int arg);
 // resolver for PQsetnonblocking
 int swow_PQsetnonblocking_resolver(void *conn, int arg) {
-    swow_PQsetnonblocking_resolved = (int (*)(void *conn, int arg))dlsym(NULL, "PQsetnonblocking");
+    swow_PQsetnonblocking_resolved = (int (*)(void *conn, int arg))DL_FETCH_SYMBOL(NULL, "PQsetnonblocking");
 
     if (swow_PQsetnonblocking_resolved == NULL) {
-        fprintf(stderr, "failed resolve PQsetnonblocking: %s\n", dlerror());
+        fprintf(stderr, "failed resolve PQsetnonblocking: %s\n", DL_ERROR());
         abort();
     } 
 
@@ -843,10 +844,10 @@ __attribute__((weak, alias("swow_PQsetNoticeProcessor_redirect"))) extern void *
 void * (*swow_PQsetNoticeProcessor_resolved)(void *conn, void *proc, void *arg);
 // resolver for PQsetNoticeProcessor
 void * swow_PQsetNoticeProcessor_resolver(void *conn, void *proc, void *arg) {
-    swow_PQsetNoticeProcessor_resolved = (void * (*)(void *conn, void *proc, void *arg))dlsym(NULL, "PQsetNoticeProcessor");
+    swow_PQsetNoticeProcessor_resolved = (void * (*)(void *conn, void *proc, void *arg))DL_FETCH_SYMBOL(NULL, "PQsetNoticeProcessor");
 
     if (swow_PQsetNoticeProcessor_resolved == NULL) {
-        fprintf(stderr, "failed resolve PQsetNoticeProcessor: %s\n", dlerror());
+        fprintf(stderr, "failed resolve PQsetNoticeProcessor: %s\n", DL_ERROR());
         abort();
     } 
 
@@ -863,10 +864,10 @@ __attribute__((weak, alias("swow_PQsocket_redirect"))) extern int PQsocket(const
 int (*swow_PQsocket_resolved)(const void *conn);
 // resolver for PQsocket
 int swow_PQsocket_resolver(const void *conn) {
-    swow_PQsocket_resolved = (int (*)(const void *conn))dlsym(NULL, "PQsocket");
+    swow_PQsocket_resolved = (int (*)(const void *conn))DL_FETCH_SYMBOL(NULL, "PQsocket");
 
     if (swow_PQsocket_resolved == NULL) {
-        fprintf(stderr, "failed resolve PQsocket: %s\n", dlerror());
+        fprintf(stderr, "failed resolve PQsocket: %s\n", DL_ERROR());
         abort();
     } 
 
@@ -883,10 +884,10 @@ __attribute__((weak, alias("swow_PQstatus_redirect"))) extern int PQstatus(const
 int (*swow_PQstatus_resolved)(const void *conn);
 // resolver for PQstatus
 int swow_PQstatus_resolver(const void *conn) {
-    swow_PQstatus_resolved = (int (*)(const void *conn))dlsym(NULL, "PQstatus");
+    swow_PQstatus_resolved = (int (*)(const void *conn))DL_FETCH_SYMBOL(NULL, "PQstatus");
 
     if (swow_PQstatus_resolved == NULL) {
-        fprintf(stderr, "failed resolve PQstatus: %s\n", dlerror());
+        fprintf(stderr, "failed resolve PQstatus: %s\n", DL_ERROR());
         abort();
     } 
 
@@ -903,10 +904,10 @@ __attribute__((weak, alias("swow_PQtransactionStatus_redirect"))) extern int PQt
 int (*swow_PQtransactionStatus_resolved)(const void *conn);
 // resolver for PQtransactionStatus
 int swow_PQtransactionStatus_resolver(const void *conn) {
-    swow_PQtransactionStatus_resolved = (int (*)(const void *conn))dlsym(NULL, "PQtransactionStatus");
+    swow_PQtransactionStatus_resolved = (int (*)(const void *conn))DL_FETCH_SYMBOL(NULL, "PQtransactionStatus");
 
     if (swow_PQtransactionStatus_resolved == NULL) {
-        fprintf(stderr, "failed resolve PQtransactionStatus: %s\n", dlerror());
+        fprintf(stderr, "failed resolve PQtransactionStatus: %s\n", DL_ERROR());
         abort();
     } 
 
@@ -923,10 +924,10 @@ __attribute__((weak, alias("swow_PQunescapeBytea_redirect"))) extern unsigned ch
 unsigned char * (*swow_PQunescapeBytea_resolved)(const unsigned char *strtext, size_t *retbuflen);
 // resolver for PQunescapeBytea
 unsigned char * swow_PQunescapeBytea_resolver(const unsigned char *strtext, size_t *retbuflen) {
-    swow_PQunescapeBytea_resolved = (unsigned char * (*)(const unsigned char *strtext, size_t *retbuflen))dlsym(NULL, "PQunescapeBytea");
+    swow_PQunescapeBytea_resolved = (unsigned char * (*)(const unsigned char *strtext, size_t *retbuflen))DL_FETCH_SYMBOL(NULL, "PQunescapeBytea");
 
     if (swow_PQunescapeBytea_resolved == NULL) {
-        fprintf(stderr, "failed resolve PQunescapeBytea: %s\n", dlerror());
+        fprintf(stderr, "failed resolve PQunescapeBytea: %s\n", DL_ERROR());
         abort();
     } 
 
@@ -944,10 +945,10 @@ __attribute__((weak, alias("swow_pdo_get_bool_param_redirect"))) extern bool pdo
 bool (*swow_pdo_get_bool_param_resolved)(bool *bval, void *value);
 // resolver for pdo_get_bool_param
 bool swow_pdo_get_bool_param_resolver(bool *bval, void *value) {
-    swow_pdo_get_bool_param_resolved = (bool (*)(bool *bval, void *value))dlsym(NULL, "pdo_get_bool_param");
+    swow_pdo_get_bool_param_resolved = (bool (*)(bool *bval, void *value))DL_FETCH_SYMBOL(NULL, "pdo_get_bool_param");
 
     if (swow_pdo_get_bool_param_resolved == NULL) {
-        fprintf(stderr, "failed resolve pdo_get_bool_param: %s\n", dlerror());
+        fprintf(stderr, "failed resolve pdo_get_bool_param: %s\n", DL_ERROR());
         abort();
     } 
 
@@ -964,10 +965,10 @@ __attribute__((weak, alias("swow_pdo_handle_error_redirect"))) extern void pdo_h
 void (*swow_pdo_handle_error_resolved)(void *dbh, void *stmt);
 // resolver for pdo_handle_error
 void swow_pdo_handle_error_resolver(void *dbh, void *stmt) {
-    swow_pdo_handle_error_resolved = (void (*)(void *dbh, void *stmt))dlsym(NULL, "pdo_handle_error");
+    swow_pdo_handle_error_resolved = (void (*)(void *dbh, void *stmt))DL_FETCH_SYMBOL(NULL, "pdo_handle_error");
 
     if (swow_pdo_handle_error_resolved == NULL) {
-        fprintf(stderr, "failed resolve pdo_handle_error: %s\n", dlerror());
+        fprintf(stderr, "failed resolve pdo_handle_error: %s\n", DL_ERROR());
         abort();
     } 
 
@@ -986,10 +987,10 @@ __attribute__((weak, alias("swow_pdo_parse_params_redirect"))) extern int pdo_pa
 int (*swow_pdo_parse_params_resolved)(void *stmt, void *inquery, size_t inquery_len, void *outquery, void *outquery_len);
 // resolver for pdo_parse_params
 int swow_pdo_parse_params_resolver(void *stmt, void *inquery, size_t inquery_len, void *outquery, void *outquery_len) {
-    swow_pdo_parse_params_resolved = (int (*)(void *stmt, void *inquery, size_t inquery_len, void *outquery, void *outquery_len))dlsym(NULL, "pdo_parse_params");
+    swow_pdo_parse_params_resolved = (int (*)(void *stmt, void *inquery, size_t inquery_len, void *outquery, void *outquery_len))DL_FETCH_SYMBOL(NULL, "pdo_parse_params");
 
     if (swow_pdo_parse_params_resolved == NULL) {
-        fprintf(stderr, "failed resolve pdo_parse_params: %s\n", dlerror());
+        fprintf(stderr, "failed resolve pdo_parse_params: %s\n", DL_ERROR());
         abort();
     } 
 
@@ -1007,10 +1008,10 @@ __attribute__((weak, alias("swow_pdo_parse_params_redirect"))) extern int pdo_pa
 int (*swow_pdo_parse_params_resolved)(void *stmt, void *inquery, void *outquery);
 // resolver for pdo_parse_params
 int swow_pdo_parse_params_resolver(void *stmt, void *inquery, void *outquery) {
-    swow_pdo_parse_params_resolved = (int (*)(void *stmt, void *inquery, void *outquery))dlsym(NULL, "pdo_parse_params");
+    swow_pdo_parse_params_resolved = (int (*)(void *stmt, void *inquery, void *outquery))DL_FETCH_SYMBOL(NULL, "pdo_parse_params");
 
     if (swow_pdo_parse_params_resolved == NULL) {
-        fprintf(stderr, "failed resolve pdo_parse_params: %s\n", dlerror());
+        fprintf(stderr, "failed resolve pdo_parse_params: %s\n", DL_ERROR());
         abort();
     } 
 
@@ -1028,10 +1029,10 @@ __attribute__((weak, alias("swow_pdo_throw_exception_redirect"))) extern void pd
 void (*swow_pdo_throw_exception_resolved)(unsigned int driver_errcode, char *driver_errmsg, void *pdo_error);
 // resolver for pdo_throw_exception
 void swow_pdo_throw_exception_resolver(unsigned int driver_errcode, char *driver_errmsg, void *pdo_error) {
-    swow_pdo_throw_exception_resolved = (void (*)(unsigned int driver_errcode, char *driver_errmsg, void *pdo_error))dlsym(NULL, "pdo_throw_exception");
+    swow_pdo_throw_exception_resolved = (void (*)(unsigned int driver_errcode, char *driver_errmsg, void *pdo_error))DL_FETCH_SYMBOL(NULL, "pdo_throw_exception");
 
     if (swow_pdo_throw_exception_resolved == NULL) {
-        fprintf(stderr, "failed resolve pdo_throw_exception: %s\n", dlerror());
+        fprintf(stderr, "failed resolve pdo_throw_exception: %s\n", DL_ERROR());
         abort();
     } 
 
@@ -1049,10 +1050,10 @@ __attribute__((weak, alias("swow_php_pdo_register_driver_redirect"))) extern int
 int (*swow_php_pdo_register_driver_resolved)(const void *driver);
 // resolver for php_pdo_register_driver
 int swow_php_pdo_register_driver_resolver(const void *driver) {
-    swow_php_pdo_register_driver_resolved = (int (*)(const void *driver))dlsym(NULL, "php_pdo_register_driver");
+    swow_php_pdo_register_driver_resolved = (int (*)(const void *driver))DL_FETCH_SYMBOL(NULL, "php_pdo_register_driver");
 
     if (swow_php_pdo_register_driver_resolved == NULL) {
-        fprintf(stderr, "failed resolve php_pdo_register_driver: %s\n", dlerror());
+        fprintf(stderr, "failed resolve php_pdo_register_driver: %s\n", DL_ERROR());
         abort();
     } 
 
@@ -1069,10 +1070,10 @@ __attribute__((weak, alias("swow_php_pdo_unregister_driver_redirect"))) extern v
 void (*swow_php_pdo_unregister_driver_resolved)(const void *driver);
 // resolver for php_pdo_unregister_driver
 void swow_php_pdo_unregister_driver_resolver(const void *driver) {
-    swow_php_pdo_unregister_driver_resolved = (void (*)(const void *driver))dlsym(NULL, "php_pdo_unregister_driver");
+    swow_php_pdo_unregister_driver_resolved = (void (*)(const void *driver))DL_FETCH_SYMBOL(NULL, "php_pdo_unregister_driver");
 
     if (swow_php_pdo_unregister_driver_resolved == NULL) {
-        fprintf(stderr, "failed resolve php_pdo_unregister_driver: %s\n", dlerror());
+        fprintf(stderr, "failed resolve php_pdo_unregister_driver: %s\n", DL_ERROR());
         abort();
     } 
 
