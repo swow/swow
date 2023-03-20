@@ -800,7 +800,7 @@ EOF
             fi
             SWOW_CAT_INCLUDES="$SWOW_CAT_INCLUDES $POSTGRESQL_INCL"
             SWOW_ADD_SOURCES(deps/libcat/src, cat_pq.c, SWOW_CAT_INCLUDES, SWOW_CAT_CFLAGS)
-            SWOW_ADD_SOURCES(src, swow_pgsql_driver.c swow_pgsql_statement.c, SWOW_INCLUDES, SWOW_CFLAGS)
+            SWOW_ADD_SOURCES(src, swow_pgsql_driver.c swow_pgsql_statement.c swow_pgsql_version.c, SWOW_INCLUDES, SWOW_CFLAGS)
           ],[
             AC_MSG_WARN([Swow PDO_PGSQL support not enabled: libpq not found])
           ])

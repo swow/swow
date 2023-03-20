@@ -16,14 +16,6 @@
   +--------------------------------------------------------------------------+
  */
 
-#ifdef CAT_HAVE_PQ
-# include <pg_config.h>
-// avoid conflict
-# ifdef OPENSSL_API_COMPAT
-#  undef OPENSSL_API_COMPAT
-# endif
-#endif
-
 #include "swow.h"
 #include "swow_errno.h"
 #include "swow_log.h"
@@ -49,10 +41,7 @@
 #include "swow_curl.h"
 
 #ifdef CAT_HAVE_PQ
-zend_result swow_pgsql_module_init(INIT_FUNC_ARGS);
-zend_result swow_pgsql_module_shutdown(INIT_FUNC_ARGS);
-// at src/swow_pgsql_driver.c
-extern int swow_libpq_version;
+# include "swow_pgsql.h"
 #endif
 
 #include "cat_api.h"
@@ -500,7 +489,7 @@ PHP_MINFO_FUNCTION(swow)
         sizeof(libpq_version_info),
         "libpq/%s (built with %d.%d)",
         linking_libpq_version,
-        PG_VERSION_NUM / 10000, PG_VERSION_NUM % 10000
+        swow_building_libpq_version / 10000, swow_building_libpq_version % 10000
     );
     php_info_print_table_row(2, "PostgreSQL", libpq_version_info);
 #endif
