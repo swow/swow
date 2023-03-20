@@ -36,30 +36,41 @@ declare(strict_types=1);
 #include "php_version.h"
 #include "php.h"
 
-#include "config.h"
+#include "swow.h"
 <?php
 
 function weak(string $name, string $ret, string $argsSign, string $argsPassthruSign) {
-    $return = $ret === "void" ? "$name($argsPassthruSign);\n    return;" : "return $name($argsPassthruSign);";
+    $return = $ret === "void" ? "swow_{$name}_resolved($argsPassthruSign)" : "return swow_{$name}_resolved($argsPassthruSign)";
     echo <<<C
 // weak function pointer for $name
+#ifdef CAT_OS_WIN
+// extern $ret $name($argsSign);
+# pragma comment(linker, "/alternatename:$name=swow_{$name}_redirect")
+#else
 __attribute__((weak, alias("swow_{$name}_redirect"))) extern $ret $name($argsSign);
+#endif
 // resolved function holder
 $ret (*swow_{$name}_resolved)($argsSign);
 // resolver for $name
 $ret swow_{$name}_resolver($argsSign) {
-    swow_{$name}_resolved = ($ret (*)($argsSign))DL_FETCH_SYMBOL(NULL, "$name");
+    swow_{$name}_resolved = ($ret (*)($argsSign))DL_FETCH_SYMBOL(DL_FROM_HANDLE, "$name");
 
     if (swow_{$name}_resolved == NULL) {
+#if defined(DL_ERROR)
         fprintf(stderr, "failed resolve $name: %s\\n", DL_ERROR());
+#elif defined(CAT_OS_WIN)
+        fprintf(stderr, "failed resolve $name: %08x\\n", GetLastError());
+#else
+        fprintf(stderr, "failed resolve $name\\n",());
+#endif
         abort();
     } 
 
-    $return
+    $return;
 }
 $ret (*swow_{$name}_resolved)($argsSign) = swow_{$name}_resolver;
 $ret swow_{$name}_redirect($argsSign) {
-    return swow_{$name}_resolved($argsPassthruSign);
+    $return;
 }
 
 
@@ -103,6 +114,11 @@ function weaks(string $signs) {
 #ifdef CAT_HAVE_PQ
 <?php
 weaks(<<<C
+#ifdef CAT_OS_WIN
+# define DL_FROM_HANDLE GetModuleHandleA("libpq.dll")
+#else
+# define DL_FROM_HANDLE NULL
+#endif
 int  PQbackendPID(const void *conn);
 void PQclear(void *res);
 char *PQcmdTuples(void *res);
@@ -148,7 +164,28 @@ int  PQsocket(const void *conn);
 int  PQstatus(const void *conn);
 int PQtransactionStatus(const void *conn);
 unsigned char *PQunescapeBytea(const unsigned char *strtext, size_t *retbuflen);
+#ifdef CAT_OS_WIN
+int	lo_open(void *conn, unsigned int lobjId, int mode);
+int	lo_close(void *conn, int fd);
+int	lo_read(void *conn, int fd, char *buf, size_t len);
+int	lo_write(void *conn, int fd, const char *buf, size_t len);
+int	lo_lseek(void *conn, int fd, int offset, int whence);
+unsigned int	lo_creat(void *conn, int mode);
+int	lo_unlink(void *conn, unsigned int lobjId);
+#endif // CAT_OS_WIN
 
+#undef DL_FROM_HANDLE
+#ifdef CAT_OS_WIN
+# define str(x) _str(x)
+# define _str(x) #x
+# if defined(ZTS) && ZTS
+#  define DL_FROM_HANDLE GetModuleHandleA("php" str(PHP_VERSION_MAJOR) "ts.dll")
+# else
+#  define DL_FROM_HANDLE GetModuleHandleA("php" str(PHP_VERSION_MAJOR) ".dll")
+# endif
+#else
+# define DL_FROM_HANDLE NULL
+#endif
 bool pdo_get_bool_param(bool *bval, void *value);
 void pdo_handle_error(void *dbh, void *stmt);
 #if PHP_VERSION_ID < 80100
