@@ -34,6 +34,7 @@ declare(strict_types=1);
 #endif
 
 #include "php_version.h"
+#include "php.h"
 
 #include "config.h"
 <?php
@@ -47,10 +48,10 @@ __attribute__((weak, alias("swow_{$name}_redirect"))) extern $ret $name($argsSig
 $ret (*swow_{$name}_resolved)($argsSign);
 // resolver for $name
 $ret swow_{$name}_resolver($argsSign) {
-    swow_{$name}_resolved = ($ret (*)($argsSign))dlsym(NULL, "$name");
+    swow_{$name}_resolved = ($ret (*)($argsSign))DL_FETCH_SYMBOL(NULL, "$name");
 
     if (swow_{$name}_resolved == NULL) {
-        fprintf(stderr, "failed resolve $name: %s\\n", dlerror());
+        fprintf(stderr, "failed resolve $name: %s\\n", DL_ERROR());
         abort();
     } 
 
