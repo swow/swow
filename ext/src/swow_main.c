@@ -728,10 +728,28 @@ SWOW_API const char *swow_extra_version(void)
     return SWOW_EXTRA_VERSION;
 }
 
+
+struct _zend_module_dep swow_module_deps[] = {
+    ZEND_MOD_CONFLICTS("swoole")
+#ifdef CAT_HAVE_CURL
+    ZEND_MOD_OPTIONAL("curl")
+#endif
+#ifdef CAT_HAVE_OPENSSL
+    ZEND_MOD_OPTIONAL("openssl")
+#endif
+#ifdef CAT_HAVE_PQ
+    ZEND_MOD_OPTIONAL("pdo")
+    ZEND_MOD_OPTIONAL("pdo_pgsql")
+#endif
+    ZEND_MOD_END
+};
+
 /* {{{ swow_module_entry
  */
 SWOW_API zend_module_entry swow_module_entry = {
-    STANDARD_MODULE_HEADER,
+    STANDARD_MODULE_HEADER_EX,
+    NULL,                        /* ini_entries */
+    &swow_module_deps,           /* module dependencies */
     SWOW_MODULE_NAME,            /* Extension name */
     swow_functions,              /* zend_function_entry */
     PHP_MINIT(swow),             /* PHP_MINIT - Module initialization */
