@@ -2618,15 +2618,8 @@ static cat_bool_t swow_pgsql_hooked = cat_false;
 
 zend_result swow_pgsql_module_init(INIT_FUNC_ARGS)
 {
-	cat_bool_t pdo_enabled = cat_false;
-
-	SWOW_MODULES_CHECK_PRE_START() {
-		"pdo",
-		"pdo_pgsql"
-	} SWOW_MODULES_CHECK_PRE_END_EX({pdo_enabled = cat_true;});
-
-	if (!pdo_enabled) {
-		php_error_docref(NULL, E_WARNING, "Swow pdo_pgsql hook not enabled, pdo extension not enabled or bad loading order");
+	if (!zend_hash_str_exists(&module_registry, ZEND_STRL("pdo"))) {
+		php_error_docref(NULL, E_WARNING, "Swow pdo_pgsql hook not enabled, pdo extension not enabled");
 		return SUCCESS;
 	}
 
@@ -2666,7 +2659,6 @@ zend_result swow_pgsql_module_shutdown(INIT_FUNC_ARGS)
 		swow_pgsql_hooked = cat_false;
 	}
 
-printf("hooked\n");
 	return SUCCESS;
 }
 
