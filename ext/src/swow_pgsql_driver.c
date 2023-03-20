@@ -2643,10 +2643,10 @@ zend_result swow_pgsql_module_init(INIT_FUNC_ARGS)
 # elif defined(CAT_OS_WIN)
 #  define LIBPQ_SO_NAME "libpq.dll"
 		{
-			"C:\\Program Files\\PostgreSQL\\15\\lib\\",
-			"C:\\Program Files\\PostgreSQL\\14\\lib\\",
-			"C:\\Program Files (x86)\\PostgreSQL\\15\\lib\\",
-			"C:\\Program Files (x86)\\PostgreSQL\\14\\lib\\",
+			"C:\\Program Files\\PostgreSQL\\15\\bin\\",
+			"C:\\Program Files\\PostgreSQL\\14\\bin\\",
+			"C:\\Program Files (x86)\\PostgreSQL\\15\\bin\\",
+			"C:\\Program Files (x86)\\PostgreSQL\\14\\bin\\",
 			NULL
 		}
 # else
@@ -2659,8 +2659,15 @@ zend_result swow_pgsql_module_init(INIT_FUNC_ARGS)
 	if (!dummy_handle) {
 		char name_buf[64];
 		for (int i = 0; i < CAT_ARRAY_SIZE(library_paths); i++) {
-			snprintf(name_buf, sizeof(name_buf), "%s/%s", library_paths[i], LIBPQ_SO_NAME);
-			dummy_handle = DL_LOAD(name_buf);
+			snprintf(name_buf, sizeof(name_buf), "%s%s", library_paths[i], LIBPQ_SO_NAME);
+			
+#ifdef CAT_OS_WIN
+			SetDllDirectoryA(library_paths[i]);
+#endif
+			dummy_handle = DL_LOAD(name_buf);			
+#ifdef CAT_OS_WIN
+			SetDllDirectoryA(NULL);
+#endif
 			if (dummy_handle) {
 				break;
 			}
