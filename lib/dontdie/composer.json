@@ -1,0 +1,27 @@
+{
+    "name": "swow/dontdie",
+    "description": "A script to prevent your program from dying",
+    "keywords": [
+        "dontdie",
+        "swow"
+    ],
+    "license": "Apache-2.0",
+    "authors": [
+        {
+            "name": "twose",
+            "email": "twosee@php.net"
+        }
+    ],
+    "support": {
+        "issues": "https://github.com/swow/swow"
+    },
+    "require": {
+        "php": ">=8.0"
+    },
+    "suggest": {
+        "ext-swow": "*"
+    },
+    "bin": [
+        "bin/dontdie"
+    ]
+}

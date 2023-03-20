@@ -21,14 +21,19 @@ use function Swow\Utils\passthru;
 use function Swow\Utils\success;
 
 $repoInfo = [
-    'swow-examples' => 'examples',
-    'swow-extension' => 'ext',
-    'swow-stub' => 'lib/swow-stub',
-    'swow-library' => 'lib/swow-library',
-    'swow-utils' => 'lib/swow-utils',
-    'swow-php-cs-fixer-config' => 'lib/swow-php-cs-fixer-config',
-    'php-stub-generator' => 'lib/php-stub-generator',
+    'swow-examples' => dirname(__DIR__) . '/examples',
+    'swow-extension' => dirname(__DIR__) . '/ext',
+    'swow-stub' => dirname(__DIR__) . '/lib/swow-stub',
+    'swow-library' => dirname(__DIR__) . '/lib/swow-library',
+    'swow-utils' => dirname(__DIR__) . '/lib/swow-utils',
+    'swow-php-cs-fixer-config' => dirname(__DIR__) . '/lib/swow-php-cs-fixer-config',
+    'php-stub-generator' => dirname(__DIR__) . '/lib/php-stub-generator',
+    'dontdie' => dirname(__DIR__) . '/lib/dontdie',
 ];
+
+$repoInfo = array_map(static function ($path) {
+    return str_replace(dirname(__DIR__) . '/', '', $path);
+}, $repoInfo);
 
 $specifiedRepoName = $argv[1] ?? null;
 if ($specifiedRepoName) {

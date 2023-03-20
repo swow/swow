@@ -104,6 +104,7 @@
         "split": [ "@php -n tools/split.php" ]
     },
     "bin": [
-        "ext/bin/swow-builder"
+        "ext/bin/swow-builder",
+        "lib/dontdie/dontdie"
     ]
 }
