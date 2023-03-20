@@ -1309,11 +1309,6 @@ cleanup:
 }
 /* }}} */
 
-const pdo_driver_t pdo_pgsql_driver = {
-	PDO_DRIVER_HEADER(pgsql),
-	pdo_pgsql_handle_factory
-};
-
 /* Git hash: php/php-src@22c9e7e27ea4396f43c4496cce6c058937976e90 */
 #elif PHP_VERSION_ID >= 80100
 #include "php.h"
@@ -2610,11 +2605,6 @@ cleanup:
 }
 /* }}} */
 
-const pdo_driver_t pdo_pgsql_driver = {
-	PDO_DRIVER_HEADER(pgsql),
-	pdo_pgsql_handle_factory
-};
-
 #endif
 
 const pdo_driver_t swow_pdo_pgsql_driver = {
@@ -2628,14 +2618,15 @@ static cat_bool_t swow_pgsql_hooked = cat_false;
 
 zend_result swow_pgsql_module_init(INIT_FUNC_ARGS)
 {
-	cat_bool_t pdo_enabled;
+	cat_bool_t pdo_enabled = cat_false;
 
 	SWOW_MODULES_CHECK_PRE_START() {
 		"pdo",
-	} SWOW_MODULES_CHECK_PRE_END_OPTIONAL(pdo_enabled);
+		"pdo_pgsql"
+	} SWOW_MODULES_CHECK_PRE_END_EX({pdo_enabled = cat_true;});
 
 	if (!pdo_enabled) {
-		//php_error_docref(NULL, E_WARNING, "Swow pdo_pgsql hook not enabled, pdo extension not enabled or bad loading order");
+		php_error_docref(NULL, E_WARNING, "Swow pdo_pgsql hook not enabled, pdo extension not enabled or bad loading order");
 		return SUCCESS;
 	}
 
@@ -2643,7 +2634,7 @@ zend_result swow_pgsql_module_init(INIT_FUNC_ARGS)
 # ifdef __GNUC__
 	void* dummy_handle = dlopen("libpq.so", RTLD_LAZY | RTLD_DEEPBIND | RTLD_GLOBAL);
 	if (!dummy_handle) {
-		//php_error_docref(NULL, E_WARNING, "Swow pdo_pgsql hook not enabled, libpq not found");
+		php_error_docref(NULL, E_WARNING, "Swow pdo_pgsql hook not enabled, libpq not found");
 		return SUCCESS;
 	}
 # endif // __GNUC__
@@ -2651,15 +2642,14 @@ zend_result swow_pgsql_module_init(INIT_FUNC_ARGS)
 
 	int version = PQlibVersion();
 	if (version < 140000) {
-		//php_error_docref(NULL, E_WARNING, "Swow pdo_pgsql hook not enabled, libpq is too old (%d < 140000)", version);
+		php_error_docref(NULL, E_WARNING, "Swow pdo_pgsql hook not enabled, libpq is too old (%d < 140000)", version);
 		return SUCCESS;
 	}
 
-	php_pdo_unregister_driver(&pdo_pgsql_driver);
+	// php_pdo_register_driver will overwrite original driver
 	if (php_pdo_register_driver(&swow_pdo_pgsql_driver) == SUCCESS) {
 		swow_pgsql_hooked = cat_true;
 	}
-
 	return SUCCESS;
 }
 
@@ -2667,10 +2657,16 @@ zend_result swow_pgsql_module_shutdown(INIT_FUNC_ARGS)
 {
 	if (swow_pgsql_hooked) {
 		php_pdo_unregister_driver(&swow_pdo_pgsql_driver);
-		php_pdo_register_driver(&pdo_pgsql_driver);
+
+		// we cannot get original driver, so whatever
+		// if (swow_original_pdo_pgsql) {
+		//		php_pdo_register_driver(swow_original_pdo_pgsql);
+		// }
+
 		swow_pgsql_hooked = cat_false;
 	}
 
+printf("hooked\n");
 	return SUCCESS;
 }
 
