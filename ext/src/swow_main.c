@@ -729,7 +729,7 @@ SWOW_API const char *swow_extra_version(void)
 }
 
 
-struct _zend_module_dep swow_module_deps[] = {
+static const zend_module_dep swow_module_deps[] = {
     ZEND_MOD_CONFLICTS("swoole")
 #ifdef CAT_HAVE_CURL
     ZEND_MOD_OPTIONAL("curl")
