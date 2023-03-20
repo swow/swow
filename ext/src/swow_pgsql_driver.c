@@ -2614,7 +2614,8 @@ const pdo_driver_t swow_pdo_pgsql_driver = {
 
 #include "swow.h"
 
-static cat_bool_t swow_pgsql_hooked = cat_false;
+int swow_libpq_version = 0;
+cat_bool_t swow_pgsql_hooked = cat_false;
 
 zend_result swow_pgsql_module_init(INIT_FUNC_ARGS)
 {
@@ -2633,9 +2634,9 @@ zend_result swow_pgsql_module_init(INIT_FUNC_ARGS)
 # endif // __GNUC__
 #endif // COMPILE_DL_SWOW
 
-	int version = PQlibVersion();
-	if (version < 140000) {
-		php_error_docref(NULL, E_WARNING, "Swow pdo_pgsql hook not enabled, libpq is too old (%d < 140000)", version);
+	swow_libpq_version = PQlibVersion();
+	if (swow_libpq_version < 140000) {
+		php_error_docref(NULL, E_WARNING, "Swow pdo_pgsql hook not enabled, libpq is too old (%d < 140000)", swow_libpq_version);
 		return SUCCESS;
 	}
 
