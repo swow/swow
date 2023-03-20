@@ -151,7 +151,7 @@ class ServerRequest extends Request implements ServerRequestPlusInterface
         return $this->parsedBody ??= BodyDecoder::decode($this->getBody(), $this->getContentType());
     }
 
-    /** @param array<mixed>|object $data */
+    /** @param null|array<mixed>|object $data */
     public function setParsedBody(null|array|object $data): static
     {
         $this->parsedBody = $data;
