@@ -41,9 +41,11 @@
 #include "swow_curl.h"
 
 #ifdef CAT_HAVE_PQ
-#include <libpq-fe.h>
+#include <pg_config.h>
 zend_result swow_pgsql_module_init(INIT_FUNC_ARGS);
 zend_result swow_pgsql_module_shutdown(INIT_FUNC_ARGS);
+// at src/swow_pgsql_driver.c
+extern int swow_libpq_version;
 #endif
 
 #include "cat_api.h"
@@ -481,20 +483,19 @@ PHP_MINFO_FUNCTION(swow)
     }
 #endif
 #ifdef CAT_HAVE_PQ
-    do {
-        char pgsql_libpq_version[16];
-        int version = PQlibVersion();
-        int major = version / 10000;
-        if (major >= 10) {
-            int minor = version % 10000;
-            snprintf(pgsql_libpq_version, sizeof(pgsql_libpq_version), "libpq/%d.%d", major, minor);
-        } else {
-            int minor = version / 100 % 100;
-            int revision = version % 100;
-            snprintf(pgsql_libpq_version, sizeof(pgsql_libpq_version), "libpq/%d.%d.%d", major, minor, revision);
-        }
-        php_info_print_table_row(2, "PostgreSQL", pgsql_libpq_version);
-    } while (0);
+    char linking_libpq_version[64] = { "notfound" };
+    if (swow_libpq_version) {
+        snprintf(linking_libpq_version, sizeof(linking_libpq_version), "%d.%d", swow_libpq_version / 10000, swow_libpq_version % 10000);
+    }
+    char libpq_version_info[64];
+    snprintf(
+        libpq_version_info,
+        sizeof(libpq_version_info),
+        "libpq/%s (built with %d.%d)",
+        linking_libpq_version,
+        PG_VERSION_NUM / 10000, PG_VERSION_NUM % 10000
+    );
+    php_info_print_table_row(2, "PostgreSQL", libpq_version_info);
 #endif
     php_info_print_table_end();
 }
