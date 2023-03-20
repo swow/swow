@@ -2625,9 +2625,50 @@ zend_result swow_pgsql_module_init(INIT_FUNC_ARGS)
 	}
 
 #ifdef COMPILE_DL_SWOW
-	DL_HANDLE dummy_handle = DL_LOAD("libpq." PHP_SHLIB_SUFFIX);
+	const char *library_paths[] =
+# if defined(CAT_OS_DARWIN)
+#  define LIBPQ_SO_NAME "libpq.5.dylib"
+		{
+			// macports/brew
+			"/opt/local/lib/",
+			// brew
+			"/usr/local/Cellar/libpq@15/",
+			"/usr/local/Cellar/libpq@14/",
+			// postgres.app
+			"/Applications/Postgres.app/Contents/Versions/latest/lib/",
+			// fink
+			"/sw/lib",
+			NULL
+		}
+# elif defined(CAT_OS_WIN)
+#  define LIBPQ_SO_NAME "libpq.dll"
+		{
+			"C:\\Program Files\\PostgreSQL\\15\\lib\\",
+			"C:\\Program Files\\PostgreSQL\\14\\lib\\",
+			"C:\\Program Files (x86)\\PostgreSQL\\15\\lib\\",
+			"C:\\Program Files (x86)\\PostgreSQL\\14\\lib\\",
+			NULL
+		}
+# else
+#  define LIBPQ_SO_NAME "libpq." PHP_SHLIB_SUFFIX
+		{ NULL }
+# endif
+	;
+
+	DL_HANDLE dummy_handle = DL_LOAD(LIBPQ_SO_NAME);
 	if (!dummy_handle) {
-		php_error_docref(NULL, E_WARNING, "Swow pdo_pgsql hook not enabled, libpq." PHP_SHLIB_SUFFIX " not found");
+		char name_buf[64];
+		for (int i = 0; i < CAT_ARRAY_SIZE(library_paths); i++) {
+			snprintf(name_buf, sizeof(name_buf), "%s/%s", library_paths[i], LIBPQ_SO_NAME);
+			dummy_handle = DL_LOAD(name_buf);
+			if (dummy_handle) {
+				break;
+			}
+		}
+
+	}
+	if (!dummy_handle) {
+		php_error_docref(NULL, E_WARNING, "Swow pdo_pgsql hook not enabled, " LIBPQ_SO_NAME " not found");
 		return SUCCESS;
 	}
 #endif // COMPILE_DL_SWOW
