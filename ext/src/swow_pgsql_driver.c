@@ -2627,7 +2627,7 @@ zend_result swow_pgsql_module_init(INIT_FUNC_ARGS)
 #ifdef COMPILE_DL_SWOW
 	DL_HANDLE dummy_handle = DL_LOAD("libpq." PHP_SHLIB_SUFFIX);
 	if (!dummy_handle) {
-		php_error_docref(NULL, E_WARNING, "Swow pdo_pgsql hook not enabled, libpq not found");
+		php_error_docref(NULL, E_WARNING, "Swow pdo_pgsql hook not enabled, libpq." PHP_SHLIB_SUFFIX " not found");
 		return SUCCESS;
 	}
 #endif // COMPILE_DL_SWOW
