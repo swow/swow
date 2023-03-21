@@ -787,32 +787,26 @@ EOF
 
     dnl add postgresql sources
     if test "x${PHP_SWOW_PDO_PGSQL}" != "xno" ; then
-      ac_save_CPPFLAGS=$CPPFLAGS
-      CPPFLAGS="$CPPFLAGS $INCLUDES"
-      AC_CHECK_HEADER(pdo/php_pdo.h,
-        [
-          dnl according to pdo_pgsql config.m4, we need at least 9.1
-          SWOW_PKG_CHECK_MODULES([POSTGRESQL], libpq, 9.1, [PHP_SWOW_PDO_PGSQL], [
-            dnl make changes
-            AC_DEFINE([CAT_HAVE_PQ], 1, [Enable libcat PostgreSQL])
-            dnl use weak symbol to provide this
-            if test x"${ac_cv_cc_attribute_weak}" != x"yes"; then
-              PHP_EVAL_LIBLINE($POSTGRESQL_LIBS, SWOW_SHARED_LIBADD)
-            fi
-            SWOW_CAT_INCLUDES="$SWOW_CAT_INCLUDES $POSTGRESQL_INCL"
-            SWOW_ADD_SOURCES(deps/libcat/src, cat_pq.c, SWOW_CAT_INCLUDES, SWOW_CAT_CFLAGS)
-            SWOW_ADD_SOURCES(src, swow_pgsql_driver.c swow_pgsql_statement.c swow_pgsql_version.c, SWOW_INCLUDES, SWOW_CFLAGS)
-          ],[
-            AC_MSG_WARN([Swow PDO_PGSQL support not enabled: libpq not found])
-          ])
-        ],
-        [
-          AC_MSG_WARN([Swow PDO_PGSQL support not enabled: pdo/php_pdo.h not found, pdo may not enabled])
-        ],
-        [
-          #include <php.h>
+      PHP_CHECK_PDO_INCLUDES([
+        dnl according to pdo_pgsql config.m4, we need at least 9.1
+        SWOW_PKG_CHECK_MODULES([POSTGRESQL], libpq, 9.1, [PHP_SWOW_PDO_PGSQL], [
+          dnl make changes
+          AC_DEFINE([CAT_HAVE_PQ], 1, [Enable libcat PostgreSQL])
+          dnl use weak symbol to provide this
+          if test x"${ac_cv_cc_attribute_weak}" != x"yes"; then
+            PHP_EVAL_LIBLINE($POSTGRESQL_LIBS, SWOW_SHARED_LIBADD)
+          fi
+          SWOW_CAT_INCLUDES="$SWOW_CAT_INCLUDES $POSTGRESQL_INCL"
+          SWOW_INCLUDES="$SWOW_INCLUDES -I$pdo_cv_inc_path"
+          SWOW_ADD_SOURCES(deps/libcat/src, cat_pq.c, SWOW_CAT_INCLUDES, SWOW_CAT_CFLAGS)
+          SWOW_ADD_SOURCES(src, swow_pgsql_driver.c swow_pgsql_statement.c swow_pgsql_version.c, SWOW_INCLUDES, SWOW_CFLAGS)
+        ],[
+          AC_MSG_WARN([Swow PDO_PGSQL support not enabled: libpq not found])
         ])
-      CPPFLAGS=$ac_save_CPPFLAGS
+      ],
+      [
+        AC_MSG_WARN([Swow PDO_PGSQL support not enabled: pdo/php_pdo.h not found, pdo may not enabled])
+      ])
     fi
 
     PHP_SUBST(SWOW_CAT_INCLUDES)
