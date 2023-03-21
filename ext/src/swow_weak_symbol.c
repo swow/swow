@@ -61,7 +61,7 @@ int swow_PQbackendPID_resolver(const void *conn) {
         fprintf(stderr, "failed resolve PQbackendPID\n",());
 #endif
         abort();
-    } 
+    }
 
     return swow_PQbackendPID_resolved(conn);
 }
@@ -92,7 +92,7 @@ void swow_PQclear_resolver(void *res) {
         fprintf(stderr, "failed resolve PQclear\n",());
 #endif
         abort();
-    } 
+    }
 
     swow_PQclear_resolved(res);
 }
@@ -123,7 +123,7 @@ char * swow_PQcmdTuples_resolver(void *res) {
         fprintf(stderr, "failed resolve PQcmdTuples\n",());
 #endif
         abort();
-    } 
+    }
 
     return swow_PQcmdTuples_resolved(res);
 }
@@ -154,7 +154,7 @@ int swow_PQconnectPoll_resolver(void *conn) {
         fprintf(stderr, "failed resolve PQconnectPoll\n",());
 #endif
         abort();
-    } 
+    }
 
     return swow_PQconnectPoll_resolved(conn);
 }
@@ -185,7 +185,7 @@ void * swow_PQconnectStart_resolver(const char *conninfo) {
         fprintf(stderr, "failed resolve PQconnectStart\n",());
 #endif
         abort();
-    } 
+    }
 
     return swow_PQconnectStart_resolved(conninfo);
 }
@@ -216,7 +216,7 @@ int swow_PQconsumeInput_resolver(void *conn) {
         fprintf(stderr, "failed resolve PQconsumeInput\n",());
 #endif
         abort();
-    } 
+    }
 
     return swow_PQconsumeInput_resolved(conn);
 }
@@ -247,7 +247,7 @@ char * swow_PQerrorMessage_resolver(const void *conn) {
         fprintf(stderr, "failed resolve PQerrorMessage\n",());
 #endif
         abort();
-    } 
+    }
 
     return swow_PQerrorMessage_resolved(conn);
 }
@@ -278,7 +278,7 @@ unsigned char * swow_PQescapeByteaConn_resolver(void *conn, const unsigned char 
         fprintf(stderr, "failed resolve PQescapeByteaConn\n",());
 #endif
         abort();
-    } 
+    }
 
     return swow_PQescapeByteaConn_resolved(conn, from, from_length, to_length);
 }
@@ -309,7 +309,7 @@ size_t swow_PQescapeStringConn_resolver(void *conn, char *to, const char *from, 
         fprintf(stderr, "failed resolve PQescapeStringConn\n",());
 #endif
         abort();
-    } 
+    }
 
     return swow_PQescapeStringConn_resolved(conn, to, from, length, error);
 }
@@ -340,7 +340,7 @@ void swow_PQfinish_resolver(void *conn) {
         fprintf(stderr, "failed resolve PQfinish\n",());
 #endif
         abort();
-    } 
+    }
 
     swow_PQfinish_resolved(conn);
 }
@@ -371,7 +371,7 @@ int swow_PQflush_resolver(void *conn) {
         fprintf(stderr, "failed resolve PQflush\n",());
 #endif
         abort();
-    } 
+    }
 
     return swow_PQflush_resolved(conn);
 }
@@ -402,7 +402,7 @@ int swow_PQfmod_resolver(const void *res, int field_num) {
         fprintf(stderr, "failed resolve PQfmod\n",());
 #endif
         abort();
-    } 
+    }
 
     return swow_PQfmod_resolved(res, field_num);
 }
@@ -433,7 +433,7 @@ char * swow_PQfname_resolver(const void *res, int field_num) {
         fprintf(stderr, "failed resolve PQfname\n",());
 #endif
         abort();
-    } 
+    }
 
     return swow_PQfname_resolved(res, field_num);
 }
@@ -464,7 +464,7 @@ void swow_PQfreemem_resolver(void *ptr) {
         fprintf(stderr, "failed resolve PQfreemem\n",());
 #endif
         abort();
-    } 
+    }
 
     swow_PQfreemem_resolved(ptr);
 }
@@ -495,7 +495,7 @@ int swow_PQfsize_resolver(const void *res, int field_num) {
         fprintf(stderr, "failed resolve PQfsize\n",());
 #endif
         abort();
-    } 
+    }
 
     return swow_PQfsize_resolved(res, field_num);
 }
@@ -526,7 +526,7 @@ unsigned int swow_PQftable_resolver(const void *res, int field_num) {
         fprintf(stderr, "failed resolve PQftable\n",());
 #endif
         abort();
-    } 
+    }
 
     return swow_PQftable_resolved(res, field_num);
 }
@@ -557,7 +557,7 @@ unsigned int swow_PQftype_resolver(const void *res, int field_num) {
         fprintf(stderr, "failed resolve PQftype\n",());
 #endif
         abort();
-    } 
+    }
 
     return swow_PQftype_resolved(res, field_num);
 }
@@ -588,7 +588,7 @@ int swow_PQgetCopyData_resolver(void *conn, char **buffer, int async) {
         fprintf(stderr, "failed resolve PQgetCopyData\n",());
 #endif
         abort();
-    } 
+    }
 
     return swow_PQgetCopyData_resolved(conn, buffer, async);
 }
@@ -619,7 +619,7 @@ int swow_PQgetisnull_resolver(const void *res, int tup_num, int field_num) {
         fprintf(stderr, "failed resolve PQgetisnull\n",());
 #endif
         abort();
-    } 
+    }
 
     return swow_PQgetisnull_resolved(res, tup_num, field_num);
 }
@@ -650,7 +650,7 @@ int swow_PQgetlength_resolver(const void *res, int tup_num, int field_num) {
         fprintf(stderr, "failed resolve PQgetlength\n",());
 #endif
         abort();
-    } 
+    }
 
     return swow_PQgetlength_resolved(res, tup_num, field_num);
 }
@@ -681,7 +681,7 @@ void * swow_PQgetResult_resolver(void *conn) {
         fprintf(stderr, "failed resolve PQgetResult\n",());
 #endif
         abort();
-    } 
+    }
 
     return swow_PQgetResult_resolved(conn);
 }
@@ -712,7 +712,7 @@ char * swow_PQgetvalue_resolver(const void *res, int tup_num, int field_num) {
         fprintf(stderr, "failed resolve PQgetvalue\n",());
 #endif
         abort();
-    } 
+    }
 
     return swow_PQgetvalue_resolved(res, tup_num, field_num);
 }
@@ -743,7 +743,7 @@ int swow_PQlibVersion_resolver(void) {
         fprintf(stderr, "failed resolve PQlibVersion\n",());
 #endif
         abort();
-    } 
+    }
 
     return swow_PQlibVersion_resolved();
 }
@@ -774,7 +774,7 @@ int swow_PQnfields_resolver(const void *res) {
         fprintf(stderr, "failed resolve PQnfields\n",());
 #endif
         abort();
-    } 
+    }
 
     return swow_PQnfields_resolved(res);
 }
@@ -805,7 +805,7 @@ int swow_PQntuples_resolver(const void *res) {
         fprintf(stderr, "failed resolve PQntuples\n",());
 #endif
         abort();
-    } 
+    }
 
     return swow_PQntuples_resolved(res);
 }
@@ -836,7 +836,7 @@ void * swow_PQnotifies_resolver(void *conn) {
         fprintf(stderr, "failed resolve PQnotifies\n",());
 #endif
         abort();
-    } 
+    }
 
     return swow_PQnotifies_resolved(conn);
 }
@@ -867,7 +867,7 @@ unsigned int swow_PQoidValue_resolver(const void *res) {
         fprintf(stderr, "failed resolve PQoidValue\n",());
 #endif
         abort();
-    } 
+    }
 
     return swow_PQoidValue_resolved(res);
 }
@@ -898,7 +898,7 @@ const char * swow_PQparameterStatus_resolver(const void *conn, const char *param
         fprintf(stderr, "failed resolve PQparameterStatus\n",());
 #endif
         abort();
-    } 
+    }
 
     return swow_PQparameterStatus_resolved(conn, paramName);
 }
@@ -929,7 +929,7 @@ int swow_PQprotocolVersion_resolver(const void *conn) {
         fprintf(stderr, "failed resolve PQprotocolVersion\n",());
 #endif
         abort();
-    } 
+    }
 
     return swow_PQprotocolVersion_resolved(conn);
 }
@@ -960,7 +960,7 @@ int swow_PQputCopyData_resolver(void *conn, const char *buffer, int nbytes) {
         fprintf(stderr, "failed resolve PQputCopyData\n",());
 #endif
         abort();
-    } 
+    }
 
     return swow_PQputCopyData_resolved(conn, buffer, nbytes);
 }
@@ -991,7 +991,7 @@ int swow_PQputCopyEnd_resolver(void *conn, const char *errormsg) {
         fprintf(stderr, "failed resolve PQputCopyEnd\n",());
 #endif
         abort();
-    } 
+    }
 
     return swow_PQputCopyEnd_resolved(conn, errormsg);
 }
@@ -1022,7 +1022,7 @@ void swow_PQreset_resolver(void *conn) {
         fprintf(stderr, "failed resolve PQreset\n",());
 #endif
         abort();
-    } 
+    }
 
     swow_PQreset_resolved(conn);
 }
@@ -1053,7 +1053,7 @@ int swow_PQresetStart_resolver(void *conn) {
         fprintf(stderr, "failed resolve PQresetStart\n",());
 #endif
         abort();
-    } 
+    }
 
     return swow_PQresetStart_resolved(conn);
 }
@@ -1084,7 +1084,7 @@ char * swow_PQresultErrorField_resolver(const void *res, int fieldcode) {
         fprintf(stderr, "failed resolve PQresultErrorField\n",());
 #endif
         abort();
-    } 
+    }
 
     return swow_PQresultErrorField_resolved(res, fieldcode);
 }
@@ -1115,7 +1115,7 @@ int swow_PQresultStatus_resolver(const void *res) {
         fprintf(stderr, "failed resolve PQresultStatus\n",());
 #endif
         abort();
-    } 
+    }
 
     return swow_PQresultStatus_resolved(res);
 }
@@ -1146,7 +1146,7 @@ int swow_PQsendPrepare_resolver(void *conn, const char *stmtName, const char *qu
         fprintf(stderr, "failed resolve PQsendPrepare\n",());
 #endif
         abort();
-    } 
+    }
 
     return swow_PQsendPrepare_resolved(conn, stmtName, query, nParams, paramTypes);
 }
@@ -1177,7 +1177,7 @@ int swow_PQsendQuery_resolver(void *conn, const char *query) {
         fprintf(stderr, "failed resolve PQsendQuery\n",());
 #endif
         abort();
-    } 
+    }
 
     return swow_PQsendQuery_resolved(conn, query);
 }
@@ -1208,7 +1208,7 @@ int swow_PQsendQueryParams_resolver(void *conn, const char *command, int nParams
         fprintf(stderr, "failed resolve PQsendQueryParams\n",());
 #endif
         abort();
-    } 
+    }
 
     return swow_PQsendQueryParams_resolved(conn, command, nParams, paramTypes, paramValues, paramLengths, paramFormats, resultFormat);
 }
@@ -1239,7 +1239,7 @@ int swow_PQsendQueryPrepared_resolver(void *conn, const char *stmtName, int nPar
         fprintf(stderr, "failed resolve PQsendQueryPrepared\n",());
 #endif
         abort();
-    } 
+    }
 
     return swow_PQsendQueryPrepared_resolved(conn, stmtName, nParams, paramValues, paramLengths, paramFormats, resultFormat);
 }
@@ -1270,7 +1270,7 @@ int swow_PQsetnonblocking_resolver(void *conn, int arg) {
         fprintf(stderr, "failed resolve PQsetnonblocking\n",());
 #endif
         abort();
-    } 
+    }
 
     return swow_PQsetnonblocking_resolved(conn, arg);
 }
@@ -1301,7 +1301,7 @@ void * swow_PQsetNoticeProcessor_resolver(void *conn, void *proc, void *arg) {
         fprintf(stderr, "failed resolve PQsetNoticeProcessor\n",());
 #endif
         abort();
-    } 
+    }
 
     return swow_PQsetNoticeProcessor_resolved(conn, proc, arg);
 }
@@ -1332,7 +1332,7 @@ int swow_PQsocket_resolver(const void *conn) {
         fprintf(stderr, "failed resolve PQsocket\n",());
 #endif
         abort();
-    } 
+    }
 
     return swow_PQsocket_resolved(conn);
 }
@@ -1363,7 +1363,7 @@ int swow_PQstatus_resolver(const void *conn) {
         fprintf(stderr, "failed resolve PQstatus\n",());
 #endif
         abort();
-    } 
+    }
 
     return swow_PQstatus_resolved(conn);
 }
@@ -1394,7 +1394,7 @@ int swow_PQtransactionStatus_resolver(const void *conn) {
         fprintf(stderr, "failed resolve PQtransactionStatus\n",());
 #endif
         abort();
-    } 
+    }
 
     return swow_PQtransactionStatus_resolved(conn);
 }
@@ -1425,7 +1425,7 @@ unsigned char * swow_PQunescapeBytea_resolver(const unsigned char *strtext, size
         fprintf(stderr, "failed resolve PQunescapeBytea\n",());
 #endif
         abort();
-    } 
+    }
 
     return swow_PQunescapeBytea_resolved(strtext, retbuflen);
 }
@@ -1457,7 +1457,7 @@ int swow_lo_open_resolver(void *conn, unsigned int lobjId, int mode) {
         fprintf(stderr, "failed resolve lo_open\n",());
 #endif
         abort();
-    } 
+    }
 
     return swow_lo_open_resolved(conn, lobjId, mode);
 }
@@ -1488,7 +1488,7 @@ int swow_lo_close_resolver(void *conn, int fd) {
         fprintf(stderr, "failed resolve lo_close\n",());
 #endif
         abort();
-    } 
+    }
 
     return swow_lo_close_resolved(conn, fd);
 }
@@ -1519,7 +1519,7 @@ int swow_lo_read_resolver(void *conn, int fd, char *buf, size_t len) {
         fprintf(stderr, "failed resolve lo_read\n",());
 #endif
         abort();
-    } 
+    }
 
     return swow_lo_read_resolved(conn, fd, buf, len);
 }
@@ -1550,7 +1550,7 @@ int swow_lo_write_resolver(void *conn, int fd, const char *buf, size_t len) {
         fprintf(stderr, "failed resolve lo_write\n",());
 #endif
         abort();
-    } 
+    }
 
     return swow_lo_write_resolved(conn, fd, buf, len);
 }
@@ -1581,7 +1581,7 @@ int swow_lo_lseek_resolver(void *conn, int fd, int offset, int whence) {
         fprintf(stderr, "failed resolve lo_lseek\n",());
 #endif
         abort();
-    } 
+    }
 
     return swow_lo_lseek_resolved(conn, fd, offset, whence);
 }
@@ -1612,7 +1612,7 @@ unsigned int swow_lo_creat_resolver(void *conn, int mode) {
         fprintf(stderr, "failed resolve lo_creat\n",());
 #endif
         abort();
-    } 
+    }
 
     return swow_lo_creat_resolved(conn, mode);
 }
@@ -1643,7 +1643,7 @@ int swow_lo_unlink_resolver(void *conn, unsigned int lobjId) {
         fprintf(stderr, "failed resolve lo_unlink\n",());
 #endif
         abort();
-    } 
+    }
 
     return swow_lo_unlink_resolved(conn, lobjId);
 }
@@ -1688,7 +1688,7 @@ bool swow_pdo_get_bool_param_resolver(bool *bval, void *value) {
         fprintf(stderr, "failed resolve pdo_get_bool_param\n",());
 #endif
         abort();
-    } 
+    }
 
     return swow_pdo_get_bool_param_resolved(bval, value);
 }
@@ -1719,7 +1719,7 @@ void swow_pdo_handle_error_resolver(void *dbh, void *stmt) {
         fprintf(stderr, "failed resolve pdo_handle_error\n",());
 #endif
         abort();
-    } 
+    }
 
     swow_pdo_handle_error_resolved(dbh, stmt);
 }
@@ -1751,7 +1751,7 @@ int swow_pdo_parse_params_resolver(void *stmt, void *inquery, size_t inquery_len
         fprintf(stderr, "failed resolve pdo_parse_params\n",());
 #endif
         abort();
-    } 
+    }
 
     return swow_pdo_parse_params_resolved(stmt, inquery, inquery_len, outquery, outquery_len);
 }
@@ -1783,7 +1783,7 @@ int swow_pdo_parse_params_resolver(void *stmt, void *inquery, void *outquery) {
         fprintf(stderr, "failed resolve pdo_parse_params\n",());
 #endif
         abort();
-    } 
+    }
 
     return swow_pdo_parse_params_resolved(stmt, inquery, outquery);
 }
@@ -1815,7 +1815,7 @@ void swow_pdo_throw_exception_resolver(unsigned int driver_errcode, char *driver
         fprintf(stderr, "failed resolve pdo_throw_exception\n",());
 #endif
         abort();
-    } 
+    }
 
     swow_pdo_throw_exception_resolved(driver_errcode, driver_errmsg, pdo_error);
 }
@@ -1846,7 +1846,7 @@ int swow_php_pdo_register_driver_resolver(const void *driver) {
         fprintf(stderr, "failed resolve php_pdo_register_driver\n",());
 #endif
         abort();
-    } 
+    }
 
     return swow_php_pdo_register_driver_resolved(driver);
 }
@@ -1877,7 +1877,7 @@ void swow_php_pdo_unregister_driver_resolver(const void *driver) {
         fprintf(stderr, "failed resolve php_pdo_unregister_driver\n",());
 #endif
         abort();
-    } 
+    }
 
     swow_php_pdo_unregister_driver_resolved(driver);
 }

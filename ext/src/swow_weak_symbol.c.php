@@ -39,71 +39,73 @@ declare(strict_types=1);
 #include "swow.h"
 <?php
 
-function weak(string $name, string $ret, string $argsSign, string $argsPassthruSign) {
-    $return = $ret === "void" ? "swow_{$name}_resolved($argsPassthruSign)" : "return swow_{$name}_resolved($argsPassthruSign)";
+function weak(string $name, string $ret, string $argsSign, string $argsPassthruSign): void
+{
+    $return = $ret === 'void' ? "swow_{$name}_resolved({$argsPassthruSign})" : "return swow_{$name}_resolved({$argsPassthruSign})";
     echo <<<C
-// weak function pointer for $name
+// weak function pointer for {$name}
 #ifdef CAT_OS_WIN
-// extern $ret $name($argsSign);
-# pragma comment(linker, "/alternatename:$name=swow_{$name}_redirect")
+// extern {$ret} {$name}({$argsSign});
+# pragma comment(linker, "/alternatename:{$name}=swow_{$name}_redirect")
 #else
-__attribute__((weak, alias("swow_{$name}_redirect"))) extern $ret $name($argsSign);
+__attribute__((weak, alias("swow_{$name}_redirect"))) extern {$ret} {$name}({$argsSign});
 #endif
 // resolved function holder
-$ret (*swow_{$name}_resolved)($argsSign);
-// resolver for $name
-$ret swow_{$name}_resolver($argsSign) {
-    swow_{$name}_resolved = ($ret (*)($argsSign))DL_FETCH_SYMBOL(DL_FROM_HANDLE, "$name");
+{$ret} (*swow_{$name}_resolved)({$argsSign});
+// resolver for {$name}
+{$ret} swow_{$name}_resolver({$argsSign}) {
+    swow_{$name}_resolved = ({$ret} (*)({$argsSign}))DL_FETCH_SYMBOL(DL_FROM_HANDLE, "{$name}");
 
     if (swow_{$name}_resolved == NULL) {
 #if defined(DL_ERROR)
-        fprintf(stderr, "failed resolve $name: %s\\n", DL_ERROR());
+        fprintf(stderr, "failed resolve {$name}: %s\\n", DL_ERROR());
 #elif defined(CAT_OS_WIN)
-        fprintf(stderr, "failed resolve $name: %08x\\n", GetLastError());
+        fprintf(stderr, "failed resolve {$name}: %08x\\n", GetLastError());
 #else
-        fprintf(stderr, "failed resolve $name\\n",());
+        fprintf(stderr, "failed resolve {$name}\\n",());
 #endif
         abort();
-    } 
+    }
 
-    $return;
+    {$return};
 }
-$ret (*swow_{$name}_resolved)($argsSign) = swow_{$name}_resolver;
-$ret swow_{$name}_redirect($argsSign) {
-    $return;
+{$ret} (*swow_{$name}_resolved)({$argsSign}) = swow_{$name}_resolver;
+{$ret} swow_{$name}_redirect({$argsSign}) {
+    {$return};
 }
 
 
 C;
 }
 
-function weaks(string $signs) {
+function weaks(string $signs): void
+{
     // dammy signature parser
     foreach (explode("\n", $signs) as $line) {
-        preg_match("/^(?P<ret_name>[^(]+)\((?P<args>.+)\);$/", $line, $match);
+        preg_match('/^(?P<ret_name>[^(]+)\\((?P<args>.+)\\);$/', $line, $match);
         if (!$match) {
-            echo "$line\n";
+            echo "{$line}\n";
             continue;
         }
 
         $ret_name = $match['ret_name'];
         $argsSign = $match['args'];
-        preg_match("/^(?P<type>.*[*\s]+)(?P<name>.+)$/", $ret_name, $match);
-        $ret = trim($match['type']) ?: "void";
+        preg_match('/^(?P<type>.*[*\\s]+)(?P<name>.+)$/', $ret_name, $match);
+        $ret = trim($match['type']) ?: 'void';
         $name = trim($match['name']);
 
-        if ($argsSign == "void") {
-            $argsPassthruSign = "";
+        if ($argsSign === 'void') {
+            $argsPassthruSign = '';
         } else {
             $argsPassthru = [];
-            foreach (explode(",", $argsSign) as $argSign) {
-                preg_match("/^(?P<type>.*[*\s]+)(?P<name>.+)$/", $argSign, $match);
+            foreach (explode(',', $argsSign) as $argSign) {
+                preg_match('/^(?P<type>.*[*\\s]+)(?P<name>.+)$/', $argSign, $match);
                 // $argType = trim($match['$type']);
                 $argName = trim($match['name']);
                 $argsPassthru[] = $argName;
             }
 
-            $argsPassthruSign = implode(", ", $argsPassthru);
+            $argsPassthruSign = implode(', ', $argsPassthru);
         }
 
         weak($name, $ret, $argsSign, $argsPassthruSign);
@@ -113,7 +115,7 @@ function weaks(string $signs) {
 
 #ifdef CAT_HAVE_PQ
 <?php
-weaks(<<<C
+weaks(<<<'C'
 #ifdef CAT_OS_WIN
 # define DL_FROM_HANDLE GetModuleHandleA("libpq.dll")
 #else
@@ -197,6 +199,6 @@ void pdo_throw_exception(unsigned int driver_errcode, char *driver_errmsg, void 
 int php_pdo_register_driver(const void *driver);
 void php_pdo_unregister_driver(const void *driver);
 C);
-echo "\n";
 ?>
+
 #endif
