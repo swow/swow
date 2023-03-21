@@ -105,6 +105,6 @@
     },
     "bin": [
         "ext/bin/swow-builder",
-        "lib/dontdie/dontdie"
+        "lib/dontdie/bin/dontdie"
     ]
 }

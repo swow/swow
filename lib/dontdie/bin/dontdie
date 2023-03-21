@@ -30,6 +30,7 @@ use function fread;
 use function fwrite;
 use function getcwd;
 use function getenv;
+use function getopt;
 use function json_encode;
 use function proc_close;
 use function proc_get_status;
@@ -43,7 +44,8 @@ use const JSON_THROW_ON_ERROR;
 use const JSON_UNESCAPED_SLASHES;
 use const STDERR;
 
-function dontDie(array $command): void
+/** @param string[] $command */
+function dontDie(array $command, string $nickname = ''): void
 {
     $running = true;
     while (true) {
@@ -61,14 +63,19 @@ function dontDie(array $command): void
         $pid = $status['pid'];
         $cwd = getcwd();
         $enableTrace = getenv('DONTDIE_TRACE') === '1';
-        $log = static function (string|array $contents) use ($pid, $cwd): void {
+        if ($nickname === '') {
+            $logFilename = $cwd . '/.dontdie.log';
+        } else {
+            $logFilename = $cwd . '/.dontdie.' . $nickname . '.log';
+        }
+        $log = static function (string|array $contents) use ($pid, $logFilename): void {
             $line =
                 json_encode([
                     'pid' => $pid,
                     'time' => date('Y-m-d H:i:s'),
                     'contents' => $contents,
                 ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES) . "\n";
-            file_put_contents(sprintf($cwd . '/.dontdie.log', $pid), $line, FILE_APPEND);
+            file_put_contents($logFilename, $line, FILE_APPEND);
         };
         $trace = static function (string|array $contents) use ($log, $enableTrace): void {
             if ($enableTrace) {
@@ -76,6 +83,11 @@ function dontDie(array $command): void
             }
         };
         $log('process started');
+        $processInfo = ['command' => $command];
+        if ($nickname !== '') {
+            $processInfo['nickname'] = $nickname;
+        }
+        $log($processInfo);
         $wr = new WaitReference();
         $stderr = $pipes[2];
         $stderrWorker = Coroutine::run(static function () use ($stderr, $trace, $wr): void {
@@ -149,4 +161,6 @@ if ($argc <= 1) {
     throw new InvalidArgumentException('No command specified');
 }
 
-dontDie([...array_slice($argv, 1)]);
+$options = getopt('', ['nickname:'], $restIndex);
+$command = array_slice($argv, $restIndex);
+dontDie(command: $command, nickname: $options['nickname'] ?? '');
