@@ -78,14 +78,14 @@ typedef struct {
 
 extern const pdo_driver_t pdo_pgsql_driver;
 
-extern int _pdo_pgsql_error(pdo_dbh_t *dbh, pdo_stmt_t *stmt, int errcode, const char *sqlstate, const char *msg, const char *file, int line);
-#define pdo_pgsql_error(d,e,z)	_pdo_pgsql_error(d, NULL, e, z, NULL, __FILE__, __LINE__)
-#define pdo_pgsql_error_msg(d,e,m)	_pdo_pgsql_error(d, NULL, e, NULL, m, __FILE__, __LINE__)
-#define pdo_pgsql_error_stmt(s,e,z)	_pdo_pgsql_error(s->dbh, s, e, z, NULL, __FILE__, __LINE__)
+extern int _swow_pdo_pgsql_error(pdo_dbh_t *dbh, pdo_stmt_t *stmt, int errcode, const char *sqlstate, const char *msg, const char *file, int line);
+#define pdo_pgsql_error(d,e,z)	_swow_pdo_pgsql_error(d, NULL, e, z, NULL, __FILE__, __LINE__)
+#define pdo_pgsql_error_msg(d,e,m)	_swow_pdo_pgsql_error(d, NULL, e, NULL, m, __FILE__, __LINE__)
+#define pdo_pgsql_error_stmt(s,e,z)	_swow_pdo_pgsql_error(s->dbh, s, e, z, NULL, __FILE__, __LINE__)
 #define pdo_pgsql_error_stmt_msg(stmt, e, sqlstate, msg) \
-	_pdo_pgsql_error(stmt->dbh, stmt, e, sqlstate, msg, __FILE__, __LINE__)
+	_swow_pdo_pgsql_error(stmt->dbh, stmt, e, sqlstate, msg, __FILE__, __LINE__)
 
-extern const struct pdo_stmt_methods pgsql_stmt_methods;
+extern const struct pdo_stmt_methods swow_pgsql_stmt_methods;
 
 #define pdo_pgsql_sqlstate(r) PQresultErrorField(r, PG_DIAG_SQLSTATE)
 
@@ -108,11 +108,11 @@ enum pdo_pgsql_specific_constants {
 	PGSQL_TRANSACTION_UNKNOWN = PQTRANS_UNKNOWN
 };
 
-php_stream *pdo_pgsql_create_lob_stream(zval *pdh, int lfd, Oid oid);
-extern const php_stream_ops pdo_pgsql_lob_stream_ops;
+php_stream *swow_pdo_pgsql_create_lob_stream(zval *pdh, int lfd, Oid oid);
+extern const php_stream_ops swow_pdo_pgsql_lob_stream_ops;
 
-void pdo_libpq_version(char *buf, size_t len);
-void pdo_pgsql_close_lob_streams(pdo_dbh_t *dbh);
+void swow_pdo_libpq_version(char *buf, size_t len);
+void swow_pdo_pgsql_close_lob_streams(pdo_dbh_t *dbh);
 
 /* Git hash: php/php-src@22c9e7e27ea4396f43c4496cce6c058937976e90 */
 #elif PHP_VERSION_ID >= 80100
@@ -171,14 +171,14 @@ typedef struct {
 
 extern const pdo_driver_t pdo_pgsql_driver;
 
-extern int _pdo_pgsql_error(pdo_dbh_t *dbh, pdo_stmt_t *stmt, int errcode, const char *sqlstate, const char *msg, const char *file, int line);
-#define pdo_pgsql_error(d,e,z)	_pdo_pgsql_error(d, NULL, e, z, NULL, __FILE__, __LINE__)
-#define pdo_pgsql_error_msg(d,e,m)	_pdo_pgsql_error(d, NULL, e, NULL, m, __FILE__, __LINE__)
-#define pdo_pgsql_error_stmt(s,e,z)	_pdo_pgsql_error(s->dbh, s, e, z, NULL, __FILE__, __LINE__)
+extern int _swow_pdo_pgsql_error(pdo_dbh_t *dbh, pdo_stmt_t *stmt, int errcode, const char *sqlstate, const char *msg, const char *file, int line);
+#define pdo_pgsql_error(d,e,z)	_swow_pdo_pgsql_error(d, NULL, e, z, NULL, __FILE__, __LINE__)
+#define pdo_pgsql_error_msg(d,e,m)	_swow_pdo_pgsql_error(d, NULL, e, NULL, m, __FILE__, __LINE__)
+#define pdo_pgsql_error_stmt(s,e,z)	_swow_pdo_pgsql_error(s->dbh, s, e, z, NULL, __FILE__, __LINE__)
 #define pdo_pgsql_error_stmt_msg(stmt, e, sqlstate, msg) \
-	_pdo_pgsql_error(stmt->dbh, stmt, e, sqlstate, msg, __FILE__, __LINE__)
+	_swow_pdo_pgsql_error(stmt->dbh, stmt, e, sqlstate, msg, __FILE__, __LINE__)
 
-extern const struct pdo_stmt_methods pgsql_stmt_methods;
+extern const struct pdo_stmt_methods swow_pgsql_stmt_methods;
 
 #define pdo_pgsql_sqlstate(r) PQresultErrorField(r, PG_DIAG_SQLSTATE)
 
@@ -201,13 +201,12 @@ enum pdo_pgsql_specific_constants {
 	PGSQL_TRANSACTION_UNKNOWN = PQTRANS_UNKNOWN
 };
 
-php_stream *pdo_pgsql_create_lob_stream(zval *pdh, int lfd, Oid oid);
-extern const php_stream_ops pdo_pgsql_lob_stream_ops;
+php_stream *swow_pdo_pgsql_create_lob_stream(zval *pdh, int lfd, Oid oid);
+extern const php_stream_ops swow_pdo_pgsql_lob_stream_ops;
 
-void pdo_libpq_version(char *buf, size_t len);
-void pdo_pgsql_close_lob_streams(pdo_dbh_t *dbh);
+void swow_pdo_libpq_version(char *buf, size_t len);
+void swow_pdo_pgsql_close_lob_streams(pdo_dbh_t *dbh);
 
 #endif
 
-extern pdo_driver_t *pdo_find_driver(const char *name, int namelen);
 #endif /* PHP_PDO_PGSQL_INT_H */

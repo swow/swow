@@ -20,10 +20,6 @@
 
 #ifdef CAT_PQ
 
-#include "php_version.h"
-
-/* Git hash: php/php-src@0e45ed772df304c58f151d75d75f4ab5d9192c5b */
-#if PHP_VERSION_ID < 80100
 #include "php.h"
 #include "php_ini.h"
 #include "ext/standard/info.h"
@@ -36,7 +32,17 @@
 #undef SIZEOF_OFF_T
 #include "swow_pdo_pgsql_int.h"
 #include "zend_exceptions.h"
+
+#undef ZEND_METHOD
+#define ZEND_METHOD(classname, name) ZEND_NAMED_FUNCTION(swow_zim_##classname##_##name)
+#undef ZEND_ME
+#define ZEND_ME(classname, name, arg_info, flags) ZEND_RAW_FENTRY(#name, swow_zim_##classname##_##name, arg_info, flags)
+
 #include "swow_pgsql_driver_arginfo.h"
+
+
+/* Git hash: php/php-src@0e45ed772df304c58f151d75d75f4ab5d9192c5b */
+#if PHP_VERSION_ID < 80100
 
 static int pgsql_handle_in_transaction(pdo_dbh_t *dbh);
 
@@ -68,7 +74,7 @@ static zend_string* _pdo_pgsql_escape_credentials(char *str)
 	return NULL;
 }
 
-int _pdo_pgsql_error(pdo_dbh_t *dbh, pdo_stmt_t *stmt, int errcode, const char *sqlstate, const char *msg, const char *file, int line) /* {{{ */
+int _swow_pdo_pgsql_error(pdo_dbh_t *dbh, pdo_stmt_t *stmt, int errcode, const char *sqlstate, const char *msg, const char *file, int line) /* {{{ */
 {
 	pdo_pgsql_db_handle *H = (pdo_pgsql_db_handle *)dbh->driver_data;
 	pdo_error_type *pdo_err = stmt ? &stmt->error_code : &dbh->error_code;
@@ -106,13 +112,13 @@ int _pdo_pgsql_error(pdo_dbh_t *dbh, pdo_stmt_t *stmt, int errcode, const char *
 }
 /* }}} */
 
-static void _pdo_pgsql_notice(pdo_dbh_t *dbh, const char *message) /* {{{ */
+static void _swow_pdo_pgsql_notice(pdo_dbh_t *dbh, const char *message) /* {{{ */
 {
 /*	pdo_pgsql_db_handle *H = (pdo_pgsql_db_handle *)dbh->driver_data; */
 }
 /* }}} */
 
-static int pdo_pgsql_fetch_error_func(pdo_dbh_t *dbh, pdo_stmt_t *stmt, zval *info) /* {{{ */
+static int swow_pdo_pgsql_fetch_error_func(pdo_dbh_t *dbh, pdo_stmt_t *stmt, zval *info) /* {{{ */
 {
 	pdo_pgsql_db_handle *H = (pdo_pgsql_db_handle *)dbh->driver_data;
 	pdo_pgsql_error_info *einfo = &H->einfo;
@@ -131,19 +137,19 @@ static int pdo_pgsql_fetch_error_func(pdo_dbh_t *dbh, pdo_stmt_t *stmt, zval *in
 /* }}} */
 
 /* {{{ pdo_pgsql_create_lob_stream */
-static ssize_t pgsql_lob_write(php_stream *stream, const char *buf, size_t count)
+static ssize_t swow_pgsql_lob_write(php_stream *stream, const char *buf, size_t count)
 {
 	struct pdo_pgsql_lob_self *self = (struct pdo_pgsql_lob_self*)stream->abstract;
 	return lo_write(self->conn, self->lfd, (char*)buf, count);
 }
 
-static ssize_t pgsql_lob_read(php_stream *stream, char *buf, size_t count)
+static ssize_t swow_pgsql_lob_read(php_stream *stream, char *buf, size_t count)
 {
 	struct pdo_pgsql_lob_self *self = (struct pdo_pgsql_lob_self*)stream->abstract;
 	return lo_read(self->conn, self->lfd, buf, count);
 }
 
-static int pgsql_lob_close(php_stream *stream, int close_handle)
+static int swow_pgsql_lob_close(php_stream *stream, int close_handle)
 {
 	struct pdo_pgsql_lob_self *self = (struct pdo_pgsql_lob_self*)stream->abstract;
 	pdo_pgsql_db_handle *H = (pdo_pgsql_db_handle *)(Z_PDO_DBH_P(&self->dbh))->driver_data;
@@ -157,12 +163,12 @@ static int pgsql_lob_close(php_stream *stream, int close_handle)
 	return 0;
 }
 
-static int pgsql_lob_flush(php_stream *stream)
+static int swow_pgsql_lob_flush(php_stream *stream)
 {
 	return 0;
 }
 
-static int pgsql_lob_seek(php_stream *stream, zend_off_t offset, int whence,
+static int swow_pgsql_lob_seek(php_stream *stream, zend_off_t offset, int whence,
 		zend_off_t *newoffset)
 {
 	struct pdo_pgsql_lob_self *self = (struct pdo_pgsql_lob_self*)stream->abstract;
@@ -175,19 +181,19 @@ static int pgsql_lob_seek(php_stream *stream, zend_off_t offset, int whence,
 	return pos >= 0 ? 0 : -1;
 }
 
-const php_stream_ops pdo_pgsql_lob_stream_ops = {
-	pgsql_lob_write,
-	pgsql_lob_read,
-	pgsql_lob_close,
-	pgsql_lob_flush,
+const php_stream_ops swow_pdo_pgsql_lob_stream_ops = {
+	swow_pgsql_lob_write,
+	swow_pgsql_lob_read,
+	swow_pgsql_lob_close,
+	swow_pgsql_lob_flush,
 	"pdo_pgsql lob stream",
-	pgsql_lob_seek,
+	swow_pgsql_lob_seek,
 	NULL,
 	NULL,
 	NULL
 };
 
-php_stream *pdo_pgsql_create_lob_stream(zval *dbh, int lfd, Oid oid)
+php_stream *swow_pdo_pgsql_create_lob_stream(zval *dbh, int lfd, Oid oid)
 {
 	php_stream *stm;
 	struct pdo_pgsql_lob_self *self = ecalloc(1, sizeof(*self));
@@ -198,7 +204,7 @@ php_stream *pdo_pgsql_create_lob_stream(zval *dbh, int lfd, Oid oid)
 	self->oid = oid;
 	self->conn = H->server;
 
-	stm = php_stream_alloc(&pdo_pgsql_lob_stream_ops, self, 0, "r+b");
+	stm = php_stream_alloc(&swow_pdo_pgsql_lob_stream_ops, self, 0, "r+b");
 
 	if (stm) {
 		Z_ADDREF_P(dbh);
@@ -211,7 +217,7 @@ php_stream *pdo_pgsql_create_lob_stream(zval *dbh, int lfd, Oid oid)
 }
 /* }}} */
 
-void pdo_pgsql_close_lob_streams(pdo_dbh_t *dbh)
+void swow_pdo_pgsql_close_lob_streams(pdo_dbh_t *dbh)
 {
 	zend_resource *res;
 	pdo_pgsql_db_handle *H = (pdo_pgsql_db_handle *)dbh->driver_data;
@@ -229,7 +235,7 @@ static int pgsql_handle_closer(pdo_dbh_t *dbh) /* {{{ */
 	pdo_pgsql_db_handle *H = (pdo_pgsql_db_handle *)dbh->driver_data;
 	if (H) {
 		if (H->lob_streams) {
-			pdo_pgsql_close_lob_streams(dbh);
+			swow_pdo_pgsql_close_lob_streams(dbh);
 			zend_hash_destroy(H->lob_streams);
 			pefree(H->lob_streams, dbh->is_persistent);
 			H->lob_streams = NULL;
@@ -262,7 +268,7 @@ static int pgsql_handle_preparer(pdo_dbh_t *dbh, const char *sql, size_t sql_len
 
 	S->H = H;
 	stmt->driver_data = S;
-	stmt->methods = &pgsql_stmt_methods;
+	stmt->methods = &swow_pgsql_stmt_methods;
 
 	scrollable = pdo_attr_lval(driver_options, PDO_ATTR_CURSOR,
 		PDO_CURSOR_FWDONLY) == PDO_CURSOR_SCROLL;
@@ -346,7 +352,7 @@ static zend_long pgsql_handle_doer(pdo_dbh_t *dbh, const char *sql, size_t sql_l
 	}
 	PQclear(res);
 	if (in_trans && !pgsql_handle_in_transaction(dbh)) {
-		pdo_pgsql_close_lob_streams(dbh);
+		swow_pdo_pgsql_close_lob_streams(dbh);
 	}
 
 	return ret;
@@ -412,7 +418,7 @@ static char *pdo_pgsql_last_insert_id(pdo_dbh_t *dbh, const char *name, size_t *
 	return id;
 }
 
-void pdo_libpq_version(char *buf, size_t len)
+void swow_pdo_libpq_version(char *buf, size_t len)
 {
 	int version = PQlibVersion();
 	int major = version / 10000;
@@ -441,7 +447,7 @@ static int pdo_pgsql_get_attribute(pdo_dbh_t *dbh, zend_long attr, zval *return_
 
 		case PDO_ATTR_CLIENT_VERSION: {
 			char buf[16];
-			pdo_libpq_version(buf, sizeof(buf));
+			swow_pdo_libpq_version(buf, sizeof(buf));
 			ZVAL_STRING(return_value, buf);
 			break;
 		}
@@ -567,7 +573,7 @@ static int pgsql_handle_commit(pdo_dbh_t *dbh)
 	/* When deferred constraints are used the commit could
 	   fail, and a ROLLBACK implicitly ran. See bug #67462 */
 	if (ret) {
-		pdo_pgsql_close_lob_streams(dbh);
+		swow_pdo_pgsql_close_lob_streams(dbh);
 	} else {
 		dbh->in_txn = pgsql_handle_in_transaction(dbh);
 	}
@@ -580,7 +586,7 @@ static int pgsql_handle_rollback(pdo_dbh_t *dbh)
 	int ret = pdo_pgsql_transaction_cmd("ROLLBACK", dbh);
 
 	if (ret) {
-		pdo_pgsql_close_lob_streams(dbh);
+		swow_pdo_pgsql_close_lob_streams(dbh);
 	}
 
 	return ret;
@@ -1032,7 +1038,7 @@ PHP_METHOD(PDO_PGSql_Ext, pgsqlLOBOpen)
 	lfd = lo_open(H->server, oid, mode);
 
 	if (lfd >= 0) {
-		php_stream *stream = pdo_pgsql_create_lob_stream(ZEND_THIS, lfd, oid);
+		php_stream *stream = swow_pdo_pgsql_create_lob_stream(ZEND_THIS, lfd, oid);
 		if (stream) {
 			php_stream_to_zval(stream, return_value);
 			return;
@@ -1215,7 +1221,7 @@ static const struct pdo_dbh_methods pgsql_methods = {
 	pgsql_handle_rollback,
 	pdo_pgsql_set_attr,
 	pdo_pgsql_last_insert_id,
-	pdo_pgsql_fetch_error_func,
+	swow_pdo_pgsql_fetch_error_func,
 	pdo_pgsql_get_attribute,
 	pdo_pgsql_check_liveness,	/* check_liveness */
 	pdo_pgsql_get_driver_methods,  /* get_driver_methods */
@@ -1288,7 +1294,7 @@ static int pdo_pgsql_handle_factory(pdo_dbh_t *dbh, zval *driver_options) /* {{{
 		goto cleanup;
 	}
 
-	PQsetNoticeProcessor(H->server, (void(*)(void*,const char*))_pdo_pgsql_notice, (void *)&dbh);
+	PQsetNoticeProcessor(H->server, (void(*)(void*,const char*))_swow_pdo_pgsql_notice, (void *)&dbh);
 
 	H->attached = 1;
 	H->pgoid = -1;
@@ -1311,19 +1317,6 @@ cleanup:
 
 /* Git hash: php/php-src@22c9e7e27ea4396f43c4496cce6c058937976e90 */
 #elif PHP_VERSION_ID >= 80100
-#include "php.h"
-#include "php_ini.h"
-#include "ext/standard/info.h"
-#include "ext/standard/php_string.h"
-#include "main/php_network.h"
-#include "pdo/php_pdo.h"
-#include "pdo/php_pdo_driver.h"
-#include "pdo/php_pdo_error.h"
-#include "ext/standard/file.h"
-#undef SIZEOF_OFF_T
-#include "swow_pdo_pgsql_int.h"
-#include "zend_exceptions.h"
-#include "swow_pgsql_driver_arginfo.h"
 
 static bool pgsql_handle_in_transaction(pdo_dbh_t *dbh);
 
@@ -1355,7 +1348,7 @@ static zend_string* _pdo_pgsql_escape_credentials(char *str)
 	return NULL;
 }
 
-int _pdo_pgsql_error(pdo_dbh_t *dbh, pdo_stmt_t *stmt, int errcode, const char *sqlstate, const char *msg, const char *file, int line) /* {{{ */
+int _swow_pdo_pgsql_error(pdo_dbh_t *dbh, pdo_stmt_t *stmt, int errcode, const char *sqlstate, const char *msg, const char *file, int line) /* {{{ */
 {
 	pdo_pgsql_db_handle *H = (pdo_pgsql_db_handle *)dbh->driver_data;
 	pdo_error_type *pdo_err = stmt ? &stmt->error_code : &dbh->error_code;
@@ -1393,13 +1386,13 @@ int _pdo_pgsql_error(pdo_dbh_t *dbh, pdo_stmt_t *stmt, int errcode, const char *
 }
 /* }}} */
 
-static void _pdo_pgsql_notice(pdo_dbh_t *dbh, const char *message) /* {{{ */
+static void _swow_pdo_pgsql_notice(pdo_dbh_t *dbh, const char *message) /* {{{ */
 {
 /*	pdo_pgsql_db_handle *H = (pdo_pgsql_db_handle *)dbh->driver_data; */
 }
 /* }}} */
 
-static void pdo_pgsql_fetch_error_func(pdo_dbh_t *dbh, pdo_stmt_t *stmt, zval *info) /* {{{ */
+static void swow_pdo_pgsql_fetch_error_func(pdo_dbh_t *dbh, pdo_stmt_t *stmt, zval *info) /* {{{ */
 {
 	pdo_pgsql_db_handle *H = (pdo_pgsql_db_handle *)dbh->driver_data;
 	pdo_pgsql_error_info *einfo = &H->einfo;
@@ -1417,19 +1410,19 @@ static void pdo_pgsql_fetch_error_func(pdo_dbh_t *dbh, pdo_stmt_t *stmt, zval *i
 /* }}} */
 
 /* {{{ pdo_pgsql_create_lob_stream */
-static ssize_t pgsql_lob_write(php_stream *stream, const char *buf, size_t count)
+static ssize_t swow_pgsql_lob_write(php_stream *stream, const char *buf, size_t count)
 {
 	struct pdo_pgsql_lob_self *self = (struct pdo_pgsql_lob_self*)stream->abstract;
 	return lo_write(self->conn, self->lfd, (char*)buf, count);
 }
 
-static ssize_t pgsql_lob_read(php_stream *stream, char *buf, size_t count)
+static ssize_t swow_pgsql_lob_read(php_stream *stream, char *buf, size_t count)
 {
 	struct pdo_pgsql_lob_self *self = (struct pdo_pgsql_lob_self*)stream->abstract;
 	return lo_read(self->conn, self->lfd, buf, count);
 }
 
-static int pgsql_lob_close(php_stream *stream, int close_handle)
+static int swow_pgsql_lob_close(php_stream *stream, int close_handle)
 {
 	struct pdo_pgsql_lob_self *self = (struct pdo_pgsql_lob_self*)stream->abstract;
 	pdo_pgsql_db_handle *H = (pdo_pgsql_db_handle *)(Z_PDO_DBH_P(&self->dbh))->driver_data;
@@ -1443,12 +1436,12 @@ static int pgsql_lob_close(php_stream *stream, int close_handle)
 	return 0;
 }
 
-static int pgsql_lob_flush(php_stream *stream)
+static int swow_pgsql_lob_flush(php_stream *stream)
 {
 	return 0;
 }
 
-static int pgsql_lob_seek(php_stream *stream, zend_off_t offset, int whence,
+static int swow_pgsql_lob_seek(php_stream *stream, zend_off_t offset, int whence,
 		zend_off_t *newoffset)
 {
 	struct pdo_pgsql_lob_self *self = (struct pdo_pgsql_lob_self*)stream->abstract;
@@ -1461,19 +1454,19 @@ static int pgsql_lob_seek(php_stream *stream, zend_off_t offset, int whence,
 	return pos >= 0 ? 0 : -1;
 }
 
-const php_stream_ops pdo_pgsql_lob_stream_ops = {
-	pgsql_lob_write,
-	pgsql_lob_read,
-	pgsql_lob_close,
-	pgsql_lob_flush,
+const php_stream_ops swow_pdo_pgsql_lob_stream_ops = {
+	swow_pgsql_lob_write,
+	swow_pgsql_lob_read,
+	swow_pgsql_lob_close,
+	swow_pgsql_lob_flush,
 	"pdo_pgsql lob stream",
-	pgsql_lob_seek,
+	swow_pgsql_lob_seek,
 	NULL,
 	NULL,
 	NULL
 };
 
-php_stream *pdo_pgsql_create_lob_stream(zval *dbh, int lfd, Oid oid)
+php_stream *swow_pdo_pgsql_create_lob_stream(zval *dbh, int lfd, Oid oid)
 {
 	php_stream *stm;
 	struct pdo_pgsql_lob_self *self = ecalloc(1, sizeof(*self));
@@ -1484,7 +1477,7 @@ php_stream *pdo_pgsql_create_lob_stream(zval *dbh, int lfd, Oid oid)
 	self->oid = oid;
 	self->conn = H->server;
 
-	stm = php_stream_alloc(&pdo_pgsql_lob_stream_ops, self, 0, "r+b");
+	stm = php_stream_alloc(&swow_pdo_pgsql_lob_stream_ops, self, 0, "r+b");
 
 	if (stm) {
 		Z_ADDREF_P(dbh);
@@ -1497,7 +1490,7 @@ php_stream *pdo_pgsql_create_lob_stream(zval *dbh, int lfd, Oid oid)
 }
 /* }}} */
 
-void pdo_pgsql_close_lob_streams(pdo_dbh_t *dbh)
+void swow_pdo_pgsql_close_lob_streams(pdo_dbh_t *dbh)
 {
 	zend_resource *res;
 	pdo_pgsql_db_handle *H = (pdo_pgsql_db_handle *)dbh->driver_data;
@@ -1515,7 +1508,7 @@ static void pgsql_handle_closer(pdo_dbh_t *dbh) /* {{{ */
 	pdo_pgsql_db_handle *H = (pdo_pgsql_db_handle *)dbh->driver_data;
 	if (H) {
 		if (H->lob_streams) {
-			pdo_pgsql_close_lob_streams(dbh);
+			swow_pdo_pgsql_close_lob_streams(dbh);
 			zend_hash_destroy(H->lob_streams);
 			pefree(H->lob_streams, dbh->is_persistent);
 			H->lob_streams = NULL;
@@ -1546,7 +1539,7 @@ static bool pgsql_handle_preparer(pdo_dbh_t *dbh, zend_string *sql, pdo_stmt_t *
 
 	S->H = H;
 	stmt->driver_data = S;
-	stmt->methods = &pgsql_stmt_methods;
+	stmt->methods = &swow_pgsql_stmt_methods;
 
 	scrollable = pdo_attr_lval(driver_options, PDO_ATTR_CURSOR,
 		PDO_CURSOR_FWDONLY) == PDO_CURSOR_SCROLL;
@@ -1630,7 +1623,7 @@ static zend_long pgsql_handle_doer(pdo_dbh_t *dbh, const zend_string *sql)
 	}
 	PQclear(res);
 	if (in_trans && !pgsql_handle_in_transaction(dbh)) {
-		pdo_pgsql_close_lob_streams(dbh);
+		swow_pdo_pgsql_close_lob_streams(dbh);
 	}
 
 	return ret;
@@ -1701,7 +1694,7 @@ static zend_string *pdo_pgsql_last_insert_id(pdo_dbh_t *dbh, const zend_string *
 	return id;
 }
 
-void pdo_libpq_version(char *buf, size_t len)
+void swow_pdo_libpq_version(char *buf, size_t len)
 {
 	int version = PQlibVersion();
 	int major = version / 10000;
@@ -1730,7 +1723,7 @@ static int pdo_pgsql_get_attribute(pdo_dbh_t *dbh, zend_long attr, zval *return_
 
 		case PDO_ATTR_CLIENT_VERSION: {
 			char buf[16];
-			pdo_libpq_version(buf, sizeof(buf));
+			swow_pdo_libpq_version(buf, sizeof(buf));
 			ZVAL_STRING(return_value, buf);
 			break;
 		}
@@ -1856,7 +1849,7 @@ static bool pgsql_handle_commit(pdo_dbh_t *dbh)
 	/* When deferred constraints are used the commit could
 	   fail, and a ROLLBACK implicitly ran. See bug #67462 */
 	if (ret) {
-		pdo_pgsql_close_lob_streams(dbh);
+		swow_pdo_pgsql_close_lob_streams(dbh);
 	} else {
 		dbh->in_txn = pgsql_handle_in_transaction(dbh);
 	}
@@ -1869,7 +1862,7 @@ static bool pgsql_handle_rollback(pdo_dbh_t *dbh)
 	int ret = pdo_pgsql_transaction_cmd("ROLLBACK", dbh);
 
 	if (ret) {
-		pdo_pgsql_close_lob_streams(dbh);
+		swow_pdo_pgsql_close_lob_streams(dbh);
 	}
 
 	return ret;
@@ -2321,7 +2314,7 @@ PHP_METHOD(PDO_PGSql_Ext, pgsqlLOBOpen)
 	lfd = lo_open(H->server, oid, mode);
 
 	if (lfd >= 0) {
-		php_stream *stream = pdo_pgsql_create_lob_stream(ZEND_THIS, lfd, oid);
+		php_stream *stream = swow_pdo_pgsql_create_lob_stream(ZEND_THIS, lfd, oid);
 		if (stream) {
 			php_stream_to_zval(stream, return_value);
 			return;
@@ -2510,7 +2503,7 @@ static const struct pdo_dbh_methods pgsql_methods = {
 	pgsql_handle_rollback,
 	pdo_pgsql_set_attr,
 	pdo_pgsql_last_insert_id,
-	pdo_pgsql_fetch_error_func,
+	swow_pdo_pgsql_fetch_error_func,
 	pdo_pgsql_get_attribute,
 	pdo_pgsql_check_liveness,	/* check_liveness */
 	pdo_pgsql_get_driver_methods,  /* get_driver_methods */
@@ -2584,7 +2577,7 @@ static int pdo_pgsql_handle_factory(pdo_dbh_t *dbh, zval *driver_options) /* {{{
 		goto cleanup;
 	}
 
-	PQsetNoticeProcessor(H->server, (void(*)(void*,const char*))_pdo_pgsql_notice, (void *)&dbh);
+	PQsetNoticeProcessor(H->server, (void(*)(void*,const char*))_swow_pdo_pgsql_notice, (void *)&dbh);
 
 	H->attached = 1;
 	H->pgoid = -1;
