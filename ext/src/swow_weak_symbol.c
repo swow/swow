@@ -32,13 +32,13 @@
 #include "php.h"
 
 #include "swow.h"
-
 #ifdef CAT_HAVE_PQ
+
 #ifdef CAT_OS_WIN
 # define DL_FROM_HANDLE GetModuleHandleA("libpq.dll")
 #else
 # define DL_FROM_HANDLE NULL
-#endif
+#endif // CAT_OS_WIN
 // weak function pointer for PQbackendPID
 #ifdef CAT_OS_WIN
 // extern int PQbackendPID(const void *conn);
@@ -1792,7 +1792,7 @@ int swow_pdo_parse_params_redirect(void *stmt, void *inquery, void *outquery) {
     return swow_pdo_parse_params_resolved(stmt, inquery, outquery);
 }
 
-#endif
+#endif // PHP_VERSION_ID < 80100
 // weak function pointer for pdo_throw_exception
 #ifdef CAT_OS_WIN
 // extern void pdo_throw_exception(unsigned int driver_errcode, char *driver_errmsg, void *pdo_error);
@@ -1887,4 +1887,4 @@ void swow_php_pdo_unregister_driver_redirect(const void *driver) {
 }
 
 
-#endif
+#endif // CAT_HAVE_PQ

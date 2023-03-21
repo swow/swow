@@ -111,16 +111,15 @@ function weaks(string $signs): void
         weak($name, $ret, $argsSign, $argsPassthruSign);
     }
 }
-?>
 
-#ifdef CAT_HAVE_PQ
-<?php
 weaks(<<<'C'
+#ifdef CAT_HAVE_PQ
+
 #ifdef CAT_OS_WIN
 # define DL_FROM_HANDLE GetModuleHandleA("libpq.dll")
 #else
 # define DL_FROM_HANDLE NULL
-#endif
+#endif // CAT_OS_WIN
 int  PQbackendPID(const void *conn);
 void PQclear(void *res);
 char *PQcmdTuples(void *res);
@@ -194,11 +193,11 @@ void pdo_handle_error(void *dbh, void *stmt);
 int pdo_parse_params(void *stmt, void *inquery, size_t inquery_len, void *outquery, void *outquery_len);
 #else
 int pdo_parse_params(void *stmt, void *inquery, void *outquery);
-#endif
+#endif // PHP_VERSION_ID < 80100
 void pdo_throw_exception(unsigned int driver_errcode, char *driver_errmsg, void *pdo_error);
 int php_pdo_register_driver(const void *driver);
 void php_pdo_unregister_driver(const void *driver);
+
+#endif // CAT_HAVE_PQ
 C);
 ?>
-
-#endif
