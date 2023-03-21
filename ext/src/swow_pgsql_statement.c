@@ -258,7 +258,7 @@ stmt_retry:
 	}
 
 	if (in_trans && !stmt->dbh->methods->in_transaction(stmt->dbh)) {
-		pdo_pgsql_close_lob_streams(stmt->dbh);
+		swow_pdo_pgsql_close_lob_streams(stmt->dbh);
 	}
 
 	return 1;
@@ -351,7 +351,7 @@ static int pgsql_stmt_param_hook(pdo_stmt_t *stmt, struct pdo_bound_param_data *
 						php_stream *stm;
 						php_stream_from_zval_no_verify(stm, parameter);
 						if (stm) {
-							if (php_stream_is(stm, &pdo_pgsql_lob_stream_ops)) {
+							if (php_stream_is(stm, &swow_pdo_pgsql_lob_stream_ops)) {
 								struct pdo_pgsql_lob_self *self = (struct pdo_pgsql_lob_self*)stm->abstract;
 								pdo_pgsql_bound_param *P = param->driver_data;
 
@@ -572,7 +572,7 @@ static int pgsql_stmt_get_col(pdo_stmt_t *stmt, int colno, char **ptr, size_t *l
 					Oid oid = (Oid)strtoul(*ptr, &end_ptr, 10);
 					int loid = lo_open(S->H->server, oid, INV_READ);
 					if (loid >= 0) {
-						*ptr = (char*)pdo_pgsql_create_lob_stream(&stmt->database_object_handle, loid, oid);
+						*ptr = (char*)swow_pdo_pgsql_create_lob_stream(&stmt->database_object_handle, loid, oid);
 						*len = 0;
 						return *ptr ? 1 : 0;
 					}
@@ -721,7 +721,7 @@ static int pdo_pgsql_stmt_cursor_closer(pdo_stmt_t *stmt)
 	return 1;
 }
 
-const struct pdo_stmt_methods pgsql_stmt_methods = {
+const struct pdo_stmt_methods swow_pgsql_stmt_methods = {
 	pgsql_stmt_dtor,
 	pgsql_stmt_execute,
 	pgsql_stmt_fetch,
@@ -971,7 +971,7 @@ stmt_retry:
 	}
 
 	if (in_trans && !stmt->dbh->methods->in_transaction(stmt->dbh)) {
-		pdo_pgsql_close_lob_streams(stmt->dbh);
+		swow_pdo_pgsql_close_lob_streams(stmt->dbh);
 	}
 
 	return 1;
@@ -1065,7 +1065,7 @@ static int pgsql_stmt_param_hook(pdo_stmt_t *stmt, struct pdo_bound_param_data *
 						php_stream *stm;
 						php_stream_from_zval_no_verify(stm, parameter);
 						if (stm) {
-							if (php_stream_is(stm, &pdo_pgsql_lob_stream_ops)) {
+							if (php_stream_is(stm, &swow_pdo_pgsql_lob_stream_ops)) {
 								struct pdo_pgsql_lob_self *self = (struct pdo_pgsql_lob_self*)stm->abstract;
 								pdo_pgsql_bound_param *P = param->driver_data;
 
@@ -1237,7 +1237,7 @@ static int pgsql_stmt_get_col(pdo_stmt_t *stmt, int colno, zval *result, enum pd
 					/* If column was bound as LOB, return a stream. */
 					int loid = lo_open(S->H->server, oid, INV_READ);
 					if (loid >= 0) {
-						php_stream *stream = pdo_pgsql_create_lob_stream(&stmt->database_object_handle, loid, oid);
+						php_stream *stream = swow_pdo_pgsql_create_lob_stream(&stmt->database_object_handle, loid, oid);
 						if (stream) {
 							php_stream_to_zval(stream, result);
 							return 1;
@@ -1399,7 +1399,7 @@ static int pdo_pgsql_stmt_cursor_closer(pdo_stmt_t *stmt)
 	return 1;
 }
 
-const struct pdo_stmt_methods pgsql_stmt_methods = {
+const struct pdo_stmt_methods swow_pgsql_stmt_methods = {
 	pgsql_stmt_dtor,
 	pgsql_stmt_execute,
 	pgsql_stmt_fetch,
