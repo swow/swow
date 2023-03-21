@@ -479,19 +479,30 @@ PHP_MINFO_FUNCTION(swow)
     }
 #endif
 #ifdef CAT_HAVE_PQ
-    char linking_libpq_version[64] = { "notfound" };
+# define VERSION_NUM_TO_STR(num, buf) do { \
+    if (num < 100000) { \
+        snprintf(buf, sizeof(buf), "%d.%d.%d", num / 10000, num / 100 % 100, num % 100); \
+    } else { \
+        snprintf(buf, sizeof(buf), "%d.%d", num / 10000, num % 10000); \
+    } \
+} while (0)
+
+    char linking_libpq_version[16] = { "notfound" };
     if (swow_libpq_version) {
-        snprintf(linking_libpq_version, sizeof(linking_libpq_version), "%d.%d", swow_libpq_version / 10000, swow_libpq_version % 10000);
+        VERSION_NUM_TO_STR(swow_libpq_version, linking_libpq_version);
     }
+    char building_libpq_version[16];
+    VERSION_NUM_TO_STR(swow_building_libpq_version, building_libpq_version);
     char libpq_version_info[64];
     snprintf(
         libpq_version_info,
         sizeof(libpq_version_info),
-        "libpq/%s (built with %d.%d)",
+        "libpq/%s (built with %s)",
         linking_libpq_version,
-        swow_building_libpq_version / 10000, swow_building_libpq_version % 10000
+        building_libpq_version
     );
     php_info_print_table_row(2, "PostgreSQL", libpq_version_info);
+# undef VERSION_NUM_TO_STR
 #endif
     php_info_print_table_end();
 }

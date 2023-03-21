@@ -2681,8 +2681,8 @@ zend_result swow_pgsql_module_init(INIT_FUNC_ARGS)
 #endif // COMPILE_DL_SWOW
 
 	swow_libpq_version = PQlibVersion();
-	if (swow_libpq_version < 140000) {
-		php_error_docref(NULL, E_WARNING, "Swow pdo_pgsql hook not enabled, libpq is too old (%d < 140000)", swow_libpq_version);
+	if (swow_libpq_version < 90100) {
+		php_error_docref(NULL, E_WARNING, "Swow pdo_pgsql hook not enabled, libpq is too old (%d < 90100)", swow_libpq_version);
 		return SUCCESS;
 	}
 
