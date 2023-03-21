@@ -791,7 +791,8 @@ EOF
       CPPFLAGS="$CPPFLAGS $INCLUDES"
       AC_CHECK_HEADER(pdo/php_pdo.h,
         [
-          SWOW_PKG_CHECK_MODULES([POSTGRESQL], libpq, 14.3, [PHP_SWOW_PDO_PGSQL], [
+          dnl according to pdo_pgsql config.m4, we need at least 9.1
+          SWOW_PKG_CHECK_MODULES([POSTGRESQL], libpq, 9.1, [PHP_SWOW_PDO_PGSQL], [
             dnl make changes
             AC_DEFINE([CAT_HAVE_PQ], 1, [Enable libcat PostgreSQL])
             dnl use weak symbol to provide this
