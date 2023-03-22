@@ -45,7 +45,7 @@ use const JSON_UNESCAPED_SLASHES;
 use const STDERR;
 
 /** @param string[] $command */
-function dontDie(array $command, string $nickname = ''): void
+function dontDie(array $command, string $nickname = '', int $maxExecutionTime = -1): void
 {
     $running = true;
     while (true) {
@@ -112,10 +112,11 @@ function dontDie(array $command, string $nickname = ''): void
 
         $trace('wait for process');
         try {
-            $wr::wait($wr);
+            $wr::wait($wr, $maxExecutionTime);
             $trace('wait for process done');
         } catch (SyncException) {
-            $trace('wait for process canceled');
+            $trace('wait for process timeout or canceled');
+            Signal::kill($status['pid'], Signal::TERM);
         }
 
         if ($stderrWorker->isExecuting()) {
