@@ -33,8 +33,8 @@ class ServerRequest extends Request implements ServerRequestPlusInterface
     /** @var array<string, string> */
     protected array $queryParams = [];
 
-    /** @var array<mixed>|object */
-    protected array|object $parsedBody;
+    /** @var null|array<mixed>|object */
+    protected array|object|null $parsedBody;
 
     protected ?int $contentLength = null;
 
