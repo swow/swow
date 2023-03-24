@@ -53,8 +53,6 @@ class Client extends Socket implements ClientInterface, ProtocolTypeInterface
      */
     use ReceiverTrait;
 
-    use ServerParamsTrait;
-
     use WebSocketTrait;
 
     public const DEFAULT_HTTP_PARSER_EVENTS =
