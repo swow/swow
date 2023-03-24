@@ -17,7 +17,7 @@
     },
     "require": {
         "php": ">=8.0",
-        "swow/util": "*"
+        "swow/swow-utils": "*"
     },
     "autoload": {
         "psr-4": {
