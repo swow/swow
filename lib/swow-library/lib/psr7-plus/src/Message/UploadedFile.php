@@ -110,8 +110,14 @@ class UploadedFile implements UploadedFilePlusInterface, ArrayableInterface
 
     public function __destruct()
     {
-        $this->stream->close();
-        unlink($this->file);
+        if (isset($this->stream)) {
+            $this->stream->close();
+        }
+
+        if (! empty($this->file) && is_file($this->file)) {
+            unlink($this->file);
+        }
+
     }
 
     /**
