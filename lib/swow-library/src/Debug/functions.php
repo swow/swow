@@ -65,35 +65,35 @@ function registerDeadlockDetectorHandler(): Handler
 
 function showExecutedSourceLines(bool $all = false): Handler
 {
-    $getFileLineCached = static function (string $file, int $line): string {
-        // TODO: LRU cache
-        static $cache = [];
-        if (!isset($cache[$file])) {
-            $fileLines = [];
-            $fp = @fopen($file, 'rb');
-            if ($fp === false) {
-                $cache[$file] = false;
-            } else {
-                while (true) {
-                    $lineContent = fgets($fp);
-                    if ($lineContent === false) {
-                        break;
-                    }
-                    $fileLines[] = rtrim($lineContent);
-                }
-                $cache[$file] = $fileLines;
-            }
-        }
-        if (!$cache[$file]) {
-            return "Unable to read file {$file}";
-        }
-        if (!isset($cache[$file][$line - 1])) {
-            return "Unable to read file line {$file}:{$line}";
-        }
-
-        return $cache[$file][$line - 1];
-    };
     if ($all) {
+        $getFileLineCached = static function (string $file, int $line): string {
+            // TODO: LRU cache
+            static $cache = [];
+            if (!isset($cache[$file])) {
+                $fileLines = [];
+                $fp = @fopen($file, 'rb');
+                if ($fp === false) {
+                    $cache[$file] = false;
+                } else {
+                    while (true) {
+                        $lineContent = fgets($fp);
+                        if ($lineContent === false) {
+                            break;
+                        }
+                        $fileLines[] = rtrim($lineContent);
+                    }
+                    $cache[$file] = $fileLines;
+                }
+            }
+            if (!$cache[$file]) {
+                return "Unable to read file {$file}";
+            }
+            if (!isset($cache[$file][$line - 1])) {
+                return "Unable to read file line {$file}:{$line}";
+            }
+
+            return $cache[$file][$line - 1];
+        };
         $handler = static function () use ($getFileLineCached): void {
             static $lastFile = '', $firstTouch = false;
             if (!$firstTouch) {
