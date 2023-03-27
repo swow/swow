@@ -99,10 +99,26 @@ static PHP_GSHUTDOWN_FUNCTION(swow)
 }
 /* }}} */
 
+static ZEND_INI_MH(swow_OnUpdateLong_only_when_startup)
+{
+    if (stage != ZEND_INI_STAGE_STARTUP) {
+        return FAILURE;
+    }
+    return OnUpdateLong(entry, new_value, mh_arg1, mh_arg2, mh_arg3, stage);
+}
+
+static ZEND_INI_MH(swow_OnUpdateBool_only_when_startup)
+{
+    if (stage != ZEND_INI_STAGE_STARTUP) {
+        return FAILURE;
+    }
+    return OnUpdateBool(entry, new_value, mh_arg1, mh_arg2, mh_arg3, stage);
+}
+
 PHP_INI_BEGIN()
-STD_PHP_INI_ENTRY("swow.async_threads", "0", PHP_INI_ALL, OnUpdateLong, ini.async_threads, zend_swow_globals, swow_globals)
-STD_ZEND_INI_BOOLEAN("swow.async_file", "On", PHP_INI_ALL, OnUpdateBool, ini.async_file, zend_swow_globals, swow_globals)
-STD_ZEND_INI_BOOLEAN("swow.async_stdio", "On", PHP_INI_ALL, OnUpdateBool, ini.async_stdio, zend_swow_globals, swow_globals)
+STD_PHP_INI_ENTRY("swow.async_threads", "0", PHP_INI_ALL, swow_OnUpdateLong_only_when_startup, ini.async_threads, zend_swow_globals, swow_globals)
+STD_ZEND_INI_BOOLEAN("swow.async_file", "On", PHP_INI_ALL, swow_OnUpdateBool_only_when_startup, ini.async_file, zend_swow_globals, swow_globals)
+STD_ZEND_INI_BOOLEAN("swow.async_stdio", "On", PHP_INI_ALL, swow_OnUpdateBool_only_when_startup, ini.async_stdio, zend_swow_globals, swow_globals)
 PHP_INI_END()
 
 static void swow_globals_ctor(zend_swow_globals *g)
