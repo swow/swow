@@ -2057,16 +2057,16 @@ zend_result swow_stream_module_init(INIT_FUNC_ARGS)
 #endif
 
     // backup blocking stdio operators (for include/require)
+    memcpy(&swow_stream_stdio_ops_sync, &php_stream_stdio_ops, sizeof(php_stream_stdio_ops));
     if (SWOW_G(ini.async_stdio)) {
-        memcpy(&swow_stream_stdio_ops_sync, &php_stream_stdio_ops, sizeof(php_stream_stdio_ops));
         // hook std ops
         memcpy(&php_stream_stdio_ops, &swow_stream_stdio_ops_proxy, sizeof(php_stream_stdio_ops));
         // prepare tty sockets
         memset(SWOW_STREAM_G(tty_sockets), 0, sizeof(SWOW_STREAM_G(tty_sockets)));
     }
+    // backup blocking plain files wrapper
+    memcpy(&swow_plain_files_wrapper_sync, &php_plain_files_wrapper, sizeof(php_plain_files_wrapper));
     if (SWOW_G(ini.async_file)) {
-        // backup blocking plain files wrapper
-        memcpy(&swow_plain_files_wrapper_sync, &php_plain_files_wrapper, sizeof(php_plain_files_wrapper));
         // hook plain wrapper
         memcpy(&php_plain_files_wrapper, &swow_plain_files_wrapper_proxy, sizeof(php_plain_files_wrapper));
         if ("phar unhook") {
