@@ -1020,7 +1020,7 @@ static ssize_t swow_stream_read(php_stream *stream, char *buffer, size_t size)
     if (EXPECTED(nr_bytes > 0)) {
         php_stream_notify_progress_increment(PHP_STREAM_CONTEXT(stream), nr_bytes, 0);
     } else if (nr_bytes < 0) {
-        cat_errno_t error = cat_get_last_error_code();
+        cat_errno_t error = sock->is_blocked ? cat_get_last_error_code() : (cat_errno_t) nr_bytes;
         stream->eof = cat_socket_is_eof_error(error);
         sock->timeout_event = (error == CAT_ETIMEDOUT);
         if (sock->timeout_event) {
@@ -1054,7 +1054,7 @@ static ssize_t swow_stream_write(php_stream *stream, const char *buffer, size_t 
         ret = didwrite >= 0;
     }
     if (UNEXPECTED(!ret)) {
-        cat_errno_t error = cat_get_last_error_code();
+        cat_errno_t error = sock->is_blocked ? cat_get_last_error_code() : (cat_errno_t) didwrite;
 #ifdef PHP_STREAM_FLAG_SUPPRESS_ERRORS
         if (!(stream->flags & PHP_STREAM_FLAG_SUPPRESS_ERRORS))
 #endif
