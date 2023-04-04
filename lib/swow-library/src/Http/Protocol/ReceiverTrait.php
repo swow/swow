@@ -329,6 +329,7 @@ trait ReceiverTrait
                                             }
                                             // Notice: There may be some risks associated with doing so,
                                             // but it's the easiest way...
+                                            $realBuffer = $buffer;
                                             $buffer = $body;
                                             $parsedOffset = 0;
                                         }
@@ -593,6 +594,9 @@ trait ReceiverTrait
             $this->shouldKeepAlive = $shouldKeepAlive;
         }
         $parser->reset();
+        if (isset($realBuffer)) {
+            $buffer = $realBuffer;
+        }
         $this->updateParsedOffsetAndRecycleBufferSpace($buffer, $parsedOffset);
 
         return $messageEntity;
