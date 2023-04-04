@@ -31,7 +31,6 @@ use Swow\Psr7\Message\ClientPsr17FactoryTrait;
 use Swow\Psr7\Message\Request;
 use Swow\Psr7\Protocol\WebSocketTrait;
 use Swow\Psr7\Psr7;
-use Swow\Psr7\Server\ServerParamsTrait;
 use Swow\Socket;
 use Swow\SocketException;
 use Swow\WebSocket\WebSocket;
