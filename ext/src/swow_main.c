@@ -34,6 +34,7 @@
 #include "swow_signal.h"
 #include "swow_watchdog.h"
 #include "swow_closure.h"
+#include "swow_siritz.h"
 #include "swow_ipaddress.h"
 #include "swow_http.h"
 #include "swow_websocket.h"
@@ -213,6 +214,7 @@ PHP_MINIT_FUNCTION(swow)
         swow_signal_module_init,
         swow_watchdog_module_init,
         swow_closure_module_init,
+        swow_siritz_module_init,
         swow_ipaddress_init,
         swow_http_module_init,
         swow_websocket_module_init,
@@ -278,6 +280,7 @@ PHP_MSHUTDOWN_FUNCTION(swow)
 #ifdef CAT_OS_WAIT
         swow_proc_open_module_shutdown,
 #endif
+        swow_siritz_module_shutdown,
         swow_closure_module_shutdown,
         swow_watchdog_module_shutdown,
         swow_stream_module_shutdown,

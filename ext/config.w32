@@ -200,6 +200,9 @@ if (PHP_SWOW != 'no') (function(){
     // no, we donot use config.h, that thing have non-unified behavior
     //ADD_FLAG("CFLAGS_SWOW", "/D HAVE_CONFIG_H");
     ADD_FLAG('CFLAGS_SWOW', '/D HAVE_SWOW $(CFLAGS_SWOW_COMMON)');
+    if (PHP_ZTS != 'no') {
+        ADD_FLAG('CFLAGS_SWOW', '/DZEND_ENABLE_STATIC_TSRMLS_CACHE=1');
+    }
     ADD_FLAG('CFLAGS_SWOW_COMMON', '/D HAVE_LIBCAT /D CAT_VM');
 
     if (PHP_SWOW_DEBUG != 'no'){
@@ -296,6 +299,7 @@ if (PHP_SWOW != 'no') (function(){
         'swow_watchdog.c',
         'swow_closure.c',
         'swow_tokenizer.c',
+        'swow_siritz.c',
         'swow_ipaddress.c',
         'swow_http.c',
         'swow_websocket.c',
