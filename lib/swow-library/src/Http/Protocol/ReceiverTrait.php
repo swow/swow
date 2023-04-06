@@ -168,7 +168,11 @@ trait ReceiverTrait
      */
     protected function recvMessageEntity(): ServerRequestEntity|ResponseEntity
     {
-        $buffer = $this->buffer;
+        $thisBuffer = $this->buffer;
+        $thisBufferParsedOffset = null;
+        /* buffer may be replaced for some special parsing cases,
+         * e.g. preserve body data case. */
+        $buffer = $thisBuffer;
         $parser = $this->httpParser;
         $parsedOffset = $this->parsedOffset;
         $isServerRequest = $parser->getType() === HttpParser::TYPE_REQUEST;
@@ -240,6 +244,9 @@ trait ReceiverTrait
                         }
                     }
                     if ($event === HttpParser::EVENT_NONE) {
+                        if ($buffer !== $thisBuffer) {
+                            throw new ParserException('Unexpected EVENT_NONE, buffer is dummy one');
+                        }
                         $buffer->truncateFrom($parsedOffset);
                         if ($buffer->isFull()) {
                             throw new ParserException('Buffer is full and unable to continue parsing');
@@ -329,7 +336,7 @@ trait ReceiverTrait
                                             }
                                             // Notice: There may be some risks associated with doing so,
                                             // but it's the easiest way...
-                                            $realBuffer = $buffer;
+                                            $thisBufferParsedOffset = $parsedOffset;
                                             $buffer = $body;
                                             $parsedOffset = 0;
                                         }
@@ -594,10 +601,7 @@ trait ReceiverTrait
             $this->shouldKeepAlive = $shouldKeepAlive;
         }
         $parser->reset();
-        if (isset($realBuffer)) {
-            $buffer = $realBuffer;
-        }
-        $this->updateParsedOffsetAndRecycleBufferSpace($buffer, $parsedOffset);
+        $this->updateParsedOffsetAndRecycleBufferSpace($thisBuffer, $thisBufferParsedOffset ?? $parsedOffset);
 
         return $messageEntity;
     }
