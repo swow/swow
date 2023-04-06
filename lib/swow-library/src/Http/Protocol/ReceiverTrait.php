@@ -445,7 +445,7 @@ trait ReceiverTrait
                             case HttpParser::EVENT_BODY:
                                 {
                                     if ($isChunked) {
-                                        ($body ??= new Buffer(Buffer::COMMON_SIZE))->append($buffer->toString(), $dataOffset, $dataLength);
+                                        ($body ??= new Buffer(Buffer::COMMON_SIZE))->append($buffer, $dataOffset, $dataLength);
                                         $neededLength = $currentChunkLength - $dataLength;
                                         if ($neededLength > 0) {
                                             $bodyParsedOffset = $body->getLength();
