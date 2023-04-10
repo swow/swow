@@ -34,7 +34,7 @@ void cat_bug_detector_callback(int signum)
     "The libcat developers probably don't know about it,\n" \
     "and unless you report it, chances are it won't be fixed.\n" \
     "You can read How to report a bug doc before submitting any bug reports:\n" \
-    ">> https://github.com/libcat/libcat/blob/master/.github/ISSUE.md \n"
+    ">> https://github.com/libcat/libcat/issues/new \n"
 #endif
     fprintf(stderr, CAT_BUG_REPORT);
     abort();

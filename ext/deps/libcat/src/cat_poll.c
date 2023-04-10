@@ -298,12 +298,12 @@ static cat_ret_t cat_poll_one_impl(cat_os_socket_t fd, cat_pollfd_events_t event
         cat_event_io_defer_task_close(poll->done_task);
     }
 
+    uv_close(&poll->u.handle, cat_poll_one_close_callback);
 #ifdef CAT_OS_UNIX_LIKE
     if (_fd != fd) {
         uv__close(_fd);
     }
 #endif
-    uv_close(&poll->u.handle, cat_poll_one_close_callback);
 
     switch (ret) {
         /* delay canceled */

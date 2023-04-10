@@ -35,10 +35,11 @@ extern "C" {
 #include "cat_buffer.h"
 #include "cat_fs.h"
 #include "cat_signal.h"
-#include "cat_os_wait.h"
 #include "cat_async.h"
-#include "cat_watchdog.h"
+#include "cat_thread.h"
 #include "cat_process.h"
+#include "cat_os_wait.h"
+#include "cat_watchdog.h"
 #include "cat_ssl.h"
 
 typedef enum cat_run_mode_e{

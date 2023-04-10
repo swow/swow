@@ -24,6 +24,7 @@
 
 #include "cat_buffer.h"
 #include "cat_coroutine.h" /* for coroutine id (TODO: need to decouple it?) */
+#include "cat_thread.h" /* for thread id (TODO: need to decouple it?) */
 
 CAT_API cat_log_t cat_log_function;
 
@@ -249,6 +250,18 @@ CAT_API void cat_log_va_list_standard(CAT_LOG_VA_LIST_PARAMETERS)
         (void) cat_buffer_append_str(&buffer, "] ");
     } while (0);
 
+#ifdef CAT_THREAD
+    // TODO: use smart_str liked things
+    if (cat_thread_get_count() > 1) {
+        fprintf(
+            output,
+            "T%" PRIu64 " ",
+            cat_thread_get_current()->id
+        );
+    }
+#endif
+
+    // TODO: make fprintf async
     // role_name + log_type + module_name
     do {
         const int name_width = 12;

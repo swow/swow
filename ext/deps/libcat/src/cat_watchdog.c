@@ -115,9 +115,27 @@ CAT_API cat_bool_t cat_watchdog_module_shutdown(void)
     return cat_true;
 }
 
+#ifndef CAT_OS_WIN
+static void cat_watch_dog_reset(void)
+{
+    // FIXME: it may cause memory leak, but it can make sure the watchdog runs properly.
+    CAT_WATCH_DOG_G(watchdog) = NULL;
+}
+#endif
+
 CAT_API cat_bool_t cat_watchdog_runtime_init(void)
 {
     CAT_WATCH_DOG_G(watchdog) = NULL;
+
+#ifndef CAT_OS_WIN
+    /* Re-initialize the watchdog after fork.
+    * Note that this discards the global mutex and condition as well
+    * as the work queue.
+    */
+    if (pthread_atfork(NULL, NULL, &cat_watch_dog_reset) != 0) {
+        abort();
+    }
+#endif
 
     return cat_true;
 }

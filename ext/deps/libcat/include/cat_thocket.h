@@ -15,3 +15,25 @@
   | Author: Twosee <twosee@php.net>                                          |
   +--------------------------------------------------------------------------+
  */
+
+#ifndef CAT_THOCKET_H
+#define CAT_THOCKET_H
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#include "cat.h"
+#include "cat_thread.h"
+
+#ifdef CAT_THREAD
+
+CAT_API cat_bool_t cat_thocket_module_init(void);
+CAT_API cat_bool_t cat_thocket_runtime_init(void);
+CAT_API cat_bool_t cat_thocket_runtime_shutdown(void);
+
+#endif /* CAT_THREAD */
+
+#ifdef __cplusplus
+}
+#endif
+#endif /* CAT_THOCKET_H */
