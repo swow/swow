@@ -517,6 +517,10 @@ static zend_always_inline void swow_output_globals_fast_shutdown(void)
     *output_ptr = ret == SUCCESS ? Z_STR(z_output) : NULL; \
 } while (0);
 
+/* serialization */
+
+SWOW_API SWOW_MAY_THROW zend_string *swow_serialize(zval *z_data);
+
 /* file */
 
 SWOW_API SWOW_MAY_THROW zend_string *swow_file_get_contents(zend_string *filename);
