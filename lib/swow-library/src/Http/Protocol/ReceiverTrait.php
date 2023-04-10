@@ -327,15 +327,18 @@ trait ReceiverTrait
                                             $unparsedLength = $buffer->getLength() - $parsedOffset;
                                             if ($contentLength < $parsedLength) {
                                                 $body->append($buffer, $parsedOffset, $contentLength);
+                                                $parsedOffset += $contentLength;
                                             } else {
                                                 $body->append($buffer, $parsedOffset, $unparsedLength);
+                                                $parsedOffset += $unparsedLength;
                                                 $neededLength = $contentLength - $unparsedLength;
                                                 if ($neededLength > 0) {
                                                     $this->read($body, $unparsedLength, $neededLength);
                                                 }
                                             }
-                                            // Notice: There may be some risks associated with doing so,
-                                            // but it's the easiest way...
+                                            /* Notice: There may be some risks associated with doing so,
+                                             * but it's the easiest way...
+                                             * $parsedOffset is for $body instead of $thisBuffer from now. */
                                             $thisBufferParsedOffset = $parsedOffset;
                                             $buffer = $body;
                                             $parsedOffset = 0;
