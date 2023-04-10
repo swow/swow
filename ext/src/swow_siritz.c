@@ -220,6 +220,31 @@ static PHP_METHOD(Swow_Siritz, wait)
     RETURN_LONG(ret);
 }
 
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Siritz_getTid, 0, 0, IS_LONG, 0)
+ZEND_END_ARG_INFO()
+
+static PHP_METHOD(Swow_Siritz, getTid)
+{
+    getThisSiritz(s);
+
+#ifdef CAT_OS_WIN
+    RETURN_LONG(GetThreadId((HANDLE)s->thread));
+#else
+    RETURN_LONG(s->thread->tid);
+#endif
+}
+
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_swow_getmytid, 0, 0, IS_LONG, 0)
+ZEND_END_ARG_INFO()
+
+PHP_FUNCTION(swow_getmytid) {
+#ifdef CAT_OS_WIN
+    RETURN_LONG(GetCurrentThreadId());
+#else
+    RETURN_LONG(gettid());
+#endif
+}
+
 SWOW_API zend_object_handlers swow_siritz_handlers;
 
 static zend_object *swow_siritz_create_object(zend_class_entry *ce)
@@ -236,6 +261,12 @@ static const zend_function_entry swow_siritz_methods[] = {
     PHP_ME(Swow_Siritz, __construct, arginfo_class_Swow_Siritz___construct, ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Siritz, run, arginfo_class_Swow_Siritz_run, ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Siritz, wait, arginfo_class_Swow_Siritz_wait, ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Siritz, getTid, arginfo_class_Swow_Siritz_getTid, ZEND_ACC_PUBLIC)
+    PHP_FE_END
+};
+
+static const zend_function_entry swow_siritz_functions[] = {
+    PHP_FENTRY(getmytid, PHP_FN(swow_getmytid), arginfo_swow_getmytid, 0)
     PHP_FE_END
 };
 
@@ -254,6 +285,10 @@ zend_result swow_siritz_module_init(INIT_FUNC_ARGS)
     swow_siritz_exception_ce = swow_register_internal_class(
         "Swow\\SiritzException", swow_exception_ce, NULL, NULL, NULL, cat_true, cat_true, NULL, NULL, 0
     );
+
+    if (!swow_hook_internal_functions(swow_siritz_functions)) {
+        return FAILURE;
+    }
 
     zend_hash_init(&siritz, 0, NULL, NULL, 1);
 
