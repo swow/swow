@@ -128,7 +128,9 @@ SWOW_API void swow_siritz_run(swow_siritz_run_t *call)
 
         uint32_t param_count = zend_hash_num_elements(Z_ARRVAL(z_args));
 
-        zend_hash_to_packed(Z_ARRVAL(z_args));
+        if (param_count) {
+            zend_hash_to_packed(Z_ARRVAL(z_args));
+        }
 
         zval retval;
         // ZVAL_STRING(&z_code, "var_dump");
@@ -136,7 +138,7 @@ SWOW_API void swow_siritz_run(swow_siritz_run_t *call)
             .size = sizeof(zend_fcall_info),
             .retval = &retval,
             .function_name = z_code,
-            .params = Z_ARRVAL(z_args)->arPacked,
+            .params = param_count ? Z_ARRVAL(z_args)->arPacked: 0,
             .param_count = param_count,
         }, NULL);
 
