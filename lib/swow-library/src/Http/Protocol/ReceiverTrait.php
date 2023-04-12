@@ -263,8 +263,8 @@ trait ReceiverTrait
                                 array_map('trim', explode(',', implode(',', $headers[$transferEncodingIndex]))),
                                 static function (string $value): bool {
                                     return strcasecmp($value, 'chunked') !== 0;
-                                })
-                            );
+                                }
+                            ));
                             $headers[$headerNames['content-length'] ??= 'Content-Length'] = $body ? (string) $body->getLength() : '0';
                             if ($body && $body->getLength() < ($body->getSize() / 2)) {
                                 $body->mallocTrim();
@@ -280,263 +280,239 @@ trait ReceiverTrait
                     if (!$headersCompleted) {
                         switch ($event) {
                             case HttpParser::EVENT_HEADER_FIELD:
-                                {
-                                    if ($event !== $previousEvent) {
-                                        $headerName = $data;
-                                    } else {
-                                        $headerName .= $data;
-                                    }
-                                    break;
+                                if ($event !== $previousEvent) {
+                                    $headerName = $data;
+                                } else {
+                                    $headerName .= $data;
                                 }
+                                break;
                             case HttpParser::EVENT_HEADER_VALUE:
-                                {
-                                    if ($event !== $previousEvent) {
-                                        $headers[$headerName][] = $data;
-                                        $headerNames[strtolower($headerName)] = $headerName;
-                                    } else {
-                                        $headers[$headerName][count($headers[$headerName]) - 1] .= $data;
-                                    }
-                                    break;
+                                if ($event !== $previousEvent) {
+                                    $headers[$headerName][] = $data;
+                                    $headerNames[strtolower($headerName)] = $headerName;
+                                } else {
+                                    $headers[$headerName][count($headers[$headerName]) - 1] .= $data;
                                 }
+                                break;
                             case HttpParser::EVENT_URL:
                             case HttpParser::EVENT_STATUS:
-                                {
-                                    if ($event !== $previousEvent) {
-                                        $uriOrReasonPhrase = $data;
-                                    } else {
-                                        $uriOrReasonPhrase .= $data;
-                                    }
-                                    break;
+                                if ($event !== $previousEvent) {
+                                    $uriOrReasonPhrase = $data;
+                                } else {
+                                    $uriOrReasonPhrase .= $data;
                                 }
+                                break;
                             case HttpParser::EVENT_HEADERS_COMPLETE:
-                                {
-                                    $headersCompleted = true;
-                                    $shouldKeepAlive = $parser->shouldKeepAlive();
-                                    if ($parser->isChunked()) {
-                                        $isChunked = true;
-                                    } else {
-                                        $contentLength = $parser->getContentLength();
-                                        if ($contentLength > $maxContentLength) {
-                                            throw new ProtocolException(HttpStatus::REQUEST_ENTITY_TOO_LARGE);
-                                        }
+                                $headersCompleted = true;
+                                $shouldKeepAlive = $parser->shouldKeepAlive();
+                                if ($parser->isChunked()) {
+                                    $isChunked = true;
+                                } else {
+                                    $contentLength = $parser->getContentLength();
+                                    if ($contentLength > $maxContentLength) {
+                                        throw new ProtocolException(HttpStatus::REQUEST_ENTITY_TOO_LARGE);
                                     }
-                                    if ($parser->isMultipart()) {
-                                        $isMultipart = true;
-                                        if ($this->preserveBodyData) {
-                                            $body = new Buffer($contentLength);
-                                            $unparsedLength = $buffer->getLength() - $parsedOffset;
-                                            if ($contentLength < $parsedLength) {
-                                                $body->append($buffer, $parsedOffset, $contentLength);
-                                                $parsedOffset += $contentLength;
-                                            } else {
-                                                $body->append($buffer, $parsedOffset, $unparsedLength);
-                                                $parsedOffset += $unparsedLength;
-                                                $neededLength = $contentLength - $unparsedLength;
-                                                if ($neededLength > 0) {
-                                                    $this->read($body, $unparsedLength, $neededLength);
-                                                }
-                                            }
-                                            /* Notice: There may be some risks associated with doing so,
-                                             * but it's the easiest way...
-                                             * $parsedOffset is for $body instead of $thisBuffer from now. */
-                                            $thisBufferParsedOffset = $parsedOffset;
-                                            $buffer = $body;
-                                            $parsedOffset = 0;
-                                        }
-                                    }
-                                    break;
                                 }
+                                if ($parser->isMultipart()) {
+                                    $isMultipart = true;
+                                    if ($this->preserveBodyData) {
+                                        $body = new Buffer($contentLength);
+                                        $unparsedLength = $buffer->getLength() - $parsedOffset;
+                                        if ($contentLength < $parsedLength) {
+                                            $body->append($buffer, $parsedOffset, $contentLength);
+                                            $parsedOffset += $contentLength;
+                                        } else {
+                                            $body->append($buffer, $parsedOffset, $unparsedLength);
+                                            $parsedOffset += $unparsedLength;
+                                            $neededLength = $contentLength - $unparsedLength;
+                                            if ($neededLength > 0) {
+                                                $this->read($body, $unparsedLength, $neededLength);
+                                            }
+                                        }
+                                        /* Notice: There may be some risks associated with doing so,
+                                         * but it's the easiest way...
+                                         * $parsedOffset is for $body instead of $thisBuffer from now. */
+                                        $thisBufferParsedOffset = $parsedOffset;
+                                        $buffer = $body;
+                                        $parsedOffset = 0;
+                                    }
+                                }
+                                break;
                         }
                     } elseif ($isMultipart) {
                         switch ($event) {
                             case HttpParser::EVENT_MULTIPART_HEADER_FIELD:
-                                {
-                                    if ($event !== $previousEvent) {
-                                        $multipartHeaderName = strtolower($data);
-                                    } else {
-                                        $multipartHeaderName .= strtolower($data);
-                                    }
-                                    break;
+                                if ($event !== $previousEvent) {
+                                    $multipartHeaderName = strtolower($data);
+                                } else {
+                                    $multipartHeaderName .= strtolower($data);
                                 }
+                                break;
                             case HttpParser::EVENT_MULTIPART_HEADER_VALUE:
-                                {
-                                    if ($event !== $previousEvent) {
-                                        $multipartHeaders[$multipartHeaderName] = $data;
-                                    } else {
-                                        $multipartHeaders[$multipartHeaderName] .= $data;
-                                    }
-                                    break;
+                                if ($event !== $previousEvent) {
+                                    $multipartHeaders[$multipartHeaderName] = $data;
+                                } else {
+                                    $multipartHeaders[$multipartHeaderName] .= $data;
                                 }
+                                break;
                             case HttpParser::EVENT_MULTIPART_HEADERS_COMPLETE:
-                                {
-                                    $multiPartHeadersCompleted = true;
-                                    /* parse Content-Disposition */
-                                    $contentDisposition = $multipartHeaders['content-disposition'] ?? '';
-                                    $contentDispositionParts = explode(';', $contentDisposition, 2);
-                                    $contentDispositionType = $contentDispositionParts[0];
-                                    // FIXME: is inline/attachment valid?
-                                    if (!in_array($contentDispositionType, ['form-data', 'inline', 'attachment'], true)) {
-                                        throw new ProtocolException(HttpStatus::BAD_REQUEST, "Unsupported Content-Disposition type '{$contentDispositionParts[0]}'");
-                                    }
-                                    $contentDispositionParts = explode(';', $contentDispositionParts[1] ?? '');
-                                    $contentDispositionMap = [];
-                                    foreach ($contentDispositionParts as $contentDispositionPart) {
-                                        $contentDispositionKeyValue = explode('=', $contentDispositionPart, 2);
-                                        $contentDispositionMap[trim($contentDispositionKeyValue[0], ' ')] = trim($contentDispositionKeyValue[1] ?? '', ' "');
-                                    }
-                                    $formDataName = $contentDispositionMap['name'] ?? null;
-                                    $fileName = $contentDispositionMap['filename'] ?? null;
-                                    if (!$fileName && !$formDataName) {
-                                        throw new ProtocolException(HttpStatus::BAD_REQUEST, 'Missing name or filename in Content-Disposition');
-                                    }
+                                $multiPartHeadersCompleted = true;
+                                /* parse Content-Disposition */
+                                $contentDisposition = $multipartHeaders['content-disposition'] ?? '';
+                                $contentDispositionParts = explode(';', $contentDisposition, 2);
+                                $contentDispositionType = $contentDispositionParts[0];
+                                // FIXME: is inline/attachment valid?
+                                if (!in_array($contentDispositionType, ['form-data', 'inline', 'attachment'], true)) {
+                                    throw new ProtocolException(HttpStatus::BAD_REQUEST, "Unsupported Content-Disposition type '{$contentDispositionParts[0]}'");
+                                }
+                                $contentDispositionParts = explode(';', $contentDispositionParts[1] ?? '');
+                                $contentDispositionMap = [];
+                                foreach ($contentDispositionParts as $contentDispositionPart) {
+                                    $contentDispositionKeyValue = explode('=', $contentDispositionPart, 2);
+                                    $contentDispositionMap[trim($contentDispositionKeyValue[0], ' ')] = trim($contentDispositionKeyValue[1] ?? '', ' "');
+                                }
+                                $formDataName = $contentDispositionMap['name'] ?? null;
+                                $fileName = $contentDispositionMap['filename'] ?? null;
+                                if (!$fileName && !$formDataName) {
+                                    throw new ProtocolException(HttpStatus::BAD_REQUEST, 'Missing name or filename in Content-Disposition');
+                                }
 
-                                    if ($fileName) {
-                                        // TODO: make dir and prefix configurable
-                                        $tmpName = tempnam(sys_get_temp_dir(), 'swow_uploaded_file_');
-                                        $tmpFile = fopen($tmpName, 'rwb+');
-                                    } else {
-                                        // TODO: not hard code here?
-                                        $formDataValue = new Buffer(256);
-                                    }
-                                    break;
+                                if ($fileName) {
+                                    // TODO: make dir and prefix configurable
+                                    $tmpName = tempnam(sys_get_temp_dir(), 'swow_uploaded_file_');
+                                    $tmpFile = fopen($tmpName, 'rwb+');
+                                } else {
+                                    // TODO: not hard code here?
+                                    $formDataValue = new Buffer(256);
                                 }
+                                break;
                             case HttpParser::EVENT_MULTIPART_BODY:
-                                {
-                                    if (isset($formDataValue)) {
-                                        $formDataValue->append($buffer, $dataOffset, $dataLength);
-                                    } else {
-                                        if ($fileError !== UPLOAD_ERR_OK) {
-                                            break;
-                                        }
-                                        if ($dataOffset === 0) {
-                                            $nWrite = fwrite($tmpFile, $buffer->toString(), $dataLength);
-                                        } else {
-                                            // TODO: maybe we should have something like fwrite_ex() to gain more performance?
-                                            $nWrite = fwrite($tmpFile, $buffer->read($dataOffset, $dataLength));
-                                        }
-                                        if ($nWrite !== $dataLength) {
-                                            $fileError = UPLOAD_ERR_CANT_WRITE;
-                                        } else {
-                                            $tmpFileSize += $nWrite;
-                                        }
+                                if (isset($formDataValue)) {
+                                    $formDataValue->append($buffer, $dataOffset, $dataLength);
+                                } else {
+                                    if ($fileError !== UPLOAD_ERR_OK) {
+                                        break;
                                     }
-                                    break;
+                                    if ($dataOffset === 0) {
+                                        $nWrite = fwrite($tmpFile, $buffer->toString(), $dataLength);
+                                    } else {
+                                        // TODO: maybe we should have something like fwrite_ex() to gain more performance?
+                                        $nWrite = fwrite($tmpFile, $buffer->read($dataOffset, $dataLength));
+                                    }
+                                    if ($nWrite !== $dataLength) {
+                                        $fileError = UPLOAD_ERR_CANT_WRITE;
+                                    } else {
+                                        $tmpFileSize += $nWrite;
+                                    }
                                 }
+                                break;
                             case HttpParser::EVENT_MULTIPART_DATA_END:
-                                {
-                                    if (isset($formDataValue)) {
-                                        $formData[$formDataName] = $formDataValue->toString();
-                                        // reset for the next parts
-                                        $formDataName = '';
-                                        $formDataValue = null;
-                                    } else {
-                                        $uploadedFile = new UploadedFileEntity();
-                                        $uploadedFile->name = $fileName;
-                                        $uploadedFile->type = $multipartHeaders['content-type'] ?? MimeType::TXT;
-                                        $uploadedFile->tmpName = $tmpName;
-                                        $uploadedFile->tmpFile = $tmpFile;
-                                        $uploadedFile->error = $fileError;
-                                        $uploadedFile->size = $tmpFileSize;
-                                        $uploadedFiles[$formDataName] = $uploadedFile;
-                                        // reset for the next parts
-                                        $tmpName = '';
-                                        $tmpFile = null;
-                                        $tmpFileSize = 0;
-                                        $fileError = UPLOAD_ERR_OK;
-                                    }
+                                if (isset($formDataValue)) {
+                                    $formData[$formDataName] = $formDataValue->toString();
                                     // reset for the next parts
-                                    $multiPartHeadersCompleted = false;
-                                    $multipartHeaderName = '';
-                                    $multipartHeaders = [];
+                                    $formDataName = '';
+                                    $formDataValue = null;
+                                } else {
+                                    $uploadedFile = new UploadedFileEntity();
+                                    $uploadedFile->name = $fileName;
+                                    $uploadedFile->type = $multipartHeaders['content-type'] ?? MimeType::TXT;
+                                    $uploadedFile->tmpName = $tmpName;
+                                    $uploadedFile->tmpFile = $tmpFile;
+                                    $uploadedFile->error = $fileError;
+                                    $uploadedFile->size = $tmpFileSize;
+                                    $uploadedFiles[$formDataName] = $uploadedFile;
+                                    // reset for the next parts
+                                    $tmpName = '';
+                                    $tmpFile = null;
+                                    $tmpFileSize = 0;
+                                    $fileError = UPLOAD_ERR_OK;
                                 }
+                                // reset for the next parts
+                                $multiPartHeadersCompleted = false;
+                                $multipartHeaderName = '';
+                                $multipartHeaders = [];
                         }
                     } else {
                         switch ($event) {
                             case HttpParser::EVENT_BODY:
-                                {
-                                    if ($isChunked) {
-                                        ($body ??= new Buffer(Buffer::COMMON_SIZE))->append($buffer, $dataOffset, $dataLength);
-                                        $neededLength = $currentChunkLength - $dataLength;
-                                        if ($neededLength > 0) {
-                                            $bodyParsedOffset = $body->getLength();
-                                            if ($body->getAvailableSize() < $neededLength) {
-                                                $body->extend($bodyParsedOffset + $neededLength);
-                                            }
-                                            $this->read($body, $bodyParsedOffset, $neededLength);
-                                            $bodyParsedOffset += $parser->execute($body, $bodyParsedOffset);
-                                            if ($parser->getEvent() !== HttpParser::EVENT_BODY) {
-                                                throw new ParserException(sprintf(
-                                                    'Expected EVENT_BODY for chunked message, got %s',
-                                                    $parser->getEventName()
-                                                ));
-                                            }
-                                            if ($bodyParsedOffset !== $body->getLength()) {
-                                                throw new ParserException(sprintf(
-                                                    'Expected all data of chunked body was parsed, but got %d/%d',
-                                                    $bodyParsedOffset, $body->getLength()
-                                                ));
-                                            }
-                                        }
-                                        break;
-                                    }
-                                    $body = new Buffer($contentLength);
-                                    $body->append($buffer, $dataOffset, $dataLength);
-                                    $neededLength = $contentLength - $dataLength;
-                                    $bodyParsedOffset = $dataLength;
+                                if ($isChunked) {
+                                    ($body ??= new Buffer(Buffer::COMMON_SIZE))->append($buffer, $dataOffset, $dataLength);
+                                    $neededLength = $currentChunkLength - $dataLength;
                                     if ($neededLength > 0) {
-                                        if ($dataOffset + $dataLength !== $buffer->getLength()) {
-                                            throw new ParserException(sprintf(
-                                                'Expected all data has been parsed for body, got %d remaining bytes',
-                                                $buffer->getLength() - $bodyParsedOffset
-                                            ));
+                                        $bodyParsedOffset = $body->getLength();
+                                        if ($body->getAvailableSize() < $neededLength) {
+                                            $body->extend($bodyParsedOffset + $neededLength);
                                         }
-                                        /* receive all body data at once here (for performance) */
                                         $this->read($body, $bodyParsedOffset, $neededLength);
                                         $bodyParsedOffset += $parser->execute($body, $bodyParsedOffset);
                                         if ($parser->getEvent() !== HttpParser::EVENT_BODY) {
-                                            throw new ParserException(sprintf('Expected EVENT_BODY, got %s', $parser->getEventName()));
+                                            throw new ParserException(sprintf(
+                                                'Expected EVENT_BODY for chunked message, got %s',
+                                                $parser->getEventName()
+                                            ));
                                         }
                                         if ($bodyParsedOffset !== $body->getLength()) {
                                             throw new ParserException(sprintf(
-                                                'Expected all data of body was parsed, but got %d/%d',
+                                                'Expected all data of chunked body was parsed, but got %d/%d',
                                                 $bodyParsedOffset, $body->getLength()
                                             ));
                                         }
                                     }
-                                    /* execute again to trigger MESSAGE_COMPLETE event */
-                                    $parsedLength = $parser->execute($body, $bodyParsedOffset);
-                                    if ($parsedLength !== 0) {
-                                        throw new ParserException('Expected 0 parsed length for MESSAGE_COMPLETE, got %d', $parsedLength);
+                                    break;
+                                }
+                                $body = new Buffer($contentLength);
+                                $body->append($buffer, $dataOffset, $dataLength);
+                                $neededLength = $contentLength - $dataLength;
+                                $bodyParsedOffset = $dataLength;
+                                if ($neededLength > 0) {
+                                    if ($dataOffset + $dataLength !== $buffer->getLength()) {
+                                        throw new ParserException(sprintf(
+                                            'Expected all data has been parsed for body, got %d remaining bytes',
+                                            $buffer->getLength() - $bodyParsedOffset
+                                        ));
                                     }
-                                    $event = $parser->getEvent();
-                                    if ($event !== HttpParser::EVENT_MESSAGE_COMPLETE) {
-                                        throw new ParserException(sprintf('Expected MESSAGE_COMPLETE, got %s', $parser->getEventName()));
+                                    /* receive all body data at once here (for performance) */
+                                    $this->read($body, $bodyParsedOffset, $neededLength);
+                                    $bodyParsedOffset += $parser->execute($body, $bodyParsedOffset);
+                                    if ($parser->getEvent() !== HttpParser::EVENT_BODY) {
+                                        throw new ParserException(sprintf('Expected EVENT_BODY, got %s', $parser->getEventName()));
+                                    }
+                                    if ($bodyParsedOffset !== $body->getLength()) {
+                                        throw new ParserException(sprintf(
+                                            'Expected all data of body was parsed, but got %d/%d',
+                                            $bodyParsedOffset, $body->getLength()
+                                        ));
+                                    }
+                                }
+                                /* execute again to trigger MESSAGE_COMPLETE event */
+                                $parsedLength = $parser->execute($body, $bodyParsedOffset);
+                                if ($parsedLength !== 0) {
+                                    throw new ParserException('Expected 0 parsed length for MESSAGE_COMPLETE, got %d', $parsedLength);
+                                }
+                                $event = $parser->getEvent();
+                                if ($event !== HttpParser::EVENT_MESSAGE_COMPLETE) {
+                                    throw new ParserException(sprintf('Expected MESSAGE_COMPLETE, got %s', $parser->getEventName()));
+                                }
+                                break 3; /* end */
+                            case HttpParser::EVENT_CHUNK_HEADER:
+                                $currentChunkLength = $parser->getCurrentChunkLength();
+                                $contentLength += $currentChunkLength;
+                                if ($contentLength > $maxContentLength) {
+                                    throw new ProtocolException(HttpStatus::REQUEST_ENTITY_TOO_LARGE);
+                                }
+                                break;
+                            case HttpParser::EVENT_CHUNK_COMPLETE:
+                                if ($currentChunkLength === 0) {
+                                    $parsedOffset += $parser->execute($buffer, $parsedOffset);
+                                    if ($parser->getEvent() !== HttpParser::EVENT_MESSAGE_COMPLETE) {
+                                        throw new ParserException(sprintf(
+                                            'Expected MESSAGE_COMPLETE for chunked message, got %s',
+                                            $parser->getEventName()
+                                        ));
                                     }
                                     break 3; /* end */
                                 }
-                            case HttpParser::EVENT_CHUNK_HEADER:
-                                {
-                                    $currentChunkLength = $parser->getCurrentChunkLength();
-                                    $contentLength += $currentChunkLength;
-                                    if ($contentLength > $maxContentLength) {
-                                        throw new ProtocolException(HttpStatus::REQUEST_ENTITY_TOO_LARGE);
-                                    }
-                                    break;
-                                }
-                            case HttpParser::EVENT_CHUNK_COMPLETE:
-                                {
-                                    if ($currentChunkLength === 0) {
-                                        $parsedOffset += $parser->execute($buffer, $parsedOffset);
-                                        if ($parser->getEvent() !== HttpParser::EVENT_MESSAGE_COMPLETE) {
-                                            throw new ParserException(sprintf(
-                                                'Expected MESSAGE_COMPLETE for chunked message, got %s',
-                                                $parser->getEventName()
-                                            ));
-                                        }
-                                        break 3; /* end */
-                                    }
-                                    break;
-                                }
+                                break;
                             default:
                                 throw new ParserException("Unexpected HttpParser event: {$parser->getEventName()}");
                         }
