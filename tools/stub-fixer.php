@@ -78,7 +78,7 @@ PHP;
                 $this->inNamespaceClass('Swow', 'Signal')
             ) {
                 // entering class Swow\Signal
-                /** @var array<int, array{'value': int, 'name': string, 'stmt': array<mixed>}> */
+                /** @var array<int, array{'value': int, 'name': string, 'stmt': array<mixed>}> $newStmts */
                 $newStmts = [];
                 $signalDefinitions = [];
                 // filter out all SIGXXX constants

@@ -451,7 +451,7 @@ class StubGenerator
         $params = $function->getParameters();
         foreach ($params as $param) {
             $variadic = $param->isVariadic() ? '...' : '';
-            /** @var ReflectionNamedType|ReflectionUnionType|ReflectionIntersectionType|null */
+            /** @var ReflectionNamedType|ReflectionUnionType|ReflectionIntersectionType|null $param */
             $paramTypeReflection = $param->getType();
             if ($paramTypeReflection) {
                 if ($paramTypeReflection instanceof ReflectionNamedType) {
@@ -542,7 +542,7 @@ class StubGenerator
         $paramsDeclaration = implode(', ', $paramsDeclarations);
 
         if ($function->hasReturnType()) {
-            /** @var ReflectionNamedType|ReflectionUnionType|ReflectionIntersectionType|null */
+            /** @var ReflectionNamedType|ReflectionUnionType|ReflectionIntersectionType|null $returnType */
             $returnType = $function->getReturnType();
             if ($returnType instanceof ReflectionNamedType) {
                 $returnTypeNames = [$returnType->getName()];

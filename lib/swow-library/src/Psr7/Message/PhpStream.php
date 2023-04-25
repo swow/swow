@@ -83,8 +83,10 @@ class PhpStream implements StreamPlusInterface
         ],
     ];
 
-    /** @psalm-var closed-resource|resource|null */
-    /** @var resource|null A resource reference */
+    /**
+     * @var resource|null A resource reference
+     * @psalm-var closed-resource|resource|null
+     */
     protected $stream;
 
     protected bool $seekable = false;

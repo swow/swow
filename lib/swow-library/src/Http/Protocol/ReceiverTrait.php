@@ -193,9 +193,9 @@ trait ReceiverTrait
         $headerName = '';
         $formDataName = '';
         $fileName = '';
-        /** @var array<string, array<string>> */
+        /** @var array<string, array<string>> $headers */
         $headers = [];
-        /** @var array<string, string> */
+        /** @var array<string, string> $headerNames */
         $headerNames = [];
         $shouldKeepAlive = false;
         $contentLength = 0;

@@ -53,7 +53,7 @@ class ExceptionEditor
      *     'line': int,
      *     'function': string,
      *     'args': array<mixed>,
-     *     'class'?: string
+     *     "class"?: string
      * }> $trace
      */
     public static function setTrace(Exception $exception, array $trace): void
