@@ -71,7 +71,7 @@ ZEND_BEGIN_MODULE_GLOBALS(swow)
     struct {
         zend_long async_threads;
         bool async_file;
-        bool async_stdio;
+        bool async_tty;
     } ini;
 ZEND_END_MODULE_GLOBALS(swow)
 
