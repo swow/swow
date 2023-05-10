@@ -82,6 +82,7 @@ created via cat_coroutine_context_make.
 */
 
 cat_coroutine_context_ontop:
+	.machine "z10"
 	/* Reserve stack space to store the current context.  */
 	aghi	%r15,-CONTEXT_SIZE
 

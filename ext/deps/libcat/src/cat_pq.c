@@ -61,7 +61,7 @@ static PGresult *cat_pq_get_result(PGconn *conn)
         PQclear(last_result);
         last_result = result;
     }
-    
+
     return last_result;
 }
 
@@ -90,7 +90,7 @@ static cat_bool_t cat_pq_poll_connection(PGconn *conn)
             return cat_false;
         }
     }
-    
+
     return cat_false;
 }
 
@@ -110,7 +110,7 @@ CAT_API PGconn *cat_pq_connectdb(const char *conninfo)
     PQsetnonblocking(conn, 1);
 
     cat_pq_poll_connection(conn);
-    
+
     return conn;
 }
 

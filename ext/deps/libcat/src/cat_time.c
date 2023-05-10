@@ -155,15 +155,43 @@ static cat_timer_t *cat_timer_wait(cat_msec_t msec)
     return timer;
 }
 
+static void cat_time_wait_0_callback(cat_event_loop_defer_task_t *task, cat_data_t *data)
+{
+    cat_coroutine_t *coroutine = (cat_coroutine_t *) data;
+    (void) task;
+    cat_coroutine_schedule(coroutine, TIME, "Time wait 0");
+}
+
+static cat_ret_t cat_time_delay_0(void)
+{
+    cat_event_loop_defer_task_t *task = cat_event_loop_defer_task_create(
+        cat_time_wait_0_callback,
+        CAT_COROUTINE_G(current)
+    );
+    cat_bool_t ret = cat_coroutine_yield(NULL, NULL);
+    if (unlikely(!ret)) {
+        cat_event_loop_defer_task_close(task);
+        return CAT_RET_ERROR;
+    }
+    return cat_event_loop_defer_task_close(task) ? CAT_RET_OK : CAT_RET_NONE;
+}
+
 static cat_always_inline cat_bool_t cat_time_wait_impl(cat_timeout_t timeout)
 {
     if (timeout < 0) {
         return cat_coroutine_yield(NULL, NULL);
+    } else if (timeout == 0) {
+        cat_ret_t ret = cat_time_delay_0();
+        if (ret == CAT_RET_ERROR) {
+            return cat_false;
+        }
+        if (ret == CAT_RET_OK) {
+            cat_update_last_error(CAT_ETIMEDOUT, "Timed out for 0 ms");
+            return cat_false;
+        }
+        return cat_true;
     } else {
-        cat_timer_t *timer;
-
-        timer = cat_timer_wait(timeout);
-
+        cat_timer_t *timer = cat_timer_wait(timeout);
         if (unlikely(timer == NULL)) {
             return cat_false;
         }
@@ -191,11 +219,10 @@ static cat_always_inline cat_ret_t cat_time_delay_impl(cat_timeout_t timeout)
 {
     if (timeout < 0) {
         cat_coroutine_yield(NULL, NULL);
+    } else if (timeout == 0) {
+        return cat_time_delay_0();
     } else {
-        cat_timer_t *timer;
-
-        timer = cat_timer_wait(timeout);
-
+        cat_timer_t *timer = cat_timer_wait(timeout);
         if (unlikely(timer == NULL)) {
             return CAT_RET_ERROR;
         }
@@ -220,22 +247,27 @@ CAT_API cat_ret_t cat_time_delay(cat_timeout_t timeout)
 
 static cat_always_inline cat_msec_t cat_time_msleep_impl(cat_msec_t msec)
 {
-    cat_timer_t *timer;
+    if (msec == 0) {
+        (void) cat_time_delay_0();
+        // even if error, the number of seconds left to sleep is always 0...
+    } else {
+        cat_timer_t *timer;
 
-    timer = cat_timer_wait(msec);
+        timer = cat_timer_wait(msec);
 
-    if (unlikely(timer == NULL)) {
-        return msec;
-    }
-
-    if (unlikely(timer->coroutine != NULL)) {
-        cat_update_last_error(CAT_ECANCELED, "Time waiter has been canceled");
-        if (unlikely(timer->timer.timeout <= CAT_EVENT_G(loop).time)) {
-            /* blocking IO lead it to be negative or 0
-             * we can not know the real reserve time */
+        if (unlikely(timer == NULL)) {
             return msec;
         }
-        return timer->timer.timeout - CAT_EVENT_G(loop).time;
+
+        if (unlikely(timer->coroutine != NULL)) {
+            cat_update_last_error(CAT_ECANCELED, "Time waiter has been canceled");
+            if (unlikely(timer->timer.timeout <= CAT_EVENT_G(loop).time)) {
+                /* blocking IO lead it to be negative or 0
+                * we can not know the real reserve time */
+                return msec;
+            }
+            return timer->timer.timeout - CAT_EVENT_G(loop).time;
+        }
     }
 
     return 0;

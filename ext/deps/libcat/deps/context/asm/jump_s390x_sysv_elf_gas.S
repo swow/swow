@@ -131,11 +131,11 @@ cat_coroutine_context_jump:
 	ltg	%r2,GR_OFFSET(%r15)
 	jnz	use_return_slot
 
-	/* We restore a cat_coroutine_context_make context.  Use the function
-	   argument slot in the context we just saved and allocate the
-	   register save area for the target function.  */
-	la	%r2,ARG_OFFSET(%r1)
-	aghi	%r15,-REG_SAVE_AREA_SIZE
+	/* We're restoring a context created by cat_coroutine_context_make.
+	   Use the function argument slot in the current context
+	   and make sure it isn't deallocated. */
+	la	%r2,ARG_OFFSET(%r15)
+	aghi	%r15,-CONTEXT_SIZE
 
 use_return_slot:
 	/* Save the two fields in transfer_t.  When calling a

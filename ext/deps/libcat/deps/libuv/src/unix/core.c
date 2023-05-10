@@ -451,39 +451,30 @@ int uv_run(uv_loop_t* loop, uv_run_mode mode) {
 
 
 #ifdef HAVE_LIBCAT
-int uv_crun(uv_loop_t* loop, const uv_run_options_t *options) {
+int uv_crun(uv_loop_t* loop) {
   int r;
 
-  r = uv__loop_alive(loop) ||
-      (options->alive_cb && options->alive_cb(loop));
+  r = uv__loop_alive(loop);
   if (!r)
     uv__update_time(loop);
 
   while (r) {
+    loop->round++;
+
     uv__run_pending(loop);
     uv__run_idle(loop);
     uv__run_prepare(loop);
 
     uv__io_poll(loop, uv_backend_timeout(loop));
-    if (options->io_defer_cb)
-      options->io_defer_cb(loop);
     uv__metrics_update_idle_time(loop);
 
     uv__run_check(loop);
     uv__run_closing_handles(loop);
 
-    loop->round++;
-
-    if (options->loop_defer_cb)
-      options->loop_defer_cb(loop);
-
     uv__update_time(loop);
     uv__run_timers(loop);
 
-    r = !loop->stop_flag && (
-      uv__loop_alive(loop) ||
-      (options->alive_cb && options->alive_cb(loop))
-    );
+    r = !loop->stop_flag && uv__loop_alive(loop);
   }
 
   if (loop->stop_flag)
