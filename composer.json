@@ -28,7 +28,7 @@
         "composer/semver": "^3.3",
         "psr/http-client": "^1.0",
         "psr/http-factory": "^1.0",
-        "psr/http-message": "^1.0"
+        "psr/http-message": "^1.1"
     },
     "require-dev": {
         "friendsofphp/php-cs-fixer": "^3.13",
