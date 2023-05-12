@@ -99,12 +99,12 @@ class Client extends Socket implements ClientInterface, ProtocolTypeInterface
         ]);
     }
 
-    public function recvResponseEntity(): ResponseEntity
+    public function recvResponseEntity(?int $timeout = null): ResponseEntity
     {
-        return $this->recvMessageEntity();
+        return $this->recvMessageEntity($timeout);
     }
 
-    public function sendRequest(RequestInterface $request): ResponseInterface
+    public function sendRequest(RequestInterface $request, ?int $timeout = null): ResponseInterface
     {
         try {
             $headers = $request->getHeaders();
@@ -127,7 +127,7 @@ class Client extends Socket implements ClientInterface, ProtocolTypeInterface
                 headers: $headers,
                 body: $body,
                 protocolVersion: $request->getProtocolVersion(),
-            )->recvResponseEntity();
+            )->recvResponseEntity($timeout);
 
             return Psr7::createResponseFromEntity($responseEntity, $this->responseFactory, $this->streamFactory);
         } catch (Exception $exception) {

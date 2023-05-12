@@ -19,6 +19,7 @@ use ReflectionProperty;
 use RuntimeException;
 use Swow\Channel;
 use Swow\Coroutine;
+use Swow\Errno;
 use Swow\Http\Http;
 use Swow\Http\Mime\MimeType;
 use Swow\Http\Protocol\ProtocolException as HttpProtocolException;
@@ -30,6 +31,7 @@ use Swow\Psr7\Message\WebSocketFrame;
 use Swow\Psr7\Psr7;
 use Swow\Psr7\Server\Server;
 use Swow\Socket;
+use Swow\SocketException;
 use Swow\Sync\WaitReference;
 use Swow\TestUtils\Testing;
 use Swow\WebSocket\Opcode;
@@ -38,6 +40,8 @@ use Swow\WebSocket\WebSocket;
 use function file_exists;
 use function http_build_query;
 use function json_encode;
+use function microtime;
+use function msleep;
 use function putenv;
 use function serialize;
 use function sprintf;
@@ -167,6 +171,49 @@ final class ServerTest extends TestCase
         $heartBeater->kill();
         $worker->kill();
         $this->assertGreaterThan(0, $heartBeatCount);
+    }
+
+    public function testRecvRequestTimeout(): void
+    {
+        $wr = new WaitReference();
+        foreach ([0, 100, 1000, 10 * 1000, -1] as $readTimeout) {
+            Coroutine::run(function () use ($readTimeout, $wr): void {
+                $server = new Server();
+                $server->bind('127.0.0.1')->listen();
+                $attacker = Coroutine::run(function () use ($server): void {
+                    $client = new Socket(Socket::TYPE_TCP);
+                    $client->connect($server->getSockAddress(), $server->getSockPort());
+                    $requestText = "GET / HTTP/1.1\r\nConnection: keep-alive\r\nContent-Length: 1000\r\n\r\n" . str_repeat('X', 1000);
+                    $client->send($requestText);
+                    $this->assertSame('X', $client->readString(1));
+                    for ($i = 0; $i < strlen($requestText); $i++) {
+                        $client->send($requestText[$i]);
+                        msleep(100);
+                    }
+                });
+                defer(static function () use ($attacker): void {
+                    $attacker->isExecuting() && $attacker->kill();
+                });
+                $connection = $server->acceptConnection();
+                $connection->setReadTimeout($readTimeout);
+                $request = $connection->recvHttpRequest(500);
+                $connection->send('X');
+                $this->assertSame($request->getHeaderLine('Connection'), 'keep-alive');
+                $exception = null;
+                $s = microtime(true);
+                try {
+                    $connection->recvHttpRequest(500);
+                } catch (SocketException $exception) {
+                }
+                $this->assertInstanceOf(SocketException::class, $exception);
+                $this->assertSame(Errno::ETIMEDOUT, $exception->getCode());
+                $d = ((microtime(true) - $s) * 1000) + 1;
+                if ($readTimeout >= 500) {
+                    $this->assertGreaterThanOrEqual(500, $d);
+                }
+            });
+        }
+        $wr::wait($wr);
     }
 
     public function testUploadFileWithCR(): void
@@ -339,7 +386,8 @@ final class ServerTest extends TestCase
         $request = Psr7::createRequest(
             'GET', '/test', [
                 'Host' => "{$server->getSockAddress()}:{$server->getSockPort()}",
-            ]);
+            ]
+        );
         $request = Psr7::stringifyRequest($request);
         $client = new Client();
         $client->connect($server->getSockAddress(), $server->getSockPort());

@@ -109,19 +109,19 @@ class ServerConnection extends Socket implements ProtocolTypeInterface
         return $this->getServer()->getMaxContentLength();
     }
 
-    public function recvServerRequestEntity(): ServerRequestEntity
+    public function recvServerRequestEntity(?int $timeout = null): ServerRequestEntity
     {
-        return $this->recvMessageEntity();
+        return $this->recvMessageEntity($timeout);
     }
 
     /**
      * @return ServerRequestInterface|ServerRequestPlusInterface|ServerRequest
      */
-    public function recvHttpRequest(): ServerRequestInterface
+    public function recvHttpRequest(?int $timeout = null): ServerRequestInterface
     {
         $server = $this->getServer();
         return Psr7::createServerRequestFromEntity(
-            $this->recvServerRequestEntity(),
+            $this->recvServerRequestEntity($timeout),
             $server->getServerRequestFactory(),
             $server->getUriFactory(),
             $server->getStreamFactory(),

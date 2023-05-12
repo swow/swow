@@ -14,6 +14,8 @@ declare(strict_types=1);
 namespace Swow\Http\Protocol;
 
 use Swow\Buffer;
+use Swow\Coroutine;
+use Swow\Errno;
 use Swow\Exception\ExceptionEditor;
 use Swow\Http\Message\ResponseEntity;
 use Swow\Http\Message\ServerRequestEntity;
@@ -41,8 +43,10 @@ use function strcasecmp;
 use function strtolower;
 use function sys_get_temp_dir;
 use function tempnam;
+use function time;
 use function trim;
 
+use const PHP_INT_MAX;
 use const UPLOAD_ERR_CANT_WRITE;
 use const UPLOAD_ERR_OK;
 
@@ -68,6 +72,8 @@ trait ReceiverTrait
     protected bool $preserveBodyData = false;
 
     protected bool $autoUnmask = true;
+
+    protected int $recvMessageTimeout = -1;
 
     protected bool $shouldKeepAlive = false;
 
@@ -155,6 +161,21 @@ trait ReceiverTrait
         return $this;
     }
 
+    public function getRecvMessageTimeout(): int
+    {
+        return $this->recvMessageTimeout;
+    }
+
+    /**
+     * @param int $timeout HTTP keep alive timeout in milliseconds
+     */
+    public function setRecvMessageTimeout(int $timeout): static
+    {
+        $this->recvMessageTimeout = $timeout;
+
+        return $this;
+    }
+
     public function shouldKeepAlive(): bool
     {
         return $this->shouldKeepAlive;
@@ -166,7 +187,7 @@ trait ReceiverTrait
      * @phpstan-return T
      * @psalm-return T
      */
-    protected function recvMessageEntity(): ServerRequestEntity|ResponseEntity
+    protected function recvMessageEntity(?int $timeout = null): ServerRequestEntity|ResponseEntity
     {
         $thisBuffer = $this->buffer;
         $thisBufferParsedOffset = null;
@@ -217,10 +238,28 @@ trait ReceiverTrait
         $formData = [];
         $uploadedFiles = [];
         /* }}} */
+        $timeout ??= $this->recvMessageTimeout;
+        $readTimeout = $this->getReadTimeout();
+        // if read timeout is less than message timeout, use message timeout instead
+        if (($timeout < 0 ? PHP_INT_MAX : $timeout) < ($readTimeout < 0 ? PHP_INT_MAX : $timeout)) {
+            $readTimeout = $timeout;
+        }
+        $mainCoroutine = Coroutine::getMain();
         try {
             while (true) {
                 if ($expectMoreData) {
-                    $this->recvData($buffer, $buffer->getLength());
+                    if ($timeout >= 0) {
+                        if (!isset($startTime)) {
+                            $startTime = $mainCoroutine->getElapsed();
+                        } else {
+                            $timePassed = $mainCoroutine->getElapsed() - $startTime;
+                            if ($timePassed > $timeout) {
+                                throw new SocketException(sprintf('Recv HTTP message timeout (expect within %d ms, but %d ms passed)', $timeout, $timePassed), Errno::ETIMEDOUT);
+                            }
+                            $readTimeout = $timeout - $timePassed;
+                        }
+                    }
+                    $this->recvData($buffer, $buffer->getLength(), timeout: $readTimeout);
                     /** @noinspection PhpUnusedLocalVariableInspection (on the safe-side) */
                     $expectMoreData = false;
                 }
