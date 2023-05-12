@@ -29,15 +29,20 @@ declare(strict_types=1);
     $autoloadPsr4 = $autoload['psr-4'] ?? [];
     if ($autoloadPsr4) {
         spl_autoload_register(static function (string $class) use ($autoloadPsr4): void {
-            foreach ($autoloadPsr4 as $namespace => $path) {
+            foreach ($autoloadPsr4 as $namespace => $pathList) {
                 if (!str_starts_with($class, $namespace)) {
                     continue;
                 }
-                $file = str_replace('\\', '/', substr($class, strlen($namespace))) . '.php';
-                $file = "{$path}{$file}";
-                if (file_exists($file)) {
-                    require $file;
-                    return;
+                if (is_string($pathList)) {
+                    $pathList = [$pathList];
+                }
+                foreach ($pathList as $path) {
+                    $file = str_replace('\\', '/', substr($class, strlen($namespace))) . '.php';
+                    $file = "{$path}{$file}";
+                    if (file_exists($file)) {
+                        require $file;
+                        return;
+                    }
                 }
             }
         });
