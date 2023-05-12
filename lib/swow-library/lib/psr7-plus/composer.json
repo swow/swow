@@ -1,9 +1,12 @@
 {
-    "name": "swow/swow-library",
-    "description": "Coroutine-based multi-platform support library with a focus on concurrent I/O",
+    "name": "swow/psr7-plus",
+    "description": "Modern strong-typed interfaces and more performant implementations for Psr7, not only HTTP but also WebSocket",
     "keywords": [
         "swow",
-        "library"
+        "psr7",
+        "psr17",
+        "http",
+        "websocket"
     ],
     "license": "Apache-2.0",
     "authors": [
@@ -19,26 +22,12 @@
         "php": ">=8.0",
         "psr/http-client": "^1.0",
         "psr/http-factory": "^1.0",
-        "psr/http-message": "^1.1"
-    },
-    "replace": {
-        "swow/psr7-plus": "*"
-    },
-    "suggest": {
-        "ext-swow": "*"
+        "psr/http-message": "^1.0"
     },
     "autoload": {
         "psr-4": {
-            "Swow\\": "src/",
-            "Swow\\Psr7\\": [
-                "lib/psr7-plus/src/",
-                "src/Psr7/"
-            ]
-        },
-        "files": [
-            "src/bootstrap.php",
-            "src/Debug/functions.php"
-        ]
+            "Swow\\Psr7": "src/"
+        }
     },
     "autoload-dev": {
         "psr-4": {
