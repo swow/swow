@@ -254,12 +254,10 @@ SWOW_API php_stream *swow_stream_socket_factory(
         ops = &swow_stream_ssl_socket_ops;
         swow_sock->ssl.enable_on_connect = 1;
         swow_sock->ssl.method = swow_stream_get_crypto_method(context, STREAM_CRYPTO_METHOD_TLS_ANY_CLIENT);
-        goto _error;
     } else if (strncmp(proto, "tlsv1.0", protolen) == 0) {
         ops = &swow_stream_ssl_socket_ops;
         swow_sock->ssl.enable_on_connect = 1;
         swow_sock->ssl.method = STREAM_CRYPTO_METHOD_TLSv1_0_CLIENT;
-        goto _error;
     } else if (strncmp(proto, "tlsv1.1", protolen) == 0) {
 # ifdef HAVE_TLS11
         ops = &swow_stream_ssl_socket_ops;
