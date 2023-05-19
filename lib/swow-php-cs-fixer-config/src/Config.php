@@ -49,9 +49,6 @@ class Config extends \PhpCsFixer\Config
                     ],
                 ],
                 'blank_line_after_namespace' => true,
-                'braces' => [
-                    'allow_single_line_closure' => true,
-                ],
                 'general_phpdoc_annotation_remove' => [
                     'annotations' => [
                         'author',
