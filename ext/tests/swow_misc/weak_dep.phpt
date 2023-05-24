@@ -30,7 +30,7 @@ if (strpos($loaded1, 'Swow') === false) {
 }
 $ext_enable = preg_replace('/-d\s*"extension\s*=\s*pdo"/', '', $ext_enable);
 $ext_enable = preg_replace('/-d\s*"extension\s*=\s*pdo_[^\s]*"/', '', $ext_enable);
-$loaded2 = shell_exec(PHP_BINARY . " -n $ext_enable -r 'echo \"hello Swow\";'");
+$loaded2 = shell_exec(PHP_BINARY . " -n $ext_enable -r \"echo Swow\\Extension::VERSION; echo 'hello Swow';\"");
 if (
     strpos($loaded2, 'hello Swow') === false
 ) {
