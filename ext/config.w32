@@ -93,8 +93,7 @@ if (PHP_SWOW != 'no') (function(){
 
     var use_pgsql = 0;
     if('no' !== PHP_SWOW_PDO_PGSQL){
-        if (CHECK_LIB("libpq.lib", "swow", PHP_SWOW) &&
-            CHECK_HEADER_ADD_INCLUDE("libpq-fe.h", "CFLAGS_SWOW", PHP_SWOW_PDO_PGSQL + "\\include;" + PHP_PHP_BUILD + "\\include\\pgsql;" + PHP_PHP_BUILD + "\\include\\libpq;") &&
+        if (CHECK_HEADER_ADD_INCLUDE("libpq-fe.h", "CFLAGS_SWOW", PHP_SWOW_PDO_PGSQL + "\\include;" + PHP_PHP_BUILD + "\\include\\pgsql;" + PHP_PHP_BUILD + "\\include\\libpq;") &&
             SETUP_OPENSSL("swow", PHP_SWOW) > 0)
             {
             ADD_FLAG("CFLAGS_SWOW_COMMON", "/D CAT_HAVE_PQ");
@@ -298,7 +297,8 @@ if (PHP_SWOW != 'no') (function(){
         'swow_tokenizer.c',
         'swow_ipaddress.c',
         'swow_http.c',
-        'swow_websocket.c' // <-- wsh donot support comma here!
+        'swow_websocket.c',
+        'swow_weak_symbol.c' // <-- wsh donot support comma here!
     ];
     /* not implemented
     if(use_ssl){
