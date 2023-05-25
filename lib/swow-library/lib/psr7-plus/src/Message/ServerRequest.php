@@ -33,8 +33,8 @@ class ServerRequest extends Request implements ServerRequestPlusInterface
     /** @var array<string, string> */
     protected array $queryParams = [];
 
-    /** @var array<mixed>|object */
-    protected array|object $parsedBody;
+    /** @var array<mixed>|object|null */
+    protected array|object|null $parsedBody;
 
     protected ?int $contentLength = null;
 
@@ -151,8 +151,8 @@ class ServerRequest extends Request implements ServerRequestPlusInterface
         return $this->parsedBody ??= BodyDecoder::decode($this->getBody(), $this->getContentType());
     }
 
-    /** @param array<mixed>|object $data */
-    public function setParsedBody(array|object $data): static
+    /** @param array<mixed>|object|null $data */
+    public function setParsedBody(array|object|null $data): static
     {
         $this->parsedBody = $data;
 
