@@ -13,7 +13,7 @@ $coroutine = Swow\Coroutine::run(static function () {
         Swow\Coroutine::yield();
         return 'Never here';
     } catch (Throwable $throwable) {
-        return get_class($throwable);
+        return $throwable::class;
     }
 });
 var_dump($coroutine->throw(new Exception()));

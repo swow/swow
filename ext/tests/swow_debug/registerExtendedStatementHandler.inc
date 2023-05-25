@@ -23,7 +23,7 @@ define('BREAK_ME', implode(' ', ['break', 'me']));
 
 // find out which line to break
 foreach ($lines as $i => $line) {
-    if (strpos($line, BREAK_ME) !== false) {
+    if (str_contains($line, BREAK_ME)) {
         $break_line = $i + 1 /* index starts from 0, lines start from 1 */;
         break;
     }

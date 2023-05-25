@@ -225,7 +225,14 @@ function getHttpProxyUri(): string
     return $proxy;
 }
 
-/** @return array<array{'status': int, 'headers': array<string, string>, 'body': string}> */
+/**
+ * @param array<string, string> $headers
+ * @return array<array{
+ *     'status': int,
+ *     'headers': array<string, string>,
+ *     'body': string,
+ * }>
+ */
 function httpRequest(string $url, string $method = 'GET', string $content = '', array $headers = [], ?int $timeoutSeconds = null, bool|string $proxy = false, bool $doNotThrow = false): array|false
 {
     $headers += [

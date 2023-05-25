@@ -6,17 +6,17 @@ require __DIR__ . '/../include/skipif.php';
 skip_if_extension_not_exist('phar');
 $ext_enable = '';
 $loaded1 = shell_exec(PHP_BINARY . ' -m');
-if (strpos($loaded1, 'Swow') === false) {
+if (!str_contains($loaded1, 'Swow')) {
     $ext_enable .= ' -dextension=swow';
 }
-if (strpos($loaded1, 'Phar') === false) {
+if (!str_contains($loaded1, 'Phar')) {
     $ext_enable .= ' -dextension=phar';
 }
 $loaded2 = shell_exec(PHP_BINARY . $ext_enable . ' -m');
 if (
-    strpos($loaded2, 'Phar') === false ||
-    strpos($loaded2, 'Swow') === false ||
-    strpos($loaded2, 'Warning') !== false
+    !str_contains($loaded2, 'Phar') ||
+    !str_contains($loaded2, 'Swow') ||
+    str_contains($loaded2, 'Warning')
 ) {
     skip('Swow or phar is not present in TEST_PHP_EXECUTABLE and cannot load it via -dextension');
 }
@@ -31,7 +31,7 @@ require_once __DIR__ . '/build_phar.inc';
 
 $ext_enable = ' ';
 $loaded = shell_exec(PHP_BINARY . ' -m');
-if (strpos($loaded, 'Swow') === false) {
+if (!str_contains($loaded, 'Swow')) {
     $ext_enable = ' -dextension=swow ';
 }
 

@@ -66,12 +66,8 @@ interface ServerRequestPlusInterface extends RequestPlusInterface, ServerRequest
     /** @return array<mixed> */
     public function getAttributes(): array;
 
-    /**
-     * @param string $name
-     * @param mixed $default
-     * @return mixed
-     */
-    public function getAttribute(mixed $name, mixed $default = null);
+    /** @param string $name */
+    public function getAttribute(mixed $name, mixed $default = null): mixed;
 
     public function setAttribute(string $name, mixed $value): static;
 
