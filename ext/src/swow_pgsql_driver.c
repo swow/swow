@@ -2625,13 +2625,15 @@ zend_result swow_pgsql_module_init(INIT_FUNC_ARGS)
 			// macports/brew
 			"/opt/local/lib/",
 			// brew
-			"/usr/local/Cellar/libpq@15/",
-			"/usr/local/Cellar/libpq@14/",
+			"/usr/local/Cellar/libpq@15/lib/",
+			"/usr/local/Cellar/libpq@14/lib/",
+			// brew (new)
+			// @see: https://earthly.dev/blog/homebrew-on-m1/)
+			"/opt/homebrew/opt/libpq/lib/",
 			// postgres.app
 			"/Applications/Postgres.app/Contents/Versions/latest/lib/",
 			// fink
-			"/sw/lib",
-			NULL
+			"/sw/lib/",
 		}
 # elif defined(CAT_OS_WIN)
 #  define LIBPQ_SO_NAME "libpq.dll"
@@ -2640,11 +2642,10 @@ zend_result swow_pgsql_module_init(INIT_FUNC_ARGS)
 			"C:\\Program Files\\PostgreSQL\\14\\bin\\",
 			"C:\\Program Files (x86)\\PostgreSQL\\15\\bin\\",
 			"C:\\Program Files (x86)\\PostgreSQL\\14\\bin\\",
-			NULL
 		}
 # else
 #  define LIBPQ_SO_NAME "libpq." PHP_SHLIB_SUFFIX
-		{ NULL }
+		{ "" }
 # endif
 	;
 
@@ -2653,11 +2654,11 @@ zend_result swow_pgsql_module_init(INIT_FUNC_ARGS)
 		char name_buf[64];
 		for (int i = 0; i < CAT_ARRAY_SIZE(library_paths); i++) {
 			snprintf(name_buf, sizeof(name_buf), "%s%s", library_paths[i], LIBPQ_SO_NAME);
-			
+
 #ifdef CAT_OS_WIN
 			SetDllDirectoryA(library_paths[i]);
 #endif
-			dummy_handle = DL_LOAD(name_buf);			
+			dummy_handle = DL_LOAD(name_buf);
 #ifdef CAT_OS_WIN
 			SetDllDirectoryA(NULL);
 #endif
@@ -2668,7 +2669,15 @@ zend_result swow_pgsql_module_init(INIT_FUNC_ARGS)
 
 	}
 	if (!dummy_handle) {
-		php_error_docref(NULL, E_WARNING, "Swow pdo_pgsql hook not enabled, " LIBPQ_SO_NAME " not found");
+		smart_str paths = {0};
+		for (int i = 0; i < CAT_ARRAY_SIZE(library_paths); i++) {
+			smart_str_appends(&paths, library_paths[i]);
+			smart_str_appendc(&paths, ',');
+		}
+		ZSTR_LEN(paths.s) -= 1;
+		smart_str_0(&paths);
+		php_error_docref(NULL, E_WARNING, "Swow pdo_pgsql hook not enabled, " LIBPQ_SO_NAME " not found, (search paths: %s)", ZSTR_VAL(paths.s));
+		smart_str_free(&paths);
 		return SUCCESS;
 	}
 #endif // COMPILE_DL_SWOW
