@@ -22,6 +22,7 @@ use ValueError;
 
 use function get_debug_type;
 use function sprintf;
+use function strlen;
 use function Swow\Debug\isStringable;
 
 use const SEEK_CUR;
@@ -34,9 +35,9 @@ class BufferStream implements StreamPlusInterface
     protected int $offset = 0;
 
     /**
-     * @param scalar|Buffer $data
+     * @param scalar|Stringable|Buffer $data
      */
-    public function __construct(mixed $data)
+    public function __construct(mixed $data = '')
     {
         if ($data instanceof Buffer) {
             $this->buffer = $data;
@@ -98,6 +99,7 @@ class BufferStream implements StreamPlusInterface
         if ($thisOffset < 0 || $thisOffset > $this->getSize()) {
             throw new InvalidArgumentException('Offset is overflow');
         }
+        $this->offset = $thisOffset;
     }
 
     public function rewind(): void
@@ -107,27 +109,42 @@ class BufferStream implements StreamPlusInterface
 
     public function isWritable(): bool
     {
-        return $this->buffer->isLocked();
+        return true;
     }
 
     public function write(mixed $string): int
     {
-        return $this->buffer->write($this->offset, (string) $string);
+        $buffer = $this->buffer;
+        $appendLength = $this->offset + strlen($string) - $buffer->getLength();
+        if ($appendLength > 0) {
+            $buffer->prepare($appendLength);
+        }
+        $nWrite = $buffer->write($this->offset, (string) $string);
+        $this->offset += $nWrite;
+        return $nWrite;
     }
 
     public function isReadable(): bool
     {
-        return $this->buffer->isLocked();
+        return true;
     }
 
     public function read(mixed $length): string
     {
-        return $this->buffer->read($this->offset, $length);
+        $buffer = $this->buffer;
+        $offset = $this->offset;
+        $bufferLength = $buffer->getLength();
+        if ($length > 0 && $offset + $length > $bufferLength) {
+            $length = $bufferLength - $offset;
+        }
+        $string = $buffer->read($offset, $length);
+        $this->offset += strlen($string);
+        return $string;
     }
 
     public function getContents(): string
     {
-        return $this->buffer->read($this->offset, -1);
+        return $this->read(-1);
     }
 
     public function getMetadata(mixed $key = null): mixed
