@@ -5,15 +5,15 @@ swow_misc: weak dependency
 require __DIR__ . '/../include/skipif.php';
 $loaded1 = shell_exec(PHP_BINARY . ' -m');
 $ext_enable = '';
-if (strpos($loaded1, 'Swow') === false) {
+if (!str_contains($loaded1, 'Swow')) {
     $ext_enable .= ' ' . (getenv('TEST_PHP_ARGS') ?: '');
     $ext_enable .= ' ' . (getenv('TEST_PHP_EXTRA_ARGS') ?: '');
     $ext_enable = trim($ext_enable) ?: '-dextension=swow';
 }
 $loaded2 = shell_exec(PHP_BINARY . " {$ext_enable} -m");
 if (
-    strpos($loaded2, 'Swow') === false ||
-    strpos($loaded2, 'Warning') !== false
+    !str_contains($loaded2, 'Swow') ||
+    str_contains($loaded2, 'Warning')
 ) {
     skip('Swow is not present in TEST_PHP_EXECUTABLE and cannot load it via -dextension');
 }
@@ -45,7 +45,7 @@ $args .= " -dextension_dir={$extension_dir}";
 // start test
 $loaded2 = shell_exec(PHP_BINARY . " -n {$args} -r \"echo Swow\\Extension::VERSION; echo 'hello Swow';\"");
 if (
-    strpos($loaded2, 'hello Swow') === false
+    !str_contains($loaded2, 'hello Swow')
 ) {
     echo "badresult: {$loaded2}\n";
 }
