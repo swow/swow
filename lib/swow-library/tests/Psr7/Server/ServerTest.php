@@ -26,6 +26,7 @@ use Swow\Http\Protocol\ProtocolException as HttpProtocolException;
 use Swow\Http\Protocol\ReceiverTrait;
 use Swow\Http\Status;
 use Swow\Psr7\Client\Client;
+use Swow\Psr7\Message\Request;
 use Swow\Psr7\Message\UpgradeType;
 use Swow\Psr7\Message\WebSocketFrame;
 use Swow\Psr7\Psr7;
@@ -444,5 +445,26 @@ final class ServerTest extends TestCase
         $frame = $client->recvWebSocketFrame();
         $this->assertSame((string) $frame->getPayloadData(), $random);
         $wr::wait($wr);
+    }
+
+    public function testEmptyContentType(): void
+    {
+        $server = new Server();
+        $server->bind('127.0.0.1')->listen();
+        $wr = new WaitReference();
+        Coroutine::run(static function () use ($server, $wr): void {
+            $connection = $server->acceptConnection();
+            $request = $connection->recvHttpRequest();
+            $connection->respond(serialize($request));
+        });
+        $client = new Client();
+        $client->connect($server->getSockAddress(), $server->getSockPort());
+        $request = Psr7::createRequest(method: 'GET', uri: '/', headers: ['Content-Type' => '']);
+        $response = $client->sendRequest($request);
+        $wr::wait($wr);
+        /** @var Request $requestDup */
+        $requestDup = unserialize((string) $response->getBody());
+        $this->assertTrue($requestDup->hasHeader('Content-Type'));
+        $this->assertSame('', $requestDup->getHeaderLine('Content-Type'));
     }
 }
