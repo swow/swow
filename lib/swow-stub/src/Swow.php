@@ -1140,6 +1140,7 @@ namespace Swow
          * @phpstan-param int<-1, max> $length
          * @psalm-param int<-1, max> $length
          * @param int $length -1 meaning read all available, otherwise max length in byte to read
+         * @return string data read
          */
         public function read(int $start = 0, int $length = -1): string { }
 
@@ -1160,6 +1161,7 @@ namespace Swow
          * @phpstan-param int<-1, max> $length
          * @psalm-param int<-1, max> $length
          * @param int $length meaning write all available data from string to buffer, otherwise max length in byte to write
+         * @return int bytes written
          */
         public function write(int $offset, \Stringable|string $string, int $start = 0, int $length = -1): int { }
 
@@ -1176,12 +1178,17 @@ namespace Swow
          * @phpstan-param int<-1, max> $length
          * @psalm-param int<-1, max> $length
          * @param int $length -1 meaning write all available data from string to buffer, otherwise max length in byte to write
+         * @return int bytes written
          */
         public function append(\Stringable|string $string, int $start = 0, int $length = -1): int { }
 
+        /** @return int length of buffer after truncate */
         public function truncate(int $length): int { }
 
-        /** @param int $offset [optional] = $this->getOffset() */
+        /**
+         * @param int $offset [optional] = $this->getOffset()
+         * @return int length of buffer after truncate
+         */
         public function truncateFrom(int $offset = 0, int $length = -1): int { }
 
         public function clear(): void { }
