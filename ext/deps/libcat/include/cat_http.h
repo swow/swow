@@ -129,9 +129,7 @@ CAT_API const char *cat_http_status_get_reason(cat_http_status_code_t status);
 #define CAT_HTTP_PARSER_ERRNO_MAP(XX) \
     HTTP_ERRNO_MAP(XX) \
     XX(HPE_MAX + 1, NOMEM, NOMEM) \
-    XX(HPE_MAX + 2, MULTIPART_HEADER, MULTIPART_HEADER) \
-    XX(HPE_MAX + 3, DUPLICATE_CONTENT_TYPE, DUPLICATE_CONTENT_TYPE) \
-    XX(HPE_MAX + 4, MULTIPART_BODY, MULTIPART_BODY) \
+    XX(HPE_MAX + 2, MULTIPART, MULTIPART) \
 
 typedef enum cat_http_parser_standard_errno_e {
 #define CAT_HTTP_PARSER_ERRNO_GEN(code, name, string) CAT_EHP_ ## name = CAT_HTTP_PARSER_STANDARD_ERRNO_START - (code),
@@ -229,16 +227,14 @@ typedef struct cat_http_parser_s {
     cat_http_parser_internal_flags_t internal_flags;
     /* private: handle */
     llhttp_t llhttp;
-    /* private: multipart parser */
-    multipart_parser multipart;
-    /* private: multipart parser header parser index */
-    uint8_t multipart_header_index;
-    /* private: multipart parser state*/
+    /* private: multipart content-type field parser state, also used for mark in-body parsing */
     uint8_t multipart_state;
-    /* private: callback complete state */
-    uint8_t complete_state;
     /* private: multipart parser header parser buffer */
     char multipart_header[12];
+    /* private: multipart content-type value parser state */
+    int header_value_parser_state;
+    /* private: multipart parser */
+    multipart_parser multipart;
     /* private: multipart parser pointer */
     const char *multipart_ptr;
 } cat_http_parser_t;
