@@ -108,6 +108,13 @@ class UploadedFile implements UploadedFilePlusInterface, ArrayableInterface
         }
     }
 
+    public function __destruct()
+    {
+        if (!$this->moved && $this->file !== null) {
+            @unlink($this->file);
+        }
+    }
+
     /**
      * @throws RuntimeException if is moved or not ok
      */
