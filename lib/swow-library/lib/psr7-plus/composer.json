@@ -1,6 +1,6 @@
 {
     "name": "swow/psr7-plus",
-    "description": "Modern strong-typed interfaces and more performant implementations for Psr7, not only HTTP but also WebSocket",
+    "description": "Modern strong-typed interfaces for Psr7, not only HTTP but also WebSocket",
     "keywords": [
         "swow",
         "psr7",
@@ -26,12 +26,7 @@
     },
     "autoload": {
         "psr-4": {
-            "Swow\\Psr7": "src/"
-        }
-    },
-    "autoload-dev": {
-        "psr-4": {
-            "Swow\\Tests\\": "tests/"
+            "Swow\\Psr7\\Message\\": "src/Message/"
         }
     },
     "config": {
