@@ -134,7 +134,7 @@ jobs:
           }
           Write-Host "::group::Installing swow"
           Copy-Item ext\${{ matrix.arch }}\Release${{ matrix.ts == 1 && '_TS' || '' }}\php_swow.dll ${{ env.tools_path }}\php\ext\
-          "extension_dir=C:\tools\phpdev\php\ext`nzend_extension=opcache`nextension=swow`n" | Out-File ${{ env.tools_path }}\php\php.ini -Encoding ASCII # for no BOM
+          "extension_dir=C:\tools\phpdev\php\ext`nzend_extension=opcache`nextension=curl`nextension=openssl`nextension=pdo_pgsql`nextension=swow`n" | Out-File ${{ env.tools_path }}\php\php.ini -Encoding ASCII # for no BOM
           php --ri swow
 
       # shell we move these commands into some bats or composer.json?
