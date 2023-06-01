@@ -29,7 +29,7 @@ jobs:
     outputs:
       ref: ${{ steps.getref.outputs.ref }}
     env:
-      deps: openssl,libcurl,zlib,libssh2,nghttp2
+      deps: openssl,libcurl,libssh2,zlib,nghttp2,libpq
       tools_path: C:\tools\phpdev
       dllname: "php_swow-php${{ matrix.php-version }}-${{ matrix.arch }}-${{ (matrix.ts == '0') && 'n' || '' }}ts-VS16"
     steps:
@@ -114,7 +114,7 @@ jobs:
           phpts: ${{ matrix.ts }}
           phparch: ${{ matrix.arch }}
           install: "0"
-          conf-args: "--enable-swow-ssl --enable-swow-curl --enable-debug-pack"
+          conf-args: "--enable-swow-ssl --enable-swow-curl  --enable-swow-pdo-pgsql --enable-debug-pack"
       - name: Prepare php for test
         id: php-inst
         continue-on-error: true
@@ -136,18 +136,26 @@ jobs:
           Copy-Item ext\${{ matrix.arch }}\Release${{ matrix.ts == 1 && '_TS' || '' }}\php_swow.dll ${{ env.tools_path }}\php\ext\
           "extension_dir=C:\tools\phpdev\php\ext`nzend_extension=opcache`nextension=swow`n" | Out-File ${{ env.tools_path }}\php\php.ini -Encoding ASCII # for no BOM
           php --ri swow
+
       # shell we move these commands into some bats or composer.json?
       - name: Run extension tests
-        shell: cmd
+        shell: pwsh
         id: ext-test
         continue-on-error: true
         if: steps.php-inst.outcome == 'success'
         env:
           UNIX_COLOR: "1"
         run: |
-          SET NO_INTERACTION=1 && ^
-          SET TEST_PHP_EXECUTABLE=C:\tools\phpdev\php\php.exe && ^
-          C:\tools\phpdev\php\php.exe tools/test-extension.php
+          & "${env:PGBIN}\initdb.exe" --locale=C -E UTF-8 -U postgres "C:\pgsqldata"
+          & "${env:PGBIN}\pg_ctl.exe" -D "C:\pgsqldata" start
+          ${env:TEST_SWOW_POSTGRESQL} = "1"
+          ${env:TEST_PHP_EXECUTABLE} = "C:\tools\phpdev\php\php.exe"
+          & C:\tools\phpdev\php\php.exe C:\tools\php\composer.phar test-extension
+          if (0 -Ne $lastexitcode) {
+            err "Failed test"
+            exit 1
+          }
+
       - name: Generate information about this dll
         shell: powershell
         run: |
@@ -162,6 +170,7 @@ jobs:
             "runid" = "${{ github.run_id }}";
             "jobname" = "PHP-${{ matrix.php-version }}-${{ matrix.arch }}-${{ (matrix.ts == '0') && 'N' || '' }}TS-VS16";
           } | ConvertTo-Json -Compress | Out-File "${fn}.json" -Encoding ASCII # for no BOM
+
       - name: Upload artifact
         uses: actions/upload-artifact@v2
         with:
@@ -170,6 +179,7 @@ jobs:
             ${{ env.dllname }}.dll
             ${{ env.dllname }}.pdb
             ${{ env.dllname }}.dll.json
+
       # see notes at cache step
       # TODO: remove this step when upstream fixed the bug
       - name: Remove ini and dll to avoid them being cached
@@ -177,6 +187,7 @@ jobs:
         run: |
           Remove-Item ${{ env.tools_path }}\php\ext\php_swow.dll
           Remove-Item ${{ env.tools_path }}\php\php.ini
+
   uploaddlls:
     name: Upload DLLs
     if: ${{ github.event_name == 'push' }}
