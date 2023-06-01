@@ -37,12 +37,14 @@ jobs:
         uses: actions/checkout@v3
         with:
           ref: ${{ (github.event.inputs && github.event.inputs.ref) || github.ref }}
+
       - name: Get git commit ref hash
         id: getref
         shell: powershell
         run: |
           $ref = git rev-parse HEAD
           Write-Output "ref=$ref" | Out-File "${env:GITHUB_OUTPUT}" -Append
+
       - name: Prepare caches
         id: cacheprepare
         env:
@@ -90,6 +92,7 @@ jobs:
             -DryRun 1 &&
           ($ret = 0 | Out-Null)
           exit $ret
+
       - name: Cache build environments
         uses: actions/cache@v3
         with:
@@ -102,6 +105,7 @@ jobs:
             !${{ env.tools_path }}\php\ext\php_swow.dll
             !${{ env.tools_path }}\php\php.ini
           key: buildenv-v1-${{ matrix.arch }}-${{ matrix.ts }}-${{ steps.cacheprepare.outputs.php-version }}-${{ steps.cacheprepare.outputs.devpackver }}-${{ steps.cacheprepare.outputs.downloadeddeps }}-${{ steps.cacheprepare.outputs.phpsdkver }}
+
       - name: Build Swow extension
         id: ext-build
         uses: ./.github/workflows/winext
@@ -115,6 +119,7 @@ jobs:
           phparch: ${{ matrix.arch }}
           install: "0"
           conf-args: "--enable-swow-ssl --enable-swow-curl  --enable-swow-pdo-pgsql --enable-debug-pack"
+
       - name: Prepare php for test
         id: php-inst
         continue-on-error: true
@@ -137,7 +142,6 @@ jobs:
           "extension_dir=C:\tools\phpdev\php\ext`nzend_extension=opcache`nextension=curl`nextension=openssl`nextension=pdo_pgsql`nextension=swow`n" | Out-File ${{ env.tools_path }}\php\php.ini -Encoding ASCII # for no BOM
           php --ri swow
 
-      # shell we move these commands into some bats or composer.json?
       - name: Run extension tests
         shell: pwsh
         id: ext-test
@@ -151,9 +155,10 @@ jobs:
           ${env:TEST_SWOW_POSTGRESQL} = "1"
           ${env:TEST_PHP_EXECUTABLE} = "C:\tools\phpdev\php\php.exe"
           & C:\tools\phpdev\php\php.exe C:\tools\php\composer.phar test-extension
-          if (0 -Ne $lastexitcode) {
-            err "Failed test"
-            exit 1
+          $ret = $lastexitcode
+          Write-Host "exit code $ret"
+          if( 0 -Ne $ret ){
+              exit 1
           }
 
       - name: Generate information about this dll
