@@ -130,11 +130,64 @@ function pseudo_random_sleep(): void
     usleep($seed);
 }
 
-function real_php_path(): string
+/**
+ * split posix args into array, like python shlex.split
+ *
+ * @param string $args the posix args string to split
+ * @return array the splitted args
+ */
+function shell_split(string $args): array
 {
-    return realpath(PHP_BINARY);
+    $ret = [];
+    $len = strlen($args);
+    $i = 0;
+    $in_quote = false;
+    $quote = '';
+    $arg = '';
+    while ($i < $len) {
+        $c = $args[$i];
+        if ($in_quote) {
+            if ($c === $quote) {
+                $in_quote = false;
+            } else {
+                $arg .= $c;
+            }
+        } else {
+            if ($c === '"' || $c === "'") {
+                $in_quote = true;
+                $quote = $c;
+            } elseif ($c === ' ') {
+                if ($arg !== '') {
+                    $ret[] = $arg;
+                    $arg = '';
+                }
+            } else {
+                $arg .= $c;
+            }
+        }
+        $i++;
+    }
+    if ($arg !== '') {
+        $ret[] = $arg;
+    }
+    return $ret;
 }
 
+/**
+ * Returns testing php absulote path
+ *
+ * @return string the testing php absulote path
+ */
+function test_php_path(): string
+{
+    return realpath(getenv('TEST_PHP_EXECUTABLE') ?: PHP_BINARY);
+}
+
+/**
+ * Returns php options that enables swow
+ *
+ * @return array args that enables swow
+ */
 function php_options_with_swow(): array
 {
     static $options;
@@ -157,8 +210,6 @@ function php_options_with_swow(): array
     // guessing
     $try_args = match (PHP_OS_FAMILY) {
         'Windows' => [
-            // installed, enabled
-            [],
             // installed
             ['-d', 'extension=swow'],
             // made
@@ -172,8 +223,6 @@ function php_options_with_swow(): array
             ],
         ],
         default => [
-            // installed, enabled
-            [],
             // installed
             ['-d', 'extension=swow'],
             // made in phpize
@@ -182,12 +231,20 @@ function php_options_with_swow(): array
             ['-d', 'extension=modules/swow' . (PHP_OS_FAMILY === 'Darwin' ? '.dylib' : '.so')],
         ]
     };
+    // run-test args
+    array_unshift($try_args, [
+        ...shell_split(getenv('TEST_PHP_ARGS') ?: ''),
+        ...shell_split(getenv('TEST_PHP_EXTRA_ARGS') ?: ''),
+    ]);
+    // installed, enabled
+    array_unshift($try_args, []);
 
     $ext_args = null;
     foreach ($try_args as $args) {
-        $is_swow_enabled = shell_exec(real_php_path() . ' --ri swow ' . implode(' ', $args) . ' 2>&1');
+        $is_swow_enabled = shell_exec(test_php_path() . ' --ri swow ' . implode(' ', $args) . ' 2>&1');
         if (!str_contains($is_swow_enabled, 'not present')) {
             $ext_args = $args;
+            break;
         }
     }
     if ($ext_args === null) {
@@ -201,12 +258,12 @@ function php_options_with_swow(): array
 
 function php_exec_with_swow(string $args)
 {
-    return shell_exec(real_php_path() . ' ' . implode(' ', php_options_with_swow()) . ' ' . $args . ' 2>&1');
+    return shell_exec(test_php_path() . ' ' . implode(' ', php_options_with_swow()) . ' ' . $args . ' 2>&1');
 }
 
 function php_proc_with_swow(array $args, callable $handler, array $options = []): int
 {
-    $_args = array_merge([real_php_path()], php_options_with_swow(), $args);
+    $_args = array_merge([test_php_path()], php_options_with_swow(), $args);
     $proc = proc_open($_args, [
         0 => $options['stdin'] ?? STDIN,
         1 => $options['stdout'] ?? ['pipe', 'w'],

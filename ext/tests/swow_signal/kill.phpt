@@ -12,7 +12,7 @@ use Swow\Signal;
 
 $proc = proc_open(
     [
-        real_php_path(),
+        test_php_path(),
         '-r',
         'echo getmypid().PHP_EOL;' .
             'sleep(10);' .
