@@ -32,12 +32,29 @@ class Server extends Socket
 
     use ServerPsr17FactoryTrait;
 
+    protected int $recvMessageTimeout = -1;
+
     public function __construct(int $type = self::TYPE_TCP)
     {
         parent::__construct($type);
         $this->__constructServerConnectionManager();
         $this->__constructServerConnectionFactory();
         $this->__constructServerPsr17Factory();
+    }
+
+    public function getRecvMessageTimeout(): int
+    {
+        return $this->recvMessageTimeout;
+    }
+
+    /**
+     * @param int $timeout HTTP keep alive timeout in milliseconds
+     */
+    public function setRecvMessageTimeout(int $timeout): static
+    {
+        $this->recvMessageTimeout = $timeout;
+
+        return $this;
     }
 
     public function acceptConnection(?int $timeout = null): ServerConnection

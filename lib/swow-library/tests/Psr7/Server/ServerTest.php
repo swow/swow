@@ -180,6 +180,7 @@ final class ServerTest extends TestCase
         foreach ([0, 100, 1000, 10 * 1000, -1] as $readTimeout) {
             Coroutine::run(function () use ($readTimeout, $wr): void {
                 $server = new Server();
+                $server->setRecvMessageTimeout(500);
                 $server->bind('127.0.0.1')->listen();
                 $attacker = Coroutine::run(function () use ($server): void {
                     $client = new Socket(Socket::TYPE_TCP);
@@ -197,7 +198,9 @@ final class ServerTest extends TestCase
                 });
                 $connection = $server->acceptConnection();
                 $connection->setReadTimeout($readTimeout);
-                $request = $connection->recvHttpRequest(500);
+                $this->assertSame($connection->getRecvMessageTimeout(), 500);
+
+                $request = $connection->recvHttpRequest();
                 $connection->send('X');
                 $this->assertSame($request->getHeaderLine('Connection'), 'keep-alive');
                 $exception = null;
