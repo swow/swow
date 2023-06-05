@@ -95,9 +95,6 @@ class Psr17Factory implements Psr17PlusFactoryInterface
 
     public function createServerConnection(Server $server): ServerConnection
     {
-        $connection = new ServerConnection($server);
-        // Inherited server configuration.
-        $connection->setRecvMessageTimeout($server->getRecvMessageTimeout());
-        return $connection;
+        return new ServerConnection($server);
     }
 }
