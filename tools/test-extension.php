@@ -90,4 +90,13 @@ $userArgs = array_map('escapeshellarg', $userArgs);
 $userArgs = escapeshellarg(implode(' ', $userArgs));
 
 notice('Start testing Swow');
+/*
+ * Workaround for GitHub actions strange failures on Windows release builds,
+ * we haven't found the reason why the program suddenly exited with 0,
+ * but after we set default_socket_timeout to 300, it works.
+ * We have tried:
+ * `php -d extension=swow -d default_socket_timeout=1 -r "passthru('sleep 999');"`
+ * or without swow, but results show that Swow has no effect on this...
+ */
+ini_set('default_socket_timeout', '300');
 exit(passthru("{$shell} \"{$cmd} {$options} \"{$userArgs}"));
