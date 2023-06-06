@@ -315,14 +315,18 @@ static cat_always_inline cat_curl_multi_context_t *cat_curl_multi_get_context(CU
 
 static void cat_curl_multi_context_close(cat_curl_multi_context_t *context)
 {
-#ifdef CAT_DONT_OPTIMIZE /* fds should have been free'd in curl_multi_socket_function() */
-    cat_curl_pollfd_t *fd;
-    while ((fd = cat_queue_front_data(&context->fds, cat_curl_pollfd_t, node))) {
-        cat_queue_remove(&fd->node);
-        cat_free(fd);
-        context->nfds--;
+    /* we assume that fds should have been free'd in curl_multi_socket_function() before,
+     * but when fatal error occurred and we called curl_multi_cleanup() without calling
+     * curl_multi_remove_handle(), fd storage would not be removed from fds.  */
+    if (context->nfds > 0) {
+        CAT_LOG_DEBUG_V2(CURL, "curl_multi_context_close(multi: %p) with %zu fds", context->multi, (size_t) context->nfds);
+        cat_curl_pollfd_t *fd;
+        while ((fd = cat_queue_front_data(&context->fds, cat_curl_pollfd_t, node))) {
+            cat_queue_remove(&fd->node);
+            cat_free(fd);
+            context->nfds--;
+        }
     }
-#endif
     CAT_ASSERT(context->nfds == 0);
     RB_REMOVE(cat_curl_multi_context_tree_s, &CAT_CURL_G(multi_tree), context);
     cat_free(context);
