@@ -142,6 +142,9 @@ jobs:
           "extension_dir=C:\tools\phpdev\php\ext`nzend_extension=opcache`nextension=curl`nextension=openssl`nextension=pdo_pgsql`nextension=swow`n" | Out-File ${{ env.tools_path }}\php\php.ini -Encoding ASCII # for no BOM
           php --ri swow
 
+      # FIXME: we used `& C:\tools\phpdev\php\php.exe C:\tools\php\composer.phar test-extension` before,
+      # GitHub actions have strange failures on Windows release builds,
+      # we haven't found the reason why the program suddenly exited with 0 under composer.
       - name: Run extension tests
         shell: pwsh
         id: ext-test
@@ -154,7 +157,8 @@ jobs:
           & "${env:PGBIN}\pg_ctl.exe" -D "C:\pgsqldata" start
           ${env:TEST_SWOW_POSTGRESQL} = "1"
           ${env:TEST_PHP_EXECUTABLE} = "C:\tools\phpdev\php\php.exe"
-          & C:\tools\phpdev\php\php.exe C:\tools\php\composer.phar test-extension
+          Set-Location ext
+          & C:\tools\phpdev\php\php.exe run-tests.php -P --show-diff --show-slow 1000 --set-timeout 30 --color
           $ret = $lastexitcode
           Write-Host "exit code $ret"
           if( 0 -Ne $ret ){
