@@ -13,10 +13,10 @@ declare(strict_types=1);
 
 return [
     'swow-extension' => [
-        'version' => '1.3.0',
+        'version' => '1.3.1-dev',
     ],
     'swow-library' => [
-        'version' => '1.3.0',
+        'version' => '1.3.1-dev',
         /* library of v1.3.0 truly only required v1.2.0 extension,
          * because extension has no changes since v1.2.0 to v1.3.0. */
         'required_extension_version' => '^1.2.0',
