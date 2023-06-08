@@ -14,15 +14,7 @@ declare(strict_types=1);
 use function Swow\Utils\info;
 use function Swow\Utils\success;
 
-$versions = [
-    'swow-extension' => [
-        'version' => '1.2.1-dev',
-    ],
-    'swow-library' => [
-        'version' => '1.2.1-dev',
-        'required_extension_version' => '^1.2.0',
-    ],
-];
+$versions = require __DIR__ . '/versions.php';
 
 putenv('SKIP_SWOW_REQUIRED_EXTENSION_CHECK=1');
 

@@ -54,12 +54,12 @@ namespace Swow
 {
     class Extension
     {
-        public const VERSION = '1.2.1-dev';
-        public const VERSION_ID = 10201;
+        public const VERSION = '1.3.0';
+        public const VERSION_ID = 10300;
         public const MAJOR_VERSION = 1;
-        public const MINOR_VERSION = 2;
-        public const RELEASE_VERSION = 1;
-        public const EXTRA_VERSION = 'dev';
+        public const MINOR_VERSION = 3;
+        public const RELEASE_VERSION = 0;
+        public const EXTRA_VERSION = '';
 
         public static function isBuiltWith(string $lib): bool { }
     }
@@ -637,9 +637,7 @@ namespace Swow
         public const EHP_CB_CHUNK_EXTENSION_VALUE_COMPLETE = -816035;
         public const EHP_CB_RESET = -816031;
         public const EHP_NOMEM = -816065;
-        public const EHP_MULTIPART_HEADER = -816066;
-        public const EHP_DUPLICATE_CONTENT_TYPE = -816067;
-        public const EHP_MULTIPART_BODY = -816068;
+        public const EHP_MULTIPART = -816066;
 
         public static function getDescriptionOf(int $error): string { }
     }

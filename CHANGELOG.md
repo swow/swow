@@ -1,4 +1,61 @@
-# [v1.2.0](https://github.com/swow/swow/releases/tag/v1.2.0)
+# v1.3.0
+
+> release-date: 2023-06-09
+
+> 差距并不可怕，可怕的是因为差距而放弃。
+>
+> The gap is not terrible. What's terrible is giving up because of it.
+
+## 🐣 What's New
+
++ Support PDO PostgreSQL (#137) (@huanghantao)
++ Weak dependency for PDO (#171) (@dixyes)
++ Support ServerConnection->sendHttpFile() (#168) (@PandaLIU-1111)
++ Support remove temp file automatically (#172) (@PandaLIU-1111)
++ Support simple HTTP recvMessage timeout (dd615e9) (@twose)
++ Server config connection recvMessage timeout (#194) (@xuanyanwow)
++ Provides psr7-plus in an independent composer package (6142114)  (2667931) (@twose)
++ Introduce dontdie as an independent composer package (6ce662e) (@twose)
+
+## ✨ What's Enhanced
+
++ Use psr/http-message v1.1 (e6743e5) (@twose)
++ Rename swow.async_stdio to swow.async_tty (7283708) (@twose)
++ Remove extra export ignores (2e5abe9) (@dixyes)
++ Support resolve path list of autoload in composer.json (90e0d39) (@twose)
++ Support maxExecutionTime for dontDie() (ddfe1ad) (@twose)
++ Support nickname option for dontdie (8f347af) (@twose)
++ Add a test for empty Content-Type (e6a7ce1) (@twose)
++ Added ServerConnection SendHttpFile test case (#170) (@PandaLIU-1111)
++ Add comments for some Buffer methods (57b2121) (@twose)
++ Fix "Doc tag without variable name" (ea620d9) (@twose)
+
+## 🐛 What's Fixed
+
+* Fix Psr7 BufferStream implementation and add tests for it (#192) (@twose)
+* Fix setParsedBody params type (#174) (@duxphp)
+* Fix PHP stream create TLS server error (#187) (f758a40) (@twose)
+* Fix incorrect parsedOffset (94b689c) (@twose)
+* Fix preserveBodyData not work (4fb20dd) (@twose)
+* Fix incorrect error code of try APIs (572278b) (@twose)
+* Fix require package name (c9a5dea) (@twose)
+* Fix pdo header check (255ac36) (@dixyes)
+* Fix ulimit typo (a628513) (@dixyes)
+* Fix MODULES_CHECK_PRE memory error (90bb701) (@twose)
+* Fix exdev copy logic (70cb109) (@dixyes)
+* Fix Socket->sendFile() behaviour with length 0 (aad9911) (@twose)
+* Always backup native ops/wrapper (efc2f80) (@twose)
+* Defensive programming for ENOTCONN when call getpeername() on accepted socket (32c1fa5) (@twose)
+* Defensive programming for preserve body data case (0e2cb0f) (@twose)
+* Workaround for test-extension unexpected exit (70c1744) (@twose)
+
+## 👻 What's Removed
+
+- Nothing removed
+
+---
+
+# v1.2.0
 
 > release-date: 2023-02-26
 
@@ -8,38 +65,38 @@
 
 ## 🐣 What's New
 
-- New API: Socket->sendFile() ([`da2397f`](https://github.com/swow/swow/commit/da2397fba8ae6d8bd7bfd17f6c9bb4d1c8650932))
-- New APIs: `Coroutine->getStartTime()`, `Coroutine->getEndTime()` ([`64f516e`](https://github.com/swow/swow/commit/64f516e06515898134a161ce7ff29552884eab52))
-- New Constant: WebSocket::DEFAULT_MASKING_KEY ([`72f1920`](https://github.com/swow/swow/commit/72f1920175672a0a652397ac5dff155afd8e3166))
-- New Config: Introduce autoUnmask config for specific requirements ([`56088cc`](https://github.com/swow/swow/commit/56088cc8b961a12dc8e161c440c96bb28cf0122a))
-- Support use PHP ini to configure async stdio/file hook and async threads (swow.async_threads=4, swow.async_file=1, swow.async_stdio=1 by default) ([`0d94d1a`](https://github.com/swow/swow/commit/0d94d1a09e568c7f100978844016ce38b263f202))
+- New API: Socket->sendFile() (da2397f)
+- New APIs: `Coroutine->getStartTime()`, `Coroutine->getEndTime()` (64f516e)
+- New Constant: WebSocket::DEFAULT_MASKING_KEY (72f1920)
+- New Config: Introduce autoUnmask config for specific requirements (56088cc)
+- Support use PHP ini to configure async stdio/file hook and async threads (swow.async_threads=4, swow.async_file=1, swow.async_stdio=1 by default) (0d94d1a)
 
 ## ✨ What's Enhanced
 
-- Support get php binary files via php-config ([#158](https://github.com/swow/swow/pull/158)) ([@sy-records](https://github.com/sy-records))
-- Run update docs ci under swow organization only ([#159](https://github.com/swow/swow/pull/159)) ([@sy-records](https://github.com/sy-records))
-- Handle empty maskingKey and empty data for WebSocket::unmask() ([`3d07a94`](https://github.com/swow/swow/commit/3d07a94a1bb07296a4763ce8dd1747da9ee3f576))
-- Skip NULL values when pack headers ([`977c54c`](https://github.com/swow/swow/commit/977c54cf848e7445c048aacd5882e783b0a105f0))
-- Add HTTP event-stream case for mixed server example ([`923e69e`](https://github.com/swow/swow/commit/923e69ef38f770606f4f1212ebc5ed02465b1852))
+- Support get php binary files via php-config (#158) (@sy-records)
+- Run update docs ci under swow organization only (#159) (@sy-records)
+- Handle empty maskingKey and empty data for WebSocket::unmask() (3d07a94)
+- Skip NULL values when pack headers (977c54c)
+- Add HTTP event-stream case for mixed server example (923e69e)
 
 ## 🐛 What's Fixed
 
-- Fix stream_select() hangs on server for all platforms ([#162](https://github.com/swow/swow/issues/162))
-- Fix missing SSL module init ([`90ea96c`](https://github.com/swow/swow/commit/90ea96c4ef7bd7365d0a18e3451bb569c75bf9df))
-- Fix test-extension.php can not run without composer ([`329d49d`](https://github.com/swow/swow/commit/329d49d3516a0f2178e5b611d77c4cb1e117a1c0))
-- Fix callable memory leak when coroutine allocation failed ([`25be041`](https://github.com/swow/swow/commit/25be04199c52844168ebf51f473b5edd831d3337))
-- Some fixes for Debugger: Fix `p` and `vars` does not work; Fix missing `step_in` command ([`63a9c84`](https://github.com/swow/swow/commit/63a9c84989b33a658c64e5c1b1fc3897ee8fed44))
-- Fix PHP rename() did not work for cross devices ([`9903049`](https://github.com/swow/swow/commit/9903049f068f4646ba5e1e8584878544870c68f8))
-- Fix WebSocket payloadData buffer size ([`ee8bc7c`](https://github.com/swow/swow/commit/ee8bc7c8827758b02f8c8a2e54033debb091904f))
-- Fix Message->addHeader() and add a test for it ([`2e51848`](https://github.com/swow/swow/commit/2e51848601ebb5e5f77055d9a1e1b49e6d2d9acc))
+- Fix stream_select() hangs on server for all platforms (#162)
+- Fix missing SSL module init (90ea96c)
+- Fix test-extension.php can not run without composer (329d49d)
+- Fix callable memory leak when coroutine allocation failed (25be041)
+- Some fixes for Debugger: Fix `p` and `vars` does not work; Fix missing step_in command (63a9c84)
+- Fix PHP rename() did not work for cross devices (9903049)
+- Fix WebSocket payloadData buffer size (ee8bc7c)
+- Fix Message->addHeader() and add a test for it (2e51848)
 
 ## 👻 What's Removed
 
-- Remove API: Socket->setTcpAcceptBalance() ([`72e7c44`](https://github.com/swow/swow/commit/72e7c44a5f3179b2fffd39ccd5c7a2dd9e4ba719))
+- Remove API: Socket->setTcpAcceptBalance() (72e7c44)
 
 ---
 
-# [v1.1.0](https://github.com/swow/swow/releases/tag/v1.1.0)
+# v1.1.0
 
 > release-date: 2023-01-18
 
@@ -48,34 +105,34 @@
 
 ## 🐣 What's New
 
-- New [README](https://github.com/swow/swow/blob/b121caa2530cb950f4d2f05e98ede9d63b18c135/README.md) ([`b121caa`](https://github.com/swow/swow/commit/b121caa2530cb950f4d2f05e98ede9d63b18c135))
-- New PHP API: `Coroutine->getSwitches()`, `Coroutine::getGlobalSwitches()` ([`2ef2ac3`](https://github.com/swow/swow/commit/2ef2ac3752b6dbdf5e3bb35b78bf1eb9c9c1d621))
-- Add `HttpParser` errno ([`3365aaa`](https://github.com/swow/swow/commit/3365aaa6da8e0e7c190fe74f3caae8a9245dc134)) ([`0a8c96b`](https://github.com/swow/swow/commit/0a8c96b4b8c0d9a2f15b11b2cff43a00d2b3c99e))
-- New C APIs: version getters ([`f0ce087`](https://github.com/swow/swow/commit/f0ce087517127d8a73dc0e14e5f8d70eefe4cce0))
+- New README (b121caa)
+- New PHP API: `Coroutine->getSwitches()`, `Coroutine::getGlobalSwitches()` (2ef2ac3)
+- Add `HttpParser` errno (3365aaa) (0a8c96b)
+- New C APIs: version getters (f0ce087)
 
 ## ✨ What's Enhanced
 
-- Do not always close all connections when closing Server (graceful shutdown)] ([`dd00372`](https://github.com/swow/swow/commit/dd003727dd5e504d78388f00911435b3e743e9b5))
-- Optimizations for swow-builder ([`2ed5f60`](https://github.com/swow/swow/commit/2ed5f6058d2790256630bc585d271491248de9e7))
+- Do not always close all connections when closing Server (graceful shutdown)] (dd00372)
+- Optimizations for swow-builder (2ed5f60)
 
 ## 🐛 What's Fixed
 
-- Fix bad arg name of Signal methods ([`6041422`](https://github.com/swow/swow/commit/6041422d8b816f3009a252fa1425db24acb4f2dc))
+- Fix bad arg name of Signal methods (6041422)
 
 ## 🐞 What's Fixed in Dependencies
 
-- Fix va_args memory error ([libcat/libcat@`6d08909`](https://github.com/libcat/libcat/commit/6d08909b7fe48d07dabeaa5fde148a32473262b3))
-- Fix bad usage of buffer value ([libcat/libcat@`6c20f9e`](https://github.com/libcat/libcat/commit/6c20f9e87f9167dabf7fe9488250f4b51fa21006))
-- Fix curl easy handle exec dead loop with SSL connection ([libcat/libcat@`6f5865d`](https://github.com/libcat/libcat/commit/6f5865de631d4c7aa5d5a93ff81c26270941b04c))
-- Full cURL workaround solution for SSL connection ([libcat/libcat@`1e8d176`](https://github.com/libcat/libcat/commit/1e8d1764ec30b9655b2eb52027a26e737d3ca96a))
+- Fix va_args memory error (libcat/libcat@6d08909)
+- Fix bad usage of buffer value (libcat/libcat@6c20f9e)
+- Fix curl easy handle exec dead loop with SSL connection (libcat/libcat@6f5865d)
+- Full cURL workaround solution for SSL connection (libcat/libcat@1e8d176)
 
 ## 👻 What's Removed
 
-- Remove `Coroutine->getRound()`, `Coroutine::getCurrentRound()` ([`2ef2ac3`](https://github.com/swow/swow/commit/2ef2ac3752b6dbdf5e3bb35b78bf1eb9c9c1d621))
+- Remove `Coroutine->getRound()`, `Coroutine::getCurrentRound()` (2ef2ac3)
 
 ---
 
-# [v1.0.0](https://github.com/swow/swow/releases/tag/v1.0.0)
+# v1.0.0
 
 > release-date: 2023-01-03
 
