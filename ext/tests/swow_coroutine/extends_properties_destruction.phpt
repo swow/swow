@@ -35,7 +35,7 @@ foreach ([false, true] as $throwError) {
         }
     })->resume();
     msleep(1);
-    echo str_repeat('-', 32) . "\n";
+    echo "\n";
 }
 
 (new class(static function (): void {
@@ -58,7 +58,7 @@ foreach ([false, true] as $throwError) {
     }
 })->resume();
 msleep(1);
-echo str_repeat('-', 32) . "\n";
+echo "\n";
 
 echo "Done\n";
 
@@ -66,17 +66,17 @@ echo "Done\n";
 --EXPECTF--
 Destruct
 bool(true)
---------------------------------
+
 Destruct
 bool(true)
 
-Warning: [Fatal error in R%s] Uncaught Error in %s/tests/swow_coroutine/extends_properties_destruction.php:%d
+Warning: [Fatal error in R%d] Uncaught Error in %s/tests/swow_coroutine/extends_properties_destruction.php:%d
 Stack trace:
 #0 [internal function]: class@anonymous->__destruct()
 #1 {main}
   thrown in %s/tests/swow_coroutine/extends_properties_destruction.php on line %d
---------------------------------
+
 Destruct
 bool(false)
---------------------------------
+
 Done
