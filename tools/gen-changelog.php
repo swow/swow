@@ -15,6 +15,8 @@ use function Swow\Utils\error;
 
 require __DIR__ . '/autoload.php';
 
+date_default_timezone_set('PRC');
+
 $addUrl = filter_var(getenv('URL'), FILTER_VALIDATE_BOOL);
 $gptMode = filter_var(getenv('GPT'), FILTER_VALIDATE_BOOL);
 
@@ -26,6 +28,19 @@ $authorMap = [
     '宣言就是Siam' => 'xuanyanwow',
     'DuxWeb' => 'duxphp',
 ];
+$kinds = [
+    'new',
+    'enhanced',
+    'fixed',
+    'removed',
+];
+$listPrefixMatcher = static function (string $kind): string {
+    return match ($kind) {
+        'new', 'enhanced' => '+',
+        'removed' => '-',
+        default => '*',
+    };
+};
 
 $versions = require __DIR__ . '/versions.php';
 $versionId = preg_match('/\d+\.\d+\.\d+/', $versions['swow-extension']['version'], $match);
@@ -105,11 +120,7 @@ foreach ($commits as $commit) {
 
     $changes[$kind][] = sprintf(
         '%s %s (%s) (%s)',
-        match ($kind) {
-            'new', 'enhanced' => '+',
-            'removed' => '-',
-            default => '*',
-        },
+        $listPrefixMatcher($kind),
         $message,
         $link,
         $addUrl ?
@@ -155,8 +166,17 @@ TEXT, "\n\n";
 
 
 MARKDOWN;
-    $changes = array_map(static function (array $group) {
-        return implode("\n", $group);
+    foreach ($kinds as $kind) {
+        if (!empty($changes[$kind])) {
+            continue;
+        }
+        $changes[$kind] = ["{$listPrefixMatcher($kind)} Nothing {$kind}"];
+    }
+    $changes = array_map(static function (string|array $group): string {
+        if (is_array($group)) {
+            $group = implode("\n", $group);
+        }
+        return $group;
     }, $changes);
     echo <<<MARKDOWN
 ## 🐣 What's New
