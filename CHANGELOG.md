@@ -1,3 +1,17 @@
+# [v1.3.1](https://github.com/swow/swow/releases/tag/v1.3.1)
+
+> release-date: 2023-06-15
+
+> 「成就伟大的唯一途径是热爱自己的工作。」 - 史蒂夫·乔布斯
+>
+> "The only way to do great work is to love what you do." - Steve Jobs
+
+## 🐛 What's Fixed
+
+* Fix memory error due to call destructor in scheduler (#198) (@twose)
+
+---
+
 # v1.3.0
 
 > release-date: 2023-06-09
