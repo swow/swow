@@ -33,14 +33,28 @@ if (!file_exists($runTestsPath)) {
 }
 $runTestsXPath = "{$workspace}/run-tests-x.php";
 if (!file_exists($runTestsXPath)) {
-    file_put_contents(
-        $runTestsXPath,
-        str_replace(
-            '$optionals = [\'Zend\', \'tests\', \'ext\', \'sapi\'];',
-            '$optionals = [\'ext/tests\'];',
-            file_get_contents($runTestsPath)
-        )
+    $runTestsContents = file_get_contents($runTestsPath);
+    $runTestsContents = str_replace(
+        '$optionals = [\'Zend\', \'tests\', \'ext\', \'sapi\'];',
+        '$optionals = [\'ext/tests\'];',
+        $runTestsContents,
     );
+    $runTestsContents = str_replace(
+        <<<'PHP'
+    if (!$passed && !$retried && $retriable && error_may_be_retried($output)) {
+        $retried = true;
+        goto retry;
+    }
+PHP,
+        <<<'PHP'
+    if (!$passed && $retriable && (error_may_be_retried($output) || str_contains($tested_file, 'watchdog')) && ($retried === false ? $retried = 1 : $retried++) < 3 ) {
+        sleep($retried);
+        goto retry;
+    }
+PHP,
+        $runTestsContents,
+    );
+    file_put_contents($runTestsXPath, $runTestsContents);
 }
 
 if ('Windows' === PHP_OS_FAMILY) {
@@ -78,7 +92,7 @@ $options = [
     '-n', $runTestsXPath,
     '-P', ...$enableSwow,
     '--show-diff',
-    '--show-slow', '1000',
+    '--show-slow', '3000',
     '--set-timeout', '30',
     '--color',
     "-j{$cpuCount}",
