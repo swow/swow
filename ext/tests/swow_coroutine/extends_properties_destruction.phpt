@@ -70,11 +70,11 @@ bool(true)
 Destruct
 bool(true)
 
-Warning: [Fatal error in R%d] Uncaught Error in %s/tests/swow_coroutine/extends_properties_destruction.php:%d
+Warning: [Fatal error in R%d] Uncaught Error in %sextends_properties_destruction.php:%d
 Stack trace:
 #0 [internal function]: class@anonymous->__destruct()
 #1 {main}
-  thrown in %s/tests/swow_coroutine/extends_properties_destruction.php on line %d
+  thrown in %sextends_properties_destruction.php on line %d
 
 Destruct
 bool(false)
