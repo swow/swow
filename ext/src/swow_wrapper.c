@@ -169,6 +169,45 @@ SWOW_API zend_object *swow_custom_object_clone(zend_object *object)
     return new_object;
 }
 
+/* object */
+
+SWOW_API void swow_object_properties_clean(zend_object *object)
+{
+    zval *p, *end;
+
+    if (object->properties) {
+        if (EXPECTED(!(GC_FLAGS(object->properties) & IS_ARRAY_IMMUTABLE))) {
+            if (EXPECTED(GC_DELREF(object->properties) == 0)
+                    && EXPECTED(GC_TYPE(object->properties) != IS_NULL)) {
+                zend_array_destroy(object->properties);
+            }
+        }
+        object->properties = NULL;
+    }
+    p = object->properties_table;
+    if (EXPECTED(object->ce->default_properties_count)) {
+        end = p + object->ce->default_properties_count;
+        do {
+            zend_property_info *prop_info = zend_get_property_info_for_slot(object, p);
+            if (Z_REFCOUNTED_P(p)) {
+                if (UNEXPECTED(Z_ISREF_P(p)) &&
+                        (ZEND_DEBUG || ZEND_REF_HAS_TYPE_SOURCES(Z_REF_P(p)))) {
+                    if (ZEND_TYPE_IS_SET(prop_info->type)) {
+                        ZEND_REF_DEL_TYPE_SOURCE(Z_REF_P(p), prop_info);
+                    }
+                }
+                i_zval_ptr_dtor(p);
+            }
+            if (ZEND_TYPE_IS_SET(prop_info->type)) {
+                ZVAL_UNDEF(p);
+            } else {
+                ZVAL_NULL(p);
+            }
+            p++;
+        } while (p != end);
+    }
+}
+
 /* callable */
 
 SWOW_API zend_bool swow_fcall_storage_is_available(const swow_fcall_storage_t *fcall)

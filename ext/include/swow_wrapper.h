@@ -296,6 +296,8 @@ static zend_always_inline zend_object* swow_object_create(zend_class_entry *ce)
     return ce->create_object(ce);
 }
 
+SWOW_API void swow_object_properties_clean(zend_object *object);
+
 #ifndef Z_OBJCENAME_P
 #define Z_OBJCENAME_P(zobject) ZSTR_VAL(Z_OBJCE_P(zobject)->name)
 #endif

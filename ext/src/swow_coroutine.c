@@ -275,18 +275,29 @@ static zval *swow_coroutine_function(zval *z_data)
             swow_coroutine_function_handle_exception();
         }
 
-        /* discard all possible resources (e.g. variable by "use" in zend_closure) */
-        swow_fcall_storage_release(&executor->fcall);
-        if (UNEXPECTED(EG(exception) != NULL)) {
-            swow_coroutine_function_handle_exception();
-        }
-
         /* call __destruct() first here (prevent destructing in scheduler) */
         if (s_coroutine->std.ce->destructor != NULL) {
             zend_objects_destroy_object(&s_coroutine->std);
             if (UNEXPECTED(EG(exception) != NULL)) {
                 swow_coroutine_function_handle_exception();
             }
+        }
+
+        /* discard all possible resources (e.g. variable by "use" in zend_closure) */
+        swow_fcall_storage_release(&executor->fcall);
+        if (UNEXPECTED(EG(exception) != NULL)) {
+            swow_coroutine_function_handle_exception();
+        }
+
+        /* clean properties (prevent destructing in scheduler)
+         * > As the Coroutine class can be inherited, developers can define more properties on Coroutines.
+         * > When a Coroutine is released in the scheduler, the properties on the Coroutine will also be released.
+         * > If some of these properties have a destructor function, the destructor function will be called in the scheduler.
+         * > However, the scheduler does not have a PHP stack, which can lead to memory errors.
+         * > The solution is to clean all property values after the Coroutine function has finished running. */
+        swow_object_properties_clean(&s_coroutine->std);
+        if (UNEXPECTED(EG(exception) != NULL)) {
+            swow_coroutine_function_handle_exception();
         }
     } zend_catch {
         swow_coroutine_bailout_handler(s_coroutine);
