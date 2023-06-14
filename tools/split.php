@@ -16,9 +16,12 @@ require __DIR__ . '/autoload.php';
 
 use function Swow\Utils\check;
 use function Swow\Utils\error;
+use function Swow\Utils\info;
 use function Swow\Utils\log;
+use function Swow\Utils\ok;
 use function Swow\Utils\passthru;
 use function Swow\Utils\success;
+use function Swow\Utils\warn;
 
 $repoInfo = [
     'swow-examples' => dirname(__DIR__) . '/examples',
@@ -32,11 +35,26 @@ $repoInfo = [
     'dontdie' => dirname(__DIR__) . '/lib/dontdie',
 ];
 
+$options = getopt('', ['no-cache'], $optind);
+$noCache = isset($options['no-cache']);
+if ($noCache) {
+    info('Clearing cache...');
+    if (file_exists($splitshDb = dirname(__DIR__) . '/.git/splitsh.db')) {
+        if (@unlink($splitshDb) === false) {
+            warn('Failed to clear cache');
+        } else {
+            ok('Cache cleared');
+        }
+    } else {
+        info('No cache found');
+    }
+}
+$specifiedRepoName = $argv[$optind] ?? null;
+
 $repoInfo = array_map(static function ($path) {
     return str_replace(dirname(__DIR__) . '/', '', $path);
 }, $repoInfo);
 
-$specifiedRepoName = $argv[1] ?? null;
 if ($specifiedRepoName) {
     $specifiedRepoPath = $repoInfo[$specifiedRepoName] ?? null;
     if (!$specifiedRepoPath) {
@@ -55,6 +73,7 @@ if (!str_contains(shell_exec('splitsh-lite --version 2>&1') ?: '', 'splitsh-lite
  * use `develop` as target-branch for the sub repos. */
 $targetBranch = 'develop';
 foreach ($repoInfo as $repoName => $repoPath) {
+    info("Updating {$repoName}...");
     if (!is_dir("{$workspace}/{$repoPath}")) {
         error("Repo {$repoName}'s path '{$repoPath}' is unavailable");
     }
