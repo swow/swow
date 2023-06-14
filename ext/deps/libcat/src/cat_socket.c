@@ -5006,7 +5006,8 @@ static int cat_socket_buffer_size(const cat_socket_t *socket, cat_bool_t is_send
     }
 
     if (unlikely(error != 0)) {
-        cat_update_last_error_with_reason(error, "Socket get recv buffer size failed");
+        cat_update_last_error_with_reason(error, "Socket %s %s buffer size failed",
+            size == 0 ? "get" : "set", is_send ? "send" : "recv");
         return -1;
     }
 
