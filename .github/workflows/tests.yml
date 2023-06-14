@@ -9,11 +9,17 @@ env:
 
 jobs:
   cs-check:
-    name: Library coding style check
+    name: Coding style check
     runs-on: "ubuntu-latest"
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+
+      - name: Use action to check for CRLF endings
+        uses: erclu/check-crlf@v1
+        with:
+          path: ./
+
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
