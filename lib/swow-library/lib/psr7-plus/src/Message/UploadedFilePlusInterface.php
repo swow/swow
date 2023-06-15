@@ -18,16 +18,4 @@ use Psr\Http\Message\UploadedFileInterface;
 
 interface UploadedFilePlusInterface extends UploadedFileInterface
 {
-    public function getStream(): StreamInterface;
-
-    /** @param string $targetPath */
-    public function moveTo(mixed $targetPath): void;
-
-    public function getSize(): ?int;
-
-    public function getError(): int;
-
-    public function getClientFilename(): ?string;
-
-    public function getClientMediaType(): ?string;
 }

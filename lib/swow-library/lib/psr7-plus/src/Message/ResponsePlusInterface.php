@@ -17,15 +17,5 @@ use Psr\Http\Message\ResponseInterface;
 
 interface ResponsePlusInterface extends MessagePlusInterface, ResponseInterface
 {
-    public function getStatusCode(): int;
-
-    public function getReasonPhrase(): string;
-
     public function setStatus(int $code, string $reasonPhrase = ''): static;
-
-    /**
-     * @param int $code
-     * @param string $reasonPhrase
-     */
-    public function withStatus($code, $reasonPhrase = ''): static;
 }

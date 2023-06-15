@@ -20,37 +20,4 @@ use const SEEK_SET;
 
 interface StreamPlusInterface extends StreamInterface, StringableInterface
 {
-    public function getSize(): ?int;
-
-    public function tell(): int;
-
-    public function eof(): bool;
-
-    public function isSeekable(): bool;
-
-    /**
-     * @param int $offset
-     * @param int $whence
-     */
-    public function seek(mixed $offset, mixed $whence = SEEK_SET): void;
-
-    public function rewind(): void;
-
-    public function isWritable(): bool;
-
-    public function write(mixed $string): int;
-
-    public function isReadable(): bool;
-
-    /** @param int $length */
-    public function read(mixed $length): string;
-
-    public function getContents(): string;
-
-    public function getMetadata(mixed $key = null): mixed;
-
-    /** @return resource|null */
-    public function detach(): mixed;
-
-    public function close(): void;
 }
