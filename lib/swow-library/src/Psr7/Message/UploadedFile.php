@@ -15,7 +15,6 @@ namespace Swow\Psr7\Message;
 
 use Psr\Http\Message\StreamInterface;
 use RuntimeException;
-use Swow\Object\ArrayableInterface;
 use TypeError;
 use ValueError;
 
@@ -41,7 +40,7 @@ use const UPLOAD_ERR_PARTIAL;
 /**
  * PSR-7 UploadedFile implementation (https://github.com/Nyholm/psr7/blob/master/src/UploadedFile.php)
  */
-class UploadedFile implements UploadedFilePlusInterface, ArrayableInterface
+class UploadedFile implements UploadedFilePlusInterface
 {
     protected const ERRORS = [
         UPLOAD_ERR_OK => true,

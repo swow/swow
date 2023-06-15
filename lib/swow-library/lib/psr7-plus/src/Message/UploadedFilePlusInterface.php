@@ -30,4 +30,7 @@ interface UploadedFilePlusInterface extends UploadedFileInterface
     public function getClientFilename(): ?string;
 
     public function getClientMediaType(): ?string;
+
+    /** @return array{'name': string|null, 'type': string|null, 'tmp_file': string|null, 'error': int, 'size': int|false} */
+    public function toArray(): array;
 }

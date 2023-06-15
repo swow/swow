@@ -14,11 +14,10 @@ declare(strict_types=1);
 namespace Swow\Psr7\Message;
 
 use Psr\Http\Message\StreamInterface;
-use Swow\Object\StringableInterface;
 
 use const SEEK_SET;
 
-interface StreamPlusInterface extends StreamInterface, StringableInterface
+interface StreamPlusInterface extends StreamInterface
 {
     public function getSize(): ?int;
 
@@ -53,4 +52,6 @@ interface StreamPlusInterface extends StreamInterface, StringableInterface
     public function detach(): mixed;
 
     public function close(): void;
+
+    public function toString(): string;
 }

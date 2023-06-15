@@ -15,9 +15,8 @@ namespace Swow\Psr7\Message;
 
 use Psr\Http\Message\MessageInterface;
 use Psr\Http\Message\StreamInterface;
-use Swow\Object\StringableInterface;
 
-interface MessagePlusInterface extends MessageInterface, StringableInterface
+interface MessagePlusInterface extends MessageInterface
 {
     public const DEFAULT_PROTOCOL_VERSION = '1.1';
 

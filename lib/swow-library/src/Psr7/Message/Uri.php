@@ -14,7 +14,6 @@ declare(strict_types=1);
 namespace Swow\Psr7\Message;
 
 use InvalidArgumentException;
-use Swow\Object\StringableInterface;
 use Swow\Object\StringableTrait;
 
 use function http_build_query;
@@ -29,7 +28,7 @@ use function strtolower;
 /**
  * PSR-7 URI implementation (https://github.com/Nyholm/psr7/blob/master/src/Uri.php)
  */
-class Uri implements UriPlusInterface, StringableInterface
+class Uri implements UriPlusInterface
 {
     use StringableTrait;
 
