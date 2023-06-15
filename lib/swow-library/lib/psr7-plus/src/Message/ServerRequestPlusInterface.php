@@ -61,7 +61,7 @@ interface ServerRequestPlusInterface extends RequestPlusInterface, ServerRequest
     public function setUploadedFiles(array $uploadedFiles): static;
 
     /** @param array<UploadedFileInterface> $uploadedFiles */
-    public function withUploadedFiles(array $uploadedFiles);
+    public function withUploadedFiles(array $uploadedFiles): static;
 
     /** @return array<mixed> */
     public function getAttributes(): array;
