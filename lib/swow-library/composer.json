@@ -19,7 +19,7 @@
         "php": ">=8.0",
         "psr/http-client": "^1.0",
         "psr/http-factory": "^1.0",
-        "psr/http-message": "^1.1"
+        "psr/http-message": "^1.1|^2.0"
     },
     "replace": {
         "swow/psr7-plus": "*"

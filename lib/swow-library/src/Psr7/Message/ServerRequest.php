@@ -180,7 +180,7 @@ class ServerRequest extends Request implements ServerRequestPlusInterface
     }
 
     /** @param array<UploadedFileInterface> $uploadedFiles */
-    public function withUploadedFiles(array $uploadedFiles)
+    public function withUploadedFiles(array $uploadedFiles): static
     {
         $new = clone $this;
         $new->uploadedFiles = $uploadedFiles;
