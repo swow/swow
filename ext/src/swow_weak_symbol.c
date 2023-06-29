@@ -1590,6 +1590,37 @@ int swow_lo_lseek_redirect(void *conn, int fd, int offset, int whence) {
     return swow_lo_lseek_resolved(conn, fd, offset, whence);
 }
 
+// weak function pointer for lo_lseek64
+#ifdef CAT_OS_WIN
+// extern long long lo_lseek64(void *conn, int fd, pg_int64 offset, int whence);
+# pragma comment(linker, "/alternatename:lo_lseek64=swow_lo_lseek64_redirect")
+#else
+__attribute__((weak, alias("swow_lo_lseek64_redirect"))) extern long long lo_lseek64(void *conn, int fd, pg_int64 offset, int whence);
+#endif
+// resolved function holder
+long long (*swow_lo_lseek64_resolved)(void *conn, int fd, pg_int64 offset, int whence);
+// resolver for lo_lseek64
+long long swow_lo_lseek64_resolver(void *conn, int fd, pg_int64 offset, int whence) {
+    swow_lo_lseek64_resolved = (long long (*)(void *conn, int fd, pg_int64 offset, int whence))DL_FETCH_SYMBOL(DL_FROM_HANDLE, "lo_lseek64");
+
+    if (swow_lo_lseek64_resolved == NULL) {
+#if defined(DL_ERROR)
+        fprintf(stderr, "failed resolve lo_lseek64: %s\n", DL_ERROR());
+#elif defined(CAT_OS_WIN)
+        fprintf(stderr, "failed resolve lo_lseek64: %08x\n", GetLastError());
+#else
+        fprintf(stderr, "failed resolve lo_lseek64\n",());
+#endif
+        abort();
+    }
+
+    return swow_lo_lseek64_resolved(conn, fd, offset, whence);
+}
+long long (*swow_lo_lseek64_resolved)(void *conn, int fd, pg_int64 offset, int whence) = swow_lo_lseek64_resolver;
+long long swow_lo_lseek64_redirect(void *conn, int fd, pg_int64 offset, int whence) {
+    return swow_lo_lseek64_resolved(conn, fd, offset, whence);
+}
+
 // weak function pointer for lo_creat
 #ifdef CAT_OS_WIN
 // extern unsigned int lo_creat(void *conn, int mode);

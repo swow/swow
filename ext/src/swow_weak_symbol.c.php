@@ -171,7 +171,8 @@ int	lo_close(void *conn, int fd);
 int	lo_read(void *conn, int fd, char *buf, size_t len);
 int	lo_write(void *conn, int fd, const char *buf, size_t len);
 int	lo_lseek(void *conn, int fd, int offset, int whence);
-unsigned int	lo_creat(void *conn, int mode);
+long long lo_lseek64(void *conn, int fd, pg_int64 offset, int whence);
+unsigned int lo_creat(void *conn, int mode);
 int	lo_unlink(void *conn, unsigned int lobjId);
 #endif // CAT_OS_WIN
 
