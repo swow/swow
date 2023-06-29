@@ -60,7 +60,7 @@ __attribute__((weak, alias("swow_{$name}_redirect"))) extern {$ret} {$name}({$ar
 #if defined(DL_ERROR)
         fprintf(stderr, "failed resolve {$name}: %s\\n", DL_ERROR());
 #elif defined(CAT_OS_WIN)
-        fprintf(stderr, "failed resolve {$name}: %08x\\n", GetLastError());
+        fprintf(stderr, "failed resolve {$name}: %08x\\n", (unsigned int)GetLastError());
 #else
         fprintf(stderr, "failed resolve {$name}\\n",());
 #endif
@@ -165,16 +165,15 @@ int  PQsocket(const void *conn);
 int  PQstatus(const void *conn);
 int PQtransactionStatus(const void *conn);
 unsigned char *PQunescapeBytea(const unsigned char *strtext, size_t *retbuflen);
-#ifdef CAT_OS_WIN
+
 int	lo_open(void *conn, unsigned int lobjId, int mode);
 int	lo_close(void *conn, int fd);
 int	lo_read(void *conn, int fd, char *buf, size_t len);
 int	lo_write(void *conn, int fd, const char *buf, size_t len);
 int	lo_lseek(void *conn, int fd, int offset, int whence);
-long long lo_lseek64(void *conn, int fd, pg_int64 offset, int whence);
+long long lo_lseek64(void *conn, int fd, long long offset, int whence);
 unsigned int lo_creat(void *conn, int mode);
 int	lo_unlink(void *conn, unsigned int lobjId);
-#endif // CAT_OS_WIN
 
 #undef DL_FROM_HANDLE
 #ifdef CAT_OS_WIN

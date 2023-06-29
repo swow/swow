@@ -56,7 +56,7 @@ int swow_PQbackendPID_resolver(const void *conn) {
 #if defined(DL_ERROR)
         fprintf(stderr, "failed resolve PQbackendPID: %s\n", DL_ERROR());
 #elif defined(CAT_OS_WIN)
-        fprintf(stderr, "failed resolve PQbackendPID: %08x\n", GetLastError());
+        fprintf(stderr, "failed resolve PQbackendPID: %08x\n", (unsigned int)GetLastError());
 #else
         fprintf(stderr, "failed resolve PQbackendPID\n",());
 #endif
@@ -87,7 +87,7 @@ void swow_PQclear_resolver(void *res) {
 #if defined(DL_ERROR)
         fprintf(stderr, "failed resolve PQclear: %s\n", DL_ERROR());
 #elif defined(CAT_OS_WIN)
-        fprintf(stderr, "failed resolve PQclear: %08x\n", GetLastError());
+        fprintf(stderr, "failed resolve PQclear: %08x\n", (unsigned int)GetLastError());
 #else
         fprintf(stderr, "failed resolve PQclear\n",());
 #endif
@@ -118,7 +118,7 @@ char * swow_PQcmdTuples_resolver(void *res) {
 #if defined(DL_ERROR)
         fprintf(stderr, "failed resolve PQcmdTuples: %s\n", DL_ERROR());
 #elif defined(CAT_OS_WIN)
-        fprintf(stderr, "failed resolve PQcmdTuples: %08x\n", GetLastError());
+        fprintf(stderr, "failed resolve PQcmdTuples: %08x\n", (unsigned int)GetLastError());
 #else
         fprintf(stderr, "failed resolve PQcmdTuples\n",());
 #endif
@@ -149,7 +149,7 @@ int swow_PQconnectPoll_resolver(void *conn) {
 #if defined(DL_ERROR)
         fprintf(stderr, "failed resolve PQconnectPoll: %s\n", DL_ERROR());
 #elif defined(CAT_OS_WIN)
-        fprintf(stderr, "failed resolve PQconnectPoll: %08x\n", GetLastError());
+        fprintf(stderr, "failed resolve PQconnectPoll: %08x\n", (unsigned int)GetLastError());
 #else
         fprintf(stderr, "failed resolve PQconnectPoll\n",());
 #endif
@@ -180,7 +180,7 @@ void * swow_PQconnectStart_resolver(const char *conninfo) {
 #if defined(DL_ERROR)
         fprintf(stderr, "failed resolve PQconnectStart: %s\n", DL_ERROR());
 #elif defined(CAT_OS_WIN)
-        fprintf(stderr, "failed resolve PQconnectStart: %08x\n", GetLastError());
+        fprintf(stderr, "failed resolve PQconnectStart: %08x\n", (unsigned int)GetLastError());
 #else
         fprintf(stderr, "failed resolve PQconnectStart\n",());
 #endif
@@ -211,7 +211,7 @@ int swow_PQconsumeInput_resolver(void *conn) {
 #if defined(DL_ERROR)
         fprintf(stderr, "failed resolve PQconsumeInput: %s\n", DL_ERROR());
 #elif defined(CAT_OS_WIN)
-        fprintf(stderr, "failed resolve PQconsumeInput: %08x\n", GetLastError());
+        fprintf(stderr, "failed resolve PQconsumeInput: %08x\n", (unsigned int)GetLastError());
 #else
         fprintf(stderr, "failed resolve PQconsumeInput\n",());
 #endif
@@ -242,7 +242,7 @@ char * swow_PQerrorMessage_resolver(const void *conn) {
 #if defined(DL_ERROR)
         fprintf(stderr, "failed resolve PQerrorMessage: %s\n", DL_ERROR());
 #elif defined(CAT_OS_WIN)
-        fprintf(stderr, "failed resolve PQerrorMessage: %08x\n", GetLastError());
+        fprintf(stderr, "failed resolve PQerrorMessage: %08x\n", (unsigned int)GetLastError());
 #else
         fprintf(stderr, "failed resolve PQerrorMessage\n",());
 #endif
@@ -273,7 +273,7 @@ unsigned char * swow_PQescapeByteaConn_resolver(void *conn, const unsigned char 
 #if defined(DL_ERROR)
         fprintf(stderr, "failed resolve PQescapeByteaConn: %s\n", DL_ERROR());
 #elif defined(CAT_OS_WIN)
-        fprintf(stderr, "failed resolve PQescapeByteaConn: %08x\n", GetLastError());
+        fprintf(stderr, "failed resolve PQescapeByteaConn: %08x\n", (unsigned int)GetLastError());
 #else
         fprintf(stderr, "failed resolve PQescapeByteaConn\n",());
 #endif
@@ -304,7 +304,7 @@ size_t swow_PQescapeStringConn_resolver(void *conn, char *to, const char *from, 
 #if defined(DL_ERROR)
         fprintf(stderr, "failed resolve PQescapeStringConn: %s\n", DL_ERROR());
 #elif defined(CAT_OS_WIN)
-        fprintf(stderr, "failed resolve PQescapeStringConn: %08x\n", GetLastError());
+        fprintf(stderr, "failed resolve PQescapeStringConn: %08x\n", (unsigned int)GetLastError());
 #else
         fprintf(stderr, "failed resolve PQescapeStringConn\n",());
 #endif
@@ -335,7 +335,7 @@ void swow_PQfinish_resolver(void *conn) {
 #if defined(DL_ERROR)
         fprintf(stderr, "failed resolve PQfinish: %s\n", DL_ERROR());
 #elif defined(CAT_OS_WIN)
-        fprintf(stderr, "failed resolve PQfinish: %08x\n", GetLastError());
+        fprintf(stderr, "failed resolve PQfinish: %08x\n", (unsigned int)GetLastError());
 #else
         fprintf(stderr, "failed resolve PQfinish\n",());
 #endif
@@ -366,7 +366,7 @@ int swow_PQflush_resolver(void *conn) {
 #if defined(DL_ERROR)
         fprintf(stderr, "failed resolve PQflush: %s\n", DL_ERROR());
 #elif defined(CAT_OS_WIN)
-        fprintf(stderr, "failed resolve PQflush: %08x\n", GetLastError());
+        fprintf(stderr, "failed resolve PQflush: %08x\n", (unsigned int)GetLastError());
 #else
         fprintf(stderr, "failed resolve PQflush\n",());
 #endif
@@ -397,7 +397,7 @@ int swow_PQfmod_resolver(const void *res, int field_num) {
 #if defined(DL_ERROR)
         fprintf(stderr, "failed resolve PQfmod: %s\n", DL_ERROR());
 #elif defined(CAT_OS_WIN)
-        fprintf(stderr, "failed resolve PQfmod: %08x\n", GetLastError());
+        fprintf(stderr, "failed resolve PQfmod: %08x\n", (unsigned int)GetLastError());
 #else
         fprintf(stderr, "failed resolve PQfmod\n",());
 #endif
@@ -428,7 +428,7 @@ char * swow_PQfname_resolver(const void *res, int field_num) {
 #if defined(DL_ERROR)
         fprintf(stderr, "failed resolve PQfname: %s\n", DL_ERROR());
 #elif defined(CAT_OS_WIN)
-        fprintf(stderr, "failed resolve PQfname: %08x\n", GetLastError());
+        fprintf(stderr, "failed resolve PQfname: %08x\n", (unsigned int)GetLastError());
 #else
         fprintf(stderr, "failed resolve PQfname\n",());
 #endif
@@ -459,7 +459,7 @@ void swow_PQfreemem_resolver(void *ptr) {
 #if defined(DL_ERROR)
         fprintf(stderr, "failed resolve PQfreemem: %s\n", DL_ERROR());
 #elif defined(CAT_OS_WIN)
-        fprintf(stderr, "failed resolve PQfreemem: %08x\n", GetLastError());
+        fprintf(stderr, "failed resolve PQfreemem: %08x\n", (unsigned int)GetLastError());
 #else
         fprintf(stderr, "failed resolve PQfreemem\n",());
 #endif
@@ -490,7 +490,7 @@ int swow_PQfsize_resolver(const void *res, int field_num) {
 #if defined(DL_ERROR)
         fprintf(stderr, "failed resolve PQfsize: %s\n", DL_ERROR());
 #elif defined(CAT_OS_WIN)
-        fprintf(stderr, "failed resolve PQfsize: %08x\n", GetLastError());
+        fprintf(stderr, "failed resolve PQfsize: %08x\n", (unsigned int)GetLastError());
 #else
         fprintf(stderr, "failed resolve PQfsize\n",());
 #endif
@@ -521,7 +521,7 @@ unsigned int swow_PQftable_resolver(const void *res, int field_num) {
 #if defined(DL_ERROR)
         fprintf(stderr, "failed resolve PQftable: %s\n", DL_ERROR());
 #elif defined(CAT_OS_WIN)
-        fprintf(stderr, "failed resolve PQftable: %08x\n", GetLastError());
+        fprintf(stderr, "failed resolve PQftable: %08x\n", (unsigned int)GetLastError());
 #else
         fprintf(stderr, "failed resolve PQftable\n",());
 #endif
@@ -552,7 +552,7 @@ unsigned int swow_PQftype_resolver(const void *res, int field_num) {
 #if defined(DL_ERROR)
         fprintf(stderr, "failed resolve PQftype: %s\n", DL_ERROR());
 #elif defined(CAT_OS_WIN)
-        fprintf(stderr, "failed resolve PQftype: %08x\n", GetLastError());
+        fprintf(stderr, "failed resolve PQftype: %08x\n", (unsigned int)GetLastError());
 #else
         fprintf(stderr, "failed resolve PQftype\n",());
 #endif
@@ -583,7 +583,7 @@ int swow_PQgetCopyData_resolver(void *conn, char **buffer, int async) {
 #if defined(DL_ERROR)
         fprintf(stderr, "failed resolve PQgetCopyData: %s\n", DL_ERROR());
 #elif defined(CAT_OS_WIN)
-        fprintf(stderr, "failed resolve PQgetCopyData: %08x\n", GetLastError());
+        fprintf(stderr, "failed resolve PQgetCopyData: %08x\n", (unsigned int)GetLastError());
 #else
         fprintf(stderr, "failed resolve PQgetCopyData\n",());
 #endif
@@ -614,7 +614,7 @@ int swow_PQgetisnull_resolver(const void *res, int tup_num, int field_num) {
 #if defined(DL_ERROR)
         fprintf(stderr, "failed resolve PQgetisnull: %s\n", DL_ERROR());
 #elif defined(CAT_OS_WIN)
-        fprintf(stderr, "failed resolve PQgetisnull: %08x\n", GetLastError());
+        fprintf(stderr, "failed resolve PQgetisnull: %08x\n", (unsigned int)GetLastError());
 #else
         fprintf(stderr, "failed resolve PQgetisnull\n",());
 #endif
@@ -645,7 +645,7 @@ int swow_PQgetlength_resolver(const void *res, int tup_num, int field_num) {
 #if defined(DL_ERROR)
         fprintf(stderr, "failed resolve PQgetlength: %s\n", DL_ERROR());
 #elif defined(CAT_OS_WIN)
-        fprintf(stderr, "failed resolve PQgetlength: %08x\n", GetLastError());
+        fprintf(stderr, "failed resolve PQgetlength: %08x\n", (unsigned int)GetLastError());
 #else
         fprintf(stderr, "failed resolve PQgetlength\n",());
 #endif
@@ -676,7 +676,7 @@ void * swow_PQgetResult_resolver(void *conn) {
 #if defined(DL_ERROR)
         fprintf(stderr, "failed resolve PQgetResult: %s\n", DL_ERROR());
 #elif defined(CAT_OS_WIN)
-        fprintf(stderr, "failed resolve PQgetResult: %08x\n", GetLastError());
+        fprintf(stderr, "failed resolve PQgetResult: %08x\n", (unsigned int)GetLastError());
 #else
         fprintf(stderr, "failed resolve PQgetResult\n",());
 #endif
@@ -707,7 +707,7 @@ char * swow_PQgetvalue_resolver(const void *res, int tup_num, int field_num) {
 #if defined(DL_ERROR)
         fprintf(stderr, "failed resolve PQgetvalue: %s\n", DL_ERROR());
 #elif defined(CAT_OS_WIN)
-        fprintf(stderr, "failed resolve PQgetvalue: %08x\n", GetLastError());
+        fprintf(stderr, "failed resolve PQgetvalue: %08x\n", (unsigned int)GetLastError());
 #else
         fprintf(stderr, "failed resolve PQgetvalue\n",());
 #endif
@@ -738,7 +738,7 @@ int swow_PQlibVersion_resolver(void) {
 #if defined(DL_ERROR)
         fprintf(stderr, "failed resolve PQlibVersion: %s\n", DL_ERROR());
 #elif defined(CAT_OS_WIN)
-        fprintf(stderr, "failed resolve PQlibVersion: %08x\n", GetLastError());
+        fprintf(stderr, "failed resolve PQlibVersion: %08x\n", (unsigned int)GetLastError());
 #else
         fprintf(stderr, "failed resolve PQlibVersion\n",());
 #endif
@@ -769,7 +769,7 @@ int swow_PQnfields_resolver(const void *res) {
 #if defined(DL_ERROR)
         fprintf(stderr, "failed resolve PQnfields: %s\n", DL_ERROR());
 #elif defined(CAT_OS_WIN)
-        fprintf(stderr, "failed resolve PQnfields: %08x\n", GetLastError());
+        fprintf(stderr, "failed resolve PQnfields: %08x\n", (unsigned int)GetLastError());
 #else
         fprintf(stderr, "failed resolve PQnfields\n",());
 #endif
@@ -800,7 +800,7 @@ int swow_PQntuples_resolver(const void *res) {
 #if defined(DL_ERROR)
         fprintf(stderr, "failed resolve PQntuples: %s\n", DL_ERROR());
 #elif defined(CAT_OS_WIN)
-        fprintf(stderr, "failed resolve PQntuples: %08x\n", GetLastError());
+        fprintf(stderr, "failed resolve PQntuples: %08x\n", (unsigned int)GetLastError());
 #else
         fprintf(stderr, "failed resolve PQntuples\n",());
 #endif
@@ -831,7 +831,7 @@ void * swow_PQnotifies_resolver(void *conn) {
 #if defined(DL_ERROR)
         fprintf(stderr, "failed resolve PQnotifies: %s\n", DL_ERROR());
 #elif defined(CAT_OS_WIN)
-        fprintf(stderr, "failed resolve PQnotifies: %08x\n", GetLastError());
+        fprintf(stderr, "failed resolve PQnotifies: %08x\n", (unsigned int)GetLastError());
 #else
         fprintf(stderr, "failed resolve PQnotifies\n",());
 #endif
@@ -862,7 +862,7 @@ unsigned int swow_PQoidValue_resolver(const void *res) {
 #if defined(DL_ERROR)
         fprintf(stderr, "failed resolve PQoidValue: %s\n", DL_ERROR());
 #elif defined(CAT_OS_WIN)
-        fprintf(stderr, "failed resolve PQoidValue: %08x\n", GetLastError());
+        fprintf(stderr, "failed resolve PQoidValue: %08x\n", (unsigned int)GetLastError());
 #else
         fprintf(stderr, "failed resolve PQoidValue\n",());
 #endif
@@ -893,7 +893,7 @@ const char * swow_PQparameterStatus_resolver(const void *conn, const char *param
 #if defined(DL_ERROR)
         fprintf(stderr, "failed resolve PQparameterStatus: %s\n", DL_ERROR());
 #elif defined(CAT_OS_WIN)
-        fprintf(stderr, "failed resolve PQparameterStatus: %08x\n", GetLastError());
+        fprintf(stderr, "failed resolve PQparameterStatus: %08x\n", (unsigned int)GetLastError());
 #else
         fprintf(stderr, "failed resolve PQparameterStatus\n",());
 #endif
@@ -924,7 +924,7 @@ int swow_PQprotocolVersion_resolver(const void *conn) {
 #if defined(DL_ERROR)
         fprintf(stderr, "failed resolve PQprotocolVersion: %s\n", DL_ERROR());
 #elif defined(CAT_OS_WIN)
-        fprintf(stderr, "failed resolve PQprotocolVersion: %08x\n", GetLastError());
+        fprintf(stderr, "failed resolve PQprotocolVersion: %08x\n", (unsigned int)GetLastError());
 #else
         fprintf(stderr, "failed resolve PQprotocolVersion\n",());
 #endif
@@ -955,7 +955,7 @@ int swow_PQputCopyData_resolver(void *conn, const char *buffer, int nbytes) {
 #if defined(DL_ERROR)
         fprintf(stderr, "failed resolve PQputCopyData: %s\n", DL_ERROR());
 #elif defined(CAT_OS_WIN)
-        fprintf(stderr, "failed resolve PQputCopyData: %08x\n", GetLastError());
+        fprintf(stderr, "failed resolve PQputCopyData: %08x\n", (unsigned int)GetLastError());
 #else
         fprintf(stderr, "failed resolve PQputCopyData\n",());
 #endif
@@ -986,7 +986,7 @@ int swow_PQputCopyEnd_resolver(void *conn, const char *errormsg) {
 #if defined(DL_ERROR)
         fprintf(stderr, "failed resolve PQputCopyEnd: %s\n", DL_ERROR());
 #elif defined(CAT_OS_WIN)
-        fprintf(stderr, "failed resolve PQputCopyEnd: %08x\n", GetLastError());
+        fprintf(stderr, "failed resolve PQputCopyEnd: %08x\n", (unsigned int)GetLastError());
 #else
         fprintf(stderr, "failed resolve PQputCopyEnd\n",());
 #endif
@@ -1017,7 +1017,7 @@ void swow_PQreset_resolver(void *conn) {
 #if defined(DL_ERROR)
         fprintf(stderr, "failed resolve PQreset: %s\n", DL_ERROR());
 #elif defined(CAT_OS_WIN)
-        fprintf(stderr, "failed resolve PQreset: %08x\n", GetLastError());
+        fprintf(stderr, "failed resolve PQreset: %08x\n", (unsigned int)GetLastError());
 #else
         fprintf(stderr, "failed resolve PQreset\n",());
 #endif
@@ -1048,7 +1048,7 @@ int swow_PQresetStart_resolver(void *conn) {
 #if defined(DL_ERROR)
         fprintf(stderr, "failed resolve PQresetStart: %s\n", DL_ERROR());
 #elif defined(CAT_OS_WIN)
-        fprintf(stderr, "failed resolve PQresetStart: %08x\n", GetLastError());
+        fprintf(stderr, "failed resolve PQresetStart: %08x\n", (unsigned int)GetLastError());
 #else
         fprintf(stderr, "failed resolve PQresetStart\n",());
 #endif
@@ -1079,7 +1079,7 @@ char * swow_PQresultErrorField_resolver(const void *res, int fieldcode) {
 #if defined(DL_ERROR)
         fprintf(stderr, "failed resolve PQresultErrorField: %s\n", DL_ERROR());
 #elif defined(CAT_OS_WIN)
-        fprintf(stderr, "failed resolve PQresultErrorField: %08x\n", GetLastError());
+        fprintf(stderr, "failed resolve PQresultErrorField: %08x\n", (unsigned int)GetLastError());
 #else
         fprintf(stderr, "failed resolve PQresultErrorField\n",());
 #endif
@@ -1110,7 +1110,7 @@ int swow_PQresultStatus_resolver(const void *res) {
 #if defined(DL_ERROR)
         fprintf(stderr, "failed resolve PQresultStatus: %s\n", DL_ERROR());
 #elif defined(CAT_OS_WIN)
-        fprintf(stderr, "failed resolve PQresultStatus: %08x\n", GetLastError());
+        fprintf(stderr, "failed resolve PQresultStatus: %08x\n", (unsigned int)GetLastError());
 #else
         fprintf(stderr, "failed resolve PQresultStatus\n",());
 #endif
@@ -1141,7 +1141,7 @@ int swow_PQsendPrepare_resolver(void *conn, const char *stmtName, const char *qu
 #if defined(DL_ERROR)
         fprintf(stderr, "failed resolve PQsendPrepare: %s\n", DL_ERROR());
 #elif defined(CAT_OS_WIN)
-        fprintf(stderr, "failed resolve PQsendPrepare: %08x\n", GetLastError());
+        fprintf(stderr, "failed resolve PQsendPrepare: %08x\n", (unsigned int)GetLastError());
 #else
         fprintf(stderr, "failed resolve PQsendPrepare\n",());
 #endif
@@ -1172,7 +1172,7 @@ int swow_PQsendQuery_resolver(void *conn, const char *query) {
 #if defined(DL_ERROR)
         fprintf(stderr, "failed resolve PQsendQuery: %s\n", DL_ERROR());
 #elif defined(CAT_OS_WIN)
-        fprintf(stderr, "failed resolve PQsendQuery: %08x\n", GetLastError());
+        fprintf(stderr, "failed resolve PQsendQuery: %08x\n", (unsigned int)GetLastError());
 #else
         fprintf(stderr, "failed resolve PQsendQuery\n",());
 #endif
@@ -1203,7 +1203,7 @@ int swow_PQsendQueryParams_resolver(void *conn, const char *command, int nParams
 #if defined(DL_ERROR)
         fprintf(stderr, "failed resolve PQsendQueryParams: %s\n", DL_ERROR());
 #elif defined(CAT_OS_WIN)
-        fprintf(stderr, "failed resolve PQsendQueryParams: %08x\n", GetLastError());
+        fprintf(stderr, "failed resolve PQsendQueryParams: %08x\n", (unsigned int)GetLastError());
 #else
         fprintf(stderr, "failed resolve PQsendQueryParams\n",());
 #endif
@@ -1234,7 +1234,7 @@ int swow_PQsendQueryPrepared_resolver(void *conn, const char *stmtName, int nPar
 #if defined(DL_ERROR)
         fprintf(stderr, "failed resolve PQsendQueryPrepared: %s\n", DL_ERROR());
 #elif defined(CAT_OS_WIN)
-        fprintf(stderr, "failed resolve PQsendQueryPrepared: %08x\n", GetLastError());
+        fprintf(stderr, "failed resolve PQsendQueryPrepared: %08x\n", (unsigned int)GetLastError());
 #else
         fprintf(stderr, "failed resolve PQsendQueryPrepared\n",());
 #endif
@@ -1265,7 +1265,7 @@ int swow_PQsetnonblocking_resolver(void *conn, int arg) {
 #if defined(DL_ERROR)
         fprintf(stderr, "failed resolve PQsetnonblocking: %s\n", DL_ERROR());
 #elif defined(CAT_OS_WIN)
-        fprintf(stderr, "failed resolve PQsetnonblocking: %08x\n", GetLastError());
+        fprintf(stderr, "failed resolve PQsetnonblocking: %08x\n", (unsigned int)GetLastError());
 #else
         fprintf(stderr, "failed resolve PQsetnonblocking\n",());
 #endif
@@ -1296,7 +1296,7 @@ void * swow_PQsetNoticeProcessor_resolver(void *conn, void *proc, void *arg) {
 #if defined(DL_ERROR)
         fprintf(stderr, "failed resolve PQsetNoticeProcessor: %s\n", DL_ERROR());
 #elif defined(CAT_OS_WIN)
-        fprintf(stderr, "failed resolve PQsetNoticeProcessor: %08x\n", GetLastError());
+        fprintf(stderr, "failed resolve PQsetNoticeProcessor: %08x\n", (unsigned int)GetLastError());
 #else
         fprintf(stderr, "failed resolve PQsetNoticeProcessor\n",());
 #endif
@@ -1327,7 +1327,7 @@ int swow_PQsocket_resolver(const void *conn) {
 #if defined(DL_ERROR)
         fprintf(stderr, "failed resolve PQsocket: %s\n", DL_ERROR());
 #elif defined(CAT_OS_WIN)
-        fprintf(stderr, "failed resolve PQsocket: %08x\n", GetLastError());
+        fprintf(stderr, "failed resolve PQsocket: %08x\n", (unsigned int)GetLastError());
 #else
         fprintf(stderr, "failed resolve PQsocket\n",());
 #endif
@@ -1358,7 +1358,7 @@ int swow_PQstatus_resolver(const void *conn) {
 #if defined(DL_ERROR)
         fprintf(stderr, "failed resolve PQstatus: %s\n", DL_ERROR());
 #elif defined(CAT_OS_WIN)
-        fprintf(stderr, "failed resolve PQstatus: %08x\n", GetLastError());
+        fprintf(stderr, "failed resolve PQstatus: %08x\n", (unsigned int)GetLastError());
 #else
         fprintf(stderr, "failed resolve PQstatus\n",());
 #endif
@@ -1389,7 +1389,7 @@ int swow_PQtransactionStatus_resolver(const void *conn) {
 #if defined(DL_ERROR)
         fprintf(stderr, "failed resolve PQtransactionStatus: %s\n", DL_ERROR());
 #elif defined(CAT_OS_WIN)
-        fprintf(stderr, "failed resolve PQtransactionStatus: %08x\n", GetLastError());
+        fprintf(stderr, "failed resolve PQtransactionStatus: %08x\n", (unsigned int)GetLastError());
 #else
         fprintf(stderr, "failed resolve PQtransactionStatus\n",());
 #endif
@@ -1420,7 +1420,7 @@ unsigned char * swow_PQunescapeBytea_resolver(const unsigned char *strtext, size
 #if defined(DL_ERROR)
         fprintf(stderr, "failed resolve PQunescapeBytea: %s\n", DL_ERROR());
 #elif defined(CAT_OS_WIN)
-        fprintf(stderr, "failed resolve PQunescapeBytea: %08x\n", GetLastError());
+        fprintf(stderr, "failed resolve PQunescapeBytea: %08x\n", (unsigned int)GetLastError());
 #else
         fprintf(stderr, "failed resolve PQunescapeBytea\n",());
 #endif
@@ -1434,7 +1434,7 @@ unsigned char * swow_PQunescapeBytea_redirect(const unsigned char *strtext, size
     return swow_PQunescapeBytea_resolved(strtext, retbuflen);
 }
 
-#ifdef CAT_OS_WIN
+
 // weak function pointer for lo_open
 #ifdef CAT_OS_WIN
 // extern int lo_open(void *conn, unsigned int lobjId, int mode);
@@ -1452,7 +1452,7 @@ int swow_lo_open_resolver(void *conn, unsigned int lobjId, int mode) {
 #if defined(DL_ERROR)
         fprintf(stderr, "failed resolve lo_open: %s\n", DL_ERROR());
 #elif defined(CAT_OS_WIN)
-        fprintf(stderr, "failed resolve lo_open: %08x\n", GetLastError());
+        fprintf(stderr, "failed resolve lo_open: %08x\n", (unsigned int)GetLastError());
 #else
         fprintf(stderr, "failed resolve lo_open\n",());
 #endif
@@ -1483,7 +1483,7 @@ int swow_lo_close_resolver(void *conn, int fd) {
 #if defined(DL_ERROR)
         fprintf(stderr, "failed resolve lo_close: %s\n", DL_ERROR());
 #elif defined(CAT_OS_WIN)
-        fprintf(stderr, "failed resolve lo_close: %08x\n", GetLastError());
+        fprintf(stderr, "failed resolve lo_close: %08x\n", (unsigned int)GetLastError());
 #else
         fprintf(stderr, "failed resolve lo_close\n",());
 #endif
@@ -1514,7 +1514,7 @@ int swow_lo_read_resolver(void *conn, int fd, char *buf, size_t len) {
 #if defined(DL_ERROR)
         fprintf(stderr, "failed resolve lo_read: %s\n", DL_ERROR());
 #elif defined(CAT_OS_WIN)
-        fprintf(stderr, "failed resolve lo_read: %08x\n", GetLastError());
+        fprintf(stderr, "failed resolve lo_read: %08x\n", (unsigned int)GetLastError());
 #else
         fprintf(stderr, "failed resolve lo_read\n",());
 #endif
@@ -1545,7 +1545,7 @@ int swow_lo_write_resolver(void *conn, int fd, const char *buf, size_t len) {
 #if defined(DL_ERROR)
         fprintf(stderr, "failed resolve lo_write: %s\n", DL_ERROR());
 #elif defined(CAT_OS_WIN)
-        fprintf(stderr, "failed resolve lo_write: %08x\n", GetLastError());
+        fprintf(stderr, "failed resolve lo_write: %08x\n", (unsigned int)GetLastError());
 #else
         fprintf(stderr, "failed resolve lo_write\n",());
 #endif
@@ -1576,7 +1576,7 @@ int swow_lo_lseek_resolver(void *conn, int fd, int offset, int whence) {
 #if defined(DL_ERROR)
         fprintf(stderr, "failed resolve lo_lseek: %s\n", DL_ERROR());
 #elif defined(CAT_OS_WIN)
-        fprintf(stderr, "failed resolve lo_lseek: %08x\n", GetLastError());
+        fprintf(stderr, "failed resolve lo_lseek: %08x\n", (unsigned int)GetLastError());
 #else
         fprintf(stderr, "failed resolve lo_lseek\n",());
 #endif
@@ -1592,22 +1592,22 @@ int swow_lo_lseek_redirect(void *conn, int fd, int offset, int whence) {
 
 // weak function pointer for lo_lseek64
 #ifdef CAT_OS_WIN
-// extern long long lo_lseek64(void *conn, int fd, pg_int64 offset, int whence);
+// extern long long lo_lseek64(void *conn, int fd, long long offset, int whence);
 # pragma comment(linker, "/alternatename:lo_lseek64=swow_lo_lseek64_redirect")
 #else
-__attribute__((weak, alias("swow_lo_lseek64_redirect"))) extern long long lo_lseek64(void *conn, int fd, pg_int64 offset, int whence);
+__attribute__((weak, alias("swow_lo_lseek64_redirect"))) extern long long lo_lseek64(void *conn, int fd, long long offset, int whence);
 #endif
 // resolved function holder
-long long (*swow_lo_lseek64_resolved)(void *conn, int fd, pg_int64 offset, int whence);
+long long (*swow_lo_lseek64_resolved)(void *conn, int fd, long long offset, int whence);
 // resolver for lo_lseek64
-long long swow_lo_lseek64_resolver(void *conn, int fd, pg_int64 offset, int whence) {
-    swow_lo_lseek64_resolved = (long long (*)(void *conn, int fd, pg_int64 offset, int whence))DL_FETCH_SYMBOL(DL_FROM_HANDLE, "lo_lseek64");
+long long swow_lo_lseek64_resolver(void *conn, int fd, long long offset, int whence) {
+    swow_lo_lseek64_resolved = (long long (*)(void *conn, int fd, long long offset, int whence))DL_FETCH_SYMBOL(DL_FROM_HANDLE, "lo_lseek64");
 
     if (swow_lo_lseek64_resolved == NULL) {
 #if defined(DL_ERROR)
         fprintf(stderr, "failed resolve lo_lseek64: %s\n", DL_ERROR());
 #elif defined(CAT_OS_WIN)
-        fprintf(stderr, "failed resolve lo_lseek64: %08x\n", GetLastError());
+        fprintf(stderr, "failed resolve lo_lseek64: %08x\n", (unsigned int)GetLastError());
 #else
         fprintf(stderr, "failed resolve lo_lseek64\n",());
 #endif
@@ -1616,8 +1616,8 @@ long long swow_lo_lseek64_resolver(void *conn, int fd, pg_int64 offset, int when
 
     return swow_lo_lseek64_resolved(conn, fd, offset, whence);
 }
-long long (*swow_lo_lseek64_resolved)(void *conn, int fd, pg_int64 offset, int whence) = swow_lo_lseek64_resolver;
-long long swow_lo_lseek64_redirect(void *conn, int fd, pg_int64 offset, int whence) {
+long long (*swow_lo_lseek64_resolved)(void *conn, int fd, long long offset, int whence) = swow_lo_lseek64_resolver;
+long long swow_lo_lseek64_redirect(void *conn, int fd, long long offset, int whence) {
     return swow_lo_lseek64_resolved(conn, fd, offset, whence);
 }
 
@@ -1638,7 +1638,7 @@ unsigned int swow_lo_creat_resolver(void *conn, int mode) {
 #if defined(DL_ERROR)
         fprintf(stderr, "failed resolve lo_creat: %s\n", DL_ERROR());
 #elif defined(CAT_OS_WIN)
-        fprintf(stderr, "failed resolve lo_creat: %08x\n", GetLastError());
+        fprintf(stderr, "failed resolve lo_creat: %08x\n", (unsigned int)GetLastError());
 #else
         fprintf(stderr, "failed resolve lo_creat\n",());
 #endif
@@ -1669,7 +1669,7 @@ int swow_lo_unlink_resolver(void *conn, unsigned int lobjId) {
 #if defined(DL_ERROR)
         fprintf(stderr, "failed resolve lo_unlink: %s\n", DL_ERROR());
 #elif defined(CAT_OS_WIN)
-        fprintf(stderr, "failed resolve lo_unlink: %08x\n", GetLastError());
+        fprintf(stderr, "failed resolve lo_unlink: %08x\n", (unsigned int)GetLastError());
 #else
         fprintf(stderr, "failed resolve lo_unlink\n",());
 #endif
@@ -1683,7 +1683,6 @@ int swow_lo_unlink_redirect(void *conn, unsigned int lobjId) {
     return swow_lo_unlink_resolved(conn, lobjId);
 }
 
-#endif // CAT_OS_WIN
 
 #undef DL_FROM_HANDLE
 #ifdef CAT_OS_WIN
@@ -1714,7 +1713,7 @@ bool swow_pdo_get_bool_param_resolver(bool *bval, void *value) {
 #if defined(DL_ERROR)
         fprintf(stderr, "failed resolve pdo_get_bool_param: %s\n", DL_ERROR());
 #elif defined(CAT_OS_WIN)
-        fprintf(stderr, "failed resolve pdo_get_bool_param: %08x\n", GetLastError());
+        fprintf(stderr, "failed resolve pdo_get_bool_param: %08x\n", (unsigned int)GetLastError());
 #else
         fprintf(stderr, "failed resolve pdo_get_bool_param\n",());
 #endif
@@ -1745,7 +1744,7 @@ void swow_pdo_handle_error_resolver(void *dbh, void *stmt) {
 #if defined(DL_ERROR)
         fprintf(stderr, "failed resolve pdo_handle_error: %s\n", DL_ERROR());
 #elif defined(CAT_OS_WIN)
-        fprintf(stderr, "failed resolve pdo_handle_error: %08x\n", GetLastError());
+        fprintf(stderr, "failed resolve pdo_handle_error: %08x\n", (unsigned int)GetLastError());
 #else
         fprintf(stderr, "failed resolve pdo_handle_error\n",());
 #endif
@@ -1777,7 +1776,7 @@ int swow_pdo_parse_params_resolver(void *stmt, void *inquery, size_t inquery_len
 #if defined(DL_ERROR)
         fprintf(stderr, "failed resolve pdo_parse_params: %s\n", DL_ERROR());
 #elif defined(CAT_OS_WIN)
-        fprintf(stderr, "failed resolve pdo_parse_params: %08x\n", GetLastError());
+        fprintf(stderr, "failed resolve pdo_parse_params: %08x\n", (unsigned int)GetLastError());
 #else
         fprintf(stderr, "failed resolve pdo_parse_params\n",());
 #endif
@@ -1809,7 +1808,7 @@ int swow_pdo_parse_params_resolver(void *stmt, void *inquery, void *outquery) {
 #if defined(DL_ERROR)
         fprintf(stderr, "failed resolve pdo_parse_params: %s\n", DL_ERROR());
 #elif defined(CAT_OS_WIN)
-        fprintf(stderr, "failed resolve pdo_parse_params: %08x\n", GetLastError());
+        fprintf(stderr, "failed resolve pdo_parse_params: %08x\n", (unsigned int)GetLastError());
 #else
         fprintf(stderr, "failed resolve pdo_parse_params\n",());
 #endif
@@ -1841,7 +1840,7 @@ void swow_pdo_throw_exception_resolver(unsigned int driver_errcode, char *driver
 #if defined(DL_ERROR)
         fprintf(stderr, "failed resolve pdo_throw_exception: %s\n", DL_ERROR());
 #elif defined(CAT_OS_WIN)
-        fprintf(stderr, "failed resolve pdo_throw_exception: %08x\n", GetLastError());
+        fprintf(stderr, "failed resolve pdo_throw_exception: %08x\n", (unsigned int)GetLastError());
 #else
         fprintf(stderr, "failed resolve pdo_throw_exception\n",());
 #endif
@@ -1872,7 +1871,7 @@ int swow_php_pdo_register_driver_resolver(const void *driver) {
 #if defined(DL_ERROR)
         fprintf(stderr, "failed resolve php_pdo_register_driver: %s\n", DL_ERROR());
 #elif defined(CAT_OS_WIN)
-        fprintf(stderr, "failed resolve php_pdo_register_driver: %08x\n", GetLastError());
+        fprintf(stderr, "failed resolve php_pdo_register_driver: %08x\n", (unsigned int)GetLastError());
 #else
         fprintf(stderr, "failed resolve php_pdo_register_driver\n",());
 #endif
@@ -1903,7 +1902,7 @@ void swow_php_pdo_unregister_driver_resolver(const void *driver) {
 #if defined(DL_ERROR)
         fprintf(stderr, "failed resolve php_pdo_unregister_driver: %s\n", DL_ERROR());
 #elif defined(CAT_OS_WIN)
-        fprintf(stderr, "failed resolve php_pdo_unregister_driver: %08x\n", GetLastError());
+        fprintf(stderr, "failed resolve php_pdo_unregister_driver: %08x\n", (unsigned int)GetLastError());
 #else
         fprintf(stderr, "failed resolve php_pdo_unregister_driver\n",());
 #endif
