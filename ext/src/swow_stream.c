@@ -893,10 +893,11 @@ static int swow_stream_set_option(php_stream *stream, int option, int value, voi
                         flags |= MSG_OOB;
                     }
 #endif
-                    xparam->outputs.returncode = cat_socket_sendto(
+                    cat_bool_t ret = cat_socket_sendto(
                         socket, xparam->inputs.buf, xparam->inputs.buflen,
                         xparam->inputs.addr, xparam->inputs.addrlen
                     );
+                    xparam->outputs.returncode = ret ? xparam->inputs.buflen : -1;
                     if (xparam->outputs.returncode == -1) {
                         php_error_docref(NULL, E_WARNING, "%s\n", cat_get_last_error_message());
                     }
