@@ -234,6 +234,7 @@ jobs:
             --capture \
             --directory "ext/src" \
             --directory "ext/include" \
+            --ignore-errors empty \
             --output-file coverage.info &&
           lcov \
             --extract coverage.info \
