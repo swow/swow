@@ -442,6 +442,13 @@ static inline int swow_stream_bind(php_stream *stream, swow_netstream_data_t *sw
         goto _error;
     }
 
+    if (bind_flags & CAT_SOCKET_BIND_FLAG_IPV6ONLY) {
+        // Fallback to IPv4
+        if (strchr(host, ':') == NULL) {
+            bind_flags ^= CAT_SOCKET_BIND_FLAG_IPV6ONLY;
+        }
+    }
+
     ret = cat_socket_bind_to_ex(socket, host, host_len, port, bind_flags) ? 0 : -1;
 
     if (UNEXPECTED(ret != 0)) {
