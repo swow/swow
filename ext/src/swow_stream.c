@@ -1706,7 +1706,6 @@ static int swow_stream_array_emulate_read_fd_set(zval *stream_array)
 
     return ret;
 }
-/* }}} */
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_MASK_EX(arginfo_swow_stream_select, 0, 4, MAY_BE_LONG|MAY_BE_FALSE)
     ZEND_ARG_TYPE_INFO(1, read, IS_ARRAY, 1)
@@ -1716,7 +1715,6 @@ ZEND_BEGIN_ARG_WITH_RETURN_TYPE_MASK_EX(arginfo_swow_stream_select, 0, 4, MAY_BE
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, microseconds, IS_LONG, 1, "null")
 ZEND_END_ARG_INFO()
 
-/* {{{ Runs the select() system call on the sets of streams with a timeout specified by tv_sec and tv_usec */
 PHP_FUNCTION(swow_stream_select)
 {
     zval *r_array, *w_array, *e_array;
@@ -1843,6 +1841,254 @@ PHP_FUNCTION(swow_stream_select)
     }
 
     RETURN_LONG(retval);
+}
+/* }}} */
+
+/* {{{ stream_select_unlimited related functions */
+
+typedef struct swow_stream_pollfd_map_bucket_s {
+    cat_pollfd_t *pollfd;
+} swow_stream_pollfd_map_bucket_t;
+
+typedef struct swow_stream_pollfd_context_s {
+    cat_pollfd_t fds_stacked[8];
+    cat_pollfd_t *fds;
+    cat_nfds_t nfds;
+    uint32_t size;
+} swow_stream_pollfd_context_t;
+
+static void swow_stream_pollfd_map_bucket_dtor_func(zval *pDest)
+{
+    cat_pollfd_t *pollfd = (cat_pollfd_t *) Z_PTR_P(pDest);
+    efree(pollfd);
+}
+
+static void swow_stream_array_to_pollfd_map(zval *stream_array, HashTable *pollfd_map, swow_stream_pollfd_context_t *context, cat_pollfd_events_t event)
+{
+    zval *stream_zval;
+    php_stream *stream;
+
+    if (Z_TYPE_P(stream_array) != IS_ARRAY) {
+        return;
+    }
+
+    ZEND_HASH_FOREACH_VAL(Z_ARRVAL_P(stream_array), stream_zval) {
+        /* Temporary int fd is needed for the STREAM data type on windows, passing this_fd directly to php_stream_cast()
+            would eventually bring a wrong result on x64. php_stream_cast() casts to int internally, and this will leave
+            the higher bits of a SOCKET variable uninitialized on systems with little endian. */
+        php_socket_t this_fd;
+
+        ZVAL_DEREF(stream_zval);
+        php_stream_from_zval_no_verify(stream, stream_zval);
+        if (stream == NULL) {
+            continue;
+        }
+        /* get the fd.
+         * NB: Most other code will NOT use the PHP_STREAM_CAST_INTERNAL flag
+         * when casting.  It is only used here so that the buffered data warning
+         * is not displayed.
+         * */
+        if (
+            SUCCESS == php_stream_cast(
+                stream, PHP_STREAM_AS_FD_FOR_SELECT | PHP_STREAM_CAST_INTERNAL, (void *) &this_fd, 1) &&
+            this_fd != -1
+        ) {
+            swow_stream_pollfd_map_bucket_t *pollfd_bucket = (swow_stream_pollfd_map_bucket_t *) zend_hash_index_find_ptr(pollfd_map, this_fd);
+            if (pollfd_bucket == NULL) {
+                uint32_t index = context->nfds++;
+                pollfd_bucket = (swow_stream_pollfd_map_bucket_t *) ecalloc(1, sizeof(*pollfd_bucket));
+                if (UNEXPECTED(index == context->size)) {
+                    context->size += context->size;
+                    if (context->fds == context->fds_stacked) {
+                        context->fds = (cat_pollfd_t *) emalloc(context->size * sizeof(*context->fds));
+                        memcpy(context->fds, context->fds_stacked, index * sizeof(*context->fds));
+                    } else {
+                        context->fds = (cat_pollfd_t *) erealloc(context->fds, context->size * sizeof(*context->fds));
+                    }
+                }
+                pollfd_bucket->pollfd = &context->fds[index];
+                pollfd_bucket->pollfd->events = event;
+                pollfd_bucket->pollfd->fd = this_fd;
+                pollfd_bucket->pollfd->revents = POLLNONE;
+                zend_hash_index_add_ptr(pollfd_map, this_fd, pollfd_bucket);
+            } else {
+                pollfd_bucket->pollfd->events |= event;
+            }
+        }
+    } ZEND_HASH_FOREACH_END();
+}
+
+static void swow_stream_array_from_pollfd_map(zval *stream_array, HashTable *pollfd_map, cat_pollfd_events_t event)
+{
+    HashTable *new_stream_array;
+    zval *stream_zval, *dest_stream_zval;
+    php_stream *stream;
+    zend_string *string_key;
+    zend_ulong index_key;
+
+    if (Z_TYPE_P(stream_array) != IS_ARRAY) {
+        return;
+    }
+    new_stream_array = zend_new_array(zend_hash_num_elements(Z_ARRVAL_P(stream_array)));
+
+    ZEND_HASH_FOREACH_KEY_VAL(Z_ARRVAL_P(stream_array), index_key, string_key, stream_zval) {
+        php_socket_t this_fd;
+
+        ZVAL_DEREF(stream_zval);
+        php_stream_from_zval_no_verify(stream, stream_zval);
+        if (stream == NULL) {
+            continue;
+        }
+        /* get the fd
+         * NB: Most other code will NOT use the PHP_STREAM_CAST_INTERNAL flag
+         * when casting.  It is only used here so that the buffered data warning
+         * is not displayed.
+         */
+        if (
+            SUCCESS ==
+                php_stream_cast(
+                    stream, PHP_STREAM_AS_FD_FOR_SELECT | PHP_STREAM_CAST_INTERNAL, (void *) &this_fd, 1) &&
+            this_fd != SOCK_ERR
+        ) {
+            swow_stream_pollfd_map_bucket_t *bucket = (swow_stream_pollfd_map_bucket_t *) zend_hash_index_find_ptr(pollfd_map, this_fd);
+            cat_pollfd_t *pollfd = bucket->pollfd;
+            if ((pollfd->revents & event) == event) {
+                if (!string_key) {
+                    dest_stream_zval = zend_hash_index_update(new_stream_array, index_key, stream_zval);
+                } else {
+                    dest_stream_zval = zend_hash_update(new_stream_array, string_key, stream_zval);
+                }
+                zval_add_ref(dest_stream_zval);
+                continue;
+            }
+        }
+    } ZEND_HASH_FOREACH_END();
+
+    /* destroy old array and add new one */
+    zval_ptr_dtor(stream_array);
+    ZVAL_ARR(stream_array, new_stream_array);
+}
+
+#define arginfo_swow_stream_select_unlimited arginfo_swow_stream_select
+
+PHP_FUNCTION(swow_stream_select_unlimited)
+{
+    zval *r_array, *w_array, *e_array;
+    struct timeval tv, *tv_p = NULL;
+    zend_long sec, usec = 0;
+    zend_bool secnull;
+    zend_bool usecnull = 1;
+    int retval;
+
+    ZEND_PARSE_PARAMETERS_START(4, 5)
+        Z_PARAM_ARRAY_EX2(r_array, 1, 1, 0)
+        Z_PARAM_ARRAY_EX2(w_array, 1, 1, 0)
+        Z_PARAM_ARRAY_EX2(e_array, 1, 1, 0)
+        Z_PARAM_LONG_OR_NULL(sec, secnull)
+        Z_PARAM_OPTIONAL
+        Z_PARAM_LONG_OR_NULL(usec, usecnull)
+    ZEND_PARSE_PARAMETERS_END();
+
+    if (secnull && !usecnull) {
+        if (usec == 0) {
+            php_error_docref(NULL, E_DEPRECATED, "Argument #5 ($microseconds) should be null instead of 0 when argument #4 ($seconds) is null");
+        } else {
+            zend_argument_value_error(5, "must be null when argument #4 ($seconds) is null");
+            RETURN_THROWS();
+        }
+    }
+
+    /* If seconds is not set to null, build the timeval, else we wait indefinitely */
+    if (!secnull) {
+
+        if (sec < 0) {
+            zend_argument_value_error(4, "must be greater than or equal to 0");
+            RETURN_THROWS();
+        } else if (usec < 0) {
+            // there's a bug before b751c24e233945281b08ef15b569a63feb6e0c48
+            // here we fixed it
+            zend_argument_value_error(5, "must be greater than or equal to 0");
+            RETURN_THROWS();
+        }
+
+        /* Windows, Solaris and BSD do not like microsecond values which are >= 1 sec */
+        tv.tv_sec = (long) (sec + (usec / 1000000));
+        tv.tv_usec = (long) (usec % 1000000);
+        tv_p = &tv;
+    }
+
+    /* slight hack to support buffered data; if there is data sitting in the
+     * read buffer of any of the streams in the read array, let's pretend
+     * that we selected, but return only the readable sockets */
+    if (r_array != NULL) {
+        retval = swow_stream_array_emulate_read_fd_set(r_array);
+        if (retval > 0) {
+            if (w_array != NULL) {
+                zval_ptr_dtor(w_array);
+                ZVAL_EMPTY_ARRAY(w_array);
+            }
+            if (e_array != NULL) {
+                zval_ptr_dtor(e_array);
+                ZVAL_EMPTY_ARRAY(e_array);
+            }
+            RETURN_LONG(retval);
+        }
+    }
+
+    HashTable _pollfd_map, *pollfd_map = &_pollfd_map;
+    swow_stream_pollfd_context_t context;
+    context.fds = context.fds_stacked;
+    context.nfds = 0;
+    context.size = CAT_ARRAY_SIZE(context.fds_stacked);
+
+    zend_hash_init(
+        pollfd_map, 0,
+        NULL, swow_stream_pollfd_map_bucket_dtor_func, false
+    );
+
+    if (r_array != NULL) {
+        swow_stream_array_to_pollfd_map(r_array, pollfd_map, &context, POLLIN);
+    }
+    if (w_array != NULL) {
+        swow_stream_array_to_pollfd_map(w_array, pollfd_map, &context, POLLOUT);
+    }
+    if (e_array != NULL) {
+        swow_stream_array_to_pollfd_map(e_array, pollfd_map, &context, POLLERR);
+    }
+
+    if (context.nfds == 0) {
+        zend_value_error("No stream arrays were passed");
+        ZEND_ASSERT_HAS_EXCEPTION();
+        goto _out;
+    }
+    ZEND_ASSERT(context.nfds == zend_hash_num_elements(pollfd_map));
+
+    retval = cat_poll(context.fds, context.nfds, cat_time_tv2to(tv_p));
+
+    if (retval == -1) {
+        php_error_docref(NULL, E_WARNING, "Unable to select [%d]: %s (max_fd=%d)",
+            errno, strerror(errno), INT_MAX);
+        RETVAL_FALSE;
+        goto _out;
+    }
+
+    if (r_array != NULL) {
+        swow_stream_array_from_pollfd_map(r_array, pollfd_map, POLLIN);
+    }
+    if (w_array != NULL) {
+        swow_stream_array_from_pollfd_map(w_array, pollfd_map, POLLOUT);
+    }
+    if (e_array != NULL) {
+        swow_stream_array_from_pollfd_map(e_array, pollfd_map, POLLERR);
+    }
+
+    RETVAL_LONG(retval);
+
+    _out:
+    if (UNEXPECTED(context.fds != context.fds_stacked)) {
+        efree(context.fds);
+    }
+    zend_hash_destroy(pollfd_map);
 }
 /* }}} */
 
@@ -1989,6 +2235,7 @@ static PHP_FUNCTION(swow_socket_export_stream)
 static const zend_function_entry swow_stream_functions[] = {
     PHP_FENTRY(stream_socket_sendto, PHP_FN(swow_stream_socket_sendto), arginfo_swow_stream_socket_sendto, 0)
     PHP_FENTRY(stream_select, PHP_FN(swow_stream_select), arginfo_swow_stream_select, 0)
+    PHP_FENTRY(stream_select_unlimited, PHP_FN(swow_stream_select_unlimited), arginfo_swow_stream_select_unlimited, 0)
     PHP_FENTRY(stream_poll_one, PHP_FN(swow_stream_poll_one), arginfo_swow_stream_poll_one, 0)
     PHP_FE_END
 };

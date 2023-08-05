@@ -41,6 +41,13 @@ namespace
 
 namespace
 {
+
+    /** unlimited version of stream_select() */
+    function stream_select_unlimited(?array &$read, ?array &$write, ?array &$except, ?int $seconds, ?int $microseconds = null): int|false { }
+}
+
+namespace
+{
     /**
      * poll one stream for events
      * @param int $events flags: STREAM_POLL* constants combinations
