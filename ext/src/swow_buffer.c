@@ -874,6 +874,54 @@ static PHP_METHOD(Swow_Buffer, __debugInfo)
     RETURN_DEBUG_INFO_WITH_PROPERTIES(&z_debug_info);
 }
 
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Buffer___serialize, 0, 0, IS_ARRAY, 0)
+ZEND_END_ARG_INFO()
+
+static PHP_METHOD(Swow_Buffer, __serialize)
+{
+    ZEND_PARSE_PARAMETERS_NONE();
+
+    zend_string *string = swow_buffer_get_string(getThisBuffer());
+
+    if (UNEXPECTED(string == NULL)) {
+        string = zend_empty_string;
+    }
+
+    zval z_buffer;
+    array_init(&z_buffer);
+    add_assoc_str(&z_buffer, "value", string);
+
+    RETURN_ARR(Z_ARR(z_buffer));
+}
+
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Buffer___unserialize, 0, 1, IS_VOID, 0)
+    ZEND_ARG_TYPE_INFO(0, data, IS_ARRAY, 0)
+ZEND_END_ARG_INFO()
+
+static PHP_METHOD(Swow_Buffer, __unserialize)
+{
+    SWOW_BUFFER_GETTER(s_buffer, buffer);
+    HashTable *data;
+
+    ZEND_PARSE_PARAMETERS_START(1, 1)
+        Z_PARAM_ARRAY_HT(data)
+    ZEND_PARSE_PARAMETERS_END();
+
+    zval *z_value = zend_hash_find_known_hash(data, ZSTR_KNOWN(ZEND_STR_VALUE));
+    if (UNEXPECTED(z_value == NULL)) {
+        zend_argument_value_error(1, "must have a \"value\" key");
+        RETURN_THROWS();
+    }
+    if (UNEXPECTED(Z_TYPE_P(z_value) != IS_STRING)) {
+        zend_argument_value_error(1, "\"value\" must be string");
+        RETURN_THROWS();
+    }
+
+    zend_string *string = Z_STR_P(z_value);
+    buffer->value = ZSTR_VAL(zend_string_copy(string));
+    buffer->size = buffer->length = ZSTR_LEN(string);
+}
+
 static const zend_function_entry swow_buffer_methods[] = {
     PHP_ME(Swow_Buffer, alignSize,         arginfo_class_Swow_Buffer_alignSize,         ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
     PHP_ME(Swow_Buffer, __construct,       arginfo_class_Swow_Buffer___construct,       ZEND_ACC_PUBLIC)
@@ -906,6 +954,8 @@ static const zend_function_entry swow_buffer_methods[] = {
     /* magic */
     PHP_ME(Swow_Buffer, __toString,        arginfo_class_Swow_Buffer___toString,        ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Buffer, __debugInfo,       arginfo_class_Swow_Buffer___debugInfo,       ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Buffer, __serialize,       arginfo_class_Swow_Buffer___serialize,       ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Buffer, __unserialize,     arginfo_class_Swow_Buffer___unserialize,     ZEND_ACC_PUBLIC)
     PHP_FE_END
 };
 
@@ -1020,7 +1070,7 @@ zend_result swow_buffer_module_init(INIT_FUNC_ARGS)
     swow_buffer_ce = swow_register_internal_class(
         "Swow\\Buffer", NULL, swow_buffer_methods,
         &swow_buffer_handlers, NULL,
-        cat_true, cat_false,
+        cat_true, cat_true,
         swow_buffer_create_object,
         swow_buffer_free_object,
         XtOffsetOf(swow_buffer_t, std)
