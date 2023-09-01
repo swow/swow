@@ -34,7 +34,7 @@ static PHP_METHOD(Swow_Errno, getDescriptionOf)
 
     // overflow for int
     if (error < INT_MIN || error > INT_MAX) {
-        zend_value_error("Errno passed in is not in errno_t range");
+        zend_argument_value_error(1, "Errno passed in is not in errno_t range");
         RETURN_THROWS();
     }
 

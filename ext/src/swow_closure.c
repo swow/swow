@@ -555,22 +555,22 @@ static PHP_METHOD(Swow_Closure, __unserialize)
 
     zval *z_file = zend_hash_find_known_hash(data, ZSTR_KNOWN(ZEND_STR_FILE));
     if (z_file != NULL && Z_TYPE_P(z_file) != IS_STRING) {
-        zend_value_error("Expected string for key 'file', got %s", zend_zval_type_name(z_file));
+        zend_argument_value_error(1, "Expected string for key 'file', got %s", zend_zval_type_name(z_file));
         RETURN_THROWS();
     }
     zval *z_code = zend_hash_find_known_hash(data, ZSTR_KNOWN(ZEND_STR_CODE));
     if (z_code == NULL || Z_TYPE_P(z_code) != IS_STRING) {
-        zend_value_error("Expected string for key 'code', got %s", z_code == NULL ? "null" : zend_zval_type_name(z_code));
+        zend_argument_value_error(1, "Expected string for key 'code', got %s", z_code == NULL ? "null" : zend_zval_type_name(z_code));
         RETURN_THROWS();
     }
     zval *z_doc_comment = zend_hash_find(data, SWOW_KNOWN_STRING(doc_comment));
     if (z_doc_comment != NULL && Z_TYPE_P(z_doc_comment) != IS_STRING) {
-        zend_value_error("Expected string for key 'doc_comment', got %s", zend_zval_type_name(z_code));
+        zend_argument_value_error(1, "Expected string for key 'doc_comment', got %s", zend_zval_type_name(z_code));
         RETURN_THROWS();
     }
     zval *z_static_variables = zend_hash_find(data, SWOW_KNOWN_STRING(static_variables));
     if (z_static_variables != NULL && (Z_TYPE_P(z_static_variables) != IS_ARRAY || HT_IS_PACKED(Z_ARR_P(z_static_variables)))) {
-        zend_value_error("Expected assoc array for key 'static_variables', got %s", zend_zval_type_name(z_code));
+        zend_argument_value_error(1, "Expected assoc array for key 'static_variables', got %s", zend_zval_type_name(z_code));
         RETURN_THROWS();
     }
     zval retval;
