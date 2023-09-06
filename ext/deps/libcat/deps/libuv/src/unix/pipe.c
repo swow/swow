@@ -30,14 +30,30 @@
 #include <stdlib.h>
 
 
+#ifdef HAVE_LIBCAT
+int uv_pipe_init_ex(uv_loop_t* loop, uv_pipe_t* handle, int type) {
+#else
 int uv_pipe_init(uv_loop_t* loop, uv_pipe_t* handle, int ipc) {
+#endif
   uv__stream_init(loop, (uv_stream_t*)handle, UV_NAMED_PIPE);
   handle->shutdown_req = NULL;
   handle->connect_req = NULL;
   handle->pipe_fname = NULL;
+#ifdef HAVE_LIBCAT
+  handle->ipc = !!(type & UV_PIPE_USE_IPC);
+  handle->dgram = !!(type & UV_PIPE_DGRAM);
+#else
   handle->ipc = ipc;
+#endif
   return 0;
 }
+
+
+#ifdef HAVE_LIBCAT
+int uv_pipe_init(uv_loop_t* loop, uv_pipe_t* handle, int ipc) {
+  return uv_pipe_init_ex(loop, handle, ipc ? UV_PIPE_USE_IPC : 0);
+}
+#endif
 
 
 #ifdef HAVE_LIBCAT
@@ -63,9 +79,6 @@ int uv_pipe_bind(uv_pipe_t* handle, const char* name) {
 #endif
   struct sockaddr_un saddr;
   const char* pipe_fname;
-#ifdef HAVE_LIBCAT
-  int new_socket;
-#endif
   int sockfd;
   int err;
 
@@ -103,17 +116,13 @@ int uv_pipe_bind(uv_pipe_t* handle, const char* name) {
 #endif
 
 #ifdef HAVE_LIBCAT
-  sockfd = uv__stream_fd(handle);
-  new_socket = sockfd < 0;
-  if (new_socket) {
-#endif
+  err = uv__socket(AF_UNIX, handle->dgram ? SOCK_DGRAM : SOCK_STREAM, 0);
+#else
   err = uv__socket(AF_UNIX, SOCK_STREAM, 0);
+#endif
   if (err < 0)
     goto err_socket;
   sockfd = err;
-#ifdef HAVE_LIBCAT
-  }
-#endif
 
   memset(&saddr, 0, sizeof saddr);
 #ifdef HAVE_LIBCAT
@@ -137,9 +146,6 @@ int uv_pipe_bind(uv_pipe_t* handle, const char* name) {
     if (err == UV_ENOENT)
       err = UV_EACCES;
 
-#ifdef HAVE_LIBCAT
-    if (new_socket)
-#endif
     uv__close(sockfd);
     goto err_socket;
   }
@@ -268,7 +274,11 @@ void uv_pipe_connect(uv_connect_t* req,
   new_sock = (uv__stream_fd(handle) == -1);
 
   if (new_sock) {
+#ifdef HAVE_LIBCAT
+    err = uv__socket(AF_UNIX, handle->dgram ? SOCK_DGRAM : SOCK_STREAM, 0);
+#else
     err = uv__socket(AF_UNIX, SOCK_STREAM, 0);
+#endif
     if (err < 0)
       goto out;
     handle->io_watcher.fd = err;

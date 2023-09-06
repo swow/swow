@@ -203,35 +203,6 @@ CAT_API size_t cat_socket_write_vector_length(const cat_socket_write_vector_t *v
 #undef TCP_KEEPALIVE
 #endif
 
-#define CAT_SOCKET_CREATION_FLAG_MAP(XX) \
-    XX(NONE,              0) \
-    XX(OPEN_FD,      1 << 0) \
-    XX(OPEN_SOCKET,  1 << 1) \
-    XX(OPEN_HANDLE,  1 << 2) \
-
-typedef enum cat_socket_creation_flag_e {
-#define CAT_SOCKET_CREATION_FLAG_GEN(name, value) CAT_ENUM_GEN(CAT_SOCKET_CREATION_FLAG_, name, value)
-    CAT_SOCKET_CREATION_FLAG_MAP(CAT_SOCKET_CREATION_FLAG_GEN)
-#undef CAT_SOCKET_CREATION_FLAG_GEN
-} cat_socket_creation_flag_t;
-
-typedef enum cat_socket_creation_union_flags_e {
-    CAT_SOCKET_CREATION_OPEN_FLAGS = CAT_SOCKET_CREATION_FLAG_OPEN_FD |
-                                     CAT_SOCKET_CREATION_FLAG_OPEN_SOCKET |
-                                     CAT_SOCKET_CREATION_FLAG_OPEN_HANDLE,
-} cat_socket_creation_union_flags_t;
-
-typedef uint32_t cat_socket_creation_flags_t;
-
-typedef struct cat_socket_creation_options_s {
-    cat_socket_creation_flags_t flags;
-    union {
-        cat_os_fd_t fd;
-        cat_os_socket_t socket;
-        cat_os_handle_t handle;
-    } o;
-} cat_socket_creation_options_t;
-
 /* 0 ~ 23 */
 #define CAT_SOCKET_TYPE_FLAG_MAP_EX(XX, SS) \
     /* 0 - 3 (sock) */ \
@@ -534,10 +505,9 @@ CAT_API cat_bool_t cat_socket_runtime_init(void);
 
 CAT_API void cat_socket_init(cat_socket_t *socket);
 CAT_API cat_socket_t *cat_socket_create(cat_socket_t *socket, cat_socket_type_t type);
-CAT_API cat_socket_t *cat_socket_create_ex(cat_socket_t *socket, cat_socket_type_t type, const cat_socket_creation_options_t *options);
 
-CAT_API cat_socket_t *cat_socket_open_os_fd(cat_socket_t *socket, cat_socket_type_t type, cat_os_fd_t os_fd);
-CAT_API cat_socket_t *cat_socket_open_os_socket(cat_socket_t *socket, cat_socket_type_t type, cat_os_socket_t os_socket);
+CAT_API cat_bool_t cat_socket_open_os_fd(cat_socket_t *socket, cat_os_fd_t os_fd);
+CAT_API cat_bool_t cat_socket_open_os_socket(cat_socket_t *socket, cat_os_socket_t os_socket);
 
 CAT_API cat_socket_type_t cat_socket_type_simplify(cat_socket_type_t type);
 CAT_API const char *cat_socket_type_get_name(cat_socket_type_t type);
