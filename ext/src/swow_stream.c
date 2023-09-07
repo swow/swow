@@ -1273,7 +1273,16 @@ static cat_socket_t *swow_stream_tty_try_init(const php_stream *stream)
 
     if (unlikely(socket == NULL)) {
         /* convert int to SOCKET on Windows, and internal will parse it as int */
-        socket = cat_socket_open_os_fd(NULL, CAT_SOCKET_TYPE_TTY, fd);
+        cat_socket_type_t socket_type;
+        CAT_ASSERT(fd == STDIN_FILENO || fd == STDOUT_FILENO || fd == STDERR_FILENO);
+        if (fd == STDIN_FILENO) {
+            socket_type = CAT_SOCKET_TYPE_STDIN;
+        } else if (fd == STDOUT_FILENO) {
+            socket_type = CAT_SOCKET_TYPE_STDOUT;
+        } else /* if (fd == STDERR_FILENO) */ {
+            socket_type = CAT_SOCKET_TYPE_STDERR;
+        }
+        socket = cat_socket_create(NULL, socket_type);
         if (unlikely(socket == NULL)) {
             SWOW_STREAM_G(tty_sockets)[fd] = INVALID_TTY_SOCKET;
             return NULL;
@@ -2218,18 +2227,26 @@ static PHP_FUNCTION(swow_socket_export_stream)
         }
     }
 #endif
+    socket = cat_socket_create(socket, socket_type);
+    if (socket == NULL) {
+        goto _error;
+    }
 #ifdef CAT_OS_UNIX_LIKE
     if (socket_type & CAT_SOCKET_TYPE_FLAG_LOCAL) {
-        socket = cat_socket_open_os_fd(socket, socket_type, sock);
+        if (!cat_socket_open_os_fd(socket, sock)) {
+            goto _error;
+        }
     } else
 #endif
     {
-        socket = cat_socket_open_os_socket(socket, socket_type, sock);
+        if (!cat_socket_open_os_socket(socket, sock)) {
+            goto _error;
+        }
     }
-    if (socket == NULL) {
-        zval_ptr_dtor(return_value);
-        RETURN_FALSE;
-    }
+    return;
+    _error:
+    zval_ptr_dtor(return_value);
+    RETURN_FALSE;
 }
 
 static const zend_function_entry swow_stream_functions[] = {
