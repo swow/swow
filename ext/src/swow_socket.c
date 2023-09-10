@@ -98,6 +98,74 @@ static PHP_METHOD(Swow_Socket, __construct)
     }
 }
 
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_open, 0, 0, IS_STATIC, 0)
+    ZEND_ARG_INFO(0, socket)
+ZEND_END_ARG_INFO()
+
+static PHP_METHOD(Swow_Socket, open)
+{
+    SWOW_SOCKET_GETTER(s_socket, socket);
+    zval *z_socket;
+    php_stream *stream;
+    cat_os_socket_t os_sock;
+    zend_result result;
+
+    if (UNEXPECTED(cat_socket_is_open(socket))) {
+        zend_throw_error(NULL, "%s can be opened only once", ZEND_THIS_NAME);
+        RETURN_THROWS();
+    }
+
+    ZEND_PARSE_PARAMETERS_START(1, 1)
+        Z_PARAM_ZVAL(z_socket)
+    ZEND_PARSE_PARAMETERS_END();
+
+    // TODD: support more types
+    if (Z_TYPE_P(z_socket) != IS_RESOURCE) {
+        zend_argument_type_error(1, "must be a resource, %s given", zend_zval_type_name(z_socket));
+        RETURN_THROWS();
+    }
+
+    SWOW_THROW_ON_ERROR_START_EX(swow_socket_exception_ce) {
+	    php_stream_from_zval_no_verify(stream, z_socket);
+    } SWOW_THROW_ON_ERROR_END();
+    if (stream == NULL) {
+        RETURN_THROWS();
+    }
+
+    SWOW_THROW_ON_ERROR_START_EX(swow_socket_exception_ce) {
+        result = php_stream_cast(stream, PHP_STREAM_AS_SOCKETD, (void **) &os_sock, true);
+    } SWOW_THROW_ON_ERROR_END();
+	if (result != SUCCESS) {
+        RETURN_THROWS();
+	}
+
+#ifndef CAT_OS_WIN
+    os_sock = dup(os_sock);
+#else
+    os_sock = _dup(os_sock);
+#endif
+    if (os_sock == CAT_OS_INVALID_SOCKET) {
+        swow_throw_exception(swow_socket_exception_ce,
+            cat_translate_sys_error(cat_sys_errno),
+            "Failed to dup socket: %s", cat_strerror(cat_sys_errno));
+        RETURN_THROWS();
+    }
+
+    if (!cat_socket_open_os_socket(socket, os_sock)) {
+#ifndef CAT_OS_WIN
+        close(os_sock);
+#else
+        closesocket(os_sock);
+#endif
+        swow_throw_exception_with_last(swow_socket_exception_ce);
+        RETURN_THROWS();
+    }
+
+	php_stream_set_option(stream, PHP_STREAM_OPTION_READ_BUFFER, PHP_STREAM_BUFFER_NONE, NULL);
+
+    RETURN_THIS();
+}
+
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_getLong, ZEND_RETURN_VALUE, 0, IS_LONG, 0)
 ZEND_END_ARG_INFO()
 
@@ -1594,6 +1662,7 @@ static PHP_METHOD(Swow_Socket, __debugInfo)
 
 static const zend_function_entry swow_socket_methods[] = {
     PHP_ME(Swow_Socket, __construct,               arginfo_class_Swow_Socket___construct,         ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Socket, open,                      arginfo_class_Swow_Socket_open,                ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Socket, getId,                     arginfo_class_Swow_Socket_getId,               ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Socket, getType,                   arginfo_class_Swow_Socket_getType,             ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Socket, getSimpleType,             arginfo_class_Swow_Socket_getSimpleType,       ZEND_ACC_PUBLIC)

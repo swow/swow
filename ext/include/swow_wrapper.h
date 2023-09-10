@@ -456,10 +456,13 @@ SWOW_API zend_result swow_call_function_anyway(zend_fcall_info *fci, zend_fcall_
 
 /* exception */
 
-#define SWOW_THROW_ON_ERROR_START() do { \
+#define SWOW_THROW_ON_ERROR_START(ce) \
+        SWOW_THROW_ON_ERROR_START_EX(spl_ce_RuntimeException)
+
+#define SWOW_THROW_ON_ERROR_START_EX(ce) do { \
     /* convert E_WARNINGs to exceptions */ \
     zend_error_handling _error_handling; \
-    zend_replace_error_handling(EH_THROW, spl_ce_RuntimeException, &_error_handling); \
+    zend_replace_error_handling(EH_THROW, ce, &_error_handling); \
 
 #define SWOW_THROW_ON_ERROR_END() \
     zend_restore_error_handling(&_error_handling); \

@@ -1275,6 +1275,8 @@ namespace Swow
 
         public function __construct(int $type) { }
 
+        public function open($socket, bool $dup = false): static { }
+
         /**
          * @FIXME may cause error on 32-bit env
          * @return int 64-bit auto-incrementing ID, never repeat in the same process
