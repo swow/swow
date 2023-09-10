@@ -41,7 +41,6 @@ namespace
 
 namespace
 {
-
     /** unlimited version of stream_select() */
     function stream_select_unlimited(?array &$read, ?array &$write, ?array &$except, ?int $seconds, ?int $microseconds = null): int|false { }
 }
@@ -1220,6 +1219,10 @@ namespace Swow
 
         /** @return array<string, mixed> debug information for var_dump */
         public function __debugInfo(): array { }
+
+        public function __serialize(): array { }
+
+        public function __unserialize(array $data): void { }
     }
 }
 
