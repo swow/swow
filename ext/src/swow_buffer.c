@@ -534,7 +534,7 @@ static PHP_METHOD(Swow_Buffer, read)
     RETURN_STRINGL_FAST(ptr, length);
 }
 
-static PHP_METHOD_EX(Swow_Buffer, _write, const zend_bool append)
+static PHP_METHOD_EX(Swow_Buffer, _write, const bool append)
 {
     SWOW_BUFFER_GETTER(s_buffer, buffer);
     SWOW_BUFFER_CHECK_LOCK(s_buffer);
@@ -1005,7 +1005,7 @@ static char *swow_buffer_realloc_standard(char *old_value, size_t new_size)
     zend_string *new_string;
     size_t old_length = old_string != NULL ? ZSTR_LEN(old_string) : 0;
     size_t new_length = MIN(old_length, new_size);
-    zend_bool do_erealloc;
+    bool do_erealloc;
 
     if (
         /* zend string do not support realloc from NULL */

@@ -141,7 +141,7 @@ static zend_always_inline swow_coroutine_t *swow_buffer_get_locker(const swow_bu
     return s_buffer->locker;
 }
 
-static zend_always_inline zend_bool swow_buffer_check_lock(swow_buffer_t *s_buffer)
+static zend_always_inline bool swow_buffer_check_lock(swow_buffer_t *s_buffer)
 {
     swow_coroutine_t *locker = swow_buffer_get_locker(s_buffer);
     if (UNEXPECTED(locker != NULL)) {
@@ -154,7 +154,7 @@ static zend_always_inline zend_bool swow_buffer_check_lock(swow_buffer_t *s_buff
     return true;
 }
 
-static zend_always_inline zend_bool swow_buffer_lock(swow_buffer_t *s_buffer)
+static zend_always_inline bool swow_buffer_lock(swow_buffer_t *s_buffer)
 {
     if (UNEXPECTED(!swow_buffer_check_lock(s_buffer))) {
         return false;
@@ -163,7 +163,7 @@ static zend_always_inline zend_bool swow_buffer_lock(swow_buffer_t *s_buffer)
     return true;
 }
 
-static zend_always_inline zend_bool swow_buffer_unlock(swow_buffer_t *s_buffer)
+static zend_always_inline bool swow_buffer_unlock(swow_buffer_t *s_buffer)
 {
     swow_coroutine_t *locker = swow_buffer_get_locker(s_buffer);
     if (UNEXPECTED(locker != swow_coroutine_get_current())) {

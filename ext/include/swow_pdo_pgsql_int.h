@@ -44,9 +44,9 @@ typedef struct {
 	unsigned int	stmt_counter;
 	/* The following two variables have the same purpose. Unfortunately we need
 	   to keep track of two different attributes having the same effect. */
-	zend_bool		emulate_prepares;
-	zend_bool		disable_native_prepares; /* deprecated since 5.6 */
-	zend_bool		disable_prepares;
+	bool		emulate_prepares;
+	bool		disable_native_prepares; /* deprecated since 5.6 */
+	bool		disable_prepares;
 	HashTable       *lob_streams;
 } pdo_pgsql_db_handle;
 
@@ -54,7 +54,7 @@ typedef struct {
 	char         *def;
 	zend_long    intval;
 	Oid          pgsql_type;
-	zend_bool    boolval;
+	bool    boolval;
 } pdo_pgsql_column;
 
 typedef struct {
@@ -69,7 +69,7 @@ typedef struct {
 	int *param_formats;
 	Oid *param_types;
 	int                     current_row;
-	zend_bool is_prepared;
+	bool is_prepared;
 } pdo_pgsql_stmt;
 
 typedef struct {

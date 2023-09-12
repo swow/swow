@@ -1820,7 +1820,7 @@ SWOW_API php_stream_ops swow_stream_stdio_ops_sync;
 /* {{{ php_stream_fopen */
 SWOW_API  php_stream *_swow_stream_fopen(const char *filename, const char *mode, zend_string **opened_path, int options STREAMS_DC)
 {
-    zend_bool open_for_include = options & STREAM_OPEN_FOR_INCLUDE;
+    bool open_for_include = options & STREAM_OPEN_FOR_INCLUDE;
     /** phar_open_archive_fp, cannot use async-io */
 
     if (!open_for_include && EG(current_execute_data) && EG(current_execute_data)->func &&
@@ -2188,7 +2188,7 @@ static int swow_plain_files_mkdir(php_stream_wrapper *wrapper, const char *dir, 
             return 0;
         }
 
-        zend_bool replaced_slash = 0;
+        bool replaced_slash = 0;
         while (++p != e) {
             if (*p == '\0') {
                 replaced_slash = 1;

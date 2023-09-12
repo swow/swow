@@ -213,7 +213,7 @@ SWOW_API HashTable *swow_coroutine_get_trace_as_list(const swow_coroutine_t *s_c
 SWOW_API zend_long swow_coroutine_get_trace_depth(const swow_coroutine_t *s_coroutine, zend_long limit);
 
 SWOW_API HashTable *swow_coroutine_get_defined_vars(swow_coroutine_t *s_coroutine, zend_ulong level);
-SWOW_API cat_bool_t swow_coroutine_set_local_var(swow_coroutine_t *s_coroutine, zend_string *name, zval *value, zend_long level, zend_bool force);
+SWOW_API cat_bool_t swow_coroutine_set_local_var(swow_coroutine_t *s_coroutine, zend_string *name, zval *value, zend_long level, bool force);
 
 SWOW_API cat_bool_t swow_coroutine_eval(swow_coroutine_t *s_coroutine, zend_string *string, zend_long level, zval *return_value);
 SWOW_API cat_bool_t swow_coroutine_call(swow_coroutine_t *s_coroutine, zval *z_callable, zend_long level, zval *return_value);

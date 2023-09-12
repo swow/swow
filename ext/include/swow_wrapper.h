@@ -69,7 +69,7 @@ SWOW_API zend_op_array *swow_compile_string(zend_string *source_string, const ch
 SWOW_API zend_op_array *swow_compile_string_ex(zend_string *source_string, const char *filename, zend_compile_position position);
 
 #if PHP_VERSION_ID < 80200
-# define zend_atomic_bool zend_bool
+# define zend_atomic_bool bool
 # define zend_atomic_bool_init(atomic, desired) (*atomic = desired)
 # define zend_atomic_bool_store(atomic, desired) (*atomic = desired)
 # define zend_atomic_bool_load(atomic) (*atomic)
@@ -413,8 +413,8 @@ typedef struct swow_fcall_storage_s {
     zend_fcall_info_cache fcc;
 } swow_fcall_storage_t;
 
-SWOW_API zend_bool swow_fcall_storage_is_available(const swow_fcall_storage_t *fcall);
-SWOW_API zend_bool swow_fcall_storage_create(swow_fcall_storage_t *fcall, zval *z_callable);
+SWOW_API bool swow_fcall_storage_is_available(const swow_fcall_storage_t *fcall);
+SWOW_API bool swow_fcall_storage_create(swow_fcall_storage_t *fcall, zval *z_callable);
 SWOW_API void swow_fcall_storage_release(swow_fcall_storage_t *fcall);
 
 #define SWOW_PARAM_FCALL(fcall) \

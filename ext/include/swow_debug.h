@@ -39,7 +39,7 @@ zend_result swow_debug_module_shutdown(INIT_FUNC_ARGS);
 zend_result swow_debug_runtime_init(INIT_FUNC_ARGS);
 zend_result swow_debug_runtime_shutdown(INIT_FUNC_ARGS);
 
-static zend_always_inline zend_bool swow_debug_is_user_call(zend_execute_data *call)
+static zend_always_inline bool swow_debug_is_user_call(zend_execute_data *call)
 {
     return call && call->func && ZEND_USER_CODE(call->func->common.type);
 }

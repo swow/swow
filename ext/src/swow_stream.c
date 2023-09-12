@@ -42,8 +42,8 @@ CAT_GLOBALS_DECLARE(swow_stream);
 
 #ifdef CAT_SSL
 typedef struct swow_netstream_ssl_s {
-    zend_bool enable_on_connect;
-    zend_bool is_client;
+    bool enable_on_connect;
+    bool is_client;
     struct timeval connect_timeout;
     php_stream_xport_crypt_method_t method;
     char *url_name;
@@ -492,7 +492,7 @@ static inline int swow_stream_accept(php_stream *stream, swow_netstream_data_t *
     swow_netstream_data_t *client_sock;
     cat_socket_t *server, *client;
     const cat_sockaddr_info_t *address_info;
-    zend_bool tcp_nodelay = 1;
+    bool tcp_nodelay = 1;
     zval *z_tmp = NULL;
     cat_bool_t ret;
 
@@ -579,7 +579,7 @@ static inline int swow_stream_accept(php_stream *stream, swow_netstream_data_t *
     return -1;
 }
 
-static zend_always_inline zend_bool swow_stream_socket_connect(cat_socket_t *socket, const char *name, size_t name_length, int port, const struct timeval *timeout, zend_bool asynchronous)
+static zend_always_inline bool swow_stream_socket_connect(cat_socket_t *socket, const char *name, size_t name_length, int port, const struct timeval *timeout, bool asynchronous)
 {
     if (!asynchronous) {
         return cat_socket_connect_to_ex(socket, name, name_length, port, cat_time_tv2to(timeout));
@@ -588,7 +588,7 @@ static zend_always_inline zend_bool swow_stream_socket_connect(cat_socket_t *soc
     }
 }
 
-static int swow_stream_connect(php_stream *stream, swow_netstream_data_t *swow_sock, php_stream_xport_param *xparam, zend_bool asynchronous)
+static int swow_stream_connect(php_stream *stream, swow_netstream_data_t *swow_sock, php_stream_xport_param *xparam, bool asynchronous)
 {
     cat_socket_type_t type = swow_stream_parse_socket_type(stream->ops);
     cat_socket_t *socket = &swow_sock->socket;
@@ -760,11 +760,11 @@ static int swow_stream_enable_crypto(php_stream *stream,
     swow_netstream_data_t *swow_sock, php_netstream_data_t *sock, cat_socket_t *socket,
     php_stream_xport_crypto_param *cparam)
 {
-    zend_bool encrypted = cat_socket_is_encrypted(socket);
+    bool encrypted = cat_socket_is_encrypted(socket);
 
     if (cparam->inputs.activate && !encrypted) {
         cat_socket_crypto_options_t options;
-        zend_bool is_client = swow_sock->ssl.is_client;
+        bool is_client = swow_sock->ssl.is_client;
         zval *val;
 
         cat_socket_crypto_options_init(&options, is_client);
@@ -1732,9 +1732,9 @@ PHP_FUNCTION(swow_stream_select)
     php_socket_t max_fd = 0;
     int retval, sets = 0;
     zend_long sec, usec = 0;
-    zend_bool secnull;
+    bool secnull;
 #if PHP_VERSION_ID >= 80100
-    zend_bool usecnull = 1;
+    bool usecnull = 1;
 #endif // PHP_VERSION_ID >= 80100
     int set_count, max_set_count = 0;
 
@@ -1985,8 +1985,8 @@ PHP_FUNCTION(swow_stream_select_unlimited)
     zval *r_array, *w_array, *e_array;
     struct timeval tv, *tv_p = NULL;
     zend_long sec, usec = 0;
-    zend_bool secnull;
-    zend_bool usecnull = 1;
+    bool secnull;
+    bool usecnull = 1;
     int retval;
 
     ZEND_PARSE_PARAMETERS_START(4, 5)

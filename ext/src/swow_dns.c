@@ -24,7 +24,7 @@
 # define MAXFQDNLEN 255
 #endif
 
-static PHP_FUNCTION_EX(_swow_gethostbyname, zend_bool is_v2)
+static PHP_FUNCTION_EX(_swow_gethostbyname, bool is_v2)
 {
     char *hostname;
     size_t hostname_len;

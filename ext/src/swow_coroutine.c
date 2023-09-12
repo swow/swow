@@ -76,7 +76,7 @@ static cat_bool_t swow_coroutine_construct(swow_coroutine_t *s_coroutine, zval *
 static void swow_coroutine_shutdown(swow_coroutine_t *s_coroutine);
 static ZEND_COLD void swow_coroutine_handle_cross_exception(zend_object *cross_exception);
 static ZEND_COLD void swow_coroutine_throw_kill(void);
-static zend_always_inline zend_bool swow_coroutine_has_unwind_exit(zend_object *exception);
+static zend_always_inline bool swow_coroutine_has_unwind_exit(zend_object *exception);
 
 static zend_always_inline size_t swow_coroutine_align_stack_page_size(size_t size)
 {
@@ -712,7 +712,7 @@ static void swow_coroutine_handle_not_null_zval_data(
         }
     } else {
         zval *z_data = *z_data_ptr;
-        zend_bool handle_ref = current_s_coroutine->coroutine.state == CAT_COROUTINE_STATE_DEAD;
+        bool handle_ref = current_s_coroutine->coroutine.state == CAT_COROUTINE_STATE_DEAD;
         if (!(s_coroutine->coroutine.flags & SWOW_COROUTINE_FLAG_ACCEPT_ZVAL_DATA)) {
             ZEND_ASSERT(Z_TYPE_P(z_data) != IS_PTR);
             /* the PHP layer can not send data to the internal-controlled coroutine */
@@ -1193,7 +1193,7 @@ SWOW_API HashTable *swow_coroutine_get_defined_vars(swow_coroutine_t *s_coroutin
     return symbol_table;
 }
 
-SWOW_API cat_bool_t swow_coroutine_set_local_var(swow_coroutine_t *s_coroutine, zend_string *name, zval *value, zend_long level, zend_bool force)
+SWOW_API cat_bool_t swow_coroutine_set_local_var(swow_coroutine_t *s_coroutine, zend_string *name, zval *value, zend_long level, bool force)
 {
     cat_bool_t ret;
 
@@ -1988,7 +1988,7 @@ static PHP_METHOD(Swow_Coroutine, setLocalVar)
     zend_string *name;
     zval *value;
     zend_long level = 0;
-    zend_bool force = 1;
+    bool force = 1;
     cat_bool_t ret;
 
     ZEND_PARSE_PARAMETERS_START(2, 4)
@@ -2328,7 +2328,7 @@ static void swow_coroutine_error_cb(int type, ZEND_ERROR_CB_FILENAME_T *error_fi
     swow_coroutine_t *current_s_coroutine = swow_coroutine_get_current();
     swow_coroutine_t *main_s_coroutine = swow_coroutine_get_main();
     const char *format = ZSTR_VAL(message);
-    zend_bool is_uncaught_exception = !!(type & E_DONT_BAIL) && !(type & (E_PARSE | E_COMPILE_ERROR));
+    bool is_uncaught_exception = !!(type & E_DONT_BAIL) && !(type & (E_PARSE | E_COMPILE_ERROR));
     zend_string *new_message = NULL;
 
     /* keep silent for kill */
@@ -2412,7 +2412,7 @@ static void swow_coroutine_error_cb(int type, ZEND_ERROR_CB_FILENAME_T *error_fi
 
 /* hook catch */
 
-static zend_always_inline zend_bool swow_coroutine_has_unwind_exit(zend_object *exception)
+static zend_always_inline bool swow_coroutine_has_unwind_exit(zend_object *exception)
 {
     if (zend_is_unwind_exit(exception)) {
         return true;

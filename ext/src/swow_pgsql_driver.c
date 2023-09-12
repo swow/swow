@@ -1196,7 +1196,7 @@ static const zend_function_entry *pdo_pgsql_get_driver_methods(pdo_dbh_t *dbh, i
 
 static int pdo_pgsql_set_attr(pdo_dbh_t *dbh, zend_long attr, zval *val)
 {
-	zend_bool bval = zval_get_long(val)? 1 : 0;
+	bool bval = zval_get_long(val)? 1 : 0;
 	pdo_pgsql_db_handle *H = (pdo_pgsql_db_handle *)dbh->driver_data;
 
 	switch (attr) {

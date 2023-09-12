@@ -210,12 +210,12 @@ SWOW_API void swow_object_properties_clean(zend_object *object)
 
 /* callable */
 
-SWOW_API zend_bool swow_fcall_storage_is_available(const swow_fcall_storage_t *fcall)
+SWOW_API bool swow_fcall_storage_is_available(const swow_fcall_storage_t *fcall)
 {
     return Z_TYPE(fcall->z_callable) != IS_UNDEF;
 }
 
-SWOW_API zend_bool swow_fcall_storage_create(swow_fcall_storage_t *fcall, zval *z_callable)
+SWOW_API bool swow_fcall_storage_create(swow_fcall_storage_t *fcall, zval *z_callable)
 {
     if (Z_TYPE_P(z_callable) == IS_PTR) {
         *fcall = *((swow_fcall_storage_t *) Z_PTR_P(z_callable));
@@ -302,7 +302,7 @@ SWOW_API void swow_output_globals_init(void)
 SWOW_API void swow_output_globals_shutdown(void)
 {
     SWOW_OUTPUT_GLOBALS_MODIFY_START() {
-        zend_bool no_headers = SG(request_info).no_headers;
+        bool no_headers = SG(request_info).no_headers;
 
         /* Do not send headers by SAPI */
         SG(request_info).no_headers = 1;

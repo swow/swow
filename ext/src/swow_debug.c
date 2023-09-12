@@ -39,7 +39,7 @@ SWOW_API zend_execute_data *swow_debug_backtrace_resolve(zend_execute_data *call
 }
 
 #if PHP_VERSION_ID < 80100
-static inline zend_bool swow_debug_skip_internal_handler(zend_execute_data *skip) /* {{{ */
+static inline bool swow_debug_skip_internal_handler(zend_execute_data *skip) /* {{{ */
 {
     return !(skip->func && ZEND_USER_CODE(skip->func->common.type))
             && skip->prev_execute_data
@@ -272,7 +272,7 @@ static void swow_debug_build_trace_args(zval *arg, smart_str *str) /* {{{ */
     }
 }
 
-static void swow_debug_build_trace_string(smart_str *str, HashTable *ht, uint32_t num, zend_bool trim) /* {{{ */
+static void swow_debug_build_trace_string(smart_str *str, HashTable *ht, uint32_t num, bool trim) /* {{{ */
 {
     zval *file, *tmp;
 

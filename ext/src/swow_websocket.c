@@ -116,10 +116,10 @@ ZEND_END_ARG_INFO()
 static PHP_METHOD(Swow_WebSocket_Header, __construct)
 {
     SWOW_WEBSOCKET_HEADER_GETTER(s_header, header);
-    zend_bool fin = true;
-    zend_bool rsv1 = false;
-    zend_bool rsv2 = false;
-    zend_bool rsv3 = false;
+    bool fin = true;
+    bool rsv1 = false;
+    bool rsv2 = false;
+    bool rsv3 = false;
     zend_long opcode = CAT_WEBSOCKET_OPCODE_TEXT;
     zend_long payload_length = 0;
     zend_string *masking_key = NULL;
@@ -213,7 +213,7 @@ ZEND_END_ARG_INFO()
 static PHP_METHOD(Swow_WebSocket_Header, setFin)
 {
     SWOW_WEBSOCKET_HEADER_GETTER(s_header, header);
-    zend_bool fin;
+    bool fin;
 
     ZEND_PARSE_PARAMETERS_START(1, 1)
         Z_PARAM_BOOL(fin)
@@ -242,7 +242,7 @@ ZEND_END_ARG_INFO()
 static PHP_METHOD(Swow_WebSocket_Header, setRSV1)
 {
     SWOW_WEBSOCKET_HEADER_GETTER(s_header, header);
-    zend_bool rsv1;
+    bool rsv1;
 
     ZEND_PARSE_PARAMETERS_START(1, 1)
         Z_PARAM_BOOL(rsv1)
@@ -271,7 +271,7 @@ ZEND_END_ARG_INFO()
 static PHP_METHOD(Swow_WebSocket_Header, setRSV2)
 {
     SWOW_WEBSOCKET_HEADER_GETTER(s_header, header);
-    zend_bool rsv2;
+    bool rsv2;
 
     ZEND_PARSE_PARAMETERS_START(1, 1)
         Z_PARAM_BOOL(rsv2)
@@ -300,7 +300,7 @@ ZEND_END_ARG_INFO()
 static PHP_METHOD(Swow_WebSocket_Header, setRSV3)
 {
     SWOW_WEBSOCKET_HEADER_GETTER(s_header, header);
-    zend_bool rsv3;
+    bool rsv3;
 
     ZEND_PARSE_PARAMETERS_START(1, 1)
         Z_PARAM_BOOL(rsv3)

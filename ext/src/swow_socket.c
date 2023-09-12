@@ -441,7 +441,7 @@ static PHP_METHOD(Swow_Socket, accept)
     SWOW_SOCKET_GETTER(s_server, server);
     cat_socket_type_t server_type = cat_socket_get_simple_type(server);
     zend_long timeout;
-    zend_bool timeout_is_null = 1;
+    bool timeout_is_null = 1;
     swow_socket_t *s_connection;
     cat_socket_t *connection;
     cat_bool_t ret;
@@ -490,7 +490,7 @@ static PHP_METHOD(Swow_Socket, acceptTo)
 {
     SWOW_SOCKET_GETTER(s_server, server);
     zend_long timeout;
-    zend_bool timeout_is_null = 1;
+    bool timeout_is_null = 1;
     zend_object *connection_object;
     swow_socket_t *s_connection;
     cat_socket_t *connection;
@@ -530,7 +530,7 @@ static PHP_METHOD(Swow_Socket, connect)
     zend_string *name;
     zend_long port = 0;
     zend_long timeout;
-    zend_bool timeout_is_null = 1;
+    bool timeout_is_null = 1;
     cat_bool_t ret;
 
     ZEND_PARSE_PARAMETERS_START(1, 3)
@@ -617,7 +617,7 @@ static PHP_METHOD(Swow_Socket, enableCrypto)
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_getAddress, ZEND_RETURN_VALUE, 0, IS_STRING, 0)
 ZEND_END_ARG_INFO()
 
-static PHP_METHOD_EX(Swow_Socket, getAddress, zend_bool is_peer)
+static PHP_METHOD_EX(Swow_Socket, getAddress, bool is_peer)
 {
     SWOW_SOCKET_GETTER(s_socket, socket);
     char buffer[CAT_SOCKADDR_MAX_PATH];
@@ -638,7 +638,7 @@ static PHP_METHOD_EX(Swow_Socket, getAddress, zend_bool is_peer)
 
 #define arginfo_class_Swow_Socket_getPort arginfo_class_Swow_Socket_getLong
 
-static PHP_METHOD_EX(Swow_Socket, getPort, zend_bool is_peer)
+static PHP_METHOD_EX(Swow_Socket, getPort, bool is_peer)
 {
     SWOW_SOCKET_GETTER(s_socket, socket);
     zend_long port;
@@ -679,7 +679,7 @@ static PHP_METHOD(Swow_Socket, getPeerPort)
     PHP_METHOD_CALL(Swow_Socket, getPort, cat_true);
 }
 
-static PHP_METHOD_EX(Swow_Socket, _read, zend_bool once, zend_bool may_address, zend_bool peek)
+static PHP_METHOD_EX(Swow_Socket, _read, bool once, bool may_address, bool peek)
 {
     SWOW_SOCKET_GETTER(s_socket, socket);
     uint32_t max_num_args;
@@ -688,7 +688,7 @@ static PHP_METHOD_EX(Swow_Socket, _read, zend_bool once, zend_bool may_address, 
     zend_long size = -1;
     zval *z_address = NULL, *z_port = NULL;
     zend_long timeout;
-    zend_bool timeout_is_null = !peek;
+    bool timeout_is_null = !peek;
     swow_buffer_t *s_buffer;
     char *ptr;
     cat_bool_t want_address;
@@ -873,7 +873,7 @@ static PHP_METHOD(Swow_Socket, peekFrom)
     PHP_METHOD_CALL(Swow_Socket, _read, 1, 1, 1);
 }
 
-static PHP_METHOD_EX(Swow_Socket, _readString, zend_bool once, zend_bool may_address, zend_bool peek)
+static PHP_METHOD_EX(Swow_Socket, _readString, bool once, bool may_address, bool peek)
 {
     SWOW_SOCKET_GETTER(s_socket, socket);
     uint32_t max_num_args;
@@ -881,7 +881,7 @@ static PHP_METHOD_EX(Swow_Socket, _readString, zend_bool once, zend_bool may_add
     zend_long size = CAT_BUFFER_COMMON_SIZE;
     zval *z_address = NULL, *z_port = NULL;
     zend_long timeout;
-    zend_bool timeout_is_null = !peek;
+    bool timeout_is_null = !peek;
     char *ptr;
     cat_bool_t want_address;
     ssize_t ret;
@@ -1043,7 +1043,7 @@ static PHP_METHOD(Swow_Socket, peekStringFrom)
     PHP_METHOD_CALL(Swow_Socket, _readString, 1, 1, 1);
 }
 
-static PHP_METHOD_EX(Swow_Socket, _write, zend_bool single, zend_bool may_address)
+static PHP_METHOD_EX(Swow_Socket, _write, bool single, bool may_address)
 {
     SWOW_SOCKET_GETTER(s_socket, socket);
     uint32_t max_num_args;
@@ -1054,7 +1054,7 @@ static PHP_METHOD_EX(Swow_Socket, _write, zend_bool single, zend_bool may_addres
     zend_string *address = NULL;
     zend_long port = 0;
     zend_long timeout;
-    zend_bool timeout_is_null = 1;
+    bool timeout_is_null = 1;
     const char *ptr;
     cat_socket_write_vector_t *vector, *vector_list_on_heap = NULL, vector_list_on_stack[8];
     /* real non-empty vector count */
@@ -1287,7 +1287,7 @@ static PHP_METHOD(Swow_Socket, sendHandle)
     SWOW_SOCKET_GETTER(s_socket, socket);
     zend_object *handle_object;
     zend_long timeout;
-    zend_bool timeout_is_null = 1;
+    bool timeout_is_null = 1;
     swow_socket_t *s_handle;
     cat_socket_t *handle;
     cat_bool_t ret;
@@ -1328,7 +1328,7 @@ static PHP_METHOD(Swow_Socket, sendFile)
     zend_long offset = 0;
     zend_long length = 0;
     zend_long timeout;
-    zend_bool timeout_is_null = 1;
+    bool timeout_is_null = 1;
     ssize_t written;
 
     ZEND_PARSE_PARAMETERS_START(1, 4)
@@ -1553,7 +1553,7 @@ ZEND_END_ARG_INFO()
 static PHP_METHOD(Swow_Socket, setTcpNodelay)
 {
     SWOW_SOCKET_GETTER(s_socket, socket);
-    zend_bool enable = cat_true;
+    bool enable = cat_true;
     cat_bool_t ret;
 
     ZEND_PARSE_PARAMETERS_START(0, 1)
@@ -1579,7 +1579,7 @@ ZEND_END_ARG_INFO()
 static PHP_METHOD(Swow_Socket, setTcpKeepAlive)
 {
     SWOW_SOCKET_GETTER(s_socket, socket);
-    zend_bool enable = cat_true;
+    bool enable = cat_true;
     zend_long delay = 0;
     cat_bool_t ret;
 

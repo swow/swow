@@ -60,7 +60,7 @@
 static int pgsql_stmt_dtor(pdo_stmt_t *stmt)
 {
 	pdo_pgsql_stmt *S = (pdo_pgsql_stmt*)stmt->driver_data;
-	zend_bool server_obj_usable = !Z_ISUNDEF(stmt->database_object_handle)
+	bool server_obj_usable = !Z_ISUNDEF(stmt->database_object_handle)
 		&& IS_OBJ_VALID(EG(objects_store).object_buckets[Z_OBJ_HANDLE(stmt->database_object_handle)])
 		&& !(OBJ_FLAGS(Z_OBJ(stmt->database_object_handle)) & IS_OBJ_FREE_CALLED);
 
@@ -562,7 +562,7 @@ static int pgsql_stmt_get_col(pdo_stmt_t *stmt, int colno, char **ptr, size_t *l
 			case PDO_PARAM_BOOL:
 				S->cols[colno].boolval = **ptr == 't';
 				*ptr = (char *) &(S->cols[colno].boolval);
-				*len = sizeof(zend_bool);
+				*len = sizeof(bool);
 				break;
 
 			case PDO_PARAM_LOB:

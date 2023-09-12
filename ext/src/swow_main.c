@@ -549,7 +549,7 @@ ZEND_END_ARG_INFO()
 static PHP_METHOD(Swow_Extension, isBuiltWith)
 {
     zend_string *lib;
-    zend_bool ret = 0;
+    bool ret = 0;
 
     ZEND_PARSE_PARAMETERS_START(1, 1)
         Z_PARAM_STR(lib)
