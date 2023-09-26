@@ -759,16 +759,6 @@ static cat_bool_t cat_socket_internal_getaddrbyname(
     return cat_false;
 }
 
-static void cat_socket_internal_detect_family(cat_socket_internal_t *socket_i, cat_sa_family_t af)
-{
-    CAT_ASSERT(af == AF_INET || af == AF_INET6);
-    if (af == AF_INET) {
-        socket_i->type |= CAT_SOCKET_TYPE_FLAG_IPV4;
-    } else if (af == AF_INET6) {
-        socket_i->type |= CAT_SOCKET_TYPE_FLAG_IPV6;
-    }
-}
-
 static cat_always_inline cat_bool_t cat_socket_internal_can_be_transfer_by_ipc(cat_socket_internal_t *socket_i)
 {
     return
@@ -802,7 +792,12 @@ static cat_always_inline void cat_socket_internal_on_open(cat_socket_internal_t 
         }
     }
     if (af != AF_UNSPEC && (socket_i->type & CAT_SOCKET_TYPE_FLAG_INET)) {
-        cat_socket_internal_detect_family(socket_i, af);
+        CAT_ASSERT(af == AF_INET || af == AF_INET6);
+        if (af == AF_INET) {
+            socket_i->type |= CAT_SOCKET_TYPE_FLAG_IPV4;
+        } else if (af == AF_INET6) {
+            socket_i->type |= CAT_SOCKET_TYPE_FLAG_IPV6;
+        }
     }
 }
 
@@ -811,12 +806,6 @@ CAT_API void cat_socket_init(cat_socket_t *socket)
     socket->id = CAT_SOCKET_INVALID_ID;
     socket->flags = CAT_SOCKET_FLAG_NONE;
     socket->internal = NULL;
-}
-
-static CAT_COLD void cat_socket_internal_fail_close_callback(uv_handle_t *handle)
-{
-    cat_socket_internal_t *socket_i = cat_container_of(handle, cat_socket_internal_t, u.handle);
-    cat_free(socket_i);
 }
 
 static cat_always_inline cat_socket_t *cat_socket_create_impl(cat_socket_t *socket, cat_socket_type_t type)
@@ -965,18 +954,20 @@ static cat_always_inline cat_socket_t *cat_socket_create_impl(cat_socket_t *sock
     socket_i->ssl = NULL;
     socket_i->ssl_peer_name = NULL;
 #endif
-if (af != AF_UNSPEC) {
+
+    if (af != AF_UNSPEC) {
         cat_socket_internal_on_open(socket_i, af);
+    }
+    // eq to check_establishment()
+    if ((type & CAT_SOCKET_TYPE_TTY) == CAT_SOCKET_TYPE_TTY &&
+        ((type & CAT_SOCKET_TYPE_FLAG_STDIN) || (type & CAT_SOCKET_TYPE_FLAG_STDOUT) || (type & CAT_SOCKET_TYPE_FLAG_STDERR))) {
+        socket_i->flags |= CAT_SOCKET_INTERNAL_FLAG_OPENED | CAT_SOCKET_INTERNAL_FLAG_ESTABLISHED;
     }
 
     return socket;
 
-    if (0 && "socket_i should be free in close callback after handle has been initialized") {
-        uv_close(&socket_i->u.handle, cat_socket_internal_fail_close_callback);
-    } else {
-        _init_error:
-        cat_free(socket_i);
-    }
+    _init_error:
+    cat_free(socket_i);
     _type_error:
     cat_update_last_error_with_reason(error, "Socket crate with type %s failed", cat_socket_type_get_name(type));
 #if CAT_ALLOC_HANDLE_ERRORS
@@ -1004,13 +995,33 @@ CAT_API cat_socket_t *cat_socket_create(cat_socket_t *socket, cat_socket_type_t 
     return socket;
 }
 
-static void cat_socket_internal_on_manual_open(cat_socket_internal_t *socket_i, cat_socket_type_t type)
+static cat_always_inline void cat_socket_internal_on_manual_open(cat_socket_internal_t *socket_i, cat_socket_type_t type)
 {
+    cat_sa_family_t af = AF_UNSPEC;
     const cat_sockaddr_info_t *address_info = NULL;
     cat_bool_t is_established;
-    if (((type & CAT_SOCKET_TYPE_TTY) == CAT_SOCKET_TYPE_TTY)) {
-        is_established = cat_true;
-    } else if (type & CAT_SOCKET_TYPE_FLAG_STREAM) {
+
+    // detect family and trigger on_open()
+    if (type & CAT_SOCKET_TYPE_FLAG_INET) {
+        address_info = cat_socket_internal_getname_fast(socket_i, cat_true, NULL);
+        if (address_info != NULL) {
+            af = address_info->address.common.sa_family;
+        }
+#ifdef SO_DOMAIN
+        else {
+            cat_socklen_t option_len;
+            cat_sa_family_t _af;
+            option_len = sizeof(af);
+            if (getsockopt(cat_socket_internal_get_fd_fast(socket_i), SOL_SOCKET, SO_DOMAIN, &_af, &option_len) == 0) {
+                af = _af;
+            }
+        }
+#endif
+    }
+    cat_socket_internal_on_open(socket_i, af);
+
+    // check_establishment()
+    if (type & CAT_SOCKET_TYPE_FLAG_STREAM) {
         do {
             if ((type & CAT_SOCKET_TYPE_PIPE) == CAT_SOCKET_TYPE_PIPE) {
                 unsigned int flags = socket_i->u.handle.flags & (UV_HANDLE_READABLE | UV_HANDLE_WRITABLE);
@@ -1029,7 +1040,6 @@ static void cat_socket_internal_on_manual_open(cat_socket_internal_t *socket_i, 
     if (is_established) {
         socket_i->flags |= CAT_SOCKET_INTERNAL_FLAG_ESTABLISHED;
     }
-    cat_socket_internal_on_open(socket_i, address_info != NULL ? address_info->address.common.sa_family : AF_UNSPEC);
 }
 
 CAT_API cat_bool_t cat_socket_open_os_fd(cat_socket_t *socket, cat_os_fd_t os_fd)
@@ -1037,7 +1047,11 @@ CAT_API cat_bool_t cat_socket_open_os_fd(cat_socket_t *socket, cat_os_fd_t os_fd
     CAT_SOCKET_INTERNAL_GETTER(socket, socket_i, return cat_false);
     cat_socket_type_t type = socket_i->type;
     int error;
-    if ((type & CAT_SOCKET_TYPE_PIPE) == CAT_SOCKET_TYPE_PIPE) {
+    if (((type & CAT_SOCKET_TYPE_PIPE) == CAT_SOCKET_TYPE_PIPE)
+#ifdef CAT_OS_UNIX_LIKE
+        || ((type & CAT_SOCKET_TYPE_UDG) == CAT_SOCKET_TYPE_UDG)
+#endif
+    ) {
         /* convert SOCKET to int on Windows */
         error = uv_pipe_open(&socket_i->u.pipe, os_fd);
     } else {
@@ -2384,6 +2398,9 @@ static const cat_sockaddr_info_t *cat_socket_internal_getname_fast(cat_socket_in
     _out:
     if (error_ptr != NULL) {
         *error_ptr = error;
+    }
+    if (unlikely(error != 0)) {
+        return NULL;
     }
     return cache;
 }

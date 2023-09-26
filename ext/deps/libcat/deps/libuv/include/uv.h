@@ -911,15 +911,17 @@ struct uv_pipe_s {
 #ifdef HAVE_LIBCAT
 typedef enum {
   UV_PIPE_USE_IPC = 1 << 0,
-#ifndef _WIN32
-  UV_PIPE_DGRAM = 1 << 1,
-#endif
+  UV_PIPE_DGRAM = 1 << 1, /* it will be ignored on Windows */
 } uv_pipe_type;
 #endif
 
 UV_EXTERN int uv_pipe_init(uv_loop_t*, uv_pipe_t* handle, int ipc);
 #ifdef HAVE_LIBCAT
+# ifdef _WIN32
+#define  uv_pipe_init_ex(loop, handle, ipc) uv_pipe_init(loop, handle, ipc)
+# else
 UV_EXTERN int uv_pipe_init_ex(uv_loop_t* loop, uv_pipe_t* handle, int type);
+# endif
 #endif
 UV_EXTERN int uv_pipe_open(uv_pipe_t*, uv_file file);
 UV_EXTERN int uv_pipe_bind(uv_pipe_t* handle, const char* name);
