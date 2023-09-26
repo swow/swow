@@ -15,6 +15,4 @@ namespace Swow\Psr7\Client;
 
 use Psr\Http\Client\NetworkExceptionInterface;
 
-class ClientNetworkException extends ClientExceptionAbstract implements NetworkExceptionInterface
-{
-}
+class ClientNetworkException extends ClientExceptionAbstract implements NetworkExceptionInterface {}

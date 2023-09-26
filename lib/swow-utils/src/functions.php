@@ -104,7 +104,7 @@ function debug(string $message, int $level = 1): void
     if (!isset($debugLevel)) {
         $debugLevel = getenv('DEBUG');
         if (is_numeric($debugLevel)) {
-            $debugLevel = $debugLevel + 0;
+            $debugLevel += 0;
         } else {
             $debugLevel = 0;
         }

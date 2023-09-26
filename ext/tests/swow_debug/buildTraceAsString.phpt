@@ -61,9 +61,7 @@ class A
     }
 }
 
-class MyWarningException extends ErrorException
-{
-}
+class MyWarningException extends ErrorException {}
 set_error_handler(static function ($errno, $errstr, $errfile, $errline): void {
     var_dump(buildTraceAsString(debug_backtrace()));
     throw new MyWarningException($errstr, $errno, 1, $errfile, $errline);

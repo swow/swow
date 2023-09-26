@@ -20,9 +20,7 @@ final class ServerConnectionIterator implements ServerConnectionIteratorInterfac
     /**
      * @param Iterator<ServerConnection, int> $iterator
      */
-    public function __construct(protected Iterator $iterator)
-    {
-    }
+    public function __construct(protected Iterator $iterator) {}
 
     public function current(): ServerConnection
     {

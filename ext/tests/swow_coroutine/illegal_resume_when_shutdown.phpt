@@ -8,7 +8,7 @@ require __DIR__ . '/../include/skipif.php';
 <?php
 require __DIR__ . '/../include/bootstrap.php';
 
-$coroutine = new Swow\Coroutine(static function (): void { });
+$coroutine = new Swow\Coroutine(static function (): void {});
 set_exception_handler(static function () use ($coroutine): void {
     echo "Never here\n";
     $coroutine->resume();

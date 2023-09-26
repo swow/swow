@@ -28,8 +28,7 @@ class ConstantDefinitionMap implements ArrayAccess, IteratorAggregate
     public function __construct(
         private string $arch,
         private string $os,
-    ) {
-    }
+    ) {}
 
     public function getOS(): string
     {

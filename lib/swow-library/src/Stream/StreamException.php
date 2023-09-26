@@ -15,6 +15,4 @@ namespace Swow\Stream;
 
 use Swow\Exception;
 
-class StreamException extends Exception
-{
-}
+class StreamException extends Exception {}

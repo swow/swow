@@ -29,8 +29,7 @@ class WindowsConstantDefinitionsFetcher extends ConstantDefinitionsFetcherAbstra
         private string $arch = 'x86_64',
         private string $baseUrl = 'https://raw.githubusercontent.com/microsoft/win32metadata/master',
         private int $pageSize = 4096,
-    ) {
-    }
+    ) {}
 
     public function fetch(): ConstantDefinitionMap
     {

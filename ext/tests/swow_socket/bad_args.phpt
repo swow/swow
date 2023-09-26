@@ -228,14 +228,10 @@ Assert::throws(static function () use ($buffer, $function, $conn): void {
 // writev arguments checks
 foreach (['write', 'writeTo'] as $function) {
     $notString = new class('im not a string-ish') {
-        public function __construct(private string $string)
-        {
-        }
+        public function __construct(private string $string) {}
     };
     $stringable = new class('stringable') {
-        public function __construct(private string $string)
-        {
-        }
+        public function __construct(private string $string) {}
 
         public function __toString(): string
         {

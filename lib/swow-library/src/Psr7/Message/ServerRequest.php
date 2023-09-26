@@ -52,9 +52,7 @@ class ServerRequest extends Request implements ServerRequestPlusInterface
     /** @var array<string, mixed> */
     protected array $attributes = [];
 
-    final public function __construct()
-    {
-    }
+    final public function __construct() {}
 
     /** @return array<string, mixed> */
     public function getServerParams(): array
@@ -203,7 +201,6 @@ class ServerRequest extends Request implements ServerRequestPlusInterface
 
     /**
      * @param string $name
-     * @param mixed $default
      */
     public function getAttribute(mixed $name, mixed $default = null): mixed
     {

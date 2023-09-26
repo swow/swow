@@ -59,8 +59,7 @@ PHP;
          */
         public function __construct(
             private array $constantDefinitions,
-        ) {
-        }
+        ) {}
 
         public function enterNode(Node $node)
         {

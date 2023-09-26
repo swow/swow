@@ -15,7 +15,7 @@ $foo = new class() {
 
     public function __construct()
     {
-        $this->coroutine = new Coroutine(static function (): void { });
+        $this->coroutine = new Coroutine(static function (): void {});
     }
 };
 

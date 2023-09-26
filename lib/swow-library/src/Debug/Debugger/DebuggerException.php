@@ -15,6 +15,4 @@ namespace Swow\Debug\Debugger;
 
 use Swow\Exception;
 
-class DebuggerException extends Exception
-{
-}
+class DebuggerException extends Exception {}

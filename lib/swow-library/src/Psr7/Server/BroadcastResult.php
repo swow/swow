@@ -23,8 +23,7 @@ class BroadcastResult
         protected int $failureCount,
         /** @var ?WeakMap<ServerConnection, Exception> $exceptions */
         protected ?WeakMap $exceptions = null
-    ) {
-    }
+    ) {}
 
     public function getCount(): int
     {
