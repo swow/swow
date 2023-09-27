@@ -18,11 +18,12 @@ if (PHP_INT_MAX > 2147483647) {
         $ret = Errno::getDescriptionOf(PHP_INT_MAX);
         var_dump('bad return', $ret);
     } catch (ValueError $e) {
-        Assert::same($e->getMessage(), 'Errno passed in is not in errno_t range');
+        echo $e->getMessage(), "\n";
     }
 }
 
 echo "Done\n";
 ?>
 --EXPECT--
+Swow\Errno::getDescriptionOf(): Argument #1 ($error) Errno passed in is not in errno_t range
 Done
