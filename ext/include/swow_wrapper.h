@@ -456,7 +456,7 @@ SWOW_API zend_result swow_call_function_anyway(zend_fcall_info *fci, zend_fcall_
 
 /* exception */
 
-#define SWOW_THROW_ON_ERROR_START(ce) \
+#define SWOW_THROW_ON_ERROR_START() \
         SWOW_THROW_ON_ERROR_START_EX(spl_ce_RuntimeException)
 
 #define SWOW_THROW_ON_ERROR_START_EX(ce) do { \
