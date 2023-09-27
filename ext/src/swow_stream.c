@@ -312,7 +312,7 @@ SWOW_API php_stream *swow_stream_socket_factory(
     return NULL;
 }
 
-static cat_socket_type_t swow_stream_parse_socket_type(const php_stream_ops *ops)
+static zend_always_inline cat_socket_type_t swow_stream_parse_socket_type_ex(const php_stream_ops *ops, const cat_socket_type_t default_type)
 {
     if (ops == &swow_stream_tcp_socket_ops) {
         return CAT_SOCKET_TYPE_TCP;
@@ -325,8 +325,13 @@ static cat_socket_type_t swow_stream_parse_socket_type(const php_stream_ops *ops
         return CAT_SOCKET_TYPE_UDG;
 #endif // PHP_WIN32
     } else /* swow_stream_generic_socket_ops */ {
-        return CAT_SOCKET_TYPE_TCP;
+        return default_type;
     }
+}
+
+static zend_always_inline cat_socket_type_t swow_stream_parse_socket_type(const php_stream_ops *ops)
+{
+    return swow_stream_parse_socket_type_ex(ops, CAT_SOCKET_TYPE_TCP);
 }
 
 static char *swow_stream_parse_ip_address_ex(const char *str, size_t str_len, int *portno, int get_err, zend_string **err)
@@ -2181,69 +2186,157 @@ PHP_FUNCTION(swow_stream_poll_one)
 }
 /* }}} */
 
+static zend_class_entry *socket_ce = (zend_class_entry *) -1;
 static zif_handler PHP_FN(original_socket_export_stream) = (zif_handler) -1;
+
+#ifndef PHP_WIN32
+typedef int PHP_SOCKET;
+#else
+typedef SOCKET PHP_SOCKET;
+#endif
+
+typedef struct {
+    PHP_SOCKET bsd_socket;
+    int type;
+    int error;
+    int blocking;
+    zval zstream;
+    zend_object std;
+} php_socket;
+
+static inline php_socket *socket_from_obj(zend_object *obj)
+{
+    return (php_socket *)((char *)(obj) - XtOffsetOf(php_socket, std));
+}
+
+#define Z_SOCKET_P(zv) socket_from_obj(Z_OBJ_P(zv))
+
+#ifdef PHP_WIN32
+# define IS_INVALID_SOCKET(a) (a->bsd_socket == INVALID_SOCKET)
+#else
+# define IS_INVALID_SOCKET(a) (a->bsd_socket < 0)
+#endif
+
+#define ENSURE_SOCKET_VALID(php_sock) do { \
+    if (IS_INVALID_SOCKET(php_sock)) { \
+        zend_argument_error(NULL, 1, "has already been closed"); \
+        RETURN_THROWS(); \
+    } \
+} while (0)
 
 /* hook for socket_export_stream */
 static PHP_FUNCTION(swow_socket_export_stream)
 {
-    PHP_FN(original_socket_export_stream)(execute_data, return_value);
-    if (Z_TYPE_P(return_value) != IS_RESOURCE) {
-        return;
-    }
-
-    php_stream *stream;
-    php_stream_from_zval(stream, return_value);
-
-    swow_netstream_data_t *data = (swow_netstream_data_t *) stream->abstract;
-    php_socket_t sock = data->sock.socket;
-    cat_socket_t *socket = &data->socket;
-    int type, af = AF_UNSPEC;
-    socklen_t option_len;
-
-    option_len = sizeof(type);
-    if (getsockopt(sock, SOL_SOCKET, SO_TYPE, (char *) &type, &option_len) != 0) {
-        zval_ptr_dtor(return_value);
-        RETURN_FALSE;
-    }
-#ifdef SO_DOMAIN
-    option_len = sizeof(af);
-    (void) getsockopt(sock, SOL_SOCKET, SO_DOMAIN, &af, &option_len);
-#endif
+    zval *zsocket;
+    php_socket *socket;
+    php_stream *stream = NULL;
+    php_netstream_data_t *stream_data;
+    const char *protocol = NULL;
     cat_socket_type_t socket_type = CAT_SOCKET_TYPE_ANY;
-    // determine type by sock type and domain
-    if (AF_INET == af || AF_INET6 == af || AF_UNSPEC == af) {
-        if (SOCK_STREAM == type) {
-            socket_type = CAT_SOCKET_TYPE_TCP;
-        } else if (SOCK_DGRAM == type) {
+
+    if (zend_parse_parameters(ZEND_NUM_ARGS(), "O", &zsocket, socket_ce) == FAILURE) {
+        RETURN_THROWS();
+    }
+
+    socket = Z_SOCKET_P(zsocket);
+    ENSURE_SOCKET_VALID(socket);
+
+    /* Either we already exported a stream or the socket came from an import,
+     * just return the existing stream */
+    if (!Z_ISUNDEF(socket->zstream)) {
+        RETURN_COPY(&socket->zstream);
+    }
+
+    /* Determine if socket is using a protocol with one of the default registered
+     * socket stream wrappers */
+    if (socket->type == PF_INET
+#if HAVE_IPV6
+         || socket->type == PF_INET6
+#endif
+    ) {
+        int protoid;
+        socklen_t protoidlen = sizeof(protoid);
+
+        getsockopt(socket->bsd_socket, SOL_SOCKET, SO_TYPE, (char *) &protoid, &protoidlen);
+
+        if (protoid == SOCK_STREAM) {
+            /* SO_PROTOCOL is not (yet?) supported on OS X, so lets assume it's TCP there */
+#ifdef SO_PROTOCOL
+            protoidlen = sizeof(protoid);
+            getsockopt(socket->bsd_socket, SOL_SOCKET, SO_PROTOCOL, (char *) &protoid, &protoidlen);
+            if (protoid == IPPROTO_TCP)
+#endif
+            {
+                protocol = "tcp://";
+                socket_type = CAT_SOCKET_TYPE_TCP;
+            }
+        } else if (protoid == SOCK_DGRAM) {
+            protocol = "udp://";
             socket_type = CAT_SOCKET_TYPE_UDP;
         }
-    }
-#ifdef CAT_OS_UNIX_LIKE
-    else if (af == AF_LOCAL) {
-        if (SOCK_STREAM == type) {
+#ifdef PF_UNIX
+    } else if (socket->type == PF_UNIX) {
+        int type;
+        socklen_t typelen = sizeof(type);
+
+        getsockopt(socket->bsd_socket, SOL_SOCKET, SO_TYPE, (char *) &type, &typelen);
+
+        if (type == SOCK_STREAM) {
+            protocol = "unix://";
             socket_type = CAT_SOCKET_TYPE_UNIX;
-        } else if (SOCK_DGRAM == type) {
+        } else if (type == SOCK_DGRAM) {
+            protocol = "udg://";
             socket_type = CAT_SOCKET_TYPE_UDG;
         }
-    }
 #endif
-    socket = cat_socket_create(socket, socket_type);
-    if (socket == NULL) {
-        goto _error;
     }
-#ifdef CAT_OS_UNIX_LIKE
-    if (socket_type & CAT_SOCKET_TYPE_FLAG_LOCAL) {
-        if (!cat_socket_open_os_fd(socket, sock)) {
-            goto _error;
-        }
-    } else
-#endif
+
+    /* Try to get a stream with the registered sockops for the protocol in use
+     * We don't want streams to actually *do* anything though, so don't give it
+     * anything apart from the protocol */
+    if (protocol != NULL) {
+        stream = php_stream_xport_create(protocol, strlen(protocol), 0, 0, NULL, NULL, NULL, NULL, NULL);
+    }
+
+    if (stream == NULL) {
+        php_error_docref(NULL, E_WARNING, "Failed to create stream");
+        RETURN_FALSE;
+    }
+
+    stream_data = (php_netstream_data_t *) stream->abstract;
+    stream_data->socket = socket->bsd_socket;
+    stream_data->is_blocked = socket->blocking;
+    stream_data->timeout.tv_sec = FG(default_socket_timeout);
+    stream_data->timeout.tv_usec = 0;
+
+    php_stream_to_zval(stream, &socket->zstream);
+
+    // swow logic:
     {
-        if (!cat_socket_open_os_socket(socket, sock)) {
+        swow_netstream_data_t *data = (swow_netstream_data_t *) stream->abstract;
+        php_socket_t sock = data->sock.socket;
+        cat_socket_t *socket = &data->socket;
+        socket = cat_socket_create(socket, socket_type);
+        if (socket == NULL) {
             goto _error;
         }
+#ifdef CAT_OS_UNIX_LIKE
+        if (socket_type & CAT_SOCKET_TYPE_FLAG_LOCAL) {
+            if (!cat_socket_open_os_fd(socket, sock)) {
+                goto _error;
+            }
+        } else
+#endif
+        {
+            if (!cat_socket_open_os_socket(socket, sock)) {
+                goto _error;
+            }
+        }
     }
+
+    RETURN_COPY(&socket->zstream);
     return;
+
     _error:
     zval_ptr_dtor(return_value);
     RETURN_FALSE;
@@ -2355,7 +2448,10 @@ zend_result swow_stream_runtime_init(INIT_FUNC_ARGS)
     // prepare tty sockets (FIXME: Why won't Zend bzero() it when we are in ZTS?)
     memset(SWOW_STREAM_G(tty_sockets), 0, sizeof(SWOW_STREAM_G(tty_sockets)));
 
-    if (PHP_FN(original_socket_export_stream) == (zif_handler) -1) {
+    if (socket_ce == (zend_class_entry *) -1) {
+        socket_ce = (zend_class_entry *) zend_hash_str_find_ptr(CG(class_table), ZEND_STRL("socket"));
+    }
+    if (socket_ce != NULL && PHP_FN(original_socket_export_stream) == (zif_handler) -1) {
         (void) swow_hook_internal_function_handler_ex(
             ZEND_STRL("socket_export_stream"),
             PHP_FN(swow_socket_export_stream),
