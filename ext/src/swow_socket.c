@@ -141,8 +141,6 @@ static PHP_METHOD(Swow_Socket, open)
 
 #ifndef CAT_OS_WIN
     os_sock = dup(os_sock);
-#else
-    os_sock = _dup(os_sock);
 #endif
     if (os_sock == CAT_OS_INVALID_SOCKET) {
         swow_throw_exception(swow_socket_exception_ce,
@@ -154,8 +152,6 @@ static PHP_METHOD(Swow_Socket, open)
     if (!cat_socket_open_os_socket(socket, os_sock)) {
 #ifndef CAT_OS_WIN
         close(os_sock);
-#else
-        closesocket(os_sock);
 #endif
         swow_throw_exception_with_last(swow_socket_exception_ce);
         RETURN_THROWS();
