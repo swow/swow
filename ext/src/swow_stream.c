@@ -2232,6 +2232,7 @@ static PHP_FUNCTION(swow_socket_export_stream)
     php_stream *stream = NULL;
     php_netstream_data_t *stream_data;
     const char *protocol = NULL;
+    size_t protocollen = 0;
     cat_socket_type_t socket_type = CAT_SOCKET_TYPE_ANY;
 
     if (zend_parse_parameters(ZEND_NUM_ARGS(), "O", &zsocket, socket_ce) == FAILURE) {
@@ -2249,16 +2250,10 @@ static PHP_FUNCTION(swow_socket_export_stream)
 
     /* Determine if socket is using a protocol with one of the default registered
      * socket stream wrappers */
-    if (socket->type == PF_INET
-#if HAVE_IPV6
-         || socket->type == PF_INET6
-#endif
-    ) {
+    if (socket->type == AF_INET || socket->type == AF_INET6) {
         int protoid;
         socklen_t protoidlen = sizeof(protoid);
-
         getsockopt(socket->bsd_socket, SOL_SOCKET, SO_TYPE, (char *) &protoid, &protoidlen);
-
         if (protoid == SOCK_STREAM) {
             /* SO_PROTOCOL is not (yet?) supported on OS X, so lets assume it's TCP there */
 #ifdef SO_PROTOCOL
@@ -2268,34 +2263,37 @@ static PHP_FUNCTION(swow_socket_export_stream)
 #endif
             {
                 protocol = "tcp://";
+                protocollen = CAT_STRLEN("tcp://");
                 socket_type = CAT_SOCKET_TYPE_TCP;
             }
         } else if (protoid == SOCK_DGRAM) {
             protocol = "udp://";
+            protocollen = CAT_STRLEN("udp://");
             socket_type = CAT_SOCKET_TYPE_UDP;
         }
-#ifdef PF_UNIX
-    } else if (socket->type == PF_UNIX) {
+    }
+#ifdef CAT_OS_UNIX_LIKE
+    else if (socket->type == AF_UNIX) {
         int type;
         socklen_t typelen = sizeof(type);
-
         getsockopt(socket->bsd_socket, SOL_SOCKET, SO_TYPE, (char *) &type, &typelen);
-
         if (type == SOCK_STREAM) {
             protocol = "unix://";
+            protocollen = CAT_STRLEN("unix://");
             socket_type = CAT_SOCKET_TYPE_UNIX;
         } else if (type == SOCK_DGRAM) {
             protocol = "udg://";
+            protocollen = CAT_STRLEN("udg://");
             socket_type = CAT_SOCKET_TYPE_UDG;
         }
-#endif
     }
+#endif
 
     /* Try to get a stream with the registered sockops for the protocol in use
      * We don't want streams to actually *do* anything though, so don't give it
      * anything apart from the protocol */
     if (protocol != NULL) {
-        stream = php_stream_xport_create(protocol, strlen(protocol), 0, 0, NULL, NULL, NULL, NULL, NULL);
+        stream = php_stream_xport_create(protocol, protocollen, 0, 0, NULL, NULL, NULL, NULL, NULL);
     }
 
     if (stream == NULL) {
