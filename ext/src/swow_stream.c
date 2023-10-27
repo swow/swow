@@ -1049,10 +1049,20 @@ static ssize_t swow_stream_read(php_stream *stream, char *buffer, size_t size)
 static ssize_t swow_stream_write(php_stream *stream, const char *buffer, size_t length)
 {
     SWOW_STREAM_SOCKET_GETTER(stream, swow_sock, sock, socket, return 0);
+    bool is_blocked = sock->is_blocked;
     ssize_t didwrite;
     cat_bool_t ret;
 
-    if (sock->is_blocked) {
+    if (UNEXPECTED(EG(flags) & EG_FLAGS_IN_SHUTDOWN)) {
+        /* workaround for mysql_handle_closer()->
+                          php_mysqlnd_cmd_write() ->
+                          mysqlnd_mysqlnd_vio_network_write_pub()
+                          here ->
+                          "Coroutine has nowhere to go" error */
+        is_blocked = false;
+    }
+
+    if (is_blocked) {
         ret = cat_socket_send_ex(socket, buffer, length, cat_time_tv2to(&sock->timeout));
         didwrite = length;
     } else {
@@ -1065,7 +1075,7 @@ static ssize_t swow_stream_write(php_stream *stream, const char *buffer, size_t 
         ret = didwrite >= 0;
     }
     if (UNEXPECTED(!ret)) {
-        cat_errno_t error = sock->is_blocked ? cat_get_last_error_code() : (cat_errno_t) didwrite;
+        cat_errno_t error = is_blocked ? cat_get_last_error_code() : (cat_errno_t) didwrite;
 #ifdef PHP_STREAM_FLAG_SUPPRESS_ERRORS
         if (!(stream->flags & PHP_STREAM_FLAG_SUPPRESS_ERRORS))
 #endif
