@@ -494,13 +494,14 @@ PHP_MINFO_FUNCTION(swow)
     char building_libpq_version[16];
     VERSION_NUM_TO_STR(swow_building_libpq_version, building_libpq_version);
     char libpq_version_info[64];
-    snprintf(
-        libpq_version_info,
-        sizeof(libpq_version_info),
-        "libpq/%s (built with %s)",
-        linking_libpq_version,
-        building_libpq_version
-    );
+    if (strcmp(linking_libpq_version, building_libpq_version) == 0) {
+        snprintf(libpq_version_info, sizeof(libpq_version_info),
+            "libpq/%s", linking_libpq_version);
+    } else {
+        snprintf(libpq_version_info, sizeof(libpq_version_info),
+            "libpq/%s (built with %s)",
+            linking_libpq_version, building_libpq_version);
+    }
     php_info_print_table_row(2, "PostgreSQL", libpq_version_info);
 # undef VERSION_NUM_TO_STR
 #endif
