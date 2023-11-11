@@ -439,6 +439,9 @@ PHP_MINFO_FUNCTION(swow)
     zend_string_release(str.s);
     php_info_print_table_row(2, "Context", SWOW_COROUTINE_CONTEXT_TYPE);
     php_info_print_table_row(2, "Scheduler", "libuv-event");
+#ifdef CAT_ENABLE_DEBUG_LOG
+    php_info_print_table_row(2, "DebugLog", "enabled");
+#endif
 #if defined(CAT_HAVE_MSAN) || defined(CAT_HAVE_ASAN) || defined(CAT_HAVE_UBSAN)
     memset(&str, 0, sizeof(str));
 # if defined(CAT_HAVE_MSAN)
@@ -550,7 +553,7 @@ ZEND_END_ARG_INFO()
 static PHP_METHOD(Swow_Extension, isBuiltWith)
 {
     zend_string *lib;
-    bool ret = 0;
+    bool ret = false;
 
     ZEND_PARSE_PARAMETERS_START(1, 1)
         Z_PARAM_STR(lib)
@@ -559,38 +562,43 @@ static PHP_METHOD(Swow_Extension, isBuiltWith)
     if (0) { }
 #ifdef CAT_DEBUG
     else if (zend_string_equals_literal_ci(lib, "debug")) {
-        ret = 1;
+        ret = true;
+    }
+#endif
+#ifdef CAT_ENABLE_DEBUG_LOG
+    else if (zend_string_equals_literal_ci(lib, "debug_log")) {
+        ret = true;
     }
 #endif
 #ifdef CAT_HAVE_ASAN
     else if (zend_string_equals_literal_ci(lib, "asan")) {
-        ret = 1;
+        ret = true;
     }
 #endif
 #ifdef CAT_HAVE_MSAN
     else if (zend_string_equals_literal_ci(lib, "msan")) {
-        ret = 1;
+        ret = true;
     }
 #endif
 #ifdef CAT_HAVE_UBSAN
     else if (zend_string_equals_literal_ci(lib, "ubsan")) {
-        ret = 1;
+        ret = true;
     }
 #endif
 #ifdef CAT_HAVE_OPENSSL
     else if (zend_string_equals_literal_ci(lib, "ssl") ||
              zend_string_equals_literal_ci(lib, "openssl")) {
-        ret = 1;
+        ret = true;
     }
 #endif
 #ifdef CAT_HAVE_CURL
     else if (zend_string_equals_literal_ci(lib, "curl")) {
-        ret = 1;
+        ret = true;
     }
 #endif
 #ifdef CAT_HAVE_PQ
     else if (zend_string_equals_literal_ci(lib, "pgsql")) {
-        ret = 1;
+        ret = true;
     }
 #endif
 
