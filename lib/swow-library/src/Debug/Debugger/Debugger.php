@@ -495,7 +495,7 @@ TEXT;
      * @return array<array{
      *     'frame': int,
      *     'executing': string,
-     *     'source position': string,
+     *     'source_position': string,
      * }>
      */
     protected static function convertTraceToTable(array $trace, ?int $frameIndex = null): array
@@ -516,7 +516,7 @@ TEXT;
             $traceTable[] = [
                 'frame' => $index,
                 'executing' => $executing,
-                'source position' => $sourcePosition,
+                'source_position' => $sourcePosition,
             ];
             if ($frameIndex !== null) {
                 break;
@@ -542,7 +542,7 @@ TEXT;
     {
         $traceTable = $this::convertTraceToTable($trace, $frameIndex);
         foreach ($traceTable as &$traceItem) {
-            $traceItem['source position'] = $this->callSourcePositionHandler($traceItem['source position']);
+            $traceItem['source_position'] = $this->callSourcePositionHandler($traceItem['source_position']);
         }
         unset($traceItem);
         $this->table($traceTable, $newLine);
@@ -649,7 +649,7 @@ TEXT;
      *     'switches': int,
      *     'elapsed': string,
      *     'executing': string|null,
-     *     'source position': string|null,
+     *     'source_position': string|null,
      * } $simpleInfo
      * @psalm-return ($whatAreYouDoing is true ?array{
      *     'id': int,
@@ -657,7 +657,7 @@ TEXT;
      *     'switches': int,
      *     'elapsed': string,
      *     'executing': string,
-     *     'source position': string,
+     *     'source_position': string,
      * } : array{
      *     'id': int,
      *     'state': string,
@@ -684,7 +684,7 @@ TEXT;
                 $file = basename($file);
                 $sourcePosition = "{$file}({$line})";
             }
-            $info['source position'] = $sourcePosition;
+            $info['source_position'] = $sourcePosition;
         }
 
         return $info;
@@ -713,7 +713,7 @@ TEXT;
                 continue;
             }
             $info = static::getSimpleInfoOfCoroutine($coroutine, true);
-            $info['source position'] = $this->callSourcePositionHandler($info['source position']);
+            $info['source_position'] = $this->callSourcePositionHandler($info['source_position']);
             $map[] = $info;
         }
 
