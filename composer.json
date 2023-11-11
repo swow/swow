@@ -75,7 +75,7 @@
         "sort-packages": true
     },
     "scripts": {
-        "swow-php": [ "@php tools/php-wrapper.php" ],
+        "swow-php": [ "@php tools/php-wrapper.php -d extension=swow" ],
         "cs-check": [ "@php vendor/bin/php-cs-fixer fix --dry-run --diff" ],
         "cs-fix": [ "@php vendor/bin/php-cs-fixer fix" ],
         "rector": [ "@php vendor/bin/rector process --config=tools/rector.php" ],
