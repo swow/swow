@@ -109,7 +109,7 @@ class Config extends \PhpCsFixer\Config
                 'multiline_comment_opening_closing' => true,
                 'no_useless_else' => false,
                 'no_unused_imports' => true,
-                'no_unneeded_curly_braces' => false,
+                'no_unneeded_braces' => false,
                 'not_operator_with_space' => false,
                 'not_operator_with_successor_space' => false,
                 'ordered_class_elements' => false,
@@ -126,6 +126,8 @@ class Config extends \PhpCsFixer\Config
                 'phpdoc_to_comment' => [
                     'ignored_tags' => ['var'],
                 ],
+                'ordered_types' => false,
+                'phpdoc_types_order' => false,
                 /* risky */
                 'comment_to_phpdoc' => [
                     'ignored_tags' => [
