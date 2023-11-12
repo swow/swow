@@ -122,8 +122,8 @@ CAT_API cat_bool_t cat_stop(void)
     return cat_event_scheduler_close() != NULL;
 }
 
-#ifdef CAT_DEBUG
-CAT_API void cat_enable_debug_mode(void)
+#ifdef CAT_ENABLE_DEBUG_LOG
+CAT_API void cat_enable_debug_log_mode(void)
 {
     CAT_LOG_G(types) = CAT_LOG_TYPES_ALL;
     if (CAT_LOG_G(debug_level) == 0) {
@@ -132,12 +132,24 @@ CAT_API void cat_enable_debug_mode(void)
 }
 #endif
 
-CAT_API FILE *cat_get_error_log(void)
+CAT_API FILE *cat_get_error_output(void)
 {
     return CAT_LOG_G(error_output);
 }
 
-CAT_API void cat_set_error_log(FILE *file)
+CAT_API void cat_set_error_output(FILE *file)
 {
     CAT_LOG_G(error_output) = file;
 }
+
+#ifdef CAT_ENABLE_DEBUG_LOG
+CAT_API FILE *cat_get_debug_output(void)
+{
+    return CAT_LOG_G(debug_output);
+}
+
+CAT_API void cat_set_debug_output(FILE *file)
+{
+    CAT_LOG_G(debug_output) = file;
+}
+#endif

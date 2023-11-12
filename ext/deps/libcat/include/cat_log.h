@@ -16,7 +16,7 @@
   +--------------------------------------------------------------------------+
  */
 
-#if defined(CAT_DEBUG) && !defined(CAT_DISABLE_DEBUG_LOG)
+#ifndef CAT_DISABLE_DEBUG_LOG
 #define CAT_ENABLE_DEBUG_LOG 1
 #endif
 
@@ -42,11 +42,12 @@ typedef struct cat_log_globals_s {
     cat_log_types_t types;
     FILE *error_output;
     size_t str_size;
-    char *module_name_filter;
     unsigned int show_timestamps;
-    const char *timestamps_format;
     cat_bool_t show_timestamps_as_relative;
-#ifdef CAT_DEBUG
+    const char *timestamps_format;
+    char *module_name_filter;
+#ifdef CAT_ENABLE_DEBUG_LOG
+    FILE *debug_output;
     unsigned int debug_level;
     unsigned int last_debug_log_level;
 #endif

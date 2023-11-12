@@ -119,11 +119,9 @@ CAT_API cat_bool_t cat_event_runtime_close(void)
 
     if (unlikely(error != 0)) {
         CAT_WARN_WITH_REASON(EVENT, error, "Event loop close failed");
-#ifdef CAT_DEBUG
         if (error == CAT_EBUSY) {
             uv_print_all_handles(&CAT_EVENT_G(loop), CAT_LOG_G(error_output));
         }
-#endif
         return cat_false;
     }
 

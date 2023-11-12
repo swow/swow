@@ -60,7 +60,7 @@ CAT_API void cat_update_last_error_va_list(cat_errno_t code, const char *format,
         /* Notice: new message maybe relying on the previous message */
         message = cat_vsprintf(format, args);
         if (unlikely(message == NULL)) {
-            fprintf(CAT_LOG_G(error_output), "Sprintf last error message failed\n");
+            fprintf(CAT_LOG_G(error_output), "libcat error: sprintf() last error message failed\n");
             return;
         }
     }

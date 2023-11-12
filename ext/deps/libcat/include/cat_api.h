@@ -58,14 +58,19 @@ CAT_API cat_bool_t cat_runtime_close_all(void);
 CAT_API cat_bool_t cat_run(cat_run_mode_t run_mode);
 CAT_API cat_bool_t cat_stop(void);
 
-#ifdef CAT_DEBUG
-CAT_API void cat_enable_debug_mode(void);
+#ifdef CAT_ENABLE_DEBUG_LOG
+CAT_API void cat_enable_debug_log_mode(void);
 #else
-#define cat_enable_debug_mode()
+#define cat_enable_debug_log_mode()
 #endif
 
-CAT_API FILE *cat_get_error_log(void);
-CAT_API void cat_set_error_log(FILE *file);
+CAT_API FILE *cat_get_error_output(void);
+CAT_API void cat_set_error_output(FILE *file);
+
+#ifdef CAT_ENABLE_DEBUG_LOG
+CAT_API FILE *cat_get_debug_output(void);
+CAT_API void cat_set_debug_output(FILE *file);
+#endif
 
 #ifdef __cplusplus
 }

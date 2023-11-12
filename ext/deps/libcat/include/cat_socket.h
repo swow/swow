@@ -23,6 +23,7 @@ extern "C" {
 #endif
 
 #include "cat.h"
+#include "cat_ref.h"
 #include "cat_coroutine.h"
 #include "cat_dns.h"
 #include "cat_ssl.h"
@@ -280,8 +281,9 @@ typedef uint32_t cat_socket_option_flags_t;
 #define CAT_SOCKET_FLAG_MAP(XX) \
     XX(NONE,                     0) \
     XX(ALLOCATED,           1 << 0) \
-    XX(CLOSED,              1 << 1) \
-    XX(UNRECOVERABLE_ERROR, 1 << 2) \
+    XX(USER_CLOSED,         1 << 1) \
+    XX(CLOSED,              1 << 2) \
+    XX(UNRECOVERABLE_ERROR, 1 << 3) \
     /* for user (16 ~ 31) */ \
     XX(USR1,  1 << 16) XX(USR2,  1 << 17) XX(USR3,  1 << 18) XX(USR4,  1 << 19) \
     XX(USR5,  1 << 20) XX(USR6,  1 << 21) XX(USR7,  1 << 22) XX(USR8,  1 << 23) \
@@ -294,15 +296,20 @@ typedef enum cat_socket_flag_e {
 #undef CAT_SOCKET_FLAG_GEN
 } cat_socket_flag_t;
 
+typedef enum cat_socket_union_flags_e {
+    CAT_SOCKET_FLAGS_NON_TRANSFERABLE_BITS = CAT_SOCKET_FLAG_ALLOCATED,
+} cat_socket_union_flags_t;
+
 typedef uint32_t cat_socket_flags_t;
 
 #define CAT_SOCKET_INTERNAL_FLAG_MAP(XX) \
     XX(NONE,                   0) \
     XX(OPENED,            1 << 0) \
     XX(ESTABLISHED,       1 << 1) \
+    XX(CLOSED,            1 << 2) \
     /* socket may be a pipe file, which is created by pipe2()
      * and can only work with read()/write() */ \
-    XX(NOT_SOCK,          1 << 2) \
+    XX(NOT_SOCK,          1 << 3) \
     /* 20 ~ 23 (stream (tcp|pipe|tty)) */ \
     XX(SERVER,            1 << 20) \
     XX(SERVER_CONNECTION, 1 << 21) \
@@ -450,9 +457,12 @@ struct cat_socket_internal_s
 #endif
     /* tree */
     RB_ENTRY(cat_socket_internal_s) tree_entry;
+    /* bound socket objects */
+    cat_queue_t sockets;
+    CAT_REF_FIELD;
     /* u must be the last one (due to dynamic alloc) */
     union {
-        cat_socket_t *socket;
+        void *reserved;
         uv_handle_t handle;
         uv_stream_t stream;
         uv_tcp_t tcp;
@@ -465,8 +475,26 @@ struct cat_socket_internal_s
     } u;
 };
 
+/**
+ * 1 internal_socket may have multiple bound socket objects,
+ * also means that the different sockets may share the same internal_socket.
+ *
+ *  ┌──────┐
+ *  │socket◄──────────────┐
+ *  └──────┘              │
+ *                        │
+ *  ┌──────┐     ┌────────▼────────┐
+ *  │socket◄─────► socket_i (rc=3) │
+ *  └──────┘     └────────▲────────┘
+ *                        │
+ *  ┌──────┐              │
+ *  │socket◄──────────────┘
+ *  └──────┘
+ */
+
 struct cat_socket_s
 {
+    cat_queue_node_t node;
     cat_socket_id_t id;
     cat_socket_flags_t flags;
     cat_socket_internal_t *internal;
@@ -485,6 +513,9 @@ CAT_GLOBALS_STRUCT_BEGIN(cat_socket) {
         cat_socket_timeout_options_t timeout;
         unsigned int tcp_keepalive_delay;
     } options;
+    /* In theory, all internal socket objects should be maintained in the tree,
+     * but currently only the internal sockets that need to be used are stored
+     * e.g., server sockets for poll module. */
     struct cat_socket_internal_tree_s internal_tree;
     /* dns */
     // TODO: dns_cache (we should implement lru_cache)
@@ -508,6 +539,7 @@ CAT_API cat_socket_t *cat_socket_create(cat_socket_t *socket, cat_socket_type_t 
 
 CAT_API cat_bool_t cat_socket_open_os_fd(cat_socket_t *socket, cat_os_fd_t os_fd);
 CAT_API cat_bool_t cat_socket_open_os_socket(cat_socket_t *socket, cat_os_socket_t os_socket);
+CAT_API cat_bool_t cat_socket_open_socket(cat_socket_t *socket, const cat_socket_t *origin_socket);
 
 CAT_API cat_socket_type_t cat_socket_type_simplify(cat_socket_type_t type);
 CAT_API const char *cat_socket_type_get_name(cat_socket_type_t type);
@@ -713,8 +745,6 @@ CAT_API int cat_socket_get_local_free_port(void);
 
 CAT_API void cat_socket_dump_all(void);
 CAT_API void cat_socket_close_all(void);
-
-CAT_API cat_bool_t cat_socket_move(cat_socket_t *from, cat_socket_t *to);
 
 /* pipe */
 

@@ -94,6 +94,9 @@ CAT_API cat_bool_t cat_runtime_init(void)
 
     CAT_LOG_G(types) = CAT_LOG_TYPES_DEFAULT;
     CAT_LOG_G(error_output) = stderr;
+#ifdef CAT_ENABLE_DEBUG_LOG
+    CAT_LOG_G(debug_output) = stdout;
+#endif
 #ifdef CAT_SOURCE_POSITION
     CAT_LOG_G(show_source_postion) = cat_false;
 #endif
@@ -110,6 +113,18 @@ CAT_API cat_bool_t cat_runtime_init(void)
         }  /* TODO: log file support */
         cat_free(error_log);
     }
+    /* debug log */
+#ifdef CAT_ENABLE_DEBUG_LOG
+    if (!cat_env_is_empty("CAT_LOG_DEBUG_OUTPUT")) {
+        char *debug_log = cat_env_get_silent("CAT_LOG_DEBUG_OUTPUT", NULL);
+        if (cat_strcasecmp(debug_log, "stdout") == 0) {
+            CAT_LOG_G(debug_output) = stdout;
+        } else if (cat_strcasecmp(debug_log, "stderr") == 0) {
+            CAT_LOG_G(debug_output) = stderr;
+        }  /* TODO: log file support */
+        cat_free(debug_log);
+    }
+#endif
     /* log str size */
     CAT_LOG_G(str_size) = (size_t) cat_env_get_i("CAT_LOG_STR_SIZE", 32);
     /* log module name filter */
@@ -136,7 +151,7 @@ CAT_API cat_bool_t cat_runtime_init(void)
     if (cat_env_is_true("CAT_LOG_SHOW_TIMESTAMPS_AS_RELATIVE", cat_false)) {
         CAT_LOG_G(show_timestamps_as_relative) = cat_true;
     }
-#ifdef CAT_DEBUG
+#ifdef CAT_ENABLE_DEBUG_LOG
     CAT_LOG_G(last_debug_log_level) = 0;
     CAT_LOG_G(debug_level) = (unsigned int) cat_env_get_i("CAT_DEBUG", 0);
     if (CAT_LOG_G(debug_level) > 0) {

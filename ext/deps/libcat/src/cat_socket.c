@@ -635,7 +635,7 @@ static cat_always_inline cat_bool_t cat_socket_internal_is_established(cat_socke
 
 static cat_always_inline cat_socket_fd_t cat_socket_internal_get_fd_fast(const cat_socket_internal_t *socket_i);
 
-static void cat_socket_internal_close(cat_socket_internal_t *socket_i, cat_bool_t unrecoverable_error);
+static cat_always_inline void cat_socket_internal_close(cat_socket_internal_t *socket_i, cat_socket_t *socket, cat_bool_t unrecoverable_error);
 
 static CAT_COLD void cat_socket_internal_unrecoverable_io_error(cat_socket_internal_t *socket_i);
 #ifdef CAT_SSL
@@ -859,13 +859,13 @@ static cat_always_inline cat_socket_t *cat_socket_create_impl(cat_socket_t *sock
     }
 #endif
     /* Notice: dump callback may access this even if creation failed,
-     * so we must set it to NULL here */
-    socket_i->u.socket = NULL;
+     * so we must init it here. */
+    cat_queue_init(&socket_i->sockets);
 
     /* solve type and get af
      *  Notice: we should create socket without IPV* flag (AF_UNSPEC)
-     *  to make sure that sys socket will not be created for now
-     *  (it should be created when accept)) */
+     *  to make sure that sys socket will not be created for now.
+     *  (it should be created when accept) */
     if (type & CAT_SOCKET_TYPE_FLAG_IPV4) {
         af = AF_INET;
     } else if (type & CAT_SOCKET_TYPE_FLAG_IPV6) {
@@ -933,7 +933,8 @@ static cat_always_inline cat_socket_t *cat_socket_create_impl(cat_socket_t *sock
 
     /* init properties of socket internal */
     socket_i->type = type;
-    socket_i->u.socket = socket;
+    CAT_REF_INIT(socket_i);
+    cat_queue_push_back(&socket_i->sockets, &socket->node);
     socket_i->flags = CAT_SOCKET_INTERNAL_FLAG_NONE;
     socket_i->io_flags = CAT_SOCKET_IO_FLAG_NONE;
     memset(&socket_i->context.io.read, 0, sizeof(socket_i->context.io.read));
@@ -995,6 +996,39 @@ CAT_API cat_socket_t *cat_socket_create(cat_socket_t *socket, cat_socket_type_t 
     return socket;
 }
 
+static cat_always_inline cat_socket_t *cat_socket_create_from_socket_impl(cat_socket_t *socket, const cat_socket_t *origin_socket)
+{
+    cat_socket_flag_t flags = CAT_SOCKET_FLAG_NONE;
+
+    if (socket == NULL) {
+        socket = (cat_socket_t *) cat_malloc(sizeof(*socket));
+#if CAT_ALLOC_HANDLE_ERRORS
+        if (unlikely(socket == NULL)) {
+            cat_update_last_error_of_syscall("Malloc for socket failed");
+            goto _malloc_error;
+        }
+#endif
+        flags |= CAT_SOCKET_FLAG_ALLOCATED;
+    }
+    socket->id = ++CAT_SOCKET_G(last_id);
+    socket->flags = (origin_socket->flags & ~CAT_SOCKET_FLAGS_NON_TRANSFERABLE_BITS) | flags;
+    socket->internal = origin_socket->internal;
+    cat_queue_push_back(&socket->internal->sockets, &socket->node);
+    CAT_REF_ADD(socket->internal);
+
+    return socket;
+}
+
+CAT_API cat_socket_t *cat_socket_create_from_socket(cat_socket_t *socket, const cat_socket_t *origin_socket)
+{
+    socket = cat_socket_create_from_socket_impl(socket, origin_socket);
+
+    CAT_LOG_DEBUG(SOCKET, "socket_create_from_socket(" CAT_SOCKET_ID_FMT ", " CAT_SOCKET_ID_FMT ") = " CAT_SOCKET_ID_FMT,
+        socket->id, origin_socket->id, socket->id);
+
+    return socket;
+}
+
 static cat_always_inline void cat_socket_internal_on_manual_open(cat_socket_internal_t *socket_i, cat_socket_type_t type)
 {
     cat_sa_family_t af = AF_UNSPEC;
@@ -1042,7 +1076,7 @@ static cat_always_inline void cat_socket_internal_on_manual_open(cat_socket_inte
     }
 }
 
-CAT_API cat_bool_t cat_socket_open_os_fd(cat_socket_t *socket, cat_os_fd_t os_fd)
+static cat_always_inline cat_bool_t cat_socket_open_os_fd_impl(cat_socket_t *socket, cat_os_fd_t os_fd)
 {
     CAT_SOCKET_INTERNAL_GETTER(socket, socket_i, return cat_false);
     cat_socket_type_t type = socket_i->type;
@@ -1065,7 +1099,17 @@ CAT_API cat_bool_t cat_socket_open_os_fd(cat_socket_t *socket, cat_os_fd_t os_fd
     return cat_true;
 }
 
-CAT_API cat_bool_t cat_socket_open_os_socket(cat_socket_t *socket, cat_os_socket_t os_socket)
+CAT_API cat_bool_t cat_socket_open_os_fd(cat_socket_t *socket, cat_os_fd_t os_fd)
+{
+    cat_bool_t ret = cat_socket_open_os_fd_impl(socket, os_fd);
+
+    CAT_LOG_DEBUG(SOCKET, "open_os_fd(" CAT_SOCKET_ID_FMT ", " CAT_OS_FD_FMT ") = %s",
+        socket->id, os_fd, cat_bool_str(ret));
+
+    return ret;
+}
+
+static cat_always_inline cat_bool_t cat_socket_open_os_socket_impl(cat_socket_t *socket, cat_os_socket_t os_socket)
 {
     CAT_SOCKET_INTERNAL_GETTER(socket, socket_i, return cat_false);
     cat_socket_type_t type = socket_i->type;
@@ -1083,6 +1127,50 @@ CAT_API cat_bool_t cat_socket_open_os_socket(cat_socket_t *socket, cat_os_socket
     }
     cat_socket_internal_on_manual_open(socket_i, type);
     return cat_true;
+}
+
+CAT_API cat_bool_t cat_socket_open_os_socket(cat_socket_t *socket, cat_os_socket_t os_socket)
+{
+    cat_bool_t ret = cat_socket_open_os_socket_impl(socket, os_socket);
+
+    CAT_LOG_DEBUG(SOCKET, "open_os_socket(" CAT_SOCKET_ID_FMT ", " CAT_OS_SOCKET_FMT ") = %s",
+        socket->id, os_socket, cat_bool_str(ret));
+
+    return ret;
+}
+
+static cat_always_inline cat_bool_t cat_socket_open_socket_impl(cat_socket_t *socket, const cat_socket_t *origin_socket)
+{
+    CAT_SOCKET_INTERNAL_GETTER(socket, socket_i, return cat_false);
+    cat_socket_flags_t inherited_flags = socket_i->flags & CAT_SOCKET_FLAGS_NON_TRANSFERABLE_BITS;
+
+    if (unlikely(!cat_socket_is_available(origin_socket))) {
+        cat_update_last_error(CAT_EBADF, "Socket to copy is not available");
+        return cat_false;
+    }
+    if (unlikely(socket->internal == origin_socket->internal)) {
+        return cat_true;
+    }
+    if (cat_socket_is_available(socket)) {
+        cat_socket_close(socket);
+    }
+    // socket->id will not change
+    socket->flags = (origin_socket->flags & ~CAT_SOCKET_FLAGS_NON_TRANSFERABLE_BITS) | inherited_flags;
+    socket->internal = socket_i = origin_socket->internal;
+    cat_queue_push_back(&socket_i->sockets, &socket->node);
+    CAT_REF_ADD(socket_i);
+
+    return cat_true;
+}
+
+CAT_API cat_bool_t cat_socket_open_socket(cat_socket_t *socket, const cat_socket_t *origin_socket)
+{
+    cat_bool_t ret = cat_socket_open_socket_impl(socket, origin_socket);
+
+    CAT_LOG_DEBUG(SOCKET, "open_socket(" CAT_SOCKET_ID_FMT ", " CAT_SOCKET_ID_FMT ") = %s",
+        socket->id, origin_socket->id, cat_bool_str(ret));
+
+    return ret;
 }
 
 CAT_API cat_socket_type_t cat_socket_type_simplify(cat_socket_type_t type)
@@ -1519,6 +1607,16 @@ static void cat_socket_accept_connection_callback(uv_stream_t *stream, int statu
     // else we can call uv_accept to get it later
 }
 
+#define CAT_LOG_DEBUG_SOCKET_ESTABLISHED_SOCK_ONLY(socket, action, ret) \
+    CAT_LOG_DEBUG_VA(SOCKET, if (ret) { \
+        char sock_address[CAT_SOCKADDR_MAX_PATH] = "unknown"; \
+        size_t sock_address_length = sizeof(sock_address); \
+        cat_socket_get_sock_address(socket, sock_address, &sock_address_length); \
+        CAT_LOG_DEBUG_D(SOCKET, #action " %s { sock: {\"%.*s\", %d} }", \
+            cat_socket_get_type_name(socket), \
+            (int) sock_address_length, sock_address, cat_socket_get_sock_port(socket)); \
+    });
+
 static cat_always_inline cat_bool_t cat_socket_listen_impl(cat_socket_t *socket, int backlog)
 {
     CAT_SOCKET_INTERNAL_GETTER(socket, socket_i, return cat_false);
@@ -1529,10 +1627,14 @@ static cat_always_inline cat_bool_t cat_socket_listen_impl(cat_socket_t *socket,
         cat_update_last_error_with_reason(error, "Socket listen(%d) failed", backlog);
         return cat_false;
     }
-    uv_unref(&socket_i->u.handle);
-    socket_i->flags |= CAT_SOCKET_INTERNAL_FLAG_SERVER;
+    /* note: socket maybe copied from the other one, so it may have already unref and in the internal tree. */
+    if (!(socket_i->flags & CAT_SOCKET_INTERNAL_FLAG_SERVER)) {
+        uv_unref(&socket_i->u.handle);
+        RB_INSERT(cat_socket_internal_tree_s, &CAT_SOCKET_G(internal_tree), socket_i);
+        socket_i->flags |= CAT_SOCKET_INTERNAL_FLAG_SERVER;
+    }
 
-    RB_INSERT(cat_socket_internal_tree_s, &CAT_SOCKET_G(internal_tree), socket_i);
+    CAT_LOG_DEBUG_SOCKET_ESTABLISHED_SOCK_ONLY(socket, listened, cat_true);
 
     return cat_true;
 }
@@ -1866,7 +1968,8 @@ static cat_bool_t cat_socket_connect_to_impl(cat_socket_t *socket, const char *n
             CAT_ASSERT(af == AF_UNSPEC);
             // af changed and socket has not been initialized yet, recreate socket_i
             cat_socket_type_t type = socket_i->type; // TODO: Implement socket_dup()
-            cat_socket_internal_close(socket_i, cat_false);
+            // FIXME: multi bound sockets, make them all available
+            cat_socket_internal_close(socket_i, NULL, cat_true);
             ret = cat_socket_create(socket, type) != NULL;
             if (!ret) {
                 cat_update_last_error_with_previous("Socket connect recreate failed");
@@ -2762,7 +2865,6 @@ static ssize_t cat_socket_internal_try_recv_raw(
     cat_sockaddr_t *address, cat_socklen_t *address_length
 )
 {
-    cat_socket_t *socket = socket_i->u.socket; CAT_ASSERT(socket != NULL);
     cat_socket_fd_t fd;
     ssize_t nread;
 
@@ -3359,9 +3461,9 @@ static ssize_t cat_socket_internal_try_write_encrypted(
             }
         }
         /* Well, this could be confusing. if we can not send all encrypted data at once,
-            * we really can not know how many bytes of raw data has been sent,
-            * so the only thing we can do is to store the remaining data to buffer and
-            * try again in the next call. */
+         * we really can not know how many bytes of raw data has been sent,
+         * so the only thing we can do is to store the remaining data to buffer and
+         * try again in the next call. */
 #ifdef CAT_DEBUG
         size_t encrypted_bytes = cat_io_vector_length(ssl_vector, ssl_vector_count);
         CAT_LOG_DEBUG(SSL, "SSL %p expect send %zu encrypted bytes, actually %zu bytes was sent (raw data is %zu bytes)",
@@ -4550,29 +4652,53 @@ static void cat_socket_close_callback(uv_handle_t *handle)
     cat_free(socket_i);
 }
 
-/* Notice: socket may be freed before socket_i closed, so we can not use socket anymore after IO wait failure  */
-static void cat_socket_internal_close_impl(cat_socket_internal_t *socket_i, cat_bool_t unrecoverable_error)
+static cat_always_inline void cat_socket_soft_close(cat_socket_t *socket, cat_bool_t unrecoverable_error)
 {
-    cat_socket_t *socket = socket_i->u.socket;
-
-    if (socket == NULL) {
-        return;
-    }
-
     socket->flags |= CAT_SOCKET_FLAG_CLOSED;
     if (unlikely(unrecoverable_error)) {
         socket->flags |= CAT_SOCKET_FLAG_UNRECOVERABLE_ERROR;
     }
-
-    /* unbind */
     socket->internal = NULL;
-    socket_i->u.socket = NULL;
-    if (socket_i->flags & CAT_SOCKET_INTERNAL_FLAG_SERVER) {
-        RB_REMOVE(cat_socket_internal_tree_s, &CAT_SOCKET_G(internal_tree), socket_i);
+    cat_queue_remove(&socket->node);
+}
+
+/* Notice: socket may be freed before socket_i closed, so we can not use socket anymore after IO wait failure  */
+static void cat_socket_internal_close_impl(cat_socket_internal_t *socket_i, cat_socket_t *socket, cat_bool_t unrecoverable_error)
+{
+    CAT_ASSERT((CAT_REF_GET(socket_i) != 0 || (socket == NULL && cat_queue_empty(&socket_i->sockets))) && "internal_close() failed, internal socket has been already closed");
+    CAT_ASSERT((unrecoverable_error ? socket == NULL : cat_true) && "socket must be NULL when unrecoverable error");
+
+    if (socket_i->flags & CAT_SOCKET_INTERNAL_FLAG_CLOSED) {
+        // another "thread" is in closing
+        return;
+    }
+    if (likely(socket != NULL)) {
+        CAT_ASSERT(!unrecoverable_error && "socket is not NULL means normal close, so unrecoverable error must be false");
+        // normal close
+        cat_socket_soft_close(socket, unrecoverable_error);
+        if (CAT_REF_DEL(socket_i) != 0) {
+            return;
+        }
     }
 
-    /* unref in listen (references are idempotent) */
-    if (unlikely(cat_socket_is_server(socket))) {
+    // mark socket_i as closed
+    socket_i->flags |= CAT_SOCKET_INTERNAL_FLAG_CLOSED;
+
+    do {
+        cat_socket_t *socket_reference;
+        while ((socket_reference = cat_queue_front_data(&socket_i->sockets, cat_socket_t, node))) {
+            cat_socket_soft_close(socket_reference, unrecoverable_error);
+            CAT_REF_DEL(socket_i);
+        }
+        CAT_ASSERT(CAT_REF_GET(socket_i) == 0 && "incorrect refcount, socket is still referenced");
+        CAT_ASSERT(cat_queue_empty(&socket_i->sockets) && "incorrect bindings, socket is still referenced");
+    } while (0);
+
+    /* cleanup */
+    if (unlikely(socket_i->flags & CAT_SOCKET_INTERNAL_FLAG_SERVER)) {
+        /* note: only server socket would be added to tree for now */
+        RB_REMOVE(cat_socket_internal_tree_s, &CAT_SOCKET_G(internal_tree), socket_i);
+        /* unref in listen (references are idempotent) */
         uv_ref(&socket_i->u.handle);
     }
 
@@ -4619,12 +4745,35 @@ static void cat_socket_internal_close_impl(cat_socket_internal_t *socket_i, cat_
     uv_close(&socket_i->u.handle, cat_socket_close_callback);
 }
 
-static void cat_socket_internal_close(cat_socket_internal_t *socket_i, cat_bool_t unrecoverable_error)
+static cat_always_inline void cat_socket_internal_close(cat_socket_internal_t *socket_i, cat_socket_t *socket, cat_bool_t unrecoverable_error)
 {
-    cat_socket_internal_close_impl(socket_i, unrecoverable_error);
+#ifdef CAT_ENABLE_DEBUG_LOG
+    cat_socket_fd_t fd = cat_socket_internal_get_fd_fast(socket_i);
+#endif
+    CAT_LOG_DEBUG_VA_WITH_LEVEL(SOCKET, 3, {
+        cat_buffer_t buffer = { 0 };
+        cat_refcount_t refcount = CAT_REF_GET(socket_i);
+        cat_buffer_create(&buffer, 32);
+        CAT_QUEUE_FOREACH_DATA_START(&socket_i->sockets, cat_socket_t, node, socket_reference) {
+            if (socket_reference == socket) {
+                cat_buffer_append_printf(&buffer, CAT_SOCKET_ID_FMT "*, ", socket_reference->id);
+            } else {
+                cat_buffer_append_printf(&buffer, CAT_SOCKET_ID_FMT ", ", socket_reference->id);
+            }
+        } CAT_QUEUE_FOREACH_DATA_END();
+        if (buffer.length > CAT_STRLEN(", ")) {
+            buffer.length -= CAT_STRLEN(", ");
+        }
+        CAT_LOG_DEBUG_D(SOCKET, "internal_close(fd: " CAT_SOCKET_FD_FMT " => { ref: %u, sockets: [%.*s] }, unrecoverable_error: %s) = ...",
+            fd, refcount, (int) buffer.length, buffer.value, cat_bool_str(unrecoverable_error));
+    });
 
-    CAT_LOG_DEBUG(SOCKET, "internal_close(" CAT_SOCKET_ID_FMT ")",
-        socket_i->u.socket != NULL ? socket_i->u.socket->id : CAT_SOCKET_INVALID_ID);
+    cat_socket_internal_close_impl(socket_i, socket, unrecoverable_error);
+
+    CAT_LOG_DEBUG_VA_WITH_LEVEL(SOCKET, 3, {
+        CAT_LOG_DEBUG_D(SOCKET, "internal_close(fd: " CAT_SOCKET_FD_FMT " => { ref: 0, sockets: [] }, unrecoverable_error: %s) = done",
+            fd, cat_bool_str(unrecoverable_error));
+    });
 }
 
 static cat_always_inline cat_bool_t cat_socket_close_impl(cat_socket_t *socket)
@@ -4639,12 +4788,13 @@ static cat_always_inline cat_bool_t cat_socket_close_impl(cat_socket_t *socket)
     if (socket_i == NULL) {
          /* unrecoverable error is triggered by internal,
           * do not re-trigger EBADF when user call close(). */
-        if (!is_unrecoverable_error) {
+        if (!is_unrecoverable_error && (socket->flags & CAT_SOCKET_FLAG_USER_CLOSED)) {
             cat_update_last_error(CAT_EBADF, NULL);
             ret = cat_false;
         }
     } else {
-        cat_socket_internal_close_impl(socket_i, cat_false);
+        socket->flags |= CAT_SOCKET_FLAG_USER_CLOSED;
+        cat_socket_internal_close(socket_i, socket, cat_false);
     }
 
     if (socket->flags & CAT_SOCKET_FLAG_ALLOCATED) {
@@ -4684,7 +4834,7 @@ static CAT_COLD void cat_socket_internal_unrecoverable_io_error(cat_socket_inter
         cat_ssl_unrecoverable_error(socket_i->ssl);
     }
 #endif
-    cat_socket_internal_close(socket_i, cat_true);
+    cat_socket_internal_close(socket_i, NULL, cat_true);
 }
 
 #ifdef CAT_SSL
@@ -4693,7 +4843,7 @@ static cat_always_inline void cat_socket_internal_ssl_recoverability_check(cat_s
     if (!cat_ssl_is_down(socket_i->ssl)) {
         return;
     }
-    cat_socket_internal_close(socket_i, cat_true);
+    cat_socket_internal_close(socket_i, NULL, cat_true);
 }
 #endif
 
@@ -5158,43 +5308,33 @@ static void cat_socket_dump_callback(uv_handle_t* handle, void* arg)
 {
     (void) arg;
 
-    cat_socket_t *socket;
     cat_socket_internal_t *socket_i;
-    cat_socket_fd_t fd;
-    const char *type_name, *io_state_naming, *role;
-    char sock_addr[CAT_SOCKADDR_MAX_PATH] = "unknown", peer_addr[CAT_SOCKADDR_MAX_PATH] = "unknown";
-    size_t sock_addr_size = sizeof(sock_addr), peer_addr_size = sizeof(peer_addr);
-    int sock_port, peer_port;
 
     // this convert makes MSVC happy (C4061)
     switch ((int) handle->type) {
         case UV_TCP:
             socket_i = cat_container_of(handle, cat_socket_internal_t, u.tcp);
-            type_name = "TCP";
             break;
         case UV_NAMED_PIPE:
             socket_i = cat_container_of(handle, cat_socket_internal_t, u.pipe);
-            type_name = "PIPE";
             break;
         case UV_TTY:
             socket_i = cat_container_of(handle, cat_socket_internal_t, u.tty);
-            type_name = "TTY";
             break;
         case UV_UDP:
             socket_i = cat_container_of(handle, cat_socket_internal_t, u.udp);
-            type_name = "UDP";
             break;
         default:
             return;
     }
 
-    if (socket_i->u.socket == NULL) {
-        fd = CAT_SOCKET_INVALID_FD;
-        io_state_naming = "unavailable";
-        role = "unknown";
-        sock_port = peer_port = -1;
-    } else {
-        socket = socket_i->u.socket;
+    CAT_QUEUE_FOREACH_DATA_START(&socket_i->sockets, cat_socket_t, node, socket) {
+        cat_socket_fd_t fd = CAT_SOCKET_INVALID_FD;
+        const char *type_name = "unknown", *io_state_naming = "unavailable", *role = "unknown";
+        char sock_addr[CAT_SOCKADDR_MAX_PATH] = "unknown", peer_addr[CAT_SOCKADDR_MAX_PATH] = "unknown";
+        size_t sock_addr_size = sizeof(sock_addr), peer_addr_size = sizeof(peer_addr);
+        int sock_port = -1, peer_port = -1;
+        CAT_ASSERT(socket->internal == socket_i && "Socket internal mismatch");
         fd = cat_socket_internal_get_fd_fast(socket_i);
         type_name = cat_socket_get_type_name(socket);
         io_state_naming = cat_socket_get_io_state_naming(socket);
@@ -5203,10 +5343,9 @@ static void cat_socket_dump_callback(uv_handle_t* handle, void* arg)
         sock_port = cat_socket_get_sock_port(socket);
         (void) cat_socket_get_sock_address(socket, peer_addr, &peer_addr_size);
         peer_port = cat_socket_get_peer_port(socket);
-    }
-
-    CAT_LOG_INFO(SOCKET, "%-4s fd: %-6d io: %-12s role: %-7s addr: %s:%d, peer: %s:%d",
-                     type_name, (int) fd, io_state_naming, role, sock_addr, sock_port, peer_addr, peer_port);
+        CAT_LOG_INFO(SOCKET, "%-4s id:%-6d fd: %-6d io: %-12s role: %-7s addr: %s:%d, peer: %s:%d",
+                        type_name, (int) socket->id, (int) fd, io_state_naming, role, sock_addr, sock_port, peer_addr, peer_port);
+    } CAT_QUEUE_FOREACH_DATA_END();
 }
 
 CAT_API void cat_socket_dump_all(void)
@@ -5218,7 +5357,6 @@ static void cat_socket_close_by_handle_callback(uv_handle_t* handle, void* arg)
 {
     (void) arg;
 
-    cat_socket_t *socket;
     cat_socket_internal_t *socket_i;
 
     // this convert makes MSVC happy (C4061)
@@ -5239,37 +5377,12 @@ static void cat_socket_close_by_handle_callback(uv_handle_t* handle, void* arg)
             return;
     }
 
-    socket = socket_i->u.socket;
-    if (socket == NULL) {
-        return;
-    }
-
-    cat_socket_close(socket);
+    cat_socket_internal_close(socket_i, NULL, cat_false);
 }
 
 CAT_API void cat_socket_close_all(void)
 {
     uv_walk(&CAT_EVENT_G(loop), cat_socket_close_by_handle_callback, NULL);
-}
-
-CAT_API cat_bool_t cat_socket_move(cat_socket_t *from, cat_socket_t *to)
-{
-    if (from == to) {
-        return cat_true;
-    }
-    if (from->internal != NULL && from->internal->io_flags != CAT_SOCKET_IO_FLAG_NONE) {
-        // TODO: make it work
-        cat_update_last_error(CAT_EMISUSE, "Socket is immovable during IO operations");
-        return cat_false;
-    }
-
-    *to = *from;
-    if (from->internal != NULL) {
-        from->internal = NULL;
-        to->internal->u.socket = to;
-    }
-
-    return cat_true;
 }
 
 /* pipe */

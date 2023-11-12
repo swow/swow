@@ -79,6 +79,7 @@
 #ifdef CAT_COROUTINE_USE_ASAN
 // for warning -Wstrict-prototypes/C4255
 # define __sanitizer_acquire_crash_state() __sanitizer_acquire_crash_state(void)
+# define __sanitizer_get_report_path() __sanitizer_get_report_path(void)
 # if !defined(_MSC_VER) || _MSC_VER >= 1933
 #  include <sanitizer/common_interface_defs.h>
 # else // workaround

@@ -38,7 +38,7 @@ static cat_always_inline const char *cat_log_type_dispatch(cat_log_type_t type, 
             return NULL;
 #else
             type_name = "Debug";
-            output = stdout;
+            output = CAT_LOG_G(debug_output);
             break;
 #endif
         }
@@ -183,7 +183,29 @@ typedef unsigned int cat_syscall_write_length_t;
 typedef size_t cat_syscall_write_length_t;
 #endif
 
-CAT_API cat_bool_t cat_log_fwrite(FILE *file, const char *str, size_t length)
+static cat_bool_t cat_log_fwrite_use_libc_impl = cat_false;
+
+
+static cat_bool_t cat_log_fwrite_libc_impl(FILE *file, const char *str, size_t length)
+{
+    size_t n = fwrite(str, 1, length, file);
+    if (unlikely(n != length)) {
+        char *s;
+        fprintf(CAT_LOG_G(error_output),
+            "libcat error: write(fd: %d, length: %d) for log message failed (error:%d:%s)\n",
+            (int) fileno(file), (int) length, cat_sys_errno, cat_strerror(cat_sys_errno));
+        fprintf(CAT_LOG_G(error_output),
+            "libcat error: un-outputted log message: %s\n",
+            cat_log_str_quote(str, CAT_MIN(length, 128), &s)
+        );
+        cat_free(s);
+        return cat_false;
+    }
+    fflush(file);
+    return cat_true;
+}
+
+static cat_bool_t cat_log_fwrite_syscall_impl(FILE *file, const char *str, size_t length)
 {
     const char *p = str;
     const char *pe = p + length;
@@ -196,17 +218,25 @@ CAT_API cat_bool_t cat_log_fwrite(FILE *file, const char *str, size_t length)
             n = write(fd, p, (cat_syscall_write_length_t) l);
         } while (n <= 0 && cat_sys_errno == EAGAIN && cat_log_select_writable(fd));
         if (unlikely(n < 0)) {
-            fprintf(CAT_LOG_G(error_output), "Write log message failed (%s)\n", cat_strerror(cat_sys_errno));
-            return cat_false;
+            cat_log_fwrite_use_libc_impl = cat_true;
+            return cat_log_fwrite_libc_impl(file, p, l);
         }
         p += n;
         if (p == pe) {
             break;
         }
     }
-    // fflush(file);
 
     return cat_true;
+}
+
+CAT_API cat_bool_t cat_log_fwrite(FILE *file, const char *str, size_t length)
+{
+    if (likely(!cat_log_fwrite_use_libc_impl)) {
+        return cat_log_fwrite_syscall_impl(file, str, length);
+    } else {
+        return cat_log_fwrite_libc_impl(file, str, length);
+    }
 }
 
 CAT_API void cat_log_va_list_standard(CAT_LOG_VA_LIST_PARAMETERS)
@@ -230,7 +260,7 @@ CAT_API void cat_log_va_list_standard(CAT_LOG_VA_LIST_PARAMETERS)
 
     ret = cat_buffer_create(&buffer, 0);
     if (unlikely(!ret)) {
-        fprintf(CAT_LOG_G(error_output), "Create log buffer failed (%s)\n", cat_get_last_error_message());
+        fprintf(CAT_LOG_G(error_output), "libcat error: create log buffer failed (%s)\n", cat_get_last_error_message());
         return;
     }
 
@@ -286,7 +316,7 @@ CAT_API void cat_log_va_list_standard(CAT_LOG_VA_LIST_PARAMETERS)
 
     ret = cat_buffer_append_vprintf(&buffer, format, args);
     if (unlikely(!ret)) {
-        fprintf(CAT_LOG_G(error_output), "Vprintf log message failed (%s)\n", cat_get_last_error_message());
+        fprintf(CAT_LOG_G(error_output), "libcat error: vprintf() log message failed (%s)\n", cat_get_last_error_message());
         goto _error;
     }
 

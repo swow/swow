@@ -42,7 +42,7 @@ socket write of encrypted data.
 static int cat_ssl_get_error(const cat_ssl_t *ssl, int ret_code);
 static void cat_ssl_clear_error(void);
 static void cat_ssl_info_callback(const cat_ssl_connection_t *connection, int where, int ret);
-#ifdef CAT_DEBUG
+#ifdef CAT_ENABLE_DEBUG_LOG
 static void cat_ssl_handshake_log(cat_ssl_t *ssl);
 #else
 #define cat_ssl_handshake_log(ssl)
@@ -753,7 +753,9 @@ CAT_API cat_ssl_ret_t cat_ssl_handshake(cat_ssl_t *ssl)
     CAT_LOG_DEBUG(SSL, "SSL_do_handshake(%p): %d", ssl, n);
     if (n == 1) {
         ssl->flags |= CAT_SSL_FLAG_HANDSHAKE_OK;
-        cat_ssl_handshake_log(ssl);
+        CAT_LOG_DEBUG_VA(SSL, {
+            cat_ssl_handshake_log(ssl);
+        });
 #ifndef SSL_OP_NO_RENEGOTIATION
 #if CAT_SSL_VERSION_NUMBER < 0x10100000L
 #ifdef SSL3_FLAGS_NO_RENEGOTIATE_CIPHERS
@@ -1485,7 +1487,7 @@ static void cat_ssl_info_callback(const cat_ssl_connection_t *connection, int wh
     }
 }
 
-#ifdef CAT_DEBUG
+#ifdef CAT_ENABLE_DEBUG_LOG
 static void cat_ssl_handshake_log(cat_ssl_t *ssl)
 {
     const char *cipher_str = NULL;
@@ -1511,7 +1513,7 @@ static void cat_ssl_handshake_log(cat_ssl_t *ssl)
         *d = '\0';
         cipher_str = &buf[1];
     }
-    CAT_LOG_DEBUG(SSL, "SSL(%p) version: %s, cipher: " CAT_LOG_STRING_OR_NULL_FMT ", reused: %u",
+    CAT_LOG_DEBUG_D(SSL, "SSL(%p) version: %s, cipher: " CAT_LOG_STRING_OR_NULL_FMT ", reused: %u",
         ssl, SSL_get_version(ssl->connection), CAT_LOG_STRING_OR_NULL_PARAM(cipher_str), !!SSL_session_reused(ssl->connection));
 }
 #endif

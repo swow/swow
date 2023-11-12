@@ -129,7 +129,7 @@ static cat_always_inline cat_pollfd_events_t cat_curl_translate_poll_flags_to_sy
     return events;
 }
 
-#ifdef CAT_DEBUG
+#ifdef CAT_ENABLE_DEBUG_LOG
 static const char *cat_curl_action_name(int action)
 {
 #define CAT_CURL_ACTION_MAP(XX) \
