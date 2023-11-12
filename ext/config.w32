@@ -84,10 +84,10 @@ if (PHP_SWOW != 'no') (function(){
             use_curl = 1;
         } else {
             WARNING("Swow cURL support not enabled; libraries and headers not found");
-            WARNING("To enable Swow cURL support using offical pre-built deps and dlls,\r\n"+
+            WARNING("To enable Swow cURL support using official pre-built deps and dlls,\r\n"+
                 "you need deps curl,openssl,zlib,libssh2,nghttp2.\r\n"+
                 "You may also want build curl yourself and add it into search path using --with-php-build=\r\n"+
-                "See PHP offical documents for Windows build for detail.");
+                "See PHP official documents for Windows build for detail.");
         }
     }
 
