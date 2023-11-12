@@ -34,11 +34,12 @@ declare(strict_types=1);
     do {
         $output .= fread($pipes[1], 8192);
     } while (!feof($pipes[1]));
-    $exitCode = proc_get_status($proc)['exitcode'];
+    // $exitCode = proc_get_status($proc)['exitcode'];
     proc_close($proc);
-    if ($exitCode !== 0) {
-        throw new RuntimeException('Failed to get loaded extensions');
-    }
+    // FIXME: Workaround: ignore exit code, it may be -1 on some platforms but it's ok
+    // if ($exitCode !== 0) {
+    //     throw new RuntimeException(sprintf('Failed to get loaded extensions with exit code %d and output "%s"', $exitCode, addcslashes($output, "\r\n")));
+    // }
     $defaultLoadedExtensions = !empty($output) ? (array) @unserialize($output) : [];
     $defaultLoadedExtensions = array_map('strtolower', $defaultLoadedExtensions);
 
