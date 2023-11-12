@@ -23,10 +23,7 @@
 #include "cat_socket.h"
 #include "cat_time.h" /* for time_tv2to() */
 #include "cat_poll.h" /* for select() */
-#include "cat_ssl.h"
 
-#include "php.h"
-#include "php_network.h"
 #include "streams/php_streams_int.h"
 #include "ext/standard/file.h"
 #include "ext/standard/url.h"
@@ -38,25 +35,7 @@
 
 CAT_GLOBALS_DECLARE(swow_stream);
 
-/* $Id: f078bca729f4ab1bc2d60370e83bfa561f86b88d $ */
-
-#ifdef CAT_SSL
-typedef struct swow_netstream_ssl_s {
-    bool enable_on_connect;
-    bool is_client;
-    struct timeval connect_timeout;
-    php_stream_xport_crypt_method_t method;
-    char *url_name;
-} swow_netstream_ssl_t;
-#endif
-
-typedef struct swow_netstream_data_s {
-    php_netstream_data_t sock;
-#ifdef CAT_SSL
-    swow_netstream_ssl_t ssl;
-#endif
-    cat_socket_t socket;
-} swow_netstream_data_t;
+/* php-src: f078bca729f4ab1bc2d60370e83bfa561f86b88d */
 
 #define SWOW_STREAM_MEMBERS(stream, swow_sock, sock, socket) \
     swow_netstream_data_t *swow_sock = (swow_netstream_data_t *) (stream)->abstract; \
@@ -1258,6 +1237,21 @@ SWOW_API const php_stream_ops swow_stream_ssl_socket_ops = {
     swow_stream_set_tcp_option,
 };
 #endif
+
+SWOW_API const php_stream_ops *swow_stream_builtin_ops[sizeof(swow_stream_ops_list_t) / sizeof(php_stream_ops *)] = {
+    &swow_stream_generic_socket_ops,
+    &swow_stream_tcp_socket_ops,
+    &swow_stream_udp_socket_ops,
+    &swow_stream_pipe_socket_ops,
+#ifdef AF_UNIX
+    &swow_stream_unix_socket_ops,
+    &swow_stream_udg_socket_ops,
+#endif
+#ifdef CAT_SSL
+    &swow_stream_ssl_socket_ops,
+#endif
+};
+SWOW_API const size_t swow_stream_builtin_ops_count = sizeof(swow_stream_ops_list_t) / sizeof(php_stream_ops *);
 
 /* $Id: 547d98b81d674c48f04eab5c24aa065eba4838cc $ */
 

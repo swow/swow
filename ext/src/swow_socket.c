@@ -19,6 +19,8 @@
 #include "swow_socket.h"
 #include "swow_buffer.h"
 
+#include "swow_stream.h" /* for Socket->open(stream) */
+
 SWOW_API zend_class_entry *swow_socket_ce;
 SWOW_API zend_object_handlers swow_socket_handlers;
 
@@ -132,32 +134,52 @@ static PHP_METHOD(Swow_Socket, open)
         RETURN_THROWS();
     }
 
-    SWOW_THROW_ON_ERROR_START_EX(swow_socket_exception_ce) {
-        result = php_stream_cast(stream, PHP_STREAM_AS_SOCKETD, (void **) &os_sock, true);
-    } SWOW_THROW_ON_ERROR_END();
-	if (result != SUCCESS) {
-        RETURN_THROWS();
-	}
-
-#ifndef CAT_OS_WIN
-    os_sock = dup(os_sock);
-#endif
-    if (os_sock == CAT_OS_INVALID_SOCKET) {
-        swow_throw_exception(swow_socket_exception_ce,
-            cat_translate_sys_error(cat_sys_errno),
-            "Failed to dup socket: %s", cat_strerror(cat_sys_errno));
-        RETURN_THROWS();
+    bool is_builtin_stream = false;
+    for (size_t n = 0; n < swow_stream_builtin_ops_count; n++) {
+        if (stream->ops == swow_stream_builtin_ops[n]) {
+            is_builtin_stream = true;
+            break;
+        }
     }
+    if (is_builtin_stream) {
+        swow_netstream_data_t *from_swow_sock = (swow_netstream_data_t *) stream->abstract;
+        cat_socket_t *origin_socket = &from_swow_sock->socket;
+        if (cat_socket_get_type(socket) != cat_socket_get_simple_type(origin_socket)) {
+            zend_argument_type_error(1, "must be a socket of the same type, expect %s, %s given",
+                cat_socket_get_type_name(socket), cat_socket_get_simple_type_name(origin_socket));
+            RETURN_THROWS();
+        }
+        if (!cat_socket_open_socket(socket, origin_socket)) {
+            swow_throw_exception_with_last(swow_socket_exception_ce);
+            RETURN_THROWS();
+        }
+        RETURN_THIS();
+    } else {
+        SWOW_THROW_ON_ERROR_START_EX(swow_socket_exception_ce) {
+            result = php_stream_cast(stream, PHP_STREAM_AS_SOCKETD, (void **) &os_sock, true);
+        } SWOW_THROW_ON_ERROR_END();
+        if (result != SUCCESS) {
+            RETURN_THROWS();
+        }
+    #ifndef CAT_OS_WIN
+        os_sock = dup(os_sock);
+    #endif
+        if (os_sock == CAT_OS_INVALID_SOCKET) {
+            swow_throw_exception(swow_socket_exception_ce,
+                cat_translate_sys_error(cat_sys_errno),
+                "Failed to dup socket: %s", cat_strerror(cat_sys_errno));
+            RETURN_THROWS();
+        }
 
-    if (!cat_socket_open_os_socket(socket, os_sock)) {
-#ifndef CAT_OS_WIN
-        close(os_sock);
-#endif
-        swow_throw_exception_with_last(swow_socket_exception_ce);
-        RETURN_THROWS();
+        if (!cat_socket_open_os_socket(socket, os_sock)) {
+    #ifndef CAT_OS_WIN
+            close(os_sock);
+    #endif
+            swow_throw_exception_with_last(swow_socket_exception_ce);
+            RETURN_THROWS();
+        }
+        php_stream_set_option(stream, PHP_STREAM_OPTION_READ_BUFFER, PHP_STREAM_BUFFER_NONE, NULL);
     }
-
-	php_stream_set_option(stream, PHP_STREAM_OPTION_READ_BUFFER, PHP_STREAM_BUFFER_NONE, NULL);
 
     RETURN_THIS();
 }
