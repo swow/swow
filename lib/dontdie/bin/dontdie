@@ -20,6 +20,7 @@ use Swow\Coroutine;
 use Swow\Signal;
 use Swow\Sync\WaitReference;
 use Swow\SyncException;
+
 use function array_slice;
 use function date;
 use function extension_loaded;
@@ -37,6 +38,7 @@ use function proc_open;
 use function sleep;
 use function sprintf;
 use function usleep;
+
 use const FILE_APPEND;
 use const JSON_THROW_ON_ERROR;
 use const JSON_UNESCAPED_SLASHES;
