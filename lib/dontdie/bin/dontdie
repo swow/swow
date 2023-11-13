@@ -44,6 +44,8 @@ use const JSON_THROW_ON_ERROR;
 use const JSON_UNESCAPED_SLASHES;
 use const STDERR;
 
+const MAX_FILE_SIZE = 1024 * 1024;
+
 /** @param string[] $command */
 function dontDie(array $command, string $nickname = '', int $maxExecutionTime = -1): void
 {
@@ -69,6 +71,9 @@ function dontDie(array $command, string $nickname = '', int $maxExecutionTime = 
             $logFilename = $cwd . '/.dontdie.' . $nickname . '.log';
         }
         $log = static function (string|array $contents) use ($pid, $logFilename): void {
+            if (file_exists($logFilename) && filesize($logFilename) > MAX_FILE_SIZE) { // If logFileSize > 1MB,Avoid adding logs all the time, causing files to become too large
+                rename($logFilename, date('YmdHis').'.old'); // Rename it to YmdHis.old
+            }
             $line =
                 json_encode([
                     'pid' => $pid,
@@ -109,6 +114,7 @@ function dontDie(array $command, string $nickname = '', int $maxExecutionTime = 
         };
         $sigintWorker = Coroutine::run($signalProxy, Signal::INT);
         $sigtermWorker = Coroutine::run($signalProxy, Signal::TERM);
+        $sighupWorker = Coroutine::run($signalProxy, Signal::HUP);
 
         $trace('wait for process');
         try {
@@ -128,6 +134,10 @@ function dontDie(array $command, string $nickname = '', int $maxExecutionTime = 
         if ($sigtermWorker->isExecuting()) {
             $sigtermWorker->kill();
         }
+        if($sighupWorker->isExecuting()){
+            $sighupWorker->kill();
+        }
+
         $trace('wait for process exit');
         for ($i = 0; $i < 110; $i++) {
             if (!$status['running']) {
@@ -161,6 +171,8 @@ if (!extension_loaded('swow')) {
 if ($argc <= 1) {
     throw new InvalidArgumentException('No command specified');
 }
+
+date_default_timezone_set('Asia/Shanghai');
 
 $options = getopt('', ['nickname:'], $restIndex);
 $command = array_slice($argv, $restIndex);
