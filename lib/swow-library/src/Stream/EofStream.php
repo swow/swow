@@ -65,7 +65,7 @@ class EofStream extends Socket
      * @param ?int $offset default value is $buffer->getLength()
      * @return int message length
      */
-    public function recvMessage(Buffer $buffer, ?int $offset = null, ?int $timeout = null)
+    public function recvMessage(Buffer $buffer, ?int $offset = null, ?int $timeout = null): int
     {
         $offset ??= $buffer->getLength();
         $internalBuffer = $this->internalBuffer;
