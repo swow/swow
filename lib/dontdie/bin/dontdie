@@ -20,7 +20,6 @@ use Swow\Coroutine;
 use Swow\Signal;
 use Swow\Sync\WaitReference;
 use Swow\SyncException;
-
 use function array_slice;
 use function date;
 use function extension_loaded;
@@ -38,7 +37,6 @@ use function proc_open;
 use function sleep;
 use function sprintf;
 use function usleep;
-
 use const FILE_APPEND;
 use const JSON_THROW_ON_ERROR;
 use const JSON_UNESCAPED_SLASHES;
@@ -72,7 +70,7 @@ function dontDie(array $command, string $nickname = '', int $maxExecutionTime = 
         }
         $log = static function (string|array $contents) use ($pid, $logFilename): void {
             if (file_exists($logFilename) && filesize($logFilename) > MAX_FILE_SIZE) { // If logFileSize > 1MB,Avoid adding logs all the time, causing files to become too large
-                rename($logFilename, date('YmdHis').'.old'); // Rename it to YmdHis.old
+                rename($logFilename, date('YmdHis') . '.old'); // Rename it to YmdHis.old
             }
             $line =
                 json_encode([
@@ -124,18 +122,10 @@ function dontDie(array $command, string $nickname = '', int $maxExecutionTime = 
             $trace('wait for process timeout or canceled');
             Signal::kill($status['pid'], Signal::TERM);
         }
-
-        if ($stderrWorker->isExecuting()) {
-            $stderrWorker->kill();
-        }
-        if ($sigintWorker->isExecuting()) {
-            $sigintWorker->kill();
-        }
-        if ($sigtermWorker->isExecuting()) {
-            $sigtermWorker->kill();
-        }
-        if($sighupWorker->isExecuting()){
-            $sighupWorker->kill();
+        foreach ([$stderrWorker, $sigintWorker, $sigtermWorker, $sighupWorker] as $worker) {
+            if ($worker->isExecuting()) {
+                $worker->kill();
+            }
         }
 
         $trace('wait for process exit');
