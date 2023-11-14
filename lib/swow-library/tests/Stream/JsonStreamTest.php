@@ -11,7 +11,7 @@
 
 declare(strict_types=1);
 
-namespace SwowTest\Stream;
+namespace Swow\Tests\Stream;
 
 use PHPUnit\Framework\TestCase;
 use Swow\Coroutine;
