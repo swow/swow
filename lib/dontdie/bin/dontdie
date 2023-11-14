@@ -16,6 +16,7 @@ namespace DontDie;
 
 use InvalidArgumentException;
 use RuntimeException;
+use SplFileInfo;
 use Swow\Coroutine;
 use Swow\Signal;
 use Swow\Sync\WaitReference;
@@ -71,7 +72,8 @@ function dontDie(array $command, string $nickname = '', int $maxExecutionTime = 
             $logFilename = $cwd . '/.dontdie.' . $nickname . '.log';
         }
         $log = static function (string|array $contents) use ($pid, $logFilename): void {
-            if (file_exists($logFilename) && filesize($logFilename) > MAX_FILE_SIZE) { // If logFileSize > 1MB,Avoid adding logs all the time, causing files to become too large
+            $file = new SplFileInfo($logFilename);
+            if ($file->getRealPath() && $file->getSize() > MAX_FILE_SIZE) { // If logFileSize > 1MB,Avoid adding logs all the time, causing files to become too large
                 rename($logFilename, date('YmdHis') . '.old'); // Rename it to YmdHis.old
             }
             $line =
