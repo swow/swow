@@ -109,6 +109,7 @@ function dontDie(array $command, string $nickname = '', int $maxExecutionTime = 
         };
         $sigintWorker = Coroutine::run($signalProxy, Signal::INT);
         $sigtermWorker = Coroutine::run($signalProxy, Signal::TERM);
+        $sighupWorker = Coroutine::run($signalProxy, Signal::HUP);
 
         $trace('wait for process');
         try {
@@ -118,16 +119,12 @@ function dontDie(array $command, string $nickname = '', int $maxExecutionTime = 
             $trace('wait for process timeout or canceled');
             Signal::kill($status['pid'], Signal::TERM);
         }
+        foreach ([$stderrWorker, $sigintWorker, $sigtermWorker, $sighupWorker] as $worker) {
+            if ($worker->isExecuting()) {
+                $worker->kill();
+            }
+        }
 
-        if ($stderrWorker->isExecuting()) {
-            $stderrWorker->kill();
-        }
-        if ($sigintWorker->isExecuting()) {
-            $sigintWorker->kill();
-        }
-        if ($sigtermWorker->isExecuting()) {
-            $sigtermWorker->kill();
-        }
         $trace('wait for process exit');
         for ($i = 0; $i < 110; $i++) {
             if (!$status['running']) {
