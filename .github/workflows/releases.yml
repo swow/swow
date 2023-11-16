@@ -22,7 +22,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        php-version: ["8.2", "8.1", "8.0"]
+        php-version: ["8.3", "8.2", "8.1", "8.0"]
         arch: ["x64"]
         ts: ["0", "1"]
       max-parallel: 8
