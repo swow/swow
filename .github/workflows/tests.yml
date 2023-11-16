@@ -40,7 +40,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        php-version: ['8.2', '8.1', '8.0']
+        php-version: ['8.3', '8.2', '8.1', '8.0']
         #php-version: ['8.0']
         #ts: ['nts', 'ts']
       max-parallel: 3
@@ -148,7 +148,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        php-version: ['8.2', '8.1', '8.0']
+        php-version: ['8.3', '8.2', '8.1', '8.0']
         #php-version: ['8.0']
         #ts: ['nts', 'ts']
       max-parallel: 3
@@ -259,7 +259,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        php-version: ["8.2", "8.1", "8.0"]
+        php-version: ["8.3", "8.2", "8.1", "8.0"]
         ts: [ 'nts', 'ts' ]
       max-parallel: 8
     steps:
