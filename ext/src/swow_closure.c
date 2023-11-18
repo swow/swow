@@ -182,7 +182,7 @@ SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_user_anonymous_function(zend_f
     HashTable *ht = NULL;
 
     if (!swow_function_is_user_anonymous(function)) {
-        zend_value_error( "Closure is not a user anonymous function");
+        zend_value_error("Closure is not a user anonymous function");
         return NULL;
     }
     if (filename == NULL) {
