@@ -414,7 +414,7 @@ PHP_MINFO_FUNCTION(swow)
 #ifdef CAT_DEBUG
 # define SWOW_VERSION_SUFFIX_EXT " DEBUG"
 #else
-# define SWOW_VERSION_SUFFIX_EXT ""
+# define SWOW_VERSION_SUFFIX_EXT " RELEASE"
 #endif
 
 #ifdef CAT_COROUTINE_USE_UCONTEXT
@@ -441,7 +441,13 @@ PHP_MINFO_FUNCTION(swow)
     php_info_print_table_row(2, "Scheduler", "libuv-event");
 #ifdef CAT_ENABLE_DEBUG_LOG
     php_info_print_table_row(2, "DebugLog", "enabled");
+#else
+    php_info_print_table_row(2, "DebugLog", "disabled");
 #endif
+    php_info_print_table_end();
+
+    php_info_print_table_start();
+    php_info_print_table_header(2, "Optional dependencies", "Version Info");
 #if defined(CAT_HAVE_MSAN) || defined(CAT_HAVE_ASAN) || defined(CAT_HAVE_UBSAN)
     memset(&str, 0, sizeof(str));
 # if defined(CAT_HAVE_MSAN)
@@ -457,6 +463,8 @@ PHP_MINFO_FUNCTION(swow)
     smart_str_0(&str);
     php_info_print_table_row(2, "Sanitizers", ZSTR_VAL(str.s));
     smart_str_free(&str);
+#else
+    php_info_print_table_row(2, "Sanitizers", "none");
 #endif
 #ifdef CAT_HAVE_OPENSSL
     if (strcmp(cat_ssl_version(), OPENSSL_VERSION_TEXT) == 0) {
@@ -468,6 +476,8 @@ PHP_MINFO_FUNCTION(swow)
         php_info_print_table_row(2, "SSL", ZSTR_VAL(str.s));
         smart_str_free(&str);
     }
+#else
+    php_info_print_table_row(2, "SSL", "none");
 #endif
 #ifdef CAT_HAVE_CURL
     curl_version_info_data *curl_vid = curl_version_info(CURLVERSION_NOW);
@@ -480,6 +490,8 @@ PHP_MINFO_FUNCTION(swow)
         php_info_print_table_row(2, "cURL", ZSTR_VAL(str.s));
         smart_str_free(&str);
     }
+#else
+    php_info_print_table_row(2, "cURL", "none");
 #endif
 #ifdef CAT_HAVE_PQ
 # define VERSION_NUM_TO_STR(num, buf) do { \
@@ -489,7 +501,6 @@ PHP_MINFO_FUNCTION(swow)
         snprintf(buf, sizeof(buf), "%d.%d", num / 10000, num % 10000); \
     } \
 } while (0)
-
     char linking_libpq_version[16] = { "notfound" };
     if (swow_libpq_version) {
         VERSION_NUM_TO_STR(swow_libpq_version, linking_libpq_version);
@@ -507,8 +518,12 @@ PHP_MINFO_FUNCTION(swow)
     }
     php_info_print_table_row(2, "PostgreSQL", libpq_version_info);
 # undef VERSION_NUM_TO_STR
+#else
+    php_info_print_table_row(2, "PostgreSQL", "none");
 #endif
     php_info_print_table_end();
+
+	DISPLAY_INI_ENTRIES();
 }
 /* }}} */
 
