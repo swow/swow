@@ -415,7 +415,7 @@ static inline int swow_fs_open(const char *path, int flags, ...)
     data->path = path;
 #endif
 
-    if (flags & CAT_FS_O_CREAT) {
+    if (flags & CAT_FS_OPEN_FLAG_CREAT) {
         va_list arg;
 
         va_start(arg, flags);
@@ -731,26 +731,26 @@ static inline int swow_virtual_lchown(const char *path, uid_t owner, gid_t group
 /*
  * cat_fs_flock wrapper
  */
-#if defined(LOCK_SH) && LOCK_SH == CAT_LOCK_SH && \
-    defined(LOCK_EX) && LOCK_EX == CAT_LOCK_EX && \
-    defined(LOCK_UN) && LOCK_UN == CAT_LOCK_UN && \
-    defined(LOCK_NB) && LOCK_NB == CAT_LOCK_NB
+#if defined(LOCK_SH) && LOCK_SH == CAT_FS_FLOCK_FLAG_SHARED && \
+    defined(LOCK_EX) && LOCK_EX == CAT_FS_FLOCK_FLAG_EXCLUSIVE && \
+    defined(LOCK_UN) && LOCK_UN == CAT_FS_FLOCK_FLAG_UNLOCK && \
+    defined(LOCK_NB) && LOCK_NB == CAT_FS_FLOCK_FLAG_NONBLOCK
 # define swow_fs_flock cat_fs_flock
 #else
 static inline int swow_fs_flock(int fd, int op)
 {
     int op_type = op | (LOCK_SH & LOCK_EX & LOCK_UN);
     int op_nb = op | LOCK_NB;
-    int _op = op_nb != 0 ? CAT_LOCK_NB : 0;
+    int _op = op_nb != 0 ? CAT_FS_FLOCK_FLAG_NONBLOCK : 0;
     switch (op_type) {
         case LOCK_SH:
-            _op |= CAT_LOCK_SH;
+            _op |= CAT_FS_FLOCK_FLAG_SHARED;
             break;
         case LOCK_EX:
-            _op |= CAT_LOCK_EX;
+            _op |= CAT_FS_FLOCK_FLAG_EXCLUSIVE;
             break;
         case LOCK_UN:
-            _op |= CAT_LOCK_UN;
+            _op |= CAT_FS_FLOCK_FLAG_UNLOCK;
             break;
         default:
             errno = EINVAL;
