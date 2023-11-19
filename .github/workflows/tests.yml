@@ -87,6 +87,7 @@ jobs:
           printf "\033[1mStart configure\033[0m\n"
           ./configure --enable-swow\
             --enable-swow-debug \
+            --disable-swow-debug-log \
             --enable-swow-gcov \
             --enable-swow-ssl \
             --enable-swow-curl \
@@ -197,6 +198,7 @@ jobs:
           printf "\033[1mStart configure\033[0m\n"
           ./configure --enable-swow\
             --enable-swow-debug \
+            --disable-swow-debug-log \
             --enable-swow-gcov \
             --enable-swow-ssl=${{ env.OPENSSL_ROOT_DIR }} \
             --enable-swow-curl=${{ env.CURL_ROOT_DIR }} \
@@ -287,7 +289,7 @@ jobs:
         with:
           ext-path: ./ext
           tools-path: C:\tools\phpdev
-          conf-args: --enable-swow-debug --enable-swow-ssl --enable-swow-curl --enable-debug-pack --enable-swow-pdo-pgsql
+          conf-args: --enable-swow-debug --disable-swow-debug-log --enable-swow-ssl --enable-swow-curl --enable-debug-pack --enable-swow-pdo-pgsql
           ext-name: swow
           deps: openssl,libcurl,libssh2,zlib,nghttp2,libpq
 
