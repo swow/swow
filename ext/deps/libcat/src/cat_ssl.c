@@ -318,7 +318,7 @@ CAT_API cat_bool_t cat_ssl_context_load_verify_locations(cat_ssl_context_t *cont
 {
     CAT_LOG_DEBUG(SSL, "SSL_CTX_load_verify_locations(%p, ca_file: " CAT_LOG_STRING_OR_NULL_FMT ", ca_path: " CAT_LOG_STRING_OR_NULL_FMT ")",
         context, CAT_LOG_STRING_OR_NULL_PARAM(ca_file), CAT_LOG_STRING_OR_NULL_PARAM(ca_path));
-    if (SSL_CTX_load_verify_locations(context->ctx, ca_file, NULL) != 1) {
+    if (SSL_CTX_load_verify_locations(context->ctx, ca_file, ca_path) != 1) {
         cat_ssl_update_last_error(CAT_ESSL, "SSL_CTX_load_verify_locations() failed");
         return cat_false;
     }

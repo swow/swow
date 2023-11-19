@@ -141,7 +141,7 @@ typedef struct cat_log_globals_s {
 # define CAT_LOG_DEBUG_D(module_name, format, ...)
 #else
 # define CAT_LOG_DEBUG_LEVEL_SCOPE_START(level) do { \
-    if (CAT_LOG_G(debug_level) >= level) { \
+    if (unlikely(CAT_LOG_G(debug_level) >= level)) { \
         CAT_LOG_G(last_debug_log_level) = level; \
 
 # define CAT_LOG_DEBUG_LEVEL_SCOPE_END() \
@@ -260,22 +260,32 @@ CAT_API const char *cat_log_str_quote_unlimited(const char *str, size_t n, char 
 #define CAT_LOG_RET_RET_FMT "%s" CAT_LOG_STRERRNO_FMT
 #define CAT_LOG_RET_RET_C(n) \
             cat_ret_str(n), \
-            CAT_LOG_STRERRNO_C(n != CAT_RET_ERROR, cat_get_last_error_code())
+            CAT_LOG_STRERRNO_C((n) != CAT_RET_ERROR, cat_get_last_error_code())
 
 #define CAT_LOG_ERROR_RET_FMT CAT_ERRNO_FMT CAT_LOG_STRERRNO_FMT
 #define CAT_LOG_ERROR_RET_C(error) \
             error, \
-            CAT_LOG_STRERRNO_C(error == 0, error)
+            CAT_LOG_STRERRNO_C((error) == 0, error)
 
 #define CAT_LOG_INT_RET_FMT "%d" CAT_LOG_STRERRNO_FMT
 #define CAT_LOG_INT_RET_C(n) \
             n, \
-            CAT_LOG_STRERRNO_C(n >= 0, cat_get_last_error_code())
+            CAT_LOG_STRERRNO_C((n) >= 0, cat_get_last_error_code())
 
 #define CAT_LOG_SSIZE_RET_FMT "%zd" CAT_LOG_STRERRNO_FMT
 #define CAT_LOG_SSIZE_RET_C(n) \
             n, \
-            CAT_LOG_STRERRNO_C(n >= 0, cat_get_last_error_code())
+            CAT_LOG_STRERRNO_C((n) >= 0, cat_get_last_error_code())
+
+#define CAT_LOG_OFF_RET_FMT "%jd" CAT_LOG_STRERRNO_FMT
+#define CAT_LOG_OFF_RET_C(n) \
+            ((intmax_t) (n)), \
+            CAT_LOG_STRERRNO_C((n) >= 0, cat_get_last_error_code())
+
+#define CAT_LOG_PTR_RET_FMT "%p" CAT_LOG_STRERRNO_FMT
+#define CAT_LOG_PTR_RET_C(ret) \
+        ret, \
+        CAT_LOG_STRERRNO_C(ret != NULL, cat_get_last_error_code())
 
 #define CAT_LOG_READ_BUFFER_FMT "%s"
 #define CAT_LOG_READ_BUFFER_C(buffer) \

@@ -53,12 +53,12 @@ CAT_API char *cat_vslprintf(const char *format, size_t *length, va_list args)
 {
     va_list _args;
     size_t size;
-    char *string;
+    char *str;
 
     va_copy(_args, args);
     size = vsnprintf(NULL, 0, format, _args) + 1;
     va_end(_args);
-    string = (char *) cat_malloc(size);
+    str = (char *) cat_malloc(size);
 #if CAT_ALLOC_HANDLE_ERRORS
     if (unlikely(string == NULL)) {
         /* no need to update error message, we even have no mem to sprintf,
@@ -70,16 +70,16 @@ CAT_API char *cat_vslprintf(const char *format, size_t *length, va_list args)
         return NULL;
     }
 #endif
-    if (unlikely(vsnprintf(string, size, format, args) < 0)) {
-        cat_free(string);
+    if (unlikely(vsnprintf(str, size, format, args) < 0)) {
+        cat_free(str);
         return NULL;
     }
-    string[size - 1] = '\0';
+    str[size - 1] = '\0';
     if (length != NULL) {
         *length = size - 1;
     }
 
-    return string;
+    return str;
 }
 
 CAT_API char *cat_vsprintf(const char *format, va_list args)
@@ -90,32 +90,32 @@ CAT_API char *cat_vsprintf(const char *format, va_list args)
 CAT_API char *cat_slprintf(const char *format, size_t *length, ...)
 {
     va_list args;
-    char *string;
+    char *str;
 
     va_start(args, length);
-    string = cat_vslprintf(format, length, args);
+    str = cat_vslprintf(format, length, args);
     va_end(args);
 
-    return string;
+    return str;
 }
 
 CAT_API char *cat_sprintf(const char *format, ...)
 {
     va_list args;
-    char *string;
+    char *str;
 
     va_start(args, format);
-    string = cat_vslprintf(format, NULL, args);
+    str = cat_vslprintf(format, NULL, args);
     va_end(args);
 
-    return string;
+    return str;
 }
 
-CAT_API cat_bool_t cat_str_is_print(const char *string, size_t length)
+CAT_API cat_bool_t cat_str_is_print(const char *str, size_t length)
 {
     size_t i;
     for (i = 0; i < length; i++) {
-        if (!isprint(string[i])) {
+        if (!isprint(str[i])) {
             return cat_false;
         }
     }

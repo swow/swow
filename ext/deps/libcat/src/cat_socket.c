@@ -1526,7 +1526,7 @@ static cat_bool_t cat_socket_bind_to_impl(cat_socket_t *socket, const char *name
             break;
         }
         char *bind_flags = cat_socket_bind_flags_str(flags);
-        CAT_LOG_DEBUG_D(SOCKET, "bind(" CAT_SOCKET_ID_FMT ", \"%.*s\", %d, %s) = " CAT_LOG_UNFINISHED_STR,
+        CAT_LOG_DEBUG_D(SOCKET, "bind_to(" CAT_SOCKET_ID_FMT ", \"%.*s\", %d, %s) = " CAT_LOG_UNFINISHED_STR,
             socket->id, (int) name_length, name, port, bind_flags);
         cat_buffer_str_free(bind_flags);
     });
@@ -4570,7 +4570,7 @@ static cat_always_inline ssize_t cat_socket_send_file_impl(cat_socket_t *socket,
     cat_file_t file;
     ssize_t written;
 
-    file = cat_fs_open(filename, O_RDONLY);
+    file = cat_fs_open(filename, CAT_FS_OPEN_FLAG_RDONLY);
     if (unlikely(file < 0)) {
         cat_update_last_error_with_previous("Socket sendfile failed when open file");
         return -1;
