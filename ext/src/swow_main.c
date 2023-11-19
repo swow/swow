@@ -97,6 +97,9 @@ static PHP_GSHUTDOWN_FUNCTION(swow)
 }
 /* }}} */
 
+/** @note: some options can not be changed after startup,
+ * so we use OnUpdate*_only_when_startup to prevent it. */
+
 static ZEND_INI_MH(swow_OnUpdateLong_only_when_startup)
 {
     if (stage != ZEND_INI_STAGE_STARTUP) {
@@ -114,6 +117,7 @@ static ZEND_INI_MH(swow_OnUpdateBool_only_when_startup)
 }
 
 PHP_INI_BEGIN()
+STD_ZEND_INI_BOOLEAN("swow.enable", "On", PHP_INI_ALL, swow_OnUpdateBool_only_when_startup, ini.enable, zend_swow_globals, swow_globals)
 STD_PHP_INI_ENTRY("swow.async_threads", "0", PHP_INI_ALL, swow_OnUpdateLong_only_when_startup, ini.async_threads, zend_swow_globals, swow_globals)
 STD_ZEND_INI_BOOLEAN("swow.async_file", "On", PHP_INI_ALL, swow_OnUpdateBool_only_when_startup, ini.async_file, zend_swow_globals, swow_globals)
 STD_ZEND_INI_BOOLEAN("swow.async_tty", "On", PHP_INI_ALL, swow_OnUpdateBool_only_when_startup, ini.async_tty, zend_swow_globals, swow_globals)
@@ -122,6 +126,7 @@ PHP_INI_END()
 static void swow_globals_ctor(zend_swow_globals *g)
 {
     g->runtime_state = SWOW_RUNTIME_STATE_NONE;
+    g->ini.enable = true;
     g->ini.async_threads = 0;
     g->ini.async_file = true;
     g->ini.async_tty = true;
@@ -133,6 +138,9 @@ PHP_MINIT_FUNCTION(swow)
 {
     ZEND_INIT_MODULE_GLOBALS(swow, swow_globals_ctor, NULL);
     REGISTER_INI_ENTRIES();
+    if (!SWOW_G(ini.enable)) {
+        return SUCCESS;
+    }
     if (SWOW_G(ini.async_threads) > 0) {
         if (SWOW_G(ini.async_threads) > 1024) {
             SWOW_G(ini.async_threads) = 1024;
@@ -256,6 +264,10 @@ static void swow_clean_module_functions(int module_number)
  */
 PHP_MSHUTDOWN_FUNCTION(swow)
 {
+    if (!SWOW_G(ini.enable)) {
+        return SUCCESS;
+    }
+
     static const swow_shutdown_function_t mshutdown_functions[] = {
 #ifdef CAT_HAVE_PQ
         swow_pgsql_module_shutdown,
@@ -300,6 +312,10 @@ PHP_MSHUTDOWN_FUNCTION(swow)
  */
 PHP_RINIT_FUNCTION(swow)
 {
+    if (!SWOW_G(ini.enable)) {
+        return SUCCESS;
+    }
+
     static const swow_init_function_t rinit_functions[] = {
         swow_runtime_init,
         swow_debug_runtime_init,
@@ -342,6 +358,10 @@ PHP_RINIT_FUNCTION(swow)
  */
 PHP_RSHUTDOWN_FUNCTION(swow)
 {
+    if (!SWOW_G(ini.enable)) {
+        return SUCCESS;
+    }
+
     static const swow_shutdown_function_t rshutdown_functions[] = {
 #ifdef CAT_OS_WAIT
         swow_proc_open_runtime_shutdown,
@@ -380,6 +400,10 @@ PHP_RSHUTDOWN_FUNCTION(swow)
 
 static zend_result swow_post_deactivate(void)
 {
+    if (!SWOW_G(ini.enable)) {
+        return SUCCESS;
+    }
+
     /* make sure all closed handles will be cleaned up totally */
     cat_event_schedule();
 
@@ -429,7 +453,7 @@ PHP_MINFO_FUNCTION(swow)
     smart_str str;
 
     php_info_print_table_start();
-    php_info_print_table_row(2, "Status", "enabled");
+    php_info_print_table_row(2, "Status", SWOW_G(ini.enable) ? "enabled" : "disabled");
     php_info_print_table_row(2, "Author", "Swow Team");
     php_info_print_table_row(2, "Link", "https://github.com/swow/swow");
     php_info_print_table_row(2, "Contact", "Twosee <twosee@php.net>");

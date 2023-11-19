@@ -69,9 +69,10 @@ typedef enum swow_runtime_state_e {
 ZEND_BEGIN_MODULE_GLOBALS(swow)
     swow_runtime_state_t runtime_state;
     struct {
-        zend_long async_threads;
+        bool enable;
         bool async_file;
         bool async_tty;
+        zend_long async_threads;
     } ini;
 ZEND_END_MODULE_GLOBALS(swow)
 
