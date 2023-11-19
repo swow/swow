@@ -136,6 +136,12 @@ PHP_ARG_ENABLE([swow-debug],
   [no], [no]
 )
 
+PHP_ARG_ENABLE([swow-debug-log],
+  [whether to enable Swow debug log],
+  [AS_HELP_STRING([--enable-swow-debug-log], [Enable Swow debug log (it is enabled by default even in release build)])],
+  [yes], [no]
+)
+
 PHP_ARG_ENABLE([swow-thread-context],
   [whether to enable Swow thread context support],
   [AS_HELP_STRING([--enable-swow-thread-context], [Enable Swow thread context support])],

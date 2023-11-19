@@ -2,6 +2,7 @@
 // vim:ft=javascript
 ARG_ENABLE('swow', 'Enable Swow support', 'yes');
 ARG_ENABLE('swow-debug', 'Enable Swow debug build flags', 'no');
+ARG_ENABLE('swow-debug-log', 'Enable Swow debug log (it is enabled by default even in release build)', 'yes');
 ARG_ENABLE('swow-ssl', 'Enable Swow OpenSSL support', 'yes');
 ARG_ENABLE('swow-curl', 'Enable Swow cURL support', 'yes');
 ARG_ENABLE('swow-pdo-pgsql', 'Enable Swow PDO_PGSQL support', 'yes');
