@@ -53,56 +53,56 @@ CAT_API cat_bool_t cat_register_allocator(const cat_allocator_t *allocator)
 }
 #endif
 
-CAT_API char *cat_sys_strdup(const char *string)
+CAT_API char *cat_sys_strdup(const char *str)
 {
-    size_t size = strlen(string) + 1;
+    size_t size = strlen(str) + 1;
     char *ptr = (char *) cat_sys_malloc(size);
 #if CAT_SYS_ALLOC_HANDLE_ERRORS
     if (unlikely(ptr == NULL)) {
         return NULL;
     }
 #endif
-    return memcpy(ptr, string, size);
+    return memcpy(ptr, str, size);
 }
 
-CAT_API char *cat_sys_strndup(const char *string, size_t length)
+CAT_API char *cat_sys_strndup(const char *str, size_t length)
 {
     char *ptr;
-    length = cat_strnlen(string, length);
+    length = cat_strnlen(str, length);
     ptr = (char *) cat_sys_malloc(length + 1);
 #if CAT_SYS_ALLOC_HANDLE_ERRORS
     if (unlikely(ptr == NULL)) {
         return NULL;
     }
 #endif
-    memcpy(ptr, string, length);
+    memcpy(ptr, str, length);
     ptr[length] = '\0';
     return ptr;
 }
 
-CAT_API char *cat_strdup(const char *string)
+CAT_API char *cat_strdup(const char *str)
 {
-    size_t size = strlen(string) + 1;
+    size_t size = strlen(str) + 1;
     char *ptr = (char *) cat_malloc(size);
 #if CAT_ALLOC_HANDLE_ERRORS
     if (unlikely(ptr == NULL)) {
         return NULL;
     }
 #endif
-    return memcpy(ptr, string, size);
+    return memcpy(ptr, str, size);
 }
 
-CAT_API char *cat_strndup(const char *string, size_t length)
+CAT_API char *cat_strndup(const char *str, size_t length)
 {
     char *ptr;
-    length = cat_strnlen(string, length);
+    length = cat_strnlen(str, length);
     ptr = (char *) cat_malloc(length + 1);
 #if CAT_ALLOC_HANDLE_ERRORS
     if (unlikely(ptr == NULL)) {
         return NULL;
     }
 #endif
-    memcpy(ptr, string, length);
+    memcpy(ptr, str, length);
     ptr[length] = '\0';
     return ptr;
 }

@@ -209,11 +209,11 @@ static cat_always_inline char *cat_memdup(const void *p, size_t size)
     return (char *) memcpy(np, p, size);
 }
 
-CAT_API char *cat_sys_strdup(const char *string);
-CAT_API char *cat_sys_strndup(const char *string, size_t length);
+CAT_API char *cat_sys_strdup(const char *str);
+CAT_API char *cat_sys_strndup(const char *str, size_t length);
 
-CAT_API char *cat_strdup(const char *string);
-CAT_API char *cat_strndup(const char *string, size_t length);
+CAT_API char *cat_strdup(const char *str);
+CAT_API char *cat_strndup(const char *str, size_t length);
 
 CAT_API void *cat_malloc_function(size_t size);
 CAT_API void *cat_calloc_function(size_t count, size_t size);
