@@ -13,6 +13,7 @@ declare(strict_types=1);
 
 use Swow\Coroutine;
 use Swow\Sync\WaitReference;
+
 use function Swow\Utils\error;
 
 require __DIR__ . '/autoload.php';
@@ -37,7 +38,7 @@ $kinds = [
     'deps',
     'meaningless',
 ];
-$kindDescription = <<<MAARKDOWN
+$kindDescription = <<<'MAARKDOWN'
 - new: 新增的特性、功能、类、方法或 API
 - enhanced: 对已存在的功能的加强或优化
 - fixed: BUG 修复或对于某些故障的缓解措施
@@ -112,7 +113,7 @@ $gptComplete = static function (string $message) use ($gptBaseUrl, $gptKey): str
                 'messages' => [
                     [
                         'role' => 'system',
-                        'content' => 'You are an expert in git and version management, you will help me with the classification of git commits and the preparation of CHANGELOG writing'
+                        'content' => 'You are an expert in git and version management, you will help me with the classification of git commits and the preparation of CHANGELOG writing',
                     ],
                     [
                         'role' => 'user',
@@ -124,9 +125,9 @@ $gptComplete = static function (string $message) use ($gptBaseUrl, $gptKey): str
                 'temperature' => 0,
                 'top_p' => 0.5,
                 'presence_penalty' => 0.4,
-                'frequency_penalty' => 0.4
-            ])
-        ]
+                'frequency_penalty' => 0.4,
+            ]),
+        ],
     ];
     $context = stream_context_create($options);
     $response = file_get_contents($gptBaseUrl, false, $context);
@@ -207,7 +208,7 @@ TEXT;
                 if ($debug) {
                     $reply = [
                         'message' => $message,
-                        ...$reply
+                        ...$reply,
                     ];
                     var_dump($reply);
                 }
@@ -220,7 +221,7 @@ TEXT;
                     $kind = 'fixed';
                 } elseif (str_contains($kind, 'removed')) {
                     $kind = 'removed';
-                }  elseif (str_contains($kind, 'meaningless')) {
+                } elseif (str_contains($kind, 'meaningless')) {
                     $kind = 'meaningless';
                 } else {
                     _classification_downgrade:

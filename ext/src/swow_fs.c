@@ -976,7 +976,7 @@ static void detect_is_seekable(swow_stdio_stream_data *self) {
         self->is_pipe = S_ISFIFO(self->sb.st_mode);
     }
 #elif defined(PHP_WIN32)
-    zend_uintptr_t handle = _get_osfhandle(self->fd);
+    zend_uintptr_t handle = (zend_uintptr_t) uv_get_osfhandle(self->fd);
 
     if (handle != (zend_uintptr_t)INVALID_HANDLE_VALUE) {
         DWORD file_type = GetFileType((HANDLE)handle);
@@ -1523,7 +1523,7 @@ static int swow_stdiop_fs_set_option(php_stream *stream, int option, int value, 
 #elif defined(PHP_WIN32)
             {
                 php_stream_mmap_range *range = (php_stream_mmap_range*)ptrparam;
-                HANDLE hfile = (HANDLE)_get_osfhandle(fd);
+                HANDLE hfile = uv_get_osfhandle(fd);
                 DWORD prot, acc, loffs = 0, hoffs = 0, delta = 0;
                 LARGE_INTEGER file_size;
 

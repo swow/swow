@@ -655,24 +655,33 @@ CAT_API int cat_poll(cat_pollfd_t *fds, cat_nfds_t nfds, cat_timeout_t timeout)
 
 #define SAFE_FD_ISSET(fd, set) (set != NULL && FD_ISSET(fd, set))
 
-CAT_API int cat_select(int max_fd, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout)
+CAT_API int cat_select(cat_os_socket_t max_fd, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout)
 {
     cat_pollfd_t *pfds, *pfd;
     cat_nfds_t nfds = 0, ifds;
     int fd, ret;
 
-    if (unlikely(max_fd < 0)) {
-        cat_update_last_error(CAT_EINVAL, "Select nfds is negative");
+    if (unlikely((int) max_fd < 0)) {
+        cat_update_last_error(CAT_EINVAL, "Select nfds is invalid");
         return -1;
     }
     /* count nfds */
-    for (fd = 0; fd < max_fd; fd++) {
-        if (SAFE_FD_ISSET(fd, readfds) || SAFE_FD_ISSET(fd, writefds) || SAFE_FD_ISSET(fd, exceptfds)) {
+    for (fd = 0; fd < (int) max_fd; fd++) {
+        if (SAFE_FD_ISSET((cat_os_socket_t) fd, readfds) ||
+            SAFE_FD_ISSET((cat_os_socket_t) fd, writefds) ||
+            SAFE_FD_ISSET((cat_os_socket_t) fd, exceptfds)) {
             nfds++;
         }
     }
     /* nothing to do */
     if (nfds == 0) {
+        cat_timeout_t timeout_ms = cat_time_tv2to(timeout);
+        if (timeout_ms > 0) {
+            if (cat_time_delay(timeout_ms) != CAT_RET_OK) {
+                cat_update_last_error_with_previous("Select wait failed");
+                return -1;
+            }
+        }
         return 0;
     }
 
@@ -687,19 +696,19 @@ CAT_API int cat_select(int max_fd, fd_set *readfds, fd_set *writefds, fd_set *ex
 
     /* translate from select structure to pollfd structure */
     ifds = 0;
-    for (fd = 0; fd < max_fd; fd++) {
+    for (fd = 0; fd < (int) max_fd; fd++) {
         cat_pollfd_events_t events = POLLNONE;
-        if (SAFE_FD_ISSET(fd, readfds)) {
+        if (SAFE_FD_ISSET((cat_os_socket_t) fd, readfds)) {
             events |= POLLIN;
         }
-        if (SAFE_FD_ISSET(fd, writefds)) {
+        if (SAFE_FD_ISSET((cat_os_socket_t) fd, writefds)) {
             events |= POLLOUT;
         }
         if (events == POLLNONE) {
             continue;
         }
         pfd = &pfds[ifds];
-        pfd->fd = fd;
+        pfd->fd = (cat_os_socket_t) fd;
         pfd->events = events;
         pfd->revents = POLLNONE;
         ifds++;

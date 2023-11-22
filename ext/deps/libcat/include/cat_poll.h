@@ -73,7 +73,7 @@ CAT_API int cat_poll(cat_pollfd_t *fds, cat_nfds_t nfds, cat_timeout_t timeout);
 /** same with select(),
  * but we can not use it for file IO.
  * @see: same with poll_one() note. */
-CAT_API int cat_select(int max_fd, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout);
+CAT_API int cat_select(cat_os_socket_t max_fd, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout);
 
 /** poll emulation APIs */
 typedef cat_ret_t (*cat_poll_one_emulate_t)(cat_os_socket_t fd, cat_pollfd_events_t events, cat_pollfd_events_t *revents);

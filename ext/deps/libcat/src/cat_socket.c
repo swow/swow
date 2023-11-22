@@ -3051,6 +3051,7 @@ CAT_API size_t cat_socket_write_vector_length(const cat_socket_write_vector_t *v
     return cat_io_vector_length((const cat_io_vector_t *) vector, vector_count);
 }
 
+#ifdef CAT_ENABLE_DEBUG_LOG
 static CAT_BUFFER_STR_FREE char *cat_socket_write_vector_str(const cat_socket_write_vector_t *vector, unsigned int vector_count)
 {
     cat_buffer_t buffer;
@@ -3076,6 +3077,7 @@ static CAT_BUFFER_STR_FREE char *cat_socket_write_vector_str(const cat_socket_wr
     cat_buffer_append_char(&buffer, ']');
     return cat_buffer_export_str(&buffer);
 }
+#endif
 
 /* IOCP/io_uring may not support wait writable */
 static cat_always_inline void cat_socket_internal_write_callback(cat_socket_internal_t *socket_i, cat_socket_write_request_t *request, int status)
