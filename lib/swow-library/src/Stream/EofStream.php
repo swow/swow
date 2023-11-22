@@ -193,18 +193,18 @@ class EofStream extends Socket
     public function sendMessages(array $messages, ?int $timeout = null): static
     {
         $eof = $this->eof;
-        $_messages = [];
+        $outputMessages = [];
         foreach ($messages as $message) {
             if (is_array($message)) {
                 foreach ($message as $chunk) {
-                    $_messages[] = $chunk;
+                    $outputMessages[] = $chunk;
                 }
             } else {
-                $_messages[] = $message;
+                $outputMessages[] = $message;
             }
-            $_messages[] = $eof;
+            $outputMessages[] = $eof;
         }
-        /** @var non-empty-array<string|Stringable|Buffer|array{0: string|Stringable|Buffer, 1?: int, 2?: int}|null> $_messages */
-        return $this->write($_messages, $timeout);
+        /** @var non-empty-array<string|Stringable|Buffer|array{0: string|Stringable|Buffer, 1?: int, 2?: int}|null> $outputMessages */
+        return $this->write($outputMessages, $timeout);
     }
 }
