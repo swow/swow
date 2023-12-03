@@ -1,3 +1,51 @@
+# [v1.4.0](https://github.com/swow/swow/releases/tag/v1.4.0)
+
+> release-date: 2023-12-03
+
+> 「不要盯着时钟看，要做时钟所做的事情，继续前进。」 - 萨姆·莱文森
+>
+> "Don't watch the clock; do what it does. Keep going." - Sam Levenson
+
+## 🐣 What's New
+
++ Add EventDriver for Psr7 Server (54cd3ab) (@twose)
++ New API: Socket->open() (6bbcd89) (@twose)
++ New API: stream_select_unlimited (231f580) (@twose)
++ Support SSL security_level and apln_protocols (8fdda59) (@twose)
++ Support serialization for Buffer (206fb1b) (@twose)
++ Support coroutine switch in autoload (f49445b) (@twose)
++ Add lo_lseek64 weak symbol (f7cefee) (@dixyes)
++ Add --enable-debug-log to the compilation options (ce6fb89) (@twose)
++ Support disable Swow by `swow.enable=0` (7f46b5e) (@twose)
+
+## ✨ What's Enhanced
+
++ Enhance showExecutedSourceLines() (addd0de) (@twose)
++ Show SSL info in stream metadata (c12d1c9) (@twose)
++ Improve `php --ri swow` output (393304f) (@twose)
++ Make parsedBody nullable (#202) (@limingxinleo)
++ Support v2.0 for `psr/http-message` (#199) (@limingxinleo)
++ Handle SIGHUP signal in dontdie (#225) (@AuroraYolo)
++ Add return type to recvMessage method (#224) (@AuroraYolo)
++ Update namespace in stream tests (#226) (@AuroraYolo)
++ Make php-wrapper smarter (5e8fc64) (@twose)
++ Use GPT to generate CHANGELOG (4f250e7) (@twose)
+
+## 🐛 What's Fixed
+
+* Workaround for mysql_handle_closer() (56d6ffe) (@twose)
+* Fix socket_export_stream() hook (f6e6b28) (f94d381) (@twose)
+* Fix cURL on PHP-8.3 (76a5bcc) (@twose)
+* Fix #208 (ipv6_v6only compatibility) (d2059ad) (@twose)
+* Fix return value of stream_socket_sendto() (e1f6a7f) (@twose)
+* Fix weak dep symbols (b97bd1e) (@dixyes)
+
+## 👻 What's Removed
+
+- Remove interface dependencies from psr7-plus (a990bf2) (@twose)
+
+---
+
 # [v1.3.1](https://github.com/swow/swow/releases/tag/v1.3.1)
 
 > release-date: 2023-06-15
