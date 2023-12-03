@@ -874,8 +874,7 @@ static PHP_METHOD(Swow_Buffer, __debugInfo)
     RETURN_DEBUG_INFO_WITH_PROPERTIES(&z_debug_info);
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Buffer___serialize, 0, 0, IS_ARRAY, 0)
-ZEND_END_ARG_INFO()
+#define arginfo_class_Swow_Buffer___serialize arginfo_class_Swow_Buffer___debugInfo
 
 static PHP_METHOD(Swow_Buffer, __serialize)
 {

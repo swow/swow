@@ -100,8 +100,8 @@ static PHP_METHOD(Swow_Socket, __construct)
     }
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_open, 0, 0, IS_STATIC, 0)
-    ZEND_ARG_INFO(0, socket)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_open, 0, 1, IS_STATIC, 0)
+    ZEND_ARG_TYPE_INFO(0, socket, IS_MIXED, 0)
 ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Socket, open)

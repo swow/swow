@@ -60,12 +60,12 @@ namespace Swow
 {
     class Extension
     {
-        public const VERSION = '1.3.2-dev';
-        public const VERSION_ID = 10302;
+        public const VERSION = '1.4.0';
+        public const VERSION_ID = 10400;
         public const MAJOR_VERSION = 1;
-        public const MINOR_VERSION = 3;
-        public const RELEASE_VERSION = 2;
-        public const EXTRA_VERSION = 'dev';
+        public const MINOR_VERSION = 4;
+        public const RELEASE_VERSION = 0;
+        public const EXTRA_VERSION = '';
 
         public static function isBuiltWith(string $lib): bool { }
     }
@@ -1278,7 +1278,7 @@ namespace Swow
 
         public function __construct(int $type) { }
 
-        public function open($socket, bool $dup = false): static { }
+        public function open(mixed $socket): static { }
 
         /**
          * @FIXME may cause error on 32-bit env
@@ -2531,5 +2531,5 @@ namespace Swow\Debug
 
 namespace Swow\Debug
 {
-    function registerExtendedStatementHandler(callable $handler): \Swow\Utils\Handler { }
+    function registerExtendedStatementHandler(callable $handler, bool $force = false): \Swow\Utils\Handler { }
 }
