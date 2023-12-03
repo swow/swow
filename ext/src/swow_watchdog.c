@@ -24,8 +24,6 @@ SWOW_API zend_class_entry *swow_watchdog_ce;
 
 SWOW_API zend_class_entry *swow_watchdog_exception_ce;
 
-typedef void (*swow_interrupt_function_t)(zend_execute_data *execute_data);
-
 static swow_interrupt_function_t original_zend_interrupt_function = (swow_interrupt_function_t) -1;
 
 SWOW_API void swow_watchdog_alert_standard(cat_watchdog_t *watchdog)

@@ -15,9 +15,8 @@ use function Swow\Debug\showExecutedSourceLines;
 
 require __DIR__ . '/../autoload.php';
 
-showExecutedSourceLines();
+showExecutedSourceLines(filter: true, force: true);
 
-while (true) {
-    echo date('Y-m-d H:i:s') . "\n";
-    sleep(1);
-}
+ini_set('memory_limit', '512M');
+
+require __DIR__ . '/../amazing.php';

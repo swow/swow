@@ -135,6 +135,10 @@ SWOW_API zend_op_array *swow_compile_string_ex(zend_string *source_string, const
 
 #define SWOW_MODULES_CHECK_PRE_END() SWOW_MODULES_CHECK_PRE_END_EX({CAT_CORE_ERROR(CORE, "Module %s must be loaded before " SWOW_MODULE_NAME, _pre_module);})
 
+/* typedef */
+
+typedef void (*swow_interrupt_function_t)(zend_execute_data *execute_data);
+
 /* string */
 
 #define SWOW_PARAM_STRINGABLE(dest_string)  \

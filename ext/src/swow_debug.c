@@ -443,8 +443,12 @@ static PHP_FUNCTION(Swow_Debug_buildTraceAsString)
     RETURN_STR(swow_debug_build_trace_as_string(trace));
 }
 
+static swow_interrupt_function_t original_zend_interrupt_function = (swow_interrupt_function_t) -1;
+static void swow_debug_ext_stmt_interrupt_function(zend_execute_data *execute_data);
+
 ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_Swow_Debug_registerExtendedStatementHandler, 0, 1, Swow\\\125tils\\Handler, 0)
     ZEND_ARG_TYPE_INFO(0, handler, IS_CALLABLE, 0)
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, force, _IS_BOOL, 0, "false")
 ZEND_END_ARG_INFO()
 
 static PHP_FUNCTION(Swow_Debug_registerExtendedStatementHandler)
@@ -452,14 +456,25 @@ static PHP_FUNCTION(Swow_Debug_registerExtendedStatementHandler)
     swow_utils_handler_t *handler;
     swow_fcall_storage_t fcall;
     zval z_fcall;
+    bool force = false;
 
-    ZEND_PARSE_PARAMETERS_START(1, 1)
+    ZEND_PARSE_PARAMETERS_START(1, 2)
         SWOW_PARAM_FCALL(fcall)
+        Z_PARAM_OPTIONAL
+        Z_PARAM_BOOL(force)
     ZEND_PARSE_PARAMETERS_END();
 
     if (!(CG(compiler_options) & ZEND_COMPILE_EXTENDED_INFO)) {
-        zend_throw_error(NULL, "Please re-run your program with \"-e\" option");
-        RETURN_THROWS();
+        if (force) {
+            if (original_zend_interrupt_function == (swow_interrupt_function_t) -1) {
+                original_zend_interrupt_function = zend_interrupt_function;
+                zend_interrupt_function = swow_debug_ext_stmt_interrupt_function;
+            }
+            zend_atomic_bool_store(&EG(vm_interrupt), true);
+        } else {
+            zend_throw_error(NULL, "Please re-run your program with \"-e\" option");
+            RETURN_THROWS();
+        }
     }
 
     ZVAL_PTR(&z_fcall, &fcall);
@@ -484,38 +499,60 @@ static bool is_zend_compile_extended_info_checked = false;
 static bool is_zend_ext_stmt_handler_hooked = false;
 static user_opcode_handler_t original_zend_ext_stmt_handler = NULL;
 
-static int swow_debug_ext_stmt_handler(zend_execute_data *execute_data)
+static bool swow_debug_call_extended_statement_handlers(void)
 {
     swow_coroutine_t *s_coroutine = swow_coroutine_get_current();
 
-    if (!cat_queue_empty(&SWOW_DEBUG_G(extended_statement_handlers)) &&
-        !(s_coroutine->coroutine.flags & SWOW_COROUTINE_FLAG_DEBUGGING)) {
-        zend_fcall_info fci;
-        zval retval;
-
-        fci.size = sizeof(fci);
-        ZVAL_UNDEF(&fci.function_name);
-        fci.object = NULL;
-        fci.param_count = 0;
-        fci.named_params = NULL;
-        fci.retval = &retval;
-
-        s_coroutine->coroutine.flags |= SWOW_COROUTINE_FLAG_DEBUGGING;
-
-        CAT_QUEUE_FOREACH_DATA_START(&SWOW_DEBUG_G(extended_statement_handlers), swow_utils_handler_t, node, handler) {
-            (void) zend_call_function(&fci, &handler->fcall.fcc);
-        } CAT_QUEUE_FOREACH_DATA_END();
-
-        s_coroutine->coroutine.flags ^= SWOW_COROUTINE_FLAG_DEBUGGING;
-
-        zval_ptr_dtor(&retval);
+    if (cat_queue_empty(&SWOW_DEBUG_G(extended_statement_handlers))) {
+        return false;
     }
+    if (s_coroutine->coroutine.flags & SWOW_COROUTINE_FLAG_DEBUGGING) {
+        return false;
+    }
+
+    zend_fcall_info fci;
+    zval retval;
+
+    fci.size = sizeof(fci);
+    ZVAL_UNDEF(&fci.function_name);
+    fci.object = NULL;
+    fci.param_count = 0;
+    fci.named_params = NULL;
+    fci.retval = &retval;
+
+    s_coroutine->coroutine.flags |= SWOW_COROUTINE_FLAG_DEBUGGING;
+
+    CAT_QUEUE_FOREACH_DATA_START(&SWOW_DEBUG_G(extended_statement_handlers), swow_utils_handler_t, node, handler) {
+        (void) zend_call_function(&fci, &handler->fcall.fcc);
+    } CAT_QUEUE_FOREACH_DATA_END();
+
+    s_coroutine->coroutine.flags ^= SWOW_COROUTINE_FLAG_DEBUGGING;
+
+    zval_ptr_dtor(&retval);
+
+    return true;
+}
+
+static int swow_debug_ext_stmt_handler(zend_execute_data *execute_data)
+{
+    (void) swow_debug_call_extended_statement_handlers();
 
     if (original_zend_ext_stmt_handler != NULL) {
         return original_zend_ext_stmt_handler(execute_data);
     }
 
     return ZEND_USER_OPCODE_DISPATCH;
+}
+
+static void swow_debug_ext_stmt_interrupt_function(zend_execute_data *execute_data)
+{
+    if (swow_debug_call_extended_statement_handlers()) {
+        zend_atomic_bool_store(&EG(vm_interrupt), true);
+    }
+
+    if (original_zend_interrupt_function != NULL) {
+        original_zend_interrupt_function(execute_data);
+    }
 }
 
 zend_result swow_debug_module_init(INIT_FUNC_ARGS)
