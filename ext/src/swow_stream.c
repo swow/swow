@@ -771,6 +771,15 @@ static int swow_stream_enable_crypto(php_stream *stream,
             options.no_client_ca_list = cat_true;
         }
         GET_VER_OPT_STRING("passphrase", options.passphrase);
+#ifdef CAT_SSL_HAVE_SECURITY_LEVEL
+        GET_VER_OPT_LONG("security_level", options.security_level);
+#endif
+        GET_VER_OPT_STRING("alpn_protocols", options.alpn_protocols);
+#ifndef CAT_SSL_HAVE_TLS_ALPN
+        if (alpn_protocols != NULL) {
+            php_error_docref(NULL, E_WARNING, "alpn_protocols support is not compiled into the OpenSSL library against which PHP is linked");
+        }
+#endif
         GET_VER_OPT_STRING("local_cert", options.certificate);
         GET_VER_OPT_STRING("local_pk", options.certificate_key);
         if (GET_VER_OPT("no_ticket") && zend_is_true(val)) {
