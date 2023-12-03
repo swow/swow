@@ -839,6 +839,50 @@ static int swow_stream_set_option(php_stream *stream, int option, int value, voi
             return PHP_STREAM_OPTION_RETURN_OK;
         }
         case PHP_STREAM_OPTION_META_DATA_API: {
+#ifdef CAT_SSL
+            cat_ssl_connection_t *ssl_connection = NULL;
+            if (cat_socket_is_encrypted(socket)) {
+                ssl_connection = socket->internal->ssl->connection;
+            }
+            if (ssl_connection != NULL) {
+                zval z_tmp;
+                const char *protocol_str;
+                const SSL_CIPHER *cipher;
+                array_init(&z_tmp);
+                switch (SSL_version(ssl_connection)) {
+# ifdef HAVE_TLS13
+                    case TLS1_3_VERSION: protocol_str = "TLSv1.3"; break;
+# endif
+# ifdef HAVE_TLS12
+                    case TLS1_2_VERSION: protocol_str = "TLSv1.2"; break;
+# endif
+# ifdef HAVE_TLS11
+                    case TLS1_1_VERSION: protocol_str = "TLSv1.1"; break;
+# endif
+                    case TLS1_VERSION: protocol_str = "TLSv1"; break;
+# ifdef HAVE_SSL3
+                    case SSL3_VERSION: proto_str = "SSLv3"; break;
+# endif
+                    default: protocol_str = "UNKNOWN";
+                }
+                cipher = SSL_get_current_cipher(ssl_connection);
+                add_assoc_string(&z_tmp, "protocol", protocol_str);
+                add_assoc_string(&z_tmp, "cipher_name", (char *) SSL_CIPHER_get_name(cipher));
+                add_assoc_long(&z_tmp, "cipher_bits", SSL_CIPHER_get_bits(cipher, NULL));
+                add_assoc_string(&z_tmp, "cipher_version", SSL_CIPHER_get_version(cipher));
+# ifdef CAT_SSL_HAVE_TLS_ALPN
+                {
+                    const unsigned char *alpn_proto = NULL;
+                    unsigned int alpn_proto_len = 0;
+                    SSL_get0_alpn_selected(ssl_connection, &alpn_proto, &alpn_proto_len);
+                    if (alpn_proto) {
+                        add_assoc_stringl(&z_tmp, "alpn_protocol", (char *) alpn_proto, alpn_proto_len);
+                    }
+                }
+# endif
+                add_assoc_zval((zval *) ptrparam, "crypto", &z_tmp);
+            }
+#endif
             add_assoc_bool((zval *) ptrparam, "timed_out", sock->timeout_event);
             add_assoc_bool((zval *) ptrparam, "blocked", sock->is_blocked);
             add_assoc_bool((zval *) ptrparam, "eof", stream->eof);
