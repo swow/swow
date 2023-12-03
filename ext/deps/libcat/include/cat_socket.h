@@ -609,6 +609,12 @@ typedef struct cat_socket_crypto_options_s {
     const char *certificate;
     const char *certificate_key;
     const char *passphrase;
+#ifdef CAT_SSL_HAVE_SECURITY_LEVEL
+    int security_level;
+#endif
+#ifdef CAT_SSL_HAVE_TLS_ALPN
+    const char *alpn_protocols;
+#endif
     cat_ssl_protocols_t protocols;
     int verify_depth;
     cat_bool_t is_client;

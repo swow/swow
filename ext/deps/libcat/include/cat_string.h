@@ -84,6 +84,19 @@ static cat_always_inline void cat_string_init(cat_string_t *string)
     string->length = 0;
 }
 
+static cat_always_inline cat_bool_t cat_string_alloc(cat_string_t *string, size_t max_length)
+{
+    char *new_value = (char *) cat_malloc(max_length + 1);
+#if CAT_ALLOC_HANDLE_ERRORS
+    if (unlikely(new_value == NULL)) {
+        return cat_false;
+    }
+#endif
+    string->value = new_value;
+    string->length = 0;
+    return cat_true;
+}
+
 static cat_always_inline cat_bool_t cat_string_create(cat_string_t *string, const char *value, size_t length)
 {
     char *new_value = (char *) cat_strndup(value, length);
@@ -103,6 +116,13 @@ static cat_always_inline void cat_string_close(cat_string_t *string)
         cat_free(string->value);
         cat_string_init(string);
     }
+}
+
+static cat_always_inline void cat_string_move_uncleaned(cat_string_t *from, cat_string_t *to)
+{
+    cat_string_close(to);
+    to->value = from->value;
+    to->length = from->length;
 }
 
 CAT_API size_t cat_strnlen(const char *s, size_t n);

@@ -112,6 +112,20 @@ extern "C" {
 #define CAT_SSL_MAX_PLAIN_LENGTH  SSL3_RT_MAX_PLAIN_LENGTH
 #define CAT_SSL_BUFFER_SIZE       SSL3_RT_MAX_PACKET_SIZE
 
+#ifndef OPENSSL_NO_TLSEXT
+#define CAT_SSL_HAVE_TLS_SNI 1
+#define CAT_SSL_HAVE_TLS_ALPN 1
+#endif
+
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L && !defined(LIBRESSL_VERSION_NUMBER)
+# define CAT_SSL_HAVE_SECURITY_LEVEL 1
+# ifdef OPENSSL_TLS_SECURITY_LEVEL
+#  define CAT_SSL_DEFAULT_SECURITY_LEVEL OPENSSL_TLS_SECURITY_LEVEL
+#else
+#  define CAT_SSL_DEFAULT_SECURITY_LEVEL 1
+# endif
+#endif
+
 typedef enum cat_ssl_flag_e {
     CAT_SSL_FLAG_NONE                  = 0,
     CAT_SSL_FLAG_ALLOC                 = 1 << 0,
@@ -172,6 +186,9 @@ typedef struct cat_ssl_context_s {
     CAT_REF_FIELD;
     cat_ssl_ctx_t *ctx;
     cat_string_t passphrase;
+#ifdef CAT_SSL_HAVE_TLS_ALPN
+    cat_string_t alpn;
+#endif
 } cat_ssl_context_t;
 
 typedef struct cat_ssl_s {
@@ -196,6 +213,7 @@ typedef enum cat_ssl_ret_e {
 CAT_API cat_bool_t cat_ssl_module_init(void);
 
 /* context */
+
 CAT_API cat_ssl_context_t *cat_ssl_context_create(cat_ssl_method_t method, cat_ssl_protocols_t protocols);
 CAT_API void cat_ssl_context_close(cat_ssl_context_t *context);
 
@@ -214,6 +232,12 @@ CAT_API void cat_ssl_context_enable_verify_peer(cat_ssl_context_t *context);
 CAT_API void cat_ssl_context_disable_verify_peer(cat_ssl_context_t *context);
 CAT_API void cat_ssl_context_set_no_ticket(cat_ssl_context_t *context);
 CAT_API void cat_ssl_context_set_no_compression(cat_ssl_context_t *context);
+#ifdef CAT_SSL_HAVE_SECURITY_LEVEL
+CAT_API void cat_ssl_context_set_security_level(cat_ssl_context_t *context, int level);
+#endif
+#ifdef CAT_SSL_HAVE_TLS_ALPN
+CAT_API cat_bool_t cas_ssl_context_set_apln_protocols(cat_ssl_context_t *context, cat_bool_t is_client, const char *alpn_protocols);
+#endif
 
 /* connection */
 

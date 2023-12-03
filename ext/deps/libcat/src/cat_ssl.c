@@ -214,6 +214,7 @@ CAT_API cat_ssl_context_t *cat_ssl_context_create(cat_ssl_method_t method, cat_s
 
     /* init extra info */
     cat_string_init(&context->passphrase);
+    cat_string_init(&context->alpn);
 
     return context;
 
@@ -235,6 +236,7 @@ CAT_API void cat_ssl_context_close(cat_ssl_context_t *context)
     if (CAT_REF_DEL(context) != 0) {
         return;
     }
+    cat_string_close(&context->alpn);
     cat_string_close(&context->passphrase);
     cat_free(context);
 }
@@ -341,20 +343,119 @@ static int cat_ssl_context_password_callback(char *buf, int length, int verify, 
 CAT_API cat_bool_t cat_ssl_context_set_passphrase(cat_ssl_context_t *context, const char *passphrase, size_t passphrase_length)
 {
     cat_ssl_ctx_t *ctx = context->ctx;
+    cat_string_t passphrase_storage;
     cat_bool_t ret;
 
-    cat_string_close(&context->passphrase);
-    ret = cat_string_create(&context->passphrase, passphrase, passphrase_length);
+    CAT_LOG_DEBUG(SSL, "SSL_set_default_passwd(%p, passphrase=\"%.*s\")", context, (int) passphrase_length, passphrase);
+    ret = cat_string_create(&passphrase_storage, passphrase, passphrase_length);
+#if CAT_ALLOC_HANDLE_ERRORS
     if (unlikely(!ret)) {
         cat_update_last_error_of_syscall("Malloc for SSL passphrase failed");
         return cat_false;
     }
-    CAT_LOG_DEBUG(SSL, "SSL_set_default_passwd(%p, passphrase=\"%.*s\")", context, (int) passphrase_length, passphrase);
+#endif
+    cat_string_move_uncleaned(&passphrase_storage, &context->passphrase);
     SSL_CTX_set_default_passwd_cb_userdata(ctx, context);
     SSL_CTX_set_default_passwd_cb(ctx, cat_ssl_context_password_callback);
 
+    return ret;
+}
+
+#ifdef CAT_SSL_HAVE_SECURITY_LEVEL
+CAT_API void cat_ssl_context_set_security_level(cat_ssl_context_t *context, int level)
+{
+    CAT_LOG_DEBUG(SSL, "SSL_CTX_set_security_level(%p, %d)", context, level);
+    if (level < 0 || level > 5) {
+        level = 5;
+    }
+    SSL_CTX_set_security_level(context->ctx, level);
+}
+#endif
+
+#ifdef CAT_SSL_HAVE_TLS_ALPN
+/**
+ * Parses a comma-separated list of strings into a string suitable for SSL_CTX_set_next_protos_advertised
+ *   outlen: (output) set to the length of the resulting buffer on success.
+ *   err: (maybe NULL) on failure, an error message line is written to this BIO.
+ *   in: a NULL terminated string like "abc,def,ghi"
+ *
+ *   returns: an cat_malloc() buffer or NULL on failure.
+ */
+static cat_bool_t cat_ssl_alpn_protos_parse(cat_string_t *alpn, const char *alpn_protocols)
+{
+    size_t len;
+    size_t i, start = 0;
+    cat_bool_t ret;
+
+    len = strlen(alpn_protocols);
+    if (len >= 65535) {
+        cat_update_last_error(CAT_EINVAL, "SSL alpn protocols too long");
+        return cat_false;
+    }
+    ret = cat_string_alloc(alpn, len);
+#if CAT_ALLOC_HANDLE_ERRORS
+    if (unlikely(!ret)) {
+        cat_update_last_error_of_syscall("Malloc for SSL alpn failed");
+        return cat_false;
+    }
+#endif
+    for (i = 0; i <= len; i++) {
+        if (i == len || alpn_protocols[i] == ',') {
+            if (i - start > 255) {
+                cat_string_close(alpn);
+                return cat_false;
+            }
+            ((unsigned char *) alpn->value)[start] = (unsigned char) (i - start);
+            start = i + 1;
+        } else {
+            alpn->value[i + 1] = alpn_protocols[i];
+        }
+    }
+    alpn->length = len + 1;
+
+    return ret;
+}
+
+static int cat_ssl_server_alpn_callback(
+    cat_ssl_connection_t *connection,
+    const unsigned char **out, unsigned char *outlen,
+    const unsigned char *in, unsigned int inlen, void *arg
+)
+{
+    (void) connection;
+    cat_string_t *alpn = (cat_string_t *) arg;
+
+    if (SSL_select_next_proto(
+        (unsigned char **) out, outlen,
+        (unsigned char *) alpn->value, (unsigned int) alpn->length,
+        in, inlen) != OPENSSL_NPN_NEGOTIATED
+    ) {
+        return SSL_TLSEXT_ERR_NOACK;
+    }
+
+    return SSL_TLSEXT_ERR_OK;
+}
+
+CAT_API cat_bool_t cas_ssl_context_set_apln_protocols(cat_ssl_context_t *context, cat_bool_t is_client, const char *alpn_protocols)
+{
+    CAT_LOG_DEBUG(SSL, "SSL_CTX_set_alpn_protos(%p, \"%s\")", context, alpn_protocols);
+    cat_string_t alpn;
+    if (!cat_ssl_alpn_protos_parse(&alpn, alpn_protocols)) {
+        return cat_false;
+    }
+    if (is_client) {
+        if (!SSL_CTX_set_alpn_protos(context->ctx, (unsigned char *) context->alpn.value, (unsigned int) context->alpn.length)) {
+            cat_ssl_update_last_error(CAT_ESSL, "SSL_CTX_set_alpn_protos() failed");
+            cat_string_close(&alpn);
+            return cat_false;
+        }
+    } else {
+        SSL_CTX_set_alpn_select_cb(context->ctx, cat_ssl_server_alpn_callback, &context->alpn);
+    }
+    cat_string_move_uncleaned(&alpn, &context->alpn);
     return cat_true;
 }
+#endif
 
 CAT_API cat_bool_t cat_ssl_context_set_certificate(cat_ssl_context_t *context, const char *certificate, const char *certificate_key)
 {

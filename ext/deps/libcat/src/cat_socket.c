@@ -2097,6 +2097,12 @@ CAT_API void cat_socket_crypto_options_init(cat_socket_crypto_options_t *options
     options->certificate = NULL;
     options->certificate_key = NULL;
     options->passphrase = NULL;
+#ifdef CAT_SSL_HAVE_SECURITY_LEVEL
+    options->security_level = CAT_SSL_DEFAULT_SECURITY_LEVEL;
+#endif
+#ifdef CAT_SSL_HAVE_TLS_ALPN
+    options->alpn_protocols = NULL;
+#endif
     options->protocols = CAT_SSL_PROTOCOLS_DEFAULT;
     options->verify_depth = CAT_SSL_DEFAULT_STREAM_VERIFY_DEPTH;
     options->verify_peer = is_client;
@@ -2195,7 +2201,14 @@ static cat_bool_t cat_socket_enable_crypto_impl(cat_socket_t *socket, const cat_
     if (ioptions.no_compression) {
         cat_ssl_context_set_no_compression(context);
     }
-
+#ifdef CAT_SSL_HAVE_SECURITY_LEVEL
+    cat_ssl_context_set_security_level(context, ioptions.security_level);
+#endif
+#ifdef CAT_SSL_HAVE_TLS_ALPN
+    if (ioptions.alpn_protocols != NULL) {
+        cas_ssl_context_set_apln_protocols(context, ioptions.is_client, ioptions.alpn_protocols);
+    }
+#endif
     /* create ssl connection */
     ssl = cat_ssl_create(NULL, context);
     if (use_tmp_context) {
