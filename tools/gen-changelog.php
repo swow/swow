@@ -12,6 +12,7 @@
 declare(strict_types=1);
 
 use Swow\Coroutine;
+use Swow\Http\Status as HttpStatus;
 use Swow\Sync\WaitReference;
 
 use function Swow\Utils\error;
@@ -100,39 +101,58 @@ $commits = array_map(static function (string $commit) use ($workspace, $authorMa
     return $commit;
 }, explode("\n\n", $gitLog));
 
-$gptComplete = static function (string $message) use ($gptBaseUrl, $gptKey): string {
+$gptComplete = static function (string $message) use ($gptBaseUrl, $gptKey, $debug): string {
+    try {
+        $content = json_encode([
+            'messages' => [
+                [
+                    'role' => 'system',
+                    'content' => 'You are an expert in git and version management, you will help me with the classification of git commits and the preparation of CHANGELOG writing',
+                ],
+                [
+                    'role' => 'user',
+                    'content' => $message,
+                ],
+            ],
+            'stream' => false,
+            'max_tokens' => 3000,
+            'temperature' => 0,
+            'top_p' => 0.5,
+            'presence_penalty' => 0.4,
+            'frequency_penalty' => 0.4,
+        ], flags: JSON_THROW_ON_ERROR);
+    } catch (JsonException $jsonException) {
+        if ($debug) {
+            var_dump($message);
+        }
+        throw $jsonException;
+    }
     $options = [
         'http' => [
             'method' => 'POST',
             'header' => [
                 'Content-type: application/json',
-                'accept: application/json, text/plain, */*',
+                'Accept: application/json, text/plain, */*',
                 'api-key: ' . $gptKey,
             ],
-            'content' => json_encode([
-                'messages' => [
-                    [
-                        'role' => 'system',
-                        'content' => 'You are an expert in git and version management, you will help me with the classification of git commits and the preparation of CHANGELOG writing',
-                    ],
-                    [
-                        'role' => 'user',
-                        'content' => $message,
-                    ],
-                ],
-                'stream' => false,
-                'max_tokens' => 3000,
-                'temperature' => 0,
-                'top_p' => 0.5,
-                'presence_penalty' => 0.4,
-                'frequency_penalty' => 0.4,
-            ]),
+            'content' => $content,
         ],
     ];
     $context = stream_context_create($options);
-    $response = file_get_contents($gptBaseUrl, false, $context);
-    if ($response === false) {
-        throw new RuntimeException('Failed to get GPT response');
+    $fails = 0;
+    while (true) {
+        $response = file_get_contents($gptBaseUrl, false, $context);
+        if ($response === false) {
+            $statusCode = (int) (explode(' ', $http_response_header[0], 3)[1] ?? 500);
+            if ($statusCode === HttpStatus::TOO_MANY_REQUESTS) {
+                if (++$fails < 3) {
+                    sleep($fails);
+                    continue;
+                }
+            }
+            throw new RuntimeException('Failed to get GPT response, reason: ' . $http_response_header[0]);
+        }
+        break;
     }
     return json_decode($response, true)['choices'][0]['message']['content'] ?? throw new RuntimeException('Failed to parse GPT response');
 };
@@ -159,12 +179,18 @@ foreach ($commitGroups as $commitGroup) {
                     sprintf('%s', substr($hash, 0, 7));
             }
             $messageLC = strtolower($message);
-            if (str_starts_with($messageLC, 'back to dev')) {
-                return;
+            if (str_starts_with($messageLC, 'back to dev') ||
+                str_starts_with($messageLC, 'release v') ||
+                str_starts_with($messageLC, 'update stub')
+            ) {
+                $kind = 'version_control';
+                goto _add_to_list;
             }
             if (str_contains($messageLC, 'fix cs') ||
+                str_contains($messageLC, 'fix typo') ||
                 str_contains($messageLC, 'code format')) {
-                return;
+                $kind = 'cs_fixes';
+                goto _add_to_list;
             }
             if (str_starts_with($messageLC, 'sync deps')) {
                 $kind = 'deps';
@@ -174,6 +200,7 @@ foreach ($commitGroups as $commitGroup) {
                     $replyString = file_get_contents($gptCompletedKindCacheDir . '/' . $hash);
                 } else {
                     $question = <<<TEXT
+你是一个专业的开源项目维护者，你需要帮助我对提交进行分类，以便我能够自动生成 CHANGELOG，现有以下基本信息：
 commit message:
 ```
 {$message}
@@ -183,14 +210,15 @@ code diff:
 {$diff}
 ```
 以上是 Git 提交的信息，提交分为以下四种类型：
+kinds:
 ```
 {$kindDescription}
 ```
+请按照下述JSON格式回复，即在 `thinking_logic` 字段中先解释你对提交进行分类的逻辑（不要超过100个字），再通过 `kind` 字段告诉我这个提交归属于哪个分类，请不要在回答前后添加多余内容使得 JSON 解析失败。
 reply format:
 ```JSON
 {"thinking_logic": "...", "kind": "..."}
 ```
-请按照上述JSON格式回复，即在`thinking_logic`字段中先解释你对提交进行分类的逻辑（不要超过100个字），再通过`kind`字段告诉我这个提交归属于哪个分类，请不要在回答前后添加多余内容使得JSON解析失败。
 TEXT;
                     $replyString = $gptComplete($question);
                     if (!is_dir($gptCompletedKindCacheDir)) {
@@ -244,7 +272,8 @@ TEXT;
                     }
                 }
             }
-            $changes[$kind][] = sprintf(
+            _add_to_list:
+            $changes[$kind][] = $changeLine = sprintf(
                 '%s %s (%s) (%s)',
                 $listPrefixMatcher($kind),
                 $message,
@@ -253,6 +282,7 @@ TEXT;
                     sprintf('[@%s](https://github.com/%s)', $author, $author) :
                     sprintf('@%s', $author),
             );
+            echo $changeLine, "\n";
         });
     }
     $wr::wait($wr);
@@ -260,6 +290,7 @@ TEXT;
 if ($debug) {
     var_dump($changes);
 }
+echo "\n", str_repeat('-', 80), "\n\n";
 
 $date = date('Y-m-d');
 echo <<<MARKDOWN
@@ -309,6 +340,14 @@ echo <<<MARKDOWN
 ### meaningless
 
 {$changes['meaningless']}
+
+### version control
+
+{$changes['version_control']}
+
+### cs fixes
+
+{$changes['cs_fixes']}
 
 ### deps
 
