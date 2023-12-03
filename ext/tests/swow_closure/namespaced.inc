@@ -16,6 +16,6 @@ namespace SomeNamespace;
 function getAnonymous()
 {
     return static function (): void {
-        echo('im namespaced! ' . basename(__FILE__) . ':' . __NAMESPACE__) . "\n";
+        echo ('im namespaced! ' . basename(__FILE__) . ':' . __NAMESPACE__) . "\n";
     };
 }
