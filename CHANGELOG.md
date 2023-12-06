@@ -11,7 +11,7 @@
 + Add EventDriver for Psr7 Server (54cd3ab) (@twose)
 + New API: Socket->open() (6bbcd89) (@twose)
 + New API: stream_select_unlimited (231f580) (@twose)
-+ Support SSL security_level and apln_protocols (8fdda59) (@twose)
++ Support SSL security_level and alpn_protocols (8fdda59) (@twose)
 + Support serialization for Buffer (206fb1b) (@twose)
 + Support coroutine switch in autoload (f49445b) (@twose)
 + Add lo_lseek64 weak symbol (f7cefee) (@dixyes)
