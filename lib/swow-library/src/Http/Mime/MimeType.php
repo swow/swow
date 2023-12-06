@@ -21,7 +21,6 @@ class MimeType
     public const GIF = 'image/gif';
     public const JPEG = 'image/jpeg';
     public const JS = 'application/javascript';
-    public const MJS = self::JS;
     public const ATOM = 'application/atom+xml';
     public const RSS = 'application/rss+xml';
     public const MML = 'text/mathml';
@@ -159,8 +158,11 @@ class MimeType
     public const _3GPPHALFORMS_JSON = 'application/3gpphalforms+json';
     public const A2L = 'application/a2l';
     public const ACE_CBOR = 'application/ace+cbor';
+    public const ACE_JSON = 'application/ace+json';
     public const ACTIVEMESSAGE = 'application/activemessage';
     public const ACTIVITY_JSON = 'application/activity+json';
+    public const AIF_CBOR = 'application/aif+cbor';
+    public const AIF_JSON = 'application/aif+json';
     public const ALTO_CDNI_JSON = 'application/alto-cdni+json';
     public const ALTO_CDNIFILTER_JSON = 'application/alto-cdnifilter+json';
     public const ALTO_COSTMAP_JSON = 'application/alto-costmap+json';
@@ -179,8 +181,11 @@ class MimeType
     public const ALTO_UPDATESTREAMPARAMS_JSON = 'application/alto-updatestreamparams+json';
     public const AML = 'application/aml';
     public const EZ = 'application/andrew-inset';
+    public const APPINSTALLER = 'application/appinstaller';
     public const APPLEFILE = 'application/applefile';
     public const AW = 'application/applixware';
+    public const APPX = 'application/appx';
+    public const APPXBUNDLE = 'application/appxbundle';
     public const AT_JWT = 'application/at+jwt';
     public const ATF = 'application/atf';
     public const ATFX = 'application/atfx';
@@ -195,6 +200,7 @@ class MimeType
     public const RSAT = 'application/atsc-rsat+xml';
     public const ATXML = 'application/atxml';
     public const AUTH_POLICY_XML = 'application/auth-policy+xml';
+    public const AMLX = 'application/automationml-amlx+zip';
     public const BACNET_XDD_ZIP = 'application/bacnet-xdd+zip';
     public const BATCH_SMTP = 'application/batch-smtp';
     public const BDOC = 'application/bdoc';
@@ -209,6 +215,7 @@ class MimeType
     public const CCCEX = 'application/cccex';
     public const CCMP_XML = 'application/ccmp+xml';
     public const CCXML = 'application/ccxml+xml';
+    public const CDA_XML = 'application/cda+xml';
     public const CDFX = 'application/cdfx+xml';
     public const CDMIA = 'application/cdmi-capability';
     public const CDMIC = 'application/cdmi-container';
@@ -229,16 +236,20 @@ class MimeType
     public const COAP_GROUP_JSON = 'application/coap-group+json';
     public const COAP_PAYLOAD = 'application/coap-payload';
     public const COMMONGROUND = 'application/commonground';
+    public const CONCISE_PROBLEM_DETAILS_CBOR = 'application/concise-problem-details+cbor';
     public const CONFERENCE_INFO_XML = 'application/conference-info+xml';
     public const COSE = 'application/cose';
     public const COSE_KEY = 'application/cose-key';
     public const COSE_KEY_SET = 'application/cose-key-set';
+    public const COSE_X509 = 'application/cose-x509';
     public const CPL = 'application/cpl+xml';
     public const CSRATTRS = 'application/csrattrs';
     public const CSTA_XML = 'application/csta+xml';
     public const CSTADATA_XML = 'application/cstadata+xml';
     public const CSVM_JSON = 'application/csvm+json';
     public const CU = 'application/cu-seeme';
+    public const CWL = 'application/cwl';
+    public const CWL_JSON = 'application/cwl+json';
     public const CWT = 'application/cwt';
     public const CYBERCASH = 'application/cybercash';
     public const DART = 'application/dart';
@@ -264,8 +275,7 @@ class MimeType
     public const DSSC = 'application/dssc+der';
     public const XDSSC = 'application/dssc+xml';
     public const DVCS = 'application/dvcs';
-    public const ES = 'application/ecmascript';
-    public const ECMA = self::ES;
+    public const ECMA = 'application/ecmascript';
     public const EDI_CONSENT = 'application/edi-consent';
     public const EDI_X12 = 'application/edi-x12';
     public const EDIFACT = 'application/edifact';
@@ -277,6 +287,7 @@ class MimeType
     public const EMERGENCYCALLDATA_CONTROL_XML = 'application/emergencycalldata.control+xml';
     public const EMERGENCYCALLDATA_DEVICEINFO_XML = 'application/emergencycalldata.deviceinfo+xml';
     public const EMERGENCYCALLDATA_ECALL_MSD = 'application/emergencycalldata.ecall.msd';
+    public const EMERGENCYCALLDATA_LEGACYESN_JSON = 'application/emergencycalldata.legacyesn+json';
     public const EMERGENCYCALLDATA_PROVIDERINFO_XML = 'application/emergencycalldata.providerinfo+xml';
     public const EMERGENCYCALLDATA_SERVICEINFO_XML = 'application/emergencycalldata.serviceinfo+xml';
     public const EMERGENCYCALLDATA_SUBSCRIBERINFO_XML = 'application/emergencycalldata.subscriberinfo+xml';
@@ -292,6 +303,7 @@ class MimeType
     public const EXP = 'application/express';
     public const FASTINFOSET = 'application/fastinfoset';
     public const FASTSOAP = 'application/fastsoap';
+    public const FDF = 'application/fdf';
     public const FDT = 'application/fdt+xml';
     public const FHIR_JSON = 'application/fhir+json';
     public const FHIR_XML = 'application/fhir+xml';
@@ -314,6 +326,7 @@ class MimeType
     public const H224 = 'application/h224';
     public const HELD_XML = 'application/held+xml';
     public const HJSON = 'application/hjson';
+    public const HL7V2_XML = 'application/hl7v2+xml';
     public const HTTP = 'application/http';
     public const STK = 'application/hyperstudio';
     public const IBE_KEY_REQUEST_XML = 'application/ibe-key-request+xml';
@@ -352,7 +365,10 @@ class MimeType
     public const JSONLD = 'application/ld+json';
     public const LGR = 'application/lgr+xml';
     public const LINK_FORMAT = 'application/link-format';
+    public const LINKSET = 'application/linkset';
+    public const LINKSET_JSON = 'application/linkset+json';
     public const LOAD_CONTROL_XML = 'application/load-control+xml';
+    public const LOGOUT_JWT = 'application/logout+jwt';
     public const LOSTXML = 'application/lost+xml';
     public const LOSTSYNC_XML = 'application/lostsync+xml';
     public const LPF_ZIP = 'application/lpf+zip';
@@ -400,8 +416,9 @@ class MimeType
     public const MOSSKEY_DATA = 'application/mosskey-data';
     public const MOSSKEY_REQUEST = 'application/mosskey-request';
     public const MP21 = 'application/mp21';
-    public const MP4S = 'application/mp4';
-    public const M4P = self::MP4S;
+    public const MPG4 = 'application/mp4';
+    public const MP4S = self::MPG4;
+    public const M4P = self::MPG4;
     public const MPEG4_GENERIC = 'application/mpeg4-generic';
     public const MPEG4_IOD = 'application/mpeg4-iod';
     public const MPEG4_IOD_XMT = 'application/mpeg4-iod-xmt';
@@ -409,6 +426,8 @@ class MimeType
     public const MRB_PUBLISH_XML = 'application/mrb-publish+xml';
     public const MSC_IVR_XML = 'application/msc-ivr+xml';
     public const MSC_MIXER_XML = 'application/msc-mixer+xml';
+    public const MSIX = 'application/msix';
+    public const MSIXBUNDLE = 'application/msixbundle';
     public const MUD_JSON = 'application/mud+json';
     public const MULTIPART_CORE = 'application/multipart-core';
     public const MXF = 'application/mxf';
@@ -477,7 +496,7 @@ class MimeType
     public const PRS_NPREND = 'application/prs.nprend';
     public const PRS_PLUCKER = 'application/prs.plucker';
     public const PRS_RDF_XML_CRYPT = 'application/prs.rdf-xml-crypt';
-    public const PRS_XSF_XML = 'application/prs.xsf+xml';
+    public const XSF = 'application/prs.xsf+xml';
     public const PSKCXML = 'application/pskc+xml';
     public const PVD_JSON = 'application/pvd+json';
     public const QSIG = 'application/qsig';
@@ -499,6 +518,7 @@ class MimeType
     public const RAPD = 'application/route-apd+xml';
     public const SLS = 'application/route-s-tsid+xml';
     public const RUSD = 'application/route-usd+xml';
+    public const RPKI_CHECKLIST = 'application/rpki-checklist';
     public const GBR = 'application/rpki-ghostbusters';
     public const MFT = 'application/rpki-manifest';
     public const RPKI_PUBLICATION = 'application/rpki-publication';
@@ -563,6 +583,7 @@ class MimeType
     public const SSDL = 'application/ssdl+xml';
     public const SSML = 'application/ssml+xml';
     public const STIX_JSON = 'application/stix+json';
+    public const SWID_CBOR = 'application/swid+cbor';
     public const SWIDTAG = 'application/swid+xml';
     public const TAMP_APEX_UPDATE = 'application/tamp-apex-update';
     public const TAMP_APEX_UPDATE_CONFIRM = 'application/tamp-apex-update-confirm';
@@ -587,6 +608,7 @@ class MimeType
     public const TSD = 'application/timestamped-data';
     public const TLSRPT_GZIP = 'application/tlsrpt+gzip';
     public const TLSRPT_JSON = 'application/tlsrpt+json';
+    public const TM_JSON = 'application/tm+json';
     public const TNAUTHLIST = 'application/tnauthlist';
     public const TOKEN_INTROSPECTION_JWT = 'application/token-introspection+jwt';
     public const TOML = 'application/toml';
@@ -608,7 +630,10 @@ class MimeType
     public const VIVIDENCE_SCRIPTFILE = 'application/vividence.scriptfile';
     public const _1KM = 'application/vnd.1000minds.decision-model+xml';
     public const VND_3GPP_PROSE_XML = 'application/vnd.3gpp-prose+xml';
+    public const VND_3GPP_PROSE_PC3A_XML = 'application/vnd.3gpp-prose-pc3a+xml';
+    public const VND_3GPP_PROSE_PC3ACH_XML = 'application/vnd.3gpp-prose-pc3ach+xml';
     public const VND_3GPP_PROSE_PC3CH_XML = 'application/vnd.3gpp-prose-pc3ch+xml';
+    public const VND_3GPP_PROSE_PC8_XML = 'application/vnd.3gpp-prose-pc8+xml';
     public const VND_3GPP_V2X_LOCAL_SERVICE_INFORMATION = 'application/vnd.3gpp-v2x-local-service-information';
     public const VND_3GPP_5GNAS = 'application/vnd.3gpp.5gnas';
     public const VND_3GPP_ACCESS_TRANSFER_EVENTS_XML = 'application/vnd.3gpp.access-transfer-events+xml';
@@ -620,7 +645,9 @@ class MimeType
     public const VND_3GPP_MC_SIGNALLING_EAR = 'application/vnd.3gpp.mc-signalling-ear';
     public const VND_3GPP_MCDATA_AFFILIATION_COMMAND_XML = 'application/vnd.3gpp.mcdata-affiliation-command+xml';
     public const VND_3GPP_MCDATA_INFO_XML = 'application/vnd.3gpp.mcdata-info+xml';
+    public const VND_3GPP_MCDATA_MSGSTORE_CTRL_REQUEST_XML = 'application/vnd.3gpp.mcdata-msgstore-ctrl-request+xml';
     public const VND_3GPP_MCDATA_PAYLOAD = 'application/vnd.3gpp.mcdata-payload';
+    public const VND_3GPP_MCDATA_REGROUP_XML = 'application/vnd.3gpp.mcdata-regroup+xml';
     public const VND_3GPP_MCDATA_SERVICE_CONFIG_XML = 'application/vnd.3gpp.mcdata-service-config+xml';
     public const VND_3GPP_MCDATA_SIGNALLING = 'application/vnd.3gpp.mcdata-signalling';
     public const VND_3GPP_MCDATA_UE_CONFIG_XML = 'application/vnd.3gpp.mcdata-ue-config+xml';
@@ -636,7 +663,6 @@ class MimeType
     public const VND_3GPP_MCPTT_UE_INIT_CONFIG_XML = 'application/vnd.3gpp.mcptt-ue-init-config+xml';
     public const VND_3GPP_MCPTT_USER_PROFILE_XML = 'application/vnd.3gpp.mcptt-user-profile+xml';
     public const VND_3GPP_MCVIDEO_AFFILIATION_COMMAND_XML = 'application/vnd.3gpp.mcvideo-affiliation-command+xml';
-    public const VND_3GPP_MCVIDEO_AFFILIATION_INFO_XML = 'application/vnd.3gpp.mcvideo-affiliation-info+xml';
     public const VND_3GPP_MCVIDEO_INFO_XML = 'application/vnd.3gpp.mcvideo-info+xml';
     public const VND_3GPP_MCVIDEO_LOCATION_INFO_XML = 'application/vnd.3gpp.mcvideo-location-info+xml';
     public const VND_3GPP_MCVIDEO_MBMS_USAGE_INFO_XML = 'application/vnd.3gpp.mcvideo-mbms-usage-info+xml';
@@ -651,12 +677,15 @@ class MimeType
     public const PSB = 'application/vnd.3gpp.pic-bw-small';
     public const PVB = 'application/vnd.3gpp.pic-bw-var';
     public const VND_3GPP_S1AP = 'application/vnd.3gpp.s1ap';
+    public const VND_3GPP_SEAL_INFO_XML = 'application/vnd.3gpp.seal-info+xml';
+    public const VND_3GPP_SEAL_LOCATION_INFO_XML = 'application/vnd.3gpp.seal-location-info+xml';
     public const VND_3GPP_SMS = 'application/vnd.3gpp.sms';
     public const VND_3GPP_SMS_XML = 'application/vnd.3gpp.sms+xml';
     public const VND_3GPP_SRVCC_EXT_XML = 'application/vnd.3gpp.srvcc-ext+xml';
     public const VND_3GPP_SRVCC_INFO_XML = 'application/vnd.3gpp.srvcc-info+xml';
     public const VND_3GPP_STATE_AND_EVENT_INFO_XML = 'application/vnd.3gpp.state-and-event-info+xml';
     public const VND_3GPP_USSD_XML = 'application/vnd.3gpp.ussd+xml';
+    public const VND_3GPP_VAE_INFO_XML = 'application/vnd.3gpp.vae-info+xml';
     public const VND_3GPP2_BCMCSINFO_XML = 'application/vnd.3gpp2.bcmcsinfo+xml';
     public const VND_3GPP2_SMS = 'application/vnd.3gpp2.sms';
     public const TCAP = 'application/vnd.3gpp2.tcap';
@@ -711,6 +740,7 @@ class MimeType
     public const VND_APACHE_THRIFT_BINARY = 'application/vnd.apache.thrift.binary';
     public const VND_APACHE_THRIFT_COMPACT = 'application/vnd.apache.thrift.compact';
     public const VND_APACHE_THRIFT_JSON = 'application/vnd.apache.thrift.json';
+    public const VND_APEXLANG = 'application/vnd.apexlang';
     public const VND_API_JSON = 'application/vnd.api+json';
     public const VND_APLEXTOR_WARRP_JSON = 'application/vnd.aplextor.warrp+json';
     public const VND_APOTHEKENDE_RESERVATION_JSON = 'application/vnd.apothekende.reservation+json';
@@ -735,6 +765,8 @@ class MimeType
     public const VND_BBF_USP_MSG = 'application/vnd.bbf.usp.msg';
     public const VND_BBF_USP_MSG_JSON = 'application/vnd.bbf.usp.msg+json';
     public const VND_BEKITZUR_STECH_JSON = 'application/vnd.bekitzur-stech+json';
+    public const VND_BELIGHTSOFT_LHZD_ZIP = 'application/vnd.belightsoft.lhzd+zip';
+    public const VND_BELIGHTSOFT_LHZL_ZIP = 'application/vnd.belightsoft.lhzl+zip';
     public const VND_BINT_MED_CONTENT = 'application/vnd.bint.med-content';
     public const VND_BIOPAX_RDF_XML = 'application/vnd.biopax.rdf+xml';
     public const VND_BLINK_IDB_VALUE_WRAPPER = 'application/vnd.blink-idb-value-wrapper';
@@ -768,6 +800,8 @@ class MimeType
     public const C4U = self::C4G;
     public const C11AMC = 'application/vnd.cluetrust.cartomobile-config';
     public const C11AMZ = 'application/vnd.cluetrust.cartomobile-config-pkg';
+    public const VND_CNCF_HELM_CHART_CONTENT_V1_TAR_GZIP = 'application/vnd.cncf.helm.chart.content.v1.tar+gzip';
+    public const VND_CNCF_HELM_CHART_PROVENANCE_V1_PROV = 'application/vnd.cncf.helm.chart.provenance.v1.prov';
     public const VND_COFFEESCRIPT = 'application/vnd.coffeescript';
     public const VND_COLLABIO_XODOCUMENTS_DOCUMENT = 'application/vnd.collabio.xodocuments.document';
     public const VND_COLLABIO_XODOCUMENTS_DOCUMENT_TEMPLATE = 'application/vnd.collabio.xodocuments.document-template';
@@ -813,6 +847,7 @@ class MimeType
     public const VND_D3M_DATASET = 'application/vnd.d3m-dataset';
     public const VND_D3M_PROBLEM = 'application/vnd.d3m-problem';
     public const RDZ = 'application/vnd.data-vision.rdz';
+    public const VND_DATALOG = 'application/vnd.datalog';
     public const VND_DATAPACKAGE_JSON = 'application/vnd.datapackage+json';
     public const VND_DATARESOURCE_JSON = 'application/vnd.dataresource+json';
     public const DBF = 'application/vnd.dbf';
@@ -879,6 +914,7 @@ class MimeType
     public const VND_ECOWIN_SERIESUPDATE = 'application/vnd.ecowin.seriesupdate';
     public const VND_EFI_IMG = 'application/vnd.efi.img';
     public const VND_EFI_ISO = 'application/vnd.efi.iso';
+    public const VND_ELN_ZIP = 'application/vnd.eln+zip';
     public const VND_EMCLIENT_ACCESSREQUEST_XML = 'application/vnd.emclient.accessrequest+xml';
     public const NML = 'application/vnd.enliven';
     public const VND_ENPHASE_ENVOY = 'application/vnd.enphase.envoy';
@@ -926,7 +962,6 @@ class MimeType
     public const VND_F_SECURE_MOBILE = 'application/vnd.f-secure.mobile';
     public const VND_FAMILYSEARCH_GEDCOM_ZIP = 'application/vnd.familysearch.gedcom+zip';
     public const VND_FASTCOPY_DISK_IMAGE = 'application/vnd.fastcopy-disk-image';
-    public const FDF = 'application/vnd.fdf';
     public const MSEED = 'application/vnd.fdsn.mseed';
     public const SEED = 'application/vnd.fdsn.seed';
     public const DATALESS = self::SEED;
@@ -966,7 +1001,15 @@ class MimeType
     public const VND_FUTOIN_JSON = 'application/vnd.futoin+json';
     public const FZS = 'application/vnd.fuzzysheet';
     public const TXD = 'application/vnd.genomatix.tuxedo';
+    public const VND_GENOZIP = 'application/vnd.genozip';
     public const VND_GENTICS_GRD_JSON = 'application/vnd.gentics.grd+json';
+    public const VND_GENTOO_CATMETADATA_XML = 'application/vnd.gentoo.catmetadata+xml';
+    public const VND_GENTOO_EBUILD = 'application/vnd.gentoo.ebuild';
+    public const VND_GENTOO_ECLASS = 'application/vnd.gentoo.eclass';
+    public const VND_GENTOO_GPKG = 'application/vnd.gentoo.gpkg';
+    public const VND_GENTOO_MANIFEST = 'application/vnd.gentoo.manifest';
+    public const VND_GENTOO_PKGMETADATA_XML = 'application/vnd.gentoo.pkgmetadata+xml';
+    public const VND_GENTOO_XPAK = 'application/vnd.gentoo.xpak';
     public const VND_GEO_JSON = 'application/vnd.geo+json';
     public const VND_GEOCUBE_XML = 'application/vnd.geocube+xml';
     public const GGB = 'application/vnd.geogebra.file';
@@ -989,6 +1032,7 @@ class MimeType
     public const VND_GOV_SK_E_FORM_XML = 'application/vnd.gov.sk.e-form+xml';
     public const VND_GOV_SK_E_FORM_ZIP = 'application/vnd.gov.sk.e-form+zip';
     public const VND_GOV_SK_XMLDATACONTAINER_XML = 'application/vnd.gov.sk.xmldatacontainer+xml';
+    public const VND_GPXSEE_MAP_XML = 'application/vnd.gpxsee.map+xml';
     public const GQF = 'application/vnd.grafeq';
     public const GQS = self::GQF;
     public const VND_GRIDMP = 'application/vnd.gridmp';
@@ -1008,14 +1052,13 @@ class MimeType
     public const VND_HDT = 'application/vnd.hdt';
     public const VND_HEROKU_JSON = 'application/vnd.heroku+json';
     public const LES = 'application/vnd.hhe.lesson-player';
-    public const VND_HL7CDA_XML = 'application/vnd.hl7cda+xml';
-    public const VND_HL7V2_XML = 'application/vnd.hl7v2+xml';
     public const HPGL = 'application/vnd.hp-hpgl';
     public const HPID = 'application/vnd.hp-hpid';
     public const HPS = 'application/vnd.hp-hps';
     public const JLT = 'application/vnd.hp-jlyt';
     public const PCL = 'application/vnd.hp-pcl';
     public const PCLXL = 'application/vnd.hp-pclxl';
+    public const VND_HSL = 'application/vnd.hsl';
     public const VND_HTTPHONE = 'application/vnd.httphone';
     public const SFD_HDSTX = 'application/vnd.hydrostatix.sof-data';
     public const VND_HYPER_JSON = 'application/vnd.hyper+json';
@@ -1060,6 +1103,10 @@ class MimeType
     public const VND_INTERTRUST_NNCP = 'application/vnd.intertrust.nncp';
     public const QBO = 'application/vnd.intu.qbo';
     public const QFX = 'application/vnd.intu.qfx';
+    public const VND_IPLD_CAR = 'application/vnd.ipld.car';
+    public const VND_IPLD_DAG_CBOR = 'application/vnd.ipld.dag-cbor';
+    public const VND_IPLD_DAG_JSON = 'application/vnd.ipld.dag-json';
+    public const VND_IPLD_RAW = 'application/vnd.ipld.raw';
     public const VND_IPTC_G2_CATALOGITEM_XML = 'application/vnd.iptc.g2.catalogitem+xml';
     public const VND_IPTC_G2_CONCEPTITEM_XML = 'application/vnd.iptc.g2.conceptitem+xml';
     public const VND_IPTC_G2_KNOWLEDGEITEM_XML = 'application/vnd.iptc.g2.knowledgeitem+xml';
@@ -1135,6 +1182,7 @@ class MimeType
     public const MCD = 'application/vnd.mcd';
     public const MC1 = 'application/vnd.medcalcdata';
     public const CDKEY = 'application/vnd.mediastation.cdkey';
+    public const VND_MEDICALHOLODECK_RECORDXR = 'application/vnd.medicalholodeck.recordxr';
     public const VND_MERIDIAN_SLINGSHOT = 'application/vnd.meridian-slingshot';
     public const MWF = 'application/vnd.mfer';
     public const MFM = 'application/vnd.mfmp';
@@ -1259,6 +1307,7 @@ class MimeType
     public const VND_NTT_LOCAL_OGW_REMOTE_ACCESS = 'application/vnd.ntt-local.ogw_remote-access';
     public const VND_NTT_LOCAL_SIP_TA_REMOTE = 'application/vnd.ntt-local.sip-ta_remote';
     public const VND_NTT_LOCAL_SIP_TA_TCP_STREAM = 'application/vnd.ntt-local.sip-ta_tcp_stream';
+    public const VND_OASIS_OPENDOCUMENT_BASE = 'application/vnd.oasis.opendocument.base';
     public const ODC = 'application/vnd.oasis.opendocument.chart';
     public const OTC = 'application/vnd.oasis.opendocument.chart-template';
     public const ODB = 'application/vnd.oasis.opendocument.database';
@@ -1336,6 +1385,7 @@ class MimeType
     public const VND_ONEPAGERTAT = 'application/vnd.onepagertat';
     public const VND_ONEPAGERTATP = 'application/vnd.onepagertatp';
     public const VND_ONEPAGERTATX = 'application/vnd.onepagertatx';
+    public const VND_ONVIF_METADATA = 'application/vnd.onvif.metadata';
     public const OBGX = 'application/vnd.openblox.game+xml';
     public const VND_OPENBLOX_GAME_BINARY = 'application/vnd.openblox.game-binary';
     public const VND_OPENEYE_OEB = 'application/vnd.openeye.oeb';
@@ -1451,7 +1501,7 @@ class MimeType
     public const QPS = 'application/vnd.publishare-delta-tree';
     public const PTID = 'application/vnd.pvi.ptid1';
     public const VND_PWG_MULTIPLEXED = 'application/vnd.pwg-multiplexed';
-    public const VND_PWG_XHTML_PRINT_XML = 'application/vnd.pwg-xhtml-print+xml';
+    public const XHTM = 'application/vnd.pwg-xhtml-print+xml';
     public const VND_QUALCOMM_BREW_APP_RES = 'application/vnd.qualcomm.brew-app-res';
     public const VND_QUARANTAINENET = 'application/vnd.quarantainenet';
     public const QXD = 'application/vnd.quark.quarkxpress';
@@ -1529,6 +1579,7 @@ class MimeType
     public const MMF = 'application/vnd.smaf';
     public const VND_SMART_NOTEBOOK = 'application/vnd.smart.notebook';
     public const TEACHER = 'application/vnd.smart.teacher';
+    public const VND_SMINTIO_PORTALS_ARCHIVE = 'application/vnd.smintio.portals.archive';
     public const VND_SNESDEV_PAGE_TABLE = 'application/vnd.snesdev-page-table';
     public const FO = 'application/vnd.software602.filler.form+xml';
     public const VND_SOFTWARE602_FILLER_FORM_XML_ZIP = 'application/vnd.software602.filler.form-xml-zip';
@@ -1565,6 +1616,7 @@ class MimeType
     public const SUSP = self::SUS;
     public const SVD = 'application/vnd.svd';
     public const VND_SWIFTVIEW_ICS = 'application/vnd.swiftview-ics';
+    public const VND_SYBYL_MOL2 = 'application/vnd.sybyl.mol2';
     public const VND_SYCLE_XML = 'application/vnd.sycle+xml';
     public const VND_SYFT_JSON = 'application/vnd.syft+json';
     public const SIS = 'application/vnd.symbian.install';
@@ -1599,6 +1651,7 @@ class MimeType
     public const UMJ = 'application/vnd.umajin';
     public const UNITYWEB = 'application/vnd.unity';
     public const UOML = 'application/vnd.uoml+xml';
+    public const UO = self::UOML;
     public const VND_UPLANET_ALERT = 'application/vnd.uplanet.alert';
     public const VND_UPLANET_ALERT_WBXML = 'application/vnd.uplanet.alert-wbxml';
     public const VND_UPLANET_BEARER_CHOICE = 'application/vnd.uplanet.bearer-choice';
@@ -1634,6 +1687,7 @@ class MimeType
     public const VND_WAP_SLC = 'application/vnd.wap.slc';
     public const WBXML = 'application/vnd.wap.wbxml';
     public const WMLSC = 'application/vnd.wap.wmlscriptc';
+    public const VND_WASMFLOW_WAFL = 'application/vnd.wasmflow.wafl';
     public const WTB = 'application/vnd.webturbo';
     public const VND_WFA_DPP = 'application/vnd.wfa.dpp';
     public const VND_WFA_P2P = 'application/vnd.wfa.p2p';
@@ -1644,6 +1698,7 @@ class MimeType
     public const VND_WOLFRAM_MATHEMATICA = 'application/vnd.wolfram.mathematica';
     public const VND_WOLFRAM_MATHEMATICA_PACKAGE = 'application/vnd.wolfram.mathematica.package';
     public const NBP = 'application/vnd.wolfram.player';
+    public const VND_WORDLIFT = 'application/vnd.wordlift';
     public const WPD = 'application/vnd.wordperfect';
     public const WQD = 'application/vnd.wqd';
     public const VND_WRQ_HP3000_LABELLED = 'application/vnd.wrq-hp3000-labelled';
@@ -1673,7 +1728,6 @@ class MimeType
     public const VND_YAMAHA_TUNNEL_UDPENCAP = 'application/vnd.yamaha.tunnel-udpencap';
     public const VND_YAOWEME = 'application/vnd.yaoweme';
     public const CMP = 'application/vnd.yellowriver-custom-menu';
-    public const VND_YOUTUBE_YT = 'application/vnd.youtube.yt';
     public const ZIR = 'application/vnd.zul';
     public const ZIRZ = self::ZIR;
     public const ZAZ = 'application/vnd.zzazz.deck+xml';
@@ -1875,6 +1929,7 @@ class MimeType
     public const XVML = self::MXML;
     public const XVM = self::MXML;
     public const YANG = 'application/yang';
+    public const YANG_DATA_CBOR = 'application/yang-data+cbor';
     public const YANG_DATA_JSON = 'application/yang-data+json';
     public const YANG_DATA_XML = 'application/yang-data+xml';
     public const YANG_PATCH_JSON = 'application/yang-patch+json';
@@ -2064,8 +2119,10 @@ class MimeType
     public const APNG = 'image/apng';
     public const AVCI = 'image/avci';
     public const AVCS = 'image/avcs';
+    public const DIB = 'image/bmp';
     public const CGM = 'image/cgm';
     public const DRLE = 'image/dicom-rle';
+    public const DPX = 'image/dpx';
     public const G3 = 'image/g3fax';
     public const HEIC = 'image/heic';
     public const HEICS = 'image/heic-sequence';
@@ -2092,6 +2149,7 @@ class MimeType
     public const NAPLPS = 'image/naplps';
     public const PJPEG = 'image/pjpeg';
     public const BTIF = 'image/prs.btif';
+    public const BTF = self::BTIF;
     public const PTI = 'image/prs.pti';
     public const PWG_RASTER = 'image/pwg-raster';
     public const SGI = 'image/sgi';
@@ -2151,6 +2209,7 @@ class MimeType
     public const X_XCF = 'image/x-xcf';
     public const XPM = 'image/x-xpixmap';
     public const XWD = 'image/x-xwindowdump';
+    public const BHTTP = 'message/bhttp';
     public const CPIM = 'message/cpim';
     public const DELIVERY_STATUS = 'message/delivery-status';
     public const DISPOSITION_NOTIFICATION = 'message/disposition-notification';
@@ -2176,6 +2235,7 @@ class MimeType
     public const GLTF = 'model/gltf+json';
     public const GLB = 'model/gltf-binary';
     public const IGS = 'model/iges';
+    public const JT = 'model/jt';
     public const MESH = 'model/mesh';
     public const MTL = 'model/mtl';
     public const STEP = 'model/step';
@@ -2183,6 +2243,7 @@ class MimeType
     public const STPZ = 'model/step+zip';
     public const STPXZ = 'model/step-xml+zip';
     public const U3D = 'model/u3d';
+    public const CLD = 'model/vnd.cld';
     public const DAE = 'model/vnd.collada+xml';
     public const DWF = 'model/vnd.dwf';
     public const VND_FLATLAND_3DML = 'model/vnd.flatland.3dml';
@@ -2194,9 +2255,11 @@ class MimeType
     public const OGEX = 'model/vnd.opengex';
     public const X_B = 'model/vnd.parasolid.transmit.binary';
     public const X_T = 'model/vnd.parasolid.transmit.text';
-    public const VND_PYTHA_PYOX = 'model/vnd.pytha.pyox';
+    public const PYO = 'model/vnd.pytha.pyox';
+    public const PYOX = self::PYO;
     public const VND_ROSETTE_ANNOTATED_DATA_MODEL = 'model/vnd.rosette.annotated-data-model';
     public const VDS = 'model/vnd.sap.vds';
+    public const USDA = 'model/vnd.usda';
     public const USDZ = 'model/vnd.usdz+zip';
     public const BSP = 'model/vnd.valve.source.compiled-map';
     public const VTU = 'model/vnd.vtu';
@@ -2242,8 +2305,9 @@ class MimeType
     public const FHIRPATH = 'text/fhirpath';
     public const GFF3 = 'text/gff3';
     public const GRAMMAR_REF_LIST = 'text/grammar-ref-list';
+    public const HL7V2 = 'text/hl7v2';
     public const JADE = 'text/jade';
-    public const JAVASCRIPT = 'text/javascript';
+    public const MJS = 'text/javascript';
     public const JCR_CND = 'text/jcr-cnd';
     public const JSX = 'text/jsx';
     public const LESS = 'text/less';
@@ -2287,6 +2351,7 @@ class MimeType
     public const VND_DEBIAN_COPYRIGHT = 'text/vnd.debian.copyright';
     public const VND_DMCLIENTSCRIPT = 'text/vnd.dmclientscript';
     public const VND_ESMERTEC_THEME_DESCRIPTOR = 'text/vnd.esmertec.theme-descriptor';
+    public const VND_EXCHANGEABLE = 'text/vnd.exchangeable';
     public const GED = 'text/vnd.familysearch.gedcom';
     public const VND_FICLAB_FLT = 'text/vnd.ficlab.flt';
     public const FLY = 'text/vnd.fly';
@@ -2312,6 +2377,7 @@ class MimeType
     public const VND_WAP_SL = 'text/vnd.wap.sl';
     public const WMLS = 'text/vnd.wap.wmlscript';
     public const VTT = 'text/vtt';
+    public const WGSL = 'text/wgsl';
     public const S = 'text/x-asm';
     public const ASM = self::S;
     public const C = 'text/x-c';
@@ -2360,10 +2426,10 @@ class MimeType
     public const H264_RCDO = 'video/h264-rcdo';
     public const H264_SVC = 'video/h264-svc';
     public const H265 = 'video/h265';
+    public const H266 = 'video/h266';
     public const M4S = 'video/iso.segment';
     public const JPGV = 'video/jpeg';
     public const JPEG2000 = 'video/jpeg2000';
-    public const JPGM = 'video/jpm';
     public const JXSV = 'video/jxsv';
     public const MJ2 = 'video/mj2';
     public const MP1S = 'video/mp1s';
@@ -2420,6 +2486,7 @@ class MimeType
     public const UVU = 'video/vnd.uvvu.mp4';
     public const UVVU = self::UVU;
     public const VIV = 'video/vnd.vivo';
+    public const VND_YOUTUBE_YT = 'video/vnd.youtube.yt';
     public const VP8 = 'video/vp8';
     public const VP9 = 'video/vp9';
     public const F4V = 'video/x-f4v';
@@ -2445,7 +2512,7 @@ class MimeType
         'gif' => self::GIF,
         'jpeg' => self::JPEG,
         'jpg' => self::JPEG,
-        'js' => self::MJS,
+        'js' => self::JS,
         'atom' => self::ATOM,
         'rss' => self::RSS,
         'mml' => self::MML,
@@ -2548,13 +2615,17 @@ class MimeType
         'wmv' => self::WMV,
         'avi' => self::AVI,
         'ez' => self::EZ,
+        'appinstaller' => self::APPINSTALLER,
         'aw' => self::AW,
+        'appx' => self::APPX,
+        'appxbundle' => self::APPXBUNDLE,
         'atomcat' => self::ATOMCAT,
         'atomdeleted' => self::ATOMDELETED,
         'atomsvc' => self::ATOMSVC,
         'dwd' => self::DWD,
         'held' => self::HELD,
         'rsat' => self::RSAT,
+        'amlx' => self::AMLX,
         'bdoc' => self::BDOC,
         'xcs' => self::XCS,
         'ccxml' => self::CCXML,
@@ -2566,19 +2637,20 @@ class MimeType
         'cdmiq' => self::CDMIQ,
         'cpl' => self::CPL,
         'cu' => self::CU,
+        'cwl' => self::CWL,
         'mpd' => self::MPD,
         'mpp' => self::MPP,
         'davmount' => self::DAVMOUNT,
         'dbk' => self::DBK,
         'dssc' => self::DSSC,
         'xdssc' => self::XDSSC,
-        'es' => self::ECMA,
         'ecma' => self::ECMA,
         'emma' => self::EMMA,
         'emotionml' => self::EMOTIONML,
         'epub' => self::EPUB,
         'exi' => self::EXI,
         'exp' => self::EXP,
+        'fdf' => self::FDF,
         'fdt' => self::FDT,
         'pfr' => self::PFR,
         'geojson' => self::GEOJSON,
@@ -2594,7 +2666,6 @@ class MimeType
         'its' => self::ITS,
         'ser' => self::SER,
         'class' => self::_CLASS,
-        'mjs' => self::MJS,
         'map' => self::JSON,
         'json5' => self::JSON5,
         'jsonml' => self::JSONML,
@@ -2621,8 +2692,11 @@ class MimeType
         'mods' => self::MODS,
         'm21' => self::MP21,
         'mp21' => self::MP21,
+        'mpg4' => self::M4P,
         'mp4s' => self::M4P,
         'm4p' => self::M4P,
+        'msix' => self::MSIX,
+        'msixbundle' => self::MSIXBUNDLE,
         'dot' => self::DOT,
         'mxf' => self::MXF,
         'nq' => self::NQ,
@@ -2667,6 +2741,7 @@ class MimeType
         'pls' => self::PLS,
         'provx' => self::PROVX,
         'cww' => self::CWW,
+        'xsf' => self::XSF,
         'pskcxml' => self::PSKCXML,
         'raml' => self::RAML,
         'rdf' => self::OWL,
@@ -2699,6 +2774,7 @@ class MimeType
         'smi' => self::SMI,
         'rq' => self::RQ,
         'srx' => self::SRX,
+        'sql' => self::SQL,
         'gram' => self::GRAM,
         'grxml' => self::GRXML,
         'sru' => self::SRU,
@@ -2813,7 +2889,6 @@ class MimeType
         'et3' => self::ET3,
         'ez2' => self::EZ2,
         'ez3' => self::EZ3,
-        'fdf' => self::FDF,
         'mseed' => self::MSEED,
         'seed' => self::DATALESS,
         'dataless' => self::DATALESS,
@@ -3033,6 +3108,7 @@ class MimeType
         'mgz' => self::MGZ,
         'qps' => self::QPS,
         'ptid' => self::PTID,
+        'xhtm' => self::XHTM,
         'qxd' => self::QXB,
         'qxt' => self::QXB,
         'qwd' => self::QXB,
@@ -3107,7 +3183,8 @@ class MimeType
         'utz' => self::UTZ,
         'umj' => self::UMJ,
         'unityweb' => self::UNITYWEB,
-        'uoml' => self::UOML,
+        'uoml' => self::UO,
+        'uo' => self::UO,
         'vcx' => self::VCX,
         'vsd' => self::VSW,
         'vst' => self::VSW,
@@ -3303,6 +3380,8 @@ class MimeType
         'xvm' => self::XVM,
         'yang' => self::YANG,
         'yin' => self::YIN,
+        'adts' => self::AAC,
+        'aac' => self::AAC,
         'adp' => self::ADP,
         'amr' => self::AMR,
         'au' => self::SND,
@@ -3358,8 +3437,10 @@ class MimeType
         'apng' => self::APNG,
         'avci' => self::AVCI,
         'avcs' => self::AVCS,
+        'dib' => self::DIB,
         'cgm' => self::CGM,
         'drle' => self::DRLE,
+        'dpx' => self::DPX,
         'g3' => self::G3,
         'heic' => self::HEIC,
         'heics' => self::HEICS,
@@ -3375,6 +3456,7 @@ class MimeType
         'jph' => self::JPH,
         'jhc' => self::JHC,
         'jpm' => self::JPM,
+        'jpgm' => self::JPM,
         'jpx' => self::JPX,
         'jpf' => self::JPX,
         'jxr' => self::JXR,
@@ -3386,7 +3468,8 @@ class MimeType
         'jxss' => self::JXSS,
         'ktx' => self::KTX,
         'ktx2' => self::KTX2,
-        'btif' => self::BTIF,
+        'btif' => self::BTF,
+        'btf' => self::BTF,
         'pti' => self::PTI,
         'sgi' => self::SGI,
         'tfx' => self::TFX,
@@ -3447,6 +3530,7 @@ class MimeType
         'gltf' => self::GLTF,
         'glb' => self::GLB,
         'igs' => self::IGS,
+        'jt' => self::JT,
         'msh' => self::MESH,
         'mesh' => self::MESH,
         'silo' => self::MESH,
@@ -3455,6 +3539,7 @@ class MimeType
         'stpz' => self::STPZ,
         'stpxz' => self::STPXZ,
         'u3d' => self::U3D,
+        'cld' => self::CLD,
         'dae' => self::DAE,
         'dwf' => self::DWF,
         'gdl' => self::GDL,
@@ -3463,7 +3548,10 @@ class MimeType
         'ogex' => self::OGEX,
         'x_b' => self::X_B,
         'x_t' => self::X_T,
+        'pyo' => self::PYOX,
+        'pyox' => self::PYOX,
         'vds' => self::VDS,
+        'usda' => self::USDA,
         'usdz' => self::USDZ,
         'bsp' => self::BSP,
         'vtu' => self::VTU,
@@ -3483,10 +3571,11 @@ class MimeType
         'litcoffee' => self::LITCOFFEE,
         'csv' => self::CSV,
         'jade' => self::JADE,
+        'mjs' => self::MJS,
         'jsx' => self::JSX,
         'less' => self::LESS,
-        'markdown' => self::MARKDOWN,
         'md' => self::MARKDOWN,
+        'markdown' => self::MARKDOWN,
         'mdx' => self::MDX,
         'n3' => self::N3,
         'text' => self::INI,
@@ -3528,6 +3617,7 @@ class MimeType
         'spot' => self::SPOT,
         'wmls' => self::WMLS,
         'vtt' => self::VTT,
+        'wgsl' => self::WGSL,
         's' => self::ASM,
         'asm' => self::ASM,
         'c' => self::DIC,
@@ -3566,11 +3656,9 @@ class MimeType
         'h264' => self::H264,
         'm4s' => self::M4S,
         'jpgv' => self::JPGV,
-        'jpgm' => self::JPGM,
         'mj2' => self::MJ2,
         'mjp2' => self::MJ2,
         'mp4v' => self::MP4,
-        'mpg4' => self::MP4,
         'mpe' => self::MPEG,
         'm1v' => self::MPEG,
         'm2v' => self::MPEG,

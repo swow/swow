@@ -20,7 +20,8 @@ require __DIR__ . '/autoload.php';
 
 $nginxDbUri = 'https://raw.githubusercontent.com/nginx/nginx/master/conf/mime.types';
 $jsHttpDbUri = 'https://raw.githubusercontent.com/jshttp/mime-db/master/db.json';
-$sourceFilePathWithoutExtension = dirname(__DIR__) . '/lib/swow-library/src/Http/Mime/Mime';
+$sourceFilePath = dirname(__DIR__) . '/lib/swow-library/src/Http/Mime/MimeType.php';
+$sourceFilePathWithoutExtension = substr($sourceFilePath, 0, -(strlen(pathinfo($sourceFilePath, PATHINFO_EXTENSION)) + 1));
 $indent = 4;
 
 $extensionMap = [];
@@ -153,7 +154,7 @@ foreach ($extensionMap as $extension => $mime) {
 $mimePairLines = implode("\n", $mimePairLines);
 $skeletonSource = str_replace('{{extension_map}}', $mimePairLines, $skeletonSource);
 
-if (!@file_put_contents("{$sourceFilePathWithoutExtension}.php", $skeletonSource)) {
+if (!@file_put_contents($sourceFilePath, $skeletonSource)) {
     throw new RuntimeException(sprintf('Failed to write the new ContentType source to file (%s)', error_get_last()['message']));
 }
 success('MimeType updated');
