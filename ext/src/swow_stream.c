@@ -545,6 +545,10 @@ static inline int swow_stream_accept(php_stream *stream, swow_netstream_data_t *
             php_stream_close(xparam->outputs.client);
             xparam->outputs.client = NULL;
             xparam->outputs.returncode = -1;
+            xparam->outputs.error_code = cat_orig_errno(cat_get_last_error_code());
+            if (xparam->want_errortext) {
+                xparam->outputs.error_text = strpprintf(0, "%s", cat_get_last_error_message());
+            }
             return -1;
         }
     }
@@ -1030,6 +1034,9 @@ static int swow_stream_set_tcp_option(php_stream *stream, int option, int value,
                     return PHP_STREAM_OPTION_RETURN_OK;
                 case STREAM_XPORT_CRYPTO_OP_ENABLE:
                     cparam->outputs.returncode = swow_stream_enable_crypto(stream, swow_sock, sock, socket, cparam);
+                    if (cparam->outputs.returncode != 1) {
+                        php_error_docref(NULL, E_WARNING, "%s", cat_get_last_error_message());
+                    }
                     return PHP_STREAM_OPTION_RETURN_OK;
                 default:
                     break;
