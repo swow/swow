@@ -17,6 +17,8 @@ use Swow\Sync\WaitReference;
 
 use function Swow\Utils\error;
 
+putenv('SKIP_SWOW_REQUIRED_EXTENSION_CHECK=1');
+
 require __DIR__ . '/autoload.php';
 
 date_default_timezone_set('PRC');
