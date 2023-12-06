@@ -120,9 +120,13 @@ static cat_always_inline void cat_string_close(cat_string_t *string)
 
 static cat_always_inline void cat_string_move_uncleaned(cat_string_t *from, cat_string_t *to)
 {
+    // release possible old string first
     cat_string_close(to);
     to->value = from->value;
     to->length = from->length;
+    // do not do it, let caller judge whether to do it, so it's "uncleaned"
+    // from->value = NULL;
+    // from->length = NULL;
 }
 
 CAT_API size_t cat_strnlen(const char *s, size_t n);

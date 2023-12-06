@@ -230,15 +230,20 @@ CAT_API cat_ssl_context_t *cat_ssl_context_create(cat_ssl_method_t method, cat_s
     return NULL;
 }
 
-CAT_API void cat_ssl_context_close(cat_ssl_context_t *context)
+static cat_always_inline void cat_ssl_context_close_data(cat_ssl_context_t *context)
 {
-    SSL_CTX_free(context->ctx);
     if (CAT_REF_DEL(context) != 0) {
         return;
     }
     cat_string_close(&context->alpn);
     cat_string_close(&context->passphrase);
     cat_free(context);
+}
+
+CAT_API void cat_ssl_context_close(cat_ssl_context_t *context)
+{
+    SSL_CTX_free(context->ctx);
+    cat_ssl_context_close_data(context);
 }
 
 CAT_API void cat_ssl_context_set_protocols(cat_ssl_context_t *context, cat_ssl_protocols_t protocols)
@@ -436,7 +441,7 @@ static int cat_ssl_server_alpn_callback(
     return SSL_TLSEXT_ERR_OK;
 }
 
-CAT_API cat_bool_t cas_ssl_context_set_apln_protocols(cat_ssl_context_t *context, cat_bool_t is_client, const char *alpn_protocols)
+CAT_API cat_bool_t cas_ssl_context_set_alpn_protocols(cat_ssl_context_t *context, cat_bool_t is_client, const char *alpn_protocols)
 {
     CAT_LOG_DEBUG(SSL, "SSL_CTX_set_alpn_protos(%p, \"%s\")", context, alpn_protocols);
     cat_string_t alpn;
@@ -697,6 +702,7 @@ CAT_API cat_ssl_t *cat_ssl_create(cat_ssl_t *ssl, cat_ssl_context_t *context)
         cat_ssl_update_last_error(CAT_ESSL, "SSL_new() failed");
         goto _new_failed;
     }
+    CAT_REF_ADD(context);
 
     /* malloc for SSL handle */
     if (ssl == NULL) {
@@ -736,6 +742,7 @@ CAT_API cat_ssl_t *cat_ssl_create(cat_ssl_t *ssl, cat_ssl_context_t *context)
 
     /* init ssl fields */
     ssl->connection = connection;
+    ssl->context = context;
     ssl->allow_self_signed = cat_false;
 
     return ssl;
@@ -745,8 +752,11 @@ CAT_API cat_ssl_t *cat_ssl_create(cat_ssl_t *ssl, cat_ssl_context_t *context)
     BIO_free(ssl->nbio);
     _set_ex_data_failed:
     _new_bio_pair_failed:
+    CAT_REF_DEL(context);
+    /* When context can be passed as a parameter,
+     * its reference count must be greater than or equal to 1. */
+    CAT_ASSERT(CAT_REF_GET(context) >= 1);
     SSL_free(connection);
-    ssl->connection = NULL;
 #if CAT_ALLOC_HANDLE_ERRORS
     _malloc_failed:
 #endif
@@ -763,6 +773,7 @@ CAT_API void cat_ssl_close(cat_ssl_t *ssl)
     cat_buffer_close(&ssl->read_buffer);
     /* ibio will be free'd by SSL_free */
     BIO_free(ssl->nbio);
+    cat_ssl_context_close_data(ssl->context);
     /* implicitly frees internal_bio */
     SSL_free(ssl->connection);
     /* free */

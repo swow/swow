@@ -199,6 +199,8 @@ typedef struct cat_ssl_s {
     cat_buffer_t write_buffer;
     /* options */
     cat_bool_t allow_self_signed;
+    /* internals */
+    cat_ssl_context_t *context; // for free data before SSL_free()
 } cat_ssl_t;
 
 typedef enum cat_ssl_ret_e {
@@ -236,7 +238,7 @@ CAT_API void cat_ssl_context_set_no_compression(cat_ssl_context_t *context);
 CAT_API void cat_ssl_context_set_security_level(cat_ssl_context_t *context, int level);
 #endif
 #ifdef CAT_SSL_HAVE_TLS_ALPN
-CAT_API cat_bool_t cas_ssl_context_set_apln_protocols(cat_ssl_context_t *context, cat_bool_t is_client, const char *alpn_protocols);
+CAT_API cat_bool_t cas_ssl_context_set_alpn_protocols(cat_ssl_context_t *context, cat_bool_t is_client, const char *alpn_protocols);
 #endif
 
 /* connection */

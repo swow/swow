@@ -2193,7 +2193,9 @@ static cat_bool_t cat_socket_enable_crypto_impl(cat_socket_t *socket, const cat_
         }
     }
     if (ioptions.certificate != NULL) {
-        cat_ssl_context_set_certificate(context, ioptions.certificate, ioptions.certificate_key);
+        if (!cat_ssl_context_set_certificate(context, ioptions.certificate, ioptions.certificate_key)) {
+            goto _setup_error;
+        }
     }
     if (ioptions.no_ticket) {
         cat_ssl_context_set_no_ticket(context);
@@ -2206,7 +2208,9 @@ static cat_bool_t cat_socket_enable_crypto_impl(cat_socket_t *socket, const cat_
 #endif
 #ifdef CAT_SSL_HAVE_TLS_ALPN
     if (ioptions.alpn_protocols != NULL) {
-        cas_ssl_context_set_apln_protocols(context, ioptions.is_client, ioptions.alpn_protocols);
+        if (!cas_ssl_context_set_alpn_protocols(context, ioptions.is_client, ioptions.alpn_protocols)) {
+            goto _setup_error;
+        }
     }
 #endif
     /* create ssl connection */
