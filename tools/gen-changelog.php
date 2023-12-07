@@ -143,7 +143,7 @@ $gptComplete = static function (string $message) use ($gptBaseUrl, $gptKey, $deb
     $context = stream_context_create($options);
     $fails = 0;
     while (true) {
-        $response = file_get_contents($gptBaseUrl, false, $context);
+        $response = @file_get_contents($gptBaseUrl, false, $context);
         if ($response === false) {
             $statusCode = (int) (explode(' ', $http_response_header[0], 3)[1] ?? 500);
             if ($statusCode === HttpStatus::TOO_MANY_REQUESTS) {
@@ -183,7 +183,8 @@ foreach ($commitGroups as $commitGroup) {
             $messageLC = strtolower($message);
             if (str_starts_with($messageLC, 'back to dev') ||
                 str_starts_with($messageLC, 'release v') ||
-                str_starts_with($messageLC, 'update stub')
+                str_starts_with($messageLC, 'update stub') ||
+                str_starts_with($messageLC, 'update mime')
             ) {
                 $kind = 'version_control';
                 goto _add_to_list;
@@ -296,7 +297,7 @@ echo "\n", str_repeat('-', 80), "\n\n";
 
 $date = date('Y-m-d');
 echo <<<MARKDOWN
-# [v{$versionId}](https://github.com/swow/swow/releases/tag/v{$versionId})
+# v{$versionId}
 
 > release-date: {$date}
 

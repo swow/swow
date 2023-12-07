@@ -106,7 +106,15 @@
         "update-arginfo": [ "@php -n lib/php-stub-generator/bin/update-arginfo.php --cache-path=ext/build --stub-file=lib/swow-stub/src/Swow.php swow ext/src ext/build" ],
         "update-version": [ "@php tools/update-version.php" ],
         "update-mime-types": [ "@php -n tools/update-mime-types.php" ],
-        "split": [ "@php -n tools/split.php" ]
+        "split": [ "@php -n tools/split.php" ],
+        "prepare-release": [
+            "@update-mime-types",
+            "@gen-stub",
+            "@update-arginfo",
+            "@php tools/blank-fixer.php",
+            "@update-version"
+        ],
+        "gen-changelog": [ "@swow-php tools/gen-changelog.php" ]
     },
     "bin": [
         "ext/bin/swow-builder",
