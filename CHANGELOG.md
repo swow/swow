@@ -1,4 +1,19 @@
-# [v1.4.0](https://github.com/swow/swow/releases/tag/v1.4.0)
+# v1.4.1
+
+> release-date: 2023-12-08
+
+> 「生活并不是等待暴风雨过去，而是学会如何在雨中跳舞。」- 维维安·格林
+> 
+> "Life isn't about waiting for the storm to pass. It's about learning how to dance in the rain." - Vivian Greene
+
+## 🐛 What's Fixed
+
+* Fix SSL context not work (fb15f29) (libcat/libcat@bc6ec0a8) (@twose)
+* Fix missing stream error info (232b509) (@twose)
+
+---
+
+# v1.4.0
 
 > release-date: 2023-12-03
 
@@ -46,7 +61,7 @@
 
 ---
 
-# [v1.3.1](https://github.com/swow/swow/releases/tag/v1.3.1)
+# v1.3.1
 
 > release-date: 2023-06-15
 
