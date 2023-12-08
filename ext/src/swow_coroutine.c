@@ -2734,6 +2734,8 @@ zend_result swow_coroutine_runtime_init(INIT_FUNC_ARGS)
     SWOW_COROUTINE_G(exception) = NULL;
     SWOW_COROUTINE_G(bailout) = false;
 
+    SWOW_COROUTINE_G(in_autoload) = NULL;
+
     /* create s_coroutine map */
     do {
         zval z_tmp;
