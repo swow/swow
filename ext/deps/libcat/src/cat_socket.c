@@ -4785,6 +4785,7 @@ static cat_always_inline void cat_socket_internal_close(cat_socket_internal_t *s
         }
         CAT_LOG_DEBUG_D(SOCKET, "internal_close(fd: " CAT_SOCKET_FD_FMT " => { ref: %u, sockets: [%.*s] }, unrecoverable_error: %s) = ...",
             fd, refcount, (int) buffer.length, buffer.value, cat_bool_str(unrecoverable_error));
+        cat_buffer_close(&buffer);
     });
 
     cat_socket_internal_close_impl(socket_i, socket, unrecoverable_error);
