@@ -865,7 +865,7 @@ static int swow_stream_set_option(php_stream *stream, int option, int value, voi
 # endif
                     case TLS1_VERSION: protocol_str = "TLSv1"; break;
 # ifdef HAVE_SSL3
-                    case SSL3_VERSION: proto_str = "SSLv3"; break;
+                    case SSL3_VERSION: protocol_str = "SSLv3"; break;
 # endif
                     default: protocol_str = "UNKNOWN";
                 }
@@ -945,7 +945,7 @@ static int swow_stream_set_option(php_stream *stream, int option, int value, voi
                         socket, xparam->inputs.buf, xparam->inputs.buflen,
                         xparam->inputs.addr, xparam->inputs.addrlen
                     );
-                    xparam->outputs.returncode = ret ? xparam->inputs.buflen : -1;
+                    xparam->outputs.returncode = (int) (ret ? xparam->inputs.buflen : -1);
                     if (xparam->outputs.returncode == -1) {
                         php_error_docref(NULL, E_WARNING, "%s\n", cat_get_last_error_message());
                     }
