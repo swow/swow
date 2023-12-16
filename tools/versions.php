@@ -13,7 +13,7 @@ declare(strict_types=1);
 
 return [
     'swow-extension' => [
-        'version' => '1.4.1',
+        'version' => '1.4.2-dev',
     ],
     'swow-library' => [
         /* No changes were made to the library during the upgrade
