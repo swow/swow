@@ -167,6 +167,20 @@ typedef void (*swow_interrupt_function_t)(zend_execute_data *execute_data);
     } \
 } while (0)
 
+#define swow_hash_str_fetch_int(ht, str, ret) do { \
+    zval *z_tmp = zend_hash_str_find(ht, str, strlen(str)); \
+    if (z_tmp != NULL) { \
+        zend_long _tmp = zval_get_long(z_tmp); \
+        if (UNEXPECTED(_tmp < INT_MIN)) { \
+            *(ret) = INT_MIN; \
+        } else if (UNEXPECTED(_tmp > INT_MAX)) { \
+            *(ret) = INT_MAX; \
+        } else { \
+            *(ret) = (int) _tmp; \
+        } \
+    } \
+} while (0)
+
 #define swow_hash_str_fetch_long(ht, str, ret) do { \
     zval *z_tmp = zend_hash_str_find(ht, str, strlen(str)); \
     if (z_tmp != NULL) { \

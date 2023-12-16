@@ -596,7 +596,7 @@ static PHP_METHOD(Swow_Socket, enableCrypto)
         swow_hash_str_fetch_bool(options_array, "verify_peer", &options.verify_peer);
         swow_hash_str_fetch_bool(options_array, "verify_peer_name", &options.verify_peer_name);
         swow_hash_str_fetch_bool(options_array, "allow_self_signed", &options.allow_self_signed);
-        swow_hash_str_fetch_long(options_array, "verify_depth", &options.verify_depth);
+        swow_hash_str_fetch_int(options_array, "verify_depth", &options.verify_depth);
         swow_hash_str_fetch_str(options_array, "ca_file", &options.ca_file);
         swow_hash_str_fetch_str(options_array, "ca_path", &options.ca_path);
         if (options.ca_file == NULL) {
@@ -605,6 +605,12 @@ static PHP_METHOD(Swow_Socket, enableCrypto)
             options.ca_file = (options.ca_file != NULL && strlen(options.ca_file) != 0) ? options.ca_file : NULL;
             options.no_client_ca_list = cat_true;
         }
+#ifdef CAT_SSL_HAVE_SECURITY_LEVEL
+        swow_hash_str_fetch_int(options_array, "security_level", &options.security_level);
+#endif
+#ifdef CAT_SSL_HAVE_TLS_ALPN
+        swow_hash_str_fetch_str(options_array, "alpn_protocols", &options.alpn_protocols);
+#endif
         swow_hash_str_fetch_str(options_array, "passphrase", &options.passphrase);
         swow_hash_str_fetch_str(options_array, "certificate", &options.certificate);
         swow_hash_str_fetch_str(options_array, "certificate_key", &options.certificate_key);
