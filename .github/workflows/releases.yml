@@ -22,9 +22,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # @FIXME: 8.3 is not supported yet (20231204)
-        # php-version: ["8.3", "8.2", "8.1", "8.0"]
-        php-version: ["8.2", "8.1", "8.0"]
+        php-version: ["8.3", "8.2", "8.1", "8.0"]
         arch: ["x64"]
         ts: ["0", "1"]
       max-parallel: 8
@@ -54,7 +52,7 @@ jobs:
         run: |
           . "./.github/workflows/winext/utils.ps1" -ToolName "cacheprepare" -MaxTry 3
           $phpver = "${{ matrix.php-version }}"
-          if ($phpver.Equals("8.2") -Or $phpver.Equals("8.1") -Or $phpver.Equals("8.0")) {
+          if ($phpver.Equals("8.3") -Or $phpver.Equals("8.2") -Or $phpver.Equals("8.1") -Or $phpver.Equals("8.0")) {
             $PhpVCVer = "VS16"
           } else {
             Write-Host "::error::Bad version"
