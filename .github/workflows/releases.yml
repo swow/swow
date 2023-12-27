@@ -183,7 +183,7 @@ jobs:
           } | ConvertTo-Json -Compress | Out-File "${fn}.json" -Encoding ASCII # for no BOM
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: "${{ steps.getref.outputs.ref }}"
           path: |
@@ -217,7 +217,7 @@ jobs:
             -TagName "${{ github.ref }}".Split("/")[-1] `
             -prerelease $true
       - name: Fetch artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4
         with:
           name: ${{ needs.builddlls.outputs.ref }}
           path: .
