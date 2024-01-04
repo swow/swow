@@ -14,19 +14,22 @@ declare(strict_types=1);
 
 (static function () use ($argv): void {
     $options = getopt('d:');
+    $fetchExtensionName = static function (string $extension): string {
+        return preg_replace('/\.(so|dll)$/', '', strtolower(basename($extension)));
+    };
     $requiredExtensions = [];
     if (isset($options['d'])) {
         $commandLoadedExtensions = is_array($options['d']) ? $options['d'] : [$options['d']];
         foreach ($commandLoadedExtensions as $commandLoadedExtension) {
             if (str_starts_with($commandLoadedExtension, 'extension=')) {
                 [, $commandLoadedExtension] = explode('=', $commandLoadedExtension);
-                $requiredExtensions[] = $commandLoadedExtension;
+                $requiredExtensions[] = $fetchExtensionName($commandLoadedExtension);
             }
         }
     }
 
     $proc = proc_open(
-        [PHP_BINARY, '-r', 'echo serialize(get_loaded_extensions());'],
+        [PHP_BINARY, '-r', 'echo json_encode(get_loaded_extensions());'],
         [0 => STDIN, 1 => ['pipe', 'w'], 2 => ['redirect', 1]],
         $pipes, null, null
     );
@@ -40,8 +43,8 @@ declare(strict_types=1);
     // if ($exitCode !== 0) {
     //     throw new RuntimeException(sprintf('Failed to get loaded extensions with exit code %d and output "%s"', $exitCode, addcslashes($output, "\r\n")));
     // }
-    $defaultLoadedExtensions = !empty($output) ? (array) @unserialize($output) : [];
-    $defaultLoadedExtensions = array_map('strtolower', $defaultLoadedExtensions);
+    $defaultLoadedExtensions = !empty($output) ? (array) @json_decode($output, true) : [];
+    $defaultLoadedExtensions = array_map($fetchExtensionName, $defaultLoadedExtensions);
 
     $iniFiles = [];
     $mainIniFile = php_ini_loaded_file();
@@ -62,9 +65,9 @@ declare(strict_types=1);
     foreach ($iniFiles as $iniFile) {
         $parsedIni = parse_ini_file($iniFile, true);
         $iniLoadedExtensions = [];
-        array_walk_recursive($parsedIni, static function (mixed $value, mixed $key) use (&$iniLoadedExtensions): void {
+        array_walk_recursive($parsedIni, static function (mixed $value, mixed $key) use (&$iniLoadedExtensions, $fetchExtensionName): void {
             if ($key === 'extension') {
-                $iniLoadedExtensions[] = basename((string) $value);
+                $iniLoadedExtensions[] = $fetchExtensionName((string) $value);
             }
         });
     }
@@ -77,6 +80,7 @@ declare(strict_types=1);
         $unloadedExtensions,
         $iniLoadedExtensions,
     );
+    $unloadedExtensions = array_unique($unloadedExtensions);
 
     $args = array_slice($argv, 1);
     $args = array_filter($args, static function ($arg) {
