@@ -976,9 +976,9 @@ static void detect_is_seekable(swow_stdio_stream_data *self) {
         self->is_pipe = S_ISFIFO(self->sb.st_mode);
     }
 #elif defined(PHP_WIN32)
-    zend_uintptr_t handle = (zend_uintptr_t) uv_get_osfhandle(self->fd);
+    uintptr_t handle = (uintptr_t) uv_get_osfhandle(self->fd);
 
-    if (handle != (zend_uintptr_t)INVALID_HANDLE_VALUE) {
+    if (handle != (uintptr_t)INVALID_HANDLE_VALUE) {
         DWORD file_type = GetFileType((HANDLE)handle);
 
         self->is_seekable = !(file_type == FILE_TYPE_PIPE || file_type == FILE_TYPE_CHAR);
@@ -1249,7 +1249,7 @@ static int swow_stdiop_fs_flush(php_stream *stream)
 
     /*
      * stdio buffers data in user land. By calling fflush(3), this
-     * data is send to the kernel using write(2). fsync'ing is
+     * data is sent to the kernel using write(2). fsync'ing is
      * something completely different.
      */
     if (data->file) {
@@ -1442,7 +1442,7 @@ static int swow_stdiop_fs_set_option(php_stream *stream, int option, int value, 
                 return -1;
             }
 
-            if ((zend_uintptr_t) ptrparam == PHP_STREAM_LOCK_SUPPORTED) {
+            if ((uintptr_t) ptrparam == PHP_STREAM_LOCK_SUPPORTED) {
                 return 0;
             }
 
@@ -1721,6 +1721,20 @@ static ssize_t swow_plain_files_dirstream_read(php_stream *stream, char *buf, si
     if (result) {
         PHP_STRLCPY(ent->d_name, result->name, sizeof(ent->d_name), strlen(result->name));
         free((void*)result->name);
+#if PHP_VERSION_ID >= 80300
+        // libcat always _DIRENT_HAVE_D_TYPE
+        switch (result->type) {
+            case CAT_DIRENT_TYPE_DIR:
+                ent->d_type = DT_DIR;
+                break;
+            case CAT_DIRENT_TYPE_FILE:
+                ent->d_type = DT_REG;
+                break;
+            default:
+                ent->d_type = DT_UNKNOWN;
+                break;
+        }
+#endif // PHP_VERSION_ID > 80300
         free(result);
         return sizeof(php_stream_dirent);
     }
@@ -2425,7 +2439,7 @@ not_relative_path:
 
     /* check in provided path */
     /* append the calling scripts' current working directory
-     * as a fall back case
+     * as a fallback case
      */
     if (zend_is_executing() &&
         (exec_filename = zend_get_executed_filename_ex()) != NULL) {
