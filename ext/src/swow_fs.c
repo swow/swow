@@ -35,7 +35,7 @@
 #include "cat_work.h"
 #include "cat_time.h"
 
-// from main/streams/plain_wrapper.c @ e2bd3b1e999b62cb0b6135f7c6a5a237a1200077
+// from main/streams/plain_wrapper.c @ 0b2e6bc2b07246087bd0e39d631085b5e6bd511d
 
 #include "php.h"
 #include "php_globals.h"
@@ -317,7 +317,7 @@ static int swow_win32_check_trailing_space(const char *path, const size_t path_l
 }
 #endif
 
-// from main/streams/cast.c @ 067df263448ee26013cddee1065bc9c1f028bd23
+// from main/streams/cast.c @ abed8b8e417e69d43f1ccd9e2c473f95dbab2400
 static void swow_stream_mode_sanitize_fdopen_fopencookie(php_stream *stream, char *result)
 {
     /* replace modes not supported by fdopen and fopencookie, but supported
