@@ -36,7 +36,11 @@
 #undef ZEND_METHOD
 #define ZEND_METHOD(classname, name) ZEND_NAMED_FUNCTION(swow_zim_##classname##_##name)
 #undef ZEND_ME
-#define ZEND_ME(classname, name, arg_info, flags) ZEND_RAW_FENTRY(#name, swow_zim_##classname##_##name, arg_info, flags)
+#if PHP_VERSION_ID >= 80400
+# define ZEND_ME(classname, name, arg_info, flags) ZEND_RAW_FENTRY(#name, swow_zim_##classname##_##name, arg_info, flags, NULL, NULL)
+#else
+# define ZEND_ME(classname, name, arg_info, flags) ZEND_RAW_FENTRY(#name, swow_zim_##classname##_##name, arg_info, flags)
+#endif
 
 #include "swow_pgsql_driver_arginfo.h"
 
