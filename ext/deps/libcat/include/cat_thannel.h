@@ -16,64 +16,24 @@
   +--------------------------------------------------------------------------+
  */
 
-#ifndef CAT_API_H
-#define CAT_API_H
+#ifndef CAT_THANNEL_H
+#define CAT_THANNEL_H
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 #include "cat.h"
-#include "cat_coroutine.h"
-#include "cat_channel.h"
-#include "cat_sync.h"
-#include "cat_event.h"
-#include "cat_poll.h"
-#include "cat_time.h"
-#include "cat_socket.h"
-#include "cat_dns.h"
-#include "cat_work.h"
-#include "cat_buffer.h"
-#include "cat_fs.h"
-#include "cat_signal.h"
-#include "cat_async.h"
 #include "cat_thread.h"
-#include "cat_process.h"
-#include "cat_os_wait.h"
-#include "cat_watchdog.h"
-#include "cat_ssl.h"
 
-typedef enum cat_run_mode_e{
-    CAT_RUN_EASY = 0,
-} cat_run_mode_t;
+#ifdef CAT_THREAD
 
-CAT_API cat_bool_t cat_init_all(void);
-CAT_API cat_bool_t cat_shutdown_all(void);
+CAT_API cat_bool_t cat_thannel_module_init(void);
+CAT_API cat_bool_t cat_thannel_runtime_init(void);
+CAT_API cat_bool_t cat_thannel_runtime_shutdown(void);
 
-CAT_API cat_bool_t cat_module_init_all(void);
-CAT_API cat_bool_t cat_module_shutdown_all(void);
-
-CAT_API cat_bool_t cat_runtime_init_all(void);
-CAT_API cat_bool_t cat_runtime_shutdown_all(void);
-CAT_API cat_bool_t cat_runtime_close_all(void);
-
-CAT_API cat_bool_t cat_run(cat_run_mode_t run_mode);
-CAT_API cat_bool_t cat_stop(void);
-
-#ifdef CAT_ENABLE_DEBUG_LOG
-CAT_API void cat_enable_debug_log_mode(void);
-#else
-#define cat_enable_debug_log_mode()
-#endif
-
-CAT_API FILE *cat_get_error_output(void);
-CAT_API void cat_set_error_output(FILE *file);
-
-#ifdef CAT_ENABLE_DEBUG_LOG
-CAT_API FILE *cat_get_debug_output(void);
-CAT_API void cat_set_debug_output(FILE *file);
-#endif
+#endif /* CAT_THREAD */
 
 #ifdef __cplusplus
 }
 #endif
-#endif /* CAT_API_H */
+#endif /* CAT_THANNEL_H */

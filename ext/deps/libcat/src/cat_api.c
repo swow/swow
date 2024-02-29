@@ -48,6 +48,9 @@ CAT_API cat_bool_t cat_module_init_all(void)
 #ifdef CAT_OS_WAIT
            cat_os_wait_module_init() &&
 #endif
+#ifdef CAT_THREAD
+           cat_thread_module_init() &&
+#endif
            cat_watchdog_module_init() &&
            cat_true;
 }
@@ -74,6 +77,9 @@ CAT_API cat_bool_t cat_runtime_init_all(void)
            cat_coroutine_runtime_init() &&
            cat_event_runtime_init() &&
            cat_socket_runtime_init() &&
+#ifdef CAT_THREAD
+           cat_thread_runtime_init() &&
+#endif
 #ifdef CAT_OS_WAIT
            cat_os_wait_runtime_init() &&
 #endif
@@ -88,6 +94,9 @@ CAT_API cat_bool_t cat_runtime_shutdown_all(void)
     ret = cat_watchdog_runtime_shutdown() && ret;
 #ifdef CAT_OS_WAIT
     ret = cat_os_wait_runtime_shutdown() && ret;
+#endif
+#ifdef CAT_THREAD
+    ret = cat_thread_runtime_shutdown() && ret;
 #endif
     ret = cat_event_runtime_shutdown() && ret;
     ret = cat_coroutine_runtime_shutdown() && ret;

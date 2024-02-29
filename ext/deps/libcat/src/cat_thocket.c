@@ -15,3 +15,11 @@
   | Author: Twosee <twosee@php.net>                                          |
   +--------------------------------------------------------------------------+
  */
+
+#include "cat_thocket.h"
+
+#ifdef CAT_THREAD
+
+
+
+#endif /* CAT_THREAD */

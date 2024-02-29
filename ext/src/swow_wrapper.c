@@ -322,6 +322,24 @@ SWOW_API void swow_output_globals_shutdown(void)
     } SWOW_OUTPUT_GLOBALS_MODIFY_END();
 }
 
+/* serialization */
+
+SWOW_API SWOW_MAY_THROW zend_string *swow_serialize(zval *z_data)
+{
+    php_serialize_data_t var_hash;
+    smart_str serialized_data = {0};
+
+    PHP_VAR_SERIALIZE_INIT(var_hash);
+    php_var_serialize(&serialized_data, z_data, &var_hash);
+    PHP_VAR_SERIALIZE_DESTROY(var_hash);
+
+    if (EG(exception)) {
+        smart_str_free(&serialized_data);
+        return NULL;
+    }
+    return serialized_data.s;
+}
+
 /* file */
 
 SWOW_API SWOW_MAY_THROW zend_string *swow_file_get_contents(zend_string *filename)

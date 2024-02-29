@@ -386,6 +386,7 @@ EOF
     swow_signal.c \
     swow_watchdog.c \
     swow_closure.c \
+    swow_thread.c \
     swow_ipaddress.c \
     swow_http.c \
     swow_websocket.c \
@@ -481,6 +482,7 @@ EOF
       cat_signal.c \
       cat_os_wait.c \
       cat_async.c \
+      cat_thread.c \
       cat_watchdog.c \
       cat_http.c \
       cat_websocket.c, SWOW_CAT_INCLUDES, SWOW_CAT_CFLAGS)
