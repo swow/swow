@@ -35,8 +35,6 @@ extern "C" {
 #include "cat_version.h"
 /* standard C libraries */
 #include "cat_scl.h"
-/* OS related */
-#include "cat_os.h"
 /* builtin (compiler) */
 #include "cat_builtin.h"
 /* cross platform */

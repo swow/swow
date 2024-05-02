@@ -15,3 +15,21 @@
   | Author: Twosee <twosee@php.net>                                          |
   +--------------------------------------------------------------------------+
  */
+
+#ifndef CAT_CPU_H
+#define CAT_CPU_H
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#include "cat.h"
+
+typedef uv_cpu_info_t cat_cpu_info_t;
+
+CAT_API unsigned int cat_cpu_get_available_parallelism(void);
+CAT_API unsigned int cat_cpu_count(void);
+
+#ifdef __cplusplus
+}
+#endif
+#endif /* CAT_CPU_H */
