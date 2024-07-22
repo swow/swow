@@ -44,8 +44,10 @@ static int swow_proc_open_rsrc_close(php_process_handle *proc)
     for (int i = 0; i < proc->npipes; i++) {
         if (proc->pipes[i] != NULL) {
             GC_DELREF(proc->pipes[i]);
-            zend_list_close(proc->pipes[i]);
-            proc->pipes[i] = NULL;
+            if (GC_REFCOUNT(proc->pipes[i]) == 0) { // Check the reference count
+                zend_list_close(proc->pipes[i]); // Close the resource when the reference count is 0
+                proc->pipes[i] = NULL;
+            }
         }
     }
 
