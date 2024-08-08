@@ -780,7 +780,7 @@ EOF
 
     dnl add curl sources
     if test "x${PHP_SWOW_CURL}" != "xno" ; then
-      SWOW_PKG_CHECK_MODULES([CURL], libcurl, 7.25.2, [PHP_SWOW_CURL], [
+      SWOW_PKG_CHECK_MODULES([CURL], libcurl, 7.61.0, [PHP_SWOW_CURL], [
         if test "x${PHP_CURL}" = "xno" ; then
           AC_MSG_WARN([Swow cURL support is enabled but cURL PHP extension is not enabled])
         fi
