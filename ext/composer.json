@@ -1,26 +1,76 @@
 {
-    "name": "swow/swow-extension",
-    "description": "Swow PHP extension",
-    "keywords": [
-        "swow",
-        "php",
-        "extension"
-    ],
-    "license": "Apache-2.0",
-    "authors": [
-        {
-            "name": "twose",
-            "email": "twosee@php.net"
-        }
-    ],
-    "support": {
-        "issues": "https://github.com/swow/swow"
-    },
-    "require": {
-        "php": ">=8.0",
-        "swow/swow-utils": ">=0.2.0"
-    },
-    "bin": [
-        "bin/swow-builder"
+  "name": "swow/swow-extension",
+  "type": "php-ext",
+  "description": "Coroutine-based multi-platform support engine with a focus on concurrent I/O",
+  "keywords": [
+    "swow",
+    "php",
+    "extension"
+  ],
+  "license": "Apache-2.0",
+  "authors": [
+    {
+      "name": "twose",
+      "email": "twosee@php.net"
+    }
+  ],
+  "support": {
+    "issues": "https://github.com/swow/swow"
+  },
+  "require": {
+    "php": ">=8.1",
+    "swow/swow-utils": ">=0.2.0"
+  },
+  "bin": [
+    "bin/swow-builder"
+  ],
+  "php-ext": {
+    "extension-name": "swow",
+    "configure-options": [
+      {
+        "name": "enable-swow-debug",
+        "description": "Enable Swow debug build flags"
+      },
+      {
+        "name": "enable-swow-debug-log",
+        "description": "Enable Swow debug log (it is enabled by default even in release build)"
+      },
+      {
+        "name": "enable-swow-thread-context",
+        "description": "Enable Swow thread context support"
+      },
+      {
+        "name": "enable-swow-gcov",
+        "description": "Enable Swow GCOV support"
+      },
+      {
+        "name": "enable-swow-valgrind",
+        "description": "Enable Swow valgrind support"
+      },
+      {
+        "name": "enable-swow-memory-sanitizer",
+        "description": "Enable memory sanitizer (clang only)"
+      },
+      {
+        "name": "enable-swow-address-sanitizer",
+        "description": "Enable address sanitizer"
+      },
+      {
+        "name": "enable-swow-undefined-sanitizer",
+        "description": "Enable undefined sanitizer"
+      },
+      {
+        "name": "enable-swow-ssl",
+        "description": "Enable Swow OpenSSL support"
+      },
+      {
+        "name": "enable-swow-curl",
+        "description": "Enable Swow cURL support"
+      },
+      {
+        "name": "enable-swow-pdo-pgsql",
+        "description": "Enable Swow PDO_PGSQL support"
+      }
     ]
+  }
 }
