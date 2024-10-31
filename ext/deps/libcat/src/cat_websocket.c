@@ -100,13 +100,22 @@ CAT_API uint64_t cat_websocket_header_get_size(const cat_websocket_header_t *hea
 
 CAT_API uint64_t cat_websocket_header_get_payload_length(const cat_websocket_header_t *header)
 {
+    uint64_t tmp = 0;
     if (header->payload_length < CAT_WEBSOCKET_EXT16_PAYLOAD_LENGTH) {
         return header->payload_length;
     } else if (header->payload_length == CAT_WEBSOCKET_EXT16_PAYLOAD_LENGTH) {
-        return ntohs(*((uint16_t *) &header->extended_payload_length));
+        tmp = header->extended_payload_length[0];
+        tmp <<= 8;
+        tmp |= header->extended_payload_length[1];
+        return tmp;
     } else {
+        int i;
         CAT_ASSERT(header->payload_length == CAT_WEBSOCKET_EXT64_PAYLOAD_LENGTH);
-        return cat_ntoh64(*((uint64_t *) &header->extended_payload_length));
+        for (i = 0; i < sizeof(uint64_t); i++) {
+            tmp <<= 8;
+            tmp |= header->extended_payload_length[i];
+        }
+        return tmp;
     }
 }
 
@@ -122,6 +131,7 @@ CAT_API const char *cat_websocket_header_get_masking_key(const cat_websocket_hea
 
 CAT_API void cat_websocket_header_set_payload_length(cat_websocket_header_t *header, uint64_t payload_length)
 {
+    uint64_t tmp = payload_length;
     if (header->mask) {
         char *p = ((char *) header) + cat_websocket_header_get_masking_key_offset(header);
         char *new_p = ((char *) header) + cat_websocket_calculate_masking_key_offset(payload_length);
@@ -131,10 +141,15 @@ CAT_API void cat_websocket_header_set_payload_length(cat_websocket_header_t *hea
         header->payload_length = (uint8_t) payload_length;
     } else if (likely(payload_length <= CAT_WEBSOCKET_EXT16_MAX_LENGTH)) {
         header->payload_length = CAT_WEBSOCKET_EXT16_PAYLOAD_LENGTH;
-        *((uint16_t *) &header->extended_payload_length) = (uint16_t) htons((uint16_t) payload_length);
+        header->extended_payload_length[0] = (uint8_t) (tmp >> 8);
+        header->extended_payload_length[1] = (uint8_t) tmp;
     } else {
+        int i;
         header->payload_length = CAT_WEBSOCKET_EXT64_PAYLOAD_LENGTH;
-        *((uint64_t *) &header->extended_payload_length) = cat_hton64(payload_length);
+        for (i = sizeof(uint64_t) - 1; i >= 0; i--) {
+            header->extended_payload_length[i] = (uint8_t) tmp;
+            tmp >>= 8;
+        }
     }
 }
 
@@ -170,21 +185,22 @@ static void cat_websocket_mask1(char *data, uint64_t length, const char *masking
 {
     char *p = data;
     const char *pe = p + length;
-#ifdef CAT_L64
-    if (p + sizeof(uint64_t) <= pe) {
-        for (; p < pe && ((index & (sizeof(uint64_t) - 1)) != 0); p++, index++) {
-            *p ^= masking_key[index & (CAT_WEBSOCKET_MASKING_KEY_LENGTH - 1)];
-        }
-        uint64_t masking_key_u64 = ((uint64_t) (*((uint32_t *) masking_key)) << 32) | *((uint32_t *) masking_key);
-        uint64_t unmasked_length_of_u64 = pe - p;
-        unmasked_length_of_u64 = unmasked_length_of_u64 - (unmasked_length_of_u64 & (sizeof(uint64_t) - 1));
-        index += unmasked_length_of_u64;
-        const char *pe_of_u64 = p + unmasked_length_of_u64;
-        for (; p < pe_of_u64; p += sizeof(uint64_t)) {
-            *((uint64_t *) p) ^= masking_key_u64;
-        }
-    }
-#endif
+// fixme: unaligned access is UB, reimplementation is needed
+// #ifdef CAT_L64
+//     if (p + sizeof(uint64_t) <= pe) {
+//         for (; p < pe && ((index & (sizeof(uint64_t) - 1)) != 0); p++, index++) {
+//             *p ^= masking_key[index & (CAT_WEBSOCKET_MASKING_KEY_LENGTH - 1)];
+//         }
+//         uint64_t masking_key_u64 = ((uint64_t) (*((uint32_t *) masking_key)) << 32) | *((uint32_t *) masking_key);
+//         uint64_t unmasked_length_of_u64 = pe - p;
+//         unmasked_length_of_u64 = unmasked_length_of_u64 - (unmasked_length_of_u64 & (sizeof(uint64_t) - 1));
+//         index += unmasked_length_of_u64;
+//         const char *pe_of_u64 = p + unmasked_length_of_u64;
+//         for (; p < pe_of_u64; p += sizeof(uint64_t)) {
+//             *((uint64_t *) p) ^= masking_key_u64;
+//         }
+//     }
+// #endif
     for (; p < pe; index++, p++) {
         *p ^= masking_key[index & (CAT_WEBSOCKET_MASKING_KEY_LENGTH - 1)];
     }
@@ -193,21 +209,22 @@ static void cat_websocket_mask1(char *data, uint64_t length, const char *masking
 static void cat_websocket_mask2(const char *from, char *to, uint64_t length, const char *masking_key, uint64_t index)
 {
     const char *to_end = to + length;
-#ifdef CAT_L64
-    if (to + sizeof(uint64_t) <= to_end) {
-        for (; to < to_end && ((index & (sizeof(uint64_t) - 1)) != 0); from++, to++, index++) {
-            *to = *from ^ masking_key[index & (CAT_WEBSOCKET_MASKING_KEY_LENGTH - 1)];
-        }
-        uint64_t masking_key_u64 = ((uint64_t) (*((uint32_t *) masking_key)) << 32) | *((uint32_t *) masking_key);
-        uint64_t unmasked_length_of_u64 = to_end - to;
-        unmasked_length_of_u64 = unmasked_length_of_u64 - (unmasked_length_of_u64 & (sizeof(uint64_t) - 1));
-        index += unmasked_length_of_u64;
-        const char *to_end_of_u64 = to + unmasked_length_of_u64;
-        for (; to < to_end_of_u64; to += sizeof(uint64_t), from += sizeof(uint64_t)) {
-            *((uint64_t *) to) = *((uint64_t *) from) ^ masking_key_u64;
-        }
-    }
-#endif
+// fixme: unaligned access is UB, reimplementation is needed
+// #ifdef CAT_L64
+//     if (to + sizeof(uint64_t) <= to_end) {
+//         for (; to < to_end && ((index & (sizeof(uint64_t) - 1)) != 0); from++, to++, index++) {
+//             *to = *from ^ masking_key[index & (CAT_WEBSOCKET_MASKING_KEY_LENGTH - 1)];
+//         }
+//         uint64_t masking_key_u64 = ((uint64_t) (*((uint32_t *) masking_key)) << 32) | *((uint32_t *) masking_key);
+//         uint64_t unmasked_length_of_u64 = to_end - to;
+//         unmasked_length_of_u64 = unmasked_length_of_u64 - (unmasked_length_of_u64 & (sizeof(uint64_t) - 1));
+//         index += unmasked_length_of_u64;
+//         const char *to_end_of_u64 = to + unmasked_length_of_u64;
+//         for (; to < to_end_of_u64; to += sizeof(uint64_t), from += sizeof(uint64_t)) {
+//             *((uint64_t *) to) = *((uint64_t *) from) ^ masking_key_u64;
+//         }
+//     }
+// #endif
     for (; to < to_end; index++, to++, from++) {
         *to = *from ^ masking_key[index & (CAT_WEBSOCKET_MASKING_KEY_LENGTH - 1)];
     }

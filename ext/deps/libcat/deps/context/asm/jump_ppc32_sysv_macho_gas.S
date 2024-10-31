@@ -68,12 +68,13 @@
  *  -------------------------------------------------  *
  *  | 256 |                                         |  *
  *  -------------------------------------------------  *
- *  | DATA|                                         |  * 
+ *  | DATA|                                         |  *
  *  -------------------------------------------------  *
  *                                                     *
  *******************************************************/
 
 .text
+.private_extern _cat_coroutine_context_jump
 .globl _cat_coroutine_context_jump
 .align 2
 _cat_coroutine_context_jump:
@@ -193,7 +194,7 @@ _cat_coroutine_context_jump:
     ; adjust stack
     addi  r1, r1, 244
 
-    ; return transfer_t 
+    ; return transfer_t
     stw  r6, 0(r3)
     stw  r5, 4(r3)
 

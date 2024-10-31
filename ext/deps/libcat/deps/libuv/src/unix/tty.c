@@ -22,11 +22,7 @@
 #include "uv.h"
 #include "internal.h"
 
-#ifdef HAVE_LIBCAT
-#include "../hat_atomic.h"
-#else
 #include <stdatomic.h>
-#endif
 #include <stdlib.h>
 #include <assert.h>
 #include <unistd.h>
@@ -68,11 +64,7 @@ static int isreallyatty(int file) {
 
 static int orig_termios_fd = -1;
 static struct termios orig_termios;
-#ifdef HAVE_LIBCAT
-static hat_atomic_int32_t termios_spinlock;
-#else
 static _Atomic int termios_spinlock;
-#endif
 
 int uv__tcsetattr(int fd, int how, const struct termios *term) {
   int rc;
@@ -89,7 +81,7 @@ int uv__tcsetattr(int fd, int how, const struct termios *term) {
 
 static int uv__tty_is_slave(const int fd) {
   int result;
-#if defined(__linux__) || defined(__FreeBSD__) || defined(__FreeBSD_kernel__)
+#if defined(__linux__) || defined(__FreeBSD__)
   int dummy;
 
   result = ioctl(fd, TIOCGPTN, &dummy) != 0;
@@ -230,7 +222,7 @@ skip:
     int rc = r;
     if (newfd != -1)
       uv__close(newfd);
-    QUEUE_REMOVE(&tty->handle_queue);
+    uv__queue_remove(&tty->handle_queue);
     do
       r = fcntl(fd, F_SETFL, saved_flags);
     while (r == -1 && errno == EINTR);
@@ -307,22 +299,14 @@ int uv_tty_set_mode(uv_tty_t* tty, uv_tty_mode_t mode) {
     /* This is used for uv_tty_reset_mode() */
     do
       expected = 0;
-#ifdef HAVE_LIBCAT
-    while (!hat_atomic_int32_compare_exchange_strong(&termios_spinlock, &expected, 1));
-#else
     while (!atomic_compare_exchange_strong(&termios_spinlock, &expected, 1));
-#endif
 
     if (orig_termios_fd == -1) {
       orig_termios = tty->orig_termios;
       orig_termios_fd = fd;
     }
 
-#ifdef HAVE_LIBCAT
-    hat_atomic_int32_store(&termios_spinlock, 0);
-#else
     atomic_store(&termios_spinlock, 0);
-#endif
   }
 
   tmp = tty->orig_termios;
@@ -348,6 +332,37 @@ int uv_tty_set_mode(uv_tty_t* tty, uv_tty_mode_t mode) {
     tty->mode = mode;
 
   return rc;
+}
+
+
+void uv__tty_close(uv_tty_t* handle) {
+  int expected;
+  int fd;
+
+  fd = handle->io_watcher.fd;
+  if (fd == -1)
+    goto done;
+
+  /* This is used for uv_tty_reset_mode() */
+  do
+    expected = 0;
+  while (!atomic_compare_exchange_strong(&termios_spinlock, &expected, 1));
+
+  if (fd == orig_termios_fd) {
+    /* XXX(bnoordhuis) the tcsetattr is probably wrong when there are still
+     * other uv_tty_t handles active that refer to the same tty/pty but it's
+     * hard to recognize that particular situation without maintaining some
+     * kind of process-global data structure, and that still won't work in a
+     * multi-process setup.
+     */
+    uv__tcsetattr(fd, TCSANOW, &orig_termios);
+    orig_termios_fd = -1;
+  }
+
+  atomic_store(&termios_spinlock, 0);
+
+done:
+  uv__stream_close((uv_stream_t*) handle);
 }
 
 
@@ -467,22 +482,14 @@ int uv_tty_reset_mode(void) {
 
   saved_errno = errno;
 
-#ifdef HAVE_LIBCAT
-  if (hat_atomic_int32_exchange(&termios_spinlock, 1))
-#else
   if (atomic_exchange(&termios_spinlock, 1))
-#endif
-    return UV_EBUSY;  /* In uv_tty_set_mode(). */
+    return UV_EBUSY;  /* In uv_tty_set_mode() or uv__tty_close(). */
 
   err = 0;
   if (orig_termios_fd != -1)
     err = uv__tcsetattr(orig_termios_fd, TCSANOW, &orig_termios);
 
-#ifdef HAVE_LIBCAT
-  hat_atomic_int32_store(&termios_spinlock, 0);
-#else
   atomic_store(&termios_spinlock, 0);
-#endif
   errno = saved_errno;
 
   return err;

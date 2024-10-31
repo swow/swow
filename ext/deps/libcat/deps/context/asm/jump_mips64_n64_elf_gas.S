@@ -48,6 +48,7 @@
 .file "jump_mips64_n64_elf_gas.S"
 .text
 .globl cat_coroutine_context_jump
+.hidden cat_coroutine_context_jump
 .align 3
 .type cat_coroutine_context_jump,@function
 .ent cat_coroutine_context_jump

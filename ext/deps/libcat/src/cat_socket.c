@@ -1493,7 +1493,7 @@ static cat_bool_t cat_socket_internal_bind(
             if (!cat_sockaddr_is_linux_abstract_name(name, name_length)) {
                 name_length = cat_strnlen(name, name_length);
             }
-            error = uv_pipe_bind_ex(&socket_i->u.pipe, name, name_length);
+            error = uv_pipe_bind2(&socket_i->u.pipe, name, name_length, UV_PIPE_NO_TRUNCATE);
         }
     }
     if (unlikely(error != 0)) {
@@ -1845,8 +1845,8 @@ static cat_bool_t cat_socket_internal_connect(
         if (!cat_sockaddr_is_linux_abstract_name(name, name_length)) {
             name_length = cat_strnlen(name, name_length);
         }
-        (void) uv_pipe_connect_ex(
-            request, &socket_i->u.pipe, name, name_length,
+        error = uv_pipe_connect2(
+            request, &socket_i->u.pipe, name, name_length, UV_PIPE_NO_TRUNCATE,
             !is_try ? cat_socket_internal_connect_callback : cat_socket_internal_try_connect_callback
         );
     } else {
@@ -2102,7 +2102,7 @@ CAT_API void cat_socket_crypto_options_init(cat_socket_crypto_options_t *options
     options->certificate = NULL;
     options->certificate_key = NULL;
     options->passphrase = NULL;
-    options->load_certficate = NULL;
+    options->load_certificate = NULL;
 #ifdef CAT_SSL_HAVE_SECURITY_LEVEL
     options->security_level = CAT_SSL_DEFAULT_SECURITY_LEVEL;
 #endif
@@ -2196,8 +2196,8 @@ static cat_bool_t cat_socket_enable_crypto_impl(cat_socket_t *socket, const cat_
     } else {
         cat_ssl_context_disable_verify_peer(context);
     }
-    if (ioptions.load_certficate != NULL) {
-        if (!ioptions.load_certficate(context, &ioptions)) {
+    if (ioptions.load_certificate != NULL) {
+        if (!ioptions.load_certificate(context, &ioptions)) {
             goto _setup_error;
         }
     } else {
@@ -2371,7 +2371,7 @@ static cat_bool_t cat_socket_enable_crypto_impl(cat_socket_t *socket, const cat_
     CAT_NULLABLE_STR_C(options.certificate), \
     CAT_NULLABLE_STR_C(options.certificate_key), \
     options.passphrase ? "<REDEACTED>" : "(not set)", \
-    options.load_certficate, \
+    options.load_certificate, \
     protocols_str, \
     options.verify_depth, \
     cat_bool_str(options.is_client), \

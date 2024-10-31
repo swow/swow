@@ -68,6 +68,7 @@
 
 .text
 .align 2
+.private_extern _cat_coroutine_context_ontop
 .globl _cat_coroutine_context_ontop
 
 _cat_coroutine_context_ontop:

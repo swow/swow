@@ -192,43 +192,55 @@ static int cat_curl_multi_socket_function(
     (void) ch;
     CURLM *multi = context->multi;
 
-    CAT_LOG_DEBUG_V2(CURL, "libcurl::curl_multi_socket_function(multi: %p, sockfd: %d, action=%s)",
-        multi, sockfd, cat_curl_action_name(action));
+    CAT_LOG_DEBUG_V2(CURL, "libcurl::curl_multi_socket_function(multi: %p, sockfd: %d, action=%s, socket_context=%p)",
+        multi, sockfd, cat_curl_action_name(action), socket_context);
 
     switch (action) {
         case CURL_POLL_IN:
         case CURL_POLL_OUT:
         case CURL_POLL_INOUT: {
-            if (action != CURL_POLL_REMOVE) {
-                if (socket_context == NULL) {
-                    socket_context = (cat_curl_multi_socket_context_t *) cat_malloc(sizeof(*socket_context));
-#if CAT_ALLOC_HANDLE_ERRORS
-                    if (unlikely(fd == NULL)) {
-                        return CURLM_OUT_OF_MEMORY;
-                    }
-#endif
-                    socket_context->context = context;
-                    socket_context->sockfd = sockfd;
-                    (void) uv_poll_init_socket(&CAT_EVENT_G(loop), &socket_context->poll, sockfd);
-                    socket_context->poll.data = socket_context;
-                    curl_multi_assign(multi, sockfd, socket_context);
-                }
-            }
             int uv_events = 0;
+            if (socket_context == NULL) {
+                socket_context = (cat_curl_multi_socket_context_t *) cat_malloc(sizeof(*socket_context));
+#if CAT_ALLOC_HANDLE_ERRORS
+                if (unlikely(fd == NULL)) {
+                    return CURLM_OUT_OF_MEMORY;
+                }
+#endif
+                cat_bool_t assigned = curl_multi_assign(multi, sockfd, socket_context) == CURLM_OK;
+                if (unlikely(!assigned)) {
+                    cat_free(socket_context);
+                    /* Fixed after 8.10.1, but i don't know which version it starts from,
+                     * see https://github.com/curl/curl/pull/15206. */
+#if LIBCURL_VERSION_NUM <= 0x080a01
+                    return CURLM_OK; // ignore
+#else
+# ifdef CAT_DEBUG
+                    abort();
+# else
+                    return CURLM_INTERNAL_ERROR;
+# endif
+#endif
+                }
+                socket_context->context = context;
+                socket_context->sockfd = sockfd;
+                (void) uv_poll_init_socket(&CAT_EVENT_G(loop), &socket_context->poll, sockfd);
+                socket_context->poll.data = socket_context;
+            }
             if(action != CURL_POLL_OUT) {
                 uv_events |= UV_READABLE;
             }
             if(action != CURL_POLL_IN) {
                 uv_events |= UV_WRITABLE;
             }
-            uv_poll_start(&socket_context->poll, uv_events, cat_curl_multi_socket_poll_callback);
+            (void) uv_poll_start(&socket_context->poll, uv_events, cat_curl_multi_socket_poll_callback);
             break;
         }
         case CURL_POLL_REMOVE:
             if (socket_context != NULL) {
-                curl_multi_assign(multi, sockfd, NULL);
                 uv_poll_stop(&socket_context->poll);
                 uv_close((uv_handle_t*) &socket_context->poll, cat_curl_multi_socket_context_close_callback);
+                curl_multi_assign(multi, sockfd, NULL);
             }
             break;
         default:

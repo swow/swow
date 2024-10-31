@@ -61,6 +61,7 @@
 .text
 .align  1
 .global cat_coroutine_context_make
+.hidden cat_coroutine_context_make
 .type   cat_coroutine_context_make, %function
 cat_coroutine_context_make:
     # shift address in a0 (allocated stack) to lower 16 byte boundary

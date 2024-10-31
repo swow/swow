@@ -40,6 +40,7 @@
 .file "ontop_x86_64_sysv_elf_gas.S"
 .text
 .globl cat_coroutine_context_ontop
+.hidden cat_coroutine_context_ontop
 .type cat_coroutine_context_ontop,@function
 .align 16
 cat_coroutine_context_ontop:

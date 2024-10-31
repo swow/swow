@@ -64,8 +64,10 @@
  *  |    FCTX   |    DATA   |           |           |  *
  *  -------------------------------------------------  *
  *                                                     *
+ *******************************************************/
 
 .text
+.private_extern _cat_coroutine_context_make
 .globl _cat_coroutine_context_make
 _cat_coroutine_context_make:
     ; save return address into R6

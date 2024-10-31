@@ -25,6 +25,7 @@
  ****************************************************************************************/
 
 .text
+.private_extern _cat_coroutine_context_jump
 .globl _cat_coroutine_context_jump
 .align 2
 _cat_coroutine_context_jump:
@@ -54,8 +55,8 @@ _cat_coroutine_context_jump:
 
     /* return parent fcontext_t */
     movl  %ecx, %eax
-    /* returned data is stored in EDX */ 
- 
+    /* returned data is stored in EDX */
+
     movl  0x18(%esp), %ecx  /* restore EIP */
 
 #if !defined(CAT_USE_TSX)

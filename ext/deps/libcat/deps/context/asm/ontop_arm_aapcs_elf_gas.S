@@ -41,6 +41,7 @@
 .file "ontop_arm_aapcs_elf_gas.S"
 .text
 .globl cat_coroutine_context_ontop
+.hidden cat_coroutine_context_ontop
 .align 2
 .type cat_coroutine_context_ontop,%function
 .syntax unified

@@ -39,6 +39,7 @@
  *******************************************************/
 
 .text
+.private_extern _cat_coroutine_context_jump
 .globl _cat_coroutine_context_jump
 .align 2
 _cat_coroutine_context_jump:

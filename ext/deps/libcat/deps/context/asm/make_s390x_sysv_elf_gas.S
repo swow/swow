@@ -46,15 +46,16 @@
 .text
 .align	8
 .global	cat_coroutine_context_make
+.hidden cat_coroutine_context_make
 .type	cat_coroutine_context_make, @function
 
 #define ARG_OFFSET         0
-#define GR_OFFSET	   16
-#define R14_OFFSET	   88
-#define FP_OFFSET	   96
-#define FPC_OFFSET	   160
-#define PC_OFFSET	   168
-#define CONTEXT_SIZE	   176
+#define GR_OFFSET          16
+#define R14_OFFSET         88
+#define FP_OFFSET          96
+#define FPC_OFFSET         160
+#define PC_OFFSET          168
+#define CONTEXT_SIZE       176
 
 /*
 
@@ -71,8 +72,8 @@ r4 - The address of the context function
 
 cat_coroutine_context_make:
 	.machine "z10"
-	/* Align the stack to an 16 byte boundary.  */
-	nill    %r2,0xfff0
+	/* Align the stack to an 8 byte boundary.  */
+	nill    %r2,0xfff8
 
 	/* Allocate stack space for the context.  */
 	aghi	%r2,-CONTEXT_SIZE

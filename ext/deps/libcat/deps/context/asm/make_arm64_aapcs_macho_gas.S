@@ -52,6 +52,7 @@
  *******************************************************/
 
 .text
+.private_extern _cat_coroutine_context_make
 .globl _cat_coroutine_context_make
 .balign 16
 

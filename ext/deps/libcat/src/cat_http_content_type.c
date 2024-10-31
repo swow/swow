@@ -21,8 +21,6 @@
 #include "cat_http.h"
 #endif
 
-CAT_STRCASECMP_FAST_FUNCTION(multipart_slash, "multipart/", "         \0");
-
 enum media_type_state {
     mt_error = 0,
     mt_start = 1,
@@ -177,7 +175,7 @@ static cat_always_inline cat_bool_t cat_http_parser_multipart_parse_content_type
             /*
             'multipart/' => continue to check
             */
-            size_t read_len = pe - p > (10 - state + mt_start) ? (10 - state + mt_start) : pe - p;
+            size_t read_len = (size_t) (pe - p) > (10 - state + mt_start) ? (10 - state + mt_start) : (size_t) (pe - p);
             // printf("readlen: %d\n", read_len);
             memcpy(&parser->multipart.multipart_boundary[state], p, read_len);
             state += (int) read_len;
@@ -193,7 +191,7 @@ static cat_always_inline cat_bool_t cat_http_parser_multipart_parse_content_type
             CAT_FALLTHROUGH;
         case mt_maybe_subtype:
         mt_dbg();
-            if (!cat_strcasecmp_fast_multipart_slash(&parser->multipart.multipart_boundary[1])) {
+            if (0 != cat_strncasecmp(&parser->multipart.multipart_boundary[1], CAT_STRL("multipart/"))) {
                 /* not multipart */
                 goto error;
             }

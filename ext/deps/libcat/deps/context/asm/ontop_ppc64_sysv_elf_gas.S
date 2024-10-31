@@ -68,6 +68,7 @@
 
 .file "ontop_ppc64_sysv_elf_gas.S"
 .globl cat_coroutine_context_ontop
+.hidden cat_coroutine_context_ontop
 #if _CALL_ELF == 2
 	.text
 	.align 2
@@ -97,7 +98,7 @@ cat_coroutine_context_ontop:
 # endif
 #endif
     # reserve space on stack
-    subi  %r1, %r1, 184
+    subi  %r1, %r1, 200
 
 #if _CALL_ELF != 2
     std  %r2,  0(%r1)  # save TOC
@@ -133,6 +134,10 @@ cat_coroutine_context_ontop:
     # save LR as PC
     std   %r0, 176(%r1)
 
+    # save VS63
+    li %r31, 184
+    stvx %v31, %r1, %r31
+
     # store RSP (pointing to context-data) in R7
     mr  %r7, %r1
 
@@ -144,6 +149,10 @@ cat_coroutine_context_ontop:
     mr  %r1, %r4
 #endif
 
+    # restore VS63
+    li %r31, 184
+    lvx %v31, %r1, %r31
+    
     ld  %r14, 8(%r1)  # restore R14
     ld  %r15, 16(%r1)  # restore R15
     ld  %r16, 24(%r1)  # restore R16
@@ -203,7 +212,7 @@ return_to_ctx:
     mtlr  %r0
 
     # adjust stack
-    addi  %r1, %r1, 184
+    addi  %r1, %r1, 200
 
     # jump to context
     bctr

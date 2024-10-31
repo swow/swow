@@ -68,12 +68,13 @@
  *  -------------------------------------------------  *
  *  | 256 |                                         |  *
  *  -------------------------------------------------  *
- *  | DATA|                                         |  * 
+ *  | DATA|                                         |  *
  *  -------------------------------------------------  *
  *                                                     *
  *******************************************************/
 
 .text
+.private_extern _cat_coroutine_context_make
 .globl _cat_coroutine_context_make
 .align 2
 _cat_coroutine_context_make:
@@ -101,8 +102,8 @@ _cat_coroutine_context_make:
 
     ; compute address of returned transfer_t
     addi  r0, r3, 252
-    mr    r4, r0 
-    stw   r4, 228(r3) 
+    mr    r4, r0
+    stw   r4, 228(r3)
 
     ; load LR
     mflr  r0

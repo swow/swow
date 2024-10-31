@@ -479,17 +479,17 @@ struct cat_socket_internal_s
  * 1 internal_socket may have multiple bound socket objects,
  * also means that the different sockets may share the same internal_socket.
  *
- *  ┌──────┐
- *  │socket◄──────────────┐
- *  └──────┘              │
- *                        │
- *  ┌──────┐     ┌────────▼────────┐
- *  │socket◄─────► socket_i (rc=3) │
- *  └──────┘     └────────▲────────┘
- *                        │
- *  ┌──────┐              │
- *  │socket◄──────────────┘
- *  └──────┘
+ * +------+
+ * |socket<--------------+
+ * +------+              |
+ *                       |
+ * +------+     +--------v--------+
+ * |socket<-----> socket_i (rc=3) |
+ * +------+     +--------^--------+
+ *                       |
+ * +------+              |
+ * |socket<--------------+
+ * +------+
  */
 
 struct cat_socket_s
@@ -615,7 +615,7 @@ typedef struct cat_socket_crypto_options_s {
     const char *certificate;
     const char *certificate_key;
     const char *passphrase;
-    cat_load_certificate_t load_certficate;
+    cat_load_certificate_t load_certificate;
 #ifdef CAT_SSL_HAVE_SECURITY_LEVEL
     int security_level;
 #endif

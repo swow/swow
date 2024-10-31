@@ -52,6 +52,7 @@
  *******************************************************/
 
 .text
+.private_extern _cat_coroutine_context_jump
 .globl _cat_coroutine_context_jump
 .balign 16
 _cat_coroutine_context_jump:

@@ -46,14 +46,16 @@
 .text
 .align	8
 .global	cat_coroutine_context_jump
+.hidden cat_coroutine_context_jump
 .type	cat_coroutine_context_jump, @function
 
 #define ARG_OFFSET         0
-#define GR_OFFSET	   16
-#define FP_OFFSET	   96
-#define FPC_OFFSET	   160
-#define PC_OFFSET	   168
-#define CONTEXT_SIZE	   176
+#define GR_OFFSET          16
+#define R14_OFFSET         88
+#define FP_OFFSET          96
+#define FPC_OFFSET         160
+#define PC_OFFSET          168
+#define CONTEXT_SIZE       176
 
 #define REG_SAVE_AREA_SIZE 160
 
@@ -132,10 +134,13 @@ cat_coroutine_context_jump:
 	jnz	use_return_slot
 
 	/* We're restoring a context created by cat_coroutine_context_make.
-	   Use the function argument slot in the current context
-	   and make sure it isn't deallocated. */
-	la	%r2,ARG_OFFSET(%r15)
-	aghi	%r15,-CONTEXT_SIZE
+	   This is going to be the argument of the entry point
+	   of the fiber. We're placing it on top of the ABI
+	   defined register save area of the fiber's own stack. */
+	la	%r2,REG_SAVE_AREA_SIZE(%r15)
+
+	/* REG_SAVE_AREA_SIZE + sizeof(transfer_t) */
+	aghi	%r15,-(REG_SAVE_AREA_SIZE+16)
 
 use_return_slot:
 	/* Save the two fields in transfer_t.  When calling a

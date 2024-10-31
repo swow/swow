@@ -55,6 +55,7 @@
 .text
 .align  2
 .global cat_coroutine_context_ontop
+.hidden cat_coroutine_context_ontop
 .type   cat_coroutine_context_ontop, %function
 cat_coroutine_context_ontop:
     # prepare stack for GP + FPU

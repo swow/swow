@@ -25,6 +25,7 @@
  ****************************************************************************************/
 
 .text
+.private_extern _cat_coroutine_context_make
 .globl _cat_coroutine_context_make
 .align 2
 _cat_coroutine_context_make:
@@ -69,7 +70,7 @@ _cat_coroutine_context_make:
     addl  $finish-2b, %ecx
     /* save address of finish as return-address for context-function */
     /* will be entered after context-function returns */
-    movl  %ecx, 0x14(%eax) 
+    movl  %ecx, 0x14(%eax)
 
     ret /* return pointer to context-data */
 

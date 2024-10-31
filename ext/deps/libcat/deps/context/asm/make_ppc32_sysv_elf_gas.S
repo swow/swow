@@ -53,6 +53,7 @@
 .file "make_ppc32_sysv_elf_gas.S"
 .text
 .globl cat_coroutine_context_make
+.hidden cat_coroutine_context_make
 .align 2
 .type cat_coroutine_context_make,@function
 cat_coroutine_context_make:

@@ -151,7 +151,7 @@ cat_coroutine_context_make:
 
 trampoline:
     /* store return address on stack */
-    /* fix stack alignment */ 
+    /* fix stack alignment */
     pushq %rbp
     /* jump to context-function */
     jmp *%rbx
