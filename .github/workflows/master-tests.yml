@@ -96,7 +96,7 @@ jobs:
 
       - name: Setup extension dependencies
         run: |
-          [ ! -d /opt/homebrew/Cellar/pkgconf* ] && brew install pkgconf
+          # [ ! -d /opt/homebrew/Cellar/pkgconf* ] && brew install pkgconf
           [ ! -d /opt/homebrew/Cellar/openssl@3 ] && brew install openssl@3
           [ ! -d /opt/homebrew/Cellar/curl* ] && brew install curl
           [ ! -d /opt/homebrew/Cellar/postgresql* ] && brew install libpq postgresql
