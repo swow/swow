@@ -278,16 +278,16 @@ jobs:
       matrix:
         php-version: ["8.3", "8.2", "8.1", "8.0"]
         arch: ["x64"]
-        ts: ["0", "1"]
+        ts: ["nts", "ts"]
         image: [ "windows-2019" ]
         include:
           - php-version: "8.4"
             arch: "x64"
-            ts: "0"
+            ts: "nts"
             image: "windows-2022"
           - php-version: "8.4"
             arch: "x64"
-            ts: "1"
+            ts: "ts"
             image: "windows-2022"
       max-parallel: 8
     steps:

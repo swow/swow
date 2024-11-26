@@ -18,7 +18,7 @@ env:
 jobs:
   builddlls:
     # this name is used after, change it with cautious
-    name: Build dll for PHP-${{ matrix.php-version }}-${{ matrix.arch }}-${{ (matrix.ts == '0') && 'N' || '' }}TS-VS16
+    name: Build dll for PHP-${{ matrix.php-version }}-${{ matrix.arch }}-${{ (matrix.ts == '0') && 'N' || '' }}TS-${{ (matrix.image == 'windows-2019') && 'VS16' || 'VS17' }}
     runs-on: ${{ matrix.image }}
     strategy:
       fail-fast: false
@@ -42,7 +42,7 @@ jobs:
     env:
       deps: openssl,libcurl,libssh2,zlib,nghttp2,libpq
       tools_path: C:\tools\phpdev
-      dllname: "php_swow-php${{ matrix.php-version }}-${{ matrix.arch }}-${{ (matrix.ts == '0') && 'n' || '' }}ts-VS16"
+      dllname: "php_swow-php${{ matrix.php-version }}-${{ matrix.arch }}-${{ (matrix.ts == '0') && 'n' || '' }}ts-${{ (matrix.image == 'windows-2019') && 'VS16' || 'VS17' }}"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -193,7 +193,7 @@ jobs:
             "hash" = (Get-FileHash -Algorithm SHA256 $fn).Hash;
             "result" = "${{ steps.ext-test.outcome }}";
             "runid" = "${{ github.run_id }}";
-            "jobname" = "PHP-${{ matrix.php-version }}-${{ matrix.arch }}-${{ (matrix.ts == '0') && 'N' || '' }}TS-VS16";
+            "jobname" = "PHP-${{ matrix.php-version }}-${{ matrix.arch }}-${{ (matrix.ts == '0') && 'N' || '' }}TS-${{ (matrix.image == 'windows-2019') && 'VS16' || 'VS17' }}";
           } | ConvertTo-Json -Compress | Out-File "${fn}.json" -Encoding ASCII # for no BOM
 
       - name: Upload artifact
