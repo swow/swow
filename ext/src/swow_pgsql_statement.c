@@ -471,7 +471,7 @@ static int pgsql_stmt_param_hook(pdo_stmt_t *stmt, struct pdo_bound_param_data *
 						convert_to_string(parameter);
 #endif // PHP_VERSION_ID < 80100
 						S->param_values[param->paramno] = Z_STRVAL_P(parameter);
-						S->param_lengths[param->paramno] = Z_STRLEN_P(parameter);
+						S->param_lengths[param->paramno] = (int)Z_STRLEN_P(parameter);
 						S->param_formats[param->paramno] = 0;
 					}
 

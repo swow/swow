@@ -842,7 +842,7 @@ void swow_pgsqlCopyFromArray_internal(INTERNAL_FUNCTION_PARAMETERS)
 				query[query_len++] = '\n';
 			}
 			query[query_len] = '\0';
-			if (PQputCopyData(H->server, query, query_len) != 1) {
+			if (PQputCopyData(H->server, query, (int)query_len) != 1) {
 				efree(query);
 				pdo_pgsql_error(dbh, PGRES_FATAL_ERROR, NULL);
 				PDO_HANDLE_DBH_ERR();
@@ -943,7 +943,7 @@ void swow_pgsqlCopyFromFile_internal(INTERNAL_FUNCTION_PARAMETERS)
 
 		PQclear(pgsql_result);
 		while ((buf = php_stream_get_line(stream, NULL, 0, &line_len)) != NULL) {
-			if (PQputCopyData(H->server, buf, line_len) != 1) {
+			if (PQputCopyData(H->server, buf, (int)line_len) != 1) {
 				efree(buf);
 				pdo_pgsql_error(dbh, PGRES_FATAL_ERROR, NULL);
 				php_stream_close(stream);
