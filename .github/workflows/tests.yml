@@ -43,7 +43,7 @@ jobs:
         php-version: ['8.4', '8.3', '8.2', '8.1', '8.0']
         #php-version: ['8.0']
         #ts: ['nts', 'ts']
-      max-parallel: 3
+      max-parallel: 5
 
     services:
       postgres:
@@ -157,7 +157,7 @@ jobs:
         php-version: ['8.4', '8.3', '8.2', '8.1', '8.0']
         #php-version: ['8.0']
         #ts: ['nts', 'ts']
-      max-parallel: 3
+      max-parallel: 5
 
     steps:
 
@@ -289,7 +289,7 @@ jobs:
             arch: "x64"
             ts: "ts"
             image: "windows-2022"
-      max-parallel: 8
+      max-parallel: 10
     steps:
       - name: Checkout
         uses: actions/checkout@v4

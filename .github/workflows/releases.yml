@@ -36,7 +36,7 @@ jobs:
             arch: "x64"
             ts: "1"
             image: "windows-2022"
-      max-parallel: 8
+      max-parallel: 10
     outputs:
       ref: ${{ steps.getref.outputs.ref }}
     env:
