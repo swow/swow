@@ -159,6 +159,13 @@ try{
 $sa = New-Object -ComObject Shell.Application
 $dirname = ($sa.NameSpace($zipdest).Items() | Select-Object -Index 0).Name
 
+# patch config.w32.h
+$configw32path = "$ToolsPath\$dirname\include\main\config.w32.h"
+$configw32 = Get-Content -Raw $configw32path
+$configw32 = $configw32 -Replace "#\s*define\s+PHP_LINKER_MAJOR\s+.+", '// $0'
+$configw32 = $configw32 -Replace "#\s*define\s+PHP_LINKER_MINOR\s+.+", '// $0'
+[IO.File]::WriteAllText($configw32path, $configw32)
+
 info "Done unzipping devpack, generate env.bat."
 
 # Since setup-php only provides Release version PHP, yet we only support Release
