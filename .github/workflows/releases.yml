@@ -19,13 +19,23 @@ jobs:
   builddlls:
     # this name is used after, change it with cautious
     name: Build dll for PHP-${{ matrix.php-version }}-${{ matrix.arch }}-${{ (matrix.ts == '0') && 'N' || '' }}TS-VS16
-    runs-on: windows-2019
+    runs-on: ${{ matrix.image }}
     strategy:
       fail-fast: false
       matrix:
-        php-version: ["8.4", "8.3", "8.2", "8.1", "8.0"]
+        php-version: ["8.3", "8.2", "8.1", "8.0"]
         arch: ["x64"]
         ts: ["0", "1"]
+        image: [ "windows-2019" ]
+        include:
+          - php-version: "8.4"
+            arch: "x64"
+            ts: "0"
+            image: "windows-2022"
+          - php-version: "8.4"
+            arch: "x64"
+            ts: "1"
+            image: "windows-2022"
       max-parallel: 8
     outputs:
       ref: ${{ steps.getref.outputs.ref }}
