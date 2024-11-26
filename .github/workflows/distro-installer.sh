@@ -148,7 +148,7 @@ mian()
     info Show extension installed
     "$PREFIX/bin/php" -dextension=swow --ri swow
     info Run extension tests
-    exec "$PREFIX/bin/php" "${SWOW_SRC}/tools/test-extension.php"
+    exec "$PREFIX/bin/php" "${SWOW_SRC}/tools/test-extension.php" .
 }
 
 mian "$1"

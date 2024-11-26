@@ -104,7 +104,7 @@ jobs:
         id: test-extension
         continue-on-error: true
         run: |
-          TEST_SWOW_POSTGRESQL=1 composer test-extension
+          TEST_SWOW_POSTGRESQL=1 composer test-extension .
 
       - name: Run library tests
         id: test-library
@@ -239,7 +239,7 @@ jobs:
         id: test-extension
         continue-on-error: true
         run: |
-          TEST_SWOW_POSTGRESQL=1 composer test-extension
+          TEST_SWOW_POSTGRESQL=1 composer test-extension .
 
       - name: Run library tests
         id: test-library
@@ -399,7 +399,7 @@ jobs:
             --excluded_line_regex "\s*\}.*" `
             --excluded_line_regex "\s*\{\s*" `
             --modules php_swow.dll `
-            -- C:\tools\php\php.exe C:\tools\php\composer.phar test-extension
+            -- C:\tools\php\php.exe C:\tools\php\composer.phar test-extension .
 
       - name: Run library tests
         shell: pwsh
