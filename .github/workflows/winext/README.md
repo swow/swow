@@ -49,7 +49,7 @@ Max download retry times, default is `3`
 
 #### deps
 
-Comma splited list for dependencies can be downloaded at `https://windows.php.net/downloads/php-sdk/deps/<sdk version>/<arch>/<depname>-<version>-<sdk version>-<arch>.zip`
+Comma splited list for dependencies can be downloaded at `https://downloads.php.net/~windows/php-sdk/deps/<sdk version>/<arch>/<depname>-<version>-<sdk version>-<arch>.zip`
 
 deps will be downloaded into `<tools-path>\deps`, this dir can be cached for faster build.
 
@@ -230,7 +230,7 @@ At lease `<maj>.<min>` format PhpVer argument is needed for determining which va
     [-ToolsPath <string>]
 ```
 
-Fetch deps from windows.php.net for futher use.
+Fetch deps from https://downloads.php.net/~windows for futher use.
 
 If PHP version args is not specified, it will use PhpBin arg (default is "php") to find php version and varient.
 
@@ -258,7 +258,7 @@ If we use staging version deps.
     [-ToolsPath <string>]
 ```
 
-Fetch development pack from windows.php.net for futher use.
+Fetch development pack from https://downloads.php.net/~windows for futher use.
 
 If PHP version args is not specified, it will use PhpBin arg (default is "php") to find php version and varient.
 

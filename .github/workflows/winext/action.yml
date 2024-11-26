@@ -94,7 +94,7 @@ runs:
           $PhpVCVer = "vc15"
         }
         Write-Output "vcver=$PhpVCVer" | Out-File "${env:GITHUB_OUTPUT}" -Append
-        Write-Host "::group::Fetching deps from windows.php.net"
+        Write-Host "::group::Fetching deps from https://downloads.php.net/~windows"
         ${{github.action_path}}/deps.ps1 `
           ${{ inputs.deps }} `
           -MaxTry ${{ inputs.max-try }} `
@@ -121,7 +121,7 @@ runs:
           $ret = $lastexitcode
           Write-Host "::endgroup::"
         } else {
-          Write-Host "::group::Fetching devel-pack from windows.php.net"
+          Write-Host "::group::Fetching devel-pack from https://downloads.php.net/~windows"
           ${{github.action_path}}/devpack.ps1 `
             -MaxTry ${{ inputs.max-try }} `
             -ToolsPath ${{ inputs.tools-path }} `
