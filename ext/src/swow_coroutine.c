@@ -19,6 +19,7 @@
 #include "swow_coroutine.h"
 
 #include "swow_debug.h"
+#include "swow_hook.h"
 
 #ifdef SWOW_COROUTINE_MOCK_FIBER_CONTEXT
 # include "zend_observer.h"
@@ -2509,6 +2510,36 @@ static int swow_coroutine_exit_handler(zend_execute_data *execute_data)
 
     return ZEND_USER_OPCODE_CONTINUE;
 }
+#else
+// from php/php-src@bc07a8a28a084a9bd2637b8232b75d1634a5872e Zend/zend_builtin_functions.c L72
+static PHP_FUNCTION(swow_exit)
+{
+    swow_coroutine_t *s_coroutine = swow_coroutine_get_current();
+    zend_string *str = NULL;
+    zend_long status = 0;
+
+    ZEND_PARSE_PARAMETERS_START(0, 1)
+        Z_PARAM_OPTIONAL
+        Z_PARAM_STR_OR_LONG(str, status)
+    ZEND_PARSE_PARAMETERS_END();
+
+    if (str) {
+        size_t len = ZSTR_LEN(str);
+        if (len != 0) {
+            /* An exception might be emitted by an output handler */
+            zend_write(ZSTR_VAL(str), len);
+            if (EG(exception)) {
+                RETURN_THROWS();
+            }
+        }
+    } else {
+        EG(exit_status) = status;
+        s_coroutine->exit_status = status;
+    }
+
+    ZEND_ASSERT(!EG(exception));
+    zend_throw_unwind_exit();
+}
 #endif // ZEND_EXIT
 
 /* hook silence */
@@ -2681,6 +2712,11 @@ zend_result swow_coroutine_module_init(INIT_FUNC_ARGS)
 # ifdef ZEND_EXIT
     /* hook opcode exit */
     zend_set_user_opcode_handler(ZEND_EXIT, swow_coroutine_exit_handler);
+# else
+    /* hook function exit */
+    if (!swow_hook_internal_function_handler(CAT_STRL("exit"), PHP_FN(swow_exit))) {
+        return FAILURE;
+    }
 # endif // ZEND_EXIT
 # ifdef SWOW_COROUTINE_SWAP_SILENCE_CONTEXT
     /* hook opcode silence */
