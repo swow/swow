@@ -386,7 +386,7 @@ static int _php_server_push_callback(CURL *parent_ch, CURL *easy, size_t num_hea
 
     pz_parent_ch = _php_curl_multi_find_easy_handle(mh, parent_ch);
     if (pz_parent_ch == NULL) {
-        return rval;
+        return (int)rval;
     }
 
     parent = Z_CURL_P(pz_parent_ch);
@@ -417,7 +417,7 @@ static int _php_server_push_callback(CURL *parent_ch, CURL *easy, size_t num_hea
         }
     }
 
-    return rval;
+    return (int)rval;
 }
 /* }}} */
 

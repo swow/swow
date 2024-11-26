@@ -793,7 +793,7 @@ static size_t curl_read(char *data, size_t size, size_t nmemb, void *ctx)
 {
     php_curl *ch = (php_curl *)ctx;
     php_curl_read *read_handler = ch->handlers.read;
-    int length = 0;
+    size_t length = 0;
 
     switch (read_handler->method) {
         case PHP_CURL_DIRECT:
@@ -1103,7 +1103,7 @@ static void create_certinfo(struct curl_certinfo *ci, zval *listcode)
 
             array_init(&certhash);
             for (slist = ci->certinfo[i]; slist; slist = slist->next) {
-                int len;
+                size_t len;
                 char s[64];
                 char *tmp;
                 strncpy(s, slist->data, sizeof(s));
@@ -2906,7 +2906,7 @@ PHP_FUNCTION(swow_curl_escape)
         RETURN_FALSE;
     }
 
-    if ((res = curl_easy_escape(ch->cp, ZSTR_VAL(str), ZSTR_LEN(str)))) {
+    if ((res = curl_easy_escape(ch->cp, ZSTR_VAL(str), (int)ZSTR_LEN(str)))) {
         RETVAL_STRING(res);
         curl_free(res);
     } else {
@@ -2935,7 +2935,7 @@ PHP_FUNCTION(swow_curl_unescape)
         RETURN_FALSE;
     }
 
-    if ((out = curl_easy_unescape(ch->cp, ZSTR_VAL(str), ZSTR_LEN(str), &out_len))) {
+    if ((out = curl_easy_unescape(ch->cp, ZSTR_VAL(str), (int)ZSTR_LEN(str), &out_len))) {
         RETVAL_STRINGL(out, out_len);
         curl_free(out);
     } else {
