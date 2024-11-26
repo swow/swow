@@ -193,9 +193,12 @@ jobs:
 
       - name: Detect dependencies path from php-config
         run: |
-          echo "OPENSSL_ROOT_DIR=$(php ./.github/workflows/detect-deps.php openssl)" >> $GITHUB_ENV
-          echo "CURL_ROOT_DIR=$(php ./.github/workflows/detect-deps.php curl)" >> $GITHUB_ENV
-          echo "PGSQL_ROOT_DIR=$(php ./.github/workflows/detect-deps.php libpq)" >> $GITHUB_ENV
+          simplefind() {
+            find /opt/homebrew/Cellar/$1 -type d -depth 1 | head -n 1
+          }
+          echo "OPENSSL_ROOT_DIR=$(simplefind openssl@3)" >> $GITHUB_ENV
+          echo "CURL_ROOT_DIR=$(simplefind curl)" >> $GITHUB_ENV
+          echo "PGSQL_ROOT_DIR=$(simplefind libpq)" >> $GITHUB_ENV
 
       - name: Build Swow extension
         env:
