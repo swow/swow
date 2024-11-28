@@ -43,6 +43,11 @@ SWOW_API CAT_COLD zend_object *swow_throw_exception(zend_class_entry *ce, zend_l
     char *message;
     zend_object *object;
 
+    if (EG(exception) && zend_is_unwind_exit(EG(exception))) {
+        // PHP refuses to throw exceptions after an unwind exit
+        return NULL;
+    }
+
     if (code == CAT_EMISUSE || code == CAT_EVALUE || code == CAT_ELOCKED) {
         ce = zend_ce_error;
     }
