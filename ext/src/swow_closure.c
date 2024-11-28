@@ -112,7 +112,7 @@ static swow_php_ast_walker_op swow_closure_walker(zend_ast *ast, void *context_p
                 // see Zend/zend_language_parser.y near L369 top_statement syntax
                 ZEND_ASSERT(namespace != NULL);
 
-                smart_str_setl(&context->code_str, ZEND_STRL("namespace "));
+                smart_str_setl(&context->code_str, CAT_STRL("namespace "));
                 smart_str_appendl(&context->code_str, ZSTR_VAL(namespace), ZSTR_LEN(namespace));
                 smart_str_appendc(&context->code_str, ';');
                 context->in_namespace_brace = false;
@@ -126,11 +126,11 @@ static swow_php_ast_walker_op swow_closure_walker(zend_ast *ast, void *context_p
             ZEND_ASSERT(stmts->kind == ZEND_AST_STMT_LIST);
             if (!namespace) {
                 // at root namespace
-                smart_str_setl(&context->code_str, ZEND_STRL("namespace {"));
+                smart_str_setl(&context->code_str, CAT_STRL("namespace {"));
             } else {
-                smart_str_setl(&context->code_str, ZEND_STRL("namespace "));
+                smart_str_setl(&context->code_str, CAT_STRL("namespace "));
                 smart_str_appendl(&context->code_str, ZSTR_VAL(namespace), ZSTR_LEN(namespace));
-                smart_str_appendl(&context->code_str, ZEND_STRL(" {"));
+                smart_str_appendl(&context->code_str, CAT_STRL(" {"));
             }
             context->in_namespace_brace = true;
             break;
