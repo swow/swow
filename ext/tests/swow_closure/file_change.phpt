@@ -54,15 +54,15 @@ PHP;
 
 $code6 = '';
 
-file_put_contents(__DIR__ . '/file_change.inc', $code1);
+file_put_contents(__DIR__ . '/file_change_test.php', $code1);
 
-require __DIR__ . '/file_change.inc';
+require __DIR__ . '/file_change_test.php';
 
 $anonymous(); // hello1
 // at first, hello is hello1
 $anonymousString = serialize($anonymous);
 // file changed, use hello2
-file_put_contents(__DIR__ . '/file_change.inc', $code2);
+file_put_contents(__DIR__ . '/file_change_test.php', $code2);
 // unserialize is not affected
 $anonymousUnserialized = unserialize($anonymousString);
 $anonymousUnserialized(); // hello1
@@ -72,25 +72,25 @@ $anonymousString = serialize($anonymous);
 $anonymousUnserialized = unserialize($anonymousString);
 $anonymousUnserialized(); // hello2
 
-file_put_contents(__DIR__ . '/file_change.inc', $code3);
+file_put_contents(__DIR__ . '/file_change_test.php', $code3);
 // this will fail, because line changed
 Assert::throws(static function () use ($anonymous): void {
     serialize($anonymous);
 }, 'Error'); // TODO: a normalized error
 
-file_put_contents(__DIR__ . '/file_change.inc', $code4);
+file_put_contents(__DIR__ . '/file_change_test.php', $code4);
 // this will be ok, but result is wrong, because namespace changed
 $anonymousString = serialize($anonymous);
 $anonymousUnserialized = unserialize($anonymousString);
 $anonymousUnserialized(); // hello4
 
-file_put_contents(__DIR__ . '/file_change.inc', $code5);
+file_put_contents(__DIR__ . '/file_change_test.php', $code5);
 // this will be ok, but result is wrong
 $anonymousString = serialize($anonymous);
 $anonymousUnserialized = unserialize($anonymousString);
 $anonymousUnserialized(); // hello5
 
-file_put_contents(__DIR__ . '/file_change.inc', $code6);
+file_put_contents(__DIR__ . '/file_change_test.php', $code6);
 // this will fail
 Assert::throws(static function () use ($anonymous): void {
     serialize($anonymous);
@@ -100,7 +100,7 @@ echo "Done\n";
 ?>
 --CLEAN--
 <?php
-@unlink(__DIR__ . '/file_change.inc');
+@unlink(__DIR__ . '/file_change_test.php');
 ?>
 --EXPECTF--
 hello1
