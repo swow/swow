@@ -72,8 +72,8 @@ typedef struct swow_closure_walk_context_s {
     uint32_t line_start;
     uint32_t found_function;
     smart_str code_str; /* prepend code string */
+    smart_str closure_str; /* closure code string */
     bool in_namespace_brace; /* in namespace ... { */
-    // smart_str closure_str;
 } swow_closure_walk_context_t;
 
 static swow_php_ast_walker_op swow_closure_walker(zend_ast *ast, void *context_ptr)
@@ -81,11 +81,11 @@ static swow_php_ast_walker_op swow_closure_walker(zend_ast *ast, void *context_p
     swow_closure_walk_context_t *context = (swow_closure_walk_context_t *) context_ptr;
     if (ast->kind == ZEND_AST_CLOSURE || ast->kind == ZEND_AST_ARROW_FUNC) {
         if (ast->lineno == context->line_start) {
-            // if (context->found_function == 0) {
-            //     zend_string *code = zend_ast_export("", ast, "");
-            //     smart_str_setl(&context->closure_str, ZSTR_VAL(code), ZSTR_LEN(code));
-            //     zend_string_release(code);
-            // }
+            if (context->found_function == 0) {
+                zend_string *code = zend_ast_export("", ast, "");
+                smart_str_setl(&context->closure_str, ZSTR_VAL(code), ZSTR_LEN(code));
+                zend_string_release(code);
+            }
             context->found_function++;
             return SWOW_PHP_AST_WALKER_SKIP;
         }
@@ -250,7 +250,7 @@ SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_user_anonymous_function(zend_f
             }
             if (UNEXPECTED(zval_update_constant_ex(z_val, function->common.scope) != SUCCESS)) {
                 zend_throw_error(NULL, "Failed to solve static variable %.*s", (int) ZSTR_LEN(key), ZSTR_VAL(key));
-                goto _serialize_use_error;
+                goto _err;
             }
             /* if (!Z_ISREF_P(z_val)) */ {
                 CAT_LOG_DEBUG_WITH_LEVEL(CLOSURE, 5, "Use variable $%.*s", (int) ZSTR_LEN(key), ZSTR_VAL(key));
@@ -269,13 +269,12 @@ SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_user_anonymous_function(zend_f
         return NULL;
     }
 
-    smart_str buffer = {0};
     swow_closure_walk_context_t context = {
         /* .line_start = */ line_start,
         /* .found_function = */ 0,
         /* .code_str = */ { 0 },
+        /* .closure_str = */ { 0 },
         /* .in_namespace_brace = */ false,
-        // /* .closure_str = */ { 0 },
     };
 
     swow_php_token_list_t *token_list = swow_php_tokenize(contents, swow_closure_walk_callback, &context);
@@ -285,179 +284,88 @@ SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_user_anonymous_function(zend_f
     // if (smart_str_get_len(&context.code_str) > 0) {
     //     printf("code_str: %.*s\n", (int)context.code_str.s->len, context.code_str.s->val);
     // }
-    smart_str_append_smart_str(&buffer, &context.code_str);
-    smart_str_free(&context.code_str);
 
-    enum parser_state_e {
-        CLOSURE_PARSER_STATE_FIND_OPEN_TAG,
-        CLOSURE_PARSER_STATE_PARSING,
-        CLOSURE_PARSER_STATE_FUNCTION_START,
-        CLOSURE_PARSER_STATE_FUNCTION_FIND_CLOSE_BRACE,
-        CLOSURE_PARSER_STATE_FN_FIND_SEMICOLON,
-        CLOSURE_PARSER_STATE_END,
-    };
-    enum parser_state_e parser_state = CLOSURE_PARSER_STATE_FIND_OPEN_TAG;
-    enum parser_state_e original_parser_state = CLOSURE_PARSER_STATE_PARSING;
-    uint32_t brace_level = 0;
-    bool captured = false;
-    bool is_arrow_function = false;
-    bool use_extra_function_wrapper = false;
-
-    CAT_QUEUE_FOREACH_DATA_START(&token_list->queue, swow_php_token_t, node, token) {
-        bool previous_was_captured = captured;
-        captured = false;
-        if (!previous_was_captured && cat_queue_prev(&token->node) != &token_list->queue) {
-            swow_php_token_t *prev_token = cat_queue_data(cat_queue_prev(&token->node), swow_php_token_t, node);
-            if (token->line > prev_token->line) {
-                uint32_t line_diff = token->line - prev_token->line;
-                CAT_LOG_DEBUG_WITH_LEVEL(CLOSURE, 5, "Insert %u new lines", line_diff);
-                for (uint32_t i = 0; i < line_diff; i++) {
-                    smart_str_appendc(&buffer, '\n');
-                }
-            }
-        }
-        CAT_LOG_DEBUG_V3(CLOSURE, "token { type=%s, text='%.*s', line=%u, offset=%u }",
-            swow_php_token_get_name(token), (int) token->text.length, token->text.data, token->line, token->offset);
-        if (parser_state == CLOSURE_PARSER_STATE_FIND_OPEN_TAG) {
-            if (token->type == T_OPEN_TAG) {
-                parser_state = original_parser_state;
-            }
-            continue;
-        }
-        if (token->type == T_CLOSE_TAG) {
-            original_parser_state = parser_state;
-            parser_state = CLOSURE_PARSER_STATE_FIND_OPEN_TAG;
-            continue;
-        }
-        switch (parser_state) {
-            case CLOSURE_PARSER_STATE_FUNCTION_START: {
-                if (token->type == '{') {
-                    ZEND_ASSERT(brace_level == 0);
-                    brace_level = 1;
-                    parser_state = CLOSURE_PARSER_STATE_FUNCTION_FIND_CLOSE_BRACE;
-                }
-                goto _capture;
-            }
-            case CLOSURE_PARSER_STATE_FUNCTION_FIND_CLOSE_BRACE: {
-                if (token->type == '{' || token->type == T_CURLY_OPEN) {
-                    brace_level++;
-                } else if (token->type == '}') {
-                    if (brace_level-- == 1) {
-                        parser_state = CLOSURE_PARSER_STATE_END;
-                    }
-                }
-                goto _capture;
-            }
-            case CLOSURE_PARSER_STATE_FN_FIND_SEMICOLON: {
-                if (token->type == ';') {
-                    parser_state = CLOSURE_PARSER_STATE_END;
-                    goto _end;
-                }
-                goto _capture;
-            }
-            default:
-                break;
-        }
-        switch (token->type) {
-            case T_FUNCTION:
-            case T_FN: {
-                if (token->line != line_start) {
-                    break;
-                }
-                if (token->type == T_FN) {
-                    is_arrow_function = true;
-                }
-                if (!is_arrow_function) {
-                    if (!ZVAL_IS_NULL(&z_static_variables) || !ZVAL_IS_NULL(&z_references)) {
-                        use_extra_function_wrapper = true;
-                    }
-                } else {
-                    if (!ZVAL_IS_NULL(&z_static_variables)) {
-                        use_extra_function_wrapper = true;
-                    }
-                }
-                /* Solve function use (start) */
-                if (use_extra_function_wrapper) {
-                    zend_string *key;
-                    zval *z_val;
-                    smart_str_appends(&buffer, "return (static function () ");
-                    if (!ZVAL_IS_NULL(&z_references)) {
-                        bool first = true;
-                        smart_str_appends(&buffer, "use (");
-                        ZEND_HASH_PACKED_FOREACH_VAL(Z_ARRVAL(z_references), z_val) {
-                            CAT_LOG_DEBUG_WITH_LEVEL(CLOSURE, 5, "Use reference for $%.*s", (int) Z_STRLEN_P(z_val), Z_STRVAL_P(z_val));
-                            if (first) {
-                                first = false;
-                            } else {
-                                smart_str_appends(&buffer, ", ");
-                            }
-                            smart_str_appends(&buffer, "&$");
-                            smart_str_append(&buffer, Z_STR_P(z_val));
-                        } ZEND_HASH_FOREACH_END();
-                        smart_str_appends(&buffer, ") ");
-                    }
-                    smart_str_appends(&buffer, "{ ");
-                    if (!ZVAL_IS_NULL(&z_static_variables)) {
-                        ZEND_HASH_MAP_FOREACH_STR_KEY_VAL(Z_ARRVAL(z_static_variables), key, z_val) {
-                            smart_str_appendc(&buffer, '$');
-                            smart_str_append(&buffer, key);
-                            smart_str_appends(&buffer, " = NULL; ");
-                        } ZEND_HASH_FOREACH_END();
-                    }
-                }
-                smart_str_appends(&buffer, "return ");
-                if (!use_extra_function_wrapper && function->common.scope != NULL) {
-                    smart_str_appendc(&buffer, '(');
-                }
-                if (function->common.fn_flags & ZEND_ACC_STATIC) {
-                    smart_str_appends(&buffer, "static ");
-                }
-                if (!is_arrow_function) {
-                    parser_state = CLOSURE_PARSER_STATE_FUNCTION_START;
-                } else {
-                    parser_state = CLOSURE_PARSER_STATE_FN_FIND_SEMICOLON;
-                }
-                goto _capture;
-            }
-        }
-        if (0) {
-            _capture:
-            smart_str_appendl(&buffer, token->text.data, token->text.length);
-            captured = true;
-        }
-        if (parser_state == CLOSURE_PARSER_STATE_END) {
-            _end:
-            /* Solve function use (end) */
-            if (!use_extra_function_wrapper) {
-                if (function->common.scope != NULL) {
-                    smart_str_appendc(&buffer, ')');
-                }
-            } else {
-                smart_str_appends(&buffer, "; })()");
-            }
-            /* Solve scope */
-            if (function->common.scope != NULL) {
-                smart_str_appends(&buffer, "->bindTo(null, \\");
-                smart_str_append(&buffer, function->common.scope->name);
-                smart_str_appends(&buffer, "::class)");
-            }
-            smart_str_appendc(&buffer, ';');
-            break;
-        }
-    } CAT_QUEUE_FOREACH_DATA_END();
-    if (context.in_namespace_brace) {
-        smart_str_appendc(&buffer, '}');
+    if (smart_str_get_len(&context.closure_str) == 0) {
+        // no closure found
+        zend_throw_error(NULL, "Closure serialize error: no closure found in source code");
+        smart_str_free(&context.closure_str);
+        goto _err;
     }
-    smart_str_0(&buffer);
-    if (parser_state != CLOSURE_PARSER_STATE_END) {
-        zend_throw_error(NULL, "Failure to parse tokens");
-        goto _token_parse_error;
+    if (context.found_function > 1) {
+		php_error_docref(NULL, E_WARNING, "Found multiple closure on %s:%d, using the first one", ZSTR_VAL(filename), line_start);
+    }
+    // now: "namespace A { use A; use B;"
+
+    // align start line
+    for (uint32_t i = 1; i < line_start; i++) {
+        smart_str_appendc(&context.code_str, '\n');
+    }
+    // now: "namespace A { use A; use B;\n\n\n\n"
+
+    // static variables and references needs wrapper
+    if (!ZVAL_IS_NULL(&z_static_variables) || !ZVAL_IS_NULL(&z_references)) {
+        zend_string *key;
+        zval *z_val;
+        smart_str_appendl(&context.code_str, CAT_STRL("return (static function () "));
+        if (!ZVAL_IS_NULL(&z_references)) {
+            bool first = true;
+            smart_str_appendl(&context.code_str, CAT_STRL("use ("));
+            ZEND_HASH_PACKED_FOREACH_VAL(Z_ARRVAL(z_references), z_val) {
+                CAT_LOG_DEBUG_WITH_LEVEL(CLOSURE, 5, "Use reference for $%.*s", (int) Z_STRLEN_P(z_val), Z_STRVAL_P(z_val));
+                if (first) {
+                    first = false;
+                } else {
+                    smart_str_appendl(&context.code_str, CAT_STRL(", "));
+                }
+                smart_str_appendl(&context.code_str, CAT_STRL("&$"));
+                smart_str_append(&context.code_str, Z_STR_P(z_val));
+            } ZEND_HASH_FOREACH_END();
+            smart_str_appendl(&context.code_str, CAT_STRL(") "));
+        }
+        smart_str_appendl(&context.code_str, CAT_STRL("{ "));
+        if (!ZVAL_IS_NULL(&z_static_variables)) {
+            ZEND_HASH_MAP_FOREACH_STR_KEY_VAL(Z_ARRVAL(z_static_variables), key, z_val) {
+                smart_str_appendc(&context.code_str, '$');
+                smart_str_append(&context.code_str, key);
+                smart_str_appendl(&context.code_str, CAT_STRL(" = NULL; "));
+            } ZEND_HASH_FOREACH_END();
+        }
+    }
+    // now: "namespace A { use A; use B;\n\n\n\nreturn (static function () use (...) { $a = NULL; "
+
+    // append clusore
+    smart_str_appendl(&context.code_str, CAT_STRL("return ("));
+    smart_str_append_smart_str(&context.code_str, &context.closure_str);
+    smart_str_appendl(&context.code_str, CAT_STRL(")"));
+    // now:"namespace A { use A; use B;\n\n\n\nreturn (static function () use (...) { $a = NULL; return (fn()=>1)"
+
+    // scope binding
+    if (function->common.scope != NULL) {
+        smart_str_appendl(&context.code_str, CAT_STRL("->bindTo(null, \\"));
+        smart_str_append(&context.code_str, function->common.scope->name);
+        smart_str_appendl(&context.code_str, CAT_STRL("::class)"));
+    }
+    // now: "namespace A { use A; use B;\n\n\n\nreturn (static function () use (...) { $a = NULL; return (fn()=>1)->bindTo(numm, \\A::class)"
+
+    // return semi-colon
+    smart_str_appendc(&context.code_str, ';');
+    // now: "namespace A { use A; use B;\n\n\n\nreturn (static function () use (...) { $a = NULL; return (fn()=>1)->bindTo(numm, \\A::class);"
+
+    // wrapper end brace
+    if (!ZVAL_IS_NULL(&z_static_variables) || !ZVAL_IS_NULL(&z_references)) {
+        smart_str_appendl(&context.code_str, CAT_STRL(" })();"));
+    }
+    // now: "namespace A { use A; use B;\n\n\n\nreturn (static function () use (...) { $a = NULL; return (fn()=>1)->bindTo(numm, \\A::class); })();"
+
+    // if in namespace brace
+    if (context.in_namespace_brace) {
+        smart_str_appendc(&context.code_str, '}');
     }
 
     ht = zend_new_array(3);
     ZVAL_STR_COPY(&z_tmp, filename);
     zend_hash_update(ht, ZSTR_KNOWN(ZEND_STR_FILE), &z_tmp);
-    ZVAL_STR_COPY(&z_tmp, buffer.s);
+    ZVAL_STR_COPY(&z_tmp, context.code_str.s);
     zend_hash_update(ht, ZSTR_KNOWN(ZEND_STR_CODE), &z_tmp);
     if (doc_comment != NULL) {
         ZVAL_STR(&z_tmp, zend_string_copy(doc_comment));
@@ -479,17 +387,11 @@ SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_user_anonymous_function(zend_f
         zend_string_release(output);
     });
 
-    if (0) {
-        _token_parse_error:
-        if (buffer.s) {
-            CAT_LOG_DEBUG_WITH_LEVEL(CLOSURE, 5, "Closure serialization code: <<<DUMP\n%.*s}}}\nDUMP;",
-                (int) ZSTR_LEN(buffer.s), ZSTR_VAL(buffer.s));
-        }
-    }
-    smart_str_free_ex(&buffer, false);
     swow_php_token_list_free(token_list);
     zend_string_release_ex(contents, false);
-    _serialize_use_error:
+    _err:
+    smart_str_free(&context.code_str);
+    smart_str_free(&context.closure_str);
     zval_ptr_dtor(&z_references);
     zval_ptr_dtor(&z_static_variables);
 
