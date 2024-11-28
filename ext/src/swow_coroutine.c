@@ -336,6 +336,15 @@ static cat_bool_t swow_coroutine_construct(swow_coroutine_t *s_coroutine, zval *
         return cat_false;
     }
 
+#ifdef ZEND_CHECK_STACK_LIMIT
+    if (c_stack_size < EG(reserved_stack_size)) {
+        if (c_stack_size == 0) {
+            c_stack_size = CAT_COROUTINE_RECOMMENDED_STACK_SIZE;
+        }
+        c_stack_size += EG(reserved_stack_size);
+    }
+#endif // ZEND_CHECK_STACK_LIMIT
+
     /* create C coroutine only if function is not NULL
      * (e.g. main coroutine is running so we do not need to re-create it,
      * or we want to create/run it by ourself later) */
