@@ -244,6 +244,9 @@ SWOW_API uint32_t swow_php_ast_children(zend_ast *node, zend_ast ***child)
             case ZEND_AST_METHOD:
             case ZEND_AST_CLASS:
             case ZEND_AST_ARROW_FUNC:
+#ifdef ZEND_AST_PROPERTY_HOOK
+            case ZEND_AST_PROPERTY_HOOK:
+#endif // ZEND_AST_PROPERTY_HOOK
                 children = 5;
                 *child = (zend_ast **) (((zend_ast_decl *) node)->child);
                 break;
