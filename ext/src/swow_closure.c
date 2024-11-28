@@ -24,6 +24,8 @@
 
 #include <zend_language_parser.h>
 
+#define smart_str_appendcstr(pstr, str) smart_str_appendl((pstr), (str), strlen(str))
+
 SWOW_API CAT_GLOBALS_DECLARE(swow_closure);
 
 typedef struct swow_closure_s {
@@ -130,7 +132,7 @@ static swow_php_ast_walker_op swow_closure_walker(zend_ast *ast, void *context_p
             } else {
                 smart_str_setl(&context->code_str, CAT_STRL("namespace "));
                 smart_str_appendl(&context->code_str, ZSTR_VAL(namespace), ZSTR_LEN(namespace));
-                smart_str_appendl(&context->code_str, CAT_STRL(" {"));
+                smart_str_appendcstr(&context->code_str, " {");
             }
             context->in_namespace_brace = true;
             break;
@@ -280,44 +282,44 @@ SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_user_anonymous_function(zend_f
     if (!ZVAL_IS_NULL(&z_static_variables) || !ZVAL_IS_NULL(&z_references)) {
         zend_string *key;
         zval *z_val;
-        smart_str_appendl(&context.code_str, CAT_STRL("return (static function () "));
+        smart_str_appendcstr(&context.code_str, "return (static function () ");
         if (!ZVAL_IS_NULL(&z_references)) {
             bool first = true;
-            smart_str_appendl(&context.code_str, CAT_STRL("use ("));
+            smart_str_appendcstr(&context.code_str, "use (");
             ZEND_HASH_PACKED_FOREACH_VAL(Z_ARRVAL(z_references), z_val) {
                 CAT_LOG_DEBUG_WITH_LEVEL(CLOSURE, 5, "Use reference for $%.*s", (int) Z_STRLEN_P(z_val), Z_STRVAL_P(z_val));
                 if (first) {
                     first = false;
                 } else {
-                    smart_str_appendl(&context.code_str, CAT_STRL(", "));
+                    smart_str_appendcstr(&context.code_str, ", ");
                 }
-                smart_str_appendl(&context.code_str, CAT_STRL("&$"));
+                smart_str_appendcstr(&context.code_str, "&$");
                 smart_str_append(&context.code_str, Z_STR_P(z_val));
             } ZEND_HASH_FOREACH_END();
-            smart_str_appendl(&context.code_str, CAT_STRL(") "));
+            smart_str_appendcstr(&context.code_str, ") ");
         }
-        smart_str_appendl(&context.code_str, CAT_STRL("{ "));
+        smart_str_appendcstr(&context.code_str, "{ ");
         if (!ZVAL_IS_NULL(&z_static_variables)) {
             ZEND_HASH_MAP_FOREACH_STR_KEY_VAL(Z_ARRVAL(z_static_variables), key, z_val) {
                 smart_str_appendc(&context.code_str, '$');
                 smart_str_append(&context.code_str, key);
-                smart_str_appendl(&context.code_str, CAT_STRL(" = NULL; "));
+                smart_str_appendcstr(&context.code_str, " = NULL; ");
             } ZEND_HASH_FOREACH_END();
         }
     }
     // now: "namespace A { use A; use B;\n\n\n\nreturn (static function () use (...) { $a = NULL; "
 
     // append clusore
-    smart_str_appendl(&context.code_str, CAT_STRL("return ("));
+    smart_str_appendcstr(&context.code_str, "return (");
     smart_str_append_smart_str(&context.code_str, &context.closure_str);
-    smart_str_appendl(&context.code_str, CAT_STRL(")"));
+    smart_str_appendcstr(&context.code_str, ")");
     // now:"namespace A { use A; use B;\n\n\n\nreturn (static function () use (...) { $a = NULL; return (fn()=>1)"
 
     // scope binding
     if (function->common.scope != NULL) {
-        smart_str_appendl(&context.code_str, CAT_STRL("->bindTo(null, \\"));
+        smart_str_appendcstr(&context.code_str, "->bindTo(null, \\");
         smart_str_append(&context.code_str, function->common.scope->name);
-        smart_str_appendl(&context.code_str, CAT_STRL("::class)"));
+        smart_str_appendcstr(&context.code_str, "::class)");
     }
     // now: "namespace A { use A; use B;\n\n\n\nreturn (static function () use (...) { $a = NULL; return (fn()=>1)->bindTo(numm, \\A::class)"
 
@@ -327,7 +329,7 @@ SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_user_anonymous_function(zend_f
 
     // wrapper end brace
     if (!ZVAL_IS_NULL(&z_static_variables) || !ZVAL_IS_NULL(&z_references)) {
-        smart_str_appendl(&context.code_str, CAT_STRL(" })();"));
+        smart_str_appendcstr(&context.code_str, " })();");
     }
     // now: "namespace A { use A; use B;\n\n\n\nreturn (static function () use (...) { $a = NULL; return (fn()=>1)->bindTo(numm, \\A::class); })();"
 
@@ -387,19 +389,19 @@ SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_named_function(zend_function *
     }
 
     smart_str buffer = {0};
-    smart_str_appends(&buffer, "return Closure::fromCallable(");
+    smart_str_appendcstr(&buffer, "return Closure::fromCallable(");
     if (scope != NULL) {
         smart_str_appendc(&buffer, '[');
         smart_str_append(&buffer, scope->name);
-        smart_str_appends(&buffer, "::class, '");
+        smart_str_appendcstr(&buffer, "::class, '");
         smart_str_append(&buffer, function_name);
-        smart_str_appends(&buffer, "']");
+        smart_str_appendcstr(&buffer, "']");
     } else {
         smart_str_appendc(&buffer, '\'');
         smart_str_append(&buffer, function_name);
         smart_str_appendc(&buffer, '\'');
     }
-    smart_str_appends(&buffer, ");");
+    smart_str_appendcstr(&buffer, ");");
     smart_str_0(&buffer);
 
     HashTable *ht = zend_new_array(1);
