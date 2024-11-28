@@ -1106,7 +1106,7 @@ static void create_certinfo(struct curl_certinfo *ci, zval *listcode)
                 size_t len;
                 char s[64];
                 char *tmp;
-                strncpy(s, slist->data, sizeof(s));
+                strncpy(s, slist->data, sizeof(s) - 1);
                 s[sizeof(s)-1] = '\0';
                 tmp = memchr(s, ':', sizeof(s));
                 if(tmp) {
