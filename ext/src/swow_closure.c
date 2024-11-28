@@ -160,35 +160,7 @@ static swow_php_ast_walker_op _swow_closure_walk_callback(zend_ast *ast, void *c
         return ret;
     }
 
-    // get all children
-    if (ast->kind & (1 << ZEND_AST_IS_LIST_SHIFT)) {
-        // is list
-        children = ((zend_ast_list *) ast)->children;
-        child = (zend_ast **) (((zend_ast_list *) ast)->child);
-    } else if (ast->kind & (1 << ZEND_AST_SPECIAL_SHIFT)) {
-        // is special
-        ZEND_ASSERT(ast->kind != ZEND_AST_ZNODE);
-        switch (ast->kind) {
-            case ZEND_AST_ZVAL:
-            case ZEND_AST_CONSTANT:
-                children = 0;
-                child = NULL;
-                break;
-            case ZEND_AST_FUNC_DECL:
-            case ZEND_AST_METHOD:
-            case ZEND_AST_CLASS:
-                children = 5;
-                child = (zend_ast **) (((zend_ast_decl *) ast)->child);
-                break;
-            default:
-                CAT_NEVER_HERE("unknown ast kind");
-                return -1;
-        }
-    } else {
-        children = (ast->kind >> ZEND_AST_NUM_CHILDREN_SHIFT) & 7;
-        child = ast->child;
-    }
-
+    children = swow_php_ast_children(ast, &child);
     for (index = 0; index < children; index++) {
         if (child[index] == NULL) {
             continue;
@@ -218,6 +190,15 @@ SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_user_anonymous_function(zend_f
     zend_string *doc_comment = function->op_array.doc_comment;
     zval z_static_variables, z_references, z_tmp;
     HashTable *ht = NULL;
+    zend_string *contents = NULL;
+    swow_closure_walk_context_t context = {
+        /* .line_start = */ 0,
+        /* .found_function = */ 0,
+        /* .code_str = */ { 0 },
+        /* .closure_str = */ { 0 },
+        /* .in_namespace_brace = */ false,
+    };
+    swow_php_token_list_t *token_list = NULL;
 
     if (!swow_function_is_user_anonymous(function)) {
         zend_value_error("Closure is not a user anonymous function");
@@ -263,21 +244,15 @@ SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_user_anonymous_function(zend_f
     CAT_LOG_DEBUG_V3(CLOSURE, "Closure { filename=%s, line_start=%u, line_end=%u }",
         ZSTR_VAL(filename), line_start, line_end);
 
-    zend_string *contents = swow_file_get_contents(filename);
+    contents = swow_file_get_contents(filename);
 
     if (contents == NULL) {
-        return NULL;
+        zend_throw_error(NULL, "Closure serialize error: cannot read file %s", ZSTR_VAL(filename));
+        goto _err;
     }
 
-    swow_closure_walk_context_t context = {
-        /* .line_start = */ line_start,
-        /* .found_function = */ 0,
-        /* .code_str = */ { 0 },
-        /* .closure_str = */ { 0 },
-        /* .in_namespace_brace = */ false,
-    };
-
-    swow_php_token_list_t *token_list = swow_php_tokenize(contents, swow_closure_walk_callback, &context);
+    context.line_start = line_start;
+    token_list = swow_php_tokenize(contents, swow_closure_walk_callback, &context);
 
     // printf("closure_str: %.*s\n", (int)context.closure_str.s->len, context.closure_str.s->val);
 
@@ -288,7 +263,6 @@ SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_user_anonymous_function(zend_f
     if (smart_str_get_len(&context.closure_str) == 0) {
         // no closure found
         zend_throw_error(NULL, "Closure serialize error: no closure found in source code");
-        smart_str_free(&context.closure_str);
         goto _err;
     }
     if (context.found_function > 1) {
@@ -387,9 +361,13 @@ SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_user_anonymous_function(zend_f
         zend_string_release(output);
     });
 
-    swow_php_token_list_free(token_list);
-    zend_string_release_ex(contents, false);
     _err:
+    if (token_list) {
+        swow_php_token_list_free(token_list);
+    }
+    if (contents != NULL) {
+        zend_string_release_ex(contents, false);
+    }
     smart_str_free(&context.code_str);
     smart_str_free(&context.closure_str);
     zval_ptr_dtor(&z_references);
