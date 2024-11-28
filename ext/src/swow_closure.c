@@ -68,218 +68,146 @@ static void swow_closure_construct_from_another_closure(swow_closure_t *this_clo
     ZEND_ASSERT(swow_closure_get_from_object(Z_OBJ(result)) == this_closure);
 }
 
-typedef enum swow_ast_walk_state_e {
-    SWOW_ZEND_AST_WALK_STATE_OK = 0,
-    SWOW_ZEND_AST_WALK_STATE_NOT_PROCESSED,
-    // SWOW_ZEND_AST_WALK_STATE_SOURCE_IS_IN_ROOT,
-    SWOW_ZEND_AST_WALK_STATE_NOT_FOUND,
-} swow_ast_walk_state_t;
+typedef struct swow_closure_walk_context_s {
+    uint32_t line_start;
+    uint32_t found_function;
+    smart_str code_str; /* prepend code string */
+    bool in_namespace_brace; /* in namespace ... { */
+    // smart_str closure_str;
+} swow_closure_walk_context_t;
 
-typedef struct swow_ast_walk_context_s {
-    smart_str *str;
-    const char *required_namespace;
-    size_t required_namespace_length;
-    uint32_t line_end;
-    swow_ast_walk_state_t state;
-} swow_ast_walk_context_t;
-
-static void swow_closure_ast_callback(zend_ast *ast, void *context_ptr)
+static swow_php_ast_walker_op swow_closure_walker(zend_ast *ast, void *context_ptr)
 {
-    ZEND_ASSERT(ast->kind == ZEND_AST_STMT_LIST);
-    swow_ast_walk_context_t *context = (swow_ast_walk_context_t *) context_ptr;
-    zend_ast **child;
-    uint32_t children = swow_ast_children(ast, &child);
-    bool has_use = false;
-
-    for (uint32_t i = 0; i < children; i++) {
-        zend_ast *stmt = child[i];
-        if (!stmt || stmt->lineno > context->line_end) {
-            continue;
+    swow_closure_walk_context_t *context = (swow_closure_walk_context_t *) context_ptr;
+    if (ast->kind == ZEND_AST_CLOSURE || ast->kind == ZEND_AST_ARROW_FUNC) {
+        if (ast->lineno == context->line_start) {
+            // if (context->found_function == 0) {
+            //     zend_string *code = zend_ast_export("", ast, "");
+            //     smart_str_setl(&context->closure_str, ZSTR_VAL(code), ZSTR_LEN(code));
+            //     zend_string_release(code);
+            // }
+            context->found_function++;
+            return SWOW_PHP_AST_WALKER_SKIP;
         }
-        switch (stmt->kind) {
-            case ZEND_AST_NAMESPACE: {
-                zend_ast_zval *namespace_name = (zend_ast_zval *) stmt->child[0];
-                zend_ast_list *stmts = (zend_ast_list *) stmt->child[1];
-                zend_string *namespace = NULL;
+        return SWOW_PHP_AST_WALKER_CONTINUE;
+    } else if (context->found_function != 0) {
+        // already found function, other namespace, use, etc. is ignored
+        return SWOW_PHP_AST_WALKER_STOP;
+    }
 
-                if (!stmts) {
-                    // single namespace <T_STRING>; statement
-                    // see Zend/zend_language_parser.y near L369 top_statement syntax
-                    ZEND_ASSERT(namespace_name != NULL);
-                    ZEND_ASSERT(namespace_name->kind == ZEND_AST_ZVAL);
-                    ZEND_ASSERT(Z_TYPE(namespace_name->val) == IS_STRING);
-                    namespace = Z_STR(namespace_name->val);
+    switch (ast->kind) {
+        case ZEND_AST_NAMESPACE:
+        {
+            zend_ast_zval *namespace_name = (zend_ast_zval *) ast->child[0];
+            zend_ast_list *stmts = (zend_ast_list *) ast->child[1];
+            zend_string *namespace = NULL;
+            if (namespace_name) {
+                ZEND_ASSERT(namespace_name->kind == ZEND_AST_ZVAL);
+                ZEND_ASSERT(Z_TYPE(namespace_name->val) == IS_STRING);
+                namespace = Z_STR(namespace_name->val);
+            }
 
-                    if (ZSTR_LEN(namespace) != context->required_namespace_length ||
-                        strncasecmp(ZSTR_VAL(namespace), context->required_namespace, ZSTR_LEN(namespace))) {
-                        CAT_LOG_DEBUG_WITH_LEVEL(CLOSURE, 5, "Function is namespaced, but target file contains another namespace");
-                        context->state = SWOW_ZEND_AST_WALK_STATE_NOT_FOUND;
-                        return;
-                    }
-                    context->state = SWOW_ZEND_AST_WALK_STATE_OK;
-                    // continue to find next top statement
-                    break;
-                }
-
-                // namespace <T_STRING> { STMT_LIST }; statement
+            if (!stmts) {
+                // single namespace <T_STRING>; statement
                 // see Zend/zend_language_parser.y near L369 top_statement syntax
+                ZEND_ASSERT(namespace != NULL);
 
-                ZEND_ASSERT(stmts->kind == ZEND_AST_STMT_LIST);
-                if (!namespace_name) {
-                    // at root namespace
-                    if (context->required_namespace_length != 0) {
-                        // not the required namespace, continue to find next top statement
-                        continue;
-                    }
-                } else {
-                    ZEND_ASSERT(namespace_name->kind == ZEND_AST_ZVAL);
-                    ZEND_ASSERT(Z_TYPE(namespace_name->val) == IS_STRING);
-                    namespace = Z_STR(namespace_name->val);
+                smart_str_setl(&context->code_str, ZEND_STRL("namespace "));
+                smart_str_appendl(&context->code_str, ZSTR_VAL(namespace), ZSTR_LEN(namespace));
+                smart_str_appendc(&context->code_str, ';');
+                context->in_namespace_brace = false;
 
-                    if (ZSTR_LEN(namespace) != context->required_namespace_length ||
-                        strncasecmp(ZSTR_VAL(namespace), context->required_namespace, ZSTR_LEN(namespace))) {
-                        // not the required namespace, continue to find next top statement
-                        continue;
-                    }
-                }
-                context->state = SWOW_ZEND_AST_WALK_STATE_OK;
-
-                zend_ast **namespaced_child;
-                uint32_t namespaced_children = swow_ast_children((zend_ast *) stmts, &namespaced_child);
-
-                for (uint32_t j = 0; j < namespaced_children; j++) {
-                    zend_ast *ast = namespaced_child[j];
-                    if (!ast || ast->lineno > context->line_end) {
-                        continue;
-                    }
-                    switch (ast->kind) {
-                        case ZEND_AST_USE:
-                        case ZEND_AST_GROUP_USE:
-                            swow_ast_export_kinds_of_use(ast, context->str, has_use);
-                            has_use = true;
-                            break;
-                    }
-                }
                 break;
             }
-            case ZEND_AST_USE:
-            case ZEND_AST_GROUP_USE:
-                swow_ast_export_kinds_of_use(stmt, context->str, has_use);
-                has_use = true;
-                break;
+            
+            // namespace <T_STRING> { STMT_LIST }; statement
+            // see Zend/zend_language_parser.y near L369 top_statement syntax
+
+            ZEND_ASSERT(stmts->kind == ZEND_AST_STMT_LIST);
+            if (!namespace) {
+                // at root namespace
+                smart_str_setl(&context->code_str, ZEND_STRL("namespace {"));
+            } else {
+                smart_str_setl(&context->code_str, ZEND_STRL("namespace "));
+                smart_str_appendl(&context->code_str, ZSTR_VAL(namespace), ZSTR_LEN(namespace));
+                smart_str_appendl(&context->code_str, ZEND_STRL(" {"));
+            }
+            context->in_namespace_brace = true;
+            break;
         }
+        case ZEND_AST_USE:
+        case ZEND_AST_GROUP_USE:
+        {
+            swow_php_ast_export_kinds_of_use(ast, &context->code_str, true);
+            return SWOW_PHP_AST_WALKER_SKIP;
+        }
+        default:
+            // ignore other nodes
+            break;
     }
-    return;
+    return SWOW_PHP_AST_WALKER_CONTINUE;
 }
 
-// FIXME: this is fragile since php 8.4, should use another way (instant from ast) to determine namespace
-static const char *swow_function_get_namespace_name(const zend_function *function, size_t *length)
+static swow_php_ast_walker_op _swow_closure_walk_callback(zend_ast *ast, void *context_ptr)
 {
-    const char *anchor;
-    const char *name;
-    size_t name_len;
+    zend_ast **child;
+    uint32_t children;
+    uint32_t index;
+    swow_php_ast_walker_op ret;
 
-    // printf("name: %s\n", ZSTR_VAL(function->common.function_name));
-    // printf("scope: %s\n", function->common.scope ? ZSTR_VAL(function->common.scope->name) : NULL);
+    ret = swow_closure_walker(ast, context_ptr);
+    if (ret != SWOW_PHP_AST_WALKER_CONTINUE) {
+        return ret;
+    }
 
-    // if have scope, use namespace from scope
-    if (function->common.scope) {
-        name = ZSTR_VAL(function->common.scope->name);
-        name_len = ZSTR_LEN(function->common.scope->name);
-        anchor = (const char *) zend_memrchr(name, '\\', name_len);
-        if (anchor > name) {
-            *length = anchor - name;
-            // printf("namespace by scope: %.*s\n", (int)*length, name);
-            return name;
+    // get all children
+    if (ast->kind & (1 << ZEND_AST_IS_LIST_SHIFT)) {
+        // is list
+        children = ((zend_ast_list *) ast)->children;
+        child = (zend_ast **) (((zend_ast_list *) ast)->child);
+    } else if (ast->kind & (1 << ZEND_AST_SPECIAL_SHIFT)) {
+        // is special
+        ZEND_ASSERT(ast->kind != ZEND_AST_ZNODE);
+        switch (ast->kind) {
+            case ZEND_AST_ZVAL:
+            case ZEND_AST_CONSTANT:
+                children = 0;
+                child = NULL;
+                break;
+            case ZEND_AST_FUNC_DECL:
+            case ZEND_AST_METHOD:
+            case ZEND_AST_CLASS:
+                children = 5;
+                child = (zend_ast **) (((zend_ast_decl *) ast)->child);
+                break;
+            default:
+                CAT_NEVER_HERE("unknown ast kind");
+                return -1;
+        }
+    } else {
+        children = (ast->kind >> ZEND_AST_NUM_CHILDREN_SHIFT) & 7;
+        child = ast->child;
+    }
+
+    for (index = 0; index < children; index++) {
+        if (child[index] == NULL) {
+            continue;
+        }
+        ret = _swow_closure_walk_callback(child[index], context_ptr);
+        if (ret == SWOW_PHP_AST_WALKER_STOP) {
+            return ret;
+        } else if (ret == SWOW_PHP_AST_WALKER_SKIP) {
+            continue;
+        } else if (ret != SWOW_PHP_AST_WALKER_CONTINUE) {
+            CAT_NEVER_HERE("unknown ast walker op");
         }
     }
+    return SWOW_PHP_AST_WALKER_CONTINUE;
+}
 
-    // otherwise, from name
-    name = ZSTR_VAL(function->common.function_name);
-    name_len = ZSTR_LEN(function->common.function_name);
-
-#if PHP_VERSION_ID >= 80400
-    // since php 8.4, closure now have namespaces in their name
-    // php/php-src@08b2ab22f4d3f26345e34d8fad9185f349dac43a
-    // "{closure:{closure:NamespaceA\functionA():6}:7}"
-    // "{closure:NamespaceA\ClassA::methodA():16}"
-    // "{closure:/path/to/some.php:1}"
-    // "{closure:C:\path\to\some\php:16}"
-    // "{closure:\\?\C:\path\to\some\php:16}"
-    // "{closure:\\NETWORKHOST\path\to\some\php:16}"
-    // "{closure:C:\xx\xx\xx\x():16}" C:\xx\xx\xx\x() is a file name
-    // "{closure:\\xx\xx\xx\x():16}"
-    // XXX if closure is namespaced, but as a variable,
-    //     no information can be used for determine namespace
-    // closure := "{closure:" name ":" line "}"
-    // name := function_name | file_name | closure
-    // function_name := ( namespace "\" )* class_name "::" method_name "()"
-    // file_name := FILENAME
-    // class_name := IDENT
-    // method_name := IDENT
-    // line := INTEGER
-
-    // find last '{'
-    anchor = (const char *) zend_memrchr(name, '{', name_len);
-    if (anchor) {
-        // find first ":" after anchor
-        anchor = (const char *) memchr(anchor, ':', name_len - (anchor - name));
-        if (anchor) {
-            name_len -= anchor - name + 1;
-            name = anchor + 1;
-        }
-    }
-    // after above progress
-    // "NamespaceA\functionA():6}:7}"
-    // "\\?\C:\path\to\some\php:1}:2}"
-    // "C:\path\to\some\php:1}:2}"
-    // "AA:\path\to\some\php:1}:2}"
-    // "\\HOST\path\to\some\php:1}:2}"
-
-    // printf("name: %.*s\n", (int)name_len, name);
-    // find first '}'
-    anchor = (const char *) memchr(name, '}', name_len);
-    if (anchor) {
-        // find last ":"
-        anchor = (const char *) zend_memrchr(name, ':', anchor - name);
-        if (anchor) {
-            name_len = anchor - name;
-        }
-    }
-
-    // after above progress
-    // "NamespaceA\functionA()"
-    // "\\?\C:\path\to\some\php"
-    // "C:\path\to\some\php"
-    // "AA:\path\to\some\php"
-    // "\\HOST\path\to\some\php"
-
-    // printf("name: %.*s\n", (int)name_len, name);
-    if (memchr(name, ':', name_len)) {
-        // if it contains ':', it is a path, we can't determine namespace
-        // printf("path name: %.*s\n", (int)name_len, name);
-        *length = 0;
-        return NULL;
-    }
-    if (memcmp(name, "\\\\", name_len > 2 ? 2 : name_len) == 0) {
-        // if it starts with "\\", it is a UNC path, we can't determine namespace
-        // printf("path name: %.*s\n", (int)name_len, name);
-        *length = 0;
-        return NULL;
-    }
-
-    // after above progress
-    // "NamespaceA\functionA()"
-#endif
-    // before, always "Namespace\FQDN\To\{closure}"
-    anchor = (const char *) zend_memrchr(name, '\\', name_len);
-    if (anchor && anchor > name) {
-        *length = anchor - name;
-        // printf("namespace by name: %.*s\n", (int)*length, name);
-        return name;
-    }
-    *length = 0;
-    return NULL;
+static void swow_closure_walk_callback(zend_ast *ast, void *context_ptr)
+{
+    _swow_closure_walk_callback(ast, context_ptr);
 }
 
 SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_user_anonymous_function(zend_function *function)
@@ -342,35 +270,23 @@ SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_user_anonymous_function(zend_f
     }
 
     smart_str buffer = {0};
-    swow_ast_walk_context_t context;
-    context.state = SWOW_ZEND_AST_WALK_STATE_NOT_PROCESSED;
-    context.str = &buffer;
-    context.required_namespace = swow_function_get_namespace_name(function, &context.required_namespace_length);
-    context.line_end = line_end;
+    swow_closure_walk_context_t context = {
+        /* .line_start = */ line_start,
+        /* .found_function = */ 0,
+        /* .code_str = */ { 0 },
+        /* .in_namespace_brace = */ false,
+        // /* .closure_str = */ { 0 },
+    };
 
-    if (context.required_namespace_length != 0) {
-        smart_str_appends(&buffer, "namespace ");
-        smart_str_appendl(&buffer, context.required_namespace, context.required_namespace_length);
-        smart_str_appends(&buffer, "; ");
-    }
+    swow_php_token_list_t *token_list = swow_php_tokenize(contents, swow_closure_walk_callback, &context);
 
-    php_token_list_t *token_list = php_tokenize(contents, swow_closure_ast_callback, &context);
+    // printf("closure_str: %.*s\n", (int)context.closure_str.s->len, context.closure_str.s->val);
 
-    switch (context.state) {
-        case SWOW_ZEND_AST_WALK_STATE_NOT_PROCESSED:
-            if (context.required_namespace_length == 0) {
-                break;
-            }
-            ZEND_FALLTHROUGH;
-        case SWOW_ZEND_AST_WALK_STATE_NOT_FOUND:
-            zend_throw_error(NULL, "Closure is in namespace \"%.*s\", but its source file do not have this namespace",
-                (int) context.required_namespace_length, context.required_namespace);
-            goto _token_parse_error;
-        case SWOW_ZEND_AST_WALK_STATE_OK:
-            break;
-        default:
-            CAT_NEVER_HERE("strange ast parsing state");
-    }
+    // if (smart_str_get_len(&context.code_str) > 0) {
+    //     printf("code_str: %.*s\n", (int)context.code_str.s->len, context.code_str.s->val);
+    // }
+    smart_str_append_smart_str(&buffer, &context.code_str);
+    smart_str_free(&context.code_str);
 
     enum parser_state_e {
         CLOSURE_PARSER_STATE_FIND_OPEN_TAG,
@@ -387,11 +303,11 @@ SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_user_anonymous_function(zend_f
     bool is_arrow_function = false;
     bool use_extra_function_wrapper = false;
 
-    CAT_QUEUE_FOREACH_DATA_START(&token_list->queue, php_token_t, node, token) {
+    CAT_QUEUE_FOREACH_DATA_START(&token_list->queue, swow_php_token_t, node, token) {
         bool previous_was_captured = captured;
         captured = false;
         if (!previous_was_captured && cat_queue_prev(&token->node) != &token_list->queue) {
-            php_token_t *prev_token = cat_queue_data(cat_queue_prev(&token->node), php_token_t, node);
+            swow_php_token_t *prev_token = cat_queue_data(cat_queue_prev(&token->node), swow_php_token_t, node);
             if (token->line > prev_token->line) {
                 uint32_t line_diff = token->line - prev_token->line;
                 CAT_LOG_DEBUG_WITH_LEVEL(CLOSURE, 5, "Insert %u new lines", line_diff);
@@ -401,7 +317,7 @@ SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_user_anonymous_function(zend_f
             }
         }
         CAT_LOG_DEBUG_V3(CLOSURE, "token { type=%s, text='%.*s', line=%u, offset=%u }",
-            php_token_get_name(token), (int) token->text.length, token->text.data, token->line, token->offset);
+            swow_php_token_get_name(token), (int) token->text.length, token->text.data, token->line, token->offset);
         if (parser_state == CLOSURE_PARSER_STATE_FIND_OPEN_TAG) {
             if (token->type == T_OPEN_TAG) {
                 parser_state = original_parser_state;
@@ -529,6 +445,9 @@ SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_user_anonymous_function(zend_f
             break;
         }
     } CAT_QUEUE_FOREACH_DATA_END();
+    if (context.in_namespace_brace) {
+        smart_str_appendc(&buffer, '}');
+    }
     smart_str_0(&buffer);
     if (parser_state != CLOSURE_PARSER_STATE_END) {
         zend_throw_error(NULL, "Failure to parse tokens");
@@ -568,7 +487,7 @@ SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_user_anonymous_function(zend_f
         }
     }
     smart_str_free_ex(&buffer, false);
-    php_token_list_free(token_list);
+    swow_php_token_list_free(token_list);
     zend_string_release_ex(contents, false);
     _serialize_use_error:
     zval_ptr_dtor(&z_references);

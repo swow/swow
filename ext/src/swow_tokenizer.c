@@ -24,20 +24,20 @@
 #include <zend_language_parser.h>
 
 typedef struct tokenizer_event_context_s {
-    php_token_list_t *token_list;
+    swow_php_token_list_t *token_list;
 } tokenizer_event_context_t;
 
-SWOW_API php_token_list_t *php_token_list_alloc(void)
+SWOW_API swow_php_token_list_t *swow_php_token_list_alloc(void)
 {
-    php_token_list_t *token_list = (php_token_list_t *) emalloc(sizeof(*token_list));
+    swow_php_token_list_t *token_list = (swow_php_token_list_t *) emalloc(sizeof(*token_list));
     cat_queue_init(&token_list->queue);
     token_list->count = 0;
     return token_list;
 }
 
-SWOW_API void php_token_list_add(php_token_list_t *token_list, int token_type, const char *text, size_t text_length, int line)
+SWOW_API void swow_php_token_list_add(swow_php_token_list_t *token_list, int token_type, const char *text, size_t text_length, int line)
 {
-    php_token_t *token = emalloc(sizeof(*token));
+    swow_php_token_t *token = emalloc(sizeof(*token));
 
     token->type = token_type;
     cat_const_string_create(&token->text, text, text_length);
@@ -48,10 +48,10 @@ SWOW_API void php_token_list_add(php_token_list_t *token_list, int token_type, c
     token_list->count++;
 }
 
-SWOW_API void php_token_list_clear(php_token_list_t *token_list)
+SWOW_API void swow_php_token_list_clear(swow_php_token_list_t *token_list)
 {
-    php_token_t *token;
-    while ((token = cat_queue_front_data(&token_list->queue, php_token_t, node))) {
+    swow_php_token_t *token;
+    while ((token = cat_queue_front_data(&token_list->queue, swow_php_token_t, node))) {
         cat_queue_remove(&token->node);
         efree(token);
         token_list->count--;
@@ -61,13 +61,13 @@ SWOW_API void php_token_list_clear(php_token_list_t *token_list)
     token_list->source = NULL;
 }
 
-SWOW_API void php_token_list_free(php_token_list_t *token_list)
+SWOW_API void swow_php_token_list_free(swow_php_token_list_t *token_list)
 {
-    php_token_list_clear(token_list);
+    swow_php_token_list_clear(token_list);
     efree(token_list);
 }
 
-static php_token_t *tokenizer_extract_token_to_replace_id(php_token_t *token, const char *text, size_t length)
+static swow_php_token_t *tokenizer_extract_token_to_replace_id(swow_php_token_t *token, const char *text, size_t length)
 {
     ZEND_ASSERT(token != NULL);
 
@@ -78,6 +78,52 @@ static php_token_t *tokenizer_extract_token_to_replace_id(php_token_t *token, co
     }
 
     return NULL;
+}
+
+/**
+ * Walk through the AST and call the callback for each node by level
+ * when using this as ast_callback in swow_php_tokenize, 
+ * pass swow_php_ast_walker as ast_callback_context
+ */
+SWOW_API void swow_php_ast_walk(zend_ast *ast, void *context)
+{
+    ZEND_ASSERT(ast->kind == ZEND_AST_STMT_LIST);
+    swow_php_ast_walker_t *ast_walker = (swow_php_ast_walker_t *) context;
+
+    // zend_ast *c;
+    size_t node_size = 1024 * sizeof(zend_ast *);
+    zend_ast **nodes = ecalloc(node_size, 1);
+    size_t node_count = 0, node_cursor = 0;
+
+    nodes[0] = CG(ast);
+    node_count = 1;
+
+    while (node_cursor < node_count) {
+        zend_ast *node = nodes[node_cursor++];
+        zend_ast **child;
+
+        swow_php_ast_walker_op op = ast_walker->walker(node, ast_walker->context);
+        if (op == SWOW_PHP_AST_WALKER_STOP) {
+            break;
+        } else if (op == SWOW_PHP_AST_WALKER_SKIP) {
+            continue;
+        } else if (op != SWOW_PHP_AST_WALKER_CONTINUE) {
+            CAT_NEVER_HERE("unknown ast walker op");
+        }
+
+        uint32_t children = swow_php_ast_children(node, &child);
+        for (uint32_t i = 0; i < children; i++) {
+            if (child[i] == NULL) {
+                continue;
+            }
+            if (node_count >= node_size) {
+                node_size *= 2;
+                nodes = erealloc(nodes, node_size);
+            }
+            nodes[node_count++] = child[i];
+        }
+    }
+    efree(nodes);
 }
 
 static void swow_tokenizer_on_language_scanner_event(
@@ -96,12 +142,12 @@ static void swow_tokenizer_on_language_scanner_event(
             } else if (token_type == T_ECHO && LANG_SCNG(yy_leng) == sizeof("<?=") - 1) {
                 token_type = T_OPEN_TAG_WITH_ECHO;
             }
-            php_token_list_add(context->token_list, token_type, text, length, line);
+            swow_php_token_list_add(context->token_list, token_type, text, length, line);
             break;
         case ON_FEEDBACK: {
-            php_token_list_t *token_list = context->token_list;
-            php_token_t *target_token = NULL;
-            CAT_QUEUE_REVERSE_FOREACH_DATA_START(&token_list->queue, php_token_t, node, token) {
+            swow_php_token_list_t *token_list = context->token_list;
+            swow_php_token_t *target_token = NULL;
+            CAT_QUEUE_REVERSE_FOREACH_DATA_START(&token_list->queue, swow_php_token_t, node, token) {
                 target_token = tokenizer_extract_token_to_replace_id(token, text, length);
                 if (target_token) {
                     break;
@@ -113,7 +159,7 @@ static void swow_tokenizer_on_language_scanner_event(
         }
         case ON_STOP:
             if (LANG_SCNG(yy_cursor) != LANG_SCNG(yy_limit)) {
-                php_token_list_add(context->token_list, T_INLINE_HTML,
+                swow_php_token_list_add(context->token_list, T_INLINE_HTML,
                     (const char *) LANG_SCNG(yy_cursor),
                     LANG_SCNG(yy_limit) - LANG_SCNG(yy_cursor),
                     CG(zend_lineno));
@@ -122,7 +168,11 @@ static void swow_tokenizer_on_language_scanner_event(
     }
 }
 
-SWOW_API php_token_list_t *php_tokenize(zend_string *source, swow_closure_ast_callback_t ast_callback, void *ast_callback_context)
+SWOW_API swow_php_token_list_t *swow_php_tokenize (
+    zend_string *source,
+    swow_php_ast_callback_t ast_callback,
+    void *ast_callback_context
+)
 {
     zval source_zval;
     tokenizer_event_context_t context;
@@ -141,7 +191,7 @@ SWOW_API php_token_list_t *php_tokenize(zend_string *source, swow_closure_ast_ca
     zend_prepare_string_for_scanning(&source_zval, ZSTR_EMPTY_ALLOC());
 #endif
 
-    context.token_list = php_token_list_alloc();
+    context.token_list = swow_php_token_list_alloc();
 
     CG(ast) = NULL;
     CG(ast_arena) = zend_arena_create(32 * 1024);
@@ -150,7 +200,7 @@ SWOW_API php_token_list_t *php_tokenize(zend_string *source, swow_closure_ast_ca
     LANG_SCNG(on_event_context) = &context;
 
     if (zendparse() != SUCCESS) {
-        php_token_list_free(context.token_list);
+        swow_php_token_list_free(context.token_list);
         return NULL;
     }
 
@@ -171,7 +221,7 @@ SWOW_API php_token_list_t *php_tokenize(zend_string *source, swow_closure_ast_ca
     return context.token_list;
 }
 
-SWOW_API uint32_t swow_ast_children(zend_ast *node, zend_ast ***child)
+SWOW_API uint32_t swow_php_ast_children(zend_ast *node, zend_ast ***child)
 {
     uint32_t children;
 
@@ -211,7 +261,7 @@ SWOW_API uint32_t swow_ast_children(zend_ast *node, zend_ast ***child)
 
 /* AST export */
 
-static void swow_ast_export_use_elem(zend_ast *ast, smart_str *str, bool append_comma_space)
+static void swow_php_ast_export_use_elem(zend_ast *ast, smart_str *str, bool append_comma_space)
 {
     zend_ast_zval *name, *as_name;
 
@@ -237,7 +287,7 @@ static void swow_ast_export_use_elem(zend_ast *ast, smart_str *str, bool append_
     }
 }
 
-static void swow_ast_export_use(zend_ast *ast, smart_str *str)
+static void swow_php_ast_export_use(zend_ast *ast, smart_str *str)
 {
     zend_ast_list *list;
 
@@ -254,12 +304,12 @@ static void swow_ast_export_use(zend_ast *ast, smart_str *str)
 
     for (uint32_t i = 0; i < list->children; i++) {
         zend_ast *child = list->child[i];
-        swow_ast_export_use_elem(child, str, i != 0);
+        swow_php_ast_export_use_elem(child, str, i != 0);
     }
     smart_str_appendc(str, ';');
 }
 
-static void swow_ast_export_group_use(zend_ast *ast, smart_str *str)
+static void swow_php_ast_export_group_use(zend_ast *ast, smart_str *str)
 {
     zend_ast_list *list;
     zend_ast_zval *namespace_name;
@@ -283,23 +333,23 @@ static void swow_ast_export_group_use(zend_ast *ast, smart_str *str)
 
     for (uint32_t i = 0; i < list->children; i++) {
         zend_ast *elem = list->child[i];
-        swow_ast_export_use_elem(elem, str, i != 0);
+        swow_php_ast_export_use_elem(elem, str, i != 0);
     }
 
     smart_str_appends(str, "};");
 }
 
-SWOW_API void swow_ast_export_kinds_of_use(zend_ast *ast, smart_str *str, bool append_space)
+SWOW_API void swow_php_ast_export_kinds_of_use(zend_ast *ast, smart_str *str, bool append_space)
 {
     if (append_space) {
         smart_str_appendc(str, ' ');
     }
     switch (ast->kind) {
         case ZEND_AST_USE:
-            swow_ast_export_use(ast, str);
+            swow_php_ast_export_use(ast, str);
             break;
         case ZEND_AST_GROUP_USE:
-            swow_ast_export_group_use(ast, str);
+            swow_php_ast_export_group_use(ast, str);
             break;
         default:
             ZEND_UNREACHABLE();
@@ -308,12 +358,12 @@ SWOW_API void swow_ast_export_kinds_of_use(zend_ast *ast, smart_str *str, bool a
 
 /* token data */
 
-SWOW_API const char *php_token_get_name(const php_token_t *token)
+SWOW_API const char *swow_php_token_get_name(const swow_php_token_t *token)
 {
-    return php_token_get_name_from_type(token->type);
+    return swow_php_token_get_name_from_type(token->type);
 }
 
-SWOW_API const char *php_token_get_name_from_type(int type)
+SWOW_API const char *swow_php_token_get_name_from_type(int type)
 {
     if (type < 256) {
         static char text_map[256 + 256];

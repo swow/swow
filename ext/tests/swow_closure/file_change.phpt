@@ -13,7 +13,7 @@ $code1 = <<<'PHP'
 <?php
 
 $anonymous = function () {
-    echo "hello1\n";
+    echo __NAMESPACE__ . "hello1\n";
 };
 PHP;
 
@@ -21,7 +21,7 @@ $code2 = <<<'PHP'
 <?php
 
 $anonymous = function () {
-    echo "hello2\n";
+    echo __NAMESPACE__ . "hello2\n";
 };
 PHP;
 
@@ -31,7 +31,7 @@ $code3 = <<<'PHP'
 namespace SomeNamespace;
 
 $anonymous = function () {
-    echo "hello3\n";
+    echo __NAMESPACE__ . "hello3\n";
 };
 PHP;
 
@@ -39,7 +39,7 @@ $code4 = <<<'PHP'
 <?php namespace SomeNamespace;
 
 $anonymous = function () {
-    echo "hello4\n";
+    echo __NAMESPACE__ . "hello4\n";
 };
 PHP;
 
@@ -47,7 +47,7 @@ $code5 = <<<'PHP'
 <?php
 namespace {
     $anonymous = function () {
-        echo "hello5\n";
+        echo __NAMESPACE__ . "hello5\n";
     };
 }
 PHP;
@@ -79,10 +79,10 @@ Assert::throws(static function () use ($anonymous): void {
 }, 'Error'); // TODO: a normalized error
 
 file_put_contents(__DIR__ . '/file_change.inc', $code4);
-// this will fail, because namespace changed
-Assert::throws(static function () use ($anonymous): void {
-    serialize($anonymous);
-}, 'Error'); // TODO: a normalized error
+// this will be ok, but result is wrong, because namespace changed
+$anonymousString = serialize($anonymous);
+$anonymousUnserialized = unserialize($anonymousString);
+$anonymousUnserialized(); // hello4
 
 file_put_contents(__DIR__ . '/file_change.inc', $code5);
 // this will be ok, but result is wrong
@@ -106,5 +106,6 @@ echo "Done\n";
 hello1
 hello1
 hello2
+SomeNamespacehello4
 hello5
 Done
