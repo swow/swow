@@ -1433,6 +1433,7 @@ static ZEND_COLD void swow_coroutine_throw_kill(void)
 
 SWOW_API cat_bool_t swow_coroutine_kill(swow_coroutine_t *s_coroutine)
 {
+    cat_coroutine_id_t id = s_coroutine->coroutine.id;
     while (1) {
         zval retval;
         cat_bool_t success = swow_coroutine_throw(s_coroutine, SWOW_COROUTINE_THROW_KILL_MAGIC, &retval);
@@ -1441,6 +1442,10 @@ SWOW_API cat_bool_t swow_coroutine_kill(swow_coroutine_t *s_coroutine)
             return cat_false;
         }
         zval_ptr_dtor(&retval); // TODO: __destruct may lead coroutine switch
+        if (!zend_hash_index_find(SWOW_COROUTINE_G(map), id)) {
+            // coroutine already gone
+            break;
+        }
         if (UNEXPECTED(swow_coroutine_is_alive(s_coroutine))) {
             if (s_coroutine == swow_coroutine_get_current()) {
                 break;
