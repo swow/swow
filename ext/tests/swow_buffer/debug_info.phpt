@@ -1,5 +1,5 @@
 --TEST--
-swow_buffer: bad arguments passed in
+swow_buffer: debug info
 --SKIPIF--
 <?php
 require __DIR__ . '/../include/skipif.php';
