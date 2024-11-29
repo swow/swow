@@ -244,15 +244,15 @@ SWOW_API uint32_t swow_php_ast_children(zend_ast *node, zend_ast ***child)
             case ZEND_AST_METHOD:
             case ZEND_AST_CLASS:
             case ZEND_AST_ARROW_FUNC:
-#ifdef ZEND_AST_PROPERTY_HOOK
+#if PHP_VERSION_ID >= 80400
             case ZEND_AST_PROPERTY_HOOK:
-#endif // ZEND_AST_PROPERTY_HOOK
+#endif // PHP_VERSION_ID >= 80400
                 children = 5;
                 *child = (zend_ast **) (((zend_ast_decl *) node)->child);
                 break;
             default:
                 CAT_NEVER_HERE("unknown ast kind");
-                return -1;
+                return 0;
         }
     } else {
         children = (node->kind >> ZEND_AST_NUM_CHILDREN_SHIFT) & 7;
