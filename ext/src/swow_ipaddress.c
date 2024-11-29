@@ -114,7 +114,7 @@ static bool swow_ipaddress_in(swow_ipaddress_t *s_address, swow_ipaddress_t *s_c
         // ipv4
         uint32_t beIpv4Addr = addr->address.components[1] + (addr->address.components[0] << 16);
         uint32_t beIpv4Cidr = cidr->address.components[1] + (cidr->address.components[0] << 16);
-        uint32_t mask = ((1 << cidr->mask) - 1) << (32 - cidr->mask);
+        uint32_t mask = ((1ULL << cidr->mask) - 1ULL) << (32 - cidr->mask);
         // printf("%08x %08x %08x\n", beIpv4Addr, beIpv4Cidr, mask);
         return (bool) ((beIpv4Addr & mask) == (beIpv4Cidr & mask));
     } else {
@@ -126,9 +126,11 @@ static bool swow_ipaddress_in(swow_ipaddress_t *s_address, swow_ipaddress_t *s_c
             if (addr->address.components[i] != cidr->address.components[i]) {
                 return false;
             }
+            i++;
         }
         uint32_t mask = ((1 << remainingMaskLen) - 1) << (16 - remainingMaskLen);
-        if ((addr->address.components[i] & mask) != (cidr->address.components[i] & mask)) {
+        if (i < sameComponents &&
+            (addr->address.components[i] & mask) != (cidr->address.components[i] & mask)) {
             return false;
         }
 
@@ -446,13 +448,13 @@ static PHP_METHOD(Swow_IpAddress, isLocal)
         // real ipv4
         (s_address->ipv6_address.flags & IPV6_FLAG_IPV4_COMPAT))
     {
-        beIpv4 = s_address->ipv6_address.address.components[1] + (s_address->ipv6_address.address.components[0] << 16);
+        beIpv4 = s_address->ipv6_address.address.components[1] + ((uint64_t)s_address->ipv6_address.address.components[0] << 16);
         goto v4;
     } else if (
         // mapped ipv4
         memcmp(&s_address->ipv6_address.address, ZEND_STRL("\0\0\0\0\0\0\0\0\0\0\xff\xff")) == 0
     ) {
-        beIpv4 = s_address->ipv6_address.address.components[7] + (s_address->ipv6_address.address.components[6] << 16);
+        beIpv4 = s_address->ipv6_address.address.components[7] + ((uint64_t)s_address->ipv6_address.address.components[6] << 16);
         v4:
         if (
             // 10.0.0.0/8

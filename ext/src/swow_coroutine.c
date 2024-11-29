@@ -30,7 +30,7 @@
 #endif
 
 #ifdef SWOW_COROUTINE_SWAP_SILENCE_CONTEXT
-# define E_MAGIC (1 << 31)
+# define E_MAGIC (1ULL << 31)
 #endif
 
 SWOW_API zend_class_entry *swow_coroutine_ce;
