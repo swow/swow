@@ -3,7 +3,14 @@ swow_coroutine: edge case of kill
 --SKIPIF--
 <?php
 require __DIR__ . '/../include/skipif.php';
+
+if (memory_get_usage() == 0) {
+    // zend mm not enabled, skip test
+    exit("SKIP: zend mm not enabled");
+}
 ?>
+--INI--
+memory_limit=32M
 --FILE--
 <?php
 require __DIR__ . '/../include/bootstrap.php';

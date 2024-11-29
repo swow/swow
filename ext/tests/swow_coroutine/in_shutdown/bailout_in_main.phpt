@@ -3,7 +3,14 @@ swow_coroutine: bailout in main
 --SKIPIF--
 <?php
 require __DIR__ . '/../../include/skipif.php';
+
+if (memory_get_usage() == 0) {
+    // zend mm not enabled, skip test
+    exit("SKIP: zend mm not enabled");
+}
 ?>
+--INI--
+memory_limit=32M
 --FILE--
 <?php
 require __DIR__ . '/../../include/bootstrap.php';
@@ -22,8 +29,10 @@ for ($c = 0; $c < TEST_MAX_CONCURRENCY; $c++) {
     });
 }
 
-echo str_repeat('X', 128 * 1024 * 1024);
+$str128M = str_repeat('X', 128 * 1024 * 1024);
+var_dump(md5($str128M));
 
+echo "Never here\n";
 ?>
 --EXPECTF--
 %AFatal error: [Fatal error in main] Allowed memory size of %d bytes exhausted%A (tried to allocate %d bytes)
