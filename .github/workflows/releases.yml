@@ -42,7 +42,10 @@ jobs:
     env:
       deps: openssl,libcurl,libssh2,zlib,nghttp2,libpq
       tools_path: C:\tools\phpdev
-      dllname: "php_swow-php${{ matrix.php-version }}-${{ matrix.arch }}-${{ (matrix.ts == '0') && 'n' || '' }}ts-${{ (matrix.image == 'windows-2019') && 'VS16' || 'VS17' }}"
+      # old naming style php_swow-php8.1-x64-ts-VS16.dll
+      # dllname: "php_swow-php${{ matrix.php-version }}-${{ matrix.arch }}-${{ (matrix.ts == '0') && 'n' || '' }}ts-${{ (matrix.image == 'windows-2019') && 'VS16' || 'VS17' }}"
+      # PIE compatible naming style php_swow-v1.6.0-8.4-ts-vs17.dll
+      dllname: "php_swow-${{ github.ref_type == 'tag' && github.ref_name || github.sha }}-${{ matrix.php-version }}-${{ (matrix.ts == '0') && 'n' || '' }}ts-${{ (matrix.image == 'windows-2019') && 'vs16' || 'vs17' }}-${{ matrix.arch }}"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -202,6 +205,8 @@ jobs:
           # see https://github.com/actions/upload-artifact/blob/main/docs/MIGRATION.md#multiple-uploads-to-the-same-named-artifact
           name: "${{ env.dllname }}-${{ steps.getref.outputs.ref }}"
           path: |
+            LICENSE
+            LICENSES.full
             ${{ env.dllname }}.dll
             ${{ env.dllname }}.pdb
             ${{ env.dllname }}.dll.json
@@ -231,6 +236,10 @@ jobs:
     needs:
       - mergedlls
     runs-on: windows-2019
+    permissions:
+      id-token: write
+      contents: write
+      attestations: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -247,6 +256,13 @@ jobs:
         with:
           name: all-dlls
           path: .
+      - name: Attestation
+        id: attest
+        uses: actions/attest-build-provenance@v1
+        with:
+          subject-path: |
+            php_swow-*.dll
+            php_swow-*.pdb
       - name: Upload all dlls
         shell: powershell
         env:
@@ -255,4 +271,5 @@ jobs:
           .\.github\workflows\winext\uploader.ps1 `
             -RelId "${{ steps.create_release.outputs.id }}" `
             -Repo "${{ github.repository }}" `
-            -Token "${{ github.token }}"
+            -Token "${{ github.token }}" `
+            -AttestationBundle "${{ steps.attest.outputs.bundle-path }}"
