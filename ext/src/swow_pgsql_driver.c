@@ -1612,6 +1612,10 @@ size_t (*swow_PQresultMemorySize)(const PGresult *res) = NULL;
 
 zend_result swow_pgsql_module_init(INIT_FUNC_ARGS)
 {
+	if (!SWOW_G(ini.hook_pdo_pgsql)) {
+		return SUCCESS;
+	}
+
 	if (!zend_hash_str_exists(&module_registry, ZEND_STRL("pdo"))) {
 		php_error_docref(NULL, E_WARNING, "Swow pdo_pgsql hook not enabled, pdo extension not enabled");
 		return SUCCESS;
@@ -1625,6 +1629,7 @@ zend_result swow_pgsql_module_init(INIT_FUNC_ARGS)
 			// macports/brew
 			"/opt/local/lib/",
 			// brew
+			"/usr/local/Cellar/libpq@16/lib/",
 			"/usr/local/Cellar/libpq@15/lib/",
 			"/usr/local/Cellar/libpq@14/lib/",
 			// brew (new)
@@ -1638,8 +1643,10 @@ zend_result swow_pgsql_module_init(INIT_FUNC_ARGS)
 # elif defined(CAT_OS_WIN)
 #  define LIBPQ_SO_NAME "libpq.dll"
 		{
+			"C:\\Program Files\\PostgreSQL\\16\\bin\\",
 			"C:\\Program Files\\PostgreSQL\\15\\bin\\",
 			"C:\\Program Files\\PostgreSQL\\14\\bin\\",
+			"C:\\Program Files (x86)\\PostgreSQL\\16\\bin\\",
 			"C:\\Program Files (x86)\\PostgreSQL\\15\\bin\\",
 			"C:\\Program Files (x86)\\PostgreSQL\\14\\bin\\",
 		}
@@ -1651,7 +1658,7 @@ zend_result swow_pgsql_module_init(INIT_FUNC_ARGS)
 
 	DL_HANDLE dummy_handle = DL_LOAD(LIBPQ_SO_NAME);
 	if (!dummy_handle) {
-		char name_buf[64];
+		char name_buf[128];
 		for (int i = 0; i < CAT_ARRAY_SIZE(library_paths); i++) {
 			snprintf(name_buf, sizeof(name_buf), "%s%s", library_paths[i], LIBPQ_SO_NAME);
 

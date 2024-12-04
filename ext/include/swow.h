@@ -72,6 +72,7 @@ ZEND_BEGIN_MODULE_GLOBALS(swow)
         bool enable;
         bool async_file;
         bool async_tty;
+        bool hook_pdo_pgsql;
         zend_long async_threads;
     } ini;
 ZEND_END_MODULE_GLOBALS(swow)
