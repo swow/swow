@@ -1,5 +1,5 @@
 --TEST--
-swow_coroutine: destructor case
+swow_coroutine/destructor: destructor case
 --SKIPIF--
 <?php
 require __DIR__ . '/../../include/skipif.php';

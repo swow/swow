@@ -1,5 +1,5 @@
 --TEST--
-swow_coroutine: bailout in shutdown functions
+swow_coroutine/in_shutdown: bailout in shutdown functions
 --SKIPIF--
 <?php
 require __DIR__ . '/../../include/skipif.php';

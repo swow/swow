@@ -17,16 +17,20 @@ if (
 ) {
     skip('Swow is not present in TEST_PHP_EXECUTABLE and cannot load it via -dextension');
 }
+$loaded3 = shell_exec(PHP_BINARY . " -n -m");
+if (str_contains($loaded3, 'PDO')) {
+    skip('PDO is statically linked in TEST_PHP_EXECUTABLE');
+}
 ?>
 --FILE--
 <?php
 
-// get extension dir
-$extension_dir = shell_exec(PHP_BINARY . " -r \"echo ini_get('extension_dir');\"");
-
 // get TEST_PHP_ARGS TEST_PHP_EXTRA_ARGS
 $args = ' ' . (getenv('TEST_PHP_ARGS') ?: '');
 $args .= ' ' . (getenv('TEST_PHP_EXTRA_ARGS') ?: '');
+
+// get extension dir
+$extension_dir = shell_exec(PHP_BINARY . " $args -r \"echo ini_get('extension_dir');\"");
 
 // remove pdo, make sure swow is loaded before any libpq dynamic lib
 $args = preg_replace('/-d\s*"extension\s*=\s*pdo"/', '', $args);

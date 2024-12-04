@@ -1,5 +1,5 @@
 --TEST--
-swow_coroutine: in_shutdown base
+swow_coroutine/in_shutdown: in_shutdown base
 --SKIPIF--
 <?php
 require __DIR__ . '/../../include/skipif.php';

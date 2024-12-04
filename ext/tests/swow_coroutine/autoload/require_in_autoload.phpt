@@ -1,5 +1,5 @@
 --TEST--
-swow_coroutine:
+swow_coroutine/autoload: require in autoload
 --SKIPIF--
 <?php
 require __DIR__ . '/../../include/skipif.php';
