@@ -15,10 +15,68 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Use action to check for CRLF endings
-        uses: erclu/check-crlf@v1
-        with:
-          path: ./
+      - name: Check for CRLF endings
+        id: checkcrlf
+        continue-on-error: true
+        shell: php {0}
+        run: |
+          <?php
+
+          # find out files with CRLF (\r\n) line endings
+          $includes = [
+              '.'
+          ];
+          $excludes = [
+              '/.+\.ps1$/',
+              '/.+\.bat$/',
+              '/.+\.cmd$/',
+          ];
+
+          $files = [];
+          foreach ($includes as $include) {
+              $iteriter = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($include));
+              foreach ($iteriter as $file) {
+                  if ($file->isDir()) {
+                      continue;
+                  }
+                  $files[] = $file->getPathname();
+              }
+          }
+          foreach ($excludes as $exclude) {
+              $files = array_filter($files, static function (string $file) use ($exclude): bool {
+                  return !preg_match($exclude, $file);
+              });
+          }
+          $haveCRLF = [];
+          foreach ($files as $file) {
+              $stat = stat($file);
+              if ($stat['size'] >= 1024 * 1024) {
+                  # skip large files
+                  continue;
+              }
+              $content = file_get_contents($file);
+              if (strpos($content, "\0")) {
+                  # skip binary files
+                  continue;
+              }
+              if (strpos($content, "\r") !== false) {
+                  # if we have a file like
+                  # "<?php\n$someData = \"somedata\r\n\";\n"
+                  # this is not a CRLF ending file
+                  # while
+                  # "<?php\r\n$someData = \"somedata\r\n\";\r\n# this file is noeol"
+                  # is a CRLF file
+                  # so we need to find the last (CRLF or LF) in the file, if it is CRLF, then it is a CRLF file
+                  if (strrpos($content, "\r\n") === strrpos($content, "\n") - 1) {
+                      echo $file . PHP_EOL;
+                      $haveCRLF[] = $file;
+                  }
+              }
+          }
+          if (count($haveCRLF) > 0) {
+              echo "::error::CRLF line endings found" . PHP_EOL;
+              exit(1);
+          }
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
@@ -33,6 +91,10 @@ jobs:
           echo "::endgroup::"
           echo "::group::Run cs-check"
           composer cs-check -- -v
+      
+      - name: Error if CRLF found
+        if: steps.checkcrlf.outcome != 'success'
+        run: exit 1
 
   linux-tests:
     name: PHP ${{ matrix.php-version }} ${{ matrix.ts }} Test on ubuntu-latest
