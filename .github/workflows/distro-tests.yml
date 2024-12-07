@@ -67,6 +67,8 @@ jobs:
         uses: actions/checkout@v4
         with:
           path: swow
+          persist-credentials: false
+
       - name: Prepare cache PHP source
         id: cacheprepare
         shell: bash
@@ -81,6 +83,7 @@ jobs:
                 jq -r '.source[] |select( .filename | endswith("tar.xz")) | .filename'
             )" >> $GITHUB_OUTPUT
           fi
+
       - name: Cache PHP codes
         if: steps.cacheprepare.outputs.phpfn
         uses: actions/cache@v4
@@ -88,6 +91,7 @@ jobs:
           key: phpcode-v3-${{steps.cacheprepare.outputs.phpfn}}
           path: |
             ${{steps.cacheprepare.outputs.phpfn}}
+
       - name: Prepare PHP codes
         shell: bash
         run: |
@@ -106,6 +110,7 @@ jobs:
           cd php-src
           curl https://github.com/php/php-src/commit/a9f172466d2a7ddda192d116b4a5a2b1577a45cc.patch | patch -p1 || :
           curl https://github.com/php/php-src/commit/577b8ae4226368e66fee7a9b5c58f9e2428372fc.patch | patch -p1 || :
+          
       - name: Build things
         run: |
           docker run --rm --name testcontainer \

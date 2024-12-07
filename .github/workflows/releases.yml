@@ -51,6 +51,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ (github.event.inputs && github.event.inputs.ref) || github.ref }}
+          persist-credentials: false
 
       - name: Get git commit ref hash
         id: getref
@@ -104,7 +105,7 @@ jobs:
             -PhpTs ${{ matrix.ts }} `
             -DryRun 1 &&
           ./.github/workflows/winext/deps.ps1 `
-            ${{ env.deps }} `
+            "${{ env.deps }}" `
             -DryRun 1 &&
           ($ret = 0 | Out-Null)
           exit $ret
@@ -243,6 +244,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
       - name: Create Release
         id: create_release
         run: |
@@ -251,11 +255,13 @@ jobs:
             -Token "${{ secrets.GITHUB_TOKEN }}" `
             -TagName "${{ github.ref }}".Split("/")[-1] `
             -prerelease $true
+
       - name: Fetch artifact
         uses: actions/download-artifact@v4
         with:
           name: all-dlls
           path: .
+
       - name: Attestation
         id: attest
         uses: actions/attest-build-provenance@v1
@@ -263,6 +269,7 @@ jobs:
           subject-path: |
             php_swow-*.dll
             php_swow-*.pdb
+
       - name: Upload all dlls
         shell: powershell
         env:
