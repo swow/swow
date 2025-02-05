@@ -126,7 +126,6 @@ static bool swow_ipaddress_in(swow_ipaddress_t *s_address, swow_ipaddress_t *s_c
             if (addr->address.components[i] != cidr->address.components[i]) {
                 return false;
             }
-            i++;
         }
         uint32_t mask = ((1 << remainingMaskLen) - 1) << (16 - remainingMaskLen);
         if (i < sameComponents &&
