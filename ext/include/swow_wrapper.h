@@ -25,6 +25,7 @@ extern "C" {
 #if !defined(__cplusplus) && !defined(_MSC_VER)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wstrict-prototypes"
+#pragma GCC diagnostic ignored "-Wtypedef-redefinition"
 #endif
 #include "php.h"
 

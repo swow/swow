@@ -19,6 +19,11 @@
 #include "cat_pq.h"
 #ifdef CAT_PQ
 
+#if !defined(__cplusplus) && !defined(_MSC_VER)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wredefinition"
+#endif
+
 #include "php.h"
 #include "php_ini.h"
 #include "ext/standard/info.h"
@@ -32,6 +37,10 @@
 #include "swow_pdo_pgsql_int.h"
 #include "zend_exceptions.h"
 #include "zend_smart_str.h"
+
+#if !defined(__cplusplus) && !defined(_MSC_VER)
+#pragma GCC diagnostic pop
+#endif
 
 #undef ZEND_METHOD
 #define ZEND_METHOD(classname, name) ZEND_NAMED_FUNCTION(swow_zim_##classname##_##name)
