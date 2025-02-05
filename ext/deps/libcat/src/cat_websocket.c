@@ -111,7 +111,7 @@ CAT_API uint64_t cat_websocket_header_get_payload_length(const cat_websocket_hea
     } else {
         int i;
         CAT_ASSERT(header->payload_length == CAT_WEBSOCKET_EXT64_PAYLOAD_LENGTH);
-        for (i = 0; i < sizeof(uint64_t); i++) {
+        for (i = 0; i < ((int) sizeof(uint64_t)); i++) {
             tmp <<= 8;
             tmp |= header->extended_payload_length[i];
         }
