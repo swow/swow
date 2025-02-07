@@ -18,10 +18,23 @@
   +----------------------------------------------------------------------+
 */
 
+#include "cat_pq.h"
+#ifdef CAT_PQ
+
+#if !defined(__cplusplus) && !defined(_MSC_VER)
+#pragma GCC diagnostic push
+# ifdef HAVE_WTYPEDEF_REDEFINITION
+#  pragma GCC diagnostic ignored "-Wtypedef-redefinition"
+# endif
+#endif
 
 #include "php.h"
 #include "ext/pdo/php_pdo_driver.h"
 #include "ext/pdo/pdo_sql_parser.h"
+
+#if !defined(__cplusplus) && !defined(_MSC_VER)
+#pragma GCC diagnostic pop
+#endif
 
 int swow_pdo_pgsql_scanner(pdo_scanner_t *s)
 {
@@ -526,3 +539,5 @@ yy37:
 }
 
 }
+
+#endif // CAT_PQ

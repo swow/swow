@@ -19,8 +19,6 @@
 #if !defined(__cplusplus) && !defined(_MSC_VER)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wstrict-prototypes"
-/* zend_op in zend_compile.h and zend_frameless_function.h
- * @see @see: https://github.com/php/php-src/pull/13347 */
 # ifdef HAVE_WTYPEDEF_REDEFINITION
 #  pragma GCC diagnostic ignored "-Wtypedef-redefinition"
 # endif

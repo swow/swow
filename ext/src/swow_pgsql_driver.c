@@ -21,7 +21,9 @@
 
 #if !defined(__cplusplus) && !defined(_MSC_VER)
 #pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wredefinition"
+# ifdef HAVE_WTYPEDEF_REDEFINITION
+#  pragma GCC diagnostic ignored "-Wtypedef-redefinition"
+# endif
 #endif
 
 #include "php.h"
