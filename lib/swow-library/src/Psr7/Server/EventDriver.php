@@ -230,6 +230,11 @@ class EventDriver
         }
     }
 
+    public function stop(): void
+    {
+        $this->server->close();
+    }
+
     protected function solveUpgradeResponse(mixed $upgradeResponse): ResponseInterface
     {
         switch (true) {
