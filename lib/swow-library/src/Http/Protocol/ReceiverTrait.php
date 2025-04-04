@@ -289,10 +289,13 @@ trait ReceiverTrait
                                 $body->mallocTrim();
                             }
                         } elseif ($isMultipart && !$this->preserveBodyData) {
-                            $contentLengthIndex = $headerNames['content-length'] ?? null;
-                            if ($contentLengthIndex) {
-                                unset($headers[$contentLengthIndex]);
-                            }
+                            // Some program may want to get content length header,
+                            // we would find it strange if we didn't consider them to have a body.
+                            // $contentLengthIndex = $headerNames['content-length'] ?? null;
+                            // if ($contentLengthIndex) {
+                            //     unset($headerNames['content-length']);
+                            //     unset($headers[$contentLengthIndex]);
+                            // }
                         }
                         break 2;
                     }
