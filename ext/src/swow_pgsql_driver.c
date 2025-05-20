@@ -1651,7 +1651,7 @@ zend_result swow_pgsql_module_init(INIT_FUNC_ARGS)
 			"C:\\Program Files (x86)\\PostgreSQL\\14\\bin\\",
 		}
 # else
-#  define LIBPQ_SO_NAME "libpq." PHP_SHLIB_SUFFIX
+#  define LIBPQ_SO_NAME "libpq." PHP_SHLIB_SUFFIX ".5"
 		{ "" }
 # endif
 	;
