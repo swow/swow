@@ -3,6 +3,8 @@ swow_siritz: wait2
 --SKIPIF--
 <?php
 require __DIR__ . '/../include/skipif.php';
+
+skip_if_not_zts();
 ?>
 --FILE--
 <?php
