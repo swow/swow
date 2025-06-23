@@ -237,7 +237,9 @@ PHP_MINIT_FUNCTION(swow)
         swow_signal_module_init,
         swow_watchdog_module_init,
         swow_closure_module_init,
+#ifdef PHP_ZTS
         swow_siritz_module_init,
+#endif
         swow_ipaddress_init,
         swow_http_module_init,
         swow_websocket_module_init,
@@ -286,7 +288,9 @@ PHP_MSHUTDOWN_FUNCTION(swow)
 #ifdef CAT_OS_WAIT
         swow_proc_open_module_shutdown,
 #endif
+#ifdef PHP_ZTS
         swow_siritz_module_shutdown,
+#endif
         swow_closure_module_shutdown,
         swow_watchdog_module_shutdown,
         swow_stream_module_shutdown,
@@ -338,7 +342,9 @@ PHP_RINIT_FUNCTION(swow)
         swow_dns_runtime_init,
         swow_stream_runtime_init,
         swow_watchdog_runtime_init,
+#ifdef PHP_ZTS
         swow_siritz_runtime_init,
+#endif
 #ifdef CAT_OS_WAIT
         swow_proc_open_runtime_init,
 #endif
@@ -383,7 +389,9 @@ PHP_RSHUTDOWN_FUNCTION(swow)
 #ifdef CAT_OS_WAIT
         swow_proc_open_runtime_shutdown,
 #endif
+#ifdef PHP_ZTS
         swow_siritz_runtime_shutdown,
+#endif
         swow_watchdog_runtime_shutdown,
         swow_stream_runtime_shutdown,
         swow_event_runtime_shutdown,
