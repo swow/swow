@@ -391,6 +391,7 @@ EOF
     swow_signal.c \
     swow_watchdog.c \
     swow_closure.c \
+    swow_siritz.c \
     swow_ipaddress.c \
     swow_http.c \
     swow_websocket.c \
@@ -406,6 +407,11 @@ EOF
   if test x"${ac_cv_cc_attribute_weak}" = x"yes"; then
     SWOW_ADD_SOURCES(src, swow_weak_symbol.c, SWOW_INCLUDES, SWOW_CFLAGS)
   fi
+
+  dnl check if pthread have pthread_timedjoin_np
+  AC_CHECK_FUNCS([pthread_timedjoin_np], [
+    AC_DEFINE([HAVE_PTHREAD_TIMEDJOIN_NP], 1, [Have pthread_timedjoin_np])
+  ])
 
   dnl TODO: may use separate libcat
   if test "libcat" != ""; then

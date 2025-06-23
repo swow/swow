@@ -338,6 +338,7 @@ PHP_RINIT_FUNCTION(swow)
         swow_dns_runtime_init,
         swow_stream_runtime_init,
         swow_watchdog_runtime_init,
+        swow_siritz_runtime_init,
 #ifdef CAT_OS_WAIT
         swow_proc_open_runtime_init,
 #endif
@@ -382,6 +383,7 @@ PHP_RSHUTDOWN_FUNCTION(swow)
 #ifdef CAT_OS_WAIT
         swow_proc_open_runtime_shutdown,
 #endif
+        swow_siritz_runtime_shutdown,
         swow_watchdog_runtime_shutdown,
         swow_stream_runtime_shutdown,
         swow_event_runtime_shutdown,
