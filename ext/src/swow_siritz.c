@@ -40,9 +40,28 @@ static PHP_METHOD(Swow_Siritz, __construct)
     php_var_serialize(&str_callable, ZEND_CALL_ARG(execute_data, 1), &var_hash);
     PHP_VAR_SERIALIZE_DESTROY(var_hash);
 
+    zval z_args;
+    HashTable args;
+    zend_hash_init(&args, fci.param_count, NULL, ZVAL_PTR_DTOR, 0);
+    for (uint32_t i = 0; i < fci.param_count; i++) {
+        zend_hash_next_index_insert(&args, &fci.params[i]);
+    }
+    ZVAL_ARR(&z_args, &args);
+
+    smart_str str_args = {0};
+    PHP_VAR_SERIALIZE_INIT(var_hash);
+    php_var_serialize(&str_args, &z_args, &var_hash);
+    PHP_VAR_SERIALIZE_DESTROY(var_hash);
+
+    zend_hash_destroy(&args);
+
     s->callable.s = NULL;
     smart_str_appendl_ex(&s->callable, str_callable.s->val, str_callable.s->len, 1);
     smart_str_free(&str_callable);
+
+    s->args.s = NULL;
+    smart_str_appendl_ex(&s->args, str_args.s->val, str_args.s->len, 1);
+    smart_str_free(&str_args);
 }
 
 SWOW_API void swow_siritz_run(swow_siritz_run_t *call)
@@ -67,7 +86,7 @@ SWOW_API void swow_siritz_run(swow_siritz_run_t *call)
     SG(request_info).no_headers = true;
 	php_register_variable("PHP_SELF", "-", NULL);
 
-    zval z_code;
+    zval z_code, z_args;
     // printf("%p %d %.*s\n", call->callable.s->val, call->callable.s->len, call->callable.s->len, call->callable.s->val);
     zend_first_try {
 
@@ -91,12 +110,34 @@ SWOW_API void swow_siritz_run(swow_siritz_run_t *call)
             return;
         }
 
+        PHP_VAR_UNSERIALIZE_INIT(var_hash);
+        p = call->args.s->val;
+        pe =  call->args.s->val + call->args.s->len;
+        ret = php_var_unserialize(
+            &z_args,
+            &p,
+            pe,
+            &var_hash
+        );
+        PHP_VAR_UNSERIALIZE_DESTROY(var_hash);
+        if (!ret) {
+            php_error_docref(NULL, E_ERROR, "Failed to unserialize args: offset " ZEND_LONG_FMT " of %zd bytes",
+                (zend_long)((char*)p - call->args.s->val), call->args.s->len);
+            return;
+        }
+
+        uint32_t param_count = zend_hash_num_elements(Z_ARRVAL(z_args));
+
+        zend_hash_to_packed(Z_ARRVAL(z_args));
+
         zval retval;
         // ZVAL_STRING(&z_code, "var_dump");
         zend_call_function(&(zend_fcall_info){
             .size = sizeof(zend_fcall_info),
             .retval = &retval,
             .function_name = z_code,
+            .params = Z_ARRVAL(z_args)->arPacked,
+            .param_count = param_count,
         }, NULL);
 
         zval_ptr_dtor(&z_code);
