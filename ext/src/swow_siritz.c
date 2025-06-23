@@ -59,6 +59,23 @@ static int swow_pthread_timedjoin_np(pthread_t td, void **res, struct timespec *
 
 CAT_GLOBALS_DECLARE(swow_siritz);
 
+static swow_interrupt_function_t original_zend_interrupt_function = (swow_interrupt_function_t) -1;
+
+static void swow_siritz_interrupt_function(zend_execute_data *execute_data)
+{
+    if (SWOW_SIRITZ_G(parent_thread_exiting)) {
+#if PHP_VERSION_ID <= 80012
+# error "Unsupported PHP version"
+#else
+        zend_throw_unwind_exit();
+#endif
+    }
+
+    if (original_zend_interrupt_function != NULL) {
+        original_zend_interrupt_function(execute_data);
+    }
+}
+
 #define getThisSiritz(s) swow_siritz_t *s = swow_siritz_get_from_object(Z_OBJ_P(ZEND_THIS))
 
 SWOW_API zend_class_entry *swow_siritz_ce;
@@ -92,9 +109,9 @@ static PHP_METHOD(Swow_Siritz, __construct)
     PHP_VAR_SERIALIZE_INIT(var_hash);
     php_var_serialize(&str_callable, ZEND_CALL_ARG(execute_data, 1), &var_hash);
     PHP_VAR_SERIALIZE_DESTROY(var_hash);
-	if (EG(exception)) {
-		return;
-	}
+    if (EG(exception)) {
+        return;
+    }
 
     if (str_callable.s == NULL) {
         // serialize failed
@@ -114,9 +131,9 @@ static PHP_METHOD(Swow_Siritz, __construct)
     PHP_VAR_SERIALIZE_INIT(var_hash);
     php_var_serialize(&str_args, &z_args, &var_hash);
     PHP_VAR_SERIALIZE_DESTROY(var_hash);
-	if (EG(exception)) {
-		return;
-	}
+    if (EG(exception)) {
+        return;
+    }
 
     zend_hash_destroy(&args);
 
@@ -139,7 +156,7 @@ SWOW_API void swow_siritz_run(swow_siritz_run_t *call)
 {
     ts_resource(0);
 #ifdef PHP_WIN32
-	ZEND_TSRMLS_CACHE_UPDATE();
+    ZEND_TSRMLS_CACHE_UPDATE();
 #endif
 
     SG(server_context) = call->server_context;
@@ -155,7 +172,7 @@ SWOW_API void swow_siritz_run(swow_siritz_run_t *call)
     SG(sapi_started) = false;
     SG(headers_sent) = true;
     SG(request_info).no_headers = true;
-	php_register_variable("PHP_SELF", "-", NULL);
+    php_register_variable("PHP_SELF", "-", NULL);
 
     zval z_code, z_args;
     // printf("%p %d %.*s\n", call->callable.s->val, call->callable.s->len, call->callable.s->len, call->callable.s->val);
@@ -423,43 +440,61 @@ zend_result swow_siritz_module_init(INIT_FUNC_ARGS)
         return FAILURE;
     }
 
+    if (original_zend_interrupt_function == (swow_interrupt_function_t) -1) {
+        original_zend_interrupt_function = zend_interrupt_function;
+        zend_interrupt_function = swow_siritz_interrupt_function;
+    }
+
     return SUCCESS;
 }
 
 zend_result swow_siritz_runtime_init(INIT_FUNC_ARGS)
 {
     zend_hash_init(&SWOW_SIRITZ_G(threads), 0, NULL, NULL, 1);
+    SWOW_SIRITZ_G(parent_thread_exiting) = 0;
 
     return SUCCESS;
 }
 
 zend_result swow_siritz_runtime_shutdown(INIT_FUNC_ARGS)
 {
+    ZEND_HASH_REVERSE_FOREACH_STR_KEY(&SWOW_SIRITZ_G(threads), zend_string *strkey) {
 
 #ifdef CAT_OS_WIN
-    ZEND_HASH_REVERSE_FOREACH_STR_KEY(&SWOW_SIRITZ_G(threads), zend_string *strkey) {
-        // printf("shutdown: wait for thread %p\n", t);
         HANDLE t = *(HANDLE *)strkey->val;
+        // printf("rshutdown: wait for thread %d\n", GetThreadId(t));
+
+        // interrupt threads using vm_interrupt
+        THREAD_T phpThread = GetThreadId(t); // for Windows, php use thread id as thread handle
+        zend_executor_globals *child_executor_global =
+            (zend_executor_globals *)ts_resource_ex(executor_globals_id, &phpThread);
+        zend_atomic_bool_store(&child_executor_global->vm_interrupt, true);
+
+        // wait for at most 1 second
         DWORD ret = WaitForSingleObject(t, 1000/* TODO: configurable */);
         if (ret == WAIT_TIMEOUT) {
             TerminateThread(t, 0);
         }
-    } ZEND_HASH_FOREACH_END();
 #elif defined(CAT_OS_UNIX_LIKE)
-    ZEND_HASH_REVERSE_FOREACH_STR_KEY(&SWOW_SIRITZ_G(threads), zend_string *strkey) {
-        // wait for at most 1 second
         pthread_t t = *(pthread_t *)strkey->val;
-        // printf("shutdown: wait for thread %p\n", t);
+
+        // interrupt threads using vm_interrupt
+        // at pthread OS, php use pthread_t as thread handle
+        zend_executor_globals *child_executor_global =
+            (zend_executor_globals *)ts_resource_ex(executor_globals_id, &t);
+        zend_atomic_bool_store(&child_executor_global->vm_interrupt, true);
+
+        // wait for at most 1 second
         struct timespec ts;
         clock_gettime(CLOCK_REALTIME, &ts);
         ts.tv_sec += 1;
         pthread_timedjoin_np(t, NULL, &ts);
         // printf("shutdown: wait for thread %p done\n", t);
         pthread_cancel(t);
-    } ZEND_HASH_FOREACH_END();
 #else
 # error "Unsupported OS"
 #endif
+    } ZEND_HASH_FOREACH_END();
 
     return SUCCESS;
 }

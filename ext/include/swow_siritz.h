@@ -11,6 +11,7 @@
 
 CAT_GLOBALS_STRUCT_BEGIN(swow_siritz) {
     HashTable threads; // sub-threads for this thread
+    volatile int parent_thread_exiting;
 } CAT_GLOBALS_STRUCT_END(swow_siritz);
 
 #define SWOW_SIRITZ_G(x) CAT_GLOBALS_GET(swow_siritz, x)
