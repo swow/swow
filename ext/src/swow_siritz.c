@@ -6,7 +6,7 @@
 #include "swow_closure.h"
 #include "swow_hook.h"
 
-#ifndef HAVE_PTHREAD_TIMEDJOIN_NP
+#if !defined(HAVE_PTHREAD_TIMEDJOIN_NP) && !defined(CAT_OS_WIN)
 // from https://stackoverflow.com/a/11552244
 struct pthread_timedjoin_np_args {
     int joined;
