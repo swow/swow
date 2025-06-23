@@ -130,6 +130,22 @@ static ZEND_INI_MH(swow_OnUpdateBool_only_when_startup)
     return OnUpdateBool(entry, new_value, mh_arg1, mh_arg2, mh_arg3, stage);
 }
 
+static ZEND_INI_MH(swow_OnUpdateLong_int32)
+{
+    int ret = OnUpdateLong(entry, new_value, mh_arg1, mh_arg2, mh_arg3, stage);
+    if (ret == SUCCESS) {
+        zend_long *p = (zend_long *) ZEND_INI_GET_ADDR();
+        if (*p < INT32_MIN || *p > INT32_MAX) {
+            zend_error(
+				E_WARNING, "Invalid \"%s\" setting. out of range %d, %d",
+				ZSTR_VAL(entry->name), INT32_MIN, INT32_MAX
+			);
+            return FAILURE;
+        }
+    }
+    return ret;
+}
+
 PHP_INI_BEGIN()
 STD_ZEND_INI_BOOLEAN("swow.enable", "On", PHP_INI_ALL, swow_OnUpdateBool_only_when_startup, ini.enable, zend_swow_globals, swow_globals)
 STD_ZEND_INI_BOOLEAN("swow.closure_serializer", "Off", PHP_INI_ALL, swow_OnUpdateBool_only_when_startup, ini.closure_serializer, zend_swow_globals, swow_globals)
@@ -137,6 +153,7 @@ STD_PHP_INI_ENTRY("swow.async_threads", "0", PHP_INI_ALL, swow_OnUpdateLong_only
 STD_ZEND_INI_BOOLEAN("swow.async_file", "On", PHP_INI_ALL, swow_OnUpdateBool_only_when_startup, ini.async_file, zend_swow_globals, swow_globals)
 STD_ZEND_INI_BOOLEAN("swow.async_tty", "On", PHP_INI_ALL, swow_OnUpdateBool_only_when_startup, ini.async_tty, zend_swow_globals, swow_globals)
 STD_ZEND_INI_BOOLEAN("swow.hook_pdo_pgsql", "On", PHP_INI_ALL, swow_OnUpdateBool_only_when_startup, ini.hook_pdo_pgsql, zend_swow_globals, swow_globals)
+STD_PHP_INI_ENTRY("swow.thread_exit_join_ms", "-1", PHP_INI_ALL, swow_OnUpdateLong_int32, ini.thread_exit_join_ms, zend_swow_globals, swow_globals)
 #ifdef CAT_HAVE_CURL
 PHP_INI_ENTRY("curl.cainfo", "", PHP_INI_SYSTEM, NULL)
 #endif

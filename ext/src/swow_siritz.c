@@ -470,11 +470,11 @@ zend_result swow_siritz_runtime_shutdown(INIT_FUNC_ARGS)
             (zend_executor_globals *)ts_resource_ex(executor_globals_id, &phpThread);
         zend_atomic_bool_store(&child_executor_global->vm_interrupt, true);
 
-        // wait for at most 1 second
-        DWORD ret = WaitForSingleObject(t, 1000/* TODO: configurable */);
-        if (ret == WAIT_TIMEOUT) {
-            TerminateThread(t, 0);
-        }
+		if (SWOW_G(ini.thread_exit_join_ms) < 0) {
+			WaitForSingleObject(t, INFINITE);
+		} else {
+			WaitForSingleObject(t, (DWORD)SWOW_G(ini.thread_exit_join_ms));
+		}
 #elif defined(CAT_OS_UNIX_LIKE)
         pthread_t t = *(pthread_t *)strkey->val;
 
@@ -484,13 +484,19 @@ zend_result swow_siritz_runtime_shutdown(INIT_FUNC_ARGS)
             (zend_executor_globals *)ts_resource_ex(executor_globals_id, &t);
         zend_atomic_bool_store(&child_executor_global->vm_interrupt, true);
 
-        // wait for at most 1 second
-        struct timespec ts;
-        clock_gettime(CLOCK_REALTIME, &ts);
-        ts.tv_sec += 1;
-        pthread_timedjoin_np(t, NULL, &ts);
-        // printf("shutdown: wait for thread %p done\n", t);
-        pthread_cancel(t);
+		if (SWOW_G(ini.thread_exit_join_ms) < 0) {
+			pthread_join(t, NULL);
+		} else {
+			struct timespec ts;
+			clock_gettime(CLOCK_MONOTONIC, &ts);
+			ts.tv_sec += SWOW_G(ini.thread_exit_join_ms) / 1000;
+			ts.tv_nsec += (SWOW_G(ini.thread_exit_join_ms) % 1000) * 1000000;
+			if (ts.tv_nsec >= 1000000000) {
+				ts.tv_sec += 1;
+				ts.tv_nsec -= 1000000000;
+			}
+			pthread_timedjoin_np(t, NULL, &ts);
+		}
 #else
 # error "Unsupported OS"
 #endif
