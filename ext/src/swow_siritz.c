@@ -437,9 +437,9 @@ zend_result swow_siritz_runtime_shutdown(INIT_FUNC_ARGS)
 {
 
 #ifdef CAT_OS_WIN
-    ZEND_HASH_REVERSE_FOREACH_STR_KEY(&siritz, zend_string *strkey) {
-        pthread_t t = *(pthread_t *)strkey->val;
+    ZEND_HASH_REVERSE_FOREACH_STR_KEY(&SWOW_SIRITZ_G(threads), zend_string *strkey) {
         // printf("shutdown: wait for thread %p\n", t);
+        HANDLE t = *(HANDLE *)strkey->val;
         DWORD ret = WaitForSingleObject(t, 1000/* TODO: configurable */);
         if (ret == WAIT_TIMEOUT) {
             TerminateThread(t, 0);
