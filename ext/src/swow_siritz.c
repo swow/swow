@@ -6,7 +6,7 @@
 #include "swow_closure.h"
 #include "swow_hook.h"
 
-#ifdef PHP_ZTS
+#ifdef ZTS
 
 #if !defined(HAVE_PTHREAD_TIMEDJOIN_NP) && !defined(CAT_OS_WIN)
 // from https://stackoverflow.com/a/11552244
@@ -471,4 +471,4 @@ zend_result swow_siritz_module_shutdown(INIT_FUNC_ARGS)
     return SUCCESS;
 }
 
-#endif
+#endif // ZTS

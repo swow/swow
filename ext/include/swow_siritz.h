@@ -5,7 +5,7 @@
 
 #include "swow.h"
 
-#ifdef PHP_ZTS
+#ifdef ZTS
 
 /* globals */
 
@@ -41,6 +41,6 @@ zend_result swow_siritz_module_shutdown(INIT_FUNC_ARGS);
 zend_result swow_siritz_runtime_init(INIT_FUNC_ARGS);
 zend_result swow_siritz_runtime_shutdown(INIT_FUNC_ARGS);
 
-#endif // PHP_ZTS
+#endif // ZTS
 
 #endif // _SWOW_SIRITZ_H
