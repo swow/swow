@@ -85,8 +85,9 @@ SWOW_API void swow_siritz_run(swow_siritz_run_t *call)
         // php_var_dump(&z_code, 0);
         // printf("%d\n", ret);
 
-        if (!swow_zval_is_closure(&z_code)) {
-            php_error_docref(NULL, E_ERROR, "Failed to unserialize callable");
+        if (!ret || !swow_zval_is_closure(&z_code)) {
+            php_error_docref(NULL, E_ERROR, "Failed to unserialize callable: offset " ZEND_LONG_FMT " of %zd bytes",
+                (zend_long)((char*)p - call->callable.s->val), call->callable.s->len);
             return;
         }
 
@@ -108,6 +109,8 @@ SWOW_API void swow_siritz_run(swow_siritz_run_t *call)
     sapi_module.deactivate = fuck;
 
     ts_free_thread();
+
+    free(call);
 }
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Siritz_run, 0, 0, IS_STATIC, 0)
@@ -117,20 +120,24 @@ static PHP_METHOD(Swow_Siritz, run)
 {
     getThisSiritz(s);
 
-    int ret = uv_thread_create_ex(&s->thread, (const uv_thread_options_t[]) {{
-        .flags = UV_THREAD_HAS_STACK_SIZE,
-        .stack_size = 1024 * 1024,
-    }}, swow_siritz_run, (const swow_siritz_run_t[]) {{
+    // printf("%p %d %.*s\n", s->callable.s->val, s->callable.s->len, s->callable.s->len, s->callable.s->val);
+    const swow_siritz_run_t *run = malloc(sizeof(*run));
+    memcpy(run, (const swow_siritz_run_t[]){{
         .callable = s->callable,
         .args = s->args,
         .server_context = SG(server_context),
-    }});
+    }}, sizeof(*run));
+    
+    int ret = uv_thread_create_ex(&s->thread, (const uv_thread_options_t[]) {{
+        .flags = UV_THREAD_HAS_STACK_SIZE,
+        .stack_size = 1024 * 1024,
+    }}, swow_siritz_run, run);
     if (ret != 0) {
         zend_throw_exception_ex(swow_siritz_exception_ce, 0, "Failed to create thread: %s", uv_strerror(ret));
         return;
     }
 
-    printf("add thread %p\n", s->thread);
+    // printf("add thread %p\n", s->thread);
     zend_hash_str_add_ptr(&siritz, (const char *) &s->thread, sizeof(s->thread), "running");
 
     RETURN_THIS();
@@ -163,7 +170,7 @@ static PHP_METHOD(Swow_Siritz, wait)
     }
 
     if (ret == WAIT_OBJECT_0 || kill) {
-        printf("remove thread %p\n", s->thread);
+        // printf("remove thread %p\n", s->thread);
         zend_hash_str_del(&siritz, (const char *) &s->thread, sizeof(s->thread));
     }
 
@@ -214,7 +221,7 @@ zend_result swow_siritz_module_shutdown(INIT_FUNC_ARGS)
 {
 
     ZEND_HASH_REVERSE_FOREACH_STR_KEY(&siritz, HANDLE t) {
-        printf("wait for thread %p\n", t);
+        // printf("wait for thread %p\n", t);
         DWORD ret = WaitForSingleObject(t, 1000/* TODO: configurable */);
         if (ret == WAIT_TIMEOUT) {
             TerminateThread(t, 0);
