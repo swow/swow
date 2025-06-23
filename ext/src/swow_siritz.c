@@ -40,6 +40,12 @@ static PHP_METHOD(Swow_Siritz, __construct)
     php_var_serialize(&str_callable, ZEND_CALL_ARG(execute_data, 1), &var_hash);
     PHP_VAR_SERIALIZE_DESTROY(var_hash);
 
+    if (str_callable.s == NULL) {
+        // serialize failed
+        zend_throw_exception(swow_siritz_exception_ce, "Invalid callable", 0);
+        return;
+    }
+
     zval z_args;
     HashTable args;
     zend_hash_init(&args, fci.param_count, NULL, ZVAL_PTR_DTOR, 0);
@@ -54,6 +60,12 @@ static PHP_METHOD(Swow_Siritz, __construct)
     PHP_VAR_SERIALIZE_DESTROY(var_hash);
 
     zend_hash_destroy(&args);
+
+    if (str_args.s == NULL) {
+        // serialize failed
+        zend_throw_exception(swow_siritz_exception_ce, "Invalid args", 0);
+        return;
+    }
 
     s->callable.s = NULL;
     smart_str_appendl_ex(&s->callable, str_callable.s->val, str_callable.s->len, 1);
