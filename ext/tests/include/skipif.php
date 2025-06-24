@@ -169,3 +169,10 @@ function skip_if_offline(): void
 {
     skip_if(getenv('OFFLINE'), 'Internet connection required');
 }
+
+function skip_if_cannot_create_fifo(): void
+{
+    $fifo = make_fifo();
+    @unlink($fifo);
+    skip_if(!$fifo, "Cannot create fifo(named pipe)");
+}

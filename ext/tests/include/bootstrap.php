@@ -352,3 +352,65 @@ function httpRequest(string $url, string $method = 'GET', string $content = '', 
         'body' => $content ?: '',
     ];
 }
+
+
+function make_fifo(): ?string
+{
+    $path = sprintf(
+        PHP_OS_FAMILY !== 'Windows' ? '/tmp/swow_test_%s.fifo' : '\\\\.\pipe\swow_test_%s',
+        getRandomBytes(8)
+    );
+
+    if (PHP_OS_FAMILY !== 'Windows') {
+        shell_exec("mkfifo \"$path\"");
+        $stat = @stat($path);
+        if ($stat === false || !($stat['mode'] | 0x1000)) {
+            // mkfifo failed, try mknod
+            @unlink($path);
+            shell_exec("mknod \"$path\" p");
+            $stat = @stat($path);
+            if ($stat === false || !($stat['mode'] | 0x1000)) {
+                @unlink($path);
+                return null;
+            }
+        }
+    } else {
+        // new Socket(Socket::TYPE_PIPE) cannot be used
+        // because dwOpenMode FILE_FLAG_FIRST_PIPE_INSTANCE is specified
+        // the flag will make following opens fail with ERROR_ACCESS_DENIED
+        if (!extension_loaded('ffi')) {
+            // no way to create fifo on windows
+            return null;
+        }
+        try {
+            // ffi may not be enabled
+            $ffi = FFI::cdef('
+                void *CreateNamedPipeA(
+                    const char *lpName,
+                    int dwOpenMode,
+                    int dwPipeMode,
+                    int nMaxInstances,
+                    int nOutBufferSize,
+                    int nInBufferSize,
+                    int nDefaultTimeOut,
+                    const void *lpSecurityAttributes
+                );
+                void CloseHandle(void *hObject);
+            ', 'kernel32.dll');
+            $handle = $ffi->CreateNamedPipeA(
+                $path,
+                0x00000003 /* PIPE_ACCESS_DUPLEX */,
+                0 /* PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT | PIPE_ACCEPT_REMOTE_CLIENTS */,
+                255 /* PIPE_UNLIMITED_INSTANCES */,
+                0, // no buffer
+                0, // no buffer
+                0, // default time out
+                null, // no security specified
+            );
+        } catch (Throwable $e) {
+            var_dump($e);
+            return null;
+        }
+    }
+    return $path;
+}
