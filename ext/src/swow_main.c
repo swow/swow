@@ -133,6 +133,10 @@ PHP_INI_ENTRY("curl.cainfo", "", PHP_INI_SYSTEM, NULL)
 #endif
 PHP_INI_END()
 
+// swow_fs donot have a separate header file, so we need to define it here
+// this is implemented in swow_fs.c
+zend_result swow_fs_module_init(INIT_FUNC_ARGS);
+
 /* {{{ PHP_MINIT_FUNCTION
  */
 PHP_MINIT_FUNCTION(swow)
@@ -207,6 +211,7 @@ PHP_MINIT_FUNCTION(swow)
         swow_exceptions_module_init,
         swow_debug_module_init,
         swow_util_module_init,
+        swow_fs_module_init,
         swow_defer_module_init,
         swow_coroutine_module_init,
         swow_channel_module_init,

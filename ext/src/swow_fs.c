@@ -31,9 +31,11 @@
  */
 
 #include "swow.h"
+#include "swow_hook.h"
 #include "cat_fs.h"
 #include "cat_work.h"
 #include "cat_time.h"
+#include "cat_socket.h"
 
 // from main/streams/plain_wrapper.c @ 4dad74f250de682a7deae0c9895436cd8aee6978
 
@@ -2496,3 +2498,162 @@ stream_skip:
 
 }
 /* }}} */
+
+static php_stream *swow_pipe_stream_fopen_from_fd_int(int fd, const char *mode)
+{
+    php_stream *stream;
+    swow_stdio_stream_data *self;
+
+    self = ecalloc(1, sizeof(*self));
+
+    self->file = NULL;
+    self->is_seekable = 0;
+    self->is_pipe = 1;
+    self->lock_flag = LOCK_UN;
+    self->is_process_pipe = 0;
+    self->fd = fd;
+    self->temp_name = NULL;
+#ifdef PHP_WIN32
+    self->is_pipe_blocking = 1;
+#endif
+
+    stream = php_stream_alloc(&php_stream_stdio_ops, self, NULL, mode);
+    stream->flags |= PHP_STREAM_FLAG_NO_SEEK | PHP_STREAM_FLAG_NO_BUFFER;
+    stream->position = -1;
+
+    return stream;
+}
+
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_swow_pipe, 0, 0, IS_ARRAY, 1)
+    ZEND_ARG_TYPE_INFO(0, rflags, IS_LONG, 0)
+    ZEND_ARG_TYPE_INFO(0, wflags, IS_LONG, 0)
+ZEND_END_ARG_INFO()
+
+static PHP_FUNCTION(swow_pipe)
+{
+    zend_long rflags = 0, wflags = 0;
+    php_stream *rstream, *wstream;
+    zval rzv, wzv;
+
+    ZEND_PARSE_PARAMETERS_START(0, 1)
+        Z_PARAM_OPTIONAL
+        Z_PARAM_LONG(rflags)
+        Z_PARAM_LONG(wflags)
+    ZEND_PARSE_PARAMETERS_END();
+
+    if (EX_NUM_ARGS() == 1) {
+        wflags = rflags;
+    }
+
+    cat_os_fd_t fds[2];
+    cat_bool_t ret = cat_pipe(fds, rflags, wflags);
+    if (UNEXPECTED(!ret)) {
+        swow_throw_exception_with_last(swow_exception_ce);
+        RETURN_THROWS();
+    }
+
+    rstream = swow_pipe_stream_fopen_from_fd_int(fds[0], "rb");
+    php_stream_to_zval(rstream, &rzv);
+
+    wstream = swow_pipe_stream_fopen_from_fd_int(fds[1], "wb");
+    php_stream_to_zval(wstream, &wzv);
+
+    array_init(return_value);
+    add_next_index_zval(return_value, &rzv);
+    add_next_index_zval(return_value, &wzv);
+}
+
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_swow_fileno, 0, 1, IS_LONG, 1)
+    ZEND_ARG_INFO(0, stream)
+ZEND_END_ARG_INFO()
+
+static PHP_FUNCTION(swow_fileno)
+{
+    zval *zres;
+    zend_resource *res;
+    php_stream *stream;
+	// php may access this as pointer, so we use intptr_t to avoid stack overflow
+    intptr_t fd = -1;
+
+    ZEND_PARSE_PARAMETERS_START(1, 1)
+        Z_PARAM_RESOURCE(zres)
+    ZEND_PARSE_PARAMETERS_END();
+
+    res = Z_RES_P(zres);
+    if (res->type != php_file_le_stream() && res->type != php_file_le_pstream()) {
+        zend_throw_exception_ex(swow_exception_ce, 0, "Invalid stream resource");
+        RETURN_THROWS();
+    }
+
+    stream = (php_stream *) res->ptr;
+    if (php_stream_cast(stream, PHP_STREAM_AS_FD, (void**)&fd, 0) == FAILURE) {
+        zend_throw_exception_ex(swow_exception_ce, 0,
+            "Cannot represent a stream of type %s as a File Descriptor", stream->ops->label);
+        RETURN_THROWS();
+    }
+
+    // truncate to int because fd is int (i32 at most platform)
+    if ((int)fd < 0) {
+        zend_throw_exception_ex(swow_exception_ce, 0, "Invalid file descriptor");
+        RETURN_THROWS();
+    }
+
+	// cast to zend_long because zend_long is long (i64 at most platform)
+    RETURN_LONG((zend_long)(int)fd);
+}
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_swow_pipe_from_fd, 0, 0, 2)
+    ZEND_ARG_TYPE_INFO(0, fd, IS_LONG, 0)
+    ZEND_ARG_TYPE_INFO(0, mode, IS_STRING, 0)
+ZEND_END_ARG_INFO()
+
+static PHP_FUNCTION(swow_pipe_from_fd)
+{
+    zend_long fd;
+    php_stream *stream;
+    char *mode;
+    size_t mode_len;
+
+    ZEND_PARSE_PARAMETERS_START(2, 2)
+        Z_PARAM_LONG(fd)
+        Z_PARAM_STRING(mode, mode_len)
+    ZEND_PARSE_PARAMETERS_END();
+
+
+#ifdef CAT_OS_WIN
+    // a libuv flaw here, on Windows, this is the only way to check if a file descriptor is a pipe
+    if (GetFileType(uv_get_osfhandle(fd)) != FILE_TYPE_PIPE)
+#else
+    cat_stat_t stat;
+    if (cat_fs_fstat(fd, &stat) != 0) {
+        zend_throw_exception_ex(swow_exception_ce, 0, "Failed to get file status");
+        RETURN_THROWS();
+    }
+
+    if (!(stat.st_mode & S_IFIFO))
+#endif
+    {
+        zend_throw_exception_ex(swow_exception_ce, 0, "File descriptor is not a pipe");
+        RETURN_THROWS();
+    }
+
+    stream = swow_pipe_stream_fopen_from_fd_int(fd, mode);
+    php_stream_to_zval(stream, return_value);
+};
+
+
+static const zend_function_entry swow_fs_functions[] = {
+    ZEND_NS_FENTRY("Swow", pipe, PHP_FN(swow_pipe), arginfo_swow_pipe, 0)
+    ZEND_NS_FENTRY("Swow", fileno, PHP_FN(swow_fileno), arginfo_swow_fileno, 0)
+    ZEND_NS_FENTRY("Swow", pipe_from_fd, PHP_FN(swow_pipe_from_fd), arginfo_swow_pipe_from_fd, 0)
+    ZEND_FE_END
+};
+
+zend_result swow_fs_module_init(INIT_FUNC_ARGS)
+{
+    if (!swow_hook_internal_functions(swow_fs_functions)) {
+        return FAILURE;
+    }
+
+    return SUCCESS;
+}
