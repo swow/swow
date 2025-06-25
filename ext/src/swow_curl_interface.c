@@ -127,7 +127,7 @@ static zend_result php_curl_option_url(php_curl *ch, const zend_string *url) /* 
 {
     /* Disable file:// if open_basedir are used */
     if (PG(open_basedir) && *PG(open_basedir)) {
-        curl_easy_setopt(ch->cp, CURLOPT_PROTOCOLS, CURLPROTO_ALL & ~CURLPROTO_FILE);
+        curl_easy_setopt(ch->cp, CURLOPT_PROTOCOLS, CURLPROTO_ALL & (long)~CURLPROTO_FILE);
     }
 
 #ifdef PHP_WIN32

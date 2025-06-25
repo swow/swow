@@ -1047,7 +1047,7 @@ void swow_pgsqlCopyToFile_internal(INTERNAL_FUNCTION_PARAMETERS)
 			if (ret == -1) {
 				break; /* done */
 			} else if (ret > 0) {
-				if (php_stream_write(stream, csv, ret) != (size_t)ret) {
+				if (php_stream_write(stream, csv, ret) != (ssize_t)ret) {
 					pdo_pgsql_error_msg(dbh, PGRES_FATAL_ERROR, "Unable to write to file");
 					PQfreemem(csv);
 					php_stream_close(stream);
@@ -1659,7 +1659,7 @@ zend_result swow_pgsql_module_init(INIT_FUNC_ARGS)
 	DL_HANDLE dummy_handle = DL_LOAD(LIBPQ_SO_NAME);
 	if (!dummy_handle) {
 		char name_buf[128];
-		for (int i = 0; i < CAT_ARRAY_SIZE(library_paths); i++) {
+		for (int i = 0; i < (int)CAT_ARRAY_SIZE(library_paths); i++) {
 			snprintf(name_buf, sizeof(name_buf), "%s%s", library_paths[i], LIBPQ_SO_NAME);
 
 #ifdef CAT_OS_WIN
@@ -1677,7 +1677,7 @@ zend_result swow_pgsql_module_init(INIT_FUNC_ARGS)
 	}
 	if (!dummy_handle) {
 		smart_str paths = {0};
-		for (int i = 0; i < CAT_ARRAY_SIZE(library_paths); i++) {
+		for (int i = 0; i < (int)CAT_ARRAY_SIZE(library_paths); i++) {
 			smart_str_appends(&paths, library_paths[i]);
 			smart_str_appendc(&paths, ',');
 		}
