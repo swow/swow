@@ -121,7 +121,7 @@ static swow_php_ast_walker_op swow_closure_walker(zend_ast *ast, void *context_p
 
                 break;
             }
-            
+
             // namespace <T_STRING> { STMT_LIST }; statement
             // see Zend/zend_language_parser.y near L369 top_statement syntax
 
@@ -268,7 +268,7 @@ SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_user_anonymous_function(zend_f
         goto _err;
     }
     if (context.found_function > 1) {
-		php_error_docref(NULL, E_WARNING, "Found multiple closure on %s:%d, using the first one", ZSTR_VAL(filename), line_start);
+        php_error_docref(NULL, E_WARNING, "Found multiple closure on %s:%d, using the first one", ZSTR_VAL(filename), line_start);
     }
     // now: "namespace A { use A; use B;"
 
@@ -337,6 +337,7 @@ SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_user_anonymous_function(zend_f
     if (context.in_namespace_brace) {
         smart_str_appendc(&context.code_str, '}');
     }
+    smart_str_0(&context.code_str);
 
     ht = zend_new_array(3);
     ZVAL_STR_COPY(&z_tmp, filename);
