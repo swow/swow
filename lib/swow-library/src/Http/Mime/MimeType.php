@@ -405,7 +405,7 @@ class MimeType
     public const META4 = 'application/metalink4+xml';
     public const METS = 'application/mets+xml';
     public const MF4 = 'application/mf4';
-    public const MIKEY = 'application/mikey';
+    public const MIKEY = 'application/mikey'; // gitleaks:allow
     public const MIPC = 'application/mipc';
     public const MISSING_BLOCKS_CBOR_SEQ = 'application/missing-blocks+cbor-seq';
     public const MAEI = 'application/mmt-aei+xml';
