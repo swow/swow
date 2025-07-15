@@ -337,11 +337,20 @@ static cat_bool_t swow_coroutine_construct(swow_coroutine_t *s_coroutine, zval *
     }
 
 #ifdef ZEND_CHECK_STACK_LIMIT
-    if (c_stack_size < EG(reserved_stack_size)) {
+    if (EG(reserved_stack_size) > 0) {
         if (c_stack_size == 0) {
-            c_stack_size = CAT_COROUTINE_RECOMMENDED_STACK_SIZE;
+            c_stack_size = CAT_COROUTINE_G(default_stack_size);
         }
-        c_stack_size += EG(reserved_stack_size);
+        zend_ulong reserve = EG(reserved_stack_size);
+#ifdef __APPLE__
+        /* On Apple Clang, the stack probing function ___chkstk_darwin incorrectly
+        * probes a location that is twice the entered function's stack usage away
+        * from the stack pointer, when using an alternative stack.
+        * https://openradar.appspot.com/radar?id=5497722702397440
+        */
+        reserve += reserve;
+#endif
+        c_stack_size += reserve;
     }
 #endif // ZEND_CHECK_STACK_LIMIT
 
