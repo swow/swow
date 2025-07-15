@@ -3406,8 +3406,8 @@ static cat_bool_t cat_socket_internal_write_encrypted(
 )
 {
     cat_ssl_t *ssl = socket_i->ssl; CAT_ASSERT(ssl != NULL);
-    cat_io_vector_t ssl_vector[8];
-    unsigned int ssl_vector_count = CAT_ARRAY_SIZE(ssl_vector);
+    char *encrypted_data;
+    size_t encrypted_length;
     cat_bool_t ret;
 
     /* Notice: we must encrypt all buffers at once,
@@ -3415,7 +3415,7 @@ static cat_bool_t cat_socket_internal_write_encrypted(
     ret = cat_ssl_encrypt(
         socket_i->ssl,
         (const cat_io_vector_t *) vector, vector_count,
-        ssl_vector, &ssl_vector_count
+        &encrypted_data, &encrypted_length
     );
 
     if (unlikely(!ret)) {
@@ -3424,12 +3424,16 @@ static cat_bool_t cat_socket_internal_write_encrypted(
         return cat_false;
     }
 
+    // Create single vector for raw write
+    cat_socket_write_vector_t encrypted_vector = cat_socket_write_vector_init(encrypted_data, (cat_socket_vector_length_t) encrypted_length);
+
     ret = cat_socket_internal_write_raw(
-        socket_i, (cat_socket_write_vector_t *) ssl_vector, ssl_vector_count,
+        socket_i, &encrypted_vector, 1,
         address, address_length, NULL, timeout
     );
 
-    cat_ssl_encrypted_vector_free(ssl, ssl_vector, ssl_vector_count);
+    // Simple cleanup
+    cat_free(encrypted_data);
 
     return ret;
 }
@@ -3452,20 +3456,19 @@ static ssize_t cat_socket_internal_try_write_encrypted(
     if (unlikely(ssl->write_buffer.length != 0)) {
         return CAT_EAGAIN;
     }
-    cat_io_vector_t ssl_vector[8];
-    unsigned int ssl_vector_count;
+    char *encrypted_data;
+    size_t encrypted_length;
     ssize_t nwrite, nwrite_encrypted;
     cat_bool_t encrypted;
     cat_errno_t error = 0;
 
     /* Notice: we must encrypt all buffers at once,
      * otherwise we will not be able to support queued writes. */
-    ssl_vector_count = CAT_ARRAY_SIZE(ssl_vector);
     CAT_PROTECT_LAST_ERROR_START() {
         encrypted = cat_ssl_encrypt(
             socket_i->ssl,
             (const cat_io_vector_t *) vector, vector_count,
-            ssl_vector, &ssl_vector_count
+            &encrypted_data, &encrypted_length
         );
         if (unlikely(!encrypted)) {
             error = cat_get_last_error_code();
@@ -3474,12 +3477,13 @@ static ssize_t cat_socket_internal_try_write_encrypted(
     if (unlikely(!encrypted)) {
         cat_socket_internal_ssl_recoverability_check(socket_i);
         return error;
-    }
+          }
+
+    // Create single vector for raw write
+    cat_socket_write_vector_t encrypted_vector = cat_socket_write_vector_init(encrypted_data, (cat_socket_vector_length_t) encrypted_length);
 
     nwrite_encrypted = cat_socket_internal_try_write_raw(
-        socket_i,
-        (cat_socket_write_vector_t *) ssl_vector, ssl_vector_count,
-        address, address_length
+        socket_i, &encrypted_vector, 1, address, address_length
     );
 
     if (nwrite_encrypted == CAT_EAGAIN) {
@@ -3488,45 +3492,19 @@ static ssize_t cat_socket_internal_try_write_encrypted(
     if (unlikely(nwrite_encrypted < 0)) {
         nwrite = nwrite_encrypted;
     } else {
-        cat_io_vector_t *ssl_vector_current = ssl_vector;
-        cat_io_vector_t *ssl_vector_eof = ssl_vector + ssl_vector_count;
-        size_t ssl_vector_base_offset = nwrite_encrypted;
         nwrite = cat_io_vector_length((const cat_io_vector_t *) vector, vector_count);
-        while (ssl_vector_base_offset >= ssl_vector_current->length) {
-            ssl_vector_base_offset -= ssl_vector_current->length;
-            if (++ssl_vector_current == ssl_vector_eof) {
-                break;
-            }
-        }
-        /* Well, this could be confusing. if we can not send all encrypted data at once,
-         * we really can not know how many bytes of raw data has been sent,
-         * so the only thing we can do is to store the remaining data to buffer and
-         * try again in the next call. */
-#ifdef CAT_DEBUG
-        size_t encrypted_bytes = cat_io_vector_length(ssl_vector, ssl_vector_count);
-        CAT_LOG_DEBUG(SSL, "SSL %p expect send %zu encrypted bytes, actually %zu bytes was sent (raw data is %zu bytes)",
-            ssl, encrypted_bytes, (size_t) nwrite_encrypted, (size_t) nwrite);
-        CAT_ASSERT(((size_t) nwrite_encrypted == encrypted_bytes) ==
-                    (ssl_vector_current == ssl_vector_eof));
-#endif
-        if (ssl_vector_current != ssl_vector_eof) {
-            if (ssl_vector_current->base == ssl->write_buffer.value) {
-                ssl->write_buffer.length = ssl_vector_current->length - ssl_vector_base_offset;
-                memmove(ssl->write_buffer.value,
-                        ssl_vector_current->base + ssl_vector_base_offset,
-                        ssl->write_buffer.length);
-            } else {
-                cat_buffer_append(&ssl->write_buffer,
-                    ssl_vector_current->base + ssl_vector_base_offset,
-                    ssl_vector_current->length - ssl_vector_base_offset);
-            }
-            while (++ssl_vector_current < ssl_vector_eof) {
-                cat_buffer_append(&ssl->write_buffer,
-                    ssl_vector_current->base,
-                    ssl_vector_current->length);
-            }
-            /* We tell caller all data has been sent, but actually they are in buffered,
-                * it's ok, just like syscall write() did. */
+
+        /* If we can not send all encrypted data at once,
+         * store the remaining data to buffer and try again in the next call. */
+        if ((size_t) nwrite_encrypted < encrypted_length) {
+            size_t remaining_encrypted = encrypted_length - nwrite_encrypted;
+            CAT_LOG_DEBUG(SSL, "SSL %p expect send %zu encrypted bytes, actually %zu bytes was sent (raw data is %zu bytes)",
+                ssl, encrypted_length, (size_t) nwrite_encrypted, (size_t) nwrite);
+
+            // Store remaining encrypted data to write buffer
+            cat_buffer_append(&ssl->write_buffer,
+                encrypted_data + nwrite_encrypted, remaining_encrypted);
+
             CAT_LOG_DEBUG(SSL, "SSL %p write buffer now has %zu bytes queued data", ssl, ssl->write_buffer.length);
             uv_write_t *request = (uv_write_t *) cat_malloc(sizeof(*request));
 #if CAT_ALLOC_HANDLE_ERRORS
@@ -3547,7 +3525,8 @@ static ssize_t cat_socket_internal_try_write_encrypted(
         }
     }
 
-    cat_ssl_encrypted_vector_free(ssl, ssl_vector, ssl_vector_count);
+    // Simple cleanup
+    cat_free(encrypted_data);
 
     return nwrite;
 }
