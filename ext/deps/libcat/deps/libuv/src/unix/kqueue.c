@@ -21,6 +21,11 @@
 #include "uv.h"
 #include "internal.h"
 
+#ifdef HAVE_LIBCAT
+#include "../hat_atomic.h"
+#else
+#include <stdatomic.h>
+#endif
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
@@ -63,7 +68,11 @@ int uv__kqueue_init(uv_loop_t* loop) {
 
 
 #if defined(__APPLE__) && MAC_OS_X_VERSION_MAX_ALLOWED >= 1070
+#ifdef HAVE_LIBCAT
+static hat_atomic_int32_t uv__has_forked_with_cfrunloop = HAT_ATOMIC_INT32_INIT(0);
+#else
 static _Atomic int uv__has_forked_with_cfrunloop;
+#endif
 #endif
 
 int uv__io_fork(uv_loop_t* loop) {
@@ -85,9 +94,13 @@ int uv__io_fork(uv_loop_t* loop) {
        process. So we sidestep the issue by pretending like we never
        started it in the first place.
     */
+#ifdef HAVE_LIBCAT
+    hat_atomic_int32_store(&uv__has_forked_with_cfrunloop, 1);
+#else
     atomic_store_explicit(&uv__has_forked_with_cfrunloop,
                           1,
                           memory_order_relaxed);
+#endif
     uv__free(loop->cf_state);
     loop->cf_state = NULL;
   }
@@ -111,7 +124,7 @@ int uv__io_check_fd(uv_loop_t* loop, int fd) {
    *
    * On Darwin, DragonFlyBSD, NetBSD and OpenBSD, kqueue reports ready events for
    * regular files as readable and writable only once, acting like an EV_ONESHOT.
-   * 
+   *
    * Neither of the above cases should be added to the kqueue.
    */
   if (S_ISREG(sb.st_mode) || S_ISDIR(sb.st_mode))
@@ -121,9 +134,9 @@ int uv__io_check_fd(uv_loop_t* loop, int fd) {
   /* On Darwin (both macOS and iOS), in addition to regular files, FIFOs also don't
    * work properly with kqueue: the disconnection from the last writer won't trigger
    * an event for kqueue in spite of what the man pages say. Thus, we also disallow
-   * the case of S_IFIFO. */ 
+   * the case of S_IFIFO. */
   if (S_ISFIFO(sb.st_mode)) {
-    /* File descriptors of FIFO, pipe and kqueue share the same type of file, 
+    /* File descriptors of FIFO, pipe and kqueue share the same type of file,
      * therefore there is no way to tell them apart via stat.st_mode&S_IFMT.
      * Fortunately, FIFO is the only one that has a persisted file on filesystem,
      * from which we're able to make the distinction for it. */
@@ -602,8 +615,12 @@ int uv_fs_event_start(uv_fs_event_t* handle,
   if (!(statbuf.st_mode & S_IFDIR))
     goto fallback;
 
+#ifdef HAVE_LIBCAT
+  if (0 == hat_atomic_int32_load(&uv__has_forked_with_cfrunloop)) {
+#else
   if (0 == atomic_load_explicit(&uv__has_forked_with_cfrunloop,
                                 memory_order_relaxed)) {
+#endif
     int r;
     /* The fallback fd is no longer needed */
     uv__close_nocheckstdio(fd);
@@ -638,8 +655,12 @@ int uv_fs_event_stop(uv_fs_event_t* handle) {
   uv__handle_stop(handle);
 
 #if defined(__APPLE__) && MAC_OS_X_VERSION_MAX_ALLOWED >= 1070
+#ifdef HAVE_LIBCAT
+  if (0 == hat_atomic_int32_load(&uv__has_forked_with_cfrunloop))
+#else
   if (0 == atomic_load_explicit(&uv__has_forked_with_cfrunloop,
                                 memory_order_relaxed))
+#endif
     if (handle->cf_cb != NULL)
       r = uv__fsevents_close(handle);
 #endif

@@ -22,6 +22,11 @@
 #include "internal.h"
 #include "strtok.h"
 
+#ifdef HAVE_LIBCAT
+#include "../hat_atomic.h"
+#else
+#include <stdatomic.h>
+#endif
 #include <stddef.h> /* NULL */
 #include <stdio.h> /* printf */
 #include <stdlib.h>
@@ -276,10 +281,18 @@ int uv__getiovmax(void) {
 #if defined(IOV_MAX)
   return IOV_MAX;
 #elif defined(_SC_IOV_MAX)
+#ifdef HAVE_LIBCAT
+  static hat_atomic_int32_t iovmax_cached = HAT_ATOMIC_INT32_INIT(-1);
+#else
   static _Atomic int iovmax_cached = -1;
+#endif
   int iovmax;
 
+#ifdef HAVE_LIBCAT
+  iovmax = hat_atomic_int32_load(&iovmax_cached);
+#else
   iovmax = atomic_load_explicit(&iovmax_cached, memory_order_relaxed);
+#endif
   if (iovmax != -1)
     return iovmax;
 
@@ -291,7 +304,11 @@ int uv__getiovmax(void) {
   if (iovmax == -1)
     iovmax = 1;
 
+#ifdef HAVE_LIBCAT
+  hat_atomic_int32_store(&iovmax_cached, iovmax);
+#else
   atomic_store_explicit(&iovmax_cached, iovmax, memory_order_relaxed);
+#endif
 
   return iovmax;
 #else

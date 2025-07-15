@@ -31,7 +31,11 @@
 
 #include <errno.h>
 #include <dlfcn.h>
+#ifdef HAVE_LIBCAT
+#include "../hat_atomic.h"
+#else
 #include <stdatomic.h>
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -299,7 +303,11 @@ static int uv__fs_mkstemp(uv_fs_t* req) {
   static uv_once_t once = UV_ONCE_INIT;
   int r;
 #ifdef O_CLOEXEC
+#ifdef HAVE_LIBCAT
+  static hat_atomic_int32_t no_cloexec_support = HAT_ATOMIC_INT32_INIT(0);
+#else
   static _Atomic int no_cloexec_support;
+#endif
 #endif
   static const char pattern[] = "XXXXXX";
   static const size_t pattern_size = sizeof(pattern) - 1;
@@ -324,8 +332,13 @@ static int uv__fs_mkstemp(uv_fs_t* req) {
   uv_once(&once, uv__mkostemp_initonce);
 
 #ifdef O_CLOEXEC
+#ifdef HAVE_LIBCAT
+  if (hat_atomic_int32_load(&no_cloexec_support) == 0 &&
+      uv__mkostemp != NULL) {
+#else
   if (atomic_load_explicit(&no_cloexec_support, memory_order_relaxed) == 0 &&
       uv__mkostemp != NULL) {
+#endif
     r = uv__mkostemp(path, O_CLOEXEC);
 
     if (r >= 0)
@@ -338,7 +351,11 @@ static int uv__fs_mkstemp(uv_fs_t* req) {
 
     /* We set the static variable so that next calls don't even
        try to use mkostemp. */
+#ifdef HAVE_LIBCAT
+    hat_atomic_int32_store(&no_cloexec_support, 1);
+#else
     atomic_store_explicit(&no_cloexec_support, 1, memory_order_relaxed);
+#endif
   }
 #endif  /* O_CLOEXEC */
 
@@ -466,12 +483,20 @@ static ssize_t uv__preadv_or_pwritev(int fd,
                                      const struct iovec* bufs,
                                      size_t nbufs,
                                      off_t off,
+#ifdef HAVE_LIBCAT
+                                     hat_atomic_uintptr_t* cache,
+#else
                                      _Atomic uintptr_t* cache,
+#endif
                                      int is_pread) {
   ssize_t (*f)(int, const struct iovec*, uv__iovcnt, off_t);
   void* p;
 
+#ifdef HAVE_LIBCAT
+  p = (void*) hat_atomic_uintptr_load(cache);
+#else
   p = (void*) atomic_load_explicit(cache, memory_order_relaxed);
+#endif
   if (p == NULL) {
 #ifdef RTLD_DEFAULT
     /* Try _LARGEFILE_SOURCE version of preadv/pwritev first,
@@ -484,7 +509,11 @@ static ssize_t uv__preadv_or_pwritev(int fd,
 #endif  /* RTLD_DEFAULT */
     if (p == NULL)
       p = is_pread ? uv__preadv_emul : uv__pwritev_emul;
+#ifdef HAVE_LIBCAT
+    hat_atomic_uintptr_store(cache, (uintptr_t) p);
+#else
     atomic_store_explicit(cache, (uintptr_t) p, memory_order_relaxed);
+#endif
   }
 
   f = p;
@@ -496,7 +525,11 @@ static ssize_t uv__preadv(int fd,
                           const struct iovec* bufs,
                           size_t nbufs,
                           off_t off) {
+#ifdef HAVE_LIBCAT
+  static hat_atomic_uintptr_t cache = HAT_ATOMIC_UINTPTR_INIT(0);
+#else
   static _Atomic uintptr_t cache;
+#endif
   return uv__preadv_or_pwritev(fd, bufs, nbufs, off, &cache, /*is_pread*/1);
 }
 
@@ -505,7 +538,11 @@ static ssize_t uv__pwritev(int fd,
                            const struct iovec* bufs,
                            size_t nbufs,
                            off_t off) {
+#ifdef HAVE_LIBCAT
+  static hat_atomic_uintptr_t cache = HAT_ATOMIC_UINTPTR_INIT(0);
+#else
   static _Atomic uintptr_t cache;
+#endif
   return uv__preadv_or_pwritev(fd, bufs, nbufs, off, &cache, /*is_pread*/0);
 }
 
@@ -982,10 +1019,18 @@ static int uv__is_cifs_or_smb(int fd) {
 
 static ssize_t uv__fs_try_copy_file_range(int in_fd, off_t* off,
                                           int out_fd, size_t len) {
+#ifdef HAVE_LIBCAT
+  static hat_atomic_int32_t no_copy_file_range_support = HAT_ATOMIC_INT32_INIT(0);
+#else
   static _Atomic int no_copy_file_range_support;
+#endif
   ssize_t r;
 
+#ifdef HAVE_LIBCAT
+  if (hat_atomic_int32_load(&no_copy_file_range_support)) {
+#else
   if (atomic_load_explicit(&no_copy_file_range_support, memory_order_relaxed)) {
+#endif
     errno = ENOSYS;
     return -1;
   }
@@ -1004,7 +1049,11 @@ static ssize_t uv__fs_try_copy_file_range(int in_fd, off_t* off,
       errno = ENOSYS;  /* Use fallback. */
     break;
   case ENOSYS:
+#ifdef HAVE_LIBCAT
+    hat_atomic_int32_store(&no_copy_file_range_support, 1);
+#else
     atomic_store_explicit(&no_copy_file_range_support, 1, memory_order_relaxed);
+#endif
     break;
   case EPERM:
     /* It's been reported that CIFS spuriously fails.
@@ -1528,14 +1577,22 @@ static int uv__fs_statx(int fd,
                         uv_stat_t* buf) {
   STATIC_ASSERT(UV_ENOSYS != -1);
 #ifdef __linux__
+#ifdef HAVE_LIBCAT
+  static hat_atomic_int32_t no_statx = HAT_ATOMIC_INT32_INIT(0);
+#else
   static _Atomic int no_statx;
+#endif
   struct uv__statx statxbuf;
   int dirfd;
   int flags;
   int mode;
   int rc;
 
+#ifdef HAVE_LIBCAT
+  if (hat_atomic_int32_load(&no_statx))
+#else
   if (atomic_load_explicit(&no_statx, memory_order_relaxed))
+#endif
     return UV_ENOSYS;
 
   dirfd = AT_FDCWD;
@@ -1569,7 +1626,11 @@ static int uv__fs_statx(int fd,
      * implemented, rc might return 1 with 0 set as the error code in which
      * case we return ENOSYS.
      */
+#ifdef HAVE_LIBCAT
+    hat_atomic_int32_store(&no_statx, 1);
+#else
     atomic_store_explicit(&no_statx, 1, memory_order_relaxed);
+#endif
     return UV_ENOSYS;
   }
 

@@ -27,7 +27,11 @@
 #include "internal.h"
 
 #include <inttypes.h>
+#ifdef HAVE_LIBCAT
+#include "../hat_atomic.h"
+#else
 #include <stdatomic.h>
+#endif
 #include <stddef.h>  /* offsetof */
 #include <stdint.h>
 #include <stdio.h>
@@ -300,7 +304,11 @@ static struct watcher_root* uv__inotify_watchers(uv_loop_t* loop) {
 
 
 unsigned uv__kernel_version(void) {
+#ifdef HAVE_LIBCAT
+  static hat_atomic_uint32_t cached_version = HAT_ATOMIC_UINT32_INIT(0);
+#else
   static _Atomic unsigned cached_version;
+#endif
   struct utsname u;
   unsigned version;
   unsigned major;
@@ -309,7 +317,11 @@ unsigned uv__kernel_version(void) {
   char v_sig[256];
   char* needle;
 
+#ifdef HAVE_LIBCAT
+  version = hat_atomic_uint32_load(&cached_version);
+#else
   version = atomic_load_explicit(&cached_version, memory_order_relaxed);
+#endif
   if (version != 0)
     return version;
 
@@ -365,7 +377,11 @@ unsigned uv__kernel_version(void) {
 
 calculate_version:
   version = major * 65536 + minor * 256 + patch;
+#ifdef HAVE_LIBCAT
+  hat_atomic_uint32_store(&cached_version, version);
+#else
   atomic_store_explicit(&cached_version, version, memory_order_relaxed);
+#endif
 
   return version;
 }
@@ -466,7 +482,11 @@ static int uv__use_io_uring(uint32_t flags) {
   return 0; /* Random SIGSEGV in signal handler. */
 #else
   /* Ternary: unknown=0, yes=1, no=-1 */
+#ifdef HAVE_LIBCAT
+  static hat_atomic_int32_t use_io_uring = HAT_ATOMIC_INT32_INIT(0);
+#else
   static _Atomic int use_io_uring;
+#endif
   char* val;
   int use;
 
@@ -486,12 +506,20 @@ static int uv__use_io_uring(uint32_t flags) {
   if (uv__kernel_version() < /*5.10.186*/0x050ABA)
     return 0;
 
+#ifdef HAVE_LIBCAT
+  use = hat_atomic_int32_load(&use_io_uring);
+#else
   use = atomic_load_explicit(&use_io_uring, memory_order_relaxed);
+#endif
 
   if (use == 0) {
     val = getenv("UV_USE_IO_URING");
     use = val != NULL && atoi(val) > 0 ? 1 : -1;
+#ifdef HAVE_LIBCAT
+    hat_atomic_int32_store(&use_io_uring, use);
+#else
     atomic_store_explicit(&use_io_uring, use, memory_order_relaxed);
+#endif
   }
 
   return use > 0;
@@ -1620,7 +1648,11 @@ update_timeout:
 }
 
 uint64_t uv__hrtime(uv_clocktype_t type) {
+#ifdef HAVE_LIBCAT
+  static hat_atomic_clock_t fast_clock_id = HAT_ATOMIC_CLOCK_INIT(-1);
+#else
   static _Atomic clock_t fast_clock_id = -1;
+#endif
   struct timespec t;
   clock_t clock_id;
 
@@ -1636,7 +1668,11 @@ uint64_t uv__hrtime(uv_clocktype_t type) {
   if (type != UV_CLOCK_FAST)
     goto done;
 
+#ifdef HAVE_LIBCAT
+  clock_id = hat_atomic_clock_load(&fast_clock_id);
+#else
   clock_id = atomic_load_explicit(&fast_clock_id, memory_order_relaxed);
+#endif
   if (clock_id != -1)
     goto done;
 
@@ -1645,7 +1681,11 @@ uint64_t uv__hrtime(uv_clocktype_t type) {
     if (t.tv_nsec <= 1 * 1000 * 1000)
       clock_id = CLOCK_MONOTONIC_COARSE;
 
+#ifdef HAVE_LIBCAT
+  hat_atomic_clock_store(&fast_clock_id, clock_id);
+#else
   atomic_store_explicit(&fast_clock_id, clock_id, memory_order_relaxed);
+#endif
 
 done:
 

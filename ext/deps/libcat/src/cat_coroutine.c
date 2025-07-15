@@ -83,9 +83,11 @@
 #  pragma warning(disable: 4255)
 # endif
 # if !defined(_MSC_VER) || _MSC_VER >= 1933
+#  include <sanitizer/asan_interface.h>
 #  include <sanitizer/common_interface_defs.h>
 # else // workaround
 // should be fixed in VS 2022: https://developercommunity.visualstudio.com/t/ASan-API-headers-not-in-include-path-whe/1517192
+#  include <../crt/src/sanitizer/asan_interface.h>
 #  include <../crt/src/sanitizer/common_interface_defs.h>
 # endif
 # ifdef _MSC_VER
@@ -632,6 +634,13 @@ CAT_API void cat_coroutine_free(cat_coroutine_t *coroutine)
         if (unlikely(!ret)) {
             CAT_SYSCALL_FAILURE(NOTICE, COROUTINE, "Unprotect stack page failed");
         }
+    }
+#endif
+#if defined(CAT_COROUTINE_USE_USER_STACK) && defined(CAT_COROUTINE_USE_ASAN)
+    /* If another mmap occurs after unmapping, it might activate the stale stack red zones.
+       Therefore, it's necessary to unpoison these zones before unmapping. */
+    if (coroutine->virtual_memory != NULL) {
+        ASAN_UNPOISON_MEMORY_REGION(coroutine->virtual_memory, coroutine->virtual_memory_size);
     }
 #endif
 #if defined(CAT_COROUTINE_USE_MMAP)

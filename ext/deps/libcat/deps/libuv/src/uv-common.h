@@ -41,6 +41,10 @@
 # include <stdatomic.h>
 #endif
 
+#ifdef HAVE_LIBCAT
+# include "hat_atomic.h"
+#endif
+
 #if EDOM > 0
 # define UV__ERR(x) (-(x))
 #else
@@ -68,6 +72,9 @@ extern int snprintf(char*, size_t, const char*, ...);
 #ifdef _MSC_VER
 #define uv__exchange_int_relaxed(p, v)                                        \
   InterlockedExchangeNoFence((LONG volatile*)(p), v)
+#elif defined(HAVE_LIBCAT)
+#define uv__exchange_int_relaxed(p, v)                                        \
+  hat_atomic_int32_exchange((hat_atomic_int32_t*)(p), v)
 #else
 #define uv__exchange_int_relaxed(p, v)                                        \
   atomic_exchange_explicit((_Atomic int*)(p), v, memory_order_relaxed)
