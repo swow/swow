@@ -609,10 +609,7 @@ int uv_crun(uv_loop_t* loop) {
     uv__idle_invoke(loop);
     uv__prepare_invoke(loop);
 
-    if (pGetQueuedCompletionStatusEx)
-      uv__poll(loop, uv_backend_timeout(loop));
-    else
-      uv__poll_wine(loop, uv_backend_timeout(loop));
+    uv__poll(loop, uv_backend_timeout(loop));
     uv__metrics_update_idle_time(loop);
 
     uv__check_invoke(loop);

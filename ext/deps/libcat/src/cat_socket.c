@@ -2134,10 +2134,9 @@ static cat_bool_t cat_socket_enable_crypto_impl(cat_socket_t *socket, const cat_
     }
     cat_ssl_t *ssl;
     cat_ssl_context_t *context = NULL;
-    cat_buffer_t *buffer;
+    cat_buffer_t *rbuffer, *wbuffer;
     cat_socket_crypto_options_t ioptions;
     cat_bool_t use_tmp_context;
-    cat_bool_t ret = cat_false;
 
     /* check options */
     if (options == NULL) {
@@ -2246,12 +2245,19 @@ static cat_bool_t cat_socket_enable_crypto_impl(cat_socket_t *socket, const cat_
     }
 
     /* connection related options */
-    if (ioptions.is_client && ioptions.peer_name != NULL) {
-        cat_ssl_set_sni_server_name(ssl, ioptions.peer_name);
+    if (ioptions.peer_name != NULL) {
+        if (ioptions.is_client) {
+            cat_ssl_set_sni_server_name(ssl, ioptions.peer_name);
+        }
+        if (ioptions.verify_peer_name) {
+            ssl->expected_peer_name = cat_strdup(ioptions.peer_name);
+        }
     }
+    ssl->verify_peer = ioptions.verify_peer;
     ssl->allow_self_signed = ioptions.allow_self_signed;
 
-    buffer = &ssl->read_buffer;
+    rbuffer = &ssl->read_buffer;
+    wbuffer = &ssl->write_buffer;
 
     while (1) {
         ssize_t n;
@@ -2259,69 +2265,73 @@ static cat_bool_t cat_socket_enable_crypto_impl(cat_socket_t *socket, const cat_
 
         ssl_ret = cat_ssl_handshake(ssl);
         if (unlikely(ssl_ret == CAT_SSL_RET_ERROR)) {
-            break;
+            goto _unrecoverable_error;
         }
-        /* ssl_read_encrypted_bytes() may return n > 0
-         * after ssl_handshake() return OK */
-        n = cat_ssl_read_encrypted_bytes(ssl, buffer->value, buffer->size);
+        CAT_ASSERT(ssl_ret == CAT_SSL_RET_WANT_READ || ssl_ret == CAT_SSL_RET_WANT_WRITE || ssl_ret == CAT_SSL_RET_OK);
+
+        // get data to write
+        write_buffer_not_enough:
+        CAT_ASSERT(wbuffer->size >= wbuffer->length);
+        n = cat_ssl_read_encrypted_bytes(
+            ssl, wbuffer->value + wbuffer->length, wbuffer->size - wbuffer->length);
         if (unlikely(n == CAT_RET_ERROR)) {
-            break;
+            if (unlikely(cat_get_last_error_code() == CAT_ENOBUFS)) {
+                // extend the buffer and retry
+                // cat_buffer_extend will try by *2
+                cat_buffer_extend(wbuffer, wbuffer->size + 1);
+                CAT_ASSERT(wbuffer->size > 0);
+                // FIXME: any limit here ?
+                goto write_buffer_not_enough;
+            }
+            goto _unrecoverable_error;
         }
-        if (n > 0) {
+        wbuffer->length += n;
+
+        // wants to write, write it
+        if (wbuffer->length > 0) {
             cat_bool_t ret;
             CAT_TIME_WAIT_START() {
-                ret = cat_socket_send_ex(socket, buffer->value, n, timeout);
+                ret = cat_socket_send_ex(socket, wbuffer->value, wbuffer->length, timeout);
             } CAT_TIME_WAIT_END(timeout);
             if (unlikely(!ret)) {
-                break;
+                goto _unrecoverable_error;
+            } else {
+                // if success, all buffer is sent
+                wbuffer->length = 0;
             }
         }
-#if 0   /* FIXME: Disable it for now because we do not sure that whether it still works now,
-         * and it make SSL handshake hang on recv() forever on Linux. */
-        /* Notice: if it's client and it write something to the server,
-         * it means server will response something later, so, we need to recv it then returns,
-         * otherwise it will lead errors on Windows */
-#define CAT_SOCKET_SSL_HANDSHAKE_WORKAROUND_FOR_WINDOWS() !(n > 0 && ioptions.is_client)
-#else
-#define CAT_SOCKET_SSL_HANDSHAKE_WORKAROUND_FOR_WINDOWS() 1
-#endif
-        if (ssl_ret == CAT_SSL_RET_OK && CAT_SOCKET_SSL_HANDSHAKE_WORKAROUND_FOR_WINDOWS()) {
-            CAT_LOG_DEBUG(SOCKET, "Socket SSL handshake completed");
-            ret = cat_true;
+
+        if (ssl_ret == CAT_SSL_RET_OK) {
+            // our write buffer is clean, we can break
             break;
         }
-        {
+
+        // wants to read, read it
+        if (ssl_ret == CAT_SSL_RET_WANT_READ) {
             ssize_t nread, nwrite;
+            CAT_ASSERT(rbuffer->size >= rbuffer->length);
+            if (rbuffer->size - rbuffer->length == 0) {
+                // buffer is full, extend it
+                // cat_buffer_extend will try by *2
+                cat_buffer_extend(rbuffer, rbuffer->size + 1);
+                CAT_ASSERT(rbuffer->size > 0);
+                continue;
+            }
             CAT_TIME_WAIT_START() {
-                nread = cat_socket_recv_ex(socket, buffer->value, buffer->size, timeout);
+                nread = cat_socket_recv_ex(
+                    socket, rbuffer->value + rbuffer->length, rbuffer->size - rbuffer->length, timeout);
             } CAT_TIME_WAIT_END(timeout);
             if (unlikely(nread <= 0)) {
                 if (nread == 0) {
                     cat_update_last_error_by_code(CAT_ECONNRESET);
                 }
-                break;
+                goto _unrecoverable_error;
             }
-            nwrite = cat_ssl_write_encrypted_bytes(ssl, buffer->value, nread);
-            if (unlikely(nwrite != nread)) {
-                break;
-            }
-            continue;
-        }
-    }
-
-    if (unlikely(!ret)) {
-        /* Notice: io error can not recover */
-        goto _unrecoverable_error;
-    }
-
-    if (ioptions.verify_peer) {
-        if (!cat_ssl_verify_peer(ssl, ioptions.allow_self_signed)) {
-            goto _unrecoverable_error;
-        }
-    }
-    if (ioptions.verify_peer_name) {
-        if (!cat_ssl_check_host(ssl, ioptions.peer_name, strlen(ioptions.peer_name))) {
-            goto _unrecoverable_error;
+            rbuffer->length += nread;
+            nwrite = cat_ssl_write_encrypted_bytes(ssl, rbuffer->value, rbuffer->length);
+            CAT_ASSERT(rbuffer->length >= nwrite);
+            // move the remaining data to the beginning of the buffer
+            cat_buffer_truncate_from(rbuffer, nwrite, rbuffer->length - nwrite);
         }
     }
 

@@ -198,8 +198,10 @@ typedef struct cat_ssl_s {
     cat_ssl_bio_t *nbio;
     cat_buffer_t read_buffer;
     cat_buffer_t write_buffer;
-    /* options */
+    /* options for verification */
+    cat_bool_t verify_peer;
     cat_bool_t allow_self_signed;
+    const char *expected_peer_name;
     /* internals */
     cat_ssl_context_t *context; // for free data before SSL_free()
 } cat_ssl_t;
@@ -208,9 +210,8 @@ typedef enum cat_ssl_ret_e {
     CAT_SSL_RET_OK         = 1,
     CAT_SSL_RET_NONE       = 0,
     CAT_SSL_RET_ERROR      = -1,
-    CAT_SSL_RET_WANT_READ  = 1 << 0,
-    CAT_SSL_RET_WANT_WRITE = 1 << 1,
-    CAT_SSL_RET_WANT_IO = CAT_SSL_RET_WANT_READ | CAT_SSL_RET_WANT_WRITE,
+    CAT_SSL_RET_WANT_READ  = 2,
+    CAT_SSL_RET_WANT_WRITE = 3,
 } cat_ssl_ret_t;
 
 CAT_API cat_bool_t cat_ssl_module_init(void);

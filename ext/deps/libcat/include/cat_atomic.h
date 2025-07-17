@@ -95,6 +95,7 @@ extern "C" {
 # define __atomic_compare_exchange_weak(atomic, expected, desired) \
          __atomic_compare_exchange_n(atomic, expected, desired, 1 /* weak */, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST)
 # elif defined(CAT_HAVE_INTERLOCK_ATOMIC)
+/* alias */
 # define _InterlockedOr32                          _InterlockedOr
 # define _InterlockedExchange32                    _InterlockedExchange
 # define _InterlockedExchangeAdd32                 _InterlockedExchangeAdd
@@ -108,6 +109,46 @@ extern "C" {
 # define _InterlockedExchangeSub16(value, operand) _InterlockedExchangeAdd16(value, -operand)
 # define _InterlockedExchangeSub32(value, operand) _InterlockedExchangeAdd32(value, -operand)
 # define _InterlockedExchangeSub64(value, operand) _InterlockedExchangeAdd64(value, -operand)
+/* not exist at any platform */
+# define _InterlockedExchange32_acq                _InterlockedExchange
+# define _InterlockedExchange32_rel                _InterlockedExchange
+# define _InterlockedExchange32_nf                 _InterlockedExchange
+# define _InterlockedLoad8_acq(value)              _InterlockedOr8_acq(value, 0)
+# define _InterlockedLoad16_acq(value)             _InterlockedOr16_acq(value, 0)
+# define _InterlockedLoad32_acq(value)             _InterlockedOr_acq(value, 0)
+# define _InterlockedLoad64_acq(value)             _InterlockedOr64_acq(value, 0)
+# define _InterlockedLoad8_nf(value)               _InterlockedOr8_nf(value, 0)
+# define _InterlockedLoad16_nf(value)              _InterlockedOr16_nf(value, 0)
+# define _InterlockedLoad32_nf(value)              _InterlockedOr_nf(value, 0)
+# define _InterlockedLoad64_nf(value)              _InterlockedOr64_nf(value, 0)
+# define _InterlockedLoadPointer_acq               _InterlockedLoadPointer
+# define _InterlockedLoadPointer_nf                _InterlockedLoadPointer
+# ifdef _M_X64
+/* not exist at x86 */
+#  define _InterlockedExchange8_acq _InterlockedExchange8
+#  define _InterlockedExchange8_rel _InterlockedExchange8
+#  define _InterlockedExchange8_nf _InterlockedExchange8
+#  define _InterlockedExchange16_acq _InterlockedExchange16
+#  define _InterlockedExchange16_rel _InterlockedExchange16
+#  define _InterlockedExchange16_nf _InterlockedExchange16
+#  define _InterlockedExchange_acq _InterlockedExchange
+#  define _InterlockedExchange_rel _InterlockedExchange
+#  define _InterlockedExchange_nf _InterlockedExchange
+#  define _InterlockedExchange64_acq _InterlockedExchange64
+#  define _InterlockedExchange64_rel _InterlockedExchange64
+#  define _InterlockedExchange64_nf _InterlockedExchange64
+#  define _InterlockedOr8_acq _InterlockedOr8
+#  define _InterlockedOr8_nf _InterlockedOr8
+#  define _InterlockedOr16_acq _InterlockedOr16
+#  define _InterlockedOr16_nf _InterlockedOr16
+#  define _InterlockedOr_acq _InterlockedOr
+#  define _InterlockedOr_nf _InterlockedOr
+#  define _InterlockedOr64_acq _InterlockedOr64
+#  define _InterlockedOr64_nf _InterlockedOr64
+#  define _InterlockedExchangePointer_acq _InterlockedExchangePointer
+#  define _InterlockedExchangePointer_nf _InterlockedExchangePointer
+#  define _InterlockedExchangePointer_rel _InterlockedExchangePointer
+# endif
 #endif
 
 #define CAT_ATOMIC_COMMON_OPERATION_FUNCTIONS_GEN(name, type_name_t, interlocked_suffix, interlocked_type_t) \
@@ -332,7 +373,7 @@ static cat_always_inline type_name_t cat_atomic_##name##_exchange(cat_atomic_##n
         return ret; \
     }) \
     CAT_ATOMIC_INTERLOCK_CASE({ \
-        return _InterlockedExchange##interlocked_suffix(&atomic->value, (interlocked_type_t) desired); \
+        return (type_name_t) _InterlockedExchange##interlocked_suffix(&atomic->value, (interlocked_type_t) desired); \
     }) \
     CAT_ATOMIC_SYNC_CASE({ \
         return __sync_val_compare_and_swap(&atomic->value, atomic->value, desired); \
@@ -395,17 +436,17 @@ static cat_always_inline type_name_t cat_atomic_##name##_exchange_explicit(cat_a
         switch (order) { \
             case CAT_ATOMIC_MEMORY_ORDER_ACQ_REL: \
             case CAT_ATOMIC_MEMORY_ORDER_SEQ_CST: \
-                ret = _InterlockedExchange##interlocked_suffix(&atomic->value, (interlocked_type_t) desired); \
+                ret = (type_name_t) _InterlockedExchange##interlocked_suffix(&atomic->value, (interlocked_type_t) desired); \
                 break; \
             case CAT_ATOMIC_MEMORY_ORDER_ACQUIRE: \
             case CAT_ATOMIC_MEMORY_ORDER_CONSUME: \
-                ret = _InterlockedExchange##interlocked_suffix##_acq(&atomic->value, (interlocked_type_t) desired); \
+                ret = (type_name_t) _InterlockedExchange##interlocked_suffix##_acq(&atomic->value, (interlocked_type_t) desired); \
                 break; \
             case CAT_ATOMIC_MEMORY_ORDER_RELEASE: \
-                ret = _InterlockedExchange##interlocked_suffix##_rel(&atomic->value, (interlocked_type_t) desired); \
+                ret = (type_name_t) _InterlockedExchange##interlocked_suffix##_rel(&atomic->value, (interlocked_type_t) desired); \
                 break; \
             case CAT_ATOMIC_MEMORY_ORDER_RELAXED: \
-                ret = _InterlockedExchange##interlocked_suffix##_nf(&atomic->value, (interlocked_type_t) desired); \
+                ret = (type_name_t) _InterlockedExchange##interlocked_suffix##_nf(&atomic->value, (interlocked_type_t) desired); \
                 break; \
             default: \
                 CAT_NEVER_HERE("Unknown memory order"); \

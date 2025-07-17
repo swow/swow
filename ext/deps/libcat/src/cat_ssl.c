@@ -632,6 +632,7 @@ CAT_API void cat_ssl_context_configure_cert_verify_callback(cat_ssl_context_t *c
 }
 #endif
 
+static inline cat_bool_t _cat_ssl_check_host(X509 *cert, const char *name, size_t name_length);
 static int cat_ssl_verify_callback(int preverify_ok, X509_STORE_CTX *ctx) /* {{{ */
 {
     /* conjure the stream & context to use */
@@ -640,6 +641,7 @@ static int cat_ssl_verify_callback(int preverify_ok, X509_STORE_CTX *ctx) /* {{{
     int depth, allowed_depth;
     int err;
     int ret = preverify_ok;
+    X509 *cert;
 
     /* determine the status for the current cert */
     err = X509_STORE_CTX_get_error(ctx);
@@ -648,30 +650,64 @@ static int cat_ssl_verify_callback(int preverify_ok, X509_STORE_CTX *ctx) /* {{{
     CAT_LOG_DEBUG(SSL, "SSL_cert_verify_callback(%p, preverify_ok: %d, err: \"%s\")", ssl, preverify_ok, X509_verify_cert_error_string(err));
 
     /* if allow_self_signed is set, make sure that verification succeeds */
-    if (err == X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT && ssl->allow_self_signed) {
-        CAT_LOG_DEBUG(SSL, "SSL connection use self-signed cert but we allowed");
-        ret = 1;
+    switch (err) {
+        case X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT:
+        case X509_V_ERR_SELF_SIGNED_CERT_IN_CHAIN:
+        case X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT_LOCALLY:
+        case X509_V_ERR_CERT_UNTRUSTED:
+        case X509_V_ERR_UNABLE_TO_VERIFY_LEAF_SIGNATURE:
+            if (ssl->allow_self_signed) {
+                CAT_LOG_DEBUG(SSL, "SSL connection use self-signed cert but we allowed: %d", err);
+                ret = 1;
+            }
+            break;
     }
 
     /* check the depth */
-    allowed_depth = SSL_get_verify_depth(connection);
-    if (allowed_depth < 0) {
-        allowed_depth = CAT_SSL_DEFAULT_STREAM_VERIFY_DEPTH;
+    if (ssl->verify_peer) {
+        allowed_depth = SSL_get_verify_depth(connection);
+        if (allowed_depth < 0) {
+            allowed_depth = CAT_SSL_DEFAULT_STREAM_VERIFY_DEPTH;
+        }
+        if (depth > allowed_depth) {
+            CAT_LOG_DEBUG(SSL, "SSL cert depth is %d, exceeded allowed_depth %d, abort", depth, allowed_depth);
+            X509_STORE_CTX_set_error(ctx, X509_V_ERR_CERT_CHAIN_TOO_LONG);
+            ret = 0;
+            goto _out;
+        }
     }
-    if (depth > allowed_depth) {
+
+    /* get current verifying cert */
+    cert = X509_STORE_CTX_get0_cert(ctx);
+    if (cert == NULL) {
+        /* this should never happen */
+        CAT_LOG_DEBUG(SSL, "SSL cert is NULL, abort");
+        X509_STORE_CTX_set_error(ctx, X509_V_ERR_UNSPECIFIED);
         ret = 0;
-        X509_STORE_CTX_set_error(ctx, X509_V_ERR_CERT_CHAIN_TOO_LONG);
+        goto _out;
     }
 
-    CAT_LOG_DEBUG(SSL, "SSL allowed depth is %d, actual depth is %d, ret = %d", allowed_depth, depth, ret);
+    /* check peer name */
+    if (ssl->expected_peer_name != NULL &&
+        !_cat_ssl_check_host(cert, ssl->expected_peer_name, strlen(ssl->expected_peer_name))
+    ) {
+        CAT_LOG_DEBUG(SSL, "SSL cert name mismatch, abort");
+        X509_STORE_CTX_set_error(ctx, X509_V_ERR_HOSTNAME_MISMATCH);
+        ret = 0;
+        goto _out;
+    }
 
+_out:
+    if (!ret) {
+        cat_update_last_error(CAT_ECERT, "SSL verify callback failed: (%d, %s)", err, X509_verify_cert_error_string(err));
+    }
     return ret;
 }
 
 CAT_API void cat_ssl_context_enable_verify_peer(cat_ssl_context_t *context)
 {
-    CAT_LOG_DEBUG(SSL, "SSL_CTX_set_verify(%p, SSL_VERIFY_PEER, ssl_verify_callback)", context);
-    SSL_CTX_set_verify(context->ctx, SSL_VERIFY_PEER, cat_ssl_verify_callback);
+    CAT_LOG_DEBUG(SSL, "SSL_CTX_set_verify(%p, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT | SSL_VERIFY_CLIENT_ONCE, ssl_verify_callback)", context);
+    SSL_CTX_set_verify(context->ctx, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT | SSL_VERIFY_CLIENT_ONCE, cat_ssl_verify_callback);
 }
 
 CAT_API void cat_ssl_context_disable_verify_peer(cat_ssl_context_t *context)
@@ -743,7 +779,9 @@ CAT_API cat_ssl_t *cat_ssl_create(cat_ssl_t *ssl, cat_ssl_context_t *context)
     /* init ssl fields */
     ssl->connection = connection;
     ssl->context = context;
+    ssl->verify_peer = cat_true;
     ssl->allow_self_signed = cat_false;
+    ssl->expected_peer_name = NULL;
 
     return ssl;
 
@@ -776,6 +814,10 @@ CAT_API void cat_ssl_close(cat_ssl_t *ssl)
     cat_ssl_context_close_data(ssl->context);
     /* implicitly frees internal_bio */
     SSL_free(ssl->connection);
+    /* free peer name */
+    if (ssl->expected_peer_name != NULL) {
+        cat_free((void *) ssl->expected_peer_name);
+    }
     /* free */
     if (ssl->flags & CAT_SSL_FLAG_ALLOC) {
         cat_free(ssl);
@@ -885,12 +927,9 @@ CAT_API cat_ssl_ret_t cat_ssl_handshake(cat_ssl_t *ssl)
     int error = cat_ssl_get_error(ssl, n);
 
     if (error == SSL_ERROR_WANT_WRITE) {
-        fprintf(stderr, "SSL handshake should never return SSL_ERROR_WANT_WRITE with BIO mode.");
-        abort();
-    }
-    if (error == SSL_ERROR_WANT_READ) {
-        CAT_LOG_DEBUG(SSL, "SSL_ERROR_WANT_READ");
-        return CAT_SSL_RET_WANT_IO;
+        return CAT_SSL_RET_WANT_WRITE;
+    } else if (error == SSL_ERROR_WANT_READ) {
+        return CAT_SSL_RET_WANT_READ;
     } else if (error == SSL_ERROR_SYSCALL) {
         cat_update_last_error_of_syscall("SSL_do_handshake() failed");
     } else if (error == SSL_ERROR_ZERO_RETURN || ERR_peek_error() == 0) {
@@ -909,14 +948,22 @@ CAT_API cat_bool_t cat_ssl_verify_peer(cat_ssl_t *ssl, cat_bool_t allow_self_sig
     long err;
     const char *errmsg;
 
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+    cert = SSL_get0_peer_certificate(connection);
+#else
     cert = SSL_get_peer_certificate(connection);
+#endif
 
     if (cert == NULL) {
-        cat_update_last_error(CAT_ENOCERT, "SSL certificate not found");
+        long err_code;
+        while ((err_code = ERR_get_error()) != 0);
+        cat_update_last_error(CAT_ENOCERT, "SSL certificate not found: %s", ERR_error_string(err_code, NULL));
         return cat_false;
     }
 
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
     X509_free(cert);
+#endif
 
     err = SSL_get_verify_result(connection);
 
@@ -941,123 +988,38 @@ CAT_API cat_bool_t cat_ssl_verify_peer(cat_ssl_t *ssl, cat_bool_t allow_self_sig
     return cat_false;
 }
 
-#ifndef X509_CHECK_FLAG_ALWAYS_CHECK_SUBJECT
-static cat_bool_t cat_ssl_check_name(const char *name, size_t name_length, ASN1_STRING *pattern)
+static inline cat_bool_t _cat_ssl_check_host(X509 *cert, const char *name, size_t name_length)
 {
-    const unsigned char *s, *p, *end;
-    size_t slen, plen;
-
-    s = name;
-    slen = name_length;
-    p = ASN1_STRING_data(pattern);
-    plen = ASN1_STRING_length(pattern);
-    if (slen == plen && cat_strncasecmp(s, p, plen) == 0) {
-        return cat_true;
+    if (name_length == 0) {
+        return cat_false;
     }
-    if (plen > 2 && p[0] == '*' && p[1] == '.') {
-        plen -= 1;
-        p += 1;
-        end = s + slen;
-        s = cat_strlchr(s, end, '.');
-        if (s == NULL) {
-            return cat_false;
-        }
-        slen = end - s;
-        if (plen == slen && cat_strncasecmp(s, p, plen) == 0) {
-            return cat_true;
-        }
+    if (X509_check_host(cert, (char *) name, name_length, 0, NULL) != 1) {
+        CAT_LOG_DEBUG(SSL, "X509_check_host(%p, \"%.*s\", %zu): no match", cert, (int) name_length, name, name_length);
+        return cat_false;
     }
-
-    return cat_false;
+    CAT_LOG_DEBUG(SSL, "X509_check_host(%p, \"%.*s\", %zu): match", cert, (int) name_length, name, name_length);
+    return cat_true;
 }
-#endif
 
 CAT_API cat_bool_t cat_ssl_check_host(cat_ssl_t *ssl, const char *name, size_t name_length)
 {
     X509 *cert;
-    cat_bool_t ret = cat_false;
 
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+    cert = SSL_get0_peer_certificate(ssl->connection);
+#else
     cert = SSL_get_peer_certificate(ssl->connection);
+#endif
 
     if (cert == NULL) {
         return cat_false;
     }
 
-#ifdef X509_CHECK_FLAG_ALWAYS_CHECK_SUBJECT
-    /* X509_check_host() is only available in OpenSSL 1.0.2+ */
-    if (name_length == 0) {
-        goto _out;
-    }
-    if (X509_check_host(cert, (char *) name, name_length, 0, NULL) != 1) {
-        CAT_LOG_DEBUG(SSL, "X509_check_host(): no match");
-        goto _out;
-    }
-    CAT_LOG_DEBUG(SSL, "X509_check_host(): match");
-    ret = cat_true;
-    goto _out;
-#else
-    {
-        int n, i;
-        X509_NAME *sname;
-        ASN1_STRING *str;
-        X509_NAME_ENTRY *entry;
-        GENERAL_NAME *altname;
-        STACK_OF(GENERAL_NAME) *altnames;
-        /*
-         * As per RFC6125 and RFC2818, we check subjectAltName extension,
-         * and if it's not present - commonName in Subject is checked.
-         */
-        altnames = X509_get_ext_d2i(cert, NID_subject_alt_name, NULL, NULL);
-        if (altnames) {
-            n = sk_GENERAL_NAME_num(altnames);
-            for (i = 0; i < n; i++) {
-                altname = sk_GENERAL_NAME_value(altnames, i);
-                if (altname->type != GEN_DNS) {
-                    continue;
-                }
-                str = altname->d.dNSName;
-                CAT_LOG_DEBUG(SSL, "Subject alt name: \"%*s\"", ASN1_STRING_length(str), ASN1_STRING_data(str));
-                if (cat_ssl_check_name(name, name_length, str)) {
-                    CAT_LOG_DEBUG(SSL, "Subject alt name: match");
-                    GENERAL_NAMES_free(altnames);
-                    ret = cat_true;
-                    goto _out;
-                }
-            }
-            CAT_LOG_DEBUG(SSL, "Subject alt name: no match");
-            GENERAL_NAMES_free(altnames);
-            goto _out;
-        }
-        /*
-         * If there is no subjectAltName extension, check commonName
-         * in Subject.  While RFC2818 requires to only check "most specific"
-         * CN, both Apache and OpenSSL check all CNs, and so do we.
-         */
-        sname = X509_get_subject_name(cert);
-        if (sname == NULL) {
-            goto _out;
-        }
-        i = -1;
-        while (1) {
-            i = X509_NAME_get_index_by_NID(sname, NID_commonName, i);
-            if (i < 0) {
-                break;
-            }
-            entry = X509_NAME_get_entry(sname, i);
-            str = X509_NAME_ENTRY_get_data(entry);
-            CAT_LOG_DEBUG(SSL, "Common name: \"%*s\"", ASN1_STRING_length(str), ASN1_STRING_data(str));
-            if (cat_ssl_check_name(name, name_length, str)) {
-                CAT_LOG_DEBUG(SSL, "Common name: match");
-                ret = cat_true;
-                goto _out;
-            }
-        }
-        CAT_LOG_DEBUG(SSL, "Common name: no match");
-    }
-#endif
+    cat_bool_t ret = _cat_ssl_check_host(cert, name, name_length);
 
-    _out:
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
     X509_free(cert);
+#endif
     return ret;
 }
 
@@ -1234,6 +1196,7 @@ CAT_API cat_bool_t cat_ssl_encrypt(
 #endif
                 encrypted_buffer = new_encrypted_buffer;
                 encrypted_buffer_size = new_encrypted_buffer_size;
+                cat_clear_last_error();
                 continue; // Retry current chunk
             } else if (!ret) {
                 cat_free(encrypted_buffer);
