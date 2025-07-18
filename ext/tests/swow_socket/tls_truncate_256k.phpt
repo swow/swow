@@ -32,6 +32,7 @@ $server->bind("127.0.0.1", 0);
 Coroutine::run(function () use ($server, $paths, $data) {
     $server->listen();
     $conn = $server->accept()->enableCrypto([
+        'ca_file' => $paths['ca']['cert'],
         'certificate' => $paths['localhost']['cert'],
         'certificate_key' => $paths['localhost']['key'],
         'verify_peer' => false,
