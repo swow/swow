@@ -23,11 +23,11 @@ $tail = substr($data, 256 * 1024);
 // var_dump($tail);
 
 // start tls server
-$paths = testX509Paths();
+$paths = testX509Paths(__DIR__ . '/tls_truncate_256kX509');
 
 $server = new Socket(Socket::TYPE_TCP);
 $server->bind("127.0.0.1", 0);
-var_dump($server->getSockPort());
+// var_dump($server->getSockPort());
 
 Coroutine::run(function () use ($server, $paths, $data) {
     $server->listen();
@@ -57,6 +57,12 @@ $received = $client->readString(strlen($tail));
 Assert::same($tail, $received, 'Received data does not match sent data');
 
 echo "Done\n";
+?>
+--CLEAN--
+<?php
+require __DIR__ . '/../include/bootstrap.php';
+
+@rmtree(__DIR__ . '/tls_truncate_256kX509');
 ?>
 --EXPECT--
 Done

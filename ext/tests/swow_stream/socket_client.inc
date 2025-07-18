@@ -25,7 +25,7 @@ function recvFirst(mixed /* resource|false */ $stream): void
     fclose($stream);
 }
 
-$paths = testX509Paths();
+$paths = testX509Paths(__DIR__ . '/socket_clientX509');
 
 function clientWithConfig(string $serverAddr, array $config, bool $expectSuccess = true): mixed /* resource|false */
 {
@@ -56,9 +56,30 @@ $client = clientWithConfig(fgets(STDIN), [
 ]);
 recvFirst($client);
 
-// 4. server checks peer name, client donot have cert
+// 4a. server checks peer name, client donot have cert
+// PHP buggy: client will success and server will fail
+// $client = clientWithConfig(fgets(STDIN), [
+//     'cafile' => $paths['ca']['cert'],
+//     'verify_peer' => true,
+//     'verify_peer_name' => false,
+// ], false);
+
+// 4b. server checks peer name, client have bad cert
 $client = clientWithConfig(fgets(STDIN), [
     'cafile' => $paths['ca']['cert'],
+    'local_cert' => $paths['selfsigned']['cert'],
+    'local_pk' => $paths['selfsigned']['key'],
+    'verify_peer' => true,
+    'verify_peer_name' => false,
+], false);
+
+// 4c. server checks peer name, client have cert, but bad peer name
+$client = clientWithConfig(fgets(STDIN), [
+    'cafile' => $paths['ca']['cert'],
+    'local_cert' => $paths['localhost']['cert'],
+    'local_pk' => $paths['localhost']['key'],
+    'verify_peer' => true,
+    'verify_peer_name' => false,
 ], false);
 
 // 5. server checks peer name, client have cert

@@ -25,16 +25,7 @@ function recvFirst(mixed /* resource|false */ $stream): void
     fclose($stream);
 }
 
-$paths = testX509Paths();
-$verydeepCertPath = $paths['verydeep']['cert'];
-$verydeepCertFile = fopen($verydeepCertPath, 'ab');
-foreach ($paths as $certName => $path) {
-    if (strpos($path['cert'], 'intermediate') !== false) {
-        continue;
-    }
-    fwrite($verydeepCertFile, file_get_contents($path['cert']));
-}
-fclose($verydeepCertFile);
+$paths = testX509Paths(__DIR__ . '/socket_serverX509');
 // var_dump(file_get_contents($verydeepCertPath));
 
 function serverWithConfig(array $config): mixed /* resource */
@@ -69,11 +60,34 @@ $conn = stream_socket_accept($server, ACCEPT_TIMEOUT);
 Assert::notSame($conn, false);
 sendFirst($conn);
 
-// 4. server checks peer name, client donot have cert
+// 4a. server checks peer name, client donot have cert
+// PHP buggy: client will success and server will fail
+// $server = serverWithConfig([
+//     'cafile' => $paths['ca']['cert'],
+//     'local_cert' => $paths['localhost']['cert'],
+//     'local_pk' => $paths['localhost']['key'],
+//     'verify_peer' => true,
+//     'verify_peer_name' => false,
+// ]);
+// printf("%s\n", stream_socket_get_name($server, false));
+// Assert::same(@stream_socket_accept($server, ACCEPT_TIMEOUT), false);
+
+// 4b. server checks peer name, client have bad cert
 $server = serverWithConfig([
     'cafile' => $paths['ca']['cert'],
-    'local_cert' => $paths['localhost']['cert'],
-    'local_pk' => $paths['localhost']['key'],
+    'local_cert' => $paths['selfsigned']['cert'],
+    'local_pk' => $paths['selfsigned']['key'],
+    'verify_peer' => true,
+    'verify_peer_name' => false,
+]);
+printf("%s\n", stream_socket_get_name($server, false));
+Assert::same(@stream_socket_accept($server, ACCEPT_TIMEOUT), false);
+
+// 4c. server checks peer name, client have cert, but bad peer name
+$server = serverWithConfig([
+    'cafile' => $paths['ca']['cert'],
+    'local_cert' => $paths['selfsigned']['cert'],
+    'local_pk' => $paths['selfsigned']['key'],
     'verify_peer' => true,
     'verify_peer_name' => false,
 ]);
@@ -133,7 +147,7 @@ Assert::same(@stream_socket_accept($server, ACCEPT_TIMEOUT), false);
 // 10. very deep certificate chain, client accept it
 $server = serverWithConfig([
     'cafile' => $paths['ca']['cert'],
-    'local_cert' => $verydeepCertPath,
+    'local_cert' => $paths['verydeep']['cert'],
     'local_pk' => $paths['verydeep']['key'],
     'verify_peer' => false,
 ]);

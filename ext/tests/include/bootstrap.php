@@ -601,22 +601,39 @@ TEXT;
     return $pems;
 }
 
-function testX509Paths(): array
+function testX509Paths(string $dirname): array
 {
-    $tempfilename = function() {
-        $file = tmpfile();
-        return stream_get_meta_data($file)['uri'];
-    };
-
+    @mkdir($dirname, 0755, true);
     $pems = testX509PEMs();
     foreach ($pems as $name => $pem) {
         $paths[$name] = [
-            'cert' => $tempfilename(),
-            'key' => $tempfilename(),
+            'cert' => $dirname . '/' . $name . '.crt',
+            'key' => $dirname . '/' . $name . '.key',
         ];
         file_put_contents($paths[$name]['cert'], $pem['cert']);
         file_put_contents($paths[$name]['key'], $pem['key']);
     }
 
+    $verydeepCertPath = $paths['verydeep']['cert'];
+    $verydeepCertFile = fopen($verydeepCertPath, 'ab');
+    foreach ($paths as $certName => $path) {
+        if (strpos($certName, 'intermediate') === false) {
+            continue;
+        }
+        fwrite($verydeepCertFile, file_get_contents($path['cert']));
+    }
+    fclose($verydeepCertFile);
+
     return $paths;
+}
+
+function rmtree(string $dirname): void
+{
+    foreach (scandir($dirname) as $file) {
+        if ($file === '.' || $file === '..') {
+            continue;
+        }
+        unlink($dirname . '/' . $file);
+    }
+    rmdir($dirname);
 }

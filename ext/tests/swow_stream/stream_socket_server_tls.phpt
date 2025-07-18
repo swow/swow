@@ -33,6 +33,13 @@ proc_close($clientProc);
 
 echo "Done\n";
 ?>
+--CLEAN--
+<?php
+require __DIR__ . '/../include/bootstrap.php';
+
+@rmtree(__DIR__ . '/socket_serverX509');
+@rmtree(__DIR__ . '/socket_clientX509');
+?>
 --EXPECT--
 server end
 client end
