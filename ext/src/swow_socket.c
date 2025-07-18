@@ -707,11 +707,8 @@ static PHP_METHOD(Swow_Socket, enableCrypto)
         swow_hash_str_fetch_str(options_array, "certificate_key", &options.certificate_key);
         swow_hash_str_fetch_bool(options_array, "no_ticket", &options.no_ticket);
         swow_hash_str_fetch_bool(options_array, "no_compression", &options.no_compression);
-        swow_hash_str_fetch_str(options_array, "passphrase", &options.passphrase);
         // TODO: SNI related things
-        if (is_client) {
-            swow_hash_str_fetch_str(options_array, "peer_name", &options.peer_name);
-        }
+        swow_hash_str_fetch_str(options_array, "peer_name", &options.peer_name);
     }
 
     ret = cat_socket_enable_crypto(socket, &options);
