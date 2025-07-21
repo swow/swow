@@ -261,7 +261,7 @@ static int cat_sockaddr__getbyname(cat_sockaddr_t *address, cat_socklen_t *addre
     while (1) {
         if (af == AF_INET) {
             *address_length = sizeof(cat_sockaddr_in_t);
-            if (unlikely(size < sizeof(cat_sockaddr_in_t))) {
+            if (unlikely((size_t) size < sizeof(cat_sockaddr_in_t))) {
                 error = CAT_ENOSPC;
             } else {
                 error = uv_ip4_addr(name, port, (cat_sockaddr_in_t *) address);
@@ -272,7 +272,7 @@ static int cat_sockaddr__getbyname(cat_sockaddr_t *address, cat_socklen_t *addre
             }
         } else if (af == AF_INET6) {
             *address_length = sizeof(cat_sockaddr_in6_t);
-            if (unlikely(size < sizeof(cat_sockaddr_in6_t))) {
+            if (unlikely((size_t) size < sizeof(cat_sockaddr_in6_t))) {
                 error = CAT_ENOSPC;
             } else {
                 error = uv_ip6_addr(name, port, (cat_sockaddr_in6_t *) address);
@@ -363,7 +363,7 @@ CAT_API int cat_sockaddr_copy(cat_sockaddr_t *to, cat_socklen_t *to_length, cons
     if (to != NULL && to_length != NULL) {
         if (unlikely(*to_length < from_length)) {
             /* ENOSPC, do not copy (meaningless) */
-            if (likely(*to_length >= cat_offsize_of(cat_sockaddr_t, sa_family))) {
+            if (likely((size_t) (*to_length) >= cat_offsize_of(cat_sockaddr_t, sa_family))) {
                 to->sa_family = from->sa_family;
             } // else is impossible?
             error = CAT_ENOSPC;
@@ -2329,7 +2329,10 @@ static cat_bool_t cat_socket_enable_crypto_impl(cat_socket_t *socket, const cat_
             }
             rbuffer->length += nread;
             nwrite = cat_ssl_write_encrypted_bytes(ssl, rbuffer->value, rbuffer->length);
-            CAT_ASSERT(rbuffer->length >= nwrite);
+            if (unlikely(nwrite <= 0)) {
+                goto _unrecoverable_error;
+            }
+            CAT_ASSERT(rbuffer->length >= (size_t) nwrite);
             // move the remaining data to the beginning of the buffer
             cat_buffer_truncate_from(rbuffer, nwrite, rbuffer->length - nwrite);
         }
@@ -3643,7 +3646,7 @@ static cat_always_inline ssize_t cat_socket_try_write_impl(cat_socket_t *socket,
 } while (0)
 
 #define CAT_SOCKET_READ_ADDRESS_TO_NAME(_address, _name, _name_length, _port) do { \
-    if (unlikely(_address##_info.length > sizeof(_address##_info.address))) { \
+    if (unlikely((size_t) (_address##_info.length) > sizeof(_address##_info.address))) { \
         _address##_info.length = 0; /* address is imcomplete, just discard it */ \
     } \
     /* always call this (it can handle empty case internally) */ \

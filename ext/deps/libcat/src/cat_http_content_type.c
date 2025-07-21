@@ -175,7 +175,7 @@ static cat_always_inline cat_bool_t cat_http_parser_multipart_parse_content_type
             /*
             'multipart/' => continue to check
             */
-            size_t read_len = ((int) (pe - p)) > (10 - state + mt_start) ? (10 - state + mt_start) : (size_t) (pe - p);
+            size_t read_len = (size_t) (((int) (pe - p)) > (10 - state + mt_start) ? (10 - state + mt_start) : (pe - p));
             // printf("readlen: %d\n", read_len);
             memcpy(&parser->multipart.multipart_boundary[state], p, read_len);
             state += (int) read_len;

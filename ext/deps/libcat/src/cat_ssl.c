@@ -1065,86 +1065,6 @@ CAT_API int cat_ssl_write_encrypted_bytes(cat_ssl_t *ssl, const char *buffer, si
     return n;
 }
 
-static cat_bool_t cat_ssl_encrypt_buffered(cat_ssl_t *ssl, const char *in, size_t *in_length, char *out, size_t *out_length)
-{
-    size_t nread = 0, nwrite = 0;
-    size_t in_size = *in_length;
-    size_t out_size = *out_length;
-    cat_bool_t ret = cat_false;
-
-    *in_length = 0;
-    *out_length = 0;
-
-    if (unlikely(in_size == 0)) {
-        return cat_false;
-    }
-
-    while (1) {
-        int n;
-
-        if (unlikely(nread == out_size)) {
-            cat_update_last_error(CAT_ENOBUFS, "SSL_encrypt() no out buffer space available");
-            break;
-        }
-
-        n = cat_ssl_read_encrypted_bytes(ssl, out + nread, out_size - nread);
-
-        if (n > 0) {
-            nread += n;
-        } else if (n == CAT_RET_NONE) {
-            // continue to SSL_write()
-        } else {
-            cat_update_last_error_with_previous("SSL_write() error");
-            break;
-        }
-
-        if (nwrite == in_size) {
-            /* done */
-            ret = cat_true;
-            break;
-        }
-
-        cat_ssl_clear_error();
-
-        n = SSL_write(ssl->connection, in + nwrite, (int) (in_size - nwrite));
-
-        CAT_LOG_DEBUG_VA(SSL, {
-            char *s;
-            CAT_LOG_DEBUG_D(SSL, "SSL_write(%p, %s, %zu) = %d",
-                ssl, cat_log_str_quote(in + nwrite, n < 0 ? 0 : n, &s), in_size - nwrite, n);
-            cat_free(s);
-        });
-
-        if (unlikely(n <= 0)) {
-            int error = cat_ssl_get_error(ssl, n);
-
-            if (error == SSL_ERROR_WANT_READ || error == SSL_ERROR_WANT_WRITE) {
-                CAT_LOG_DEBUG(SSL, "SSL_write(%p) want %s", ssl, error == SSL_ERROR_WANT_READ ? "read" : "write");
-                // continue to  SSL_read_encrypted_bytes()
-            } else if (error == SSL_ERROR_SYSCALL) {
-                cat_update_last_error_of_syscall("SSL_write() error");
-                break;
-            } else {
-                if (error != SSL_ERROR_ZERO_RETURN) {
-                    cat_ssl_update_last_error(CAT_ESSL, "SSL_write() error");
-                } else {
-                    /* TODO: try to confirm: is that possible? */
-                    cat_update_last_error_with_reason(CAT_ECONNRESET, "SSL_write() error");
-                }
-                cat_ssl_unrecoverable_error(ssl);
-                break;
-            }
-        } else {
-            nwrite += n;
-        }
-    }
-
-    *in_length = nwrite;
-    *out_length = nread;
-
-    return ret;
-}
-
 CAT_API cat_bool_t cat_ssl_encrypt(
     cat_ssl_t *ssl,
     const cat_io_vector_t *vector_in, unsigned int vector_in_count,
@@ -1152,7 +1072,7 @@ CAT_API cat_bool_t cat_ssl_encrypt(
 )
 {
     // Initial buffer allocation with reasonable size
-    size_t encrypted_buffer_size = CAT_SSL_BUFFER_SIZE;
+    size_t encrypted_buffer_size = CAT_MEMORY_ALIGNED_SIZE_EX(CAT_SSL_BUFFER_SIZE, cat_getpagesize());
     char *encrypted_buffer = (char *) cat_malloc(encrypted_buffer_size);
 #if CAT_ALLOC_HANDLE_ERRORS
     if (unlikely(encrypted_buffer == NULL)) {
@@ -1167,40 +1087,89 @@ CAT_API cat_bool_t cat_ssl_encrypt(
     unsigned int i;
     for (i = 0; i < vector_in_count; i++) {
         const cat_io_vector_t *current_vector = &vector_in[i];
-        size_t remaining_input = current_vector->length;
-        const char *input_ptr = current_vector->base;
+        size_t offset = 0;
 
-        while (remaining_input > 0) {
-            size_t input_length = remaining_input;
-            size_t output_length = encrypted_buffer_size - encrypted_total_length;
+        while (offset < current_vector->length) {
 
-            cat_bool_t ret = cat_ssl_encrypt_buffered(
-                ssl, input_ptr, &input_length,
-                encrypted_buffer + encrypted_total_length, &output_length
-            );
+            cat_ssl_clear_error();
 
-            encrypted_total_length += output_length;
-            input_ptr += input_length;
-            remaining_input -= input_length;
+            CAT_ASSUME(current_vector->length - offset < INT_MAX);
+            int nwrote = SSL_write(ssl->connection, current_vector->base + offset, (int) (current_vector->length - offset));
 
-            if (!ret && cat_get_last_error_code() == CAT_ENOBUFS) {
-                // Dynamic expansion: double the buffer size
-                size_t new_encrypted_buffer_size = encrypted_buffer_size * 2;
-                char *new_encrypted_buffer = (char *) cat_realloc(encrypted_buffer, new_encrypted_buffer_size);
+            CAT_LOG_DEBUG_VA(SSL, {
+                char *s;
+                CAT_LOG_DEBUG_D(SSL, "SSL_write(%p, %s, %zu) = %d",
+                    ssl, cat_log_str_quote(current_vector->base + offset, nwrote < 0 ? 0 : nwrote, &s),
+                    current_vector->length - offset, nwrote);
+                cat_free(s);
+            });
+
+            int error = SSL_ERROR_NONE;
+            if (unlikely(nwrote <= 0)) {
+                error = cat_ssl_get_error(ssl, nwrote);
+            }
+            switch (error) {
+                case SSL_ERROR_NONE:
+                    // success wrote
+                    offset += nwrote;
+                    CAT_ASSERT(offset <= current_vector->length);
+                    // needs to get the encrypted data
+                    /* fall through */
+                case SSL_ERROR_WANT_WRITE:
+                    // ssl bio buffer is full, clear it
+                    while (1) {
+                        if (encrypted_total_length == encrypted_buffer_size) {
+                            // buffer is full, expand it
+                            // fprintf(stderr, "cat_ssl_encrypt: buffer is full, %zu -> %zu\n", encrypted_buffer_size, encrypted_buffer_size * 2);
+                            encrypted_buffer_size *= 2;
+                            encrypted_buffer = (char *) cat_realloc(encrypted_buffer, encrypted_buffer_size);
 #if CAT_ALLOC_HANDLE_ERRORS
-                if (unlikely(new_encrypted_buffer == NULL)) {
-                    cat_free(encrypted_buffer);
-                    cat_update_last_error_of_syscall("Realloc for SSL encrypted buffer failed");
-                    return cat_false;
-                }
+                            if (unlikely(encrypted_buffer == NULL)) {
+                                cat_update_last_error_of_syscall("Realloc for SSL encrypted buffer failed");
+                                goto error_free;
+                            }
 #endif
-                encrypted_buffer = new_encrypted_buffer;
-                encrypted_buffer_size = new_encrypted_buffer_size;
-                cat_clear_last_error();
-                continue; // Retry current chunk
-            } else if (!ret) {
-                cat_free(encrypted_buffer);
-                return cat_false;
+                        }
+                        int n = cat_ssl_read_encrypted_bytes(
+                            ssl,
+                            encrypted_buffer + encrypted_total_length,
+                            encrypted_buffer_size - encrypted_total_length
+                        );
+                        // fprintf(stderr, "cat_ssl_encrypt: error: %d, bufsize: %zu, length: %zu, n: %d\n", error, encrypted_buffer_size, encrypted_total_length, n);
+
+                        CAT_LOG_DEBUG_VA(SSL, {
+                            char *s;
+                            CAT_LOG_DEBUG_D(SSL, "BIO_read(%p, %s, %zu) = %d",
+                                ssl, cat_log_str_quote(encrypted_buffer + encrypted_total_length, n < 0 ? 0 : n, &s),
+                                encrypted_buffer_size - encrypted_total_length, n);
+                            cat_free(s);
+                        });
+
+                        if (n > 0) {
+                            // success read
+                            encrypted_total_length += n;
+                            CAT_ASSERT(encrypted_total_length <= encrypted_buffer_size);
+                            if (encrypted_total_length == encrypted_buffer_size) {
+                                // buffer is full, there may be more data, try again
+                                continue;
+                            }
+                            break;
+                        } else {
+                            // CAT_RET_ERROR when real error
+                            // CAT_RET_NONE when buffer is empty this should not happen
+                            CAT_ASSERT(n == CAT_RET_ERROR);
+                            cat_update_last_error_with_previous("BIO_read() error");
+                            goto error_free;
+                        }
+                    }
+                    break;
+                case SSL_ERROR_WANT_READ:
+                    // this may happen when re-negotiation is enabled
+                    // since we hardcoded to disable it, just error out
+                    /* fall through */
+                default:
+                    cat_update_last_error_with_previous("SSL_write() error");
+                    goto error_free;
             }
         }
     }
@@ -1208,8 +1177,13 @@ CAT_API cat_bool_t cat_ssl_encrypt(
     // Return the single buffer
     *encrypted_data = encrypted_buffer;
     *encrypted_length = encrypted_total_length;
+    // fprintf(stderr, "cat_ssl_encrypt: encrypted_total_length: %zu\n", encrypted_total_length);
 
     return cat_true;
+
+error_free:
+    cat_free(encrypted_buffer);
+    return cat_false;
 }
 
 CAT_API cat_bool_t cat_ssl_decrypt(cat_ssl_t *ssl, char *out, size_t *out_length, cat_bool_t *eof)
@@ -1236,7 +1210,6 @@ CAT_API cat_bool_t cat_ssl_decrypt(cat_ssl_t *ssl, char *out, size_t *out_length
             } else if (n == CAT_RET_NONE) {
                 // continue to SSL_read()
             } else {
-                cat_update_last_error_with_previous("SSL_write() error");
                 break;
             }
         }

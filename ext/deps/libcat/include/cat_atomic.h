@@ -26,9 +26,9 @@ extern "C" {
 
 /* TODO: Fixed implementation selection
  * or provided C API for external use. */
-#if __has_feature(c_atomic)
+#if __has_feature(c_atomic) && defined(__clang__)
 # define CAT_HAVE_C11_ATOMIC 1
-#elif defined(__clang__) || CAT_GCC_VERSION >= 4007
+#elif CAT_GCC_VERSION >= 4007
 # define CAT_HAVE_GNUC_ATOMIC 1
 #elif defined(__GNUC__)
 # define CAT_HAVE_SYNC_ATOMIC 1
