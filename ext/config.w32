@@ -45,7 +45,8 @@ if (PHP_SWOW != 'no') (function(){
     // check used libs
     if(
         !CHECK_LIB('Iphlpapi.lib', 'swow', PHP_SWOW) ||
-        !CHECK_LIB('Userenv.lib', 'swow', PHP_SWOW)
+        !CHECK_LIB('Userenv.lib', 'swow', PHP_SWOW) ||
+        !CHECK_LIB('Dbghelp.lib', 'swow', PHP_SWOW)
     ){
         WARNING('Swow not enabled; libraries not found');
         return;
@@ -220,6 +221,9 @@ if (PHP_SWOW != 'no') (function(){
     ADD_FLAG("CFLAGS_SWOW_COMMON", "/wd4018");
     // -Wno-unused-parameter like
     ADD_FLAG("CFLAGS_SWOW_COMMON", "/wd4100");
+    // seems to be a MSVC bug
+    ADD_FLAG("CFLAGS_SWOW_COMMON", "/wd5286");
+    ADD_FLAG("CFLAGS_SWOW_COMMON", "/wd5287");
 
     // header dependencies
     var LIBCAT_DIR = "deps\\libcat";
