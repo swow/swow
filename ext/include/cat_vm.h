@@ -17,15 +17,26 @@
  */
 
 #if !defined(__cplusplus) && !defined(_MSC_VER)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wstrict-prototypes"
+# pragma GCC diagnostic push
+# pragma GCC diagnostic ignored "-Wstrict-prototypes"
 # ifdef HAVE_WTYPEDEF_REDEFINITION
 #  pragma GCC diagnostic ignored "-Wtypedef-redefinition"
 # endif
 #endif
-#include "zend_API.h"
+
+// php undefined _WIN32_WINNT and NTDDI_VERSION, this will break libuv build
+#if defined(_WIN32_WINNT) || defined(NTDDI_VERSION)
+# pragma push_macro("_WIN32_WINNT")
+# pragma push_macro("NTDDI_VERSION")
+# include "zend_API.h"
+# pragma pop_macro("_WIN32_WINNT")
+# pragma pop_macro("NTDDI_VERSION")
+#else
+# include "zend_API.h"
+#endif
+
 #if !defined(__cplusplus) && !defined(_MSC_VER)
-#pragma GCC diagnostic pop
+# pragma GCC diagnostic pop
 #endif
 
 /* memory */
