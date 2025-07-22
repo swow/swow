@@ -576,6 +576,7 @@ ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_enableCrypto, 
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, options, IS_ARRAY, 1, "null")
 ZEND_END_ARG_INFO()
 
+#ifdef CAT_SSL
 cat_bool_t swow_load_stream_cafile(cat_ssl_context_t *context, struct cat_socket_crypto_options_s *options)
 {
     php_stream *stream;
@@ -665,6 +666,7 @@ cat_bool_t swow_load_stream_cafile(cat_ssl_context_t *context, struct cat_socket
 end:
     return certs_added > 0;
 }
+#endif
 
 static PHP_METHOD(Swow_Socket, enableCrypto)
 {
