@@ -5,8 +5,12 @@ swow_fs: FIFO double read
 require __DIR__ . '/../include/skipif.php';
 require __DIR__ . '/../include/bootstrap.php';
 
+// now, cat_fs_open() cannot open fifo on windows as a plain file
+skip_if_win();
 skip_if_cannot_create_fifo();
 ?>
+--INI--
+ffi.enable=1
 --XFAIL--
 Need to fix
 --FILE--
