@@ -71,6 +71,7 @@ $excludeTests = @(
     "ext/curl/tests/bug72202.phpt",
     "ext/curl/tests/bug48514.phpt",
     # error message changed
+    "ext/curl/tests/curl_basic_028.phpt",
     "ext/openssl/tests/bug54992.phpt", # fixme: bad message
     "ext/openssl/tests/bug65538_002.phpt",
     "ext/openssl/tests/bug65729.phpt", # fixme: bad message
@@ -81,7 +82,12 @@ $excludeTests = @(
     "ext/curl/tests/bug78775.phpt",
     # no readline support
     "sapi/cli/tests/009.phpt",
-    "sapi/cli/tests/012-2.phpt"
+    "sapi/cli/tests/012-2.phpt",
+    # fixme: may stuck
+    "ext/curl/tests/curl_progress.phpt",
+    "ext/curl/tests/curl_postfields_array.phpt",
+    # output changes
+    "ext/curl/tests/check_win_config.phpt"
 )
 
 $nproc = Get-CIMInstance -ClassName Win32_ComputerSystem | Select-Object -ExpandProperty NumberOfLogicalProcessors

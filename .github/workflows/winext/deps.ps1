@@ -51,14 +51,18 @@ if($Staging){
 }else{
     $stagingStr = "stable"
 }
-$series = (fetchpage "https://downloads.php.net/~windows/php-sdk/deps/series/packages-$PhpVer-$PhpVCVer-$PhpArch-$stagingStr.txt").Content
+$seriesUrl = "https://downloads.php.net/~windows/php-sdk/deps/series/packages-$PhpVer-$PhpVCVer-$PhpArch-$stagingStr.txt"
+info "Series URL: $seriesUrl"
+$series = (fetchpage $seriesUrl).Content
 if(!$series){
-    warn "Cannot get series information from https://downloads.php.net/~windows, try file list instead"
-    $filelist = (fetchpage ("https://downloads.php.net/~windows/php-sdk/deps/" + $PhpVCVer.ToLower() + "/$PhpArch/")).Content
-    if(!$filelist){
-        err "Neither series file nor file list can be got, aborting"
-        exit 1
-    }
+    err "Cannot get series information from https://downloads.php.net/~windows"
+    exit 1
+    # filelist may not match php distro, so disable it
+    # $filelist = (fetchpage ("https://downloads.php.net/~windows/php-sdk/deps/" + $PhpVCVer.ToLower() + "/$PhpArch/")).Content
+    # if(!$filelist){
+    #     err "Neither series file nor file list can be got, aborting"
+    #     exit 1
+    # }
 }
 
 $downloadeddeps = [System.Collections.ArrayList]@()

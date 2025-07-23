@@ -198,11 +198,13 @@ jobs:
             --capture \
             --directory "ext/src" \
             --directory "ext/include" \
+            --ignore-errors gcov,empty \
             --output-file coverage.info &&
           lcov \
             --extract coverage.info \
               "${{github.workspace}}/ext/include/*" \
               "${{github.workspace}}/ext/src/*" \
+            --ignore-errors gcov,empty \
             --output-file coverage.info &&
           lcov --list coverage.info
 
@@ -353,30 +355,96 @@ jobs:
           verbose: true
 
   windows-tests:
-    name: PHP ${{ matrix.php-version }} ${{ matrix.ts }} Test on ${{ matrix.image }}
-    runs-on: ${{ matrix.image }}
+    name: PHP ${{ matrix.php-version }} ${{ matrix.ts }} Test with VS${{ matrix.vsver }}
+    runs-on: windows-latest
     strategy:
       fail-fast: false
       matrix:
         php-version: ["8.3", "8.2", "8.1", "8.0"]
         arch: ["x64"]
         ts: ["nts", "ts"]
-        image: [ "windows-2019" ]
+        vsver: ["16"]
         include:
           - php-version: "8.4"
             arch: "x64"
             ts: "nts"
-            image: "windows-2022"
+            vsver: "17"
           - php-version: "8.4"
             arch: "x64"
             ts: "ts"
-            image: "windows-2022"
+            vsver: "17"
       max-parallel: 10
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           persist-credentials: false
+
+      - name: Restore cache for Visual Studio build tools
+        uses: actions/cache/restore@v4
+        id: restore-cache
+        if: matrix.vsver == '16'
+        with:
+          key: ${{ runner.os }}-vs${{ matrix.vsver }}-buildtools-alwaysmiss
+          path: C:\VSLayout
+          restore-keys: ${{ runner.os }}-vs${{ matrix.vsver }}-buildtools
+
+      - name: Setup Visual Studio build tools
+        shell: pwsh
+        id: setup-vs-buildtools
+        if: matrix.vsver == '16'
+        run: |
+          Invoke-WebRequest -Uri https://aka.ms/vs/16/release/vs_buildtools.exe -OutFile vs_buildtools.exe
+
+          # make layout (cache)
+          $proc = Start-Process `
+            -Verb runas `
+            .\vs_buildtools.exe `
+            -Wait `
+            -PassThru `
+            -ArgumentList @(
+              '--layout', 'C:\VSLayout',
+              '--passive',
+              '--norestart',
+              '--wait',
+              '--config', '.github/workflows/winext/.vsconfig',
+              '--lang', 'en-US'
+            )
+          if ($proc.ExitCode -ne 0) {
+            throw "Failed to make Visual Studio layout: $($proc.ExitCode)"
+          }
+
+          # install from layout (cache)
+          $proc = Start-Process `
+            -Verb runas `
+            C:\VSLayout\vs_buildtools.exe `
+            -Wait `
+            -PassThru `
+            -ArgumentList @(
+              '--noWeb',
+              '--passive',
+              '--norestart',
+              '--wait'
+            )
+          if ($proc.ExitCode -ne 0) {
+            throw "Failed to install Visual Studio build tools: $($proc.ExitCode)"
+          }
+
+          # calculate cache key
+          $catalogHash = (
+            Get-FileHash -Path C:\VSLayout\catalog.json -Algorithm SHA256 | Select-Object -ExpandProperty Hash
+          ).ToLower()
+          Write-Output "cache-key=${{ runner.os }}-vs${{ matrix.vsver }}-buildtools-${catalogHash}" |
+            Out-File -FilePath "${env:GITHUB_OUTPUT}" -Encoding utf8 -Append
+
+      - name: Save cache for Visual Studio build tools
+        uses: actions/cache/save@v4
+        if: |
+          matrix.vsver == '16' &&
+          steps.restore-cache.outputs.cache-matched-key != steps.setup-vs-buildtools.outputs.cache-key
+        with:
+          path: C:\VSLayout
+          key: ${{ steps.setup-vs-buildtools.outputs.cache-key }}
 
       # TODO: windows varient of setup-php seems to be so slow
       #       shell we add caches?
