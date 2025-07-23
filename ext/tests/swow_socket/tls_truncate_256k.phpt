@@ -3,6 +3,7 @@ swow_socket: tls 256k truncate bug
 --SKIPIF--
 <?php
 require __DIR__ . '/../include/skipif.php';
+skip_if(!Swow\Extension::isBuiltWith('openssl'), 'extension must be built with ssl');
 ?>
 --FILE--
 <?php
