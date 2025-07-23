@@ -280,10 +280,10 @@ void uv__make_close_pending(uv_handle_t* handle) {
 int uv__getiovmax(void) {
 #if defined(IOV_MAX)
   return IOV_MAX;
-#elif defined(_SC_IOV_MAX)
-#ifdef HAVE_LIBCAT
+#elif defined(_SC_IOV_MAX) && !defined(__QNX__)
+# ifdef HAVE_LIBCAT
   static hat_atomic_int32_t iovmax_cached = HAT_ATOMIC_INT32_INIT(-1);
-#else
+# else
   static _Atomic int iovmax_cached = -1;
 #endif
   int iovmax;
@@ -524,7 +524,15 @@ int uv_crun(uv_loop_t* loop) {
     uv__run_idle(loop);
     uv__run_prepare(loop);
 
+    uv__metrics_inc_loop_count(loop);
+
     uv__io_poll(loop, uv_backend_timeout(loop));
+
+    /* Process immediate callbacks (e.g. write_cb) a small fixed number of
+     * times to avoid loop starvation.*/
+    for (r = 0; r < 8 && !uv__queue_empty(&loop->pending_queue); r++)
+      uv__run_pending(loop);
+
     uv__metrics_update_idle_time(loop);
 
     uv__run_check(loop);
@@ -921,7 +929,7 @@ static unsigned int next_power_of_two(unsigned int val) {
   return val;
 }
 
-static void maybe_resize(uv_loop_t* loop, unsigned int len) {
+static int maybe_resize(uv_loop_t* loop, unsigned int len) {
   uv__io_t** watchers;
   void* fake_watcher_list;
   void* fake_watcher_count;
@@ -929,7 +937,7 @@ static void maybe_resize(uv_loop_t* loop, unsigned int len) {
   unsigned int i;
 
   if (len <= loop->nwatchers)
-    return;
+    return 0;
 
   /* Preserve fake watcher list and count at the end of the watchers */
   if (loop->watchers != NULL) {
@@ -945,7 +953,7 @@ static void maybe_resize(uv_loop_t* loop, unsigned int len) {
                           (nwatchers + 2) * sizeof(loop->watchers[0]));
 
   if (watchers == NULL)
-    abort();
+    return UV_ENOMEM;
   for (i = loop->nwatchers; i < nwatchers; i++)
     watchers[i] = NULL;
   watchers[nwatchers] = fake_watcher_list;
@@ -953,11 +961,11 @@ static void maybe_resize(uv_loop_t* loop, unsigned int len) {
 
   loop->watchers = watchers;
   loop->nwatchers = nwatchers;
+  return 0;
 }
 
 
 void uv__io_init(uv__io_t* w, uv__io_cb cb, int fd) {
-  assert(cb != NULL);
   assert(fd >= -1);
   uv__queue_init(&w->pending_queue);
   uv__queue_init(&w->watcher_queue);
@@ -968,14 +976,18 @@ void uv__io_init(uv__io_t* w, uv__io_cb cb, int fd) {
 }
 
 
-void uv__io_start(uv_loop_t* loop, uv__io_t* w, unsigned int events) {
+int uv__io_start(uv_loop_t* loop, uv__io_t* w, unsigned int events) {
+  int err;
+
   assert(0 == (events & ~(POLLIN | POLLOUT | UV__POLLRDHUP | UV__POLLPRI)));
   assert(0 != events);
   assert(w->fd >= 0);
   assert(w->fd < INT_MAX);
 
   w->pevents |= events;
-  maybe_resize(loop, w->fd + 1);
+  err = maybe_resize(loop, w->fd + 1);
+  if (err)
+    return err;
 
 #if !defined(__sun)
   /* The event ports backend needs to rearm all file descriptors on each and
@@ -983,7 +995,7 @@ void uv__io_start(uv_loop_t* loop, uv__io_t* w, unsigned int events) {
    * short-circuit here if the event mask is unchanged.
    */
   if (w->events == w->pevents)
-    return;
+    return 0;
 #endif
 
   if (uv__queue_empty(&w->watcher_queue))
@@ -993,6 +1005,25 @@ void uv__io_start(uv_loop_t* loop, uv__io_t* w, unsigned int events) {
     loop->watchers[w->fd] = w;
     loop->nfds++;
   }
+
+  return 0;
+}
+
+
+int uv__io_init_start(uv_loop_t* loop,
+                      uv__io_t* w,
+                      uv__io_cb cb,
+                      int fd,
+                      unsigned int events) {
+  int err;
+
+  assert(cb != NULL);
+  assert(fd > -1);
+  uv__io_init(w, cb, fd);
+  err = uv__io_start(loop, w, events);
+  if (err)
+    uv__io_init(w, NULL, -1);
+  return err;
 }
 
 
@@ -1132,6 +1163,8 @@ int uv_getrusage_thread(uv_rusage_t* rusage) {
 
   return 0;
 
+#elif defined(RUSAGE_LWP)
+  return uv__getrusage(RUSAGE_LWP, rusage);
 #elif defined(RUSAGE_THREAD)
   return uv__getrusage(RUSAGE_THREAD, rusage);
 #endif  /* defined(__APPLE__) */
@@ -1640,6 +1673,10 @@ int uv_cpumask_size(void) {
 }
 
 int uv_os_getpriority(uv_pid_t pid, int* priority) {
+#if defined(__QNX__)
+  /* QNX priority is not process-based */
+  return UV_ENOSYS;
+#else
   int r;
 
   if (priority == NULL)
@@ -1653,10 +1690,15 @@ int uv_os_getpriority(uv_pid_t pid, int* priority) {
 
   *priority = r;
   return 0;
+#endif
 }
 
 
 int uv_os_setpriority(uv_pid_t pid, int priority) {
+#if defined(__QNX__)
+  /* QNX priority is not process-based */
+  return UV_ENOSYS;
+#else
   if (priority < UV_PRIORITY_HIGHEST || priority > UV_PRIORITY_LOW)
     return UV_EINVAL;
 
@@ -1664,6 +1706,7 @@ int uv_os_setpriority(uv_pid_t pid, int priority) {
     return UV__ERR(errno);
 
   return 0;
+#endif
 }
 
 /**
@@ -1685,7 +1728,7 @@ int uv_thread_getpriority(uv_thread_t tid, int* priority) {
 
   r = pthread_getschedparam(tid, &policy, &param);
   if (r != 0)
-    return UV__ERR(errno);
+    return UV__ERR(r);
 
 #ifdef __linux__
   if (SCHED_OTHER == policy && pthread_equal(tid, pthread_self())) {
@@ -1738,7 +1781,7 @@ int uv_thread_setpriority(uv_thread_t tid, int priority) {
 
   r = pthread_getschedparam(tid, &policy, &param);
   if (r != 0)
-    return UV__ERR(errno);
+    return UV__ERR(r);
 
 #ifdef __linux__
 /**
@@ -1786,7 +1829,7 @@ int uv_thread_setpriority(uv_thread_t tid, int priority) {
     param.sched_priority = prio;
     r = pthread_setschedparam(tid, policy, &param);
     if (r != 0)
-      return UV__ERR(errno);
+      return UV__ERR(r);
   }
 
   return 0;
@@ -2075,14 +2118,11 @@ unsigned int uv_available_parallelism(void) {
 
 #ifdef __linux__
   {
-    double rc_with_cgroup;
-    uv__cpu_constraint c = {0, 0, 0.0};
+    long long quota = 0;
 
-    if (uv__get_constrained_cpu(&c) == 0 && c.period_length > 0) {
-      rc_with_cgroup = (double)c.quota_per_period / c.period_length * c.proportions;
-      if (rc_with_cgroup < rc)
-        rc = (long)rc_with_cgroup; /* Casting is safe since rc_with_cgroup < rc < LONG_MAX */
-    }
+    if (uv__get_constrained_cpu(&quota) == 0)
+      if (quota > 0 && quota < rc)
+        rc = quota;
   }
 #endif  /* __linux__ */
 
@@ -2092,14 +2132,6 @@ unsigned int uv_available_parallelism(void) {
   return (unsigned) rc;
 }
 
-#ifdef HAVE_LIBCAT
-int uv__sock_reuseport(int fd) {
-    int on = 1;
-    if (setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, &on, sizeof(on)))
-        return UV__ERR(errno);
-    return 0;
-}
-#else
 int uv__sock_reuseport(int fd) {
   int on = 1;
 #if defined(__FreeBSD__) && __FreeBSD__ >= 12 && defined(SO_REUSEPORT_LB)
@@ -2133,13 +2165,17 @@ int uv__sock_reuseport(int fd) {
 #else
   (void) (fd);
   (void) (on);
+# ifdef HAVE_LIBCAT
+  /* aovid bind failed due to unsupport */
+  return 0;
+# else
   /* SO_REUSEPORTs do not have the capability of load balancing on platforms
    * other than those mentioned above. The semantics are completely different,
    * therefore we shouldn't enable it, but fail this operation to indicate that
    * UV_[TCP/UDP]_REUSEPORT is not supported on these platforms. */
   return UV_ENOTSUP;
+# endif /* HAVE_LIBCAT */
 #endif
 
   return 0;
 }
-#endif /* HAVE_LIBCAT */

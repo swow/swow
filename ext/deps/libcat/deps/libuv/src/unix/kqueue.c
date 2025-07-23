@@ -582,6 +582,7 @@ int uv_fs_event_start(uv_fs_event_t* handle,
                       const char* path,
                       unsigned int flags) {
   int fd;
+  int r;
 #if defined(__APPLE__) && MAC_OS_X_VERSION_MAX_ALLOWED >= 1070
   struct stat statbuf;
 #endif
@@ -620,8 +621,7 @@ int uv_fs_event_start(uv_fs_event_t* handle,
 #else
   if (0 == atomic_load_explicit(&uv__has_forked_with_cfrunloop,
                                 memory_order_relaxed)) {
-#endif
-    int r;
+#endif /* HAVE_LIBCAT */
     /* The fallback fd is no longer needed */
     uv__close_nocheckstdio(fd);
     handle->event_watcher.fd = -1;
@@ -637,11 +637,16 @@ int uv_fs_event_start(uv_fs_event_t* handle,
 fallback:
 #endif /* #if defined(__APPLE__) && MAC_OS_X_VERSION_MAX_ALLOWED >= 1070 */
 
-  uv__handle_start(handle);
-  uv__io_init(&handle->event_watcher, uv__fs_event, fd);
-  uv__io_start(handle->loop, &handle->event_watcher, POLLIN);
+  r = uv__io_init_start(handle->loop,
+                        &handle->event_watcher,
+                        uv__fs_event,
+                        fd,
+                        POLLIN);
 
-  return 0;
+  if (!r)
+    uv__handle_start(handle);
+
+  return r;
 }
 
 

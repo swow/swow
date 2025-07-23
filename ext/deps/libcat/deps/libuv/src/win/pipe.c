@@ -997,26 +997,6 @@ error:
 }
 
 
-#ifdef HAVE_LIBCAT
-void uv_pipe_connect_ex(uv_connect_t* req, uv_pipe_t* handle,
-    const char* name, size_t name_length, uv_connect_cb cb) {
-    char *pipe_fname;
-
-    pipe_fname = (char *) uv__malloc(name_length + 1);
-    if (pipe_fname == NULL)
-      pipe_fname = (char *) "";
-    else {
-      memcpy(pipe_fname, name, name_length);
-      pipe_fname[name_length] = '\0';
-    }
-
-    uv_pipe_connect(req, handle, name, cb);
-
-    uv__free(pipe_fname);
-}
-#endif
-
-
 void uv__pipe_interrupt_read(uv_pipe_t* handle) {
   BOOL r;
 
@@ -2169,7 +2149,8 @@ void uv__process_pipe_read_req(uv_loop_t* loop,
   } else {
     /* The zero-read completed without error, indicating there is data
      * available in the kernel buffer. */
-    while (handle->flags & UV_HANDLE_READING) {
+    while (handle->flags & UV_HANDLE_READING &&
+           !(handle->flags & UV_HANDLE_READ_PENDING)) {
       bytes_requested = 65536;
       /* Depending on the type of pipe, read either IPC frames or raw data. */
       if (handle->ipc)

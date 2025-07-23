@@ -4145,8 +4145,8 @@ typedef struct _FILE_STAT_BASIC_INFORMATION {
   ULONG DeviceType;
   ULONG DeviceCharacteristics;
   ULONG Reserved;
-  FILE_ID_128 FileId128;
   LARGE_INTEGER VolumeSerialNumber;
+  FILE_ID_128 FileId128;
 } FILE_STAT_BASIC_INFORMATION;
 #endif
 
@@ -4751,6 +4751,8 @@ typedef DWORD (WINAPI *sPowerRegisterSuspendResumeNotification)
                HANDLE        Recipient,
                _PHPOWERNOTIFY RegistrationHandle);
 
+typedef BOOL (WINAPI *sProcessPrng)(/*_Out_*/PBYTE pbData, SIZE_T cbData);
+
 /* from Winuser.h */
 typedef VOID (CALLBACK* WINEVENTPROC)
              (HWINEVENTHOOK hWinEventHook,
@@ -4814,6 +4816,9 @@ extern sNtQueryInformationProcess pNtQueryInformationProcess;
 
 /* Powrprof.dll function pointer */
 extern sPowerRegisterSuspendResumeNotification pPowerRegisterSuspendResumeNotification;
+
+/* bcryptprimitives.dll function pointer */
+extern sProcessPrng pProcessPrng;
 
 /* User32.dll function pointer */
 extern sSetWinEventHook pSetWinEventHook;

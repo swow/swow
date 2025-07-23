@@ -141,6 +141,11 @@ union uv__sockaddr {
 /* Leans on the fact that, on Linux, POLLRDHUP == EPOLLRDHUP. */
 #ifdef POLLRDHUP
 # define UV__POLLRDHUP POLLRDHUP
+#elif defined(__QNX__)
+/* On QNX, POLLRDHUP is not available and the 0x2000 workaround
+ * leads to undefined bahavior.
+ */
+# define UV__POLLRDHUP 0
 #else
 # define UV__POLLRDHUP 0x2000
 #endif
@@ -257,7 +262,12 @@ void uv__make_close_pending(uv_handle_t* handle);
 int uv__getiovmax(void);
 
 void uv__io_init(uv__io_t* w, uv__io_cb cb, int fd);
-void uv__io_start(uv_loop_t* loop, uv__io_t* w, unsigned int events);
+int uv__io_start(uv_loop_t* loop, uv__io_t* w, unsigned int events);
+int uv__io_init_start(uv_loop_t* loop,
+                      uv__io_t* w,
+                      uv__io_cb cb,
+                      int fd,
+                      unsigned int events);
 void uv__io_stop(uv_loop_t* loop, uv__io_t* w, unsigned int events);
 void uv__io_close(uv_loop_t* loop, uv__io_t* w);
 void uv__io_feed(uv_loop_t* loop, uv__io_t* w);
@@ -294,7 +304,11 @@ int uv__slurp(const char* filename, char* buf, size_t len);
 /* tcp */
 int uv__tcp_listen(uv_tcp_t* tcp, int backlog, uv_connection_cb cb);
 int uv__tcp_nodelay(int fd, int on);
-int uv__tcp_keepalive(int fd, int on, unsigned int delay);
+int uv__tcp_keepalive(int fd,
+                      int on,
+                      unsigned int idle,
+                      unsigned int intvl,
+                      unsigned int cnt);
 
 /* tty */
 void uv__tty_close(uv_tty_t* handle);
@@ -489,13 +503,7 @@ uv__fs_copy_file_range(int fd_in,
 #endif
 
 #ifdef __linux__
-typedef struct {
-  long long quota_per_period;
-  long long period_length;
-  double proportions;
-} uv__cpu_constraint;
-
-int uv__get_constrained_cpu(uv__cpu_constraint* constraint);
+int uv__get_constrained_cpu(long long* quota);
 #endif
 
 #if defined(__sun) && !defined(__illumos__)

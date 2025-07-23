@@ -173,7 +173,6 @@ int uv_translate_sys_error(int sys_errno) {
     case WSAEDESTADDRREQ:                   return UV_EDESTADDRREQ;
     case WSAEPROTOTYPE:                     return UV_EPROTOTYPE;
     case WSAENOPROTOOPT:                    return UV_ENOPROTOOPT;
-    case WSAESTALE:                         return UV_ESTALE;
     case WSAEHOSTDOWN:                      return UV_EHOSTDOWN;
     case WSAENAMETOOLONG:                   return UV_ENAMETOOLONG;
     case WSAENETRESET:                      return UV_ECONNRESET;
