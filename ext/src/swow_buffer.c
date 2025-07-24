@@ -976,8 +976,11 @@ static zend_object *swow_buffer_clone_object(zend_object *object)
 
     return &new_s_buffer->std;
 }
-
+#if PHP_VERSION_ID < 80200
+static int swow_buffer_cast_object(zend_object *object, zval *result, int type)
+#else
 static zend_result swow_buffer_cast_object(zend_object *object, zval *result, int type)
+#endif
 {
     /* __toString() function maybe rewritten on PHP layer */
     if (EXPECTED(type == IS_STRING && object->ce->__tostring == swow_buffer_ce->__tostring)) {
