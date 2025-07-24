@@ -300,11 +300,11 @@ static inline int swow_fs_stat_mock(const char *path, zend_stat_t *statbuf, int 
 }
 #undef COPY_MEMBER
 
-// from win32/winutil.c @ 9e80947e343b253e078abfc9d1d4f800342c26f8
+// from win32/winutil.c @ 107bd080a5b02ad929e781c3e42bd8aa0ac79f9e
 #ifdef PHP_WIN32
 static int swow_win32_check_trailing_space(const char *path, const size_t path_len)
 {
-    if (path_len > MAXPATHLEN - 1) {
+    if (path_len == 0 || path_len > MAXPATHLEN - 1) {
         return 1;
     }
     if (path) {
@@ -319,7 +319,7 @@ static int swow_win32_check_trailing_space(const char *path, const size_t path_l
 }
 #endif
 
-// from main/streams/cast.c @ abed8b8e417e69d43f1ccd9e2c473f95dbab2400
+// from main/streams/cast.c @ bcecbb59d36a152cb6eaa22218d6d380b702399a
 static void swow_stream_mode_sanitize_fdopen_fopencookie(php_stream *stream, char *result)
 {
     /* replace modes not supported by fdopen and fopencookie, but supported
@@ -556,6 +556,17 @@ static inline int swow_virtual_open(const char *path, int flags)
         ret = -1;
     }, {
         ret = cat_fs_open(real_path, flags);
+    });
+    return ret;
+}
+
+static inline int swow_virtual_open_mode(const char *path, int flags, mode_t mode)
+{
+    int ret;
+    SWOW_VCWD_WRAP(path, real_path, CWD_FILEPATH, {
+        ret = -1;
+    }, {
+        ret = cat_fs_open(real_path, flags, mode);
     });
     return ret;
 }
@@ -848,18 +859,36 @@ static php_stream *_swow_stream_fopen_from_file_int(FILE *file, const char *mode
 }
 
 // from main/php_open_temporary_file.c @ 01b3fc03c30c6cb85038250bb5640be3a09c6a32
+static const char base32alphabet[] = "0123456789abcdefghijklmnopqrstuv";
+
 static int swow_do_open_temporary_file(const char *path, const char *pfx, zend_string **opened_path_p)
 {
+#ifdef PHP_WIN32
+    char *opened_path = NULL;
+    size_t opened_path_len;
+    wchar_t *cwdw, *random_prefix_w, pathw[MAXPATHLEN];
+#else
     char opened_path[MAXPATHLEN];
     const char *trailing_slash;
+#endif
+    uint64_t random;
+    char *random_prefix;
+    char *p;
+    size_t len;
     char cwd[MAXPATHLEN];
     cwd_state new_state;
     int fd = -1;
+#ifndef HAVE_MKSTEMP
+    int open_flags = O_CREAT | O_TRUNC | O_RDWR
+#ifdef PHP_WIN32
+        | _O_BINARY
+#endif
+        ;
+#endif
 
     if (!path || !path[0]) {
         return -1;
     }
-
 
 #ifdef PHP_WIN32
     if (!swow_win32_check_trailing_space(pfx, strlen(pfx))) {
@@ -880,24 +909,90 @@ static int swow_do_open_temporary_file(const char *path, const char *pfx, zend_s
         return -1;
     }
 
+    /* Extend the prefix to increase randomness */
+    if (php_random_bytes_silent(&random, sizeof(random)) == FAILURE) {
+        random = php_random_generate_fallback_seed();
+    }
+
+    /* Use a compact encoding to not increase the path len too much, but do not
+     * mix case to avoid losing randomness on case-insensitive file systems */
+    len = strlen(pfx) + 13 /* log(2**64)/log(strlen(base32alphabet)) */ + 1;
+    random_prefix = emalloc(len);
+    p = zend_mempcpy(random_prefix, pfx, strlen(pfx));
+    while (p + 1 < random_prefix + len) {
+        *p = base32alphabet[random % strlen(base32alphabet)];
+        p++;
+        random /= strlen(base32alphabet);
+    }
+    *p = '\0';
+
+#ifndef PHP_WIN32
     if (IS_SLASH(new_state.cwd[new_state.cwd_length - 1])) {
         trailing_slash = "";
     } else {
         trailing_slash = "/";
     }
 
-    if (snprintf(opened_path, MAXPATHLEN, "%s%s%sXXXXXX", new_state.cwd, trailing_slash, pfx) >= MAXPATHLEN) {
+    if (snprintf(opened_path, MAXPATHLEN, "%s%s%sXXXXXX", new_state.cwd, trailing_slash, random_prefix) >= MAXPATHLEN) {
+        efree(random_prefix);
+        efree(new_state.cwd);
+        return -1;
+    }
+#endif
+
+#ifdef PHP_WIN32
+    cwdw = php_win32_ioutil_conv_any_to_w(new_state.cwd, PHP_WIN32_CP_IGNORE_LEN, PHP_WIN32_CP_IGNORE_LEN_P);
+    random_prefix_w = php_win32_ioutil_conv_any_to_w(random_prefix, PHP_WIN32_CP_IGNORE_LEN, PHP_WIN32_CP_IGNORE_LEN_P);
+    if (!cwdw || !random_prefix_w) {
+        free(cwdw);
+        free(random_prefix_w);
+        efree(random_prefix);
         efree(new_state.cwd);
         return -1;
     }
 
-    fd = cat_fs_mkstemp(opened_path);
+    if (GetTempFileNameW(cwdw, random_prefix_w, 0, pathw)) {
+        opened_path = php_win32_cp_conv_w_to_cur(pathw, PHP_WIN32_CP_IGNORE_LEN, &opened_path_len);
+        if (!opened_path || opened_path_len >= MAXPATHLEN) {
+            free(cwdw);
+            free(random_prefix_w);
+            efree(random_prefix);
+            efree(new_state.cwd);
+            return -1;
+        }
+        assert(strlen(opened_path) == opened_path_len);
 
+        /* Some versions of windows set the temp file to be read-only,
+         * which means that opening it will fail... */
+        if (swow_virtual_chmod(opened_path, 0600)) {
+            free(cwdw);
+            free(random_prefix_w);
+            efree(random_prefix);
+            efree(new_state.cwd);
+            free(opened_path);
+            return -1;
+        }
+        fd = swow_virtual_open_mode(opened_path, open_flags, 0600);
+    }
+
+    free(cwdw);
+    free(random_prefix_w);
+#else
+    fd = cat_fs_mkstemp(opened_path);
+#endif
+
+#ifdef PHP_WIN32
+    if (fd != -1 && opened_path_p) {
+        *opened_path_p = zend_string_init(opened_path, opened_path_len, 0);
+    }
+    free(opened_path);
+#else
     if (fd != -1 && opened_path_p) {
         *opened_path_p = zend_string_init(opened_path, strlen(opened_path), 0);
     }
-
+#endif
     efree(new_state.cwd);
+    efree(random_prefix);
     return fd;
 }
 
