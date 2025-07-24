@@ -83,9 +83,6 @@ $excludeTests = @(
     # no readline support
     "sapi/cli/tests/009.phpt",
     "sapi/cli/tests/012-2.phpt",
-    # fixme: may stuck
-    "ext/curl/tests/curl_progress.phpt",
-    "ext/curl/tests/curl_postfields_array.phpt",
     # output changes
     "ext/curl/tests/check_win_config.phpt"
 )
