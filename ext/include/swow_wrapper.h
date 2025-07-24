@@ -92,6 +92,8 @@ static zend_always_inline bool zend_string_starts_with_cstr_ci(const zend_string
 # endif
 
 const char *zend_zval_value_name(const zval *arg);
+
+zend_long ZEND_FASTCALL zval_try_get_long(const zval *op, bool *failed);
 #endif
 /* }}} */
 
@@ -107,7 +109,6 @@ static zend_always_inline void *zend_mempcpy(void *dest, const void *src, size_t
 #endif
 }
 
-zend_long ZEND_FASTCALL zval_try_get_long(const zval *op, bool *failed);
 #define php_random_generate_fallback_seed GENERATE_SEED
 #endif
 /* }}} */

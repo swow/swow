@@ -77,11 +77,7 @@ const char *zend_zval_value_name(const zval *arg)
 
     return zend_get_type_by_const(Z_TYPE_P(arg));
 }
-#endif
-/* }}} */
 
-/* PHP 8.4 compatibility {{{*/
-#if PHP_VERSION_ID < 80400
 static zend_never_inline zend_long ZEND_FASTCALL zendi_try_get_long(const zval *op, zend_bool *failed) /* {{{ */
 {
     *failed = 0;
@@ -151,6 +147,11 @@ zend_long ZEND_FASTCALL zval_try_get_long(const zval *op, bool *failed)
     }
     return zendi_try_get_long(op, failed);
 }
+#endif
+/* }}} */
+
+/* PHP 8.4 compatibility {{{*/
+#if PHP_VERSION_ID < 80400
 #endif // PHP_VERSION_ID < 80400
 /* }}} */
 
