@@ -11,8 +11,6 @@ on:
     - 'v*'
 
 env:
-  SWOW_HAVE_SSL: 1
-  SWOW_HAVE_CURL: 1
   SKIP_SWOW_SOCKET_WRITE_TIMEOUT_TEST: 1 # FIXME: On Windows releases CI environment, the test will fail (dead loop)
 
 jobs:

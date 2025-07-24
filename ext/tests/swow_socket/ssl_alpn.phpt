@@ -3,7 +3,7 @@ swow_socket: SSL ALPN
 --SKIPIF--
 <?php
 require __DIR__ . '/../include/skipif.php';
-skip_if(!getenv('SWOW_HAVE_SSL') && !Swow\Extension::isBuiltWith('ssl'), 'extension must be built with libcurl');
+skip_if(!Swow\Extension::isBuiltWith('libcurl'), 'extension must be built with libcurl');
 skip_if(!defined('CURL_HTTP_VERSION_2_0'), 'curl must be built with HTTP/2 support');
 ?>
 --FILE--

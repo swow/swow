@@ -4,7 +4,7 @@ swow_curl: multi
 <?php
 require __DIR__ . '/../include/skipif.php';
 skip_if(PHP_SAPI !== 'cli', 'only for cli');
-skip_if(!getenv('SWOW_HAVE_CURL') && !Swow\Extension::isBuiltWith('curl'), 'extension must be built with libcurl');
+skip_if(!Swow\Extension::isBuiltWith('curl'), 'extension must be built with libcurl');
 ?>
 --FILE--
 <?php
