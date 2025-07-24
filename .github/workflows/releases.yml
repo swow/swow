@@ -208,8 +208,8 @@ jobs:
           if( 0 -Ne $ret ){
               exit 1
           }
-          # Write-Host "::group::Set cafile for cURL and OpenSSL"
-          # .\.github\workflows\winext\cafile.ps1
+          Write-Host "::group::Set cafile for cURL and OpenSSL"
+          .\.github\workflows\winext\cafile.ps1
           Write-Host "::endgroup::"
           Write-Host "::group::Installing swow"
           Copy-Item ext\${{ matrix.arch }}\Release${{ matrix.ts == 1 && '_TS' || '' }}\php_swow.dll ${{ env.tools_path }}\php\ext\

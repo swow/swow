@@ -19,9 +19,13 @@ if (-not (Test-Path $cafile)) {
     $ret = fetchpage "https://curl.se/ca/cacert.pem"
     if ($ret.StatusCode -ne 200) {
         warn "Failed to download cafile from curl.se"
-        return
+        exit 1
     }
-    $ret.Content | Out-File -FilePath $cafile -Encoding ASCII
+    $content = $ret.Content
+    if ($content.GetType() -eq [System.Byte[]]) {
+        $content = [System.Text.Encoding]::UTF8.GetString($content)
+    }
+    $content | Out-File -FilePath $cafile -Encoding ASCII
 }
 
 $openssl_cafile_ini = "openssl.cafile = $cafile"
