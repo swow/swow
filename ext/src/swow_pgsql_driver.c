@@ -191,6 +191,9 @@ static void pdo_pgsql_fetch_error_func(pdo_dbh_t *dbh, pdo_stmt_t *stmt, zval *i
 	if (einfo->errmsg) {
 		add_next_index_string(info, einfo->errmsg);
 	}
+#if PHP_VERSION_ID < 80100
+	return 1;
+#endif // PHP_VERSION_ID
 }
 /* }}} */
 
