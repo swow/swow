@@ -566,6 +566,7 @@ static inline int swow_virtual_open(const char *path, int flags)
     return ret;
 }
 
+#ifdef PHP_WIN32
 static inline int swow_virtual_open_mode(const char *path, int flags, mode_t mode)
 {
     int ret;
@@ -576,6 +577,7 @@ static inline int swow_virtual_open_mode(const char *path, int flags, mode_t mod
     });
     return ret;
 }
+#endif
 
 static inline int swow_virtual_unlink(const char *path)
 {
