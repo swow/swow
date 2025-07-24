@@ -46,6 +46,12 @@
 #include "ext/standard/file.h"
 #include "ext/standard/flock_compat.h"
 #include "ext/standard/php_filestat.h"
+#if PHP_VERSION_ID < 80300
+#include "ext/standard/php_rand.h"
+#include "ext/standard/php_random.h"
+#else
+#include "ext/random/php_random.h"
+#endif
 #include <stddef.h>
 #include <fcntl.h>
 #ifdef HAVE_SYS_WAIT_H
