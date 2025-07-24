@@ -179,6 +179,7 @@ jobs:
 
       - name: Run PHPT from php-src
         id: test-php-src
+        timeout-minutes: 5
         continue-on-error: true
         run: |
           script -eqc ./.github/workflows/run-php-src-tests.sh
@@ -318,6 +319,7 @@ jobs:
 
       - name: Run PHPT from php-src
         id: test-php-src
+        timeout-minutes: 5
         continue-on-error: true
         run: |
           script -q whatever ./.github/workflows/run-php-src-tests.sh
@@ -559,6 +561,7 @@ jobs:
       - name: Run PHPT from php-src
         shell: pwsh
         id: test-php-src
+        timeout-minutes: 5
         continue-on-error: true
         run: |
           ./.github/workflows/run-php-src-tests.ps1

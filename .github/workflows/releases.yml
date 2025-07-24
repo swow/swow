@@ -210,12 +210,18 @@ jobs:
           if( 0 -Ne $ret ){
               exit 1
           }
-          Write-Host "::group::Set cafile for cURL and OpenSSL"
-          .\.github\workflows\winext\cafile.ps1
+          # Write-Host "::group::Set cafile for cURL and OpenSSL"
+          # .\.github\workflows\winext\cafile.ps1
           Write-Host "::endgroup::"
           Write-Host "::group::Installing swow"
           Copy-Item ext\${{ matrix.arch }}\Release${{ matrix.ts == 1 && '_TS' || '' }}\php_swow.dll ${{ env.tools_path }}\php\ext\
-          "extension_dir=C:\tools\phpdev\php\ext`nzend_extension=opcache`nextension=curl`nextension=openssl`nextension=pdo_pgsql`nextension=swow`n" | Out-File -Append ${{ env.tools_path }}\php\php.ini -Encoding ASCII # for no BOM
+          "extension_dir=C:\tools\phpdev\php\ext`n" + `
+            "zend_extension=opcache`n" + `
+            "extension=curl`n" + `
+            "extension=openssl`n" + `
+            "extension=pdo_pgsql`n" + `
+            "extension=swow`n" |
+              Out-File -Append ${{ env.tools_path }}\php\php.ini -Encoding ASCII # for no BOM
           php --ri swow
 
       # FIXME: we used `& C:\tools\phpdev\php\php.exe C:\tools\php\composer.phar test-extension` before,
