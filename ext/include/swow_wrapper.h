@@ -90,6 +90,25 @@ static zend_always_inline bool zend_string_starts_with_cstr_ci(const zend_string
 #define zend_string_starts_with_literal_ci(str, prefix) \
     zend_string_starts_with_cstr_ci(str, prefix, strlen(prefix))
 # endif
+
+const char *zend_zval_value_name(const zval *arg);
+#endif
+/* }}} */
+
+/* PHP 8.4 compatibility {{{*/
+#if PHP_VERSION_ID < 80400
+
+static zend_always_inline void *zend_mempcpy(void *dest, const void *src, size_t n)
+{
+#if defined(HAVE_MEMPCPY)
+    return mempcpy(dest, src, n);
+#else
+    return (char *)memcpy(dest, src, n) + n;
+#endif
+}
+
+zend_long ZEND_FASTCALL zval_try_get_long(const zval *op, bool *failed);
+#define php_random_generate_fallback_seed GENERATE_SEED
 #endif
 /* }}} */
 

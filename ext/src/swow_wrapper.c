@@ -57,6 +57,103 @@ SWOW_API zend_op_array *swow_compile_string_ex(zend_string *source_string, const
 
 /* }}} */
 
+/* PHP 8.3 compatibility {{{*/
+#if PHP_VERSION_ID < 80300
+const char *zend_zval_value_name(const zval *arg)
+{
+    ZVAL_DEREF(arg);
+
+    if (Z_ISUNDEF_P(arg)) {
+        return "null";
+    }
+
+    if (Z_TYPE_P(arg) == IS_OBJECT) {
+        return ZSTR_VAL(Z_OBJCE_P(arg)->name);
+    } else if (Z_TYPE_P(arg) == IS_FALSE) {
+        return "false";
+    } else if  (Z_TYPE_P(arg) == IS_TRUE) {
+        return "true";
+    }
+
+    return zend_get_type_by_const(Z_TYPE_P(arg));
+}
+#endif
+/* }}} */
+
+/* PHP 8.4 compatibility {{{*/
+#if PHP_VERSION_ID < 80400
+static zend_never_inline zend_long ZEND_FASTCALL zendi_try_get_long(const zval *op, zend_bool *failed) /* {{{ */
+{
+    *failed = 0;
+    switch (Z_TYPE_P(op)) {
+        case IS_NULL:
+        case IS_FALSE:
+            return 0;
+        case IS_TRUE:
+            return 1;
+        case IS_DOUBLE:
+            return zend_dval_to_lval(Z_DVAL_P(op));
+        case IS_STRING:
+            {
+                zend_uchar type;
+                zend_long lval;
+                double dval;
+                bool trailing_data = false;
+
+                /* For BC reasons we allow errors so that we can warn on leading numeric string */
+                type = is_numeric_string_ex(Z_STRVAL_P(op), Z_STRLEN_P(op), &lval, &dval,
+                    /* allow errors */ true, NULL, &trailing_data);
+                if (type == 0) {
+                    *failed = 1;
+                    return 0;
+                }
+                if (UNEXPECTED(trailing_data)) {
+                    zend_error(E_WARNING, "A non-numeric value encountered");
+                    if (UNEXPECTED(EG(exception))) {
+                        *failed = 1;
+                    }
+                }
+                if (EXPECTED(type == IS_LONG)) {
+                    return lval;
+                } else {
+                    /* Previously we used strtol here, not is_numeric_string,
+                     * and strtol gives you LONG_MAX/_MIN on overflow.
+                     * We use use saturating conversion to emulate strtol()'s
+                     * behaviour.
+                     */
+                     return zend_dval_to_lval_cap(dval);
+                }
+            }
+        case IS_OBJECT:
+            {
+                zval dst;
+                if (Z_OBJ_HT_P(op)->cast_object(Z_OBJ_P(op), &dst, IS_LONG) == FAILURE
+                        || EG(exception)) {
+                    *failed = 1;
+                    return 0;
+                }
+                ZEND_ASSERT(Z_TYPE(dst) == IS_LONG);
+                return Z_LVAL(dst);
+            }
+        case IS_RESOURCE:
+        case IS_ARRAY:
+            *failed = 1;
+            return 0;
+        EMPTY_SWITCH_DEFAULT_CASE()
+    }
+}
+
+zend_long ZEND_FASTCALL zval_try_get_long(const zval *op, bool *failed)
+{
+    if (EXPECTED(Z_TYPE_P(op) == IS_LONG)) {
+        *failed = false;
+        return Z_LVAL_P(op);
+    }
+    return zendi_try_get_long(op, failed);
+}
+#endif // PHP_VERSION_ID < 80400
+/* }}} */
+
 /* class */
 
 SWOW_API zend_class_entry *swow_register_internal_class(
