@@ -29,6 +29,7 @@ extern "C" {
 #ifdef CAT_HAVE_CURL
 SWOW_API extern zend_class_entry *swow_curl_ce;
 SWOW_API extern zend_class_entry *swow_curl_share_ce;
+SWOW_API extern zend_class_entry *swow_curl_share_persistent_ce;
 SWOW_API extern zend_class_entry *swow_curl_multi_ce;
 SWOW_API extern zend_class_entry *swow_curl_CURLFile_class;
 SWOW_API extern zend_class_entry *swow_curl_CURLStringFile_class;

@@ -75,6 +75,11 @@ ZEND_BEGIN_MODULE_GLOBALS(swow)
         bool hook_pdo_pgsql;
         zend_long async_threads;
     } ini;
+#ifdef CAT_HAVE_CURL
+    struct {
+        HashTable persistent_curlsh;
+    } curl;
+#endif
 ZEND_END_MODULE_GLOBALS(swow)
 
 ZEND_EXTERN_MODULE_GLOBALS(swow)

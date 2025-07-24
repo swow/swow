@@ -94,4 +94,19 @@ zend_result swow_curl_runtime_close(void)
     return SUCCESS;
 }
 
+// include swow_curl_private.h will cause circular dependency
+// so we need to declare it here
+void swow_curl_share_free_persistent_curlsh(zval *data);
+
+void swow_curl_globals_init(zend_swow_globals *swow_globals)
+{
+    zend_hash_init(&swow_globals->curl.persistent_curlsh, 0, NULL, swow_curl_share_free_persistent_curlsh, true);
+    GC_MAKE_PERSISTENT_LOCAL(&swow_globals->curl.persistent_curlsh);
+}
+
+void swow_curl_globals_shutdown(zend_swow_globals *swow_globals)
+{
+    zend_hash_destroy(&swow_globals->curl.persistent_curlsh);
+}
+
 #endif /* CAT_CURL */

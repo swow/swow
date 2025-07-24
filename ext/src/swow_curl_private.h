@@ -15,6 +15,8 @@
    +----------------------------------------------------------------------+
 */
 
+// from ext/curl/curl_private.h @ 89be689f778430f93bac04d75248b5b6fc593571
+
 #ifndef _SWOW_CURL_PRIVATE_H
 #define _SWOW_CURL_PRIVATE_H
 
@@ -41,9 +43,19 @@
     do { (__handle)->err.no = (int) __err; } while (0)
 
 #ifndef HAVE_LIBCAT
+ZEND_BEGIN_MODULE_GLOBALS(curl)
+    HashTable persistent_curlsh;
+ZEND_END_MODULE_GLOBALS(curl)
+
+ZEND_EXTERN_MODULE_GLOBALS(curl)
+
+#define CURL_G(v) ZEND_MODULE_GLOBALS_ACCESSOR(curl, v)
+
 PHP_MINIT_FUNCTION(curl);
 PHP_MSHUTDOWN_FUNCTION(curl);
 PHP_MINFO_FUNCTION(curl);
+PHP_GINIT_FUNCTION(curl);
+PHP_GSHUTDOWN_FUNCTION(curl);
 #endif
 
 typedef struct {
@@ -70,6 +82,10 @@ typedef struct {
     swow_fcall_info_cache progress;
     swow_fcall_info_cache xferinfo;
     swow_fcall_info_cache fnmatch;
+    swow_fcall_info_cache debug;
+#if LIBCURL_VERSION_NUM >= 0x075000 /* Available since 7.80.0 */
+    swow_fcall_info_cache prereq;
+#endif
 #if LIBCURL_VERSION_NUM >= 0x075400 /* Available since 7.84.0 */
     swow_fcall_info_cache sshhostkey;
 #endif
@@ -87,7 +103,7 @@ struct _php_curl_send_headers {
 struct _php_curl_free {
     zend_llist post;
     zend_llist stream;
-    HashTable *slist;
+    HashTable slist;
 };
 
 typedef struct {
@@ -130,12 +146,15 @@ typedef struct _php_curlsh {
     zend_object std;
 } php_curlsh;
 
-php_curl *swow_swow_init_curl_handle_into_zval(zval *curl);
+php_curl *swow_init_curl_handle_into_zval(zval *curl);
 void swow_init_curl_handle(php_curl *ch);
 void _swow_curl_cleanup_handle(php_curl *);
 void _swow_curl_multi_cleanup_list(void *data);
 void _swow_curl_verify_handlers(php_curl *ch, bool reporterror);
 void _swow_setup_easy_copy_handlers(php_curl *ch, php_curl *source);
+
+/* Consumes `zv` */
+zend_long swow_curl_get_long(zval *zv);
 
 static inline php_curl *swow_curl_from_obj(zend_object *obj) {
     return (php_curl *)((char *)(obj) - XtOffsetOf(php_curl, std));
@@ -151,7 +170,13 @@ static inline php_curlsh *swow_curl_share_from_obj(zend_object *obj) {
 
 void swow_curl_multi_register_handlers(void);
 void swow_curl_share_register_handlers(void);
+void swow_curl_share_persistent_register_handlers(void);
+void swow_curl_share_free_persistent_curlsh(zval *data);
 void swow_curlfile_register_class(void);
+#if PHP_VERSION_ID < 80200
+int swow_curl_cast_object(zend_object *obj, zval *result, int type);
+#else
 zend_result swow_curl_cast_object(zend_object *obj, zval *result, int type);
+#endif
 
 #endif  /* _SWOW_CURL_PRIVATE_H */
