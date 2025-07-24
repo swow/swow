@@ -192,7 +192,7 @@ PHP_FUNCTION(swow_curl_multi_get_handles)
 
     mh = Z_CURL_MULTI_P(z_mh);
 
-    array_init_size(return_value, zend_llist_count(&mh->easyh));
+    array_init_size(return_value, (uint32_t)zend_llist_count(&mh->easyh));
     zend_hash_real_init_packed(Z_ARRVAL_P(return_value));
     zend_llist_position pos;
     zval    *pz_ch;
@@ -428,7 +428,7 @@ static int _php_server_push_callback(CURL *parent_ch, CURL *easy, size_t num_hea
     ch->cp = easy;
     _swow_setup_easy_copy_handlers(ch, parent);
 
-    array_init_size(&headers, num_headers);
+    array_init_size(&headers, (uint32_t)num_headers);
     zend_hash_real_init_packed(Z_ARRVAL(headers));
     for (size_t i = 0; i < num_headers; i++) {
         char *header = curl_pushheader_bynum(push_headers, i);
