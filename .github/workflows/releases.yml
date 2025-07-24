@@ -264,7 +264,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           # see https://github.com/actions/upload-artifact/blob/main/docs/MIGRATION.md#multiple-uploads-to-the-same-named-artifact
-          name: "${{ env.dllname }}-${{ steps.getref.outputs.ref }}"
+          name: "${{ env.dllname }}"
           path: |
             LICENSE
             LICENSES.full

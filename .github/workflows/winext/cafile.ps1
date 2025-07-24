@@ -13,20 +13,17 @@ $inipath = "$phppath\php.ini"
 
 $cafile = "$phppath\ssl\cacert.pem"
 
-if (-not (Test-Path $cafile)) {
-    info "Cafile $cafile does not exist, download it from curl.se"
-    New-Item -ItemType Directory -Force -Path "$phppath\ssl"
-    $ret = fetchpage "https://curl.se/ca/cacert.pem"
-    if ($ret.StatusCode -ne 200) {
-        warn "Failed to download cafile from curl.se"
-        exit 1
-    }
-    $content = $ret.Content
-    if ($content.GetType() -eq [System.Byte[]]) {
-        $content = [System.Text.Encoding]::UTF8.GetString($content)
-    }
-    $content | Out-File -FilePath $cafile -Encoding ASCII
+New-Item -ItemType Directory -Force -Path "$phppath\ssl"
+$ret = fetchpage "https://curl.se/ca/cacert.pem"
+if ($ret.StatusCode -ne 200) {
+    warn "Failed to download cafile from curl.se"
+    exit 1
 }
+$content = $ret.Content
+if ($content.GetType() -eq [System.Byte[]]) {
+    $content = [System.Text.Encoding]::UTF8.GetString($content)
+}
+$content | Out-File -FilePath $cafile -Encoding ASCII
 
 $openssl_cafile_ini = "openssl.cafile = $cafile"
 $curl_cafile_ini = "curl.cainfo = $cafile"

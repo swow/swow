@@ -31,6 +31,9 @@ for ($n = 2; $n--;) {
     curl_setopt($ch2, CURLOPT_HEADER, 0);
     curl_setopt($ch2, CURLOPT_RETURNTRANSFER, 1);
 
+    curl_setopt($ch1, CURLOPT_VERBOSE, 1);
+    curl_setopt($ch2, CURLOPT_VERBOSE, 1);
+
     // add the two handles
     curl_multi_add_handle($mh, $ch1);
     curl_multi_add_handle($mh, $ch2);
