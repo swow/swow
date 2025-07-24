@@ -9,8 +9,8 @@ require __DIR__ . '/../include/skipif.php';
 require __DIR__ . '/../include/bootstrap.php';
 
 /** this is a doc comment */
-$anonymous = function () {
-    return "whatever";
+$anonymous = static function () {
+    return 'whatever';
 };
 
 $anonymousString = serialize($anonymous);

@@ -9,52 +9,52 @@ require __DIR__ . '/../include/skipif.php';
 require __DIR__ . '/../include/bootstrap.php';
 
 const A = 1;
-$a = "this is a";
-$fns =[
+$a = 'this is a';
+$fns = [
     // literal
-    fn () => 1,
-    fn () => "cafebabe",
-    fn () => 3.14,
-    fn () => true,
-    fn () => false,
-    fn () => null,
-    fn () => [],
-    fn () => [1, 2, 3],
-    fn () => ["a" => 1, "b" => 2, "c" => 3],
+    static fn() => 1,
+    static fn() => 'cafebabe',
+    static fn() => 3.14,
+    static fn() => true,
+    static fn() => false,
+    static fn() => null,
+    static fn() => [],
+    static fn() => [1, 2, 3],
+    static fn() => ['a' => 1, 'b' => 2, 'c' => 3],
     // create object
-    fn () => new stdClass(),
-    fn () => new ValueError(),
+    static fn() => new stdClass(),
+    static fn() => new ValueError(),
     // throw
-    fn () => throw new AssertionError(),
+    static fn() => throw new AssertionError(),
     // reference
-    fn () => $a,
-    fn () => A,
+    static fn() => $a,
+    static fn() => A,
     // expression
-    fn () => 1 + 1,
-    fn () => 1 - (1 + 2) * 3 >> 4,
-    fn ($arg) => $arg + 1,
+    static fn() => 1 + 1,
+    static fn() => 1 - (1 + 2) * 3 >> 4,
+    static fn($arg) => $arg + 1,
     // static
     // literal
-    static fn () => 1,
-    static fn () => "cafebabe",
-    static fn () => 3.14,
-    static fn () => true,
-    static fn () => false,
-    static fn () => null,
-    static fn () => [],
-    static fn () => [1, 2, 3],
-    static fn () => ["a" => 1, "b" => 2, "c" => 3],
+    static fn() => 1,
+    static fn() => 'cafebabe',
+    static fn() => 3.14,
+    static fn() => true,
+    static fn() => false,
+    static fn() => null,
+    static fn() => [],
+    static fn() => [1, 2, 3],
+    static fn() => ['a' => 1, 'b' => 2, 'c' => 3],
     // create object
-    static fn () => new stdClass(),
-    static fn () => new ValueError(),
+    static fn() => new stdClass(),
+    static fn() => new ValueError(),
     // throw
-    static fn () => throw new AssertionError(),
+    static fn() => throw new AssertionError(),
     // reference
-    static fn () => A,
+    static fn() => A,
     // expression
-    static fn () => 1 + 1,
-    static fn () => 1 - (1 + 2) * 3 >> 4,
-    static fn ($arg) => $arg + 1,
+    static fn() => 1 + 1,
+    static fn() => 1 - (1 + 2) * 3 >> 4,
+    static fn($arg) => $arg + 1,
 ];
 
 foreach ($fns as $fn) {
@@ -64,7 +64,7 @@ foreach ($fns as $fn) {
     try {
         $ret = $unserialized();
         if (is_a($ret, 'stdClass') || is_a($ret, 'ValueError')) {
-            var_dump(get_class($ret));
+            var_dump($ret::class);
         } else {
             var_dump($ret);
         }
@@ -73,7 +73,7 @@ foreach ($fns as $fn) {
     } catch (ArgumentCountError) {
         var_dump($unserialized(41));
     } catch (Error $e) {
-        var_dump(get_class($e));
+        var_dump($e::class);
     }
 }
 

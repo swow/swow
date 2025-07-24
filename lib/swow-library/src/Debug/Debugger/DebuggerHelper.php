@@ -1,4 +1,5 @@
 <?php
+
 /**
  * This file is part of Swow
  *
@@ -313,7 +314,7 @@ class DebuggerHelper
         SplFileObject $sourceFile,
         int $startLine,
         int $lineCount = self::SOURCE_FILE_DEFAULT_LINE_COUNT,
-        int $offset = self::SOURCE_FILE_CONTENT_PADDING
+        int $offset = self::SOURCE_FILE_CONTENT_PADDING,
     ): array {
         $contents = [];
         for ($i = $startLine + $offset + 1; $i < $startLine + $offset + $lineCount; $i++) {

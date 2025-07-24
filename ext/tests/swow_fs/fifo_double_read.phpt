@@ -25,7 +25,7 @@ $pipePath = make_fifo();
 
 $wr = new WaitReference();
 
-Coroutine::run(function () use ($pipePath, &$w, $wr): void {
+Coroutine::run(static function () use ($pipePath, &$w, $wr): void {
     $w = fopen($pipePath, 'w');
 });
 $r = fopen($pipePath, 'r');
@@ -33,7 +33,7 @@ WaitReference::wait($wr);
 
 $wr = new WaitReference();
 
-Coroutine::run(function () use ($w, $r, $wr): void {
+Coroutine::run(static function () use ($w, $r, $wr): void {
     fwrite($w, 'Hello, world!'); // 1. on half of fwrite calling, coroutine yield
     $read = fread($r, 13); // 3. duplicate read on $r, things got corrupted
     var_dump($read);

@@ -13,13 +13,14 @@ use Swow\Coroutine;
 use Swow\Socket;
 
 // prepare tls certs
-$paths = testX509Paths(__DIR__ . "/enableCryptoX509");
+$paths = testX509Paths(__DIR__ . '/enableCryptoX509');
 
 $server = new Socket(Socket::TYPE_TCP);
-$server->bind("localhost", 0);
+$server->bind('localhost', 0);
 $port = $server->getSockPort();
 
-function sendFirst(Socket $conn) {
+function sendFirst(Socket $conn): void
+{
     static $callTime = 0;
     $callTime++;
     $conn->send("sendFirst{$callTime}");
@@ -28,7 +29,8 @@ function sendFirst(Socket $conn) {
     $conn->close();
 }
 
-function recvFirst(Socket $conn) {
+function recvFirst(Socket $conn): void
+{
     static $callTime = 0;
     $callTime++;
     $data = $conn->recvString(1024);
@@ -37,21 +39,21 @@ function recvFirst(Socket $conn) {
     $conn->close();
 }
 
-Coroutine::run(function () use ($server, $paths) {
+Coroutine::run(static function () use ($server, $paths): void {
     $server->listen();
 
     // 1. enableCrypto with empty arguments (should fail)
-    Assert::throws(function () use ($server) {
+    Assert::throws(static function () use ($server): void {
         $server->accept()->enableCrypto();
     }, 'Swow\SocketException', expectMessage: '/Socket enable crypto failed.+/');
 
     // 2. enableCrypto with empty array (should fail)
-    Assert::throws(function () use ($server) {
+    Assert::throws(static function () use ($server): void {
         $server->accept()->enableCrypto([]);
     }, 'Swow\SocketException', expectMessage: '/Socket enable crypto failed.+/');
 
     // 3a. enableCrypto server with valid certificate, client not specified ca_file
-    Assert::throws(function () use ($server, $paths) {
+    Assert::throws(static function () use ($server, $paths): void {
         $server->accept()->enableCrypto([
             'certificate' => $paths['localhost']['cert'],
             'certificate_key' => $paths['localhost']['key'],
@@ -59,7 +61,7 @@ Coroutine::run(function () use ($server, $paths) {
     }, 'Swow\SocketException', expectMessage: '/Socket enable crypto failed.+/');
 
     // 3b. enableCrypto server with valid certificate, client donot accept the ca
-    Assert::throws(function () use ($server, $paths) {
+    Assert::throws(static function () use ($server, $paths): void {
         $server->accept()->enableCrypto([
             'certificate' => $paths['localhost']['cert'],
             'certificate_key' => $paths['localhost']['key'],
@@ -75,7 +77,7 @@ Coroutine::run(function () use ($server, $paths) {
     recvFirst($conn);
 
     // 4a. server checks client certificate, client have no certificate
-    Assert::throws(function () use ($server, $paths) {
+    Assert::throws(static function () use ($server, $paths): void {
         $server->accept()->enableCrypto([
             'ca_file' => $paths['ca']['cert'],
             'certificate' => $paths['localhost']['cert'],
@@ -87,7 +89,7 @@ Coroutine::run(function () use ($server, $paths) {
     }, 'Swow\SocketException', expectMessage: '/Socket enable crypto failed.+/');
 
     // 4b. server checks client certificate, client have certificate but not match peer_name
-    Assert::throws(function () use ($server, $paths) {
+    Assert::throws(static function () use ($server, $paths): void {
         $server->accept()->enableCrypto([
             'ca_file' => $paths['ca']['cert'],
             'certificate' => $paths['localhost']['cert'],
@@ -118,7 +120,7 @@ Coroutine::run(function () use ($server, $paths) {
     recvFirst($conn);
 
     // 6a. enableCrypto server with valid certificate, bad peer name
-    Assert::throws(function () use ($server, $paths) {
+    Assert::throws(static function () use ($server, $paths): void {
         $server->accept()->enableCrypto([
             'certificate' => $paths['localhost']['cert'],
             'certificate_key' => $paths['localhost']['key'],
@@ -135,7 +137,7 @@ Coroutine::run(function () use ($server, $paths) {
     sendFirst($conn);
 
     // 7a. enableCrypto server with very deep certificate chain, client reject it
-    Assert::throws(function () use ($server, $paths) {
+    Assert::throws(static function () use ($server, $paths): void {
         $server->accept()->enableCrypto([
             'ca_file' => $paths['ca']['cert'],
             'certificate' => $paths['verydeep']['cert'],
@@ -154,7 +156,7 @@ Coroutine::run(function () use ($server, $paths) {
     recvFirst($conn);
 
     // 8a. self signed certificate
-    Assert::throws(function () use ($server, $paths) {
+    Assert::throws(static function () use ($server, $paths): void {
         $server->accept()->enableCrypto([
             'certificate' => $paths['selfsigned']['cert'],
             'certificate_key' => $paths['selfsigned']['key'],
@@ -172,28 +174,28 @@ Coroutine::run(function () use ($server, $paths) {
 });
 
 // 1. enableCrypto with empty arguments (should fail)
-$client = (new Socket(Socket::TYPE_TCP))->connect("localhost", $port);
-Assert::throws(function () use ($client) {
+$client = (new Socket(Socket::TYPE_TCP))->connect('localhost', $port);
+Assert::throws(static function () use ($client): void {
     $client->enableCrypto();
 }, 'Swow\SocketException', expectMessage: '/Socket enable crypto failed.+/');
 
 // 2. enableCrypto with empty array (should fail)
-$client = (new Socket(Socket::TYPE_TCP))->connect("localhost", $port);
-Assert::throws(function () use ($client) {
+$client = (new Socket(Socket::TYPE_TCP))->connect('localhost', $port);
+Assert::throws(static function () use ($client): void {
     $client->enableCrypto([]);
 }, 'Swow\SocketException', expectMessage: '/Socket enable crypto failed.+/');
 
 // 3a. enableCrypto server with valid certificate, client not specified ca_file
-$client = (new Socket(Socket::TYPE_TCP))->connect("localhost", $port);
-Assert::throws(function () use ($client, $paths) {
+$client = (new Socket(Socket::TYPE_TCP))->connect('localhost', $port);
+Assert::throws(static function () use ($client, $paths): void {
     $client->enableCrypto([
         'verify_peer' => true,
     ]);
 }, 'Swow\SocketException', expectMessage: '/Socket enable crypto failed.+/');
 
 // 3b. enableCrypto server with valid certificate, client donot accept the ca
-$client = (new Socket(Socket::TYPE_TCP))->connect("localhost", $port);
-Assert::throws(function () use ($client, $paths) {
+$client = (new Socket(Socket::TYPE_TCP))->connect('localhost', $port);
+Assert::throws(static function () use ($client, $paths): void {
     $client->enableCrypto([
         'ca_file' => $paths['ca2']['cert'],
         'verify_peer' => true,
@@ -201,7 +203,7 @@ Assert::throws(function () use ($client, $paths) {
 }, 'Swow\SocketException', expectMessage: '/Socket enable crypto failed.+/');
 
 // 3c. enableCrypto server with valid certificate, client accept the ca
-$client = (new Socket(Socket::TYPE_TCP))->connect("localhost", $port);
+$client = (new Socket(Socket::TYPE_TCP))->connect('localhost', $port);
 $client->enableCrypto([
     'ca_file' => $paths['ca']['cert'],
     'verify_peer' => true,
@@ -209,7 +211,7 @@ $client->enableCrypto([
 sendFirst($client);
 
 // 4a. server checks client certificate, client have no certificate
-$client = (new Socket(Socket::TYPE_TCP))->connect("localhost", $port);
+$client = (new Socket(Socket::TYPE_TCP))->connect('localhost', $port);
 // this wont fail: server will refuse the client after serverHello
 // at that time, client will think its handshake is finished
 $client->enableCrypto([
@@ -218,8 +220,8 @@ $client->enableCrypto([
 ]);
 
 // 4b. server checks client certificate, client have certificate but not match peer_name
-$client = (new Socket(Socket::TYPE_TCP))->connect("localhost", $port);
-Assert::throws(function () use ($client, $paths) {
+$client = (new Socket(Socket::TYPE_TCP))->connect('localhost', $port);
+Assert::throws(static function () use ($client, $paths): void {
     $client->enableCrypto([
         'ca_file' => $paths['client']['cert'],
         'verify_peer' => true,
@@ -227,7 +229,7 @@ Assert::throws(function () use ($client, $paths) {
 }, 'Swow\SocketException', expectMessage: '/Socket enable crypto failed.+/');
 
 // 4c. server checks client certificate, client have valid certificate
-$client = (new Socket(Socket::TYPE_TCP))->connect("localhost", $port);
+$client = (new Socket(Socket::TYPE_TCP))->connect('localhost', $port);
 $client->enableCrypto([
     'ca_file' => $paths['ca']['cert'],
     'certificate' => $paths['client']['cert'],
@@ -239,7 +241,7 @@ $client->enableCrypto([
 recvFirst($client);
 
 // 5. enableCrypto client with valid certificate
-$client = (new Socket(Socket::TYPE_TCP))->connect("localhost", $port);
+$client = (new Socket(Socket::TYPE_TCP))->connect('localhost', $port);
 $client->enableCrypto([
     'ca_file' => $paths['ca']['cert'],
     'verify_peer' => true,
@@ -247,8 +249,8 @@ $client->enableCrypto([
 sendFirst($client);
 
 // 6a. enableCrypto server with valid certificate, bad peer name
-$client = (new Socket(Socket::TYPE_TCP))->connect("localhost", $port);
-Assert::throws(function () use ($client, $paths) {
+$client = (new Socket(Socket::TYPE_TCP))->connect('localhost', $port);
+Assert::throws(static function () use ($client, $paths): void {
     $client->enableCrypto([
         'ca_file' => $paths['ca']['cert'],
         'peer_name' => 'notlocalhost',
@@ -258,7 +260,7 @@ Assert::throws(function () use ($client, $paths) {
 }, 'Swow\SocketException', expectMessage: '/Socket enable crypto failed.+/');
 
 // 6b. enableCrypto server with valid certificate, bad peer name, but client accept it
-$client = (new Socket(Socket::TYPE_TCP))->connect("localhost", $port);
+$client = (new Socket(Socket::TYPE_TCP))->connect('localhost', $port);
 $client->enableCrypto([
     'ca_file' => $paths['ca']['cert'],
     'verify_peer' => true,
@@ -267,8 +269,8 @@ $client->enableCrypto([
 recvFirst($client);
 
 // 7a. enableCrypto server with very deep certificate chain, client reject it
-$client = (new Socket(Socket::TYPE_TCP))->connect("localhost", $port);
-Assert::throws(function () use ($client, $paths) {
+$client = (new Socket(Socket::TYPE_TCP))->connect('localhost', $port);
+Assert::throws(static function () use ($client, $paths): void {
     $client->enableCrypto([
         'ca_file' => $paths['ca']['cert'],
         'verify_peer' => true,
@@ -276,7 +278,7 @@ Assert::throws(function () use ($client, $paths) {
 }, 'Swow\SocketException', expectMessage: '/Socket enable crypto failed.+/');
 
 // 7b. enableCrypto server with very deep certificate chain, client accept it
-$client = (new Socket(Socket::TYPE_TCP))->connect("localhost", $port);
+$client = (new Socket(Socket::TYPE_TCP))->connect('localhost', $port);
 $client->enableCrypto([
     'ca_file' => $paths['ca']['cert'],
     'verify_peer' => true,
@@ -285,13 +287,13 @@ $client->enableCrypto([
 sendFirst($client);
 
 // 8a. self signed certificate
-$client = (new Socket(Socket::TYPE_TCP))->connect("localhost", $port);
-Assert::throws(function () use ($client, $paths) {
+$client = (new Socket(Socket::TYPE_TCP))->connect('localhost', $port);
+Assert::throws(static function () use ($client, $paths): void {
     $client->enableCrypto();
 }, 'Swow\SocketException', expectMessage: '/Socket enable crypto failed.+/');
 
 // 8b. self signed certificate, but client accept it
-$client = (new Socket(Socket::TYPE_TCP))->connect("localhost", $port);
+$client = (new Socket(Socket::TYPE_TCP))->connect('localhost', $port);
 $client->enableCrypto([
     'allow_self_signed' => true,
 ]);

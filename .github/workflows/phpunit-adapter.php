@@ -1,4 +1,5 @@
 <?php
+
 /**
  * This file is part of Swow
  *
@@ -22,7 +23,7 @@ if (!preg_match('/^8\.[0-5]$/', $phpVersion)) {
         '8.5', '8.4', '8.3', '8.2' => '^11',
         '8.1' => '^10',
         '8.0' => '^9',
-        default => throw new InvalidArgumentException("Unexpected PHP version {$phpVersion}")
+        default => throw new InvalidArgumentException("Unexpected PHP version {$phpVersion}"),
     };
     $newComposerJson = str_replace('"phpunit/phpunit": "^9|^10|^11"', "\"phpunit/phpunit\": \"{$phpunitVersion}\"", $composerJson);
     file_put_contents('composer.json', $newComposerJson);

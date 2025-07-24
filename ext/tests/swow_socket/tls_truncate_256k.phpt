@@ -21,10 +21,10 @@ foreach ([1, 2048, 4096, 16384, 32768] as $tailLength) {
     $paths = testX509Paths(__DIR__ . '/tls_truncate_256kX509');
 
     $server = new Socket(Socket::TYPE_TCP);
-    $server->bind("127.0.0.1", 0);
+    $server->bind('127.0.0.1', 0);
     // var_dump($server->getSockPort());
 
-    Coroutine::run(function () use ($server, $paths, $data) {
+    Coroutine::run(static function () use ($server, $paths, $data): void {
         $server->listen();
         $conn = $server->accept()->enableCrypto([
             'ca_file' => $paths['ca']['cert'],
@@ -40,7 +40,7 @@ foreach ([1, 2048, 4096, 16384, 32768] as $tailLength) {
     });
 
     $client = new Socket(Socket::TYPE_TCP);
-    $client->connect("127.0.0.1", $server->getSockPort());
+    $client->connect('127.0.0.1', $server->getSockPort());
     $client->enableCrypto([
         'ca_file' => $paths['ca']['cert'],
         'peer_name' => 'localhost',

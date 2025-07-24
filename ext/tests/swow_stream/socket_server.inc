@@ -1,4 +1,15 @@
 <?php
+/**
+ * This file is part of Swow
+ *
+ * @link    https://github.com/swow/swow
+ * @contact twosee <twosee@php.net>
+ *
+ * For the full copyright and license information,
+ * please view the LICENSE file that was distributed with this source code
+ */
+
+declare(strict_types=1);
 // this file can be used without swow:
 // php tests/swow_stream/socket_server.inc | php tests/swow_stream/socket_client.inc
 require_once __DIR__ . '/../include/bootstrap.php';
@@ -33,8 +44,7 @@ function serverWithConfig(array $config): mixed /* resource */
     $context = stream_context_create([
         'ssl' => $config,
     ]);
-    $server = stream_socket_server('ssl://127.0.0.1:0', $errno, $errstr, STREAM_SERVER_BIND | STREAM_SERVER_LISTEN, $context);
-    return $server;
+    return stream_socket_server('ssl://127.0.0.1:0', $errno, $errstr, STREAM_SERVER_BIND | STREAM_SERVER_LISTEN, $context);
 }
 
 // 1. server with empty array

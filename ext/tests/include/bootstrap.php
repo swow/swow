@@ -1,4 +1,5 @@
 <?php
+
 /**
  * This file is part of Swow
  *
@@ -235,7 +236,7 @@ function php_options_with_swow(): array
             ['-d', 'extension=.libs/swow' . (PHP_OS_FAMILY === 'Darwin' ? '.dylib' : '.so')],
             // made in-tree
             ['-d', 'extension=modules/swow' . (PHP_OS_FAMILY === 'Darwin' ? '.dylib' : '.so')],
-        ]
+        ],
     };
     // run-test args
     array_unshift($try_args, [
@@ -353,21 +354,20 @@ function httpRequest(string $url, string $method = 'GET', string $content = '', 
     ];
 }
 
-
 function make_fifo(): ?string
 {
     $path = sprintf(
-        PHP_OS_FAMILY !== 'Windows' ? '/tmp/swow_test_%s.fifo' : '\\\\.\pipe\swow_test_%s',
+        PHP_OS_FAMILY !== 'Windows' ? '/tmp/swow_test_%s.fifo' : '\\\.\pipe\swow_test_%s',
         getRandomBytes(8)
     );
 
     if (PHP_OS_FAMILY !== 'Windows') {
-        shell_exec("mkfifo \"$path\"");
+        shell_exec("mkfifo \"{$path}\"");
         $stat = @stat($path);
         if ($stat === false || !($stat['mode'] | 0x1000)) {
             // mkfifo failed, try mknod
             @unlink($path);
-            shell_exec("mknod \"$path\" p");
+            shell_exec("mknod \"{$path}\" p");
             $stat = @stat($path);
             if ($stat === false || !($stat['mode'] | 0x1000)) {
                 @unlink($path);
@@ -586,7 +586,7 @@ AQQw4byMsNRHayLe3G/O+fXYY1or9xFhsGJz0IZ8je5A9ytT41YErAHIMQQ5E63EZB/NoAcGBSuBBAAi
 8wWHkxXWCPq+kPAOetE6QDjhteNCtL3Yw2xq4Uwuf/LbpWOp9bRwdvgkBoGaw9O57R4FAiqdQXpkhs0GAJt1Ta52Ijt9fQ==
 TEXT;
 
-    $unserialized = unserialize(base64_decode($serializedBase64ed));
+    $unserialized = unserialize(base64_decode($serializedBase64ed, true));
     $pems = [];
     foreach ($unserialized as $name => $pair) {
         $certBin = $pair['cert'];
@@ -617,7 +617,7 @@ function testX509Paths(string $dirname): array
     $verydeepCertPath = $paths['verydeep']['cert'];
     $verydeepCertFile = fopen($verydeepCertPath, 'ab');
     foreach ($paths as $certName => $path) {
-        if (strpos($certName, 'intermediate') === false) {
+        if (!str_contains($certName, 'intermediate')) {
             continue;
         }
         fwrite($verydeepCertFile, file_get_contents($path['cert']));

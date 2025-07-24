@@ -1,4 +1,5 @@
 <?php
+
 /**
  * This file is part of Swow
  *
@@ -42,6 +43,6 @@ interface UploadedFileFactoryInterface
         ?int $size = null,
         int $error = UPLOAD_ERR_OK,
         ?string $clientFilename = null,
-        ?string $clientMediaType = null
+        ?string $clientMediaType = null,
     ): UploadedFileInterface;
 }

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * This file is part of Swow
  *
@@ -174,5 +175,5 @@ function skip_if_cannot_create_fifo(): void
 {
     $fifo = make_fifo();
     @unlink($fifo);
-    skip_if(!$fifo, "Cannot create fifo(named pipe)");
+    skip_if(!$fifo, 'Cannot create fifo(named pipe)');
 }

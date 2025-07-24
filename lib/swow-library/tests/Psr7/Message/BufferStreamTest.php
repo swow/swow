@@ -1,4 +1,5 @@
 <?php
+
 /**
  * This file is part of Swow
  *
@@ -42,7 +43,7 @@ final class BufferStreamTest extends TestCase
 
     public function testConstructorWithStringable(): void
     {
-        $obj = new class() implements Stringable {
+        $obj = new class implements Stringable {
             public function __toString(): string
             {
                 return 'stringable object';

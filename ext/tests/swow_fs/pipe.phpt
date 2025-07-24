@@ -9,15 +9,16 @@ require __DIR__ . '/../include/skipif.php';
 require __DIR__ . '/../include/bootstrap.php';
 
 use Swow\Coroutine;
-use function Swow\pipe;
 use Swow\Sync\WaitReference;
+
+use function Swow\pipe;
 
 [$r, $w] = pipe();
 
 $wr = new WaitReference();
 
 // common use
-Coroutine::run(function () use ($w, $wr) {
+Coroutine::run(static function () use ($w, $wr): void {
     fwrite($w, 'Hello, world!');
 });
 

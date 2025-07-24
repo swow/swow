@@ -1,4 +1,5 @@
 <?php
+
 /**
  * This file is part of Swow
  *
@@ -27,6 +28,7 @@ use function array_map;
 use function file_exists;
 use function is_numeric;
 use function mkdir;
+use function sprintf;
 use function Swow\TestUtils\getRandomBytes;
 
 use const CURLOPT_HEADER;

@@ -10,7 +10,7 @@ Need to fix
 <?php
 require __DIR__ . '/../include/bootstrap.php';
 
-$o = new class() {
+$o = new class {
     public static function foo(): void
     {
     }

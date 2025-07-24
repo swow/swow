@@ -19,60 +19,62 @@ var_dump(fileno(STDIN));
 var_dump(fileno(STDOUT));
 var_dump(fileno(STDERR));
 
-$stdin = fopen("php://stdin", "r");
+$stdin = fopen('php://stdin', 'r');
 var_dump(fileno($stdin));
-$stdout = fopen("php://stdout", "w");
+$stdout = fopen('php://stdout', 'w');
 var_dump(fileno($stdout));
-$stderr = fopen("php://stderr", "w");
+$stderr = fopen('php://stderr', 'w');
 var_dump(fileno($stderr));
 
 $context = stream_context_create();
-Assert::throws(function () use ($context) {
+Assert::throws(static function () use ($context): void {
     fileno($context);
 }, Swow\Exception::class, expectMessage: 'Invalid stream resource');
 
-$memory = fopen("php://memory", "r+");
-Assert::throws(function () use ($memory) {
+$memory = fopen('php://memory', 'r+');
+Assert::throws(static function () use ($memory): void {
     fileno($memory);
 }, Swow\Exception::class, expectMessage: 'Cannot represent a stream of type MEMORY as a File Descriptor');
 
 // maybe we can support this in the future ?
-$url = fopen(TEST_WEBSITE1_URL, "r");
-Assert::throws(function () use ($url) {
+$url = fopen(TEST_WEBSITE1_URL, 'r');
+Assert::throws(static function () use ($url): void {
     fileno($url);
 }, Swow\Exception::class, expectMessage: 'Cannot represent a stream of type tcp_socket/ssl as a File Descriptor');
 
 if (extension_loaded('phar')) {
     build_phar(__DIR__ . DIRECTORY_SEPARATOR . 'fileno_test.phar', TEST_REQUIRE);
-    $phar = fopen("phar://" . __DIR__ . DIRECTORY_SEPARATOR . 'fileno_test.phar' . DIRECTORY_SEPARATOR . 'run.php', 'r');
-    Assert::throws(function () use ($phar) {
+    $phar = fopen('phar://' . __DIR__ . DIRECTORY_SEPARATOR . 'fileno_test.phar' . DIRECTORY_SEPARATOR . 'run.php', 'r');
+    Assert::throws(static function () use ($phar): void {
         fileno($phar);
     }, Swow\Exception::class, expectMessage: 'Cannot represent a stream of type phar stream as a File Descriptor');
 }
 
-class TestUserStream {
-    public /* resource */ $context;
+class TestUserStream
+{
+    /* resource */ public $context;
 
     public function stream_open(
         string $path,
         string $mode,
         int $options,
-        ?string &$opened_path
+        ?string &$opened_path,
     ): bool {
         return true;
     }
 
-    public function stream_close(): void {
-        return;
+    public function stream_close(): void
+    {
     }
 
-    public function stream_cast(int $cast_as): mixed {
+    public function stream_cast(int $cast_as): mixed
+    {
         throw new TestError('cafebabe');
     }
 }
 stream_wrapper_register('test', TestUserStream::class);
 $test = fopen('test://test', 'r');
-Assert::throws(function () use ($test) {
+Assert::throws(static function () use ($test): void {
     fileno($test);
 }, Swow\Exception::class, expectMessage: 'Cannot represent a stream of type user-space as a File Descriptor');
 stream_wrapper_unregister('test');

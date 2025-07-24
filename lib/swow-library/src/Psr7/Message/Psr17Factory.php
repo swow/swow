@@ -1,4 +1,5 @@
 <?php
+
 /**
  * This file is part of Swow
  *
@@ -70,7 +71,7 @@ class Psr17Factory implements Psr17PlusFactoryInterface
 
     public function createResponse(
         int $code = Status::OK,
-        string $reasonPhrase = ''
+        string $reasonPhrase = '',
     ): Response {
         return (new Response())->setStatus($code, $reasonPhrase);
     }
@@ -88,7 +89,7 @@ class Psr17Factory implements Psr17PlusFactoryInterface
         ?int $size = null,
         int $error = UPLOAD_ERR_OK,
         ?string $clientFilename = null,
-        ?string $clientMediaType = null
+        ?string $clientMediaType = null,
     ): UploadedFile {
         return new UploadedFile($stream, $size, $error, $clientFilename, $clientMediaType);
     }

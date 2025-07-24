@@ -1,4 +1,5 @@
 <?php
+
 /**
  * This file is part of Swow
  *
@@ -20,7 +21,7 @@ final class ServerConnectionIterator implements ServerConnectionIteratorInterfac
     /**
      * @param Iterator<ServerConnection, int> $iterator
      */
-    public function __construct(protected Iterator $iterator)
+    public function __construct(private Iterator $iterator)
     {
     }
 

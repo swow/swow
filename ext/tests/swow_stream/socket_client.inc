@@ -1,4 +1,15 @@
 <?php
+/**
+ * This file is part of Swow
+ *
+ * @link    https://github.com/swow/swow
+ * @contact twosee <twosee@php.net>
+ *
+ * For the full copyright and license information,
+ * please view the LICENSE file that was distributed with this source code
+ */
+
+declare(strict_types=1);
 // this file can be used without swow:
 // php tests/swow_stream/socket_server.inc | php tests/swow_stream/socket_client.inc
 require_once __DIR__ . '/../include/bootstrap.php';
@@ -33,10 +44,10 @@ function clientWithConfig(string $serverAddr, array $config, bool $expectSuccess
         'ssl' => $config,
     ]);
     if ($expectSuccess) {
-        $client = stream_socket_client("ssl://$serverAddr", $errno, $errstr, CONNECT_TIMEOUT, STREAM_CLIENT_CONNECT, $context);
+        $client = stream_socket_client("ssl://{$serverAddr}", $errno, $errstr, CONNECT_TIMEOUT, STREAM_CLIENT_CONNECT, $context);
         Assert::notSame($client, false);
     } else {
-        $client = @stream_socket_client("ssl://$serverAddr", $errno, $errstr, CONNECT_TIMEOUT, STREAM_CLIENT_CONNECT, $context);
+        $client = @stream_socket_client("ssl://{$serverAddr}", $errno, $errstr, CONNECT_TIMEOUT, STREAM_CLIENT_CONNECT, $context);
         Assert::same($client, false);
     }
     return $client;
@@ -117,7 +128,6 @@ $client = clientWithConfig(fgets(STDIN), [
     'verify_peer_name' => true,
 ], false);
 
-
 // 10. very deep certificate chain, client accept it
 $client = clientWithConfig(fgets(STDIN), [
     'cafile' => $paths['ca']['cert'],
@@ -128,5 +138,5 @@ $client = clientWithConfig(fgets(STDIN), [
 ]);
 sendFirst($client);
 
-printf("%s", fgets(STDIN));
+printf('%s', fgets(STDIN));
 printf("client end\n");

@@ -4,9 +4,9 @@ swow_coroutine/in_shutdown: bailout in main
 <?php
 require __DIR__ . '/../../include/skipif.php';
 
-if (memory_get_usage() == 0) {
+if (memory_get_usage() === 0) {
     // zend mm not enabled, skip test
-    exit("SKIP: zend mm not enabled");
+    exit('SKIP: zend mm not enabled');
 }
 ?>
 --INI--

@@ -10,10 +10,10 @@ require __DIR__ . '/../include/skipif.php';
 <?php
 require __DIR__ . '/../include/bootstrap.php';
 
-$anonymous = function () {
+$anonymous = static function (): void {
     /** this is a doc comment */
-    $a = function () {
-        return "whatever";
+    $a = static function () {
+        return 'whatever';
     };
 
     $reflect = new ReflectionFunction($a);

@@ -10,7 +10,7 @@ require __DIR__ . '/../include/bootstrap.php';
 
 use Swow\Coroutine;
 
-$foo = new class() {
+$foo = new class {
     public Coroutine $coroutine;
 
     public function __construct()
