@@ -162,11 +162,7 @@ PHP_FUNCTION(swow_curl_share_init_persistent)
     ZEND_PARSE_PARAMETERS_END();
 
     if (zend_hash_num_elements(share_opts) == 0) {
-#if PHP_VERSION_ID < 80400
-        zend_argument_value_error(1, "cannot be empty");
-#else
         zend_argument_must_not_be_empty_error(1);
-#endif // PHP_VERSION_ID < 80400
         goto error;
     }
 
