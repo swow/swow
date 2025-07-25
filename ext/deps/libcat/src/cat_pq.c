@@ -60,7 +60,7 @@ static PGresult *cat_pq_get_result(PGconn *conn)
     while ((result = PQgetResult(conn))) {
         PQclear(last_result);
         last_result = result;
-        ExecStatusType status = PQresultStatus(result);
+        ExecStatusType status = PQresultStatus(last_result);
         if (
             status == PGRES_COPY_OUT ||
             status == PGRES_COPY_IN ||
