@@ -26,6 +26,9 @@
 #include <libpq/libpq-fs.h>
 #include <php.h>
 
+#include "swow.h"
+#include "swow_wrapper.h"
+
 #define PHP_PDO_PGSQL_CONNECTION_FAILURE_SQLSTATE "08006"
 
 typedef struct {
@@ -35,6 +38,8 @@ typedef struct {
     char *errmsg;
 } pdo_pgsql_error_info;
 
+typedef struct pdo_pgsql_stmt pdo_pgsql_stmt;
+
 /* stuff we use in a pgsql database handle */
 typedef struct {
     PGconn        *server;
@@ -43,23 +48,18 @@ typedef struct {
     pdo_pgsql_error_info    einfo;
     Oid         pgoid;
     unsigned int    stmt_counter;
-    /* The following two variables have the same purpose. Unfortunately we need
-       to keep track of two different attributes having the same effect. */
 // diff since php/php-src@3e01f5afb1b52fe26a956190296de0192eedeec1
 #if PHP_VERSION_ID <= 80100
     zend_bool        emulate_prepares;
-    zend_bool        disable_native_prepares; /* deprecated since 5.6 */
     zend_bool        disable_prepares;
 #else
     bool        emulate_prepares;
-    bool        disable_native_prepares; /* deprecated since 5.6 */
     bool        disable_prepares;
 #endif // PHP_VERSION_ID
     HashTable       *lob_streams;
-// diff since php/php-src@c265b9085ae9b20bb37e0c1a052a1716827a8004
-#if PHP_VERSION_ID >= 80400
-    zend_fcall_info_cache *notice_callback;
-#endif // PHP_VERSION_ID
+    swow_fcall_info_cache *notice_callback;
+    bool        default_fetching_laziness;
+    pdo_pgsql_stmt  *running_stmt;
 } pdo_pgsql_db_handle;
 
 // diff since php/php-src@caa710037e663fd78f67533b29611183090068b2
@@ -75,7 +75,7 @@ typedef struct {
     Oid          pgsql_type;
 } pdo_pgsql_column;
 #endif
-typedef struct {
+struct pdo_pgsql_stmt {
     pdo_pgsql_db_handle     *H;
     PGresult                *result;
     pdo_pgsql_column        *cols;
@@ -95,10 +95,14 @@ typedef struct {
 // diff since php/php-src@3e01f5afb1b52fe26a956190296de0192eedeec1
 #if PHP_VERSION_ID <= 80100
     zend_bool is_prepared;
+    zend_bool is_unbuffered;
+    zend_bool is_running_unbuffered;
 #else
     bool is_prepared;
+    bool is_unbuffered;
+    bool is_running_unbuffered;
 #endif // PHP_VERSION_ID
-} pdo_pgsql_stmt;
+};
 
 typedef struct {
     Oid     oid;
@@ -142,13 +146,12 @@ enum pdo_pgsql_specific_constants {
     PGSQL_TRANSACTION_UNKNOWN = PQTRANS_UNKNOWN
 };
 
-php_stream *swow_pdo_pgsql_create_lob_stream(zval *pdh, int lfd, Oid oid);
+#if PHP_VERSION_ID < 80500
+php_stream *swow_pdo_pgsql_create_lob_stream(zval *dbh, int lfd, Oid oid);
+#else
+php_stream *swow_pdo_pgsql_create_lob_stream(zend_object *dbh, int lfd, Oid oid);
+#endif // PHP_VERSION_ID < 80500
 extern const php_stream_ops swow_pdo_pgsql_lob_stream_ops;
-
-// diff since php/php-src@a9259c04969eefabf4c66a8843a66d0bee1c56c0
-#if PHP_VERSION_ID >= 80400
-void swow_pdo_pgsql_cleanup_notice_callback(pdo_pgsql_db_handle *H);
-#endif //PHP_VERSION_ID
 
 void swow_pdo_libpq_version(char *buf, size_t len);
 void swow_pdo_pgsql_close_lob_streams(pdo_dbh_t *dbh);
@@ -168,5 +171,16 @@ void swow_pgsqlGetPid_internal(INTERNAL_FUNCTION_PARAMETERS);
 // wrapper for pq functions
 extern PGresult *(*swow_PQclosePrepared)(PGconn *conn, const char *stmtName);
 extern size_t (*swow_PQresultMemorySize)(const PGresult *res);
+
+// compatibility
+
+#if PHP_VERSION_ID < 80100
+bool pdo_get_long_param(zend_long *lval, const zval *value);
+bool pdo_get_bool_param(bool *bval, const zval *value);
+#endif // PHP_VERSION_ID < 80100
+
+#if PHP_VERSION_ID < 80500
+bool php_pdo_stmt_valid_db_obj_handle(const pdo_stmt_t *stmt);
+#endif // PHP_VERSION_ID < 80500
 
 #endif /* PHP_PDO_PGSQL_INT_H */

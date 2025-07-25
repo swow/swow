@@ -1,4 +1,4 @@
-// php/php-src@a9259c04969eefabf4c66a8843a66d0bee1c56c0
+// php/php-src@7f5e96d030f2d5f36b043451ef89b8bcb367a397
 // from ext/pdo_pgsql/pgsql_driver_arginfo.h
 
 #ifndef ZEND_BEGIN_ARG_WITH_TENTATIVE_RETURN_TYPE_INFO_EX
@@ -9,11 +9,11 @@
 #endif
 
 /* This is a generated file, edit the .stub.php file instead.
- * Stub hash: dd20abc5d8580d72b25bfb3c598b1ca54a501fcc */
+ * Stub hash: 30c01b4d2e7f836b81a31dc0c1a115883eb41568 */
 
 ZEND_BEGIN_ARG_WITH_TENTATIVE_RETURN_TYPE_INFO_EX(arginfo_class_PDO_PGSql_Ext_pgsqlCopyFromArray, 0, 2, _IS_BOOL, 0)
     ZEND_ARG_TYPE_INFO(0, tableName, IS_STRING, 0)
-    ZEND_ARG_TYPE_INFO(0, rows, IS_ARRAY, 0)
+    ZEND_ARG_OBJ_TYPE_MASK(0, rows, Traversable, MAY_BE_ARRAY, NULL)
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, separator, IS_STRING, 0, "\"\\t\"")
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, nullAs, IS_STRING, 0, "\"\\\\\\\\N\"")
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, fields, IS_STRING, 1, "null")
