@@ -1,9 +1,9 @@
 --TEST--
-swow_misc: trig user warning in coroutine
+swow_misc: trig user warning in coroutine 8.4+
 --SKIPIF--
 <?php
 require __DIR__ . '/../include/skipif.php';
-needs_php_version("<", "8.4");
+needs_php_version(">=", "8.4");
 ?>
 --FILE--
 <?php
@@ -33,32 +33,40 @@ Stack trace:%A
 
 %ADeprecated: [Deprecated in R%d] running run-tests.php to test php is deprecated
 Stack trace:
-#%d %swarning_in_coro.php(%d): trigger_error('running run-tes...', %d)
+#%d %swarning_in_coro_4.php(%d): trigger_error('running run-tes...', %d)
 #%d [internal function]: {closur%s}()%A
 #%d %s(%d): Swow\Coroutine::run(Object(Closure))
 #%d {main}
-  triggered in %swarning_in_coro.php on line %d
+  triggered in %swarning_in_coro_4.php on line %d
 
 %ANotice: [Notice in R%d] running run-tests.php to test swow is deprecated
 Stack trace:
-#%d %swarning_in_coro.php(%d): trigger_error('running run-tes...', %d)
+#%d %swarning_in_coro_4.php(%d): trigger_error('running run-tes...', %d)
 #%d [internal function]: {closur%s}()%A
 #%d %s(%d): Swow\Coroutine::run(Object(Closure))
 #%d {main}
-  triggered in %swarning_in_coro.php on line %d
+  triggered in %swarning_in_coro_4.php on line %d
 
 %AWarning: [Warning in R%d] running run-tests.php to test twosee is deprecated
 Stack trace:
-#%d %swarning_in_coro.php(%d): trigger_error('running run-tes...', %d)
+#%d %swarning_in_coro_4.php(%d): trigger_error('running run-tes...', %d)
 #%d [internal function]: {closur%s}()%A
 #%d %s(%d): Swow\Coroutine::run(Object(Closure))
 #%d {main}
-  triggered in %swarning_in_coro.php on line %d
+  triggered in %swarning_in_coro_4.php on line %d
+
+%ADeprecated: [Deprecated in R%d] Passing E_USER_ERROR to trigger_error() is deprecated since 8.4, throw an exception or call exit with a string message instead
+Stack trace:
+#%d %swarning_in_coro_4.php(%d): trigger_error('running run-tes...', %d)
+#%d [internal function]: {closur%s}()%A
+#%d %s(%d): Swow\Coroutine::run(Object(Closure))
+#%d {main}
+  triggered in %swarning_in_coro_4.php on line %d
 
 %AFatal error: [Fatal error in R%d] running run-tests.php to test dixyes is deprecated
 Stack trace:
-#%d %swarning_in_coro.php(%d): trigger_error('running run-tes...', %d)
+#%d %swarning_in_coro_4.php(%d): trigger_error('running run-tes...', %d)
 #%d [internal function]: {closur%s}()%A
 #%d %s(%d): Swow\Coroutine::run(Object(Closure))
 #%d {main}
-  triggered in %swarning_in_coro.php on line %d
+  triggered in %swarning_in_coro_4.php on line %d
