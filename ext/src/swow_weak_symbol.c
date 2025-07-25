@@ -1434,6 +1434,130 @@ unsigned char * swow_PQunescapeBytea_redirect(const unsigned char *strtext, size
     return swow_PQunescapeBytea_resolved(strtext, retbuflen);
 }
 
+// weak function pointer for PQgetCancel
+#ifdef CAT_OS_WIN
+// extern void * PQgetCancel(void *conn);
+# pragma comment(linker, "/alternatename:PQgetCancel=swow_PQgetCancel_redirect")
+#else
+__attribute__((weak, alias("swow_PQgetCancel_redirect"))) extern void * PQgetCancel(void *conn);
+#endif
+// resolved function holder
+void * (*swow_PQgetCancel_resolved)(void *conn);
+// resolver for PQgetCancel
+void * swow_PQgetCancel_resolver(void *conn) {
+    swow_PQgetCancel_resolved = (void * (*)(void *conn))DL_FETCH_SYMBOL(DL_FROM_HANDLE, "PQgetCancel");
+
+    if (swow_PQgetCancel_resolved == NULL) {
+#if defined(DL_ERROR)
+        fprintf(stderr, "failed resolve PQgetCancel: %s\n", DL_ERROR());
+#elif defined(CAT_OS_WIN)
+        fprintf(stderr, "failed resolve PQgetCancel: %08x\n", (unsigned int)GetLastError());
+#else
+        fprintf(stderr, "failed resolve PQgetCancel\n",());
+#endif
+        abort();
+    }
+
+    return swow_PQgetCancel_resolved(conn);
+}
+void * (*swow_PQgetCancel_resolved)(void *conn) = swow_PQgetCancel_resolver;
+void * swow_PQgetCancel_redirect(void *conn) {
+    return swow_PQgetCancel_resolved(conn);
+}
+
+// weak function pointer for PQfreeCancel
+#ifdef CAT_OS_WIN
+// extern void PQfreeCancel(void *cancel);
+# pragma comment(linker, "/alternatename:PQfreeCancel=swow_PQfreeCancel_redirect")
+#else
+__attribute__((weak, alias("swow_PQfreeCancel_redirect"))) extern void PQfreeCancel(void *cancel);
+#endif
+// resolved function holder
+void (*swow_PQfreeCancel_resolved)(void *cancel);
+// resolver for PQfreeCancel
+void swow_PQfreeCancel_resolver(void *cancel) {
+    swow_PQfreeCancel_resolved = (void (*)(void *cancel))DL_FETCH_SYMBOL(DL_FROM_HANDLE, "PQfreeCancel");
+
+    if (swow_PQfreeCancel_resolved == NULL) {
+#if defined(DL_ERROR)
+        fprintf(stderr, "failed resolve PQfreeCancel: %s\n", DL_ERROR());
+#elif defined(CAT_OS_WIN)
+        fprintf(stderr, "failed resolve PQfreeCancel: %08x\n", (unsigned int)GetLastError());
+#else
+        fprintf(stderr, "failed resolve PQfreeCancel\n",());
+#endif
+        abort();
+    }
+
+    swow_PQfreeCancel_resolved(cancel);
+}
+void (*swow_PQfreeCancel_resolved)(void *cancel) = swow_PQfreeCancel_resolver;
+void swow_PQfreeCancel_redirect(void *cancel) {
+    swow_PQfreeCancel_resolved(cancel);
+}
+
+// weak function pointer for PQcancel
+#ifdef CAT_OS_WIN
+// extern int PQcancel(void *cancel, char *errbuf, int errbufsize);
+# pragma comment(linker, "/alternatename:PQcancel=swow_PQcancel_redirect")
+#else
+__attribute__((weak, alias("swow_PQcancel_redirect"))) extern int PQcancel(void *cancel, char *errbuf, int errbufsize);
+#endif
+// resolved function holder
+int (*swow_PQcancel_resolved)(void *cancel, char *errbuf, int errbufsize);
+// resolver for PQcancel
+int swow_PQcancel_resolver(void *cancel, char *errbuf, int errbufsize) {
+    swow_PQcancel_resolved = (int (*)(void *cancel, char *errbuf, int errbufsize))DL_FETCH_SYMBOL(DL_FROM_HANDLE, "PQcancel");
+
+    if (swow_PQcancel_resolved == NULL) {
+#if defined(DL_ERROR)
+        fprintf(stderr, "failed resolve PQcancel: %s\n", DL_ERROR());
+#elif defined(CAT_OS_WIN)
+        fprintf(stderr, "failed resolve PQcancel: %08x\n", (unsigned int)GetLastError());
+#else
+        fprintf(stderr, "failed resolve PQcancel\n",());
+#endif
+        abort();
+    }
+
+    return swow_PQcancel_resolved(cancel, errbuf, errbufsize);
+}
+int (*swow_PQcancel_resolved)(void *cancel, char *errbuf, int errbufsize) = swow_PQcancel_resolver;
+int swow_PQcancel_redirect(void *cancel, char *errbuf, int errbufsize) {
+    return swow_PQcancel_resolved(cancel, errbuf, errbufsize);
+}
+
+// weak function pointer for PQsetSingleRowMode
+#ifdef CAT_OS_WIN
+// extern int PQsetSingleRowMode(void *conn);
+# pragma comment(linker, "/alternatename:PQsetSingleRowMode=swow_PQsetSingleRowMode_redirect")
+#else
+__attribute__((weak, alias("swow_PQsetSingleRowMode_redirect"))) extern int PQsetSingleRowMode(void *conn);
+#endif
+// resolved function holder
+int (*swow_PQsetSingleRowMode_resolved)(void *conn);
+// resolver for PQsetSingleRowMode
+int swow_PQsetSingleRowMode_resolver(void *conn) {
+    swow_PQsetSingleRowMode_resolved = (int (*)(void *conn))DL_FETCH_SYMBOL(DL_FROM_HANDLE, "PQsetSingleRowMode");
+
+    if (swow_PQsetSingleRowMode_resolved == NULL) {
+#if defined(DL_ERROR)
+        fprintf(stderr, "failed resolve PQsetSingleRowMode: %s\n", DL_ERROR());
+#elif defined(CAT_OS_WIN)
+        fprintf(stderr, "failed resolve PQsetSingleRowMode: %08x\n", (unsigned int)GetLastError());
+#else
+        fprintf(stderr, "failed resolve PQsetSingleRowMode\n",());
+#endif
+        abort();
+    }
+
+    return swow_PQsetSingleRowMode_resolved(conn);
+}
+int (*swow_PQsetSingleRowMode_resolved)(void *conn) = swow_PQsetSingleRowMode_resolver;
+int swow_PQsetSingleRowMode_redirect(void *conn) {
+    return swow_PQsetSingleRowMode_resolved(conn);
+}
+
 
 // weak function pointer for lo_open
 #ifdef CAT_OS_WIN

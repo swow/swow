@@ -165,6 +165,10 @@ int  PQsocket(const void *conn);
 int  PQstatus(const void *conn);
 int PQtransactionStatus(const void *conn);
 unsigned char *PQunescapeBytea(const unsigned char *strtext, size_t *retbuflen);
+void *PQgetCancel(void *conn);
+void PQfreeCancel(void *cancel);
+int	PQcancel(void *cancel, char *errbuf, int errbufsize);
+int  PQsetSingleRowMode(void *conn);
 
 int	lo_open(void *conn, unsigned int lobjId, int mode);
 int	lo_close(void *conn, int fd);
