@@ -190,6 +190,7 @@ static inline cat_dirent_t *swow_fs_readdir(cat_dir_t *dir)
         }
         free((void *) dirent->name);
         dirent->name = php_win32_cp_w_to_cur(wname);
+        free((void *) wname);
         if (NULL == dirent->name) {
             CLEANUP(dirent);
             return NULL;
@@ -480,7 +481,9 @@ static inline const char *swow_check_path(const char *path)
     if (!pathw) {
         return NULL;
     }
-    return php_win32_cp_w_to_utf8(pathw);
+    const char *ret = php_win32_cp_w_to_utf8(pathw);
+    free((void *) pathw);
+    return ret;
 }
 # define check_path_free free
 # define SAVE_LE DWORD le = GetLastError()
@@ -624,6 +627,8 @@ static inline int swow_virtual_stat_ex(const char *path, zend_stat_t *statbuf, i
     int ret;
 #ifdef PHP_WIN32
     LPCWSTR pathw = swow_check_path_w(path);
+    // not used, just free it
+    free((void *) pathw);
     if (!pathw) {
         ret = -1;
     } else
@@ -966,6 +971,7 @@ static int swow_do_open_temporary_file(const char *path, const char *pfx, zend_s
             free(random_prefix_w);
             efree(random_prefix);
             efree(new_state.cwd);
+            free(opened_path);
             return -1;
         }
         assert(strlen(opened_path) == opened_path_len);
@@ -1844,6 +1850,8 @@ static ssize_t swow_plain_files_dirstream_read(php_stream *stream, char *buf, si
     if (result) {
         size_t len = strlen(result->name);
         if (UNEXPECTED(len >= sizeof(ent->d_name))) {
+            free((void*)result->name);
+            free(result);
             return -1;
         }
         /* Include null byte */
