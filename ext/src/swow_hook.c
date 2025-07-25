@@ -148,7 +148,7 @@ SWOW_API void swow_clean_module_constants(zend_module_entry *module)
     /* Rehash the constant table after deleting constants. This ensures that all internal
      * constants are contiguous, which means we don't need to perform full table cleanup
      * on shutdown. */
-	zend_hash_rehash(EG(zend_constants));
+    zend_hash_rehash(EG(zend_constants));
 }
 
 SWOW_API void swow_clean_module_classes(zend_module_entry *module)
@@ -173,7 +173,7 @@ SWOW_API void swow_clean_module_classes(zend_module_entry *module)
     /* Rehash the class table after deleting classes. This ensures that all internal
      * classes are contiguous, which means we don't need to perform full table cleanup
      * on shutdown. */
-	zend_hash_rehash(CG(class_table));
+    zend_hash_rehash(CG(class_table));
 }
 
 static int swow_clean_module_function_callback(zval *z_fe, void *argument)
@@ -195,7 +195,7 @@ SWOW_API void swow_clean_module_functions(zend_module_entry *module)
         zend_hash_apply_with_argument(CG(function_table), swow_clean_module_function_callback, module);
     }
     /* Rehash the function table after deleting functions. This ensures that all internal
-	 * functions are contiguous, which means we don't need to perform full table cleanup
-	 * on shutdown. Search "persistent_functions_count" for more. */
-	zend_hash_rehash(CG(function_table));
+     * functions are contiguous, which means we don't need to perform full table cleanup
+     * on shutdown. Search "persistent_functions_count" for more. */
+    zend_hash_rehash(CG(function_table));
 }

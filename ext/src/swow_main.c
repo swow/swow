@@ -300,7 +300,7 @@ PHP_MSHUTDOWN_FUNCTION(swow)
     swow_wrapper_shutdown();
 
 end:
-	UNREGISTER_INI_ENTRIES();
+    UNREGISTER_INI_ENTRIES();
     return ret;
 }
 /* }}} */
