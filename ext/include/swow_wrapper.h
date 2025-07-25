@@ -476,7 +476,7 @@ static zend_always_inline bool swow_parse_arg_stringable(zval *arg, zend_string 
 /* function */
 
 
-#ifdef SWOW_FCC_INITIALIZED
+#ifdef ZEND_FCC_INITIALIZED
 
 #define swow_fcall_info_cache zend_fcall_info_cache
 #define swow_empty_fcall_info_cache empty_fcall_info_cache

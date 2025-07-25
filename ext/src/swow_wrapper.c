@@ -18,7 +18,9 @@
 
 #include "swow.h"
 
+#ifndef ZEND_FCC_INITIALIZED
 SWOW_API const swow_fcall_info_cache swow_empty_fcall_info_cache = { 0 };
+#endif // ZEND_FCC_INITIALIZED
 
 /* PHP 8.1 compatibility {{{*/
 #if PHP_VERSION_ID < 80100
@@ -153,6 +155,11 @@ zend_long ZEND_FASTCALL zval_try_get_long(const zval *op, bool *failed)
 /* PHP 8.4 compatibility {{{*/
 #if PHP_VERSION_ID < 80400
 #endif // PHP_VERSION_ID < 80400
+/* }}} */
+
+/* PHP 8.5 compatibility {{{*/
+#if PHP_VERSION_ID < 80500
+#endif // PHP_VERSION_ID < 80500
 /* }}} */
 
 /* class */
