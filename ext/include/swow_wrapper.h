@@ -110,6 +110,11 @@ static zend_always_inline void *zend_mempcpy(void *dest, const void *src, size_t
 }
 
 #define php_random_generate_fallback_seed GENERATE_SEED
+
+static inline void zend_argument_must_not_be_empty_error(uint32_t arg_num)
+{
+	zend_argument_value_error(arg_num, "must not be empty");
+}
 #endif
 /* }}} */
 
@@ -585,14 +590,6 @@ static zend_always_inline void swow_call_known_fcc(
     zend_call_known_function(func, fcc->object, fcc->called_scope, retval_ptr, param_count, params, named_params);
 }
 
-static zend_always_inline bool swow_is_callable_ex(zval *callable, zend_object *object, uint32_t check_flags, zend_string **callable_name, swow_fcall_info_cache *fcc, char **error)
-{
-    bool ret = zend_is_callable_ex(callable, object, check_flags, callable_name, (zend_fcall_info_cache *) fcc, error);
-    if (ret && Z_TYPE_P(callable) == IS_OBJECT) {
-        fcc->closure = Z_OBJ_P(callable);
-    }
-    return ret;
-}
 #endif
 
 typedef struct swow_fcall_s {

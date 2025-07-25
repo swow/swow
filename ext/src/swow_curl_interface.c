@@ -1625,7 +1625,7 @@ static bool php_curl_set_callable_handler(swow_fcall_info_cache *const handler_f
     }
 
     char *error = NULL;
-    if (UNEXPECTED(!swow_is_callable_ex(callable, /* object */ NULL, /* check_flags */ 0, /* callable_name */ NULL, handler_fcc, /* error */ &error))) {
+    if (UNEXPECTED(!zend_is_callable_ex(callable, /* object */ NULL, /* check_flags */ 0, /* callable_name */ NULL, (zend_fcall_info_cache *)handler_fcc, /* error */ &error))) {
         if (!EG(exception)) {
             zend_argument_type_error(2 + !is_array_config, "must be a valid callback for option %s, %s", option_name, error);
         }
