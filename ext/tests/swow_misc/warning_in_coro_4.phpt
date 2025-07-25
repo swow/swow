@@ -3,7 +3,7 @@ swow_misc: trig user warning in coroutine 8.4+
 --SKIPIF--
 <?php
 require __DIR__ . '/../include/skipif.php';
-needs_php_version(">=", "8.4");
+needs_php_version('>=', '8.4');
 ?>
 --FILE--
 <?php
