@@ -1504,31 +1504,20 @@ static const zend_function_entry *pdo_pgsql_get_driver_methods(pdo_dbh_t *dbh, i
 
 static swow_pdo_txn_bool pdo_pgsql_set_attr(pdo_dbh_t *dbh, zend_long attr, zval *val)
 {
-// diff since php/php-src@ebaeb93c3f9f23aa9b2e5ccc1f8bf17ec3700bf2
-#if PHP_VERSION_ID < 80100
-    zend_bool bval = zval_get_long(val)? 1 : 0;
-#else
     bool bval;
-#endif // PHP_VERSION_ID
     pdo_pgsql_db_handle *H = (pdo_pgsql_db_handle *)dbh->driver_data;
 
     switch (attr) {
         case PDO_ATTR_EMULATE_PREPARES:
-// diff since php/php-src@ebaeb93c3f9f23aa9b2e5ccc1f8bf17ec3700bf2
-#if PHP_VERSION_ID >= 80100
             if (!pdo_get_bool_param(&bval, val)) {
                 return false;
             }
-#endif // PHP_VERSION_ID
             H->emulate_prepares = bval;
             return true;
         case PDO_PGSQL_ATTR_DISABLE_PREPARES:
-// diff since php/php-src@ebaeb93c3f9f23aa9b2e5ccc1f8bf17ec3700bf2
-#if PHP_VERSION_ID >= 80100
             if (!pdo_get_bool_param(&bval, val)) {
                 return false;
             }
-#endif // PHP_VERSION_ID
             H->disable_prepares = bval;
             return true;
         case PDO_ATTR_PREFETCH:
