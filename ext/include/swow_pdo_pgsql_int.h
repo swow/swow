@@ -48,33 +48,29 @@ typedef struct {
     pdo_pgsql_error_info    einfo;
     Oid         pgoid;
     unsigned int    stmt_counter;
-// diff since php/php-src@3e01f5afb1b52fe26a956190296de0192eedeec1
-#if PHP_VERSION_ID <= 80100
-    zend_bool        emulate_prepares;
-    zend_bool        disable_prepares;
-#else
     bool        emulate_prepares;
+#if PHP_VERSION_ID < 80500
+    bool        disable_native_prepares;
+#endif // PHP_VERSION_ID < 80500
     bool        disable_prepares;
-#endif // PHP_VERSION_ID
     HashTable       *lob_streams;
     swow_fcall_info_cache *notice_callback;
     bool        default_fetching_laziness;
     pdo_pgsql_stmt  *running_stmt;
 } pdo_pgsql_db_handle;
 
+typedef struct {
 // diff since php/php-src@caa710037e663fd78f67533b29611183090068b2
 #if PHP_VERSION_ID < 80100
-typedef struct {
     char         *def;
     zend_long    intval;
     Oid          pgsql_type;
     zend_bool    boolval;
-} pdo_pgsql_column;
 #else
-typedef struct {
     Oid          pgsql_type;
-} pdo_pgsql_column;
 #endif
+} pdo_pgsql_column;
+
 struct pdo_pgsql_stmt {
     pdo_pgsql_db_handle     *H;
     PGresult                *result;
@@ -92,16 +88,9 @@ struct pdo_pgsql_stmt {
     int *param_formats;
     Oid *param_types;
     int                     current_row;
-// diff since php/php-src@3e01f5afb1b52fe26a956190296de0192eedeec1
-#if PHP_VERSION_ID <= 80100
-    zend_bool is_prepared;
-    zend_bool is_unbuffered;
-    zend_bool is_running_unbuffered;
-#else
     bool is_prepared;
     bool is_unbuffered;
     bool is_running_unbuffered;
-#endif // PHP_VERSION_ID
 };
 
 typedef struct {
@@ -146,11 +135,7 @@ enum pdo_pgsql_specific_constants {
     PGSQL_TRANSACTION_UNKNOWN = PQTRANS_UNKNOWN
 };
 
-#if PHP_VERSION_ID < 80500
-php_stream *swow_pdo_pgsql_create_lob_stream(zval *dbh, int lfd, Oid oid);
-#else
 php_stream *swow_pdo_pgsql_create_lob_stream(zend_object *dbh, int lfd, Oid oid);
-#endif // PHP_VERSION_ID < 80500
 extern const php_stream_ops swow_pdo_pgsql_lob_stream_ops;
 
 void swow_pdo_libpq_version(char *buf, size_t len);

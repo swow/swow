@@ -233,8 +233,8 @@ static int pgsql_stmt_execute(pdo_stmt_t *stmt)
         }
 
 // diff since php/php-src@6ae12093ce1067f2b4604a8bf00c975d7c2f8783
-#if PHP_VERSION_ID < 80500
-		spprintf(&q, 0, "DECLARE %s SCROLL CURSOR WITH HOLD FOR %s", S->cursor_name, stmt->active_query_string);
+#if PHP_VERSION_ID < 80100
+        spprintf(&q, 0, "DECLARE %s SCROLL CURSOR WITH HOLD FOR %s", S->cursor_name, stmt->active_query_string);
 #else
         spprintf(&q, 0, "DECLARE %s SCROLL CURSOR WITH HOLD FOR %s", S->cursor_name, ZSTR_VAL(stmt->active_query_string));
 #endif // PHP_VERSION_ID < 80500
@@ -264,7 +264,7 @@ stmt_retry:
             /* we deferred the prepare until now, because we didn't
              * know anything about the parameter types; now we do */
 // diff since php/php-src@6ae12093ce1067f2b4604a8bf00c975d7c2f8783
-#if PHP_VERSION_ID < 80500
+#if PHP_VERSION_ID < 80100
             S->result = cat_pq_prepare(H->server, S->stmt_name, S->query,
                         stmt->bound_params ? zend_hash_num_elements(stmt->bound_params) : 0,
                         S->param_types);
@@ -330,7 +330,7 @@ stmt_retry:
                 0);
         }
 // diff since php/php-src@6ae12093ce1067f2b4604a8bf00c975d7c2f8783
-#if PHP_VERSION_ID < 80500
+#if PHP_VERSION_ID < 80100
     } else if (stmt->supports_placeholders == PDO_PLACEHOLDER_NAMED) {
         /* execute query with parameters */
         if (S->is_unbuffered) {
@@ -784,7 +784,8 @@ static int pgsql_stmt_get_col(pdo_stmt_t *stmt, int colno, char **ptr, size_t *l
                     Oid oid = (Oid)strtoul(*ptr, &end_ptr, 10);
                     int loid = lo_open(S->H->server, oid, INV_READ);
                     if (loid >= 0) {
-                        *ptr = (char*)swow_pdo_pgsql_create_lob_stream(&stmt->database_object_handle, loid, oid);
+                        zend_object *database_object_handle = Z_OBJ_P(&stmt->database_object_handle);
+                        *ptr = (char*)swow_pdo_pgsql_create_lob_stream(database_object_handle, loid, oid);
                         *len = 0;
                         return *ptr ? 1 : 0;
                     }
@@ -872,7 +873,8 @@ static int pgsql_stmt_get_col(pdo_stmt_t *stmt, int colno, zval *result, enum pd
                     if (loid >= 0) {
 // diff since php/php-src@09791ed1d1200c58c82584671054cd2e1894a3ac
 #if PHP_VERSION_ID < 80500
-                        php_stream *stream = swow_pdo_pgsql_create_lob_stream(&stmt->database_object_handle, loid, oid);
+                        zend_object *database_object_handle = Z_OBJ_P(&stmt->database_object_handle);
+                        php_stream *stream = swow_pdo_pgsql_create_lob_stream(database_object_handle, loid, oid);
 #else
                         php_stream *stream = swow_pdo_pgsql_create_lob_stream(stmt->database_object_handle, loid, oid);
 #endif // PHP_VERSION_ID < 80500

@@ -272,25 +272,13 @@ const php_stream_ops swow_pdo_pgsql_lob_stream_ops = {
     NULL
 };
 
-// diff since php/php-src@09791ed1d1200c58c82584671054cd2e1894a3ac
-#if PHP_VERSION_ID < 80500
-php_stream *swow_pdo_pgsql_create_lob_stream(zval *dbh, int lfd, Oid oid)
-#else
 php_stream *swow_pdo_pgsql_create_lob_stream(zend_object *dbh, int lfd, Oid oid)
-#endif // PHP_VERSION_ID < 80500
 {
     php_stream *stm;
     struct pdo_pgsql_lob_self *self = ecalloc(1, sizeof(*self));
-#if PHP_VERSION_ID < 80500
-    pdo_pgsql_db_handle *H = (pdo_pgsql_db_handle *)(Z_PDO_DBH_P(dbh))->driver_data;
-
-    ZVAL_COPY_VALUE(&self->dbh, dbh);
-#else
     pdo_pgsql_db_handle *H = (pdo_pgsql_db_handle *)(php_pdo_dbh_fetch_inner(dbh))->driver_data;
 
     ZVAL_OBJ(&self->dbh, dbh);
-#endif // PHP_VERSION_ID < 80500
-
     self->lfd = lfd;
     self->oid = oid;
     self->conn = H->server;
@@ -298,13 +286,9 @@ php_stream *swow_pdo_pgsql_create_lob_stream(zend_object *dbh, int lfd, Oid oid)
     stm = php_stream_alloc(&swow_pdo_pgsql_lob_stream_ops, self, 0, "r+b");
 
     if (stm) {
-#if PHP_VERSION_ID < 80500
-        Z_ADDREF_P(dbh);
-#else
-        GC_ADDREF(dbh);
-#endif // PHP_VERSION_ID < 80500
-        zend_hash_index_add_ptr(H->lob_streams, php_stream_get_resource_id(stm), stm->res);
-        return stm;
+            GC_ADDREF(dbh);
+            zend_hash_index_add_ptr(H->lob_streams, php_stream_get_resource_id(stm), stm->res);
+            return stm;
     }
 
     efree(self);
@@ -1307,12 +1291,7 @@ void swow_pgsqlLOBOpen_internal(INTERNAL_FUNCTION_PARAMETERS)
     lfd = lo_open(H->server, oid, mode);
 
     if (lfd >= 0) {
-// diff since php/php-src@09791ed1d1200c58c82584671054cd2e1894a3ac
-#if PHP_VERSION_ID < 80500
-        php_stream *stream = swow_pdo_pgsql_create_lob_stream(ZEND_THIS, lfd, oid);
-#else
         php_stream *stream = swow_pdo_pgsql_create_lob_stream(Z_OBJ_P(ZEND_THIS), lfd, oid);
-#endif // PHP_VERSION_ID < 80500
         if (stream) {
             php_stream_to_zval(stream, return_value);
             return;
