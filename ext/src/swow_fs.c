@@ -2661,8 +2661,8 @@ static php_stream *swow_pipe_stream_fopen_from_fd_int(int fd, const char *mode)
 }
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_swow_pipe, 0, 0, IS_ARRAY, 1)
-    ZEND_ARG_TYPE_INFO(0, rflags, IS_LONG, 0)
-    ZEND_ARG_TYPE_INFO(0, wflags, IS_LONG, 0)
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, rflags, IS_LONG, 0, "0")
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, wflags, IS_LONG, 0, "0")
 ZEND_END_ARG_INFO()
 
 static PHP_FUNCTION(swow_pipe)
