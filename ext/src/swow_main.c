@@ -519,27 +519,33 @@ PHP_MINFO_FUNCTION(swow)
 #ifdef CAT_HAVE_PQ
 # define VERSION_NUM_TO_STR(num, buf) do { \
     if (num < 100000) { \
-        snprintf(buf, sizeof(buf), "%d.%d.%d", num / 10000, num / 100 % 100, num % 100); \
+        smart_str_append_printf(buf, "%d.%d.%d", num / 10000, num / 100 % 100, num % 100); \
     } else { \
-        snprintf(buf, sizeof(buf), "%d.%d", num / 10000, num % 10000); \
+        smart_str_append_printf(buf, "%d.%d", num / 10000, num % 10000); \
     } \
 } while (0)
-    char linking_libpq_version[16] = { "notfound" };
-    if (swow_libpq_version) {
-        VERSION_NUM_TO_STR(swow_libpq_version, linking_libpq_version);
-    }
-    char building_libpq_version[16];
-    VERSION_NUM_TO_STR(swow_building_libpq_version, building_libpq_version);
-    char libpq_version_info[64];
-    if (strcmp(linking_libpq_version, building_libpq_version) == 0) {
-        snprintf(libpq_version_info, sizeof(libpq_version_info),
-            "libpq/%s", linking_libpq_version);
+    smart_str libpq_version_info = {0};
+    if (!swow_libpq_version) {
+        smart_str_append_printf(&libpq_version_info, "notfound");
     } else {
-        snprintf(libpq_version_info, sizeof(libpq_version_info),
-            "libpq/%s (built with %s)",
-            linking_libpq_version, building_libpq_version);
+        smart_str_appends(&libpq_version_info, "libpq/");
+        VERSION_NUM_TO_STR(swow_libpq_version, &libpq_version_info);
     }
-    php_info_print_table_row(2, "PostgreSQL", libpq_version_info);
+    if (swow_libpq_version != swow_building_libpq_version) {
+        smart_str_appends(&libpq_version_info, " (built with ");
+        VERSION_NUM_TO_STR(swow_building_libpq_version, &libpq_version_info);
+        smart_str_appends(&libpq_version_info, ")");
+    }
+    if (SWOW_G(libpq_so_name)) {
+        smart_str_appends(&libpq_version_info, " (library: ");
+        smart_str_appends(&libpq_version_info, SWOW_G(libpq_so_name));
+        smart_str_appends(&libpq_version_info, ")");
+    }
+    smart_str_0(&libpq_version_info);
+
+    php_info_print_table_row(2, "PostgreSQL", ZSTR_VAL(libpq_version_info.s));
+
+    smart_str_free(&libpq_version_info);
 # undef VERSION_NUM_TO_STR
 #else
     php_info_print_table_row(2, "PostgreSQL", "none");

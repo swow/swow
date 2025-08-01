@@ -1717,6 +1717,7 @@ zend_result swow_pgsql_module_init(INIT_FUNC_ARGS)
     for (int i = 0; i < (int)CAT_ARRAY_SIZE(library_names); i++) {
         dummy_handle = DL_LOAD(library_names[i]);
         if (dummy_handle) {
+            SWOW_G(libpq_so_name) = strdup(library_names[i]);
             break;
         }
     }
@@ -1734,6 +1735,7 @@ zend_result swow_pgsql_module_init(INIT_FUNC_ARGS)
                 SetDllDirectoryA(NULL);
 #endif
                 if (dummy_handle) {
+                    SWOW_G(libpq_so_name) = strdup(name_buf);
                     break;
                 }
             }
@@ -1796,6 +1798,8 @@ zend_result swow_pgsql_module_shutdown(INIT_FUNC_ARGS)
         // }
 
         swow_pgsql_hooked = cat_false;
+        free((void *)SWOW_G(libpq_so_name));
+        SWOW_G(libpq_so_name) = NULL;
     }
 
     return SUCCESS;
