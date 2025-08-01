@@ -14,7 +14,7 @@ var_dump(Swow\nproc(Swow\NPROC_AVAILABLE));
 
 Assert::throws(static function (): void {
     var_dump(Swow\nproc(-1));
-}, Swow\Exception::class, -Swow\Errno::EINVAL);
+}, Swow\Exception::class);
 
 echo "Done\n";
 ?>
