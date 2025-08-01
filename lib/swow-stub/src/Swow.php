@@ -58,6 +58,11 @@ namespace
 
 namespace Swow
 {
+    const NPROC_AVAILABLE = 0;
+}
+
+namespace Swow
+{
     class Extension
     {
         public const VERSION = '1.5.4-dev';
@@ -587,14 +592,6 @@ namespace Swow
          */
         public const ESOCKTNOSUPPORT = -94;
         public const ENODATA = -61;
-        /**
-         * This constant holds UV_ESTALE value, it's platform-dependent.
-         *
-         * At Linux platform, this constant means "Stale file handle"
-         * At macOS platform, this constant may have a value `-70` means "Stale NFS file handle"
-         * At Windows platform, this constant may have a value `-10070`
-         */
-        public const ESTALE = -116;
         public const UNCODED = -9763;
         public const EPREV = -9762;
         public const EMISUSE = -9761;
@@ -1880,20 +1877,6 @@ namespace Swow
          */
         public const BUS = 7;
         /**
-         * This constant holds SIGEMT value, it's platform-dependent.
-         *
-         * At macOS platform, this constant means "EMT instruction"
-         * At Windows, Linux x86_64, Linux arm64 and Linux riscv64 platforms, this constant may not exist
-         */
-        public const EMT = 7;
-        /**
-         * This constant holds SIGPOLL value, it's platform-dependent.
-         *
-         * At macOS platform, this constant means "pollable event ([XSR] generated, not supported)"
-         * At Linux and Windows platforms, this constant may not exist
-         */
-        public const POLL = 7;
-        /**
          * This constant holds SIGFPE value, it's platform-dependent.
          *
          * At macOS and Windows platforms, this constant means "floating point exception"
@@ -1951,12 +1934,6 @@ namespace Swow
          */
         public const TERM = 15;
         /**
-         * This constant holds SIGSTKFLT value, it's platform-dependent.
-         *
-         * At macOS and Windows platforms, this constant may not exist
-         */
-        public const STKFLT = 16;
-        /**
          * This constant holds SIGCHLD value, it's platform-dependent.
          *
          * At Linux mips64 platform, this constant may have a value `18`
@@ -1964,6 +1941,12 @@ namespace Swow
          * At Windows platform, this constant may not exist
          */
         public const CHLD = 17;
+        /**
+         * This constant holds SIGSTKFLT value, it's platform-dependent.
+         *
+         * At macOS and Windows platforms, this constant may not exist
+         */
+        public const STKFLT = 16;
         /**
          * This constant holds SIGCONT value, it's platform-dependent.
          *
@@ -1988,13 +1971,6 @@ namespace Swow
          * At Windows platform, this constant may not exist
          */
         public const TSTP = 20;
-        /**
-         * This constant holds SIGBREAK value, it's platform-dependent.
-         *
-         * At Windows platform, this constant means "Ctrl-Break sequence"
-         * At Linux and macOS platforms, this constant may not exist
-         */
-        public const BREAK = 21;
         /**
          * This constant holds SIGTTIN value, it's platform-dependent.
          *
@@ -2060,13 +2036,6 @@ namespace Swow
          */
         public const WINCH = 28;
         /**
-         * This constant holds SIGINFO value, it's platform-dependent.
-         *
-         * At macOS platform, this constant means "information request"
-         * At Linux and Windows platforms, this constant may not exist
-         */
-        public const INFO = 29;
-        /**
          * This constant holds SIGIO value, it's platform-dependent.
          *
          * At Linux mips64 platform, this constant may have a value `22`
@@ -2075,11 +2044,12 @@ namespace Swow
          */
         public const IO = 29;
         /**
-         * This constant holds SIGLOST value, it's platform-dependent.
+         * This constant holds SIGPOLL value, it's platform-dependent.
          *
-         * At macOS and Windows platforms, this constant may not exist
+         * At macOS platform, this constant means "pollable event ([XSR] generated, not supported)"
+         * At Linux and Windows platforms, this constant may not exist
          */
-        public const LOST = 29;
+        public const POLL = 29;
         /**
          * This constant holds SIGPWR value, it's platform-dependent.
          *
@@ -2185,6 +2155,56 @@ namespace Swow
 namespace Swow
 {
     class IpAddressException extends \Swow\Exception { }
+}
+
+namespace Swow
+{
+    /**
+     * get Number of PROCessors
+     *
+     * @param int $kind processors count kind, currently only support `Swow\NPROC_AVAILABLE` which means the number of available (i.e. online logical cores) processors
+     * @return int
+     * @throws \Swow\Exception when failed to get the number of processors
+     */
+    function nproc(int $kind = \Swow\NPROC_AVAILABLE): int { }
+}
+
+namespace Swow
+{
+    /**
+     * create a pipe pair like pipe(2)
+     *
+     * @param int $rflags read end flags, default is `0`
+     * @param int $wflags write end flags, default is `0`
+     * @return array{0: resource, 1: resource}|null the first element is the read end, the second element is the write end
+     * @throws \Swow\Exception when failed to create pipe
+     */
+    function pipe(int $rflags = 0, int $wflags = 0): ?array { }
+}
+
+namespace Swow
+{
+    /**
+     * get the file descriptor of a stream
+     *
+     * @param resource $stream the stream to get the file descriptor of, must be a PHP stream resource
+     * @return int|null
+     * @throws \Swow\Exception when failed to get the file descriptor
+     */
+    function fileno($stream): ?int { }
+}
+
+namespace Swow
+{
+    /**
+     * create a pipe from a file descriptor
+     *
+     * @param int $fd the file descriptor to create a pipe from
+     * @param string $mode the mode of the pipe, must be `r` or `w`
+     * @return resource the pipe resource
+     * @throws \Swow\Exception when failed to create a pipe
+     */
+    function pipe_from_fd(int $fd, string $mode) { }
 }
 
 namespace Swow
