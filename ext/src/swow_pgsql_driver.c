@@ -1670,69 +1670,96 @@ zend_result swow_pgsql_module_init(INIT_FUNC_ARGS)
     }
 
 #ifdef COMPILE_DL_SWOW
-    const char *library_paths[] =
 # if defined(CAT_OS_DARWIN)
-#  define LIBPQ_SO_NAME "libpq.5.dylib"
-        {
-            // macports/brew
-            "/opt/local/lib/",
-            // brew
-            "/usr/local/Cellar/libpq@16/lib/",
-            "/usr/local/Cellar/libpq@15/lib/",
-            "/usr/local/Cellar/libpq@14/lib/",
-            // brew (new)
-            // @see: https://earthly.dev/blog/homebrew-on-m1/)
-            "/opt/homebrew/opt/libpq/lib/",
-            // postgres.app
-            "/Applications/Postgres.app/Contents/Versions/latest/lib/",
-            // fink
-            "/sw/lib/",
-        }
+    const char *library_paths[] = {
+        // macports/brew
+        "/opt/local/lib/",
+        // brew
+        "/usr/local/Cellar/libpq@17/lib/",
+        "/usr/local/Cellar/libpq@16/lib/",
+        "/usr/local/Cellar/libpq@15/lib/",
+        "/usr/local/Cellar/libpq@14/lib/",
+        // brew (new)
+        // @see: https://earthly.dev/blog/homebrew-on-m1/)
+        "/opt/homebrew/opt/libpq/lib/",
+        // postgres.app
+        "/Applications/Postgres.app/Contents/Versions/latest/lib/",
+        // fink
+        "/sw/lib/",
+    };
+    const char *library_names[] = {
+        "libpq.5.dylib",
+        "libpq.dylib",
+    };
 # elif defined(CAT_OS_WIN)
-#  define LIBPQ_SO_NAME "libpq.dll"
-        {
-            "C:\\Program Files\\PostgreSQL\\16\\bin\\",
-            "C:\\Program Files\\PostgreSQL\\15\\bin\\",
-            "C:\\Program Files\\PostgreSQL\\14\\bin\\",
-            "C:\\Program Files (x86)\\PostgreSQL\\16\\bin\\",
-            "C:\\Program Files (x86)\\PostgreSQL\\15\\bin\\",
-            "C:\\Program Files (x86)\\PostgreSQL\\14\\bin\\",
-        }
+    const char *library_paths[] = {
+        "C:\\Program Files\\PostgreSQL\\17\\bin\\",
+        "C:\\Program Files\\PostgreSQL\\16\\bin\\",
+        "C:\\Program Files\\PostgreSQL\\15\\bin\\",
+        "C:\\Program Files\\PostgreSQL\\14\\bin\\",
+        "C:\\Program Files (x86)\\PostgreSQL\\17\\bin\\",
+        "C:\\Program Files (x86)\\PostgreSQL\\16\\bin\\",
+        "C:\\Program Files (x86)\\PostgreSQL\\15\\bin\\",
+        "C:\\Program Files (x86)\\PostgreSQL\\14\\bin\\",
+    };
+    const char *library_names[] = {
+        "libpq.dll",
+    };
 # else
-#  define LIBPQ_SO_NAME "libpq." PHP_SHLIB_SUFFIX ".5"
-        { "" }
+    const char *library_paths[] = { "" };
+    const char *library_names[] = {
+        "libpq." PHP_SHLIB_SUFFIX ".5",
+        "libpq." PHP_SHLIB_SUFFIX,
+    };
 # endif
-    ;
 
-    DL_HANDLE dummy_handle = DL_LOAD(LIBPQ_SO_NAME);
+    DL_HANDLE dummy_handle = NULL;
+    for (int i = 0; i < (int)CAT_ARRAY_SIZE(library_names); i++) {
+        dummy_handle = DL_LOAD(library_names[i]);
+        if (dummy_handle) {
+            break;
+        }
+    }
     if (!dummy_handle) {
         char name_buf[128];
         for (int i = 0; i < (int)CAT_ARRAY_SIZE(library_paths); i++) {
-            snprintf(name_buf, sizeof(name_buf), "%s%s", library_paths[i], LIBPQ_SO_NAME);
+            for (int j = 0; j < (int)CAT_ARRAY_SIZE(library_names); j++) {
+                snprintf(name_buf, sizeof(name_buf), "%s%s", library_paths[i], library_names[j]);
 
 #ifdef CAT_OS_WIN
-            SetDllDirectoryA(library_paths[i]);
+                SetDllDirectoryA(library_paths[i]);
 #endif
-            dummy_handle = DL_LOAD(name_buf);
+                dummy_handle = DL_LOAD(name_buf);
 #ifdef CAT_OS_WIN
-            SetDllDirectoryA(NULL);
+                SetDllDirectoryA(NULL);
 #endif
-            if (dummy_handle) {
-                break;
+                if (dummy_handle) {
+                    break;
+                }
             }
         }
-
     }
+
     if (!dummy_handle) {
         smart_str paths = {0};
+        smart_str names = {0};
         for (int i = 0; i < (int)CAT_ARRAY_SIZE(library_paths); i++) {
             smart_str_appends(&paths, library_paths[i]);
             smart_str_appendc(&paths, ',');
         }
         ZSTR_LEN(paths.s) -= 1;
         smart_str_0(&paths);
-        php_error_docref(NULL, E_WARNING, "Swow pdo_pgsql hook not enabled, " LIBPQ_SO_NAME " not found, (search paths: %s)", ZSTR_VAL(paths.s));
+
+        for (int i = 0; i < (int)CAT_ARRAY_SIZE(library_names); i++) {
+            smart_str_appends(&names, library_names[i]);
+            smart_str_appends(&names, " or ");
+        }
+        ZSTR_LEN(names.s) -= 4;
+        smart_str_0(&names);
+
+        php_error_docref(NULL, E_WARNING, "Swow pdo_pgsql hook not enabled, %s not found, (search paths: %s)", ZSTR_VAL(names.s), ZSTR_VAL(paths.s));
         smart_str_free(&paths);
+        smart_str_free(&names);
         return SUCCESS;
     }
 
