@@ -99,6 +99,43 @@ static const zend_function_entry swow_utils_handler_methods[] = {
     PHP_FE_END
 };
 
+
+enum {
+    SWOW_NPROC_AVAILABLE = 0,
+    SWOW_NPROC_CURRENT_NUMA = 1, // TODO
+    SWOW_NPROC_ALL = 2, // TODO
+};
+
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_Swow_nproc, 0, 0, IS_LONG, 0)
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, kind, IS_LONG, 0, "SWOW\\NPROC_AVAILABLE")
+ZEND_END_ARG_INFO()
+
+static PHP_FUNCTION(swow_nproc)
+{
+    zend_long kind = SWOW_NPROC_AVAILABLE;
+    ZEND_PARSE_PARAMETERS_START(0, 1)
+        Z_PARAM_OPTIONAL
+        Z_PARAM_LONG(kind)
+    ZEND_PARSE_PARAMETERS_END();
+
+    if (kind == SWOW_NPROC_AVAILABLE) {
+        RETURN_LONG(uv_available_parallelism());
+    } else {
+        swow_throw_exception(
+            swow_exception_ce,
+            EINVAL,
+            "Invalid nproc kind: %ld",
+            kind
+        );
+        RETURN_THROWS();
+    }
+}
+
+static const zend_function_entry swow_utils_functions[] = {
+    ZEND_NS_FENTRY("Swow", nproc, PHP_FN(swow_nproc), arginfo_Swow_nproc, 0)
+    PHP_FE_END
+};
+
 static HashTable *swow_utils_handler_get_gc(zend_object *object, zval **gc_data, int *gc_count)
 {
     swow_utils_handler_t *handler = swow_utils_handler_get_from_object(object);
@@ -126,6 +163,11 @@ zend_result swow_util_module_init(INIT_FUNC_ARGS)
     );
     swow_utils_handler_ce->ce_flags |= ZEND_ACC_FINAL;
     swow_utils_handler_handlers.get_gc = swow_utils_handler_get_gc;
+
+    zend_register_long_constant(CAT_STRL("Swow\\NPROC_AVAILABLE"), SWOW_NPROC_AVAILABLE, CONST_PERSISTENT, module_number);
+    if (zend_register_functions(NULL, swow_utils_functions, NULL, type) != SUCCESS) {
+        return FAILURE;
+    }
 
     return SUCCESS;
 }
