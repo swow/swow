@@ -1548,11 +1548,11 @@ static const struct pdo_dbh_methods pgsql_methods = {
     NULL,
     pgsql_handle_in_transaction
 // diff since php/php-src@e735de6eae4a60fb55fac6fc99b6b63f525c4b4b
-#if PHP_VERSION_ID > 80400
+#if PHP_VERSION_ID >= 80100
     , NULL /* get_gc */
 #endif // PHP_VERSION_ID
 // diff since php/php-src@715b9aaa09e1ad76a94f32b17da7927592fdae0a
-#if PHP_VERSION_ID > 80400
+#if PHP_VERSION_ID >= 80400
     , swow_pdo_pgsql_scanner /* scanner, not an exported symbol */
 #endif // PHP_VERSION_ID
 };
