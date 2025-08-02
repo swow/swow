@@ -282,6 +282,8 @@ void swow_curl_share_free_persistent_curlsh(zval *data)
     curl_share_cleanup(handle);
 }
 
+static zend_object_handlers curl_share_handlers;
+
 /* CurlShareHandle class */
 
 static zend_object *curl_share_create_object(zend_class_entry *class_type) {
@@ -289,6 +291,9 @@ static zend_object *curl_share_create_object(zend_class_entry *class_type) {
 
     zend_object_std_init(&intern->std, class_type);
     object_properties_init(&intern->std, class_type);
+#if PHP_VERSION_ID < 80300
+	intern->std.handlers = &curl_share_handlers;
+#endif
 
     return &intern->std;
 }
@@ -305,8 +310,6 @@ static void curl_share_free_obj(zend_object *object)
     curl_share_cleanup(sh->share);
     zend_object_std_dtor(&sh->std);
 }
-
-static zend_object_handlers curl_share_handlers;
 
 void swow_curl_share_register_handlers(void) {
     swow_curl_share_ce->create_object = curl_share_create_object;
