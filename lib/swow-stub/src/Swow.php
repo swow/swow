@@ -65,12 +65,12 @@ namespace Swow
 {
     class Extension
     {
-        public const VERSION = '1.5.4-dev';
-        public const VERSION_ID = 10504;
+        public const VERSION = '1.6.0';
+        public const VERSION_ID = 10600;
         public const MAJOR_VERSION = 1;
-        public const MINOR_VERSION = 5;
-        public const RELEASE_VERSION = 4;
-        public const EXTRA_VERSION = 'dev';
+        public const MINOR_VERSION = 6;
+        public const RELEASE_VERSION = 0;
+        public const EXTRA_VERSION = '';
 
         public static function isBuiltWith(string $lib): bool { }
     }
@@ -592,6 +592,8 @@ namespace Swow
          */
         public const ESOCKTNOSUPPORT = -94;
         public const ENODATA = -61;
+        public const EUNATCH = -49;
+        public const ENOEXEC = -8;
         public const UNCODED = -9763;
         public const EPREV = -9762;
         public const EMISUSE = -9761;
@@ -1877,6 +1879,20 @@ namespace Swow
          */
         public const BUS = 7;
         /**
+         * This constant holds SIGEMT value, it's platform-dependent.
+         *
+         * At macOS platform, this constant means "EMT instruction"
+         * At Windows, Linux x86_64, Linux arm64 and Linux riscv64 platforms, this constant may not exist
+         */
+        public const EMT = 7;
+        /**
+         * This constant holds SIGPOLL value, it's platform-dependent.
+         *
+         * At macOS platform, this constant means "pollable event ([XSR] generated, not supported)"
+         * At Linux and Windows platforms, this constant may not exist
+         */
+        public const POLL = 7;
+        /**
          * This constant holds SIGFPE value, it's platform-dependent.
          *
          * At macOS and Windows platforms, this constant means "floating point exception"
@@ -1934,6 +1950,12 @@ namespace Swow
          */
         public const TERM = 15;
         /**
+         * This constant holds SIGSTKFLT value, it's platform-dependent.
+         *
+         * At macOS and Windows platforms, this constant may not exist
+         */
+        public const STKFLT = 16;
+        /**
          * This constant holds SIGCHLD value, it's platform-dependent.
          *
          * At Linux mips64 platform, this constant may have a value `18`
@@ -1941,12 +1963,6 @@ namespace Swow
          * At Windows platform, this constant may not exist
          */
         public const CHLD = 17;
-        /**
-         * This constant holds SIGSTKFLT value, it's platform-dependent.
-         *
-         * At macOS and Windows platforms, this constant may not exist
-         */
-        public const STKFLT = 16;
         /**
          * This constant holds SIGCONT value, it's platform-dependent.
          *
@@ -1971,6 +1987,13 @@ namespace Swow
          * At Windows platform, this constant may not exist
          */
         public const TSTP = 20;
+        /**
+         * This constant holds SIGBREAK value, it's platform-dependent.
+         *
+         * At Windows platform, this constant means "Ctrl-Break sequence"
+         * At Linux and macOS platforms, this constant may not exist
+         */
+        public const BREAK = 21;
         /**
          * This constant holds SIGTTIN value, it's platform-dependent.
          *
@@ -2036,6 +2059,13 @@ namespace Swow
          */
         public const WINCH = 28;
         /**
+         * This constant holds SIGINFO value, it's platform-dependent.
+         *
+         * At macOS platform, this constant means "information request"
+         * At Linux and Windows platforms, this constant may not exist
+         */
+        public const INFO = 29;
+        /**
          * This constant holds SIGIO value, it's platform-dependent.
          *
          * At Linux mips64 platform, this constant may have a value `22`
@@ -2044,12 +2074,11 @@ namespace Swow
          */
         public const IO = 29;
         /**
-         * This constant holds SIGPOLL value, it's platform-dependent.
+         * This constant holds SIGLOST value, it's platform-dependent.
          *
-         * At macOS platform, this constant means "pollable event ([XSR] generated, not supported)"
-         * At Linux and Windows platforms, this constant may not exist
+         * At macOS and Windows platforms, this constant may not exist
          */
-        public const POLL = 29;
+        public const LOST = 29;
         /**
          * This constant holds SIGPWR value, it's platform-dependent.
          *

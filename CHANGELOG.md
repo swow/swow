@@ -1,9 +1,62 @@
+# v1.6.0
+
+> Release Date: 2025-08-02 | 发布日期：2025-08-02
+
+> "This version did a lot of things" —— Swow Team
+>
+> 「该版本做了许多事」 —— Swow Team
+
+### Version Highlights | 版本亮点
+
+This version provides full support for PHP 8.4, updated more powerful features, enhanced SSL/TLS reliability, critical memory security fixes, and significant architectural improvements.
+该版本提供了完整的 PHP 8.4 支持、更新更强大的功能、增强的 SSL/TLS 可靠性、关键的内存安全修复以及重大的架构改进。
+
+## 🐣 What's New | 什么是牛的
+
++ Full PHP 8.4 support | PHP 8.4 完整支持 (754a868, ee976a5) [@dixyes]
++ New pipe stuff: `Swow\pipe()`, `Swow\fileno()`, `Swow\pipe_from_fd()` | 新增管道 API (627fe16) [@dixyes]
++ Add `Swow\nproc()` to get CPU core count | 新增 `Swow\nproc()` 获取 CPU 核心数 [@dixyes]
++ EventDriver gets `stop()` method for graceful shutdown | EventDriver 新增 `stop()` 方法用于优雅停止服务器 (#269) [@devhaozi]
++ New INI: `swow.hook_pdo_pgsql` | 新 INI：`swow.hook_pdo_pgsql` (70af3d5) [@dixyes]
+
+## ✨ What's Enhanced | 啥叫enhance?
+
++ Complete closure serialization rewrite (⚠️ Breaking Change) | 闭包序列化完全重构（⚠️ 破坏性变更）
+  - Use AST to build closure code | 用 AST 构建闭包代码 (d5fd9ba, 92154a3, 9d0f796) [@dixyes]
++ Performance stuff: Apple Clang compatibility, libcurl bump to 7.61.0 | 性能优化：Apple Clang 兼容性，libcurl 最低版本提升到 7.61.0 (42096dc, a264539) [@twose]
+
+## 🐛 What's Fixed | 什么修了
+
+* Fix SSL problems: `enableCrypto()` and stream CA read | 修了 SSL 的一堆问题：`enableCrypto()` 和流 CA 读取 [@dixyes]
+* Fix Use-After-Free bugs in coroutine stuff and exception handling | 修复 Use-After-Free：协程管理和异常处理中的内存安全问题 (d2a549d, 3993aeb) [@dixyes]
+* Fix UAF when killing coroutines and throwing exceptions | 修复协程终止和异常抛出时的 UAF (ec8c6c6) [@dixyes]
+* Fix ZTS build crash on shutdown | 修复 ZTS 构建关闭时的崩溃 (ec8c6c6) [@dixyes]
+* Fix many PHP 8.4 compatibility problems | 修复 PHP 8.4 各种兼容性问题 (0c09661, 7e68033, 6fa98d8) [@dixyes]
+* Update libpq search paths | 更新 libpq 查找路径 [@dixyes]
+* Fix build stuff: string terminators, left shift overflow, macro problems etc. | 修复构建问题：字符串终止符、左移溢出、宏展开等 (7cf2cf6, bdda08b, ccf437f, db35d83, d39500f) [@dixyes]
+* Fix undefined Content-Length error in HTTP responses | 修复 HTTP 响应 Content-Length 未定义错误 (09f5c65) [@twose]
+
+## 👻 What's Removed | 什么移除了
+
+- Remove `Swow\Errno::ESTALE` | 移除 `Swow\Errno::ESTALE` [@dixyes]
+
+## 📦 Internal | 内部
+
++ Update libcat's libuv | 更新 libcat 的 libuv (@twose)
++ Optimize many compatibility macros or wrappers | 优化许多兼容性宏或包装 (@dixyes)
++ Update swow_fs from PHP source tree for better file system handling | 从 PHP 源码树更新 swow_fs 以改进文件系统处理 (91e9758, 4b32c71) [@dixyes]
++ Update to latest PHP 8.4 PostgreSQL source code | 更新到最新 PHP 8.4 PostgreSQL 源码，增强各种能力 (da3562a, d7736c4, 0ed3782) [@dixyes]
++ Add tests: OpenSSL hooks, TLS, Property Hooks | 新增各种测试：OpenSSL 钩子、TLS、Property Hooks (c046201, 1dde6d9, 9efeaf7) [@dixyes]
++ Better CI/CD configs and dev tools | 增强 CI/CD 配置和开发工具 (60fdf81, f7dff44, dc8e9e1, 48a6555, 8fe564f, 62758f7, c2b442b, 9850f7e) [@dixyes]
+
+---
+
 # v1.5.3
 
 > release-date: 2024-07-22
 
 > 「成功的关键在于我们对失败的反应。」 - ChatGPT
-> 
+>
 > "The key to success is how we respond to failure." - ChatGPT
 
 该版本主要修复了 cURL 在特定条件下会死循环的问题，并新增了日语版本的 README。
@@ -158,7 +211,7 @@ This version mainly fixes the issue of cURL getting stuck in an infinite loop un
 > release-date: 2023-12-10
 
 > 「生活并不是等待暴风雨过去，而是学会如何在雨中跳舞。」- 维维安·格林
-> 
+>
 > "Life isn't about waiting for the storm to pass. It's about learning how to dance in the rain." - Vivian Greene
 
 ## 🐛 What's Fixed
