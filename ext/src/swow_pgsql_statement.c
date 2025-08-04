@@ -119,16 +119,7 @@ static void pgsql_stmt_finish(pdo_pgsql_stmt *S, int fin_mode)
 
     if (S->stmt_name && S->is_prepared && (fin_mode & FIN_CLOSE)) {
         PGresult *res;
-#ifndef HAVE_PQCLOSEPREPARED
-        // TODO (??) libpq does not support close statement protocol < postgres 17
-        // check if we can circumvent this.
-        char *q = NULL;
-        spprintf(&q, 0, "DEALLOCATE %s", S->stmt_name);
-        res = cat_pq_exec(H->server, q);
-        efree(q);
-#else
-        res = PQclosePrepared(H->server, S->stmt_name);
-#endif
+        res = swow_PQclosePrepared(H->server, S->stmt_name);
         if (res) {
             PQclear(res);
         }
@@ -292,13 +283,7 @@ stmt_retry:
                      */
                     if (sqlstate && !strcmp(sqlstate, "42P05")) {
                         PGresult *res;
-#ifndef HAVE_PQCLOSEPREPARED
-                        char buf[100]; /* stmt_name == "pdo_crsr_%08x" */
-                        snprintf(buf, sizeof(buf), "DEALLOCATE %s", S->stmt_name);
-                        res = cat_pq_exec(H->server, buf);
-#else
-                        res = PQclosePrepared(H->server, S->stmt_name);
-#endif
+                        res = swow_PQclosePrepared(H->server, S->stmt_name);
                         if (res) {
                             PQclear(res);
                         }

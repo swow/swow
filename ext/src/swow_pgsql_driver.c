@@ -1653,9 +1653,24 @@ const pdo_driver_t swow_pdo_pgsql_driver = {
 
 #include "swow.h"
 
+static PGresult *(*_swow_PQclosePrepared)(PGconn *conn, const char *stmtName) = NULL;
+PGresult *swow_PQclosePrepared(PGconn *conn, const char *stmtName)
+{
+    if (_swow_PQclosePrepared) {
+        return _swow_PQclosePrepared(conn, stmtName);
+    }
+
+    // TODO (??) libpq does not support close statement protocol < postgres 17
+    // check if we can circumvent this.
+    char *query;
+    spprintf(&query, 0, "DEALLOCATE %s", stmtName);
+    PGresult *res = cat_pq_exec(conn, query);
+    efree(query);
+    return res;
+}
+
 int swow_libpq_version = 0;
 cat_bool_t swow_pgsql_hooked = cat_false;
-PGresult *(*swow_PQclosePrepared)(PGconn *conn, const char *stmtName) = NULL;
 size_t (*swow_PQresultMemorySize)(const PGresult *res) = NULL;
 
 zend_result swow_pgsql_module_init(INIT_FUNC_ARGS)
@@ -1765,11 +1780,15 @@ zend_result swow_pgsql_module_init(INIT_FUNC_ARGS)
         return SUCCESS;
     }
 
-    swow_PQclosePrepared = (PGresult *(*)(PGconn *, const char *)) DL_FETCH_SYMBOL(dummy_handle, "PQclosePrepared");
+    _swow_PQclosePrepared = (PGresult *(*)(PGconn *, const char *)) DL_FETCH_SYMBOL(dummy_handle, "PQclosePrepared");
+    swow_PQresultMemorySize = (size_t (*)(const PGresult *)) DL_FETCH_SYMBOL(dummy_handle, "PQresultMemorySize");
 #else
-#ifdef HAVE_PQCLOSEPREPARED
-    swow_PQclosePrepared = PQclosePrepared;
-#endif // HAVE_PQCLOSEPREPARED
+#if PG_VERSION_NUM >= 170000
+    _swow_PQclosePrepared = PQclosePrepared;
+#endif // PG_VERSION_NUM >= 170000
+#if PG_VERSION_NUM >= 120000
+    swow_PQresultMemorySize = PQresultMemorySize;
+#endif // PG_VERSION_NUM >= 120000
 #endif // COMPILE_DL_SWOW
 
 

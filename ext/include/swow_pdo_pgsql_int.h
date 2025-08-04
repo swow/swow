@@ -154,7 +154,7 @@ void swow_pgsqlGetPid_internal(INTERNAL_FUNCTION_PARAMETERS);
 // end of ext/pdo_pgsql/php_pdo_pgsql_int.h
 
 // wrapper for pq functions
-extern PGresult *(*swow_PQclosePrepared)(PGconn *conn, const char *stmtName);
+extern PGresult *swow_PQclosePrepared(PGconn *conn, const char *stmtName);
 extern size_t (*swow_PQresultMemorySize)(const PGresult *res);
 
 // compatibility
