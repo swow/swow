@@ -1820,6 +1820,38 @@ int swow_lo_unlink_redirect(void *conn, unsigned int lobjId) {
 #else
 # define DL_FROM_HANDLE NULL
 #endif
+#if PHP_VERSION_ID >= 80100
+// weak function pointer for pdo_get_long_param
+#ifdef CAT_OS_WIN
+// extern bool pdo_get_long_param(long *lval, void *value);
+# pragma comment(linker, "/alternatename:pdo_get_long_param=swow_pdo_get_long_param_redirect")
+#else
+__attribute__((weak, alias("swow_pdo_get_long_param_redirect"))) extern bool pdo_get_long_param(long *lval, void *value);
+#endif
+// resolved function holder
+bool (*swow_pdo_get_long_param_resolved)(long *lval, void *value);
+// resolver for pdo_get_long_param
+bool swow_pdo_get_long_param_resolver(long *lval, void *value) {
+    swow_pdo_get_long_param_resolved = (bool (*)(long *lval, void *value))DL_FETCH_SYMBOL(DL_FROM_HANDLE, "pdo_get_long_param");
+
+    if (swow_pdo_get_long_param_resolved == NULL) {
+#if defined(DL_ERROR)
+        fprintf(stderr, "failed resolve pdo_get_long_param: %s\n", DL_ERROR());
+#elif defined(CAT_OS_WIN)
+        fprintf(stderr, "failed resolve pdo_get_long_param: %08x\n", (unsigned int)GetLastError());
+#else
+        fprintf(stderr, "failed resolve pdo_get_long_param\n",());
+#endif
+        abort();
+    }
+
+    return swow_pdo_get_long_param_resolved(lval, value);
+}
+bool (*swow_pdo_get_long_param_resolved)(long *lval, void *value) = swow_pdo_get_long_param_resolver;
+bool swow_pdo_get_long_param_redirect(long *lval, void *value) {
+    return swow_pdo_get_long_param_resolved(lval, value);
+}
+
 // weak function pointer for pdo_get_bool_param
 #ifdef CAT_OS_WIN
 // extern bool pdo_get_bool_param(bool *bval, void *value);
@@ -1851,6 +1883,40 @@ bool swow_pdo_get_bool_param_redirect(bool *bval, void *value) {
     return swow_pdo_get_bool_param_resolved(bval, value);
 }
 
+#endif // PHP_VERSION_ID >= 80100
+#if PHP_VERSION_ID >= 80500
+// weak function pointer for php_pdo_stmt_valid_db_obj_handle
+#ifdef CAT_OS_WIN
+// extern bool php_pdo_stmt_valid_db_obj_handle(const void *stmt);
+# pragma comment(linker, "/alternatename:php_pdo_stmt_valid_db_obj_handle=swow_php_pdo_stmt_valid_db_obj_handle_redirect")
+#else
+__attribute__((weak, alias("swow_php_pdo_stmt_valid_db_obj_handle_redirect"))) extern bool php_pdo_stmt_valid_db_obj_handle(const void *stmt);
+#endif
+// resolved function holder
+bool (*swow_php_pdo_stmt_valid_db_obj_handle_resolved)(const void *stmt);
+// resolver for php_pdo_stmt_valid_db_obj_handle
+bool swow_php_pdo_stmt_valid_db_obj_handle_resolver(const void *stmt) {
+    swow_php_pdo_stmt_valid_db_obj_handle_resolved = (bool (*)(const void *stmt))DL_FETCH_SYMBOL(DL_FROM_HANDLE, "php_pdo_stmt_valid_db_obj_handle");
+
+    if (swow_php_pdo_stmt_valid_db_obj_handle_resolved == NULL) {
+#if defined(DL_ERROR)
+        fprintf(stderr, "failed resolve php_pdo_stmt_valid_db_obj_handle: %s\n", DL_ERROR());
+#elif defined(CAT_OS_WIN)
+        fprintf(stderr, "failed resolve php_pdo_stmt_valid_db_obj_handle: %08x\n", (unsigned int)GetLastError());
+#else
+        fprintf(stderr, "failed resolve php_pdo_stmt_valid_db_obj_handle\n",());
+#endif
+        abort();
+    }
+
+    return swow_php_pdo_stmt_valid_db_obj_handle_resolved(stmt);
+}
+bool (*swow_php_pdo_stmt_valid_db_obj_handle_resolved)(const void *stmt) = swow_php_pdo_stmt_valid_db_obj_handle_resolver;
+bool swow_php_pdo_stmt_valid_db_obj_handle_redirect(const void *stmt) {
+    return swow_php_pdo_stmt_valid_db_obj_handle_resolved(stmt);
+}
+
+#endif // PHP_VERSION_ID >= 80500
 // weak function pointer for pdo_handle_error
 #ifdef CAT_OS_WIN
 // extern void pdo_handle_error(void *dbh, void *stmt);
