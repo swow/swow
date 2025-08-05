@@ -227,7 +227,7 @@ PHP_FUNCTION(swow_curl_multi_select)
         RETURN_THROWS();
     }
 
-    error = curl_multi_wait(mh->multi, NULL, 0, (int) (timeout * 1000.0), &numfds);
+    error = cat_curl_multi_wait(mh->multi, NULL, 0, (int) (timeout * 1000.0), &numfds);
     if (CURLM_OK != error) {
         SAVE_CURLM_ERROR(mh, error);
         RETURN_LONG(-1);
