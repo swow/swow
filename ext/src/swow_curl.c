@@ -19,7 +19,7 @@
 #include "swow_curl.h"
 #include "swow_hook.h"
 
-#ifdef CAT_CURL
+#ifdef CAT_HAVE_CURL
 
 void swow_curl_module_info(zend_module_entry *zend_module);
 zend_result swow_curl_interface_module_init(INIT_FUNC_ARGS);
@@ -109,4 +109,4 @@ void swow_curl_globals_shutdown(zend_swow_globals *swow_globals)
     zend_hash_destroy(&swow_globals->curl.persistent_curlsh);
 }
 
-#endif /* CAT_CURL */
+#endif /* CAT_HAVE_CURL */
