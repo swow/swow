@@ -248,11 +248,6 @@ void swow_curl_module_info(zend_module_entry *zend_module)
     char str[1024];
     size_t n = 0;
 
-    php_info_print_table_start();
-    php_info_print_table_row(1, "cURL is powered by " SWOW_MODULE_NAME " now!!!");
-    php_info_print_table_row(2, "cURL coroutinify", "Yes");
-    php_info_print_table_end();
-
     d = curl_version_info(CURLVERSION_NOW);
     php_info_print_table_start();
     php_info_print_table_row(2, "cURL support",    "enabled");
@@ -359,6 +354,8 @@ void swow_curl_module_info(zend_module_entry *zend_module)
         php_info_print_table_row(2, "libSSH Version", d->libssh_version);
     }
 
+    php_info_print_table_row(2, "cURL is powered by", SWOW_MODULE_NAME);
+    php_info_print_table_row(2, "cURL coroutinify", "Yes");
     php_info_print_table_end();
 
     DISPLAY_INI_ENTRIES();
