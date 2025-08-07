@@ -93,13 +93,19 @@ static PHP_GINIT_FUNCTION(swow)
     swow_globals->ini.async_threads = 0;
     swow_globals->ini.async_file = true;
     swow_globals->ini.async_tty = true;
+
+#ifdef CAT_HAVE_CURL
+    swow_curl_globals_init(swow_globals);
+#endif
 }
 /* }}} */
 
 /* {{{ PHP_GSHUTDOWN_FUNCTION */
 static PHP_GSHUTDOWN_FUNCTION(swow)
 {
-    /* reserved */
+#ifdef CAT_HAVE_CURL
+    swow_curl_globals_shutdown(swow_globals);
+#endif
 }
 /* }}} */
 
