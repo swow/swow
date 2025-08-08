@@ -44,6 +44,7 @@ typedef struct cat_curl_multi_context_s {
     cat_coroutine_t *waiter;
     cat_curl_multi_event_t event_storage;
     cat_queue_t events;
+    cat_msec_t timeout_due_time;
 } cat_curl_multi_context_t;
 
 typedef struct cat_curl_multi_socket_context_s {
@@ -257,6 +258,23 @@ static void cat_curl_multi_timeout_callback(uv_timer_t *timer)
 {
     cat_curl_multi_context_t *context = timer->data;
     CAT_LOG_DEBUG_V2(CURL, "libcurl::cat_curl_multi_on_timeout(multi: %p)", context->multi);
+    cat_msec_t now = cat_time_msec();
+    if (unlikely(context->timeout_due_time > now)) {
+        // this callback returns early, sleep again
+        // should we use real time slice here?
+#ifdef CAT_OS_WIN
+        // for default tick 15.6ms
+        cat_msec_t retry_timeout_ms = 16;
+#else
+        // for CONFIG_HZ=100
+        cat_msec_t retry_timeout_ms = 10;
+#endif
+        if (retry_timeout_ms < context->timeout_due_time - now) {
+            retry_timeout_ms = context->timeout_due_time - now;
+        }
+        uv_timer_start(timer, cat_curl_multi_timeout_callback, retry_timeout_ms, 0);
+        return;
+    }
     cat_curl_multi_socket_schedule(context, CURL_SOCKET_TIMEOUT, 0);
 }
 
@@ -272,7 +290,7 @@ static int cat_curl_multi_timeout_function(CURLM *multi, long timeout_ms, cat_cu
             /* 0 means directly call socket_action, but we'll do it in a bit */
             timeout_ms = 1;
         }
-        uv_update_time(&CAT_EVENT_G(loop));
+        context->timeout_due_time = cat_time_msec() + (cat_msec_t) timeout_ms;
         (void) uv_timer_start(&context->timer, cat_curl_multi_timeout_callback, timeout_ms, 0);
     }
 
