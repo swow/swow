@@ -29,6 +29,20 @@ Swow 致力于使用最小 C 核心及多数 PHP 代码以支持 PHP 高性能�
 - Linux、 Windows、macOS 等常见操作系统，详见 [发布文档 - 支持的操作系统](https://docs.toast.run/swow-blog/chs/init.html#%E6%94%AF%E6%8C%81%E7%9A%84%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F)
 - PHP 8.0.0 或以上版本，推荐使用最新版本
 
+### 🥧 使用PIE安装扩展
+
+先获取[PIE](https://github.com/php/pie)
+
+```shell
+pie install swow/swow-extension
+```
+
+develop版本（一般来说有最新的bugfix）：
+
+```shell
+pie install swow/swow-extension:dev-develop
+```
+
 ### 👨‍🎤 通过 Composer 安装 (扩展 + PHP 库)
 
 拉取源码：

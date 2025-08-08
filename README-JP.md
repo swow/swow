@@ -29,6 +29,20 @@ Swowは、最小のCコアとほとんどのPHPコードを使用してPHPの高
 - Linux、Windows、macOSなどの一般的なオペレーティングシステム。詳細は[libuv](https://github.com/libuv/libuv/blob/v1.x/SUPPORTED_PLATFORMS.md)を参照してください。
 - PHP 8.0.0以上。最新バージョンを推奨します。
 
+### 🥧 PIEを使用する
+
+まず[PIE](https://github.com/php/pie)を取得してください。
+
+```shell
+pie install swow/swow-extension
+```
+
+開発版の場合（バグ修正を含む可能性があります）:
+
+```shell
+pie install swow/swow-extension:dev-develop
+```
+
 ### 👨‍🎤 Composerによるインストール
 
 ソースコードを取得します：

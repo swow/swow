@@ -34,6 +34,20 @@ so as to maximize development efficiency.
 - Common operating systems such as Linux, Windows, macOS, etc. Almost same as [libuv](https://github.com/libuv/libuv/blob/v1.x/SUPPORTED_PLATFORMS.md)
 - PHP 8.0.0 or above, the latest version is recommended
 
+### 🥧 Using PIE
+
+Get [PIE](https://github.com/php/pie) first.
+
+```shell
+pie install swow/swow-extension
+```
+
+for develop version (may contain bugfix):
+
+```shell
+pie install swow/swow-extension:dev-develop
+```
+
 ### 👨‍🎤 By Composer
 
 pull source code:
