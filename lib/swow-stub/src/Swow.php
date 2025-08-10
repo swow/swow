@@ -65,12 +65,12 @@ namespace Swow
 {
     class Extension
     {
-        public const VERSION = '1.6.1-dev';
+        public const VERSION = '1.6.1';
         public const VERSION_ID = 10601;
         public const MAJOR_VERSION = 1;
         public const MINOR_VERSION = 6;
         public const RELEASE_VERSION = 1;
-        public const EXTRA_VERSION = 'dev';
+        public const EXTRA_VERSION = '';
 
         public static function isBuiltWith(string $lib): bool { }
     }
@@ -2195,7 +2195,7 @@ namespace Swow
      * @return int
      * @throws \Swow\Exception when failed to get the number of processors
      */
-    function nproc(int $kind = \Swow\NPROC_AVAILABLE): int { }
+    function nproc(int $kind = \SWOW\NPROC_AVAILABLE): int { }
 }
 
 namespace Swow

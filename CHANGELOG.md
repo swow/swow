@@ -1,3 +1,41 @@
+# v1.6.1
+
+> Release Date: 2025-08-10 | 发布日期：2025-08-10
+
+> "The next version will be better" —— Swow Team
+>
+> 「下一个版本会更好」 —— Swow Team
+
+### Version Highlights | 版本亮点
+
+This version focuses on stability improvements, PIE (PHP Installer for Extensions) support, cURL reliability fixes, and PostgreSQL compatibility.
+该版本专注于修复 cURL Hook、PIE (PHP Installer for Extensions) 支持、以及 PostgreSQL 兼容性。
+
+## 🐣 What's New | 什么是牛的
++ PIE (PHP Installer for Extensions) support and installation documentation | PIE (PHP Installer for Extensions) 支持和安装文档 (f161c4bf, b20583d3) [@dixyes]
+
+## ✨ What's Enhanced | 啥叫enhance?
+
++ Use warning instead of exception for extension version mismatch | 扩展版本不匹配使用警告而非异常 (8f311ec6) [@twosee]
+
+## 🐛 What's Fixed | 什么修了
+
+* Fix cURL hook implementation | 修复 cURL 钩子实现 (10a0dbb8) [@dixyes]
+* Fix cURL module initialization | 修复 cURL 模块初始化 (6a828238) [@dixyes]
+* Fix PQclosePrepared weak dependency | 修复 PQclosePrepared 弱依赖 (bb348b9d) [@dixyes]
+* Fix missing weak dependencies | 修复缺失的弱依赖 (2f7f44d1) [@dixyes]
+
+## 👻 What's Removed | 什么移除了
+
+- Nothing removed | 啥都没有移除
+
+## 📦 Internal | 内部
+
++ Improved cURL multi test to cover blocking issues | 改进 cURL 多重测试以覆盖阻塞问题 (5e592cb0) [@twosee]
++ Match PHP cURL minfo | 匹配 PHP cURL minfo (50d0e87d) [@dixyes]
+
+---
+
 # v1.6.0
 
 > Release Date: 2025-08-02 | 发布日期：2025-08-02
