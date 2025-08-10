@@ -3490,7 +3490,7 @@ static ssize_t cat_socket_internal_try_write_encrypted(
     if (unlikely(!encrypted)) {
         cat_socket_internal_ssl_recoverability_check(socket_i);
         return error;
-          }
+    }
 
     // Create single vector for raw write
     cat_socket_write_vector_t encrypted_vector = cat_socket_write_vector_init(encrypted_data, (cat_socket_vector_length_t) encrypted_length);
