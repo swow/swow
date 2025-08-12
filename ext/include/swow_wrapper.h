@@ -495,6 +495,8 @@ static zend_always_inline bool swow_parse_arg_stringable(zval *arg, zend_string 
 #define swow_get_gc_buffer_add_fcc zend_get_gc_buffer_add_fcc
 #define swow_call_known_fcc zend_call_known_fcc
 
+#define swow_is_callable_ex zend_is_callable_ex
+
 #else
 
 typedef struct swow_fcall_info_cache {
@@ -590,7 +592,16 @@ static zend_always_inline void swow_call_known_fcc(
     zend_call_known_function(func, fcc->object, fcc->called_scope, retval_ptr, param_count, params, named_params);
 }
 
-#endif
+static zend_always_inline bool swow_is_callable_ex(zval *callable, zend_object *object, uint32_t check_flags, zend_string **callable_name, swow_fcall_info_cache *fcc, char **error)
+{
+    bool ret = zend_is_callable_ex(callable, object, check_flags, callable_name, (zend_fcall_info_cache *) fcc, error);
+    if (ret && Z_TYPE_P(callable) == IS_OBJECT) {
+        fcc->closure = Z_OBJ_P(callable);
+    }
+    return ret;
+}
+
+#endif /* ZEND_FCC_INITIALIZED */
 
 typedef struct swow_fcall_s {
     zend_fcall_info info;
