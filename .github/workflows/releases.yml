@@ -40,7 +40,7 @@ jobs:
     env:
       deps: openssl,libcurl,libssh2,zlib,nghttp2,libpq
       tools_path: C:\tools\phpdev
-      dllname: "php_swow-${{ github.ref_type == 'tag' && github.ref_name || github.sha }}-${{ matrix.php-version }}-${{ (matrix.ts == '0') && 'n' || '' }}ts-vs${{ matrix.vsver }}-${{ matrix.arch }}"
+      dllname: "php_swow-${{ github.ref_type == 'tag' && github.ref_name || github.sha }}-${{ matrix.php-version }}-${{ (matrix.ts == '0') && 'n' || '' }}ts-vs${{ matrix.vsver }}-${{ matrix.arch == 'x64' && 'x86_64' || 'arm64' }}"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
