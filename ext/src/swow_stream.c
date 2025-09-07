@@ -806,6 +806,41 @@ static int swow_stream_enable_crypto(php_stream *stream,
                 }
             }
         }
+        /* Handle SNI_server_certs for dynamic certificate selection */
+        if (GET_VER_OPT("SNI_enabled") && zend_is_true(val)) {
+            if (GET_VER_OPT("SNI_server_certs") && Z_TYPE_P(val) == IS_ARRAY) {
+                const char *hostname = options.peer_name;
+                if (hostname == NULL && !is_client) {
+                    /* For server side, try to get hostname from url_name */
+                    hostname = swow_sock->ssl.url_name;
+                }
+                
+                if (hostname != NULL) {
+                    zval *cert_config = zend_hash_str_find(Z_ARRVAL_P(val), hostname, strlen(hostname));
+                    if (cert_config != NULL) {
+                        if (Z_TYPE_P(cert_config) == IS_STRING) {
+                            /* Simple format: 'host.com' => '/path/host.com.pem' */
+                            options.certificate = Z_STRVAL_P(cert_config);
+                        } else if (Z_TYPE_P(cert_config) == IS_ARRAY) {
+                            /* Complex format with separate cert and key */
+                            zval *local_cert = zend_hash_str_find(Z_ARRVAL_P(cert_config), "local_cert", sizeof("local_cert") - 1);
+                            zval *local_pk = zend_hash_str_find(Z_ARRVAL_P(cert_config), "local_pk", sizeof("local_pk") - 1);
+                            zval *passphrase = zend_hash_str_find(Z_ARRVAL_P(cert_config), "passphrase", sizeof("passphrase") - 1);
+                            
+                            if (local_cert != NULL && Z_TYPE_P(local_cert) == IS_STRING) {
+                                options.certificate = Z_STRVAL_P(local_cert);
+                            }
+                            if (local_pk != NULL && Z_TYPE_P(local_pk) == IS_STRING) {
+                                options.certificate_key = Z_STRVAL_P(local_pk);
+                            }
+                            if (passphrase != NULL && Z_TYPE_P(passphrase) == IS_STRING) {
+                                options.passphrase = Z_STRVAL_P(passphrase);
+                            }
+                        }
+                    }
+                }
+            }
+        }
         cat_timeout_t timeout = cat_time_tv2to(swow_sock->ssl.is_client ?
             &swow_sock->ssl.connect_timeout :
             &swow_sock->sock.timeout
