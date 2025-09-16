@@ -125,7 +125,7 @@ static PHP_FUNCTION(swow_nproc)
             swow_exception_ce,
             EINVAL,
             "Invalid nproc kind: %ld",
-            kind
+            (long) kind
         );
         RETURN_THROWS();
     }
