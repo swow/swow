@@ -40,8 +40,7 @@ DEF
         // mocking blocking with Sleep at windows
         $ffi = FFI::cdef(<<<'DEF'
 void Sleep(uint32_t);
-DEF
-            , 'kernel32.dll');
+DEF, 'kernel32.dll');
         $ffi->Sleep($ns / (1000 * 1000));
     }
 }
