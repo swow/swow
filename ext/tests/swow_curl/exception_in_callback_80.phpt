@@ -1,12 +1,12 @@
 --TEST--
-swow_curl: exception in callback
+swow_curl: exception in callback for PHP 8.0
 --SKIPIF--
 <?php
 require __DIR__ . '/../include/skipif.php';
 skip_if(!Swow\Extension::isBuiltWith('curl'), 'extension must be built with libcurl');
 require __DIR__ . '/../include/bootstrap.php';
 skip_if(!str_contains(@file_get_contents(TEST_WEBSITE2_URL), TEST_WEBSITE2_KEYWORD), 'Unable to access ' . TEST_WEBSITE2_URL);
-needs_php_version('>=', '8.1');
+needs_php_version('<', '8.1');
 ?>
 --FILE--
 <?php
@@ -56,16 +56,16 @@ Assert::throws(static function () use ($ch): void {
 echo "Done\n";
 ?>
 --EXPECTF--
-#0 [internal function]: {closur%s}(Object(CurlHandle), '%A')
-#1 %s/exception_in_callback.php(%d): curl_exec(Object(CurlHandle))
-#2 %s/include/lib/Assert.php(%d): {closur%s}()
-#3 %s/exception_in_callback.php(%d): Assert::throws(Object(Closure), 'Exception', NULL, 'testh')
-#0 [internal function]: {closur%s}(Object(CurlHandle), '%A')
-#1 %s/exception_in_callback.php(%d): curl_exec(Object(CurlHandle))
-#2 %s/include/lib/Assert.php(%d): {closur%s}()
-#3 %s/exception_in_callback.php(%d): Assert::throws(Object(Closure), 'Exception', NULL, 'testw')
-#0 [internal function]: {closur%s}(Object(CurlHandle), Resource id #%d, %d)
-#1 %s/exception_in_callback.php(%d): curl_exec(Object(CurlHandle))
-#2 %s/include/lib/Assert.php(%d): {closur%s}()
-#3 %s/exception_in_callback.php(%d): Assert::throws(Object(Closure), 'Exception', NULL, 'testr')
+#0  {closure}(CurlHandle Object (), %A)
+#1  curl_exec(CurlHandle Object ()) called at [%s:%d]
+#2  {closure}() called at [%s:%d]
+#3  Assert::throws(Closure Object (), Exception, , testh) called at [%s:%d]
+#0  {closure}(CurlHandle Object (), %A)
+#1  curl_exec(CurlHandle Object ()) called at [%s:%d]
+#2  {closure}() called at [%s:%d]
+#3  Assert::throws(Closure Object (), Exception, , testw) called at [%s:%d]
+#0  {closure}(CurlHandle Object (), Resource id #%d, %d)
+#1  curl_exec(CurlHandle Object ()) called at [%s:%d]
+#2  {closure}() called at [%s:%d]
+#3  Assert::throws(Closure Object (), Exception, , testr) called at [%s:%d]
 Done
