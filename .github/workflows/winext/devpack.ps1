@@ -159,6 +159,12 @@ try{
 $sa = New-Object -ComObject Shell.Application
 $dirname = ($sa.NameSpace($zipdest).Items() | Select-Object -Index 0).Name
 
+info "Try patch phpize.js for newer wscript"
+# see https://github.com/php/php-src/commit/7f6c05116e83e75353f27f5333cc860c3a6f64f7
+$phpizejs = Get-Content "$ToolsPath\$dirname\script\phpize.js"
+$phpizejs = $phpizejs -Replace "var c, i, ok, n;", "var c, i, ok, n=`"`";"
+[IO.File]::WriteAllLines("$ToolsPath\$dirname\script\phpize.js", $phpizejs)
+
 info "Done unzipping devpack, generate env.bat."
 
 # Since setup-php only provides Release version PHP, yet we only support Release
