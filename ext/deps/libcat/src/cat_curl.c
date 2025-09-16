@@ -42,7 +42,6 @@ typedef struct cat_curl_multi_context_s {
     CURLM *multi;
     uv_timer_t timer;
     cat_coroutine_t *waiter;
-    cat_curl_multi_event_t event_storage;
     cat_queue_t events;
     cat_msec_t timeout_due_time;
 } cat_curl_multi_context_t;
@@ -144,14 +143,21 @@ static void cat_curl_multi_socket_context_close_callback(uv_handle_t *handle)
 static cat_always_inline void cat_curl_multi_socket_schedule(cat_curl_multi_context_t *context, curl_socket_t sockfd, int action)
 {
     cat_curl_multi_event_t *event;
-    if (cat_queue_empty(&context->events)) {
-        event = &context->event_storage;
-    } else {
+    cat_bool_t found = cat_false;
+    CAT_QUEUE_FOREACH_START(&context->events, node) {
+        event = (cat_curl_multi_event_t *) node;
+        if (event->sockfd == sockfd) {
+            event->action |= action;
+            found = cat_true;
+            break;
+        }
+    } CAT_QUEUE_FOREACH_END();
+    if (!found) {
         event = (cat_curl_multi_event_t *) cat_malloc_unrecoverable(sizeof(*event));
+        event->sockfd = sockfd;
+        event->action = action;
+        cat_queue_push_back(&context->events, &event->node);
     }
-    event->sockfd = sockfd;
-    event->action = action;
-    cat_queue_push_back(&context->events, &event->node);
     if (context->waiter != NULL) {
         cat_coroutine_schedule(context->waiter, CURL, "Poll event");
     }
@@ -163,6 +169,11 @@ static void cat_curl_multi_socket_poll_callback(uv_poll_t *poll, int status, int
     cat_curl_multi_context_t *context = socket_context->context;
     curl_socket_t sockfd = socket_context->sockfd;
     int action = 0;
+
+    if (unlikely(context->waiter == NULL)) {
+        // no one cares about this event, stop polling
+        uv_poll_stop(&socket_context->poll);
+    }
 
     CAT_LOG_DEBUG_VA_WITH_LEVEL(POLL, 2, {
         char *events_str = cat_poll_uv_events_str(events);
@@ -318,7 +329,11 @@ static void cat_curl_multi_context_close(cat_curl_multi_context_t *context)
     /* we assume that all resources should have been released in curl_multi_socket_function() before,
      * but when fatal error occurred and we called curl_multi_cleanup() without calling
      * curl_multi_remove_handle(), some will not be removed from context.  */
-    CAT_ASSERT(cat_queue_empty(&context->events));
+    cat_curl_multi_event_t *event;
+    while ((event = cat_queue_front_data(&context->events, cat_curl_multi_event_t, node))) {
+        cat_queue_remove(&event->node);
+        cat_free(event);
+    }
     RB_REMOVE(cat_curl_multi_context_tree_s, &CAT_CURL_G(multi_tree), context);
     uv_close((uv_handle_t *) &context->timer, cat_curl_multi_context_close_callback);
 }
@@ -430,9 +445,7 @@ static CURLMcode cat_curl_multi_wait_impl(
             }
             CURLMcode action_mcode;
             action_mcode = cat_curl_multi_socket_action(multi, event->sockfd, event->action, running_handles);
-            if (event != &context->event_storage) {
-                cat_free(event);
-            }
+            cat_free(event);
             if (unlikely(action_mcode != CURLM_OK)) {
                 mcode = action_mcode;
             }
