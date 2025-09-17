@@ -32,7 +32,6 @@
 /* declarations */
 
 typedef struct cat_curl_multi_event_s {
-    cat_queue_node_t node;
     curl_socket_t sockfd;
     int action;
 } cat_curl_multi_event_t;
@@ -42,8 +41,10 @@ typedef struct cat_curl_multi_context_s {
     CURLM *multi;
     uv_timer_t timer;
     cat_coroutine_t *waiter;
-    cat_queue_t events;
     cat_msec_t timeout_due_time;
+    size_t events_size;
+    size_t events_count;
+    cat_curl_multi_event_t *events;
 } cat_curl_multi_context_t;
 
 typedef struct cat_curl_multi_socket_context_s {
@@ -142,21 +143,24 @@ static void cat_curl_multi_socket_context_close_callback(uv_handle_t *handle)
 
 static cat_always_inline void cat_curl_multi_socket_schedule(cat_curl_multi_context_t *context, curl_socket_t sockfd, int action)
 {
-    cat_curl_multi_event_t *event;
     cat_bool_t found = cat_false;
-    CAT_QUEUE_FOREACH_START(&context->events, node) {
-        event = (cat_curl_multi_event_t *) node;
-        if (event->sockfd == sockfd) {
-            event->action |= action;
+    for (size_t i = 0; i < context->events_count; i++) {
+        if (context->events[i].sockfd == sockfd) {
+            context->events[i].action |= action;
             found = cat_true;
             break;
         }
-    } CAT_QUEUE_FOREACH_END();
+    }
     if (!found) {
-        event = (cat_curl_multi_event_t *) cat_malloc_unrecoverable(sizeof(*event));
-        event->sockfd = sockfd;
-        event->action = action;
-        cat_queue_push_back(&context->events, &event->node);
+        // not found, add to context->events
+        if (context->events_count == context->events_size) {
+            // extend context->events
+            context->events_size *= 4;
+            context->events = cat_realloc_unrecoverable(context->events, sizeof(*context->events) * (context->events_size));
+        }
+        context->events[context->events_count].sockfd = sockfd;
+        context->events[context->events_count].action = action;
+        context->events_count++;
     }
     if (context->waiter != NULL) {
         cat_coroutine_schedule(context->waiter, CURL, "Poll event");
@@ -218,7 +222,7 @@ static int cat_curl_multi_socket_function(
             if (socket_context == NULL) {
                 socket_context = (cat_curl_multi_socket_context_t *) cat_malloc(sizeof(*socket_context));
 #if CAT_ALLOC_HANDLE_ERRORS
-                if (unlikely(fd == NULL)) {
+                if (unlikely(socket_context == NULL)) {
                     return CURLM_OUT_OF_MEMORY;
                 }
 #endif
@@ -321,6 +325,7 @@ static void cat_curl_multi_context_close_callback(uv_handle_t *handle)
 {
     uv_timer_t *timer = (uv_timer_t *) handle;
     cat_curl_multi_context_t *context = cat_container_of(timer, cat_curl_multi_context_t, timer);
+    cat_free(context->events);
     cat_free(context);
 }
 
@@ -329,11 +334,6 @@ static void cat_curl_multi_context_close(cat_curl_multi_context_t *context)
     /* we assume that all resources should have been released in curl_multi_socket_function() before,
      * but when fatal error occurred and we called curl_multi_cleanup() without calling
      * curl_multi_remove_handle(), some will not be removed from context.  */
-    cat_curl_multi_event_t *event;
-    while ((event = cat_queue_front_data(&context->events, cat_curl_multi_event_t, node))) {
-        cat_queue_remove(&event->node);
-        cat_free(event);
-    }
     RB_REMOVE(cat_curl_multi_context_tree_s, &CAT_CURL_G(multi_tree), context);
     uv_close((uv_handle_t *) &context->timer, cat_curl_multi_context_close_callback);
 }
@@ -361,10 +361,19 @@ static cat_curl_multi_context_t *cat_curl_multi_create_context(CURLM *multi)
 #endif
 
     context->multi = multi;
+    context->waiter = NULL;
+    context->events_size = 1;
+    context->events_count = 0;
+    context->events = cat_malloc(sizeof(*context->events) * context->events_size);
+#if CAT_ALLOC_HANDLE_ERRORS
+    if (unlikely(context->events == NULL)) {
+        cat_free(context);
+        return NULL;
+    }
+#endif
     uv_timer_init(&CAT_EVENT_G(loop), &context->timer);
     context->timer.data = context;
-    context->waiter = NULL;
-    cat_queue_init(&context->events);
+
     /* following is outdated comment, but I didn't understand the specific meaning,
      * so I won't remove it yet:
      *   latest multi has higher priority
@@ -435,21 +444,20 @@ static CURLMcode cat_curl_multi_wait_impl(
             // timeout or error
             break;
         }
-        cat_curl_multi_event_t *event;
-        int socket_event_count = 0;
-        while ((event = cat_queue_front_data(&context->events, cat_curl_multi_event_t, node))) {
-            cat_queue_remove(&event->node);
-            socket_event_count++;
-            if (event->sockfd != CURL_SOCKET_TIMEOUT) {
+        int socket_event_count = context->events_count;
+        for (size_t i = 0; i < context->events_count; i++) {
+            if (context->events[i].sockfd != CURL_SOCKET_TIMEOUT) {
                 socket_poll_event_count++;
             }
             CURLMcode action_mcode;
-            action_mcode = cat_curl_multi_socket_action(multi, event->sockfd, event->action, running_handles);
-            cat_free(event);
+            action_mcode = cat_curl_multi_socket_action(
+                multi, context->events[i].sockfd, context->events[i].action, running_handles
+            );
             if (unlikely(action_mcode != CURLM_OK)) {
                 mcode = action_mcode;
             }
         }
+        context->events_count = 0;
         if (socket_event_count == 0)  {
             // cancelled
             break;
@@ -464,8 +472,6 @@ static CURLMcode cat_curl_multi_wait_impl(
         }
     }
     if (numfds != NULL) {
-        /** FIXME: socket_poll_event_count maybe bigger than numfds (when repeated),
-         * but it should not matter for our usage scenarios. */
         *numfds = socket_poll_event_count;
     }
     return mcode;
