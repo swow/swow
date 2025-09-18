@@ -353,7 +353,8 @@ static char *swow_stream_parse_ip_address_ex(const char *str, size_t str_len, in
 }
 
 #ifdef AF_UNIX
-// from main/streams/xp_socket.c:parse_unix_address @ 3e01f5afb1b52fe26a956190296de0192eedeec1
+// from main/streams/xp_socket.c @ 9e334af6e4e790cc11b4a0dc68f740d9a5b9add0
+// for function parse_unix_address
 // should we remove this in the future?
 // TODO: should we remove this in the future?
 static inline void swow_stream_check_unix_path_len(size_t *len)

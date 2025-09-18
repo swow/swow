@@ -26,7 +26,7 @@
 # endif
 #endif
 
-// from php/php-src@49d94cced0689f85ebb7baf4497b95cea77b5551 ext/pdo_pgsql/pgsql_driver.c
+// from ext/pdo_pgsql/pgsql_driver.c @ f7ca8138e7fcb90f7b42509d0489be166258b519
 
 #include "php.h"
 #include "php_ini.h"
@@ -81,15 +81,13 @@
 
 #include "swow_pgsql_driver_arginfo.h"
 
-/* Git hash: php/php-src@5853cdb73db85c75d5f558a8cf92161a31291de0 */
-
 static swow_pdo_txn_bool pgsql_handle_in_transaction(pdo_dbh_t *dbh);
 
 static char * _pdo_pgsql_trim_message(const char *message, int persistent)
 {
     size_t i = strlen(message);
     char *tmp;
-    if (i == 0) {
+    if (UNEXPECTED(i == 0)) {
         tmp = pemalloc(1, persistent);
         tmp[0] = '\0';
         return tmp;

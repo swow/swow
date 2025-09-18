@@ -326,7 +326,7 @@ static int swow_win32_check_trailing_space(const char *path, const size_t path_l
 }
 #endif
 
-// from main/streams/cast.c @ bcecbb59d36a152cb6eaa22218d6d380b702399a
+// from main/streams/cast.c @ 051414bec6bdc43b8345e317b680d2d063b28067
 static void swow_stream_mode_sanitize_fdopen_fopencookie(php_stream *stream, char *result)
 {
     /* replace modes not supported by fdopen and fopencookie, but supported
@@ -871,7 +871,7 @@ static php_stream *_swow_stream_fopen_from_file_int(FILE *file, const char *mode
     return php_stream_alloc_rel(&php_stream_stdio_ops, self, 0, mode);
 }
 
-// from main/php_open_temporary_file.c @ 01b3fc03c30c6cb85038250bb5640be3a09c6a32
+// from main/php_open_temporary_file.c @ 1c74a1a8892484c3baae35106e2f2e2f7bf2b36d
 static const char base32alphabet[] = "0123456789abcdefghijklmnopqrstuv";
 
 static int swow_do_open_temporary_file(const char *path, const char *pfx, zend_string **opened_path_p)
