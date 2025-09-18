@@ -230,7 +230,7 @@ if test "${PHP_SWOW}" != "no"; then
   SWOW_STD_CFLAGS="${SWOW_STD_CFLAGS} -DHAVE_CONFIG_H"
 
   dnl start build SWOW_CFLAGS
-  SWOW_STD_CFLAGS="${SWOW_STD_CFLAGS} -fvisibility=hidden -std=gnu99"
+  SWOW_STD_CFLAGS="${SWOW_STD_CFLAGS} -fvisibility=hidden -std=gnu11"
   SWOW_STD_CFLAGS="${SWOW_STD_CFLAGS} -Wall -Wextra -Wstrict-prototypes"
   SWOW_STD_CFLAGS="${SWOW_STD_CFLAGS} -Wno-unused-parameter"
   dnl for warning: the argument to '__builtin_assume' has side effects that will be discarded [-Wassume] in PHP
