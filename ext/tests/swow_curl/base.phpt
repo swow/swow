@@ -108,7 +108,9 @@ for ($c = 0; $c < TEST_MAX_CONCURRENCY; $c++) {
         $ch = $chInit();
         $response = curl_exec($ch);
         $chResponseVerify($response);
-        curl_close($ch);
+        if (PHP_VERSION_ID < 80100) {
+            curl_close($ch);
+        }
     });
 }
 WaitReference::wait($wrClient);
@@ -130,7 +132,9 @@ foreach ($chs as $ch) {
     $response = curl_multi_getcontent($ch);
     $chResponseVerify($response);
     curl_multi_remove_handle($mh, $ch);
-    curl_close($ch);
+    if (PHP_VERSION_ID < 80100) {
+        curl_close($ch);
+    }
 }
 curl_multi_close($mh);
 

@@ -50,7 +50,9 @@ curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
 curl_setopt($ch, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_2_0);
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 curl_exec($ch);
-curl_close($ch);
+if (PHP_VERSION_ID < 80100) {
+    curl_close($ch);
+}
 
 $wr::wait($wr);
 

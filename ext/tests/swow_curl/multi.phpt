@@ -55,7 +55,9 @@ Coroutine::run(static function () use ($server, $wr): void {
         $response = curl_multi_getcontent($ch);
         Assert::eq($response, 'OK');
         curl_multi_remove_handle($mh, $ch);
-        curl_close($ch);
+        if (PHP_VERSION_ID < 80100) {
+            curl_close($ch);
+        }
     }
 });
 

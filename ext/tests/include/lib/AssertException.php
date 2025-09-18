@@ -19,7 +19,9 @@ class AssertException extends Exception
         parent::__construct($message, $code, $previous);
 
         $rp = new ReflectionProperty(Exception::class, 'trace');
-        $rp->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $rp->setAccessible(true);
+        }
         $trace = $rp->getValue($this);
         $file = null;
         foreach ($trace as $index => $frame) {
@@ -32,11 +34,15 @@ class AssertException extends Exception
         $rp->setValue($this, $trace);
 
         $rp = new ReflectionProperty(Exception::class, 'file');
-        $rp->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $rp->setAccessible(true);
+        }
         $rp->setValue($this, $trace[0]['file']);
 
         $rp = new ReflectionProperty(Exception::class, 'line');
-        $rp->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $rp->setAccessible(true);
+        }
         $rp->setValue($this, $trace[0]['line']);
     }
 }

@@ -51,9 +51,13 @@ for ($n = 2; $n--;) {
 
     // close the handles
     curl_multi_remove_handle($mh, $ch1);
-    curl_close($ch1);
+    if (PHP_VERSION_ID < 80100) {
+        curl_close($ch1);
+    }
     curl_multi_remove_handle($mh, $ch2);
-    curl_close($ch2);
+    if (PHP_VERSION_ID < 80100) {
+        curl_close($ch2);
+    }
     curl_multi_close($mh);
 
     Assert::contains($response1, TEST_WEBSITE1_KEYWORD);

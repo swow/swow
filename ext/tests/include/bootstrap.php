@@ -331,6 +331,9 @@ function httpRequest(string $url, string $method = 'GET', string $content = '', 
             'http' => $httpContext,
         ])
     );
+    if (PHP_VERSION_ID >= 80400) {
+        $http_response_header = http_get_last_response_headers();
+    }
     if (!$content && empty($http_response_header)) {
         if ($doNotThrow) {
             return false;

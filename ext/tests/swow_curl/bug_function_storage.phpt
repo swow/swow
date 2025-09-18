@@ -43,7 +43,9 @@ foreach ([$testHeaderFunction, 'testHeaderFunction', [testHeaderFunctionClass::c
     $response = curl_exec($curl);
     Assert::contains($response, TEST_WEBSITE1_KEYWORD);
     Assert::true(strtotime($GLOBALS['header_lines']['date']) > 0);
-    curl_close($curl);
+    if (PHP_VERSION_ID < 80100) {
+        curl_close($curl);
+    }
 }
 
 $curl = curl_init();

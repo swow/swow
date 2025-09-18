@@ -1,9 +1,9 @@
 --TEST--
-swow_coroutine: serialize
+swow_coroutine: serialize for 8.0
 --SKIPIF--
 <?php
 require __DIR__ . '/../include/skipif.php';
-needs_php_version('>=', '8.1');
+needs_php_version('<', '8.1');
 ?>
 --FILE--
 <?php
@@ -18,7 +18,7 @@ try {
 
 class TestCoroutine extends Swow\Coroutine
 {
-    public function __serialize(): array
+    public function __sleep(): array
     {
         return [];
     }
