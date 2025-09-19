@@ -33,6 +33,12 @@ jobs:
           - name: Rocky Linux 9
             image: rockylinux:9
             pkg: dnf
+          - name: AlmaLinux 10
+            image: almalinux:10
+            pkg: dnf
+          - name: Rocky Linux 10
+            image: rockylinux:10
+            pkg: dnf
           - name: Fedora
             image: fedora
             pkg: dnf
