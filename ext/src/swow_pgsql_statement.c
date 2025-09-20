@@ -590,7 +590,7 @@ static int pgsql_stmt_fetch(pdo_stmt_t *stmt,
     pdo_pgsql_stmt *S = (pdo_pgsql_stmt*)stmt->driver_data;
 
     if (S->cursor_name) {
-        char *ori_str = NULL;
+        const char *ori_str = NULL;
         char *q = NULL;
         ExecStatusType status;
 
@@ -599,8 +599,8 @@ static int pgsql_stmt_fetch(pdo_stmt_t *stmt,
             case PDO_FETCH_ORI_PRIOR:    ori_str = "BACKWARD"; break;
             case PDO_FETCH_ORI_FIRST:    ori_str = "FIRST"; break;
             case PDO_FETCH_ORI_LAST:    ori_str = "LAST"; break;
-            case PDO_FETCH_ORI_ABS:        spprintf(&ori_str, 0, "ABSOLUTE " ZEND_LONG_FMT, offset); break;
-            case PDO_FETCH_ORI_REL:        spprintf(&ori_str, 0, "RELATIVE " ZEND_LONG_FMT, offset); break;
+            case PDO_FETCH_ORI_ABS:        spprintf((char**)&ori_str, 0, "ABSOLUTE " ZEND_LONG_FMT, offset); break;
+            case PDO_FETCH_ORI_REL:        spprintf((char**)&ori_str, 0, "RELATIVE " ZEND_LONG_FMT, offset); break;
             default:
                 return 0;
         }
@@ -612,7 +612,7 @@ static int pgsql_stmt_fetch(pdo_stmt_t *stmt,
 
         spprintf(&q, 0, "FETCH %s FROM %s", ori_str, S->cursor_name);
         if (ori == PDO_FETCH_ORI_ABS || ori == PDO_FETCH_ORI_REL) {
-            efree(ori_str);
+            efree((void *)ori_str);
         }
         S->result = cat_pq_exec(S->H->server, q);
         efree(q);
