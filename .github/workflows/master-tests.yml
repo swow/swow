@@ -102,6 +102,7 @@ jobs:
           [ ! -d /opt/homebrew/Cellar/postgresql* ] && brew install libpq postgresql
           initdb --locale=C -E UTF-8 -U postgres "$HOME/pgsqldata"
           pg_ctl -D "$HOME/pgsqldata" start
+          openssl rand -writerand "$HOME/.rnd"
 
       - name: Setup PHP
         uses: shivammathur/setup-php@master
