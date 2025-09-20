@@ -47,12 +47,6 @@ typedef struct cat_curl_multi_context_s {
     cat_curl_multi_event_t *events;
 } cat_curl_multi_context_t;
 
-typedef struct cat_curl_multi_socket_context_s {
-    cat_curl_multi_context_t *context;
-    curl_socket_t sockfd;
-    uv_poll_t poll;
-} cat_curl_multi_socket_context_t;
-
 RB_HEAD(cat_curl_multi_context_tree_s, cat_curl_multi_context_s);
 
 static int cat_curl__multi_context_compare(cat_curl_multi_context_t* c1, cat_curl_multi_context_t* c2)
@@ -72,10 +66,19 @@ RB_GENERATE_STATIC(cat_curl_multi_context_tree_s,
                    cat_curl_multi_context_s, tree_entry,
                    cat_curl__multi_context_compare);
 
+
+typedef struct cat_curl_multi_socket_context_s {
+    cat_queue_node_t node;
+    cat_curl_multi_context_t *context;
+    curl_socket_t sockfd;
+    uv_poll_t poll;
+} cat_curl_multi_socket_context_t;
+
 /* globals */
 
 CAT_GLOBALS_STRUCT_BEGIN(cat_curl) {
     struct cat_curl_multi_context_tree_s multi_tree;
+    cat_queue_t socket_contexts;
 } CAT_GLOBALS_STRUCT_END(cat_curl);
 
 CAT_GLOBALS_DECLARE(cat_curl);
@@ -141,6 +144,13 @@ static void cat_curl_multi_socket_context_close_callback(uv_handle_t *handle)
     cat_free(socket_context);
 }
 
+static cat_always_inline void cat_curl_multi_socket_context_close(cat_curl_multi_socket_context_t *socket_context)
+{
+    cat_queue_remove(&socket_context->node);
+    (void) uv_poll_stop(&socket_context->poll);
+    uv_close((uv_handle_t*) &socket_context->poll, cat_curl_multi_socket_context_close_callback);
+}
+
 static cat_always_inline void cat_curl_multi_socket_schedule(cat_curl_multi_context_t *context, curl_socket_t sockfd, int action)
 {
     cat_bool_t found = cat_false;
@@ -176,7 +186,7 @@ static void cat_curl_multi_socket_poll_callback(uv_poll_t *poll, int status, int
 
     if (unlikely(context->waiter == NULL)) {
         // no one cares about this event, stop polling
-        uv_poll_stop(&socket_context->poll);
+        (void) uv_poll_stop(&socket_context->poll);
     }
 
     CAT_LOG_DEBUG_VA_WITH_LEVEL(POLL, 2, {
@@ -241,6 +251,8 @@ static int cat_curl_multi_socket_function(
 # endif
 #endif
                 }
+
+                cat_queue_push_back(&CAT_CURL_G(socket_contexts), &socket_context->node);
                 socket_context->context = context;
                 socket_context->sockfd = sockfd;
                 (void) uv_poll_init_socket(&CAT_EVENT_G(loop), &socket_context->poll, sockfd);
@@ -257,9 +269,8 @@ static int cat_curl_multi_socket_function(
         }
         case CURL_POLL_REMOVE:
             if (socket_context != NULL) {
-                uv_poll_stop(&socket_context->poll);
-                uv_close((uv_handle_t*) &socket_context->poll, cat_curl_multi_socket_context_close_callback);
                 curl_multi_assign(multi, sockfd, NULL);
+                cat_curl_multi_socket_context_close(socket_context);
             }
             break;
         default:
@@ -444,7 +455,7 @@ static CURLMcode cat_curl_multi_wait_impl(
             // timeout or error
             break;
         }
-        int socket_event_count = context->events_count;
+        int socket_event_count = (int) context->events_count;
         for (size_t i = 0; i < context->events_count; i++) {
             if (context->events[i].sockfd != CURL_SOCKET_TIMEOUT) {
                 socket_poll_event_count++;
@@ -674,6 +685,21 @@ CAT_API cat_bool_t cat_curl_module_shutdown(void)
 
 CAT_API cat_bool_t cat_curl_runtime_init(void)
 {
+    RB_INIT(&CAT_CURL_G(multi_tree));
+    cat_queue_init(&CAT_CURL_G(socket_contexts));
+
+    return cat_true;
+}
+
+CAT_API cat_bool_t cat_curl_runtime_shutdown(void)
+{
+    cat_curl_multi_socket_context_t *socket_context;
+    while ((
+        socket_context = (cat_curl_multi_socket_context_t *)
+            cat_queue_front_data(&CAT_CURL_G(socket_contexts), cat_curl_multi_socket_context_t, node)
+    )) {
+        cat_curl_multi_socket_context_close(socket_context);
+    }
 
     return cat_true;
 }
