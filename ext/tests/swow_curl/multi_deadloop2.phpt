@@ -6,6 +6,7 @@ require __DIR__ . '/../include/skipif.php';
 skip_if(!Swow\Extension::isBuiltWith('curl'), 'extension must be built with libcurl');
 require __DIR__ . '/../include/bootstrap.php';
 skip_if(!str_contains(@file_get_contents(TEST_WEBSITE2_URL), TEST_WEBSITE2_KEYWORD), 'Unable to access ' . TEST_WEBSITE2_URL);
+skip_if(php_uname('s') === 'Darwin', 'skip on macos, buggy with curl async dns');
 ?>
 --FILE--
 <?php
