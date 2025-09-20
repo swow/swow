@@ -368,6 +368,9 @@ PHP_RSHUTDOWN_FUNCTION(swow)
     }
 
     static const swow_shutdown_function_t rshutdown_functions[] = {
+#ifdef CAT_HAVE_CURL
+        swow_curl_runtime_shutdown,
+#endif
 #ifdef CAT_OS_WAIT
         swow_proc_open_runtime_shutdown,
 #endif

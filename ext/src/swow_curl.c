@@ -85,6 +85,15 @@ zend_result swow_curl_runtime_init(INIT_FUNC_ARGS)
     return SUCCESS;
 }
 
+zend_result swow_curl_runtime_shutdown(INIT_FUNC_ARGS)
+{
+    if (!cat_curl_runtime_shutdown()) {
+        return FAILURE;
+    }
+
+    return SUCCESS;
+}
+
 zend_result swow_curl_runtime_close(void)
 {
     if (!cat_curl_runtime_close()) {
