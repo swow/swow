@@ -36,24 +36,22 @@ class CertificateGenerator
     }
 
     /**
-     * @param int|null $keyLength
+     * @param string $curve
      * @return resource
      */
-    private static function generateKey($keyLength = null)
+    private static function generateKey($curve = 'prime256v1')
     {
-        if (null === $keyLength) {
-            $keyLength = 2048;
-        }
-
         return openssl_pkey_new([
-            'private_key_bits' => $keyLength,
-            'private_key_type' => OPENSSL_KEYTYPE_RSA,
+            'ec' => [
+                'curve_name' => $curve,
+            ],
+            'private_key_type' => OPENSSL_KEYTYPE_EC,
             'encrypt_key' => false,
         ]);
     }
 
     private function generateCa()
-    {
+    { 
         $this->caKey = self::generateKey();
         $dn = [
             'countryName' => 'GB',
@@ -87,7 +85,7 @@ class CertificateGenerator
         openssl_x509_export_to_file($this->ca, $file);
     }
 
-    private function generateCertAndKey($commonNameForCert, $file, $keyLength = null, $subjectAltName = null)
+    private function generateCertAndKey($commonNameForCert, $file, $curve = 'prime256v1', $subjectAltName = null)
     {
         $dn = [
             'countryName' => 'BY',
@@ -104,7 +102,7 @@ class CertificateGenerator
 [ req ]
 distinguished_name = req_distinguished_name
 default_md = sha256
-default_bits = 1024
+default_bits = 2048
 
 [ req_distinguished_name ]
 
@@ -126,7 +124,7 @@ CONFIG;
             'x509_extensions' => 'usr_cert',
         ];
 
-        $this->lastKey = self::generateKey($keyLength);
+        $this->lastKey = self::generateKey($curve);
         $csr = openssl_csr_new($dn, $this->lastKey, $config);
 
         // If in self-signed mode, sign with the same key, otherwise use CA
@@ -145,9 +143,9 @@ CONFIG;
     }
 
     public function saveNewCertAsFileWithKey(
-        $commonNameForCert, $file, $keyLength = null, $subjectAltName = null
+        $commonNameForCert, $file, $curve = 'prime256v1', $subjectAltName = null
     ) {
-        $config = $this->generateCertAndKey($commonNameForCert, $file, $keyLength, $subjectAltName);
+        $config = $this->generateCertAndKey($commonNameForCert, $file, $curve, $subjectAltName);
 
         $certText = '';
         openssl_x509_export($this->lastCert, $certText);
