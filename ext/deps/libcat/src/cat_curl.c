@@ -31,10 +31,8 @@
 
 /* declarations */
 
-typedef struct cat_curl_multi_event_s {
-    curl_socket_t sockfd;
-    int action;
-} cat_curl_multi_event_t;
+// CURLM_CALL_MULTI_PERFORM/CURLM_CALL_MULTI_SOCKET, deprecated since curl 7.20.0
+#define CAT_CURL_MULTI_CANCELLED ((CURLMcode)-1)
 
 typedef struct cat_curl_multi_context_s {
     RB_ENTRY(cat_curl_multi_context_s) tree_entry;
@@ -42,9 +40,8 @@ typedef struct cat_curl_multi_context_s {
     uv_timer_t timer;
     cat_coroutine_t *waiter;
     cat_msec_t timeout_due_time;
-    size_t events_size;
-    size_t events_count;
-    cat_curl_multi_event_t *events;
+    cat_bool_t timedout; // timed out or initializing
+    cat_queue_t socket_contexts;
 } cat_curl_multi_context_t;
 
 RB_HEAD(cat_curl_multi_context_tree_s, cat_curl_multi_context_s);
@@ -66,13 +63,22 @@ RB_GENERATE_STATIC(cat_curl_multi_context_tree_s,
                    cat_curl_multi_context_s, tree_entry,
                    cat_curl__multi_context_compare);
 
-
 typedef struct cat_curl_multi_socket_context_s {
     cat_queue_node_t node;
-    cat_curl_multi_context_t *context;
     curl_socket_t sockfd;
+    int poll_uv_events; // events to be polled
+    int curl_events; // events to be processed
+    cat_curl_multi_context_t *context;
     uv_poll_t poll;
 } cat_curl_multi_socket_context_t;
+
+#define CAT_CURL_MULTI_FOREACH_SOCKET_CONTEXT(queue, var) \
+    for ( \
+        cat_curl_multi_socket_context_t *var = \
+            (cat_curl_multi_socket_context_t *) cat_queue_next(queue); \
+        var != (cat_curl_multi_socket_context_t *) (queue); \
+        var = (cat_curl_multi_socket_context_t *) cat_queue_next((cat_queue_t *) var) \
+    )
 
 /* globals */
 
@@ -153,27 +159,24 @@ static cat_always_inline void cat_curl_multi_socket_context_close(cat_curl_multi
 
 static cat_always_inline void cat_curl_multi_socket_schedule(cat_curl_multi_context_t *context, curl_socket_t sockfd, int action)
 {
+    // insert to context->socket_contexts
+#ifdef CAT_DEBUG
     cat_bool_t found = cat_false;
-    for (size_t i = 0; i < context->events_count; i++) {
-        if (context->events[i].sockfd == sockfd) {
-            context->events[i].action |= action;
+#endif
+    CAT_CURL_MULTI_FOREACH_SOCKET_CONTEXT(&context->socket_contexts, socket_context) {
+        if (socket_context->sockfd == sockfd) {
+            socket_context->curl_events |= action;
+#ifdef CAT_DEBUG
             found = cat_true;
+#endif
             break;
         }
     }
-    if (!found) {
-        // not found, add to context->events
-        if (context->events_count == context->events_size) {
-            // extend context->events
-            context->events_size *= 4;
-            context->events = cat_realloc_unrecoverable(context->events, sizeof(*context->events) * (context->events_size));
-        }
-        context->events[context->events_count].sockfd = sockfd;
-        context->events[context->events_count].action = action;
-        context->events_count++;
-    }
+#ifdef CAT_DEBUG
+    CAT_ASSERT(found);
+#endif
     if (context->waiter != NULL) {
-        cat_coroutine_schedule(context->waiter, CURL, "Poll event");
+        cat_coroutine_schedule(context->waiter, CURL, "Poll event from CURL socket function");
     }
 }
 
@@ -184,10 +187,8 @@ static void cat_curl_multi_socket_poll_callback(uv_poll_t *poll, int status, int
     curl_socket_t sockfd = socket_context->sockfd;
     int action = 0;
 
-    if (unlikely(context->waiter == NULL)) {
-        // no one cares about this event, stop polling
-        (void) uv_poll_stop(&socket_context->poll);
-    }
+    // always one shot
+    (void) uv_poll_stop(&socket_context->poll);
 
     CAT_LOG_DEBUG_VA_WITH_LEVEL(POLL, 2, {
         char *events_str = cat_poll_uv_events_str(events);
@@ -226,10 +227,12 @@ static int cat_curl_multi_socket_function(
 
     switch (action) {
         case CURL_POLL_IN:
+            /* fallthrough */
         case CURL_POLL_OUT:
+            /* fallthrough */
         case CURL_POLL_INOUT: {
-            int uv_events = 0;
             if (socket_context == NULL) {
+                // first time to assign
                 socket_context = (cat_curl_multi_socket_context_t *) cat_malloc(sizeof(*socket_context));
 #if CAT_ALLOC_HANDLE_ERRORS
                 if (unlikely(socket_context == NULL)) {
@@ -252,19 +255,25 @@ static int cat_curl_multi_socket_function(
 #endif
                 }
 
-                cat_queue_push_back(&CAT_CURL_G(socket_contexts), &socket_context->node);
-                socket_context->context = context;
                 socket_context->sockfd = sockfd;
+                socket_context->curl_events = 0;
+                socket_context->context = context;
                 (void) uv_poll_init_socket(&CAT_EVENT_G(loop), &socket_context->poll, sockfd);
                 socket_context->poll.data = socket_context;
+                cat_queue_push_back(&context->socket_contexts, &socket_context->node);
             }
+
+            // update uv_events
+            socket_context->poll_uv_events = 0;
             if(action != CURL_POLL_OUT) {
-                uv_events |= UV_READABLE;
+                socket_context->poll_uv_events |= UV_READABLE;
             }
             if(action != CURL_POLL_IN) {
-                uv_events |= UV_WRITABLE;
+                socket_context->poll_uv_events |= UV_WRITABLE;
             }
-            (void) uv_poll_start(&socket_context->poll, uv_events, cat_curl_multi_socket_poll_callback);
+            (void) uv_poll_start(
+                &socket_context->poll, socket_context->poll_uv_events, cat_curl_multi_socket_poll_callback
+            );
             break;
         }
         case CURL_POLL_REMOVE:
@@ -286,7 +295,7 @@ static void cat_curl_multi_timeout_callback(uv_timer_t *timer)
     CAT_LOG_DEBUG_V2(CURL, "libcurl::cat_curl_multi_on_timeout(multi: %p)", context->multi);
     cat_msec_t now = cat_time_msec();
     if (unlikely(context->timeout_due_time > now)) {
-        // this callback returns early, sleep again
+        // this callback returns early (due to uv and libcurl clock alignment), sleep again
         // should we use real time slice here?
 #ifdef CAT_OS_WIN
         // for default tick 15.6ms
@@ -301,7 +310,11 @@ static void cat_curl_multi_timeout_callback(uv_timer_t *timer)
         uv_timer_start(timer, cat_curl_multi_timeout_callback, retry_timeout_ms, 0);
         return;
     }
-    cat_curl_multi_socket_schedule(context, CURL_SOCKET_TIMEOUT, 0);
+
+    context->timedout = cat_true;
+    if (context->waiter != NULL) {
+        cat_coroutine_schedule(context->waiter, CURL, "Timeout from CURL timeout callback");
+    }
 }
 
 static int cat_curl_multi_timeout_function(CURLM *multi, long timeout_ms, cat_curl_multi_context_t *context)
@@ -336,7 +349,6 @@ static void cat_curl_multi_context_close_callback(uv_handle_t *handle)
 {
     uv_timer_t *timer = (uv_timer_t *) handle;
     cat_curl_multi_context_t *context = cat_container_of(timer, cat_curl_multi_context_t, timer);
-    cat_free(context->events);
     cat_free(context);
 }
 
@@ -346,7 +358,17 @@ static void cat_curl_multi_context_close(cat_curl_multi_context_t *context)
      * but when fatal error occurred and we called curl_multi_cleanup() without calling
      * curl_multi_remove_handle(), some will not be removed from context.  */
     RB_REMOVE(cat_curl_multi_context_tree_s, &CAT_CURL_G(multi_tree), context);
+    if (context->waiter != NULL) {
+        cat_coroutine_schedule(context->waiter, CURL, "Multi context close");
+    }
     uv_close((uv_handle_t *) &context->timer, cat_curl_multi_context_close_callback);
+    // should be empty, but if user called curl_multi_wait() and the transfer is not finished,
+    // some sockets may not be removed from the multi context due to a curl bug.
+    while (!cat_queue_empty(&context->socket_contexts)) {
+        cat_curl_multi_socket_context_t *socket_context = 
+            (cat_curl_multi_socket_context_t *) cat_queue_front(&context->socket_contexts);
+        cat_curl_multi_socket_context_close(socket_context);
+    }
 }
 
 static void cat_curl_multi_close_context(CURLM *multi)
@@ -373,15 +395,8 @@ static cat_curl_multi_context_t *cat_curl_multi_create_context(CURLM *multi)
 
     context->multi = multi;
     context->waiter = NULL;
-    context->events_size = 1;
-    context->events_count = 0;
-    context->events = cat_malloc(sizeof(*context->events) * context->events_size);
-#if CAT_ALLOC_HANDLE_ERRORS
-    if (unlikely(context->events == NULL)) {
-        cat_free(context);
-        return NULL;
-    }
-#endif
+    context->timedout = cat_true;
+    cat_queue_init(&context->socket_contexts);
     uv_timer_init(&CAT_EVENT_G(loop), &context->timer);
     context->timer.data = context;
 
@@ -414,15 +429,23 @@ static CURLMcode cat_curl_multi_wait_impl(
     CAT_ASSERT(context != NULL);
     CURLMcode mcode;
     cat_timeout_t remaining = timeout_ms;
-    int socket_poll_event_count = 0;
+    cat_ret_t ret;
+    int _numfds;
+    if (numfds == NULL) {
+        numfds = &_numfds;
+    }
+    *numfds = 0;
 
-    mcode = cat_curl_multi_socket_action(multi, CURL_SOCKET_TIMEOUT, 0, running_handles);
-    if (unlikely(mcode != CURLM_OK)) {
-        return mcode;
+    // kickstart wait
+    context->timedout = cat_false;
+    mcode = cat_curl_multi_socket_action(
+        multi, CURL_SOCKET_TIMEOUT, 0, running_handles
+    );
+    if (unlikely(mcode != CURLM_OK || *running_handles == 0)) {
+        // failed or this multi handle is already done
+        goto end;
     }
-    if (*running_handles == 0) {
-        return CURLM_OK;
-    }
+
     if (context->waiter != NULL) {
         // since 7.59.0
 #ifdef CURLM_RECURSIVE_API_CALL
@@ -431,66 +454,107 @@ static CURLMcode cat_curl_multi_wait_impl(
         return CURLM_INTERNAL_ERROR;
 #endif
     }
-    while (1) {
-        cat_ret_t ret;
-        context->waiter = CAT_COROUTINE_G(current);
-        if (remaining >= 0) {
-            if (remaining == 0) {
-                remaining = 1;
-            }
-            uv_timespec64_t ts_start, ts_end;
-            (void) uv_clock_gettime(UV_CLOCK_MONOTONIC, &ts_start);
-            ret = cat_time_delay((cat_timeout_t) remaining);
-            (void) uv_clock_gettime(UV_CLOCK_MONOTONIC, &ts_end);
-            remaining -= (ts_end.tv_sec - ts_start.tv_sec) * 1000 + (ts_end.tv_nsec - ts_start.tv_nsec) / 1000000;
-            if (remaining < 0) {
-                // timed out, avoid it become eternal
-                remaining = 0;
-            }
-        } else {
-            ret = cat_time_delay(-1);
-        }
-        context->waiter = NULL;
-        if (unlikely(ret != CAT_RET_NONE)) {
-            // timeout or error
-            break;
-        }
-        int socket_event_count = (int) context->events_count;
-        for (size_t i = 0; i < context->events_count; i++) {
-            if (context->events[i].sockfd != CURL_SOCKET_TIMEOUT) {
-                socket_poll_event_count++;
-            }
-            CURLMcode action_mcode;
-            action_mcode = cat_curl_multi_socket_action(
-                multi, context->events[i].sockfd, context->events[i].action, running_handles
+
+    mcode = CURLM_OK;
+    CAT_CURL_MULTI_FOREACH_SOCKET_CONTEXT(&context->socket_contexts, socket_context) {
+        if (socket_context->curl_events != 0) {
+            // process remaining curl events
+            (*numfds)++;
+            mcode = cat_curl_multi_socket_action(
+                multi, socket_context->sockfd, socket_context->curl_events, running_handles
             );
-            if (unlikely(action_mcode != CURLM_OK)) {
-                mcode = action_mcode;
+            if (unlikely(mcode != CURLM_OK)) {
+                break;
             }
+            socket_context->curl_events = 0;
         }
-        context->events_count = 0;
-        if (socket_event_count == 0)  {
-            // cancelled
-            break;
-        }
-        if (socket_poll_event_count > 0) {
-            // has events
-            break;
-        }
-        if (*running_handles == 0) {
-            // done
-            break;
+        if (*numfds == 0 && socket_context->poll_uv_events != 0) {
+            // if no events happened, restore polls
+            // otherwise, multi_wait processed events, return immediately
+            (void) uv_poll_start(
+                &socket_context->poll, socket_context->poll_uv_events, cat_curl_multi_socket_poll_callback
+            );
         }
     }
-    if (numfds != NULL) {
-        *numfds = socket_poll_event_count;
+    if (*numfds > 0) {
+        // some (remaining) events is processed
+        goto end;
     }
+
+    // wait for timeout or event
+    context->waiter = CAT_COROUTINE_G(current);
+    if (remaining >= 0) {
+        if (remaining == 0) {
+            remaining = 1;
+        }
+        ret = cat_time_delay((cat_timeout_t) remaining);
+    } else {
+        ret = cat_time_delay(-1);
+    }
+    context->waiter = NULL;
+    if (unlikely(ret == CAT_RET_ERROR)) {
+        // CAT_RET_ERROR for wait encountered errors
+        mcode = CURLM_INTERNAL_ERROR;
+        goto end;
+    } else if (ret == CAT_RET_OK) {
+        // CAT_RET_OK for wait arrived, timeout in argument arrived
+        goto end;
+    }
+#ifdef CAT_DEBUG
+    // else, CAT_RET_NONE for wait being interrupted, cancelled or events happened
+    CAT_ASSERT(ret == CAT_RET_NONE);
+#endif
+    if (context->timedout) {
+        // wait is interrupted with timer function
+        // call socket_action and stop waiting
+        context->timedout = cat_false;
+        mcode = cat_curl_multi_socket_action(
+            multi, CURL_SOCKET_TIMEOUT, 0, running_handles
+        );
+        goto end;
+    }
+
+    // process events
+    CAT_CURL_MULTI_FOREACH_SOCKET_CONTEXT(&context->socket_contexts, socket_context) {
+        if (socket_context->curl_events == 0) {
+            continue;
+        }
+        (*numfds)++;
+        mcode = cat_curl_multi_socket_action(
+            multi, socket_context->sockfd, socket_context->curl_events, running_handles
+        );
+        if (unlikely(mcode != CURLM_OK)) {
+            break;
+        }
+        socket_context->curl_events = 0;
+    }
+
+    if (*numfds == 0) {
+        // no events happened, wait is interrupted, cancelled
+        mcode = CAT_CURL_MULTI_CANCELLED;
+        goto end;
+    }
+
+end:
+    // stop all polls
+    CAT_CURL_MULTI_FOREACH_SOCKET_CONTEXT(&context->socket_contexts, socket_context) {
+        if (socket_context->poll_uv_events == 0) {
+            continue;
+        }
+        (void) uv_poll_stop(&socket_context->poll);
+    }
+
     return mcode;
 }
 
 static cat_always_inline CURLMcode cat_curl_multi_perform_impl(CURLM *multi, int *running_handles)
 {
-    return cat_curl_multi_wait_impl(multi, 0, NULL, running_handles);
+    CURLMcode mcode = cat_curl_multi_wait_impl(multi, 0, NULL, running_handles);
+    if (unlikely(mcode == CAT_CURL_MULTI_CANCELLED)) {
+        // do not return CAT_CURL_MULTI_CANCELLED to user, use it as an internal error
+        return CURLM_INTERNAL_ERROR;
+    }
+    return mcode;
 }
 
 /* easy APIs  */
@@ -521,17 +585,17 @@ static CURLcode cat_curl_easy_perform_impl(CURL *ch)
     }
 
     while (1) {
-        int numfds = 0;
-        mcode = cat_curl_multi_wait_impl(multi, -1, &numfds, &running_handles);
+        mcode = cat_curl_multi_wait_impl(multi, -1, NULL, &running_handles);
         if (unlikely(mcode != CURLM_OK)) {
+            if (unlikely(mcode == CAT_CURL_MULTI_CANCELLED)) {
+                // do not return CAT_CURL_MULTI_CANCELLED to user, use it as an internal error
+                mcode = CURLM_INTERNAL_ERROR;
+            }
             goto _error;
         }
         if (running_handles == 0) {
+            // done
             break;
-        }
-        if (numfds == 0) {
-            // timedout or cancelled
-            goto _error;
         }
     }
 
@@ -642,6 +706,10 @@ CAT_API CURLMcode cat_curl_multi_wait(
     CAT_LOG_DEBUG(CURL, "curl_multi_wait(multi: %p, timeout_ms: %d, numfds: " CAT_LOG_UNFILLED_STR ") = " CAT_LOG_UNFINISHED_STR, multi, timeout_ms);
 
     CURLMcode mcode = cat_curl_multi_wait_impl(multi, timeout_ms, numfds, running_handles);
+    if (unlikely(mcode == CAT_CURL_MULTI_CANCELLED)) {
+        // do not return CAT_CURL_MULTI_CANCELLED to user, use it as an internal error
+        mcode = CURLM_INTERNAL_ERROR;
+    }
 
     CAT_LOG_DEBUG(CURL, "curl_multi_wait(multi: %p, timeout_ms: %d, numfds: %d, running_handles: %d) = %d (%s)", multi, timeout_ms, *numfds, *running_handles, mcode, curl_multi_strerror(mcode));
 
@@ -686,20 +754,12 @@ CAT_API cat_bool_t cat_curl_module_shutdown(void)
 CAT_API cat_bool_t cat_curl_runtime_init(void)
 {
     RB_INIT(&CAT_CURL_G(multi_tree));
-    cat_queue_init(&CAT_CURL_G(socket_contexts));
 
     return cat_true;
 }
 
 CAT_API cat_bool_t cat_curl_runtime_shutdown(void)
 {
-    cat_curl_multi_socket_context_t *socket_context;
-    while ((
-        socket_context = (cat_curl_multi_socket_context_t *)
-            cat_queue_front_data(&CAT_CURL_G(socket_contexts), cat_curl_multi_socket_context_t, node)
-    )) {
-        cat_curl_multi_socket_context_close(socket_context);
-    }
 
     return cat_true;
 }
