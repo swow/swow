@@ -1,3 +1,51 @@
+# v1.6.2
+
+> Release Date: 2025-11-03 | 发布日期：2025-11-03
+
+> "Fixing bugs is like whack-a-mole, but at least we're getting better at it" —— AI
+>
+> 「修 BUG 就像打地鼠，但至少我们越来越熟练了」 —— AI
+
+### Version Highlights | 版本亮点
+
+This version focuses on cURL stability fixes, PHP 8.5 compatibility improvements, and build system enhancements.
+该版本专注于 cURL 稳定性修复、PHP 8.5 兼容性改进以及构建系统增强。
+
+## 🐣 What's New | 什么是牛的
+
+- Nothing new | 啥都没有新增
+
+## ✨ What's Enhanced | 加强了啥
+
++ Improve PHP 8.5 compatibility with zend_disable_class support | 通过 zend_disable_class 支持改进 PHP 8.5 兼容性 (58494848) [@dixyes]
++ Change release DLL name to match PIE standards | 更改发布 DLL 名称以匹配 PIE 标准 (ec7e7681) [@dixyes]
++ Use gnu11 standard for build | 构建使用 gnu11 标准 (fe10fb3c) [@dixyes]
+
+## 🐛 What's Fixed | 什么修了
+
+* Fix OpenSSL .rnd file read and creation on macOS | 修复 macOS 上 OpenSSL .rnd 文件读取和创建 (232cacee, 2c4ac7b3) [@dixyes]
+* Fix cURL runtime shutdown sequence | 修复 cURL 运行时关闭序列 (a69146b6) [@dixyes]
+* Fix ARM64 platform INI file lookup | 修复 ARM64 平台 INI 文件查找 (e5fba705) [@dixyes]
+* Fix PHP 8.5 deprecation warnings | 修复 PHP 8.5 废弃警告 (19d20413) [@dixyes]
+* Revert zend_is_callable_ex wrapper removal | 回退 zend_is_callable_ex 包装器移除 (f7ae1c7e) [@dixyes]
+
+## 👻 What's Removed | 什么移除了
+
+- Remove PHP 8.0 from distro tests | 从发行版测试中移除 PHP 8.0 (0d39f1b5) [@dixyes]
+
+## 📦 Internal | 内部
+
++ Sync libcat dependencies (multiple updates) | 同步 libcat 依赖（多次更新）(5f1eda65, 748ecc4f, 1595c397, 9051b512) [@dixyes]
++ Add comprehensive cURL hook tests for multi handle deadloop and callback exceptions | 添加 cURL 钩子测试以覆盖 multi handle 死循环和回调异常 (096024f8, 4813c1de, f5a434c2) [@dixyes]
++ Add Rocky Linux and AlmaLinux 10 CI tests | 添加 Rocky Linux 和 AlmaLinux 10 CI 测试 (684758ed) [@dixyes]
++ Update code from PHP source tree | 从 PHP 源码树更新代码 (a1031796) [@dixyes]
++ Add source update utility | 添加源码更新工具 (14615871) [@dixyes]
++ Update certificate generator with EC private key support | 更新证书生成器，支持 EC 私钥 (ef45c3a0, b80e55de) [@dixyes]
++ Patch phpize.js for newer wsh compatibility | 修补 phpize.js 以兼容新版 wsh (38263e88) [@dixyes]
++ Various test improvements for platform-specific issues | 针对平台特定问题的各种测试改进 (e103e3df, 93c0086b, fa38bf55) [@dixyes]
+
+---
+
 # v1.6.1
 
 > Release Date: 2025-08-10 | 发布日期：2025-08-10
