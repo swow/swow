@@ -40,42 +40,42 @@
                 "needs-value": false
             },
             {
-                "name": "swow-gcov",
+                "name": "enable-swow-gcov",
                 "description": "Enable Swow GCOV support",
                 "needs-value": false
             },
             {
-                "name": "swow-valgrind",
+                "name": "enable-swow-valgrind",
                 "description": "Enable Swow valgrind support",
                 "needs-value": false
             },
             {
-                "name": "swow-memory-sanitizer",
+                "name": "enable-swow-memory-sanitizer",
                 "description": "Enable Swow MSan support",
                 "needs-value": false
             },
             {
-                "name": "swow-address-sanitizer",
+                "name": "enable-swow-address-sanitizer",
                 "description": "Enable Swow ASan support",
                 "needs-value": false
             },
             {
-                "name": "swow-undefined-sanitizer",
+                "name": "enable-swow-undefined-sanitizer",
                 "description": "Enable Swow UBSan support",
                 "needs-value": false
             },
             {
-                "name": "swow-ssl",
+                "name": "enable-swow-ssl",
                 "description": "Enable Swow OpenSSL support",
                 "needs-value": false
             },
             {
-                "name": "swow-curl",
+                "name": "enable-swow-curl",
                 "description": "Enable Swow cURL support",
                 "needs-value": false
             },
             {
-                "name": "swow-pdo-pgsql",
+                "name": "enable-swow-pdo-pgsql",
                 "description": "Enable Swow PDO_PGSQL support",
                 "needs-value": false
             }
