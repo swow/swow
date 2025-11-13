@@ -22,7 +22,7 @@
 
 #include "php_version.h"
 
-// from ext/pdo_pgsql/pgsql_statement.c @ d9000b309416867aaa075d675b374746a1dcad5b
+// from ext/pdo_pgsql/pgsql_statement.c @ 5668b16ad26d0751648fc185f35329804d12b663
 #include "php.h"
 #include "php_ini.h"
 #include "ext/standard/info.h"
@@ -241,7 +241,7 @@ static int pgsql_stmt_execute(pdo_stmt_t *stmt)
         PQclear(S->result);
 
         /* the cursor was declared correctly */
-        S->is_prepared = 1;
+        S->is_prepared = true;
 
         /* fetch to be able to get the number of tuples later, but don't advance the cursor pointer */
         spprintf(&q, 0, "FETCH FORWARD 0 FROM %s", S->cursor_name);
@@ -269,7 +269,7 @@ stmt_retry:
                 case PGRES_COMMAND_OK:
                 case PGRES_TUPLES_OK:
                     /* it worked */
-                    S->is_prepared = 1;
+                    S->is_prepared = true;
                     PQclear(S->result);
                     S->result = NULL;
                     break;

@@ -37,7 +37,7 @@
 #include "cat_time.h"
 #include "cat_socket.h"
 
-// from main/streams/plain_wrapper.c @ 76791e90b9a26f707f4a5f3a0e7e7d5b17e2e820
+// from main/streams/plain_wrapper.c @ ff7e1e71059d61398b7d21ac4f2c9101cff777d8
 
 #include "php.h"
 #include "php_globals.h"
@@ -54,6 +54,9 @@
 #endif
 #include <stddef.h>
 #include <fcntl.h>
+#ifdef __linux__
+# include <sys/sysmacros.h>
+#endif
 #ifdef HAVE_SYS_WAIT_H
 # include <sys/wait.h>
 #endif
@@ -1083,7 +1086,28 @@ SWOW_API php_stream *_swow_stream_fopen_temporary_file(const char *dir, const ch
 static void detect_is_seekable(swow_stdio_stream_data *self) {
 #if defined(S_ISFIFO) && defined(S_ISCHR)
     if (self->fd >= 0 && do_fstat(self, 0) == 0) {
+#ifdef __linux__
+        if (S_ISCHR(self->sb.st_mode)) {
+            /* Some character devices are exceptions, check their major/minor ID
+             * https://www.kernel.org/doc/Documentation/admin-guide/devices.txt */
+            if (major(self->sb.st_rdev) == 1) {
+                unsigned m = minor(self->sb.st_rdev);
+                self->is_seekable =
+                    m == 1 ||   /* /dev/mem   */
+                    m == 2 ||   /* /dev/kmem  */
+                    m == 3 ||   /* /dev/null  */
+                    m == 4 ||   /* /dev/port  (seekable, offset = I/O port) */
+                    m == 5 ||   /* /dev/zero  */
+                    m == 7;     /* /dev/full  */
+            } else {
+                self->is_seekable = false;
+            }
+        } else {
+            self->is_seekable = !S_ISFIFO(self->sb.st_mode);
+        }
+#else
         self->is_seekable = !(S_ISFIFO(self->sb.st_mode) || S_ISCHR(self->sb.st_mode));
+#endif
         self->is_pipe = S_ISFIFO(self->sb.st_mode);
     }
 #elif defined(PHP_WIN32)

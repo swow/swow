@@ -353,7 +353,7 @@ static char *swow_stream_parse_ip_address_ex(const char *str, size_t str_len, in
 }
 
 #ifdef AF_UNIX
-// from main/streams/xp_socket.c @ 9e334af6e4e790cc11b4a0dc68f740d9a5b9add0
+// from main/streams/xp_socket.c @ aead67d0bb2f6a3903325b68f274e6b1bceb7bce
 // for function parse_unix_address
 // should we remove this in the future?
 // TODO: should we remove this in the future?
@@ -414,6 +414,14 @@ static inline int swow_stream_bind(php_stream *stream, swow_netstream_data_t *sw
             zend_is_true(z_tmp)
         ) {
             bind_flags |= CAT_SOCKET_BIND_FLAG_REUSEPORT;
+        }
+
+        if (
+            PHP_STREAM_CONTEXT(stream) &&
+            (z_tmp = php_stream_context_get_option(PHP_STREAM_CONTEXT(stream), "socket", "so_reuseaddr")) != NULL &&
+            zend_is_true(z_tmp)
+        ) {
+            bind_flags |= CAT_SOCKET_BIND_FLAG_REUSEADDR;
         }
     } else {
         swow_stream_check_unix_path_len(&xparam->inputs.namelen);

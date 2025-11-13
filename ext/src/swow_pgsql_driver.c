@@ -1825,6 +1825,7 @@ zend_result swow_pgsql_module_shutdown(INIT_FUNC_ARGS)
 // compatibility
 
 #if PHP_VERSION_ID < 80100
+// from ext/pdo/pdo_dbh.c @ 715b9aaa09e1ad76a94f32b17da7927592fdae0a
 bool pdo_get_long_param(zend_long *lval, const zval *value)
 {
     switch (Z_TYPE_P(value)) {
@@ -1854,7 +1855,7 @@ bool pdo_get_bool_param(bool *bval, const zval *value)
             *bval = false;
             return true;
         case IS_LONG:
-            *bval = zval_is_true((zval *)value);
+            *bval = zend_is_true((zval *)value);
             return true;
         case IS_STRING: /* TODO Should string be allowed? */
         default:

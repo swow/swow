@@ -14,7 +14,7 @@
    +----------------------------------------------------------------------+
 */
 
-// from ext/curl/interface.c @ 4b6c465588bf0aee11d7b176f61f4634c2e13467
+// from ext/curl/interface.c @ 7a63dcc3ca73ba89dd8488e754f2e7828911a2c0
 
 // @see: https://github.com/php/php-src/pull/13347
 #if !defined(__cplusplus) && !defined(_MSC_VER) && defined(HAVE_WTYPEDEF_REDEFINITION)
@@ -1199,7 +1199,7 @@ static void _php_curl_set_default_options(php_curl *ch)
     }
 
 #ifdef ZTS
-    curl_easy_setopt(ch->cp, CURLOPT_NOSIGNAL, 1);
+    curl_easy_setopt(ch->cp, CURLOPT_NOSIGNAL, 1L);
 #endif
 }
 /* }}} */
@@ -1674,7 +1674,7 @@ static zend_result _php_curl_setopt(php_curl *ch, zend_long option, zval *zvalue
             lval = zval_get_long(zvalue);
             if (lval == 1) {
                 php_error_docref(NULL, E_NOTICE, "CURLOPT_SSL_VERIFYHOST no longer accepts the value 1, value 2 will be used instead");
-                error = curl_easy_setopt(ch->cp, option, 2);
+                error = curl_easy_setopt(ch->cp, option, 2L);
                 break;
             }
             ZEND_FALLTHROUGH;
