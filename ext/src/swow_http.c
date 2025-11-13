@@ -492,7 +492,7 @@ static const zend_function_entry swow_http_parser_methods[] = {
 
 static zend_always_inline size_t swow_http_get_header_length(zend_string *header_name, zval *z_header_value)
 {
-    if (ZVAL_IS_NULL(z_header_value)) {
+    if (Z_ISNULL_P(z_header_value)) {
         return 0;
     }
 
@@ -534,7 +534,7 @@ static zend_always_inline size_t swow_http_get_message_length(HashTable *headers
 
 static zend_always_inline char *swow_http_pack_header(char *p, zend_string *header_name, zval *z_header_value)
 {
-    if (ZVAL_IS_NULL(z_header_value)) {
+    if (Z_ISNULL_P(z_header_value)) {
         return p;
     }
 

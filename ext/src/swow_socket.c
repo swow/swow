@@ -1213,7 +1213,7 @@ static PHP_METHOD_EX(Swow_Socket, _write, bool single, bool may_address)
                 uint32_t vector_list_array_index = 0;
                 ZEND_HASH_FOREACH_VAL(vector_list_array, z_tmp) {
                     /* the last one can be null */
-                    if (ZVAL_IS_NULL(z_tmp)) {
+                    if (Z_ISNULL_P(z_tmp)) {
                         break;
                     }
                     /* [array|string|Stringable|Buffer] */

@@ -140,7 +140,7 @@ static HashTable *swow_utils_handler_get_gc(zend_object *object, zval **gc_data,
 {
     swow_utils_handler_t *handler = swow_utils_handler_get_from_object(object);
 
-    if (ZVAL_IS_NULL(&handler->fcall.z_callable)) {
+    if (Z_ISNULL(handler->fcall.z_callable)) {
         *gc_data = NULL;
         *gc_count = 0;
     } else {

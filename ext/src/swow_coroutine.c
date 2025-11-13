@@ -2297,7 +2297,7 @@ static HashTable *swow_coroutine_get_gc(zend_object *object, zval **gc_data, int
     swow_coroutine_t *s_coroutine = swow_coroutine_get_from_object(object);
     zval *z_callable = s_coroutine->executor ? &s_coroutine->executor->fcall.z_callable : NULL;
 
-    if (z_callable == NULL || ZVAL_IS_NULL(z_callable)) {
+    if (z_callable == NULL || Z_ISNULL_P(z_callable)) {
         *gc_data = NULL;
         *gc_count = 0;
     } else {

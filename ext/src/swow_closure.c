@@ -224,7 +224,7 @@ SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_user_anonymous_function(zend_f
         zval *z_val;
         ZEND_HASH_MAP_FOREACH_STR_KEY_VAL(ht, key, z_val) {
             if (Z_ISREF_P(z_val)) {
-                if (ZVAL_IS_NULL(&z_references)) {
+                if (Z_ISNULL(z_references)) {
                     array_init(&z_references);
                 }
                 CAT_LOG_DEBUG_WITH_LEVEL(CLOSURE, 5, "Use reference $%.*s", (int) ZSTR_LEN(key), ZSTR_VAL(key));
@@ -279,11 +279,11 @@ SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_user_anonymous_function(zend_f
     // now: "namespace A { use A; use B;\n\n\n\n"
 
     // static variables and references needs wrapper
-    if (!ZVAL_IS_NULL(&z_static_variables) || !ZVAL_IS_NULL(&z_references)) {
+    if (!Z_ISNULL(z_static_variables) || !Z_ISNULL(z_references)) {
         zend_string *key;
         zval *z_val;
         smart_str_appendcstr(&context.code_str, "return (static function () ");
-        if (!ZVAL_IS_NULL(&z_references)) {
+        if (!Z_ISNULL(z_references)) {
             bool first = true;
             smart_str_appendcstr(&context.code_str, "use (");
             ZEND_HASH_PACKED_FOREACH_VAL(Z_ARRVAL(z_references), z_val) {
@@ -299,7 +299,7 @@ SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_user_anonymous_function(zend_f
             smart_str_appendcstr(&context.code_str, ") ");
         }
         smart_str_appendcstr(&context.code_str, "{ ");
-        if (!ZVAL_IS_NULL(&z_static_variables)) {
+        if (!Z_ISNULL(z_static_variables)) {
             ZEND_HASH_MAP_FOREACH_STR_KEY_VAL(Z_ARRVAL(z_static_variables), key, z_val) {
                 smart_str_appendc(&context.code_str, '$');
                 smart_str_append(&context.code_str, key);
@@ -328,7 +328,7 @@ SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_user_anonymous_function(zend_f
     // now: "namespace A { use A; use B;\n\n\n\nreturn (static function () use (...) { $a = NULL; return (fn()=>1)->bindTo(numm, \\A::class);"
 
     // wrapper end brace
-    if (!ZVAL_IS_NULL(&z_static_variables) || !ZVAL_IS_NULL(&z_references)) {
+    if (!Z_ISNULL(z_static_variables) || !Z_ISNULL(z_references)) {
         smart_str_appendcstr(&context.code_str, " })();");
     }
     // now: "namespace A { use A; use B;\n\n\n\nreturn (static function () use (...) { $a = NULL; return (fn()=>1)->bindTo(numm, \\A::class); })();"
@@ -348,7 +348,7 @@ SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_user_anonymous_function(zend_f
         ZVAL_STR(&z_tmp, zend_string_copy(doc_comment));
         zend_hash_update(ht, SWOW_KNOWN_STRING(doc_comment), &z_tmp);
     }
-    if (!ZVAL_IS_NULL(&z_static_variables)) {
+    if (!Z_ISNULL(z_static_variables)) {
         Z_TRY_ADDREF(z_static_variables);
         zend_hash_update(ht, SWOW_KNOWN_STRING(static_variables), &z_static_variables);
     }
