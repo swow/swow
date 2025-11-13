@@ -214,7 +214,7 @@ static zend_always_inline bool zend_char_has_nul_byte(const char *s, size_t know
 #define swow_hash_str_fetch_bool(ht, str, ret) do { \
     zval *z_tmp = zend_hash_str_find(ht, str, strlen(str)); \
     if (z_tmp != NULL) { \
-        *(ret) = zval_is_true(z_tmp); \
+        *(ret) = zend_is_true(z_tmp); \
     } \
 } while (0)
 
