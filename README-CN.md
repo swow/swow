@@ -43,6 +43,8 @@ develop版本（一般来说有最新的bugfix）：
 pie install swow/swow-extension:dev-develop
 ```
 
+**注意** 目前（2025年11月13日）腾讯云composer镜像的元信息不正确，这导致无法正常使用PIE安装，可以使用官方packagist或其他镜像尝试，见[#283](https://github.com/swow/swow/issues/283)
+
 ### 👨‍🎤 通过 Composer 安装 (扩展 + PHP 库)
 
 拉取源码：
@@ -137,6 +139,6 @@ Swow 也包含了一些第三方库，这些库的开源协议各不相同，请
 [release-badge]: https://img.shields.io/github/release/swow/swow.svg?style=flat-square
 [release-link]: https://github.com/swow/swow/releases
 [made-with-love-badge]: https://img.shields.io/badge/made%20with-%E2%9D%A4-f00
-[supported-php-versions-badge]: https://img.shields.io/badge/php-8.0--8.4-royalblue.svg
+[supported-php-versions-badge]: https://img.shields.io/badge/php-8.0--8.5-royalblue.svg
 [supported-platforms-badge]: https://img.shields.io/badge/platform-Win32%20|%20GNU/Linux%20|%20macOS%20|%20FreeBSD%20-gold
 [supported-architectures-badge]: https://img.shields.io/badge/architecture-x86--64%20|%20ARM64%20|%20mips64el%20|%20riscv64%20-maroon
