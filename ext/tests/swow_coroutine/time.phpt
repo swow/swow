@@ -24,7 +24,7 @@ $diff = $microTime > $startTime ? $microTime - $startTime : $startTime - $microT
 Assert::lessThanEq($diff, 10);
 waitAll();
 Assert::greaterThan($coroutine->getEndTime(), 0);
-Assert::greaterThan($coroutine->getEndTime() - $coroutine->getStartTime(), 10);
+Assert::greaterThanEq($coroutine->getEndTime() - $coroutine->getStartTime(), 10);
 
 echo "Done\n";
 

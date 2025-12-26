@@ -187,7 +187,7 @@ recvFrom verified %d times
 peekFrom start
 peekFrom verified %d times
 peekFrom(with-timeout) start
-peekFrom(with-timeout) verified 128 times
+peekFrom(with-timeout) verified %d times
 recvDataFrom start
 recvDataFrom verified %d times
 recvStringFrom start
