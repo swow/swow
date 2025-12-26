@@ -151,88 +151,18 @@ SWOW_API void swow_clean_module_constants(zend_module_entry *module)
     zend_hash_rehash(EG(zend_constants));
 }
 
-#if PHP_VERSION_ID >= 80500
-// zend_disable_class have been removed since PHP 8.5
-static void swow_zend_free_internal_arg_info(zend_internal_function *function) {
-    if ((function->fn_flags & (ZEND_ACC_HAS_RETURN_TYPE|ZEND_ACC_HAS_TYPE_HINTS)) &&
-        function->arg_info) {
-
-        uint32_t i;
-        uint32_t num_args = function->num_args + 1;
-        zend_internal_arg_info *arg_info = function->arg_info - 1;
-
-        if (function->fn_flags & ZEND_ACC_VARIADIC) {
-            num_args++;
-        }
-        for (i = 0 ; i < num_args; i++) {
-            zend_type_release(arg_info[i].type, /* persistent */ 1);
-        }
-        free(arg_info);
-    }
-}
-
-static const zend_function_entry disabled_class_new[] = {
-    ZEND_FE_END
-};
-
-static void zend_disable_class(const char *class_name, size_t class_name_length) {
-    zend_class_entry *disabled_class;
-    zend_string *key;
-    zend_function *fn;
-    zend_property_info *prop;
-
-    key = zend_string_alloc(class_name_length, 0);
-    zend_str_tolower_copy(ZSTR_VAL(key), class_name, class_name_length);
-    disabled_class = zend_hash_find_ptr(CG(class_table), key);
-    zend_string_release_ex(key, 0);
-    if (!disabled_class) {
-        return;
-    }
-
-    /* Will be reset by INIT_CLASS_ENTRY. */
-    free(disabled_class->interfaces);
-
-    INIT_CLASS_ENTRY_INIT_METHODS((*disabled_class), disabled_class_new);
-    // disabled_class->create_object = display_disabled_class;
-
-    ZEND_HASH_MAP_FOREACH_PTR(&disabled_class->function_table, fn) {
-        if ((fn->common.fn_flags & (ZEND_ACC_HAS_RETURN_TYPE|ZEND_ACC_HAS_TYPE_HINTS)) &&
-            fn->common.scope == disabled_class) {
-            swow_zend_free_internal_arg_info(&fn->internal_function);
-        }
-    } ZEND_HASH_FOREACH_END();
-    zend_hash_clean(&disabled_class->function_table);
-    ZEND_HASH_MAP_FOREACH_PTR(&disabled_class->properties_info, prop) {
-        if (prop->ce == disabled_class) {
-            zend_string_release(prop->name);
-            zend_type_release(prop->type, /* persistent */ 1);
-            free(prop);
-        }
-    } ZEND_HASH_FOREACH_END();
-    zend_hash_clean(&disabled_class->properties_info);
-    return;
-}
-#endif
-
 SWOW_API void swow_clean_module_classes(zend_module_entry *module)
 {
-    zend_array *class_name_map = zend_new_array(0);
+    zval *zclass;
+    zend_string *class_name;
     zend_class_entry *ce;
-    ZEND_HASH_FOREACH_PTR(CG(class_table), ce) {
+    ZEND_HASH_MAP_REVERSE_FOREACH_STR_KEY_VAL(CG(class_table), class_name, zclass) {
+        ce = (zend_class_entry *) Z_PTR_P(zclass);
         if (ce->type == ZEND_INTERNAL_CLASS && ce->info.internal.module->module_number == module->module_number) {
-            zend_hash_add_empty_element(class_name_map, ce->name);
+            zend_hash_del(CG(class_table), class_name);
+            zend_string_release_ex(class_name, 1);
         }
     } ZEND_HASH_FOREACH_END();
-    zend_string *class_name;
-    ZEND_HASH_FOREACH_STR_KEY(class_name_map, class_name) {
-        /* if we use the way like clean_module_functions,
-         * it will lead to memory leak (just run PhpUnit),
-         * so we have to use zend_disable_class and zend_hash_del instead.
-         * but we do not know why. All we can do is believe that the API is stable. */
-        zend_disable_class(ZSTR_VAL(class_name), ZSTR_LEN(class_name));
-        zend_hash_del(CG(class_table), class_name);
-    } ZEND_HASH_FOREACH_END();
-    zend_array_destroy(class_name_map);
     /* Rehash the class table after deleting classes. This ensures that all internal
      * classes are contiguous, which means we don't need to perform full table cleanup
      * on shutdown. */
