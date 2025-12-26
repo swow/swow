@@ -35,15 +35,7 @@ zend_result swow_curl_module_init(INIT_FUNC_ARGS)
 
     php_curl_module = zend_hash_str_find_ptr(&module_registry, ZEND_STRL("curl"));
     php_curl_ce = (zend_class_entry *) zend_hash_str_find_ptr(CG(class_table), ZEND_STRL("curlhandle"));
-    if (php_curl_ce == NULL) {
-        if (php_curl_module != NULL) {
-                zend_error(E_WARNING,
-                    "Swow extension must be loaded after curl extension in PHP ini, for example:\n"
-                    "   extension=curl\n"
-                    "   extension=swow\n");
-                return FAILURE;
-        }
-    } else {
+    if (php_curl_ce != NULL) {
         swow_clean_module_constants(php_curl_module);
         swow_clean_module_classes(php_curl_module);
         swow_clean_module_functions(php_curl_module);
