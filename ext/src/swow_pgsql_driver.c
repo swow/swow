@@ -1688,6 +1688,7 @@ zend_result swow_pgsql_module_init(INIT_FUNC_ARGS)
         // macports/brew
         "/opt/local/lib/",
         // brew
+        "/usr/local/Cellar/libpq@18/lib/",
         "/usr/local/Cellar/libpq@17/lib/",
         "/usr/local/Cellar/libpq@16/lib/",
         "/usr/local/Cellar/libpq@15/lib/",
@@ -1706,10 +1707,12 @@ zend_result swow_pgsql_module_init(INIT_FUNC_ARGS)
     };
 # elif defined(CAT_OS_WIN)
     const char *library_paths[] = {
+        "C:\\Program Files\\PostgreSQL\\18\\bin\\",
         "C:\\Program Files\\PostgreSQL\\17\\bin\\",
         "C:\\Program Files\\PostgreSQL\\16\\bin\\",
         "C:\\Program Files\\PostgreSQL\\15\\bin\\",
         "C:\\Program Files\\PostgreSQL\\14\\bin\\",
+        "C:\\Program Files (x86)\\PostgreSQL\\18\\bin\\",
         "C:\\Program Files (x86)\\PostgreSQL\\17\\bin\\",
         "C:\\Program Files (x86)\\PostgreSQL\\16\\bin\\",
         "C:\\Program Files (x86)\\PostgreSQL\\15\\bin\\",
