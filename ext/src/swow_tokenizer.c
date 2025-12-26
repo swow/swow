@@ -449,9 +449,14 @@ SWOW_API const char *swow_php_token_get_name_from_type(int type)
         case T_PRIVATE: return "T_PRIVATE";
         case T_PROTECTED: return "T_PROTECTED";
         case T_PUBLIC: return "T_PUBLIC";
+#if PHP_VERSION_ID >= 80400
+        case T_PRIVATE_SET: return "T_PRIVATE_SET";
+        case T_PROTECTED_SET: return "T_PROTECTED_SET";
+        case T_PUBLIC_SET: return "T_PUBLIC_SET";
+#endif // PHP_VERSION_ID >= 80400
 #if PHP_VERSION_ID >= 80100
         case T_READONLY: return "T_READONLY";
-#endif
+#endif // PHP_VERSION_ID >= 80100
         case T_VAR: return "T_VAR";
         case T_UNSET: return "T_UNSET";
         case T_ISSET: return "T_ISSET";
@@ -462,7 +467,7 @@ SWOW_API const char *swow_php_token_get_name_from_type(int type)
         case T_INTERFACE: return "T_INTERFACE";
 #if PHP_VERSION_ID >= 80100
         case T_ENUM: return "T_ENUM";
-#endif
+#endif // PHP_VERSION_ID >= 80100
         case T_EXTENDS: return "T_EXTENDS";
         case T_IMPLEMENTS: return "T_IMPLEMENTS";
         case T_NAMESPACE: return "T_NAMESPACE";
@@ -476,6 +481,9 @@ SWOW_API const char *swow_php_token_get_name_from_type(int type)
         case T_TRAIT_C: return "T_TRAIT_C";
         case T_METHOD_C: return "T_METHOD_C";
         case T_FUNC_C: return "T_FUNC_C";
+#if PHP_VERSION_ID >= 80400
+        case T_PROPERTY_C: return "T_PROPERTY_C";
+#endif // PHP_VERSION_ID >= 80400
         case T_NS_C: return "T_NS_C";
         case T_ATTRIBUTE: return "T_ATTRIBUTE";
         case T_PLUS_EQUAL: return "T_PLUS_EQUAL";
@@ -510,6 +518,9 @@ SWOW_API const char *swow_php_token_get_name_from_type(int type)
         case T_OBJECT_CAST: return "T_OBJECT_CAST";
         case T_BOOL_CAST: return "T_BOOL_CAST";
         case T_UNSET_CAST: return "T_UNSET_CAST";
+#if PHP_VERSION_ID >= 80500
+        case T_VOID_CAST: return "T_VOID_CAST";
+#endif // PHP_VERSION_ID >= 80500
         case T_OBJECT_OPERATOR: return "T_OBJECT_OPERATOR";
         case T_NULLSAFE_OBJECT_OPERATOR: return "T_NULLSAFE_OBJECT_OPERATOR";
         case T_DOUBLE_ARROW: return "T_DOUBLE_ARROW";
@@ -529,10 +540,13 @@ SWOW_API const char *swow_php_token_get_name_from_type(int type)
         case T_COALESCE: return "T_COALESCE";
         case T_POW: return "T_POW";
         case T_POW_EQUAL: return "T_POW_EQUAL";
+#if PHP_VERSION_ID >= 80500
+        case T_PIPE: return "T_PIPE";
+#endif // PHP_VERSION_ID >= 80500
 #if PHP_VERSION_ID >= 80100
         case T_AMPERSAND_FOLLOWED_BY_VAR_OR_VARARG: return "T_AMPERSAND_FOLLOWED_BY_VAR_OR_VARARG";
         case T_AMPERSAND_NOT_FOLLOWED_BY_VAR_OR_VARARG: return "T_AMPERSAND_NOT_FOLLOWED_BY_VAR_OR_VARARG";
-#endif
+#endif // PHP_VERSION_ID >= 80100
         case T_BAD_CHARACTER: return "T_BAD_CHARACTER";
         default: return "UNKNOWN";
     }
