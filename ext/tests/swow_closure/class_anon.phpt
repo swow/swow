@@ -4,27 +4,47 @@ swow_closure: serialize function of class anonymous
 <?php
 require __DIR__ . '/../include/skipif.php';
 ?>
---XFAIL--
-Need to fix
 --FILE--
 <?php
 require __DIR__ . '/../include/bootstrap.php';
 
-$o = new class {
-    public static function foo(): void
+$o = new class(6) {
+    private static int $staticA;
+
+    public function __construct(
+        private int $instanceA,
+    ) { }
+
+    public static function staticMethod(int $b): int
     {
+        return self::$staticA * $b;
+    }
+
+    public function instanceMethod(int $b): int
+    {
+        return $this->instanceA * $b;
+    }
+
+    public function __serialize(): array
+    {
+        return ['instanceA' => $this->instanceA];
+    }
+
+    public function __unserialize(array $data): void
+    {
+        $this->instanceA = $data['instanceA'];
     }
 };
-$c = Closure::fromCallable([$o, 'foo']);
-$s = serialize($c);
-// var_dump($s);
-try {
-    $c = unserialize($s);
-} catch (Throwable $e) {
-    printf("failed to unserialize: %s\n", $e->getMessage());
-    var_dump($s);
-}
-// var_dump($c);
+
+$c = Closure::fromCallable([$o, 'instanceMethod']);
+Assert::throws(function () use ($c) {
+    serialize($c);
+}, Error::class, expectMessage: "Closure which is not user-defined anonymous function and has no name cannot be serialized");
+
+$c = Closure::fromCallable([$o, 'staticMethod']);
+Assert::throws(function () use ($c) {
+    serialize($c);
+}, Error::class, expectMessage: "Closure which is not user-defined anonymous function and has no name cannot be serialized");
 
 echo "Done\n";
 ?>

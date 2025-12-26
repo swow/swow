@@ -59,6 +59,24 @@ static zend_always_inline bool swow_function_is_user_anonymous(const zend_functi
 
 static zend_always_inline bool swow_function_is_named(const zend_function *function)
 {
+    zend_class_entry *scope = function->common.scope;
+    if (scope != NULL) {
+        // for anonymous class, the name of it is:
+        // 8.0 - 8.6: "%s(prefix)@anonymous%c(\0)%s(filename):%lu(line)$%lu(rtd_key_counter)"
+        // which prefix is "class" if the anonymous donot implement or extend any class
+        // otherwise it is the first extended class name then implemented interfaces name
+        size_t i;
+        for (i = 0; i < ZSTR_LEN(scope->name); i++) {
+            if (ZSTR_VAL(scope->name)[i] == '\0') {
+                break;
+            }
+        }
+        if (i != ZSTR_LEN(scope->name)) {
+            // it's an anonymous class
+            CAT_ASSERT(i > 9 /* "@anonymous" */ && memcmp(ZSTR_VAL(scope->name) + i - 10, "@anonymous", 11) == 0);
+            return false;
+        }
+    }
     return function->common.function_name != NULL && !swow_function_is_anonymous(function);
 }
 
