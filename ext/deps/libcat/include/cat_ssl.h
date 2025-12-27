@@ -192,6 +192,13 @@ typedef struct cat_ssl_context_s {
 #endif
 } cat_ssl_context_t;
 
+typedef struct cat_ssl_peer_fingerprint_s {
+    const char *algorithm; // openssl supported algorithm name, must be null-terminated
+    const unsigned char *fingerprint; // fingerprint data, at least EVP_MAX_MD_SIZE bytes
+} cat_ssl_peer_fingerprint_t;
+
+#define CAT_SSL_PEER_FINGERPRINT_END {NULL, NULL}
+
 typedef struct cat_ssl_s {
     cat_ssl_flags_t flags;
     cat_ssl_connection_t *connection;
@@ -199,12 +206,14 @@ typedef struct cat_ssl_s {
     cat_buffer_t read_buffer;
     cat_buffer_t write_buffer;
     /* options for verification */
-    cat_bool_t verify_peer;
-    cat_bool_t allow_self_signed;
+    const cat_ssl_peer_fingerprint_t *peer_fingerprints;
+    unsigned int verify_peer :1;
+    unsigned int allow_self_signed :1;
     const char *expected_peer_name;
     /* internals */
     cat_ssl_context_t *context; // for free data before SSL_free()
 } cat_ssl_t;
+
 
 typedef enum cat_ssl_ret_e {
     CAT_SSL_RET_OK         = 1,
