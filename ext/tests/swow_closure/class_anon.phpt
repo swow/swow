@@ -13,7 +13,8 @@ $o = new class(6) {
 
     public function __construct(
         private int $instanceA,
-    ) { }
+    ) {
+    }
 
     public static function staticMethod(int $b): int
     {
@@ -37,14 +38,14 @@ $o = new class(6) {
 };
 
 $c = Closure::fromCallable([$o, 'instanceMethod']);
-Assert::throws(function () use ($c) {
+Assert::throws(static function () use ($c): void {
     serialize($c);
-}, Error::class, expectMessage: "Closure which is not user-defined anonymous function and has no name cannot be serialized");
+}, Error::class, expectMessage: 'Closure which is not user-defined anonymous function and has no name cannot be serialized');
 
 $c = Closure::fromCallable([$o, 'staticMethod']);
-Assert::throws(function () use ($c) {
+Assert::throws(static function () use ($c): void {
     serialize($c);
-}, Error::class, expectMessage: "Closure which is not user-defined anonymous function and has no name cannot be serialized");
+}, Error::class, expectMessage: 'Closure which is not user-defined anonymous function and has no name cannot be serialized');
 
 echo "Done\n";
 ?>
