@@ -211,10 +211,10 @@ static zend_always_inline bool zend_char_has_nul_byte(const char *s, size_t know
 #define ZEND_HASH_MAP_FOREACH_STR_KEY_VAL ZEND_HASH_FOREACH_STR_KEY_VAL
 #endif
 
-#define swow_hash_str_fetch_bool(ht, str, ret) do { \
+#define swow_hash_str_fetch_bool_field(ht, str, ret) do { \
     zval *z_tmp = zend_hash_str_find(ht, str, strlen(str)); \
     if (z_tmp != NULL) { \
-        *(ret) = zend_is_true(z_tmp); \
+        (ret) = zend_is_true(z_tmp); \
     } \
 } while (0)
 

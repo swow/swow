@@ -42,6 +42,42 @@ static zend_always_inline swow_utils_handler_t *swow_utils_handler_get_from_obje
     return cat_container_of(object, swow_utils_handler_t, std);
 }
 
+static zend_always_inline int swow_utils_parse_hex_string(unsigned char *dest, const char *str, size_t str_len)
+{
+    size_t i = 0;
+    if (str_len % 2 != 0) {
+        return -1;
+    }
+    for (; i < str_len; i++) {
+        switch (str[i]) {
+        case '0': case '1': case '2': case '3': case '4': case '5': case '6': case '7': case '8': case '9':
+            if (i % 2 == 0) {
+                dest[i / 2] = (str[i] - '0') << 4;
+            } else {
+                dest[i / 2] |= (str[i] - '0');
+            }
+            break;
+        case 'a': case 'b': case 'c': case 'd': case 'e': case 'f':
+            if (i % 2 == 0) {
+                dest[i / 2] = (str[i] - 'a' + 10) << 4;
+            } else {
+                dest[i / 2] |= (str[i] - 'a' + 10);
+            }
+            break;
+        case 'A': case 'B': case 'C': case 'D': case 'E': case 'F':
+            if (i % 2 == 0) {
+                dest[i / 2] = (str[i] - 'A' + 10) << 4;
+            } else {
+                dest[i / 2] |= (str[i] - 'A' + 10);
+            }
+            break;
+        default:
+            return -1;
+        }
+    }
+    return i;
+}
+
 /* loader */
 
 zend_result swow_util_module_init(INIT_FUNC_ARGS);

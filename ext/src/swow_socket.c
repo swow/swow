@@ -17,9 +17,17 @@
  */
 
 #include "swow_socket.h"
+#include "cat_ssl.h"
 #include "swow_buffer.h"
 
+#include "swow_exception.h"
 #include "swow_stream.h" /* for Socket->open(stream) */
+#include "swow_utils.h"
+#include "zend_hash.h"
+#include "zend_types.h"
+
+#include <openssl/evp.h>
+#include <string.h>
 
 SWOW_API zend_class_entry *swow_socket_ce;
 SWOW_API zend_object_handlers swow_socket_handlers;
@@ -676,6 +684,7 @@ static PHP_METHOD(Swow_Socket, enableCrypto)
     cat_socket_crypto_options_t options;
     cat_bool_t is_client = !cat_socket_is_server_connection(socket);
     cat_bool_t ret;
+    cat_ssl_peer_fingerprint_t *fingerprints = NULL;
 
     ZEND_PARSE_PARAMETERS_START(0, 1)
         Z_PARAM_OPTIONAL
@@ -686,9 +695,9 @@ static PHP_METHOD(Swow_Socket, enableCrypto)
     cat_socket_crypto_options_init(&options, is_client);
     options.load_ca = swow_load_stream_cafile;
     if (options_array != NULL) {
-        swow_hash_str_fetch_bool(options_array, "verify_peer", &options.verify_peer);
-        swow_hash_str_fetch_bool(options_array, "verify_peer_name", &options.verify_peer_name);
-        swow_hash_str_fetch_bool(options_array, "allow_self_signed", &options.allow_self_signed);
+        swow_hash_str_fetch_bool_field(options_array, "verify_peer", options.verify_peer);
+        swow_hash_str_fetch_bool_field(options_array, "verify_peer_name", options.verify_peer_name);
+        swow_hash_str_fetch_bool_field(options_array, "allow_self_signed", options.allow_self_signed);
         swow_hash_str_fetch_int(options_array, "verify_depth", &options.verify_depth);
         swow_hash_str_fetch_str(options_array, "ca_file", &options.ca_file);
         swow_hash_str_fetch_str(options_array, "ca_path", &options.ca_path);
@@ -707,13 +716,125 @@ static PHP_METHOD(Swow_Socket, enableCrypto)
         swow_hash_str_fetch_str(options_array, "passphrase", &options.passphrase);
         swow_hash_str_fetch_str(options_array, "certificate", &options.certificate);
         swow_hash_str_fetch_str(options_array, "certificate_key", &options.certificate_key);
-        swow_hash_str_fetch_bool(options_array, "no_ticket", &options.no_ticket);
-        swow_hash_str_fetch_bool(options_array, "no_compression", &options.no_compression);
-        // TODO: SNI related things
+        swow_hash_str_fetch_bool_field(options_array, "no_ticket", options.no_ticket);
+        swow_hash_str_fetch_bool_field(options_array, "no_compression", options.no_compression);
         swow_hash_str_fetch_str(options_array, "peer_name", &options.peer_name);
+
+        zval *zpeer_fingerprint = zend_hash_str_find(options_array, CAT_STRL("peer_fingerprint"));
+        if (zpeer_fingerprint != NULL) {
+            /*
+             * according to PHP documentation:
+             * When a string is used, the length will determine which hashing algorithm is applied, either "md5" (32) or "sha1" (40).
+             * When an array is used, the keys indicate the hashing algorithm name and each corresponding value is the expected digest. 
+             * but this error handling behavior is not confirmed to PHP
+             * we error here right now, donot continue
+             * (PHP will try to connect/accept then verify the fingerprint and it will fail)
+             */
+            if (Z_TYPE_P(zpeer_fingerprint) == IS_STRING) {
+                // single kind of fingerprint
+                fingerprints = (cat_ssl_peer_fingerprint_t *) cat_calloc(2 * sizeof(cat_ssl_peer_fingerprint_t) + EVP_MAX_MD_SIZE, 1);
+#if CAT_ALLOC_HANDLE_ERRORS
+                if (unlikely(fingerprints == NULL)) {
+                    swow_throw_exception(swow_socket_exception_ce, CAT_ENOMEM, "failed to allocate memory for peer fingerprints");
+                    RETURN_THROWS();
+                }
+#endif
+                switch (Z_STRLEN_P(zpeer_fingerprint)) {
+                case 32:
+                    fingerprints[0].algorithm = "md5";
+                    break;
+                case 40:
+                    fingerprints[0].algorithm = "sha1";
+                    break;
+                default:
+                    swow_throw_exception(swow_socket_exception_ce, CAT_EINVAL, "invalid peer fingerprint length: %zu, only md5 (32) or sha1 (40) are supported", Z_STRLEN_P(zpeer_fingerprint));
+                    cat_free(fingerprints);
+                    fingerprints = NULL;
+                    RETURN_THROWS();
+                }
+                if (swow_utils_parse_hex_string(
+                    (unsigned char *) (fingerprints + 2),
+                    Z_STRVAL_P(zpeer_fingerprint),
+                    Z_STRLEN_P(zpeer_fingerprint)
+                ) < 0) {
+                    swow_throw_exception(swow_socket_exception_ce, CAT_EINVAL, "invalid peer fingerprint, expected hex string");
+                    cat_free(fingerprints);
+                    fingerprints = NULL;
+                    RETURN_THROWS();
+                }
+                fingerprints[0].fingerprint = (unsigned char *) (fingerprints + 2);
+            } else if (Z_TYPE_P(zpeer_fingerprint) == IS_ARRAY) {
+                uint32_t count = zend_hash_num_elements(Z_ARR_P(zpeer_fingerprint));
+                if (count == 0) {
+                    swow_throw_exception(swow_socket_exception_ce, CAT_EINVAL, "invalid peer fingerprint, expected array with at least one element");
+                    RETURN_THROWS();
+                }
+                fingerprints = (cat_ssl_peer_fingerprint_t *) cat_calloc(
+                    count * (EVP_MAX_MD_SIZE + sizeof(cat_ssl_peer_fingerprint_t)) + sizeof(cat_ssl_peer_fingerprint_t),
+                    1
+                );
+#if CAT_ALLOC_HANDLE_ERRORS
+                if (unlikely(fingerprints == NULL)) {
+                    swow_throw_exception(swow_socket_exception_ce, CAT_ENOMEM, "failed to allocate memory for peer fingerprints");
+                    RETURN_THROWS();
+                }
+#endif
+                unsigned char *p_binary_digest = (unsigned char *) (fingerprints + count + 1);
+                size_t i = 0;
+                ZEND_HASH_FOREACH_STR_KEY_VAL(Z_ARRVAL_P(zpeer_fingerprint), zend_string *key, zval *value) {
+                    if (key == NULL || value == NULL) {
+                        swow_throw_exception(swow_socket_exception_ce, CAT_EINVAL, "invalid peer fingerprint, expected array with string key and hex string value");
+                        cat_free(fingerprints);
+                        fingerprints = NULL;
+                        RETURN_THROWS();
+                    }
+                    // I'm not sure if ZSTR_VAL(key) is null-terminated
+                    // but PHP passes it to EVP_get_digestbyname/OBJ_NAME_get
+                    // so we assume it is null-terminated
+                    fingerprints[i].algorithm = ZSTR_VAL(key);
+
+                    // check if the algo is supported
+                    const EVP_MD *md = (const EVP_MD *) OBJ_NAME_get(fingerprints[i].algorithm, OBJ_NAME_TYPE_MD_METH);
+                    if (md == NULL) {
+                        swow_throw_exception(swow_socket_exception_ce, CAT_EINVAL, "invalid peer fingerprint algorithm \"%s\"", ZSTR_VAL(key));
+                        cat_free(fingerprints);
+                        fingerprints = NULL;
+                        RETURN_THROWS();
+                    }
+                    size_t digest_length = (size_t) EVP_MD_size(md);
+                    if (2 * digest_length != Z_STRLEN_P(value)) {
+                        swow_throw_exception(swow_socket_exception_ce, CAT_EINVAL, "invalid peer fingerprint hex string length, expected %zu, got %zu", 2 * digest_length, Z_STRLEN_P(value));
+                        cat_free(fingerprints);
+                        fingerprints = NULL;
+                        RETURN_THROWS();
+                    }
+
+                    if (swow_utils_parse_hex_string(
+                        p_binary_digest + (i * EVP_MAX_MD_SIZE),
+                        Z_STRVAL_P(value),
+                        Z_STRLEN_P(value)
+                    ) < 0) {
+                        swow_throw_exception(swow_socket_exception_ce, CAT_EINVAL, "invalid peer fingerprint value, expected hex string");
+                        cat_free(fingerprints);
+                        fingerprints = NULL;
+                        RETURN_THROWS();
+                    }
+                    fingerprints[i].fingerprint = p_binary_digest + (i * EVP_MAX_MD_SIZE);
+                    i++;
+                } ZEND_HASH_FOREACH_END();
+            } else {
+                swow_throw_exception(swow_socket_exception_ce, CAT_EINVAL, "invalid peer fingerprint, expected string or array");
+                RETURN_THROWS();
+            }
+        }
     }
+    options.peer_fingerprints = fingerprints;
 
     ret = cat_socket_enable_crypto(socket, &options);
+
+    if (fingerprints != NULL) {
+        cat_free(fingerprints);
+    }
 
     if (UNEXPECTED(!ret)) {
         swow_throw_exception_with_last(swow_socket_exception_ce);

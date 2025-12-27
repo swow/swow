@@ -85,7 +85,7 @@ class CertificateGenerator
         openssl_x509_export_to_file($this->ca, $file);
     }
 
-    private function generateCertAndKey($commonNameForCert, $file, $curve = 'prime256v1', $subjectAltName = null)
+    private function generateCertAndKey($commonNameForCert, $file, $curve = 'prime256v1', $subjectAltName = null, $extKeyUsage = null)
     {
         $dn = [
             'countryName' => 'BY',
@@ -98,6 +98,7 @@ class CertificateGenerator
         }
 
         $subjectAltNameConfig = $subjectAltName ? "subjectAltName = $subjectAltName" : "";
+        $extKeyUsageConfig = $extKeyUsage ? "extendedKeyUsage = $extKeyUsage" : "";
         $configCode = <<<CONFIG
 [ req ]
 distinguished_name = req_distinguished_name
@@ -110,10 +111,12 @@ default_bits = 2048
 basicConstraints = CA:FALSE
 keyUsage = nonRepudiation, digitalSignature, keyEncipherment
 $subjectAltNameConfig
+$extKeyUsageConfig
 
 [ usr_cert ]
 basicConstraints = CA:FALSE
 $subjectAltNameConfig
+$extKeyUsageConfig
 CONFIG;
         $configFile = $file . '.cnf';
         file_put_contents($configFile, $configCode);
@@ -143,9 +146,9 @@ CONFIG;
     }
 
     public function saveNewCertAsFileWithKey(
-        $commonNameForCert, $file, $curve = 'prime256v1', $subjectAltName = null
+        $commonNameForCert, $file, $curve = 'prime256v1', $subjectAltName = null, $extKeyUsage = null
     ) {
-        $config = $this->generateCertAndKey($commonNameForCert, $file, $curve, $subjectAltName);
+        $config = $this->generateCertAndKey($commonNameForCert, $file, $curve, $subjectAltName, $extKeyUsage);
 
         $certText = '';
         openssl_x509_export($this->lastCert, $certText);
@@ -159,9 +162,9 @@ CONFIG;
     }
 
     public function saveNewCertAndKey(
-        $commonNameForCert, $certFile, $keyFile, $keyLength = null, $subjectAltName = null
+        $commonNameForCert, $certFile, $keyFile, $keyLength = null, $subjectAltName = null, $extKeyUsage = null
     ) {
-        $config = $this->generateCertAndKey($commonNameForCert, $certFile, $keyLength, $subjectAltName);
+        $config = $this->generateCertAndKey($commonNameForCert, $certFile, $keyLength, $subjectAltName, $extKeyUsage);
 
         openssl_x509_export_to_file($this->lastCert, $certFile);
         openssl_pkey_export_to_file($this->lastKey, $keyFile, null, $config);
@@ -170,9 +173,9 @@ CONFIG;
     }
 
     public function saveNewCertAndPubKey(
-        $commonNameForCert, $certFile, $pubKeyFile, $keyLength = null, $subjectAltName = null
+        $commonNameForCert, $certFile, $pubKeyFile, $keyLength = null, $subjectAltName = null, $extKeyUsage = null
     ) {
-        $config = $this->generateCertAndKey($commonNameForCert, $certFile, $keyLength, $subjectAltName);
+        $config = $this->generateCertAndKey($commonNameForCert, $certFile, $keyLength, $subjectAltName, $extKeyUsage);
 
         openssl_x509_export_to_file($this->lastCert, $certFile);
 
