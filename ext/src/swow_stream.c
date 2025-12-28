@@ -19,6 +19,7 @@
 #include "swow_stream.h"
 
 #include "swow_hook.h"
+#include "swow_utils.h"
 
 #include "cat_socket.h"
 #include "cat_time.h" /* for time_tv2to() */
@@ -761,22 +762,24 @@ static int swow_stream_enable_crypto(php_stream *stream,
     php_stream_xport_crypto_param *cparam)
 {
     bool encrypted = cat_socket_is_encrypted(socket);
+    cat_ssl_peer_fingerprint_t *fingerprints = NULL;
 
     if (cparam->inputs.activate && !encrypted) {
         cat_socket_crypto_options_t options;
         bool is_client = swow_sock->ssl.is_client;
         zval *val;
+        zval *zpeer_fingerprint = NULL;
 
         cat_socket_crypto_options_init(&options, is_client);
         options.load_ca = swow_load_stream_cafile;
-        if (GET_VER_OPT("verify_peer") && !zend_is_true(val)) {
-            options.verify_peer = cat_false;
+        if (GET_VER_OPT("verify_peer")) {
+            options.verify_peer = zend_is_true(val) ? cat_true : cat_false;
         }
-        if (GET_VER_OPT("verify_peer_name") && !zend_is_true(val)) {
-            options.verify_peer_name = cat_false;
+        if (GET_VER_OPT("verify_peer_name")) {
+            options.verify_peer_name = zend_is_true(val) ? cat_true : cat_false;
         }
-        if (GET_VER_OPT("allow_self_signed") && zend_is_true(val)) {
-            options.allow_self_signed = cat_true;
+        if (GET_VER_OPT("allow_self_signed")) {
+            options.allow_self_signed = zend_is_true(val) ? cat_true : cat_false;
         }
         GET_VER_OPT_LONG("verify_depth", options.verify_depth);
         GET_VER_OPT_STRING("cafile", options.ca_file);
@@ -799,11 +802,11 @@ static int swow_stream_enable_crypto(php_stream *stream,
 #endif
         GET_VER_OPT_STRING("local_cert", options.certificate);
         GET_VER_OPT_STRING("local_pk", options.certificate_key);
-        if (GET_VER_OPT("no_ticket") && zend_is_true(val)) {
-            options.no_ticket = cat_true;
+        if (GET_VER_OPT("no_ticket")) {
+            options.no_ticket = zend_is_true(val) ? cat_true : cat_false;
         }
-        if (!GET_VER_OPT("disable_compression") || zend_is_true(val)) {
-            options.no_compression = cat_true;
+        if (GET_VER_OPT("disable_compression")) {
+            options.no_compression = zend_is_true(val) ? cat_true : cat_false;
         }
         GET_VER_OPT_STRING("peer_name", options.peer_name);
         if (is_client) {
@@ -815,11 +818,146 @@ static int swow_stream_enable_crypto(php_stream *stream,
                 }
             }
         }
+        if (GET_VER_OPT("peer_fingerprint")) {
+            zpeer_fingerprint = val;
+
+            /*
+             * according to PHP documentation:
+             * When a string is used, the length will determine which hashing algorithm is applied, either "md5" (32) or "sha1" (40).
+             * When an array is used, the keys indicate the hashing algorithm name and each corresponding value is the expected digest. 
+             * but this error handling behavior is not confirmed to PHP
+             * we error here right now, donot continue
+             * (PHP will try to connect/accept then verify the fingerprint and it will fail)
+             */
+             if (Z_TYPE_P(zpeer_fingerprint) == IS_STRING) {
+                // single kind of fingerprint
+                fingerprints = (cat_ssl_peer_fingerprint_t *) cat_calloc(2 * sizeof(cat_ssl_peer_fingerprint_t) + EVP_MAX_MD_SIZE, 1);
+#if CAT_ALLOC_HANDLE_ERRORS
+                if (unlikely(fingerprints == NULL)) {
+                    php_error_docref(NULL, E_WARNING, "failed to allocate memory for peer fingerprints");
+                    return -1;
+                }
+#endif
+                switch (Z_STRLEN_P(zpeer_fingerprint)) {
+                case 32:
+                    fingerprints[0].algorithm = "md5";
+                    break;
+                case 40:
+                    fingerprints[0].algorithm = "sha1";
+                    break;
+                default:
+                    // php will try to get the digest with algorithm (const char *) NULL, then fail
+                    // so we fail here right now with "Unknown digest algorithm" error
+                    php_error_docref(NULL, E_WARNING, "Unknown digest algorithm");
+                    cat_free(fingerprints);
+                    fingerprints = NULL;
+                    return -1;
+                }
+                if (swow_utils_parse_hex_string(
+                    (unsigned char *) (fingerprints + 2),
+                    Z_STRVAL_P(zpeer_fingerprint),
+                    Z_STRLEN_P(zpeer_fingerprint)
+                ) < 0) {
+                    // php will try to compare a not-hex string as digest with a hex string, this always fails
+                    php_error_docref(NULL, E_WARNING,
+                        "peer_fingerprint match failure"
+                    );
+                    cat_free(fingerprints);
+                    fingerprints = NULL;
+                    return -1;
+                }
+                fingerprints[0].fingerprint = (unsigned char *) (fingerprints + 2);
+            } else if (Z_TYPE_P(zpeer_fingerprint) == IS_ARRAY) {
+                uint32_t count = zend_hash_num_elements(Z_ARR_P(zpeer_fingerprint));
+                if (count == 0) {
+                    php_error_docref(NULL, E_WARNING, "Invalid peer_fingerprint array; [algo => fingerprint] form required");
+                    // php will try to compare the fingerprint, so we warn here
+                    php_error_docref(NULL, E_WARNING,
+                        "peer_fingerprint match failure"
+                    );
+                    return -1;
+                }
+                fingerprints = (cat_ssl_peer_fingerprint_t *) cat_calloc(
+                    count * (EVP_MAX_MD_SIZE + sizeof(cat_ssl_peer_fingerprint_t)) + sizeof(cat_ssl_peer_fingerprint_t),
+                    1
+                );
+#if CAT_ALLOC_HANDLE_ERRORS
+                if (unlikely(fingerprints == NULL)) {
+                    php_error_docref(NULL, E_WARNING, "failed to allocate memory for peer fingerprints");
+                    return -1;
+                }
+#endif
+                unsigned char *p_binary_digest = (unsigned char *) (fingerprints + count + 1);
+                size_t i = 0;
+                ZEND_HASH_FOREACH_STR_KEY_VAL(Z_ARRVAL_P(zpeer_fingerprint), zend_string *key, zval *value) {
+                    if (key == NULL || value == NULL) {
+                        php_error_docref(NULL, E_WARNING, "Invalid peer_fingerprint array; [algo => fingerprint] form required");
+                        // php will try to compare the fingerprint, so we warn here
+                        php_error_docref(NULL, E_WARNING,
+                            "peer_fingerprint match failure"
+                        );
+                        cat_free(fingerprints);
+                        fingerprints = NULL;
+                        return -1;
+                    }
+                    // I'm not sure if ZSTR_VAL(key) is null-terminated
+                    // but PHP passes it to EVP_get_digestbyname/OBJ_NAME_get
+                    // so we assume it is null-terminated
+                    fingerprints[i].algorithm = ZSTR_VAL(key);
+                    // then, php will try compare
+
+                    // check if the algo is supported
+                    const EVP_MD *md = (const EVP_MD *) OBJ_NAME_get(fingerprints[i].algorithm, OBJ_NAME_TYPE_MD_METH);
+                    if (md == NULL) {
+                        php_error_docref(NULL, E_WARNING, "Unknown digest algorithm");
+                        cat_free(fingerprints);
+                        fingerprints = NULL;
+                        return -1;
+                    }
+                    size_t digest_length = (size_t) EVP_MD_size(md);
+                    if (2 * digest_length != Z_STRLEN_P(value)) {
+                        // php will never match with a different length digest
+                        php_error_docref(NULL, E_WARNING, "peer_fingerprint match failure");
+                        cat_free(fingerprints);
+                        fingerprints = NULL;
+                        return -1;
+                    }
+
+                    if (swow_utils_parse_hex_string(
+                        p_binary_digest + (i * EVP_MAX_MD_SIZE),
+                        Z_STRVAL_P(value),
+                        Z_STRLEN_P(value)
+                    ) < 0) {
+                        // php will never match with a not-hex string as digest
+                        php_error_docref(NULL, E_WARNING, "peer_fingerprint match failure");
+                        cat_free(fingerprints);
+                        fingerprints = NULL;
+                        return -1;
+                    }
+                    fingerprints[i].fingerprint = p_binary_digest + (i * EVP_MAX_MD_SIZE);
+                    i++;
+                } ZEND_HASH_FOREACH_END();
+            } else {
+                php_error_docref(NULL, E_WARNING,
+                    "Expected peer fingerprint must be a string or an array"
+                );
+                return -1;
+            }
+        }
+
         cat_timeout_t timeout = cat_time_tv2to(swow_sock->ssl.is_client ?
             &swow_sock->ssl.connect_timeout :
             &swow_sock->sock.timeout
         );
-        return cat_socket_enable_crypto_ex(socket, &options, timeout) ? 1 : -1;
+
+        options.peer_fingerprints = fingerprints;
+
+        int ret = cat_socket_enable_crypto_ex(socket, &options, timeout);
+
+        if (fingerprints != NULL) {
+            cat_free(fingerprints);
+        }
+        return ret ? 1 : -1;
     } else if (!cparam->inputs.activate && encrypted) {
         /* deactivate - common for server/client */
         // cat_socket_disable_crypto(socket->internal->ssl);

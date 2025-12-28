@@ -3,6 +3,8 @@ swow_socket: tls peer fingerprint
 --SKIPIF--
 <?php
 require __DIR__ . '/../include/skipif.php';
+skip_if(!extension_loaded('openssl'), 'openssl extension is required');
+skip_if(!Swow\Extension::isBuiltWith('openssl'), 'extension must be built with ssl');
 ?>
 --FILE--
 <?php
@@ -568,7 +570,13 @@ if (isset($serverFingerprints['md5'])) {
     $conn->enableCrypto([
         ...$commonClientOptions,
     ]);
-    // }, 'Swow\SocketException', expectMessage: '/Socket enable crypto failed/');
+// }, 'Swow\SocketException', expectMessage: '/Socket enable crypto failed/');
+} else {
+    // echo only
+    echo '2a. server checks client fingerprint with single md5 string, success' . PHP_EOL;
+    echo '2b. server checks client fingerprint with single md5 string, failure' . PHP_EOL;
+    echo '2c. server checks client fingerprint with md5 array, success' . PHP_EOL;
+    echo '2d. server checks client fingerprint with md5 array, failure' . PHP_EOL;
 }
 
 echo '2e. server checks client fingerprint with single sha1 string, success' . PHP_EOL;

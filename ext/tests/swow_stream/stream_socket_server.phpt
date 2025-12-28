@@ -23,14 +23,13 @@ $certificateGenerator->saveNewCertAsFileWithKey('stream_socket_server', $certFil
 $wg = new WaitGroup();
 $wg->add();
 
-Coroutine::run(static function () use ($wg, $certFile): void {
-    $serverUri = 'ssl://0.0.0.0:12346';
-    $serverFlags = STREAM_SERVER_BIND | STREAM_SERVER_LISTEN;
+Coroutine::run(static function () use ($wg, $certFile, &$serverUri): void {
     $serverCtx = stream_context_create(['ssl' => [
         'local_cert' => $certFile,
     ]]);
 
-    $server = stream_socket_server($serverUri, $errno, $errMessage, $serverFlags, $serverCtx);
+    $server = stream_socket_server('ssl://127.0.0.1:0', $errno, $errMessage, STREAM_SERVER_BIND | STREAM_SERVER_LISTEN, $serverCtx);
+    $serverUri = stream_socket_get_name($server, false);
     $wg->done();
 
     $ret = stream_socket_accept($server);
@@ -45,7 +44,7 @@ $context = stream_context_create(['ssl' => [
     'cafile' => "{$cacertFile}",
     'peer_name' => 'stream_socket_server',
 ]]);
-$ret = file_get_contents('https://localhost:12346', context: $context);
+$ret = file_get_contents('https://' . $serverUri, context: $context);
 var_dump($ret);
 
 echo 'Done' . PHP_EOL;
