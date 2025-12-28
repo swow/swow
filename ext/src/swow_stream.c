@@ -18,6 +18,7 @@
 
 #include "swow_stream.h"
 
+#include "cat.h"
 #include "swow_hook.h"
 #include "swow_utils.h"
 
@@ -834,7 +835,7 @@ static int swow_stream_enable_crypto(php_stream *stream,
                 fingerprints = (cat_ssl_peer_fingerprint_t *) cat_calloc(2 * sizeof(cat_ssl_peer_fingerprint_t) + EVP_MAX_MD_SIZE, 1);
 #if CAT_ALLOC_HANDLE_ERRORS
                 if (unlikely(fingerprints == NULL)) {
-                    php_error_docref(NULL, E_WARNING, "failed to allocate memory for peer fingerprints");
+                    cat_update_last_error(CAT_ENOMEM, "failed to allocate memory for peer fingerprints");
                     return -1;
                 }
 #endif
@@ -859,9 +860,7 @@ static int swow_stream_enable_crypto(php_stream *stream,
                     Z_STRLEN_P(zpeer_fingerprint)
                 ) < 0) {
                     // php will try to compare a not-hex string as digest with a hex string, this always fails
-                    php_error_docref(NULL, E_WARNING,
-                        "peer_fingerprint match failure"
-                    );
+                    cat_update_last_error(CAT_EINVAL, "peer_fingerprint match failure");
                     cat_free(fingerprints);
                     fingerprints = NULL;
                     return -1;
@@ -872,9 +871,7 @@ static int swow_stream_enable_crypto(php_stream *stream,
                 if (count == 0) {
                     php_error_docref(NULL, E_WARNING, "Invalid peer_fingerprint array; [algo => fingerprint] form required");
                     // php will try to compare the fingerprint, so we warn here
-                    php_error_docref(NULL, E_WARNING,
-                        "peer_fingerprint match failure"
-                    );
+                    cat_update_last_error(CAT_EINVAL, "peer_fingerprint match failure");
                     return -1;
                 }
                 fingerprints = (cat_ssl_peer_fingerprint_t *) cat_calloc(
@@ -883,7 +880,7 @@ static int swow_stream_enable_crypto(php_stream *stream,
                 );
 #if CAT_ALLOC_HANDLE_ERRORS
                 if (unlikely(fingerprints == NULL)) {
-                    php_error_docref(NULL, E_WARNING, "failed to allocate memory for peer fingerprints");
+                    cat_update_last_error(CAT_ENOMEM, "failed to allocate memory for peer fingerprints");
                     return -1;
                 }
 #endif
@@ -893,9 +890,7 @@ static int swow_stream_enable_crypto(php_stream *stream,
                     if (key == NULL || value == NULL) {
                         php_error_docref(NULL, E_WARNING, "Invalid peer_fingerprint array; [algo => fingerprint] form required");
                         // php will try to compare the fingerprint, so we warn here
-                        php_error_docref(NULL, E_WARNING,
-                            "peer_fingerprint match failure"
-                        );
+                        cat_update_last_error(CAT_EINVAL, "peer_fingerprint match failure");
                         cat_free(fingerprints);
                         fingerprints = NULL;
                         return -1;
@@ -909,7 +904,7 @@ static int swow_stream_enable_crypto(php_stream *stream,
                     // check if the algo is supported
                     const EVP_MD *md = (const EVP_MD *) OBJ_NAME_get(fingerprints[i].algorithm, OBJ_NAME_TYPE_MD_METH);
                     if (md == NULL) {
-                        php_error_docref(NULL, E_WARNING, "Unknown digest algorithm");
+                        cat_update_last_error(CAT_ENOTSUP, "Unknown digest algorithm");
                         cat_free(fingerprints);
                         fingerprints = NULL;
                         return -1;
@@ -917,7 +912,7 @@ static int swow_stream_enable_crypto(php_stream *stream,
                     size_t digest_length = (size_t) EVP_MD_size(md);
                     if (2 * digest_length != Z_STRLEN_P(value)) {
                         // php will never match with a different length digest
-                        php_error_docref(NULL, E_WARNING, "peer_fingerprint match failure");
+                        cat_update_last_error(CAT_EINVAL, "peer_fingerprint match failure");
                         cat_free(fingerprints);
                         fingerprints = NULL;
                         return -1;
@@ -929,7 +924,7 @@ static int swow_stream_enable_crypto(php_stream *stream,
                         Z_STRLEN_P(value)
                     ) < 0) {
                         // php will never match with a not-hex string as digest
-                        php_error_docref(NULL, E_WARNING, "peer_fingerprint match failure");
+                        cat_update_last_error(CAT_EINVAL, "peer_fingerprint match failure");
                         cat_free(fingerprints);
                         fingerprints = NULL;
                         return -1;
@@ -938,9 +933,7 @@ static int swow_stream_enable_crypto(php_stream *stream,
                     i++;
                 } ZEND_HASH_FOREACH_END();
             } else {
-                php_error_docref(NULL, E_WARNING,
-                    "Expected peer fingerprint must be a string or an array"
-                );
+                cat_update_last_error(CAT_EINVAL, "Expected peer fingerprint must be a string or an array");
                 return -1;
             }
         }
