@@ -54,6 +54,10 @@ CAT_GLOBALS_DECLARE(swow_stream);
     } while (0)
 
 #ifdef CAT_SSL
+
+# define map_proto_versions(methods) ((methods) >> 1) & CAT_SSL_PROTOCOLS_ALL
+
+// from ext/openssl/xp_ssl.c
 /* Flags for determining allowed stream crypto methods */
 # define STREAM_CRYPTO_IS_CLIENT            (1<<0)
 # define STREAM_CRYPTO_METHOD_SSLv2         (1<<1)
@@ -751,6 +755,7 @@ static int swow_stream_setup_crypto(php_stream *stream,
     /* We need to do slightly different things based on client/server method
      * so lets remember which method was selected */
     swow_sock->ssl.is_client = cparam->inputs.method & STREAM_CRYPTO_IS_CLIENT;
+    swow_sock->ssl.method = cparam->inputs.method;
 
     return SUCCESS;
 }
@@ -768,6 +773,8 @@ static int swow_stream_enable_crypto(php_stream *stream,
     if (cparam->inputs.activate && !encrypted) {
         cat_socket_crypto_options_t options;
         bool is_client = swow_sock->ssl.is_client;
+        int min_proto_version = 0;
+        int max_proto_version = 0;
         zval *val;
         zval *zpeer_fingerprint = NULL;
 
@@ -818,6 +825,26 @@ static int swow_stream_enable_crypto(php_stream *stream,
                     options.peer_name = swow_sock->ssl.url_name;
                 }
             }
+        }
+        options.protocols = map_proto_versions(swow_sock->ssl.method);
+        GET_VER_OPT_LONG("min_proto_version", min_proto_version);
+        GET_VER_OPT_LONG("max_proto_version", max_proto_version);
+        if (min_proto_version > 0 || max_proto_version > 0) {
+            options.protocols = CAT_SSL_PROTOCOLS_ALL;
+            
+            if (min_proto_version == 0) {
+                min_proto_version = PHP_OPENSSL_MIN_PROTO_VERSION;
+            }
+            if (max_proto_version == 0) {
+                max_proto_version = PHP_OPENSSL_MAX_PROTO_VERSION;
+            }
+            int vers = 0;
+            for (int ver = min_proto_version; ver <= max_proto_version; ver <<= 1) {
+                if (ver & options.protocols) {
+                    vers |= ver;
+                }
+            }
+            options.protocols = map_proto_versions(vers);
         }
         if (GET_VER_OPT("peer_fingerprint")) {
             zpeer_fingerprint = val;
