@@ -387,6 +387,7 @@ EOF
     swow_fs.c \
     swow_stream.c \
     swow_stream_wrapper.c \
+    swow_ssl.c \
     swow_signal.c \
     swow_watchdog.c \
     swow_closure.c \

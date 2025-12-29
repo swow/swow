@@ -22,6 +22,7 @@
 #include "cat_ssl.h"
 #include "swow_hook.h"
 #include "swow_utils.h"
+#include "swow_ssl.h"
 
 #include "cat_socket.h"
 #include "cat_time.h" /* for time_tv2to() */
@@ -761,9 +762,6 @@ static int swow_stream_setup_crypto(php_stream *stream,
     return SUCCESS;
 }
 
-// no export yet
-cat_bool_t swow_load_stream_cafile(cat_ssl_context_t *context, struct cat_socket_crypto_options_s *options);
-
 static int swow_stream_enable_crypto(php_stream *stream,
     swow_netstream_data_t *swow_sock, php_netstream_data_t *sock, cat_socket_t *socket,
     php_stream_xport_crypto_param *cparam)
@@ -777,7 +775,6 @@ static int swow_stream_enable_crypto(php_stream *stream,
         int min_proto_version = 0;
         int max_proto_version = 0;
         zval *val;
-        zval *zpeer_fingerprint = NULL;
 
         cat_socket_crypto_options_init(&options, is_client);
         options.load_ca = swow_load_stream_cafile;
@@ -877,130 +874,17 @@ static int swow_stream_enable_crypto(php_stream *stream,
         options.protocols = map_proto_versions(vers);
         // fprintf(stderr, "%s options.protocols: %s\n", is_client ? "client" : "server", cat_ssl_protocols_str(options.protocols));
         if (GET_VER_OPT("peer_fingerprint")) {
-            zpeer_fingerprint = val;
-
-            /*
-             * according to PHP documentation:
-             * When a string is used, the length will determine which hashing algorithm is applied, either "md5" (32) or "sha1" (40).
-             * When an array is used, the keys indicate the hashing algorithm name and each corresponding value is the expected digest. 
-             * but this error handling behavior is not confirmed to PHP
-             * we error here right now, donot continue
-             * (PHP will try to connect/accept then verify the fingerprint and it will fail)
-             */
-             if (Z_TYPE_P(zpeer_fingerprint) == IS_STRING) {
-                // single kind of fingerprint
-                fingerprints = (cat_ssl_peer_fingerprint_t *) cat_calloc(2 * sizeof(cat_ssl_peer_fingerprint_t) + EVP_MAX_MD_SIZE, 1);
-#if CAT_ALLOC_HANDLE_ERRORS
-                if (unlikely(fingerprints == NULL)) {
-                    cat_update_last_error(CAT_ENOMEM, "failed to allocate memory for peer fingerprints");
-                    return -1;
-                }
-#endif
-                switch (Z_STRLEN_P(zpeer_fingerprint)) {
-                case 32:
-                    fingerprints[0].algorithm = "md5";
-                    break;
-                case 40:
-                    fingerprints[0].algorithm = "sha1";
-                    break;
-                default:
-                    // php will try to get the digest with algorithm (const char *) NULL, then fail
-                    // so we fail here right now with "Unknown digest algorithm" error
-                    cat_update_last_error(CAT_EINVAL, "Unknown digest algorithm");
-                    cat_free(fingerprints);
-                    fingerprints = NULL;
-                    return -1;
-                }
-                if (swow_utils_parse_hex_string(
-                    (unsigned char *) (fingerprints + 2),
-                    Z_STRVAL_P(zpeer_fingerprint),
-                    Z_STRLEN_P(zpeer_fingerprint)
-                ) < 0) {
-                    // php will try to compare a not-hex string as digest with a hex string, this always fails
-                    cat_update_last_error(CAT_EINVAL, "peer_fingerprint match failure");
-                    cat_free(fingerprints);
-                    fingerprints = NULL;
-                    return -1;
-                }
-                fingerprints[0].fingerprint = (unsigned char *) (fingerprints + 2);
-            } else if (Z_TYPE_P(zpeer_fingerprint) == IS_ARRAY) {
-                uint32_t count = zend_hash_num_elements(Z_ARR_P(zpeer_fingerprint));
-                if (count == 0) {
-                    php_error_docref(NULL, E_WARNING, "Invalid peer_fingerprint array; [algo => fingerprint] form required");
-                    // php will try to compare the fingerprint, so we warn here
-                    cat_update_last_error(CAT_EINVAL, "peer_fingerprint match failure");
-                    return -1;
-                }
-                fingerprints = (cat_ssl_peer_fingerprint_t *) cat_calloc(
-                    count * (EVP_MAX_MD_SIZE + sizeof(cat_ssl_peer_fingerprint_t)) + sizeof(cat_ssl_peer_fingerprint_t),
-                    1
-                );
-#if CAT_ALLOC_HANDLE_ERRORS
-                if (unlikely(fingerprints == NULL)) {
-                    cat_update_last_error(CAT_ENOMEM, "failed to allocate memory for peer fingerprints");
-                    return -1;
-                }
-#endif
-                unsigned char *p_binary_digest = (unsigned char *) (fingerprints + count + 1);
-                size_t i = 0;
-                ZEND_HASH_FOREACH_STR_KEY_VAL(Z_ARRVAL_P(zpeer_fingerprint), zend_string *key, zval *value) {
-                    if (key == NULL || value == NULL) {
-                        php_error_docref(NULL, E_WARNING, "Invalid peer_fingerprint array; [algo => fingerprint] form required");
-                        // php will try to compare the fingerprint, so we warn here
-                        cat_update_last_error(CAT_EINVAL, "peer_fingerprint match failure");
-                        cat_free(fingerprints);
-                        fingerprints = NULL;
-                        return -1;
-                    }
-                    // I'm not sure if ZSTR_VAL(key) is null-terminated
-                    // but PHP passes it to EVP_get_digestbyname/OBJ_NAME_get
-                    // so we assume it is null-terminated
-                    fingerprints[i].algorithm = ZSTR_VAL(key);
-                    // then, php will try compare
-
-                    // check if the algo is supported
-                    const EVP_MD *md = (const EVP_MD *) OBJ_NAME_get(fingerprints[i].algorithm, OBJ_NAME_TYPE_MD_METH);
-                    if (md == NULL) {
-                        cat_update_last_error(CAT_ENOTSUP, "Unknown digest algorithm");
-                        cat_free(fingerprints);
-                        fingerprints = NULL;
-                        return -1;
-                    }
-                    size_t digest_length = (size_t) EVP_MD_size(md);
-                    if (2 * digest_length != Z_STRLEN_P(value)) {
-                        // php will never match with a different length digest
-                        cat_update_last_error(CAT_EINVAL, "peer_fingerprint match failure");
-                        cat_free(fingerprints);
-                        fingerprints = NULL;
-                        return -1;
-                    }
-
-                    if (swow_utils_parse_hex_string(
-                        p_binary_digest + (i * EVP_MAX_MD_SIZE),
-                        Z_STRVAL_P(value),
-                        Z_STRLEN_P(value)
-                    ) < 0) {
-                        // php will never match with a not-hex string as digest
-                        cat_update_last_error(CAT_EINVAL, "peer_fingerprint match failure");
-                        cat_free(fingerprints);
-                        fingerprints = NULL;
-                        return -1;
-                    }
-                    fingerprints[i].fingerprint = p_binary_digest + (i * EVP_MAX_MD_SIZE);
-                    i++;
-                } ZEND_HASH_FOREACH_END();
-            } else {
-                cat_update_last_error(CAT_EINVAL, "Expected peer fingerprint must be a string or an array");
+            if (!swow_ssl_enable_peer_fingerprint_verify(val, &fingerprints, 1)) {
+                // failed to enable peer fingerprint check
                 return -1;
             }
+            options.peer_fingerprints = fingerprints;
         }
 
         cat_timeout_t timeout = cat_time_tv2to(swow_sock->ssl.is_client ?
             &swow_sock->ssl.connect_timeout :
             &swow_sock->sock.timeout
         );
-
-        options.peer_fingerprints = fingerprints;
 
         int ret = cat_socket_enable_crypto_ex(socket, &options, timeout);
 
