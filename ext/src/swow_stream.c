@@ -19,6 +19,7 @@
 #include "swow_stream.h"
 
 #include "cat.h"
+#include "cat_ssl.h"
 #include "swow_hook.h"
 #include "swow_utils.h"
 
@@ -826,26 +827,55 @@ static int swow_stream_enable_crypto(php_stream *stream,
                 }
             }
         }
-        options.protocols = map_proto_versions(swow_sock->ssl.method);
-        GET_VER_OPT_LONG("min_proto_version", min_proto_version);
-        GET_VER_OPT_LONG("max_proto_version", max_proto_version);
-        if (min_proto_version > 0 || max_proto_version > 0) {
-            options.protocols = CAT_SSL_PROTOCOLS_ALL;
-            
-            if (min_proto_version == 0) {
+        /*
+         * this is confusing, but php will regard
+         * STREAM_CRYPTO_METHOD_TLSv1_0 | STREAM_CRYPTO_METHOD_TLSv1_2
+         * as "TLSv1_0 to TLSv1_2" not "TLSv1_0 and TLSv1_2"
+         */
+        if (GET_VER_OPT("min_proto_version")) {
+            min_proto_version = (int) zval_get_long(val);
+            if (min_proto_version < PHP_OPENSSL_MIN_PROTO_VERSION || min_proto_version > PHP_OPENSSL_MAX_PROTO_VERSION) {
+                // illegal value, use default
+                // php will try to connect/accept then fail
+                // but we use default value here
                 min_proto_version = PHP_OPENSSL_MIN_PROTO_VERSION;
             }
-            if (max_proto_version == 0) {
-                max_proto_version = PHP_OPENSSL_MAX_PROTO_VERSION;
-            }
-            int vers = 0;
-            for (int ver = min_proto_version; ver <= max_proto_version; ver <<= 1) {
-                if (ver & options.protocols) {
-                    vers |= ver;
+        } else {
+            min_proto_version = PHP_OPENSSL_MIN_PROTO_VERSION;
+            for (int ver = PHP_OPENSSL_MIN_PROTO_VERSION; ver <= PHP_OPENSSL_MAX_PROTO_VERSION; ver <<= 1) {
+                if (ver & swow_sock->ssl.method) {
+                    min_proto_version = ver;
+                    break;
                 }
             }
-            options.protocols = map_proto_versions(vers);
         }
+        if (GET_VER_OPT("max_proto_version")) {
+            max_proto_version = (int) zval_get_long(val);
+            if (max_proto_version < PHP_OPENSSL_MIN_PROTO_VERSION || max_proto_version > PHP_OPENSSL_MAX_PROTO_VERSION) {
+                // illegal value, use default
+                // php will try to connect/accept then fail
+                // but we use default value here
+                max_proto_version = PHP_OPENSSL_MAX_PROTO_VERSION;
+            }
+        } else {
+            max_proto_version = PHP_OPENSSL_MAX_PROTO_VERSION;
+            for (int ver = PHP_OPENSSL_MAX_PROTO_VERSION; ver >= PHP_OPENSSL_MIN_PROTO_VERSION; ver >>= 1) {
+                if (ver & swow_sock->ssl.method) {
+                    max_proto_version = ver;
+                    break;
+                }
+            }
+        }
+        int vers = 0, ver = min_proto_version;
+        while (ver <= max_proto_version && ver > 0) {
+            vers |= ver;
+            if (ver == max_proto_version) {
+                break;
+            }
+            ver <<= 1;
+        }
+        options.protocols = map_proto_versions(vers);
+        // fprintf(stderr, "%s options.protocols: %s\n", is_client ? "client" : "server", cat_ssl_protocols_str(options.protocols));
         if (GET_VER_OPT("peer_fingerprint")) {
             zpeer_fingerprint = val;
 
@@ -876,7 +906,7 @@ static int swow_stream_enable_crypto(php_stream *stream,
                 default:
                     // php will try to get the digest with algorithm (const char *) NULL, then fail
                     // so we fail here right now with "Unknown digest algorithm" error
-                    php_error_docref(NULL, E_WARNING, "Unknown digest algorithm");
+                    cat_update_last_error(CAT_EINVAL, "Unknown digest algorithm");
                     cat_free(fingerprints);
                     fingerprints = NULL;
                     return -1;
