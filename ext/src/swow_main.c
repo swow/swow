@@ -41,7 +41,7 @@
 #include "swow_proc_open.h"
 
 #include "swow_curl.h"
-
+#include "swow_ssl.h"
 #include "swow_pgsql.h"
 
 #include "cat_api.h"
@@ -225,6 +225,9 @@ PHP_MINIT_FUNCTION(swow)
         swow_event_module_init,
         swow_time_module_init,
         swow_buffer_module_init,
+#ifdef CAT_HAVE_OPENSSL
+        swow_ssl_module_init,
+#endif
         swow_socket_module_init,
         swow_dns_module_init,
         swow_stream_module_init,

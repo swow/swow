@@ -768,13 +768,16 @@ static int swow_stream_enable_crypto(php_stream *stream,
 {
     bool encrypted = cat_socket_is_encrypted(socket);
     cat_ssl_peer_fingerprint_t *fingerprints = NULL;
-
+#ifdef CAT_SSL_HAVE_TLS_SNI
+    swow_ssl_server_sni_data_t *sni_contexts = NULL;
+#endif // CAT_SSL_HAVE_TLS_SNI
     if (cparam->inputs.activate && !encrypted) {
         cat_socket_crypto_options_t options;
         bool is_client = swow_sock->ssl.is_client;
         int min_proto_version = 0;
         int max_proto_version = 0;
         zval *val;
+        int ret = -1;
 
         cat_socket_crypto_options_init(&options, is_client);
         options.load_ca = swow_load_stream_cafile;
@@ -876,22 +879,38 @@ static int swow_stream_enable_crypto(php_stream *stream,
         if (GET_VER_OPT("peer_fingerprint")) {
             if (!swow_ssl_enable_peer_fingerprint_verify(val, &fingerprints, 1)) {
                 // failed to enable peer fingerprint check
-                return -1;
+                goto _cleanup;
             }
             options.peer_fingerprints = fingerprints;
         }
+#ifdef CAT_SSL_HAVE_TLS_SNI
+        if (GET_VER_OPT("SNI_server_certs")) {
+            sni_contexts = swow_ssl_server_sni_data_alloc();
+            if (!swow_ssl_enable_server_sni(val, sni_contexts, 1)) {
+                goto _cleanup;
+            }
+            options.before_handshake_callback = swow_ssl_before_handshake_callback;
+            options.before_handshake_callback_data = sni_contexts;
+        }
+#endif // CAT_SSL_HAVE_TLS_SNI
 
         cat_timeout_t timeout = cat_time_tv2to(swow_sock->ssl.is_client ?
             &swow_sock->ssl.connect_timeout :
             &swow_sock->sock.timeout
         );
 
-        int ret = cat_socket_enable_crypto_ex(socket, &options, timeout);
+        ret = cat_socket_enable_crypto_ex(socket, &options, timeout) ? 1 : -1;
 
+_cleanup:
+#ifdef CAT_SSL_HAVE_TLS_SNI
+        if (sni_contexts != NULL) {
+            swow_ssl_server_sni_data_free(sni_contexts);
+        }
+#endif // CAT_SSL_HAVE_TLS_SNI
         if (fingerprints != NULL) {
             cat_free(fingerprints);
         }
-        return ret ? 1 : -1;
+        return ret;
     } else if (!cparam->inputs.activate && encrypted) {
         /* deactivate - common for server/client */
         // cat_socket_disable_crypto(socket->internal->ssl);

@@ -27,6 +27,7 @@
 #include "swow_utils.h"
 
 #include "streams/php_streams_int.h"
+#include "zend_hash.h"
 #include "zend_portability.h"
 
 #ifdef CAT_SSL
@@ -275,6 +276,374 @@ _cleanup:
     }
     *pfingerprints = fingerprints;
     return ret;
+}
+
+#ifndef OPENSSL_NO_TLSEXT
+
+// TODO: implement this (open_basedir limitation)
+// // from ext/openssl/openssl.c @ 040ea4ab5f9e2390ead553104a3a569768c678a5
+
+// /* openssl file path check error function */
+// static void swow_php_openssl_check_path_error(uint32_t arg_num, int type, const char *format, ...)
+// {
+//     va_list va;
+//     const char *arg_name;
+
+//     va_start(va, format);
+
+//     if (type == E_ERROR) {
+//         zend_argument_error_variadic(zend_ce_value_error, arg_num, format, va);
+//     } else {
+//         arg_name = get_active_function_arg_name(arg_num);
+//         php_verror(NULL, arg_name, type, format, va);
+//     }
+//     va_end(va);
+// }
+
+// /* openssl file path check extended */
+// static bool swow_php_openssl_check_path_ex(
+//         const char *file_path, size_t file_path_len, char *real_path, uint32_t arg_num,
+//         bool contains_file_protocol, bool is_from_array, const char *option_name)
+// {
+//     const char *fs_file_path;
+//     size_t fs_file_path_len;
+//     const char *error_msg = NULL;
+//     int error_type = E_WARNING;
+
+//     if (file_path_len == 0) {
+//         real_path[0] = '\0';
+//         return true;
+//     }
+
+//     if (contains_file_protocol) {
+//         size_t path_prefix_len = sizeof("file://") - 1;
+//         if (file_path_len <= path_prefix_len) {
+//             return false;
+//         }
+//         fs_file_path = file_path + path_prefix_len;
+//         fs_file_path_len = file_path_len - path_prefix_len;
+//     } else {
+//         fs_file_path = file_path;
+//         fs_file_path_len = file_path_len;
+//     }
+
+//     if (zend_char_has_nul_byte(fs_file_path, fs_file_path_len)) {
+//         error_msg = "must not contain any null bytes";
+//         error_type = E_ERROR;
+//     } else if (expand_filepath(fs_file_path, real_path) == NULL) {
+//         error_msg = "must be a valid file path";
+//     }
+
+//     if (error_msg != NULL) {
+//         if (arg_num == 0) {
+//             const char *option_title = option_name ? option_name : "unknown";
+//             const char *option_label = is_from_array ? "array item" : "option";
+//             php_error_docref(NULL, E_WARNING, "Path for %s %s %s",
+//                     option_title, option_label, error_msg);
+//         } else if (is_from_array && option_name != NULL) {
+//             swow_php_openssl_check_path_error(
+//                     arg_num, error_type, "option %s array item %s", option_name, error_msg);
+//         } else if (is_from_array) {
+//             swow_php_openssl_check_path_error(arg_num, error_type, "array item %s", error_msg);
+//         } else if (option_name != NULL) {
+//             swow_php_openssl_check_path_error(
+//                     arg_num, error_type, "option %s %s", option_name, error_msg);
+//         } else {
+//             swow_php_openssl_check_path_error(arg_num, error_type, "%s", error_msg);
+//         }
+//     } else if (!php_check_open_basedir(real_path)) {
+//         return true;
+//     }
+
+//     return false;
+// }
+
+// // from ext/openssl/php_openssl.h @ d0c0a9abfdc3d60f8e442e1ed4e13b200abd03de
+
+// /* openssl file path extra check with zend string */
+// static inline bool swow_php_openssl_check_path_str_ex(
+//     zend_string *file_path, char *real_path, uint32_t arg_num,
+//     bool contains_file_protocol, bool is_from_array, const char *option_name)
+// {
+//     return swow_php_openssl_check_path_ex(
+//         ZSTR_VAL(file_path), ZSTR_LEN(file_path), real_path, arg_num, contains_file_protocol,
+//         is_from_array, option_name);
+// }
+
+static void swow_ssl_server_sni_data_destructor(zval *zcontext) {
+    cat_ssl_context_t *context = (cat_ssl_context_t *) Z_PTR_P(zcontext);
+    cat_ssl_context_close(context);
+}
+
+swow_ssl_server_sni_data_t *swow_ssl_server_sni_data_alloc(void) {
+    swow_ssl_server_sni_data_t *contexts =
+        (swow_ssl_server_sni_data_t *) cat_calloc(sizeof(swow_ssl_server_sni_data_t), 1);
+#if CAT_ALLOC_HANDLE_ERRORS
+    // let caller handle the error
+    if (unlikely(contexts == NULL)) {
+        return NULL;
+    }
+#endif
+    zend_hash_init(&contexts->fullmatch, 0, NULL, NULL, true);
+    zend_hash_init(&contexts->wildcard, 0, NULL, NULL, true);
+    zend_hash_init(&contexts->contexts, 0, NULL, swow_ssl_server_sni_data_destructor, true);
+    return contexts;
+}
+
+static inline void swow_ssl_server_sni_data_add_cert(
+    swow_ssl_server_sni_data_t *contexts,
+    const char *matcher, size_t matcher_len, cat_ssl_context_t *ctx
+) {
+    if (matcher_len > 2 && matcher[0] == '*' && matcher[1] == '.') {
+        // wildcard matcher
+        zend_hash_str_add_new_ptr(&contexts->wildcard, matcher + 2, matcher_len - 2, ctx);
+    } else {
+        // fullmatch matcher
+        zend_hash_str_add_new_ptr(&contexts->fullmatch, matcher, matcher_len, ctx);
+    }
+}
+
+
+void swow_ssl_server_sni_data_free(swow_ssl_server_sni_data_t *contexts) {
+    if (contexts == NULL) {
+        return;
+    }
+    zend_hash_destroy(&contexts->fullmatch);
+    zend_hash_destroy(&contexts->wildcard);
+    zend_hash_destroy(&contexts->contexts);
+    cat_free(contexts);
+}
+
+static zend_always_inline cat_bool_t load_sni_server_cert_and_key_from_file(
+    SSL_CTX *ctx, const char *cert_path, const char *key_path, int php_warning
+) {
+    if (SSL_CTX_use_certificate_chain_file(ctx, cert_path) != 1) {
+        if (php_warning) {
+            php_error_docref(NULL, E_WARNING,
+                "Failed setting local cert chain file `%s'; " \
+                "check that your cafile/capath settings include " \
+                "details of your certificate and its issuer",
+                cert_path
+            );
+        } else {
+            swow_throw_exception(swow_socket_exception_ce, CAT_ESSL, "Failed setting local cert chain file '%s'", cert_path);
+        }
+        return cat_false;
+    }
+    if (SSL_CTX_use_PrivateKey_file(ctx, key_path, SSL_FILETYPE_PEM) != 1) {
+        if (php_warning) {
+            php_error_docref(NULL, E_WARNING,
+                "Failed setting private key from file `%s'",
+                key_path
+            );
+        } else {
+            swow_throw_exception(swow_socket_exception_ce, CAT_ESSL, "Failed setting private key from file '%s'", key_path);
+        }
+        return cat_false;
+    }
+
+    return cat_true;
+}
+
+cat_bool_t swow_ssl_enable_server_sni(const zval *zconfig, swow_ssl_server_sni_data_t *contexts, bool php_warning) {
+    if (Z_TYPE_P(zconfig) != IS_ARRAY) {
+        // not supported
+        if (php_warning) {
+            cat_update_last_error(CAT_EINVAL, "SNI_server_certs requires an array mapping host names to cert paths");
+        } else {
+            swow_throw_exception(swow_socket_exception_ce, CAT_EINVAL, "SNI_server_certs requires an array of configs");
+        }
+        return cat_false;
+    }
+
+    if (zend_hash_num_elements(Z_ARRVAL_P(zconfig)) == 0) {
+        // empty array
+        if (php_warning) {
+            cat_update_last_error(CAT_EINVAL, "SNI_server_certs host cert array must not be empty");
+        } else {
+            swow_throw_exception(swow_socket_exception_ce, CAT_EINVAL, "SNI_server_certs host cert array must not be empty");
+        }
+        return cat_false;
+    }
+
+    ZEND_HASH_REVERSE_FOREACH_STR_KEY_VAL(Z_ARRVAL_P(zconfig), zend_string *key, zval *config) {
+        cat_ssl_context_t *ctx = cat_ssl_context_create(CAT_SSL_METHOD_TLS, CAT_SSL_PROTOCOLS_ALL); // TODO: DTLS
+        if (ctx == NULL) {
+            if (php_warning) {
+                cat_update_last_error(CAT_ESSL, "Failed creating SSL context");
+            } else {
+                swow_throw_exception(swow_socket_exception_ce, CAT_ESSL, "Failed creating SSL context");
+            }
+            return cat_false;
+        }
+        zend_hash_next_index_insert_ptr(&contexts->contexts, ctx);
+
+        if (Z_TYPE_P(config) == IS_ARRAY) {
+            // if it is an array, it is a config like { "local_cert" => "path/to/cert.pem", "local_pk" => "path/to/key.pem" }
+            // we need to load the cert and key from the array
+            zval *zcert, *zpkey;
+            if (php_warning) {
+                // for PHP stream, uses "local_cert" and "local_pk"
+                zcert = zend_hash_str_find(Z_ARRVAL_P(config), CAT_STRL("local_cert"));
+                zpkey = zend_hash_str_find(Z_ARRVAL_P(config), CAT_STRL("local_pk"));
+            } else {
+                // for Swow, uses "certificate" and "certificate_key"
+                zcert = zend_hash_str_find(Z_ARRVAL_P(config), CAT_STRL("certificate"));
+                zpkey = zend_hash_str_find(Z_ARRVAL_P(config), CAT_STRL("certificate_key"));
+            }
+
+            if (zcert == NULL) {
+                if (php_warning) {
+                    cat_update_last_error(CAT_EINVAL, "local_cert not present in the array");
+                } else {
+                    swow_throw_exception(swow_socket_exception_ce, CAT_EINVAL, "certificate not present in SNI_server_certs");
+                }
+                goto _failed;
+            }
+            if (zpkey == NULL) {
+                if (php_warning) {
+                    cat_update_last_error(CAT_EINVAL, "local_pk not present in the array");
+                } else {
+                    swow_throw_exception(swow_socket_exception_ce, CAT_EINVAL, "certificate_key not present in SNI_server_certs");
+                }
+                goto _failed;
+            }
+
+            if (!load_sni_server_cert_and_key_from_file(ctx->ctx, Z_STRVAL_P(zcert), Z_STRVAL_P(zpkey), php_warning)) {
+                goto _failed;
+            }
+
+        } else if (Z_TYPE_P(config) == IS_STRING) {
+            if (!load_sni_server_cert_and_key_from_file(ctx->ctx, Z_STRVAL_P(config), Z_STRVAL_P(config), php_warning)) {
+                goto _failed;
+            }
+        } else {
+            // not supported
+            if (php_warning) {
+                // this is confusing, but it is what PHP does (segfault here)
+                // cat_update_last_error(CAT_ENOENT,
+                //     "Failed setting local cert chain file `%s'; file not found",
+                //     Z_STRVAL_P(config)
+                // );
+                // TODO: when php fixed, use php style error
+                swow_throw_exception(swow_socket_exception_ce, CAT_ENOENT, "SNI_server_certs value must be a string or array");
+            } else {
+                swow_throw_exception(swow_socket_exception_ce, CAT_ENOENT, "SNI_server_certs value must be a string or array");
+            }
+            goto _failed;
+        }
+
+        // handle the key
+        int matchers = 0;
+        if (!key) {
+            // no key specified, use the cert name (SAN only, not CN) as matcher
+            X509 *cert = SSL_CTX_get0_certificate(ctx->ctx);
+            if (cert != NULL) {
+                STACK_OF(GENERAL_NAME) *san_names =
+                    X509_get_ext_d2i(cert, NID_subject_alt_name, NULL, NULL);
+                if (san_names != NULL) {
+                    for (int j = 0; j < sk_GENERAL_NAME_num(san_names); j++) {
+                        GENERAL_NAME *name = sk_GENERAL_NAME_value(san_names, j);
+                        if (name->type == GEN_DNS && name->d.ia5 != NULL) {
+                            matchers++;
+                            swow_ssl_server_sni_data_add_cert(contexts, (const char *)name->d.ia5->data, name->d.ia5->length, ctx);
+                        }
+                    }
+                    GENERAL_NAMES_free(san_names);
+                }
+            }
+        } else {
+            // key specified, use the key as matcher
+            matchers++;
+            swow_ssl_server_sni_data_add_cert(contexts, ZSTR_VAL(key), ZSTR_LEN(key), ctx);
+        }
+        if (matchers == 0) {
+            // no matchers found, throw error
+            if (php_warning) {
+                cat_update_last_error(CAT_EINVAL, "SNI_server_certs array requires string host name keys");
+            } else {
+                swow_throw_exception(swow_socket_exception_ce, CAT_EINVAL, "No dns name SAN found for cert in SNI_server_certs");
+            }
+            goto _failed;
+        }
+    } ZEND_HASH_FOREACH_END();
+
+    if (0) {
+_failed:
+        return cat_false;
+    }
+
+    return cat_true;
+}
+
+static int swow_openssl_server_sni_callback(SSL *ssl_handle, int *al, void *arg)
+{
+    size_t i;
+    const char *server_name;
+    size_t server_name_len;
+    swow_ssl_server_sni_data_t *contexts;
+    zval *zcontext;
+    cat_ssl_context_t *context;
+
+    contexts = (swow_ssl_server_sni_data_t *)arg;
+    if (contexts == NULL) {
+        // no contexts, use the default context
+        return SSL_TLSEXT_ERR_OK;
+    }
+
+    server_name = SSL_get_servername(ssl_handle, TLSEXT_NAMETYPE_host_name);
+    if (!server_name) {
+        return SSL_TLSEXT_ERR_NOACK;
+    }
+    server_name_len = strlen(server_name);
+
+    // try full match first
+    zcontext = zend_hash_str_find(&contexts->fullmatch, server_name, server_name_len);
+    if (zcontext != NULL) {
+        context = (cat_ssl_context_t *)Z_PTR_P(zcontext);
+        return SSL_set_SSL_CTX(ssl_handle, context->ctx) ? SSL_TLSEXT_ERR_OK : SSL_TLSEXT_ERR_NOACK;
+    }
+
+    // try wildcard match
+    // remove first domain part some.example.com -> example.com
+    for (i = 0; i < server_name_len; i++) {
+        if (server_name[i] == '.') {
+            break;
+        }
+    }
+    if (i < server_name_len) {
+        server_name = server_name + i + 1;
+        server_name_len = server_name_len - i - 1;
+    } else {
+        // bad domain, nothing can match
+        return SSL_TLSEXT_ERR_NOACK;
+    }
+    zcontext = zend_hash_str_find(&contexts->wildcard, server_name, server_name_len);
+    if (zcontext != NULL) {
+        context = (cat_ssl_context_t *)Z_PTR_P(zcontext);
+        return SSL_set_SSL_CTX(ssl_handle, context->ctx) ? SSL_TLSEXT_ERR_OK : SSL_TLSEXT_ERR_NOACK;
+    }
+
+    return SSL_TLSEXT_ERR_NOACK;
+}
+
+cat_bool_t swow_ssl_before_handshake_callback(cat_ssl_t* ssl, void * data) {
+    SSL_CTX *ctx = SSL_get_SSL_CTX(ssl->connection);
+
+    SSL_CTX_set_tlsext_servername_callback(ctx, swow_openssl_server_sni_callback);
+    SSL_CTX_set_tlsext_servername_arg(ctx, data);
+    return cat_true;
+}
+
+# endif // OPENSSL_NO_TLSEXT
+
+zend_result swow_ssl_module_init(INIT_FUNC_ARGS)
+{
+    if (!cat_ssl_module_init()) {
+        return FAILURE;
+    }
+
+    return SUCCESS;
 }
 
 #endif

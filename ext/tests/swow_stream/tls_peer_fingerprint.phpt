@@ -197,6 +197,12 @@ if (!in_array('不会真有人叫这个吧', openssl_get_md_methods(), true)) {
 
 echo 'Done' . PHP_EOL;
 ?>
+--CLEAN--
+<?php
+@unlink(__DIR__ . '/tls_peer_fingerprint_ca.crt');
+@unlink(__DIR__ . '/tls_peer_fingerprint_server.pem');
+@unlink(__DIR__ . '/tls_peer_fingerprint_client.pem');
+?>
 --EXPECT--
 0a. bad string fingerprint length
 0b. bad md5 string fingerprint value

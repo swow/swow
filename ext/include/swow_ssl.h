@@ -32,6 +32,21 @@ cat_bool_t swow_load_stream_cafile(cat_ssl_context_t *context, struct cat_socket
 
 cat_bool_t swow_ssl_enable_peer_fingerprint_verify(zval *zpeer_fingerprint, cat_ssl_peer_fingerprint_t **pfingerprints, int php_warning);
 
+typedef struct {
+    HashTable fullmatch;
+    HashTable wildcard;
+    HashTable contexts;
+} swow_ssl_server_sni_data_t;
+
+cat_bool_t swow_ssl_enable_server_sni(const zval *zconfig, swow_ssl_server_sni_data_t *contexts, bool php_warning);
+
+swow_ssl_server_sni_data_t *swow_ssl_server_sni_data_alloc(void);
+void swow_ssl_server_sni_data_free(swow_ssl_server_sni_data_t *contexts);
+
+cat_bool_t swow_ssl_before_handshake_callback(cat_ssl_t* ssl, void * data);
+
+zend_result swow_ssl_module_init(INIT_FUNC_ARGS);
+
 #endif
 #ifdef __cplusplus
 }

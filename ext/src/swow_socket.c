@@ -596,6 +596,9 @@ static PHP_METHOD(Swow_Socket, enableCrypto)
     cat_bool_t is_client = !cat_socket_is_server_connection(socket);
     cat_bool_t ret;
     cat_ssl_peer_fingerprint_t *fingerprints = NULL;
+#ifdef CAT_SSL_HAVE_TLS_SNI
+    swow_ssl_server_sni_data_t *sni_contexts = NULL;
+#endif // CAT_SSL_HAVE_TLS_SNI
 
     ZEND_PARSE_PARAMETERS_START(0, 1)
         Z_PARAM_OPTIONAL
@@ -638,6 +641,17 @@ static PHP_METHOD(Swow_Socket, enableCrypto)
             }
             options.peer_fingerprints = fingerprints;
         }
+#ifdef CAT_SSL_HAVE_TLS_SNI
+        zval *zserver_sni = zend_hash_str_find(options_array, CAT_STRL("SNI_server_certs"));
+        if (zserver_sni != NULL) {
+            sni_contexts = swow_ssl_server_sni_data_alloc();
+            if (!swow_ssl_enable_server_sni(zserver_sni, sni_contexts, 0)) {
+                goto _cleanup;
+            }
+            options.before_handshake_callback = swow_ssl_before_handshake_callback;
+            options.before_handshake_callback_data = sni_contexts;
+        }
+#endif // CAT_SSL_HAVE_TLS_SNI
     }
 
     ret = cat_socket_enable_crypto(socket, &options);
@@ -649,6 +663,11 @@ static PHP_METHOD(Swow_Socket, enableCrypto)
     }
 
 _cleanup:
+#ifdef CAT_SSL_HAVE_TLS_SNI
+    if (sni_contexts != NULL) {
+        swow_ssl_server_sni_data_free(sni_contexts);
+    }
+#endif // CAT_SSL_HAVE_TLS_SNI
     if (fingerprints != NULL) {
         cat_free(fingerprints);
     }
@@ -1805,11 +1824,6 @@ zend_result swow_socket_module_init(INIT_FUNC_ARGS)
     if (!cat_socket_module_init()) {
         return FAILURE;
     }
-#ifdef CAT_SSL
-    if (!cat_ssl_module_init()) {
-        return FAILURE;
-    }
-#endif
 
     swow_socket_ce = swow_register_internal_class(
         "Swow\\Socket", NULL, swow_socket_methods,
