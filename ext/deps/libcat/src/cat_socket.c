@@ -2112,6 +2112,10 @@ CAT_API void cat_socket_crypto_options_init(cat_socket_crypto_options_t *options
 #endif
     options->protocols = CAT_SSL_PROTOCOLS_DEFAULT;
     options->verify_depth = CAT_SSL_DEFAULT_STREAM_VERIFY_DEPTH;
+    options->before_handshake_callback = NULL;
+    options->before_handshake_callback_data = NULL;
+    options->after_handshake_callback = NULL;
+    options->after_handshake_callback_data = NULL;
     options->verify_peer = is_client;
     options->verify_peer_name = is_client;
     options->peer_fingerprints = NULL;
@@ -2297,6 +2301,12 @@ static cat_bool_t cat_socket_enable_crypto_impl(cat_socket_t *socket, const cat_
     rbuffer = &ssl->read_buffer;
     wbuffer = &ssl->write_buffer;
 
+    if (ioptions.before_handshake_callback != NULL) {
+        if (!ioptions.before_handshake_callback(ssl, ioptions.before_handshake_callback_data)) {
+            goto _setup_error;
+        }
+    }
+
     while (1) {
         ssize_t n;
         cat_ssl_ret_t ssl_ret;
@@ -2378,9 +2388,15 @@ static cat_bool_t cat_socket_enable_crypto_impl(cat_socket_t *socket, const cat_
 
     socket_i->ssl = ssl;
 
+    if (ioptions.after_handshake_callback != NULL) {
+        ioptions.after_handshake_callback(ssl, cat_true, ioptions.after_handshake_callback_data);
+    }
     return cat_true;
 
     _unrecoverable_error:
+    if (ioptions.after_handshake_callback != NULL) {
+        ioptions.after_handshake_callback(ssl, cat_false, ioptions.after_handshake_callback_data);
+    }
     cat_socket_internal_unrecoverable_io_error(socket_i);
     cat_ssl_close(ssl);
     if (0) {

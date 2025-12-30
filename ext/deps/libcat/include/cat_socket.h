@@ -671,6 +671,29 @@ typedef struct cat_socket_crypto_options_s {
      */
     int verify_depth;
     /*
+     * before_handshake_callback
+     * used for setup ssl configs that libcat not provide.
+     * will be called right before SSL handshake.
+     * return true to continue the handshake, false to abort.
+     */
+    cat_bool_t (*before_handshake_callback)(cat_ssl_t *ssl, void *data);
+    /*
+     * before_handshake_callback_data
+     * will be passed to the callback.
+     */
+    void *before_handshake_callback_data;
+    /*
+     * after_handshake_callback
+     * used for post-processing after SSL handshake.
+     * will be called right after SSL handshake.
+     */
+    void (*after_handshake_callback)(cat_ssl_t *ssl, cat_bool_t success, void *data);
+    /*
+     * after_handshake_callback_data
+     * will be passed to the callback.
+     */
+    void *after_handshake_callback_data;
+    /*
      * is_client: is_client is used to set the role of the SSL connection.
      */
     unsigned int is_client :1;
