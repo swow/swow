@@ -2576,6 +2576,16 @@ namespace Swow\Debug
      * @param array<array{'file': string, 'line': int, 'function': string, 'class': string, 'type': string, 'args': array<mixed>}> $trace
      */
     function buildTraceAsString(array $trace): string { }
+
+    /**
+     * Block the current thread for testing syscall blocking detection
+     *
+     * This function uses native sleep to simulate a real syscall blocking scenario,
+     * which will be detected by Watchdog if it's running.
+     *
+     * @param int $timeout The time to block in milliseconds (must be positive)
+     */
+    function block(int $timeout): void { }
 }
 
 namespace Swow\Debug

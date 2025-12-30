@@ -18,13 +18,90 @@
 
 #include "swow_watchdog.h"
 
-#include "cat_time.h" /* for time_wait() */
+#include "swow_debug.h"    /* for trace functions */
+#include "cat_time.h"      /* for time_wait() */
+
+#include "zend_generators.h" /* for zend_generator_check_placeholder_frame() */
 
 SWOW_API zend_class_entry *swow_watchdog_ce;
 
 SWOW_API zend_class_entry *swow_watchdog_exception_ce;
 
 static swow_interrupt_function_t original_zend_interrupt_function = (swow_interrupt_function_t) -1;
+
+/* Try to read current execution location from executor_globals.
+ * Note: Called from watchdog thread with potential race conditions.
+ * The returned information may be inaccurate but should not crash. */
+static void swow_watchdog_try_read_execute_location(
+    zend_executor_globals *eg,
+    const char **filename,
+    uint32_t *lineno,
+    const char **function_name,
+    const char **class_name
+)
+{
+    *filename = NULL;
+    *lineno = 0;
+    *function_name = NULL;
+    *class_name = NULL;
+
+    if (eg == NULL) {
+        return;
+    }
+
+    /* Try to read current_execute_data (race condition possible,
+     * but reading pointer value should be safe) */
+    zend_execute_data *execute_data = eg->current_execute_data;
+
+    if (execute_data == NULL) {
+        return;
+    }
+
+    /* Try to read function first (check before accessing opline) */
+    zend_function *func = execute_data->func;
+    if (func == NULL) {
+        return;
+    }
+
+    /* Read function name (safe to read pointer to string) */
+    if (func->common.function_name != NULL) {
+        *function_name = ZSTR_VAL(func->common.function_name);
+        /* Try to read class name if it's a method */
+        if (func->common.scope != NULL && func->common.scope->name != NULL) {
+            *class_name = ZSTR_VAL(func->common.scope->name);
+        }
+    }
+
+    /* Check if it's a user function */
+    if (ZEND_USER_CODE(func->common.type)) {
+        /* Try to read opline */
+        const zend_op *opline = execute_data->opline;
+        if (opline != NULL) {
+            /* Read filename and line number from user function */
+            if (func->op_array.filename != NULL) {
+                *filename = ZSTR_VAL(func->op_array.filename);
+            }
+            *lineno = opline->lineno;
+            return;
+        }
+    }
+
+    /* Current function is internal or has no location info,
+     * try to find caller's location from previous frame */
+    zend_execute_data *prev = execute_data->prev_execute_data;
+    while (prev != NULL) {
+        zend_function *prev_func = prev->func;
+        if (prev_func != NULL && ZEND_USER_CODE(prev_func->common.type)) {
+            const zend_op *prev_opline = prev->opline;
+            if (prev_opline != NULL && prev_func->op_array.filename != NULL) {
+                *filename = ZSTR_VAL(prev_func->op_array.filename);
+                *lineno = prev_opline->lineno;
+                return;
+            }
+        }
+        prev = prev->prev_execute_data;
+    }
+}
 
 SWOW_API void swow_watchdog_alert_standard(cat_watchdog_t *watchdog)
 {
@@ -48,9 +125,119 @@ SWOW_API void swow_watchdog_alert_standard(cat_watchdog_t *watchdog)
              * CPU starvation is also possible,
              * the machine performance is too bad (such as mine),
              * VM has not interrupted yet */
+
+            /* Try to read current execution location (may be inaccurate, but provides debugging clues) */
+            const char *filename = NULL;
+            uint32_t lineno = 0;
+            const char *function_name = NULL;
+            const char *class_name = NULL;
+            cat_coroutine_t *current_coroutine = watchdog->globals->current;
+
+            swow_watchdog_try_read_execute_location(
+                s_watchdog->executor_globals,
+                &filename,
+                &lineno,
+                &function_name,
+                &class_name
+            );
+
+            /* Output standard warning first */
             cat_watchdog_alert_standard(watchdog);
+
+            /* Output detailed location info for debugging */
+            if (current_coroutine != NULL) {
+                fprintf(stderr,
+                    "         Coroutine: #" CAT_COROUTINE_ID_FMT " (total: " CAT_COROUTINE_COUNT_FMT ")\n",
+                    current_coroutine->id, watchdog->globals->count);
+            }
+
+            if (function_name != NULL) {
+                if (class_name != NULL) {
+                    fprintf(stderr, "         Function: %s::%s()\n", class_name, function_name);
+                } else {
+                    fprintf(stderr, "         Function: %s()\n", function_name);
+                }
+            }
+
+            if (filename != NULL) {
+                fprintf(stderr, "         Location: %s:%u\n", filename, lineno);
+                fprintf(stderr, "         Note: Location info may be inaccurate due to cross-thread reading\n");
+            } else if (function_name == NULL) {
+                fprintf(stderr, "         Unable to read execute location (coroutine may be idle or in C extension)\n");
+            }
+
+            /* Set flag to trigger user callback when syscall returns and VM resumes */
+            cat_atomic_bool_store(&s_watchdog->syscall_blocked, cat_true);
         }
     }
+}
+
+/* Check if execution context is safe for functions that access call stack (like debug_backtrace)
+ * Returns true if safe, false if execution context is incomplete (e.g., just returned from FFI call) */
+static cat_bool_t swow_watchdog_is_backtrace_safe(void)
+{
+    zend_execute_data *call = EG(current_execute_data);
+
+    if (!call) {
+        return cat_false;
+    }
+
+    /* Check a few frames to ensure func pointers are valid
+     * This prevents assertion failure in zend_fetch_debug_backtrace when
+     * returning from FFI calls where execute_data->func may be NULL */
+    int check_depth = 0;
+    while (call && check_depth < 3) {
+        if (!call->func) {
+            /* Check if this is a generator placeholder frame */
+            zend_execute_data *checked = zend_generator_check_placeholder_frame(call);
+            if (!checked->func) {
+                /* Not a generator frame and func is still NULL - unsafe for backtrace */
+                return cat_false;
+            }
+        }
+
+        call = call->prev_execute_data;
+        check_depth++;
+    }
+
+    return cat_true;
+}
+
+/* Call user alerter with blocking type parameter */
+static void swow_watchdog_call_alerter(swow_watchdog_t *s_watchdog, const char *blocking_type, cat_bool_t is_delayed)
+{
+    if (s_watchdog->alerter.function_handler == NULL) {
+        return;
+    }
+
+    /* Print hint for delayed syscall alerter callback */
+    if (is_delayed) {
+        fprintf(stderr, "Notice: <Watchdog> Alerter callback invoked at nearest safe execution point (not at exact blocking location)\n");
+    }
+
+    zend_fcall_info fci;
+    zval retval, z_type;
+
+    fci.size = sizeof(fci);
+    ZVAL_UNDEF(&fci.function_name);
+    fci.object = NULL;
+    fci.param_count = 1;
+    fci.params = &z_type;
+    fci.named_params = NULL;
+    fci.retval = &retval;
+
+    ZVAL_STRING(&z_type, blocking_type);
+
+    /* Save and clear vm_interrupt to prevent being triggered again in PHP alerter function */
+    bool original_vm_interrupt = zend_atomic_bool_exchange(s_watchdog->vm_interrupt_ptr, 0);
+
+    (void) zend_call_function(&fci, &s_watchdog->alerter);
+
+    /* Restore original vm_interrupt value in case it was set by other reasons */
+    zend_atomic_bool_store(s_watchdog->vm_interrupt_ptr, original_vm_interrupt);
+
+    zval_ptr_dtor(&retval);
+    zval_ptr_dtor(&z_type);
 }
 
 static void swow_watchdog_interrupt_function(zend_execute_data *execute_data)
@@ -59,10 +246,28 @@ static void swow_watchdog_interrupt_function(zend_execute_data *execute_data)
         swow_watchdog_t *s_watchdog = swow_watchdog_get_current();
         cat_watchdog_t *watchdog = &s_watchdog->watchdog;
 
+        /* Check if syscall blocking was detected and VM just resumed */
+        if (cat_atomic_bool_load(&s_watchdog->syscall_blocked)) {
+            /* Syscall blocking detected, check if execution context is safe for alerter callback */
+            if (swow_watchdog_is_backtrace_safe()) {
+                /* Execution context is now safe, clear flag and call user alerter */
+                cat_atomic_bool_store(&s_watchdog->syscall_blocked, cat_false);
+                swow_watchdog_call_alerter(s_watchdog, SWOW_WATCHDOG_BLOCKING_TYPE_SYSCALL, cat_true);
+                goto _end;
+            } else {
+                /* Execution context still incomplete (e.g., just returned from FFI),
+                 * keep flag set and trigger another interrupt to retry later */
+                zend_atomic_bool_store(s_watchdog->vm_interrupt_ptr, 1);
+                goto _end;
+            }
+        }
+
         cat_atomic_bool_store(&s_watchdog->vm_interrupted, cat_true);
         /* re-check if current switches still equal to last_switches  */
         if (CAT_COROUTINE_G(switches) == watchdog->last_switches) {
+            /* CPU blocking detected */
             if (s_watchdog->alerter.function_handler == NULL) {
+                /* No user alerter, use default delay scheduling */
                 if (
                     !cat_time_wait(s_watchdog->delay) &&
                     cat_get_last_error_code() != CAT_ETIMEDOUT
@@ -70,20 +275,13 @@ static void swow_watchdog_interrupt_function(zend_execute_data *execute_data)
                     CAT_CORE_ERROR_WITH_LAST(WATCH_DOG, "Watchdog interrupt schedule failed");
                 }
             } else {
-                zend_fcall_info fci;
-                zval retval;
-                fci.size = sizeof(fci);
-                ZVAL_UNDEF(&fci.function_name);
-                fci.object = NULL;
-                fci.param_count = 0;
-                fci.named_params = NULL;
-                fci.retval = &retval;
-                (void) zend_call_function(&fci, &s_watchdog->alerter);
-                zval_ptr_dtor(&retval);
+                /* Call user alerter with CPU blocking type */
+                swow_watchdog_call_alerter(s_watchdog, SWOW_WATCHDOG_BLOCKING_TYPE_CPU, cat_false);
             }
         }
     }
 
+_end:
     if (original_zend_interrupt_function != NULL) {
         original_zend_interrupt_function(execute_data);
     }
@@ -119,6 +317,8 @@ SWOW_API cat_bool_t swow_watchdog_run(cat_timeout_t quantum, cat_timeout_t thres
     s_watchdog = (swow_watchdog_t *) emalloc(sizeof(*s_watchdog));
     cat_atomic_bool_init(&s_watchdog->vm_interrupted, cat_false);
     s_watchdog->vm_interrupt_ptr = &EG(vm_interrupt);
+    s_watchdog->executor_globals = ZEND_GLOBALS_FAST_PTR(executor_globals);
+    cat_atomic_bool_init(&s_watchdog->syscall_blocked, cat_false);
     s_watchdog->delay = delay;
     s_watchdog->alerter = fcc;
     if (z_alerter != NULL) {

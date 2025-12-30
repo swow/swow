@@ -443,6 +443,32 @@ static PHP_FUNCTION(Swow_Debug_buildTraceAsString)
     RETURN_STR(swow_debug_build_trace_as_string(trace));
 }
 
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_Swow_Debug_block, 0, 1, IS_VOID, 0)
+    ZEND_ARG_TYPE_INFO(0, timeout, IS_LONG, 0)
+ZEND_END_ARG_INFO()
+
+static PHP_FUNCTION(Swow_Debug_block)
+{
+    zend_long timeout;
+
+    ZEND_PARSE_PARAMETERS_START(1, 1)
+        Z_PARAM_LONG(timeout)
+    ZEND_PARSE_PARAMETERS_END();
+
+    if (timeout <= 0) {
+        zend_throw_error(NULL, "Timeout must be positive");
+        RETURN_THROWS();
+    }
+
+    /* Use native sleep to block the thread (not hooked by Swow coroutine scheduler)
+     * This simulates a real syscall blocking scenario for testing watchdog functionality */
+#ifdef PHP_WIN32
+    Sleep((DWORD)timeout);
+#else
+    usleep((useconds_t)(timeout * 1000)); // convert milliseconds to microseconds
+#endif
+}
+
 static swow_interrupt_function_t original_zend_interrupt_function = (swow_interrupt_function_t) -1;
 static void swow_debug_ext_stmt_interrupt_function(zend_execute_data *execute_data);
 
@@ -488,6 +514,7 @@ static PHP_FUNCTION(Swow_Debug_registerExtendedStatementHandler)
 
 static const zend_function_entry swow_debug_functions[] = {
     PHP_FENTRY(Swow\\Debug\\buildTraceAsString, PHP_FN(Swow_Debug_buildTraceAsString), arginfo_Swow_Debug_buildTraceAsString, 0)
+    PHP_FENTRY(Swow\\Debug\\block, PHP_FN(Swow_Debug_block), arginfo_Swow_Debug_block, 0)
     /* for breakpoint debugging  */
     PHP_FENTRY(Swow\\Debug\\registerExtendedStatementHandler, PHP_FN(Swow_Debug_registerExtendedStatementHandler), arginfo_Swow_Debug_registerExtendedStatementHandler, 0)
     PHP_FE_END

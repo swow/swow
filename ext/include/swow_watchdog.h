@@ -27,16 +27,31 @@ extern "C" {
 #include "cat_watchdog.h"
 #include "cat_atomic.h"
 
+/* Blocking type constants for alerter callback */
+#define SWOW_WATCHDOG_BLOCKING_TYPE_CPU     "cpu"
+#define SWOW_WATCHDOG_BLOCKING_TYPE_SYSCALL "syscall"
+
 extern SWOW_API zend_class_entry *swow_watchdog_ce;
 
 extern SWOW_API zend_class_entry *swow_watchdog_exception_ce;
 
 typedef struct swow_watchdog_s {
+    /* Underlying watchdog handle, runs in separate thread to monitor coroutine switches */
     cat_watchdog_t watchdog;
+    /* VM interrupt flag: used to distinguish CPU blocking (interruptible) from syscall blocking (non-interruptible) */
     cat_atomic_bool_t vm_interrupted;
+    /* Pointer to EG(vm_interrupt), used to trigger PHP VM interrupt */
     zend_atomic_bool *vm_interrupt_ptr;
+    /* Pointer to executor_globals for cross-thread reading of execution location from watchdog thread
+     * Note: race condition exists, read info may be inaccurate but should not crash */
+    zend_executor_globals *executor_globals;
+    /* Flag indicating syscall blocking was detected, will be checked when VM resumes */
+    cat_atomic_bool_t syscall_blocked;
+    /* Delay scheduling time (nanoseconds) on CPU blocking, 0 means schedule immediately */
     cat_timeout_t delay;
+    /* User-defined alerter zval reference (for lifetime management) */
     zval z_alerter;
+    /* User-defined alerter call info cache (only used in CPU blocking scenario) */
     zend_fcall_info_cache alerter;
 } swow_watchdog_t;
 
