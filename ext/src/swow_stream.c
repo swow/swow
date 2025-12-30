@@ -771,6 +771,7 @@ static int swow_stream_enable_crypto(php_stream *stream,
 #ifdef CAT_SSL_HAVE_TLS_SNI
     swow_ssl_server_sni_data_t *sni_contexts = NULL;
 #endif // CAT_SSL_HAVE_TLS_SNI
+
     if (cparam->inputs.activate && !encrypted) {
         cat_socket_crypto_options_t options;
         bool is_client = swow_sock->ssl.is_client;
@@ -893,6 +894,9 @@ static int swow_stream_enable_crypto(php_stream *stream,
             options.before_handshake_callback_data = sni_contexts;
         }
 #endif // CAT_SSL_HAVE_TLS_SNI
+        // capture peer cert
+        options.after_handshake_callback = swow_ssl_after_handshake_callback;
+        options.after_handshake_callback_data = stream;
 
         cat_timeout_t timeout = cat_time_tv2to(swow_sock->ssl.is_client ?
             &swow_sock->ssl.connect_timeout :

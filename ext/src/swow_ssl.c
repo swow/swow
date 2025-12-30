@@ -637,10 +637,105 @@ cat_bool_t swow_ssl_before_handshake_callback(cat_ssl_t* ssl, void * data) {
 
 # endif // OPENSSL_NO_TLSEXT
 
+// from ext/openssl/php_openssl.h @ d0c0a9abfdc3d60f8e442e1ed4e13b200abd03de
+typedef struct _php_openssl_certificate_object {
+    X509 *x509;
+    zend_object std;
+} php_openssl_certificate_object;
+
+static zend_class_entry *swow_php_openssl_certificate_ce = NULL;
+
+static inline php_openssl_certificate_object *php_openssl_certificate_from_obj(zend_object *obj) {
+    return (php_openssl_certificate_object *)((char *)(obj) - XtOffsetOf(php_openssl_certificate_object, std));
+}
+
+#define Z_OPENSSL_CERTIFICATE_P(zv) php_openssl_certificate_from_obj(Z_OBJ_P(zv))
+
+
+void swow_ssl_after_handshake_callback(cat_ssl_t* ssl, cat_bool_t success, void * data) {
+    php_stream *stream = (php_stream *)data;
+    X509 *peer_cert = NULL;
+    zval zcert;
+    zval *val;
+    php_openssl_certificate_object *cert_object;
+
+    // we need to get the peer cert, regardless of success or not
+    (void) success;
+
+    if (swow_php_openssl_certificate_ce == NULL) {
+        // we cannot initialize openssl certificate object, cannot capture peer certificate
+        // TODO: throw exception ?
+        php_error_docref(NULL, E_WARNING, "PHP openssl extension is not loaded or version mismatch with Swow, cannot capture peer certificate");
+        return;
+    }
+
+    if (NULL != (val = php_stream_context_get_option(PHP_STREAM_CONTEXT(stream),
+            "ssl", "capture_peer_cert")) &&
+        zend_is_true(val)
+    ) {
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+        peer_cert = SSL_get1_peer_certificate(ssl->connection);
+#else
+        peer_cert = SSL_get_peer_certificate(ssl->connection);
+#endif
+        if (peer_cert != NULL) {
+            object_init_ex(&zcert, swow_php_openssl_certificate_ce);
+            cert_object = Z_OPENSSL_CERTIFICATE_P(&zcert);
+            cert_object->x509 = peer_cert;
+
+            php_stream_context_set_option(PHP_STREAM_CONTEXT(stream), "ssl", "peer_certificate", &zcert);
+            zval_ptr_dtor(&zcert);
+        }
+    }
+    
+    if (NULL != (val = php_stream_context_get_option(PHP_STREAM_CONTEXT(stream),
+    "ssl", "capture_peer_cert_chain")) &&
+        zend_is_true(val)
+    ) {
+        zval arr;
+        STACK_OF(X509) *chain;
+
+        chain = SSL_get_peer_cert_chain(ssl->connection);
+
+        if (chain && sk_X509_num(chain) > 0) {
+            int i;
+            array_init(&arr);
+
+            for (i = 0; i < sk_X509_num(chain); i++) {
+                X509 *mycert = X509_dup(sk_X509_value(chain, i));
+
+                object_init_ex(&zcert, swow_php_openssl_certificate_ce);
+                cert_object = Z_OPENSSL_CERTIFICATE_P(&zcert);
+                cert_object->x509 = mycert;
+                add_next_index_zval(&arr, &zcert);
+            }
+
+        } else {
+            ZVAL_NULL(&arr);
+        }
+
+        php_stream_context_set_option(PHP_STREAM_CONTEXT(stream), "ssl", "peer_certificate_chain", &arr);
+        zval_ptr_dtor(&arr);
+    }
+}
+
 zend_result swow_ssl_module_init(INIT_FUNC_ARGS)
 {
     if (!cat_ssl_module_init()) {
         return FAILURE;
+    }
+
+    // get php_openssl_certificate_ce from php
+    swow_php_openssl_certificate_ce = (zend_class_entry *) zend_hash_str_find_ptr(
+        CG(class_table), ZEND_STRL("opensslcertificate")
+    );
+    if (swow_php_openssl_certificate_ce == NULL) {
+        return SUCCESS;
+    }
+
+    // check if the offset matches our version
+    if (swow_php_openssl_certificate_ce->default_object_handlers->offset != XtOffsetOf(php_openssl_certificate_object, std)) {
+        return SUCCESS;
     }
 
     return SUCCESS;
