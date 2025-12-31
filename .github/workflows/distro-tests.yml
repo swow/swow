@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        php-version: [ '8.4', '8.3', '8.2', '8.1' ]
+        php-version: [ '8.5', '8.4', '8.3', '8.2', '8.1' ]
         distro:
           # CentOS 7 died
           # - name: CentOS 7

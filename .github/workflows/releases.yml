@@ -21,11 +21,19 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        php-version: ["8.3", "8.2", "8.1", "8.0"]
+        php-version: ["8.3", "8.2", "8.1"]
         arch: ["x64"]
         ts: ["0", "1"]
         vsver: ["16"]
         include:
+          - php-version: "8.5"
+            arch: "x64"
+            ts: "0"
+            vsver: "17"
+          - php-version: "8.5"
+            arch: "x64"
+            ts: "1"
+            vsver: "17"
           - php-version: "8.4"
             arch: "x64"
             ts: "0"
