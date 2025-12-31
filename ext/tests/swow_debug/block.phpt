@@ -15,7 +15,7 @@ $start = microtime(true);
 Debug\block(100); // block for 100ms
 $elapsed = (microtime(true) - $start) * 1000;
 
-Assert::greaterThanOrEqual($elapsed, 90); // allow 10% tolerance
+Assert::greaterThanEq($elapsed, 90); // allow 10% tolerance
 echo "Block completed\n";
 
 // Test 2: Invalid timeout (negative)
