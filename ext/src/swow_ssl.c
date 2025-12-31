@@ -520,13 +520,7 @@ cat_bool_t swow_ssl_enable_server_sni(const zval *zconfig, swow_ssl_server_sni_d
         } else {
             // not supported
             if (php_warning) {
-                // this is confusing, but it is what PHP does (segfault here)
-                // cat_update_last_error(CAT_ENOENT,
-                //     "Failed setting local cert chain file `%s'; file not found",
-                //     Z_STRVAL_P(config)
-                // );
-                // TODO: when php fixed, use php style error
-                swow_throw_exception(swow_socket_exception_ce, CAT_ENOENT, "SNI_server_certs value must be a string or array");
+                cat_update_last_error(CAT_ENOENT, "SNI_server_certs options values must be of type array|string");
             } else {
                 swow_throw_exception(swow_socket_exception_ce, CAT_ENOENT, "SNI_server_certs value must be a string or array");
             }
