@@ -76,6 +76,8 @@ SWOW_API zend_op_array *swow_compile_string_ex(zend_string *source_string, const
 # define zend_atomic_bool_init(atomic, desired) (*atomic = desired)
 # define zend_atomic_bool_store(atomic, desired) (*atomic = desired)
 # define zend_atomic_bool_load(atomic) (*atomic)
+# define zend_atomic_bool_exchange(atomic, desired) \
+    ({ bool _old = *(atomic); *(atomic) = (desired); _old; })
 #endif
 /* }}} */
 

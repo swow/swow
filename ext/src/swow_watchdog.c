@@ -228,11 +228,8 @@ static void swow_watchdog_call_alerter(swow_watchdog_t *s_watchdog, const char *
 
     ZVAL_STRING(&z_type, blocking_type);
 
-    /* Save and clear vm_interrupt to prevent being triggered again in PHP alerter function
-     * Note: This is not atomic but acceptable since vm_interrupt is only modified by
-     * watchdog thread and interrupt handler (which won't run during alerter execution) */
-    bool original_vm_interrupt = zend_atomic_bool_load(s_watchdog->vm_interrupt_ptr);
-    zend_atomic_bool_store(s_watchdog->vm_interrupt_ptr, 0);
+    /* Save and clear vm_interrupt to prevent being triggered again in PHP alerter function */
+    bool original_vm_interrupt = zend_atomic_bool_exchange(s_watchdog->vm_interrupt_ptr, 0);
 
     (void) zend_call_function(&fci, &s_watchdog->alerter);
 
