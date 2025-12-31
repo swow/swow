@@ -209,6 +209,7 @@ static zend_always_inline bool zend_char_has_nul_byte(const char *s, size_t know
 #define ZEND_HASH_MAP_FOREACH_STR_KEY     ZEND_HASH_FOREACH_STR_KEY
 #define ZEND_HASH_MAP_FOREACH_VAL         ZEND_HASH_FOREACH_VAL
 #define ZEND_HASH_MAP_FOREACH_STR_KEY_VAL ZEND_HASH_FOREACH_STR_KEY_VAL
+#define ZEND_HASH_MAP_REVERSE_FOREACH_STR_KEY_VAL ZEND_HASH_REVERSE_FOREACH_STR_KEY_VAL
 #endif
 
 #define swow_hash_str_fetch_bool_field(ht, str, ret) do { \

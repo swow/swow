@@ -16,6 +16,9 @@
   +--------------------------------------------------------------------------+
  */
 
+
+#include "swow.h"
+#include "swow_wrapper.h"
 #include "swow_hook.h"
 
 /* functions */

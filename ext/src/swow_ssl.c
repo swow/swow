@@ -728,7 +728,18 @@ zend_result swow_ssl_module_init(INIT_FUNC_ARGS)
     }
 
     // check if the offset matches our version
-    if (swow_php_openssl_certificate_ce->default_object_handlers->offset != XtOffsetOf(php_openssl_certificate_object, std)) {
+#if PHP_VERSION_ID < 80300
+    if (
+        swow_php_openssl_certificate_ce->properties_info_table == NULL ||
+        swow_php_openssl_certificate_ce->properties_info_table[0]->offset != XtOffsetOf(php_openssl_certificate_object, std)
+    )
+#else
+    if (
+        swow_php_openssl_certificate_ce->default_object_handlers == NULL ||
+        swow_php_openssl_certificate_ce->default_object_handlers->offset != XtOffsetOf(php_openssl_certificate_object, std)
+    )
+#endif
+    {
         return SUCCESS;
     }
 
