@@ -26,7 +26,7 @@
 # endif
 #endif
 
-// from ext/pdo_pgsql/pgsql_driver.c @ f7ca8138e7fcb90f7b42509d0489be166258b519
+// from ext/pdo_pgsql/pgsql_driver.c @ 19deb91002a53958893903aa3315e30e3285e614
 
 #include "php.h"
 #include "php_ini.h"
@@ -1500,6 +1500,20 @@ static const zend_function_entry *pdo_pgsql_get_driver_methods(pdo_dbh_t *dbh, i
     }
 }
 
+static void pdo_pgsql_request_shutdown(pdo_dbh_t *dbh)
+{
+    PGresult *res;
+    pdo_pgsql_db_handle *H = (pdo_pgsql_db_handle *)dbh->driver_data;
+
+    if(H->server) {
+        res = PQexec(H->server, "DISCARD ALL");
+
+        if(res) {
+            PQclear(res);
+        }
+    }
+}
+
 static swow_pdo_txn_bool pdo_pgsql_set_attr(pdo_dbh_t *dbh, zend_long attr, zval *val)
 {
     bool bval;
@@ -1543,7 +1557,7 @@ static const struct pdo_dbh_methods pgsql_methods = {
     pdo_pgsql_get_attribute,
     pdo_pgsql_check_liveness,    /* check_liveness */
     pdo_pgsql_get_driver_methods,  /* get_driver_methods */
-    NULL,
+    pdo_pgsql_request_shutdown,
     pgsql_handle_in_transaction
 // diff since php/php-src@e735de6eae4a60fb55fac6fc99b6b63f525c4b4b
 #if PHP_VERSION_ID >= 80100
@@ -1828,7 +1842,7 @@ zend_result swow_pgsql_module_shutdown(INIT_FUNC_ARGS)
 // compatibility
 
 #if PHP_VERSION_ID < 80100
-// from ext/pdo/pdo_dbh.c @ 715b9aaa09e1ad76a94f32b17da7927592fdae0a
+// from ext/pdo/pdo_dbh.c @ 626f3c3c7c6834f884286e454dbe5a870d125299
 bool pdo_get_long_param(zend_long *lval, const zval *value)
 {
     switch (Z_TYPE_P(value)) {
