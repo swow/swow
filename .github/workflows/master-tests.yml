@@ -33,6 +33,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -yqq libcurl4-openssl-dev
+          openssl rand -writerand "$HOME/.rnd"
 
       - name: Setup PHP
         uses: shivammathur/setup-php@master
