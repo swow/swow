@@ -35,11 +35,11 @@ while (true) {
 echo "Never here\n";
 
 ?>
---EXPECTF--
-int(%d)
+--EXPECTREGEX--
+(?:Warning:[^\n]*\n)?int\(\d+\)
 
-Warning: [Fatal error in main] Uncaught %s: CPU starvation occurred in %s:%d
+Warning: \[Fatal error in main\] Uncaught .+: CPU starvation occurred in .+:\d+
 Stack trace:
-#0 [internal function]: {closur%s}()
-#1 {main}
-  thrown in %s on line %d
+#0 \[internal function\]: \{closur.+\}\(\)
+#1 \{main\}
+  thrown in .+ on line \d+

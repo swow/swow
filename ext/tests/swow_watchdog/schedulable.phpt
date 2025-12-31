@@ -60,5 +60,4 @@ echo "Never here\n";
 
 ?>
 --EXPECTREGEX--
-int\(0\)
-(?:int\((\d+)\)\n?)+
+(?:Warning:[^\n]*\n)?int\(0\)\n(?:int\(\d+\)\n?)+

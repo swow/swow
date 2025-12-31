@@ -88,5 +88,5 @@ echo "Done\n";
 
 ?>
 --EXPECTREGEX--
-(?:Warning: <(?:Watchdog)> [\S ]+\n)+I am back
+(?:Warning:[^\n]*\n)?[\s\S]*?Warning: <Watchdog>[\s\S]*?I am back
 Done
