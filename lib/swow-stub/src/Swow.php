@@ -41,7 +41,16 @@ namespace
 
 namespace
 {
-    /** unlimited version of stream_select() */
+    /**
+     * unlimited version of stream_select()
+     *
+     * @param array<resource> $read
+     * @param array<resource> $write
+     * @param array<resource> $except
+     * @param int|null $seconds
+     * @param int|null $microseconds
+     * @return int|false number of stream resources that are ready for reading, writing, or have an error, or false on error
+     */
     function stream_select_unlimited(?array &$read, ?array &$write, ?array &$except, ?int $seconds, ?int $microseconds = null): int|false { }
 }
 
@@ -49,6 +58,8 @@ namespace
 {
     /**
      * poll one stream for events
+     *
+     * @param resource $stream stream resource
      * @param int $events flags: STREAM_POLL* constants combinations
      * @return int flags: STREAM_POLL* constants combinations, STREAM_POLLNONE means timeout
      * @throws RuntimeException on runtime error, e.g. poll has been cancelled or poll failed
@@ -1221,6 +1232,9 @@ namespace Swow
 
         public function __serialize(): array { }
 
+        /**
+         * @param array<mixed, mixed>|array<mixed> $data
+         */
         public function __unserialize(array $data): void { }
     }
 }
@@ -1344,6 +1358,39 @@ namespace Swow
         /** @param int $timeout [optional] = $this->getConnectTimeout() */
         public function connect(string $name, int $port = 0, ?int $timeout = null): static { }
 
+        /**
+         * enable crypto (TLS) on socket
+         * the options is a little different from PHP options,
+         * PHP uses `cafile`, `local_cert`, `local_pk` while we use `ca_file`, `certificate`, `certificate_key`.
+         * most other options is the same as PHP options.
+         *
+         * @note context switching may happen here
+         *
+         * @throws SocketException when options are invalid
+         * @throws SocketException when IO error
+         * @param array{
+         *  'verify_peer'?: bool,
+         *  'verify_peer_name'?: bool,
+         *  'allow_self_signed'?: bool,
+         *  'verify_depth'?: int,
+         *  'ca_file'?: string,
+         *  'ca_path'?: string,
+         *  'security_level'?: int,
+         *  'alpn_protocols'?: string,
+         *  'passphrase'?: string,
+         *  'certificate'?: string,
+         *  'certificate_key'?: string,
+         *  'no_ticket'?: bool,
+         *  'no_compression'?: bool,
+         *  'peer_name'?: string,
+         *  'peer_fingerprint'?: string|array<string, string>,
+         *  'SNI_server_certs'?: array<string, string>|array<string, array{
+         *    'certificate'?: callable,
+         *    'certificate_key'?: callable
+         *   }>
+         * } $options [optional]
+         * @return static it returns itself
+         */
         public function enableCrypto(?array $options = null): static { }
 
         public function getSockAddress(): string { }
@@ -2576,7 +2623,6 @@ namespace Swow\Debug
      * @param array<array{'file': string, 'line': int, 'function': string, 'class': string, 'type': string, 'args': array<mixed>}> $trace
      */
     function buildTraceAsString(array $trace): string { }
-
     /**
      * Block the current thread for testing syscall blocking detection
      *
