@@ -4,6 +4,10 @@ swow_misc: trig deprecation and errors in coroutine
 <?php
 require __DIR__ . '/../include/skipif.php';
 skip_if(PHP_VERSION_ID >= 80200 || PHP_VERSION_ID < 70200, 'no proper deprecation in this version of PHP');
+if (memory_get_usage() === 0) {
+    // zend mm not enabled, skip test
+    exit('SKIP: zend mm not enabled');
+}
 ?>
 --INI--
 memory_limit=128M
