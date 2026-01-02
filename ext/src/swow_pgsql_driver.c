@@ -1710,6 +1710,22 @@ zend_result swow_pgsql_module_init(INIT_FUNC_ARGS)
         // brew (new)
         // @see: https://earthly.dev/blog/homebrew-on-m1/)
         "/opt/homebrew/opt/libpq/lib/",
+        // brew (Apple Silicon) - actual Cellar paths
+        "/opt/homebrew/Cellar/libpq/18.1/lib/",
+        "/opt/homebrew/Cellar/libpq/18.0/lib/",
+        "/opt/homebrew/Cellar/libpq/17.5/lib/",
+        "/opt/homebrew/Cellar/libpq/17.4/lib/",
+        "/opt/homebrew/Cellar/libpq/17.3/lib/",
+        "/opt/homebrew/Cellar/libpq/17.2/lib/",
+        "/opt/homebrew/Cellar/libpq/17.1/lib/",
+        "/opt/homebrew/Cellar/libpq/17.0/lib/",
+        "/opt/homebrew/Cellar/libpq/16.6/lib/",
+        "/opt/homebrew/Cellar/libpq/16.5/lib/",
+        "/opt/homebrew/Cellar/libpq/16.4/lib/",
+        "/opt/homebrew/Cellar/libpq/16.3/lib/",
+        "/opt/homebrew/Cellar/libpq/16.2/lib/",
+        "/opt/homebrew/Cellar/libpq/16.1/lib/",
+        "/opt/homebrew/Cellar/libpq/16.0/lib/",
         // postgres.app
         "/Applications/Postgres.app/Contents/Versions/latest/lib/",
         // fink
@@ -1768,6 +1784,9 @@ zend_result swow_pgsql_module_init(INIT_FUNC_ARGS)
                     SWOW_G(libpq_so_name) = strdup(name_buf);
                     break;
                 }
+            }
+            if (dummy_handle) {
+                break;
             }
         }
     }
