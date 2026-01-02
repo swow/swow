@@ -10,6 +10,7 @@ require __DIR__ . '/../include/bootstrap.php';
 
 use Swow\Coroutine;
 use Swow\Debug;
+use Swow\Sync\WaitReference;
 use Swow\Watchdog;
 
 switch (PHP_OS_FAMILY) {
@@ -50,19 +51,23 @@ Watchdog::run(
 );
 
 // Test 1: CPU blocking
-Coroutine::run(static function () use ($threshold): void {
+$wr = new WaitReference();
+Coroutine::run(static function () use ($threshold, $wr): void {
     $start = microtime(true);
     while (microtime(true) - $start < ($threshold / 1e9) * 2) {
         // busy loop to trigger CPU blocking
     }
 });
+WaitReference::wait($wr);
 
 Assert::true($cpu_alerted, 'CPU blocking should trigger alerter');
 
 // Test 2: Syscall blocking with Debug\block()
-Coroutine::run(static function () use ($blocking_time_ms): void {
+$wr = new WaitReference();
+Coroutine::run(static function () use ($blocking_time_ms, $wr): void {
     Debug\block($blocking_time_ms);
 });
+WaitReference::wait($wr);
 
 Assert::true($syscall_alerted, 'Syscall blocking should trigger alerter');
 
