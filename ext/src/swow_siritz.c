@@ -372,10 +372,10 @@ static void swow_siritz_run(swow_siritz_run_t *call)
     zval_ptr_dtor(&z_code);
 
     // fuck cli flaw
-    void *fuck = sapi_module.deactivate;
+    // void *fuck = sapi_module.deactivate;
     sapi_module.deactivate = NULL;
     php_request_shutdown(NULL);
-    sapi_module.deactivate = fuck;
+    // sapi_module.deactivate = fuck;
 
     ts_free_thread();
 }
