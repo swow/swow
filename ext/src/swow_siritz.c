@@ -1,3 +1,4 @@
+#include "cat.h"
 #include "swow.h"
 #include "SAPI.h"
 #include "php_main.h"
@@ -5,8 +6,35 @@
 #include "swow_siritz.h"
 #include "swow_closure.h"
 #include "swow_hook.h"
+#include "swow_wrapper.h"
+#include "zend_atomic.h"
+#include "zend_exceptions.h"
+#include "zend_hash.h"
+#include "zend_smart_str.h"
+#include "zend_types.h"
 
 #ifdef ZTS
+
+typedef enum swow_siritz_thread_status_e {
+    SWOW_SIRITZ_THREAD_STATUS_NONE = 0,
+    SWOW_SIRITZ_THREAD_STATUS_RUNNING = 1,
+    SWOW_SIRITZ_THREAD_STATUS_FINISHED = 2,
+} swow_siritz_thread_status_t;
+
+typedef enum swow_siritz_wait_result_e {
+    SWOW_SIRITZ_WAIT_RESULT_SUCCESS = 0,
+    SWOW_SIRITZ_WAIT_RESULT_TIMEOUT = 1,
+    SWOW_SIRITZ_WAIT_RESULT_KILLED = 2,
+    SWOW_SIRITZ_WAIT_RESULT_ERROR = 3,
+} swow_siritz_wait_result_t;
+
+#ifdef CAT_OS_WIN
+# define CAT_LOG_THREAD_FMT "%p"
+#elif defined(CAT_OS_UNIX_LIKE)
+# define CAT_LOG_THREAD_FMT "%lu"
+#else
+# error "Unsupported OS"
+#endif
 
 #if !defined(HAVE_PTHREAD_TIMEDJOIN_NP) && !defined(CAT_OS_WIN)
 // from https://stackoverflow.com/a/11552244
@@ -63,7 +91,7 @@ static swow_interrupt_function_t original_zend_interrupt_function = (swow_interr
 
 static void swow_siritz_interrupt_function(zend_execute_data *execute_data)
 {
-    if (SWOW_SIRITZ_G(parent_thread_exiting)) {
+    if (EG(current_execute_data)) {
 #if PHP_VERSION_ID <= 80012
 # error "Unsupported PHP version"
 #else
@@ -74,6 +102,101 @@ static void swow_siritz_interrupt_function(zend_execute_data *execute_data)
     if (original_zend_interrupt_function != NULL) {
         original_zend_interrupt_function(execute_data);
     }
+}
+
+static void swow_siritz_thread_interrupt(uv_thread_t thread)
+{
+    THREAD_T php_thread;
+#ifdef CAT_OS_WIN
+    php_thread = GetThreadId((HANDLE)thread);
+#elif defined(CAT_OS_UNIX_LIKE)
+    php_thread = (THREAD_T)thread;
+#else
+# error "Unsupported OS"
+#endif
+    // interrupt thread using vm_interrupt
+    zend_executor_globals *child_executor_global =
+        (zend_executor_globals *)ts_resource_ex(executor_globals_id, &php_thread);
+    zend_atomic_bool_store(&child_executor_global->vm_interrupt, true);
+}
+
+static swow_siritz_wait_result_t swow_siritz_thread_wait(uv_thread_t thread, swow_siritz_run_t *run, int32_t timeout_ms, bool kill_after_timeout)
+{
+    CAT_LOG_DEBUG(THREADS, "wait for thread " CAT_LOG_THREAD_FMT ", timeout %d, kill_after_timeout %d", thread, timeout_ms, kill_after_timeout);
+
+    swow_siritz_wait_result_t ret = SWOW_SIRITZ_WAIT_RESULT_SUCCESS;
+
+#ifdef CAT_OS_WIN
+    DWORD dword_ret;
+    if (timeout_ms < 0) {
+        // wait until thread is finished
+        dword_ret = WaitForSingleObject((HANDLE)thread, INFINITE);
+    } else {
+        // wait for timeout_ms
+        dword_ret = WaitForSingleObject((HANDLE)thread, (DWORD)timeout_ms);
+    }
+    // fprintf(stderr, "WaitForSingleObject: %d\n", dword_ret);
+    switch (dword_ret) {
+        case WAIT_OBJECT_0:
+            ret = SWOW_SIRITZ_WAIT_RESULT_SUCCESS;
+            break;
+        case WAIT_TIMEOUT:
+            ret = SWOW_SIRITZ_WAIT_RESULT_TIMEOUT;
+            break;
+        case WAIT_FAILED:
+            /* fall through */
+        default:
+            ret = SWOW_SIRITZ_WAIT_RESULT_ERROR;
+            break;
+    }
+    if (ret == SWOW_SIRITZ_WAIT_RESULT_TIMEOUT && kill_after_timeout) {
+        // fprintf(stderr, "swow_siritz_thread_wait: thread %p timed out, killing\n", thread);
+        CAT_LOG_DEBUG(THREADS, "swow_siritz_thread_wait: thread " CAT_LOG_THREAD_FMT " timed out, killing", thread);
+        ret = SWOW_SIRITZ_WAIT_RESULT_KILLED;
+        TerminateThread((HANDLE)thread, 0);
+    }
+#elif defined(CAT_OS_UNIX_LIKE)
+    int int_ret;
+    if (timeout_ms < 0) {
+        // wait until thread is finished
+        int_ret = pthread_join(thread, NULL);
+    } else {
+        // wait for timeout_ms then kill thread
+        struct timespec ts;
+        clock_gettime(CLOCK_MONOTONIC, &ts);
+        ts.tv_sec += timeout_ms / 1000;
+        ts.tv_nsec += (timeout_ms % 1000) * 1000000;
+        if (ts.tv_nsec >= 1000000000) {
+            ts.tv_sec += 1;
+            ts.tv_nsec -= 1000000000;
+        }
+        int_ret = pthread_timedjoin_np(thread, NULL, &ts);
+    }
+    // fprintf(stderr, "pthread_join/pthread_timedjoin_np: %d\n", int_ret);
+    switch (int_ret) {
+        case 0:
+            ret = SWOW_SIRITZ_WAIT_RESULT_SUCCESS;
+            break;
+        case ETIMEDOUT:
+            ret = SWOW_SIRITZ_WAIT_RESULT_TIMEOUT;
+            break;
+        default:
+            ret = SWOW_SIRITZ_WAIT_RESULT_ERROR;
+            errno = int_ret;
+            break;
+    }
+    if (ret == SWOW_SIRITZ_WAIT_RESULT_TIMEOUT && kill_after_timeout) {
+        CAT_LOG_DEBUG(THREADS, "swow_siritz_thread_wait: thread " CAT_LOG_THREAD_FMT " timed out, killing", thread);
+        pthread_cancel(thread);
+        pthread_join(thread, NULL);
+        ret = SWOW_SIRITZ_WAIT_RESULT_KILLED;
+    }
+#else
+    # error "Unsupported OS"
+#endif
+
+    CAT_LOG_DEBUG(THREADS, "swow_siritz_thread_wait: thread " CAT_LOG_THREAD_FMT " finished with result %d", thread, ret);
+    return ret;
 }
 
 #define getThisSiritz(s) swow_siritz_t *s = swow_siritz_get_from_object(Z_OBJ_P(ZEND_THIS))
@@ -92,6 +215,11 @@ static PHP_METHOD(Swow_Siritz, __construct)
     getThisSiritz(s);
     zend_fcall_info fci = empty_fcall_info;
     zend_fcall_info_cache fcc = empty_fcall_info_cache;
+    zval z_args;
+    HashTable args;
+    php_serialize_data_t var_hash;
+    smart_str str_callable = {0};
+    smart_str str_args = {0};
 
     ZEND_PARSE_PARAMETERS_START(1, -1)
         Z_PARAM_FUNC_EX(fci, fcc, 0, 0)
@@ -100,64 +228,60 @@ static PHP_METHOD(Swow_Siritz, __construct)
 
     if (!fcc.function_handler) {
         zend_throw_exception(swow_siritz_exception_ce, "Invalid callable", 0);
-        return;
+        RETURN_THROWS();
     }
 
-    php_serialize_data_t var_hash;
-
-    smart_str str_callable = {0};
     PHP_VAR_SERIALIZE_INIT(var_hash);
     php_var_serialize(&str_callable, ZEND_CALL_ARG(execute_data, 1), &var_hash);
     PHP_VAR_SERIALIZE_DESTROY(var_hash);
     if (EG(exception)) {
-        return;
+        goto _cleanup;
     }
 
     if (str_callable.s == NULL) {
         // serialize failed
         zend_throw_exception(swow_siritz_exception_ce, "Invalid callable", 0);
-        return;
+        goto _cleanup;
     }
 
-    zval z_args;
-    HashTable args;
-    zend_hash_init(&args, fci.param_count, NULL, ZVAL_PTR_DTOR, 0);
+    zend_hash_init(&args, fci.param_count, NULL, NULL, 0);
     for (uint32_t i = 0; i < fci.param_count; i++) {
-        zend_hash_next_index_insert(&args, &fci.params[i]);
+        zend_hash_next_index_insert_new(&args, &fci.params[i]);
     }
     ZVAL_ARR(&z_args, &args);
 
-    smart_str str_args = {0};
     PHP_VAR_SERIALIZE_INIT(var_hash);
     php_var_serialize(&str_args, &z_args, &var_hash);
     PHP_VAR_SERIALIZE_DESTROY(var_hash);
-    if (EG(exception)) {
-        return;
-    }
-
     zend_hash_destroy(&args);
+    if (EG(exception)) {
+        goto _cleanup;
+    }
 
     if (str_args.s == NULL) {
         // serialize failed
         zend_throw_exception(swow_siritz_exception_ce, "Invalid args", 0);
-        return;
+        goto _cleanup;
     }
 
-    s->callable.s = NULL;
-    smart_str_appendl_ex(&s->callable, str_callable.s->val, str_callable.s->len, 1);
-    smart_str_free(&str_callable);
+    // duplicate strings
+    s->callable = malloc(str_callable.s->len);
+    memcpy((unsigned char *)s->callable, str_callable.s->val, str_callable.s->len);
+    s->callable_len = str_callable.s->len;
+    s->args = malloc(str_args.s->len);
+    memcpy((unsigned char *)s->args, str_args.s->val, str_args.s->len);
+    s->args_len = str_args.s->len;
 
-    s->args.s = NULL;
-    smart_str_appendl_ex(&s->args, str_args.s->val, str_args.s->len, 1);
+_cleanup:
+    smart_str_free(&str_callable);
     smart_str_free(&str_args);
 }
 
-SWOW_API void swow_siritz_run(swow_siritz_run_t *call)
+static void swow_siritz_run(swow_siritz_run_t *call)
 {
-    ts_resource(0);
-#ifdef PHP_WIN32
+    (void) ts_resource(0);
+
     ZEND_TSRMLS_CACHE_UPDATE();
-#endif
 
     SG(server_context) = call->server_context;
     PG(expose_php)       = false;
@@ -175,43 +299,51 @@ SWOW_API void swow_siritz_run(swow_siritz_run_t *call)
     php_register_variable("PHP_SELF", "-", NULL);
 
     zval z_code, z_args;
-    // printf("%p %d %.*s\n", call->callable.s->val, call->callable.s->len, call->callable.s->len, call->callable.s->val);
+    const unsigned char *p;
+    ZVAL_UNDEF(&z_code);
+    ZVAL_UNDEF(&z_args);
+    CAT_LOG_DEBUG_V3(THREADS, "run child thread with callable %.*s and args %.*s", (int)call->callable_len, (const char *)call->callable, (int)call->args_len, (const char *)call->args);
     zend_first_try {
+        uv_mutex_lock(&call->mutex);
+        uv_sem_post(&call->sem);
+        call->status = SWOW_SIRITZ_THREAD_STATUS_RUNNING;
+        uv_mutex_unlock(&call->mutex);
 
         php_unserialize_data_t var_hash;
         PHP_VAR_UNSERIALIZE_INIT(var_hash);
-        const char *p = call->callable.s->val;
-        const char *pe =  call->callable.s->val + call->callable.s->len;
+        p = call->callable;
         int ret = php_var_unserialize(
             &z_code,
-            (const unsigned char **)&p,
-            (const unsigned char *)pe,
+            &p,
+            (const unsigned char *)(p + call->callable_len),
             &var_hash
         );
         PHP_VAR_UNSERIALIZE_DESTROY(var_hash);
+        free((void *)call->callable);
         // php_var_dump(&z_code, 0);
-        // printf("%d\n", ret);
-
+        // fprintf(stderr, "unserialize callable: %d\n", ret);
         if (!ret || !swow_zval_is_closure(&z_code)) {
-            php_error_docref(NULL, E_ERROR, "Failed to unserialize callable: offset " ZEND_LONG_FMT " of %zd bytes",
-                (zend_long)((char*)p - call->callable.s->val), call->callable.s->len);
-            return;
+            zend_throw_exception_ex(swow_siritz_exception_ce,
+                0, "Failed to unserialize callable: offset " ZEND_LONG_FMT " of %zd bytes",
+                (zend_long)(p - call->callable), call->callable_len);
+            zend_bailout();
         }
 
         PHP_VAR_UNSERIALIZE_INIT(var_hash);
-        p = call->args.s->val;
-        pe =  call->args.s->val + call->args.s->len;
+        p = call->args;
         ret = php_var_unserialize(
             &z_args,
-            (const unsigned char **)&p,
-            (const unsigned char *)pe,
+            &p,
+            (const unsigned char *)(p + call->args_len),
             &var_hash
         );
         PHP_VAR_UNSERIALIZE_DESTROY(var_hash);
+        free((void *)call->args);
         if (!ret) {
-            php_error_docref(NULL, E_ERROR, "Failed to unserialize args: offset " ZEND_LONG_FMT " of %zd bytes",
-                (zend_long)((char*)p - call->args.s->val), call->args.s->len);
-            return;
+            zend_throw_exception_ex(swow_siritz_exception_ce,
+                0, "Failed to unserialize args: offset " ZEND_LONG_FMT " of %zd bytes",
+                (zend_long)(p - call->args), call->args_len);
+            zend_bailout();
         }
 
         uint32_t param_count = zend_hash_num_elements(Z_ARRVAL(z_args));
@@ -230,8 +362,14 @@ SWOW_API void swow_siritz_run(swow_siritz_run_t *call)
             .param_count = param_count,
         }, NULL);
 
-        zval_ptr_dtor(&z_code);
     } zend_end_try();
+
+    uv_mutex_lock(&call->mutex);
+    call->status = SWOW_SIRITZ_THREAD_STATUS_FINISHED;
+    uv_mutex_unlock(&call->mutex);
+
+    zval_ptr_dtor(&z_args);
+    zval_ptr_dtor(&z_code);
 
     // fuck cli flaw
     void *fuck = sapi_module.deactivate;
@@ -240,8 +378,6 @@ SWOW_API void swow_siritz_run(swow_siritz_run_t *call)
     sapi_module.deactivate = fuck;
 
     ts_free_thread();
-
-    free(call);
 }
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Siritz_run, 0, 0, IS_STATIC, 0)
@@ -250,105 +386,94 @@ ZEND_END_ARG_INFO()
 static PHP_METHOD(Swow_Siritz, run)
 {
     getThisSiritz(s);
+    int ret;
 
-    // printf("%p %d %.*s\n", s->callable.s->val, s->callable.s->len, s->callable.s->len, s->callable.s->val);
-    const swow_siritz_run_t *run = malloc(sizeof(*run));
-    memcpy((void *)run, (const swow_siritz_run_t[]){{
-        .callable = s->callable,
-        .args = s->args,
-        .server_context = SG(server_context),
-    }}, sizeof(*run));
+    if (s->thread) {
+        zend_throw_exception(swow_siritz_exception_ce, "Thread already started", 0);
+        RETURN_THROWS();
+    }
 
-    int ret = uv_thread_create_ex(&s->thread, (const uv_thread_options_t[]) {{
+    // fprintf(stderr, "%p %d %.*s\n", s->callable.s->val, s->callable.s->len, s->callable.s->len, s->callable.s->val);
+    // initialize run struct
+    swow_siritz_run_t *run = malloc(sizeof(*run));
+    run->callable = s->callable;
+    run->callable_len = s->callable_len;
+    run->args = s->args;
+    run->args_len = s->args_len;
+    run->server_context = SG(server_context);
+    run->status = SWOW_SIRITZ_THREAD_STATUS_NONE;
+    ret = uv_mutex_init(&run->mutex);
+    if (ret != 0) {
+        // almost impossible
+        swow_throw_exception(swow_siritz_exception_ce, 0, "Failed to init mutex: %s", uv_strerror(ret));
+        RETURN_THROWS();
+    }
+    ret = uv_sem_init(&run->sem, 0);
+    if (ret != 0) {
+        // almost impossible
+        swow_throw_exception(swow_siritz_exception_ce, 0, "Failed to init semaphore: %s", uv_strerror(ret));
+        RETURN_THROWS();
+    }
+
+    ret = uv_thread_create_ex(&s->thread, (const uv_thread_options_t[]) {{
         .flags = UV_THREAD_HAS_STACK_SIZE,
         .stack_size = 1024 * 1024,
     }}, (void *)swow_siritz_run, (void *)run);
     if (ret != 0) {
+        // almost impossible
         swow_throw_exception(swow_siritz_exception_ce, 0, "Failed to create thread: %s", uv_strerror(ret));
-        return;
+        RETURN_THROWS();
     }
 
-    // printf("add thread %p\n", s->thread);
-    zend_hash_str_add_ptr(&SWOW_SIRITZ_G(threads), (const char *) &s->thread, sizeof(s->thread), "running");
+    zend_hash_str_add_ptr(&SWOW_SIRITZ_G(threads), (const char *) &s->thread, sizeof(s->thread), run);
+    CAT_LOG_DEBUG(THREADS, "add thread " CAT_LOG_THREAD_FMT " run %p, start waiting for semaphore", s->thread, run);
+    uv_sem_wait(&run->sem);
 
     RETURN_THIS();
 }
 
 // returns enum for error code
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Siritz_wait, 0, 0, IS_VOID, 0)
-    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, timeout, IS_LONG, 1, "null")
-    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, kill, _IS_BOOL, 0, "false")
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, timeout, IS_LONG, 0, "-1")
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, kill_after_timeout, _IS_BOOL, 0, "false")
 ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Siritz, wait)
 {
     getThisSiritz(s);
 
-    zend_long timeout = 0;
-    zend_bool kill = false;
-    zend_bool timeout_is_null = true;
+    zend_long timeout = -1;
+    zend_bool kill_after_timeout = false;
 
     ZEND_PARSE_PARAMETERS_START(0, 2)
         Z_PARAM_OPTIONAL
-        Z_PARAM_LONG_OR_NULL(timeout, timeout_is_null)
-        Z_PARAM_BOOL(kill)
+        Z_PARAM_LONG(timeout)
+        Z_PARAM_BOOL(kill_after_timeout)
     ZEND_PARSE_PARAMETERS_END();
-
-    bool done = false;
 
     if (!s->thread) {
         zend_throw_exception(swow_siritz_exception_ce, "Thread not started", 0);
         RETURN_THROWS();
     }
 
-    // maybetodo: use uv_thread and mutex things
-#ifdef CAT_OS_WIN
-    if (timeout_is_null) {
-        timeout = INFINITE;
-    }
-    DWORD ret = WaitForSingleObject((HANDLE)s->thread, timeout);
-    if (ret == WAIT_OBJECT_0) {
-        done = true;
+    swow_siritz_run_t *run = zend_hash_str_find_ptr(&SWOW_SIRITZ_G(threads), (const char *) &s->thread, sizeof(s->thread));
+    if (!run) {
+        // impossible
+        zend_throw_exception(swow_siritz_exception_ce, "Thread not found", 0);
+        RETURN_THROWS();
     }
 
-    if (kill) {
-        TerminateThread((HANDLE)s->thread, 0);
-        done = true;
-    }
-#elif defined(CAT_OS_UNIX_LIKE)
-
-    if (timeout_is_null) {
-        pthread_join(s->thread, NULL);
-        done = true;
-    } else {
-        struct timespec ts;
-        clock_gettime(CLOCK_REALTIME, &ts);
-        ts.tv_sec += timeout / 1000;
-        ts.tv_nsec += (timeout % 1000) * 1000000;
-        if (ts.tv_nsec >= 1000000000) {
-            ts.tv_sec += 1;
-            ts.tv_nsec -= 1000000000;
-        }
-
-        int ret = pthread_timedjoin_np(s->thread, NULL, &ts);
-        if (ret == 0) {
-            done = true;
-        }
-    }
-
-    if (kill) {
-        pthread_cancel(s->thread);
-        done = true;
-    }
-#else
-# error "Unsupported OS"
-#endif
-
-    if (done) {
-        // printf("remove thread %p\n", s->thread);
-        zend_hash_str_del(&SWOW_SIRITZ_G(threads), (const char *) &s->thread, sizeof(s->thread));
-    } else {
-        zend_throw_exception(swow_siritz_exception_ce, "Wait for thread timed out", 0);
+    swow_siritz_wait_result_t ret = swow_siritz_thread_wait(s->thread, run, timeout, kill_after_timeout);
+    switch (ret) {
+        case SWOW_SIRITZ_WAIT_RESULT_TIMEOUT:
+            zend_throw_exception(swow_siritz_exception_ce, "Wait for thread timed out", 0);
+            RETURN_THROWS();
+        case SWOW_SIRITZ_WAIT_RESULT_ERROR:
+            zend_throw_exception(swow_siritz_exception_ce, "Failed to wait for thread", 0);
+            RETURN_THROWS();
+        default:
+            // otherwise, success
+            break;
     }
 }
 
@@ -406,6 +531,17 @@ static zend_object *swow_siritz_create_object(zend_class_entry *ce)
     return &s->std;
 }
 
+static void swow_siritz_free_object(zend_object *object)
+{
+    swow_siritz_t *s = swow_siritz_get_from_object(object);
+    if (!s->thread) {
+        // if the thread is not started, free the callable and args
+        free((void *)s->callable);
+        free((void *)s->args);
+    }
+    // otherwise, let child thread free it
+}
+
 static const zend_function_entry swow_siritz_methods[] = {
     PHP_ME(Swow_Siritz, __construct, arginfo_class_Swow_Siritz___construct, ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Siritz, run, arginfo_class_Swow_Siritz_run, ZEND_ACC_PUBLIC)
@@ -428,7 +564,7 @@ zend_result swow_siritz_module_init(INIT_FUNC_ARGS)
         "Swow\\Siritz", NULL, swow_siritz_methods,
         &swow_siritz_handlers, NULL,
         cat_false, cat_false,
-        swow_siritz_create_object, NULL,
+        swow_siritz_create_object, swow_siritz_free_object,
         XtOffsetOf(swow_siritz_t, std)
     );
 
@@ -451,56 +587,40 @@ zend_result swow_siritz_module_init(INIT_FUNC_ARGS)
 zend_result swow_siritz_runtime_init(INIT_FUNC_ARGS)
 {
     zend_hash_init(&SWOW_SIRITZ_G(threads), 0, NULL, NULL, 1);
-    SWOW_SIRITZ_G(parent_thread_exiting) = 0;
 
     return SUCCESS;
 }
 
 zend_result swow_siritz_runtime_shutdown(INIT_FUNC_ARGS)
 {
-    ZEND_HASH_REVERSE_FOREACH_STR_KEY(&SWOW_SIRITZ_G(threads), zend_string *strkey) {
+    ZEND_HASH_REVERSE_FOREACH_STR_KEY_VAL(&SWOW_SIRITZ_G(threads), zend_string *strkey, zval *zv) {
+        swow_siritz_run_t *run = (swow_siritz_run_t *)Z_PTR_P(zv);
+        uv_thread_t thread = *(uv_thread_t *)strkey->val;
+        bool needs_wait = false;
 
-#ifdef CAT_OS_WIN
-        HANDLE t = *(HANDLE *)strkey->val;
-        // printf("rshutdown: wait for thread %d\n", GetThreadId(t));
+        CAT_LOG_DEBUG(THREADS, "siritz runtime shutdown: wait for thread " CAT_LOG_THREAD_FMT " run %p", thread, run);
 
-        // interrupt threads using vm_interrupt
-        THREAD_T phpThread = GetThreadId(t); // for Windows, php use thread id as thread handle
-        zend_executor_globals *child_executor_global =
-            (zend_executor_globals *)ts_resource_ex(executor_globals_id, &phpThread);
-        zend_atomic_bool_store(&child_executor_global->vm_interrupt, true);
-
-        if (SWOW_G(ini.thread_exit_join_ms) < 0) {
-            WaitForSingleObject(t, INFINITE);
-        } else {
-            WaitForSingleObject(t, (DWORD)SWOW_G(ini.thread_exit_join_ms));
+        uv_mutex_lock(&run->mutex);
+        if (run->status == SWOW_SIRITZ_THREAD_STATUS_RUNNING) {
+            swow_siritz_thread_interrupt(thread);
+            needs_wait = true;
         }
-#elif defined(CAT_OS_UNIX_LIKE)
-        pthread_t t = *(pthread_t *)strkey->val;
+        uv_mutex_unlock(&run->mutex);
 
-        // interrupt threads using vm_interrupt
-        // at pthread OS, php use pthread_t as thread handle
-        zend_executor_globals *child_executor_global =
-            (zend_executor_globals *)ts_resource_ex(executor_globals_id, &t);
-        zend_atomic_bool_store(&child_executor_global->vm_interrupt, true);
-
-        if (SWOW_G(ini.thread_exit_join_ms) < 0) {
-            pthread_join(t, NULL);
-        } else {
-            struct timespec ts;
-            clock_gettime(CLOCK_MONOTONIC, &ts);
-            ts.tv_sec += SWOW_G(ini.thread_exit_join_ms) / 1000;
-            ts.tv_nsec += (SWOW_G(ini.thread_exit_join_ms) % 1000) * 1000000;
-            if (ts.tv_nsec >= 1000000000) {
-                ts.tv_sec += 1;
-                ts.tv_nsec -= 1000000000;
+        if (needs_wait) {
+            if (SWOW_G(ini.thread_exit_join_ms) >= 0) {
+                swow_siritz_thread_wait(thread, run, SWOW_G(ini.thread_exit_join_ms), true);
+            } else {
+                swow_siritz_thread_wait(thread, run, -1, false);
             }
-            pthread_timedjoin_np(t, NULL, &ts);
         }
-#else
-# error "Unsupported OS"
-#endif
+
+        uv_mutex_destroy(&run->mutex);
+        uv_sem_destroy(&run->sem);
+        free(run);
     } ZEND_HASH_FOREACH_END();
+
+    zend_hash_destroy(&SWOW_SIRITZ_G(threads));
 
     return SUCCESS;
 }

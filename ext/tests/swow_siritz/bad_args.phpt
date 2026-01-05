@@ -58,9 +58,9 @@ Create siritz normal
 Create siritz arg unserializable
 Create siritz callable unserializable
 Create siritz callable with bad arg
-%AFatal error: Uncaught ArgumentCountError: Too few arguments to function Closure::{closure}(), 0 passed and exactly 1 expected in %s
+%AFatal error: Uncaught ArgumentCountError: Too few arguments to function Closure::{closur%s}(), 0 passed and exactly 1 expected in %s
 Stack trace:
-#0 [internal function]: Closure->{closure}()
+#0 [internal function]: Closure->{closur%s}()
 #1 {main}
   thrown in %s
 Done

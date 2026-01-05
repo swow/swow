@@ -1,33 +1,32 @@
 --TEST--
-swow_siritz: create
+swow_siritz: exit1
 --SKIPIF--
 <?php
 require __DIR__ . '/../include/skipif.php';
 
 skip_if_not_zts();
 ?>
+--INI--
+swow.thread_exit_join_ms=-1
 --FILE--
 <?php
 require __DIR__ . '/../include/bootstrap.php';
 
 use Swow\Siritz;
 
-echo "Create siritz\n";
-
-$siritz = new Siritz(function () {
+$thread = new Siritz(function () {
     for ($i = 0; $i < 100; $i++) {
         // main thread will interrupt this thread using unwind exit
         // so we need to split sleep into small chunks
         msleep(50);
     }
-    echo "I'm in siritz!\n";
+    echo "Child thread exit\n";
 });
 
-echo "Start siritz\n";
+$thread->run();
 
-$siritz->run();
+echo "Main thread exit\n";
 
 ?>
 --EXPECT--
-Create siritz
-Start siritz
+Main thread exit
