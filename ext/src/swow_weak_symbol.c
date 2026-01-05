@@ -39,6 +39,37 @@
 #else
 # define DL_FROM_HANDLE NULL
 #endif // CAT_OS_WIN
+// weak function pointer for PQexec
+#ifdef CAT_OS_WIN
+// extern void * PQexec(void *conn, const char *command);
+# pragma comment(linker, "/alternatename:PQexec=swow_PQexec_redirect")
+#else
+__attribute__((weak, alias("swow_PQexec_redirect"))) extern void * PQexec(void *conn, const char *command);
+#endif
+// resolved function holder
+void * (*swow_PQexec_resolved)(void *conn, const char *command);
+// resolver for PQexec
+void * swow_PQexec_resolver(void *conn, const char *command) {
+    swow_PQexec_resolved = (void * (*)(void *conn, const char *command))DL_FETCH_SYMBOL(DL_FROM_HANDLE, "PQexec");
+
+    if (swow_PQexec_resolved == NULL) {
+#if defined(DL_ERROR)
+        fprintf(stderr, "failed resolve PQexec: %s\n", DL_ERROR());
+#elif defined(CAT_OS_WIN)
+        fprintf(stderr, "failed resolve PQexec: %08x\n", (unsigned int)GetLastError());
+#else
+        fprintf(stderr, "failed resolve PQexec\n",());
+#endif
+        abort();
+    }
+
+    return swow_PQexec_resolved(conn, command);
+}
+void * (*swow_PQexec_resolved)(void *conn, const char *command) = swow_PQexec_resolver;
+void * swow_PQexec_redirect(void *conn, const char *command) {
+    return swow_PQexec_resolved(conn, command);
+}
+
 // weak function pointer for PQbackendPID
 #ifdef CAT_OS_WIN
 // extern int PQbackendPID(const void *conn);

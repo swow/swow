@@ -120,6 +120,7 @@ weaks(<<<'C'
 #else
 # define DL_FROM_HANDLE NULL
 #endif // CAT_OS_WIN
+void *PQexec(void *conn, const char *command);
 int  PQbackendPID(const void *conn);
 void PQclear(void *res);
 char *PQcmdTuples(void *res);
