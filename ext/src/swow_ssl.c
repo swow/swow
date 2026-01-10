@@ -377,7 +377,7 @@ static void swow_ssl_server_sni_data_destructor(zval *zcontext) {
 
 swow_ssl_server_sni_data_t *swow_ssl_server_sni_data_alloc(void) {
     swow_ssl_server_sni_data_t *contexts =
-        (swow_ssl_server_sni_data_t *) cat_calloc(sizeof(swow_ssl_server_sni_data_t), 1);
+        (swow_ssl_server_sni_data_t *) cat_calloc(1, sizeof(swow_ssl_server_sni_data_t));
 #if CAT_ALLOC_HANDLE_ERRORS
     // let caller handle the error
     if (unlikely(contexts == NULL)) {
