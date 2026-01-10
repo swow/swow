@@ -4,6 +4,8 @@ swow_closure: constants reference
 <?php
 require __DIR__ . '/../include/skipif.php';
 ?>
+--INI--
+swow.closure_serializer=1
 --FILE--
 <?php
 require __DIR__ . '/../include/bootstrap.php';

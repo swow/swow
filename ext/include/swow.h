@@ -70,6 +70,7 @@ ZEND_BEGIN_MODULE_GLOBALS(swow)
     swow_runtime_state_t runtime_state;
     struct {
         bool enable;
+        bool closure_serializer;
         bool async_file;
         bool async_tty;
         bool hook_pdo_pgsql;

@@ -546,6 +546,10 @@ static const zend_function_entry swow_closure_methods[] = {
 
 zend_result swow_closure_module_init(INIT_FUNC_ARGS)
 {
+    if (!SWOW_G(ini.closure_serializer)) {
+        return SUCCESS;
+    }
+
     CAT_GLOBALS_REGISTER(swow_closure);
 
     SWOW_CLOSURE_KNOWN_STRING_MAP(SWOW_KNOWN_STRING_INIT_GEN);
@@ -564,6 +568,10 @@ zend_result swow_closure_module_init(INIT_FUNC_ARGS)
 
 zend_result swow_closure_module_shutdown(INIT_FUNC_ARGS)
 {
+    if (!SWOW_G(ini.closure_serializer)) {
+        return SUCCESS;
+    }
+
     CAT_GLOBALS_UNREGISTER(swow_closure);
 
     return SUCCESS;

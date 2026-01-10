@@ -5,6 +5,8 @@ swow_closure: basic usage for PHP 8.4+
 require __DIR__ . '/../include/skipif.php';
 needs_php_version('>=', '8.4');
 ?>
+--INI--
+swow.closure_serializer=1
 --FILE--
 <?php
 require __DIR__ . '/../include/bootstrap.php';

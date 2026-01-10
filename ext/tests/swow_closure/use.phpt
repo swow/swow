@@ -4,6 +4,8 @@ swow_closure: use keyword
 <?php
 require __DIR__ . '/../include/skipif.php';
 ?>
+--INI--
+swow.closure_serializer=1
 --FILE--
 <?php
 require __DIR__ . '/../include/bootstrap.php';

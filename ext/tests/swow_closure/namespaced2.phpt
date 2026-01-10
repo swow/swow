@@ -4,6 +4,8 @@ swow_closure: namespaced2
 <?php
 require __DIR__ . '/../include/skipif.php';
 ?>
+--INI--
+swow.closure_serializer=1
 --FILE--
 <?php
 
