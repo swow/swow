@@ -5,6 +5,8 @@ swow_event: fork for worker
 require __DIR__ . '/../include/skipif.php';
 skip_if_extension_not_exist('pcntl');
 ?>
+--INI--
+swow.closure_serializer=1
 --FILE--
 <?php
 require __DIR__ . '/../include/bootstrap.php';
