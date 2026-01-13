@@ -6,6 +6,8 @@ require __DIR__ . '/../include/skipif.php';
 
 skip_if_not_zts();
 ?>
+--INI--
+swow.closure_serializer=1
 --FILE--
 <?php
 require __DIR__ . '/../include/bootstrap.php';

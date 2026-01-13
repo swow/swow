@@ -7,6 +7,7 @@ require __DIR__ . '/../include/skipif.php';
 skip_if_not_zts();
 ?>
 --INI--
+swow.closure_serializer=1
 swow.thread_exit_join_ms=-1
 --FILE--
 <?php
