@@ -72,12 +72,18 @@ SWOW_API zend_op_array *swow_compile_string(zend_string *source_string, const ch
 SWOW_API zend_op_array *swow_compile_string_ex(zend_string *source_string, const char *filename, zend_compile_position position);
 
 #if PHP_VERSION_ID < 80200
+// atomic is not available in PHP 8.1 or lower
+// no need to be atomic, just use a simple read-write
 # define zend_atomic_bool bool
 # define zend_atomic_bool_init(atomic, desired) (*atomic = desired)
 # define zend_atomic_bool_store(atomic, desired) (*atomic = desired)
 # define zend_atomic_bool_load(atomic) (*atomic)
-# define zend_atomic_bool_exchange(atomic, desired) \
-    ({ bool _old = *(atomic); *(atomic) = (desired); _old; })
+static zend_always_inline bool zend_atomic_bool_exchange(bool *atomic, bool desired)
+{
+    bool old = *atomic;
+    *atomic = desired;
+    return old;
+}
 #endif
 /* }}} */
 

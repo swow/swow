@@ -42,7 +42,7 @@ static zend_always_inline swow_utils_handler_t *swow_utils_handler_get_from_obje
     return cat_container_of(object, swow_utils_handler_t, std);
 }
 
-static zend_always_inline int swow_utils_parse_hex_string(unsigned char *dest, const char *str, size_t str_len)
+static zend_always_inline ssize_t swow_utils_parse_hex_string(unsigned char *dest, const char *str, size_t str_len)
 {
     size_t i = 0;
     if (str_len % 2 != 0) {
@@ -75,7 +75,7 @@ static zend_always_inline int swow_utils_parse_hex_string(unsigned char *dest, c
             return -1;
         }
     }
-    return i;
+    return (ssize_t) i;
 }
 
 /* loader */

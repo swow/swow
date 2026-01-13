@@ -812,7 +812,7 @@ static bool _pdo_pgsql_send_copy_data(pdo_pgsql_db_handle *H, zval *line) {
         ZSTR_LEN(query) ++;
     }
 
-    if (PQputCopyData(H->server, ZSTR_VAL(query), ZSTR_LEN(query)) != 1) {
+    if (PQputCopyData(H->server, ZSTR_VAL(query), (int)(ZSTR_LEN(query))) != 1) {
         zend_string_release_ex(query, false);
         return false;
     }
@@ -997,7 +997,7 @@ void swow_pgsqlCopyFromFile_internal(INTERNAL_FUNCTION_PARAMETERS)
 
         PQclear(pgsql_result);
         while ((buf = php_stream_get_line(stream, NULL, 0, &line_len)) != NULL) {
-            if (PQputCopyData(H->server, buf, line_len) != 1) {
+            if (PQputCopyData(H->server, buf, (int)(line_len)) != 1) {
                 efree(buf);
                 pdo_pgsql_error(dbh, PGRES_FATAL_ERROR, NULL);
                 php_stream_close(stream);
