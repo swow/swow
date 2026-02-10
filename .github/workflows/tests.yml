@@ -3,10 +3,6 @@ name: tests
 #on: [gollum]
 on: [push, pull_request]
 
-env:
-  SWOW_HAVE_SSL: 1
-  SWOW_HAVE_CURL: 1
-
 jobs:
   cs-check:
     name: Coding style check
@@ -14,16 +10,76 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Use action to check for CRLF endings
-        uses: erclu/check-crlf@v1
         with:
-          path: ./
+          persist-credentials: false
+
+      - name: Check for CRLF endings
+        id: checkcrlf
+        continue-on-error: true
+        shell: php {0}
+        run: |
+          <?php
+
+          # find out files with CRLF (\r\n) line endings
+          $includes = [
+              '.'
+          ];
+          $excludes = [
+              '/.+\.ps1$/',
+              '/.+\.bat$/',
+              '/.+\.cmd$/',
+          ];
+
+          $files = [];
+          foreach ($includes as $include) {
+              $iteriter = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($include));
+              foreach ($iteriter as $file) {
+                  if ($file->isDir()) {
+                      continue;
+                  }
+                  $files[] = $file->getPathname();
+              }
+          }
+          foreach ($excludes as $exclude) {
+              $files = array_filter($files, static function (string $file) use ($exclude): bool {
+                  return !preg_match($exclude, $file);
+              });
+          }
+          $haveCRLF = [];
+          foreach ($files as $file) {
+              $stat = stat($file);
+              if ($stat['size'] >= 1024 * 1024) {
+                  # skip large files
+                  continue;
+              }
+              $content = file_get_contents($file);
+              if (strpos($content, "\0")) {
+                  # skip binary files
+                  continue;
+              }
+              if (strpos($content, "\r") !== false) {
+                  # if we have a file like
+                  # "<?php\n$someData = \"somedata\r\n\";\n"
+                  # this is not a CRLF ending file
+                  # while
+                  # "<?php\r\n$someData = \"somedata\r\n\";\r\n# this file is noeol"
+                  # is a CRLF file
+                  # so we need to find the last (CRLF or LF) in the file, if it is CRLF, then it is a CRLF file
+                  if (strrpos($content, "\r\n") === strrpos($content, "\n") - 1) {
+                      echo $file . PHP_EOL;
+                      $haveCRLF[] = $file;
+                  }
+              }
+          }
+          if (count($haveCRLF) > 0) {
+              echo "::error::CRLF line endings found" . PHP_EOL;
+              exit(1);
+          }
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: "8.1"
+          php-version: "8.4"
 
       - name: Coding Standards Check
         shell: bash
@@ -33,6 +89,10 @@ jobs:
           echo "::endgroup::"
           echo "::group::Run cs-check"
           composer cs-check -- -v
+      
+      - name: Error if CRLF found
+        if: steps.checkcrlf.outcome != 'success'
+        run: exit 1
 
   linux-tests:
     name: PHP ${{ matrix.php-version }} ${{ matrix.ts }} Test on ubuntu-latest
@@ -40,10 +100,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        php-version: ['8.3', '8.2', '8.1', '8.0']
+        php-version: ['8.4', '8.3', '8.2', '8.1', '8.0']
         #php-version: ['8.0']
         #ts: ['nts', 'ts']
-      max-parallel: 3
+      max-parallel: 5
 
     services:
       postgres:
@@ -58,6 +118,8 @@ jobs:
 
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Setup extension dependencies
         run: |
@@ -104,12 +166,19 @@ jobs:
         id: test-extension
         continue-on-error: true
         run: |
-          TEST_SWOW_POSTGRESQL=1 composer test-extension
+          TEST_SWOW_POSTGRESQL=1 composer test-extension .
 
       - name: Run library tests
         id: test-library
         continue-on-error: true
         run: php --ri pcov && composer test-library-with-pcov
+
+      - name: Run PHPT from php-src
+        id: test-php-src
+        timeout-minutes: 5
+        continue-on-error: true
+        run: |
+          script -eqc ./.github/workflows/run-php-src-tests.sh
 
       - name: Fail if test-extension failed
         if: steps.test-extension.outcome != 'success'
@@ -126,11 +195,13 @@ jobs:
             --capture \
             --directory "ext/src" \
             --directory "ext/include" \
+            --ignore-errors gcov,empty \
             --output-file coverage.info &&
           lcov \
             --extract coverage.info \
               "${{github.workspace}}/ext/include/*" \
               "${{github.workspace}}/ext/src/*" \
+            --ignore-errors gcov,empty \
             --output-file coverage.info &&
           lcov --list coverage.info
 
@@ -148,25 +219,28 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        php-version: ['8.3', '8.2', '8.1', '8.0']
+        php-version: ['8.4', '8.3', '8.2', '8.1', '8.0']
         #php-version: ['8.0']
         #ts: ['nts', 'ts']
-      max-parallel: 3
+      max-parallel: 5
 
     steps:
 
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Setup extension dependencies
         run: |
-          brew install pkg-config
-          brew install openssl@3
-          brew install curl
-          brew install lcov
-          brew install libpq postgresql
+          # [ ! -d /opt/homebrew/Cellar/pkgconf* ] && brew install pkgconf
+          [ ! -d /opt/homebrew/Cellar/openssl@3 ] && brew install openssl@3
+          [ ! -d /opt/homebrew/Cellar/curl* ] && brew install curl
+          [ ! -d /opt/homebrew/Cellar/postgresql* ] && brew install libpq postgresql
+          [ ! -d /opt/homebrew/Cellar/lcov* ] && brew install lcov
           initdb --locale=C -E UTF-8 -U postgres "$HOME/pgsqldata"
           pg_ctl -D "$HOME/pgsqldata" start
+          openssl rand -writerand "$HOME/.rnd"
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
@@ -184,12 +258,26 @@ jobs:
         run: |
           php ./.github/workflows/phpunit-adapter.php ${{ matrix.php-version }}
           composer update -o --ignore-platform-reqs
+          # for arm64 machines:
+          # Warning: JIT on AArch64 doesn't support opcache.jit_buffer_size above 128M. in Unknown on line 0
+          if uname -m | grep -q -e arm64 -e aarch64; then
+            # for shivammathur/setup-php@v2 at macos
+            for f in \
+              /opt/homebrew/etc/php/${{ matrix.php-version }}/php.ini \
+              $(find /opt/homebrew/etc/php/${{ matrix.php-version }}/conf.d -name '*.ini' -type f)
+            do
+              sed -i -E 's/opcache.jit_buffer_size=.+/opcache.jit_buffer_size=128M/g' "$f"
+            done
+          fi
 
       - name: Detect dependencies path from php-config
         run: |
-          echo "OPENSSL_ROOT_DIR=$(php ./.github/workflows/detect-deps.php openssl)" >> $GITHUB_ENV
-          echo "CURL_ROOT_DIR=$(php ./.github/workflows/detect-deps.php curl)" >> $GITHUB_ENV
-          echo "PGSQL_ROOT_DIR=$(php ./.github/workflows/detect-deps.php libpq)" >> $GITHUB_ENV
+          simplefind() {
+            find /opt/homebrew/Cellar/$1 -type d -depth 1 | head -n 1
+          }
+          echo "OPENSSL_ROOT_DIR=$(simplefind openssl@3)" >> $GITHUB_ENV
+          echo "CURL_ROOT_DIR=$(simplefind curl)" >> $GITHUB_ENV
+          echo "PGSQL_ROOT_DIR=$(simplefind libpq)" >> $GITHUB_ENV
 
       - name: Build Swow extension
         env:
@@ -219,12 +307,19 @@ jobs:
         id: test-extension
         continue-on-error: true
         run: |
-          TEST_SWOW_POSTGRESQL=1 composer test-extension
+          TEST_SWOW_POSTGRESQL=1 composer test-extension .
 
       - name: Run library tests
         id: test-library
         continue-on-error: true
         run: php --ri pcov && composer test-library-with-pcov
+
+      - name: Run PHPT from php-src
+        id: test-php-src
+        timeout-minutes: 5
+        continue-on-error: true
+        run: |
+          script -q whatever ./.github/workflows/run-php-src-tests.sh
 
       - name: Fail if test-extension failed
         if: steps.test-extension.outcome != 'success'
@@ -259,17 +354,96 @@ jobs:
           verbose: true
 
   windows-tests:
-    name: PHP ${{ matrix.php-version }} ${{ matrix.ts }} Test on windows-2019
-    runs-on: windows-2019
+    name: PHP ${{ matrix.php-version }} ${{ matrix.ts }} Test with VS${{ matrix.vsver }}
+    runs-on: windows-latest
     strategy:
       fail-fast: false
       matrix:
         php-version: ["8.3", "8.2", "8.1", "8.0"]
-        ts: [ 'nts', 'ts' ]
-      max-parallel: 8
+        arch: ["x64"]
+        ts: ["nts", "ts"]
+        vsver: ["16"]
+        include:
+          - php-version: "8.4"
+            arch: "x64"
+            ts: "nts"
+            vsver: "17"
+          - php-version: "8.4"
+            arch: "x64"
+            ts: "ts"
+            vsver: "17"
+      max-parallel: 10
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Restore cache for Visual Studio build tools
+        uses: actions/cache/restore@v4
+        id: restore-cache
+        if: matrix.vsver == '16'
+        with:
+          key: ${{ runner.os }}-vs${{ matrix.vsver }}-buildtools-alwaysmiss
+          path: C:\VSLayout
+          restore-keys: ${{ runner.os }}-vs${{ matrix.vsver }}-buildtools
+
+      - name: Setup Visual Studio build tools
+        shell: pwsh
+        id: setup-vs-buildtools
+        if: matrix.vsver == '16'
+        run: |
+          Invoke-WebRequest -Uri https://aka.ms/vs/16/release/vs_buildtools.exe -OutFile vs_buildtools.exe
+
+          # make layout (cache)
+          $proc = Start-Process `
+            -Verb runas `
+            .\vs_buildtools.exe `
+            -Wait `
+            -PassThru `
+            -ArgumentList @(
+              '--layout', 'C:\VSLayout',
+              '--passive',
+              '--norestart',
+              '--wait',
+              '--config', '.github/workflows/winext/.vsconfig',
+              '--lang', 'en-US'
+            )
+          if ($proc.ExitCode -ne 0) {
+            throw "Failed to make Visual Studio layout: $($proc.ExitCode)"
+          }
+
+          # install from layout (cache)
+          $proc = Start-Process `
+            -Verb runas `
+            C:\VSLayout\vs_buildtools.exe `
+            -Wait `
+            -PassThru `
+            -ArgumentList @(
+              '--noWeb',
+              '--passive',
+              '--norestart',
+              '--wait'
+            )
+          if ($proc.ExitCode -ne 0) {
+            throw "Failed to install Visual Studio build tools: $($proc.ExitCode)"
+          }
+
+          # calculate cache key
+          $catalogHash = (
+            Get-FileHash -Path C:\VSLayout\catalog.json -Algorithm SHA256 | Select-Object -ExpandProperty Hash
+          ).ToLower()
+          Write-Output "cache-key=${{ runner.os }}-vs${{ matrix.vsver }}-buildtools-${catalogHash}" |
+            Out-File -FilePath "${env:GITHUB_OUTPUT}" -Encoding utf8 -Append
+
+      - name: Save cache for Visual Studio build tools
+        uses: actions/cache/save@v4
+        if: |
+          matrix.vsver == '16' &&
+          steps.restore-cache.outputs.cache-matched-key != steps.setup-vs-buildtools.outputs.cache-key
+        with:
+          path: C:\VSLayout
+          key: ${{ steps.setup-vs-buildtools.outputs.cache-key }}
 
       # TODO: windows varient of setup-php seems to be so slow
       #       shell we add caches?
@@ -362,7 +536,7 @@ jobs:
             --excluded_line_regex "\s*\}.*" `
             --excluded_line_regex "\s*\{\s*" `
             --modules php_swow.dll `
-            -- C:\tools\php\php.exe C:\tools\php\composer.phar test-extension
+            -- C:\tools\php\php.exe C:\tools\php\composer.phar test-extension .
 
       - name: Run library tests
         shell: pwsh
@@ -380,6 +554,14 @@ jobs:
             --excluded_line_regex "\s*\{\s*" `
             --modules php_swow.dll `
             -- C:\tools\php\php.exe C:\tools\php\composer.phar test-library
+
+      - name: Run PHPT from php-src
+        shell: pwsh
+        id: test-php-src
+        timeout-minutes: 5
+        continue-on-error: true
+        run: |
+          ./.github/workflows/run-php-src-tests.ps1
 
       - name: Fail if test-extension failed
         if: steps.test-extension.outcome != 'success'

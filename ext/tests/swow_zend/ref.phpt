@@ -18,13 +18,13 @@ $waitReferenceAssign = static function (object $storage): bool {
     $storage->wr::wait($storage->wr);
     return true;
 };
-Assert::throws(static fn() => $waitReferenceAssign(new class() {
+Assert::throws(static fn() => $waitReferenceAssign(new class {
     public int $wr = 0;
 }), TypeError::class);
-Assert::throws(static fn() => $waitReferenceAssign(new class() {
+Assert::throws(static fn() => $waitReferenceAssign(new class {
     public string $wr = '';
 }), TypeError::class);
-Assert::true($waitReferenceAssign(new class() {
+Assert::true($waitReferenceAssign(new class {
     public ?WaitReference $wr = null;
 }));
 
@@ -47,11 +47,11 @@ $readFromAssign = static function (object $storage): object {
     }
     return $storage;
 };
-Assert::throws(static fn() => $readFromAssign(new class() {
+Assert::throws(static fn() => $readFromAssign(new class {
     public int $address = 0;
     public string $port = '';
 }), TypeError::class);
-var_dump(get_object_vars($readFromAssign(new class() {
+var_dump(get_object_vars($readFromAssign(new class {
     public string $address = '';
     public int $port = 0;
 })));

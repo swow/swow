@@ -61,6 +61,7 @@
 .text
 .align  1
 .global cat_coroutine_context_jump
+.hidden cat_coroutine_context_jump
 .type   cat_coroutine_context_jump, %function
 cat_coroutine_context_jump:
     # prepare stack for GP + FPU

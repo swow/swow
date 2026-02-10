@@ -19,5 +19,6 @@ echo "Done\n";
 --EXPECTF--
 hello world
 !!!anonymous
-anonymous
+hello world
+!!!anonymous
 Done

@@ -165,6 +165,10 @@ int  PQsocket(const void *conn);
 int  PQstatus(const void *conn);
 int PQtransactionStatus(const void *conn);
 unsigned char *PQunescapeBytea(const unsigned char *strtext, size_t *retbuflen);
+void *PQgetCancel(void *conn);
+void PQfreeCancel(void *cancel);
+int	PQcancel(void *cancel, char *errbuf, int errbufsize);
+int  PQsetSingleRowMode(void *conn);
 
 int	lo_open(void *conn, unsigned int lobjId, int mode);
 int	lo_close(void *conn, int fd);
@@ -187,7 +191,13 @@ int	lo_unlink(void *conn, unsigned int lobjId);
 #else
 # define DL_FROM_HANDLE NULL
 #endif
+#if PHP_VERSION_ID >= 80100
+bool pdo_get_long_param(long *lval, void *value);
 bool pdo_get_bool_param(bool *bval, void *value);
+#endif // PHP_VERSION_ID >= 80100
+#if PHP_VERSION_ID >= 80500
+bool php_pdo_stmt_valid_db_obj_handle(const void *stmt);
+#endif // PHP_VERSION_ID >= 80500
 void pdo_handle_error(void *dbh, void *stmt);
 #if PHP_VERSION_ID < 80100
 int pdo_parse_params(void *stmt, void *inquery, size_t inquery_len, void *outquery, void *outquery_len);

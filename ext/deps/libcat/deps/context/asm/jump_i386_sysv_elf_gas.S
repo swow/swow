@@ -24,9 +24,14 @@
  *                                                                                      *
  ****************************************************************************************/
 
+#ifdef __x86_64__
+#include "jump_x86_64_sysv_elf_gas.S"
+#else
+
 .file "jump_i386_sysv_elf_gas.S"
 .text
 .globl cat_coroutine_context_jump
+.hidden cat_coroutine_context_jump
 .align 2
 .type cat_coroutine_context_jump,@function
 cat_coroutine_context_jump:
@@ -91,3 +96,5 @@ cat_coroutine_context_jump:
 
 /* Mark that we don't need executable stack.  */
 .section .note.GNU-stack,"",%progbits
+
+#endif

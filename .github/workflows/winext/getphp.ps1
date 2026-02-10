@@ -14,7 +14,7 @@ $scriptPath = Split-Path -parent $MyInvocation.MyCommand.Definition
 . "$scriptPath\utils.ps1" -ToolName "getphp" -MaxTry $MaxTry
 
 $guessedVCVers = @{
-    "8.4" = "VS16";
+    "8.4" = "VS17";
     "8.3" = "VS16";
     "8.2" = "VS16";
     "8.1" = "VS16";
@@ -48,9 +48,9 @@ if($PhpTs){
 }
 
 info "Fetching releases list for PHP $PhpVer $phpvar"
-$info = fetchjson -Uri "https://windows.php.net/downloads/releases/releases.json"
+$info = fetchjson -Uri "https://downloads.php.net/~windows/releases/releases.json"
 if(!$info){
-    warn "Cannot fetch php releases info from windows.php.net."
+    warn "Cannot fetch php releases info from https://downloads.php.net/~windows."
 }
 
 $dest = $null
@@ -86,7 +86,7 @@ if($info.$PhpVer.$phpvar){
     if (-Not $skip){
         provedir $ToolsPath
         $ret = dlwithhash `
-            -Uri ("https://windows.php.net/downloads/releases/" + ($latest.path)) `
+            -Uri ("https://downloads.php.net/~windows/releases/" + ($latest.path)) `
             -Dest $dest `
             -Hash $hash `
             -Hashmethod $hashmethod
@@ -96,8 +96,8 @@ if($info.$PhpVer.$phpvar){
         }
     }
 }else{
-    info "Cannot find in releases, fetching php list from windows.php.net"
-    $page = fetchpage "https://windows.php.net/downloads/releases/archives/"
+    info "Cannot find in releases, fetching php list from https://downloads.php.net/~windows"
+    $page = fetchpage "https://downloads.php.net/~windows/releases/archives/"
     $fnver = searchfile $page -Pattern ('php-(?<ver>' + $PhpVer + '[^-]+?)' + $dashnts +'-Win32-' + $PhpVCVer + '-' + $PhpArch + '.zip')
     if(!$fnver){
         warn "Cannot fetch archives list, use oldest instead"
@@ -116,7 +116,7 @@ if($info.$PhpVer.$phpvar){
         return
     }
     $dest = "$ToolsPath\$fn"
-    $ret = dlwithhash -Uri "https://windows.php.net/downloads/releases/archives/$fn" -Dest $dest
+    $ret = dlwithhash -Uri "https://downloads.php.net/~windows/releases/archives/$fn" -Dest $dest
     if (!$ret){
         err "Cannot fetch $fn"
         exit 1

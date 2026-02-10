@@ -3,7 +3,7 @@ __DIR__=$(cd "$(dirname "$0")" || exit 1; pwd); [ -z "${__DIR__}" ] && exit 1
 
 BOOST_CONTEXT_VERSION="develop"
 LIBUV_VERSION="develop"
-LLHTTP_VERSION="v8.1.0"
+LLHTTP_VERSION="v9.2.1"
 MULTIPART_PARSER_C_VERSION="master"
 
 sync(){ "${__DIR__}/../tools/dm.sh" "${__DIR__}/../" "$@"; }

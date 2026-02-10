@@ -49,7 +49,7 @@ array(5) {
     ["line"]=>
     int(%d)
     ["function"]=>
-    string(9) "{closure}"
+    string(%d) "{closur%s}"
     ["args"]=>
     array(0) {
     }
@@ -61,7 +61,7 @@ array(5) {
     ["line"]=>
     int(%d)
     ["function"]=>
-    string(9) "{closure}"
+    string(%d) "{closur%s}"
     ["args"]=>
     array(0) {
     }
@@ -73,7 +73,7 @@ array(5) {
     ["line"]=>
     int(%d)
     ["function"]=>
-    string(9) "{closure}"
+    string(%d) "{closur%s}"
     ["args"]=>
     array(0) {
     }
@@ -81,7 +81,7 @@ array(5) {
   [4]=>
   array(2) {
     ["function"]=>
-    string(9) "{closure}"
+    string(%d) "{closur%s}"
     ["args"]=>
     array(0) {
     }

@@ -40,25 +40,25 @@ echo "Done\n";
 ?>
 --EXPECTF--
 #%d %s(%d): Swow\Coroutine->getTraceAsString()
-#%d [internal function]: {closure}()%A
+#%d [internal function]: {closur%s}()%A
 #%d %s(%d): Swow\Coroutine::run(Object(Closure))
-#%d [internal function]: {closure}()%A
+#%d [internal function]: {closur%s}()%A
 #%d %s(%d): Swow\Coroutine::run(Object(Closure))
-#%d [internal function]: {closure}()%A
+#%d [internal function]: {closur%s}()%A
 #%d %s(%d): Swow\Coroutine::run(Object(Closure))
-#%d [internal function]: {closure}()%A
+#%d [internal function]: {closur%s}()%A
 #%d %s(%d): Swow\Coroutine::run(Object(Closure))
-#%d [internal function]: {closure}()%A
+#%d [internal function]: {closur%s}()%A
 #%d %s(%d): Swow\Coroutine::run(Object(Closure))
 #%d {main}
 
 #%d %s(%d): Swow\Coroutine->getTraceAsString()
-#%d [internal function]: {closure}()%A
+#%d [internal function]: {closur%s}()%A
 #%d %s(%d): Swow\Coroutine->resume()
 #%d {main}
 
 #%d %s(%d): Swow\Coroutine->getTraceAsString()
-#%d [internal function]: {closure}()%A
+#%d [internal function]: {closur%s}()%A
 #%d {main}
 
 Done

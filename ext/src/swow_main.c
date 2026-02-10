@@ -87,13 +87,25 @@ static PHP_GINIT_FUNCTION(swow)
     ZEND_TSRMLS_CACHE_UPDATE();
 #endif
     memset(swow_globals, 0, sizeof(*swow_globals));
+
+    swow_globals->runtime_state = SWOW_RUNTIME_STATE_NONE;
+    swow_globals->ini.enable = true;
+    swow_globals->ini.async_threads = 0;
+    swow_globals->ini.async_file = true;
+    swow_globals->ini.async_tty = true;
+
+#ifdef CAT_HAVE_CURL
+    swow_curl_globals_init(swow_globals);
+#endif
 }
 /* }}} */
 
 /* {{{ PHP_GSHUTDOWN_FUNCTION */
 static PHP_GSHUTDOWN_FUNCTION(swow)
 {
-    /* reserved */
+#ifdef CAT_HAVE_CURL
+    swow_curl_globals_shutdown(swow_globals);
+#endif
 }
 /* }}} */
 
@@ -121,26 +133,20 @@ STD_ZEND_INI_BOOLEAN("swow.enable", "On", PHP_INI_ALL, swow_OnUpdateBool_only_wh
 STD_PHP_INI_ENTRY("swow.async_threads", "0", PHP_INI_ALL, swow_OnUpdateLong_only_when_startup, ini.async_threads, zend_swow_globals, swow_globals)
 STD_ZEND_INI_BOOLEAN("swow.async_file", "On", PHP_INI_ALL, swow_OnUpdateBool_only_when_startup, ini.async_file, zend_swow_globals, swow_globals)
 STD_ZEND_INI_BOOLEAN("swow.async_tty", "On", PHP_INI_ALL, swow_OnUpdateBool_only_when_startup, ini.async_tty, zend_swow_globals, swow_globals)
+STD_ZEND_INI_BOOLEAN("swow.hook_pdo_pgsql", "On", PHP_INI_ALL, swow_OnUpdateBool_only_when_startup, ini.hook_pdo_pgsql, zend_swow_globals, swow_globals)
 #ifdef CAT_HAVE_CURL
 PHP_INI_ENTRY("curl.cainfo", "", PHP_INI_SYSTEM, NULL)
 #endif
 PHP_INI_END()
 
-static void swow_globals_ctor(zend_swow_globals *g)
-{
-    g->runtime_state = SWOW_RUNTIME_STATE_NONE;
-    g->ini.enable = true;
-    g->ini.async_threads = 0;
-    g->ini.async_file = true;
-    g->ini.async_tty = true;
-}
+// swow_fs donot have a separate header file, so we need to define it here
+// this is implemented in swow_fs.c
+zend_result swow_fs_module_init(INIT_FUNC_ARGS);
 
 /* {{{ PHP_MINIT_FUNCTION
  */
 PHP_MINIT_FUNCTION(swow)
 {
-    ZEND_INIT_MODULE_GLOBALS(swow, swow_globals_ctor, NULL);
-
 #ifdef CAT_HAVE_CURL
     zend_module_entry *php_curl_module = zend_hash_str_find_ptr(&module_registry, ZEND_STRL("curl"));
     if (php_curl_module != NULL) {
@@ -211,6 +217,7 @@ PHP_MINIT_FUNCTION(swow)
         swow_exceptions_module_init,
         swow_debug_module_init,
         swow_util_module_init,
+        swow_fs_module_init,
         swow_defer_module_init,
         swow_coroutine_module_init,
         swow_channel_module_init,
@@ -256,8 +263,10 @@ PHP_MINIT_FUNCTION(swow)
  */
 PHP_MSHUTDOWN_FUNCTION(swow)
 {
+    int ret = SUCCESS;
+
     if (!SWOW_G(ini.enable)) {
-        return SUCCESS;
+        goto end;
     }
 
     static const swow_shutdown_function_t mshutdown_functions[] = {
@@ -282,7 +291,7 @@ PHP_MSHUTDOWN_FUNCTION(swow)
 
     for (size_t i = 0; i < CAT_ARRAY_SIZE(mshutdown_functions); i++) {
         if (mshutdown_functions[i](SHUTDOWN_FUNC_ARGS_PASSTHRU) != SUCCESS) {
-            return FAILURE;
+            ret = FAILURE;
         }
     }
 
@@ -296,7 +305,9 @@ PHP_MSHUTDOWN_FUNCTION(swow)
 
     swow_wrapper_shutdown();
 
-    return SUCCESS;
+end:
+    UNREGISTER_INI_ENTRIES();
+    return ret;
 }
 /* }}} */
 
@@ -357,6 +368,9 @@ PHP_RSHUTDOWN_FUNCTION(swow)
     }
 
     static const swow_shutdown_function_t rshutdown_functions[] = {
+#ifdef CAT_HAVE_CURL
+        swow_curl_runtime_shutdown,
+#endif
 #ifdef CAT_OS_WAIT
         swow_proc_open_runtime_shutdown,
 #endif
@@ -514,27 +528,33 @@ PHP_MINFO_FUNCTION(swow)
 #ifdef CAT_HAVE_PQ
 # define VERSION_NUM_TO_STR(num, buf) do { \
     if (num < 100000) { \
-        snprintf(buf, sizeof(buf), "%d.%d.%d", num / 10000, num / 100 % 100, num % 100); \
+        smart_str_append_printf(buf, "%d.%d.%d", num / 10000, num / 100 % 100, num % 100); \
     } else { \
-        snprintf(buf, sizeof(buf), "%d.%d", num / 10000, num % 10000); \
+        smart_str_append_printf(buf, "%d.%d", num / 10000, num % 10000); \
     } \
 } while (0)
-    char linking_libpq_version[16] = { "notfound" };
-    if (swow_libpq_version) {
-        VERSION_NUM_TO_STR(swow_libpq_version, linking_libpq_version);
-    }
-    char building_libpq_version[16];
-    VERSION_NUM_TO_STR(swow_building_libpq_version, building_libpq_version);
-    char libpq_version_info[64];
-    if (strcmp(linking_libpq_version, building_libpq_version) == 0) {
-        snprintf(libpq_version_info, sizeof(libpq_version_info),
-            "libpq/%s", linking_libpq_version);
+    smart_str libpq_version_info = {0};
+    if (!swow_libpq_version) {
+        smart_str_append_printf(&libpq_version_info, "notfound");
     } else {
-        snprintf(libpq_version_info, sizeof(libpq_version_info),
-            "libpq/%s (built with %s)",
-            linking_libpq_version, building_libpq_version);
+        smart_str_appends(&libpq_version_info, "libpq/");
+        VERSION_NUM_TO_STR(swow_libpq_version, &libpq_version_info);
     }
-    php_info_print_table_row(2, "PostgreSQL", libpq_version_info);
+    if (swow_libpq_version != swow_building_libpq_version) {
+        smart_str_appends(&libpq_version_info, " (built with ");
+        VERSION_NUM_TO_STR(swow_building_libpq_version, &libpq_version_info);
+        smart_str_appends(&libpq_version_info, ")");
+    }
+    if (SWOW_G(libpq_so_name)) {
+        smart_str_appends(&libpq_version_info, " (library: ");
+        smart_str_appends(&libpq_version_info, SWOW_G(libpq_so_name));
+        smart_str_appends(&libpq_version_info, ")");
+    }
+    smart_str_0(&libpq_version_info);
+
+    php_info_print_table_row(2, "PostgreSQL", ZSTR_VAL(libpq_version_info.s));
+
+    smart_str_free(&libpq_version_info);
 # undef VERSION_NUM_TO_STR
 #else
     php_info_print_table_row(2, "PostgreSQL", "none");

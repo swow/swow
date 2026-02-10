@@ -19,6 +19,7 @@
 #include "swow_coroutine.h"
 
 #include "swow_debug.h"
+#include "swow_hook.h"
 
 #ifdef SWOW_COROUTINE_MOCK_FIBER_CONTEXT
 # include "zend_observer.h"
@@ -29,7 +30,7 @@
 #endif
 
 #ifdef SWOW_COROUTINE_SWAP_SILENCE_CONTEXT
-# define E_MAGIC (1 << 31)
+# define E_MAGIC (1ULL << 31)
 #endif
 
 SWOW_API zend_class_entry *swow_coroutine_ce;
@@ -334,6 +335,24 @@ static cat_bool_t swow_coroutine_construct(swow_coroutine_t *s_coroutine, zval *
         cat_update_last_error_with_previous("Coroutine construct failed");
         return cat_false;
     }
+
+#ifdef ZEND_CHECK_STACK_LIMIT
+    if (EG(reserved_stack_size) > 0) {
+        if (c_stack_size == 0) {
+            c_stack_size = CAT_COROUTINE_G(default_stack_size);
+        }
+        zend_ulong reserve = EG(reserved_stack_size);
+#ifdef __APPLE__
+        /* On Apple Clang, the stack probing function ___chkstk_darwin incorrectly
+        * probes a location that is twice the entered function's stack usage away
+        * from the stack pointer, when using an alternative stack.
+        * https://openradar.appspot.com/radar?id=5497722702397440
+        */
+        reserve += reserve;
+#endif
+        c_stack_size += reserve;
+    }
+#endif // ZEND_CHECK_STACK_LIMIT
 
     /* create C coroutine only if function is not NULL
      * (e.g. main coroutine is running so we do not need to re-create it,
@@ -1423,6 +1442,7 @@ static ZEND_COLD void swow_coroutine_throw_kill(void)
 
 SWOW_API cat_bool_t swow_coroutine_kill(swow_coroutine_t *s_coroutine)
 {
+    cat_coroutine_id_t id = s_coroutine->coroutine.id;
     while (1) {
         zval retval;
         cat_bool_t success = swow_coroutine_throw(s_coroutine, SWOW_COROUTINE_THROW_KILL_MAGIC, &retval);
@@ -1431,6 +1451,10 @@ SWOW_API cat_bool_t swow_coroutine_kill(swow_coroutine_t *s_coroutine)
             return cat_false;
         }
         zval_ptr_dtor(&retval); // TODO: __destruct may lead coroutine switch
+        if (!zend_hash_index_find(SWOW_COROUTINE_G(map), id)) {
+            // coroutine already gone
+            break;
+        }
         if (UNEXPECTED(swow_coroutine_is_alive(s_coroutine))) {
             if (s_coroutine == swow_coroutine_get_current()) {
                 break;
@@ -2273,7 +2297,7 @@ static HashTable *swow_coroutine_get_gc(zend_object *object, zval **gc_data, int
     swow_coroutine_t *s_coroutine = swow_coroutine_get_from_object(object);
     zval *z_callable = s_coroutine->executor ? &s_coroutine->executor->fcall.z_callable : NULL;
 
-    if (z_callable == NULL || ZVAL_IS_NULL(z_callable)) {
+    if (z_callable == NULL || Z_ISNULL_P(z_callable)) {
         *gc_data = NULL;
         *gc_count = 0;
     } else {
@@ -2458,6 +2482,7 @@ static int swow_coroutine_catch_handler(zend_execute_data *execute_data)
 
 /* hook exit */
 
+#ifdef ZEND_EXIT
 static int swow_coroutine_exit_handler(zend_execute_data *execute_data)
 {
     SWOW_COROUTINE_OPCODE_HANDLER_CHECK();
@@ -2508,6 +2533,37 @@ static int swow_coroutine_exit_handler(zend_execute_data *execute_data)
 
     return ZEND_USER_OPCODE_CONTINUE;
 }
+#else
+// from php/php-src@bc07a8a28a084a9bd2637b8232b75d1634a5872e Zend/zend_builtin_functions.c L72
+static PHP_FUNCTION(swow_exit)
+{
+    swow_coroutine_t *s_coroutine = swow_coroutine_get_current();
+    zend_string *str = NULL;
+    zend_long status = 0;
+
+    ZEND_PARSE_PARAMETERS_START(0, 1)
+        Z_PARAM_OPTIONAL
+        Z_PARAM_STR_OR_LONG(str, status)
+    ZEND_PARSE_PARAMETERS_END();
+
+    if (str) {
+        size_t len = ZSTR_LEN(str);
+        if (len != 0) {
+            /* An exception might be emitted by an output handler */
+            zend_write(ZSTR_VAL(str), len);
+            if (EG(exception)) {
+                RETURN_THROWS();
+            }
+        }
+    } else {
+        EG(exit_status) = status;
+        s_coroutine->exit_status = status;
+    }
+
+    ZEND_ASSERT(!EG(exception));
+    zend_throw_unwind_exit();
+}
+#endif // ZEND_EXIT
 
 /* hook silence */
 
@@ -2676,8 +2732,15 @@ zend_result swow_coroutine_module_init(INIT_FUNC_ARGS)
     memset(&swow_coroutine_internal_function, 0, sizeof(swow_coroutine_internal_function));
     swow_coroutine_internal_function.common.type = ZEND_INTERNAL_FUNCTION;
 
+# ifdef ZEND_EXIT
     /* hook opcode exit */
     zend_set_user_opcode_handler(ZEND_EXIT, swow_coroutine_exit_handler);
+# else
+    /* hook function exit */
+    if (!swow_hook_internal_function_handler(CAT_STRL("exit"), PHP_FN(swow_exit))) {
+        return FAILURE;
+    }
+# endif // ZEND_EXIT
 # ifdef SWOW_COROUTINE_SWAP_SILENCE_CONTEXT
     /* hook opcode silence */
     zend_set_user_opcode_handler(ZEND_BEGIN_SILENCE, swow_coroutine_begin_silence_handler);

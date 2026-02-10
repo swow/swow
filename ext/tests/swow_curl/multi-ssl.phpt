@@ -4,7 +4,7 @@ swow_curl: multi (SSL connection)
 <?php
 require __DIR__ . '/../include/skipif.php';
 skip_if(PHP_SAPI !== 'cli', 'only for cli');
-skip_if(!getenv('SWOW_HAVE_CURL') && !Swow\Extension::isBuiltWith('curl'), 'extension must be built with libcurl');
+skip_if(!Swow\Extension::isBuiltWith('curl'), 'extension must be built with libcurl');
 require __DIR__ . '/../include/bootstrap.php';
 skip_if(!str_contains(@file_get_contents(TEST_WEBSITE1_URL), TEST_WEBSITE1_KEYWORD), 'Unable to access ' . TEST_WEBSITE1_URL);
 skip_if(!str_contains(@file_get_contents(TEST_WEBSITE2_URL), TEST_WEBSITE2_KEYWORD), 'Unable to access ' . TEST_WEBSITE2_URL);
@@ -51,9 +51,13 @@ for ($n = 2; $n--;) {
 
     // close the handles
     curl_multi_remove_handle($mh, $ch1);
-    curl_close($ch1);
+    if (PHP_VERSION_ID < 80100) {
+        curl_close($ch1);
+    }
     curl_multi_remove_handle($mh, $ch2);
-    curl_close($ch2);
+    if (PHP_VERSION_ID < 80100) {
+        curl_close($ch2);
+    }
     curl_multi_close($mh);
 
     Assert::contains($response1, TEST_WEBSITE1_KEYWORD);

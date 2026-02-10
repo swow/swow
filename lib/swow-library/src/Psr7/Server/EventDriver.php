@@ -1,4 +1,5 @@
 <?php
+
 /**
  * This file is part of Swow
  *
@@ -228,6 +229,11 @@ class EventDriver
                 }
             }
         }
+    }
+
+    public function stop(): void
+    {
+        $this->server->close();
     }
 
     protected function solveUpgradeResponse(mixed $upgradeResponse): ResponseInterface

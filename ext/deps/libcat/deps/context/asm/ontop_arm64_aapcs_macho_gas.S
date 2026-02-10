@@ -52,6 +52,7 @@
  *******************************************************/
 
 .text
+.private_extern _cat_coroutine_context_ontop
 .global _cat_coroutine_context_ontop
 .balign 16
 _cat_coroutine_context_ontop:

@@ -70,6 +70,10 @@ CAT_API void cat_update_last_error_va_list(cat_errno_t code, const char *format,
 
 CAT_API void cat_update_last_error(cat_errno_t code, const char *format, ...)
 {
+    if (!CAT_G(runtime)) {
+        // we are not in runtime / shutting down
+        return;
+    }
     if (format == NULL) {
         cat_set_last_error(code, NULL);
     } else {

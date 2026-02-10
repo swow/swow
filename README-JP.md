@@ -29,6 +29,20 @@ Swowは、最小のCコアとほとんどのPHPコードを使用してPHPの高
 - Linux、Windows、macOSなどの一般的なオペレーティングシステム。詳細は[libuv](https://github.com/libuv/libuv/blob/v1.x/SUPPORTED_PLATFORMS.md)を参照してください。
 - PHP 8.0.0以上。最新バージョンを推奨します。
 
+### 🥧 PIEを使用する
+
+まず[PIE](https://github.com/php/pie)を取得してください。
+
+```shell
+pie install swow/swow-extension
+```
+
+開発版の場合（バグ修正を含む可能性があります）:
+
+```shell
+pie install swow/swow-extension:dev-develop
+```
+
 ### 👨‍🎤 Composerによるインストール
 
 ソースコードを取得します：
@@ -121,6 +135,6 @@ Swowには、さまざまなライセンスで利用可能な外部ライブラ�
 [release-badge]: https://img.shields.io/github/release/swow/swow.svg?include_prereleases
 [release-link]: https://github.com/swow/swow/releases
 [made-with-love-badge]: https://img.shields.io/badge/made%20with-%E2%9D%A4-f00
-[supported-php-versions-badge]: https://img.shields.io/badge/php-8.0--8.3-royalblue.svg
+[supported-php-versions-badge]: https://img.shields.io/badge/php-8.0--8.5-royalblue.svg
 [supported-platforms-badge]: https://img.shields.io/badge/platform-Win32%20|%20GNU/Linux%20|%20macOS%20|%20FreeBSD%20-gold
 [supported-architectures-badge]: https://img.shields.io/badge/architecture-x86--64%20|%20ARM64%20|%20mips64el%20|%20riscv64%20-maroon

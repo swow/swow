@@ -976,8 +976,11 @@ static zend_object *swow_buffer_clone_object(zend_object *object)
 
     return &new_s_buffer->std;
 }
-
+#if PHP_VERSION_ID < 80200
+static int swow_buffer_cast_object(zend_object *object, zval *result, int type)
+#else
 static zend_result swow_buffer_cast_object(zend_object *object, zval *result, int type)
+#endif
 {
     /* __toString() function maybe rewritten on PHP layer */
     if (EXPECTED(type == IS_STRING && object->ce->__tostring == swow_buffer_ce->__tostring)) {
@@ -1026,9 +1029,11 @@ static char *swow_buffer_realloc_standard(char *old_value, size_t new_size)
         zend_string_forget_hash_val(new_string);
     } else {
         new_string = zend_string_alloc(new_size, false);
-        memcpy(ZSTR_VAL(new_string), ZSTR_VAL(old_string), new_length);
-        if (old_string != NULL && !ZSTR_IS_INTERNED(old_string)) {
-            GC_DELREF(old_string);
+        if (old_string != NULL) {
+            memcpy(ZSTR_VAL(new_string), ZSTR_VAL(old_string), new_length);
+            if (!ZSTR_IS_INTERNED(old_string)) {
+                GC_DELREF(old_string);
+            }
         }
     }
     ZSTR_VAL(new_string)[ZSTR_LEN(new_string) = new_length] = '\0';

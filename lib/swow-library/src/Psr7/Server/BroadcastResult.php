@@ -1,4 +1,5 @@
 <?php
+
 /**
  * This file is part of Swow
  *
@@ -22,7 +23,7 @@ class BroadcastResult
         protected int $count,
         protected int $failureCount,
         /** @var ?WeakMap<ServerConnection, Exception> $exceptions */
-        protected ?WeakMap $exceptions = null
+        protected ?WeakMap $exceptions = null,
     ) {
     }
 

@@ -42,6 +42,11 @@ CAT_API char *cat_env_get_silent(const char *name, cat_errno_t *error_ptr)
     return cat_env_get_silent_ex(name, NULL, NULL, error_ptr);
 }
 
+// GCC bug: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=93644
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wreturn-local-addr"
+#endif
 CAT_API char *cat_env_get_silent_ex(const char *name, char *buffer, size_t *size, cat_errno_t *error_ptr)
 {
     char _buffer[CAT_ENV_BUFFER_SIZE];
@@ -106,6 +111,9 @@ CAT_API char *cat_env_get_silent_ex(const char *name, char *buffer, size_t *size
 
     return buffer;
 }
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic pop
+#endif
 
 CAT_API int cat_env_get_i(const char *name, int default_value)
 {

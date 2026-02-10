@@ -1,4 +1,5 @@
 <?php
+
 /**
  * This file is part of Swow
  *
@@ -27,10 +28,10 @@ function skip_if(bool $condition, string $reason): void
     }
 }
 
-function skip_if_php_version_lower_than($require_version = '7.0'): void
+function needs_php_version($cmp, $require_version): void
 {
-    if (version_compare(PHP_VERSION, $require_version, '<')) {
-        skip('need php version >= ' . $require_version);
+    if (!version_compare(PHP_VERSION, $require_version, $cmp)) {
+        skip("needs php version {$cmp} {$require_version}, now: " . PHP_VERSION);
     }
 }
 
@@ -168,4 +169,11 @@ function skip_if_max_open_files_less_than(int $number): void
 function skip_if_offline(): void
 {
     skip_if(getenv('OFFLINE'), 'Internet connection required');
+}
+
+function skip_if_cannot_create_fifo(): void
+{
+    $fifo = make_fifo();
+    @unlink($fifo);
+    skip_if(!$fifo, 'Cannot create fifo(named pipe)');
 }

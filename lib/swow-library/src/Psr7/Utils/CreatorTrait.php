@@ -1,4 +1,5 @@
 <?php
+
 /**
  * This file is part of Swow
  *
@@ -111,7 +112,7 @@ trait CreatorTrait
         mixed $uri,
         array $headers = [],
         mixed $body = null,
-        ?RequestFactoryInterface $requestFactory = null
+        ?RequestFactoryInterface $requestFactory = null,
     ): RequestInterface {
         $requestFactory ??= static::getDefaultRequestFactory();
         $request = $requestFactory->createRequest($method, $uri);
@@ -133,7 +134,7 @@ trait CreatorTrait
         string $reasonPhrase = '',
         array $headers = [],
         mixed $body = null,
-        ?ResponseFactoryInterface $responseFactory = null
+        ?ResponseFactoryInterface $responseFactory = null,
     ): ResponseInterface {
         $responseFactory ??= static::getDefaultResponseFactory();
         $response = $responseFactory->createResponse($code, $reasonPhrase);
@@ -222,7 +223,7 @@ trait CreatorTrait
         array $serverParams,
         array $headers = [],
         mixed $body = null,
-        ?ServerRequestFactoryInterface $serverRequestFactory = null
+        ?ServerRequestFactoryInterface $serverRequestFactory = null,
     ): ServerRequestInterface {
         $serverRequestFactory ??= static::getDefaultServerRequestFactory();
         $serverRequest = $serverRequestFactory->createServerRequest($method, $uri, $serverParams);
@@ -243,7 +244,7 @@ trait CreatorTrait
         ?ServerRequestFactoryInterface $serverRequestFactory = null,
         ?UriFactoryInterface $uriFactory = null,
         ?StreamFactoryInterface $streamFactory = null,
-        ?UploadedFileFactoryInterface $uploadedFileFactory = null
+        ?UploadedFileFactoryInterface $uploadedFileFactory = null,
     ): ServerRequestInterface {
         $serverRequestFactory ??= static::getDefaultServerRequestFactory();
         $serverRequest = $serverRequestFactory->createServerRequest(

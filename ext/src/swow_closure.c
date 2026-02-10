@@ -24,6 +24,8 @@
 
 #include <zend_language_parser.h>
 
+#define smart_str_appendcstr(pstr, str) smart_str_appendl((pstr), (str), strlen(str))
+
 SWOW_API CAT_GLOBALS_DECLARE(swow_closure);
 
 typedef struct swow_closure_s {
@@ -68,108 +70,118 @@ static void swow_closure_construct_from_another_closure(swow_closure_t *this_clo
     ZEND_ASSERT(swow_closure_get_from_object(Z_OBJ(result)) == this_closure);
 }
 
-typedef enum swow_ast_walk_state_e {
-    SWOW_ZEND_AST_WALK_STATE_OK = 0,
-    SWOW_ZEND_AST_WALK_STATE_NOT_PROCESSED,
-    // SWOW_ZEND_AST_WALK_STATE_SOURCE_IS_IN_ROOT,
-    SWOW_ZEND_AST_WALK_STATE_NOT_FOUND,
-} swow_ast_walk_state_t;
+typedef struct swow_closure_walk_context_s {
+    uint32_t line_start;
+    uint32_t found_function;
+    smart_str code_str; /* prepend code string */
+    smart_str closure_str; /* closure code string */
+    bool in_namespace_brace; /* in namespace ... { */
+} swow_closure_walk_context_t;
 
-typedef struct swow_ast_walk_context_s {
-    smart_str *str;
-    const char *required_namespace;
-    size_t required_namespace_length;
-    uint32_t line_end;
-    swow_ast_walk_state_t state;
-} swow_ast_walk_context_t;
-
-static void swow_closure_ast_callback(zend_ast *ast, void *context_ptr)
+static swow_php_ast_walker_op swow_closure_walker(zend_ast *ast, void *context_ptr)
 {
-    ZEND_ASSERT(ast->kind == ZEND_AST_STMT_LIST);
-    swow_ast_walk_context_t *context = (swow_ast_walk_context_t *) context_ptr;
-    zend_ast **child;
-    uint32_t children = swow_ast_children(ast, &child);
-    bool has_use = false;
-
-    for (uint32_t i = 0; i < children; i++) {
-        zend_ast *stmt = child[i];
-        if (!stmt || stmt->lineno > context->line_end) {
-            continue;
+    swow_closure_walk_context_t *context = (swow_closure_walk_context_t *) context_ptr;
+    if (ast->kind == ZEND_AST_CLOSURE || ast->kind == ZEND_AST_ARROW_FUNC) {
+        if (ast->lineno == context->line_start) {
+            if (context->found_function == 0) {
+                zend_string *code = zend_ast_export("", ast, "");
+                smart_str_setl(&context->closure_str, ZSTR_VAL(code), ZSTR_LEN(code));
+                zend_string_release(code);
+            }
+            context->found_function++;
+            return SWOW_PHP_AST_WALKER_SKIP;
         }
-        switch (stmt->kind) {
-            case ZEND_AST_NAMESPACE: {
-                zend_ast_zval *namespace_name = (zend_ast_zval *) stmt->child[0];
-                zend_ast_list *stmts = (zend_ast_list *) stmt->child[1];
-                zend_string *namespace = NULL;
+        return SWOW_PHP_AST_WALKER_CONTINUE;
+    } else if (context->found_function != 0) {
+        // already found function, other namespace, use, etc. is ignored
+        return SWOW_PHP_AST_WALKER_STOP;
+    }
 
-                if (!stmts) {
-                    // single namespace <T_STRING>; statement
-                    // see Zend/zend_language_parser.y near L369 top_statement syntax
-                    ZEND_ASSERT(namespace_name != NULL);
-                    ZEND_ASSERT(namespace_name->kind == ZEND_AST_ZVAL);
-                    ZEND_ASSERT(Z_TYPE(namespace_name->val) == IS_STRING);
-                    namespace = Z_STR(namespace_name->val);
+    switch (ast->kind) {
+        case ZEND_AST_NAMESPACE:
+        {
+            zend_ast_zval *namespace_name = (zend_ast_zval *) ast->child[0];
+            zend_ast_list *stmts = (zend_ast_list *) ast->child[1];
+            zend_string *namespace = NULL;
+            if (namespace_name) {
+                ZEND_ASSERT(namespace_name->kind == ZEND_AST_ZVAL);
+                ZEND_ASSERT(Z_TYPE(namespace_name->val) == IS_STRING);
+                namespace = Z_STR(namespace_name->val);
+            }
 
-                    if (ZSTR_LEN(namespace) != context->required_namespace_length ||
-                        strncasecmp(ZSTR_VAL(namespace), context->required_namespace, ZSTR_LEN(namespace))) {
-                        CAT_LOG_DEBUG_WITH_LEVEL(CLOSURE, 5, "Function is namespaced, but target file contains another namespace");
-                        context->state = SWOW_ZEND_AST_WALK_STATE_NOT_FOUND;
-                        return;
-                    }
-                    context->state = SWOW_ZEND_AST_WALK_STATE_OK;
-                    // continue to find next top statement
-                    break;
-                }
-
-                // namespace <T_STRING> { STMT_LIST }; statement
+            if (!stmts) {
+                // single namespace <T_STRING>; statement
                 // see Zend/zend_language_parser.y near L369 top_statement syntax
+                ZEND_ASSERT(namespace != NULL);
 
-                ZEND_ASSERT(stmts->kind == ZEND_AST_STMT_LIST);
-                if (!namespace_name) {
-                    // at root namespace
-                    if (context->required_namespace_length != 0) {
-                        // not the required namespace, continue to find next top statement
-                        continue;
-                    }
-                } else {
-                    ZEND_ASSERT(namespace_name->kind == ZEND_AST_ZVAL);
-                    ZEND_ASSERT(Z_TYPE(namespace_name->val) == IS_STRING);
-                    namespace = Z_STR(namespace_name->val);
+                smart_str_setl(&context->code_str, CAT_STRL("namespace "));
+                smart_str_appendl(&context->code_str, ZSTR_VAL(namespace), ZSTR_LEN(namespace));
+                smart_str_appendc(&context->code_str, ';');
+                context->in_namespace_brace = false;
 
-                    if (ZSTR_LEN(namespace) != context->required_namespace_length ||
-                        strncasecmp(ZSTR_VAL(namespace), context->required_namespace, ZSTR_LEN(namespace))) {
-                        // not the required namespace, continue to find next top statement
-                        continue;
-                    }
-                }
-                context->state = SWOW_ZEND_AST_WALK_STATE_OK;
-
-                zend_ast **namespaced_child;
-                uint32_t namespaced_children = swow_ast_children((zend_ast *) stmts, &namespaced_child);
-
-                for (uint32_t j = 0; j < namespaced_children; j++) {
-                    zend_ast *ast = namespaced_child[j];
-                    if (!ast || ast->lineno > context->line_end) {
-                        continue;
-                    }
-                    switch (ast->kind) {
-                        case ZEND_AST_USE:
-                        case ZEND_AST_GROUP_USE:
-                            swow_ast_export_kinds_of_use(ast, context->str, has_use);
-                            has_use = true;
-                            break;
-                    }
-                }
                 break;
             }
-            case ZEND_AST_USE:
-            case ZEND_AST_GROUP_USE:
-                swow_ast_export_kinds_of_use(stmt, context->str, has_use);
-                has_use = true;
-                break;
+
+            // namespace <T_STRING> { STMT_LIST }; statement
+            // see Zend/zend_language_parser.y near L369 top_statement syntax
+
+            ZEND_ASSERT(stmts->kind == ZEND_AST_STMT_LIST);
+            if (!namespace) {
+                // at root namespace
+                smart_str_setl(&context->code_str, CAT_STRL("namespace {"));
+            } else {
+                smart_str_setl(&context->code_str, CAT_STRL("namespace "));
+                smart_str_appendl(&context->code_str, ZSTR_VAL(namespace), ZSTR_LEN(namespace));
+                smart_str_appendcstr(&context->code_str, " {");
+            }
+            context->in_namespace_brace = true;
+            break;
+        }
+        case ZEND_AST_USE:
+        case ZEND_AST_GROUP_USE:
+        {
+            swow_php_ast_export_kinds_of_use(ast, &context->code_str, true);
+            return SWOW_PHP_AST_WALKER_SKIP;
+        }
+        default:
+            // ignore other nodes
+            break;
+    }
+    return SWOW_PHP_AST_WALKER_CONTINUE;
+}
+
+static swow_php_ast_walker_op _swow_closure_walk_callback(zend_ast *ast, void *context_ptr)
+{
+    zend_ast **child;
+    uint32_t children;
+    uint32_t index;
+    swow_php_ast_walker_op ret;
+
+    ret = swow_closure_walker(ast, context_ptr);
+    if (ret != SWOW_PHP_AST_WALKER_CONTINUE) {
+        return ret;
+    }
+
+    children = swow_php_ast_children(ast, &child);
+    for (index = 0; index < children; index++) {
+        if (child[index] == NULL) {
+            continue;
+        }
+        ret = _swow_closure_walk_callback(child[index], context_ptr);
+        if (ret == SWOW_PHP_AST_WALKER_STOP) {
+            return ret;
+        } else if (ret == SWOW_PHP_AST_WALKER_SKIP) {
+            continue;
+        } else if (ret != SWOW_PHP_AST_WALKER_CONTINUE) {
+            CAT_NEVER_HERE("unknown ast walker op");
         }
     }
-    return;
+    return SWOW_PHP_AST_WALKER_CONTINUE;
+}
+
+static void swow_closure_walk_callback(zend_ast *ast, void *context_ptr)
+{
+    _swow_closure_walk_callback(ast, context_ptr);
 }
 
 SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_user_anonymous_function(zend_function *function)
@@ -180,6 +192,15 @@ SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_user_anonymous_function(zend_f
     zend_string *doc_comment = function->op_array.doc_comment;
     zval z_static_variables, z_references, z_tmp;
     HashTable *ht = NULL;
+    zend_string *contents = NULL;
+    swow_closure_walk_context_t context = {
+        /* .line_start = */ 0,
+        /* .found_function = */ 0,
+        /* .code_str = */ { 0 },
+        /* .closure_str = */ { 0 },
+        /* .in_namespace_brace = */ false,
+    };
+    swow_php_token_list_t *token_list = NULL;
 
     if (!swow_function_is_user_anonymous(function)) {
         zend_value_error("Closure is not a user anonymous function");
@@ -203,7 +224,7 @@ SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_user_anonymous_function(zend_f
         zval *z_val;
         ZEND_HASH_MAP_FOREACH_STR_KEY_VAL(ht, key, z_val) {
             if (Z_ISREF_P(z_val)) {
-                if (ZVAL_IS_NULL(&z_references)) {
+                if (Z_ISNULL(z_references)) {
                     array_init(&z_references);
                 }
                 CAT_LOG_DEBUG_WITH_LEVEL(CLOSURE, 5, "Use reference $%.*s", (int) ZSTR_LEN(key), ZSTR_VAL(key));
@@ -212,7 +233,7 @@ SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_user_anonymous_function(zend_f
             }
             if (UNEXPECTED(zval_update_constant_ex(z_val, function->common.scope) != SUCCESS)) {
                 zend_throw_error(NULL, "Failed to solve static variable %.*s", (int) ZSTR_LEN(key), ZSTR_VAL(key));
-                goto _serialize_use_error;
+                goto _err;
             }
             /* if (!Z_ISREF_P(z_val)) */ {
                 CAT_LOG_DEBUG_WITH_LEVEL(CLOSURE, 5, "Use variable $%.*s", (int) ZSTR_LEN(key), ZSTR_VAL(key));
@@ -225,216 +246,109 @@ SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_user_anonymous_function(zend_f
     CAT_LOG_DEBUG_V3(CLOSURE, "Closure { filename=%s, line_start=%u, line_end=%u }",
         ZSTR_VAL(filename), line_start, line_end);
 
-    zend_string *contents = swow_file_get_contents(filename);
+    contents = swow_file_get_contents(filename);
 
     if (contents == NULL) {
-        return NULL;
+        zend_throw_error(NULL, "Closure serialize error: cannot read file %s", ZSTR_VAL(filename));
+        goto _err;
     }
 
-    smart_str buffer = {0};
-    swow_ast_walk_context_t context;
-    context.state = SWOW_ZEND_AST_WALK_STATE_NOT_PROCESSED;
-    context.str = &buffer;
-    context.required_namespace = swow_function_get_namespace_name(function, &context.required_namespace_length);
-    context.line_end = line_end;
+    context.line_start = line_start;
+    token_list = swow_php_tokenize(contents, swow_closure_walk_callback, &context);
 
-    if (context.required_namespace_length != 0) {
-        smart_str_appends(&buffer, "namespace ");
-        smart_str_appendl(&buffer, context.required_namespace, context.required_namespace_length);
-        smart_str_appends(&buffer, "; ");
+    // printf("closure_str: %.*s\n", (int)context.closure_str.s->len, context.closure_str.s->val);
+
+    // if (smart_str_get_len(&context.code_str) > 0) {
+    //     printf("code_str: %.*s\n", (int)context.code_str.s->len, context.code_str.s->val);
+    // }
+
+    if (smart_str_get_len(&context.closure_str) == 0) {
+        // no closure found
+        zend_throw_error(NULL, "Closure serialize error: no closure found in source code");
+        goto _err;
     }
-
-    php_token_list_t *token_list = php_tokenize(contents, swow_closure_ast_callback, &context);
-
-    switch (context.state) {
-        case SWOW_ZEND_AST_WALK_STATE_NOT_PROCESSED:
-            if (context.required_namespace_length == 0) {
-                break;
-            }
-            ZEND_FALLTHROUGH;
-        case SWOW_ZEND_AST_WALK_STATE_NOT_FOUND:
-            zend_throw_error(NULL, "Closure is in namespace \"%.*s\", but its source file do not have this namespace",
-                (int) context.required_namespace_length, context.required_namespace);
-            goto _token_parse_error;
-        case SWOW_ZEND_AST_WALK_STATE_OK:
-            break;
-        default:
-            CAT_NEVER_HERE("strange ast parsing state");
+    if (context.found_function > 1) {
+        php_error_docref(NULL, E_WARNING, "Found multiple closure on %s:%d, using the first one", ZSTR_VAL(filename), line_start);
     }
+    // now: "namespace A { use A; use B;"
 
-    enum parser_state_e {
-        CLOSURE_PARSER_STATE_FIND_OPEN_TAG,
-        CLOSURE_PARSER_STATE_PARSING,
-        CLOSURE_PARSER_STATE_FUNCTION_START,
-        CLOSURE_PARSER_STATE_FUNCTION_FIND_CLOSE_BRACE,
-        CLOSURE_PARSER_STATE_FN_FIND_SEMICOLON,
-        CLOSURE_PARSER_STATE_END,
-    };
-    enum parser_state_e parser_state = CLOSURE_PARSER_STATE_FIND_OPEN_TAG;
-    enum parser_state_e original_parser_state = CLOSURE_PARSER_STATE_PARSING;
-    uint32_t brace_level = 0;
-    bool captured = false;
-    bool is_arrow_function = false;
-    bool use_extra_function_wrapper = false;
+    // align start line
+    for (uint32_t i = 1; i < line_start; i++) {
+        smart_str_appendc(&context.code_str, '\n');
+    }
+    // now: "namespace A { use A; use B;\n\n\n\n"
 
-    CAT_QUEUE_FOREACH_DATA_START(&token_list->queue, php_token_t, node, token) {
-        bool previous_was_captured = captured;
-        captured = false;
-        if (!previous_was_captured && cat_queue_prev(&token->node) != &token_list->queue) {
-            php_token_t *prev_token = cat_queue_data(cat_queue_prev(&token->node), php_token_t, node);
-            if (token->line > prev_token->line) {
-                uint32_t line_diff = token->line - prev_token->line;
-                CAT_LOG_DEBUG_WITH_LEVEL(CLOSURE, 5, "Insert %u new lines", line_diff);
-                for (uint32_t i = 0; i < line_diff; i++) {
-                    smart_str_appendc(&buffer, '\n');
-                }
-            }
-        }
-        CAT_LOG_DEBUG_V3(CLOSURE, "token { type=%s, text='%.*s', line=%u, offset=%u }",
-            php_token_get_name(token), (int) token->text.length, token->text.data, token->line, token->offset);
-        if (parser_state == CLOSURE_PARSER_STATE_FIND_OPEN_TAG) {
-            if (token->type == T_OPEN_TAG) {
-                parser_state = original_parser_state;
-            }
-            continue;
-        }
-        if (token->type == T_CLOSE_TAG) {
-            original_parser_state = parser_state;
-            parser_state = CLOSURE_PARSER_STATE_FIND_OPEN_TAG;
-            continue;
-        }
-        switch (parser_state) {
-            case CLOSURE_PARSER_STATE_FUNCTION_START: {
-                if (token->type == '{') {
-                    ZEND_ASSERT(brace_level == 0);
-                    brace_level = 1;
-                    parser_state = CLOSURE_PARSER_STATE_FUNCTION_FIND_CLOSE_BRACE;
-                }
-                goto _capture;
-            }
-            case CLOSURE_PARSER_STATE_FUNCTION_FIND_CLOSE_BRACE: {
-                if (token->type == '{' || token->type == T_CURLY_OPEN) {
-                    brace_level++;
-                } else if (token->type == '}') {
-                    if (brace_level-- == 1) {
-                        parser_state = CLOSURE_PARSER_STATE_END;
-                    }
-                }
-                goto _capture;
-            }
-            case CLOSURE_PARSER_STATE_FN_FIND_SEMICOLON: {
-                if (token->type == ';') {
-                    parser_state = CLOSURE_PARSER_STATE_END;
-                    goto _end;
-                }
-                goto _capture;
-            }
-            default:
-                break;
-        }
-        switch (token->type) {
-            case T_FUNCTION:
-            case T_FN: {
-                if (token->line != line_start) {
-                    break;
-                }
-                if (token->type == T_FN) {
-                    is_arrow_function = true;
-                }
-                if (!is_arrow_function) {
-                    if (!ZVAL_IS_NULL(&z_static_variables) || !ZVAL_IS_NULL(&z_references)) {
-                        use_extra_function_wrapper = true;
-                    }
+    // static variables and references needs wrapper
+    if (!Z_ISNULL(z_static_variables) || !Z_ISNULL(z_references)) {
+        zend_string *key;
+        zval *z_val;
+        smart_str_appendcstr(&context.code_str, "return (static function () ");
+        if (!Z_ISNULL(z_references)) {
+            bool first = true;
+            smart_str_appendcstr(&context.code_str, "use (");
+            ZEND_HASH_PACKED_FOREACH_VAL(Z_ARRVAL(z_references), z_val) {
+                CAT_LOG_DEBUG_WITH_LEVEL(CLOSURE, 5, "Use reference for $%.*s", (int) Z_STRLEN_P(z_val), Z_STRVAL_P(z_val));
+                if (first) {
+                    first = false;
                 } else {
-                    if (!ZVAL_IS_NULL(&z_static_variables)) {
-                        use_extra_function_wrapper = true;
-                    }
+                    smart_str_appendcstr(&context.code_str, ", ");
                 }
-                /* Solve function use (start) */
-                if (use_extra_function_wrapper) {
-                    zend_string *key;
-                    zval *z_val;
-                    smart_str_appends(&buffer, "return (static function () ");
-                    if (!ZVAL_IS_NULL(&z_references)) {
-                        bool first = true;
-                        smart_str_appends(&buffer, "use (");
-                        ZEND_HASH_PACKED_FOREACH_VAL(Z_ARRVAL(z_references), z_val) {
-                            CAT_LOG_DEBUG_WITH_LEVEL(CLOSURE, 5, "Use reference for $%.*s", (int) Z_STRLEN_P(z_val), Z_STRVAL_P(z_val));
-                            if (first) {
-                                first = false;
-                            } else {
-                                smart_str_appends(&buffer, ", ");
-                            }
-                            smart_str_appends(&buffer, "&$");
-                            smart_str_append(&buffer, Z_STR_P(z_val));
-                        } ZEND_HASH_FOREACH_END();
-                        smart_str_appends(&buffer, ") ");
-                    }
-                    smart_str_appends(&buffer, "{ ");
-                    if (!ZVAL_IS_NULL(&z_static_variables)) {
-                        ZEND_HASH_MAP_FOREACH_STR_KEY_VAL(Z_ARRVAL(z_static_variables), key, z_val) {
-                            smart_str_appendc(&buffer, '$');
-                            smart_str_append(&buffer, key);
-                            smart_str_appends(&buffer, " = NULL; ");
-                        } ZEND_HASH_FOREACH_END();
-                    }
-                }
-                smart_str_appends(&buffer, "return ");
-                if (!use_extra_function_wrapper && function->common.scope != NULL) {
-                    smart_str_appendc(&buffer, '(');
-                }
-                if (function->common.fn_flags & ZEND_ACC_STATIC) {
-                    smart_str_appends(&buffer, "static ");
-                }
-                if (!is_arrow_function) {
-                    parser_state = CLOSURE_PARSER_STATE_FUNCTION_START;
-                } else {
-                    parser_state = CLOSURE_PARSER_STATE_FN_FIND_SEMICOLON;
-                }
-                goto _capture;
-            }
+                smart_str_appendcstr(&context.code_str, "&$");
+                smart_str_append(&context.code_str, Z_STR_P(z_val));
+            } ZEND_HASH_FOREACH_END();
+            smart_str_appendcstr(&context.code_str, ") ");
         }
-        if (0) {
-            _capture:
-            smart_str_appendl(&buffer, token->text.data, token->text.length);
-            captured = true;
+        smart_str_appendcstr(&context.code_str, "{ ");
+        if (!Z_ISNULL(z_static_variables)) {
+            ZEND_HASH_MAP_FOREACH_STR_KEY_VAL(Z_ARRVAL(z_static_variables), key, z_val) {
+                smart_str_appendc(&context.code_str, '$');
+                smart_str_append(&context.code_str, key);
+                smart_str_appendcstr(&context.code_str, " = NULL; ");
+            } ZEND_HASH_FOREACH_END();
         }
-        if (parser_state == CLOSURE_PARSER_STATE_END) {
-            _end:
-            /* Solve function use (end) */
-            if (!use_extra_function_wrapper) {
-                if (function->common.scope != NULL) {
-                    smart_str_appendc(&buffer, ')');
-                }
-            } else {
-                smart_str_appends(&buffer, "; })()");
-            }
-            /* Solve scope */
-            if (function->common.scope != NULL) {
-                smart_str_appends(&buffer, "->bindTo(null, \\");
-                smart_str_append(&buffer, function->common.scope->name);
-                smart_str_appends(&buffer, "::class)");
-            }
-            smart_str_appendc(&buffer, ';');
-            break;
-        }
-    } CAT_QUEUE_FOREACH_DATA_END();
-    smart_str_0(&buffer);
-    if (parser_state != CLOSURE_PARSER_STATE_END) {
-        zend_throw_error(NULL, "Failure to parse tokens");
-        goto _token_parse_error;
     }
+    // now: "namespace A { use A; use B;\n\n\n\nreturn (static function () use (...) { $a = NULL; "
+
+    // append clusore
+    smart_str_appendcstr(&context.code_str, "return (");
+    smart_str_append_smart_str(&context.code_str, &context.closure_str);
+    smart_str_appendcstr(&context.code_str, ")");
+    // now:"namespace A { use A; use B;\n\n\n\nreturn (static function () use (...) { $a = NULL; return (fn()=>1)"
+
+    // scope binding
+    if (function->common.scope != NULL) {
+        smart_str_appendcstr(&context.code_str, "->bindTo(null, \\");
+        smart_str_append(&context.code_str, function->common.scope->name);
+        smart_str_appendcstr(&context.code_str, "::class)");
+    }
+    // now: "namespace A { use A; use B;\n\n\n\nreturn (static function () use (...) { $a = NULL; return (fn()=>1)->bindTo(numm, \\A::class)"
+
+    // return semi-colon
+    smart_str_appendc(&context.code_str, ';');
+    // now: "namespace A { use A; use B;\n\n\n\nreturn (static function () use (...) { $a = NULL; return (fn()=>1)->bindTo(numm, \\A::class);"
+
+    // wrapper end brace
+    if (!Z_ISNULL(z_static_variables) || !Z_ISNULL(z_references)) {
+        smart_str_appendcstr(&context.code_str, " })();");
+    }
+    // now: "namespace A { use A; use B;\n\n\n\nreturn (static function () use (...) { $a = NULL; return (fn()=>1)->bindTo(numm, \\A::class); })();"
+
+    // if in namespace brace
+    if (context.in_namespace_brace) {
+        smart_str_appendc(&context.code_str, '}');
+    }
+    smart_str_0(&context.code_str);
 
     ht = zend_new_array(3);
     ZVAL_STR_COPY(&z_tmp, filename);
     zend_hash_update(ht, ZSTR_KNOWN(ZEND_STR_FILE), &z_tmp);
-    ZVAL_STR_COPY(&z_tmp, buffer.s);
+    ZVAL_STR_COPY(&z_tmp, context.code_str.s);
     zend_hash_update(ht, ZSTR_KNOWN(ZEND_STR_CODE), &z_tmp);
     if (doc_comment != NULL) {
         ZVAL_STR(&z_tmp, zend_string_copy(doc_comment));
         zend_hash_update(ht, SWOW_KNOWN_STRING(doc_comment), &z_tmp);
     }
-    if (!ZVAL_IS_NULL(&z_static_variables)) {
+    if (!Z_ISNULL(z_static_variables)) {
         Z_TRY_ADDREF(z_static_variables);
         zend_hash_update(ht, SWOW_KNOWN_STRING(static_variables), &z_static_variables);
     }
@@ -450,17 +364,15 @@ SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_user_anonymous_function(zend_f
         zend_string_release(output);
     });
 
-    if (0) {
-        _token_parse_error:
-        if (buffer.s) {
-            CAT_LOG_DEBUG_WITH_LEVEL(CLOSURE, 5, "Closure serialization code: <<<DUMP\n%.*s}}}\nDUMP;",
-                (int) ZSTR_LEN(buffer.s), ZSTR_VAL(buffer.s));
-        }
+    _err:
+    if (token_list) {
+        swow_php_token_list_free(token_list);
     }
-    smart_str_free_ex(&buffer, false);
-    php_token_list_free(token_list);
-    zend_string_release_ex(contents, false);
-    _serialize_use_error:
+    if (contents != NULL) {
+        zend_string_release_ex(contents, false);
+    }
+    smart_str_free(&context.code_str);
+    smart_str_free(&context.closure_str);
     zval_ptr_dtor(&z_references);
     zval_ptr_dtor(&z_static_variables);
 
@@ -478,19 +390,19 @@ SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_named_function(zend_function *
     }
 
     smart_str buffer = {0};
-    smart_str_appends(&buffer, "return Closure::fromCallable(");
+    smart_str_appendcstr(&buffer, "return Closure::fromCallable(");
     if (scope != NULL) {
         smart_str_appendc(&buffer, '[');
         smart_str_append(&buffer, scope->name);
-        smart_str_appends(&buffer, "::class, '");
+        smart_str_appendcstr(&buffer, "::class, '");
         smart_str_append(&buffer, function_name);
-        smart_str_appends(&buffer, "']");
+        smart_str_appendcstr(&buffer, "']");
     } else {
         smart_str_appendc(&buffer, '\'');
         smart_str_append(&buffer, function_name);
         smart_str_appendc(&buffer, '\'');
     }
-    smart_str_appends(&buffer, ");");
+    smart_str_appendcstr(&buffer, ");");
     smart_str_0(&buffer);
 
     HashTable *ht = zend_new_array(1);

@@ -261,7 +261,7 @@ static int cat_sockaddr__getbyname(cat_sockaddr_t *address, cat_socklen_t *addre
     while (1) {
         if (af == AF_INET) {
             *address_length = sizeof(cat_sockaddr_in_t);
-            if (unlikely(size < sizeof(cat_sockaddr_in_t))) {
+            if (unlikely((size_t) size < sizeof(cat_sockaddr_in_t))) {
                 error = CAT_ENOSPC;
             } else {
                 error = uv_ip4_addr(name, port, (cat_sockaddr_in_t *) address);
@@ -272,7 +272,7 @@ static int cat_sockaddr__getbyname(cat_sockaddr_t *address, cat_socklen_t *addre
             }
         } else if (af == AF_INET6) {
             *address_length = sizeof(cat_sockaddr_in6_t);
-            if (unlikely(size < sizeof(cat_sockaddr_in6_t))) {
+            if (unlikely((size_t) size < sizeof(cat_sockaddr_in6_t))) {
                 error = CAT_ENOSPC;
             } else {
                 error = uv_ip6_addr(name, port, (cat_sockaddr_in6_t *) address);
@@ -363,7 +363,7 @@ CAT_API int cat_sockaddr_copy(cat_sockaddr_t *to, cat_socklen_t *to_length, cons
     if (to != NULL && to_length != NULL) {
         if (unlikely(*to_length < from_length)) {
             /* ENOSPC, do not copy (meaningless) */
-            if (likely(*to_length >= cat_offsize_of(cat_sockaddr_t, sa_family))) {
+            if (likely((size_t) (*to_length) >= cat_offsize_of(cat_sockaddr_t, sa_family))) {
                 to->sa_family = from->sa_family;
             } // else is impossible?
             error = CAT_ENOSPC;
@@ -1493,7 +1493,7 @@ static cat_bool_t cat_socket_internal_bind(
             if (!cat_sockaddr_is_linux_abstract_name(name, name_length)) {
                 name_length = cat_strnlen(name, name_length);
             }
-            error = uv_pipe_bind_ex(&socket_i->u.pipe, name, name_length);
+            error = uv_pipe_bind2(&socket_i->u.pipe, name, name_length, UV_PIPE_NO_TRUNCATE);
         }
     }
     if (unlikely(error != 0)) {
@@ -1845,8 +1845,8 @@ static cat_bool_t cat_socket_internal_connect(
         if (!cat_sockaddr_is_linux_abstract_name(name, name_length)) {
             name_length = cat_strnlen(name, name_length);
         }
-        (void) uv_pipe_connect_ex(
-            request, &socket_i->u.pipe, name, name_length,
+        error = uv_pipe_connect2(
+            request, &socket_i->u.pipe, name, name_length, UV_PIPE_NO_TRUNCATE,
             !is_try ? cat_socket_internal_connect_callback : cat_socket_internal_try_connect_callback
         );
     } else {
@@ -2102,7 +2102,7 @@ CAT_API void cat_socket_crypto_options_init(cat_socket_crypto_options_t *options
     options->certificate = NULL;
     options->certificate_key = NULL;
     options->passphrase = NULL;
-    options->load_certficate = NULL;
+    options->load_certificate = NULL;
 #ifdef CAT_SSL_HAVE_SECURITY_LEVEL
     options->security_level = CAT_SSL_DEFAULT_SECURITY_LEVEL;
 #endif
@@ -2134,10 +2134,9 @@ static cat_bool_t cat_socket_enable_crypto_impl(cat_socket_t *socket, const cat_
     }
     cat_ssl_t *ssl;
     cat_ssl_context_t *context = NULL;
-    cat_buffer_t *buffer;
+    cat_buffer_t *rbuffer, *wbuffer;
     cat_socket_crypto_options_t ioptions;
     cat_bool_t use_tmp_context;
-    cat_bool_t ret = cat_false;
 
     /* check options */
     if (options == NULL) {
@@ -2196,8 +2195,8 @@ static cat_bool_t cat_socket_enable_crypto_impl(cat_socket_t *socket, const cat_
     } else {
         cat_ssl_context_disable_verify_peer(context);
     }
-    if (ioptions.load_certficate != NULL) {
-        if (!ioptions.load_certficate(context, &ioptions)) {
+    if (ioptions.load_certificate != NULL) {
+        if (!ioptions.load_certificate(context, &ioptions)) {
             goto _setup_error;
         }
     } else {
@@ -2246,12 +2245,19 @@ static cat_bool_t cat_socket_enable_crypto_impl(cat_socket_t *socket, const cat_
     }
 
     /* connection related options */
-    if (ioptions.is_client && ioptions.peer_name != NULL) {
-        cat_ssl_set_sni_server_name(ssl, ioptions.peer_name);
+    if (ioptions.peer_name != NULL) {
+        if (ioptions.is_client) {
+            cat_ssl_set_sni_server_name(ssl, ioptions.peer_name);
+        }
+        if (ioptions.verify_peer_name) {
+            ssl->expected_peer_name = cat_strdup(ioptions.peer_name);
+        }
     }
+    ssl->verify_peer = ioptions.verify_peer;
     ssl->allow_self_signed = ioptions.allow_self_signed;
 
-    buffer = &ssl->read_buffer;
+    rbuffer = &ssl->read_buffer;
+    wbuffer = &ssl->write_buffer;
 
     while (1) {
         ssize_t n;
@@ -2259,69 +2265,76 @@ static cat_bool_t cat_socket_enable_crypto_impl(cat_socket_t *socket, const cat_
 
         ssl_ret = cat_ssl_handshake(ssl);
         if (unlikely(ssl_ret == CAT_SSL_RET_ERROR)) {
-            break;
+            goto _unrecoverable_error;
         }
-        /* ssl_read_encrypted_bytes() may return n > 0
-         * after ssl_handshake() return OK */
-        n = cat_ssl_read_encrypted_bytes(ssl, buffer->value, buffer->size);
+        CAT_ASSERT(ssl_ret == CAT_SSL_RET_WANT_READ || ssl_ret == CAT_SSL_RET_WANT_WRITE || ssl_ret == CAT_SSL_RET_OK);
+
+        // get data to write
+        write_buffer_not_enough:
+        CAT_ASSERT(wbuffer->size >= wbuffer->length);
+        n = cat_ssl_read_encrypted_bytes(
+            ssl, wbuffer->value + wbuffer->length, wbuffer->size - wbuffer->length);
         if (unlikely(n == CAT_RET_ERROR)) {
-            break;
+            if (unlikely(cat_get_last_error_code() == CAT_ENOBUFS)) {
+                // extend the buffer and retry
+                // cat_buffer_extend will try by *2
+                cat_buffer_extend(wbuffer, wbuffer->size + 1);
+                CAT_ASSERT(wbuffer->size > 0);
+                // FIXME: any limit here ?
+                goto write_buffer_not_enough;
+            }
+            goto _unrecoverable_error;
         }
-        if (n > 0) {
+        wbuffer->length += n;
+
+        // wants to write, write it
+        if (wbuffer->length > 0) {
             cat_bool_t ret;
             CAT_TIME_WAIT_START() {
-                ret = cat_socket_send_ex(socket, buffer->value, n, timeout);
+                ret = cat_socket_send_ex(socket, wbuffer->value, wbuffer->length, timeout);
             } CAT_TIME_WAIT_END(timeout);
             if (unlikely(!ret)) {
-                break;
+                goto _unrecoverable_error;
+            } else {
+                // if success, all buffer is sent
+                wbuffer->length = 0;
             }
         }
-#if 0   /* FIXME: Disable it for now because we do not sure that whether it still works now,
-         * and it make SSL handshake hang on recv() forever on Linux. */
-        /* Notice: if it's client and it write something to the server,
-         * it means server will response something later, so, we need to recv it then returns,
-         * otherwise it will lead errors on Windows */
-#define CAT_SOCKET_SSL_HANDSHAKE_WORKAROUND_FOR_WINDOWS() !(n > 0 && ioptions.is_client)
-#else
-#define CAT_SOCKET_SSL_HANDSHAKE_WORKAROUND_FOR_WINDOWS() 1
-#endif
-        if (ssl_ret == CAT_SSL_RET_OK && CAT_SOCKET_SSL_HANDSHAKE_WORKAROUND_FOR_WINDOWS()) {
-            CAT_LOG_DEBUG(SOCKET, "Socket SSL handshake completed");
-            ret = cat_true;
+
+        if (ssl_ret == CAT_SSL_RET_OK) {
+            // our write buffer is clean, we can break
             break;
         }
-        {
+
+        // wants to read, read it
+        if (ssl_ret == CAT_SSL_RET_WANT_READ) {
             ssize_t nread, nwrite;
+            CAT_ASSERT(rbuffer->size >= rbuffer->length);
+            if (rbuffer->size - rbuffer->length == 0) {
+                // buffer is full, extend it
+                // cat_buffer_extend will try by *2
+                cat_buffer_extend(rbuffer, rbuffer->size + 1);
+                CAT_ASSERT(rbuffer->size > 0);
+                continue;
+            }
             CAT_TIME_WAIT_START() {
-                nread = cat_socket_recv_ex(socket, buffer->value, buffer->size, timeout);
+                nread = cat_socket_recv_ex(
+                    socket, rbuffer->value + rbuffer->length, rbuffer->size - rbuffer->length, timeout);
             } CAT_TIME_WAIT_END(timeout);
             if (unlikely(nread <= 0)) {
                 if (nread == 0) {
                     cat_update_last_error_by_code(CAT_ECONNRESET);
                 }
-                break;
+                goto _unrecoverable_error;
             }
-            nwrite = cat_ssl_write_encrypted_bytes(ssl, buffer->value, nread);
-            if (unlikely(nwrite != nread)) {
-                break;
+            rbuffer->length += nread;
+            nwrite = cat_ssl_write_encrypted_bytes(ssl, rbuffer->value, rbuffer->length);
+            if (unlikely(nwrite <= 0)) {
+                goto _unrecoverable_error;
             }
-            continue;
-        }
-    }
-
-    if (unlikely(!ret)) {
-        /* Notice: io error can not recover */
-        goto _unrecoverable_error;
-    }
-
-    if (ioptions.verify_peer) {
-        if (!cat_ssl_verify_peer(ssl, ioptions.allow_self_signed)) {
-            goto _unrecoverable_error;
-        }
-    }
-    if (ioptions.verify_peer_name) {
-        if (!cat_ssl_check_host(ssl, ioptions.peer_name, strlen(ioptions.peer_name))) {
-            goto _unrecoverable_error;
+            CAT_ASSERT(rbuffer->length >= (size_t) nwrite);
+            // move the remaining data to the beginning of the buffer
+            cat_buffer_truncate_from(rbuffer, nwrite, rbuffer->length - nwrite);
         }
     }
 
@@ -2371,7 +2384,7 @@ static cat_bool_t cat_socket_enable_crypto_impl(cat_socket_t *socket, const cat_
     CAT_NULLABLE_STR_C(options.certificate), \
     CAT_NULLABLE_STR_C(options.certificate_key), \
     options.passphrase ? "<REDEACTED>" : "(not set)", \
-    options.load_certficate, \
+    options.load_certificate, \
     protocols_str, \
     options.verify_depth, \
     cat_bool_str(options.is_client), \
@@ -3406,8 +3419,8 @@ static cat_bool_t cat_socket_internal_write_encrypted(
 )
 {
     cat_ssl_t *ssl = socket_i->ssl; CAT_ASSERT(ssl != NULL);
-    cat_io_vector_t ssl_vector[8];
-    unsigned int ssl_vector_count = CAT_ARRAY_SIZE(ssl_vector);
+    char *encrypted_data;
+    size_t encrypted_length;
     cat_bool_t ret;
 
     /* Notice: we must encrypt all buffers at once,
@@ -3415,7 +3428,7 @@ static cat_bool_t cat_socket_internal_write_encrypted(
     ret = cat_ssl_encrypt(
         socket_i->ssl,
         (const cat_io_vector_t *) vector, vector_count,
-        ssl_vector, &ssl_vector_count
+        &encrypted_data, &encrypted_length
     );
 
     if (unlikely(!ret)) {
@@ -3424,12 +3437,16 @@ static cat_bool_t cat_socket_internal_write_encrypted(
         return cat_false;
     }
 
+    // Create single vector for raw write
+    cat_socket_write_vector_t encrypted_vector = cat_socket_write_vector_init(encrypted_data, (cat_socket_vector_length_t) encrypted_length);
+
     ret = cat_socket_internal_write_raw(
-        socket_i, (cat_socket_write_vector_t *) ssl_vector, ssl_vector_count,
+        socket_i, &encrypted_vector, 1,
         address, address_length, NULL, timeout
     );
 
-    cat_ssl_encrypted_vector_free(ssl, ssl_vector, ssl_vector_count);
+    // Simple cleanup
+    cat_free(encrypted_data);
 
     return ret;
 }
@@ -3452,20 +3469,19 @@ static ssize_t cat_socket_internal_try_write_encrypted(
     if (unlikely(ssl->write_buffer.length != 0)) {
         return CAT_EAGAIN;
     }
-    cat_io_vector_t ssl_vector[8];
-    unsigned int ssl_vector_count;
+    char *encrypted_data;
+    size_t encrypted_length;
     ssize_t nwrite, nwrite_encrypted;
     cat_bool_t encrypted;
     cat_errno_t error = 0;
 
     /* Notice: we must encrypt all buffers at once,
      * otherwise we will not be able to support queued writes. */
-    ssl_vector_count = CAT_ARRAY_SIZE(ssl_vector);
     CAT_PROTECT_LAST_ERROR_START() {
         encrypted = cat_ssl_encrypt(
             socket_i->ssl,
             (const cat_io_vector_t *) vector, vector_count,
-            ssl_vector, &ssl_vector_count
+            &encrypted_data, &encrypted_length
         );
         if (unlikely(!encrypted)) {
             error = cat_get_last_error_code();
@@ -3476,10 +3492,11 @@ static ssize_t cat_socket_internal_try_write_encrypted(
         return error;
     }
 
+    // Create single vector for raw write
+    cat_socket_write_vector_t encrypted_vector = cat_socket_write_vector_init(encrypted_data, (cat_socket_vector_length_t) encrypted_length);
+
     nwrite_encrypted = cat_socket_internal_try_write_raw(
-        socket_i,
-        (cat_socket_write_vector_t *) ssl_vector, ssl_vector_count,
-        address, address_length
+        socket_i, &encrypted_vector, 1, address, address_length
     );
 
     if (nwrite_encrypted == CAT_EAGAIN) {
@@ -3488,45 +3505,19 @@ static ssize_t cat_socket_internal_try_write_encrypted(
     if (unlikely(nwrite_encrypted < 0)) {
         nwrite = nwrite_encrypted;
     } else {
-        cat_io_vector_t *ssl_vector_current = ssl_vector;
-        cat_io_vector_t *ssl_vector_eof = ssl_vector + ssl_vector_count;
-        size_t ssl_vector_base_offset = nwrite_encrypted;
         nwrite = cat_io_vector_length((const cat_io_vector_t *) vector, vector_count);
-        while (ssl_vector_base_offset >= ssl_vector_current->length) {
-            ssl_vector_base_offset -= ssl_vector_current->length;
-            if (++ssl_vector_current == ssl_vector_eof) {
-                break;
-            }
-        }
-        /* Well, this could be confusing. if we can not send all encrypted data at once,
-         * we really can not know how many bytes of raw data has been sent,
-         * so the only thing we can do is to store the remaining data to buffer and
-         * try again in the next call. */
-#ifdef CAT_DEBUG
-        size_t encrypted_bytes = cat_io_vector_length(ssl_vector, ssl_vector_count);
-        CAT_LOG_DEBUG(SSL, "SSL %p expect send %zu encrypted bytes, actually %zu bytes was sent (raw data is %zu bytes)",
-            ssl, encrypted_bytes, (size_t) nwrite_encrypted, (size_t) nwrite);
-        CAT_ASSERT(((size_t) nwrite_encrypted == encrypted_bytes) ==
-                    (ssl_vector_current == ssl_vector_eof));
-#endif
-        if (ssl_vector_current != ssl_vector_eof) {
-            if (ssl_vector_current->base == ssl->write_buffer.value) {
-                ssl->write_buffer.length = ssl_vector_current->length - ssl_vector_base_offset;
-                memmove(ssl->write_buffer.value,
-                        ssl_vector_current->base + ssl_vector_base_offset,
-                        ssl->write_buffer.length);
-            } else {
-                cat_buffer_append(&ssl->write_buffer,
-                    ssl_vector_current->base + ssl_vector_base_offset,
-                    ssl_vector_current->length - ssl_vector_base_offset);
-            }
-            while (++ssl_vector_current < ssl_vector_eof) {
-                cat_buffer_append(&ssl->write_buffer,
-                    ssl_vector_current->base,
-                    ssl_vector_current->length);
-            }
-            /* We tell caller all data has been sent, but actually they are in buffered,
-                * it's ok, just like syscall write() did. */
+
+        /* If we can not send all encrypted data at once,
+         * store the remaining data to buffer and try again in the next call. */
+        if ((size_t) nwrite_encrypted < encrypted_length) {
+            size_t remaining_encrypted = encrypted_length - nwrite_encrypted;
+            CAT_LOG_DEBUG(SSL, "SSL %p expect send %zu encrypted bytes, actually %zu bytes was sent (raw data is %zu bytes)",
+                ssl, encrypted_length, (size_t) nwrite_encrypted, (size_t) nwrite);
+
+            // Store remaining encrypted data to write buffer
+            cat_buffer_append(&ssl->write_buffer,
+                encrypted_data + nwrite_encrypted, remaining_encrypted);
+
             CAT_LOG_DEBUG(SSL, "SSL %p write buffer now has %zu bytes queued data", ssl, ssl->write_buffer.length);
             uv_write_t *request = (uv_write_t *) cat_malloc(sizeof(*request));
 #if CAT_ALLOC_HANDLE_ERRORS
@@ -3547,7 +3538,8 @@ static ssize_t cat_socket_internal_try_write_encrypted(
         }
     }
 
-    cat_ssl_encrypted_vector_free(ssl, ssl_vector, ssl_vector_count);
+    // Simple cleanup
+    cat_free(encrypted_data);
 
     return nwrite;
 }
@@ -3654,7 +3646,7 @@ static cat_always_inline ssize_t cat_socket_try_write_impl(cat_socket_t *socket,
 } while (0)
 
 #define CAT_SOCKET_READ_ADDRESS_TO_NAME(_address, _name, _name_length, _port) do { \
-    if (unlikely(_address##_info.length > sizeof(_address##_info.address))) { \
+    if (unlikely((size_t) (_address##_info.length) > sizeof(_address##_info.address))) { \
         _address##_info.length = 0; /* address is imcomplete, just discard it */ \
     } \
     /* always call this (it can handle empty case internally) */ \

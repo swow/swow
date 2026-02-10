@@ -39,6 +39,7 @@
  *******************************************************/
 
 .text
+.private_extern _cat_coroutine_context_make
 .globl _cat_coroutine_context_make
 .align 2
 _cat_coroutine_context_make:

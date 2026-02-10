@@ -1,4 +1,5 @@
 <?php
+
 /**
  * This file is part of Swow
  *
@@ -261,8 +262,8 @@ trait DebuggerCommandTrait
          *     #0 [internal function]: Swow\Coroutine->__debugInfo()
          *     #1 /path/to/swow/lib/swow-library/src/Debug/Debugger/DebuggerBreakpointTrait.php(%d): var_dump(Array)
          *     #2 /path/to/swow/examples/debug/debugger/demo.php(%d): Swow\Debug\Debugger\Debugger::breakPointHandler()
-         *     #3 /path/to/swow/examples/debug/debugger/demo.php(%d): {closure}()
-         *     #4 [internal function]: {closure}()
+         *     #3 /path/to/swow/examples/debug/debugger/demo.php(%d): {closur%s}()
+         *     #4 [internal function]: {closur%s}()
          *     #5 {main}
          * ```
          * We can see that when we call breakPointHandler,

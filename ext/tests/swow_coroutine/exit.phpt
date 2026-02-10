@@ -3,6 +3,7 @@ swow_coroutine: exit
 --SKIPIF--
 <?php
 require __DIR__ . '/../include/skipif.php';
+needs_php_version('<', '8.4');
 ?>
 --FILE--
 <?php

@@ -37,7 +37,7 @@ installyum()
     done
     yum update -yy
     # enable epel for el 7 things
-    yum install -yy epel-release
+    yum install -yy epel-release || echo "no epel-release"
     yum update -yy
     yum groupinstall -yy "Development Tools"
     yum install -yy sqlite-devel libxml2-devel libcurl-devel openssl-devel re2c bison
@@ -55,7 +55,9 @@ installdnf()
         dnf config-manager --enable powertools || :
     fi
 
-    dnf groupinstall -yy "Development Tools"
+    dnf groupinstall -yy "Development Tools" ||
+        dnf group install -yy "Development Tools" ||
+        dnf group install -yy "development-tools"
     dnf install -yy sqlite-devel libxml2-devel libcurl-devel openssl-devel re2c bison autoconf
 }
 
@@ -146,7 +148,7 @@ mian()
     info Show extension installed
     "$PREFIX/bin/php" -dextension=swow --ri swow
     info Run extension tests
-    exec "$PREFIX/bin/php" "${SWOW_SRC}/tools/test-extension.php"
+    exec "$PREFIX/bin/php" "${SWOW_SRC}/tools/test-extension.php" .
 }
 
 mian "$1"

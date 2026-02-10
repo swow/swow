@@ -29,12 +29,12 @@ extern "C" {
 
 /* version */
 
-#define SWOW_VERSION            "1.5.3"
-#define SWOW_VERSION_ID         10503
+#define SWOW_VERSION            "1.6.3-dev"
+#define SWOW_VERSION_ID         10603
 #define SWOW_MAJOR_VERSION      1
-#define SWOW_MINOR_VERSION      5
+#define SWOW_MINOR_VERSION      6
 #define SWOW_RELEASE_VERSION    3
-#define SWOW_EXTRA_VERSION      ""
+#define SWOW_EXTRA_VERSION      "dev"
 
 /* compiler */
 
@@ -72,8 +72,15 @@ ZEND_BEGIN_MODULE_GLOBALS(swow)
         bool enable;
         bool async_file;
         bool async_tty;
+        bool hook_pdo_pgsql;
         zend_long async_threads;
     } ini;
+    const char *libpq_so_name;
+#ifdef CAT_HAVE_CURL
+    struct {
+        HashTable persistent_curlsh;
+    } curl;
+#endif
 ZEND_END_MODULE_GLOBALS(swow)
 
 ZEND_EXTERN_MODULE_GLOBALS(swow)

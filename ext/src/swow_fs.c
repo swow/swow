@@ -31,11 +31,13 @@
  */
 
 #include "swow.h"
+#include "swow_hook.h"
 #include "cat_fs.h"
 #include "cat_work.h"
 #include "cat_time.h"
+#include "cat_socket.h"
 
-// from main/streams/plain_wrapper.c @ 4dad74f250de682a7deae0c9895436cd8aee6978
+// from main/streams/plain_wrapper.c @ ff7e1e71059d61398b7d21ac4f2c9101cff777d8
 
 #include "php.h"
 #include "php_globals.h"
@@ -44,12 +46,21 @@
 #include "ext/standard/file.h"
 #include "ext/standard/flock_compat.h"
 #include "ext/standard/php_filestat.h"
+#if PHP_VERSION_ID < 80300
+#include "ext/standard/php_rand.h"
+#include "ext/standard/php_random.h"
+#else
+#include "ext/random/php_random.h"
+#endif
 #include <stddef.h>
 #include <fcntl.h>
-#if HAVE_SYS_WAIT_H
+#ifdef __linux__
+# include <sys/sysmacros.h>
+#endif
+#ifdef HAVE_SYS_WAIT_H
 # include <sys/wait.h>
 #endif
-#if HAVE_SYS_FILE_H
+#ifdef HAVE_SYS_FILE_H
 # include <sys/file.h>
 #endif
 #ifdef HAVE_SYS_MMAN_H
@@ -182,6 +193,7 @@ static inline cat_dirent_t *swow_fs_readdir(cat_dir_t *dir)
         }
         free((void *) dirent->name);
         dirent->name = php_win32_cp_w_to_cur(wname);
+        free((void *) wname);
         if (NULL == dirent->name) {
             CLEANUP(dirent);
             return NULL;
@@ -298,11 +310,11 @@ static inline int swow_fs_stat_mock(const char *path, zend_stat_t *statbuf, int 
 }
 #undef COPY_MEMBER
 
-// from win32/winutil.c @ 9e80947e343b253e078abfc9d1d4f800342c26f8
+// from win32/winutil.c @ 107bd080a5b02ad929e781c3e42bd8aa0ac79f9e
 #ifdef PHP_WIN32
 static int swow_win32_check_trailing_space(const char *path, const size_t path_len)
 {
-    if (path_len > MAXPATHLEN - 1) {
+    if (path_len == 0 || path_len > MAXPATHLEN - 1) {
         return 1;
     }
     if (path) {
@@ -317,7 +329,7 @@ static int swow_win32_check_trailing_space(const char *path, const size_t path_l
 }
 #endif
 
-// from main/streams/cast.c @ abed8b8e417e69d43f1ccd9e2c473f95dbab2400
+// from main/streams/cast.c @ 051414bec6bdc43b8345e317b680d2d063b28067
 static void swow_stream_mode_sanitize_fdopen_fopencookie(php_stream *stream, char *result)
 {
     /* replace modes not supported by fdopen and fopencookie, but supported
@@ -472,7 +484,9 @@ static inline const char *swow_check_path(const char *path)
     if (!pathw) {
         return NULL;
     }
-    return php_win32_cp_w_to_utf8(pathw);
+    const char *ret = php_win32_cp_w_to_utf8(pathw);
+    free((void *) pathw);
+    return ret;
 }
 # define check_path_free free
 # define SAVE_LE DWORD le = GetLastError()
@@ -558,6 +572,19 @@ static inline int swow_virtual_open(const char *path, int flags)
     return ret;
 }
 
+#ifdef PHP_WIN32
+static inline int swow_virtual_open_mode(const char *path, int flags, mode_t mode)
+{
+    int ret;
+    SWOW_VCWD_WRAP(path, real_path, CWD_FILEPATH, {
+        ret = -1;
+    }, {
+        ret = cat_fs_open(real_path, flags, mode);
+    });
+    return ret;
+}
+#endif
+
 static inline int swow_virtual_unlink(const char *path)
 {
     int ret;
@@ -603,6 +630,8 @@ static inline int swow_virtual_stat_ex(const char *path, zend_stat_t *statbuf, i
     int ret;
 #ifdef PHP_WIN32
     LPCWSTR pathw = swow_check_path_w(path);
+    // not used, just free it
+    free((void *) pathw);
     if (!pathw) {
         ret = -1;
     } else
@@ -845,19 +874,37 @@ static php_stream *_swow_stream_fopen_from_file_int(FILE *file, const char *mode
     return php_stream_alloc_rel(&php_stream_stdio_ops, self, 0, mode);
 }
 
-// from main/php_open_temporary_file.c @ 01b3fc03c30c6cb85038250bb5640be3a09c6a32
+// from main/php_open_temporary_file.c @ 1c74a1a8892484c3baae35106e2f2e2f7bf2b36d
+static const char base32alphabet[] = "0123456789abcdefghijklmnopqrstuv";
+
 static int swow_do_open_temporary_file(const char *path, const char *pfx, zend_string **opened_path_p)
 {
+#ifdef PHP_WIN32
+    char *opened_path = NULL;
+    size_t opened_path_len;
+    wchar_t *cwdw, *random_prefix_w, pathw[MAXPATHLEN];
+#else
     char opened_path[MAXPATHLEN];
     const char *trailing_slash;
+#endif
+    uint64_t random;
+    char *random_prefix;
+    char *p;
+    size_t len;
     char cwd[MAXPATHLEN];
     cwd_state new_state;
     int fd = -1;
+#ifndef HAVE_MKSTEMP
+    int open_flags = O_CREAT | O_TRUNC | O_RDWR
+#ifdef PHP_WIN32
+        | _O_BINARY
+#endif
+        ;
+#endif
 
     if (!path || !path[0]) {
         return -1;
     }
-
 
 #ifdef PHP_WIN32
     if (!swow_win32_check_trailing_space(pfx, strlen(pfx))) {
@@ -878,24 +925,91 @@ static int swow_do_open_temporary_file(const char *path, const char *pfx, zend_s
         return -1;
     }
 
+    /* Extend the prefix to increase randomness */
+    if (php_random_bytes_silent(&random, sizeof(random)) == FAILURE) {
+        random = php_random_generate_fallback_seed();
+    }
+
+    /* Use a compact encoding to not increase the path len too much, but do not
+     * mix case to avoid losing randomness on case-insensitive file systems */
+    len = strlen(pfx) + 13 /* log(2**64)/log(strlen(base32alphabet)) */ + 1;
+    random_prefix = emalloc(len);
+    p = zend_mempcpy(random_prefix, pfx, strlen(pfx));
+    while (p + 1 < random_prefix + len) {
+        *p = base32alphabet[random % strlen(base32alphabet)];
+        p++;
+        random /= strlen(base32alphabet);
+    }
+    *p = '\0';
+
+#ifndef PHP_WIN32
     if (IS_SLASH(new_state.cwd[new_state.cwd_length - 1])) {
         trailing_slash = "";
     } else {
         trailing_slash = "/";
     }
 
-    if (snprintf(opened_path, MAXPATHLEN, "%s%s%sXXXXXX", new_state.cwd, trailing_slash, pfx) >= MAXPATHLEN) {
+    if (snprintf(opened_path, MAXPATHLEN, "%s%s%sXXXXXX", new_state.cwd, trailing_slash, random_prefix) >= MAXPATHLEN) {
+        efree(random_prefix);
+        efree(new_state.cwd);
+        return -1;
+    }
+#endif
+
+#ifdef PHP_WIN32
+    cwdw = php_win32_ioutil_conv_any_to_w(new_state.cwd, PHP_WIN32_CP_IGNORE_LEN, PHP_WIN32_CP_IGNORE_LEN_P);
+    random_prefix_w = php_win32_ioutil_conv_any_to_w(random_prefix, PHP_WIN32_CP_IGNORE_LEN, PHP_WIN32_CP_IGNORE_LEN_P);
+    if (!cwdw || !random_prefix_w) {
+        free(cwdw);
+        free(random_prefix_w);
+        efree(random_prefix);
         efree(new_state.cwd);
         return -1;
     }
 
-    fd = cat_fs_mkstemp(opened_path);
+    if (GetTempFileNameW(cwdw, random_prefix_w, 0, pathw)) {
+        opened_path = php_win32_cp_conv_w_to_cur(pathw, PHP_WIN32_CP_IGNORE_LEN, &opened_path_len);
+        if (!opened_path || opened_path_len >= MAXPATHLEN) {
+            free(cwdw);
+            free(random_prefix_w);
+            efree(random_prefix);
+            efree(new_state.cwd);
+            free(opened_path);
+            return -1;
+        }
+        assert(strlen(opened_path) == opened_path_len);
 
+        /* Some versions of windows set the temp file to be read-only,
+         * which means that opening it will fail... */
+        if (swow_virtual_chmod(opened_path, 0600)) {
+            free(cwdw);
+            free(random_prefix_w);
+            efree(random_prefix);
+            efree(new_state.cwd);
+            free(opened_path);
+            return -1;
+        }
+        fd = swow_virtual_open_mode(opened_path, open_flags, 0600);
+    }
+
+    free(cwdw);
+    free(random_prefix_w);
+#else
+    fd = cat_fs_mkstemp(opened_path);
+#endif
+
+#ifdef PHP_WIN32
+    if (fd != -1 && opened_path_p) {
+        *opened_path_p = zend_string_init(opened_path, opened_path_len, 0);
+    }
+    free(opened_path);
+#else
     if (fd != -1 && opened_path_p) {
         *opened_path_p = zend_string_init(opened_path, strlen(opened_path), 0);
     }
-
+#endif
     efree(new_state.cwd);
+    efree(random_prefix);
     return fd;
 }
 
@@ -972,7 +1086,28 @@ SWOW_API php_stream *_swow_stream_fopen_temporary_file(const char *dir, const ch
 static void detect_is_seekable(swow_stdio_stream_data *self) {
 #if defined(S_ISFIFO) && defined(S_ISCHR)
     if (self->fd >= 0 && do_fstat(self, 0) == 0) {
+#ifdef __linux__
+        if (S_ISCHR(self->sb.st_mode)) {
+            /* Some character devices are exceptions, check their major/minor ID
+             * https://www.kernel.org/doc/Documentation/admin-guide/devices.txt */
+            if (major(self->sb.st_rdev) == 1) {
+                unsigned m = minor(self->sb.st_rdev);
+                self->is_seekable =
+                    m == 1 ||   /* /dev/mem   */
+                    m == 2 ||   /* /dev/kmem  */
+                    m == 3 ||   /* /dev/null  */
+                    m == 4 ||   /* /dev/port  (seekable, offset = I/O port) */
+                    m == 5 ||   /* /dev/zero  */
+                    m == 7;     /* /dev/full  */
+            } else {
+                self->is_seekable = false;
+            }
+        } else {
+            self->is_seekable = !S_ISFIFO(self->sb.st_mode);
+        }
+#else
         self->is_seekable = !(S_ISFIFO(self->sb.st_mode) || S_ISCHR(self->sb.st_mode));
+#endif
         self->is_pipe = S_ISFIFO(self->sb.st_mode);
     }
 #elif defined(PHP_WIN32)
@@ -1067,11 +1202,12 @@ SWOW_API php_stream *_swow_stream_fopen_from_pipe(FILE *file, const char *mode S
 static ssize_t swow_stdiop_fs_write(php_stream *stream, const char *buf, size_t count)
 {
     swow_stdio_stream_data *data = (swow_stdio_stream_data*)stream->abstract;
+    ssize_t bytes_written;
 
     assert(data != NULL);
 
     if (data->fd >= 0) {
-        ssize_t bytes_written = cat_fs_write(data->fd, buf, PLAIN_WRAP_BUF_SIZE(count));
+        bytes_written = cat_fs_write(data->fd, buf, PLAIN_WRAP_BUF_SIZE(count));
         UPDATE_ERRNO_FROM_CAT();
         if (bytes_written < 0) {
             cat_errno_t cat_errno = cat_get_last_error_code();
@@ -1095,8 +1231,15 @@ static ssize_t swow_stdiop_fs_write(php_stream *stream, const char *buf, size_t 
         }
         data->last_op = 'w';
 #endif // HAVE_FLUSHIO
-        return (ssize_t) cat_fs_fwrite(buf, 1, count, data->file);
+        bytes_written = (ssize_t) cat_fs_fwrite(buf, 1, count, data->file);
     }
+
+    if (EG(active)) {
+        /* clear stat cache as mtime and ctime got changed */
+        php_clear_stat_cache(0, NULL, 0);
+    }
+
+    return bytes_written;
 }
 
 static ssize_t swow_stdiop_fs_read(php_stream *stream, char *buf, size_t count)
@@ -1175,6 +1318,12 @@ static ssize_t swow_stdiop_fs_read(php_stream *stream, char *buf, size_t count)
 
         stream->eof = feof(data->file);
     }
+
+    if (EG(active)) {
+        /* clear stat cache as atime got changed */
+        php_clear_stat_cache(0, NULL, 0);
+    }
+
     return (ssize_t) ret;
 }
 
@@ -1253,6 +1402,10 @@ static int swow_stdiop_fs_flush(php_stream *stream)
      * something completely different.
      */
     if (data->file) {
+        if (EG(active)) {
+            /* clear stat cache as there might be a write so mtime and ctime might have changed */
+            php_clear_stat_cache(0, NULL, 0);
+        }
         return cat_fs_fflush(data->file);
     }
     return 0;
@@ -1719,7 +1872,14 @@ static ssize_t swow_plain_files_dirstream_read(php_stream *stream, char *buf, si
     result = swow_fs_readdir(dir);
     UPDATE_ERRNO_FROM_CAT();
     if (result) {
-        PHP_STRLCPY(ent->d_name, result->name, sizeof(ent->d_name), strlen(result->name));
+        size_t len = strlen(result->name);
+        if (UNEXPECTED(len >= sizeof(ent->d_name))) {
+            free((void*)result->name);
+            free(result);
+            return -1;
+        }
+        /* Include null byte */
+        memcpy(ent->d_name, result->name, len+1);
         free((void*)result->name);
 #if PHP_VERSION_ID >= 80300
         // libcat always _DIRENT_HAVE_D_TYPE
@@ -1801,7 +1961,8 @@ static php_stream *swow_plain_files_dir_opener(php_stream_wrapper *wrapper, cons
 {
     php_stream *stream = NULL;
 
-#ifdef HAVE_GLOB
+    // since 76791e90b9a26f707f4a5f3a0e7e7d5b17e2e820 (included in 8.5), it always use glob_stream_wrapper
+#if PHP_VERSION_ID >= 80500
     if (options & STREAM_USE_GLOB_DIR_OPEN) {
         return php_glob_stream_wrapper.wops->dir_opener((php_stream_wrapper*)&php_glob_stream_wrapper, path, mode, options, opened_path, context STREAMS_REL_CC);
     }
@@ -1899,6 +2060,12 @@ SWOW_API  php_stream *_swow_stream_fopen(const char *filename, const char *mode,
          * O_APPEND mode) */
         /* ret = php_stream_fopen_from_fd_rel(fd, mode, persistent_id, (open_flags & O_APPEND) == 0); */
         ret = _swow_stream_fopen_from_fd(fd, mode, persistent_id, (open_flags & O_APPEND) == 0 STREAMS_REL_CC);
+
+        if (EG(active)) {
+            /* clear stat cache as mtime and ctime might got changed - phar can use stream before
+             * cache is initialized so we need to check if the execution is active. */
+            php_clear_stat_cache(0, NULL, 0);
+        }
 
         if (ret)    {
             if (opened_path) {
@@ -2120,20 +2287,6 @@ static int swow_plain_files_rename(php_stream_wrapper *wrapper, const char *url_
     return 1;
 }
 
-static int swow_mkdir_ex(const char *dir, zend_long mode, int options){
-    int ret;
-
-    if (php_check_open_basedir(dir)) {
-        return -1;
-    }
-
-    if ((ret = swow_virtual_mkdir(dir, (mode_t)mode)) < 0 && (options & REPORT_ERRORS)) {
-        php_error_docref(NULL, E_WARNING, "%s", cat_get_last_error_message());
-    }
-
-    return ret;
-}
-
 static int swow_plain_files_mkdir(php_stream_wrapper *wrapper, const char *dir, int mode, int options, php_stream_context *context)
 {
     if (strncasecmp(dir, "file://", sizeof("file://") - 1) == 0) {
@@ -2141,7 +2294,16 @@ static int swow_plain_files_mkdir(php_stream_wrapper *wrapper, const char *dir, 
     }
 
     if (!(options & PHP_STREAM_MKDIR_RECURSIVE)) {
-        return swow_mkdir_ex(dir, mode, REPORT_ERRORS) == 0;
+        if (php_check_open_basedir(dir)) {
+            return 0;
+        }
+
+        int ret = swow_virtual_mkdir(dir, (mode_t)mode);
+        if (ret < 0 && (options & REPORT_ERRORS)) {
+            php_error_docref(NULL, E_WARNING, "%s", strerror(errno));
+            return 0;
+        }
+        return 1;
     }
 
     char buf[MAXPATHLEN];
@@ -2283,7 +2445,7 @@ static int swow_plain_files_metadata(php_stream_wrapper *wrapper, const char *ur
         case PHP_STREAM_META_TOUCH:
             newtime = (struct utimbuf *)value;
             if (swow_virtual_access(url, F_OK) != 0) {
-                int fd = swow_virtual_open(url,  O_TRUNC | O_CREAT);
+                int fd = swow_virtual_open(url, O_TRUNC | O_CREAT);
                 if (fd < 0) {
                     php_error_docref1(NULL, url, E_WARNING, "Unable to create file %s because %s", url, cat_get_last_error_message());
                     return 0;
@@ -2496,3 +2658,162 @@ stream_skip:
 
 }
 /* }}} */
+
+static php_stream *swow_pipe_stream_fopen_from_fd_int(int fd, const char *mode)
+{
+    php_stream *stream;
+    swow_stdio_stream_data *self;
+
+    self = ecalloc(1, sizeof(*self));
+
+    self->file = NULL;
+    self->is_seekable = 0;
+    self->is_pipe = 1;
+    self->lock_flag = LOCK_UN;
+    self->is_process_pipe = 0;
+    self->fd = fd;
+    self->temp_name = NULL;
+#ifdef PHP_WIN32
+    self->is_pipe_blocking = 1;
+#endif
+
+    stream = php_stream_alloc(&php_stream_stdio_ops, self, NULL, mode);
+    stream->flags |= PHP_STREAM_FLAG_NO_SEEK | PHP_STREAM_FLAG_NO_BUFFER;
+    stream->position = -1;
+
+    return stream;
+}
+
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_swow_pipe, 0, 0, IS_ARRAY, 1)
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, rflags, IS_LONG, 0, "0")
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, wflags, IS_LONG, 0, "0")
+ZEND_END_ARG_INFO()
+
+static PHP_FUNCTION(swow_pipe)
+{
+    zend_long rflags = 0, wflags = 0;
+    php_stream *rstream, *wstream;
+    zval rzv, wzv;
+
+    ZEND_PARSE_PARAMETERS_START(0, 1)
+        Z_PARAM_OPTIONAL
+        Z_PARAM_LONG(rflags)
+        Z_PARAM_LONG(wflags)
+    ZEND_PARSE_PARAMETERS_END();
+
+    if (EX_NUM_ARGS() == 1) {
+        wflags = rflags;
+    }
+
+    cat_os_fd_t fds[2];
+    cat_bool_t ret = cat_pipe(fds, rflags, wflags);
+    if (UNEXPECTED(!ret)) {
+        swow_throw_exception_with_last(swow_exception_ce);
+        RETURN_THROWS();
+    }
+
+    rstream = swow_pipe_stream_fopen_from_fd_int(fds[0], "rb");
+    php_stream_to_zval(rstream, &rzv);
+
+    wstream = swow_pipe_stream_fopen_from_fd_int(fds[1], "wb");
+    php_stream_to_zval(wstream, &wzv);
+
+    array_init(return_value);
+    add_next_index_zval(return_value, &rzv);
+    add_next_index_zval(return_value, &wzv);
+}
+
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_swow_fileno, 0, 1, IS_LONG, 1)
+    ZEND_ARG_INFO(0, stream)
+ZEND_END_ARG_INFO()
+
+static PHP_FUNCTION(swow_fileno)
+{
+    zval *zres;
+    zend_resource *res;
+    php_stream *stream;
+    // php may access this as pointer, so we use intptr_t to avoid stack overflow
+    intptr_t fd = -1;
+
+    ZEND_PARSE_PARAMETERS_START(1, 1)
+        Z_PARAM_RESOURCE(zres)
+    ZEND_PARSE_PARAMETERS_END();
+
+    res = Z_RES_P(zres);
+    if (res->type != php_file_le_stream() && res->type != php_file_le_pstream()) {
+        zend_throw_exception_ex(swow_exception_ce, 0, "Invalid stream resource");
+        RETURN_THROWS();
+    }
+
+    stream = (php_stream *) res->ptr;
+    if (php_stream_cast(stream, PHP_STREAM_AS_FD, (void**)&fd, 0) == FAILURE) {
+        zend_throw_exception_ex(swow_exception_ce, 0,
+            "Cannot represent a stream of type %s as a File Descriptor", stream->ops->label);
+        RETURN_THROWS();
+    }
+
+    // truncate to int because fd is int (i32 at most platform)
+    if ((int)fd < 0) {
+        zend_throw_exception_ex(swow_exception_ce, 0, "Invalid file descriptor");
+        RETURN_THROWS();
+    }
+
+    // cast to zend_long because zend_long is long (i64 at most platform)
+    RETURN_LONG((zend_long)(int)fd);
+}
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_swow_pipe_from_fd, 0, 0, 2)
+    ZEND_ARG_TYPE_INFO(0, fd, IS_LONG, 0)
+    ZEND_ARG_TYPE_INFO(0, mode, IS_STRING, 0)
+ZEND_END_ARG_INFO()
+
+static PHP_FUNCTION(swow_pipe_from_fd)
+{
+    zend_long fd;
+    php_stream *stream;
+    char *mode;
+    size_t mode_len;
+
+    ZEND_PARSE_PARAMETERS_START(2, 2)
+        Z_PARAM_LONG(fd)
+        Z_PARAM_STRING(mode, mode_len)
+    ZEND_PARSE_PARAMETERS_END();
+
+
+#ifdef CAT_OS_WIN
+    // a libuv flaw here, on Windows, this is the only way to check if a file descriptor is a pipe
+    if (GetFileType(uv_get_osfhandle(fd)) != FILE_TYPE_PIPE)
+#else
+    cat_stat_t stat;
+    if (cat_fs_fstat(fd, &stat) != 0) {
+        zend_throw_exception_ex(swow_exception_ce, 0, "Failed to get file status");
+        RETURN_THROWS();
+    }
+
+    if (!(stat.st_mode & S_IFIFO))
+#endif
+    {
+        zend_throw_exception_ex(swow_exception_ce, 0, "File descriptor is not a pipe");
+        RETURN_THROWS();
+    }
+
+    stream = swow_pipe_stream_fopen_from_fd_int(fd, mode);
+    php_stream_to_zval(stream, return_value);
+};
+
+
+static const zend_function_entry swow_fs_functions[] = {
+    ZEND_NS_FENTRY("Swow", pipe, PHP_FN(swow_pipe), arginfo_swow_pipe, 0)
+    ZEND_NS_FENTRY("Swow", fileno, PHP_FN(swow_fileno), arginfo_swow_fileno, 0)
+    ZEND_NS_FENTRY("Swow", pipe_from_fd, PHP_FN(swow_pipe_from_fd), arginfo_swow_pipe_from_fd, 0)
+    ZEND_FE_END
+};
+
+zend_result swow_fs_module_init(INIT_FUNC_ARGS)
+{
+    if (!swow_hook_internal_functions(swow_fs_functions)) {
+        return FAILURE;
+    }
+
+    return SUCCESS;
+}

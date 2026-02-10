@@ -1,4 +1,5 @@
 <?php
+
 /**
  * This file is part of Swow
  *
@@ -14,6 +15,7 @@ declare(strict_types=1);
 namespace Swow\Utils;
 
 use RuntimeException;
+use stdClass;
 use Swow;
 
 use function array_shift;
@@ -242,12 +244,12 @@ function gitFiles(string $root = '.'): array
 /**
  * defer execute
  *
- * @param-out \stdClass $any reference to any variable used for defer
+ * @param-out stdClass $any reference to any variable used for defer
  */
 function defer(mixed &$any, callable $callback): void
 {
     if (!$any) {
-        $any = new class() {
+        $any = new class {
             /** @var array<callable> */
             private array $callbacks = [];
 

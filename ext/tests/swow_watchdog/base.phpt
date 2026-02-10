@@ -40,6 +40,6 @@ int(%d)
 
 Warning: [Fatal error in main] Uncaught %s: CPU starvation occurred in %s:%d
 Stack trace:
-#0 [internal function]: {closure}()
+#0 [internal function]: {closur%s}()
 #1 {main}
   thrown in %s on line %d

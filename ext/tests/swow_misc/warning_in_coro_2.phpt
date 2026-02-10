@@ -38,7 +38,7 @@ echo "Never here\n";
 Deprecated: [Deprecated in R%d] %s
 Stack trace:
 #%d %swarning_in_coro_2.php(%d): %s
-#%d [internal function]: {closure}()%A
+#%d [internal function]: {closur%s}()%A
 #%d %swarning_in_coro_2.php(%d): Swow\Coroutine::run(Object(Closure))
 #%d {main}
   triggered in %swarning_in_coro_2.php on line %d
@@ -46,7 +46,7 @@ Stack trace:
 %ANotice: [Notice in R%d] %s
 Stack trace:
 #%d %swarning_in_coro_2.php(%d): %s
-#%d [internal function]: {closure}()%A
+#%d [internal function]: {closur%s}()%A
 #%d %swarning_in_coro_2.php(%d): Swow\Coroutine::run(Object(Closure))
 #%d {main}
   triggered in %swarning_in_coro_2.php on line %d
@@ -54,21 +54,21 @@ Stack trace:
 %AWarning: [Warning in R%d] %s
 Stack trace:
 #%d %swarning_in_coro_2.php(%d): %s
-#%d [internal function]: {closure}()%A
+#%d [internal function]: {closur%s}()%A
 #%d %swarning_in_coro_2.php(%d): Swow\Coroutine::run(Object(Closure))
 #%d {main}
   triggered in %swarning_in_coro_2.php on line %d
 
 %AWarning: [Warning in R%d] Unsupported declare 'not_a_declare'
 Stack trace:
-#%d [internal function]: {closure}()%A
+#%d [internal function]: {closur%s}()%A
 #%d %swarning_in_coro_2.php(%d): Swow\Coroutine::run(Object(Closure))
 #%d {main}
   triggered in %swarning_in_coro_2.php(%d) : eval()'d code on line 1
 
 %AFatal error: [Fatal error in R%d] jump out of a finally block is disallowed
 Stack trace:
-#%d [internal function]: {closure}()%A
+#%d [internal function]: {closur%s}()%A
 #%d %swarning_in_coro_2.php(%d): Swow\Coroutine::run(Object(Closure))
 #%d {main}
   triggered in %swarning_in_coro_2.php(%d) : eval()'d code on line 1

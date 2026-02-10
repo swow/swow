@@ -84,7 +84,7 @@ function fetchdevpack(){
 
         provedir $ToolsPath
         $ret = dlwithhash `
-            -Uri ("https://windows.php.net/downloads/releases/" + ($latest.path)) `
+            -Uri ("https://downloads.php.net/~windows/releases/" + ($latest.path)) `
             -Dest $dest `
             -Hash $hash `
             -Hashmethod $hashmethod
@@ -94,7 +94,7 @@ function fetchdevpack(){
     } else {
         info "Target version is not active release or failed to download releases info, try search in file list."
         try{
-            $page = fetchpage "https://windows.php.net/downloads/releases/archives/"
+            $page = fetchpage "https://downloads.php.net/~windows/releases/archives/"
             $groups = ($page | Select-String `
                 -List `
                 -AllMatches `
@@ -125,7 +125,7 @@ function fetchdevpack(){
         }
         #Write-Host $fn
         provedir $ToolsPath
-        $ret = dlwithhash -Uri "https://windows.php.net/downloads/releases/archives/$fn" -Dest "$ToolsPath\$fn"
+        $ret = dlwithhash -Uri "https://downloads.php.net/~windows/releases/archives/$fn" -Dest "$ToolsPath\$fn"
         if ($ret){
             return "$ToolsPath\$fn"
         }
@@ -133,9 +133,9 @@ function fetchdevpack(){
 }
 
 info "Finding devpack for PHP $PhpVer $phpvar"
-$info = fetchjson -Uri "https://windows.php.net/downloads/releases/releases.json"
+$info = fetchjson -Uri "https://downloads.php.net/~windows/releases/releases.json"
 if(!$info){
-    warn "Cannot fetch php releases info from windows.php.net."
+    warn "Cannot fetch php releases info from https://downloads.php.net/~windows."
 }
 $zipdest = fetchdevpack
 if($DryRun){
@@ -158,6 +158,12 @@ try{
 }
 $sa = New-Object -ComObject Shell.Application
 $dirname = ($sa.NameSpace($zipdest).Items() | Select-Object -Index 0).Name
+
+info "Try patch phpize.js for newer wscript"
+# see https://github.com/php/php-src/commit/7f6c05116e83e75353f27f5333cc860c3a6f64f7
+$phpizejs = Get-Content "$ToolsPath\$dirname\script\phpize.js"
+$phpizejs = $phpizejs -Replace "var c, i, ok, n;", "var c, i, ok, n=`"`";"
+[IO.File]::WriteAllLines("$ToolsPath\$dirname\script\phpize.js", $phpizejs)
 
 info "Done unzipping devpack, generate env.bat."
 

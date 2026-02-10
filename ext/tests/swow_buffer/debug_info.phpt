@@ -1,5 +1,5 @@
 --TEST--
-swow_buffer: bad arguments passed in
+swow_buffer: debug info
 --SKIPIF--
 <?php
 require __DIR__ . '/../include/skipif.php';
@@ -96,7 +96,7 @@ object(Swow\Buffer)#%d (%d) {
     ["trace"]=>
     string(%s) "
 #0 %s(%d): Swow\Socket->recvFrom(Object(Swow\Buffer))
-#1 [internal function]: {closure}()
+#1 [internal function]: {closur%s}()
 #2 {main}
 "
   }

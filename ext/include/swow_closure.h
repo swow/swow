@@ -62,19 +62,6 @@ static zend_always_inline bool swow_function_is_named(const zend_function *funct
     return function->common.function_name != NULL && !swow_function_is_anonymous(function);
 }
 
-static zend_always_inline const char *swow_function_get_namespace_name(const zend_function *function, size_t *length)
-{
-    zend_string *name = function->common.function_name;
-    const char *backslash = (const char *) zend_memrchr(ZSTR_VAL(name), '\\', ZSTR_LEN(name));
-    if (backslash && backslash > ZSTR_VAL(name)) {
-        *length = backslash - ZSTR_VAL(name);
-        return ZSTR_VAL(name);
-    } else {
-        *length = 0;
-        return NULL;
-    }
-}
-
 /* loader */
 
 zend_result swow_closure_module_init(INIT_FUNC_ARGS);

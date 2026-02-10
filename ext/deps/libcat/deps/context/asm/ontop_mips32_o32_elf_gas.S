@@ -41,6 +41,7 @@
 .file "ontop_mips32_o32_elf_gas.S"
 .text
 .globl cat_coroutine_context_ontop
+.hidden cat_coroutine_context_ontop
 .align 2
 .type cat_coroutine_context_ontop,@function
 .ent cat_coroutine_context_ontop
@@ -102,13 +103,13 @@ cat_coroutine_context_ontop:
 
     # adjust stack
     addiu $sp, $sp, 96
-    
+
     # return transfer_t from jump
     sw  $a0, ($v0)  # fctx of transfer_t
     sw  $a2, 4($v0) # data of transfer_t
     # pass transfer_t as first arg in context function
     # A0 == hidden, A1 == fctx, A2 == data
-    move  $a1, $a0 
+    move  $a1, $a0
     move  $a0, $v0
 
     # jump to context

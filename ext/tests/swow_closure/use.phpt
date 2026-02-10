@@ -1,5 +1,5 @@
 --TEST--
-swow_closure: use keryword
+swow_closure: use keyword
 --SKIPIF--
 <?php
 require __DIR__ . '/../include/skipif.php';

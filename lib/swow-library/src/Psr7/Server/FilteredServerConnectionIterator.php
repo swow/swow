@@ -1,4 +1,5 @@
 <?php
+
 /**
  * This file is part of Swow
  *
@@ -22,7 +23,7 @@ final class FilteredServerConnectionIterator implements ServerConnectionIterator
      * @param Iterator<ServerConnection, int> $iterator
      * @param Closure(ServerConnection): bool $filter
      */
-    public function __construct(protected Iterator $iterator, protected Closure $filter)
+    public function __construct(private Iterator $iterator, private Closure $filter)
     {
     }
 

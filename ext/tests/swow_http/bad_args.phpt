@@ -30,7 +30,7 @@ Assert::throws(static function (): void {
     $buffer->append("HTTP/1.1 12450 Blocked by 12dora\r\ncontent-type: coffee\r\n\r\n");
     $parser = new Swow\Http\Parser();
     $parser->execute($buffer->toString());
-}, ParserException::class, expectMessage: '/Response overflow/');
+}, ParserException::class, expectMessage: '/Invalid response status/');
 
 // bad EOF in Parser::finish
 Assert::throws(static function (): void {

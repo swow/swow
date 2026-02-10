@@ -4,10 +4,9 @@ swow_curl: callback function storage
 <?php
 require __DIR__ . '/../include/skipif.php';
 skip_if(PHP_SAPI !== 'cli', 'only for cli');
-skip_if(!getenv('SWOW_HAVE_CURL') && !Swow\Extension::isBuiltWith('curl'), 'extension must be built with libcurl');
+skip_if(!Swow\Extension::isBuiltWith('curl'), 'extension must be built with libcurl');
 require __DIR__ . '/../include/bootstrap.php';
 skip_if(!str_contains(@file_get_contents(TEST_WEBSITE1_URL), TEST_WEBSITE1_KEYWORD), 'Unable to access ' . TEST_WEBSITE1_URL);
-skip_if(!str_contains(@file_get_contents(TEST_WEBSITE2_URL), TEST_WEBSITE2_KEYWORD), 'Unable to access ' . TEST_WEBSITE2_URL);
 ?>
 --FILE--
 <?php
@@ -43,7 +42,9 @@ foreach ([$testHeaderFunction, 'testHeaderFunction', [testHeaderFunctionClass::c
     $response = curl_exec($curl);
     Assert::contains($response, TEST_WEBSITE1_KEYWORD);
     Assert::true(strtotime($GLOBALS['header_lines']['date']) > 0);
-    curl_close($curl);
+    if (PHP_VERSION_ID < 80100) {
+        curl_close($curl);
+    }
 }
 
 $curl = curl_init();

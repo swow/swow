@@ -39,9 +39,9 @@ echo "Done\n";
 ?>
 --EXPECTF--
 #0 %s(%d): Swow\Coroutine::yield()
-#1 %s(%d): {closure}()
-#2 %s(%d): {closure}(Resource id #%d, Object(A), NULL, Array, true, false, 'string', 'a string that i...', 1597463007, 0.0072973526)
-#3 %s(%d): {closure}()
-#4 [internal function]: {closure}()
+#1 %s(%d): {closur%s}()
+#2 %s(%d): {closur%s}(Resource id #%d, Object(A), NULL, Array, true, false, 'string', 'a string that i...', 1597463007, 0.0072973526)
+#3 %s(%d): {closur%s}()
+#4 [internal function]: {closur%s}()
 #5 {main}
 Done

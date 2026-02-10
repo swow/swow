@@ -1,4 +1,5 @@
 <?php
+
 /**
  * This file is part of Swow
  *
@@ -33,6 +34,7 @@ $authorMap = [
     'AuroraHe' => 'AuroraYolo',
     '李铭昕' => 'limingxinleo',
     '张城铭' => 'assert6',
+    '耗子' => 'devhaozi',
 ];
 $kinds = [
     'new',
@@ -53,12 +55,12 @@ $kindDescription = <<<'MAARKDOWN'
 MAARKDOWN;
 
 $addUrl = filter_var(getenv('ADD_URL'), FILTER_VALIDATE_BOOL);
-$gptPlatform = getenv('GPT_PLATFORM') ?? throw new RuntimeException('Please set GPT_PLATFORM');
+$gptPlatform = trim(getenv('GPT_PLATFORM') ?? throw new RuntimeException('Please set GPT_PLATFORM'));
 if ($gptPlatform !== 'azure') {
     throw new RuntimeException(sprintf('Only azure is supported for now, but got \'%s\'', $gptPlatform));
 }
-$gptBaseUrl = getenv('GPT_BASE_URL') ?? throw new RuntimeException('Please set GPT_BASE_URL');
-$gptKey = getenv('GPT_KEY') ?? throw new RuntimeException('Please set GPT_KEY');
+$gptBaseUrl = trim(getenv('GPT_BASE_URL') ?? throw new RuntimeException('Please set GPT_BASE_URL'));
+$gptKey = trim(getenv('GPT_KEY') ?? throw new RuntimeException('Please set GPT_KEY'));
 $noCache = filter_var(getenv('NO_CACHE'), FILTER_VALIDATE_BOOL);
 $debug = filter_var(getenv('DEBUG'), FILTER_VALIDATE_BOOL);
 
@@ -79,7 +81,7 @@ $versionId = $match[0];
 
 $workspace = dirname(__DIR__);
 $gitLog = trim((string) shell_exec(<<<SHELL
-cd {$workspace} && git log --no-merges --pretty=format:'%H%n%aN%n%aE%n%aD%n%s%n' $(git describe --tags --abbrev=0)..HEAD
+cd {$workspace} && git log --no-merges --pretty=format:'%H%n%aN%n%aE%n%aD%n%s%n' $(git tag --sort=-version:refname | grep -E '^v[0-9]+\\.[0-9]+\\.[0-9]+$' | head -1)..HEAD
 SHELL
 ));
 
@@ -136,7 +138,7 @@ $gptComplete = static function (string $message) use ($gptBaseUrl, $gptKey, $deb
         'http' => [
             'method' => 'POST',
             'header' => [
-                'Content-type: application/json',
+                'Content-Type: application/json',
                 'Accept: application/json, text/plain, */*',
                 'api-key: ' . $gptKey,
             ],
@@ -159,6 +161,7 @@ $gptComplete = static function (string $message) use ($gptBaseUrl, $gptKey, $deb
         }
         break;
     }
+    sleep(1); // Avoid hitting rate limits too quickly
     return json_decode($response, true)['choices'][0]['message']['content'] ?? throw new RuntimeException('Failed to parse GPT response');
 };
 

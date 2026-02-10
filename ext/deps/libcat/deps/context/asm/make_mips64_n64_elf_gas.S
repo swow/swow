@@ -48,6 +48,7 @@
 .file "make_mips64_n64_elf_gas.S"
 .text
 .globl cat_coroutine_context_make
+.hidden cat_coroutine_context_make
 .align 3
 .type cat_coroutine_context_make,@function
 .ent cat_coroutine_context_make

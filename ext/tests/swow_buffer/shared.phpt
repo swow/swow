@@ -18,7 +18,9 @@ var_dump($buffer);
 var_dump($json);
 
 if (memory_get_usage(true) === 0) {
-    return;
+    // zend mm not enabled, skip remainning tests
+    echo "Done\n";
+    exit(0);
 }
 
 $memoryUsages = [0, 0, 0];

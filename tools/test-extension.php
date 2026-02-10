@@ -1,5 +1,6 @@
 #!/usr/bin/env php
 <?php
+
 /**
  * This file is part of Swow
  *
@@ -35,8 +36,8 @@ $runTestsXPath = "{$workspace}/run-tests-x.php";
 if (!file_exists($runTestsXPath)) {
     $runTestsContents = file_get_contents($runTestsPath);
     $runTestsContents = str_replace(
-        '$optionals = [\'Zend\', \'tests\', \'ext\', \'sapi\'];',
-        '$optionals = [\'ext/tests\'];',
+        '[\'Zend\', \'tests\', \'ext\', \'sapi\']',
+        '[\'ext/tests\']',
         $runTestsContents,
     );
     $runTestsContents = str_replace(

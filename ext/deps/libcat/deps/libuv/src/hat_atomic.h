@@ -22,6 +22,12 @@
 extern "C" {
 #endif
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
+#include <stdint.h>
+#include <time.h>
+
 #ifndef __has_feature
 # define __has_feature(x) 0
 #endif
@@ -49,13 +55,13 @@ typedef void *hat_ptr_t;
 
 /* TODO: Fixed implementation selection
  * or provided C API for external use. */
-#if __has_feature(c_atomic)
+#if __has_feature(c_atomic) && defined(__clang__)
 # define HAT_HAVE_C11_ATOMIC 1
-#elif defined(__clang__) || HAT_GCC_VERSION >= 4007
+#elif HAT_GCC_VERSION >= 4007
 # define HAT_HAVE_GNUC_ATOMIC 1
 #elif defined(__GNUC__)
 # define HAT_HAVE_SYNC_ATOMIC 1
-#elif defined(HAT_OS_WIN)
+#elif defined(_MSC_VER)
 # define HAT_HAVE_INTERLOCK_ATOMIC 1
 #else
 # error "No atomics support detected, that's terrible!"
@@ -100,6 +106,7 @@ typedef void *hat_ptr_t;
 #define HAT_ATOMIC_COMMON_OPERATION_FUNCTIONS_MAP(XX) \
         XX(bool, uint8_t, 8,       char) \
         XX(ptr,  hat_ptr_t,  Pointer, PVOID) \
+        XX(uintptr, uintptr_t, Pointer, PVOID) \
 
 #define HAT_ATOMIC_NUMERIC_OPERATION_FUNCTIONS_MAP(XX) \
         XX(int8,   int8_t,   8,  char) \
@@ -110,6 +117,7 @@ typedef void *hat_ptr_t;
         XX(uint32, uint32_t, 32, long) \
         XX(int64,  int64_t,  64, __int64) \
         XX(uint64, uint64_t, 64, __int64) \
+        XX(clock, clock_t, 64, __int64) \
 
 # if defined(HAT_HAVE_GNUC_ATOMIC)
 # define __atomic_compare_exchange_strong(atomic, expected, desired) \
@@ -221,7 +229,7 @@ static hat_atomic_inline type_name_t hat_atomic_##name##_exchange(hat_atomic_##n
         return ret; \
     }) \
     HAT_ATOMIC_INTERLOCK_CASE({ \
-        return _InterlockedExchange##interlocked_suffix(&atomic->value, (interlocked_type_t) desired); \
+        return (type_name_t) _InterlockedExchange##interlocked_suffix(&atomic->value, (interlocked_type_t) desired); \
     }) \
     HAT_ATOMIC_SYNC_CASE({ \
         return __sync_val_compare_and_swap(&atomic->value, atomic->value, desired); \
@@ -338,6 +346,20 @@ static hat_atomic_inline type_name_t hat_atomic_##name##_fetch_sub(hat_atomic_##
 
 HAT_ATOMIC_COMMON_OPERATION_FUNCTIONS_MAP(HAT_ATOMIC_COMMON_OPERATION_FUNCTIONS_GEN)
 HAT_ATOMIC_NUMERIC_OPERATION_FUNCTIONS_MAP(HAT_ATOMIC_OPERATION_FUNCTIONS_GEN)
+
+/* Static initialization macros for elegant variable declaration */
+#define HAT_ATOMIC_BOOL_INIT(val)     { .value = val }
+#define HAT_ATOMIC_PTR_INIT(val)      { .value = val }
+#define HAT_ATOMIC_UINTPTR_INIT(val)  { .value = val }
+#define HAT_ATOMIC_INT8_INIT(val)     { .value = val }
+#define HAT_ATOMIC_UINT8_INIT(val)    { .value = val }
+#define HAT_ATOMIC_INT16_INIT(val)    { .value = val }
+#define HAT_ATOMIC_UINT16_INIT(val)   { .value = val }
+#define HAT_ATOMIC_INT32_INIT(val)    { .value = val }
+#define HAT_ATOMIC_UINT32_INIT(val)   { .value = val }
+#define HAT_ATOMIC_INT64_INIT(val)    { .value = val }
+#define HAT_ATOMIC_UINT64_INIT(val)   { .value = val }
+#define HAT_ATOMIC_CLOCK_INIT(val)    { .value = val }
 
 #ifdef __cplusplus
 }

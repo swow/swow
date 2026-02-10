@@ -1434,6 +1434,130 @@ unsigned char * swow_PQunescapeBytea_redirect(const unsigned char *strtext, size
     return swow_PQunescapeBytea_resolved(strtext, retbuflen);
 }
 
+// weak function pointer for PQgetCancel
+#ifdef CAT_OS_WIN
+// extern void * PQgetCancel(void *conn);
+# pragma comment(linker, "/alternatename:PQgetCancel=swow_PQgetCancel_redirect")
+#else
+__attribute__((weak, alias("swow_PQgetCancel_redirect"))) extern void * PQgetCancel(void *conn);
+#endif
+// resolved function holder
+void * (*swow_PQgetCancel_resolved)(void *conn);
+// resolver for PQgetCancel
+void * swow_PQgetCancel_resolver(void *conn) {
+    swow_PQgetCancel_resolved = (void * (*)(void *conn))DL_FETCH_SYMBOL(DL_FROM_HANDLE, "PQgetCancel");
+
+    if (swow_PQgetCancel_resolved == NULL) {
+#if defined(DL_ERROR)
+        fprintf(stderr, "failed resolve PQgetCancel: %s\n", DL_ERROR());
+#elif defined(CAT_OS_WIN)
+        fprintf(stderr, "failed resolve PQgetCancel: %08x\n", (unsigned int)GetLastError());
+#else
+        fprintf(stderr, "failed resolve PQgetCancel\n",());
+#endif
+        abort();
+    }
+
+    return swow_PQgetCancel_resolved(conn);
+}
+void * (*swow_PQgetCancel_resolved)(void *conn) = swow_PQgetCancel_resolver;
+void * swow_PQgetCancel_redirect(void *conn) {
+    return swow_PQgetCancel_resolved(conn);
+}
+
+// weak function pointer for PQfreeCancel
+#ifdef CAT_OS_WIN
+// extern void PQfreeCancel(void *cancel);
+# pragma comment(linker, "/alternatename:PQfreeCancel=swow_PQfreeCancel_redirect")
+#else
+__attribute__((weak, alias("swow_PQfreeCancel_redirect"))) extern void PQfreeCancel(void *cancel);
+#endif
+// resolved function holder
+void (*swow_PQfreeCancel_resolved)(void *cancel);
+// resolver for PQfreeCancel
+void swow_PQfreeCancel_resolver(void *cancel) {
+    swow_PQfreeCancel_resolved = (void (*)(void *cancel))DL_FETCH_SYMBOL(DL_FROM_HANDLE, "PQfreeCancel");
+
+    if (swow_PQfreeCancel_resolved == NULL) {
+#if defined(DL_ERROR)
+        fprintf(stderr, "failed resolve PQfreeCancel: %s\n", DL_ERROR());
+#elif defined(CAT_OS_WIN)
+        fprintf(stderr, "failed resolve PQfreeCancel: %08x\n", (unsigned int)GetLastError());
+#else
+        fprintf(stderr, "failed resolve PQfreeCancel\n",());
+#endif
+        abort();
+    }
+
+    swow_PQfreeCancel_resolved(cancel);
+}
+void (*swow_PQfreeCancel_resolved)(void *cancel) = swow_PQfreeCancel_resolver;
+void swow_PQfreeCancel_redirect(void *cancel) {
+    swow_PQfreeCancel_resolved(cancel);
+}
+
+// weak function pointer for PQcancel
+#ifdef CAT_OS_WIN
+// extern int PQcancel(void *cancel, char *errbuf, int errbufsize);
+# pragma comment(linker, "/alternatename:PQcancel=swow_PQcancel_redirect")
+#else
+__attribute__((weak, alias("swow_PQcancel_redirect"))) extern int PQcancel(void *cancel, char *errbuf, int errbufsize);
+#endif
+// resolved function holder
+int (*swow_PQcancel_resolved)(void *cancel, char *errbuf, int errbufsize);
+// resolver for PQcancel
+int swow_PQcancel_resolver(void *cancel, char *errbuf, int errbufsize) {
+    swow_PQcancel_resolved = (int (*)(void *cancel, char *errbuf, int errbufsize))DL_FETCH_SYMBOL(DL_FROM_HANDLE, "PQcancel");
+
+    if (swow_PQcancel_resolved == NULL) {
+#if defined(DL_ERROR)
+        fprintf(stderr, "failed resolve PQcancel: %s\n", DL_ERROR());
+#elif defined(CAT_OS_WIN)
+        fprintf(stderr, "failed resolve PQcancel: %08x\n", (unsigned int)GetLastError());
+#else
+        fprintf(stderr, "failed resolve PQcancel\n",());
+#endif
+        abort();
+    }
+
+    return swow_PQcancel_resolved(cancel, errbuf, errbufsize);
+}
+int (*swow_PQcancel_resolved)(void *cancel, char *errbuf, int errbufsize) = swow_PQcancel_resolver;
+int swow_PQcancel_redirect(void *cancel, char *errbuf, int errbufsize) {
+    return swow_PQcancel_resolved(cancel, errbuf, errbufsize);
+}
+
+// weak function pointer for PQsetSingleRowMode
+#ifdef CAT_OS_WIN
+// extern int PQsetSingleRowMode(void *conn);
+# pragma comment(linker, "/alternatename:PQsetSingleRowMode=swow_PQsetSingleRowMode_redirect")
+#else
+__attribute__((weak, alias("swow_PQsetSingleRowMode_redirect"))) extern int PQsetSingleRowMode(void *conn);
+#endif
+// resolved function holder
+int (*swow_PQsetSingleRowMode_resolved)(void *conn);
+// resolver for PQsetSingleRowMode
+int swow_PQsetSingleRowMode_resolver(void *conn) {
+    swow_PQsetSingleRowMode_resolved = (int (*)(void *conn))DL_FETCH_SYMBOL(DL_FROM_HANDLE, "PQsetSingleRowMode");
+
+    if (swow_PQsetSingleRowMode_resolved == NULL) {
+#if defined(DL_ERROR)
+        fprintf(stderr, "failed resolve PQsetSingleRowMode: %s\n", DL_ERROR());
+#elif defined(CAT_OS_WIN)
+        fprintf(stderr, "failed resolve PQsetSingleRowMode: %08x\n", (unsigned int)GetLastError());
+#else
+        fprintf(stderr, "failed resolve PQsetSingleRowMode\n",());
+#endif
+        abort();
+    }
+
+    return swow_PQsetSingleRowMode_resolved(conn);
+}
+int (*swow_PQsetSingleRowMode_resolved)(void *conn) = swow_PQsetSingleRowMode_resolver;
+int swow_PQsetSingleRowMode_redirect(void *conn) {
+    return swow_PQsetSingleRowMode_resolved(conn);
+}
+
 
 // weak function pointer for lo_open
 #ifdef CAT_OS_WIN
@@ -1696,6 +1820,38 @@ int swow_lo_unlink_redirect(void *conn, unsigned int lobjId) {
 #else
 # define DL_FROM_HANDLE NULL
 #endif
+#if PHP_VERSION_ID >= 80100
+// weak function pointer for pdo_get_long_param
+#ifdef CAT_OS_WIN
+// extern bool pdo_get_long_param(long *lval, void *value);
+# pragma comment(linker, "/alternatename:pdo_get_long_param=swow_pdo_get_long_param_redirect")
+#else
+__attribute__((weak, alias("swow_pdo_get_long_param_redirect"))) extern bool pdo_get_long_param(long *lval, void *value);
+#endif
+// resolved function holder
+bool (*swow_pdo_get_long_param_resolved)(long *lval, void *value);
+// resolver for pdo_get_long_param
+bool swow_pdo_get_long_param_resolver(long *lval, void *value) {
+    swow_pdo_get_long_param_resolved = (bool (*)(long *lval, void *value))DL_FETCH_SYMBOL(DL_FROM_HANDLE, "pdo_get_long_param");
+
+    if (swow_pdo_get_long_param_resolved == NULL) {
+#if defined(DL_ERROR)
+        fprintf(stderr, "failed resolve pdo_get_long_param: %s\n", DL_ERROR());
+#elif defined(CAT_OS_WIN)
+        fprintf(stderr, "failed resolve pdo_get_long_param: %08x\n", (unsigned int)GetLastError());
+#else
+        fprintf(stderr, "failed resolve pdo_get_long_param\n",());
+#endif
+        abort();
+    }
+
+    return swow_pdo_get_long_param_resolved(lval, value);
+}
+bool (*swow_pdo_get_long_param_resolved)(long *lval, void *value) = swow_pdo_get_long_param_resolver;
+bool swow_pdo_get_long_param_redirect(long *lval, void *value) {
+    return swow_pdo_get_long_param_resolved(lval, value);
+}
+
 // weak function pointer for pdo_get_bool_param
 #ifdef CAT_OS_WIN
 // extern bool pdo_get_bool_param(bool *bval, void *value);
@@ -1727,6 +1883,40 @@ bool swow_pdo_get_bool_param_redirect(bool *bval, void *value) {
     return swow_pdo_get_bool_param_resolved(bval, value);
 }
 
+#endif // PHP_VERSION_ID >= 80100
+#if PHP_VERSION_ID >= 80500
+// weak function pointer for php_pdo_stmt_valid_db_obj_handle
+#ifdef CAT_OS_WIN
+// extern bool php_pdo_stmt_valid_db_obj_handle(const void *stmt);
+# pragma comment(linker, "/alternatename:php_pdo_stmt_valid_db_obj_handle=swow_php_pdo_stmt_valid_db_obj_handle_redirect")
+#else
+__attribute__((weak, alias("swow_php_pdo_stmt_valid_db_obj_handle_redirect"))) extern bool php_pdo_stmt_valid_db_obj_handle(const void *stmt);
+#endif
+// resolved function holder
+bool (*swow_php_pdo_stmt_valid_db_obj_handle_resolved)(const void *stmt);
+// resolver for php_pdo_stmt_valid_db_obj_handle
+bool swow_php_pdo_stmt_valid_db_obj_handle_resolver(const void *stmt) {
+    swow_php_pdo_stmt_valid_db_obj_handle_resolved = (bool (*)(const void *stmt))DL_FETCH_SYMBOL(DL_FROM_HANDLE, "php_pdo_stmt_valid_db_obj_handle");
+
+    if (swow_php_pdo_stmt_valid_db_obj_handle_resolved == NULL) {
+#if defined(DL_ERROR)
+        fprintf(stderr, "failed resolve php_pdo_stmt_valid_db_obj_handle: %s\n", DL_ERROR());
+#elif defined(CAT_OS_WIN)
+        fprintf(stderr, "failed resolve php_pdo_stmt_valid_db_obj_handle: %08x\n", (unsigned int)GetLastError());
+#else
+        fprintf(stderr, "failed resolve php_pdo_stmt_valid_db_obj_handle\n",());
+#endif
+        abort();
+    }
+
+    return swow_php_pdo_stmt_valid_db_obj_handle_resolved(stmt);
+}
+bool (*swow_php_pdo_stmt_valid_db_obj_handle_resolved)(const void *stmt) = swow_php_pdo_stmt_valid_db_obj_handle_resolver;
+bool swow_php_pdo_stmt_valid_db_obj_handle_redirect(const void *stmt) {
+    return swow_php_pdo_stmt_valid_db_obj_handle_resolved(stmt);
+}
+
+#endif // PHP_VERSION_ID >= 80500
 // weak function pointer for pdo_handle_error
 #ifdef CAT_OS_WIN
 // extern void pdo_handle_error(void *dbh, void *stmt);

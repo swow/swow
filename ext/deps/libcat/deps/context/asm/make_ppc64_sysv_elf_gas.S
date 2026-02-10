@@ -68,6 +68,7 @@
 
 .file "make_ppc64_sysv_elf_gas.S"
 .globl cat_coroutine_context_make
+.hidden cat_coroutine_context_make
 #if _CALL_ELF == 2
 	.text
 	.align 2

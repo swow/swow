@@ -82,17 +82,19 @@ runs:
           $PhpVer = "${{ inputs.phpver }}"
         }
         $master = $PhpVer
-        if ($PhpVer.Equals("8.4")) {
+        if ($PhpVer.Equals("8.5")) {
           # using master
           $master = "master"
         }
-        if ($PhpVer.Equals("8.4") -Or $PhpVer.Equals("8.3") -Or $PhpVer.Equals("8.2") -Or $PhpVer.Equals("8.1") -Or $PhpVer.Equals("8.0")) {
+        if ($PhpVer.Equals("8.5") -Or $PhpVer.Equals("8.4")) {
+          $PhpVCVer = "vs17"
+        } elseif ($PhpVer.Equals("8.3") -Or $PhpVer.Equals("8.2") -Or $PhpVer.Equals("8.1") -Or $PhpVer.Equals("8.0")) {
           $PhpVCVer = "vs16"
         } else {
           $PhpVCVer = "vc15"
         }
         Write-Output "vcver=$PhpVCVer" | Out-File "${env:GITHUB_OUTPUT}" -Append
-        Write-Host "::group::Fetching deps from windows.php.net"
+        Write-Host "::group::Fetching deps from https://downloads.php.net/~windows"
         ${{github.action_path}}/deps.ps1 `
           ${{ inputs.deps }} `
           -MaxTry ${{ inputs.max-try }} `
@@ -119,7 +121,7 @@ runs:
           $ret = $lastexitcode
           Write-Host "::endgroup::"
         } else {
-          Write-Host "::group::Fetching devel-pack from windows.php.net"
+          Write-Host "::group::Fetching devel-pack from https://downloads.php.net/~windows"
           ${{github.action_path}}/devpack.ps1 `
             -MaxTry ${{ inputs.max-try }} `
             -ToolsPath ${{ inputs.tools-path }} `

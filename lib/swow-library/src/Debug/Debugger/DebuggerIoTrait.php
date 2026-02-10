@@ -1,4 +1,5 @@
 <?php
+
 /**
  * This file is part of Swow
  *
@@ -21,6 +22,7 @@ use Swow\Buffer;
 
 use function count;
 use function explode;
+use function sprintf;
 use function trim;
 
 trait DebuggerIoTrait

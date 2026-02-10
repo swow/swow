@@ -23,7 +23,7 @@ echo "Never here\n";
 %AFatal error: [Fatal error in R%d] Allowed memory size of %d bytes exhausted%A (tried to allocate %d bytes)
 Stack trace:
 #%d %swarning_in_coro_3.php(%d): %s
-#%d [internal function]: {closure}()%A
+#%d [internal function]: {closur%s}()%A
 #%d %swarning_in_coro_3.php(%d): Swow\Coroutine::run(Object(Closure))
 #%d {main}
   triggered in %swarning_in_coro_3.php on line %d

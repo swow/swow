@@ -632,6 +632,7 @@ CAT_API void cat_ssl_context_configure_cert_verify_callback(cat_ssl_context_t *c
 }
 #endif
 
+static inline cat_bool_t _cat_ssl_check_host(X509 *cert, const char *name, size_t name_length);
 static int cat_ssl_verify_callback(int preverify_ok, X509_STORE_CTX *ctx) /* {{{ */
 {
     /* conjure the stream & context to use */
@@ -640,6 +641,7 @@ static int cat_ssl_verify_callback(int preverify_ok, X509_STORE_CTX *ctx) /* {{{
     int depth, allowed_depth;
     int err;
     int ret = preverify_ok;
+    X509 *cert;
 
     /* determine the status for the current cert */
     err = X509_STORE_CTX_get_error(ctx);
@@ -648,30 +650,64 @@ static int cat_ssl_verify_callback(int preverify_ok, X509_STORE_CTX *ctx) /* {{{
     CAT_LOG_DEBUG(SSL, "SSL_cert_verify_callback(%p, preverify_ok: %d, err: \"%s\")", ssl, preverify_ok, X509_verify_cert_error_string(err));
 
     /* if allow_self_signed is set, make sure that verification succeeds */
-    if (err == X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT && ssl->allow_self_signed) {
-        CAT_LOG_DEBUG(SSL, "SSL connection use self-signed cert but we allowed");
-        ret = 1;
+    switch (err) {
+        case X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT:
+        case X509_V_ERR_SELF_SIGNED_CERT_IN_CHAIN:
+        case X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT_LOCALLY:
+        case X509_V_ERR_CERT_UNTRUSTED:
+        case X509_V_ERR_UNABLE_TO_VERIFY_LEAF_SIGNATURE:
+            if (ssl->allow_self_signed) {
+                CAT_LOG_DEBUG(SSL, "SSL connection use self-signed cert but we allowed: %d", err);
+                ret = 1;
+            }
+            break;
     }
 
     /* check the depth */
-    allowed_depth = SSL_get_verify_depth(connection);
-    if (allowed_depth < 0) {
-        allowed_depth = CAT_SSL_DEFAULT_STREAM_VERIFY_DEPTH;
+    if (ssl->verify_peer) {
+        allowed_depth = SSL_get_verify_depth(connection);
+        if (allowed_depth < 0) {
+            allowed_depth = CAT_SSL_DEFAULT_STREAM_VERIFY_DEPTH;
+        }
+        if (depth > allowed_depth) {
+            CAT_LOG_DEBUG(SSL, "SSL cert depth is %d, exceeded allowed_depth %d, abort", depth, allowed_depth);
+            X509_STORE_CTX_set_error(ctx, X509_V_ERR_CERT_CHAIN_TOO_LONG);
+            ret = 0;
+            goto _out;
+        }
     }
-    if (depth > allowed_depth) {
+
+    /* get current verifying cert */
+    cert = X509_STORE_CTX_get0_cert(ctx);
+    if (cert == NULL) {
+        /* this should never happen */
+        CAT_LOG_DEBUG(SSL, "SSL cert is NULL, abort");
+        X509_STORE_CTX_set_error(ctx, X509_V_ERR_UNSPECIFIED);
         ret = 0;
-        X509_STORE_CTX_set_error(ctx, X509_V_ERR_CERT_CHAIN_TOO_LONG);
+        goto _out;
     }
 
-    CAT_LOG_DEBUG(SSL, "SSL allowed depth is %d, actual depth is %d, ret = %d", allowed_depth, depth, ret);
+    /* check peer name */
+    if (ssl->expected_peer_name != NULL &&
+        !_cat_ssl_check_host(cert, ssl->expected_peer_name, strlen(ssl->expected_peer_name))
+    ) {
+        CAT_LOG_DEBUG(SSL, "SSL cert name mismatch, abort");
+        X509_STORE_CTX_set_error(ctx, X509_V_ERR_HOSTNAME_MISMATCH);
+        ret = 0;
+        goto _out;
+    }
 
+_out:
+    if (!ret) {
+        cat_update_last_error(CAT_ECERT, "SSL verify callback failed: (%d, %s)", err, X509_verify_cert_error_string(err));
+    }
     return ret;
 }
 
 CAT_API void cat_ssl_context_enable_verify_peer(cat_ssl_context_t *context)
 {
-    CAT_LOG_DEBUG(SSL, "SSL_CTX_set_verify(%p, SSL_VERIFY_PEER, ssl_verify_callback)", context);
-    SSL_CTX_set_verify(context->ctx, SSL_VERIFY_PEER, cat_ssl_verify_callback);
+    CAT_LOG_DEBUG(SSL, "SSL_CTX_set_verify(%p, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT | SSL_VERIFY_CLIENT_ONCE, ssl_verify_callback)", context);
+    SSL_CTX_set_verify(context->ctx, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT | SSL_VERIFY_CLIENT_ONCE, cat_ssl_verify_callback);
 }
 
 CAT_API void cat_ssl_context_disable_verify_peer(cat_ssl_context_t *context)
@@ -743,7 +779,9 @@ CAT_API cat_ssl_t *cat_ssl_create(cat_ssl_t *ssl, cat_ssl_context_t *context)
     /* init ssl fields */
     ssl->connection = connection;
     ssl->context = context;
+    ssl->verify_peer = cat_true;
     ssl->allow_self_signed = cat_false;
+    ssl->expected_peer_name = NULL;
 
     return ssl;
 
@@ -776,6 +814,10 @@ CAT_API void cat_ssl_close(cat_ssl_t *ssl)
     cat_ssl_context_close_data(ssl->context);
     /* implicitly frees internal_bio */
     SSL_free(ssl->connection);
+    /* free peer name */
+    if (ssl->expected_peer_name != NULL) {
+        cat_free((void *) ssl->expected_peer_name);
+    }
     /* free */
     if (ssl->flags & CAT_SSL_FLAG_ALLOC) {
         cat_free(ssl);
@@ -885,12 +927,9 @@ CAT_API cat_ssl_ret_t cat_ssl_handshake(cat_ssl_t *ssl)
     int error = cat_ssl_get_error(ssl, n);
 
     if (error == SSL_ERROR_WANT_WRITE) {
-        fprintf(stderr, "SSL handshake should never return SSL_ERROR_WANT_WRITE with BIO mode.");
-        abort();
-    }
-    if (error == SSL_ERROR_WANT_READ) {
-        CAT_LOG_DEBUG(SSL, "SSL_ERROR_WANT_READ");
-        return CAT_SSL_RET_WANT_IO;
+        return CAT_SSL_RET_WANT_WRITE;
+    } else if (error == SSL_ERROR_WANT_READ) {
+        return CAT_SSL_RET_WANT_READ;
     } else if (error == SSL_ERROR_SYSCALL) {
         cat_update_last_error_of_syscall("SSL_do_handshake() failed");
     } else if (error == SSL_ERROR_ZERO_RETURN || ERR_peek_error() == 0) {
@@ -909,14 +948,22 @@ CAT_API cat_bool_t cat_ssl_verify_peer(cat_ssl_t *ssl, cat_bool_t allow_self_sig
     long err;
     const char *errmsg;
 
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+    cert = SSL_get0_peer_certificate(connection);
+#else
     cert = SSL_get_peer_certificate(connection);
+#endif
 
     if (cert == NULL) {
-        cat_update_last_error(CAT_ENOCERT, "SSL certificate not found");
+        long err_code;
+        while ((err_code = ERR_get_error()) != 0);
+        cat_update_last_error(CAT_ENOCERT, "SSL certificate not found: %s", ERR_error_string(err_code, NULL));
         return cat_false;
     }
 
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
     X509_free(cert);
+#endif
 
     err = SSL_get_verify_result(connection);
 
@@ -941,123 +988,38 @@ CAT_API cat_bool_t cat_ssl_verify_peer(cat_ssl_t *ssl, cat_bool_t allow_self_sig
     return cat_false;
 }
 
-#ifndef X509_CHECK_FLAG_ALWAYS_CHECK_SUBJECT
-static cat_bool_t cat_ssl_check_name(const char *name, size_t name_length, ASN1_STRING *pattern)
+static inline cat_bool_t _cat_ssl_check_host(X509 *cert, const char *name, size_t name_length)
 {
-    const unsigned char *s, *p, *end;
-    size_t slen, plen;
-
-    s = name;
-    slen = name_length;
-    p = ASN1_STRING_data(pattern);
-    plen = ASN1_STRING_length(pattern);
-    if (slen == plen && cat_strncasecmp(s, p, plen) == 0) {
-        return cat_true;
+    if (name_length == 0) {
+        return cat_false;
     }
-    if (plen > 2 && p[0] == '*' && p[1] == '.') {
-        plen -= 1;
-        p += 1;
-        end = s + slen;
-        s = cat_strlchr(s, end, '.');
-        if (s == NULL) {
-            return cat_false;
-        }
-        slen = end - s;
-        if (plen == slen && cat_strncasecmp(s, p, plen) == 0) {
-            return cat_true;
-        }
+    if (X509_check_host(cert, (char *) name, name_length, 0, NULL) != 1) {
+        CAT_LOG_DEBUG(SSL, "X509_check_host(%p, \"%.*s\", %zu): no match", cert, (int) name_length, name, name_length);
+        return cat_false;
     }
-
-    return cat_false;
+    CAT_LOG_DEBUG(SSL, "X509_check_host(%p, \"%.*s\", %zu): match", cert, (int) name_length, name, name_length);
+    return cat_true;
 }
-#endif
 
 CAT_API cat_bool_t cat_ssl_check_host(cat_ssl_t *ssl, const char *name, size_t name_length)
 {
     X509 *cert;
-    cat_bool_t ret = cat_false;
 
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+    cert = SSL_get0_peer_certificate(ssl->connection);
+#else
     cert = SSL_get_peer_certificate(ssl->connection);
+#endif
 
     if (cert == NULL) {
         return cat_false;
     }
 
-#ifdef X509_CHECK_FLAG_ALWAYS_CHECK_SUBJECT
-    /* X509_check_host() is only available in OpenSSL 1.0.2+ */
-    if (name_length == 0) {
-        goto _out;
-    }
-    if (X509_check_host(cert, (char *) name, name_length, 0, NULL) != 1) {
-        CAT_LOG_DEBUG(SSL, "X509_check_host(): no match");
-        goto _out;
-    }
-    CAT_LOG_DEBUG(SSL, "X509_check_host(): match");
-    ret = cat_true;
-    goto _out;
-#else
-    {
-        int n, i;
-        X509_NAME *sname;
-        ASN1_STRING *str;
-        X509_NAME_ENTRY *entry;
-        GENERAL_NAME *altname;
-        STACK_OF(GENERAL_NAME) *altnames;
-        /*
-         * As per RFC6125 and RFC2818, we check subjectAltName extension,
-         * and if it's not present - commonName in Subject is checked.
-         */
-        altnames = X509_get_ext_d2i(cert, NID_subject_alt_name, NULL, NULL);
-        if (altnames) {
-            n = sk_GENERAL_NAME_num(altnames);
-            for (i = 0; i < n; i++) {
-                altname = sk_GENERAL_NAME_value(altnames, i);
-                if (altname->type != GEN_DNS) {
-                    continue;
-                }
-                str = altname->d.dNSName;
-                CAT_LOG_DEBUG(SSL, "Subject alt name: \"%*s\"", ASN1_STRING_length(str), ASN1_STRING_data(str));
-                if (cat_ssl_check_name(name, name_length, str)) {
-                    CAT_LOG_DEBUG(SSL, "Subject alt name: match");
-                    GENERAL_NAMES_free(altnames);
-                    ret = cat_true;
-                    goto _out;
-                }
-            }
-            CAT_LOG_DEBUG(SSL, "Subject alt name: no match");
-            GENERAL_NAMES_free(altnames);
-            goto _out;
-        }
-        /*
-         * If there is no subjectAltName extension, check commonName
-         * in Subject.  While RFC2818 requires to only check "most specific"
-         * CN, both Apache and OpenSSL check all CNs, and so do we.
-         */
-        sname = X509_get_subject_name(cert);
-        if (sname == NULL) {
-            goto _out;
-        }
-        i = -1;
-        while (1) {
-            i = X509_NAME_get_index_by_NID(sname, NID_commonName, i);
-            if (i < 0) {
-                break;
-            }
-            entry = X509_NAME_get_entry(sname, i);
-            str = X509_NAME_ENTRY_get_data(entry);
-            CAT_LOG_DEBUG(SSL, "Common name: \"%*s\"", ASN1_STRING_length(str), ASN1_STRING_data(str));
-            if (cat_ssl_check_name(name, name_length, str)) {
-                CAT_LOG_DEBUG(SSL, "Common name: match");
-                ret = cat_true;
-                goto _out;
-            }
-        }
-        CAT_LOG_DEBUG(SSL, "Common name: no match");
-    }
-#endif
+    cat_bool_t ret = _cat_ssl_check_host(cert, name, name_length);
 
-    _out:
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
     X509_free(cert);
+#endif
     return ret;
 }
 
@@ -1103,181 +1065,125 @@ CAT_API int cat_ssl_write_encrypted_bytes(cat_ssl_t *ssl, const char *buffer, si
     return n;
 }
 
-CAT_API size_t cat_ssl_encrypted_size(size_t length)
-{
-    return CAT_MEMORY_ALIGNED_SIZE_EX(length, CAT_SSL_MAX_BLOCK_LENGTH) + (CAT_SSL_BUFFER_SIZE - CAT_SSL_MAX_PLAIN_LENGTH);
-}
-
-static cat_bool_t cat_ssl_encrypt_buffered(cat_ssl_t *ssl, const char *in, size_t *in_length, char *out, size_t *out_length)
-{
-    size_t nread = 0, nwrite = 0;
-    size_t in_size = *in_length;
-    size_t out_size = *out_length;
-    cat_bool_t ret = cat_false;
-
-    *in_length = 0;
-    *out_length = 0;
-
-    if (unlikely(in_size == 0)) {
-        return cat_false;
-    }
-
-    while (1) {
-        int n;
-
-        if (unlikely(nread == out_size)) {
-            cat_update_last_error(CAT_ENOBUFS, "SSL_encrypt() no out buffer space available");
-            break;
-        }
-
-        n = cat_ssl_read_encrypted_bytes(ssl, out + nread, out_size - nread);
-
-        if (n > 0) {
-            nread += n;
-        } else if (n == CAT_RET_NONE) {
-            // continue to SSL_write()
-        } else {
-            cat_update_last_error_with_previous("SSL_write() error");
-            break;
-        }
-
-        if (nwrite == in_size) {
-            /* done */
-            ret = cat_true;
-            break;
-        }
-
-        cat_ssl_clear_error();
-
-        n = SSL_write(ssl->connection, in + nwrite, (int) (in_size - nwrite));
-
-        CAT_LOG_DEBUG_VA(SSL, {
-            char *s;
-            CAT_LOG_DEBUG_D(SSL, "SSL_write(%p, %s, %zu) = %d",
-                ssl, cat_log_str_quote(in + nwrite, n < 0 ? 0 : n, &s), in_size - nwrite, n);
-            cat_free(s);
-        });
-
-        if (unlikely(n <= 0)) {
-            int error = cat_ssl_get_error(ssl, n);
-
-            if (error == SSL_ERROR_WANT_READ || error == SSL_ERROR_WANT_WRITE) {
-                CAT_LOG_DEBUG(SSL, "SSL_write(%p) want %s", ssl, error == SSL_ERROR_WANT_READ ? "read" : "write");
-                // continue to  SSL_read_encrypted_bytes()
-            } else if (error == SSL_ERROR_SYSCALL) {
-                cat_update_last_error_of_syscall("SSL_write() error");
-                break;
-            } else {
-                if (error != SSL_ERROR_ZERO_RETURN) {
-                    cat_ssl_update_last_error(CAT_ESSL, "SSL_write() error");
-                } else {
-                    /* TODO: try to confirm: is that possible? */
-                    cat_update_last_error_with_reason(CAT_ECONNRESET, "SSL_write() error");
-                }
-                cat_ssl_unrecoverable_error(ssl);
-                break;
-            }
-        } else {
-            nwrite += n;
-        }
-    }
-
-    *in_length = nwrite;
-    *out_length = nread;
-
-    return ret;
-}
-
 CAT_API cat_bool_t cat_ssl_encrypt(
     cat_ssl_t *ssl,
     const cat_io_vector_t *vector_in, unsigned int vector_in_count,
-    cat_io_vector_t *vector_out, unsigned int *vector_out_count
+    char **encrypted_data, size_t *encrypted_length
 )
 {
-    const cat_io_vector_t *v = vector_in, *ve = v + vector_in_count;
-    size_t vector_in_length = cat_io_vector_length(vector_in, vector_in_count);
-    unsigned int vector_out_counted = 0, vector_out_size = *vector_out_count;
-    char *buffer;
-    size_t length = 0;
-    size_t size;
-
-    CAT_ASSERT(vector_out_size > 0);
-
-    *vector_out_count = 0;
-
-    size = cat_ssl_encrypted_size(vector_in_length);
-    if (unlikely(size >  ssl->write_buffer.size)) {
-        buffer = (char *) cat_malloc(size);
+    // Initial buffer allocation with reasonable size
+    size_t encrypted_buffer_size = CAT_MEMORY_ALIGNED_SIZE_EX(CAT_SSL_BUFFER_SIZE, cat_getpagesize());
+    char *encrypted_buffer = (char *) cat_malloc(encrypted_buffer_size);
 #if CAT_ALLOC_HANDLE_ERRORS
-        if (unlikely(buffer == NULL)) {
-            cat_update_last_error_of_syscall("Malloc for SSL write buffer failed");
-            return cat_false;
-        }
-#endif
-    } else {
-        buffer = ssl->write_buffer.value;
-        size = ssl->write_buffer.size;
+    if (unlikely(encrypted_buffer == NULL)) {
+        cat_update_last_error_of_syscall("Malloc for SSL encrypted buffer failed");
+        return cat_false;
     }
-
-    while (1) {
-        size_t in_length = v->length;
-        size_t out_length = size - length;
-        cat_bool_t ret = cat_ssl_encrypt_buffered(
-            ssl, v->base, &in_length, buffer + length, &out_length
-        );
-        length += out_length;
-        if (unlikely(!ret)) {
-            /* save current */
-            vector_out->base = buffer;
-            vector_out->length = (cat_io_vector_length_t) length;
-            vector_out_counted++;
-            if (cat_get_last_error_code() == CAT_ENOBUFS) {
-                CAT_ASSERT(length == size);
-                CAT_LOG_DEBUG(SSL, "SSL encrypt buffer extend");
-                if (vector_out_counted == vector_out_size) {
-                    cat_update_last_error(CAT_ENOBUFS, "Unexpected vector count (too many)");
-                    goto _unrecoverable_error;
-                }
-                buffer = (char *) cat_malloc(size = CAT_SSL_BUFFER_SIZE);
-#if CAT_ALLOC_HANDLE_ERRORS
-                if (unlikely(buffer == NULL)) {
-                    cat_update_last_error_of_syscall("Realloc for SSL write buffer failed");
-                    goto _unrecoverable_error;
-                }
 #endif
-                /* switch to the next */
-                vector_out++;
-                continue;
+
+    size_t encrypted_total_length = 0;
+
+    // Process all input vectors
+    unsigned int i;
+    for (i = 0; i < vector_in_count; i++) {
+        const cat_io_vector_t *current_vector = &vector_in[i];
+        size_t offset = 0;
+
+        while (offset < current_vector->length) {
+
+            cat_ssl_clear_error();
+
+            CAT_ASSUME(current_vector->length - offset < INT_MAX);
+            int nwrote = SSL_write(ssl->connection, current_vector->base + offset, (int) (current_vector->length - offset));
+
+            CAT_LOG_DEBUG_VA(SSL, {
+                char *s;
+                CAT_LOG_DEBUG_D(SSL, "SSL_write(%p, %s, %zu) = %d",
+                    ssl, cat_log_str_quote(current_vector->base + offset, nwrote < 0 ? 0 : nwrote, &s),
+                    current_vector->length - offset, nwrote);
+                cat_free(s);
+            });
+
+            int error = SSL_ERROR_NONE;
+            if (unlikely(nwrote <= 0)) {
+                error = cat_ssl_get_error(ssl, nwrote);
             }
-            goto _error;
-        }
-        if (++v == ve) {
-            break;
+            switch (error) {
+                case SSL_ERROR_NONE:
+                    // success wrote
+                    offset += nwrote;
+                    CAT_ASSERT(offset <= current_vector->length);
+                    // needs to get the encrypted data
+                    /* fall through */
+                case SSL_ERROR_WANT_WRITE:
+                    // ssl bio buffer is full, clear it
+                    while (1) {
+                        if (encrypted_total_length == encrypted_buffer_size) {
+                            // buffer is full, expand it
+                            // fprintf(stderr, "cat_ssl_encrypt: buffer is full, %zu -> %zu\n", encrypted_buffer_size, encrypted_buffer_size * 2);
+                            encrypted_buffer_size *= 2;
+                            encrypted_buffer = (char *) cat_realloc(encrypted_buffer, encrypted_buffer_size);
+#if CAT_ALLOC_HANDLE_ERRORS
+                            if (unlikely(encrypted_buffer == NULL)) {
+                                cat_update_last_error_of_syscall("Realloc for SSL encrypted buffer failed");
+                                goto error_free;
+                            }
+#endif
+                        }
+                        int n = cat_ssl_read_encrypted_bytes(
+                            ssl,
+                            encrypted_buffer + encrypted_total_length,
+                            encrypted_buffer_size - encrypted_total_length
+                        );
+                        // fprintf(stderr, "cat_ssl_encrypt: error: %d, bufsize: %zu, length: %zu, n: %d\n", error, encrypted_buffer_size, encrypted_total_length, n);
+
+                        CAT_LOG_DEBUG_VA(SSL, {
+                            char *s;
+                            CAT_LOG_DEBUG_D(SSL, "BIO_read(%p, %s, %zu) = %d",
+                                ssl, cat_log_str_quote(encrypted_buffer + encrypted_total_length, n < 0 ? 0 : n, &s),
+                                encrypted_buffer_size - encrypted_total_length, n);
+                            cat_free(s);
+                        });
+
+                        if (n > 0) {
+                            // success read
+                            encrypted_total_length += n;
+                            CAT_ASSERT(encrypted_total_length <= encrypted_buffer_size);
+                            if (encrypted_total_length == encrypted_buffer_size) {
+                                // buffer is full, there may be more data, try again
+                                continue;
+                            }
+                            break;
+                        } else {
+                            // CAT_RET_ERROR when real error
+                            // CAT_RET_NONE when buffer is empty this should not happen
+                            CAT_ASSERT(n == CAT_RET_ERROR);
+                            cat_update_last_error_with_previous("BIO_read() error");
+                            goto error_free;
+                        }
+                    }
+                    break;
+                case SSL_ERROR_WANT_READ:
+                    // this may happen when re-negotiation is enabled
+                    // since we hardcoded to disable it, just error out
+                    /* fall through */
+                default:
+                    cat_update_last_error_with_previous("SSL_write() error");
+                    goto error_free;
+            }
         }
     }
 
-    vector_out->base = buffer;
-    vector_out->length = (cat_io_vector_length_t) length;
-    *vector_out_count = vector_out_counted + 1;
+    // Return the single buffer
+    *encrypted_data = encrypted_buffer;
+    *encrypted_length = encrypted_total_length;
+    // fprintf(stderr, "cat_ssl_encrypt: encrypted_total_length: %zu\n", encrypted_total_length);
 
     return cat_true;
 
-    _unrecoverable_error:
-    cat_ssl_unrecoverable_error(ssl);
-    _error:
-    cat_ssl_encrypted_vector_free(ssl, vector_out, vector_out_counted);
+error_free:
+    cat_free(encrypted_buffer);
     return cat_false;
-}
-
-CAT_API void cat_ssl_encrypted_vector_free(cat_ssl_t *ssl, cat_io_vector_t *vector, unsigned int vector_count)
-{
-    while (vector_count > 0) {
-        if (vector->base != ssl->write_buffer.value) {
-            cat_free(vector->base);
-        }
-        vector++;
-        vector_count--;
-    }
 }
 
 CAT_API cat_bool_t cat_ssl_decrypt(cat_ssl_t *ssl, char *out, size_t *out_length, cat_bool_t *eof)
@@ -1304,7 +1210,6 @@ CAT_API cat_bool_t cat_ssl_decrypt(cat_ssl_t *ssl, char *out, size_t *out_length
             } else if (n == CAT_RET_NONE) {
                 // continue to SSL_read()
             } else {
-                cat_update_last_error_with_previous("SSL_write() error");
                 break;
             }
         }

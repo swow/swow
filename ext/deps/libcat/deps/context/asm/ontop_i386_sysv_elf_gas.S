@@ -24,9 +24,14 @@
  *                                                                                      *
  ****************************************************************************************/
 
+#ifdef __x86_64__
+#include "ontop_x86_64_sysv_elf_gas.S"
+#else
+
 .file "ontop_i386_sysv_elf_gas.S"
 .text
 .globl cat_coroutine_context_ontop
+.hidden cat_coroutine_context_ontop
 .align 2
 .type cat_coroutine_context_ontop,@function
 cat_coroutine_context_ontop:
@@ -98,3 +103,5 @@ cat_coroutine_context_ontop:
 
 /* Mark that we don't need executable stack.  */
 .section .note.GNU-stack,"",%progbits
+
+#endif

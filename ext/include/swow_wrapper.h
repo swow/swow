@@ -25,6 +25,9 @@ extern "C" {
 #if !defined(__cplusplus) && !defined(_MSC_VER)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wstrict-prototypes"
+# ifdef HAVE_WTYPEDEF_REDEFINITION
+#  pragma GCC diagnostic ignored "-Wtypedef-redefinition"
+# endif
 #endif
 #include "php.h"
 
@@ -87,6 +90,31 @@ static zend_always_inline bool zend_string_starts_with_cstr_ci(const zend_string
 #define zend_string_starts_with_literal_ci(str, prefix) \
     zend_string_starts_with_cstr_ci(str, prefix, strlen(prefix))
 # endif
+
+const char *zend_zval_value_name(const zval *arg);
+
+zend_long ZEND_FASTCALL zval_try_get_long(const zval *op, bool *failed);
+#endif
+/* }}} */
+
+/* PHP 8.4 compatibility {{{*/
+#if PHP_VERSION_ID < 80400
+
+static zend_always_inline void *zend_mempcpy(void *dest, const void *src, size_t n)
+{
+#if defined(HAVE_MEMPCPY)
+    return mempcpy(dest, src, n);
+#else
+    return (char *)memcpy(dest, src, n) + n;
+#endif
+}
+
+#define php_random_generate_fallback_seed GENERATE_SEED
+
+static inline void zend_argument_must_not_be_empty_error(uint32_t arg_num)
+{
+	zend_argument_value_error(arg_num, "must not be empty");
+}
 #endif
 /* }}} */
 
@@ -186,7 +214,7 @@ static zend_always_inline bool zend_char_has_nul_byte(const char *s, size_t know
 #define swow_hash_str_fetch_bool(ht, str, ret) do { \
     zval *z_tmp = zend_hash_str_find(ht, str, strlen(str)); \
     if (z_tmp != NULL) { \
-        *(ret) = zval_is_true(z_tmp); \
+        *(ret) = zend_is_true(z_tmp); \
     } \
 } while (0)
 
@@ -453,7 +481,7 @@ static zend_always_inline bool swow_parse_arg_stringable(zval *arg, zend_string 
 /* function */
 
 
-#ifdef SWOW_FCC_INITIALIZED
+#ifdef ZEND_FCC_INITIALIZED
 
 #define swow_fcall_info_cache zend_fcall_info_cache
 #define swow_empty_fcall_info_cache empty_fcall_info_cache
@@ -466,6 +494,8 @@ static zend_always_inline bool swow_parse_arg_stringable(zval *arg, zend_string 
 #define swow_fcc_dtor zend_fcc_dtor
 #define swow_get_gc_buffer_add_fcc zend_get_gc_buffer_add_fcc
 #define swow_call_known_fcc zend_call_known_fcc
+
+#define swow_is_callable_ex zend_is_callable_ex
 
 #else
 
@@ -570,7 +600,8 @@ static zend_always_inline bool swow_is_callable_ex(zval *callable, zend_object *
     }
     return ret;
 }
-#endif
+
+#endif /* ZEND_FCC_INITIALIZED */
 
 typedef struct swow_fcall_s {
     zend_fcall_info info;

@@ -28,13 +28,13 @@ array(6) {
   [0]=>
   string(%d) "%sgetTraceAsList.php(%d): Swow\Coroutine::yield()"
   [1]=>
-  string(%d) "%sgetTraceAsList.php(%d): {closure}()"
+  string(%d) "%sgetTraceAsList.php(%d): {closur%s}()"
   [2]=>
-  string(%d) "%sgetTraceAsList.php(%d): {closure}()"
+  string(%d) "%sgetTraceAsList.php(%d): {closur%s}()"
   [3]=>
-  string(%d) "%sgetTraceAsList.php(%d): {closure}()"
+  string(%d) "%sgetTraceAsList.php(%d): {closur%s}()"
   [4]=>
-  string(32) "[internal function]: {closure}()"
+  string(%d) "[internal function]: {closur%s}()"
   [5]=>
   string(6) "{main}"
 }

@@ -52,8 +52,6 @@ typedef enum cat_http_parser_errno_e {
 #undef CAT_HTTP_PARSER_ERRNO_GEN
 } cat_http_parser_internal_errno_t;
 
-CAT_STRCASECMP_FAST_FUNCTION(content_type, "content-type", "       \0    ");
-
 #define cat_http_parser_throw_error(action, code, fmt, ...) do { \
     parser->internal_flags |= CAT_HTTP_PARSER_INTERNAL_FLAG_HAS_PREVIOUS_ERROR; \
     cat_http_parser_update_last_error(code, fmt, ##__VA_ARGS__); \
@@ -245,7 +243,7 @@ CAT_HTTP_PARSER_ON_DATA_BEGIN(header_value, HEADER_VALUE) {
             break;
         case CAT_MULTIPART_HEADER_FIELD_STATE_MAYBE_CONTENT_TYPE:
             // maybe content-type
-            if (0 == cat_strcasecmp_fast_content_type(parser->multipart_header)) {
+            if (0 != cat_strncasecmp(parser->multipart_header, CAT_STRL("content-type"))) {
                 parser->multipart_state = CAT_MULTIPART_HEADER_FIELD_STATE_NOT_CONTENT_TYPE;
                 break;
             }

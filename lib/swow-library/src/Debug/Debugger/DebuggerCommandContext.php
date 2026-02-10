@@ -1,4 +1,5 @@
 <?php
+
 /**
  * This file is part of Swow
  *
@@ -27,7 +28,7 @@ class DebuggerCommandContext
     public function __construct(
         protected string $command,
         /** @var string[] */
-        protected array $arguments
+        protected array $arguments,
     ) {
     }
 

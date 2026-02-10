@@ -73,7 +73,7 @@ _cat_coroutine_context_jump:
 
     /* firstarg of cat_coroutine_context_jump() == fcontext to jump to */
     movl  0x30(%esp), %ecx
-    
+
     /* restore ESP (pointing to context-data) from ECX */
     movl  %ecx, %esp
 

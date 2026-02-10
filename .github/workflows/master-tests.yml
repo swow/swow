@@ -8,10 +8,6 @@ on:
     # upstream shivammathur/php-builder* run at 23:30+0000 per day
     - cron:  '42 3 * * *'
 
-env:
-  SWOW_HAVE_SSL: 1
-  SWOW_HAVE_CURL: 1
-
 jobs:
   linux-tests:
     name: PHP latest Test on ubuntu-latest
@@ -30,6 +26,8 @@ jobs:
 
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Setup extension dependencies
         run: |
@@ -39,7 +37,7 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@master
         with:
-          php-version: '8.4'
+          php-version: '8.5'
           tools: phpize
           # ini-values: pcov.directory=lib
           # coverage: pcov
@@ -71,7 +69,7 @@ jobs:
         id: test-extension
         continue-on-error: true
         run: |
-          TEST_SWOW_POSTGRESQL=1 composer test-extension
+          TEST_SWOW_POSTGRESQL=1 composer test-extension .
 
       - name: Run library tests
         id: test-library
@@ -93,20 +91,23 @@ jobs:
 
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Setup extension dependencies
         run: |
-          brew install pkg-config
-          brew install openssl@3
-          brew install curl
-          brew install libpq postgresql
+          # [ ! -d /opt/homebrew/Cellar/pkgconf* ] && brew install pkgconf
+          [ ! -d /opt/homebrew/Cellar/openssl@3 ] && brew install openssl@3
+          [ ! -d /opt/homebrew/Cellar/curl* ] && brew install curl
+          [ ! -d /opt/homebrew/Cellar/postgresql* ] && brew install libpq postgresql
           initdb --locale=C -E UTF-8 -U postgres "$HOME/pgsqldata"
           pg_ctl -D "$HOME/pgsqldata" start
+          openssl rand -writerand "$HOME/.rnd"
 
       - name: Setup PHP
         uses: shivammathur/setup-php@master
         with:
-          php-version: '8.4'
+          php-version: '8.5'
           tools: phpize
           # ini-values: pcov.directory=lib
           # coverage: pcov
@@ -114,13 +115,27 @@ jobs:
           extensions: curl,openssl,sockets,ffi,pdo,pdo_pgsql
 
       - name: Setup composer dependencies
-        run: composer update -o --ignore-platform-reqs
+        run: |
+          composer update -o --ignore-platform-reqs
+          # for arm64 machines:
+          # Warning: JIT on AArch64 doesn't support opcache.jit_buffer_size above 128M. in Unknown on line 0
+          if uname -m | grep -q -e arm64 -e aarch64; then
+            phpini="$(php --ini | sed -n 's/Loaded Configuration File:[[:space:]]*//p' | sed -E 's/^"//; s/"$//')"
+            sed -i -E 's/opcache.jit_buffer_size=.+/opcache.jit_buffer_size=128M/g' "$phpini"
+            configdir="$(php --ini | sed -n 's/Scan for additional .ini files in:[[:space:]]*//p' | sed -E 's/^"//; s/"$//')"
+            for f in $(find "$configdir" -name '*.ini' -type f || true); do
+              sed -i -E 's/opcache.jit_buffer_size=.+/opcache.jit_buffer_size=128M/g' "$f"
+            done
+          fi
 
       - name: Detect dependencies path from php-config
         run: |
-          echo "OPENSSL_ROOT_DIR=$(php .github/workflows/detect-deps.php openssl)" >> $GITHUB_ENV
-          echo "CURL_ROOT_DIR=$(php .github/workflows/detect-deps.php curl)" >> $GITHUB_ENV
-          echo "PGSQL_ROOT_DIR=$(php .github/workflows/detect-deps.php libpq)" >> $GITHUB_ENV
+          simplefind() {
+            find /opt/homebrew/Cellar/$1 -type d -depth 1 | head -n 1
+          }
+          echo "OPENSSL_ROOT_DIR=$(simplefind openssl@3)" >> $GITHUB_ENV
+          echo "CURL_ROOT_DIR=$(simplefind curl)" >> $GITHUB_ENV
+          echo "PGSQL_ROOT_DIR=$(simplefind libpq)" >> $GITHUB_ENV
 
       - name: Build Swow extension
         env:
@@ -149,7 +164,7 @@ jobs:
         id: test-extension
         continue-on-error: true
         run: |
-          TEST_SWOW_POSTGRESQL=1 composer test-extension
+          TEST_SWOW_POSTGRESQL=1 composer test-extension .
 
       - name: Run library tests
         id: test-library
@@ -170,19 +185,21 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: ['windows-2019']
+        os: ['windows-latest']
         ts: [ 'nts', 'ts' ]
       max-parallel: 2
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       # TODO: windows varient of setup-php seems to be so slow
       #       shell we add caches?
       - name: Setup PHP
         uses: shivammathur/setup-php@master
         with:
-          php-version: '8.4'
+          php-version: '8.5'
           # ini-values: pcov.directory=lib
           # coverage: pcov
           coverage: none
@@ -193,7 +210,7 @@ jobs:
       - name: Build Swow extension
         uses: ./.github/workflows/winext
         with:
-          phpver: '8.4'
+          phpver: '8.5'
           phpts: ${{ matrix.ts == 'ts' && '1' || '0' }}
           ext-path: ./ext
           tools-path: C:\tools\phpdev
@@ -213,7 +230,7 @@ jobs:
           & "${env:PGBIN}\initdb.exe" --locale=C -E UTF-8 -U postgres "C:\pgsqldata"
           & "${env:PGBIN}\pg_ctl.exe" -D "C:\pgsqldata" start
           ${env:TEST_SWOW_POSTGRESQL} = "1"
-          composer test-extension
+          composer test-extension .
 
       - name: Run library tests
         shell: cmd

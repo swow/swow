@@ -230,7 +230,7 @@ if test "${PHP_SWOW}" != "no"; then
   SWOW_STD_CFLAGS="${SWOW_STD_CFLAGS} -DHAVE_CONFIG_H"
 
   dnl start build SWOW_CFLAGS
-  SWOW_STD_CFLAGS="${SWOW_STD_CFLAGS} -fvisibility=hidden -std=gnu99"
+  SWOW_STD_CFLAGS="${SWOW_STD_CFLAGS} -fvisibility=hidden -std=gnu11"
   SWOW_STD_CFLAGS="${SWOW_STD_CFLAGS} -Wall -Wextra -Wstrict-prototypes"
   SWOW_STD_CFLAGS="${SWOW_STD_CFLAGS} -Wno-unused-parameter"
   dnl for warning: the argument to '__builtin_assume' has side effects that will be discarded [-Wassume] in PHP
@@ -327,7 +327,7 @@ if test "${PHP_SWOW}" != "no"; then
 
   dnl start declare extension sources
 
-  PHP_NEW_EXTENSION(swow, "swow.c", $ext_shared, ,\\$(SWOW_CFLAGS))
+  PHP_NEW_EXTENSION(swow, "swow.c", $ext_shared, ,[\$(SWOW_CFLAGS)])
 
   dnl for git version number in swow.c
   AC_PATH_PROG(SWOW_GIT, git, no)
@@ -780,7 +780,7 @@ EOF
 
     dnl add curl sources
     if test "x${PHP_SWOW_CURL}" != "xno" ; then
-      SWOW_PKG_CHECK_MODULES([CURL], libcurl, 7.25.2, [PHP_SWOW_CURL], [
+      SWOW_PKG_CHECK_MODULES([CURL], libcurl, 7.61.0, [PHP_SWOW_CURL], [
         if test "x${PHP_CURL}" = "xno" ; then
           AC_MSG_WARN([Swow cURL support is enabled but cURL PHP extension is not enabled])
         fi
@@ -812,6 +812,9 @@ EOF
           SWOW_INCLUDES="$SWOW_INCLUDES -I$pdo_cv_inc_path"
           SWOW_ADD_SOURCES(deps/libcat/src, cat_pq.c, SWOW_CAT_INCLUDES, SWOW_CAT_CFLAGS)
           SWOW_ADD_SOURCES(src, swow_pgsql_driver.c swow_pgsql_statement.c swow_pgsql_version.c, SWOW_INCLUDES, SWOW_CFLAGS)
+          if test "${SWOW_PHP_VERSION_ID}" -ge "80400"; then
+            SWOW_ADD_SOURCES(src, swow_pgsql_sql_parser.c, SWOW_INCLUDES, SWOW_CFLAGS)
+          fi
         ],[
           AC_MSG_WARN([Swow PDO_PGSQL support not enabled: libpq not found])
         ])

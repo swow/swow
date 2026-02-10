@@ -4,7 +4,8 @@ param (
     [int]$MaxTry=3,
     [string]$Repo,
     [string]$RelID,
-    [string]$Token
+    [string]$Token,
+    [string]$AttestationBundle = ""
 )
 
 $scriptPath = Split-Path -parent $MyInvocation.MyCommand.Definition
@@ -46,67 +47,103 @@ Get-ChildItem . | Sort-Object -Property Name | ForEach-Object -Process {
         $fn = $_.Name
         $jsonfn = "${fn}.json"
         $pdbfn = $fn.replace('.dll', '.pdb')
-        if (Test-Path $jsonfn -Type Leaf){
-            info "Read information from $jsonfn"
-            $data = Get-Content $jsonfn | ConvertFrom-Json
-            if($fn -Ne $data.name){
-                warn "Not same filename, bad json, skip it"
-                continue
-            }
-            if(-Not $RunID){
-                $RunID = $data.runid
-                $jobdata = (fetchjson `
-                    -Headers $headers `
-                    -Uri "https://api.github.com/repos/$Repo/actions/runs/$RunID/jobs")."jobs"
-            }else{
-                if ($RunID -Ne $data.runid){
-                    warn "Not same runid, bad json, skip it"
-                    continue
-                }
-            }
-            if((Get-FileHash -Algorithm SHA256 $fn).Hash -Ne $data.hash){
-                warn "Bad dll hash, skip it"
-                continue
-            }
-            $link = $null
-            foreach($job in $jobdata) {
-                if($job.name.ToString().Contains($data.jobname)){
-                    $link = $job."html_url"
-                    info "Workflow run link is $link"
-                }
-            }
-            $linkstr = "[link](${link})"
-            if(-Not $link){
-                warn "Not found work run, strange"
-                $linkstr = "-"
-            }
-            info "Uploading file $fn"
-            $ret = Invoke-WebRequest `
-                -Uri "$uploadUrl$fn" `
-                -Method "POST" `
-                -ContentType "application/zip" `
-                -Headers $headers `
-                -InFile $fn
-            if(-Not $ret){
-                warn "Failed to upload $fn"
-                continue
-            }
-            info "Uploading file $pdbfn"
-            $ret = Invoke-WebRequest `
-                -Uri "$uploadUrl$pdbfn" `
-                -Method "POST" `
-                -ContentType "application/zip" `
-                -Headers $headers `
-                -InFile $pdbfn
-            if(-Not $ret){
-                warn "Failed to upload $pdbfn"
-                continue
-            }
-            $size = $data.size
-            $hash = $data.hash
-            $result = $data.result
-            $note += "| ${fn} | ${size} | ${hash} | ${linkstr} | ${result} |`n"
+        if (-Not (Test-Path $jsonfn -Type Leaf)){
+            continue
         }
+        info "Read information from $jsonfn"
+        $data = Get-Content $jsonfn | ConvertFrom-Json
+        if($fn -Ne $data.name){
+            warn "Not same filename, bad json, skip it"
+            continue
+        }
+        if(-Not $RunID){
+            $RunID = $data.runid
+            $jobdata = (fetchjson `
+                -Headers $headers `
+                -Uri "https://api.github.com/repos/$Repo/actions/runs/$RunID/jobs")."jobs"
+        }else{
+            if ($RunID -Ne $data.runid){
+                warn "Not same runid, bad json, skip it"
+                continue
+            }
+        }
+        if((Get-FileHash -Algorithm SHA256 $fn).Hash -Ne $data.hash){
+            warn "Bad dll hash, skip it"
+            continue
+        }
+        $link = $null
+        foreach($job in $jobdata) {
+            if($job.name.ToString().Contains($data.jobname)){
+                $link = $job."html_url"
+                info "Workflow run link is $link"
+            }
+        }
+        $linkstr = "[link](${link})"
+        if(-Not $link){
+            warn "Not found work run, strange"
+            $linkstr = "-"
+        }
+        info "Uploading file $fn"
+        $ret = Invoke-WebRequest `
+            -Uri "$uploadUrl$fn" `
+            -Method "POST" `
+            -ContentType "application/zip" `
+            -Headers $headers `
+            -InFile $fn
+        if(-Not $ret){
+            warn "Failed to upload $fn"
+            continue
+        }
+        info "Uploading file $pdbfn"
+        $ret = Invoke-WebRequest `
+            -Uri "$uploadUrl$pdbfn" `
+            -Method "POST" `
+            -ContentType "application/zip" `
+            -Headers $headers `
+            -InFile $pdbfn
+        if(-Not $ret){
+            warn "Failed to upload $pdbfn"
+            continue
+        }
+        $size = $data.size
+        $hash = $data.hash
+        $result = $data.result
+        $note += "| ${fn} | ${size} | ${hash} | ${linkstr} | ${result} |`n"
+
+        # build PIE zip
+        $zipfn = $fn.replace('.dll', '.zip')
+        info "Building PIE zip $zipfn"
+        & 7z a -tzip -mx=9 $zipfn `
+            $fn `
+            $pdbfn `
+            LICENSE `
+            LICENSES.full `
+
+        info "Uploading PIE zip $zipfn"
+        $ret = Invoke-WebRequest `
+            -Uri "$uploadUrl$zipfn" `
+            -Method "POST" `
+            -ContentType "application/zip" `
+            -Headers $headers `
+            -InFile $zipfn
+        if(-Not $ret){
+            warn "Failed to upload $zipfn"
+            continue
+        }
+    }
+}
+
+if ($AttestationBundle) {
+    info "Uploading Attestation bundle $AttestationBundle"
+    $ret = Invoke-WebRequest `
+        -Uri "${uploadUrl}attestation.jsonl" `
+        -Method "POST" `
+        -ContentType "application/json" `
+        -Headers $headers `
+        -InFile $AttestationBundle
+    if(-Not $ret){
+        warn "Failed to upload $AttestationBundle"
+        continue
     }
 }
 

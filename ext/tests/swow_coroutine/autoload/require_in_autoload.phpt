@@ -1,5 +1,5 @@
 --TEST--
-swow_coroutine:
+swow_coroutine/autoload: require in autoload
 --SKIPIF--
 <?php
 require __DIR__ . '/../../include/skipif.php';
@@ -26,6 +26,6 @@ new Foo();
 --EXPECTF--
 Fatal error: Uncaught Error: Class "%s\Foo" not found in %srequire_in_autoload.php:%d
 Stack trace:
-#0 %srequire_in_autoload.php(%d): {closure}('%s...')
+#0 %srequire_in_autoload.php(%d): {closur%s}('%s...')
 #1 {main}
   thrown in %srequire_in_autoload.php on line %d

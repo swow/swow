@@ -20,7 +20,7 @@ foreach ([false, true] as $throwError) {
         public function __construct(callable $callable, bool $throwError)
         {
             parent::__construct($callable);
-            $this->aaa = new class() {
+            $this->aaa = new class {
                 public function __destruct()
                 {
                     echo "Destruct\n";
@@ -48,7 +48,7 @@ foreach ([false, true] as $throwError) {
     {
         parent::__construct($callable);
         $this->bbb = true;
-        $this->aaa = new class() {
+        $this->aaa = new class {
             public function __destruct()
             {
                 echo "Destruct\n";

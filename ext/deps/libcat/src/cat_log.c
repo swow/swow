@@ -300,7 +300,20 @@ CAT_API void cat_log_va_list_standard(CAT_LOG_VA_LIST_PARAMETERS)
         }
         (void) cat_buffer_append_char(&buffer, '[');
         (void) cat_buffer_append_str_with_padding(&buffer, name, ' ', name_width);
+#ifdef CAT_THREAD_SAFE
+        (void) cat_buffer_append_str(&buffer, "] T");
+        (void) cat_buffer_append_unsigned(
+            &buffer,
+# ifdef CAT_OS_WIN
+            GetCurrentThreadId()
+# else
+            (unsigned) pthread_self()
+# endif
+        );
+        (void) cat_buffer_append_str(&buffer, " ");
+#else
         (void) cat_buffer_append_str(&buffer, "] ");
+#endif
         (void) cat_buffer_append_str(&buffer, type_name);
 #ifdef CAT_ENABLE_DEBUG_LOG
         if (type == CAT_LOG_TYPE_DEBUG && CAT_LOG_G(debug_level) > 1) {

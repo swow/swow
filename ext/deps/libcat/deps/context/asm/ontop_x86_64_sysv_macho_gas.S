@@ -25,6 +25,7 @@
  ****************************************************************************************/
 
 .text
+.private_extern _cat_coroutine_context_ontop
 .globl _cat_coroutine_context_ontop
 .align 8
 _cat_coroutine_context_ontop:

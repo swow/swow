@@ -1,4 +1,5 @@
 <?php
+
 /**
  * This file is part of Swow
  *
@@ -14,6 +15,8 @@ declare(strict_types=1);
 namespace Swow\Pack;
 
 use InvalidArgumentException;
+
+use function sprintf;
 
 class Format
 {

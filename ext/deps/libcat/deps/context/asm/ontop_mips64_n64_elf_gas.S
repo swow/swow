@@ -48,6 +48,7 @@
 .file "ontop_mips64_n64_elf_gas.S"
 .text
 .globl cat_coroutine_context_ontop
+.hidden cat_coroutine_context_ontop
 .align 3
 .type cat_coroutine_context_ontop,@function
 .ent cat_coroutine_context_ontop

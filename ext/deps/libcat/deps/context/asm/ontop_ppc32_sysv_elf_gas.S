@@ -53,6 +53,7 @@
 .file "ontop_ppc32_sysv_elf_gas.S"
 .text
 .globl cat_coroutine_context_ontop
+.hidden cat_coroutine_context_ontop
 .align 2
 .type cat_coroutine_context_ontop,@function
 cat_coroutine_context_ontop:

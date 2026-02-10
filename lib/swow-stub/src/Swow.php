@@ -58,14 +58,19 @@ namespace
 
 namespace Swow
 {
+    const NPROC_AVAILABLE = 0;
+}
+
+namespace Swow
+{
     class Extension
     {
-        public const VERSION = '1.5.3';
-        public const VERSION_ID = 10503;
+        public const VERSION = '1.6.3-dev';
+        public const VERSION_ID = 10603;
         public const MAJOR_VERSION = 1;
-        public const MINOR_VERSION = 5;
+        public const MINOR_VERSION = 6;
         public const RELEASE_VERSION = 3;
-        public const EXTRA_VERSION = '';
+        public const EXTRA_VERSION = 'dev';
 
         public static function isBuiltWith(string $lib): bool { }
     }
@@ -587,14 +592,8 @@ namespace Swow
          */
         public const ESOCKTNOSUPPORT = -94;
         public const ENODATA = -61;
-        /**
-         * This constant holds UV_ESTALE value, it's platform-dependent.
-         *
-         * At Linux platform, this constant means "Stale file handle"
-         * At macOS platform, this constant may have a value `-70` means "Stale NFS file handle"
-         * At Windows platform, this constant may have a value `-10070`
-         */
-        public const ESTALE = -116;
+        public const EUNATCH = -49;
+        public const ENOEXEC = -8;
         public const UNCODED = -9763;
         public const EPREV = -9762;
         public const EMISUSE = -9761;
@@ -2185,6 +2184,56 @@ namespace Swow
 namespace Swow
 {
     class IpAddressException extends \Swow\Exception { }
+}
+
+namespace Swow
+{
+    /**
+     * get Number of PROCessors
+     *
+     * @param int $kind processors count kind, currently only support `Swow\NPROC_AVAILABLE` which means the number of available (i.e. online logical cores) processors
+     * @return int
+     * @throws \Swow\Exception when failed to get the number of processors
+     */
+    function nproc(int $kind = \SWOW\NPROC_AVAILABLE): int { }
+}
+
+namespace Swow
+{
+    /**
+     * create a pipe pair like pipe(2)
+     *
+     * @param int $rflags read end flags, default is `0`
+     * @param int $wflags write end flags, default is `0`
+     * @return array{0: resource, 1: resource}|null the first element is the read end, the second element is the write end
+     * @throws \Swow\Exception when failed to create pipe
+     */
+    function pipe(int $rflags = 0, int $wflags = 0): ?array { }
+}
+
+namespace Swow
+{
+    /**
+     * get the file descriptor of a stream
+     *
+     * @param resource $stream the stream to get the file descriptor of, must be a PHP stream resource
+     * @return int|null
+     * @throws \Swow\Exception when failed to get the file descriptor
+     */
+    function fileno($stream): ?int { }
+}
+
+namespace Swow
+{
+    /**
+     * create a pipe from a file descriptor
+     *
+     * @param int $fd the file descriptor to create a pipe from
+     * @param string $mode the mode of the pipe, must be `r` or `w`
+     * @return resource the pipe resource
+     * @throws \Swow\Exception when failed to create a pipe
+     */
+    function pipe_from_fd(int $fd, string $mode) { }
 }
 
 namespace Swow

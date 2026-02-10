@@ -39,8 +39,8 @@ if (0 -Ne $lastexitcode){
 }
 
 if ("${env:FIX_PICKLE}" -Eq "1"){
-    info "Modify config.pickle.h to avoid C4005"
-    $picklefn = "${env:DEVPACK_PATH}\include\main\config.pickle.h"
+    info "Modify config.w32.h to avoid C4005"
+    $picklefn = "${env:DEVPACK_PATH}\include\main\config.w32.h"
     $orig = Get-Content -Raw $picklefn
     $modified = $orig
 
@@ -58,8 +58,8 @@ if ("${env:FIX_PICKLE}" -Eq "1"){
         "PHP_SIMD_SCALE"
     )
     foreach ($definition in $definitions){
-        $re = "^(\s*#\s*define\s*" + $definition + ".+)$"
-        $modified = $modified -Replace ($re, '// $1')
+        $re = "(?m)^#define\s*" + $definition + "(.+)$"
+        $modified = $modified -Replace ($re, "#ifndef $definition`n# define $definition `$1`n#endif")
     }
     # avoid utf8 bom
     [System.IO.File]::WriteAllLines($picklefn, $modified)

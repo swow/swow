@@ -1,4 +1,5 @@
 <?php
+
 /**
  * This file is part of Swow
  *
@@ -34,7 +35,7 @@ Coroutine::run(static function () use ($channel3): void {
     $channel3->push('three');
 });
 
-$s = new class() extends Selector {
+$s = new class extends Selector {
     /** @var array<Closure> */
     protected array $pushCallbacks = [];
 

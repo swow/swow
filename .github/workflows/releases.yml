@@ -11,33 +11,108 @@ on:
     - 'v*'
 
 env:
-  SWOW_HAVE_SSL: 1
-  SWOW_HAVE_CURL: 1
   SKIP_SWOW_SOCKET_WRITE_TIMEOUT_TEST: 1 # FIXME: On Windows releases CI environment, the test will fail (dead loop)
 
 jobs:
   builddlls:
     # this name is used after, change it with cautious
-    name: Build dll for PHP-${{ matrix.php-version }}-${{ matrix.arch }}-${{ (matrix.ts == '0') && 'N' || '' }}TS-VS16
-    runs-on: windows-2019
+    name: Build dll for PHP-${{ matrix.php-version }}-${{ matrix.arch }}-${{ (matrix.ts == '0') && 'N' || '' }}TS-VS${{ matrix.vsver }}
+    runs-on: windows-latest
     strategy:
       fail-fast: false
       matrix:
         php-version: ["8.3", "8.2", "8.1", "8.0"]
         arch: ["x64"]
         ts: ["0", "1"]
-      max-parallel: 8
+        vsver: ["16"]
+        include:
+          - php-version: "8.4"
+            arch: "x64"
+            ts: "0"
+            vsver: "17"
+          - php-version: "8.4"
+            arch: "x64"
+            ts: "1"
+            vsver: "17"
+      max-parallel: 10
     outputs:
       ref: ${{ steps.getref.outputs.ref }}
     env:
       deps: openssl,libcurl,libssh2,zlib,nghttp2,libpq
       tools_path: C:\tools\phpdev
-      dllname: "php_swow-php${{ matrix.php-version }}-${{ matrix.arch }}-${{ (matrix.ts == '0') && 'n' || '' }}ts-VS16"
+      dllname: "php_swow-${{ github.ref_type == 'tag' && github.ref_name || github.sha }}-${{ matrix.php-version }}-${{ (matrix.ts == '0') && 'n' || '' }}ts-vs${{ matrix.vsver }}-${{ matrix.arch == 'x64' && 'x86_64' || 'arm64' }}"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           ref: ${{ (github.event.inputs && github.event.inputs.ref) || github.ref }}
+          persist-credentials: false
+
+      - name: Restore cache for Visual Studio build tools
+        uses: actions/cache/restore@v4
+        id: restore-cache
+        if: matrix.vsver == '16'
+        with:
+          key: ${{ runner.os }}-vs${{ matrix.vsver }}-buildtools-alwaysmiss
+          path: C:\VSLayout
+          restore-keys: ${{ runner.os }}-vs${{ matrix.vsver }}-buildtools
+
+      - name: Setup Visual Studio build tools
+        shell: pwsh
+        id: setup-vs-buildtools
+        if: matrix.vsver == '16'
+        run: |
+          Invoke-WebRequest -Uri https://aka.ms/vs/16/release/vs_buildtools.exe -OutFile vs_buildtools.exe
+
+          # make layout (cache)
+          $proc = Start-Process `
+            -Verb runas `
+            .\vs_buildtools.exe `
+            -Wait `
+            -PassThru `
+            -ArgumentList @(
+              '--layout', 'C:\VSLayout',
+              '--passive',
+              '--norestart',
+              '--wait',
+              '--config', '.github/workflows/winext/.vsconfig',
+              '--lang', 'en-US'
+            )
+          if ($proc.ExitCode -ne 0) {
+            throw "Failed to make Visual Studio layout: $($proc.ExitCode)"
+          }
+
+          # install from layout (cache)
+          $proc = Start-Process `
+            -Verb runas `
+            C:\VSLayout\vs_buildtools.exe `
+            -Wait `
+            -PassThru `
+            -ArgumentList @(
+              '--noWeb',
+              '--passive',
+              '--norestart',
+              '--wait'
+            )
+          if ($proc.ExitCode -ne 0) {
+            throw "Failed to install Visual Studio build tools: $($proc.ExitCode)"
+          }
+
+          # calculate cache key
+          $catalogHash = (
+            Get-FileHash -Path C:\VSLayout\catalog.json -Algorithm SHA256 | Select-Object -ExpandProperty Hash
+          ).ToLower()
+          Write-Output "cache-key=${{ runner.os }}-vs${{ matrix.vsver }}-buildtools-${catalogHash}" |
+            Out-File -FilePath "${env:GITHUB_OUTPUT}" -Encoding utf8 -Append
+
+      - name: Save cache for Visual Studio build tools
+        uses: actions/cache/save@v4
+        if: |
+          matrix.vsver == '16' &&
+          steps.restore-cache.outputs.cache-matched-key != steps.setup-vs-buildtools.outputs.cache-key
+        with:
+          path: C:\VSLayout
+          key: ${{ steps.setup-vs-buildtools.outputs.cache-key }}
 
       - name: Get git commit ref hash
         id: getref
@@ -53,12 +128,7 @@ jobs:
         run: |
           . "./.github/workflows/winext/utils.ps1" -ToolName "cacheprepare" -MaxTry 3
           $phpver = "${{ matrix.php-version }}"
-          if ($phpver.Equals("8.3") -Or $phpver.Equals("8.2") -Or $phpver.Equals("8.1") -Or $phpver.Equals("8.0")) {
-            $PhpVCVer = "VS16"
-          } else {
-            Write-Host "::error::Bad version"
-            exit 1
-          }
+          $PhpVCVer = "VS${{ matrix.vsver }}"
           function phpsdkver {
             $headers = @{
               "accept"="application/vnd.github.v3+json";
@@ -128,7 +198,7 @@ jobs:
         env:
           UNIX_COLOR: "1"
         run: |
-          Write-Host "::group::Fetching php from windows.php.net"
+          Write-Host "::group::Fetching php from https://downloads.php.net/~windows"
           .\.github\workflows\winext\getphp.ps1 `
             -PhpVer "${{ matrix.php-version }}" `
             -PhpVCVer "${{ steps.ext-build.outputs.vcver }}" `
@@ -143,7 +213,13 @@ jobs:
           Write-Host "::endgroup::"
           Write-Host "::group::Installing swow"
           Copy-Item ext\${{ matrix.arch }}\Release${{ matrix.ts == 1 && '_TS' || '' }}\php_swow.dll ${{ env.tools_path }}\php\ext\
-          "extension_dir=C:\tools\phpdev\php\ext`nzend_extension=opcache`nextension=curl`nextension=openssl`nextension=pdo_pgsql`nextension=swow`n" | Out-File -Append ${{ env.tools_path }}\php\php.ini -Encoding ASCII # for no BOM
+          "extension_dir=C:\tools\phpdev\php\ext`n" + `
+            "zend_extension=opcache`n" + `
+            "extension=curl`n" + `
+            "extension=openssl`n" + `
+            "extension=pdo_pgsql`n" + `
+            "extension=swow`n" |
+              Out-File -Append ${{ env.tools_path }}\php\php.ini -Encoding ASCII # for no BOM
           php --ri swow
 
       # FIXME: we used `& C:\tools\phpdev\php\php.exe C:\tools\php\composer.phar test-extension` before,
@@ -181,15 +257,17 @@ jobs:
             "hash" = (Get-FileHash -Algorithm SHA256 $fn).Hash;
             "result" = "${{ steps.ext-test.outcome }}";
             "runid" = "${{ github.run_id }}";
-            "jobname" = "PHP-${{ matrix.php-version }}-${{ matrix.arch }}-${{ (matrix.ts == '0') && 'N' || '' }}TS-VS16";
+            "jobname" = "PHP-${{ matrix.php-version }}-${{ matrix.arch }}-${{ (matrix.ts == '0') && 'N' || '' }}TS-VS${{ matrix.vsver }}";
           } | ConvertTo-Json -Compress | Out-File "${fn}.json" -Encoding ASCII # for no BOM
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           # see https://github.com/actions/upload-artifact/blob/main/docs/MIGRATION.md#multiple-uploads-to-the-same-named-artifact
-          name: "${{ env.dllname }}-${{ steps.getref.outputs.ref }}"
+          name: "${{ env.dllname }}"
           path: |
+            LICENSE
+            LICENSES.full
             ${{ env.dllname }}.dll
             ${{ env.dllname }}.pdb
             ${{ env.dllname }}.dll.json
@@ -204,7 +282,7 @@ jobs:
 
   mergedlls:
     name: Merge DLLs
-    runs-on: windows-2019
+    runs-on: windows-latest
     needs: builddlls
     steps:
       - name: Merge Artifacts
@@ -218,10 +296,17 @@ jobs:
     if: ${{ github.event_name == 'push' }}
     needs:
       - mergedlls
-    runs-on: windows-2019
+    runs-on: windows-latest
+    permissions:
+      id-token: write
+      contents: write
+      attestations: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
       - name: Create Release
         id: create_release
         run: |
@@ -230,11 +315,21 @@ jobs:
             -Token "${{ secrets.GITHUB_TOKEN }}" `
             -TagName "${{ github.ref }}".Split("/")[-1] `
             -prerelease $true
+
       - name: Fetch artifact
         uses: actions/download-artifact@v4
         with:
           name: all-dlls
           path: .
+
+      - name: Attestation
+        id: attest
+        uses: actions/attest-build-provenance@v1
+        with:
+          subject-path: |
+            php_swow-*.dll
+            php_swow-*.pdb
+
       - name: Upload all dlls
         shell: powershell
         env:
@@ -243,4 +338,5 @@ jobs:
           .\.github\workflows\winext\uploader.ps1 `
             -RelId "${{ steps.create_release.outputs.id }}" `
             -Repo "${{ github.repository }}" `
-            -Token "${{ github.token }}"
+            -Token "${{ github.token }}" `
+            -AttestationBundle "${{ steps.attest.outputs.bundle-path }}"

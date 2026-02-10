@@ -25,9 +25,15 @@ extern "C" {
 #include "cat.h"
 #include "cat_queue.h"
 
-#define CAT_COROUTINE_MIN_STACK_SIZE            (128UL * 1024UL)
-#define CAT_COROUTINE_RECOMMENDED_STACK_SIZE    (256UL * 1024UL)
+#define CAT_COROUTINE_MIN_STACK_SIZE            (256UL * 1024UL)
 #define CAT_COROUTINE_MAX_STACK_SIZE            (16UL * 1024UL * 1024UL)
+
+/* Default stack size for coroutines:
+ * 32-bit systems (4-byte pointers):
+ * 1 * 1024 * 1024 = 1,048,576 bytes (1MB)
+ * 64-bit systems (8-byte pointers):
+ * 2 * 1024 * 1024 = 2,097,152 bytes (2MB) */
+#define CAT_COROUTINE_RECOMMENDED_STACK_SIZE    ((sizeof(void *) < 8 ? 1 : 2) * 1024 * 1024)
 
 #define CAT_COROUTINE_MIN_ID                    0ULL
 #define CAT_COROUTINE_MAX_ID                    UINT64_MAX

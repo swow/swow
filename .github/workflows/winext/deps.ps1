@@ -45,20 +45,24 @@ if ("".Equals($PhpVer)){
 
 $PhpVCVer = $PhpVCVer.ToLower()
 
-info "Try to fetch deps series list from windows.php.net"
+info "Try to fetch deps series list from https://downloads.php.net/~windows"
 if($Staging){
     $stagingStr = "staging"
 }else{
     $stagingStr = "stable"
 }
-$series = (fetchpage "https://windows.php.net/downloads/php-sdk/deps/series/packages-$PhpVer-$PhpVCVer-$PhpArch-$stagingStr.txt").Content
+$seriesUrl = "https://downloads.php.net/~windows/php-sdk/deps/series/packages-$PhpVer-$PhpVCVer-$PhpArch-$stagingStr.txt"
+info "Series URL: $seriesUrl"
+$series = (fetchpage $seriesUrl).Content
 if(!$series){
-    warn "Cannot get series information from windows.php.net, try file list instead"
-    $filelist = (fetchpage ("https://windows.php.net/downloads/php-sdk/deps/" + $PhpVCVer.ToLower() + "/$PhpArch/")).Content
-    if(!$filelist){
-        err "Neither series file nor file list can be got, aborting"
-        exit 1
-    }
+    err "Cannot get series information from https://downloads.php.net/~windows"
+    exit 1
+    # filelist may not match php distro, so disable it
+    # $filelist = (fetchpage ("https://downloads.php.net/~windows/php-sdk/deps/" + $PhpVCVer.ToLower() + "/$PhpArch/")).Content
+    # if(!$filelist){
+    #     err "Neither series file nor file list can be got, aborting"
+    #     exit 1
+    # }
 }
 
 $downloadeddeps = [System.Collections.ArrayList]@()
@@ -86,14 +90,14 @@ foreach ($depname in $DllDeps) {
         continue
     }
 
-    info "Downloading $filename from windows.php.net"
+    info "Downloading $filename from https://downloads.php.net/~windows"
     provedir "$ToolsPath"
     provedir "$ToolsPath\deps"
     $dest = "$ToolsPath\deps\$depfile"
     if(Test-Path $dest -PathType Leaf){
         warn "$depfile is already provided, instant extract it."
     }else {
-        $uri = "https://windows.php.net/downloads/php-sdk/deps/$PhpVCVer/$PhpArch/$depfile"
+        $uri = "https://downloads.php.net/~windows/php-sdk/deps/$PhpVCVer/$PhpArch/$depfile"
         $ret = dlwithhash -Uri $uri -Dest $dest
         if (!$ret){
             err "Failed download $uri."

@@ -24,8 +24,8 @@ enum cat_bool_e {
 #ifdef CAT_IDE_HELPER
 #ifdef __cplusplus
 typedef bool cat_bool_t;
-#define cat_true true
-#define cat_false false
+#define cat_true cat_bool_t(true)
+#define cat_false cat_bool_t(false)
 #else
 typedef enum cat_bool_e cat_bool_t;
 #endif

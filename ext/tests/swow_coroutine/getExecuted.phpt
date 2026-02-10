@@ -48,14 +48,14 @@ class SomeStrangeClass
 
 $closure = static function (...$_): void {
     $coro = Coroutine::getCurrent();
-    Assert::same($coro->getExecutedFunctionName(1), '{closure}');
+    Assert::startsWith($coro->getExecutedFunctionName(1), '{closure');
     Assert::same($coro->getExecutedFilename(1), __FILE__);
     Assert::same($coro->getExecutedLineno(1), __LINE__);
 };
 
 $closure_yield = static function (bool $yield): void {
     $coro = Coroutine::getCurrent();
-    Assert::same($coro->getExecutedFunctionName(1), '{closure}');
+    Assert::startsWith($coro->getExecutedFunctionName(1), '{closure');
     Assert::same($coro->getExecutedFilename(1), __FILE__);
     Assert::same($coro->getExecutedLineno(1), __LINE__);
     if ($yield) {

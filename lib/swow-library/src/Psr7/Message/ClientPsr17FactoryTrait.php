@@ -1,4 +1,5 @@
 <?php
+
 /**
  * This file is part of Swow
  *
@@ -30,7 +31,7 @@ trait ClientPsr17FactoryTrait
         ?UriFactoryInterface $uriFactory = null,
         ?StreamFactoryInterface $streamFactory = null,
         ?RequestFactoryInterface $requestFactory = null,
-        ?ResponseFactoryInterface $responseFactory = null
+        ?ResponseFactoryInterface $responseFactory = null,
     ): void {
         $this->__constructMessagePsr17Factory($uriFactory, $streamFactory);
         $this->requestFactory = $requestFactory ?? Psr7::getDefaultRequestFactory();

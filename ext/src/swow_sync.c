@@ -105,7 +105,7 @@ static PHP_METHOD(Swow_Sync_WaitReference, wait)
     /* eq to unset() */
     ZEND_TRY_ASSIGN_REF_NULL(zwr);
 
-    if (UNEXPECTED(!ZVAL_IS_NULL(Z_REFVAL_P(zwr)))) {
+    if (UNEXPECTED(!Z_ISNULL_P(Z_REFVAL_P(zwr)))) {
         // assign failed
         RETURN_THROWS();
     }

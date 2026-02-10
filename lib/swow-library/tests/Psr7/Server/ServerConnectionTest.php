@@ -1,4 +1,5 @@
 <?php
+
 /**
  * This file is part of Swow
  *
@@ -27,12 +28,14 @@ use function array_map;
 use function file_exists;
 use function is_numeric;
 use function mkdir;
+use function sprintf;
 use function Swow\TestUtils\getRandomBytes;
 
 use const CURLOPT_HEADER;
 use const CURLOPT_PROXY;
 use const CURLOPT_RETURNTRANSFER;
 use const CURLOPT_URL;
+use const PHP_VERSION_ID;
 
 /**
  * @internal
@@ -86,7 +89,9 @@ final class ServerConnectionTest extends TestCase
         curl_setopt($ch, CURLOPT_HEADER, true);
         curl_setopt($ch, CURLOPT_PROXY, false);
         $response = curl_exec($ch);
-        curl_close($ch);
+        if (PHP_VERSION_ID < 80100) {
+            curl_close($ch);
+        }
 
         $fileSize = filesize($this->tempFile);
         [$headerLines, $body] = explode("\r\n\r\n", $response);

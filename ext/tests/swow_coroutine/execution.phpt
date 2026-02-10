@@ -81,7 +81,7 @@ echo "Done\n";
 #2 %sexecution.php(%d): TestGetExecution::b()
 #3 %sexecution.php(%d): TestGetExecution::a()
 #4 %sexecution.php(%d): TestGetExecution::test()
-#5 [internal function]: {closure}()
+#5 [internal function]: {closur%s}()
 #6 {main}
 
 I am C

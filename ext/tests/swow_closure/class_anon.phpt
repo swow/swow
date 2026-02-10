@@ -10,7 +10,7 @@ Need to fix
 <?php
 require __DIR__ . '/../include/bootstrap.php';
 
-$o = new class() {
+$o = new class {
     public static function foo(): void
     {
     }
@@ -18,7 +18,12 @@ $o = new class() {
 $c = Closure::fromCallable([$o, 'foo']);
 $s = serialize($c);
 // var_dump($s);
-$c = unserialize($s);
+try {
+    $c = unserialize($s);
+} catch (Throwable $e) {
+    printf("failed to unserialize: %s\n", $e->getMessage());
+    var_dump($s);
+}
 // var_dump($c);
 
 echo "Done\n";

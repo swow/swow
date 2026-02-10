@@ -1,5 +1,6 @@
 #!/usr/bin/env php
 <?php
+
 /**
  * This file is part of Swow
  *
@@ -38,7 +39,7 @@ require __DIR__ . '/autoload.php';
  * - prepend definition and generate document for Swow\Socket::{TYPE_UDG, TYPE_UNIX} constants
  * - remove all ending spaces
  */
-$swowModifier = function (
+$swowModifier = static function (
     string $content,
     array $constantDefinitions,
 ): string {

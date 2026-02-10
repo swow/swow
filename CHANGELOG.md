@@ -1,9 +1,148 @@
+# v1.6.2
+
+> Release Date: 2025-11-03 | 发布日期：2025-11-03
+
+> "Fixing bugs is like whack-a-mole, but at least we're getting better at it" —— AI
+>
+> 「修 BUG 就像打地鼠，但至少我们越来越熟练了」 —— AI
+
+### Version Highlights | 版本亮点
+
+This version focuses on cURL stability fixes, PHP 8.5 compatibility improvements, and build system enhancements.
+该版本专注于 cURL 稳定性修复、PHP 8.5 兼容性改进以及构建系统增强。
+
+## 🐣 What's New | 什么是牛的
+
+- Nothing new | 啥都没有新增
+
+## ✨ What's Enhanced | 加强了啥
+
++ Improve PHP 8.5 compatibility with zend_disable_class support | 通过 zend_disable_class 支持改进 PHP 8.5 兼容性 (58494848) [@dixyes]
++ Change release DLL name to match PIE standards | 更改发布 DLL 名称以匹配 PIE 标准 (ec7e7681) [@dixyes]
++ Use gnu11 standard for build | 构建使用 gnu11 标准 (fe10fb3c) [@dixyes]
+
+## 🐛 What's Fixed | 什么修了
+
+* Fix OpenSSL .rnd file read and creation on macOS | 修复 macOS 上 OpenSSL .rnd 文件读取和创建 (232cacee, 2c4ac7b3) [@dixyes]
+* Fix cURL runtime shutdown sequence | 修复 cURL 运行时关闭序列 (a69146b6) [@dixyes]
+* Fix ARM64 platform INI file lookup | 修复 ARM64 平台 INI 文件查找 (e5fba705) [@dixyes]
+* Fix PHP 8.5 deprecation warnings | 修复 PHP 8.5 废弃警告 (19d20413) [@dixyes]
+* Revert zend_is_callable_ex wrapper removal | 回退 zend_is_callable_ex 包装器移除 (f7ae1c7e) [@dixyes]
+
+## 👻 What's Removed | 什么移除了
+
+- Remove PHP 8.0 from distro tests | 从发行版测试中移除 PHP 8.0 (0d39f1b5) [@dixyes]
+
+## 📦 Internal | 内部
+
++ Sync libcat dependencies (multiple updates) | 同步 libcat 依赖（多次更新）(5f1eda65, 748ecc4f, 1595c397, 9051b512) [@dixyes]
++ Add comprehensive cURL hook tests for multi handle deadloop and callback exceptions | 添加 cURL 钩子测试以覆盖 multi handle 死循环和回调异常 (096024f8, 4813c1de, f5a434c2) [@dixyes]
++ Add Rocky Linux and AlmaLinux 10 CI tests | 添加 Rocky Linux 和 AlmaLinux 10 CI 测试 (684758ed) [@dixyes]
++ Update code from PHP source tree | 从 PHP 源码树更新代码 (a1031796) [@dixyes]
++ Add source update utility | 添加源码更新工具 (14615871) [@dixyes]
++ Update certificate generator with EC private key support | 更新证书生成器，支持 EC 私钥 (ef45c3a0, b80e55de) [@dixyes]
++ Patch phpize.js for newer wsh compatibility | 修补 phpize.js 以兼容新版 wsh (38263e88) [@dixyes]
++ Various test improvements for platform-specific issues | 针对平台特定问题的各种测试改进 (e103e3df, 93c0086b, fa38bf55) [@dixyes]
+
+---
+
+# v1.6.1
+
+> Release Date: 2025-08-10 | 发布日期：2025-08-10
+
+> "The next version will be better" —— Swow Team
+>
+> 「下一个版本会更好」 —— Swow Team
+
+### Version Highlights | 版本亮点
+
+This version focuses on stability improvements, PIE (PHP Installer for Extensions) support, cURL reliability fixes, and PostgreSQL compatibility.
+该版本专注于修复 cURL Hook、PIE (PHP Installer for Extensions) 支持、以及 PostgreSQL 兼容性。
+
+## 🐣 What's New | 什么是牛的
++ PIE (PHP Installer for Extensions) support and installation documentation | PIE (PHP Installer for Extensions) 支持和安装文档 (f161c4bf, b20583d3) [@dixyes]
+
+## ✨ What's Enhanced | 啥叫enhance?
+
++ Use warning instead of exception for extension version mismatch | 扩展版本不匹配使用警告而非异常 (8f311ec6) [@twosee]
+
+## 🐛 What's Fixed | 什么修了
+
+* Fix cURL hook implementation | 修复 cURL 钩子实现 (10a0dbb8) [@dixyes]
+* Fix cURL module initialization | 修复 cURL 模块初始化 (6a828238) [@dixyes]
+* Fix PQclosePrepared weak dependency | 修复 PQclosePrepared 弱依赖 (bb348b9d) [@dixyes]
+* Fix missing weak dependencies | 修复缺失的弱依赖 (2f7f44d1) [@dixyes]
+
+## 👻 What's Removed | 什么移除了
+
+- Nothing removed | 啥都没有移除
+
+## 📦 Internal | 内部
+
++ Improved cURL multi test to cover blocking issues | 改进 cURL 多重测试以覆盖阻塞问题 (5e592cb0) [@twosee]
++ Match PHP cURL minfo | 匹配 PHP cURL minfo (50d0e87d) [@dixyes]
+
+---
+
+# v1.6.0
+
+> Release Date: 2025-08-02 | 发布日期：2025-08-02
+
+> "This version did a lot of things" —— Swow Team
+>
+> 「该版本做了许多事」 —— Swow Team
+
+### Version Highlights | 版本亮点
+
+This version provides full support for PHP 8.4, updated more powerful features, enhanced SSL/TLS reliability, critical memory security fixes, and significant architectural improvements.
+该版本提供了完整的 PHP 8.4 支持、更新更强大的功能、增强的 SSL/TLS 可靠性、关键的内存安全修复以及重大的架构改进。
+
+## 🐣 What's New | 什么是牛的
+
++ Full PHP 8.4 support | PHP 8.4 完整支持 (754a868, ee976a5) [@dixyes]
++ New pipe stuff: `Swow\pipe()`, `Swow\fileno()`, `Swow\pipe_from_fd()` | 新增管道 API (627fe16) [@dixyes]
++ Add `Swow\nproc()` to get CPU core count | 新增 `Swow\nproc()` 获取 CPU 核心数 [@dixyes]
++ EventDriver gets `stop()` method for graceful shutdown | EventDriver 新增 `stop()` 方法用于优雅停止服务器 (#269) [@devhaozi]
++ New INI: `swow.hook_pdo_pgsql` | 新 INI：`swow.hook_pdo_pgsql` (70af3d5) [@dixyes]
+
+## ✨ What's Enhanced | 啥叫enhance?
+
++ Complete closure serialization rewrite (⚠️ Breaking Change) | 闭包序列化完全重构（⚠️ 破坏性变更）
+  - Use AST to build closure code | 用 AST 构建闭包代码 (d5fd9ba, 92154a3, 9d0f796) [@dixyes]
++ Performance stuff: Apple Clang compatibility, libcurl bump to 7.61.0 | 性能优化：Apple Clang 兼容性，libcurl 最低版本提升到 7.61.0 (42096dc, a264539) [@twose]
+
+## 🐛 What's Fixed | 什么修了
+
+* Fix SSL problems: `enableCrypto()` and stream CA read | 修了 SSL 的一堆问题：`enableCrypto()` 和流 CA 读取 [@dixyes]
+* Fix Use-After-Free bugs in coroutine stuff and exception handling | 修复 Use-After-Free：协程管理和异常处理中的内存安全问题 (d2a549d, 3993aeb) [@dixyes]
+* Fix UAF when killing coroutines and throwing exceptions | 修复协程终止和异常抛出时的 UAF (ec8c6c6) [@dixyes]
+* Fix ZTS build crash on shutdown | 修复 ZTS 构建关闭时的崩溃 (ec8c6c6) [@dixyes]
+* Fix many PHP 8.4 compatibility problems | 修复 PHP 8.4 各种兼容性问题 (0c09661, 7e68033, 6fa98d8) [@dixyes]
+* Update libpq search paths | 更新 libpq 查找路径 [@dixyes]
+* Fix build stuff: string terminators, left shift overflow, macro problems etc. | 修复构建问题：字符串终止符、左移溢出、宏展开等 (7cf2cf6, bdda08b, ccf437f, db35d83, d39500f) [@dixyes]
+* Fix undefined Content-Length error in HTTP responses | 修复 HTTP 响应 Content-Length 未定义错误 (09f5c65) [@twose]
+
+## 👻 What's Removed | 什么移除了
+
+- Remove `Swow\Errno::ESTALE` | 移除 `Swow\Errno::ESTALE` [@dixyes]
+
+## 📦 Internal | 内部
+
++ Update libcat's libuv | 更新 libcat 的 libuv (@twose)
++ Optimize many compatibility macros or wrappers | 优化许多兼容性宏或包装 (@dixyes)
++ Update swow_fs from PHP source tree for better file system handling | 从 PHP 源码树更新 swow_fs 以改进文件系统处理 (91e9758, 4b32c71) [@dixyes]
++ Update to latest PHP 8.4 PostgreSQL source code | 更新到最新 PHP 8.4 PostgreSQL 源码，增强各种能力 (da3562a, d7736c4, 0ed3782) [@dixyes]
++ Add tests: OpenSSL hooks, TLS, Property Hooks | 新增各种测试：OpenSSL 钩子、TLS、Property Hooks (c046201, 1dde6d9, 9efeaf7) [@dixyes]
++ Better CI/CD configs and dev tools | 增强 CI/CD 配置和开发工具 (60fdf81, f7dff44, dc8e9e1, 48a6555, 8fe564f, 62758f7, c2b442b, 9850f7e) [@dixyes]
+
+---
+
 # v1.5.3
 
 > release-date: 2024-07-22
 
 > 「成功的关键在于我们对失败的反应。」 - ChatGPT
-> 
+>
 > "The key to success is how we respond to failure." - ChatGPT
 
 该版本主要修复了 cURL 在特定条件下会死循环的问题，并新增了日语版本的 README。
@@ -158,7 +297,7 @@ This version mainly fixes the issue of cURL getting stuck in an infinite loop un
 > release-date: 2023-12-10
 
 > 「生活并不是等待暴风雨过去，而是学会如何在雨中跳舞。」- 维维安·格林
-> 
+>
 > "Life isn't about waiting for the storm to pass. It's about learning how to dance in the rain." - Vivian Greene
 
 ## 🐛 What's Fixed

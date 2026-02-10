@@ -576,6 +576,98 @@ ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_enableCrypto, 
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, options, IS_ARRAY, 1, "null")
 ZEND_END_ARG_INFO()
 
+#ifdef CAT_SSL
+cat_bool_t swow_load_stream_cafile(cat_ssl_context_t *context, struct cat_socket_crypto_options_s *options)
+{
+    php_stream *stream;
+    X509 *cert;
+    BIO *buffer;
+    int buffer_active = 0;
+    char *line = NULL;
+    size_t line_len;
+    long certs_added = 0;
+    X509_STORE *cert_store = SSL_CTX_get_cert_store(context->ctx);
+
+    // printf("load file %s\n", cafile);
+    cat_bool_t hooking_plain_wrapper = SWOW_STREAM_G(hooking_plain_wrapper);
+    cat_bool_t hooking_stdio_ops = SWOW_STREAM_G(hooking_stdio_ops);
+    SWOW_STREAM_G(hooking_plain_wrapper) = cat_false;
+    SWOW_STREAM_G(hooking_stdio_ops) = cat_false;
+
+    stream = php_stream_open_wrapper(options->ca_file, "rb", 0, NULL);
+
+    if (stream == NULL) {
+        php_error(E_WARNING, "failed loading cafile stream: `%s'", options->ca_file);
+        goto end;
+    } else if (stream->wrapper->is_url) {
+        php_stream_close(stream);
+        php_error(E_WARNING, "remote cafile streams are disabled for security purposes");
+        goto end;
+    }
+
+    cert_start: {
+        line = php_stream_get_line(stream, NULL, 0, &line_len);
+        if (line == NULL) {
+            goto stream_complete;
+        } else if (!strcmp(line, "-----BEGIN CERTIFICATE-----\n") ||
+            !strcmp(line, "-----BEGIN CERTIFICATE-----\r\n")
+        ) {
+            buffer = BIO_new(BIO_s_mem());
+            buffer_active = 1;
+            goto cert_line;
+        } else {
+            efree(line);
+            goto cert_start;
+        }
+    }
+
+    cert_line: {
+        BIO_puts(buffer, line);
+        efree(line);
+        line = php_stream_get_line(stream, NULL, 0, &line_len);
+        if (line == NULL) {
+            goto stream_complete;
+        } else if (!strcmp(line, "-----END CERTIFICATE-----") ||
+            !strcmp(line, "-----END CERTIFICATE-----\n") ||
+            !strcmp(line, "-----END CERTIFICATE-----\r\n")
+        ) {
+            goto add_cert;
+        } else {
+            goto cert_line;
+        }
+    }
+
+    add_cert: {
+        BIO_puts(buffer, line);
+        efree(line);
+        cert = PEM_read_bio_X509(buffer, NULL, 0, NULL);
+        BIO_free(buffer);
+        buffer_active = 0;
+        if (cert && X509_STORE_add_cert(cert_store, cert)) {
+            ++certs_added;
+            X509_free(cert);
+        }
+        goto cert_start;
+    }
+
+    stream_complete: {
+        php_stream_close(stream);
+        if (buffer_active == 1) {
+            BIO_free(buffer);
+        }
+    }
+
+    if (certs_added == 0) {
+        php_error(E_WARNING, "no valid certs found cafile stream: `%s'", options->ca_file);
+    }
+
+    SWOW_STREAM_G(hooking_plain_wrapper) = hooking_plain_wrapper;
+    SWOW_STREAM_G(hooking_stdio_ops) = hooking_stdio_ops;
+end:
+    return certs_added > 0;
+}
+#endif
+
 static PHP_METHOD(Swow_Socket, enableCrypto)
 {
 #ifdef CAT_SSL
@@ -592,6 +684,7 @@ static PHP_METHOD(Swow_Socket, enableCrypto)
     ZEND_PARSE_PARAMETERS_END();
 
     cat_socket_crypto_options_init(&options, is_client);
+    options.load_ca = swow_load_stream_cafile;
     if (options_array != NULL) {
         swow_hash_str_fetch_bool(options_array, "verify_peer", &options.verify_peer);
         swow_hash_str_fetch_bool(options_array, "verify_peer_name", &options.verify_peer_name);
@@ -616,11 +709,8 @@ static PHP_METHOD(Swow_Socket, enableCrypto)
         swow_hash_str_fetch_str(options_array, "certificate_key", &options.certificate_key);
         swow_hash_str_fetch_bool(options_array, "no_ticket", &options.no_ticket);
         swow_hash_str_fetch_bool(options_array, "no_compression", &options.no_compression);
-        swow_hash_str_fetch_str(options_array, "passphrase", &options.passphrase);
         // TODO: SNI related things
-        if (is_client) {
-            swow_hash_str_fetch_str(options_array, "peer_name", &options.peer_name);
-        }
+        swow_hash_str_fetch_str(options_array, "peer_name", &options.peer_name);
     }
 
     ret = cat_socket_enable_crypto(socket, &options);
@@ -1123,7 +1213,7 @@ static PHP_METHOD_EX(Swow_Socket, _write, bool single, bool may_address)
                 uint32_t vector_list_array_index = 0;
                 ZEND_HASH_FOREACH_VAL(vector_list_array, z_tmp) {
                     /* the last one can be null */
-                    if (ZVAL_IS_NULL(z_tmp)) {
+                    if (Z_ISNULL_P(z_tmp)) {
                         break;
                     }
                     /* [array|string|Stringable|Buffer] */

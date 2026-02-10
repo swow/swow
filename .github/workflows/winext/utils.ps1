@@ -49,7 +49,9 @@ function fetchpage {
             $ret = Invoke-WebRequest -Uri $Uri -UseBasicParsing -Headers $Headers -Method $Method -Body $Body
             return $ret
         }catch [System.Net.WebException],[System.IO.IOException]{
-            warn "Failed to fetch page ${Uri}, try again."
+            $randomSleepSeconds = Get-Random -Minimum 1 -Maximum 10
+            warn "Failed to fetch page ${Uri}, sleep ${randomSleepSeconds} seconds to try again."
+            Start-Sleep -Seconds $randomSleepSeconds
             Write-Host $_
             continue
         }
@@ -59,13 +61,26 @@ function fetchpage {
 
 function fetchjson {
     param ($Uri, $Headers, $Method="GET", $Body)
-    $page = fetchpage -Uri $Uri -Headers $Headers -Method $Method -Body $Body
-    if($page){
+    for ($i=0; $i -lt $MaxTry; $i++){
         try{
-            return ($page | ConvertFrom-Json)
+            $page = fetchpage -Uri $Uri -Headers $Headers -Method $Method -Body $Body
         }catch{
-            warn "Failed parse page ${Uri} as json."
+            $randomSleepSeconds = Get-Random -Minimum 1 -Maximum 10
+            warn "Failed to fetch page ${Uri} for json, sleep ${randomSleepSeconds} seconds to try again."
+            Start-Sleep -Seconds $randomSleepSeconds
             Write-Host $_
+            continue
+        }
+        if($page){
+            try{
+                return ($page | ConvertFrom-Json)
+            }catch{
+                $randomSleepSeconds = Get-Random -Minimum 1 -Maximum 10
+                warn "Failed to parse page ${Uri} as json, sleep ${randomSleepSeconds} seconds to try again."
+                Start-Sleep -Seconds $randomSleepSeconds
+                Write-Host $_
+                continue
+            }
         }
     }
     return $null
@@ -81,7 +96,9 @@ function dlwithhash{
             info "Try to download ${uri}"
             Invoke-WebRequest -Uri $Uri -OutFile $Dest -UseBasicParsing | Out-Null
         }catch [System.Net.WebException],[System.IO.IOException]{
-            warn "Failed download ${uri}."
+            $randomSleepSeconds = Get-Random -Minimum 1 -Maximum 10
+            warn "Failed to download ${Uri}, sleep ${randomSleepSeconds} seconds to try again."
+            Start-Sleep -Seconds $randomSleepSeconds
             Write-Host $_
             continue
         }

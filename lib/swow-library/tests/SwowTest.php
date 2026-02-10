@@ -1,4 +1,5 @@
 <?php
+
 /**
  * This file is part of Swow
  *
@@ -18,6 +19,7 @@ use PHPUnit\Framework\TestCase;
 use Swow;
 
 use function extension_loaded;
+use function sprintf;
 use function strlen;
 
 /**
