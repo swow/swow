@@ -663,7 +663,9 @@ void swow_ssl_after_handshake_callback(cat_ssl_t* ssl, cat_bool_t success, void 
         return;
     }
 
-    if (NULL != (val = php_stream_context_get_option(PHP_STREAM_CONTEXT(stream),
+    if (
+        NULL != PHP_STREAM_CONTEXT(stream) &&
+        NULL != (val = php_stream_context_get_option(PHP_STREAM_CONTEXT(stream),
             "ssl", "capture_peer_cert")) &&
         zend_is_true(val)
     ) {
@@ -682,7 +684,9 @@ void swow_ssl_after_handshake_callback(cat_ssl_t* ssl, cat_bool_t success, void 
         }
     }
     
-    if (NULL != (val = php_stream_context_get_option(PHP_STREAM_CONTEXT(stream),
+    if (
+        NULL != PHP_STREAM_CONTEXT(stream) &&
+        NULL != (val = php_stream_context_get_option(PHP_STREAM_CONTEXT(stream),
     "ssl", "capture_peer_cert_chain")) &&
         zend_is_true(val)
     ) {
