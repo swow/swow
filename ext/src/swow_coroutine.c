@@ -184,7 +184,9 @@ static CAT_COLD void swow_coroutine_function_handle_exception(void)
 {
     ZEND_ASSERT(EG(exception) != NULL);
 
+#if PHP_VERSION_ID < 80600
     zend_exception_restore();
+#endif
 
     if (swow_coroutine_has_unwind_exit(EG(exception))) {
         OBJ_RELEASE(EG(exception));
@@ -395,9 +397,11 @@ static cat_bool_t swow_coroutine_construct(swow_coroutine_t *s_coroutine, zval *
         } while (0);
         executor->current_execute_data = executor->root_execute_data;
         executor->exception = NULL;
+#if PHP_VERSION_ID < 80600
         /* we may save exception before zend_call_function() and restore exception after it,
          * and coroutine switching may happen during function executing. */
         executor->prev_exception = NULL;
+#endif
 #ifdef SWOW_COROUTINE_SWAP_ERROR_HANDING
         executor->error_handling = EH_NORMAL;
         executor->exception_class = NULL;
@@ -616,7 +620,9 @@ SWOW_API void swow_coroutine_executor_save(swow_coroutine_executor_t *executor)
     executor->vm_stack_page_size = eg->vm_stack_page_size;
     executor->current_execute_data = eg->current_execute_data;
     executor->exception = eg->exception;
+#if PHP_VERSION_ID < 80600
     executor->prev_exception = eg->prev_exception;
+#endif
 #ifdef SWOW_COROUTINE_SWAP_ERROR_HANDING
     executor->error_handling = eg->error_handling;
     executor->exception_class = eg->exception_class;
@@ -674,7 +680,9 @@ SWOW_API void swow_coroutine_executor_recover(swow_coroutine_executor_t *executo
     eg->vm_stack_page_size = executor->vm_stack_page_size;
     eg->current_execute_data = executor->current_execute_data;
     eg->exception = executor->exception;
+#if PHP_VERSION_ID < 80600
     eg->prev_exception = executor->prev_exception;
+#endif
 #ifdef SWOW_COROUTINE_SWAP_ERROR_HANDING
     eg->error_handling = executor->error_handling;
     eg->exception_class = executor->exception_class;
@@ -2469,7 +2477,9 @@ static zend_always_inline bool swow_coroutine_has_unwind_exit(zend_object *excep
 static int swow_coroutine_catch_handler(zend_execute_data *execute_data)
 {
     SWOW_COROUTINE_OPCODE_HANDLER_CHECK();
+#if PHP_VERSION_ID < 80600
     zend_exception_restore();
+#endif
     if (UNEXPECTED(EG(exception) != NULL)) {
         if (swow_coroutine_has_unwind_exit(EG(exception))) {
             return ZEND_USER_OPCODE_RETURN;

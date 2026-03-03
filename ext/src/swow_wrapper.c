@@ -354,9 +354,13 @@ SWOW_API void swow_fcall_storage_release(swow_fcall_storage_t *fcall)
 
 SWOW_API zend_result swow_call_function_anyway(zend_fcall_info *fci, zend_fcall_info_cache *fci_cache)
 {
+#if PHP_VERSION_ID < 80600
     zend_exception_save();
+#endif
     zend_result ret = zend_call_function(fci, fci_cache);
+#if PHP_VERSION_ID < 80600
     zend_exception_restore();
+#endif
     return ret;
 }
 
