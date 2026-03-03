@@ -2640,10 +2640,14 @@ typedef struct swow_coroutine_autoload_pending_node_s {
 
 static zend_class_entry *swow_coroutine_autoload(zend_string *name, zend_string *lc_name)
 {
-    ZEND_ASSERT(EG(in_autoload) != NULL);
 
     cat_coroutine_t *current_coroutine = CAT_COROUTINE_G(current);
+#if PHP_VERSION_ID < 80600
+    ZEND_ASSERT(EG(in_autoload) != NULL);
     zend_hash_del(EG(in_autoload), lc_name);
+#else
+    zend_hash_del(&EG(autoload_current_classnames), lc_name);
+#endif
 
     if (UNEXPECTED(SWOW_COROUTINE_G(in_autoload) == NULL)) {
         ALLOC_HASHTABLE(SWOW_COROUTINE_G(in_autoload));
@@ -2678,8 +2682,11 @@ static zend_class_entry *swow_coroutine_autoload(zend_string *name, zend_string 
     while ((pending_coroutine = cat_queue_front_data(&head.queue, cat_coroutine_t, waiter.node)) != NULL) {
         cat_coroutine_schedule(pending_coroutine, COROUTINE, "Autoload");
     }
-
+#if PHP_VERSION_ID < 80600
     zend_hash_add_empty_element(EG(in_autoload), lc_name);
+#else
+    zend_hash_add_empty_element(&EG(autoload_current_classnames), lc_name);
+#endif
     return head.ce;
 }
 
