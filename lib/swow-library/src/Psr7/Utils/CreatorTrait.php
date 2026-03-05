@@ -30,8 +30,11 @@ use Swow\Buffer;
 use Swow\Http\Message\ResponseEntity;
 use Swow\Http\Message\ServerRequestEntity;
 use Swow\Http\Message\UploadedFileEntity;
+use Swow\Http\Protocol\ChunkedBodyStream;
 use Swow\Http\Status;
 use Swow\Psr7\Message\BufferStream;
+use Swow\Psr7\Message\ChunkedBodyPsrStream;
+use Swow\Psr7\Message\MessagePlusInterface;
 use Swow\Psr7\Message\PhpStream;
 use Swow\Psr7\Message\Psr17Factory;
 use Swow\Psr7\Message\Request;
@@ -48,12 +51,45 @@ use Swow\Psr7\Message\WebSocketFrame;
 use Swow\WebSocket\Opcode;
 use Swow\WebSocket\WebSocket;
 
+use function array_filter;
+use function array_map;
+use function explode;
+use function implode;
 use function is_resource;
 use function is_string;
 use function parse_str;
+use function strcasecmp;
+use function trim;
 
 trait CreatorTrait
 {
+    /* 这里只处理 plus 对象：它支持原地改 header。
+     * 非 plus 对象通常是不可变语义（withHeader 返回新实例），
+     * 而 chunked 完成事件发生在对象已返回之后，无法安全替换调用方持有的实例。 */
+    /**
+     * 在 chunked 流式 body 完成后，把 header 归一化为“普通完整 body”形态：
+     * - 移除 Transfer-Encoding 中的 chunked；
+     * - 写入最终 Content-Length。
+     */
+    protected static function normalizeChunkedHeadersForPlusMessage(MessagePlusInterface $message, int $contentLength): void
+    {
+        if ($message->hasHeader('transfer-encoding')) {
+            $transferEncoding = implode(', ', $message->getHeader('transfer-encoding'));
+            $transferEncodings = array_filter(
+                array_map('trim', explode(',', $transferEncoding)),
+                static function (string $value): bool {
+                    return $value !== '' && strcasecmp($value, 'chunked') !== 0;
+                }
+            );
+            if ($transferEncodings === []) {
+                $message->unsetHeader('Transfer-Encoding');
+            } else {
+                $message->setHeader('Transfer-Encoding', implode(', ', $transferEncodings));
+            }
+        }
+        $message->setHeader('Content-Length', (string) $contentLength);
+    }
+
     /**
      * @return UriInterface|UriPlusInterface|Uri
      */
@@ -91,6 +127,10 @@ trait CreatorTrait
     {
         if ($data instanceof StreamInterface) {
             return $data;
+        }
+        if ($data instanceof ChunkedBodyStream) {
+            // 分层边界：HTTP 层流对象在这里适配成 PSR7 StreamInterface。
+            return new ChunkedBodyPsrStream($data);
         }
         $streamFactory ??= static::getDefaultStreamFactory();
         if (is_resource($data)) {
@@ -153,9 +193,10 @@ trait CreatorTrait
     public static function createResponseFromEntity(ResponseEntity $responseEntity, ?ResponseFactoryInterface $responseFactory = null, ?StreamFactoryInterface $streamFactory = null): ResponseInterface
     {
         $responseFactory ??= static::getDefaultResponseFactory();
-        $body = $responseEntity->body;
-        if ($body) {
-            $bodyStream = static::createStreamFromBuffer($body, $streamFactory);
+        $streamFactory ??= static::getDefaultStreamFactory();
+        $rawBody = $responseEntity->body;
+        if ($responseEntity->body !== null) {
+            $bodyStream = static::createStreamFromAny($rawBody, $streamFactory);
         } else {
             $bodyStream = null;
         }
@@ -164,14 +205,23 @@ trait CreatorTrait
             $responseEntity->reasonPhrase
         );
         if ($response instanceof ResponsePlusInterface) {
-            $response
-                ->setProtocolVersion($responseEntity->protocolVersion)
-                ->setHeadersAndHeaderNames(
+            $response->setProtocolVersion($responseEntity->protocolVersion);
+            if (method_exists($response, 'setHeadersAndHeaderNames')) {
+                $response->{'setHeadersAndHeaderNames'}(
                     $responseEntity->headers,
                     $responseEntity->headerNames
                 );
+            } else {
+                $response->setHeaders($responseEntity->headers);
+            }
             if ($bodyStream) {
                 $response->setBody($bodyStream);
+                if ($rawBody instanceof ChunkedBodyStream) {
+                    // 完成后再归一化 header，避免在 body 未完整消费时伪造 Content-Length。
+                    $rawBody->onCompleted(static function () use ($response, $rawBody): void {
+                        self::normalizeChunkedHeadersForPlusMessage($response, $rawBody->getSize() ?? 0);
+                    });
+                }
             }
             if ($response instanceof Response) {
                 if (!$responseEntity->shouldKeepAlive) {
@@ -247,6 +297,7 @@ trait CreatorTrait
         ?UploadedFileFactoryInterface $uploadedFileFactory = null,
     ): ServerRequestInterface {
         $serverRequestFactory ??= static::getDefaultServerRequestFactory();
+        $streamFactory ??= static::getDefaultStreamFactory();
         $serverRequest = $serverRequestFactory->createServerRequest(
             $serverRequestEntity->method,
             static::createUriFromString($serverRequestEntity->uri, $uriFactory),
@@ -258,8 +309,9 @@ trait CreatorTrait
         } else {
             $queryParams = [];
         }
-        if ($serverRequestEntity->body) {
-            $bodyStream = $streamFactory->createStream((string) $serverRequestEntity->body);
+        $rawBody = $serverRequestEntity->body;
+        if ($serverRequestEntity->body !== null) {
+            $bodyStream = static::createStreamFromAny($rawBody, $streamFactory);
         } else {
             $bodyStream = null;
         }
@@ -275,15 +327,25 @@ trait CreatorTrait
             if ($queryParams) {
                 $serverRequest->setQueryParams($queryParams);
             }
-            $serverRequest->setHeadersAndHeaderNames(
-                $serverRequestEntity->headers,
-                $serverRequestEntity->headerNames
-            );
+            if (method_exists($serverRequest, 'setHeadersAndHeaderNames')) {
+                $serverRequest->{'setHeadersAndHeaderNames'}(
+                    $serverRequestEntity->headers,
+                    $serverRequestEntity->headerNames
+                );
+            } else {
+                $serverRequest->setHeaders($serverRequestEntity->headers);
+            }
             if ($serverRequestEntity->cookies) {
                 $serverRequest->setCookieParams($serverRequestEntity->cookies);
             }
             if ($bodyStream) {
                 $serverRequest->setBody($bodyStream);
+                if ($rawBody instanceof ChunkedBodyStream) {
+                    // 与 response 分支一致：仅在流完成后回写长度相关 header。
+                    $rawBody->onCompleted(static function () use ($serverRequest, $rawBody): void {
+                        self::normalizeChunkedHeadersForPlusMessage($serverRequest, $rawBody->getSize() ?? 0);
+                    });
+                }
             }
             if ($serverRequestEntity->formData) {
                 $serverRequest->setParsedBody($serverRequestEntity->formData);

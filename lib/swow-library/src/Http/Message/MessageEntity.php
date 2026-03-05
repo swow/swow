@@ -15,6 +15,7 @@ declare(strict_types=1);
 namespace Swow\Http\Message;
 
 use Swow\Buffer;
+use Swow\Http\Protocol\ChunkedBodyStream;
 
 class MessageEntity
 {
@@ -38,5 +39,5 @@ class MessageEntity
 
     public bool $shouldKeepAlive = false;
 
-    public ?Buffer $body = null;
+    public Buffer|ChunkedBodyStream|null $body = null;
 }

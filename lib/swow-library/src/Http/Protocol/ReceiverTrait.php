@@ -28,6 +28,7 @@ use Swow\Http\ParserException;
 use Swow\Http\Status as HttpStatus;
 use Swow\SocketException;
 use Swow\WebSocket\WebSocket;
+use Throwable;
 use ValueError;
 
 use function array_filter;
@@ -75,6 +76,10 @@ trait ReceiverTrait
     protected int $recvMessageTimeout = -1;
 
     protected bool $shouldKeepAlive = false;
+
+    protected bool $streamingChunkedResponse = false;
+
+    protected ?ChunkedBodyState $activeChunkedBody = null;
 
     protected function __constructReceiver(int $type, int $events): void
     {
@@ -162,6 +167,17 @@ trait ReceiverTrait
         return $this->shouldKeepAlive;
     }
 
+    public function isStreamingChunkedResponse(): bool
+    {
+        return $this->streamingChunkedResponse;
+    }
+
+    public function setStreamingChunkedResponse(bool $enable): static
+    {
+        $this->streamingChunkedResponse = $enable;
+        return $this;
+    }
+
     /**
      * @TODO The options must be managed in a unified way
      * @phan-return T
@@ -170,6 +186,8 @@ trait ReceiverTrait
      */
     protected function recvMessageEntity(?int $timeout = null): ServerRequestEntity|ResponseEntity
     {
+        // 同一连接上不能带着“上一条未消费完成 body”继续解析下一条消息。
+        $this->guardPreviousChunkedBody();
         $thisBuffer = $this->buffer;
         $thisBufferParsedOffset = null;
         /* buffer may be replaced for some special parsing cases,
@@ -206,6 +224,7 @@ trait ReceiverTrait
         $isChunked = false;
         $currentChunkLength = 0;
         $body = null;
+        $isStreamingChunkedBody = false;
         /* }}} */
         /* multipart related values {{{ */
         $isMultipart = false;
@@ -330,6 +349,31 @@ trait ReceiverTrait
                                 $shouldKeepAlive = $parser->shouldKeepAlive();
                                 if ($parser->isChunked()) {
                                     $isChunked = true;
+                                    if (!$isServerRequest && $this->streamingChunkedResponse) {
+                                        // 流式模式下在 headers 完成后即返回 body stream，
+                                        // 后续协议推进由 stream 按需驱动。
+                                        $state = new ChunkedBodyState(
+                                            buffer: $buffer,
+                                            parser: $parser,
+                                            parsedOffset: $parsedOffset,
+                                            bodyBuffer: new Buffer(Buffer::COMMON_SIZE),
+                                        );
+                                        $this->activeChunkedBody = $state;
+                                        $body = new ChunkedBodyStream(
+                                            state: $state,
+                                            fillToCallback: function (int $targetLength) use ($state, $timeout): void {
+                                                $this->pumpChunkedBodyStateToLength($state, $targetLength, $timeout);
+                                            },
+                                            fillAllCallback: function () use ($state, $timeout): void {
+                                                $this->pumpChunkedBodyStateToCompletion($state, $timeout);
+                                            },
+                                            closeCallback: function () use ($state): void {
+                                                $this->handleChunkedBodyStreamClosed($state);
+                                            },
+                                        );
+                                        $isStreamingChunkedBody = true;
+                                        break 3;
+                                    }
                                 } else {
                                     $contentLength = $parser->getContentLength();
                                     if ($contentLength > $maxContentLength) {
@@ -602,10 +646,252 @@ trait ReceiverTrait
             $messageEntity->shouldKeepAlive = $shouldKeepAlive;
             $this->shouldKeepAlive = $shouldKeepAlive;
         }
-        $parser->reset();
-        $this->updateParsedOffsetAndRecycleBufferSpace($thisBuffer, $thisBufferParsedOffset ?? $parsedOffset);
+        if (!$isStreamingChunkedBody) {
+            $parser->reset();
+            $this->updateParsedOffsetAndRecycleBufferSpace($thisBuffer, $thisBufferParsedOffset ?? $parsedOffset);
+        }
 
         return $messageEntity;
+    }
+
+    /**
+     * 在解析下一条 HTTP 消息前，先处理上一条未完成的流式 chunked body。
+     *
+     * 触发时机：
+     * - recvMessageEntity() 入口第一步。
+     *
+     * 副作用：
+     * - 发现未完成 body 时直接关闭连接并将 shouldKeepAlive 置为 false。
+     */
+    protected function guardPreviousChunkedBody(): void
+    {
+        $state = $this->activeChunkedBody;
+        if ($state === null) {
+            return;
+        }
+        if ($state->finalized) {
+            $this->activeChunkedBody = null;
+            return;
+        }
+        $this->activeChunkedBody = null;
+        $this->shouldKeepAlive = false;
+        // 该连接上出现未完成 body，直接断开，避免后续请求读到残留字节。
+        $this->close();
+        throw new ProtocolException(
+            HttpStatus::BAD_REQUEST,
+            sprintf(
+                'Previous streaming chunked body was not fully consumed (buffered_bytes=%d, complete=%s)',
+                $state->bodyBuffer->getLength(),
+                $state->complete ? 'true' : 'false'
+            )
+        );
+    }
+
+    /**
+     * 处理业务层主动 close() 的流式 body。
+     *
+     * 设计意图：
+     * - 业务可能只读取了前缀数据就关闭 body；
+     * - 当前策略固定为“未完成即断开连接”，简化维护并避免状态分叉。
+     */
+    protected function handleChunkedBodyStreamClosed(ChunkedBodyState $state): void
+    {
+        if ($state->finalized) {
+            return;
+        }
+        $this->activeChunkedBody = null;
+        $this->shouldKeepAlive = false;
+        try {
+            $this->close();
+        } catch (Throwable) {
+            // ignore
+        }
+    }
+
+    /**
+     * 一直推进直到 MESSAGE_COMPLETE（用于 getSize/toString/getContents 等全量语义）。
+     */
+    protected function pumpChunkedBodyStateToCompletion(ChunkedBodyState $state, ?int $timeout = null): void
+    {
+        while (!$state->finalized) {
+            $this->pumpChunkedBodyStateToLength($state, $state->bodyBuffer->getLength() + 1, $timeout);
+        }
+    }
+
+    /**
+     * 核心推进器：按需把 bodyBuffer 推进到 targetLength，或推进到 finalized。
+     *
+     * 关键保证：
+     * - parser 输入与 socket 字节流保持一致；
+     * - 仅在 EVENT_MESSAGE_COMPLETE 时 finalize；
+     * - 任何解析错误都视为连接不可复用。
+     */
+    protected function pumpChunkedBodyStateToLength(ChunkedBodyState $state, int $targetLength, ?int $timeout = null): void
+    {
+        if ($state->finalized || $state->bodyBuffer->getLength() >= $targetLength) {
+            return;
+        }
+        $buffer = $state->buffer;
+        $parser = $state->parser;
+        $parsedOffset = $state->parsedOffset;
+        $maxContentLength = $this->getMaxContentLength();
+        $expectMoreData = $parsedOffset === $buffer->getLength();
+        $timeout ??= $this->recvMessageTimeout;
+        $readTimeout = $this->getReadTimeout();
+        if (($timeout < 0 ? PHP_INT_MAX : $timeout) < ($readTimeout < 0 ? PHP_INT_MAX : $readTimeout)) {
+            $readTimeout = $timeout;
+        }
+        $mainCoroutine = Coroutine::getMain();
+        try {
+            while (!$state->finalized && $state->bodyBuffer->getLength() < $targetLength) {
+                if ($expectMoreData) {
+                    // recvData 的 offset 不能等于 buffer size；当缓冲区已满且已全部解析时先回收。
+                    if ($parsedOffset >= $buffer->getLength() && $buffer->isFull()) {
+                        $buffer->truncateFrom($parsedOffset);
+                        $parsedOffset = 0;
+                    }
+                    /*
+                     * 到这里仍然 full，说明“未解析数据”已经占满整个协议缓冲区，
+                     * 且当前循环又判定还需要更多数据才能继续解析。
+                     * 这通常意味着协议片段异常过长或解析状态无进展，再继续收包也没有可写空间，
+                     * 必须立刻失败，避免死循环或写越界。
+                     */
+                    if ($buffer->isFull()) {
+                        throw new ParserException('Buffer is full and unable to continue receiving chunked stream');
+                    }
+                    if ($timeout >= 0) {
+                        if (!isset($startTime)) {
+                            $startTime = $mainCoroutine->getElapsed();
+                        } else {
+                            $timePassed = $mainCoroutine->getElapsed() - $startTime;
+                            if ($timePassed > $timeout) {
+                                throw new SocketException(sprintf('Recv HTTP chunked body timeout (expect within %d ms, but %d ms passed)', $timeout, $timePassed), Errno::ETIMEDOUT);
+                            }
+                            $readTimeout = $timeout - $timePassed;
+                        }
+                    }
+                    $this->recvData($buffer, offset: $buffer->getLength(), timeout: $readTimeout);
+                    $expectMoreData = false;
+                }
+                $parsedLength = $parser->execute($buffer, $parsedOffset);
+                $parsedOffset += $parsedLength;
+                $event = $parser->getEvent();
+                if ($event === HttpParser::EVENT_NONE) {
+                    // 与主解析路径保持一致：NONE 表示需要更多数据，先回收已解析区间再继续收包。
+                    $buffer->truncateFrom($parsedOffset);
+                    if ($buffer->isFull()) {
+                        throw new ParserException('Buffer is full and unable to continue parsing chunked stream');
+                    }
+                    $parsedOffset = 0;
+                    $expectMoreData = true;
+                    continue;
+                }
+                switch ($event) {
+                    case HttpParser::EVENT_CHUNK_HEADER:
+                        $state->currentChunkLength = $parser->getCurrentChunkLength();
+                        if ($state->bodyBuffer->getLength() + $state->currentChunkLength > $maxContentLength) {
+                            throw new ProtocolException(HttpStatus::REQUEST_ENTITY_TOO_LARGE);
+                        }
+                        break;
+                    case HttpParser::EVENT_BODY:
+                        $dataOffset = $parser->getDataOffset();
+                        $dataLength = $parser->getDataLength();
+                        $state->bodyBuffer->append($buffer, $dataOffset, $dataLength);
+                        $neededLength = $state->currentChunkLength - $dataLength;
+                        if ($neededLength > 0) {
+                            $bodyParsedOffset = $state->bodyBuffer->getLength();
+                            if ($state->bodyBuffer->getAvailableSize() < $neededLength) {
+                                $state->bodyBuffer->extend($bodyParsedOffset + $neededLength);
+                            }
+                            $this->read($state->bodyBuffer, $bodyParsedOffset, $neededLength);
+                            $bodyParsedOffset += $parser->execute($state->bodyBuffer, $bodyParsedOffset);
+                            if ($parser->getEvent() !== HttpParser::EVENT_BODY) {
+                                throw new ParserException(sprintf(
+                                    'Expected EVENT_BODY for chunked stream, got %s',
+                                    $parser->getEventName()
+                                ));
+                            }
+                            if ($bodyParsedOffset !== $state->bodyBuffer->getLength()) {
+                                throw new ParserException(sprintf(
+                                    'Expected all chunked stream body data was parsed, but got %d/%d',
+                                    $bodyParsedOffset,
+                                    $state->bodyBuffer->getLength()
+                                ));
+                            }
+                        }
+                        break;
+                    case HttpParser::EVENT_CHUNK_COMPLETE:
+                        if ($state->currentChunkLength === 0) {
+                            $parsedOffset += $parser->execute($buffer, $parsedOffset);
+                            if ($parser->getEvent() !== HttpParser::EVENT_MESSAGE_COMPLETE) {
+                                throw new ParserException(sprintf(
+                                    'Expected MESSAGE_COMPLETE for chunked stream, got %s',
+                                    $parser->getEventName()
+                                ));
+                            }
+                            $event = HttpParser::EVENT_MESSAGE_COMPLETE;
+                        } else {
+                            break;
+                        }
+                        // no break
+                    case HttpParser::EVENT_MESSAGE_COMPLETE:
+                        $state->complete = true;
+                        $state->parsedOffset = $parsedOffset;
+                        // 只在 MESSAGE_COMPLETE 时 finalize，保证 trailer 等协议尾部已消费完毕。
+                        $this->finalizeChunkedBodyState($state);
+                        return;
+                    default:
+                        throw new ParserException(sprintf(
+                            'Unexpected HttpParser event for chunked stream: %s',
+                            $parser->getEventName()
+                        ));
+                }
+            }
+        } catch (ParserException $parserException) {
+            $this->shouldKeepAlive = false;
+            $this->close();
+            throw new ProtocolException(HttpStatus::BAD_REQUEST, 'Protocol Parsing Error', $parserException);
+        } catch (SocketException $socketException) {
+            $this->shouldKeepAlive = false;
+            ExceptionEditor::setMessage(
+                $socketException,
+                sprintf(
+                    '%s [streaming-chunked-context: event=%s, parsed_offset=%d, buffer_length=%d, body_buffered=%d, current_chunk_length=%d]',
+                    $socketException->getMessage(),
+                    $parser->getEventName(),
+                    $parsedOffset,
+                    $buffer->getLength(),
+                    $state->bodyBuffer->getLength(),
+                    $state->currentChunkLength
+                )
+            );
+            throw $socketException;
+        } finally {
+            $state->parsedOffset = $parsedOffset;
+        }
+    }
+
+    /**
+     * 提交流式 body 的最终状态到连接级上下文。
+     *
+     * 做三件事：
+     * 1) 标记 complete/finalized；
+     * 2) reset parser；
+     * 3) 按 parsedOffset 回收 buffer 并清空 activeChunkedBody。
+     */
+    protected function finalizeChunkedBodyState(ChunkedBodyState $state): void
+    {
+        if ($state->finalized) {
+            return;
+        }
+        $state->complete = true;
+        $state->finalized = true;
+        // 必须在 finalize 时统一 reset/recycle，确保连接解析状态与缓冲区位置一致。
+        $state->parser->reset();
+        $this->updateParsedOffsetAndRecycleBufferSpace($state->buffer, $state->parsedOffset);
+        if ($this->activeChunkedBody === $state) {
+            $this->activeChunkedBody = null;
+        }
     }
 
     /**
