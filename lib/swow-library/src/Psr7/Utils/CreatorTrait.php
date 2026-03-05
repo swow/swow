@@ -14,6 +14,7 @@ declare(strict_types=1);
 
 namespace Swow\Psr7\Utils;
 
+use Generator;
 use Psr\Http\Message\RequestFactoryInterface;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseFactoryInterface;
@@ -34,6 +35,8 @@ use Swow\Http\Protocol\ChunkedBodyStream;
 use Swow\Http\Status;
 use Swow\Psr7\Message\BufferStream;
 use Swow\Psr7\Message\ChunkedBodyPsrStream;
+use Swow\Psr7\Message\EventStreamDecoder;
+use Swow\Psr7\Message\EventStreamEvent;
 use Swow\Psr7\Message\MessagePlusInterface;
 use Swow\Psr7\Message\PhpStream;
 use Swow\Psr7\Message\Psr17Factory;
@@ -141,6 +144,16 @@ trait CreatorTrait
         } else {
             return $streamFactory->createStream((string) $data);
         }
+    }
+
+    /**
+     * 从 PSR Stream 按 SSE 协议读取事件流。
+     *
+     * @return Generator<int, EventStreamEvent>
+     */
+    public static function readEventStream(StreamInterface $stream, int $readSize = 8192): Generator
+    {
+        return EventStreamDecoder::decode($stream, $readSize);
     }
 
     /**
