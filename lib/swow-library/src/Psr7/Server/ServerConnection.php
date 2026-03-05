@@ -116,7 +116,7 @@ class ServerConnection extends Socket implements ProtocolTypeInterface
 
     public function recvServerRequestEntity(?int $timeout = null): ServerRequestEntity
     {
-        return $this->recvMessageEntity($timeout);
+        return $this->recvMessageEntity(timeout: $timeout);
     }
 
     /**

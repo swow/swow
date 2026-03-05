@@ -102,7 +102,7 @@ class Client extends Socket implements ClientInterface, ProtocolTypeInterface
 
     public function recvResponseEntity(?int $timeout = null): ResponseEntity
     {
-        return $this->recvMessageEntity($timeout);
+        return $this->recvMessageEntity(timeout: $timeout);
     }
 
     public function sendRequest(RequestInterface $request, ?int $timeout = null): ResponseInterface
