@@ -1,3 +1,52 @@
+# v1.7.0-alpha.1
+
+> Release Date: 2026-03-08 | 发布日期：2026-03-08
+
+> "I finally got a chance to write code for this project." —— AI
+>
+> 「我终于有机会写这个项目了。」 —— AI
+
+### Version Highlights | 版本亮点
+
+This alpha release includes proxy support in MagicClient, new streaming/event-stream and timeout capabilities for HTTP client workflows, watchdog and closure serialization improvements, plus broad SSL/PHP compatibility updates.
+该 alpha 版本包含 MagicClient 代理支持、HTTP 客户端流式与 event-stream/超时能力、watchdog 与闭包序列化改进，以及较大范围的 SSL/PHP 兼容性更新。
+
+## 🐣 What's New | 什么是牛的
+
++ Add HTTP and SOCKS5 proxy support in MagicClient | 为 MagicClient 增加 HTTP 和 SOCKS5 代理支持 (49b3231e) [@twosee]
++ Add HTTP client chunked streaming and event-stream handling support | 增加 HTTP 客户端 chunked 流式与 event-stream 处理支持 (f0a832c1, af3f3f38) [@twosee]
++ Add explicit timeout parameters for PSR-7 recv entity APIs | 为 PSR-7 接收实体 API 增加显式超时参数 (aa339560) [@twosee]
++ Add `Debug\block()` and watchdog syscall blocking detection improvements | 新增 `Debug\block()` 并增强 watchdog 系统调用阻塞检测 (a2ff1f17) [@twosee]
++ Add closure serializer INI options for runtime control | 新增闭包序列化相关 INI 配置项用于运行时控制 (bec43b4d, 62a97ad8) [@dixyes]
++ Add `peer_fingerprint`, `capture_peer_cert`, and `SNI_server_certs` support in stream/SSL paths | 在流/SSL 路径新增 `peer_fingerprint`、`capture_peer_cert` 和 `SNI_server_certs` 支持 (04c7d254, 42e0328c, c46ac9a2, 4f0c886f) [@dixyes]
+
+## ✨ What's Enhanced | 加强了啥
+
++ Refactor OpenAI streaming example to use MagicClient and improve proxy flow consistency | 重构 OpenAI 流式示例以使用 MagicClient，并改进代理流程一致性 (9070013c) [@twosee]
++ Improve PDO_PGSQL support detection and align multiple behaviors/warnings with PHP upstream | 改进 PDO_PGSQL 支持检测并让多处行为/告警更贴近 PHP 上游 (446e537d, 2ef7b0ad, 3fded8eb, 3c268506, de062d18) [@twosee] [@dixyes]
++ Adopt PHP 8.6 `in_autoload` changes and add compatibility for PHP < 8.2 atomic exchange | 适配 PHP 8.6 `in_autoload` 变更并增加 PHP < 8.2 原子交换兼容 (21329405, 6fe13c47) [@dixyes] [@twosee]
+
+## 🐛 What's Fixed | 什么修了
+
+* Fix segv when using `fsockopen` | 修复使用 `fsockopen` 时的段错误 (b0e263e3) [@dixyes]
+* Fix watchdog alerter atomic operation and PHP 8.2 build issues | 修复 watchdog alerter 原子操作与 PHP 8.2 构建问题 (9780f686, 9ef06c83) [@twosee] [@dixyes]
+* Fix PHP stream TLS version option handling and PIE argument issues | 修复 PHP stream TLS 版本选项处理与 PIE 参数问题 (470c572f, 5650301c) [@dixyes]
+* Fix flaky watchdog tests and assertion boundary checks | 修复 watchdog 测试偶发失败与断言边界判断问题 (ca941f77, 541daf35) [@twosee]
+* Fix unsafe closure serialization case for anonymous class static methods | 修复匿名类静态方法在闭包序列化场景下的不安全行为 (2e7bdb78) [@dixyes]
+
+## 👻 What's Removed | 什么移除了
+
+- Remove legacy exception save/restore hooks and outdated `disable_class` related logic | 移除旧异常保存/恢复钩子与过时 `disable_class` 相关逻辑 (e5994de7, c5e2ff37) [@dixyes]
+- Remove cURL load-order check and other unused legacy checks | 移除 cURL 加载顺序检查及其他未使用检查 (4f9633dc, ae3265e6) [@dixyes]
+
+## 📦 Internal | 内部
+
++ Sync dependencies and upstream sources/stubs from PHP/libcat | 同步依赖并更新来自 PHP/libcat 的源码与 stub (1957ea99, 9d23b0b9, d347bd84, ffe25459, 02d1bfec, f3babafc) [@dixyes]
++ Improve CI/test matrix and stabilize watchdog/SSL related tests | 改进 CI/测试矩阵并增强 watchdog/SSL 相关测试稳定性 (5015c6cd, c714d431, 57177bee, f4b643f2, b6131389) [@dixyes] [@twosee]
++ Include various compiler/style/tokenizer/pgsql list maintenance updates | 包含编译器/风格/tokenizer/pgsql 列表等维护性更新 (c03256f6, c8620a53, 9e78a18f, b07721ac, 924b511d, bdbddc9c, 11df0885) [@dixyes]
+
+---
+
 # v1.6.2
 
 > Release Date: 2025-11-03 | 发布日期：2025-11-03
