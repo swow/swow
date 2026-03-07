@@ -15,8 +15,8 @@ declare(strict_types=1);
 namespace Swow\Psr7\Client;
 
 use Exception;
+use Generator;
 use Psr\Http\Client\ClientExceptionInterface;
-use Psr\Http\Client\ClientInterface;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
 use Swow\Http\Http;
@@ -40,7 +40,7 @@ use function base64_encode;
 use function random_bytes;
 use function strlen;
 
-class Client extends Socket implements ClientInterface, ProtocolTypeInterface
+class Client extends Socket implements ClientPlusInterface, ProtocolTypeInterface
 {
     use ClientPsr17FactoryTrait;
 
@@ -134,6 +134,17 @@ class Client extends Socket implements ClientInterface, ProtocolTypeInterface
         } catch (Exception $exception) {
             throw $this->convertToClientException($exception, $request);
         }
+    }
+
+    /**
+     * 基于标准请求入口提供 SSE 事件流读取能力，支持任意 HTTP 方法（含 POST）。
+     *
+     * @return Generator<int, \Swow\Psr7\Message\EventStreamEvent>
+     */
+    public function sendEventStreamRequest(RequestInterface $request, ?int $timeout = null, int $readSize = 8192): Generator
+    {
+        $response = $this->sendRequest($request, $timeout);
+        return Psr7::readEventStream($response->getBody(), $readSize);
     }
 
     public function upgradeToWebSocket(RequestInterface $request): ResponseInterface

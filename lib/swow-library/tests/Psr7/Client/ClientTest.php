@@ -19,9 +19,11 @@ use PHPUnit\Framework\TestCase;
 use Swow\Coroutine;
 use Swow\Http\Status;
 use Swow\Psr7\Client\Client;
+use Swow\Psr7\Client\ClientPlusInterface;
 use Swow\Psr7\Client\ClientNetworkException;
 use Swow\Psr7\Client\ClientRequestException;
 use Swow\Psr7\Message\Request as HttpRequest;
+use Swow\Psr7\Psr7;
 use Swow\Psr7\Server\Server;
 use Swow\Socket;
 use Swow\SocketException;
@@ -35,6 +37,7 @@ use function usleep;
  * @internal
  */
 #[CoversClass(Client::class)]
+#[CoversClass(ClientPlusInterface::class)]
 final class ClientTest extends TestCase
 {
     /** This causes HttpParser fall into dead-loop before */
@@ -219,6 +222,51 @@ final class ClientTest extends TestCase
             $this->assertTrue(str_contains($message, 'body_buffered='));
             $this->assertTrue(str_contains($message, 'current_chunk_length='));
         }
+
+        $wr::wait($wr);
+    }
+
+    public function testSendEventStreamRequestSupportsPostMethod(): void
+    {
+        $server = new Socket(Socket::TYPE_TCP);
+        $server->bind('127.0.0.1')->listen();
+
+        $rawRequest = '';
+        $wr = new WaitReference();
+        Coroutine::run(static function () use ($server, &$rawRequest, $wr): void {
+            $connection = $server->accept();
+            $rawRequest = $connection->recvString();
+
+            $payload1 = "data: first\n\n";
+            $payload2 = "data: second\n\n";
+            $connection->send(
+                "HTTP/1.1 200 OK\r\n" .
+                "Content-Type: text/event-stream\r\n" .
+                "Transfer-Encoding: chunked\r\n" .
+                "Connection: close\r\n" .
+                "\r\n" .
+                dechex(strlen($payload1)) . "\r\n{$payload1}\r\n" .
+                dechex(strlen($payload2)) . "\r\n{$payload2}\r\n" .
+                "0\r\n\r\n"
+            );
+            $connection->close();
+        });
+
+        $client = (new Client())
+            ->setStreamingChunkedResponse(true)
+            ->connect($server->getSockAddress(), $server->getSockPort());
+        $request = Psr7::createRequest(
+            method: 'POST',
+            uri: '/events',
+            headers: ['Content-Type' => 'application/json'],
+            body: '{"ping":1}',
+        );
+        $events = iterator_to_array($client->sendEventStreamRequest($request), false);
+
+        $this->assertTrue(str_contains($rawRequest, 'POST /events HTTP/1.1'));
+        $this->assertCount(2, $events);
+        $this->assertSame('first', $events[0]->data);
+        $this->assertSame('second', $events[1]->data);
 
         $wr::wait($wr);
     }
