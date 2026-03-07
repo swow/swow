@@ -12,8 +12,7 @@
 
 declare(strict_types=1);
 
-use Swow\Psr7\Client\Client;
-use Swow\Psr7\Psr7;
+use Swow\Psr7\Client\MagicClient;
 
 require __DIR__ . '/../autoload.php';
 
@@ -29,36 +28,73 @@ function requireEnv(string $name): string
     return $value;
 }
 
+/**
+ * @param list<string> $names
+ */
+function getEnvOrEmpty(array $names): string
+{
+    foreach ($names as $name) {
+        $value = trim((string) getenv($name));
+        if ($value !== '') {
+            return $value;
+        }
+    }
+    return '';
+}
+
+/**
+ * @return ?array{
+ *     type: string,
+ *     host: string,
+ *     port: int,
+ *     username: ?string,
+ *     password: ?string,
+ *     remote_dns?: bool
+ * }
+ */
+function parseProxyFromEnv(): ?array
+{
+    $allProxy = getEnvOrEmpty(['all_proxy', 'ALL_PROXY']);
+    if ($allProxy !== '') {
+        $parts = parse_url($allProxy);
+        if ($parts !== false && isset($parts['host'])) {
+            $scheme = strtolower((string) ($parts['scheme'] ?? 'socks5'));
+            if ($scheme === 'socks5' || $scheme === 'socks5h') {
+                return [
+                    'type' => $scheme,
+                    'host' => (string) $parts['host'],
+                    'port' => (int) ($parts['port'] ?? 1080),
+                    'username' => isset($parts['user']) ? (string) $parts['user'] : null,
+                    'password' => isset($parts['pass']) ? (string) $parts['pass'] : null,
+                    'remote_dns' => $scheme === 'socks5h',
+                ];
+            }
+        }
+    }
+
+    $httpProxy = getEnvOrEmpty(['https_proxy', 'HTTPS_PROXY', 'http_proxy', 'HTTP_PROXY']);
+    if ($httpProxy === '') {
+        return null;
+    }
+    $parts = parse_url($httpProxy);
+    if ($parts === false || !isset($parts['host'])) {
+        return null;
+    }
+    return [
+        'type' => 'http',
+        'host' => (string) $parts['host'],
+        'port' => (int) ($parts['port'] ?? 80),
+        'username' => isset($parts['user']) ? (string) $parts['user'] : null,
+        'password' => isset($parts['pass']) ? (string) $parts['pass'] : null,
+    ];
+}
+
 $platform = strtolower(requireEnv('GPT_PLATFORM'));
 $baseUrl = requireEnv('GPT_BASE_URL');
 $apiKey = requireEnv('GPT_KEY');
 
-$url = parse_url($baseUrl);
-if ($url === false || !isset($url['host'])) {
-    throw new \RuntimeException('Invalid GPT_BASE_URL');
-}
-
-$scheme = strtolower((string) ($url['scheme'] ?? 'https'));
-$host = (string) $url['host'];
-$port = (int) ($url['port'] ?? ($scheme === 'https' ? 443 : 80));
-$path = (string) ($url['path'] ?? '/');
-if ($path === '') {
-    $path = '/';
-}
-if (isset($url['query']) && $url['query'] !== '') {
-    $path .= '?' . $url['query'];
-}
-
-$hostHeader = $host;
-if (!(($scheme === 'https' && $port === 443) || ($scheme === 'http' && $port === 80))) {
-    $hostHeader .= ':' . $port;
-}
-
 $headers = [
-    'Host' => $hostHeader,
-    'Content-Type' => 'application/json',
     'Accept' => 'text/event-stream',
-    'Connection' => 'keep-alive',
 ];
 
 if ($platform === 'azure') {
@@ -80,31 +116,23 @@ if ($platform !== 'azure') {
     $requestBody['model'] = trim((string) getenv('GPT_MODEL')) ?: 'gpt-4o-mini';
 }
 
-$request = Psr7::createRequest(
-    method: 'POST',
-    uri: $path,
-    headers: $headers,
-    body: json_encode($requestBody, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
-);
-
-$client = (new Client())
-    ->setStreamingChunkedResponse(true)
-    ->connect($host, $port);
-
-if ($scheme === 'https') {
-    $client->enableCrypto([
-        'peer_name' => $host,
-    ]);
+$proxy = parseProxyFromEnv();
+$client = (new MagicClient())
+    ->setConnectTimeout(10 * 1000 * 1000)
+    ->setRecvMessageTimeout(60 * 1000 * 1000)
+    ->setStreamingChunkedResponse(true);
+if ($proxy !== null) {
+    $client->setProxy($proxy);
 }
-
-$response = $client->sendRequest($request);
-
-echo 'HTTP ' . $response->getStatusCode() . ' ' . $response->getReasonPhrase() . PHP_EOL;
-echo str_repeat('-', 60) . PHP_EOL;
 
 $receivedChars = 0;
 $done = false;
-foreach (Psr7::readEventStream($response->getBody()) as $event) {
+foreach ($client->stream($baseUrl, [
+    'method' => 'POST',
+    'headers' => $headers,
+    'json' => $requestBody,
+    'streaming_chunked' => true,
+]) as $event) {
     $payload = trim($event->data);
     if ($payload === '') {
         continue;
