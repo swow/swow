@@ -389,7 +389,8 @@ CAT_API void cat_ssl_context_set_security_level(cat_ssl_context_t *context, int 
 static cat_bool_t cat_ssl_alpn_protos_parse(cat_string_t *alpn, const char *alpn_protocols)
 {
     size_t len;
-    size_t i, start = 0;
+    size_t read_offset = 0;
+    size_t write_offset = 0;
     cat_bool_t ret;
 
     len = strlen(alpn_protocols);
@@ -397,26 +398,54 @@ static cat_bool_t cat_ssl_alpn_protos_parse(cat_string_t *alpn, const char *alpn
         cat_update_last_error(CAT_EINVAL, "SSL alpn protocols too long");
         return cat_false;
     }
-    ret = cat_string_alloc(alpn, len);
+    ret = cat_string_alloc(alpn, len + 1);
 #if CAT_ALLOC_HANDLE_ERRORS
     if (unlikely(!ret)) {
         cat_update_last_error_of_syscall("Malloc for SSL alpn failed");
         return cat_false;
     }
 #endif
-    for (i = 0; i <= len; i++) {
-        if (i == len || alpn_protocols[i] == ',') {
-            if (i - start > 255) {
+
+    /* OpenSSL expects ALPN protocols in wire format:
+     * [len][proto][len][proto]..., not as a comma-separated string.
+     * The PHP-facing option stays human-friendly ("h2,http/1.1"), so we
+     * normalize it here before passing it into SSL_CTX_set_alpn_protos().
+     */
+    while (read_offset < len) {
+        size_t protocol_start = read_offset;
+        size_t protocol_length;
+
+        while (read_offset < len && alpn_protocols[read_offset] != ',') {
+            read_offset++;
+        }
+
+        protocol_length = read_offset - protocol_start;
+        if (protocol_length == 0 || protocol_length > 255) {
+            cat_string_close(alpn);
+            cat_update_last_error(CAT_EINVAL, "SSL alpn protocol length out of range");
+            return cat_false;
+        }
+
+        ((unsigned char *) alpn->value)[write_offset++] = (unsigned char) protocol_length;
+        memcpy(alpn->value + write_offset, alpn_protocols + protocol_start, protocol_length);
+        write_offset += protocol_length;
+
+        if (read_offset < len) {
+            if (alpn_protocols[read_offset] != ',') {
                 cat_string_close(alpn);
+                cat_update_last_error(CAT_EINVAL, "SSL alpn protocols must be comma separated");
                 return cat_false;
             }
-            ((unsigned char *) alpn->value)[start] = (unsigned char) (i - start);
-            start = i + 1;
-        } else {
-            alpn->value[i + 1] = alpn_protocols[i];
+
+            read_offset++;
+            if (read_offset == len) {
+                cat_string_close(alpn);
+                cat_update_last_error(CAT_EINVAL, "SSL alpn protocols must not end with a separator");
+                return cat_false;
+            }
         }
     }
-    alpn->length = len + 1;
+    alpn->length = write_offset;
 
     return ret;
 }
@@ -449,7 +478,12 @@ CAT_API cat_bool_t cas_ssl_context_set_alpn_protocols(cat_ssl_context_t *context
         return cat_false;
     }
     if (is_client) {
-        if (!SSL_CTX_set_alpn_protos(context->ctx, (unsigned char *) context->alpn.value, (unsigned int) context->alpn.length)) {
+        /* SSL_CTX_set_alpn_protos() returns 0 on success.
+         * Also note that the freshly parsed buffer lives in the local `alpn`
+         * variable at this point; `context->alpn` is updated only after the
+         * OpenSSL call succeeds.
+         */
+        if (SSL_CTX_set_alpn_protos(context->ctx, (unsigned char *) alpn.value, (unsigned int) alpn.length) != 0) {
             cat_ssl_update_last_error(CAT_ESSL, "SSL_CTX_set_alpn_protos() failed");
             cat_string_close(&alpn);
             return cat_false;

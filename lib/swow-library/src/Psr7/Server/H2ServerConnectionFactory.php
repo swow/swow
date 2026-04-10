@@ -14,7 +14,10 @@ declare(strict_types=1);
 
 namespace Swow\Psr7\Server;
 
-interface ServerConnectionFactoryInterface
+final class H2ServerConnectionFactory implements ServerConnectionFactoryInterface
 {
-    public function createServerConnection(Server $server): ServerConnection|H2ServerConnection;
+    public function createServerConnection(Server $server): ServerConnection|H2ServerConnection
+    {
+        return new H2ServerConnection($server->getSimpleType());
+    }
 }

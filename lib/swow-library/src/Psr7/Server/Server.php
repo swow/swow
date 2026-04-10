@@ -58,16 +58,18 @@ class Server extends Socket
         return $this;
     }
 
-    public function acceptConnection(?int $timeout = null): ServerConnection
+    public function acceptConnection(?int $timeout = null): ServerConnection|H2ServerConnection
     {
         while (true) {
             $connection = $this->serverConnectionFactory->createServerConnection($this);
             $this->acceptTo($connection, $timeout);
             try {
-                $connection->addServerParams([
-                    'remote_addr' => $connection->getPeerAddress(),
-                    'remote_port' => $connection->getPeerPort(),
-                ]);
+                if ($connection instanceof ServerConnection || $connection instanceof H2ServerConnection) {
+                    $connection->addServerParams([
+                        'remote_addr' => $connection->getPeerAddress(),
+                        'remote_port' => $connection->getPeerPort(),
+                    ]);
+                }
             } catch (SocketException) {
                 /* FIXME: workaround for ENOTCONN error.
                  * getpeername() may return ENOTCONN in some edge cases,
@@ -76,11 +78,35 @@ class Server extends Socket
                  * we ignore it and continue to accept next connection for now. */
                 continue;
             }
-            $this->online($connection);
+            if ($connection instanceof ServerConnection) {
+                $this->online($connection);
+            }
             break;
         }
 
         return $connection;
+    }
+
+    /**
+     * @param array{acceptTimeout?: ?int, timeout?: ?int, settings?: array<int, int>, limit?: ?int}|array{} $options
+     */
+    public function handleH2Connection(callable $handler, array $options = []): int
+    {
+        $acceptTimeout = $options['acceptTimeout'] ?? null;
+        $timeout = $options['timeout'] ?? null;
+        $settings = $options['settings'] ?? [];
+        $limit = $options['limit'] ?? null;
+
+        $connection = $this->acceptConnection($acceptTimeout);
+        if (!$connection instanceof H2ServerConnection) {
+            throw new \RuntimeException('Accepted connection is not an H2 server connection');
+        }
+
+        return $connection->serve($handler, [
+            'timeout' => $timeout,
+            'settings' => $settings,
+            'limit' => $limit,
+        ]);
     }
 
     protected const BROADCAST_FLAG_NONE = 0;

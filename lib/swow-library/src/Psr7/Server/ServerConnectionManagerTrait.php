@@ -19,7 +19,7 @@ use WeakMap;
 
 trait ServerConnectionManagerTrait
 {
-    /** @var WeakMap<ServerConnection, bool> */
+    /** @var WeakMap<ServerConnection|H2ServerConnection, bool> */
     protected WeakMap $connections;
 
     protected function __constructServerConnectionManager(): void
@@ -32,7 +32,7 @@ trait ServerConnectionManagerTrait
         return new ServerConnectionIterator($this->connections->getIterator());
     }
 
-    /** @param Closure(ServerConnection): bool $filter */
+    /** @param Closure(ServerConnection|H2ServerConnection): bool $filter */
     public function getFilteredConnections(Closure $filter)
     {
         return new FilteredServerConnectionIterator($this->connections->getIterator(), $filter);
@@ -40,24 +40,32 @@ trait ServerConnectionManagerTrait
 
     public function getHttpConnections(): ServerConnectionIteratorInterface
     {
-        return $this->getFilteredConnections(static function (ServerConnection $connection) {
+        return $this->getFilteredConnections(static function (ServerConnection|H2ServerConnection $connection) {
+            if (!$connection instanceof ServerConnection) {
+                return false;
+            }
+
             return $connection->getProtocolType() === $connection::PROTOCOL_TYPE_HTTP;
         });
     }
 
     public function getWebSocketConnections(): ServerConnectionIteratorInterface
     {
-        return $this->getFilteredConnections(static function (ServerConnection $connection) {
+        return $this->getFilteredConnections(static function (ServerConnection|H2ServerConnection $connection) {
+            if (!$connection instanceof ServerConnection) {
+                return false;
+            }
+
             return $connection->getProtocolType() === $connection::PROTOCOL_TYPE_WEBSOCKET;
         });
     }
 
-    protected function online(ServerConnection $connection): void
+    protected function online(ServerConnection|H2ServerConnection $connection): void
     {
         $this->connections[$connection] = $connection->getId();
     }
 
-    public function offline(ServerConnection $connection): void
+    public function offline(ServerConnection|H2ServerConnection $connection): void
     {
         unset($this->connections[$connection]);
     }

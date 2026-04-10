@@ -337,6 +337,9 @@ trait CreatorTrait
             $uploadedFiles = null;
         }
         if ($serverRequest instanceof ServerRequestPlusInterface) {
+            if (method_exists($serverRequest, 'setProtocolVersion')) {
+                $serverRequest->setProtocolVersion($serverRequestEntity->protocolVersion);
+            }
             if ($queryParams) {
                 $serverRequest->setQueryParams($queryParams);
             }

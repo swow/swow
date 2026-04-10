@@ -30,6 +30,7 @@ use Swow\Psr7\Psr7;
 use Swow\SocketException;
 use Swow\WebSocket\Opcode as WebSocketOpcode;
 use Swow\WebSocket\WebSocket;
+use Throwable;
 use TypeError;
 
 use function in_array;
@@ -47,10 +48,10 @@ class EventDriver
     /** @var Closure(Server): void */
     protected Closure $startHandler;
 
-    /** @var Closure(ServerConnection): void */
+    /** @var Closure(ServerConnection|H2ServerConnection): void */
     protected Closure $connectionHandler;
 
-    /** @var Closure(ServerConnection, ServerRequestPlusInterface): mixed */
+    /** @var Closure(ServerConnection|H2ServerConnection, ServerRequestPlusInterface): mixed */
     protected Closure $requestHandler;
 
     /** @var Closure(ServerConnection, ServerRequestPlusInterface, int): mixed */
@@ -59,10 +60,10 @@ class EventDriver
     /** @var Closure(ServerConnection, WebSocketFrameInterface): mixed */
     protected Closure $messageHandler;
 
-    /** @var Closure(ServerConnection): void */
+    /** @var Closure(ServerConnection|H2ServerConnection): void */
     protected Closure $closeHandler;
 
-    /** @var Closure(ServerConnection, Exception): void */
+    /** @var Closure(ServerConnection|H2ServerConnection, Throwable): void */
     protected Closure $exceptionHandler;
 
     public function __construct(?Server $server = null)
@@ -78,7 +79,7 @@ class EventDriver
         return $new;
     }
 
-    /** @param callable(ServerConnection): void $handler */
+    /** @param callable(ServerConnection|H2ServerConnection): void $handler */
     public function withConnectionHandler(callable $handler): static
     {
         $new = clone $this;
@@ -86,7 +87,7 @@ class EventDriver
         return $new;
     }
 
-    /** @param callable(ServerConnection, ServerRequestPlusInterface): mixed $handler */
+    /** @param callable(ServerConnection|H2ServerConnection, ServerRequestPlusInterface): mixed $handler */
     public function withRequestHandler(callable $handler): static
     {
         $new = clone $this;
@@ -102,7 +103,7 @@ class EventDriver
         return $new;
     }
 
-    /** @param callable(ServerConnection): void $handler */
+    /** @param callable(ServerConnection|H2ServerConnection): void $handler */
     public function withCloseHandler(callable $handler): static
     {
         $new = clone $this;
@@ -110,11 +111,11 @@ class EventDriver
         return $new;
     }
 
-    /** @param callable(ServerConnection, Exception): void $handler */
+    /** @param callable(ServerConnection|H2ServerConnection, Throwable): void $handler */
     public function withExceptionHandler(callable $handler): static
     {
         $new = clone $this;
-        $this->exceptionHandler = $handler;
+        $new->exceptionHandler = Closure::fromCallable($handler);
         return $new;
     }
 
@@ -134,92 +135,17 @@ class EventDriver
 
         while (true) {
             try {
-                $connection = null;
                 $connection = $server->acceptConnection();
-                if ($connectionHandler !== null) {
-                    $connectionHandler($connection);
-                }
-                Coroutine::run(static function () use ($connection, $requestHandler, $upgradeHandler, $messageHandler, $closeHandler, $exceptionHandler): void {
-                    try {
-                        while (true) {
-                            $request = null;
-                            try {
-                                /** @var ServerRequestPlusInterface $request */
-                                $request = $connection->recvHttpRequest();
-                                if ($requestHandler) {
-                                    $upgradeType = UpgradeType::UPGRADE_TYPE_NONE;
-                                    if ($upgradeHandler !== null || $messageHandler !== null) {
-                                        $upgradeType = Psr7::detectUpgradeType($request);
-                                        if ($upgradeType !== UpgradeType::UPGRADE_TYPE_NONE) {
-                                            if (($upgradeType & UpgradeType::UPGRADE_TYPE_WEBSOCKET) === 0) {
-                                                throw new HttpProtocolException(HttpStatus::BAD_REQUEST, 'Unsupported Upgrade Type');
-                                            }
-                                            if ($upgradeHandler !== null) {
-                                                $upgradeResponse = $upgradeHandler($connection, $request, $upgradeType);
-                                                if ($upgradeResponse !== null && !($upgradeResponse instanceof ResponseInterface)) {
-                                                    $upgradeResponse = static::solveUpgradeResponse($upgradeResponse);
-                                                }
-                                            }
-                                        }
-                                    }
-                                    if ($upgradeType === UpgradeType::UPGRADE_TYPE_NONE) {
-                                        $response = $requestHandler($connection, $request);
-                                        if ($response !== null) {
-                                            if ($response instanceof ResponseInterface) {
-                                                $connection->sendHttpResponse($response);
-                                            } elseif (is_array($response)) {
-                                                $connection->respond(...$response);
-                                            } else {
-                                                $connection->respond($response);
-                                            }
-                                        }
-                                    } elseif ($upgradeType & UpgradeType::UPGRADE_TYPE_WEBSOCKET) {
-                                        $connection->upgradeToWebSocket($request, $upgradeResponse ?? null);
-                                        $request = null;
-                                        while (true) {
-                                            $frame = $connection->recvWebSocketFrame();
-                                            $opcode = $frame->getOpcode();
-                                            switch ($opcode) {
-                                                case WebSocketOpcode::PING:
-                                                    $connection->send(WebSocket::PONG_FRAME);
-                                                    break;
-                                                case WebSocketOpcode::PONG:
-                                                    break;
-                                                case WebSocketOpcode::CLOSE:
-                                                    break 3;
-                                                default:
-                                                    $reply = $messageHandler($connection, $frame);
-                                                    if ($reply instanceof WebSocketFrameInterface) {
-                                                        $connection->sendWebSocketFrame($reply);
-                                                    } elseif (Swow\Debug\isStrictStringable($reply)) {
-                                                        $connection->sendWebSocketFrame(
-                                                            Psr7::createWebSocketTextFrame(
-                                                                payloadData: $reply
-                                                            )
-                                                        );
-                                                    }
-                                            }
-                                        }
-                                    }
-                                }
-                            } catch (HttpProtocolException $exception) {
-                                $connection->error($exception->getCode(), $exception->getMessage(), close: true);
-                                break;
-                            }
-                            if (!$connection->shouldKeepAlive()) {
-                                break;
-                            }
-                        }
-                    } catch (Exception $exception) {
-                        if ($exceptionHandler !== null) {
-                            $exceptionHandler($connection, $exception);
-                        }
-                    } finally {
-                        if ($closeHandler !== null) {
-                            $closeHandler($connection);
-                        }
-                        $connection->close();
-                    }
+                $handler = $this->createConnectionHandler(
+                    $connectionHandler,
+                    $requestHandler,
+                    $upgradeHandler,
+                    $messageHandler,
+                    $closeHandler,
+                    $exceptionHandler
+                );
+                Coroutine::run(function () use ($connection, $handler): void {
+                    $handler->handle($connection);
                 });
             } catch (CoroutineException|SocketException $exception) {
                 if (in_array($exception->getCode(), [Errno::EMFILE, Errno::ENFILE, Errno::ENOMEM], true)) {
@@ -278,5 +204,31 @@ class EventDriver
                 break;
         }
         return $upgradeResponse;
+    }
+
+    /**
+     * @param ?Closure(ServerConnection|H2ServerConnection): void $connectionHandler
+     * @param ?Closure(ServerConnection|H2ServerConnection, ServerRequestPlusInterface): mixed $requestHandler
+     * @param ?Closure(ServerConnection, ServerRequestPlusInterface, int): mixed $upgradeHandler
+     * @param ?Closure(ServerConnection, WebSocketFrameInterface): mixed $messageHandler
+     * @param ?Closure(ServerConnection|H2ServerConnection): void $closeHandler
+     * @param ?Closure(ServerConnection|H2ServerConnection, Throwable): void $exceptionHandler
+     */
+    protected function createConnectionHandler(
+        ?Closure $connectionHandler,
+        ?Closure $requestHandler,
+        ?Closure $upgradeHandler,
+        ?Closure $messageHandler,
+        ?Closure $closeHandler,
+        ?Closure $exceptionHandler,
+    ): EventDriverConnectionHandler {
+        return new EventDriverConnectionHandler(
+            $connectionHandler,
+            $requestHandler,
+            $upgradeHandler,
+            $messageHandler,
+            $closeHandler,
+            $exceptionHandler,
+        );
     }
 }

@@ -266,6 +266,40 @@ static PHP_METHOD(Swow_Socket, getFd)
     RETURN_LONG((zend_long) cat_socket_get_fd(socket));
 }
 
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_getNegotiatedAlpnProtocol, 0, 0, IS_STRING, 1)
+ZEND_END_ARG_INFO()
+
+static PHP_METHOD(Swow_Socket, getNegotiatedAlpnProtocol)
+{
+    SWOW_SOCKET_GETTER(s_socket, socket);
+
+    ZEND_PARSE_PARAMETERS_NONE();
+
+#ifdef CAT_SSL_HAVE_TLS_ALPN
+    if (!cat_socket_is_available(socket) || socket->internal == NULL || socket->internal->ssl == NULL) {
+        RETURN_NULL();
+    }
+
+    do {
+        cat_ssl_t *ssl = socket->internal->ssl;
+        cat_ssl_connection_t *connection = ssl->connection;
+        const unsigned char *alpn_proto = NULL;
+        unsigned int alpn_proto_len = 0;
+
+        if (connection == NULL) {
+            break;
+        }
+
+        SSL_get0_alpn_selected(connection, &alpn_proto, &alpn_proto_len);
+        if (alpn_proto != NULL && alpn_proto_len > 0) {
+            RETURN_STRINGL((const char *) alpn_proto, alpn_proto_len);
+        }
+    } while (0);
+#endif
+
+    RETURN_NULL();
+}
+
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_typeSimplify, 0, 1, IS_LONG, 0)
     ZEND_ARG_TYPE_INFO(0, type, IS_LONG, 0)
 ZEND_END_ARG_INFO()
@@ -625,6 +659,9 @@ static PHP_METHOD(Swow_Socket, enableCrypto)
         swow_hash_str_fetch_int(options_array, "security_level", &options.security_level);
 #endif
 #ifdef CAT_SSL_HAVE_TLS_ALPN
+        /* Keep the PHP option as a comma-separated string such as
+         * "h2,http/1.1". libcat converts it to the OpenSSL ALPN wire format.
+         */
         swow_hash_str_fetch_str(options_array, "alpn_protocols", &options.alpn_protocols);
 #endif
         swow_hash_str_fetch_str(options_array, "passphrase", &options.passphrase);
@@ -1735,6 +1772,7 @@ static const zend_function_entry swow_socket_methods[] = {
     PHP_ME(Swow_Socket, getTypeName,               arginfo_class_Swow_Socket_getTypeName,         ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Socket, getSimpleTypeName,         arginfo_class_Swow_Socket_getSimpleTypeName,   ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Socket, getFd,                     arginfo_class_Swow_Socket_getFd,               ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Socket, getNegotiatedAlpnProtocol, arginfo_class_Swow_Socket_getNegotiatedAlpnProtocol, ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Socket, getDnsTimeout,             arginfo_class_Swow_Socket_getTimeout,          ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Socket, getAcceptTimeout,          arginfo_class_Swow_Socket_getTimeout,          ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Socket, getConnectTimeout,         arginfo_class_Swow_Socket_getTimeout,          ZEND_ACC_PUBLIC)
