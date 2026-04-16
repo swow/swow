@@ -22,6 +22,9 @@ final class ChunkedBodyState
     /** 当前 chunk 的声明长度，用于补齐跨包 body 读取 */
     public int $currentChunkLength = 0;
 
+    /** 当前 chunk 中尚未从 socket 读取的剩余 body 字节数（增量读取大 chunk 时 > 0） */
+    public int $remainingChunkBytes = 0;
+
     /** 是否已经读到 HTTP MESSAGE_COMPLETE */
     public bool $complete = false;
 

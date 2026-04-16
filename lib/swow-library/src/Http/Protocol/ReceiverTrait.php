@@ -744,6 +744,36 @@ trait ReceiverTrait
         $mainCoroutine = Coroutine::getMain();
         try {
             while (!$state->finalized && $state->bodyBuffer->getLength() < $targetLength) {
+                // mid-chunk 增量读取：当前 chunk 还有未读字节时，用 recvData 非精确读
+                // 直接写入 bodyBuffer，有多少收多少，收到即跳出——避免大 chunk 阻塞流式传输。
+                if ($state->remainingChunkBytes > 0) {
+                    $bodyReadOffset = $state->bodyBuffer->getLength();
+                    $maxRecv = min($state->remainingChunkBytes, $targetLength - $bodyReadOffset);
+                    if ($maxRecv <= 0) {
+                        break;
+                    }
+                    if ($state->bodyBuffer->getAvailableSize() < $maxRecv) {
+                        $state->bodyBuffer->extend($bodyReadOffset + $maxRecv);
+                    }
+                    $recvd = $this->recvData($state->bodyBuffer, offset: $bodyReadOffset, size: $maxRecv, timeout: $readTimeout);
+                    $state->remainingChunkBytes -= $recvd;
+                    $bodyReadOffset += $parser->execute($state->bodyBuffer, $bodyReadOffset);
+                    if ($parser->getEvent() !== HttpParser::EVENT_BODY) {
+                        throw new ParserException(sprintf(
+                            'Expected EVENT_BODY for remaining chunk data, got %s',
+                            $parser->getEventName()
+                        ));
+                    }
+                    if ($bodyReadOffset !== $state->bodyBuffer->getLength()) {
+                        throw new ParserException(sprintf(
+                            'Expected all remaining chunk data was parsed, but got %d/%d',
+                            $bodyReadOffset,
+                            $state->bodyBuffer->getLength()
+                        ));
+                    }
+                    // 收到数据即跳出，让上层 read() 返回已有字节，不死等凑满 targetLength
+                    break;
+                }
                 if ($expectMoreData) {
                     // recvData 的 offset 不能等于 buffer size；当缓冲区已满且已全部解析时先回收。
                     if ($parsedOffset >= $buffer->getLength() && $buffer->isFull()) {
@@ -797,28 +827,8 @@ trait ReceiverTrait
                         $dataOffset = $parser->getDataOffset();
                         $dataLength = $parser->getDataLength();
                         $state->bodyBuffer->append($buffer, $dataOffset, $dataLength);
-                        $neededLength = $state->currentChunkLength - $dataLength;
-                        if ($neededLength > 0) {
-                            $bodyParsedOffset = $state->bodyBuffer->getLength();
-                            if ($state->bodyBuffer->getAvailableSize() < $neededLength) {
-                                $state->bodyBuffer->extend($bodyParsedOffset + $neededLength);
-                            }
-                            $this->read($state->bodyBuffer, $bodyParsedOffset, $neededLength);
-                            $bodyParsedOffset += $parser->execute($state->bodyBuffer, $bodyParsedOffset);
-                            if ($parser->getEvent() !== HttpParser::EVENT_BODY) {
-                                throw new ParserException(sprintf(
-                                    'Expected EVENT_BODY for chunked stream, got %s',
-                                    $parser->getEventName()
-                                ));
-                            }
-                            if ($bodyParsedOffset !== $state->bodyBuffer->getLength()) {
-                                throw new ParserException(sprintf(
-                                    'Expected all chunked stream body data was parsed, but got %d/%d',
-                                    $bodyParsedOffset,
-                                    $state->bodyBuffer->getLength()
-                                ));
-                            }
-                        }
+                        // chunk 剩余未在协议缓冲区中的字节，记入 state 由 mid-chunk 路径增量拉取
+                        $state->remainingChunkBytes = $state->currentChunkLength - $dataLength;
                         break;
                     case HttpParser::EVENT_CHUNK_COMPLETE:
                         if ($state->currentChunkLength === 0) {
