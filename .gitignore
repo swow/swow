@@ -12,3 +12,5 @@ composer.lock
 # others
 /debug
 *.cache
+.DS_Store
+docs/
