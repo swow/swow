@@ -50,6 +50,7 @@ final class ChunkedBodyStream
     public function __construct(
         protected ChunkedBodyState $state,
         protected Closure $fillToCallback,
+        protected Closure $fillStreamingCallback,
         protected Closure $fillAllCallback,
         protected Closure $closeCallback,
     ) {
@@ -65,12 +66,25 @@ final class ChunkedBodyStream
 
     protected function fillTo(int $targetLength): void
     {
-        // 需要按需拉取：最多推进到底层状态满足 targetLength，不强制全读。
         if ($this->state->finalized || $this->state->bodyBuffer->getLength() >= $targetLength) {
             $this->notifyCompletionIfNeeded();
             return;
         }
         ($this->fillToCallback)($targetLength);
+        $this->notifyCompletionIfNeeded();
+    }
+
+    /**
+     * 流式推进：做一轮 IO 后即返回，不保证 bodyBuffer 达到 targetLength。
+     * targetLength 仅作为读取量上限，实际返回量取决于单次 IO 收到的数据。
+     */
+    protected function fillStreaming(int $targetLength): void
+    {
+        if ($this->state->finalized || $this->state->bodyBuffer->getLength() >= $targetLength) {
+            $this->notifyCompletionIfNeeded();
+            return;
+        }
+        ($this->fillStreamingCallback)($targetLength);
         $this->notifyCompletionIfNeeded();
     }
 
@@ -209,7 +223,8 @@ final class ChunkedBodyStream
             return '';
         }
         $targetOffset = $this->offset + $length;
-        $this->fillTo($targetOffset);
+        // 流式推进：一轮 IO 后即返回，下方 min($length, $available) 保证不超读
+        $this->fillStreaming($targetOffset);
         $available = $this->state->bodyBuffer->getLength() - $this->offset;
         if ($available <= 0) {
             return '';

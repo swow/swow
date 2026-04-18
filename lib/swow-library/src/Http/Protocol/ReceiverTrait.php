@@ -364,6 +364,9 @@ trait ReceiverTrait
                                             fillToCallback: function (int $targetLength) use ($state, $timeout): void {
                                                 $this->pumpChunkedBodyStateToLength($state, $targetLength, $timeout);
                                             },
+                                            fillStreamingCallback: function (int $targetLength) use ($state, $timeout): void {
+                                                $this->pumpChunkedBodyStateToLength($state, $targetLength, $timeout, streaming: true);
+                                            },
                                             fillAllCallback: function () use ($state, $timeout): void {
                                                 $this->pumpChunkedBodyStateToCompletion($state, $timeout);
                                             },
@@ -713,20 +716,17 @@ trait ReceiverTrait
      */
     protected function pumpChunkedBodyStateToCompletion(ChunkedBodyState $state, ?int $timeout = null): void
     {
-        while (!$state->finalized) {
-            $this->pumpChunkedBodyStateToLength($state, $state->bodyBuffer->getLength() + 1, $timeout);
-        }
+        $this->pumpChunkedBodyStateToLength($state, PHP_INT_MAX, $timeout);
     }
 
     /**
      * 核心推进器：按需把 bodyBuffer 推进到 targetLength，或推进到 finalized。
      *
-     * 关键保证：
-     * - parser 输入与 socket 字节流保持一致；
-     * - 仅在 EVENT_MESSAGE_COMPLETE 时 finalize；
-     * - 任何解析错误都视为连接不可复用。
+     * @param bool $streaming 流式模式：每收到一批 body 数据就返回，不等凑满 targetLength。
+     *                        供 ChunkedBodyStream::read() 使用，保证 SSE 等场景的低延迟。
+     *                        非流式模式下（seek / fillAll）循环到 bodyBuffer >= targetLength。
      */
-    protected function pumpChunkedBodyStateToLength(ChunkedBodyState $state, int $targetLength, ?int $timeout = null): void
+    protected function pumpChunkedBodyStateToLength(ChunkedBodyState $state, int $targetLength, ?int $timeout = null, bool $streaming = false): void
     {
         if ($state->finalized || $state->bodyBuffer->getLength() >= $targetLength) {
             return;
@@ -742,10 +742,11 @@ trait ReceiverTrait
             $readTimeout = $timeout;
         }
         $mainCoroutine = Coroutine::getMain();
+        $bodyLengthOnEntry = $streaming ? $state->bodyBuffer->getLength() : -1;
         try {
             while (!$state->finalized && $state->bodyBuffer->getLength() < $targetLength) {
                 // mid-chunk 增量读取：当前 chunk 还有未读字节时，用 recvData 非精确读
-                // 直接写入 bodyBuffer，有多少收多少，收到即跳出——避免大 chunk 阻塞流式传输。
+                // 直接写入 bodyBuffer，有多少收多少——避免大 chunk 阻塞流式传输。
                 if ($state->remainingChunkBytes > 0) {
                     $bodyReadOffset = $state->bodyBuffer->getLength();
                     $maxRecv = min($state->remainingChunkBytes, $targetLength - $bodyReadOffset);
@@ -771,10 +772,17 @@ trait ReceiverTrait
                             $state->bodyBuffer->getLength()
                         ));
                     }
-                    // 收到数据即跳出，让上层 read() 返回已有字节，不死等凑满 targetLength
-                    break;
+                    if ($streaming) {
+                        // 流式：收到数据即跳出，让上层 read() 返回已有字节
+                        break;
+                    }
+                    continue;
                 }
                 if ($expectMoreData) {
+                    // 流式模式下已有新 body 数据时不再阻塞等更多，让上层及时处理
+                    if ($streaming && $state->bodyBuffer->getLength() > $bodyLengthOnEntry) {
+                        break;
+                    }
                     // recvData 的 offset 不能等于 buffer size；当缓冲区已满且已全部解析时先回收。
                     if ($parsedOffset >= $buffer->getLength() && $buffer->isFull()) {
                         $buffer->truncateFrom($parsedOffset);
