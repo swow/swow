@@ -617,7 +617,7 @@ zend_result swow_channel_module_init(INIT_FUNC_ARGS)
         cat_false, cat_false,
         swow_channel_create_object,
         swow_channel_free_object,
-        XtOffsetOf(swow_channel_t, std)
+        offsetof(swow_channel_t, std)
     );
     swow_channel_handlers.get_gc = swow_channel_get_gc;
     swow_channel_handlers.dtor_obj = swow_channel_dtor_object;
@@ -634,7 +634,7 @@ zend_result swow_channel_module_init(INIT_FUNC_ARGS)
         cat_false, cat_false,
         swow_selector_create_object,
         swow_selector_free_object,
-        XtOffsetOf(swow_selector_t, std)
+        offsetof(swow_selector_t, std)
     );
     swow_selector_handlers.get_gc = swow_selector_get_gc;
 

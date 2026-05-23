@@ -318,7 +318,7 @@ void swow_curl_share_register_handlers(void) {
 #endif
 
     memcpy(&curl_share_handlers, &std_object_handlers, sizeof(zend_object_handlers));
-    curl_share_handlers.offset = XtOffsetOf(php_curlsh, std);
+    curl_share_handlers.offset = offsetof(php_curlsh, std);
     curl_share_handlers.free_obj = curl_share_free_obj;
     curl_share_handlers.get_constructor = curl_share_get_constructor;
     curl_share_handlers.clone_obj = NULL;
@@ -341,7 +341,7 @@ void swow_curl_share_persistent_register_handlers(void) {
 #endif
 
     memcpy(&curl_share_persistent_handlers, &std_object_handlers, sizeof(zend_object_handlers));
-    curl_share_persistent_handlers.offset = XtOffsetOf(php_curlsh, std);
+    curl_share_persistent_handlers.offset = offsetof(php_curlsh, std);
     curl_share_persistent_handlers.get_constructor = curl_share_persistent_get_constructor;
     curl_share_persistent_handlers.clone_obj = NULL;
     curl_share_persistent_handlers.compare = zend_objects_not_comparable;

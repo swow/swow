@@ -184,7 +184,9 @@ static CAT_COLD void swow_coroutine_function_handle_exception(void)
 {
     ZEND_ASSERT(EG(exception) != NULL);
 
+#if PHP_VERSION_ID < 80600
     zend_exception_restore();
+#endif
 
     if (swow_coroutine_has_unwind_exit(EG(exception))) {
         OBJ_RELEASE(EG(exception));
@@ -616,7 +618,9 @@ SWOW_API void swow_coroutine_executor_save(swow_coroutine_executor_t *executor)
     executor->vm_stack_page_size = eg->vm_stack_page_size;
     executor->current_execute_data = eg->current_execute_data;
     executor->exception = eg->exception;
+#if PHP_VERSION_ID < 80600
     executor->prev_exception = eg->prev_exception;
+#endif
 #ifdef SWOW_COROUTINE_SWAP_ERROR_HANDING
     executor->error_handling = eg->error_handling;
     executor->exception_class = eg->exception_class;
@@ -674,7 +678,9 @@ SWOW_API void swow_coroutine_executor_recover(swow_coroutine_executor_t *executo
     eg->vm_stack_page_size = executor->vm_stack_page_size;
     eg->current_execute_data = executor->current_execute_data;
     eg->exception = executor->exception;
-    eg->prev_exception = executor->prev_exception;
+#if PHP_VERSION_ID < 80600
+    executor->prev_exception = eg->prev_exception;
+#endif
 #ifdef SWOW_COROUTINE_SWAP_ERROR_HANDING
     eg->error_handling = executor->error_handling;
     eg->exception_class = executor->exception_class;
@@ -2640,10 +2646,14 @@ typedef struct swow_coroutine_autoload_pending_node_s {
 
 static zend_class_entry *swow_coroutine_autoload(zend_string *name, zend_string *lc_name)
 {
+#if PHP_VERSION_ID < 80600
     ZEND_ASSERT(EG(in_autoload) != NULL);
+    zend_hash_del(EG(in_autoload), lc_name);
+#else
+    zend_hash_del(&EG(autoload_current_classnames), lc_name);
+#endif
 
     cat_coroutine_t *current_coroutine = CAT_COROUTINE_G(current);
-    zend_hash_del(EG(in_autoload), lc_name);
 
     if (UNEXPECTED(SWOW_COROUTINE_G(in_autoload) == NULL)) {
         ALLOC_HASHTABLE(SWOW_COROUTINE_G(in_autoload));
@@ -2679,7 +2689,11 @@ static zend_class_entry *swow_coroutine_autoload(zend_string *name, zend_string 
         cat_coroutine_schedule(pending_coroutine, COROUTINE, "Autoload");
     }
 
+#if PHP_VERSION_ID < 80600
     zend_hash_add_empty_element(EG(in_autoload), lc_name);
+#else
+    zend_hash_add_empty_element(&EG(autoload_current_classnames), lc_name);
+#endif
     return head.ce;
 }
 
@@ -2699,7 +2713,7 @@ zend_result swow_coroutine_module_init(INIT_FUNC_ARGS)
         cat_false, cat_false,
         swow_coroutine_create_object,
         swow_coroutine_free_object,
-        XtOffsetOf(swow_coroutine_t, std)
+        offsetof(swow_coroutine_t, std)
     );
     swow_coroutine_handlers.get_gc = swow_coroutine_get_gc;
     swow_coroutine_handlers.dtor_obj = swow_coroutine_dtor_object;

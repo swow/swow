@@ -1883,7 +1883,7 @@ zend_result swow_socket_module_init(INIT_FUNC_ARGS)
         &swow_socket_handlers, NULL,
         cat_false, cat_false,
         swow_socket_create_object, swow_socket_free_object,
-        XtOffsetOf(swow_socket_t, std)
+        offsetof(swow_socket_t, std)
     );
     swow_socket_handlers.dtor_obj = swow_socket_dtor_object;
     /* constants */

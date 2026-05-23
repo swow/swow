@@ -400,6 +400,13 @@ SWOW_API void swow_object_properties_clean(zend_object *object);
 # define _ARG_POS(x) , x
 #endif
 
+#if PHP_VERSION_ID >= 80600
+# define _ARG_DEST(x)
+# define INI_STR(x) (char *) zend_ini_string_literal(x)
+#else
+# define _ARG_DEST(x) , x
+#endif
+
 static zend_always_inline bool swow_parse_arg_long(zval *arg, zend_long *dest, bool *is_null, bool check_null, uint32_t arg_num)
 {
     return zend_parse_arg_long(arg, dest, is_null, check_null _ARG_POS(arg_num));
@@ -407,7 +414,7 @@ static zend_always_inline bool swow_parse_arg_long(zval *arg, zend_long *dest, b
 
 static zend_always_inline bool swow_parse_arg_str_weak(zval *arg, zend_string **dest, uint32_t arg_num) /* {{{ */
 {
-    return zend_parse_arg_str_weak(arg, dest _ARG_POS(arg_num));
+    return zend_parse_arg_str_weak(arg _ARG_DEST(dest) _ARG_POS(arg_num));
 }
 
 static zend_always_inline bool swow_parse_arg_stringable(zval *arg, zend_string **dest, uint32_t arg_num)

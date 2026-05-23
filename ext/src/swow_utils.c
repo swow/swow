@@ -159,7 +159,7 @@ zend_result swow_util_module_init(INIT_FUNC_ARGS)
         cat_false, cat_false,
         swow_utils_handler_create_object,
         swow_utils_handler_free_object,
-        XtOffsetOf(swow_utils_handler_t, std)
+        offsetof(swow_utils_handler_t, std)
     );
     swow_utils_handler_ce->ce_flags |= ZEND_ACC_FINAL;
     swow_utils_handler_handlers.get_gc = swow_utils_handler_get_gc;
