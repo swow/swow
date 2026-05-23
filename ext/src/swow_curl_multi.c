@@ -58,7 +58,7 @@
 zend_class_entry *swow_curl_multi_ce;
 
 static inline php_curlm *curl_multi_from_obj(zend_object *obj) {
-    return (php_curlm *)((char *)(obj) - XtOffsetOf(php_curlm, std));
+    return (php_curlm *)((char *)(obj) - offsetof(php_curlm, std));
 }
 
 #define Z_CURL_MULTI_P(zv) curl_multi_from_obj(Z_OBJ_P(zv))
@@ -620,7 +620,7 @@ void swow_curl_multi_register_handlers(void) {
 #endif
 
     memcpy(&swow_curl_multi_handlers, &std_object_handlers, sizeof(zend_object_handlers));
-    swow_curl_multi_handlers.offset = XtOffsetOf(php_curlm, std);
+    swow_curl_multi_handlers.offset = offsetof(php_curlm, std);
     swow_curl_multi_handlers.free_obj = curl_multi_free_obj;
     swow_curl_multi_handlers.get_gc = curl_multi_get_gc;
     swow_curl_multi_handlers.get_constructor = curl_multi_get_constructor;

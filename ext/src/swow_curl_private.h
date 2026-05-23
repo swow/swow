@@ -157,13 +157,13 @@ void _swow_setup_easy_copy_handlers(php_curl *ch, php_curl *source);
 zend_long swow_curl_get_long(zval *zv);
 
 static inline php_curl *swow_curl_from_obj(zend_object *obj) {
-    return (php_curl *)((char *)(obj) - XtOffsetOf(php_curl, std));
+    return (php_curl *)((char *)(obj) - offsetof(php_curl, std));
 }
 
 #define Z_CURL_P(zv) swow_curl_from_obj(Z_OBJ_P(zv))
 
 static inline php_curlsh *swow_curl_share_from_obj(zend_object *obj) {
-    return (php_curlsh *)((char *)(obj) - XtOffsetOf(php_curlsh, std));
+    return (php_curlsh *)((char *)(obj) - offsetof(php_curlsh, std));
 }
 
 #define Z_CURL_SHARE_P(zv) swow_curl_share_from_obj(Z_OBJ_P(zv))

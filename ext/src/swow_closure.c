@@ -500,7 +500,9 @@ static PHP_METHOD(Swow_Closure, __unserialize)
 
     /* execute code to generate a closure instance */
     zend_execute(op_array, &retval);
+#if PHP_VERSION_ID < 80600
     zend_exception_restore();
+#endif
 #if PHP_VERSION_ID >= 80100
     zend_destroy_static_vars(op_array);
 #endif

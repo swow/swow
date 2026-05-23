@@ -741,7 +741,7 @@ zend_result swow_http_module_init(INIT_FUNC_ARGS)
         &swow_http_parser_handlers, NULL,
         cat_false, cat_false,
         swow_http_parser_create_object, NULL,
-        XtOffsetOf(swow_http_parser_t, std)
+        offsetof(swow_http_parser_t, std)
     );
     zend_declare_class_constant_long(swow_http_parser_ce, ZEND_STRL("TYPE_BOTH"), CAT_HTTP_PARSER_TYPE_BOTH);
     zend_declare_class_constant_long(swow_http_parser_ce, ZEND_STRL("TYPE_REQUEST"), CAT_HTTP_PARSER_TYPE_REQUEST);
