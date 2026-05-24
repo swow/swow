@@ -18,7 +18,7 @@ try {
 
 class TestCoroutine extends Swow\Coroutine
 {
-    public function __sleep(): array
+    public function __serialize(): array
     {
         return [];
     }

@@ -428,7 +428,7 @@ class Assert
 
     public static function isInstanceOf($value, $class, $message = ''): bool
     {
-        if (!($value instanceof $class)) {
+        if (!$value instanceof $class) {
             static::reportInvalidArgument(sprintf(
                 $message ?: 'Expected an instance of %2$s. Got: %s',
                 static::typeToString($value),
