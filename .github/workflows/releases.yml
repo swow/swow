@@ -38,7 +38,7 @@ jobs:
     outputs:
       ref: ${{ steps.getref.outputs.ref }}
     env:
-      deps: openssl,libcurl,libssh2,zlib,nghttp2,libpq
+      deps: openssl,libcurl,libssh2,zlib,nghttp2,libpq,zstd
       tools_path: C:\tools\phpdev
       dllname: "php_swow-${{ github.ref_type == 'tag' && github.ref_name || github.sha }}-${{ matrix.php-version }}-${{ (matrix.ts == '0') && 'n' || '' }}ts-vs${{ matrix.vsver }}-${{ matrix.arch == 'x64' && 'x86_64' || 'arm64' }}"
     steps:

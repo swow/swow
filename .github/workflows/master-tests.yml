@@ -217,7 +217,7 @@ jobs:
           conf-args: --enable-swow-debug --enable-swow-ssl --enable-swow-curl --enable-swow-pdo-pgsql
           ext-name: swow
           staging-deps: '1'
-          deps: openssl,libcurl,libssh2,zlib,nghttp2,libpq
+          deps: openssl,libcurl,libssh2,zlib,nghttp2,libpq,zstd
 
       - name: Setup composer dependencies
         run: composer update -o --ignore-platform-reqs
