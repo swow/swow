@@ -23,6 +23,8 @@ use Swow\CoroutineException;
 use Swow\Errno;
 use Swow\Http\Protocol\ProtocolException as HttpProtocolException;
 use Swow\Http\Status as HttpStatus;
+use Swow\Process\ProcessManager;
+use Swow\Process\WorkerContext;
 use Swow\Psr7\Message\ServerRequestPlusInterface;
 use Swow\Psr7\Message\UpgradeType;
 use Swow\Psr7\Message\WebSocketFrameInterface;
@@ -65,9 +67,27 @@ class EventDriver
     /** @var Closure(ServerConnection, Exception): void */
     protected Closure $exceptionHandler;
 
+    /** @var int 多进程 Worker 数量，0 = 单进程（默认） */
+    protected int $workerCount = 0;
+
     public function __construct(?Server $server = null)
     {
         $this->server = $server ?? new Server();
+    }
+
+    /**
+     * 设置多进程 Worker 数量
+     *
+     * 启用后 startOn() 会自动 fork 多个 Worker 进程，每个 Worker 独立 bind(REUSEPORT)+listen+accept。
+     * 设为 0 或不调用此方法 = 单进程模式（默认行为不变）。
+     *
+     * @param int $count Worker 数量，0 = 单进程
+     */
+    public function withWorkerCount(int $count): static
+    {
+        $new = clone $this;
+        $new->workerCount = $count;
+        return $new;
     }
 
     /** @param callable(Server): void $handler */
@@ -120,7 +140,43 @@ class EventDriver
 
     public function startOn(string $name, int $port): void
     {
+        if ($this->workerCount > 1) {
+            $this->startMultiProcess($name, $port);
+            return;
+        }
+
+        $this->startSingleProcess($name, $port);
+    }
+
+    /**
+     * 多进程模式（Prefork）：父进程 bind+listen，子进程继承 fd 并各自 accept
+     */
+    protected function startMultiProcess(string $name, int $port): void
+    {
+        // 父进程完成 bind+listen，子进程通过 fork 继承监听 fd
         $server = $this->server->bind($name, $port)->listen();
+        $eventDriver = $this;
+
+        $manager = new ProcessManager($this->workerCount);
+        $manager->start(static function (WorkerContext $ctx) use ($eventDriver, $server): void {
+            $eventDriver->runAcceptLoop($server);
+        });
+    }
+
+    /**
+     * 单进程模式
+     */
+    protected function startSingleProcess(string $name, int $port): void
+    {
+        $server = $this->server->bind($name, $port)->listen();
+        $this->runAcceptLoop($server);
+    }
+
+    /**
+     * Accept 循环：单进程和多进程复用同一逻辑
+     */
+    protected function runAcceptLoop(Server $server): void
+    {
         $connectionHandler = $this->connectionHandler ?? null;
         $requestHandler = $this->requestHandler ?? null;
         $upgradeHandler = $this->upgradeHandler ?? null;
