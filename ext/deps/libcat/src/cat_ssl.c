@@ -697,36 +697,6 @@ static int cat_ssl_verify_callback(int preverify_ok, X509_STORE_CTX *ctx) /* {{{
         goto _out;
     }
 
-    /* check peer fingerprints */
-    if (ssl->peer_fingerprints != NULL) {
-        unsigned int fingerprint_length;
-        unsigned char fingerprint[EVP_MAX_MD_SIZE];
-        const EVP_MD *md;
-
-        for (int i = 0; ssl->peer_fingerprints[i].algorithm != NULL; i++) {
-            md = EVP_get_digestbyname(ssl->peer_fingerprints[i].algorithm);
-            if (md == NULL) {
-                /* this should never happen */
-                X509_STORE_CTX_set_error(ctx, X509_V_ERR_UNSPECIFIED);
-                ret = 0;
-                goto _out;
-            }
-            fingerprint_length = sizeof(fingerprint);
-            if (!X509_digest(cert, md, fingerprint, &fingerprint_length)) {
-                X509_STORE_CTX_set_error(ctx, X509_V_ERR_UNSPECIFIED);
-                ret = 0;
-                goto _out;
-            }
-            if (
-                CRYPTO_memcmp(fingerprint, ssl->peer_fingerprints[i].fingerprint, fingerprint_length) != 0
-            ) {
-                X509_STORE_CTX_set_error(ctx, X509_V_ERR_UNSPECIFIED);
-                ret = 0;
-                goto _out;
-            }
-        }
-    }
-
 _out:
     if (!ret) {
         cat_update_last_error(CAT_ECERT, "SSL verify callback failed: (%d, %s)", err, X509_verify_cert_error_string(err));
@@ -847,10 +817,6 @@ CAT_API void cat_ssl_close(cat_ssl_t *ssl)
     /* free peer name */
     if (ssl->expected_peer_name != NULL) {
         cat_free((void *) ssl->expected_peer_name);
-    }
-    /* free peer fingerprints */
-    if (ssl->peer_fingerprints != NULL) {
-        cat_free((void *) ssl->peer_fingerprints);
     }
     /* free */
     if (ssl->flags & CAT_SSL_FLAG_ALLOC) {

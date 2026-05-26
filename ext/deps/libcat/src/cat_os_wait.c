@@ -486,4 +486,16 @@ CAT_API cat_bool_t cat_os_wait_runtime_shutdown(void)
     return cat_true;
 }
 
+CAT_API cat_pid_t cat_os_fork(void)
+{
+    cat_pid_t pid = fork();
+    if (pid == 0) {
+        /* 子进程：重建事件循环，使 libuv handles 在子进程中正常工作 */
+        cat_event_fork();
+    } else if (pid < 0) {
+        cat_update_last_error_of_syscall("Fork failed");
+    }
+    return pid;
+}
+
 #endif /* CAT_OS_WAIT */

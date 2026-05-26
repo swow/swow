@@ -39,6 +39,13 @@ CAT_API cat_bool_t cat_os_wait_module_shutdown(void);
 CAT_API cat_bool_t cat_os_wait_runtime_init(void);
 CAT_API cat_bool_t cat_os_wait_runtime_shutdown(void);
 
+/**
+ * 协程安全的 fork 封装
+ * 子进程中自动调用 cat_event_fork() 重建事件循环
+ * @return 父进程返回子进程 PID，子进程返回 0，失败返回 -1
+ */
+CAT_API cat_pid_t cat_os_fork(void);
+
 CAT_API cat_pid_t cat_os_wait(int *status);
 CAT_API cat_pid_t cat_os_wait_ex(int *status, cat_msec_t timeout);
 CAT_API cat_pid_t cat_os_waitpid(cat_pid_t pid, int *status, int options);
