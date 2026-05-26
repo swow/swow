@@ -395,6 +395,7 @@ EOF
     swow_http.c \
     swow_websocket.c \
     swow_proc_open.c \
+    swow_process.c \
     , SWOW_INCLUDES, SWOW_CFLAGS)
   dnl if we do in-tree build, zend_language_scanner_defs.h may be not exist, add dependencies
   if test x"${PHP_PECL_EXTENSION}" = x"swow"; then

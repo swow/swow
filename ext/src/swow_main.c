@@ -39,6 +39,7 @@
 #include "swow_http.h"
 #include "swow_websocket.h"
 #include "swow_proc_open.h"
+#include "swow_process.h"
 
 #include "swow_curl.h"
 #include "swow_ssl.h"
@@ -241,6 +242,7 @@ PHP_MINIT_FUNCTION(swow)
         swow_websocket_module_init,
 #ifdef CAT_OS_WAIT
         swow_proc_open_module_init,
+        swow_process_module_init,
 #endif
 #ifdef CAT_HAVE_CURL
         swow_curl_module_init,
