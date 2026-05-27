@@ -209,7 +209,7 @@ static cat_always_inline void *cat_allocator_realloc_unrecoverable(void *ptr, si
 CAT_API cat_bool_t cat_register_allocator(const cat_allocator_t *allocator);
 #endif /* CAT_USE_DYNAMIC_ALLOCATOR */
 
-static cat_always_inline char *cat_memdup(const void *p, size_t size)
+static cat_always_inline void *cat_memdup(const void *p, size_t size)
 {
     void *np = cat_malloc(size);
 #if CAT_ALLOC_HANDLE_ERRORS
@@ -217,7 +217,7 @@ static cat_always_inline char *cat_memdup(const void *p, size_t size)
         return NULL;
     }
 #endif
-    return (char *) memcpy(np, p, size);
+    return memcpy(np, p, size);
 }
 
 CAT_API char *cat_sys_strdup(const char *str);
