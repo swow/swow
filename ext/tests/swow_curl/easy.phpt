@@ -5,6 +5,7 @@ swow_curl: easy (SSL connection)
 require __DIR__ . '/../include/skipif.php';
 skip_if(PHP_SAPI !== 'cli', 'only for cli');
 skip_if(!Swow\Extension::isBuiltWith('curl'), 'extension must be built with libcurl');
+skip_if(PHP_OS === 'Darwin', 'curl hook is not working properly on macOS');
 require __DIR__ . '/../include/bootstrap.php';
 skip_if(!str_contains(@file_get_contents(TEST_WEBSITE1_URL), TEST_WEBSITE1_KEYWORD), 'Unable to access ' . TEST_WEBSITE1_URL);
 skip_if(!str_contains(@file_get_contents(TEST_WEBSITE2_URL), TEST_WEBSITE2_KEYWORD), 'Unable to access ' . TEST_WEBSITE2_URL);

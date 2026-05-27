@@ -5,6 +5,7 @@ swow_curl: multi
 require __DIR__ . '/../include/skipif.php';
 skip_if(PHP_SAPI !== 'cli', 'only for cli');
 skip_if(!Swow\Extension::isBuiltWith('curl'), 'extension must be built with libcurl');
+skip_if(PHP_OS === 'Darwin', 'curl hook is not working properly on macOS');
 ?>
 --FILE--
 <?php

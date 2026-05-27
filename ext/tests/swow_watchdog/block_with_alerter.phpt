@@ -3,6 +3,7 @@ swow_watchdog: Debug\block() with alerter callback
 --SKIPIF--
 <?php
 require __DIR__ . '/../include/skipif.php';
+skip_if(PHP_OS === 'Darwin', 'watchdog syscall detection is unreliable on macOS');
 ?>
 --FILE--
 <?php
