@@ -20,6 +20,7 @@ use RuntimeException;
 use Throwable;
 use ValueError;
 
+use function is_string;
 use function min;
 use function strlen;
 use function strtolower;
@@ -37,34 +38,34 @@ final class ChunkedBodyStream
      * 4) 完成后触发一次 onCompleted 回调，用于上层做 header 归一化。 */
 
     /** 当前读取游标；缓冲区始终保存“从 0 开始的完整已读数据” */
-    protected int $offset = 0;
+    private int $offset = 0;
 
-    protected bool $closed = false;
+    private bool $closed = false;
 
     /** 只通知一次，避免 header 归一化等收尾逻辑重复执行 */
-    protected bool $completionNotified = false;
+    private bool $completionNotified = false;
 
     /** @var array<Closure> */
-    protected array $completionCallbacks = [];
+    private array $completionCallbacks = [];
 
     public function __construct(
-        protected ChunkedBodyState $state,
-        protected Closure $fillToCallback,
-        protected Closure $fillStreamingCallback,
-        protected Closure $fillAllCallback,
-        protected Closure $closeCallback,
+        private ChunkedBodyState $state,
+        private Closure $fillToCallback,
+        private Closure $fillStreamingCallback,
+        private Closure $fillAllCallback,
+        private Closure $closeCallback,
     ) {
     }
 
     /** 防止 close 后继续读取，避免状态机被重复驱动。 */
-    protected function ensureOpen(): void
+    private function ensureOpen(): void
     {
         if ($this->closed) {
             throw new RuntimeException('Stream is closed');
         }
     }
 
-    protected function fillTo(int $targetLength): void
+    private function fillTo(int $targetLength): void
     {
         if ($this->state->finalized || $this->state->bodyBuffer->getLength() >= $targetLength) {
             $this->notifyCompletionIfNeeded();
@@ -78,7 +79,7 @@ final class ChunkedBodyStream
      * 流式推进：做一轮 IO 后即返回，不保证 bodyBuffer 达到 targetLength。
      * targetLength 仅作为读取量上限，实际返回量取决于单次 IO 收到的数据。
      */
-    protected function fillStreaming(int $targetLength): void
+    private function fillStreaming(int $targetLength): void
     {
         if ($this->state->finalized || $this->state->bodyBuffer->getLength() >= $targetLength) {
             $this->notifyCompletionIfNeeded();
@@ -88,7 +89,7 @@ final class ChunkedBodyStream
         $this->notifyCompletionIfNeeded();
     }
 
-    protected function fillAll(): void
+    private function fillAll(): void
     {
         // toString/getSize/getContents 等“全量语义”入口会走这里，直到 MESSAGE_COMPLETE。
         if ($this->state->finalized) {
@@ -100,7 +101,7 @@ final class ChunkedBodyStream
     }
 
     /** 统一完成事件出口：只触发一次，避免重复回调造成重复收尾。 */
-    protected function notifyCompletionIfNeeded(): void
+    private function notifyCompletionIfNeeded(): void
     {
         if ($this->completionNotified || !$this->state->finalized) {
             return;

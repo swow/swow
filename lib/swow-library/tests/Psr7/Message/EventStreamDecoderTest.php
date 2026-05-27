@@ -54,7 +54,7 @@ final class EventStreamDecoderTest extends TestCase
 
     public function testDecodeWillFlushTailEventWithoutEndingBlankLine(): void
     {
-        $stream = new BufferStream("data: tail");
+        $stream = new BufferStream('data: tail');
         $events = iterator_to_array(Psr7::readEventStream($stream), false);
 
         $this->assertCount(1, $events);

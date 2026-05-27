@@ -23,7 +23,7 @@ final class ChunkedBodyPsrStream implements StreamPlusInterface
 {
     /** 仅做协议层到 PSR7 的适配，所有真实状态都在底层 chunked stream 中 */
     public function __construct(
-        protected ChunkedBodyStream $chunkedBodyStream,
+        private ChunkedBodyStream $chunkedBodyStream,
     ) {
     }
 

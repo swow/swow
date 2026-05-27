@@ -20,6 +20,6 @@ namespace Swow\Process;
  * 注意：ext 层已有 \Swow\Process\ProcessException（C 扩展注册）。
  * 本类继承自它，供 library 层使用。
  */
-class ProcessManagerException extends \Swow\Process\ProcessException
+class ProcessManagerException extends ProcessException
 {
 }

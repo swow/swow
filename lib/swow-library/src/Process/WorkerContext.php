@@ -26,7 +26,8 @@ class WorkerContext
         protected int $pid,
         protected int $managerPid,
         protected int $workerCount,
-    ) {}
+    ) {
+    }
 
     /** Worker 编号 (0-based) */
     public function getId(): int

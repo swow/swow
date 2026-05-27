@@ -93,7 +93,7 @@ final class EventStreamDecoder
                     }
                     break;
                 case 'id':
-                    if (strpos($value, "\0") === false) {
+                    if (!str_contains($value, "\0")) {
                         $eventId = $value;
                     }
                     break;

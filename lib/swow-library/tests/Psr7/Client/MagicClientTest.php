@@ -93,7 +93,7 @@ final class MagicClientTest extends TestCase
                 "Content-Length: 2\r\n" .
                 "Connection: close\r\n" .
                 "\r\n" .
-                "OK"
+                'OK'
             );
             $connection->close();
         });
@@ -129,7 +129,7 @@ final class MagicClientTest extends TestCase
                 "Content-Length: 2\r\n" .
                 "Connection: close\r\n" .
                 "\r\n" .
-                "OK"
+                'OK'
             );
             $connection->close();
         });
@@ -183,7 +183,7 @@ final class MagicClientTest extends TestCase
                 "Content-Length: 2\r\n" .
                 "Connection: close\r\n" .
                 "\r\n" .
-                "OK"
+                'OK'
             );
             $connection->close();
         });

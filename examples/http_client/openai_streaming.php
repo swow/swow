@@ -23,7 +23,7 @@ function requireEnv(string $name): string
 {
     $value = trim((string) getenv($name));
     if ($value === '') {
-        throw new \RuntimeException(sprintf('Missing required env: %s', $name));
+        throw new RuntimeException(sprintf('Missing required env: %s', $name));
     }
     return $value;
 }

@@ -19,3 +19,37 @@
 - 采用 Prefork 模式：父进程 bind+listen，fork 后子进程继承 fd 直接 accept
 - 不要用 `SO_REUSEPORT` — macOS 上 libuv 不实际设置该选项
 - fork 后事件循环由 `cat_event_fork()` 自动重建，已有 handle 继续有效
+
+## Git 分支与发布
+
+- `develop` = 生产，`ci` = 开发；线性历史，禁止 merge commit
+- ci 必须始终 rebase 在 develop 之上
+- libcat（`~/Toast/cat/libcat/`）同策略
+
+### 发布流程
+
+```bash
+# 1. cs-fix + commit
+composer cs-fix && git add -A && git commit -m "Fix code style"
+
+# 2. 改 tools/versions.php（version + required_extension_version）
+
+# 3. prepare-release + commit
+composer prepare-release && git add -A && git commit -m "Release vX.Y.Z"
+
+# 4. 推送前确认 develop 是 ci 祖先
+git merge-base --is-ancestor develop ci
+
+# 5. 推 ci → ff develop
+git push origin ci
+git checkout develop && git merge ci --ff-only && git push origin develop && git checkout ci
+
+# 6. libcat 同理（如有变更）
+```
+
+### Commit 风格
+
+简洁祈使句，不用 conventional commit 前缀：
+- `Fix code style` / `Release vX.Y.Z` / `Sync deps: libcat`
+- `Add ...` / `Fix ...` / `Improve ...` / `Update ...` / `Remove ...` / `Support ...`
+- 不要写 `feat:` / `style:` / `chore:` 等前缀

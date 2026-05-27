@@ -17,6 +17,11 @@ namespace Swow\Process;
 use Closure;
 use Swow\Coroutine;
 use Swow\Signal;
+use Throwable;
+
+use function sprintf;
+
+use const STDERR;
 
 /**
  * 多进程管理器
@@ -226,11 +231,11 @@ class ProcessManager
             try {
                 $onWorkerStart($ctx);
                 return 0;
-            } catch (\Throwable $e) {
+            } catch (Throwable $e) {
                 fwrite(STDERR, sprintf(
                     "[Worker#%d] Uncaught %s: %s in %s:%d\n",
                     $id,
-                    get_class($e),
+                    $e::class,
                     $e->getMessage(),
                     $e->getFile(),
                     $e->getLine()
@@ -259,7 +264,7 @@ class ProcessManager
         }
 
         /* SIGTERM → 优雅关闭 */
-        $this->termCoroutine = Coroutine::run(function () {
+        $this->termCoroutine = Coroutine::run(function (): void {
             while ($this->running) {
                 try {
                     Signal::wait(Signal::TERM);
@@ -272,7 +277,7 @@ class ProcessManager
         });
 
         /* SIGINT → 优雅关闭 */
-        $this->intCoroutine = Coroutine::run(function () {
+        $this->intCoroutine = Coroutine::run(function (): void {
             while ($this->running) {
                 try {
                     Signal::wait(Signal::INT);
@@ -285,7 +290,7 @@ class ProcessManager
         });
 
         /* SIGUSR1 → 优雅重载 */
-        $this->reloadCoroutine = Coroutine::run(function () {
+        $this->reloadCoroutine = Coroutine::run(function (): void {
             while ($this->running) {
                 try {
                     Signal::wait(Signal::USR1);
@@ -306,7 +311,7 @@ class ProcessManager
      */
     protected function watchWorker(int $id): void
     {
-        $this->watcherCoroutines[$id] = Coroutine::run(function () use ($id) {
+        $this->watcherCoroutines[$id] = Coroutine::run(function () use ($id): void {
             $process = $this->workers[$id] ?? null;
             if ($process === null) {
                 return;

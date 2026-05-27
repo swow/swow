@@ -62,7 +62,6 @@ use function is_resource;
 use function is_string;
 use function parse_str;
 use function strcasecmp;
-use function trim;
 
 trait CreatorTrait
 {

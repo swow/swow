@@ -21,7 +21,6 @@ use Swow\Coroutine;
 use Swow\Process\ForkProcess;
 use Swow\Process\ProcessManager;
 use Swow\Process\WorkerContext;
-use Swow\Signal;
 
 /**
  * @internal

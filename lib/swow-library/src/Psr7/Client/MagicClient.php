@@ -35,9 +35,9 @@ use function pack;
 use function preg_match;
 use function strlen;
 use function strpos;
-use function substr;
 use function strtolower;
 use function strtoupper;
+use function substr;
 
 use const CASE_LOWER;
 use const FILTER_FLAG_IPV4;
@@ -250,10 +250,10 @@ class MagicClient implements ClientPlusInterface
         }
         $port = $uri->getPort() ?? ($scheme === 'https' ? 443 : 80);
         $proxySignature = $this->buildProxySignature($proxy);
-        $endpointChanged = $this->connectedScheme !== $scheme
-            || $this->connectedHost !== $host
-            || $this->connectedPort !== $port
-            || $this->connectedProxySignature !== $proxySignature;
+        $endpointChanged = $this->connectedScheme !== $scheme ||
+            $this->connectedHost !== $host ||
+            $this->connectedPort !== $port ||
+            $this->connectedProxySignature !== $proxySignature;
         if (!$endpointChanged) {
             return;
         }
@@ -490,7 +490,6 @@ class MagicClient implements ClientPlusInterface
     }
 
     /**
-     * @param mixed $proxy
      * @return ?array{
      *     type: string,
      *     host: string,
@@ -550,7 +549,6 @@ class MagicClient implements ClientPlusInterface
     }
 
     /**
-     * @param mixed $tls
      * @return array<string, mixed>
      */
     protected function normalizeTlsOptions(mixed $tls): array
@@ -633,9 +631,6 @@ class MagicClient implements ClientPlusInterface
         );
     }
 
-    /**
-     * @param mixed $timeout
-     */
     protected function normalizeOptionalTimeout(mixed $timeout): ?int
     {
         if ($timeout === null) {
@@ -647,9 +642,6 @@ class MagicClient implements ClientPlusInterface
         return $timeout;
     }
 
-    /**
-     * @param mixed $readSize
-     */
     protected function normalizeReadSize(mixed $readSize): int
     {
         if (!is_int($readSize) || $readSize <= 0) {
@@ -659,7 +651,6 @@ class MagicClient implements ClientPlusInterface
     }
 
     /**
-     * @param mixed $headers
      * @return array<string, mixed>
      */
     protected function normalizeHeaders(mixed $headers): array
