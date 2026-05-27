@@ -82,7 +82,10 @@ if (PHP_SWOW != 'no') (function(){
             {
             ADD_FLAG("CFLAGS_SWOW_COMMON", "/D CAT_HAVE_CURL");
             ADD_FLAG("CFLAGS_SWOW_COMMON", "/D CURL_STATICLIB");
-            // TODO: check for curl_version_info
+            // brotli/zstd: required by newer curl builds (8.2+), optional for older ones
+            CHECK_LIB("brotlidec.lib;brotlidec-static.lib", "swow", PHP_SWOW);
+            CHECK_LIB("brotlicommon.lib;brotlicommon-static.lib", "swow", PHP_SWOW);
+            CHECK_LIB("libzstd.lib;zstd.lib;libzstd_static.lib", "swow", PHP_SWOW);
             use_curl = 1;
         } else {
             WARNING("Swow cURL support not enabled; libraries and headers not found");

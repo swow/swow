@@ -20,7 +20,6 @@ use Swow\Coroutine;
 use Swow\Http\Status;
 use Swow\Psr7\Client\Client;
 use Swow\Psr7\Client\ClientNetworkException;
-use Swow\Psr7\Client\ClientPlusInterface;
 use Swow\Psr7\Client\ClientRequestException;
 use Swow\Psr7\Message\Request as HttpRequest;
 use Swow\Psr7\Psr7;
@@ -37,7 +36,6 @@ use function usleep;
  * @internal
  */
 #[CoversClass(Client::class)]
-#[CoversClass(ClientPlusInterface::class)]
 final class ClientTest extends TestCase
 {
     /** This causes HttpParser fall into dead-loop before */

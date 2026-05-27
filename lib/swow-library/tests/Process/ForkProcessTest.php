@@ -14,7 +14,7 @@ declare(strict_types=1);
 
 namespace Swow\Tests\Process;
 
-use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\CoversNothing;
 use PHPUnit\Framework\Attributes\RequiresOperatingSystem;
 use PHPUnit\Framework\TestCase;
 use Swow\Process\ForkProcess;
@@ -26,7 +26,7 @@ use Swow\Signal;
 /**
  * @internal
  */
-#[CoversClass(ForkProcess::class)]
+#[CoversNothing]
 #[RequiresOperatingSystem('Linux|Darwin')]
 final class ForkProcessTest extends TestCase
 {
