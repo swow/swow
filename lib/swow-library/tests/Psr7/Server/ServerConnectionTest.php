@@ -35,6 +35,7 @@ use const CURLOPT_HEADER;
 use const CURLOPT_PROXY;
 use const CURLOPT_RETURNTRANSFER;
 use const CURLOPT_URL;
+use const PHP_OS;
 use const PHP_VERSION_ID;
 
 /**

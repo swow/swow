@@ -53,3 +53,9 @@ git checkout develop && git merge ci --ff-only && git push origin develop && git
 - `Fix code style` / `Release vX.Y.Z` / `Sync deps: libcat`
 - `Add ...` / `Fix ...` / `Improve ...` / `Update ...` / `Remove ...` / `Support ...`
 - 不要写 `feat:` / `style:` / `chore:` 等前缀
+
+### CI 与代码风格
+
+- **推送前必须先运行 `composer cs-fix`**，确保本地 php-cs-fixer 版本与 CI 一致（当前 v3.95）
+- CS check 是 CI 最先完成的 job，失败会导致整个流水线标红
+- 本地运行 CS fix 后再 commit，避免额外的 "Fix code style" commit

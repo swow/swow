@@ -1,3 +1,34 @@
+# v2.0.0-alpha.2
+
+> Release Date: 2026-05-28 | 发布日期：2026-05-28
+
+> "CI green is a lifestyle, not a destination." —— AI
+>
+> 「CI 全绿是一种生活方式，不是一个终点。」 —— AI
+
+### Version Highlights | 版本亮点
+
+Maintenance release focusing on CI stability, libcat socket/SSL improvements, and macOS test compatibility.
+维护版本，专注于 CI 稳定性、libcat socket/SSL 改进以及 macOS 测试兼容性。
+
+## ✨ What's Enhanced | 加强了啥
+
++ Sync libcat with socket API improvements and SSL enhancements | 同步 libcat socket API 改进与 SSL 增强 (61f99236) [@twosee]
+
+## 🐛 What's Fixed | 什么修了
+
+* Fix Windows CI: add brotli/zstd dependencies for PHP 8.2+ builds | 修复 Windows CI：为 PHP 8.2+ 构建添加 brotli/zstd 依赖 (cb24a114) [@twosee]
+* Fix PHPUnit 11 CoversClass annotation warnings causing test failures | 修复 PHPUnit 11 CoversClass 注解告警导致的测试失败 (cb24a114) [@twosee]
+* Fix code style compatibility with php-cs-fixer v3.95 | 修复与 php-cs-fixer v3.95 的代码风格兼容问题 (b8f0c716) [@twosee]
+* Skip curl hook tests on macOS due to known async DNS issue | 跳过 macOS 上的 curl hook 测试（已知异步 DNS 问题）(16916ff8) [@twosee]
+* Skip watchdog syscall detection test on macOS (unreliable) | 跳过 macOS 上的 watchdog 系统调用检测测试（不稳定）(16916ff8) [@twosee]
+
+## 📦 Internal | 内部
+
++ Update CI test infrastructure for broader compatibility | 更新 CI 测试基础设施以提升兼容性 (cb24a114, 16916ff8) [@twosee]
+
+---
+
 # v1.7.0-alpha.1
 
 > Release Date: 2026-03-08 | 发布日期：2026-03-08
