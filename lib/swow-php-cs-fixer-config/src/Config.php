@@ -64,8 +64,7 @@ class Config extends \PhpCsFixer\Config
                     'sort_algorithm' => 'alpha',
                 ],
                 'single_line_comment_style' => [
-                    'comment_types' => [
-                    ],
+                    'comment_types' => [],
                 ],
                 'yoda_style' => [
                     'always_move_variable' => false,

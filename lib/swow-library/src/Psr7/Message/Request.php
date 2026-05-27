@@ -86,7 +86,7 @@ class Request extends AbstractMessage implements RequestPlusInterface
 
     public function setUri(string|UriInterface $uri, ?bool $preserveHost = null): static
     {
-        if (!($uri instanceof UriInterface)) {
+        if (!$uri instanceof UriInterface) {
             $uri = Psr7::createUriFromString($uri);
         }
         $this->uri = $uri;
