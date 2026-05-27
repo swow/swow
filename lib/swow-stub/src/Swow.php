@@ -76,12 +76,12 @@ namespace Swow
 {
     class Extension
     {
-        public const VERSION = '1.7.0-alpha.3';
-        public const VERSION_ID = 10700;
-        public const MAJOR_VERSION = 1;
-        public const MINOR_VERSION = 7;
+        public const VERSION = '2.0.0-alpha.1';
+        public const VERSION_ID = 20000;
+        public const MAJOR_VERSION = 2;
+        public const MINOR_VERSION = 0;
         public const RELEASE_VERSION = 0;
-        public const EXTRA_VERSION = 'alpha.3';
+        public const EXTRA_VERSION = 'alpha.1';
 
         public static function isBuiltWith(string $lib): bool { }
     }
@@ -1232,9 +1232,7 @@ namespace Swow
 
         public function __serialize(): array { }
 
-        /**
-         * @param array<mixed, mixed>|array<mixed> $data
-         */
+        /** @param array<mixed, mixed>|array<mixed> $data */
         public function __unserialize(array $data): void { }
     }
 }
@@ -2614,6 +2612,57 @@ namespace Swow\WebSocket
     }
 }
 
+namespace Swow\Process
+{
+    interface ProcessInterface
+    {
+        public function getPid(): int { }
+
+        public function wait(int $timeout = -1): ProcessExitStatus { }
+
+        public function hasExited(): bool { }
+
+        public function kill(int $signal = \Swow\Signal::TERM): void { }
+    }
+}
+
+namespace Swow\Process
+{
+    class ForkProcess implements \Swow\Process\ProcessInterface
+    {
+        public static function fork(\Closure $callback): self { }
+
+        public function getPid(): int { }
+
+        public function wait(int $timeout = -1): ProcessExitStatus { }
+
+        public function hasExited(): bool { }
+
+        public function kill(int $signal = \Swow\Signal::TERM): void { }
+    }
+}
+
+namespace Swow\Process
+{
+    class ProcessExitStatus
+    {
+        public function getExitCode(): int { }
+
+        public function getTermSignal(): int { }
+
+        public function isExited(): bool { }
+
+        public function isSignaled(): bool { }
+
+        public function isStopped(): bool { }
+    }
+}
+
+namespace Swow\Process
+{
+    class ProcessException extends \Swow\Exception { }
+}
+
 namespace Swow\Debug
 {
     /**
@@ -2623,6 +2672,10 @@ namespace Swow\Debug
      * @param array<array{'file': string, 'line': int, 'function': string, 'class': string, 'type': string, 'args': array<mixed>}> $trace
      */
     function buildTraceAsString(array $trace): string { }
+}
+
+namespace Swow\Debug
+{
     /**
      * Block the current thread for testing syscall blocking detection
      *
