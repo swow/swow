@@ -443,6 +443,7 @@ CAT_API cat_bool_t cat_channel_close(cat_channel_t *channel)
         cat_channel_resume_waiter(waiter, "Producer");
     }
     while ((waiter = cat_queue_front_data(&channel->consumers, cat_coroutine_t, waiter.node))) {
+        cat_queue_remove(&waiter->waiter.node);
         cat_channel_resume_waiter(waiter, "Consumer");
     }
 
