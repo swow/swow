@@ -915,7 +915,7 @@ trait ReceiverTrait
     /**
      * @note This method will unmask masked payloadData and clear the masking key automatically
      */
-    public function recvWebSocketFrameEntity(): WebSocketFrameEntity
+    public function recvWebSocketFrameEntity(?int $timeout = null): WebSocketFrameEntity
     {
         $buffer = $this->buffer;
         $parsedOffset = $this->parsedOffset;
@@ -928,7 +928,7 @@ trait ReceiverTrait
         try {
             /* recv header */
             while ($unparsedLength < WebSocket::HEADER_MIN_SIZE) {
-                $unparsedLength += $this->recvData($buffer, offset: $buffer->getLength());
+                $unparsedLength += $this->recvData($buffer, offset: $buffer->getLength(), timeout: $timeout);
             }
             $header->write(
                 offset: 0,
@@ -938,7 +938,7 @@ trait ReceiverTrait
             );
             $headerSize = $header->getHeaderSize();
             while ($unparsedLength < $headerSize) {
-                $unparsedLength += $this->recvData($buffer, offset: $buffer->getLength());
+                $unparsedLength += $this->recvData($buffer, offset: $buffer->getLength(), timeout: $timeout);
             }
             $header->write(
                 offset: WebSocket::HEADER_MIN_SIZE,
@@ -962,7 +962,8 @@ trait ReceiverTrait
                     $this->read(
                         buffer: $payloadData,
                         offset: $unparsedLength,
-                        length: $payloadLength - $unparsedLength
+                        length: $payloadLength - $unparsedLength,
+                        timeout: $timeout,
                     );
                 }
                 /* Notice: $parsedOffset may be bigger than $buffer->getLength(),

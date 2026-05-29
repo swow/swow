@@ -19,17 +19,20 @@ use Swow\Psr7\Message\WebSocketFrameInterface;
 
 trait WebSocketTrait
 {
-    public function sendWebSocketFrame(WebSocketFrameInterface $frame): static
+    public function sendWebSocketFrame(WebSocketFrameInterface $frame, ?int $timeout = null): static
     {
-        return $this->write([
-            $frame->toString(true),
-            (string) $frame->getPayloadData(),
-        ]);
+        return $this->write(
+            [
+                $frame->toString(true),
+                (string) $frame->getPayloadData(),
+            ],
+            $timeout
+        );
     }
 
-    public function recvWebSocketFrame(): WebSocketFrameInterface
+    public function recvWebSocketFrame(?int $timeout = null): WebSocketFrameInterface
     {
-        $frameEntity = $this->recvWebSocketFrameEntity();
+        $frameEntity = $this->recvWebSocketFrameEntity($timeout);
         $frame = new WebSocketFrame();
         $frame->write(0, $frameEntity);
         if ($frameEntity->payloadData) {
