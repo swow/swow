@@ -75,6 +75,7 @@ ZEND_BEGIN_MODULE_GLOBALS(swow)
         bool async_tty;
         bool hook_pdo_pgsql;
         zend_long async_threads;
+        zend_long thread_exit_join_ms;
     } ini;
     const char *libpq_so_name;
 #ifdef CAT_HAVE_CURL

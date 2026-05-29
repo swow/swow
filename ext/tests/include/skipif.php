@@ -35,6 +35,11 @@ function needs_php_version($cmp, $require_version): void
     }
 }
 
+function skip_if_not_zts(): void
+{
+    skip_if(!PHP_ZTS, 'ZTS is required');
+}
+
 function skip_if_php_version_between($a, $b): void
 {
     if (version_compare(PHP_VERSION, $a, '>=') && version_compare(PHP_VERSION, $b, '<=')) {
