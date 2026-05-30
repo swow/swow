@@ -2619,13 +2619,13 @@ namespace Swow\Process
 {
     interface ProcessInterface
     {
-        public function getPid(): int { }
+        public function getPid(): int;
 
-        public function wait(int $timeout = -1): ProcessExitStatus { }
+        public function wait(int $timeout = -1): ProcessExitStatus;
 
-        public function hasExited(): bool { }
+        public function hasExited(): bool;
 
-        public function kill(int $signal = \Swow\Signal::TERM): void { }
+        public function kill(int $signal = \Swow\Signal::TERM): void;
     }
 }
 

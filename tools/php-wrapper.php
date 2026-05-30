@@ -18,13 +18,31 @@ declare(strict_types=1);
     $fetchExtensionName = static function (string $extension): string {
         return preg_replace('/\.(so|dll)$/', '', strtolower(basename($extension)));
     };
+    $resolveExtension = static function (string $extension) use ($fetchExtensionName): string {
+        if ($fetchExtensionName($extension) !== 'swow' || str_contains($extension, '/') || str_contains($extension, '\\')) {
+            return $extension;
+        }
+        foreach ([
+            dirname(__DIR__) . '/ext/modules/swow.' . PHP_SHLIB_SUFFIX,
+            dirname(__DIR__) . '/ext/.libs/swow.' . PHP_SHLIB_SUFFIX,
+        ] as $localExtension) {
+            if (is_file($localExtension)) {
+                return $localExtension;
+            }
+        }
+
+        return $extension;
+    };
     $requiredExtensions = [];
+    $requiredExtensionLoadMap = [];
     if (isset($options['d'])) {
         $commandLoadedExtensions = is_array($options['d']) ? $options['d'] : [$options['d']];
         foreach ($commandLoadedExtensions as $commandLoadedExtension) {
             if (str_starts_with($commandLoadedExtension, 'extension=')) {
                 [, $commandLoadedExtension] = explode('=', $commandLoadedExtension);
-                $requiredExtensions[] = $fetchExtensionName($commandLoadedExtension);
+                $extensionName = $fetchExtensionName($commandLoadedExtension);
+                $requiredExtensions[] = $extensionName;
+                $requiredExtensionLoadMap[$extensionName] = $resolveExtension($commandLoadedExtension);
             }
         }
     }
@@ -90,7 +108,7 @@ declare(strict_types=1);
     $unloadedExtensionsArgs = [];
     foreach ($unloadedExtensions as $unloadedExtension) {
         $unloadedExtensionsArgs[] = '-d';
-        $unloadedExtensionsArgs[] = 'extension=' . $unloadedExtension;
+        $unloadedExtensionsArgs[] = 'extension=' . ($requiredExtensionLoadMap[$unloadedExtension] ?? $unloadedExtension);
     }
     $proc = proc_open(
         [PHP_BINARY, ...$unloadedExtensionsArgs, ...$args],

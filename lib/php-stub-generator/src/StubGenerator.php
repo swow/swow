@@ -320,10 +320,14 @@ class StubGenerator
     protected function getDeclarationPrefix(ReflectionFunction|ReflectionMethod|ReflectionProperty|Reflector $reflector, bool $withSpace = false): string
     {
         $prefix = [];
-        if (method_exists($reflector, 'isFinal') && $reflector->isFinal()) {
+        if ($reflector instanceof ReflectionClass && $reflector->isInterface()) {
+            return '';
+        }
+        $isInterfaceMethod = $reflector instanceof ReflectionMethod && $reflector->getDeclaringClass()->isInterface();
+        if (!$isInterfaceMethod && method_exists($reflector, 'isFinal') && $reflector->isFinal()) {
             $prefix[] = 'final';
         }
-        if (method_exists($reflector, 'isAbstract') && $reflector->isAbstract()) {
+        if (!$isInterfaceMethod && method_exists($reflector, 'isAbstract') && $reflector->isAbstract()) {
             $prefix[] = 'abstract';
         }
         if (method_exists($reflector, 'isPublic') && $reflector->isPublic()) {
@@ -411,11 +415,11 @@ class StubGenerator
     /**
      * @param string|array<string> $comment
      */
-    protected function formatFunction(ReflectionFunctionAbstract $function, string|array $comment, string $prefix, string $name, string $params, string $returnType, string $body): string
+    protected function formatFunction(ReflectionFunctionAbstract $function, string|array $comment, string $prefix, string $name, string $params, string $returnType, ?string $body): string
     {
         $comment = static::genComment($comment);
-        return sprintf(
-            '%s%s%s%sfunction %s(%s)%s%s {%s}',
+        $declaration = sprintf(
+            '%s%s%s%sfunction %s(%s)%s%s',
             $comment,
             $comment ? "\n" : '',
             $prefix,
@@ -423,7 +427,15 @@ class StubGenerator
             $name,
             $params,
             $returnType ? ': ' : '',
-            $returnType,
+            $returnType
+        );
+        if ($body === null) {
+            return "{$declaration};";
+        }
+
+        return sprintf(
+            '%s {%s}',
+            $declaration,
             $body
         );
     }
@@ -588,6 +600,12 @@ class StubGenerator
             $returnTypeName = '';
         }
         $body = ' ';
+        if (
+            $function instanceof ReflectionMethod &&
+            ($function->getDeclaringClass()->isInterface() || $function->isAbstract())
+        ) {
+            $body = null;
+        }
 
         $declaration = $this->formatFunction(
             $function,
