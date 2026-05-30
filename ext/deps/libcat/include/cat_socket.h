@@ -536,6 +536,7 @@ CAT_API cat_bool_t cat_socket_runtime_init(void);
 
 CAT_API void cat_socket_init(cat_socket_t *socket);
 CAT_API cat_socket_t *cat_socket_create(cat_socket_t *socket, cat_socket_type_t type);
+CAT_API cat_socket_t *cat_socket_recreate(cat_socket_t *socket, cat_socket_type_t type);
 
 CAT_API cat_bool_t cat_socket_open_os_fd(cat_socket_t *socket, cat_os_fd_t os_fd);
 CAT_API cat_bool_t cat_socket_open_os_socket(cat_socket_t *socket, cat_os_socket_t os_socket);

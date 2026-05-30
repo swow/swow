@@ -1001,6 +1001,17 @@ CAT_API cat_socket_t *cat_socket_create(cat_socket_t *socket, cat_socket_type_t 
     return socket;
 }
 
+CAT_API cat_socket_t *cat_socket_recreate(cat_socket_t *socket, cat_socket_type_t type)
+{
+    cat_bool_t allocated = socket->flags & CAT_SOCKET_FLAG_ALLOCATED;
+
+    if (cat_socket_is_available(socket) && !cat_socket_close(socket)) {
+        return NULL;
+    }
+
+    return cat_socket_create(allocated ? NULL : socket, type);
+}
+
 static cat_always_inline cat_socket_t *cat_socket_create_from_socket_impl(cat_socket_t *socket, const cat_socket_t *origin_socket)
 {
     cat_socket_flag_t flags = CAT_SOCKET_FLAG_NONE;
