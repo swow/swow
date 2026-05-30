@@ -24,7 +24,6 @@ use Swow\Psr7\Server\Server;
 use Swow\Socket;
 use Swow\SocketException;
 use Swow\WebSocket\Opcode as WebSocketOpcode;
-use Swow\WebSocket\WebSocket;
 
 require __DIR__ . '/../autoload.php';
 
@@ -33,9 +32,14 @@ ini_set('memory_limit', '1G');
 $host = getenv('SERVER_HOST') ?: '127.0.0.1';
 $port = (int) ((($port = getenv('SERVER_PORT')) !== '' && $port !== false) ? $port : 9764);
 $backlog = (int) (getenv('SERVER_BACKLOG') ?: Socket::DEFAULT_BACKLOG);
+$eventStreamTicks = (int) ((($ticks = getenv('SERVER_EVENT_STREAM_TICKS')) !== '' && $ticks !== false) ? $ticks : 30);
+$eventStreamInterval = (int) ((($interval = getenv('SERVER_EVENT_STREAM_INTERVAL')) !== '' && $interval !== false) ? $interval : 1);
 
 $server = new Server();
 $server->bind($host, $port)->listen($backlog);
+if (getenv('CI')) {
+    $GLOBALS['swow_mixed_server'] = $server;
+}
 if (!getenv('CI')) {
     echo "Server started at http://{$host}:{$port}\n";
 }
@@ -43,7 +47,7 @@ while (true) {
     try {
         $connection = null;
         $connection = $server->acceptConnection();
-        Coroutine::run(static function () use ($connection): void {
+        Coroutine::run(static function () use ($connection, $eventStreamTicks, $eventStreamInterval): void {
             try {
                 while (true) {
                     $request = null;
@@ -91,7 +95,7 @@ while (true) {
                                     $opcode = $frame->getOpcode();
                                     switch ($opcode) {
                                         case WebSocketOpcode::PING:
-                                            $connection->send(WebSocket::PONG_FRAME);
+                                            $connection->sendWebSocketPongFrame();
                                             break;
                                         case WebSocketOpcode::PONG:
                                             break;
@@ -109,19 +113,16 @@ while (true) {
                             case '/event-stream':
                                 if ($request->getQueryParams()['subscribe'] ?? false) {
                                     $request = null;
-                                    $connection->respond([
-                                        'Cache-Control' => 'no-store',
-                                        'Content-Type' => 'text/event-stream',
-                                        'Content-Length' => null,
-                                    ]);
+                                    $connection->sendEventStreamHeaders();
                                     $id = 0;
-                                    for ($i = 0; $i < 30; $i++) {
-                                        $connection->send(sprintf(
+                                    for ($i = 0; $i < $eventStreamTicks; $i++) {
+                                        $connection->sendHttpChunk(sprintf(
                                             "id: %d\nevent: clock\ndata: %s\n\n",
                                             $id++, json_encode(['date' => date('Y-m-d H:i:s')])
                                         ));
-                                        sleep(1);
+                                        sleep($eventStreamInterval);
                                     }
+                                    $connection->sendHttpLastChunk();
                                 } else {
                                     $connection->respond(<<<'JS'
                                         <script> new EventSource('http://127.0.0.1:9764/event-stream?subscribe=1').addEventListener('clock', function(event) {

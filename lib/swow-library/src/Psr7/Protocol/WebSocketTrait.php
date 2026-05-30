@@ -16,15 +16,32 @@ namespace Swow\Psr7\Protocol;
 
 use Swow\Psr7\Message\WebSocketFrame;
 use Swow\Psr7\Message\WebSocketFrameInterface;
+use Swow\WebSocket\WebSocket;
 
 trait WebSocketTrait
 {
     public function sendWebSocketFrame(WebSocketFrameInterface $frame): static
     {
-        return $this->write([
+        $this->getSocket()->write([
             $frame->toString(true),
             (string) $frame->getPayloadData(),
         ]);
+
+        return $this;
+    }
+
+    public function sendWebSocketPingFrame(): static
+    {
+        $this->getSocket()->send(WebSocket::PING_FRAME);
+
+        return $this;
+    }
+
+    public function sendWebSocketPongFrame(): static
+    {
+        $this->getSocket()->send(WebSocket::PONG_FRAME);
+
+        return $this;
     }
 
     public function recvWebSocketFrame(): WebSocketFrameInterface

@@ -305,11 +305,12 @@ class MagicClient implements ClientPlusInterface
             $connectRequest .= "Proxy-Authorization: {$proxyAuthorization}\r\n";
         }
         $connectRequest .= "\r\n";
-        $this->client->send($connectRequest);
+        $socket = $this->client->getSocket();
+        $socket->send($connectRequest);
 
         $rawHeaders = '';
         while (($headerEndPos = strpos($rawHeaders, "\r\n\r\n")) === false) {
-            $chunk = $this->client->recvString(1024, $this->connectTimeout);
+            $chunk = $socket->recvString(1024, $this->connectTimeout);
             if ($chunk === '') {
                 throw new ClientRequestException($request, 'HTTP proxy CONNECT failed: proxy closed before response headers completed');
             }
@@ -348,10 +349,11 @@ class MagicClient implements ClientPlusInterface
      */
     protected function connectViaSocks5Proxy(RequestInterface $request, array $proxy, string $targetHost, int $targetPort): void
     {
+        $socket = $this->client->getSocket();
         $proxyAuthorization = $this->buildProxyAuthorization($proxy);
         $methods = $proxyAuthorization === null ? "\x00" : "\x00\x02";
-        $this->client->send("\x05" . pack('C', strlen($methods)) . $methods);
-        $methodReply = $this->client->readString(2, $this->connectTimeout);
+        $socket->send("\x05" . pack('C', strlen($methods)) . $methods);
+        $methodReply = $socket->readString(2, $this->connectTimeout);
         if (ord($methodReply[0]) !== 0x05) {
             throw new ClientRequestException($request, 'SOCKS5 handshake failed: invalid version in method reply');
         }
@@ -365,20 +367,20 @@ class MagicClient implements ClientPlusInterface
         if ($selectedMethod === 0x02) {
             $username = $proxy['username'] ?? '';
             $password = $proxy['password'] ?? '';
-            $this->client->send(
+            $socket->send(
                 "\x01" .
                 pack('C', strlen($username)) . $username .
                 pack('C', strlen($password)) . $password
             );
-            $authReply = $this->client->readString(2, $this->connectTimeout);
+            $authReply = $socket->readString(2, $this->connectTimeout);
             if (ord($authReply[1]) !== 0x00) {
                 throw new ClientRequestException($request, 'SOCKS5 auth failed: username/password rejected');
             }
         }
 
         $addressPayload = $this->buildSocks5AddressPayload($targetHost, $proxy['remote_dns']);
-        $this->client->send("\x05\x01\x00" . $addressPayload . pack('n', $targetPort));
-        $connectHead = $this->client->readString(4, $this->connectTimeout);
+        $socket->send("\x05\x01\x00" . $addressPayload . pack('n', $targetPort));
+        $connectHead = $socket->readString(4, $this->connectTimeout);
         if (ord($connectHead[0]) !== 0x05) {
             throw new ClientRequestException($request, 'SOCKS5 CONNECT failed: invalid version in response');
         }
@@ -388,18 +390,18 @@ class MagicClient implements ClientPlusInterface
         }
         $addressType = ord($connectHead[3]);
         if ($addressType === 0x01) {
-            $this->client->readString(4, $this->connectTimeout);
+            $socket->readString(4, $this->connectTimeout);
         } elseif ($addressType === 0x03) {
-            $length = ord($this->client->readString(1, $this->connectTimeout));
+            $length = ord($socket->readString(1, $this->connectTimeout));
             if ($length > 0) {
-                $this->client->readString($length, $this->connectTimeout);
+                $socket->readString($length, $this->connectTimeout);
             }
         } elseif ($addressType === 0x04) {
-            $this->client->readString(16, $this->connectTimeout);
+            $socket->readString(16, $this->connectTimeout);
         } else {
             throw new ClientRequestException($request, "SOCKS5 CONNECT failed: invalid address type={$addressType}");
         }
-        $this->client->readString(2, $this->connectTimeout);
+        $socket->readString(2, $this->connectTimeout);
     }
 
     protected function buildSocks5AddressPayload(string $host, bool $remoteDns): string

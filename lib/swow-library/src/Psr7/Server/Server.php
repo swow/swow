@@ -23,7 +23,7 @@ use Swow\Socket;
 use Swow\SocketException;
 use WeakMap;
 
-class Server extends Socket
+class Server
 {
     use LimitationTrait;
 
@@ -33,14 +33,50 @@ class Server extends Socket
 
     use ServerPsr17FactoryTrait;
 
+    public const DEFAULT_BACKLOG = Socket::DEFAULT_BACKLOG;
+
+    public const TYPE_TCP = Socket::TYPE_TCP;
+    public const TYPE_TCP4 = Socket::TYPE_TCP4;
+    public const TYPE_TCP6 = Socket::TYPE_TCP6;
+
+    public const BIND_FLAG_NONE = Socket::BIND_FLAG_NONE;
+    public const BIND_FLAG_IPV6ONLY = Socket::BIND_FLAG_IPV6ONLY;
+    public const BIND_FLAG_REUSEADDR = Socket::BIND_FLAG_REUSEADDR;
+    public const BIND_FLAG_REUSEPORT = Socket::BIND_FLAG_REUSEPORT;
+
     protected int $recvMessageTimeout = -1;
+
+    private Socket $socket;
+
+    private int $socketType;
 
     public function __construct(int $type = self::TYPE_TCP)
     {
-        parent::__construct($type);
+        $this->socketType = $type;
+        $this->socket = new Socket($type);
         $this->__constructServerConnectionManager();
         $this->__constructServerConnectionFactory();
         $this->__constructServerPsr17Factory();
+    }
+
+    public function getSocket(): Socket
+    {
+        return $this->socket;
+    }
+
+    public function getSocketType(): int
+    {
+        return $this->socketType;
+    }
+
+    public function close(): bool
+    {
+        return $this->socket->close();
+    }
+
+    public function __debugInfo(): array
+    {
+        return $this->socket->__debugInfo();
     }
 
     public function getRecvMessageTimeout(): int
@@ -58,11 +94,83 @@ class Server extends Socket
         return $this;
     }
 
+    public function getSockAddress(): string
+    {
+        return $this->getSocket()->getSockAddress();
+    }
+
+    public function getSockPort(): int
+    {
+        return $this->getSocket()->getSockPort();
+    }
+
+    public function getAcceptTimeout(): int
+    {
+        return $this->getSocket()->getAcceptTimeout();
+    }
+
+    public function setTimeout(int $timeout): static
+    {
+        $this->getSocket()->setTimeout($timeout);
+
+        return $this;
+    }
+
+    public function setAcceptTimeout(int $timeout): static
+    {
+        $this->getSocket()->setAcceptTimeout($timeout);
+
+        return $this;
+    }
+
+    public function setRecvBufferSize(int $size): static
+    {
+        $this->getSocket()->setRecvBufferSize($size);
+
+        return $this;
+    }
+
+    public function setSendBufferSize(int $size): static
+    {
+        $this->getSocket()->setSendBufferSize($size);
+
+        return $this;
+    }
+
+    public function setTcpNodelay(bool $enable): static
+    {
+        $this->getSocket()->setTcpNodelay($enable);
+
+        return $this;
+    }
+
+    public function setTcpKeepAlive(bool $enable, int $delay): static
+    {
+        $this->getSocket()->setTcpKeepAlive($enable, $delay);
+
+        return $this;
+    }
+
+    public function bind(string $name, int $port = 0, int $flags = self::BIND_FLAG_NONE): static
+    {
+        $this->getSocket()->bind($name, $port, $flags);
+
+        return $this;
+    }
+
+    public function listen(int $backlog = self::DEFAULT_BACKLOG): static
+    {
+        $this->getSocket()->listen($backlog);
+
+        return $this;
+    }
+
     public function acceptConnection(?int $timeout = null): ServerConnection
     {
+        $socket = $this->getSocket();
         while (true) {
             $connection = $this->serverConnectionFactory->createServerConnection($this);
-            $this->acceptTo($connection, $timeout);
+            $socket->acceptTo($connection->getSocket(), $timeout);
             try {
                 $connection->addServerParams([
                     'remote_addr' => $connection->getPeerAddress(),
@@ -81,6 +189,14 @@ class Server extends Socket
         }
 
         return $connection;
+    }
+
+    public function rebind(string $name, int $port = 0, int $flags = self::BIND_FLAG_NONE): static
+    {
+        $this->socket->recreate($this->socketType);
+        $this->__constructServerConnectionManager();
+
+        return $this->bind($name, $port, $flags);
     }
 
     protected const BROADCAST_FLAG_NONE = 0;

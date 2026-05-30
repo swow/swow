@@ -17,18 +17,22 @@ namespace Swow\Tests\Psr7\Server;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use Swow\Coroutine;
+use Swow\Http\Http;
 use Swow\Http\Status;
 use Swow\Psr7\Psr7;
 use Swow\Psr7\Server\Server;
 use Swow\Psr7\Server\ServerConnection;
+use Swow\Socket;
 use Swow\Sync\WaitReference;
 use Swow\Utils\FileSystem\FileSystem;
 
 use function array_map;
 use function file_exists;
 use function is_numeric;
+use function method_exists;
 use function mkdir;
 use function sprintf;
+use function str_contains;
 use function Swow\TestUtils\getRandomBytes;
 
 use const CURLOPT_HEADER;
@@ -118,6 +122,44 @@ final class ServerConnectionTest extends TestCase
         $this->assertSame('text/plain', $headers['Content-Type'] ?? '');
         $this->assertSame($fileSize, (int) ($headers['Content-Length'] ?? ''));
         $this->assertSame(file_get_contents($this->tempFile), $body);
+
+        $wr::wait($wr);
+        $server->close();
+    }
+
+    public function testSendEventStreamHeaders(): void
+    {
+        $this->assertTrue(method_exists(ServerConnection::class, 'sendEventStreamHeaders'));
+
+        $server = new Server();
+        $server->bind('127.0.0.1')->listen();
+
+        $wr = new WaitReference();
+        Coroutine::run(static function () use ($server, $wr): void {
+            $connection = $server->acceptConnection();
+            $connection->recvHttpRequest();
+            $connection->sendEventStreamHeaders();
+            $connection->close();
+        });
+
+        $client = new Socket(Socket::TYPE_TCP);
+        $client->setReadTimeout(1000);
+        $client->connect($server->getSockAddress(), $server->getSockPort());
+        $client->send(Http::packRequest('GET', '/events', [
+            'Host' => "{$server->getSockAddress()}:{$server->getSockPort()}",
+            'Accept' => 'text/event-stream',
+        ]));
+
+        $response = '';
+        while (!str_contains($response, "\r\n\r\n")) {
+            $response .= $client->recvString(1024);
+        }
+
+        $this->assertStringContainsString("HTTP/1.1 200 OK\r\n", $response);
+        $this->assertStringContainsString("Cache-Control: no-store\r\n", $response);
+        $this->assertStringContainsString("Content-Type: text/event-stream\r\n", $response);
+        $this->assertStringContainsString("Transfer-Encoding: chunked\r\n", $response);
+        $this->assertStringNotContainsString("Content-Length:", $response);
 
         $wr::wait($wr);
         $server->close();

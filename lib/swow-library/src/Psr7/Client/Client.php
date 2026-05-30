@@ -40,7 +40,7 @@ use function base64_encode;
 use function random_bytes;
 use function strlen;
 
-class Client extends Socket implements ClientPlusInterface, ProtocolTypeInterface
+class Client implements ClientPlusInterface, ProtocolTypeInterface
 {
     use ClientPsr17FactoryTrait;
 
@@ -55,6 +55,10 @@ class Client extends Socket implements ClientPlusInterface, ProtocolTypeInterfac
 
     use WebSocketTrait;
 
+    public const TYPE_TCP = Socket::TYPE_TCP;
+    public const TYPE_TCP4 = Socket::TYPE_TCP4;
+    public const TYPE_TCP6 = Socket::TYPE_TCP6;
+
     public const DEFAULT_HTTP_PARSER_EVENTS =
         HttpParser::EVENT_STATUS |
         HttpParser::EVENT_HEADER_FIELD |
@@ -65,20 +69,110 @@ class Client extends Socket implements ClientPlusInterface, ProtocolTypeInterfac
         HttpParser::EVENT_BODY |
         HttpParser::EVENT_MESSAGE_COMPLETE;
 
+    private Socket $socket;
+
+    private int $socketType;
+
     protected string $host = '';
 
-    public function __construct(int $type = Socket::TYPE_TCP)
+    public function __construct(int $type = self::TYPE_TCP)
     {
-        parent::__construct($type);
+        $this->socketType = $type;
+        $this->socket = new Socket($type);
         $this->__constructReceiver(Parser::TYPE_RESPONSE, static::DEFAULT_HTTP_PARSER_EVENTS);
         $this->__constructClientPsr17Factory();
+    }
+
+    public function getSocket(): Socket
+    {
+        return $this->socket;
+    }
+
+    public function getSocketType(): int
+    {
+        return $this->socketType;
+    }
+
+    public function close(): bool
+    {
+        return $this->socket->close();
+    }
+
+    public function __debugInfo(): array
+    {
+        return $this->socket->__debugInfo();
     }
 
     public function connect(string $name, int $port = 0, ?int $timeout = null): static
     {
         $this->host = $name;
+        $this->getSocket()->connect($name, $port, $timeout);
 
-        return parent::connect($name, $port, $timeout);
+        return $this;
+    }
+
+    public function recreate(?int $type = null): static
+    {
+        $type ??= $this->socketType;
+        $this->socket->recreate($type);
+        $this->socketType = $type;
+        $this->host = '';
+        $this->protocolType = self::PROTOCOL_TYPE_HTTP;
+        $this->__constructReceiver(Parser::TYPE_RESPONSE, static::DEFAULT_HTTP_PARSER_EVENTS);
+
+        return $this;
+    }
+
+    public function enableCrypto(?array $options = null): static
+    {
+        $this->getSocket()->enableCrypto($options);
+
+        return $this;
+    }
+
+    public function isEstablished(): bool
+    {
+        return $this->getSocket()->isEstablished();
+    }
+
+    public function getReadTimeout(): int
+    {
+        return $this->getSocket()->getReadTimeout();
+    }
+
+    public function setTimeout(int $timeout): static
+    {
+        $this->getSocket()->setTimeout($timeout);
+
+        return $this;
+    }
+
+    public function setConnectTimeout(int $timeout): static
+    {
+        $this->getSocket()->setConnectTimeout($timeout);
+
+        return $this;
+    }
+
+    public function setHandshakeTimeout(int $timeout): static
+    {
+        $this->getSocket()->setHandshakeTimeout($timeout);
+
+        return $this;
+    }
+
+    public function setReadTimeout(int $timeout): static
+    {
+        $this->getSocket()->setReadTimeout($timeout);
+
+        return $this;
+    }
+
+    public function setWriteTimeout(int $timeout): static
+    {
+        $this->getSocket()->setWriteTimeout($timeout);
+
+        return $this;
     }
 
     /** @param array<string, array<string>> $headers */
@@ -89,7 +183,7 @@ class Client extends Socket implements ClientPlusInterface, ProtocolTypeInterfac
         string $body = '',
         string $protocolVersion = Request::DEFAULT_PROTOCOL_VERSION,
     ): static {
-        return $this->write([
+        $this->getSocket()->write([
             Http::packRequest(
                 method: $method,
                 uri: $uri,
@@ -98,6 +192,8 @@ class Client extends Socket implements ClientPlusInterface, ProtocolTypeInterfac
             ),
             $body,
         ]);
+
+        return $this;
     }
 
     public function recvResponseEntity(?int $timeout = null): ResponseEntity

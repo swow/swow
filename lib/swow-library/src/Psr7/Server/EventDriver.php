@@ -31,7 +31,6 @@ use Swow\Psr7\Message\WebSocketFrameInterface;
 use Swow\Psr7\Psr7;
 use Swow\SocketException;
 use Swow\WebSocket\Opcode as WebSocketOpcode;
-use Swow\WebSocket\WebSocket;
 use TypeError;
 
 use function in_array;
@@ -237,7 +236,7 @@ class EventDriver
                                             $opcode = $frame->getOpcode();
                                             switch ($opcode) {
                                                 case WebSocketOpcode::PING:
-                                                    $connection->send(WebSocket::PONG_FRAME);
+                                                    $connection->sendWebSocketPongFrame();
                                                     break;
                                                 case WebSocketOpcode::PONG:
                                                     break;

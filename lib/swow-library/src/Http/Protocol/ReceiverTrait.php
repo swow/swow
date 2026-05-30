@@ -199,6 +199,7 @@ trait ReceiverTrait
         $messageEntity = $isServerRequest ? new ServerRequestEntity() : new ResponseEntity();
         $maxHeaderLength = $this->getMaxHeaderLength();
         $maxContentLength = $this->getMaxContentLength();
+        $socket = $this->getSocket();
 
         /* Socket IO related values {{{ */
         $expectMoreData = $parsedOffset === $buffer->getLength();
@@ -239,9 +240,9 @@ trait ReceiverTrait
         $uploadedFiles = [];
         /* }}} */
         $timeout ??= $this->recvMessageTimeout;
-        $readTimeout = $this->getReadTimeout();
+        $readTimeout = $socket->getReadTimeout();
         // if read timeout is less than message timeout, use message timeout instead
-        if (($timeout < 0 ? PHP_INT_MAX : $timeout) < ($readTimeout < 0 ? PHP_INT_MAX : $timeout)) {
+        if (($timeout < 0 ? PHP_INT_MAX : $timeout) < ($readTimeout < 0 ? PHP_INT_MAX : $readTimeout)) {
             $readTimeout = $timeout;
         }
         $mainCoroutine = Coroutine::getMain();
@@ -259,7 +260,7 @@ trait ReceiverTrait
                             $readTimeout = $timeout - $timePassed;
                         }
                     }
-                    $this->recvData($buffer, offset: $buffer->getLength(), timeout: $readTimeout);
+                    $socket->recvData($buffer, offset: $buffer->getLength(), timeout: $readTimeout);
                     /** @noinspection PhpUnusedLocalVariableInspection (on the safe-side) */
                     $expectMoreData = false;
                 }
@@ -396,7 +397,7 @@ trait ReceiverTrait
                                             $parsedOffset += $unparsedLength;
                                             $neededLength = $contentLength - $unparsedLength;
                                             if ($neededLength > 0) {
-                                                $this->read($body, $unparsedLength, $neededLength);
+                                                $socket->read($body, $unparsedLength, $neededLength);
                                             }
                                         }
                                         /* Notice: There may be some risks associated with doing so,
@@ -513,7 +514,7 @@ trait ReceiverTrait
                                         if ($body->getAvailableSize() < $neededLength) {
                                             $body->extend($bodyParsedOffset + $neededLength);
                                         }
-                                        $this->read($body, $bodyParsedOffset, $neededLength);
+                                        $socket->read($body, $bodyParsedOffset, $neededLength);
                                         $bodyParsedOffset += $parser->execute($body, $bodyParsedOffset);
                                         if ($parser->getEvent() !== HttpParser::EVENT_BODY) {
                                             throw new ParserException(sprintf(
@@ -542,7 +543,7 @@ trait ReceiverTrait
                                         ));
                                     }
                                     /* receive all body data at once here (for performance) */
-                                    $this->read($body, $bodyParsedOffset, $neededLength);
+                                    $socket->read($body, $bodyParsedOffset, $neededLength);
                                     $bodyParsedOffset += $parser->execute($body, $bodyParsedOffset);
                                     if ($parser->getEvent() !== HttpParser::EVENT_BODY) {
                                         throw new ParserException(sprintf('Expected EVENT_BODY, got %s', $parser->getEventName()));
@@ -735,9 +736,10 @@ trait ReceiverTrait
         $parser = $state->parser;
         $parsedOffset = $state->parsedOffset;
         $maxContentLength = $this->getMaxContentLength();
+        $socket = $this->getSocket();
         $expectMoreData = $parsedOffset === $buffer->getLength();
         $timeout ??= $this->recvMessageTimeout;
-        $readTimeout = $this->getReadTimeout();
+        $readTimeout = $socket->getReadTimeout();
         if (($timeout < 0 ? PHP_INT_MAX : $timeout) < ($readTimeout < 0 ? PHP_INT_MAX : $readTimeout)) {
             $readTimeout = $timeout;
         }
@@ -756,7 +758,7 @@ trait ReceiverTrait
                     if ($state->bodyBuffer->getAvailableSize() < $maxRecv) {
                         $state->bodyBuffer->extend($bodyReadOffset + $maxRecv);
                     }
-                    $recvd = $this->recvData($state->bodyBuffer, offset: $bodyReadOffset, size: $maxRecv, timeout: $readTimeout);
+                    $recvd = $socket->recvData($state->bodyBuffer, offset: $bodyReadOffset, size: $maxRecv, timeout: $readTimeout);
                     $state->remainingChunkBytes -= $recvd;
                     $bodyReadOffset += $parser->execute($state->bodyBuffer, $bodyReadOffset);
                     if ($parser->getEvent() !== HttpParser::EVENT_BODY) {
@@ -808,7 +810,7 @@ trait ReceiverTrait
                             $readTimeout = $timeout - $timePassed;
                         }
                     }
-                    $this->recvData($buffer, offset: $buffer->getLength(), timeout: $readTimeout);
+                    $socket->recvData($buffer, offset: $buffer->getLength(), timeout: $readTimeout);
                     $expectMoreData = false;
                 }
                 $parsedLength = $parser->execute($buffer, $parsedOffset);
@@ -921,6 +923,7 @@ trait ReceiverTrait
         $parsedOffset = $this->parsedOffset;
         $unparsedLength = $buffer->getLength() - $parsedOffset;
         $maxContentLength = $this->getMaxContentLength();
+        $socket = $this->getSocket();
 
         $frame = new WebSocketFrameEntity();
         $header = $frame;
@@ -928,7 +931,7 @@ trait ReceiverTrait
         try {
             /* recv header */
             while ($unparsedLength < WebSocket::HEADER_MIN_SIZE) {
-                $unparsedLength += $this->recvData($buffer, offset: $buffer->getLength());
+                $unparsedLength += $socket->recvData($buffer, offset: $buffer->getLength());
             }
             $header->write(
                 offset: 0,
@@ -938,7 +941,7 @@ trait ReceiverTrait
             );
             $headerSize = $header->getHeaderSize();
             while ($unparsedLength < $headerSize) {
-                $unparsedLength += $this->recvData($buffer, offset: $buffer->getLength());
+                $unparsedLength += $socket->recvData($buffer, offset: $buffer->getLength());
             }
             $header->write(
                 offset: WebSocket::HEADER_MIN_SIZE,
@@ -959,7 +962,7 @@ trait ReceiverTrait
                     $payloadData->append($buffer, $parsedOffset, $payloadLength);
                 } else {
                     $payloadData->append($buffer, $parsedOffset, $unparsedLength);
-                    $this->read(
+                    $socket->read(
                         buffer: $payloadData,
                         offset: $unparsedLength,
                         length: $payloadLength - $unparsedLength

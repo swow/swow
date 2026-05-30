@@ -51,7 +51,7 @@ use function Swow\Debug\isStrictStringable;
 
 use const PATHINFO_EXTENSION;
 
-class ServerConnection extends Socket implements ProtocolTypeInterface
+class ServerConnection implements ProtocolTypeInterface
 {
     use ProtocolTypeTrait;
 
@@ -84,14 +84,34 @@ class ServerConnection extends Socket implements ProtocolTypeInterface
 
     protected ?Server $server;
 
+    private Socket $socket;
+
+    private int $socketType;
+
     public function __construct(Server $server)
     {
-        parent::__construct($server->getSimpleType());
+        $this->socketType = $server->getSocket()->getSimpleType();
+        $this->socket = new Socket($this->socketType);
         $this->server = $server;
         $this->__constructReceiver(HttpParser::TYPE_REQUEST, static::DEFAULT_HTTP_PARSER_EVENTS);
 
         // Inherited server configuration.
         $this->setRecvMessageTimeout($server->getRecvMessageTimeout());
+    }
+
+    public function getSocket(): Socket
+    {
+        return $this->socket;
+    }
+
+    public function getSocketType(): int
+    {
+        return $this->socketType;
+    }
+
+    public function __debugInfo(): array
+    {
+        return $this->socket->__debugInfo();
     }
 
     /**
@@ -102,6 +122,26 @@ class ServerConnection extends Socket implements ProtocolTypeInterface
     public function getServer(): Server
     {
         return $this->server ?? throw new SocketException('Connection has been closed', Errno::EBADF);
+    }
+
+    public function getId(): int
+    {
+        return $this->getSocket()->getId();
+    }
+
+    public function getFd(): int
+    {
+        return $this->getSocket()->getFd();
+    }
+
+    public function getPeerAddress(): string
+    {
+        return $this->getSocket()->getPeerAddress();
+    }
+
+    public function getPeerPort(): int
+    {
+        return $this->getSocket()->getPeerPort();
     }
 
     public function getMaxHeaderLength(): int
@@ -134,24 +174,44 @@ class ServerConnection extends Socket implements ProtocolTypeInterface
         );
     }
 
-    public function sendHttpHeader(int $statusCode = HttpStatus::OK, string $reasonPhrase = '', array $headers = [], string $protocolVersion = '1.1'): static
+    public function sendHttpHeaders(int $statusCode = HttpStatus::OK, string $reasonPhrase = '', array $headers = [], string $protocolVersion = '1.1'): static
     {
-        return $this->send(Http::packResponse($statusCode, $reasonPhrase, $headers, '', $protocolVersion));
+        $this->getSocket()->send(Http::packResponse($statusCode, $reasonPhrase, $headers, '', $protocolVersion));
+
+        return $this;
+    }
+
+    /** @param array<string, string|string[]|null> $headers */
+    public function sendEventStreamHeaders(array $headers = []): static
+    {
+        return $this->sendHttpHeaders(headers: $headers + [
+            'Cache-Control' => 'no-store',
+            'Content-Type' => 'text/event-stream',
+            'Transfer-Encoding' => 'chunked',
+            'Content-Length' => null,
+        ]);
     }
 
     public function sendHttpChunk(string|Stringable $chunkData): static
     {
-        return $this->write([dechex(strlen($chunkData)), "\r\n", $chunkData, "\r\n"]);
+        $chunkData = (string) $chunkData;
+        $this->getSocket()->write([dechex(strlen($chunkData)), "\r\n", $chunkData, "\r\n"]);
+
+        return $this;
     }
 
     public function sendHttpLastChunk(): static
     {
-        return $this->send("0\r\n\r\n");
+        $this->getSocket()->send("0\r\n\r\n");
+
+        return $this;
     }
 
     public function sendHttpResponse(ResponseInterface $response): static
     {
-        return $this->write(Psr7::convertResponseToVector($response));
+        $this->getSocket()->write(Psr7::convertResponseToVector($response));
+
+        return $this;
     }
 
     /** @return array<string, string> */
@@ -190,7 +250,7 @@ class ServerConnection extends Socket implements ProtocolTypeInterface
                     }
                 }
                 $headers += $this->generateResponseHeaders($body, $close);
-                $this->write([
+                $this->getSocket()->write([
                     Http::packResponse(
                         statusCode: $statusCode,
                         headers: $headers
@@ -212,7 +272,7 @@ class ServerConnection extends Socket implements ProtocolTypeInterface
                     $message = HttpStatus::getReasonPhraseOf($statusCode);
                 }
                 $message = "<html lang=\"en\"><body><h2>HTTP {$statusCode} {$message}</h2><hr><i>Powered by Swow</i></body></html>";
-                $this->write([
+                $this->getSocket()->write([
                     Http::packResponse(
                         statusCode: $statusCode,
                         headers: $this->generateResponseHeaders($message, $close)
@@ -267,11 +327,12 @@ class ServerConnection extends Socket implements ProtocolTypeInterface
     {
         $this->offline();
 
-        return parent::close();
+        return $this->getSocket()->close();
     }
 
     public function sendHttpFile(ResponseInterface $response, string $filename, int $offset = 0, int $length = -1, ?int $timeout = null): int
     {
+        $socket = $this->getSocket();
         if ($response->hasHeader('Content-Length')) {
             throw new InvalidArgumentException('Content-Length cannot be set');
         }
@@ -284,11 +345,11 @@ class ServerConnection extends Socket implements ProtocolTypeInterface
         }
 
         $headers['Content-Length'] = $length <= 0 ? filesize($filename) : $length;
-        $this->send(Http::packResponse(
+        $socket->send(Http::packResponse(
             statusCode: HttpStatus::OK,
             headers: $headers
         ));
 
-        return $this->sendFile($filename, $offset, $length, $timeout);
+        return $socket->sendFile($filename, $offset, $length, $timeout);
     }
 }

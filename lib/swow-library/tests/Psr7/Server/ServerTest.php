@@ -37,7 +37,6 @@ use Swow\SocketException;
 use Swow\Sync\WaitReference;
 use Swow\TestUtils\Testing;
 use Swow\WebSocket\Opcode;
-use Swow\WebSocket\WebSocket;
 
 use function file_exists;
 use function http_build_query;
@@ -48,6 +47,7 @@ use function putenv;
 use function serialize;
 use function sleep;
 use function sprintf;
+use function str_contains;
 use function str_repeat;
 use function strlen;
 use function substr;
@@ -102,8 +102,8 @@ final class ServerTest extends TestCase
             'Content-Type' => MimeType::JSON,
             'Cookie' => 'foo=bar; bar=baz',
         ], Psr7::createStream(json_encode([
-            'address' => $client->getSockAddress(),
-            'port' => $client->getSockPort(),
+            'address' => $client->getSocket()->getSockAddress(),
+            'port' => $client->getSocket()->getSockPort(),
         ])));
         $response = $client->sendRequest($request);
         $this->assertSame($query, unserialize((string) $response->getBody()));
@@ -115,6 +115,8 @@ final class ServerTest extends TestCase
     {
         putenv('SERVER_PORT=0');
         putenv('CI=1');
+        putenv('SERVER_EVENT_STREAM_TICKS=1');
+        putenv('SERVER_EVENT_STREAM_INTERVAL=0');
         $mixedServerFile = __DIR__ . '/../../../../../examples/http_server/mixed.php';
         if (!file_exists($mixedServerFile)) {
             $this->markTestSkipped('unable to find mixed server example file');
@@ -124,12 +126,39 @@ final class ServerTest extends TestCase
         });
         // so hacky ^^
         /** @var Server $server */
-        $server = $serverCoroutine->eval('$this');
+        $server = $serverCoroutine->eval('$GLOBALS["swow_mixed_server"] ?? null');
         if (!$server instanceof Server) {
             throw new RuntimeException(sprintf('$server expect type of %s, got %s', Server::class, $server::class));
         }
 
         return $server;
+    }
+
+    public function testMixedServerEventStreamUsesChunkedTransfer(): void
+    {
+        $server = $this->getMixedServer();
+        defer(static function () use ($server): void {
+            $server->close();
+        });
+
+        $client = new Socket(Socket::TYPE_TCP);
+        $client->setReadTimeout(1000);
+        $client->connect($server->getSockAddress(), $server->getSockPort());
+        $client->send(Http::packRequest('GET', '/event-stream?subscribe=1', [
+            'Host' => "{$server->getSockAddress()}:{$server->getSockPort()}",
+            'Accept' => 'text/event-stream',
+        ]));
+
+        $response = '';
+        while (!str_contains($response, "\r\n\r\n")) {
+            $response .= $client->recvString(1024);
+        }
+
+        $this->assertStringContainsString("Transfer-Encoding: chunked\r\n", $response);
+        while (substr($response, -5) !== "0\r\n\r\n") {
+            $response .= $client->recvString(1024);
+        }
+        $this->assertStringEndsWith("0\r\n\r\n", $response);
     }
 
     public function testMixedServer(): void
@@ -171,7 +200,7 @@ final class ServerTest extends TestCase
             static function () use ($client, &$heartBeatCount): void {
                 /* @phpstan-ignore-next-line */
                 while (true) {
-                    $client->send(WebSocket::PING_FRAME);
+                    $client->sendWebSocketPingFrame();
                     $heartBeatCount++;
                     usleep(1000);
                 }
@@ -217,11 +246,11 @@ final class ServerTest extends TestCase
                         $attacker->isExecuting() && $attacker->kill();
                     });
                     $connection = $server->acceptConnection();
-                    $connection->setReadTimeout($readTimeout);
+                    $connection->getSocket()->setReadTimeout($readTimeout);
 
                     $request = $connection->recvHttpRequest($recvMessageTimeout['connection']);
 
-                    $connection->send('X');
+                    $connection->getSocket()->send('X');
                     $this->assertSame($request->getHeaderLine('Connection'), 'keep-alive');
                     $exception = null;
                     $s = microtime(true);
@@ -280,7 +309,7 @@ final class ServerTest extends TestCase
 
         $client = new Client();
         $client->connect($server->getSockAddress(), $server->getSockPort());
-        $client->send($request);
+        $client->getSocket()->send($request);
         /** @var array<string, UploadedFileInterface> $uploadedFiles */
         $uploadedFiles = $channel->pop();
         $this->assertCount(1, $uploadedFiles);
@@ -413,9 +442,9 @@ final class ServerTest extends TestCase
         $request = Psr7::stringifyRequest($request);
         $client = new Client();
         $client->connect($server->getSockAddress(), $server->getSockPort());
-        $client->send(substr($request, 0, (int) (strlen($request) / 2)));
+        $client->getSocket()->send(substr($request, 0, (int) (strlen($request) / 2)));
         usleep(1);
-        $client->send(substr($request, (int) (strlen($request) / 2)));
+        $client->getSocket()->send(substr($request, (int) (strlen($request) / 2)));
         $response = $client->recvResponseEntity();
         $this->assertSame(Status::OK, $response->statusCode);
 
@@ -465,6 +494,25 @@ final class ServerTest extends TestCase
         $client->sendWebSocketFrame(Psr7::createWebSocketTextFrame($random));
         $frame = $client->recvWebSocketFrame();
         $this->assertSame((string) $frame->getPayloadData(), $random);
+        $wr::wait($wr);
+    }
+
+    public function testWebSocketPongFastPath(): void
+    {
+        $server = new Server();
+        $server->bind('127.0.0.1')->listen();
+        $wr = new WaitReference();
+        Coroutine::run(static function () use ($server, $wr): void {
+            $connection = $server->acceptConnection();
+            $connection->upgradeToWebSocket($connection->recvHttpRequest());
+            $connection->sendWebSocketPongFrame();
+        });
+        $client = new Client();
+        $client->connect($server->getSockAddress(), $server->getSockPort());
+        $request = Psr7::createRequest(method: 'GET', uri: '/chat');
+        $client->upgradeToWebSocket($request);
+        $frame = $client->recvWebSocketFrame();
+        $this->assertSame(Opcode::PONG, $frame->getOpcode());
         $wr::wait($wr);
     }
 

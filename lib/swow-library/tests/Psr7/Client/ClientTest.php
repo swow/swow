@@ -96,13 +96,11 @@ final class ClientTest extends TestCase
         Coroutine::run(static function () use ($server, $wr): void {
             $connection = $server->acceptConnection();
             $connection->recvHttpRequest();
-            $connection->send(
-                "HTTP/1.1 200 OK\r\n" .
-                "Host: {$server->getSockAddress()}:{$server->getSockPort()}\r\n" .
-                "Connection: close\r\n" .
-                "Content-type: text/html; charset=UTF-8\r\n" .
-                "\r\n"
-            );
+            $connection->sendHttpHeaders(headers: [
+                'Host' => "{$server->getSockAddress()}:{$server->getSockPort()}",
+                'Connection' => 'close',
+                'Content-type' => 'text/html; charset=UTF-8',
+            ]);
             $connection->close();
         });
 
