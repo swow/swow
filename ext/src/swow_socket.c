@@ -1427,6 +1427,27 @@ static PHP_METHOD(Swow_Socket, sendFile)
     RETURN_LONG(written);
 }
 
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_recreate, 0, 1, IS_STATIC, 0)
+    ZEND_ARG_TYPE_INFO(0, type, IS_LONG, 0)
+ZEND_END_ARG_INFO()
+
+static PHP_METHOD(Swow_Socket, recreate)
+{
+    SWOW_SOCKET_GETTER(s_socket, socket);
+    zend_long type;
+
+    ZEND_PARSE_PARAMETERS_START(1, 1)
+        Z_PARAM_LONG(type)
+    ZEND_PARSE_PARAMETERS_END();
+
+    if (UNEXPECTED(cat_socket_recreate(socket, (cat_socket_type_t) type) == NULL)) {
+        swow_throw_exception_with_last(swow_socket_exception_ce);
+        RETURN_THROWS();
+    }
+
+    RETURN_THIS();
+}
+
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_close, 0, 0, _IS_BOOL, 0)
 ZEND_END_ARG_INFO()
 
@@ -1778,6 +1799,7 @@ static const zend_function_entry swow_socket_methods[] = {
     PHP_ME(Swow_Socket, sendTo,                    arginfo_class_Swow_Socket_sendTo,              ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Socket, sendHandle,                arginfo_class_Swow_Socket_sendHandle,          ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Socket, sendFile,                  arginfo_class_Swow_Socket_sendFile,            ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Socket, recreate,                  arginfo_class_Swow_Socket_recreate,            ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Socket, close,                     arginfo_class_Swow_Socket_close,               ZEND_ACC_PUBLIC)
     /* status */
     PHP_ME(Swow_Socket, isAvailable,               arginfo_class_Swow_Socket_isAvailable,         ZEND_ACC_PUBLIC)

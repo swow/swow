@@ -1776,6 +1776,9 @@ namespace Swow
          */
         public function sendFile(string $filename, int $offset = 0, int $length = 0, ?int $timeout = null): int { }
 
+        /** Recreate the native socket handle on this Socket object. */
+        public function recreate(int $type): static { }
+
         public function close(): bool { }
 
         /** @return bool Whether the socket has been constructed and has not been closed */
