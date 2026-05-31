@@ -64,6 +64,9 @@ class ProcessManager
     /** @var Coroutine|null SIGUSR1 监听协程 */
     protected ?Coroutine $reloadCoroutine = null;
 
+    /** @var Coroutine|null 当前 reload 执行协程 */
+    protected ?Coroutine $reloadTaskCoroutine = null;
+
     /** @var array<int, Coroutine> Worker 监控协程（Worker ID → Coroutine） */
     protected array $watcherCoroutines = [];
 
@@ -156,7 +159,7 @@ class ProcessManager
 
         /* kill 残留的信号协程（排除调用 stop 的当前协程） */
         $current = Coroutine::getCurrent();
-        foreach ([$this->termCoroutine, $this->intCoroutine, $this->reloadCoroutine] as $coroutine) {
+        foreach ([$this->termCoroutine, $this->intCoroutine, $this->reloadCoroutine, $this->reloadTaskCoroutine] as $coroutine) {
             if ($coroutine !== null && $coroutine !== $current && $coroutine->isAvailable()) {
                 $coroutine->kill();
             }
@@ -164,10 +167,11 @@ class ProcessManager
         $this->termCoroutine = null;
         $this->intCoroutine = null;
         $this->reloadCoroutine = null;
+        $this->reloadTaskCoroutine = null;
 
         /* watcherCoroutines 在 worker 退出后会自动结束，但以防万一 */
         foreach ($this->watcherCoroutines as $coroutine) {
-            if ($coroutine->isAvailable()) {
+            if ($coroutine !== $current && $coroutine->isAvailable()) {
                 $coroutine->kill();
             }
         }
@@ -194,6 +198,10 @@ class ProcessManager
 
             /* 先 fork 新 Worker（确保服务不中断） */
             $this->forkWorker($id);
+            $newProcess = $this->workers[$id] ?? null;
+            if ($newProcess !== null) {
+                $this->watchWorker($id, $newProcess);
+            }
 
             /* 再通知旧 Worker 退出 */
             if (!$oldProcess->hasExited()) {
@@ -297,7 +305,11 @@ class ProcessManager
                 } catch (\Swow\SignalException) {
                     return;
                 }
-                $this->reload();
+                if ($this->reloadTaskCoroutine === null || !$this->reloadTaskCoroutine->isAvailable()) {
+                    $this->reloadTaskCoroutine = Coroutine::run(function (): void {
+                        $this->reload();
+                    });
+                }
             }
         });
 
@@ -309,18 +321,22 @@ class ProcessManager
      * 为 Worker 启动一个监控协程
      * Worker 退出时根据策略自动重启
      */
-    protected function watchWorker(int $id): void
+    protected function watchWorker(int $id, ?ForkProcess $process = null): void
     {
-        $this->watcherCoroutines[$id] = Coroutine::run(function () use ($id): void {
-            $process = $this->workers[$id] ?? null;
-            if ($process === null) {
-                return;
-            }
+        $process ??= $this->workers[$id] ?? null;
+        if ($process === null) {
+            return;
+        }
 
+        $this->watcherCoroutines[$id] = Coroutine::run(function () use ($id, $process): void {
             try {
                 $process->wait();
             } catch (ProcessException) {
                 /* wait 失败（进程已被其他方式回收） */
+            }
+
+            if (($this->workers[$id] ?? null) !== $process) {
+                return;
             }
 
             if (!$this->running) {
@@ -332,15 +348,19 @@ class ProcessManager
             if ($this->restartCounts[$id] < $this->maxRestartCount) {
                 $this->restartCounts[$id]++;
                 $this->forkWorker($id);
-                $this->watchWorker($id);
-            } else {
-                fwrite(STDERR, sprintf(
-                    "[Manager] Worker#%d exceeded max restart count (%d), giving up\n",
-                    $id,
-                    $this->maxRestartCount
-                ));
-                unset($this->workers[$id]);
+                $newProcess = $this->workers[$id] ?? null;
+                if ($newProcess !== null) {
+                    $this->watchWorker($id, $newProcess);
+                }
+                return;
             }
+
+            fwrite(STDERR, sprintf(
+                "[Manager] Worker#%d exceeded max restart count (%d), giving up\n",
+                $id,
+                $this->maxRestartCount
+            ));
+            unset($this->workers[$id]);
         });
     }
 }
