@@ -29,6 +29,7 @@ use Swow\Psr7\Message\ServerRequestPlusInterface;
 use Swow\Psr7\Message\UpgradeType;
 use Swow\Psr7\Message\WebSocketFrameInterface;
 use Swow\Psr7\Psr7;
+use Swow\Socket;
 use Swow\SocketException;
 use Swow\WebSocket\Opcode as WebSocketOpcode;
 use TypeError;
@@ -77,7 +78,7 @@ class EventDriver
     /**
      * 设置多进程 Worker 数量
      *
-     * 启用后 startOn() 会自动 fork 多个 Worker 进程，每个 Worker 独立 bind(REUSEPORT)+listen+accept。
+     * 启用后 startOn() 会自动 fork 多个 Worker 进程，并按当前平台能力选择独立 REUSEPORT 监听或共享 fd。
      * 设为 0 或不调用此方法 = 单进程模式（默认行为不变）。
      *
      * @param int $count Worker 数量，0 = 单进程
@@ -148,18 +149,54 @@ class EventDriver
     }
 
     /**
-     * 多进程模式（Prefork）：父进程 bind+listen，子进程继承 fd 并各自 accept
+     * 多进程模式：支持 TCP REUSEPORT 负载均衡时每个 Worker 独立监听，否则保留 prefork 共享 fd。
      */
     protected function startMultiProcess(string $name, int $port): void
     {
-        // 父进程完成 bind+listen，子进程通过 fork 继承监听 fd
-        $server = $this->server->bind($name, $port)->listen();
         $eventDriver = $this;
 
+        if ($this->supportsTcpReusePortLoadBalancing()) {
+            $port = $this->resolveReusePortListenPort($name, $port);
+
+            $manager = new ProcessManager($this->workerCount);
+            $manager->start(static function (WorkerContext $ctx) use ($eventDriver, $name, $port): void {
+                $server = $eventDriver->server;
+                try {
+                    $server->rebind($name, $port, Socket::BIND_FLAG_REUSEPORT)->listen();
+                    $eventDriver->runAcceptLoop($server);
+                } finally {
+                    $server->close();
+                }
+            });
+            return;
+        }
+
+        $server = $this->server->bind($name, $port)->listen();
         $manager = new ProcessManager($this->workerCount);
         $manager->start(static function (WorkerContext $ctx) use ($eventDriver, $server): void {
             $eventDriver->runAcceptLoop($server);
         });
+    }
+
+    /**
+     * 由 Swow 扩展报告当前构建是否支持 TCP REUSEPORT 负载均衡语义。
+     */
+    protected function supportsTcpReusePortLoadBalancing(): bool
+    {
+        return Socket::supportsTcpReusePortLoadBalancing();
+    }
+
+    protected function resolveReusePortListenPort(string $name, int $port): int
+    {
+        if ($port !== 0) {
+            return $port;
+        }
+
+        $this->server->rebind($name, 0, Socket::BIND_FLAG_REUSEPORT)->listen();
+        $resolvedPort = $this->server->getSockPort();
+        $this->server->close();
+
+        return $resolvedPort;
     }
 
     /**

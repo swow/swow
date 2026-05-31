@@ -1448,6 +1448,16 @@ static PHP_METHOD(Swow_Socket, recreate)
     RETURN_THIS();
 }
 
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_supportsTcpReusePortLoadBalancing, 0, 0, _IS_BOOL, 0)
+ZEND_END_ARG_INFO()
+
+static PHP_METHOD(Swow_Socket, supportsTcpReusePortLoadBalancing)
+{
+    ZEND_PARSE_PARAMETERS_NONE();
+
+    RETURN_BOOL(cat_socket_is_tcp_reuseport_load_balancing_supported());
+}
+
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_close, 0, 0, _IS_BOOL, 0)
 ZEND_END_ARG_INFO()
 
@@ -1838,6 +1848,7 @@ static const zend_function_entry swow_socket_methods[] = {
     PHP_ME(Swow_Socket, setGlobalHandshakeTimeout, arginfo_class_Swow_Socket_setGlobalTimeout,    ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
     PHP_ME(Swow_Socket, setGlobalReadTimeout,      arginfo_class_Swow_Socket_setGlobalTimeout,    ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
     PHP_ME(Swow_Socket, setGlobalWriteTimeout,     arginfo_class_Swow_Socket_setGlobalTimeout,    ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    PHP_ME(Swow_Socket, supportsTcpReusePortLoadBalancing, arginfo_class_Swow_Socket_supportsTcpReusePortLoadBalancing, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
     PHP_FE_END
 };
 

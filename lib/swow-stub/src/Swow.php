@@ -1859,6 +1859,8 @@ namespace Swow
         public static function setGlobalReadTimeout(int $timeout): void { }
 
         public static function setGlobalWriteTimeout(int $timeout): void { }
+
+        public static function supportsTcpReusePortLoadBalancing(): bool { }
     }
 }
 
