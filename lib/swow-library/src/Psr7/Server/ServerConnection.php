@@ -29,6 +29,8 @@ use Swow\Http\Protocol\ProtocolTypeInterface;
 use Swow\Http\Protocol\ProtocolTypeTrait;
 use Swow\Http\Protocol\ReceiverTrait;
 use Swow\Http\Status as HttpStatus;
+use Swow\Psr7\Message\ConnectionType;
+use Swow\Psr7\Message\ResponsePlusInterface;
 use Swow\Psr7\Message\ServerRequest;
 use Swow\Psr7\Message\ServerRequestPlusInterface;
 use Swow\Psr7\Protocol\WebSocketTrait;
@@ -41,11 +43,13 @@ use TypeError;
 use function base64_encode;
 use function dechex;
 use function get_debug_type;
+use function implode;
 use function is_array;
 use function is_bool;
 use function is_int;
 use function sha1;
 use function sprintf;
+use function strcasecmp;
 use function strlen;
 use function Swow\Debug\isStrictStringable;
 
@@ -176,6 +180,7 @@ class ServerConnection implements ProtocolTypeInterface
 
     public function sendHttpHeaders(int $statusCode = HttpStatus::OK, string $reasonPhrase = '', array $headers = [], string $protocolVersion = '1.1'): static
     {
+        $this->applyHttpResponseKeepAlive($protocolVersion, $headers);
         $this->getSocket()->send(Http::packResponse($statusCode, $reasonPhrase, $headers, '', $protocolVersion));
 
         return $this;
@@ -209,7 +214,40 @@ class ServerConnection implements ProtocolTypeInterface
 
     public function sendHttpResponse(ResponseInterface $response): static
     {
-        $this->getSocket()->write(Psr7::convertResponseToVector($response));
+        $body = (string) $response->getBody();
+        $headers = $response instanceof ResponsePlusInterface
+            ? $response->getStandardHeaders()
+            : $response->getHeaders();
+
+        $responseKeepAlive = $response instanceof ResponsePlusInterface
+            ? $response->shouldKeepAlive()
+            : ConnectionType::shouldKeepAlive(
+                $response->getProtocolVersion(),
+                $response->getHeaderLine('Connection')
+            );
+        $effectiveKeepAlive = $this->shouldKeepAlive && $responseKeepAlive;
+
+        if (!$response->hasHeader('connection')) {
+            $connection = ConnectionType::toHeaderLine($response->getProtocolVersion(), $effectiveKeepAlive);
+            if ($connection !== null) {
+                $headers['Connection'] = [$connection];
+            }
+        }
+        if (!$response->hasHeader('content-length')) {
+            $headers['Content-Length'] = [(string) strlen($body)];
+        }
+
+        $this->shouldKeepAlive = $effectiveKeepAlive;
+        $response = Psr7::setHeaders($response, $headers);
+        $this->getSocket()->write([
+            Http::packResponse(
+                statusCode: $response->getStatusCode(),
+                reasonPhrase: $response->getReasonPhrase(),
+                headers: $response->getHeaders(),
+                protocolVersion: $response->getProtocolVersion()
+            ),
+            $body,
+        ]);
 
         return $this;
     }
@@ -218,9 +256,10 @@ class ServerConnection implements ProtocolTypeInterface
     protected function generateResponseHeaders(string $body, ?bool $close): array
     {
         $headers = [];
-        $close ??= !$this->shouldKeepAlive;
-        $headers['Connection'] = $close ? 'close' : 'keep-alive';
+        $effectiveKeepAlive = $this->shouldKeepAlive && $close !== true;
+        $headers['Connection'] = $effectiveKeepAlive ? 'keep-alive' : 'close';
         $headers['Content-Length'] = (string) strlen($body);
+        $this->shouldKeepAlive = $effectiveKeepAlive;
 
         return $headers;
     }
@@ -250,6 +289,7 @@ class ServerConnection implements ProtocolTypeInterface
                     }
                 }
                 $headers += $this->generateResponseHeaders($body, $close);
+                $this->applyHttpResponseKeepAlive('1.1', $headers);
                 $this->getSocket()->write([
                     Http::packResponse(
                         statusCode: $statusCode,
@@ -351,5 +391,33 @@ class ServerConnection implements ProtocolTypeInterface
         ));
 
         return $socket->sendFile($filename, $offset, $length, $timeout);
+    }
+
+    /** @param array<string, string|string[]|null> $headers */
+    private function applyHttpResponseKeepAlive(string $protocolVersion, array $headers): void
+    {
+        $this->shouldKeepAlive = $this->shouldKeepAlive && ConnectionType::shouldKeepAlive(
+            $protocolVersion,
+            self::getHeaderLineFromArray($headers, 'Connection')
+        );
+    }
+
+    /** @param array<string, string|string[]|null> $headers */
+    private static function getHeaderLineFromArray(array $headers, string $name): string
+    {
+        foreach ($headers as $headerName => $headerValue) {
+            if (strcasecmp($headerName, $name) !== 0) {
+                continue;
+            }
+            if ($headerValue === null) {
+                return '';
+            }
+            if (is_array($headerValue)) {
+                return implode(', ', $headerValue);
+            }
+            return (string) $headerValue;
+        }
+
+        return '';
     }
 }

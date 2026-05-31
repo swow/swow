@@ -16,6 +16,7 @@ namespace Swow\Tests\Psr7\Server;
 
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
+use Psr\Http\Message\ResponseInterface;
 use Swow\Coroutine;
 use Swow\Http\Http;
 use Swow\Http\Status;
@@ -32,6 +33,7 @@ use function is_numeric;
 use function method_exists;
 use function mkdir;
 use function sprintf;
+use function strcasecmp;
 use function str_contains;
 use function Swow\TestUtils\getRandomBytes;
 
@@ -160,6 +162,71 @@ final class ServerConnectionTest extends TestCase
         $this->assertStringContainsString("Content-Type: text/event-stream\r\n", $response);
         $this->assertStringContainsString("Transfer-Encoding: chunked\r\n", $response);
         $this->assertStringNotContainsString("Content-Length:", $response);
+
+        $wr::wait($wr);
+        $server->close();
+    }
+
+    public function testSendPlainPsrResponseUpdatesKeepAlive(): void
+    {
+        $server = new Server();
+        $server->bind('127.0.0.1')->listen();
+
+        $wr = new WaitReference();
+        Coroutine::run(function () use ($server, $wr): void {
+            $connection = $server->acceptConnection();
+            $connection->recvHttpRequest();
+
+            $headers = ['Connection' => ['close']];
+            $response = $this->createMock(ResponseInterface::class);
+            $response->method('getStatusCode')->willReturn(Status::OK);
+            $response->method('getReasonPhrase')->willReturn('OK');
+            $response->method('getProtocolVersion')->willReturn('1.1');
+            $response->method('getBody')->willReturn(Psr7::createStream('pong'));
+            $response->method('getHeaders')->willReturnCallback(static function () use (&$headers): array {
+                return $headers;
+            });
+            $response->method('hasHeader')->willReturnCallback(static function (string $name) use (&$headers): bool {
+                foreach ($headers as $headerName => $_) {
+                    if (strcasecmp($headerName, $name) === 0) {
+                        return true;
+                    }
+                }
+                return false;
+            });
+            $response->method('getHeaderLine')->willReturnCallback(static function (string $name) use (&$headers): string {
+                foreach ($headers as $headerName => $headerValue) {
+                    if (strcasecmp($headerName, $name) === 0) {
+                        return implode(', ', $headerValue);
+                    }
+                }
+                return '';
+            });
+            $response->method('withHeader')->willReturnCallback(static function (string $name, mixed $value) use (&$headers, $response): ResponseInterface {
+                $headers[$name] = is_array($value) ? $value : [(string) $value];
+                return $response;
+            });
+
+            $connection->sendHttpResponse($response);
+            $this->assertFalse($connection->shouldKeepAlive());
+            $connection->close();
+        });
+
+        $client = new Socket(Socket::TYPE_TCP);
+        $client->setReadTimeout(1000);
+        $client->connect($server->getSockAddress(), $server->getSockPort());
+        $client->send(Http::packRequest('GET', '/', [
+            'Host' => "{$server->getSockAddress()}:{$server->getSockPort()}",
+            'Connection' => 'keep-alive',
+        ]));
+
+        $response = '';
+        while (!str_contains($response, 'pong')) {
+            $response .= $client->recvString(1024);
+        }
+
+        $this->assertStringContainsString("Connection: close\r\n", $response);
+        $this->assertStringContainsString("Content-Length: 4\r\n", $response);
 
         $wr::wait($wr);
         $server->close();

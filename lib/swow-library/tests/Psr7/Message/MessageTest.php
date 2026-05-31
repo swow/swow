@@ -16,6 +16,7 @@ namespace Swow\Tests\Psr7\Message;
 
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
+use Psr\Http\Message\MessageInterface;
 use Swow\Psr7\Message\AbstractMessage;
 use Swow\Psr7\Message\MessagePlusInterface;
 use Swow\Psr7\Psr7;
@@ -50,5 +51,33 @@ final class MessageTest extends TestCase
             $this->assertSame($request->getHeaderLine('char'), 'dua');
             $this->assertSame($request->getHeaders(), ['foo' => ['bar', 'baz'], 'char' => ['dua']]);
         }
+    }
+
+    public function testKeepAliveProtocolSemantics(): void
+    {
+        $response = Psr7::createResponse(body: 'hello');
+        $this->assertStringContainsString("Connection: keep-alive\r\n", $response->toString(true));
+
+        $response->setProtocolVersion('1.0');
+        $this->assertStringContainsString("Connection: close\r\n", $response->toString(true));
+
+        $response->setProtocolVersion('2.0');
+        $this->assertStringNotContainsString("Connection:", $response->toString(true));
+
+        $response->setProtocolVersion('1.1')->setHeader('Connection', 'foo, close');
+        $this->assertFalse($response->shouldKeepAlive());
+        $this->assertFalse(Psr7::detectShouldKeepAlive($response));
+
+        $request = Psr7::createRequest('GET', '/');
+        $this->assertStringContainsString("Connection: keep-alive\r\n", $request->toString(true));
+    }
+
+    public function testDetectShouldKeepAliveForPlainPsrMessage(): void
+    {
+        $message = $this->createMock(MessageInterface::class);
+        $message->method('getProtocolVersion')->willReturn('1.1');
+        $message->method('getHeaderLine')->with('Connection')->willReturn('foo, close');
+
+        $this->assertFalse(Psr7::detectShouldKeepAlive($message));
     }
 }

@@ -15,13 +15,10 @@ declare(strict_types=1);
 namespace Swow\Psr7\Utils;
 
 use Psr\Http\Message\MessageInterface;
+use Swow\Psr7\Message\ConnectionType;
 use Swow\Psr7\Message\MessagePlusInterface;
 use Swow\Psr7\Message\ServerRequest;
 use Swow\Psr7\Message\UpgradeType;
-
-use function explode;
-use function strcasecmp;
-use function strlen;
 
 trait DetectorTrait
 {
@@ -30,23 +27,11 @@ trait DetectorTrait
         if ($message instanceof MessagePlusInterface) {
             return $message->shouldKeepAlive();
         }
-        $protocolVersion = $message->getProtocolVersion();
-        $parts = explode('.', $protocolVersion, 2);
-        $majorVersion = (int) $parts[0];
-        $minorVersion = (int) $parts[1];
-        $connection = $message->getHeaderLine('connection');
-        if ($majorVersion > 0 && $minorVersion > 0) {
-            /* HTTP/1.1+ */
-            if (strlen($connection) === strlen('close') && strcasecmp($connection, 'close') === 0) {
-                return false;
-            }
-        } else {
-            /* HTTP/1.0 or earlier */
-            if (strlen($connection) !== strlen('keep-alive') || strcasecmp($connection, 'keep-alive') !== 0) {
-                return false;
-            }
-        }
-        return true;
+
+        return ConnectionType::shouldKeepAlive(
+            $message->getProtocolVersion(),
+            $message->getHeaderLine('Connection')
+        );
     }
 
     public static function detectUpgradeType(MessageInterface $message): int

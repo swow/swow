@@ -47,7 +47,7 @@ abstract class AbstractMessage implements MessagePlusInterface
      */
     protected array $headerNames = [];
 
-    protected bool $shouldKeepAlive = true;
+    protected ?bool $shouldKeepAlive = null;
 
     protected ?StreamInterface $body = null;
 
@@ -178,7 +178,10 @@ abstract class AbstractMessage implements MessagePlusInterface
     {
         $headers = $this->getHeaders();
         if (!$this->hasHeader('connection')) {
-            $headers['Connection'] = [$this->shouldKeepAlive() ? 'keep-alive' : 'close'];
+            $connection = ConnectionType::toHeaderLine($this->getProtocolVersion(), $this->shouldKeepAlive());
+            if ($connection !== null) {
+                $headers['Connection'] = [$connection];
+            }
         }
         if (!$this->hasHeader('content-length')) {
             $headers['Content-Length'] = [(string) $this->getContentLength()];
@@ -237,7 +240,10 @@ abstract class AbstractMessage implements MessagePlusInterface
 
     public function shouldKeepAlive(): bool
     {
-        return $this->shouldKeepAlive;
+        return $this->shouldKeepAlive ?? ConnectionType::shouldKeepAlive(
+            $this->getProtocolVersion(),
+            $this->getHeaderLine('Connection')
+        );
     }
 
     public function setShouldKeepAlive(bool $shouldKeepAlive): static
