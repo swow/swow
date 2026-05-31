@@ -38,11 +38,11 @@
         "rector/rector": "^1"
     },
     "replace": {
-        "swow/swow-library": "*",
-        "swow/psr7-plus": "*",
-        "swow/swow-stub": "*",
-        "swow/swow-utils": "*",
-        "swow/php-stub-generator": "*"
+        "swow/swow-library": "self.version",
+        "swow/psr7-plus": "^1.2",
+        "swow/swow-stub": "self.version",
+        "swow/swow-utils": "self.version",
+        "swow/php-stub-generator": "self.version"
     },
     "suggest": {
         "ext-swow": "*"

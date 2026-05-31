@@ -14,10 +14,10 @@ declare(strict_types=1);
 
 return [
     'swow-extension' => [
-        'version' => '2.0.0-alpha.2',
+        'version' => '2.0.0-alpha.3',
     ],
     'swow-library' => [
-        'version' => '2.0.0-alpha.2',
-        'required_extension_version' => '^2.0',
+        'version' => '2.0.0-alpha.3',
+        'required_extension_version' => '>=2.0.0-alpha.3',
     ],
 ];
