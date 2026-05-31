@@ -2,60 +2,48 @@
 
 ## 项目结构
 
-- `ext/deps/libcat/` 是从 libcat 源库同步过来的，禁止直接修改
-- libcat 源库路径：`/Users/twosee/Toast/cat/libcat/`（与 swow 同级）
-- 同步流程：libcat 提交并 push → swow 项目下执行 `composer sync-dependencies` → 用脚本输出的信息提交
-- 同步 commit 格式：`Sync deps: libcat\n\n* libcat/libcat@<hash>`
+- `ext/deps/libcat/` 从同级 libcat 源库同步，禁止直接修改；源库路径为 `/Users/twosee/Toast/cat/libcat/`
+- libcat 同步流程：先提交 libcat，再在 swow 执行 `composer sync-dependencies`，提交信息使用 `Sync deps: libcat\n\n* libcat/libcat@<hash>`
+- Swow 是 monorepo，子包由 `tools/split.php` 发布：`ext/` → `swow/swow-extension`，`lib/swow-library/` → `swow/swow-library`，`lib/swow-library/lib/psr7-plus/` → `swow/psr7-plus`，`lib/swow-stub/` → `swow/swow-stub`
+- split 只推子仓库 `develop`，稳定版本还需要单独 tag / release；split 会执行 remote / push，未经用户确认不要运行
 
-## 协程规则
+## 版本与生成物
 
-- 所有 `Coroutine::run()` 创建的协程必须保存引用到对象属性，禁止空悬（fire-and-forget）
-- 对象 `stop()`/销毁时必须确保所有协程退出：自然退出的确保前置条件满足，阻塞中的主动 `$coroutine->kill()`
-- kill 时排除 `Coroutine::getCurrent()`（stop 可能从被管协程内部调用）
-- 使用 `waitAll()` 前必须保证所有协程最终可退出，否则死锁
+- 版本源头是 `tools/versions.php`，不要直接手改 `Swow\Extension`、`Swow\Library`、`ext/include/swow.h`、stub 中的版本常量
+- `Swow\Library::REQUIRED_EXTENSION_VERSION` 由 `tools/versions.php` 的 `swow-library.required_extension_version` 生成
+- `composer prepare-release` / `composer update-version` 会同步扩展、library、stub 等版本生成物
+- `lib/swow-stub/src/Swow.php` 是生成文件；新增扩展 API 后先更新 C 实现，再运行 `composer gen-stub`，不要只手改 stub
 
-## 多进程
+## 扩展约束
 
-- 采用 Prefork 模式：父进程 bind+listen，fork 后子进程继承 fd 直接 accept
-- 不要用 `SO_REUSEPORT` — macOS 上 libuv 不实际设置该选项
-- fork 后事件循环由 `cat_event_fork()` 自动重建，已有 handle 继续有效
+- Composer 包里 `ext-swow` 通常只能作为 `suggest`，不要默认改成 `require`
+- `lib/swow-library/src/bootstrap.php` 已内置扩展版本检测，用 `Swow\Extension::VERSION` 对比 `Swow\Library::REQUIRED_EXTENSION_VERSION`
+- PHP 代码开始依赖新的 C 扩展 API 时，必须同时发布包含该 API 的 `swow/swow-extension`，并在 `tools/versions.php` 收紧 `required_extension_version` 到首个包含该 API 的扩展版本
+- 不要用过宽约束掩盖 API 缺失；例如新 API 只存在于某个 alpha 之后时，`^2.0` 这类约束可能仍接受更早 alpha
+
+## 协程与多进程
+
+- `Coroutine::run()` 创建的长期协程必须保存引用，禁止空悬；停止对象时要保证相关协程退出，主动 kill 时排除 `Coroutine::getCurrent()`
+- 使用 `waitAll()` 前必须确认所有参与协程最终可退出，否则会死锁
+- 多进程默认采用 prefork 思路：父进程 bind/listen，fork 后子进程继承 fd accept
+- 需要平台能力分流时，以 libcat/libuv 或扩展暴露的真实能力为准，不要只靠 PHP 层 OS 名称判断
+- 不支持或无法确认能力的平台保留共享 fd 路径；支持独立监听的平台也要处理随机端口、socket 选项继承和 worker ready 这类进程间边界
+
+## API 设计边界
+
+- PSR-7 Server、Client、Connection 这类高层对象优先表达协议语义，不要机械暴露底层 Socket 的全部读写方法
+- 需要重建 native socket 时，优先保留 PHP 对象状态；同时明确哪些 native socket 选项需要记录和重放
+- 公共协议 helper 应放在可被复用的纯 PHP 包中，避免依赖 ext-swow 或具体上层框架
+- 外部框架适配层只做适配，不把通用协议语义塞进引擎专用包；Swow 自身行为也不能依赖下游框架修补
+
+## Composer 依赖
+
+- `replace` 表示「这个大包已经包含某个子包，可以当作那个子包用」。不要写 `replace: "*"` 表示永远包含所有未来版本；应写大包实际内置的子包版本范围
 
 ## Git 分支与发布
 
 - `develop` = 生产，`ci` = 开发；线性历史，禁止 merge commit
-- ci 必须始终 rebase 在 develop 之上
-- libcat（`~/Toast/cat/libcat/`）同策略
-
-### 发布流程
-
-```bash
-# 1. cs-fix + commit
-composer cs-fix && git add -A && git commit -m "Fix code style"
-
-# 2. 改 tools/versions.php（version + required_extension_version）
-
-# 3. prepare-release + commit
-composer prepare-release && git add -A && git commit -m "Release vX.Y.Z"
-
-# 4. 推送前确认 develop 是 ci 祖先
-git merge-base --is-ancestor develop ci
-
-# 5. 推 ci → ff develop
-git push origin ci
-git checkout develop && git merge ci --ff-only && git push origin develop && git checkout ci
-
-# 6. libcat 同理（如有变更）
-```
-
-### Commit 风格
-
-简洁祈使句，不用 conventional commit 前缀：
-- `Fix code style` / `Release vX.Y.Z` / `Sync deps: libcat`
-- `Add ...` / `Fix ...` / `Improve ...` / `Update ...` / `Remove ...` / `Support ...`
-- 不要写 `feat:` / `style:` / `chore:` 等前缀
-
-### CI 与代码风格
-
-- **推送前必须先运行 `composer cs-fix`**，确保本地 php-cs-fixer 版本与 CI 一致（当前 v3.95）
-- CS check 是 CI 最先完成的 job，失败会导致整个流水线标红
-- 本地运行 CS fix 后再 commit，避免额外的 "Fix code style" commit
+- ci 必须始终 rebase 在 develop 之上；libcat 同策略
+- 发布流程：`composer cs-fix` → 提交 `Fix code style` → 改 `tools/versions.php` → `composer prepare-release` → 提交 `Release vX.Y.Z` → 确认 `develop` 是 `ci` 祖先 → fast-forward 到 develop
+- Commit 信息使用简洁祈使句，不用 conventional commit 前缀；常见格式为 `Add ...`、`Fix ...`、`Improve ...`、`Update ...`、`Remove ...`、`Support ...`
+- 推送前运行 `composer cs-fix`，使用项目锁定的 php-cs-fixer 版本，避免 CI 先在代码风格阶段失败
