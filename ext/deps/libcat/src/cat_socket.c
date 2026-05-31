@@ -5416,6 +5416,21 @@ CAT_API cat_bool_t cat_socket_set_udp_broadcast(cat_socket_t *socket, cat_bool_t
     return cat_true;
 }
 
+CAT_API cat_bool_t cat_socket_is_tcp_reuseport_load_balancing_supported(void)
+{
+#if defined(__FreeBSD__) && __FreeBSD__ >= 12 && defined(SO_REUSEPORT_LB)
+    return cat_true;
+#elif (defined(__linux__) || \
+       defined(_AIX73) || \
+       (defined(__DragonFly__) && __DragonFly_version >= 300600) || \
+       (defined(UV__SOLARIS_11_4) && UV__SOLARIS_11_4)) && \
+       defined(SO_REUSEPORT)
+    return cat_true;
+#else
+    return cat_false;
+#endif
+}
+
 /* helper */
 
 CAT_API int cat_socket_get_local_free_port(void)
