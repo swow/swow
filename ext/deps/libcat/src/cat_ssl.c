@@ -1028,7 +1028,27 @@ static inline cat_bool_t _cat_ssl_check_host(X509 *cert, const char *name, size_
     if (name_length == 0) {
         return cat_false;
     }
-    if (X509_check_host(cert, (char *) name, name_length, 0, NULL) != 1) {
+    unsigned int flags = 0;
+    GENERAL_NAMES *names = X509_get_ext_d2i(cert, NID_subject_alt_name, NULL, NULL);
+    if (names != NULL) {
+        /* A CA may validate only SAN service IDs; a matching CN must not override them. */
+        for (int i = 0; i < sk_GENERAL_NAME_num(names); i++) {
+            GENERAL_NAME *san = sk_GENERAL_NAME_value(names, i);
+            cat_bool_t is_service_id = san->type == GEN_DNS || san->type == GEN_URI;
+            if (san->type == GEN_OTHERNAME) {
+                static const char srv_name_oid[] = "1.3.6.1.5.5.7.8.7";
+                char oid[sizeof(srv_name_oid)];
+                is_service_id = OBJ_obj2txt(oid, (int) sizeof(oid), san->d.otherName->type_id, 1)
+                    == (int) (sizeof(srv_name_oid) - 1) && strcmp(oid, srv_name_oid) == 0;
+            }
+            if (is_service_id) {
+                flags |= X509_CHECK_FLAG_NEVER_CHECK_SUBJECT;
+                break;
+            }
+        }
+        GENERAL_NAMES_free(names);
+    }
+    if (X509_check_host(cert, (char *) name, name_length, flags, NULL) != 1) {
         CAT_LOG_DEBUG(SSL, "X509_check_host(%p, \"%.*s\", %zu): no match", cert, (int) name_length, name, name_length);
         return cat_false;
     }
