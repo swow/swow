@@ -22,6 +22,7 @@ use Swow\Psr7\Client\MagicClient;
 use Swow\Psr7\Psr7;
 use Swow\Socket;
 use Swow\Sync\WaitReference;
+
 use function dechex;
 use function ord;
 use function pack;

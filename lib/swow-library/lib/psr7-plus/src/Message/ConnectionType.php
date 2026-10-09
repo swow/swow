@@ -17,8 +17,8 @@ namespace Swow\Psr7\Message;
 use function array_map;
 use function array_pad;
 use function explode;
-use function strcasecmp;
 use function str_contains;
+use function strcasecmp;
 use function strlen;
 use function trim;
 

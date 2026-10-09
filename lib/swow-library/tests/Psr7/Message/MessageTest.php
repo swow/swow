@@ -62,7 +62,7 @@ final class MessageTest extends TestCase
         $this->assertStringContainsString("Connection: close\r\n", $response->toString(true));
 
         $response->setProtocolVersion('2.0');
-        $this->assertStringNotContainsString("Connection:", $response->toString(true));
+        $this->assertStringNotContainsString('Connection:', $response->toString(true));
 
         $response->setProtocolVersion('1.1')->setHeader('Connection', 'foo, close');
         $this->assertFalse($response->shouldKeepAlive());

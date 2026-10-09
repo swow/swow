@@ -25,38 +25,13 @@ use Swow\Psr7\Message\ConnectionType;
 #[CoversClass(ConnectionType::class)]
 final class ConnectionTypeTest extends TestCase
 {
-    #[DataProvider('connectionTypeProvider')]
+    #[DataProvider('provideFromStringParsesConnectionTokensCases')]
     public function testFromStringParsesConnectionTokens(string $connection, int $expected): void
     {
         $this->assertSame($expected, ConnectionType::fromString($connection));
     }
 
-    #[DataProvider('shouldKeepAliveProvider')]
-    public function testShouldKeepAliveFollowsProtocolAndConnectionHeader(
-        string $protocolVersion,
-        string $connection,
-        bool $expected,
-    ): void {
-        $this->assertSame($expected, ConnectionType::shouldKeepAlive($protocolVersion, $connection));
-    }
-
-    #[DataProvider('headerLineProvider')]
-    public function testToHeaderLineFollowsProtocolVersion(
-        string $protocolVersion,
-        bool $shouldKeepAlive,
-        ?string $expected,
-    ): void {
-        $this->assertSame($expected, ConnectionType::toHeaderLine($protocolVersion, $shouldKeepAlive));
-    }
-
-    public function testCloseWinsOverKeepAlive(): void
-    {
-        $this->assertFalse(ConnectionType::shouldKeepAlive('1.1', 'keep-alive, close'));
-        $this->assertFalse(ConnectionType::shouldKeepAlive('1.0', 'keep-alive, close'));
-        $this->assertFalse(ConnectionType::shouldKeepAlive('2.0', 'keep-alive, close'));
-    }
-
-    public static function connectionTypeProvider(): iterable
+    public static function provideFromStringParsesConnectionTokensCases(): iterable
     {
         yield 'empty' => [
             '',
@@ -164,7 +139,16 @@ final class ConnectionTypeTest extends TestCase
         ];
     }
 
-    public static function shouldKeepAliveProvider(): iterable
+    #[DataProvider('provideShouldKeepAliveFollowsProtocolAndConnectionHeaderCases')]
+    public function testShouldKeepAliveFollowsProtocolAndConnectionHeader(
+        string $protocolVersion,
+        string $connection,
+        bool $expected,
+    ): void {
+        $this->assertSame($expected, ConnectionType::shouldKeepAlive($protocolVersion, $connection));
+    }
+
+    public static function provideShouldKeepAliveFollowsProtocolAndConnectionHeaderCases(): iterable
     {
         yield 'http 1.1 keeps alive by default' => [
             '1.1',
@@ -248,7 +232,16 @@ final class ConnectionTypeTest extends TestCase
         ];
     }
 
-    public static function headerLineProvider(): iterable
+    #[DataProvider('provideToHeaderLineFollowsProtocolVersionCases')]
+    public function testToHeaderLineFollowsProtocolVersion(
+        string $protocolVersion,
+        bool $shouldKeepAlive,
+        ?string $expected,
+    ): void {
+        $this->assertSame($expected, ConnectionType::toHeaderLine($protocolVersion, $shouldKeepAlive));
+    }
+
+    public static function provideToHeaderLineFollowsProtocolVersionCases(): iterable
     {
         yield 'http 1.0 keep alive' => [
             '1.0',
@@ -290,5 +283,12 @@ final class ConnectionTypeTest extends TestCase
             true,
             null,
         ];
+    }
+
+    public function testCloseWinsOverKeepAlive(): void
+    {
+        $this->assertFalse(ConnectionType::shouldKeepAlive('1.1', 'keep-alive, close'));
+        $this->assertFalse(ConnectionType::shouldKeepAlive('1.0', 'keep-alive, close'));
+        $this->assertFalse(ConnectionType::shouldKeepAlive('2.0', 'keep-alive, close'));
     }
 }

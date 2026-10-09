@@ -23,6 +23,7 @@ use Swow\Process\ProcessExitStatus;
 use Swow\Process\ProcessManager;
 use Swow\Process\WorkerContext;
 use Swow\Signal;
+use Throwable;
 
 /**
  * @internal
@@ -206,7 +207,7 @@ final class ProcessManagerTest extends TestCase
                 $process->kill(Signal::KILL);
                 try {
                     $process->wait(1000);
-                } catch (\Throwable) {
+                } catch (Throwable) {
                     /* ignore */
                 }
             }

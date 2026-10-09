@@ -29,12 +29,13 @@ use Swow\Utils\FileSystem\FileSystem;
 
 use function array_map;
 use function file_exists;
+use function is_array;
 use function is_numeric;
 use function method_exists;
 use function mkdir;
 use function sprintf;
-use function strcasecmp;
 use function str_contains;
+use function strcasecmp;
 use function Swow\TestUtils\getRandomBytes;
 
 use const CURLOPT_HEADER;
@@ -161,7 +162,7 @@ final class ServerConnectionTest extends TestCase
         $this->assertStringContainsString("Cache-Control: no-store\r\n", $response);
         $this->assertStringContainsString("Content-Type: text/event-stream\r\n", $response);
         $this->assertStringContainsString("Transfer-Encoding: chunked\r\n", $response);
-        $this->assertStringNotContainsString("Content-Length:", $response);
+        $this->assertStringNotContainsString('Content-Length:', $response);
 
         $wr::wait($wr);
         $server->close();
