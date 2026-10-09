@@ -116,6 +116,13 @@ jobs:
           cd php-src
           curl https://github.com/php/php-src/commit/a9f172466d2a7ddda192d116b4a5a2b1577a45cc.patch | patch -p1 || :
           curl https://github.com/php/php-src/commit/577b8ae4226368e66fee7a9b5c58f9e2428372fc.patch | patch -p1 || :
+          if [ '${{ matrix.php-version }}' = '8.1' ]; then
+            curl --fail --silent --show-error --location --retry 3 \
+              https://github.com/php/php-src/commit/19255f4b784cedf6dd4bb21e97def348d335dd69.patch \
+              --output openssl4.patch
+            git apply --include='ext/openssl/*' --check openssl4.patch
+            git apply --include='ext/openssl/*' openssl4.patch
+          fi
           
       - name: Build things
         run: |
