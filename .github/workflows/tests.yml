@@ -277,8 +277,9 @@ jobs:
           $(otool -L "$extension_dir/$extension.so")"
             fi
           done
+          printf '%s\n' "$linked_libraries"
           dependency_prefix() {
-            library=$(printf '%s\n' "$linked_libraries" | awk -v name="$1" '$1 ~ "/lib" name "[.][0-9]+[.]dylib$" { print $1; exit }')
+            library=$(printf '%s\n' "$linked_libraries" | awk -v name="$1" '$1 ~ "/lib" name "([.][0-9]+)+[.]dylib$" { print $1; exit }')
             if [ -z "$library" ] || [ ! -f "$library" ]; then
               echo "Cannot locate PHP's $1 library" >&2
               return 1
