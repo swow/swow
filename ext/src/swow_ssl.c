@@ -539,9 +539,14 @@ cat_bool_t swow_ssl_enable_server_sni(const zval *zconfig, swow_ssl_server_sni_d
                     for (int j = 0; j < sk_GENERAL_NAME_num(san_names); j++) {
                         GENERAL_NAME *name = sk_GENERAL_NAME_value(san_names, j);
                         if (name->type == GEN_DNS && name->d.ia5 != NULL) {
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+                            const char *name_data = (const char *) ASN1_STRING_get0_data(name->d.ia5);
+#else
+                            const char *name_data = (const char *) ASN1_STRING_data(name->d.ia5);
+#endif
                             matchers++;
                             swow_ssl_server_sni_data_add_cert(contexts,
-                                (const char *) ASN1_STRING_get0_data(name->d.ia5), ASN1_STRING_length(name->d.ia5), ctx);
+                                name_data, ASN1_STRING_length(name->d.ia5), ctx);
                         }
                     }
                     GENERAL_NAMES_free(san_names);
