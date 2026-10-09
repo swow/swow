@@ -1025,8 +1025,23 @@ CAT_API cat_bool_t cat_ssl_verify_peer(cat_ssl_t *ssl, cat_bool_t allow_self_sig
 
 static inline cat_bool_t _cat_ssl_check_host(X509 *cert, const char *name, size_t name_length)
 {
-    if (name_length == 0) {
+    if (name_length == 0 || memchr(name, '\0', name_length) != NULL) {
         return cat_false;
+    }
+    char *address_name = cat_strndup(name, name_length);
+#if CAT_ALLOC_HANDLE_ERRORS
+    if (address_name == NULL) {
+        return cat_false;
+    }
+#endif
+    ASN1_OCTET_STRING *address = a2i_IPADDRESS(address_name);
+    cat_free(address_name);
+    if (address != NULL) {
+        /* Numeric addresses require an IP SAN; DNS names and CNs are not IP identities. */
+        cat_bool_t ret = X509_check_ip(cert, ASN1_STRING_get0_data(address),
+            (size_t) ASN1_STRING_length(address), 0) == 1;
+        ASN1_OCTET_STRING_free(address);
+        return ret;
     }
     unsigned int flags = 0;
     GENERAL_NAMES *names = X509_get_ext_d2i(cert, NID_subject_alt_name, NULL, NULL);
