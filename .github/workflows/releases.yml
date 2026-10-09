@@ -288,6 +288,11 @@ jobs:
           Remove-Item ${{ env.tools_path }}\php\ext\php_swow.dll
           Remove-Item ${{ env.tools_path }}\php\php.ini
 
+      - name: Fail if release tests failed
+        if: always() && (steps.php-inst.outcome != 'success' || steps.ext-test.outcome != 'success')
+        shell: pwsh
+        run: exit 1
+
   mergedlls:
     name: Merge DLLs
     runs-on: windows-latest
