@@ -525,25 +525,6 @@ jobs:
           # install OpenCppCoverage
           Write-Host "Installing OpenCppCoverage"
           & .\OpenCppCoverage.exe /SP- /NORESTART /VERYSILENT /DIR=C:\OpenCppCoverage
-          # get latest codecov uploader download path
-          Write-Host "Fetching latest codecov uploader download path"
-          $info = Invoke-WebRequest `
-            -UseBasicParsing `
-            -Headers $headers `
-            -Uri https://api.github.com/repos/codecov/codecov-exe/releases/latest `
-              | ConvertFrom-Json
-          foreach ($x in $info.assets) {
-            if ($x.name.EndsWith('win7-x64.zip')) {
-              Write-Host "Downloading latest codecov uploader"
-              $uri = $x.browser_download_url
-              Invoke-WebRequest -Uri $uri -OutFile codecov.zip -Headers $headers -UseBasicParsing
-              break
-            }
-          }
-          # unzip it
-          Write-Host "Extracting codecov uploader"
-          New-Item C:\Codecov -ItemType Container | Out-Null
-          Expand-Archive .\codecov.zip -DestinationPath C:\Codecov
 
       - name: Run extension tests
         shell: pwsh
@@ -590,7 +571,7 @@ jobs:
         run: |
           ./.github/workflows/run-php-src-tests.ps1
 
-      - name: Upload coverage tests results
+      - name: Merge coverage tests results
         shell: pwsh
         run: |
           # merge results
@@ -606,7 +587,15 @@ jobs:
             --excluded_line_regex "\s*\{\s*" `
             --modules php_swow.dll `
             -- C:\tools\php\php.exe -dextension=swow --ri swow
-          & C:\Codecov\codecov.exe -f coverage.xml
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          fail_ci_if_error: true
+          files: coverage.xml
+          token: ${{ secrets.CODECOV_TOKEN }}
+          verbose: true
 
       - name: Fail if required tests failed
         if: always() && (steps.test-extension.outcome != 'success' || steps.test-library.outcome != 'success')
