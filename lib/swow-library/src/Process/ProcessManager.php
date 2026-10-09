@@ -31,6 +31,8 @@ use const STDERR;
  */
 class ProcessManager
 {
+    private const SIGNAL_POLL_TIMEOUT = 100;
+
     /** @var int Worker 数量 */
     protected int $workerCount;
 
@@ -54,6 +56,15 @@ class ProcessManager
 
     /** @var Closure|null Worker 启动回调 */
     protected ?Closure $onWorkerStart = null;
+
+    /** @var Closure(int, int, ProcessExitStatus): void|null Worker 退出回调 */
+    protected ?Closure $onWorkerExit = null;
+
+    /** @var bool 是否处于 Manager 主循环 */
+    protected bool $managingCoroutines = false;
+
+    /** @var int Manager 自己创建且尚未退出的协程数量 */
+    protected int $managedCoroutineCount = 0;
 
     /** @var Coroutine|null SIGTERM 监听协程 */
     protected ?Coroutine $termCoroutine = null;
@@ -105,6 +116,19 @@ class ProcessManager
     }
 
     /**
+     * 设置 Worker 退出回调。
+     *
+     * 回调运行在 Manager 进程中，用于上层获取 worker id、pid 和退出状态。
+     *
+     * @param Closure(int $workerId, int $workerPid, ProcessExitStatus $status): void $callback
+     */
+    public function onWorkerExit(Closure $callback): static
+    {
+        $this->onWorkerExit = $callback;
+        return $this;
+    }
+
+    /**
      * 启动多进程管理器
      *
      * 当前进程变为 Manager，阻塞直到所有 Worker 退出。
@@ -131,51 +155,85 @@ class ProcessManager
     public function stop(): void
     {
         $this->running = false;
+        $managedByManager = $this->managingCoroutines;
 
         foreach ($this->workers as $process) {
             if (!$process->hasExited()) {
-                $process->kill(Signal::TERM);
+                $this->killWorker($process, Signal::TERM);
             }
         }
 
-        /* 等待所有 Worker 退出 */
-        foreach ($this->workers as $id => $process) {
-            if (!$process->hasExited()) {
-                try {
-                    $process->wait($this->maxWaitTime * 1000);
-                } catch (ProcessException) {
-                    /* 超时，强制杀死 */
-                    $process->kill(Signal::KILL);
+        if (!$managedByManager) {
+            /* 等待所有 Worker 退出 */
+            foreach ($this->workers as $id => $process) {
+                if (!$process->hasExited()) {
                     try {
-                        $process->wait(1000);
+                        $process->wait($this->maxWaitTime * 1000);
                     } catch (ProcessException) {
-                        /* ignore */
+                        /* 超时，强制杀死 */
+                        $this->killWorker($process, Signal::KILL);
+                        try {
+                            $process->wait(1000);
+                        } catch (ProcessException) {
+                            /* ignore */
+                        }
                     }
                 }
             }
+
+            $this->workers = [];
         }
 
-        $this->workers = [];
-
-        /* kill 残留的信号协程（排除调用 stop 的当前协程） */
         $current = Coroutine::getCurrent();
-        foreach ([$this->termCoroutine, $this->intCoroutine, $this->reloadCoroutine, $this->reloadTaskCoroutine] as $coroutine) {
-            if ($coroutine !== null && $coroutine !== $current && $coroutine->isAvailable()) {
-                $coroutine->kill();
+        if (!$managedByManager) {
+            /* kill 残留的信号协程（排除调用 stop 的当前协程） */
+            foreach ([$this->termCoroutine, $this->intCoroutine, $this->reloadCoroutine, $this->reloadTaskCoroutine] as $coroutine) {
+                if ($coroutine !== null && $coroutine !== $current && $coroutine->isAvailable()) {
+                    $coroutine->kill();
+                }
             }
+            $this->termCoroutine = null;
+            $this->intCoroutine = null;
+            $this->reloadCoroutine = null;
+            $this->reloadTaskCoroutine = null;
         }
-        $this->termCoroutine = null;
-        $this->intCoroutine = null;
-        $this->reloadCoroutine = null;
-        $this->reloadTaskCoroutine = null;
 
-        /* watcherCoroutines 在 worker 退出后会自动结束，但以防万一 */
-        foreach ($this->watcherCoroutines as $coroutine) {
-            if ($coroutine !== $current && $coroutine->isAvailable()) {
-                $coroutine->kill();
+        if (!$managedByManager) {
+            /* watcherCoroutines 在 worker 退出后会自动结束，但以防万一 */
+            foreach ($this->watcherCoroutines as $coroutine) {
+                if ($coroutine !== $current && $coroutine->isAvailable()) {
+                    $coroutine->kill();
+                }
+            }
+            $this->watcherCoroutines = [];
+        }
+    }
+
+    protected function runManagedCoroutine(Closure $callback): Coroutine
+    {
+        $this->managedCoroutineCount++;
+
+        return Coroutine::run(function () use ($callback): void {
+            try {
+                $callback();
+            } finally {
+                $this->managedCoroutineCount--;
+            }
+        });
+    }
+
+    protected function enforceWorkerShutdownTimeout(): void
+    {
+        $deadline = microtime(true) + $this->maxWaitTime;
+        while ($this->workers !== [] && microtime(true) < $deadline) {
+            usleep(50000);
+        }
+
+        foreach ($this->workers as $process) {
+            if (!$process->hasExited()) {
+                $this->killWorker($process, Signal::KILL);
             }
         }
-        $this->watcherCoroutines = [];
     }
 
     /**
@@ -205,11 +263,11 @@ class ProcessManager
 
             /* 再通知旧 Worker 退出 */
             if (!$oldProcess->hasExited()) {
-                $oldProcess->kill(Signal::TERM);
+                $this->killWorker($oldProcess, Signal::TERM);
                 try {
                     $oldProcess->wait($this->maxWaitTime * 1000);
                 } catch (ProcessException) {
-                    $oldProcess->kill(Signal::KILL);
+                    $this->killWorker($oldProcess, Signal::KILL);
                     try {
                         $oldProcess->wait(1000);
                     } catch (ProcessException) {
@@ -223,6 +281,15 @@ class ProcessManager
         }
 
         $this->reloading = false;
+    }
+
+    private function killWorker(ForkProcess $process, int $signal): void
+    {
+        try {
+            $process->kill($signal);
+        } catch (ProcessException) {
+            /* Worker 可能在 hasExited() 与 kill() 之间已经退出。 */
+        }
     }
 
     /**
@@ -262,22 +329,25 @@ class ProcessManager
      * Manager 主循环：处理信号 + 回收 Worker
      *
      * 为每个 Worker 启动一个等待协程，Worker 退出时自动处理重启逻辑。
-     * 主协程使用 waitAll 等待所有协程退出，信号协程在 stop 时被主动 kill。
+     * 主协程只等待 ProcessManager 自己创建的协程退出，stop 后信号协程会通过短超时自行结束。
      */
     protected function handleSignals(): void
     {
+        $this->managingCoroutines = true;
+        $this->managedCoroutineCount = 0;
+
         /* 为每个 Worker 启动一个 wait 协程 */
         foreach ($this->workers as $id => $process) {
             $this->watchWorker($id);
         }
 
         /* SIGTERM → 优雅关闭 */
-        $this->termCoroutine = Coroutine::run(function (): void {
+        $this->termCoroutine = $this->runManagedCoroutine(function (): void {
             while ($this->running) {
                 try {
-                    Signal::wait(Signal::TERM);
+                    Signal::wait(Signal::TERM, self::SIGNAL_POLL_TIMEOUT);
                 } catch (\Swow\SignalException) {
-                    return;
+                    continue;
                 }
                 $this->stop();
                 return;
@@ -285,12 +355,12 @@ class ProcessManager
         });
 
         /* SIGINT → 优雅关闭 */
-        $this->intCoroutine = Coroutine::run(function (): void {
+        $this->intCoroutine = $this->runManagedCoroutine(function (): void {
             while ($this->running) {
                 try {
-                    Signal::wait(Signal::INT);
+                    Signal::wait(Signal::INT, self::SIGNAL_POLL_TIMEOUT);
                 } catch (\Swow\SignalException) {
-                    return;
+                    continue;
                 }
                 $this->stop();
                 return;
@@ -298,23 +368,42 @@ class ProcessManager
         });
 
         /* SIGUSR1 → 优雅重载 */
-        $this->reloadCoroutine = Coroutine::run(function (): void {
+        $this->reloadCoroutine = $this->runManagedCoroutine(function (): void {
             while ($this->running) {
                 try {
-                    Signal::wait(Signal::USR1);
+                    Signal::wait(Signal::USR1, self::SIGNAL_POLL_TIMEOUT);
                 } catch (\Swow\SignalException) {
-                    return;
+                    continue;
                 }
                 if ($this->reloadTaskCoroutine === null || !$this->reloadTaskCoroutine->isAvailable()) {
-                    $this->reloadTaskCoroutine = Coroutine::run(function (): void {
+                    $this->reloadTaskCoroutine = $this->runManagedCoroutine(function (): void {
                         $this->reload();
                     });
                 }
             }
         });
 
-        /* Manager 主协程等待直到所有协程退出 */
-        \Swow\Sync\waitAll();
+        $this->runManagedCoroutine(function (): void {
+            while ($this->running) {
+                usleep(50000);
+            }
+            $this->enforceWorkerShutdownTimeout();
+        });
+
+        try {
+            /* Manager 主协程只等待自己管理的协程退出 */
+            while ($this->managedCoroutineCount > 0) {
+                usleep(10000);
+            }
+        } finally {
+            $this->managingCoroutines = false;
+            $this->managedCoroutineCount = 0;
+            $this->termCoroutine = null;
+            $this->intCoroutine = null;
+            $this->reloadCoroutine = null;
+            $this->reloadTaskCoroutine = null;
+            $this->watcherCoroutines = [];
+        }
     }
 
     /**
@@ -328,15 +417,21 @@ class ProcessManager
             return;
         }
 
-        $this->watcherCoroutines[$id] = Coroutine::run(function () use ($id, $process): void {
+        $this->watcherCoroutines[$id] = $this->runManagedCoroutine(function () use ($id, $process): void {
+            $status = null;
             try {
-                $process->wait();
+                $status = $process->wait();
             } catch (ProcessException) {
                 /* wait 失败（进程已被其他方式回收） */
+                return;
             }
 
             if (($this->workers[$id] ?? null) !== $process) {
                 return;
+            }
+
+            if ($this->onWorkerExit !== null) {
+                ($this->onWorkerExit)($id, $process->getPid(), $status);
             }
 
             if (!$this->running) {
