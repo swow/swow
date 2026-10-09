@@ -78,12 +78,33 @@ typedef struct swow_closure_walk_context_s {
     bool in_namespace_brace; /* in namespace ... { */
 } swow_closure_walk_context_t;
 
+static void swow_closure_resolve_line_constants(zend_ast **ast_ptr)
+{
+    zend_ast *ast = *ast_ptr;
+    if (ast == NULL) {
+        return;
+    }
+    if (ast->kind == ZEND_AST_MAGIC_CONST && ast->attr == T_LINE) {
+        zval line;
+        // __LINE__ is resolved in the original source; AST formatting must not change its value during unserialization.
+        ZVAL_LONG(&line, ast->lineno);
+        *ast_ptr = zend_ast_create_zval(&line);
+        return;
+    }
+    zend_ast **child;
+    uint32_t children = swow_php_ast_children(ast, &child);
+    for (uint32_t i = 0; i < children; i++) {
+        swow_closure_resolve_line_constants(&child[i]);
+    }
+}
+
 static swow_php_ast_walker_op swow_closure_walker(zend_ast *ast, void *context_ptr)
 {
     swow_closure_walk_context_t *context = (swow_closure_walk_context_t *) context_ptr;
     if (ast->kind == ZEND_AST_CLOSURE || ast->kind == ZEND_AST_ARROW_FUNC) {
         if (ast->lineno == context->line_start) {
             if (context->found_function == 0) {
+                swow_closure_resolve_line_constants(&ast);
                 zend_string *code = zend_ast_export("", ast, "");
                 smart_str_setl(&context->closure_str, ZSTR_VAL(code), ZSTR_LEN(code));
                 zend_string_release(code);
