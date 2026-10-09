@@ -60,7 +60,7 @@ $s = new class extends Selector {
     {
         $channel = $this->commit($timeout);
         $id = spl_object_id($channel);
-        if ($this->getLastEvent() === static::EVENT_PUSH) {
+        if ($this->getLastEvent() === self::EVENT_PUSH) {
             $this->pushCallbacks[$id]();
         } else {
             $this->popCallbacks[$id]($this->fetch());

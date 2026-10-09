@@ -31,7 +31,7 @@
         "psr/http-message": "^1.1|^2.0"
     },
     "require-dev": {
-        "friendsofphp/php-cs-fixer": "^3",
+        "friendsofphp/php-cs-fixer": "3.95.27",
         "phan/phan": "^5.4",
         "phpstan/phpstan": "^1.10",
         "phpunit/phpunit": "^9|^10|^11",
