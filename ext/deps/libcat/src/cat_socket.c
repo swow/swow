@@ -2208,6 +2208,10 @@ static cat_bool_t cat_socket_enable_crypto_impl(cat_socket_t *socket, const cat_
 #endif
         }
         cat_ssl_context_set_verify_depth(context, ioptions.verify_depth);
+    }
+    if (ioptions.verify_peer || ioptions.verify_peer_name ||
+        (ioptions.peer_fingerprints != NULL && ioptions.peer_fingerprints[0].algorithm != NULL)
+    ) {
         cat_ssl_context_enable_verify_peer(context);
     } else {
         cat_ssl_context_disable_verify_peer(context);

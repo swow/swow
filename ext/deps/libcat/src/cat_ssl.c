@@ -640,7 +640,8 @@ static int cat_ssl_verify_callback(int preverify_ok, X509_STORE_CTX *ctx) /* {{{
     cat_ssl_t *ssl = cat_ssl_get_from_connection(connection);
     int depth, allowed_depth;
     int err;
-    int ret = preverify_ok;
+    /* Disabling chain validation must not disable peer name or fingerprint checks. */
+    int ret = ssl->verify_peer ? preverify_ok : 1;
     X509 *cert;
 
     /* determine the status for the current cert */
