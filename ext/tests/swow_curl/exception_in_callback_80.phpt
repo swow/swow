@@ -4,9 +4,9 @@ swow_curl: exception in callback for PHP 8.0
 <?php
 require __DIR__ . '/../include/skipif.php';
 skip_if(!Swow\Extension::isBuiltWith('curl'), 'extension must be built with libcurl');
+needs_php_version('<', '8.1');
 require __DIR__ . '/../include/bootstrap.php';
 skip_if(!str_contains(@file_get_contents(TEST_WEBSITE2_URL), TEST_WEBSITE2_KEYWORD), 'Unable to access ' . TEST_WEBSITE2_URL);
-needs_php_version('<', '8.1');
 ?>
 --FILE--
 <?php
