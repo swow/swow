@@ -482,6 +482,8 @@ static void swow_coroutine_main_create(void)
         swow_object_create(swow_coroutine_ce)
     );
     s_coroutine->std.handlers = &swow_coroutine_main_handlers;
+    /* OPcache preload clears the object store before RSHUTDOWN; release main coroutine resources only after Swow stops it. */
+    GC_ADD_FLAGS(&s_coroutine->std, IS_OBJ_FREE_CALLED);
 
     /* register first (sync coroutine info) */
     SWOW_COROUTINE_G(original_main) = cat_coroutine_register_main(&s_coroutine->coroutine);
@@ -524,6 +526,7 @@ static void swow_coroutine_main_close(void)
     swow_coroutine_shutdown(s_coroutine);
 
     /* release main s_coroutine */
+    GC_DEL_FLAGS(&s_coroutine->std, IS_OBJ_FREE_CALLED);
     swow_coroutine_close(s_coroutine);
     EG(objects_store).object_buckets[0] = NULL;
 }
