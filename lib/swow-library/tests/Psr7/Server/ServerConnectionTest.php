@@ -42,7 +42,6 @@ use const CURLOPT_HEADER;
 use const CURLOPT_PROXY;
 use const CURLOPT_RETURNTRANSFER;
 use const CURLOPT_URL;
-use const PHP_OS;
 use const PHP_VERSION_ID;
 
 /**
@@ -78,10 +77,6 @@ final class ServerConnectionTest extends TestCase
 
     public function testSendHttpFile(): void
     {
-        if (PHP_OS === 'Darwin') {
-            $this->markTestSkipped('curl hook is not working properly on macOS');
-        }
-
         $server = new Server();
         $server->bind('127.0.0.1')->listen();
 
