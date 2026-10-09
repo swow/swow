@@ -1038,7 +1038,12 @@ static inline cat_bool_t _cat_ssl_check_host(X509 *cert, const char *name, size_
     cat_free(address_name);
     if (address != NULL) {
         /* Numeric addresses require an IP SAN; DNS names and CNs are not IP identities. */
-        cat_bool_t ret = X509_check_ip(cert, ASN1_STRING_get0_data(address),
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+        const unsigned char *address_data = ASN1_STRING_get0_data(address);
+#else
+        const unsigned char *address_data = ASN1_STRING_data(address);
+#endif
+        cat_bool_t ret = X509_check_ip(cert, address_data,
             (size_t) ASN1_STRING_length(address), 0) == 1;
         ASN1_OCTET_STRING_free(address);
         return ret;
@@ -1046,6 +1051,10 @@ static inline cat_bool_t _cat_ssl_check_host(X509 *cert, const char *name, size_
     unsigned int flags = 0;
     GENERAL_NAMES *names = X509_get_ext_d2i(cert, NID_subject_alt_name, NULL, NULL);
     if (names != NULL) {
+#ifndef X509_CHECK_FLAG_NEVER_CHECK_SUBJECT
+        cat_bool_t has_service_id = cat_false;
+        cat_bool_t has_dns_id = cat_false;
+#endif
         /* A CA may validate only SAN service IDs; a matching CN must not override them. */
         for (int i = 0; i < sk_GENERAL_NAME_num(names); i++) {
             GENERAL_NAME *san = sk_GENERAL_NAME_value(names, i);
@@ -1057,11 +1066,25 @@ static inline cat_bool_t _cat_ssl_check_host(X509 *cert, const char *name, size_
                     == (int) (sizeof(srv_name_oid) - 1) && strcmp(oid, srv_name_oid) == 0;
             }
             if (is_service_id) {
+#ifdef X509_CHECK_FLAG_NEVER_CHECK_SUBJECT
                 flags |= X509_CHECK_FLAG_NEVER_CHECK_SUBJECT;
                 break;
+#else
+                if (san->type == GEN_DNS) {
+                    has_dns_id = cat_true;
+                    break;
+                }
+                has_service_id = cat_true;
+#endif
             }
         }
         GENERAL_NAMES_free(names);
+#ifndef X509_CHECK_FLAG_NEVER_CHECK_SUBJECT
+        /* OpenSSL 1.0.2 suppresses CN fallback only when a DNS SAN is present. */
+        if (has_service_id && !has_dns_id) {
+            return cat_false;
+        }
+#endif
     }
     if (X509_check_host(cert, (char *) name, name_length, flags, NULL) != 1) {
         CAT_LOG_DEBUG(SSL, "X509_check_host(%p, \"%.*s\", %zu): no match", cert, (int) name_length, name, name_length);
