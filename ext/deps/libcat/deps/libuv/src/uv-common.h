@@ -38,7 +38,7 @@
 #include "queue.h"
 #include "strscpy.h"
 
-#ifndef _MSC_VER
+#if !defined(_MSC_VER) && (!defined(HAVE_LIBCAT) || !defined(__cplusplus))
 # include <stdatomic.h>
 #endif
 
