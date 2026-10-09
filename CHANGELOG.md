@@ -1,3 +1,43 @@
+# v2.0.0-alpha.3
+
+> Release Date: 2026-10-10 | 发布日期：2026-10-10
+
+> "The bug only happened once, but it only needed to." —— AI
+>
+> 「这个 BUG 只出现过一次，但一次就够了。」 —— AI
+
+### Version Highlights | 版本亮点
+
+This alpha release adds socket recreation and TCP REUSEPORT load balancing for multi-process servers, refines PSR-7 keep-alive semantics, improves ProcessManager supervision, and fixes a curl hook use-after-free that could hang the event loop. Swow Library now requires Swow extension `>=2.0.0-alpha.3`.
+该 alpha 版本为多进程服务新增 socket 重建与 TCP REUSEPORT 负载均衡，完善 PSR-7 keep-alive 语义，改进 ProcessManager 进程监管，并修复 curl hook 中可能导致事件循环卡死的释放后使用问题。Swow Library 现在要求 Swow 扩展版本 `>=2.0.0-alpha.3`。
+
+## 🐣 What's New | 什么是牛的
+
++ Add `Socket::recreate()` to rebuild the native socket while keeping the PHP object | 新增 `Socket::recreate()`，在保留 PHP 对象的同时重建底层 socket (7877fa2e, bdf86d13) [@twosee]
++ Add `Socket::supportsTcpReusePortLoadBalancing()` and let multi-process `EventDriver` listen per worker with REUSEPORT when supported | 新增 `Socket::supportsTcpReusePortLoadBalancing()`，多进程 `EventDriver` 在平台支持时改为每个 Worker 独立 REUSEPORT 监听 (1ae90cc2, 17373b3f) [@twosee]
++ Add `ProcessManager::onWorkerExit()` to receive worker id, pid and exit status | 新增 `ProcessManager::onWorkerExit()`，可获取 Worker 编号、pid 与退出状态 (9887b067) [@twosee]
++ Add explicit socket access, rebind helpers and SSE/WebSocket send helpers to PSR-7 Client and Server | 为 PSR-7 Client 与 Server 增加显式 socket 访问、rebind 辅助方法以及 SSE/WebSocket 发送辅助方法 (2ebf06bc) [@twosee]
+
+## ✨ What's Enhanced | 加强了啥
+
++ Refactor PSR-7 Client, Server and ServerConnection to compose inner Socket objects | 重构 PSR-7 Client、Server 与 ServerConnection，改为组合内部 Socket 对象 (2ebf06bc) [@twosee]
++ Add a fast path for single-token Connection header parsing | 为单 token 的 Connection 头解析增加快速路径 (24a57b8e) [@twosee]
++ Improve ProcessManager reload supervision so reloads run in the background and replaced workers are watched correctly | 改进 ProcessManager 重载监管，重载改为后台执行，新 Worker 能被正确监控 (61311d3a) [@twosee]
++ Make ProcessManager shutdown wait only for its own coroutines and enforce the worker shutdown timeout | ProcessManager 关闭时只等待自身创建的协程，并强制执行 Worker 关闭超时 (9887b067) [@twosee]
++ Narrow Composer `replace` constraints to the actually bundled sub-package versions | 将 Composer `replace` 约束收紧为实际内置的子包版本 (45b3e681) [@twosee]
+
+## 🐛 What's Fixed | 什么修了
+
+* Fix curl hook use-after-free when libcurl removes a socket during `socket_action`, which could spin the event loop forever | 修复 libcurl 在 `socket_action` 期间移除 socket 时 curl hook 的释放后使用问题，该问题可能导致事件循环无限空转 (023522f9) [@twosee]
+* Fix PSR-7 keep-alive semantics to follow the protocol version and Connection header of both request and response | 修复 PSR-7 keep-alive 语义，使其遵循请求与响应的协议版本及 Connection 头 (9c6b8699) [@twosee]
+* Fix stub generation for interfaces and abstract methods | 修复接口与抽象方法的 stub 生成 (5e79110a) [@twosee]
+
+## 📦 Internal | 内部
+
++ Prefer local Swow builds in php-wrapper and make the `dontdie` script executable | php-wrapper 优先加载本地 Swow 构建，并为 `dontdie` 脚本添加可执行权限 (5e79110a, 61af2b81) [@twosee]
+
+---
+
 # v2.0.0-alpha.2
 
 > Release Date: 2026-05-28 | 发布日期：2026-05-28

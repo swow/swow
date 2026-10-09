@@ -1448,8 +1448,7 @@ static PHP_METHOD(Swow_Socket, recreate)
     RETURN_THIS();
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_supportsTcpReusePortLoadBalancing, 0, 0, _IS_BOOL, 0)
-ZEND_END_ARG_INFO()
+#define arginfo_class_Swow_Socket_supportsTcpReusePortLoadBalancing arginfo_class_Swow_Socket_close
 
 static PHP_METHOD(Swow_Socket, supportsTcpReusePortLoadBalancing)
 {

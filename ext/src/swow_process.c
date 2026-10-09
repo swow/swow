@@ -129,7 +129,8 @@ static PHP_METHOD(Swow_Process_ForkProcess, fork)
     s_process->pid = pid;
 }
 
-#define arginfo_class_Swow_Process_ForkProcess_getPid arginfo_class_Swow_Process_ProcessInterface_getPid
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Process_ForkProcess_getPid, 0, 0, IS_LONG, 0)
+ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Process_ForkProcess, getPid)
 {
@@ -142,7 +143,9 @@ static PHP_METHOD(Swow_Process_ForkProcess, getPid)
     RETURN_LONG(s_process->pid);
 }
 
-#define arginfo_class_Swow_Process_ForkProcess_wait arginfo_class_Swow_Process_ProcessInterface_wait
+ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_class_Swow_Process_ForkProcess_wait, 0, 0, Swow\\Process\\ProcessExitStatus, 0)
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, timeout, IS_LONG, 0, "-1")
+ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Process_ForkProcess, wait)
 {
@@ -184,7 +187,8 @@ static PHP_METHOD(Swow_Process_ForkProcess, wait)
     s_exit_status->status = wstatus;
 }
 
-#define arginfo_class_Swow_Process_ForkProcess_hasExited arginfo_class_Swow_Process_ProcessInterface_hasExited
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Process_ForkProcess_hasExited, 0, 0, _IS_BOOL, 0)
+ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Process_ForkProcess, hasExited)
 {
@@ -197,7 +201,9 @@ static PHP_METHOD(Swow_Process_ForkProcess, hasExited)
     RETURN_BOOL(s_process->exited);
 }
 
-#define arginfo_class_Swow_Process_ForkProcess_kill arginfo_class_Swow_Process_ProcessInterface_kill
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Process_ForkProcess_kill, 0, 0, IS_VOID, 0)
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, signal, IS_LONG, 0, "Swow\\Signal::TERM")
+ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Process_ForkProcess, kill)
 {
@@ -247,8 +253,7 @@ static zend_object *swow_process_exit_status_create_object(zend_class_entry *ce)
     return &s_status->std;
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Process_ProcessExitStatus_getExitCode, 0, 0, IS_LONG, 0)
-ZEND_END_ARG_INFO()
+#define arginfo_class_Swow_Process_ProcessExitStatus_getExitCode arginfo_class_Swow_Process_ForkProcess_getPid
 
 static PHP_METHOD(Swow_Process_ProcessExitStatus, getExitCode)
 {
@@ -264,7 +269,7 @@ static PHP_METHOD(Swow_Process_ProcessExitStatus, getExitCode)
     RETURN_LONG(-1);
 }
 
-#define arginfo_class_Swow_Process_ProcessExitStatus_getTermSignal arginfo_class_Swow_Process_ProcessExitStatus_getExitCode
+#define arginfo_class_Swow_Process_ProcessExitStatus_getTermSignal arginfo_class_Swow_Process_ForkProcess_getPid
 
 static PHP_METHOD(Swow_Process_ProcessExitStatus, getTermSignal)
 {
@@ -280,8 +285,7 @@ static PHP_METHOD(Swow_Process_ProcessExitStatus, getTermSignal)
     RETURN_LONG(0);
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Process_ProcessExitStatus_isExited, 0, 0, _IS_BOOL, 0)
-ZEND_END_ARG_INFO()
+#define arginfo_class_Swow_Process_ProcessExitStatus_isExited arginfo_class_Swow_Process_ForkProcess_hasExited
 
 static PHP_METHOD(Swow_Process_ProcessExitStatus, isExited)
 {
@@ -294,7 +298,7 @@ static PHP_METHOD(Swow_Process_ProcessExitStatus, isExited)
     RETURN_BOOL(WIFEXITED(s_status->status));
 }
 
-#define arginfo_class_Swow_Process_ProcessExitStatus_isSignaled arginfo_class_Swow_Process_ProcessExitStatus_isExited
+#define arginfo_class_Swow_Process_ProcessExitStatus_isSignaled arginfo_class_Swow_Process_ForkProcess_hasExited
 
 static PHP_METHOD(Swow_Process_ProcessExitStatus, isSignaled)
 {
@@ -307,7 +311,7 @@ static PHP_METHOD(Swow_Process_ProcessExitStatus, isSignaled)
     RETURN_BOOL(WIFSIGNALED(s_status->status));
 }
 
-#define arginfo_class_Swow_Process_ProcessExitStatus_isStopped arginfo_class_Swow_Process_ProcessExitStatus_isExited
+#define arginfo_class_Swow_Process_ProcessExitStatus_isStopped arginfo_class_Swow_Process_ForkProcess_hasExited
 
 static PHP_METHOD(Swow_Process_ProcessExitStatus, isStopped)
 {
