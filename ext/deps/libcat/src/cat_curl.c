@@ -41,7 +41,18 @@ typedef struct cat_curl_multi_context_s {
     cat_coroutine_t *waiter;
     cat_msec_t timeout_due_time;
     cat_bool_t timedout; // timed out or initializing
-    cat_queue_t socket_contexts;
+    cat_queue_t socket_contexts; // all sockets currently known by libcurl
+    /* Sockets which have pending curl_events, a socket is linked here if and only if its curl_events != 0.
+     * Why a separate queue instead of scanning socket_contexts:
+     *   curl_multi_socket_action() may call socket function with CURL_POLL_REMOVE for any socket
+     *   (including the one being processed), and then call user callbacks (e.g. read/progress functions)
+     *   which may yield the current coroutine. The event loop then runs uv_close() callbacks,
+     *   so the removed socket context is free'd and its memory may be reused by another multi.
+     *   Scanning socket_contexts holds a node pointer across socket_action() and reads node->next after it,
+     *   that is a use-after-free, and the cursor may jump into another multi's queue and loop forever.
+     *   With this queue, we always pick the front node and never touch it after socket_action(),
+     *   and a closing socket is unlinked from here too, so every node in this queue is alive. */
+    cat_queue_t ready_socket_contexts;
 } cat_curl_multi_context_t;
 
 RB_HEAD(cat_curl_multi_context_tree_s, cat_curl_multi_context_s);
@@ -65,6 +76,7 @@ RB_GENERATE_STATIC(cat_curl_multi_context_tree_s,
 
 typedef struct cat_curl_multi_socket_context_s {
     cat_queue_node_t node;
+    cat_queue_node_t ready_node; // linked to context->ready_socket_contexts, points to itself if not linked
     curl_socket_t sockfd;
     int poll_uv_events; // events to be polled
     int curl_events; // events to be processed
@@ -153,6 +165,8 @@ static void cat_curl_multi_socket_context_close_callback(uv_handle_t *handle)
 static cat_always_inline void cat_curl_multi_socket_context_close(cat_curl_multi_socket_context_t *socket_context)
 {
     cat_queue_remove(&socket_context->node);
+    // no-op if it is not linked (ready_node points to itself)
+    cat_queue_remove(&socket_context->ready_node);
     (void) uv_poll_stop(&socket_context->poll);
     uv_close((uv_handle_t*) &socket_context->poll, cat_curl_multi_socket_context_close_callback);
 }
@@ -166,6 +180,9 @@ static cat_always_inline void cat_curl_multi_socket_schedule(cat_curl_multi_cont
     CAT_CURL_MULTI_FOREACH_SOCKET_CONTEXT(&context->socket_contexts, socket_context) {
         if (socket_context->sockfd == sockfd) {
             socket_context->curl_events |= action;
+            if (socket_context->curl_events != 0 && cat_queue_empty(&socket_context->ready_node)) {
+                cat_queue_push_back(&context->ready_socket_contexts, &socket_context->ready_node);
+            }
 #ifdef CAT_DEBUG
             found = cat_true;
 #endif
@@ -255,6 +272,7 @@ static int cat_curl_multi_socket_function(
 #endif
                 }
 
+                cat_queue_init(&socket_context->ready_node);
                 socket_context->sockfd = sockfd;
                 socket_context->curl_events = 0;
                 socket_context->context = context;
@@ -397,6 +415,7 @@ static cat_curl_multi_context_t *cat_curl_multi_create_context(CURLM *multi)
     context->waiter = NULL;
     context->timedout = cat_true;
     cat_queue_init(&context->socket_contexts);
+    cat_queue_init(&context->ready_socket_contexts);
     uv_timer_init(&CAT_EVENT_G(loop), &context->timer);
     context->timer.data = context;
 
@@ -419,6 +438,29 @@ static cat_curl_multi_context_t *cat_curl_multi_create_context(CURLM *multi)
 }
 
 /* multi impl */
+
+/* Process all ready sockets, see the comment of ready_socket_contexts for why it is done this way.
+ * Never access socket_context after socket_action(), it may have been free'd. */
+static CURLMcode cat_curl_multi_process_ready_sockets(cat_curl_multi_context_t *context, int *numfds, int *running_handles)
+{
+    cat_curl_multi_socket_context_t *socket_context;
+    CURLMcode mcode = CURLM_OK;
+
+    while ((socket_context = cat_queue_front_data(&context->ready_socket_contexts, cat_curl_multi_socket_context_t, ready_node)) != NULL) {
+        curl_socket_t sockfd = socket_context->sockfd;
+        int curl_events = socket_context->curl_events;
+        cat_queue_remove(&socket_context->ready_node);
+        cat_queue_init(&socket_context->ready_node);
+        socket_context->curl_events = 0;
+        (*numfds)++;
+        mcode = cat_curl_multi_socket_action(context->multi, sockfd, curl_events, running_handles);
+        if (unlikely(mcode != CURLM_OK)) {
+            break;
+        }
+    }
+
+    return mcode;
+}
 
 static CURLMcode cat_curl_multi_wait_impl(
     CURLM *multi, int timeout_ms, int *numfds, int *running_handles
@@ -455,30 +497,19 @@ static CURLMcode cat_curl_multi_wait_impl(
 #endif
     }
 
-    mcode = CURLM_OK;
+    // process remaining curl events
+    mcode = cat_curl_multi_process_ready_sockets(context, numfds, running_handles);
+    if (*numfds > 0) {
+        // some (remaining) events is processed
+        goto end;
+    }
+    // if no events happened, restore polls
     CAT_CURL_MULTI_FOREACH_SOCKET_CONTEXT(&context->socket_contexts, socket_context) {
-        if (socket_context->curl_events != 0) {
-            // process remaining curl events
-            (*numfds)++;
-            mcode = cat_curl_multi_socket_action(
-                multi, socket_context->sockfd, socket_context->curl_events, running_handles
-            );
-            if (unlikely(mcode != CURLM_OK)) {
-                break;
-            }
-            socket_context->curl_events = 0;
-        }
-        if (*numfds == 0 && socket_context->poll_uv_events != 0) {
-            // if no events happened, restore polls
-            // otherwise, multi_wait processed events, return immediately
+        if (socket_context->poll_uv_events != 0) {
             (void) uv_poll_start(
                 &socket_context->poll, socket_context->poll_uv_events, cat_curl_multi_socket_poll_callback
             );
         }
-    }
-    if (*numfds > 0) {
-        // some (remaining) events is processed
-        goto end;
     }
 
     // wait for timeout or event
@@ -515,19 +546,7 @@ static CURLMcode cat_curl_multi_wait_impl(
     }
 
     // process events
-    CAT_CURL_MULTI_FOREACH_SOCKET_CONTEXT(&context->socket_contexts, socket_context) {
-        if (socket_context->curl_events == 0) {
-            continue;
-        }
-        (*numfds)++;
-        mcode = cat_curl_multi_socket_action(
-            multi, socket_context->sockfd, socket_context->curl_events, running_handles
-        );
-        if (unlikely(mcode != CURLM_OK)) {
-            break;
-        }
-        socket_context->curl_events = 0;
-    }
+    mcode = cat_curl_multi_process_ready_sockets(context, numfds, running_handles);
 
     if (*numfds == 0) {
         // no events happened, wait is interrupted, cancelled
