@@ -181,14 +181,6 @@ jobs:
         run: |
           script -eqc ./.github/workflows/run-php-src-tests.sh
 
-      - name: Fail if test-extension failed
-        if: steps.test-extension.outcome != 'success'
-        run: exit 1
-
-      - name: Fail if test-library failed
-        if: steps.test-library.outcome != 'success'
-        run: exit 1
-
       - name: Coverage ext tests
         shell: bash
         run: |
@@ -213,6 +205,10 @@ jobs:
           files: coverage.info,./lib/swow-library/build/coverage.xml
           token: ${{ secrets.CODECOV_TOKEN }}
           verbose: true
+
+      - name: Fail if required tests failed
+        if: always() && (steps.test-extension.outcome != 'success' || steps.test-library.outcome != 'success')
+        run: exit 1
 
   macos-tests:
     name: PHP ${{ matrix.php-version }} ${{ matrix.ts }} Test on macos-latest
@@ -273,12 +269,32 @@ jobs:
 
       - name: Detect dependencies path from php-config
         run: |
-          simplefind() {
-            find /opt/homebrew/Cellar/$1 -type d -depth 1 | head -n 1
+          linked_libraries=$(otool -L "$(php -r 'echo PHP_BINARY;')")
+          extension_dir=$(php-config --extension-dir)
+          for extension in openssl curl pdo_pgsql; do
+            if [ -f "$extension_dir/$extension.so" ]; then
+              linked_libraries="$linked_libraries
+          $(otool -L "$extension_dir/$extension.so")"
+            fi
+          done
+          dependency_prefix() {
+            library=$(printf '%s\n' "$linked_libraries" | awk -v name="$1" '$1 ~ "/lib" name "[.][0-9]+[.]dylib$" { print $1; exit }')
+            if [ -z "$library" ] || [ ! -f "$library" ]; then
+              echo "Cannot locate PHP's $1 library" >&2
+              return 1
+            fi
+            prefix=$(dirname "$(dirname "$library")")
+            if [ ! -d "$prefix/include" ] || [ ! -d "$prefix/lib/pkgconfig" ]; then
+              echo "Missing development files for $library" >&2
+              return 1
+            fi
+            printf '%s\n' "$prefix"
           }
-          echo "OPENSSL_ROOT_DIR=$(simplefind openssl@3)" >> $GITHUB_ENV
-          echo "CURL_ROOT_DIR=$(simplefind curl)" >> $GITHUB_ENV
-          echo "PGSQL_ROOT_DIR=$(simplefind libpq)" >> $GITHUB_ENV
+          # Use PHP's linked dependencies to avoid building and running with different OpenSSL versions in Cellar.
+          openssl_root=$(dependency_prefix ssl)
+          curl_root=$(dependency_prefix curl)
+          pgsql_root=$(dependency_prefix pq)
+          printf 'OPENSSL_ROOT_DIR=%s\nCURL_ROOT_DIR=%s\nPGSQL_ROOT_DIR=%s\n' "$openssl_root" "$curl_root" "$pgsql_root" >> "$GITHUB_ENV"
 
       - name: Build Swow extension
         env:
@@ -322,14 +338,6 @@ jobs:
         run: |
           script -q whatever ./.github/workflows/run-php-src-tests.sh
 
-      - name: Fail if test-extension failed
-        if: steps.test-extension.outcome != 'success'
-        run: exit 1
-
-      - name: Fail if test-library failed
-        if: steps.test-library.outcome != 'success'
-        run: exit 1
-
       - name: Coverage ext tests
         shell: bash
         run: |
@@ -354,9 +362,13 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           verbose: true
 
+      - name: Fail if required tests failed
+        if: always() && (steps.test-extension.outcome != 'success' || steps.test-library.outcome != 'success')
+        run: exit 1
+
   windows-tests:
     name: PHP ${{ matrix.php-version }} ${{ matrix.ts }} Test with VS${{ matrix.vsver }}
-    runs-on: windows-latest
+    runs-on: windows-2022
     strategy:
       fail-fast: false
       matrix:
@@ -572,14 +584,6 @@ jobs:
         run: |
           ./.github/workflows/run-php-src-tests.ps1
 
-      - name: Fail if test-extension failed
-        if: steps.test-extension.outcome != 'success'
-        run: exit 1
-
-      - name: Fail if test-library failed
-        if: steps.test-library.outcome != 'success'
-        run: exit 1
-
       - name: Upload coverage tests results
         shell: pwsh
         run: |
@@ -597,3 +601,7 @@ jobs:
             --modules php_swow.dll `
             -- C:\tools\php\php.exe -dextension=swow --ri swow
           & C:\Codecov\codecov.exe -f coverage.xml
+
+      - name: Fail if required tests failed
+        if: always() && (steps.test-extension.outcome != 'success' || steps.test-library.outcome != 'success')
+        run: exit 1

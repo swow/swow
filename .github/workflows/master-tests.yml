@@ -131,12 +131,32 @@ jobs:
 
       - name: Detect dependencies path from php-config
         run: |
-          simplefind() {
-            find /opt/homebrew/Cellar/$1 -type d -depth 1 | head -n 1
+          linked_libraries=$(otool -L "$(php -r 'echo PHP_BINARY;')")
+          extension_dir=$(php-config --extension-dir)
+          for extension in openssl curl pdo_pgsql; do
+            if [ -f "$extension_dir/$extension.so" ]; then
+              linked_libraries="$linked_libraries
+          $(otool -L "$extension_dir/$extension.so")"
+            fi
+          done
+          dependency_prefix() {
+            library=$(printf '%s\n' "$linked_libraries" | awk -v name="$1" '$1 ~ "/lib" name "[.][0-9]+[.]dylib$" { print $1; exit }')
+            if [ -z "$library" ] || [ ! -f "$library" ]; then
+              echo "Cannot locate PHP's $1 library" >&2
+              return 1
+            fi
+            prefix=$(dirname "$(dirname "$library")")
+            if [ ! -d "$prefix/include" ] || [ ! -d "$prefix/lib/pkgconfig" ]; then
+              echo "Missing development files for $library" >&2
+              return 1
+            fi
+            printf '%s\n' "$prefix"
           }
-          echo "OPENSSL_ROOT_DIR=$(simplefind openssl@3)" >> $GITHUB_ENV
-          echo "CURL_ROOT_DIR=$(simplefind curl)" >> $GITHUB_ENV
-          echo "PGSQL_ROOT_DIR=$(simplefind libpq)" >> $GITHUB_ENV
+          # Use PHP's linked dependencies to avoid building and running with different OpenSSL versions in Cellar.
+          openssl_root=$(dependency_prefix ssl)
+          curl_root=$(dependency_prefix curl)
+          pgsql_root=$(dependency_prefix pq)
+          printf 'OPENSSL_ROOT_DIR=%s\nCURL_ROOT_DIR=%s\nPGSQL_ROOT_DIR=%s\n' "$openssl_root" "$curl_root" "$pgsql_root" >> "$GITHUB_ENV"
 
       - name: Build Swow extension
         env:
@@ -186,7 +206,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: ['windows-latest']
+        os: ['windows-2022']
         ts: [ 'nts', 'ts' ]
       max-parallel: 2
     steps:
@@ -218,7 +238,7 @@ jobs:
           conf-args: --enable-swow-debug --enable-swow-ssl --enable-swow-curl --enable-swow-pdo-pgsql
           ext-name: swow
           staging-deps: '1'
-          deps: openssl,libcurl,libssh2,zlib,nghttp2,libpq
+          deps: openssl,libcurl,libssh2,zlib,nghttp2,libpq,brotli,libzstd
 
       - name: Setup composer dependencies
         run: composer update -o --ignore-platform-reqs

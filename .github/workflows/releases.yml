@@ -17,7 +17,7 @@ jobs:
   builddlls:
     # this name is used after, change it with cautious
     name: Build dll for PHP-${{ matrix.php-version }}-${{ matrix.arch }}-${{ (matrix.ts == '0') && 'N' || '' }}TS-VS${{ matrix.vsver }}
-    runs-on: windows-latest
+    runs-on: windows-2022
     strategy:
       fail-fast: false
       matrix:
@@ -46,7 +46,7 @@ jobs:
     outputs:
       ref: ${{ steps.getref.outputs.ref }}
     env:
-      deps: openssl,libcurl,libssh2,zlib,nghttp2,libpq
+      deps: openssl,libcurl,libssh2,zlib,nghttp2,libpq${{ matrix.php-version != '8.1' && ',brotli,libzstd' || '' }}
       tools_path: C:\tools\phpdev
       dllname: "php_swow-${{ github.ref_type == 'tag' && github.ref_name || github.sha }}-${{ matrix.php-version }}-${{ (matrix.ts == '0') && 'n' || '' }}ts-vs${{ matrix.vsver }}-${{ matrix.arch == 'x64' && 'x86_64' || 'arm64' }}"
     steps:

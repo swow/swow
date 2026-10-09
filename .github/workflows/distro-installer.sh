@@ -65,7 +65,8 @@ installapt()
 {
     info Installing dependencies using api
     apt-get update -yyq
-    apt-get install --no-install-recommends -yyq libsqlite3-dev libxml2-dev libcurl4-openssl-dev libssl-dev build-essential re2c bison autoconf pkgconf
+    apt-get install --no-install-recommends -yyq ca-certificates libsqlite3-dev libxml2-dev libcurl4-openssl-dev libssl-dev build-essential re2c bison autoconf pkgconf
+    update-ca-certificates
 }
 
 installpacman()
