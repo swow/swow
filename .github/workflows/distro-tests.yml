@@ -22,50 +22,51 @@ jobs:
           #  image: centos:8
           #  pkg: yum
           - name: AlmaLinux 8
-            image: almalinux:8
+            image: quay.io/almalinuxorg/8-base:8
             pkg: dnf
           - name: Rocky Linux 8
-            image: rockylinux:8
+            image: quay.io/rockylinux/rockylinux:8
             pkg: dnf
           - name: AlmaLinux 9
-            image: almalinux:9
+            image: quay.io/almalinuxorg/9-base:9
             pkg: dnf
           - name: Rocky Linux 9
-            image: rockylinux:9
+            image: quay.io/rockylinux/rockylinux:9
             pkg: dnf
           - name: AlmaLinux 10
-            image: almalinux:10
+            image: quay.io/almalinuxorg/10-base:10
             pkg: dnf
           - name: Rocky Linux 10
-            image: rockylinux/rockylinux:10
+            image: quay.io/rockylinux/rockylinux:10
             pkg: dnf
           - name: Fedora
-            image: fedora
+            image: registry.fedoraproject.org/fedora:latest
             pkg: dnf
           - name: Fedora rawhide
-            image: fedora:rawhide
+            image: registry.fedoraproject.org/fedora:rawhide
             pkg: dnf
           - name: Archlinux
-            image: archlinux
+            image: quay.io/archlinux/archlinux:latest
             pkg: pacman
           - name: Alpine
-            image: alpine
+            image: public.ecr.aws/docker/library/alpine:latest
             pkg: apk
           - name: Alpine Edge
-            image: alpine:edge
+            image: public.ecr.aws/docker/library/alpine:edge
             pkg: apk
           - name: Debian
-            image: debian:stable-slim
+            image: public.ecr.aws/docker/library/debian:stable-slim
             pkg: apt
           - name: Debian sid
-            image: debian:sid-slim
+            image: public.ecr.aws/docker/library/debian:sid-slim
             pkg: apt
           - name: openSUSE Leap
-            image: opensuse/leap
+            image: registry.opensuse.org/opensuse/leap:latest
             pkg: zypper
           - name: openSUSE Tumbleweed
-            image: opensuse/tumbleweed
+            image: registry.opensuse.org/opensuse/tumbleweed:latest
             pkg: zypper
+            privileged: true
       max-parallel: 12
       fail-fast: false
     steps:
@@ -127,7 +128,7 @@ jobs:
       - name: Build things
         run: |
           docker run --rm --name testcontainer \
-            ${{ matrix.distro.image == 'opensuse/tumbleweed' && '--privileged' || '' }} \
+            ${{ matrix.distro.privileged && '--privileged' || '' }} \
             --cap-add=SYS_NICE \
             --cap-add=IPC_LOCK \
             -v `realpath php-src`:/src/php-src:rw,rshared \
