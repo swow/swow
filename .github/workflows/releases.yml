@@ -221,14 +221,19 @@ jobs:
           Write-Host "::endgroup::"
           Write-Host "::group::Installing swow"
           Copy-Item ext\${{ matrix.arch }}\Release${{ matrix.ts == 1 && '_TS' || '' }}\php_swow.dll ${{ env.tools_path }}\php\ext\
+          php -n -r "exit(extension_loaded('Zend OPcache') ? 0 : 1);"
+          $opcacheIni = if ($lastexitcode -Eq 0) { "" } else { "zend_extension=opcache`n" }
           "extension_dir=C:\tools\phpdev\php\ext`n" + `
-            "zend_extension=opcache`n" + `
+            $opcacheIni + `
             "extension=curl`n" + `
             "extension=openssl`n" + `
             "extension=pdo_pgsql`n" + `
             "extension=swow`n" |
               Out-File -Append ${{ env.tools_path }}\php\php.ini -Encoding ASCII # for no BOM
           php --ri swow
+          if ($lastexitcode -Ne 0) { exit 1 }
+          php -r "exit(extension_loaded('Zend OPcache') ? 0 : 1);"
+          if ($lastexitcode -Ne 0) { exit 1 }
 
       # FIXME: we used `& C:\tools\phpdev\php\php.exe C:\tools\php\composer.phar test-extension` before,
       # GitHub actions have strange failures on Windows release builds,
