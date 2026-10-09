@@ -16,12 +16,12 @@ namespace Swow;
 
 final class Library
 {
-    public const VERSION = '2.0.0-alpha.3';
+    public const VERSION = '2.0.0-dev';
     public const VERSION_ID = 20000;
     public const MAJOR_VERSION = 2;
     public const MINOR_VERSION = 0;
     public const RELEASE_VERSION = 0;
-    public const EXTRA_VERSION = 'alpha.3';
+    public const EXTRA_VERSION = 'dev';
 
-    public const REQUIRED_EXTENSION_VERSION = '>=2.0.0-alpha.3';
+    public const REQUIRED_EXTENSION_VERSION = '^2.0.0-dev';
 }
