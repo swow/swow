@@ -269,12 +269,17 @@ jobs:
 
       - name: Detect dependencies path from php-config
         run: |
-          linked_libraries=$(otool -L "$(php -r 'echo PHP_BINARY;')")
+          linked_libraries=''
+          collect_linked_libraries() {
+            loader_dir=$(dirname "$1")
+            linked_libraries="$linked_libraries
+          $(otool -L "$1" | awk -v loader_dir="$loader_dir" 'NR > 1 { sub("^@loader_path", loader_dir, $1); print $1 }')"
+          }
+          collect_linked_libraries "$(php -r 'echo PHP_BINARY;')"
           extension_dir=$(php-config --extension-dir)
           for extension in openssl curl pdo_pgsql; do
             if [ -f "$extension_dir/$extension.so" ]; then
-              linked_libraries="$linked_libraries
-          $(otool -L "$extension_dir/$extension.so")"
+              collect_linked_libraries "$extension_dir/$extension.so"
             fi
           done
           printf '%s\n' "$linked_libraries"
@@ -284,7 +289,7 @@ jobs:
               echo "Cannot locate PHP's $1 library" >&2
               return 1
             fi
-            prefix=$(dirname "$(dirname "$library")")
+            prefix=$(cd "$(dirname "$(dirname "$library")")" && pwd -P)
             if [ ! -d "$prefix/include" ] || [ ! -d "$prefix/lib/pkgconfig" ]; then
               echo "Missing development files for $library" >&2
               return 1
