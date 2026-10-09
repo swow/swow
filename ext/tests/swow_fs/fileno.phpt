@@ -3,6 +3,7 @@ swow_fs: fileno()
 --SKIPIF--
 <?php
 require __DIR__ . '/../include/skipif.php';
+skip_if(!Swow\Extension::isBuiltWith('openssl'), 'extension must be built with ssl');
 ?>
 --INI--
 phar.readonly=0
@@ -37,10 +38,18 @@ Assert::throws(static function () use ($memory): void {
 }, Swow\Exception::class, expectMessage: 'Cannot represent a stream of type MEMORY as a File Descriptor');
 
 // maybe we can support this in the future ?
-$url = fopen(TEST_WEBSITE1_URL, 'r');
+$paths = testX509Paths(__DIR__ . '/filenoX509');
+[$server, $serverCoroutine] = createHttpTestServer($paths['localhost']['cert'], $paths['localhost']['key']);
+$context = stream_context_create([
+    'ssl' => ['cafile' => $paths['ca']['cert'], 'peer_name' => 'localhost'],
+]);
+$url = fopen('https://127.0.0.1:' . $server->getSockPort(), 'r', false, $context);
+Assert::same(stream_get_contents($url), 'Done');
 Assert::throws(static function () use ($url): void {
     fileno($url);
 }, Swow\Exception::class, expectMessage: 'Cannot represent a stream of type tcp_socket/ssl as a File Descriptor');
+fclose($url);
+$server->close();
 
 if (extension_loaded('phar')) {
     build_phar(__DIR__ . DIRECTORY_SEPARATOR . 'fileno_test.phar', TEST_REQUIRE);
@@ -89,6 +98,8 @@ echo 'Done' . PHP_EOL;
 ?>
 --CLEAN--
 <?php
+require __DIR__ . '/../include/bootstrap.php';
+rmtree(__DIR__ . '/filenoX509');
 @unlink(__DIR__ . '/fileno_test.txt');
 @unlink(__DIR__ . '/fileno_test.phar');
 ?>

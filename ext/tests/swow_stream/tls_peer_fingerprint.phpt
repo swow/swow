@@ -74,6 +74,9 @@ $commonServerOptions = [
     'local_pk' => __DIR__ . '/tls_peer_fingerprint_server.pem',
 ];
 
+[$server, $serverCoroutine] = createHttpTestServer(__DIR__ . '/tls_peer_fingerprint_server.pem');
+$serverUrl = 'https://127.0.0.1:' . $server->getSockPort();
+
 // php will only show warnings, so convert warnings to exceptions
 class PHPWarningException extends Exception
 {
@@ -91,8 +94,8 @@ $clientcontext = stream_context_create([
         'peer_fingerprint' => 'cafebabe',
     ],
 ]);
-Assert::throws(static function () use ($clientcontext): void {
-    file_get_contents('https://www.baidu.com', context: $clientcontext);
+Assert::throws(static function () use ($clientcontext, $serverUrl): void {
+    file_get_contents($serverUrl, context: $clientcontext);
 }, PHPWarningException::class, expectMessage: '/Unknown digest algorithm/');
 
 echo '0b. bad md5 string fingerprint value' . PHP_EOL;
@@ -102,8 +105,8 @@ $clientcontext = stream_context_create([
         'peer_fingerprint' => 'notadigestcafebabecafebabecafeba',
     ],
 ]);
-Assert::throws(static function () use ($clientcontext): void {
-    file_get_contents('https://www.baidu.com', context: $clientcontext);
+Assert::throws(static function () use ($clientcontext, $serverUrl): void {
+    file_get_contents($serverUrl, context: $clientcontext);
 }, PHPWarningException::class, expectMessage: '/peer_fingerprint match failure/');
 
 echo '0c. bad sha1 string fingerprint value' . PHP_EOL;
@@ -113,8 +116,8 @@ $clientcontext = stream_context_create([
         'peer_fingerprint' => 'notadigestcafebabecafebabecafebabecafeba',
     ],
 ]);
-Assert::throws(static function () use ($clientcontext): void {
-    file_get_contents('https://www.baidu.com', context: $clientcontext);
+Assert::throws(static function () use ($clientcontext, $serverUrl): void {
+    file_get_contents($serverUrl, context: $clientcontext);
 }, PHPWarningException::class, expectMessage: '/peer_fingerprint match failure/');
 
 echo '0d. empty array fingerprint' . PHP_EOL;
@@ -124,8 +127,8 @@ $clientcontext = stream_context_create([
         'peer_fingerprint' => [],
     ],
 ]);
-Assert::throws(static function () use ($clientcontext): void {
-    file_get_contents('https://www.baidu.com', context: $clientcontext);
+Assert::throws(static function () use ($clientcontext, $serverUrl): void {
+    file_get_contents($serverUrl, context: $clientcontext);
 }, PHPWarningException::class, expectMessage: '/Invalid peer_fingerprint array; \[algo => fingerprint\] form required/');
 
 echo '0e. bad array format' . PHP_EOL;
@@ -137,8 +140,8 @@ $clientcontext = stream_context_create([
         ],
     ],
 ]);
-Assert::throws(static function () use ($clientcontext): void {
-    file_get_contents('https://www.baidu.com', context: $clientcontext);
+Assert::throws(static function () use ($clientcontext, $serverUrl): void {
+    file_get_contents($serverUrl, context: $clientcontext);
 }, PHPWarningException::class, expectMessage: '/Invalid peer_fingerprint array; \[algo => fingerprint\] form required/');
 
 echo '0f. bad array value' . PHP_EOL;
@@ -150,8 +153,8 @@ $clientcontext = stream_context_create([
         ],
     ],
 ]);
-Assert::throws(static function () use ($clientcontext): void {
-    file_get_contents('https://www.baidu.com', context: $clientcontext);
+Assert::throws(static function () use ($clientcontext, $serverUrl): void {
+    file_get_contents($serverUrl, context: $clientcontext);
 }, PHPWarningException::class, expectMessage: '/peer_fingerprint match failure/');
 
 echo '0g. bad array value' . PHP_EOL;
@@ -163,8 +166,8 @@ $clientcontext = stream_context_create([
         ],
     ],
 ]);
-Assert::throws(static function () use ($clientcontext): void {
-    file_get_contents('https://www.baidu.com', context: $clientcontext);
+Assert::throws(static function () use ($clientcontext, $serverUrl): void {
+    file_get_contents($serverUrl, context: $clientcontext);
 }, PHPWarningException::class, expectMessage: '/peer_fingerprint match failure/');
 
 echo '0h. bad array value' . PHP_EOL;
@@ -176,8 +179,8 @@ $clientcontext = stream_context_create([
         ],
     ],
 ]);
-Assert::throws(static function () use ($clientcontext): void {
-    file_get_contents('https://www.baidu.com', context: $clientcontext);
+Assert::throws(static function () use ($clientcontext, $serverUrl): void {
+    file_get_contents($serverUrl, context: $clientcontext);
 }, PHPWarningException::class, expectMessage: '/peer_fingerprint match failure/');
 
 echo '0i. bad method' . PHP_EOL;
@@ -190,11 +193,13 @@ if (!in_array('不会真有人叫这个吧', openssl_get_md_methods(), true)) {
             ],
         ],
     ]);
-    Assert::throws(static function () use ($clientcontext): void {
-        file_get_contents('https://www.baidu.com', context: $clientcontext);
+    Assert::throws(static function () use ($clientcontext, $serverUrl): void {
+        file_get_contents($serverUrl, context: $clientcontext);
     }, PHPWarningException::class, expectMessage: '/Unknown digest algorithm/');
 }
 
+restore_error_handler();
+$server->close();
 echo 'Done' . PHP_EOL;
 ?>
 --CLEAN--

@@ -70,6 +70,52 @@ if (extension_loaded(Swow::class) && ini_get('swow.enable')) {
 
 # functions
 
+/** @return array{Swow\Socket, Swow\Coroutine} */
+function createHttpTestServer(?string $certificate = null, ?string $certificateKey = null): array
+{
+    $server = new Swow\Socket(Swow\Socket::TYPE_TCP);
+    $server->bind('127.0.0.1', 0)->listen();
+    // The test owns the listener and coroutine; stop both during cleanup and close every connection in finally.
+    $coroutine = Swow\Coroutine::run(static function () use ($server, $certificate, $certificateKey): void {
+        while ($server->isAvailable()) {
+            try {
+                $connection = $server->accept();
+            } catch (Swow\SocketException $exception) {
+                if (!$server->isAvailable()) {
+                    return;
+                }
+                throw $exception;
+            }
+            try {
+                if ($certificate !== null) {
+                    $connection->enableCrypto([
+                        'certificate' => $certificate,
+                        'certificate_key' => $certificateKey ?? $certificate,
+                        'verify_peer' => false,
+                    ]);
+                }
+                $request = '';
+                do {
+                    $chunk = $connection->recvString();
+                    if ($chunk === '') {
+                        break;
+                    }
+                    $request .= $chunk;
+                } while (!str_contains($request, "\r\n\r\n"));
+                if ($request !== '') {
+                    $connection->send("HTTP/1.1 200 OK\r\nContent-Length: 4\r\nConnection: close\r\n\r\nDone");
+                }
+            } catch (Swow\SocketException) {
+                // Rejected connections, such as fingerprint mismatches, abort the handshake; keep accepting subsequent requests.
+            } finally {
+                $connection->close();
+            }
+        }
+    });
+
+    return [$server, $coroutine];
+}
+
 function getRandomBytes(int $length = 64): string
 {
     if (function_exists('openssl_random_pseudo_bytes')) {
