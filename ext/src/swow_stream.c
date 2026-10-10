@@ -98,8 +98,10 @@ CAT_GLOBALS_DECLARE(swow_stream);
 #  define HAVE_SEC_LEVEL 1
 # endif
 
-# ifndef OPENSSL_NO_SSL3
-#  define HAVE_SSL3 1
+/* OpenSSL 4 removed SSLv3 and its configurable disable macro. Absence of
+ * OPENSSL_NO_SSL3 no longer indicates protocol support in that release. */
+# if !defined(OPENSSL_NO_SSL3) && OPENSSL_VERSION_NUMBER < 0x40000000L
+#  define SWOW_STREAM_HAVE_SSL3 1
 #  define PHP_OPENSSL_MIN_PROTO_VERSION STREAM_CRYPTO_METHOD_SSLv3
 # else
 #  define PHP_OPENSSL_MIN_PROTO_VERSION STREAM_CRYPTO_METHOD_TLSv1_0
@@ -228,7 +230,7 @@ SWOW_API php_stream *swow_stream_socket_factory(
         php_error_docref(NULL, E_WARNING, "SSLv2 unavailable in this PHP version");
         goto _error;
     } else if (strncmp(proto, "sslv3", protolen) == 0) {
-# ifdef HAVE_SSL3
+# ifdef SWOW_STREAM_HAVE_SSL3
         ops = &swow_stream_ssl_socket_ops;
         swow_sock->ssl.enable_on_connect = 1;
         swow_sock->ssl.method = STREAM_CRYPTO_METHOD_SSLv3_CLIENT;
@@ -1096,7 +1098,7 @@ static int swow_stream_set_option(php_stream *stream, int option, int value, voi
                     case TLS1_1_VERSION: protocol_str = "TLSv1.1"; break;
 # endif
                     case TLS1_VERSION: protocol_str = "TLSv1"; break;
-# ifdef HAVE_SSL3
+# ifdef SWOW_STREAM_HAVE_SSL3
                     case SSL3_VERSION: protocol_str = "SSLv3"; break;
 # endif
                     default: protocol_str = "UNKNOWN";
@@ -2707,7 +2709,7 @@ zend_result swow_stream_module_init(INIT_FUNC_ARGS)
 #endif
 #ifdef CAT_SSL
     php_stream_xport_register("ssl", swow_stream_socket_factory);
-# ifndef OPENSSL_NO_SSL3
+# ifdef SWOW_STREAM_HAVE_SSL3
     php_stream_xport_register("sslv3", swow_stream_socket_factory);
 # endif
     php_stream_xport_register("tls", swow_stream_socket_factory);
