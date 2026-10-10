@@ -568,7 +568,17 @@ jobs:
           }
           # install OpenCppCoverage
           Write-Host "Installing OpenCppCoverage"
-          & .\OpenCppCoverage.exe /SP- /NORESTART /VERYSILENT /DIR=C:\OpenCppCoverage
+          # The GUI installer can outlive a direct invocation; wait before starting coverage tests.
+          $installer = Start-Process `
+            -FilePath .\OpenCppCoverage.exe `
+            -ArgumentList '/SP- /NORESTART /VERYSILENT /DIR=C:\OpenCppCoverage' `
+            -Wait -PassThru
+          if ($installer.ExitCode -ne 0) {
+            throw "OpenCppCoverage installation failed with exit code $($installer.ExitCode)."
+          }
+          if (-not (Test-Path -LiteralPath C:\OpenCppCoverage\OpenCppCoverage.exe -PathType Leaf)) {
+            throw 'OpenCppCoverage installation did not produce the coverage executable.'
+          }
 
       - name: Run extension tests
         shell: pwsh
