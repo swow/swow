@@ -562,7 +562,7 @@ static inline int swow_stream_accept(php_stream *stream, swow_netstream_data_t *
             xparam->outputs.returncode = -1;
             xparam->outputs.error_code = cat_orig_errno(cat_get_last_error_code());
             if (xparam->want_errortext) {
-                xparam->outputs.error_text = strpprintf(0, "%s", cat_get_last_error_message());
+                xparam->outputs.error_text = ZSTR_INIT_LITERAL("Cannot enable crypto", 0);
             }
             return -1;
         }
