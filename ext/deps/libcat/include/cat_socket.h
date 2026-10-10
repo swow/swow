@@ -695,6 +695,9 @@ typedef struct cat_socket_crypto_options_s {
      * will be passed to the callback.
      */
     void *after_handshake_callback_data;
+    /* Notification data must outlive the encrypted connection, unlike handshake callbacks. */
+    cat_ssl_renegotiation_callback_t renegotiation_callback;
+    void *renegotiation_callback_data;
     /*
      * is_client: is_client is used to set the role of the SSL connection.
      */
@@ -728,6 +731,8 @@ typedef struct cat_socket_crypto_options_s {
      * no_client_ca_list: if no_client_ca_list is true, the SSL connection will not use client CA list.
      */
     unsigned int no_client_ca_list :1;
+    /* Opt in to secure renegotiation; the default continues to reject it. */
+    unsigned int allow_renegotiation :1;
     void *context; /* context for crypto things */
 } cat_socket_crypto_options_t;
 
@@ -808,6 +813,8 @@ CAT_API cat_bool_t cat_socket_is_established(const cat_socket_t *socket);
 #ifdef CAT_SSL
 CAT_API cat_bool_t cat_socket_has_crypto(const cat_socket_t *socket);
 CAT_API cat_bool_t cat_socket_is_encrypted(const cat_socket_t *socket);
+/* Includes buffered TLS records that need protocol processing, not just plaintext. */
+CAT_API cat_bool_t cat_socket_has_buffered_data(const cat_socket_t *socket);
 #endif
 CAT_API cat_bool_t cat_socket_is_server(const cat_socket_t *socket);
 CAT_API cat_bool_t cat_socket_is_server_connection(const cat_socket_t *socket);

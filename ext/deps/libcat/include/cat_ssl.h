@@ -135,6 +135,8 @@ typedef enum cat_ssl_flag_e {
     CAT_SSL_FLAG_HANDSHAKE_OK          = 1 << 3,
     CAT_SSL_FLAG_RENEGOTIATION         = 1 << 4,
     CAT_SSL_FLAG_HANDSHAKE_BUFFER_SET  = 1 << 5,
+    CAT_SSL_FLAG_ALLOW_RENEGOTIATION   = 1 << 6,
+    CAT_SSL_FLAG_RENEGOTIATION_CALLBACK = 1 << 7,
     CAT_SSL_FLAG_UNRECOVERABLE_ERROR   = 1 << 31,
 } cat_ssl_flag_t;
 
@@ -199,7 +201,12 @@ typedef struct cat_ssl_peer_fingerprint_s {
 
 #define CAT_SSL_PEER_FINGERPRINT_END {NULL, NULL}
 
-typedef struct cat_ssl_s {
+typedef struct cat_ssl_s cat_ssl_t;
+/* Called after OpenSSL returns; false ends the connection before application data
+ * is delivered. The callback must not yield or perform TLS I/O on this connection. */
+typedef cat_bool_t (*cat_ssl_renegotiation_callback_t)(cat_ssl_t *ssl, void *data);
+
+struct cat_ssl_s {
     cat_ssl_flags_t flags;
     cat_ssl_connection_t *connection;
     cat_ssl_bio_t *nbio;
@@ -214,9 +221,12 @@ typedef struct cat_ssl_s {
     X509 *failed_peer_certificate;
     /* Preserve the OpenSSL reason before formatting drains its thread-local error queue. */
     unsigned long handshake_error;
+    cat_ssl_renegotiation_callback_t renegotiation_callback;
+    void *renegotiation_callback_data;
+    unsigned int pending_renegotiations;
     /* internals */
     cat_ssl_context_t *context; // for free data before SSL_free()
-} cat_ssl_t;
+};
 
 
 typedef enum cat_ssl_ret_e {
@@ -249,6 +259,8 @@ CAT_API void cat_ssl_context_enable_verify_peer(cat_ssl_context_t *context);
 CAT_API void cat_ssl_context_disable_verify_peer(cat_ssl_context_t *context);
 CAT_API void cat_ssl_context_set_no_ticket(cat_ssl_context_t *context);
 CAT_API void cat_ssl_context_set_no_compression(cat_ssl_context_t *context);
+CAT_API void cat_ssl_configure_renegotiation(cat_ssl_t *ssl, cat_bool_t enable,
+    cat_ssl_renegotiation_callback_t callback, void *data);
 #ifdef CAT_SSL_HAVE_SECURITY_LEVEL
 CAT_API void cat_ssl_context_set_security_level(cat_ssl_context_t *context, int level);
 #endif
