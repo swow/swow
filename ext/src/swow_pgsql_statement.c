@@ -92,7 +92,6 @@ static void pgsql_stmt_finish(pdo_pgsql_stmt *S, int fin_mode)
         char errbuf[256];
         PQcancel(cancel, errbuf, 256);
         PQfreeCancel(cancel);
-        S->is_running_unbuffered = false;
     }
 
     if (S->result) {
@@ -653,7 +652,6 @@ static int pgsql_stmt_fetch(pdo_stmt_t *stmt,
             S->current_row = 0;
 
             if (!stmt->row_count) {
-                S->is_running_unbuffered = false;
                 /* libpq requires looping until getResult returns null */
                 pgsql_stmt_finish(S, 0);
             }
