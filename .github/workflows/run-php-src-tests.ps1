@@ -99,6 +99,9 @@ $nproc = Get-CIMInstance -ClassName Win32_ComputerSystem | Select-Object -Expand
 
 # remove excluded tests
 Set-Location -Path php-src
+# Respect the per-test timeout when a child retains stdout after stderr closes.
+& git apply (Join-Path $env:GITHUB_WORKSPACE ".github/workflows/php-src-runner-timeout.patch")
+if ($LASTEXITCODE -ne 0) { throw "Failed applying the upstream runner timeout fix." }
 foreach ($excludeTest in $excludeTests) {
     Remove-Item -Path $excludeTest -Recurse -Force -ErrorAction SilentlyContinue
 }
