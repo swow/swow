@@ -14,8 +14,11 @@ declare(strict_types=1);
 
 namespace Swow\Tests\Stream;
 
+use Closure;
+use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
+use Swow\Buffer;
 use Swow\Coroutine;
 use Swow\Errno;
 use Swow\SocketException;
@@ -33,6 +36,50 @@ use function Swow\TestUtils\getRandomBytes;
 #[CoversClass(EofStream::class)]
 final class EofStreamTest extends TestCase
 {
+    /** @param Closure(EofStream, EofStream): void $test */
+    private function withConnection(Closure $test, string $eof = "\r\n"): void
+    {
+        $server = new EofStream($eof);
+        $server->setMaxMessageLength(1024 * 1024)->bind('127.0.0.1')->listen();
+        $peer = new EofStream($eof);
+        $connection = null;
+        try {
+            $peer->setTimeout(1000)->connect($server->getSockAddress(), $server->getSockPort());
+            $connection = $server->accept(1000);
+            $connection->setTimeout(1000);
+            $this->assertSame($eof, $connection->getEof());
+            $this->assertSame($server->getMaxMessageLength(), $connection->getMaxMessageLength());
+            $test($connection, $peer);
+        } finally {
+            $connection?->close();
+            $peer->close();
+            $server->close();
+        }
+    }
+
+    public function testSocketTypeMustSupportStreams(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Socket type should be a kind of streams');
+        new EofStream(type: EofStream::TYPE_UDP);
+    }
+
+    public function testChunksSlicesAndCoalescedMessagesUseTheConfiguredDelimiter(): void
+    {
+        $this->withConnection(function (EofStream $connection, EofStream $peer): void {
+            $this->assertSame($peer, $peer->setEof('|END|'));
+            $this->assertSame($connection, $connection->setEof('|END|'));
+            $peer->sendMessage('prefix:data:suffix', 7, 4);
+            $chunk = new Buffer(0);
+            $chunk->append("\0b");
+            $peer->sendMessageChunks(['a', $chunk, ['-tail', 1, 4]]);
+            $peer->sendMessages(['first', ['se', 'cond'], '']);
+            foreach (['data', "a\0btail", 'first', 'second', ''] as $expected) {
+                $this->assertSame($expected, $connection->recvMessageString());
+            }
+        });
+    }
+
     public function testBase(): void
     {
         foreach (['recvMessageString', 'recvMessageStringFast'] as $recvMethod) {
