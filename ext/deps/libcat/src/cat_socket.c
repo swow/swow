@@ -2463,6 +2463,16 @@ CAT_API cat_bool_t cat_socket_enable_crypto(cat_socket_t *socket, const cat_sock
     return cat_socket_enable_crypto_ex(socket, options, cat_socket_get_handshake_timeout_fast(socket));
 }
 
+CAT_API cat_bool_t cat_socket_resume_renegotiation(cat_socket_t *socket, cat_bool_t allow)
+{
+    CAT_SOCKET_INTERNAL_GETTER(socket, socket_i, return cat_false);
+    if (socket_i->ssl == NULL) {
+        cat_update_last_error(CAT_EINVAL, "Socket is not encrypted");
+        return cat_false;
+    }
+    return cat_ssl_resume_renegotiation(socket_i->ssl, allow);
+}
+
 static inline const char *cat_socket_crypto_options_str(const cat_socket_crypto_options_t *options, char **options_str)
 {
     if (options == NULL) {
@@ -3166,6 +3176,9 @@ static ssize_t cat_socket_internal_read_decrypted(
             cat_update_last_error_with_previous("Socket SSL decrypt failed");
             goto _error;
         }
+        if (ssl->flags & CAT_SSL_FLAG_RENEGOTIATION_PAUSED) {
+            return (ssize_t) (nread + out_length);
+        }
 
         cat_bool_t had_control_data = BIO_ctrl_pending(ssl->nbio) != 0;
         if (!eof) {
@@ -3248,7 +3261,7 @@ static ssize_t cat_socket_internal_try_recv_decrypted(
         CAT_PROTECT_LAST_ERROR_START() {
             decrypted = cat_ssl_decrypt(ssl, buffer, &out_length, &eof);
             had_control_data = BIO_ctrl_pending(ssl->nbio) != 0;
-            if (decrypted && !eof) {
+            if (decrypted && !eof && !(ssl->flags & CAT_SSL_FLAG_RENEGOTIATION_PAUSED)) {
                 decrypted = cat_socket_internal_ssl_flush_control(socket_i, 0, cat_false);
                 if (unlikely(!decrypted)) {
                     cat_socket_internal_unrecoverable_io_error(socket_i);
