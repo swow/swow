@@ -33,6 +33,8 @@ use function is_string;
 use function ord;
 use function pack;
 use function preg_match;
+use function str_ends_with;
+use function str_starts_with;
 use function strlen;
 use function strpos;
 use function strtolower;
@@ -417,9 +419,10 @@ class MagicClient implements ClientPlusInterface
         if ($ipv4 !== false) {
             return "\x01" . pack('C4', ...array_map('intval', explode('.', $host)));
         }
-        $ipv6 = filter_var($host, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6);
+        $ipv6Host = str_starts_with($host, '[') && str_ends_with($host, ']') ? substr($host, 1, -1) : $host;
+        $ipv6 = filter_var($ipv6Host, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6);
         if ($ipv6 !== false) {
-            return "\x04" . (string) inet_pton($host);
+            return "\x04" . (string) inet_pton($ipv6);
         }
         if (!$remoteDns) {
             throw new InvalidArgumentException('SOCKS5 with remote_dns=false requires an IP host');

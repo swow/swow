@@ -32,7 +32,7 @@ final class MagicClientSocks5Test extends TestCase
 {
     /** @param list<array{string, string}> $exchanges */
     #[DataProvider('provideNegotiationCases')]
-    public function testNegotiation(array $exchanges, bool $credentials, ?string $error): void
+    public function testNegotiation(array $exchanges, bool $credentials, ?string $error, string $targetHost = 'example.test', string $proxyType = 'socks5h'): void
     {
         $server = new Socket(Socket::TYPE_TCP);
         $server->setTimeout(1000)->bind('127.0.0.1')->listen();
@@ -61,13 +61,13 @@ final class MagicClientSocks5Test extends TestCase
                 $connection->close();
             }
         });
-        $proxy = ['type' => 'socks5h', 'host' => $server->getSockAddress(), 'port' => $server->getSockPort(), 'remote_dns' => false];
+        $proxy = ['type' => $proxyType, 'host' => $server->getSockAddress(), 'port' => $server->getSockPort(), 'remote_dns' => false];
         if ($credentials) {
             $proxy['username'] = 'user';
             $proxy['password'] = 'secret';
         }
         $client = (new MagicClient())->setConnectTimeout(1000)->setRecvMessageTimeout(1000)->setProxy($proxy);
-        $request = Psr7::createRequest('GET', 'http://example.test:8080/target');
+        $request = Psr7::createRequest('GET', "http://{$targetHost}:8080/target");
         try {
             try {
                 $response = $client->sendRequest($request);
@@ -88,7 +88,7 @@ final class MagicClientSocks5Test extends TestCase
         }
     }
 
-    /** @return iterable<string, array{list<array{string, string}>, bool, ?string}> */
+    /** @return iterable<string, array{list<array{string, string}>, bool, ?string, 3?: string, 4?: string}> */
     public static function provideNegotiationCases(): iterable
     {
         $greeting = "\x05\x02\x00\x02";
@@ -102,6 +102,10 @@ final class MagicClientSocks5Test extends TestCase
             'IPv6 reply' => "\x04" . inet_pton('::1'),
         ] as $name => $address) {
             yield $name => [[...$prefix, [$connect, "\x05\x00\x00" . $address . pack('n', 8081)]], true, null];
+        }
+        foreach (['127.0.0.1' => "\x01" . inet_pton('127.0.0.1'), '[::1]' => "\x04" . inet_pton('::1')] as $target => $address) {
+            $ipConnect = "\x05\x01\x00" . $address . pack('n', 8080);
+            yield 'IP target ' . $target => [[...$prefix, [$ipConnect, "\x05\x00\x00\x01" . inet_pton('127.0.0.1') . pack('n', 8081)]], true, null, $target, 'socks5'];
         }
         yield 'wrong method version' => [[[$greeting, "\x04\x00"]], true, 'invalid version in method reply'];
         yield 'no acceptable method' => [[[$greeting, "\x05\xff"]], true, 'no acceptable auth method'];
