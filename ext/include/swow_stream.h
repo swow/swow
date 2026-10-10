@@ -69,6 +69,10 @@ typedef struct swow_netstream_ssl_s {
     struct timeval connect_timeout;
     php_stream_xport_crypt_method_t method;
     char *url_name;
+    zend_long reneg_limit;
+    zend_long reneg_window;
+    cat_msec_t reneg_prev_handshake;
+    double reneg_tokens;
 } swow_netstream_ssl_t;
 #endif
 
