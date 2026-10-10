@@ -52,6 +52,19 @@ final class RequestTest extends TestCase
         $this->assertSame('PUT', $request->getMethod());
     }
 
+    public function testImmutableUriChangeWorksBeforeTheDefaultUriIsRead(): void
+    {
+        $request = new Request();
+        $uri = Psr7::createUriFromString('https://example.test/new');
+        $changed = $request->withUri($uri);
+        $this->assertNotSame($request, $changed);
+        $this->assertSame($uri, $changed->getUri());
+        $this->assertSame('example.test', $changed->getHeaderLine('Host'));
+        $this->assertSame('/new', $changed->getRequestTarget());
+        $this->assertSame('/', (string) $request->getUri());
+        $this->assertFalse($request->hasHeader('Host'));
+    }
+
     #[DataProvider('provideRequestTargetUsesThePathAndQueryCases')]
     public function testRequestTargetUsesThePathAndQuery(string $uri, string $target): void
     {
