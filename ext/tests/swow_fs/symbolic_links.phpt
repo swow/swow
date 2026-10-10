@@ -26,7 +26,8 @@ try {
     Assert::true(symlink($target, $link));
     Assert::true(is_link($link));
     Assert::same(filetype($link), 'link');
-    Assert::same(readlink($link), $target);
+    // Windows may return a short path for the same target; compare the resolved file identity.
+    Assert::same(realpath(readlink($link)), realpath($target));
     Assert::same(realpath($link), realpath($target));
     Assert::same(stat($link)['size'], 8);
     Assert::same(file_get_contents($link), 'original');
