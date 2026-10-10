@@ -180,10 +180,18 @@ jobs:
 
       - name: Run PHPT from php-src
         id: test-php-src
-        timeout-minutes: 5
+        timeout-minutes: 20
         continue-on-error: true
         run: |
           script -eqc ./.github/workflows/run-php-src-tests.sh
+
+      - name: Upload upstream compatibility reports
+        if: always() && steps.test-php-src.outcome != 'skipped'
+        uses: actions/upload-artifact@v4
+        with:
+          name: php-src-${{ runner.os }}-${{ matrix.php-version }}-${{ matrix.ts || 'nts' }}
+          path: ${{ runner.temp }}/php-src-reports
+          retention-days: 7
 
       - name: Coverage ext tests
         shell: bash
@@ -343,10 +351,18 @@ jobs:
 
       - name: Run PHPT from php-src
         id: test-php-src
-        timeout-minutes: 5
+        timeout-minutes: 20
         continue-on-error: true
         run: |
           script -q whatever ./.github/workflows/run-php-src-tests.sh
+
+      - name: Upload upstream compatibility reports
+        if: always() && steps.test-php-src.outcome != 'skipped'
+        uses: actions/upload-artifact@v4
+        with:
+          name: php-src-${{ runner.os }}-${{ matrix.php-version }}-${{ matrix.ts || 'nts' }}
+          path: ${{ runner.temp }}/php-src-reports
+          retention-days: 7
 
       - name: Coverage ext tests
         shell: bash
@@ -570,10 +586,18 @@ jobs:
       - name: Run PHPT from php-src
         shell: pwsh
         id: test-php-src
-        timeout-minutes: 5
+        timeout-minutes: 20
         continue-on-error: true
         run: |
           ./.github/workflows/run-php-src-tests.ps1
+
+      - name: Upload upstream compatibility reports
+        if: always() && steps.test-php-src.outcome != 'skipped'
+        uses: actions/upload-artifact@v4
+        with:
+          name: php-src-${{ runner.os }}-${{ matrix.php-version }}-${{ matrix.ts || 'nts' }}
+          path: ${{ runner.temp }}/php-src-reports
+          retention-days: 7
 
       - name: Merge coverage tests results
         shell: pwsh

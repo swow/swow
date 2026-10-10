@@ -106,14 +106,40 @@ foreach ($excludeTest in $excludeTests) {
 # no pty for Windows
 ${env:SKIP_IO_CAPTURE_TESTS} = "true"
 
-# test it
-& php "run-tests.php" `
-    "-q" `
+# Preserve the Swow result before rerunning failures without the extension.
+$reportDir = Join-Path $env:RUNNER_TEMP "php-src-reports"
+New-Item -ItemType Directory -Force -Path $reportDir | Out-Null
+$env:REPORT_EXIT_STATUS = "1"
+$env:TEST_PHP_JUNIT = Join-Path $reportDir "swow.xml"
+$options = @(
+    "-q",
+    "-d", "opcache.enable_cli=on",
+    "--show-diff",
+    "--show-slow", "3000",
+    "--set-timeout", "30",
+    "--color",
+    "-j$nproc"
+)
+
+# PHPT failures are collected here; the original status is returned after diagnosis.
+$PSNativeCommandUseErrorActionPreference = $false
+& php "run-tests.php" @options `
     "-d" "extension=swow" `
-    "-d" "opcache.enable_cli=on" `
-    "--show-diff" `
-    "--show-slow" "3000" `
-    "--set-timeout" "30" `
-    "--color" `
-    "-j$nproc" `
-    ${includeTests}
+    "-w" (Join-Path $reportDir "swow-failures.txt") `
+    @includeTests 2>&1 | Tee-Object -FilePath (Join-Path $reportDir "swow.log")
+$status = $LASTEXITCODE
+Set-Content -Path (Join-Path $reportDir "swow-exit-status.txt") -Value $status
+
+if ((Get-Item (Join-Path $reportDir "swow-failures.txt")).Length -gt 0) {
+    # A passing native baseline distinguishes hook regressions from runner issues.
+    & php "-r" 'exit(extension_loaded("swow") ? 1 : 0);'
+    if ($LASTEXITCODE -ne 0) { throw "The native baseline must not load Swow." }
+    $env:TEST_PHP_JUNIT = Join-Path $reportDir "native.xml"
+    & php "run-tests.php" @options `
+        "-r" (Join-Path $reportDir "swow-failures.txt") `
+        "-w" (Join-Path $reportDir "native-failures.txt") `
+        2>&1 | Tee-Object -FilePath (Join-Path $reportDir "native.log")
+    Set-Content -Path (Join-Path $reportDir "native-exit-status.txt") -Value $LASTEXITCODE
+}
+
+exit $status
