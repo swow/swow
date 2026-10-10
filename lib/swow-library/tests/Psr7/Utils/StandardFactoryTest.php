@@ -27,6 +27,7 @@ use Swow\Buffer;
 use Swow\Http\Message\ResponseEntity;
 use Swow\Http\Message\ServerRequestEntity;
 use Swow\Http\Message\UploadedFileEntity;
+use Swow\Psr7\Message\ServerRequest;
 use Swow\Psr7\Psr7;
 
 use function is_resource;
@@ -35,6 +36,7 @@ use const UPLOAD_ERR_OK;
 
 /** @internal */
 #[CoversClass(Psr7::class)]
+#[CoversClass(ServerRequest::class)]
 final class StandardFactoryTest extends TestCase
 {
     public function testExplicitFactoriesCreateStandardMessagesAndStreams(): void
@@ -179,6 +181,20 @@ final class StandardFactoryTest extends TestCase
         }
         foreach ($defaults as $kind => $default) {
             $this->assertSame($default, Psr7::{'getDefault' . $kind . 'Factory'}());
+        }
+    }
+
+    public function testServerEntityProtocolVersionSurvivesBothFactoryPaths(): void
+    {
+        $entity = new ServerRequestEntity();
+        $entity->method = 'GET';
+        $entity->uri = '/old-protocol';
+        $entity->protocolVersion = '1.0';
+        foreach ([Psr7::getBuiltinPsr17Factory(), new NyholmFactory()] as $factory) {
+            $request = Psr7::createServerRequestFromEntity($entity, $factory);
+            $this->assertSame('1.0', $request->getProtocolVersion());
+            $this->assertSame('GET', $request->getMethod());
+            $this->assertSame('/old-protocol', $request->getRequestTarget());
         }
     }
 }
