@@ -112,7 +112,7 @@ class LengthStream extends Socket
         if ($needSize > $bufferSize) {
             $buffer->realloc($needSize);
         }
-        $nWrite = $buffer->write($offset, $internalBuffer, $formatSize);
+        $nWrite = $buffer->write($offset, $internalBuffer, $formatSize, min($length, $internalLength - $formatSize));
         $internalBuffer->truncateFrom($formatSize + $nWrite);
         if ($nWrite < $length) {
             $nWrite += $this->read($buffer, $offset + $nWrite, $length - $nWrite, $timeout);
