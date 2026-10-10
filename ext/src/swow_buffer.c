@@ -888,7 +888,7 @@ static PHP_METHOD(Swow_Buffer, __serialize)
 
     zval z_buffer;
     array_init(&z_buffer);
-    add_assoc_str(&z_buffer, "value", string);
+    add_assoc_str(&z_buffer, "value", zend_string_copy(string));
 
     RETURN_ARR(Z_ARR(z_buffer));
 }
