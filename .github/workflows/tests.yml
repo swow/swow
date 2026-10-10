@@ -426,10 +426,28 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Detect compatible preinstalled Visual Studio toolset
+        id: preinstalled-toolset
+        if: matrix.vsver == '16'
+        shell: pwsh
+        run: |
+          # VS 2022 can host the v142 compiler used by PHP's VS16 binaries.
+          # Keep the original VS16 installation path when that compiler is absent.
+          $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vswhere.exe'
+          $compiler = & $vswhere -latest -products '*' `
+            -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 `
+            -find 'VC\Tools\MSVC\14.29.*\bin\Hostx64\x64\cl.exe' |
+            Select-Object -First 1
+          if ($compiler) {
+            Write-Host "Using PHP VS16-compatible compiler: $compiler"
+            'SWOW_WINDOWS_TOOLSET=14.29' | Out-File $env:GITHUB_ENV -Append
+            'available=true' | Out-File $env:GITHUB_OUTPUT -Append
+          }
+
       - name: Restore cache for Visual Studio build tools
         uses: actions/cache/restore@v4
         id: restore-cache
-        if: matrix.vsver == '16'
+        if: matrix.vsver == '16' && steps.preinstalled-toolset.outputs.available != 'true'
         with:
           key: ${{ runner.os }}-vs${{ matrix.vsver }}-buildtools-alwaysmiss
           path: C:\VSLayout
@@ -438,7 +456,7 @@ jobs:
       - name: Setup Visual Studio build tools
         shell: pwsh
         id: setup-vs-buildtools
-        if: matrix.vsver == '16'
+        if: matrix.vsver == '16' && steps.preinstalled-toolset.outputs.available != 'true'
         run: |
           Invoke-WebRequest -Uri https://aka.ms/vs/16/release/vs_buildtools.exe -OutFile vs_buildtools.exe
 
@@ -486,7 +504,7 @@ jobs:
       - name: Save cache for Visual Studio build tools
         uses: actions/cache/save@v4
         if: |
-          matrix.vsver == '16' &&
+          matrix.vsver == '16' && steps.preinstalled-toolset.outputs.available != 'true' &&
           steps.restore-cache.outputs.cache-matched-key != steps.setup-vs-buildtools.outputs.cache-key
         with:
           path: C:\VSLayout
