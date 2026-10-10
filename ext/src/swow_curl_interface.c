@@ -590,7 +590,7 @@ static size_t curl_write(char *data, size_t size, size_t nmemb, void *ctx)
             if (!Z_ISUNDEF(retval)) {
                 _swow_curl_verify_handlers(ch, /* reporterror */ true);
                 /* TODO Check callback returns an int or something castable to int */
-                length = zval_get_long(&retval);
+                length = swow_curl_get_long(&retval);
             }
 
             zval_ptr_dtor(&argv[0]);
@@ -764,6 +764,7 @@ static int curl_prereqfunction(void *clientp, char *conn_primary_ip, char *conn_
         } else {
             zend_type_error("The CURLOPT_PREREQFUNCTION callback must return either CURL_PREREQFUNC_OK or CURL_PREREQFUNC_ABORT");
         }
+        zval_ptr_dtor(&retval);
     }
 
     zval_ptr_dtor(&args[0]);
