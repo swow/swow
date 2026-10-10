@@ -14,6 +14,15 @@ require __DIR__ . '/PDOUtil.inc';
 $pdo = PDOUtil::create();
 $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 $stream = null;
+$deprecations = [];
+// Legacy PDO methods remain callable in PHP 8.5 and must report their deprecation.
+set_error_handler(static function (int $severity, string $message) use (&$deprecations): bool {
+    if ($severity !== E_DEPRECATED || !preg_match('/^Method PDO::(pgsqlLOBCreate|pgsqlLOBOpen|pgsqlLOBUnlink)\(\) is deprecated since 8\.5,/', $message, $matches)) {
+        return false;
+    }
+    $deprecations[] = $matches[1];
+    return true;
+});
 try {
     Assert::true($pdo->beginTransaction());
     $oid = $pdo->pgsqlLOBCreate();
@@ -34,6 +43,7 @@ try {
     $stream = null;
     Assert::true($pdo->pgsqlLOBUnlink($oid));
 } finally {
+    restore_error_handler();
     if (is_resource($stream)) {
         fclose($stream);
     }
@@ -41,6 +51,12 @@ try {
         $pdo->rollBack();
     }
 }
+
+Assert::same(array_count_values($deprecations), PHP_VERSION_ID >= 80500 ? [
+    'pgsqlLOBCreate' => 1,
+    'pgsqlLOBOpen' => 2,
+    'pgsqlLOBUnlink' => 1,
+] : []);
 
 echo "Done\n";
 ?>

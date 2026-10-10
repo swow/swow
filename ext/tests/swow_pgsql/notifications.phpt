@@ -15,6 +15,15 @@ $listener = PDOUtil::create();
 $sender = PDOUtil::create();
 $channel = 'swow_notify_' . getRandomBytes(12);
 $listener->exec('LISTEN "' . $channel . '"');
+$deprecations = [];
+// Assert the PHP 8.5 legacy-method notices without hiding unrelated diagnostics.
+set_error_handler(static function (int $severity, string $message) use (&$deprecations): bool {
+    if ($severity !== E_DEPRECATED || !preg_match('/^Method PDO::(pgsqlGetNotify|pgsqlGetPid)\(\) is deprecated since 8\.5,/', $message, $matches)) {
+        return false;
+    }
+    $deprecations[] = $matches[1];
+    return true;
+});
 try {
     Assert::false($listener->pgsqlGetNotify(PDO::FETCH_ASSOC));
     $statement = $sender->prepare('SELECT pg_notify(:channel, :payload)');
@@ -35,8 +44,14 @@ try {
     }
     Assert::false($listener->pgsqlGetNotify(PDO::FETCH_ASSOC));
 } finally {
+    restore_error_handler();
     $listener->exec('UNLISTEN "' . $channel . '"');
 }
+
+Assert::same(array_count_values($deprecations), PHP_VERSION_ID >= 80500 ? [
+    'pgsqlGetNotify' => 5,
+    'pgsqlGetPid' => 4,
+] : []);
 
 echo "Done\n";
 ?>
