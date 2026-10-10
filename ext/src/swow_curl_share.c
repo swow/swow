@@ -283,6 +283,7 @@ void swow_curl_share_free_persistent_curlsh(zval *data)
 }
 
 static zend_object_handlers curl_share_handlers;
+static zend_object_handlers curl_share_persistent_handlers;
 
 /* CurlShareHandle class */
 
@@ -292,7 +293,7 @@ static zend_object *curl_share_create_object(zend_class_entry *class_type) {
     zend_object_std_init(&intern->std, class_type);
     object_properties_init(&intern->std, class_type);
 #if PHP_VERSION_ID < 80300
-	intern->std.handlers = &curl_share_handlers;
+    intern->std.handlers = class_type == swow_curl_share_persistent_ce ? &curl_share_persistent_handlers : &curl_share_handlers;
 #endif
 
     return &intern->std;
@@ -326,8 +327,6 @@ void swow_curl_share_register_handlers(void) {
 }
 
 /* CurlSharePersistentHandle class */
-
-static zend_object_handlers curl_share_persistent_handlers;
 
 static zend_function *curl_share_persistent_get_constructor(zend_object *object) {
     zend_throw_error(NULL, "Cannot directly construct CurlSharePersistentHandle, use curl_share_init_persistent() instead");
