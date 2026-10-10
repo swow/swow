@@ -611,6 +611,10 @@ static int curl_fnmatch(void *ctx, const char *pattern, const char *string)
     zval argv[3];
     zval retval;
 
+    if (!SWOW_FCC_INITIALIZED(ch->handlers.fnmatch)) {
+        return rval;
+    }
+
     GC_ADDREF(&ch->std);
     ZVAL_OBJ(&argv[0], &ch->std);
     ZVAL_STRING(&argv[1], pattern);
@@ -642,6 +646,10 @@ static int curl_progress(void *clientp, double dltotal, double dlnow, double ult
     fprintf(stderr, "curl_progress() called\n");
     fprintf(stderr, "clientp = %x, dltotal = %f, dlnow = %f, ultotal = %f, ulnow = %f\n", clientp, dltotal, dlnow, ultotal, ulnow);
 #endif
+
+    if (!SWOW_FCC_INITIALIZED(ch->handlers.progress)) {
+        return rval;
+    }
 
     zval args[5];
     zval retval;
@@ -680,6 +688,10 @@ static int curl_xferinfo(void *clientp, curl_off_t dltotal, curl_off_t dlnow, cu
     fprintf(stderr, "curl_xferinfo() called\n");
     fprintf(stderr, "clientp = %x, dltotal = %ld, dlnow = %ld, ultotal = %ld, ulnow = %ld\n", clientp, dltotal, dlnow, ultotal, ulnow);
 #endif
+
+    if (!SWOW_FCC_INITIALIZED(ch->handlers.xferinfo)) {
+        return rval;
+    }
 
     zval argv[5];
     zval retval;
