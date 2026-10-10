@@ -2236,6 +2236,10 @@ static cat_bool_t cat_socket_enable_crypto_impl(cat_socket_t *socket, const cat_
     } else {
         cat_ssl_context_disable_verify_peer(context);
     }
+#ifdef CAT_SSL_HAVE_SECURITY_LEVEL
+    /* Certificate loading must use the requested policy, including explicit level zero. */
+    cat_ssl_context_set_security_level(context, ioptions.security_level);
+#endif
     if (ioptions.load_certificate != NULL) {
         if (!ioptions.load_certificate(context, &ioptions)) {
             goto _setup_error;
@@ -2258,9 +2262,6 @@ static cat_bool_t cat_socket_enable_crypto_impl(cat_socket_t *socket, const cat_
     if (ioptions.no_compression) {
         cat_ssl_context_set_no_compression(context);
     }
-#ifdef CAT_SSL_HAVE_SECURITY_LEVEL
-    cat_ssl_context_set_security_level(context, ioptions.security_level);
-#endif
 #ifdef CAT_SSL_HAVE_TLS_ALPN
     if (ioptions.alpn_protocols != NULL) {
         if (!cas_ssl_context_set_alpn_protocols(context, (cat_bool_t) ioptions.is_client, ioptions.alpn_protocols)) {
