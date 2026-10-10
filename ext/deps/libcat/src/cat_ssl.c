@@ -1451,6 +1451,12 @@ CAT_API cat_bool_t cat_ssl_decrypt(cat_ssl_t *ssl, char *out, size_t *out_length
 
             if (error == SSL_ERROR_WANT_READ || error == SSL_ERROR_WANT_WRITE) {
                 CAT_LOG_DEBUG(SSL, "SSL_read(%p) want %s", ssl, error == SSL_ERROR_WANT_READ ? "read" : "write");
+                if (error == SSL_ERROR_WANT_WRITE) {
+                    /* The write BIO is full. Let the transport flush it before
+                     * retrying, even if encrypted input remains buffered. */
+                    ret = cat_true;
+                    break;
+                }
                 // continue to SSL_write_encrypted_bytes()
             } else if (error == SSL_ERROR_ZERO_RETURN) {
                 // Connection closed normally

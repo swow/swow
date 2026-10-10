@@ -3167,6 +3167,7 @@ static ssize_t cat_socket_internal_read_decrypted(
             goto _error;
         }
 
+        cat_bool_t had_control_data = BIO_ctrl_pending(ssl->nbio) != 0;
         if (!eof) {
             cat_bool_t ret;
             CAT_TIME_WAIT_START() {
@@ -3193,6 +3194,11 @@ static ssize_t cat_socket_internal_read_decrypted(
                 break;
             }
             goto _error;
+        }
+        if (had_control_data) {
+            /* A large handshake may need several write-BIO fills. Retry TLS
+             * processing before waiting for a peer that still needs our reply. */
+            continue;
         }
 
         CAT_TIME_WAIT_START() {
@@ -3237,9 +3243,11 @@ static ssize_t cat_socket_internal_try_recv_decrypted(
         ssize_t nread;
         cat_errno_t error = 0;
         cat_bool_t decrypted, eof;
+        cat_bool_t had_control_data;
 
         CAT_PROTECT_LAST_ERROR_START() {
             decrypted = cat_ssl_decrypt(ssl, buffer, &out_length, &eof);
+            had_control_data = BIO_ctrl_pending(ssl->nbio) != 0;
             if (decrypted && !eof) {
                 decrypted = cat_socket_internal_ssl_flush_control(socket_i, 0, cat_false);
                 if (unlikely(!decrypted)) {
@@ -3260,6 +3268,9 @@ static ssize_t cat_socket_internal_try_recv_decrypted(
         }
         if (eof) {
             return 0;
+        }
+        if (had_control_data) {
+            continue;
         }
 
         nread = cat_socket_internal_try_recv_raw(
