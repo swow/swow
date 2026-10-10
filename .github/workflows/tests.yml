@@ -523,6 +523,10 @@ jobs:
         env:
           phpts: ${{ matrix.ts }}
 
+      - name: Initialize OpenSSL random state
+        shell: pwsh
+        run: openssl rand -writerand "$HOME/.rnd"
+
       - name: Setup composer dependencies
         run: |
           C:\tools\php\php.exe .\.github\workflows\phpunit-adapter.php ${{ matrix.php-version }}
