@@ -44,14 +44,14 @@ final class HttpFileResponseTest extends TestCase
 
     private string $filename;
 
-    private string $data = "0123456789\0binary file";
+    private const DATA = "0123456789\0binary file";
 
     protected function setUp(): void
     {
         $filename = tempnam(sys_get_temp_dir(), 'swow-http-file-');
         $this->assertIsString($filename);
         $this->filename = $filename;
-        file_put_contents($this->filename, $this->data);
+        file_put_contents($this->filename, self::DATA);
         $this->server = new Server();
         $this->server->setTimeout(1000)->bind('127.0.0.1')->listen();
         $this->client = new Client();
@@ -77,7 +77,7 @@ final class HttpFileResponseTest extends TestCase
             $headers['Content-Type'] = [$type];
         }
         $response = Psr7::createResponse(headers: $headers);
-        $expected = $length <= 0 ? $this->data : substr($this->data, $offset, $length);
+        $expected = $length <= 0 ? substr(self::DATA, $offset) : substr(self::DATA, $offset, $length);
         $this->assertSame(strlen($expected), $this->connection->sendHttpFile($response, $this->filename, $offset, $length, 1000));
         $received = Psr7::createResponseFromEntity($this->client->recvResponseEntity(1000));
         $this->assertSame(Status::OK, $received->getStatusCode());
@@ -94,6 +94,10 @@ final class HttpFileResponseTest extends TestCase
         yield 'whole file' => [0, -1, null];
         yield 'zero means unlimited' => [0, 0, 'application/custom'];
         yield 'binary slice' => [8, 5, 'application/octet-stream'];
+        yield 'remaining file from offset' => [8, -1, null];
+        yield 'zero length from offset' => [8, 0, null];
+        yield 'explicit length beyond file end' => [8, 100, null];
+        yield 'offset at file end' => [strlen(self::DATA), -1, null];
     }
 
     public function testCallerCannotDeclareAnUnrelatedContentLength(): void

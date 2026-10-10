@@ -384,7 +384,8 @@ class ServerConnection implements ProtocolTypeInterface
             $headers['Content-Type'] = MimeType::fromExtension($extension);
         }
 
-        $headers['Content-Length'] = $length <= 0 ? filesize($filename) : $length;
+        $remaining = max(filesize($filename) - $offset, 0);
+        $headers['Content-Length'] = $length <= 0 ? $remaining : min($length, $remaining);
         $socket->send(Http::packResponse(
             statusCode: HttpStatus::OK,
             headers: $headers
