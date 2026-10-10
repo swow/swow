@@ -27,8 +27,13 @@ try {
     Assert::true(is_link($link));
     Assert::same(filetype($link), 'link');
     // Windows may return a short path for the same target; compare the resolved file identity.
-    Assert::same(realpath(readlink($link)), realpath($target));
-    Assert::same(realpath($link), realpath($target));
+    $targetStat = stat($target);
+    foreach ([readlink($link), realpath($link)] as $resolvedTarget) {
+        Assert::true(is_string($resolvedTarget));
+        $resolvedStat = stat($resolvedTarget);
+        Assert::same($resolvedStat['dev'], $targetStat['dev']);
+        Assert::same($resolvedStat['ino'], $targetStat['ino']);
+    }
     Assert::same(stat($link)['size'], 8);
     Assert::same(file_get_contents($link), 'original');
     Assert::true(rename($target, $renamed));
