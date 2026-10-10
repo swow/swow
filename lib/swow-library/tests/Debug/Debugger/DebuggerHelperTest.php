@@ -70,4 +70,49 @@ final class DebuggerHelperTest extends TestCase
         $table = DebuggerHelper::tableFormat([['value' => str_repeat('x', 520)]]);
         $this->assertStringContainsString(str_repeat('x', 512) . '...', $table);
     }
+
+    public function testSourceExcerptAtBeginningOfFile(): void
+    {
+        $filename = tempnam(sys_get_temp_dir(), 'swow_debug_source');
+        file_put_contents($filename, "first\nsecond\nthird\nfourth\n");
+        try {
+            $source = null;
+            $this->assertSame([
+                ['line' => '1->', 'contents' => 'first'],
+                ['line' => 2, 'contents' => 'second'],
+            ], DebuggerHelper::getSourceFileContentAsTable($filename, 1, $source, 2));
+            $this->assertNotNull($source);
+            $this->assertSame([
+                ['line' => 3, 'contents' => 'third'],
+            ], DebuggerHelper::getFollowingSourceFileContent($source, 2, 2, 0));
+        } finally {
+            unset($source);
+            unlink($filename);
+        }
+    }
+
+    public function testSourceExcerptKeepsContextAndFollowingPosition(): void
+    {
+        $filename = tempnam(sys_get_temp_dir(), 'swow_debug_source');
+        file_put_contents($filename, implode("\n", range(1, 20)));
+        try {
+            $source = null;
+            $rows = DebuggerHelper::getSourceFileContentAsTable($filename, 10, $source);
+            $this->assertSame([7, 8, 9, '10->', 11, 12, 13, 14], array_column($rows, 'line'));
+            $this->assertSame(array_map(strval(...), range(7, 14)), array_column($rows, 'contents'));
+            $following = DebuggerHelper::getFollowingSourceFileContent($source, 10, 3);
+            $this->assertSame([
+                ['line' => 15, 'contents' => '15'],
+                ['line' => 16, 'contents' => '16'],
+            ], $following);
+            $rows = DebuggerHelper::getSourceFileContentAsTable($filename, 3, $source);
+            $this->assertSame([1, 2, '3->', 4, 5, 6, 7, 8], array_column($rows, 'line'));
+            $this->expectException(DebuggerException::class);
+            $this->expectExceptionMessage('File Line not found');
+            DebuggerHelper::getSourceFileContentAsTable($filename, 40, $source);
+        } finally {
+            unset($source);
+            unlink($filename);
+        }
+    }
 }

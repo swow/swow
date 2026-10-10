@@ -271,22 +271,15 @@ class DebuggerHelper
         int $lineCount = self::SOURCE_FILE_DEFAULT_LINE_COUNT,
     ): array {
         $sourceFile = null;
-        if ($line < 2) {
-            $startLine = $line;
-        } else {
-            $startLine = $line - ($lineCount - static::SOURCE_FILE_CONTENT_PADDING - 1);
-        }
+        $startLine = max(1, $line - max(0, $lineCount - static::SOURCE_FILE_CONTENT_PADDING - 1));
         $file = new SplFileObject($filename);
         $sourceFile = $file;
         $i = 0;
-        while (!$file->eof()) {
-            $lineContent = $file->fgets();
+        while ($i < $startLine - 1 && !$file->eof()) {
+            $file->fgets();
             $i++;
-            if ($i === $startLine - 1) {
-                break;
-            }
         }
-        if (!isset($lineContent)) {
+        if ($file->eof()) {
             throw new DebuggerException('File Line not found');
         }
         $contents = [];
