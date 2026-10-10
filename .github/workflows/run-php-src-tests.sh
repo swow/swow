@@ -96,6 +96,8 @@ git clone \
 
 # remove excluded tests
 cd php-src
+# Respect the per-test timeout when a child retains stdout after stderr closes.
+git apply "${GITHUB_WORKSPACE}/.github/workflows/php-src-runner-timeout.patch"
 rm -rf "${EXCLUDE_TESTS[@]}"
 
 # Preserve the Swow result before rerunning failures without the extension.

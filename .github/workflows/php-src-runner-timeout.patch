@@ -1,0 +1,32 @@
+--- a/run-tests.php
++++ b/run-tests.php
+@@ -1226,13 +1226,25 @@
+-            if ($captureStdOut) {
++            if ($captureStdOut && isset($r[1])) {
+                 $line = fread($pipes[1], 8192);
+-            } elseif ($captureStdErr) {
++            } elseif ($captureStdErr && isset($r[2])) {
+                 $line = fread($pipes[2], 8192);
++                // Callers merge captured stderr into stdout; preserve stdout-priority capture.
++                if ($captureStdOut && strlen($line) != 0) {
++                    continue;
++                }
+             } else {
+                 $line = '';
+             }
+             if (strlen($line) == 0) {
+-                /* EOF */
+-                break;
++                /* EOF on one pipe must not cause a blocking read of another. */
++                foreach ($r as $key => $pipe) {
++                    if (feof($pipe)) {
++                        unset($pipes[$key]);
++                    }
++                }
++                if (!$pipes) {
++                    break;
++                }
++                continue;
+             }
+             $data .= $line;
+         }
