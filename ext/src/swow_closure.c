@@ -205,6 +205,19 @@ static void swow_closure_walk_callback(zend_ast *ast, void *context_ptr)
     _swow_closure_walk_callback(ast, context_ptr);
 }
 
+static bool swow_closure_is_static_variable(const zend_op_array *op_array, zend_string *name)
+{
+    for (uint32_t i = 0; i < op_array->last; i++) {
+        const zend_op *opline = &op_array->opcodes[i];
+        if (opline->opcode == ZEND_BIND_STATIC &&
+            !(opline->extended_value & (ZEND_BIND_EXPLICIT | ZEND_BIND_IMPLICIT)) &&
+            zend_string_equals(op_array->vars[EX_VAR_TO_NUM(opline->op1.var)], name)) {
+            return true;
+        }
+    }
+    return false;
+}
+
 SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_user_anonymous_function(zend_function *function)
 {
     zend_string *filename = function->op_array.filename;
@@ -244,6 +257,10 @@ SWOW_API SWOW_MAY_THROW HashTable *swow_serialize_user_anonymous_function(zend_f
         zend_string *key;
         zval *z_val;
         ZEND_HASH_MAP_FOREACH_STR_KEY_VAL(ht, key, z_val) {
+            // Executed static locals use references internally, but their values belong to the closure snapshot.
+            if (Z_ISREF_P(z_val) && swow_closure_is_static_variable(&function->op_array, key)) {
+                ZVAL_DEREF(z_val);
+            }
             if (Z_ISREF_P(z_val)) {
                 if (Z_ISNULL(z_references)) {
                     array_init(&z_references);
