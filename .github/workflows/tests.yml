@@ -605,6 +605,25 @@ jobs:
             --modules php_swow.dll `
             -- C:\tools\php\php.exe C:\tools\php\composer.phar test-library -- --debug
 
+      - name: Diagnose native library failures
+        if: ${{ always() && steps.test-library.outcome == 'failure' }}
+        shell: pwsh
+        continue-on-error: true
+        timeout-minutes: 2
+        run: |
+          # Keep the original test result; print native stacks without uploading process memory.
+          $debugger = Get-Command gdb.exe -ErrorAction Stop
+          $phpArguments = @()
+          & C:\tools\php\php.exe -r "exit(extension_loaded('swow') ? 0 : 1);"
+          if ($LASTEXITCODE -ne 0) { $phpArguments += @('-d', 'extension=swow') }
+          & $debugger.Source --batch `
+            -ex "set pagination off" `
+            -ex "run" `
+            -ex "thread apply all bt" `
+            -ex "info sharedlibrary" `
+            --args C:\tools\php\php.exe @phpArguments vendor/bin/phpunit `
+              --configuration lib/swow-library --no-coverage --debug
+
       - name: Run PHPT from php-src
         shell: pwsh
         id: test-php-src
