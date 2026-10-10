@@ -98,14 +98,39 @@ git clone \
 cd php-src
 rm -rf "${EXCLUDE_TESTS[@]}"
 
-# test it
+# Preserve the Swow result before rerunning failures without the extension.
+REPORT_DIR="${RUNNER_TEMP}/php-src-reports"
+mkdir -p "$REPORT_DIR"
+export REPORT_EXIT_STATUS=1
+export TEST_PHP_JUNIT="$REPORT_DIR/swow.xml"
+OPTIONS=(
+    -q
+    -d opcache.enable_cli=on
+    --show-diff
+    --show-slow 3000
+    --set-timeout 30
+    --color
+    "-j$NPROC"
+)
+
+status=0
 php run-tests.php \
-    -q \
+    "${OPTIONS[@]}" \
     -d extension="${GITHUB_WORKSPACE}/ext/.libs/swow.so" \
-    -d opcache.enable_cli=on \
-    --show-diff \
-    --show-slow 3000 \
-    --set-timeout 30 \
-    --color \
-    "-j$NPROC" \
-    "${INCLUDE_TESTS[@]}"
+    -w "$REPORT_DIR/swow-failures.txt" \
+    "${INCLUDE_TESTS[@]}" 2>&1 | tee "$REPORT_DIR/swow.log" || status=$?
+printf '%s\n' "$status" > "$REPORT_DIR/swow-exit-status.txt"
+
+if [[ -s "$REPORT_DIR/swow-failures.txt" ]]; then
+    # A passing native baseline distinguishes hook regressions from runner issues.
+    php -r 'exit(extension_loaded("swow") ? 1 : 0);'
+    export TEST_PHP_JUNIT="$REPORT_DIR/native.xml"
+    native_status=0
+    php run-tests.php \
+        "${OPTIONS[@]}" \
+        -r "$REPORT_DIR/swow-failures.txt" \
+        -w "$REPORT_DIR/native-failures.txt" 2>&1 | tee "$REPORT_DIR/native.log" || native_status=$?
+    printf '%s\n' "$native_status" > "$REPORT_DIR/native-exit-status.txt"
+fi
+
+exit "$status"
