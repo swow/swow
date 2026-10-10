@@ -19,6 +19,7 @@
 #include "cat_ssl.h"
 
 #ifdef CAT_SSL
+#include "cat_coroutine.h"
 /*
 This diagram shows how the read and write memory BIO's (rbio & wbio) are
 associated with the socket read and write respectively.  On the inbound flow
@@ -829,6 +830,9 @@ CAT_API cat_ssl_t *cat_ssl_create(cat_ssl_t *ssl, cat_ssl_context_t *context)
     ssl->expected_peer_name = NULL;
     ssl->failed_peer_certificate = NULL;
     ssl->handshake_error = 0;
+    ssl->renegotiation_callback = NULL;
+    ssl->renegotiation_callback_data = NULL;
+    ssl->pending_renegotiations = 0;
 
     return ssl;
 
@@ -919,6 +923,62 @@ CAT_API void cat_ssl_set_connect_state(cat_ssl_t *ssl)
     ssl->flags |= CAT_SSL_FLAG_CONNECT_STATE;
 }
 
+CAT_API void cat_ssl_configure_renegotiation(cat_ssl_t *ssl, cat_bool_t enable,
+    cat_ssl_renegotiation_callback_t callback, void *data)
+{
+    ssl->renegotiation_callback = callback;
+    ssl->renegotiation_callback_data = data;
+    if (enable) {
+        ssl->flags |= CAT_SSL_FLAG_ALLOW_RENEGOTIATION;
+        /* Keep partially received records out of OpenSSL's read-ahead buffer;
+         * readiness must become false again when more transport bytes are needed. */
+        SSL_set_read_ahead(ssl->connection, 0);
+#ifdef SSL_OP_NO_RENEGOTIATION
+        SSL_clear_options(ssl->connection, SSL_OP_NO_RENEGOTIATION);
+#endif
+#ifdef SSL_OP_NO_CLIENT_RENEGOTIATION
+        SSL_clear_options(ssl->connection, SSL_OP_NO_CLIENT_RENEGOTIATION);
+#endif
+#ifdef SSL_OP_ALLOW_CLIENT_RENEGOTIATION
+        SSL_set_options(ssl->connection, SSL_OP_ALLOW_CLIENT_RENEGOTIATION);
+#endif
+        /* A new client certificate must pass the same verification callback. */
+        SSL_set_verify(ssl->connection, SSL_get_verify_mode(ssl->connection) & ~SSL_VERIFY_CLIENT_ONCE,
+            SSL_get_verify_callback(ssl->connection));
+    } else {
+        ssl->flags &= ~CAT_SSL_FLAG_ALLOW_RENEGOTIATION;
+#ifdef SSL_OP_NO_RENEGOTIATION
+        SSL_set_options(ssl->connection, SSL_OP_NO_RENEGOTIATION);
+#endif
+#ifdef SSL_OP_ALLOW_CLIENT_RENEGOTIATION
+        SSL_clear_options(ssl->connection, SSL_OP_ALLOW_CLIENT_RENEGOTIATION);
+#endif
+    }
+}
+
+static cat_bool_t cat_ssl_notify_renegotiation(cat_ssl_t *ssl)
+{
+    /* User callbacks may yield. Never invoke them with OpenSSL on the stack. */
+    while (ssl->pending_renegotiations != 0) {
+        ssl->pending_renegotiations--;
+        if (ssl->renegotiation_callback != NULL) {
+            cat_bool_t switch_denied = cat_coroutine_switch_denied();
+            cat_coroutine_switch_deny();
+            ssl->flags |= CAT_SSL_FLAG_RENEGOTIATION_CALLBACK;
+            cat_bool_t ret = ssl->renegotiation_callback(ssl, ssl->renegotiation_callback_data);
+            ssl->flags &= ~CAT_SSL_FLAG_RENEGOTIATION_CALLBACK;
+            if (!switch_denied) {
+                cat_coroutine_switch_allow();
+            }
+            if (!ret) {
+                cat_ssl_set_shutdown(ssl, CAT_SSL_SENT_SHUTDOWN | CAT_SSL_RECEIVED_SHUTDOWN);
+                return cat_false;
+            }
+        }
+    }
+    return cat_true;
+}
+
 CAT_API cat_bool_t cat_ssl_set_sni_server_name(cat_ssl_t *ssl, const char *name)
 {
 #ifdef SSL_CTRL_SET_TLSEXT_HOSTNAME
@@ -966,7 +1026,8 @@ CAT_API cat_ssl_ret_t cat_ssl_handshake(cat_ssl_t *ssl)
 #if CAT_SSL_VERSION_NUMBER < 0x10100000L
 #ifdef SSL3_FLAGS_NO_RENEGOTIATE_CIPHERS
         /* initial handshake done, disable renegotiation (CVE-2009-3555) */
-        if (connection->s3 && SSL_is_server((SSL *) connection)) {
+        if (connection->s3 && SSL_is_server((SSL *) connection) &&
+            !(ssl->flags & CAT_SSL_FLAG_ALLOW_RENEGOTIATION)) {
             connection->s3->flags |= SSL3_FLAGS_NO_RENEGOTIATE_CIPHERS;
         }
 #endif
@@ -1210,6 +1271,10 @@ CAT_API cat_bool_t cat_ssl_encrypt(
     char **encrypted_data, size_t *encrypted_length
 )
 {
+    if (unlikely(ssl->flags & CAT_SSL_FLAG_RENEGOTIATION_CALLBACK)) {
+        cat_update_last_error(CAT_ELOCKED, "TLS I/O is not allowed inside a renegotiation callback");
+        return cat_false;
+    }
     // Initial buffer allocation with reasonable size
     size_t encrypted_buffer_size = CAT_MEMORY_ALIGNED_SIZE_EX(CAT_SSL_BUFFER_SIZE, cat_getpagesize());
     char *encrypted_buffer = (char *) cat_malloc(encrypted_buffer_size);
@@ -1246,6 +1311,11 @@ CAT_API cat_bool_t cat_ssl_encrypt(
             int error = SSL_ERROR_NONE;
             if (unlikely(nwrote <= 0)) {
                 error = cat_ssl_get_error(ssl, nwrote);
+            }
+            if ((error == SSL_ERROR_NONE || error == SSL_ERROR_WANT_READ || error == SSL_ERROR_WANT_WRITE) &&
+                !cat_ssl_notify_renegotiation(ssl)) {
+                cat_update_last_error(CAT_ECONNRESET, "TLS renegotiation rejected by the application");
+                goto error_free;
             }
             switch (error) {
                 case SSL_ERROR_NONE:
@@ -1327,6 +1397,10 @@ error_free:
 
 CAT_API cat_bool_t cat_ssl_decrypt(cat_ssl_t *ssl, char *out, size_t *out_length, cat_bool_t *eof)
 {
+    if (unlikely(ssl->flags & CAT_SSL_FLAG_RENEGOTIATION_CALLBACK)) {
+        cat_update_last_error(CAT_ELOCKED, "TLS I/O is not allowed inside a renegotiation callback");
+        return cat_false;
+    }
     cat_buffer_t *buffer = &ssl->read_buffer;
     size_t nread = 0, nwrite = 0;
     size_t out_size = *out_length;
@@ -1364,8 +1438,16 @@ CAT_API cat_bool_t cat_ssl_decrypt(cat_ssl_t *ssl, char *out, size_t *out_length
             cat_free(s);
         });
 
+        int error = n <= 0 ? cat_ssl_get_error(ssl, n) : SSL_ERROR_NONE;
+        if ((error == SSL_ERROR_NONE || error == SSL_ERROR_WANT_READ || error == SSL_ERROR_WANT_WRITE) &&
+            !cat_ssl_notify_renegotiation(ssl)) {
+            *eof = cat_true;
+            nread = 0;
+            ret = cat_true;
+            break;
+        }
+
         if (unlikely(n <= 0)) {
-            int error = cat_ssl_get_error(ssl, n);
 
             if (error == SSL_ERROR_WANT_READ || error == SSL_ERROR_WANT_WRITE) {
                 CAT_LOG_DEBUG(SSL, "SSL_read(%p) want %s", ssl, error == SSL_ERROR_WANT_READ ? "read" : "write");
@@ -1607,15 +1689,16 @@ static void cat_ssl_info_callback(const cat_ssl_connection_t *connection, int wh
 {
     (void) ret;
 
-#ifndef SSL_OP_NO_RENEGOTIATION
     if ((where & SSL_CB_HANDSHAKE_START) && SSL_is_server((SSL *) connection)) {
         cat_ssl_t *ssl = cat_ssl_get_from_connection(connection);
         if (ssl->flags & CAT_SSL_FLAG_HANDSHAKE_OK) {
             ssl->flags |= CAT_SSL_FLAG_RENEGOTIATION;
+            if (ssl->flags & CAT_SSL_FLAG_ALLOW_RENEGOTIATION) {
+                ssl->pending_renegotiations++;
+            }
             CAT_LOG_DEBUG(SSL, "SSL#(%p) renegotiation", ssl);
         }
     }
-#endif
 
     if ((where & SSL_CB_ACCEPT_LOOP) == SSL_CB_ACCEPT_LOOP) {
         cat_ssl_t *ssl = cat_ssl_get_from_connection(connection);

@@ -645,6 +645,11 @@ static cat_always_inline void cat_socket_internal_close(cat_socket_internal_t *s
 static CAT_COLD void cat_socket_internal_unrecoverable_io_error(cat_socket_internal_t *socket_i);
 #ifdef CAT_SSL
 static cat_always_inline void cat_socket_internal_ssl_recoverability_check(cat_socket_internal_t *socket_i);
+static cat_bool_t cat_socket_internal_write_raw(
+    cat_socket_internal_t *socket_i,
+    const cat_socket_write_vector_t *vector, unsigned int vector_count,
+    const cat_sockaddr_t *address, cat_socklen_t address_length,
+    cat_socket_t *send_handle, cat_timeout_t timeout);
 #endif
 
 static int cat_socket__internal_compare(cat_socket_internal_t* socket_i_1, cat_socket_internal_t* socket_i_2)
@@ -2147,6 +2152,8 @@ CAT_API void cat_socket_crypto_options_init(cat_socket_crypto_options_t *options
     options->before_handshake_callback_data = NULL;
     options->after_handshake_callback = NULL;
     options->after_handshake_callback_data = NULL;
+    options->renegotiation_callback = NULL;
+    options->renegotiation_callback_data = NULL;
     options->verify_peer = is_client;
     options->verify_peer_name = is_client;
     options->peer_fingerprints = NULL;
@@ -2154,6 +2161,7 @@ CAT_API void cat_socket_crypto_options_init(cat_socket_crypto_options_t *options
     options->no_ticket = cat_false;
     options->no_compression = cat_false;
     options->no_client_ca_list = cat_false;
+    options->allow_renegotiation = cat_false;
     options->context = NULL;
 }
 
@@ -2332,6 +2340,11 @@ static cat_bool_t cat_socket_enable_crypto_impl(cat_socket_t *socket, const cat_
         }
     } else {
         ssl->peer_fingerprints = NULL;
+    }
+
+    if (!ioptions.is_client && ioptions.allow_renegotiation) {
+        cat_ssl_configure_renegotiation(ssl, cat_true,
+            ioptions.renegotiation_callback, ioptions.renegotiation_callback_data);
     }
 
     rbuffer = &ssl->read_buffer;
@@ -3071,6 +3084,67 @@ static ssize_t cat_socket_internal_try_recv_raw(
 }
 
 #ifdef CAT_SSL
+typedef struct cat_socket_ssl_control_write_s {
+    uv_write_t request;
+    char data[];
+} cat_socket_ssl_control_write_t;
+
+static void cat_socket_ssl_control_write_callback(uv_write_t *request, int status)
+{
+    cat_socket_internal_t *socket_i = (cat_socket_internal_t *) request->data;
+    /* libuv delivers canceled write callbacks before freeing the closed handle. */
+    if (unlikely(status != 0) && !(socket_i->flags & CAT_SOCKET_INTERNAL_FLAG_CLOSED)) {
+        cat_socket_internal_unrecoverable_io_error(socket_i);
+    }
+    cat_free(request);
+}
+
+static cat_bool_t cat_socket_internal_ssl_flush_control(
+    cat_socket_internal_t *socket_i, cat_timeout_t timeout, cat_bool_t blocked)
+{
+    cat_ssl_t *ssl = socket_i->ssl;
+    /* SSL_read can produce handshake replies and alerts. Application writes
+     * cannot be relied on to flush them, including on a read-only connection. */
+    while (BIO_ctrl_pending(ssl->nbio) != 0) {
+        cat_socket_ssl_control_write_t *write = (cat_socket_ssl_control_write_t *)
+            cat_malloc(sizeof(*write) + CAT_SSL_BUFFER_SIZE);
+#if CAT_ALLOC_HANDLE_ERRORS
+        if (unlikely(write == NULL)) {
+            cat_update_last_error_of_syscall("Malloc for TLS control data failed");
+            return cat_false;
+        }
+#endif
+        int length = cat_ssl_read_encrypted_bytes(ssl, write->data, CAT_SSL_BUFFER_SIZE);
+        if (unlikely(length <= 0)) {
+            cat_free(write);
+            return cat_false;
+        }
+        cat_socket_write_vector_t vector = cat_socket_write_vector_init(write->data, (cat_socket_vector_length_t) length);
+        if (blocked) {
+            cat_bool_t ret;
+            CAT_TIME_WAIT_START() {
+                ret = cat_socket_internal_write_raw(socket_i, &vector, 1, NULL, 0, NULL, timeout);
+            } CAT_TIME_WAIT_END(timeout);
+            cat_free(write);
+            if (unlikely(!ret)) {
+                return cat_false;
+            }
+        } else {
+            /* Own the bytes until uv_write completes; do not reuse the existing
+             * write_buffer while an application write is still queued. */
+            write->request.data = socket_i;
+            int error = uv_write(&write->request, &socket_i->u.stream,
+                (const uv_buf_t *) &vector, 1, cat_socket_ssl_control_write_callback);
+            if (unlikely(error != 0)) {
+                cat_free(write);
+                cat_update_last_error_with_reason(error, "TLS control write failed");
+                return cat_false;
+            }
+        }
+    }
+    return cat_true;
+}
+
 static ssize_t cat_socket_internal_read_decrypted(
     cat_socket_internal_t *socket_i,
     char *buffer, size_t size,
@@ -3091,6 +3165,17 @@ static ssize_t cat_socket_internal_read_decrypted(
         if (!cat_ssl_decrypt(ssl, buffer + nread, &out_length, &eof)) {
             cat_update_last_error_with_previous("Socket SSL decrypt failed");
             goto _error;
+        }
+
+        if (!eof) {
+            cat_bool_t ret;
+            CAT_TIME_WAIT_START() {
+                ret = cat_socket_internal_ssl_flush_control(socket_i, timeout, cat_true);
+            } CAT_TIME_WAIT_END(timeout);
+            if (unlikely(!ret)) {
+                cat_socket_internal_unrecoverable_io_error(socket_i);
+                goto _error;
+            }
         }
 
         if (out_length > 0) {
@@ -3155,6 +3240,12 @@ static ssize_t cat_socket_internal_try_recv_decrypted(
 
         CAT_PROTECT_LAST_ERROR_START() {
             decrypted = cat_ssl_decrypt(ssl, buffer, &out_length, &eof);
+            if (decrypted && !eof) {
+                decrypted = cat_socket_internal_ssl_flush_control(socket_i, 0, cat_false);
+                if (unlikely(!decrypted)) {
+                    cat_socket_internal_unrecoverable_io_error(socket_i);
+                }
+            }
             if (!decrypted) {
                 error = cat_get_last_error_code();
             }
@@ -4936,6 +5027,13 @@ static cat_always_inline void cat_socket_internal_close(cat_socket_internal_t *s
 static cat_always_inline cat_bool_t cat_socket_close_impl(cat_socket_t *socket)
 {
     cat_socket_internal_t *socket_i = socket->internal;
+#ifdef CAT_SSL
+    if (socket_i != NULL && socket_i->ssl != NULL &&
+        (socket_i->ssl->flags & CAT_SSL_FLAG_RENEGOTIATION_CALLBACK)) {
+        cat_update_last_error(CAT_ELOCKED, "Cannot close a socket inside its TLS renegotiation callback");
+        return cat_false;
+    }
+#endif
     cat_bool_t is_unrecoverable_error = socket->flags & CAT_SOCKET_FLAG_UNRECOVERABLE_ERROR;
     cat_bool_t ret = cat_true;
 
@@ -5098,6 +5196,20 @@ static cat_always_inline cat_bool_t cat_socket_internal_ssl_get_liveness(const c
 #endif
 }
 #endif
+
+CAT_API cat_bool_t cat_socket_has_buffered_data(const cat_socket_t *socket)
+{
+#ifdef CAT_SSL
+    cat_ssl_t *ssl = socket->internal != NULL ? socket->internal->ssl : NULL;
+    /* SSL_has_pending can report an incomplete record. That keeps a closed
+     * transport alive for EOF checks, but does not make a read immediately ready. */
+    return ssl != NULL && (ssl->read_buffer.length != 0 || SSL_pending(ssl->connection) > 0 ||
+        BIO_ctrl_pending(SSL_get_rbio(ssl->connection)) > 0);
+#else
+    (void) socket;
+    return cat_false;
+#endif
+}
 
 static cat_errno_t cat_socket_check_liveness_by_fd(cat_socket_fd_t fd)
 {
