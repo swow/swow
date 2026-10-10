@@ -775,7 +775,6 @@ static int swow_stream_setup_crypto(php_stream *stream,
 
 static cat_bool_t swow_stream_renegotiation_callback(cat_ssl_t *ssl, void *data)
 {
-    (void) ssl;
     php_stream *stream = (php_stream *) data;
     swow_netstream_data_t *swow_sock = (swow_netstream_data_t *) stream->abstract;
     swow_netstream_ssl_t *state = &swow_sock->ssl;
@@ -793,38 +792,67 @@ static cat_bool_t swow_stream_renegotiation_callback(cat_ssl_t *ssl, void *data)
         return cat_true;
     }
 
-    zval *callback = PHP_STREAM_CONTEXT(stream) ?
-        php_stream_context_get_option(PHP_STREAM_CONTEXT(stream), "ssl", "reneg_limit_callback") : NULL;
-    if (callback == NULL) {
-        php_error_docref(NULL, E_WARNING, "SSL: client-initiated handshake rate limit exceeded by peer");
-        php_stream_xport_shutdown(stream, STREAM_SHUT_RDWR);
+    if (!cat_ssl_pause_renegotiation(ssl)) {
         return cat_false;
     }
+    state->reneg_callback_pending = true;
+    return cat_true;
+}
 
+static bool swow_stream_complete_renegotiation(php_stream *stream, swow_netstream_data_t *swow_sock)
+{
+    /* Libcat's OpenSSL, decrypt-buffer and socket calls have returned before
+     * PHP callbacks: logging and other I/O can suspend and close the transport. */
+    swow_sock->ssl.reneg_callback_pending = false;
+
+    zval *callback = PHP_STREAM_CONTEXT(stream) ?
+        php_stream_context_get_option(PHP_STREAM_CONTEXT(stream), "ssl", "reneg_limit_callback") : NULL;
     zval function, param, retval;
-    ZVAL_COPY(&function, callback);
+    ZVAL_UNDEF(&function);
+    if (callback != NULL) {
+        ZVAL_COPY(&function, callback);
+    }
     php_stream_to_zval(stream, &param);
     Z_TRY_ADDREF(param);
     ZVAL_UNDEF(&retval);
-    /* Match PHP's fclose protection. Libcat also rejects yielding, nested TLS
-     * I/O and socket destruction while delivering this notification. */
+    /* Retain PHP's fclose protection. Only this TLS connection is paused;
+     * the callback can yield while accessing files or other connections. */
     bool no_fclose = (stream->flags & PHP_STREAM_FLAG_NO_FCLOSE) != 0;
     stream->flags |= PHP_STREAM_FLAG_NO_FCLOSE;
-    zend_result result = call_user_function(NULL, NULL, &function, &retval, 1, &param);
-    if (!no_fclose) {
-        stream->flags &= ~PHP_STREAM_FLAG_NO_FCLOSE;
+    zend_result result = FAILURE;
+    if (callback == NULL) {
+        php_error_docref(NULL, E_WARNING, "SSL: client-initiated handshake rate limit exceeded by peer");
+    } else {
+        result = call_user_function(NULL, NULL, &function, &retval, 1, &param);
+        if (result == FAILURE && !EG(exception)) {
+            php_error_docref(NULL, E_WARNING, "SSL: failed invoking reneg limit notification callback");
+        }
     }
-    if (result == FAILURE && !EG(exception)) {
-        php_error_docref(NULL, E_WARNING, "SSL: failed invoking reneg limit notification callback");
-    }
-    cat_bool_t keep = result == SUCCESS && !EG(exception) && Z_TYPE(retval) == IS_TRUE;
+    bool keep = result == SUCCESS && !EG(exception) && Z_TYPE(retval) == IS_TRUE;
     zval_ptr_dtor(&retval);
     zval_ptr_dtor(&param);
     zval_ptr_dtor(&function);
+    /* Destructors may also run user code; retain close protection until the
+     * decision is committed and account for exceptions raised during cleanup. */
+    keep = keep && !EG(exception);
+    /* Reacquire through the socket after user code; an async write error may
+     * have closed and freed its previous SSL state while the callback yielded. */
+    if (!cat_socket_resume_renegotiation(&swow_sock->socket, keep)) {
+        stream->eof = 1;
+        if (!no_fclose) {
+            stream->flags &= ~PHP_STREAM_FLAG_NO_FCLOSE;
+        }
+        return false;
+    }
     if (!keep) {
         /* EOF alone leaves the peer waiting for a handshake reply. PHP shuts
          * down both transport directions even while the stream remains referenced. */
         php_stream_xport_shutdown(stream, STREAM_SHUT_RDWR);
+        stream->eof = 1;
+        cat_update_last_error(CAT_ECONNRESET, "TLS renegotiation rejected by the application");
+    }
+    if (!no_fclose) {
+        stream->flags &= ~PHP_STREAM_FLAG_NO_FCLOSE;
     }
     return keep;
 }
@@ -1301,13 +1329,33 @@ static ssize_t swow_stream_read(php_stream *stream, char *buffer, size_t size)
     sock->timeout_event = 0; // clear error state
 #endif
 
-    if (is_blocked) {
-        nr_bytes = cat_socket_recv_ex(socket, buffer, size, cat_time_tv2to(&sock->timeout));
-    } else {
-        nr_bytes = cat_socket_try_recv(socket, buffer, size);
-        if (nr_bytes == CAT_EAGAIN) {
+    cat_timeout_t timeout = cat_time_tv2to(&sock->timeout);
+    while (1) {
+        if (is_blocked) {
+            CAT_TIME_WAIT_START() {
+                nr_bytes = cat_socket_recv_ex(socket, buffer, size, timeout);
+            } CAT_TIME_WAIT_END(timeout);
+        } else {
+            nr_bytes = cat_socket_try_recv(socket, buffer, size);
+        }
+#ifdef CAT_SSL
+        if (swow_sock->ssl.reneg_callback_pending) {
+            bool keep;
+            CAT_TIME_WAIT_START() {
+                keep = swow_stream_complete_renegotiation(stream, swow_sock);
+            } CAT_TIME_WAIT_END(timeout);
+            if (!keep) {
+                return 0;
+            }
+            if (nr_bytes <= 0) {
+                continue;
+            }
+        }
+#endif
+        if (!is_blocked && nr_bytes == CAT_EAGAIN) {
             return 0;
         }
+        break;
     }
 
     if (EXPECTED(nr_bytes > 0)) {
@@ -1344,17 +1392,35 @@ static ssize_t swow_stream_write(php_stream *stream, const char *buffer, size_t 
         is_blocked = false;
     }
 
-    if (is_blocked) {
-        ret = cat_socket_send_ex(socket, buffer, length, cat_time_tv2to(&sock->timeout));
-        didwrite = length;
-    } else {
-        didwrite = cat_socket_try_send(socket, buffer, length);
-        if (UNEXPECTED(didwrite == CAT_EAGAIN)) {
+    cat_timeout_t timeout = cat_time_tv2to(&sock->timeout);
+    while (1) {
+        if (is_blocked) {
+            CAT_TIME_WAIT_START() {
+                ret = cat_socket_send_ex(socket, buffer, length, timeout);
+            } CAT_TIME_WAIT_END(timeout);
+            didwrite = length;
+        } else {
+            didwrite = cat_socket_try_send(socket, buffer, length);
+            ret = didwrite >= 0;
+        }
+#ifdef CAT_SSL
+        if (swow_sock->ssl.reneg_callback_pending) {
+            bool keep;
+            CAT_TIME_WAIT_START() {
+                keep = swow_stream_complete_renegotiation(stream, swow_sock);
+            } CAT_TIME_WAIT_END(timeout);
+            if (keep) {
+                continue;
+            }
+            ret = false;
+        }
+#endif
+        if (!is_blocked && UNEXPECTED(didwrite == CAT_EAGAIN)) {
             /* EWOULDBLOCK/EAGAIN is not an error for a non-blocking stream.
              * Report zero byte wrote instead. */
             return 0;
         }
-        ret = didwrite >= 0;
+        break;
     }
     if (UNEXPECTED(!ret)) {
         cat_errno_t error = is_blocked ? cat_get_last_error_code() : (cat_errno_t) didwrite;

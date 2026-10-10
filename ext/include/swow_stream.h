@@ -73,6 +73,7 @@ typedef struct swow_netstream_ssl_s {
     zend_long reneg_window;
     cat_msec_t reneg_prev_handshake;
     double reneg_tokens;
+    bool reneg_callback_pending;
 } swow_netstream_ssl_t;
 #endif
 
