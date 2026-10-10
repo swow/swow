@@ -593,6 +593,13 @@ static zend_always_inline bool swow_stream_socket_connect(cat_socket_t *socket, 
 
 static int swow_stream_connect(php_stream *stream, swow_netstream_data_t *swow_sock, php_stream_xport_param *xparam, bool asynchronous)
 {
+#ifdef CAT_SSL
+    /* PHP completes the initial handshake of a blocking TLS stream even when
+     * asynchronous TCP connect was requested. TLS needs an established socket. */
+    if (swow_sock->ssl.enable_on_connect && swow_sock->sock.is_blocked) {
+        asynchronous = false;
+    }
+#endif
     cat_socket_type_t type = swow_stream_parse_socket_type(stream->ops);
     cat_socket_t *socket = &swow_sock->socket;
     char *host = NULL, *bind_host = NULL;
