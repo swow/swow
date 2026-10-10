@@ -16,10 +16,13 @@ namespace Swow\Tests\Psr7\Message;
 
 use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 use Swow\Http\Protocol\ChunkedBodyState;
 use Swow\Http\Protocol\ChunkedBodyStream;
+use Swow\Http\Protocol\ProtocolException;
+use Swow\Http\Status;
 use Swow\Psr7\Client\Client;
 use Swow\Psr7\Message\ChunkedBodyPsrStream;
 use Swow\Psr7\Message\Response;
@@ -38,6 +41,83 @@ use const SEEK_END;
 #[CoversClass(Psr7::class)]
 final class ChunkedBodyPsrStreamTest extends TestCase
 {
+    public function testPartialChunkReturnsBeforeTheRestIsSent(): void
+    {
+        $server = new Socket(Socket::TYPE_TCP);
+        $server->bind('127.0.0.1')->listen();
+        $client = new Client();
+        $client->setTimeout(1000)->setStreamingChunkedResponse(true);
+        $peer = null;
+        try {
+            $client->connect($server->getSockAddress(), $server->getSockPort());
+            $peer = $server->accept(1000);
+            $peer->send("HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n6\r\nab");
+            $response = Psr7::createResponseFromEntity($client->recvResponseEntity());
+            $stream = $response->getBody();
+            $this->assertSame('chunked', $response->getHeaderLine('Transfer-Encoding'));
+            $this->assertFalse($response->hasHeader('Content-Length'));
+            // The producer cannot send the remainder until this read has returned.
+            $this->assertSame('ab', $stream->read(6));
+            $this->assertFalse($stream->getMetadata('complete'));
+            $this->assertSame(2, $stream->getMetadata('buffered_bytes'));
+            $peer->send("cdef\r\n0\r\n\r\nHTTP/1.1 204 No Content\r\n\r\n");
+            $this->assertSame('cdef', $stream->read(4));
+            $this->assertSame('', $stream->getContents());
+            $this->assertTrue($stream->eof());
+            $this->assertSame('6', $response->getHeaderLine('Content-Length'));
+            $this->assertSame('abcdef', (string) $stream);
+            $this->assertSame(Status::NO_CONTENT, $client->recvResponseEntity()->statusCode);
+        } finally {
+            $client->close();
+            $peer?->close();
+            $server->close();
+        }
+    }
+
+    #[DataProvider('provideUnfinishedBodyCannotLeaveTheConnectionReusableCases')]
+    public function testUnfinishedBodyCannotLeaveTheConnectionReusable(string $action): void
+    {
+        $server = new Socket(Socket::TYPE_TCP);
+        $server->bind('127.0.0.1')->listen();
+        $client = new Client();
+        $client->setTimeout(1000)->setStreamingChunkedResponse(true);
+        $peer = null;
+        try {
+            $client->connect($server->getSockAddress(), $server->getSockPort());
+            $peer = $server->accept(1000);
+            $peer->send("HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n");
+            $stream = Psr7::createResponseFromEntity($client->recvResponseEntity())->getBody();
+            if ($action === 'receive') {
+                try {
+                    $client->recvResponseEntity();
+                    $this->fail('An unfinished body must prevent parsing the next response');
+                } catch (ProtocolException $exception) {
+                    $this->assertSame(Status::BAD_REQUEST, $exception->getCode());
+                    $this->assertStringContainsString('Previous streaming chunked body was not fully consumed', $exception->getMessage());
+                }
+            } elseif ($action === 'detach') {
+                $this->assertNull($stream->detach());
+            } else {
+                $stream->close();
+                $stream->close();
+            }
+            $this->assertFalse($client->getSocket()->isAvailable());
+            $this->assertFalse($client->shouldKeepAlive());
+        } finally {
+            $client->close();
+            $peer?->close();
+            $server->close();
+        }
+    }
+
+    /** @return iterable<string, array{string}> */
+    public static function provideUnfinishedBodyCannotLeaveTheConnectionReusableCases(): iterable
+    {
+        yield 'close' => ['close'];
+        yield 'detach' => ['detach'];
+        yield 'receive next response' => ['receive'];
+    }
+
     public function testStreamingBodyReplayCompletionAndNextResponse(): void
     {
         $server = new Socket(Socket::TYPE_TCP);

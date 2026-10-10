@@ -747,6 +747,10 @@ trait ReceiverTrait
         $bodyLengthOnEntry = $streaming ? $state->bodyBuffer->getLength() : -1;
         try {
             while (!$state->finalized && $state->bodyBuffer->getLength() < $targetLength) {
+                // Return newly parsed bytes before waiting for the remainder of a chunk.
+                if ($streaming && $state->bodyBuffer->getLength() > $bodyLengthOnEntry) {
+                    break;
+                }
                 // mid-chunk 增量读取：当前 chunk 还有未读字节时，用 recvData 非精确读
                 // 直接写入 bodyBuffer，有多少收多少——避免大 chunk 阻塞流式传输。
                 if ($state->remainingChunkBytes > 0) {
@@ -781,10 +785,6 @@ trait ReceiverTrait
                     continue;
                 }
                 if ($expectMoreData) {
-                    // 流式模式下已有新 body 数据时不再阻塞等更多，让上层及时处理
-                    if ($streaming && $state->bodyBuffer->getLength() > $bodyLengthOnEntry) {
-                        break;
-                    }
                     // recvData 的 offset 不能等于 buffer size；当缓冲区已满且已全部解析时先回收。
                     if ($parsedOffset >= $buffer->getLength() && $buffer->isFull()) {
                         $buffer->truncateFrom($parsedOffset);
