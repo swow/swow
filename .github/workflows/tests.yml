@@ -594,19 +594,10 @@ jobs:
         shell: pwsh
         id: test-library
         continue-on-error: true
-        timeout-minutes: 5
+        # Keep the five-minute test deadline and reserve time for native process cleanup.
+        timeout-minutes: 6
         run: |
-          & C:\OpenCppCoverage\OpenCppCoverage.exe `
-            --export_type binary:lib_test.cov `
-            --sources ext\include `
-            --sources ext\src `
-            --excluded_sources ext\deps `
-            --cover_children `
-            --excluded_line_regex "\s*else.*" `
-            --excluded_line_regex "\s*\}.*" `
-            --excluded_line_regex "\s*\{\s*" `
-            --modules php_swow.dll `
-            -- C:\tools\php\php.exe C:\tools\php\composer.phar test-library -- --debug
+          ./.github/workflows/run-library-tests.ps1 -TimeoutMinutes 5
 
       - name: Diagnose native library failures
         if: ${{ always() && steps.test-library.outcome == 'failure' }}
