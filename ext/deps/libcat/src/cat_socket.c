@@ -5082,7 +5082,20 @@ CAT_API const char *cat_socket_get_role_name(const cat_socket_t *socket)
 
 static cat_always_inline cat_bool_t cat_socket_internal_ssl_get_liveness(const cat_socket_internal_t *socket_i)
 {
-    return socket_i->ssl != NULL && socket_i->ssl->read_buffer.length > 0;
+    cat_ssl_t *ssl = socket_i->ssl;
+    if (ssl == NULL) {
+        return cat_false;
+    }
+    /* A closed transport can still have readable TLS data in any buffering layer. */
+    if (ssl->read_buffer.length > 0 || SSL_pending(ssl->connection) > 0 ||
+        BIO_ctrl_pending(SSL_get_rbio(ssl->connection)) > 0) {
+        return cat_true;
+    }
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L && !defined(LIBRESSL_VERSION_NUMBER)
+    return SSL_has_pending(ssl->connection) ? cat_true : cat_false;
+#else
+    return cat_false;
+#endif
 }
 #endif
 
