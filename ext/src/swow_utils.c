@@ -62,6 +62,9 @@ SWOW_API void swow_utils_handler_push_back_to(swow_utils_handler_t *handler, cat
 
 SWOW_API void swow_utils_handler_remove(swow_utils_handler_t *handler)
 {
+    if (cat_queue_empty(&handler->node)) {
+        return;
+    }
     cat_queue_remove(&handler->node);
     cat_queue_init(&handler->node);
     zend_object_release(&handler->std);
