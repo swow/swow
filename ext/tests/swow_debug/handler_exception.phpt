@@ -30,7 +30,10 @@ $caught = null;
 try {
     $secondCalls = 0;
     $throw = true;
-    Coroutine::getCurrent()->getId();
+    $deadline = hrtime(true) + 1000000000;
+    while (hrtime(true) < $deadline) {
+        Coroutine::getCurrent()->getId();
+    }
 } catch (RuntimeException $exception) {
     $secondCallsAtCatch = $secondCalls;
     $caught = $exception;

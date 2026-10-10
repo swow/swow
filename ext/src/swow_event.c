@@ -20,6 +20,7 @@
 
 #include "swow_defer.h"
 #include "swow_coroutine.h"
+#include "swow_debug.h"
 
 static cat_bool_t swow_event_scheduler_run(void)
 {
@@ -72,7 +73,12 @@ static zif_handler original_pcntl_fork = (zif_handler) -1;
 
 static PHP_FUNCTION(swow_pcntl_fork)
 {
+    /* Background threads do not survive fork; join before copying their locks. */
+    bool restart_debug_sampler = swow_debug_sampler_stop();
     original_pcntl_fork(INTERNAL_FUNCTION_PARAM_PASSTHRU);
+    if (restart_debug_sampler && !swow_debug_sampler_start()) {
+        RETURN_THROWS();
+    }
     if (Z_TYPE_P(return_value) == IS_LONG || Z_LVAL_P(return_value) == 0) {
         /* Fork event loop in child process
          * TODO: kill all coroutines?  */

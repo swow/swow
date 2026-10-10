@@ -75,6 +75,7 @@ ZEND_BEGIN_MODULE_GLOBALS(swow)
         bool async_tty;
         bool hook_pdo_pgsql;
         zend_long async_threads;
+        zend_long debug_force_interval;
     } ini;
     const char *libpq_so_name;
 #ifdef SWOW_HAVE_MONGODB

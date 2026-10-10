@@ -21,6 +21,7 @@
 #ifdef CAT_OS_WAIT
 
 #include "swow_closure.h"
+#include "swow_debug.h"
 
 #include "cat_signal.h"
 
@@ -90,7 +91,11 @@ static PHP_METHOD(Swow_Process_ForkProcess, fork)
         Z_PARAM_OBJECT_OF_CLASS(zcallback, zend_ce_closure)
     ZEND_PARSE_PARAMETERS_END();
 
+    bool restart_debug_sampler = swow_debug_sampler_stop();
     pid = cat_os_fork();
+    if (restart_debug_sampler && !swow_debug_sampler_start()) {
+        RETURN_THROWS();
+    }
     if (pid < 0) {
         swow_throw_exception_with_last(swow_process_exception_ce);
         RETURN_THROWS();

@@ -94,6 +94,7 @@ static PHP_GINIT_FUNCTION(swow)
     swow_globals->ini.enable = true;
     swow_globals->ini.closure_serializer = false;
     swow_globals->ini.async_threads = 0;
+    swow_globals->ini.debug_force_interval = 1;
     swow_globals->ini.async_file = true;
     swow_globals->ini.async_tty = true;
 
@@ -135,6 +136,7 @@ PHP_INI_BEGIN()
 STD_ZEND_INI_BOOLEAN("swow.enable", "On", PHP_INI_ALL, swow_OnUpdateBool_only_when_startup, ini.enable, zend_swow_globals, swow_globals)
 STD_ZEND_INI_BOOLEAN("swow.closure_serializer", "Off", PHP_INI_ALL, swow_OnUpdateBool_only_when_startup, ini.closure_serializer, zend_swow_globals, swow_globals)
 STD_PHP_INI_ENTRY("swow.async_threads", "0", PHP_INI_ALL, swow_OnUpdateLong_only_when_startup, ini.async_threads, zend_swow_globals, swow_globals)
+STD_PHP_INI_ENTRY("swow.debug_force_interval", "1", PHP_INI_SYSTEM, OnUpdateLongGEZero, ini.debug_force_interval, zend_swow_globals, swow_globals)
 STD_ZEND_INI_BOOLEAN("swow.async_file", "On", PHP_INI_ALL, swow_OnUpdateBool_only_when_startup, ini.async_file, zend_swow_globals, swow_globals)
 STD_ZEND_INI_BOOLEAN("swow.async_tty", "On", PHP_INI_ALL, swow_OnUpdateBool_only_when_startup, ini.async_tty, zend_swow_globals, swow_globals)
 STD_ZEND_INI_BOOLEAN("swow.hook_pdo_pgsql", "On", PHP_INI_ALL, swow_OnUpdateBool_only_when_startup, ini.hook_pdo_pgsql, zend_swow_globals, swow_globals)

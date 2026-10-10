@@ -28,6 +28,7 @@ extern "C" {
 
 CAT_GLOBALS_STRUCT_BEGIN(swow_debug) {
     cat_queue_t extended_statement_handlers;
+    struct swow_debug_sampler_s *sampler;
 } CAT_GLOBALS_STRUCT_END(swow_debug);
 
 extern SWOW_API CAT_GLOBALS_DECLARE(swow_debug);
@@ -38,6 +39,11 @@ zend_result swow_debug_module_init(INIT_FUNC_ARGS);
 zend_result swow_debug_module_shutdown(INIT_FUNC_ARGS);
 zend_result swow_debug_runtime_init(INIT_FUNC_ARGS);
 zend_result swow_debug_runtime_shutdown(INIT_FUNC_ARGS);
+
+/* Forced observation uses timed interrupts; callbacks remain on the PHP thread. */
+bool swow_debug_sampler_start(void);
+bool swow_debug_sampler_stop(void);
+void swow_debug_sampler_set_armed(bool armed);
 
 static zend_always_inline bool swow_debug_is_user_call(zend_execute_data *call)
 {

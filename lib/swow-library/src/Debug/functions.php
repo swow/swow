@@ -67,6 +67,10 @@ function registerDeadlockDetectorHandler(): Handler
     });
 }
 
+/**
+ * Use -e for statement-by-statement output. Without -e, force samples execution
+ * at swow.debug_force_interval milliseconds and may miss short-lived code.
+ */
 function showExecutedSourceLines(mixed $filter = false, bool $force = false): void
 {
     static $registeredHandler;

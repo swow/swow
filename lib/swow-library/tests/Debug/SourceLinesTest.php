@@ -50,9 +50,10 @@ final class SourceLinesTest extends TestCase
 <?php
 $sum = 0;
 for ($index = 0; $index < 3; $index++) {
-    $sum += $index; // source-line-marker
-    Swow\Coroutine::getCurrent();
+    $sum += $index;
 }
+$deadline = hrtime(true) + 1000000000;
+do { Swow\Coroutine::getCurrent(); } while (hrtime(true) < $deadline && !str_contains(ob_get_contents(), 'source-line-marker')); // source-line-marker
 return $sum;
 PHP);
         $filter = match ($mode) {
@@ -91,9 +92,10 @@ PHP);
         ob_start();
         try {
             showExecutedSourceLines(false, force: true);
-            for ($index = 0; $index < 2; $index++) { // default-source-marker
-                Coroutine::getCurrent();
-            }
+            $deadline = hrtime(true) + 1000000000;
+            do {
+                Coroutine::getCurrent(); // default-source-marker
+            } while (hrtime(true) < $deadline && !str_contains(ob_get_contents(), 'default-source-marker'));
             showExecutedSourceLines(static fn(?string $file, ?int $line): bool => false, force: true);
             echo 'after-replacement';
             showExecutedSourceLines(null);

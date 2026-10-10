@@ -26,7 +26,10 @@ $second = registerExtendedStatementHandler(static function (): void {
 }, true);
 try {
     $enabled = true;
-    Coroutine::getCurrent()->getId();
+    $deadline = hrtime(true) + 1000000000;
+    while (count($references) < 3 && hrtime(true) < $deadline) {
+        Coroutine::getCurrent()->getId();
+    }
     $enabled = false;
 } finally {
     $enabled = false;

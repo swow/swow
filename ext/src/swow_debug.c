@@ -469,7 +469,7 @@ static PHP_FUNCTION(Swow_Debug_block)
 #endif
 }
 
-static swow_interrupt_function_t original_zend_interrupt_function = (swow_interrupt_function_t) -1;
+static swow_interrupt_function_t original_zend_interrupt_function = NULL;
 static void swow_debug_ext_stmt_interrupt_function(zend_execute_data *execute_data);
 
 ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_Swow_Debug_registerExtendedStatementHandler, 0, 1, Swow\\\125tils\\Handler, 0)
@@ -492,11 +492,9 @@ static PHP_FUNCTION(Swow_Debug_registerExtendedStatementHandler)
 
     if (!(CG(compiler_options) & ZEND_COMPILE_EXTENDED_INFO)) {
         if (force) {
-            if (original_zend_interrupt_function == (swow_interrupt_function_t) -1) {
-                original_zend_interrupt_function = zend_interrupt_function;
-                zend_interrupt_function = swow_debug_ext_stmt_interrupt_function;
+            if (!swow_debug_sampler_start()) {
+                RETURN_THROWS();
             }
-            zend_atomic_bool_store(&EG(vm_interrupt), true);
         } else {
             zend_throw_error(NULL, "Please re-run your program with \"-e\" option");
             RETURN_THROWS();
@@ -578,12 +576,26 @@ static int swow_debug_ext_stmt_handler(zend_execute_data *execute_data)
 
 static void swow_debug_ext_stmt_interrupt_function(zend_execute_data *execute_data)
 {
-    if (swow_debug_call_extended_statement_handlers()) {
-        zend_atomic_bool_store(&EG(vm_interrupt), true);
+    bool rearm_sampler = false;
+
+    if (SWOW_G(runtime_state) == SWOW_RUNTIME_STATE_RUNNING && SWOW_DEBUG_G(sampler) != NULL &&
+        !(swow_coroutine_get_current()->coroutine.flags & SWOW_COROUTINE_FLAG_DEBUGGING)) {
+        /* Re-arming vm_interrupt here can re-enter the VM without executing an
+         * opcode. Pause sampling while callbacks run, then wait a full interval. */
+        swow_debug_sampler_set_armed(false);
+        (void) swow_debug_call_extended_statement_handlers();
+        if (cat_queue_empty(&SWOW_DEBUG_G(extended_statement_handlers))) {
+            (void) swow_debug_sampler_stop();
+        } else {
+            rearm_sampler = true;
+        }
     }
 
     if (original_zend_interrupt_function != NULL) {
         original_zend_interrupt_function(execute_data);
+    }
+    if (rearm_sampler) {
+        swow_debug_sampler_set_armed(true);
     }
 }
 
@@ -595,11 +607,17 @@ zend_result swow_debug_module_init(INIT_FUNC_ARGS)
         return FAILURE;
     }
 
+    original_zend_interrupt_function = zend_interrupt_function;
+    zend_interrupt_function = swow_debug_ext_stmt_interrupt_function;
+
     return SUCCESS;
 }
 
 zend_result swow_debug_module_shutdown(INIT_FUNC_ARGS)
 {
+    if (zend_interrupt_function == swow_debug_ext_stmt_interrupt_function) {
+        zend_interrupt_function = original_zend_interrupt_function;
+    }
     CAT_GLOBALS_UNREGISTER(swow_debug);
 
     return SUCCESS;
@@ -608,6 +626,7 @@ zend_result swow_debug_module_shutdown(INIT_FUNC_ARGS)
 zend_result swow_debug_runtime_init(INIT_FUNC_ARGS)
 {
     cat_queue_init(&SWOW_DEBUG_G(extended_statement_handlers));
+    SWOW_DEBUG_G(sampler) = NULL;
 
     /* ZEND_COMPILE_EXTENDED_INFO is set after MINIT, so we can only check it in RINIT */
     if (!is_zend_compile_extended_info_checked) {
@@ -624,6 +643,7 @@ zend_result swow_debug_runtime_init(INIT_FUNC_ARGS)
 
 zend_result swow_debug_runtime_shutdown(INIT_FUNC_ARGS)
 {
+    (void) swow_debug_sampler_stop();
     swow_utils_handlers_release(&SWOW_DEBUG_G(extended_statement_handlers));
 
     if (is_zend_ext_stmt_handler_hooked) {
