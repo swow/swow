@@ -2173,7 +2173,8 @@ static int swow_plain_files_unlink(php_stream_wrapper *wrapper, const char *url,
     ret = swow_virtual_unlink(url);
     if (ret == -1) {
         if (options & REPORT_ERRORS) {
-            php_error_docref1(NULL, url, E_WARNING, "%s", cat_get_last_error_message());
+            php_error_docref1(NULL, url, E_WARNING, "%s",
+                strerror(cat_orig_errno(cat_get_last_error_code())));
         }
         return 0;
     }
