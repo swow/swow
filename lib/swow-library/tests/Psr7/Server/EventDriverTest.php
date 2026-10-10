@@ -80,6 +80,7 @@ final class EventDriverTest extends TestCase
             $this->assertSame('close', $response->getHeaderLine('Connection'));
             $connection = $closed->pop(1000);
             $this->assertSame(['start', 'connection', '/request', 'close'], $events);
+            $this->assertSame('', $client->getSocket()->recvString(1));
             $this->assertFalse($connection->getSocket()->isAvailable());
             $this->assertSame([], iterator_to_array($server->getConnections()));
         } finally {
