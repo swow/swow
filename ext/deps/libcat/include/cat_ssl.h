@@ -212,6 +212,8 @@ typedef struct cat_ssl_s {
     const char *expected_peer_name;
     /* Retained for diagnostics when OpenSSL discards an unverified peer certificate. */
     X509 *failed_peer_certificate;
+    /* Preserve the OpenSSL reason before formatting drains its thread-local error queue. */
+    unsigned long handshake_error;
     /* internals */
     cat_ssl_context_t *context; // for free data before SSL_free()
 } cat_ssl_t;
