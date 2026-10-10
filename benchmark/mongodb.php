@@ -16,12 +16,13 @@ require __DIR__ . '/mongodb/Benchmark.php';
 
 use Swow\Benchmark\MongoDB\Benchmark;
 
-$options = getopt('', ['uri:', 'database:', 'mode:', 'clients:', 'scenario:', 'concurrency:', 'operations:', 'warmup:', 'delay-ms:', 'help']);
+$options = getopt('', ['uri:', 'database:', 'mode:', 'mongodb-hook:', 'clients:', 'scenario:', 'concurrency:', 'operations:', 'warmup:', 'delay-ms:', 'help']);
 if (isset($options['help']) || !isset($options['uri'])) {
     echo "MongoDB benchmark (creates and drops a temporary collection in swow_benchmark).\n",
-    "--uri=URI --mode=sync|async --clients=independent|shared --scenario=ping|query|insert|delay\n",
+    "--uri=URI --mode=sync|async --clients=independent|shared --scenario=ping|query|insert|delay|await\n",
     "--concurrency=16 --operations=1000 --warmup=10 --delay-ms=10 --database=swow_benchmark\n",
     "Use -d swow.enable=0 for sync, and -d swow.enable=1 for async. JSON is written to stdout.\n";
+    echo "--mongodb-hook=on|off selects the expected MongoDB adapter build (default on).\n";
     exit(isset($options['help']) ? 0 : 1);
 }
 try {
@@ -42,12 +43,13 @@ try {
     $mode = $string('mode', 'async');
     $clients = $string('clients', 'independent');
     $scenario = $string('scenario', 'query');
+    $hook = $string('mongodb-hook', 'on');
     if (!in_array($mode, ['sync', 'async'], true) || !in_array($clients, ['independent', 'shared'], true) ||
-        !in_array($scenario, ['ping', 'query', 'insert', 'delay'], true)) {
+        !in_array($scenario, ['ping', 'query', 'insert', 'delay', 'await'], true) || !in_array($hook, ['on', 'off'], true)) {
         throw new InvalidArgumentException('Invalid mode, clients or scenario');
     }
     $enabled = extension_loaded('swow') && (bool) ini_get('swow.enable');
-    if (($mode === 'async') !== $enabled || ($enabled && !Swow\Extension::isBuiltWith('mongodb'))) {
+    if (($mode === 'async') !== $enabled || ($enabled && Swow\Extension::isBuiltWith('mongodb') !== ($hook === 'on'))) {
         throw new RuntimeException('The requested mode does not match the loaded Swow configuration');
     }
     $result = (new Benchmark($string('uri', ''), $mode, $clients, $scenario,
