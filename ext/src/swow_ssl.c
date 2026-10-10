@@ -29,8 +29,24 @@
 #include "streams/php_streams_int.h"
 #include "zend_hash.h"
 #include "zend_portability.h"
+#include "main/fopen_wrappers.h"
 
 #ifdef CAT_SSL
+
+bool swow_ssl_resolve_stream_path(zend_string *path, const char *option_name, char *resolved_path)
+{
+    if (ZSTR_LEN(path) == 0) {
+        resolved_path[0] = '\0';
+        return true;
+    }
+    // Keep PHP path length and open_basedir checks before OpenSSL consumes a C string.
+    if (CHECK_NULL_PATH(ZSTR_VAL(path), ZSTR_LEN(path))) {
+        php_error_docref(NULL, E_WARNING,
+            "Path for %s in ssl stream context option must not contain any null bytes", option_name);
+        return false;
+    }
+    return expand_filepath(ZSTR_VAL(path), resolved_path) != NULL && php_check_open_basedir(resolved_path) == 0;
+}
 
 cat_bool_t swow_load_stream_cafile(cat_ssl_context_t *context, struct cat_socket_crypto_options_s *options)
 {

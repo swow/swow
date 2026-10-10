@@ -784,6 +784,8 @@ static int swow_stream_enable_crypto(php_stream *stream,
         int max_proto_version = 0;
         zval *val;
         int ret = -1;
+        char certificate_path[MAXPATHLEN];
+        char private_key_path[MAXPATHLEN];
 
         cat_socket_crypto_options_init(&options, is_client);
         options.load_ca = swow_load_stream_cafile;
@@ -837,7 +839,21 @@ static int swow_stream_enable_crypto(php_stream *stream,
         }
 #endif
         GET_VER_OPT_STRING("local_cert", options.certificate);
+        if (options.certificate != NULL) {
+            if (!swow_ssl_resolve_stream_path(Z_STR_P(val), "local_cert", certificate_path)) {
+                cat_update_last_error(CAT_EINVAL, "Unable to get real path of certificate file `%s'", options.certificate);
+                goto _cleanup;
+            }
+            options.certificate = certificate_path;
+        }
         GET_VER_OPT_STRING("local_pk", options.certificate_key);
+        if (options.certificate_key != NULL) {
+            if (!swow_ssl_resolve_stream_path(Z_STR_P(val), "local_pk", private_key_path)) {
+                cat_update_last_error(CAT_EINVAL, "Unable to get real path of private key file `%s'", options.certificate_key);
+                goto _cleanup;
+            }
+            options.certificate_key = private_key_path;
+        }
         if (GET_VER_OPT("no_ticket")) {
             options.no_ticket = zend_is_true(val) ? cat_true : cat_false;
         }
