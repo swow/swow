@@ -828,6 +828,7 @@ CAT_API cat_ssl_t *cat_ssl_create(cat_ssl_t *ssl, cat_ssl_context_t *context)
     ssl->allow_self_signed = cat_false;
     ssl->expected_peer_name = NULL;
     ssl->failed_peer_certificate = NULL;
+    ssl->handshake_error = 0;
 
     return ssl;
 
@@ -976,6 +977,7 @@ CAT_API cat_ssl_ret_t cat_ssl_handshake(cat_ssl_t *ssl)
     }
 
     int error = cat_ssl_get_error(ssl, n);
+    ssl->handshake_error = ERR_peek_error();
 
     if (error == SSL_ERROR_WANT_WRITE) {
         return CAT_SSL_RET_WANT_WRITE;
