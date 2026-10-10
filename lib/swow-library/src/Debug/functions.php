@@ -182,7 +182,7 @@ function showExecutedSourceLines(mixed $filter = false, bool $force = false): vo
             }
         };
     } elseif ($filter === null) {
-        $registeredHandler->remove();
+        $registeredHandler?->remove();
     } else {
         throw new TypeError(sprintf('%s(): Argument #1 ($filter) must be of type bool, callable or null, %s given', __FUNCTION__, get_debug_type($filter)));
     }
