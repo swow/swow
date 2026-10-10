@@ -803,6 +803,27 @@ static int swow_stream_enable_crypto(php_stream *stream,
         GET_VER_OPT_LONG("security_level", options.security_level);
 #endif
         GET_VER_OPT_STRING("alpn_protocols", options.alpn_protocols);
+#ifdef CAT_SSL_HAVE_TLS_ALPN
+        if (options.alpn_protocols != NULL) {
+            const char *protocol = options.alpn_protocols;
+            const char *delimiter;
+            do {
+                delimiter = strchr(protocol, ',');
+                size_t length = delimiter != NULL ? (size_t) (delimiter - protocol) : strlen(protocol);
+                if (length == 0) {
+                    cat_update_last_error(CAT_EINVAL, "Failed setting TLS ALPN protocols, protocol names must not be empty");
+                    goto _cleanup;
+                }
+                if (length > 255) {
+                    cat_update_last_error(CAT_EINVAL, "Failed setting TLS ALPN protocols, protocol names must not exceed 255 bytes");
+                    goto _cleanup;
+                }
+                if (delimiter != NULL) {
+                    protocol = delimiter + 1;
+                }
+            } while (delimiter != NULL);
+        }
+#endif
 #ifndef CAT_SSL_HAVE_TLS_ALPN
         if (alpn_protocols != NULL) {
             php_error_docref(NULL, E_WARNING, "alpn_protocols support is not compiled into the OpenSSL library against which PHP is linked");
