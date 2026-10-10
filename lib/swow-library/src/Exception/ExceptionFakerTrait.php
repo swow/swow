@@ -17,20 +17,28 @@ namespace Swow\Exception;
 use Exception;
 use ReflectionProperty;
 
+use const PHP_VERSION_ID;
+
 trait ExceptionFakerTrait
 {
     protected function cloneInternalPropertiesFrom(Exception $exception): static
     {
         $rp = new ReflectionProperty(Exception::class, 'file');
-        $rp->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $rp->setAccessible(true);
+        }
         $rp->setValue($this, $exception->getFile());
 
         $rp = new ReflectionProperty(Exception::class, 'line');
-        $rp->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $rp->setAccessible(true);
+        }
         $rp->setValue($this, $exception->getLine());
 
         $rp = new ReflectionProperty(Exception::class, 'trace');
-        $rp->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $rp->setAccessible(true);
+        }
         $rp->setValue($this, $exception->getTrace());
 
         return $this;

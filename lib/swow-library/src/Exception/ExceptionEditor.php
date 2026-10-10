@@ -17,33 +17,43 @@ namespace Swow\Exception;
 use Exception;
 use ReflectionProperty;
 
+use const PHP_VERSION_ID;
+
 class ExceptionEditor
 {
     public static function setCode(Exception $exception, int $code): void
     {
         $rp = new ReflectionProperty(Exception::class, 'code');
-        $rp->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $rp->setAccessible(true);
+        }
         $rp->setValue($exception, $code);
     }
 
     public static function setMessage(Exception $exception, string $message): void
     {
         $rp = new ReflectionProperty(Exception::class, 'message');
-        $rp->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $rp->setAccessible(true);
+        }
         $rp->setValue($exception, $message);
     }
 
     public static function setFile(Exception $exception, string $file): void
     {
         $rp = new ReflectionProperty(Exception::class, 'file');
-        $rp->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $rp->setAccessible(true);
+        }
         $rp->setValue($exception, $file);
     }
 
     public static function setLine(Exception $exception, int $line): void
     {
         $rp = new ReflectionProperty(Exception::class, 'line');
-        $rp->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $rp->setAccessible(true);
+        }
         $rp->setValue($exception, $line);
     }
 
@@ -60,7 +70,9 @@ class ExceptionEditor
     public static function setTrace(Exception $exception, array $trace): void
     {
         $rp = new ReflectionProperty(Exception::class, 'trace');
-        $rp->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $rp->setAccessible(true);
+        }
         $rp->setValue($exception, $trace);
     }
 }
