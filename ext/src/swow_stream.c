@@ -701,7 +701,7 @@ static int swow_stream_connect(php_stream *stream, swow_netstream_data_t *swow_s
 static inline int swow_stream_socket_recvfrom(
     cat_socket_t *socket, char *buf, size_t buflen, int flags,
     zend_string **textaddr,
-    struct sockaddr **addr, socklen_t *addrlen)
+    struct sockaddr **addr, socklen_t *addrlen, cat_timeout_t timeout)
 {
     int ret;
     int want_addr = textaddr || addr;
@@ -718,7 +718,7 @@ static inline int swow_stream_socket_recvfrom(
         if (!(flags & STREAM_PEEK)) {
             ret = cat_socket_recvfrom(socket, buf, buflen, (struct sockaddr *) &sa, &sl);
         } else {
-            ret = cat_socket_peekfrom(socket, buf, buflen, (struct sockaddr *) &sa, &sl);
+            ret = cat_socket_peekfrom_ex(socket, buf, buflen, (struct sockaddr *) &sa, &sl, timeout);
         }
 #ifdef PHP_WIN32
         /* POSIX discards excess bytes without signalling failure; emulate this on Windows */
@@ -741,7 +741,7 @@ static inline int swow_stream_socket_recvfrom(
         if (!(flags & STREAM_PEEK)) {
             ret = cat_socket_recv(socket, buf, buflen);
         } else {
-            ret = cat_socket_peek(socket, buf, buflen);
+            ret = cat_socket_peek_ex(socket, buf, buflen, timeout);
         }
     }
 
@@ -1242,7 +1242,8 @@ static int swow_stream_set_option(php_stream *stream, int option, int value, voi
                     xparam->outputs.returncode = swow_stream_socket_recvfrom(
                         socket, xparam->inputs.buf, xparam->inputs.buflen, xparam->inputs.flags,
                         xparam->want_textaddr ? &xparam->outputs.textaddr : NULL, xparam->want_addr ? &xparam->outputs.addr : NULL,
-                        xparam->want_addr ? &xparam->outputs.addrlen : NULL
+                        xparam->want_addr ? &xparam->outputs.addrlen : NULL,
+                        sock->is_blocked ? cat_time_tv2to(&sock->timeout) : 0
                     );
                     return PHP_STREAM_OPTION_RETURN_OK;
                 }
