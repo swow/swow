@@ -14,6 +14,7 @@ declare(strict_types=1);
 
 namespace Swow\Http\Protocol;
 
+use RuntimeException;
 use Swow\Buffer;
 use Swow\Coroutine;
 use Swow\Errno;
@@ -83,6 +84,9 @@ trait ReceiverTrait
 
     protected function __constructReceiver(int $type, int $events): void
     {
+        $this->parsedOffset = 0;
+        $this->shouldKeepAlive = false;
+        $this->activeChunkedBody = null;
         $this->buffer = new Buffer(max(Buffer::COMMON_SIZE, $this->getMaxHeaderLength()));
         $requiredEvents =
             HttpParser::EVENT_URL |
@@ -708,7 +712,7 @@ trait ReceiverTrait
      */
     protected function handleChunkedBodyStreamClosed(ChunkedBodyState $state): void
     {
-        if ($state->finalized) {
+        if ($state->finalized || $this->activeChunkedBody !== $state) {
             return;
         }
         $this->activeChunkedBody = null;
@@ -739,6 +743,10 @@ trait ReceiverTrait
     {
         if ($state->finalized || $state->bodyBuffer->getLength() >= $targetLength) {
             return;
+        }
+        if ($this->activeChunkedBody !== $state) {
+            // An abandoned body must never perform I/O on a recreated connection.
+            throw new RuntimeException('Stream is closed');
         }
         $buffer = $state->buffer;
         $parser = $state->parser;
