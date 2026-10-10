@@ -629,6 +629,25 @@ static int swow_openssl_server_sni_callback(SSL *ssl_handle, int *al, void *arg)
 
 cat_bool_t swow_ssl_before_handshake_callback(cat_ssl_t* ssl, void * data) {
     SSL_CTX *ctx = SSL_get_SSL_CTX(ssl->connection);
+    swow_ssl_server_sni_data_t *contexts = (swow_ssl_server_sni_data_t *) data;
+    X509_STORE *verify_store = NULL;
+#ifdef SSL_get0_verify_cert_store
+    SSL_get0_verify_cert_store(ssl->connection, &verify_store);
+#endif
+    if (verify_store == NULL) {
+        verify_store = SSL_CTX_get_cert_store(ctx);
+    }
+
+    // SNI contexts belong to this handshake; switching contexts replaces certificate data and its verification store.
+    // Retain the original store so certificate selection preserves the trust source for client authentication.
+    if (contexts != NULL) {
+        ZEND_HASH_FOREACH_PTR(&contexts->contexts, cat_ssl_context_t *context) {
+            if (!SSL_CTX_set1_verify_cert_store(context->ctx, verify_store)) {
+                cat_update_last_error(CAT_ESSL, "Failed retaining certificate verification store for SNI");
+                return cat_false;
+            }
+        } ZEND_HASH_FOREACH_END();
+    }
 
     SSL_CTX_set_tlsext_servername_callback(ctx, swow_openssl_server_sni_callback);
     SSL_CTX_set_tlsext_servername_arg(ctx, data);
