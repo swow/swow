@@ -24,12 +24,31 @@ use function Swow\TestUtils\getRandomBytes;
 use function sys_get_temp_dir;
 use function tempnam;
 
+use const UPLOAD_ERR_OK;
+
 /**
  * @internal
  */
 #[CoversClass(UploadedFile::class)]
 final class UploadedFileTest extends TestCase
 {
+    public function testBufferStreamWithoutWrapperMetadata(): void
+    {
+        $stream = Psr7::createStream('upload data');
+        $uploadedFile = new UploadedFile($stream, 11, clientFilename: 'document.txt', clientMediaType: 'text/plain');
+
+        $this->assertSame($stream, $uploadedFile->getStream());
+        $this->assertSame('upload data', (string) $uploadedFile->getStream());
+        $this->assertSame('txt', $uploadedFile->getExtension());
+        $this->assertSame([
+            'name' => 'document.txt',
+            'type' => 'text/plain',
+            'tmp_file' => null,
+            'error' => UPLOAD_ERR_OK,
+            'size' => 11,
+        ], $uploadedFile->toArray());
+    }
+
     public function testMove(): void
     {
         $tmpFile = tempnam(sys_get_temp_dir(), 'swow_uploaded_tmp_file');

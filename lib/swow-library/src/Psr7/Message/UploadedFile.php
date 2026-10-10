@@ -90,7 +90,7 @@ class UploadedFile implements UploadedFilePlusInterface
             if ($streamOrFile instanceof StreamInterface) {
                 $this->stream = $streamOrFile;
                 $metaData = $streamOrFile->getMetadata();
-                if ($metaData['wrapper_type'] === 'plainfile') {
+                if (($metaData['wrapper_type'] ?? null) === 'plainfile') {
                     $this->file = $metaData['uri'];
                 }
             } elseif (is_resource($streamOrFile)) {
