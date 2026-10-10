@@ -592,6 +592,7 @@ jobs:
         shell: pwsh
         id: test-library
         continue-on-error: true
+        timeout-minutes: 5
         run: |
           & C:\OpenCppCoverage\OpenCppCoverage.exe `
             --export_type binary:lib_test.cov `
