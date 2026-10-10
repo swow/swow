@@ -522,7 +522,7 @@ static inline int swow_stream_accept(php_stream *stream, swow_netstream_data_t *
         goto _accept_error;
     }
 
-    address_info = cat_socket_getsockname_fast(client);
+    address_info = cat_socket_getpeername_fast(client);
 
     if (UNEXPECTED(address_info == NULL)) {
         goto _accept_error;
