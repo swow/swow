@@ -141,6 +141,7 @@ end:
 cat_bool_t swow_ssl_enable_peer_fingerprint_verify(zval *zpeer_fingerprint, cat_ssl_peer_fingerprint_t **pfingerprints, int php_warning) {
     cat_bool_t ret = cat_false;
     cat_ssl_peer_fingerprint_t *fingerprints = NULL;
+    ZVAL_DEREF(zpeer_fingerprint);
     /*
      * according to PHP documentation:
      * When a string is used, the length will determine which hashing algorithm is applied, either "md5" (32) or "sha1" (40).
@@ -225,7 +226,10 @@ cat_bool_t swow_ssl_enable_peer_fingerprint_verify(zval *zpeer_fingerprint, cat_
         unsigned char *p_binary_digest = (unsigned char *) (fingerprints + count + 1);
         size_t i = 0;
         ZEND_HASH_FOREACH_STR_KEY_VAL(Z_ARRVAL_P(zpeer_fingerprint), zend_string *key, zval *value) {
-            if (key == NULL || value == NULL) {
+            if (value != NULL) {
+                ZVAL_DEREF(value);
+            }
+            if (key == NULL || value == NULL || Z_TYPE_P(value) != IS_STRING) {
                 if (php_warning) {
                     php_error_docref(NULL, E_WARNING, "Invalid peer_fingerprint array; [algo => fingerprint] form required");
                     // php will try to compare the fingerprint, so we warn here
