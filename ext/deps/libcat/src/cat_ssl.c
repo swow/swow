@@ -730,6 +730,13 @@ static int cat_ssl_verify_callback(int preverify_ok, X509_STORE_CTX *ctx) /* {{{
 
 _out:
     if (!ret) {
+        /* A rejected handshake must still expose the received leaf to diagnostic callbacks. */
+        if (ssl->failed_peer_certificate == NULL) {
+            X509 *peer = X509_STORE_CTX_get0_cert(ctx);
+            if (peer != NULL) {
+                ssl->failed_peer_certificate = X509_dup(peer);
+            }
+        }
         cat_update_last_error(CAT_ECERT, "SSL verify callback failed: (%d, %s)", err, X509_verify_cert_error_string(err));
     }
     return ret;
@@ -813,6 +820,7 @@ CAT_API cat_ssl_t *cat_ssl_create(cat_ssl_t *ssl, cat_ssl_context_t *context)
     ssl->verify_peer = cat_true;
     ssl->allow_self_signed = cat_false;
     ssl->expected_peer_name = NULL;
+    ssl->failed_peer_certificate = NULL;
 
     return ssl;
 
@@ -845,6 +853,7 @@ CAT_API void cat_ssl_close(cat_ssl_t *ssl)
     cat_ssl_context_close_data(ssl->context);
     /* implicitly frees internal_bio */
     SSL_free(ssl->connection);
+    X509_free(ssl->failed_peer_certificate);
     /* free peer name */
     if (ssl->expected_peer_name != NULL) {
         cat_free((void *) ssl->expected_peer_name);
