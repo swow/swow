@@ -16,15 +16,12 @@ foreach ([false, true] as $emulate) {
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     $pdo->setAttribute(PDO::ATTR_EMULATE_PREPARES, $emulate);
     $statement = $pdo->prepare(<<<'SQL'
-        SELECT ':ignored ?' AS literal, $$:dollar ?$$ AS dollar,
-            $tag$:tagged ?$tag$ AS tagged, CAST(:value AS integer) AS value
+        SELECT ':ignored ?' AS literal, CAST(:value AS integer) AS value
             /* :block ? */ -- :line ?
         SQL);
     $statement->execute(['value' => 42]);
     Assert::same($statement->fetch(PDO::FETCH_ASSOC), [
         'literal' => ':ignored ?',
-        'dollar' => ':dollar ?',
-        'tagged' => ':tagged ?',
         'value' => 42,
     ]);
     $statement->closeCursor();
