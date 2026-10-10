@@ -699,6 +699,10 @@ void swow_ssl_after_handshake_callback(cat_ssl_t* ssl, cat_bool_t success, void 
 #else
         peer_cert = SSL_get_peer_certificate(ssl->connection);
 #endif
+        if (peer_cert == NULL && ssl->failed_peer_certificate != NULL) {
+            // Verification failure can discard OpenSSL's peer; capture preserves diagnostics, not trust.
+            peer_cert = X509_dup(ssl->failed_peer_certificate);
+        }
         if (peer_cert != NULL) {
             object_init_ex(&zcert, swow_php_openssl_certificate_ce);
             cert_object = Z_OPENSSL_CERTIFICATE_P(&zcert);
