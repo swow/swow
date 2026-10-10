@@ -22,6 +22,7 @@ use function array_walk_recursive;
 use function http_build_query;
 use function json_encode;
 
+use const ENT_XML1;
 use const JSON_THROW_ON_ERROR;
 
 class BodyEncoder
@@ -46,7 +47,9 @@ class BodyEncoder
     public static function encodeXml(array $data): string
     {
         $xml = new SimpleXMLElement('<root/>');
-        array_walk_recursive($data, [$xml, 'addChild']);
+        array_walk_recursive($data, static function (mixed $value, string|int $name) use ($xml): void {
+            $xml->addChild((string) $name, htmlspecialchars((string) $value, ENT_XML1));
+        });
         $xmlString = $xml->asXML();
         if (!$xmlString) {
             throw new RuntimeException('XML encode failed');
