@@ -39,6 +39,7 @@ use const PHP_INT_MAX;
 
 trait DebuggerCommandTrait
 {
+    /** @var array<string, string> */
     protected static array $commandMethods = [];
 
     protected static array $commandShortNameMap = [
@@ -77,7 +78,7 @@ trait DebuggerCommandTrait
                 if (str_starts_with($methodName, 'command')) {
                     $commandName = substr($methodName, strlen('command'));
                     $commandName = strtolower($commandName);
-                    static::$commandMethods[$commandName] = $method->getClosure($this);
+                    static::$commandMethods[$commandName] = $methodName;
                 }
             }
         }
@@ -88,7 +89,7 @@ trait DebuggerCommandTrait
             }
             throw new DebuggerException("Unknown command '{$command}'");
         }
-        $method(new DebuggerCommandContext($command, $arguments));
+        $this->{$method}(new DebuggerCommandContext($command, $arguments));
     }
 
     public function commandPs(): void
