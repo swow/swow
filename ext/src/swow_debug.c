@@ -551,11 +551,10 @@ static bool swow_debug_call_extended_statement_handlers(void)
 
     CAT_QUEUE_FOREACH_DATA_START(&SWOW_DEBUG_G(extended_statement_handlers), swow_utils_handler_t, node, handler) {
         (void) zend_call_function(&fci, &handler->fcall.fcc);
+        zval_ptr_dtor(&retval);
     } CAT_QUEUE_FOREACH_DATA_END();
 
     s_coroutine->coroutine.flags ^= SWOW_COROUTINE_FLAG_DEBUGGING;
-
-    zval_ptr_dtor(&retval);
 
     return true;
 }
