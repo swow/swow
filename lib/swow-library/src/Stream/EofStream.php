@@ -120,7 +120,7 @@ class EofStream extends Socket
     public function recvMessageString(?int $timeout = null): string
     {
         $buffer = new Buffer(0);
-        $this->recvMessage($buffer, $timeout);
+        $this->recvMessage($buffer, timeout: $timeout);
 
         return $buffer->toString();
     }
@@ -172,7 +172,7 @@ class EofStream extends Socket
     public function recvMessageStringFast(?int $timeout = null): string
     {
         $buffer = new Buffer(Buffer::PAGE_SIZE);
-        $this->recvMessageFast($buffer, $timeout);
+        $this->recvMessageFast($buffer, timeout: $timeout);
 
         return $buffer->toString();
     }

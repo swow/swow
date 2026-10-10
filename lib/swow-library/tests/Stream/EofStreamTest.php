@@ -17,6 +17,7 @@ namespace Swow\Tests\Stream;
 use Closure;
 use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Swow\Buffer;
 use Swow\Coroutine;
@@ -78,6 +79,22 @@ final class EofStreamTest extends TestCase
                 $this->assertSame($expected, $connection->recvMessageString());
             }
         });
+    }
+
+    #[DataProvider('provideStringReceiveTimeoutDoesNotChangeTheDestinationOffsetCases')]
+    public function testStringReceiveTimeoutDoesNotChangeTheDestinationOffset(string $method): void
+    {
+        $this->withConnection(function (EofStream $connection, EofStream $peer) use ($method): void {
+            $peer->sendMessage('body');
+            $this->assertSame('body', $connection->{$method}(timeout: 1000));
+        });
+    }
+
+    /** @return iterable<string, array{string}> */
+    public static function provideStringReceiveTimeoutDoesNotChangeTheDestinationOffsetCases(): iterable
+    {
+        yield 'buffered' => ['recvMessageString'];
+        yield 'fast' => ['recvMessageStringFast'];
     }
 
     public function testBase(): void
