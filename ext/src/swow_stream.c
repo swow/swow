@@ -1203,12 +1203,21 @@ static ssize_t swow_stream_read(php_stream *stream, char *buffer, size_t size)
 {
     SWOW_STREAM_SOCKET_GETTER(stream, swow_sock, sock, socket, return 0);
     ssize_t nr_bytes = 0;
+    bool is_blocked = sock->is_blocked;
+
+#if PHP_VERSION_ID >= 80300 && defined(CAT_SSL)
+    /* A supplemental TLS read may add available bytes, but must not delay
+     * returning data already supplied by PHP's stream buffer. */
+    if (stream->has_buffered_data && cat_socket_is_encrypted(socket)) {
+        is_blocked = false;
+    }
+#endif
 
 #if 1 /* PHP_VERSION_ID < 80100 */
     sock->timeout_event = 0; // clear error state
 #endif
 
-    if (sock->is_blocked) {
+    if (is_blocked) {
         nr_bytes = cat_socket_recv_ex(socket, buffer, size, cat_time_tv2to(&sock->timeout));
     } else {
         nr_bytes = cat_socket_try_recv(socket, buffer, size);
@@ -1220,7 +1229,7 @@ static ssize_t swow_stream_read(php_stream *stream, char *buffer, size_t size)
     if (EXPECTED(nr_bytes > 0)) {
         php_stream_notify_progress_increment(PHP_STREAM_CONTEXT(stream), nr_bytes, 0);
     } else if (nr_bytes < 0) {
-        cat_errno_t error = sock->is_blocked ? cat_get_last_error_code() : (cat_errno_t) nr_bytes;
+        cat_errno_t error = is_blocked ? cat_get_last_error_code() : (cat_errno_t) nr_bytes;
         stream->eof = cat_socket_is_eof_error(error);
         sock->timeout_event = (error == CAT_ETIMEDOUT);
         if (sock->timeout_event) {
