@@ -298,20 +298,7 @@ trait ReceiverTrait
                         break; /* goto recv more data */
                     }
                     if ($event === HttpParser::EVENT_MESSAGE_COMPLETE) {
-                        if ($isChunked) {
-                            // Remove 'chunked' field from Transfer-Encoding header because we combined the chunked body
-                            $transferEncodingIndex = $headerNames['transfer-encoding'];
-                            $headers[$transferEncodingIndex] = implode(', ', array_filter(
-                                array_map('trim', explode(',', implode(',', $headers[$transferEncodingIndex]))),
-                                static function (string $value): bool {
-                                    return strcasecmp($value, 'chunked') !== 0;
-                                }
-                            ));
-                            $headers[$headerNames['content-length'] ??= 'Content-Length'] = $body ? (string) $body->getLength() : '0';
-                            if ($body && $body->getLength() < ($body->getSize() / 2)) {
-                                $body->mallocTrim();
-                            }
-                        } elseif ($isMultipart && !$this->preserveBodyData) {
+                        if ($isMultipart && !$this->preserveBodyData) {
                             // Some program may want to get content length header,
                             // we would find it strange if we didn't consider them to have a body.
                             // $contentLengthIndex = $headerNames['content-length'] ?? null;
@@ -590,6 +577,25 @@ trait ReceiverTrait
                                 throw new ParserException("Unexpected HttpParser event: {$parser->getEventName()}");
                         }
                     }
+                }
+            }
+            if ($isChunked && !$isStreamingChunkedBody) {
+                // Remove 'chunked' field from Transfer-Encoding header because we combined the chunked body
+                $transferEncodingIndex = $headerNames['transfer-encoding'];
+                $transferEncodings = array_values(array_filter(
+                    array_map('trim', explode(',', implode(',', $headers[$transferEncodingIndex]))),
+                    static function (string $value): bool {
+                        return $value !== '' && strcasecmp($value, 'chunked') !== 0;
+                    }
+                ));
+                if ($transferEncodings === []) {
+                    unset($headers[$transferEncodingIndex], $headerNames['transfer-encoding']);
+                } else {
+                    $headers[$transferEncodingIndex] = $transferEncodings;
+                }
+                $headers[$headerNames['content-length'] ??= 'Content-Length'] = [(string) ($body?->getLength() ?? 0)];
+                if ($body && $body->getLength() < ($body->getSize() / 2)) {
+                    $body->mallocTrim();
                 }
             }
         } catch (ParserException $parserException) {

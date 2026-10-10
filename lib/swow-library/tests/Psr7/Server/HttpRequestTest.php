@@ -23,6 +23,7 @@ use Swow\Http\Http;
 use Swow\Http\Protocol\ProtocolException;
 use Swow\Http\Status;
 use Swow\Psr7\Client\Client;
+use Swow\Psr7\Message\Response;
 use Swow\Psr7\Message\ServerRequest;
 use Swow\Psr7\Psr7;
 use Swow\Psr7\Server\Server;
@@ -35,6 +36,7 @@ use function strlen;
 #[CoversClass(Server::class)]
 #[CoversClass(ServerConnection::class)]
 #[CoversClass(ServerRequest::class)]
+#[CoversClass(Response::class)]
 #[CoversClass(Psr7::class)]
 #[CoversClass(Client::class)]
 final class HttpRequestTest extends TestCase
@@ -145,6 +147,51 @@ final class HttpRequestTest extends TestCase
                 $writer->kill();
             }
         }
+    }
+
+    #[DataProvider('provideChunkedBodiesCases')]
+    public function testChunkedBodiesAreCombinedWithoutConsumingTheNextRequest(string $wireBody, string $body): void
+    {
+        $this->client->getSocket()->send("POST /chunked HTTP/1.1\r\nHost: example.test\r\nTransfer-Encoding: chunked\r\n\r\n"
+            . $wireBody . Http::packRequest('GET', '/next', ['Host' => 'example.test']));
+        $request = $this->connection->recvHttpRequest();
+        $this->assertSame($body, (string) $request->getBody());
+        $this->assertSame((string) strlen($body), $request->getHeaderLine('Content-Length'));
+        $this->assertSame('', $request->getHeaderLine('Transfer-Encoding'));
+        $this->assertSame('/next', $this->connection->recvHttpRequest()->getRequestTarget());
+    }
+
+    /** @return iterable<string, array{string, string}> */
+    public static function provideChunkedBodiesCases(): iterable
+    {
+        yield 'empty' => ["0\r\n\r\n", ''];
+        yield 'binary chunks' => ["3\r\na\0b\r\n2\r\ncd\r\n0\r\n\r\n", "a\0bcd"];
+        yield 'chunk extensions' => ["3;name=value\r\nabc\r\n0\r\n\r\n", 'abc'];
+    }
+
+    #[DataProvider('provideChunkedBodiesCases')]
+    public function testBufferedChunkedResponsesNormalizeHeaders(string $wireBody, string $body): void
+    {
+        $this->connection->getSocket()->send("HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n"
+            . $wireBody . "HTTP/1.1 204 No Content\r\n\r\n");
+        $response = Psr7::createResponseFromEntity($this->client->recvResponseEntity());
+        $this->assertSame($body, (string) $response->getBody());
+        $this->assertSame([(string) strlen($body)], $response->getHeader('Content-Length'));
+        $this->assertFalse($response->hasHeader('Transfer-Encoding'));
+        $this->assertSame(Status::NO_CONTENT, $this->client->recvResponseEntity()->statusCode);
+        $this->assertSame($body, (string) $response->getBody());
+    }
+
+    public function testBufferedChunkedResponsePreservesOtherTransferEncodings(): void
+    {
+        $body = gzencode('encoded response');
+        $this->assertIsString($body);
+        $this->connection->getSocket()->send("HTTP/1.1 200 OK\r\nTransfer-Encoding: gzip, Chunked\r\n\r\n"
+            . dechex(strlen($body)) . "\r\n{$body}\r\n0\r\n\r\n");
+        $response = Psr7::createResponseFromEntity($this->client->recvResponseEntity());
+        $this->assertSame($body, (string) $response->getBody());
+        $this->assertSame(['gzip'], $response->getHeader('Transfer-Encoding'));
+        $this->assertSame([(string) strlen($body)], $response->getHeader('Content-Length'));
     }
 
     public function testChunkedBodyLengthLimitCountsAllChunks(): void
