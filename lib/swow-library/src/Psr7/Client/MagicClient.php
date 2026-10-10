@@ -365,6 +365,9 @@ class MagicClient implements ClientPlusInterface
             throw new ClientRequestException($request, "SOCKS5 handshake failed: unsupported auth method={$selectedMethod}");
         }
         if ($selectedMethod === 0x02) {
+            if ($proxyAuthorization === null) {
+                throw new ClientRequestException($request, 'SOCKS5 handshake failed: proxy selected an unadvertised auth method');
+            }
             $username = $proxy['username'] ?? '';
             $password = $proxy['password'] ?? '';
             $socket->send(

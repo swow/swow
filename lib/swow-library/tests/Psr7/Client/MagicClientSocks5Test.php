@@ -106,6 +106,7 @@ final class MagicClientSocks5Test extends TestCase
         yield 'wrong method version' => [[[$greeting, "\x04\x00"]], true, 'invalid version in method reply'];
         yield 'no acceptable method' => [[[$greeting, "\x05\xff"]], true, 'no acceptable auth method'];
         yield 'unsupported method' => [[[$greeting, "\x05\x03"]], true, 'unsupported auth method'];
+        yield 'unadvertised password authentication' => [[["\x05\x01\x00", "\x05\x02"]], false, 'unadvertised auth method'];
         yield 'wrong authentication version' => [[[$greeting, "\x05\x02"], [$authentication, "\x02\x00"]], true, 'invalid version in auth reply'];
         yield 'rejected credentials' => [[[$greeting, "\x05\x02"], [$authentication, "\x01\x01"]], true, 'username/password rejected'];
         yield 'wrong connect version' => [[...$prefix, [$connect, "\x04\x00\x00\x01"]], true, 'invalid version in response'];
