@@ -533,6 +533,9 @@ static bool swow_debug_call_extended_statement_handlers(void)
     if (cat_queue_empty(&SWOW_DEBUG_G(extended_statement_handlers))) {
         return false;
     }
+    if (EG(exception) != NULL) {
+        return false;
+    }
     if (s_coroutine->coroutine.flags & SWOW_COROUTINE_FLAG_DEBUGGING) {
         return false;
     }
@@ -552,6 +555,9 @@ static bool swow_debug_call_extended_statement_handlers(void)
     CAT_QUEUE_FOREACH_DATA_START(&SWOW_DEBUG_G(extended_statement_handlers), swow_utils_handler_t, node, handler) {
         (void) zend_call_function(&fci, &handler->fcall.fcc);
         zval_ptr_dtor(&retval);
+        if (EG(exception) != NULL) {
+            break;
+        }
     } CAT_QUEUE_FOREACH_DATA_END();
 
     s_coroutine->coroutine.flags ^= SWOW_COROUTINE_FLAG_DEBUGGING;
