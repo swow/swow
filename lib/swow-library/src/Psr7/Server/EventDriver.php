@@ -134,7 +134,7 @@ class EventDriver
     public function withExceptionHandler(callable $handler): static
     {
         $new = clone $this;
-        $this->exceptionHandler = $handler;
+        $new->exceptionHandler = Closure::fromCallable($handler);
         return $new;
     }
 
