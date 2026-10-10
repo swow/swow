@@ -124,4 +124,14 @@ final class UriTest extends TestCase
         $this->assertSame($uri, $uri->apply('https://next.example/'));
         $this->assertSame('https://next.example/', $uri->toString());
     }
+
+    public function testApplyReplacesPreviouslyParsedQuery(): void
+    {
+        $uri = new Uri('/?old=value');
+        $this->assertSame(['old' => 'value'], $uri->getQueryParams());
+        $uri->apply('/?new=value');
+        $this->assertSame(['new' => 'value'], $uri->getQueryParams());
+        $uri->applyParts(['path' => '/without-query']);
+        $this->assertSame([], $uri->getQueryParams());
+    }
 }

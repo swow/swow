@@ -83,6 +83,7 @@ class Uri implements UriPlusInterface
         $this->port = isset($parts['port']) ? $this->filterPort((int) $parts['port']) : null;
         $this->path = isset($parts['path']) ? $this->filterPath($parts['path']) : '';
         $this->query = isset($parts['query']) ? $this->filterQueryAndFragment($parts['query']) : '';
+        $this->queryParams = null;
         $this->fragment = isset($parts['fragment']) ? $this->filterQueryAndFragment($parts['fragment']) : '';
         if (isset($parts['pass'])) {
             $this->userInfo .= ':' . $parts['pass'];
