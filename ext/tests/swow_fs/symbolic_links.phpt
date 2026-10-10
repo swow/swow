@@ -20,6 +20,7 @@ $directory = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'swow-links-' . getRando
 $target = $directory . DIRECTORY_SEPARATOR . 'target';
 $renamed = $directory . DIRECTORY_SEPARATOR . 'renamed';
 $link = $directory . DIRECTORY_SEPARATOR . 'link';
+$nativeProbe = $directory . DIRECTORY_SEPARATOR . 'native-probe.php';
 try {
     Assert::true(mkdir($directory));
     Assert::same(file_put_contents($target, 'original'), 8);
@@ -39,6 +40,22 @@ try {
     Assert::true(rename($target, $renamed));
     clearstatcache(true, $link);
     Assert::true(is_link($link));
+    if (file_exists($link)) {
+        // An unhooked process distinguishes native filesystem behavior from Swow hooks.
+        file_put_contents($nativeProbe, <<<'PHP'
+<?php
+echo json_encode([
+    'swow_loaded' => extension_loaded('swow'),
+    'zts' => PHP_ZTS,
+    'file_exists' => file_exists($argv[1]),
+    'is_link' => is_link($argv[1]),
+    'realpath' => realpath($argv[1]),
+], JSON_THROW_ON_ERROR), PHP_EOL;
+PHP);
+        echo 'Native broken-link probe: ', shell_exec(
+            escapeshellarg(PHP_BINARY) . ' -n ' . escapeshellarg($nativeProbe) . ' ' . escapeshellarg($link)
+        );
+    }
     Assert::false(file_exists($link));
     Assert::false(realpath($link));
     Assert::true(is_array(lstat($link)));
@@ -47,7 +64,7 @@ try {
     Assert::same(file_get_contents($renamed), 'original');
     Assert::true(unlink($renamed));
 } finally {
-    foreach ([$link, $target, $renamed] as $path) {
+    foreach ([$nativeProbe, $link, $target, $renamed] as $path) {
         if (is_link($path) || file_exists($path)) {
             unlink($path);
         }
