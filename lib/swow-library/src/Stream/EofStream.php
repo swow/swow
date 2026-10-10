@@ -134,13 +134,14 @@ class EofStream extends Socket
     public function recvMessageFast(Buffer $buffer, ?int $offset = null, ?int $timeout = null): int
     {
         $offset ??= $buffer->getLength();
+        $buffer->truncate($offset);
         $internalBuffer = $this->internalBuffer;
         $eof = $this->eof;
         $eofOffset = $offset;
         $maxMessageLength = $this->maxMessageLength;
         while (true) {
             if ($internalBuffer->isEmpty()) {
-                $this->recvData($buffer, timeout: $timeout);
+                $this->recvData($buffer, offset: $buffer->getLength(), timeout: $timeout);
             } else {
                 $buffer->write($offset, $internalBuffer);
                 $internalBuffer->clear();

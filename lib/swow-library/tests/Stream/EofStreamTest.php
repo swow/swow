@@ -29,6 +29,7 @@ use Swow\Sync\WaitReference;
 use Swow\TestUtils\Testing;
 
 use function str_repeat;
+use function strlen;
 use function Swow\TestUtils\getRandomBytes;
 
 /**
@@ -95,6 +96,40 @@ final class EofStreamTest extends TestCase
     {
         yield 'buffered' => ['recvMessageString'];
         yield 'fast' => ['recvMessageStringFast'];
+    }
+
+    public function testFastReceivePreservesThePrefixAcrossMultipleReads(): void
+    {
+        $this->withConnection(function (EofStream $connection, EofStream $peer): void {
+            $body = str_repeat("a\0b", Buffer::COMMON_SIZE);
+            $buffer = new Buffer(16);
+            $buffer->append('prefix:');
+            $writer = Coroutine::run(static function () use ($peer, $body): void {
+                $peer->sendMessages([$body, 'next']);
+            });
+            try {
+                $this->assertSame(strlen($body), $connection->recvMessageFast($buffer, timeout: 1000));
+                $this->assertSame('prefix:' . $body, (string) $buffer);
+                $this->assertSame('next', $connection->recvMessageStringFast(timeout: 1000));
+                $this->assertFalse($buffer->isLocked());
+            } finally {
+                if ($writer->isAlive()) {
+                    $writer->kill();
+                }
+            }
+        });
+    }
+
+    public function testFastReceiveAtAnExplicitOffsetDiscardsOldTrailingData(): void
+    {
+        $this->withConnection(function (EofStream $connection, EofStream $peer): void {
+            $buffer = new Buffer(64);
+            $buffer->append("prefix:obsolete\r\n");
+            $peer->sendMessages(['body', 'next']);
+            $this->assertSame(4, $connection->recvMessageFast($buffer, offset: strlen('prefix:'), timeout: 1000));
+            $this->assertSame('prefix:body', (string) $buffer);
+            $this->assertSame('next', $connection->recvMessageStringFast(timeout: 1000));
+        });
     }
 
     public function testBase(): void
