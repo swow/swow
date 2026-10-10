@@ -111,6 +111,10 @@ function showExecutedSourceLines(mixed $filter = false, bool $force = false): vo
             $call = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 1)[0];
             $file = $call['file'] ?? null;
             $line = $call['line'] ?? null;
+            // Forced interrupts can arrive in native frames without a source position.
+            if ($file === null || $line === null) {
+                return;
+            }
             if ($lastFile !== $file) {
                 $lastFile = $file;
                 echo ">>> {$file}\n";
@@ -130,8 +134,8 @@ function showExecutedSourceLines(mixed $filter = false, bool $force = false): vo
         fclose($fp);
         $handler = static function () use ($file, $lines): void {
             $call = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 1)[0];
-            $callFile = $call['file'];
-            $callLine = $call['line'];
+            $callFile = $call['file'] ?? null;
+            $callLine = $call['line'] ?? null;
             if ($callFile === $file) {
                 echo sprintf("%-6s%s\n", $callLine, $lines[$callLine - 1]);
             }
@@ -143,6 +147,9 @@ function showExecutedSourceLines(mixed $filter = false, bool $force = false): vo
             $call = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 1)[0];
             $file = $call['file'] ?? null;
             $line = $call['line'] ?? null;
+            if ($file === null || $line === null) {
+                return;
+            }
             if ($filter($file, $line)) {
                 if ($lastFile !== $file) {
                     $lastFile = $file;
@@ -158,6 +165,9 @@ function showExecutedSourceLines(mixed $filter = false, bool $force = false): vo
             $call = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 1)[0];
             $file = $call['file'] ?? null;
             $line = $call['line'] ?? null;
+            if ($file === null || $line === null) {
+                return;
+            }
             if (isset($filter[$file])) {
                 if ($lastFile !== $file) {
                     $lastFile = $file;
@@ -173,6 +183,9 @@ function showExecutedSourceLines(mixed $filter = false, bool $force = false): vo
             $call = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 1)[0];
             $file = $call['file'] ?? null;
             $line = $call['line'] ?? null;
+            if ($file === null || $line === null) {
+                return;
+            }
             if ($isRegex ? preg_match($filter, $file) : ($file === $filter)) {
                 if ($lastFile !== $file) {
                     $lastFile = $file;
