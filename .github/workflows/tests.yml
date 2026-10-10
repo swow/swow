@@ -176,6 +176,7 @@ jobs:
       - name: Run library tests
         id: test-library
         continue-on-error: true
+        timeout-minutes: 5
         run: php --ri pcov && composer test-library-with-pcov
 
       - name: Run PHPT from php-src
@@ -347,6 +348,7 @@ jobs:
       - name: Run library tests
         id: test-library
         continue-on-error: true
+        timeout-minutes: 5
         run: php --ri pcov && composer test-library-with-pcov
 
       - name: Run PHPT from php-src
