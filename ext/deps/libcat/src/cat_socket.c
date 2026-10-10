@@ -1643,6 +1643,11 @@ static cat_always_inline cat_bool_t cat_socket_listen_impl(cat_socket_t *socket,
         cat_update_last_error_with_reason(error, "Socket listen(%d) failed", backlog);
         return cat_false;
     }
+#ifdef CAT_OS_UNIX_LIKE
+    /* Keep connections in the kernel backlog until accept is requested. Eager
+     * libuv accepts can steal them from another process sharing the listener. */
+    uv__io_stop(socket_i->u.stream.loop, &socket_i->u.stream.io_watcher, POLLIN);
+#endif
     /* note: socket maybe copied from the other one, so it may have already unref and in the internal tree. */
     if (!(socket_i->flags & CAT_SOCKET_INTERNAL_FLAG_SERVER)) {
         uv_unref(&socket_i->u.handle);
@@ -1685,6 +1690,11 @@ static cat_bool_t cat_socket_internal_accept(
         cat_bool_t ret;
         error = uv_accept(&server_i->u.stream, &connection_i->u.stream);
         if (error == 0) {
+#ifdef CAT_OS_UNIX_LIKE
+            if (server_i->flags & CAT_SOCKET_INTERNAL_FLAG_SERVER) {
+                uv__io_stop(server_i->u.stream.loop, &server_i->u.stream.io_watcher, POLLIN);
+            }
+#endif
             /* init client properties */
             connection_i->flags |= (CAT_SOCKET_INTERNAL_FLAG_ESTABLISHED | CAT_SOCKET_INTERNAL_FLAG_SERVER_CONNECTION);
             /* TODO: socket_extends() ? */
@@ -1700,7 +1710,17 @@ static cat_bool_t cat_socket_internal_accept(
         server_i->context.accept.data.status = CAT_ECANCELED;
         server_i->context.accept.coroutine = CAT_COROUTINE_G(current);
         server_i->io_flags = CAT_SOCKET_IO_FLAG_ACCEPT;
+#ifdef CAT_OS_UNIX_LIKE
+        if (server_i->flags & CAT_SOCKET_INTERNAL_FLAG_SERVER) {
+            uv__io_start(server_i->u.stream.loop, &server_i->u.stream.io_watcher, POLLIN);
+        }
+#endif
         ret = cat_time_wait(timeout);
+#ifdef CAT_OS_UNIX_LIKE
+        if (server_i->flags & CAT_SOCKET_INTERNAL_FLAG_SERVER) {
+            uv__io_stop(server_i->u.stream.loop, &server_i->u.stream.io_watcher, POLLIN);
+        }
+#endif
         server_i->io_flags = CAT_SOCKET_IO_FLAG_NONE;
         server_i->context.accept.coroutine = NULL;
         uv_unref(&server_i->u.handle);
