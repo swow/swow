@@ -75,6 +75,11 @@
                 "needs-value": false
             },
             {
+                "name": "enable-swow-mongodb",
+                "description": "Enable the MongoDB runtime adapter",
+                "needs-value": false
+            },
+            {
                 "name": "enable-swow-pdo-pgsql",
                 "description": "Enable Swow PDO_PGSQL support",
                 "needs-value": false

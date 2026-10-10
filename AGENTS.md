@@ -22,6 +22,8 @@
 
 ## Extension Constraints
 
+- MongoDB integration is optional (`--enable-swow-mongodb`). Keep its full driver and bundled C libraries in their separate source repository; Swow only provides waiting and native-client ownership callbacks through `php_mongodb_runtime.h`.
+- Treat the MongoDB callback header as a versioned public ABI. Keep the consumer and driver copies identical, and never inspect private driver objects from Swow. Preserve original client persistence, socket/TLS ownership and protocol processing.
 - Composer packages should normally list `ext-swow` under `suggest`. Do not make it a `require` by default.
 - `lib/swow-library/src/bootstrap.php` already checks the extension version by comparing `Swow\Extension::VERSION` with `Swow\Library::REQUIRED_EXTENSION_VERSION`.
 - When PHP code starts using a new C extension API, also publish a `swow/swow-extension` version containing that API. Set `required_extension_version` in `tools/versions.php` to the first extension version that provides it.

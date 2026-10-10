@@ -77,6 +77,13 @@ ZEND_BEGIN_MODULE_GLOBALS(swow)
         zend_long async_threads;
     } ini;
     const char *libpq_so_name;
+#ifdef SWOW_HAVE_MONGODB
+    struct {
+        HashTable locks;
+        int pid;
+        bool active;
+    } mongodb;
+#endif
 #ifdef CAT_HAVE_CURL
     struct {
         HashTable persistent_curlsh;

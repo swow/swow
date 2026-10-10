@@ -196,6 +196,8 @@ PHP_ARG_ENABLE([swow-pdo-pgsql],
   [yes], [no]
 )
 
+PHP_ARG_ENABLE([swow-mongodb], [whether to enable the MongoDB runtime adapter], [AS_HELP_STRING([--enable-swow-mongodb], [Enable the MongoDB runtime adapter])], [no], [no])
+
 if test "${PHP_SWOW}" != "no"; then
   AC_LANG_PUSH(C)
 
@@ -367,6 +369,11 @@ EOF
   SWOW_MAIN_CFLAGS='$(SWOW_CFLAGS) $(SWOW_GIT_VERSION_CFLAG)'
   PHP_SUBST(SWOW_MAIN_CFLAGS)
   SWOW_ADD_SOURCES(src, swow_main.c, SWOW_INCLUDES, SWOW_MAIN_CFLAGS)
+
+  if test "$PHP_SWOW_MONGODB" != "no"; then
+    AC_DEFINE([SWOW_HAVE_MONGODB], 1, [Enable the MongoDB runtime adapter])
+    SWOW_ADD_SOURCES(src, swow_mongodb.c, SWOW_INCLUDES, SWOW_CFLAGS)
+  fi
   SWOW_ADD_SOURCES(src,
     swow_wrapper.c \
     swow_errno.c \

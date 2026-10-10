@@ -17,6 +17,7 @@
  */
 
 #include "swow.h"
+#include "swow_mongodb.h"
 #include "swow_errno.h"
 #include "swow_log.h"
 #include "swow_debug.h"
@@ -237,6 +238,9 @@ PHP_MINIT_FUNCTION(swow)
         swow_signal_module_init,
         swow_watchdog_module_init,
         swow_closure_module_init,
+#ifdef SWOW_HAVE_MONGODB
+        swow_mongodb_module_init,
+#endif
         swow_ipaddress_init,
         swow_http_module_init,
         swow_websocket_module_init,
@@ -337,6 +341,9 @@ PHP_RINIT_FUNCTION(swow)
         swow_dns_runtime_init,
         swow_stream_runtime_init,
         swow_watchdog_runtime_init,
+#ifdef SWOW_HAVE_MONGODB
+        swow_mongodb_runtime_init,
+#endif
 #ifdef CAT_OS_WAIT
         swow_proc_open_runtime_init,
 #endif
@@ -385,6 +392,9 @@ PHP_RSHUTDOWN_FUNCTION(swow)
         swow_stream_runtime_shutdown,
         swow_event_runtime_shutdown,
         swow_coroutine_runtime_shutdown,
+#ifdef SWOW_HAVE_MONGODB
+        swow_mongodb_runtime_shutdown,
+#endif
         swow_debug_runtime_shutdown,
         swow_runtime_shutdown,
     };
@@ -620,6 +630,11 @@ static PHP_METHOD(Swow_Extension, isBuiltWith)
     ZEND_PARSE_PARAMETERS_END();
 
     if (0) { }
+#ifdef SWOW_HAVE_MONGODB
+    else if (zend_string_equals_literal_ci(lib, "mongodb")) {
+        ret = true;
+    }
+#endif
 #ifdef CAT_DEBUG
     else if (zend_string_equals_literal_ci(lib, "debug")) {
         ret = true;
@@ -817,6 +832,9 @@ static const zend_module_dep swow_module_deps[] = {
 #ifdef CAT_HAVE_PQ
     ZEND_MOD_OPTIONAL("pdo")
     ZEND_MOD_OPTIONAL("pdo_pgsql")
+#endif
+#ifdef SWOW_HAVE_MONGODB
+    ZEND_MOD_OPTIONAL("mongodb")
 #endif
     ZEND_MOD_END
 };

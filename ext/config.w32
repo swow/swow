@@ -4,6 +4,7 @@ ARG_ENABLE('swow', 'Enable Swow support', 'yes');
 ARG_ENABLE('swow-debug', 'Enable Swow debug build flags', 'no');
 ARG_ENABLE('swow-debug-log', 'Enable Swow debug log (it is enabled by default even in release build)', 'yes');
 ARG_ENABLE('swow-ssl', 'Enable Swow OpenSSL support', 'yes');
+ARG_ENABLE('swow-mongodb', 'Enable the MongoDB runtime adapter', 'no');
 ARG_ENABLE('swow-curl', 'Enable Swow cURL support', 'yes');
 ARG_ENABLE('swow-pdo-pgsql', 'Enable Swow PDO_PGSQL support', 'yes');
 
@@ -323,6 +324,10 @@ if (PHP_SWOW != 'no') (function(){
         if (PHP_VERSION >= 8 && PHP_MINOR_VERSION >= 4) {
             SWOW_SOURCE_FILENAMES.push('swow_pgsql_sql_parser.c');
         }
+    }
+    if (PHP_SWOW_MONGODB != 'no') {
+        ADD_FLAG('CFLAGS_SWOW_COMMON', '/D SWOW_HAVE_MONGODB');
+        SWOW_SOURCE_FILENAMES.push('swow_mongodb.c');
     }
     ADD_SOURCES(configure_module_dirname + '\\' + SWOW_SRC_DIR, SWOW_SOURCE_FILENAMES.join(' '), 'swow');
 

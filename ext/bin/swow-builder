@@ -73,6 +73,7 @@ $enableOptions = [
     /* 3rd */
     'ssl',
     'curl',
+    'mongodb',
 ];
 $_enableOptions = [];
 foreach ($enableOptions as $enableOptionAlias => $enableOption) {
