@@ -25,6 +25,7 @@ final class CommandObserver implements CommandSubscriber
     private int $maximumPending = 0;
     private int $completed = 0;
     private int $failed = 0;
+    private ?string $firstFailure = null;
 
     public function __construct(private string $commandName = 'find')
     {
@@ -51,10 +52,11 @@ final class CommandObserver implements CommandSubscriber
         if ($event->getCommandName() === $this->commandName) {
             $this->pending--;
             $this->failed++;
+            $this->firstFailure ??= $event->getError()->getMessage();
         }
     }
 
-    /** @return array<string, int> */
+    /** @return array<string, int|string|null> */
     public function statistics(): array
     {
         // Native command events delimit actual commands, rather than counting
@@ -64,6 +66,7 @@ final class CommandObserver implements CommandSubscriber
             $this->commandName . '_pending' => $this->pending,
             $this->commandName . '_completed' => $this->completed,
             $this->commandName . '_failed' => $this->failed,
+            $this->commandName . '_first_failure' => $this->firstFailure,
         ];
     }
 }
