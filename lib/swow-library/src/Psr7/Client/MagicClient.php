@@ -373,6 +373,10 @@ class MagicClient implements ClientPlusInterface
                 pack('C', strlen($password)) . $password
             );
             $authReply = $socket->readString(2, $this->connectTimeout);
+            // RFC 1929 uses version 1 for username/password subnegotiation.
+            if (ord($authReply[0]) !== 0x01) {
+                throw new ClientRequestException($request, 'SOCKS5 auth failed: invalid version in auth reply');
+            }
             if (ord($authReply[1]) !== 0x00) {
                 throw new ClientRequestException($request, 'SOCKS5 auth failed: username/password rejected');
             }
