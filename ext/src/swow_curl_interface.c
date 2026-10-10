@@ -1124,6 +1124,7 @@ php_curl *swow_init_curl_handle_into_zval(zval *curl)
 
 void swow_init_curl_handle(php_curl *ch)
 {
+    ch->multi = NULL;
     ch->to_free = ecalloc(1, sizeof(struct _php_curl_free));
     ch->handlers.write = ecalloc(1, sizeof(php_curl_write));
     ch->handlers.write_header = ecalloc(1, sizeof(php_curl_write));
@@ -2464,7 +2465,10 @@ PHP_FUNCTION(swow_curl_exec)
 
     _swow_curl_cleanup_handle(ch);
 
-    error = cat_curl_easy_perform(ch->cp);
+    if (ch->multi == NULL) {
+        ch->multi = cat_curl_multi_init();
+    }
+    error = ch->multi != NULL ? cat_curl_easy_perform_ex(ch->cp, ch->multi) : CURLE_OUT_OF_MEMORY;
     SAVE_CURL_ERROR(ch, error);
 
     if (error != CURLE_OK) {
@@ -2869,6 +2873,9 @@ static void curl_free_obj(zend_object *object)
 
     _swow_curl_verify_handlers(ch, /* reporterror */ false);
 
+    if (ch->multi != NULL) {
+        cat_curl_multi_cleanup(ch->multi);
+    }
     curl_easy_cleanup(ch->cp);
 
     /* cURL destructors should be invoked only by last curl handle */
