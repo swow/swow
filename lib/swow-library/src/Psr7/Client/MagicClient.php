@@ -22,7 +22,7 @@ use Psr\Http\Message\UriInterface;
 use Swow\Psr7\Psr7;
 use Throwable;
 
-use function array_change_key_case;
+use function array_filter;
 use function array_key_exists;
 use function base64_encode;
 use function filter_var;
@@ -39,7 +39,7 @@ use function strtolower;
 use function strtoupper;
 use function substr;
 
-use const CASE_LOWER;
+use const ARRAY_FILTER_USE_KEY;
 use const FILTER_FLAG_IPV4;
 use const FILTER_FLAG_IPV6;
 use const FILTER_VALIDATE_IP;
@@ -660,10 +660,7 @@ class MagicClient implements ClientPlusInterface
         if (!is_array($headers)) {
             throw new InvalidArgumentException('Option "headers" must be an array');
         }
-        $lowerHeaders = array_change_key_case($headers, CASE_LOWER);
-        if (array_key_exists('host', $lowerHeaders)) {
-            unset($headers['host'], $headers['Host'], $headers['HOST']);
-        }
-        return $headers;
+        // Host follows the target URI; HTTP field names are case-insensitive.
+        return array_filter($headers, static fn(string|int $name): bool => strtolower((string) $name) !== 'host', ARRAY_FILTER_USE_KEY);
     }
 }
