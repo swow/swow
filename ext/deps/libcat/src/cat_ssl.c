@@ -406,7 +406,13 @@ static cat_bool_t cat_ssl_alpn_protos_parse(cat_string_t *alpn, const char *alpn
 #endif
     for (i = 0; i <= len; i++) {
         if (i == len || alpn_protocols[i] == ',') {
+            if (i == start) {
+                cat_update_last_error(CAT_EINVAL, "TLS ALPN protocol names must not be empty");
+                cat_string_close(alpn);
+                return cat_false;
+            }
             if (i - start > 255) {
+                cat_update_last_error(CAT_EINVAL, "TLS ALPN protocol names must not exceed 255 bytes");
                 cat_string_close(alpn);
                 return cat_false;
             }
@@ -449,7 +455,8 @@ CAT_API cat_bool_t cas_ssl_context_set_alpn_protocols(cat_ssl_context_t *context
         return cat_false;
     }
     if (is_client) {
-        if (!SSL_CTX_set_alpn_protos(context->ctx, (unsigned char *) context->alpn.value, (unsigned int) context->alpn.length)) {
+        /* Unlike most OpenSSL setters, this API returns zero on success. */
+        if (SSL_CTX_set_alpn_protos(context->ctx, (unsigned char *) alpn.value, (unsigned int) alpn.length) != 0) {
             cat_ssl_update_last_error(CAT_ESSL, "SSL_CTX_set_alpn_protos() failed");
             cat_string_close(&alpn);
             return cat_false;
