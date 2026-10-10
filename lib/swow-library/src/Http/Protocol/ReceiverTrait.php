@@ -284,6 +284,8 @@ trait ReceiverTrait
                         }
                     }
                     if ($event === HttpParser::EVENT_NONE) {
+                        // An incomplete read does not end the current URL or header fragment.
+                        $event = $previousEvent;
                         if ($buffer !== $thisBuffer) {
                             throw new ParserException('Unexpected EVENT_NONE, buffer is dummy one');
                         }

@@ -102,6 +102,27 @@ final class HttpRequestTest extends TestCase
         $this->assertSame($body, (string) $first->getBody());
     }
 
+    public function testRequestTargetAndHeaderValuesCanSpanTheReceiveBuffer(): void
+    {
+        $this->server->setMaxHeaderLength(Buffer::COMMON_SIZE * 4);
+        $target = '/' . str_repeat('p', Buffer::COMMON_SIZE + 32);
+        $value = str_repeat('h', Buffer::COMMON_SIZE + 64);
+        $wire = Http::packRequest('GET', $target, ['Host' => 'example.test', 'X-Long' => $value]);
+        $writer = Coroutine::run(function () use ($wire): void {
+            $this->client->getSocket()->send($wire);
+        });
+        try {
+            $request = $this->connection->recvHttpRequest();
+            $this->assertSame($target, $request->getRequestTarget());
+            $this->assertSame($value, $request->getHeaderLine('X-Long'));
+            $this->assertSame('example.test', $request->getHeaderLine('Host'));
+        } finally {
+            if ($writer->isAlive()) {
+                $writer->kill();
+            }
+        }
+    }
+
     public function testContentLengthBodyBeyondTheReceiveBufferDoesNotConsumeTheNextRequest(): void
     {
         $body = str_repeat("a\0b", Buffer::COMMON_SIZE);
