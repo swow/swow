@@ -210,6 +210,8 @@ typedef struct cat_ssl_s {
     unsigned int verify_peer :1;
     unsigned int allow_self_signed :1;
     const char *expected_peer_name;
+    /* Retained for diagnostics when OpenSSL discards an unverified peer certificate. */
+    X509 *failed_peer_certificate;
     /* internals */
     cat_ssl_context_t *context; // for free data before SSL_free()
 } cat_ssl_t;
