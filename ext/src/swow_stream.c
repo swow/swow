@@ -857,6 +857,26 @@ static bool swow_stream_complete_renegotiation(php_stream *stream, swow_netstrea
     return keep;
 }
 
+#ifdef CAT_SSL_HAVE_TLS_SNI
+static void swow_stream_sni_data_free(void *data)
+{
+    swow_ssl_server_sni_data_free((swow_ssl_server_sni_data_t *) data);
+}
+
+static cat_bool_t swow_stream_ssl_before_handshake(cat_ssl_t *ssl, void *data)
+{
+    swow_ssl_server_sni_data_t **contexts = (swow_ssl_server_sni_data_t **) data;
+    if (!swow_ssl_before_handshake_callback(ssl, *contexts) ||
+        !cat_ssl_set_owned_data(ssl, *contexts, swow_stream_sni_data_free)) {
+        return cat_false;
+    }
+    /* SNI selection runs again during renegotiation. Transfer the maps to the
+     * SSL object rather than freeing callback arguments after the first handshake. */
+    *contexts = NULL;
+    return cat_true;
+}
+#endif
+
 static int swow_stream_enable_crypto(php_stream *stream,
     swow_netstream_data_t *swow_sock, php_netstream_data_t *sock, cat_socket_t *socket,
     php_stream_xport_crypto_param *cparam)
@@ -1040,8 +1060,13 @@ static int swow_stream_enable_crypto(php_stream *stream,
             if (!swow_ssl_enable_server_sni(val, sni_contexts, 1)) {
                 goto _cleanup;
             }
-            options.before_handshake_callback = swow_ssl_before_handshake_callback;
-            options.before_handshake_callback_data = sni_contexts;
+            if (is_client) {
+                options.before_handshake_callback = swow_ssl_before_handshake_callback;
+                options.before_handshake_callback_data = sni_contexts;
+            } else {
+                options.before_handshake_callback = swow_stream_ssl_before_handshake;
+                options.before_handshake_callback_data = &sni_contexts;
+            }
         }
 #endif // CAT_SSL_HAVE_TLS_SNI
         // capture peer cert
