@@ -50,7 +50,8 @@ foreach ($argument in @(
     '--excluded_line_regex', '\s*\{\s*',
     '--modules', 'php_swow.dll',
     '--', 'C:\tools\php\php.exe', 'C:\tools\php\composer.phar',
-    'test-library', '--', '--debug'
+    # PHPUnit 10 debug output exports complete successful assertion values; keep routine CI output compact.
+    'test-library'
 )) {
     $startInfo.ArgumentList.Add($argument)
 }
@@ -72,6 +73,7 @@ try {
     Write-Host 'Waiting for the library coverage process to exit.'
     if ($process.WaitForExit([TimeSpan]::FromMinutes($TimeoutMinutes))) {
         $exitCode = $process.ExitCode
+        Write-Host "Library coverage process exited with code $exitCode."
     } else {
         Write-Warning "Library tests exceeded the $TimeoutMinutes minute deadline."
         # A timeout remains a failure even if the coverage tool exits successfully during cleanup.

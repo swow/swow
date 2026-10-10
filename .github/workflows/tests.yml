@@ -616,7 +616,7 @@ jobs:
           & $debugger.Source --batch `
             --command=$commandFile `
             --args C:\tools\php\php.exe @phpArguments vendor/bin/phpunit `
-              --configuration lib/swow-library --no-coverage --debug
+              --configuration lib/swow-library --no-coverage
 
       - name: Run PHPT from php-src
         shell: pwsh
