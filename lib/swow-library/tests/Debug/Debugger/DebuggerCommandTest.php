@@ -142,6 +142,36 @@ final class DebuggerCommandTest extends TestCase
         $this->assertSame($current, $debugger->getCurrentCoroutine());
     }
 
+    public function testContinueResumesAnExplicitlyStoppedCoroutine(): void
+    {
+        $io = new StreamDebuggerIo();
+        $debugger = new CommandDebugger($io);
+        $completed = false;
+        $coroutine = Coroutine::run(static function () use (&$completed): void {
+            Debugger::break();
+            $completed = true;
+        });
+        try {
+            $context = Debugger::getDebugContextOfCoroutine($coroutine);
+            $this->assertTrue($context->stopped);
+            $this->assertFalse($completed);
+            $this->assertSame('stopped', Debugger::getSimpleInfoOfCoroutine($coroutine, false)['state']);
+            $debugger->dispatch('co', [(string) $coroutine->getId()]);
+            $this->assertSame($coroutine, $debugger->getCurrentCoroutine());
+            $this->assertNotSame('', $io->readOutput());
+            $debugger->dispatch('c');
+            $this->assertTrue($completed);
+            $this->assertFalse($context->stopped);
+            $this->assertFalse($context->stop);
+            $this->assertFalse($coroutine->isAlive());
+            $this->assertStringContainsString('continue to run', $io->readOutput());
+        } finally {
+            if ($coroutine->isAlive()) {
+                $coroutine->kill();
+            }
+        }
+    }
+
     public function testSourceSelectionDoesNotRetainAFileAfterAnInternalFrame(): void
     {
         $io = new StreamDebuggerIo();
