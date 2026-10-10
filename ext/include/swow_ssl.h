@@ -46,6 +46,12 @@ swow_ssl_server_sni_data_t *swow_ssl_server_sni_data_alloc(void);
 void swow_ssl_server_sni_data_free(swow_ssl_server_sni_data_t *contexts);
 
 cat_bool_t swow_ssl_before_handshake_callback(cat_ssl_t* ssl, void * data);
+
+typedef struct {
+    php_stream *stream;
+    zend_string *verification_error;
+} swow_ssl_handshake_data_t;
+
 void swow_ssl_after_handshake_callback(cat_ssl_t* ssl, cat_bool_t success, void * data);
 
 zend_result swow_ssl_module_init(INIT_FUNC_ARGS);
