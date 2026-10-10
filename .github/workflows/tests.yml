@@ -603,7 +603,7 @@ jobs:
             --excluded_line_regex "\s*\}.*" `
             --excluded_line_regex "\s*\{\s*" `
             --modules php_swow.dll `
-            -- C:\tools\php\php.exe C:\tools\php\composer.phar test-library
+            -- C:\tools\php\php.exe C:\tools\php\composer.phar test-library -- --debug
 
       - name: Run PHPT from php-src
         shell: pwsh
