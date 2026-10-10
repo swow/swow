@@ -528,6 +528,7 @@ static int pgsql_stmt_param_hook(pdo_stmt_t *stmt, struct pdo_bound_param_data *
                                 return 1;
                             } else {
                                 zend_string *str = php_stream_copy_to_mem(stm, PHP_STREAM_COPY_ALL, 0);
+                                zval_ptr_dtor(parameter);
                                 if (str != NULL) {
                                     ZVAL_STR(parameter, str);
                                 } else {
