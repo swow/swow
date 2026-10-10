@@ -2202,9 +2202,24 @@ static zend_result _php_curl_setopt(php_curl *ch, zend_long option, zval *zvalue
         }
 
         case CURLOPT_BINARYTRANSFER:
+#if PHP_VERSION_ID >= 80400
         case CURLOPT_DNS_USE_GLOBAL_CACHE:
+#endif
             /* Do nothing, just backward compatibility */
             break;
+
+#if PHP_VERSION_ID < 80400
+        case CURLOPT_DNS_USE_GLOBAL_CACHE:
+            lval = zval_get_long(zvalue);
+# ifdef ZTS
+            if (lval) {
+                php_error_docref(NULL, E_WARNING, "CURLOPT_DNS_USE_GLOBAL_CACHE cannot be activated when thread safety is enabled");
+                return FAILURE;
+            }
+# endif
+            error = curl_easy_setopt(ch->cp, option, lval);
+            break;
+#endif
 
         case CURLOPT_POSTFIELDS:
             if (Z_TYPE_P(zvalue) == IS_ARRAY) {
