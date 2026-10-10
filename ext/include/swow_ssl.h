@@ -30,6 +30,8 @@ extern "C" {
 
 cat_bool_t swow_load_stream_cafile(cat_ssl_context_t *context, struct cat_socket_crypto_options_s *options);
 
+bool swow_ssl_resolve_stream_path(zend_string *path, const char *option_name, char *resolved_path);
+
 cat_bool_t swow_ssl_enable_peer_fingerprint_verify(zval *zpeer_fingerprint, cat_ssl_peer_fingerprint_t **pfingerprints, int php_warning);
 
 typedef struct {
