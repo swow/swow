@@ -223,8 +223,16 @@ PHP_FUNCTION(swow_curl_multi_select)
     mh = Z_CURL_MULTI_P(z_mh);
 
     if (!(timeout >= 0.0 && timeout <= (INT_MAX / 1000.0))) {
+#if PHP_VERSION_ID >= 80400
         zend_argument_value_error(2, "must be between 0 and %d", (int) ceilf((double) INT_MAX / 1000));
         RETURN_THROWS();
+#else
+        php_error_docref(NULL, E_WARNING, "timeout must be between 0 and %d", (int) ceilf((double) INT_MAX / 1000));
+# ifdef CURLM_BAD_FUNCTION_ARGUMENT
+        SAVE_CURLM_ERROR(mh, CURLM_BAD_FUNCTION_ARGUMENT);
+# endif
+        RETURN_LONG(-1);
+#endif
     }
 
     error = cat_curl_multi_wait(mh->multi, NULL, 0, (int) (timeout * 1000.0), &numfds);
