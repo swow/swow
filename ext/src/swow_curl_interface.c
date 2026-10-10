@@ -2741,7 +2741,7 @@ PHP_FUNCTION(swow_curl_getinfo)
                     }
                     case CURLINFO_LONG:
                     {
-                        zend_long code = 0;
+                        long code = 0;
 
                         if (curl_easy_getinfo(ch->cp, option, &code) == CURLE_OK) {
                             RETURN_LONG(code);
@@ -2782,7 +2782,7 @@ PHP_FUNCTION(swow_curl_getinfo)
                     {
                         curl_off_t c_off;
                         if (curl_easy_getinfo(ch->cp, option, &c_off) == CURLE_OK) {
-                            RETURN_LONG((long) c_off);
+                            RETURN_LONG((zend_long) c_off);
                         } else {
                             RETURN_FALSE;
                         }
