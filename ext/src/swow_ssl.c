@@ -743,6 +743,11 @@ static zend_string *swow_ssl_peer_verification_error(cat_ssl_t *ssl)
             }
         }
     }
+    if (ERR_GET_REASON(ssl->handshake_error) == SSL_R_CERTIFICATE_VERIFY_FAILED) {
+        char message[256];
+        ERR_error_string_n(ssl->handshake_error, message, sizeof(message));
+        return strpprintf(0, "SSL operation failed with code %d. OpenSSL Error messages:\n%s", SSL_ERROR_SSL, message);
+    }
     return NULL;
 }
 
