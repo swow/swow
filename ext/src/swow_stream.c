@@ -767,6 +767,66 @@ static int swow_stream_setup_crypto(php_stream *stream,
     return SUCCESS;
 }
 
+/* PHP's OpenSSL extension does not install its private header with these defaults. */
+#define SWOW_STREAM_SSL_DEFAULT_RENEG_LIMIT 2
+#define SWOW_STREAM_SSL_DEFAULT_RENEG_WINDOW 300
+
+static cat_bool_t swow_stream_renegotiation_callback(cat_ssl_t *ssl, void *data)
+{
+    (void) ssl;
+    php_stream *stream = (php_stream *) data;
+    swow_netstream_data_t *swow_sock = (swow_netstream_data_t *) stream->abstract;
+    swow_netstream_ssl_t *state = &swow_sock->ssl;
+    cat_msec_t now = cat_time_msec();
+    /* Preserve PHP's rate calculation and keep the initial handshake out of
+     * the bucket. Monotonic time avoids clock adjustments changing the limit. */
+    state->reneg_tokens -= ((now - state->reneg_prev_handshake) / 1000) *
+        (state->reneg_limit / state->reneg_window);
+    state->reneg_prev_handshake = now;
+    if (state->reneg_tokens < 0) {
+        state->reneg_tokens = 0;
+    }
+    state->reneg_tokens++;
+    if (state->reneg_tokens <= state->reneg_limit) {
+        return cat_true;
+    }
+
+    zval *callback = PHP_STREAM_CONTEXT(stream) ?
+        php_stream_context_get_option(PHP_STREAM_CONTEXT(stream), "ssl", "reneg_limit_callback") : NULL;
+    if (callback == NULL) {
+        php_error_docref(NULL, E_WARNING, "SSL: client-initiated handshake rate limit exceeded by peer");
+        php_stream_xport_shutdown(stream, STREAM_SHUT_RDWR);
+        return cat_false;
+    }
+
+    zval function, param, retval;
+    ZVAL_COPY(&function, callback);
+    php_stream_to_zval(stream, &param);
+    Z_TRY_ADDREF(param);
+    ZVAL_UNDEF(&retval);
+    /* Match PHP's fclose protection. Libcat also rejects yielding, nested TLS
+     * I/O and socket destruction while delivering this notification. */
+    bool no_fclose = (stream->flags & PHP_STREAM_FLAG_NO_FCLOSE) != 0;
+    stream->flags |= PHP_STREAM_FLAG_NO_FCLOSE;
+    zend_result result = call_user_function(NULL, NULL, &function, &retval, 1, &param);
+    if (!no_fclose) {
+        stream->flags &= ~PHP_STREAM_FLAG_NO_FCLOSE;
+    }
+    if (result == FAILURE && !EG(exception)) {
+        php_error_docref(NULL, E_WARNING, "SSL: failed invoking reneg limit notification callback");
+    }
+    cat_bool_t keep = result == SUCCESS && !EG(exception) && Z_TYPE(retval) == IS_TRUE;
+    zval_ptr_dtor(&retval);
+    zval_ptr_dtor(&param);
+    zval_ptr_dtor(&function);
+    if (!keep) {
+        /* EOF alone leaves the peer waiting for a handshake reply. PHP shuts
+         * down both transport directions even while the stream remains referenced. */
+        php_stream_xport_shutdown(stream, STREAM_SHUT_RDWR);
+    }
+    return keep;
+}
+
 static int swow_stream_enable_crypto(php_stream *stream,
     swow_netstream_data_t *swow_sock, php_netstream_data_t *sock, cat_socket_t *socket,
     php_stream_xport_crypto_param *cparam)
@@ -789,6 +849,23 @@ static int swow_stream_enable_crypto(php_stream *stream,
         swow_ssl_handshake_data_t handshake_data = { stream, NULL };
 
         cat_socket_crypto_options_init(&options, is_client);
+        if (!is_client) {
+            swow_sock->ssl.reneg_limit = SWOW_STREAM_SSL_DEFAULT_RENEG_LIMIT;
+            swow_sock->ssl.reneg_window = SWOW_STREAM_SSL_DEFAULT_RENEG_WINDOW;
+            GET_VER_OPT_LONG("reneg_limit", swow_sock->ssl.reneg_limit);
+            options.allow_renegotiation = cat_true;
+            if (swow_sock->ssl.reneg_limit >= 0) {
+                GET_VER_OPT_LONG("reneg_window", swow_sock->ssl.reneg_window);
+                if (swow_sock->ssl.reneg_window <= 0) {
+                    php_error_docref(NULL, E_WARNING, "SSL: reneg_window must be greater than zero");
+                    goto _cleanup;
+                }
+                swow_sock->ssl.reneg_tokens = 0;
+                swow_sock->ssl.reneg_prev_handshake = cat_time_msec();
+                options.renegotiation_callback = swow_stream_renegotiation_callback;
+                options.renegotiation_callback_data = stream;
+            }
+        }
         options.load_ca = swow_load_stream_cafile;
         if (GET_VER_OPT("verify_peer")) {
             options.verify_peer = zend_is_true(val) ? cat_true : cat_false;
@@ -1920,7 +1997,16 @@ static int swow_stream_array_emulate_read_fd_set(zval *stream_array)
         if (stream == NULL) {
             continue;
         }
-        if ((stream->writepos - stream->readpos) > 0) {
+        bool readable = (stream->writepos - stream->readpos) > 0;
+#ifdef CAT_SSL
+        if (!readable && stream->ops->read == swow_stream_read && stream->abstract != NULL) {
+            /* A memory BIO may already hold handshake or application records
+             * even though the underlying fd no longer reports readability. */
+            swow_netstream_data_t *data = (swow_netstream_data_t *) stream->abstract;
+            readable = cat_socket_has_buffered_data(&data->socket);
+        }
+#endif
+        if (readable) {
             /* allow readable non-descriptor based streams to participate in stream_select.
              * Non-descriptor streams will only "work" if they have previously buffered the
              * data.  Not ideal, but better than nothing.
