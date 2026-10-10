@@ -43,7 +43,7 @@ try {
     Assert::true(rename($filename, $renamed));
     Assert::same(scandir($directory), ['.', '..', 'renamed']);
     Assert::same(file($renamed), ['ABcd']);
-    Assert::same(realpath($renamed), realpath($directory) . '/renamed');
+    Assert::same(realpath($renamed), realpath($directory) . DIRECTORY_SEPARATOR . 'renamed');
     Assert::same(file_get_contents($renamed), 'ABcd');
     Assert::true(unlink($renamed));
     clearstatcache(true, $renamed);
