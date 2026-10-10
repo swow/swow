@@ -1058,6 +1058,7 @@ static inline cat_bool_t _cat_ssl_check_host(X509 *cert, const char *name, size_
         return ret;
     }
     unsigned int flags = 0;
+    cat_bool_t has_rooted_dns_id = cat_false;
     GENERAL_NAMES *names = X509_get_ext_d2i(cert, NID_subject_alt_name, NULL, NULL);
     if (names != NULL) {
 #ifndef X509_CHECK_FLAG_NEVER_CHECK_SUBJECT
@@ -1067,6 +1068,17 @@ static inline cat_bool_t _cat_ssl_check_host(X509 *cert, const char *name, size_
         /* A CA may validate only SAN service IDs; a matching CN must not override them. */
         for (int i = 0; i < sk_GENERAL_NAME_num(names); i++) {
             GENERAL_NAME *san = sk_GENERAL_NAME_value(names, i);
+            if (san->type == GEN_DNS) {
+                int length = ASN1_STRING_length(san->d.dNSName);
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+                const unsigned char *value = ASN1_STRING_get0_data(san->d.dNSName);
+#else
+                const unsigned char *value = ASN1_STRING_data(san->d.dNSName);
+#endif
+                if (length > 0 && value[length - 1] == '.') {
+                    has_rooted_dns_id = cat_true;
+                }
+            }
             cat_bool_t is_service_id = san->type == GEN_DNS || san->type == GEN_URI;
             if (san->type == GEN_OTHERNAME) {
                 static const char srv_name_oid[] = "1.3.6.1.5.5.7.8.7";
@@ -1077,11 +1089,9 @@ static inline cat_bool_t _cat_ssl_check_host(X509 *cert, const char *name, size_
             if (is_service_id) {
 #ifdef X509_CHECK_FLAG_NEVER_CHECK_SUBJECT
                 flags |= X509_CHECK_FLAG_NEVER_CHECK_SUBJECT;
-                break;
 #else
                 if (san->type == GEN_DNS) {
                     has_dns_id = cat_true;
-                    break;
                 }
                 has_service_id = cat_true;
 #endif
@@ -1096,6 +1106,24 @@ static inline cat_bool_t _cat_ssl_check_host(X509 *cert, const char *name, size_
 #endif
     }
     if (X509_check_host(cert, (char *) name, name_length, flags, NULL) != 1) {
+        /* A terminal DNS root dot identifies the same SAN name. Keep OpenSSL's
+         * wildcard and SAN precedence checks; do not extend this rule to CNs. */
+        if (has_rooted_dns_id && name[name_length - 1] != '.') {
+            char *rooted_name = (char *) cat_malloc(name_length + 2);
+#if CAT_ALLOC_HANDLE_ERRORS
+            if (rooted_name == NULL) {
+                return cat_false;
+            }
+#endif
+            memcpy(rooted_name, name, name_length);
+            rooted_name[name_length] = '.';
+            rooted_name[name_length + 1] = '\0';
+            cat_bool_t matched = X509_check_host(cert, rooted_name, name_length + 1, flags, NULL) == 1;
+            cat_free(rooted_name);
+            if (matched) {
+                return cat_true;
+            }
+        }
         CAT_LOG_DEBUG(SSL, "X509_check_host(%p, \"%.*s\", %zu): no match", cert, (int) name_length, name, name_length);
         return cat_false;
     }
