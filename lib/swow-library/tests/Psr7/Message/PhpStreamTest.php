@@ -131,4 +131,41 @@ final class PhpStreamTest extends TestCase
         $this->expectException(TypeError::class);
         new PhpStream('php://temp');
     }
+
+    #[DataProvider('provideWritableFileModesCases')]
+    public function testWritableFileModes(string $mode, bool $readable): void
+    {
+        $filename = tempnam(sys_get_temp_dir(), 'swow_stream_mode');
+        if ($mode === 'x') {
+            unlink($filename);
+        }
+        $stream = null;
+        try {
+            $stream = new PhpStream(fopen($filename, $mode));
+            $this->assertTrue($stream->isWritable());
+            $this->assertSame($readable, $stream->isReadable());
+            $this->assertSame(4, $stream->write('data'));
+            $this->assertSame(4, $stream->getSize());
+            if ($readable) {
+                $stream->rewind();
+                $this->assertSame('data', $stream->read(4));
+            }
+        } finally {
+            $stream?->close();
+            unlink($filename);
+        }
+    }
+
+    /** @return iterable<string, array{string, bool}> */
+    public static function provideWritableFileModesCases(): iterable
+    {
+        yield 'binary then plus' => ['wb+', true];
+        yield 'plus then binary' => ['w+b', true];
+        yield 'read binary then plus' => ['rb+', true];
+        yield 'read plus then binary' => ['r+b', true];
+        yield 'append binary then plus' => ['ab+', true];
+        yield 'append plus then binary' => ['a+b', true];
+        yield 'exclusive write' => ['x', false];
+        yield 'non-truncating write' => ['c', false];
+    }
 }

@@ -51,34 +51,17 @@ class PhpStream implements StreamPlusInterface
             'r+' => true,
             'x+' => true,
             'c+' => true,
-            'rb' => true,
-            'w+b' => true,
-            'r+b' => true,
-            'x+b' => true,
-            'c+b' => true,
-            'rt' => true,
-            'w+t' => true,
-            'r+t' => true,
-            'x+t' => true,
-            'c+t' => true,
             'a+' => true,
         ],
         'write' => [
             'w' => true,
+            'x' => true,
+            'c' => true,
             'w+' => true,
             'rw' => true,
             'r+' => true,
             'x+' => true,
             'c+' => true,
-            'wb' => true,
-            'w+b' => true,
-            'r+b' => true,
-            'x+b' => true,
-            'c+b' => true,
-            'w+t' => true,
-            'r+t' => true,
-            'x+t' => true,
-            'c+t' => true,
             'a' => true,
             'a+' => true,
         ],
@@ -114,8 +97,10 @@ class PhpStream implements StreamPlusInterface
         $this->stream = $resource;
         $meta = stream_get_meta_data($resource);
         $this->seekable = $meta['seekable'] && fseek($this->stream, 0, SEEK_CUR) === 0;
-        $this->readable = isset(static::READ_WRITE_HASH['read'][$meta['mode']]);
-        $this->writable = isset(static::READ_WRITE_HASH['write'][$meta['mode']]);
+        // Binary/text flags preserve access permissions; PHP accepts both "wb+" and "w+b".
+        $mode = str_replace(['b', 't'], '', $meta['mode']);
+        $this->readable = isset(static::READ_WRITE_HASH['read'][$mode]);
+        $this->writable = isset(static::READ_WRITE_HASH['write'][$mode]);
     }
 
     protected function getUri(): ?string
