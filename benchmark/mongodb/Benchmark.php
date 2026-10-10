@@ -48,6 +48,7 @@ final class Benchmark
     private int $next = 0;
     private int $completed = 0;
     private int $warmedClients = 0;
+    private ?int $deadlineNs = null;
     private float $maximumTimerLag = 0;
     private int $timerTicksDuringWorkload = 0;
     private bool $startingWorkers = true;
@@ -69,6 +70,7 @@ final class Benchmark
         private int $warmup,
         private int $delayMs,
         private string $database,
+        private ?int $durationMs = null,
     ) {
         $this->collection = 'benchmark_' . bin2hex(random_bytes(12));
         for ($i = 0; $i < $concurrency; $i++) {
@@ -155,9 +157,12 @@ final class Benchmark
     private function worker(Manager $manager): void
     {
         try {
+            // In fixed-count runs:
             // Allocation is atomic here: PHP switches only when an operation
             // suspends. Every mode executes exactly the same total workload.
-            while ($this->next < $this->operations) {
+            // Timed runs stop allocating at the deadline and drain all started
+            // commands, including their completion time in the reported QPS.
+            while ($this->hasNextOperation($this->next)) {
                 $index = $this->next++;
                 $start = hrtime(true);
                 $this->operation($manager, $index);
@@ -170,9 +175,22 @@ final class Benchmark
         }
     }
 
+    private function hasNextOperation(int $index): bool
+    {
+        return $index < $this->operations && ($this->deadlineNs === null || hrtime(true) < $this->deadlineNs);
+    }
+
     /** @return array<string, int|float|string|bool|null> */
     public function run(): array
     {
+        // Repeated samples reuse native connections without retaining the
+        // previous sample's counters, latencies or scheduler observations.
+        $this->latencies = $this->errors = [];
+        $this->next = $this->completed = $this->warmedClients = $this->timerTicksDuringWorkload = 0;
+        $this->maximumTimerLag = $this->workerStartupMs = 0;
+        $this->maximumSteadyTimerLag = $this->timerLagCpuMs = null;
+        $this->deadlineNs = null;
+        $this->startingWorkers = true;
         $commandName = $this->scenario === 'await' ? 'hello' : 'find';
         $observer = in_array($this->scenario, ['delay', 'await', 'query'], true) ? new CommandObserver($commandName) : null;
         try {
@@ -183,10 +201,11 @@ final class Benchmark
             $cpuBefore = self::cpuSeconds();
             $gcBefore = gc_status();
             $start = hrtime(true);
+            $this->deadlineNs = $this->durationMs === null ? null : $start + $this->durationMs * 1000000;
             if ($this->mode === 'sync') {
                 // Round-robin the same warmed clients. This baseline has no
                 // coroutine runtime; scheduler lag is deliberately null.
-                for ($index = 0; $index < $this->operations; $index++) {
+                for ($index = 0; $this->hasNextOperation($index); $index++) {
                     $before = hrtime(true);
                     $this->operation($this->managers[$index % $this->concurrency], $index);
                     $this->latencies[] = (hrtime(true) - $before) / 1e6;
@@ -245,17 +264,17 @@ final class Benchmark
             if ($this->errors !== []) {
                 throw $this->errors[0];
             }
-            if ($this->completed !== $this->operations) {
+            if ($this->completed === 0 || ($this->durationMs === null && $this->completed !== $this->operations)) {
                 throw new RuntimeException('Measured workload is incomplete');
             }
             $commands = $observer?->statistics() ?? [];
             if ($observer !== null && ($commands[$commandName . '_pending'] !== 0 ||
-                $commands[$commandName . '_failed'] !== 0 || $commands[$commandName . '_completed'] !== $this->operations)) {
+                $commands[$commandName . '_failed'] !== 0 || $commands[$commandName . '_completed'] !== $this->completed)) {
                 throw new RuntimeException('Native command monitoring did not confirm the complete workload');
             }
             if ($this->scenario === 'insert') {
                 $rows = $this->managers[0]->executeCommand($this->database, new Command(['count' => $this->collection]))->toArray();
-                if ((int) $rows[0]->n !== 256 + $this->concurrency * $this->warmup + $this->operations) {
+                if ((int) $rows[0]->n !== 256 + $this->concurrency * $this->warmup + $this->completed) {
                     throw new RuntimeException('Final inserted document count is invalid');
                 }
             }
@@ -264,6 +283,7 @@ final class Benchmark
             return array_merge([
                 'mode' => $this->mode, 'clients' => $this->clients, 'scenario' => $this->scenario,
                 'concurrency' => $this->concurrency, 'operations' => $this->completed,
+                'duration_ms' => $this->durationMs,
                 'warmup_per_client' => $this->warmup, 'delay_ms' => in_array($this->scenario, ['delay', 'await'], true) ? $this->delayMs : 0,
                 'warmup_operation' => in_array($this->scenario, ['delay', 'await'], true) ? 'ping' : $this->scenario,
                 'coroutines_enabled' => (bool) ini_get('swow.enable'),
