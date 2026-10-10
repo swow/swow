@@ -23,6 +23,7 @@ use Swow\Pack\Format;
 use Swow\Socket;
 use Swow\Stream\LengthStream;
 use Swow\Stream\MessageTooLargeException;
+use ValueError;
 
 use const PHP_INT_MAX;
 
@@ -92,6 +93,26 @@ final class LengthStreamTest extends TestCase
             $this->expectException(MessageTooLargeException::class);
             $this->expectExceptionMessage('Message length 3 exceeds the max length 2');
             $connection->recvMessageString();
+        });
+    }
+
+    public function testSendSliceAdvertisesSliceLength(): void
+    {
+        $this->withConnection(function (LengthStream $connection, Socket $peer): void {
+            $this->assertSame($connection, $connection->sendMessage('abcdef', 1, 3));
+            $this->assertSame(pack('n', 3) . 'bcd', $peer->readString(5));
+            $connection->sendMessage('abcdef', 3);
+            $this->assertSame(pack('n', 3) . 'def', $peer->readString(5));
+            $connection->sendMessage('abcdef', 2, 0);
+            $this->assertSame(pack('n', 0), $peer->readString(2));
+        });
+    }
+
+    public function testSendSliceStillRejectsInvalidRange(): void
+    {
+        $this->withConnection(function (LengthStream $connection, Socket $peer): void {
+            $this->expectException(ValueError::class);
+            $connection->sendMessage('abcdef', -1, 3);
         });
     }
 

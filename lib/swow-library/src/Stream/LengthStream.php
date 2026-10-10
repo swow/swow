@@ -132,7 +132,10 @@ class LengthStream extends Socket
 
     public function sendMessage(string|Stringable $string, int $start = 0, int $length = -1, ?int $timeout = null): static
     {
-        return $this->write([pack($this->format, strlen((string) $string)), [$string, $start, $length]], $timeout);
+        $string = (string) $string;
+        $messageLength = $length === -1 ? strlen($string) - $start : $length;
+
+        return $this->write([pack($this->format, $messageLength), [$string, $start, $length]], $timeout);
     }
 
     /** @param non-empty-array<string|Stringable|Buffer|array{0: string|Stringable|Buffer, 1?: int, 2?: int}|null> $chunks */
