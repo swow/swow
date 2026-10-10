@@ -137,6 +137,7 @@ typedef enum cat_ssl_flag_e {
     CAT_SSL_FLAG_HANDSHAKE_BUFFER_SET  = 1 << 5,
     CAT_SSL_FLAG_ALLOW_RENEGOTIATION   = 1 << 6,
     CAT_SSL_FLAG_RENEGOTIATION_CALLBACK = 1 << 7,
+    CAT_SSL_FLAG_RENEGOTIATION_PAUSED  = 1 << 8,
     CAT_SSL_FLAG_UNRECOVERABLE_ERROR   = 1 << 31,
 } cat_ssl_flag_t;
 
@@ -205,6 +206,7 @@ typedef struct cat_ssl_s cat_ssl_t;
 /* Called after OpenSSL returns; false ends the connection before application data
  * is delivered. The callback must not yield or perform TLS I/O on this connection. */
 typedef cat_bool_t (*cat_ssl_renegotiation_callback_t)(cat_ssl_t *ssl, void *data);
+typedef void (*cat_ssl_owned_data_free_t)(void *data);
 
 struct cat_ssl_s {
     cat_ssl_flags_t flags;
@@ -224,6 +226,8 @@ struct cat_ssl_s {
     cat_ssl_renegotiation_callback_t renegotiation_callback;
     void *renegotiation_callback_data;
     unsigned int pending_renegotiations;
+    void *owned_data;
+    cat_ssl_owned_data_free_t owned_data_free;
     /* internals */
     cat_ssl_context_t *context; // for free data before SSL_free()
 };
@@ -261,6 +265,13 @@ CAT_API void cat_ssl_context_set_no_ticket(cat_ssl_context_t *context);
 CAT_API void cat_ssl_context_set_no_compression(cat_ssl_context_t *context);
 CAT_API void cat_ssl_configure_renegotiation(cat_ssl_t *ssl, cat_bool_t enable,
     cat_ssl_renegotiation_callback_t callback, void *data);
+/* A notification callback can pause and return true to defer its decision.
+ * Socket I/O returns EAGAIN; resume through the owned socket after it returns. */
+CAT_API cat_bool_t cat_ssl_pause_renegotiation(cat_ssl_t *ssl);
+CAT_API cat_bool_t cat_ssl_resume_renegotiation(cat_ssl_t *ssl, cat_bool_t allow);
+/* Transfer one connection-owned metadata object. Cleanup runs after SSL_free
+ * and must not yield; failed attachment leaves ownership with the caller. */
+CAT_API cat_bool_t cat_ssl_set_owned_data(cat_ssl_t *ssl, void *data, cat_ssl_owned_data_free_t free_function);
 #ifdef CAT_SSL_HAVE_SECURITY_LEVEL
 CAT_API void cat_ssl_context_set_security_level(cat_ssl_context_t *context, int level);
 #endif

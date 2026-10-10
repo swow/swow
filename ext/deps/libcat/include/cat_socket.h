@@ -740,6 +740,8 @@ CAT_API void cat_socket_crypto_options_init(cat_socket_crypto_options_t *options
 
 CAT_API cat_bool_t cat_socket_enable_crypto(cat_socket_t *socket, const cat_socket_crypto_options_t *options);
 CAT_API cat_bool_t cat_socket_enable_crypto_ex(cat_socket_t *socket, const cat_socket_crypto_options_t *options, cat_timeout_t timeout);
+/* Reacquire the SSL state after a deferred callback; the socket may have closed meanwhile. */
+CAT_API cat_bool_t cat_socket_resume_renegotiation(cat_socket_t *socket, cat_bool_t allow);
 #endif
 
 CAT_API cat_bool_t cat_socket_getname(const cat_socket_t *socket, cat_sockaddr_t *address, cat_socklen_t *length, cat_bool_t is_peer);
