@@ -27,6 +27,34 @@ foreach ([false, true] as $emulate) {
         'value' => 42,
     ]);
     $statement->closeCursor();
+    $statement = $pdo->prepare(<<<'SQL'
+        SELECT 'quote'' ? :ignored' AS "quoted""name ? :ignored",
+            E'backslash \\ and quote \' ? :ignored' AS escaped,
+            $long_tag$one $short$ ? :ignored$long_tag$ AS tagged,
+            CAST(:value AS integer) AS value
+            /* ? :ignored */ -- ? :ignored
+        SQL);
+    $statement->execute(['value' => 7]);
+    Assert::same($statement->fetch(PDO::FETCH_ASSOC), [
+        'quoted"name ? :ignored' => "quote' ? :ignored",
+        'escaped' => "backslash \\ and quote ' ? :ignored",
+        'tagged' => 'one $short$ ? :ignored',
+        'value' => 7,
+    ]);
+    $statement->closeCursor();
+    $statement = $pdo->prepare(<<<'SQL'
+        SELECT CAST(:document AS jsonb) ?? CAST(:key AS text) AS present
+        SQL);
+    $statement->execute(['document' => '{"present":true}', 'key' => 'present']);
+    Assert::same($statement->fetch(PDO::FETCH_ASSOC), ['present' => true]);
+    $statement->closeCursor();
+    $statement->execute(['document' => '{"present":true}', 'key' => 'missing']);
+    Assert::same($statement->fetch(PDO::FETCH_ASSOC), ['present' => false]);
+    $statement->closeCursor();
+    $statement = $pdo->prepare('SELECT CAST(:value AS integer) + CAST(:value AS integer) AS repeated');
+    $statement->execute(['value' => 21]);
+    Assert::same($statement->fetchColumn(), 42);
+    $statement->closeCursor();
 }
 
 echo "Done\n";
