@@ -616,11 +616,11 @@ jobs:
           $phpArguments = @()
           & C:\tools\php\php.exe -r "exit(extension_loaded('swow') ? 0 : 1);"
           if ($LASTEXITCODE -ne 0) { $phpArguments += @('-d', 'extension=swow') }
+          $commandFile = Join-Path $env:RUNNER_TEMP 'swow-library.gdb'
+          @('set pagination off', 'run', 'thread apply all bt', 'info sharedlibrary') |
+            Set-Content -Path $commandFile -Encoding utf8NoBOM
           & $debugger.Source --batch `
-            -ex "set pagination off" `
-            -ex "run" `
-            -ex "thread apply all bt" `
-            -ex "info sharedlibrary" `
+            --command=$commandFile `
             --args C:\tools\php\php.exe @phpArguments vendor/bin/phpunit `
               --configuration lib/swow-library --no-coverage --debug
 
