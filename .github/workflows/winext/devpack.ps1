@@ -169,12 +169,17 @@ info "Done unzipping devpack, generate env.bat."
 
 # Since setup-php only provides Release version PHP, yet we only support Release
 # Maybe sometimes we can build PHP by ourself?
+$toolsetArgs = ""
+if ($env:SWOW_WINDOWS_TOOLSET) {
+    # The SDK selects the newest VS host when a compatible toolset is explicit.
+    $toolsetArgs = "-s $env:SWOW_WINDOWS_TOOLSET "
+}
 $content="
 @ECHO OFF
 SET BUILD_DIR=$PhpArch\Release$underscorets
 SET PATH=$ToolsPath\$dirname;%PATH%
 SET DEVPACK_PATH=$ToolsPath\$dirname
-$ToolsPath\php-sdk-binary-tools\phpsdk-starter.bat -c $PhpVCVer -a $PhpArch -t %*
+$ToolsPath\php-sdk-binary-tools\phpsdk-starter.bat -c $PhpVCVer -a $PhpArch ${toolsetArgs}-t %*
 "
 [IO.File]::WriteAllLines("$ToolsPath\env.bat", $content)
 
