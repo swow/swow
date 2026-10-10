@@ -171,7 +171,7 @@ trait CreatorTrait
         if ($headers) {
             $request = static::setHeaders($request, $headers);
         }
-        if ($body) {
+        if ($body !== null) {
             $request = static::setBody($request, $body);
         }
         return $request;
@@ -193,7 +193,7 @@ trait CreatorTrait
         if ($headers) {
             $response = static::setHeaders($response, $headers);
         }
-        if ($body) {
+        if ($body !== null) {
             $response = static::setBody($response, $body);
         }
         return $response;
@@ -292,7 +292,7 @@ trait CreatorTrait
         if ($headers) {
             $serverRequest = static::setHeaders($serverRequest, $headers);
         }
-        if ($body) {
+        if ($body !== null) {
             $serverRequest = static::setBody($serverRequest, $body);
         }
         return $serverRequest;
