@@ -108,6 +108,8 @@ struct _php_curl_free {
 
 typedef struct {
     CURL                         *cp;
+    /* Owned by this handle so successive easy transfers retain libcurl's connection cache. */
+    CURLM                        *multi;
     php_curl_handlers             handlers;
     struct _php_curl_free        *to_free;
     struct _php_curl_send_headers header;
