@@ -31,7 +31,7 @@ try {
     clearstatcache(true, $filename);
     Assert::same(filemtime($filename), $modified);
     Assert::same(filesize($filename), 13);
-    Assert::same(realpath('./child/../' . $filename), getcwd() . DIRECTORY_SEPARATOR . $filename);
+    Assert::same(realpath('./child/../' . $filename), realpath('.') . DIRECTORY_SEPARATOR . $filename);
     Assert::true(rename($filename, './child/renamed'));
     Assert::same(file_get_contents('child/renamed'), "relative\0body");
     Assert::false(file_exists($filename));

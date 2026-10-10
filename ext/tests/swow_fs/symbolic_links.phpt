@@ -16,10 +16,10 @@ skip_if(!$supported, 'temporary directory does not support creating symbolic lin
 <?php
 require __DIR__ . '/../include/bootstrap.php';
 
-$directory = sys_get_temp_dir() . '/swow-links-' . getRandomBytes(12);
-$target = $directory . '/target';
-$renamed = $directory . '/renamed';
-$link = $directory . '/link';
+$directory = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'swow-links-' . getRandomBytes(12);
+$target = $directory . DIRECTORY_SEPARATOR . 'target';
+$renamed = $directory . DIRECTORY_SEPARATOR . 'renamed';
+$link = $directory . DIRECTORY_SEPARATOR . 'link';
 try {
     Assert::true(mkdir($directory));
     Assert::same(file_put_contents($target, 'original'), 8);
