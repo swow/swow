@@ -578,18 +578,13 @@ static cat_always_inline CURLMcode cat_curl_multi_perform_impl(CURLM *multi, int
 
 /* easy APIs  */
 
-static CURLcode cat_curl_easy_perform_impl(CURL *ch)
+static CURLcode cat_curl_easy_perform_impl(CURL *ch, CURLM *multi)
 {
-    CURLM *multi;
     CURLMsg *message = NULL;
     CURLcode code = CURLE_RECV_ERROR;
     CURLMcode mcode;
     int running_handles;
 
-    multi = cat_curl_multi_init();
-    if (unlikely(multi == NULL)) {
-        return CURLE_OUT_OF_MEMORY;
-    }
     mcode = curl_multi_add_handle(multi, ch);
     if (unlikely(mcode != CURLM_OK)) {
 #if LIBCURL_VERSION_NUM >= 0x072001 /* Available since 7.32.1 */
@@ -633,16 +628,26 @@ static CURLcode cat_curl_easy_perform_impl(CURL *ch)
     _error:
     curl_multi_remove_handle(multi, ch);
     _add_failed:
-    cat_curl_multi_cleanup(multi);
 
     return code;
 }
 
 CAT_API CURLcode cat_curl_easy_perform(CURL *ch)
 {
+    CURLM *multi = cat_curl_multi_init();
+    if (unlikely(multi == NULL)) {
+        return CURLE_OUT_OF_MEMORY;
+    }
+    CURLcode code = cat_curl_easy_perform_ex(ch, multi);
+    cat_curl_multi_cleanup(multi);
+    return code;
+}
+
+CAT_API CURLcode cat_curl_easy_perform_ex(CURL *ch, CURLM *multi)
+{
     CAT_LOG_DEBUG(CURL, "curl_easy_perform(ch: %p) = " CAT_LOG_UNFINISHED_STR, ch);
 
-    CURLcode code = cat_curl_easy_perform_impl(ch);
+    CURLcode code = cat_curl_easy_perform_impl(ch, multi);
 
     CAT_LOG_DEBUG(CURL, "curl_easy_perform(ch: %p) = %d (%s)", ch, code, curl_easy_strerror(code));
 
