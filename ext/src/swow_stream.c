@@ -786,6 +786,7 @@ static int swow_stream_enable_crypto(php_stream *stream,
         int ret = -1;
         char certificate_path[MAXPATHLEN];
         char private_key_path[MAXPATHLEN];
+        swow_ssl_handshake_data_t handshake_data = { stream, NULL };
 
         cat_socket_crypto_options_init(&options, is_client);
         options.load_ca = swow_load_stream_cafile;
@@ -938,7 +939,7 @@ static int swow_stream_enable_crypto(php_stream *stream,
 #endif // CAT_SSL_HAVE_TLS_SNI
         // capture peer cert
         options.after_handshake_callback = swow_ssl_after_handshake_callback;
-        options.after_handshake_callback_data = stream;
+        options.after_handshake_callback_data = &handshake_data;
 
         cat_timeout_t timeout = cat_time_tv2to(swow_sock->ssl.is_client ?
             &swow_sock->ssl.connect_timeout :
@@ -946,6 +947,10 @@ static int swow_stream_enable_crypto(php_stream *stream,
         );
 
         ret = cat_socket_enable_crypto_ex(socket, &options, timeout) ? 1 : -1;
+        if (handshake_data.verification_error != NULL) {
+            cat_update_last_error(cat_get_last_error_code(), "%s", ZSTR_VAL(handshake_data.verification_error));
+            zend_string_release(handshake_data.verification_error);
+        }
 
 _cleanup:
 #ifdef CAT_SSL_HAVE_TLS_SNI

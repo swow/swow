@@ -687,15 +687,77 @@ static inline php_openssl_certificate_object *php_openssl_certificate_from_obj(z
 #define Z_OPENSSL_CERTIFICATE_P(zv) php_openssl_certificate_from_obj(Z_OBJ_P(zv))
 
 
+static zend_string *swow_ssl_peer_verification_error(cat_ssl_t *ssl)
+{
+    X509 *peer = ssl->failed_peer_certificate;
+    long error = SSL_get_verify_result(ssl->connection);
+
+    if (peer == NULL) {
+        return NULL;
+    }
+    /* Describe OpenSSL's rejection without repeating or relaxing its verification policy. */
+    if (error == X509_V_ERR_HOSTNAME_MISMATCH && ssl->expected_peer_name != NULL) {
+        GENERAL_NAMES *names = X509_get_ext_d2i(peer, NID_subject_alt_name, NULL, NULL);
+        bool has_service_id = false;
+        for (int i = 0; names != NULL && i < sk_GENERAL_NAME_num(names); i++) {
+            GENERAL_NAME *name = sk_GENERAL_NAME_value(names, i);
+            if (name->type == GEN_DNS || name->type == GEN_URI) {
+                has_service_id = true;
+            } else if (name->type == GEN_OTHERNAME) {
+                char oid[32];
+                if (OBJ_obj2txt(oid, sizeof(oid), name->d.otherName->type_id, 1) > 0 &&
+                    strcmp(oid, "1.3.6.1.5.5.7.8.7") == 0) {
+                    has_service_id = true;
+                }
+            }
+        }
+        GENERAL_NAMES_free(names);
+        if (has_service_id) {
+            return strpprintf(0, "Peer certificate subjectAltName did not match expected name `%s'", ssl->expected_peer_name);
+        }
+        X509_NAME *subject = X509_get_subject_name(peer);
+        int length = X509_NAME_get_text_by_NID(subject, NID_commonName, NULL, 0);
+        if (length < 0) {
+            return ZSTR_INIT_LITERAL("Unable to locate peer certificate CN", 0);
+        }
+        zend_string *common_name = zend_string_alloc(length, 0);
+        X509_NAME_get_text_by_NID(subject, NID_commonName, ZSTR_VAL(common_name), length + 1);
+        zend_string *message;
+        if ((size_t) length != strlen(ZSTR_VAL(common_name))) {
+            message = strpprintf(0, "Peer certificate CN=`%.*s' is malformed", length, ZSTR_VAL(common_name));
+        } else {
+            message = strpprintf(0, "Peer certificate CN=`%.*s' did not match expected CN=`%s'",
+                length, ZSTR_VAL(common_name), ssl->expected_peer_name);
+        }
+        zend_string_release(common_name);
+        return message;
+    }
+    if (error == X509_V_ERR_UNSPECIFIED && ssl->peer_fingerprints != NULL) {
+        unsigned char digest[EVP_MAX_MD_SIZE];
+        for (int i = 0; ssl->peer_fingerprints[i].algorithm != NULL; i++) {
+            const EVP_MD *md = EVP_get_digestbyname(ssl->peer_fingerprints[i].algorithm);
+            unsigned int length = sizeof(digest);
+            if (md != NULL && X509_digest(peer, md, digest, &length) &&
+                CRYPTO_memcmp(digest, ssl->peer_fingerprints[i].fingerprint, length) != 0) {
+                return ZSTR_INIT_LITERAL("peer_fingerprint match failure", 0);
+            }
+        }
+    }
+    return NULL;
+}
+
 void swow_ssl_after_handshake_callback(cat_ssl_t* ssl, cat_bool_t success, void * data) {
-    php_stream *stream = (php_stream *)data;
+    swow_ssl_handshake_data_t *handshake_data = (swow_ssl_handshake_data_t *) data;
+    php_stream *stream = handshake_data->stream;
     X509 *peer_cert = NULL;
     zval zcert;
     zval *val;
     php_openssl_certificate_object *cert_object;
 
     // we need to get the peer cert, regardless of success or not
-    (void) success;
+    if (!success) {
+        handshake_data->verification_error = swow_ssl_peer_verification_error(ssl);
+    }
 
     if (swow_php_openssl_certificate_ce == NULL) {
         // we cannot initialize openssl certificate object, cannot capture peer certificate
