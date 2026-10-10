@@ -300,7 +300,9 @@ CAT_API int cat_time_usleep(cat_usec_t microseconds)
 {
     CAT_LOG_DEBUG(TIME, "time_usleep(" CAT_USEC_FMT ") = " CAT_LOG_UNFINISHED_STR, microseconds);
 
-    int ret = cat_time_msleep_impl((cat_msec_t) (((double) microseconds) / 1000)) == 0 ? 0 : -1;
+    /* Round positive fractions up to the timer tick; only zero is a pure yield. */
+    cat_msec_t msec = microseconds / 1000 + (microseconds % 1000 != 0);
+    int ret = cat_time_msleep_impl(msec) == 0 ? 0 : -1;
 
     CAT_LOG_DEBUG(TIME, "time_usleep(" CAT_USEC_FMT ") = " CAT_LOG_INT_RET_FMT, microseconds, CAT_LOG_INT_RET_C(ret));
 
@@ -313,7 +315,8 @@ static cat_always_inline int cat_time_nanosleep_impl(const struct cat_timespec *
         cat_update_last_error(CAT_EINVAL, "The value in the tv_nsec field was not in the range 0 to 999999999 or tv_sec was negative");
         return -1;
     } else {
-        cat_msec_t msec = (uint64_t) (req->tv_sec * 1000 + (((double) req->tv_nsec) / (1000 * 1000)));
+        cat_msec_t msec = (cat_msec_t) req->tv_sec * 1000 + req->tv_nsec / (1000 * 1000) +
+            (req->tv_nsec % (1000 * 1000) != 0);
         cat_msec_t rmsec = cat_time_msleep_impl(msec);
         if (rmsec > 0 && rem) {
             rem->tv_sec = (rmsec - (rmsec % 1000)) / 1000;
