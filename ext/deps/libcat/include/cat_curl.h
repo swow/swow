@@ -36,6 +36,8 @@ CAT_API cat_bool_t cat_curl_runtime_shutdown(void);
 CAT_API cat_bool_t cat_curl_runtime_close(void);
 
 CAT_API CURLcode cat_curl_easy_perform(CURL *ch);
+/* The caller owns a cat_curl_multi_init() context dedicated to this easy handle. */
+CAT_API CURLcode cat_curl_easy_perform_ex(CURL *ch, CURLM *multi);
 
 CAT_API CURLM *cat_curl_multi_init(void);
 CAT_API CURLMcode cat_curl_multi_cleanup(CURLM *multi);
