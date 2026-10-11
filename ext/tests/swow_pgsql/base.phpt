@@ -15,7 +15,7 @@ use function Swow\Sync\waitAll;
 require __DIR__ . '/../include/bootstrap.php';
 require __DIR__ . '/PDOUtil.inc';
 
-PDOUtil::init();
+// Catalog queries need no shared table fixture and must not race its creation or truncation.
 
 Coroutine::run(static function (): void {
     $pdo = PDOUtil::create();

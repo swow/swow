@@ -1,5 +1,7 @@
 --TEST--
 swow_pgsql: test transaction
+--CONFLICTS--
+pgsql_test_swow_pgsql_users
 --SKIPIF--
 <?php
 require __DIR__ . '/../include/skipif.php';
