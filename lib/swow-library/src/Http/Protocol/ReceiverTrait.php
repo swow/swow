@@ -591,6 +591,13 @@ trait ReceiverTrait
                                     break 3; /* end */
                                 }
                                 break;
+                            case HttpParser::EVENT_HEADER_FIELD:
+                            case HttpParser::EVENT_HEADER_VALUE:
+                                // Consume trailer fields without promoting them into the initial headers.
+                                if ($isChunked && $currentChunkLength === 0) {
+                                    break;
+                                }
+                                // no break
                             default:
                                 throw new ParserException("Unexpected HttpParser event: {$parser->getEventName()}");
                         }
@@ -894,6 +901,12 @@ trait ReceiverTrait
                         // 只在 MESSAGE_COMPLETE 时 finalize，保证 trailer 等协议尾部已消费完毕。
                         $this->finalizeChunkedBodyState($state);
                         return;
+                    case HttpParser::EVENT_HEADER_FIELD:
+                    case HttpParser::EVENT_HEADER_VALUE:
+                        if ($state->currentChunkLength === 0) {
+                            break;
+                        }
+                        // no break
                     default:
                         throw new ParserException(sprintf(
                             'Unexpected HttpParser event for chunked stream: %s',

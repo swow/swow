@@ -179,4 +179,45 @@ final class HttpResponseTest extends TestCase
             }
         }
     }
+
+    #[DataProvider('provideTrailersAreConsumedBeforeTheNextResponseCases')]
+    public function testTrailersAreConsumedBeforeTheNextResponse(bool $streaming): void
+    {
+        $this->client->setStreamingChunkedResponse($streaming);
+        $this->peer->send("HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\nTrailer: X-Result\r\n\r\n"
+            . "3;name=value\r\nabc\r\n0\r\nX-Result: finished\r\n\r\nHTTP/1.1 204 No Content\r\n\r\n");
+        $response = Psr7::createResponseFromEntity($this->client->recvResponseEntity());
+        $this->assertSame('abc', (string) $response->getBody());
+        $this->assertSame('3', $response->getHeaderLine('Content-Length'));
+        $this->assertSame(Status::NO_CONTENT, $this->client->recvResponseEntity()->statusCode);
+    }
+
+    /** @return iterable<string, array{bool}> */
+    public static function provideTrailersAreConsumedBeforeTheNextResponseCases(): iterable
+    {
+        yield 'buffered' => [false];
+        yield 'streaming' => [true];
+    }
+
+    #[DataProvider('provideTrailersAreConsumedBeforeTheNextResponseCases')]
+    public function testSplitTrailerFieldsWaitForCompletionBeforeReusingTheConnection(bool $streaming): void
+    {
+        $this->client->setStreamingChunkedResponse($streaming);
+        $this->peer->send("HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n3\r\nabc\r\n0\r\nX-Res");
+        $result = new Channel(1);
+        $reader = Coroutine::run(function () use ($result): void {
+            $response = Psr7::createResponseFromEntity($this->client->recvResponseEntity());
+            $result->push($response->getBody()->getContents());
+        });
+        try {
+            $this->assertTrue($reader->isAlive());
+            $this->peer->send("ult: finished\r\n\r\nHTTP/1.1 204 No Content\r\n\r\n");
+            $this->assertSame('abc', $result->pop(1000));
+            $this->assertSame(Status::NO_CONTENT, $this->client->recvResponseEntity()->statusCode);
+        } finally {
+            if ($reader->isAlive()) {
+                $reader->kill();
+            }
+        }
+    }
 }
