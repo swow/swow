@@ -197,7 +197,7 @@ jobs:
           phpts: ${{ matrix.ts }}
           phparch: ${{ matrix.arch }}
           install: "0"
-          conf-args: "--enable-swow-ssl --enable-swow-curl  --enable-swow-pdo-pgsql --enable-debug-pack"
+          conf-args: "--enable-swow-ssl --enable-swow-curl --enable-swow-mongodb --enable-swow-pdo-pgsql --enable-debug-pack"
 
       - name: Prepare php for test
         id: php-inst
