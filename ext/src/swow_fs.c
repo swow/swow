@@ -2809,7 +2809,7 @@ static zif_handler PHP_FN(original_realpath);
 
 static bool swow_win32_path_target_exists(const char *path)
 {
-    LPCWSTR pathw = php_win32_ioutil_conv_any_to_w(path, PHP_WIN32_CP_IGNORE_LEN, NULL);
+    LPCWSTR pathw = php_win32_ioutil_any_to_w(path);
     if (pathw == NULL) {
         return false;
     }

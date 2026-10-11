@@ -26,6 +26,7 @@
 - `lib/swow-library/src/bootstrap.php` already checks the extension version by comparing `Swow\Extension::VERSION` with `Swow\Library::REQUIRED_EXTENSION_VERSION`.
 - When PHP code starts using a new C extension API, also publish a `swow/swow-extension` version containing that API. Set `required_extension_version` in `tools/versions.php` to the first extension version that provides it.
 - Do not hide missing APIs behind overly broad version constraints. For example, if an API was added after a particular alpha release, `^2.0` may still accept earlier alphas without that API.
+- Preserve synchronous behavior in the plain-filesystem `file_exists()` and `realpath()` fast paths. Adding implicit suspension can break autoloading inside `Coroutine::call()` and code that observes a coroutine's first suspension.
 
 ## Coroutines and Multiple Processes
 
