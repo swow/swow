@@ -251,21 +251,22 @@ trait ReceiverTrait
             $readTimeout = $timeout;
         }
         $mainCoroutine = Coroutine::getMain();
+        $startTime = null;
+        $getReadTimeout = static function () use ($mainCoroutine, $timeout, $readTimeout, &$startTime): int {
+            if ($timeout < 0) {
+                return $readTimeout;
+            }
+            $startTime ??= $mainCoroutine->getElapsed();
+            $timePassed = $mainCoroutine->getElapsed() - $startTime;
+            if ($timePassed > $timeout) {
+                throw new SocketException(sprintf('Recv HTTP message timeout (expect within %d ms, but %d ms passed)', $timeout, $timePassed), Errno::ETIMEDOUT);
+            }
+            return min($readTimeout, $timeout - $timePassed);
+        };
         try {
             while (true) {
                 if ($expectMoreData) {
-                    if ($timeout >= 0) {
-                        if (!isset($startTime)) {
-                            $startTime = $mainCoroutine->getElapsed();
-                        } else {
-                            $timePassed = $mainCoroutine->getElapsed() - $startTime;
-                            if ($timePassed > $timeout) {
-                                throw new SocketException(sprintf('Recv HTTP message timeout (expect within %d ms, but %d ms passed)', $timeout, $timePassed), Errno::ETIMEDOUT);
-                            }
-                            $readTimeout = $timeout - $timePassed;
-                        }
-                    }
-                    $socket->recvData($buffer, offset: $buffer->getLength(), timeout: $readTimeout);
+                    $socket->recvData($buffer, offset: $buffer->getLength(), timeout: $getReadTimeout());
                     /** @noinspection PhpUnusedLocalVariableInspection (on the safe-side) */
                     $expectMoreData = false;
                 }
@@ -396,7 +397,7 @@ trait ReceiverTrait
                                             $parsedOffset += $unparsedLength;
                                             $neededLength = $contentLength - $unparsedLength;
                                             if ($neededLength > 0) {
-                                                $socket->read($body, $unparsedLength, $neededLength);
+                                                $socket->read($body, $unparsedLength, $neededLength, timeout: $getReadTimeout());
                                             }
                                         }
                                         /* Notice: There may be some risks associated with doing so,
@@ -521,7 +522,7 @@ trait ReceiverTrait
                                         if ($body->getAvailableSize() < $neededLength) {
                                             $body->extend($bodyParsedOffset + $neededLength);
                                         }
-                                        $socket->read($body, $bodyParsedOffset, $neededLength);
+                                        $socket->read($body, $bodyParsedOffset, $neededLength, timeout: $getReadTimeout());
                                         $bodyParsedOffset += $parser->execute($body, $bodyParsedOffset);
                                         if ($parser->getEvent() !== HttpParser::EVENT_BODY) {
                                             throw new ParserException(sprintf(
@@ -550,7 +551,7 @@ trait ReceiverTrait
                                         ));
                                     }
                                     /* receive all body data at once here (for performance) */
-                                    $socket->read($body, $bodyParsedOffset, $neededLength);
+                                    $socket->read($body, $bodyParsedOffset, $neededLength, timeout: $getReadTimeout());
                                     $bodyParsedOffset += $parser->execute($body, $bodyParsedOffset);
                                     if ($parser->getEvent() !== HttpParser::EVENT_BODY) {
                                         throw new ParserException(sprintf('Expected EVENT_BODY, got %s', $parser->getEventName()));

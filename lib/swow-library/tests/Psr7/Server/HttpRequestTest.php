@@ -29,6 +29,7 @@ use Swow\Psr7\Psr7;
 use Swow\Psr7\Server\Server;
 use Swow\Psr7\Server\ServerConnection;
 use Swow\SocketException;
+use ValueError;
 
 use function strlen;
 
@@ -245,5 +246,77 @@ final class HttpRequestTest extends TestCase
             $this->assertSame(Status::REQUEST_ENTITY_TOO_LARGE, $exception->getCode());
             $this->assertFalse($this->connection->shouldKeepAlive());
         }
+    }
+
+    #[DataProvider('providePipelinedRequestsSurviveEveryBufferRecyclingPolicyCases')]
+    public function testPipelinedRequestsSurviveEveryBufferRecyclingPolicy(float $factor): void
+    {
+        $this->assertSame($this->connection, $this->connection->setBufferLoadFactor($factor));
+        $this->assertSame($factor, $this->connection->getBufferLoadFactor());
+        $wire = '';
+        for ($i = 0; $i < 32; $i++) {
+            $wire .= Http::packRequest('GET', "/{$i}", ['Host' => 'example.test', 'X-Padding' => str_repeat('x', (int) (Buffer::COMMON_SIZE / 8))]);
+        }
+        $writer = Coroutine::run(function () use ($wire): void {
+            $this->client->getSocket()->send($wire);
+        });
+        try {
+            for ($i = 0; $i < 32; $i++) {
+                $this->assertSame("/{$i}", $this->connection->recvHttpRequest()->getRequestTarget());
+            }
+        } finally {
+            if ($writer->isAlive()) {
+                $writer->kill();
+            }
+        }
+    }
+
+    /** @return iterable<string, array{float}> */
+    public static function providePipelinedRequestsSurviveEveryBufferRecyclingPolicyCases(): iterable
+    {
+        foreach ([0.0, 0.5, 0.75, 1.0] as $factor) {
+            yield (string) $factor => [$factor];
+        }
+    }
+
+    #[DataProvider('provideInvalidBufferLoadFactorsAreRejectedCases')]
+    public function testInvalidBufferLoadFactorsAreRejected(float $factor): void
+    {
+        $this->expectException(ValueError::class);
+        $this->connection->setBufferLoadFactor($factor);
+    }
+
+    /** @return iterable<string, array{float}> */
+    public static function provideInvalidBufferLoadFactorsAreRejectedCases(): iterable
+    {
+        yield 'below zero' => [-0.1];
+        yield 'above one' => [1.1];
+    }
+
+    #[DataProvider('provideExactBodyReadsHonorTheMessageTimeoutCases')]
+    public function testExactBodyReadsHonorTheMessageTimeout(string $headers, string $prefix, string $remainder): void
+    {
+        $this->connection->setRecvMessageTimeout(20);
+        $this->client->getSocket()->send("POST / HTTP/1.1\r\nHost: example.test\r\n{$headers}\r\n\r\n{$prefix}");
+        $writer = Coroutine::run(function () use ($remainder): void {
+            usleep(50000);
+            $this->client->getSocket()->send($remainder);
+        });
+        try {
+            $this->expectException(SocketException::class);
+            $this->expectExceptionCode(\Swow\Errno::ETIMEDOUT);
+            $this->connection->recvHttpRequest();
+        } finally {
+            if ($writer->isAlive()) {
+                $writer->kill();
+            }
+        }
+    }
+
+    /** @return iterable<string, array{string, string, string}> */
+    public static function provideExactBodyReadsHonorTheMessageTimeoutCases(): iterable
+    {
+        yield 'content length' => ['Content-Length: 4', 'a', 'bcd'];
+        yield 'buffered chunk' => ['Transfer-Encoding: chunked', "4\r\na", "bcd\r\n0\r\n\r\n"];
     }
 }
