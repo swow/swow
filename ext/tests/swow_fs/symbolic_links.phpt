@@ -20,7 +20,10 @@ $directory = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'swow-links-' . getRando
 $target = $directory . DIRECTORY_SEPARATOR . 'target';
 $renamed = $directory . DIRECTORY_SEPARATOR . 'renamed';
 $link = $directory . DIRECTORY_SEPARATOR . 'link';
-$nativeProbe = $directory . DIRECTORY_SEPARATOR . 'native-probe.php';
+$relativeLink = $directory . DIRECTORY_SEPARATOR . 'relative-link';
+$targetDirectory = $directory . DIRECTORY_SEPARATOR . 'target-directory';
+$movedDirectory = $directory . DIRECTORY_SEPARATOR . 'moved-directory';
+$directoryLink = $directory . DIRECTORY_SEPARATOR . 'directory-link';
 try {
     Assert::true(mkdir($directory));
     Assert::same(file_put_contents($target, 'original'), 8);
@@ -37,36 +40,57 @@ try {
     }
     Assert::same(stat($link)['size'], 8);
     Assert::same(file_get_contents($link), 'original');
+    Assert::true(symlink('target', $relativeLink));
+    Assert::true(file_exists($relativeLink));
+    Assert::same(file_get_contents($relativeLink), 'original');
     Assert::true(rename($target, $renamed));
     clearstatcache(true, $link);
     Assert::true(is_link($link));
-    if (file_exists($link)) {
-        // An unhooked process distinguishes native filesystem behavior from Swow hooks.
-        file_put_contents($nativeProbe, <<<'PHP'
-<?php
-echo json_encode([
-    'swow_loaded' => extension_loaded('swow'),
-    'zts' => PHP_ZTS,
-    'file_exists' => file_exists($argv[1]),
-    'is_link' => is_link($argv[1]),
-    'realpath' => realpath($argv[1]),
-], JSON_THROW_ON_ERROR), PHP_EOL;
-PHP);
-        echo 'Native broken-link probe: ', shell_exec(
-            escapeshellarg(PHP_BINARY) . ' -n ' . escapeshellarg($nativeProbe) . ' ' . escapeshellarg($link)
-        );
-    }
     Assert::false(file_exists($link));
     Assert::false(realpath($link));
     Assert::true(is_array(lstat($link)));
+    clearstatcache(true, $relativeLink);
+    Assert::true(is_link($relativeLink));
+    Assert::false(file_exists($relativeLink));
+    Assert::false(realpath($relativeLink));
+    Assert::false(file_exists('file://' . $link));
+
+    // Restoring the target makes both aliases usable again without replacing the links.
+    Assert::same(file_put_contents($target, 'replacement'), 11);
+    foreach ([$link, $relativeLink] as $alias) {
+        clearstatcache(true, $alias);
+        Assert::true(file_exists($alias));
+        Assert::true(is_string(realpath($alias)));
+        Assert::same(file_get_contents($alias), 'replacement');
+    }
+    Assert::true(unlink($target));
+    Assert::true(unlink($relativeLink));
     // Removing the broken alias must leave the moved target intact.
     Assert::true(unlink($link));
     Assert::same(file_get_contents($renamed), 'original');
     Assert::true(unlink($renamed));
+
+    Assert::true(mkdir($targetDirectory));
+    Assert::true(symlink($targetDirectory, $directoryLink));
+    Assert::true(file_exists($directoryLink));
+    Assert::true(is_dir($directoryLink));
+    Assert::true(is_string(realpath($directoryLink)));
+    Assert::true(rename($targetDirectory, $movedDirectory));
+    clearstatcache(true, $directoryLink);
+    Assert::true(is_link($directoryLink));
+    Assert::false(file_exists($directoryLink));
+    Assert::false(realpath($directoryLink));
+    Assert::true(unlink($directoryLink));
+    Assert::true(is_dir($movedDirectory));
 } finally {
-    foreach ([$nativeProbe, $link, $target, $renamed] as $path) {
+    foreach ([$directoryLink, $relativeLink, $link, $target, $renamed] as $path) {
         if (is_link($path) || file_exists($path)) {
             unlink($path);
+        }
+    }
+    foreach ([$targetDirectory, $movedDirectory] as $path) {
+        if (is_dir($path)) {
+            rmdir($path);
         }
     }
     if (is_dir($directory)) {

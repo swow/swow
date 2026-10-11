@@ -2803,6 +2803,48 @@ static PHP_FUNCTION(swow_pipe_from_fd)
 };
 
 
+#if defined(PHP_WIN32) && !defined(ZTS)
+static zif_handler PHP_FN(original_file_exists);
+static zif_handler PHP_FN(original_realpath);
+
+static PHP_FUNCTION(swow_file_exists)
+{
+    if (SWOW_G(runtime_state) != SWOW_RUNTIME_STATE_RUNNING || !SWOW_G(ini.async_file)) {
+        PHP_FN(original_file_exists)(INTERNAL_FUNCTION_PARAM_PASSTHRU);
+        return;
+    }
+
+    zend_string *filename;
+    ZEND_PARSE_PARAMETERS_START(1, 1)
+        Z_PARAM_STR(filename)
+    ZEND_PARSE_PARAMETERS_END();
+
+    php_stat(filename, FS_EXISTS, return_value);
+    if (Z_TYPE_P(return_value) == IS_TRUE) {
+        const char *local;
+        if (php_stream_locate_url_wrapper(ZSTR_VAL(filename), &local, 0) == &php_plain_files_wrapper) {
+            zend_stat_t statbuf;
+            // Windows NTS access(F_OK) sees the link itself; existence requires its target.
+            RETVAL_BOOL(swow_virtual_stat(local, &statbuf) == 0);
+        }
+    }
+}
+
+static PHP_FUNCTION(swow_realpath)
+{
+    PHP_FN(original_realpath)(INTERNAL_FUNCTION_PARAM_PASSTHRU);
+    if (SWOW_G(runtime_state) == SWOW_RUNTIME_STATE_RUNNING && SWOW_G(ini.async_file) &&
+        Z_TYPE_P(return_value) == IS_STRING) {
+        zend_stat_t statbuf;
+        // Native NTS resolution can return an absolute reparse target that no longer exists.
+        if (swow_virtual_stat(Z_STRVAL_P(return_value), &statbuf) != 0) {
+            zval_ptr_dtor(return_value);
+            RETVAL_FALSE;
+        }
+    }
+}
+#endif
+
 static const zend_function_entry swow_fs_functions[] = {
     ZEND_NS_FENTRY("Swow", pipe, PHP_FN(swow_pipe), arginfo_swow_pipe, 0)
     ZEND_NS_FENTRY("Swow", fileno, PHP_FN(swow_fileno), arginfo_swow_fileno, 0)
@@ -2815,6 +2857,15 @@ zend_result swow_fs_module_init(INIT_FUNC_ARGS)
     if (!swow_hook_internal_functions(swow_fs_functions)) {
         return FAILURE;
     }
+
+#if defined(PHP_WIN32) && !defined(ZTS)
+    (void) swow_hook_internal_function_handler_ex(
+        ZEND_STRL("file_exists"), PHP_FN(swow_file_exists), &PHP_FN(original_file_exists)
+    );
+    (void) swow_hook_internal_function_handler_ex(
+        ZEND_STRL("realpath"), PHP_FN(swow_realpath), &PHP_FN(original_realpath)
+    );
+#endif
 
     return SUCCESS;
 }
