@@ -188,7 +188,7 @@ trait ReceiverTrait
      * @phpstan-return T
      * @psalm-return T
      */
-    protected function recvMessageEntity(?int $timeout = null): ServerRequestEntity|ResponseEntity
+    protected function recvMessageEntity(?int $timeout = null, bool $headResponse = false): ServerRequestEntity|ResponseEntity
     {
         // 同一连接上不能带着“上一条未消费完成 body”继续解析下一条消息。
         $this->guardPreviousChunkedBody();
@@ -342,6 +342,10 @@ trait ReceiverTrait
                             case HttpParser::EVENT_HEADERS_COMPLETE:
                                 $headersCompleted = true;
                                 $shouldKeepAlive = $parser->shouldKeepAlive();
+                                // HEAD advertises representation metadata but never sends that body.
+                                if (!$isServerRequest && $headResponse) {
+                                    break 3;
+                                }
                                 if ($parser->isChunked()) {
                                     $isChunked = true;
                                     if (!$isServerRequest && $this->streamingChunkedResponse) {

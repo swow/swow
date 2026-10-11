@@ -74,6 +74,7 @@ class Client implements ClientPlusInterface, ProtocolTypeInterface
     private int $socketType;
 
     protected string $host = '';
+    private bool $receivingHeadResponse = false;
 
     public function __construct(int $type = self::TYPE_TCP)
     {
@@ -198,11 +199,12 @@ class Client implements ClientPlusInterface, ProtocolTypeInterface
 
     public function recvResponseEntity(?int $timeout = null): ResponseEntity
     {
-        return $this->recvMessageEntity(timeout: $timeout);
+        return $this->recvMessageEntity(timeout: $timeout, headResponse: $this->receivingHeadResponse);
     }
 
     public function sendRequest(RequestInterface $request, ?int $timeout = null): ResponseInterface
     {
+        $this->receivingHeadResponse = strcasecmp($request->getMethod(), 'HEAD') === 0;
         try {
             $headers = $request->getHeaders();
             $body = (string) $request->getBody();
@@ -229,6 +231,8 @@ class Client implements ClientPlusInterface, ProtocolTypeInterface
             return Psr7::createResponseFromEntity($responseEntity, $this->responseFactory, $this->streamFactory);
         } catch (Exception $exception) {
             throw $this->convertToClientException($exception, $request);
+        } finally {
+            $this->receivingHeadResponse = false;
         }
     }
 

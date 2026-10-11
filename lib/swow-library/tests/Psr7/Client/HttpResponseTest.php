@@ -138,4 +138,14 @@ final class HttpResponseTest extends TestCase
             }
         }
     }
+
+    public function testHeadResponseDoesNotReadTheAdvertisedRepresentationBody(): void
+    {
+        $this->peer->send("HTTP/1.1 200 OK\r\nContent-Length: 12345\r\n\r\n"
+            . "HTTP/1.1 200 OK\r\nContent-Length: 4\r\n\r\nnext");
+        $response = $this->client->sendRequest(Psr7::createRequest('HEAD', '/metadata'));
+        $this->assertSame('12345', $response->getHeaderLine('Content-Length'));
+        $this->assertSame('', (string) $response->getBody());
+        $this->assertSame('next', (string) $this->client->recvResponseEntity()->body);
+    }
 }
