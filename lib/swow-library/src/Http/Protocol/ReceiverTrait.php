@@ -382,7 +382,7 @@ trait ReceiverTrait
                                     if ($this->preserveBodyData) {
                                         $body = new Buffer($contentLength);
                                         $unparsedLength = $buffer->getLength() - $parsedOffset;
-                                        if ($contentLength < $parsedLength) {
+                                        if ($contentLength < $unparsedLength) {
                                             $body->append($buffer, $parsedOffset, $contentLength);
                                             $parsedOffset += $contentLength;
                                         } else {
