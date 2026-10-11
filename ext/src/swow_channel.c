@@ -518,13 +518,16 @@ static PHP_METHOD(Swow_Selector, commit)
         zval *z_data = (zval *) response->data.common;
         RETVAL_OBJ_COPY(channel);
         selector->last_event = response->opcode;
-        if (response->opcode == CAT_CHANNEL_SELECT_EVENT_PUSH) {
+        if (response->opcode == CAT_CHANNEL_SELECT_EVENT_PUSH || UNEXPECTED(response->error)) {
             ZVAL_UNDEF(&selector->z_data);
         } else /* if (response->opcode == CAT_CHANNEL_SELECT_EVENT_POP) */ {
             ZVAL_COPY_VALUE(&selector->z_data, z_data);
         }
-        /* data has been consumed or copied */
-        ZVAL_UNDEF(z_data);
+        /* Failed selections retain their push values for release_requests(). */
+        if (EXPECTED(!response->error)) {
+            /* data has been consumed or copied */
+            ZVAL_UNDEF(z_data);
+        }
     } else {
         ZVAL_UNDEF(&selector->z_data);
     }
