@@ -623,6 +623,9 @@ trait ReceiverTrait
                     $body->mallocTrim();
                 }
             }
+        } catch (ProtocolException $protocolException) {
+            $shouldKeepAlive = false;
+            throw $protocolException;
         } catch (ParserException $parserException) {
             /* Note: Connection should be reset, it's an unrecoverable error. */
             $shouldKeepAlive = false;
@@ -915,6 +918,10 @@ trait ReceiverTrait
                         ));
                 }
             }
+        } catch (ProtocolException $protocolException) {
+            $this->shouldKeepAlive = false;
+            $this->close();
+            throw $protocolException;
         } catch (ParserException $parserException) {
             $this->shouldKeepAlive = false;
             $this->close();

@@ -229,5 +229,21 @@ final class HttpRequestTest extends TestCase
         yield 'oversized headers' => ["GET / HTTP/1.1\r\nHost: example.test\r\nX-Long: " . str_repeat('x', 256) . "\r\n\r\n", 64, 8192, Status::REQUEST_HEADER_FIELDS_TOO_LARGE];
         yield 'oversized target' => ['GET /' . str_repeat('x', 256) . " HTTP/1.1\r\nHost: example.test\r\n\r\n", 64, 8192, Status::REQUEST_URI_TOO_LARGE];
         yield 'malformed protocol' => ["INVALID HTTP\r\n\r\n", 8192, 8192, Status::BAD_REQUEST];
+        yield 'conflicting lengths' => ["POST / HTTP/1.1\r\nHost: example.test\r\nContent-Length: 3\r\nContent-Length: 4\r\n\r\ntest", 8192, 8192, Status::BAD_REQUEST];
+        yield 'negative length' => ["POST / HTTP/1.1\r\nHost: example.test\r\nContent-Length: -1\r\n\r\n", 8192, 8192, Status::BAD_REQUEST];
+        yield 'invalid chunk delimiter' => ["POST / HTTP/1.1\r\nHost: example.test\r\nTransfer-Encoding: chunked\r\n\r\n3\r\nabc!\r\n0\r\n\r\n", 8192, 8192, Status::BAD_REQUEST];
+    }
+
+    public function testContentLimitFailureMarksTheConnectionNonReusable(): void
+    {
+        $this->server->setMaxContentLength(3);
+        $this->client->getSocket()->send("POST / HTTP/1.1\r\nHost: example.test\r\nContent-Length: 4\r\n\r\ntest");
+        try {
+            $this->connection->recvHttpRequest();
+            $this->fail('An oversized body must fail');
+        } catch (ProtocolException $exception) {
+            $this->assertSame(Status::REQUEST_ENTITY_TOO_LARGE, $exception->getCode());
+            $this->assertFalse($this->connection->shouldKeepAlive());
+        }
     }
 }

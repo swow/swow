@@ -131,6 +131,8 @@ final class StreamingResponseTest extends TestCase
             $this->assertSame(Status::REQUEST_ENTITY_TOO_LARGE, $exception->getCode());
             $this->assertSame(3, $body->getMetadata('buffered_bytes'));
             $this->assertFalse($body->getMetadata('complete'));
+            $this->assertFalse($this->client->shouldKeepAlive());
+            $this->assertFalse($this->client->getSocket()->isAvailable());
         }
         $body->close();
         $this->assertFalse($this->client->getSocket()->isAvailable());
