@@ -163,7 +163,6 @@ final class MultipartRequestTest extends TestCase
         $body = $completedPart ? "--form\r\nContent-Disposition: form-data; name=\"completed\"; filename=\"completed.bin\"\r\n\r\ncomplete\r\n" : '';
         $body .= "--form\r\nContent-Disposition: form-data; name=\"upload\"; filename=\"file.bin\"\r\n"
             . "Content-Type: application/octet-stream\r\n\r\npartial";
-        $before = get_resources('stream');
         $this->client->getSocket()->send(Http::packRequest('POST', '/upload', [
             'Content-Type' => 'multipart/form-data; boundary=form',
             'Content-Length' => strlen($body) + 100,
@@ -182,14 +181,21 @@ final class MultipartRequestTest extends TestCase
             $deadline = Coroutine::getMain()->getElapsed() + 1000;
             do {
                 $paths = [];
-                foreach (array_diff_key(get_resources('stream'), $before) as $stream) {
-                    $path = stream_get_meta_data($stream)['uri'] ?? null;
-                    if (is_string($path) && str_starts_with(basename($path), 'swow_uploaded_file_')) {
-                        $paths[] = $path;
+                for ($level = 0; $level < $reader->getTraceDepth() - 1; $level++) {
+                    $variables = $reader->getDefinedVars($level);
+                    if (($variables['socket'] ?? null) !== $this->connection->getSocket() || !isset($variables['uploadedFiles'])) {
+                        continue;
                     }
+                    foreach ($variables['uploadedFiles'] as $file) {
+                        $paths[] = $file->tmpName;
+                    }
+                    if (is_string($variables['tmpName']) && $variables['tmpName'] !== '') {
+                        $paths[] = $variables['tmpName'];
+                    }
+                    break;
                 }
-                unset($stream);
-                // Observe file creation and the following socket wait, including asynchronous file I/O.
+                unset($variables, $file);
+                // Inspect only this receiver's owned paths, independent of platform resource metadata.
                 if (count($paths) === ($completedPart ? 2 : 1) && $this->connection->getSocket()->getIoState() === Socket::IO_FLAG_READ) {
                     break;
                 }
