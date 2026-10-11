@@ -237,6 +237,8 @@ typedef struct cat_http_parser_s {
     multipart_parser multipart;
     /* private: multipart parser pointer */
     const char *multipart_ptr;
+    /* private: bytes consumed within the HTTP Content-Length boundary */
+    uint64_t multipart_body_length;
 } cat_http_parser_t;
 
 /*

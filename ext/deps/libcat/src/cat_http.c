@@ -72,6 +72,7 @@ enum cat_multipart_state {
     CAT_MULTIPART_HEADER_FIELD_STATE_START = 0,
     CAT_MULTIPART_HEADER_FIELD_STATE_MAYBE_CONTENT_TYPE = sizeof("content-type") - 1,
     CAT_MULTIPART_HEADER_FIELD_STATE_NOT_CONTENT_TYPE = 252,
+    CAT_MULTIPART_IN_EPILOGUE = 251,
     CAT_MULTIPART_PARSING_VALUE = 253,
     CAT_MULTIPART_BOUNDARY_OK = 254,
     CAT_MULTIPART_IN_BODY = 255,
@@ -121,7 +122,7 @@ static long CAT_HTTP_MULTIPART_CB_FNAME(body_end)(multipart_parser *p)
     CAT_ASSERT(!(parser->events & CAT_HTTP_PARSER_EVENT_FLAG_MULTIPART) || parser->multipart_state == CAT_MULTIPART_IN_BODY);
     // escape mp parser
     parser->event = CAT_HTTP_PARSER_EVENT_MULTIPART_BODY_END;
-    parser->multipart_state = CAT_MULTIPART_HEADER_FIELD_STATE_NOT_CONTENT_TYPE;
+    parser->multipart_state = CAT_MULTIPART_IN_EPILOGUE;
     CAT_LOG_DEBUG_V2(HTTP, "HTTP multipart parser data on_body_end");
     return MPPE_OK;
 }
@@ -360,6 +361,7 @@ static cat_always_inline void cat_http_parser__init(cat_http_parser_t *parser)
     parser->keep_alive = cat_false;
     parser->multipart_state = CAT_MULTIPART_HEADER_FIELD_STATE_START;
     parser->multipart.boundary_length = 0;
+    parser->multipart_body_length = 0;
     parser->internal_flags = CAT_HTTP_PARSER_INTERNAL_FLAG_NONE;
 }
 
@@ -447,6 +449,13 @@ static cat_bool_t cat_http_parser_multipart_parser_execute(cat_http_parser_t *pa
 {
     size_t parsed_length = 0;
 
+    /* The multipart parser accepts epilogue bytes after its closing boundary.
+     * Keep those bytes inside this HTTP body, never the following message. */
+    uint64_t remaining = parser->content_length - parser->multipart_body_length;
+    if (length > remaining) {
+        length = (size_t) remaining;
+    }
+
     parser->event = CAT_HTTP_PARSER_EVENT_NONE;
     parsed_length = multipart_parser_execute((multipart_parser*) &parser->multipart, data, length);
     if (MPPE_ERROR == parsed_length) {
@@ -469,6 +478,11 @@ static cat_bool_t cat_http_parser_multipart_parser_execute(cat_http_parser_t *pa
     // add ptr
     parser->multipart_ptr = data + parsed_length;
     parser->parsed_length = parsed_length;
+    parser->multipart_body_length += parsed_length;
+    if (parser->multipart_state == CAT_MULTIPART_IN_EPILOGUE) {
+        parser->event = parser->multipart_body_length == parser->content_length ?
+            CAT_HTTP_PARSER_EVENT_MULTIPART_BODY_END : CAT_HTTP_PARSER_EVENT_NONE;
+    }
 
     return cat_true;
 }
@@ -503,9 +517,10 @@ static cat_bool_t cat_http_parser_solve_multipart_body(cat_http_parser_t *parser
     CAT_ASSERT(parser->event == CAT_HTTP_PARSER_EVENT_MESSAGE_COMPLETE);
 
     // now parsed length is all body, execute multipart_parser
+    parser->multipart_body_length = 0;
+    parser->multipart_state = CAT_MULTIPART_IN_BODY;
     ret = cat_http_parser_multipart_parser_execute(parser, mp_body, mp_length);
     parser->parsed_length += http_parsed_length;
-    parser->multipart_state = CAT_MULTIPART_IN_BODY;
 
     return ret;
 }
@@ -517,7 +532,7 @@ CAT_API cat_bool_t cat_http_parser_execute(cat_http_parser_t *parser, const char
 
     parser->previous_event = parser->event;
 
-    if (likely(parser->multipart_state != CAT_MULTIPART_IN_BODY)) {
+    if (likely(parser->multipart_state != CAT_MULTIPART_IN_BODY && parser->multipart_state != CAT_MULTIPART_IN_EPILOGUE)) {
         // if not in multipart body
         error = cat_http_parser_llhttp_execute(parser, data, length);
         ret = error == CAT_HTTP_PARSER_E_OK;
@@ -620,6 +635,10 @@ CAT_API cat_bool_t cat_http_parser_should_keep_alive(const cat_http_parser_t *pa
 CAT_API cat_bool_t cat_http_parser_finish(cat_http_parser_t *parser)
 {
     cat_http_parser_internal_errno_t error;
+
+    if (parser->multipart_state == CAT_MULTIPART_IN_BODY || parser->multipart_state == CAT_MULTIPART_IN_EPILOGUE) {
+        cat_http_parser_throw_error(return cat_false, CAT_HTTP_PARSER_E_MULTIPART, "Incomplete multipart body");
+    }
 
     error = (cat_http_parser_internal_errno_t) llhttp_finish(&parser->llhttp);
     if (unlikely(
