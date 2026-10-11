@@ -40,7 +40,7 @@ installyum()
     yum install -yy epel-release || echo "no epel-release"
     yum update -yy
     yum groupinstall -yy "Development Tools"
-    yum install -yy sqlite-devel libxml2-devel libcurl-devel openssl-devel re2c bison
+    yum install -yy sqlite-devel libxml2-devel libcurl-devel openssl-devel nodejs re2c bison
 }
 
 installdnf()
@@ -58,14 +58,14 @@ installdnf()
     dnf groupinstall -yy "Development Tools" ||
         dnf group install -yy "Development Tools" ||
         dnf group install -yy "development-tools"
-    dnf install -yy sqlite-devel libxml2-devel libcurl-devel openssl-devel re2c bison autoconf
+    dnf install -yy sqlite-devel libxml2-devel libcurl-devel openssl-devel nodejs re2c bison autoconf
 }
 
 installapt()
 {
     info Installing dependencies using api
     apt-get update -yyq
-    apt-get install --no-install-recommends -yyq ca-certificates libsqlite3-dev libxml2-dev libcurl4-openssl-dev libssl-dev build-essential re2c bison autoconf pkgconf
+    apt-get install --no-install-recommends -yyq ca-certificates libsqlite3-dev libxml2-dev libcurl4-openssl-dev libssl-dev nodejs build-essential re2c bison autoconf pkgconf
     update-ca-certificates
 }
 
@@ -73,21 +73,21 @@ installpacman()
 {
     info Installing dependencies using pacman
     pacman -Syyu --noconfirm --noprogressbar
-    pacman -S --noconfirm --noprogressbar sqlite libxml2 curl openssl base-devel re2c bison
+    pacman -S --noconfirm --noprogressbar sqlite libxml2 curl openssl nodejs base-devel re2c bison
 }
 
 installapk()
 {
     info Installing dependencies using apk
     apk update
-    apk add --no-progress sqlite-dev libxml2-dev curl-dev alpine-sdk autoconf automake re2c bison
+    apk add --no-progress sqlite-dev libxml2-dev curl-dev nodejs alpine-sdk autoconf automake re2c bison
 }
 
 installzypper()
 {
     info Installing dependencies using zypper
     zypper --non-interactive update
-    zypper --non-interactive install sqlite3-devel libxml2-devel libcurl-devel libopenssl-devel patterns-devel-C-C++-devel_C_C++ re2c bison
+    zypper --non-interactive install sqlite3-devel libxml2-devel libcurl-devel libopenssl-devel nodejs patterns-devel-C-C++-devel_C_C++ re2c bison
 }
 
 buildphp()

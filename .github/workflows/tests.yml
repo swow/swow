@@ -167,8 +167,16 @@ jobs:
           printf "\033[1mInstall Swow\033[0m\n"
           sudo make install-modules
 
+      - name: Setup HTTP/2 test peer
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          package-manager-cache: false
+
       - name: Run extension tests
         id: test-extension
+        env:
+          TEST_SWOW_HTTP2: '1'
         continue-on-error: true
         run: |
           TEST_SWOW_POSTGRESQL=1 composer test-extension .
@@ -339,8 +347,16 @@ jobs:
           printf "\033[1mInstall Swow\033[0m\n"
           make install-modules
 
+      - name: Setup HTTP/2 test peer
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          package-manager-cache: false
+
       - name: Run extension tests
         id: test-extension
+        env:
+          TEST_SWOW_HTTP2: '1'
         continue-on-error: true
         run: |
           TEST_SWOW_POSTGRESQL=1 composer test-extension .
@@ -580,9 +596,17 @@ jobs:
             throw 'OpenCppCoverage installation did not produce the coverage executable.'
           }
 
+      - name: Setup HTTP/2 test peer
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          package-manager-cache: false
+
       - name: Run extension tests
         shell: pwsh
         id: test-extension
+        env:
+          TEST_SWOW_HTTP2: '1'
         continue-on-error: true
         run: |
           & "${env:PGBIN}\initdb.exe" --locale=C -E UTF-8 -U postgres "C:\pgsqldata"
