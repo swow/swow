@@ -21,6 +21,7 @@ require __DIR__ . '/../include/bootstrap.php';
 Assert::same(ini_get('swow.async_file'), '0');
 $target = tempnam(sys_get_temp_dir(), 'swow-sync-link-');
 $link = $target . '-link';
+$nativeProbe = $target . '-native.php';
 try {
     Assert::true(symlink($target, $link));
     Assert::true(file_exists($link));
@@ -28,10 +29,12 @@ try {
     Assert::true(unlink($target));
     clearstatcache(true, $link);
     // The disabled hook must delegate even where native PHP has different broken-link results.
+    file_put_contents($nativeProbe, <<<'PHP'
+<?php
+echo json_encode([extension_loaded('swow'), file_exists($argv[1]), realpath($argv[1]), is_link($argv[1])], JSON_THROW_ON_ERROR);
+PHP);
     $native = json_decode(shell_exec(
-        escapeshellarg(PHP_BINARY) . ' -n -r ' . escapeshellarg(
-            'echo json_encode([extension_loaded("swow"), file_exists($argv[1]), realpath($argv[1]), is_link($argv[1])], JSON_THROW_ON_ERROR);'
-        ) . ' ' . escapeshellarg($link)
+        escapeshellarg(PHP_BINARY) . ' -n ' . escapeshellarg($nativeProbe) . ' ' . escapeshellarg($link)
     ), true, flags: JSON_THROW_ON_ERROR);
     Assert::false($native[0]);
     Assert::same(file_exists($link), $native[1]);
@@ -44,6 +47,9 @@ try {
     }
     if (file_exists($target)) {
         unlink($target);
+    }
+    if (file_exists($nativeProbe)) {
+        unlink($nativeProbe);
     }
 }
 echo "Done\n";

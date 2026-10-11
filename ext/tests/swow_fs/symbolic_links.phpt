@@ -24,8 +24,10 @@ $relativeLink = $directory . DIRECTORY_SEPARATOR . 'relative-link';
 $targetDirectory = $directory . DIRECTORY_SEPARATOR . 'target-directory';
 $movedDirectory = $directory . DIRECTORY_SEPARATOR . 'moved-directory';
 $directoryLink = $directory . DIRECTORY_SEPARATOR . 'directory-link';
+$workingDirectory = getcwd();
 try {
     Assert::true(mkdir($directory));
+    Assert::true(chdir($directory));
     Assert::same(file_put_contents($target, 'original'), 8);
     Assert::true(symlink($target, $link));
     Assert::true(is_link($link));
@@ -83,6 +85,7 @@ try {
     Assert::true(unlink($directoryLink));
     Assert::true(is_dir($movedDirectory));
 } finally {
+    chdir($workingDirectory);
     foreach ([$directoryLink, $relativeLink, $link, $target, $renamed] as $path) {
         if (is_link($path) || file_exists($path)) {
             unlink($path);
