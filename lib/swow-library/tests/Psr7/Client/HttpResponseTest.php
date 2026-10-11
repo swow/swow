@@ -220,4 +220,23 @@ final class HttpResponseTest extends TestCase
             }
         }
     }
+
+    #[DataProvider('provideModelHttpErrorResponsesRemainAvailableToTheApplicationCases')]
+    public function testModelHttpErrorResponsesRemainAvailableToTheApplication(int $status): void
+    {
+        $json = '{"error":{"message":"request could not be completed"}}';
+        $this->peer->send("HTTP/1.1 {$status} Error\r\nContent-Type: application/json\r\nRetry-After: 1\r\nContent-Length: " . strlen($json) . "\r\n\r\n{$json}");
+        $response = $this->client->sendRequest(Psr7::createRequest('POST', '/model', body: '{}'));
+        $this->assertSame($status, $response->getStatusCode());
+        $this->assertSame('1', $response->getHeaderLine('Retry-After'));
+        $this->assertSame($json, $response->getBody()->getContents());
+    }
+
+    /** @return iterable<string, array{int}> */
+    public static function provideModelHttpErrorResponsesRemainAvailableToTheApplicationCases(): iterable
+    {
+        foreach ([400, 401, 429, 500, 503] as $status) {
+            yield (string) $status => [$status];
+        }
+    }
 }
