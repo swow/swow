@@ -786,11 +786,23 @@ trait ReceiverTrait
         }
         $mainCoroutine = Coroutine::getMain();
         $bodyLengthOnEntry = $streaming ? $state->bodyBuffer->getLength() : -1;
+        $readTimeoutLimit = $readTimeout;
+        $startTime = $mainCoroutine->getElapsed();
         try {
             while (!$state->finalized && $state->bodyBuffer->getLength() < $targetLength) {
                 // Return newly parsed bytes before waiting for the remainder of a chunk.
                 if ($streaming && $state->bodyBuffer->getLength() > $bodyLengthOnEntry) {
                     break;
+                }
+                if ($state->remainingChunkBytes > 0 || $expectMoreData) {
+                    $readTimeout = $readTimeoutLimit;
+                    if ($timeout >= 0) {
+                        $timePassed = $mainCoroutine->getElapsed() - $startTime;
+                        if ($timePassed > $timeout) {
+                            throw new SocketException(sprintf('Recv HTTP chunked body timeout (expect within %d ms, but %d ms passed)', $timeout, $timePassed), Errno::ETIMEDOUT);
+                        }
+                        $readTimeout = min($readTimeoutLimit, $timeout - $timePassed);
+                    }
                 }
                 // mid-chunk 增量读取：当前 chunk 还有未读字节时，用 recvData 非精确读
                 // 直接写入 bodyBuffer，有多少收多少——避免大 chunk 阻塞流式传输。
@@ -839,17 +851,6 @@ trait ReceiverTrait
                      */
                     if ($buffer->isFull()) {
                         throw new ParserException('Buffer is full and unable to continue receiving chunked stream');
-                    }
-                    if ($timeout >= 0) {
-                        if (!isset($startTime)) {
-                            $startTime = $mainCoroutine->getElapsed();
-                        } else {
-                            $timePassed = $mainCoroutine->getElapsed() - $startTime;
-                            if ($timePassed > $timeout) {
-                                throw new SocketException(sprintf('Recv HTTP chunked body timeout (expect within %d ms, but %d ms passed)', $timeout, $timePassed), Errno::ETIMEDOUT);
-                            }
-                            $readTimeout = $timeout - $timePassed;
-                        }
                     }
                     $socket->recvData($buffer, offset: $buffer->getLength(), timeout: $readTimeout);
                     $expectMoreData = false;

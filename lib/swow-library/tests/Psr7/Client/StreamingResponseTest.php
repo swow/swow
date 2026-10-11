@@ -172,4 +172,52 @@ final class StreamingResponseTest extends TestCase
         $body->close();
         $this->assertFalse($this->client->getSocket()->isAvailable());
     }
+
+    public function testReadingAChunkRemainderHonorsTheTotalOperationTimeout(): void
+    {
+        $this->client->setRecvMessageTimeout(50);
+        $body = Psr7::createResponseFromEntity($this->client->recvResponseEntity())->getBody();
+        $this->peer->send("a\r\nx");
+        $this->assertSame('x', $body->read(1));
+        $writer = Coroutine::run(function (): void {
+            for ($i = 0; $i < 9; $i++) {
+                usleep(10000);
+                $this->peer->send('x');
+            }
+            $this->peer->send("\r\n0\r\n\r\n");
+        });
+        try {
+            $this->expectException(SocketException::class);
+            $this->expectExceptionCode(Errno::ETIMEDOUT);
+            $body->getContents();
+        } finally {
+            if ($writer->isAlive()) {
+                $writer->kill();
+            }
+            $body->close();
+        }
+    }
+
+    public function testLaterChunkReadsRetainTheShorterSocketTimeout(): void
+    {
+        $this->client->setRecvMessageTimeout(100);
+        $this->client->getSocket()->setReadTimeout(10);
+        $body = Psr7::createResponseFromEntity($this->client->recvResponseEntity())->getBody();
+        $writer = Coroutine::run(function (): void {
+            usleep(1000);
+            $this->peer->send("1\r\n");
+            usleep(30000);
+            $this->peer->send("x\r\n0\r\n\r\n");
+        });
+        try {
+            $this->expectException(SocketException::class);
+            $this->expectExceptionCode(Errno::ETIMEDOUT);
+            $body->getContents();
+        } finally {
+            if ($writer->isAlive()) {
+                $writer->kill();
+            }
+            $body->close();
+        }
+    }
 }
