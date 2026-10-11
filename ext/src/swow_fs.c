@@ -2807,6 +2807,29 @@ static PHP_FUNCTION(swow_pipe_from_fd)
 static zif_handler PHP_FN(original_file_exists);
 static zif_handler PHP_FN(original_realpath);
 
+static bool swow_win32_path_target_exists(const char *path)
+{
+    LPCWSTR pathw = php_win32_ioutil_conv_any_to_w(path, PHP_WIN32_CP_IGNORE_LEN, NULL);
+    if (pathw == NULL) {
+        return false;
+    }
+
+    // Keep these native queries synchronous: yielding here changes autoload and Coroutine::call().
+    // Zero desired access follows the target without requiring file-content permissions;
+    // PHP stat's attribute fallback would accept the broken link itself instead.
+    HANDLE handle = CreateFileW(pathw, 0, PHP_WIN32_IOUTIL_DEFAULT_SHARE_MODE, NULL,
+        OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
+    DWORD error = handle == INVALID_HANDLE_VALUE ? GetLastError() : ERROR_SUCCESS;
+    free((void *) pathw);
+    if (handle != INVALID_HANDLE_VALUE) {
+        CloseHandle(handle);
+        return true;
+    }
+
+    // Access or sharing denial does not disprove the native positive existence result.
+    return error == ERROR_ACCESS_DENIED || error == ERROR_SHARING_VIOLATION;
+}
+
 static PHP_FUNCTION(swow_file_exists)
 {
     if (SWOW_G(runtime_state) != SWOW_RUNTIME_STATE_RUNNING || !SWOW_G(ini.async_file)) {
@@ -2823,9 +2846,8 @@ static PHP_FUNCTION(swow_file_exists)
     if (Z_TYPE_P(return_value) == IS_TRUE) {
         const char *local;
         if (php_stream_locate_url_wrapper(ZSTR_VAL(filename), &local, 0) == &php_plain_files_wrapper) {
-            zend_stat_t statbuf;
             // Windows NTS access(F_OK) sees the link itself; existence requires its target.
-            RETVAL_BOOL(swow_virtual_stat(local, &statbuf) == 0);
+            RETVAL_BOOL(swow_win32_path_target_exists(local));
         }
     }
 }
@@ -2835,9 +2857,8 @@ static PHP_FUNCTION(swow_realpath)
     PHP_FN(original_realpath)(INTERNAL_FUNCTION_PARAM_PASSTHRU);
     if (SWOW_G(runtime_state) == SWOW_RUNTIME_STATE_RUNNING && SWOW_G(ini.async_file) &&
         Z_TYPE_P(return_value) == IS_STRING) {
-        zend_stat_t statbuf;
         // Native NTS resolution can return an absolute reparse target that no longer exists.
-        if (swow_virtual_stat(Z_STRVAL_P(return_value), &statbuf) != 0) {
+        if (!swow_win32_path_target_exists(Z_STRVAL_P(return_value))) {
             zval_ptr_dtor(return_value);
             RETVAL_FALSE;
         }

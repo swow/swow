@@ -21,6 +21,7 @@ $target = $directory . DIRECTORY_SEPARATOR . 'target';
 $renamed = $directory . DIRECTORY_SEPARATOR . 'renamed';
 $link = $directory . DIRECTORY_SEPARATOR . 'link';
 $relativeLink = $directory . DIRECTORY_SEPARATOR . 'relative-link';
+$chainLink = $directory . DIRECTORY_SEPARATOR . 'chain-link';
 $targetDirectory = $directory . DIRECTORY_SEPARATOR . 'target-directory';
 $movedDirectory = $directory . DIRECTORY_SEPARATOR . 'moved-directory';
 $directoryLink = $directory . DIRECTORY_SEPARATOR . 'directory-link';
@@ -45,27 +46,33 @@ try {
     Assert::true(symlink('target', $relativeLink));
     Assert::true(file_exists($relativeLink));
     Assert::same(file_get_contents($relativeLink), 'original');
+    Assert::true(symlink($link, $chainLink));
+    Assert::true(file_exists($chainLink));
+    Assert::same(file_get_contents($chainLink), 'original');
     Assert::true(rename($target, $renamed));
     clearstatcache(true, $link);
     Assert::true(is_link($link));
     Assert::false(file_exists($link));
     Assert::false(realpath($link));
     Assert::true(is_array(lstat($link)));
-    clearstatcache(true, $relativeLink);
-    Assert::true(is_link($relativeLink));
-    Assert::false(file_exists($relativeLink));
-    Assert::false(realpath($relativeLink));
+    foreach ([$relativeLink, $chainLink] as $alias) {
+        clearstatcache(true, $alias);
+        Assert::true(is_link($alias));
+        Assert::false(file_exists($alias));
+        Assert::false(realpath($alias));
+    }
     Assert::false(file_exists('file://' . $link));
 
     // Restoring the target makes both aliases usable again without replacing the links.
     Assert::same(file_put_contents($target, 'replacement'), 11);
-    foreach ([$link, $relativeLink] as $alias) {
+    foreach ([$link, $relativeLink, $chainLink] as $alias) {
         clearstatcache(true, $alias);
         Assert::true(file_exists($alias));
         Assert::true(is_string(realpath($alias)));
         Assert::same(file_get_contents($alias), 'replacement');
     }
     Assert::true(unlink($target));
+    Assert::true(unlink($chainLink));
     Assert::true(unlink($relativeLink));
     // Removing the broken alias must leave the moved target intact.
     Assert::true(unlink($link));
@@ -86,7 +93,7 @@ try {
     Assert::true(is_dir($movedDirectory));
 } finally {
     chdir($workingDirectory);
-    foreach ([$directoryLink, $relativeLink, $link, $target, $renamed] as $path) {
+    foreach ([$directoryLink, $chainLink, $relativeLink, $link, $target, $renamed] as $path) {
         if (is_link($path) || file_exists($path)) {
             unlink($path);
         }

@@ -39,6 +39,15 @@ try {
     Assert::same(realpath('./文件.txt'), realpath($filename));
     Assert::same(realpath(''), realpath('.'));
 
+    $completion = new Swow\Channel(1);
+    $coroutine = Swow\Coroutine::run(static function () use ($filename, $completion): void {
+        $completion->push([file_exists($filename), is_string(realpath($filename))]);
+    });
+    $yielded = $coroutine->isAlive();
+    Assert::same($completion->pop(1000), [true, true]);
+    // Native existence and path queries must not introduce an implicit coroutine suspension.
+    Assert::false($yielded);
+
     $path = new class($filename) {
         public int $calls = 0;
 
