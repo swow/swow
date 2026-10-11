@@ -20,8 +20,8 @@ use ValueError;
 
 use function ctype_digit;
 use function implode;
-use function ltrim;
 use function rtrim;
+use function strlen;
 use function strpos;
 use function substr;
 
@@ -43,6 +43,8 @@ final class EventStreamDecoder
         $eventId = null;
         $eventRetry = null;
         $eventDataLines = [];
+        $firstLine = true;
+        $skipLineFeed = false;
 
         /* 空行是 SSE 事件分隔符：只有积累过 data 才产出事件。 */
         $dispatchEvent = static function () use (&$eventName, &$eventId, &$eventRetry, &$eventDataLines): ?EventStreamEvent {
@@ -66,7 +68,13 @@ final class EventStreamDecoder
         };
 
         /* 逐行消费，支持注释行、field:value 与跨 chunk 增量拼接。 */
-        $consumeLine = static function (string $line) use (&$eventName, &$eventId, &$eventRetry, &$eventDataLines, $dispatchEvent): ?EventStreamEvent {
+        $consumeLine = static function (string $line) use (&$eventName, &$eventId, &$eventRetry, &$eventDataLines, &$firstLine, $dispatchEvent): ?EventStreamEvent {
+            if ($firstLine) {
+                $firstLine = false;
+                if (str_starts_with($line, "\xef\xbb\xbf")) {
+                    $line = substr($line, 3);
+                }
+            }
             if ($line === '') {
                 return $dispatchEvent();
             }
@@ -80,7 +88,11 @@ final class EventStreamDecoder
                 $value = '';
             } else {
                 $field = substr($line, 0, $separatorPos);
-                $value = ltrim((string) substr($line, $separatorPos + 1), ' ');
+                $value = substr($line, $separatorPos + 1);
+                // SSE removes exactly one optional space after the colon, not data indentation.
+                if (str_starts_with($value, ' ')) {
+                    $value = substr($value, 1);
+                }
             }
 
             switch ($field) {
@@ -88,9 +100,7 @@ final class EventStreamDecoder
                     $eventDataLines[] = $value;
                     break;
                 case 'event':
-                    if ($value !== '') {
-                        $eventName = $value;
-                    }
+                    $eventName = $value !== '' ? $value : 'message';
                     break;
                 case 'id':
                     if (!str_contains($value, "\0")) {
@@ -114,9 +124,21 @@ final class EventStreamDecoder
             }
             $lineBuffer .= $chunk;
 
-            while (($lineBreakPos = strpos($lineBuffer, "\n")) !== false) {
-                $line = rtrim(substr($lineBuffer, 0, $lineBreakPos), "\r");
-                $lineBuffer = (string) substr($lineBuffer, $lineBreakPos + 1);
+            while ($lineBuffer !== '') {
+                if ($skipLineFeed) {
+                    $skipLineFeed = false;
+                    if ($lineBuffer[0] === "\n") {
+                        $lineBuffer = substr($lineBuffer, 1);
+                    }
+                }
+                $lineBreakPos = strcspn($lineBuffer, "\r\n");
+                if ($lineBreakPos === strlen($lineBuffer)) {
+                    break;
+                }
+                $line = substr($lineBuffer, 0, $lineBreakPos);
+                // A CR ends the line immediately; its optional LF can arrive in a later read.
+                $skipLineFeed = $lineBuffer[$lineBreakPos] === "\r";
+                $lineBuffer = substr($lineBuffer, $lineBreakPos + 1);
                 $event = $consumeLine($line);
                 if ($event !== null) {
                     yield $event;

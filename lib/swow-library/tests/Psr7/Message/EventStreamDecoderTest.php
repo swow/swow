@@ -15,6 +15,7 @@ declare(strict_types=1);
 namespace Swow\Tests\Psr7\Message;
 
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Swow\Psr7\Message\BufferStream;
 use Swow\Psr7\Message\EventStreamDecoder;
@@ -65,5 +66,43 @@ final class EventStreamDecoderTest extends TestCase
     {
         $this->expectException(ValueError::class);
         iterator_to_array(Psr7::readEventStream(new BufferStream("data: x\n\n"), 0), false);
+    }
+
+    #[DataProvider('provideBomLineEndingsAndFieldWhitespaceArePreservedCases')]
+    public function testBomLineEndingsAndFieldWhitespaceArePreserved(string $ending, int $readSize): void
+    {
+        $wire = "\xef\xbb\xbfdata: first{$ending}{$ending}: heartbeat{$ending}event: token{$ending}data:  indented{$ending}data:tail{$ending}{$ending}";
+        $events = iterator_to_array(Psr7::readEventStream(new BufferStream($wire), $readSize), false);
+        $this->assertCount(2, $events);
+        $this->assertSame('first', $events[0]->data);
+        $this->assertSame('token', $events[1]->event);
+        $this->assertSame(" indented\ntail", $events[1]->data);
+    }
+
+    /** @return iterable<string, array{string, int}> */
+    public static function provideBomLineEndingsAndFieldWhitespaceArePreservedCases(): iterable
+    {
+        foreach (["\n", "\r\n", "\r"] as $ending) {
+            foreach ([1, 2, 3, 8192] as $readSize) {
+                yield bin2hex($ending) . " {$readSize}" => [$ending, $readSize];
+            }
+        }
+    }
+
+    public function testEmptyEventFieldRestoresTheDefaultEventName(): void
+    {
+        $events = iterator_to_array(Psr7::readEventStream(new BufferStream("event: token\nevent:\ndata: value\n\n")), false);
+        $this->assertCount(1, $events);
+        $this->assertSame('message', $events[0]->event);
+    }
+
+    public function testInvalidIdAndRetryFieldsDoNotReplaceValidMetadata(): void
+    {
+        $wire = "id: valid\nid: invalid\0id\nretry: 1500\nretry: -1\nretry: text\nunknown: ignored\ndata\n\n";
+        $events = iterator_to_array(Psr7::readEventStream(new BufferStream($wire), 1), false);
+        $this->assertCount(1, $events);
+        $this->assertSame('', $events[0]->data);
+        $this->assertSame('valid', $events[0]->id);
+        $this->assertSame(1500, $events[0]->retry);
     }
 }
