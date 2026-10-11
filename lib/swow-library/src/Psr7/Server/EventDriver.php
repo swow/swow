@@ -273,7 +273,11 @@ class EventDriver
                                             $opcode = $frame->getOpcode();
                                             switch ($opcode) {
                                                 case WebSocketOpcode::PING:
-                                                    $connection->sendWebSocketPongFrame();
+                                                    if ($frame->getPayloadLength() === 0) {
+                                                        $connection->sendWebSocketPongFrame();
+                                                    } else {
+                                                        $connection->sendWebSocketFrame(Psr7::createWebSocketFrame(WebSocketOpcode::PONG, $frame->getPayloadData()));
+                                                    }
                                                     break;
                                                 case WebSocketOpcode::PONG:
                                                     break;

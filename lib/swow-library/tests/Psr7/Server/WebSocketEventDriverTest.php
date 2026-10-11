@@ -30,6 +30,8 @@ use Swow\Psr7\Server\Server;
 use Swow\Psr7\Server\ServerConnection;
 use Swow\WebSocket\Opcode;
 
+use function strlen;
+
 /** @internal */
 #[CoversClass(EventDriver::class)]
 #[CoversClass(ServerConnection::class)]
@@ -39,7 +41,7 @@ use Swow\WebSocket\Opcode;
 final class WebSocketEventDriverTest extends TestCase
 {
     #[DataProvider('provideUpgradeControlFramesAndApplicationRepliesCases')]
-    public function testUpgradeControlFramesAndApplicationReplies(bool $frameReply): void
+    public function testUpgradeControlFramesAndApplicationReplies(bool $frameReply, string $pingPayload): void
     {
         $server = new Server();
         $server->setRecvMessageTimeout(1000);
@@ -68,10 +70,10 @@ final class WebSocketEventDriverTest extends TestCase
             $response = $client->upgradeToWebSocket(Psr7::createRequest('GET', 'http://example.test/events'));
             $this->assertSame(Status::SWITCHING_PROTOCOLS, $response->getStatusCode());
             $this->assertSame('websocket', $response->getHeaderLine('Upgrade'));
-            $client->sendWebSocketFrame(Psr7::createWebSocketFrame(Opcode::PING, '', mask: true));
+            $client->sendWebSocketFrame(Psr7::createWebSocketFrame(Opcode::PING, $pingPayload, mask: true));
             $pong = $client->recvWebSocketFrame();
             $this->assertSame(Opcode::PONG, $pong->getOpcode());
-            $this->assertSame('', (string) $pong->getPayloadData());
+            $this->assertSame($pingPayload, (string) $pong->getPayloadData());
             $client->sendWebSocketFrame(Psr7::createWebSocketFrame(Opcode::PONG, '', mask: true));
             $client->sendWebSocketFrame(Psr7::createWebSocketTextMaskedFrame("message\0data"));
             $reply = $client->recvWebSocketFrame();
@@ -94,11 +96,14 @@ final class WebSocketEventDriverTest extends TestCase
         }
     }
 
-    /** @return iterable<string, array{bool}> */
+    /** @return iterable<string, array{bool, string}> */
     public static function provideUpgradeControlFramesAndApplicationRepliesCases(): iterable
     {
-        yield 'string reply' => [false];
-        yield 'frame reply' => [true];
+        foreach ([false, true] as $frameReply) {
+            foreach (['', "heartbeat\0token"] as $pingPayload) {
+                yield 'frame ' . (int) $frameReply . ' ping ' . strlen($pingPayload) => [$frameReply, $pingPayload];
+            }
+        }
     }
 
     #[DataProvider('provideInvalidUpgradeIsRejectedAndClosedCases')]
