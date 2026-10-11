@@ -32,6 +32,8 @@ use Swow\WebSocket\Header;
 use Swow\WebSocket\Opcode;
 use Swow\WebSocket\WebSocket;
 
+use function count;
+
 /** @internal */
 #[CoversClass(Client::class)]
 #[CoversClass(Server::class)]
@@ -256,5 +258,27 @@ final class WebSocketReceiveTest extends TestCase
             . Psr7::createWebSocketTextFrame('first')->toString());
         $this->assertSame(Status::SWITCHING_PROTOCOLS, $this->client->recvResponseEntity()->statusCode);
         $this->assertSame('first', (string) $this->client->recvWebSocketFrame()->getPayloadData());
+    }
+
+    public function testUtf8MessageFragmentsAndInterleavedControlFramesKeepTheirBoundaries(): void
+    {
+        $message = '你🙂';
+        $fragments = str_split($message, 1);
+        $wire = '';
+        foreach ($fragments as $index => $fragment) {
+            $wire .= Psr7::createWebSocketFrame($index === 0 ? Opcode::TEXT : Opcode::CONTINUATION, $fragment,
+                fin: $index === count($fragments) - 1, mask: 'mask')->toString() . WebSocket::PING_FRAME;
+        }
+        $this->client->getSocket()->send($wire);
+        $received = '';
+        foreach ($fragments as $index => $fragment) {
+            $frame = $this->connection->recvWebSocketFrame();
+            $this->assertSame($index === 0 ? Opcode::TEXT : Opcode::CONTINUATION, $frame->getOpcode());
+            $this->assertSame($index === count($fragments) - 1, $frame->getFin());
+            $this->assertSame($fragment, (string) $frame->getPayloadData());
+            $received .= (string) $frame->getPayloadData();
+            $this->assertSame(Opcode::PING, $this->connection->recvWebSocketFrame()->getOpcode());
+        }
+        $this->assertSame($message, $received);
     }
 }
