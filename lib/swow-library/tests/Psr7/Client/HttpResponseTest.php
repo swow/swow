@@ -21,6 +21,8 @@ use Swow\Buffer;
 use Swow\Channel;
 use Swow\Coroutine;
 use Swow\Errno;
+use Swow\Http\Message\ResponseEntity;
+use Swow\Http\Message\ServerRequestEntity;
 use Swow\Http\Protocol\ProtocolException;
 use Swow\Http\Status;
 use Swow\Psr7\Client\Client;
@@ -238,5 +240,24 @@ final class HttpResponseTest extends TestCase
         foreach ([400, 401, 429, 500, 503] as $status) {
             yield (string) $status => [$status];
         }
+    }
+
+    public function testHeadResponseFramingPreservesExistingReceiverOverrides(): void
+    {
+        $this->client->close();
+        $this->peer->close();
+        $this->client = new class extends Client {
+            protected function recvMessageEntity(?int $timeout = null): ServerRequestEntity|ResponseEntity
+            {
+                return parent::recvMessageEntity($timeout);
+            }
+        };
+        $this->client->setTimeout(1000)->connect('127.0.0.1', $this->server->getSockPort());
+        $this->peer = $this->server->accept();
+        $this->peer->send("HTTP/1.1 200 OK\r\nContent-Length: 12345\r\n\r\nHTTP/1.1 204 No Content\r\n\r\n");
+        $response = $this->client->sendRequest(Psr7::createRequest('HEAD', '/metadata'));
+        $this->assertSame('', (string) $response->getBody());
+        $this->assertSame('12345', $response->getHeaderLine('Content-Length'));
+        $this->assertSame(Status::NO_CONTENT, $this->client->recvResponseEntity()->statusCode);
     }
 }

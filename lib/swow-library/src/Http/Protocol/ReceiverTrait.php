@@ -82,6 +82,8 @@ trait ReceiverTrait
 
     protected bool $shouldKeepAlive = false;
 
+    private bool $receivingHeadResponse = false;
+
     protected bool $streamingChunkedResponse = false;
 
     protected ?ChunkedBodyState $activeChunkedBody = null;
@@ -90,6 +92,7 @@ trait ReceiverTrait
     {
         $this->parsedOffset = 0;
         $this->shouldKeepAlive = false;
+        $this->receivingHeadResponse = false;
         $this->activeChunkedBody = null;
         $this->buffer = new Buffer(max(Buffer::COMMON_SIZE, $this->getMaxHeaderLength()));
         $requiredEvents =
@@ -192,7 +195,7 @@ trait ReceiverTrait
      * @phpstan-return T
      * @psalm-return T
      */
-    protected function recvMessageEntity(?int $timeout = null, bool $headResponse = false): ServerRequestEntity|ResponseEntity
+    protected function recvMessageEntity(?int $timeout = null): ServerRequestEntity|ResponseEntity
     {
         // 同一连接上不能带着“上一条未消费完成 body”继续解析下一条消息。
         $this->guardPreviousChunkedBody();
@@ -350,7 +353,7 @@ trait ReceiverTrait
                                 $headersCompleted = true;
                                 $shouldKeepAlive = $parser->shouldKeepAlive();
                                 // HEAD advertises representation metadata but never sends that body.
-                                if (!$isServerRequest && $headResponse) {
+                                if (!$isServerRequest && $this->receivingHeadResponse) {
                                     break 3;
                                 }
                                 if ($parser->isChunked()) {
