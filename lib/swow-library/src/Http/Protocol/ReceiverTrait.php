@@ -230,6 +230,7 @@ trait ReceiverTrait
         $currentChunkLength = 0;
         $body = null;
         $isStreamingChunkedBody = false;
+        $isCloseDelimitedBody = false;
         /* }}} */
         /* multipart related values {{{ */
         $isMultipart = false;
@@ -373,6 +374,7 @@ trait ReceiverTrait
                                     }
                                 } else {
                                     $contentLength = $parser->getContentLength();
+                                    $isCloseDelimitedBody = !$isServerRequest && !isset($headerNames['content-length']);
                                     if ($contentLength > $maxContentLength) {
                                         throw new ProtocolException(HttpStatus::REQUEST_ENTITY_TOO_LARGE);
                                     }
@@ -499,6 +501,14 @@ trait ReceiverTrait
                     } else {
                         switch ($event) {
                             case HttpParser::EVENT_BODY:
+                                if ($isCloseDelimitedBody) {
+                                    $contentLength += $dataLength;
+                                    if ($contentLength > $maxContentLength) {
+                                        throw new ProtocolException(HttpStatus::REQUEST_ENTITY_TOO_LARGE);
+                                    }
+                                    ($body ??= new Buffer(Buffer::COMMON_SIZE))->append($buffer, $dataOffset, $dataLength);
+                                    break;
+                                }
                                 if ($isChunked) {
                                     ($body ??= new Buffer(Buffer::COMMON_SIZE))->append($buffer, $dataOffset, $dataLength);
                                     $neededLength = $currentChunkLength - $dataLength;
@@ -608,6 +618,10 @@ trait ReceiverTrait
             throw new ProtocolException(HttpStatus::BAD_REQUEST, 'Protocol Parsing Error', $parserException);
         } catch (SocketException $socketException) {
             $shouldKeepAlive = false;
+            // recvData reports orderly EOF with code 0; timeouts and resets do not complete a body.
+            if ($isCloseDelimitedBody && $socketException->getCode() !== 0) {
+                throw $socketException;
+            }
             try {
                 $parser->finish();
             } catch (ParserException $parserException) {
