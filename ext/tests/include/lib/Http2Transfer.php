@@ -48,6 +48,20 @@ final class Http2Transfer
         return $multi;
     }
 
+    /** @return array{session: int, stream: int, port: int, alpn: string, path: string, method: string, body: string, batch: int} */
+    public static function establish(Http2Server $server, CurlMultiHandle $multi): array
+    {
+        $transfer = new self($server, '/settings');
+        $transfer->add($multi);
+        try {
+            // Reuse tests begin with a verified connection and received peer SETTINGS.
+            self::assertSuccessful(self::run($multi), 1);
+            return $transfer->response();
+        } finally {
+            $transfer->remove($multi);
+        }
+    }
+
     public function add(CurlMultiHandle $multi): void
     {
         Assert::same(curl_multi_add_handle($multi, $this->handle), CURLM_OK);

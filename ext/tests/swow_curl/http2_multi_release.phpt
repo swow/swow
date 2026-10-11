@@ -15,6 +15,7 @@ foreach ([false, true] as $tls) {
     try {
         foreach (['close', 'collect'] as $operation) {
             $multi = Http2Transfer::multi();
+            Http2Transfer::establish($server, $multi);
             $first = new Http2Transfer($server, "/hold?group={$operation}&count=2&id=first");
             $second = new Http2Transfer($server, "/hold?group={$operation}&count=2&id=second");
             $first->add($multi);

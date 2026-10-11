@@ -14,6 +14,7 @@ foreach ([false, true] as $tls) {
     $server = new Http2Server($tls);
     $multi = Http2Transfer::multi();
     try {
+        Http2Transfer::establish($server, $multi);
         foreach (['cancel', 'timeout'] as $operation) {
             $held = new Http2Transfer($server, "/hold?group={$operation}&count=2");
             $sibling = new Http2Transfer($server, "/barrier?group={$operation}&count=2");

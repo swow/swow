@@ -15,6 +15,7 @@ foreach ([false, true] as $tls) {
     $multi = Http2Transfer::multi();
     $transfers = [];
     try {
+        $connection = Http2Transfer::establish($server, $multi);
         $size = 256 * 1024 + 17;
         for ($index = 0; $index < 6; $index++) {
             $transfer = new Http2Transfer($server, "/data?group=data&count=6&id={$index}&size={$size}", 100);
@@ -31,6 +32,7 @@ foreach ([false, true] as $tls) {
             Assert::same(preg_match('/HTTP\/2 200 ?\r\n/', $transfer->headers), 1);
             Assert::contains($transfer->headers, 'x-body-sha256: ' . hash('sha256', $expected));
             Assert::same(preg_match('/x-session: (\d+)/', $transfer->headers, $match), 1);
+            Assert::same((int) $match[1], $connection['session']);
             $sessions[] = $match[1];
             Assert::same(preg_match('/x-stream: (\d+)/', $transfer->headers, $match), 1);
             $streams[] = $match[1];

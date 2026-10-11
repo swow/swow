@@ -71,6 +71,8 @@ server.on('stream', (stream, headers) => {
             ':status': 200,
             'content-type': url.pathname === '/data' ? 'application/octet-stream' : 'application/json',
             'x-session': String(metadata.session), 'x-stream': String(metadata.stream),
+            // A reset must interrupt a promised body, rather than look like a complete empty response.
+            ...(url.pathname === '/reset' ? { 'content-length': Buffer.byteLength('interrupted response') } : {}),
         }, { waitForTrailers: url.pathname === '/data' });
         const respond = (batch = 1) => {
             if (stream.destroyed) return;

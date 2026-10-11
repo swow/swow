@@ -14,6 +14,7 @@ foreach ([false, true] as $tls) {
     $server = new Http2Server($tls);
     $multi = Http2Transfer::multi();
     try {
+        Http2Transfer::establish($server, $multi);
         foreach (['reset', 'callback'] as $operation) {
             $path = $operation === 'reset' ? '/reset' : '/data?size=131072&id=failed';
             $path .= ($operation === 'reset' ? '?' : '&') . "group={$operation}&count=2";
@@ -34,9 +35,13 @@ foreach ([false, true] as $tls) {
                 $results[spl_object_id($message['handle'])] = $message['result'];
             }
             if ($operation === 'reset') {
-                // PHP does not expose CURLE_HTTP2_STREAM; require a stream error without relying on its numeric value.
-                Assert::notSame($results[spl_object_id($failed->handle)], CURLE_OK);
-                Assert::contains(strtolower(curl_error($failed->handle)), 'stream');
+                $result = $results[spl_object_id($failed->handle)];
+                Assert::notSame($result, CURLE_OK);
+                // libcurl can report the incomplete body or the stream reset; PHP has no CURLE_HTTP2_STREAM constant.
+                if ($result !== CURLE_PARTIAL_FILE) {
+                    Assert::contains(strtolower(curl_strerror($result)), 'stream');
+                }
+                Assert::same($failed->body, '');
             } else {
                 Assert::same($results[spl_object_id($failed->handle)], CURLE_WRITE_ERROR);
             }

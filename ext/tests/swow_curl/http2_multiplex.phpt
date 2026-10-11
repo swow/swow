@@ -15,7 +15,7 @@ foreach ([false, true] as $tls) {
     $multi = Http2Transfer::multi();
     $transfers = [];
     try {
-        $first = null;
+        $first = Http2Transfer::establish($server, $multi);
         $streams = [];
         for ($batch = 0; $batch < 4; $batch++) {
             for ($index = 0; $index < 8; $index++) {
