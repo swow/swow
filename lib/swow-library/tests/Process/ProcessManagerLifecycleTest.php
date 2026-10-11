@@ -17,6 +17,7 @@ namespace Swow\Tests\Process;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\RequiresOperatingSystem;
 use PHPUnit\Framework\TestCase;
+use Swow\Channel;
 use Swow\Coroutine;
 use Swow\Process\ProcessExitStatus;
 use Swow\Process\ProcessManager;
@@ -80,8 +81,7 @@ final class ProcessManagerLifecycleTest extends TestCase
         });
         $loop = Coroutine::run(static function () use ($manager, $readyFile): void {
             $manager->start(static function (WorkerContext $context) use ($readyFile): void {
-                file_put_contents($readyFile, $context->getPid() . "\n", FILE_APPEND | LOCK_EX);
-                Signal::wait(Signal::TERM, 5000);
+                self::reportReadyAndWaitForTermination($context, $readyFile, FILE_APPEND | LOCK_EX);
             });
         });
         try {
@@ -119,8 +119,7 @@ final class ProcessManagerLifecycleTest extends TestCase
         });
         $loop = Coroutine::run(static function () use ($manager, $readyFile): void {
             $manager->start(static function (WorkerContext $context) use ($readyFile): void {
-                file_put_contents($readyFile, $context->getPid() . "\n");
-                Signal::wait(Signal::TERM, 5000);
+                self::reportReadyAndWaitForTermination($context, $readyFile);
                 // An active worker may delay graceful shutdown beyond the configured deadline.
                 while (true) {
                     usleep(50000);
@@ -141,6 +140,25 @@ final class ProcessManagerLifecycleTest extends TestCase
                 $this->waitForManagerExit($loop);
             }
             unlink($readyFile);
+        }
+    }
+
+    private static function reportReadyAndWaitForTermination(WorkerContext $context, string $file, int $flags = 0): void
+    {
+        $terminated = new Channel(1);
+        $waiter = Coroutine::run(static function () use ($terminated): void {
+            Signal::wait(Signal::TERM, 5000);
+            $terminated->push(true);
+        });
+        try {
+            // Publish readiness only after the signal waiter has suspended. A file write can
+            // become visible to the parent before its own coroutine resumes to register a waiter.
+            file_put_contents($file, $context->getPid() . "\n", $flags);
+            $terminated->pop(5000);
+        } finally {
+            if ($waiter->isAlive()) {
+                $waiter->kill();
+            }
         }
     }
 
