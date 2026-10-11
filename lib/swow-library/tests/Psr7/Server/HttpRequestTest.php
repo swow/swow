@@ -319,4 +319,16 @@ final class HttpRequestTest extends TestCase
         yield 'content length' => ['Content-Length: 4', 'a', 'bcd'];
         yield 'buffered chunk' => ['Transfer-Encoding: chunked', "4\r\na", "bcd\r\n0\r\n\r\n"];
     }
+
+    public function testRepeatedHeadersWithDifferentCasingPreserveAllValues(): void
+    {
+        $this->client->getSocket()->send("GET / HTTP/1.1\r\nHost: example.test\r\nX-Value: first\r\nx-value: second\r\nX-VALUE: third\r\n"
+            . "Cookie: a=1\r\ncookie: b=2\r\n\r\n");
+        $request = $this->connection->recvHttpRequest();
+        $this->assertSame(['first', 'second', 'third'], $request->getHeader('X-Value'));
+        $this->assertSame(['a' => '1', 'b' => '2'], $request->getCookieParams());
+        $this->connection->getSocket()->send("HTTP/1.1 200 OK\r\nContent-Length: 0\r\nSet-Cookie: a=1\r\nset-cookie: b=2\r\n\r\n");
+        $response = Psr7::createResponseFromEntity($this->client->recvResponseEntity());
+        $this->assertSame(['a=1', 'b=2'], $response->getHeader('Set-Cookie'));
+    }
 }

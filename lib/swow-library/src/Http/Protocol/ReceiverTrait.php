@@ -326,6 +326,7 @@ trait ReceiverTrait
                                 break;
                             case HttpParser::EVENT_HEADER_VALUE:
                                 if ($event !== $previousEvent) {
+                                    $headerName = $headerNames[strtolower($headerName)] ?? $headerName;
                                     $headers[$headerName][] = $data;
                                     $headerNames[strtolower($headerName)] = $headerName;
                                 } else {
@@ -670,7 +671,7 @@ trait ReceiverTrait
                 if (isset($headerNames['cookie'])) {
                     parse_str(
                         strtr(
-                            implode(', ', $headers[$headerNames['cookie']]),
+                            implode('; ', $headers[$headerNames['cookie']]),
                             ['&' => '%26', '+' => '%2B', ';' => '&']
                         ),
                         $messageEntity->cookies
