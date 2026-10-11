@@ -18,6 +18,7 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Swow\Buffer;
+use Swow\Channel;
 use Swow\Coroutine;
 use Swow\Http\Protocol\ProtocolException;
 use Swow\Http\Status;
@@ -99,7 +100,7 @@ final class WebSocketReceiveTest extends TestCase
     /** @return iterable<string, array{int, bool}> */
     public static function provideSplitHeaderAndPayloadLeaveTheNextFrameIntactCases(): iterable
     {
-        foreach ([125, 126, Buffer::COMMON_SIZE + 32, 65536] as $length) {
+        foreach ([1, 124, 125, 126, 127, Buffer::COMMON_SIZE - 1, Buffer::COMMON_SIZE, Buffer::COMMON_SIZE + 1, 65535, 65536] as $length) {
             yield "unmasked {$length}" => [$length, false];
             yield "masked {$length}" => [$length, true];
         }
@@ -120,6 +121,65 @@ final class WebSocketReceiveTest extends TestCase
         $this->assertNotNull($received->payloadData);
         WebSocket::unmask($received->payloadData, maskingKey: $received->getMaskingKey());
         $this->assertSame($payload, (string) $received->payloadData);
+    }
+
+    #[DataProvider('provideEmptyMaskedFramesRespectAutomaticUnmaskingCases')]
+    public function testEmptyMaskedFramesRespectAutomaticUnmasking(int $opcode, bool $autoUnmask): void
+    {
+        $this->connection->setAutoUnmask($autoUnmask);
+        $this->client->sendWebSocketFrame(Psr7::createWebSocketFrame($opcode, '', mask: 'mask'));
+        $frame = $this->connection->recvWebSocketFrameEntity();
+        $this->assertSame($opcode, $frame->getOpcode());
+        $this->assertSame(0, $frame->getPayloadLength());
+        $this->assertNull($frame->payloadData);
+        $this->assertSame(!$autoUnmask, $frame->getMask());
+        $this->assertSame($autoUnmask ? '' : 'mask', $frame->getMaskingKey());
+    }
+
+    /** @return iterable<string, array{int, bool}> */
+    public static function provideEmptyMaskedFramesRespectAutomaticUnmaskingCases(): iterable
+    {
+        foreach ([Opcode::TEXT, Opcode::BINARY, Opcode::PING, Opcode::PONG, Opcode::CLOSE] as $opcode) {
+            foreach ([true, false] as $autoUnmask) {
+                yield "{$opcode} automatic " . (int) $autoUnmask => [$opcode, $autoUnmask];
+            }
+        }
+    }
+
+    #[DataProvider('provideEveryExtendedHeaderSplitWaitsForTheRemainingBytesCases')]
+    public function testEveryExtendedHeaderSplitWaitsForTheRemainingBytes(int $length, int $split): void
+    {
+        $payload = str_repeat('x', $length);
+        $wire = Psr7::createWebSocketBinaryFrame($payload, mask: 'mask')->toString();
+        $this->client->getSocket()->send(substr($wire, 0, $split));
+        $result = new Channel(1);
+        $reader = Coroutine::run(function () use ($result): void {
+            $result->push($this->connection->recvWebSocketFrame());
+        });
+        try {
+            // The remainder does not exist on the wire until the receiver has suspended.
+            $this->assertTrue($reader->isAlive());
+            $this->client->getSocket()->send(substr($wire, $split) . WebSocket::PONG_FRAME);
+            $frame = $result->pop(1000);
+            $this->assertSame($payload, (string) $frame->getPayloadData());
+            $this->assertFalse($frame->getMask());
+            $this->assertSame(Opcode::PONG, $this->connection->recvWebSocketFrame()->getOpcode());
+        } finally {
+            if ($reader->isAlive()) {
+                $reader->kill();
+            }
+        }
+    }
+
+    /** @return iterable<string, array{int, int}> */
+    public static function provideEveryExtendedHeaderSplitWaitsForTheRemainingBytesCases(): iterable
+    {
+        foreach ([126, 65536] as $length) {
+            $headerSize = (new Header(payloadLength: $length, maskingKey: 'mask'))->getHeaderSize();
+            for ($split = 1; $split < $headerSize; $split++) {
+                yield "{$length} at {$split}" => [$length, $split];
+            }
+        }
     }
 
     public function testContinuationFramesRetainTheirOwnBoundaries(): void
@@ -156,5 +216,45 @@ final class WebSocketReceiveTest extends TestCase
         $this->client->close();
         $this->expectException(SocketException::class);
         $this->connection->recvWebSocketFrame();
+    }
+
+    #[DataProvider('provideTruncatedBaseExtendedAndMaskHeadersRaiseASocketExceptionCases')]
+    public function testTruncatedBaseExtendedAndMaskHeadersRaiseASocketException(int $split): void
+    {
+        $header = (new Header(fin: true, payloadLength: 65536, maskingKey: 'mask'))->toString();
+        $this->client->getSocket()->send(substr($header, 0, $split));
+        $this->client->close();
+        $this->expectException(SocketException::class);
+        $this->connection->recvWebSocketFrame();
+    }
+
+    /** @return iterable<string, array{int}> */
+    public static function provideTruncatedBaseExtendedAndMaskHeadersRaiseASocketExceptionCases(): iterable
+    {
+        for ($split = 1; $split < 14; $split++) {
+            yield "header ends at {$split}" => [$split];
+        }
+    }
+
+    public function testUpgradeRequestAndFirstFrameShareTheReceiveBuffer(): void
+    {
+        $this->client->getSocket()->send("GET /chat HTTP/1.1\r\nHost: example.test\r\nConnection: Upgrade\r\nUpgrade: websocket\r\n"
+            . 'Sec-WebSocket-Key: ' . base64_encode('0123456789abcdef') . "\r\nSec-WebSocket-Version: 13\r\n\r\n"
+            . Psr7::createWebSocketTextMaskedFrame('first')->toString());
+        $request = $this->connection->recvHttpRequest();
+        $this->connection->upgradeToWebSocket($request);
+        $this->assertSame(Status::SWITCHING_PROTOCOLS, $this->client->recvResponseEntity()->statusCode);
+        $frame = $this->connection->recvWebSocketFrame();
+        $this->assertSame(Opcode::TEXT, $frame->getOpcode());
+        $this->assertSame('first', (string) $frame->getPayloadData());
+        $this->assertFalse($frame->getMask());
+    }
+
+    public function testUpgradeResponseAndFirstFrameShareTheReceiveBuffer(): void
+    {
+        $this->connection->getSocket()->send("HTTP/1.1 101 Switching Protocols\r\nConnection: Upgrade\r\nUpgrade: websocket\r\n\r\n"
+            . Psr7::createWebSocketTextFrame('first')->toString());
+        $this->assertSame(Status::SWITCHING_PROTOCOLS, $this->client->recvResponseEntity()->statusCode);
+        $this->assertSame('first', (string) $this->client->recvWebSocketFrame()->getPayloadData());
     }
 }

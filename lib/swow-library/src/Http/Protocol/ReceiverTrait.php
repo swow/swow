@@ -987,10 +987,12 @@ trait ReceiverTrait
                 /* Notice: $parsedOffset may be bigger than $buffer->getLength(),
                  * because we may recv payloadData from remote instead of unparsed buffer. */
                 $parsedOffset += $payloadLength;
-                if ($header->getMask() && $this->autoUnmask) {
+            }
+            if ($header->getMask() && $this->autoUnmask) {
+                if ($payloadData !== null) {
                     WebSocket::unmask($payloadData, maskingKey: $header->getMaskingKey());
-                    $header->setMaskingKey(''); // drop mask and masking key
                 }
+                $header->setMaskingKey(''); // drop mask and masking key
             }
         } finally {
             $frame->payloadData = $payloadData;
