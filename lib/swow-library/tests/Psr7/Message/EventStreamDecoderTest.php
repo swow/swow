@@ -19,6 +19,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Swow\Psr7\Message\BufferStream;
 use Swow\Psr7\Message\EventStreamDecoder;
+use Swow\Psr7\Message\EventStreamEvent;
 use Swow\Psr7\Psr7;
 use ValueError;
 
@@ -104,5 +105,13 @@ final class EventStreamDecoderTest extends TestCase
         $this->assertSame('', $events[0]->data);
         $this->assertSame('valid', $events[0]->id);
         $this->assertSame(1500, $events[0]->retry);
+    }
+
+    public function testEventIdsPersistUntilAnExplicitReset(): void
+    {
+        $wire = "id: first\n\ndata: one\n\ndata: two\n\nid:\ndata: three\n\nid: invalid\0id\ndata: four\n\n";
+        $events = iterator_to_array(Psr7::readEventStream(new BufferStream($wire), 1), false);
+        $this->assertCount(4, $events);
+        $this->assertSame(['first', 'first', '', ''], array_map(static fn(EventStreamEvent $event): ?string => $event->id, $events));
     }
 }

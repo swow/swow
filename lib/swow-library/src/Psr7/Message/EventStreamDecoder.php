@@ -50,7 +50,6 @@ final class EventStreamDecoder
         $dispatchEvent = static function () use (&$eventName, &$eventId, &$eventRetry, &$eventDataLines): ?EventStreamEvent {
             if ($eventDataLines === []) {
                 $eventName = 'message';
-                $eventId = null;
                 $eventRetry = null;
                 return null;
             }
@@ -61,7 +60,6 @@ final class EventStreamDecoder
                 retry: $eventRetry,
             );
             $eventName = 'message';
-            $eventId = null;
             $eventRetry = null;
             $eventDataLines = [];
             return $event;
