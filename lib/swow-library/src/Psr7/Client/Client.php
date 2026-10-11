@@ -19,6 +19,8 @@ use Generator;
 use Psr\Http\Client\ClientExceptionInterface;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
+use Swow\Coroutine;
+use Swow\Errno;
 use Swow\Http\Http;
 use Swow\Http\Message\ResponseEntity;
 use Swow\Http\Parser;
@@ -220,13 +222,27 @@ class Client implements ClientPlusInterface, ProtocolTypeInterface
                 $headers['Connection'] = 'keep-alive';
             }
 
-            $responseEntity = $this->sendPackedRequestAsync(
+            $this->sendPackedRequestAsync(
                 method: $request->getMethod(),
                 uri: $request->getRequestTarget(),
                 headers: $headers,
                 body: $body,
                 protocolVersion: $request->getProtocolVersion(),
-            )->recvResponseEntity($timeout);
+            );
+            $timeout ??= $this->recvMessageTimeout;
+            $startTime = Coroutine::getMain()->getElapsed();
+            do {
+                $remainingTimeout = $timeout;
+                if ($timeout >= 0) {
+                    $elapsed = Coroutine::getMain()->getElapsed() - $startTime;
+                    if ($elapsed > $timeout) {
+                        throw new SocketException('Recv final HTTP response timeout', Errno::ETIMEDOUT);
+                    }
+                    $remainingTimeout -= $elapsed;
+                }
+                $responseEntity = $this->recvResponseEntity($remainingTimeout);
+                // Informational responses precede the final response; 101 transfers protocol ownership.
+            } while ($responseEntity->statusCode < 200 && $responseEntity->statusCode !== HttpStatus::SWITCHING_PROTOCOLS);
 
             return Psr7::createResponseFromEntity($responseEntity, $this->responseFactory, $this->streamFactory);
         } catch (Exception $exception) {

@@ -24,6 +24,7 @@ use Swow\Errno;
 use Swow\Http\Protocol\ProtocolException;
 use Swow\Http\Status;
 use Swow\Psr7\Client\Client;
+use Swow\Psr7\Client\ClientNetworkException;
 use Swow\Psr7\Message\Response;
 use Swow\Psr7\Psr7;
 use Swow\Socket;
@@ -147,5 +148,35 @@ final class HttpResponseTest extends TestCase
         $this->assertSame('12345', $response->getHeaderLine('Content-Length'));
         $this->assertSame('', (string) $response->getBody());
         $this->assertSame('next', (string) $this->client->recvResponseEntity()->body);
+    }
+
+    public function testSendRequestReturnsTheFinalResponseAfterInformationalResponses(): void
+    {
+        $this->peer->send("HTTP/1.1 100 Continue\r\n\r\nHTTP/1.1 103 Early Hints\r\nLink: </style.css>\r\n\r\n"
+            . "HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\nok");
+        $response = $this->client->sendRequest(Psr7::createRequest('POST', '/complete', body: '{}'));
+        $this->assertSame(Status::OK, $response->getStatusCode());
+        $this->assertSame('ok', (string) $response->getBody());
+        $this->assertFalse($response->hasHeader('Link'));
+    }
+
+    public function testInformationalResponsesDoNotRestartTheResponseTimeout(): void
+    {
+        $writer = Coroutine::run(function (): void {
+            for ($i = 0; $i < 10; $i++) {
+                $this->peer->send("HTTP/1.1 103 Early Hints\r\n\r\n");
+                usleep(10000);
+            }
+            $this->peer->send("HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n");
+        });
+        try {
+            $this->expectException(ClientNetworkException::class);
+            $this->expectExceptionCode(Errno::ETIMEDOUT);
+            $this->client->sendRequest(Psr7::createRequest('GET', '/hints'), 50);
+        } finally {
+            if ($writer->isAlive()) {
+                $writer->kill();
+            }
+        }
     }
 }
