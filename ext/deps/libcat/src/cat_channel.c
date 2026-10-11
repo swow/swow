@@ -542,10 +542,14 @@ CAT_API cat_channel_select_response_t *cat_channel_select(cat_channel_select_req
 
     ret = cat_time_wait(timeout);
 
+    /* Unlink every waiter before a response can exit early, including a closed channel. */
+    for (i = 0; i < count; i++) {
+        cat_queue_remove(&dummy_coroutines[i].waiter.node);
+    }
+
     response = NULL;
     for (i = 0; i < count; i++) {
         cat_channel_dummy_coroutine_t *dummy_coroutine = &dummy_coroutines[i];
-        cat_queue_remove(&dummy_coroutine->waiter.node);
         if (dummy_coroutine->coroutine == NULL) {
             response = &requests[i];
             channel = response->channel;
