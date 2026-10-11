@@ -36,10 +36,13 @@ use function array_filter;
 use function array_map;
 use function count;
 use function explode;
+use function fclose;
 use function fopen;
 use function fwrite;
 use function implode;
 use function in_array;
+use function is_resource;
+use function is_string;
 use function max;
 use function parse_str;
 use function sprintf;
@@ -48,6 +51,7 @@ use function strtolower;
 use function sys_get_temp_dir;
 use function tempnam;
 use function trim;
+use function unlink;
 
 use const PHP_INT_MAX;
 use const UPLOAD_ERR_CANT_WRITE;
@@ -251,6 +255,7 @@ trait ReceiverTrait
             $readTimeout = $timeout;
         }
         $mainCoroutine = Coroutine::getMain();
+        $messageReceived = false;
         $startTime = null;
         $getReadTimeout = static function () use ($mainCoroutine, $timeout, $readTimeout, &$startTime): int {
             if ($timeout < 0) {
@@ -625,6 +630,7 @@ trait ReceiverTrait
                     $body->mallocTrim();
                 }
             }
+            $messageReceived = true;
         } catch (ProtocolException $protocolException) {
             $shouldKeepAlive = false;
             throw $protocolException;
@@ -662,7 +668,23 @@ trait ReceiverTrait
                 );
                 throw $socketException;
             }
+            $messageReceived = true;
         } finally {
+            if (!$messageReceived) {
+                // Failed receives transfer no upload ownership, including completed parts and the active file.
+                foreach ($uploadedFiles as $uploadedFile) {
+                    if (is_resource($uploadedFile->tmpFile)) {
+                        fclose($uploadedFile->tmpFile);
+                    }
+                    @unlink($uploadedFile->tmpName);
+                }
+                if (is_resource($tmpFile)) {
+                    fclose($tmpFile);
+                }
+                if (is_string($tmpName) && $tmpName !== '') {
+                    @unlink($tmpName);
+                }
+            }
             if ($isServerRequest) {
                 $messageEntity->method = $parser->getMethod();
                 $messageEntity->uri = $uriOrReasonPhrase;

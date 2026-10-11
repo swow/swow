@@ -26,8 +26,11 @@ use Swow\Psr7\Message\UploadedFile;
 use Swow\Psr7\Psr7;
 use Swow\Psr7\Server\Server;
 use Swow\Psr7\Server\ServerConnection;
+use Swow\Socket;
 use Swow\SocketException;
 
+use function count;
+use function is_string;
 use function strlen;
 
 use const UPLOAD_ERR_OK;
@@ -152,5 +155,71 @@ final class MultipartRequestTest extends TestCase
         $this->client->close();
         $this->expectException(SocketException::class);
         $this->connection->recvHttpRequest();
+    }
+
+    #[DataProvider('provideInterruptedUploadReleasesItsTemporaryFileCases')]
+    public function testInterruptedUploadReleasesItsTemporaryFile(bool $completedPart): void
+    {
+        $body = $completedPart ? "--form\r\nContent-Disposition: form-data; name=\"completed\"; filename=\"completed.bin\"\r\n\r\ncomplete\r\n" : '';
+        $body .= "--form\r\nContent-Disposition: form-data; name=\"upload\"; filename=\"file.bin\"\r\n"
+            . "Content-Type: application/octet-stream\r\n\r\npartial";
+        $before = get_resources('stream');
+        $this->client->getSocket()->send(Http::packRequest('POST', '/upload', [
+            'Content-Type' => 'multipart/form-data; boundary=form',
+            'Content-Length' => strlen($body) + 100,
+        ], $body));
+        $result = new Channel(1);
+        $reader = Coroutine::run(function () use ($result): void {
+            try {
+                $this->connection->recvHttpRequest();
+                $result->push(false);
+            } catch (SocketException) {
+                $result->push(true);
+            }
+        });
+        $paths = [];
+        try {
+            $deadline = Coroutine::getMain()->getElapsed() + 1000;
+            do {
+                $paths = [];
+                foreach (array_diff_key(get_resources('stream'), $before) as $stream) {
+                    $path = stream_get_meta_data($stream)['uri'] ?? null;
+                    if (is_string($path) && str_starts_with(basename($path), 'swow_uploaded_file_')) {
+                        $paths[] = $path;
+                    }
+                }
+                unset($stream);
+                // Observe file creation and the following socket wait, including asynchronous file I/O.
+                if (count($paths) === ($completedPart ? 2 : 1) && $this->connection->getSocket()->getIoState() === Socket::IO_FLAG_READ) {
+                    break;
+                }
+                usleep(1000);
+            } while ($reader->isAlive() && Coroutine::getMain()->getElapsed() < $deadline);
+            $this->assertCount($completedPart ? 2 : 1, $paths);
+            foreach ($paths as $path) {
+                $this->assertTrue(file_exists($path));
+            }
+            $this->client->close();
+            $this->assertTrue($result->pop(1000));
+            foreach ($paths as $path) {
+                $this->assertFalse(file_exists($path));
+            }
+        } finally {
+            if ($reader->isAlive()) {
+                $reader->kill();
+            }
+            foreach ($paths as $path) {
+                if (file_exists($path)) {
+                    unlink($path);
+                }
+            }
+        }
+    }
+
+    /** @return iterable<string, array{bool}> */
+    public static function provideInterruptedUploadReleasesItsTemporaryFileCases(): iterable
+    {
+        yield 'active upload' => [false];
+        yield 'completed part and active upload' => [true];
     }
 }
