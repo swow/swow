@@ -60,23 +60,26 @@ server.on('stream', (stream, headers) => {
     stream.on('error', () => {});
     stream.on('data', (chunk) => chunks.push(chunk));
     stream.on('end', () => {
+        const metadata = {
+            session: sessions.get(session), stream: stream.id,
+            port: session.socket.remotePort, alpn: session.socket.alpnProtocol || 'h2c',
+            path, method: headers[':method'], body: Buffer.concat(chunks).toString('base64'), batch: 1,
+        };
+        // Expose the negotiated protocol before gating application data. The barrier
+        // still requires concurrent streams on one session, without also withholding headers.
+        stream.respond({
+            ':status': 200,
+            'content-type': url.pathname === '/data' ? 'application/octet-stream' : 'application/json',
+            'x-session': String(metadata.session), 'x-stream': String(metadata.stream),
+        }, { waitForTrailers: url.pathname === '/data' });
         const respond = (batch = 1) => {
             if (stream.destroyed) return;
             if (url.pathname === '/reset') {
                 stream.close(NGHTTP2_CANCEL);
                 return;
             }
-            const metadata = {
-                session: sessions.get(session), stream: stream.id,
-                port: session.socket.remotePort, alpn: session.socket.alpnProtocol || 'h2c',
-                path, method: headers[':method'], body: Buffer.concat(chunks).toString('base64'), batch,
-            };
-            const responseHeaders = {
-                ':status': 200, 'content-type': 'application/json',
-                'x-session': String(metadata.session), 'x-stream': String(metadata.stream),
-            };
+            metadata.batch = batch;
             if (url.pathname === '/hold') {
-                stream.respond(responseHeaders);
                 // Intentionally incomplete: the client controls cancellation or its transfer deadline.
                 return;
             }
@@ -87,18 +90,16 @@ server.on('stream', (stream, headers) => {
                 for (let offset = 0; offset < size; offset += unit.length) {
                     unit.copy(data, offset, 0, Math.min(unit.length, size - offset));
                 }
-                stream.respond({ ...responseHeaders, 'content-type': 'application/octet-stream' }, { waitForTrailers: true });
                 stream.on('wantTrailers', () => stream.sendTrailers({ 'x-body-sha256': require('crypto').createHash('sha256').update(data).digest('hex') }));
                 stream.end(data);
                 return;
             }
-            stream.respond(responseHeaders);
             if (url.pathname === '/goaway') session.goaway(NGHTTP2_NO_ERROR, stream.id);
             stream.end(JSON.stringify(metadata));
         };
         const count = Number(url.searchParams.get('count') || 1);
         if (count > 1) {
-            // No response is sent until N streams arrive on the same connection.
+            // No response body is sent until N streams arrive on the same connection.
             const key = `${sessions.get(session)}:${url.searchParams.get('group')}`;
             const pending = barriers.get(key) || [];
             pending.push(() => respond(count));

@@ -39,6 +39,7 @@ foreach ([false, true] as $tls) {
                 Assert::contains($held->headers, 'x-stream:');
                 $held->remove($multi);
             }
+            Assert::same($held->body, '');
             $response = $sibling->response();
             Assert::same($response['path'], "/barrier?group={$operation}&count=2");
             Assert::contains($held->headers, 'x-session: ' . $response['session']);
