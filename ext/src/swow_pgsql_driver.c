@@ -46,6 +46,19 @@
 #pragma GCC diagnostic pop
 #endif
 
+#ifdef COMPILE_DL_SWOW
+# if defined(CAT_OS_DARWIN)
+#  include <dirent.h>
+#  include <sys/stat.h>
+#  include <limits.h>
+#  ifndef PATH_MAX
+#   define PATH_MAX 4096
+#  endif
+# elif defined(CAT_OS_WIN)
+#  include <windows.h>
+# endif
+#endif
+
 #undef ZEND_METHOD
 #define ZEND_METHOD(classname, name) ZEND_NAMED_FUNCTION(swow_zim_##classname##_##name)
 #undef ZEND_ME
@@ -1685,6 +1698,166 @@ int swow_libpq_version = 0;
 cat_bool_t swow_pgsql_hooked = cat_false;
 size_t (*swow_PQresultMemorySize)(const PGresult *res) = NULL;
 
+#ifdef COMPILE_DL_SWOW
+# if defined(CAT_OS_DARWIN)
+/* Dynamic library path discovery for macOS
+ * Scans Homebrew Cellar directories to find installed libpq versions
+ * Returns: number of paths found (0 on failure)
+ * Note: Caller must free each path string and the array itself
+ */
+static int swow_discover_libpq_paths_darwin(char ***out_paths, const char *cellar_base)
+{
+    DIR *dir = opendir(cellar_base);
+    if (!dir) {
+        return 0;
+    }
+
+    // Count valid version directories first
+    int count = 0;
+    struct dirent *entry;
+    while ((entry = readdir(dir)) != NULL) {
+        if (entry->d_name[0] == '.') {
+            continue;
+        }
+        char path[PATH_MAX];
+        int written = snprintf(path, sizeof(path), "%s/%s/lib", cellar_base, entry->d_name);
+        if (written < 0 || written >= (int)sizeof(path)) {
+            // Path too long, skip
+            continue;
+        }
+        struct stat st;
+        if (stat(path, &st) == 0 && S_ISDIR(st.st_mode)) {
+            count++;
+        }
+    }
+
+    if (count == 0) {
+        closedir(dir);
+        return 0;
+    }
+
+    // Allocate array for paths
+    *out_paths = (char **)malloc(count * sizeof(char *));
+    if (!*out_paths) {
+        closedir(dir);
+        return 0;
+    }
+
+    // Initialize all pointers to NULL for safe cleanup
+    for (int i = 0; i < count; i++) {
+        (*out_paths)[i] = NULL;
+    }
+
+    // Collect paths
+    rewinddir(dir);
+    int idx = 0;
+    while ((entry = readdir(dir)) != NULL && idx < count) {
+        if (entry->d_name[0] == '.') {
+            continue;
+        }
+        char path[PATH_MAX];
+        int written = snprintf(path, sizeof(path), "%s/%s/lib/", cellar_base, entry->d_name);
+        if (written < 0 || written >= (int)sizeof(path)) {
+            continue;
+        }
+        struct stat st;
+        if (stat(path, &st) == 0 && S_ISDIR(st.st_mode)) {
+            (*out_paths)[idx] = strdup(path);
+            if (!(*out_paths)[idx]) {
+                // strdup failed, cleanup and return partial results
+                closedir(dir);
+                return idx; // Return number of successfully allocated paths
+            }
+            idx++;
+        }
+    }
+
+    closedir(dir);
+    return idx; // Return actual number of paths collected
+}
+# elif defined(CAT_OS_WIN)
+/* Dynamic library path discovery for Windows
+ * Scans PostgreSQL installation directories
+ * Returns: number of paths found (0 on failure)
+ * Note: Caller must free each path string and the array itself
+ */
+static int swow_discover_libpq_paths_win(char ***out_paths, const char *base_dir)
+{
+    char search_path[MAX_PATH];
+    int written = snprintf(search_path, sizeof(search_path), "%s\\PostgreSQL\\*", base_dir);
+    if (written < 0 || written >= (int)sizeof(search_path)) {
+        return 0;
+    }
+
+    WIN32_FIND_DATAA find_data;
+    HANDLE hFind = FindFirstFileA(search_path, &find_data);
+
+    if (hFind == INVALID_HANDLE_VALUE) {
+        return 0;
+    }
+
+    // Count valid directories
+    int count = 0;
+    do {
+        if ((find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) &&
+            find_data.cFileName[0] != '.') {
+            count++;
+        }
+    } while (FindNextFileA(hFind, &find_data));
+
+    if (count == 0) {
+        FindClose(hFind);
+        return 0;
+    }
+
+    // Allocate array
+    *out_paths = (char **)malloc(count * sizeof(char *));
+    if (!*out_paths) {
+        FindClose(hFind);
+        return 0;
+    }
+
+    // Initialize all pointers to NULL for safe cleanup
+    for (int i = 0; i < count; i++) {
+        (*out_paths)[i] = NULL;
+    }
+
+    // Collect paths (reopen directory)
+    FindClose(hFind);
+    hFind = FindFirstFileA(search_path, &find_data);
+    if (hFind == INVALID_HANDLE_VALUE) {
+        // Second scan failed, free array and return
+        free(*out_paths);
+        *out_paths = NULL;
+        return 0;
+    }
+
+    int idx = 0;
+    do {
+        if ((find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) &&
+            find_data.cFileName[0] != '.' && idx < count) {
+            char path[MAX_PATH];
+            written = snprintf(path, sizeof(path), "%s\\PostgreSQL\\%s\\bin\\",
+                               base_dir, find_data.cFileName);
+            if (written < 0 || written >= (int)sizeof(path)) {
+                continue;
+            }
+            (*out_paths)[idx] = strdup(path);
+            if (!(*out_paths)[idx]) {
+                // strdup failed, cleanup and return partial results
+                FindClose(hFind);
+                return idx;
+            }
+            idx++;
+        }
+    } while (FindNextFileA(hFind, &find_data));
+
+    FindClose(hFind);
+    return idx; // Return actual number of paths collected
+}
+# endif
+#endif
+
 zend_result swow_pgsql_module_init(INIT_FUNC_ARGS)
 {
     if (!SWOW_G(ini.hook_pdo_pgsql)) {
@@ -1697,46 +1870,17 @@ zend_result swow_pgsql_module_init(INIT_FUNC_ARGS)
     }
 
 #ifdef COMPILE_DL_SWOW
+    /* Library names to try for each platform */
 # if defined(CAT_OS_DARWIN)
-    const char *library_paths[] = {
-        // macports/brew
-        "/opt/local/lib/",
-        // brew
-        "/usr/local/Cellar/libpq@18/lib/",
-        "/usr/local/Cellar/libpq@17/lib/",
-        "/usr/local/Cellar/libpq@16/lib/",
-        "/usr/local/Cellar/libpq@15/lib/",
-        "/usr/local/Cellar/libpq@14/lib/",
-        // brew (new)
-        // @see: https://earthly.dev/blog/homebrew-on-m1/)
-        "/opt/homebrew/opt/libpq/lib/",
-        // postgres.app
-        "/Applications/Postgres.app/Contents/Versions/latest/lib/",
-        // fink
-        "/sw/lib/",
-    };
     const char *library_names[] = {
         "libpq.5.dylib",
         "libpq.dylib",
     };
 # elif defined(CAT_OS_WIN)
-    const char *library_paths[] = {
-        "C:\\Program Files\\PostgreSQL\\18\\bin\\",
-        "C:\\Program Files\\PostgreSQL\\17\\bin\\",
-        "C:\\Program Files\\PostgreSQL\\16\\bin\\",
-        "C:\\Program Files\\PostgreSQL\\15\\bin\\",
-        "C:\\Program Files\\PostgreSQL\\14\\bin\\",
-        "C:\\Program Files (x86)\\PostgreSQL\\18\\bin\\",
-        "C:\\Program Files (x86)\\PostgreSQL\\17\\bin\\",
-        "C:\\Program Files (x86)\\PostgreSQL\\16\\bin\\",
-        "C:\\Program Files (x86)\\PostgreSQL\\15\\bin\\",
-        "C:\\Program Files (x86)\\PostgreSQL\\14\\bin\\",
-    };
     const char *library_names[] = {
         "libpq.dll",
     };
 # else
-    const char *library_paths[] = { "" };
     const char *library_names[] = {
         "libpq." PHP_SHLIB_SUFFIX ".5",
         "libpq." PHP_SHLIB_SUFFIX,
@@ -1744,57 +1888,185 @@ zend_result swow_pgsql_module_init(INIT_FUNC_ARGS)
 # endif
 
     DL_HANDLE dummy_handle = NULL;
+    char name_buf[512];
+
+    /* Step 1: Try loading library by name (relies on system library paths) */
     for (int i = 0; i < (int)CAT_ARRAY_SIZE(library_names); i++) {
         dummy_handle = DL_LOAD(library_names[i]);
         if (dummy_handle) {
             SWOW_G(libpq_so_name) = strdup(library_names[i]);
-            break;
+            if (!SWOW_G(libpq_so_name)) {
+                // strdup failed, but we have a valid handle, continue anyway
+            }
+            goto _library_loaded;
         }
     }
-    if (!dummy_handle) {
-        char name_buf[128];
-        for (int i = 0; i < (int)CAT_ARRAY_SIZE(library_paths); i++) {
-            for (int j = 0; j < (int)CAT_ARRAY_SIZE(library_names); j++) {
-                snprintf(name_buf, sizeof(name_buf), "%s%s", library_paths[i], library_names[j]);
 
-#ifdef CAT_OS_WIN
-                SetDllDirectoryA(library_paths[i]);
-#endif
-                dummy_handle = DL_LOAD(name_buf);
-#ifdef CAT_OS_WIN
-                SetDllDirectoryA(NULL);
-#endif
-                if (dummy_handle) {
-                    SWOW_G(libpq_so_name) = strdup(name_buf);
-                    break;
+    /* Step 2: Check environment variable LIBPQ_PATH */
+    const char *env_path = getenv("LIBPQ_PATH");
+    if (env_path) {
+        for (int i = 0; i < (int)CAT_ARRAY_SIZE(library_names); i++) {
+# if defined(CAT_OS_WIN)
+            snprintf(name_buf, sizeof(name_buf), "%s\\%s", env_path, library_names[i]);
+# else
+            snprintf(name_buf, sizeof(name_buf), "%s/%s", env_path, library_names[i]);
+# endif
+            dummy_handle = DL_LOAD(name_buf);
+            if (dummy_handle) {
+                SWOW_G(libpq_so_name) = strdup(name_buf);
+                if (!SWOW_G(libpq_so_name)) {
+                    // strdup failed, but we have a valid handle, continue anyway
                 }
+                goto _library_loaded;
             }
         }
     }
 
-    if (!dummy_handle) {
-        smart_str paths = {0};
-        smart_str names = {0};
-        for (int i = 0; i < (int)CAT_ARRAY_SIZE(library_paths); i++) {
-            smart_str_appends(&paths, library_paths[i]);
-            smart_str_appendc(&paths, ',');
-        }
-        ZSTR_LEN(paths.s) -= 1;
-        smart_str_0(&paths);
+    /* Step 3: Platform-specific discovery and fallback paths */
+# if defined(CAT_OS_DARWIN)
+    /* Priority paths for macOS (Homebrew symlinks point to current version) */
+    const char *priority_paths[] = {
+        "/opt/homebrew/opt/libpq/lib/",      // Homebrew (Apple Silicon) - symlink
+        "/usr/local/opt/libpq/lib/",         // Homebrew (Intel) - symlink
+        "/opt/local/lib/",                   // MacPorts
+        "/Applications/Postgres.app/Contents/Versions/latest/lib/", // Postgres.app
+        "/sw/lib/",                          // Fink
+    };
 
+    for (int i = 0; i < (int)CAT_ARRAY_SIZE(priority_paths); i++) {
+        for (int j = 0; j < (int)CAT_ARRAY_SIZE(library_names); j++) {
+            snprintf(name_buf, sizeof(name_buf), "%s%s", priority_paths[i], library_names[j]);
+            dummy_handle = DL_LOAD(name_buf);
+            if (dummy_handle) {
+                SWOW_G(libpq_so_name) = strdup(name_buf);
+                if (!SWOW_G(libpq_so_name)) {
+                    // strdup failed, but we have a valid handle, continue anyway
+                }
+                goto _library_loaded;
+            }
+        }
+    }
+
+    /* Dynamically scan Homebrew Cellar directories */
+    const char *cellar_bases[] = {
+        "/opt/homebrew/Cellar/libpq",
+        "/usr/local/Cellar/libpq",
+    };
+
+    for (int k = 0; k < (int)CAT_ARRAY_SIZE(cellar_bases); k++) {
+        char **discovered_paths = NULL;
+        int path_count = swow_discover_libpq_paths_darwin(&discovered_paths, cellar_bases[k]);
+
+        for (int i = 0; i < path_count; i++) {
+            for (int j = 0; j < (int)CAT_ARRAY_SIZE(library_names); j++) {
+                snprintf(name_buf, sizeof(name_buf), "%s%s", discovered_paths[i], library_names[j]);
+                dummy_handle = DL_LOAD(name_buf);
+                if (dummy_handle) {
+                    SWOW_G(libpq_so_name) = strdup(name_buf);
+                    if (!SWOW_G(libpq_so_name)) {
+                        // strdup failed, but we have a valid handle, continue anyway
+                    }
+                    // Cleanup discovered paths before jumping
+                    for (int m = 0; m < path_count; m++) {
+                        if (discovered_paths[m]) {
+                            free(discovered_paths[m]);
+                        }
+                    }
+                    free(discovered_paths);
+                    goto _library_loaded;
+                }
+            }
+        }
+
+        // Cleanup discovered paths
+        for (int i = 0; i < path_count; i++) {
+            if (discovered_paths[i]) {
+                free(discovered_paths[i]);
+            }
+        }
+        free(discovered_paths);
+    }
+
+# elif defined(CAT_OS_WIN)
+    /* Dynamically scan Windows PostgreSQL installation directories */
+    const char *base_dirs[] = {
+        "C:\\Program Files",
+        "C:\\Program Files (x86)",
+    };
+
+    for (int k = 0; k < (int)CAT_ARRAY_SIZE(base_dirs); k++) {
+        char **discovered_paths = NULL;
+        int path_count = swow_discover_libpq_paths_win(&discovered_paths, base_dirs[k]);
+
+        for (int i = 0; i < path_count; i++) {
+            for (int j = 0; j < (int)CAT_ARRAY_SIZE(library_names); j++) {
+                snprintf(name_buf, sizeof(name_buf), "%s%s", discovered_paths[i], library_names[j]);
+
+                SetDllDirectoryA(discovered_paths[i]);
+                dummy_handle = DL_LOAD(name_buf);
+                SetDllDirectoryA(NULL);
+
+                if (dummy_handle) {
+                    SWOW_G(libpq_so_name) = strdup(name_buf);
+                    if (!SWOW_G(libpq_so_name)) {
+                        // strdup failed, but we have a valid handle, continue anyway
+                    }
+                    // Cleanup discovered paths before jumping
+                    for (int m = 0; m < path_count; m++) {
+                        if (discovered_paths[m]) {
+                            free(discovered_paths[m]);
+                        }
+                    }
+                    free(discovered_paths);
+                    goto _library_loaded;
+                }
+            }
+        }
+
+        // Cleanup discovered paths
+        for (int i = 0; i < path_count; i++) {
+            if (discovered_paths[i]) {
+                free(discovered_paths[i]);
+            }
+        }
+        free(discovered_paths);
+    }
+
+# else
+    /* Linux/Unix: Try empty path (system will search LD_LIBRARY_PATH and default paths) */
+    for (int i = 0; i < (int)CAT_ARRAY_SIZE(library_names); i++) {
+        dummy_handle = DL_LOAD(library_names[i]);
+        if (dummy_handle) {
+            SWOW_G(libpq_so_name) = strdup(library_names[i]);
+            if (!SWOW_G(libpq_so_name)) {
+                // strdup failed, but we have a valid handle, continue anyway
+            }
+            goto _library_loaded;
+        }
+    }
+# endif
+
+    /* If still not found, report error */
+    if (!dummy_handle) {
+        smart_str names = {0};
         for (int i = 0; i < (int)CAT_ARRAY_SIZE(library_names); i++) {
             smart_str_appends(&names, library_names[i]);
-            smart_str_appends(&names, " or ");
+            if (i < (int)CAT_ARRAY_SIZE(library_names) - 1) {
+                smart_str_appends(&names, " or ");
+            }
         }
-        ZSTR_LEN(names.s) -= 4;
         smart_str_0(&names);
 
-        php_error_docref(NULL, E_WARNING, "Swow pdo_pgsql hook not enabled, %s not found, (search paths: %s)", ZSTR_VAL(names.s), ZSTR_VAL(paths.s));
-        smart_str_free(&paths);
+        php_error_docref(NULL, E_WARNING,
+            "Swow pdo_pgsql hook not enabled, %s not found. "
+            "Try setting LIBPQ_PATH environment variable to the directory containing libpq library.",
+            ZSTR_VAL(names.s));
         smart_str_free(&names);
         return SUCCESS;
     }
 
+_library_loaded:
+    // Library successfully loaded, fetch symbols
     _swow_PQclosePrepared = (PGresult *(*)(PGconn *, const char *)) DL_FETCH_SYMBOL(dummy_handle, "PQclosePrepared");
     swow_PQresultMemorySize = (size_t (*)(const PGresult *)) DL_FETCH_SYMBOL(dummy_handle, "PQresultMemorySize");
 #else
