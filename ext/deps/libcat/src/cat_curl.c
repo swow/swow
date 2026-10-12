@@ -39,6 +39,7 @@ typedef struct cat_curl_multi_context_s {
     CURLM *multi;
     uv_timer_t timer;
     cat_coroutine_t *waiter;
+    cat_event_io_defer_task_t *done_task;
     cat_msec_t timeout_due_time;
     cat_bool_t timedout; // timed out or initializing
     cat_queue_t socket_contexts; // all sockets currently known by libcurl
@@ -171,6 +172,8 @@ static cat_always_inline void cat_curl_multi_socket_context_close(cat_curl_multi
     uv_close((uv_handle_t*) &socket_context->poll, cat_curl_multi_socket_context_close_callback);
 }
 
+static void cat_curl_multi_done_callback(cat_event_io_defer_task_t *task, cat_data_t *data);
+
 static cat_always_inline void cat_curl_multi_socket_schedule(cat_curl_multi_context_t *context, curl_socket_t sockfd, int action)
 {
     // insert to context->socket_contexts
@@ -192,6 +195,16 @@ static cat_always_inline void cat_curl_multi_socket_schedule(cat_curl_multi_cont
 #ifdef CAT_DEBUG
     CAT_ASSERT(found);
 #endif
+    if (context->waiter != NULL && context->done_task == NULL) {
+        context->done_task = cat_event_io_defer_task_create(cat_curl_multi_done_callback, context);
+    }
+}
+
+static void cat_curl_multi_done_callback(cat_event_io_defer_task_t *task, cat_data_t *data)
+{
+    cat_curl_multi_context_t *context = (cat_curl_multi_context_t *) data;
+
+    (void) task;
     if (context->waiter != NULL) {
         cat_coroutine_schedule(context->waiter, CURL, "Poll event from CURL socket function");
     }
@@ -379,6 +392,10 @@ static void cat_curl_multi_context_close(cat_curl_multi_context_t *context)
     if (context->waiter != NULL) {
         cat_coroutine_schedule(context->waiter, CURL, "Multi context close");
     }
+    if (context->done_task != NULL) {
+        cat_event_io_defer_task_close(context->done_task);
+        context->done_task = NULL;
+    }
     uv_close((uv_handle_t *) &context->timer, cat_curl_multi_context_close_callback);
     // should be empty, but if user called curl_multi_wait() and the transfer is not finished,
     // some sockets may not be removed from the multi context due to a curl bug.
@@ -413,6 +430,7 @@ static cat_curl_multi_context_t *cat_curl_multi_create_context(CURLM *multi)
 
     context->multi = multi;
     context->waiter = NULL;
+    context->done_task = NULL;
     context->timedout = cat_true;
     cat_queue_init(&context->socket_contexts);
     cat_queue_init(&context->ready_socket_contexts);
@@ -523,6 +541,10 @@ static CURLMcode cat_curl_multi_wait_impl(
         ret = cat_time_delay(-1);
     }
     context->waiter = NULL;
+    if (context->done_task != NULL) {
+        cat_event_io_defer_task_close(context->done_task);
+        context->done_task = NULL;
+    }
     if (unlikely(ret == CAT_RET_ERROR)) {
         // CAT_RET_ERROR for wait encountered errors
         mcode = CURLM_INTERNAL_ERROR;
