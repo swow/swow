@@ -119,6 +119,7 @@ static zend_object *swow_coroutine_create_object(zend_class_entry *ce)
 {
     swow_coroutine_t *s_coroutine = swow_object_alloc(swow_coroutine_t, ce, swow_coroutine_handlers);
 
+    memset(&s_coroutine->coroutine, 0, sizeof(s_coroutine->coroutine));
     s_coroutine->coroutine.state = CAT_COROUTINE_STATE_NONE;
     s_coroutine->executor = NULL;
     s_coroutine->exit_status = 0;
