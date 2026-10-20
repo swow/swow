@@ -30,20 +30,21 @@ extern "C" {
 
 extern SWOW_API zend_class_entry *swow_process_interface_ce;
 
-extern SWOW_API zend_class_entry *swow_fork_process_ce;
-extern SWOW_API zend_object_handlers swow_fork_process_handlers;
+extern SWOW_API zend_class_entry *swow_child_process_ce;
+extern SWOW_API zend_object_handlers swow_child_process_handlers;
 
 extern SWOW_API zend_class_entry *swow_process_exit_status_ce;
 extern SWOW_API zend_object_handlers swow_process_exit_status_handlers;
 
 extern SWOW_API zend_class_entry *swow_process_exception_ce;
 
-typedef struct swow_fork_process_s {
+typedef struct swow_child_process_s {
     cat_pid_t pid;
     int status;           /* waitpid 返回的 raw status */
     cat_bool_t exited;    /* 是否已回收 */
+    zval streams[3];
     zend_object std;
-} swow_fork_process_t;
+} swow_child_process_t;
 
 typedef struct swow_process_exit_status_s {
     int status;           /* waitpid 返回的 raw status */
@@ -56,9 +57,9 @@ zend_result swow_process_module_init(INIT_FUNC_ARGS);
 
 /* helper */
 
-static zend_always_inline swow_fork_process_t *swow_fork_process_get_from_object(zend_object *object)
+static zend_always_inline swow_child_process_t *swow_child_process_get_from_object(zend_object *object)
 {
-    return cat_container_of(object, swow_fork_process_t, std);
+    return cat_container_of(object, swow_child_process_t, std);
 }
 
 static zend_always_inline swow_process_exit_status_t *swow_process_exit_status_get_from_object(zend_object *object)

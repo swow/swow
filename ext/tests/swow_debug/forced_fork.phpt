@@ -9,7 +9,7 @@ skip_if_extension_not_exist('pcntl');
 <?php
 require __DIR__ . '/../include/bootstrap.php';
 
-use Swow\Process\ForkProcess;
+use Swow\Process\ChildProcess;
 
 use function Swow\Debug\registerExtendedStatementHandler;
 
@@ -36,7 +36,7 @@ $observe();
 Assert::same(pcntl_waitpid($pid, $status), $pid);
 Assert::true(pcntl_wifexited($status));
 Assert::same(pcntl_wexitstatus($status), 0);
-$child = ForkProcess::fork(static function () use ($observe): int {
+$child = ChildProcess::fork(static function () use ($observe): int {
     $observe();
     return 0;
 });

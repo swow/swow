@@ -42,7 +42,7 @@ class ProcessManager
     /** @var int Worker 优雅退出最大等待时间（秒） */
     protected int $maxWaitTime = 30;
 
-    /** @var array<int, ForkProcess> Worker ID → ForkProcess */
+    /** @var array<int, ChildProcess> Worker ID → ChildProcess */
     protected array $workers = [];
 
     /** @var array<int, int> Worker ID → 已重启次数 */
@@ -283,7 +283,7 @@ class ProcessManager
         $this->reloading = false;
     }
 
-    private function killWorker(ForkProcess $process, int $signal): void
+    private function killWorker(ChildProcess $process, int $signal): void
     {
         try {
             $process->kill($signal);
@@ -301,7 +301,7 @@ class ProcessManager
         $workerCount = $this->workerCount;
         $onWorkerStart = $this->onWorkerStart;
 
-        $process = ForkProcess::fork(static function () use ($id, $managerPid, $workerCount, $onWorkerStart): int {
+        $process = ChildProcess::fork(static function () use ($id, $managerPid, $workerCount, $onWorkerStart): int {
             $ctx = new WorkerContext($id, getmypid(), $managerPid, $workerCount);
             try {
                 $onWorkerStart($ctx);
@@ -410,7 +410,7 @@ class ProcessManager
      * 为 Worker 启动一个监控协程
      * Worker 退出时根据策略自动重启
      */
-    protected function watchWorker(int $id, ?ForkProcess $process = null): void
+    protected function watchWorker(int $id, ?ChildProcess $process = null): void
     {
         $process ??= $this->workers[$id] ?? null;
         if ($process === null) {

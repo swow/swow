@@ -2619,6 +2619,39 @@ namespace Swow\WebSocket
 
 namespace Swow\Process
 {
+    /**
+     * POSIX: real signal number
+     * Windows: alias of CTRL_C_EVENT
+     */
+    const SIGINT = 2;
+
+    /**
+     * POSIX: SIGKILL
+     * Windows: internal value mapped to TerminateProcess
+     */
+    const SIGKILL = 9;
+
+    /**
+     * POSIX only
+     */
+    const SIGTERM = 15;
+
+    /**
+     * Windows only: alias of CTRL_BREAK_EVENT
+     */
+    const SIGBREAK = 1;
+
+    /**
+     * Windows only
+     */
+    const CTRL_C_EVENT = 0;
+    const CTRL_BREAK_EVENT = 1;
+
+    function kill(int $pid, int $signal): void { }
+}
+
+namespace Swow\Process
+{
     interface ProcessInterface
     {
         public function getPid(): int;
@@ -2627,14 +2660,29 @@ namespace Swow\Process
 
         public function hasExited(): bool;
 
-        public function kill(int $signal = \Swow\Signal::TERM): void;
+        public function kill(int $signal): void;
     }
 }
 
 namespace Swow\Process
 {
-    class ForkProcess implements \Swow\Process\ProcessInterface
+    final class ChildProcess implements \Swow\Process\ProcessInterface
     {
+        /**
+         * @param non-empty-list<string> $command
+         * @param array{
+         *     cwd?: string,
+         *     env?: array<string, string>,
+         *     stdin?: 'inherit'|'pipe'|resource|array{0: 'file', 1: string, 2?: string},
+         *     stdout?: 'inherit'|'pipe'|resource|array{0: 'file', 1: string, 2?: string},
+         *     stderr?: 'inherit'|'pipe'|resource|array{0: 'file', 1: string, 2?: string},
+         * } $options
+         */
+        public static function spawn(array $command, array $options = []): self { }
+
+        /**
+         * POSIX only; throws ProcessException on Windows
+         */
         public static function fork(\Closure $callback): self { }
 
         public function getPid(): int { }
@@ -2643,7 +2691,18 @@ namespace Swow\Process
 
         public function hasExited(): bool { }
 
-        public function kill(int $signal = \Swow\Signal::TERM): void { }
+        /** @return resource|null */
+        public function getStdin() { }
+
+        /** @return resource|null */
+        public function getStdout() { }
+
+        /** @return resource|null */
+        public function getStderr() { }
+
+        public function kill(int $signal = \Swow\Process\SIGTERM): void { }
+
+        public function close(): void { }
     }
 }
 

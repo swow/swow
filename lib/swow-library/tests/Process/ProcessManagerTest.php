@@ -18,7 +18,7 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\RequiresOperatingSystem;
 use PHPUnit\Framework\TestCase;
 use Swow\Coroutine;
-use Swow\Process\ForkProcess;
+use Swow\Process\ChildProcess;
 use Swow\Process\ProcessExitStatus;
 use Swow\Process\ProcessManager;
 use Swow\Process\WorkerContext;
@@ -94,10 +94,10 @@ final class ProcessManagerTest extends TestCase
         $this->assertSame(2, $manager->getWorkerCount());
     }
 
-    public function testForkProcessIntegration(): void
+    public function testChildProcessIntegration(): void
     {
-        // 直接测试 ForkProcess 与 ProcessManager 的配合
-        $process = ForkProcess::fork(static function (): int {
+        // 直接测试 ChildProcess 与 ProcessManager 的配合
+        $process = ChildProcess::fork(static function (): int {
             // 模拟一个 Worker 的简单逻辑
             usleep(100000);
             return 7;
@@ -173,7 +173,7 @@ final class ProcessManagerTest extends TestCase
     {
         $readyFile = tempnam(sys_get_temp_dir(), 'swow-process-manager-ready-');
         $this->assertIsString($readyFile);
-        $process = ForkProcess::fork(static function () use ($readyFile): int {
+        $process = ChildProcess::fork(static function () use ($readyFile): int {
             $manager = new ProcessManager(1);
             $manager->setMaxWaitTime(3);
             $manager->start(static function () use ($readyFile): void {

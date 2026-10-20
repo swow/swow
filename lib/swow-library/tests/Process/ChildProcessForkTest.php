@@ -17,7 +17,7 @@ namespace Swow\Tests\Process;
 use PHPUnit\Framework\Attributes\CoversNothing;
 use PHPUnit\Framework\Attributes\RequiresOperatingSystem;
 use PHPUnit\Framework\TestCase;
-use Swow\Process\ForkProcess;
+use Swow\Process\ChildProcess;
 use Swow\Process\ProcessException;
 use Swow\Process\ProcessExitStatus;
 use Swow\Process\ProcessInterface;
@@ -28,12 +28,12 @@ use Swow\Signal;
  */
 #[CoversNothing]
 #[RequiresOperatingSystem('Linux|Darwin')]
-final class ForkProcessTest extends TestCase
+final class ChildProcessForkTest extends TestCase
 {
     public function testForkReturnsProcess(): void
     {
-        $process = ForkProcess::fork(static fn(): int => 0);
-        $this->assertInstanceOf(ForkProcess::class, $process);
+        $process = ChildProcess::fork(static fn(): int => 0);
+        $this->assertInstanceOf(ChildProcess::class, $process);
         $this->assertInstanceOf(ProcessInterface::class, $process);
         $this->assertGreaterThan(0, $process->getPid());
         $process->wait();
@@ -41,7 +41,7 @@ final class ForkProcessTest extends TestCase
 
     public function testForkCallbackExitCode(): void
     {
-        $process = ForkProcess::fork(static fn(): int => 42);
+        $process = ChildProcess::fork(static fn(): int => 42);
         $status = $process->wait();
 
         $this->assertInstanceOf(ProcessExitStatus::class, $status);
@@ -53,7 +53,7 @@ final class ForkProcessTest extends TestCase
 
     public function testForkCallbackZeroExitCode(): void
     {
-        $process = ForkProcess::fork(static fn(): int => 0);
+        $process = ChildProcess::fork(static fn(): int => 0);
         $status = $process->wait();
 
         $this->assertTrue($status->isExited());
@@ -62,7 +62,7 @@ final class ForkProcessTest extends TestCase
 
     public function testHasExitedBeforeAndAfterWait(): void
     {
-        $process = ForkProcess::fork(static fn(): int => 0);
+        $process = ChildProcess::fork(static fn(): int => 0);
 
         // 可能还没退出（竞态），但 wait 后一定是 true
         $process->wait();
@@ -71,7 +71,7 @@ final class ForkProcessTest extends TestCase
 
     public function testWaitThrowsOnAlreadyExited(): void
     {
-        $process = ForkProcess::fork(static fn(): int => 0);
+        $process = ChildProcess::fork(static fn(): int => 0);
         $process->wait();
 
         $this->expectException(ProcessException::class);
@@ -80,7 +80,7 @@ final class ForkProcessTest extends TestCase
 
     public function testKill(): void
     {
-        $process = ForkProcess::fork(static function (): int {
+        $process = ChildProcess::fork(static function (): int {
             // 子进程持续运行
             while (true) {
                 usleep(50000);
@@ -99,7 +99,7 @@ final class ForkProcessTest extends TestCase
 
     public function testKillWithTerm(): void
     {
-        $process = ForkProcess::fork(static function (): int {
+        $process = ChildProcess::fork(static function (): int {
             while (true) {
                 usleep(50000);
             }
@@ -116,7 +116,7 @@ final class ForkProcessTest extends TestCase
 
     public function testKillThrowsOnAlreadyExited(): void
     {
-        $process = ForkProcess::fork(static fn(): int => 0);
+        $process = ChildProcess::fork(static fn(): int => 0);
         $process->wait();
 
         $this->expectException(ProcessException::class);
@@ -127,7 +127,7 @@ final class ForkProcessTest extends TestCase
     {
         $processes = [];
         for ($i = 0; $i < 4; $i++) {
-            $processes[$i] = ForkProcess::fork(static fn(): int => $i);
+            $processes[$i] = ChildProcess::fork(static fn(): int => $i);
         }
 
         $this->assertCount(4, $processes);
@@ -147,7 +147,7 @@ final class ForkProcessTest extends TestCase
     {
         $parentPid = getmypid();
 
-        $process = ForkProcess::fork(static fn(): int => 0);
+        $process = ChildProcess::fork(static fn(): int => 0);
         $childPid = $process->getPid();
 
         $this->assertNotSame($parentPid, $childPid);

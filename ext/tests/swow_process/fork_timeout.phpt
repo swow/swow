@@ -1,19 +1,20 @@
 --TEST--
-swow_process: wait() times out for a running child
+swow_process: ChildProcess fork wait timeout
 --SKIPIF--
 <?php
 require __DIR__ . '/../include/skipif.php';
+skip_if(PHP_OS_FAMILY === 'Windows', 'fork is POSIX only');
 ?>
 --FILE--
 <?php
 require __DIR__ . '/../include/bootstrap.php';
 
-use Swow\Process\ForkProcess;
+use Swow\Process\ChildProcess;
 use Swow\Process\ProcessException;
 
-$process = ForkProcess::fork(static function (): int {
-    usleep(500000);
-    return 42;
+$process = ChildProcess::fork(static function (): int {
+    sleep(5);
+    return 0;
 });
 
 try {
@@ -23,8 +24,8 @@ try {
     echo "Timeout\n";
 }
 
-$process->kill();
-$process->wait(-1);
+$process->kill(\Swow\Process\SIGKILL);
+$process->wait();
 echo "Done\n";
 
 ?>
