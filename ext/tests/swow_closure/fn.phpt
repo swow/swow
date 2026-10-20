@@ -65,7 +65,7 @@ foreach ($fns as $fn) {
     $unserialized = unserialize($serialized);
     try {
         $ret = $unserialized();
-        if (is_a($ret, 'stdClass') || is_a($ret, 'ValueError')) {
+        if (is_object($ret) && (is_a($ret, 'stdClass') || is_a($ret, 'ValueError'))) {
             var_dump($ret::class);
         } else {
             var_dump($ret);

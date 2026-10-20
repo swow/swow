@@ -66,7 +66,11 @@ try {
     Assert::same(realpath($path), realpath($filename));
     Assert::same($path->calls, 2);
     Assert::false(file_exists(''));
-    Assert::false(file_exists("invalid\0path"));
+    if (PHP_VERSION_ID >= 80600) {
+        Assert::throws(static fn(): bool => file_exists("invalid\0path"), ValueError::class);
+    } else {
+        Assert::false(file_exists("invalid\0path"));
+    }
     Assert::throws(static fn(): string|false => realpath("invalid\0path"), ValueError::class);
     foreach (['file_exists', 'realpath'] as $query) {
         Assert::throws(static fn(): mixed => $query(), ArgumentCountError::class);
