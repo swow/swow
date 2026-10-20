@@ -156,6 +156,14 @@ static inline void zend_argument_must_not_be_empty_error(uint32_t arg_num)
 # define swow_error_docref1(docref, param1, type, ...) php_error_docref(docref, type, __VA_ARGS__)
 # define swow_error_docref2(docref, param1, param2, type, ...) php_error_docref(docref, type, __VA_ARGS__)
 #endif
+
+#if PHP_VERSION_ID < 80600
+# define swow_stream_wrapper_log_error(wrapper, options, ...) \
+    php_stream_wrapper_log_error(wrapper, options, __VA_ARGS__)
+#else
+# define swow_stream_wrapper_log_error(wrapper, options, ...) \
+    php_stream_wrapper_log_error(wrapper, NULL, options, E_WARNING, false, PHP_STREAM_EC(Generic), __VA_ARGS__)
+#endif
 /* }}} */
 
 /* PHP 8.7 compatibility {{{*/

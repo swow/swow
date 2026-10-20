@@ -2023,7 +2023,7 @@ SWOW_API  php_stream *_swow_stream_fopen(const char *filename, const char *mode,
     char *persistent_id = NULL;
 
     if (FAILURE == php_stream_parse_fopen_modes(mode, &open_flags)) {
-        php_stream_wrapper_log_error(&php_plain_files_wrapper, options, "`%s' is not a valid mode for fopen", mode);
+        swow_stream_wrapper_log_error(&php_plain_files_wrapper, options, "`%s' is not a valid mode for fopen", mode);
         return NULL;
     }
 
