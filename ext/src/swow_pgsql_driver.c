@@ -26,7 +26,7 @@
 # endif
 #endif
 
-// from ext/pdo_pgsql/pgsql_driver.c @ 19deb91002a53958893903aa3315e30e3285e614
+// from ext/pdo_pgsql/pgsql_driver.c @ f4a17fdefd18ab40807a82c4526c52fdcb4a875a
 
 #include "php.h"
 #include "php_ini.h"
@@ -341,6 +341,16 @@ static void pgsql_handle_closer(pdo_dbh_t *dbh) /* {{{ */
 }
 /* }}} */
 
+static bool pdo_pgsql_check_chunk_size(zend_long size)
+{
+    if (size < 0 || ZEND_LONG_EXCEEDS_INT(size)) {
+        zend_value_error("Pdo\\Pgsql::ATTR_CHUNK_SIZE must be between 0 and %d", INT_MAX);
+        return false;
+    }
+
+    return true;
+}
+
 // diff since php/php-src@2d51c203f09551323ed595514e03ab206fd93129
 #if PHP_VERSION_ID < 80100
 static int pgsql_handle_preparer(pdo_dbh_t *dbh, const char *sql, size_t sql_len, pdo_stmt_t *stmt, zval *driver_options)
@@ -371,7 +381,51 @@ static bool pgsql_handle_preparer(pdo_dbh_t *dbh, zend_string *sql, pdo_stmt_t *
     scrollable = pdo_attr_lval(driver_options, PDO_ATTR_CURSOR,
         PDO_CURSOR_FWDONLY) == PDO_CURSOR_SCROLL;
 
+    bool prefetch_given = driver_options
+        && (val = zend_hash_index_find(Z_ARRVAL_P(driver_options), PDO_ATTR_PREFETCH));
+
+    S->is_unbuffered = prefetch_given && pdo_get_long_param(&lval, val)
+        ? !lval
+        : H->default_fetching_laziness;
+
+    // chunk size needs libpq 17, see swow_PQsetChunkedRowsMode
+    if (swow_PQsetChunkedRowsMode) {
+        bool chunk_size_given = driver_options
+            && (val = zend_hash_index_find(Z_ARRVAL_P(driver_options), PDO_PGSQL_ATTR_CHUNK_SIZE));
+
+        if (chunk_size_given) {
+            if (!pdo_get_long_param(&lval, val)) {
+                return false;
+            }
+            S->chunk_size = lval;
+        } else if (prefetch_given) {
+            /* the statement's own prefetch replaces an inherited chunk size */
+            S->chunk_size = 0;
+        } else {
+            S->chunk_size = H->default_chunk_size;
+        }
+
+        if (!pdo_pgsql_check_chunk_size(S->chunk_size)) {
+            return false;
+        }
+
+        if (S->chunk_size >= 1 && scrollable) {
+            if (chunk_size_given) {
+                zend_value_error("Pdo\\Pgsql::ATTR_CHUNK_SIZE cannot be combined with "
+                    "PDO::ATTR_CURSOR set to PDO::CURSOR_SCROLL");
+                return false;
+            }
+
+            S->chunk_size = 0;
+        }
+
+        if (S->chunk_size >= 1) {
+            S->is_unbuffered = true;
+        }
+    }
+
     if (scrollable) {
+        S->is_unbuffered = false;
         if (S->cursor_name) {
             efree(S->cursor_name);
         }
@@ -397,14 +451,6 @@ static bool pgsql_handle_preparer(pdo_dbh_t *dbh, zend_string *sql, pdo_stmt_t *
         stmt->supports_placeholders = PDO_PLACEHOLDER_NAMED;
         stmt->named_rewrite_template = "$%d";
     }
-
-    S->is_unbuffered =
-        driver_options
-        && (val = zend_hash_index_find(Z_ARRVAL_P(driver_options), PDO_ATTR_PREFETCH))
-        && pdo_get_long_param(&lval, val)
-        ? !lval
-        : H->default_fetching_laziness
-    ;
 
 // diff since php/php-src@2d51c203f09551323ed595514e03ab206fd93129
 #if PHP_VERSION_ID < 80100
@@ -531,11 +577,19 @@ static zend_string* pgsql_handle_quoter(pdo_dbh_t *dbh, const zend_string *unquo
                 return NULL;
             }
             quotedlen = tmp_len + 1;
+// diff since php/php-src@22a2c2ed2f8efeb20aa913800665271dffa1bd13
+#if PHP_VERSION_ID >= 80600
+            quoted = zend_cstr_concat3(
+                "'", 1,
+                (const char *) escaped, quotedlen - 2,
+                "'", 1);
+#else
             quoted = emalloc(quotedlen + 1);
             memcpy(quoted+1, escaped, quotedlen-2);
             quoted[0] = '\'';
             quoted[quotedlen-1] = '\'';
             quoted[quotedlen] = '\0';
+#endif // PHP_VERSION_ID
             PQfreemem(escaped);
             break;
         default:
@@ -632,6 +686,13 @@ static int pdo_pgsql_get_attribute(pdo_dbh_t *dbh, zend_long attr, zval *return_
             ZVAL_BOOL(return_value, H->disable_prepares);
             break;
 
+        case PDO_PGSQL_ATTR_CHUNK_SIZE:
+            if (!swow_PQsetChunkedRowsMode) {
+                return 0;
+            }
+            ZVAL_LONG(return_value, H->default_chunk_size);
+            break;
+
         case PDO_ATTR_CLIENT_VERSION: {
             char buf[16];
             swow_pdo_libpq_version(buf, sizeof(buf));
@@ -662,22 +723,18 @@ static int pdo_pgsql_get_attribute(pdo_dbh_t *dbh, zend_long attr, zval *return_
                 case CONNECTION_AUTH_OK:
                     ZVAL_STRINGL(return_value, "Received authentication; waiting for backend start-up to finish.", strlen("Received authentication; waiting for backend start-up to finish."));
                     break;
-#ifdef CONNECTION_SSL_STARTUP
                 case CONNECTION_SSL_STARTUP:
                     ZVAL_STRINGL(return_value, "Negotiating SSL encryption.", strlen("Negotiating SSL encryption."));
                     break;
-#endif
                 case CONNECTION_SETENV:
                     ZVAL_STRINGL(return_value, "Negotiating environment-driven parameter settings.", strlen("Negotiating environment-driven parameter settings."));
                     break;
 
-#ifdef CONNECTION_CONSUME
                 case CONNECTION_CONSUME:
                     ZVAL_STRINGL(return_value, "Flushing send queue/consuming extra data.", strlen("Flushing send queue/consuming extra data."));
                     break;
-#endif
 #ifdef CONNECTION_GSS_STARTUP
-                case CONNECTION_SSL_STARTUP:
+                case CONNECTION_GSS_STARTUP:
                     ZVAL_STRINGL(return_value, "Negotiating GSSAPI.", strlen("Negotiating GSSAPI."));
                     break;
 #endif
@@ -884,6 +941,9 @@ void swow_pgsqlCopyFromArray_internal(INTERNAL_FUNCTION_PARAMETERS)
         if (Z_TYPE_P(pg_rows) == IS_ARRAY) {
             ZEND_HASH_FOREACH_VAL(Z_ARRVAL_P(pg_rows), tmp) {
                 if (!_pdo_pgsql_send_copy_data(H, tmp)) {
+                    if (EG(exception)) {
+                        RETURN_THROWS();
+                    }
                     pdo_pgsql_error(dbh, PGRES_FATAL_ERROR, NULL);
                     PDO_HANDLE_DBH_ERR();
                     RETURN_FALSE;
@@ -899,6 +959,9 @@ void swow_pgsqlCopyFromArray_internal(INTERNAL_FUNCTION_PARAMETERS)
                 tmp = iter->funcs->get_current_data(iter);
                 if (!_pdo_pgsql_send_copy_data(H, tmp)) {
                     zend_iterator_dtor(iter);
+                    if (EG(exception)) {
+                        RETURN_THROWS();
+                    }
                     pdo_pgsql_error(dbh, PGRES_FATAL_ERROR, NULL);
                     PDO_HANDLE_DBH_ERR();
                     RETURN_FALSE;
@@ -1537,7 +1600,24 @@ static swow_pdo_txn_bool pdo_pgsql_set_attr(pdo_dbh_t *dbh, zend_long attr, zval
                 return false;
             }
             H->default_fetching_laziness = !bval;
+            H->default_chunk_size = 0;
             return true;
+        case PDO_PGSQL_ATTR_CHUNK_SIZE: {
+            zend_long lval;
+
+            // chunk size needs libpq 17, see swow_PQsetChunkedRowsMode
+            if (!swow_PQsetChunkedRowsMode) {
+                return false;
+            }
+            if (!pdo_get_long_param(&lval, val)) {
+                return false;
+            }
+            if (!pdo_pgsql_check_chunk_size(lval)) {
+                return false;
+            }
+            H->default_chunk_size = lval;
+            return true;
+        }
         default:
             return false;
     }
@@ -1684,6 +1764,8 @@ PGresult *swow_PQclosePrepared(PGconn *conn, const char *stmtName)
 int swow_libpq_version = 0;
 cat_bool_t swow_pgsql_hooked = cat_false;
 size_t (*swow_PQresultMemorySize)(const PGresult *res) = NULL;
+PGresult *(*swow_PQclosePortal)(PGconn *conn, const char *portalName) = NULL;
+int (*swow_PQsetChunkedRowsMode)(PGconn *conn, int chunkSize) = NULL;
 
 zend_result swow_pgsql_module_init(INIT_FUNC_ARGS)
 {
@@ -1797,6 +1879,11 @@ zend_result swow_pgsql_module_init(INIT_FUNC_ARGS)
 
     _swow_PQclosePrepared = (PGresult *(*)(PGconn *, const char *)) DL_FETCH_SYMBOL(dummy_handle, "PQclosePrepared");
     swow_PQresultMemorySize = (size_t (*)(const PGresult *)) DL_FETCH_SYMBOL(dummy_handle, "PQresultMemorySize");
+    swow_PQclosePortal = (PGresult *(*)(PGconn *, const char *)) DL_FETCH_SYMBOL(dummy_handle, "PQclosePortal");
+#ifdef LIBPQ_HAS_CHUNK_MODE
+    /* PGRES_TUPLES_CHUNK is only declared by libpq 17 and newer headers */
+    swow_PQsetChunkedRowsMode = (int (*)(PGconn *, int)) DL_FETCH_SYMBOL(dummy_handle, "PQsetChunkedRowsMode");
+#endif
 #else
 #if PG_VERSION_NUM >= 170000
     _swow_PQclosePrepared = PQclosePrepared;
@@ -1804,6 +1891,12 @@ zend_result swow_pgsql_module_init(INIT_FUNC_ARGS)
 #if PG_VERSION_NUM >= 120000
     swow_PQresultMemorySize = PQresultMemorySize;
 #endif // PG_VERSION_NUM >= 120000
+#ifdef LIBPQ_HAS_CLOSE_PREPARED
+    swow_PQclosePortal = PQclosePortal;
+#endif
+#ifdef LIBPQ_HAS_CHUNK_MODE
+    swow_PQsetChunkedRowsMode = PQsetChunkedRowsMode;
+#endif
 #endif // COMPILE_DL_SWOW
 
 
@@ -1842,7 +1935,7 @@ zend_result swow_pgsql_module_shutdown(INIT_FUNC_ARGS)
 // compatibility
 
 #if PHP_VERSION_ID < 80100
-// from ext/pdo/pdo_dbh.c @ 626f3c3c7c6834f884286e454dbe5a870d125299
+// from ext/pdo/pdo_dbh.c @ 41ea9d310d2d2a41dc2f4471faffcc2a71692581
 bool pdo_get_long_param(zend_long *lval, const zval *value)
 {
     switch (Z_TYPE_P(value)) {

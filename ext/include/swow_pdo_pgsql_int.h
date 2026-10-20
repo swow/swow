@@ -56,6 +56,7 @@ typedef struct {
     HashTable       *lob_streams;
     swow_fcall_info_cache *notice_callback;
     bool        default_fetching_laziness;
+    zend_long   default_chunk_size;
     pdo_pgsql_stmt  *running_stmt;
 } pdo_pgsql_db_handle;
 
@@ -88,7 +89,9 @@ struct pdo_pgsql_stmt {
     int *param_formats;
     Oid *param_types;
     int                     current_row;
+    zend_long               chunk_size;
     bool is_prepared;
+    bool is_cursor_declared;
     bool is_unbuffered;
     bool is_running_unbuffered;
 };
@@ -118,6 +121,7 @@ extern const struct pdo_stmt_methods swow_pgsql_stmt_methods;
 enum {
     PDO_PGSQL_ATTR_DISABLE_PREPARES = PDO_ATTR_DRIVER_SPECIFIC,
     PDO_PGSQL_ATTR_RESULT_MEMORY_SIZE,
+    PDO_PGSQL_ATTR_CHUNK_SIZE,
 };
 
 struct pdo_pgsql_lob_self {
@@ -156,6 +160,9 @@ void swow_pgsqlGetPid_internal(INTERNAL_FUNCTION_PARAMETERS);
 // wrapper for pq functions
 extern PGresult *swow_PQclosePrepared(PGconn *conn, const char *stmtName);
 extern size_t (*swow_PQresultMemorySize)(const PGresult *res);
+
+extern PGresult *(*swow_PQclosePortal)(PGconn *conn, const char *portalName);
+extern int (*swow_PQsetChunkedRowsMode)(PGconn *conn, int chunkSize);
 
 // compatibility
 
