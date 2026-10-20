@@ -1909,6 +1909,14 @@ zend_result swow_pgsql_module_init(INIT_FUNC_ARGS)
     // php_pdo_register_driver will unregister swow_pdo_pgsql_driver->driver_name i.e. "pdo_pgsql"
     php_pdo_unregister_driver(&swow_pdo_pgsql_driver);
     if (php_pdo_register_driver(&swow_pdo_pgsql_driver) == SUCCESS) {
+#if PHP_VERSION_ID >= 80400
+        /* php_pdo_unregister_driver() removed the driver name to Pdo\Pgsql mapping,
+         * register the class for the swow driver again */
+        zend_class_entry *pgsql_ce = zend_hash_str_find_ptr(CG(class_table), ZEND_STRL("pdo\\pgsql"));
+        if (pgsql_ce) {
+            php_pdo_register_driver_specific_ce(&swow_pdo_pgsql_driver, pgsql_ce);
+        }
+#endif
         swow_pgsql_hooked = cat_true;
     }
     return SUCCESS;
