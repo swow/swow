@@ -164,6 +164,16 @@ static inline void zend_argument_must_not_be_empty_error(uint32_t arg_num)
 # define swow_stream_wrapper_log_error(wrapper, options, ...) \
     php_stream_wrapper_log_error(wrapper, NULL, options, E_WARNING, false, PHP_STREAM_EC(Generic), __VA_ARGS__)
 #endif
+
+/* php_stream_xport_register() returns void since PHP 8.6. Yield SUCCESS from
+ * the 8.6+ branch so callers can keep their "!= SUCCESS" checks. */
+#if PHP_VERSION_ID < 80600
+# define swow_stream_xport_register(protocol, factory) \
+    php_stream_xport_register(protocol, factory)
+#else
+# define swow_stream_xport_register(protocol, factory) \
+    (php_stream_xport_register(protocol, factory), SUCCESS)
+#endif
 /* }}} */
 
 /* PHP 8.7 compatibility {{{*/

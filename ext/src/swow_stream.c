@@ -2782,20 +2782,20 @@ zend_result swow_stream_module_init(INIT_FUNC_ARGS)
         return FAILURE;
     }
 
-    if (php_stream_xport_register("tcp", swow_stream_socket_factory) != SUCCESS) {
+    if (swow_stream_xport_register("tcp", swow_stream_socket_factory) != SUCCESS) {
         return FAILURE;
     }
-    if (php_stream_xport_register("udp", swow_stream_socket_factory) != SUCCESS) {
+    if (swow_stream_xport_register("udp", swow_stream_socket_factory) != SUCCESS) {
         return FAILURE;
     }
-    if (php_stream_xport_register("pipe", swow_stream_socket_factory) != SUCCESS) {
+    if (swow_stream_xport_register("pipe", swow_stream_socket_factory) != SUCCESS) {
         return FAILURE;
     }
 #ifdef AF_UNIX
-    if (php_stream_xport_register("unix", swow_stream_socket_factory) != SUCCESS) {
+    if (swow_stream_xport_register("unix", swow_stream_socket_factory) != SUCCESS) {
         return FAILURE;
     }
-    if (php_stream_xport_register("udg", swow_stream_socket_factory) != SUCCESS) {
+    if (swow_stream_xport_register("udg", swow_stream_socket_factory) != SUCCESS) {
         return FAILURE;
     }
 #endif
