@@ -93,6 +93,14 @@ static zend_always_inline bool zend_atomic_bool_exchange(bool *atomic, bool desi
 #endif
 /* }}} */
 
+/* zend_char_has_nul_byte() is available since PHP 8.2 {{{*/
+#if PHP_VERSION_ID < 80200
+# define swow_check_null_path(p, l) CHECK_NULL_PATH(p, l)
+#else
+# define swow_check_null_path(p, l) zend_char_has_nul_byte(p, l)
+#endif
+/* }}} */
+
 /* PHP 8.3 compatibility {{{*/
 #if PHP_VERSION_ID < 80300
 # ifdef PHP_WIN32 // we only need this on Windows temporarily for curl_interface.c

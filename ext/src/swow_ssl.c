@@ -40,7 +40,7 @@ bool swow_ssl_resolve_stream_path(zend_string *path, const char *option_name, ch
         return true;
     }
     // Keep PHP path length and open_basedir checks before OpenSSL consumes a C string.
-    if (CHECK_NULL_PATH(ZSTR_VAL(path), ZSTR_LEN(path))) {
+    if (swow_check_null_path(ZSTR_VAL(path), ZSTR_LEN(path))) {
         php_error_docref(NULL, E_WARNING,
             "Path for %s in ssl stream context option must not contain any null bytes", option_name);
         return false;
