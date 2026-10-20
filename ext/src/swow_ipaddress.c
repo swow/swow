@@ -149,7 +149,7 @@ static PHP_METHOD(Swow_IpAddress, __construct)
 
     ZEND_PARSE_PARAMETERS_START(0, 1)
         Z_PARAM_OPTIONAL
-        Z_PARAM_STR_OR_NULL(address)
+        Z_PARAM_STR(address)
     ZEND_PARSE_PARAMETERS_END();
 
     swow_ipaddress_t *s_address = getThisAddr();
