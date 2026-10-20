@@ -480,8 +480,11 @@ static PHP_METHOD(Swow_Closure, __serialize)
 #if PHP_VERSION_ID < 80600
         zval* closure_this = zend_get_closure_this_ptr(ZEND_THIS);
         if (!Z_ISUNDEF_P(closure_this)) {
-#else
+#elif PHP_VERSION_ID < 80700
         zend_object *closure_this = zend_get_closure_this_ptr(ZEND_THIS);
+        if (closure_this != NULL) {
+#else
+        zend_object *closure_this = zend_get_closure_this_ptr(Z_OBJ_P(ZEND_THIS));
         if (closure_this != NULL) {
 #endif
             zend_throw_error(NULL, "Closure with bound '$this' cannot be serialized, it is recommended to add the 'static' modifier");
