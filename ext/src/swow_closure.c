@@ -65,8 +65,14 @@ static void swow_closure_construct_from_another_closure(swow_closure_t *this_clo
     zval result;
     SWOW_CLOSURE_G(current_object) = &this_closure->std;
     zend_ce_closure->create_object = swow_closure_create_object_for_unserialization;
+#if PHP_VERSION_ID < 80600
     zend_create_closure(&result, &closure->func,
         closure->func.common.scope, closure->called_scope, &closure->this_ptr);
+#else
+    zend_create_closure(&result, &closure->func,
+        closure->func.common.scope, closure->called_scope,
+        Z_TYPE(closure->this_ptr) == IS_OBJECT ? Z_OBJ(closure->this_ptr) : NULL);
+#endif
     ZEND_ASSERT(swow_closure_get_from_object(Z_OBJ(result)) == this_closure);
 }
 
@@ -471,8 +477,13 @@ static PHP_METHOD(Swow_Closure, __serialize)
         RETURN_THROWS();
     }
     do {
+#if PHP_VERSION_ID < 80600
         zval* closure_this = zend_get_closure_this_ptr(ZEND_THIS);
         if (!Z_ISUNDEF_P(closure_this)) {
+#else
+        zend_object *closure_this = zend_get_closure_this_ptr(ZEND_THIS);
+        if (closure_this != NULL) {
+#endif
             zend_throw_error(NULL, "Closure with bound '$this' cannot be serialized, it is recommended to add the 'static' modifier");
             RETURN_THROWS();
         }
