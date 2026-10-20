@@ -14,7 +14,7 @@
    +----------------------------------------------------------------------+
 */
 
-// from ext/curl/share.c @ 029a78813dd57929934976ad032743155f28503e
+// from ext/curl/share.c @ 7114314c5a96c362b95663f7e7c9184586721f58
 
 // @see: https://github.com/php/php-src/pull/13347
 #if !defined(__cplusplus) && !defined(_MSC_VER) && defined(HAVE_WTYPEDEF_REDEFINITION)

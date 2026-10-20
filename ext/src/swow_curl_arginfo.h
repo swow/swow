@@ -1,4 +1,4 @@
-// from ext/curl/curl_arginfo.h @ 57ce245e1ec4a375f206370a447b88ecd2fba07e
+// from ext/curl/curl_arginfo.h @ 67135cb97b5edbb99003a021f2d61dd511d89a69
 
 /* This is a generated file, edit the .stub.php file instead.
  * Stub hash: 2a2772e99deea07c0bc148e9715e6a960230cf4d */
