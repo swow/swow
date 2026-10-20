@@ -25,7 +25,7 @@
 
 static cat_bool_t swow_function_is_hookable(const char *name, size_t name_length)
 {
-    return !cat_str_list_contains_ci(INI_STR("disable_functions"), name, name_length);
+    return !cat_str_list_contains_ci(swow_ini_string_literal("disable_functions"), name, name_length);
 }
 
 SWOW_API cat_bool_t swow_hook_internal_function_handler(const char *name, size_t name_length, zif_handler handler)

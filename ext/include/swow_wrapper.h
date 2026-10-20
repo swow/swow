@@ -140,6 +140,14 @@ static inline void zend_argument_must_not_be_empty_error(uint32_t arg_num)
 #endif
 /* }}} */
 
+/* PHP 8.6 compatibility {{{*/
+#if PHP_VERSION_ID < 80600
+# define swow_ini_string_literal(name) INI_STR(name)
+#else
+# define swow_ini_string_literal(name) zend_ini_string_literal(name)
+#endif
+/* }}} */
+
 /* ZTS */
 
 #ifdef ZTS
