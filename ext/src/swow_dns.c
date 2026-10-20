@@ -108,10 +108,16 @@ zend_result swow_dns_module_init(INIT_FUNC_ARGS)
         return FAILURE;
     }
 
-    REGISTER_LONG_CONSTANT("AF_UNSPEC", AF_UNSPEC, CONST_PERSISTENT);
+    if (!zend_hash_str_exists(EG(zend_constants), ZEND_STRL("AF_UNSPEC"))) {
+        REGISTER_LONG_CONSTANT("AF_UNSPEC", AF_UNSPEC, CONST_PERSISTENT);
+    }
     if (!zend_hash_str_find_ptr(&module_registry, ZEND_STRL("sockets"))) {
-        REGISTER_LONG_CONSTANT("AF_INET", AF_INET, CONST_PERSISTENT);
-        REGISTER_LONG_CONSTANT("AF_INET6", AF_INET6, CONST_PERSISTENT);
+        if (!zend_hash_str_exists(EG(zend_constants), ZEND_STRL("AF_INET"))) {
+            REGISTER_LONG_CONSTANT("AF_INET", AF_INET, CONST_PERSISTENT);
+        }
+        if (!zend_hash_str_exists(EG(zend_constants), ZEND_STRL("AF_INET6"))) {
+            REGISTER_LONG_CONSTANT("AF_INET6", AF_INET6, CONST_PERSISTENT);
+        }
         // TODO: others?
     } else {
         has_sockets_extension = true;
