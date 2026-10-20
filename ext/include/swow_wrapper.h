@@ -148,6 +148,22 @@ static inline void zend_argument_must_not_be_empty_error(uint32_t arg_num)
 #endif
 /* }}} */
 
+/* PHP 8.7 compatibility {{{*/
+/* PHP 8.7 removed the zend_atomic abstraction and made EG(vm_interrupt) a C11
+ * atomic. Keep one name for the bool atomic on both sides. */
+#if PHP_VERSION_ID < 80700
+typedef zend_atomic_bool swow_atomic_bool;
+# define swow_atomic_bool_store(atomic, desired) zend_atomic_bool_store(atomic, desired)
+# define swow_atomic_bool_load(atomic) zend_atomic_bool_load(atomic)
+# define swow_atomic_bool_exchange(atomic, desired) zend_atomic_bool_exchange(atomic, desired)
+#else
+typedef atomic_bool swow_atomic_bool;
+# define swow_atomic_bool_store(atomic, desired) atomic_store(atomic, desired)
+# define swow_atomic_bool_load(atomic) atomic_load(atomic)
+# define swow_atomic_bool_exchange(atomic, desired) atomic_exchange(atomic, desired)
+#endif
+/* }}} */
+
 /* ZTS */
 
 #ifdef ZTS

@@ -111,7 +111,7 @@ SWOW_API void swow_watchdog_alert_standard(cat_watchdog_t *watchdog)
     // CPU starvation (and we should try to schedule the coroutine)
 
     vm_interrupted = cat_atomic_bool_exchange(&s_watchdog->vm_interrupted, cat_false);
-    zend_atomic_bool_store(s_watchdog->vm_interrupt_ptr, 1);
+    swow_atomic_bool_store(s_watchdog->vm_interrupt_ptr, 1);
 
     if (
         watchdog->alert_count > 1 &&
@@ -229,12 +229,12 @@ static void swow_watchdog_call_alerter(swow_watchdog_t *s_watchdog, const char *
     ZVAL_STRING(&z_type, blocking_type);
 
     /* Save and clear vm_interrupt to prevent being triggered again in PHP alerter function */
-    bool original_vm_interrupt = zend_atomic_bool_exchange(s_watchdog->vm_interrupt_ptr, 0);
+    bool original_vm_interrupt = swow_atomic_bool_exchange(s_watchdog->vm_interrupt_ptr, 0);
 
     (void) zend_call_function(&fci, &s_watchdog->alerter);
 
     /* Restore original vm_interrupt value in case it was set by other reasons */
-    zend_atomic_bool_store(s_watchdog->vm_interrupt_ptr, original_vm_interrupt);
+    swow_atomic_bool_store(s_watchdog->vm_interrupt_ptr, original_vm_interrupt);
 
     zval_ptr_dtor(&retval);
     zval_ptr_dtor(&z_type);
@@ -257,7 +257,7 @@ static void swow_watchdog_interrupt_function(zend_execute_data *execute_data)
             } else {
                 /* Execution context still incomplete (e.g., just returned from FFI),
                  * keep flag set and trigger another interrupt to retry later */
-                zend_atomic_bool_store(s_watchdog->vm_interrupt_ptr, 1);
+                swow_atomic_bool_store(s_watchdog->vm_interrupt_ptr, 1);
                 goto _end;
             }
         }

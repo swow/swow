@@ -41,7 +41,7 @@ typedef struct swow_watchdog_s {
     /* VM interrupt flag: used to distinguish CPU blocking (interruptible) from syscall blocking (non-interruptible) */
     cat_atomic_bool_t vm_interrupted;
     /* Pointer to EG(vm_interrupt), used to trigger PHP VM interrupt */
-    zend_atomic_bool *vm_interrupt_ptr;
+    swow_atomic_bool *vm_interrupt_ptr;
     /* Pointer to executor_globals for cross-thread reading of execution location from watchdog thread
      * Note: race condition exists, read info may be inaccurate but should not crash */
     zend_executor_globals *executor_globals;

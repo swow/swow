@@ -22,7 +22,7 @@ typedef struct swow_debug_sampler_s {
     uv_thread_t thread;
     uv_mutex_t mutex;
     uv_cond_t cond;
-    zend_atomic_bool *vm_interrupt;
+    swow_atomic_bool *vm_interrupt;
     uint64_t interval;
     uint64_t generation;
     bool armed;
@@ -51,7 +51,7 @@ static void swow_debug_sampler_loop(void *data)
         if (sampler->armed && !sampler->stopping && generation == sampler->generation) {
             /* Only the atomic flag crosses threads. PHP frames and handlers are
              * accessed by the executor after it acknowledges this request. */
-            zend_atomic_bool_store(sampler->vm_interrupt, true);
+            swow_atomic_bool_store(sampler->vm_interrupt, true);
             sampler->armed = false;
         }
     }
