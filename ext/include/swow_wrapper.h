@@ -146,6 +146,16 @@ static inline void zend_argument_must_not_be_empty_error(uint32_t arg_num)
 #else
 # define swow_ini_string_literal(name) zend_ini_string_literal(name)
 #endif
+
+/* php_error_docref1() and php_error_docref2() were removed in PHP 8.6. The
+ * replacement relies on the error_include_args INI setting for the arguments. */
+#if PHP_VERSION_ID < 80600
+# define swow_error_docref1(docref, param1, type, ...) php_error_docref1(docref, param1, type, __VA_ARGS__)
+# define swow_error_docref2(docref, param1, param2, type, ...) php_error_docref2(docref, param1, param2, type, __VA_ARGS__)
+#else
+# define swow_error_docref1(docref, param1, type, ...) php_error_docref(docref, type, __VA_ARGS__)
+# define swow_error_docref2(docref, param1, param2, type, ...) php_error_docref(docref, type, __VA_ARGS__)
+#endif
 /* }}} */
 
 /* PHP 8.7 compatibility {{{*/

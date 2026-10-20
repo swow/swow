@@ -2173,7 +2173,7 @@ static int swow_plain_files_unlink(php_stream_wrapper *wrapper, const char *url,
     ret = swow_virtual_unlink(url);
     if (ret == -1) {
         if (options & REPORT_ERRORS) {
-            php_error_docref1(NULL, url, E_WARNING, "%s",
+            swow_error_docref1(NULL, url, E_WARNING, "%s",
                 strerror(cat_orig_errno(cat_get_last_error_code())));
         }
         return 0;
@@ -2240,7 +2240,7 @@ static int swow_plain_files_rename(php_stream_wrapper *wrapper, const char *url_
                      * access to the file in the meantime.
                      */
                     if (swow_virtual_chown(url_to, sb.st_uid, sb.st_gid)) {
-                        php_error_docref2(NULL, url_from, url_to, E_WARNING, "%s", cat_get_last_error_message());
+                        swow_error_docref2(NULL, url_from, url_to, E_WARNING, "%s", cat_get_last_error_message());
                         if (errno != EPERM) {
                             success = 0;
                         }
@@ -2248,7 +2248,7 @@ static int swow_plain_files_rename(php_stream_wrapper *wrapper, const char *url_
 
                     if (success) {
                         if (swow_virtual_chmod(url_to, sb.st_mode)) {
-                            php_error_docref2(NULL, url_from, url_to, E_WARNING, "%s", cat_get_last_error_message());
+                            swow_error_docref2(NULL, url_from, url_to, E_WARNING, "%s", cat_get_last_error_message());
                             if (errno != EPERM) {
                                 success = 0;
                             }
@@ -2259,10 +2259,10 @@ static int swow_plain_files_rename(php_stream_wrapper *wrapper, const char *url_
                         swow_virtual_unlink(url_from);
                     }
                 } else {
-                    php_error_docref2(NULL, url_from, url_to, E_WARNING, "%s", cat_get_last_error_message());
+                    swow_error_docref2(NULL, url_from, url_to, E_WARNING, "%s", cat_get_last_error_message());
                 }
             } else {
-                php_error_docref2(NULL, url_from, url_to, E_WARNING, "%s", cat_get_last_error_message());
+                swow_error_docref2(NULL, url_from, url_to, E_WARNING, "%s", cat_get_last_error_message());
             }
 #  if !defined(ZTS) && !defined(TSRM_WIN32)
             umask(oldmask);
@@ -2275,9 +2275,9 @@ static int swow_plain_files_rename(php_stream_wrapper *wrapper, const char *url_
 #ifdef PHP_WIN32
         // should be php_win32_docref2_from_error(GetLastError(), url_from, url_to);
         // but {G,S}etLastError is not usable
-        php_error_docref2(NULL, url_from, url_to, E_WARNING, "%s (code: %d)", cat_get_last_error_message(), cat_orig_errno(cat_get_last_error_code()));
+        swow_error_docref2(NULL, url_from, url_to, E_WARNING, "%s (code: %d)", cat_get_last_error_message(), cat_orig_errno(cat_get_last_error_code()));
 #else
-        php_error_docref2(NULL, url_from, url_to, E_WARNING, "%s", cat_get_last_error_message());
+        swow_error_docref2(NULL, url_from, url_to, E_WARNING, "%s", cat_get_last_error_message());
 #endif
         return 0;
     }
@@ -2401,13 +2401,13 @@ static int swow_plain_files_rmdir(php_stream_wrapper *wrapper, const char *url, 
 
 #ifdef PHP_WIN32
     if (!swow_win32_check_trailing_space(url, strlen(url))) {
-        php_error_docref1(NULL, url, E_WARNING, "%s", strerror(ENOENT));
+        swow_error_docref1(NULL, url, E_WARNING, "%s", strerror(ENOENT));
         return 0;
     }
 #endif
 
     if (swow_virtual_rmdir(url) < 0) {
-        php_error_docref1(NULL, url, E_WARNING, "%s", cat_get_last_error_message());
+        swow_error_docref1(NULL, url, E_WARNING, "%s", cat_get_last_error_message());
         return 0;
     }
 
@@ -2429,7 +2429,7 @@ static int swow_plain_files_metadata(php_stream_wrapper *wrapper, const char *ur
 
 #ifdef PHP_WIN32
     if (!swow_win32_check_trailing_space(url, strlen(url))) {
-        php_error_docref1(NULL, url, E_WARNING, "%s", strerror(ENOENT));
+        swow_error_docref1(NULL, url, E_WARNING, "%s", strerror(ENOENT));
         return 0;
     }
 #endif
@@ -2448,7 +2448,7 @@ static int swow_plain_files_metadata(php_stream_wrapper *wrapper, const char *ur
             if (swow_virtual_access(url, F_OK) != 0) {
                 int fd = swow_virtual_open(url, O_TRUNC | O_CREAT);
                 if (fd < 0) {
-                    php_error_docref1(NULL, url, E_WARNING, "Unable to create file %s because %s", url, cat_get_last_error_message());
+                    swow_error_docref1(NULL, url, E_WARNING, "Unable to create file %s because %s", url, cat_get_last_error_message());
                     return 0;
                 }
                 cat_fs_close(fd);
@@ -2462,7 +2462,7 @@ static int swow_plain_files_metadata(php_stream_wrapper *wrapper, const char *ur
         case PHP_STREAM_META_OWNER:
             if(option == PHP_STREAM_META_OWNER_NAME) {
                 if(php_get_uid_by_name((char *)value, &uid) != SUCCESS) {
-                    php_error_docref1(NULL, url, E_WARNING, "Unable to find uid for %s", (char *)value);
+                    swow_error_docref1(NULL, url, E_WARNING, "Unable to find uid for %s", (char *)value);
                     return 0;
                 }
             } else {
@@ -2474,7 +2474,7 @@ static int swow_plain_files_metadata(php_stream_wrapper *wrapper, const char *ur
         case PHP_STREAM_META_GROUP_NAME:
             if(option == PHP_STREAM_META_GROUP_NAME) {
                 if(php_get_gid_by_name((char *)value, &gid) != SUCCESS) {
-                    php_error_docref1(NULL, url, E_WARNING, "Unable to find gid for %s", (char *)value);
+                    swow_error_docref1(NULL, url, E_WARNING, "Unable to find gid for %s", (char *)value);
                     return 0;
                 }
             } else {
@@ -2492,7 +2492,7 @@ static int swow_plain_files_metadata(php_stream_wrapper *wrapper, const char *ur
             return 0;
     }
     if (ret == -1) {
-        php_error_docref1(NULL, url, E_WARNING, "Operation failed: %s", cat_get_last_error_message());
+        swow_error_docref1(NULL, url, E_WARNING, "Operation failed: %s", cat_get_last_error_message());
         return 0;
     }
     php_clear_stat_cache(0, NULL, 0);
