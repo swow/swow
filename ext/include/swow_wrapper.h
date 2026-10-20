@@ -422,7 +422,18 @@ static zend_always_inline bool swow_parse_arg_long(zval *arg, zend_long *dest, b
 
 static zend_always_inline bool swow_parse_arg_str_weak(zval *arg, zend_string **dest, uint32_t arg_num) /* {{{ */
 {
+#if PHP_VERSION_ID < 80600
     return zend_parse_arg_str_weak(arg, dest _ARG_POS(arg_num));
+#else
+    zend_string *str = zend_parse_arg_str_weak(arg, arg_num);
+
+    if (str == NULL) {
+        return false;
+    }
+    *dest = str;
+
+    return true;
+#endif
 }
 
 static zend_always_inline bool swow_parse_arg_stringable(zval *arg, zend_string **dest, uint32_t arg_num)
