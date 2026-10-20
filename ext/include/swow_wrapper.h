@@ -401,7 +401,11 @@ static zend_always_inline void zend_array_release_gc(HashTable *ht)
 typedef zend_object *(*swow_object_create_t)(zend_class_entry *class_type);
 typedef zend_object_dtor_obj_t swow_object_dtor_t;
 typedef zend_object_free_obj_t swow_object_free_t;
+#if PHP_VERSION_ID < 80700
 typedef int (*swow_interface_gets_implemented_t)(zend_class_entry *iface, zend_class_entry *class_type);
+#else
+typedef void (*swow_interface_gets_implemented_t)(zend_class_entry *iface, zend_class_entry *class_type);
+#endif
 
 SWOW_API zend_class_entry *swow_register_internal_class(
     const char *name, zend_class_entry *parent_ce, const zend_function_entry methods[],
