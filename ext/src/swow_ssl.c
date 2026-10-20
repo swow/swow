@@ -685,7 +685,7 @@ typedef struct _php_openssl_certificate_object {
 static zend_class_entry *swow_php_openssl_certificate_ce = NULL;
 
 static inline php_openssl_certificate_object *php_openssl_certificate_from_obj(zend_object *obj) {
-    return (php_openssl_certificate_object *)((char *)(obj) - XtOffsetOf(php_openssl_certificate_object, std));
+    return (php_openssl_certificate_object *)((char *)(obj) - offsetof(php_openssl_certificate_object, std));
 }
 
 #define Z_OPENSSL_CERTIFICATE_P(zv) php_openssl_certificate_from_obj(Z_OBJ_P(zv))
@@ -851,12 +851,12 @@ zend_result swow_ssl_module_init(INIT_FUNC_ARGS)
 #if PHP_VERSION_ID < 80300
     if (
         swow_php_openssl_certificate_ce->properties_info_table == NULL ||
-        swow_php_openssl_certificate_ce->properties_info_table[0]->offset != XtOffsetOf(php_openssl_certificate_object, std)
+        swow_php_openssl_certificate_ce->properties_info_table[0]->offset != offsetof(php_openssl_certificate_object, std)
     )
 #else
     if (
         swow_php_openssl_certificate_ce->default_object_handlers == NULL ||
-        swow_php_openssl_certificate_ce->default_object_handlers->offset != XtOffsetOf(php_openssl_certificate_object, std)
+        swow_php_openssl_certificate_ce->default_object_handlers->offset != offsetof(php_openssl_certificate_object, std)
     )
 #endif
     {

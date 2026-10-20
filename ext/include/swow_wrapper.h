@@ -50,6 +50,12 @@ extern "C" {
 void swow_wrapper_init(void);
 void swow_wrapper_shutdown(void);
 
+/* XtOffsetOf is deprecated and removed in PHP 8.6, use offsetof instead. Some
+ * old systems may not provide the macro. */
+#ifndef offsetof
+# define offsetof(s_type, field) ((size_t) &((s_type *) 0)->field)
+#endif
+
 /* PHP 8.1 compatibility {{{*/
 #if PHP_VERSION_ID < 80100
 #define ZEND_FALLTHROUGH CAT_FALLTHROUGH

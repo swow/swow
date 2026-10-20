@@ -357,7 +357,7 @@ zend_result swow_process_module_init(INIT_FUNC_ARGS)
         &swow_fork_process_handlers, NULL,
         cat_false, cat_false,
         swow_fork_process_create_object, NULL,
-        XtOffsetOf(swow_fork_process_t, std)
+        offsetof(swow_fork_process_t, std)
     );
     zend_class_implements(swow_fork_process_ce, 1, swow_process_interface_ce);
 
@@ -367,7 +367,7 @@ zend_result swow_process_module_init(INIT_FUNC_ARGS)
         &swow_process_exit_status_handlers, NULL,
         cat_false, cat_false,
         swow_process_exit_status_create_object, NULL,
-        XtOffsetOf(swow_process_exit_status_t, std)
+        offsetof(swow_process_exit_status_t, std)
     );
 
     /* ProcessException */

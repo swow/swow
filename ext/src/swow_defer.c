@@ -171,7 +171,7 @@ zend_result swow_defer_module_init(INIT_FUNC_ARGS)
         &swow_defer_handlers, NULL,
         cat_false, cat_false,
         swow_defer_create_object, NULL,
-        XtOffsetOf(swow_defer_t, std)
+        offsetof(swow_defer_t, std)
     );
     swow_defer_ce->ce_flags |= ZEND_ACC_FINAL;
     /* we do not need get_gc because we never expose defer object to user */

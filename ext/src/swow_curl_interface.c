@@ -387,7 +387,7 @@ zend_result swow_curl_interface_module_init(INIT_FUNC_ARGS)
 #endif
 
     memcpy(&swow_curl_object_handlers, &std_object_handlers, sizeof(zend_object_handlers));
-    swow_curl_object_handlers.offset = XtOffsetOf(php_curl, std);
+    swow_curl_object_handlers.offset = offsetof(php_curl, std);
     swow_curl_object_handlers.free_obj = curl_free_obj;
     swow_curl_object_handlers.get_gc = curl_get_gc;
     swow_curl_object_handlers.get_constructor = curl_get_constructor;

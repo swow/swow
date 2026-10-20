@@ -2759,7 +2759,7 @@ zend_result swow_coroutine_module_init(INIT_FUNC_ARGS)
         cat_false, cat_false,
         swow_coroutine_create_object,
         swow_coroutine_free_object,
-        XtOffsetOf(swow_coroutine_t, std)
+        offsetof(swow_coroutine_t, std)
     );
     swow_coroutine_handlers.get_gc = swow_coroutine_get_gc;
     swow_coroutine_handlers.dtor_obj = swow_coroutine_dtor_object;

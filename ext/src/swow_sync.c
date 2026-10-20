@@ -234,14 +234,14 @@ zend_result swow_sync_module_init(INIT_FUNC_ARGS)
         &swow_sync_wait_reference_handlers, NULL,
         cat_false, cat_false,
         swow_sync_wait_reference_create_object, NULL,
-        XtOffsetOf(swow_sync_wait_reference_t, std)
+        offsetof(swow_sync_wait_reference_t, std)
     );
     swow_sync_wait_group_ce = swow_register_internal_class(
         "Swow\\Sync\\WaitGroup", NULL, swow_sync_wait_group_methods,
         &swow_sync_wait_group_handlers, NULL,
         cat_false, cat_false,
         swow_sync_wait_group_create_object, NULL,
-        XtOffsetOf(swow_sync_wait_group_t, std)
+        offsetof(swow_sync_wait_group_t, std)
     );
 
     swow_sync_exception_ce = swow_register_internal_class(

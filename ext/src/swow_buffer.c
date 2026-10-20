@@ -1077,7 +1077,7 @@ zend_result swow_buffer_module_init(INIT_FUNC_ARGS)
         cat_true, cat_true,
         swow_buffer_create_object,
         swow_buffer_free_object,
-        XtOffsetOf(swow_buffer_t, std)
+        offsetof(swow_buffer_t, std)
     );
     swow_buffer_handlers.clone_obj = swow_buffer_clone_object;
     swow_buffer_handlers.cast_object = swow_buffer_cast_object;

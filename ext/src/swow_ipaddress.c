@@ -664,7 +664,7 @@ zend_result swow_ipaddress_init(INIT_FUNC_ARGS)
         &swow_ipaddress_handlers, NULL,
         true, false,
         swow_ipaddress_create_object, NULL,
-        XtOffsetOf(swow_ipaddress_t, std)
+        offsetof(swow_ipaddress_t, std)
     );
     zend_declare_class_constant_long(swow_ipaddress_ce, ZEND_STRL("IPV4"), IPV6_FLAG_IPV4_COMPAT);
     zend_declare_class_constant_long(swow_ipaddress_ce, ZEND_STRL("HAS_PORT"), IPV6_FLAG_HAS_PORT);
