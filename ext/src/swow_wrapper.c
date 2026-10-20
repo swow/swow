@@ -83,6 +83,7 @@ const char *zend_zval_value_name(const zval *arg)
 static zend_never_inline zend_long ZEND_FASTCALL zendi_try_get_long(const zval *op, zend_bool *failed) /* {{{ */
 {
     *failed = 0;
+try_again:
     switch (Z_TYPE_P(op)) {
         case IS_NULL:
         case IS_FALSE:
@@ -137,6 +138,13 @@ static zend_never_inline zend_long ZEND_FASTCALL zendi_try_get_long(const zval *
         case IS_ARRAY:
             *failed = 1;
             return 0;
+        case IS_REFERENCE:
+            op = Z_REFVAL_P(op);
+            if (Z_TYPE_P(op) == IS_LONG) {
+                return Z_LVAL_P(op);
+            } else {
+                goto try_again;
+            }
         EMPTY_SWITCH_DEFAULT_CASE()
     }
 }

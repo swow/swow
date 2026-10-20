@@ -14,7 +14,7 @@
    +----------------------------------------------------------------------+
 */
 
-// from ext/curl/multi.c @ 89be689f778430f93bac04d75248b5b6fc593571
+// from ext/curl/multi.c @ 595abc18eeb80fd3301aff929260dc0b0d47b26a
 
 // @see: https://github.com/php/php-src/pull/13347
 #if !defined(__cplusplus) && !defined(_MSC_VER) && defined(HAVE_WTYPEDEF_REDEFINITION)
@@ -57,9 +57,7 @@
 
 zend_class_entry *swow_curl_multi_ce;
 
-static inline php_curlm *curl_multi_from_obj(zend_object *obj) {
-    return (php_curlm *)((char *)(obj) - offsetof(php_curlm, std));
-}
+#define curl_multi_from_obj(obj) ZEND_CONTAINER_OF(obj, php_curlm, std)
 
 #define Z_CURL_MULTI_P(zv) curl_multi_from_obj(Z_OBJ_P(zv))
 
@@ -274,7 +272,17 @@ PHP_FUNCTION(swow_curl_multi_exec)
         }
     }
 
-    still_running = zval_get_long(z_still_running);
+    /* The argument is passed by reference, but zval_try_get_long() only
+     * handles IS_REFERENCE since PHP 8.4, so read through a dereferenced copy
+     * and keep the original reference for the assignment below */
+    zval *z_still_running_value = z_still_running;
+    ZVAL_DEREF(z_still_running_value);
+    bool failed;
+    still_running = zval_try_get_long(z_still_running_value, &failed);
+    if (UNEXPECTED(failed)) {
+        zend_argument_type_error(2, "must be of type int, %s given", zend_zval_value_name(z_still_running));
+        RETURN_THROWS();
+    }
     error = cat_curl_multi_perform(mh->multi, &still_running);
     ZEND_TRY_ASSIGN_REF_LONG(z_still_running, still_running);
 
@@ -463,7 +471,7 @@ static int _php_server_push_callback(CURL *parent_ch, CURL *easy, size_t num_hea
 }
 /* }}} */
 
-static bool _php_curl_multi_setopt(php_curlm *mh, zend_long option, zval *zvalue, zval *return_value) /* {{{ */
+static bool _php_curl_multi_setopt(php_curlm *mh, zend_long option, zval *zvalue) /* {{{ */
 {
     CURLMcode error = CURLM_OK;
 
@@ -541,7 +549,7 @@ PHP_FUNCTION(swow_curl_multi_setopt)
 
     mh = Z_CURL_MULTI_P(z_mh);
 
-    RETURN_BOOL(_php_curl_multi_setopt(mh, options, zvalue, return_value));
+    RETURN_BOOL(_php_curl_multi_setopt(mh, options, zvalue));
 }
 /* }}} */
 
