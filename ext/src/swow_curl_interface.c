@@ -1601,7 +1601,7 @@ out_mime:
 /* {{{ Copy a cURL handle along with all of it's preferences */
 PHP_FUNCTION(swow_curl_copy_handle)
 {
-    zval		*zid;
+    zval        *zid;
 
     ZEND_PARSE_PARAMETERS_START(1,1)
         Z_PARAM_OBJECT_OF_CLASS(zid, swow_curl_ce)
