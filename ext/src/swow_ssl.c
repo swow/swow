@@ -301,21 +301,19 @@ _cleanup:
 #ifndef OPENSSL_NO_TLSEXT
 
 // TODO: implement this (open_basedir limitation)
-// // from ext/openssl/openssl.c @ 040ea4ab5f9e2390ead553104a3a569768c678a5
+// // from ext/openssl/openssl.c @ eb4bd0b79672438f80c75b78006c3a8101a5fa19
 
 // /* openssl file path check error function */
 // static void swow_php_openssl_check_path_error(uint32_t arg_num, int type, const char *format, ...)
 // {
 //     va_list va;
-//     const char *arg_name;
 
 //     va_start(va, format);
 
 //     if (type == E_ERROR) {
-//         zend_argument_error_variadic(zend_ce_value_error, arg_num, format, va);
+//         zend_argument_error_variadic(zend_ce_value_error, zend_active_function(), arg_num, format, va);
 //     } else {
-//         arg_name = get_active_function_arg_name(arg_num);
-//         php_verror(NULL, arg_name, type, format, va);
+//         php_verror(NULL, type, format, va);
 //     }
 //     va_end(va);
 // }
@@ -323,7 +321,8 @@ _cleanup:
 // /* openssl file path check extended */
 // static bool swow_php_openssl_check_path_ex(
 //         const char *file_path, size_t file_path_len, char *real_path, uint32_t arg_num,
-//         bool contains_file_protocol, bool is_from_array, const char *option_name)
+//         bool contains_file_protocol, bool is_from_array, const char *option_name,
+//         php_stream *stream)
 // {
 //     const char *fs_file_path;
 //     size_t fs_file_path_len;
@@ -358,8 +357,13 @@ _cleanup:
 //         if (arg_num == 0) {
 //             const char *option_title = option_name ? option_name : "unknown";
 //             const char *option_label = is_from_array ? "array item" : "option";
-//             php_error_docref(NULL, E_WARNING, "Path for %s %s %s",
-//                     option_title, option_label, error_msg);
+//             if (stream != NULL) {
+//                 php_stream_warn(stream, InvalidPath, "Path for %s %s %s",
+//                         option_title, option_label, error_msg);
+//             } else {
+//                 php_error_docref(NULL, E_WARNING, "Path for %s %s %s",
+//                         option_title, option_label, error_msg);
+//             }
 //         } else if (is_from_array && option_name != NULL) {
 //             swow_php_openssl_check_path_error(
 //                     arg_num, error_type, "option %s array item %s", option_name, error_msg);
@@ -378,16 +382,17 @@ _cleanup:
 //     return false;
 // }
 
-// // from ext/openssl/php_openssl.h @ d0c0a9abfdc3d60f8e442e1ed4e13b200abd03de
+// // from ext/openssl/php_openssl.h @ 6aca6e30bb4ecf062d3d863de254b8b1d0914a8f
 
 // /* openssl file path extra check with zend string */
 // static inline bool swow_php_openssl_check_path_str_ex(
 //     zend_string *file_path, char *real_path, uint32_t arg_num,
-//     bool contains_file_protocol, bool is_from_array, const char *option_name)
+//     bool contains_file_protocol, bool is_from_array, const char *option_name,
+//     struct _php_stream *stream)
 // {
 //     return swow_php_openssl_check_path_ex(
 //         ZSTR_VAL(file_path), ZSTR_LEN(file_path), real_path, arg_num, contains_file_protocol,
-//         is_from_array, option_name);
+//         is_from_array, option_name, stream);
 // }
 
 static void swow_ssl_server_sni_data_destructor(zval *zcontext) {
@@ -676,7 +681,7 @@ cat_bool_t swow_ssl_before_handshake_callback(cat_ssl_t* ssl, void * data) {
 
 # endif // OPENSSL_NO_TLSEXT
 
-// from ext/openssl/php_openssl.h @ d0c0a9abfdc3d60f8e442e1ed4e13b200abd03de
+// from ext/openssl/php_openssl.h @ 6aca6e30bb4ecf062d3d863de254b8b1d0914a8f
 typedef struct _php_openssl_certificate_object {
     X509 *x509;
     zend_object std;
@@ -684,9 +689,7 @@ typedef struct _php_openssl_certificate_object {
 
 static zend_class_entry *swow_php_openssl_certificate_ce = NULL;
 
-static inline php_openssl_certificate_object *php_openssl_certificate_from_obj(zend_object *obj) {
-    return (php_openssl_certificate_object *)((char *)(obj) - offsetof(php_openssl_certificate_object, std));
-}
+#define php_openssl_certificate_from_obj(obj) ZEND_CONTAINER_OF(obj, php_openssl_certificate_object, std)
 
 #define Z_OPENSSL_CERTIFICATE_P(zv) php_openssl_certificate_from_obj(Z_OBJ_P(zv))
 
