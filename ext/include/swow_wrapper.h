@@ -174,6 +174,10 @@ static inline void zend_argument_must_not_be_empty_error(uint32_t arg_num)
 # define swow_stream_xport_register(protocol, factory) \
     (php_stream_xport_register(protocol, factory), SUCCESS)
 #endif
+
+#ifndef ZEND_CONTAINER_OF
+# define ZEND_CONTAINER_OF(ptr, type, member) ((type *)((char *)(ptr) - offsetof(type, member)))
+#endif
 /* }}} */
 
 /* PHP 8.7 compatibility {{{*/
