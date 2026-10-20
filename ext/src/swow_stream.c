@@ -293,6 +293,10 @@ SWOW_API php_stream *swow_stream_socket_factory(
 #ifdef CAT_SSL
     swow_sock->ssl.url_name = swow_stream_ssl_get_url_name(resourcename, resourcenamelen, persistent_id != NULL);
 #endif
+    if (persistent_id != NULL) {
+        swow_sock->persistent = true;
+        cat_queue_push_back(&SWOW_STREAM_G(persistent_streams), &swow_sock->node);
+    }
 
     return stream;
 
@@ -1474,6 +1478,11 @@ static int swow_stream_close(php_stream *stream, int close_handle)
 
     if (!swow_sock) {
         return 0;
+    }
+
+    if (swow_sock->persistent) {
+        swow_sock->persistent = false;
+        cat_queue_remove(&swow_sock->node);
     }
 
     if (close_handle) {
@@ -2769,6 +2778,7 @@ zend_result swow_stream_module_init(INIT_FUNC_ARGS)
 #endif
 
     CAT_GLOBALS_REGISTER(swow_stream);
+    cat_queue_init(&SWOW_STREAM_G(persistent_streams));
 
     REGISTER_LONG_CONSTANT("STREAM_POLLNONE", POLLNONE, CONST_PERSISTENT);
     REGISTER_LONG_CONSTANT("STREAM_POLLIN", POLLIN, CONST_PERSISTENT);
@@ -2853,6 +2863,7 @@ zend_result swow_stream_runtime_init(INIT_FUNC_ARGS)
     SWOW_STREAM_G(hooking_plain_wrapper) = SWOW_G(ini.async_file);
     // prepare tty sockets (FIXME: Why won't Zend bzero() it when we are in ZTS?)
     memset(SWOW_STREAM_G(tty_sockets), 0, sizeof(SWOW_STREAM_G(tty_sockets)));
+    cat_queue_init(&SWOW_STREAM_G(persistent_streams));
 
     if (socket_ce == (zend_class_entry *) -1) {
         socket_ce = (zend_class_entry *) zend_hash_str_find_ptr(CG(class_table), ZEND_STRL("socket"));
@@ -2870,6 +2881,21 @@ zend_result swow_stream_runtime_init(INIT_FUNC_ARGS)
 
 zend_result swow_stream_runtime_shutdown(INIT_FUNC_ARGS)
 {
+    /* PHP releases persistent streams at module shutdown, which is after the request
+     * bound event loop is gone, close their sockets here while the loop is still
+     * available, otherwise the loop close will fail and they will be closed on a
+     * destroyed loop later */
+    cat_queue_t *persistent_streams = &SWOW_STREAM_G(persistent_streams);
+    swow_netstream_data_t *swow_sock;
+    while ((swow_sock = cat_queue_front_data(persistent_streams, swow_netstream_data_t, node)) != NULL) {
+        cat_queue_remove(&swow_sock->node);
+        swow_sock->persistent = false;
+        if (cat_socket_is_available(&swow_sock->socket)) {
+            cat_socket_close(&swow_sock->socket);
+        }
+        swow_sock->sock.socket = SOCK_ERR;
+    }
+
     for (size_t i = 0; i < CAT_ARRAY_SIZE(SWOW_STREAM_G(tty_sockets)); i++) {
         cat_socket_t *socket = SWOW_STREAM_G(tty_sockets)[i];
         if (socket != NULL && socket != INVALID_TTY_SOCKET) {

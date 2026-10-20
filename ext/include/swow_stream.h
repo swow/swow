@@ -80,6 +80,9 @@ typedef struct swow_netstream_ssl_s {
 typedef struct swow_netstream_data_s {
     php_netstream_data_t sock;
     cat_socket_t socket;
+    /* links the persistent stream into SWOW_STREAM_G(persistent_streams) */
+    cat_queue_node_t node;
+    bool persistent;
 #ifdef CAT_SSL
     swow_netstream_ssl_t ssl;
 #endif
@@ -95,6 +98,7 @@ CAT_GLOBALS_STRUCT_BEGIN(swow_stream) {
     bool hooking_tty;
     bool hooking_plain_wrapper;
     cat_socket_t *tty_sockets[3];
+    cat_queue_t persistent_streams;
 } CAT_GLOBALS_STRUCT_END(swow_stream);
 
 extern CAT_GLOBALS_DECLARE(swow_stream);
