@@ -37,7 +37,7 @@
 #include "cat_time.h"
 #include "cat_socket.h"
 
-// from main/streams/plain_wrapper.c @ ff7e1e71059d61398b7d21ac4f2c9101cff777d8
+// from main/streams/plain_wrapper.c @ 8330ca37edb41b5f34a0934c99e70e2d2a6ead71
 
 #include "php.h"
 #include "php_globals.h"
@@ -66,7 +66,49 @@
 #ifdef HAVE_SYS_MMAN_H
 # include <sys/mman.h>
 #endif
+#if PHP_VERSION_ID >= 80600
+# include "php_io.h"
+#endif
 #include "SAPI.h"
+
+/*
+ * PHP 8.6 replaced the docref based stream errors with the stream error API
+ * and removed the win32 docref helpers. Map the calls below to the old
+ * reporting functions on earlier versions
+ */
+#if PHP_VERSION_ID >= 80600
+typedef zend_enum_StreamErrorCode swow_stream_error_code;
+# define SWOW_STREAM_EC(name) PHP_STREAM_EC(name)
+# define swow_stream_notice(stream, code, ...) \
+    php_stream_notice(stream, code, __VA_ARGS__)
+# define swow_stream_wrapper_warn(wrapper, context, options, code, ...) \
+    php_stream_wrapper_warn(wrapper, context, options, code, __VA_ARGS__)
+# define swow_stream_wrapper_warn_nt(wrapper, context, options, code, ...) \
+    php_stream_wrapper_warn_nt(wrapper, context, options, code, __VA_ARGS__)
+# define swow_stream_wrapper_error(wrapper, context, docref, options, severity, terminating, code, ...) \
+    php_stream_wrapper_error(wrapper, context, docref, options, severity, terminating, code, __VA_ARGS__)
+# define swow_stream_wrapper_log_warn(wrapper, context, options, code, ...) \
+    php_stream_wrapper_log_warn(wrapper, context, options, code, __VA_ARGS__)
+#else
+typedef int swow_stream_error_code;
+# define SWOW_STREAM_EC(name) 0
+# define swow_stream_notice(stream, code, ...) \
+    php_error_docref(NULL, E_NOTICE, __VA_ARGS__)
+# define swow_stream_wrapper_warn(wrapper, context, options, code, ...) do { \
+    if ((options) & REPORT_ERRORS) { \
+        php_error_docref(NULL, E_WARNING, __VA_ARGS__); \
+    } \
+} while (0)
+# define swow_stream_wrapper_warn_nt(wrapper, context, options, code, ...) \
+    swow_stream_wrapper_warn(wrapper, context, options, code, __VA_ARGS__)
+# define swow_stream_wrapper_error(wrapper, context, docref, options, severity, terminating, code, ...) do { \
+    if ((options) & REPORT_ERRORS) { \
+        php_error_docref(NULL, severity, __VA_ARGS__); \
+    } \
+} while (0)
+# define swow_stream_wrapper_log_warn(wrapper, context, options, code, ...) \
+    swow_stream_wrapper_log_error(wrapper, options, __VA_ARGS__)
+#endif
 
 // update errno from cat err code
 #define UPDATE_ERRNO_FROM_CAT() do { \
@@ -310,7 +352,7 @@ static inline int swow_fs_stat_mock(const char *path, zend_stat_t *statbuf, int 
 }
 #undef COPY_MEMBER
 
-// from win32/winutil.c @ 107bd080a5b02ad929e781c3e42bd8aa0ac79f9e
+// from win32/winutil.c @ bd07d1b71a7f275e547fc42d2958150f80201aae
 #ifdef PHP_WIN32
 static int swow_win32_check_trailing_space(const char *path, const size_t path_len)
 {
@@ -329,7 +371,7 @@ static int swow_win32_check_trailing_space(const char *path, const size_t path_l
 }
 #endif
 
-// from main/streams/cast.c @ 051414bec6bdc43b8345e317b680d2d063b28067
+// from main/streams/cast.c @ 8330ca37edb41b5f34a0934c99e70e2d2a6ead71
 static void swow_stream_mode_sanitize_fdopen_fopencookie(php_stream *stream, char *result)
 {
     /* replace modes not supported by fdopen and fopencookie, but supported
@@ -823,6 +865,21 @@ typedef struct {
 } swow_stdio_stream_data;
 #define SWOW_STDIOP_FD(data)    ((data)->file ? fileno((data)->file) : (data)->fd)
 
+#ifdef PHP_WIN32
+static ZEND_COLD void swow_win32_stream_wrapper_warn_error(
+    php_stream_wrapper *wrapper,
+    php_stream_context *context,
+    int options,
+    swow_stream_error_code code,
+    DWORD error
+) {
+    char *buf = php_win32_error_to_msg(error);
+    swow_stream_wrapper_error(wrapper, context, NULL, options, E_WARNING, true, code,
+        "%s (code: %lu)", buf, error);
+    php_win32_error_msg_free(buf);
+}
+#endif
+
 static int do_fstat(swow_stdio_stream_data *d, int force)
 {
     if (!d->cached_fstat || (force && !d->no_forced_fstat)) {
@@ -874,7 +931,7 @@ static php_stream *_swow_stream_fopen_from_file_int(FILE *file, const char *mode
     return php_stream_alloc_rel(&php_stream_stdio_ops, self, 0, mode);
 }
 
-// from main/php_open_temporary_file.c @ 1c74a1a8892484c3baae35106e2f2e2f7bf2b36d
+// from main/php_open_temporary_file.c @ 5c4bff65781a6dfc12b7a46860becda7470244f3
 static const char base32alphabet[] = "0123456789abcdefghijklmnopqrstuv";
 
 static int swow_do_open_temporary_file(const char *path, const char *pfx, zend_string **opened_path_p)
@@ -1219,7 +1276,9 @@ static ssize_t swow_stdiop_fs_write(php_stream *stream, const char *buf, size_t 
                 return bytes_written;
             }
             if (!(stream->flags & PHP_STREAM_FLAG_SUPPRESS_ERRORS)) {
-                php_error_docref(NULL, E_NOTICE, "Write of %zu bytes failed with errno=%d %s", count, errno, cat_get_last_error_message());
+                swow_stream_notice(stream, WriteFailed,
+                    "Write of %zu bytes failed with errno=%d %s",
+                    count, errno, cat_get_last_error_message());
             }
         }
         return (ssize_t) bytes_written;
@@ -1296,7 +1355,9 @@ static ssize_t swow_stdiop_fs_read(php_stream *stream, char *buf, size_t count)
                 /* TODO: Should this be treated as a proper error or not? */
             } else {
                 if (!(stream->flags & PHP_STREAM_FLAG_SUPPRESS_ERRORS)) {
-                    php_error_docref(NULL, E_NOTICE, "Read of %zu bytes failed with errno=%d %s", count, errno, cat_get_last_error_message());
+                    swow_stream_notice(stream, ReadFailed,
+                        "Read of %zu bytes failed with errno=%d %s",
+                        count, errno, cat_get_last_error_message());
                 }
 
                 /* TODO: Remove this special-case? */
@@ -1441,7 +1502,8 @@ static int swow_stdiop_fs_seek(php_stream *stream, zend_off_t offset, int whence
     assert(data != NULL);
 
     if (!data->is_seekable) {
-        php_error_docref(NULL, E_WARNING, "Cannot seek on this stream");
+        swow_stream_wrapper_warn(NULL, PHP_STREAM_CONTEXT(stream), REPORT_ERRORS,
+            SeekNotSupported, "Cannot seek on this stream");
         return -1;
     }
 
@@ -1494,6 +1556,9 @@ static int swow_stdiop_fs_cast(php_stream *stream, int castas, void **ret)
             return SUCCESS;
 
         case PHP_STREAM_AS_FD_FOR_SELECT:
+#ifdef PHP_STREAM_AS_FD_FOR_POLL
+        case PHP_STREAM_AS_FD_FOR_POLL:
+#endif
             fd = SWOW_STDIOP_FD(data);
             if (SOCK_ERR == fd) {
                 return FAILURE;
@@ -1516,6 +1581,28 @@ static int swow_stdiop_fs_cast(php_stream *stream, int castas, void **ret)
                 *(php_socket_t *)ret = fd;
             }
             return SUCCESS;
+
+#ifdef PHP_STREAM_AS_FD_FOR_COPY
+        case PHP_STREAM_AS_FD_FOR_COPY:
+            /* stdio may read ahead, so use the buffered fallback for FILE* streams */
+            if (data->file) {
+                return FAILURE;
+            }
+            fd = SWOW_STDIOP_FD(data);
+            if (SOCK_ERR == fd) {
+                return FAILURE;
+            }
+            if (ret) {
+                php_io_fd *copy_fd = (php_io_fd *) ret;
+                copy_fd->fd = fd;
+                copy_fd->fd_type = data->is_pipe ? PHP_IO_FD_PIPE : PHP_IO_FD_FILE;
+                copy_fd->timeout.tv_sec = 0;
+                copy_fd->timeout.tv_usec = 0;
+                copy_fd->is_blocked = 0;
+            }
+            return SUCCESS;
+#endif
+
         default:
             return FAILURE;
     }
@@ -1924,38 +2011,6 @@ static const php_stream_ops swow_plain_files_dirstream_ops_async = {
     NULL  /* set_option */
 };
 
-#if defined(PHP_WIN32)
-# if PHP_VERSION_ID < 80100
-// using shim
-static ZEND_COLD void swow_php_win32_docref1_from_error(DWORD error, const char *param1) {
-    static void (*orig)(DWORD, const char *) = swow_php_win32_docref1_from_error;
-    while (swow_php_win32_docref1_from_error == orig) {
-        orig = NULL;
-        DWORD le = GetLastError();
-        HMODULE hModule = GetModuleHandleA("php" CAT_TO_STR(PHP_MAJOR_VERSION)
-#  ifdef ZTS
-        "ts"
-#  endif // ZTS
-#  if ZEND_DEBUG
-        "_debug"
-#  endif // ZEND_DEBUG
-        );
-        ZEND_ASSERT(hModule);
-        orig = (void (*)(DWORD, const char *))GetProcAddress(hModule, "php_win32_docref1_from_error");
-        SetLastError(le);
-    }
-    if(orig) {
-        orig(error, param1);
-    }else{
-        php_win32_docref2_from_error(error, param1, param1);
-    }
-}
-# else
-// native docref1
-#  define swow_php_win32_docref1_from_error(le, arg) php_win32_docref1_from_error(le, arg);
-# endif
-#endif
-
 static php_stream *swow_plain_files_dir_opener(php_stream_wrapper *wrapper, const char *path, const char *mode,
     int options, zend_string **opened_path, php_stream_context *context STREAMS_DC)
 {
@@ -1975,7 +2030,8 @@ static php_stream *swow_plain_files_dir_opener(php_stream_wrapper *wrapper, cons
     cat_dir_t * dir = swow_virtual_opendir(path);
 #ifdef PHP_WIN32
     if (!dir) {
-        swow_php_win32_docref1_from_error(GetLastError(), path);
+        swow_win32_stream_wrapper_warn_error(wrapper, context, options,
+            SWOW_STREAM_EC(OpenFailed), GetLastError());
     }
 #endif // PHP_WIN32
     if (dir) {
@@ -2023,7 +2079,8 @@ SWOW_API  php_stream *_swow_stream_fopen(const char *filename, const char *mode,
     char *persistent_id = NULL;
 
     if (FAILURE == php_stream_parse_fopen_modes(mode, &open_flags)) {
-        swow_stream_wrapper_log_error(&php_plain_files_wrapper, options, "`%s' is not a valid mode for fopen", mode);
+        swow_stream_wrapper_log_warn(&php_plain_files_wrapper, NULL, options,
+            InvalidMode, "`%s' is not a valid mode for fopen", mode);
         return NULL;
     }
 
@@ -2173,7 +2230,8 @@ static int swow_plain_files_unlink(php_stream_wrapper *wrapper, const char *url,
     ret = swow_virtual_unlink(url);
     if (ret == -1) {
         if (options & REPORT_ERRORS) {
-            swow_error_docref1(NULL, url, E_WARNING, "%s",
+            swow_stream_wrapper_warn(wrapper, context, options,
+                UnlinkFailed, "%s: %s", url,
                 strerror(cat_orig_errno(cat_get_last_error_code())));
         }
         return 0;
@@ -2193,13 +2251,20 @@ static int swow_plain_files_rename(php_stream_wrapper *wrapper, const char *url_
         return 0;
     }
 
+#if PHP_VERSION_ID < 80600
+    /* PHP < 8.6 calls the rename op without REPORT_ERRORS */
+    options |= REPORT_ERRORS;
+#endif
+
 #ifdef PHP_WIN32
     if (!swow_win32_check_trailing_space(url_from, strlen(url_from))) {
-        php_win32_docref2_from_error(ERROR_INVALID_NAME, url_from, url_to);
+        swow_win32_stream_wrapper_warn_error(wrapper, context, options,
+            SWOW_STREAM_EC(InvalidPath), ERROR_INVALID_NAME);
         return 0;
     }
     if (!swow_win32_check_trailing_space(url_to, strlen(url_to))) {
-        php_win32_docref2_from_error(ERROR_INVALID_NAME, url_from, url_to);
+        swow_win32_stream_wrapper_warn_error(wrapper, context, options,
+            SWOW_STREAM_EC(InvalidPath), ERROR_INVALID_NAME);
         return 0;
     }
 #endif
@@ -2240,18 +2305,22 @@ static int swow_plain_files_rename(php_stream_wrapper *wrapper, const char *url_
                      * access to the file in the meantime.
                      */
                     if (swow_virtual_chown(url_to, sb.st_uid, sb.st_gid)) {
-                        swow_error_docref2(NULL, url_from, url_to, E_WARNING, "%s", cat_get_last_error_message());
                         if (errno != EPERM) {
                             success = 0;
                         }
+                        swow_stream_wrapper_error(wrapper, context, NULL, options, E_WARNING,
+                            !success, SWOW_STREAM_EC(ChownFailed),
+                            "%s", cat_get_last_error_message());
                     }
 
                     if (success) {
                         if (swow_virtual_chmod(url_to, sb.st_mode)) {
-                            swow_error_docref2(NULL, url_from, url_to, E_WARNING, "%s", cat_get_last_error_message());
                             if (errno != EPERM) {
                                 success = 0;
                             }
+                            swow_stream_wrapper_error(wrapper, context, NULL, options, E_WARNING,
+                                !success, SWOW_STREAM_EC(ChownFailed),
+                                "%s", cat_get_last_error_message());
                         }
                     }
 #  endif
@@ -2259,10 +2328,12 @@ static int swow_plain_files_rename(php_stream_wrapper *wrapper, const char *url_
                         swow_virtual_unlink(url_from);
                     }
                 } else {
-                    swow_error_docref2(NULL, url_from, url_to, E_WARNING, "%s", cat_get_last_error_message());
+                    swow_stream_wrapper_warn_nt(wrapper, context, options,
+                        StatFailed, "%s", cat_get_last_error_message());
                 }
             } else {
-                swow_error_docref2(NULL, url_from, url_to, E_WARNING, "%s", cat_get_last_error_message());
+                swow_stream_wrapper_warn_nt(wrapper, context, options,
+                    CopyFailed, "%s", cat_get_last_error_message());
             }
 #  if !defined(ZTS) && !defined(TSRM_WIN32)
             umask(oldmask);
@@ -2273,11 +2344,14 @@ static int swow_plain_files_rename(php_stream_wrapper *wrapper, const char *url_
 #endif
 
 #ifdef PHP_WIN32
-        // should be php_win32_docref2_from_error(GetLastError(), url_from, url_to);
+        // should be swow_win32_stream_wrapper_warn_error(wrapper, context, options,
+        //     SWOW_STREAM_EC(RenameFailed), GetLastError());
         // but {G,S}etLastError is not usable
-        swow_error_docref2(NULL, url_from, url_to, E_WARNING, "%s (code: %d)", cat_get_last_error_message(), cat_orig_errno(cat_get_last_error_code()));
+        swow_stream_wrapper_warn(wrapper, context, options, RenameFailed,
+            "%s: %s (code: %d)", url_from, cat_get_last_error_message(), cat_orig_errno(cat_get_last_error_code()));
 #else
-        swow_error_docref2(NULL, url_from, url_to, E_WARNING, "%s", cat_get_last_error_message());
+        swow_stream_wrapper_warn(wrapper, context, options, RenameFailed,
+            "%s: %s", url_from, cat_get_last_error_message());
 #endif
         return 0;
     }
@@ -2300,8 +2374,9 @@ static int swow_plain_files_mkdir(php_stream_wrapper *wrapper, const char *dir, 
         }
 
         int ret = swow_virtual_mkdir(dir, (mode_t)mode);
-        if (ret < 0 && (options & REPORT_ERRORS)) {
-            php_error_docref(NULL, E_WARNING, "%s", strerror(errno));
+        if (ret < 0) {
+            swow_stream_wrapper_warn(wrapper, context, options,
+                MkdirFailed, "%s", strerror(errno));
             return 0;
         }
         return 1;
@@ -2309,7 +2384,8 @@ static int swow_plain_files_mkdir(php_stream_wrapper *wrapper, const char *dir, 
 
     char buf[MAXPATHLEN];
     if (!expand_filepath_with_mode(dir, buf, NULL, 0, CWD_EXPAND)) {
-        php_error_docref(NULL, E_WARNING, "Invalid path");
+        swow_stream_wrapper_warn(wrapper, context, options,
+            InvalidPath, "Invalid path");
         return 0;
     }
 
@@ -2360,7 +2436,8 @@ static int swow_plain_files_mkdir(php_stream_wrapper *wrapper, const char *dir, 
         int ret = swow_virtual_mkdir(buf, (mode_t) mode);
         if (ret < 0 && errno != EEXIST) {
             if (options & REPORT_ERRORS) {
-                php_error_docref(NULL, E_WARNING, "%s", cat_get_last_error_message());
+                swow_stream_wrapper_warn(wrapper, context, options,
+                    MkdirFailed, "%s", cat_get_last_error_message());
             }
             return 0;
         }
@@ -2380,7 +2457,8 @@ static int swow_plain_files_mkdir(php_stream_wrapper *wrapper, const char *dir, 
             /* issue a warning to client when the last directory was created failed */
             if (ret < 0) {
                 if (options & REPORT_ERRORS) {
-                    php_error_docref(NULL, E_WARNING, "%s", cat_get_last_error_message());
+                    swow_stream_wrapper_warn(wrapper, context, options,
+                        MkdirFailed, "%s", cat_get_last_error_message());
                 }
                 return 0;
             }
@@ -2401,13 +2479,15 @@ static int swow_plain_files_rmdir(php_stream_wrapper *wrapper, const char *url, 
 
 #ifdef PHP_WIN32
     if (!swow_win32_check_trailing_space(url, strlen(url))) {
-        swow_error_docref1(NULL, url, E_WARNING, "%s", strerror(ENOENT));
+        swow_stream_wrapper_warn(wrapper, context, options,
+            NotFound, "%s", strerror(ENOENT));
         return 0;
     }
 #endif
 
     if (swow_virtual_rmdir(url) < 0) {
-        swow_error_docref1(NULL, url, E_WARNING, "%s", cat_get_last_error_message());
+        swow_stream_wrapper_warn(wrapper, context, options,
+            RmdirFailed, "%s: %s", url, cat_get_last_error_message());
         return 0;
     }
 
@@ -2429,7 +2509,8 @@ static int swow_plain_files_metadata(php_stream_wrapper *wrapper, const char *ur
 
 #ifdef PHP_WIN32
     if (!swow_win32_check_trailing_space(url, strlen(url))) {
-        swow_error_docref1(NULL, url, E_WARNING, "%s", strerror(ENOENT));
+        swow_stream_wrapper_warn(wrapper, context, REPORT_ERRORS,
+            NotFound, "%s", strerror(ENOENT));
         return 0;
     }
 #endif
@@ -2448,7 +2529,9 @@ static int swow_plain_files_metadata(php_stream_wrapper *wrapper, const char *ur
             if (swow_virtual_access(url, F_OK) != 0) {
                 int fd = swow_virtual_open(url, O_TRUNC | O_CREAT);
                 if (fd < 0) {
-                    swow_error_docref1(NULL, url, E_WARNING, "Unable to create file %s because %s", url, cat_get_last_error_message());
+                    swow_stream_wrapper_warn(wrapper, context, REPORT_ERRORS,
+                        PermissionDenied, "Unable to create file %s because %s",
+                        url, cat_get_last_error_message());
                     return 0;
                 }
                 cat_fs_close(fd);
@@ -2462,7 +2545,8 @@ static int swow_plain_files_metadata(php_stream_wrapper *wrapper, const char *ur
         case PHP_STREAM_META_OWNER:
             if(option == PHP_STREAM_META_OWNER_NAME) {
                 if(php_get_uid_by_name((char *)value, &uid) != SUCCESS) {
-                    swow_error_docref1(NULL, url, E_WARNING, "Unable to find uid for %s", (char *)value);
+                    swow_stream_wrapper_warn(wrapper, context, REPORT_ERRORS,
+                        MetaFailed, "Unable to find uid for %s", (char *)value);
                     return 0;
                 }
             } else {
@@ -2474,7 +2558,8 @@ static int swow_plain_files_metadata(php_stream_wrapper *wrapper, const char *ur
         case PHP_STREAM_META_GROUP_NAME:
             if(option == PHP_STREAM_META_GROUP_NAME) {
                 if(php_get_gid_by_name((char *)value, &gid) != SUCCESS) {
-                    swow_error_docref1(NULL, url, E_WARNING, "Unable to find gid for %s", (char *)value);
+                    swow_stream_wrapper_warn(wrapper, context, REPORT_ERRORS,
+                        MetaFailed, "Unable to find gid for %s", (char *)value);
                     return 0;
                 }
             } else {
@@ -2492,7 +2577,8 @@ static int swow_plain_files_metadata(php_stream_wrapper *wrapper, const char *ur
             return 0;
     }
     if (ret == -1) {
-        swow_error_docref1(NULL, url, E_WARNING, "Operation failed: %s", cat_get_last_error_message());
+        swow_stream_wrapper_warn(wrapper, context, REPORT_ERRORS,
+            MetaFailed, "Operation failed: %s", cat_get_last_error_message());
         return 0;
     }
     php_clear_stat_cache(0, NULL, 0);
@@ -2518,147 +2604,6 @@ SWOW_API const php_stream_wrapper swow_plain_files_wrapper_async = {
     NULL,
     0
 };
-
-/* {{{ php_stream_fopen_with_path */
-SWOW_API php_stream *_swow_stream_fopen_with_path(const char *filename, const char *mode, const char *path, zend_string **opened_path, int options STREAMS_DC)
-{
-    /* code ripped off from fopen_wrappers.c */
-    char *pathbuf, *end;
-    const char *ptr;
-    char trypath[MAXPATHLEN];
-    php_stream *stream;
-    size_t filename_length;
-    zend_string *exec_filename;
-
-    if (opened_path) {
-        *opened_path = NULL;
-    }
-
-    if(!filename) {
-        return NULL;
-    }
-
-    filename_length = strlen(filename);
-#ifndef PHP_WIN32
-    (void) filename_length;
-#endif
-
-    /* Relative path open */
-    if (*filename == '.' && (IS_SLASH(filename[1]) || filename[1] == '.')) {
-        /* further checks, we could have ....... filenames */
-        ptr = filename + 1;
-        if (*ptr == '.') {
-            while (*(++ptr) == '.');
-            if (!IS_SLASH(*ptr)) { /* not a relative path after all */
-                goto not_relative_path;
-            }
-        }
-
-
-        if (((options & STREAM_DISABLE_OPEN_BASEDIR) == 0) && php_check_open_basedir(filename)) {
-            return NULL;
-        }
-
-        return _swow_stream_fopen(filename, mode, opened_path, options STREAMS_REL_CC);
-    }
-
-not_relative_path:
-
-    /* Absolute path open */
-    if (IS_ABSOLUTE_PATH(filename, filename_length)) {
-
-        if (((options & STREAM_DISABLE_OPEN_BASEDIR) == 0) && php_check_open_basedir(filename)) {
-            return NULL;
-        }
-
-        return _swow_stream_fopen(filename, mode, opened_path, options STREAMS_REL_CC);
-    }
-
-#ifdef PHP_WIN32
-    if (IS_SLASH(filename[0])) {
-        size_t cwd_len;
-        char *cwd;
-        cwd = virtual_getcwd_ex(&cwd_len);
-        /* getcwd() will return always return [DRIVE_LETTER]:/) on windows. */
-        *(cwd+3) = '\0';
-
-        if (snprintf(trypath, MAXPATHLEN, "%s%s", cwd, filename) >= MAXPATHLEN) {
-            php_error_docref(NULL, E_NOTICE, "%s/%s path was truncated to %d", cwd, filename, MAXPATHLEN);
-        }
-
-        efree(cwd);
-
-        if (((options & STREAM_DISABLE_OPEN_BASEDIR) == 0) && php_check_open_basedir(trypath)) {
-            return NULL;
-        }
-
-        return _swow_stream_fopen(trypath, mode, opened_path, options STREAMS_REL_CC);
-    }
-#endif
-
-    if (!path || !*path) {
-        return _swow_stream_fopen(filename, mode, opened_path, options STREAMS_REL_CC);
-    }
-
-    /* check in provided path */
-    /* append the calling scripts' current working directory
-     * as a fallback case
-     */
-    if (zend_is_executing() &&
-        (exec_filename = zend_get_executed_filename_ex()) != NULL) {
-        const char *exec_fname = ZSTR_VAL(exec_filename);
-        size_t exec_fname_length = ZSTR_LEN(exec_filename);
-
-        while ((--exec_fname_length < SIZE_MAX) && !IS_SLASH(exec_fname[exec_fname_length]));
-        if (exec_fname_length<=0) {
-            /* no path */
-            pathbuf = estrdup(path);
-        } else {
-            size_t path_length = strlen(path);
-
-            pathbuf = (char *) emalloc(exec_fname_length + path_length +1 +1);
-            memcpy(pathbuf, path, path_length);
-            pathbuf[path_length] = DEFAULT_DIR_SEPARATOR;
-            memcpy(pathbuf+path_length+1, exec_fname, exec_fname_length);
-            pathbuf[path_length + exec_fname_length +1] = '\0';
-        }
-    } else {
-        pathbuf = estrdup(path);
-    }
-
-    ptr = pathbuf;
-
-    while (ptr && *ptr) {
-        end = strchr(ptr, DEFAULT_DIR_SEPARATOR);
-        if (end != NULL) {
-            *end = '\0';
-            end++;
-        }
-        if (*ptr == '\0') {
-            goto stream_skip;
-        }
-        if (snprintf(trypath, MAXPATHLEN, "%s/%s", ptr, filename) >= MAXPATHLEN) {
-            php_error_docref(NULL, E_NOTICE, "%s/%s path was truncated to %d", ptr, filename, MAXPATHLEN);
-        }
-
-        if (((options & STREAM_DISABLE_OPEN_BASEDIR) == 0) && php_check_open_basedir_ex(trypath, 0)) {
-            goto stream_skip;
-        }
-
-        stream = _swow_stream_fopen(trypath, mode, opened_path, options STREAMS_REL_CC);
-        if (stream) {
-            efree(pathbuf);
-            return stream;
-        }
-stream_skip:
-        ptr = end;
-    } /* end provided path */
-
-    efree(pathbuf);
-    return NULL;
-
-}
-/* }}} */
 
 static php_stream *swow_pipe_stream_fopen_from_fd_int(int fd, const char *mode)
 {
