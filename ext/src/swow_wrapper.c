@@ -354,13 +354,61 @@ SWOW_API void swow_fcall_storage_release(swow_fcall_storage_t *fcall)
 
 SWOW_API zend_result swow_call_function_anyway(zend_fcall_info *fci, zend_fcall_info_cache *fci_cache)
 {
+    zend_object *exception = EG(exception);
+    zend_execute_data *execute_data = EG(current_execute_data);
+    const zend_op *opline = execute_data != NULL ? execute_data->opline : NULL;
+    const zend_op *opline_before_exception = EG(opline_before_exception);
 #if PHP_VERSION_ID < 80600
-    zend_exception_save();
+    zend_object *prev_exception = EG(prev_exception);
+    EG(prev_exception) = NULL;
 #endif
-    zend_result ret = zend_call_function(fci, fci_cache);
+    /* Autoload and catch use the executor's exception slots themselves. Keep the
+     * outer state on this C stack so nested calls and coroutine switches cannot
+     * restore or consume it while the callback is still running. PHP 8.6 removed
+     * prev_exception, but zend_call_function() still skips pending exceptions. */
+    EG(exception) = NULL;
+
+    zend_result ret = FAILURE;
+    bool bailout = false;
+    zend_try {
+        ret = zend_call_function(fci, fci_cache);
+    } zend_catch {
+        bailout = true;
+    } zend_end_try();
+
 #if PHP_VERSION_ID < 80600
+    /* Restore only the callback's own pending exception before returning the
+     * outer slots to their owner. */
     zend_exception_restore();
 #endif
+
+    /* A callback may throw and catch an exception, changing the saved throw
+     * location even when it returns normally. With an outer exception, retain
+     * its frame location; otherwise preserve any newly propagated exception. */
+    if (exception != NULL || EG(exception) == NULL) {
+        EG(opline_before_exception) = opline_before_exception;
+        if (exception != NULL && execute_data != NULL) {
+            execute_data->opline = opline;
+        }
+    }
+
+    if (exception != NULL) {
+        if (EG(exception) != NULL) {
+            /* An uncaught callback exception chains the outer exception;
+             * a caught callback exception leaves the outer exception intact.
+             * Zend consumes this reference, including duplicate/exit cases. */
+            zend_exception_set_previous(EG(exception), exception);
+        } else {
+            EG(exception) = exception;
+        }
+    }
+#if PHP_VERSION_ID < 80600
+    EG(prev_exception) = prev_exception;
+#endif
+
+    if (bailout) {
+        zend_bailout();
+    }
     return ret;
 }
 
