@@ -51,6 +51,7 @@
 
 - `develop` is the production branch and `ci` is the development branch. Keep linear history; do not create merge commits.
 - Keep `ci` rebased on top of `develop`. The same policy applies to libcat.
+- For an authorized integration, push and validate the feature branch first. Only after its GitHub Actions checks pass, integrate it linearly into `ci`, push `ci`, and delete the local and remote feature branches. Keep the feature branch while validation or integration is incomplete; never infer push authorization from this workflow alone.
 - Release sequence: run `composer cs-fix`, commit `Fix code style`, update `tools/versions.php`, run `composer prepare-release`, commit `Release vX.Y.Z`, verify that `develop` is an ancestor of `ci`, then fast-forward `develop`.
 - Write commit messages as concise English imperative sentences without Conventional Commit prefixes. Common forms include `Add ...`, `Fix ...`, `Improve ...`, `Update ...`, `Remove ...`, and `Support ...`.
 - Before pushing, run `composer cs-fix` with the version of php-cs-fixer locked by the project so the coding-style check does not fail first in CI.
