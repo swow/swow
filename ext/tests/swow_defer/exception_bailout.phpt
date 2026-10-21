@@ -27,6 +27,5 @@ try {
 }
 echo "Unexpected completion\n";
 ?>
---EXPECTF--
-defer entered
-%AFatal error: A void function must not return a value in %s on line %d%A
+--EXPECTREGEX--
+(?![\s\S]*Unexpected)defer entered\n[\s\S]*Fatal error: A void function must not return a value in [^\n]+ on line [0-9]+[\s\S]*
