@@ -40,7 +40,7 @@ $fruits = ['apple', 'pear', 'orange', 'banana', 'grape'];
 array_map(static function ($fruit) use ($bucket): void {
     Coroutine::run(static function () use ($fruit, $bucket): void {
         // "wash it"
-        pseudo_random_sleep();
+        pseudo_random_sleep(1);
         $bucket->push("washed {$fruit}");
     });
 }, $fruits);

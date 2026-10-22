@@ -17,7 +17,7 @@ $wr = new WaitReference();
 // normal done
 Coroutine::run(static function () use ($wr): void {
     // do nothing
-    pseudo_random_sleep();
+    pseudo_random_sleep(1);
 });
 // wait it
 $waiting_coro = Coroutine::run(static function ($wr): void {

@@ -12,11 +12,12 @@ use Swow\Coroutine;
 use Swow\Sync\WaitGroup;
 
 $wg = new WaitGroup();
+$tick = max(5, measure_timer_precision() * 2);
 $wg->add($n = 10);
 while ($n--) {
-    Coroutine::run(static function () use ($wg, $n): void {
+    Coroutine::run(static function () use ($wg, $n, $tick): void {
         // mock doing some tasks consuming times
-        pseudo_random_sleep();
+        pseudo_random_sleep($tick);
         echo $n . "\n";
         $wg->done();
     });

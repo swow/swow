@@ -38,7 +38,7 @@ class Consumer
                 } catch (ChannelException $e) {
                     return;
                 }
-                pseudo_random_sleep();
+                pseudo_random_sleep(1);
                 Assert::same($good, 'good');
                 $this->consumed++;
             }

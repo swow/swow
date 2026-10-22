@@ -46,7 +46,7 @@ function testMultiClient(string $name, callable $function): void
         Coroutine::run(static function () use ($server, $wr): void {
             $client = new Socket(Socket::TYPE_UDP);
             $client->bind('127.0.0.1');
-            pseudo_random_sleep();
+            pseudo_random_sleep(1);
             $client->sendTo(pack('N2', $client->getSockPort(), $server->getSockPort()), address: $server->getSockAddress(), port: $server->getSockPort());
             $client->close();
         });

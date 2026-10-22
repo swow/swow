@@ -12,6 +12,7 @@ use Swow\Coroutine;
 use Swow\Sync\WaitReference;
 
 $wr = new WaitReference();
+$tick = max(5, measure_timer_precision() * 2);
 // wait will return immediately when there's no more reference counts
 // and unset $wr
 WaitReference::wait($wr);
@@ -21,9 +22,9 @@ Assert::null($wr);
 // common WaitReference usage: create and wait it on same scope
 $wr = new WaitReference();
 for ($n = 9; $n >= 0; $n--) {
-    Coroutine::run(static function () use ($wr, $n): void {
+    Coroutine::run(static function () use ($wr, $n, $tick): void {
         // mock doing some tasks consuming times
-        pseudo_random_sleep();
+        pseudo_random_sleep($tick);
         echo $n . "\n";
     });
 }
@@ -34,9 +35,9 @@ echo "Done 1\n";
 // uncommon WaitReference usage: create and wait it on different scope
 $wr = new WaitReference();
 for ($n = 9; $n >= 0; $n--) {
-    Coroutine::run(static function () use ($wr, $n): void {
+    Coroutine::run(static function () use ($wr, $n, $tick): void {
         // mock a time-consuming action
-        pseudo_random_sleep();
+        pseudo_random_sleep($tick);
         echo $n . "\n";
     });
 }

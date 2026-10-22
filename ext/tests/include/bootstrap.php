@@ -175,12 +175,25 @@ function phpt_var_dump(...$args): void
     var_dump(...$args);
 }
 
-function pseudo_random_sleep(): void
+function measure_timer_precision(): int
+{
+    $samples = [];
+    for ($i = 0; $i < 5; $i++) {
+        $start = hrtime(true);
+        msleep(1);
+        $samples[] = hrtime(true) - $start;
+    }
+    sort($samples);
+    // Use the median sample. Coarse timers report a larger wakeup interval.
+    return max(1, (int) ceil($samples[2] / 1000000));
+}
+
+function pseudo_random_sleep(int $tick): void
 {
     static $seed = 42;
     // simple LCG with fixed seed
     $seed = (75 * $seed + 74) % 65537;
-    usleep($seed);
+    usleep($seed * $tick);
 }
 
 /**

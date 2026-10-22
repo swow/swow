@@ -12,14 +12,18 @@ use Swow\Sync\WaitReference;
 
 $wr = new WaitReference();
 
-Swow\Coroutine::run(static function () use ($wr): void {
+$timerPrecision = measure_timer_precision();
+$shortSleep = max(5, $timerPrecision * 2);
+$longSleep = max(10, $timerPrecision * 4);
+
+Swow\Coroutine::run(static function () use ($wr, $shortSleep, $longSleep): void {
     echo "coroutine[1] start\n";
-    Swow\Coroutine::run(static function () use ($wr): void {
+    Swow\Coroutine::run(static function () use ($wr, $longSleep): void {
         echo "coroutine[2] start\n";
-        msleep(2);
+        msleep($longSleep);
         echo "coroutine[2] exit\n";
     });
-    msleep(1);
+    msleep($shortSleep);
     echo "coroutine[1] exit\n";
 });
 echo "end\n";
