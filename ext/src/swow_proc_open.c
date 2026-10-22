@@ -56,7 +56,7 @@ static int swow_proc_open_rsrc_close(php_process_handle *proc)
     if (wstatus == STILL_ACTIVE) {
         wstatus = -1;
     }
-    CloseHandle(proc->childHandle);
+    /* proc_open_rsrc_dtor closes childHandle. Do not close it here. */
     return wstatus;
 #else
     wait_pid = cat_os_waitpid(proc->child, &wstatus, 0);
