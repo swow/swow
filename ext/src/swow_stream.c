@@ -203,7 +203,7 @@ SWOW_API php_stream *swow_stream_socket_factory(
     /* we don't know the socket until we have determined if we are binding or connecting */
     sock->socket = -1;
 #ifdef CAT_SSL
-    swow_sock->ssl.connect_timeout = sock->timeout;
+    swow_sock->ssl.connect_timeout = timeout != NULL ? *timeout : sock->timeout;
 #endif
 
     /* which type of socket ? */
