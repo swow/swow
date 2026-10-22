@@ -111,7 +111,7 @@ jobs:
 
     services:
       postgres:
-        image: public.ecr.aws/docker/library/postgres:latest
+        image: docker.io/library/postgres:latest
         ports:
           - 5432:5432
         env:
@@ -172,6 +172,32 @@ jobs:
         with:
           node-version: '24'
           package-manager-cache: false
+
+      - name: Diagnose fatal error handling
+        shell: bash
+        run: |
+          php -d extension=swow -r 'echo json_encode(["php" => PHP_VERSION, "extensions" => get_loaded_extensions(), "ini" => php_ini_loaded_file(), "scanned" => php_ini_scanned_files()], JSON_PRETTY_PRINT), PHP_EOL;'
+          cat > "$RUNNER_TEMP/swow-oom.php" <<'PHP'
+          <?php
+          Swow\Coroutine::run(static function (): void {
+              $value = str_repeat('X', 64 * 1024 * 1024);
+              echo strlen($value), PHP_EOL;
+          });
+          echo "Unexpected completion\n";
+          PHP
+          for config in default clean; do
+            options=()
+            if [ "$config" = clean ]; then
+              options+=(-n)
+            fi
+            echo "OOM diagnostic with $config PHP configuration"
+            if php "${options[@]}" -d extension=swow -d memory_limit=32M -d display_errors=1 "$RUNNER_TEMP/swow-oom.php"; then
+              status=0
+            else
+              status=$?
+            fi
+            echo "OOM diagnostic exit: $status"
+          done
 
       - name: Run extension tests
         id: test-extension
@@ -561,26 +587,18 @@ jobs:
 
       - name: Prepare coverage dependencies
         shell: powershell
+        env:
+          OPENCPPCOVERAGE_VERSION: '0.9.9.0'
+          OPENCPPCOVERAGE_SHA256: '2295a733da39412c61e4f478677519dd0bb1893d88313ce56b468c9e50517888'
         run: |
-          $headers = @{
-            "accept"="application/vnd.github.v3+json";
-            "content-type"="application/json";
-            "authorization"="Bearer ${{github.token}}";
-          }
-          # get latest OpenCppCoverage download path
-          Write-Host "Fetching latest OpenCppCoverage download path"
-          $info = Invoke-WebRequest `
-            -UseBasicParsing `
-            -Headers $headers `
-            -Uri https://api.github.com/repos/OpenCppCoverage/OpenCppCoverage/releases/latest `
-              | ConvertFrom-Json
-          foreach ($x in $info.assets) {
-            if ($x.name.EndsWith('.exe')) {
-              Write-Host "Downloading latest OpenCppCoverage"
-              $uri = $x.browser_download_url
-              Invoke-WebRequest -Uri $uri -OutFile OpenCppCoverage.exe -Headers $headers -UseBasicParsing
-              break
-            }
+          $ErrorActionPreference = 'Stop'
+          # Keep the installer and its integrity check tied to one reviewed release.
+          $version = $env:OPENCPPCOVERAGE_VERSION
+          $uri = "https://github.com/OpenCppCoverage/OpenCppCoverage/releases/download/release-$version/OpenCppCoverageSetup-x64-$version.exe"
+          Invoke-WebRequest -Uri $uri -OutFile OpenCppCoverage.exe -UseBasicParsing
+          $actualHash = (Get-FileHash -LiteralPath OpenCppCoverage.exe -Algorithm SHA256).Hash
+          if ($actualHash -ne $env:OPENCPPCOVERAGE_SHA256) {
+            throw "OpenCppCoverage installer checksum mismatch: $actualHash"
           }
           # install OpenCppCoverage
           Write-Host "Installing OpenCppCoverage"

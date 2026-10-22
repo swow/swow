@@ -15,7 +15,7 @@ jobs:
 
     services:
       postgres:
-        image: public.ecr.aws/docker/library/postgres:latest
+        image: docker.io/library/postgres:latest
         ports:
           - 5432:5432
         env:
@@ -253,7 +253,6 @@ jobs:
       - name: Build Swow extension
         uses: ./.github/workflows/winext
         with:
-          phpver: '8.5'
           phpts: ${{ matrix.ts == 'ts' && '1' || '0' }}
           ext-path: ./ext
           tools-path: C:\tools\phpdev

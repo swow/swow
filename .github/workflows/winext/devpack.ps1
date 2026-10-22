@@ -14,8 +14,14 @@ param (
 $scriptPath = Split-Path -parent $MyInvocation.MyCommand.Definition
 . "$scriptPath\utils.ps1" -ToolName "devpack" -MaxTry $MaxTry
 
+$ErrorActionPreference = 'Stop'
+$requiredVersion = $null
 if ("".Equals($PhpVer)){
     try{
+        $requiredVersion = (& $PhpBin -r "echo PHP_VERSION;").Trim()
+        if ($LASTEXITCODE -ne 0 -or $requiredVersion -notmatch '^\d+\.\d+\.\d+$') {
+            throw "Cannot determine a stable PHP runtime version from $PhpBin"
+        }
         $PhpVer = & $PhpBin -r "echo PHP_MAJOR_VERSION . '.' . PHP_MINOR_VERSION . PHP_EOL;"
         $phpinfo = & $PhpBin -i
         $PhpVCVer = ($phpinfo | Select-String -Pattern 'PHP Extension Build => .+,(.+)' -CaseSensitive -List).Matches.Groups[1]
@@ -26,6 +32,10 @@ if ("".Equals($PhpVer)){
     }finally{
     }
 }else{
+    if ($PhpVer -match '^(\d+\.\d+)\.\d+$') {
+        $requiredVersion = $PhpVer
+        $PhpVer = $Matches[1]
+    }
     if($PhpTs){
         $phpvar = "ts-$PhpVCVer-$PhpArch"
         $dashnts = ""
@@ -53,6 +63,25 @@ if(
 
 
 function fetchdevpack(){
+    if ($requiredVersion -and $info.$PhpVer.version -ne $requiredVersion) {
+        # Auto-detection must match the installed runtime, even after a newer
+        # patch release becomes available. Explicit series builds stay floating.
+        $fn = "php-devel-pack-$requiredVersion$dashnts-Win32-$PhpVCVer-$PhpArch.zip"
+        info "Use exact PHP $requiredVersion devpack from the official archives."
+        if (${env:CI} -Eq "true") {
+            Write-Output "devpackver=$requiredVersion" | Out-File "${env:GITHUB_OUTPUT}" -Append
+        }
+        if ($DryRun) {
+            return
+        }
+        provedir $ToolsPath
+        $dest = Join-Path $ToolsPath $fn
+        if ((dlwithhash -Uri "https://downloads.php.net/~windows/releases/archives/$fn" -Dest $dest) -and
+            (Test-Path -LiteralPath $dest -PathType Leaf)) {
+            return $dest
+        }
+        throw "Cannot obtain the exact PHP $requiredVersion devpack for $phpvar"
+    }
     if ($info.$PhpVer.$phpvar) {
         info "Found target version on releases, try using latest devpack."
         $latest = $info.$PhpVer.$phpvar."devel_pack"
@@ -158,6 +187,18 @@ try{
 }
 $sa = New-Object -ComObject Shell.Application
 $dirname = ($sa.NameSpace($zipdest).Items() | Select-Object -Index 0).Name
+
+if ($requiredVersion) {
+    $versionHeader = Get-Content -LiteralPath "$ToolsPath\$dirname\include\main\php_version.h" -Raw
+    if ($versionHeader -notmatch '#define\s+PHP_VERSION\s+"([^"]+)"' -or $Matches[1] -ne $requiredVersion) {
+        throw "The extracted devpack does not match PHP $requiredVersion"
+    }
+    $importLibrary = if ($dashnts) { 'php8.lib' } else { 'php8ts.lib' }
+    if (-not (Test-Path -LiteralPath "$ToolsPath\$dirname\lib\$importLibrary" -PathType Leaf)) {
+        throw "The extracted devpack does not match the requested thread mode: $phpvar"
+    }
+    info "Verified PHP $requiredVersion devpack for $phpvar."
+}
 
 info "Try patch phpize.js for newer wscript"
 # see https://github.com/php/php-src/commit/7f6c05116e83e75353f27f5333cc860c3a6f64f7
