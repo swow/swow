@@ -20,6 +20,11 @@
 
 #include "cat_signal.h"
 
+#include "main/php_network.h"
+
+#include <limits.h>
+#include <stdint.h>
+
 #ifdef CAT_OS_UNIX_LIKE
 
 # include "swow_closure.h"
@@ -262,16 +267,20 @@ static bool swow_child_process_parse_stdio(zval *value, int target_fd, swow_chil
 
     if (Z_TYPE_P(value) == IS_RESOURCE) {
         php_stream *stream;
-        int fd;
+        php_socket_t stream_fd = (php_socket_t) -1;
         stream = (php_stream *) zend_fetch_resource2_ex(value, "stream", php_file_le_stream(), php_file_le_pstream());
         if (stream == NULL) {
             return false;
         }
-        if (php_stream_cast(stream, PHP_STREAM_AS_FD, (void **) &fd, 1) != SUCCESS) {
+        /* php_stream_cast() writes php_socket_t; Windows SOCKET is 64-bit. */
+        if (php_stream_cast(stream, PHP_STREAM_AS_FD, (void **) &stream_fd, 1) != SUCCESS) {
+            return false;
+        }
+        if ((intmax_t) stream_fd < 0 || (intmax_t) stream_fd > INT_MAX) {
             return false;
         }
         stdio->mode = SWOW_CHILD_STDIO_RESOURCE;
-        stdio->fd = fd;
+        stdio->fd = (int) stream_fd;
         return true;
     }
 
@@ -313,15 +322,19 @@ static bool swow_child_process_parse_fd(zval *value, int *fd)
 
     if (Z_TYPE_P(value) == IS_RESOURCE) {
         php_stream *stream;
-        int stream_fd;
+        php_socket_t stream_fd = (php_socket_t) -1;
         stream = (php_stream *) zend_fetch_resource2_ex(value, "stream", php_file_le_stream(), php_file_le_pstream());
         if (stream == NULL) {
             return false;
         }
+        /* php_stream_cast() writes php_socket_t; Windows SOCKET is 64-bit. */
         if (php_stream_cast(stream, PHP_STREAM_AS_FD, (void **) &stream_fd, 1) != SUCCESS) {
             return false;
         }
-        *fd = stream_fd;
+        if ((intmax_t) stream_fd < 0 || (intmax_t) stream_fd > INT_MAX) {
+            return false;
+        }
+        *fd = (int) stream_fd;
         return true;
     }
 
