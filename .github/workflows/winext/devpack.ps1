@@ -66,7 +66,8 @@ function fetchdevpack(){
     if ($requiredVersion -and $info.$PhpVer.version -ne $requiredVersion) {
         # Auto-detection must match the installed runtime, even after a newer
         # patch release becomes available. Explicit series builds stay floating.
-        $fn = "php-devel-pack-$requiredVersion$dashnts-Win32-$PhpVCVer-$PhpArch.zip"
+        $filenameToolset = $PhpVCVer.ToLowerInvariant()
+        $fn = "php-devel-pack-$requiredVersion$dashnts-Win32-$filenameToolset-$PhpArch.zip"
         info "Use exact PHP $requiredVersion devpack from the official archives."
         if (${env:CI} -Eq "true") {
             Write-Output "devpackver=$requiredVersion" | Out-File "${env:GITHUB_OUTPUT}" -Append
