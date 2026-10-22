@@ -29,8 +29,6 @@ Makefile
 Makefile.fragments
 Makefile.objects
 tmp-php.ini
-x64/**
-x86/**
 
 # tests
 run-tests.php
@@ -57,3 +55,25 @@ config*
 **/.cache
 **/compile_commands.json
 **/compile_flags.txt
+
+# windows build dirs
+x64/**
+x86/**
+ARM64/**
+Release/
+Debug/
+Release_TS/
+Debug_TS/
+
+# build artifacts
+*.gcov
+*.dll
+*.lib
+*.exp
+*.pdb
+*.ilk
+*.obj
+*.res
+*.idb
+*.tlog
+*.lastbuildstate
