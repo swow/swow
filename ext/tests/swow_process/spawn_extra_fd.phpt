@@ -20,9 +20,9 @@ $process = ChildProcess::spawn([
     'fds' => [3 => $read],
 ]);
 
-fclose($read);
 fwrite($write, 'hello');
 fclose($write);
+fclose($read);
 
 $stdout = stream_get_contents($process->getStdout());
 $process->wait();

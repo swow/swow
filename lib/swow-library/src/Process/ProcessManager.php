@@ -140,8 +140,6 @@ final class ProcessManager implements ProcessManagerInterface
                         throw $e;
                     }
 
-                    fclose($read);
-
                     $payload = $this->serializedClosure ?? '';
                     $written = 0;
                     try {
@@ -154,6 +152,7 @@ final class ProcessManager implements ProcessManagerInterface
                         }
                     } finally {
                         fclose($write);
+                        fclose($read);
                     }
 
                     if ($written !== strlen($payload)) {

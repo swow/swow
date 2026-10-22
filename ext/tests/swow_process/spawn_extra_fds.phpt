@@ -25,12 +25,12 @@ $process = ChildProcess::spawn([
     'fds' => [3 => $read3, 5 => $read5],
 ]);
 
-fclose($read3);
-fclose($read5);
 fwrite($write3, 'three');
 fclose($write3);
 fwrite($write5, 'five');
 fclose($write5);
+fclose($read3);
+fclose($read5);
 
 $stdout = stream_get_contents($process->getStdout());
 $process->wait();
