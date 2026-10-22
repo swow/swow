@@ -12,6 +12,9 @@ if (!in_array('file', curl_version()['protocols'], true)) {
 <?php
 require __DIR__ . '/../include/bootstrap.php';
 
+// curl_close() is deprecated in PHP 8.5; its callback guard remains the subject here.
+error_reporting(E_ALL & ~E_DEPRECATED);
+
 class Callback
 {
     public function __construct(private CurlHandle $handle)
