@@ -22,12 +22,19 @@ if($DllDeps.Length -Lt 1){
 }
 
 # things we used later
+$requiredCurlVersion = $null
 if ("".Equals($PhpVer)){
     try{
         $PhpVer = & $PhpBin -r "echo PHP_MAJOR_VERSION . '.' . PHP_MINOR_VERSION . PHP_EOL;"
         $phpinfo = & $PhpBin -i
         $PhpVCVer = ($phpinfo | Select-String -Pattern 'PHP Extension Build => .+,(.+)' -CaseSensitive -List).Matches.Groups[1]
         $PhpArch = ($phpinfo | Select-String -Pattern 'Architecture => (.+)' -CaseSensitive -List).Matches.Groups[1]
+        if ($DllDeps -contains 'libcurl') {
+            $requiredCurlVersion = ([string] (& $PhpBin -r "echo extension_loaded('curl') ? curl_version()['version'] : '';")).Trim()
+            if ($LASTEXITCODE -ne 0 -or ($requiredCurlVersion -and $requiredCurlVersion -notmatch '^\d+\.\d+\.\d+$')) {
+                throw "Cannot determine the native PHP libcurl version"
+            }
+        }
     }finally{
         if(
             !$PhpVer -Or
@@ -85,12 +92,31 @@ foreach ($depname in $DllDeps) {
         err "Cannot find dep file for $depname"
         exit 1
     }
+    if ($depname -eq 'libcurl' -and $requiredCurlVersion) {
+        # Swow links libcurl statically; the native PHP control must use the same
+        # release, even when the floating SDK series has already moved ahead.
+        $prefix = "libcurl-$requiredCurlVersion-"
+        if (-not $depfile.StartsWith($prefix)) {
+            $directory = "https://downloads.php.net/~windows/php-sdk/deps/$PhpVCVer/$PhpArch/"
+            $page = fetchpage -Uri $directory
+            $pattern = 'libcurl-' + [regex]::Escape($requiredCurlVersion) +
+                '(?:-(?<revision>\d+))?-' + [regex]::Escape("$PhpVCVer-$PhpArch") + '\.zip'
+            $package = [regex]::Matches($page.Content, $pattern) |
+                Sort-Object -Property @{Expression = { [int] $_.Groups['revision'].Value }; Descending = $true} |
+                Select-Object -First 1
+            if (-not $package) {
+                throw "Cannot find the exact native PHP libcurl $requiredCurlVersion package for $PhpVCVer-$PhpArch"
+            }
+            $depfile = $package.Value
+        }
+        info "Use native PHP libcurl $requiredCurlVersion package $depfile"
+    }
     $downloadeddeps.Add($depfile) | Out-Null
     if($DryRun){
         continue
     }
 
-    info "Downloading $filename from https://downloads.php.net/~windows"
+    info "Downloading $depfile from https://downloads.php.net/~windows"
     provedir "$ToolsPath"
     provedir "$ToolsPath\deps"
     $dest = "$ToolsPath\deps\$depfile"
@@ -107,6 +133,12 @@ foreach ($depname in $DllDeps) {
     info "Unzipping $dest to $ToolsPath\deps\"
 
     Expand-Archive $dest -Destination "$ToolsPath\deps\" -Force
+    if ($depname -eq 'libcurl' -and $requiredCurlVersion) {
+        $header = Get-Content -LiteralPath "$ToolsPath\deps\include\curl\curlver.h" -Raw
+        if ($header -notmatch '#define\s+LIBCURL_VERSION\s+"([^"]+)"' -or $Matches[1] -ne $requiredCurlVersion) {
+            throw "The extracted libcurl package does not match native PHP libcurl $requiredCurlVersion"
+        }
+    }
 }
 
 # if we are in github workflows, set downloaded as output
