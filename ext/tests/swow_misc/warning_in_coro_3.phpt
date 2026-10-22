@@ -24,10 +24,4 @@ Coroutine::run(static function (): void {
 echo "Never here\n";
 ?>
 --EXPECTREGEX--
-(?![\s\S]*(?:Never here|Deadlock|process timed out))(?:Fatal error: \[Fatal error in R\d+\] Allowed memory size of \d+ bytes exhausted[^\n]* \(tried to allocate \d+ bytes\)
-Stack trace:
-#\d+ [^\r\n]+warning_in_coro_3\.php\(\d+\): [^\r\n]+
-#\d+ \[internal function\]: \{closur[^\r\n]+\}\(\)[\s\S]*
-#\d+ [^\r\n]+warning_in_coro_3\.php\(\d+\): Swow\\Coroutine::run\(Object\(Closure\)\)
-#\d+ \{main\}
-  triggered in [^\r\n]+warning_in_coro_3\.php on line \d+|Fatal error: Allowed memory size of \d+ bytes exhausted[^\n]* \(tried to allocate \d+ bytes\) in [^\n]+warning_in_coro_3\.php on line \d+)
+(?![\s\S]*(?:Never here|Deadlock|process timed out))(?:Fatal error: \[Fatal error in R\d+\] Allowed memory size of \d+ bytes exhausted[^\n]* \(tried to allocate \d+ bytes\)\nStack trace:\n#\d+ [^\r\n]+warning_in_coro_3\.php\(\d+\): [^\r\n]+\n#\d+ \[internal function\]: \{closur[^\r\n]+\}\(\)[\s\S]*\n#\d+ [^\r\n]+warning_in_coro_3\.php\(\d+\): Swow\\Coroutine::run\(Object\(Closure\)\)\n#\d+ \{main\}\n  triggered in [^\r\n]+warning_in_coro_3\.php on line \d+|Fatal error: Allowed memory size of \d+ bytes exhausted[^\n]* \(tried to allocate \d+ bytes\) in [^\n]+warning_in_coro_3\.php on line \d+)

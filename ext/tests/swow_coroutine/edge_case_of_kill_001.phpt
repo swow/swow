@@ -38,11 +38,4 @@ while (true) {
 
 ?>
 --EXPECTREGEX--
-(?![\s\S]*(?:Never here|Deadlock|process timed out))(?:Fatal error: \[Fatal error in (?:R\d+|main)\] Allowed memory size of \d+ bytes exhausted[^\n]* \(tried to allocate \d+ bytes\)
-Stack trace:
-(?:#0 [^\n]+\(\d+\): sleep\(1\)
-#1 \[internal function\]: \{closur[^\n]*\}\(\)
-#2 [^\n]+\(\d+\): Swow\\Coroutine->resume\(\)
-#3 \{main\}|#0 [^\n]+\(\d+\): Swow\\Coroutine->resume\(\)
-#1 \{main\})
-  triggered in [^\n]+edge_case_of_kill_001\.php on line \d+|Fatal error: Allowed memory size of \d+ bytes exhausted[^\n]* \(tried to allocate \d+ bytes\) in [^\n]+edge_case_of_kill_001\.php on line \d+)
+(?![\s\S]*(?:Never here|Deadlock|process timed out))(?:Fatal error: \[Fatal error in (?:R\d+|main)\] Allowed memory size of \d+ bytes exhausted[^\n]* \(tried to allocate \d+ bytes\)\nStack trace:\n(?:#0 [^\n]+\(\d+\): sleep\(1\)\n#1 \[internal function\]: \{closur[^\n]*\}\(\)\n#2 [^\n]+\(\d+\): Swow\\Coroutine->resume\(\)\n#3 \{main\}|#0 [^\n]+\(\d+\): Swow\\Coroutine->resume\(\)\n#1 \{main\}|#0 \{main\})\n  triggered in [^\n]+edge_case_of_kill_001\.php on line \d+|Fatal error: Allowed memory size of \d+ bytes exhausted[^\n]* \(tried to allocate \d+ bytes\) in [^\n]+edge_case_of_kill_001\.php on line \d+)
