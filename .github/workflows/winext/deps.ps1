@@ -95,14 +95,15 @@ foreach ($depname in $DllDeps) {
     if ($depname -eq 'libcurl' -and $requiredCurlVersion) {
         # Swow links libcurl statically; the native PHP control must use the same
         # release, even when the floating SDK series has already moved ahead.
-        $prefix = "libcurl-$requiredCurlVersion-"
-        if (-not $depfile.StartsWith($prefix)) {
+        $pattern = 'libcurl-' + [regex]::Escape($requiredCurlVersion) +
+            '(?:\.pl(?<patch>\d+))?(?:-(?<revision>\d+))?-' + [regex]::Escape("$PhpVCVer-$PhpArch") + '\.zip'
+        if ($depfile -notmatch ('^' + $pattern + '$')) {
             $directory = "https://downloads.php.net/~windows/php-sdk/deps/$PhpVCVer/$PhpArch/"
             $page = fetchpage -Uri $directory
-            $pattern = 'libcurl-' + [regex]::Escape($requiredCurlVersion) +
-                '(?:-(?<revision>\d+))?-' + [regex]::Escape("$PhpVCVer-$PhpArch") + '\.zip'
             $package = [regex]::Matches($page.Content, $pattern) |
-                Sort-Object -Property @{Expression = { [int] $_.Groups['revision'].Value }; Descending = $true} |
+                Sort-Object -Property `
+                    @{Expression = { [int] $_.Groups['patch'].Value }; Descending = $true}, `
+                    @{Expression = { [int] $_.Groups['revision'].Value }; Descending = $true} |
                 Select-Object -First 1
             if (-not $package) {
                 throw "Cannot find the exact native PHP libcurl $requiredCurlVersion package for $PhpVCVer-$PhpArch"
