@@ -63,7 +63,9 @@ static void swow_log_abnormal_raw(cat_log_type_t type, const char *module_name, 
     } while (0);
     smart_str_appends(&str, "\n");
     smart_str_0(&str);
-    cat_set_last_error(code, ZSTR_VAL(str.s));
+    /* cat_set_last_error() takes ownership of the message, so it must not point
+     * into the smart_str buffer, which is released below */
+    cat_set_last_error(code, cat_strdup(ZSTR_VAL(str.s)));
     /* Write CLI/CGI errors to stderr if display_errors = "stderr" */
     if ((!strcmp(sapi_module.name, "cli") ||
             !strcmp(sapi_module.name, "micro") ||
@@ -110,7 +112,8 @@ static void swow_log_va_list_standard(CAT_LOG_VA_LIST_PARAMETERS)
         smart_str_free(&str);
     } else {
         char *message = cat_vsprintf(format, args);
-        /* set error anyway even if message is NULL */
+        /* set error anyway even if message is NULL;
+         * cat_set_last_error() takes ownership of message, so we must not free it here */
         cat_set_last_error(code, message);
         if (unlikely(message == NULL)) {
             fprintf(stderr, "Sprintf log message failed\n");
@@ -144,7 +147,8 @@ static void swow_log_va_list_standard(CAT_LOG_VA_LIST_PARAMETERS)
             default:
                 CAT_NEVER_HERE("Unknown log type");
         }
-        cat_free(message);
+        /* message is owned by last_error now, it is released by
+         * cat_set_last_error() on replacement or cat_clear_last_error() on shutdown */
     }
 }
 
