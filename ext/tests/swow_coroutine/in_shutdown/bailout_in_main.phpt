@@ -34,11 +34,10 @@ var_dump(md5($str128M));
 
 echo "Never here\n";
 ?>
---EXPECTF--
-%AFatal error: [Fatal error in main] Allowed memory size of %d bytes exhausted%A (tried to allocate %d bytes)
+--EXPECTREGEX--
+(?![\s\S]*(?:Never here|Deadlock|process timed out))(?:Fatal error: \[Fatal error in main\] Allowed memory size of \d+ bytes exhausted[^\n]* \(tried to allocate \d+ bytes\)
 Stack trace:
-#0 %sbailout_in_main.php(%d): str_repeat('X', 134217728)
-#1 {main}
-  triggered in %sbailout_in_main.php on line %d
+(?:#0 [^\n]+bailout_in_main\.php\(\d+\): str_repeat\('X', 134217728\)\n)?#\d+ \{main\}
+  triggered in [^\r\n]+bailout_in_main\.php on line \d+
 
-Coroutine count: %d
+Coroutine count: \d+|Fatal error: Allowed memory size of \d+ bytes exhausted[^\n]* \(tried to allocate \d+ bytes\) in [^\n]+bailout_in_main\.php on line \d+)

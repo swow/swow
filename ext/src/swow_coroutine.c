@@ -188,6 +188,15 @@ static CAT_COLD void swow_coroutine_function_handle_exception(void)
     zend_exception_restore();
 #endif
 
+#ifdef ZEND_HAS_OOM
+    /* Delayed OOM uses UnwindExit after the VM has unwound safely. It ends the
+     * whole request, unlike coroutine-local exit/kill; consuming it would let
+     * the caller keep waiting on coroutines that can no longer execute. */
+    if (ZEND_HAS_OOM()) {
+        zend_bailout();
+    }
+#endif
+
     if (swow_coroutine_has_unwind_exit(EG(exception))) {
         OBJ_RELEASE(EG(exception));
         EG(exception) = NULL;

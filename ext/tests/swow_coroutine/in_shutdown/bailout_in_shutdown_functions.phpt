@@ -45,20 +45,15 @@ Coroutine::run(static function (): void {
 waitAll();
 
 ?>
---EXPECTF--
-%AFatal error: [Fatal error in R%d] Allowed memory size of %d bytes exhausted%A (tried to allocate %d bytes)
+--EXPECTREGEX--
+(?![\s\S]*(?:Never here|Deadlock|process timed out))(?:Fatal error: \[Fatal error in R\d+\] Allowed memory size of \d+ bytes exhausted[^\n]* \(tried to allocate \d+ bytes\)
 Stack trace:
-#0 %sbailout_in_shutdown_functions.php(%d): str_repeat('X', 134217728)
-#1 [internal function]: {closur%s}()
-#2 %sbailout_in_shutdown_functions.php(%d): Swow\Coroutine::run(Object(Closure))
-#3 {main}
-  triggered in %sbailout_in_shutdown_functions.php on line %d
+(?:#0 [^\n]+bailout_in_shutdown_functions\.php\(\d+\): str_repeat\('X', 134217728\)\n)?(?:#\d+ \[internal function\]: \{closur[^\n]*\}\(\)\n)?(?:#\d+ [^\n]+: Swow\\Coroutine::run\(Object\(Closure\)\)\n)?#\d+ \{main\}
+  triggered in [^\r\n]+bailout_in_shutdown_functions\.php on line \d+
 
 Coroutine count: 66
 
-%AFatal error: [Fatal error in main] Allowed memory size of %d bytes exhausted%A (tried to allocate %d bytes)
+[\s\S]*Fatal error: \[Fatal error in main\] Allowed memory size of \d+ bytes exhausted[^\n]* \(tried to allocate \d+ bytes\)
 Stack trace:
-#0 %sbailout_in_shutdown_functions.php(%d): str_repeat('X', 134217729)
-#1 [internal function]: {closur%s}()
-#2 {main}
-  triggered in %sbailout_in_shutdown_functions.php on line %d
+(?:#0 [^\n]+bailout_in_shutdown_functions\.php\(\d+\): str_repeat\('X', 134217729\)\n)?(?:#\d+ \[internal function\]: \{closur[^\n]*\}\(\)\n)?#\d+ \{main\}
+  triggered in [^\r\n]+bailout_in_shutdown_functions\.php on line \d+|Fatal error: Allowed memory size of \d+ bytes exhausted[^\n]* \(tried to allocate \d+ bytes\) in [^\n]+bailout_in_shutdown_functions\.php on line \d+)

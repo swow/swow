@@ -173,32 +173,6 @@ jobs:
           node-version: '24'
           package-manager-cache: false
 
-      - name: Diagnose fatal error handling
-        shell: bash
-        run: |
-          php -d extension=swow -r 'echo json_encode(["php" => PHP_VERSION, "extensions" => get_loaded_extensions(), "ini" => php_ini_loaded_file(), "scanned" => php_ini_scanned_files()], JSON_PRETTY_PRINT), PHP_EOL;'
-          cat > "$RUNNER_TEMP/swow-oom.php" <<'PHP'
-          <?php
-          Swow\Coroutine::run(static function (): void {
-              $value = str_repeat('X', 64 * 1024 * 1024);
-              echo strlen($value), PHP_EOL;
-          });
-          echo "Unexpected completion\n";
-          PHP
-          for config in default clean; do
-            options=()
-            if [ "$config" = clean ]; then
-              options+=(-n)
-            fi
-            echo "OOM diagnostic with $config PHP configuration"
-            if php "${options[@]}" -d extension=swow -d memory_limit=32M -d display_errors=1 "$RUNNER_TEMP/swow-oom.php"; then
-              status=0
-            else
-              status=$?
-            fi
-            echo "OOM diagnostic exit: $status"
-          done
-
       - name: Run extension tests
         id: test-extension
         env:
