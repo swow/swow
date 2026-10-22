@@ -2620,14 +2620,14 @@ namespace Swow\WebSocket
 namespace Swow\Process
 {
     /**
-     * POSIX: real signal number
-     * Windows: alias of CTRL_C_EVENT
+     * POSIX: SIGINT
+     * Windows: CRT SIGINT, mapped to CTRL_C_EVENT by the process API
      */
     const SIGINT = 2;
 
     /**
      * POSIX: SIGKILL
-     * Windows: internal value mapped to TerminateProcess
+     * Windows: mapped to TerminateProcess
      */
     const SIGKILL = 9;
 
@@ -2637,29 +2637,64 @@ namespace Swow\Process
     const SIGTERM = 15;
 
     /**
-     * Windows only: alias of CTRL_BREAK_EVENT
+     * Windows only: CRT SIGBREAK, mapped to CTRL_BREAK_EVENT
      */
-    const SIGBREAK = 1;
+    const SIGBREAK = 21;
 
     /**
-     * Windows only
+     * Windows only: console control event value
      */
     const CTRL_C_EVENT = 0;
+
+    /**
+     * Windows only: console control event value
+     */
     const CTRL_BREAK_EVENT = 1;
 
-    function kill(int $pid, int $signal): void { }
+    /**
+     * Send a signal to an arbitrary process.
+     *
+     * POSIX uses the signal number. Windows supports 0 (existence check),
+     * SIGKILL (TerminateProcess), SIGINT (CTRL_C_EVENT), and SIGBREAK
+     * (CTRL_BREAK_EVENT). SIGTERM is not supported on Windows.
+     *
+     * @param int $pid process id
+     * @param int $signal platform signal value
+     * @throws ProcessException when the signal cannot be sent
+     */
+    function kill(int $pid, int $signal = \Swow\Process\SIGTERM): void { }
 }
 
 namespace Swow\Process
 {
     interface ProcessInterface
     {
+        /**
+         * Get the process id.
+         */
         public function getPid(): int;
 
+        /**
+         * Wait for the process to exit.
+         *
+         * @param int $timeout timeout in milliseconds, -1 means infinite
+         * @throws ProcessException when waiting fails or times out
+         */
         public function wait(int $timeout = -1): ProcessExitStatus;
 
+        /**
+         * Check whether the process has exited.
+         */
         public function hasExited(): bool;
 
+        /**
+         * Send a signal to the process.
+         *
+         * Windows supports SIGINT, SIGBREAK, and SIGKILL. SIGTERM is not
+         * supported on Windows.
+         *
+         * @throws ProcessException when the signal cannot be sent
+         */
         public function kill(int $signal): void;
     }
 }
@@ -2669,6 +2704,13 @@ namespace Swow\Process
     final class ChildProcess implements \Swow\Process\ProcessInterface
     {
         /**
+         * Spawn a command.
+         *
+         * stdio defaults to inherit. A pipe returns a PHP stream; a file
+         * redirects to the given path; a resource uses the existing stream.
+         * Extra child file descriptors can be passed through `fds`, with
+         * child fd keys in the range 3 to 256.
+         *
          * @param non-empty-list<string> $command
          * @param array{
          *     cwd?: string,
@@ -2676,54 +2718,138 @@ namespace Swow\Process
          *     stdin?: 'inherit'|'pipe'|resource|array{0: 'file', 1: string, 2?: string},
          *     stdout?: 'inherit'|'pipe'|resource|array{0: 'file', 1: string, 2?: string},
          *     stderr?: 'inherit'|'pipe'|resource|array{0: 'file', 1: string, 2?: string},
+         *     fds?: array<int, resource|int>,
          * } $options
+         * @throws ProcessException when the command cannot be spawned
          */
         public static function spawn(array $command, array $options = []): self { }
 
         /**
-         * POSIX only; throws ProcessException on Windows
+         * Fork the current process and run a closure in the child.
+         *
+         * POSIX only. Throws ProcessException on Windows.
+         *
+         * @throws ProcessException
          */
         public static function fork(\Closure $callback): self { }
 
+        /**
+         * Get the process id.
+         */
         public function getPid(): int { }
 
+        /**
+         * Wait for the process to exit.
+         *
+         * @param int $timeout timeout in milliseconds, -1 means infinite
+         * @throws ProcessException when waiting fails or times out
+         */
         public function wait(int $timeout = -1): ProcessExitStatus { }
 
+        /**
+         * Check whether the process has exited.
+         */
         public function hasExited(): bool { }
 
-        /** @return resource|null */
+        /**
+         * Get the parent side of the stdin pipe.
+         *
+         * @return resource|null null unless stdin is a pipe
+         */
         public function getStdin() { }
 
-        /** @return resource|null */
+        /**
+         * Get the parent side of the stdout pipe.
+         *
+         * @return resource|null null unless stdout is a pipe
+         */
         public function getStdout() { }
 
-        /** @return resource|null */
+        /**
+         * Get the parent side of the stderr pipe.
+         *
+         * @return resource|null null unless stderr is a pipe
+         */
         public function getStderr() { }
 
+        /**
+         * Send a signal to the process.
+         *
+         * Windows supports SIGINT, SIGBREAK, and SIGKILL. SIGTERM is not
+         * supported on Windows.
+         *
+         * @throws ProcessException when the signal cannot be sent
+         */
         public function kill(int $signal = \Swow\Process\SIGTERM): void { }
 
+        /**
+         * Close the process object.
+         *
+         * This never kills the process. Closing a running process abandons
+         * it and releases the process handle; the child continues to run.
+         * A POSIX child may remain a zombie until the parent exits. Calling
+         * close more than once is allowed. After close the object cannot be
+         * used for getPid, wait, hasExited, or kill.
+         *
+         * @throws ProcessException when another coroutine is waiting
+         */
         public function close(): void { }
+
+        /**
+         * Close the process object during destruction.
+         *
+         * @internal
+         */
+        public function __destruct() { }
     }
 }
 
 namespace Swow\Process
 {
+    /**
+     * Exit status of a ChildProcess.
+     */
     class ProcessExitStatus
     {
+        /**
+         * Get the exit code.
+         *
+         * @return int exit code on normal exit, -1 when signaled
+         */
         public function getExitCode(): int { }
 
+        /**
+         * Get the terminating signal.
+         *
+         * @return int terminating signal, -1 on normal exit
+         */
         public function getTermSignal(): int { }
 
+        /**
+         * Check whether the process exited normally.
+         */
         public function isExited(): bool { }
 
+        /**
+         * Check whether the process was terminated by a signal.
+         */
         public function isSignaled(): bool { }
 
+        /**
+         * Check whether the process is stopped.
+         *
+         * Spawned processes always return false. On POSIX fork children this
+         * reflects a stopped wait status.
+         */
         public function isStopped(): bool { }
     }
 }
 
 namespace Swow\Process
 {
+    /**
+     * Process API exception.
+     */
     class ProcessException extends \Swow\Exception { }
 }
 
