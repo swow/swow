@@ -299,6 +299,35 @@ static bool swow_child_process_parse_stdio(zval *value, int target_fd, swow_chil
     return false;
 }
 
+#define SWOW_CHILD_PROCESS_MAX_FD 256
+
+static bool swow_child_process_parse_fd(zval *value, int *fd)
+{
+    if (Z_TYPE_P(value) == IS_LONG) {
+        if (Z_LVAL_P(value) < 0) {
+            return false;
+        }
+        *fd = (int) Z_LVAL_P(value);
+        return true;
+    }
+
+    if (Z_TYPE_P(value) == IS_RESOURCE) {
+        php_stream *stream;
+        int stream_fd;
+        stream = (php_stream *) zend_fetch_resource2_ex(value, "stream", php_file_le_stream(), php_file_le_pstream());
+        if (stream == NULL) {
+            return false;
+        }
+        if (php_stream_cast(stream, PHP_STREAM_AS_FD, (void **) &stream_fd, 1) != SUCCESS) {
+            return false;
+        }
+        *fd = stream_fd;
+        return true;
+    }
+
+    return false;
+}
+
 static void swow_child_process_close_child_fds(swow_child_stdio_t stdio[3])
 {
     for (int i = 0; i < 3; i++) {
@@ -449,10 +478,12 @@ static PHP_METHOD(Swow_Process_ChildProcess, spawn)
     uint32_t argc;
     uint32_t i;
     zval *value;
+    zval *zfds = NULL;
     swow_child_stdio_t stdio[3];
-    cat_process_stdio_container_t cat_stdio[3] = { 0 };
+    cat_process_stdio_container_t *cat_stdio = NULL;
     cat_process_options_t options = { 0 };
     cat_process_t *process = NULL;
+    int max_fd = 2;
 
     ZEND_PARSE_PARAMETERS_START(1, 2)
         Z_PARAM_ARRAY(zcommand)
@@ -535,7 +566,39 @@ static PHP_METHOD(Swow_Process_ChildProcess, spawn)
                 }
             }
         }
+        zfds = zend_hash_str_find(Z_ARRVAL_P(zoptions), "fds", sizeof("fds") - 1);
+        if (zfds != NULL) {
+            zend_ulong child_fd;
+            zend_string *fd_key;
+            zval *fd_value;
+            if (Z_TYPE_P(zfds) != IS_ARRAY) {
+                swow_child_process_free_argv(argv);
+                swow_child_process_free_envp(envp);
+                swow_throw_exception(swow_process_exception_ce, 0, "fds must be an array");
+                RETURN_THROWS();
+            }
+            ZEND_HASH_FOREACH_KEY_VAL(Z_ARRVAL_P(zfds), child_fd, fd_key, fd_value) {
+                int fd;
+                if (fd_key != NULL || child_fd < 3 || child_fd > SWOW_CHILD_PROCESS_MAX_FD) {
+                    swow_child_process_free_argv(argv);
+                    swow_child_process_free_envp(envp);
+                    swow_throw_exception(swow_process_exception_ce, 0, "fds keys must be integers between 3 and %d", SWOW_CHILD_PROCESS_MAX_FD);
+                    RETURN_THROWS();
+                }
+                if (!swow_child_process_parse_fd(fd_value, &fd)) {
+                    swow_child_process_free_argv(argv);
+                    swow_child_process_free_envp(envp);
+                    swow_throw_exception(swow_process_exception_ce, 0, "fds values must be streams or file descriptors");
+                    RETURN_THROWS();
+                }
+                if ((int) child_fd > max_fd) {
+                    max_fd = (int) child_fd;
+                }
+            } ZEND_HASH_FOREACH_END();
+        }
     }
+
+    cat_stdio = ecalloc((size_t) max_fd + 1, sizeof(*cat_stdio));
 
     for (i = 0; i < 3; i++) {
         switch (stdio[i].mode) {
@@ -562,6 +625,19 @@ static PHP_METHOD(Swow_Process_ChildProcess, spawn)
         }
     }
 
+    if (zfds != NULL) {
+        zend_ulong child_fd;
+        zend_string *fd_key;
+        zval *fd_value;
+        ZEND_HASH_FOREACH_KEY_VAL(Z_ARRVAL_P(zfds), child_fd, fd_key, fd_value) {
+            int fd;
+            (void) fd_key;
+            (void) swow_child_process_parse_fd(fd_value, &fd);
+            cat_stdio[child_fd].flags = CAT_PROCESS_STDIO_FLAG_INHERIT_FD;
+            cat_stdio[child_fd].data.fd = fd;
+        } ZEND_HASH_FOREACH_END();
+    }
+
     options.file = argv[0];
     options.args = (const char **) argv;
     options.env = (const char **) envp;
@@ -569,7 +645,7 @@ static PHP_METHOD(Swow_Process_ChildProcess, spawn)
 #ifdef CAT_OS_WIN
     options.flags = CAT_PROCESS_FLAG_WINDOWS_NEW_PROCESS_GROUP;
 #endif
-    options.stdio_count = 3;
+    options.stdio_count = max_fd + 1;
     options.stdio = cat_stdio;
 
     process = cat_process_run(&options);
@@ -602,12 +678,16 @@ static PHP_METHOD(Swow_Process_ChildProcess, spawn)
 
     swow_child_process_free_argv(argv);
     swow_child_process_free_envp(envp);
+    efree(cat_stdio);
     return;
 
 spawn_error:
     swow_child_process_close_spawn_fds(stdio);
     swow_child_process_free_argv(argv);
     swow_child_process_free_envp(envp);
+    if (cat_stdio != NULL) {
+        efree(cat_stdio);
+    }
     swow_throw_exception_with_last(swow_process_exception_ce);
     RETURN_THROWS();
 }
