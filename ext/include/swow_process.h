@@ -25,8 +25,7 @@ extern "C" {
 #include "swow.h"
 
 #include "cat_os_wait.h"
-
-#ifdef CAT_OS_WAIT
+#include "cat_process.h"
 
 extern SWOW_API zend_class_entry *swow_process_interface_ce;
 
@@ -39,15 +38,22 @@ extern SWOW_API zend_object_handlers swow_process_exit_status_handlers;
 extern SWOW_API zend_class_entry *swow_process_exception_ce;
 
 typedef struct swow_child_process_s {
+    cat_process_t *process;
     cat_pid_t pid;
-    int status;           /* waitpid 返回的 raw status */
-    cat_bool_t exited;    /* 是否已回收 */
+    int raw_status;
+    cat_bool_t exited;
+    cat_bool_t closed;
+    cat_bool_t waited;
     zval streams[3];
     zend_object std;
 } swow_child_process_t;
 
 typedef struct swow_process_exit_status_s {
-    int status;           /* waitpid 返回的 raw status */
+    int64_t exit_code;
+    int term_signal;
+    cat_bool_t exited;
+    cat_bool_t signaled;
+    cat_bool_t stopped;
     zend_object std;
 } swow_process_exit_status_t;
 
@@ -66,8 +72,6 @@ static zend_always_inline swow_process_exit_status_t *swow_process_exit_status_g
 {
     return cat_container_of(object, swow_process_exit_status_t, std);
 }
-
-#endif /* CAT_OS_WAIT */
 
 #ifdef __cplusplus
 }

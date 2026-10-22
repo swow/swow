@@ -18,8 +18,6 @@
 
 #include "swow_proc_open.h"
 
-#ifdef CAT_OS_WAIT
-
 #include "swow_hook.h"
 
 #include "zend_list.h"
@@ -135,5 +133,3 @@ zend_result swow_proc_open_runtime_shutdown(INIT_FUNC_ARGS)
 
     return SUCCESS;
 }
-
-#endif /* CAT_OS_WAIT */

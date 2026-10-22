@@ -18,21 +18,42 @@
 
 #include "swow_process.h"
 
-#ifdef CAT_OS_WAIT
-
-#include "swow_closure.h"
-#include "swow_debug.h"
-
 #include "cat_signal.h"
 
-#include <sys/wait.h>
-#include <fcntl.h>
-#include <signal.h>
-#include <unistd.h>
-#include <errno.h>
-#include <string.h>
+#ifdef CAT_OS_UNIX_LIKE
+
+# include "swow_closure.h"
+# include "swow_debug.h"
+
+# include <sys/wait.h>
+# include <fcntl.h>
+# include <signal.h>
+# include <unistd.h>
+# include <errno.h>
+# include <string.h>
 
 extern char **environ;
+
+# define SWOW_PROCESS_DEFAULT_SIGNAL_NAME "\\Swow\\Process\\SIGTERM"
+# define SWOW_PROCESS_DEFAULT_SIGNAL SIGTERM
+
+#elif defined(CAT_OS_WIN)
+
+# include <fcntl.h>
+# include <io.h>
+# include <sys/stat.h>
+# include <windows.h>
+
+# ifndef CAT_SIGKILL
+#  define CAT_SIGKILL 9
+# endif
+
+# define SWOW_PROCESS_DEFAULT_SIGNAL_NAME "\\Swow\\Process\\SIGINT"
+# define SWOW_PROCESS_DEFAULT_SIGNAL CAT_SIGINT
+
+#else
+# error "Unsupported platform"
+#endif
 
 SWOW_API zend_class_entry *swow_process_interface_ce;
 
@@ -43,112 +64,6 @@ SWOW_API zend_class_entry *swow_process_exit_status_ce;
 SWOW_API zend_object_handlers swow_process_exit_status_handlers;
 
 SWOW_API zend_class_entry *swow_process_exception_ce;
-
-/* {{{ ProcessInterface */
-
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Process_ProcessInterface_getPid, 0, 0, IS_LONG, 0)
-ZEND_END_ARG_INFO()
-
-ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_class_Swow_Process_ProcessInterface_wait, 0, 0, Swow\\Process\\ProcessExitStatus, 0)
-    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, timeout, IS_LONG, 0, "-1")
-ZEND_END_ARG_INFO()
-
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Process_ProcessInterface_hasExited, 0, 0, _IS_BOOL, 0)
-ZEND_END_ARG_INFO()
-
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Process_ProcessInterface_kill, 0, 0, IS_VOID, 0)
-    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, signal, IS_LONG, 0, "\\Swow\\Signal::TERM")
-ZEND_END_ARG_INFO()
-
-static const zend_function_entry swow_process_interface_methods[] = {
-    ZEND_ABSTRACT_ME(Swow_Process_ProcessInterface, getPid, arginfo_class_Swow_Process_ProcessInterface_getPid)
-    ZEND_ABSTRACT_ME(Swow_Process_ProcessInterface, wait, arginfo_class_Swow_Process_ProcessInterface_wait)
-    ZEND_ABSTRACT_ME(Swow_Process_ProcessInterface, hasExited, arginfo_class_Swow_Process_ProcessInterface_hasExited)
-    ZEND_ABSTRACT_ME(Swow_Process_ProcessInterface, kill, arginfo_class_Swow_Process_ProcessInterface_kill)
-    PHP_FE_END
-};
-
-/* }}} */
-
-/* {{{ ChildProcess */
-
-static zend_object *swow_child_process_create_object(zend_class_entry *ce)
-{
-    swow_child_process_t *s_process = swow_object_alloc(swow_child_process_t, ce, swow_child_process_handlers);
-
-    s_process->pid = -1;
-    s_process->status = 0;
-    s_process->exited = cat_false;
-    for (int i = 0; i < 3; i++) {
-        ZVAL_UNDEF(&s_process->streams[i]);
-    }
-
-    return &s_process->std;
-}
-
-ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_class_Swow_Process_ChildProcess_fork, 0, 1, Swow\\Process\\ChildProcess, 0)
-    ZEND_ARG_OBJ_INFO(0, callback, Closure, 0)
-ZEND_END_ARG_INFO()
-
-static PHP_METHOD(Swow_Process_ChildProcess, fork)
-{
-    zval *zcallback;
-    zend_fcall_info fci;
-    zend_fcall_info_cache fcc;
-    cat_pid_t pid;
-
-    ZEND_PARSE_PARAMETERS_START(1, 1)
-        Z_PARAM_OBJECT_OF_CLASS(zcallback, zend_ce_closure)
-    ZEND_PARSE_PARAMETERS_END();
-
-    bool restart_debug_sampler = swow_debug_sampler_stop();
-    pid = cat_os_fork();
-    if (restart_debug_sampler && !swow_debug_sampler_start()) {
-        RETURN_THROWS();
-    }
-    if (pid < 0) {
-        swow_throw_exception_with_last(swow_process_exception_ce);
-        RETURN_THROWS();
-    }
-
-    if (pid == 0) {
-        /* 子进程：执行 callback，用返回值作为 exit code */
-        zval retval;
-        int exit_code = 0;
-
-        if (zend_fcall_info_init(zcallback, 0, &fci, &fcc, NULL, NULL) == SUCCESS) {
-            fci.retval = &retval;
-            fci.param_count = 0;
-            fci.params = NULL;
-
-            if (zend_call_function(&fci, &fcc) == SUCCESS) {
-                if (Z_TYPE(retval) == IS_LONG) {
-                    exit_code = (int) Z_LVAL(retval);
-                }
-                zval_ptr_dtor(&retval);
-            } else {
-                exit_code = 1;
-            }
-        } else {
-            exit_code = 1;
-        }
-
-        /* 子进程必须退出，不能回到调用者的 PHP 代码流 */
-        _exit(exit_code);
-        /* NOTREACHED */
-    }
-
-    /* 父进程：返回 ChildProcess 对象 */
-    object_init_ex(return_value, swow_child_process_ce);
-    swow_child_process_t *s_process = swow_child_process_get_from_object(Z_OBJ_P(return_value));
-    s_process->pid = pid;
-}
-
-
-ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_class_Swow_Process_ChildProcess_spawn, 0, 1, Swow\\Process\\ChildProcess, 0)
-    ZEND_ARG_TYPE_INFO(0, command, IS_ARRAY, 0)
-    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, options, IS_ARRAY, 0, "[]")
-ZEND_END_ARG_INFO()
 
 typedef enum swow_child_stdio_mode_e {
     SWOW_CHILD_STDIO_INHERIT = 0,
@@ -162,6 +77,167 @@ typedef struct swow_child_stdio_s {
     int fd;
     int pipe_fds[2];
 } swow_child_stdio_t;
+
+/* platform helpers */
+
+#ifdef CAT_OS_UNIX_LIKE
+
+static int swow_child_process_open_file(const char *path, const char *mode, int target_fd)
+{
+    int flags;
+
+    switch (mode[0]) {
+        case 'r':
+            flags = mode[1] == '+' ? O_RDWR : O_RDONLY;
+            break;
+        case 'w':
+            flags = (mode[1] == '+' ? O_RDWR : O_WRONLY) | O_CREAT | O_TRUNC;
+            break;
+        case 'a':
+            flags = (mode[1] == '+' ? O_RDWR : O_WRONLY) | O_CREAT | O_APPEND;
+            break;
+        default:
+            return -1;
+    }
+
+    return open(path, flags, 0666);
+}
+
+static int swow_child_process_make_pipe(int pipe_fds[2], int child_index, int parent_index)
+{
+    if (pipe(pipe_fds) < 0) {
+        return -1;
+    }
+
+    (void) fcntl(pipe_fds[parent_index], F_SETFD, FD_CLOEXEC);
+
+    return 0;
+}
+
+static void swow_child_process_close_fd(int fd)
+{
+    close(fd);
+}
+
+#else
+
+static int swow_child_process_open_file(const char *path, const char *mode, int target_fd)
+{
+    int flags = _O_BINARY;
+
+    switch (mode[0]) {
+        case 'r':
+            flags |= mode[1] == '+' ? _O_RDWR : _O_RDONLY;
+            break;
+        case 'w':
+            flags |= (mode[1] == '+' ? _O_RDWR : _O_WRONLY) | _O_CREAT | _O_TRUNC;
+            break;
+        case 'a':
+            flags |= (mode[1] == '+' ? _O_RDWR : _O_WRONLY) | _O_CREAT | _O_APPEND;
+            break;
+        default:
+            return -1;
+    }
+
+    return _open(path, flags, _S_IREAD | _S_IWRITE);
+}
+
+static int swow_child_process_make_pipe(int pipe_fds[2], int child_index, int parent_index)
+{
+    if (_pipe(pipe_fds, 4096, _O_BINARY) < 0) {
+        return -1;
+    }
+
+    HANDLE child_handle = (HANDLE) _get_osfhandle(pipe_fds[child_index]);
+    HANDLE parent_handle = (HANDLE) _get_osfhandle(pipe_fds[parent_index]);
+    if (child_handle != INVALID_HANDLE_VALUE) {
+        SetHandleInformation(child_handle, HANDLE_FLAG_INHERIT, HANDLE_FLAG_INHERIT);
+    }
+    if (parent_handle != INVALID_HANDLE_VALUE) {
+        SetHandleInformation(parent_handle, HANDLE_FLAG_INHERIT, 0);
+    }
+
+    return 0;
+}
+
+static void swow_child_process_close_fd(int fd)
+{
+    _close(fd);
+}
+
+#endif
+
+static zend_object *swow_child_process_create_object(zend_class_entry *ce)
+{
+    swow_child_process_t *s_process = swow_object_alloc(swow_child_process_t, ce, swow_child_process_handlers);
+
+    s_process->process = NULL;
+    s_process->pid = -1;
+    s_process->raw_status = 0;
+    s_process->exited = cat_false;
+    s_process->closed = cat_false;
+    s_process->waited = cat_false;
+    for (int i = 0; i < 3; i++) {
+        ZVAL_UNDEF(&s_process->streams[i]);
+    }
+
+    return &s_process->std;
+}
+
+static zend_object *swow_process_exit_status_create_object(zend_class_entry *ce)
+{
+    swow_process_exit_status_t *s_status = swow_object_alloc(swow_process_exit_status_t, ce, swow_process_exit_status_handlers);
+
+    s_status->exit_code = -1;
+    s_status->term_signal = -1;
+    s_status->exited = cat_false;
+    s_status->signaled = cat_false;
+    s_status->stopped = cat_false;
+
+    return &s_status->std;
+}
+
+static cat_bool_t swow_child_process_check_open(swow_child_process_t *s_process)
+{
+    if (UNEXPECTED(s_process->closed)) {
+        swow_throw_exception(swow_process_exception_ce, 0, "Process has been closed");
+        return cat_false;
+    }
+
+    return cat_true;
+}
+
+static void swow_child_process_close_streams(swow_child_process_t *s_process)
+{
+    for (int i = 0; i < 3; i++) {
+        if (!Z_ISUNDEF(s_process->streams[i])) {
+            zval_ptr_dtor(&s_process->streams[i]);
+            ZVAL_UNDEF(&s_process->streams[i]);
+        }
+    }
+}
+
+static void swow_child_process_free_argv(char **argv)
+{
+    if (argv == NULL) {
+        return;
+    }
+    for (char **p = argv; *p != NULL; p++) {
+        efree(*p);
+    }
+    efree(argv);
+}
+
+static void swow_child_process_free_envp(char **envp)
+{
+    if (envp == NULL) {
+        return;
+    }
+    for (char **p = envp; *p != NULL; p++) {
+        efree(*p);
+    }
+    efree(envp);
+}
 
 static bool swow_child_process_parse_stdio(zval *value, int target_fd, swow_child_stdio_t *stdio)
 {
@@ -206,28 +282,13 @@ static bool swow_child_process_parse_stdio(zval *value, int target_fd, swow_chil
         const char *mode_str = mode != NULL && Z_TYPE_P(mode) == IS_STRING
             ? Z_STRVAL_P(mode)
             : (target_fd == 0 ? "r" : "w");
-        int flags;
 
         if (kind == NULL || Z_TYPE_P(kind) != IS_STRING || !zend_string_equals_literal(Z_STR_P(kind), "file")
             || path == NULL || Z_TYPE_P(path) != IS_STRING) {
             return false;
         }
 
-        switch (mode_str[0]) {
-            case 'r':
-                flags = mode_str[1] == '+' ? O_RDWR : O_RDONLY;
-                break;
-            case 'w':
-                flags = (mode_str[1] == '+' ? O_RDWR : O_WRONLY) | O_CREAT | O_TRUNC;
-                break;
-            case 'a':
-                flags = (mode_str[1] == '+' ? O_RDWR : O_WRONLY) | O_CREAT | O_APPEND;
-                break;
-            default:
-                return false;
-        }
-
-        stdio->fd = open(Z_STRVAL_P(path), flags, 0666);
+        stdio->fd = swow_child_process_open_file(Z_STRVAL_P(path), mode_str, target_fd);
         if (stdio->fd < 0) {
             return false;
         }
@@ -238,67 +299,145 @@ static bool swow_child_process_parse_stdio(zval *value, int target_fd, swow_chil
     return false;
 }
 
-
-static char *swow_child_process_resolve_executable(const char *file, char **envp)
+static void swow_child_process_close_child_fds(swow_child_stdio_t stdio[3])
 {
-    const char *path = NULL;
-    const char *start;
-    size_t file_len;
-
-    if (strchr(file, '/') != NULL) {
-        return estrdup(file);
-    }
-
-    if (envp != NULL) {
-        for (char **p = envp; *p != NULL; p++) {
-            if (strncmp(*p, "PATH=", sizeof("PATH=") - 1) == 0) {
-                path = *p + sizeof("PATH=") - 1;
-                break;
+    for (int i = 0; i < 3; i++) {
+        if (stdio[i].mode == SWOW_CHILD_STDIO_PIPE) {
+            int child_index = i == 0 ? 0 : 1;
+            if (stdio[i].pipe_fds[child_index] >= 0) {
+                swow_child_process_close_fd(stdio[i].pipe_fds[child_index]);
+                stdio[i].pipe_fds[child_index] = -1;
             }
+        } else if (stdio[i].mode == SWOW_CHILD_STDIO_FILE && stdio[i].fd >= 0) {
+            swow_child_process_close_fd(stdio[i].fd);
+            stdio[i].fd = -1;
         }
     }
-    if (path == NULL) {
-        path = getenv("PATH");
-    }
-    if (path == NULL) {
-        return NULL;
-    }
-
-    file_len = strlen(file);
-    start = path;
-    for (;;) {
-        const char *end = strchr(start, ':');
-        size_t dir_len = end != NULL ? (size_t) (end - start) : strlen(start);
-        size_t size = dir_len + 1 + file_len + 1;
-        char *candidate = emalloc(size);
-        if (dir_len == 0) {
-            snprintf(candidate, size, "%s", file);
-        } else {
-            snprintf(candidate, size, "%.*s/%s", (int) dir_len, start, file);
-        }
-        if (access(candidate, X_OK) == 0) {
-            return candidate;
-        }
-        efree(candidate);
-        if (end == NULL) {
-            break;
-        }
-        start = end + 1;
-    }
-
-    return NULL;
 }
 
-static void swow_child_process_free_argv(char **argv)
+static void swow_child_process_close_spawn_fds(swow_child_stdio_t stdio[3])
 {
-    if (argv == NULL) {
-        return;
+    for (int i = 0; i < 3; i++) {
+        if (stdio[i].mode == SWOW_CHILD_STDIO_PIPE) {
+            if (stdio[i].pipe_fds[0] >= 0) {
+                swow_child_process_close_fd(stdio[i].pipe_fds[0]);
+                stdio[i].pipe_fds[0] = -1;
+            }
+            if (stdio[i].pipe_fds[1] >= 0) {
+                swow_child_process_close_fd(stdio[i].pipe_fds[1]);
+                stdio[i].pipe_fds[1] = -1;
+            }
+        } else if (stdio[i].mode == SWOW_CHILD_STDIO_FILE && stdio[i].fd >= 0) {
+            swow_child_process_close_fd(stdio[i].fd);
+            stdio[i].fd = -1;
+        }
     }
-    for (char **p = argv; *p != NULL; p++) {
-        efree(*p);
-    }
-    efree(argv);
 }
+
+/* {{{ ProcessInterface */
+
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Process_ProcessInterface_getPid, 0, 0, IS_LONG, 0)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_class_Swow_Process_ProcessInterface_wait, 0, 0, Swow\\Process\\ProcessExitStatus, 0)
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, timeout, IS_LONG, 0, "-1")
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Process_ProcessInterface_hasExited, 0, 0, _IS_BOOL, 0)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_class_Swow_Process_ProcessInterface_kill, 0, 0, 1)
+    ZEND_ARG_TYPE_INFO(0, signal, IS_LONG, 0)
+ZEND_END_ARG_INFO()
+
+static const zend_function_entry swow_process_interface_methods[] = {
+    ZEND_ABSTRACT_ME(Swow_Process_ProcessInterface, getPid, arginfo_class_Swow_Process_ProcessInterface_getPid)
+    ZEND_ABSTRACT_ME(Swow_Process_ProcessInterface, wait, arginfo_class_Swow_Process_ProcessInterface_wait)
+    ZEND_ABSTRACT_ME(Swow_Process_ProcessInterface, hasExited, arginfo_class_Swow_Process_ProcessInterface_hasExited)
+    ZEND_ABSTRACT_ME(Swow_Process_ProcessInterface, kill, arginfo_class_Swow_Process_ProcessInterface_kill)
+    PHP_FE_END
+};
+
+/* }}} */
+
+/* {{{ ChildProcess */
+
+ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_class_Swow_Process_ChildProcess_fork, 0, 1, Swow\\Process\\ChildProcess, 0)
+    ZEND_ARG_OBJ_INFO(0, callback, Closure, 0)
+ZEND_END_ARG_INFO()
+
+#ifdef CAT_OS_UNIX_LIKE
+
+static PHP_METHOD(Swow_Process_ChildProcess, fork)
+{
+    zval *zcallback;
+    zend_fcall_info fci;
+    zend_fcall_info_cache fcc;
+    cat_pid_t pid;
+
+    ZEND_PARSE_PARAMETERS_START(1, 1)
+        Z_PARAM_OBJECT_OF_CLASS(zcallback, zend_ce_closure)
+    ZEND_PARSE_PARAMETERS_END();
+
+    bool restart_debug_sampler = swow_debug_sampler_stop();
+    pid = cat_os_fork();
+    if (restart_debug_sampler && !swow_debug_sampler_start()) {
+        RETURN_THROWS();
+    }
+    if (pid < 0) {
+        swow_throw_exception_with_last(swow_process_exception_ce);
+        RETURN_THROWS();
+    }
+
+    if (pid == 0) {
+        zval retval;
+        int exit_code = 0;
+
+        if (zend_fcall_info_init(zcallback, 0, &fci, &fcc, NULL, NULL) == SUCCESS) {
+            fci.retval = &retval;
+            fci.param_count = 0;
+            fci.params = NULL;
+
+            if (zend_call_function(&fci, &fcc) == SUCCESS) {
+                if (Z_TYPE(retval) == IS_LONG) {
+                    exit_code = (int) Z_LVAL(retval);
+                }
+                zval_ptr_dtor(&retval);
+            } else {
+                exit_code = 1;
+            }
+        } else {
+            exit_code = 1;
+        }
+
+        _exit(exit_code);
+    }
+
+    object_init_ex(return_value, swow_child_process_ce);
+    swow_child_process_t *s_process = swow_child_process_get_from_object(Z_OBJ_P(return_value));
+    s_process->pid = pid;
+}
+
+#else
+
+static PHP_METHOD(Swow_Process_ChildProcess, fork)
+{
+    zval *zcallback;
+
+    ZEND_PARSE_PARAMETERS_START(1, 1)
+        Z_PARAM_OBJECT_OF_CLASS(zcallback, zend_ce_closure)
+    ZEND_PARSE_PARAMETERS_END();
+
+    swow_throw_exception(swow_process_exception_ce, 0, "ChildProcess::fork() is not supported on Windows");
+    RETURN_THROWS();
+}
+
+#endif
+
+ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_class_Swow_Process_ChildProcess_spawn, 0, 1, Swow\\Process\\ChildProcess, 0)
+    ZEND_ARG_TYPE_INFO(0, command, IS_ARRAY, 0)
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, options, IS_ARRAY, 0, "[]")
+ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Process_ChildProcess, spawn)
 {
@@ -311,9 +450,9 @@ static PHP_METHOD(Swow_Process_ChildProcess, spawn)
     uint32_t i;
     zval *value;
     swow_child_stdio_t stdio[3];
-    int errpipe[2] = { -1, -1 };
-    pid_t pid;
-    bool restart_debug_sampler;
+    cat_process_stdio_container_t cat_stdio[3] = { 0 };
+    cat_process_options_t options = { 0 };
+    cat_process_t *process = NULL;
 
     ZEND_PARSE_PARAMETERS_START(1, 2)
         Z_PARAM_ARRAY(zcommand)
@@ -389,12 +528,8 @@ static PHP_METHOD(Swow_Process_ChildProcess, spawn)
                 value = zend_hash_str_find(Z_ARRVAL_P(zoptions), names[i], strlen(names[i]));
                 if (value != NULL && !swow_child_process_parse_stdio(value, (int) i, &stdio[i])) {
                     swow_child_process_free_argv(argv);
-                    if (envp != NULL) {
-                        for (char **p = envp; *p != NULL; p++) {
-                            efree(*p);
-                        }
-                        efree(envp);
-                    }
+                    swow_child_process_free_envp(envp);
+                    swow_child_process_close_spawn_fds(stdio);
                     swow_throw_exception(swow_process_exception_ce, 0, "Invalid stdio option");
                     RETURN_THROWS();
                 }
@@ -402,184 +537,77 @@ static PHP_METHOD(Swow_Process_ChildProcess, spawn)
         }
     }
 
-    if (pipe(errpipe) < 0) {
-        swow_child_process_free_argv(argv);
-        if (envp != NULL) {
-            for (char **p = envp; *p != NULL; p++) {
-                efree(*p);
-            }
-            efree(envp);
-        }
-        swow_throw_exception_with_last(swow_process_exception_ce);
-        RETURN_THROWS();
-    }
-    (void) fcntl(errpipe[1], F_SETFD, FD_CLOEXEC);
-
     for (i = 0; i < 3; i++) {
-        if (stdio[i].mode == SWOW_CHILD_STDIO_PIPE && pipe(stdio[i].pipe_fds) < 0) {
-            goto spawn_error;
+        switch (stdio[i].mode) {
+            case SWOW_CHILD_STDIO_INHERIT:
+                cat_stdio[i].flags = CAT_PROCESS_STDIO_FLAG_INHERIT_FD;
+                cat_stdio[i].data.fd = (int) i;
+                break;
+            case SWOW_CHILD_STDIO_PIPE:
+            {
+                int child_index = i == 0 ? 0 : 1;
+                int parent_index = i == 0 ? 1 : 0;
+                if (swow_child_process_make_pipe(stdio[i].pipe_fds, child_index, parent_index) < 0) {
+                    goto spawn_error;
+                }
+                cat_stdio[i].flags = CAT_PROCESS_STDIO_FLAG_INHERIT_FD;
+                cat_stdio[i].data.fd = stdio[i].pipe_fds[child_index];
+                break;
+            }
+            case SWOW_CHILD_STDIO_FILE:
+            case SWOW_CHILD_STDIO_RESOURCE:
+                cat_stdio[i].flags = CAT_PROCESS_STDIO_FLAG_INHERIT_FD;
+                cat_stdio[i].data.fd = stdio[i].fd;
+                break;
         }
     }
 
-    restart_debug_sampler = swow_debug_sampler_stop();
-    pid = fork();
-    if (restart_debug_sampler && !swow_debug_sampler_start()) {
+    options.file = argv[0];
+    options.args = (const char **) argv;
+    options.env = (const char **) envp;
+    options.cwd = cwd != NULL ? ZSTR_VAL(cwd) : NULL;
+#ifdef CAT_OS_WIN
+    options.flags = CAT_PROCESS_FLAG_WINDOWS_NEW_PROCESS_GROUP;
+#endif
+    options.stdio_count = 3;
+    options.stdio = cat_stdio;
+
+    process = cat_process_run(&options);
+    if (process == NULL) {
         goto spawn_error;
     }
-    if (pid < 0) {
-        goto spawn_error;
-    }
 
-    if (pid == 0) {
-        int child_errno = 0;
-
-        close(errpipe[0]);
-        for (i = 0; i < 3; i++) {
-            switch (stdio[i].mode) {
-                case SWOW_CHILD_STDIO_PIPE:
-                {
-                    int child_fd = i == 0 ? stdio[i].pipe_fds[0] : stdio[i].pipe_fds[1];
-                    if (dup2(child_fd, (int) i) < 0) {
-                        child_errno = errno;
-                        goto child_error;
-                    }
-                    break;
-                }
-                case SWOW_CHILD_STDIO_FILE:
-                case SWOW_CHILD_STDIO_RESOURCE:
-                    if (dup2(stdio[i].fd, (int) i) < 0) {
-                        child_errno = errno;
-                        goto child_error;
-                    }
-                    break;
-                case SWOW_CHILD_STDIO_INHERIT:
-                    break;
-            }
-        }
-        for (i = 0; i < 3; i++) {
-            if (stdio[i].mode == SWOW_CHILD_STDIO_PIPE) {
-                close(stdio[i].pipe_fds[0]);
-                close(stdio[i].pipe_fds[1]);
-            } else if (stdio[i].mode == SWOW_CHILD_STDIO_FILE) {
-                close(stdio[i].fd);
-            } else if (stdio[i].mode == SWOW_CHILD_STDIO_RESOURCE && stdio[i].fd > 2) {
-                close(stdio[i].fd);
-            }
-        }
-        if (cwd != NULL && chdir(ZSTR_VAL(cwd)) != 0) {
-            child_errno = errno;
-            goto child_error;
-        }
-        if (envp != NULL) {
-            char *executable = swow_child_process_resolve_executable(argv[0], envp);
-            environ = envp;
-            if (executable != NULL) {
-                execve(executable, argv, envp);
-                efree(executable);
-            } else {
-                execvp(argv[0], argv);
-            }
-        } else {
-            execvp(argv[0], argv);
-        }
-        child_errno = errno;
-child_error:
-        (void) write(errpipe[1], &child_errno, sizeof(child_errno));
-        _exit(127);
-    }
-
-    close(errpipe[1]);
-    errpipe[1] = -1;
-    for (i = 0; i < 3; i++) {
-        if (stdio[i].mode == SWOW_CHILD_STDIO_PIPE) {
-            close(i == 0 ? stdio[i].pipe_fds[0] : stdio[i].pipe_fds[1]);
-            stdio[i].pipe_fds[i == 0 ? 0 : 1] = -1;
-        } else if (stdio[i].mode == SWOW_CHILD_STDIO_FILE) {
-            close(stdio[i].fd);
-            stdio[i].fd = -1;
-        }
-    }
-
-    {
-        int child_errno = 0;
-        ssize_t n;
-        do {
-            n = read(errpipe[0], &child_errno, sizeof(child_errno));
-        } while (n < 0 && errno == EINTR);
-        close(errpipe[0]);
-        errpipe[0] = -1;
-        if (n > 0) {
-            int status;
-            (void) waitpid(pid, &status, 0);
-            swow_child_process_free_argv(argv);
-            if (envp != NULL) {
-                for (char **p = envp; *p != NULL; p++) {
-                    efree(*p);
-                }
-                efree(envp);
-            }
-            for (i = 0; i < 3; i++) {
-                if (stdio[i].mode == SWOW_CHILD_STDIO_PIPE) {
-                    close(i == 0 ? stdio[i].pipe_fds[1] : stdio[i].pipe_fds[0]);
-                }
-            }
-            swow_throw_exception(swow_process_exception_ce, 0, "Failed to execute child process");
-            RETURN_THROWS();
-        }
-    }
+    swow_child_process_close_child_fds(stdio);
 
     object_init_ex(return_value, swow_child_process_ce);
     {
         swow_child_process_t *s_process = swow_child_process_get_from_object(Z_OBJ_P(return_value));
-        s_process->pid = pid;
+        s_process->process = process;
+        s_process->pid = cat_process_get_pid(process);
+        s_process->waited = cat_false;
         for (i = 0; i < 3; i++) {
             if (stdio[i].mode == SWOW_CHILD_STDIO_PIPE) {
-                int parent_fd = i == 0 ? stdio[i].pipe_fds[1] : stdio[i].pipe_fds[0];
+                int parent_index = i == 0 ? 1 : 0;
+                int parent_fd = stdio[i].pipe_fds[parent_index];
                 php_stream *stream = php_stream_fopen_from_fd(parent_fd, i == 0 ? "w" : "r", NULL);
                 if (stream == NULL) {
-                    close(parent_fd);
+                    swow_child_process_close_fd(parent_fd);
                 } else {
                     php_stream_to_zval(stream, &s_process->streams[i]);
                 }
+                stdio[i].pipe_fds[parent_index] = -1;
             }
         }
     }
 
     swow_child_process_free_argv(argv);
-    if (envp != NULL) {
-        for (char **p = envp; *p != NULL; p++) {
-            efree(*p);
-        }
-        efree(envp);
-    }
+    swow_child_process_free_envp(envp);
     return;
 
 spawn_error:
-    if (errpipe[0] >= 0) {
-        close(errpipe[0]);
-    }
-    if (errpipe[1] >= 0) {
-        close(errpipe[1]);
-    }
-    for (i = 0; i < 3; i++) {
-        if (stdio[i].mode == SWOW_CHILD_STDIO_PIPE) {
-            if (stdio[i].pipe_fds[0] >= 0) {
-                close(stdio[i].pipe_fds[0]);
-            }
-            if (stdio[i].pipe_fds[1] >= 0) {
-                close(stdio[i].pipe_fds[1]);
-            }
-        } else if (stdio[i].mode == SWOW_CHILD_STDIO_FILE && stdio[i].fd >= 0) {
-            close(stdio[i].fd);
-        }
-    }
+    swow_child_process_close_spawn_fds(stdio);
     swow_child_process_free_argv(argv);
-    if (envp != NULL) {
-        for (char **p = envp; *p != NULL; p++) {
-            efree(*p);
-        }
-        efree(envp);
-    }
+    swow_child_process_free_envp(envp);
     swow_throw_exception_with_last(swow_process_exception_ce);
     RETURN_THROWS();
 }
@@ -595,6 +623,14 @@ static PHP_METHOD(Swow_Process_ChildProcess, getPid)
 
     s_process = swow_child_process_get_from_object(Z_OBJ_P(ZEND_THIS));
 
+    if (!swow_child_process_check_open(s_process)) {
+        RETURN_THROWS();
+    }
+
+    if (s_process->process != NULL) {
+        RETURN_LONG(cat_process_get_pid(s_process->process));
+    }
+
     RETURN_LONG(s_process->pid);
 }
 
@@ -606,8 +642,6 @@ static PHP_METHOD(Swow_Process_ChildProcess, wait)
 {
     swow_child_process_t *s_process;
     zend_long timeout = -1;
-    int wstatus;
-    cat_pid_t wait_pid;
     swow_process_exit_status_t *s_exit_status;
 
     ZEND_PARSE_PARAMETERS_START(0, 1)
@@ -617,29 +651,65 @@ static PHP_METHOD(Swow_Process_ChildProcess, wait)
 
     s_process = swow_child_process_get_from_object(Z_OBJ_P(ZEND_THIS));
 
-    if (s_process->exited) {
+    if (!swow_child_process_check_open(s_process)) {
+        RETURN_THROWS();
+    }
+
+    if (s_process->waited) {
         swow_throw_exception(swow_process_exception_ce, 0, "Process has already exited");
         RETURN_THROWS();
     }
 
-    if (timeout < 0) {
-        wait_pid = cat_os_waitpid(s_process->pid, &wstatus, 0);
-    } else {
-        wait_pid = cat_os_waitpid_ex(s_process->pid, &wstatus, 0, timeout);
-    }
-
-    if (wait_pid <= 0) {
-        swow_throw_exception_with_last(swow_process_exception_ce);
-        RETURN_THROWS();
-    }
-
-    s_process->status = wstatus;
-    s_process->exited = cat_true;
-
-    /* 返回 ProcessExitStatus 对象 */
     object_init_ex(return_value, swow_process_exit_status_ce);
     s_exit_status = swow_process_exit_status_get_from_object(Z_OBJ_P(return_value));
-    s_exit_status->status = wstatus;
+    s_exit_status->exit_code = -1;
+    s_exit_status->term_signal = -1;
+    s_exit_status->exited = cat_false;
+    s_exit_status->signaled = cat_false;
+    s_exit_status->stopped = cat_false;
+
+    if (s_process->process != NULL) {
+        cat_bool_t ret = timeout < 0
+            ? cat_process_wait(s_process->process)
+            : cat_process_wait_ex(s_process->process, (cat_timeout_t) timeout);
+        if (UNEXPECTED(!ret)) {
+            swow_throw_exception_with_last(swow_process_exception_ce);
+            RETURN_THROWS();
+        }
+        cat_process_status_t status = cat_process_get_status(s_process->process);
+        s_process->waited = cat_true;
+        s_exit_status->exit_code = status.exit_code;
+        s_exit_status->term_signal = status.term_signal;
+        s_exit_status->exited = status.exited && !status.signaled;
+        s_exit_status->signaled = status.signaled;
+        s_exit_status->stopped = cat_false;
+    } else {
+#ifdef CAT_OS_UNIX_LIKE
+        int raw_status;
+        cat_pid_t wait_pid = timeout < 0
+            ? cat_os_waitpid(s_process->pid, &raw_status, 0)
+            : cat_os_waitpid_ex(s_process->pid, &raw_status, 0, timeout);
+        if (wait_pid <= 0) {
+            swow_throw_exception_with_last(swow_process_exception_ce);
+            RETURN_THROWS();
+        }
+        s_process->raw_status = raw_status;
+        s_process->exited = cat_true;
+        s_process->waited = cat_true;
+        s_exit_status->exit_code = cat_os_wait_status_exited(raw_status)
+            ? cat_os_wait_status_exit_code(raw_status)
+            : -1;
+        s_exit_status->term_signal = cat_os_wait_status_signaled(raw_status)
+            ? cat_os_wait_status_term_signal(raw_status)
+            : -1;
+        s_exit_status->exited = cat_os_wait_status_exited(raw_status);
+        s_exit_status->signaled = cat_os_wait_status_signaled(raw_status);
+        s_exit_status->stopped = WIFSTOPPED(raw_status);
+#else
+        swow_throw_exception(swow_process_exception_ce, 0, "ChildProcess::fork() is not supported on Windows");
+        RETURN_THROWS();
+#endif
+    }
 }
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Process_ChildProcess_hasExited, 0, 0, _IS_BOOL, 0)
@@ -653,17 +723,25 @@ static PHP_METHOD(Swow_Process_ChildProcess, hasExited)
 
     s_process = swow_child_process_get_from_object(Z_OBJ_P(ZEND_THIS));
 
+    if (!swow_child_process_check_open(s_process)) {
+        RETURN_THROWS();
+    }
+
+    if (s_process->process != NULL) {
+        RETURN_BOOL(cat_process_has_exited(s_process->process));
+    }
+
     RETURN_BOOL(s_process->exited);
 }
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Process_ChildProcess_kill, 0, 0, IS_VOID, 0)
-    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, signal, IS_LONG, 0, "\\Swow\\Process\\SIGTERM")
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, signal, IS_LONG, 0, SWOW_PROCESS_DEFAULT_SIGNAL_NAME)
 ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Process_ChildProcess, kill)
 {
     swow_child_process_t *s_process;
-    zend_long signal = SIGTERM;
+    zend_long signal = SWOW_PROCESS_DEFAULT_SIGNAL;
     cat_bool_t ret;
 
     ZEND_PARSE_PARAMETERS_START(0, 1)
@@ -673,27 +751,27 @@ static PHP_METHOD(Swow_Process_ChildProcess, kill)
 
     s_process = swow_child_process_get_from_object(Z_OBJ_P(ZEND_THIS));
 
-    if (s_process->exited) {
-        swow_throw_exception(swow_process_exception_ce, 0, "Process has already exited");
+    if (!swow_child_process_check_open(s_process)) {
         RETURN_THROWS();
     }
 
-    ret = cat_kill(s_process->pid, signal);
+    if (s_process->process != NULL) {
+        if (cat_process_has_exited(s_process->process)) {
+            swow_throw_exception(swow_process_exception_ce, 0, "Process has already exited");
+            RETURN_THROWS();
+        }
+        ret = cat_process_kill(s_process->process, (int) signal);
+    } else {
+        if (s_process->exited) {
+            swow_throw_exception(swow_process_exception_ce, 0, "Process has already exited");
+            RETURN_THROWS();
+        }
+        ret = cat_kill_ex(s_process->pid, (int) signal);
+    }
 
     if (UNEXPECTED(!ret)) {
         swow_throw_exception_with_last(swow_process_exception_ce);
         RETURN_THROWS();
-    }
-}
-
-
-static void swow_child_process_close_streams(swow_child_process_t *s_process)
-{
-    for (int i = 0; i < 3; i++) {
-        if (!Z_ISUNDEF(s_process->streams[i])) {
-            zval_ptr_dtor(&s_process->streams[i]);
-            ZVAL_UNDEF(&s_process->streams[i]);
-        }
     }
 }
 
@@ -705,7 +783,7 @@ static void swow_child_process_close_streams(swow_child_process_t *s_process)
         swow_child_process_t *s_process; \
         ZEND_PARSE_PARAMETERS_NONE(); \
         s_process = swow_child_process_get_from_object(Z_OBJ_P(ZEND_THIS)); \
-        if (Z_ISUNDEF(s_process->streams[index])) { \
+        if (s_process->closed || Z_ISUNDEF(s_process->streams[index])) { \
             RETURN_NULL(); \
         } \
         RETURN_COPY(&s_process->streams[index]); \
@@ -718,20 +796,58 @@ SWOW_CHILD_PROCESS_STREAM_GETTER(getStderr, 2)
 ZEND_BEGIN_ARG_INFO_EX(arginfo_class_Swow_Process_ChildProcess_close, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
+static void swow_child_process_force_close_callback(uv_handle_t *handle)
+{
+    cat_process_t *process = cat_container_of(handle, cat_process_t, u.handle);
+    cat_free(process);
+}
+
+static cat_bool_t swow_child_process_close(swow_child_process_t *s_process, cat_bool_t throw_on_error)
+{
+    if (s_process->closed) {
+        return cat_true;
+    }
+
+    swow_child_process_close_streams(s_process);
+
+    if (s_process->process != NULL) {
+        cat_process_t *process = s_process->process;
+        if (UNEXPECTED(!cat_queue_empty(&process->waiters))) {
+            if (throw_on_error) {
+                swow_throw_exception(swow_process_exception_ce, 0, "Process has waiters");
+            }
+            return cat_false;
+        }
+        s_process->process = NULL;
+        if (!uv_is_closing((uv_handle_t *) &process->u.handle)) {
+            uv_close((uv_handle_t *) &process->u.handle, swow_child_process_force_close_callback);
+        }
+    }
+
+    s_process->closed = cat_true;
+    return cat_true;
+}
+
 static PHP_METHOD(Swow_Process_ChildProcess, close)
 {
     swow_child_process_t *s_process;
+
     ZEND_PARSE_PARAMETERS_NONE();
+
     s_process = swow_child_process_get_from_object(Z_OBJ_P(ZEND_THIS));
-    swow_child_process_close_streams(s_process);
+    if (!swow_child_process_close(s_process, cat_true)) {
+        RETURN_THROWS();
+    }
 }
 
 static PHP_METHOD(Swow_Process_ChildProcess, __destruct)
 {
     swow_child_process_t *s_process;
+
     ZEND_PARSE_PARAMETERS_NONE();
+
     s_process = swow_child_process_get_from_object(Z_OBJ_P(ZEND_THIS));
-    swow_child_process_close_streams(s_process);
+    (void) swow_child_process_close(s_process, cat_false);
 }
 
 static const zend_function_entry swow_child_process_methods[] = {
@@ -753,16 +869,11 @@ static const zend_function_entry swow_child_process_methods[] = {
 
 /* {{{ ProcessExitStatus */
 
-static zend_object *swow_process_exit_status_create_object(zend_class_entry *ce)
-{
-    swow_process_exit_status_t *s_status = swow_object_alloc(swow_process_exit_status_t, ce, swow_process_exit_status_handlers);
-
-    s_status->status = 0;
-
-    return &s_status->std;
-}
-
 #define arginfo_class_Swow_Process_ProcessExitStatus_getExitCode arginfo_class_Swow_Process_ChildProcess_getPid
+#define arginfo_class_Swow_Process_ProcessExitStatus_getTermSignal arginfo_class_Swow_Process_ChildProcess_getPid
+#define arginfo_class_Swow_Process_ProcessExitStatus_isExited arginfo_class_Swow_Process_ChildProcess_hasExited
+#define arginfo_class_Swow_Process_ProcessExitStatus_isSignaled arginfo_class_Swow_Process_ChildProcess_hasExited
+#define arginfo_class_Swow_Process_ProcessExitStatus_isStopped arginfo_class_Swow_Process_ChildProcess_hasExited
 
 static PHP_METHOD(Swow_Process_ProcessExitStatus, getExitCode)
 {
@@ -772,13 +883,8 @@ static PHP_METHOD(Swow_Process_ProcessExitStatus, getExitCode)
 
     s_status = swow_process_exit_status_get_from_object(Z_OBJ_P(ZEND_THIS));
 
-    if (WIFEXITED(s_status->status)) {
-        RETURN_LONG(WEXITSTATUS(s_status->status));
-    }
-    RETURN_LONG(-1);
+    RETURN_LONG(s_status->exit_code);
 }
-
-#define arginfo_class_Swow_Process_ProcessExitStatus_getTermSignal arginfo_class_Swow_Process_ChildProcess_getPid
 
 static PHP_METHOD(Swow_Process_ProcessExitStatus, getTermSignal)
 {
@@ -788,13 +894,8 @@ static PHP_METHOD(Swow_Process_ProcessExitStatus, getTermSignal)
 
     s_status = swow_process_exit_status_get_from_object(Z_OBJ_P(ZEND_THIS));
 
-    if (WIFSIGNALED(s_status->status)) {
-        RETURN_LONG(WTERMSIG(s_status->status));
-    }
-    RETURN_LONG(-1);
+    RETURN_LONG(s_status->term_signal);
 }
-
-#define arginfo_class_Swow_Process_ProcessExitStatus_isExited arginfo_class_Swow_Process_ChildProcess_hasExited
 
 static PHP_METHOD(Swow_Process_ProcessExitStatus, isExited)
 {
@@ -804,10 +905,8 @@ static PHP_METHOD(Swow_Process_ProcessExitStatus, isExited)
 
     s_status = swow_process_exit_status_get_from_object(Z_OBJ_P(ZEND_THIS));
 
-    RETURN_BOOL(WIFEXITED(s_status->status));
+    RETURN_BOOL(s_status->exited);
 }
-
-#define arginfo_class_Swow_Process_ProcessExitStatus_isSignaled arginfo_class_Swow_Process_ChildProcess_hasExited
 
 static PHP_METHOD(Swow_Process_ProcessExitStatus, isSignaled)
 {
@@ -817,10 +916,8 @@ static PHP_METHOD(Swow_Process_ProcessExitStatus, isSignaled)
 
     s_status = swow_process_exit_status_get_from_object(Z_OBJ_P(ZEND_THIS));
 
-    RETURN_BOOL(WIFSIGNALED(s_status->status));
+    RETURN_BOOL(s_status->signaled);
 }
-
-#define arginfo_class_Swow_Process_ProcessExitStatus_isStopped arginfo_class_Swow_Process_ChildProcess_hasExited
 
 static PHP_METHOD(Swow_Process_ProcessExitStatus, isStopped)
 {
@@ -830,7 +927,7 @@ static PHP_METHOD(Swow_Process_ProcessExitStatus, isStopped)
 
     s_status = swow_process_exit_status_get_from_object(Z_OBJ_P(ZEND_THIS));
 
-    RETURN_BOOL(WIFSTOPPED(s_status->status));
+    RETURN_BOOL(s_status->stopped);
 }
 
 static const zend_function_entry swow_process_exit_status_methods[] = {
@@ -844,25 +941,25 @@ static const zend_function_entry swow_process_exit_status_methods[] = {
 
 /* }}} */
 
-
 /* {{{ Swow\Process\kill */
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_swow_process_kill, 0, 0, 2)
+ZEND_BEGIN_ARG_INFO_EX(arginfo_swow_process_kill, 0, 0, 1)
     ZEND_ARG_TYPE_INFO(0, pid, IS_LONG, 0)
-    ZEND_ARG_TYPE_INFO(0, signal, IS_LONG, 0)
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, signal, IS_LONG, 0, SWOW_PROCESS_DEFAULT_SIGNAL_NAME)
 ZEND_END_ARG_INFO()
 
 ZEND_FUNCTION(kill)
 {
     zend_long pid;
-    zend_long signal;
+    zend_long signal = SWOW_PROCESS_DEFAULT_SIGNAL;
 
-    ZEND_PARSE_PARAMETERS_START(2, 2)
+    ZEND_PARSE_PARAMETERS_START(1, 2)
         Z_PARAM_LONG(pid)
+        Z_PARAM_OPTIONAL
         Z_PARAM_LONG(signal)
     ZEND_PARSE_PARAMETERS_END();
 
-    if (UNEXPECTED(!cat_kill((cat_pid_t) pid, (int) signal))) {
+    if (UNEXPECTED(!cat_kill_ex((cat_pid_t) pid, (int) signal))) {
         swow_throw_exception_with_last(swow_process_exception_ce);
         RETURN_THROWS();
     }
@@ -879,14 +976,12 @@ static const zend_function_entry swow_process_functions[] = {
 
 zend_result swow_process_module_init(INIT_FUNC_ARGS)
 {
-    /* ProcessInterface */
     swow_process_interface_ce = swow_register_internal_interface(
         "Swow\\Process\\ProcessInterface",
         swow_process_interface_methods,
         NULL
     );
 
-    /* ChildProcess */
     swow_child_process_ce = swow_register_internal_class(
         "Swow\\Process\\ChildProcess", NULL, swow_child_process_methods,
         &swow_child_process_handlers, NULL,
@@ -896,7 +991,6 @@ zend_result swow_process_module_init(INIT_FUNC_ARGS)
     );
     zend_class_implements(swow_child_process_ce, 1, swow_process_interface_ce);
 
-    /* ProcessExitStatus */
     swow_process_exit_status_ce = swow_register_internal_class(
         "Swow\\Process\\ProcessExitStatus", NULL, swow_process_exit_status_methods,
         &swow_process_exit_status_handlers, NULL,
@@ -905,15 +999,22 @@ zend_result swow_process_module_init(INIT_FUNC_ARGS)
         offsetof(swow_process_exit_status_t, std)
     );
 
-    /* ProcessException */
     swow_process_exception_ce = swow_register_internal_class(
         "Swow\\Process\\ProcessException", swow_exception_ce, NULL,
         NULL, NULL, cat_true, cat_true, NULL, NULL, 0
     );
 
+#ifdef CAT_OS_UNIX_LIKE
     REGISTER_LONG_CONSTANT("Swow\\Process\\SIGINT", SIGINT, CONST_PERSISTENT);
     REGISTER_LONG_CONSTANT("Swow\\Process\\SIGKILL", SIGKILL, CONST_PERSISTENT);
     REGISTER_LONG_CONSTANT("Swow\\Process\\SIGTERM", SIGTERM, CONST_PERSISTENT);
+#else
+    REGISTER_LONG_CONSTANT("Swow\\Process\\SIGINT", CAT_SIGINT, CONST_PERSISTENT);
+    REGISTER_LONG_CONSTANT("Swow\\Process\\SIGBREAK", CAT_SIGBREAK, CONST_PERSISTENT);
+    REGISTER_LONG_CONSTANT("Swow\\Process\\SIGKILL", CAT_SIGKILL, CONST_PERSISTENT);
+    REGISTER_LONG_CONSTANT("Swow\\Process\\CTRL_C_EVENT", CTRL_C_EVENT, CONST_PERSISTENT);
+    REGISTER_LONG_CONSTANT("Swow\\Process\\CTRL_BREAK_EVENT", CTRL_BREAK_EVENT, CONST_PERSISTENT);
+#endif
 
     if (zend_register_functions(NULL, swow_process_functions, NULL, MODULE_PERSISTENT) != SUCCESS) {
         return FAILURE;
@@ -923,5 +1024,3 @@ zend_result swow_process_module_init(INIT_FUNC_ARGS)
 }
 
 /* }}} */
-
-#endif /* CAT_OS_WAIT */
