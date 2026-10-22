@@ -13,7 +13,7 @@ use Swow\Process\ChildProcess;
 
 $process = ChildProcess::spawn([PHP_BINARY, '-n', '-r', 'exit(0);']);
 
-$channel = new \Swow\Channel(1);
+$channel = new Swow\Channel(1);
 $exited = false;
 for ($i = 0; $i < 200; $i++) {
     if ($process->hasExited()) {
@@ -22,7 +22,7 @@ for ($i = 0; $i < 200; $i++) {
     }
     try {
         $channel->pop(10);
-    } catch (\Swow\ChannelException) {
+    } catch (Swow\ChannelException) {
     }
 }
 

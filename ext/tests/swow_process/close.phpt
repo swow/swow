@@ -55,7 +55,7 @@ try {
 kill($pid, 0);
 kill($pid, \Swow\Process\SIGKILL);
 
-$channel = new \Swow\Channel(1);
+$channel = new Swow\Channel(1);
 for ($i = 0; $i < 200; $i++) {
     try {
         kill($pid, 0);
@@ -64,7 +64,7 @@ for ($i = 0; $i < 200; $i++) {
     }
     try {
         $channel->pop(10);
-    } catch (\Swow\ChannelException) {
+    } catch (Swow\ChannelException) {
     }
 }
 

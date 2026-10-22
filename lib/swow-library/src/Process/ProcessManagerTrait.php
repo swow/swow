@@ -22,17 +22,16 @@ use function sprintf;
 
 use const STDERR;
 
-
 /**
  * Shared process manager lifecycle.
  *
  * The manager starts workers and controls their life cycle.
  * It restarts workers that exit with an error.
- * SIGUSR1 starts a graceful reload. SIGTERM and SIGINT start a graceful stop.
+ * On POSIX, SIGUSR1 starts a graceful reload. On Windows, SIGBREAK starts it.
+ * SIGTERM and SIGINT start a graceful stop.
  */
 trait ProcessManagerTrait
 {
-
     /** @var int Number of workers */
     protected int $workerCount;
 
@@ -69,7 +68,7 @@ trait ProcessManagerTrait
     /** @var Coroutine|null SIGINT listener coroutine */
     protected ?Coroutine $intCoroutine = null;
 
-    /** @var Coroutine|null SIGUSR1 listener coroutine */
+    /** @var Coroutine|null Reload signal listener coroutine */
     protected ?Coroutine $reloadCoroutine = null;
 
     /** @var Coroutine|null Active reload coroutine */
@@ -327,11 +326,12 @@ trait ProcessManagerTrait
             }
         });
 
-        /* SIGUSR1 starts a graceful reload. */
-        $this->reloadCoroutine = $this->runManagedCoroutine(function (): void {
+        /* SIGUSR1 starts a graceful reload. Windows uses SIGBREAK. */
+        $reloadSignal = PHP_OS_FAMILY === 'Windows' ? Signal::BREAK : Signal::USR1;
+        $this->reloadCoroutine = $this->runManagedCoroutine(function () use ($reloadSignal): void {
             while ($this->running) {
                 try {
-                    Signal::wait(Signal::USR1, self::SIGNAL_POLL_TIMEOUT);
+                    Signal::wait($reloadSignal, self::SIGNAL_POLL_TIMEOUT);
                 } catch (\Swow\SignalException) {
                     continue;
                 }

@@ -19,6 +19,7 @@ use Throwable;
 
 use function sprintf;
 
+use const PHP_OS_FAMILY;
 use const STDERR;
 
 /**

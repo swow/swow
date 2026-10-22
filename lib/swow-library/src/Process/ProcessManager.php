@@ -15,19 +15,29 @@ declare(strict_types=1);
 namespace Swow\Process;
 
 use Closure;
+use ReflectionClass;
 use Throwable;
 
 use function array_merge;
+use function count;
+use function dirname;
+use function extension_loaded;
 use function fclose;
 use function fwrite;
 use function getenv;
 use function getmypid;
+use function ini_get;
 use function is_array;
 use function is_file;
+use function is_resource;
+use function is_string;
 use function str_contains;
 use function strlen;
 
+use const DIRECTORY_SEPARATOR;
+use const FILTER_VALIDATE_BOOLEAN;
 use const PHP_BINARY;
+use const PHP_OS_FAMILY;
 
 /**
  * Cross-platform process manager backed by ChildProcess::spawn().
@@ -106,74 +116,74 @@ final class ProcessManager implements ProcessManagerInterface
 
         switch ($this->mode) {
             case 'closure':
-            {
-                $pipe = \Swow\pipe();
-                if (!is_array($pipe) || count($pipe) !== 2) {
-                    throw new ProcessManagerException('Unable to create worker payload pipe');
-                }
-                [$read, $write] = $pipe;
-                $env['SWOW_PROCESS_MANAGER_PAYLOAD_FD'] = '3';
-                $options['env'] = $env;
-                $options['fds'] = [3 => $read];
-
-                $command = array_merge(
-                    [PHP_BINARY],
-                    $this->phpArgs ?? [],
-                    [__DIR__ . '/process-manager-worker.php'],
-                );
-
-                try {
-                    $process = ChildProcess::spawn($command, $options);
-                } catch (Throwable $e) {
-                    fclose($read);
-                    fclose($write);
-                    throw $e;
-                }
-
-                fclose($read);
-
-                $payload = $this->serializedClosure ?? '';
-                $written = 0;
-                try {
-                    while ($written < strlen($payload)) {
-                        $n = fwrite($write, substr($payload, $written));
-                        if ($n === false || $n === 0) {
-                            break;
-                        }
-                        $written += $n;
+                {
+                    $pipe = \Swow\pipe();
+                    if (!is_array($pipe) || count($pipe) !== 2) {
+                        throw new ProcessManagerException('Unable to create worker payload pipe');
                     }
-                } finally {
-                    fclose($write);
-                }
+                    [$read, $write] = $pipe;
+                    $env['SWOW_PROCESS_MANAGER_PAYLOAD_FD'] = '3';
+                    $options['env'] = $env;
+                    $options['fds'] = [3 => $read];
 
-                if ($written !== strlen($payload)) {
-                    $process->kill(\Swow\Signal::KILL);
-                    throw new ProcessManagerException('Unable to write worker payload');
-                }
+                    $command = array_merge(
+                        [PHP_BINARY],
+                        $this->phpArgs ?? [],
+                        [__DIR__ . '/process-manager-worker.php'],
+                    );
 
-                $this->workers[$id] = $process;
-                $this->restartCounts[$id] ??= 0;
-                return $process;
-            }
+                    try {
+                        $process = ChildProcess::spawn($command, $options);
+                    } catch (Throwable $e) {
+                        fclose($read);
+                        fclose($write);
+                        throw $e;
+                    }
+
+                    fclose($read);
+
+                    $payload = $this->serializedClosure ?? '';
+                    $written = 0;
+                    try {
+                        while ($written < strlen($payload)) {
+                            $n = fwrite($write, substr($payload, $written));
+                            if ($n === false || $n === 0) {
+                                break;
+                            }
+                            $written += $n;
+                        }
+                    } finally {
+                        fclose($write);
+                    }
+
+                    if ($written !== strlen($payload)) {
+                        $process->kill(\Swow\Signal::KILL);
+                        throw new ProcessManagerException('Unable to write worker payload');
+                    }
+
+                    $this->workers[$id] = $process;
+                    $this->restartCounts[$id] ??= 0;
+                    return $process;
+                }
             case 'inline':
-            {
-                $command = array_merge(
-                    [PHP_BINARY],
-                    $this->phpArgs ?? [],
-                    ['-r', $this->inlineCode ?? ''],
-                );
-                break;
-            }
+                {
+                    $command = array_merge(
+                        [PHP_BINARY],
+                        $this->phpArgs ?? [],
+                        ['-r', $this->inlineCode ?? ''],
+                    );
+                    break;
+                }
             case 'script':
-            {
-                $command = array_merge(
-                    [PHP_BINARY],
-                    $this->phpArgs ?? [],
-                    [$this->scriptPath ?? ''],
-                    $this->scriptArgs,
-                );
-                break;
-            }
+                {
+                    $command = array_merge(
+                        [PHP_BINARY],
+                        $this->phpArgs ?? [],
+                        [$this->scriptPath ?? ''],
+                        $this->scriptArgs,
+                    );
+                    break;
+                }
             default:
                 throw new ProcessManagerException('ProcessManager has not been started');
         }
@@ -291,8 +301,7 @@ final class ProcessManager implements ProcessManagerInterface
 
         $stdout = stream_get_contents($pipes[1]);
         $stderr = stream_get_contents($pipes[2]);
-        fclose($pipes[1]);
-        fclose($pipes[2]);
+        /* proc_close closes the pipe resources. Do not close them here. */
         $exitCode = proc_close($process);
 
         return [(string) $stdout . (string) $stderr, $exitCode];
@@ -301,7 +310,7 @@ final class ProcessManager implements ProcessManagerInterface
     private function findAutoloadPath(): ?string
     {
         if (class_exists(\Composer\Autoload\ClassLoader::class)) {
-            $file = (new \ReflectionClass(\Composer\Autoload\ClassLoader::class))->getFileName();
+            $file = (new ReflectionClass(\Composer\Autoload\ClassLoader::class))->getFileName();
             if (is_string($file)) {
                 $autoload = dirname($file, 2) . '/autoload.php';
                 if (is_file($autoload)) {

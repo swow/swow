@@ -10,6 +10,7 @@ skip_if(PHP_OS_FAMILY === 'Windows', 'POSIX implementation only');
 require __DIR__ . '/../include/bootstrap.php';
 
 use Swow\Process\ChildProcess;
+
 use function Swow\Process\kill;
 
 $process = ChildProcess::spawn([PHP_BINARY, '-n', '-r', 'sleep(5);']);

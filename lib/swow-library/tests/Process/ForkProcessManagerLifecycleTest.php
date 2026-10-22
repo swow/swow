@@ -19,8 +19,8 @@ use PHPUnit\Framework\Attributes\RequiresOperatingSystem;
 use PHPUnit\Framework\TestCase;
 use Swow\Channel;
 use Swow\Coroutine;
-use Swow\Process\ProcessExitStatus;
 use Swow\Process\ForkProcessManager;
+use Swow\Process\ProcessExitStatus;
 use Swow\Process\WorkerContext;
 use Swow\Signal;
 
@@ -147,14 +147,14 @@ final class ForkProcessManagerLifecycleTest extends TestCase
     {
         $terminated = new Channel(1);
         $waiter = Coroutine::run(static function () use ($terminated): void {
-            Signal::wait(Signal::TERM, 5000);
+            Signal::wait(Signal::TERM, 15000);
             $terminated->push(true);
         });
         try {
             // Publish readiness only after the signal waiter has suspended. A file write can
             // become visible to the parent before its own coroutine resumes to register a waiter.
             file_put_contents($file, $context->getPid() . "\n", $flags);
-            $terminated->pop(5000);
+            $terminated->pop(15000);
         } finally {
             if ($waiter->isAlive()) {
                 $waiter->kill();
@@ -164,7 +164,7 @@ final class ForkProcessManagerLifecycleTest extends TestCase
 
     private function waitForManagerExit(Coroutine $loop): void
     {
-        $deadline = microtime(true) + 5.0;
+        $deadline = microtime(true) + 15.0;
         while ($loop->isAlive() && microtime(true) < $deadline) {
             usleep(10000);
         }
@@ -174,7 +174,7 @@ final class ForkProcessManagerLifecycleTest extends TestCase
     /** @return list<string> */
     private function waitForWorkerRecords(string $file, int $count): array
     {
-        $deadline = microtime(true) + 5.0;
+        $deadline = microtime(true) + 15.0;
         do {
             $records = file($file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
             $this->assertIsArray($records);

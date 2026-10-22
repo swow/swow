@@ -21,6 +21,10 @@ use Swow\Process\ProcessManager;
 use Swow\Process\ProcessManagerInterface;
 use Swow\Process\WorkerContext;
 
+use function ini_get;
+
+use const FILTER_VALIDATE_BOOLEAN;
+
 /**
  * @internal
  */
