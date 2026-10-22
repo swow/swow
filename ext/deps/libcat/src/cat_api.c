@@ -18,6 +18,8 @@
 
 #include "cat_api.h"
 
+#include "cat_thread.h"
+
 CAT_API cat_bool_t cat_init_all(void)
 {
     return cat_module_init_all() &&
@@ -45,9 +47,7 @@ CAT_API cat_bool_t cat_module_init_all(void)
            cat_ssl_module_init() &&
 #endif
            cat_socket_module_init() &&
-#ifdef CAT_OS_WAIT
            cat_os_wait_module_init() &&
-#endif
            cat_watchdog_module_init() &&
            cat_true;
 }
@@ -57,9 +57,7 @@ CAT_API cat_bool_t cat_module_shutdown_all(void)
     cat_bool_t ret = cat_true;
 
     ret = cat_watchdog_module_shutdown() && ret;
-#ifdef CAT_OS_WAIT
     ret = cat_os_wait_module_shutdown() && ret;
-#endif
     ret = cat_socket_module_shutdown() && ret;
     ret = cat_event_module_shutdown() && ret;
     ret = cat_coroutine_module_shutdown() && ret;
@@ -74,9 +72,10 @@ CAT_API cat_bool_t cat_runtime_init_all(void)
            cat_coroutine_runtime_init() &&
            cat_event_runtime_init() &&
            cat_socket_runtime_init() &&
-#ifdef CAT_OS_WAIT
-           cat_os_wait_runtime_init() &&
+#ifdef CAT_THREAD_SAFE
+           cat_thread_runtime_init() &&
 #endif
+           cat_os_wait_runtime_init() &&
            cat_watchdog_runtime_init() &&
            cat_true;
 }
@@ -86,9 +85,11 @@ CAT_API cat_bool_t cat_runtime_shutdown_all(void)
     cat_bool_t ret = cat_true;
 
     ret = cat_watchdog_runtime_shutdown() && ret;
-#ifdef CAT_OS_WAIT
     ret = cat_os_wait_runtime_shutdown() && ret;
+#ifdef CAT_THREAD_SAFE
+    ret = cat_thread_runtime_shutdown() && ret;
 #endif
+    ret = cat_process_runtime_shutdown() && ret;
     ret = cat_event_runtime_shutdown() && ret;
     ret = cat_coroutine_runtime_shutdown() && ret;
     ret = cat_runtime_shutdown() && ret;
@@ -109,6 +110,13 @@ CAT_API cat_bool_t cat_runtime_close_all(void)
 
 CAT_API cat_bool_t cat_run(cat_run_mode_t run_mode)
 {
+#ifdef CAT_THREAD_SAFE
+    /* the thread that runs first is the root of its runtime */
+    if (!cat_thread_ensure_root()) {
+        return cat_false;
+    }
+#endif
+
     switch (run_mode) {
         case CAT_RUN_EASY: {
             return cat_event_scheduler_run(NULL) != NULL;

@@ -28,6 +28,7 @@
 #include <sys/time.h>
 #include <sys/sysctl.h>
 
+#include <dlfcn.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <paths.h>
@@ -35,6 +36,24 @@
 #include <string.h>
 #include <unistd.h>
 
+typedef int (*uv__getexecpath_cb)(char *, size_t);
+
+static uv__getexecpath_cb uv__getexecpath;
+static uv_once_t once = UV_ONCE_INIT;
+
+static void uv__getexecpath_init_once(void) {
+  uv__getexecpath =
+      (uv__getexecpath_cb) dlsym(RTLD_DEFAULT, "getexecpath");
+}
+
+static int uv__getexecpath_init(void) {
+  uv_once(&once, uv__getexecpath_init_once);
+
+  if (uv__getexecpath == NULL)
+    return UV_ENOSYS;
+
+  return 0;
+}
 
 int uv__platform_loop_init(uv_loop_t* loop) {
   return uv__kqueue_init(loop);
@@ -59,54 +78,24 @@ void uv_loadavg(double avg[3]) {
 
 
 int uv_exepath(char* buffer, size_t* size) {
-  int mib[4];
-  char **argsbuf = NULL;
-  size_t argsbuf_size = 100U;
-  size_t exepath_size;
-  pid_t mypid;
-  int err;
+  char path[PATH_MAX];
 
   if (buffer == NULL || size == NULL || *size == 0)
     return UV_EINVAL;
 
-  mypid = getpid();
-  for (;;) {
-    err = UV_ENOMEM;
-    argsbuf = uv__reallocf(argsbuf, argsbuf_size);
-    if (argsbuf == NULL)
-      goto out;
-    mib[0] = CTL_KERN;
-    mib[1] = KERN_PROC_ARGS;
-    mib[2] = mypid;
-    mib[3] = KERN_PROC_ARGV;
-    if (sysctl(mib, ARRAY_SIZE(mib), argsbuf, &argsbuf_size, NULL, 0) == 0) {
-      break;
-    }
-    if (errno != ENOMEM) {
-      err = UV__ERR(errno);
-      goto out;
-    }
-    argsbuf_size *= 2U;
+  if (uv__getexecpath_init() == 0) {
+    if (uv__getexecpath(path, sizeof path))
+      return UV__ERR(errno);
+
+    strlcpy(buffer, path, *size);
+    *size = strlen(buffer);
+    return 0;
   }
 
-  if (argsbuf[0] == NULL) {
-    err = UV_EINVAL;  /* FIXME(bnoordhuis) More appropriate error. */
-    goto out;
-  }
+  if (uv_saved_argv0 == NULL)
+    return UV_EINVAL;
 
-  *size -= 1;
-  exepath_size = strlen(argsbuf[0]);
-  if (*size > exepath_size)
-    *size = exepath_size;
-
-  memcpy(buffer, argsbuf[0], *size);
-  buffer[*size] = '\0';
-  err = 0;
-
-out:
-  uv__free(argsbuf);
-
-  return err;
+  return uv__search_path(uv_saved_argv0, buffer, size);
 }
 
 
@@ -135,7 +124,7 @@ uint64_t uv_get_total_memory(void) {
 
 
 uint64_t uv_get_constrained_memory(void) {
-  return 0;  /* Memory constraints are unknown. */
+  return uv__get_rlimit_max_memory();
 }
 
 
@@ -245,7 +234,7 @@ int uv_cpu_info(uv_cpu_info_t** cpu_infos, int* count) {
 error:
   *count = 0;
   for (j = 0; j < i; j++)
-    uv__free((*cpu_infos)[j].model);
+    uv__free((void*)(*cpu_infos)[j].model);
 
   uv__free(*cpu_infos);
   *cpu_infos = NULL;

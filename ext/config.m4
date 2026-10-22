@@ -481,6 +481,11 @@ EOF
       cat_env.c \
       cat.c \
       cat_api.c \
+      cat_tsrm.c \
+      cat_thread.c \
+      cat_thannel.c \
+      cat_thread_sync.c \
+      cat_process.c \
       cat_coroutine.c \
       cat_channel.c \
       cat_sync.c \

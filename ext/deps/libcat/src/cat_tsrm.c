@@ -18,10 +18,34 @@
 
 #include "cat.h"
 
-#ifdef CAT_USE_THREAD_KEY
+#if defined(CAT_USE_THREAD_LOCAL)
+
+static _CAT_THREAD_LOCAL cat_bool_t cat_globals_initialized = cat_false;
+
+CAT_API cat_bool_t cat_globals_is_initialized(void)
+{
+    return cat_globals_initialized;
+}
+
+CAT_API void cat_globals_runtime_init(void)
+{
+    cat_globals_initialized = cat_true;
+}
+
+CAT_API void cat_globals_runtime_shutdown(void)
+{
+    cat_globals_initialized = cat_false;
+}
+
+#elif defined(CAT_USE_THREAD_KEY)
 
 CAT_API uv_key_t cat_globals_key;
 CAT_API size_t cat_globals_size;
+
+CAT_API cat_bool_t cat_globals_key_available(void)
+{
+    return uv_key_get(&cat_globals_key) != NULL ? cat_true : cat_false;
+}
 
 CAT_API void cat_globals_module_init(void)
 {
@@ -40,13 +64,20 @@ CAT_API void cat_globals_module_shutdown(void)
 
 CAT_API void cat_globals_runtime_init(void)
 {
+    /* Keep the block that this thread already owns.
+     * The module accessors are no-ops on the non-thread-safe build, so a runtime
+     * re-init must not throw away the state that the other modules set up. */
+    if (uv_key_get(&cat_globals_key) != NULL) {
+        return;
+    }
     void *globals = cat_sys_calloc_unrecoverable(1, cat_globals_size);
     uv_key_set(&cat_globals_key, globals);
 }
 
-CAT_API void cat_globals_runtime_close(void)
+CAT_API void cat_globals_runtime_shutdown(void)
 {
     cat_sys_free(uv_key_get(&cat_globals_key));
+    uv_key_set(&cat_globals_key, NULL);
 }
 
 CAT_API void cat_globals_register(size_t size, size_t *offset)

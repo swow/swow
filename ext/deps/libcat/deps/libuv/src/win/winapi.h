@@ -4164,6 +4164,10 @@ typedef struct _REPARSE_DATA_BUFFER {
       WCHAR PathBuffer[1];
     } SymbolicLinkReparseBuffer;
     struct {
+      ULONG Version;
+      UCHAR PathBuffer[1];
+    } LinuxSymbolicLinkReparseBuffer;
+    struct {
       USHORT SubstituteNameOffset;
       USHORT SubstituteNameLength;
       USHORT PrintNameOffset;
@@ -4582,6 +4586,9 @@ typedef struct _SYSTEM_PROCESSOR_PERFORMANCE_INFORMATION {
 #ifndef IO_REPARSE_TAG_SYMLINK
 # define IO_REPARSE_TAG_SYMLINK (0xA000000CL)
 #endif
+#ifndef IO_REPARSE_TAG_LX_SYMLINK
+# define IO_REPARSE_TAG_LX_SYMLINK (0xA000001DL)
+#endif
 #ifndef IO_REPARSE_TAG_APPEXECLINK
 # define IO_REPARSE_TAG_APPEXECLINK (0x8000001BL)
 #endif
@@ -4656,6 +4663,40 @@ typedef NTSTATUS (NTAPI *sNtQueryInformationProcess)
                   PVOID ProcessInformation,
                   ULONG Length,
                   PULONG ReturnLength);
+
+#if !defined(_OBJECT_ATTRIBUTES_DEFINED) && defined(__MINGW32__)
+# define _OBJECT_ATTRIBUTES_DEFINED
+#endif
+typedef struct _OBJECT_ATTRIBUTES {
+  ULONG Length;
+  HANDLE RootDirectory;
+  PUNICODE_STRING ObjectName;
+  ULONG Attributes;
+  PVOID SecurityDescriptor;
+  PVOID SecurityQualityOfService;
+} OBJECT_ATTRIBUTES, *POBJECT_ATTRIBUTES;
+
+#ifndef FILE_OPEN
+# define FILE_OPEN 0x00000001
+#endif
+
+/* NtCreateFile() is used to reopen an existing handle with a different
+ * access mask and sharing mode relative to itself (RootDirectory set to
+ * the handle, ObjectName empty), which works for directory handles where
+ * ReOpenFile() does not.
+ */
+typedef NTSTATUS (NTAPI *sNtCreateFile)
+                 (PHANDLE FileHandle,
+                  ACCESS_MASK DesiredAccess,
+                  POBJECT_ATTRIBUTES ObjectAttributes,
+                  PIO_STATUS_BLOCK IoStatusBlock,
+                  PLARGE_INTEGER AllocationSize,
+                  ULONG FileAttributes,
+                  ULONG ShareAccess,
+                  ULONG CreateDisposition,
+                  ULONG CreateOptions,
+                  PVOID EaBuffer,
+                  ULONG EaLength);
 
 /*
  * Kernel32 headers
@@ -4778,6 +4819,9 @@ typedef struct _TCP_INITIAL_RTO_PARAMETERS {
   UCHAR  MaxSynRetransmissions;
 } TCP_INITIAL_RTO_PARAMETERS, *PTCP_INITIAL_RTO_PARAMETERS;
 
+#ifndef TCP_INITIAL_RTO_DEFAULT_RTT
+# define TCP_INITIAL_RTO_DEFAULT_RTT 0
+#endif
 #ifndef TCP_INITIAL_RTO_NO_SYN_RETRANSMISSIONS
 # define TCP_INITIAL_RTO_NO_SYN_RETRANSMISSIONS ((UCHAR) -2)
 #endif
@@ -4813,6 +4857,7 @@ extern sNtQueryVolumeInformationFile pNtQueryVolumeInformationFile;
 extern sNtQueryDirectoryFile pNtQueryDirectoryFile;
 extern sNtQuerySystemInformation pNtQuerySystemInformation;
 extern sNtQueryInformationProcess pNtQueryInformationProcess;
+extern sNtCreateFile pNtCreateFile;
 
 /* Powrprof.dll function pointer */
 extern sPowerRegisterSuspendResumeNotification pPowerRegisterSuspendResumeNotification;

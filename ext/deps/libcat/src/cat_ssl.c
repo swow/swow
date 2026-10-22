@@ -304,7 +304,7 @@ CAT_API cat_bool_t cat_ssl_context_set_client_ca_list(cat_ssl_context_t *context
     CAT_LOG_DEBUG(SSL, "SSL_load_client_CA_file(%p, \"%s\")", context, ca_file);
     STACK_OF(X509_NAME) *cert_names = SSL_load_client_CA_file(ca_file);
     if (cert_names == NULL) {
-        cat_ssl_update_last_error(CAT_ESSL, "SSL_load_client_CA_file(\"%s\") failed", context, ca_file);
+        cat_ssl_update_last_error(CAT_ESSL, "SSL_load_client_CA_file(\"%s\") failed", ca_file);
         return cat_false;
     }
     CAT_LOG_DEBUG(SSL, "SSL_CTX_set_client_CA_list(%p)", context);
@@ -835,6 +835,7 @@ CAT_API cat_ssl_t *cat_ssl_create(cat_ssl_t *ssl, cat_ssl_context_t *context)
     ssl->pending_renegotiations = 0;
     ssl->owned_data = NULL;
     ssl->owned_data_free = NULL;
+    ssl->peer_fingerprints = NULL;
 
     return ssl;
 
@@ -1428,7 +1429,8 @@ CAT_API cat_bool_t cat_ssl_encrypt(
                     // since we hardcoded to disable it, just error out
                     /* fall through */
                 default:
-                    cat_update_last_error_with_previous("SSL_write() error");
+                    cat_ssl_update_last_error(CAT_ESSL, "SSL_write() error");
+                    cat_ssl_unrecoverable_error(ssl);
                     goto error_free;
             }
         }
@@ -1751,6 +1753,7 @@ CAT_API CAT_COLD cat_bool_t cat_ssl_is_down(const cat_ssl_t *ssl)
 
 CAT_API CAT_COLD void cat_ssl_unrecoverable_error(cat_ssl_t *ssl)
 {
+    ssl->flags |= CAT_SSL_FLAG_UNRECOVERABLE_ERROR;
     cat_ssl_set_shutdown(ssl, CAT_SSL_SENT_SHUTDOWN | CAT_SSL_RECEIVED_SHUTDOWN);
 }
 

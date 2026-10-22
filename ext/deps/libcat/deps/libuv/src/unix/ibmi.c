@@ -174,7 +174,8 @@ static void iconv_a2e(const char* src, unsigned char dst[], size_t length) {
 }
 
 void init_process_title_mutex_once(void) {
-  uv_mutex_init(&process_title_mutex);
+  if (uv_mutex_init(&process_title_mutex))
+    abort();
 }
 
 static int get_ibmi_system_status(SSTS0200* rcvr) {
@@ -245,7 +246,7 @@ uint64_t uv_get_total_memory(void) {
 
 
 uint64_t uv_get_constrained_memory(void) {
-  return 0;  /* Memory constraints are unknown. */
+  return uv__get_rlimit_max_memory();
 }
 
 
@@ -537,4 +538,10 @@ int uv_get_process_title(char* buffer, size_t size) {
 }
 
 void uv__process_title_cleanup(void) {
+}
+
+void uv__ahafs_event(uv_loop_t* loop,
+                     uv__io_t* event_watch,
+                     unsigned int fflags) {
+  /* Stub function to satisfy the linker. */
 }

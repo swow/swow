@@ -25,13 +25,28 @@
 #undef ERROR /* on Windows ERROR was defined as number, it will cause conflict for module_name */
 #undef cat_show_last_error
 
+/*
+ * A thread that never took a runtime has no block to keep an error in, and
+ * reading one would walk away from a null base. Such a thread gets the misuse
+ * code and a fixed message instead, so a caller can still learn what is wrong.
+ */
+#define CAT_ERROR_HAS_NO_RUNTIME_MESSAGE "This thread has no runtime"
+
 CAT_API cat_errno_t cat_get_last_error_code(void)
 {
+    if (unlikely(!cat_globals_available())) {
+        return CAT_EMISUSE;
+    }
+
     return CAT_G(last_error).code;
 }
 
 CAT_API const char *cat_get_last_error_message(void)
 {
+    if (unlikely(!cat_globals_available())) {
+        return CAT_ERROR_HAS_NO_RUNTIME_MESSAGE;
+    }
+
     const char *message = CAT_G(last_error).message;
     if (message == NULL) {
         cat_errno_t code = cat_get_last_error_code();
@@ -42,6 +57,10 @@ CAT_API const char *cat_get_last_error_message(void)
 
 CAT_API void cat_clear_last_error(void)
 {
+    if (unlikely(!cat_globals_available())) {
+        return;
+    }
+
     cat_error_t *last_error = &CAT_G(last_error);
     last_error->code = 0;
     if (last_error->message != NULL) {
@@ -70,7 +89,11 @@ CAT_API void cat_update_last_error_va_list(cat_errno_t code, const char *format,
 
 CAT_API void cat_update_last_error(cat_errno_t code, const char *format, ...)
 {
-    if (!CAT_G(runtime)) {
+    if (unlikely(!cat_globals_available())) {
+        // this thread has no block to keep the error in
+        return;
+    }
+    if (unlikely(!CAT_G(runtime))) {
         // we are not in runtime / shutting down
         return;
     }
@@ -86,6 +109,10 @@ CAT_API void cat_update_last_error(cat_errno_t code, const char *format, ...)
 
 CAT_API void cat_set_last_error_code(cat_errno_t code)
 {
+    if (unlikely(!cat_globals_available())) {
+        return;
+    }
+
     CAT_G(last_error).code = code;
 
     if (CAT_G(show_last_error)) {
@@ -482,6 +509,11 @@ void cat_error_module_shutdown(void)
 /* return original posix errno from uv errno */
 CAT_API int cat_orig_errno(cat_errno_t error)
 {
+#ifdef EOVERFLOW
+    if (error == CAT_EOVERFLOW) {
+        return EOVERFLOW;
+    }
+#endif
 #define CAT_ERROR_GEN(name) \
     if (error == UV_ ## name) { \
         return name; \

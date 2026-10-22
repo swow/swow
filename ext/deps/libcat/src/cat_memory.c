@@ -44,6 +44,7 @@ CAT_API cat_bool_t cat_register_allocator(const cat_allocator_t *allocator)
             allocator->free == NULL
         ) {
             cat_update_last_error(CAT_EINVAL, "Allocator must be filled");
+            return cat_false;
         }
         cat_allocator = *allocator;
     } else {

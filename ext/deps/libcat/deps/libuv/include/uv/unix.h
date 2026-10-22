@@ -85,13 +85,10 @@
 struct uv__io_s;
 struct uv_loop_s;
 
-typedef void (*uv__io_cb)(struct uv_loop_s* loop,
-                          struct uv__io_s* w,
-                          unsigned int events);
 typedef struct uv__io_s uv__io_t;
 
 struct uv__io_s {
-  uv__io_cb cb;
+  uintptr_t bits;
   struct uv__queue pending_queue;
   struct uv__queue watcher_queue;
   unsigned int pevents; /* Pending event mask i.e. mask at next tick. */
@@ -259,7 +256,15 @@ typedef struct {
 
 #define UV_REQ_TYPE_PRIVATE /* empty */
 
-#define UV_REQ_PRIVATE_FIELDS  /* empty */
+struct uv__req_write_extra_s {
+  size_t nwritten;
+};
+
+#define UV_REQ_PRIVATE_FIELDS                                                 \
+  union {                                                                     \
+    void* reserved2[1];                                                       \
+    struct uv__req_write_extra_s write_extra;                                 \
+  };
 
 #define UV_PRIVATE_REQ_TYPES /* empty */
 
@@ -419,7 +424,7 @@ typedef struct {
 # define UV_FS_O_CREAT        0
 #endif
 
-#if defined(__linux__) && defined(__arm__)
+#if defined(__linux__) && (defined(__arm__) || defined(__aarch64__))
 # define UV_FS_O_DIRECT       0x10000
 #elif defined(__linux__) && defined(__m68k__)
 # define UV_FS_O_DIRECT       0x10000
@@ -427,11 +432,9 @@ typedef struct {
 # define UV_FS_O_DIRECT       0x08000
 #elif defined(__linux__) && defined(__powerpc__)
 # define UV_FS_O_DIRECT       0x20000
-#elif defined(__linux__) && defined(__s390x__)
-# define UV_FS_O_DIRECT       0x04000
-#elif defined(__linux__) && defined(__x86_64__)
-# define UV_FS_O_DIRECT       0x04000
-#elif defined(__linux__) && defined(__loongarch__)
+#elif defined(__linux__) && defined(__sparc__)
+# define UV_FS_O_DIRECT       0x100000
+#elif defined(__linux__)
 # define UV_FS_O_DIRECT       0x04000
 #elif defined(O_DIRECT)
 # define UV_FS_O_DIRECT       O_DIRECT

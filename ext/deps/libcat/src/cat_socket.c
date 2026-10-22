@@ -598,8 +598,19 @@ static cat_always_inline cat_bool_t cat_socket_internal_is_established(cat_socke
 #define CAT_SOCKET_INTERNAL_INET_STREAM_ONLY(_socket_i, _failure) \
     CAT_SOCKET_INTERNAL_WHICH_ONLY(_socket_i, CAT_SOCKET_TYPE_FLAG_STREAM | CAT_SOCKET_TYPE_FLAG_INET, "Socket should be type of inet stream", _failure);
 
+/* TCP and UDP share INET, and TCP and PIPE share STREAM; match the whole protocol type. */
+#define CAT_SOCKET_INTERNAL_TYPE_ONLY(_socket_i, _type, _errstr, _failure) do { \
+    if ((_socket_i->type & (_type)) != (_type)) { \
+        cat_update_last_error(CAT_EMISUSE, _errstr); \
+        _failure; \
+    } \
+} while (0)
+
 #define CAT_SOCKET_INTERNAL_TCP_ONLY(_socket_i, _failure) \
-    CAT_SOCKET_INTERNAL_WHICH_ONLY(_socket_i, CAT_SOCKET_TYPE_TCP, "Socket is not of type TCP", _failure)
+    CAT_SOCKET_INTERNAL_TYPE_ONLY(_socket_i, CAT_SOCKET_TYPE_TCP, "Socket is not of type TCP", _failure)
+
+#define CAT_SOCKET_INTERNAL_UDP_ONLY(_socket_i, _failure) \
+    CAT_SOCKET_INTERNAL_TYPE_ONLY(_socket_i, CAT_SOCKET_TYPE_UDP, "Socket is not of type UDP", _failure)
 
 #define CAT_SOCKET_INTERNAL_WHICH_SIDE_ONLY(_socket_i, _name, _errstr, _failure) do { \
     if (!(_socket_i->flags & CAT_SOCKET_INTERNAL_FLAG_##_name)) { \
@@ -643,6 +654,7 @@ static cat_always_inline cat_socket_fd_t cat_socket_internal_get_fd_fast(const c
 static cat_always_inline void cat_socket_internal_close(cat_socket_internal_t *socket_i, cat_socket_t *socket, cat_bool_t unrecoverable_error);
 
 static CAT_COLD void cat_socket_internal_unrecoverable_io_error(cat_socket_internal_t *socket_i);
+static void cat_socket_close_callback(uv_handle_t *handle);
 #ifdef CAT_SSL
 static cat_always_inline void cat_socket_internal_ssl_recoverability_check(cat_socket_internal_t *socket_i);
 static cat_bool_t cat_socket_internal_write_raw(
@@ -825,6 +837,9 @@ static cat_always_inline cat_socket_t *cat_socket_create_impl(cat_socket_t *sock
     cat_sa_family_t af = AF_UNSPEC;
     size_t socket_i_size;
     int error = CAT_EINVAL;
+    /* an uv handle registers itself with the loop, so a creation that fails after that
+     * must close it instead of only freeing the memory */
+    cat_bool_t handle_inited = cat_false;
 
     if (socket == NULL) {
         socket = (cat_socket_t *) cat_malloc(sizeof(*socket));
@@ -871,6 +886,16 @@ static cat_always_inline cat_socket_t *cat_socket_create_impl(cat_socket_t *sock
     /* Notice: dump callback may access this even if creation failed,
      * so we must init it here. */
     cat_queue_init(&socket_i->sockets);
+    /* the close callback frees these, and it also runs for a creation that fails after
+     * the handle was registered */
+    socket_i->cache.write_request = NULL;
+    socket_i->cache.ipcc_handle_info = NULL;
+    socket_i->cache.sockname = NULL;
+    socket_i->cache.peername = NULL;
+#ifdef CAT_SSL
+    socket_i->ssl = NULL;
+    socket_i->ssl_peer_name = NULL;
+#endif
 
     /* solve type and get af
      *  Notice: we should create socket without IPV* flag (AF_UNSPEC)
@@ -898,6 +923,7 @@ static cat_always_inline cat_socket_t *cat_socket_create_impl(cat_socket_t *sock
             }
             socket_i->u.udg.readfd = CAT_SOCKET_INVALID_FD;
             socket_i->u.udg.writefd = CAT_SOCKET_INVALID_FD;
+            socket_i->u.udg.write_coroutine = NULL;
         }
         else
 #endif
@@ -930,11 +956,16 @@ static cat_always_inline cat_socket_t *cat_socket_create_impl(cat_socket_t *sock
         } else {
             os_fd = CAT_OS_INVALID_FD;
         }
+        if (unlikely(os_fd == CAT_OS_INVALID_FD)) {
+            error = UV_EBADF;
+            goto _init_error;
+        }
         error = uv_tty_init(&CAT_EVENT_G(loop), &socket_i->u.tty, os_fd, 0);
     }
     if (unlikely(error != 0)) {
         goto _init_error;
     }
+    handle_inited = cat_true;
 
     /* init properties of socket */
     socket->id = ++CAT_SOCKET_G(last_id);
@@ -951,20 +982,12 @@ static cat_always_inline cat_socket_t *cat_socket_create_impl(cat_socket_t *sock
     cat_queue_init(&socket_i->context.io.write.coroutines);
     /* part of cache */
     socket_i->cache.fd = CAT_SOCKET_INVALID_FD;
-    socket_i->cache.write_request = NULL;
-    socket_i->cache.ipcc_handle_info = NULL;
-    socket_i->cache.sockname = NULL;
-    socket_i->cache.peername = NULL;
     socket_i->cache.recv_buffer_size = -1;
     socket_i->cache.send_buffer_size = -1;
     /* options */
     socket_i->option_flags = CAT_SOCKET_OPTION_FLAG_NONE;
     socket_i->options.timeout = cat_socket_default_timeout_options;
     socket_i->options.tcp_keepalive_delay = 0;
-#ifdef CAT_SSL
-    socket_i->ssl = NULL;
-    socket_i->ssl_peer_name = NULL;
-#endif
 
     if (af != AF_UNSPEC) {
         cat_socket_internal_on_open(socket_i, af);
@@ -978,6 +1001,11 @@ static cat_always_inline cat_socket_t *cat_socket_create_impl(cat_socket_t *sock
     return socket;
 
     _init_error:
+    if (handle_inited) {
+        /* a handle that stays registered keeps a node of the loop handle queue pointing
+         * at this memory after it is freed */
+        uv_close(&socket_i->u.handle, cat_socket_close_callback);
+    }
     cat_free(socket_i);
     _type_error:
     cat_update_last_error_with_reason(error, "Socket crate with type %s failed", cat_socket_type_get_name(type));
@@ -1026,7 +1054,7 @@ static cat_always_inline cat_socket_t *cat_socket_create_from_socket_impl(cat_so
 #if CAT_ALLOC_HANDLE_ERRORS
         if (unlikely(socket == NULL)) {
             cat_update_last_error_of_syscall("Malloc for socket failed");
-            goto _malloc_error;
+            return NULL;
         }
 #endif
         flags |= CAT_SOCKET_FLAG_ALLOCATED;
@@ -1163,7 +1191,7 @@ CAT_API cat_bool_t cat_socket_open_os_socket(cat_socket_t *socket, cat_os_socket
 static cat_always_inline cat_bool_t cat_socket_open_socket_impl(cat_socket_t *socket, const cat_socket_t *origin_socket)
 {
     CAT_SOCKET_INTERNAL_GETTER(socket, socket_i, return cat_false);
-    cat_socket_flags_t inherited_flags = socket_i->flags & CAT_SOCKET_FLAGS_NON_TRANSFERABLE_BITS;
+    cat_socket_flags_t inherited_flags = socket->flags & CAT_SOCKET_FLAGS_NON_TRANSFERABLE_BITS;
 
     if (unlikely(!cat_socket_is_available(origin_socket))) {
         cat_update_last_error(CAT_EBADF, "Socket to copy is not available");
@@ -1759,13 +1787,24 @@ static cat_always_inline cat_bool_t cat_socket_accept_impl(cat_socket_t *server,
         cat_update_last_error(CAT_EMISUSE, "Socket accept can only act on a lazy socket");
         return cat_false;
     }
+    if (unlikely(connection_i->io_flags != CAT_SOCKET_IO_FLAG_NONE)) {
+        cat_update_last_error(CAT_ELOCKED, "Socket accept destination is already in use");
+        return cat_false;
+    }
 
+    /* Closing either socket must cancel the wait before the destination is released. */
+    connection_i->context.accept.coroutine = CAT_COROUTINE_G(current);
+    connection_i->io_flags = CAT_SOCKET_IO_FLAG_ACCEPT;
+    cat_bool_t ret;
     if (!(server_i->type & CAT_SOCKET_TYPE_FLAG_IPC)) {
-        return cat_socket_internal_accept(server_i, connection_i, NULL, timeout);
+        ret = cat_socket_internal_accept(server_i, connection_i, NULL, timeout);
     } else {
         CAT_LOG_DEBUG_V2(SOCKET, "accept() via IPC");
-        return cat_socket_internal_recv_handle(server_i, connection_i, timeout);
+        ret = cat_socket_internal_recv_handle(server_i, connection_i, timeout);
     }
+    connection_i->io_flags = CAT_SOCKET_IO_FLAG_NONE;
+    connection_i->context.accept.coroutine = NULL;
+    return ret;
 }
 
 #define CAT_LOG_DEBUG_SOCKET_ESTABLISHED(socket, action, ret) \
@@ -2009,9 +2048,12 @@ static cat_bool_t cat_socket_connect_to_impl(cat_socket_t *socket, const char *n
             CAT_ASSERT(af == AF_UNSPEC);
             // af changed and socket has not been initialized yet, recreate socket_i
             cat_socket_type_t type = socket_i->type; // TODO: Implement socket_dup()
+            /* Preserve ownership of the socket while recreating its transport. */
+            cat_socket_flags_t inherited_flags = socket->flags & CAT_SOCKET_FLAG_ALLOCATED;
             // FIXME: multi bound sockets, make them all available
             cat_socket_internal_close(socket_i, NULL, cat_true);
             ret = cat_socket_create(socket, type) != NULL;
+            socket->flags |= inherited_flags;
             if (!ret) {
                 cat_update_last_error_with_previous("Socket connect recreate failed");
                 break;
@@ -2319,7 +2361,7 @@ static cat_bool_t cat_socket_enable_crypto_impl(cat_socket_t *socket, const cat_
             cat_ssl_peer_fingerprint_t *fps = (cat_ssl_peer_fingerprint_t *) cat_malloc(size);
 #if CAT_ALLOC_HANDLE_ERRORS
             if (unlikely(fps == NULL)) {
-                goto _setup_error;
+                goto _ssl_setup_error;
             }
 #endif
             char *p = (char *) fps + sizeof(cat_ssl_peer_fingerprint_t) * (count + 1);
@@ -2352,7 +2394,7 @@ static cat_bool_t cat_socket_enable_crypto_impl(cat_socket_t *socket, const cat_
 
     if (ioptions.before_handshake_callback != NULL) {
         if (!ioptions.before_handshake_callback(ssl, ioptions.before_handshake_callback_data)) {
-            goto _setup_error;
+            goto _ssl_setup_error;
         }
     }
 
@@ -2447,6 +2489,7 @@ static cat_bool_t cat_socket_enable_crypto_impl(cat_socket_t *socket, const cat_
         ioptions.after_handshake_callback(ssl, cat_false, ioptions.after_handshake_callback_data);
     }
     cat_socket_internal_unrecoverable_io_error(socket_i);
+    _ssl_setup_error:
     cat_ssl_close(ssl);
     if (0) {
         _setup_error:
@@ -2895,6 +2938,13 @@ static cat_always_inline cat_bool_t cat_socket_internal_support_inline_read(cons
            !(socket_i->u.handle.type == UV_NAMED_PIPE && socket_i->u.pipe.ipc);
 }
 
+static cat_always_inline void cat_socket_clamp_address_length(cat_socklen_t *address_length, cat_socklen_t capacity)
+{
+    if (*address_length > capacity) {
+        *address_length = capacity;
+    }
+}
+
 static ssize_t cat_socket_internal_read_raw(
     cat_socket_internal_t *socket_i,
     char *buffer, size_t size,
@@ -2925,6 +2975,9 @@ static ssize_t cat_socket_internal_read_raw(
     }
 
 #ifdef CAT_OS_UNIX_LIKE /* Do not inline read on WIN, proactor way is faster */
+    /* the kernel may report an address longer than the buffer that was offered, in which
+     * case the reported length can not be handed back to the caller */
+    const cat_socklen_t address_capacity = address_length != NULL ? *address_length : 0;
     /* Notice: when IO is low/slow, this is de-optimization,
      * because recv usually returns EAGAIN error,
      * and there is an additional system call overhead */
@@ -2940,6 +2993,9 @@ static ssize_t cat_socket_internal_read_raw(
                     error = recv(fd, buffer + nread, size - nread, 0);
                 } else {
                     error = recvfrom(fd, buffer, size, 0, address, address_length);
+                }
+                if (error >= 0 && is_dgram && address_length != NULL) {
+                    cat_socket_clamp_address_length(address_length, address_capacity);
                 }
                 if (error < 0) {
                     if (likely(cat_sys_errno == EAGAIN)) {
@@ -3065,6 +3121,7 @@ static ssize_t cat_socket_internal_try_recv_raw(
 {
     cat_socket_fd_t fd;
     ssize_t nread;
+    const cat_socklen_t address_capacity = address_length != NULL ? *address_length : 0;
 
     if (unlikely(!cat_socket_internal_support_inline_read(socket_i))) {
         return CAT_EMISUSE;
@@ -3079,6 +3136,9 @@ static ssize_t cat_socket_internal_try_recv_raw(
             fd, buffer, (cat_socket_recv_length_t) size, 0,
             address, address_length
         );
+        if (nread >= 0 && address_length != NULL) {
+            cat_socket_clamp_address_length(address_length, address_capacity);
+        }
         if (nread < 0) {
 #ifdef CAT_OS_UNIX_LIKE
             if (unlikely(cat_sys_errno == EINTR)) {
@@ -3415,16 +3475,20 @@ static cat_never_inline cat_bool_t cat_socket_internal_udg_write(
 
     if (socket_i->io_flags & CAT_SOCKET_IO_FLAG_WRITE) {
         cat_bool_t wait_ret;
+        cat_bool_t can_write;
         cat_queue_push_back(queue, &CAT_COROUTINE_G(current)->waiter.node);
         CAT_TIME_WAIT_START() {
             wait_ret = cat_time_wait(timeout);
         } CAT_TIME_WAIT_END(timeout);
+        /* A canceled waiter must not take ownership from the active writer. */
+        can_write = !(socket_i->io_flags & CAT_SOCKET_IO_FLAG_WRITE) &&
+            cat_queue_front_data(queue, cat_coroutine_t, waiter.node) == CAT_COROUTINE_G(current);
         cat_queue_remove(&CAT_COROUTINE_G(current)->waiter.node);
         if (unlikely(!wait_ret)) {
             cat_update_last_error_with_previous("Socket write failed");
             return cat_false;
         }
-        if (cat_queue_front_data(queue, cat_coroutine_t, waiter.node) != CAT_COROUTINE_G(current)) {
+        if (!can_write) {
             cat_update_last_error(CAT_ECANCELED, "Socket write has been canceled");
             return cat_false;
         }
@@ -3432,7 +3496,7 @@ static cat_never_inline cat_bool_t cat_socket_internal_udg_write(
     socket_i->io_flags |= CAT_SOCKET_IO_FLAG_WRITE;
 
     while (1) {
-        struct msghdr msg;
+        struct msghdr msg = {0};
         msg.msg_name = (struct sockaddr *) address;
         msg.msg_namelen = address_length;
         msg.msg_iov = (struct iovec *) vector;
@@ -3451,7 +3515,9 @@ static cat_never_inline cat_bool_t cat_socket_internal_udg_write(
                         goto _syscall_error;
                     }
                 }
+                socket_i->u.udg.write_coroutine = CAT_COROUTINE_G(current);
                 cat_ret_t poll_ret = cat_poll_one(socket_i->u.udg.writefd, POLLOUT, NULL, timeout);
+                socket_i->u.udg.write_coroutine = NULL;
                 if (poll_ret == CAT_RET_OK) {
                     continue;
                 } else if (poll_ret == CAT_RET_NONE) {
@@ -3591,7 +3657,7 @@ static cat_never_inline ssize_t cat_socket_internal_udg_try_write(
 )
 {
     cat_socket_fd_t fd;
-    struct msghdr msg;
+    struct msghdr msg = {0};
     ssize_t nwrite;
 
     if (!!(socket_i->io_flags & CAT_SOCKET_IO_FLAG_WRITE)) {
@@ -3623,7 +3689,7 @@ static ssize_t cat_socket_internal_try_write_raw(
     const cat_sockaddr_t *address, cat_socklen_t address_length
 )
 {
-    CAT_SOCKET_CHECK_INPUT_ADDRESS_SILENT(address, address_length, return cat_false);
+    CAT_SOCKET_CHECK_INPUT_ADDRESS_SILENT(address, address_length, return error);
     cat_bool_t is_dgram = (socket_i->type & CAT_SOCKET_TYPE_FLAG_DGRAM);
 
 #ifdef CAT_OS_UNIX_LIKE
@@ -3698,6 +3764,7 @@ static void cat_socket_internal_try_write_encrypted_callback(uv_write_t *request
     if (status == 0) {
         socket_i->ssl->write_buffer.length = 0;
     }
+    cat_free(request);
 }
 
 static ssize_t cat_socket_internal_try_write_encrypted(
@@ -3773,6 +3840,7 @@ static ssize_t cat_socket_internal_try_write_encrypted(
                 buf.len = (cat_io_vector_length_t) ssl->write_buffer.length;
                 int error = uv_write(request, &socket_i->u.stream, &buf, 1, cat_socket_internal_try_write_encrypted_callback);
                 if (unlikely(error != 0)) {
+                    cat_free(request);
                     nwrite = error;
                 }
             }
@@ -4407,7 +4475,12 @@ static ssize_t cat_socket_internal_peekfrom(
     cat_timeout_t timeout
 )
 {
-    CAT_SOCKET_INTERNAL_FD_GETTER(socket_i, fd, return cat_false);
+    CAT_SOCKET_INTERNAL_FD_GETTER(socket_i, fd, {
+        if (address_length != NULL) {
+            *address_length = 0;
+        }
+        return -1;
+    });
     ssize_t nread;
 
     if (!(socket_i->type & CAT_SOCKET_TYPE_FLAG_DGRAM)) {
@@ -4460,14 +4533,14 @@ static ssize_t cat_socket_internal_peekfrom(
 
 static ssize_t cat_socket_peekfrom_impl(const cat_socket_t *socket, char *buffer, size_t size, cat_sockaddr_t *address, cat_socklen_t *address_length, cat_timeout_t timeout)
 {
-    CAT_SOCKET_INTERNAL_GETTER(socket, socket_i, return cat_false);
+    CAT_SOCKET_INTERNAL_GETTER(socket, socket_i, return -1);
 
     return cat_socket_internal_peekfrom(socket_i, buffer, size, address, address_length, timeout);
 }
 
 static ssize_t cat_socket_peek_from_impl(const cat_socket_t *socket, char *buffer, size_t size, char *name, size_t *name_length, int *port, cat_timeout_t timeout)
 {
-    CAT_SOCKET_INTERNAL_GETTER(socket, socket_i, return cat_false);
+    CAT_SOCKET_INTERNAL_GETTER(socket, socket_i, return -1);
     CAT_SOCKET_READ_ADDRESS_CONTEXT(address, name, name_length, port);
     ssize_t nread;
 
@@ -4712,11 +4785,29 @@ static cat_bool_t cat_socket_internal_recv_handle(cat_socket_internal_t *socket_
 # define CAT_SOCKET_MOCK_SENDFILE 1
 #endif
 
+static cat_always_inline void cat_socket_internal_sendfile_wait_start(cat_socket_internal_t *socket_i)
+{
+    socket_i->io_flags |= CAT_SOCKET_IO_FLAG_WRITE;
+    cat_queue_push_back(&socket_i->context.io.write.coroutines, &CAT_COROUTINE_G(current)->waiter.node);
+}
+
+static cat_always_inline void cat_socket_internal_sendfile_wait_end(cat_socket_internal_t *socket_i)
+{
+    cat_queue_remove(&CAT_COROUTINE_G(current)->waiter.node);
+    if (cat_queue_empty(&socket_i->context.io.write.coroutines)) {
+        socket_i->io_flags ^= CAT_SOCKET_IO_FLAG_WRITE;
+    }
+}
+
 #ifdef CAT_SOCKET_NATIVE_SENDFILE
 static cat_always_inline ssize_t cat_socket_internal_native_sendfile(cat_socket_internal_t *socket_i, cat_file_t file, int64_t offset, size_t length, cat_timeout_t timeout)
 {
-    /** @see: https://github.com/torvalds/linux/blob/38f8ccde04a3fa317b51b05e63c3cb57e1641931/include/linux/fs.h#L996 */
-    const size_t max_non_lfs = ((1UL << 31) - 1);
+    /*
+     * Linux have a limit to INT32_MAX - 1:
+     * @see: https://github.com/torvalds/linux/blob/38f8ccde04a3fa317b51b05e63c3cb57e1641931/include/linux/fs.h#L996
+     * meanwhile, uv_fs_sendfile rejects any length above UV__IO_MAX_BYTES (0x7ffff000)
+     */
+    const size_t max_non_lfs = UV__IO_MAX_BYTES;
     cat_socket_fd_t fd = cat_socket_internal_get_fd_fast(socket_i);
     int64_t start = offset;
     size_t remain;
@@ -4728,18 +4819,22 @@ static cat_always_inline ssize_t cat_socket_internal_native_sendfile(cat_socket_
     }
     remain = length;
     while (remain > 0) {
+        cat_socket_internal_sendfile_wait_start(socket_i);
         int written = cat_fs_sendfile(
             fd, file, start, CAT_MIN(remain, max_non_lfs)
         );
+        cat_socket_internal_sendfile_wait_end(socket_i);
         CAT_LOG_DEBUG_V2(SOCKET,
             "fs_sendfile(" CAT_SOCKET_FD_FMT ", " CAT_OS_FD_FMT ", %" PRId64 ", %zu) = " CAT_LOG_INT_RET_FMT,
             fd, file, start, CAT_MIN(remain, max_non_lfs), CAT_LOG_INT_RET_C(written));
         if (unlikely(written < 0)) {
             if (cat_get_last_error_code() == CAT_EAGAIN) {
                 cat_ret_t ret;
+                cat_socket_internal_sendfile_wait_start(socket_i);
                 CAT_TIME_WAIT_START() {
                     ret = cat_poll_one(fd, POLLOUT, NULL, timeout);
                 } CAT_TIME_WAIT_END(timeout);
+                cat_socket_internal_sendfile_wait_end(socket_i);
                 if (unlikely(ret != CAT_RET_OK)) {
                     if (ret == CAT_RET_ERROR) {
                         cat_update_last_error_with_previous("Socket sendfile failed when poll writable");
@@ -4787,7 +4882,10 @@ static cat_always_inline ssize_t cat_socket_mock_sendfile(cat_socket_t *socket, 
     }
     remain = length;
 
-    if (unlikely(cat_fs_lseek(file, (off_t) offset, SEEK_SET) != (off_t) offset)) {
+    cat_socket_internal_sendfile_wait_start(socket_i);
+    off_t position = cat_fs_lseek(file, (off_t) offset, SEEK_SET);
+    cat_socket_internal_sendfile_wait_end(socket_i);
+    if (unlikely(position < 0 || position != (off_t) offset)) {
         cat_update_last_error_with_previous("Socket sendfile failed when seek file");
         goto _error;
     }
@@ -4800,7 +4898,9 @@ static cat_always_inline ssize_t cat_socket_mock_sendfile(cat_socket_t *socket, 
     }
 
     while (remain > 0) {
+        cat_socket_internal_sendfile_wait_start(socket_i);
         ssize_t read_n = cat_fs_read(file, buffer, n);
+        cat_socket_internal_sendfile_wait_end(socket_i);
         if (unlikely(read_n < 0)) {
             cat_update_last_error_with_previous("Socket sendfile failed when read file");
             goto _io_error;
@@ -4837,11 +4937,15 @@ static cat_always_inline ssize_t cat_socket_mock_sendfile(cat_socket_t *socket, 
 static cat_always_inline ssize_t cat_socket_send_file_impl(cat_socket_t *socket, const char *filename, int64_t offset, size_t length, cat_timeout_t timeout)
 {
     // we use IO_FLAG_WRITE instead of IO_FLAG_NONE here, because sendfile includes multi operations
-    CAT_SOCKET_IO_CHECK(socket, socket_i, CAT_SOCKET_IO_FLAG_WRITE, return cat_false);
+    CAT_SOCKET_IO_CHECK(socket, socket_i, CAT_SOCKET_IO_FLAG_WRITE, return -1);
     cat_file_t file;
     ssize_t written;
 
+    // File-system and poll waits must be canceled before close callbacks can free socket_i.
+    // Register only these waits; the TLS send already registers the same coroutine node.
+    cat_socket_internal_sendfile_wait_start(socket_i);
     file = cat_fs_open(filename, CAT_FS_OPEN_FLAG_RDONLY);
+    cat_socket_internal_sendfile_wait_end(socket_i);
     if (unlikely(file < 0)) {
         cat_update_last_error_with_previous("Socket sendfile failed when open file");
         return -1;
@@ -4875,13 +4979,16 @@ CAT_API ssize_t cat_socket_send_file(cat_socket_t *socket, const char *filename,
 
 CAT_API ssize_t cat_socket_send_file_ex(cat_socket_t *socket, const char *filename, int64_t offset, size_t length, cat_timeout_t timeout)
 {
+#ifdef CAT_ENABLE_DEBUG_LOG
+    cat_socket_id_t id = socket->id;
+#endif
     CAT_LOG_DEBUG(SOCKET, "send_file(" CAT_SOCKET_ID_FMT ", \"%s\", %" PRId64 ", %zu, " CAT_TIMEOUT_FMT ") = " CAT_LOG_UNFINISHED_STR,
-        socket->id, filename, offset, length, timeout);
+        id, filename, offset, length, timeout);
 
     ssize_t written = cat_socket_send_file_impl(socket, filename, offset, length, timeout);
 
     CAT_LOG_DEBUG(SOCKET, "send_file(" CAT_SOCKET_ID_FMT ", \"%s\", %" PRId64 ", %zu, " CAT_TIMEOUT_FMT ") = " CAT_LOG_SSIZE_RET_FMT,
-        socket->id, filename, offset, length, timeout, CAT_LOG_SSIZE_RET_C(written));
+        id, filename, offset, length, timeout, CAT_LOG_SSIZE_RET_C(written));
 
     return written;
 }
@@ -4996,6 +5103,12 @@ static void cat_socket_internal_close_impl(cat_socket_internal_t *socket_i, cat_
                 cat_socket_io_cancel(write_coroutine, "write");
             }
             CAT_ASSERT(cat_queue_empty(write_coroutines));
+#ifdef CAT_OS_UNIX_LIKE
+            if ((socket_i->type & CAT_SOCKET_TYPE_UDG) == CAT_SOCKET_TYPE_UDG) {
+                /* Stop the active poll before closing its fd; queued writers are already canceled. */
+                cat_socket_io_cancel(socket_i->u.udg.write_coroutine, "UDG write");
+            }
+#endif
         }
         if (socket_i->io_flags & CAT_SOCKET_IO_FLAG_READ) {
             cat_socket_io_cancel(socket_i->context.io.read.coroutine, "read");
@@ -5574,7 +5687,7 @@ CAT_API cat_bool_t cat_socket_get_udp_broadcast(const cat_socket_t *socket)
 CAT_API cat_bool_t cat_socket_set_udp_broadcast(cat_socket_t *socket, cat_bool_t enable)
 {
     CAT_SOCKET_INTERNAL_GETTER(socket, socket_i, return cat_false);
-    CAT_SOCKET_INTERNAL_TCP_ONLY(socket_i, return cat_false);
+    CAT_SOCKET_INTERNAL_UDP_ONLY(socket_i, return cat_false);
     int error;
 
     CAT_SOCKET_INTERNAL_SET_FLAG(socket_i, UDP_BROADCAST, enable);

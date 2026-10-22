@@ -81,13 +81,13 @@
 #  endif
 # else /* CAT_USE_DYNAMIC_ALLOCATOR */
 #  if CAT_ALLOC_ABORT_ON_OOM
-#   define cat_malloc  cat_allocator.malloc
-#   define cat_calloc  cat_allocator.calloc
-#   define cat_realloc cat_allocator.realloc
-#  else
 #   define cat_malloc  cat_allocator_malloc_unrecoverable
 #   define cat_calloc  cat_allocator_calloc_unrecoverable
 #   define cat_realloc cat_allocator_realloc_unrecoverable
+#  else
+#   define cat_malloc  cat_allocator.malloc
+#   define cat_calloc  cat_allocator.calloc
+#   define cat_realloc cat_allocator.realloc
 #  endif
 #   define cat_free    cat_allocator.free
 # endif
@@ -128,39 +128,6 @@ static cat_always_inline void *cat_sys_realloc_unrecoverable(void *ptr, size_t s
     if (unlikely(ptr == NULL && size != 0)) {
         cat_out_of_memory();
     }
-    return ptr;
-}
-
-static cat_always_inline void *cat_malloc_unrecoverable(size_t size)
-{
-    void *ptr = cat_malloc(size);
-#if CAT_ALLOC_HANDLE_ERRORS
-    if (unlikely(ptr == NULL && size != 0)) {
-        cat_out_of_memory();
-    }
-#endif
-    return ptr;
-}
-
-static cat_always_inline void *cat_calloc_unrecoverable(size_t count, size_t size)
-{
-    void *ptr = cat_calloc(count, size);
-#if CAT_ALLOC_HANDLE_ERRORS
-    if (unlikely(ptr == NULL && count != 0 && size != 0)) {
-        cat_out_of_memory();
-    }
-#endif
-    return ptr;
-}
-
-static cat_always_inline void *cat_realloc_unrecoverable(void *ptr, size_t size)
-{
-    ptr = cat_realloc(ptr, size);
-#if CAT_ALLOC_HANDLE_ERRORS
-    if (unlikely(ptr == NULL && size != 0)) {
-        cat_out_of_memory();
-    }
-#endif
     return ptr;
 }
 
@@ -208,6 +175,39 @@ static cat_always_inline void *cat_allocator_realloc_unrecoverable(void *ptr, si
 
 CAT_API cat_bool_t cat_register_allocator(const cat_allocator_t *allocator);
 #endif /* CAT_USE_DYNAMIC_ALLOCATOR */
+
+static cat_always_inline void *cat_malloc_unrecoverable(size_t size)
+{
+    void *ptr = cat_malloc(size);
+#if CAT_ALLOC_HANDLE_ERRORS
+    if (unlikely(ptr == NULL && size != 0)) {
+        cat_out_of_memory();
+    }
+#endif
+    return ptr;
+}
+
+static cat_always_inline void *cat_calloc_unrecoverable(size_t count, size_t size)
+{
+    void *ptr = cat_calloc(count, size);
+#if CAT_ALLOC_HANDLE_ERRORS
+    if (unlikely(ptr == NULL && count != 0 && size != 0)) {
+        cat_out_of_memory();
+    }
+#endif
+    return ptr;
+}
+
+static cat_always_inline void *cat_realloc_unrecoverable(void *ptr, size_t size)
+{
+    ptr = cat_realloc(ptr, size);
+#if CAT_ALLOC_HANDLE_ERRORS
+    if (unlikely(ptr == NULL && size != 0)) {
+        cat_out_of_memory();
+    }
+#endif
+    return ptr;
+}
 
 static cat_always_inline void *cat_memdup(const void *p, size_t size)
 {

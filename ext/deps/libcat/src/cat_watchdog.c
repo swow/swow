@@ -70,7 +70,12 @@ static void cat_improve_timer_resolution(void)
 }
 #endif
 
-static void cat_watchdog_loop(void* arg)
+/*
+ * The loop reads the coroutine counters of the watched thread without a lock,
+ * on purpose, and a switch may write them at the same time. A misread only
+ * delays an alert, so the accesses are left uninstrumented.
+ */
+CAT_ATTRIBUTE_NO_TSAN static void cat_watchdog_loop(void* arg)
 {
     cat_watchdog_t *watchdog = (cat_watchdog_t *) arg;
 
@@ -123,18 +128,32 @@ static void cat_watch_dog_reset(void)
 }
 #endif
 
+#ifndef CAT_OS_WIN
+/*
+ * Register the reset once for the process. A registration for each thread
+ * runtime would fill the atfork table, and the table is small on some systems.
+ */
+static void cat_watch_dog_atfork_init(void)
+{
+    if (pthread_atfork(NULL, NULL, &cat_watch_dog_reset) != 0) {
+        abort();
+    }
+}
+#endif
+
 CAT_API cat_bool_t cat_watchdog_runtime_init(void)
 {
     CAT_WATCH_DOG_G(watchdog) = NULL;
 
 #ifndef CAT_OS_WIN
-    /* Re-initialize the watchdog after fork.
+    /*
+    * Re-initialize the watchdog after fork.
     * Note that this discards the global mutex and condition as well
     * as the work queue.
     */
-    if (pthread_atfork(NULL, NULL, &cat_watch_dog_reset) != 0) {
-        abort();
-    }
+    static uv_once_t once = UV_ONCE_INIT;
+
+    uv_once(&once, cat_watch_dog_atfork_init);
 #endif
 
     return cat_true;

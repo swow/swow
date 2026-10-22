@@ -59,10 +59,8 @@ extern "C" {
     /* Building static library. */
 #   define UV_EXTERN /* nothing */
 # endif
-#elif __GNUC__ >= 4
+#elif defined(__GNUC__)
 # define UV_EXTERN __attribute__((visibility("default")))
-#elif defined(__SUNPRO_C) && (__SUNPRO_C >= 0x550) /* Sun Studio >= 8 */
-# define UV_EXTERN __global
 #else
 # define UV_EXTERN /* nothing */
 #endif
@@ -546,7 +544,7 @@ UV_EXTERN char* uv_err_name_r(int err, char* buf, size_t buflen);
   /* read-only */                                                             \
   uv_req_type type;                                                           \
   /* private */                                                               \
-  void* reserved[6];                                                          \
+  void* reserved[5];                                                          \
   UV_REQ_PRIVATE_FIELDS                                                       \
 
 /* Abstract base class of all requests. */
@@ -676,6 +674,21 @@ UV_EXTERN int uv_try_write2(uv_stream_t* handle,
                             const uv_buf_t bufs[],
                             unsigned int nbufs,
                             uv_stream_t* send_handle);
+
+/*
+ * Returns the number of bytes written by a write request.
+ *
+ * NOTE: The result is only well-defined when called from within the
+ * write callback (uv_write_cb). The value is undefined if called at
+ * other times.
+ *
+ * This is primarily useful when a write has been cancelled via uv_cancel()
+ * and the callback receives UV_ECANCELED status, to determine how many
+ * bytes were actually written before cancellation. Note that cancelled
+ * writes may still succeed or fail with other errors if the kernel finished
+ * processing the write before the cancellation took effect.
+ */
+UV_EXTERN size_t uv_write_nwritten(const uv_write_t* req);
 
 /* uv_write_t is a subclass of uv_req_t. */
 struct uv_write_s {
@@ -816,7 +829,8 @@ enum uv_udp_flags {
    */
   UV_UDP_REUSEPORT = 64,
   /*
-   * Indicates that recvmmsg should be used, if available.
+   * Indicates that recvmmsg should be used, if available. The uv_alloc_cb
+   * for this handle should create buffers that are multiples of 64 KiB.
    */
   UV_UDP_RECVMMSG = 256
 };
@@ -855,6 +869,9 @@ struct uv_udp_send_s {
 UV_EXTERN int uv_udp_init(uv_loop_t*, uv_udp_t* handle);
 UV_EXTERN int uv_udp_init_ex(uv_loop_t*, uv_udp_t* handle, unsigned int flags);
 UV_EXTERN int uv_udp_open(uv_udp_t* handle, uv_os_sock_t sock);
+UV_EXTERN int uv_udp_open_ex(uv_udp_t* handle,
+                             uv_os_sock_t sock,
+                             unsigned int flags);
 UV_EXTERN int uv_udp_bind(uv_udp_t* handle,
                           const struct sockaddr* addr,
                           unsigned int flags);
@@ -1285,7 +1302,14 @@ enum uv_process_flags {
    * search for the exact file name before trying variants with
    * extensions like '.exe' or '.cmd'.
    */
-  UV_PROCESS_WINDOWS_FILE_PATH_EXACT_NAME = (1 << 7)
+  UV_PROCESS_WINDOWS_FILE_PATH_EXACT_NAME = (1 << 7),
+
+  /*
+   * On Windows, start the child in a new process group and keep the console of
+   * the parent, so a console control event can reach the group by its id. This
+   * option is only meaningful on Windows; on other platforms it is ignored.
+   */
+  UV_PROCESS_WINDOWS_NEW_PROCESS_GROUP = (1 << 8)
 };
 
 /*
@@ -1350,7 +1374,7 @@ struct uv_cpu_times_s {
 };
 
 struct uv_cpu_info_s {
-  char* model;
+  const char* model;
   int speed;
   struct uv_cpu_times_s cpu_times;
 };
@@ -1401,7 +1425,8 @@ struct uv_statfs_s {
   uint64_t f_bavail;
   uint64_t f_files;
   uint64_t f_ffree;
-  uint64_t f_spare[4];
+  uint64_t f_frsize;
+  uint64_t f_spare[3];
 };
 
 typedef enum {

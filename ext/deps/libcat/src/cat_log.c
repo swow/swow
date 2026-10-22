@@ -189,7 +189,7 @@ static cat_bool_t cat_log_fwrite_use_libc_impl = cat_false;
 static cat_bool_t cat_log_fwrite_libc_impl(FILE *file, const char *str, size_t length)
 {
     size_t n = fwrite(str, 1, length, file);
-    if (unlikely(n != length)) {
+    if (unlikely(n != length || fflush(file) != 0)) {
         char *s;
         fprintf(CAT_LOG_G(error_output),
             "libcat error: write(fd: %d, length: %d) for log message failed (error:%d:%s)\n",
@@ -201,7 +201,6 @@ static cat_bool_t cat_log_fwrite_libc_impl(FILE *file, const char *str, size_t l
         cat_free(s);
         return cat_false;
     }
-    fflush(file);
     return cat_true;
 }
 
@@ -245,6 +244,13 @@ CAT_API void cat_log_va_list_standard(CAT_LOG_VA_LIST_PARAMETERS)
     cat_bool_t ret;
     const char *type_name;
     FILE *output;
+
+    /* the settings of the log live in the thread local block, so a thread that
+     * never took a runtime has no settings to read and nothing to write with;
+     * the function is null before the module takes its own step */
+    if (unlikely(cat_log_function == NULL || !cat_globals_available())) {
+        return;
+    }
 
     if (unlikely(type & CAT_LOG_TYPES_ABNORMAL)) {
         va_list _args;
@@ -307,7 +313,8 @@ CAT_API void cat_log_va_list_standard(CAT_LOG_VA_LIST_PARAMETERS)
 # ifdef CAT_OS_WIN
             GetCurrentThreadId()
 # else
-            (unsigned) pthread_self()
+            /* pthread_t is a pointer on Darwin, the double cast keeps the value */
+            (unsigned) (uintptr_t) pthread_self()
 # endif
         );
         (void) cat_buffer_append_str(&buffer, " ");

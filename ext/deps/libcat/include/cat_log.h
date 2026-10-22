@@ -200,8 +200,8 @@ typedef struct cat_log_globals_s {
 
 /* log function is only available on runtime */
 #define CAT_MODULE_ERROR(module_name, format, ...) do { \
-    fprintf(stderr, "Module Error: <" #module_name "> " format "\n", ##__VA_ARGS__); \
-    abort(); \
+    fputs("Module Error: <" #module_name "> ", stderr); \
+    CAT_FATAL(format "\n", ##__VA_ARGS__); \
 } while (0)
 
 #define CAT_SYSCALL_FAILURE(type, module_name, format, ...) do { \

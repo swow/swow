@@ -83,6 +83,8 @@ extern char** environ;
 # include <sys/param.h>
 # if defined(__FreeBSD__)
 #  include <sys/cpuset.h>
+# endif
+# if defined(__DragonFly__) || defined(__FreeBSD__) || defined(__OpenBSD__)
 #  define uv__accept4 accept4
 # endif
 # if defined(__NetBSD__)
@@ -913,7 +915,7 @@ static void uv__run_pending(uv_loop_t* loop) {
     uv__queue_remove(q);
     uv__queue_init(q);
     w = uv__queue_data(q, uv__io_t, pending_queue);
-    w->cb(loop, w, POLLOUT);
+    uv__io_cb(loop, w, POLLOUT);
   }
 }
 
@@ -949,8 +951,8 @@ static int maybe_resize(uv_loop_t* loop, unsigned int len) {
   }
 
   nwatchers = next_power_of_two(len + 2) - 2;
-  watchers = uv__reallocf(loop->watchers,
-                          (nwatchers + 2) * sizeof(loop->watchers[0]));
+  watchers = uv__realloc(loop->watchers,
+                         (nwatchers + 2) * sizeof(loop->watchers[0]));
 
   if (watchers == NULL)
     return UV_ENOMEM;
@@ -965,29 +967,67 @@ static int maybe_resize(uv_loop_t* loop, unsigned int len) {
 }
 
 
-void uv__io_init(uv__io_t* w, uv__io_cb cb, int fd) {
+void uv__io_cb(uv_loop_t* loop, uv__io_t* w, unsigned int events) {
+  switch (uv__io_cb_get(w)) {
+  case UV__AHAFS_EVENT:
+    uv__ahafs_event(loop, w, events);
+    break;
+  case UV__ASYNC_IO:
+    uv__async_io(loop, w, events);
+    break;
+  case UV__FS_EVENT:
+    uv__fs_event(loop, w, events);
+    break;
+  case UV__FS_EVENT_READ:
+    uv__fs_event_read(loop, w, events);
+    break;
+  case UV__INOTIFY_READ:
+    uv__inotify_read(loop, w, events);
+    break;
+  case UV__POLL_IO:
+    uv__poll_io(loop, w, events);
+    break;
+  case UV__SERVER_IO:
+    uv__server_io(loop, w, events);
+    break;
+  case UV__STREAM_IO:
+    uv__stream_io(loop, w, events);
+    break;
+  case UV__UDP_IO:
+    uv__udp_io(loop, w, events);
+    break;
+  default:
+    UNREACHABLE();
+  }
+}
+
+
+void uv__io_init(uv__io_t* w, uv__io_cb_t cb, int fd) {
   assert(fd >= -1);
   uv__queue_init(&w->pending_queue);
   uv__queue_init(&w->watcher_queue);
-  w->cb = cb;
   w->fd = fd;
+  w->bits = 0;
   w->events = 0;
   w->pevents = 0;
+  uv__io_cb_set(w, cb);
 }
 
 
 int uv__io_start(uv_loop_t* loop, uv__io_t* w, unsigned int events) {
   int err;
 
+  assert(uv__io_cb_get(w) >= UV__AHAFS_EVENT);
+  assert(uv__io_cb_get(w) <= UV__UDP_IO);
   assert(0 == (events & ~(POLLIN | POLLOUT | UV__POLLRDHUP | UV__POLLPRI)));
   assert(0 != events);
   assert(w->fd >= 0);
   assert(w->fd < INT_MAX);
 
-  w->pevents |= events;
   err = maybe_resize(loop, w->fd + 1);
   if (err)
     return err;
+  w->pevents |= events;
 
 #if !defined(__sun)
   /* The event ports backend needs to rearm all file descriptors on each and
@@ -1012,17 +1052,16 @@ int uv__io_start(uv_loop_t* loop, uv__io_t* w, unsigned int events) {
 
 int uv__io_init_start(uv_loop_t* loop,
                       uv__io_t* w,
-                      uv__io_cb cb,
+                      uv__io_cb_t cb,
                       int fd,
                       unsigned int events) {
   int err;
 
-  assert(cb != NULL);
   assert(fd > -1);
   uv__io_init(w, cb, fd);
   err = uv__io_start(loop, w, events);
   if (err)
-    uv__io_init(w, NULL, -1);
+    uv__io_init(w, UV__NO_IO_CB, -1);
   return err;
 }
 
@@ -1052,8 +1091,22 @@ void uv__io_stop(uv_loop_t* loop, uv__io_t* w, unsigned int events) {
       loop->watchers[w->fd] = NULL;
       loop->nfds--;
     }
+    return;
   }
-  else if (uv__queue_empty(&w->watcher_queue))
+
+#if !defined(__sun)
+  /* Short-circuit if the event mask is unchanged, like uv__io_start() does.
+   * Without this, stopping an event that was never started (e.g. the
+   * uv__io_stop(POLLOUT) in uv__drain() after a write that completed
+   * synchronously) needlessly re-registers the file descriptor with the
+   * kernel on the next loop iteration and makes uv_backend_timeout() report
+   * zero in the meantime.
+   */
+  if (w->events == w->pevents)
+    return;
+#endif
+
+  if (uv__queue_empty(&w->watcher_queue))
     uv__queue_insert_tail(&loop->watcher_queue, &w->watcher_queue);
 }
 
@@ -1080,6 +1133,39 @@ int uv__io_active(const uv__io_t* w, unsigned int events) {
   return 0 != (w->pevents & events);
 }
 
+
+void uv__io_poll_prepare(uv_loop_t* loop, sigset_t* pset, int timeout) {
+  uv__loop_internal_fields_t* lfields;
+
+  /* Only need to set the provider_entry_time if timeout != 0. The function
+   * will return early if the loop isn't configured with UV_METRICS_IDLE_TIME.
+   */
+  if (timeout != 0)
+    uv__metrics_set_provider_entry_time(loop);
+
+  /* Store the current timeout in a location that's globally accessible so
+   * other locations like uv__work_done() can determine whether the queue
+   * of events in the callback were waiting when poll was called.
+   */
+  lfields = uv__get_internal_fields(loop);
+  lfields->current_timeout = timeout;
+
+  if (pset != NULL)
+    if (pthread_sigmask(SIG_BLOCK, pset, NULL))
+      abort();
+}
+
+void uv__io_poll_check(uv_loop_t* loop, sigset_t* pset) {
+  if (pset != NULL)
+    if (pthread_sigmask(SIG_UNBLOCK, pset, NULL))
+      abort();
+
+  /* Update loop->time unconditionally. It's tempting to skip the update when
+   * timeout == 0 (i.e. non-blocking poll) but there is no guarantee that the
+   * operating system didn't reschedule our process while in the syscall.
+   */
+  SAVE_ERRNO(uv__update_time(loop));
+}
 
 int uv__fd_exists(uv_loop_t* loop, int fd) {
   return (unsigned) fd < loop->nwatchers && loop->watchers[fd] != NULL;
@@ -1558,7 +1644,7 @@ int uv_os_environ(uv_env_item_t** envitems, int* count) {
 
 fail:
   for (i = 0; i < cnt; i++) {
-    envitem = &(*envitems)[cnt];
+    envitem = &(*envitems)[i];
     uv__free(envitem->name);
   }
   uv__free(*envitems);
@@ -2070,8 +2156,8 @@ unsigned int uv_available_parallelism(void) {
 #elif defined(__NetBSD__)
   cpuset_t* set = cpuset_create();
   if (set != NULL) {
-    if (0 == sched_getaffinity_np(getpid(), sizeof(set), &set))
-      rc = uv__cpu_count(&set);
+    if (0 == sched_getaffinity_np(getpid(), cpuset_size(set), set))
+      rc = uv__cpu_count(set);
     cpuset_destroy(set);
   }
 #elif defined(__APPLE__)
@@ -2178,4 +2264,28 @@ int uv__sock_reuseport(int fd) {
 #endif
 
   return 0;
+}
+
+/* Check if rlimit has any expressed restrictions on usable memory. */
+uint64_t uv__get_rlimit_max_memory(void) {
+  struct rlimit rl;
+  uint64_t result = 0;
+  uint64_t rlimit_value;
+
+#if defined(RLIMIT_AS)
+  if (getrlimit(RLIMIT_AS, &rl) == 0 && rl.rlim_cur != RLIM_INFINITY) {
+    rlimit_value = rl.rlim_cur;
+    result = rlimit_value;
+  }
+#endif
+
+#if defined(RLIMIT_DATA)
+  if (getrlimit(RLIMIT_DATA, &rl) == 0 && rl.rlim_cur != RLIM_INFINITY) {
+    rlimit_value = rl.rlim_cur;
+    if (result == 0 || rlimit_value < result)
+      result = rlimit_value;
+  }
+#endif
+
+  return result;
 }

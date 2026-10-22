@@ -402,6 +402,7 @@ typedef struct uv_udg_s {
     uv_pipe_t pipe;
     cat_socket_fd_t readfd;
     cat_socket_fd_t writefd;
+    cat_coroutine_t *write_coroutine;
 } uv_udg_t;
 #endif
 

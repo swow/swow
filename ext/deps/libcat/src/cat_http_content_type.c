@@ -62,7 +62,7 @@ static cat_always_inline cat_bool_t cat_http_parser_multipart_parse_content_type
     const char *pe,
     const char *eof
 ) {
-    if (p == eof) {
+    if (p == pe || p == eof) {
         goto next;
     }
 
@@ -153,7 +153,7 @@ static cat_always_inline cat_bool_t cat_http_parser_multipart_parse_content_type
     alpha_cases
 #ifndef mt_dbg
 # define mt_dbg() do { \
-    printf("state %d *p='%c'\n", state, *p); \
+    printf("state %d *p='%c'\n", state, p != NULL && p < pe ? *p : ' '); \
 } while (0)
 #endif
 
@@ -241,7 +241,6 @@ static cat_always_inline cat_bool_t cat_http_parser_multipart_parse_content_type
         case mt_parameter_ows1_acceptable:
 mt_parameter_ows1_acceptable:
         mt_dbg();
-            p++;
             // printf("%p %p\n", p, pe);
             if (p == pe) {
                 goto next;
@@ -326,6 +325,9 @@ mt_parameter_name:
             goto next;
         case mt_parameter_value:
 mt_parameter_value:
+        if (p == pe) {
+            goto next;
+        }
         mt_dbg();
             /*
             obs_text = [\x80-\xff];
@@ -375,7 +377,7 @@ mt_parameter_quoted_value:
                     *p == '\t' || *p == ' ' || *p == '\x21' ||
                     ('\x23' <= *p && *p <= '\x5b') ||
                     ('\x5d' <= *p && *p <= '\x7e') ||
-                    (/* '\x80' <= *p && */ *p <= '\xff')
+                    ((unsigned char) *p >= 0x80)
                 ) {
                     /* qdtext */
                     /* do nothing */
@@ -384,6 +386,7 @@ mt_parameter_quoted_value:
                     state = mt_quoted_pair;
                     goto mt_quoted_pair;
                 } else if (*p == '"') {
+                    p++;
                     state = mt_parameter_ows1_acceptable;
                     goto mt_parameter_ows1_acceptable;
                 } else {
@@ -393,6 +396,9 @@ mt_parameter_quoted_value:
             goto next;
         case mt_quoted_pair:
 mt_quoted_pair:
+        if (p == pe) {
+            goto next;
+        }
         mt_dbg();
             /*
             [ \t\x1f-\x7e\x80-\xff] => mt_parameter_quoted_value
@@ -400,7 +406,7 @@ mt_quoted_pair:
             if (
                 *p == ' ' || *p == '\t' ||
                 ('\x1f' <= *p && *p <= '\x7e') ||
-                (/* '\x80' <= *p && */ *p <= '\xff')
+                ((unsigned char) *p >= 0x80)
             ) {
                 p++;
                 state = mt_parameter_quoted_value;
@@ -473,6 +479,9 @@ mt_boundary_eq_o:
             goto next;
         case mt_boundary_eq_eq:
 mt_boundary_eq_eq:
+        if (p == pe) {
+            goto next;
+        }
         mt_dbg();
             if (*p == '=') {
                 // printf("parser->multipart.boundary_length = %d\n", parser->multipart.boundary_length);
@@ -492,6 +501,9 @@ mt_boundary_eq_eq:
             }
         case mt_boundary_value:
 mt_boundary_value:
+        if (p == pe) {
+            goto next;
+        }
         mt_dbg();
             /*
             bcharsnospace = digit | alpha | "'" | "(" | ")" |
@@ -577,6 +589,7 @@ mt_boundary_quoted_value:
                         state = mt_boundary_quoted_pair;
                         goto mt_boundary_quoted_pair;
                     case '"':
+                        p++;
                         state = mt_parameter_ows1_acceptable;
                         goto mt_parameter_ows1_acceptable;
                 }
@@ -624,6 +637,9 @@ mt_boundary_quoted_value_unacceptable:
 
         case mt_boundary_quoted_pair:
 mt_boundary_quoted_pair:
+        if (p == pe) {
+            goto next;
+        }
         mt_dbg();
             /*
             RFC 9110 5.6.4

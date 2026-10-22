@@ -35,6 +35,100 @@ CAT_API cat_bool_t cat_kill(int pid, int signum)
     return cat_true;
 }
 
+#ifndef CAT_OS_WIN
+
+CAT_API cat_bool_t cat_kill_ex(cat_pid_t pid, int signum)
+{
+    return cat_kill((int) pid, signum);
+}
+
+#else
+
+static cat_bool_t cat_kill_check_running(cat_pid_t pid)
+{
+    HANDLE handle;
+    DWORD code = 0;
+    cat_bool_t alive;
+
+    handle = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, (DWORD) pid);
+    if (unlikely(handle == NULL)) {
+        DWORD error = GetLastError();
+        cat_update_last_error_with_reason(
+            error == ERROR_INVALID_PARAMETER ? CAT_ESRCH : cat_translate_sys_error((int) error),
+            "OpenProcess(%d) failed with %lu", (int) pid, (unsigned long) error);
+        return cat_false;
+    }
+
+    alive = GetExitCodeProcess(handle, &code) && code == STILL_ACTIVE;
+    CloseHandle(handle);
+
+    if (unlikely(!alive)) {
+        cat_update_last_error(CAT_ESRCH, "Process %d is not running", (int) pid);
+        return cat_false;
+    }
+
+    return cat_true;
+}
+
+static cat_bool_t cat_kill_terminate(cat_pid_t pid)
+{
+    HANDLE handle;
+    cat_bool_t ret;
+
+    handle = OpenProcess(PROCESS_TERMINATE, FALSE, (DWORD) pid);
+    if (unlikely(handle == NULL)) {
+        DWORD error = GetLastError();
+        cat_update_last_error_with_reason(
+            error == ERROR_INVALID_PARAMETER ? CAT_ESRCH : cat_translate_sys_error((int) error),
+            "OpenProcess(%d) failed with %lu", (int) pid, (unsigned long) error);
+        return cat_false;
+    }
+
+    ret = TerminateProcess(handle, 1) != 0;
+    if (unlikely(!ret)) {
+        cat_update_last_error_with_reason(
+            cat_translate_sys_error((int) GetLastError()),
+            "TerminateProcess(%d) failed", (int) pid);
+    }
+    CloseHandle(handle);
+
+    return ret;
+}
+
+static cat_bool_t cat_kill_send_console_event(cat_pid_t pid, DWORD event)
+{
+    if (unlikely(!GenerateConsoleCtrlEvent(event, (DWORD) pid))) {
+        DWORD error = GetLastError();
+        cat_update_last_error_with_reason(
+            error == ERROR_INVALID_HANDLE ? CAT_ENOTSUP : cat_translate_sys_error((int) error),
+            "Console control event to process group %d failed with %lu",
+            (int) pid, (unsigned long) error);
+        return cat_false;
+    }
+
+    return cat_true;
+}
+
+CAT_API cat_bool_t cat_kill_ex(cat_pid_t pid, int signum)
+{
+    switch (signum) {
+        case 0:
+            return cat_kill_check_running(pid);
+        case CAT_SIGKILL:
+            return cat_kill_terminate(pid);
+        case CAT_SIGINT:
+            return cat_kill_send_console_event(pid, CTRL_C_EVENT);
+        case CAT_SIGBREAK:
+            return cat_kill_send_console_event(pid, CTRL_BREAK_EVENT);
+        default:
+            cat_update_last_error(CAT_ENOSYS,
+                "Signal %d is not supported on Windows", signum);
+            return cat_false;
+    }
+}
+
+#endif
+
 typedef union {
     cat_coroutine_t *coroutine;
     uv_handle_t handle;

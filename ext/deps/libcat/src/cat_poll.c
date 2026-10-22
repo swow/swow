@@ -29,6 +29,7 @@
 #endif
 
 #ifdef CAT_OS_UNIX_LIKE
+#include <fcntl.h>
 /* for uv__fd_exists */
 #  ifdef CAT_IDE_HELPER
 #    include "unix/internal.h"
@@ -262,19 +263,21 @@ static cat_ret_t cat_poll_one_impl(cat_os_socket_t fd, cat_pollfd_events_t event
     }
 #endif
 #ifdef CAT_OS_UNIX_LIKE
-    if (unlikely(uv__fd_exists(&CAT_EVENT_G(loop), fd))) {
-        _fd = dup(fd);
-        if (unlikely(_fd == CAT_OS_INVALID_SOCKET)) {
-            cat_update_last_error_of_syscall("Dup for poll_one() failed");
-            cat_free(poll);
-            return CAT_RET_ERROR;
-        }
-        /* uv_poll_init_socket() and uv_poll_start() must return success if fd exists */
+    /* A later stream operation may register the original fd while this poll waits. */
+    _fd = dup(fd);
+    if (unlikely(_fd == CAT_OS_INVALID_SOCKET)) {
+        cat_update_last_error_of_syscall("Dup for poll_one() failed");
+        cat_free(poll);
+        return CAT_RET_ERROR;
     }
+    /* uv_poll_init_socket() and uv_poll_start() must return success if fd exists */
 #endif
     error = uv_poll_init_socket(&CAT_EVENT_G(loop), &poll->u.poll, _fd);
     if (unlikely(error != 0)) {
         cat_update_last_error_with_reason(error, "Poll init failed");
+#ifdef CAT_OS_UNIX_LIKE
+        uv__close(_fd);
+#endif
         cat_free(poll);
         *revents = cat_poll_translate_error_to_sys_events(events, cat_poll_filter_init_error(error));
         return CAT_RET_ERROR;
@@ -505,17 +508,14 @@ static int cat_poll_impl(cat_pollfd_t *fds, cat_nfds_t nfds, cat_timeout_t timeo
         do {
             cat_os_socket_t fd_no = fd->fd;
 #ifdef CAT_OS_UNIX_LIKE
-            poll->fd_dup = CAT_OS_INVALID_FD;
-            if (unlikely(uv__fd_exists(&CAT_EVENT_G(loop), fd->fd))) {
-                /* uv_poll_init_socket() and uv_poll_start() will return error if fd exists */
-                poll->fd_dup = dup(fd->fd);
-                if (unlikely(fd->fd == CAT_OS_INVALID_SOCKET)) {
-                    poll->ret.status = cat_translate_sys_error(cat_sys_errno);
-                    e++;
-                    break;
-                }
-                fd_no = poll->fd_dup;
+            /* uv_poll_init_socket() and uv_poll_start() will return error if fd exists */
+            poll->fd_dup = dup(fd->fd);
+            if (unlikely(poll->fd_dup == CAT_OS_INVALID_FD)) {
+                poll->ret.status = cat_translate_sys_error(cat_sys_errno);
+                e++;
+                break;
             }
+            fd_no = poll->fd_dup;
 #endif
             error = uv_poll_init_socket(&CAT_EVENT_G(loop), &poll->u.poll, fd_no);
             if (unlikely(error != 0)) {
@@ -561,6 +561,11 @@ static int cat_poll_impl(cat_pollfd_t *fds, cat_nfds_t nfds, cat_timeout_t timeo
         if (poll->initialized) {
             uv_close(&poll->u.handle, cat_poll_close_callback);
         }
+#ifdef CAT_OS_UNIX_LIKE
+        else if (poll->fd_dup != CAT_OS_INVALID_FD) {
+            uv__close(poll->fd_dup);
+        }
+#endif
         if (unlikely(ret == CAT_RET_ERROR)) {
             /* just close handle and go to the next one */
             continue;
@@ -677,7 +682,12 @@ CAT_API int cat_select(cat_os_socket_t max_fd, fd_set *readfds, fd_set *writefds
     if (nfds == 0) {
         cat_timeout_t timeout_ms = cat_time_tv2to(timeout);
         if (timeout_ms > 0) {
-            if (cat_time_delay(timeout_ms) != CAT_RET_OK) {
+            cat_ret_t delay_ret = cat_time_delay(timeout_ms);
+            if (delay_ret == CAT_RET_NONE) {
+                cat_update_last_error(CAT_ECANCELED, "Select wait has been canceled");
+                return -1;
+            }
+            if (delay_ret == CAT_RET_ERROR) {
                 cat_update_last_error_with_previous("Select wait failed");
                 return -1;
             }
@@ -704,6 +714,9 @@ CAT_API int cat_select(cat_os_socket_t max_fd, fd_set *readfds, fd_set *writefds
         if (SAFE_FD_ISSET((cat_os_socket_t) fd, writefds)) {
             events |= POLLOUT;
         }
+        if (SAFE_FD_ISSET((cat_os_socket_t) fd, exceptfds)) {
+            events |= POLLPRI;
+        }
         if (events == POLLNONE) {
             continue;
         }
@@ -725,18 +738,33 @@ CAT_API int cat_select(cat_os_socket_t max_fd, fd_set *readfds, fd_set *writefds
     SAFE_FD_ZERO(readfds);
     SAFE_FD_ZERO(writefds);
     SAFE_FD_ZERO(exceptfds);
+    ret = 0;
     for (ifds = 0; ifds < nfds; ifds++) {
         pfd = &pfds[ifds];
-        if (pfd->revents & (POLLIN | POLLHUP | POLLPRI)) {
-            SAFE_FD_SET(pfd->fd, readfds);
+        cat_bool_t invalid = (pfd->revents & POLLNVAL) != 0;
+#ifndef CAT_OS_WIN
+        // Unix poll reports a closed descriptor as POLLERR; select must return EBADF.
+        if ((pfd->revents & POLLERR) && fcntl(pfd->fd, F_GETFD) == -1 && errno == EBADF) {
+            invalid = cat_true;
         }
-        if (pfd->revents & POLLOUT) {
+#endif
+        if (invalid) {
+            cat_update_last_error(CAT_EBADF, "Select file descriptor is invalid");
+            ret = -1;
+            goto _out;
+        }
+        if ((pfd->events & POLLIN) && (pfd->revents & (POLLIN | POLLHUP | POLLERR))) {
+            SAFE_FD_SET(pfd->fd, readfds);
+            ret++;
+        }
+        if ((pfd->events & POLLOUT) && (pfd->revents & (POLLOUT | POLLERR))) {
             SAFE_FD_SET(pfd->fd, writefds);
+            ret++;
         }
         // ignore errors when event is already processed at IN and OUT handler.
-        if ((pfd->revents & ~(POLLIN | POLLOUT)) != 0 &&
-            !(pfd->revents & (POLLIN | POLLOUT))) {
+        if ((pfd->events & POLLPRI) && (pfd->revents & POLLPRI)) {
             SAFE_FD_SET(pfd->fd, exceptfds);
+            ret++;
         }
     }
 

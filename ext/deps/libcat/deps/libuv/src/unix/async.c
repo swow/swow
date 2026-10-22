@@ -36,7 +36,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <sched.h>  /* sched_yield() */
 
 #ifdef __linux__
 #include <sys/eventfd.h>
@@ -72,7 +71,6 @@ static void uv__kqueue_runtime_detection(void) {
 
 static void uv__async_send(uv_loop_t* loop);
 static int uv__async_start(uv_loop_t* loop);
-static void uv__cpu_relax(void);
 
 
 int uv_async_init(uv_loop_t* loop, uv_async_t* handle, uv_async_cb async_cb) {
@@ -89,7 +87,6 @@ int uv_async_init(uv_loop_t* loop, uv_async_t* handle, uv_async_cb async_cb) {
 #else
   handle->pending = 0;
 #endif
-  handle->u.fd = 0; /* This will be used as a busy flag. */
 
   uv__queue_insert_tail(&loop->async_handles, &handle->queue);
   uv__handle_start(handle);
@@ -98,107 +95,8 @@ int uv_async_init(uv_loop_t* loop, uv_async_t* handle, uv_async_cb async_cb) {
 }
 
 
-int uv_async_send(uv_async_t* handle) {
-#ifdef HAVE_LIBCAT
-  hat_atomic_int32_t *pending;
-  hat_atomic_int32_t *busy;
-#else
-  _Atomic int* pending;
-  _Atomic int* busy;
-#endif
-
-#ifdef HAVE_LIBCAT
-  pending = (hat_atomic_int32_t *) &handle->pending;
-  busy = (hat_atomic_int32_t *) &handle->u.fd;
-#else
-  pending = (_Atomic int*) &handle->pending;
-  busy = (_Atomic int*) &handle->u.fd;
-#endif
-
-  /* Do a cheap read first. */
-#ifdef HAVE_LIBCAT
-  if (hat_atomic_int32_load(pending) != 0)
-#else
-  if (atomic_load_explicit(pending, memory_order_relaxed) != 0)
-#endif
-    return 0;
-
-  /* Set the loop to busy. */
-#ifdef HAVE_LIBCAT
-  hat_atomic_int32_fetch_add(busy, 1);
-#else
-  atomic_fetch_add(busy, 1);
-#endif
-
-  /* Wake up the other thread's event loop. */
-#ifdef HAVE_LIBCAT
-  if (hat_atomic_int32_exchange(pending, 1) == 0)
-#else
-  if (atomic_exchange(pending, 1) == 0)
-#endif
-    uv__async_send(handle->loop);
-
-  /* Set the loop to not-busy. */
-#ifdef HAVE_LIBCAT
-  hat_atomic_int32_fetch_add(busy, -1);
-#else
-  atomic_fetch_add(busy, -1);
-#endif
-
-  return 0;
-}
-
-
-/* Wait for the busy flag to clear before closing.
- * Only call this from the event loop thread. */
-static void uv__async_spin(uv_async_t* handle) {
-#ifdef HAVE_LIBCAT
-  hat_atomic_int32_t *pending;
-  hat_atomic_int32_t *busy;
-#else
-  _Atomic int* pending;
-  _Atomic int* busy;
-#endif
-  int i;
-
-#ifdef HAVE_LIBCAT
-  pending = (hat_atomic_int32_t *) &handle->pending;
-  busy = (hat_atomic_int32_t *) &handle->u.fd;
-#else
-  pending = (_Atomic int*) &handle->pending;
-  busy = (_Atomic int*) &handle->u.fd;
-#endif
-
-  /* Set the pending flag first, so no new events will be added by other
-   * threads after this function returns. */
-#ifdef HAVE_LIBCAT
-  hat_atomic_int32_store(pending, 1);
-#else
-  atomic_store(pending, 1);
-#endif
-
-  for (;;) {
-    /* 997 is not completely chosen at random. It's a prime number, acyclic by
-     * nature, and should therefore hopefully dampen sympathetic resonance.
-     */
-    for (i = 0; i < 997; i++) {
-#ifdef HAVE_LIBCAT
-      if (hat_atomic_int32_load(busy) == 0)
-#else
-      if (atomic_load(busy) == 0)
-#endif
-        return;
-
-      /* Other thread is busy with this handle, spin until it's done. */
-      uv__cpu_relax();
-    }
-
-    /* Yield the CPU. We may have preempted the other thread while it's
-     * inside the critical section and if it's running on the same CPU
-     * as us, we'll just burn CPU cycles until the end of our time slice.
-     */
-    sched_yield();
-  }
+void uv__async_notify(uv_async_t* handle) {
+  uv__async_send(handle->loop);
 }
 
 
@@ -209,9 +107,11 @@ void uv__async_close(uv_async_t* handle) {
 }
 
 
-static void uv__async_io(uv_loop_t* loop, uv__io_t* w, unsigned int events) {
+void uv__async_io(uv_loop_t* loop, uv__io_t* w, unsigned int events) {
+#ifndef __linux__
   char buf[1024];
   ssize_t r;
+#endif
   struct uv__queue queue;
   struct uv__queue* q;
   uv_async_t* h;
@@ -219,6 +119,7 @@ static void uv__async_io(uv_loop_t* loop, uv__io_t* w, unsigned int events) {
 
   assert(w == &loop->async_io_watcher);
 
+#ifndef __linux__
 #if UV__KQUEUE_EVFILT_USER
   for (;!kqueue_evfilt_user_support;) {
 #else
@@ -240,6 +141,7 @@ static void uv__async_io(uv_loop_t* loop, uv__io_t* w, unsigned int events) {
 
     abort();
   }
+#endif /* !__linux__ */
 
   uv__queue_move(&loop->async_handles, &queue);
   while (!uv__queue_empty(&queue)) {
@@ -249,9 +151,13 @@ static void uv__async_io(uv_loop_t* loop, uv__io_t* w, unsigned int events) {
     uv__queue_remove(q);
     uv__queue_insert_tail(&loop->async_handles, q);
 
-    /* Atomically fetch and clear pending flag */
+    /* Atomically clear the pending flag (bit 0) and check if it was set.
+     * The seq_cst (default order) synchronizes with the seq_cst CAS in
+     * uv_async_send, making all accesses before that call visible here and
+     * ensuring no access here can get reordered before this as visible to
+     * another thread. */
     pending = (_Atomic int*) &h->pending;
-    if (atomic_exchange(pending, 0) == 0)
+    if (!(atomic_fetch_and(pending, ~1) & 1))
       continue;
 
     if (h->async_cb == NULL)
@@ -263,22 +169,36 @@ static void uv__async_io(uv_loop_t* loop, uv__io_t* w, unsigned int events) {
 
 
 static void uv__async_send(uv_loop_t* loop) {
-  const void* buf;
-  ssize_t len;
   int fd;
   int r;
-
-  buf = "";
-  len = 1;
-  fd = loop->async_wfd;
+#if !(defined(__linux__) || UV__KQUEUE_EVFILT_USER)
+  static char buf = '\0';
+#endif
 
 #if defined(__linux__)
-  if (fd == -1) {
-    static const uint64_t val = 1;
-    buf = &val;
-    len = sizeof(val);
-    fd = loop->async_io_watcher.fd;  /* eventfd */
+  uint64_t val;
+
+  fd = loop->async_io_watcher.fd;  /* eventfd */
+  for (val = 1; /* empty */; val = 1) {
+    r = write(fd, &val, sizeof(uint64_t));
+    if (r < 0) {
+      /* When EAGAIN occurs, the eventfd counter hits the maximum value of the unsigned 64-bit.
+       * We need to first drain the eventfd and then write again.
+       *
+       * Check out https://man7.org/linux/man-pages/man2/eventfd.2.html for details.
+       */
+      if (errno == EAGAIN) {
+        /* It's ready to retry. */
+        if (read(fd, &val, sizeof(uint64_t)) > 0 || errno == EAGAIN) {
+          continue;
+        }
+      }
+      /* Unknown error occurs. */
+      break;
+    }
+    return;
   }
+
 #elif UV__KQUEUE_EVFILT_USER
   struct kevent ev;
 
@@ -290,18 +210,20 @@ static void uv__async_send(uv_loop_t* loop) {
       return;
     abort();
   }
-#endif
 
+#else
+  fd = loop->async_wfd;
   do
-    r = write(fd, buf, len);
+    r = write(fd, &buf, 1);
   while (r == -1 && errno == EINTR);
 
-  if (r == len)
+  if (r == 1)
     return;
 
   if (r == -1)
     if (errno == EAGAIN || errno == EWOULDBLOCK)
       return;
+#endif
 
   abort();
 }
@@ -360,7 +282,7 @@ static int uv__async_start(uv_loop_t* loop) {
     return err;
 #endif
 
-  err = uv__io_init_start(loop, &loop->async_io_watcher, uv__async_io,
+  err = uv__io_init_start(loop, &loop->async_io_watcher, UV__ASYNC_IO,
                           pipefd[0], POLLIN);
   if (err < 0) {
     uv__close(pipefd[0]);
@@ -437,9 +359,7 @@ int uv__async_fork(uv_loop_t* loop) {
      * behavior anyways, unless async-signal-safe, for multithreaded programs
      * like libuv, and nothing interesting in pthreads is async-signal-safe.
      */
-    h->pending = 0;
-    /* This is the busy flag, and we just abruptly lost all other threads. */
-    h->u.fd = 0;
+    h->pending = 0; /* Clears both the pending flag and busy counter. */
   }
 
   /* Recreate these, since they still exist, but belong to the wrong pid now. */
@@ -454,17 +374,4 @@ int uv__async_fork(uv_loop_t* loop) {
   loop->async_io_watcher.fd = -1;
 
   return uv__async_start(loop);
-}
-
-
-static void uv__cpu_relax(void) {
-#if defined(__i386__) || defined(__x86_64__)
-  __asm__ __volatile__ ("rep; nop" ::: "memory");  /* a.k.a. PAUSE */
-#elif (defined(__arm__) && __ARM_ARCH >= 7) || defined(__aarch64__)
-  __asm__ __volatile__ ("yield" ::: "memory");
-#elif (defined(__ppc__) || defined(__ppc64__)) && defined(__APPLE__)
-  __asm volatile ("" : : : "memory");
-#elif !defined(__APPLE__) && (defined(__powerpc64__) || defined(__ppc64__) || defined(__PPC64__))
-  __asm__ __volatile__ ("or 1,1,1; or 2,2,2" ::: "memory");
-#endif
 }

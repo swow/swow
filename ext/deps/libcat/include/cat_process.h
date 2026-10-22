@@ -59,6 +59,11 @@ extern "C" {
         * option is only meaningful on Windows systems. On Unix it is silently
         * ignored. */ \
         XX(WINDOWS_HIDE_GUI) \
+        /* Start the child in a new process group, and keep the console of the
+        * parent. The child is then the target of a console control event that
+        * carries its pid as the group id. This option is only meaningful on
+        * Windows systems. On Unix it is silently ignored. */ \
+        XX(WINDOWS_NEW_PROCESS_GROUP) \
 
 typedef enum cat_process_flag_e {
 #define CAT_PROCESS_FLAG_GEN(name) CAT_PROCESS_FLAG_##name = UV_PROCESS_##name,
@@ -135,6 +140,25 @@ typedef struct cat_process_options_s {
     cat_gid_t gid;
 } cat_process_options_t;
 
+/*
+ * The state of a process in one value, so a caller does not read a raw wait
+ * status.
+ *
+ * exit_code is the code of a normal exit, or -1. term_signal is the signal that
+ * ended the process, or -1. A process that has not exited reports -1 for both,
+ * and signaled is false.
+ *
+ * On Windows the backend reports a signal only for a kill that this library
+ * sent. A process that the system stopped in another way (for example, from the
+ * task manager) looks like a normal exit with the code the system used.
+ */
+typedef struct cat_process_status_s {
+    int64_t exit_code;
+    int term_signal;
+    cat_bool_t exited;
+    cat_bool_t signaled;
+} cat_process_status_t;
+
 typedef struct cat_process_s cat_process_t;
 
 struct cat_process_s {
@@ -142,6 +166,8 @@ struct cat_process_s {
     int64_t exit_status;
     int term_signal;
     cat_bool_t exited;
+    /* the caller gave up the object, and the exit callback releases it */
+    cat_bool_t closing;
     union {
         uv_process_t process;
         uv_handle_t handle;
@@ -151,15 +177,41 @@ struct cat_process_s {
 CAT_API cat_process_t *cat_process_run(const cat_process_options_t *options);
 CAT_API cat_bool_t cat_process_wait(cat_process_t *process);
 CAT_API cat_bool_t cat_process_wait_ex(cat_process_t *process, cat_timeout_t timeout);
-CAT_API void cat_process_close(cat_process_t *process);
+/*
+ * Release the process object.
+ *
+ * A process that already exited is released now. A process that still runs is
+ * released in the background: the loop keeps the handle, the exit callback reaps
+ * the child and frees the object, and the loop does not wait for it. The exit
+ * status is dropped.
+ *
+ * The call fails with CAT_EBUSY while a coroutine waits for the process. Wait
+ * first, then close.
+ *
+ * The call does not stop the process and does not close its stdio streams. The
+ * object is not usable after a successful call, even while the process runs.
+ */
+CAT_API cat_bool_t cat_process_close(cat_process_t *process);
 
 CAT_API cat_pid_t cat_process_get_pid(const cat_process_t *process);
 
 CAT_API cat_bool_t cat_process_has_exited(const cat_process_t *process);
+
+/* The same value on every platform. */
+CAT_API cat_process_status_t cat_process_get_status(const cat_process_t *process);
+
+/* The raw value from the backend: on a Unix-like platform a process that a
+ * signal ended reports 0 here. Use cat_process_get_status() for a portable
+ * value. */
 CAT_API int64_t cat_process_get_exit_status(const cat_process_t *process);
+/* The raw value from the backend: 0 when a normal exit ended the process. */
 CAT_API int cat_process_get_term_signal(const cat_process_t *process);
 
 CAT_API cat_bool_t cat_process_kill(cat_process_t *process, int signum);
+
+/* Release the process objects that are still open when the runtime stops. A
+ * process that still runs is left alone; the child becomes an orphan. */
+CAT_API cat_bool_t cat_process_runtime_shutdown(void);
 
 #ifdef __cplusplus
 }

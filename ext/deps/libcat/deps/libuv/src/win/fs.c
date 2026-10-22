@@ -247,6 +247,32 @@ static int fs__readlink_handle(HANDLE handle,
       }
     }
 
+  } else if (reparse_data->ReparseTag == IO_REPARSE_TAG_LX_SYMLINK) {
+    /* Real (Linux) symlink */
+    char* buffer;
+    char* target;
+    size_t target_len;
+
+    target_len = (reparse_data->ReparseDataLength -
+                  sizeof(ULONG)); /* Version field */
+    buffer = (char*) reparse_data->LinuxSymbolicLinkReparseBuffer.PathBuffer;
+
+    if (target_len_ptr != NULL) {
+      *target_len_ptr = target_len;
+    }
+
+    if (target_ptr != NULL) {
+      assert(*target_ptr == NULL);
+      target = uv__malloc(target_len + 1);
+      if (target == NULL) {
+        return UV_ENOMEM;
+      }
+      memcpy(target, buffer, target_len);
+      target[target_len] = '\0';
+      *target_ptr = target;
+    }
+    return 0;
+
   } else if (reparse_data->ReparseTag == IO_REPARSE_TAG_MOUNT_POINT) {
     /* Junction. */
     w_target = reparse_data->MountPointReparseBuffer.PathBuffer +
@@ -683,10 +709,13 @@ void fs__close(uv_fs_t* req) {
     }
   }
 
-  if (fd > 2)
+  if (fd > 2) {
+    UV_BEGIN_DISABLE_CRT_ASSERT();
     result = _close(fd);
-  else
+    UV_END_DISABLE_CRT_ASSERT();
+  } else {
     result = 0;
+  }
 
   /* _close doesn't set _doserrno on failure, but it does always set errno
    * to EBADF on failure.
@@ -863,6 +892,7 @@ void fs__read(uv_fs_t* req) {
   bytes = 0;
   do {
     DWORD incremental_bytes;
+    DWORD to_read;
 
     if (offset != -1) {
       offset_.QuadPart = offset + bytes;
@@ -870,9 +900,12 @@ void fs__read(uv_fs_t* req) {
       overlapped.OffsetHigh = offset_.HighPart;
     }
 
+    to_read = req->fs.info.bufs[index].len;
+    if (to_read > UV__IO_MAX_BYTES)
+      to_read = UV__IO_MAX_BYTES;
     result = ReadFile(handle,
                       req->fs.info.bufs[index].base,
-                      req->fs.info.bufs[index].len,
+                      to_read,
                       &incremental_bytes,
                       overlapped_ptr);
     bytes += incremental_bytes;
@@ -1077,7 +1110,7 @@ void fs__write(uv_fs_t* req) {
 
     result = WriteFile(handle,
                        req->fs.info.bufs[index].base,
-                       req->fs.info.bufs[index].len,
+                       (DWORD) req->fs.info.bufs[index].len,
                        &incremental_bytes,
                        overlapped_ptr);
     bytes += incremental_bytes;
@@ -1104,7 +1137,7 @@ void fs__write(uv_fs_t* req) {
 static void fs__unlink_rmdir(uv_fs_t* req, BOOL isrmdir) {
   const WCHAR* pathw = req->file.pathw;
   HANDLE handle;
-  BY_HANDLE_FILE_INFORMATION info;
+  FILE_BASIC_INFO info;
   FILE_DISPOSITION_INFORMATION disposition;
   FILE_DISPOSITION_INFORMATION_EX disposition_ex;
   IO_STATUS_BLOCK iosb;
@@ -1112,7 +1145,7 @@ static void fs__unlink_rmdir(uv_fs_t* req, BOOL isrmdir) {
   DWORD error;
 
   handle = CreateFileW(pathw,
-                       FILE_READ_ATTRIBUTES | FILE_WRITE_ATTRIBUTES | DELETE,
+                       FILE_READ_ATTRIBUTES | DELETE,
                        FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
                        NULL,
                        OPEN_EXISTING,
@@ -1124,13 +1157,13 @@ static void fs__unlink_rmdir(uv_fs_t* req, BOOL isrmdir) {
     return;
   }
 
-  if (!GetFileInformationByHandle(handle, &info)) {
+  if (!GetFileInformationByHandleEx(handle, FileBasicInfo, &info, sizeof info)) {
     SET_REQ_WIN32_ERROR(req, GetLastError());
     CloseHandle(handle);
     return;
   }
 
-  if (isrmdir && !(info.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
+  if (isrmdir && !(info.FileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
     /* Error if we're in rmdir mode but it is not a dir.
      * TODO: change it to UV_NOTDIR in v2. */
     SET_REQ_UV_ERROR(req, UV_ENOENT, ERROR_DIRECTORY);
@@ -1138,13 +1171,13 @@ static void fs__unlink_rmdir(uv_fs_t* req, BOOL isrmdir) {
     return;
   }
 
-  if (!isrmdir && (info.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
+  if (!isrmdir && (info.FileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
     /* If not explicitly allowed, do not allow deletion of directories, unless
      * it is a symlink. When the path refers to a non-symlink directory, report
      * EPERM as mandated by POSIX.1. */
 
     /* Check if it is a reparse point. If it's not, it's a normal directory. */
-    if (!(info.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT)) {
+    if (!(info.FileAttributes & FILE_ATTRIBUTE_REPARSE_POINT)) {
       SET_REQ_WIN32_ERROR(req, ERROR_ACCESS_DENIED);
       CloseHandle(handle);
       return;
@@ -1183,18 +1216,37 @@ static void fs__unlink_rmdir(uv_fs_t* req, BOOL isrmdir) {
         error == ERROR_INVALID_PARAMETER /* pre Windows 10 error */ ||
         error == ERROR_INVALID_FUNCTION /* pre Windows 10 1607 error */) {
       /* posix delete not supported so try fallback */
-      if (info.dwFileAttributes & FILE_ATTRIBUTE_READONLY) {
+      if (info.FileAttributes & FILE_ATTRIBUTE_READONLY) {
         /* Remove read-only attribute */
         FILE_BASIC_INFORMATION basic = { 0 };
 
-        basic.FileAttributes = (info.dwFileAttributes & ~FILE_ATTRIBUTE_READONLY) |
+        /* We opened the handle above without FILE_WRITE_ATTRIBUTES access, which
+         * is not required in the happy path. On windows, it would probably
+         * be ok to ask for them anyway, but Wine has a bug that causes such calls
+         * to fail (https://bugs.winehq.org/show_bug.cgi?id=50771). To work around
+         * this bug, we re-open the handle here */
+        HANDLE write_attributes_handle;
+
+        basic.FileAttributes = (info.FileAttributes & ~FILE_ATTRIBUTE_READONLY) |
                               FILE_ATTRIBUTE_ARCHIVE;
 
-        status = pNtSetInformationFile(handle,
+        write_attributes_handle = ReOpenFile(handle, FILE_WRITE_ATTRIBUTES,
+                                             FILE_SHARE_READ | FILE_SHARE_WRITE |
+                                             FILE_SHARE_DELETE,
+                                             FILE_FLAG_OPEN_REPARSE_POINT |
+                                             FILE_FLAG_BACKUP_SEMANTICS);
+        if (write_attributes_handle == INVALID_HANDLE_VALUE) {
+          SET_REQ_WIN32_ERROR(req, GetLastError());
+          CloseHandle(handle);
+          return;
+        }
+
+        status = pNtSetInformationFile(write_attributes_handle,
                                       &iosb,
                                       &basic,
                                       sizeof basic,
                                       FileBasicInformation);
+        CloseHandle(write_attributes_handle);
         if (!NT_SUCCESS(status)) {
           SET_REQ_WIN32_ERROR(req, pRtlNtStatusToDosError(status));
           CloseHandle(handle);
@@ -1643,6 +1695,21 @@ void fs__readdir(uv_fs_t* req) {
   dir = req->ptr;
   dirents = dir->dirents;
   memset(dirents, 0, dir->nentries * sizeof(*dir->dirents));
+
+  /* Initial FindFirstFile can fail with ERROR_FILE_NOT_FOUND, meaning
+   * no matches, which leaves dir_handle set to INVALID_HANDLE_VALUE,
+   * see fs__opendir(). Not an actual error, just means no results.
+   *
+   * sshfs-win apparently works that way but reading an empty directory
+   * on a regular drive doesn't trigger that particular code path.
+   *
+   * See https://github.com/libuv/libuv/issues/4952
+   */
+  if (dir->dir_handle == INVALID_HANDLE_VALUE) {
+    SET_REQ_RESULT(req, 0);
+    return;
+  }
+
   find_data = &dir->find_data;
   dirent_idx = 0;
 
@@ -3049,67 +3116,35 @@ static void fs__lchown(uv_fs_t* req) {
 
 
 static void fs__statfs(uv_fs_t* req) {
+  FILE_FS_FULL_SIZE_INFORMATION info;
+  IO_STATUS_BLOCK io_status;
   uv_statfs_t* stat_fs;
-  DWORD sectors_per_cluster;
-  DWORD bytes_per_sector;
-  DWORD free_clusters;
-  DWORD total_clusters;
-  WCHAR* pathw;
+  NTSTATUS nt_status;
+  HANDLE handle;
 
-  pathw = req->file.pathw;
-retry_get_disk_free_space:
-  if (0 == GetDiskFreeSpaceW(pathw,
-                             &sectors_per_cluster,
-                             &bytes_per_sector,
-                             &free_clusters,
-                             &total_clusters)) {
-    DWORD err;
-    WCHAR* fpart;
-    size_t len;
-    DWORD ret;
-    BOOL is_second;
+  handle = CreateFileW(req->file.pathw,
+                       FILE_READ_ATTRIBUTES,
+                       FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                       NULL,
+                       OPEN_EXISTING,
+                       FILE_FLAG_BACKUP_SEMANTICS,
+                       NULL);
 
-    err = GetLastError();
-    is_second = pathw != req->file.pathw;
-    if (err != ERROR_DIRECTORY || is_second) {
-      if (is_second)
-        uv__free(pathw);
-
-      SET_REQ_WIN32_ERROR(req, err);
-      return;
-    }
-
-    len = MAX_PATH + 1;
-    pathw = uv__malloc(len * sizeof(*pathw));
-    if (pathw == NULL) {
-      SET_REQ_UV_ERROR(req, UV_ENOMEM, ERROR_OUTOFMEMORY);
-      return;
-    }
-retry_get_full_path_name:
-    ret = GetFullPathNameW(req->file.pathw,
-                           len,
-                           pathw,
-                           &fpart);
-    if (ret == 0) {
-      uv__free(pathw);
-      SET_REQ_WIN32_ERROR(req, err);
-      return;
-    } else if (ret > len) {
-      len = ret;
-      pathw = uv__reallocf(pathw, len * sizeof(*pathw));
-      if (pathw == NULL) {
-        SET_REQ_UV_ERROR(req, UV_ENOMEM, ERROR_OUTOFMEMORY);
-        return;
-      }
-      goto retry_get_full_path_name;
-    }
-    if (fpart != 0)
-      *fpart = L'\0';
-
-    goto retry_get_disk_free_space;
+  if (handle == INVALID_HANDLE_VALUE) {
+    SET_REQ_WIN32_ERROR(req, GetLastError());
+    return;
   }
-  if (pathw != req->file.pathw) {
-    uv__free(pathw);
+
+  nt_status = pNtQueryVolumeInformationFile(handle,
+                                            &io_status,
+                                            &info,
+                                            sizeof info,
+                                            FileFsFullSizeInformation);
+  CloseHandle(handle);
+
+  if (NT_ERROR(nt_status)) {
+    SET_REQ_WIN32_ERROR(req, pRtlNtStatusToDosError(nt_status));
+    return;
   }
 
   stat_fs = uv__malloc(sizeof(*stat_fs));
@@ -3119,10 +3154,12 @@ retry_get_full_path_name:
   }
 
   stat_fs->f_type = 0;
-  stat_fs->f_bsize = bytes_per_sector * sectors_per_cluster;
-  stat_fs->f_blocks = total_clusters;
-  stat_fs->f_bfree = free_clusters;
-  stat_fs->f_bavail = free_clusters;
+  stat_fs->f_bsize = (uint64_t)info.SectorsPerAllocationUnit *
+                               info.BytesPerSector;
+  stat_fs->f_frsize = stat_fs->f_bsize;
+  stat_fs->f_blocks = info.TotalAllocationUnits.QuadPart;
+  stat_fs->f_bfree = info.ActualAvailableAllocationUnits.QuadPart;
+  stat_fs->f_bavail = info.CallerAvailableAllocationUnits.QuadPart;
   stat_fs->f_files = 0;
   stat_fs->f_ffree = 0;
   req->ptr = stat_fs;
@@ -3295,6 +3332,11 @@ int uv_fs_write(uv_loop_t* loop,
   INIT(UV_FS_WRITE);
 
   if (bufs == NULL || nbufs == 0) {
+    SET_REQ_UV_ERROR(req, UV_EINVAL, ERROR_INVALID_PARAMETER);
+    return UV_EINVAL;
+  }
+
+  if (uv__count_bufs(bufs, nbufs) > UV__IO_MAX_BYTES) {
     SET_REQ_UV_ERROR(req, UV_EINVAL, ERROR_INVALID_PARAMETER);
     return UV_EINVAL;
   }
@@ -3668,6 +3710,8 @@ int uv_fs_sendfile(uv_loop_t* loop, uv_fs_t* req, uv_file fd_out,
   req->file.fd = fd_in;
   req->fs.info.fd_out = fd_out;
   req->fs.info.offset = in_offset;
+  if (length > UV__IO_MAX_BYTES)
+    return UV_EINVAL;
   req->fs.info.bufsml[0].len = length;
   POST;
 }

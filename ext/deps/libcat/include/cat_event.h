@@ -41,6 +41,9 @@ typedef void (*cat_event_io_defer_callback_t)(cat_event_io_defer_task_t *task, c
 CAT_GLOBALS_STRUCT_BEGIN(cat_event) {
     uv_loop_t loop;
     uv_timer_t deadlock;
+#ifdef CAT_THREAD_SAFE
+    uv_async_t wakeup;
+#endif
     cat_queue_t runtime_shutdown_tasks;
     cat_queue_t io_defer_tasks;
     uv_check_t io_defer_check;

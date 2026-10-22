@@ -25,6 +25,20 @@ extern "C" {
 #include "cat.h"
 
 CAT_API cat_bool_t cat_kill(int pid, int signum);
+
+/*
+ * Send a signal to a process, with one meaning on every platform.
+ *
+ * A Unix-like platform passes the signal to kill(2).
+ *
+ * Windows: 0 checks that the process runs, SIGKILL terminates it, SIGINT and
+ * SIGBREAK send a console control event to the process group whose id is the
+ * pid, and every other signal fails with CAT_ENOSYS. A control event needs a
+ * console that the caller and the target share, so the target must be a child
+ * that started with CAT_PROCESS_FLAG_WINDOWS_NEW_PROCESS_GROUP and kept that
+ * console. The event goes to the whole group.
+ */
+CAT_API cat_bool_t cat_kill_ex(cat_pid_t pid, int signum);
 CAT_API cat_bool_t cat_signal_wait(int signum, cat_timeout_t timeout);
 
 /* signal map and enum */

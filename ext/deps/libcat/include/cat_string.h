@@ -86,6 +86,10 @@ static cat_always_inline void cat_string_init(cat_string_t *string)
 
 static cat_always_inline cat_bool_t cat_string_alloc(cat_string_t *string, size_t max_length)
 {
+    /* The allocation includes one terminator byte. */
+    if (unlikely(max_length == SIZE_MAX)) {
+        return cat_false;
+    }
     char *new_value = (char *) cat_malloc(max_length + 1);
 #if CAT_ALLOC_HANDLE_ERRORS
     if (unlikely(new_value == NULL)) {

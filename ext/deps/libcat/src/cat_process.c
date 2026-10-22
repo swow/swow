@@ -19,6 +19,7 @@
 #include "cat_process.h"
 
 #include "cat_event.h"
+#include "cat_signal.h"
 
 #define CAT_PROCESS_CHECK_SILENT(_process, _failure) \
     if (unlikely(_process->exited)) { \
@@ -50,15 +51,40 @@ static void cat_process_exit_callback(uv_process_t* uprocess, int64_t exit_statu
     while ((waiter = cat_queue_front_data(&process->waiters, cat_coroutine_t, waiter.node))) {
         cat_coroutine_schedule(waiter, PROCESS, "Process");
     }
+
+    if (process->closing) {
+        /* The caller released the object while the process still ran. */
+        uv_close(&process->u.handle, cat_process_close_callback);
+    }
 }
 
 static int cat_process_check_stdio(uv_stdio_container_t *stdio)
 {
+    if (stdio->flags & CAT_PROCESS_STDIO_FLAG_INHERIT_FD) {
+        /* libuv only rejects an invalid fd on the Unix-like platforms, the Windows
+         * backend silently replaces it with a null handle when fd <= 2, so the check
+         * belongs here to keep the error the same everywhere */
+        if (unlikely(stdio->data.fd == CAT_OS_INVALID_FD)) {
+            return CAT_EINVAL;
+        }
+    }
+
     if (stdio->flags & (CAT_PROCESS_STDIO_FLAG_INHERIT_STREAM | CAT_PROCESS_STDIO_FLAG_CREATE_PIPE)) {
         cat_socket_t *stream = (cat_socket_t *) stdio->data.stream;
-        cat_socket_internal_t *istream = stream->internal;
+        cat_socket_internal_t *istream = NULL;
+        if (likely(stream != NULL)) {
+            istream = stream->internal;
+        }
         if (unlikely(istream == NULL || !(istream->type & CAT_SOCKET_TYPE_FLAG_STREAM))) {
             return CAT_EINVAL;
+        }
+        if (stdio->flags & CAT_PROCESS_STDIO_FLAG_INHERIT_STREAM) {
+            /* a stream that has no handle yet cannot be inherited, the Unix-like
+             * platforms fail the spawn while the Windows backend reports a
+             * different error before it starts the process */
+            if (unlikely(!cat_socket_is_open(stream))) {
+                return CAT_EINVAL;
+            }
         }
         stdio->data.stream = &stream->internal->u.stream;
     }
@@ -115,6 +141,7 @@ CAT_API cat_process_t *cat_process_run(const cat_process_options_t *options)
     }
 #endif
     process->exited = cat_false;
+    process->closing = cat_false;
     process->exit_status = 0;
     process->term_signal = 0;
     cat_queue_init(&process->waiters);
@@ -138,7 +165,10 @@ CAT_API cat_process_t *cat_process_run(const cat_process_options_t *options)
     if (unlikely(error != 0)) {
         cat_update_last_error_with_reason(error, "Process run failed");
         if (process != NULL) {
-            cat_process_close(process);
+            /* uv_spawn() removes the handle from the loop queue when it fails, so the
+             * handle cannot be closed: uv__finish_close() would remove it a second time
+             * and leave the loop handle queue holding freed memory */
+            cat_free(process);
         }
         return NULL;
     }
@@ -153,6 +183,11 @@ CAT_API cat_bool_t cat_process_wait(cat_process_t *process)
 
 CAT_API cat_bool_t cat_process_wait_ex(cat_process_t *process, cat_timeout_t timeout)
 {
+    if (unlikely(process != NULL && process->closing)) {
+        cat_update_last_error(CAT_EINVAL, "Process is closing");
+        return cat_false;
+    }
+
     CAT_PROCESS_CHECK_SILENT(process, return cat_true);
     cat_queue_t *waiter = &CAT_COROUTINE_G(current)->waiter.node;
     cat_bool_t ret;
@@ -170,9 +205,35 @@ CAT_API cat_bool_t cat_process_wait_ex(cat_process_t *process, cat_timeout_t tim
     return ret;
 }
 
-CAT_API void cat_process_close(cat_process_t *process)
+CAT_API cat_bool_t cat_process_close(cat_process_t *process)
 {
-    uv_close(&process->u.handle, cat_process_close_callback);
+    if (unlikely(process == NULL)) {
+        cat_update_last_error(CAT_EINVAL, "Process is null");
+        return cat_false;
+    }
+
+    if (unlikely(process->closing)) {
+        cat_update_last_error(CAT_EINVAL, "Process is already closing");
+        return cat_false;
+    }
+
+    if (unlikely(!cat_queue_empty(&process->waiters))) {
+        /* the object goes away in the close callback, and a parked waiter would
+         * read it after that */
+        cat_update_last_error(CAT_EBUSY, "Process has waiters");
+        return cat_false;
+    }
+
+    if (process->exited) {
+        uv_close(&process->u.handle, cat_process_close_callback);
+    } else {
+        /* The exit callback reaps the child and releases the object, and the loop
+         * does not wait for it. */
+        process->closing = cat_true;
+        uv_unref(&process->u.handle);
+    }
+
+    return cat_true;
 }
 
 CAT_API cat_pid_t cat_process_get_pid(const cat_process_t *process)
@@ -183,6 +244,29 @@ CAT_API cat_pid_t cat_process_get_pid(const cat_process_t *process)
 CAT_API cat_bool_t cat_process_has_exited(const cat_process_t *process)
 {
     return process->exited;
+}
+
+CAT_API cat_process_status_t cat_process_get_status(const cat_process_t *process)
+{
+    cat_process_status_t status = {
+        .exit_code = -1,
+        .term_signal = -1,
+        .exited = process != NULL && process->exited,
+        .signaled = cat_false,
+    };
+
+    if (process == NULL || !process->exited) {
+        return status;
+    }
+
+    if (process->term_signal != 0) {
+        status.signaled = cat_true;
+        status.term_signal = process->term_signal;
+    } else {
+        status.exit_code = process->exit_status;
+    }
+
+    return status;
 }
 
 CAT_API int64_t cat_process_get_exit_status(const cat_process_t *process)
@@ -197,8 +281,23 @@ CAT_API int cat_process_get_term_signal(const cat_process_t *process)
 
 CAT_API cat_bool_t cat_process_kill(cat_process_t *process, int signum)
 {
+    if (unlikely(process != NULL && process->closing)) {
+        cat_update_last_error(CAT_EINVAL, "Process is closing");
+        return cat_false;
+    }
+
     CAT_PROCESS_CHECK(process, return cat_false);
     int error;
+
+#ifdef CAT_OS_WIN
+    if (signum != CAT_SIGKILL) {
+        /* A console control event goes to the process group by its id, and the
+         * uv handle path only terminates the process. A kill goes through uv,
+         * because uv records the signal on the handle and the status reports
+         * it. */
+        return cat_kill_ex(process->u.process.pid, signum);
+    }
+#endif
 
     error = uv_process_kill(&process->u.process, signum);
 
@@ -206,6 +305,23 @@ CAT_API cat_bool_t cat_process_kill(cat_process_t *process, int signum)
         cat_update_last_error_with_reason(error, "Process kill(%d) failed", signum);
         return cat_false;
     }
+
+    return cat_true;
+}
+
+static void cat_process_shutdown_walk(uv_handle_t *handle, void *arg)
+{
+    (void) arg;
+
+    if (handle->type == UV_PROCESS && !uv_is_closing(handle)) {
+        uv_close(handle, cat_process_close_callback);
+    }
+}
+
+CAT_API cat_bool_t cat_process_runtime_shutdown(void)
+{
+    /* A process that still runs becomes an orphan when its handle goes away. */
+    uv_walk(&CAT_EVENT_G(loop), cat_process_shutdown_walk, NULL);
 
     return cat_true;
 }

@@ -18,6 +18,8 @@
  */
 
 #include "cat_fs.h"
+
+#include "cat_atomic.h"
 #include "cat_coroutine.h"
 #include "cat_event.h"
 #include "cat_time.h"
@@ -150,6 +152,13 @@ static void cat_fs_callback(uv_fs_t *fs)
         cat_coroutine_t *coroutine = context->coroutine;
         context->coroutine = NULL;
         cat_coroutine_schedule(coroutine, FS, "File-System");
+    } else if (fs->fs_type == UV_FS_OPEN && fs->result >= 0) {
+        // A canceled waiter cannot claim the opened fd. Reuse the request to close
+        // it asynchronously before releasing the context.
+        uv_file fd = (uv_file) fs->result;
+        uv_fs_req_cleanup(fs);
+        (void) uv_fs_close(fs->loop, fs, fd, cat_fs_callback);
+        return;
     }
 
     uv_fs_req_cleanup(&context->fs);
@@ -226,10 +235,10 @@ static inline cat_errno_t cat_fs_set_error_code(cat_fs_error_t *e)
         case CAT_FS_ERROR_NONE:
         case CAT_FS_ERROR_EOF:
             CAT_NEVER_HERE("Not a real error");
-            break;
-        default:
-            CAT_NEVER_HERE("Strange error type");
     }
+
+    /* an unknown type is not a value the callers may pass */
+    CAT_NEVER_HERE("Strange error type");
 }
 
 #ifdef CAT_OS_WIN
@@ -490,7 +499,13 @@ static void cat_fs_read_cb(cat_data_t *ptr)
 
 static cat_always_inline ssize_t cat_fs_read_impl(cat_file_t fd, void *buf, size_t size)
 {
-    cat_fs_read_data_t *data = (cat_fs_read_data_t *) cat_malloc(sizeof(*data));
+    if (unlikely(size > SIZE_MAX - sizeof(cat_fs_read_data_t))) {
+        cat_update_last_error(CAT_EOVERFLOW, "File-System read size overflow");
+        errno = cat_orig_errno(CAT_EOVERFLOW);
+        return -1;
+    }
+    // The worker can outlive a canceled waiter; keep its buffer in the work-owned allocation.
+    cat_fs_read_data_t *data = (cat_fs_read_data_t *) cat_malloc(sizeof(*data) + size);
 #if CAT_ALLOC_HANDLE_ERRORS
     if (data == NULL) {
         cat_update_last_error_of_syscall("Malloc for fs read failed");
@@ -499,12 +514,15 @@ static cat_always_inline ssize_t cat_fs_read_impl(cat_file_t fd, void *buf, size
 #endif
     memset(&data->ret, 0, sizeof(data->ret));
     data->fd = fd;
-    data->buf = buf;
+    data->buf = data + 1;
     data->size = (cat_fs_read_size_t) size;
     if (!cat_work(CAT_WORK_KIND_FAST_IO, cat_fs_read_cb, cat_free_function, data, CAT_TIMEOUT_FOREVER)) {
         return -1;
     }
     cat_fs_work_check_error(&data->ret.error, "read");
+    if (data->ret.ret.num > 0) {
+        memcpy(buf, data->buf, (size_t) data->ret.ret.num);
+    }
     return data->ret.ret.num;
 }
 
@@ -546,7 +564,13 @@ static void cat_fs_write_cb(cat_data_t *ptr)
 
 static cat_always_inline ssize_t cat_fs_write_impl(cat_file_t fd, const void *buf, size_t length)
 {
-    cat_fs_write_data_t *data = (cat_fs_write_data_t *) cat_malloc(sizeof(*data));
+    if (unlikely(length > SIZE_MAX - sizeof(cat_fs_write_data_t))) {
+        cat_update_last_error(CAT_EOVERFLOW, "File-System write size overflow");
+        errno = cat_orig_errno(CAT_EOVERFLOW);
+        return -1;
+    }
+    // Snapshot submitted bytes so cancellation cannot leave the worker using caller-owned memory.
+    cat_fs_write_data_t *data = (cat_fs_write_data_t *) cat_malloc(sizeof(*data) + length);
 #if CAT_ALLOC_HANDLE_ERRORS
     if (data == NULL) {
         cat_update_last_error_of_syscall("Malloc for fs write failed");
@@ -555,7 +579,10 @@ static cat_always_inline ssize_t cat_fs_write_impl(cat_file_t fd, const void *bu
 #endif
     memset(&data->ret, 0, sizeof(data->ret));
     data->fd = fd;
-    data->buf = buf;
+    data->buf = data + 1;
+    if (length > 0) {
+        memcpy(data + 1, buf, length);
+    }
     data->length = (cat_fs_write_size_t) length;
     if (!cat_work(CAT_WORK_KIND_FAST_IO, cat_fs_write_cb, cat_free_function, data, CAT_TIMEOUT_FOREVER)) {
         return -1;
@@ -1389,16 +1416,31 @@ static void cat_fs_fread_cb(cat_data_t *ptr)
 {
     cat_fs_fread_data_t *data = (cat_fs_fread_data_t *) ptr;
     errno = 0;
-    data->ret.ret.num = fread(data->ptr, data->size, data->nmemb, data->stream);
+    size_t nread = fread(data->ptr, data->size, data->nmemb, data->stream);
+    data->ret.ret.num = nread;
     if (0 != errno) {
         data->ret.error.type = CAT_FS_ERROR_ERRNO;
         data->ret.error.val.error = errno;
+    } else if (data->size != 0 && nread < data->nmemb && ferror(data->stream)) {
+        // Some C libraries set only the stream error indicator on failure.
+        data->ret.error.type = CAT_FS_ERROR_ERRNO;
+        data->ret.error.val.error = EIO;
     }
 }
 
 static cat_always_inline size_t cat_fs_fread_impl(void *ptr, size_t size, size_t nmemb, FILE *stream)
 {
-    cat_fs_fread_data_t *data = (cat_fs_fread_data_t *) cat_malloc(sizeof(*data));
+    if (size == 0 || nmemb == 0) {
+        return 0;
+    }
+    if (unlikely(size > (SIZE_MAX - sizeof(cat_fs_fread_data_t)) / nmemb)) {
+        cat_update_last_error(CAT_EOVERFLOW, "File-System fread size overflow");
+        errno = cat_orig_errno(CAT_EOVERFLOW);
+        return 0;
+    }
+    size_t length = size * nmemb;
+    /* A canceled waiter may release its buffer while the worker is still reading. */
+    cat_fs_fread_data_t *data = (cat_fs_fread_data_t *) cat_malloc(sizeof(*data) + length);
 #if CAT_ALLOC_HANDLE_ERRORS
     if (data == NULL) {
         cat_update_last_error_of_syscall("Malloc for fs fread failed");
@@ -1406,15 +1448,19 @@ static cat_always_inline size_t cat_fs_fread_impl(void *ptr, size_t size, size_t
     }
 #endif
     memset(&data->ret, 0, sizeof(data->ret));
-    data->ptr = ptr;
-    data->size = size;
-    data->nmemb = nmemb;
+    data->ptr = data + 1;
+    /* Count bytes internally so a short final item is copied even when it is not returned as a complete item. */
+    data->size = 1;
+    data->nmemb = length;
     data->stream = stream;
     if (!cat_work(CAT_WORK_KIND_FAST_IO, cat_fs_fread_cb, cat_free_function, data, CAT_TIMEOUT_FOREVER)) {
         return 0;
     }
     cat_fs_work_check_error(&data->ret.error, "fread");
-    return (size_t) data->ret.ret.num;
+    if (data->ret.ret.num > 0) {
+        memcpy(ptr, data->ptr, (size_t) data->ret.ret.num);
+    }
+    return (size_t) data->ret.ret.num / size;
 }
 
 CAT_API size_t cat_fs_fread(void *ptr, size_t size, size_t nmemb, FILE *stream)
@@ -1450,16 +1496,29 @@ static void cat_fs_fwrite_cb(cat_data_t *ptr)
 {
     cat_fs_fwrite_data_t *data = (cat_fs_fwrite_data_t *) ptr;
     errno = 0;
-    data->ret.ret.num = fwrite(data->ptr, data->size, data->nmemb, data->stream);
+    size_t written = fwrite(data->ptr, data->size, data->nmemb, data->stream);
+    data->ret.ret.num = written;
     if (0 != errno) {
         data->ret.error.type = CAT_FS_ERROR_ERRNO;
         data->ret.error.val.error = errno;
+    } else if (data->size != 0 && written < data->nmemb && ferror(data->stream)) {
+        data->ret.error.type = CAT_FS_ERROR_ERRNO;
+        data->ret.error.val.error = EIO;
     }
 }
 
 static cat_always_inline size_t cat_fs_fwrite_impl(const void *ptr, size_t size, size_t nmemb, FILE *stream)
 {
-    cat_fs_fwrite_data_t *data = (cat_fs_fwrite_data_t *) cat_malloc(sizeof(*data));
+    if (size == 0 || nmemb == 0) {
+        return 0;
+    }
+    if (unlikely(size > (SIZE_MAX - sizeof(cat_fs_fwrite_data_t)) / nmemb)) {
+        cat_update_last_error(CAT_EOVERFLOW, "File-System fwrite size overflow");
+        errno = cat_orig_errno(CAT_EOVERFLOW);
+        return 0;
+    }
+    size_t length = size * nmemb;
+    cat_fs_fwrite_data_t *data = (cat_fs_fwrite_data_t *) cat_malloc(sizeof(*data) + length);
 #if CAT_ALLOC_HANDLE_ERRORS
     if (data == NULL) {
         cat_update_last_error_of_syscall("Malloc for fs fwrite failed");
@@ -1467,7 +1526,9 @@ static cat_always_inline size_t cat_fs_fwrite_impl(const void *ptr, size_t size,
     }
 #endif
     memset(&data->ret, 0, sizeof(data->ret));
-    data->ptr = ptr;
+    data->ptr = data + 1;
+    /* The submitted bytes remain stable after cancellation allows the caller to reuse its buffer. */
+    memcpy(data + 1, ptr, length);
     data->size = size;
     data->nmemb = nmemb;
     data->stream = stream;
@@ -2427,8 +2488,8 @@ typedef struct cat_fs_flock_data_s {
     cat_file_t fd;
     cat_fs_flock_flags_t op;
     cat_bool_t non_blocking; /* operation is non-blocking (UN/NB) */
-    cat_bool_t started; /* new thread in worker */
-    cat_bool_t done; /* new thread finished */
+    cat_atomic_bool_t started; /* new thread in worker, read by other threads */
+    cat_atomic_bool_t done; /* new thread finished, read by other threads */
     uv_thread_t tid;
     cat_async_t async;
     cat_event_shutdown_task_t *shutdown_task;
@@ -2448,7 +2509,8 @@ static void cat_fs_orig_flock(cat_data_t *ptr)
     DWORD le;
     HANDLE hFile;
     OVERLAPPED overlapped = { 0 };
-    if (INVALID_HANDLE_VALUE == (hFile = uv_get_osfhandle(fd))) {
+    /* Negative descriptors trigger CRT assertions before handle lookup can fail. */
+    if (fd < 0 || INVALID_HANDLE_VALUE == (hFile = uv_get_osfhandle(fd))) {
         // bad fd, return error
         data->ret.error.type = CAT_FS_ERROR_ERRNO;
         data->ret.error.val.error = EBADF;
@@ -2518,7 +2580,7 @@ static void cat_fs_orig_flock(cat_data_t *ptr)
     data->ret.ret.num = -1;
 
     // tell calling thread return
-    data->done = cat_true;
+    cat_atomic_bool_store(&data->done, cat_true);
     cat_async_notify(&data->async);
 
     DWORD dummy;
@@ -2618,7 +2680,7 @@ static void cat_fs_orig_flock(cat_data_t *ptr)
     goto _done;
 #endif // LOCK_EX...
     _done:
-    data->done = cat_true;
+    cat_atomic_bool_store(&data->done, cat_true);
     if (!data->non_blocking) {
         cat_async_notify(&data->async);
     }
@@ -2635,15 +2697,18 @@ static void cat_fs_flock_cb(cat_data_t *ptr)
         .flags = UV_THREAD_HAS_STACK_SIZE,
         .stack_size = 4 * cat_getpagesize()
     };
+    /* Set the flag before the thread exists. The thread may finish and notify
+     * the loop before this callback returns, and the cleanup of the waiter must
+     * already see that there is a thread to join. */
+    cat_atomic_bool_store(&data->started, cat_true);
     int error = uv_thread_create_ex(&data->tid, &params, cat_fs_orig_flock, data);
     if (0 != error) {
         // printf("thread failed\n");
+        cat_atomic_bool_store(&data->started, cat_false);
         data->ret.ret.num = -1;
         data->ret.error.type = CAT_FS_ERROR_CAT_ERRNO;
         data->ret.error.val.cat_errno = error;
         cat_async_notify(&data->async);
-    } else {
-        data->started = cat_true;
     }
 }
 
@@ -2651,11 +2716,14 @@ static void cat_fs_flock_data_cleanup(cat_async_t *async)
 {
     cat_fs_flock_data_t *data = cat_container_of(async, cat_fs_flock_data_t, async);
 
-    CAT_ASSERT(!data->started || data->done);
+    cat_bool_t started = cat_atomic_bool_load(&data->started);
+    cat_bool_t done = cat_atomic_bool_load(&data->done);
+
+    CAT_ASSERT(!started || done);
     if (data->shutdown_task != NULL) {
         cat_event_unregister_runtime_shutdown_task(data->shutdown_task);
     }
-    if (data->started) {
+    if (started) {
         uv_thread_join(&data->tid); // shell we run it in work()?
     }
     cat_free(data);
@@ -2665,10 +2733,10 @@ static void cat_fs_flock_shutdown(cat_data_t *ptr)
 {
     cat_fs_flock_data_t *data = (cat_fs_flock_data_t *) ptr;
 
-    while (!data->started) {
+    while (!cat_atomic_bool_load(&data->started)) {
         cat_sys_usleep(1000);
     }
-    if (!data->done) {
+    if (!cat_atomic_bool_load(&data->done)) {
         // try to kill thread as much as possible
 #ifndef CAT_OS_WIN
         (void) pthread_kill(data->tid, SIGKILL);
@@ -2710,8 +2778,8 @@ static cat_always_inline int cat_fs_flock_impl(cat_file_t fd, cat_fs_flock_flags
     memset(&data->ret, 0, sizeof(data->ret));
     data->fd = fd;
     data->op = op;
-    data->started = cat_false;
-    data->done = cat_false;
+    cat_atomic_bool_init(&data->started, cat_false);
+    cat_atomic_bool_init(&data->done, cat_false);
     data->non_blocking = ((data->op & (CAT_FS_FLOCK_FLAG_SHARED | CAT_FS_FLOCK_FLAG_EXCLUSIVE | CAT_FS_FLOCK_FLAG_UNLOCK)) == CAT_FS_FLOCK_FLAG_UNLOCK) || (data->op & _CAT_FS_FLOCK_FLAG_NONBLOCK);
     data->shutdown_task = NULL;
     if (data->non_blocking) {
@@ -2791,18 +2859,30 @@ CAT_API char *cat_fs_get_contents(const char *filename, size_t *length)
     if (fd == CAT_OS_INVALID_FD) {
         return NULL;
     }
+    char *buffer = NULL;
+    cat_stat_t statbuf;
+    if (cat_fs_fstat(fd, &statbuf) != 0) {
+        goto _error;
+    }
+    if ((statbuf.st_mode & S_IFMT) == S_IFDIR) {
+        cat_update_last_error(CAT_EISDIR, "Cannot read directory as file content");
+        goto _error;
+    }
     off_t offset = cat_fs_lseek(fd, 0, SEEK_END);
     if (offset < 0) {
-        return NULL;
+        goto _error;
     }
     size_t size = (size_t) offset;
-    char *buffer = (char *) cat_malloc(size + 1);
+    buffer = (char *) cat_malloc(size + 1);
     if (buffer == NULL) {
         cat_update_last_error_of_syscall("Malloc for file content failed");
-        return NULL;
+        goto _error;
     }
     ssize_t nread = cat_fs_pread(fd, buffer, size, 0);
     if (nread < 0) {
+        goto _error;
+    }
+    if (cat_fs_close(fd) != 0) {
         cat_free(buffer);
         return NULL;
     }
@@ -2812,6 +2892,11 @@ CAT_API char *cat_fs_get_contents(const char *filename, size_t *length)
     }
 
     return buffer;
+
+    _error:
+    cat_free(buffer);
+    cat_fs_close(fd);
+    return NULL;
 }
 
 CAT_API ssize_t cat_fs_put_contents(const char *filename, const char *content, size_t length)
@@ -2822,5 +2907,9 @@ CAT_API ssize_t cat_fs_put_contents(const char *filename, const char *content, s
         return -1;
     }
 
-    return cat_fs_pwrite(fd, content, length, 0);
+    ssize_t written = cat_fs_pwrite(fd, content, length, 0);
+    if (cat_fs_close(fd) != 0) {
+        return -1;
+    }
+    return written;
 }

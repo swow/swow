@@ -139,6 +139,10 @@ static cat_timer_t *cat_timer_wait(cat_msec_t msec)
 #endif
 
     (void) uv_timer_init(&CAT_EVENT_G(loop), &timer->timer);
+    /* uv_timer_start computes the deadline from loop->time, which the scheduler only
+     * refreshes while it runs. Without this, the first timer armed after the loop went
+     * idle gets a stale base and fires immediately */
+    uv_update_time(&CAT_EVENT_G(loop));
     (void) uv_timer_start(&timer->timer, cat_timer_callback, msec, 0);
 
     timer->coroutine = CAT_COROUTINE_G(current);
@@ -353,4 +357,72 @@ CAT_API cat_timeout_t cat_time_tv2to(const struct timeval *tv)
     }
 
     return timeout;
+}
+
+/* A timer whose expiry goes to a callback, for callers that must decide
+ * themselves whether to resume anybody. */
+struct cat_time_timeout_s {
+    uv_timer_t handle;
+    cat_time_timeout_callback_t callback;
+    cat_data_t *data;
+};
+
+static void cat_time_timeout_free(uv_handle_t *handle)
+{
+    cat_time_timeout_t *timer = cat_container_of(handle, cat_time_timeout_t, handle);
+
+    cat_free(timer);
+}
+
+static void cat_time_timeout_callback(uv_timer_t *handle)
+{
+    cat_time_timeout_t *timer = cat_container_of(handle, cat_time_timeout_t, handle);
+    cat_time_timeout_callback_t callback = timer->callback;
+
+    /* Drop the callback first, so that a timer cannot report twice even if the
+     * callback does not return */
+    timer->callback = NULL;
+
+    if (callback != NULL) {
+        callback(timer, timer->data);
+    }
+}
+
+CAT_API cat_time_timeout_t *cat_time_timeout_init(cat_time_timeout_callback_t callback,
+                                                       cat_data_t *data, cat_timeout_t after)
+{
+    cat_time_timeout_t *timer;
+
+    if (after < 0) {
+        return NULL;
+    }
+
+    timer = (cat_time_timeout_t *) cat_malloc(sizeof(*timer));
+#if CAT_ALLOC_HANDLE_ERRORS
+    if (unlikely(timer == NULL)) {
+        cat_update_last_error_of_syscall("Malloc for timeout failed");
+        return NULL;
+    }
+#endif
+
+    timer->callback = callback;
+    timer->data = data;
+
+    (void) uv_timer_init(&CAT_EVENT_G(loop), &timer->handle);
+    /* uv_timer_start computes the deadline from loop->time, which the scheduler
+     * only refreshes while it runs */
+    uv_update_time(&CAT_EVENT_G(loop));
+    (void) uv_timer_start(&timer->handle, cat_time_timeout_callback, (uint64_t) after, 0);
+
+    return timer;
+}
+
+CAT_API void cat_time_timeout_close(cat_time_timeout_t *timer)
+{
+    if (timer == NULL) {
+        return;
+    }
+
+    timer->callback = NULL;
+    uv_close((uv_handle_t *) &timer->handle, cat_time_timeout_free);
 }

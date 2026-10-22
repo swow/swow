@@ -67,6 +67,10 @@ typedef void *cat_coroutine_context_t;
 #define CAT_COROUTINE_USE_ASAN
 #endif
 
+#if defined(CAT_HAVE_TSAN) && !defined(CAT_COROUTINE_USE_THREAD_CONTEXT)
+#define CAT_COROUTINE_USE_TSAN
+#endif
+
 typedef uint64_t cat_coroutine_id_t;
 #define CAT_COROUTINE_ID_FMT "%" PRIu64
 #define CAT_COROUTINE_ID_FMT_SPEC PRIu64
@@ -124,6 +128,21 @@ struct cat_coroutine_s
     } waiter;
     /* persistent info (readonly) */
     cat_coroutine_id_t id;
+    /* a coroutine that another thread wakes, either alone or in a queue */
+    union {
+        cat_coroutine_t *wakeup_coroutine;
+        cat_queue_node_t wakeup_node;
+    } wakeup;
+    /*
+     * The coroutine globals block of the thread of this coroutine. A waker on
+     * another thread reads this pointer, because it cannot read the key of this
+     * thread.
+     */
+    void *wakeup_target;
+    /* the queue of that thread, in its globals */
+    cat_queue_t *wakeup_queue;
+
+
     cat_msec_t start_time;
     cat_msec_t end_time;
     /* persistent/runtime flags */
@@ -158,6 +177,10 @@ struct cat_coroutine_s
     const void *asan_stack;
     size_t asan_stack_size;
 #endif
+#ifdef CAT_COROUTINE_USE_TSAN
+    /* the ThreadSanitizer view of this coroutine's stack */
+    void *tsan_fiber;
+#endif
 };
 
 typedef void (*cat_coroutine_jump_t)(cat_coroutine_t *coroutine, cat_data_t *data, cat_data_t **retval);
@@ -179,6 +202,17 @@ CAT_GLOBALS_STRUCT_BEGIN(cat_coroutine) {
     cat_coroutine_t *current;
     cat_coroutine_t *main;
     cat_coroutine_t _main;
+    /*
+     * Wakeup requests from other threads, guarded by wakeup_lock. The event
+     * block of this thread is reached through wakeup_event, because the async
+     * handle that wakes this loop is the property of the loop.
+     */
+    uv_mutex_t wakeup_lock;
+    cat_queue_t wakeup_queue;
+    /* the wakeup handle of this thread, put here by the event layer */
+    uv_async_t *wakeup_handle;
+    /* coroutines of this thread that are parked, so the loop can be held open */
+    int parked;
     /* scheduler */
     cat_coroutine_t *scheduler;
     cat_queue_t waiters;
@@ -299,6 +333,22 @@ static cat_always_inline cat_bool_t cat_coroutine__schedule(cat_coroutine_t *cor
 /* sync */
 CAT_API cat_bool_t cat_coroutine_wait_all(void);
 CAT_API cat_bool_t cat_coroutine_wait_all_ex(cat_timeout_t timeout);
+
+/* The event layer hands over its wakeup handle, which is how a waker on
+ * another thread reaches this loop. */
+CAT_API cat_bool_t cat_coroutine_wakeup_register(uv_async_t *handle); CAT_INTERNAL
+
+/*
+ * Wake a coroutine that waits, from any thread.
+ *
+ * A coroutine can only be resumed by its own thread, so a request for another
+ * thread lands on that thread's queue and the event loop runs it there.
+ */
+CAT_API void cat_coroutine_wake(cat_coroutine_t *coroutine); CAT_INTERNAL
+
+/* Run the requests that other threads left for this thread. The event loop
+ * calls this. */
+CAT_API void cat_coroutine_run_wakeups(void); CAT_INTERNAL
 CAT_API void cat_coroutine_notify_all(void); CAT_INTERNAL
 
 /* special */

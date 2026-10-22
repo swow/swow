@@ -242,7 +242,7 @@ CAT_API void cat_websocket_unmask(char *data, uint64_t length, const char *maski
 
 CAT_API void cat_websocket_mask_ex(const char *from, char *to, uint64_t length, const char *masking_key, uint64_t index)
 {
-    cat_bool_t masking_key_is_empty = masking_key == NULL || memcmp(masking_key, CAT_STRS(CAT_WEBSOCKET_EMPTY_MASKING_KEY)) == 0;
+    cat_bool_t masking_key_is_empty = masking_key == NULL || memcmp(masking_key, CAT_STRL(CAT_WEBSOCKET_EMPTY_MASKING_KEY)) == 0;
 
     if (from == to) {
         if (!masking_key_is_empty) {

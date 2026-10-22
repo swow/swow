@@ -40,7 +40,7 @@ CAT_API const char *cat_http_status_get_reason(cat_http_status_code_t status)
 }
 
 #define mt_dbg() do { \
-    CAT_LOG_DEBUG_V3(HTTP, "content_type parser %s:%d state %d char %c", __FILE__, __LINE__, state, *p); \
+    CAT_LOG_DEBUG_V3(HTTP, "content_type parser %s:%d state %d char %c", __FILE__, __LINE__, state, p != NULL && p < pe ? *p : ' '); \
 } while (0)
 #include "cat_http_content_type.c"
 

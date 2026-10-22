@@ -70,11 +70,18 @@
 # define CAT_STATIC_ASSERT(expression) int static_assert_failed[1 - 2 * !(expression)]
 #endif
 
-#if !defined(CAT_OS_WIN) && !defined(CAT_IDE_HELPER)
-# define CAT_NEVER_HERE(reason) CAT_ASSERT(0 && reason)
-#else
-# define CAT_NEVER_HERE(reason) abort()
-#endif
+/* low level on purpose: a fatal error can arrive before the log system works */
+#define CAT_FATAL(format, ...) do { \
+    fprintf(stderr, format, ##__VA_ARGS__); \
+    fflush(stderr); \
+    abort(); \
+} while (0)
+
+/* the same, prefixed with the call site */
+#define CAT_FATAL_HERE(format, ...) CAT_FATAL(__FILE__ ":%d: " format "\n", __LINE__, ##__VA_ARGS__)
+
+/* a point the code must not reach */
+#define CAT_NEVER_HERE(reason) CAT_FATAL_HERE("%s", reason)
 
 /* pseudo fallthrough keyword; */
 #if defined(__GNUC__) && __GNUC__ >= 7
@@ -159,6 +166,17 @@
 # define CAT_HOT
 # define CAT_OPT_SIZE
 # define CAT_OPT_SPEED
+#endif
+
+/* For a function whose memory accesses are intentionally not synchronized with
+ * another thread, so ThreadSanitizer must not report them as a race. */
+#if defined(__has_attribute)
+# if __has_attribute(no_sanitize)
+#  define CAT_ATTRIBUTE_NO_TSAN __attribute__((no_sanitize("thread")))
+# endif
+#endif
+#ifndef CAT_ATTRIBUTE_NO_TSAN
+# define CAT_ATTRIBUTE_NO_TSAN
 #endif
 
 #if defined(__GNUC__) && CAT_GCC_VERSION >= 5000
@@ -258,4 +276,8 @@
 
 #if defined(__SANITIZE_ADDRESS__) || __has_feature(address_sanitizer)
 # define CAT_HAVE_ASAN 1
+#endif
+
+#if defined(__SANITIZE_THREAD__) || __has_feature(thread_sanitizer)
+# define CAT_HAVE_TSAN 1
 #endif

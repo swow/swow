@@ -18,6 +18,8 @@
 
 #include "cat_buffer.h"
 
+#include <errno.h>
+
 CAT_API cat_buffer_allocator_t cat_buffer_allocator;
 
 static char *cat_buffer_alloc_standard(size_t size)
@@ -118,6 +120,16 @@ static cat_always_inline void cat_buffer__update(cat_buffer_t *buffer, size_t ne
     }
 }
 
+static cat_always_inline cat_bool_t cat_buffer_check_size_addition(size_t size, size_t addition)
+{
+    if (unlikely(addition > SIZE_MAX - size)) {
+        cat_update_last_error(CAT_EOVERFLOW, "Buffer size overflow");
+        errno = cat_orig_errno(CAT_EOVERFLOW);
+        return cat_false;
+    }
+    return cat_true;
+}
+
 CAT_API size_t cat_buffer_align_size(size_t size, size_t alignment)
 {
     if (size == 0) {
@@ -125,6 +137,9 @@ CAT_API size_t cat_buffer_align_size(size_t size, size_t alignment)
     }
     if (alignment == 0) {
         alignment = CAT_MEMORY_DEFAULT_ALIGNED_SIZE;
+    }
+    if (unlikely(!cat_buffer_check_size_addition(size, alignment - 1))) {
+        return 0;
     }
     return CAT_MEMORY_ALIGNED_SIZE_EX(size, alignment);;
 }
@@ -185,9 +200,18 @@ CAT_API cat_bool_t cat_buffer_extend(cat_buffer_t *buffer, size_t recommend_size
 
     if (unlikely(new_size == 0)) {
         new_size = cat_buffer_align_size(recommend_size, 0);
+        if (unlikely(new_size == 0)) {
+            return cat_false;
+        }
     } else {
         new_size = cat_buffer_align_size(new_size, 0);
+        if (unlikely(new_size == 0)) {
+            return cat_false;
+        }
         do {
+            if (unlikely(!cat_buffer_check_size_addition(new_size, new_size))) {
+                return cat_false;
+            }
             new_size += new_size;
         } while (new_size < recommend_size);
     }
@@ -199,6 +223,9 @@ CAT_API cat_bool_t cat_buffer_extend(cat_buffer_t *buffer, size_t recommend_size
 
 CAT_API cat_bool_t cat_buffer_prepare(cat_buffer_t *buffer, size_t append_length)
 {
+    if (unlikely(!cat_buffer_check_size_addition(buffer->length, append_length))) {
+        return cat_false;
+    }
     size_t expected_size = buffer->length + append_length;
     if (unlikely(expected_size > buffer->size)) {
         return cat_buffer_extend(buffer, expected_size);
@@ -217,6 +244,9 @@ CAT_API cat_bool_t cat_buffer_malloc_trim(cat_buffer_t *buffer)
 
 CAT_API cat_bool_t cat_buffer_write(cat_buffer_t *buffer, size_t offset, const void *ptr, size_t length)
 {
+    if (unlikely(!cat_buffer_check_size_addition(offset, length))) {
+        return cat_false;
+    }
     size_t new_length = offset + length;
 
     if (new_length > buffer->size) {
@@ -237,6 +267,9 @@ CAT_API cat_bool_t cat_buffer_write(cat_buffer_t *buffer, size_t offset, const v
 
 CAT_API cat_bool_t cat_buffer_append(cat_buffer_t *buffer, const void *ptr, size_t length)
 {
+    if (unlikely(!cat_buffer_check_size_addition(buffer->length, length))) {
+        return cat_false;
+    }
     size_t new_length = buffer->length + length;
 
     if (new_length > buffer->size) {

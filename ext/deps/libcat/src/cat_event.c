@@ -17,6 +17,7 @@
  */
 
 #include "cat_event.h"
+#include "cat_coroutine.h"
 
 #ifdef CAT_IDE_HELPER
 #include "uv-common.h"
@@ -63,6 +64,15 @@ CAT_API cat_bool_t cat_event_module_shutdown(void)
     return cat_true;
 }
 
+#ifdef CAT_THREAD_SAFE
+static void cat_event_wakeup_callback(uv_async_t *handle)
+{
+    (void) handle;
+
+    cat_coroutine_run_wakeups();
+}
+#endif
+
 CAT_API cat_bool_t cat_event_runtime_init(void)
 {
     int error;
@@ -76,6 +86,26 @@ CAT_API cat_bool_t cat_event_runtime_init(void)
 
     cat_queue_init(&CAT_EVENT_G(runtime_shutdown_tasks));
     cat_queue_init(&CAT_EVENT_G(io_defer_tasks));
+
+#ifdef CAT_THREAD_SAFE
+    /* One wakeup handle for each thread. Another thread uses it to bring this
+     * loop back from its poll, which is the only libuv call that is safe from
+     * another thread. */
+    do {
+        uv_async_t *wakeup = &CAT_EVENT_G(wakeup);
+        (void) uv_async_init(&CAT_EVENT_G(loop), wakeup, cat_event_wakeup_callback);
+        /* The handle wakes this loop. It must not keep the loop alive, or the
+         * scheduler never finishes. */
+        uv_unref((uv_handle_t *) wakeup);
+    } while (0);
+
+    /* A waker on another thread needs this handle. Keep it here, because the
+     * waker cannot compute the address from its own thread. */
+    if (!cat_coroutine_wakeup_register(&CAT_EVENT_G(wakeup))) {
+        return cat_false;
+    }
+#endif
+
     do {
         uv_check_t *check = &CAT_EVENT_G(io_defer_check);
         (void) uv_check_init(&CAT_EVENT_G(loop), check);
@@ -104,6 +134,13 @@ CAT_API cat_bool_t cat_event_runtime_shutdown(void)
     cat_event_schedule();
 
     uv_close((uv_handle_t *) &CAT_EVENT_G(io_defer_check), NULL);
+#ifdef CAT_THREAD_SAFE
+    uv_close((uv_handle_t *) &CAT_EVENT_G(wakeup), NULL);
+#endif
+
+    /* A close only finishes when the loop runs again, and an unfinished close
+     * makes uv_loop_close fail with EBUSY. */
+    cat_event_schedule();
 
     CAT_ASSERT(cat_queue_empty(&CAT_EVENT_G(runtime_shutdown_tasks)));
     CAT_ASSERT(cat_queue_empty(&CAT_EVENT_G(io_defer_tasks)));

@@ -19,7 +19,9 @@
 
 #include "cat_os_wait.h"
 
-#ifdef CAT_OS_WAIT
+/* The POSIX backend. A Windows backend joins this file later, so that the wait
+ * API is the same on every platform. */
+#ifdef CAT_OS_UNIX_LIKE
 
 #include "cat_signal.h"
 #include "cat_event.h"
@@ -30,13 +32,13 @@
 #include <sys/wait.h>
 
 typedef struct cat_os_wait_task_s {
+    cat_coroutine_t *coroutine;
     cat_queue_t node;
     cat_pid_t pid;
     int status;
 #ifdef CAT_OS_WAIT_HAVE_RUSAGE
     struct rusage rusage;
 #endif
-    cat_coroutine_t *coroutine;
 } cat_os_wait_task_t;
 
 typedef struct cat_os_waitpid_task_s {
@@ -108,7 +110,7 @@ RB_GENERATE_STATIC(cat_os_child_process_stat_tree_s,
                    cat_os_child_process_stat_s, tree_entry,
                    cat_os__child_process_state_compare);
 
-static size_t cat_os_wait_dispatch(void)
+static size_t cat_os_wait_dispatch(cat_pid_t requested_pid, int *requested_error)
 {
     size_t new_count = 0;
 
@@ -118,10 +120,22 @@ static size_t cat_os_wait_dispatch(void)
 #ifdef CAT_OS_WAIT_HAVE_RUSAGE
 	    struct rusage rusage;
 		memset(&rusage, 0, sizeof(rusage));
-        pid_t pid = wait4(-1, &status, WNOHANG | WUNTRACED, &rusage);
+        pid_t pid = wait4(requested_pid, &status, WNOHANG | WUNTRACED, &rusage);
 #else
-        pid_t pid = waitpid(-1, &status, WNOHANG | WUNTRACED);
+        pid_t pid = waitpid(requested_pid, &status, WNOHANG | WUNTRACED);
 #endif
+        if (requested_pid > 0) {
+            /* A live PID need not be a child. Validate it before queuing a waiter,
+             * and route any ready status through the same dispatcher as SIGCHLD. */
+            if (pid < 0) {
+                *requested_error = errno;
+                break;
+            }
+            requested_pid = -1;
+            if (pid == 0) {
+                continue;
+            }
+        }
         if (pid <= 0) {
             break;
         }
@@ -205,7 +219,7 @@ static void cat_os_wait_sigchld_handler(uv_signal_t* handle, int signum)
 {
     CAT_ASSERT(signum == CAT_SIGCHLD);
     CAT_LOG_DEBUG(OS_WAIT, "SIGCHLD received");
-    (void) cat_os_wait_dispatch();
+    (void) cat_os_wait_dispatch(-1, NULL);
 }
 
 static cat_always_inline void cat_os_wait_sigchld_watcher_start(void)
@@ -260,7 +274,8 @@ static cat_pid_t cat_os__wait(cat_pid_t pid, int *status, int options, void *rus
         return -1;
     }
 
-    do {
+    size_t dispatched;
+    for (;;) {
         cat_os_child_process_stat_t *child_process_state = NULL;
         if (pid < 0) {
             RB_FOREACH(child_process_state, cat_os_child_process_stat_tree_s, &CAT_OS_WAIT_G(child_process_state_tree)) {
@@ -284,13 +299,26 @@ static cat_pid_t cat_os__wait(cat_pid_t pid, int *status, int options, void *rus
             cat_free(child_process_state);
             return pid;
         }
-        if (pid > 0) {
-            if (unlikely(!cat_kill(pid, 0) && cat_get_last_error_code() == CAT_ESRCH)) {
-                cat_update_last_error_with_reason(CAT_ECHILD, "OS %s(pid=%d) failed", cat_os_wait_type_name(type), pid);
-                return -1;
+        int error = 0;
+        dispatched = cat_os_wait_dispatch(pid > 0 ? pid : -1, &error);
+        if (unlikely(error != 0)) {
+            if (error == EINTR) {
+                /* a signal arrived before any status was ready, look again */
+                continue;
             }
+            cat_errno_t code = error == ECHILD ? CAT_ECHILD : cat_translate_sys_error(error);
+            cat_update_last_error_with_reason(code, "OS %s(pid=%d) failed", cat_os_wait_type_name(type), pid);
+            return -1;
         }
-    } while (cat_os_wait_dispatch() > 0);
+        if (dispatched == 0) {
+            break;
+        }
+    }
+
+    /* Nothing is ready, and WNOHANG asks for an answer without waiting. */
+    if (options & WNOHANG) {
+        return 0;
+    }
 
     cat_os_wait_task_t wait_task;
     cat_os_waitpid_task_t *waitpid_task;
@@ -417,7 +445,27 @@ CAT_API cat_pid_t cat_os_waitpid(cat_pid_t pid, int *status, int options)
 
 CAT_API cat_pid_t cat_os_waitpid_ex(cat_pid_t pid, int *status, int options, cat_msec_t timeout)
 {
-    return cat_os__wait_wrapper(pid, status, 0, NULL, timeout, CAT_OS_WAIT_TYPE_WAITPID);
+    return cat_os__wait_wrapper(pid, status, options, NULL, timeout, CAT_OS_WAIT_TYPE_WAITPID);
+}
+
+CAT_API cat_bool_t cat_os_wait_status_exited(int status)
+{
+    return WIFEXITED(status) ? cat_true : cat_false;
+}
+
+CAT_API int cat_os_wait_status_exit_code(int status)
+{
+    return WIFEXITED(status) ? WEXITSTATUS(status) : -1;
+}
+
+CAT_API cat_bool_t cat_os_wait_status_signaled(int status)
+{
+    return WIFSIGNALED(status) ? cat_true : cat_false;
+}
+
+CAT_API int cat_os_wait_status_term_signal(int status)
+{
+    return WIFSIGNALED(status) ? WTERMSIG(status) : -1;
 }
 
 #ifdef CAT_OS_WAIT_HAVE_RUSAGE
@@ -443,6 +491,18 @@ CAT_API cat_pid_t cat_os_wait4_ex(cat_pid_t pid, int *status, int options, struc
 }
 
 #endif /* CAT_OS_WAIT_HAVE_RUSAGE */
+
+CAT_API cat_pid_t cat_os_fork(void)
+{
+    cat_pid_t pid = fork();
+    if (pid == 0) {
+        /* in the child: rebuild the event loop, so that the libuv handles work */
+        cat_event_fork();
+    } else if (pid < 0) {
+        cat_update_last_error_of_syscall("Fork failed");
+    }
+    return pid;
+}
 
 CAT_API cat_bool_t cat_os_wait_module_init(void)
 {
@@ -486,16 +546,210 @@ CAT_API cat_bool_t cat_os_wait_runtime_shutdown(void)
     return cat_true;
 }
 
-CAT_API cat_pid_t cat_os_fork(void)
+#else /* !CAT_OS_UNIX_LIKE */
+
+#include "cat_coroutine.h"
+#include "cat_time.h"
+
+/*
+ * Windows has no child process relation and no wait status. A caller waits for a
+ * known pid: the backend opens the process, waits for its handle, and reports the
+ * exit code as the status.
+ */
+
+#ifdef CAT_THREAD_SAFE
+
+/*
+ * The callback runs on a thread pool thread and wakes the parked coroutine. The
+ * wait stays registered until the waiter unregisters it, so the task stays valid.
+ */
+typedef struct cat_os_wait_win_task_s {
+    HANDLE process;
+    cat_coroutine_t *coroutine;
+    DWORD exit_code;
+    cat_bool_t timed_out;
+    cat_bool_t done;
+} cat_os_wait_win_task_t;
+
+static VOID CALLBACK cat_os_wait_win_callback(PVOID data, BOOLEAN timed_out)
 {
-    cat_pid_t pid = fork();
-    if (pid == 0) {
-        /* 子进程：重建事件循环，使 libuv handles 在子进程中正常工作 */
-        cat_event_fork();
-    } else if (pid < 0) {
-        cat_update_last_error_of_syscall("Fork failed");
+    cat_os_wait_win_task_t *task = (cat_os_wait_win_task_t *) data;
+
+    if (timed_out) {
+        task->timed_out = cat_true;
+    } else {
+        DWORD exit_code = 0;
+        (void) GetExitCodeProcess(task->process, &exit_code);
+        task->exit_code = exit_code;
     }
+    task->done = cat_true;
+
+    /* The waiter is parked: it parks once before the callback can wake it. */
+    cat_coroutine_wake(task->coroutine);
+}
+
+#endif /* CAT_THREAD_SAFE */
+
+CAT_API cat_pid_t cat_os_waitpid_ex(cat_pid_t pid, int *status, int options, cat_msec_t timeout)
+{
+    HANDLE process;
+    DWORD exit_code = 0;
+
+    if (pid <= 0) {
+        cat_update_last_error(CAT_ENOTSUP,
+            "Windows can not wait for any child, pass the pid of a process");
+        return -1;
+    }
+
+    process = OpenProcess(SYNCHRONIZE | PROCESS_QUERY_LIMITED_INFORMATION, FALSE, (DWORD) pid);
+    if (unlikely(process == NULL)) {
+        DWORD error = GetLastError();
+        cat_update_last_error_with_reason(
+            error == ERROR_INVALID_PARAMETER ? CAT_ESRCH : cat_translate_sys_error((int) error),
+            "OpenProcess(%d) failed with %lu", (int) pid, (unsigned long) error);
+        return -1;
+    }
+
+    if (WaitForSingleObject(process, 0) == WAIT_OBJECT_0) {
+        (void) GetExitCodeProcess(process, &exit_code);
+        CloseHandle(process);
+        *status = (int) exit_code;
+        return pid;
+    }
+
+    if (options & WNOHANG) {
+        CloseHandle(process);
+        return 0;
+    }
+
+#ifdef CAT_THREAD_SAFE
+    {
+        HANDLE wait_handle = NULL;
+        cat_os_wait_win_task_t task = {
+            .process = process,
+            .coroutine = CAT_COROUTINE_G(current),
+        };
+
+        if (unlikely(!RegisterWaitForSingleObject(
+            &wait_handle, process, cat_os_wait_win_callback, &task,
+            timeout < 0 ? INFINITE : (ULONG) timeout,
+            WT_EXECUTEONLYONCE | WT_EXECUTEINWAITTHREAD))) {
+            DWORD error = GetLastError();
+            CloseHandle(process);
+            cat_update_last_error_with_reason(cat_translate_sys_error((int) error),
+                "RegisterWaitForSingleObject(%d) failed with %lu",
+                (int) pid, (unsigned long) error);
+            return -1;
+        }
+
+        /* Park once before the callback can wake this coroutine, so a wake never
+         * lands on a running coroutine. The callback is the only waker. */
+        cat_bool_t ret = cat_time_wait(CAT_TIMEOUT_FOREVER);
+        while (ret && !task.done) {
+            ret = cat_time_wait(CAT_TIMEOUT_FOREVER);
+        }
+        (void) UnregisterWaitEx(wait_handle, INVALID_HANDLE_VALUE);
+
+        if (unlikely(!ret)) {
+            CloseHandle(process);
+            cat_update_last_error_with_previous("OS waitpid() wait failed");
+            return -1;
+        }
+
+        if (task.timed_out) {
+            CloseHandle(process);
+            cat_update_last_error(CAT_ETIMEDOUT, "Wait for process %d timed out", (int) pid);
+            return -1;
+        }
+
+        exit_code = task.exit_code;
+    }
+#else
+    {
+        /* A single threaded build has no thread safe coroutine wake, so the
+         * handle is polled from the loop. */
+        cat_msec_t start = cat_time_msec();
+
+        for (;;) {
+            if (WaitForSingleObject(process, 0) == WAIT_OBJECT_0) {
+                (void) GetExitCodeProcess(process, &exit_code);
+                break;
+            }
+            if (timeout >= 0 && cat_time_msec() - start >= timeout) {
+                CloseHandle(process);
+                cat_update_last_error(CAT_ETIMEDOUT, "Wait for process %d timed out", (int) pid);
+                return -1;
+            }
+            (void) cat_time_delay(1);
+        }
+    }
+#endif
+
+    CloseHandle(process);
+    *status = (int) exit_code;
+
     return pid;
 }
 
-#endif /* CAT_OS_WAIT */
+CAT_API cat_pid_t cat_os_waitpid(cat_pid_t pid, int *status, int options)
+{
+    return cat_os_waitpid_ex(pid, status, options, CAT_TIMEOUT_FOREVER);
+}
+
+CAT_API cat_pid_t cat_os_wait(int *status)
+{
+    return cat_os_waitpid_ex(-1, status, 0, CAT_TIMEOUT_FOREVER);
+}
+
+CAT_API cat_pid_t cat_os_wait_ex(int *status, cat_msec_t timeout)
+{
+    return cat_os_waitpid_ex(-1, status, 0, timeout);
+}
+
+CAT_API cat_bool_t cat_os_wait_status_exited(int status)
+{
+    (void) status;
+
+    return cat_true;
+}
+
+CAT_API int cat_os_wait_status_exit_code(int status)
+{
+    return status;
+}
+
+CAT_API cat_bool_t cat_os_wait_status_signaled(int status)
+{
+    (void) status;
+
+    return cat_false;
+}
+
+CAT_API int cat_os_wait_status_term_signal(int status)
+{
+    (void) status;
+
+    return -1;
+}
+
+CAT_API cat_bool_t cat_os_wait_module_init(void)
+{
+    return cat_true;
+}
+
+CAT_API cat_bool_t cat_os_wait_module_shutdown(void)
+{
+    return cat_true;
+}
+
+CAT_API cat_bool_t cat_os_wait_runtime_init(void)
+{
+    return cat_true;
+}
+
+CAT_API cat_bool_t cat_os_wait_runtime_shutdown(void)
+{
+    return cat_true;
+}
+
+#endif /* CAT_OS_UNIX_LIKE */

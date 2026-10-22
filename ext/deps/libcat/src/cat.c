@@ -18,6 +18,10 @@
 
 #include "cat.h"
 
+#include "cat_thread.h"
+#include "cat_thread_sync.h"
+#include "cat_thannel.h"
+
 CAT_API CAT_GLOBALS_DECLARE(cat);
 
 static cat_bool_t cat_args_registered = cat_false;
@@ -70,12 +74,26 @@ CAT_API cat_bool_t cat_module_init(void)
 #endif
 
     cat_error_module_init();
+#ifdef CAT_THREAD_SAFE
+    cat_thread_module_init();
+    if (!cat_thread_sync_module_init()) {
+        return cat_false;
+    }
+    if (!cat_thannel_module_init()) {
+        return cat_false;
+    }
+#endif
 
     return cat_true;
 }
 
 CAT_API cat_bool_t cat_module_shutdown(void)
 {
+#ifdef CAT_THREAD_SAFE
+    cat_thannel_module_shutdown();
+    cat_thread_sync_module_shutdown();
+    cat_thread_module_shutdown();
+#endif
     cat_error_module_shutdown();
 
     CAT_GLOBALS_UNREGISTER(cat);
@@ -144,9 +162,8 @@ CAT_API cat_bool_t cat_runtime_init(void)
             } else if (cat_strcasecmp(timestamps_format, "unix") == 0) {
                 CAT_LOG_G(timestamps_format) = "%s";
             }
-        } else {
-            cat_free(timestamps_format);
         }
+        cat_free(timestamps_format);
     } while (0);
     if (cat_env_is_true("CAT_LOG_SHOW_TIMESTAMPS_AS_RELATIVE", cat_false)) {
         CAT_LOG_G(show_timestamps_as_relative) = cat_true;
@@ -196,7 +213,10 @@ CAT_API cat_bool_t cat_runtime_shutdown(void)
 
 CAT_API cat_bool_t cat_runtime_close(void)
 {
-    CAT_GLOBALS_RUNTIME_CLOSE();
+    /* the error message lives in the block that is about to go away, so it
+     * must be released first or it leaks with the block */
+    cat_clear_last_error();
+    CAT_GLOBALS_RUNTIME_SHUTDOWN();
 
     return cat_true;
 }

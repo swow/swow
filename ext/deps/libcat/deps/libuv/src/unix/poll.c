@@ -26,7 +26,7 @@
 #include <assert.h>
 
 
-static void uv__poll_io(uv_loop_t* loop, uv__io_t* w, unsigned int events) {
+void uv__poll_io(uv_loop_t* loop, uv__io_t* w, unsigned int events) {
   uv_poll_t* handle;
   int pevents;
 
@@ -60,6 +60,19 @@ static void uv__poll_io(uv_loop_t* loop, uv__io_t* w, unsigned int events) {
   if (events & UV__POLLRDHUP)
     pevents |= UV_DISCONNECT;
 
+  /* On error or hangup, mix in events the user is interested in so the
+   * appropriate read/write callbacks are invoked. */
+  if (events & (POLLERR | POLLHUP)) {
+    if (w->pevents & POLLIN)
+      pevents |= UV_READABLE;
+    if (w->pevents & UV__POLLPRI)
+      pevents |= UV_PRIORITIZED;
+    if (w->pevents & POLLOUT)
+      pevents |= UV_WRITABLE;
+    if (w->pevents & UV__POLLRDHUP)
+      pevents |= UV_DISCONNECT;
+  }
+
   handle->poll_cb(handle, 0, pevents);
 }
 
@@ -87,7 +100,7 @@ int uv_poll_init(uv_loop_t* loop, uv_poll_t* handle, int fd) {
     return err;
 
   uv__handle_init(loop, (uv_handle_t*) handle, UV_POLL);
-  uv__io_init(&handle->io_watcher, uv__poll_io, fd);
+  uv__io_init(&handle->io_watcher, UV__POLL_IO, fd);
   handle->poll_cb = NULL;
   return 0;
 }

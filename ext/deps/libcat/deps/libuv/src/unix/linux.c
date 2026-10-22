@@ -30,6 +30,7 @@
 #ifdef HAVE_LIBCAT
 #include "../hat_atomic.h"
 #else
+#include <limits.h>
 #include <stdatomic.h>
 #endif
 #include <stddef.h>  /* offsetof */
@@ -59,6 +60,14 @@
 #include <sys/utsname.h>
 #include <time.h>
 #include <unistd.h>
+
+/* android ndk workaround */
+#ifndef LLONG_MAX
+#define LLONG_MAX 9223372036854775807LL
+#endif
+#ifndef LLONG_MIN
+#define LLONG_MIN (-9223372036854775807LL - 1)
+#endif
 
 #ifndef __NR_io_uring_setup
 # define __NR_io_uring_setup 425
@@ -131,6 +140,10 @@
 enum {
   UV__IORING_SETUP_SQPOLL = 2u,
   UV__IORING_SETUP_NO_SQARRAY = 0x10000u,
+};
+
+enum {
+  UV__IORING_REGISTER_SYNC_CANCEL = 24,
 };
 
 enum {
@@ -254,6 +267,19 @@ STATIC_ASSERT(40 + 40 + 40 == sizeof(struct uv__io_uring_params));
 STATIC_ASSERT(40 == offsetof(struct uv__io_uring_params, sq_off));
 STATIC_ASSERT(80 == offsetof(struct uv__io_uring_params, cq_off));
 
+struct uv__io_uring_sync_cancel_reg {
+  uint64_t addr;
+  int32_t fd;
+  uint32_t flags;
+  struct {
+    int64_t tv_sec;
+    int64_t tv_nsec;
+  } timeout;
+  uint64_t reserved[4];
+};
+
+STATIC_ASSERT(64 == sizeof(struct uv__io_uring_sync_cancel_reg));
+
 STATIC_ASSERT(EPOLL_CTL_ADD < 4);
 STATIC_ASSERT(EPOLL_CTL_DEL < 4);
 STATIC_ASSERT(EPOLL_CTL_MOD < 4);
@@ -271,9 +297,6 @@ struct watcher_root {
 };
 
 static int uv__inotify_fork(uv_loop_t* loop, struct watcher_list* root);
-static void uv__inotify_read(uv_loop_t* loop,
-                             uv__io_t* w,
-                             unsigned int revents);
 static int compare_watchers(const struct watcher_list* a,
                             const struct watcher_list* b);
 static void maybe_free_watcher_list(struct watcher_list* w,
@@ -468,6 +491,35 @@ int uv__io_uring_enter(int fd,
 
 int uv__io_uring_register(int fd, unsigned opcode, void* arg, unsigned nargs) {
   return syscall(__NR_io_uring_register, fd, opcode, arg, nargs);
+}
+
+int uv__iou_cancel(uv_loop_t* loop, uv_fs_t* req) {
+  struct uv__io_uring_sync_cancel_reg reg;
+  struct uv__iou* iou;
+  int rc;
+
+  if (uv__kernel_version() < /* 6.0 */0x060000)
+    return UV_EBUSY;
+
+  iou = &uv__get_internal_fields(loop)->iou;
+  if (iou->ringfd < 0)
+    return UV_EBUSY;
+
+  memset(&reg, 0, sizeof(reg));
+  reg.addr = (uintptr_t) req;
+  reg.fd = -1;
+  reg.timeout.tv_sec = -1;
+  reg.timeout.tv_nsec = -1;
+
+  rc = uv__io_uring_register(iou->ringfd,
+                             UV__IORING_REGISTER_SYNC_CANCEL,
+                             &reg,
+                             1);
+
+  if (rc == 0)
+    return 0;
+
+  return UV_EBUSY;
 }
 
 
@@ -906,7 +958,7 @@ int uv__iou_fs_ftruncate(uv_loop_t* loop, uv_fs_t* req) {
     return 0;
 
   sqe->fd = req->file;
-  sqe->len = req->off;
+  sqe->off = req->off;
   sqe->opcode = UV__IORING_OP_FTRUNCATE;
   uv__iou_submit(iou);
 
@@ -1190,6 +1242,21 @@ static void uv__iou_fs_statx_post(uv_fs_t* req) {
 }
 
 
+static void uv__iou_fs_cleanup_fallback(uv_fs_t* req) {
+  switch (req->fs_type) {
+    /* Free statxbuf */
+    case UV_FS_FSTAT:
+    case UV_FS_LSTAT:
+    case UV_FS_STAT:
+      uv__free(req->ptr);
+      req->ptr = NULL;
+      break;
+    default:
+      break;
+  }
+}
+
+
 static void uv__poll_io_uring(uv_loop_t* loop, struct uv__iou* iou) {
   struct uv__io_uring_cqe* cqe;
   struct uv__io_uring_cqe* e;
@@ -1220,6 +1287,7 @@ static void uv__poll_io_uring(uv_loop_t* loop, struct uv__iou* iou) {
 
     /* If the op is not supported by the kernel retry using the thread pool */
     if (e->res == -EOPNOTSUPP) {
+      uv__iou_fs_cleanup_fallback(req);
       uv__fs_post(loop, req);
       continue;
     }
@@ -1443,6 +1511,12 @@ void uv__io_poll(uv_loop_t* loop, int timeout) {
 
     w->events = w->pevents;
     e.events = w->pevents;
+    if (w == &loop->async_io_watcher)
+      /* Enable edge-triggered mode on async_io_watcher(eventfd),
+       * so that we're able to eliminate the overhead of reading
+       * the eventfd via system call on each event loop wakeup.
+       */
+      e.events |= EPOLLET;
     e.data.fd = w->fd;
     fd = w->fd;
 
@@ -1478,25 +1552,9 @@ void uv__io_poll(uv_loop_t* loop, int timeout) {
       while (*ctl->sqhead != *ctl->sqtail)
         uv__epoll_ctl_flush(epollfd, ctl, &prep);
 
-    /* Only need to set the provider_entry_time if timeout != 0. The function
-     * will return early if the loop isn't configured with UV_METRICS_IDLE_TIME.
-     */
-    if (timeout != 0)
-      uv__metrics_set_provider_entry_time(loop);
-
-    /* Store the current timeout in a location that's globally accessible so
-     * other locations like uv__work_done() can determine whether the queue
-     * of events in the callback were waiting when poll was called.
-     */
-    lfields->current_timeout = timeout;
-
+    uv__io_poll_prepare(loop, NULL, timeout);
     nfds = epoll_pwait(epollfd, events, ARRAY_SIZE(events), timeout, sigmask);
-
-    /* Update loop->time unconditionally. It's tempting to skip the update when
-     * timeout == 0 (i.e. non-blocking poll) but there is no guarantee that the
-     * operating system didn't reschedule our process while in the syscall.
-     */
-    SAVE_ERRNO(uv__update_time(loop));
+    uv__io_poll_check(loop, NULL);
 
     if (nfds == -1)
       assert(errno == EINTR);
@@ -1563,25 +1621,6 @@ void uv__io_poll(uv_loop_t* loop, int timeout) {
        */
       pe->events &= w->pevents | POLLERR | POLLHUP;
 
-      /* Work around an epoll quirk where it sometimes reports just the
-       * EPOLLERR or EPOLLHUP event.  In order to force the event loop to
-       * move forward, we merge in the read/write events that the watcher
-       * is interested in; uv__read() and uv__write() will then deal with
-       * the error or hangup in the usual fashion.
-       *
-       * Note to self: happens when epoll reports EPOLLIN|EPOLLHUP, the user
-       * reads the available data, calls uv_read_stop(), then sometime later
-       * calls uv_read_start() again.  By then, libuv has forgotten about the
-       * hangup and the kernel won't report EPOLLIN again because there's
-       * nothing left to read.  If anything, libuv is to blame here.  The
-       * current hack is just a quick bandaid; to properly fix it, libuv
-       * needs to remember the error/hangup event.  We should get that for
-       * free when we switch over to edge-triggered I/O.
-       */
-      if (pe->events == POLLERR || pe->events == POLLHUP)
-        pe->events |=
-          w->pevents & (POLLIN | POLLOUT | UV__POLLRDHUP | UV__POLLPRI);
-
       if (pe->events != 0) {
         /* Run signal watchers last.  This also affects child process watchers
          * because those are implemented in terms of signal watchers.
@@ -1590,7 +1629,7 @@ void uv__io_poll(uv_loop_t* loop, int timeout) {
           have_signals = 1;
         } else {
           uv__metrics_update_idle_time(loop);
-          w->cb(loop, w, pe->events);
+          uv__io_cb(loop, w, pe->events);
         }
 
         nevents++;
@@ -1606,7 +1645,7 @@ void uv__io_poll(uv_loop_t* loop, int timeout) {
 
     if (have_signals != 0) {
       uv__metrics_update_idle_time(loop);
-      loop->signal_io_watcher.cb(loop, &loop->signal_io_watcher, POLLIN);
+      uv__signal_event(loop, &loop->signal_io_watcher, POLLIN);
     }
 
     lfields->inv = NULL;
@@ -1790,7 +1829,7 @@ int uv_cpu_info(uv_cpu_info_t** ci, int* count) {
     "0xd0b\nCortex-A76\n"   "0xd0c\nNeoverse-N1\n"  "0xd0d\nCortex-A77\n"
     "0xd0e\nCortex-A76AE\n" "0xd13\nCortex-R52\n"   "0xd20\nCortex-M23\n"
     "0xd21\nCortex-M33\n"   "0xd41\nCortex-A78\n"   "0xd42\nCortex-A78AE\n"
-    "0xd4a\nNeoverse-E1\n"  "0xd4b\nCortex-A78C\n"
+    "0xd4a\nNeoverse-E1\n"  "0xd4b\nCortex-A78C\n"  "0xd4f\nNeoverse-V2\n"
 #endif
     "";
   struct cpu {
@@ -1798,7 +1837,7 @@ int uv_cpu_info(uv_cpu_info_t** ci, int* count) {
     unsigned model;
   };
   FILE* fp;
-  char* p;
+  const char* p;
   int found;
   int n;
   unsigned i;
@@ -1926,8 +1965,13 @@ nocpuinfo:
       continue;
 
     n++;
+    /* Use scaling_max_freq, not scaling_cur_freq: reading the latter takes
+     * ~20ms per core on some AMD CPUs because the ACPI cpufreq driver does
+     * a slow SMM round-trip on every read; scaling_max_freq is a plain
+     * policy value and, unlike cpuinfo_cur_freq, is world-readable.
+     */
     snprintf(buf, sizeof(buf),
-             "/sys/devices/system/cpu/cpu%u/cpufreq/scaling_cur_freq", cpu);
+             "/sys/devices/system/cpu/cpu%u/cpufreq/scaling_max_freq", cpu);
 
     fp = uv__open_file(buf);
     if (fp == NULL)
@@ -2260,11 +2304,20 @@ static uint64_t uv__get_cgroup_constrained_memory(char buf[static 1024]) {
 
 uint64_t uv_get_constrained_memory(void) {
   char buf[1024];
+  uint64_t cgroup_limit;
+  uint64_t rlimit_limit;
 
-  if (uv__slurp("/proc/self/cgroup", buf, sizeof(buf)))
-    return 0;
+  cgroup_limit = 0;
+  if (uv__slurp("/proc/self/cgroup", buf, sizeof(buf)) == 0)
+    cgroup_limit = uv__get_cgroup_constrained_memory(buf);
+  rlimit_limit = uv__get_rlimit_max_memory();
 
-  return uv__get_cgroup_constrained_memory(buf);
+  /* Return the minimum of cgroup and rlimit constraints. */
+  if (cgroup_limit == 0)
+    return rlimit_limit;
+  if (rlimit_limit == 0)
+    return cgroup_limit;
+  return cgroup_limit < rlimit_limit ? cgroup_limit : rlimit_limit;
 }
 
 
@@ -2403,6 +2456,8 @@ static int uv__get_cgroupv2_constrained_cpu(const char* cgroup,
       goto next;
 
     *quota = limit / period;
+    if (*quota == 0)
+        *quota = 1;
     if (*quota < min_quota)
       min_quota = *quota;
 
@@ -2419,10 +2474,10 @@ next:
   return 0;
 }
 
-static char* uv__cgroup1_find_cpu_controller(const char* cgroup,
+static const char* uv__cgroup1_find_cpu_controller(const char* cgroup,
                                              int* cgroup_size) {
   /* Seek to the cpu controller line. */
-  char* cgroup_cpu = strstr(cgroup, ":cpu,");
+  const char* cgroup_cpu = strstr(cgroup, ":cpu,");
 
   if (cgroup_cpu != NULL) {
     /* Skip the controller prefix to the start of the cgroup path. */
@@ -2439,7 +2494,7 @@ static int uv__get_cgroupv1_constrained_cpu(const char* cgroup,
   char path[256];
   char buf[1024];
   int cgroup_size;
-  char* cgroup_cpu;
+  const char* cgroup_cpu;
   long long period_length;
   long long quota_per_period;
 
@@ -2532,7 +2587,7 @@ static int init_inotify(uv_loop_t* loop) {
   if (fd < 0)
     return UV__ERR(errno);
 
-  err = uv__io_init_start(loop, &loop->inotify_read_watcher, uv__inotify_read,
+  err = uv__io_init_start(loop, &loop->inotify_read_watcher, UV__INOTIFY_READ,
                           fd, POLLIN);
   if (err) {
     uv__close(fd);
@@ -2628,9 +2683,7 @@ static void maybe_free_watcher_list(struct watcher_list* w, uv_loop_t* loop) {
 }
 
 
-static void uv__inotify_read(uv_loop_t* loop,
-                             uv__io_t* dummy,
-                             unsigned int events) {
+void uv__inotify_read(uv_loop_t* loop, uv__io_t* dummy, unsigned int events) {
   const struct inotify_event* e;
   struct watcher_list* w;
   uv_fs_event_t* h;

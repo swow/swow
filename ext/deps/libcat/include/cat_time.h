@@ -37,6 +37,28 @@ CAT_API double cat_microtime(void);
 
 CAT_API char *cat_time_format_msec(cat_msec_t msec);
 
+/*
+ * A timer that reports expiry through a callback. It does not resume a coroutine.
+ *
+ * A waiter needs this, because a wakeup from another thread and its own timeout
+ * both arrive at the same coroutine. Only one of them may resume it.
+ */
+typedef struct cat_time_timeout_s cat_time_timeout_t;
+typedef void (*cat_time_timeout_callback_t)(cat_time_timeout_t *timer, cat_data_t *data);
+
+/*
+ * after is in msec. A negative value arms nothing and returns NULL. A failure
+ * also returns NULL.
+ *
+ * The caller owns the returned object, which stays valid until
+ * cat_time_timeout_close. The object can therefore outlive the variable that the
+ * caller used on the stack.
+ */
+CAT_API cat_time_timeout_t *cat_time_timeout_init(cat_time_timeout_callback_t callback,
+                                                  cat_data_t *data, cat_timeout_t after); CAT_INTERNAL
+/* Safe to call with NULL and safe to call twice through the same pointer. */
+CAT_API void cat_time_timeout_close(cat_time_timeout_t *timer); CAT_INTERNAL
+
 /* cat_false: yield failed or sleep failed or timeout, cat_true: cancelled */
 CAT_API cat_bool_t cat_time_wait(cat_timeout_t timeout);
 

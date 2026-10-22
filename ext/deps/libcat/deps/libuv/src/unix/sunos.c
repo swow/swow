@@ -162,7 +162,7 @@ void uv__io_poll(uv_loop_t* loop, int timeout) {
   int count;
   int err;
   int fd;
-  int user_timeout;
+  int user_timeout = 0;
   int reset_timeout;
 
   if (loop->nfds == 0) {
@@ -210,12 +210,6 @@ void uv__io_poll(uv_loop_t* loop, int timeout) {
   }
 
   for (;;) {
-    /* Only need to set the provider_entry_time if timeout != 0. The function
-     * will return early if the loop isn't configured with UV_METRICS_IDLE_TIME.
-     */
-    if (timeout != 0)
-      uv__metrics_set_provider_entry_time(loop);
-
     if (timeout != -1) {
       spec.tv_sec = timeout / 1000;
       spec.tv_nsec = (timeout % 1000) * 1000000;
@@ -227,17 +221,13 @@ void uv__io_poll(uv_loop_t* loop, int timeout) {
     nfds = 1;
     saved_errno = 0;
 
-    if (pset != NULL)
-      pthread_sigmask(SIG_BLOCK, pset, NULL);
-
+    uv__io_poll_prepare(loop, pset, timeout);
     err = port_getn(loop->backend_fd,
                     events,
                     ARRAY_SIZE(events),
                     &nfds,
                     timeout == -1 ? NULL : &spec);
-
-    if (pset != NULL)
-      pthread_sigmask(SIG_UNBLOCK, pset, NULL);
+    uv__io_poll_check(loop, pset);
 
     if (err) {
       /* Work around another kernel bug: port_getn() may return events even
@@ -250,12 +240,6 @@ void uv__io_poll(uv_loop_t* loop, int timeout) {
         abort();
       }
     }
-
-    /* Update loop->time unconditionally. It's tempting to skip the update when
-     * timeout == 0 (i.e. non-blocking poll) but there is no guarantee that the
-     * operating system didn't reschedule our process while in the syscall.
-     */
-    SAVE_ERRNO(uv__update_time(loop));
 
     if (events[0].portev_source == 0) {
       if (reset_timeout != 0) {
@@ -307,7 +291,7 @@ void uv__io_poll(uv_loop_t* loop, int timeout) {
         have_signals = 1;
       } else {
         uv__metrics_update_idle_time(loop);
-        w->cb(loop, w, pe->portev_events);
+        uv__io_cb(loop, w, pe->portev_events);
       }
 
       nevents++;
@@ -329,7 +313,7 @@ void uv__io_poll(uv_loop_t* loop, int timeout) {
 
     if (have_signals != 0) {
       uv__metrics_update_idle_time(loop);
-      loop->signal_io_watcher.cb(loop, &loop->signal_io_watcher, POLLIN);
+      uv__signal_event(loop, &loop->signal_io_watcher, POLLIN);
     }
 
     loop->watchers[loop->nwatchers] = NULL;
@@ -413,7 +397,7 @@ uint64_t uv_get_total_memory(void) {
 
 
 uint64_t uv_get_constrained_memory(void) {
-  return 0;  /* Memory constraints are unknown. */
+  return uv__get_rlimit_max_memory();
 }
 
 
@@ -446,9 +430,7 @@ static int uv__fs_event_rearm(uv_fs_event_t *handle) {
 }
 
 
-static void uv__fs_event_read(uv_loop_t* loop,
-                              uv__io_t* w,
-                              unsigned int revents) {
+void uv__fs_event_read(uv_loop_t* loop, uv__io_t* w, unsigned int revents) {
   uv_fs_event_t *handle = NULL;
   timespec_t timeout;
   port_event_t pe;
@@ -548,7 +530,7 @@ int uv_fs_event_start(uv_fs_event_t* handle,
   if (first_run) {
     err = uv__io_init_start(handle->loop,
                              &handle->loop->fs_event_watcher,
-                             uv__fs_event_read,
+                             UV__FS_EVENT_READ,
                              portfd,
                              POLLIN);
     if (err)
@@ -630,6 +612,7 @@ void uv__fs_event_close(uv_fs_event_t* handle) {
 
 int uv_resident_set_memory(size_t* rss) {
   psinfo_t psinfo;
+  ssize_t nread;
   int err;
   int fd;
 
@@ -637,11 +620,16 @@ int uv_resident_set_memory(size_t* rss) {
   if (fd == -1)
     return UV__ERR(errno);
 
-  /* FIXME(bnoordhuis) Handle EINTR. */
+  do
+    nread = read(fd, &psinfo, sizeof(psinfo));
+  while (nread == -1 && errno == EINTR);
+
   err = UV_EINVAL;
-  if (read(fd, &psinfo, sizeof(psinfo)) == sizeof(psinfo)) {
+  if (nread == (ssize_t) sizeof(psinfo)) {
     *rss = (size_t)psinfo.pr_rssize * 1024;
     err = 0;
+  } else if (nread < 0) {
+    err = UV__ERR(errno);
   }
   uv__close(fd);
 

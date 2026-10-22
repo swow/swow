@@ -76,6 +76,10 @@
 # include <valgrind/valgrind.h>
 #endif
 
+#ifdef CAT_COROUTINE_USE_TSAN
+# include <sanitizer/tsan_interface.h>
+#endif
+
 #ifdef CAT_COROUTINE_USE_ASAN
 # ifdef _MSC_VER
 // for warning -Wstrict-prototypes/C4255
@@ -156,7 +160,109 @@ static cat_coroutine_stack_size_t cat_coroutine_align_stack_size(size_t size)
     return (cat_coroutine_stack_size_t) size;
 }
 
+/* The coroutine block of this thread. Only this module knows the offset of the
+ * block, so only this module turns the base into the pointer. */
+static cat_coroutine_globals_t *cat_coroutine_own_block(void)
+{
+    return CAT_GLOBALS_BULK(cat_coroutine);
+}
+
 CAT_API CAT_GLOBALS_DECLARE(cat_coroutine);
+
+CAT_API void cat_coroutine_wake(cat_coroutine_t *coroutine)
+{
+    cat_coroutine_globals_t *target;
+    uv_async_t *handle;
+
+    if (unlikely(coroutine == NULL)) {
+        cat_update_last_error(CAT_EINVAL, "The coroutine is null");
+        return;
+    }
+
+    target = (cat_coroutine_globals_t *) coroutine->wakeup_target;
+
+    if (unlikely(target == NULL)) {
+        cat_update_last_error(CAT_EMISUSE, "The coroutine has no thread to wake");
+        return;
+    }
+
+    /*
+     * A coroutine of this thread resumes here and now, which also means the
+     * waker must not hold a lock that the woken coroutine needs.
+     *
+     * The comparison needs this thread's own block, which only exists on a
+     * thread that took a runtime, so a thread without one always takes the
+     * queue below.
+     */
+    if (cat_globals_available() && target == cat_coroutine_own_block()) {
+        cat_coroutine_schedule(coroutine, COROUTINE, "Woken by this thread");
+        return;
+    }
+
+    handle = target->wakeup_handle;
+
+    if (unlikely(handle == NULL)) {
+        /* The target never took an event loop, so it has nothing to wake. */
+        cat_update_last_error(CAT_EMISUSE, "The target thread has no event loop");
+        return;
+    }
+
+    uv_mutex_lock(&target->wakeup_lock);
+    coroutine->wakeup.wakeup_coroutine = coroutine;
+    cat_queue_push_back(&target->wakeup_queue, &coroutine->wakeup.wakeup_node);
+    uv_mutex_unlock(&target->wakeup_lock);
+
+    /* The only libuv call that is safe from another thread. It brings the
+     * target loop out of its poll, where the queue is drained. */
+    (void) uv_async_send(handle);
+}
+
+CAT_API void cat_coroutine_run_wakeups(void)
+{
+    cat_queue_t drained;
+    cat_queue_t *queue = &CAT_COROUTINE_G(wakeup_queue);
+    cat_queue_t *first;
+    cat_queue_t *last;
+
+    cat_queue_init(&drained);
+
+    uv_mutex_lock(&CAT_COROUTINE_G(wakeup_lock));
+    if (!cat_queue_empty(queue)) {
+        /* Move the whole queue at once. Resuming a coroutine runs it, and it
+         * may take this same lock when it comes back, so the lock has to go
+         * before any resume. */
+        first = cat_queue_next(queue);
+        last = cat_queue_prev(queue);
+
+        cat_queue_next(last) = &drained;
+        cat_queue_prev(first) = &drained;
+        cat_queue_next(&drained) = first;
+        cat_queue_prev(&drained) = last;
+
+        cat_queue_init(queue);
+    }
+    uv_mutex_unlock(&CAT_COROUTINE_G(wakeup_lock));
+
+    while (!cat_queue_empty(&drained)) {
+        cat_coroutine_t *coroutine =
+            cat_queue_front_data(&drained, cat_coroutine_t, wakeup.wakeup_node);
+
+        cat_queue_remove(&coroutine->wakeup.wakeup_node);
+        cat_coroutine_schedule(coroutine, COROUTINE, "Woken by another thread");
+    }
+}
+
+CAT_API cat_bool_t cat_coroutine_wakeup_register(uv_async_t *handle)
+{
+    if (unlikely(!cat_globals_available())) {
+        cat_update_last_error(CAT_EMISUSE, "This thread has no runtime");
+        return cat_false;
+    }
+
+    CAT_COROUTINE_G(wakeup_handle) = handle;
+
+    return cat_true;
+}
 
 CAT_API cat_bool_t cat_coroutine_module_init(void)
 {
@@ -184,6 +290,21 @@ CAT_API cat_bool_t cat_coroutine_runtime_init(void)
     cat_coroutine_set_default_stack_size(CAT_COROUTINE_RECOMMENDED_STACK_SIZE);
     cat_coroutine_set_deadlock_log_type(CAT_LOG_TYPE_WARNING);
     cat_coroutine_set_deadlock_callback(NULL);
+
+    cat_queue_init(&CAT_COROUTINE_G(wakeup_queue));
+    CAT_COROUTINE_G(wakeup_handle) = NULL;
+    CAT_COROUTINE_G(parked) = 0;
+    do {
+        /* The block outlives a single runtime, so this runs again on a lock
+         * that was already initialized. A failure here is reported rather than
+         * taken as the end of the process. */
+        int error = uv_mutex_init(&CAT_COROUTINE_G(wakeup_lock));
+
+        if (unlikely(error != 0)) {
+            cat_update_last_error_with_reason(error, "Coroutine wakeup lock init failed");
+            return cat_false;
+        }
+    } while (0);
 
     /* init info */
     CAT_COROUTINE_G(last_id) = 0;
@@ -226,6 +347,12 @@ CAT_API cat_bool_t cat_coroutine_runtime_init(void)
         main_coroutine->asan_stack = NULL;
         main_coroutine->asan_stack_size = 0;
 #endif
+#ifdef CAT_COROUTINE_USE_TSAN
+        /* the main coroutine runs on the stack of the thread itself */
+        main_coroutine->tsan_fiber = __tsan_get_current_fiber();
+#endif
+        main_coroutine->wakeup_target = cat_coroutine_own_block();
+        main_coroutine->wakeup_queue = &CAT_COROUTINE_G(wakeup_queue);
         CAT_COROUTINE_G(main) = main_coroutine;
         CAT_COROUTINE_G(current) = main_coroutine;
 
@@ -564,6 +691,8 @@ CAT_API cat_coroutine_t *cat_coroutine_create_ex(cat_coroutine_t *coroutine, cat
 #endif
 
     /* init coroutine properties */
+    coroutine->wakeup_target = cat_coroutine_own_block();
+    coroutine->wakeup_queue = &CAT_COROUTINE_G(wakeup_queue);
     coroutine->id = CAT_COROUTINE_G(last_id)++;
     coroutine->flags = flags | CAT_COROUTINE_FLAG_ACCEPT_DATA;
     coroutine->state = CAT_COROUTINE_STATE_WAITING;
@@ -590,6 +719,11 @@ CAT_API cat_coroutine_t *cat_coroutine_create_ex(cat_coroutine_t *coroutine, cat
     coroutine->asan_fake_stack = NULL;
     coroutine->asan_stack = stack;
     coroutine->asan_stack_size = stack_size;
+#endif
+#ifdef CAT_COROUTINE_USE_TSAN
+    /* Without the fiber ThreadSanitizer sees the coroutine stack as plain
+     * memory, so the build still works but the reports are not reliable. */
+    coroutine->tsan_fiber = __tsan_create_fiber(0);
 #endif
 #ifndef CAT_COROUTINE_USE_THREAD_CONTEXT
     CAT_LOG_DEBUG(COROUTINE, "coroutine_create(function: %p, stack_size: %zu) = R" CAT_COROUTINE_ID_FMT " "
@@ -634,6 +768,12 @@ CAT_API void cat_coroutine_free(cat_coroutine_t *coroutine)
         if (unlikely(!ret)) {
             CAT_SYSCALL_FAILURE(NOTICE, COROUTINE, "Unprotect stack page failed");
         }
+    }
+#endif
+#ifdef CAT_COROUTINE_USE_TSAN
+    if (coroutine->tsan_fiber != NULL && coroutine->tsan_fiber != __tsan_get_current_fiber()) {
+        __tsan_destroy_fiber(coroutine->tsan_fiber);
+        coroutine->tsan_fiber = NULL;
     }
 #endif
 #if defined(CAT_COROUTINE_USE_USER_STACK) && defined(CAT_COROUTINE_USE_ASAN)
@@ -705,6 +845,12 @@ CAT_API void cat_coroutine_jump_standard(cat_coroutine_t *coroutine, cat_data_t 
     /* jump {{{ */
 #ifdef CAT_COROUTINE_USE_USER_TRANSFER_DATA
     coroutine->transfer_data = data;
+#endif
+#ifdef CAT_COROUTINE_USE_TSAN
+    /* This must be the last call before the stack switch. */
+    if (coroutine->tsan_fiber != NULL) {
+        __tsan_switch_to_fiber(coroutine->tsan_fiber, 0);
+    }
 #endif
 #if defined(CAT_COROUTINE_USE_THREAD_CONTEXT)
     uv_sem_post(&coroutine->sem);

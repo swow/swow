@@ -194,15 +194,26 @@ void uv__threadpool_cleanup(void) {
 static void init_threads(void) {
   uv_thread_options_t config;
   unsigned int i;
+  size_t buflen;
+  char buf[16];
   const char* val;
+  int err;
+
   uv_sem_t sem;
 
   nthreads = ARRAY_SIZE(default_threads);
+
+  val = NULL;
 #ifdef HAVE_LIBCAT
   val = getenv("CAT_TPS");
-  if (val == NULL)
 #endif
-  val = getenv("UV_THREADPOOL_SIZE");
+  if (val == NULL) {
+    buflen = ARRAY_SIZE(buf);
+    err = uv_os_getenv("UV_THREADPOOL_SIZE", buf, &buflen);
+    if (err == 0)
+      val = buf;
+  }
+
   if (val != NULL)
     nthreads = atoi(val);
   if (nthreads == 0)
@@ -418,9 +429,17 @@ int uv_cancel(uv_req_t* req) {
   uv_loop_t* loop;
 
   switch (req->type) {
+  case UV_WRITE:
+    if (uv__is_closing(((uv_write_t*) req)->handle))
+      return UV_EBUSY;
+    return uv__write_cancel((uv_write_t*) req);
   case UV_FS:
     loop =  ((uv_fs_t*) req)->loop;
     wreq = &((uv_fs_t*) req)->work_req;
+#ifdef __linux__
+    if (wreq->done == NULL)
+      return uv__iou_cancel(loop, (uv_fs_t*) req);
+#endif
     break;
   case UV_GETADDRINFO:
     loop =  ((uv_getaddrinfo_t*) req)->loop;

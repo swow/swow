@@ -52,27 +52,28 @@ CAT_API char *cat_stpcpy(char *dest, const char *src)
 CAT_API char *cat_vslprintf(const char *format, size_t *length, va_list args)
 {
     va_list _args;
+    int n;
     size_t size;
-    char *str;
+    char *str = NULL;
 
     va_copy(_args, args);
-    size = vsnprintf(NULL, 0, format, _args) + 1;
+    n = vsnprintf(NULL, 0, format, _args);
     va_end(_args);
+    if (unlikely(n < 0)) {
+        goto _error;
+    }
+    size = (size_t) n + 1;
     str = (char *) cat_malloc(size);
 #if CAT_ALLOC_HANDLE_ERRORS
-    if (unlikely(string == NULL)) {
+    if (unlikely(str == NULL)) {
         /* no need to update error message, we even have no mem to sprintf,
            so we may also have no mem to update error message */
         cat_update_last_error(cat_translate_sys_error(cat_sys_errno), NULL);
-        if (length != NULL) {
-            *length = 0;
-        }
-        return NULL;
+        goto _error;
     }
 #endif
     if (unlikely(vsnprintf(str, size, format, args) < 0)) {
-        cat_free(str);
-        return NULL;
+        goto _error;
     }
     str[size - 1] = '\0';
     if (length != NULL) {
@@ -80,6 +81,15 @@ CAT_API char *cat_vslprintf(const char *format, size_t *length, va_list args)
     }
 
     return str;
+
+    _error:
+    if (str != NULL) {
+        cat_free(str);
+    }
+    if (length != NULL) {
+        *length = 0;
+    }
+    return NULL;
 }
 
 CAT_API char *cat_vsprintf(const char *format, va_list args)
