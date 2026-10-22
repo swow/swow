@@ -15,447 +15,307 @@ declare(strict_types=1);
 namespace Swow\Process;
 
 use Closure;
-use Swow\Coroutine;
-use Swow\Signal;
 use Throwable;
 
-use function sprintf;
+use function array_merge;
+use function fclose;
+use function fwrite;
+use function getenv;
+use function getmypid;
+use function is_array;
+use function is_file;
+use function str_contains;
+use function strlen;
 
-use const STDERR;
+use const PHP_BINARY;
 
 /**
- * 多进程管理器
- *
- * 将当前进程变为 Manager 角色，fork 出 N 个 Worker 进程。
- * 管理 Worker 生命周期：异常退出自动重启、SIGUSR1 优雅重载、SIGTERM 优雅关闭。
+ * Cross-platform process manager backed by ChildProcess::spawn().
  */
-class ProcessManager
+final class ProcessManager implements ProcessManagerInterface
 {
+    use ProcessManagerTrait;
+
     private const SIGNAL_POLL_TIMEOUT = 100;
 
-    /** @var int Worker 数量 */
-    protected int $workerCount;
+    private string $mode = '';
 
-    /** @var int 单个 Worker 最大异常重启次数 */
-    protected int $maxRestartCount = 100;
+    private ?string $serializedClosure = null;
 
-    /** @var int Worker 优雅退出最大等待时间（秒） */
-    protected int $maxWaitTime = 30;
+    private ?string $inlineCode = null;
 
-    /** @var array<int, ChildProcess> Worker ID → ChildProcess */
-    protected array $workers = [];
+    private ?string $scriptPath = null;
 
-    /** @var array<int, int> Worker ID → 已重启次数 */
-    protected array $restartCounts = [];
+    /** @var list<string> */
+    private array $scriptArgs = [];
 
-    /** @var bool Manager 是否正在运行 */
-    protected bool $running = false;
+    /** @var list<string>|null */
+    private ?array $phpArgs = null;
 
-    /** @var bool 是否正在进行 reload */
-    protected bool $reloading = false;
+    private ?string $autoloadPath = null;
 
-    /** @var Closure|null Worker 启动回调 */
-    protected ?Closure $onWorkerStart = null;
-
-    /** @var Closure(int, int, ProcessExitStatus): void|null Worker 退出回调 */
-    protected ?Closure $onWorkerExit = null;
-
-    /** @var bool 是否处于 Manager 主循环 */
-    protected bool $managingCoroutines = false;
-
-    /** @var int Manager 自己创建且尚未退出的协程数量 */
-    protected int $managedCoroutineCount = 0;
-
-    /** @var Coroutine|null SIGTERM 监听协程 */
-    protected ?Coroutine $termCoroutine = null;
-
-    /** @var Coroutine|null SIGINT 监听协程 */
-    protected ?Coroutine $intCoroutine = null;
-
-    /** @var Coroutine|null SIGUSR1 监听协程 */
-    protected ?Coroutine $reloadCoroutine = null;
-
-    /** @var Coroutine|null 当前 reload 执行协程 */
-    protected ?Coroutine $reloadTaskCoroutine = null;
-
-    /** @var array<int, Coroutine> Worker 监控协程（Worker ID → Coroutine） */
-    protected array $watcherCoroutines = [];
-
-    /**
-     * @param int $workerCount Worker 数量，0 = CPU 核数
-     */
-    public function __construct(int $workerCount = 0)
-    {
-        if ($workerCount <= 0) {
-            $workerCount = \Swow\nproc();
-        }
-        $this->workerCount = $workerCount;
-    }
-
-    public function getWorkerCount(): int
-    {
-        return $this->workerCount;
-    }
-
-    /**
-     * 单个 Worker 最大异常重启次数，超过后不再自动拉起
-     */
-    public function setMaxRestartCount(int $count): static
-    {
-        $this->maxRestartCount = $count;
-        return $this;
-    }
-
-    /**
-     * Worker 优雅退出最大等待时间（秒），超时后 SIGKILL
-     */
-    public function setMaxWaitTime(int $seconds): static
-    {
-        $this->maxWaitTime = $seconds;
-        return $this;
-    }
-
-    /**
-     * 设置 Worker 退出回调。
-     *
-     * 回调运行在 Manager 进程中，用于上层获取 worker id、pid 和退出状态。
-     *
-     * @param Closure(int $workerId, int $workerPid, ProcessExitStatus $status): void $callback
-     */
-    public function onWorkerExit(Closure $callback): static
-    {
-        $this->onWorkerExit = $callback;
-        return $this;
-    }
-
-    /**
-     * 启动多进程管理器
-     *
-     * 当前进程变为 Manager，阻塞直到所有 Worker 退出。
-     *
-     * @param Closure(WorkerContext): void $onWorkerStart 每个 Worker 的启动逻辑
-     */
     public function start(Closure $onWorkerStart): void
     {
-        $this->onWorkerStart = $onWorkerStart;
-        $this->running = true;
+        $this->assertClosureSerializerEnabled();
+        $this->phpArgs = $this->detectPhpArgs(true);
+        $this->assertChildClosureSerializer($this->phpArgs);
+        $this->serializedClosure = $this->serializeClosure($onWorkerStart);
+        $this->autoloadPath = $this->findAutoloadPath();
+        $this->mode = 'closure';
 
-        /* 启动所有 Worker */
-        for ($i = 0; $i < $this->workerCount; $i++) {
-            $this->forkWorker($i);
-        }
-
-        /* 注册信号处理 */
-        $this->handleSignals();
+        $this->startManager();
     }
 
-    /**
-     * 优雅关闭所有 Worker
-     */
-    public function stop(): void
+    public function startInline(string $code): void
     {
-        $this->running = false;
-        $managedByManager = $this->managingCoroutines;
+        if ($code === '') {
+            throw new ProcessManagerException('Inline worker code must not be empty');
+        }
 
-        foreach ($this->workers as $process) {
-            if (!$process->hasExited()) {
-                $this->killWorker($process, Signal::TERM);
+        $this->inlineCode = $code;
+        $this->phpArgs = $this->detectPhpArgs(false);
+        $this->mode = 'inline';
+
+        $this->startManager();
+    }
+
+    /** @param list<string> $args */
+    public function startScript(string $script, array $args = []): void
+    {
+        if (!is_file($script)) {
+            throw new ProcessManagerException("Worker script '{$script}' does not exist");
+        }
+        foreach ($args as $arg) {
+            if (!is_string($arg)) {
+                throw new ProcessManagerException('Worker script arguments must be strings');
             }
         }
 
-        if (!$managedByManager) {
-            /* 等待所有 Worker 退出 */
-            foreach ($this->workers as $id => $process) {
-                if (!$process->hasExited()) {
-                    try {
-                        $process->wait($this->maxWaitTime * 1000);
-                    } catch (ProcessException) {
-                        /* 超时，强制杀死 */
-                        $this->killWorker($process, Signal::KILL);
-                        try {
-                            $process->wait(1000);
-                        } catch (ProcessException) {
-                            /* ignore */
+        $this->scriptPath = $script;
+        $this->scriptArgs = array_values($args);
+        $this->phpArgs = $this->detectPhpArgs(false);
+        $this->mode = 'script';
+
+        $this->startManager();
+    }
+
+    protected function createWorker(int $id): ChildProcess
+    {
+        $env = $this->buildEnv($id);
+        $options = ['env' => $env];
+
+        switch ($this->mode) {
+            case 'closure':
+            {
+                $pipe = \Swow\pipe();
+                if (!is_array($pipe) || count($pipe) !== 2) {
+                    throw new ProcessManagerException('Unable to create worker payload pipe');
+                }
+                [$read, $write] = $pipe;
+                $env['SWOW_PROCESS_MANAGER_PAYLOAD_FD'] = '3';
+                $options['env'] = $env;
+                $options['fds'] = [3 => $read];
+
+                $command = array_merge(
+                    [PHP_BINARY],
+                    $this->phpArgs ?? [],
+                    [__DIR__ . '/process-manager-worker.php'],
+                );
+
+                try {
+                    $process = ChildProcess::spawn($command, $options);
+                } catch (Throwable $e) {
+                    fclose($read);
+                    fclose($write);
+                    throw $e;
+                }
+
+                fclose($read);
+
+                $payload = $this->serializedClosure ?? '';
+                $written = 0;
+                try {
+                    while ($written < strlen($payload)) {
+                        $n = fwrite($write, substr($payload, $written));
+                        if ($n === false || $n === 0) {
+                            break;
                         }
+                        $written += $n;
                     }
+                } finally {
+                    fclose($write);
                 }
-            }
 
-            $this->workers = [];
-        }
-
-        $current = Coroutine::getCurrent();
-        if (!$managedByManager) {
-            /* kill 残留的信号协程（排除调用 stop 的当前协程） */
-            foreach ([$this->termCoroutine, $this->intCoroutine, $this->reloadCoroutine, $this->reloadTaskCoroutine] as $coroutine) {
-                if ($coroutine !== null && $coroutine !== $current && $coroutine->isAvailable()) {
-                    $coroutine->kill();
+                if ($written !== strlen($payload)) {
+                    $process->kill(\Swow\Signal::KILL);
+                    throw new ProcessManagerException('Unable to write worker payload');
                 }
+
+                $this->workers[$id] = $process;
+                $this->restartCounts[$id] ??= 0;
+                return $process;
             }
-            $this->termCoroutine = null;
-            $this->intCoroutine = null;
-            $this->reloadCoroutine = null;
-            $this->reloadTaskCoroutine = null;
-        }
-
-        if (!$managedByManager) {
-            /* watcherCoroutines 在 worker 退出后会自动结束，但以防万一 */
-            foreach ($this->watcherCoroutines as $coroutine) {
-                if ($coroutine !== $current && $coroutine->isAvailable()) {
-                    $coroutine->kill();
-                }
-            }
-            $this->watcherCoroutines = [];
-        }
-    }
-
-    protected function runManagedCoroutine(Closure $callback): Coroutine
-    {
-        $this->managedCoroutineCount++;
-
-        return Coroutine::run(function () use ($callback): void {
-            try {
-                $callback();
-            } finally {
-                $this->managedCoroutineCount--;
-            }
-        });
-    }
-
-    protected function enforceWorkerShutdownTimeout(): void
-    {
-        $deadline = microtime(true) + $this->maxWaitTime;
-        while ($this->workers !== [] && microtime(true) < $deadline) {
-            usleep(50000);
-        }
-
-        foreach ($this->workers as $process) {
-            if (!$process->hasExited()) {
-                $this->killWorker($process, Signal::KILL);
-            }
-        }
-    }
-
-    /**
-     * 优雅重载：逐个重启 Worker，零停机
-     */
-    public function reload(): void
-    {
-        if ($this->reloading) {
-            return;
-        }
-        $this->reloading = true;
-
-        /* 快照当前 Worker 列表 */
-        $oldWorkers = $this->workers;
-
-        foreach ($oldWorkers as $id => $oldProcess) {
-            if (!$this->running) {
+            case 'inline':
+            {
+                $command = array_merge(
+                    [PHP_BINARY],
+                    $this->phpArgs ?? [],
+                    ['-r', $this->inlineCode ?? ''],
+                );
                 break;
             }
-
-            /* 先 fork 新 Worker（确保服务不中断） */
-            $this->forkWorker($id);
-            $newProcess = $this->workers[$id] ?? null;
-            if ($newProcess !== null) {
-                $this->watchWorker($id, $newProcess);
+            case 'script':
+            {
+                $command = array_merge(
+                    [PHP_BINARY],
+                    $this->phpArgs ?? [],
+                    [$this->scriptPath ?? ''],
+                    $this->scriptArgs,
+                );
+                break;
             }
-
-            /* 再通知旧 Worker 退出 */
-            if (!$oldProcess->hasExited()) {
-                $this->killWorker($oldProcess, Signal::TERM);
-                try {
-                    $oldProcess->wait($this->maxWaitTime * 1000);
-                } catch (ProcessException) {
-                    $this->killWorker($oldProcess, Signal::KILL);
-                    try {
-                        $oldProcess->wait(1000);
-                    } catch (ProcessException) {
-                        /* ignore */
-                    }
-                }
-            }
-
-            /* 重置该 Worker 的重启计数 */
-            $this->restartCounts[$id] = 0;
+            default:
+                throw new ProcessManagerException('ProcessManager has not been started');
         }
 
-        $this->reloading = false;
-    }
-
-    private function killWorker(ChildProcess $process, int $signal): void
-    {
-        try {
-            $process->kill($signal);
-        } catch (ProcessException) {
-            /* Worker 可能在 hasExited() 与 kill() 之间已经退出。 */
-        }
-    }
-
-    /**
-     * Fork 一个 Worker 进程
-     */
-    protected function forkWorker(int $id): void
-    {
-        $managerPid = getmypid();
-        $workerCount = $this->workerCount;
-        $onWorkerStart = $this->onWorkerStart;
-
-        $process = ChildProcess::fork(static function () use ($id, $managerPid, $workerCount, $onWorkerStart): int {
-            $ctx = new WorkerContext($id, getmypid(), $managerPid, $workerCount);
-            try {
-                $onWorkerStart($ctx);
-                return 0;
-            } catch (Throwable $e) {
-                fwrite(STDERR, sprintf(
-                    "[Worker#%d] Uncaught %s: %s in %s:%d\n",
-                    $id,
-                    $e::class,
-                    $e->getMessage(),
-                    $e->getFile(),
-                    $e->getLine()
-                ));
-                return 1;
-            }
-        });
-
+        $process = ChildProcess::spawn($command, $options);
         $this->workers[$id] = $process;
-        if (!isset($this->restartCounts[$id])) {
-            $this->restartCounts[$id] = 0;
+        $this->restartCounts[$id] ??= 0;
+
+        return $process;
+    }
+
+    /** @return array<string, string> */
+    private function buildEnv(int $id): array
+    {
+        $env = getenv();
+        if (!is_array($env)) {
+            $env = [];
+        }
+
+        $env['SWOW_PROCESS_MANAGER_WORKER'] = '1';
+        $env['SWOW_PROCESS_MANAGER_WORKER_ID'] = (string) $id;
+        $env['SWOW_PROCESS_MANAGER_MANAGER_PID'] = (string) getmypid();
+        $env['SWOW_PROCESS_MANAGER_WORKER_COUNT'] = (string) $this->workerCount;
+
+        if ($this->autoloadPath !== null) {
+            $env['SWOW_PROCESS_MANAGER_AUTOLOAD'] = $this->autoloadPath;
+        }
+
+        return $env;
+    }
+
+    private function assertClosureSerializerEnabled(): void
+    {
+        if (!extension_loaded('swow')) {
+            throw new ProcessManagerException('The swow extension is required for closure workers');
+        }
+        if (!filter_var(ini_get('swow.closure_serializer'), FILTER_VALIDATE_BOOLEAN)) {
+            throw new ProcessManagerException('swow.closure_serializer is not enabled');
         }
     }
 
-    /**
-     * Manager 主循环：处理信号 + 回收 Worker
-     *
-     * 为每个 Worker 启动一个等待协程，Worker 退出时自动处理重启逻辑。
-     * 主协程只等待 ProcessManager 自己创建的协程退出，stop 后信号协程会通过短超时自行结束。
-     */
-    protected function handleSignals(): void
+    private function serializeClosure(Closure $closure): string
     {
-        $this->managingCoroutines = true;
-        $this->managedCoroutineCount = 0;
-
-        /* 为每个 Worker 启动一个 wait 协程 */
-        foreach ($this->workers as $id => $process) {
-            $this->watchWorker($id);
-        }
-
-        /* SIGTERM → 优雅关闭 */
-        $this->termCoroutine = $this->runManagedCoroutine(function (): void {
-            while ($this->running) {
-                try {
-                    Signal::wait(Signal::TERM, self::SIGNAL_POLL_TIMEOUT);
-                } catch (\Swow\SignalException) {
-                    continue;
-                }
-                $this->stop();
-                return;
-            }
-        });
-
-        /* SIGINT → 优雅关闭 */
-        $this->intCoroutine = $this->runManagedCoroutine(function (): void {
-            while ($this->running) {
-                try {
-                    Signal::wait(Signal::INT, self::SIGNAL_POLL_TIMEOUT);
-                } catch (\Swow\SignalException) {
-                    continue;
-                }
-                $this->stop();
-                return;
-            }
-        });
-
-        /* SIGUSR1 → 优雅重载 */
-        $this->reloadCoroutine = $this->runManagedCoroutine(function (): void {
-            while ($this->running) {
-                try {
-                    Signal::wait(Signal::USR1, self::SIGNAL_POLL_TIMEOUT);
-                } catch (\Swow\SignalException) {
-                    continue;
-                }
-                if ($this->reloadTaskCoroutine === null || !$this->reloadTaskCoroutine->isAvailable()) {
-                    $this->reloadTaskCoroutine = $this->runManagedCoroutine(function (): void {
-                        $this->reload();
-                    });
-                }
-            }
-        });
-
-        $this->runManagedCoroutine(function (): void {
-            while ($this->running) {
-                usleep(50000);
-            }
-            $this->enforceWorkerShutdownTimeout();
-        });
-
         try {
-            /* Manager 主协程只等待自己管理的协程退出 */
-            while ($this->managedCoroutineCount > 0) {
-                usleep(10000);
-            }
-        } finally {
-            $this->managingCoroutines = false;
-            $this->managedCoroutineCount = 0;
-            $this->termCoroutine = null;
-            $this->intCoroutine = null;
-            $this->reloadCoroutine = null;
-            $this->reloadTaskCoroutine = null;
-            $this->watcherCoroutines = [];
+            $payload = serialize($closure);
+        } catch (Throwable $e) {
+            throw new ProcessManagerException('Unable to serialize worker closure', 0, $e);
+        }
+        if (!is_string($payload) || $payload === '') {
+            throw new ProcessManagerException('Unable to serialize worker closure');
+        }
+
+        return $payload;
+    }
+
+    private function assertChildClosureSerializer(array $phpArgs): void
+    {
+        [$output] = $this->runPhp($phpArgs, ['-r', 'echo ini_get("swow.closure_serializer");']);
+        if (!filter_var(trim($output), FILTER_VALIDATE_BOOLEAN)) {
+            throw new ProcessManagerException('swow.closure_serializer is not enabled in the worker PHP configuration');
         }
     }
 
-    /**
-     * 为 Worker 启动一个监控协程
-     * Worker 退出时根据策略自动重启
-     */
-    protected function watchWorker(int $id, ?ChildProcess $process = null): void
+    /** @return list<string> */
+    private function detectPhpArgs(bool $requireSwow): array
     {
-        $process ??= $this->workers[$id] ?? null;
-        if ($process === null) {
-            return;
+        static $cache = [];
+
+        $key = PHP_BINARY . ($requireSwow ? '|1' : '|0');
+        if (isset($cache[$key])) {
+            return $cache[$key];
         }
 
-        $this->watcherCoroutines[$id] = $this->runManagedCoroutine(function () use ($id, $process): void {
-            $status = null;
-            try {
-                $status = $process->wait();
-            } catch (ProcessException) {
-                /* wait 失败（进程已被其他方式回收） */
-                return;
+        $candidates = [
+            [],
+            ['-d', 'extension=swow'],
+        ];
+        $extensionFile = getenv('SWOW_PROCESS_MANAGER_EXTENSION');
+        if (!is_string($extensionFile) || $extensionFile === '') {
+            $extensionDir = ini_get('extension_dir');
+            if (is_string($extensionDir) && $extensionDir !== '') {
+                $extensionFile = $extensionDir . DIRECTORY_SEPARATOR . 'swow.' . (PHP_OS_FAMILY === 'Windows' ? 'dll' : 'so');
             }
+        }
+        if (is_string($extensionFile) && $extensionFile !== '' && is_file($extensionFile)) {
+            $candidates[] = ['-d', 'extension=' . $extensionFile];
+        }
 
-            if (($this->workers[$id] ?? null) !== $process) {
-                return;
+        foreach ($candidates as $args) {
+            [$output] = $this->runPhp($args, ['--ri', 'swow']);
+            if (str_contains($output, 'swow') && !str_contains($output, 'not present')) {
+                return $cache[$key] = $args;
             }
+        }
 
-            if ($this->onWorkerExit !== null) {
-                ($this->onWorkerExit)($id, $process->getPid(), $status);
-            }
+        if ($requireSwow) {
+            throw new ProcessManagerException('Unable to load swow in the worker PHP process');
+        }
 
-            if (!$this->running) {
-                unset($this->workers[$id]);
-                return;
-            }
+        return $cache[$key] = [];
+    }
 
-            /* 异常退出时自动重启 */
-            if ($this->restartCounts[$id] < $this->maxRestartCount) {
-                $this->restartCounts[$id]++;
-                $this->forkWorker($id);
-                $newProcess = $this->workers[$id] ?? null;
-                if ($newProcess !== null) {
-                    $this->watchWorker($id, $newProcess);
+    /** @param list<string> $args @param list<string> $scriptArgs @return array{0: string, 1: int} */
+    private function runPhp(array $args, array $scriptArgs): array
+    {
+        $command = array_merge([PHP_BINARY], $args, $scriptArgs);
+        $pipes = [];
+        $process = proc_open($command, [
+            1 => ['pipe', 'w'],
+            2 => ['pipe', 'w'],
+        ], $pipes);
+        if (!is_resource($process)) {
+            return ['', -1];
+        }
+
+        $stdout = stream_get_contents($pipes[1]);
+        $stderr = stream_get_contents($pipes[2]);
+        fclose($pipes[1]);
+        fclose($pipes[2]);
+        $exitCode = proc_close($process);
+
+        return [(string) $stdout . (string) $stderr, $exitCode];
+    }
+
+    private function findAutoloadPath(): ?string
+    {
+        if (class_exists(\Composer\Autoload\ClassLoader::class)) {
+            $file = (new \ReflectionClass(\Composer\Autoload\ClassLoader::class))->getFileName();
+            if (is_string($file)) {
+                $autoload = dirname($file, 2) . '/autoload.php';
+                if (is_file($autoload)) {
+                    return $autoload;
                 }
-                return;
             }
+        }
 
-            fwrite(STDERR, sprintf(
-                "[Manager] Worker#%d exceeded max restart count (%d), giving up\n",
-                $id,
-                $this->maxRestartCount
-            ));
-            unset($this->workers[$id]);
-        });
+        foreach (get_included_files() as $file) {
+            if (str_ends_with($file, '/vendor/autoload.php')) {
+                return $file;
+            }
+        }
+
+        return null;
     }
 }

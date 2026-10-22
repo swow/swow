@@ -15,203 +15,130 @@ declare(strict_types=1);
 namespace Swow\Tests\Process;
 
 use PHPUnit\Framework\Attributes\CoversClass;
-use PHPUnit\Framework\Attributes\RequiresOperatingSystem;
 use PHPUnit\Framework\TestCase;
 use Swow\Coroutine;
-use Swow\Process\ChildProcess;
-use Swow\Process\ProcessExitStatus;
 use Swow\Process\ProcessManager;
+use Swow\Process\ProcessManagerInterface;
 use Swow\Process\WorkerContext;
-use Swow\Signal;
-use Throwable;
 
 /**
  * @internal
  */
 #[CoversClass(ProcessManager::class)]
-#[RequiresOperatingSystem('Linux|Darwin')]
 final class ProcessManagerTest extends TestCase
 {
-    public function testWorkerCountDefault(): void
+    public function testInterface(): void
     {
-        $manager = new ProcessManager(4);
-        $this->assertSame(4, $manager->getWorkerCount());
+        $this->assertInstanceOf(ProcessManagerInterface::class, new ProcessManager(1));
     }
 
-    public function testWorkerCountAutoDetect(): void
+    public function testStartInlineWorker(): void
     {
-        $manager = new ProcessManager(0);
-        $this->assertGreaterThan(0, $manager->getWorkerCount());
-        $this->assertSame(\Swow\nproc(), $manager->getWorkerCount());
-    }
+        $file = $this->makeTempFile();
+        $code = 'file_put_contents(' . var_export($file, true) . ', getenv("SWOW_PROCESS_MANAGER_WORKER_ID"));';
 
-    public function testSetMaxRestartCountFluent(): void
-    {
-        $manager = new ProcessManager(2);
-        $result = $manager->setMaxRestartCount(50);
-        $this->assertSame($manager, $result);
-    }
-
-    public function testSetMaxWaitTimeFluent(): void
-    {
-        $manager = new ProcessManager(2);
-        $result = $manager->setMaxWaitTime(10);
-        $this->assertSame($manager, $result);
-    }
-
-    public function testOnWorkerExitFluent(): void
-    {
         $manager = new ProcessManager(1);
-        $result = $manager->onWorkerExit(static function (): void {
-        });
-
-        $this->assertSame($manager, $result);
-    }
-
-    public function testStartAndStop(): void
-    {
-        $manager = new ProcessManager(2);
-        $manager->setMaxWaitTime(3);
-
-        /* 在协程中启动 Manager，另一个协程延迟 stop */
-        $started = false;
-        $workerIds = [];
-
-        Coroutine::run(static function () use ($manager, &$started, &$workerIds): void {
-            $manager->start(static function (WorkerContext $ctx) use (&$started, &$workerIds): void {
-                $started = true;
-                $workerIds[] = $ctx->getId();
-                // Worker 运行一小段时间后自行退出
-                usleep(200000);
-            });
-        });
-
-        // 等待 Manager 启动并 Workers 退出
-        usleep(500000);
-        $manager->stop();
-
-        // Manager 的 start 内部处理了 fork，这里验证 Manager 的 API 正确
-        $this->assertSame(2, $manager->getWorkerCount());
-    }
-
-    public function testChildProcessIntegration(): void
-    {
-        // 直接测试 ChildProcess 与 ProcessManager 的配合
-        $process = ChildProcess::fork(static function (): int {
-            // 模拟一个 Worker 的简单逻辑
-            usleep(100000);
-            return 7;
-        });
-
-        $this->assertGreaterThan(0, $process->getPid());
-        $this->assertFalse($process->hasExited());
-
-        $status = $process->wait();
-        $this->assertTrue($process->hasExited());
-        $this->assertSame(7, $status->getExitCode());
-    }
-
-    public function testOnWorkerExitReceivesWorkerStatus(): void
-    {
-        $seen = [];
-        $manager = new ProcessManager(1);
-        $manager->setMaxRestartCount(0);
-        $manager->onWorkerExit(static function (int $id, int $pid, ProcessExitStatus $status) use (&$seen): void {
-            $seen[] = [$id, $pid, $status->getExitCode()];
-        });
-
-        Coroutine::run(static function () use ($manager): void {
-            $manager->start(static function (): void {
-                usleep(100000);
-            });
-        });
-
-        usleep(300000);
-        $manager->stop();
-
-        $this->assertCount(1, $seen);
-        $this->assertSame(0, $seen[0][0]);
-        $this->assertGreaterThan(0, $seen[0][1]);
-        $this->assertSame(0, $seen[0][2]);
-    }
-
-    public function testStopDoesNotWaitForExternalCoroutines(): void
-    {
-        $businessCoroutineStopped = false;
-        $businessCoroutine = Coroutine::run(static function () use (&$businessCoroutineStopped): void {
-            try {
-                while (true) {
-                    usleep(50000);
-                }
-            } finally {
-                $businessCoroutineStopped = true;
-            }
+        $manager->setMaxRestartCount(0)->setMaxWaitTime(1);
+        $this->runManager(static function () use ($manager, $code): void {
+            $manager->startInline($code);
         });
 
         try {
-            $manager = new ProcessManager(1);
-            Coroutine::run(static function () use ($manager): void {
-                $manager->start(static function (): void {
-                    while (true) {
-                        usleep(50000);
-                    }
-                });
-            });
-
-            usleep(200000);
+            $this->assertSame('0', $this->waitForFile($file));
+        } finally {
             $manager->stop();
-
-            $this->assertFalse($businessCoroutineStopped);
-        } finally {
-            if ($businessCoroutine->isAvailable()) {
-                $businessCoroutine->kill();
-            }
+            @unlink($file);
         }
     }
 
-    public function testSignalStopReapsWorkersAndReturns(): void
+    public function testStartScriptWorker(): void
     {
-        $readyFile = tempnam(sys_get_temp_dir(), 'swow-process-manager-ready-');
-        $this->assertIsString($readyFile);
-        $process = ChildProcess::fork(static function () use ($readyFile): int {
-            $manager = new ProcessManager(1);
-            $manager->setMaxWaitTime(3);
-            $manager->start(static function () use ($readyFile): void {
-                file_put_contents($readyFile, 'ready');
-                while (true) {
-                    usleep(50000);
-                }
-            });
+        $file = $this->makeTempFile();
+        $script = $this->makeTempFile();
+        file_put_contents($script, '<?php file_put_contents(' . var_export($file, true) . ', getenv("SWOW_PROCESS_MANAGER_WORKER_ID"));');
 
-            return 0;
+        $manager = new ProcessManager(1);
+        $manager->setMaxRestartCount(0)->setMaxWaitTime(1);
+        $this->runManager(static function () use ($manager, $script): void {
+            $manager->startScript($script);
         });
 
         try {
-            $deadline = microtime(true) + 5.0;
-            do {
-                if (file_get_contents($readyFile) === 'ready') {
-                    break;
-                }
-                usleep(10000);
-            } while (microtime(true) < $deadline);
-
-            $this->assertSame('ready', file_get_contents($readyFile));
-
-            $process->kill(Signal::TERM);
-            $status = $process->wait(5000);
-
-            $this->assertTrue($status->isExited());
-            $this->assertSame(0, $status->getExitCode());
+            $this->assertSame('0', $this->waitForFile($file));
         } finally {
-            if (!$process->hasExited()) {
-                $process->kill(Signal::KILL);
-                try {
-                    $process->wait(1000);
-                } catch (Throwable) {
-                    /* ignore */
-                }
-            }
-            unlink($readyFile);
+            $manager->stop();
+            @unlink($file);
+            @unlink($script);
         }
+    }
+
+    public function testStartClosureWorker(): void
+    {
+        if (!filter_var(ini_get('swow.closure_serializer'), FILTER_VALIDATE_BOOLEAN)) {
+            $this->markTestSkipped('swow.closure_serializer is not enabled');
+        }
+
+        $file = $this->makeTempFile();
+        $closure = static function (WorkerContext $context) use ($file): void {
+            file_put_contents($file, (string) $context->getId());
+        };
+
+        $manager = new ProcessManager(1);
+        $manager->setMaxRestartCount(0)->setMaxWaitTime(1);
+        $this->runManager(static function () use ($manager, $closure): void {
+            $manager->start($closure);
+        });
+
+        try {
+            $this->assertSame('0', $this->waitForFile($file));
+        } finally {
+            $manager->stop();
+            @unlink($file);
+        }
+    }
+
+    public function testStartInlineEmptyCode(): void
+    {
+        $manager = new ProcessManager(1);
+        $this->expectException(\Swow\Process\ProcessManagerException::class);
+        $manager->startInline('');
+    }
+
+    public function testStartScriptMissingFile(): void
+    {
+        $manager = new ProcessManager(1);
+        $this->expectException(\Swow\Process\ProcessManagerException::class);
+        $manager->startScript(__DIR__ . '/missing-worker-script.php');
+    }
+
+    private function runManager(callable $start): void
+    {
+        $coroutine = Coroutine::run($start);
+        $this->assertTrue($coroutine->isAvailable());
+    }
+
+    private function makeTempFile(): string
+    {
+        $file = tempnam(sys_get_temp_dir(), 'swow-pm-');
+        $this->assertIsString($file);
+        @unlink($file);
+
+        return $file;
+    }
+
+    private function waitForFile(string $file): string
+    {
+        $deadline = microtime(true) + 5.0;
+        do {
+            clearstatcache(true, $file);
+            if (is_file($file)) {
+                $content = file_get_contents($file);
+                $this->assertIsString($content);
+                return $content;
+            }
+            usleep(10000);
+        } while (microtime(true) < $deadline);
+
+        $this->fail("Worker did not write {$file}");
     }
 }
