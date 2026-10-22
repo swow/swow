@@ -14,6 +14,12 @@ declare(strict_types=1);
 
 namespace Swow\Examples\Fastext;
 
+use RuntimeException;
+
+use function count;
+
+use const STDERR;
+
 final class Verify
 {
     public static function compare(string $source, string $dest): bool
@@ -21,7 +27,7 @@ final class Verify
         $source = realpath($source);
         $dest = realpath($dest);
         if ($source === false || $dest === false) {
-            throw new \RuntimeException('Source or destination directory does not exist');
+            throw new RuntimeException('Source or destination directory does not exist');
         }
 
         $left = Scanner::scan($source);

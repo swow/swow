@@ -14,6 +14,11 @@ declare(strict_types=1);
 
 namespace Swow\Examples\Fastext;
 
+use RuntimeException;
+
+use const DIRECTORY_SEPARATOR;
+use const SORT_STRING;
+
 final class Scanner
 {
     /** @var array<string, string> */
@@ -37,7 +42,7 @@ final class Scanner
     {
         $names = scandir($dir);
         if ($names === false) {
-            throw new \RuntimeException("Unable to scan directory: {$dir}");
+            throw new RuntimeException("Unable to scan directory: {$dir}");
         }
         sort($names, SORT_STRING);
 
@@ -50,7 +55,7 @@ final class Scanner
             $name = str_replace(DIRECTORY_SEPARATOR, '/', $relative === '' ? $name : $relative . '/' . $name);
             $stat = lstat($path);
             if ($stat === false) {
-                throw new \RuntimeException("Unable to stat: {$path}");
+                throw new RuntimeException("Unable to stat: {$path}");
             }
 
             $metadata = $this->metadata($name, $stat);
@@ -59,7 +64,7 @@ final class Scanner
             if (is_link($path)) {
                 $target = readlink($path);
                 if ($target === false) {
-                    throw new \RuntimeException("Unable to read link: {$path}");
+                    throw new RuntimeException("Unable to read link: {$path}");
                 }
                 $metadata->linkTarget = $target;
                 continue;
@@ -71,7 +76,7 @@ final class Scanner
             }
 
             if (($stat['mode'] & Metadata::S_IFMT) !== Metadata::S_IFREG) {
-                throw new \RuntimeException("Unsupported file type: {$path}");
+                throw new RuntimeException("Unsupported file type: {$path}");
             }
 
             if ($stat['nlink'] > 1) {

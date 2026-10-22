@@ -14,7 +14,16 @@ declare(strict_types=1);
 
 namespace Swow\Examples\Fastext;
 
+use FilesystemIterator;
+use RecursiveDirectoryIterator;
+use RecursiveIteratorIterator;
+use RuntimeException;
 use Swow\Examples\Fastext\Compression\CompressorFactory;
+
+use function strlen;
+
+use const JSON_THROW_ON_ERROR;
+use const JSON_UNESCAPED_SLASHES;
 
 final class Fastext
 {
@@ -29,14 +38,14 @@ final class Fastext
     ): void {
         $source = realpath($source);
         if ($source === false || !is_dir($source)) {
-            throw new \RuntimeException('Source directory does not exist');
+            throw new RuntimeException('Source directory does not exist');
         }
 
         $compressor = CompressorFactory::create($compression);
         $entries = Scanner::scan($source);
         $dataTasks = array_values(array_filter(
             $entries,
-            static fn (Metadata $metadata): bool => $metadata->dataTask,
+            static fn(Metadata $metadata): bool => $metadata->dataTask,
         ));
 
         $runDir = self::createRunDir();
@@ -64,7 +73,7 @@ final class Fastext
 
             $out = fopen($blob, 'w+b');
             if ($out === false) {
-                throw new \RuntimeException("Unable to open blob: {$blob}");
+                throw new RuntimeException("Unable to open blob: {$blob}");
             }
 
             try {
@@ -78,7 +87,7 @@ final class Fastext
                     );
                     $part = fopen($runDir . '/archive-' . $id . '.part', 'rb');
                     if ($part === false) {
-                        throw new \RuntimeException("Unable to open part for worker {$id}");
+                        throw new RuntimeException("Unable to open part for worker {$id}");
                     }
                     try {
                         foreach ($result['files'] as $file) {
@@ -120,7 +129,7 @@ final class Fastext
         $entries = self::readMetadata($blob);
         TimestampRestorer::initialize();
         if (!is_dir($dest) && !mkdir($dest, 0755, true) && !is_dir($dest)) {
-            throw new \RuntimeException("Unable to create destination: {$dest}");
+            throw new RuntimeException("Unable to create destination: {$dest}");
         }
 
         $dirs = [];
@@ -144,25 +153,25 @@ final class Fastext
             }
         }
 
-        usort($dirs, static fn (Metadata $a, Metadata $b): int => substr_count($a->name, '/') <=> substr_count($b->name, '/'));
+        usort($dirs, static fn(Metadata $a, Metadata $b): int => substr_count($a->name, '/') <=> substr_count($b->name, '/'));
         foreach ($dirs as $metadata) {
             $path = $dest . '/' . $metadata->name;
             if (!is_dir($path) && !mkdir($path, 0755, true) && !is_dir($path)) {
-                throw new \RuntimeException("Unable to create directory: {$path}");
+                throw new RuntimeException("Unable to create directory: {$path}");
             }
         }
 
         foreach ($symlinks as $metadata) {
             $path = $dest . '/' . $metadata->name;
             if (!symlink($metadata->linkTarget, $path)) {
-                throw new \RuntimeException("Unable to create symlink: {$path}");
+                throw new RuntimeException("Unable to create symlink: {$path}");
             }
         }
 
         foreach ($emptyFiles as $metadata) {
             $path = $dest . '/' . $metadata->name;
             if (file_put_contents($path, '') === false) {
-                throw new \RuntimeException("Unable to create file: {$path}");
+                throw new RuntimeException("Unable to create file: {$path}");
             }
         }
 
@@ -194,7 +203,7 @@ final class Fastext
                 $target = $dest . '/' . $metadata->linkTarget;
                 $path = $dest . '/' . $metadata->name;
                 if (!link($target, $path)) {
-                    throw new \RuntimeException("Unable to create hardlink: {$path}");
+                    throw new RuntimeException("Unable to create hardlink: {$path}");
                 }
             }
 
@@ -221,20 +230,20 @@ final class Fastext
     {
         $in = fopen($blob, 'rb');
         if ($in === false) {
-            throw new \RuntimeException("Unable to open blob: {$blob}");
+            throw new RuntimeException("Unable to open blob: {$blob}");
         }
         try {
             $header = fread($in, 8);
             if (strlen($header) !== 8) {
-                throw new \RuntimeException('Invalid blob header');
+                throw new RuntimeException('Invalid blob header');
             }
             $offset = unpack('Joffset', $header)['offset'];
             if ($offset < 8 || fseek($in, $offset) !== 0) {
-                throw new \RuntimeException('Invalid metadata offset');
+                throw new RuntimeException('Invalid metadata offset');
             }
             $data = stream_get_contents($in);
             if ($data === false) {
-                throw new \RuntimeException('Unable to read metadata');
+                throw new RuntimeException('Unable to read metadata');
             }
         } finally {
             fclose($in);
@@ -263,9 +272,9 @@ final class Fastext
             if ($metadata->isDir()) {
                 $depth = substr_count($metadata->name, '/');
                 $dirs[$depth][] = $metadata;
-            } elseif ($metadata->isRegular()
-                && ($metadata->attr & Metadata::ATTR_HARDLINK) !== 0
-                && $metadata->dataSize > 0) {
+            } elseif ($metadata->isRegular() &&
+                ($metadata->attr & Metadata::ATTR_HARDLINK) !== 0 &&
+                $metadata->dataSize > 0) {
                 $hardlinks[] = $metadata;
             } else {
                 $rest[] = $metadata;
@@ -289,7 +298,7 @@ final class Fastext
      */
     private static function partition(array $tasks, int $workers): array
     {
-        usort($tasks, static fn (Metadata $a, Metadata $b): int => $b->size <=> $a->size);
+        usort($tasks, static fn(Metadata $a, Metadata $b): int => $b->size <=> $a->size);
         $buckets = array_fill(0, $workers, []);
         $sizes = array_fill(0, $workers, 0);
         foreach ($tasks as $metadata) {
@@ -310,7 +319,7 @@ final class Fastext
     {
         $json = json_encode($data, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES);
         if (file_put_contents($path, $json) === false) {
-            throw new \RuntimeException("Unable to write: {$path}");
+            throw new RuntimeException("Unable to write: {$path}");
         }
     }
 
@@ -320,10 +329,10 @@ final class Fastext
         while ($remaining > 0) {
             $chunk = fread($in, min(self::CHUNK_SIZE, $remaining));
             if ($chunk === false || $chunk === '') {
-                throw new \RuntimeException('Unexpected end of data');
+                throw new RuntimeException('Unexpected end of data');
             }
             if (fwrite($out, $chunk) !== strlen($chunk)) {
-                throw new \RuntimeException('Unable to write data');
+                throw new RuntimeException('Unable to write data');
             }
             $remaining -= strlen($chunk);
         }
@@ -333,7 +342,7 @@ final class Fastext
     {
         $dir = sys_get_temp_dir() . '/fastext-' . getmypid() . '-' . bin2hex(random_bytes(6));
         if (!mkdir($dir, 0700, true) && !is_dir($dir)) {
-            throw new \RuntimeException("Unable to create run directory: {$dir}");
+            throw new RuntimeException("Unable to create run directory: {$dir}");
         }
 
         return $dir;
@@ -344,9 +353,9 @@ final class Fastext
         if (!is_dir($dir)) {
             return;
         }
-        $iterator = new \RecursiveIteratorIterator(
-            new \RecursiveDirectoryIterator($dir, \FilesystemIterator::SKIP_DOTS),
-            \RecursiveIteratorIterator::CHILD_FIRST,
+        $iterator = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator($dir, FilesystemIterator::SKIP_DOTS),
+            RecursiveIteratorIterator::CHILD_FIRST,
         );
         foreach ($iterator as $item) {
             if ($item->isDir() && !$item->isLink()) {

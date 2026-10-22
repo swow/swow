@@ -14,6 +14,11 @@ declare(strict_types=1);
 
 namespace Swow\Examples\Fastext;
 
+use RuntimeException;
+
+use function sprintf;
+use function strlen;
+
 final class Metadata
 {
     public const ATTR_COMPRESS_ZSTD = 1 << 0;
@@ -94,14 +99,14 @@ final class Metadata
                 . $this->linkTarget;
         }
 
-        throw new \RuntimeException(sprintf('Unsupported file type: %o', $this->mode));
+        throw new RuntimeException(sprintf('Unsupported file type: %o', $this->mode));
     }
 
     public static function decode(string $data, int $offset = 0): self
     {
         $length = strlen($data);
         if ($offset + self::HEADER_SIZE > $length) {
-            throw new \RuntimeException('Truncated metadata header');
+            throw new RuntimeException('Truncated metadata header');
         }
 
         $header = unpack(
@@ -109,7 +114,7 @@ final class Metadata
             substr($data, $offset, self::HEADER_SIZE),
         );
         if ($header === false) {
-            throw new \RuntimeException('Invalid metadata header');
+            throw new RuntimeException('Invalid metadata header');
         }
 
         $metadata = new self();
@@ -127,7 +132,7 @@ final class Metadata
             self::requireBytes($data, $offset, 20);
             $body = unpack('Nlink_len/Jdata_offset/Jdata_size', substr($data, $offset, 20));
             if ($body === false) {
-                throw new \RuntimeException('Invalid hardlink metadata');
+                throw new RuntimeException('Invalid hardlink metadata');
             }
             $offset += 20;
             $linkLength = $body['link_len'];
@@ -142,7 +147,7 @@ final class Metadata
             self::requireBytes($data, $offset, 16);
             $body = unpack('Jdata_offset/Jdata_size', substr($data, $offset, 16));
             if ($body === false) {
-                throw new \RuntimeException('Invalid regular metadata');
+                throw new RuntimeException('Invalid regular metadata');
             }
             $offset += 16;
             $metadata->dataOffset = $body['data_offset'];
@@ -159,7 +164,7 @@ final class Metadata
             self::requireBytes($data, $offset, 4);
             $body = unpack('Nlink_len', substr($data, $offset, 4));
             if ($body === false) {
-                throw new \RuntimeException('Invalid symlink metadata');
+                throw new RuntimeException('Invalid symlink metadata');
             }
             $offset += 4;
             $linkLength = $body['link_len'];
@@ -169,7 +174,7 @@ final class Metadata
             $metadata->linkTarget = substr($data, $offset, $linkLength);
             $offset += $linkLength;
         } else {
-            throw new \RuntimeException(sprintf('Unsupported file type: %o', $metadata->mode));
+            throw new RuntimeException(sprintf('Unsupported file type: %o', $metadata->mode));
         }
 
         return $metadata;
@@ -230,7 +235,7 @@ final class Metadata
     private static function requireBytes(string $data, int $offset, int $length): void
     {
         if ($length < 0 || $offset + $length > strlen($data)) {
-            throw new \RuntimeException('Truncated metadata record');
+            throw new RuntimeException('Truncated metadata record');
         }
     }
 
@@ -238,7 +243,7 @@ final class Metadata
     {
         $length = strlen($data);
         if ($offset + self::HEADER_SIZE > $length) {
-            throw new \RuntimeException('Truncated metadata record');
+            throw new RuntimeException('Truncated metadata record');
         }
         $header = unpack(
             'nattr/nmode/Jsize/Nuid/Ngid/Jmtime_sec/Jmtime_nsec/Nname_len',
@@ -267,6 +272,6 @@ final class Metadata
             return $offset + 4 + $nameLength + $body['link_len'];
         }
 
-        throw new \RuntimeException(sprintf('Unsupported file type: %o', $mode));
+        throw new RuntimeException(sprintf('Unsupported file type: %o', $mode));
     }
 }

@@ -82,7 +82,7 @@ try {
         default:
             usage();
     }
-} catch (\Throwable $e) {
+} catch (Throwable $e) {
     fwrite(STDERR, $e::class . ': ' . $e->getMessage() . "\n");
     exit(1);
 }

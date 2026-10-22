@@ -15,7 +15,7 @@ declare(strict_types=1);
 require __DIR__ . '/../autoload.php';
 
 spl_autoload_register(static function (string $class): void {
-    $prefix = 'Swow\\Examples\\Fastext\\';
+    $prefix = 'Swow\Examples\Fastext\\';
     if (!str_starts_with($class, $prefix)) {
         return;
     }

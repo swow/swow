@@ -14,23 +14,30 @@ declare(strict_types=1);
 
 namespace Swow\Examples\Fastext;
 
+use RuntimeException;
 use Swow\Coroutine;
 use Swow\Process\ForkProcessManager;
 use Swow\Process\ProcessManager;
 use Swow\Process\WorkerContext;
+use Throwable;
+
+use function dirname;
+
+use const JSON_THROW_ON_ERROR;
+use const PHP_OS_FAMILY;
 
 final class Runner
 {
     public static function run(string $mode, int $workers, string $runDir, string $action): void
     {
         if ($workers < 1) {
-            throw new \RuntimeException('The worker count must be positive');
+            throw new RuntimeException('The worker count must be positive');
         }
 
         $error = null;
         if ($mode === 'fork') {
             if (PHP_OS_FAMILY === 'Windows') {
-                throw new \RuntimeException('fork mode is not supported on Windows');
+                throw new RuntimeException('fork mode is not supported on Windows');
             }
             $manager = new ForkProcessManager($workers);
             $manager->setMaxRestartCount(0)->setMaxWaitTime(10);
@@ -45,10 +52,10 @@ final class Runner
             $manager = new ProcessManager($workers);
             $manager->setMaxRestartCount(0)->setMaxWaitTime(10);
             $code = 'require ' . var_export(dirname(__DIR__) . '/autoload.php', true) . ';'
-                . '$ok = \\Swow\\Examples\\Fastext\\Worker::runFromEnvironment('
+                . '$ok = \Swow\Examples\Fastext\Worker::runFromEnvironment('
                 . var_export($runDir, true) . ', ' . var_export($action, true) . ');'
                 . 'if (!$ok) { exit(1); }'
-                . '\\Swow\\Examples\\Fastext\\Worker::waitForStop();';
+                . '\Swow\Examples\Fastext\Worker::waitForStop();';
             $start = static function () use ($manager, $code): void {
                 $manager->startInline($code);
             };
@@ -59,13 +66,13 @@ final class Runner
                 $manager->startScript(dirname(__DIR__) . '/worker.php', [$action, $runDir]);
             };
         } else {
-            throw new \RuntimeException("Unknown manager mode: {$mode}");
+            throw new RuntimeException("Unknown manager mode: {$mode}");
         }
 
         $coroutine = Coroutine::run(static function () use ($start, &$error): void {
             try {
                 $start();
-            } catch (\Throwable $e) {
+            } catch (Throwable $e) {
                 $error = $e;
             }
         });
@@ -90,7 +97,7 @@ final class Runner
         } finally {
             try {
                 $manager->stop();
-            } catch (\Throwable) {
+            } catch (Throwable) {
             }
         }
 
@@ -101,11 +108,11 @@ final class Runner
         for ($id = 0; $id < $workers; $id++) {
             $path = $runDir . '/' . $action . '-' . $id . '.result.json';
             if (!is_file($path)) {
-                throw new \RuntimeException("Worker {$id} did not finish");
+                throw new RuntimeException("Worker {$id} did not finish");
             }
             $result = json_decode((string) file_get_contents($path), true, 512, JSON_THROW_ON_ERROR);
             if (!($result['ok'] ?? false)) {
-                throw new \RuntimeException("Worker {$id} failed: " . ($result['error'] ?? 'unknown error'));
+                throw new RuntimeException("Worker {$id} failed: " . ($result['error'] ?? 'unknown error'));
             }
         }
 

@@ -14,8 +14,14 @@ declare(strict_types=1);
 
 namespace Swow\Examples\Fastext\Compression;
 
+use RuntimeException;
 use Swow\Examples\Fastext\Compressor;
 use Swow\Examples\Fastext\Metadata;
+
+use function in_array;
+
+use const STREAM_FILTER_READ;
+use const STREAM_FILTER_WRITE;
 
 final class ZstdCompressor implements Compressor
 {
@@ -26,8 +32,8 @@ final class ZstdCompressor implements Compressor
     {
         $filters = stream_get_filters();
 
-        return in_array(self::COMPRESS_FILTER, $filters, true)
-            && in_array(self::DECOMPRESS_FILTER, $filters, true);
+        return in_array(self::COMPRESS_FILTER, $filters, true) &&
+            in_array(self::DECOMPRESS_FILTER, $filters, true);
     }
 
     public function name(): string
@@ -45,17 +51,17 @@ final class ZstdCompressor implements Compressor
         $in = fopen($source, 'rb');
         $out = fopen($target, 'wb');
         if ($in === false || $out === false) {
-            throw new \RuntimeException('Unable to open zstd streams');
+            throw new RuntimeException('Unable to open zstd streams');
         }
 
         $filter = stream_filter_append($out, self::COMPRESS_FILTER, STREAM_FILTER_WRITE);
         if ($filter === false) {
-            throw new \RuntimeException('Unable to create zstd compress filter');
+            throw new RuntimeException('Unable to create zstd compress filter');
         }
 
         try {
             if (stream_copy_to_stream($in, $out) === false) {
-                throw new \RuntimeException("Unable to compress: {$source}");
+                throw new RuntimeException("Unable to compress: {$source}");
             }
             stream_filter_remove($filter);
         } finally {
@@ -69,17 +75,17 @@ final class ZstdCompressor implements Compressor
         $in = fopen($source, 'rb');
         $out = fopen($target, 'wb');
         if ($in === false || $out === false) {
-            throw new \RuntimeException('Unable to open zstd streams');
+            throw new RuntimeException('Unable to open zstd streams');
         }
 
         $filter = stream_filter_append($in, self::DECOMPRESS_FILTER, STREAM_FILTER_READ);
         if ($filter === false) {
-            throw new \RuntimeException('Unable to create zstd decompress filter');
+            throw new RuntimeException('Unable to create zstd decompress filter');
         }
 
         try {
             if (stream_copy_to_stream($in, $out) === false) {
-                throw new \RuntimeException("Unable to decompress: {$source}");
+                throw new RuntimeException("Unable to decompress: {$source}");
             }
             stream_filter_remove($filter);
         } finally {

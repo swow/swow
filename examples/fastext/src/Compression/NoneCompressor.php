@@ -14,6 +14,7 @@ declare(strict_types=1);
 
 namespace Swow\Examples\Fastext\Compression;
 
+use RuntimeException;
 use Swow\Examples\Fastext\Compressor;
 
 final class NoneCompressor implements Compressor
@@ -31,14 +32,14 @@ final class NoneCompressor implements Compressor
     public function compressFile(string $source, string $target): void
     {
         if (!copy($source, $target)) {
-            throw new \RuntimeException("Unable to copy: {$source}");
+            throw new RuntimeException("Unable to copy: {$source}");
         }
     }
 
     public function decompressFile(string $source, string $target): void
     {
         if (!copy($source, $target)) {
-            throw new \RuntimeException("Unable to copy: {$source}");
+            throw new RuntimeException("Unable to copy: {$source}");
         }
     }
 }

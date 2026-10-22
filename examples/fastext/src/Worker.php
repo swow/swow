@@ -14,7 +14,14 @@ declare(strict_types=1);
 
 namespace Swow\Examples\Fastext;
 
+use RuntimeException;
 use Swow\Examples\Fastext\Compression\CompressorFactory;
+use Throwable;
+
+use function strlen;
+
+use const JSON_THROW_ON_ERROR;
+use const JSON_UNESCAPED_SLASHES;
 
 final class Worker
 {
@@ -25,7 +32,7 @@ final class Worker
     {
         $id = getenv('SWOW_PROCESS_MANAGER_WORKER_ID');
         if ($id === false || $id === '') {
-            throw new \RuntimeException('SWOW_PROCESS_MANAGER_WORKER_ID is missing');
+            throw new RuntimeException('SWOW_PROCESS_MANAGER_WORKER_ID is missing');
         }
 
         return self::runFromRunDir($runDir, $action, (int) $id);
@@ -40,12 +47,12 @@ final class Worker
             } elseif ($action === 'extract') {
                 $result = self::extract($runDir, $id);
             } else {
-                throw new \RuntimeException("Unknown action: {$action}");
+                throw new RuntimeException("Unknown action: {$action}");
             }
             self::writeResult($resultPath, ['ok' => true] + $result);
 
             return true;
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             self::writeResult($resultPath, [
                 'ok' => false,
                 'error' => $e::class . ': ' . $e->getMessage(),
@@ -62,7 +69,7 @@ final class Worker
         $source = $manifest['source'];
         $part = fopen($manifest['part'], 'wb');
         if ($part === false) {
-            throw new \RuntimeException("Unable to open part: {$manifest['part']}");
+            throw new RuntimeException("Unable to open part: {$manifest['part']}");
         }
 
         $files = [];
@@ -78,8 +85,8 @@ final class Worker
                 if ($size > 0) {
                     $compressor->compressFile($path, $tmp);
                     $compressedSize = filesize($tmp);
-                    if ($compressedSize !== false && $compressedSize > 0
-                        && $compressedSize < (int) ($size * self::COMPRESS_RATIO_THRESHOLD)) {
+                    if ($compressedSize !== false && $compressedSize > 0 &&
+                        $compressedSize < (int) ($size * self::COMPRESS_RATIO_THRESHOLD)) {
                         self::appendFile($part, $tmp);
                         $dataSize = $compressedSize;
                         $attr = $compressor->attr();
@@ -109,7 +116,7 @@ final class Worker
         $manifest = self::readManifest($runDir, 'extract', $id);
         $blob = fopen($manifest['blob'], 'rb');
         if ($blob === false) {
-            throw new \RuntimeException("Unable to open blob: {$manifest['blob']}");
+            throw new RuntimeException("Unable to open blob: {$manifest['blob']}");
         }
 
         $compressor = CompressorFactory::create('zlib');
@@ -122,11 +129,11 @@ final class Worker
 
                 if ($dataSize === 0) {
                     if (file_put_contents($dest, '') === false) {
-                        throw new \RuntimeException("Unable to create: {$dest}");
+                        throw new RuntimeException("Unable to create: {$dest}");
                     }
                 } else {
                     if (fseek($blob, $file['data_offset']) !== 0) {
-                        throw new \RuntimeException("Unable to seek: {$file['name']}");
+                        throw new RuntimeException("Unable to seek: {$file['name']}");
                     }
                     self::copyRange($blob, $tmp, $dataSize);
                     if (($file['attr'] & Metadata::ATTR_COMPRESS_ZSTD) !== 0) {
@@ -135,7 +142,7 @@ final class Worker
                         $compressor->decompressFile($tmp, $dest);
                     } else {
                         if (!copy($tmp, $dest)) {
-                            throw new \RuntimeException("Unable to copy: {$dest}");
+                            throw new RuntimeException("Unable to copy: {$dest}");
                         }
                     }
                     @unlink($tmp);
@@ -156,7 +163,7 @@ final class Worker
         $path = $runDir . '/' . $action . '-' . $id . '.json';
         $json = file_get_contents($path);
         if ($json === false) {
-            throw new \RuntimeException("Unable to read manifest: {$path}");
+            throw new RuntimeException("Unable to read manifest: {$path}");
         }
 
         return json_decode($json, true, 512, JSON_THROW_ON_ERROR);
@@ -167,7 +174,7 @@ final class Worker
         $json = json_encode($result, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES);
         $tmp = $path . '.tmp';
         if (file_put_contents($tmp, $json) === false || !rename($tmp, $path)) {
-            throw new \RuntimeException("Unable to write result: {$path}");
+            throw new RuntimeException("Unable to write result: {$path}");
         }
     }
 
@@ -175,11 +182,11 @@ final class Worker
     {
         $in = fopen($path, 'rb');
         if ($in === false) {
-            throw new \RuntimeException("Unable to open: {$path}");
+            throw new RuntimeException("Unable to open: {$path}");
         }
         try {
             if (stream_copy_to_stream($in, $out) === false) {
-                throw new \RuntimeException("Unable to copy: {$path}");
+                throw new RuntimeException("Unable to copy: {$path}");
             }
         } finally {
             fclose($in);
@@ -190,17 +197,17 @@ final class Worker
     {
         $out = fopen($path, 'wb');
         if ($out === false) {
-            throw new \RuntimeException("Unable to open: {$path}");
+            throw new RuntimeException("Unable to open: {$path}");
         }
         try {
             $remaining = $length;
             while ($remaining > 0) {
                 $chunk = fread($in, min(self::CHUNK_SIZE, $remaining));
                 if ($chunk === false || $chunk === '') {
-                    throw new \RuntimeException('Unexpected end of blob data');
+                    throw new RuntimeException('Unexpected end of blob data');
                 }
                 if (fwrite($out, $chunk) !== strlen($chunk)) {
-                    throw new \RuntimeException("Unable to write: {$path}");
+                    throw new RuntimeException("Unable to write: {$path}");
                 }
                 $remaining -= strlen($chunk);
             }

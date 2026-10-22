@@ -21,8 +21,8 @@ if ($action === '' || $runDir === '') {
     exit(1);
 }
 
-if (!\Swow\Examples\Fastext\Worker::runFromEnvironment($runDir, $action)) {
+if (!Swow\Examples\Fastext\Worker::runFromEnvironment($runDir, $action)) {
     exit(1);
 }
 
-\Swow\Examples\Fastext\Worker::waitForStop();
+Swow\Examples\Fastext\Worker::waitForStop();

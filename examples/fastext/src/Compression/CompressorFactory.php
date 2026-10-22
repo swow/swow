@@ -14,6 +14,7 @@ declare(strict_types=1);
 
 namespace Swow\Examples\Fastext\Compression;
 
+use RuntimeException;
 use Swow\Examples\Fastext\Compressor;
 
 final class CompressorFactory
@@ -24,10 +25,10 @@ final class CompressorFactory
             'auto' => ZstdCompressor::isAvailable() ? new ZstdCompressor() : new ZlibCompressor(),
             'zstd' => ZstdCompressor::isAvailable()
                 ? new ZstdCompressor()
-                : throw new \RuntimeException('The zstd stream filter is not available'),
+                : throw new RuntimeException('The zstd stream filter is not available'),
             'zlib' => new ZlibCompressor(),
             'none' => new NoneCompressor(),
-            default => throw new \RuntimeException("Unknown compression: {$choice}"),
+            default => throw new RuntimeException("Unknown compression: {$choice}"),
         };
     }
 }

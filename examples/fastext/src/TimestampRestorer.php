@@ -14,6 +14,17 @@ declare(strict_types=1);
 
 namespace Swow\Examples\Fastext;
 
+use FFI;
+use Throwable;
+
+use function extension_loaded;
+use function function_exists;
+use function strlen;
+
+use const DIRECTORY_SEPARATOR;
+use const PHP_OS_FAMILY;
+use const STDERR;
+
 final class TimestampRestorer
 {
     private const FILE_WRITE_ATTRIBUTES = 0x00000100;
@@ -23,7 +34,7 @@ final class TimestampRestorer
     private const FILE_FLAG_BACKUP_SEMANTICS = 0x02000000;
     private const WINDOWS_EPOCH_OFFSET = 11644473600;
 
-    private static ?\FFI $ffi = null;
+    private static ?FFI $ffi = null;
 
     private static bool $initialized = false;
 
@@ -41,7 +52,7 @@ final class TimestampRestorer
             return;
         }
 
-        if (!extension_loaded('FFI') || !class_exists(\FFI::class)) {
+        if (!extension_loaded('FFI') || !class_exists(FFI::class)) {
             fwrite(STDERR, "Warning: FFI is not available; modification times will not be restored\n");
             return;
         }
@@ -51,7 +62,7 @@ final class TimestampRestorer
         }
 
         try {
-            self::$ffi = \FFI::cdef(
+            self::$ffi = FFI::cdef(
                 <<<'C'
 typedef struct {
     uint32_t dwLowDateTime;
@@ -80,7 +91,7 @@ C,
                 'kernel32.dll',
             );
             self::$available = true;
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             fwrite(STDERR, "Warning: unable to initialize FFI; modification times will not be restored\n");
         }
     }
@@ -104,7 +115,7 @@ C,
             }
             $wide .= "\0\0";
             $name = self::$ffi->new('uint16_t[' . (int) (strlen($wide) / 2) . ']');
-            \FFI::memcpy($name, $wide, strlen($wide));
+            FFI::memcpy($name, $wide, strlen($wide));
 
             $isDir = is_dir($path);
             $handle = self::$ffi->CreateFileW(
@@ -124,11 +135,11 @@ C,
             $fileTime = self::$ffi->new('FILETIME');
             $fileTime->dwLowDateTime = $time & 0xFFFFFFFF;
             $fileTime->dwHighDateTime = ($time >> 32) & 0xFFFFFFFF;
-            $ok = self::$ffi->SetFileTime($handle, null, null, \FFI::addr($fileTime));
+            $ok = self::$ffi->SetFileTime($handle, null, null, FFI::addr($fileTime));
             self::$ffi->CloseHandle($handle);
 
             return $ok !== 0;
-        } catch (\Throwable) {
+        } catch (Throwable) {
             return false;
         }
     }
