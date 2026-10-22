@@ -13,7 +13,8 @@ require __DIR__ . '/../include/bootstrap.php';
 
 $allocation = '$first = str_repeat("X", 6 * 1024 * 1024); $second = str_repeat("Y", 6 * 1024 * 1024); echo "Unexpected completion\n";';
 $results = [];
-foreach ([false, true] as $coroutines) {
+foreach (['native', 'coroutine', 'defer'] as $mode) {
+    $coroutines = $mode !== 'native';
     $code = $coroutines ? <<<'PHP'
         use Swow\Coroutine;
         register_shutdown_function(static function (): void {
@@ -27,7 +28,9 @@ foreach ([false, true] as $coroutines) {
         }
         Coroutine::run(static function (): void {
         PHP : 'register_shutdown_function(static function (): void { echo "shutdown\n"; });';
-    $code .= $allocation;
+    $code .= $mode === 'defer'
+        ? 'Swow\defer(static function (): void {' . $allocation . '}); throw new RuntimeException("outer");'
+        : $allocation;
     if ($coroutines) {
         $code .= '}); Swow\Sync\waitAll(); echo "Unexpected continuation\n";';
     }
@@ -50,12 +53,14 @@ foreach ([false, true] as $coroutines) {
 // Security backports can use _exit() without running any PHP shutdown code.
 // A graceful native OOM must retain Swow's fatal context and reach shutdown;
 // either policy must terminate the entire request rather than only its coroutine.
-Assert::same($results[1][0], $results[0][0]);
-if (str_contains($results[0][1], 'shutdown')) {
-    Assert::contains($results[1][1], '[Fatal error in R');
-    Assert::contains($results[1][1], 'shutdown: 4');
-} else {
-    Assert::false(str_contains($results[1][1], 'shutdown'));
+foreach (array_slice($results, 1) as [$status, $output]) {
+    Assert::same($status, $results[0][0]);
+    if (str_contains($results[0][1], 'shutdown')) {
+        Assert::contains($output, '[Fatal error in R');
+        Assert::contains($output, 'shutdown: 4');
+    } else {
+        Assert::false(str_contains($output, 'shutdown'));
+    }
 }
 echo "Done\n";
 ?>
