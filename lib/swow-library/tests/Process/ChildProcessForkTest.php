@@ -48,7 +48,7 @@ final class ChildProcessForkTest extends TestCase
         $this->assertTrue($status->isExited());
         $this->assertFalse($status->isSignaled());
         $this->assertSame(42, $status->getExitCode());
-        $this->assertSame(0, $status->getTermSignal());
+        $this->assertSame(-1, $status->getTermSignal());
     }
 
     public function testForkCallbackZeroExitCode(): void
