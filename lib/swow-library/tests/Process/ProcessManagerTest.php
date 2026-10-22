@@ -138,7 +138,9 @@ final class ProcessManagerTest extends TestCase
             if (is_file($file)) {
                 $content = file_get_contents($file);
                 $this->assertIsString($content);
-                return $content;
+                if ($content !== '') {
+                    return $content;
+                }
             }
             usleep(10000);
         } while (microtime(true) < $deadline);
