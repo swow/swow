@@ -20,7 +20,7 @@ use PHPUnit\Framework\TestCase;
 use Swow\Channel;
 use Swow\Coroutine;
 use Swow\Process\ProcessExitStatus;
-use Swow\Process\ProcessManager;
+use Swow\Process\ForkProcessManager;
 use Swow\Process\WorkerContext;
 use Swow\Signal;
 
@@ -32,13 +32,13 @@ use const FILE_SKIP_EMPTY_LINES;
 use const LOCK_EX;
 
 /** @internal */
-#[CoversClass(ProcessManager::class)]
+#[CoversClass(ForkProcessManager::class)]
 #[RequiresOperatingSystem('Linux|Darwin')]
-final class ProcessManagerLifecycleTest extends TestCase
+final class ForkProcessManagerLifecycleTest extends TestCase
 {
     public function testExitedWorkersRestartWithFreshProcessIds(): void
     {
-        $manager = (new ProcessManager(1))->setMaxRestartCount(1)->setMaxWaitTime(0);
+        $manager = (new ForkProcessManager(1))->setMaxRestartCount(1)->setMaxWaitTime(0);
         $exits = [];
         $manager->onWorkerExit(static function (int $id, int $pid, ProcessExitStatus $status) use ($manager, &$exits): void {
             $exits[] = [$id, $pid, $status];
@@ -74,7 +74,7 @@ final class ProcessManagerLifecycleTest extends TestCase
     {
         $readyFile = tempnam(sys_get_temp_dir(), 'swow-manager-reload-');
         $this->assertIsString($readyFile);
-        $manager = (new ProcessManager(1))->setMaxRestartCount(0)->setMaxWaitTime(1);
+        $manager = (new ForkProcessManager(1))->setMaxRestartCount(0)->setMaxWaitTime(1);
         $exits = [];
         $manager->onWorkerExit(static function (int $id, int $pid, ProcessExitStatus $status) use (&$exits): void {
             $exits[] = [$id, $pid, $status];
@@ -112,7 +112,7 @@ final class ProcessManagerLifecycleTest extends TestCase
     {
         $readyFile = tempnam(sys_get_temp_dir(), 'swow-manager-timeout-');
         $this->assertIsString($readyFile);
-        $manager = (new ProcessManager(1))->setMaxWaitTime(0);
+        $manager = (new ForkProcessManager(1))->setMaxWaitTime(0);
         $exits = [];
         $manager->onWorkerExit(static function (int $id, int $pid, ProcessExitStatus $status) use (&$exits): void {
             $exits[] = $status;
