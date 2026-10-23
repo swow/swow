@@ -28,6 +28,7 @@ use function sprintf;
 
 use const FILTER_VALIDATE_BOOLEAN;
 use const JSON_THROW_ON_ERROR;
+use const PHP_ZTS;
 
 /**
  * @internal
@@ -35,6 +36,13 @@ use const JSON_THROW_ON_ERROR;
 #[CoversClass(ThreadManager::class)]
 final class ThreadManagerTest extends TestCase
 {
+    protected function setUp(): void
+    {
+        if (!PHP_ZTS) {
+            $this->markTestSkipped('ZTS only');
+        }
+    }
+
     public function testInterface(): void
     {
         $this->assertInstanceOf(ThreadManagerInterface::class, new ThreadManager(1));
