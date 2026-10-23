@@ -41,7 +41,9 @@
 #include "swow_websocket.h"
 #include "swow_proc_open.h"
 #include "swow_process.h"
+#include "swow_shared_object.h"
 #include "swow_thread.h"
+#include "swow_mutex.h"
 
 #include "swow_curl.h"
 #include "swow_ssl.h"
@@ -254,6 +256,7 @@ PHP_MINIT_FUNCTION(swow)
         swow_errno_module_init,
         swow_log_module_init,
         swow_exceptions_module_init,
+        swow_shared_object_module_init,
         swow_debug_module_init,
         swow_util_module_init,
         swow_fs_module_init,
@@ -263,6 +266,7 @@ PHP_MINIT_FUNCTION(swow)
         swow_sync_module_init,
 #ifdef ZTS
         swow_thread_module_init,
+        swow_mutex_module_init,
 #endif
         swow_event_module_init,
         swow_time_module_init,
@@ -332,7 +336,9 @@ PHP_MSHUTDOWN_FUNCTION(swow)
         swow_coroutine_module_shutdown,
 #ifdef ZTS
         swow_thread_module_shutdown,
+        swow_mutex_module_shutdown,
 #endif
+        swow_shared_object_module_shutdown,
         swow_debug_module_shutdown,
         swow_module_shutdown,
     };
