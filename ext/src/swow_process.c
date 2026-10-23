@@ -276,7 +276,8 @@ static bool swow_child_process_parse_stdio(zval *value, int target_fd, swow_chil
         if (php_stream_cast(stream, PHP_STREAM_AS_FD, (void **) &stream_fd, 1) != SUCCESS) {
             return false;
         }
-        if ((intmax_t) stream_fd < 0 || (intmax_t) stream_fd > INT_MAX) {
+        /* stream_fd is int on Unix and an unsigned 64-bit SOCKET on Windows. */
+        if ((uintmax_t) stream_fd > INT_MAX) {
             return false;
         }
         stdio->mode = SWOW_CHILD_STDIO_RESOURCE;
@@ -331,7 +332,8 @@ static bool swow_child_process_parse_fd(zval *value, int *fd)
         if (php_stream_cast(stream, PHP_STREAM_AS_FD, (void **) &stream_fd, 1) != SUCCESS) {
             return false;
         }
-        if ((intmax_t) stream_fd < 0 || (intmax_t) stream_fd > INT_MAX) {
+        /* stream_fd is int on Unix and an unsigned 64-bit SOCKET on Windows. */
+        if ((uintmax_t) stream_fd > INT_MAX) {
             return false;
         }
         *fd = (int) stream_fd;

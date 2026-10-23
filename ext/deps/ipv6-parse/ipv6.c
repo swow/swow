@@ -674,7 +674,7 @@ static bool ipv4_parse_single_port(ipv6_reader_state_t *state) {
     state->v4_octets = 0;
     state->address_full->address.components[1] = 0;
     state->address_full->flags |= IPV6_FLAG_IPV4_COMPAT | IPV6_FLAG_HAS_PORT;
-    char *port = strchr(state->input, ':');
+    char *port = (char *) strchr(state->input, ':');
     if (!port) {
         return false;
     }
