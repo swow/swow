@@ -45,6 +45,7 @@
 #include "swow_thread.h"
 #include "swow_mutex.h"
 #include "swow_semaphore.h"
+#include "swow_thannel.h"
 
 #include "swow_curl.h"
 #include "swow_ssl.h"
@@ -269,6 +270,7 @@ PHP_MINIT_FUNCTION(swow)
         swow_thread_module_init,
         swow_mutex_module_init,
         swow_semaphore_module_init,
+        swow_thannel_module_init,
 #endif
         swow_event_module_init,
         swow_time_module_init,
@@ -340,6 +342,7 @@ PHP_MSHUTDOWN_FUNCTION(swow)
         swow_thread_module_shutdown,
         swow_mutex_module_shutdown,
         swow_semaphore_module_shutdown,
+        swow_thannel_module_shutdown,
 #endif
         swow_shared_object_module_shutdown,
         swow_debug_module_shutdown,

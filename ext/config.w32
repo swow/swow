@@ -316,6 +316,7 @@ if (PHP_SWOW != 'no') (function(){
         'swow_shared_object.c',
         'swow_mutex.c',
         'swow_semaphore.c',
+        'swow_thannel.c',
         'swow_process.c',
         'swow_weak_symbol.c' // <-- wsh donot support comma here!
     ];
