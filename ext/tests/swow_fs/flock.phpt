@@ -2,6 +2,10 @@
 swow_fs: flock basic functionality
 --SKIPIF--
 <?php
+if (getenv('SWOW_TSAN') !== false) {
+    die('skip TSan cannot handle PHP bailout');
+}
+
 require __DIR__ . '/../include/skipif.php';
 skip_if_darwin('close(2) syscall behaves strange on macOS');
 skip_if_cannot_make_subprocess();

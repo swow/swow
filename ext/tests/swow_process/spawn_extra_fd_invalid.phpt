@@ -1,5 +1,12 @@
 --TEST--
 swow_process: ChildProcess extra fd invalid options
+--SKIPIF--
+<?php
+if (getenv('SWOW_TSAN') !== false) {
+    die('skip TSan cannot handle PHP bailout');
+}
+require __DIR__ . '/../include/skipif.php';
+?>
 --FILE--
 <?php
 require __DIR__ . '/../include/bootstrap.php';

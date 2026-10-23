@@ -1,5 +1,12 @@
 --TEST--
 swow_fs: simple flock
+--SKIPIF--
+<?php
+if (getenv('SWOW_TSAN') !== false) {
+    die('skip TSan cannot handle PHP bailout');
+}
+require __DIR__ . '/../include/skipif.php';
+?>
 --FILE--
 <?php
 $file = sprintf('%s/testFlock.lock', sys_get_temp_dir());

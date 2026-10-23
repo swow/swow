@@ -2,6 +2,10 @@
 swow_fs: phar fs operations
 --SKIPIF--
 <?php
+if (getenv('SWOW_TSAN') !== false) {
+    die('skip TSan cannot handle PHP bailout');
+}
+
 require __DIR__ . '/../include/skipif.php';
 skip_if_extension_not_exist('phar');
 $ext_enable = '';

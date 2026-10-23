@@ -2,6 +2,10 @@
 swow_debug: forced observation continues independently after fork
 --SKIPIF--
 <?php
+if (getenv('SWOW_TSAN') !== false) {
+    die('skip TSan cannot handle PHP bailout');
+}
+
 require __DIR__ . '/../include/skipif.php';
 skip_if_extension_not_exist('pcntl');
 ?>

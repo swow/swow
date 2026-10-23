@@ -172,6 +172,12 @@ PHP_ARG_ENABLE([swow-address-sanitizer],
   [no], [no]
 )
 
+PHP_ARG_ENABLE([swow-thread-sanitizer],
+  [whether to enable Swow TSan support],
+  [AS_HELP_STRING([--enable-swow-thread-sanitizer], [Enable thread sanitizer])],
+  [no], [no]
+)
+
 PHP_ARG_ENABLE([swow-undefined-sanitizer],
   [whether to enable Swow UBSan support],
   [AS_HELP_STRING([--enable-swow-undefined-sanitizer], [Enable undefined sanitizer])],
@@ -459,6 +465,17 @@ EOF
       ], [AC_MSG_ERROR([MemorySanitizer is not available])])
     fi
 
+    if test "$PHP_SWOW_THREAD_SANITIZER" = "yes"; then
+      if test "$PHP_SWOW_MEMORY_SANITIZER" = "yes" ||
+        test "$PHP_SWOW_ADDRESS_SANITIZER" = "yes"; then
+        AC_MSG_ERROR([ThreadSanitizer and MemorySanitizer/AddressSanitizer are mutually exclusive])
+      fi
+      AX_CHECK_COMPILE_FLAG([-fsanitize=thread], [
+        CFLAGS="$CFLAGS -fsanitize=thread"
+        CXXFLAGS="$CXXFLAGS -fsanitize=thread"
+      ], [AC_MSG_ERROR([ThreadSanitizer is not available])])
+    fi
+
     if test "$PHP_SWOW_ADDRESS_SANITIZER" = "yes"; then
       AX_CHECK_COMPILE_FLAG([-fsanitize=address], [
         CFLAGS="$CFLAGS -fsanitize=address -DZEND_TRACK_ARENA_ALLOC"
@@ -466,7 +483,8 @@ EOF
       ], [AC_MSG_ERROR([AddressSanitizer is not available])])
     fi
 
-    if test "$PHP_SWOW_MEMORY_SANITIZER" = "yes" ||
+    if test "$PHP_SWOW_THREAD_SANITIZER" = "yes" ||
+      test "$PHP_SWOW_MEMORY_SANITIZER" = "yes" ||
       test "$PHP_SWOW_ADDRESS_SANITIZER" = "yes" ||
       test "$PHP_SWOW_UNDEFINED_SANITIZER" = "yes"; then
       CFLAGS="$CFLAGS -fno-omit-frame-pointer"

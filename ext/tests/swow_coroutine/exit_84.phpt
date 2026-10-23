@@ -2,6 +2,9 @@
 swow_coroutine: exit
 --SKIPIF--
 <?php
+if (getenv('SWOW_TSAN') !== false) {
+    die('skip TSan cannot handle PHP bailout');
+}
 require __DIR__ . '/../include/skipif.php';
 needs_php_version('>=', '8.4');
 ?>

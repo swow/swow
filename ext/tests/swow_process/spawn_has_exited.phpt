@@ -2,6 +2,9 @@
 swow_process: ChildProcess reports exit without wait
 --SKIPIF--
 <?php
+if (getenv('SWOW_TSAN') !== false) {
+    die('skip TSan cannot handle PHP bailout');
+}
 require __DIR__ . '/../include/skipif.php';
 skip_if(PHP_OS_FAMILY === 'Windows', 'POSIX implementation only');
 ?>

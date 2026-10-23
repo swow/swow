@@ -2,6 +2,10 @@
 swow_signal: Swow\Signal::kill
 --SKIPIF--
 <?php
+if (getenv('SWOW_TSAN') !== false) {
+    die('skip TSan cannot handle PHP bailout');
+}
+
 require __DIR__ . '/../include/skipif.php';
 ?>
 --FILE--
