@@ -1107,115 +1107,338 @@ namespace Swow
 
 namespace Swow
 {
+    /**
+     * An OS thread with its own PHP request.
+     *
+     * The thread body is a callable. The callable and its arguments are serialized when the thread starts.
+     * The child thread does not inherit user code or global state.
+     * A closure with a bound `$this` cannot be transferred.
+     */
     class Thread
     {
+        /**
+         * Create a thread.
+         *
+         * This method does not start the thread. This method does not yield.
+         *
+         * @param callable $callable The thread body.
+         * @param mixed ...$args Arguments for the thread body.
+         */
         public function __construct(callable $callable, mixed ...$args) { }
 
+        /**
+         * Create and start a thread.
+         *
+         * This method waits for the child runtime. In a coroutine, this method suspends the current coroutine.
+         *
+         * @param callable $callable The thread body.
+         * @param mixed ...$args Arguments for the thread body.
+         * @throws ThreadException when the thread cannot start.
+         */
         public static function run($callable, ...$args): self { }
 
+        /**
+         * Start the thread.
+         *
+         * This method waits for the child runtime. In a coroutine, this method suspends the current coroutine.
+         * Do not call this method twice. A second call throws ThreadException.
+         *
+         * @param int $timeout timeout in milliseconds, -1 waits forever
+         * @throws ThreadException when the thread cannot start or the wait times out.
+         */
         public function start(int $timeout = -1): self { }
 
+        /**
+         * Wait for the thread to exit.
+         *
+         * In a coroutine, this method suspends the current coroutine.
+         * A later call returns the cached result.
+         *
+         * @param int $timeout timeout in milliseconds, -1 waits forever
+         * @throws ThreadException when the wait times out, the thread was killed, or the thread was detached.
+         */
         public function wait(int $timeout = -1): mixed { }
 
+        /**
+         * Stop waiting for the thread.
+         *
+         * RSHUTDOWN joins the thread later. Do not call wait after this method.
+         * This method does not yield.
+         */
         public function detach(): self { }
 
+        /**
+         * Send an asynchronous kill request.
+         *
+         * This method does not wait for the thread to exit. This method does not yield.
+         * Call wait to get the result.
+         *
+         * @throws ThreadException when the thread is not running.
+         */
         public function kill(): self { }
 
+        /**
+         * Send a kill request to every child thread.
+         *
+         * This method does not wait for the threads to exit. This method does not yield.
+         *
+         * @return int the number of threads that accepted the request
+         */
         public static function killAll(): int { }
 
+        /** Return true after start was called. This method does not yield. */
         public function isStarted(): bool { }
 
+        /** Return true while the thread is running. This method does not yield. */
         public function isRunning(): bool { }
 
+        /** Return true after detach was called. This method does not yield. */
         public function isDetached(): bool { }
 
+        /**
+         * Return the native thread id.
+         *
+         * The value is fixed at start and does not change after join.
+         * The OS can reuse the id after the thread exits.
+         * This method returns 0 before start. This method does not yield.
+         */
         public function getId(): int { }
 
-        /** @return array<string, mixed> debug information for var_dump */
+        /** Return debug information for var_dump. This method does not yield. */
         public function __debugInfo(): array { }
 
+        /**
+         * Return the Thread object for the current thread.
+         *
+         * This method does not yield.
+         *
+         * @throws ThreadException when Swow has no current thread.
+         */
         public static function getCurrent(): self { }
 
+        /**
+         * Return the native id of the current thread.
+         *
+         * This method returns 0 when Swow has no current thread. This method does not yield.
+         */
         public static function getCurrentId(): int { }
 
+        /**
+         * Return the exit status of the thread.
+         *
+         * The status is 0 for a normal return, N for exit(N), 255 for an uncaught exception, and -1 for a kill.
+         * This method does not yield.
+         */
         public function getExitStatus(): int { }
     }
 }
 
 namespace Swow
 {
+    /** Report Thread API errors. */
     class ThreadException extends \Swow\Exception { }
 }
 
 namespace Swow
 {
+    /**
+     * A mutex that works across threads.
+     *
+     * The mutex is not recursive.
+     * Do not destroy a locked mutex. Destruction of a locked mutex emits a warning.
+     */
     class Mutex
     {
+        /** Create a mutex. This method does not yield. */
         public function __construct() { }
 
+        /**
+         * Take the mutex.
+         *
+         * In a coroutine, this method suspends the current coroutine when the mutex is held.
+         * Do not lock the same mutex twice from one thread. The second call waits and can deadlock.
+         *
+         * @param int $timeout timeout in milliseconds, -1 waits forever
+         * @return bool false on timeout
+         * @throws \Swow\SyncException when the caller cannot wait for the mutex.
+         */
         public function lock(int $timeout = -1): bool { }
 
+        /**
+         * Release the mutex.
+         *
+         * The caller must hold the mutex. This method does not yield.
+         *
+         * @throws \Swow\SyncException when the caller does not hold the mutex.
+         */
         public function unlock(): void { }
 
+        /**
+         * Serialize the mutex by shared object id.
+         *
+         * The serialized form does not copy the mutex state.
+         * This method does not yield.
+         *
+         * @throws \Swow\SyncException when the mutex is not constructed.
+         */
         public function __serialize(): array { }
 
+        /**
+         * Restore the mutex from a shared object id. This method does not yield.
+         *
+         * @throws \Swow\SyncException when the data is invalid or the object is gone.
+         */
         public function __unserialize(array $data): void { }
 
-        /** @return array<string, mixed> debug information for var_dump */
+        /** Return debug information. This method does not yield. */
         public function __debugInfo(): array { }
     }
 }
 
 namespace Swow
 {
+    /** A counting semaphore that works across threads. */
     class Semaphore
     {
+        /**
+         * Create a semaphore. This method does not yield.
+         *
+         * @param int $value initial permit count, from 0 to UINT_MAX
+         * @throws \ValueError when the value is out of range.
+         * @throws \Swow\SyncException when the semaphore is already constructed.
+         */
         public function __construct(int $value = 0) { }
 
+        /**
+         * Take one permit.
+         *
+         * In a coroutine, this method suspends the current coroutine when the count is zero.
+         *
+         * @param int $timeout timeout in milliseconds, -1 waits forever
+         * @return bool false on timeout
+         * @throws \Swow\SyncException when the caller cannot wait for the semaphore.
+         */
         public function acquire(int $timeout = -1): bool { }
 
+        /**
+         * Add permits and wake waiters.
+         *
+         * A count of 0 does nothing. This method does not yield.
+         *
+         * @param int $count number of permits to add
+         * @throws \ValueError when the count is negative.
+         */
         public function release(int $count = 1): void { }
 
+        /**
+         * Serialize the semaphore by shared object id.
+         *
+         * The serialized form does not copy the semaphore state.
+         * This method does not yield.
+         *
+         * @throws \Swow\SyncException when the semaphore is not constructed.
+         */
         public function __serialize(): array { }
 
+        /**
+         * Restore the semaphore from a shared object id. This method does not yield.
+         *
+         * @throws \Swow\SyncException when the data is invalid or the object is gone.
+         */
         public function __unserialize(array $data): void { }
     }
 }
 
 namespace Swow
 {
+    /** Report Thannel API errors. */
     class ThannelException extends \Swow\Exception { }
 }
 
 namespace Swow
 {
+    /**
+     * A queue that transfers serialized values between threads.
+     *
+     * The capacity is a value count. Capacity 0 is unbuffered. Capacity -1 is unlimited.
+     */
     class Thannel
     {
+        /**
+         * Create a Thannel. This method does not yield.
+         *
+         * @param int $capacity capacity is -1 or between 0 and UINT32_MAX
+         * @throws \ValueError when the capacity is out of range.
+         * @throws ThannelException when the Thannel is already constructed.
+         */
         public function __construct(int $capacity = 0) { }
 
+        /**
+         * Serialize a value and add it to the queue.
+         *
+         * In a coroutine, this method suspends the current coroutine when the queue is full.
+         *
+         * @param mixed $data value to serialize
+         * @param int $timeout timeout in milliseconds, -1 waits forever
+         * @throws ThannelException when the value cannot be serialized, the wait times out, or the queue is closed.
+         */
         public function push($data, int $timeout = -1): self { }
 
+        /**
+         * Remove a value and unserialize it.
+         *
+         * In a coroutine, this method suspends the current coroutine when the queue is empty.
+         *
+         * @param int $timeout timeout in milliseconds, -1 waits forever
+         * @throws ThannelException when the wait times out, the queue is closed and empty, or the value cannot be unserialized.
+         */
         public function pop(int $timeout = -1): mixed { }
 
+        /**
+         * Close the queue.
+         *
+         * Queued values remain available. Later push calls fail. This method does not yield.
+         *
+         * @throws ThannelException when the queue is not constructed or close fails.
+         */
         public function close(): void { }
 
+        /** Return true after the queue is closed. This method does not yield. */
         public function isClosed(): bool { }
 
+        /** Return the queue capacity. This method does not yield. */
         public function getCapacity(): int { }
 
+        /** Return the number of queued values. This method does not yield. */
         public function getLength(): int { }
 
+        /** Return true when the queue has no values. This method does not yield. */
         public function isEmpty(): bool { }
 
+        /** Return true when the queue is full. An unbuffered Thannel is always full. This method does not yield. */
         public function isFull(): bool { }
 
+        /** Return true when the next push or pop can block. An unbuffered Thannel always returns true. This method does not yield. */
         public function willBlock(): bool { }
 
+        /**
+         * Serialize the Thannel by shared object id.
+         *
+         * The serialized form does not copy the queue.
+         * This method does not yield.
+         *
+         * @throws ThannelException when the Thannel is not constructed.
+         */
         public function __serialize(): array { }
 
+        /**
+         * Restore the Thannel from a shared object id. This method does not yield.
+         *
+         * @throws ThannelException when the data is invalid or the object is gone.
+         */
         public function __unserialize(array $data): void { }
 
-        /** @return array<string, mixed> debug information for var_dump */
+        /** Return debug information. This method does not yield. */
         public function __debugInfo(): array { }
     }
 }
