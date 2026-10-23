@@ -388,7 +388,7 @@ ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Process_ProcessInterface_hasExited, 0, 0, _IS_BOOL, 0)
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_class_Swow_Process_ProcessInterface_kill, 0, 0, 1)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Process_ProcessInterface_kill, 0, 1, IS_VOID, 0)
     ZEND_ARG_TYPE_INFO(0, signal, IS_LONG, 0)
 ZEND_END_ARG_INFO()
 
@@ -886,7 +886,10 @@ SWOW_CHILD_PROCESS_STREAM_GETTER(getStdin, 0)
 SWOW_CHILD_PROCESS_STREAM_GETTER(getStdout, 1)
 SWOW_CHILD_PROCESS_STREAM_GETTER(getStderr, 2)
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_class_Swow_Process_ChildProcess_close, 0, 0, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Process_ChildProcess_close, 0, 0, IS_VOID, 0)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_class_Swow_Process_ChildProcess___destruct, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
 static void swow_child_process_force_close_callback(uv_handle_t *handle)
@@ -954,7 +957,7 @@ static const zend_function_entry swow_child_process_methods[] = {
     PHP_ME(Swow_Process_ChildProcess, getStderr, arginfo_class_Swow_Process_ChildProcess_getStderr, ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Process_ChildProcess, kill,      arginfo_class_Swow_Process_ChildProcess_kill,      ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Process_ChildProcess, close,     arginfo_class_Swow_Process_ChildProcess_close,     ZEND_ACC_PUBLIC)
-    PHP_ME(Swow_Process_ChildProcess, __destruct, arginfo_class_Swow_Process_ChildProcess_close,    ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Process_ChildProcess, __destruct, arginfo_class_Swow_Process_ChildProcess___destruct, ZEND_ACC_PUBLIC)
     PHP_FE_END
 };
 
@@ -1036,7 +1039,7 @@ static const zend_function_entry swow_process_exit_status_methods[] = {
 
 /* {{{ Swow\Process\kill */
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_swow_process_kill, 0, 0, 1)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_swow_process_kill, 0, 1, IS_VOID, 0)
     ZEND_ARG_TYPE_INFO(0, pid, IS_LONG, 0)
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, signal, IS_LONG, 0, SWOW_PROCESS_DEFAULT_SIGNAL_NAME)
 ZEND_END_ARG_INFO()

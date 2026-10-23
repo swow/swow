@@ -2641,7 +2641,7 @@ static PHP_FUNCTION(swow_pipe)
     php_stream *rstream, *wstream;
     zval rzv, wzv;
 
-    ZEND_PARSE_PARAMETERS_START(0, 1)
+    ZEND_PARSE_PARAMETERS_START(0, 2)
         Z_PARAM_OPTIONAL
         Z_PARAM_LONG(rflags)
         Z_PARAM_LONG(wflags)
