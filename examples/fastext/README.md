@@ -1,7 +1,7 @@
 # fastext PHP demo
 
 This example implements the fastext blob format in PHP.
-It uses the Swow process manager to run parallel archive and extract workers.
+It uses the Swow process or thread manager to run parallel archive and extract workers.
 
 ## Format
 
@@ -41,6 +41,7 @@ php examples/fastext/fastext.php verify \
 - `fork`: uses `ForkProcessManager`. POSIX only.
 - `inline`: uses `ProcessManager::startInline`.
 - `script`: uses `ProcessManager::startScript`.
+- `thread`: uses `ThreadManager::startInline`. Requires a ZTS build.
 
 ## Compression
 

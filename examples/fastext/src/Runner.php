@@ -19,6 +19,7 @@ use Swow\Coroutine;
 use Swow\Process\ForkProcessManager;
 use Swow\Process\ProcessManager;
 use Swow\Process\WorkerContext;
+use Swow\ThreadManager;
 use Throwable;
 
 use function dirname;
@@ -64,6 +65,16 @@ final class Runner
             $manager->setMaxRestartCount(0)->setMaxWaitTime(10);
             $start = static function () use ($manager, $runDir, $action): void {
                 $manager->startScript(dirname(__DIR__) . '/worker.php', [$action, $runDir]);
+            };
+        } elseif ($mode === 'thread') {
+            $manager = new ThreadManager($workers);
+            $manager->setMaxRestartCount(0)->setMaxWaitTime(10);
+            $code = 'require ' . var_export(dirname(__DIR__) . '/autoload.php', true) . ';'
+                . '$ok = \Swow\Examples\Fastext\Worker::runFromRunDir('
+                . var_export($runDir, true) . ', ' . var_export($action, true) . ', $context->getId());'
+                . 'if (!$ok) { exit(1); }';
+            $start = static function () use ($manager, $code): void {
+                $manager->startInline($code);
             };
         } else {
             throw new RuntimeException("Unknown manager mode: {$mode}");

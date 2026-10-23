@@ -21,8 +21,8 @@ function usage(): void
 {
     fwrite(STDERR, <<<'TXT'
 usage:
-  fastext.php archive --source=<dir> --blob=<file> [--workers=N] [--mode=fork|inline|script] [--compression=auto|zstd|zlib|none]
-  fastext.php extract --blob=<file> --dest=<dir> [--workers=N] [--mode=fork|inline|script]
+  fastext.php archive --source=<dir> --blob=<file> [--workers=N] [--mode=fork|inline|script|thread] [--compression=auto|zstd|zlib|none]
+  fastext.php extract --blob=<file> --dest=<dir> [--workers=N] [--mode=fork|inline|script|thread]
   fastext.php verify --source=<dir> --dest=<dir>
 
 TXT);
