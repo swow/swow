@@ -312,6 +312,7 @@ if (PHP_SWOW != 'no') (function(){
         'swow_http.c',
         'swow_websocket.c',
         'swow_proc_open.c',
+        'swow_thread.c',
         'swow_process.c',
         'swow_weak_symbol.c' // <-- wsh donot support comma here!
     ];

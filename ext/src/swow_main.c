@@ -41,6 +41,7 @@
 #include "swow_websocket.h"
 #include "swow_proc_open.h"
 #include "swow_process.h"
+#include "swow_thread.h"
 
 #include "swow_curl.h"
 #include "swow_ssl.h"
@@ -54,6 +55,38 @@
 #include "zend_smart_str.h"
 
 #include "ext/standard/info.h"
+
+#include "TSRM.h"
+
+/* The VM owns the per-thread globals block. libcat asks this before it reads a
+ * block, so the key is set on every thread that took a TSRM block. The main
+ * thread keeps its block for the life of the process. */
+#ifdef ZTS
+static uv_key_t swow_vm_globals_key;
+static zend_bool swow_vm_globals_key_ready;
+
+int swow_vm_globals_available(void)
+{
+    return swow_vm_globals_key_ready && uv_key_get(&swow_vm_globals_key) != NULL;
+}
+
+static void swow_vm_globals_set(void)
+{
+    if (swow_vm_globals_key_ready) {
+        uv_key_set(&swow_vm_globals_key, (void *) 1);
+    }
+}
+
+static void swow_vm_globals_clear(void)
+{
+    if (swow_vm_globals_key_ready && !tsrm_is_main_thread()) {
+        uv_key_set(&swow_vm_globals_key, NULL);
+    }
+}
+#else
+# define swow_vm_globals_set()   do { } while (0)
+# define swow_vm_globals_clear() do { } while (0)
+#endif
 
 #ifdef SWOW_DISABLE_SESSION
 # if HAVE_PHP_SESSION && !defined(COMPILE_DL_SESSION)
@@ -228,6 +261,9 @@ PHP_MINIT_FUNCTION(swow)
         swow_coroutine_module_init,
         swow_channel_module_init,
         swow_sync_module_init,
+#ifdef ZTS
+        swow_thread_module_init,
+#endif
         swow_event_module_init,
         swow_time_module_init,
         swow_buffer_module_init,
@@ -294,6 +330,9 @@ PHP_MSHUTDOWN_FUNCTION(swow)
         swow_socket_module_shutdown,
         swow_event_module_shutdown,
         swow_coroutine_module_shutdown,
+#ifdef ZTS
+        swow_thread_module_shutdown,
+#endif
         swow_debug_module_shutdown,
         swow_module_shutdown,
     };
@@ -326,12 +365,17 @@ end:
  */
 PHP_RINIT_FUNCTION(swow)
 {
+    swow_vm_globals_set();
+
     if (!SWOW_G(ini.enable)) {
         return SUCCESS;
     }
 
     static const swow_init_function_t rinit_functions[] = {
         swow_runtime_init,
+#ifdef ZTS
+        swow_thread_runtime_init,
+#endif
         swow_debug_runtime_init,
         swow_coroutine_runtime_init,
         swow_event_runtime_init,
@@ -374,6 +418,7 @@ PHP_RINIT_FUNCTION(swow)
 PHP_RSHUTDOWN_FUNCTION(swow)
 {
     if (!SWOW_G(ini.enable)) {
+        swow_vm_globals_clear();
         return SUCCESS;
     }
 
@@ -384,6 +429,9 @@ PHP_RSHUTDOWN_FUNCTION(swow)
         swow_proc_open_runtime_shutdown,
         swow_watchdog_runtime_shutdown,
         swow_stream_runtime_shutdown,
+#ifdef ZTS
+        swow_thread_runtime_shutdown,
+#endif
         swow_event_runtime_shutdown,
         swow_coroutine_runtime_shutdown,
 #ifdef SWOW_HAVE_MONGODB
@@ -403,6 +451,7 @@ PHP_RSHUTDOWN_FUNCTION(swow)
 
     for (size_t i = 0; i < CAT_ARRAY_SIZE(rshutdown_functions); i++) {
         if (rshutdown_functions[i](SHUTDOWN_FUNC_ARGS_PASSTHRU) != SUCCESS) {
+            swow_vm_globals_clear();
             return FAILURE;
         }
     }
@@ -410,6 +459,8 @@ PHP_RSHUTDOWN_FUNCTION(swow)
     /* Notice: some PHP resources still have not been released
      * (e.g. zend_resource, php_stream, user stream wrapper (which is hard to fix),
      * see shutdown_executor() -> zend_shutdown_executor_values() -> zend_close_rsrc_list()) */
+
+    swow_vm_globals_clear();
 
     SWOW_G(runtime_state) = SWOW_RUNTIME_STATE_NONE;
 
@@ -719,6 +770,15 @@ zend_result swow_module_init(INIT_FUNC_ARGS)
 #if defined(PHP_PCRE_VERSION) && defined(HAVE_PCRE_JIT_SUPPORT)
     /* enable pcre.jit with coroutine on MacOS will lead to segment fault, disable it temporarily */
     PCRE_G(jit) = 0;
+#endif
+
+#ifdef ZTS
+    if (!swow_vm_globals_key_ready) {
+        if (uv_key_create(&swow_vm_globals_key) != 0) {
+            return FAILURE;
+        }
+        swow_vm_globals_key_ready = 1;
+    }
 #endif
 
     cat_module_init();

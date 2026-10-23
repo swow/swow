@@ -24,6 +24,8 @@ extern "C" {
 
 #include "cat.h"
 
+#include "cat_atomic.h"
+
 #define SWOW_MODULE_NAME "Swow"
 #define SWOW_MODULE_NAME_LC "swow"
 
@@ -78,6 +80,16 @@ ZEND_BEGIN_MODULE_GLOBALS(swow)
         zend_long debug_force_interval;
     } ini;
     const char *libpq_so_name;
+#ifdef ZTS
+    struct {
+        bool registered;
+        cat_atomic_bool_t kill_requested;
+        bool kill_ready;
+        bool children_initialized;
+        zval current;
+        HashTable children;
+    } thread;
+#endif
 #ifdef SWOW_HAVE_MONGODB
     struct {
         HashTable locks;

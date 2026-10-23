@@ -59,7 +59,8 @@
 
 #ifdef ZTS
 #define CAT_THREAD_SAFE 1
-#define CAT_GLOBALS_AVAILABLE() (cat_true)
+#define CAT_GLOBALS_AVAILABLE() swow_vm_globals_available()
+int swow_vm_globals_available(void);
 #define CAT_GLOBALS_RUNTIME_SHUTDOWN() CAT_GLOBALS_RUNTIME_CLOSE()
 
 #ifdef TSRMG_FAST
