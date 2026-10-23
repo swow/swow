@@ -44,6 +44,11 @@ Assert::throws(static function (): void {
     $parser->finish();
 }, ParserException::class, expectMessage: '/Invalid EOF state/');
 
+// unknown event in Parser::getEventNameFor
+Assert::throws(static function (): void {
+    Swow\Http\Parser::getEventNameFor(12345);
+}, ValueError::class, expectMessage: '/Invalid HTTP parser event/');
+
 echo "Done\n";
 
 ?>

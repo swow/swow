@@ -79,6 +79,31 @@ static void swow_socket_free_object(zend_object *object)
     zend_object_std_dtor(&s_socket->std);
 }
 
+static cat_bool_t swow_socket_type_is_valid(zend_long type)
+{
+    switch (type) {
+        case CAT_SOCKET_TYPE_ANY:
+        case CAT_SOCKET_TYPE_TCP:
+        case CAT_SOCKET_TYPE_TCP4:
+        case CAT_SOCKET_TYPE_TCP6:
+        case CAT_SOCKET_TYPE_PIPE:
+        case CAT_SOCKET_TYPE_IPCC:
+        case CAT_SOCKET_TYPE_TTY:
+        case CAT_SOCKET_TYPE_STDIN:
+        case CAT_SOCKET_TYPE_STDOUT:
+        case CAT_SOCKET_TYPE_STDERR:
+        case CAT_SOCKET_TYPE_UDP:
+        case CAT_SOCKET_TYPE_UDP4:
+        case CAT_SOCKET_TYPE_UDP6:
+#ifdef CAT_OS_UNIX_LIKE
+        case CAT_SOCKET_TYPE_UDG:
+#endif
+            return cat_true;
+        default:
+            return cat_false;
+    }
+}
+
 ZEND_BEGIN_ARG_INFO_EX(arginfo_class_Swow_Socket___construct, 0, 0, 1)
     ZEND_ARG_TYPE_INFO(0, type, IS_LONG, 0)
 ZEND_END_ARG_INFO()
@@ -96,6 +121,11 @@ static PHP_METHOD(Swow_Socket, __construct)
     ZEND_PARSE_PARAMETERS_START(1, 1)
         Z_PARAM_LONG(type)
     ZEND_PARSE_PARAMETERS_END();
+
+    if (unlikely(!swow_socket_type_is_valid(type))) {
+        zend_throw_exception(swow_socket_exception_ce, "Invalid socket type", 0);
+        RETURN_THROWS();
+    }
 
     if (type == CAT_SOCKET_TYPE_ANY) {
         /* we just want an initialized socket,

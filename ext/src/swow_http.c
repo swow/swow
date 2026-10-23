@@ -445,6 +445,19 @@ ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Http_Parser_getEventN
     ZEND_ARG_TYPE_INFO(0, event, IS_LONG, 0)
 ZEND_END_ARG_INFO()
 
+static cat_bool_t swow_http_parser_event_is_valid(zend_long event)
+{
+    switch (event) {
+#define SWOW_HTTP_PARSER_EVENT_CASE(name, unused) case CAT_HTTP_PARSER_EVENT_##name:
+        CAT_HTTP_PARSER_EVENT_MAP(SWOW_HTTP_PARSER_EVENT_CASE)
+        CAT_HTTP_PARSER_INTERNAL_EVENT_MAP(SWOW_HTTP_PARSER_EVENT_CASE)
+#undef SWOW_HTTP_PARSER_EVENT_CASE
+            return cat_true;
+        default:
+            return cat_false;
+    }
+}
+
 static PHP_METHOD(Swow_Http_Parser, getEventNameFor)
 {
     zend_long event;
@@ -452,6 +465,11 @@ static PHP_METHOD(Swow_Http_Parser, getEventNameFor)
     ZEND_PARSE_PARAMETERS_START(1, 1)
         Z_PARAM_LONG(event)
     ZEND_PARSE_PARAMETERS_END();
+
+    if (unlikely(!swow_http_parser_event_is_valid(event))) {
+        zend_value_error("Invalid HTTP parser event " ZEND_LONG_FMT, event);
+        RETURN_THROWS();
+    }
 
     // TODO: interned strings?
     RETURN_STRING(cat_http_parser_event_get_name(event));
