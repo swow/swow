@@ -78,6 +78,15 @@ ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Semaphore_release, 0,
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, count, IS_LONG, 0, "1")
 ZEND_END_ARG_INFO()
 
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Semaphore_tryAcquire, 0, 0, _IS_BOOL, 0)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Semaphore_getValue, 0, 0, IS_LONG, 0)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Semaphore_getWaiterCount, 0, 0, IS_LONG, 0)
+ZEND_END_ARG_INFO()
+
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Semaphore___serialize, 0, 0, IS_ARRAY, 0)
 ZEND_END_ARG_INFO()
 
@@ -151,6 +160,57 @@ static PHP_METHOD(Swow_Semaphore, acquire)
     RETURN_TRUE;
 }
 
+static PHP_METHOD(Swow_Semaphore, tryAcquire)
+{
+    swow_semaphore_object_t *s_semaphore = swow_semaphore_get_from_object(Z_OBJ_P(ZEND_THIS));
+
+    ZEND_PARSE_PARAMETERS_NONE();
+
+    if (unlikely(s_semaphore->semaphore == NULL)) {
+        zend_throw_exception(swow_sync_exception_ce, "Semaphore has not been constructed", 0);
+        RETURN_THROWS();
+    }
+
+    if (!cat_sem_try_acquire(&s_semaphore->semaphore->sem)) {
+        cat_errno_t code = cat_get_last_error_code();
+
+        if (code == CAT_EBUSY) {
+            RETURN_FALSE;
+        }
+
+        swow_throw_exception_with_last(swow_sync_exception_ce);
+        RETURN_THROWS();
+    }
+
+    RETURN_TRUE;
+}
+
+static PHP_METHOD(Swow_Semaphore, getValue)
+{
+    swow_semaphore_object_t *s_semaphore = swow_semaphore_get_from_object(Z_OBJ_P(ZEND_THIS));
+
+    ZEND_PARSE_PARAMETERS_NONE();
+
+    if (unlikely(s_semaphore->semaphore == NULL)) {
+        RETURN_LONG(0);
+    }
+
+    RETURN_LONG((zend_long) cat_sem_get_value(&s_semaphore->semaphore->sem));
+}
+
+static PHP_METHOD(Swow_Semaphore, getWaiterCount)
+{
+    swow_semaphore_object_t *s_semaphore = swow_semaphore_get_from_object(Z_OBJ_P(ZEND_THIS));
+
+    ZEND_PARSE_PARAMETERS_NONE();
+
+    if (unlikely(s_semaphore->semaphore == NULL)) {
+        RETURN_LONG(0);
+    }
+
+    RETURN_LONG((zend_long) cat_sem_get_waiter_count(&s_semaphore->semaphore->sem));
+}
+
 static PHP_METHOD(Swow_Semaphore, release)
 {
     swow_semaphore_object_t *s_semaphore = swow_semaphore_get_from_object(Z_OBJ_P(ZEND_THIS));
@@ -171,9 +231,7 @@ static PHP_METHOD(Swow_Semaphore, release)
         RETURN_THROWS();
     }
 
-    for (zend_long i = 0; i < count; i++) {
-        cat_sem_post(&s_semaphore->semaphore->sem);
-    }
+    cat_sem_release(&s_semaphore->semaphore->sem, (size_t) count);
 }
 
 static PHP_METHOD(Swow_Semaphore, __serialize)
@@ -214,6 +272,9 @@ static PHP_METHOD(Swow_Semaphore, __unserialize)
 static const zend_function_entry swow_semaphore_methods[] = {
     PHP_ME(Swow_Semaphore, __construct,   arginfo_class_Swow_Semaphore___construct,   ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Semaphore, acquire,       arginfo_class_Swow_Semaphore_acquire,       ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Semaphore, tryAcquire,    arginfo_class_Swow_Semaphore_tryAcquire,   ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Semaphore, getValue,      arginfo_class_Swow_Semaphore_getValue,     ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Semaphore, getWaiterCount, arginfo_class_Swow_Semaphore_getWaiterCount, ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Semaphore, release,       arginfo_class_Swow_Semaphore_release,       ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Semaphore, __serialize,   arginfo_class_Swow_Semaphore___serialize,   ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Semaphore, __unserialize, arginfo_class_Swow_Semaphore___unserialize, ZEND_ACC_PUBLIC)
