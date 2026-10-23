@@ -3,7 +3,7 @@ swow_thread: class
 --SKIPIF--
 <?php
 if (!PHP_ZTS) {
-    die('skip ZTS only');
+    exit('skip ZTS only');
 }
 require __DIR__ . '/../include/skipif.php';
 ?>
@@ -11,9 +11,9 @@ require __DIR__ . '/../include/skipif.php';
 <?php
 require __DIR__ . '/../include/bootstrap.php';
 
-var_dump(class_exists('Swow\\Thread'));
-var_dump(class_exists('Swow\\ThreadException'));
-var_dump(is_subclass_of('Swow\\ThreadException', 'Throwable'));
+var_dump(class_exists('Swow\Thread'));
+var_dump(class_exists('Swow\ThreadException'));
+var_dump(is_subclass_of('Swow\ThreadException', 'Throwable'));
 ?>
 --EXPECT--
 bool(true)

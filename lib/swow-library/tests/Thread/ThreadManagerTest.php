@@ -24,8 +24,10 @@ use Swow\ThreadWorkerContext;
 
 use function filter_var;
 use function ini_get;
+use function sprintf;
 
 use const FILTER_VALIDATE_BOOLEAN;
+use const JSON_THROW_ON_ERROR;
 
 /**
  * @internal

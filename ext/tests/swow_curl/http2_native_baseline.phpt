@@ -3,7 +3,7 @@ swow_curl: cold HTTP/2 multiplexing matches the native PHP cURL baseline
 --SKIPIF--
 <?php
 if (getenv('SWOW_TSAN') !== false) {
-    die('skip TSan cannot handle PHP bailout');
+    exit('skip TSan cannot handle PHP bailout');
 }
 
 require __DIR__ . '/../include/skipif.php';

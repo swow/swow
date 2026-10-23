@@ -3,7 +3,7 @@ swow_thread: exception from the thread
 --SKIPIF--
 <?php
 if (!PHP_ZTS) {
-    die('skip ZTS only');
+    exit('skip ZTS only');
 }
 require __DIR__ . '/../include/skipif.php';
 ?>
@@ -20,13 +20,13 @@ $thread->start();
 try {
     $thread->wait();
 } catch (Throwable $e) {
-    echo get_class($e), ': ', $e->getMessage(), ' ', $e->getCode(), "\n";
+    echo $e::class, ': ', $e->getMessage(), ' ', $e->getCode(), "\n";
 }
 
 try {
     $thread->wait();
 } catch (Throwable $e) {
-    echo get_class($e), ': ', $e->getMessage(), ' ', $e->getCode(), "\n";
+    echo $e::class, ': ', $e->getMessage(), ' ', $e->getCode(), "\n";
 }
 
 var_dump($thread->getExitStatus());

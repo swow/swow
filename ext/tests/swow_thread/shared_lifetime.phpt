@@ -3,7 +3,7 @@ swow: serialized shared objects die with their last owner
 --SKIPIF--
 <?php
 if (!PHP_ZTS) {
-    die('skip ZTS only');
+    exit('skip ZTS only');
 }
 require __DIR__ . '/../include/skipif.php';
 ?>
@@ -18,7 +18,7 @@ unset($mutex);
 try {
     unserialize($data);
 } catch (Swow\SyncException $e) {
-    echo "mutex: ", $e->getMessage(), "\n";
+    echo 'mutex: ', $e->getMessage(), "\n";
 }
 
 $semaphore = new Swow\Semaphore(1);
@@ -28,7 +28,7 @@ unset($semaphore);
 try {
     unserialize($data);
 } catch (Swow\SyncException $e) {
-    echo "semaphore: ", $e->getMessage(), "\n";
+    echo 'semaphore: ', $e->getMessage(), "\n";
 }
 ?>
 --EXPECT--

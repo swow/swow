@@ -3,7 +3,7 @@ swow_thread: start and wait
 --SKIPIF--
 <?php
 if (!PHP_ZTS) {
-    die('skip ZTS only');
+    exit('skip ZTS only');
 }
 require __DIR__ . '/../include/skipif.php';
 ?>

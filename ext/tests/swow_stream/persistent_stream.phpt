@@ -3,7 +3,7 @@ swow_stream: persistent stream is closed before the event loop is destroyed
 --SKIPIF--
 <?php
 if (getenv('SWOW_TSAN') !== false) {
-    die('skip TSan cannot handle PHP bailout');
+    exit('skip TSan cannot handle PHP bailout');
 }
 require __DIR__ . '/../include/skipif.php';
 ?>

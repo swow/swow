@@ -11,7 +11,7 @@ require __DIR__ . '/../include/bootstrap.php';
 use Swow\Process\ChildProcess;
 use Swow\Process\ProcessInterface;
 
-$kill = new ReflectionFunction('Swow\\Process\\kill');
+$kill = new ReflectionFunction('Swow\Process\kill');
 var_dump((string) $kill->getReturnType());
 
 $interfaceKill = new ReflectionMethod(ProcessInterface::class, 'kill');

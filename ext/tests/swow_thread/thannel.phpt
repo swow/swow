@@ -3,7 +3,7 @@ swow_thannel: queue, close and cross-thread rendezvous
 --SKIPIF--
 <?php
 if (!PHP_ZTS) {
-    die('skip ZTS only');
+    exit('skip ZTS only');
 }
 require __DIR__ . '/../include/skipif.php';
 ?>

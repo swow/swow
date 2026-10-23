@@ -277,8 +277,8 @@ final class ThreadManager implements ThreadManagerInterface
         return $this->buildBootstrapCode($id, [
             '$__swow_thread_manager_callback = unserialize(' .
             var_export($this->closurePayload, true) . ', [\'allowed_classes\' => true]);',
-            'if (!$__swow_thread_manager_callback instanceof \\Closure) {',
-            '    throw new \\RuntimeException(\'Worker closure payload is invalid\');',
+            'if (!$__swow_thread_manager_callback instanceof \Closure) {',
+            '    throw new \RuntimeException(\'Worker closure payload is invalid\');',
             '}',
             '$__swow_thread_manager_callback($context);',
         ]);
@@ -303,7 +303,7 @@ final class ThreadManager implements ThreadManagerInterface
             '    require $__swow_thread_manager_context_file;',
             '}',
             sprintf(
-                '$context = new \\Swow\\ThreadWorkerContext(%d, \\Swow\\Thread::getCurrentId(), %d, %d);',
+                '$context = new \Swow\ThreadWorkerContext(%d, \Swow\Thread::getCurrentId(), %d, %d);',
                 $id,
                 $this->managerThreadId,
                 $this->workerCount,

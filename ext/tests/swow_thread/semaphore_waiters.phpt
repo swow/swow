@@ -3,7 +3,7 @@ swow_semaphore: release wakes multiple cross-thread waiters
 --SKIPIF--
 <?php
 if (!PHP_ZTS) {
-    die('skip ZTS only');
+    exit('skip ZTS only');
 }
 require __DIR__ . '/../include/skipif.php';
 ?>

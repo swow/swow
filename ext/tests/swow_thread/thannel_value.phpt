@@ -3,7 +3,7 @@ swow_thannel: values are copies and both directions work
 --SKIPIF--
 <?php
 if (!PHP_ZTS) {
-    die('skip ZTS only');
+    exit('skip ZTS only');
 }
 require __DIR__ . '/../include/skipif.php';
 ?>
@@ -51,7 +51,7 @@ $thannel = new Swow\Thannel(1);
 try {
     $thannel->push(new SwowThannelBadValue());
 } catch (Throwable $e) {
-    echo get_class($e), ': ', $e->getMessage(), "\n";
+    echo $e::class, ': ', $e->getMessage(), "\n";
 }
 ?>
 --EXPECT--

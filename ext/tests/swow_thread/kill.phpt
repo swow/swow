@@ -3,10 +3,10 @@ swow_thread: kill
 --SKIPIF--
 <?php
 if (getenv('SWOW_TSAN') !== false) {
-    die('skip TSan cannot handle PHP bailout');
+    exit('skip TSan cannot handle PHP bailout');
 }
 if (!PHP_ZTS) {
-    die('skip ZTS only');
+    exit('skip ZTS only');
 }
 require __DIR__ . '/../include/skipif.php';
 ?>

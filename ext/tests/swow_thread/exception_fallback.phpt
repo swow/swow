@@ -3,7 +3,7 @@ swow_thread: exception class unknown to the parent falls back to ThreadException
 --SKIPIF--
 <?php
 if (!PHP_ZTS) {
-    die('skip ZTS only');
+    exit('skip ZTS only');
 }
 require __DIR__ . '/../include/skipif.php';
 ?>
@@ -22,7 +22,7 @@ $thread->start();
 try {
     $thread->wait();
 } catch (Throwable $e) {
-    echo get_class($e), ': ', $e->getMessage(), "\n";
+    echo $e::class, ': ', $e->getMessage(), "\n";
 }
 ?>
 --EXPECT--

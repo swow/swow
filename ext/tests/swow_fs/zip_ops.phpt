@@ -3,7 +3,7 @@ swow_fs: zip fs operations
 --SKIPIF--
 <?php
 if (getenv('SWOW_TSAN') !== false) {
-    die('skip TSan cannot handle PHP bailout');
+    exit('skip TSan cannot handle PHP bailout');
 }
 
 require __DIR__ . '/../include/skipif.php';
