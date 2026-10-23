@@ -111,6 +111,9 @@ static void swow_thread_run_release(swow_thread_run_t *run)
     if (run->args != NULL) {
         cat_sys_free((void *) run->args);
     }
+    if (run->code != NULL) {
+        cat_sys_free((void *) run->code);
+    }
     if (run->result != NULL) {
         cat_sys_free((void *) run->result);
     }
@@ -383,6 +386,59 @@ _done:
     zval_ptr_dtor(&callable);
 }
 
+static void swow_thread_run_code(swow_thread_run_t *run)
+{
+    volatile cat_bool_t completed = cat_false;
+
+    if (cat_atomic_bool_load(&run->killed)) {
+        cat_atomic_int32_store(&run->exit_status, -1);
+        return;
+    }
+
+    SWOW_G(thread.kill_ready) = true;
+    if (cat_atomic_bool_load(&run->killed)) {
+        SWOW_G(thread.kill_ready) = false;
+        cat_atomic_int32_store(&run->exit_status, -1);
+        return;
+    }
+
+    zend_first_try {
+        if (zend_eval_stringl(run->code, run->code_len, NULL, "Swow\\Thread") == SUCCESS) {
+            completed = cat_true;
+        }
+    } zend_end_try();
+
+    SWOW_G(thread.kill_ready) = false;
+
+    if (cat_atomic_bool_load(&run->killed)) {
+        if (EG(exception) != NULL) {
+            zend_clear_exception();
+        }
+        cat_atomic_int32_store(&run->exit_status, -1);
+        return;
+    }
+
+    if (unlikely(!completed)) {
+        if (EG(exception) != NULL) {
+            zend_clear_exception();
+            cat_atomic_int32_store(&run->exit_status, 255);
+        } else {
+            /* exit() or die() went through the bailout path */
+            cat_atomic_int32_store(&run->exit_status, (int32_t) EG(exit_status));
+        }
+        return;
+    }
+
+    if (EG(exception) != NULL) {
+        zval exception;
+
+        ZVAL_OBJ(&exception, EG(exception));
+        (void) swow_thread_serialize(&exception, &run->exception, &run->exception_len);
+        zend_clear_exception();
+        cat_atomic_int32_store(&run->exit_status, 255);
+    }
+}
+
 static void swow_thread_entry(cat_data_t *data)
 {
     swow_thread_run_t *run = (swow_thread_run_t *) data;
@@ -423,7 +479,11 @@ _started:
     cat_sem_post(&run->started);
 
     if (cat_atomic_int32_load(&run->start_status) == SUCCESS) {
-        swow_thread_run_callable(run);
+        if (run->code != NULL) {
+            swow_thread_run_code(run);
+        } else {
+            swow_thread_run_callable(run);
+        }
     }
 
     uv_mutex_lock(&run->lock);
@@ -599,6 +659,86 @@ static PHP_METHOD(Swow_Thread, run)
     }
 
     zval_ptr_dtor(&retval);
+
+    RETVAL_ZVAL(&thread, 1, 0);
+    zval_ptr_dtor(&thread);
+}
+
+ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_class_Swow_Thread_runCode, 0, 1, Swow\\Thread, 0)
+    ZEND_ARG_TYPE_INFO(0, code, IS_STRING, 0)
+ZEND_END_ARG_INFO()
+
+static PHP_METHOD(Swow_Thread, runCode)
+{
+    zend_string *code;
+    zend_class_entry *ce;
+    zval thread;
+    swow_thread_t *s_thread;
+    swow_thread_run_t *run;
+    cat_thread_options_t options = {
+        .name = NULL,
+        .stack_size = 0,
+        .flags = CAT_THREAD_CREATE_MANUAL_RUNTIME,
+    };
+
+    ZEND_PARSE_PARAMETERS_START(1, 1)
+        Z_PARAM_STR(code)
+    ZEND_PARSE_PARAMETERS_END();
+
+    ce = zend_get_called_scope(execute_data);
+    if (ce == NULL) {
+        ce = swow_thread_ce;
+    }
+
+    object_init_ex(&thread, ce);
+    s_thread = swow_thread_get_from_object(Z_OBJ(thread));
+
+    run = swow_thread_run_create();
+    if (unlikely(run == NULL)) {
+        zval_ptr_dtor(&thread);
+        zend_throw_exception(swow_thread_exception_ce, "Failed to allocate the thread", 0);
+        RETURN_THROWS();
+    }
+
+    run->code = cat_sys_malloc(ZSTR_LEN(code) + 1);
+    if (unlikely(run->code == NULL)) {
+        swow_thread_run_release(run);
+        zval_ptr_dtor(&thread);
+        zend_throw_exception(swow_thread_exception_ce, "Failed to allocate the thread code", 0);
+        RETURN_THROWS();
+    }
+    memcpy((void *) run->code, ZSTR_VAL(code), ZSTR_LEN(code));
+    ((char *) run->code)[ZSTR_LEN(code)] = '\0';
+    run->code_len = ZSTR_LEN(code);
+    run->server_context = SG(server_context);
+    cat_atomic_int32_init(&run->start_status, FAILURE);
+
+    if (unlikely(!cat_thread_create_ex(&run->thread, swow_thread_entry, run, &options))) {
+        swow_thread_run_release(run);
+        zval_ptr_dtor(&thread);
+        swow_throw_exception_with_last(swow_thread_exception_ce);
+        RETURN_THROWS();
+    }
+
+    swow_thread_run_addref(run);
+    swow_thread_children_add(run);
+
+    s_thread->run = run;
+    s_thread->thread = &run->thread;
+    s_thread->id = swow_thread_id_to_long(&run->thread);
+    s_thread->started = cat_true;
+
+    if (unlikely(!cat_sem_acquire(&run->started, -1))) {
+        zval_ptr_dtor(&thread);
+        swow_throw_exception_with_last(swow_thread_exception_ce);
+        RETURN_THROWS();
+    }
+
+    if (unlikely(cat_atomic_int32_load(&run->start_status) != SUCCESS)) {
+        zval_ptr_dtor(&thread);
+        zend_throw_exception(swow_thread_exception_ce, "Thread failed to start", 0);
+        RETURN_THROWS();
+    }
 
     RETVAL_ZVAL(&thread, 1, 0);
     zval_ptr_dtor(&thread);
@@ -1048,6 +1188,7 @@ static PHP_METHOD(Swow_Thread, getExitStatus)
 static const zend_function_entry swow_thread_methods[] = {
     PHP_ME(Swow_Thread, __construct,   arginfo_class_Swow_Thread___construct,   ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Thread, run,           arginfo_class_Swow_Thread_run,           ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    PHP_ME(Swow_Thread, runCode,       arginfo_class_Swow_Thread_runCode,       ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
     PHP_ME(Swow_Thread, start,         arginfo_class_Swow_Thread_start,         ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Thread, wait,          arginfo_class_Swow_Thread_wait,          ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Thread, detach,        arginfo_class_Swow_Thread_detach,        ZEND_ACC_PUBLIC)

@@ -1138,6 +1138,18 @@ namespace Swow
         public static function run($callable, ...$args): self { }
 
         /**
+         * Create and start a thread that runs PHP code.
+         *
+         * This method does not use the closure serializer.
+         * The code runs in the worker thread with the ThreadWorkerContext available as $context.
+         * This method waits for the child runtime. In a coroutine, this method suspends the current coroutine.
+         *
+         * @param string $code PHP code without an opening tag
+         * @throws ThreadException when the thread cannot start.
+         */
+        public static function runCode(string $code): self { }
+
+        /**
          * Start the thread.
          *
          * This method waits for the child runtime. In a coroutine, this method suspends the current coroutine.

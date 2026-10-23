@@ -42,6 +42,9 @@ typedef struct swow_thread_run_s {
     size_t callable_len;
     const char *args;
     size_t args_len;
+    /* PHP code for runCode, allocated with cat_sys_malloc */
+    const char *code;
+    size_t code_len;
     /* serialized return value, allocated with cat_sys_malloc */
     const char *result;
     size_t result_len;
