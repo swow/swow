@@ -3242,11 +3242,9 @@ namespace Swow\WebSocket
         /**
          * Get the name of the opcode.
          *
-         * The declared return type is int, but the value is a string.
-         *
          * @return string the name
          */
-        public static function getNameOf(int $opcode): int { }
+        public static function getNameOf(int $opcode): string { }
     }
 }
 
@@ -3273,11 +3271,9 @@ namespace Swow\WebSocket
         /**
          * Get the description of a close code.
          *
-         * The declared return type is int, but the value is a string.
-         *
          * @return string the description, "Unknown websocket status code" for an unknown code
          */
-        public static function getDescriptionOf(int $code): int { }
+        public static function getDescriptionOf(int $code): string { }
     }
 }
 
