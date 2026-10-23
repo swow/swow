@@ -20,6 +20,13 @@ namespace
 {
     class Swow
     {
+        /**
+         * Check whether the swow/swow-library package is loaded.
+         *
+         * The method looks up the class Swow\Library.
+         *
+         * @return bool true when the package is loaded
+         */
         public static function isLibraryLoaded(): bool { }
     }
 }
@@ -30,12 +37,20 @@ namespace
      * sleep milliseconds
      *
      * @param int $milli_seconds time to sleep, in ms
+     * @return int always 0
+     * @throws \ValueError when the value is negative
      */
     function msleep(int $milli_seconds): int { }
 }
 
 namespace
 {
+    /**
+     * Resolve a host name to an IP address.
+     *
+     * @return string the resolved address
+     * @throws \RuntimeException when the name does not resolve. The code is a negative EAI code.
+     */
     function gethostbyname2(string $hostname, int $address_family = \AF_INET): string { }
 }
 
@@ -50,6 +65,7 @@ namespace
      * @param int|null $seconds
      * @param int|null $microseconds
      * @return int|false number of stream resources that are ready for reading, writing, or have an error, or false on error
+     * @throws \ValueError when no valid stream remains in the arrays
      */
     function stream_select_unlimited(?array &$read, ?array &$write, ?array &$except, ?int $seconds, ?int $microseconds = null): int|false { }
 }
@@ -61,7 +77,8 @@ namespace
      *
      * @param resource $stream stream resource
      * @param int $events flags: STREAM_POLL* constants combinations
-     * @return int flags: STREAM_POLL* constants combinations, STREAM_POLLNONE means timeout
+     * @return int flags: STREAM_POLL* constants combinations, STREAM_POLLNONE means timeout.
+     * The result can contain STREAM_POLLHUP and STREAM_POLLERR.
      * @throws RuntimeException on runtime error, e.g. poll has been cancelled or poll failed
      */
     function stream_poll_one($stream, int $events, int $timeout = -1): int { }
@@ -83,6 +100,14 @@ namespace Swow
         public const RELEASE_VERSION = 0;
         public const EXTRA_VERSION = 'dev';
 
+        /**
+         * Check whether the extension was built with the library.
+         *
+         * The names are case-insensitive: "ssl", "openssl", "curl", "pgsql", "mongodb", "debug",
+         * "debug_log", "asan", "msan", "ubsan".
+         *
+         * @return bool true when the library is available in this build
+         */
         public static function isBuiltWith(string $lib): bool { }
     }
 }
@@ -655,6 +680,14 @@ namespace Swow
         public const EHP_NOMEM = -816065;
         public const EHP_MULTIPART = -816066;
 
+        /**
+         * Get the description of an errno value.
+         *
+         * A positive value is converted to the negative system error first.
+         *
+         * @return string the description. 0 and unknown values give "Unknown error".
+         * @throws \ValueError when the value is out of the errno range
+         */
         public static function getDescriptionOf(int $error): string { }
     }
 }
@@ -684,7 +717,8 @@ namespace Swow
         /**
          * set logging types
          *
-         * @param int $types the log type flag
+         * @param int $types a combination of the TYPE_* constants
+         * @throws \ValueError when the value is outside TYPES_ALL
          */
         public static function setTypes(int $types): void { }
     }
@@ -736,6 +770,8 @@ namespace Swow
         /**
          * Create a coroutine and run it immediately
          *
+         * An uncaught exception in the body does not reach the caller. The coroutine ends with exit status 0.
+         *
          * @note context swap happens here
          *
          * @param callable $callable the coroutine body
@@ -748,13 +784,18 @@ namespace Swow
          * Resume coroutine execution
          *
          * @note context swap happens here when success
+         * @return mixed the value of the next yield(), or the return value of the body
          */
         public function resume(mixed ...$data): mixed { }
 
         /**
          * Yield from current coroutine
          *
+         * The coroutine continues only after another coroutine calls resume().
+         * A yield in the main coroutine without a resumer stops the process.
+         *
          * @note context swap happens here when success
+         * @return mixed the value passed to the next resume()
          */
         public static function yield(mixed $data = null): mixed { }
 
@@ -791,12 +832,24 @@ namespace Swow
 
         public function getElapsedAsString(): string { }
 
+        /**
+         * Get the exit status.
+         *
+         * @return int 0 after a normal return, a kill or an uncaught exception. The main coroutine returns the request exit status.
+         */
         public function getExitStatus(): int { }
 
         public function isAvailable(): bool { }
 
         public function isAlive(): bool { }
 
+        /**
+         * Check whether the coroutine started and did not end.
+         *
+         * A suspended coroutine counts as executing.
+         *
+         * @return bool true when the coroutine started and did not end
+         */
         public function isExecuting(): bool { }
 
         /**
@@ -836,6 +889,8 @@ namespace Swow
          * | 2 / -3 | b()                                |                |                                   | starts here    |
          * | 1 / -4 | c()                                |                |                                   |                |
          * | 0 / -5 | Swow\Coroutine->getTraceAsString() | ends here      |                                   | ends here      |
+         *
+         * The stack is the current PHP stack. Before the first switch it contains the caller frames.
          *
          * @param int $level trace start level
          * @param int $limit trace max length, negative or 0 meaning no limit
@@ -911,6 +966,7 @@ namespace Swow
         /**
          * get trace depth
          *
+         * @return int the trace depth, -1 before the coroutine starts
          * @see Coroutine::getTrace() for params usage
          */
         public function getTraceDepth(int $limit = 0): int { }
@@ -936,30 +992,67 @@ namespace Swow
         /**
          * evaluate code in specified scope
          *
+         * The code is one expression. The implementation adds "return " before the code.
+         * A return statement or an echo statement is a parse error.
+         *
          * @TODO string $string? why not rename it to $code
-         * @param string $string code to evaluate
+         * @param string $string expression to evaluate
+         * @return mixed the value of the expression
+         * @throws CoroutineException when the code is invalid
          * @see Coroutine::getTrace() for `$level` params usage
          */
         public function eval(string $string, int $level = 0): mixed { }
 
+        /**
+         * Call a function in the scope of a frame.
+         *
+         * @return mixed the return value of the function
+         */
         public function call(callable $callable, int $level = 0): mixed { }
 
+        /**
+         * Throw an exception into the coroutine and resume it.
+         *
+         * @return mixed the return value of the body
+         */
         public function throw(\Throwable $throwable): mixed { }
 
         public function kill(): void { }
 
         public static function killAll(): void { }
 
+        /**
+         * Get the number of coroutines.
+         *
+         * @return int the number of coroutines, including the main coroutine
+         */
         public static function count(): int { }
 
+        /**
+         * Get a coroutine by id.
+         *
+         * @return static|null the coroutine, or null when the id is not found
+         */
         public static function get(int $id): ?static { }
 
-        /** @return array<int, Coroutine> */
+        /**
+         * Get all coroutines.
+         *
+         * @return array<int, Coroutine> all coroutines, including the main coroutine
+         */
         public static function getAll(): array { }
 
         /** @return array<string, mixed> debug information for var_dump */
         public function __debugInfo(): array { }
 
+        /**
+         * Register a callback for a deadlock.
+         *
+         * The scheduler calls the callback when all coroutines wait. The process stays blocked after the call.
+         * The callback must kill coroutines or stop the process.
+         *
+         * @return Utils\Handler handler for remove()
+         */
         public static function registerDeadlockHandler(callable $callable): Utils\Handler { }
     }
 }
@@ -980,6 +1073,12 @@ namespace Swow
      */
     class Channel
     {
+        /**
+         * Create a channel.
+         *
+         * @param int $capacity 0 is unbuffered. -1 is unlimited.
+         * @throws \ValueError when the capacity is negative and not -1
+         */
         public function __construct(int $capacity = 0) { }
 
         /**
@@ -993,6 +1092,7 @@ namespace Swow
          * @param mixed $data
          * @param int $timeout in milliseconds
          * @return static
+         * @throws ChannelException on timeout (-110) or when the channel is closed (-9758)
          */
         public function push(mixed $data, int $timeout = -1): static { }
 
@@ -1006,9 +1106,17 @@ namespace Swow
          * @phpstan-return T $data
          * @psalm-return T $data
          * @return mixed
+         * @throws ChannelException on timeout (-110) or when the channel is closed (-9758)
          */
         public function pop(int $timeout = -1): mixed { }
 
+        /**
+         * Close the channel.
+         *
+         * A queued value can still be popped. A waiting coroutine wakes with error code -125.
+         *
+         * @throws ChannelException when the channel is already closed
+         */
         public function close(): void { }
 
         public function getCapacity(): int { }
@@ -1080,17 +1188,31 @@ namespace Swow
          *
          * any actions in selector will make this return
          *
+         * The first ready action wins. With no ready action the call waits for the timeout.
+         *
          * @note content switching may happen here
          *
          * @param int $timeout timeout in milliseconds
+         * @throws SelectorException on timeout or failure
          * @phan-return \Swow\Channel<T>
          * @phpstan-return \Swow\Channel<T>
          * @psalm-return \Swow\Channel<T>
          */
         public function commit(int $timeout = -1): Channel { }
 
+        /**
+         * Get the value of the last pop event.
+         *
+         * @return mixed the value
+         * @throws \Error when no data is available: a push event, no commit, or a failed commit
+         */
         public function fetch(): mixed { }
 
+        /**
+         * Get the event of the last successful commit.
+         *
+         * @return int the event, or EVENT_NONE
+         */
         public function getLastEvent(): int { }
     }
 }
@@ -1110,9 +1232,10 @@ namespace Swow
     /**
      * An OS thread with its own PHP request.
      *
-     * The thread body is a callable. The callable and its arguments are serialized when the thread starts.
-     * The child thread does not inherit user code or global state.
-     * A closure with a bound `$this` cannot be transferred.
+     * The thread body and its arguments are serialized at start.
+     * The child request has no user code, no autoloader and no global state.
+     * A closure cannot be serialized, so a closure body cannot start.
+     * Use an internal function or a method of a Swow object that shares state by id.
      */
     class Thread
     {
@@ -1129,19 +1252,22 @@ namespace Swow
         /**
          * Create and start a thread.
          *
+         * The body and the arguments are serialized. See the class description.
          * This method waits for the child runtime. In a coroutine, this method suspends the current coroutine.
          *
          * @param callable $callable The thread body.
          * @param mixed ...$args Arguments for the thread body.
          * @throws ThreadException when the thread cannot start.
+         * @throws \Exception when the body or an argument cannot be serialized.
          */
         public static function run($callable, ...$args): self { }
 
         /**
          * Create and start a thread that runs PHP code.
          *
-         * This method does not use the closure serializer.
-         * The code runs in the worker thread with the ThreadWorkerContext available as $context.
+         * The code runs as top level code in a fresh request. Parent globals are not visible.
+         * The code has no $context variable.
+         * The return value and the exceptions of the code are discarded. Read getExitStatus() for the result.
          * This method waits for the child runtime. In a coroutine, this method suspends the current coroutine.
          *
          * @param string $code PHP code without an opening tag
@@ -1165,9 +1291,12 @@ namespace Swow
          *
          * In a coroutine, this method suspends the current coroutine.
          * A later call returns the cached result.
+         * A fatal error in the body gives status 255.
          *
          * @param int $timeout timeout in milliseconds, -1 waits forever
+         * @return mixed the return value of the body, or null after a fatal error
          * @throws ThreadException when the wait times out, the thread was killed, or the thread was detached.
+         * @throws \Throwable the exception that the thread body threw
          */
         public function wait(int $timeout = -1): mixed { }
 
@@ -1183,6 +1312,8 @@ namespace Swow
          * Send an asynchronous kill request.
          *
          * This method does not wait for the thread to exit. This method does not yield.
+         * The thread stops at the next safe point. A blocking native call completes first.
+         * After the kill the status is -1.
          * Call wait to get the result.
          *
          * @throws ThreadException when the thread is not running.
@@ -1257,6 +1388,7 @@ namespace Swow
      * A mutex that works across threads.
      *
      * The mutex is not recursive.
+     * The owner is a thread. A mutex stays locked when the owner thread exits.
      * Do not destroy a locked mutex. Destruction of a locked mutex emits a warning.
      */
     class Mutex
@@ -1373,6 +1505,9 @@ namespace Swow
      * A queue that transfers serialized values between threads.
      *
      * The capacity is a value count. Capacity 0 is unbuffered. Capacity -1 is unlimited.
+     * Values are serialized. A resource becomes 0. A closure cannot be passed.
+     * An unbuffered push waits for the consumer. In one OS thread the push does not return after the take.
+     * Use an unbuffered Thannel only across threads.
      */
     class Thannel
     {
@@ -1389,10 +1524,12 @@ namespace Swow
          * Serialize a value and add it to the queue.
          *
          * In a coroutine, this method suspends the current coroutine when the queue is full.
+         * An unbuffered push in one OS thread does not return after the take. The timeout does not fire.
          *
          * @param mixed $data value to serialize
          * @param int $timeout timeout in milliseconds, -1 waits forever
-         * @throws ThannelException when the value cannot be serialized, the wait times out, or the queue is closed.
+         * @throws ThannelException on timeout (-110) or when the queue is closed (-9758)
+         * @throws \Exception when the value cannot be serialized
          */
         public function push($data, int $timeout = -1): self { }
 
@@ -1409,7 +1546,7 @@ namespace Swow
         /**
          * Close the queue.
          *
-         * Queued values remain available. Later push calls fail. This method does not yield.
+         * Queued values stay available. A later push is rejected. A second close() does nothing.
          *
          * @throws ThannelException when the queue is not constructed or close fails.
          */
@@ -1430,7 +1567,7 @@ namespace Swow
         /** Return true when the queue is full. An unbuffered Thannel is always full. This method does not yield. */
         public function isFull(): bool { }
 
-        /** Return true when the next push or pop can block. An unbuffered Thannel always returns true. This method does not yield. */
+        /** @return bool true when the queue is empty or full. An unbuffered Thannel always returns true. This method does not yield. */
         public function willBlock(): bool { }
 
         /**
@@ -1467,10 +1604,29 @@ namespace Swow
         public const PAGE_SIZE = 4096;
         public const COMMON_SIZE = 8192;
 
+        /**
+         * Round the size up to a multiple of the alignment.
+         *
+         * The alignment must be a power of two. Other values give a result that is not a multiple.
+         *
+         * @return int the aligned size
+         */
         public static function alignSize(int $size = 0, int $alignment = 0): int { }
 
+        /**
+         * Create a buffer and allocate the memory.
+         *
+         * Use new Buffer(0) when the size is not known. Then call alloc().
+         */
         public function __construct(int $size) { }
 
+        /**
+         * Allocate the memory.
+         *
+         * The method works only on a buffer without memory. Use new Buffer(0).
+         *
+         * @throws \Error when the buffer already has memory
+         */
         public function alloc(int $size): void { }
 
         public function getSize(): int { }
@@ -1487,11 +1643,23 @@ namespace Swow
 
         public function realloc(int $size): void { }
 
-        /** @param int $recommendSize [optional] = $this->getSize() * 2 */
+        /**
+         * Grow the buffer.
+         *
+         * The buffer doubles its size until it reaches the recommended size. The result can be larger than the request.
+         *
+         * @param int $recommendSize [optional] = $this->getSize() * 2
+         * @throws \ValueError when the size is not larger than the current size
+         */
         public function extend(int $recommendSize = 0): void { }
 
         public function prepare(int $appendLength): void { }
 
+        /**
+         * Free the unused memory.
+         *
+         * The buffer shrinks to the used length.
+         */
         public function mallocTrim(): void { }
 
         /**
@@ -1514,6 +1682,9 @@ namespace Swow
          * `$start` and `$length` is for input `$string`
          * `$offset` is for output `$buffer`
          *
+         * The offset must not be larger than the current length. The first write into a new buffer starts at 0.
+         * The buffer grows when the data does not fit.
+         *
          * @throws \ValueError when specified `$start`, `$offset` or `$length` not in range
          * @param string $string data to write
          * @phpstan-param int<0, max> $start
@@ -1533,6 +1704,7 @@ namespace Swow
          * append `$string` to the end of buffer
          *
          * `$start` and `$length` is for input `$string`
+         * The buffer grows when the data does not fit.
          *
          * @throws \ValueError when specified `$start`, `$offset` or `$length` not in range
          * @param string $string data to write
@@ -1557,22 +1729,53 @@ namespace Swow
 
         public function clear(): void { }
 
+        /**
+         * Get the value and reset the buffer.
+         *
+         * @return string the value
+         * @throws \Error when the buffer is locked
+         */
         public function fetchString(): string { }
 
         public function dupString(): string { }
 
         public function toString(): string { }
 
+        /** @return bool true when the buffer is locked */
         public function isLocked(): bool { }
 
+        /** @return Coroutine|null the locker, or null */
         public function getLocker(): Coroutine { }
 
+        /**
+         * Try to lock the buffer.
+         *
+         * @return bool false when the buffer is locked
+         */
         public function tryLock(): bool { }
 
+        /**
+         * Lock the buffer.
+         *
+         * A locked buffer rejects write operations with Error. The lock holder is not exempt.
+         * The lock stops write calls only. It is not a mutex.
+         *
+         * @throws \Error when the buffer is already locked
+         */
         public function lock(): void { }
 
+        /**
+         * Unlock the buffer.
+         *
+         * @throws \Error when the buffer is not locked, or when the caller is not the locker
+         */
         public function unlock(): void { }
 
+        /**
+         * Free the memory and set size and length to 0.
+         *
+         * A second close() does nothing. A write after close() returns the byte count and discards the data.
+         */
         public function close(): void { }
 
         public function __toString(): string { }
@@ -1580,6 +1783,13 @@ namespace Swow
         /** @return array<string, mixed> debug information for var_dump */
         public function __debugInfo(): array { }
 
+        /**
+         * Serialize the value.
+         *
+         * The size is not kept. After unserialize() the size equals the length.
+         *
+         * @return array{value: string}
+         */
         public function __serialize(): array { }
 
         /** @param array<mixed, mixed>|array<mixed> $data */
@@ -1639,6 +1849,15 @@ namespace Swow
 
         public function __construct(int $type) { }
 
+        /**
+         * Use an existing socket stream.
+         *
+         * Use a socket of type TYPE_TCP. It has no native socket before bind or connect.
+         *
+         * @param resource $socket the stream to use
+         * @throws SocketException when the stream is not a socket
+         * @throws \Error when the socket already has a native socket
+         */
         public function open(mixed $socket): static { }
 
         /**
@@ -1670,6 +1889,12 @@ namespace Swow
 
         public function getWriteTimeout(): int { }
 
+        /**
+         * Set the timeouts.
+         *
+         * The method does not change the accept timeout. Use setAcceptTimeout() for it.
+         * A negative value becomes -1.
+         */
         public function setTimeout(int $timeout): static { }
 
         public function setDnsTimeout(int $timeout): static { }
@@ -1737,6 +1962,8 @@ namespace Swow
          *    'certificate_key'?: callable
          *   }>
          * } $options [optional]
+         * The method ignores unknown options. verify_peer=true requires peer_name.
+         *
          * @return static it returns itself
          */
         public function enableCrypto(?array $options = null): static { }
@@ -1752,6 +1979,8 @@ namespace Swow
         /**
          * read `$length` bytes data into buffer from socket,
          * keep reading until `$length` bytes data received.
+         *
+         * The current length of the buffer must be at least the offset. A new buffer starts at 0.
          *
          * @note context switching may happen here
          *
@@ -1874,7 +2103,7 @@ namespace Swow
          * @phan-param int<-1, max> $size
          * @psalm-param int<-1, max> $size
          * @param int $size -1 meaning not limited, otherwise buffer size in bytes.
-         * @return int bytes received
+         * @return int bytes received, 0 when no data is ready at the timeout
          */
         public function peek(\Swow\Buffer $buffer, int $offset = 0, int $size = -1, ?int $timeout = 0): int { }
 
@@ -1909,11 +2138,12 @@ namespace Swow
          * @throws SocketException when got eof without enough data received
          * @throws SocketException when timed out
          * @throws SocketException when socket read failed
-         * @phan-param int<-1, max> $length
-         * @psalm-param int<-1, max> $length
-         * @param int $length -1 meaning not limited, receive until eof, otherwise length in bytes
+         * @phan-param int<1, max> $length
+         * @psalm-param int<1, max> $length
+         * @param int $length number of bytes, must be larger than 0
          * @param int|null $timeout timeout in milliseconds or null for using {@see Socket::getReadTimeout()} value
          * @return string data received in string
+         * @throws \ValueError when the length is not larger than 0
          */
         public function readString(int $length = \Swow\Buffer::COMMON_SIZE, ?int $timeout = null): string { }
 
@@ -2031,25 +2261,30 @@ namespace Swow
          * - `Buffer`: write full text from start `$start`
          * - `string|Stringable`: write full text from start `$start`
          * - `array[Buffer $content, int $start, int $length]`: write it from start `$start`, with length `$length`
-         * - `array[string|Stringable $content, int $start, int $offset, ?int $length]`:
-         *      write the string from start `$start`, with length `$length`, and offset `$offset` in the string
+         * - `array[string|Stringable $content, int $start, int $length]`: write it from start `$start`, with length `$length`
+         *
+         * A null element ends the vector.
+         * A write to a closed peer can succeed. Check getConnectionError() after the write.
          *
          * for code
          * ```php
          * $s = new Socket(Socket::TYPE_STDOUT);
+         * $buffer = new Buffer(0);
+         * $buffer->append('xyz');
          * $s->write([
-         *     (new Buffer(0))->write('1234567890', start: 6),
-         *     'abc',
-         *     ['1234567890', 1, 2],
-         *     [(new Buffer(0))->write('1234567890', start: 4), 2],
+         *     'abcd',
+         *     ['abcdef', 2],
+         *     ['abcdef', 1, 3],
+         *     [$buffer, 1],
          * ]);
          * ```
-         * string `"7890abc2356"` will be written to the socket.
+         * string `"abcdcdefbcdyz"` will be written to the socket.
          *
          * @note context switching may happen here
          *
          * @throws SocketException when timed out
          * @throws SocketException when write failed
+         * @throws \ValueError when an array element has more than 3 items
          * @phan-param non-empty-array<string|\Stringable|Buffer|array{0: string|\Stringable|Buffer, 1?: int, 2?: int}|null> $vector
          * @phpstan-param non-empty-array<string|\Stringable|Buffer|array{0: string|\Stringable|Buffer, 1?: int, 2?: int}|null> $vector
          * @psalm-param non-empty-array<string|\Stringable|Buffer|array{0: string|\Stringable|Buffer, 1?: int, 2?: int}|null> $vector
@@ -2081,6 +2316,8 @@ namespace Swow
 
         /**
          * write data into socket from `$start` of data with `$length` bytes
+         *
+         * A write to a closed peer can succeed. Check getConnectionError() after the write.
          *
          * @throws SocketException when timed out
          * @throws SocketException when write failed
@@ -2114,8 +2351,13 @@ namespace Swow
         public function sendTo(\Stringable|string $data, int $start = 0, int $length = -1, ?string $address = null, ?int $port = null, ?int $timeout = null): static { }
 
         /**
-         * Send a socket handle to peer via pipe socket
+         * Send a socket handle to the peer.
+         *
+         * The socket must be a named pipe with IPC enabled, type TYPE_IPCC.
+         * The API has no method to receive the handle.
+         *
          * @param int $timeout [optional] = $this->getWriteTimeout()
+         * @throws SocketException when the socket is not an IPC pipe
          */
         public function sendHandle(self $handle, ?int $timeout = null): static { }
 
@@ -2150,8 +2392,10 @@ namespace Swow
         public function isClient(): bool { }
 
         /**
-         * @return int return Errno constants if the socket is broken, zero otherwise,
-         * it's a silent version of {@see Socket::checkLiveness()}
+         * Get the connection error.
+         *
+         * @return int 0 when the connection is healthy, an Errno value when it is broken.
+         * A socket without a descriptor gives EBADF (-9), an open socket without a connection gives ENOTCONN (-107).
          */
         public function getConnectionError(): int { }
 
@@ -2495,8 +2739,21 @@ namespace Swow
          */
         public const SYS = 31;
 
+        /**
+         * Wait for the signal.
+         *
+         * One signal wakes all coroutines that wait for it. The handler exists only during the call.
+         * Without a waiter the signal uses the default action.
+         *
+         * @throws SignalException on timeout (-110) or failure
+         */
         public static function wait(int $signal, int $timeout = -1): void { }
 
+        /**
+         * Send a signal to a process.
+         *
+         * @throws SignalException when the signal cannot be sent
+         */
         public static function kill(int $pid, int $signal): void { }
     }
 }
@@ -2517,6 +2774,8 @@ namespace Swow
          * When it is callable, it will be called when blocking occurred, the developer can choose to suspend the coroutine or kill the coroutine;
          * when it is numeric, Coroutine will be delayed to run with sleep() in millisecond to alleviate CPU starvation;
          * when it is null, Coroutine will be delayed to run at the next round of the event loop starts to alleviate CPU starvation.
+         *
+         * The watchdog samples child coroutines only. A block in the main coroutine is not reported.
          * @return void
          */
         public static function run(int $quantum = 0, int $threshold = 0, callable|int|float|null $alerter = null): void { }
@@ -2541,6 +2800,13 @@ namespace Swow
         public const HAS_MASK = 2;
         public const IPV4_EMBED = 4;
 
+        /**
+         * Parse an IP address.
+         *
+         * The address can have a port and a mask. The method does not resolve names and does not check the mask length.
+         *
+         * @throws IpAddressException when the address is invalid
+         */
         public function __construct(string $address = '') { }
 
         public function getFlags(): int { }
@@ -2628,16 +2894,25 @@ namespace Swow
     /**
      * create a pipe from a file descriptor
      *
+     * The descriptor must be a pipe. The returned stream takes ownership of it.
+     * When the stream closes, the descriptor closes too. The mode is not checked.
+     *
      * @param int $fd the file descriptor to create a pipe from
-     * @param string $mode the mode of the pipe, must be `r` or `w`
+     * @param string $mode the mode of the pipe, expected to be `r` or `w`
      * @return resource the pipe resource
-     * @throws \Swow\Exception when failed to create a pipe
+     * @throws \Swow\Exception when the descriptor is not a pipe
      */
     function pipe_from_fd(int $fd, string $mode) { }
 }
 
 namespace Swow
 {
+    /**
+     * Run a task when the current function frame ends.
+     *
+     * A return or an exception ends the frame. Tasks run in reverse order.
+     * In the main scope the tasks run at request shutdown.
+     */
     function defer(callable $tasks): void { }
 }
 
@@ -2684,8 +2959,22 @@ namespace Swow\Http
     {
         public const DEFAULT_PROTOCOL_VERSION = '1.1';
 
+        /**
+         * Build a request string.
+         *
+         * The method adds no headers. An array header value writes one line per item.
+         *
+         * @return string the request
+         */
         public static function packRequest(string $method, \Stringable|string $uri, array $headers = [], \Stringable|string $body = '', string $protocolVersion = self::DEFAULT_PROTOCOL_VERSION): string { }
 
+        /**
+         * Build a response string.
+         *
+         * An empty reason phrase uses the standard phrase. The status code is not checked.
+         *
+         * @return string the response
+         */
         public static function packResponse(int $statusCode, string $reasonPhrase = '', array $headers = [], \Stringable|string $body = '', string $protocolVersion = self::DEFAULT_PROTOCOL_VERSION): string { }
     }
 }
@@ -2755,6 +3044,11 @@ namespace Swow\Http
         public const NOT_EXTENDED = 510;
         public const NETWORK_AUTHENTICATION_REQUIRED = 511;
 
+        /**
+         * Get the reason phrase of a status code.
+         *
+         * @return string the phrase, "UNKNOWN" for an unknown code
+         */
         public static function getReasonPhraseOf(int $statusCode): string { }
     }
 }
@@ -2801,7 +3095,15 @@ namespace Swow\Http
 
         public function setEvents(int $events): static { }
 
-        /** @return int the length of the data which was parsed, same with $this->getParsedLength() */
+        /**
+         * Parse data until the next event.
+         *
+         * Each call stops at one event. A begin or complete event consumes 0 bytes.
+         * Call the method again with a larger start to continue.
+         *
+         * @return int bytes consumed by this call
+         * @throws ParserException when the parse fails
+         */
         public function execute(\Stringable|string $data, int $start = 0, int $length = -1): int { }
 
         public function getEvent(): int { }
@@ -2812,10 +3114,21 @@ namespace Swow\Http
 
         public function getPreviousEventName(): string { }
 
+        /**
+         * Get the offset of the current data.
+         *
+         * @return int the offset. Valid for data events only: URL, HEADER_FIELD, HEADER_VALUE, BODY.
+         */
         public function getDataOffset(): int { }
 
+        /** @return int the length of the current data */
         public function getDataLength(): int { }
 
+        /**
+         * Get the bytes that the last execute() call consumed.
+         *
+         * @return int the byte count of the last call, not cumulative
+         */
         public function getParsedLength(): int { }
 
         public function isCompleted(): bool { }
@@ -2840,12 +3153,29 @@ namespace Swow\Http
 
         public function isChunked(): bool { }
 
+        /**
+         * Check whether the parser is in a multipart body.
+         *
+         * The parser ignores a boundary shorter than 2 characters.
+         *
+         * @return bool true when the parser is in a multipart body
+         */
         public function isMultipart(): bool { }
 
         public function isUpgrade(): bool { }
 
+        /**
+         * Finish the current message.
+         *
+         * Use the method only when the message is incomplete.
+         *
+         * @throws ParserException when the message is complete
+         */
         public function finish(): static { }
 
+        /**
+         * Reset the parser state.
+         */
         public function reset(): static { }
 
         public static function getEventNameFor(int $event): string { }
@@ -2877,8 +3207,23 @@ namespace Swow\WebSocket
         public const PING_FRAME = "\x89\x00";
         public const PONG_FRAME = "\x8a\x80\x00\x00\x00\x00";
 
+        /**
+         * Mask data.
+         *
+         * An empty key gives the input unchanged. The default key is empty.
+         *
+         * @param string $maskingKey 0 or 4 bytes
+         * @return string the masked data
+         * @throws \ValueError when the key has another length
+         */
         public static function mask(\Stringable|string $data, int $start = 0, int $length = -1, string $maskingKey = '', int $index = 0): string { }
 
+        /**
+         * Unmask the buffer in place.
+         *
+         * @param string $maskingKey 0 or 4 bytes
+         * @throws \ValueError when the key has another length
+         */
         public static function unmask(\Swow\Buffer $data, int $start = 0, int $length = -1, string $maskingKey = '', int $index = 0): void { }
     }
 }
@@ -2894,6 +3239,13 @@ namespace Swow\WebSocket
         public const PING = 9;
         public const PONG = 10;
 
+        /**
+         * Get the name of the opcode.
+         *
+         * The declared return type is int, but the value is a string.
+         *
+         * @return string the name
+         */
         public static function getNameOf(int $opcode): int { }
     }
 }
@@ -2918,12 +3270,24 @@ namespace Swow\WebSocket
         public const BAD_GATEWAY = 1014;
         public const TLS_HANDSHAKE = 1015;
 
+        /**
+         * Get the description of a close code.
+         *
+         * The declared return type is int, but the value is a string.
+         *
+         * @return string the description, "Unknown websocket status code" for an unknown code
+         */
         public static function getDescriptionOf(int $code): int { }
     }
 }
 
 namespace Swow\WebSocket
 {
+    /**
+     * A WebSocket frame header.
+     *
+     * The object is a Buffer that holds the header bytes.
+     */
     class Header extends \Swow\Buffer
     {
         public function __construct(bool $fin = true, bool $rsv1 = false, bool $rsv2 = false, bool $rsv3 = false, int $opcode = \Swow\WebSocket\Opcode::TEXT, int $payloadLength = 0, string $maskingKey = '') { }
@@ -2932,6 +3296,11 @@ namespace Swow\WebSocket
 
         public function getOpcode(): int { }
 
+        /**
+         * Set the opcode.
+         *
+         * The opcode uses 4 bits. Larger values are truncated.
+         */
         public function setOpcode(int $opcode): static { }
 
         public function getFin(): bool { }
@@ -2952,12 +3321,22 @@ namespace Swow\WebSocket
 
         public function getPayloadLength(): int { }
 
+        /**
+         * Set the payload length.
+         *
+         * The method does not check the value.
+         */
         public function setPayloadLength(int $payloadLength): static { }
 
         public function getMask(): bool { }
 
         public function getMaskingKey(): string { }
 
+        /**
+         * Set the masking key.
+         *
+         * An empty key clears the mask bit. A 4 byte key sets the mask bit.
+         */
         public function setMaskingKey(string $maskingKey): static { }
 
         public function setPayloadInfo(int $payloadLength, string $maskingKey = ''): static { }
@@ -3077,7 +3456,9 @@ namespace Swow\Process
         /**
          * Fork the current process and run a closure in the child.
          *
-         * POSIX only. Throws ProcessException on Windows.
+         * POSIX only.
+         * The child exits with the return value of the closure when the value is an int, or with 0.
+         * An exit() call inside the closure does not set the exit code.
          *
          * @throws ProcessException
          */
@@ -3229,5 +3610,13 @@ namespace Swow\Debug
 
 namespace Swow\Debug
 {
+    /**
+     * Register a handler for extended statements.
+     *
+     * The method needs the CLI option -e. With force=true it starts the debug sampler instead.
+     *
+     * @return \Swow\Utils\Handler handler for remove()
+     * @throws \Error when -e is missing and force is false
+     */
     function registerExtendedStatementHandler(callable $handler, bool $force = false): \Swow\Utils\Handler { }
 }
