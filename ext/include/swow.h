@@ -78,6 +78,8 @@ ZEND_BEGIN_MODULE_GLOBALS(swow)
         bool hook_pdo_pgsql;
         zend_long async_threads;
         zend_long debug_force_interval;
+        /* Total wait budget for direct child threads at RSHUTDOWN, -1 forever */
+        zend_long thread_shutdown_timeout;
     } ini;
     const char *libpq_so_name;
     struct {

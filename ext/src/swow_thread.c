@@ -121,8 +121,6 @@ static void swow_thread_run_release(swow_thread_run_t *run)
     cat_sys_free(run);
 }
 
-#define SWOW_THREAD_RSHUTDOWN_TIMEOUT 1000 /* ms */
-
 static cat_bool_t swow_thread_run_kill(swow_thread_run_t *run)
 {
     zend_executor_globals *target_eg;
@@ -175,10 +173,37 @@ static void swow_thread_children_del(swow_thread_run_t *run)
 
 static void swow_thread_children_shutdown(void)
 {
+    zend_long timeout = SWOW_G(ini.thread_shutdown_timeout);
+    cat_bool_t has_deadline = timeout >= 0;
+    uint64_t deadline = 0;
     swow_thread_run_t *run;
 
+    if (has_deadline) {
+        uint64_t timeout_ns;
+        uint64_t now = uv_hrtime();
+
+        if ((uint64_t) timeout > UINT64_MAX / UINT64_C(1000000)) {
+            timeout_ns = UINT64_MAX;
+        } else {
+            timeout_ns = (uint64_t) timeout * UINT64_C(1000000);
+        }
+        deadline = UINT64_MAX - now < timeout_ns ? UINT64_MAX : now + timeout_ns;
+    }
+
     ZEND_HASH_FOREACH_PTR(&SWOW_G(thread.children), run) {
-        if (!cat_thread_join(&run->thread, SWOW_THREAD_RSHUTDOWN_TIMEOUT)) {
+        cat_timeout_t join_timeout = timeout < 0 ? CAT_TIMEOUT_FOREVER : (cat_timeout_t) timeout;
+
+        if (has_deadline) {
+            uint64_t now = uv_hrtime();
+
+            if (now >= deadline) {
+                join_timeout = 0;
+            } else {
+                join_timeout = (cat_timeout_t) ((deadline - now + UINT64_C(999999)) / UINT64_C(1000000));
+            }
+        }
+
+        if (!cat_thread_join(&run->thread, join_timeout)) {
             (void) cat_thread_detach(&run->thread);
         }
         swow_thread_run_release(run);
