@@ -991,7 +991,7 @@ namespace Swow
          * @phpstan-param T $data
          * @psalm-param T $data
          * @param mixed $data
-         * @param int $timeout in microseconds
+         * @param int $timeout in milliseconds
          * @return static
          */
         public function push(mixed $data, int $timeout = -1): static { }
@@ -1001,7 +1001,7 @@ namespace Swow
          *
          * @note context switching happens here when channel is empty, context switching may also happen at this even channel is not empty.
          *
-         * @param int $timeout in microseconds
+         * @param int $timeout in milliseconds
          * @phan-return T $data
          * @phpstan-return T $data
          * @psalm-return T $data
@@ -1082,7 +1082,7 @@ namespace Swow
          *
          * @note content switching may happen here
          *
-         * @param int $timeout timeout in microseconds
+         * @param int $timeout timeout in milliseconds
          * @phan-return \Swow\Channel<T>
          * @phpstan-return \Swow\Channel<T>
          * @psalm-return \Swow\Channel<T>
@@ -1103,6 +1103,121 @@ namespace Swow
 namespace Swow
 {
     class SyncException extends \Swow\Exception { }
+}
+
+namespace Swow
+{
+    class Thread
+    {
+        public function __construct(callable $callable, mixed ...$args) { }
+
+        public static function run($callable, ...$args): self { }
+
+        public function start(int $timeout = -1): self { }
+
+        public function wait(int $timeout = -1): mixed { }
+
+        public function detach(): self { }
+
+        public function kill(): self { }
+
+        public static function killAll(): int { }
+
+        public function isStarted(): bool { }
+
+        public function isRunning(): bool { }
+
+        public function isDetached(): bool { }
+
+        public function getId(): int { }
+
+        /** @return array<string, mixed> debug information for var_dump */
+        public function __debugInfo(): array { }
+
+        public static function getCurrent(): self { }
+
+        public static function getCurrentId(): int { }
+
+        public function getExitStatus(): int { }
+    }
+}
+
+namespace Swow
+{
+    class ThreadException extends \Swow\Exception { }
+}
+
+namespace Swow
+{
+    class Mutex
+    {
+        public function __construct() { }
+
+        public function lock(int $timeout = -1): bool { }
+
+        public function unlock(): void { }
+
+        public function __serialize(): array { }
+
+        public function __unserialize(array $data): void { }
+
+        /** @return array<string, mixed> debug information for var_dump */
+        public function __debugInfo(): array { }
+    }
+}
+
+namespace Swow
+{
+    class Semaphore
+    {
+        public function __construct(int $value = 0) { }
+
+        public function acquire(int $timeout = -1): bool { }
+
+        public function release(int $count = 1): void { }
+
+        public function __serialize(): array { }
+
+        public function __unserialize(array $data): void { }
+    }
+}
+
+namespace Swow
+{
+    class ThannelException extends \Swow\Exception { }
+}
+
+namespace Swow
+{
+    class Thannel
+    {
+        public function __construct(int $capacity = 0) { }
+
+        public function push($data, int $timeout = -1): self { }
+
+        public function pop(int $timeout = -1): mixed { }
+
+        public function close(): void { }
+
+        public function isClosed(): bool { }
+
+        public function getCapacity(): int { }
+
+        public function getLength(): int { }
+
+        public function isEmpty(): bool { }
+
+        public function isFull(): bool { }
+
+        public function willBlock(): bool { }
+
+        public function __serialize(): array { }
+
+        public function __unserialize(array $data): void { }
+
+        /** @return array<string, mixed> debug information for var_dump */
+        public function __debugInfo(): array { }
+    }
 }
 
 namespace Swow
@@ -1415,7 +1530,7 @@ namespace Swow
          * @phan-param int<-1, max> $length
          * @psalm-param int<-1, max> $length
          * @param int $length -1 meaning not limited, receive until eof, otherwise length in bytes
-         * @param int|null $timeout timeout in microseconds or null for using {@see Socket::getReadTimeout()} value
+         * @param int|null $timeout timeout in milliseconds or null for using {@see Socket::getReadTimeout()} value
          * @return int bytes received
          */
         public function read(\Swow\Buffer $buffer, int $offset = 0, int $length = -1, ?int $timeout = null): int { }
@@ -1435,7 +1550,7 @@ namespace Swow
          * @phan-param int<-1, max> $size
          * @psalm-param int<-1, max> $size
          * @param int $size -1 meaning not limited, otherwise buffer size in bytes. only `$size` bytes data will be read from socket if there are more data than `$size` bytes, extra data will be kept in socket for further reading options
-         * @param int|null $timeout timeout in microseconds or null for using {@see Socket::getReadTimeout()} value
+         * @param int|null $timeout timeout in milliseconds or null for using {@see Socket::getReadTimeout()} value
          * @return int bytes received
          */
         public function recv(\Swow\Buffer $buffer, int $offset = 0, int $size = -1, ?int $timeout = null): int { }
@@ -1456,7 +1571,7 @@ namespace Swow
          * @phan-param int<-1, max> $size
          * @psalm-param int<-1, max> $size
          * @param int $size -1 meaning not limited, otherwise buffer size in bytes. only `$size` bytes data will be read from socket if there are more data than `$size` bytes, extra data will be kept in socket for further reading options
-         * @param int|null $timeout timeout in microseconds or null for using {@see Socket::getReadTimeout()} value
+         * @param int|null $timeout timeout in milliseconds or null for using {@see Socket::getReadTimeout()} value
          */
         public function recvData(\Swow\Buffer $buffer, int $offset = 0, int $size = -1, ?int $timeout = null): int { }
 
@@ -1480,7 +1595,7 @@ namespace Swow
          * @phpstan-param int<0,65535>|null &$port
          * @psalm-param int<0,65535>|null &$port
          * @param-out int &$port peer address
-         * @param int|null $timeout timeout in microseconds or null for using {@see Socket::getReadTimeout()} value
+         * @param int|null $timeout timeout in milliseconds or null for using {@see Socket::getReadTimeout()} value
          * @return int bytes received
          */
         public function recvFrom(\Swow\Buffer $buffer, int $offset = 0, int $size = -1, &$address = null, &$port = null, ?int $timeout = null): int { }
@@ -1506,7 +1621,7 @@ namespace Swow
          * @phpstan-param int<0,65535>|null &$port
          * @psalm-param int<0,65535>|null &$port
          * @param-out int &$port peer address
-         * @param int|null $timeout timeout in microseconds or null for using {@see Socket::getReadTimeout()} value
+         * @param int|null $timeout timeout in milliseconds or null for using {@see Socket::getReadTimeout()} value
          * @return int bytes received
          */
         public function recvDataFrom(\Swow\Buffer $buffer, int $offset = 0, int $size = -1, &$address = null, &$port = null, ?int $timeout = null): int { }
@@ -1562,7 +1677,7 @@ namespace Swow
          * @phan-param int<-1, max> $length
          * @psalm-param int<-1, max> $length
          * @param int $length -1 meaning not limited, receive until eof, otherwise length in bytes
-         * @param int|null $timeout timeout in microseconds or null for using {@see Socket::getReadTimeout()} value
+         * @param int|null $timeout timeout in milliseconds or null for using {@see Socket::getReadTimeout()} value
          * @return string data received in string
          */
         public function readString(int $length = \Swow\Buffer::COMMON_SIZE, ?int $timeout = null): string { }
@@ -1578,7 +1693,7 @@ namespace Swow
          * @phan-param int<-1, max> $size
          * @psalm-param int<-1, max> $size
          * @param int $size -1 meaning not limited, otherwise buffer size in bytes. only `$size` bytes data will be read from socket if there are more data than `$size` bytes, extra data will be kept in socket for further reading options
-         * @param int|null $timeout timeout in microseconds or null for using {@see Socket::getReadTimeout()} value
+         * @param int|null $timeout timeout in milliseconds or null for using {@see Socket::getReadTimeout()} value
          * @return string data received in string
          */
         public function recvString(int $size = \Swow\Buffer::COMMON_SIZE, ?int $timeout = null): string { }
@@ -1595,7 +1710,7 @@ namespace Swow
          * @phan-param int<-1, max> $size
          * @psalm-param int<-1, max> $size
          * @param int $size -1 meaning not limited, otherwise buffer size in bytes. only `$size` bytes data will be read from socket if there are more data than `$size` bytes, extra data will be kept in socket for further reading options
-         * @param int|null $timeout timeout in microseconds or null for using {@see Socket::getReadTimeout()} value
+         * @param int|null $timeout timeout in milliseconds or null for using {@see Socket::getReadTimeout()} value
          * @return string data received in string
          */
         public function recvStringData(int $size = \Swow\Buffer::COMMON_SIZE, ?int $timeout = null): string { }
@@ -1616,7 +1731,7 @@ namespace Swow
          * @phpstan-param int<0,65535>|null &$port
          * @psalm-param int<0,65535>|null &$port
          * @param-out int &$port peer address
-         * @param int|null $timeout timeout in microseconds or null for using {@see Socket::getReadTimeout()} value
+         * @param int|null $timeout timeout in milliseconds or null for using {@see Socket::getReadTimeout()} value
          * @return string data received in string
          */
         public function recvStringFrom(int $size = \Swow\Buffer::COMMON_SIZE, &$address = null, &$port = null, ?int $timeout = null): string { }
@@ -1638,7 +1753,7 @@ namespace Swow
          * @phpstan-param int<0,65535>|null &$port
          * @psalm-param int<0,65535>|null &$port
          * @param-out int &$port peer address
-         * @param int|null $timeout timeout in microseconds or null for using {@see Socket::getReadTimeout()} value
+         * @param int|null $timeout timeout in milliseconds or null for using {@see Socket::getReadTimeout()} value
          * @return string data received in string
          */
         public function recvStringDataFrom(int $size = \Swow\Buffer::COMMON_SIZE, &$address = null, &$port = null, ?int $timeout = null): string { }
@@ -1704,7 +1819,7 @@ namespace Swow
          * @phpstan-param non-empty-array<string|\Stringable|Buffer|array{0: string|\Stringable|Buffer, 1?: int, 2?: int}|null> $vector
          * @psalm-param non-empty-array<string|\Stringable|Buffer|array{0: string|\Stringable|Buffer, 1?: int, 2?: int}|null> $vector
          * @param array<string|\Stringable|Buffer|array|null> $vector
-         * @param int|null $timeout timeout in microseconds or null for using {@see Socket::getWriteTimeout()} value
+         * @param int|null $timeout timeout in milliseconds or null for using {@see Socket::getWriteTimeout()} value
          */
         public function write(array $vector, ?int $timeout = null): static { }
 
@@ -1725,7 +1840,7 @@ namespace Swow
          * @phpstan-param int<0, 65535>|null $port
          * @psalm-param int<0, 65535>|null $port
          * @param int|null $port port to send to
-         * @param int|null $timeout timeout in microseconds or null for using {@see Socket::getWriteTimeout()} value
+         * @param int|null $timeout timeout in milliseconds or null for using {@see Socket::getWriteTimeout()} value
          */
         public function writeTo(array $vector, ?string $address = null, ?int $port = null, ?int $timeout = null): static { }
 
@@ -1740,7 +1855,7 @@ namespace Swow
          * @phpstan-param int<-1, max> $length
          * @psalm-param int<-1, max> $length
          * @param int $length length of data to be sent, -1 meaning remaining data in $data, otherwise length in bytes.
-         * @param int|null $timeout timeout in microseconds or null for using {@see Socket::getWriteTimeout()} value
+         * @param int|null $timeout timeout in milliseconds or null for using {@see Socket::getWriteTimeout()} value
          */
         public function send(\Stringable|string $data, int $start = 0, int $length = -1, ?int $timeout = null): static { }
 
@@ -1755,7 +1870,7 @@ namespace Swow
          * @phpstan-param int<-1, max> $length
          * @psalm-param int<-1, max> $length
          * @param int $length length of data to be sent, -1 meaning remaining data in $data, otherwise length in bytes.
-         * @param int|null $timeout timeout in microseconds or null for using {@see Socket::getWriteTimeout()} value
+         * @param int|null $timeout timeout in milliseconds or null for using {@see Socket::getWriteTimeout()} value
          * @param string|null $address address to send to, may be ip or domain or path (for UNIX/UDG type)
          * @phpstan-param int<0, 65535>|null $port
          * @psalm-param int<0, 65535>|null $port
