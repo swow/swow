@@ -104,9 +104,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        php-version: ['8.5', '8.4', '8.3', '8.2', '8.1']
+        php-version: ['8.5', '8.4', '8.3', '8.2']
         #php-version: ['8.0']
-        #ts: ['nts', 'ts']
+        ts: ['nts', 'ts']
       max-parallel: 5
 
     services:
@@ -137,11 +137,11 @@ jobs:
           php-version: ${{ matrix.php-version }}
           tools: phpize
           ini-values: pcov.enabled = 0
-          coverage: pcov
-          # coverage: none
+          coverage: ${{ matrix.ts == 'nts' && 'pcov' || 'none' }}
+          # PCOV is not ZTS-safe; TS uses gcov-only extension coverage
           extensions: curl,openssl,sockets,ffi,pdo,pdo_pgsql
-        #env:
-          #phpts: ${{ matrix.ts }}
+        env:
+          phpts: ${{ matrix.ts }}
 
       - name: Setup composer dependencies
         run: |
@@ -185,7 +185,12 @@ jobs:
         id: test-library
         continue-on-error: true
         timeout-minutes: 5
-        run: php --ri pcov && composer test-library-with-pcov
+        run: |
+          if [ "${{ matrix.ts }}" = "nts" ]; then
+            php --ri pcov && composer test-library-with-pcov
+          else
+            composer test-library
+          fi
 
       - name: Run PHPT from php-src
         id: test-php-src
@@ -223,7 +228,7 @@ jobs:
         uses: codecov/codecov-action@v4
         with:
           fail_ci_if_error: true
-          files: coverage.info,./lib/swow-library/build/coverage.xml
+          files: ${{ matrix.ts == 'nts' && 'coverage.info,./lib/swow-library/build/coverage.xml' || 'coverage.info' }}
           token: ${{ secrets.CODECOV_TOKEN }}
           verbose: true
 
@@ -237,9 +242,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        php-version: ['8.5', '8.4', '8.3', '8.2', '8.1']
+        php-version: ['8.5', '8.4', '8.3', '8.2']
         #php-version: ['8.0']
-        #ts: ['nts', 'ts']
+        ts: ['nts', 'ts']
       max-parallel: 5
 
     steps:
@@ -266,11 +271,11 @@ jobs:
           php-version: ${{ matrix.php-version }}
           tools: phpize
           ini-values: pcov.enabled = 0
-          coverage: pcov
-          # coverage: none
+          coverage: ${{ matrix.ts == 'nts' && 'pcov' || 'none' }}
+          # PCOV is not ZTS-safe; TS uses gcov-only extension coverage
           extensions: curl,openssl,sockets,ffi,pdo,pdo_pgsql
-        #env:
-          #phpts: ${{ matrix.ts }}
+        env:
+          phpts: ${{ matrix.ts }}
 
       - name: Setup composer dependencies
         run: |
@@ -365,7 +370,12 @@ jobs:
         id: test-library
         continue-on-error: true
         timeout-minutes: 5
-        run: php --ri pcov && composer test-library-with-pcov
+        run: |
+          if [ "${{ matrix.ts }}" = "nts" ]; then
+            php --ri pcov && composer test-library-with-pcov
+          else
+            composer test-library
+          fi
 
       - name: Run PHPT from php-src
         id: test-php-src
@@ -402,7 +412,7 @@ jobs:
         uses: codecov/codecov-action@v4
         with:
           fail_ci_if_error: true
-          files: coverage.info,./lib/swow-library/build/coverage.xml
+          files: ${{ matrix.ts == 'nts' && 'coverage.info,./lib/swow-library/build/coverage.xml' || 'coverage.info' }}
           token: ${{ secrets.CODECOV_TOKEN }}
           verbose: true
 
@@ -416,7 +426,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        php-version: ["8.3", "8.2", "8.1"]
+        php-version: ["8.3", "8.2"]
         arch: ["x64"]
         ts: ["nts", "ts"]
         vsver: ["16"]
