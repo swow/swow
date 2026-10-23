@@ -326,6 +326,10 @@ if test "${PHP_SWOW}" != "no"; then
       AX_CHECK_COMPILE_FLAG([-fprofile-arcs -ftest-coverage], [
         CFLAGS="$CFLAGS -fprofile-arcs -ftest-coverage"
       ])
+      # GCOV counters need atomic updates when threads run the same code
+      AX_CHECK_COMPILE_FLAG([-fprofile-update=prefer-atomic], [
+        CFLAGS="$CFLAGS -fprofile-update=prefer-atomic"
+      ])
     fi
   fi
   PHP_SUBST(SWOW_MAINTAINER_CFLAGS)
