@@ -629,10 +629,12 @@ CAT_API cat_pid_t cat_os_waitpid_ex(cat_pid_t pid, int *status, int options, cat
             .process = process,
             .coroutine = CAT_COROUTINE_G(current),
         };
+        /* CAT_TIMEOUT_FOREVER arrives here as the largest value of cat_msec_t.
+         * A timeout above the range of the API waits without a deadline. */
+        ULONG wait_msec = timeout > (cat_msec_t) (INFINITE - 1) ? INFINITE : (ULONG) timeout;
 
         if (unlikely(!RegisterWaitForSingleObject(
-            &wait_handle, process, cat_os_wait_win_callback, &task,
-            timeout < 0 ? INFINITE : (ULONG) timeout,
+            &wait_handle, process, cat_os_wait_win_callback, &task, wait_msec,
             WT_EXECUTEONLYONCE | WT_EXECUTEINWAITTHREAD))) {
             DWORD error = GetLastError();
             CloseHandle(process);
@@ -675,7 +677,8 @@ CAT_API cat_pid_t cat_os_waitpid_ex(cat_pid_t pid, int *status, int options, cat
                 (void) GetExitCodeProcess(process, &exit_code);
                 break;
             }
-            if (timeout >= 0 && cat_time_msec() - start >= timeout) {
+            if (timeout != (cat_msec_t) CAT_TIMEOUT_FOREVER &&
+                cat_time_msec() - start >= timeout) {
                 CloseHandle(process);
                 cat_update_last_error(CAT_ETIMEDOUT, "Wait for process %d timed out", (int) pid);
                 return -1;

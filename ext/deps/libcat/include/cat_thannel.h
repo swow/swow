@@ -68,12 +68,24 @@ typedef struct cat_thannel_s {
     /* a producer waits here while the queue is full, or for a rendezvous take */
     cat_cond_t writable;
     cat_queue_t messages;
+    /* messages that a pop released, so the next push reuses them */
+    cat_queue_t free_messages;
     cat_thannel_size_t capacity;
     cat_thannel_size_t length;
     /* reserved, always 0 */
     cat_thannel_flags_t flags;
     cat_bool_t closed;
+    /* how often a wake reached a waiter, and how often a side parked */
+    uint64_t wake_count;
+    uint64_t park_count;
 } cat_thannel_t;
+
+/* One value of a batch. */
+typedef struct cat_thannel_item_s {
+    /* push reads the value, and pop writes a copy that the caller owns */
+    void *data;
+    size_t size;
+} cat_thannel_item_t;
 
 /*
  * Prepare a queue with the given capacity, 0 for a rendezvous.
@@ -106,6 +118,37 @@ CAT_API cat_bool_t cat_thannel_pop(cat_thannel_t *thannel, void **data, size_t *
                                    cat_timeout_t timeout);
 
 /*
+ * Copy a batch of values into the queue, or none of them.
+ *
+ * The whole batch enters under one lock, and a consumer wakes once. The batch
+ * must fit the queue, and a rendezvous queue takes one value at a time.
+ *
+ * cat_false: CAT_EINVAL on a null item or a batch that is too large,
+ * CAT_ETIMEDOUT on a timeout, CAT_ECLOSED when the queue is closed.
+ */
+CAT_API cat_bool_t cat_thannel_pushv(cat_thannel_t *thannel, const cat_thannel_item_t *items,
+                                     size_t count, cat_timeout_t timeout);
+
+/*
+ * Take between one and capacity values out of the queue.
+ *
+ * The caller owns the copies that the *count items point to, and frees them with
+ * cat_sys_free.
+ *
+ * cat_false: CAT_EINVAL on a null pointer or a capacity of 0, CAT_ETIMEDOUT on
+ * a timeout, CAT_ECLOSED when the queue is closed and empty.
+ */
+CAT_API cat_bool_t cat_thannel_popv(cat_thannel_t *thannel, cat_thannel_item_t *items,
+                                    size_t capacity, size_t *count, cat_timeout_t timeout);
+
+/*
+ * Take what the queue holds, up to capacity, and return how many values came
+ * out. The call does not wait, and it reports no close.
+ */
+CAT_API size_t cat_thannel_drain(cat_thannel_t *thannel, cat_thannel_item_t *items,
+                                 size_t capacity);
+
+/*
  * Refuse further pushes and wake every waiter. A pop still returns the messages
  * that remain, and reports CAT_ECLOSED after that.
  */
@@ -123,6 +166,11 @@ CAT_API cat_thannel_size_t cat_thannel_get_length(const cat_thannel_t *thannel);
 CAT_API cat_bool_t cat_thannel_is_empty(const cat_thannel_t *thannel);
 CAT_API cat_bool_t cat_thannel_is_full(const cat_thannel_t *thannel);
 CAT_API cat_bool_t cat_thannel_is_closed(const cat_thannel_t *thannel);
+
+/* How often a wake reached a waiter, and how often a side parked. A batch that is
+ * too small shows as many parks for few values. */
+CAT_API uint64_t cat_thannel_get_wake_count(const cat_thannel_t *thannel);
+CAT_API uint64_t cat_thannel_get_park_count(const cat_thannel_t *thannel);
 
 CAT_API cat_bool_t cat_thannel_module_init(void);
 CAT_API cat_bool_t cat_thannel_module_shutdown(void);

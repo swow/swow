@@ -39,6 +39,8 @@ extern "C" {
 #include "cat_async.h"
 #include "cat_watchdog.h"
 #include "cat_process.h"
+#include "cat_futex.h"
+#include "cat_shm.h"
 #include "cat_ssl.h"
 
 typedef enum cat_run_mode_e{

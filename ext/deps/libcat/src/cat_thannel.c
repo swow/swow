@@ -64,6 +64,98 @@ static void cat_thannel_destroy_message(cat_thannel_message_t *message)
     cat_sys_free(message);
 }
 
+/* The caller must hold the mutex. */
+static cat_thannel_message_t *cat_thannel_alloc_message(cat_thannel_t *thannel)
+{
+    cat_thannel_message_t *message;
+
+    if (cat_queue_empty(&thannel->free_messages)) {
+        return (cat_thannel_message_t *) cat_sys_calloc(1, sizeof(cat_thannel_message_t));
+    }
+
+    message = cat_queue_front_data(&thannel->free_messages, cat_thannel_message_t, node);
+    cat_queue_remove(&message->node);
+
+    return message;
+}
+
+/* The caller must hold the mutex, and own the message. */
+static void cat_thannel_recycle(cat_thannel_t *thannel, cat_thannel_message_t *message)
+{
+    cat_sys_free(message->data);
+    message->data = NULL;
+    message->size = 0;
+    message->taken = cat_false;
+
+    cat_queue_push_back(&thannel->free_messages, &message->node);
+}
+
+/* Copy one value into the queue. The caller must hold the mutex. */
+static cat_bool_t cat_thannel_append(cat_thannel_t *thannel, const cat_thannel_item_t *item)
+{
+    cat_thannel_message_t *message = cat_thannel_alloc_message(thannel);
+
+    if (unlikely(message == NULL)) {
+        cat_update_last_error(CAT_ENOMEM, "Allocate the message failed");
+        return cat_false;
+    }
+
+    if (item->size > 0) {
+        message->data = cat_sys_malloc(item->size);
+        if (unlikely(message->data == NULL)) {
+            cat_thannel_recycle(thannel, message);
+            cat_update_last_error(CAT_ENOMEM, "Allocate the message data failed");
+            return cat_false;
+        }
+        memcpy(message->data, item->data, item->size);
+        message->size = item->size;
+    }
+
+    cat_thannel_enqueue(thannel, message);
+
+    return cat_true;
+}
+
+/* Take the last count messages back out of the queue, so a batch push that
+ * failed half way leaves nothing behind. The caller must hold the mutex. */
+static void cat_thannel_rollback(cat_thannel_t *thannel, size_t count)
+{
+    cat_thannel_message_t *message;
+
+    while (count-- > 0) {
+        message = cat_queue_back_data(&thannel->messages, cat_thannel_message_t, node);
+        cat_thannel_take_back(thannel, message);
+        cat_thannel_recycle(thannel, message);
+    }
+}
+
+/* Take up to capacity messages and give their values to the caller. The caller
+ * must hold the mutex. */
+static size_t cat_thannel_take_messages(cat_thannel_t *thannel, cat_thannel_item_t *items,
+                                        size_t capacity)
+{
+    cat_thannel_message_t *message;
+    size_t count = 0;
+
+    while (count < capacity && (message = cat_thannel_dequeue(thannel)) != NULL) {
+        items[count].data = message->data;
+        items[count].size = message->size;
+        count++;
+
+        /* Detach the value, because a rendezvous producer frees the message as
+         * soon as it sees the take. */
+        message->data = NULL;
+        message->size = 0;
+        message->taken = cat_true;
+
+        if (!cat_thannel_is_rendezvous(thannel)) {
+            cat_thannel_recycle(thannel, message);
+        }
+    }
+
+    return count;
+}
+
 /* A wait that a wakeup ended must not restart the timeout, so the deadline is
  * fixed once for the whole call. */
 static cat_always_inline cat_timeout_t cat_thannel_deadline(cat_timeout_t timeout)
@@ -98,6 +190,7 @@ CAT_API cat_thannel_t *cat_thannel_create(cat_thannel_t *thannel, cat_thannel_si
     memset(thannel, 0, sizeof(*thannel));
     thannel->capacity = capacity;
     cat_queue_init(&thannel->messages);
+    cat_queue_init(&thannel->free_messages);
 
     if (unlikely(!cat_mutex_init(&thannel->mutex))) {
         return NULL;
@@ -115,72 +208,78 @@ CAT_API cat_thannel_t *cat_thannel_create(cat_thannel_t *thannel, cat_thannel_si
     return thannel;
 }
 
-CAT_API cat_bool_t cat_thannel_push(cat_thannel_t *thannel, const void *data, size_t size,
-                                    cat_timeout_t timeout)
+CAT_API cat_bool_t cat_thannel_pushv(cat_thannel_t *thannel, const cat_thannel_item_t *items,
+                                     size_t count, cat_timeout_t timeout)
 {
     cat_thannel_message_t *message;
     cat_timeout_t deadline;
+    size_t index;
 
     if (unlikely(thannel == NULL)) {
         cat_update_last_error(CAT_EINVAL, "The thannel is null");
         return cat_false;
     }
-    if (unlikely(data == NULL && size > 0)) {
-        cat_update_last_error(CAT_EINVAL, "The data is null but the size is not zero");
+    if (unlikely(items == NULL && count > 0)) {
+        cat_update_last_error(CAT_EINVAL, "The items are null but the count is not zero");
         return cat_false;
     }
-
-    message = (cat_thannel_message_t *) cat_sys_calloc(1, sizeof(*message));
-    if (unlikely(message == NULL)) {
-        cat_update_last_error(CAT_ENOMEM, "Allocate the message failed");
+    if (unlikely(count > cat_thannel_limit(thannel))) {
+        cat_update_last_error(CAT_EINVAL, "The batch is larger than the queue holds");
         return cat_false;
     }
-    if (size > 0) {
-        message->data = cat_sys_malloc(size);
-        if (unlikely(message->data == NULL)) {
-            cat_sys_free(message);
-            cat_update_last_error(CAT_ENOMEM, "Allocate the message data failed");
+    for (index = 0; index < count; index++) {
+        if (unlikely(items[index].data == NULL && items[index].size > 0)) {
+            cat_update_last_error(CAT_EINVAL, "The data is null but the size is not zero");
             return cat_false;
         }
-        memcpy(message->data, data, size);
-        message->size = size;
+    }
+    if (count == 0) {
+        return cat_true;
     }
 
     if (unlikely(!cat_mutex_lock(&thannel->mutex, CAT_TIMEOUT_FOREVER))) {
-        cat_thannel_destroy_message(message);
         return cat_false;
     }
 
     deadline = cat_thannel_deadline(timeout);
 
-    while (!thannel->closed && thannel->length >= cat_thannel_limit(thannel)) {
+    while (!thannel->closed && thannel->length + count > cat_thannel_limit(thannel)) {
+        thannel->park_count++;
         if (unlikely(!cat_cond_wait(&thannel->writable, &thannel->mutex,
             cat_thannel_remaining(deadline)))) {
             cat_mutex_unlock(&thannel->mutex);
-            cat_thannel_destroy_message(message);
             return cat_false;
         }
     }
 
     if (unlikely(thannel->closed)) {
         cat_mutex_unlock(&thannel->mutex);
-        cat_thannel_destroy_message(message);
         cat_update_last_error(CAT_ECLOSED, "The thannel is closed");
         return cat_false;
     }
 
-    cat_thannel_enqueue(thannel, message);
-    (void) cat_cond_signal(&thannel->readable);
+    for (index = 0; index < count; index++) {
+        if (unlikely(!cat_thannel_append(thannel, &items[index]))) {
+            cat_thannel_rollback(thannel, index);
+            cat_mutex_unlock(&thannel->mutex);
+            return cat_false;
+        }
+    }
+
+    if (cat_cond_signal(&thannel->readable)) {
+        thannel->wake_count++;
+    }
 
     if (!cat_thannel_is_rendezvous(thannel)) {
-        /* The queue owns the message from here, and a pop releases it. */
         cat_mutex_unlock(&thannel->mutex);
         return cat_true;
     }
 
     /* A rendezvous push completes only after a pop took the message. The
      * producer keeps the message object, and the pop empties it. */
+    message = cat_queue_back_data(&thannel->messages, cat_thannel_message_t, node);
     while (!message->taken && !thannel->closed) {
+        thannel->park_count++;
         if (unlikely(!cat_cond_wait(&thannel->writable, &thannel->mutex,
             cat_thannel_remaining(deadline)))) {
             break;
@@ -190,8 +289,8 @@ CAT_API cat_bool_t cat_thannel_push(cat_thannel_t *thannel, const void *data, si
     if (!message->taken) {
         /* Our message is still queued, because a pop needs the mutex to take it. */
         cat_thannel_take_back(thannel, message);
+        cat_thannel_recycle(thannel, message);
         cat_mutex_unlock(&thannel->mutex);
-        cat_thannel_destroy_message(message);
 
         if (thannel->closed) {
             cat_update_last_error(CAT_ECLOSED, "The thannel is closed");
@@ -199,26 +298,44 @@ CAT_API cat_bool_t cat_thannel_push(cat_thannel_t *thannel, const void *data, si
         return cat_false;
     }
 
+    cat_thannel_recycle(thannel, message);
     cat_mutex_unlock(&thannel->mutex);
-    cat_thannel_destroy_message(message);
 
     return cat_true;
 }
 
-CAT_API cat_bool_t cat_thannel_pop(cat_thannel_t *thannel, void **data, size_t *size,
-                                   cat_timeout_t timeout)
+CAT_API cat_bool_t cat_thannel_push(cat_thannel_t *thannel, const void *data, size_t size,
+                                    cat_timeout_t timeout)
 {
-    cat_thannel_message_t *message;
+    cat_thannel_item_t item;
+
+    if (unlikely(data == NULL && size > 0)) {
+        cat_update_last_error(CAT_EINVAL, "The data is null but the size is not zero");
+        return cat_false;
+    }
+
+    item.data = (void *) data;
+    item.size = size;
+
+    return cat_thannel_pushv(thannel, &item, 1, timeout);
+}
+
+CAT_API cat_bool_t cat_thannel_popv(cat_thannel_t *thannel, cat_thannel_item_t *items,
+                                    size_t capacity, size_t *count, cat_timeout_t timeout)
+{
     cat_timeout_t deadline;
-    void *value;
-    size_t value_size;
+    size_t taken;
 
     if (unlikely(thannel == NULL)) {
         cat_update_last_error(CAT_EINVAL, "The thannel is null");
         return cat_false;
     }
-    if (unlikely(data == NULL || size == NULL)) {
-        cat_update_last_error(CAT_EINVAL, "The data or the size is null");
+    if (unlikely(items == NULL || count == NULL)) {
+        cat_update_last_error(CAT_EINVAL, "The items or the count is null");
+        return cat_false;
+    }
+    if (unlikely(capacity == 0)) {
+        cat_update_last_error(CAT_EINVAL, "The capacity is zero");
         return cat_false;
     }
 
@@ -235,6 +352,7 @@ CAT_API cat_bool_t cat_thannel_pop(cat_thannel_t *thannel, void **data, size_t *
             return cat_false;
         }
 
+        thannel->park_count++;
         if (unlikely(!cat_cond_wait(&thannel->readable, &thannel->mutex,
             cat_thannel_remaining(deadline)))) {
             cat_mutex_unlock(&thannel->mutex);
@@ -242,30 +360,65 @@ CAT_API cat_bool_t cat_thannel_pop(cat_thannel_t *thannel, void **data, size_t *
         }
     }
 
-    message = cat_thannel_dequeue(thannel);
-    value = message->data;
-    value_size = message->size;
-
-    /* Detach the value before the wakeup, because a rendezvous producer frees
-     * the message as soon as it sees the take. */
-    message->data = NULL;
-    message->size = 0;
-    message->taken = cat_true;
+    taken = cat_thannel_take_messages(thannel, items, capacity);
 
     /* This pop made room and, for a rendezvous, completed a take. Producers of
      * both kinds wait on the same condition, so wake them all. */
-    (void) cat_cond_broadcast(&thannel->writable);
+    if (cat_cond_broadcast(&thannel->writable)) {
+        thannel->wake_count++;
+    }
 
     cat_mutex_unlock(&thannel->mutex);
 
-    if (!cat_thannel_is_rendezvous(thannel)) {
-        cat_sys_free(message);
-    }
-
-    *data = value;
-    *size = value_size;
+    *count = taken;
 
     return cat_true;
+}
+
+CAT_API cat_bool_t cat_thannel_pop(cat_thannel_t *thannel, void **data, size_t *size,
+                                   cat_timeout_t timeout)
+{
+    cat_thannel_item_t item = { 0 };
+    size_t count = 0;
+
+    if (unlikely(data == NULL || size == NULL)) {
+        cat_update_last_error(CAT_EINVAL, "The data or the size is null");
+        return cat_false;
+    }
+
+    if (unlikely(!cat_thannel_popv(thannel, &item, 1, &count, timeout))) {
+        return cat_false;
+    }
+
+    *data = item.data;
+    *size = item.size;
+
+    return cat_true;
+}
+
+CAT_API size_t cat_thannel_drain(cat_thannel_t *thannel, cat_thannel_item_t *items,
+                                 size_t capacity)
+{
+    size_t taken;
+
+    if (unlikely(thannel == NULL || items == NULL || capacity == 0)) {
+        cat_update_last_error(CAT_EINVAL, "The thannel, the items, or the capacity is invalid");
+        return 0;
+    }
+
+    if (unlikely(!cat_mutex_lock(&thannel->mutex, CAT_TIMEOUT_FOREVER))) {
+        return 0;
+    }
+
+    taken = cat_thannel_take_messages(thannel, items, capacity);
+
+    if (taken > 0 && cat_cond_broadcast(&thannel->writable)) {
+        thannel->wake_count++;
+    }
+
+    cat_mutex_unlock(&thannel->mutex);
+
+    return taken;
 }
 
 CAT_API cat_bool_t cat_thannel_close(cat_thannel_t *thannel)
@@ -298,6 +451,12 @@ CAT_API void cat_thannel_cleanup(cat_thannel_t *thannel)
     }
 
     while ((message = cat_thannel_dequeue(thannel)) != NULL) {
+        cat_thannel_destroy_message(message);
+    }
+
+    while (!cat_queue_empty(&thannel->free_messages)) {
+        message = cat_queue_front_data(&thannel->free_messages, cat_thannel_message_t, node);
+        cat_queue_remove(&message->node);
         cat_thannel_destroy_message(message);
     }
 
@@ -371,6 +530,44 @@ CAT_API cat_bool_t cat_thannel_is_closed(const cat_thannel_t *thannel)
     cat_mutex_unlock(&self->mutex);
 
     return closed;
+}
+
+CAT_API uint64_t cat_thannel_get_wake_count(const cat_thannel_t *thannel)
+{
+    cat_thannel_t *self = (cat_thannel_t *) thannel;
+    uint64_t count;
+
+    if (thannel == NULL) {
+        return 0;
+    }
+    if (unlikely(!cat_mutex_lock(&self->mutex, CAT_TIMEOUT_FOREVER))) {
+        return 0;
+    }
+
+    count = self->wake_count;
+
+    cat_mutex_unlock(&self->mutex);
+
+    return count;
+}
+
+CAT_API uint64_t cat_thannel_get_park_count(const cat_thannel_t *thannel)
+{
+    cat_thannel_t *self = (cat_thannel_t *) thannel;
+    uint64_t count;
+
+    if (thannel == NULL) {
+        return 0;
+    }
+    if (unlikely(!cat_mutex_lock(&self->mutex, CAT_TIMEOUT_FOREVER))) {
+        return 0;
+    }
+
+    count = self->park_count;
+
+    cat_mutex_unlock(&self->mutex);
+
+    return count;
 }
 
 CAT_API cat_bool_t cat_thannel_module_init(void)

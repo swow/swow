@@ -146,6 +146,8 @@ CAT_API cat_bool_t      cat_thread_is_main(const cat_thread_t *thread);
  * reuse the object. */
 CAT_API cat_bool_t      cat_thread_is_running(const cat_thread_t *thread);
 CAT_API cat_thread_t   *cat_thread_get_parent(const cat_thread_t *thread);
+/* The join releases the handle of the thread on Windows, and the id of that
+ * thread then reads as 0. Read the id before the join. */
 CAT_API cat_thread_id_t cat_thread_get_id(const cat_thread_t *thread);
 CAT_API cat_thread_id_t cat_thread_get_current_id(void);
 CAT_API uint32_t        cat_thread_get_count(void);

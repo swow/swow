@@ -100,6 +100,19 @@ CAT_API cat_bool_t cat_thread_wait_is_parked(const cat_thread_wait_t *wait);
 CAT_API cat_bool_t cat_thread_wait_park_until(cat_thread_wait_t *wait, cat_timeout_t timeout,
                                               cat_bool_t (*ready)(const void *data), const void *data); CAT_INTERNAL
 
+/*
+ * How a primitive waits when its fast path fails.
+ *
+ * CAT_SYNC_WAIT_PARK suspends the coroutine and gives the thread to the event
+ * loop. CAT_SYNC_WAIT_BLOCK blocks the calling thread in the kernel, so it needs
+ * no runtime, and it does not touch the scheduler. Use BLOCK only on a thread
+ * that runs one coroutine, because the blocked thread runs no other coroutine.
+ */
+typedef enum cat_sync_wait_e {
+    CAT_SYNC_WAIT_PARK = 0,
+    CAT_SYNC_WAIT_BLOCK = 1,
+} cat_sync_wait_t;
+
 typedef struct cat_mutex_s {
     uv_mutex_t lock;
     cat_thread_wait_t wait;
@@ -116,14 +129,22 @@ typedef struct cat_mutex_s {
      * Windows, where it is a critical section that the owning thread re-enters.
      */
     cat_atomic_uint64_t owner;
+    /* a BLOCK waiter sleeps here, and the release signals it */
+    uv_cond_t wakeup;
+    cat_sync_wait_t wait_mode;
 } cat_mutex_t;
 
 typedef struct cat_sem_s {
     uv_sem_t sem;
     cat_thread_wait_t wait;
+    /* libuv has no getter for the count, so the library keeps a copy of it */
+    cat_atomic_int64_t value;
 } cat_sem_t;
 
 CAT_API cat_bool_t cat_mutex_init(cat_mutex_t *mutex);
+/* The wait mode stays fixed for the whole life of the mutex.
+ * cat_false when the mode is not one of the two values (CAT_EINVAL). */
+CAT_API cat_bool_t cat_mutex_init_ex(cat_mutex_t *mutex, cat_sync_wait_t wait);
 
 /*
  * cat_false when a coroutine still holds the lock (CAT_EMISUSE). The mutex stays
@@ -139,6 +160,9 @@ CAT_API cat_bool_t cat_mutex_destroy(cat_mutex_t *mutex);
  *
  * The mutex is not recursive. A second lock from the same thread waits like any
  * other lock, even when it comes from another coroutine of that thread.
+ *
+ * A BLOCK mutex blocks the calling thread instead of parking a coroutine, so the
+ * call needs no runtime.
  *
  * cat_false: nothing was taken. The last error gives the reason.
  * CAT_ETIMEDOUT on a timeout, CAT_EBUSY when the timeout is 0, and CAT_EMISUSE
@@ -161,6 +185,23 @@ CAT_API void cat_sem_destroy(cat_sem_t *sem);
 CAT_API cat_bool_t cat_sem_acquire(cat_sem_t *sem, cat_timeout_t timeout);
 CAT_API void       cat_sem_post(cat_sem_t *sem);
 
+/* Add count counts and wake up to count waiters. A count of 0 posts nothing. */
+CAT_API void cat_sem_release(cat_sem_t *sem, size_t count);
+
+/*
+ * Take a count without a wait. cat_false with CAT_EBUSY when no count is left.
+ */
+CAT_API cat_bool_t cat_sem_try_acquire(cat_sem_t *sem);
+
+/*
+ * The count that a post adds and an acquire takes. The copy is one step behind
+ * while a post and a take run at the same time, so do not treat it as a lock.
+ */
+CAT_API int64_t cat_sem_get_value(const cat_sem_t *sem);
+
+/* The number of coroutines that wait on the semaphore. */
+CAT_API size_t cat_sem_get_waiter_count(const cat_sem_t *sem);
+
 /*
  * A condition variable reports that a predicate became true. The caller owns the
  * predicate and reads it under the mutex. A wait takes the mutex and returns
@@ -171,6 +212,8 @@ CAT_API void       cat_sem_post(cat_sem_t *sem);
  */
 typedef struct cat_cond_s {
     cat_thread_wait_t wait;
+    /* a waiter of a BLOCK mutex sleeps here */
+    uv_cond_t wakeup;
 } cat_cond_t;
 
 CAT_API cat_bool_t cat_cond_init(cat_cond_t *cond);
@@ -188,6 +231,9 @@ CAT_API void cat_cond_destroy(cat_cond_t *cond);
  * The caller must hold the mutex. The release and the queue insert are one
  * step, so a signal that arrives in between is not lost.
  *
+ * The wait takes the mode of the mutex. A BLOCK mutex blocks the calling thread
+ * and a PARK mutex parks the coroutine.
+ *
  * cat_false: the timeout expired (CAT_ETIMEDOUT, the mutex is held again), or
  * the caller does not hold the mutex (CAT_EMISUSE).
  *
@@ -197,10 +243,15 @@ CAT_API void cat_cond_destroy(cat_cond_t *cond);
  */
 CAT_API cat_bool_t cat_cond_wait(cat_cond_t *cond, cat_mutex_t *mutex, cat_timeout_t timeout);
 
-/* Wake one waiter. Returns cat_true when it woke one. */
+/*
+ * Wake one waiter, whether it is a parked coroutine or a blocked thread.
+ *
+ * cat_true when it woke a coroutine. A blocked thread wakes as well, but no
+ * platform reports that case.
+ */
 CAT_API cat_bool_t cat_cond_signal(cat_cond_t *cond);
 
-/* Wake all waiters. Returns cat_true when it woke at least one. */
+/* Wake all waiters. cat_true when it woke at least one coroutine. */
 CAT_API cat_bool_t cat_cond_broadcast(cat_cond_t *cond);
 
 CAT_API cat_bool_t cat_thread_sync_module_init(void);
