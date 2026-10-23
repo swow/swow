@@ -1190,7 +1190,7 @@ namespace Swow
          *
          * The first ready action wins. With no ready action the call waits for the timeout.
          *
-         * @note content switching may happen here
+         * @note context switching may happen here
          *
          * @param int $timeout timeout in milliseconds
          * @throws SelectorException on timeout or failure
@@ -1289,9 +1289,10 @@ namespace Swow
         /**
          * Wait for the thread to exit.
          *
-         * In a coroutine, this method suspends the current coroutine.
          * A later call returns the cached result.
          * A fatal error in the body gives status 255.
+         *
+         * @note context switching will happen here
          *
          * @param int $timeout timeout in milliseconds, -1 waits forever
          * @return mixed the return value of the body, or null after a fatal error
@@ -1311,7 +1312,7 @@ namespace Swow
         /**
          * Send an asynchronous kill request.
          *
-         * This method does not wait for the thread to exit. This method does not yield.
+         * This method does not wait for the thread to exit.
          * The thread stops at the next safe point. A blocking native call completes first.
          * After the kill the status is -1.
          * Call wait to get the result.
@@ -1323,19 +1324,19 @@ namespace Swow
         /**
          * Send a kill request to every child thread.
          *
-         * This method does not wait for the threads to exit. This method does not yield.
+         * This method does not wait for the threads to exit.
          *
          * @return int the number of threads that accepted the request
          */
         public static function killAll(): int { }
 
-        /** Return true after start was called. This method does not yield. */
+        /** Return true after start was called. */
         public function isStarted(): bool { }
 
-        /** Return true while the thread is running. This method does not yield. */
+        /** Return true while the thread is running. */
         public function isRunning(): bool { }
 
-        /** Return true after detach was called. This method does not yield. */
+        /** Return true after detach was called. */
         public function isDetached(): bool { }
 
         /**
@@ -1343,17 +1344,16 @@ namespace Swow
          *
          * The value is fixed at start and does not change after join.
          * The OS can reuse the id after the thread exits.
-         * This method returns 0 before start. This method does not yield.
+         * This method returns 0 before start.
          */
         public function getId(): int { }
 
-        /** Return debug information for var_dump. This method does not yield. */
+        /** Return debug information for var_dump. */
         public function __debugInfo(): array { }
 
         /**
          * Return the Thread object for the current thread.
          *
-         * This method does not yield.
          *
          * @throws ThreadException when Swow has no current thread.
          */
@@ -1362,7 +1362,7 @@ namespace Swow
         /**
          * Return the native id of the current thread.
          *
-         * This method returns 0 when Swow has no current thread. This method does not yield.
+         * This method returns 0 when Swow has no current thread.
          */
         public static function getCurrentId(): int { }
 
@@ -1370,7 +1370,6 @@ namespace Swow
          * Return the exit status of the thread.
          *
          * The status is 0 for a normal return, N for exit(N), 255 for an uncaught exception, and -1 for a kill.
-         * This method does not yield.
          */
         public function getExitStatus(): int { }
     }
@@ -1393,7 +1392,7 @@ namespace Swow
      */
     class Mutex
     {
-        /** Create a mutex. This method does not yield. */
+        /** Create a mutex. */
         public function __construct() { }
 
         /**
@@ -1401,6 +1400,8 @@ namespace Swow
          *
          * In a coroutine, this method suspends the current coroutine when the mutex is held.
          * Do not lock the same mutex twice from one thread. The second call waits and can deadlock.
+         *
+         * @note context switching may happen here
          *
          * @param int $timeout timeout in milliseconds, -1 waits forever
          * @return bool false on timeout
@@ -1411,7 +1412,7 @@ namespace Swow
         /**
          * Release the mutex.
          *
-         * The caller must hold the mutex. This method does not yield.
+         * The caller must hold the mutex.
          *
          * @throws \Swow\SyncException when the caller does not hold the mutex.
          */
@@ -1421,20 +1422,19 @@ namespace Swow
          * Serialize the mutex by shared object id.
          *
          * The serialized form does not copy the mutex state.
-         * This method does not yield.
          *
          * @throws \Swow\SyncException when the mutex is not constructed.
          */
         public function __serialize(): array { }
 
         /**
-         * Restore the mutex from a shared object id. This method does not yield.
+         * Restore the mutex from a shared object id.
          *
          * @throws \Swow\SyncException when the data is invalid or the object is gone.
          */
         public function __unserialize(array $data): void { }
 
-        /** Return debug information. This method does not yield. */
+        /** Return debug information. */
         public function __debugInfo(): array { }
     }
 }
@@ -1458,6 +1458,8 @@ namespace Swow
          *
          * In a coroutine, this method suspends the current coroutine when the count is zero.
          *
+         * @note context switching may happen here
+         *
          * @param int $timeout timeout in milliseconds, -1 waits forever
          * @return bool false on timeout
          * @throws \Swow\SyncException when the caller cannot wait for the semaphore.
@@ -1465,9 +1467,22 @@ namespace Swow
         public function acquire(int $timeout = -1): bool { }
 
         /**
+         * Try to take one permit without waiting.
+         *
+         * @return bool true when a permit was taken
+         */
+        public function tryAcquire(): bool { }
+
+        /** Return the current permit count. */
+        public function getValue(): int { }
+
+        /** Return the number of waiters. */
+        public function getWaiterCount(): int { }
+
+        /**
          * Add permits and wake waiters.
          *
-         * A count of 0 does nothing. This method does not yield.
+         * A count of 0 does nothing.
          *
          * @param int $count number of permits to add
          * @throws \ValueError when the count is negative.
@@ -1478,14 +1493,13 @@ namespace Swow
          * Serialize the semaphore by shared object id.
          *
          * The serialized form does not copy the semaphore state.
-         * This method does not yield.
          *
          * @throws \Swow\SyncException when the semaphore is not constructed.
          */
         public function __serialize(): array { }
 
         /**
-         * Restore the semaphore from a shared object id. This method does not yield.
+         * Restore the semaphore from a shared object id.
          *
          * @throws \Swow\SyncException when the data is invalid or the object is gone.
          */
@@ -1526,6 +1540,8 @@ namespace Swow
          * In a coroutine, this method suspends the current coroutine when the queue is full.
          * An unbuffered push in one OS thread does not return after the take. The timeout does not fire.
          *
+         * @note context switching may happen here
+         *
          * @param mixed $data value to serialize
          * @param int $timeout timeout in milliseconds, -1 waits forever
          * @throws ThannelException on timeout (-110) or when the queue is closed (-9758)
@@ -1538,10 +1554,49 @@ namespace Swow
          *
          * In a coroutine, this method suspends the current coroutine when the queue is empty.
          *
+         * @note context switching may happen here
+         *
          * @param int $timeout timeout in milliseconds, -1 waits forever
          * @throws ThannelException when the wait times out, the queue is closed and empty, or the value cannot be unserialized.
          */
         public function pop(int $timeout = -1): mixed { }
+
+        /**
+         * Serialize a batch and push it as one unit.
+         *
+         * The batch enters as a whole or not at all. In a coroutine, this method suspends the current coroutine
+         * when the batch does not fit.
+         *
+         * @note context switching may happen here
+         *
+         * @param array $values values to serialize
+         * @param int $timeout timeout in milliseconds, -1 waits forever
+         * @return int number of values pushed
+         * @throws ThannelException on timeout, a closed queue, or an oversized batch
+         */
+        public function pushMany(array $values, int $timeout = -1): int { }
+
+        /**
+         * Remove up to max values.
+         *
+         * The call returns at least one value when the queue is not empty.
+         *
+         * @note context switching may happen here
+         *
+         * @param int $max maximum number of values to return
+         * @param int $timeout timeout in milliseconds, -1 waits forever
+         * @return array the values in queue order
+         */
+        public function popMany(int $max, int $timeout = -1): array { }
+
+        /** Remove all queued values without waiting. */
+        public function drain(): array { }
+
+        /** Return the number of wakes that reached a waiter. */
+        public function getWakeCount(): int { }
+
+        /** Return the number of times a side parked. */
+        public function getParkCount(): int { }
 
         /**
          * Close the queue.
@@ -1552,42 +1607,388 @@ namespace Swow
          */
         public function close(): void { }
 
-        /** Return true after the queue is closed. This method does not yield. */
+        /** Return true after the queue is closed. */
         public function isClosed(): bool { }
 
-        /** Return the queue capacity. This method does not yield. */
+        /** Return the queue capacity. */
         public function getCapacity(): int { }
 
-        /** Return the number of queued values. This method does not yield. */
+        /** Return the number of queued values. */
         public function getLength(): int { }
 
-        /** Return true when the queue has no values. This method does not yield. */
+        /** Return true when the queue has no values. */
         public function isEmpty(): bool { }
 
-        /** Return true when the queue is full. An unbuffered Thannel is always full. This method does not yield. */
+        /** Return true when the queue is full. An unbuffered Thannel is always full. */
         public function isFull(): bool { }
 
-        /** @return bool true when the queue is empty or full. An unbuffered Thannel always returns true. This method does not yield. */
+        /** @return bool true when the queue is empty or full. An unbuffered Thannel always returns true. */
         public function willBlock(): bool { }
 
         /**
          * Serialize the Thannel by shared object id.
          *
          * The serialized form does not copy the queue.
-         * This method does not yield.
          *
          * @throws ThannelException when the Thannel is not constructed.
          */
         public function __serialize(): array { }
 
         /**
-         * Restore the Thannel from a shared object id. This method does not yield.
+         * Restore the Thannel from a shared object id.
          *
          * @throws ThannelException when the data is invalid or the object is gone.
          */
         public function __unserialize(array $data): void { }
 
-        /** Return debug information. This method does not yield. */
+        /** Return debug information. */
+        public function __debugInfo(): array { }
+    }
+}
+
+namespace Swow
+{
+    /** Report SpscQueue API errors. */
+    class SpscQueueException extends \Swow\Exception { }
+}
+
+namespace Swow
+{
+    /**
+     * A fixed-size single-producer single-consumer queue in shared memory.
+     *
+     * One thread produces and one thread consumes. A blocking call stops the whole OS thread,
+     * so use it only in a worker that runs one coroutine.
+     * An anonymous queue is visible to threads of this process and to a forked child.
+     * A named queue is visible to another process that attaches the same name.
+     */
+    class SpscQueue
+    {
+        /**
+         * Create an anonymous queue.
+         *
+         * @param int $capacity maximum number of queued values
+         * @param int $maxMessageSize maximum size of one serialized value in bytes
+         * @throws \ValueError when a size is out of range
+         * @throws SpscQueueException when the queue cannot be created
+         */
+        public function __construct(int $capacity, int $maxMessageSize = 8192) { }
+
+        /**
+         * Create a named queue.
+         *
+         * @throws \ValueError when a size is out of range
+         * @throws SpscQueueException when the name exists or the queue cannot be created
+         */
+        public static function createNamed(string $name, int $capacity, int $maxMessageSize = 8192): self { }
+
+        /** Attach a named queue. */
+        public static function attachNamed(string $name): self { }
+
+        /**
+         * Remove a name.
+         *
+         * An existing mapping stays valid. On Windows the section ends when the last mapping
+         * closes; unlink does not remove the name earlier.
+         */
+        public static function unlink(string $name): void { }
+
+        /** Return the name, or null for an anonymous queue. */
+        public function getName(): ?string { }
+
+        /**
+         * Serialize a value and push it.
+         *
+         * @note this method blocks the whole OS thread
+         *
+         * @param mixed $value value to serialize
+         * @param int $timeout timeout in milliseconds, -1 waits forever
+         * @throws SpscQueueException on timeout, a closed queue, or a serialization failure
+         */
+        public function push($value, int $timeout = -1): self { }
+
+        /**
+         * Pop and unserialize a value.
+         *
+         * @note this method blocks the whole OS thread
+         *
+         * @param int $timeout timeout in milliseconds, -1 waits forever
+         * @throws SpscQueueException on timeout, a closed empty queue, or a deserialization failure
+         */
+        public function pop(int $timeout = -1): mixed { }
+
+        /**
+         * Serialize a batch and push it as one unit.
+         *
+         * The batch enters as a whole or not at all.
+         *
+         * @note this method blocks the whole OS thread
+         *
+         * @param array $values values to serialize
+         * @param int $timeout timeout in milliseconds, -1 waits forever
+         * @return int number of values pushed
+         * @throws SpscQueueException on timeout, a closed queue, or an oversized batch
+         */
+        public function pushMany(array $values, int $timeout = -1): int { }
+
+        /**
+         * Pop up to max values.
+         *
+         * The call returns at least one value when the queue is not empty.
+         *
+         * @note this method blocks the whole OS thread
+         *
+         * @param int $max maximum number of values to return
+         * @param int $timeout timeout in milliseconds, -1 waits forever
+         * @return array the values in queue order
+         */
+        public function popMany(int $max, int $timeout = -1): array { }
+
+        /** Pop all queued values without waiting. */
+        public function drain(): array { }
+
+        /** Stop further pushes and wake both sides. */
+        public function close(): void { }
+
+        /** Return true after close. */
+        public function isClosed(): bool { }
+
+        /** Return the maximum number of queued values. */
+        public function getCapacity(): int { }
+
+        /** Return the maximum serialized value size in bytes. */
+        public function getMaxMessageSize(): int { }
+
+        /** Return the number of queued values. */
+        public function getLength(): int { }
+
+        /** Return true when the queue has no values. */
+        public function isEmpty(): bool { }
+
+        /** Return true when the queue has no free slot. */
+        public function isFull(): bool { }
+
+        /** Return the number of wakes that reached a waiter. */
+        public function getWakeCount(): int { }
+
+        /** Return the number of times a side parked. */
+        public function getParkCount(): int { }
+
+        /**
+         * Serialize the queue by name or shared object id.
+         *
+         * The serialized form does not copy queued values.
+         */
+        public function __serialize(): array { }
+
+        /** Restore the queue from a name or shared object id. */
+        public function __unserialize(array $data): void { }
+
+        /** Return debug information. */
+        public function __debugInfo(): array { }
+    }
+}
+
+namespace Swow
+{
+    /**
+     * A shared memory byte buffer with named and anonymous mappings.
+     *
+     * An anonymous buffer is visible to threads of this process and to a forked child.
+     * A named buffer is visible to another process that attaches the same name.
+     * The buffer does not lock. The caller coordinates access.
+     * The typed methods use offsetBytes as a byte offset and count as an element count.
+     * The endian argument selects the byte order.
+     */
+    class SharedBuffer
+    {
+        /** Use the byte order of this machine. */
+        public const NATIVE_ENDIAN = 0;
+        /** Store and load typed values in little-endian order. */
+        public const LITTLE_ENDIAN = 1;
+        /** Store and load typed values in big-endian order. */
+        public const BIG_ENDIAN = 2;
+
+        /**
+         * Create an anonymous buffer.
+         *
+         * @param int $size size in bytes
+         * @throws \ValueError when the size is not positive
+         * @throws \Swow\SyncException when the buffer cannot be created
+         */
+        public function __construct(int $size) { }
+
+        /** Create a named buffer. */
+        public static function createNamed(string $name, int $size): self { }
+
+        /** Attach a named buffer. */
+        public static function attachNamed(string $name): self { }
+
+        /** Remove a name. An existing mapping stays valid. */
+        public static function unlink(string $name): void { }
+
+        /** Return the buffer size in bytes. */
+        public function getSize(): int { }
+
+        /** Return the name, or null for an anonymous buffer. */
+        public function getName(): ?string { }
+
+        /** Return the shared object id. */
+        public function getSharedId(): int { }
+
+        /** Copy bytes out of the buffer. */
+        public function read(int $offsetBytes, int $lengthBytes): string { }
+
+        /** Copy bytes into the buffer. */
+        public function write(int $offsetBytes, string $data): void { }
+
+        /** Store 32-bit float values at a byte offset. */
+        public function writeF32(int $offsetBytes, array $values, int $endian = 0): void { }
+
+        /** Load 32-bit float values at a byte offset. */
+        public function viewF32(int $offsetBytes, int $count, int $endian = 0): array { }
+
+        /** Store 64-bit float values at a byte offset. */
+        public function writeF64(int $offsetBytes, array $values, int $endian = 0): void { }
+
+        /** Load 64-bit float values at a byte offset. */
+        public function viewF64(int $offsetBytes, int $count, int $endian = 0): array { }
+
+        /** Store signed 8-bit integers at a byte offset. */
+        public function writeI8(int $offsetBytes, array $values, int $endian = 0): void { }
+
+        /** Load signed 8-bit integers at a byte offset. */
+        public function viewI8(int $offsetBytes, int $count, int $endian = 0): array { }
+
+        /** Store unsigned 8-bit integers at a byte offset. */
+        public function writeU8(int $offsetBytes, array $values, int $endian = 0): void { }
+
+        /** Load unsigned 8-bit integers at a byte offset. */
+        public function viewU8(int $offsetBytes, int $count, int $endian = 0): array { }
+
+        /** Store signed 16-bit integers at a byte offset. */
+        public function writeI16(int $offsetBytes, array $values, int $endian = 0): void { }
+
+        /** Load signed 16-bit integers at a byte offset. */
+        public function viewI16(int $offsetBytes, int $count, int $endian = 0): array { }
+
+        /** Store unsigned 16-bit integers at a byte offset. */
+        public function writeU16(int $offsetBytes, array $values, int $endian = 0): void { }
+
+        /** Load unsigned 16-bit integers at a byte offset. */
+        public function viewU16(int $offsetBytes, int $count, int $endian = 0): array { }
+
+        /** Store signed 32-bit integers at a byte offset. */
+        public function writeI32(int $offsetBytes, array $values, int $endian = 0): void { }
+
+        /** Load signed 32-bit integers at a byte offset. */
+        public function viewI32(int $offsetBytes, int $count, int $endian = 0): array { }
+
+        /** Store unsigned 32-bit integers at a byte offset. */
+        public function writeU32(int $offsetBytes, array $values, int $endian = 0): void { }
+
+        /** Load unsigned 32-bit integers at a byte offset. */
+        public function viewU32(int $offsetBytes, int $count, int $endian = 0): array { }
+
+        /** Store signed 64-bit integers at a byte offset. */
+        public function writeI64(int $offsetBytes, array $values, int $endian = 0): void { }
+
+        /** Load signed 64-bit integers at a byte offset. */
+        public function viewI64(int $offsetBytes, int $count, int $endian = 0): array { }
+
+        /** Store unsigned 64-bit integers at a byte offset. */
+        public function writeU64(int $offsetBytes, array $values, int $endian = 0): void { }
+
+        /** Load unsigned 64-bit integers at a byte offset. */
+        public function viewU64(int $offsetBytes, int $count, int $endian = 0): array { }
+
+        /** Fill bytes with one value. */
+        public function fill(int $offsetBytes, int $lengthBytes, int $byte): void { }
+
+        /** Set all bytes to zero. */
+        public function clear(): void { }
+
+        /** Copy bytes between buffers. */
+        public function copyFrom(self $source, int $sourceOffsetBytes, int $destinationOffsetBytes, int $lengthBytes): void { }
+
+        /** Serialize the buffer by name or shared object id. */
+        public function __serialize(): array { }
+
+        /** Restore the buffer from a name or shared object id. */
+        public function __unserialize(array $data): void { }
+
+        /** Return debug information. */
+        public function __debugInfo(): array { }
+    }
+}
+
+namespace Swow
+{
+    /**
+     * A 32-bit futex in shared memory.
+     *
+     * wait() blocks the whole OS thread, not only the current coroutine.
+     * Use it only in a worker thread that runs one coroutine.
+     * An anonymous futex is visible to threads of this process and to a forked child.
+     * A named futex is visible to another process that attaches the same name.
+     * setValue() publishes the value with release order. getValue() reads it with acquire order.
+     * Store a value before wake().
+     */
+    class Futex
+    {
+        /**
+         * Create an anonymous futex.
+         *
+         * @param int $value initial signed 32-bit value
+         * @throws \ValueError when the value does not fit
+         * @throws \Swow\SyncException when the futex cannot be created
+         */
+        public function __construct(int $value = 0) { }
+
+        /** Create a named futex. */
+        public static function createNamed(string $name, int $value = 0): self { }
+
+        /** Attach a named futex. */
+        public static function attachNamed(string $name): self { }
+
+        /** Remove a name. An existing mapping stays valid. */
+        public static function unlink(string $name): void { }
+
+        /** Return the current value with acquire order. */
+        public function getValue(): int { }
+
+        /** Store a value with release order. */
+        public function setValue(int $value): void { }
+
+        /**
+         * Wait while the value equals expected.
+         *
+         * @note this method blocks the whole OS thread
+         *
+         * @param int $expected signed 32-bit value to compare
+         * @param int $timeout timeout in milliseconds, -1 waits forever
+         * @return bool false when the value changed or the timeout expired
+         * @throws \Swow\SyncException when the wait cannot be performed
+         */
+        public function wait(int $expected, int $timeout = -1): bool { }
+
+        /**
+         * Wake waiters. This method does not block.
+         *
+         * A negative count wakes all waiters. A count of zero wakes none.
+         */
+        public function wake(int $count): bool { }
+
+        /** Return the shared object id. */
+        public function getSharedId(): int { }
+
+        /** Serialize the futex by name or shared object id. */
+        public function __serialize(): array { }
+
+        /** Restore the futex from a name or shared object id. */
+        public function __unserialize(array $data): void { }
+
+        /** Return debug information. */
         public function __debugInfo(): array { }
     }
 }
@@ -2745,6 +3146,8 @@ namespace Swow
          * One signal wakes all coroutines that wait for it. The handler exists only during the call.
          * Without a waiter the signal uses the default action.
          *
+         * @note context switching may happen here
+         *
          * @throws SignalException on timeout (-110) or failure
          */
         public static function wait(int $signal, int $timeout = -1): void { }
@@ -2930,6 +3333,11 @@ namespace Swow\Sync
 {
     class WaitReference
     {
+        /**
+         * Wait for the reference to be destroyed.
+         *
+         * @note context switching may happen here
+         */
         public static function wait(self &$ref, int $timeout = -1): void { }
 
         public function __destruct() { }
@@ -2942,6 +3350,7 @@ namespace Swow\Sync
     {
         public function add(int $delta = 1): void { }
 
+        /** @note context switching may happen here */
         public function wait(int $timeout = -1): void { }
 
         public function done(): void { }
@@ -2950,6 +3359,55 @@ namespace Swow\Sync
 
 namespace Swow\Sync
 {
+    /**
+     * A reusable barrier for a fixed number of OS threads.
+     *
+     * wait() blocks the whole OS thread, not only the current coroutine.
+     * Use it only in a worker thread that runs one coroutine.
+     * A cycle releases when count threads wait. The barrier works in one process only.
+     */
+    class ThreadBarrier
+    {
+        /**
+         * Create a barrier.
+         *
+         * @param int $count number of threads in one cycle
+         * @throws \ValueError when the count is out of range
+         * @throws SyncException when the barrier is already constructed
+         */
+        public function __construct(int $count) { }
+
+        /**
+         * Wait for the other threads.
+         *
+         * @note this method blocks the whole OS thread
+         *
+         * @param int $timeout timeout in milliseconds, -1 waits forever
+         * @return bool false on timeout
+         * @throws SyncException when the caller cannot wait
+         */
+        public function wait(int $timeout = -1): bool { }
+
+        /** Return the number of threads in one cycle. */
+        public function getCount(): int { }
+
+        /** Return the number of threads currently waiting. */
+        public function getWaiting(): int { }
+
+        /** Serialize the barrier by shared object id. */
+        public function __serialize(): array { }
+
+        /** Restore the barrier from a shared object id. */
+        public function __unserialize(array $data): void { }
+
+        /** Return debug information. */
+        public function __debugInfo(): array { }
+    }
+}
+
+namespace Swow\Sync
+{
+    /** @note context switching may happen here */
     function waitAll(int $timeout = -1): void { }
 }
 
