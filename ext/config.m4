@@ -419,6 +419,10 @@ EOF
     swow_mutex.c \
     swow_semaphore.c \
     swow_thannel.c \
+    swow_spsc_queue.c \
+    swow_thread_barrier.c \
+    swow_shared_buffer.c \
+    swow_futex.c \
     , SWOW_INCLUDES, SWOW_CFLAGS)
   dnl if we do in-tree build, zend_language_scanner_defs.h may be not exist, add dependencies
   if test x"${PHP_PECL_EXTENSION}" = x"swow"; then
@@ -506,6 +510,8 @@ EOF
       cat_error.c \
       cat_log.c \
       cat_env.c \
+      cat_futex.c \
+      cat_shm.c \
       cat.c \
       cat_api.c \
       cat_tsrm.c \

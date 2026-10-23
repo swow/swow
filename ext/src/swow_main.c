@@ -46,6 +46,10 @@
 #include "swow_mutex.h"
 #include "swow_semaphore.h"
 #include "swow_thannel.h"
+#include "swow_spsc_queue.h"
+#include "swow_thread_barrier.h"
+#include "swow_shared_buffer.h"
+#include "swow_futex.h"
 
 #include "swow_curl.h"
 #include "swow_ssl.h"
@@ -273,6 +277,10 @@ PHP_MINIT_FUNCTION(swow)
         swow_mutex_module_init,
         swow_semaphore_module_init,
         swow_thannel_module_init,
+        swow_spsc_queue_module_init,
+        swow_thread_barrier_module_init,
+        swow_shared_buffer_module_init,
+        swow_futex_module_init,
 #endif
         swow_event_module_init,
         swow_time_module_init,

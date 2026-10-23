@@ -317,6 +317,10 @@ if (PHP_SWOW != 'no') (function(){
         'swow_mutex.c',
         'swow_semaphore.c',
         'swow_thannel.c',
+        'swow_spsc_queue.c',
+        'swow_thread_barrier.c',
+        'swow_shared_buffer.c',
+        'swow_futex.c',
         'swow_process.c',
         'swow_weak_symbol.c' // <-- wsh donot support comma here!
     ];
@@ -350,6 +354,8 @@ if (PHP_SWOW != 'no') (function(){
         'cat_error.c',
         'cat_log.c',
         'cat_env.c',
+        'cat_futex.c',
+        'cat_shm.c',
         'cat.c',
         'cat_api.c',
         'cat_tsrm.c',
