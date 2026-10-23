@@ -13,7 +13,7 @@
   | limitations under the License. See accompanying LICENSE file.            |
   +--------------------------------------------------------------------------+
   | Author: Twosee <twosee@php.net>                                          |
-  |         dixyes <dixyes@gmail.com>                                        |
+  | Author: Yun Dou <dixyes@gmail.com>                                       |
   +--------------------------------------------------------------------------+
  */
 
@@ -31,7 +31,12 @@ SWOW_API CAT_GLOBALS_DECLARE(swow_closure);
 typedef struct swow_closure_s {
     zend_object       std;
     zend_function     func;
+    /* Keep in sync with zend_closure; this_ptr changed type in PHP 8.6. */
+#if PHP_VERSION_ID < 80600
     zval              this_ptr;
+#else
+    zend_object      *this_ptr;
+#endif
     zend_class_entry *called_scope;
     zif_handler       orig_internal_handler;
 } swow_closure_t;
@@ -49,31 +54,67 @@ static zend_always_inline swow_closure_t *swow_closure_get_from_object(zend_obje
     return cat_container_of(object, swow_closure_t, std);
 }
 
+/* zend_ce_closure is shared by all ZTS threads. The engine reads
+ * create_object without a lock, so a runtime swap would be a data race.
+ * Install the handler once at MINIT and never rewrite it at runtime. */
 static zend_object *swow_closure_create_object_for_unserialization(zend_class_entry *class_type) /* {{{ */
 {
-    zend_object *object = SWOW_CLOSURE_G(current_object);
-    /* recover it immediately here,
-     * if there are closure objects created in zend_create_closure(),
-     * this will avoid the problems  */
-    SWOW_CLOSURE_G(current_object) = NULL;
-    zend_ce_closure->create_object = original_closure_create_object;
+    zend_object *object;
+
+    /* Threads without a pending object use the original allocator. */
+    if (!SWOW_G(closure.constructing) || class_type != zend_ce_closure) {
+        return original_closure_create_object(class_type);
+    }
+
+    object = SWOW_G(closure.current_object);
+    SWOW_G(closure.constructing) = cat_false;
+    SWOW_G(closure.current_object) = NULL;
+
+    if (object == NULL) {
+        return original_closure_create_object(class_type);
+    }
+
+    /* object_init_ex() assumes create_object() returns a new object with one
+     * reference. Return the preallocated Swow\Closure with that reference. */
+    GC_ADDREF(object);
+
     return object;
 }
 
 static void swow_closure_construct_from_another_closure(swow_closure_t *this_closure, swow_closure_t *closure)
 {
     zval result;
-    SWOW_CLOSURE_G(current_object) = &this_closure->std;
-    zend_ce_closure->create_object = swow_closure_create_object_for_unserialization;
+
+    /* Only the pristine object created by unserialize() can be reused. */
+    if (unlikely(this_closure->func.type != 0)) {
+        zend_throw_error(NULL, "Closure is already initialized");
+        return;
+    }
+
+    /* The hook consumes this per-thread state; clear it even if the call fails. */
+    SWOW_G(closure.current_object) = &this_closure->std;
+    SWOW_G(closure.constructing) = cat_true;
 #if PHP_VERSION_ID < 80600
     zend_create_closure(&result, &closure->func,
         closure->func.common.scope, closure->called_scope, &closure->this_ptr);
 #else
     zend_create_closure(&result, &closure->func,
         closure->func.common.scope, closure->called_scope,
-        Z_TYPE(closure->this_ptr) == IS_OBJECT ? Z_OBJ(closure->this_ptr) : NULL);
+        closure->this_ptr);
 #endif
-    ZEND_ASSERT(swow_closure_get_from_object(Z_OBJ(result)) == this_closure);
+    SWOW_G(closure.current_object) = NULL;
+    SWOW_G(closure.constructing) = cat_false;
+
+    if (unlikely(Z_TYPE(result) != IS_OBJECT || Z_OBJ(result) != &this_closure->std)) {
+        if (Z_TYPE(result) != IS_UNDEF) {
+            zval_ptr_dtor(&result);
+        }
+        zend_throw_error(NULL, "Failed to initialize the closure");
+        return;
+    }
+
+    /* Drop the reference taken by the create_object hook. */
+    zval_ptr_dtor(&result);
 }
 
 typedef struct swow_closure_walk_context_s {
@@ -573,7 +614,14 @@ static PHP_METHOD(Swow_Closure, __unserialize)
     swow_closure_construct_from_another_closure(this_closure, closure);
     zval_ptr_dtor(&retval);
 
+    if (unlikely(EG(exception) != NULL)) {
+        RETURN_THROWS();
+    }
+
     if (doc_comment != NULL) {
+        if (this_closure->func.op_array.doc_comment != NULL) {
+            zend_string_release(this_closure->func.op_array.doc_comment);
+        }
         this_closure->func.op_array.doc_comment = zend_string_copy(doc_comment);
     }
     if (static_variables != NULL) {
@@ -609,9 +657,14 @@ zend_result swow_closure_module_init(INIT_FUNC_ARGS)
     SWOW_CLOSURE_KNOWN_STRING_MAP(SWOW_KNOWN_STRING_INIT_GEN);
 
     original_closure_create_object = zend_ce_closure->create_object;
+    zend_ce_closure->create_object = swow_closure_create_object_for_unserialization;
 #ifdef ZEND_ACC_NOT_SERIALIZABLE /* >= PHP_VERSION_ID >= 80100 */
-    zend_ce_closure->ce_flags ^= ZEND_ACC_NOT_SERIALIZABLE;
+    /* Closure is registered non-serializable; serialize() and unserialize()
+     * reject it before __serialize()/__unserialize() run. Clear the shared
+     * class flag at MINIT so the engine dispatches to Swow's handlers. */
+    zend_ce_closure->ce_flags &= ~ZEND_ACC_NOT_SERIALIZABLE;
 #else
+    /* Before 8.1 the engine uses these handlers to reject serialization. */
     zend_ce_closure->serialize = NULL;
     zend_ce_closure->unserialize = NULL;
 #endif
@@ -624,6 +677,11 @@ zend_result swow_closure_module_shutdown(INIT_FUNC_ARGS)
 {
     if (!SWOW_G(ini.closure_serializer)) {
         return SUCCESS;
+    }
+
+    /* Restore before unregistering globals; the hook reads them. */
+    if (zend_ce_closure->create_object == swow_closure_create_object_for_unserialization) {
+        zend_ce_closure->create_object = original_closure_create_object;
     }
 
     CAT_GLOBALS_UNREGISTER(swow_closure);

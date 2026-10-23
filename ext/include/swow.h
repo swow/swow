@@ -80,6 +80,10 @@ ZEND_BEGIN_MODULE_GLOBALS(swow)
         zend_long debug_force_interval;
     } ini;
     const char *libpq_so_name;
+    struct {
+        zend_object *current_object;
+        bool constructing;
+    } closure;
 #ifdef ZTS
     struct {
         bool registered;
