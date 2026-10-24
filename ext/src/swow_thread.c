@@ -629,6 +629,7 @@ _started:
 
     cat_thread_teardown(&run->thread);
     ts_free_thread();
+    /* the reference that swow_thread_run_create() returned */
     swow_thread_run_release(run);
 }
 
@@ -658,6 +659,7 @@ static void swow_thread_free_object(zend_object *object)
     swow_thread_t *s_thread = swow_thread_get_from_object(object);
 
     if (s_thread->run != NULL) {
+        /* the reference that start() took for the object */
         swow_thread_run_release(s_thread->run);
         s_thread->run = NULL;
     }
@@ -840,14 +842,27 @@ static PHP_METHOD(Swow_Thread, runCode)
     run->server_context = SG(server_context);
     cat_atomic_int32_init(&run->start_status, FAILURE);
 
+    /* The entry drops the reference of swow_thread_run_create() when the thread
+     * exits, so take the reference of the object before the thread runs: a
+     * thread that exits at once would otherwise free the run and the semaphore
+     * that this method waits on */
+    swow_thread_run_addref(run);
+
     if (unlikely(!cat_thread_create_ex(&run->thread, swow_thread_entry, run, &options))) {
+        /*
+         * The run holds two references here: the one that
+         * swow_thread_run_create() returned for the thread entry, and the one
+         * that this method took for the object. The entry never ran, so it
+         * never drops its reference, and both have to be dropped here or the
+         * run and the semaphore inside it leak
+         */
+        swow_thread_run_release(run);
         swow_thread_run_release(run);
         zval_ptr_dtor(&thread);
         swow_throw_exception_with_last(swow_thread_exception_ce);
         RETURN_THROWS();
     }
 
-    swow_thread_run_addref(run);
     swow_thread_children_add(run);
 
     s_thread->run = run;
@@ -970,13 +985,26 @@ static PHP_METHOD(Swow_Thread, start)
     run->server_context = SG(server_context);
     cat_atomic_int32_init(&run->start_status, FAILURE);
 
+    /* The entry drops the reference of swow_thread_run_create() when the thread
+     * exits, so take the reference of the object before the thread runs: a
+     * thread that exits at once would otherwise free the run and the semaphore
+     * that this method waits on */
+    swow_thread_run_addref(run);
+
     if (unlikely(!cat_thread_create_ex(&run->thread, swow_thread_entry, run, &options))) {
+        /*
+         * The run holds two references here: the one that
+         * swow_thread_run_create() returned for the thread entry, and the one
+         * that this method took for the object. The entry never ran, so it
+         * never drops its reference, and both have to be dropped here or the
+         * run and the semaphore inside it leak
+         */
+        swow_thread_run_release(run);
         swow_thread_run_release(run);
         swow_throw_exception_with_last(swow_thread_exception_ce);
         RETURN_THROWS();
     }
 
-    swow_thread_run_addref(run);
     swow_thread_children_add(run);
 
     s_thread->run = run;
