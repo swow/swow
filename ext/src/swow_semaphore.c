@@ -220,6 +220,7 @@ static PHP_METHOD(Swow_Semaphore, release)
 {
     swow_semaphore_object_t *s_semaphore = swow_semaphore_get_from_object(Z_OBJ_P(ZEND_THIS));
     zend_long count = 1;
+    zend_long value;
 
     ZEND_PARSE_PARAMETERS_START(0, 1)
         Z_PARAM_OPTIONAL
@@ -233,6 +234,14 @@ static PHP_METHOD(Swow_Semaphore, release)
 
     if (unlikely(s_semaphore->semaphore == NULL)) {
         zend_throw_exception(swow_sync_exception_ce, "Semaphore has not been constructed", 0);
+        RETURN_THROWS();
+    }
+
+    /* uv_sem_post aborts the process when the count passes SEM_VALUE_MAX, which
+     * is INT_MAX, so a release that would pass it is rejected here */
+    value = (zend_long) cat_sem_get_value(&s_semaphore->semaphore->sem);
+    if (unlikely(count > (zend_long) (INT_MAX - value))) {
+        zend_value_error("The release count passes the semaphore limit");
         RETURN_THROWS();
     }
 
