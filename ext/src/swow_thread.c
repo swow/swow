@@ -1492,6 +1492,19 @@ zend_result swow_thread_runtime_shutdown(SHUTDOWN_FUNC_ARGS)
         SWOW_G(thread.children_initialized) = false;
     }
 
+    if (swow_thread_children_abandoned()) {
+        /*
+         * ts_free_id runs the globals destructor of every module for every
+         * thread of the process, and a destructor that reads its globals
+         * through the thread local storage of the caller then reads the state
+         * of this thread for the globals of the abandoned one. The module
+         * shutdown cannot run while the abandoned thread is alive, so end the
+         * process here with the status that the request already has
+         */
+        (void) fflush(NULL);
+        _exit(EG(exit_status));
+    }
+
     zval_ptr_dtor(&SWOW_G(thread.current));
     ZVAL_UNDEF(&SWOW_G(thread.current));
 
