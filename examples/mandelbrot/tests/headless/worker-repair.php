@@ -12,8 +12,8 @@ declare(strict_types=1);
 
 use Swow\Mandelbrot\Buffer;
 use Swow\Mandelbrot\Reference;
-use Swow\Mandelbrot\View;
 use Swow\Mandelbrot\Thread\Worker;
+use Swow\Mandelbrot\View;
 
 require __DIR__ . '/../../src/bootstrap.php';
 require __DIR__ . '/../support.php';

@@ -1,5 +1,6 @@
 #!/usr/bin/env php
 <?php
+
 declare(strict_types=1);
 
 /*
@@ -38,7 +39,7 @@ function note(string $message): void
 
 function tclName(string $name): string
 {
-    return '{' . str_replace(['\\', '{', '}'], ['\\\\', '\\{', '\\}'], $name) . '}';
+    return '{' . str_replace(['\\', '{', '}'], ['\\\\', '\{', '\}'], $name) . '}';
 }
 
 function remote(Tk $tk, string $target, string $script): string
@@ -106,8 +107,8 @@ function waitReady(Tk $tk, string $target, float $timeout = 30.0): void
             $readySince = null;
         } else {
             $readySince ??= microtime(true);
-            if (($busy && microtime(true) - $readySince >= 0.4)
-                || (!$busy && microtime(true) - $readySince >= 1.0)) {
+            if (($busy && microtime(true) - $readySince >= 0.4) ||
+                (!$busy && microtime(true) - $readySince >= 1.0)) {
                 return;
             }
         }

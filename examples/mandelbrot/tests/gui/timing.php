@@ -1,5 +1,6 @@
 #!/usr/bin/env php
 <?php
+
 declare(strict_types=1);
 
 /*
@@ -47,7 +48,7 @@ function fail(string $message): never
 
 function tclName(string $name): string
 {
-    return '{' . str_replace(['\\', '{', '}'], ['\\\\', '\\{', '\\}'], $name) . '}';
+    return '{' . str_replace(['\\', '{', '}'], ['\\\\', '\{', '\}'], $name) . '}';
 }
 
 /** @param list<float> $values */
@@ -85,9 +86,9 @@ function displayUp(string $display): bool
     return $code === 0;
 }
 
-final class TimingRun
+final class timing
 {
-    private $process = null;
+    private $process;
 
     /** @var array<int, resource> */
     private array $pipes = [];
@@ -482,7 +483,7 @@ final class TimingRun
     {
         return array_values(array_filter(
             $this->stderrLines,
-            static fn (array $entry): bool => preg_match(
+            static fn(array $entry): bool => preg_match(
                 '/warning|notice|deprecated|fatal|uncaught/i',
                 $entry['line'],
             ) === 1,
@@ -725,7 +726,7 @@ try {
     }
 
     echo "\n", implode("\n", $table), "\n\n";
-    echo "Cells are min / median / max over ", RUNS, " runs, in milliseconds.\n";
+    echo 'Cells are min / median / max over ', RUNS, " runs, in milliseconds.\n";
     echo "preview = wall= from the matching stderr kind=preview line; status-transition preview is in the detail log.\n";
     echo "full = wall= from the matching stderr kind=full line; total = send -> final ready.\n";
     echo "total also contains the ~150 ms idle gap before the full refine and the busy-state/Tk overhead.\n";

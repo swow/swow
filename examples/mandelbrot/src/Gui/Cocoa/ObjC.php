@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace Swow\Mandelbrot\Gui\Cocoa;
 
+use Closure;
 use FFI;
 use FFI\CData;
+use RuntimeException;
 
 /**
  * Objective-C runtime access through FFI.
@@ -111,7 +113,7 @@ final class ObjC
     {
         $class = $this->ffi->objc_getClass($name);
         if ($class === null) {
-            throw new \RuntimeException('Objective-C class not found: ' . $name);
+            throw new RuntimeException('Objective-C class not found: ' . $name);
         }
 
         return $class;
@@ -134,7 +136,7 @@ final class ObjC
     {
         $class = $this->ffi->objc_allocateClassPair($this->classNamed($superclass), $name, 0);
         if ($class === null) {
-            throw new \RuntimeException('objc_allocateClassPair failed for ' . $name);
+            throw new RuntimeException('objc_allocateClassPair failed for ' . $name);
         }
 
         return $class;
@@ -146,12 +148,12 @@ final class ObjC
      * The runtime stores only the function pointer, so the holder keeps the
      * closure alive until this object is dropped.
      */
-    public function addMethod(CData $class, string $selectorName, \Closure $implementation, string $types): void
+    public function addMethod(CData $class, string $selectorName, Closure $implementation, string $types): void
     {
         $holder = $this->ffi->new('MandelActionHolder');
         $holder->fn = $implementation;
         if (!$this->ffi->class_addMethod($class, $this->selector($selectorName), $holder->fn, $types)) {
-            throw new \RuntimeException('class_addMethod failed: ' . $selectorName);
+            throw new RuntimeException('class_addMethod failed: ' . $selectorName);
         }
 
         $this->impHolders[] = $holder;
@@ -171,7 +173,7 @@ final class ObjC
             $value,
         );
         if ($string === null) {
-            throw new \RuntimeException('NSString creation failed');
+            throw new RuntimeException('NSString creation failed');
         }
 
         return $string;

@@ -6,6 +6,11 @@ namespace Swow\Mandelbrot;
 
 use InvalidArgumentException;
 
+use function count;
+use function strlen;
+
+use const PHP_INT_MAX;
+
 final class Config
 {
     private const DEFAULT_WIDTH = 1280;

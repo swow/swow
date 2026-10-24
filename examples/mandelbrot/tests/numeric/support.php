@@ -34,7 +34,7 @@ function checkSame(mixed $expected, mixed $actual, string $what): void
 function checkNear(float $expected, float $actual, float $tolerance, string $what): void
 {
     $ok = abs($expected - $actual) <= $tolerance;
-    echo($ok ? '  ok   ' : '  FAIL ') . $what . ($ok ? '' : sprintf(' (expected %.17g, got %.17g)', $expected, $actual)) . "\n";
+    echo ($ok ? '  ok   ' : '  FAIL ') . $what . ($ok ? '' : sprintf(' (expected %.17g, got %.17g)', $expected, $actual)) . "\n";
     if (!$ok) {
         $GLOBALS['failures'] = ($GLOBALS['failures'] ?? 0) + 1;
     }
@@ -72,7 +72,7 @@ function pixelCenter(View $view, int $x, int $y, int $step, int $precision, floa
  * Direct bcmath iteration of the orbit of c.
  *
  * @return array{0: int, 1: float} escape count and |z|^2, count equals the limit
- *     when the pixel did not escape
+ *                                 when the pixel did not escape
  */
 function bcmathPixel(string $cRe, string $cIm, int $precision, int $limit): array
 {
@@ -124,7 +124,7 @@ function pixelColor(int $count, float $magnitudeSquared, int $limit): int
 }
 
 /** Apply a flat glitch list with Reference::renderPixelSlow(). */
-function repairGlitches(array $colors, array $glitches, \Swow\Mandelbrot\Reference $reference, int $width, int $limit, int $step = 1): array
+function repairGlitches(array $colors, array $glitches, Swow\Mandelbrot\Reference $reference, int $width, int $limit, int $step = 1): array
 {
     for ($i = 0; $i < count($glitches); $i += 2) {
         $x = $glitches[$i];

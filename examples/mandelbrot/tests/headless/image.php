@@ -33,7 +33,7 @@ check($info[1] === $height, 'PNG height');
 check($info['mime'] === 'image/png', 'PNG mime type');
 
 $png = file_get_contents($path);
-check($png !== false && strlen($png) > 0, 'PNG file is not empty');
+check($png !== false && $png !== '', 'PNG file is not empty');
 check(substr($png, 0, 8) === "\x89PNG\r\n\x1a\n", 'PNG signature');
 
 $chunks = [];

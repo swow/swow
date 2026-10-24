@@ -6,12 +6,14 @@ namespace Swow\Mandelbrot\App;
 
 use InvalidArgumentException;
 use RuntimeException;
-use Throwable;
 use Swow\Mandelbrot\Buffer;
 use Swow\Mandelbrot\Config;
 use Swow\Mandelbrot\Gui\Backend;
 use Swow\Mandelbrot\Gui\Layout;
 use Swow\Mandelbrot\View;
+use Throwable;
+
+use const STDERR;
 
 /**
  * Window event loop, auto mode and the idle preview-to-full refine.
@@ -75,10 +77,10 @@ final class WindowLoop
                 }
 
                 if (
-                    $this->config->auto()
-                    && $this->pipeline->pending() === 0
-                    && $this->pipeline->frameDone()
-                    && !$this->service->busy()
+                    $this->config->auto() &&
+                    $this->pipeline->pending() === 0 &&
+                    $this->pipeline->frameDone() &&
+                    !$this->service->busy()
                 ) {
                     $now = microtime(true);
                     if (($now - $this->autoLastTick) * 1000.0 >= $this->config->autoMs()) {
@@ -98,18 +100,18 @@ final class WindowLoop
 
                 if ($this->pipeline->frameDone()) {
                     if (
-                        $this->pendingSave !== null
-                        && !$this->pipeline->framePreview()
-                        && !$this->service->busy()
+                        $this->pendingSave !== null &&
+                        !$this->pipeline->framePreview() &&
+                        !$this->service->busy()
                     ) {
                         $path = $this->pendingSave;
                         $this->pendingSave = null;
                         $this->service->requestSave($path);
                     } elseif (
-                        $this->pipeline->framePreview()
-                        && !$this->service->busy()
-                        && !$this->config->auto()
-                        && microtime(true) - $this->lastActivity >= self::PREVIEW_IDLE_SECONDS
+                        $this->pipeline->framePreview() &&
+                        !$this->service->busy() &&
+                        !$this->config->auto() &&
+                        microtime(true) - $this->lastActivity >= self::PREVIEW_IDLE_SECONDS
                     ) {
                         $wallStart = microtime(true);
                         $this->pipeline->startFrame(

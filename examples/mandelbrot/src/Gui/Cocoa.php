@@ -1,11 +1,19 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Swow\Mandelbrot\Gui;
 
 use FFI;
 use FFI\CData;
+use InvalidArgumentException;
+use LogicException;
+use RuntimeException;
 use Swow\Mandelbrot\Gui\Cocoa\ObjC;
+use Throwable;
+
+use function sprintf;
+use function strlen;
 
 /**
  * Cocoa backend loaded through FFI.
@@ -136,7 +144,7 @@ final class Cocoa implements Backend
     /** @var list<array<string, mixed>> */
     private array $events = [];
 
-    private ?\Throwable $callbackError = null;
+    private ?Throwable $callbackError = null;
 
     private bool $placeholderVisible = false;
     private bool $busy = false;
@@ -150,15 +158,15 @@ final class Cocoa implements Backend
     public function open(int $width, int $height): void
     {
         if ($this->window !== null) {
-            throw new \LogicException('Cocoa backend is already open');
+            throw new LogicException('Cocoa backend is already open');
         }
 
         $rects = Layout::resolve(Layout::tree(), Layout::metrics(), $width, $height);
-        $canvas = $rects[Layout::COMP_CANVAS] ?? throw new \RuntimeException('layout has no canvas');
+        $canvas = $rects[Layout::COMP_CANVAS] ?? throw new RuntimeException('layout has no canvas');
         $imageWidth = $canvas->w;
         $imageHeight = $canvas->h;
         if ($imageWidth < self::PREVIEW_ZOOM || $imageHeight < self::PREVIEW_ZOOM) {
-            throw new \InvalidArgumentException(sprintf(
+            throw new InvalidArgumentException(sprintf(
                 'image size %dx%d is too small for a 1/%d preview',
                 $imageWidth,
                 $imageHeight,
@@ -211,7 +219,7 @@ final class Cocoa implements Backend
             $this->busy = false;
             $this->previewMode = true;
             $this->drainPool();
-        } catch (\Throwable $error) {
+        } catch (Throwable $error) {
             $this->shutdown();
             throw $error;
         }
@@ -275,7 +283,7 @@ final class Cocoa implements Backend
         if ($this->callbackError !== null) {
             $error = $this->callbackError;
             $this->callbackError = null;
-            throw new \RuntimeException('Cocoa callback failed: ' . $error->getMessage(), 0, $error);
+            throw new RuntimeException('Cocoa callback failed: ' . $error->getMessage(), 0, $error);
         }
 
         $events = $this->events;
@@ -333,7 +341,7 @@ final class Cocoa implements Backend
                     'int usleep(unsigned int usec);',
                     '/usr/lib/libSystem.B.dylib',
                 );
-            } catch (\Throwable) {
+            } catch (Throwable) {
                 $this->libSystem = null;
             }
         }
@@ -343,7 +351,7 @@ final class Cocoa implements Backend
                 if ($this->libSystem->usleep($microseconds) === 0) {
                     return;
                 }
-            } catch (\Throwable) {
+            } catch (Throwable) {
             }
         }
 
@@ -363,7 +371,7 @@ final class Cocoa implements Backend
 
         $rows = $rowEnd - $rowBegin;
         if ($rowBegin < 0 || $rows < 1 || $width < 1) {
-            throw new \InvalidArgumentException(sprintf(
+            throw new InvalidArgumentException(sprintf(
                 'invalid row band [%d, %d) with width %d',
                 $rowBegin,
                 $rowEnd,
@@ -373,7 +381,7 @@ final class Cocoa implements Backend
 
         $expectedBytes = $rows * $width * 4;
         if (strlen($bytes) !== $expectedBytes) {
-            throw new \InvalidArgumentException(sprintf(
+            throw new InvalidArgumentException(sprintf(
                 'pixel payload is %d bytes, expected %d for %d rows of %d pixels',
                 strlen($bytes),
                 $expectedBytes,
@@ -390,7 +398,7 @@ final class Cocoa implements Backend
             $expectedHeight = $this->imageHeight;
         }
         if ($width !== $expectedWidth || $rowEnd > $expectedHeight) {
-            throw new \InvalidArgumentException(sprintf(
+            throw new InvalidArgumentException(sprintf(
                 'row band [%d, %d) x %d does not fit the %s image %dx%d',
                 $rowBegin,
                 $rowEnd,
@@ -446,7 +454,7 @@ final class Cocoa implements Backend
             }
         } else {
             $component = self::FIELD_COMPONENTS[$field]
-                ?? throw new \InvalidArgumentException('unknown field: ' . $field);
+                ?? throw new InvalidArgumentException('unknown field: ' . $field);
             $this->objc->send(
                 ObjC::SIG_VOID_OBJ,
                 $this->widgets[$component],
@@ -604,7 +612,7 @@ final class Cocoa implements Backend
     {
         $this->assertOpen();
         $widget = $this->widgets[$component]
-            ?? throw new \InvalidArgumentException('unknown component: ' . $component);
+            ?? throw new InvalidArgumentException('unknown component: ' . $component);
         $frame = $this->objc->send(ObjC::SIG_CGRECT, $widget, $this->objc->selector('frame'));
 
         return [
@@ -619,7 +627,7 @@ final class Cocoa implements Backend
     {
         $this->assertOpen();
         $widget = $this->widgets[$component]
-            ?? throw new \InvalidArgumentException('unknown component: ' . $component);
+            ?? throw new InvalidArgumentException('unknown component: ' . $component);
 
         return (bool) $this->objc->send(ObjC::SIG_BOOL, $widget, $this->objc->selector('isEnabled'));
     }
@@ -628,7 +636,7 @@ final class Cocoa implements Backend
     {
         $this->assertOpen();
         $widget = $this->widgets[$component]
-            ?? throw new \InvalidArgumentException('unknown component: ' . $component);
+            ?? throw new InvalidArgumentException('unknown component: ' . $component);
         $action = $this->objc->send(ObjC::SIG_ID, $widget, $this->objc->selector('action'));
         if ($action === null) {
             return '';
@@ -641,7 +649,7 @@ final class Cocoa implements Backend
     {
         $this->assertOpen();
         $widget = $this->widgets[$component]
-            ?? throw new \InvalidArgumentException('unknown component: ' . $component);
+            ?? throw new InvalidArgumentException('unknown component: ' . $component);
         $target = $this->objc->send(ObjC::SIG_ID, $widget, $this->objc->selector('target'));
         if ($target === null) {
             return false;
@@ -659,7 +667,7 @@ final class Cocoa implements Backend
     {
         $this->assertOpen();
         $widget = $this->widgets[$component]
-            ?? throw new \InvalidArgumentException('unknown component: ' . $component);
+            ?? throw new InvalidArgumentException('unknown component: ' . $component);
 
         return (string) $this->objc->send(
             ObjC::SIG_CSTR,
@@ -675,7 +683,7 @@ final class Cocoa implements Backend
     {
         $this->assertOpen();
         $widget = $this->widgets[$component]
-            ?? throw new \InvalidArgumentException('unknown component: ' . $component);
+            ?? throw new InvalidArgumentException('unknown component: ' . $component);
         $color = $this->objc->send(ObjC::SIG_ID, $widget, $this->objc->selector('backgroundColor'));
         if ($color === null) {
             return [0.0, 0.0, 0.0, 0.0];
@@ -749,7 +757,7 @@ final class Cocoa implements Backend
     {
         $this->assertOpen();
         $widget = $this->widgets[$component]
-            ?? throw new \InvalidArgumentException('unknown component: ' . $component);
+            ?? throw new InvalidArgumentException('unknown component: ' . $component);
         $this->objc->send(ObjC::SIG_VOID_OBJ, $widget, $this->objc->selector('performClick:'), null);
     }
 
@@ -757,7 +765,7 @@ final class Cocoa implements Backend
     {
         $this->assertOpen();
         $widget = $this->widgets[$component]
-            ?? throw new \InvalidArgumentException('unknown component: ' . $component);
+            ?? throw new InvalidArgumentException('unknown component: ' . $component);
         $action = $this->objc->send(ObjC::SIG_ID, $widget, $this->objc->selector('action'));
         $target = $this->objc->send(ObjC::SIG_ID, $widget, $this->objc->selector('target'));
 
@@ -786,7 +794,7 @@ final class Cocoa implements Backend
     {
         $this->assertOpen();
         $field = $this->widgets[$component]
-            ?? throw new \InvalidArgumentException('unknown component: ' . $component);
+            ?? throw new InvalidArgumentException('unknown component: ' . $component);
 
         $this->objc->send(
             ObjC::SIG_VOID_BOOL,
@@ -831,7 +839,7 @@ final class Cocoa implements Backend
             self::KEY_CODE_RETURN,
         );
         if ($event === null) {
-            throw new \RuntimeException('NSEvent creation failed');
+            throw new RuntimeException('NSEvent creation failed');
         }
         $this->objc->send(
             ObjC::SIG_VOID_OBJ_BOOL,
@@ -850,7 +858,7 @@ final class Cocoa implements Backend
             $this->objc->selector('sharedApplication'),
         );
         if ($app === null) {
-            throw new \RuntimeException('NSApplication sharedApplication failed');
+            throw new RuntimeException('NSApplication sharedApplication failed');
         }
         $this->app = $app;
 
@@ -889,7 +897,7 @@ final class Cocoa implements Backend
         );
         $controller = $this->objc->send(ObjC::SIG_ID, $controller, $this->objc->selector('init'));
         if ($controller === null) {
-            throw new \RuntimeException('controller initialization failed');
+            throw new RuntimeException('controller initialization failed');
         }
         $this->controller = $controller;
     }
@@ -918,7 +926,7 @@ final class Cocoa implements Backend
                         $this->events[] = ['type' => $eventType];
                     }
                     $this->dirty = true;
-                } catch (\Throwable $error) {
+                } catch (Throwable $error) {
                     // Exceptions cannot cross the C callback boundary
                     $this->callbackError = $error;
                 }
@@ -941,7 +949,7 @@ final class Cocoa implements Backend
             false,
         );
         if ($window === null) {
-            throw new \RuntimeException('NSWindow initialization failed');
+            throw new RuntimeException('NSWindow initialization failed');
         }
         $this->window = $window;
 
@@ -957,14 +965,14 @@ final class Cocoa implements Backend
 
         $contentView = $this->objc->send(ObjC::SIG_ID, $window, $this->objc->selector('contentView'));
         if ($contentView === null) {
-            throw new \RuntimeException('window has no content view');
+            throw new RuntimeException('window has no content view');
         }
         $this->contentView = $contentView;
         $this->objc->send(ObjC::SIG_VOID_BOOL, $contentView, $this->objc->selector('setWantsLayer:'), true);
 
         $layer = $this->objc->send(ObjC::SIG_ID, $contentView, $this->objc->selector('layer'));
         if ($layer === null) {
-            throw new \RuntimeException('content view has no layer');
+            throw new RuntimeException('content view has no layer');
         }
         $this->layer = $layer;
         /*
@@ -1005,7 +1013,7 @@ final class Cocoa implements Backend
             if ($leaf->leaf === LeafKind::Spacer || $leaf->key === '') {
                 continue;
             }
-            $rect = $rects[$leaf->key] ?? throw new \RuntimeException(
+            $rect = $rects[$leaf->key] ?? throw new RuntimeException(
                 'missing layout rect for ' . $leaf->key,
             );
             $frame = $this->makeRect(
@@ -1053,7 +1061,7 @@ final class Cocoa implements Backend
                     break;
 
                 case LeafKind::Edit:
-                    $component = $leaf->component ?? throw new \RuntimeException(
+                    $component = $leaf->component ?? throw new RuntimeException(
                         'edit leaf without a component',
                     );
                     $edit = $this->objc->send(
@@ -1085,7 +1093,7 @@ final class Cocoa implements Backend
                     break;
 
                 case LeafKind::Button:
-                    $component = $leaf->component ?? throw new \RuntimeException(
+                    $component = $leaf->component ?? throw new RuntimeException(
                         'button leaf without a component',
                     );
                     $button = $this->objc->send(
@@ -1145,7 +1153,7 @@ final class Cocoa implements Backend
             Layout::COMP_PAN_DOWN => 'panDown:',
             Layout::COMP_PAN_LEFT => 'panLeft:',
             Layout::COMP_PAN_RIGHT => 'panRight:',
-            default => throw new \InvalidArgumentException('unknown button: ' . $component),
+            default => throw new InvalidArgumentException('unknown button: ' . $component),
         };
     }
 
@@ -1160,7 +1168,7 @@ final class Cocoa implements Backend
             $this->objc->string($path),
         );
         if ($image === null) {
-            throw new \RuntimeException('cannot load placeholder image: ' . $path);
+            throw new RuntimeException('cannot load placeholder image: ' . $path);
         }
 
         $view = $this->objc->send(ObjC::SIG_ID, $this->objc->classNamed('NSImageView'), $this->objc->selector('alloc'));
@@ -1192,7 +1200,7 @@ final class Cocoa implements Backend
     {
         $this->colorSpace = $this->cg->CGColorSpaceCreateDeviceRGB();
         if ($this->colorSpace === null) {
-            throw new \RuntimeException('CGColorSpaceCreateDeviceRGB failed');
+            throw new RuntimeException('CGColorSpaceCreateDeviceRGB failed');
         }
 
         $total = $this->fullRegionBytes + $this->previewRegionBytes;
@@ -1212,7 +1220,7 @@ final class Cocoa implements Backend
             null,
         );
         if ($fullProvider === null || $previewProvider === null) {
-            throw new \RuntimeException('CGDataProviderCreateWithData failed');
+            throw new RuntimeException('CGDataProviderCreateWithData failed');
         }
         $this->fullProvider = $fullProvider;
         $this->previewProvider = $previewProvider;
@@ -1254,7 +1262,7 @@ final class Cocoa implements Backend
             $this->fullImage = $image;
         }
         if ($image === null) {
-            throw new \RuntimeException('CGImageCreate failed');
+            throw new RuntimeException('CGImageCreate failed');
         }
         if ($old !== null) {
             $this->cg->CGImageRelease($old);
@@ -1321,11 +1329,11 @@ final class Cocoa implements Backend
             $this->objc->selector($selectorName),
         );
         if ($color === null) {
-            throw new \RuntimeException('NSColor lookup failed: ' . $selectorName);
+            throw new RuntimeException('NSColor lookup failed: ' . $selectorName);
         }
         $retained = $this->objc->send(ObjC::SIG_ID, $color, $this->objc->selector('retain'));
         if ($retained === null) {
-            throw new \RuntimeException('NSColor retain failed: ' . $selectorName);
+            throw new RuntimeException('NSColor retain failed: ' . $selectorName);
         }
 
         return $retained;
@@ -1340,7 +1348,7 @@ final class Cocoa implements Backend
             $size,
         );
         if ($font === null) {
-            throw new \RuntimeException('NSFont lookup failed');
+            throw new RuntimeException('NSFont lookup failed');
         }
 
         return $font;
@@ -1371,14 +1379,14 @@ final class Cocoa implements Backend
             return;
         }
         if (!$this->objc->send(ObjC::SIG_BOOL, $this->objc->classNamed('NSThread'), $this->objc->selector('isMainThread'))) {
-            throw new \RuntimeException('Cocoa backend must run on the process main thread');
+            throw new RuntimeException('Cocoa backend must run on the process main thread');
         }
     }
 
     private function assertOpen(): void
     {
         if ($this->window === null) {
-            throw new \LogicException('Cocoa backend is not open');
+            throw new LogicException('Cocoa backend is not open');
         }
     }
 
@@ -1436,7 +1444,7 @@ final class Cocoa implements Backend
                 if ($this->invalidBackground !== null) {
                     $this->objc->send(ObjC::SIG_VOID, $this->invalidBackground, $this->objc->selector('release'));
                 }
-            } catch (\Throwable) {
+            } catch (Throwable) {
                 // Closing must stay safe after a partial open
             }
             $this->drainPool();

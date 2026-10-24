@@ -1,10 +1,20 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Swow\Mandelbrot\Gui;
 
 use FFI;
 use FFI\CData;
+use InvalidArgumentException;
+use LogicException;
+use RuntimeException;
+use Throwable;
+
+use function sprintf;
+use function strlen;
+
+use const PHP_BINARY;
 
 /**
  * Tk backend loaded through FFI.
@@ -154,7 +164,7 @@ final class Tk implements Backend
     public function open(int $width, int $height): void
     {
         if ($this->tcl !== null || $this->interp !== null) {
-            throw new \LogicException('Tk backend is already open');
+            throw new LogicException('Tk backend is already open');
         }
 
         $tree = Layout::tree();
@@ -163,7 +173,7 @@ final class Tk implements Backend
         $imageWidth = $canvas->w;
         $imageHeight = $canvas->h;
         if ($imageWidth < self::PREVIEW_ZOOM || $imageHeight < self::PREVIEW_ZOOM) {
-            throw new \InvalidArgumentException(sprintf(
+            throw new InvalidArgumentException(sprintf(
                 'image size %dx%d is too small for a 1/%d preview',
                 $imageWidth,
                 $imageHeight,
@@ -179,17 +189,17 @@ final class Tk implements Backend
 
             $interp = $this->tcl->Tcl_CreateInterp();
             if ($interp === null) {
-                throw new \RuntimeException('Tcl_CreateInterp failed');
+                throw new RuntimeException('Tcl_CreateInterp failed');
             }
             $this->interp = $interp;
 
             if ($this->tcl->Tcl_Init($interp) !== self::TCL_OK) {
-                throw new \RuntimeException('Tcl_Init failed: ' . $this->result($interp));
+                throw new RuntimeException('Tcl_Init failed: ' . $this->result($interp));
             }
             $this->tclLive = true;
 
             if ($this->tk->Tk_Init($interp) !== self::TCL_OK) {
-                throw new \RuntimeException('Tk_Init failed: ' . $this->result($interp));
+                throw new RuntimeException('Tk_Init failed: ' . $this->result($interp));
             }
 
             $this->installCommands();
@@ -208,7 +218,7 @@ final class Tk implements Backend
             $full = $this->tk->Tk_FindPhoto($interp, Layout::FULL_IMAGE);
             $preview = $this->tk->Tk_FindPhoto($interp, Layout::PREVIEW_IMAGE);
             if ($full === null || $preview === null) {
-                throw new \RuntimeException('Tk_FindPhoto failed for the layout photo images');
+                throw new RuntimeException('Tk_FindPhoto failed for the layout photo images');
             }
             $this->fullPhoto = $full;
             $this->previewPhoto = $preview;
@@ -223,7 +233,7 @@ final class Tk implements Backend
             $block->offset[2] = 0;
             $block->offset[3] = 3;
             $this->block = $block;
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             $this->shutdown();
             throw $e;
         }
@@ -292,7 +302,7 @@ final class Tk implements Backend
             $this->libcTried = true;
             try {
                 $this->libc = FFI::cdef('int usleep(unsigned int usec);', 'libc.so.6');
-            } catch (\Throwable) {
+            } catch (Throwable) {
                 $this->libc = null;
             }
         }
@@ -302,7 +312,7 @@ final class Tk implements Backend
                 if ($this->libc->usleep($microseconds) === 0) {
                     return;
                 }
-            } catch (\Throwable) {
+            } catch (Throwable) {
             }
         }
 
@@ -323,7 +333,7 @@ final class Tk implements Backend
 
         $rows = $rowEnd - $rowBegin;
         if ($rowBegin < 0 || $rows < 1 || $width < 1) {
-            throw new \InvalidArgumentException(sprintf(
+            throw new InvalidArgumentException(sprintf(
                 'invalid row band [%d, %d) with width %d',
                 $rowBegin,
                 $rowEnd,
@@ -333,7 +343,7 @@ final class Tk implements Backend
 
         $expectedBytes = $rows * $width * 4;
         if (strlen($bytes) !== $expectedBytes) {
-            throw new \InvalidArgumentException(sprintf(
+            throw new InvalidArgumentException(sprintf(
                 'pixel payload is %d bytes, expected %d for %d rows of %d pixels',
                 strlen($bytes),
                 $expectedBytes,
@@ -350,7 +360,7 @@ final class Tk implements Backend
             $expectedHeight = $this->imageHeight;
         }
         if ($width !== $expectedWidth || $rowEnd > $expectedHeight) {
-            throw new \InvalidArgumentException(sprintf(
+            throw new InvalidArgumentException(sprintf(
                 'row band [%d, %d) x %d does not fit the %s image %dx%d',
                 $rowBegin,
                 $rowEnd,
@@ -389,7 +399,7 @@ final class Tk implements Backend
                 self::TK_PHOTO_COMPOSITE_SET,
             );
             if ($rc !== self::TCL_OK) {
-                throw new \RuntimeException(
+                throw new RuntimeException(
                     'Tk_PhotoPutZoomedBlock failed: ' . $this->result($this->interp),
                 );
             }
@@ -408,7 +418,7 @@ final class Tk implements Backend
             self::TK_PHOTO_COMPOSITE_SET,
         );
         if ($rc !== self::TCL_OK) {
-            throw new \RuntimeException(
+            throw new RuntimeException(
                 'Tk_PhotoPutBlock failed: ' . $this->result($this->interp),
             );
         }
@@ -449,7 +459,7 @@ final class Tk implements Backend
             }
         } else {
             if (!isset(self::ENTRY_WIDGETS[$field])) {
-                throw new \InvalidArgumentException('unknown field: ' . $field);
+                throw new InvalidArgumentException('unknown field: ' . $field);
             }
             $this->evalScript(
                 self::ENTRY_WIDGETS[$field] . ' configure -background '
@@ -522,7 +532,7 @@ final class Tk implements Backend
             if ($leaf->leaf === LeafKind::Spacer || $leaf->key === '') {
                 continue;
             }
-            $rect = $rects[$leaf->key] ?? throw new \RuntimeException(
+            $rect = $rects[$leaf->key] ?? throw new RuntimeException(
                 'missing layout rect for ' . $leaf->key,
             );
 
@@ -540,7 +550,7 @@ final class Tk implements Backend
                     break;
 
                 case LeafKind::Edit:
-                    $component = $leaf->component ?? throw new \RuntimeException(
+                    $component = $leaf->component ?? throw new RuntimeException(
                         'edit leaf without a component',
                     );
                     $path = self::WIDGETS[$component];
@@ -550,7 +560,7 @@ final class Tk implements Backend
                     break;
 
                 case LeafKind::Button:
-                    $component = $leaf->component ?? throw new \RuntimeException(
+                    $component = $leaf->component ?? throw new RuntimeException(
                         'button leaf without a component',
                     );
                     $path = self::WIDGETS[$component];
@@ -679,7 +689,7 @@ final class Tk implements Backend
                 $handler();
 
                 return self::TCL_OK;
-            } catch (\Throwable $error) {
+            } catch (Throwable $error) {
                 $this->tcl->Tcl_SetResult($interp, $error->getMessage(), self::TCL_VOLATILE);
 
                 return self::TCL_ERROR;
@@ -688,7 +698,7 @@ final class Tk implements Backend
 
         $command = $this->tcl->Tcl_CreateObjCommand($this->interp, $name, $holder->proc, null, null);
         if ($command === null) {
-            throw new \RuntimeException('Tcl_CreateObjCommand failed: ' . $name);
+            throw new RuntimeException('Tcl_CreateObjCommand failed: ' . $name);
         }
         $this->commandHolders[$name] = $holder;
     }
@@ -697,11 +707,11 @@ final class Tk implements Backend
     {
         $interp = $this->interp;
         if ($interp === null || $this->tcl === null) {
-            throw new \LogicException('Tk backend is not open');
+            throw new LogicException('Tk backend is not open');
         }
 
         if ($this->tcl->Tcl_Eval($interp, $script) !== self::TCL_OK) {
-            throw new \RuntimeException('Tcl error: ' . $this->result($interp));
+            throw new RuntimeException('Tcl error: ' . $this->result($interp));
         }
 
         return $this->result($interp);
@@ -715,7 +725,7 @@ final class Tk implements Backend
     private function assertOpen(): void
     {
         if ($this->interp === null || $this->tcl === null) {
-            throw new \LogicException('Tk backend is not open');
+            throw new LogicException('Tk backend is not open');
         }
     }
 
@@ -753,12 +763,12 @@ final class Tk implements Backend
     {
         return '"' . strtr($value, [
             '\\' => '\\\\',
-            '"' => '\\"',
-            '$' => '\\$',
-            '[' => '\\[',
-            ']' => '\\]',
-            "\n" => '\\n',
-            "\r" => '\\r',
+            '"' => '\"',
+            '$' => '\$',
+            '[' => '\[',
+            ']' => '\]',
+            "\n" => '\n',
+            "\r" => '\r',
         ]) . '"';
     }
 }

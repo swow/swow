@@ -7,6 +7,13 @@ namespace Swow\Mandelbrot;
 use InvalidArgumentException;
 use Swow\SharedBuffer;
 
+use function array_key_exists;
+use function count;
+use function in_array;
+use function is_int;
+
+use const PHP_INT_MAX;
+
 final class Buffer
 {
     public const MAGIC = 0x4D4E444C;

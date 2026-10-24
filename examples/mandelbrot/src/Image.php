@@ -7,6 +7,8 @@ namespace Swow\Mandelbrot;
 use InvalidArgumentException;
 use RuntimeException;
 
+use function strlen;
+
 /**
  * Minimal PNG writer for BGRA pixel data.
  *

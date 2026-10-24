@@ -6,6 +6,8 @@ namespace Swow\Mandelbrot\Gui\Win32;
 
 use FFI;
 
+use function strlen;
+
 /**
  * Native save dialog for the PNG export.
  *

@@ -9,6 +9,11 @@ use Swow\Mandelbrot\Config;
 use Swow\Mandelbrot\Reference;
 use Swow\Mandelbrot\View;
 
+use function count;
+use function sprintf;
+
+use const STDERR;
+
 /**
  * --headless frame loop, including --verify.
  */

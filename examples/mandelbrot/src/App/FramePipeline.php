@@ -6,16 +6,21 @@ namespace Swow\Mandelbrot\App;
 
 use RuntimeException;
 use Swow\Futex;
-use Swow\SpscQueue;
-use Swow\SpscQueueException;
-use Swow\Thread;
 use Swow\Mandelbrot\Buffer;
 use Swow\Mandelbrot\Config;
 use Swow\Mandelbrot\Gui\Backend;
 use Swow\Mandelbrot\Renderer;
 use Swow\Mandelbrot\Thread\Worker;
 use Swow\Mandelbrot\View;
+use Swow\SpscQueue;
+use Swow\SpscQueueException;
+use Swow\Thread;
 use Throwable;
+
+use function count;
+use function sprintf;
+
+use const STDERR;
 
 /**
  * Band dispatch, result tokens and presentation.

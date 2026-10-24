@@ -7,6 +7,10 @@ namespace Swow\Mandelbrot\Gui\Win32;
 use FFI;
 use FFI\CData;
 
+use function chr;
+use function ord;
+use function strlen;
+
 /**
  * UTF-16LE conversion and window text access for the Win32 backend.
  *
@@ -68,9 +72,9 @@ final class Text
                 $i++;
             }
 
-            if (!$valid
-                || $codePoint > 0x10FFFF
-                || ($codePoint >= 0xD800 && $codePoint <= 0xDFFF)
+            if (!$valid ||
+                $codePoint > 0x10FFFF ||
+                ($codePoint >= 0xD800 && $codePoint <= 0xDFFF)
             ) {
                 $out .= "\xFD\xFF";
                 continue;

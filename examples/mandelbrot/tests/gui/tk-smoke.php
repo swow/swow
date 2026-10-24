@@ -1,5 +1,6 @@
 #!/usr/bin/env php
 <?php
+
 declare(strict_types=1);
 
 /*
@@ -120,8 +121,8 @@ check(
     'status label sits at the bottom of the toolbar',
 );
 check(
-    $tk->evaluate('image width ' . Layout::FULL_IMAGE) === (string) IMAGE_WIDTH
-        && $tk->evaluate('image height ' . Layout::FULL_IMAGE) === (string) IMAGE_HEIGHT,
+    $tk->evaluate('image width ' . Layout::FULL_IMAGE) === (string) IMAGE_WIDTH &&
+        $tk->evaluate('image height ' . Layout::FULL_IMAGE) === (string) IMAGE_HEIGHT,
     'full photo image is ' . IMAGE_WIDTH . 'x' . IMAGE_HEIGHT,
 );
 check($tk->imageWidth() === IMAGE_WIDTH, 'imageWidth() is ' . IMAGE_WIDTH);
@@ -137,10 +138,10 @@ $panButtons = [
 foreach ($panButtons as $component => [$widget, $label]) {
     $rect = $layoutRects[$component];
     check(
-        (int) $tk->evaluate('winfo x ' . $widget) === $rect->x
-            && (int) $tk->evaluate('winfo y ' . $widget) === $rect->y
-            && (int) $tk->evaluate('winfo width ' . $widget) === $rect->w
-            && (int) $tk->evaluate('winfo height ' . $widget) === $rect->h,
+        (int) $tk->evaluate('winfo x ' . $widget) === $rect->x &&
+            (int) $tk->evaluate('winfo y ' . $widget) === $rect->y &&
+            (int) $tk->evaluate('winfo width ' . $widget) === $rect->w &&
+            (int) $tk->evaluate('winfo height ' . $widget) === $rect->h,
         $component . ' button is placed at '
             . sprintf('%d,%d %dx%d', $rect->x, $rect->y, $rect->w, $rect->h),
     );
@@ -196,8 +197,8 @@ check(
     'placeholder item uses the placeholder photo',
 );
 check(
-    $tk->evaluate('image width ' . Layout::PLACEHOLDER_IMAGE) === (string) IMAGE_WIDTH
-        && $tk->evaluate('image height ' . Layout::PLACEHOLDER_IMAGE) === (string) IMAGE_HEIGHT,
+    $tk->evaluate('image width ' . Layout::PLACEHOLDER_IMAGE) === (string) IMAGE_WIDTH &&
+        $tk->evaluate('image height ' . Layout::PLACEHOLDER_IMAGE) === (string) IMAGE_HEIGHT,
     'placeholder photo is ' . IMAGE_WIDTH . 'x' . IMAGE_HEIGHT,
 );
 $stack = preg_split('/\s+/', trim($tk->evaluate(Layout::CANVAS . ' find overlapping 0 0 1 1'))) ?: [];
@@ -222,7 +223,7 @@ check(
     'placeholder photo is deleted after the first presentRows',
 );
 
-$statusText = 'status {braces} "quotes" $dollar [brackets] \\slash';
+$statusText = 'status {braces} "quotes" $dollar [brackets] \slash';
 $tk->status($statusText);
 check(
     $tk->evaluate(Layout::STATUS . ' cget -text') === $statusText,

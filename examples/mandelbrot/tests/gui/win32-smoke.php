@@ -1,5 +1,6 @@
 #!/usr/bin/env php
 <?php
+
 declare(strict_types=1);
 
 /*
@@ -286,7 +287,7 @@ if (PHP_INT_SIZE < 8) {
 
 $win = new Win32();
 check(
-    $win instanceof \Swow\Mandelbrot\Gui\Backend,
+    $win instanceof Swow\Mandelbrot\Gui\Backend,
     'Win32 implements the Backend interface',
 );
 $open = false;

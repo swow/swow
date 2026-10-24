@@ -27,7 +27,7 @@ if (!PHP_ZTS) {
 }
 
 spl_autoload_register(static function (string $class): void {
-    $prefix = 'Swow\\Mandelbrot\\';
+    $prefix = 'Swow\Mandelbrot\\';
     if (!str_starts_with($class, $prefix)) {
         return;
     }

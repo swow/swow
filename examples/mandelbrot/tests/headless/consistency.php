@@ -11,14 +11,14 @@ declare(strict_types=1);
  * numeric one.
  */
 
+use Swow\Futex;
 use Swow\Mandelbrot\App;
 use Swow\Mandelbrot\Buffer;
 use Swow\Mandelbrot\Config;
 use Swow\Mandelbrot\Reference;
 use Swow\Mandelbrot\Renderer;
-use Swow\Mandelbrot\View;
 use Swow\Mandelbrot\Thread\Worker;
-use Swow\Futex;
+use Swow\Mandelbrot\View;
 use Swow\SpscQueue;
 
 require __DIR__ . '/../../src/bootstrap.php';

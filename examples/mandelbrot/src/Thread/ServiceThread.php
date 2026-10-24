@@ -5,13 +5,13 @@ declare(strict_types=1);
 namespace Swow\Mandelbrot\Thread;
 
 use Swow\Futex;
-use Swow\SpscQueue;
-use Swow\SpscQueueException;
-use Swow\Thread;
 use Swow\Mandelbrot\Buffer;
 use Swow\Mandelbrot\Image;
 use Swow\Mandelbrot\Reference;
 use Swow\Mandelbrot\View;
+use Swow\SpscQueue;
+use Swow\SpscQueueException;
+use Swow\Thread;
 use Throwable;
 
 /**
@@ -35,7 +35,7 @@ final class ServiceThread
             . self::attachCode('$jobs', serialize($jobs))
             . self::attachCode('$results', serialize($results))
             . self::attachCode('$generation', serialize($generation))
-            . '\\Swow\\Mandelbrot\\Thread\\ServiceThread::loop($buffer, $jobs, $results, $generation);';
+            . '\Swow\Mandelbrot\Thread\ServiceThread::loop($buffer, $jobs, $results, $generation);';
 
         return Thread::runCode($code);
     }

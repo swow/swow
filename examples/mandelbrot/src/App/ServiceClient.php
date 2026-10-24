@@ -6,15 +6,17 @@ namespace Swow\Mandelbrot\App;
 
 use RuntimeException;
 use Swow\Futex;
-use Swow\SpscQueue;
-use Swow\SpscQueueException;
-use Swow\Thread;
 use Swow\Mandelbrot\Buffer;
 use Swow\Mandelbrot\Config;
 use Swow\Mandelbrot\Gui\Backend;
 use Swow\Mandelbrot\Thread\Worker;
 use Swow\Mandelbrot\View;
+use Swow\SpscQueue;
+use Swow\SpscQueueException;
+use Swow\Thread;
 use Throwable;
+
+use const STDERR;
 
 /**
  * Reference build and PNG save requests to the service thread.
@@ -183,9 +185,9 @@ final class ServiceClient
     public function assertThreadAlive(): void
     {
         if (
-            ($this->building || $this->saving)
-            && $this->thread !== null
-            && !$this->thread->isRunning()
+            ($this->building || $this->saving) &&
+            $this->thread !== null &&
+            !$this->thread->isRunning()
         ) {
             throw new RuntimeException('service thread exited');
         }

@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace Swow\Mandelbrot\App;
 
+use function sprintf;
+
+use const STDERR;
+
 /**
  * MANDELBROT_TRACE output.
  *
@@ -108,10 +112,10 @@ final class Trace
     public function firstResult(int $gen): void
     {
         if (
-            !$this->enabled
-            || $this->actionFirstResult
-            || $this->actionKind === null
-            || $gen !== $this->actionGen
+            !$this->enabled ||
+            $this->actionFirstResult ||
+            $this->actionKind === null ||
+            $gen !== $this->actionGen
         ) {
             return;
         }

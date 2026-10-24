@@ -1,5 +1,6 @@
 #!/usr/bin/env php
 <?php
+
 declare(strict_types=1);
 
 /*
@@ -123,8 +124,8 @@ foreach ($busyWidgets as $widget) {
 }
 check($tk->evaluate(Layout::BUTTON_QUIT . ' cget -state') === 'normal', 'quit stays enabled while busy');
 check(
-    $tk->evaluate(Layout::STATUS . ' cget -text') === 'busy probe'
-        && (int) $tk->evaluate('winfo ismapped ' . Layout::STATUS) === 1,
+    $tk->evaluate(Layout::STATUS . ' cget -text') === 'busy probe' &&
+        (int) $tk->evaluate('winfo ismapped ' . Layout::STATUS) === 1,
     'status label stays readable while busy',
 );
 $tk->setBusy(true);

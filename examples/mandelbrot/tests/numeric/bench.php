@@ -158,7 +158,7 @@ function directDoubleBand(array $params, int $rowBegin, int $rowEnd): array
                 $zi2 = $zi * $zi;
                 $n++;
             }
-            $colors[] = $n >= $limit ? 0 : \Swow\Mandelbrot\Palette::color($n, $limit, $zr2 + $zi2);
+            $colors[] = $n >= $limit ? 0 : Swow\Mandelbrot\Palette::color($n, $limit, $zr2 + $zi2);
         }
     }
 

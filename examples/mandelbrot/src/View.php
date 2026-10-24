@@ -6,6 +6,9 @@ namespace Swow\Mandelbrot;
 
 use InvalidArgumentException;
 
+use function sprintf;
+use function strlen;
+
 /**
  * Window onto the complex plane.
  *
@@ -166,7 +169,7 @@ final class View
         if (!is_finite($dxPixels) || !is_finite($dyPixels)) {
             throw new InvalidArgumentException('pan offset must be finite');
         }
-        if ($dxPixels == 0.0 && $dyPixels == 0.0) {
+        if ($dxPixels === 0.0 && $dyPixels === 0.0) {
             return;
         }
         // scale = 300 * (height / 1080) * depth = (5 * height / 18) * depth

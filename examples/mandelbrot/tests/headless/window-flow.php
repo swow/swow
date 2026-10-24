@@ -61,8 +61,8 @@ final class FakeBackend implements Backend
     public function pump(): array
     {
         if (
-            $this->quitAfterSeconds !== null
-            && microtime(true) - $this->started >= $this->quitAfterSeconds
+            $this->quitAfterSeconds !== null &&
+            microtime(true) - $this->started >= $this->quitAfterSeconds
         ) {
             return [['type' => 'quit']];
         }

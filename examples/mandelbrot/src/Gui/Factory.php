@@ -1,7 +1,10 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Swow\Mandelbrot\Gui;
+
+use const PHP_OS_FAMILY;
 
 /**
  * Pick the native GUI backend for the current platform.

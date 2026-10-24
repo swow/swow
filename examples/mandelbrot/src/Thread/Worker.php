@@ -6,14 +6,17 @@ namespace Swow\Mandelbrot\Thread;
 
 use RuntimeException;
 use Swow\Futex;
-use Swow\SpscQueue;
-use Swow\SpscQueueException;
-use Swow\Thread;
 use Swow\Mandelbrot\Buffer;
 use Swow\Mandelbrot\Reference;
 use Swow\Mandelbrot\Renderer;
 use Swow\Mandelbrot\View;
+use Swow\SpscQueue;
+use Swow\SpscQueueException;
+use Swow\Thread;
 use Throwable;
+
+use function count;
+use function sprintf;
 
 /**
  * Worker thread body and spawn helper.
@@ -36,7 +39,7 @@ final class Worker
             . self::attachCode('$tasks', serialize($tasks))
             . self::attachCode('$results', serialize($results))
             . self::attachCode('$generation', serialize($generation))
-            . '\\Swow\\Mandelbrot\\Thread\\Worker::loop($buffer, $tasks, $results, $generation);';
+            . '\Swow\Mandelbrot\Thread\Worker::loop($buffer, $tasks, $results, $generation);';
 
         return Thread::runCode($code);
     }

@@ -493,7 +493,6 @@ function pertMinimal(array $orbit, array $params): int
     return $sum;
 }
 
-
 /**
  * Experiment 1: no guard compare. Only valid when the reference orbit is full
  * (guard === PHP_INT_MAX); the caller checks the digest on a full-orbit frame.
@@ -727,7 +726,6 @@ function pertInterleaved(array $orbit, array $params): array
     return $colors;
 }
 
-
 /**
  * Experiments 1 + 2 combined: no guard compare, inline rebase test. Only valid
  * when the reference orbit is full (guard === PHP_INT_MAX).
@@ -800,7 +798,6 @@ function pertBoth(array $orbit, array $params): array
 
     return $colors;
 }
-
 
 /**
  * Experiment 4: two pixels per reference step. The shared reference read is
@@ -1161,8 +1158,8 @@ foreach ([['direct', $shallowDepth], ['pert', $deepDepth]] as [$prefix, $depth])
         printf("%-38s %9.4f %9s\n", 'minimal (loop + sum)', $minimal, share($minimal, $full));
     }
     foreach (['pert-noguard' => 'exp 1: no guard compare', 'pert-inline' => 'exp 2: inline rebase test',
-              'pert-interleaved' => 'exp 3: interleaved ref array', 'pert-both' => 'exp 1+2: both',
-              'pert-pair' => 'exp 4: two pixels per step'] as $name => $label) {
+        'pert-interleaved' => 'exp 3: interleaved ref array', 'pert-both' => 'exp 1+2: both',
+        'pert-pair' => 'exp 4: two pixels per step'] as $name => $label) {
         if (!isset($seconds[$name])) {
             continue;
         }

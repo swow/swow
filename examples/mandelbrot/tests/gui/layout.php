@@ -1,5 +1,6 @@
 #!/usr/bin/env php
 <?php
+
 declare(strict_types=1);
 
 /*
@@ -35,10 +36,10 @@ function check(bool $condition, string $message): void
 
 function overlaps(Rect $a, Rect $b): bool
 {
-    return $a->x < $b->x + $b->w
-        && $b->x < $a->x + $a->w
-        && $a->y < $b->y + $b->h
-        && $b->y < $a->y + $a->h;
+    return $a->x < $b->x + $b->w &&
+        $b->x < $a->x + $a->w &&
+        $a->y < $b->y + $b->h &&
+        $b->y < $a->y + $a->h;
 }
 
 $metrics = Layout::metrics();
@@ -58,10 +59,10 @@ foreach (Layout::COMPONENTS as $component) {
 
 $canvas = $rects[Layout::COMP_CANVAS];
 check(
-    $canvas->x === 0
-        && $canvas->y === $toolbarHeight
-        && $canvas->w === WINDOW_WIDTH
-        && $canvas->h === WINDOW_HEIGHT - $toolbarHeight,
+    $canvas->x === 0 &&
+        $canvas->y === $toolbarHeight &&
+        $canvas->w === WINDOW_WIDTH &&
+        $canvas->h === WINDOW_HEIGHT - $toolbarHeight,
     sprintf(
         'canvas rect is 0,%d %dx%d',
         $toolbarHeight,
@@ -78,10 +79,10 @@ $window = new Rect(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
 foreach ($rects as $key => $rect) {
     check($rect->w > 0 && $rect->h > 0, $key . ' has a positive rect');
     check(
-        $rect->x >= $window->x
-            && $rect->y >= $window->y
-            && $rect->x + $rect->w <= $window->x + $window->w
-            && $rect->y + $rect->h <= $window->y + $window->h,
+        $rect->x >= $window->x &&
+            $rect->y >= $window->y &&
+            $rect->x + $rect->w <= $window->x + $window->w &&
+            $rect->y + $rect->h <= $window->y + $window->h,
         $key . ' is inside the window',
     );
     if ($key !== Layout::COMP_CANVAS) {
@@ -109,16 +110,16 @@ check(
     'Real label keeps the previous geometry',
 );
 check(
-    $rects[Layout::COMP_REAL]->x === 39
-        && $rects[Layout::COMP_REAL]->y === 0
-        && $rects[Layout::COMP_REAL]->w === 246
-        && $rects[Layout::COMP_REAL]->h === 27,
+    $rects[Layout::COMP_REAL]->x === 39 &&
+        $rects[Layout::COMP_REAL]->y === 0 &&
+        $rects[Layout::COMP_REAL]->w === 246 &&
+        $rects[Layout::COMP_REAL]->h === 27,
     'Real entry keeps the previous geometry',
 );
 check(
-    $rects[Layout::COMP_QUIT]->x === 1006
-        && $rects[Layout::COMP_QUIT]->w === 58
-        && $rects[Layout::COMP_QUIT]->h === 27,
+    $rects[Layout::COMP_QUIT]->x === 1006 &&
+        $rects[Layout::COMP_QUIT]->w === 58 &&
+        $rects[Layout::COMP_QUIT]->h === 27,
     'Quit button keeps the previous geometry',
 );
 $panRects = [

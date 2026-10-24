@@ -14,6 +14,13 @@ use Swow\Mandelbrot\Gui\Win32\Png;
 use Swow\Mandelbrot\Gui\Win32\Text;
 use Throwable;
 
+use function extension_loaded;
+use function sprintf;
+use function strlen;
+
+use const PHP_INT_SIZE;
+use const STDERR;
+
 /**
  * Native Win32 backend loaded through FFI.
  *
@@ -514,9 +521,9 @@ final class Win32 implements Backend
         $milliseconds = max(1, (int) ceil($microseconds / 1000));
 
         try {
-            if ($this->hwnd === 0
-                || $this->user32 === null
-                || $this->kernel32 === null
+            if ($this->hwnd === 0 ||
+                $this->user32 === null ||
+                $this->kernel32 === null
             ) {
                 if ($this->kernel32 !== null) {
                     $this->kernel32->Sleep($milliseconds);
@@ -1082,8 +1089,8 @@ final class Win32 implements Backend
     {
         $client = $this->user32->new('RECT');
         $window = $this->user32->new('RECT');
-        if ($this->user32->GetClientRect($this->hwnd, FFI::addr($client)) === 0
-            || $this->user32->GetWindowRect($this->hwnd, FFI::addr($window)) === 0
+        if ($this->user32->GetClientRect($this->hwnd, FFI::addr($client)) === 0 ||
+            $this->user32->GetWindowRect($this->hwnd, FFI::addr($window)) === 0
         ) {
             return;
         }

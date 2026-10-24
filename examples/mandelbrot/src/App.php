@@ -13,6 +13,8 @@ use Swow\Mandelbrot\App\WindowLoop;
 use Swow\Mandelbrot\Gui\Backend;
 use Throwable;
 
+use const STDERR;
+
 /**
  * Assembly for the headless and window front ends.
  */

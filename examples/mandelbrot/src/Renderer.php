@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace Swow\Mandelbrot;
 
+use function count;
+
+use const PHP_INT_MAX;
+
 /**
  * Renders bands of pixels, either by iterating c in double directly or by the
  * perturbation method.

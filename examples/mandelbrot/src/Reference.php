@@ -4,6 +4,11 @@ declare(strict_types=1);
 
 namespace Swow\Mandelbrot;
 
+use function count;
+use function sprintf;
+
+use const INF;
+
 /**
  * Reference orbit of the view centre.
  *
@@ -67,7 +72,7 @@ final class Reference
         $candidates = [];
         $worst = INF;
         $sortCandidates = static function (array &$list): void {
-            usort($list, static fn (array $a, array $b): int => $a['mag'] <=> $b['mag']);
+            usort($list, static fn(array $a, array $b): int => $a['mag'] <=> $b['mag']);
         };
 
         $zr = '0';

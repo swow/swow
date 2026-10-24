@@ -1,5 +1,6 @@
 #!/usr/bin/env php
 <?php
+
 declare(strict_types=1);
 
 /*
@@ -113,7 +114,7 @@ function pixelAt(string $path, int $x, int $y): array
     $color = imagecolorat($image, $x * $scale, $y * $scale);
     imagedestroy($image);
 
-    return [($color >> 16) & 0xff, ($color >> 8) & 0xff, $color & 0xff];
+    return [($color >> 16) & 0xFF, ($color >> 8) & 0xFF, $color & 0xFF];
 }
 
 $outDir = __DIR__ . '/out';
@@ -212,8 +213,8 @@ check(
     'markInvalid paints the depth field red',
 );
 check(
-    $cocoa->fieldBackground(Layout::COMP_REAL) === $defaultBackgrounds[Layout::COMP_REAL]
-        && $cocoa->fieldBackground(Layout::COMP_IMAG) === $defaultBackgrounds[Layout::COMP_IMAG],
+    $cocoa->fieldBackground(Layout::COMP_REAL) === $defaultBackgrounds[Layout::COMP_REAL] &&
+        $cocoa->fieldBackground(Layout::COMP_IMAG) === $defaultBackgrounds[Layout::COMP_IMAG],
     'markInvalid leaves the other fields alone',
 );
 check($cocoa->statusValue() === 'invalid depth', 'markInvalid writes the reason to the status line');
@@ -282,7 +283,7 @@ try {
 }
 check(!$cocoa->placeholderShown(), 'placeholder is gone after the first presentRows');
 
-$statusText = 'status {braces} "quotes" $dollar [brackets] \\slash';
+$statusText = 'status {braces} "quotes" $dollar [brackets] \slash';
 $cocoa->status($statusText);
 check($cocoa->statusValue() === $statusText, 'status text survives NSString conversion');
 

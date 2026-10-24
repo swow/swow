@@ -130,7 +130,7 @@ function testRoundTrip(): void
     $beforeRe = $view->centerRe();
     $view->pan(1.0, 0.0, 640, 360);
     $afterRe = $view->centerRe();
-    $decimals = strpos($afterRe, '.') === false ? 0 : strlen($afterRe) - strpos($afterRe, '.') - 1;
+    $decimals = !str_contains($afterRe, '.') ? 0 : strlen($afterRe) - strpos($afterRe, '.') - 1;
     check($afterRe !== $beforeRe, 'a one pixel pan changes the centre');
     checkSame(60, $decimals, 'a one pixel pan keeps all 60 stored decimals');
     checkSame('0.0000000000000001', bcsub($beforeRe, $afterRe, 60) === '0.000000000000000100000000000000000000000000000000000000000000'

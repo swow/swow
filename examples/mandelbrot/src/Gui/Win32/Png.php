@@ -7,6 +7,11 @@ namespace Swow\Mandelbrot\Gui\Win32;
 use InvalidArgumentException;
 use RuntimeException;
 
+use function chr;
+use function ord;
+use function sprintf;
+use function strlen;
+
 /**
  * Minimal PNG decoder for the bundled placeholder image.
  *
@@ -67,10 +72,10 @@ final class Png
                 );
                 $width = $header['width'];
                 $height = $header['height'];
-                if ($width < 1
-                    || $height < 1
-                    || $width > self::MAX_DIMENSION
-                    || $height > self::MAX_DIMENSION
+                if ($width < 1 ||
+                    $height < 1 ||
+                    $width > self::MAX_DIMENSION ||
+                    $height > self::MAX_DIMENSION
                 ) {
                     throw new InvalidArgumentException('unsupported PNG dimensions');
                 }

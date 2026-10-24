@@ -1,7 +1,14 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Swow\Mandelbrot\Gui;
+
+use InvalidArgumentException;
+
+use function count;
+use function dirname;
+use function sprintf;
 
 enum NodeKind
 {
@@ -339,7 +346,7 @@ final class Layout
     {
         $toolbarHeight = self::heightOf($root, $metrics);
         if ($width - 2 * $metrics->marginX < 1 || $height <= $toolbarHeight) {
-            throw new \InvalidArgumentException(sprintf(
+            throw new InvalidArgumentException(sprintf(
                 'window size %dx%d does not fit a %d pixel toolbar',
                 $width,
                 $height,
