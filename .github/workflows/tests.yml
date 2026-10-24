@@ -93,6 +93,9 @@ jobs:
           echo "::endgroup::"
           echo "::group::Run cs-check"
           composer cs-check -- -v
+          echo "::endgroup::"
+          echo "::group::Run cs-check-headerless"
+          composer cs-check-headerless -- -v
       
       - name: Error if CRLF found
         if: steps.checkcrlf.outcome != 'success'
