@@ -592,7 +592,20 @@ static PHP_METHOD(Swow_Closure, __unserialize)
     }
 
     /* execute code to generate a closure instance */
-    zend_execute(op_array, &retval);
+    do {
+        /*
+         * zend_execute takes the symbol table of the compiled code from the
+         * innermost user frame. A call from C has none, and by-reference uses
+         * need one, so execute against the global table in that case.
+         */
+        zend_execute_data *saved_execute_data = EG(current_execute_data);
+
+        if (zend_rebuild_symbol_table() == NULL) {
+            EG(current_execute_data) = NULL;
+        }
+        zend_execute(op_array, &retval);
+        EG(current_execute_data) = saved_execute_data;
+    } while (0);
 #if PHP_VERSION_ID < 80600
     zend_exception_restore();
 #endif
