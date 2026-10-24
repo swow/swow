@@ -20,6 +20,10 @@
 
 #include <stdint.h>
 
+#ifdef ZTS
+# include "swow_thread.h"
+#endif
+
 #define SWOW_SHARED_OBJECT_INITIAL_CAPACITY 64
 #define SWOW_SHARED_OBJECT_LOAD_NUMERATOR 7
 #define SWOW_SHARED_OBJECT_LOAD_DENOMINATOR 10
@@ -339,6 +343,18 @@ zend_result swow_shared_object_module_shutdown(SHUTDOWN_FUNC_ARGS)
     if (!swow_shared_object_context.initialized) {
         return SUCCESS;
     }
+
+#ifdef ZTS
+    if (swow_thread_children_abandoned()) {
+        /*
+         * A child thread that the shutdown timeout left behind still uses these
+         * objects, and a lock or a queue of one of them would be destroyed while
+         * that thread waits on it. Keep the whole registry for the process
+         * instead, so the thread never touches freed memory.
+         */
+        return SUCCESS;
+    }
+#endif
 
     for (size_t i = 0; i < swow_shared_object_context.capacity; i++) {
         swow_shared_object_t *object = swow_shared_object_context.buckets[i];

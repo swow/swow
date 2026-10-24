@@ -65,6 +65,13 @@ static cat_always_inline swow_thread_t *swow_thread_get_from_object(zend_object 
 
 /* run */
 
+static cat_bool_t swow_thread_abandoned_children = cat_false;
+
+cat_bool_t swow_thread_children_abandoned(void)
+{
+    return swow_thread_abandoned_children;
+}
+
 static swow_thread_run_t *swow_thread_run_create(void)
 {
     swow_thread_run_t *run = cat_sys_calloc(1, sizeof(*run));
@@ -209,6 +216,9 @@ static void swow_thread_children_shutdown(void)
 
         if (!cat_thread_join(&run->thread, join_timeout)) {
             (void) cat_thread_detach(&run->thread);
+            /* The thread still runs and still uses the shared objects, so the
+             * module shutdown has to keep them */
+            swow_thread_abandoned_children = cat_true;
         }
         swow_thread_run_release(run);
     } ZEND_HASH_FOREACH_END();
@@ -1432,6 +1442,7 @@ zend_result swow_thread_runtime_init(INIT_FUNC_ARGS)
     SWOW_G(thread.registered) = false;
     cat_atomic_bool_init(&SWOW_G(thread.kill_requested), cat_false);
     SWOW_G(thread.kill_ready) = false;
+    swow_thread_abandoned_children = cat_false;
     ZVAL_UNDEF(&SWOW_G(thread.current));
     zend_hash_init(&SWOW_G(thread.children), 8, NULL, NULL, 0);
     SWOW_G(thread.children_initialized) = true;

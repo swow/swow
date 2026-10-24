@@ -81,6 +81,9 @@ zend_result swow_thread_module_shutdown(SHUTDOWN_FUNC_ARGS);
 zend_result swow_thread_runtime_init(INIT_FUNC_ARGS);
 zend_result swow_thread_runtime_shutdown(SHUTDOWN_FUNC_ARGS);
 
+/* cat_true when a child thread outlived the shutdown timeout of this request */
+cat_bool_t swow_thread_children_abandoned(void);
+
 #endif /* ZTS */
 
 #ifdef __cplusplus
