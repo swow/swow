@@ -1,0 +1,5 @@
+# Generated renders written by the default --output path.
+/*.png
+
+# Scratch work directories.
+/.staging/

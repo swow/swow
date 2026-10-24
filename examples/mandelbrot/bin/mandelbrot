@@ -1,0 +1,55 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+use Swow\Mandelbrot\App;
+use Swow\Mandelbrot\Config;
+use Swow\Mandelbrot\Gui\Factory;
+
+try {
+    require __DIR__ . '/../src/bootstrap.php';
+} catch (Throwable $error) {
+    fwrite(STDERR, 'mandelbrot: ' . $error->getMessage() . "\n");
+    exit(1);
+}
+
+$argv = $_SERVER['argv'] ?? [];
+$arguments = array_slice($argv, 1);
+
+if (in_array('--help', $arguments, true)) {
+    fwrite(STDOUT, Config::usage());
+    exit(0);
+}
+
+try {
+    $config = Config::fromArgv($argv);
+} catch (InvalidArgumentException $error) {
+    fwrite(STDERR, 'mandelbrot: ' . $error->getMessage() . "\n\n");
+    fwrite(STDERR, Config::usage());
+    exit(2);
+}
+
+$jitOn = false;
+if (extension_loaded('Zend OPcache') && function_exists('opcache_get_status')) {
+    try {
+        $status = opcache_get_status(false);
+        $jitOn = is_array($status) && ($status['jit']['on'] ?? false) === true;
+    } catch (Throwable) {
+        $jitOn = false;
+    }
+}
+
+if (!$jitOn) {
+    fwrite(
+        STDERR,
+        "mandelbrot: note: opcache JIT is off; add -d opcache.enable_cli=1"
+            . " -d opcache.jit=tracing -d opcache.jit_buffer_size=64M"
+            . " for about 20x faster rendering\n",
+    );
+}
+
+// The backend opens lazily; App falls back to headless when it is unavailable.
+$gui = $config->headless() ? null : Factory::create();
+
+exit((new App($config, $gui))->run());
