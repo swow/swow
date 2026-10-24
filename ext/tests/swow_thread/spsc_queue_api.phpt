@@ -95,7 +95,6 @@ try {
     Assert::throws(static function () use ($name): void {
         SpscQueue::createNamed($name, 2, 64);
     }, SpscQueueException::class);
-
 } finally {
     unset($named, $copy);
     try {
