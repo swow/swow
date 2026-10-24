@@ -529,6 +529,7 @@ static void swow_thread_run_code(swow_thread_run_t *run)
         return;
     }
 
+    /* The code runs as a script, so a return value is not taken */
     zend_first_try {
         if (zend_eval_stringl(run->code, run->code_len, NULL, "Swow\\Thread") == SUCCESS) {
             completed = cat_true;
@@ -546,23 +547,12 @@ static void swow_thread_run_code(swow_thread_run_t *run)
     }
 
     if (unlikely(!completed)) {
-        if (EG(exception) != NULL) {
-            zend_clear_exception();
-            cat_atomic_int32_store(&run->exit_status, 255);
-        } else {
-            /* exit() or die() went through the bailout path */
-            cat_atomic_int32_store(&run->exit_status, (int32_t) EG(exit_status));
-        }
+        swow_thread_run_take_end(EG(exception), run);
         return;
     }
 
     if (EG(exception) != NULL) {
-        zval exception;
-
-        ZVAL_OBJ(&exception, EG(exception));
-        (void) swow_thread_serialize(&exception, &run->exception, &run->exception_len);
-        zend_clear_exception();
-        cat_atomic_int32_store(&run->exit_status, 255);
+        swow_thread_run_take_end(EG(exception), run);
     }
 }
 
