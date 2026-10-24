@@ -164,10 +164,15 @@ final class ThreadManager implements ThreadManagerInterface
         foreach ($this->workers as $thread) {
             try {
                 $thread->wait($this->maxWaitTime * 1000);
-            } catch (ThreadException) {
+            } catch (Throwable) {
+                /*
+                 * The watcher of the worker may hold the wait already, and only
+                 * one caller may wait for a thread. The watcher then takes the
+                 * exit and reports it.
+                 */
                 try {
                     $thread->detach();
-                } catch (ThreadException) {
+                } catch (Throwable) {
                     /* ignore */
                 }
             }
@@ -206,14 +211,15 @@ final class ThreadManager implements ThreadManagerInterface
 
             try {
                 $oldThread->wait($this->maxWaitTime * 1000);
-            } catch (ThreadException) {
+            } catch (Throwable) {
+                /* the watcher of the worker may hold the wait already */
                 try {
                     $oldThread->kill();
                     $oldThread->wait(1000);
-                } catch (ThreadException) {
+                } catch (Throwable) {
                     try {
                         $oldThread->detach();
-                    } catch (ThreadException) {
+                    } catch (Throwable) {
                         /* ignore */
                     }
                 }
