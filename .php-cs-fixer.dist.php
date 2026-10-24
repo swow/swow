@@ -14,7 +14,15 @@ declare(strict_types=1);
 
 use Swow\PhpCsFixer\Config;
 
-return (new Config())
+// WTFPL example projects: excluded here, formatted by .php-cs-fixer.headerless.php
+$headerlessPaths = [
+    __DIR__ . '/examples/gemm/',
+    __DIR__ . '/examples/mandelbrot/',
+    __DIR__ . '/examples/transformer/',
+];
+
+$config = new Config();
+$config
     ->setHeaderComment(
         projectName: 'Swow',
         projectLink: 'https://github.com/swow/swow',
@@ -40,8 +48,13 @@ return (new Config())
                 'Swow.php',
                 'run-tests*.php',
             ])
-            ->filter(static function (Symfony\Component\Finder\SplFileInfo $fileInfo): bool {
+            ->filter(static function (Symfony\Component\Finder\SplFileInfo $fileInfo) use ($headerlessPaths): bool {
                 $pathname = $fileInfo->getPathname();
+                foreach ($headerlessPaths as $headerlessPath) {
+                    if (str_starts_with($pathname, $headerlessPath)) {
+                        return false;
+                    }
+                }
                 if (empty($GLOBALS['exclude_file_path_list'])) {
                     foreach (
                         [
@@ -50,6 +63,8 @@ return (new Config())
                             __DIR__ . '/ext/tests/swow_closure/multiple_ns.inc',
                             __DIR__ . '/ext/tests/swow_closure/namespaced2.inc',
                             __DIR__ . '/ext/tests/include/lib/CertificateGenerator.php',
+                            // __wakeup to __unserialize conversion is not valid for this fixture
+                            __DIR__ . '/ext/tests/swow_thread/thannel_unserialize_failure.phpt',
                         ] as $excludeFilePath
                     ) {
                         $GLOBALS['exclude_file_path_list'][] = substr($excludeFilePath, strlen(__DIR__) + strlen('/'));
@@ -73,7 +88,10 @@ return (new Config())
             })
             ->append([
                 __FILE__,
+                __DIR__ . '/.php-cs-fixer.headerless.php',
                 __DIR__ . '/ext/bin/swow-builder',
                 __DIR__ . '/lib/dontdie/dontdie',
             ])
     );
+
+return $config;
