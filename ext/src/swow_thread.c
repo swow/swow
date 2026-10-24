@@ -75,6 +75,7 @@ static swow_thread_run_t *swow_thread_run_create(void)
 
     cat_atomic_uint32_init(&run->refcount, 1);
     cat_atomic_bool_init(&run->killed, cat_false);
+    cat_atomic_bool_init(&run->result_invalid, cat_false);
     cat_atomic_int32_init(&run->exit_status, 0);
 
     if (unlikely(uv_mutex_init(&run->lock) != 0)) {
@@ -257,16 +258,118 @@ static cat_bool_t swow_thread_unserialize(const char *data, size_t len, zval *zv
     return ret;
 }
 
+/* A serialization failure leaves EG(exception) set, and php_request_shutdown()
+ * would turn that into a fatal error that ends the whole process */
+static void swow_thread_run_set_serialize_failure(swow_thread_run_t *run)
+{
+    if (EG(exception) != NULL) {
+        zend_clear_exception();
+    }
+    cat_atomic_bool_store(&run->result_invalid, cat_true);
+    cat_atomic_int32_store(&run->exit_status, 255);
+}
+
+/*
+ * The thread entry runs without a user frame, so zend_throw_exception() reports
+ * an exception as uncaught and ends the process with a fatal error. Keep a
+ * bailout guard around the serialization, which reports such a throw.
+ */
+static cat_bool_t swow_thread_serialize_guarded(zval *zv, const char **data, size_t *len)
+{
+    volatile cat_bool_t serialized = cat_false;
+
+    zend_first_try {
+        serialized = swow_thread_serialize(zv, data, len);
+    } zend_end_try();
+
+    if (unlikely(!serialized)) {
+        if (EG(exception) != NULL) {
+            zend_clear_exception();
+        }
+        *data = NULL;
+        *len = 0;
+    }
+
+    return serialized;
+}
+
+/* Report the exception that ended the code to the waiting parent */
+static void swow_thread_run_set_exception(swow_thread_run_t *run)
+{
+    zval exception;
+
+    /*
+     * Take the exception out of the executor first, because the serializer
+     * reports a pending exception as a failure of its own
+     */
+    ZVAL_OBJ(&exception, EG(exception));
+    EG(exception) = NULL;
+
+    if (unlikely(!swow_thread_serialize_guarded(&exception, &run->exception,
+                                                &run->exception_len))) {
+        zval_ptr_dtor(&exception);
+        swow_thread_run_set_serialize_failure(run);
+        return;
+    }
+
+    zval_ptr_dtor(&exception);
+    cat_atomic_int32_store(&run->exit_status, 255);
+}
+
+/* A bailout ends the code without a return value. exit() and die() keep their
+ * status in EG(exit_status), and any other exception is the code's own */
+static void swow_thread_run_take_end(zend_object *exception, swow_thread_run_t *run)
+{
+    if (exception != NULL) {
+        if (zend_is_unwind_exit(exception) || zend_is_graceful_exit(exception)) {
+            zend_clear_exception();
+        } else {
+            swow_thread_run_set_exception(run);
+            return;
+        }
+    }
+
+    cat_atomic_int32_store(&run->exit_status, (int32_t) EG(exit_status));
+}
+
 /* child */
 
 static const char swow_thread_callable_wrapper[] =
     "static function (callable $callable, array $args): array {"
     "    try {"
-    "        return [$callable(...$args), null];"
+    "        $result = $callable(...$args);"
     "    } catch (\\Throwable $e) {"
-    "        return [null, $e];"
+    "        try {"
+    "            return [1, serialize($e)];"
+    "        } catch (\\Throwable $ignored) {"
+    "            return [2, null];"
+    "        }"
+    "    }"
+    /* The value is serialized here, because a throw from the C side of a thread
+     * has no user frame and ends the process as an uncaught exception */
+    "    try {"
+    "        return [0, serialize($result)];"
+    "    } catch (\\Throwable $ignored) {"
+    "        return [2, null];"
     "    }"
     "};";
+
+/* The status word of the wrapper result */
+#define SWOW_THREAD_RESULT_OK       0
+#define SWOW_THREAD_RESULT_EXCEPTION 1
+#define SWOW_THREAD_RESULT_INVALID  2
+
+static void swow_thread_run_take_payload(const char *data, size_t len,
+                                         const char **payload, size_t *payload_len)
+{
+    *payload = cat_sys_malloc(len);
+    if (unlikely(*payload == NULL)) {
+        *payload_len = 0;
+        return;
+    }
+    memcpy((void *) *payload, data, len);
+    *payload_len = len;
+}
 
 static void swow_thread_run_callable(swow_thread_run_t *run)
 {
@@ -274,8 +377,8 @@ static void swow_thread_run_callable(swow_thread_run_t *run)
     zval args;
     zval wrapper;
     zval wrapped;
-    zval *result;
-    zval *exception;
+    zval *status;
+    zval *payload;
     cat_bool_t completed = cat_false;
 
     ZVAL_UNDEF(&callable);
@@ -351,16 +454,12 @@ static void swow_thread_run_callable(swow_thread_run_t *run)
 
     if (unlikely(!completed)) {
         /* exit() or die() went through the bailout path */
-        if (EG(exception) != NULL) {
-            zend_clear_exception();
-        }
-        cat_atomic_int32_store(&run->exit_status, (int32_t) EG(exit_status));
+        swow_thread_run_take_end(EG(exception), run);
         goto _done;
     }
 
     if (EG(exception) != NULL) {
-        zend_clear_exception();
-        cat_atomic_int32_store(&run->exit_status, 255);
+        swow_thread_run_take_end(EG(exception), run);
         goto _done;
     }
 
@@ -369,14 +468,42 @@ static void swow_thread_run_callable(swow_thread_run_t *run)
         goto _done;
     }
 
-    result = zend_hash_index_find(Z_ARRVAL(wrapped), 0);
-    exception = zend_hash_index_find(Z_ARRVAL(wrapped), 1);
-
-    if (exception != NULL && Z_TYPE_P(exception) == IS_OBJECT) {
-        (void) swow_thread_serialize(exception, &run->exception, &run->exception_len);
+    status = zend_hash_index_find(Z_ARRVAL(wrapped), 0);
+    payload = zend_hash_index_find(Z_ARRVAL(wrapped), 1);
+    if (unlikely(status == NULL || payload == NULL || Z_TYPE_P(status) != IS_LONG)) {
         cat_atomic_int32_store(&run->exit_status, 255);
-    } else if (result != NULL) {
-        (void) swow_thread_serialize(result, &run->result, &run->result_len);
+        goto _done;
+    }
+
+    switch (Z_LVAL_P(status)) {
+        case SWOW_THREAD_RESULT_OK:
+            if (unlikely(Z_TYPE_P(payload) != IS_STRING)) {
+                swow_thread_run_set_serialize_failure(run);
+                break;
+            }
+            swow_thread_run_take_payload(Z_STRVAL_P(payload), Z_STRLEN_P(payload),
+                                        &run->result, &run->result_len);
+            if (unlikely(run->result == NULL)) {
+                swow_thread_run_set_serialize_failure(run);
+            }
+            break;
+        case SWOW_THREAD_RESULT_EXCEPTION:
+            if (unlikely(Z_TYPE_P(payload) != IS_STRING)) {
+                swow_thread_run_set_serialize_failure(run);
+                break;
+            }
+            swow_thread_run_take_payload(Z_STRVAL_P(payload), Z_STRLEN_P(payload),
+                                        &run->exception, &run->exception_len);
+            if (unlikely(run->exception == NULL)) {
+                swow_thread_run_set_serialize_failure(run);
+                break;
+            }
+            cat_atomic_int32_store(&run->exit_status, 255);
+            break;
+        default:
+            /* the result or the exception could not be serialized */
+            swow_thread_run_set_serialize_failure(run);
+            break;
     }
 
 _done:
@@ -870,6 +997,26 @@ static PHP_METHOD(Swow_Thread, start)
     RETURN_THIS();
 }
 
+/* Latch a failure that came after the join, so a second wait() reports it again
+ * instead of returning an undefined result */
+static void swow_thread_wait_failure(swow_thread_t *s_thread, const char *message)
+{
+    zval thrown;
+
+    zval_ptr_dtor(&s_thread->result);
+    ZVAL_UNDEF(&s_thread->result);
+
+    zend_throw_exception(swow_thread_exception_ce, message, 0);
+    ZVAL_OBJ(&s_thread->result, EG(exception));
+    EG(exception) = NULL;
+
+    s_thread->waited = cat_true;
+    s_thread->failed = cat_true;
+
+    ZVAL_COPY(&thrown, &s_thread->result);
+    zend_throw_exception_object(&thrown);
+}
+
 static PHP_METHOD(Swow_Thread, wait)
 {
     swow_thread_t *s_thread = swow_thread_get_from_object(Z_OBJ_P(ZEND_THIS));
@@ -921,19 +1068,30 @@ static PHP_METHOD(Swow_Thread, wait)
         RETURN_THROWS();
     }
 
+    if (unlikely(cat_atomic_bool_load(&s_thread->run->result_invalid))) {
+        swow_thread_wait_failure(s_thread, "Failed to serialize the thread result or exception");
+        RETURN_THROWS();
+    }
+
     if (s_thread->run->exception != NULL) {
         zval exception;
 
         ZVAL_UNDEF(&exception);
         if (unlikely(!swow_thread_unserialize(s_thread->run->exception,
                                               s_thread->run->exception_len, &exception))) {
-            zend_throw_exception(swow_thread_exception_ce, "Failed to unserialize the thread exception", 0);
+            if (EG(exception) != NULL) {
+                zend_clear_exception();
+            }
+            if (Z_TYPE(exception) != IS_UNDEF) {
+                zval_ptr_dtor(&exception);
+            }
+            swow_thread_wait_failure(s_thread, "Failed to unserialize the thread exception");
             RETURN_THROWS();
         }
         if (unlikely(Z_TYPE(exception) != IS_OBJECT ||
                      !instanceof_function(Z_OBJCE(exception), zend_ce_throwable))) {
             zval_ptr_dtor(&exception);
-            zend_throw_exception(swow_thread_exception_ce, "Thread returned a non-throwable exception", 0);
+            swow_thread_wait_failure(s_thread, "Thread returned a non-throwable exception");
             RETURN_THROWS();
         }
 
@@ -962,7 +1120,14 @@ static PHP_METHOD(Swow_Thread, wait)
     ZVAL_UNDEF(&s_thread->result);
     if (unlikely(!swow_thread_unserialize(s_thread->run->result, s_thread->run->result_len,
                                           &s_thread->result))) {
-        zend_throw_exception(swow_thread_exception_ce, "Failed to unserialize the thread result", 0);
+        if (EG(exception) != NULL) {
+            zend_clear_exception();
+        }
+        if (Z_TYPE(s_thread->result) != IS_UNDEF) {
+            zval_ptr_dtor(&s_thread->result);
+            ZVAL_UNDEF(&s_thread->result);
+        }
+        swow_thread_wait_failure(s_thread, "Failed to unserialize the thread result");
         RETURN_THROWS();
     }
 

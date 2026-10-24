@@ -52,6 +52,8 @@ typedef struct swow_thread_run_s {
     const char *exception;
     size_t exception_len;
     cat_atomic_int32_t exit_status;
+    /* cat_true when the result or the exception did not serialize */
+    cat_atomic_bool_t result_invalid;
     void *server_context;
     cat_atomic_int32_t start_status;
     uv_mutex_t lock;
