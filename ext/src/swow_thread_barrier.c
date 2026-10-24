@@ -40,6 +40,11 @@ static cat_bool_t swow_thread_barrier_free(swow_shared_object_t *object)
 {
     swow_thread_barrier_t *barrier = (swow_thread_barrier_t *) object;
 
+    if (cat_thread_wait_is_parked(&barrier->cond.wait)) {
+        php_error_docref(NULL, E_WARNING, "ThreadBarrier is waited on and was not destroyed");
+        return cat_false;
+    }
+
     cat_cond_destroy(&barrier->cond);
     if (!cat_mutex_destroy(&barrier->mutex)) {
         php_error_docref(NULL, E_WARNING, "ThreadBarrier is still locked and was not destroyed");
@@ -69,6 +74,39 @@ static void swow_thread_barrier_free_object(zend_object *object)
     }
 
     zend_object_std_dtor(&barrier->std);
+}
+
+/* Only CAT_TIMEOUT_FOREVER waits without a deadline. A negative timeout would
+ * arm no timer, so it becomes an expired one */
+static cat_always_inline cat_timeout_t swow_thread_barrier_normalize(cat_timeout_t timeout)
+{
+    return timeout < 0 && timeout != CAT_TIMEOUT_FOREVER ? 0 : timeout;
+}
+
+/* The deadline is fixed once for the whole wait, so a wakeup that finds no trip
+ * does not restart the timeout */
+static cat_always_inline cat_timeout_t swow_thread_barrier_deadline(cat_timeout_t timeout)
+{
+    timeout = swow_thread_barrier_normalize(timeout);
+
+    return timeout == CAT_TIMEOUT_FOREVER ? CAT_TIMEOUT_FOREVER
+                                          : (cat_timeout_t) cat_time_msec() + timeout;
+}
+
+static cat_timeout_t swow_thread_barrier_remaining(cat_timeout_t deadline)
+{
+    cat_msec_t now;
+
+    if (deadline == CAT_TIMEOUT_FOREVER) {
+        return CAT_TIMEOUT_FOREVER;
+    }
+
+    now = cat_time_msec();
+    if (now >= (cat_msec_t) deadline) {
+        return 0;
+    }
+
+    return (cat_timeout_t) ((cat_msec_t) deadline - now);
 }
 
 ZEND_BEGIN_ARG_INFO_EX(arginfo_class_Swow_Sync_ThreadBarrier___construct, 0, 0, 1)
@@ -148,6 +186,7 @@ static PHP_METHOD(Swow_Sync_ThreadBarrier, wait)
     zend_long timeout = -1;
     swow_thread_barrier_t *shared;
     uint64_t generation;
+    cat_timeout_t deadline;
 
     ZEND_PARSE_PARAMETERS_START(0, 1)
         Z_PARAM_OPTIONAL
@@ -161,6 +200,8 @@ static PHP_METHOD(Swow_Sync_ThreadBarrier, wait)
     }
 
     shared = barrier->barrier;
+    deadline = swow_thread_barrier_deadline(timeout);
+
     if (unlikely(!cat_mutex_lock(&shared->mutex, timeout))) {
         cat_errno_t code = cat_get_last_error_code();
 
@@ -185,10 +226,19 @@ static PHP_METHOD(Swow_Sync_ThreadBarrier, wait)
 
     generation = shared->generation;
     while (shared->generation == generation) {
-        if (!cat_cond_wait(&shared->cond, &shared->mutex, timeout)) {
+        if (!cat_cond_wait(&shared->cond, &shared->mutex,
+                           swow_thread_barrier_remaining(deadline))) {
             cat_errno_t code = cat_get_last_error_code();
 
-            shared->waiting--;
+            /*
+             * The trip of another participant may have cleared the count while
+             * this wait was timing out. Only the round that this waiter joined
+             * can be left, or the count wraps and the barrier never trips again
+             */
+            if (shared->generation == generation) {
+                shared->waiting--;
+            }
+
             if (unlikely(!cat_mutex_unlock(&shared->mutex))) {
                 swow_throw_exception_with_last(swow_sync_exception_ce);
                 RETURN_THROWS();
