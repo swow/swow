@@ -48,6 +48,10 @@ typedef struct cat_thread_waiter_s {
     /* cat_true after a waker removes this node. The waiter uses it to tell a
      * wakeup from a timeout */
     cat_atomic_bool_t woken;
+    /* cat_true while the node is still in the queue. The queue lock guards it,
+     * so only the side that takes the node first removes it and drops the
+     * count */
+    cat_bool_t linked;
     cat_queue_node_t node;
 } cat_thread_waiter_t;
 

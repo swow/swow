@@ -565,6 +565,9 @@ CAT_API cat_bool_t cat_thread_join(cat_thread_t *thread, cat_timeout_t timeout)
 
     (void) uv_thread_join(&thread->id);
 
+    /* The thread is gone and no waiter is left, so the queue is free to destroy */
+    cat_thread_wait_destroy(&thread->join);
+
     return cat_true;
 }
 

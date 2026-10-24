@@ -266,8 +266,12 @@ CAT_API cat_bool_t cat_thannel_pushv(cat_thannel_t *thannel, const cat_thannel_i
         }
     }
 
-    if (cat_cond_signal(&thannel->readable)) {
-        thannel->wake_count++;
+    /* Each message can serve one consumer, so every message wakes one. A single
+     * signal would leave the other consumers asleep next to a full queue. */
+    for (index = 0; index < count; index++) {
+        if (cat_cond_signal(&thannel->readable)) {
+            thannel->wake_count++;
+        }
     }
 
     if (!cat_thannel_is_rendezvous(thannel)) {
@@ -368,6 +372,14 @@ CAT_API cat_bool_t cat_thannel_popv(cat_thannel_t *thannel, cat_thannel_item_t *
         thannel->wake_count++;
     }
 
+    /* A pop that took less than the queue holds leaves values behind for the
+     * consumers that are still asleep */
+    if (taken > 0 && thannel->length > 0) {
+        if (cat_cond_broadcast(&thannel->readable)) {
+            thannel->wake_count++;
+        }
+    }
+
     cat_mutex_unlock(&thannel->mutex);
 
     *count = taken;
@@ -414,6 +426,13 @@ CAT_API size_t cat_thannel_drain(cat_thannel_t *thannel, cat_thannel_item_t *ite
 
     if (taken > 0 && cat_cond_broadcast(&thannel->writable)) {
         thannel->wake_count++;
+    }
+
+    /* A drain that may take less than the queue holds leaves values behind */
+    if (taken > 0 && thannel->length > 0) {
+        if (cat_cond_broadcast(&thannel->readable)) {
+            thannel->wake_count++;
+        }
     }
 
     cat_mutex_unlock(&thannel->mutex);

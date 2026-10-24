@@ -15,6 +15,8 @@
 #include "cat_api.h"
 #include "cat_thread_sync.h"
 
+#include <limits.h>
+
 #ifdef CAT_THREAD_SAFE
 
 CAT_API cat_bool_t cat_thread_sync_module_init(void)
@@ -75,6 +77,7 @@ static cat_coroutine_t *cat_thread_wait_take_first(cat_thread_wait_t *wait)
 
     waiter = cat_queue_front_data(&wait->queue, cat_thread_waiter_t, node);
     cat_queue_remove(&waiter->node);
+    waiter->linked = cat_false;
 
     /* Mark before the resume. The resumed waiter reads this mark. */
     cat_atomic_bool_store(&waiter->woken, cat_true);
@@ -151,9 +154,10 @@ static void cat_thread_wait_timeout(cat_time_timeout_t *timer, cat_data_t *data)
     /* The timer runs on the thread of the waiter, so the queue access here is
      * safe even when the object is gone. */
     uv_mutex_lock(&park->wait->lock);
-    if (cat_atomic_bool_load(&park->waiter.woken) != cat_true) {
+    if (park->waiter.linked) {
         /* Nobody took this waiter, so the timeout is what ends its wait. */
         cat_queue_remove(&park->waiter.node);
+        park->waiter.linked = cat_false;
         coroutine = park->waiter.coroutine;
     }
     uv_mutex_unlock(&park->wait->lock);
@@ -169,9 +173,44 @@ static void cat_thread_wait_timeout(cat_time_timeout_t *timer, cat_data_t *data)
 static void cat_thread_wait_enqueue(struct cat_thread_wait_park_s *park, cat_coroutine_t *coroutine)
 {
     park->waiter.coroutine = coroutine;
+    park->waiter.linked = cat_true;
     cat_atomic_bool_store(&park->waiter.woken, cat_false);
     cat_queue_push_back(&park->wait->queue, &park->waiter.node);
     cat_atomic_int64_fetch_add(&park->wait->count, 1);
+}
+
+/* Only CAT_TIMEOUT_FOREVER waits without a deadline. A timer is armed for every
+ * other value, and a negative one would arm none, so it becomes an expired
+ * deadline. */
+static cat_always_inline cat_timeout_t cat_thread_wait_normalize(cat_timeout_t timeout)
+{
+    return timeout < 0 && timeout != CAT_TIMEOUT_FOREVER ? 0 : timeout;
+}
+
+/* A wait that a wakeup ended must not restart the timeout, so the deadline is
+ * fixed once for the whole call. */
+static cat_always_inline cat_timeout_t cat_thread_wait_deadline(cat_timeout_t timeout)
+{
+    timeout = cat_thread_wait_normalize(timeout);
+
+    return timeout == CAT_TIMEOUT_FOREVER ? CAT_TIMEOUT_FOREVER
+                                          : (cat_timeout_t) cat_time_msec() + timeout;
+}
+
+static cat_timeout_t cat_thread_wait_remaining(cat_timeout_t deadline)
+{
+    cat_msec_t now;
+
+    if (deadline == CAT_TIMEOUT_FOREVER) {
+        return CAT_TIMEOUT_FOREVER;
+    }
+
+    now = cat_time_msec();
+    if (now >= (cat_msec_t) deadline) {
+        return 0;
+    }
+
+    return (cat_timeout_t) ((cat_msec_t) deadline - now);
 }
 
 /* Suspend until a waker takes the waiter out or the timeout expires. Leave the
@@ -181,7 +220,8 @@ static cat_bool_t cat_thread_wait_suspend(struct cat_thread_wait_park_s *park, c
     cat_bool_t woken;
     uv_async_t *handle = CAT_COROUTINE_G(wakeup_handle);
 
-    park->timer = cat_time_timeout_init(cat_thread_wait_timeout, park, timeout);
+    park->timer = cat_time_timeout_init(cat_thread_wait_timeout, park,
+                                        cat_thread_wait_normalize(timeout));
 
     /*
      * A parked coroutine may be woken from another thread, and a loop with no
@@ -205,13 +245,14 @@ static cat_bool_t cat_thread_wait_suspend(struct cat_thread_wait_park_s *park, c
     /*
      * Every path that takes the node out of the queue also drops the count, so
      * the two stay in step: a waker does it, and the timeout callback does it.
-     * Only a failed yield leaves the node queued, and then this does both.
+     * Only a node that is still linked leaves both to this path, and the lock
+     * decides which of the two sides takes it.
      */
     if (!woken) {
         uv_mutex_lock(&park->wait->lock);
-        /* the callback may have taken it between the test and the lock */
-        if (!cat_queue_empty(&park->wait->queue)) {
+        if (park->waiter.linked) {
             cat_queue_remove(&park->waiter.node);
+            park->waiter.linked = cat_false;
             cat_atomic_int64_fetch_sub(&park->wait->count, 1);
         }
         uv_mutex_unlock(&park->wait->lock);
@@ -557,6 +598,8 @@ static cat_bool_t cat_mutex_block(cat_mutex_t *mutex, cat_timeout_t timeout)
 {
     int error;
 
+    timeout = cat_thread_wait_normalize(timeout);
+
     uv_mutex_lock(&mutex->wait.lock);
 
     if (!cat_atomic_bool_load(&mutex->held)) {
@@ -585,6 +628,8 @@ static cat_bool_t cat_mutex_block(cat_mutex_t *mutex, cat_timeout_t timeout)
 
 CAT_API cat_bool_t cat_mutex_lock(cat_mutex_t *mutex, cat_timeout_t timeout)
 {
+    cat_timeout_t deadline = cat_thread_wait_deadline(timeout);
+
     for (;;) {
         int result;
 
@@ -592,20 +637,21 @@ CAT_API cat_bool_t cat_mutex_lock(cat_mutex_t *mutex, cat_timeout_t timeout)
             return cat_true;
         }
 
-        if (timeout == 0) {
+        if (cat_thread_wait_normalize(timeout) == 0) {
             cat_update_last_error(CAT_EBUSY, "The mutex is held by somebody else");
             return cat_false;
         }
 
         if (mutex->wait_mode == CAT_SYNC_WAIT_BLOCK) {
-            if (unlikely(!cat_mutex_block(mutex, timeout))) {
+            if (unlikely(!cat_mutex_block(mutex, cat_thread_wait_remaining(deadline)))) {
                 return cat_false;
             }
             /* a release woke the thread, so look again */
             continue;
         }
 
-        result = cat_thread_wait_wait_for(&mutex->wait, timeout, cat_mutex_try_take, mutex);
+        result = cat_thread_wait_wait_for(&mutex->wait, cat_thread_wait_remaining(deadline),
+                                          cat_mutex_try_take, mutex);
 
         if (result < 0) {
             return cat_false;
@@ -655,6 +701,8 @@ CAT_API cat_bool_t cat_mutex_unlock(cat_mutex_t *mutex)
 static cat_bool_t cat_cond_block_wait(cat_cond_t *cond, cat_mutex_t *mutex, cat_timeout_t timeout)
 {
     int error;
+
+    timeout = cat_thread_wait_normalize(timeout);
 
     /* The caller must hold the mutex, and the owner is how that is known. */
     if (unlikely(cat_atomic_uint64_load(&mutex->owner) != (uint64_t) (uintptr_t) uv_thread_self())) {
@@ -719,6 +767,8 @@ CAT_API void cat_sem_destroy(cat_sem_t *sem)
 
 CAT_API cat_bool_t cat_sem_acquire(cat_sem_t *sem, cat_timeout_t timeout)
 {
+    cat_timeout_t deadline = cat_thread_wait_deadline(timeout);
+
     for (;;) {
         int result;
 
@@ -726,12 +776,13 @@ CAT_API cat_bool_t cat_sem_acquire(cat_sem_t *sem, cat_timeout_t timeout)
             return cat_true;
         }
 
-        if (timeout == 0) {
+        if (cat_thread_wait_normalize(timeout) == 0) {
             cat_update_last_error(CAT_EBUSY, "The semaphore is empty");
             return cat_false;
         }
 
-        result = cat_thread_wait_wait_for(&sem->wait, timeout, cat_sem_try_take, sem);
+        result = cat_thread_wait_wait_for(&sem->wait, cat_thread_wait_remaining(deadline),
+                                          cat_sem_try_take, sem);
 
         if (result < 0) {
             return cat_false;
@@ -755,6 +806,16 @@ CAT_API void cat_sem_release(cat_sem_t *sem, size_t count)
     /* Add the counts and take a waiter while the queue lock is held. A waiter
      * cannot miss a count between its check and its suspend. */
     uv_mutex_lock(&sem->wait.lock);
+    /* uv_sem_post aborts the process when the count passes SEM_VALUE_MAX, so a
+     * release beyond the limit adds what still fits */
+    if (count > (size_t) (INT_MAX - cat_atomic_int64_load(&sem->value))) {
+        count = (size_t) (INT_MAX - cat_atomic_int64_load(&sem->value));
+    }
+    if (count == 0) {
+        uv_mutex_unlock(&sem->wait.lock);
+        cat_update_last_error(CAT_EINVAL, "The semaphore count is at its limit");
+        return;
+    }
     for (index = 0; index < count; index++) {
         uv_sem_post(&sem->sem);
     }
