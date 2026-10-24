@@ -553,13 +553,19 @@ CAT_API cat_bool_t cat_thread_join(cat_thread_t *thread, cat_timeout_t timeout)
         return cat_false;
     }
 
-    /* only one caller takes the exit, because the thread can be joined once */
+    /* Only one caller takes the exit, because the thread can be joined once. A
+     * loaded state that already holds JOINED has to fail first, because the
+     * compare and exchange below would succeed without changing anything and
+     * hand the exit to two callers. */
     state = cat_atomic_uint32_load(&thread->state);
-    while (!cat_atomic_uint32_compare_exchange_strong(&thread->state, &state,
-                                                      state | CAT_THREAD_STATE_JOINED)) {
-        if (state & CAT_THREAD_STATE_JOINED) {
+    for (;;) {
+        if (unlikely(state & CAT_THREAD_STATE_JOINED)) {
             cat_update_last_error(CAT_EMISUSE, "The thread is already joined");
             return cat_false;
+        }
+        if (cat_atomic_uint32_compare_exchange_strong(&thread->state, &state,
+                                                      state | CAT_THREAD_STATE_JOINED)) {
+            break;
         }
     }
 
