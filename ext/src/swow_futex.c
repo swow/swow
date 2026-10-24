@@ -20,6 +20,8 @@
 
 #include "swow_sync.h"
 
+#include "swow_mapping.h"
+
 #include "cat_atomic.h"
 
 #include <stdint.h>
@@ -27,8 +29,8 @@
 
 #ifdef ZTS
 
-#define SWOW_FUTEX_MAGIC 0x46555458U /* "FUTX" */
-#define SWOW_FUTEX_VERSION 1
+#define SWOW_FUTEX_MAGIC SWOW_MAPPING_FUTEX_MAGIC
+#define SWOW_FUTEX_VERSION SWOW_MAPPING_VERSION
 
 SWOW_API zend_class_entry *swow_futex_ce;
 SWOW_API zend_object_handlers swow_futex_handlers;

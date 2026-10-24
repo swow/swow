@@ -19,6 +19,7 @@
 #include "swow_shared_buffer.h"
 
 #include "swow_sync.h"
+#include "swow_mapping.h"
 
 #include <stdint.h>
 #include <string.h>
@@ -164,6 +165,23 @@ static swow_shared_buffer_t *swow_shared_buffer_attach(const char *name)
     buffer->shm = shm;
     buffer->address = cat_shm_get_address(shm);
     buffer->size = cat_shm_get_size(shm);
+
+    /* A named mapping may belong to another primitive, and this buffer would
+     * write over its header */
+    if (buffer->size >= 2 * sizeof(uint32_t)) {
+        uint32_t magic;
+        uint32_t version;
+
+        memcpy(&magic, buffer->address, sizeof(magic));
+        memcpy(&version, (char *) buffer->address + sizeof(magic), sizeof(version));
+        if (unlikely((magic == SWOW_MAPPING_FUTEX_MAGIC ||
+                      magic == SWOW_MAPPING_SPSC_MAGIC) &&
+                     version == SWOW_MAPPING_VERSION)) {
+            swow_shared_object_release(&buffer->object);
+            cat_update_last_error(CAT_EINVAL, "The mapping belongs to another primitive");
+            return NULL;
+        }
+    }
 
     {
         size_t length = strlen(name) + 1;

@@ -19,6 +19,7 @@
 #include "swow_spsc_queue.h"
 
 #include "swow_shared_object.h"
+#include "swow_mapping.h"
 
 #include "zend_smart_str.h"
 
@@ -30,8 +31,8 @@
 #include <stdint.h>
 #include <string.h>
 
-#define SWOW_SPSC_MAGIC 0x53505343U /* "SPSC" */
-#define SWOW_SPSC_VERSION 1
+#define SWOW_SPSC_MAGIC SWOW_MAPPING_SPSC_MAGIC
+#define SWOW_SPSC_VERSION SWOW_MAPPING_VERSION
 
 #define SWOW_SPSC_CACHE_LINE 64
 #define SWOW_SPSC_SPIN_COUNT 64
@@ -135,6 +136,9 @@ static cat_bool_t swow_spsc_queue_validate(const swow_spsc_shared_t *shared, siz
                  shared->capacity == 0 ||
                  shared->slot_size == 0 ||
                  shared->slot_stride < sizeof(swow_spsc_slot_header_t) ||
+                 /* a slot has to hold its header and its data */
+                 (uint64_t) shared->slot_stride <
+                     (uint64_t) sizeof(swow_spsc_slot_header_t) + shared->slot_size ||
                  shared->data_offset < sizeof(*shared) ||
                  shared->data_offset > mapping_size)) {
         cat_update_last_error(CAT_EINVAL, "Invalid SPSC queue header");
@@ -660,6 +664,18 @@ cat_bool_t swow_spsc_queue_popv(swow_spsc_queue_t *queue, swow_spsc_message_t *m
     for (i = 0; i < taken; i++) {
         swow_spsc_slot_header_t *slot =
             swow_spsc_get_slot(shared, (head + (uint32_t) i) % shared->capacity);
+
+        /* the slot header comes from the mapping, so a value above the slot size
+         * would copy memory from outside of it */
+        if (unlikely(slot->length > shared->slot_size)) {
+            cat_update_last_error(CAT_EINVAL, "The SPSC queue slot is corrupt");
+            return cat_false;
+        }
+    }
+
+    for (i = 0; i < taken; i++) {
+        swow_spsc_slot_header_t *slot =
+            swow_spsc_get_slot(shared, (head + (uint32_t) i) % shared->capacity);
         size_t length = slot->length;
         void *data = cat_sys_malloc(length > 0 ? length : 1);
 
@@ -709,6 +725,18 @@ size_t swow_spsc_queue_drain(swow_spsc_queue_t *queue, swow_spsc_message_t *mess
         &shared->tail, CAT_ATOMIC_MEMORY_ORDER_ACQUIRE);
     available = tail - head;
     taken = available < capacity ? available : capacity;
+
+    for (i = 0; i < taken; i++) {
+        swow_spsc_slot_header_t *slot =
+            swow_spsc_get_slot(shared, (head + (uint32_t) i) % shared->capacity);
+
+        /* the slot header comes from the mapping, so a value above the slot size
+         * would copy memory from outside of it */
+        if (unlikely(slot->length > shared->slot_size)) {
+            cat_update_last_error(CAT_EINVAL, "The SPSC queue slot is corrupt");
+            return 0;
+        }
+    }
 
     for (i = 0; i < taken; i++) {
         swow_spsc_slot_header_t *slot =
