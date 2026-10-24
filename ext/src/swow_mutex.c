@@ -166,12 +166,26 @@ static PHP_METHOD(Swow_Mutex, unlock)
         RETURN_THROWS();
     }
 
-    if (unlikely(!cat_mutex_unlock(&s_mutex->mutex->mutex))) {
-        swow_throw_exception_with_last(swow_sync_exception_ce);
-        RETURN_THROWS();
-    }
+    /* Drop the owner before the release. The release wakes a waiter that takes
+     * the mutex and stores its own owner immediately, so clearing it afterwards
+     * would erase the new holder */
+    {
+        uint64_t current = (uint64_t) cat_thread_get_current_id();
+        uint64_t owner = current;
 
-    cat_atomic_uint64_store(&s_mutex->mutex->owner, 0);
+        if (unlikely(!cat_atomic_uint64_compare_exchange_strong(
+                &s_mutex->mutex->owner, &owner, 0))) {
+            zend_throw_exception(swow_sync_exception_ce,
+                                 "The caller does not hold the mutex", 0);
+            RETURN_THROWS();
+        }
+
+        if (unlikely(!cat_mutex_unlock(&s_mutex->mutex->mutex))) {
+            cat_atomic_uint64_store(&s_mutex->mutex->owner, current);
+            swow_throw_exception_with_last(swow_sync_exception_ce);
+            RETURN_THROWS();
+        }
+    }
 }
 
 static PHP_METHOD(Swow_Mutex, __serialize)
