@@ -27,6 +27,10 @@
 SWOW_API zend_class_entry *swow_thread_barrier_ce;
 SWOW_API zend_object_handlers swow_thread_barrier_handlers;
 
+/* the tag of a shared barrier, so a serialized handle of another class is
+ * rejected */
+static const char swow_thread_barrier_type[] = "Swow\\Sync\\ThreadBarrier";
+
 static swow_thread_barrier_object_t *swow_thread_barrier_get_from_object(zend_object *object)
 {
     return cat_container_of(object, swow_thread_barrier_object_t, std);
@@ -112,7 +116,7 @@ static PHP_METHOD(Swow_Sync_ThreadBarrier, __construct)
     }
 
     shared = (swow_thread_barrier_t *) swow_shared_object_create(
-        sizeof(*shared), NULL);
+        sizeof(*shared), swow_thread_barrier_type, NULL);
     if (unlikely(shared == NULL)) {
         swow_throw_exception_with_last(swow_sync_exception_ce);
         RETURN_THROWS();
@@ -259,7 +263,8 @@ static PHP_METHOD(Swow_Sync_ThreadBarrier, __unserialize)
         Z_PARAM_ARRAY(data)
     ZEND_PARSE_PARAMETERS_END();
 
-    if (unlikely(!swow_shared_object_unserialize(Z_ARRVAL_P(data), &object))) {
+    if (unlikely(!swow_shared_object_unserialize(Z_ARRVAL_P(data), swow_thread_barrier_type,
+                                                 &object))) {
         swow_throw_exception_with_last(swow_sync_exception_ce);
         RETURN_THROWS();
     }

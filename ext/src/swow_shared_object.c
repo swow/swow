@@ -164,12 +164,18 @@ static void swow_shared_object_remove(swow_shared_object_t *object)
     }
 }
 
-swow_shared_object_t *swow_shared_object_create(size_t size, swow_shared_object_free_t free)
+swow_shared_object_t *swow_shared_object_create(size_t size, const char *type,
+                                                swow_shared_object_free_t free)
 {
     swow_shared_object_t *object;
 
     if (size < sizeof(*object)) {
         size = sizeof(*object);
+    }
+
+    if (unlikely(type == NULL)) {
+        cat_update_last_error(CAT_EINVAL, "The shared object type is required");
+        return NULL;
     }
 
     object = cat_sys_calloc(1, size);
@@ -185,6 +191,7 @@ swow_shared_object_t *swow_shared_object_create(size_t size, swow_shared_object_
     } while (swow_shared_object_find_locked(object->id) != NULL);
 
     cat_atomic_uint32_init(&object->refcount, 1);
+    object->type = type;
     object->free = free;
 
     if (!swow_shared_object_insert(object)) {
@@ -248,20 +255,30 @@ void swow_shared_object_serialize(zval *return_value, swow_shared_object_t *obje
     array_init(return_value);
     add_assoc_long(return_value, "id", (zend_long) object->id);
     add_assoc_long(return_value, "token", (zend_long) swow_shared_object_context.token);
+    add_assoc_string(return_value, "type", (char *) object->type);
 }
 
-cat_bool_t swow_shared_object_unserialize(HashTable *data, swow_shared_object_t **object)
+cat_bool_t swow_shared_object_unserialize(HashTable *data, const char *type,
+                                          swow_shared_object_t **object)
 {
     zval *z_id = zend_hash_str_find(data, ZEND_STRL("id"));
     zval *z_token = zend_hash_str_find(data, ZEND_STRL("token"));
+    zval *z_type = zend_hash_str_find(data, ZEND_STRL("type"));
 
-    if (z_id == NULL || z_token == NULL ||
-        Z_TYPE_P(z_id) != IS_LONG || Z_TYPE_P(z_token) != IS_LONG) {
+    if (z_id == NULL || z_token == NULL || z_type == NULL ||
+        Z_TYPE_P(z_id) != IS_LONG || Z_TYPE_P(z_token) != IS_LONG ||
+        Z_TYPE_P(z_type) != IS_STRING) {
         cat_update_last_error(CAT_EINVAL, "Invalid serialized shared object");
         return cat_false;
     }
 
-    if ((uint64_t) Z_LVAL_P(z_token) != swow_shared_object_context.token) {
+    if (strcmp(Z_STRVAL_P(z_type), type) != 0) {
+        cat_update_last_error(CAT_EINVAL, "Serialized shared object is of another class");
+        return cat_false;
+    }
+
+    if ((uint64_t) Z_LVAL_P(z_token) != swow_shared_object_context.token ||
+        swow_shared_object_context.pid != (uint32_t) uv_os_getpid()) {
         cat_update_last_error(CAT_EINVAL, "Serialized shared object belongs to another process");
         return cat_false;
     }
@@ -269,6 +286,14 @@ cat_bool_t swow_shared_object_unserialize(HashTable *data, swow_shared_object_t 
     *object = swow_shared_object_find((uint64_t) Z_LVAL_P(z_id));
     if (*object == NULL) {
         cat_update_last_error(CAT_ENOENT, "Serialized shared object is no longer alive");
+        return cat_false;
+    }
+
+    if ((*object)->type == NULL || strcmp((*object)->type, type) != 0) {
+        /* the payload of another class would be read with this layout */
+        swow_shared_object_release(*object);
+        *object = NULL;
+        cat_update_last_error(CAT_EINVAL, "Serialized shared object is of another class");
         return cat_false;
     }
 

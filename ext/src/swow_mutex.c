@@ -25,6 +25,10 @@
 SWOW_API zend_class_entry *swow_mutex_ce;
 SWOW_API zend_object_handlers swow_mutex_handlers;
 
+/* the tag of a shared mutex, so a serialized handle of another class is
+ * rejected */
+static const char swow_mutex_type[] = "Swow\\Mutex";
+
 static cat_always_inline swow_mutex_object_t *swow_mutex_get_from_object(zend_object *object)
 {
     return cat_container_of(object, swow_mutex_object_t, std);
@@ -95,7 +99,7 @@ static PHP_METHOD(Swow_Mutex, __construct)
         RETURN_THROWS();
     }
 
-    mutex = (swow_mutex_t *) swow_shared_object_create(sizeof(*mutex), NULL);
+    mutex = (swow_mutex_t *) swow_shared_object_create(sizeof(*mutex), swow_mutex_type, NULL);
     if (unlikely(mutex == NULL)) {
         swow_throw_exception_with_last(swow_sync_exception_ce);
         RETURN_THROWS();
@@ -194,7 +198,8 @@ static PHP_METHOD(Swow_Mutex, __unserialize)
         Z_PARAM_ARRAY(z_data)
     ZEND_PARSE_PARAMETERS_END();
 
-    if (unlikely(!swow_shared_object_unserialize(Z_ARRVAL_P(z_data), &object))) {
+    if (unlikely(!swow_shared_object_unserialize(Z_ARRVAL_P(z_data), swow_mutex_type,
+                                                 &object))) {
         swow_throw_exception_with_last(swow_sync_exception_ce);
         RETURN_THROWS();
     }

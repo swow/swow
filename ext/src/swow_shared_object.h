@@ -29,17 +29,22 @@ typedef cat_bool_t (*swow_shared_object_free_t)(swow_shared_object_t *object);
 struct swow_shared_object_s {
     cat_atomic_uint32_t refcount;
     uint64_t id;
+    /* names the class of the payload, so a serialized handle of one class is
+     * never applied to another */
+    const char *type;
     swow_shared_object_free_t free;
 };
 
 zend_result swow_shared_object_module_init(INIT_FUNC_ARGS);
 zend_result swow_shared_object_module_shutdown(SHUTDOWN_FUNC_ARGS);
 
-swow_shared_object_t *swow_shared_object_create(size_t size, swow_shared_object_free_t free);
+swow_shared_object_t *swow_shared_object_create(size_t size, const char *type,
+                                                swow_shared_object_free_t free);
 void swow_shared_object_addref(swow_shared_object_t *object);
 void swow_shared_object_release(swow_shared_object_t *object);
 
 void swow_shared_object_serialize(zval *return_value, swow_shared_object_t *object);
-cat_bool_t swow_shared_object_unserialize(HashTable *data, swow_shared_object_t **object);
+cat_bool_t swow_shared_object_unserialize(HashTable *data, const char *type,
+                                          swow_shared_object_t **object);
 
 #endif /* SWOW_SHARED_OBJECT_H */

@@ -39,6 +39,10 @@ typedef struct swow_futex_shared_s {
     cat_atomic_int32_t value;
 } swow_futex_shared_t;
 
+/* the tag of a shared futex, so a serialized handle of another class is
+ * rejected */
+static const char swow_futex_type[] = "Swow\\Futex";
+
 typedef struct swow_futex_s {
     swow_shared_object_t object;
     uint32_t magic;
@@ -108,7 +112,8 @@ static swow_futex_t *swow_futex_create(const char *name, zend_long value)
         return NULL;
     }
 
-    futex = (swow_futex_t *) swow_shared_object_create(sizeof(*futex), swow_futex_free);
+    futex = (swow_futex_t *) swow_shared_object_create(sizeof(*futex), swow_futex_type,
+                                                       swow_futex_free);
     if (unlikely(futex == NULL)) {
         cat_shm_detach(shm);
         return NULL;
@@ -160,7 +165,8 @@ static swow_futex_t *swow_futex_attach(const char *name)
         return NULL;
     }
 
-    futex = (swow_futex_t *) swow_shared_object_create(sizeof(*futex), swow_futex_free);
+    futex = (swow_futex_t *) swow_shared_object_create(sizeof(*futex), swow_futex_type,
+                                                       swow_futex_free);
     if (unlikely(futex == NULL)) {
         cat_shm_detach(shm);
         return NULL;
@@ -494,7 +500,8 @@ static PHP_METHOD(Swow_Futex, __unserialize)
     {
         swow_shared_object_t *shared;
 
-        if (unlikely(!swow_shared_object_unserialize(Z_ARRVAL_P(data), &shared))) {
+        if (unlikely(!swow_shared_object_unserialize(Z_ARRVAL_P(data), swow_futex_type,
+                                                     &shared))) {
             swow_throw_exception_with_last(swow_sync_exception_ce);
             RETURN_THROWS();
         }

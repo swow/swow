@@ -36,6 +36,10 @@ enum {
 SWOW_API zend_class_entry *swow_shared_buffer_ce;
 SWOW_API zend_object_handlers swow_shared_buffer_handlers;
 
+/* the tag of a shared buffer, so a serialized handle of another class is
+ * rejected */
+static const char swow_shared_buffer_type[] = "Swow\\SharedBuffer";
+
 typedef struct swow_shared_buffer_s {
     swow_shared_object_t object;
     uint32_t magic;
@@ -113,7 +117,7 @@ static swow_shared_buffer_t *swow_shared_buffer_create(const char *name, size_t 
     }
 
     buffer = (swow_shared_buffer_t *) swow_shared_object_create(
-        sizeof(*buffer), swow_shared_buffer_free);
+        sizeof(*buffer), swow_shared_buffer_type, swow_shared_buffer_free);
     if (unlikely(buffer == NULL)) {
         cat_shm_detach(shm);
         return NULL;
@@ -150,7 +154,7 @@ static swow_shared_buffer_t *swow_shared_buffer_attach(const char *name)
     }
 
     buffer = (swow_shared_buffer_t *) swow_shared_object_create(
-        sizeof(*buffer), swow_shared_buffer_free);
+        sizeof(*buffer), swow_shared_buffer_type, swow_shared_buffer_free);
     if (unlikely(buffer == NULL)) {
         cat_shm_detach(shm);
         return NULL;
@@ -1090,7 +1094,8 @@ static PHP_METHOD(Swow_SharedBuffer, __unserialize)
     } else {
         swow_shared_object_t *shared;
 
-        if (unlikely(!swow_shared_object_unserialize(Z_ARRVAL_P(data), &shared))) {
+        if (unlikely(!swow_shared_object_unserialize(Z_ARRVAL_P(data), swow_shared_buffer_type,
+                                                     &shared))) {
             swow_throw_exception_with_last(swow_sync_exception_ce);
             RETURN_THROWS();
         }

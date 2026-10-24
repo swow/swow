@@ -785,6 +785,10 @@ SWOW_API zend_object_handlers swow_spsc_queue_handlers;
 
 #define SWOW_SPSC_QUEUE_SHARED_MAGIC 0x53505351U /* "SPSQ" */
 
+/* the tag of a shared queue handle, so a serialized handle of another class is
+ * rejected */
+static const char swow_spsc_queue_type[] = "Swow\\SpscQueue";
+
 typedef struct swow_spsc_queue_shared_s {
     swow_shared_object_t object;
     uint32_t magic;
@@ -840,7 +844,7 @@ static cat_bool_t swow_spsc_queue_assign(
 {
     swow_spsc_queue_shared_t *shared =
         (swow_spsc_queue_shared_t *) swow_shared_object_create(
-            sizeof(swow_spsc_queue_shared_t), swow_spsc_queue_shared_free);
+            sizeof(swow_spsc_queue_shared_t), swow_spsc_queue_type, swow_spsc_queue_shared_free);
 
     if (unlikely(shared == NULL)) {
         swow_spsc_queue_detach(queue);
@@ -1520,7 +1524,8 @@ static PHP_METHOD(Swow_SpscQueue, __unserialize)
     } else {
         swow_shared_object_t *object;
 
-        if (unlikely(!swow_shared_object_unserialize(Z_ARRVAL_P(data), &object))) {
+        if (unlikely(!swow_shared_object_unserialize(Z_ARRVAL_P(data), swow_spsc_queue_type,
+                                                     &object))) {
             swow_throw_exception_with_last(swow_spsc_queue_exception_ce);
             RETURN_THROWS();
         }
