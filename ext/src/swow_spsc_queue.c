@@ -1320,6 +1320,7 @@ static PHP_METHOD(Swow_SpscQueue, popMany)
             }
             efree(messages);
             zval_ptr_dtor(return_value);
+            ZVAL_UNDEF(return_value);
             if (EG(exception) == NULL) {
                 zend_throw_exception(swow_spsc_queue_exception_ce,
                                      "Failed to unserialize the message", 0);
@@ -1371,6 +1372,7 @@ static PHP_METHOD(Swow_SpscQueue, drain)
             }
             efree(messages);
             zval_ptr_dtor(return_value);
+            ZVAL_UNDEF(return_value);
             if (EG(exception) == NULL) {
                 zend_throw_exception(swow_spsc_queue_exception_ce,
                                      "Failed to unserialize the message", 0);

@@ -425,6 +425,7 @@ static PHP_METHOD(Swow_Thannel, popMany)
             }
             efree(items);
             zval_ptr_dtor(return_value);
+            ZVAL_UNDEF(return_value);
             if (EG(exception) == NULL) {
                 zend_throw_exception(swow_thannel_exception_ce,
                                      "Failed to unserialize the message", 0);
@@ -475,6 +476,7 @@ static PHP_METHOD(Swow_Thannel, drain)
             }
             efree(items);
             zval_ptr_dtor(return_value);
+            ZVAL_UNDEF(return_value);
             if (EG(exception) == NULL) {
                 zend_throw_exception(swow_thannel_exception_ce,
                                      "Failed to unserialize the message", 0);
