@@ -2,9 +2,6 @@
 swow_thread: SharedBuffer
 --SKIPIF--
 <?php
-if (!PHP_ZTS) {
-    exit('skip ZTS only');
-}
 require __DIR__ . '/../include/skipif.php';
 ?>
 --FILE--
@@ -31,6 +28,33 @@ $buffer = new SharedBuffer(256);
 Assert::same(256, $buffer->getSize());
 Assert::null($buffer->getName());
 Assert::true($buffer->getSharedId() !== 0);
+Assert::same(64, $buffer->getAlignment());
+Assert::same(1, $buffer->getRefCount());
+
+$aligned = new SharedBuffer(64, 128);
+Assert::same(64, $aligned->getSize());
+Assert::same(128, $aligned->getAlignment());
+$aligned->write(0, 'aligned');
+Assert::same('aligned', $aligned->read(0, 7));
+foreach ([8, 16, 32, 64, 128, 4096] as $alignment) {
+    $one = new SharedBuffer(8, $alignment);
+    Assert::same($alignment, $one->getAlignment());
+}
+foreach ([0, 4, 100, 8192] as $badAlignment) {
+    Assert::throws(static function () use ($badAlignment): void {
+        new SharedBuffer(64, $badAlignment);
+    }, ValueError::class);
+}
+Assert::throws(static function (): void {
+    SharedBuffer::createNamed('sbuf-bad-alignment', 64, 3);
+}, ValueError::class);
+
+$unconstructed = (new ReflectionClass(SharedBuffer::class))->newInstanceWithoutConstructor();
+Assert::same(0, $unconstructed->getSize());
+Assert::same(0, $unconstructed->getAlignment());
+Assert::same(0, $unconstructed->getRefCount());
+Assert::same(0, $unconstructed->getSharedId());
+Assert::null($unconstructed->getName());
 
 $buffer->write(0, 'abcdef');
 Assert::same('abcdef', $buffer->read(0, 6));
@@ -150,17 +174,112 @@ Assert::same([PHP_INT_MIN, PHP_INT_MAX], $copy->viewI64(64, 2));
 
 $copy->clear();
 Assert::same(str_repeat("\0", 256), $copy->read(0, 256));
+Assert::same(1, $copy->getRefCount());
+
+$sliceBuffer = new SharedBuffer(64);
+$sliceBuffer->write(0, '0123456789');
+$slice = $sliceBuffer->slice(2, 5);
+Assert::same(5, $slice->getSize());
+Assert::same(64, $slice->getAlignment());
+Assert::null($slice->getName());
+Assert::same('23456', $slice->read(0, 5));
+Assert::same(1, $slice->getRefCount());
+$slice->write(0, 'abcde');
+Assert::same('01abcde789', $sliceBuffer->read(0, 10));
+
+$nested = $slice->slice(1, 3);
+Assert::same('bcd', $nested->read(0, 3));
+Assert::same(1, $nested->getRefCount());
+$nested->fill(0, 3, 0x2E);
+Assert::same('01a...e789', $sliceBuffer->read(0, 10));
+
+$emptySlice = $sliceBuffer->slice(64, 0);
+Assert::same(0, $emptySlice->getSize());
+Assert::same('', $emptySlice->read(0, 0));
+
+Assert::throws(static function () use ($sliceBuffer): void {
+    $sliceBuffer->slice(60, 8);
+}, ValueError::class);
+Assert::throws(static function () use ($sliceBuffer): void {
+    $sliceBuffer->slice(-1, 1);
+}, ValueError::class);
+Assert::throws(static function () use ($sliceBuffer): void {
+    $sliceBuffer->slice(0, -1);
+}, ValueError::class);
+Assert::throws(static function () use ($slice): void {
+    serialize($slice);
+}, SyncException::class);
+
+unset($nested, $slice, $emptySlice, $sliceBuffer);
 
 $name = 'sbuf-' . getmypid() . '-' . bin2hex(random_bytes(4));
 try {
+    Assert::throws(static function () use ($name): void {
+        SharedBuffer::createNamed($name, 32, 64, -1);
+    }, ValueError::class);
+    Assert::throws(static function () use ($name): void {
+        SharedBuffer::createNamed($name, 32, 64, 65536);
+    }, ValueError::class);
+
     $named = SharedBuffer::createNamed($name, 32);
     $named->write(0, 'named');
+    Assert::same(1, $named->getRefCount());
+    Assert::same(64, $named->getAlignment());
+
     $attached = SharedBuffer::attachNamed($name);
     Assert::same($name, $attached->getName());
     Assert::same('named', $attached->read(0, 5));
+    Assert::same(2, $named->getRefCount());
+
+    $namedSlice = $attached->slice(0, 5);
+    Assert::same('named', $namedSlice->read(0, 5));
+    Assert::same(2, $namedSlice->getRefCount());
+    unset($attached);
+    Assert::same(2, $named->getRefCount());
+    unset($namedSlice);
+    Assert::same(1, $named->getRefCount());
+
+    $restored = unserialize(serialize($named));
+    Assert::same($name, $restored->getName());
+    Assert::same('named', $restored->read(0, 5));
+    Assert::same(2, $named->getRefCount());
+    unset($restored);
+    Assert::same(1, $named->getRefCount());
+
+    unset($named);
+    if (PHP_OS_FAMILY === 'Windows') {
+        /* a named section ends when its last handle closes */
+        Assert::throws(static function () use ($name): void {
+            SharedBuffer::attachNamed($name);
+        }, SyncException::class);
+    } else {
+        $reopened = SharedBuffer::attachNamed($name);
+        Assert::same('named', $reopened->read(0, 5));
+        Assert::same(1, $reopened->getRefCount());
+        unset($reopened);
+    }
 } finally {
     try {
         SharedBuffer::unlink($name);
+    } catch (Throwable) {
+    }
+}
+
+$autoName = 'sbuf-' . getmypid() . '-' . bin2hex(random_bytes(4));
+try {
+    $auto = SharedBuffer::createNamed($autoName, 32, 64, 1);
+    Assert::same(1, $auto->getRefCount());
+    $autoAttached = SharedBuffer::attachNamed($autoName);
+    Assert::same(2, $auto->getRefCount());
+    unset($autoAttached);
+    Assert::same(1, $auto->getRefCount());
+    unset($auto);
+    Assert::throws(static function () use ($autoName): void {
+        SharedBuffer::attachNamed($autoName);
+    }, SyncException::class);
+} finally {
+    try {
+        SharedBuffer::unlink($autoName);
     } catch (Throwable) {
     }
 }

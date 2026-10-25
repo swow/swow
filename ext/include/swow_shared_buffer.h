@@ -18,21 +18,25 @@
 
 #ifndef SWOW_SHARED_BUFFER_H
 #define SWOW_SHARED_BUFFER_H
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #include "swow.h"
 
-#include "swow_shared_object.h"
-
-#include "cat_shm.h"
-
-#ifdef ZTS
+#include "swow_shared_buffer_abi.h"
 
 extern SWOW_API zend_class_entry *swow_shared_buffer_ce;
 extern SWOW_API zend_object_handlers swow_shared_buffer_handlers;
 
-zend_result swow_shared_buffer_module_init(INIT_FUNC_ARGS);
-zend_result swow_shared_buffer_module_shutdown(SHUTDOWN_FUNC_ARGS);
+/*
+ * The borrowed pointer of a Swow\SharedBuffer object, or NULL when the object
+ * is not one or has not been constructed. The pointer lives until the object
+ * is freed
+ */
+SWOW_API swow_shared_buffer_t *swow_shared_buffer_get(zend_object *object);
 
-#endif /* ZTS */
-
+#ifdef __cplusplus
+}
+#endif
 #endif /* SWOW_SHARED_BUFFER_H */

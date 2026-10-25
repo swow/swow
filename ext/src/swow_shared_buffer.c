@@ -18,15 +18,13 @@
 
 #include "swow_shared_buffer.h"
 
+#include "swow_shared_object.h"
 #include "swow_sync.h"
-#include "swow_mapping.h"
+
+#include "cat_shm.h"
 
 #include <stdint.h>
 #include <string.h>
-
-#ifdef ZTS
-
-#define SWOW_SHARED_BUFFER_MAGIC 0x53484246U /* "SHBF" */
 
 enum {
     SWOW_SHARED_BUFFER_ENDIAN_NATIVE = 0,
@@ -41,14 +39,21 @@ SWOW_API zend_object_handlers swow_shared_buffer_handlers;
  * rejected */
 static const char swow_shared_buffer_type[] = "Swow\\SharedBuffer";
 
-typedef struct swow_shared_buffer_s {
+/*
+ * A root handle owns one mapping, and a slice holds a handle reference on its
+ * parent instead of a mapping reference. The header stays mapped while any
+ * handle of the tree lives
+ */
+struct swow_shared_buffer_s {
     swow_shared_object_t object;
-    uint32_t magic;
     cat_shm_t *shm;
-    char *name;
-    void *address;
+    swow_shared_buffer_t *parent;
+    swow_shared_buffer_header_t *header;
+    void *data;
     size_t size;
-} swow_shared_buffer_t;
+    size_t alignment;
+    char *name;
+};
 
 typedef struct swow_shared_buffer_object_s {
     swow_shared_buffer_t *buffer;
@@ -60,13 +65,54 @@ static swow_shared_buffer_object_t *swow_shared_buffer_get_from_object(zend_obje
     return cat_container_of(object, swow_shared_buffer_object_t, std);
 }
 
+SWOW_API swow_shared_buffer_t *swow_shared_buffer_get(zend_object *object)
+{
+    if (object == NULL || swow_shared_buffer_ce == NULL ||
+        !instanceof_function(object->ce, swow_shared_buffer_ce)) {
+        return NULL;
+    }
+
+    return swow_shared_buffer_get_from_object(object)->buffer;
+}
+
+static char *swow_shared_buffer_copy_name(const char *name)
+{
+    size_t length = strlen(name) + 1;
+    char *copy = (char *) cat_sys_malloc(length);
+
+    if (unlikely(copy == NULL)) {
+        cat_update_last_error(CAT_ENOMEM, "Failed to allocate the shared buffer name");
+        return NULL;
+    }
+    memcpy(copy, name, length);
+
+    return copy;
+}
+
 static cat_bool_t swow_shared_buffer_free(swow_shared_object_t *object)
 {
     swow_shared_buffer_t *buffer = (swow_shared_buffer_t *) object;
+    cat_bool_t unlink = cat_false;
+
+    if (buffer->parent != NULL) {
+        swow_shared_buffer_release(buffer->parent);
+        buffer->parent = NULL;
+    }
 
     if (buffer->shm != NULL) {
+        if (buffer->header != NULL) {
+            cat_bool_t last = swow_shared_buffer_header_release(buffer->header);
+
+            unlink = last && buffer->name != NULL &&
+                (buffer->header->flags & SWOW_SHARED_BUFFER_FLAG_UNLINK_ON_LAST) != 0;
+        }
         cat_shm_detach(buffer->shm);
         buffer->shm = NULL;
+    }
+
+    if (unlink) {
+        /* the mapping is gone, so the name can not reach a new attach */
+        (void) cat_shm_unlink(buffer->name);
     }
     if (buffer->name != NULL) {
         cat_sys_free(buffer->name);
@@ -98,22 +144,57 @@ static void swow_shared_buffer_free_object(zend_object *object)
     zend_object_std_dtor(&buffer->std);
 }
 
-static swow_shared_buffer_t *swow_shared_buffer_create(const char *name, size_t size)
+SWOW_API swow_shared_buffer_t *swow_shared_buffer_create(const char *name, size_t size,
+    size_t alignment, uint32_t flags)
 {
     swow_shared_buffer_t *buffer;
+    swow_shared_buffer_header_t *header;
     cat_shm_t *shm;
+    char *name_copy = NULL;
+    size_t data_offset;
+    size_t mapping_size;
 
     if (unlikely(size == 0)) {
         cat_update_last_error(CAT_EINVAL, "The shared buffer size must be positive");
         return NULL;
     }
+    if (unlikely(alignment < 8 || alignment > 4096 ||
+                 (alignment & (alignment - 1)) != 0)) {
+        cat_update_last_error(CAT_EINVAL,
+            "The alignment must be a power of two between 8 and 4096");
+        return NULL;
+    }
+    if (unlikely(flags > UINT16_MAX)) {
+        cat_update_last_error(CAT_EINVAL, "The flags do not fit the header");
+        return NULL;
+    }
+    if (name != NULL) {
+        if (unlikely(name[0] == '\0')) {
+            cat_update_last_error(CAT_EINVAL, "The name must not be empty");
+            return NULL;
+        }
+        name_copy = swow_shared_buffer_copy_name(name);
+        if (unlikely(name_copy == NULL)) {
+            return NULL;
+        }
+    }
+
+    data_offset = alignment <= sizeof(swow_shared_buffer_header_t)
+        ? sizeof(swow_shared_buffer_header_t) : alignment;
+    if (unlikely(size > SIZE_MAX - data_offset)) {
+        cat_sys_free(name_copy);
+        cat_update_last_error(CAT_EINVAL, "The shared buffer is too large");
+        return NULL;
+    }
+    mapping_size = data_offset + size;
 
     if (name == NULL) {
-        shm = cat_shm_create_anonymous(size);
+        shm = cat_shm_create_anonymous(mapping_size);
     } else {
-        shm = cat_shm_create_named(name, size);
+        shm = cat_shm_create_named(name, mapping_size);
     }
     if (unlikely(shm == NULL)) {
+        cat_sys_free(name_copy);
         return NULL;
     }
 
@@ -121,36 +202,87 @@ static swow_shared_buffer_t *swow_shared_buffer_create(const char *name, size_t 
         sizeof(*buffer), swow_shared_buffer_type, swow_shared_buffer_free);
     if (unlikely(buffer == NULL)) {
         cat_shm_detach(shm);
+        cat_sys_free(name_copy);
         return NULL;
     }
 
-    buffer->magic = SWOW_SHARED_BUFFER_MAGIC;
+    header = (swow_shared_buffer_header_t *) cat_shm_get_address(shm);
+    memset(header, 0, sizeof(*header));
+    header->version = SWOW_SHARED_BUFFER_VERSION;
+    header->flags = (uint16_t) flags;
+    header->data_offset = (uint32_t) data_offset;
+    header->size = size;
+    header->alignment = alignment;
+    header->header_size = sizeof(*header);
+    swow_shared_buffer_header_addref(header);
+
     buffer->shm = shm;
-    buffer->address = cat_shm_get_address(shm);
-    buffer->size = cat_shm_get_size(shm);
+    buffer->parent = NULL;
+    buffer->header = header;
+    buffer->data = swow_shared_buffer_header_data(header);
+    buffer->size = size;
+    buffer->alignment = alignment;
+    buffer->name = name_copy;
 
-    if (name != NULL) {
-        size_t length = strlen(name) + 1;
-
-        buffer->name = (char *) cat_sys_malloc(length);
-        if (unlikely(buffer->name == NULL)) {
-            swow_shared_object_release(&buffer->object);
-            cat_update_last_error(CAT_ENOMEM, "Failed to allocate shared buffer name");
-            return NULL;
-        }
-        memcpy(buffer->name, name, length);
-    }
+    /* a racing attach sees an incomplete header until the magic is in place */
+    cat_atomic_fence();
+    memcpy(header->magic, SWOW_SHARED_BUFFER_MAGIC, sizeof(header->magic));
 
     return buffer;
 }
 
-static swow_shared_buffer_t *swow_shared_buffer_attach(const char *name)
+SWOW_API swow_shared_buffer_t *swow_shared_buffer_attach(const char *name)
 {
     swow_shared_buffer_t *buffer;
+    swow_shared_buffer_header_t *header;
     cat_shm_t *shm;
+    char *name_copy;
+    size_t mapping_size;
+
+    if (unlikely(name == NULL || name[0] == '\0')) {
+        cat_update_last_error(CAT_EINVAL, "The name must not be empty");
+        return NULL;
+    }
+    name_copy = swow_shared_buffer_copy_name(name);
+    if (unlikely(name_copy == NULL)) {
+        return NULL;
+    }
 
     shm = cat_shm_attach_named(name);
     if (unlikely(shm == NULL)) {
+        cat_sys_free(name_copy);
+        return NULL;
+    }
+
+    mapping_size = cat_shm_get_size(shm);
+    if (unlikely(mapping_size < sizeof(*header))) {
+        cat_shm_detach(shm);
+        cat_sys_free(name_copy);
+        cat_update_last_error(CAT_EINVAL, "The mapping is too small for a shared buffer");
+        return NULL;
+    }
+
+    header = (swow_shared_buffer_header_t *) cat_shm_get_address(shm);
+    if (unlikely(!swow_shared_buffer_header_check(header))) {
+        cat_shm_detach(shm);
+        cat_sys_free(name_copy);
+        cat_update_last_error(CAT_EBUSY, "The shared buffer header is incomplete");
+        return NULL;
+    }
+    cat_atomic_fence();
+
+    if (unlikely(header->data_offset % 8 != 0 ||
+                 header->data_offset < sizeof(*header))) {
+        cat_shm_detach(shm);
+        cat_sys_free(name_copy);
+        cat_update_last_error(CAT_EINVAL, "The shared buffer header is not valid");
+        return NULL;
+    }
+    if (unlikely(header->data_offset > mapping_size ||
+                 header->size > mapping_size - header->data_offset)) {
+        cat_shm_detach(shm);
+        cat_sys_free(name_copy);
+        cat_update_last_error(CAT_EINVAL, "The shared buffer does not fit the mapping");
         return NULL;
     }
 
@@ -158,53 +290,135 @@ static swow_shared_buffer_t *swow_shared_buffer_attach(const char *name)
         sizeof(*buffer), swow_shared_buffer_type, swow_shared_buffer_free);
     if (unlikely(buffer == NULL)) {
         cat_shm_detach(shm);
+        cat_sys_free(name_copy);
         return NULL;
     }
 
-    buffer->magic = SWOW_SHARED_BUFFER_MAGIC;
+    swow_shared_buffer_header_addref(header);
+
     buffer->shm = shm;
-    buffer->address = cat_shm_get_address(shm);
-    buffer->size = cat_shm_get_size(shm);
-
-    /* A named mapping may belong to another primitive, and this buffer would
-     * write over its header */
-    if (buffer->size >= 2 * sizeof(uint32_t)) {
-        uint32_t magic;
-        uint32_t version;
-
-        memcpy(&magic, buffer->address, sizeof(magic));
-        memcpy(&version, (char *) buffer->address + sizeof(magic), sizeof(version));
-        if (unlikely((magic == SWOW_MAPPING_FUTEX_MAGIC ||
-                      magic == SWOW_MAPPING_SPSC_MAGIC) &&
-                     version == SWOW_MAPPING_VERSION)) {
-            swow_shared_object_release(&buffer->object);
-            cat_update_last_error(CAT_EINVAL, "The mapping belongs to another primitive");
-            return NULL;
-        }
-    }
-
-    {
-        size_t length = strlen(name) + 1;
-
-        buffer->name = (char *) cat_sys_malloc(length);
-        if (unlikely(buffer->name == NULL)) {
-            swow_shared_object_release(&buffer->object);
-            cat_update_last_error(CAT_ENOMEM, "Failed to allocate shared buffer name");
-            return NULL;
-        }
-        memcpy(buffer->name, name, length);
-    }
+    buffer->parent = NULL;
+    buffer->header = header;
+    buffer->data = swow_shared_buffer_header_data(header);
+    buffer->size = (size_t) header->size;
+    buffer->alignment = (size_t) header->alignment;
+    buffer->name = name_copy;
 
     return buffer;
+}
+
+SWOW_API void swow_shared_buffer_addref(swow_shared_buffer_t *buffer)
+{
+    if (buffer != NULL) {
+        swow_shared_object_addref(&buffer->object);
+    }
+}
+
+SWOW_API void swow_shared_buffer_release(swow_shared_buffer_t *buffer)
+{
+    if (buffer != NULL) {
+        swow_shared_object_release(&buffer->object);
+    }
+}
+
+SWOW_API cat_bool_t swow_shared_buffer_unlink(const char *name)
+{
+    if (unlikely(name == NULL || name[0] == '\0')) {
+        cat_update_last_error(CAT_EINVAL, "The name must not be empty");
+        return cat_false;
+    }
+
+    return cat_shm_unlink(name);
+}
+
+SWOW_API void *swow_shared_buffer_get_data(const swow_shared_buffer_t *buffer)
+{
+    return buffer != NULL ? buffer->data : NULL;
+}
+
+SWOW_API size_t swow_shared_buffer_get_size(const swow_shared_buffer_t *buffer)
+{
+    return buffer != NULL ? buffer->size : 0;
+}
+
+SWOW_API size_t swow_shared_buffer_get_alignment(const swow_shared_buffer_t *buffer)
+{
+    return buffer != NULL ? buffer->alignment : 0;
+}
+
+SWOW_API const char *swow_shared_buffer_get_name(const swow_shared_buffer_t *buffer)
+{
+    return buffer != NULL ? buffer->name : NULL;
+}
+
+SWOW_API swow_shared_buffer_header_t *swow_shared_buffer_get_header(
+    const swow_shared_buffer_t *buffer)
+{
+    return buffer != NULL ? buffer->header : NULL;
+}
+
+SWOW_API uint32_t swow_shared_buffer_get_refcount(const swow_shared_buffer_t *buffer)
+{
+    if (buffer == NULL || buffer->header == NULL) {
+        return 0;
+    }
+
+    return (uint32_t) cat_atomic_int32_load_at(&buffer->header->refcount);
+}
+
+SWOW_API swow_shared_buffer_t *swow_shared_buffer_slice(swow_shared_buffer_t *buffer,
+    size_t offset, size_t size)
+{
+    swow_shared_buffer_t *slice;
+
+    if (unlikely(buffer == NULL)) {
+        cat_update_last_error(CAT_EINVAL, "The shared buffer is required");
+        return NULL;
+    }
+    if (unlikely(offset > buffer->size || size > buffer->size - offset)) {
+        cat_update_last_error(CAT_EINVAL, "The slice is outside the shared buffer");
+        return NULL;
+    }
+
+    slice = (swow_shared_buffer_t *) swow_shared_object_create(
+        sizeof(*slice), swow_shared_buffer_type, swow_shared_buffer_free);
+    if (unlikely(slice == NULL)) {
+        return NULL;
+    }
+
+    swow_shared_object_addref(&buffer->object);
+
+    slice->shm = NULL;
+    slice->parent = buffer;
+    slice->header = buffer->header;
+    slice->data = (char *) buffer->data + offset;
+    slice->size = size;
+    slice->alignment = buffer->alignment;
+    slice->name = NULL;
+
+    return slice;
+}
+
+SWOW_API int swow_shared_buffer_last_error_code(void)
+{
+    return cat_get_last_error_code();
+}
+
+SWOW_API const char *swow_shared_buffer_last_error_message(void)
+{
+    return cat_get_last_error_message();
 }
 
 ZEND_BEGIN_ARG_INFO_EX(arginfo_class_Swow_SharedBuffer___construct, 0, 0, 1)
     ZEND_ARG_TYPE_INFO(0, size, IS_LONG, 0)
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, alignment, IS_LONG, 0, "64")
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_class_Swow_SharedBuffer_createNamed, 0, 2, Swow\\SharedBuffer, 0)
     ZEND_ARG_TYPE_INFO(0, name, IS_STRING, 0)
     ZEND_ARG_TYPE_INFO(0, size, IS_LONG, 0)
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, alignment, IS_LONG, 0, "64")
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, flags, IS_LONG, 0, "0")
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_class_Swow_SharedBuffer_attachNamed, 0, 1, Swow\\SharedBuffer, 0)
@@ -222,6 +436,17 @@ ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_SharedBuffer_getName,
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_SharedBuffer_getSharedId, 0, 0, IS_LONG, 0)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_SharedBuffer_getRefCount, 0, 0, IS_LONG, 0)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_SharedBuffer_getAlignment, 0, 0, IS_LONG, 0)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_class_Swow_SharedBuffer_slice, 0, 2, Swow\\SharedBuffer, 0)
+    ZEND_ARG_TYPE_INFO(0, offset, IS_LONG, 0)
+    ZEND_ARG_TYPE_INFO(0, size, IS_LONG, 0)
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_SharedBuffer_read, 0, 2, IS_STRING, 0)
@@ -497,7 +722,7 @@ static cat_bool_t swow_shared_buffer_write_ints(
         max = width == 8 ? (uint64_t) ZEND_LONG_MAX : ((uint64_t) 1 << (width * 8)) - 1;
     }
 
-    address = (char *) buffer->address + offset;
+    address = (char *) buffer->data + offset;
     ZEND_HASH_FOREACH_VAL(Z_ARRVAL_P(values), value) {
         zend_long number = zval_get_long(value);
 
@@ -522,7 +747,7 @@ static void swow_shared_buffer_view_ints(
     zval *return_value, swow_shared_buffer_t *buffer, zend_long offset,
     zend_long length, size_t width, cat_bool_t is_signed, cat_bool_t big_endian)
 {
-    const char *address = (const char *) buffer->address + offset;
+    const char *address = (const char *) buffer->data + offset;
     zend_long i;
 
     array_init_size(return_value, (uint32_t) length);
@@ -560,18 +785,34 @@ static double swow_shared_buffer_load_f64(
     return value;
 }
 
+static cat_bool_t swow_shared_buffer_validate_alignment(zend_long alignment)
+{
+    if (alignment < 8 || alignment > 4096 || (alignment & (alignment - 1)) != 0) {
+        zend_value_error("The alignment must be a power of two between 8 and 4096");
+        return cat_false;
+    }
+
+    return cat_true;
+}
+
 static PHP_METHOD(Swow_SharedBuffer, __construct)
 {
     swow_shared_buffer_object_t *object = swow_shared_buffer_get_from_object(Z_OBJ_P(ZEND_THIS));
     zend_long size;
+    zend_long alignment = 64;
     swow_shared_buffer_t *buffer;
 
-    ZEND_PARSE_PARAMETERS_START(1, 1)
+    ZEND_PARSE_PARAMETERS_START(1, 2)
         Z_PARAM_LONG(size)
+        Z_PARAM_OPTIONAL
+        Z_PARAM_LONG(alignment)
     ZEND_PARSE_PARAMETERS_END();
 
     if (unlikely(size <= 0)) {
         zend_value_error("The size must be positive");
+        RETURN_THROWS();
+    }
+    if (unlikely(!swow_shared_buffer_validate_alignment(alignment))) {
         RETURN_THROWS();
     }
     if (unlikely(object->buffer != NULL)) {
@@ -580,7 +821,7 @@ static PHP_METHOD(Swow_SharedBuffer, __construct)
         RETURN_THROWS();
     }
 
-    buffer = swow_shared_buffer_create(NULL, (size_t) size);
+    buffer = swow_shared_buffer_create(NULL, (size_t) size, (size_t) alignment, 0);
     if (unlikely(buffer == NULL)) {
         swow_throw_exception_with_last(swow_sync_exception_ce);
         RETURN_THROWS();
@@ -593,11 +834,16 @@ static PHP_METHOD(Swow_SharedBuffer, createNamed)
 {
     zend_string *name;
     zend_long size;
+    zend_long alignment = 64;
+    zend_long flags = 0;
     swow_shared_buffer_t *buffer;
 
-    ZEND_PARSE_PARAMETERS_START(2, 2)
+    ZEND_PARSE_PARAMETERS_START(2, 4)
         Z_PARAM_STR(name)
         Z_PARAM_LONG(size)
+        Z_PARAM_OPTIONAL
+        Z_PARAM_LONG(alignment)
+        Z_PARAM_LONG(flags)
     ZEND_PARSE_PARAMETERS_END();
 
     if (unlikely(size <= 0)) {
@@ -608,8 +854,16 @@ static PHP_METHOD(Swow_SharedBuffer, createNamed)
         zend_value_error("The name must not be empty");
         RETURN_THROWS();
     }
+    if (unlikely(!swow_shared_buffer_validate_alignment(alignment))) {
+        RETURN_THROWS();
+    }
+    if (unlikely(flags < 0 || flags > UINT16_MAX)) {
+        zend_value_error("The flags must be between 0 and 65535");
+        RETURN_THROWS();
+    }
 
-    buffer = swow_shared_buffer_create(ZSTR_VAL(name), (size_t) size);
+    buffer = swow_shared_buffer_create(ZSTR_VAL(name), (size_t) size,
+                                       (size_t) alignment, (uint32_t) flags);
     if (unlikely(buffer == NULL)) {
         swow_throw_exception_with_last(swow_sync_exception_ce);
         RETURN_THROWS();
@@ -655,7 +909,7 @@ static PHP_METHOD(Swow_SharedBuffer, unlink)
         zend_value_error("The name must not be empty");
         RETURN_THROWS();
     }
-    if (unlikely(!cat_shm_unlink(ZSTR_VAL(name)))) {
+    if (unlikely(!swow_shared_buffer_unlink(ZSTR_VAL(name)))) {
         swow_throw_exception_with_last(swow_sync_exception_ce);
         RETURN_THROWS();
     }
@@ -676,11 +930,15 @@ static PHP_METHOD(Swow_SharedBuffer, getName)
 
     ZEND_PARSE_PARAMETERS_NONE();
 
-    if (object->buffer == NULL || object->buffer->name == NULL) {
-        RETURN_NULL();
+    if (object->buffer != NULL) {
+        const char *name = swow_shared_buffer_get_name(object->buffer);
+
+        if (name != NULL) {
+            RETURN_STRING(name);
+        }
     }
 
-    RETURN_STRING(object->buffer->name);
+    RETURN_NULL();
 }
 
 static PHP_METHOD(Swow_SharedBuffer, getSharedId)
@@ -690,6 +948,60 @@ static PHP_METHOD(Swow_SharedBuffer, getSharedId)
     ZEND_PARSE_PARAMETERS_NONE();
 
     RETURN_LONG(object->buffer != NULL ? (zend_long) object->buffer->object.id : 0);
+}
+
+static PHP_METHOD(Swow_SharedBuffer, getRefCount)
+{
+    swow_shared_buffer_object_t *object = swow_shared_buffer_get_from_object(Z_OBJ_P(ZEND_THIS));
+
+    ZEND_PARSE_PARAMETERS_NONE();
+
+    RETURN_LONG(object->buffer != NULL
+        ? (zend_long) swow_shared_buffer_get_refcount(object->buffer) : 0);
+}
+
+static PHP_METHOD(Swow_SharedBuffer, getAlignment)
+{
+    swow_shared_buffer_object_t *object = swow_shared_buffer_get_from_object(Z_OBJ_P(ZEND_THIS));
+
+    ZEND_PARSE_PARAMETERS_NONE();
+
+    RETURN_LONG(object->buffer != NULL
+        ? (zend_long) swow_shared_buffer_get_alignment(object->buffer) : 0);
+}
+
+static PHP_METHOD(Swow_SharedBuffer, slice)
+{
+    swow_shared_buffer_object_t *object = swow_shared_buffer_get_from_object(Z_OBJ_P(ZEND_THIS));
+    zend_long offset;
+    zend_long size;
+    swow_shared_buffer_t *slice;
+
+    ZEND_PARSE_PARAMETERS_START(2, 2)
+        Z_PARAM_LONG(offset)
+        Z_PARAM_LONG(size)
+    ZEND_PARSE_PARAMETERS_END();
+
+    if (unlikely(object->buffer == NULL)) {
+        zend_throw_exception(swow_sync_exception_ce,
+                             "SharedBuffer has not been constructed", 0);
+        RETURN_THROWS();
+    }
+    if (unlikely(offset < 0 || size < 0 ||
+                 (size_t) offset > object->buffer->size ||
+                 (size_t) size > object->buffer->size - (size_t) offset)) {
+        zend_value_error("The offset and size are outside the shared buffer");
+        RETURN_THROWS();
+    }
+
+    slice = swow_shared_buffer_slice(object->buffer, (size_t) offset, (size_t) size);
+    if (unlikely(slice == NULL)) {
+        swow_throw_exception_with_last(swow_sync_exception_ce);
+        RETURN_THROWS();
+    }
+
+    object_init_ex(return_value, swow_shared_buffer_ce);
+    swow_shared_buffer_get_from_object(Z_OBJ_P(return_value))->buffer = slice;
 }
 
 static PHP_METHOD(Swow_SharedBuffer, read)
@@ -712,7 +1024,7 @@ static PHP_METHOD(Swow_SharedBuffer, read)
         RETURN_THROWS();
     }
 
-    RETURN_STRINGL((char *) object->buffer->address + offset, (size_t) length);
+    RETURN_STRINGL((char *) object->buffer->data + offset, (size_t) length);
 }
 
 static PHP_METHOD(Swow_SharedBuffer, write)
@@ -737,7 +1049,7 @@ static PHP_METHOD(Swow_SharedBuffer, write)
     }
 
     if (ZSTR_LEN(data) > 0) {
-        memcpy((char *) object->buffer->address + offset, ZSTR_VAL(data), ZSTR_LEN(data));
+        memcpy((char *) object->buffer->data + offset, ZSTR_VAL(data), ZSTR_LEN(data));
     }
 }
 
@@ -798,7 +1110,7 @@ static PHP_METHOD(Swow_SharedBuffer, writeF32)
 
     ZEND_HASH_FOREACH_VAL(Z_ARRVAL_P(values), value) {
         swow_shared_buffer_store_f32(
-            (char *) object->buffer->address + offset + index * 4,
+            (char *) object->buffer->data + offset + index * 4,
             zval_get_double(value), big_endian);
         index++;
     } ZEND_HASH_FOREACH_END();
@@ -838,7 +1150,7 @@ static PHP_METHOD(Swow_SharedBuffer, viewF32)
     ZEND_HASH_FILL_PACKED(Z_ARRVAL_P(return_value)) {
         for (i = 0; i < length; i++) {
             ZEND_HASH_FILL_SET_DOUBLE(swow_shared_buffer_load_f32(
-                (char *) object->buffer->address + offset + i * 4, big_endian));
+                (char *) object->buffer->data + offset + i * 4, big_endian));
             ZEND_HASH_FILL_NEXT();
         }
     } ZEND_HASH_FILL_END();
@@ -878,7 +1190,7 @@ static PHP_METHOD(Swow_SharedBuffer, writeF64)
 
     ZEND_HASH_FOREACH_VAL(Z_ARRVAL_P(values), value) {
         swow_shared_buffer_store_f64(
-            (char *) object->buffer->address + offset + index * (zend_long) sizeof(double),
+            (char *) object->buffer->data + offset + index * (zend_long) sizeof(double),
             zval_get_double(value), big_endian);
         index++;
     } ZEND_HASH_FOREACH_END();
@@ -917,7 +1229,7 @@ static PHP_METHOD(Swow_SharedBuffer, viewF64)
     ZEND_HASH_FILL_PACKED(Z_ARRVAL_P(return_value)) {
         for (i = 0; i < length; i++) {
             ZEND_HASH_FILL_SET_DOUBLE(swow_shared_buffer_load_f64(
-                (char *) object->buffer->address + offset + i * (zend_long) sizeof(double),
+                (char *) object->buffer->data + offset + i * (zend_long) sizeof(double),
                 big_endian));
             ZEND_HASH_FILL_NEXT();
         }
@@ -1012,7 +1324,7 @@ static PHP_METHOD(Swow_SharedBuffer, fill)
         RETURN_THROWS();
     }
 
-    memset((char *) object->buffer->address + offset, (int) byte, (size_t) length);
+    memset((char *) object->buffer->data + offset, (int) byte, (size_t) length);
 }
 
 static PHP_METHOD(Swow_SharedBuffer, clear)
@@ -1027,7 +1339,7 @@ static PHP_METHOD(Swow_SharedBuffer, clear)
         RETURN_THROWS();
     }
 
-    memset(object->buffer->address, 0, object->buffer->size);
+    memset(object->buffer->data, 0, object->buffer->size);
 }
 
 static PHP_METHOD(Swow_SharedBuffer, copyFrom)
@@ -1064,14 +1376,15 @@ static PHP_METHOD(Swow_SharedBuffer, copyFrom)
     }
 
     if (length > 0) {
-        memmove((char *) object->buffer->address + destination_offset,
-                (char *) source->buffer->address + source_offset, (size_t) length);
+        memmove((char *) object->buffer->data + destination_offset,
+                (char *) source->buffer->data + source_offset, (size_t) length);
     }
 }
 
 static PHP_METHOD(Swow_SharedBuffer, __serialize)
 {
     swow_shared_buffer_object_t *object = swow_shared_buffer_get_from_object(Z_OBJ_P(ZEND_THIS));
+    const char *name;
 
     ZEND_PARSE_PARAMETERS_NONE();
 
@@ -1081,9 +1394,16 @@ static PHP_METHOD(Swow_SharedBuffer, __serialize)
         RETURN_THROWS();
     }
 
-    if (object->buffer->name != NULL) {
+    if (unlikely(object->buffer->parent != NULL)) {
+        zend_throw_exception(swow_sync_exception_ce,
+                             "A shared buffer slice can not be serialized", 0);
+        RETURN_THROWS();
+    }
+
+    name = swow_shared_buffer_get_name(object->buffer);
+    if (name != NULL) {
         array_init(return_value);
-        add_assoc_string(return_value, "name", object->buffer->name);
+        add_assoc_string(return_value, "name", (char *) name);
         return;
     }
 
@@ -1118,12 +1438,6 @@ static PHP_METHOD(Swow_SharedBuffer, __unserialize)
             RETURN_THROWS();
         }
         buffer = (swow_shared_buffer_t *) shared;
-        if (unlikely(buffer->magic != SWOW_SHARED_BUFFER_MAGIC)) {
-            swow_shared_object_release(shared);
-            zend_throw_exception(swow_sync_exception_ce,
-                                 "Invalid serialized SharedBuffer", 0);
-            RETURN_THROWS();
-        }
         if (object->buffer != NULL) {
             swow_shared_object_release(&object->buffer->object);
         }
@@ -1149,8 +1463,10 @@ static PHP_METHOD(Swow_SharedBuffer, __debugInfo)
 
     array_init(return_value);
     if (object->buffer != NULL) {
-        if (object->buffer->name != NULL) {
-            add_assoc_string(return_value, "name", object->buffer->name);
+        const char *name = swow_shared_buffer_get_name(object->buffer);
+
+        if (name != NULL) {
+            add_assoc_string(return_value, "name", (char *) name);
         }
         add_assoc_long(return_value, "size", (zend_long) object->buffer->size);
     }
@@ -1164,6 +1480,9 @@ static const zend_function_entry swow_shared_buffer_methods[] = {
     PHP_ME(Swow_SharedBuffer, getSize,       arginfo_class_Swow_SharedBuffer_getSize,       ZEND_ACC_PUBLIC)
     PHP_ME(Swow_SharedBuffer, getName,       arginfo_class_Swow_SharedBuffer_getName,       ZEND_ACC_PUBLIC)
     PHP_ME(Swow_SharedBuffer, getSharedId,   arginfo_class_Swow_SharedBuffer_getSharedId,   ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_SharedBuffer, getRefCount,   arginfo_class_Swow_SharedBuffer_getRefCount,   ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_SharedBuffer, getAlignment,  arginfo_class_Swow_SharedBuffer_getAlignment,  ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_SharedBuffer, slice,         arginfo_class_Swow_SharedBuffer_slice,         ZEND_ACC_PUBLIC)
     PHP_ME(Swow_SharedBuffer, read,          arginfo_class_Swow_SharedBuffer_read,          ZEND_ACC_PUBLIC)
     PHP_ME(Swow_SharedBuffer, write,         arginfo_class_Swow_SharedBuffer_write,         ZEND_ACC_PUBLIC)
     PHP_ME(Swow_SharedBuffer, writeF32,      arginfo_class_Swow_SharedBuffer_writeF32,      ZEND_ACC_PUBLIC)
@@ -1219,5 +1538,3 @@ zend_result swow_shared_buffer_module_shutdown(SHUTDOWN_FUNC_ARGS)
 {
     return SUCCESS;
 }
-
-#endif /* ZTS */
