@@ -91,11 +91,11 @@ SWOW_API void swow_php_ast_walk(zend_ast *ast, void *context)
     swow_php_ast_walker_t *ast_walker = (swow_php_ast_walker_t *) context;
 
     // zend_ast *c;
-    size_t node_size = 1024 * sizeof(zend_ast *);
-    zend_ast **nodes = ecalloc(node_size, 1);
+    size_t node_capacity = 1024;
+    zend_ast **nodes = ecalloc(node_capacity, sizeof(zend_ast *));
     size_t node_count = 0, node_cursor = 0;
 
-    nodes[0] = CG(ast);
+    nodes[0] = ast;
     node_count = 1;
 
     while (node_cursor < node_count) {
@@ -116,9 +116,9 @@ SWOW_API void swow_php_ast_walk(zend_ast *ast, void *context)
             if (child[i] == NULL) {
                 continue;
             }
-            if (node_count >= node_size) {
-                node_size *= 2;
-                nodes = erealloc(nodes, node_size);
+            if (node_count >= node_capacity) {
+                node_capacity *= 2;
+                nodes = erealloc(nodes, node_capacity * sizeof(zend_ast *));
             }
             nodes[node_count++] = child[i];
         }
