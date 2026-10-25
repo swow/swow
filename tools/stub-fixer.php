@@ -50,6 +50,16 @@ $swowModifier = static function (
 !defined('$1') && define('$1', $2);
 PHP;
         $content = preg_replace('/const (AF_\w+) = (\d+);/', $replacement, $content);
+        // AF_UNSPEC is owned by ext-sockets when it is loaded, so the
+        // generator omits it in that case, keep it after the other AF_* constants
+        if (!str_contains($content, "!defined('AF_UNSPEC')")) {
+            $content = preg_replace(
+                '/^((?:[ \t]*!defined\(\'AF_\w+\'\) && define\(\'AF_\w+\', \d+\);[ \t]*\n)+)/m',
+                "$1    !defined('AF_UNSPEC') && define('AF_UNSPEC', 0);\n",
+                $content,
+                1,
+            );
+        }
     }
     $parser = (new ParserFactory())->createForNewestSupportedVersion();
     $ast = $parser->parse($content);
@@ -256,6 +266,81 @@ PHP;
                     length: 0,
                     replacement: $appending
                 );
+            } elseif (
+                $node instanceof Node\Stmt\Namespace_ &&
+                $this->inNamespace('Swow\Process')
+            ) {
+                // entering namespace Swow\Process
+                // these constants only exist on Windows, keep them on other platforms
+                $processConstants = [
+                    'SIGBREAK' => [
+                        'value' => 21,
+                        'comment' => 'Windows only: CRT SIGBREAK, mapped to CTRL_BREAK_EVENT',
+                    ],
+                    'CTRL_C_EVENT' => [
+                        'value' => 0,
+                        'comment' => 'Windows only: console control event value',
+                    ],
+                    'CTRL_BREAK_EVENT' => [
+                        'value' => 1,
+                        'comment' => 'Windows only: console control event value',
+                    ],
+                ];
+                $existingConstants = [];
+                $lastConstIndex = null;
+                foreach ($node->stmts as $i => $stmt) {
+                    if (!$stmt instanceof Node\Stmt\Const_) {
+                        continue;
+                    }
+                    $lastConstIndex = $i;
+                    $const = $stmt->consts[0];
+                    $name = $const->name->name;
+                    $existingConstants[$name] = true;
+                    if (!isset($processConstants[$name])) {
+                        continue;
+                    }
+                    $const->value = new Node\Scalar\LNumber(
+                        value: $processConstants[$name]['value'],
+                    );
+                    $stmt->setAttribute('comments', [
+                        new Doc(
+                            text: "/**\n * {$processConstants[$name]['comment']}\n */",
+                        ),
+                    ]);
+                }
+                if ($lastConstIndex !== null) {
+                    $appending = [];
+                    foreach ($processConstants as $name => $definition) {
+                        if (isset($existingConstants[$name])) {
+                            continue;
+                        }
+                        $appending[] = new Node\Stmt\Const_(
+                            consts: [
+                                new Node\Const_(
+                                    name: new Node\Identifier(
+                                        name: $name,
+                                    ),
+                                    value: new Node\Scalar\LNumber(
+                                        value: $definition['value'],
+                                    ),
+                                ),
+                            ],
+                            attributes: [
+                                'comments' => [
+                                    new Doc(
+                                        text: "/**\n * {$definition['comment']}\n */",
+                                    ),
+                                ],
+                            ],
+                        );
+                    }
+                    array_splice(
+                        array: $node->stmts,
+                        offset: $lastConstIndex + 1,
+                        length: 0,
+                        replacement: $appending,
+                    );
+                }
             } elseif (
                 $node instanceof Node\Stmt\ClassConst &&
                 $this->inNamespaceClass('Swow', 'Buffer') &&
