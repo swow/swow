@@ -1813,13 +1813,23 @@ namespace Swow
          * Create an anonymous buffer.
          *
          * @param int $size size in bytes
-         * @throws \ValueError when the size is not positive
+         * @param int $alignment alignment in bytes, a power of two from 8 to 4096
+         * @throws \ValueError when the size is not positive or the alignment is not valid
          * @throws \Swow\SyncException when the buffer cannot be created
          */
-        public function __construct(int $size) { }
+        public function __construct(int $size, int $alignment = 64) { }
 
-        /** Create a named buffer. */
-        public static function createNamed(string $name, int $size): self { }
+        /**
+         * Create a named buffer.
+         *
+         * @param string $name mapping name
+         * @param int $size size in bytes
+         * @param int $alignment alignment in bytes, a power of two from 8 to 4096
+         * @param int $flags bit 0 removes the name when the last handle releases the buffer
+         * @throws \ValueError when the alignment is not valid
+         * @throws \Swow\SyncException when the name exists or the buffer cannot be created
+         */
+        public static function createNamed(string $name, int $size, int $alignment = 64, int $flags = 0): self { }
 
         /** Attach a named buffer. */
         public static function attachNamed(string $name): self { }
@@ -1835,6 +1845,29 @@ namespace Swow
 
         /** Return the shared object id. */
         public function getSharedId(): int { }
+
+        /**
+         * Return the reference count of the mapping.
+         *
+         * The threads and the forked children that map the same buffer share the count,
+         * so it is not the number of handles in this process.
+         */
+        public function getRefCount(): int { }
+
+        /** Return the alignment in bytes. */
+        public function getAlignment(): int { }
+
+        /**
+         * Return a view of a byte range of this buffer.
+         *
+         * The view holds a reference to this buffer, and it cannot be serialized.
+         *
+         * @param int $offset offset in bytes
+         * @param int $size size in bytes
+         * @throws \ValueError when the range is outside the buffer
+         * @throws \Swow\SyncException when the view cannot be created
+         */
+        public function slice(int $offset, int $size): self { }
 
         /** Copy bytes out of the buffer. */
         public function read(int $offsetBytes, int $lengthBytes): string { }
@@ -1932,6 +1965,7 @@ namespace Swow
      * An anonymous futex is visible to threads of this process and to a forked child.
      * A named futex is visible to another process that attaches the same name.
      * setValue() publishes the value with release order. getValue() reads it with acquire order.
+     * add(), compareExchange(), and exchange() are atomic.
      * Store a value before wake().
      */
     class Futex
@@ -1959,6 +1993,35 @@ namespace Swow
 
         /** Store a value with release order. */
         public function setValue(int $value): void { }
+
+        /**
+         * Add a signed value to the futex word.
+         *
+         * The addition is atomic and wraps on overflow.
+         *
+         * @param int $delta signed 32-bit value to add
+         * @return int the value before the addition
+         */
+        public function add(int $delta): int { }
+
+        /**
+         * Compare and exchange the futex word.
+         *
+         * The write happens only when the current value equals expected.
+         *
+         * @param int $expected signed 32-bit value to compare
+         * @param int $new signed 32-bit value to store
+         * @return bool true when the value was stored
+         */
+        public function compareExchange(int $expected, int $new): bool { }
+
+        /**
+         * Exchange the futex word.
+         *
+         * @param int $new signed 32-bit value to store
+         * @return int the value before the exchange
+         */
+        public function exchange(int $new): int { }
 
         /**
          * Wait while the value equals expected.
