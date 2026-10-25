@@ -3,7 +3,10 @@ swow_thread: Futex atomic operations
 --SKIPIF--
 <?php
 require __DIR__ . '/../include/skipif.php';
-skip_if_class_not_exist(Swow\Futex::class);
+
+use Swow\Futex;
+
+skip_if_class_not_exist(Futex::class);
 ?>
 --FILE--
 <?php

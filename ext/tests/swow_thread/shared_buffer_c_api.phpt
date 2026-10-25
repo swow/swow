@@ -51,7 +51,7 @@ const EINVAL = -22;
 const EBUSY = -16;
 const ENOENT = -2;
 
-$lastError = static fn (): array => [
+$lastError = static fn(): array => [
     $ffi->swow_shared_buffer_last_error_code(),
     $ffi->swow_shared_buffer_last_error_message(),
 ];
@@ -85,8 +85,8 @@ try {
     # the leading slash, and Windows MAX_PATH (260)
     $nameLimit = PHP_OS_FAMILY === 'Darwin' ? 30 : (PHP_OS_FAMILY === 'Windows' ? 260 : 255);
     Assert::throws(static function () use ($nameLimit): void {
-        \Swow\SharedBuffer::createNamed(str_repeat('n', $nameLimit + 1), 32);
-    }, \Swow\SyncException::class, null, '/longer than/');
+        Swow\SharedBuffer::createNamed(str_repeat('n', $nameLimit + 1), 32);
+    }, Swow\SyncException::class, null, '/longer than/');
 
     # a name with a leading slash goes through the POSIX path branch
     $root = $ffi->swow_shared_buffer_create($slashName, 32, 128, 0);

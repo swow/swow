@@ -32,16 +32,16 @@ try {
 
     # values that do not fit the requested width
     foreach ([
-        static fn () => $buffer->writeI8(0, [128]),
-        static fn () => $buffer->writeI8(0, [-129]),
-        static fn () => $buffer->writeU8(0, [-1]),
-        static fn () => $buffer->writeU8(0, [256]),
-        static fn () => $buffer->writeI16(0, [32768]),
-        static fn () => $buffer->writeU16(0, [65536]),
-        static fn () => $buffer->writeI32(0, [2147483648]),
-        static fn () => $buffer->writeU32(0, [-1]),
-        static fn () => $buffer->writeU32(0, [4294967296]),
-        static fn () => $buffer->writeU64(0, [-1]),
+        static fn() => $buffer->writeI8(0, [128]),
+        static fn() => $buffer->writeI8(0, [-129]),
+        static fn() => $buffer->writeU8(0, [-1]),
+        static fn() => $buffer->writeU8(0, [256]),
+        static fn() => $buffer->writeI16(0, [32768]),
+        static fn() => $buffer->writeU16(0, [65536]),
+        static fn() => $buffer->writeI32(0, [2147483648]),
+        static fn() => $buffer->writeU32(0, [-1]),
+        static fn() => $buffer->writeU32(0, [4294967296]),
+        static fn() => $buffer->writeU64(0, [-1]),
     ] as $write) {
         Assert::throws($write, ValueError::class);
     }
@@ -58,12 +58,12 @@ try {
 
     # the endian argument is one of the three constants
     foreach ([
-        static fn () => $buffer->writeF32(0, [1.0], 3),
-        static fn () => $buffer->viewF32(0, 1, 3),
-        static fn () => $buffer->writeF64(0, [1.0], 3),
-        static fn () => $buffer->viewF64(0, 1, 3),
-        static fn () => $buffer->writeI8(0, [1], 3),
-        static fn () => $buffer->viewI8(0, 1, 3),
+        static fn() => $buffer->writeF32(0, [1.0], 3),
+        static fn() => $buffer->viewF32(0, 1, 3),
+        static fn() => $buffer->writeF64(0, [1.0], 3),
+        static fn() => $buffer->viewF64(0, 1, 3),
+        static fn() => $buffer->writeI8(0, [1], 3),
+        static fn() => $buffer->viewI8(0, 1, 3),
     ] as $typed) {
         Assert::throws($typed, ValueError::class);
     }
