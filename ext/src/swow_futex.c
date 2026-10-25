@@ -18,16 +18,16 @@
 
 #include "swow_futex.h"
 
+#include "swow_shared_object.h"
 #include "swow_sync.h"
 
 #include "swow_mapping.h"
 
 #include "cat_atomic.h"
+#include "cat_shm.h"
 
 #include <stdint.h>
 #include <string.h>
-
-#ifdef ZTS
 
 #define SWOW_FUTEX_MAGIC SWOW_MAPPING_FUTEX_MAGIC
 #define SWOW_FUTEX_VERSION SWOW_MAPPING_VERSION
@@ -45,13 +45,13 @@ typedef struct swow_futex_shared_s {
  * rejected */
 static const char swow_futex_type[] = "Swow\\Futex";
 
-typedef struct swow_futex_s {
+struct swow_futex_s {
     swow_shared_object_t object;
     uint32_t magic;
     cat_shm_t *shm;
     char *name;
     swow_futex_shared_t *shared;
-} swow_futex_t;
+};
 
 typedef struct swow_futex_object_s {
     swow_futex_t *futex;
@@ -193,6 +193,81 @@ static swow_futex_t *swow_futex_attach(const char *name)
     return futex;
 }
 
+/* public C interface */
+
+SWOW_API swow_futex_t *swow_futex_get(zend_object *object)
+{
+    if (unlikely(object == NULL || !instanceof_function(object->ce, swow_futex_ce))) {
+        cat_update_last_error(CAT_EINVAL, "The object is not a Swow\\Futex instance");
+        return NULL;
+    }
+
+    return swow_futex_get_from_object(object)->futex;
+}
+
+SWOW_API cat_bool_t swow_futex_wait(swow_futex_t *futex, int32_t expected,
+                                    cat_timeout_t timeout)
+{
+    if (unlikely(futex == NULL)) {
+        cat_update_last_error(CAT_EINVAL, "The futex has not been constructed");
+        return cat_false;
+    }
+
+    return cat_futex_wait(&futex->shared->value, expected, timeout);
+}
+
+SWOW_API cat_bool_t swow_futex_wake(swow_futex_t *futex, int32_t count)
+{
+    if (unlikely(futex == NULL)) {
+        cat_update_last_error(CAT_EINVAL, "The futex has not been constructed");
+        return cat_false;
+    }
+
+    return cat_futex_wake(&futex->shared->value, count);
+}
+
+SWOW_API int32_t swow_futex_get_value(const swow_futex_t *futex)
+{
+    if (unlikely(futex == NULL)) {
+        cat_update_last_error(CAT_EINVAL, "The futex has not been constructed");
+        return 0;
+    }
+
+    return cat_atomic_int32_load_explicit(
+        &futex->shared->value, CAT_ATOMIC_MEMORY_ORDER_ACQUIRE);
+}
+
+SWOW_API int32_t swow_futex_add(swow_futex_t *futex, int32_t delta)
+{
+    if (unlikely(futex == NULL)) {
+        cat_update_last_error(CAT_EINVAL, "The futex has not been constructed");
+        return 0;
+    }
+
+    return cat_futex_add(&futex->shared->value, delta);
+}
+
+SWOW_API cat_bool_t swow_futex_compare_exchange(swow_futex_t *futex, int32_t expected,
+                                                int32_t new_value)
+{
+    if (unlikely(futex == NULL)) {
+        cat_update_last_error(CAT_EINVAL, "The futex has not been constructed");
+        return cat_false;
+    }
+
+    return cat_futex_compare_exchange(&futex->shared->value, expected, new_value);
+}
+
+SWOW_API int32_t swow_futex_exchange(swow_futex_t *futex, int32_t new_value)
+{
+    if (unlikely(futex == NULL)) {
+        cat_update_last_error(CAT_EINVAL, "The futex has not been constructed");
+        return 0;
+    }
+
+    return cat_futex_exchange(&futex->shared->value, new_value);
+}
+
 ZEND_BEGIN_ARG_INFO_EX(arginfo_class_Swow_Futex___construct, 0, 0, 0)
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, value, IS_LONG, 0, "0")
 ZEND_END_ARG_INFO()
@@ -215,6 +290,19 @@ ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Futex_setValue, 0, 1, IS_VOID, 0)
     ZEND_ARG_TYPE_INFO(0, value, IS_LONG, 0)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Futex_add, 0, 1, IS_LONG, 0)
+    ZEND_ARG_TYPE_INFO(0, delta, IS_LONG, 0)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Futex_compareExchange, 0, 2, _IS_BOOL, 0)
+    ZEND_ARG_TYPE_INFO(0, expected, IS_LONG, 0)
+    ZEND_ARG_TYPE_INFO(0, new, IS_LONG, 0)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Futex_exchange, 0, 1, IS_LONG, 0)
+    ZEND_ARG_TYPE_INFO(0, new, IS_LONG, 0)
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Futex_wait, 0, 1, _IS_BOOL, 0)
@@ -375,6 +463,79 @@ static PHP_METHOD(Swow_Futex, setValue)
         &object->futex->shared->value, (int32_t) value, CAT_ATOMIC_MEMORY_ORDER_RELEASE);
 }
 
+static PHP_METHOD(Swow_Futex, add)
+{
+    swow_futex_object_t *object = swow_futex_get_from_object(Z_OBJ_P(ZEND_THIS));
+    zend_long delta;
+
+    ZEND_PARSE_PARAMETERS_START(1, 1)
+        Z_PARAM_LONG(delta)
+    ZEND_PARSE_PARAMETERS_END();
+
+    if (unlikely(delta < INT32_MIN || delta > INT32_MAX)) {
+        zend_value_error("The delta must fit a 32-bit signed integer");
+        RETURN_THROWS();
+    }
+    if (unlikely(object->futex == NULL)) {
+        zend_throw_exception(swow_sync_exception_ce,
+                             "Futex has not been constructed", 0);
+        RETURN_THROWS();
+    }
+
+    RETURN_LONG(swow_futex_add(object->futex, (int32_t) delta));
+}
+
+static PHP_METHOD(Swow_Futex, compareExchange)
+{
+    swow_futex_object_t *object = swow_futex_get_from_object(Z_OBJ_P(ZEND_THIS));
+    zend_long expected;
+    zend_long new_value;
+
+    ZEND_PARSE_PARAMETERS_START(2, 2)
+        Z_PARAM_LONG(expected)
+        Z_PARAM_LONG(new_value)
+    ZEND_PARSE_PARAMETERS_END();
+
+    if (unlikely(expected < INT32_MIN || expected > INT32_MAX)) {
+        zend_value_error("The expected value must fit a 32-bit signed integer");
+        RETURN_THROWS();
+    }
+    if (unlikely(new_value < INT32_MIN || new_value > INT32_MAX)) {
+        zend_value_error("The new value must fit a 32-bit signed integer");
+        RETURN_THROWS();
+    }
+    if (unlikely(object->futex == NULL)) {
+        zend_throw_exception(swow_sync_exception_ce,
+                             "Futex has not been constructed", 0);
+        RETURN_THROWS();
+    }
+
+    RETURN_BOOL(swow_futex_compare_exchange(object->futex, (int32_t) expected,
+                                            (int32_t) new_value));
+}
+
+static PHP_METHOD(Swow_Futex, exchange)
+{
+    swow_futex_object_t *object = swow_futex_get_from_object(Z_OBJ_P(ZEND_THIS));
+    zend_long new_value;
+
+    ZEND_PARSE_PARAMETERS_START(1, 1)
+        Z_PARAM_LONG(new_value)
+    ZEND_PARSE_PARAMETERS_END();
+
+    if (unlikely(new_value < INT32_MIN || new_value > INT32_MAX)) {
+        zend_value_error("The new value must fit a 32-bit signed integer");
+        RETURN_THROWS();
+    }
+    if (unlikely(object->futex == NULL)) {
+        zend_throw_exception(swow_sync_exception_ce,
+                             "Futex has not been constructed", 0);
+        RETURN_THROWS();
+    }
+
+    RETURN_LONG(swow_futex_exchange(object->futex, (int32_t) new_value));
+}
+
 static PHP_METHOD(Swow_Futex, wait)
 {
     swow_futex_object_t *object = swow_futex_get_from_object(Z_OBJ_P(ZEND_THIS));
@@ -397,8 +558,7 @@ static PHP_METHOD(Swow_Futex, wait)
         RETURN_THROWS();
     }
 
-    if (!cat_futex_wait(
-            (cat_futex_t *) &object->futex->shared->value, (int32_t) expected, timeout)) {
+    if (!swow_futex_wait(object->futex, (int32_t) expected, timeout)) {
         cat_errno_t code = cat_get_last_error_code();
 
         if (code == CAT_EAGAIN || code == CAT_ETIMEDOUT) {
@@ -430,8 +590,7 @@ static PHP_METHOD(Swow_Futex, wake)
         RETURN_THROWS();
     }
 
-    if (unlikely(!cat_futex_wake(
-                     (cat_futex_t *) &object->futex->shared->value, (int32_t) count))) {
+    if (unlikely(!swow_futex_wake(object->futex, (int32_t) count))) {
         swow_throw_exception_with_last(swow_sync_exception_ce);
         RETURN_THROWS();
     }
@@ -538,18 +697,21 @@ static PHP_METHOD(Swow_Futex, __debugInfo)
 }
 
 static const zend_function_entry swow_futex_methods[] = {
-    PHP_ME(Swow_Futex, __construct,   arginfo_class_Swow_Futex___construct,   ZEND_ACC_PUBLIC)
-    PHP_ME(Swow_Futex, createNamed,   arginfo_class_Swow_Futex_createNamed,   ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-    PHP_ME(Swow_Futex, attachNamed,   arginfo_class_Swow_Futex_attachNamed,   ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-    PHP_ME(Swow_Futex, unlink,        arginfo_class_Swow_Futex_unlink,        ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-    PHP_ME(Swow_Futex, getValue,      arginfo_class_Swow_Futex_getValue,      ZEND_ACC_PUBLIC)
-    PHP_ME(Swow_Futex, setValue,      arginfo_class_Swow_Futex_setValue,      ZEND_ACC_PUBLIC)
-    PHP_ME(Swow_Futex, wait,          arginfo_class_Swow_Futex_wait,          ZEND_ACC_PUBLIC)
-    PHP_ME(Swow_Futex, wake,          arginfo_class_Swow_Futex_wake,          ZEND_ACC_PUBLIC)
-    PHP_ME(Swow_Futex, getSharedId,   arginfo_class_Swow_Futex_getSharedId,   ZEND_ACC_PUBLIC)
-    PHP_ME(Swow_Futex, __serialize,   arginfo_class_Swow_Futex___serialize,   ZEND_ACC_PUBLIC)
-    PHP_ME(Swow_Futex, __unserialize, arginfo_class_Swow_Futex___unserialize, ZEND_ACC_PUBLIC)
-    PHP_ME(Swow_Futex, __debugInfo,   arginfo_class_Swow_Futex___debugInfo,   ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Futex, __construct,     arginfo_class_Swow_Futex___construct,     ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Futex, createNamed,     arginfo_class_Swow_Futex_createNamed,     ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    PHP_ME(Swow_Futex, attachNamed,     arginfo_class_Swow_Futex_attachNamed,     ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    PHP_ME(Swow_Futex, unlink,          arginfo_class_Swow_Futex_unlink,          ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    PHP_ME(Swow_Futex, getValue,        arginfo_class_Swow_Futex_getValue,        ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Futex, setValue,        arginfo_class_Swow_Futex_setValue,        ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Futex, add,             arginfo_class_Swow_Futex_add,             ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Futex, compareExchange, arginfo_class_Swow_Futex_compareExchange, ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Futex, exchange,        arginfo_class_Swow_Futex_exchange,        ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Futex, wait,            arginfo_class_Swow_Futex_wait,            ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Futex, wake,            arginfo_class_Swow_Futex_wake,            ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Futex, getSharedId,     arginfo_class_Swow_Futex_getSharedId,     ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Futex, __serialize,     arginfo_class_Swow_Futex___serialize,     ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Futex, __unserialize,   arginfo_class_Swow_Futex___unserialize,   ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Futex, __debugInfo,     arginfo_class_Swow_Futex___debugInfo,     ZEND_ACC_PUBLIC)
     PHP_FE_END
 };
 
@@ -570,5 +732,3 @@ zend_result swow_futex_module_shutdown(SHUTDOWN_FUNC_ARGS)
 {
     return SUCCESS;
 }
-
-#endif /* ZTS */

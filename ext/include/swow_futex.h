@@ -18,22 +18,38 @@
 
 #ifndef SWOW_FUTEX_H
 #define SWOW_FUTEX_H
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #include "swow.h"
 
-#include "swow_shared_object.h"
-
 #include "cat_futex.h"
-#include "cat_shm.h"
-
-#ifdef ZTS
 
 extern SWOW_API zend_class_entry *swow_futex_ce;
 extern SWOW_API zend_object_handlers swow_futex_handlers;
 
-zend_result swow_futex_module_init(INIT_FUNC_ARGS);
-zend_result swow_futex_module_shutdown(SHUTDOWN_FUNC_ARGS);
+typedef struct swow_futex_s swow_futex_t; /* opaque */
 
-#endif /* ZTS */
+/*
+ * The borrowed pointer of a Swow\Futex object, or NULL when the object is not
+ * one or has not been constructed. The pointer lives until the object is freed
+ */
+SWOW_API swow_futex_t *swow_futex_get(zend_object *object);
 
+SWOW_API cat_bool_t swow_futex_wait(swow_futex_t *futex, int32_t expected,
+                                    cat_timeout_t timeout);
+SWOW_API cat_bool_t swow_futex_wake(swow_futex_t *futex, int32_t count);
+SWOW_API int32_t swow_futex_get_value(const swow_futex_t *futex);
+/* The result wraps on overflow. Returns the value before the add */
+SWOW_API int32_t swow_futex_add(swow_futex_t *futex, int32_t delta);
+/* Strong compare-exchange: stores new_value only when the value equals expected */
+SWOW_API cat_bool_t swow_futex_compare_exchange(swow_futex_t *futex, int32_t expected,
+                                                int32_t new_value);
+/* Returns the value before the replace */
+SWOW_API int32_t swow_futex_exchange(swow_futex_t *futex, int32_t new_value);
+
+#ifdef __cplusplus
+}
+#endif
 #endif /* SWOW_FUTEX_H */
