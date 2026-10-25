@@ -18,9 +18,23 @@
 
 #include "swow_mutex.h"
 
+#include "swow_shared_object.h"
+#include "swow_sync.h"
+
 #include "cat_thread.h"
 
 #ifdef ZTS
+
+struct swow_mutex_s {
+    swow_shared_object_t object;
+    cat_mutex_t mutex;
+    cat_atomic_uint64_t owner;
+};
+
+typedef struct swow_mutex_object_s {
+    swow_mutex_t *mutex;
+    zend_object std;
+} swow_mutex_object_t;
 
 SWOW_API zend_class_entry *swow_mutex_ce;
 SWOW_API zend_object_handlers swow_mutex_handlers;
@@ -65,6 +79,61 @@ static void swow_mutex_free_object(zend_object *object)
     }
 
     zend_object_std_dtor(&s_mutex->std);
+}
+
+/* public C interface */
+
+SWOW_API swow_mutex_t *swow_mutex_get(zend_object *object)
+{
+    if (unlikely(object == NULL || !instanceof_function(object->ce, swow_mutex_ce))) {
+        cat_update_last_error(CAT_EINVAL, "The object is not a Swow\\Mutex instance");
+        return NULL;
+    }
+
+    return swow_mutex_get_from_object(object)->mutex;
+}
+
+SWOW_API cat_bool_t swow_mutex_lock(swow_mutex_t *mutex, cat_timeout_t timeout)
+{
+    if (unlikely(!cat_mutex_lock(&mutex->mutex, timeout))) {
+        return cat_false;
+    }
+
+    cat_atomic_uint64_store(&mutex->owner, (uint64_t) cat_thread_get_current_id());
+
+    return cat_true;
+}
+
+SWOW_API cat_bool_t swow_mutex_trylock(swow_mutex_t *mutex)
+{
+    /* a timeout of 0 takes the lock once and reports CAT_EBUSY when it is held */
+    return swow_mutex_lock(mutex, 0);
+}
+
+SWOW_API cat_bool_t swow_mutex_unlock(swow_mutex_t *mutex)
+{
+    uint64_t current = (uint64_t) cat_thread_get_current_id();
+    uint64_t owner = current;
+
+    if (unlikely(cat_atomic_uint64_load(&mutex->owner) != current)) {
+        cat_update_last_error(CAT_EBUSY, "The caller does not hold the mutex");
+        return cat_false;
+    }
+
+    /* Drop the owner before the release. The release wakes a waiter that takes
+     * the mutex and stores its own owner immediately, so clearing it afterwards
+     * would erase the new holder */
+    if (unlikely(!cat_atomic_uint64_compare_exchange_strong(&mutex->owner, &owner, 0))) {
+        cat_update_last_error(CAT_EBUSY, "The caller does not hold the mutex");
+        return cat_false;
+    }
+
+    if (unlikely(!cat_mutex_unlock(&mutex->mutex))) {
+        cat_atomic_uint64_store(&mutex->owner, current);
+        return cat_false;
+    }
+
+    return cat_true;
 }
 
 ZEND_BEGIN_ARG_INFO_EX(arginfo_class_Swow_Mutex___construct, 0, 0, 0)
@@ -132,7 +201,7 @@ static PHP_METHOD(Swow_Mutex, lock)
         RETURN_THROWS();
     }
 
-    if (!cat_mutex_lock(&s_mutex->mutex->mutex, timeout)) {
+    if (!swow_mutex_lock(s_mutex->mutex, (cat_timeout_t) timeout)) {
         cat_errno_t code = cat_get_last_error_code();
 
         if (code == CAT_ETIMEDOUT || code == CAT_EBUSY) {
@@ -142,9 +211,6 @@ static PHP_METHOD(Swow_Mutex, lock)
         swow_throw_exception_with_last(swow_sync_exception_ce);
         RETURN_THROWS();
     }
-
-    cat_atomic_uint64_store(&s_mutex->mutex->owner,
-                            (uint64_t) cat_thread_get_current_id());
 
     RETURN_TRUE;
 }
@@ -160,31 +226,9 @@ static PHP_METHOD(Swow_Mutex, unlock)
         RETURN_THROWS();
     }
 
-    if (cat_atomic_uint64_load(&s_mutex->mutex->owner) !=
-        (uint64_t) cat_thread_get_current_id()) {
-        zend_throw_exception(swow_sync_exception_ce, "The caller does not hold the mutex", 0);
+    if (unlikely(!swow_mutex_unlock(s_mutex->mutex))) {
+        swow_throw_exception_with_last(swow_sync_exception_ce);
         RETURN_THROWS();
-    }
-
-    /* Drop the owner before the release. The release wakes a waiter that takes
-     * the mutex and stores its own owner immediately, so clearing it afterwards
-     * would erase the new holder */
-    {
-        uint64_t current = (uint64_t) cat_thread_get_current_id();
-        uint64_t owner = current;
-
-        if (unlikely(!cat_atomic_uint64_compare_exchange_strong(
-                &s_mutex->mutex->owner, &owner, 0))) {
-            zend_throw_exception(swow_sync_exception_ce,
-                                 "The caller does not hold the mutex", 0);
-            RETURN_THROWS();
-        }
-
-        if (unlikely(!cat_mutex_unlock(&s_mutex->mutex->mutex))) {
-            cat_atomic_uint64_store(&s_mutex->mutex->owner, current);
-            swow_throw_exception_with_last(swow_sync_exception_ce);
-            RETURN_THROWS();
-        }
     }
 }
 

@@ -18,11 +18,27 @@
 
 #include "swow_thread_barrier.h"
 
+#include "swow_shared_object.h"
 #include "swow_sync.h"
 
 #ifdef ZTS
 
 #define SWOW_THREAD_BARRIER_MAGIC 0x54424152U /* "TBAR" */
+
+struct swow_thread_barrier_s {
+    swow_shared_object_t object;
+    uint32_t magic;
+    cat_mutex_t mutex;
+    cat_cond_t cond;
+    uint32_t count;
+    uint32_t waiting;
+    uint64_t generation;
+};
+
+typedef struct swow_thread_barrier_object_s {
+    swow_thread_barrier_t *barrier;
+    zend_object std;
+} swow_thread_barrier_object_t;
 
 SWOW_API zend_class_entry *swow_thread_barrier_ce;
 SWOW_API zend_object_handlers swow_thread_barrier_handlers;
@@ -109,6 +125,80 @@ static cat_timeout_t swow_thread_barrier_remaining(cat_timeout_t deadline)
     return (cat_timeout_t) ((cat_msec_t) deadline - now);
 }
 
+/* public C interface */
+
+SWOW_API swow_thread_barrier_t *swow_thread_barrier_get(zend_object *object)
+{
+    if (unlikely(object == NULL || !instanceof_function(object->ce, swow_thread_barrier_ce))) {
+        cat_update_last_error(CAT_EINVAL,
+                              "The object is not a Swow\\Sync\\ThreadBarrier instance");
+        return NULL;
+    }
+
+    return swow_thread_barrier_get_from_object(object)->barrier;
+}
+
+SWOW_API cat_bool_t swow_thread_barrier_wait(swow_thread_barrier_t *barrier,
+                                             cat_timeout_t timeout)
+{
+    uint64_t generation;
+    cat_timeout_t deadline = swow_thread_barrier_deadline(timeout);
+
+    if (unlikely(!cat_mutex_lock(&barrier->mutex, timeout))) {
+        return cat_false;
+    }
+
+    barrier->waiting++;
+    if (barrier->waiting == barrier->count) {
+        barrier->waiting = 0;
+        barrier->generation++;
+        (void) cat_cond_broadcast(&barrier->cond);
+        return cat_mutex_unlock(&barrier->mutex);
+    }
+
+    generation = barrier->generation;
+    while (barrier->generation == generation) {
+        if (!cat_cond_wait(&barrier->cond, &barrier->mutex,
+                           swow_thread_barrier_remaining(deadline))) {
+            /*
+             * The trip of another participant may have cleared the count while
+             * this wait was timing out. Only the round that this waiter joined
+             * can be left, or the count wraps and the barrier never trips again
+             */
+            if (barrier->generation == generation) {
+                barrier->waiting--;
+            }
+
+            /* A failed unlock replaces the error of the wait, and that failure
+             * is what the caller has to see */
+            (void) cat_mutex_unlock(&barrier->mutex);
+
+            return cat_false;
+        }
+    }
+
+    return cat_mutex_unlock(&barrier->mutex);
+}
+
+SWOW_API uint32_t swow_thread_barrier_get_count(const swow_thread_barrier_t *barrier)
+{
+    return barrier->count;
+}
+
+SWOW_API uint32_t swow_thread_barrier_get_waiting(const swow_thread_barrier_t *barrier)
+{
+    uint32_t waiting;
+
+    if (!cat_mutex_lock((cat_mutex_t *) &barrier->mutex, 0)) {
+        return 0;
+    }
+
+    waiting = barrier->waiting;
+    (void) cat_mutex_unlock((cat_mutex_t *) &barrier->mutex);
+
+    return waiting;
+}
+
 ZEND_BEGIN_ARG_INFO_EX(arginfo_class_Swow_Sync_ThreadBarrier___construct, 0, 0, 1)
     ZEND_ARG_TYPE_INFO(0, count, IS_LONG, 0)
 ZEND_END_ARG_INFO()
@@ -184,9 +274,6 @@ static PHP_METHOD(Swow_Sync_ThreadBarrier, wait)
 {
     swow_thread_barrier_object_t *barrier = swow_thread_barrier_get_from_object(Z_OBJ_P(ZEND_THIS));
     zend_long timeout = -1;
-    swow_thread_barrier_t *shared;
-    uint64_t generation;
-    cat_timeout_t deadline;
 
     ZEND_PARSE_PARAMETERS_START(0, 1)
         Z_PARAM_OPTIONAL
@@ -199,59 +286,12 @@ static PHP_METHOD(Swow_Sync_ThreadBarrier, wait)
         RETURN_THROWS();
     }
 
-    shared = barrier->barrier;
-    deadline = swow_thread_barrier_deadline(timeout);
-
-    if (unlikely(!cat_mutex_lock(&shared->mutex, timeout))) {
+    if (!swow_thread_barrier_wait(barrier->barrier, (cat_timeout_t) timeout)) {
         cat_errno_t code = cat_get_last_error_code();
 
         if (code == CAT_ETIMEDOUT || code == CAT_EBUSY) {
             RETURN_FALSE;
         }
-        swow_throw_exception_with_last(swow_sync_exception_ce);
-        RETURN_THROWS();
-    }
-
-    shared->waiting++;
-    if (shared->waiting == shared->count) {
-        shared->waiting = 0;
-        shared->generation++;
-        (void) cat_cond_broadcast(&shared->cond);
-        if (unlikely(!cat_mutex_unlock(&shared->mutex))) {
-            swow_throw_exception_with_last(swow_sync_exception_ce);
-            RETURN_THROWS();
-        }
-        RETURN_TRUE;
-    }
-
-    generation = shared->generation;
-    while (shared->generation == generation) {
-        if (!cat_cond_wait(&shared->cond, &shared->mutex,
-                           swow_thread_barrier_remaining(deadline))) {
-            cat_errno_t code = cat_get_last_error_code();
-
-            /*
-             * The trip of another participant may have cleared the count while
-             * this wait was timing out. Only the round that this waiter joined
-             * can be left, or the count wraps and the barrier never trips again
-             */
-            if (shared->generation == generation) {
-                shared->waiting--;
-            }
-
-            if (unlikely(!cat_mutex_unlock(&shared->mutex))) {
-                swow_throw_exception_with_last(swow_sync_exception_ce);
-                RETURN_THROWS();
-            }
-            if (code == CAT_ETIMEDOUT || code == CAT_EBUSY) {
-                RETURN_FALSE;
-            }
-            swow_throw_exception_with_last(swow_sync_exception_ce);
-            RETURN_THROWS();
-        }
-    }
-
-    if (unlikely(!cat_mutex_unlock(&shared->mutex))) {
         swow_throw_exception_with_last(swow_sync_exception_ce);
         RETURN_THROWS();
     }
@@ -265,26 +305,24 @@ static PHP_METHOD(Swow_Sync_ThreadBarrier, getCount)
 
     ZEND_PARSE_PARAMETERS_NONE();
 
-    RETURN_LONG(barrier->barrier != NULL ? barrier->barrier->count : 0);
+    if (unlikely(barrier->barrier == NULL)) {
+        RETURN_LONG(0);
+    }
+
+    RETURN_LONG((zend_long) swow_thread_barrier_get_count(barrier->barrier));
 }
 
 static PHP_METHOD(Swow_Sync_ThreadBarrier, getWaiting)
 {
     swow_thread_barrier_object_t *barrier = swow_thread_barrier_get_from_object(Z_OBJ_P(ZEND_THIS));
-    zend_long waiting = 0;
 
     ZEND_PARSE_PARAMETERS_NONE();
 
-    if (barrier->barrier == NULL) {
+    if (unlikely(barrier->barrier == NULL)) {
         RETURN_LONG(0);
     }
 
-    if (cat_mutex_lock(&barrier->barrier->mutex, 0)) {
-        waiting = barrier->barrier->waiting;
-        (void) cat_mutex_unlock(&barrier->barrier->mutex);
-    }
-
-    RETURN_LONG(waiting);
+    RETURN_LONG((zend_long) swow_thread_barrier_get_waiting(barrier->barrier));
 }
 
 static PHP_METHOD(Swow_Sync_ThreadBarrier, __serialize)

@@ -36,6 +36,50 @@
 
 #ifdef ZTS
 
+typedef struct swow_thread_run_s {
+    cat_atomic_uint32_t refcount;
+    cat_atomic_bool_t killed;
+    cat_thread_t thread;
+    cat_sem_t started;
+    /* serialized callable and args, allocated with cat_sys_malloc */
+    const char *callable;
+    size_t callable_len;
+    const char *args;
+    size_t args_len;
+    /* PHP code for runCode, allocated with cat_sys_malloc */
+    const char *code;
+    size_t code_len;
+    /* serialized return value, allocated with cat_sys_malloc */
+    const char *result;
+    size_t result_len;
+    /* serialized exception, allocated with cat_sys_malloc */
+    const char *exception;
+    size_t exception_len;
+    cat_atomic_int32_t exit_status;
+    /* cat_true when the result or the exception did not serialize */
+    cat_atomic_bool_t result_invalid;
+    void *server_context;
+    cat_atomic_int32_t start_status;
+    uv_mutex_t lock;
+    zend_executor_globals *eg;
+    zend_swow_globals *globals;
+} swow_thread_run_t;
+
+struct swow_thread_s {
+    zval callable;
+    zval args;
+    zval result;
+    swow_thread_run_t *run;
+    cat_thread_t *thread;
+    zend_long id;
+    cat_bool_t started;
+    cat_bool_t waited;
+    cat_bool_t failed;
+    cat_bool_t detached;
+    cat_bool_t killed;
+    zend_object std;
+};
+
 SWOW_API zend_class_entry *swow_thread_ce;
 SWOW_API zend_class_entry *swow_thread_exception_ce;
 SWOW_API zend_object_handlers swow_thread_handlers;
@@ -701,6 +745,52 @@ static HashTable *swow_thread_get_gc(zend_object *object, zval **gc_data, int *g
     return zend_std_get_properties(object);
 }
 
+/* public C interface */
+
+SWOW_API swow_thread_t *swow_thread_get(zend_object *object)
+{
+    if (unlikely(object == NULL || !instanceof_function(object->ce, swow_thread_ce))) {
+        cat_update_last_error(CAT_EINVAL, "The object is not a Swow\\Thread instance");
+        return NULL;
+    }
+
+    return swow_thread_get_from_object(object);
+}
+
+SWOW_API cat_thread_id_t swow_thread_get_id(const swow_thread_t *thread)
+{
+    return thread->thread != NULL ? cat_thread_get_id(thread->thread) : (cat_thread_id_t) 0;
+}
+
+SWOW_API cat_bool_t swow_thread_is_running(const swow_thread_t *thread)
+{
+    return thread->thread != NULL && cat_thread_is_running(thread->thread);
+}
+
+SWOW_API cat_bool_t swow_thread_kill(swow_thread_t *thread)
+{
+    swow_thread_run_t *run = thread->run;
+
+    if (unlikely(run == NULL)) {
+        cat_update_last_error(CAT_EINVAL,
+                              thread->started ? "Cannot kill the current thread" :
+                                                "Thread has not been started");
+        return cat_false;
+    }
+
+    if (unlikely(!cat_thread_is_running(&run->thread))) {
+        cat_update_last_error(CAT_EBUSY, "Thread is not running");
+        return cat_false;
+    }
+
+    if (unlikely(!swow_thread_run_kill(run))) {
+        cat_update_last_error(CAT_EBUSY, "Thread is not running");
+        return cat_false;
+    }
+
+    return cat_true;
+}
+
 /* methods */
 
 ZEND_BEGIN_ARG_INFO_EX(arginfo_class_Swow_Thread___construct, 0, 0, 1)
@@ -1214,24 +1304,11 @@ static PHP_METHOD(Swow_Thread, detach)
 static PHP_METHOD(Swow_Thread, kill)
 {
     swow_thread_t *s_thread = swow_thread_get_from_object(Z_OBJ_P(ZEND_THIS));
-    swow_thread_run_t *run = s_thread->run;
 
     ZEND_PARSE_PARAMETERS_NONE();
 
-    if (unlikely(run == NULL)) {
-        zend_throw_exception(swow_thread_exception_ce,
-                             s_thread->started ? "Cannot kill the current thread" :
-                                                 "Thread has not been started", 0);
-        RETURN_THROWS();
-    }
-
-    if (unlikely(!cat_thread_is_running(&run->thread))) {
-        zend_throw_exception(swow_thread_exception_ce, "Thread is not running", 0);
-        RETURN_THROWS();
-    }
-
-    if (unlikely(!swow_thread_run_kill(run))) {
-        zend_throw_exception(swow_thread_exception_ce, "Thread is not running", 0);
+    if (unlikely(!swow_thread_kill(s_thread))) {
+        swow_throw_exception_with_last(swow_thread_exception_ce);
         RETURN_THROWS();
     }
 
@@ -1262,7 +1339,7 @@ static PHP_METHOD(Swow_Thread, isRunning)
 
     ZEND_PARSE_PARAMETERS_NONE();
 
-    RETURN_BOOL(s_thread->thread != NULL && cat_thread_is_running(s_thread->thread));
+    RETURN_BOOL(swow_thread_is_running(s_thread));
 }
 
 static PHP_METHOD(Swow_Thread, isDetached)

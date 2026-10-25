@@ -881,5 +881,10 @@ EOF
   PHP_SUBST(SWOW_INCLUDES)
   PHP_SUBST(SWOW_CFLAGS)
   PHP_SUBST(SWOW_SHARED_LIBADD)
+
+  dnl The public headers live in include/, and Makefile.frag installs them into
+  dnl $(phpincludedir)/ext/swow/
+  PHP_ADD_MAKEFILE_FRAGMENT()
+
   AC_LANG_POP()
 fi

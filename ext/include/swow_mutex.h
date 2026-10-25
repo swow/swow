@@ -18,11 +18,11 @@
 
 #ifndef SWOW_MUTEX_H
 #define SWOW_MUTEX_H
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #include "swow.h"
-
-#include "swow_shared_object.h"
-#include "swow_sync.h"
 
 #include "cat_thread_sync.h"
 
@@ -31,20 +31,21 @@
 extern SWOW_API zend_class_entry *swow_mutex_ce;
 extern SWOW_API zend_object_handlers swow_mutex_handlers;
 
-typedef struct swow_mutex_s {
-    swow_shared_object_t object;
-    cat_mutex_t mutex;
-    cat_atomic_uint64_t owner;
-} swow_mutex_t;
+typedef struct swow_mutex_s swow_mutex_t; /* opaque */
 
-typedef struct swow_mutex_object_s {
-    swow_mutex_t *mutex;
-    zend_object std;
-} swow_mutex_object_t;
+/*
+ * The borrowed pointer of a Swow\Mutex object, or NULL when the object is not
+ * one or has not been constructed. The pointer lives until the object is freed
+ */
+SWOW_API swow_mutex_t *swow_mutex_get(zend_object *object);
 
-zend_result swow_mutex_module_init(INIT_FUNC_ARGS);
-zend_result swow_mutex_module_shutdown(SHUTDOWN_FUNC_ARGS);
+SWOW_API cat_bool_t swow_mutex_lock(swow_mutex_t *mutex, cat_timeout_t timeout);
+SWOW_API cat_bool_t swow_mutex_trylock(swow_mutex_t *mutex);
+SWOW_API cat_bool_t swow_mutex_unlock(swow_mutex_t *mutex);
 
 #endif /* ZTS */
 
+#ifdef __cplusplus
+}
+#endif
 #endif /* SWOW_MUTEX_H */

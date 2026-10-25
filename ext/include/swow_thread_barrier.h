@@ -18,10 +18,11 @@
 
 #ifndef SWOW_THREAD_BARRIER_H
 #define SWOW_THREAD_BARRIER_H
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #include "swow.h"
-
-#include "swow_shared_object.h"
 
 #include "cat_thread_sync.h"
 
@@ -30,24 +31,24 @@
 extern SWOW_API zend_class_entry *swow_thread_barrier_ce;
 extern SWOW_API zend_object_handlers swow_thread_barrier_handlers;
 
-typedef struct swow_thread_barrier_s {
-    swow_shared_object_t object;
-    uint32_t magic;
-    cat_mutex_t mutex;
-    cat_cond_t cond;
-    uint32_t count;
-    uint32_t waiting;
-    uint64_t generation;
-} swow_thread_barrier_t;
+typedef struct swow_thread_barrier_s swow_thread_barrier_t; /* opaque */
 
-typedef struct swow_thread_barrier_object_s {
-    swow_thread_barrier_t *barrier;
-    zend_object std;
-} swow_thread_barrier_object_t;
+/*
+ * The borrowed pointer of a Swow\Sync\ThreadBarrier object, or NULL when the
+ * object is not one or has not been constructed. The pointer lives until the
+ * object is freed
+ */
+SWOW_API swow_thread_barrier_t *swow_thread_barrier_get(zend_object *object);
 
-zend_result swow_thread_barrier_module_init(INIT_FUNC_ARGS);
-zend_result swow_thread_barrier_module_shutdown(SHUTDOWN_FUNC_ARGS);
+/* cat_false when the wait timed out before the barrier tripped */
+SWOW_API cat_bool_t swow_thread_barrier_wait(swow_thread_barrier_t *barrier,
+                                             cat_timeout_t timeout);
+SWOW_API uint32_t swow_thread_barrier_get_count(const swow_thread_barrier_t *barrier);
+SWOW_API uint32_t swow_thread_barrier_get_waiting(const swow_thread_barrier_t *barrier);
 
 #endif /* ZTS */
 
+#ifdef __cplusplus
+}
+#endif
 #endif /* SWOW_THREAD_BARRIER_H */

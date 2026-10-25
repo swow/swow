@@ -18,11 +18,11 @@
 
 #ifndef SWOW_SEMAPHORE_H
 #define SWOW_SEMAPHORE_H
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #include "swow.h"
-
-#include "swow_shared_object.h"
-#include "swow_sync.h"
 
 #include "cat_thread_sync.h"
 
@@ -31,19 +31,24 @@
 extern SWOW_API zend_class_entry *swow_semaphore_ce;
 extern SWOW_API zend_object_handlers swow_semaphore_handlers;
 
-typedef struct swow_semaphore_s {
-    swow_shared_object_t object;
-    cat_sem_t sem;
-} swow_semaphore_t;
+typedef struct swow_semaphore_s swow_semaphore_t; /* opaque */
 
-typedef struct swow_semaphore_object_s {
-    swow_semaphore_t *semaphore;
-    zend_object std;
-} swow_semaphore_object_t;
+/*
+ * The borrowed pointer of a Swow\Semaphore object, or NULL when the object is
+ * not one or has not been constructed. The pointer lives until the object is
+ * freed
+ */
+SWOW_API swow_semaphore_t *swow_semaphore_get(zend_object *object);
 
-zend_result swow_semaphore_module_init(INIT_FUNC_ARGS);
-zend_result swow_semaphore_module_shutdown(SHUTDOWN_FUNC_ARGS);
+SWOW_API cat_bool_t swow_semaphore_acquire(swow_semaphore_t *semaphore,
+                                           cat_timeout_t timeout);
+SWOW_API cat_bool_t swow_semaphore_tryacquire(swow_semaphore_t *semaphore);
+/* A negative count is CAT_EINVAL, and so is a count that passes the limit */
+SWOW_API cat_bool_t swow_semaphore_release(swow_semaphore_t *semaphore, int32_t count);
 
 #endif /* ZTS */
 
+#ifdef __cplusplus
+}
+#endif
 #endif /* SWOW_SEMAPHORE_H */

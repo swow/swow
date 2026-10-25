@@ -18,6 +18,10 @@
 
 #include "swow_thannel.h"
 
+#include "swow_shared_object.h"
+
+#include "cat_thannel.h"
+
 #include "zend_smart_str.h"
 
 #include "ext/standard/php_var.h"
@@ -25,6 +29,16 @@
 #include <stdint.h>
 
 #ifdef ZTS
+
+struct swow_thannel_s {
+    swow_shared_object_t object;
+    cat_thannel_t thannel;
+};
+
+typedef struct swow_thannel_object_s {
+    swow_thannel_t *thannel;
+    zend_object std;
+} swow_thannel_object_t;
 
 SWOW_API zend_class_entry *swow_thannel_ce;
 SWOW_API zend_class_entry *swow_thannel_exception_ce;
@@ -74,6 +88,45 @@ static void swow_thannel_free_object(zend_object *object)
     }
 
     zend_object_std_dtor(&s_thannel->std);
+}
+
+/* public C interface */
+
+SWOW_API swow_thannel_t *swow_thannel_get(zend_object *object)
+{
+    if (unlikely(object == NULL || !instanceof_function(object->ce, swow_thannel_ce))) {
+        cat_update_last_error(CAT_EINVAL, "The object is not a Swow\\Thannel instance");
+        return NULL;
+    }
+
+    return swow_thannel_get_from_object(object)->thannel;
+}
+
+SWOW_API cat_bool_t swow_thannel_push(swow_thannel_t *thannel, const void *data,
+                                      size_t size, cat_timeout_t timeout)
+{
+    return cat_thannel_push(&thannel->thannel, data, size, timeout);
+}
+
+SWOW_API cat_bool_t swow_thannel_pop(swow_thannel_t *thannel, void **data,
+                                     size_t *size, cat_timeout_t timeout)
+{
+    return cat_thannel_pop(&thannel->thannel, data, size, timeout);
+}
+
+SWOW_API cat_bool_t swow_thannel_close(swow_thannel_t *thannel)
+{
+    return cat_thannel_close(&thannel->thannel);
+}
+
+SWOW_API size_t swow_thannel_get_length(const swow_thannel_t *thannel)
+{
+    return (size_t) cat_thannel_get_length(&thannel->thannel);
+}
+
+SWOW_API size_t swow_thannel_get_capacity(const swow_thannel_t *thannel)
+{
+    return (size_t) cat_thannel_get_capacity(&thannel->thannel);
 }
 
 static cat_bool_t swow_thannel_serialize_value(zval *value, smart_str *buffer)
@@ -249,8 +302,8 @@ static PHP_METHOD(Swow_Thannel, push)
         RETURN_THROWS();
     }
 
-    if (!cat_thannel_push(&s_thannel->thannel->thannel,
-                          ZSTR_VAL(buf.s), ZSTR_LEN(buf.s), timeout)) {
+    if (!swow_thannel_push(s_thannel->thannel, ZSTR_VAL(buf.s), ZSTR_LEN(buf.s),
+                           (cat_timeout_t) timeout)) {
         smart_str_free(&buf);
         swow_throw_exception_with_last(swow_thannel_exception_ce);
         RETURN_THROWS();
@@ -278,7 +331,7 @@ static PHP_METHOD(Swow_Thannel, pop)
         RETURN_THROWS();
     }
 
-    if (!cat_thannel_pop(&s_thannel->thannel->thannel, &data, &size, timeout)) {
+    if (!swow_thannel_pop(s_thannel->thannel, &data, &size, (cat_timeout_t) timeout)) {
         swow_throw_exception_with_last(swow_thannel_exception_ce);
         RETURN_THROWS();
     }
@@ -521,7 +574,7 @@ static PHP_METHOD(Swow_Thannel, close)
         RETURN_THROWS();
     }
 
-    if (unlikely(!cat_thannel_close(&s_thannel->thannel->thannel))) {
+    if (unlikely(!swow_thannel_close(s_thannel->thannel))) {
         swow_throw_exception_with_last(swow_thannel_exception_ce);
         RETURN_THROWS();
     }
@@ -550,7 +603,7 @@ static PHP_METHOD(Swow_Thannel, getCapacity)
         RETURN_LONG(0);
     }
 
-    RETURN_LONG((zend_long) cat_thannel_get_capacity(&s_thannel->thannel->thannel));
+    RETURN_LONG((zend_long) swow_thannel_get_capacity(s_thannel->thannel));
 }
 
 static PHP_METHOD(Swow_Thannel, getLength)
@@ -563,7 +616,7 @@ static PHP_METHOD(Swow_Thannel, getLength)
         RETURN_LONG(0);
     }
 
-    RETURN_LONG((zend_long) cat_thannel_get_length(&s_thannel->thannel->thannel));
+    RETURN_LONG((zend_long) swow_thannel_get_length(s_thannel->thannel));
 }
 
 static PHP_METHOD(Swow_Thannel, isEmpty)
@@ -657,9 +710,9 @@ static PHP_METHOD(Swow_Thannel, __debugInfo)
 
     if (s_thannel->thannel != NULL) {
         add_assoc_long(return_value, "capacity",
-                       (zend_long) cat_thannel_get_capacity(&s_thannel->thannel->thannel));
+                       (zend_long) swow_thannel_get_capacity(s_thannel->thannel));
         add_assoc_long(return_value, "length",
-                       (zend_long) cat_thannel_get_length(&s_thannel->thannel->thannel));
+                       (zend_long) swow_thannel_get_length(s_thannel->thannel));
         add_assoc_bool(return_value, "closed",
                        cat_thannel_is_closed(&s_thannel->thannel->thannel));
     }

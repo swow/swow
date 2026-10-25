@@ -18,9 +18,22 @@
 
 #include "swow_semaphore.h"
 
+#include "swow_shared_object.h"
+#include "swow_sync.h"
+
 #include <limits.h>
 
 #ifdef ZTS
+
+struct swow_semaphore_s {
+    swow_shared_object_t object;
+    cat_sem_t sem;
+};
+
+typedef struct swow_semaphore_object_s {
+    swow_semaphore_t *semaphore;
+    zend_object std;
+} swow_semaphore_object_t;
 
 SWOW_API zend_class_entry *swow_semaphore_ce;
 SWOW_API zend_object_handlers swow_semaphore_handlers;
@@ -68,6 +81,57 @@ static void swow_semaphore_free_object(zend_object *object)
     }
 
     zend_object_std_dtor(&s_semaphore->std);
+}
+
+/* public C interface */
+
+SWOW_API swow_semaphore_t *swow_semaphore_get(zend_object *object)
+{
+    if (unlikely(object == NULL || !instanceof_function(object->ce, swow_semaphore_ce))) {
+        cat_update_last_error(CAT_EINVAL, "The object is not a Swow\\Semaphore instance");
+        return NULL;
+    }
+
+    return swow_semaphore_get_from_object(object)->semaphore;
+}
+
+SWOW_API cat_bool_t swow_semaphore_acquire(swow_semaphore_t *semaphore,
+                                           cat_timeout_t timeout)
+{
+    return cat_sem_acquire(&semaphore->sem, timeout);
+}
+
+SWOW_API cat_bool_t swow_semaphore_tryacquire(swow_semaphore_t *semaphore)
+{
+    return cat_sem_try_acquire(&semaphore->sem);
+}
+
+static cat_bool_t swow_semaphore_release_count(swow_semaphore_t *semaphore, zend_long count)
+{
+    zend_long value;
+
+    /* uv_sem_post aborts the process when the count passes SEM_VALUE_MAX, which
+     * is INT_MAX, so a release that would pass it is rejected here */
+    value = (zend_long) cat_sem_get_value(&semaphore->sem);
+    if (unlikely(count > (zend_long) (INT_MAX - value))) {
+        cat_update_last_error(CAT_EINVAL, "The release count passes the semaphore limit");
+        return cat_false;
+    }
+
+    cat_sem_release(&semaphore->sem, (size_t) count);
+
+    return cat_true;
+}
+
+SWOW_API cat_bool_t swow_semaphore_release(swow_semaphore_t *semaphore, int32_t count)
+{
+    if (unlikely(count < 0)) {
+        cat_update_last_error(CAT_EINVAL,
+                              "The release count must be greater than or equal to 0");
+        return cat_false;
+    }
+
+    return swow_semaphore_release_count(semaphore, count);
 }
 
 ZEND_BEGIN_ARG_INFO_EX(arginfo_class_Swow_Semaphore___construct, 0, 0, 0)
@@ -151,7 +215,7 @@ static PHP_METHOD(Swow_Semaphore, acquire)
         RETURN_THROWS();
     }
 
-    if (!cat_sem_acquire(&s_semaphore->semaphore->sem, timeout)) {
+    if (!swow_semaphore_acquire(s_semaphore->semaphore, (cat_timeout_t) timeout)) {
         cat_errno_t code = cat_get_last_error_code();
 
         if (code == CAT_ETIMEDOUT || code == CAT_EBUSY) {
@@ -176,7 +240,7 @@ static PHP_METHOD(Swow_Semaphore, tryAcquire)
         RETURN_THROWS();
     }
 
-    if (!cat_sem_try_acquire(&s_semaphore->semaphore->sem)) {
+    if (!swow_semaphore_tryacquire(s_semaphore->semaphore)) {
         cat_errno_t code = cat_get_last_error_code();
 
         if (code == CAT_EBUSY) {
@@ -220,7 +284,6 @@ static PHP_METHOD(Swow_Semaphore, release)
 {
     swow_semaphore_object_t *s_semaphore = swow_semaphore_get_from_object(Z_OBJ_P(ZEND_THIS));
     zend_long count = 1;
-    zend_long value;
 
     ZEND_PARSE_PARAMETERS_START(0, 1)
         Z_PARAM_OPTIONAL
@@ -237,15 +300,10 @@ static PHP_METHOD(Swow_Semaphore, release)
         RETURN_THROWS();
     }
 
-    /* uv_sem_post aborts the process when the count passes SEM_VALUE_MAX, which
-     * is INT_MAX, so a release that would pass it is rejected here */
-    value = (zend_long) cat_sem_get_value(&s_semaphore->semaphore->sem);
-    if (unlikely(count > (zend_long) (INT_MAX - value))) {
-        zend_value_error("The release count passes the semaphore limit");
+    if (unlikely(!swow_semaphore_release_count(s_semaphore->semaphore, count))) {
+        zend_value_error("%s", cat_get_last_error_message());
         RETURN_THROWS();
     }
-
-    cat_sem_release(&s_semaphore->semaphore->sem, (size_t) count);
 }
 
 static PHP_METHOD(Swow_Semaphore, __serialize)

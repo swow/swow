@@ -21,7 +21,7 @@
 #include <stdint.h>
 
 #ifdef ZTS
-# include "swow_thread.h"
+# include "swow_modules.h"
 #endif
 
 #define SWOW_SHARED_OBJECT_INITIAL_CAPACITY 64
