@@ -362,6 +362,12 @@ zend_result swow_shared_object_module_shutdown(SHUTDOWN_FUNC_ARGS)
         if (object != NULL && object != SWOW_SHARED_OBJECT_TOMBSTONE) {
             cat_bool_t free_memory = cat_true;
 
+            if (cat_atomic_uint32_load(&object->refcount) > 1) {
+                /* Another handle still refers to this object, and its release
+                 * would then touch freed memory. The process exits, so leak it */
+                continue;
+            }
+
             if (object->free != NULL) {
                 free_memory = object->free(object);
             }
