@@ -30,8 +30,17 @@ extern "C" {
  * shares too. The pages come from the kernel, so a copy on write does not
  * separate the two sides the way it separates heap memory.
  *
- * A name needs no leading slash, because the POSIX backend adds one. macOS
- * accepts at most 31 characters with that slash.
+ * The mapping holds no libcat metadata. A create maps exactly size bytes, and
+ * cat_shm_get_address returns the start of the mapping. An attach takes the
+ * size from the platform, and a platform that allocates a mapping by page
+ * reports the requested size rounded up to its page size, as macOS does, so an
+ * exact-size check holds only where the platform keeps the requested size.
+ *
+ * A name needs no leading slash, because the POSIX backend adds one. The
+ * platform bounds the length: Linux accepts 255 characters (NAME_MAX), macOS
+ * accepts 31 characters including that slash, and Windows accepts 260
+ * characters (MAX_PATH). A longer name fails with CAT_EINVAL. macOS accepts a
+ * slash inside the name, and Linux rejects it with CAT_EINVAL.
  *
  * A named object keeps the name until cat_shm_unlink removes it, so a later
  * process still finds it. A create fails with CAT_EEXIST while the name exists,
@@ -55,11 +64,14 @@ CAT_API cat_shm_t *cat_shm_create_named(const char *name, size_t size);
 
 /* A second mapping of an object that another call created.
  * NULL on failure: CAT_ENOENT when no object has the name, CAT_EINVAL when the
- * object is not a mapping of libcat. */
+ * object is empty, or the reason of a failed map. */
 CAT_API cat_shm_t *cat_shm_attach_named(const char *name);
 
-/* The start of the caller data, which is aligned to 4096 bytes. */
+/* The start of the mapping. */
 CAT_API void       *cat_shm_get_address(const cat_shm_t *shm);
+
+/* The size that the create call passed, or the size that the platform reports
+ * on attach. */
 CAT_API size_t      cat_shm_get_size(const cat_shm_t *shm);
 /* NULL for an anonymous mapping. */
 CAT_API const char *cat_shm_get_name(const cat_shm_t *shm);

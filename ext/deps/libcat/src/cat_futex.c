@@ -288,3 +288,18 @@ CAT_API cat_bool_t cat_futex_wake(cat_futex_t *futex, int32_t count)
 
     return cat_futex_wake_at(futex, count);
 }
+
+CAT_API int32_t cat_futex_add(cat_futex_t *futex, int32_t delta)
+{
+    return cat_atomic_int32_fetch_add(futex, delta);
+}
+
+CAT_API int32_t cat_futex_exchange(cat_futex_t *futex, int32_t new_value)
+{
+    return cat_atomic_int32_exchange(futex, new_value);
+}
+
+CAT_API cat_bool_t cat_futex_compare_exchange(cat_futex_t *futex, int32_t expected, int32_t new_value)
+{
+    return cat_atomic_int32_compare_exchange_strong(futex, &expected, new_value);
+}

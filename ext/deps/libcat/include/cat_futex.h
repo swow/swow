@@ -63,6 +63,28 @@ CAT_API cat_bool_t cat_futex_wait(cat_futex_t *futex, int32_t expected, cat_time
  */
 CAT_API cat_bool_t cat_futex_wake(cat_futex_t *futex, int32_t count);
 
+/*
+ * Atomically add delta to the value. The result wraps on overflow.
+ *
+ * Returns the value before the add.
+ */
+CAT_API int32_t cat_futex_add(cat_futex_t *futex, int32_t delta);
+
+/*
+ * Atomically replace the value.
+ *
+ * Returns the value before the replace.
+ */
+CAT_API int32_t cat_futex_exchange(cat_futex_t *futex, int32_t new_value);
+
+/*
+ * Strong compare-exchange: store new_value only when the value equals expected.
+ *
+ * cat_true: the value was exchanged.
+ * cat_false: the value differs from expected, and the call did not store.
+ */
+CAT_API cat_bool_t cat_futex_compare_exchange(cat_futex_t *futex, int32_t expected, int32_t new_value);
+
 #ifdef __cplusplus
 }
 #endif

@@ -35,25 +35,27 @@
 #endif
 
 /*
- * The first page of a mapping holds its header, and the caller data starts at the
- * next 4096-byte boundary. An attach that finds no header therefore refuses the
- * object instead of trusting a size that nobody wrote.
+ * The platform bounds the name of a shared object. Windows takes the name as it
+ * is, and the POSIX backend adds a leading slash to a name without one.
  */
-#define CAT_SHM_HEADER_SIZE 4096
-
-#define CAT_SHM_MAGIC 0x6d687363U /* "cshm" */
-
-typedef struct cat_shm_header_s {
-    uint32_t magic;
-    uint32_t reserved;
-    uint64_t size;
-} cat_shm_header_t;
+#ifdef CAT_OS_WIN
+/* A named section lives in the kernel object namespace, and the Win32 name is
+ * limited to MAX_PATH (260) characters. The CreateFileMappingW page does not
+ * repeat that limit, which the CreateMutexW and the CreateEventW pages state
+ * for the same namespace */
+# define CAT_SHM_NAME_MAX ((size_t) 260) /* MAX_PATH */
+#elif defined(CAT_OS_DARWIN)
+/* macOS accepts at most 31 characters in the name of a shared memory object,
+ * and the leading slash counts toward that limit */
+# define CAT_SHM_NAME_MAX ((size_t) 30)
+#else
+/* a POSIX file name component is bounded by NAME_MAX */
+# define CAT_SHM_NAME_MAX ((size_t) 255)
+#endif
 
 struct cat_shm_s {
     void *base;
-    void *address;
     size_t size;
-    size_t mapping_size;
     char *name;
 #ifdef CAT_OS_WIN
     HANDLE handle;
@@ -76,8 +78,8 @@ static wchar_t *cat_shm_win32_name(const char *name)
         return NULL;
     }
 
-    wide = (wchar_t *) cat_calloc((size_t) length, sizeof(wchar_t));
-#if CAT_ALLOC_HANDLE_ERRORS
+    wide = (wchar_t *) cat_sys_calloc((size_t) length, sizeof(wchar_t));
+#if CAT_SYS_ALLOC_HANDLE_ERRORS
     if (unlikely(wide == NULL)) {
         cat_update_last_error_of_syscall("Calloc for the name of a shared mapping failed");
         return NULL;
@@ -91,7 +93,6 @@ static wchar_t *cat_shm_win32_name(const char *name)
 
 static cat_bool_t cat_shm_platform_create(cat_shm_t *shm, const char *name, size_t size)
 {
-    size_t mapping_size = size + CAT_SHM_HEADER_SIZE;
     wchar_t *wide = NULL;
     HANDLE handle;
     void *base;
@@ -105,10 +106,10 @@ static cat_bool_t cat_shm_platform_create(cat_shm_t *shm, const char *name, size
     }
 
     handle = CreateFileMappingW(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE,
-        (DWORD) (((uint64_t) mapping_size) >> 32), (DWORD) (mapping_size & 0xFFFFFFFFU), wide);
+        (DWORD) (((uint64_t) size) >> 32), (DWORD) (size & 0xFFFFFFFFU), wide);
     error = GetLastError();
     if (wide != NULL) {
-        cat_free(wide);
+        cat_sys_free(wide);
     }
 
     if (unlikely(handle == NULL)) {
@@ -133,9 +134,7 @@ static cat_bool_t cat_shm_platform_create(cat_shm_t *shm, const char *name, size
 
     shm->handle = handle;
     shm->base = base;
-    shm->mapping_size = mapping_size;
     shm->size = size;
-    shm->address = (char *) base + CAT_SHM_HEADER_SIZE;
 
     return cat_true;
 }
@@ -154,7 +153,7 @@ static cat_bool_t cat_shm_platform_attach(cat_shm_t *shm, const char *name)
 
     handle = OpenFileMappingW(FILE_MAP_ALL_ACCESS, FALSE, wide);
     error = GetLastError();
-    cat_free(wide);
+    cat_sys_free(wide);
 
     if (unlikely(handle == NULL)) {
         cat_update_last_error_with_reason(
@@ -181,9 +180,8 @@ static cat_bool_t cat_shm_platform_attach(cat_shm_t *shm, const char *name)
 
     shm->handle = handle;
     shm->base = base;
-    /* the view is rounded up to a page, so the header gives the exact size */
-    shm->mapping_size = (size_t) information.RegionSize;
-    shm->address = (char *) base + CAT_SHM_HEADER_SIZE;
+    /* the view is rounded up to a page, and that is the only size available */
+    shm->size = (size_t) information.RegionSize;
 
     return cat_true;
 }
@@ -209,28 +207,40 @@ static cat_bool_t cat_shm_platform_unlink(const char *name)
 
 #else /* !CAT_OS_WIN */
 
-/* shm_open takes a leading slash in the name, and the caller does not. */
+/* shm_open takes a leading slash in the name, and the caller does not. The
+ * path lives until the create or the attach returns, and the system allocator
+ * keeps it valid when a mapping outlives the request heap */
 static char *cat_shm_posix_path(const char *name)
 {
-    if (name[0] == '/') {
-        return cat_strdup(name);
+    size_t length = strlen(name);
+    cat_bool_t has_slash = name[0] == '/';
+    char *path = (char *) cat_sys_malloc(length + (has_slash ? 1 : 2));
+
+    if (unlikely(path == NULL)) {
+        return NULL;
     }
 
-    return cat_sprintf("/%s", name);
+    if (has_slash) {
+        memcpy(path, name, length + 1);
+    } else {
+        path[0] = '/';
+        memcpy(path + 1, name, length + 1);
+    }
+
+    return path;
 }
 
 static cat_bool_t cat_shm_platform_create(cat_shm_t *shm, const char *name, size_t size)
 {
-    size_t mapping_size = size + CAT_SHM_HEADER_SIZE;
     char *path = NULL;
     void *base;
     int fd = -1;
 
     if (name != NULL) {
         path = cat_shm_posix_path(name);
-#if CAT_ALLOC_HANDLE_ERRORS
+#if CAT_SYS_ALLOC_HANDLE_ERRORS
         if (unlikely(path == NULL)) {
-            cat_update_last_error_of_syscall("Sprintf for the name of a shared mapping failed");
+            cat_update_last_error_of_syscall("Strdup for the name of a shared mapping failed");
             return cat_false;
         }
 #endif
@@ -240,41 +250,39 @@ static cat_bool_t cat_shm_platform_create(cat_shm_t *shm, const char *name, size
             cat_update_last_error_with_reason(
                 errno == EEXIST ? CAT_EEXIST : cat_translate_sys_error(errno),
                 "shm_open(%s) failed", path);
-            cat_free(path);
+            cat_sys_free(path);
             return cat_false;
         }
 
-        if (unlikely(ftruncate(fd, (off_t) mapping_size) != 0)) {
+        if (unlikely(ftruncate(fd, (off_t) size) != 0)) {
             cat_update_last_error_with_reason(cat_translate_sys_error(errno),
                 "ftruncate(%s) failed", path);
             (void) shm_unlink(path);
             (void) close(fd);
-            cat_free(path);
+            cat_sys_free(path);
             return cat_false;
         }
     }
 
-    base = mmap(NULL, mapping_size, PROT_READ | PROT_WRITE,
+    base = mmap(NULL, size, PROT_READ | PROT_WRITE,
         MAP_SHARED | (name == NULL ? MAP_ANONYMOUS : 0), fd, 0);
     if (unlikely(base == MAP_FAILED)) {
         cat_update_last_error_with_reason(cat_translate_sys_error(errno), "mmap failed");
         if (path != NULL) {
             (void) shm_unlink(path);
             (void) close(fd);
-            cat_free(path);
+            cat_sys_free(path);
         }
         return cat_false;
     }
 
     if (path != NULL) {
-        cat_free(path);
+        cat_sys_free(path);
     }
 
     shm->base = base;
     shm->fd = fd;
-    shm->mapping_size = mapping_size;
     shm->size = size;
-    shm->address = (char *) base + CAT_SHM_HEADER_SIZE;
 
     return cat_true;
 }
@@ -286,9 +294,9 @@ static cat_bool_t cat_shm_platform_attach(cat_shm_t *shm, const char *name)
     void *base;
     int fd;
 
-#if CAT_ALLOC_HANDLE_ERRORS
+#if CAT_SYS_ALLOC_HANDLE_ERRORS
     if (unlikely(path == NULL)) {
-        cat_update_last_error_of_syscall("Sprintf for the name of a shared mapping failed");
+        cat_update_last_error_of_syscall("Strdup for the name of a shared mapping failed");
         return cat_false;
     }
 #endif
@@ -298,10 +306,10 @@ static cat_bool_t cat_shm_platform_attach(cat_shm_t *shm, const char *name)
         cat_update_last_error_with_reason(
             errno == ENOENT ? CAT_ENOENT : cat_translate_sys_error(errno),
             "shm_open(%s) failed", path);
-        cat_free(path);
+        cat_sys_free(path);
         return cat_false;
     }
-    cat_free(path);
+    cat_sys_free(path);
 
     if (unlikely(fstat(fd, &information) != 0)) {
         cat_update_last_error_with_reason(cat_translate_sys_error(errno), "fstat failed");
@@ -309,8 +317,10 @@ static cat_bool_t cat_shm_platform_attach(cat_shm_t *shm, const char *name)
         return cat_false;
     }
 
-    if (unlikely((uint64_t) information.st_size < CAT_SHM_HEADER_SIZE)) {
-        cat_update_last_error(CAT_EINVAL, "The mapping has no libcat header");
+    /* the name is visible before the create finished, so an empty object means
+     * an early attach */
+    if (unlikely(information.st_size == 0)) {
+        cat_update_last_error(CAT_EINVAL, "The size of a shared mapping is out of range");
         (void) close(fd);
         return cat_false;
     }
@@ -324,8 +334,7 @@ static cat_bool_t cat_shm_platform_attach(cat_shm_t *shm, const char *name)
 
     shm->base = base;
     shm->fd = fd;
-    shm->mapping_size = (size_t) information.st_size;
-    shm->address = (char *) base + CAT_SHM_HEADER_SIZE;
+    shm->size = (size_t) information.st_size;
 
     return cat_true;
 }
@@ -333,7 +342,7 @@ static cat_bool_t cat_shm_platform_attach(cat_shm_t *shm, const char *name)
 static void cat_shm_platform_detach(cat_shm_t *shm)
 {
     if (shm->base != NULL) {
-        (void) munmap(shm->base, shm->mapping_size);
+        (void) munmap(shm->base, shm->size);
     }
     if (shm->fd >= 0) {
         (void) close(shm->fd);
@@ -345,9 +354,9 @@ static cat_bool_t cat_shm_platform_unlink(const char *name)
     char *path = cat_shm_posix_path(name);
     int result;
 
-#if CAT_ALLOC_HANDLE_ERRORS
+#if CAT_SYS_ALLOC_HANDLE_ERRORS
     if (unlikely(path == NULL)) {
-        cat_update_last_error_of_syscall("Sprintf for the name of a shared mapping failed");
+        cat_update_last_error_of_syscall("Strdup for the name of a shared mapping failed");
         return cat_false;
     }
 #endif
@@ -358,45 +367,18 @@ static cat_bool_t cat_shm_platform_unlink(const char *name)
             errno == ENOENT ? CAT_ENOENT : cat_translate_sys_error(errno),
             "shm_unlink(%s) failed", path);
     }
-    cat_free(path);
+    cat_sys_free(path);
 
     return result == 0 ? cat_true : cat_false;
 }
 
 #endif /* CAT_OS_WIN */
 
-static void cat_shm_write_header(cat_shm_t *shm)
-{
-    cat_shm_header_t *header = (cat_shm_header_t *) shm->base;
-
-    header->magic = CAT_SHM_MAGIC;
-    header->reserved = 0;
-    header->size = (uint64_t) shm->size;
-}
-
-static cat_bool_t cat_shm_check_header(cat_shm_t *shm)
-{
-    cat_shm_header_t *header = (cat_shm_header_t *) shm->base;
-
-    if (unlikely(shm->mapping_size < CAT_SHM_HEADER_SIZE ||
-        header->magic != CAT_SHM_MAGIC ||
-        header->size == 0 ||
-        header->size > (uint64_t) (shm->mapping_size - CAT_SHM_HEADER_SIZE))) {
-        cat_update_last_error(CAT_EINVAL, "The mapping has no libcat header");
-        return cat_false;
-    }
-
-    shm->size = (size_t) header->size;
-    shm->address = (char *) shm->base + CAT_SHM_HEADER_SIZE;
-
-    return cat_true;
-}
-
 static cat_shm_t *cat_shm_alloc(void)
 {
-    cat_shm_t *shm = (cat_shm_t *) cat_calloc(1, sizeof(cat_shm_t));
+    cat_shm_t *shm = (cat_shm_t *) cat_sys_calloc(1, sizeof(cat_shm_t));
 
-#if CAT_ALLOC_HANDLE_ERRORS
+#if CAT_SYS_ALLOC_HANDLE_ERRORS
     if (unlikely(shm == NULL)) {
         cat_update_last_error_of_syscall("Calloc for a shared mapping failed");
         return NULL;
@@ -413,16 +395,41 @@ static cat_shm_t *cat_shm_alloc(void)
 static void cat_shm_free(cat_shm_t *shm)
 {
     if (shm->name != NULL) {
-        cat_free(shm->name);
+        cat_sys_free(shm->name);
     }
-    cat_free(shm);
+    cat_sys_free(shm);
+}
+
+static cat_bool_t cat_shm_name_is_valid(const char *name)
+{
+    size_t length;
+
+    if (unlikely(name == NULL || name[0] == '\0')) {
+        cat_update_last_error(CAT_EINVAL, "The name of a shared mapping is empty");
+        return cat_false;
+    }
+
+#ifdef CAT_OS_WIN
+    length = strlen(name);
+#else
+    /* the POSIX backend adds the leading slash, and the platform counts it */
+    length = strlen(name) - (name[0] == '/' ? 1 : 0);
+#endif
+    if (unlikely(length > CAT_SHM_NAME_MAX)) {
+        cat_update_last_error(CAT_EINVAL,
+            "The name of a shared mapping is longer than %zu characters",
+            CAT_SHM_NAME_MAX);
+        return cat_false;
+    }
+
+    return cat_true;
 }
 
 static cat_shm_t *cat_shm_create(const char *name, size_t size)
 {
     cat_shm_t *shm;
 
-    if (unlikely(size == 0 || size > SIZE_MAX - CAT_SHM_HEADER_SIZE)) {
+    if (unlikely(size == 0)) {
         cat_update_last_error(CAT_EINVAL, "The size of a shared mapping is out of range");
         return NULL;
     }
@@ -433,11 +440,11 @@ static cat_shm_t *cat_shm_create(const char *name, size_t size)
     }
 
     if (name != NULL) {
-        shm->name = cat_strdup(name);
-#if CAT_ALLOC_HANDLE_ERRORS
+        shm->name = cat_sys_strdup(name);
+#if CAT_SYS_ALLOC_HANDLE_ERRORS
         if (unlikely(shm->name == NULL)) {
             cat_update_last_error_of_syscall("Strdup for the name of a shared mapping failed");
-            cat_free(shm);
+            cat_sys_free(shm);
             return NULL;
         }
 #endif
@@ -447,8 +454,6 @@ static cat_shm_t *cat_shm_create(const char *name, size_t size)
         cat_shm_free(shm);
         return NULL;
     }
-
-    cat_shm_write_header(shm);
 
     return shm;
 }
@@ -460,8 +465,7 @@ CAT_API cat_shm_t *cat_shm_create_anonymous(size_t size)
 
 CAT_API cat_shm_t *cat_shm_create_named(const char *name, size_t size)
 {
-    if (unlikely(name == NULL || name[0] == '\0')) {
-        cat_update_last_error(CAT_EINVAL, "The name of a shared mapping is empty");
+    if (unlikely(!cat_shm_name_is_valid(name))) {
         return NULL;
     }
 
@@ -472,8 +476,7 @@ CAT_API cat_shm_t *cat_shm_attach_named(const char *name)
 {
     cat_shm_t *shm;
 
-    if (unlikely(name == NULL || name[0] == '\0')) {
-        cat_update_last_error(CAT_EINVAL, "The name of a shared mapping is empty");
+    if (unlikely(!cat_shm_name_is_valid(name))) {
         return NULL;
     }
 
@@ -482,11 +485,11 @@ CAT_API cat_shm_t *cat_shm_attach_named(const char *name)
         return NULL;
     }
 
-    shm->name = cat_strdup(name);
-#if CAT_ALLOC_HANDLE_ERRORS
+    shm->name = cat_sys_strdup(name);
+#if CAT_SYS_ALLOC_HANDLE_ERRORS
     if (unlikely(shm->name == NULL)) {
         cat_update_last_error_of_syscall("Strdup for the name of a shared mapping failed");
-        cat_free(shm);
+        cat_sys_free(shm);
         return NULL;
     }
 #endif
@@ -496,18 +499,12 @@ CAT_API cat_shm_t *cat_shm_attach_named(const char *name)
         return NULL;
     }
 
-    if (unlikely(!cat_shm_check_header(shm))) {
-        cat_shm_platform_detach(shm);
-        cat_shm_free(shm);
-        return NULL;
-    }
-
     return shm;
 }
 
 CAT_API void *cat_shm_get_address(const cat_shm_t *shm)
 {
-    return shm->address;
+    return shm->base;
 }
 
 CAT_API size_t cat_shm_get_size(const cat_shm_t *shm)
@@ -528,8 +525,7 @@ CAT_API void cat_shm_detach(cat_shm_t *shm)
 
 CAT_API cat_bool_t cat_shm_unlink(const char *name)
 {
-    if (unlikely(name == NULL || name[0] == '\0')) {
-        cat_update_last_error(CAT_EINVAL, "The name of a shared mapping is empty");
+    if (unlikely(!cat_shm_name_is_valid(name))) {
         return cat_false;
     }
 
