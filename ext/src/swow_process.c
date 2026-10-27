@@ -499,6 +499,8 @@ static PHP_METHOD(Swow_Process_ChildProcess, spawn)
     cat_process_options_t options = { 0 };
     cat_process_t *process = NULL;
     int max_fd = 2;
+    /* parsed fds of the fds option, -1 for an empty slot */
+    int extra_fds[SWOW_CHILD_PROCESS_MAX_FD + 1];
 
     ZEND_PARSE_PARAMETERS_START(1, 2)
         Z_PARAM_ARRAY(zcommand)
@@ -592,6 +594,9 @@ static PHP_METHOD(Swow_Process_ChildProcess, spawn)
                 swow_throw_exception(swow_process_exception_ce, 0, "fds must be an array");
                 RETURN_THROWS();
             }
+            for (i = 0; i <= SWOW_CHILD_PROCESS_MAX_FD; i++) {
+                extra_fds[i] = -1;
+            }
             ZEND_HASH_FOREACH_KEY_VAL(Z_ARRVAL_P(zfds), child_fd, fd_key, fd_value) {
                 int fd;
                 if (fd_key != NULL || child_fd < 3 || child_fd > SWOW_CHILD_PROCESS_MAX_FD) {
@@ -606,6 +611,7 @@ static PHP_METHOD(Swow_Process_ChildProcess, spawn)
                     swow_throw_exception(swow_process_exception_ce, 0, "fds values must be streams or file descriptors");
                     RETURN_THROWS();
                 }
+                extra_fds[child_fd] = fd;
                 if ((int) child_fd > max_fd) {
                     max_fd = (int) child_fd;
                 }
@@ -641,16 +647,13 @@ static PHP_METHOD(Swow_Process_ChildProcess, spawn)
     }
 
     if (zfds != NULL) {
-        zend_ulong child_fd;
-        zend_string *fd_key;
-        zval *fd_value;
-        ZEND_HASH_FOREACH_KEY_VAL(Z_ARRVAL_P(zfds), child_fd, fd_key, fd_value) {
-            int fd;
-            (void) fd_key;
-            (void) swow_child_process_parse_fd(fd_value, &fd);
-            cat_stdio[child_fd].flags = CAT_PROCESS_STDIO_FLAG_INHERIT_FD;
-            cat_stdio[child_fd].data.fd = fd;
-        } ZEND_HASH_FOREACH_END();
+        for (i = 3; i <= (uint32_t) max_fd; i++) {
+            if (extra_fds[i] < 0) {
+                continue;
+            }
+            cat_stdio[i].flags = CAT_PROCESS_STDIO_FLAG_INHERIT_FD;
+            cat_stdio[i].data.fd = extra_fds[i];
+        }
     }
 
     options.file = argv[0];
