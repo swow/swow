@@ -242,7 +242,21 @@ if test "${PHP_SWOW}" != "no"; then
   SWOW_STD_CFLAGS="${SWOW_STD_CFLAGS} -Wall -Wextra -Wstrict-prototypes"
   SWOW_STD_CFLAGS="${SWOW_STD_CFLAGS} -Wno-unused-parameter"
   dnl for warning: the argument to '__builtin_assume' has side effects that will be discarded [-Wassume] in PHP
-  SWOW_STD_CFLAGS="${SWOW_STD_CFLAGS} -Wno-assume"
+  dnl GCC accepts an unknown -Wno-* option and only prints a note, so check for clang
+  AC_CACHE_CHECK([whether the C compiler is clang], [swow_cv_cc_is_clang], [
+    AC_COMPILE_IFELSE(
+      [AC_LANG_PROGRAM([[
+#if !defined(__clang__)
+#error not clang
+#endif
+      ]])],
+      [swow_cv_cc_is_clang=yes],
+      [swow_cv_cc_is_clang=no]
+    )
+  ])
+  if test "$swow_cv_cc_is_clang" = "yes"; then
+    SWOW_STD_CFLAGS="${SWOW_STD_CFLAGS} -Wno-assume"
+  fi
   AC_MSG_CHECKING([for ZTS])
   if test "$PHP_THREAD_SAFETY" != "no"; then
     AC_MSG_RESULT([yes])
