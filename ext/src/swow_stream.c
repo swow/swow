@@ -896,7 +896,7 @@ static int swow_stream_enable_crypto(php_stream *stream,
         bool is_client = swow_sock->ssl.is_client;
         int min_proto_version = 0;
         int max_proto_version = 0;
-        zval *val;
+        zval *val = NULL;
         int ret = -1;
         char certificate_path[MAXPATHLEN];
         char private_key_path[MAXPATHLEN];
