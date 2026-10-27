@@ -364,7 +364,8 @@ SWOW_API zend_result swow_call_function_anyway(zend_fcall_info *fci, zend_fcall_
 {
     zend_object *exception = EG(exception);
     zend_execute_data *execute_data = EG(current_execute_data);
-    const zend_op *opline = execute_data != NULL ? execute_data->opline : NULL;
+    /* the callback may bail out, so the saved location must survive the longjmp */
+    const zend_op *volatile opline = execute_data != NULL ? execute_data->opline : NULL;
     const zend_op *opline_before_exception = EG(opline_before_exception);
 #if PHP_VERSION_ID < 80600
     zend_object *prev_exception = EG(prev_exception);
@@ -376,8 +377,9 @@ SWOW_API zend_result swow_call_function_anyway(zend_fcall_info *fci, zend_fcall_
      * prev_exception, but zend_call_function() still skips pending exceptions. */
     EG(exception) = NULL;
 
-    zend_result ret = FAILURE;
-    bool bailout = false;
+    /* the callback may bail out, so these values must survive the longjmp */
+    volatile zend_result ret = FAILURE;
+    volatile bool bailout = false;
     zend_try {
         ret = zend_call_function(fci, fci_cache);
     } zend_catch {

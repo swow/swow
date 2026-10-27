@@ -435,7 +435,8 @@ static void swow_thread_run_callable(swow_thread_run_t *run)
     zval wrapped;
     zval *status;
     zval *payload;
-    cat_bool_t completed = cat_false;
+    /* exit() and die() bail out, so this value must survive the longjmp */
+    volatile cat_bool_t completed = cat_false;
 
     ZVAL_UNDEF(&callable);
     ZVAL_UNDEF(&args);
