@@ -16,4 +16,3 @@ jobs:
           token: ${{ secrets.DOCS_TOKEN }}
           event-type: update
           repository: 'toastrun/docs.toast.run'
-          client-payload: '{ "swow_ref": "${{ github.sha }}" }'
