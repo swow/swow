@@ -32,6 +32,8 @@ SWOW_API swow_php_token_list_t *swow_php_token_list_alloc(void)
     swow_php_token_list_t *token_list = (swow_php_token_list_t *) emalloc(sizeof(*token_list));
     cat_queue_init(&token_list->queue);
     token_list->count = 0;
+    /* cleared by the tokenizer only when it succeeded */
+    token_list->source = NULL;
     return token_list;
 }
 
@@ -57,8 +59,10 @@ SWOW_API void swow_php_token_list_clear(swow_php_token_list_t *token_list)
         token_list->count--;
     }
     ZEND_ASSERT(token_list->count == 0);
-    zend_string_release(token_list->source);
-    token_list->source = NULL;
+    if (token_list->source != NULL) {
+        zend_string_release(token_list->source);
+        token_list->source = NULL;
+    }
 }
 
 SWOW_API void swow_php_token_list_free(swow_php_token_list_t *token_list)
@@ -200,6 +204,12 @@ SWOW_API swow_php_token_list_t *swow_php_tokenize (
     LANG_SCNG(on_event_context) = &context;
 
     if (zendparse() != SUCCESS) {
+        /* the parse left an AST arena and the compiler state behind */
+        zend_ast_destroy(CG(ast));
+        zend_arena_destroy(CG(ast_arena));
+        zend_restore_lexical_state(&original_lex_state);
+        CG(in_compilation) = original_in_compilation;
+        zval_ptr_dtor(&source_zval);
         swow_php_token_list_free(context.token_list);
         return NULL;
     }
