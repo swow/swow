@@ -89,8 +89,9 @@ static zend_object *swow_websocket_header_create_object(zend_class_entry *ce)
     swow_buffer_t *_s_header = getThisHeaderBuffer(); \
     cat_websocket_header_t *_header = (cat_websocket_header_t *) _s_header->buffer.value; \
     do { \
-        if (UNEXPECTED(_header == NULL || _s_header->buffer.size < CAT_WEBSOCKET_HEADER_MAX_SIZE)) { \
+        if (UNEXPECTED(_header == NULL || _s_header->buffer.size < sizeof(cat_websocket_header_t))) { \
             zend_throw_error(NULL, "WebSocket header buffer is unavailable"); \
+            RETURN_THROWS(); \
         } \
     } while (0)
 
@@ -513,6 +514,9 @@ static PHP_METHOD(Swow_WebSocket_WebSocket, mask)
         RETURN_STR_COPY(data);
     }
     ptr = swow_string_get_readable_space(data, start, &length, 1);
+    if (UNEXPECTED(ptr == NULL)) {
+        RETURN_THROWS();
+    }
     if (UNEXPECTED(length == 0)) {
         RETURN_EMPTY_STRING();
     }
@@ -554,6 +558,9 @@ static PHP_METHOD(Swow_WebSocket_WebSocket, unmask)
 
     data = swow_buffer_get_from_object(buffer_object);
     ptr = (char *) swow_buffer_get_readable_space(data, start, &length, 1);
+    if (UNEXPECTED(ptr == NULL)) {
+        RETURN_THROWS();
+    }
 
     cat_websocket_unmask_ex(ptr, length, masking_key != NULL ? ZSTR_VAL(masking_key) : NULL, index);
 }
