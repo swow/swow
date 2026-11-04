@@ -217,7 +217,9 @@ typedef atomic_bool swow_atomic_bool;
 
 #ifdef ZTS
 # define ZEND_GLOBALS_PTR(name)       SWOW_TSRMG_BULK(name##_id, zend_##name *)
-# ifdef TSRMG_FAST
+/* php-src removed the compile-time *_offset symbols together with the fast
+ * resource API, EG() and CG() now reach the globals through __thread storage */
+# if defined(TSRMG_FAST) && PHP_VERSION_ID < 80700
 #  define ZEND_GLOBALS_FAST_PTR(name) SWOW_TSRMG_FAST_BULK(name##_offset, zend_##name *)
 # else
 #  define ZEND_GLOBALS_FAST_PTR(name) ZEND_GLOBALS_PTR(name)
