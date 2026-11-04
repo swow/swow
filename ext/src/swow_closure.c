@@ -579,6 +579,7 @@ static PHP_METHOD(Swow_Closure, __unserialize)
         RETURN_THROWS();
     }
     zval retval;
+    ZVAL_UNDEF(&retval);
     zend_string *file = z_file != NULL ? Z_STR_P(z_file) : NULL;
     zend_string *code = Z_STR_P(z_code);
     zend_string *doc_comment = z_doc_comment != NULL ? Z_STR_P(z_doc_comment) : NULL;
@@ -592,6 +593,7 @@ static PHP_METHOD(Swow_Closure, __unserialize)
     }
 
     /* execute code to generate a closure instance */
+    bool bailed_out = false;
     do {
         /*
          * zend_execute takes the symbol table of the compiled code from the
@@ -600,10 +602,15 @@ static PHP_METHOD(Swow_Closure, __unserialize)
          */
         zend_execute_data *saved_execute_data = EG(current_execute_data);
 
-        if (zend_rebuild_symbol_table() == NULL) {
-            EG(current_execute_data) = NULL;
-        }
-        zend_execute(op_array, &retval);
+        zend_try {
+            if (zend_rebuild_symbol_table() == NULL) {
+                EG(current_execute_data) = NULL;
+            }
+            zend_execute(op_array, &retval);
+        } zend_catch {
+            /* the executed code called exit() or die() */
+            bailed_out = true;
+        } zend_end_try();
         EG(current_execute_data) = saved_execute_data;
     } while (0);
 #if PHP_VERSION_ID < 80600
@@ -614,6 +621,18 @@ static PHP_METHOD(Swow_Closure, __unserialize)
 #endif
     destroy_op_array(op_array);
     efree_size(op_array, sizeof(zend_op_array));
+
+    if (UNEXPECTED(bailed_out)) {
+        /* the runtime state is restored, let the bailout continue */
+        zval_ptr_dtor(&retval);
+        zend_bailout();
+    }
+
+    if (UNEXPECTED(EG(exception) != NULL)) {
+        /* the executed code threw, so it never assigned the return value */
+        zval_ptr_dtor(&retval);
+        RETURN_THROWS();
+    }
 
     /* check whether return value is valid */
     if (Z_TYPE(retval) != IS_OBJECT || !instanceof_function(Z_OBJCE(retval), zend_ce_closure)) {
