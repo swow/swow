@@ -814,10 +814,6 @@ static PHP_METHOD_EX(Swow_Socket, _read, bool once, bool may_address, bool peek)
 
     /* check args and initialize */
     s_buffer = swow_buffer_get_from_object(buffer_object);
-    ptr = swow_buffer_get_writable_space(s_buffer, offset, &size, 1);
-    if (UNEXPECTED(ptr == NULL)) {
-        RETURN_THROWS();
-    }
     if (timeout_is_null) {
         timeout = cat_socket_get_read_timeout(socket);
     }
@@ -827,11 +823,16 @@ static PHP_METHOD_EX(Swow_Socket, _read, bool once, bool may_address, bool peek)
         want_address = z_address != NULL || z_port != NULL;
     }
 
+    /* The lock must be taken before the copy: a separate replaces the storage
+     * the write pointer refers to, and another coroutine may not run a copy on
+     * a buffer that a suspended reader still holds a pointer into */
     SWOW_BUFFER_LOCK(s_buffer);
-
-    /* Read on socket is the same as write on Buffer,
-     * so we should call COW here */
     swow_buffer_cow(s_buffer);
+    ptr = swow_buffer_get_writable_space(s_buffer, offset, &size, 1);
+    if (UNEXPECTED(ptr == NULL)) {
+        SWOW_BUFFER_UNLOCK(s_buffer);
+        RETURN_THROWS();
+    }
 
     /* read */
     if (!want_address) {
