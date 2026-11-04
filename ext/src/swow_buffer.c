@@ -231,7 +231,7 @@ SWOW_API void swow_buffer_update(swow_buffer_t *s_buffer, size_t length)
 
 static zend_always_inline void swow_buffer_reset(swow_buffer_t *s_buffer)
 {
-    ZEND_ASSERT(s_buffer->locker == NULL);
+    ZEND_ASSERT(s_buffer->locker_id == SWOW_BUFFER_NO_LOCKER);
 }
 
 static zend_always_inline void swow_buffer_close(swow_buffer_t *s_buffer)
@@ -245,7 +245,7 @@ static zend_object *swow_buffer_create_object(zend_class_entry *ce)
     swow_buffer_t *s_buffer = swow_object_alloc(swow_buffer_t, ce, swow_buffer_handlers);
 
     cat_buffer_init(&s_buffer->buffer);
-    s_buffer->locker = NULL;
+    s_buffer->locker_id = SWOW_BUFFER_NO_LOCKER;
 
     return &s_buffer->std;
 }
@@ -758,7 +758,7 @@ static PHP_METHOD(Swow_Buffer, isLocked)
     RETURN_BOOL(swow_buffer_get_locker(s_buffer) != NULL);
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_class_Swow_Buffer_getLocker, 0, 0, Swow\\Coroutine, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_class_Swow_Buffer_getLocker, 0, 0, Swow\\Coroutine, 1)
 ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Buffer, getLocker)
@@ -866,9 +866,10 @@ static PHP_METHOD(Swow_Buffer, __debugInfo)
     }
     add_assoc_long(&z_debug_info, "size", buffer->size);
     add_assoc_long(&z_debug_info, "length", buffer->length);
-    if (s_buffer->locker) {
-        GC_ADDREF(&s_buffer->locker->std);
-        add_assoc_object(&z_debug_info, "locker", &s_buffer->locker->std);
+    swow_coroutine_t *locker = swow_buffer_get_locker(s_buffer);
+    if (locker != NULL) {
+        GC_ADDREF(&locker->std);
+        add_assoc_object(&z_debug_info, "locker", &locker->std);
     }
 
     RETURN_DEBUG_INFO_WITH_PROPERTIES(&z_debug_info);

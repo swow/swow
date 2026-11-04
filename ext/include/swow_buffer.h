@@ -42,7 +42,9 @@ typedef struct swow_buffer_s {
      * otherwise, other coroutines will change the internal value of buffer.
      * for reading on buffer, we do not need to lock it because refcount + COW
      * will make sure that string will always be dupped when writing by someone else. */
-    swow_coroutine_t *locker;
+    /* id of the locking coroutine, not a pointer: the coroutine may end while
+     * the buffer is still alive, and an id can be looked up safely afterwards */
+    cat_coroutine_id_t locker_id;
     /* ================ */
     zend_object std;
 } swow_buffer_t;
@@ -136,9 +138,17 @@ SWOW_API void swow_buffer_cow(swow_buffer_t *s_buffer);
 
 /* buffer locker */
 
+/* Zero means that the buffer is not locked */
+#define SWOW_BUFFER_NO_LOCKER ((cat_coroutine_id_t) 0)
+
 static zend_always_inline swow_coroutine_t *swow_buffer_get_locker(const swow_buffer_t *s_buffer)
 {
-    return s_buffer->locker;
+    if (s_buffer->locker_id == SWOW_BUFFER_NO_LOCKER) {
+        return NULL;
+    }
+
+    /* the locking coroutine may have already ended, and then the lock is gone */
+    return swow_coroutine_get_by_id(s_buffer->locker_id);
 }
 
 static zend_always_inline bool swow_buffer_check_lock(swow_buffer_t *s_buffer)
@@ -159,7 +169,7 @@ static zend_always_inline bool swow_buffer_lock(swow_buffer_t *s_buffer)
     if (UNEXPECTED(!swow_buffer_check_lock(s_buffer))) {
         return false;
     }
-    s_buffer->locker = swow_coroutine_get_current();
+    s_buffer->locker_id = swow_coroutine_get_current()->coroutine.id;
     return true;
 }
 
@@ -178,7 +188,7 @@ static zend_always_inline bool swow_buffer_unlock(swow_buffer_t *s_buffer)
         }
         return false;
     }
-    s_buffer->locker = NULL;
+    s_buffer->locker_id = SWOW_BUFFER_NO_LOCKER;
     return true;
 }
 

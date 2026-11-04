@@ -2209,7 +2209,7 @@ namespace Swow
         public function isLocked(): bool { }
 
         /** @return Coroutine|null the locker, or null */
-        public function getLocker(): Coroutine { }
+        public function getLocker(): ?Coroutine { }
 
         /**
          * Try to lock the buffer.
