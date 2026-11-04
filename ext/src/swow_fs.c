@@ -440,6 +440,9 @@ static void _swow_fs_open_free(cat_data_t *ptr)
     struct _swow_fs_open_s *data = (struct _swow_fs_open_s *) ptr;
 #ifdef PHP_WIN32
     free((void *) data->pathw);
+#else
+    /* the worker may outlive a canceled waiter, so the path is a copy */
+    efree((void *) data->path);
 #endif
     cat_free(data);
 }
@@ -466,7 +469,9 @@ static inline int swow_fs_open(const char *path, int flags, ...)
         return -1;
     }
 #else
-    data->path = path;
+    /* The worker outlives a canceled waiter, and callers pass stack paths
+     * (e.g. _swow_stream_fopen passes a local realpath buffer) */
+    data->path = estrdup(path);
 #endif
 
     if (flags & CAT_FS_OPEN_FLAG_CREAT) {
