@@ -252,8 +252,12 @@ static zval *swow_coroutine_function(zval *z_data)
 {
     swow_coroutine_t *s_coroutine = swow_coroutine_get_current();
     swow_coroutine_executor_t *executor = s_coroutine->executor;
-    zend_fcall_info fci;
+    zend_fcall_info fci = empty_fcall_info;
     zval retval;
+
+    /* a bailout before the call must still leave a defined retval behind */
+    ZVAL_UNDEF(&retval);
+    fci.retval = &retval;
 
     ZEND_ASSERT(executor != NULL);
 
@@ -280,7 +284,6 @@ static zval *swow_coroutine_function(zval *z_data)
             fci.params = fci_ptr->params;
         }
         fci.named_params = NULL;
-        fci.retval = &retval;
 
         /* call function */
         (void) zend_call_function(&fci, &executor->fcall.fcc);
@@ -1288,9 +1291,9 @@ SWOW_API cat_bool_t swow_coroutine_eval(swow_coroutine_t *s_coroutine, zend_stri
 
 SWOW_API cat_bool_t swow_coroutine_call(swow_coroutine_t *s_coroutine, zval *z_callable, zend_long level, zval *return_value)
 {
-    zend_fcall_info fci;
+    zend_fcall_info fci = empty_fcall_info;
     swow_fcall_storage_t fcall;
-    int error;
+    int error = FAILURE;
 
     SWOW_COROUTINE_SHOULD_BE_IN_EXECUTING(s_coroutine, cat_true, return cat_false);
 
