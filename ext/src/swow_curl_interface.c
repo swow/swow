@@ -626,7 +626,33 @@ static size_t curl_write(char *data, size_t size, size_t nmemb, void *ctx)
             return fwrite(data, size, nmemb, write_handler->fp);
         case PHP_CURL_RETURN:
             if (length > 0) {
-                smart_str_appendl(&write_handler->buf, data, length);
+// diff since php/php-src@3584a98bda0f2c0d367255b046798b0d3a221a19
+#if PHP_VERSION_ID >= 80600
+                if (!smart_str_fappendl_ex(&write_handler->buf, data, length, /* persistent */ false, /* fallible */ true)) {
+# ifdef CURL_WRITEFUNC_ERROR
+                    return CURL_WRITEFUNC_ERROR;
+# else
+                    return 0;
+# endif
+                }
+#else
+                /* An allocation failure must not unwind through libcurl: the
+                 * callback guard would stay set and the transfer state would be
+                 * corrupted. Report a write error instead */
+                bool append_failed = false;
+                zend_try {
+                    smart_str_appendl(&write_handler->buf, data, length);
+                } zend_catch {
+                    append_failed = true;
+                } zend_end_try();
+                if (UNEXPECTED(append_failed)) {
+# ifdef CURL_WRITEFUNC_ERROR
+                    return CURL_WRITEFUNC_ERROR;
+# else
+                    return 0;
+# endif
+                }
+#endif
             }
             break;
         case PHP_CURL_USER: {
@@ -823,6 +849,10 @@ static int curl_ssh_hostkeyfunction(void *clientp, int keytype, const char *key,
 {
     php_curl *ch = (php_curl *)clientp;
     int rval = CURLKHMATCH_MISMATCH; /* cancel connection in case of an exception */
+
+    if (!SWOW_FCC_INITIALIZED(ch->handlers.sshhostkey)) {
+        return rval;
+    }
 
 #if PHP_CURL_DEBUG
     fprintf(stderr, "curl_ssh_hostkeyfunction() called\n");
@@ -1305,8 +1335,11 @@ static void php_curl_copy_fcc_with_option(php_curl *ch, CURLoption option, swow_
 {
     if (SWOW_FCC_INITIALIZED(*source_fcc)) {
         swow_fcc_dup(target_fcc, source_fcc);
-        curl_easy_setopt(ch->cp, option, (void *) ch);
     }
+
+    /* The callback data (i.e. pointer to the curl handle) stays even if a user callback
+     * is reset to NULL. Ensure the data pointer always points to the new handle */
+    curl_easy_setopt(ch->cp, option, (void *) ch);
 }
 
 void _swow_setup_easy_copy_handlers(php_curl *ch, php_curl *source)
@@ -1326,6 +1359,10 @@ void _swow_setup_easy_copy_handlers(php_curl *ch, php_curl *source)
         Z_ADDREF(source->handlers.write_header->stream);
     }
     ch->handlers.write_header->stream = source->handlers.write_header->stream;
+    if (!Z_ISUNDEF(source->handlers.std_err)) {
+        Z_ADDREF(source->handlers.std_err);
+    }
+    ch->handlers.std_err = source->handlers.std_err;
 
     ch->handlers.write->fp = source->handlers.write->fp;
     ch->handlers.write_header->fp = source->handlers.write_header->fp;
@@ -1346,7 +1383,9 @@ void _swow_setup_easy_copy_handlers(php_curl *ch, php_curl *source)
     curl_easy_setopt(ch->cp, CURLOPT_FILE,              (void *) ch);
     curl_easy_setopt(ch->cp, CURLOPT_INFILE,            (void *) ch);
     curl_easy_setopt(ch->cp, CURLOPT_WRITEHEADER,       (void *) ch);
-    curl_easy_setopt(ch->cp, CURLOPT_DEBUGDATA,         (void *) ch);
+    /* set through php_curl_copy_fcc_with_option() below, which also sets the
+     * data pointer when no user callback is installed */
+    /* curl_easy_setopt(ch->cp, CURLOPT_DEBUGDATA,         (void *) ch); */
 
     php_curl_copy_fcc_with_option(ch, CURLOPT_SEEKDATA, &ch->handlers.seek, &source->handlers.seek);
     php_curl_copy_fcc_with_option(ch, CURLOPT_PROGRESSDATA, &ch->handlers.progress, &source->handlers.progress);
