@@ -508,67 +508,47 @@ static const zend_function_entry swow_http_parser_methods[] = {
     PHP_FE_END
 };
 
-static zend_always_inline size_t swow_http_get_header_length(zend_string *header_name, zval *z_header_value)
+/* A header line, a request line or a status line must never smuggle CR or LF:
+ * the packed message would split into a second one. */
+static zend_always_inline bool swow_http_has_crlf(const char *data, size_t length)
 {
-    if (Z_ISNULL_P(z_header_value)) {
-        return 0;
-    }
-
-    zend_string *header_value, *tmp_header_value;
-    size_t size;
-
-    header_value = zval_get_tmp_string(z_header_value, &tmp_header_value);
-    size = ZSTR_LEN(header_name) + CAT_STRLEN(": ") + ZSTR_LEN(header_value) + CAT_STRLEN("\r\n");
-    zend_tmp_string_release(tmp_header_value);
-
-    return size;
+    return memchr(data, '\r', length) != NULL || memchr(data, '\n', length) != NULL;
 }
 
-static zend_always_inline size_t swow_http_get_message_length(HashTable *headers, zend_string *body)
+#define SWOW_HTTP_CHECK_LINE_ARG(arg_num, name, data, length) do { \
+    if (UNEXPECTED(swow_http_has_crlf((data), (length)))) { \
+        zend_argument_value_error((arg_num), "%s must not contain a CR or LF character", (name)); \
+        RETURN_THROWS(); \
+    } \
+} while (0)
+
+/* Append one header line. The value is materialized once here, so the size of
+ * the message never depends on how often a Stringable is converted. */
+static zend_always_inline bool swow_http_append_header(smart_str *buf, zend_string *header_name, zval *z_header_value, uint32_t arg_num)
 {
-    zend_string *header_name;
-    zval *z_header_value;
-    size_t size = 0;
-
-    ZEND_HASH_FOREACH_STR_KEY_VAL(headers, header_name, z_header_value) {
-        if (UNEXPECTED(header_name == NULL)) {
-            continue;
-        }
-        if (Z_TYPE_P(z_header_value) != IS_ARRAY) {
-            size += swow_http_get_header_length(header_name, z_header_value);
-        } else {
-            ZEND_HASH_FOREACH_VAL(Z_ARR_P(z_header_value), z_header_value) {
-                size += swow_http_get_header_length(header_name, z_header_value);
-            } ZEND_HASH_FOREACH_END();
-        }
-    } ZEND_HASH_FOREACH_END();
-
-    size += CAT_STRLEN("\r\n");
-
-    size += ZSTR_LEN(body);
-
-    return size;
-}
-
-static zend_always_inline char *swow_http_pack_header(char *p, zend_string *header_name, zval *z_header_value)
-{
-    if (Z_ISNULL_P(z_header_value)) {
-        return p;
-    }
-
     zend_string *header_value, *tmp_header_value;
 
+    if (Z_ISNULL_P(z_header_value)) {
+        return true;
+    }
+
     header_value = zval_get_tmp_string(z_header_value, &tmp_header_value);
-    p = cat_strnappend(p, ZSTR_VAL(header_name), ZSTR_LEN(header_name));
-    p = cat_strnappend(p, CAT_STRL(": "));
-    p = cat_strnappend(p, ZSTR_VAL(header_value), ZSTR_LEN(header_value));
-    p = cat_strnappend(p, CAT_STRL("\r\n"));
+    if (UNEXPECTED(swow_http_has_crlf(ZSTR_VAL(header_name), ZSTR_LEN(header_name)) ||
+                   swow_http_has_crlf(ZSTR_VAL(header_value), ZSTR_LEN(header_value)))) {
+        zend_tmp_string_release(tmp_header_value);
+        zend_argument_value_error(arg_num, "Header names and values must not contain a CR or LF character");
+        return false;
+    }
+    smart_str_append(buf, header_name);
+    smart_str_appendl(buf, ": ", 2);
+    smart_str_append(buf, header_value);
+    smart_str_appendl(buf, "\r\n", 2);
     zend_tmp_string_release(tmp_header_value);
 
-    return p;
+    return true;
 }
 
-static zend_always_inline char *swow_http_pack_headers(char *p, HashTable *headers)
+static zend_always_inline bool swow_http_append_headers(smart_str *buf, HashTable *headers, uint32_t arg_num)
 {
     zend_string *header_name;
     zval *z_header_value;
@@ -578,30 +558,19 @@ static zend_always_inline char *swow_http_pack_headers(char *p, HashTable *heade
             continue;
         }
         if (Z_TYPE_P(z_header_value) != IS_ARRAY) {
-            p = swow_http_pack_header(p, header_name, z_header_value);
+            if (UNEXPECTED(!swow_http_append_header(buf, header_name, z_header_value, arg_num))) {
+                return false;
+            }
         } else {
             ZEND_HASH_FOREACH_VAL(Z_ARR_P(z_header_value), z_header_value) {
-                p = swow_http_pack_header(p, header_name, z_header_value);
+                if (UNEXPECTED(!swow_http_append_header(buf, header_name, z_header_value, arg_num))) {
+                    return false;
+                }
             } ZEND_HASH_FOREACH_END();
         }
     } ZEND_HASH_FOREACH_END();
 
-    return p;
-}
-
-static zend_always_inline char *swow_http_pack_message(char *p, HashTable *headers, zend_string *body)
-{
-    p = swow_http_pack_headers(p, headers);
-
-    p = cat_strnappend(p, CAT_STRL("\r\n"));
-
-    if (ZSTR_LEN(body) > 0) {
-        p = cat_strnappend(p, ZSTR_VAL(body), ZSTR_LEN(body));
-    }
-
-    *p = '\0';
-
-    return p;
+    return true;
 }
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Http_Http_packRequest, 0, 2, IS_STRING, 0)
@@ -614,7 +583,6 @@ ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Http_Http, packRequest)
 {
-    zend_string *request;
     /* arguments */
     zend_string *method;
     zend_string *uri;
@@ -624,8 +592,7 @@ static PHP_METHOD(Swow_Http_Http, packRequest)
     char *protocol_version = (char *) "1.1";
     size_t protocol_version_length = CAT_STRLEN("1.1");
     /* pack */
-    char *p;
-    size_t size;
+    smart_str buf = { 0 };
 
     ZEND_PARSE_PARAMETERS_START(2, 5)
         Z_PARAM_STR(method)
@@ -636,25 +603,28 @@ static PHP_METHOD(Swow_Http_Http, packRequest)
         Z_PARAM_STRING(protocol_version, protocol_version_length)
     ZEND_PARSE_PARAMETERS_END();
 
-    size = ZSTR_LEN(method) + CAT_STRLEN(" ") +
-           ZSTR_LEN(uri) + CAT_STRLEN(" ") +
-           CAT_STRLEN("HTTP/") + protocol_version_length + CAT_STRLEN("\r\n");
+    SWOW_HTTP_CHECK_LINE_ARG(1, "method", ZSTR_VAL(method), ZSTR_LEN(method));
+    SWOW_HTTP_CHECK_LINE_ARG(2, "uri", ZSTR_VAL(uri), ZSTR_LEN(uri));
+    SWOW_HTTP_CHECK_LINE_ARG(5, "protocolVersion", protocol_version, protocol_version_length);
 
-    size += swow_http_get_message_length(headers, body);
+    smart_str_appendl(&buf, ZSTR_VAL(method), ZSTR_LEN(method));
+    smart_str_appendl(&buf, " ", 1);
+    smart_str_appendl(&buf, ZSTR_VAL(uri), ZSTR_LEN(uri));
+    smart_str_appendl(&buf, " HTTP/", sizeof(" HTTP/") - 1);
+    smart_str_appendl(&buf, protocol_version, protocol_version_length);
+    smart_str_appendl(&buf, "\r\n", 2);
 
-    request = zend_string_alloc(size, 0);
+    if (UNEXPECTED(!swow_http_append_headers(&buf, headers, 3))) {
+        smart_str_free(&buf);
+        RETURN_THROWS();
+    }
+    smart_str_appendl(&buf, "\r\n", 2);
+    if (ZSTR_LEN(body) > 0) {
+        smart_str_appendl(&buf, ZSTR_VAL(body), ZSTR_LEN(body));
+    }
+    smart_str_0(&buf);
 
-    p = ZSTR_VAL(request);
-    p = cat_strnappend(p, ZSTR_VAL(method), ZSTR_LEN(method));
-    p = cat_strnappend(p, CAT_STRL(" "));
-    p = cat_strnappend(p, ZSTR_VAL(uri), ZSTR_LEN(uri));
-    p = cat_strnappend(p, CAT_STRL(" HTTP/"));
-    p = cat_strnappend(p, protocol_version, protocol_version_length);
-    p = cat_strnappend(p, CAT_STRL("\r\n"));
-
-    (void) swow_http_pack_message(p, headers, body);
-
-    RETURN_STR(request);
+    RETURN_STR(smart_str_extract(&buf));
 }
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Http_Http_packResponse, 0, 1, IS_STRING, 0)
@@ -667,7 +637,6 @@ ZEND_END_ARG_INFO()
 
 static PHP_METHOD(Swow_Http_Http, packResponse)
 {
-    zend_string *response;
     /* arguments */
     zend_long status_code;
     char status_code_buffer[MAX_LENGTH_OF_LONG + 1];
@@ -681,8 +650,7 @@ static PHP_METHOD(Swow_Http_Http, packResponse)
     char *protocol_version = (char *) "1.1";
     size_t protocol_version_length = CAT_STRLEN("1.1");
     /* pack */
-    char *p;
-    size_t size;
+    smart_str buf = { 0 };
 
     ZEND_PARSE_PARAMETERS_START(1, 5)
         Z_PARAM_LONG(status_code)
@@ -701,26 +669,30 @@ static PHP_METHOD(Swow_Http_Http, packResponse)
         reason_phrase_length = strlen(reason_phrase);
     }
 
-    size = CAT_STRLEN("HTTP/") + protocol_version_length + CAT_STRLEN(" ") +
-           status_code_length + CAT_STRLEN(" ") +
-           reason_phrase_length + CAT_STRLEN("\r\n");
+    if (reason_phrase != NULL) {
+        SWOW_HTTP_CHECK_LINE_ARG(2, "reasonPhrase", reason_phrase, reason_phrase_length);
+    }
+    SWOW_HTTP_CHECK_LINE_ARG(5, "protocolVersion", protocol_version, protocol_version_length);
 
-    size += swow_http_get_message_length(headers, body);
+    smart_str_appendl(&buf, "HTTP/", sizeof("HTTP/") - 1);
+    smart_str_appendl(&buf, protocol_version, protocol_version_length);
+    smart_str_appendl(&buf, " ", 1);
+    smart_str_appendl(&buf, status_code_string, status_code_length);
+    smart_str_appendl(&buf, " ", 1);
+    smart_str_appendl(&buf, reason_phrase, reason_phrase_length);
+    smart_str_appendl(&buf, "\r\n", 2);
 
-    response = zend_string_alloc(size, 0);
+    if (UNEXPECTED(!swow_http_append_headers(&buf, headers, 3))) {
+        smart_str_free(&buf);
+        RETURN_THROWS();
+    }
+    smart_str_appendl(&buf, "\r\n", 2);
+    if (ZSTR_LEN(body) > 0) {
+        smart_str_appendl(&buf, ZSTR_VAL(body), ZSTR_LEN(body));
+    }
+    smart_str_0(&buf);
 
-    p = ZSTR_VAL(response);
-    p = cat_strnappend(p, CAT_STRL("HTTP/"));
-    p = cat_strnappend(p, protocol_version, protocol_version_length);
-    p = cat_strnappend(p, CAT_STRL(" "));
-    p = cat_strnappend(p, status_code_string, status_code_length);
-    p = cat_strnappend(p, CAT_STRL(" "));
-    p = cat_strnappend(p, reason_phrase, reason_phrase_length);
-    p = cat_strnappend(p, CAT_STRL("\r\n"));
-
-    (void) swow_http_pack_message(p, headers, body);
-
-    RETURN_STR(response);
+    RETURN_STR(smart_str_extract(&buf));
 }
 
 static const zend_function_entry swow_http_http_methods[] = {
