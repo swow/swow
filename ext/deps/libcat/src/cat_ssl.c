@@ -338,6 +338,9 @@ static int cat_ssl_context_password_callback(char *buf, int length, int verify, 
     (void) verify;
     cat_ssl_context_t *context = (cat_ssl_context_t *) data;
 
+    if (length <= 1) {
+        return 0;
+    }
     if (context->passphrase.length < (size_t) length - 1) {
         memcpy(buf, context->passphrase.value, context->passphrase.length);
         return (int) context->passphrase.length;
@@ -1152,6 +1155,9 @@ CAT_API cat_bool_t cat_ssl_verify_peer(cat_ssl_t *ssl, cat_bool_t allow_self_sig
 
 static inline cat_bool_t _cat_ssl_check_host(X509 *cert, const char *name, size_t name_length)
 {
+    cat_bool_t has_rooted_dns_id = cat_false;
+    unsigned int flags = 0;
+
     if (name_length == 0 || memchr(name, '\0', name_length) != NULL) {
         return cat_false;
     }
@@ -1165,64 +1171,35 @@ static inline cat_bool_t _cat_ssl_check_host(X509 *cert, const char *name, size_
     cat_free(address_name);
     if (address != NULL) {
         /* Numeric addresses require an IP SAN; DNS names and CNs are not IP identities. */
-#if OPENSSL_VERSION_NUMBER >= 0x10100000L
         const unsigned char *address_data = ASN1_STRING_get0_data(address);
-#else
-        const unsigned char *address_data = ASN1_STRING_data(address);
-#endif
         cat_bool_t ret = X509_check_ip(cert, address_data,
             (size_t) ASN1_STRING_length(address), 0) == 1;
         ASN1_OCTET_STRING_free(address);
         return ret;
     }
-    unsigned int flags = 0;
-    cat_bool_t has_rooted_dns_id = cat_false;
     GENERAL_NAMES *names = X509_get_ext_d2i(cert, NID_subject_alt_name, NULL, NULL);
-    if (names != NULL) {
-#ifndef X509_CHECK_FLAG_NEVER_CHECK_SUBJECT
-        cat_bool_t has_service_id = cat_false;
-        cat_bool_t has_dns_id = cat_false;
-#endif
-        /* A CA may validate only SAN service IDs; a matching CN must not override them. */
-        for (int i = 0; i < sk_GENERAL_NAME_num(names); i++) {
-            GENERAL_NAME *san = sk_GENERAL_NAME_value(names, i);
-            if (san->type == GEN_DNS) {
-                int length = ASN1_STRING_length(san->d.dNSName);
-#if OPENSSL_VERSION_NUMBER >= 0x10100000L
-                const unsigned char *value = ASN1_STRING_get0_data(san->d.dNSName);
-#else
-                const unsigned char *value = ASN1_STRING_data(san->d.dNSName);
-#endif
-                if (length > 0 && value[length - 1] == '.') {
-                    has_rooted_dns_id = cat_true;
-                }
-            }
-            cat_bool_t is_service_id = san->type == GEN_DNS || san->type == GEN_URI;
-            if (san->type == GEN_OTHERNAME) {
-                static const char srv_name_oid[] = "1.3.6.1.5.5.7.8.7";
-                char oid[sizeof(srv_name_oid)];
-                is_service_id = OBJ_obj2txt(oid, (int) sizeof(oid), san->d.otherName->type_id, 1)
-                    == (int) (sizeof(srv_name_oid) - 1) && strcmp(oid, srv_name_oid) == 0;
-            }
-            if (is_service_id) {
-#ifdef X509_CHECK_FLAG_NEVER_CHECK_SUBJECT
-                flags |= X509_CHECK_FLAG_NEVER_CHECK_SUBJECT;
-#else
-                if (san->type == GEN_DNS) {
-                    has_dns_id = cat_true;
-                }
-                has_service_id = cat_true;
-#endif
+    for (int i = 0; names != NULL && i < sk_GENERAL_NAME_num(names); i++) {
+        GENERAL_NAME *san = sk_GENERAL_NAME_value(names, i);
+        if (san->type == GEN_DNS) {
+            int length = ASN1_STRING_length(san->d.dNSName);
+            const unsigned char *value = ASN1_STRING_get0_data(san->d.dNSName);
+            if (length > 0 && value[length - 1] == '.') {
+                has_rooted_dns_id = cat_true;
             }
         }
-        GENERAL_NAMES_free(names);
-#ifndef X509_CHECK_FLAG_NEVER_CHECK_SUBJECT
-        /* OpenSSL 1.0.2 suppresses CN fallback only when a DNS SAN is present. */
-        if (has_service_id && !has_dns_id) {
-            return cat_false;
+        cat_bool_t is_service_id = san->type == GEN_DNS || san->type == GEN_URI;
+        if (san->type == GEN_OTHERNAME) {
+            static const char srv_name_oid[] = "1.3.6.1.5.5.7.8.7";
+            char oid[sizeof(srv_name_oid)];
+            is_service_id = OBJ_obj2txt(oid, (int) sizeof(oid), san->d.otherName->type_id, 1)
+                == (int) (sizeof(srv_name_oid) - 1) && strcmp(oid, srv_name_oid) == 0;
         }
-#endif
+        if (is_service_id) {
+            /* a service ID replaces the subject common name */
+            flags |= X509_CHECK_FLAG_NEVER_CHECK_SUBJECT;
+        }
     }
+    GENERAL_NAMES_free(names);
     if (X509_check_host(cert, (char *) name, name_length, flags, NULL) != 1) {
         /* A terminal DNS root dot identifies the same SAN name. Keep OpenSSL's
          * wildcard and SAN precedence checks; do not extend this rule to CNs. */
@@ -1242,6 +1219,20 @@ static inline cat_bool_t _cat_ssl_check_host(X509 *cert, const char *name, size_
                 return cat_true;
             }
         }
+#if OPENSSL_VERSION_NUMBER >= 0x40000000L
+        /*
+         * OpenSSL 4 no longer falls back to the subject common name on its own,
+         * so ask for it explicitly. A certificate that holds a service ID names a
+         * host by that ID only, and a numeric name never reaches this point
+         */
+        if ((flags & X509_CHECK_FLAG_NEVER_CHECK_SUBJECT) == 0
+            && X509_check_host(cert, (char *) name, name_length,
+                X509_CHECK_FLAG_ALWAYS_CHECK_SUBJECT, NULL) == 1
+        ) {
+            CAT_LOG_DEBUG(SSL, "X509_check_host(%p, \"%.*s\", %zu): common name match", cert, (int) name_length, name, name_length);
+            return cat_true;
+        }
+#endif
         CAT_LOG_DEBUG(SSL, "X509_check_host(%p, \"%.*s\", %zu): no match", cert, (int) name_length, name, name_length);
         return cat_false;
     }
@@ -1275,6 +1266,14 @@ CAT_API int cat_ssl_read_encrypted_bytes(cat_ssl_t *ssl, char *buffer, size_t si
 {
     int n;
 
+    if (size == 0) {
+        return CAT_RET_NONE;
+    }
+    if (unlikely(size > INT_MAX)) {
+        cat_ssl_update_last_error(CAT_ESSL, "BIO_read size %zu is too large", size);
+        return CAT_RET_ERROR;
+    }
+
     cat_ssl_clear_error();
 
     n = BIO_read(ssl->nbio, buffer, (int) size);
@@ -1295,6 +1294,14 @@ CAT_API int cat_ssl_read_encrypted_bytes(cat_ssl_t *ssl, char *buffer, size_t si
 CAT_API int cat_ssl_write_encrypted_bytes(cat_ssl_t *ssl, const char *buffer, size_t length)
 {
     int n;
+
+    if (length == 0) {
+        return CAT_RET_NONE;
+    }
+    if (unlikely(length > INT_MAX)) {
+        cat_ssl_update_last_error(CAT_ESSL, "BIO_write size %zu is too large", length);
+        return CAT_RET_ERROR;
+    }
 
     cat_ssl_clear_error();
 
@@ -1345,8 +1352,12 @@ CAT_API cat_bool_t cat_ssl_encrypt(
 
             cat_ssl_clear_error();
 
-            CAT_ASSUME(current_vector->length - offset < INT_MAX);
-            int nwrote = SSL_write(ssl->connection, current_vector->base + offset, (int) (current_vector->length - offset));
+            /* OpenSSL takes an int length; feed the vector in int-sized chunks */
+            size_t write_chunk = current_vector->length - offset;
+            if (write_chunk > INT_MAX) {
+                write_chunk = INT_MAX;
+            }
+            int nwrote = SSL_write(ssl->connection, current_vector->base + offset, (int) write_chunk);
 
             CAT_LOG_DEBUG_VA(SSL, {
                 char *s;
@@ -1391,10 +1402,15 @@ CAT_API cat_bool_t cat_ssl_encrypt(
                             }
 #endif
                         }
+                        /* BIO_read() takes an int length; the spare space may be larger */
+                        size_t read_size = encrypted_buffer_size - encrypted_total_length;
+                        if (read_size > INT_MAX) {
+                            read_size = INT_MAX;
+                        }
                         int n = cat_ssl_read_encrypted_bytes(
                             ssl,
                             encrypted_buffer + encrypted_total_length,
-                            encrypted_buffer_size - encrypted_total_length
+                            read_size
                         );
                         // fprintf(stderr, "cat_ssl_encrypt: error: %d, bufsize: %zu, length: %zu, n: %d\n", error, encrypted_buffer_size, encrypted_total_length, n);
 
@@ -1402,7 +1418,7 @@ CAT_API cat_bool_t cat_ssl_encrypt(
                             char *s;
                             CAT_LOG_DEBUG_D(SSL, "BIO_read(%p, %s, %zu) = %d",
                                 ssl, cat_log_str_quote(encrypted_buffer + encrypted_total_length, n < 0 ? 0 : n, &s),
-                                encrypted_buffer_size - encrypted_total_length, n);
+                                read_size, n);
                             cat_free(s);
                         });
 
@@ -1467,8 +1483,13 @@ CAT_API cat_bool_t cat_ssl_decrypt(cat_ssl_t *ssl, char *out, size_t *out_length
         int n;
 
         if (have_encrypted_data) {
+            /* BIO_write() takes an int length; feed the buffer in int-sized chunks */
+            size_t write_size = buffer->length - nwrite;
+            if (write_size > INT_MAX) {
+                write_size = INT_MAX;
+            }
             n = cat_ssl_write_encrypted_bytes(
-                ssl, buffer->value + nwrite, buffer->length - nwrite
+                ssl, buffer->value + nwrite, write_size
             );
             if (n > 0) {
                 nwrite += n;
@@ -1482,7 +1503,12 @@ CAT_API cat_bool_t cat_ssl_decrypt(cat_ssl_t *ssl, char *out, size_t *out_length
 
         cat_ssl_clear_error();
 
-        n = SSL_read(ssl->connection, out + nread, (int) (out_size - nread));
+        /* OpenSSL takes an int length; read in int-sized chunks */
+        size_t read_chunk = out_size - nread;
+        if (read_chunk > INT_MAX) {
+            read_chunk = INT_MAX;
+        }
+        n = SSL_read(ssl->connection, out + nread, (int) read_chunk);
 
         CAT_LOG_DEBUG_VA(SSL, {
             char *s;
@@ -1738,7 +1764,13 @@ static void cat_ssl_clear_error(void)
 {
     while (unlikely(ERR_peek_error())) {
         char *reason = cat_ssl_get_error_reason();
-        CAT_NOTICE(SSL, "Ignoring stale global SSL error%s", reason != NULL ? reason : " (SSL: Unknown)");
+        /*
+         * The queue may hold errors that this library did not raise, for example
+         * a failed configuration load during OPENSSL_init_ssl(). Clearing them is
+         * required to attribute the next error correctly, so this is a diagnostic
+         * detail and not a notice for the application
+         */
+        CAT_LOG_DEBUG(SSL, "Ignoring stale global SSL error%s", reason != NULL ? reason : " (SSL: Unknown)");
         if (reason != NULL) {
             cat_free(reason);
         }

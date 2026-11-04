@@ -68,7 +68,7 @@ CAT_API uint8_t cat_websocket_calculate_header_size(uint64_t payload_length, cat
 
 CAT_API void cat_websocket_header_init(cat_websocket_header_t *header)
 {
-    memset(header, 0, CAT_WEBSOCKET_HEADER_MIN_SIZE);
+    memset(header, 0, sizeof(*header));
 }
 
 static cat_always_inline uint8_t cat_websocket_header_get_masking_key_offset(const cat_websocket_header_t *header)
@@ -161,7 +161,7 @@ CAT_API void cat_websocket_header_set_masking_key(cat_websocket_header_t *header
     } else {
         char *p = ((char *) header);
         p += cat_websocket_header_get_masking_key_offset(header);
-        memcpy(p, masking_key, CAT_WEBSOCKET_MASKING_KEY_LENGTH);
+        memmove(p, masking_key, CAT_WEBSOCKET_MASKING_KEY_LENGTH);
         header->mask = cat_true;
     }
 }

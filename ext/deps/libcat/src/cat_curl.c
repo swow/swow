@@ -276,7 +276,14 @@ static int cat_curl_multi_socket_function(
                 socket_context->sockfd = sockfd;
                 socket_context->curl_events = 0;
                 socket_context->context = context;
-                (void) uv_poll_init_socket(&CAT_EVENT_G(loop), &socket_context->poll, sockfd);
+                int poll_error = uv_poll_init_socket(&CAT_EVENT_G(loop), &socket_context->poll, sockfd);
+                if (unlikely(poll_error != 0)) {
+                    /* the fd can not be polled here; keep libcurl from calling us
+                     * with a half initialized handle */
+                    (void) curl_multi_assign(multi, sockfd, NULL);
+                    cat_free(socket_context);
+                    return CURLM_INTERNAL_ERROR;
+                }
                 socket_context->poll.data = socket_context;
                 cat_queue_push_back(&context->socket_contexts, &socket_context->node);
             }
@@ -289,9 +296,13 @@ static int cat_curl_multi_socket_function(
             if(action != CURL_POLL_IN) {
                 socket_context->poll_uv_events |= UV_WRITABLE;
             }
-            (void) uv_poll_start(
+            if (unlikely(uv_poll_start(
                 &socket_context->poll, socket_context->poll_uv_events, cat_curl_multi_socket_poll_callback
-            );
+            ) != 0)) {
+                (void) curl_multi_assign(multi, sockfd, NULL);
+                cat_curl_multi_socket_context_close(socket_context);
+                return CURLM_INTERNAL_ERROR;
+            }
             break;
         }
         case CURL_POLL_REMOVE:

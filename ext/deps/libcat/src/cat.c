@@ -202,9 +202,12 @@ CAT_API cat_bool_t cat_runtime_shutdown(void)
 
     if (CAT_LOG_G(module_name_filter) != NULL) {
         cat_free(CAT_LOG_G(module_name_filter));
+        CAT_LOG_G(module_name_filter) = NULL;
     }
     if (CAT_G(exepath).data != NULL) {
         cat_free((void *) CAT_G(exepath).data);
+        CAT_G(exepath).data = NULL;
+        CAT_G(exepath).length = 0;
     }
     CAT_G(runtime) = cat_false;
 

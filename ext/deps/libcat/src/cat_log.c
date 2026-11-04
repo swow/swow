@@ -252,20 +252,32 @@ CAT_API void cat_log_va_list_standard(CAT_LOG_VA_LIST_PARAMETERS)
         return;
     }
 
-    if (unlikely(type & CAT_LOG_TYPES_ABNORMAL)) {
+    cat_bool_t abnormal = (type & CAT_LOG_TYPES_ABNORMAL) != 0;
+    char *last_error_message = NULL;
+
+    if (unlikely(abnormal)) {
         va_list _args;
         va_copy(_args, args);
-        cat_set_last_error(code, cat_vsprintf(format, _args));
+        /* build the new message now, but do not store it before the line is
+         * formatted: the old message is one of the arguments of the line */
+        last_error_message = cat_vsprintf(format, _args);
         va_end(_args);
     }
 
     type_name = cat_log_type_dispatch(type, &output);
     if (unlikely(type_name == NULL)) {
+        if (unlikely(abnormal)) {
+            cat_set_last_error(code, last_error_message);
+        }
         return;
     }
 
     ret = cat_buffer_create(&buffer, 0);
     if (unlikely(!ret)) {
+        if (unlikely(abnormal)) {
+            cat_set_last_error(code, last_error_message);
+            last_error_message = NULL;
+        }
         fprintf(CAT_LOG_G(error_output), "libcat error: create log buffer failed (%s)\n", cat_get_last_error_message());
         return;
     }
@@ -342,6 +354,11 @@ CAT_API void cat_log_va_list_standard(CAT_LOG_VA_LIST_PARAMETERS)
 
     cat_buffer_append_str(&buffer, "\n");
 
+    if (unlikely(abnormal)) {
+        cat_set_last_error(code, last_error_message);
+        last_error_message = NULL;
+    }
+
 #ifdef CAT_SOURCE_POSITION
     if (CAT_LOG_G(show_source_postion)) {
         (void) cat_buffer_append_printf(
@@ -362,8 +379,11 @@ CAT_API void cat_log_va_list_standard(CAT_LOG_VA_LIST_PARAMETERS)
 
     if (0) {
         _error:
+        if (last_error_message != NULL) {
+            cat_free(last_error_message);
+        }
         cat_buffer_close(&buffer);
-        if (type & CAT_LOG_TYPES_ABNORMAL) {
+        if (unlikely(abnormal)) {
             cat_set_last_error(code, NULL);
         }
     }

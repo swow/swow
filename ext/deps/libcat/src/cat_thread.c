@@ -111,6 +111,17 @@ static cat_bool_t cat_thread_register_check(const cat_thread_t *thread)
     return cat_true;
 }
 
+/* Set bits in the state word without losing bits that another thread set
+ * between the load and the store. */
+static cat_always_inline void cat_thread_state_add(cat_atomic_uint32_t *state, uint32_t flags)
+{
+    uint32_t current = cat_atomic_uint32_load(state);
+
+    while (!cat_atomic_uint32_compare_exchange_strong(state, &current, current | flags)) {
+        /* a failed exchange leaves the current value in current */
+    }
+}
+
 CAT_API cat_bool_t cat_thread_register(cat_thread_t *thread)
 {
     if (!cat_thread_register_check(thread)) {
@@ -122,8 +133,10 @@ CAT_API cat_bool_t cat_thread_register(cat_thread_t *thread)
     }
 
     thread->id = uv_thread_self();
-    cat_atomic_uint32_store(&thread->state,
-        cat_atomic_uint32_load(&thread->state) | CAT_THREAD_STATE_JOINABLE);
+    if (unlikely(!cat_thread_wait_init(&thread->join))) {
+        return cat_false;
+    }
+    (void) cat_thread_state_add(&thread->state, CAT_THREAD_STATE_JOINABLE);
 
     return cat_thread_set_current(thread);
 }
@@ -164,6 +177,9 @@ static cat_bool_t cat_thread_register_root(cat_thread_t *thread)
     }
 
     memset(thread, 0, sizeof(*thread));
+    if (unlikely(!cat_thread_wait_init(&thread->join))) {
+        return cat_false;
+    }
     cat_atomic_uint32_store(&thread->state, CAT_THREAD_STATE_EXTERNAL | CAT_THREAD_STATE_JOINABLE);
     thread->parent = NULL;
     thread->id = uv_thread_self();
@@ -221,6 +237,9 @@ CAT_API cat_bool_t cat_thread_bootstrap(cat_thread_t *thread)
 
 CAT_API void cat_thread_teardown(cat_thread_t *thread)
 {
+    if (unlikely(thread == NULL)) {
+        return;
+    }
     if (cat_atomic_uint32_load(&thread->state) & CAT_THREAD_STATE_EXITED) {
         return;
     }
@@ -232,16 +251,17 @@ CAT_API void cat_thread_teardown(cat_thread_t *thread)
     }
 
     /* Record the exit before the wake, so a joiner that sees it sees a finished
-     * thread. The store is atomic because the joiner reads it from another
+     * thread. The update is atomic because the joiner claims bits from another
      * thread. */
-    cat_atomic_uint32_store(&thread->state,
-        cat_atomic_uint32_load(&thread->state) | CAT_THREAD_STATE_EXITED);
-    (void) cat_thread_wait_wake_all(&thread->join);
+    cat_thread_state_add(&thread->state, CAT_THREAD_STATE_EXITED);
+    /* Only a registration that made the object joinable set up the join queue. */
+    if (cat_atomic_uint32_load(&thread->state) & CAT_THREAD_STATE_JOINABLE) {
+        (void) cat_thread_wait_wake_all(&thread->join);
+    }
 
     /* The wake above still touches the object. Mark the end after it, so a
      * caller that sees a stopped thread may reuse the object. */
-    cat_atomic_uint32_store(&thread->state,
-        cat_atomic_uint32_load(&thread->state) | CAT_THREAD_STATE_FINISHED);
+    cat_thread_state_add(&thread->state, CAT_THREAD_STATE_FINISHED);
 }
 
 CAT_API cat_bool_t cat_thread_register_main(cat_thread_t *thread)
@@ -291,6 +311,9 @@ CAT_API cat_bool_t cat_thread_register_external(cat_thread_t *thread)
     }
 
     memset(thread, 0, sizeof(*thread));
+    if (unlikely(!cat_thread_wait_init(&thread->join))) {
+        return cat_false;
+    }
     cat_atomic_uint32_store(&thread->state, CAT_THREAD_STATE_EXTERNAL | CAT_THREAD_STATE_JOINABLE);
     thread->parent = cat_thread_get_current_safe() != NULL ? cat_thread_get_current_safe()
                                                           : cat_thread_main;
@@ -487,6 +510,7 @@ CAT_API cat_bool_t cat_thread_create_ex(cat_thread_t *thread, cat_thread_routine
     }
 
     if (unlikely(!cat_thread_wait_init(&thread->join))) {
+        cat_atomic_uint32_store(&thread->state, 0);
         return cat_false;
     }
 
@@ -504,6 +528,7 @@ CAT_API cat_bool_t cat_thread_create_ex(cat_thread_t *thread, cat_thread_routine
     if (unlikely(error != 0)) {
         cat_update_last_error_with_reason(error, "Thread create failed");
         cat_thread_wait_destroy(&thread->join);
+        cat_atomic_uint32_store(&thread->state, 0);
         return cat_false;
     }
 
@@ -563,6 +588,10 @@ CAT_API cat_bool_t cat_thread_join(cat_thread_t *thread, cat_timeout_t timeout)
             cat_update_last_error(CAT_EMISUSE, "The thread is already joined");
             return cat_false;
         }
+        if (unlikely(state & CAT_THREAD_STATE_DETACHED)) {
+            cat_update_last_error(CAT_EMISUSE, "The thread is detached");
+            return cat_false;
+        }
         if (cat_atomic_uint32_compare_exchange_strong(&thread->state, &state,
                                                       state | CAT_THREAD_STATE_JOINED)) {
             break;
@@ -587,18 +616,20 @@ CAT_API cat_bool_t cat_thread_detach(cat_thread_t *thread)
     }
 
     state = cat_atomic_uint32_load(&thread->state);
-
-    if (unlikely(!(state & CAT_THREAD_STATE_JOINABLE) || (state & CAT_THREAD_STATE_JOINED))) {
-        cat_update_last_error(CAT_EMISUSE, "The thread is not joinable");
-        return cat_false;
+    for (;;) {
+        if (unlikely(!(state & CAT_THREAD_STATE_JOINABLE) || (state & CAT_THREAD_STATE_JOINED))) {
+            cat_update_last_error(CAT_EMISUSE, "The thread is not joinable");
+            return cat_false;
+        }
+        if (unlikely(state & CAT_THREAD_STATE_DETACHED)) {
+            cat_update_last_error(CAT_EMISUSE, "The thread is already detached");
+            return cat_false;
+        }
+        if (cat_atomic_uint32_compare_exchange_strong(&thread->state, &state,
+                                                      state | CAT_THREAD_STATE_DETACHED)) {
+            break;
+        }
     }
-
-    if (unlikely(state & CAT_THREAD_STATE_DETACHED)) {
-        cat_update_last_error(CAT_EMISUSE, "The thread is already detached");
-        return cat_false;
-    }
-
-    cat_atomic_uint32_store(&thread->state, state | CAT_THREAD_STATE_DETACHED);
     (void) uv_thread_detach(&thread->id);
 
     return cat_true;

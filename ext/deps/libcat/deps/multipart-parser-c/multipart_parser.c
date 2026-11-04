@@ -19,10 +19,10 @@
     fprintf(stderr, "[MULTIPART_PARSER] line %d: " format "\n", __LINE__, __VA_ARGS__); \
 } while(0)
 #define multipart_log_c(format) do {\
-    if (isprint(c)) { \
+    if (isprint((unsigned char)c)) { \
         multipart_log("parsing '%c' " format, c); \
     } else { \
-        multipart_log("parsing '\\x%0.2x' " format, c); \
+        multipart_log("parsing '\\x%0.2x' " format, (unsigned char)c); \
     } \
 } while(0)
 #else
@@ -59,6 +59,13 @@ int multipart_parser_init(multipart_parser *mp, const char *boundary, size_t bou
     if (boundary_length > BOUNDARY_MAX_LEN) {
         errno = EINVAL;
         return -1;
+    }
+    // boundary == NULL keeps the previous boundary; a parser that was never
+    // initialised can hold an arbitrary length, which is not usable as the
+    // zero-fill offset
+    if (boundary == NULL && mp->boundary_length != 0 &&
+            (mp->boundary_length < 3 || mp->boundary_length > BOUNDARY_MAX_LEN + 2)) {
+        mp->boundary_length = 0;
     }
     if (boundary != NULL && boundary_length != 0) {
         memcpy(mp->multipart_boundary, "--", 2);
@@ -125,10 +132,8 @@ int multipart_parser_error_msg(multipart_parser* p, char *buf, size_t len) {
             return 0;
         case MPPE_PAUSED:
             return snprintf(buf, len, "parser paused");
-        case MPPE_UNKNOWN:
-        default:
-            abort();
-            return 0;
+        case MPPE_EARLY_EOF:
+            return snprintf(buf, len, "early EOF");
         case MPPE_BOUNDARY_END_NO_CRLF:
             ret = snprintf(buf, len, "no CRLF at first boundary end: ");
             break;
@@ -147,6 +152,8 @@ int multipart_parser_error_msg(multipart_parser* p, char *buf, size_t len) {
         case MPPE_END_BOUNDARY_NO_DASH:
             ret = snprintf(buf, len, "bad final hyphen: ");
             break;
+        default:
+            return snprintf(buf, len, "unknown parser error");
     }
     if (ret < 0) {
         return 0;
@@ -173,10 +180,10 @@ int multipart_parser_error_msg(multipart_parser* p, char *buf, size_t len) {
     if ((size_t) ret >= len) {
         return ret;
     }
-    if (isprint(p->error_unexpected)) {
+    if (isprint((unsigned char)p->error_unexpected)) {
         ret += snprintf(buf + ret, len - ret, "at %zu, but it is '%c'", p->error_i, p->error_unexpected);
     } else {
-        ret += snprintf(buf + ret, len - ret, "at %zu, but it is '\\x%.2x'", p->error_i, p->error_unexpected);
+        ret += snprintf(buf + ret, len - ret, "at %zu, but it is '\\x%.2x'", p->error_i, (unsigned char)p->error_unexpected);
     }
     return ret;
 }
@@ -186,7 +193,9 @@ size_t multipart_parser_execute(multipart_parser* p, const char *buf, size_t len
     size_t i = 0;
     size_t mark = 0;
     size_t mark_end = 0;
-    char c, cl;
+    size_t candidate_start = 0;
+    char c;
+    unsigned char uc;
     int is_last = 0;
     int ret;
 
@@ -273,19 +282,19 @@ do { \
                     p->state = s_headers_almost_done;
                     break;
                 }
-                if (c == '-') {
-                    if (is_last) {
-                        EMIT_DATA_CB(header_field, i + 1, buf + mark, i - mark + 1);
-                    }
-                    break;
-                }
                 if (c == ':') {
                     p->state = s_header_value_start;
                     EMIT_DATA_CB(header_field, i + 1, buf + mark, i - mark);
                     break;
                 }
-                cl = c | 0x20;
-                if (cl < 'a' || cl > 'z') {
+                // tchar of RFC 7230, the characters allowed in a header field name
+                uc = (unsigned char)c;
+                if (!((uc >= 'a' && uc <= 'z') || (uc >= 'A' && uc <= 'Z') ||
+                        (uc >= '0' && uc <= '9') ||
+                        uc == '!' || uc == '#' || uc == '$' || uc == '%' ||
+                        uc == '&' || uc == '\'' || uc == '*' || uc == '+' ||
+                        uc == '-' || uc == '.' || uc == '^' || uc == '_' ||
+                        uc == '`' || uc == '|' || uc == '~')) {
                     multipart_log_c("invalid character in header field");
                     p->error_unexpected = c;
                     ERROR_OUT(MPPE_INVALID_HEADER_FIELD_CHAR);
@@ -314,6 +323,7 @@ do { \
                 if (c == CR) {
                     p->state = s_header_value_almost_done;
                     EMIT_DATA_CB(header_value, i + 1, buf + mark, i - mark);
+                    break;
                 }
                 if (is_last) {
                     EMIT_DATA_CB(header_value, i + 1, buf + mark, i - mark + 1);
@@ -338,32 +348,18 @@ do { \
                 mark_end = i + 1;
                 if (c == CR) {
                     mark_end--;
-                    if (is_last) {
-                        if (i > 1) {
-                            EMIT_DATA_CB(part_data, i, buf + mark, mark_end - mark);
-                        } else {
-                            // donot trig callback
-                            return 0;
-                        }
-                    }
+                    candidate_start = i;
                     p->state = s_part_data_almost_boundary;
                     break;
                 }
                 if (is_last) {
                     EMIT_DATA_CB(part_data, i + 1, buf + mark, mark_end - mark);
+                    mark = mark_end;
                 }
                 break;
             case s_part_data_almost_boundary:
                 multipart_log_c("s_part_data_almost_boundary");
                 if (c == LF) {
-                    if (is_last) {
-                        if (i > 2) {
-                            EMIT_DATA_CB(part_data, mark_end, buf + mark, mark_end - mark);
-                        } else {
-                            // donot trig callback
-                            return 0;
-                        }
-                    }
                     p->state = s_part_data_boundary;
                     p->index = 0;
                     break;
@@ -376,17 +372,14 @@ do { \
                     p->state = s_part_data;
                     goto data_rollback;
                 }
-                if (is_last) {
-                    if (i > p->index + 2) {
-                        EMIT_DATA_CB(part_data, i - p->index - 2, buf + mark, mark_end - mark);
-                    } else {
-                        // donot trig callback
-                        return 0;
-                    }
-                }
                 if ((++p->index) == p->boundary_length) {
                     p->state = s_part_data_almost_end;
-                    EMIT_DATA_CB(part_data, i + 1, buf + mark, i + 1 - p->boundary_length - 2 - mark);
+                    // the boundary is complete, so the data run ends at the CR
+                    // that started the candidate; the candidate cannot start
+                    // before this buffer because an undecided candidate is
+                    // always handed back to the caller at the end of a call
+                    EMIT_DATA_CB(part_data, i + 1, buf + mark, candidate_start - mark);
+                    mark = i + 1;
                 }
                 break;
             case s_part_data_almost_end:
@@ -430,6 +423,17 @@ do { \
                 ERROR_OUT(MPPE_UNKNOWN);
         }
         ++i;
+    }
+    // an undecided trailing boundary candidate: report the data before it,
+    // then leave the candidate bytes to the caller, which re-feeds them from
+    // the returned offset together with the next input
+    if (p->state == s_part_data_almost_boundary || p->state == s_part_data_boundary) {
+        p->state = s_part_data;
+        p->index = 0;
+        if (mark < candidate_start) {
+            EMIT_DATA_CB(part_data, candidate_start, buf + mark, candidate_start - mark);
+        }
+        return candidate_start;
     }
     return i;
 }

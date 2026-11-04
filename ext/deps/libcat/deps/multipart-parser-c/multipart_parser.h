@@ -156,10 +156,13 @@ void multipart_parser_free(multipart_parser* p);
 
 /*
 *   execute data buf with size len
+*   call again with the same buffer if 0 is returned, after appending more
+*   data when the input can continue
 *   @param p multipart parser to be used
 *   @param buf buffer for consuming
 *   @param len buffer size
-*   @return parsed length in bytes, MPPE_ERROR for error
+*   @return parsed length in bytes, 0 if no byte was consumed, MPPE_ERROR for
+*   error
 */
 size_t multipart_parser_execute(multipart_parser* p, const char *buf, size_t len);
 

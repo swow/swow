@@ -31,70 +31,83 @@ callbacks.on_header_value = read_header_value;
 
 These functions must match the signatures defined in the multipart-parser header file.  For this simple example, we'll just use two of the available callbacks to print all headers the library finds in multipart messages.
 
-Returning a value other than 0 from the callbacks will abort message processing.
+The data callbacks receive a pointer into the current buffer and a length; the pointer is only valid until the callback returns, so a consumer that keeps the data must copy it.  Return `MPPE_OK` to continue parsing, `MPPE_PAUSED` to pause after the current event, or `MPPE_ERROR` to abort.
 
 ```c
-int read_header_name(multipart_parser* p, const char *at, size_t length)
+long read_header_name(multipart_parser* p, const char *at, size_t length)
 {
-   printf("%.*s: ", length, at);
-   return 0;
+   printf("%.*s: ", (int)length, at);
+   return MPPE_OK;
 }
 
-int read_header_value(multipart_parser* p, const char *at, size_t length)
+long read_header_value(multipart_parser* p, const char *at, size_t length)
 {
-   printf("%.*s\n", length, at);
-   return 0;
+   printf("%.*s\n", (int)length, at);
+   return MPPE_OK;
 }
 ```
 
-When a message arrives, callers must parse the multipart boundary from the **Content-Type** header (see the [RFC](http://tools.ietf.org/html/rfc2387#section-5.1) for more information and examples), and then execute the parser.
+When a message arrives, callers must parse the multipart boundary from the **Content-Type** header (see the [RFC](http://tools.ietf.org/html/rfc2387#section-5.1) for more information and examples), then feed every received chunk to the parser.
+
+The parser can be allocated on the heap:
 
 ```c
-multipart_parser* parser = multipart_parser_init(boundary, &callbacks);
-multipart_parser_execute(parser, body, length);
+multipart_parser* parser = multipart_parser_alloc(boundary, boundary_length, &callbacks);
+if (parser == NULL) {
+   /* errno is set */
+   return -1;
+}
+
+size_t parsed = multipart_parser_execute(parser, body, length);
+if (parsed == MPPE_ERROR) {
+   multipart_parser_error_msg(parser, msg, sizeof(msg));
+}
+
 multipart_parser_free(parser);
 ```
 
-### Usage (C++)
-In C++, when the callbacks are static member functions it may be helpful to pass the instantiated multipart consumer along as context.  The following (abbreviated) class called `MultipartConsumer` shows how to pass `this` to callback functions in order to access non-static member data.
+or placed on the stack:
 
-```cpp
-class MultipartConsumer
-{
-public:
-    MultipartConsumer(const std::string& boundary)
-    {
-        memset(&m_callbacks, 0, sizeof(multipart_parser_settings));
-        m_callbacks.on_header_field = ReadHeaderName;
-        m_callbacks.on_header_value = ReadHeaderValue;
+```c
+multipart_parser parser;
 
-        m_parser = multipart_parser_init(boundary.c_str(), &m_callbacks);
-        multipart_parser_set_data(m_parser, this);
-    }
+if (multipart_parser_init(&parser, boundary, boundary_length, &callbacks) != 0) {
+   /* errno is set */
+   return -1;
+}
 
-    ~MultipartConsumer()
-    {
-        multipart_parser_free(m_parser);
-    }
-
-    int CountHeaders(const std::string& body)
-    {
-        multipart_parser_execute(m_parser, body.c_str(), body.size());
-        return m_headers;
-    }
-
-private:
-    static int ReadHeaderName(multipart_parser* p, const char *at, size_t length)
-    {
-        MultipartConsumer* me = (MultipartConsumer*)multipart_parser_get_data(p);
-        me->m_headers++;
-    }
-
-    multipart_parser* m_parser;
-    multipart_parser_settings m_callbacks;
-    int m_headers;
-};
+multipart_parser_execute(&parser, body, length);
 ```
+
+`multipart_parser_execute()` returns the number of consumed bytes, or `MPPE_ERROR`.  In PAUSE mode it also returns early when a callback returns `MPPE_PAUSED`, so the caller resumes parsing with the remaining buffer at the returned offset:
+
+```c
+size_t offset = 0;
+while (offset < length) {
+   size_t parsed = multipart_parser_execute(&parser, body + offset, length - offset);
+   if (parsed == MPPE_ERROR) {
+      break;
+   }
+   if (parsed == 0) {
+      break; /* need more data */
+   }
+   offset += parsed;
+}
+```
+
+A boundary longer than `BOUNDARY_MAX_LEN` (70) bytes is rejected with `errno = EINVAL`.  Passing `NULL` as the boundary to `multipart_parser_init()` keeps the boundary of a previously initialised parser; `multipart_parser_alloc()` needs a real boundary.
+
+### Fuzzing
+
+`test/multipart_fuzz.c` is a [honggfuzz](https://github.com/google/honggfuzz) target. It feeds one body through several feed schedules, plain and with callbacks that pause on every event, checks that every callback span points inside the input of the current `execute()` call, and that a body that parses in one call parses the same way when split at any point.
+
+Build honggfuzz first, then run a session:
+
+```sh
+make fuzz HONGGFUZZ_DIR=~/honggfuzz
+```
+
+`FUZZ_RUN_TIME` limits the session length in seconds (the default runs until interrupted), `FUZZ_THREADS` sets the number of workers (default 2), and `FUZZ_MAX_INPUT` the maximum input size (default 4096). Seed inputs are `test/hello_world.data` and `test/fuzz-corpus/*.bin`; new coverage inputs and crash files go to `test/out/fuzz/`.
 
 ### Contributors
 * [Daniel T. Wagner](http://www.danieltwagner.de/)

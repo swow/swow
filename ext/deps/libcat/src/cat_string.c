@@ -125,7 +125,7 @@ CAT_API cat_bool_t cat_str_is_print(const char *str, size_t length)
 {
     size_t i;
     for (i = 0; i < length; i++) {
-        if (!isprint(str[i])) {
+        if (!isprint((unsigned char) str[i])) {
             return cat_false;
         }
     }
@@ -162,11 +162,12 @@ CAT_API char *cat_hex_dump(const char *data, size_t length)
 
 CAT_API char *cat_srand(char *buffer, size_t count)
 {
+    if (unlikely(count == 0)) {
+        return buffer;
+    }
     buffer = cat_snrand(buffer, count);
 
-    if (likely(buffer != NULL)) {
-        buffer[count - 1] = '\0';
-    }
+    buffer[count - 1] = '\0';
 
     return buffer;
 }
@@ -222,10 +223,16 @@ CAT_API cat_bool_t cat_str_list_contains_ci(const char *haystack, const char *ne
 
 CAT_API size_t cat_str_quote_size(size_t length, cat_str_quote_style_flags_t style)
 {
-    return
-        (4 * length) +
+    size_t size;
+
+    if (unlikely(length > (SIZE_MAX - 10) / 4)) {
+        return SIZE_MAX;
+    }
+    size = (4 * length) +
         (style & CAT_STR_QUOTE_STYLE_FLAG_OMIT_LEADING_TRAILING_QUOTES ? 1 : 3) +
-        (style & CAT_STR_QUOTE_STYLE_FLAG_ELLIPSIS ? 3 : 0);
+        (style & CAT_STR_QUOTE_STYLE_FLAG_ELLIPSIS ? 3 : 0) +
+        (style & CAT_STR_QUOTE_STYLE_FLAG_EMIT_COMMENT ? 7 : 0);
+    return size;
 }
 
 /*

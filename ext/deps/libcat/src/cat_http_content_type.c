@@ -175,7 +175,13 @@ static cat_always_inline cat_bool_t cat_http_parser_multipart_parse_content_type
             /*
             'multipart/' => continue to check
             */
-            size_t read_len = (size_t) (((int) (pe - p)) > (10 - state + mt_start) ? (10 - state + mt_start) : (pe - p));
+            if (unlikely(pe < p)) {
+                CAT_ASSERT(0 && "logical bug");
+                goto error;
+            }
+            size_t needed = (size_t) (10 - state + mt_start);
+            size_t available = (size_t) (pe - p);
+            size_t read_len = available > needed ? needed : available;
             // printf("readlen: %d\n", read_len);
             memcpy(&parser->multipart.multipart_boundary[state], p, read_len);
             state += (int) read_len;
@@ -183,10 +189,6 @@ static cat_always_inline cat_bool_t cat_http_parser_multipart_parse_content_type
 
             if (pe - p == 0) {
                 goto next;
-            }
-            if (unlikely(pe < p)) {
-                CAT_ASSERT(0 && "logical bug");
-                goto error;
             }
             CAT_FALLTHROUGH;
         case mt_maybe_subtype:

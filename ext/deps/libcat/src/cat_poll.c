@@ -471,6 +471,16 @@ static void cat_poll_callback(uv_poll_t* handle, int status, uv_events_t events)
 
 CAT_API cat_poll_emulate_t cat_poll_emulate;
 
+/* The context carries the poll objects, so its size must neither wrap nor
+ * exceed the int result. The check runs before the debug log formats the
+ * descriptors, so an invalid count never walks the caller array. nfds may be
+ * narrower than size_t, so compare in uintmax_t. */
+static cat_always_inline cat_bool_t cat_poll_nfds_is_valid(cat_nfds_t nfds)
+{
+    return (uintmax_t) nfds <= (uintmax_t) INT_MAX &&
+           (uintmax_t) nfds <= (uintmax_t) ((SIZE_MAX - sizeof(cat_poll_context_t)) / sizeof(cat_poll_t));
+}
+
 static int cat_poll_impl(cat_pollfd_t *fds, cat_nfds_t nfds, cat_timeout_t timeout)
 {
     CAT_POLL_EMULATE(fds, nfds);
@@ -504,6 +514,7 @@ static int cat_poll_impl(cat_pollfd_t *fds, cat_nfds_t nfds, cat_timeout_t timeo
 #endif
         poll->initialized = cat_false;
         poll->ret.events = UV_EVENT_NONE;
+        poll->ret.status = CAT_ECANCELED;
         poll->u.context = context;
         do {
             cat_os_socket_t fd_no = fd->fd;
@@ -629,6 +640,11 @@ static CAT_BUFFER_STR_FREE char *cat_pollfds_str(cat_pollfd_t *fds, cat_nfds_t n
 
 CAT_API int cat_poll(cat_pollfd_t *fds, cat_nfds_t nfds, cat_timeout_t timeout)
 {
+    if (unlikely(!cat_poll_nfds_is_valid(nfds))) {
+        cat_update_last_error(CAT_EOVERFLOW, "Too many descriptors");
+        return CAT_RET_ERROR;
+    }
+
     CAT_LOG_DEBUG_VA(POLL, {
         char *fds_str = cat_pollfds_str(fds, nfds, cat_false);
         CAT_LOG_DEBUG_D(POLL, "poll(fds: %s, nfds: %zu, timeout: " CAT_TIMEOUT_FMT ") = " CAT_LOG_UNFINISHED_STR, fds_str, (size_t) nfds, timeout);

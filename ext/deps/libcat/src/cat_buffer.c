@@ -422,23 +422,41 @@ CAT_API void cat_buffer_dump(cat_buffer_t *buffer)
 CAT_API cat_bool_t cat_buffer_append_unsigned(cat_buffer_t *buffer, size_t value)
 {
     char tmp[32];
-    size_t length = snprintf(tmp, sizeof(tmp), "%zu", value);
-    return cat_buffer_append(buffer, tmp, length);
+    int n = snprintf(tmp, sizeof(tmp), "%zu", value);
+    if (unlikely(n < 0)) {
+        return cat_false;
+    }
+    if (unlikely((size_t) n >= sizeof(tmp))) {
+        return cat_buffer_append_printf(buffer, "%zu", value);
+    }
+    return cat_buffer_append(buffer, tmp, (size_t) n);
 }
 
 CAT_API cat_bool_t cat_buffer_append_signed(cat_buffer_t *buffer, ssize_t value)
 {
     intmax_t i = (intmax_t) value;
     char tmp[32];
-    size_t length = snprintf(tmp, sizeof(tmp), "%jd", i);
-    return cat_buffer_append(buffer, tmp, length);
+    int n = snprintf(tmp, sizeof(tmp), "%jd", i);
+    if (unlikely(n < 0)) {
+        return cat_false;
+    }
+    if (unlikely((size_t) n >= sizeof(tmp))) {
+        return cat_buffer_append_printf(buffer, "%jd", i);
+    }
+    return cat_buffer_append(buffer, tmp, (size_t) n);
 }
 
 CAT_API cat_bool_t cat_buffer_append_double(cat_buffer_t *buffer, double value)
 {
     char tmp[32];
-    size_t length = snprintf(tmp, sizeof(tmp), "%f", value);
-    return cat_buffer_append(buffer, tmp, length);
+    int n = snprintf(tmp, sizeof(tmp), "%f", value);
+    if (unlikely(n < 0)) {
+        return cat_false;
+    }
+    if (unlikely((size_t) n >= sizeof(tmp))) {
+        return cat_buffer_append_printf(buffer, "%f", value);
+    }
+    return cat_buffer_append(buffer, tmp, (size_t) n);
 }
 
 CAT_API cat_bool_t cat_buffer_append_char(cat_buffer_t *buffer, char c)
@@ -454,11 +472,15 @@ CAT_API cat_bool_t cat_buffer_append_str(cat_buffer_t *buffer, const char *str)
 CAT_API cat_bool_t cat_buffer_append_vprintf(cat_buffer_t *buffer, const char *format, va_list args)
 {
     va_list _args;
-    size_t length;
+    int n;
 
     va_copy(_args, args);
-    length = vsnprintf(NULL, 0, format, _args);
+    n = vsnprintf(NULL, 0, format, _args);
     va_end(_args);
+    if (unlikely(n < 0)) {
+        return cat_false;
+    }
+    size_t length = (size_t) n;
 
     /* TODO: drop +1 will lead coredump, figure out why */
     if (unlikely(!cat_buffer_prepare(buffer, length + 1))) {
@@ -467,7 +489,7 @@ CAT_API cat_bool_t cat_buffer_append_vprintf(cat_buffer_t *buffer, const char *f
     if (unlikely(
         vsnprintf(buffer->value + buffer->length,
                   buffer->size - buffer->length,
-                  format, args) < 0)) {
+                  format, args) != n)) {
         return cat_false;
     }
     buffer->length += length;
@@ -496,7 +518,7 @@ CAT_API cat_bool_t cat_buffer_zero_terminate(cat_buffer_t *buffer)
 
 CAT_API cat_bool_t cat_buffer_append_with_padding(cat_buffer_t *buffer, const void *ptr, size_t length, const char padding_char, size_t width)
 {
-    ssize_t padding_length = width - length;
+    size_t padding_length = width > length ? width - length : 0;
     size_t padding_left = padding_length / 2;
     size_t padding_right = padding_length - padding_left;
     size_t i;

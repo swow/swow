@@ -168,6 +168,9 @@ struct cat_process_s {
     cat_bool_t exited;
     /* the caller gave up the object, and the exit callback releases it */
     cat_bool_t closing;
+    /* the spawn failed after the child started, so the object was never handed
+     * out and its handle can not be closed; the exit callback releases it */
+    cat_bool_t orphaned;
     union {
         uv_process_t process;
         uv_handle_t handle;

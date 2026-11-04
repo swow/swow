@@ -382,6 +382,8 @@ typedef struct cat_socket_context_s {
         int status;
     } data;
     cat_coroutine_t *coroutine;
+    /* handle that started the wait, NULL when no handle owns it */
+    struct cat_socket_s *owner;
 } cat_socket_context_t;
 
 typedef struct cat_socket_write_context_s {

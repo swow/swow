@@ -614,9 +614,30 @@ CAT_API ssize_t cat_fs_write(cat_file_t fd, const void *buffer, size_t length)
 
 static cat_always_inline ssize_t cat_fs_pread_impl(cat_file_t fd, void *buffer, size_t size, off_t offset)
 {
-    uv_buf_t buf = uv_buf_init((char *) buffer, (unsigned int) size);
-
-    CAT_FS_DO_RESULT(ssize_t, read, fd, &buf, 1, offset);
+    /* The worker can outlive a canceled waiter; keep the read target in the
+     * request allocation, not in the caller's buffer. */
+    if (unlikely(size > SIZE_MAX - sizeof(cat_fs_context_t))) {
+        cat_update_last_error(CAT_EOVERFLOW, "File-System pread size overflow");
+        errno = cat_orig_errno(CAT_EOVERFLOW);
+        return -1;
+    }
+    cat_fs_context_t *context = (cat_fs_context_t *) cat_malloc(sizeof(*context) + size);
+#if CAT_ALLOC_HANDLE_ERRORS
+    if (unlikely(context == NULL)) {
+        cat_update_last_error_of_syscall("Malloc for fs pread failed");
+        return -1;
+    }
+#endif
+    char *staging = (char *) (context + 1);
+    uv_buf_t buf = uv_buf_init(staging, (unsigned int) size);
+    int error = uv_fs_read(&CAT_EVENT_G(loop), &context->fs, fd, &buf, 1, offset, cat_fs_callback);
+    if (!cat_fs_do_result(context, error, "read")) {
+        return -1;
+    }
+    if (size > 0 && context->fs.result > 0) {
+        memcpy(buffer, staging, (size_t) context->fs.result);
+    }
+    return (ssize_t) context->fs.result;
 }
 
 CAT_API ssize_t cat_fs_pread(cat_file_t fd, void *buffer, size_t size, off_t offset)
@@ -640,9 +661,30 @@ CAT_API ssize_t cat_fs_pread(cat_file_t fd, void *buffer, size_t size, off_t off
 
 static cat_always_inline ssize_t cat_fs_pwrite_impl(cat_file_t fd, const void *buffer, size_t length, off_t offset)
 {
-    uv_buf_t buf = uv_buf_init((char *) buffer, (unsigned int) length);
-
-    CAT_FS_DO_RESULT(ssize_t, write, fd, &buf, 1, offset);
+    /* Snapshot the submitted bytes so a cancel can not make the worker read the
+     * caller's storage after the caller reused it. */
+    if (unlikely(length > SIZE_MAX - sizeof(cat_fs_context_t))) {
+        cat_update_last_error(CAT_EOVERFLOW, "File-System pwrite size overflow");
+        errno = cat_orig_errno(CAT_EOVERFLOW);
+        return -1;
+    }
+    cat_fs_context_t *context = (cat_fs_context_t *) cat_malloc(sizeof(*context) + length);
+#if CAT_ALLOC_HANDLE_ERRORS
+    if (unlikely(context == NULL)) {
+        cat_update_last_error_of_syscall("Malloc for fs pwrite failed");
+        return -1;
+    }
+#endif
+    char *staging = (char *) (context + 1);
+    if (length > 0) {
+        memcpy(staging, buffer, length);
+    }
+    uv_buf_t buf = uv_buf_init(staging, (unsigned int) length);
+    int error = uv_fs_write(&CAT_EVENT_G(loop), &context->fs, fd, &buf, 1, offset, cat_fs_callback);
+    if (!cat_fs_do_result(context, error, "write")) {
+        return -1;
+    }
+    return (ssize_t) context->fs.result;
 }
 
 CAT_API ssize_t cat_fs_pwrite(cat_file_t fd, const void *buffer, size_t length, off_t offset)
@@ -804,10 +846,10 @@ static cat_always_inline int cat_fs_scandir_impl(const char *path, cat_dirent_t 
     cat_dirent_t dirent, *tmp = NULL;
     int cnt = 0, len = 0;
 
+    /* Snapshot the whole listing before any user callback runs. cat_fs_callback()
+     * releases the request as soon as this coroutine yields, and a filter or a
+     * comparator is allowed to block. */
     while (uv_fs_scandir_next(req, (uv_dirent_t *) &dirent) == 0) {
-        if (filter && !filter(&dirent)) {
-            continue;
-        }
         if (cnt >= len) {
             len = 2*len+1;
             void *_tmp = realloc(tmp, len * sizeof(*tmp));
@@ -827,7 +869,22 @@ static cat_always_inline int cat_fs_scandir_impl(const char *path, cat_dirent_t 
         tmp[cnt++].type = dirent.type;
     }
 
-    if (compar) {
+    if (filter != NULL) {
+        int kept = 0;
+        for (int i = 0; i < cnt; i++) {
+            if (filter(&tmp[i])) {
+                if (kept != i) {
+                    tmp[kept] = tmp[i];
+                }
+                kept++;
+            } else {
+                free((void*) tmp[i].name);
+            }
+        }
+        cnt = kept;
+    }
+
+    if (compar != NULL && cnt > 0) {
 #ifdef _MSC_VER
 # pragma warning(disable:4191) /* FIXME: workaround for MSVC bug */
 #endif
@@ -2870,6 +2927,10 @@ CAT_API char *cat_fs_get_contents(const char *filename, size_t *length)
     }
     off_t offset = cat_fs_lseek(fd, 0, SEEK_END);
     if (offset < 0) {
+        goto _error;
+    }
+    if (unlikely((uintmax_t) offset > (uintmax_t) SIZE_MAX - 1)) {
+        cat_update_last_error(CAT_EOVERFLOW, "File content is too large");
         goto _error;
     }
     size_t size = (size_t) offset;

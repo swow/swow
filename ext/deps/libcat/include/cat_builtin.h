@@ -86,6 +86,8 @@
 /* pseudo fallthrough keyword; */
 #if defined(__GNUC__) && __GNUC__ >= 7
 # define CAT_FALLTHROUGH __attribute__((__fallthrough__))
+#elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202311L
+# define CAT_FALLTHROUGH [[fallthrough]]
 #else
 # define CAT_FALLTHROUGH ((void) 0)
 #endif

@@ -181,6 +181,11 @@ CAT_API cat_bool_t cat_watchdog_run(cat_watchdog_t *watchdog, cat_timeout_t quan
     uv_sem_t sem;
     int error;
 
+    if (unlikely(!cat_globals_available())) {
+        cat_update_last_error(CAT_EMISUSE, "This thread has no runtime");
+        return cat_false;
+    }
+
     if (CAT_WATCH_DOG_G(watchdog) != NULL) {
         cat_update_last_error(CAT_EMISUSE, "Only one watchdog is allowed to run per " CAT_WATCH_DOG_ROLE_NAME);
         return cat_false;

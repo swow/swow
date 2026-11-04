@@ -290,7 +290,9 @@ static cat_pid_t cat_os__wait(cat_pid_t pid, int *status, int options, void *rus
         if (child_process_state != NULL) {
             RB_REMOVE(cat_os_child_process_stat_tree_s, &CAT_OS_WAIT_G(child_process_state_tree), child_process_state);
             pid = child_process_state->pid;
-            *status = child_process_state->status;
+            if (status != NULL) {
+                *status = child_process_state->status;
+            }
 #ifdef CAT_OS_WAIT_HAVE_RUSAGE
             if (rusage != NULL) {
                 *((struct rusage *) rusage) = child_process_state->rusage;
@@ -320,7 +322,7 @@ static cat_pid_t cat_os__wait(cat_pid_t pid, int *status, int options, void *rus
         return 0;
     }
 
-    cat_os_wait_task_t wait_task;
+    cat_os_wait_task_t wait_task = { 0 };
     cat_os_waitpid_task_t *waitpid_task;
     if (pid < 0) {
         wait_task.pid = -1;
@@ -354,7 +356,9 @@ static cat_pid_t cat_os__wait(cat_pid_t pid, int *status, int options, void *rus
 
     if (pid < 0) {
         pid = wait_task.pid;
-        *status = wait_task.status;
+        if (status != NULL) {
+            *status = wait_task.status;
+        }
 #ifdef CAT_OS_WAIT_HAVE_RUSAGE
         if (rusage != NULL) {
             *((struct rusage *) rusage) = wait_task.rusage;
@@ -363,7 +367,9 @@ static cat_pid_t cat_os__wait(cat_pid_t pid, int *status, int options, void *rus
         cat_queue_remove(&wait_task.node);
     } else {
         CAT_ASSERT(pid == waitpid_task->pid);
-        *status = waitpid_task->status;
+        if (status != NULL) {
+            *status = waitpid_task->status;
+        }
 #ifdef CAT_OS_WAIT_HAVE_RUSAGE
         if (rusage != NULL) {
             *((struct rusage *) rusage) = waitpid_task->rusage;
@@ -613,7 +619,9 @@ CAT_API cat_pid_t cat_os_waitpid_ex(cat_pid_t pid, int *status, int options, cat
     if (WaitForSingleObject(process, 0) == WAIT_OBJECT_0) {
         (void) GetExitCodeProcess(process, &exit_code);
         CloseHandle(process);
-        *status = (int) exit_code;
+        if (status != NULL) {
+            *status = (int) exit_code;
+        }
         return pid;
     }
 
@@ -689,7 +697,9 @@ CAT_API cat_pid_t cat_os_waitpid_ex(cat_pid_t pid, int *status, int options, cat
 #endif
 
     CloseHandle(process);
-    *status = (int) exit_code;
+    if (status != NULL) {
+        *status = (int) exit_code;
+    }
 
     return pid;
 }

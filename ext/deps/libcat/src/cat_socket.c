@@ -1201,7 +1201,13 @@ static cat_always_inline cat_bool_t cat_socket_open_socket_impl(cat_socket_t *so
         return cat_true;
     }
     if (cat_socket_is_available(socket)) {
-        cat_socket_close(socket);
+        if (socket->flags & CAT_SOCKET_FLAG_ALLOCATED) {
+            /* a normal close would free the allocated object; release only the old
+             * transport and keep the caller's storage for the new reference */
+            cat_socket_internal_close(socket->internal, socket, cat_false);
+        } else if (!cat_socket_close(socket)) {
+            return cat_false;
+        }
     }
     // socket->id will not change
     socket->flags = (origin_socket->flags & ~CAT_SOCKET_FLAGS_NON_TRANSFERABLE_BITS) | inherited_flags;
@@ -1584,10 +1590,12 @@ static cat_bool_t cat_socket_bind_to_impl(cat_socket_t *socket, const char *name
     do {
         cat_bool_t ret;
         socket_i->context.bind.coroutine = CAT_COROUTINE_G(current);
+        socket_i->context.bind.owner = socket;
         socket_i->io_flags = CAT_SOCKET_IO_FLAG_BIND;
         ret  = cat_socket_internal_getaddrbyname(socket_i, &address_info, name, name_length, port, NULL);
         socket_i->io_flags = CAT_SOCKET_IO_FLAG_NONE;
         socket_i->context.bind.coroutine = NULL;
+        socket_i->context.bind.owner = NULL;
         if (unlikely(!ret)) {
            cat_update_last_error_with_previous("Socket bind failed");
            return cat_false;
@@ -1794,16 +1802,21 @@ static cat_always_inline cat_bool_t cat_socket_accept_impl(cat_socket_t *server,
 
     /* Closing either socket must cancel the wait before the destination is released. */
     connection_i->context.accept.coroutine = CAT_COROUTINE_G(current);
+    connection_i->context.accept.owner = connection;
     connection_i->io_flags = CAT_SOCKET_IO_FLAG_ACCEPT;
     cat_bool_t ret;
+    /* the server side of the wait belongs to the listening handle */
+    server_i->context.accept.owner = server;
     if (!(server_i->type & CAT_SOCKET_TYPE_FLAG_IPC)) {
         ret = cat_socket_internal_accept(server_i, connection_i, NULL, timeout);
     } else {
         CAT_LOG_DEBUG_V2(SOCKET, "accept() via IPC");
         ret = cat_socket_internal_recv_handle(server_i, connection_i, timeout);
     }
+    server_i->context.accept.owner = NULL;
     connection_i->io_flags = CAT_SOCKET_IO_FLAG_NONE;
     connection_i->context.accept.coroutine = NULL;
+    connection_i->context.accept.owner = NULL;
     return ret;
 }
 
@@ -2102,7 +2115,14 @@ CAT_API cat_bool_t cat_socket_connect_ex(cat_socket_t *socket, const cat_sockadd
             socket->id, (int) name_length, name, port, timeout);
     });
 
+    /* record the handle for every wait this connect can park on, including DNS */
+    if (socket->internal != NULL) {
+        socket->internal->context.connect.owner = socket;
+    }
     cat_bool_t ret = cat_socket_connect_impl(socket, address, address_length, timeout, cat_false);
+    if (socket->internal != NULL) {
+        socket->internal->context.connect.owner = NULL;
+    }
 
     CAT_LOG_DEBUG_VA(SOCKET, {
         CAT_LOG_DEBUG_D(SOCKET, "connect(" CAT_SOCKET_ID_FMT ", \"%.*s\", %d, " CAT_TIMEOUT_FMT ") = " CAT_LOG_BOOL_RET_FMT,
@@ -2123,7 +2143,13 @@ CAT_API cat_bool_t cat_socket_connect_to_ex(cat_socket_t *socket, const char *na
     CAT_LOG_DEBUG(SOCKET, "connect_to(" CAT_SOCKET_ID_FMT ", \"%.*s\", %d, " CAT_TIMEOUT_FMT ") = " CAT_LOG_UNFINISHED_STR,
         socket->id, (int) name_length, name, port, timeout);
 
+    if (socket->internal != NULL) {
+        socket->internal->context.connect.owner = socket;
+    }
     cat_bool_t ret = cat_socket_connect_to_impl(socket, name, name_length, port, timeout, cat_false);
+    if (socket->internal != NULL) {
+        socket->internal->context.connect.owner = NULL;
+    }
 
     CAT_LOG_DEBUG(SOCKET, "connect_to(" CAT_SOCKET_ID_FMT ", \"%.*s\", %d, " CAT_TIMEOUT_FMT ") = " CAT_LOG_BOOL_RET_FMT,
         socket->id, (int) name_length, name, port, timeout, CAT_LOG_BOOL_RET_C(ret));
@@ -2147,7 +2173,13 @@ CAT_API cat_bool_t cat_socket_try_connect(cat_socket_t *socket, const cat_sockad
             socket->id, (int) name_length, name, port);
     });
 
+    if (socket->internal != NULL) {
+        socket->internal->context.connect.owner = socket;
+    }
     cat_bool_t ret = cat_socket_connect_impl(socket, address, address_length, CAT_TIMEOUT_INVALID, cat_true);
+    if (socket->internal != NULL) {
+        socket->internal->context.connect.owner = NULL;
+    }
 
     CAT_LOG_DEBUG_VA(SOCKET, {
         CAT_LOG_DEBUG_D(SOCKET, "try_connect_to(" CAT_SOCKET_ID_FMT ", \"%.*s\", %d) = " CAT_LOG_BOOL_RET_FMT,
@@ -2162,7 +2194,13 @@ CAT_API cat_bool_t cat_socket_try_connect_to(cat_socket_t *socket, const char *n
     CAT_LOG_DEBUG(SOCKET, "try_connect(" CAT_SOCKET_ID_FMT ", \"%.*s\", %d) = " CAT_LOG_UNFINISHED_STR,
         socket->id, (int) name_length, name, port);
 
+    if (socket->internal != NULL) {
+        socket->internal->context.connect.owner = socket;
+    }
     cat_bool_t ret = cat_socket_connect_to_impl(socket, name, name_length, port, CAT_TIMEOUT_INVALID, cat_true);
+    if (socket->internal != NULL) {
+        socket->internal->context.connect.owner = NULL;
+    }
 
     CAT_LOG_DEBUG(SOCKET, "try_connect(" CAT_SOCKET_ID_FMT ", \"%.*s\", %d) = " CAT_LOG_BOOL_RET_FMT,
         socket->id, (int) name_length, name, port, CAT_LOG_BOOL_RET_C(ret));
@@ -3564,10 +3602,11 @@ static cat_bool_t cat_socket_internal_write_raw(
 
 #ifdef CAT_OS_UNIX_LIKE
     /* libuv does not support dynamic address length */
-    CAT_ASSERT(
-        (!is_udp || address == NULL || address->sa_family != AF_UNIX || address_length >= sizeof(struct sockaddr_un)) &&
-        "Socket does not support variable size UNIX address on UDP"
-    );
+    if (unlikely(is_udp && address != NULL && address->sa_family == AF_LOCAL &&
+                 address_length < (cat_socklen_t) sizeof(struct sockaddr_un))) {
+        cat_update_last_error(CAT_EINVAL, "A UDP AF_LOCAL address must be a full sockaddr_un");
+        return cat_false;
+    }
     if (is_dgram && !is_udp) {
         ret = cat_socket_internal_udg_write(socket_i, vector, vector_count, address, address_length, timeout);
         goto _out;
@@ -3695,10 +3734,11 @@ static ssize_t cat_socket_internal_try_write_raw(
 #ifdef CAT_OS_UNIX_LIKE
     cat_bool_t is_udp = ((socket_i->type & CAT_SOCKET_TYPE_UDP) == CAT_SOCKET_TYPE_UDP);
     /* libuv does not support dynamic address length */
-    CAT_ASSERT(
-        (!is_udp || address == NULL || address->sa_family != AF_UNIX || address_length >= sizeof(struct sockaddr_un)) &&
-        "Socket does not support variable size UNIX address on UDP"
-    );
+    if (unlikely(is_udp && address != NULL && address->sa_family == AF_LOCAL &&
+                 address_length < (cat_socklen_t) sizeof(struct sockaddr_un))) {
+        cat_update_last_error(CAT_EINVAL, "A UDP AF_LOCAL address must be a full sockaddr_un");
+        return CAT_EINVAL;
+    }
     if (is_dgram && !is_udp) {
         return cat_socket_internal_udg_try_write(socket_i, vector, vector_count, address, address_length);
     }
@@ -3917,7 +3957,11 @@ static cat_always_inline ssize_t cat_socket_internal_try_write(
 static cat_always_inline ssize_t cat_socket_read_impl(cat_socket_t *socket, char *buffer, size_t size, cat_sockaddr_t *address, cat_socklen_t *address_length, cat_timeout_t timeout, cat_bool_t once)
 {
     CAT_SOCKET_IO_CHECK(socket, socket_i, CAT_SOCKET_IO_FLAG_READ, return -1);
-    return cat_socket_internal_read(socket_i, buffer, size, address, address_length, timeout, once);
+    /* the caller owns the handle, so record it here instead of plumbing it down */
+    socket_i->context.io.read.owner = socket;
+    ssize_t ret = cat_socket_internal_read(socket_i, buffer, size, address, address_length, timeout, once);
+    socket_i->context.io.read.owner = NULL;
+    return ret;
 }
 
 static cat_always_inline ssize_t cat_socket_try_recv_impl(cat_socket_t *socket, char *buffer, size_t size, cat_sockaddr_t *address, cat_socklen_t *address_length)
@@ -3968,7 +4012,9 @@ static ssize_t cat_socket_recv_from_impl(cat_socket_t *socket, char *buffer, siz
     CAT_SOCKET_READ_ADDRESS_CONTEXT(address, name, name_length, port);
     ssize_t ret;
 
+    socket_i->context.io.read.owner = socket;
     ret = cat_socket_internal_read(socket_i, buffer, size, address, address_length, timeout, cat_true);
+    socket_i->context.io.read.owner = NULL;
 
     CAT_SOCKET_READ_ADDRESS_TO_NAME(address, name, name_length, port);
 
@@ -5001,6 +5047,22 @@ static cat_always_inline void cat_socket_io_cancel(cat_coroutine_t *coroutine, c
     } /* else: under which case will coroutine be null except we are in try_connect()? */
 }
 
+/* An internal socket may be shared by several handles, so a close cancels only
+ * the waits started by its own handle. Writes reference caller buffers and the
+ * transport, so they stay on the last-reference teardown path. */
+static cat_always_inline void cat_socket_internal_cancel_owned_io(cat_socket_internal_t *socket_i, const cat_socket_t *socket)
+{
+    if (socket_i->io_flags == CAT_SOCKET_IO_FLAG_BIND && socket_i->context.bind.owner == socket) {
+        cat_socket_io_cancel(socket_i->context.bind.coroutine, "bind");
+    } else if (socket_i->io_flags == CAT_SOCKET_IO_FLAG_ACCEPT && socket_i->context.accept.owner == socket) {
+        cat_socket_io_cancel(socket_i->context.accept.coroutine, "accept");
+    } else if (socket_i->io_flags == CAT_SOCKET_IO_FLAG_CONNECT && socket_i->context.connect.owner == socket) {
+        cat_socket_io_cancel(socket_i->context.connect.coroutine, "connect");
+    } else if ((socket_i->io_flags & CAT_SOCKET_IO_FLAG_READ) && socket_i->context.io.read.owner == socket) {
+        cat_socket_io_cancel(socket_i->context.io.read.coroutine, "read");
+    }
+}
+
 static void cat_socket_close_callback(uv_handle_t *handle)
 {
     cat_socket_internal_t *socket_i = cat_container_of(handle, cat_socket_internal_t, u.handle);
@@ -5055,6 +5117,10 @@ static void cat_socket_internal_close_impl(cat_socket_internal_t *socket_i, cat_
         // normal close
         cat_socket_soft_close(socket, unrecoverable_error);
         if (CAT_REF_DEL(socket_i) != 0) {
+            /* Other references keep the transport alive, so only this handle's
+             * waits are canceled. Cancel after the reference drop: the resumed
+             * wait may close the last reference and free the internal socket. */
+            cat_socket_internal_cancel_owned_io(socket_i, socket);
             return;
         }
     }
@@ -5327,6 +5393,7 @@ static cat_always_inline cat_bool_t cat_socket_internal_ssl_get_liveness(const c
         return cat_true;
     }
 #if OPENSSL_VERSION_NUMBER >= 0x10100000L && !defined(LIBRESSL_VERSION_NUMBER)
+    /* LibreSSL has no SSL_has_pending() */
     return SSL_has_pending(ssl->connection) ? cat_true : cat_false;
 #else
     return cat_false;

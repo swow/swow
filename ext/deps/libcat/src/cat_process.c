@@ -52,6 +52,13 @@ static void cat_process_exit_callback(uv_process_t* uprocess, int64_t exit_statu
         cat_coroutine_schedule(waiter, PROCESS, "Process");
     }
 
+    if (process->orphaned) {
+        /* the spawn removed the handle from the loop handle queue, so it can not
+         * be closed; the child is reaped and the object freed here */
+        cat_free(process);
+        return;
+    }
+
     if (process->closing) {
         /* The caller released the object while the process still ran. */
         uv_close(&process->u.handle, cat_process_close_callback);
@@ -142,6 +149,7 @@ CAT_API cat_process_t *cat_process_run(const cat_process_options_t *options)
 #endif
     process->exited = cat_false;
     process->closing = cat_false;
+    process->orphaned = cat_false;
     process->exit_status = 0;
     process->term_signal = 0;
     cat_queue_init(&process->waiters);
@@ -165,10 +173,17 @@ CAT_API cat_process_t *cat_process_run(const cat_process_options_t *options)
     if (unlikely(error != 0)) {
         cat_update_last_error_with_reason(error, "Process run failed");
         if (process != NULL) {
-            /* uv_spawn() removes the handle from the loop queue when it fails, so the
-             * handle cannot be closed: uv__finish_close() would remove it a second time
-             * and leave the loop handle queue holding freed memory */
-            cat_free(process);
+            if (process->u.process.pid != 0) {
+                /* the child is running but the spawn removed the handle from the
+                 * loop handle queue, so it can not be closed; the exit callback
+                 * reaps the child and releases the object */
+                process->orphaned = cat_true;
+            } else {
+                /* uv_spawn() removes the handle from the loop queue when it fails, so the
+                 * handle cannot be closed: uv__finish_close() would remove it a second time
+                 * and leave the loop handle queue holding freed memory */
+                cat_free(process);
+            }
         }
         return NULL;
     }

@@ -37,8 +37,13 @@ extern "C" {
 
 #include <openssl/opensslv.h>
 
-#if OPENSSL_VERSION_NUMBER < 0x10002000L
-#error "Require OpenSSL >= 1.0.2"
+/* LibreSSL reports the OpenSSL version it emulates, which differs from its own */
+#if defined(LIBRESSL_VERSION_NUMBER)
+#if LIBRESSL_VERSION_NUMBER < 0x3060000fL
+#error "Require LibreSSL >= 3.6.0"
+#endif
+#elif OPENSSL_VERSION_NUMBER < 0x10101000L
+#error "Require OpenSSL >= 1.1.1"
 #endif
 
 #include <openssl/ssl.h>
@@ -72,16 +77,6 @@ extern "C" {
 #undef X509_NAME
 #undef X509_CERT_PAIR
 #undef X509_EXTENSIONS
-#endif
-
-/* fixup OPENSSL_VERSION_NUMBER first */
-#if (defined LIBRESSL_VERSION_NUMBER && OPENSSL_VERSION_NUMBER == 0x20000000L)
-#undef OPENSSL_VERSION_NUMBER
-#if (LIBRESSL_VERSION_NUMBER >= 0x2080000fL)
-#define OPENSSL_VERSION_NUMBER 0x1010000fL
-#else
-#define OPENSSL_VERSION_NUMBER 0x1000107fL
-#endif
 #endif
 
 /* full version macro/API support */
@@ -118,8 +113,15 @@ extern "C" {
 #define CAT_SSL_HAVE_TLS_ALPN 1
 #endif
 
-#if OPENSSL_VERSION_NUMBER >= 0x10100000L && !defined(LIBRESSL_VERSION_NUMBER)
+/* LibreSSL gained the security level API in 3.6.0 */
+#if defined(LIBRESSL_VERSION_NUMBER)
+# if LIBRESSL_VERSION_NUMBER >= 0x3060000fL
+#  define CAT_SSL_HAVE_SECURITY_LEVEL 1
+# endif
+#elif OPENSSL_VERSION_NUMBER >= 0x10100000L
 # define CAT_SSL_HAVE_SECURITY_LEVEL 1
+#endif
+#ifdef CAT_SSL_HAVE_SECURITY_LEVEL
 # ifdef OPENSSL_TLS_SECURITY_LEVEL
 #  define CAT_SSL_DEFAULT_SECURITY_LEVEL OPENSSL_TLS_SECURITY_LEVEL
 #else

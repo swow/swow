@@ -110,7 +110,8 @@ static cat_always_inline cat_bool_t cat_string_create(cat_string_t *string, cons
     }
 #endif
     string->value = new_value;
-    string->length = length;
+    /* the copy ends at the first NUL, so the recorded length must end there too */
+    string->length = strlen(new_value);
     return cat_true;
 }
 
