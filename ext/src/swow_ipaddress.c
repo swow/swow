@@ -112,9 +112,11 @@ static bool swow_ipaddress_in(swow_ipaddress_t *s_address, swow_ipaddress_t *s_c
     }
     if (addr->flags & IPV6_FLAG_IPV4_COMPAT) {
         // ipv4
-        uint32_t beIpv4Addr = addr->address.components[1] + (addr->address.components[0] << 16);
-        uint32_t beIpv4Cidr = cidr->address.components[1] + (cidr->address.components[0] << 16);
-        uint32_t mask = ((1ULL << cidr->mask) - 1ULL) << (32 - cidr->mask);
+        uint32_t beIpv4Addr = (uint32_t) addr->address.components[1] |
+                              ((uint32_t) addr->address.components[0] << 16);
+        uint32_t beIpv4Cidr = (uint32_t) cidr->address.components[1] |
+                              ((uint32_t) cidr->address.components[0] << 16);
+        uint32_t mask = (uint32_t) (((1ULL << cidr->mask) - 1ULL) << (32 - cidr->mask));
         // printf("%08x %08x %08x\n", beIpv4Addr, beIpv4Cidr, mask);
         return (bool) ((beIpv4Addr & mask) == (beIpv4Cidr & mask));
     } else {
@@ -127,10 +129,11 @@ static bool swow_ipaddress_in(swow_ipaddress_t *s_address, swow_ipaddress_t *s_c
                 return false;
             }
         }
-        uint32_t mask = ((1 << remainingMaskLen) - 1) << (16 - remainingMaskLen);
-        if (i < sameComponents &&
-            (addr->address.components[i] & mask) != (cidr->address.components[i] & mask)) {
-            return false;
+        if (remainingMaskLen != 0) {
+            uint32_t mask = ((1U << remainingMaskLen) - 1U) << (16 - remainingMaskLen);
+            if ((addr->address.components[i] & mask) != (cidr->address.components[i] & mask)) {
+                return false;
+            }
         }
 
         return true;

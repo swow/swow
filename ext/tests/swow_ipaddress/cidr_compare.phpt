@@ -13,6 +13,9 @@ use Swow\IpAddress;
 $testCases = [
     ['0.0.0.0', '0.0.0.0/1', true],
     ['0.0.0.0', '0.0.0.0/32', true],
+    // a zero mask must not shift by the width of the type
+    ['1.2.3.4', '0.0.0.0/0', true],
+    ['255.255.255.255', '0.0.0.0/0', true],
     ['1.0.0.0', '0.0.0.0/8', false],
     ['0.0.0.0', '0.0.0.1/8', true],
     ['0.0.0.0/7', '0.0.0.1/8', false],
@@ -25,6 +28,15 @@ $testCases = [
     ['2001::1', 'fd00::/16', false],
     ['fd00::', 'fd00::/128', true],
     ['fd00::', 'fd00::/0', true],
+    // a mask that ends inside a component must compare the remaining bits
+    ['fd00::1', 'fd00::/33', true],
+    ['fd00:0:8000::1', 'fd00::/33', false],
+    ['fd00::1', 'fd00::/65', true],
+    ['fd00:0:0:0:8000::1', 'fd00::/65', false],
+    ['fd00:0:0:0:0:0:0:1', 'fd00::/127', true],
+    ['fd00:0:0:0:0:0:0:2', 'fd00::/127', false],
+    ['fd00:0:0:0:0:0:0:3', 'fd00::/126', true],
+    ['fd00:0:0:0:0:0:0:4', 'fd00::/126', false],
 ];
 
 foreach ($testCases as $case) {
