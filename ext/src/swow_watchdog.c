@@ -29,78 +29,78 @@ SWOW_API zend_class_entry *swow_watchdog_exception_ce;
 
 static swow_interrupt_function_t original_zend_interrupt_function = (swow_interrupt_function_t) -1;
 
-/* Try to read current execution location from executor_globals.
- * Note: Called from watchdog thread with potential race conditions.
- * The returned information may be inaccurate but should not crash. */
-static void swow_watchdog_try_read_execute_location(
-    zend_executor_globals *eg,
-    const char **filename,
-    uint32_t *lineno,
-    const char **function_name,
-    const char **class_name
-)
+/* Capture the current execution location. This runs on the watched thread, so
+ * walking the execute stack is safe here; the watchdog thread only reads the
+ * resulting text. */
+static void swow_watchdog_capture_execute_location(swow_watchdog_t *s_watchdog)
 {
-    *filename = NULL;
-    *lineno = 0;
-    *function_name = NULL;
-    *class_name = NULL;
+    zend_execute_data *execute_data = EG(current_execute_data);
+    const char *filename = NULL;
+    uint32_t lineno = 0;
+    const char *function_name = NULL;
+    const char *class_name = NULL;
+    char line[sizeof(s_watchdog->location)];
+    int length;
 
-    if (eg == NULL) {
-        return;
-    }
-
-    /* Try to read current_execute_data (race condition possible,
-     * but reading pointer value should be safe) */
-    zend_execute_data *execute_data = eg->current_execute_data;
-
-    if (execute_data == NULL) {
-        return;
-    }
-
-    /* Try to read function first (check before accessing opline) */
-    zend_function *func = execute_data->func;
-    if (func == NULL) {
-        return;
-    }
-
-    /* Read function name (safe to read pointer to string) */
-    if (func->common.function_name != NULL) {
-        *function_name = ZSTR_VAL(func->common.function_name);
-        /* Try to read class name if it's a method */
-        if (func->common.scope != NULL && func->common.scope->name != NULL) {
-            *class_name = ZSTR_VAL(func->common.scope->name);
+    for (zend_execute_data *frame = execute_data; frame != NULL; frame = frame->prev_execute_data) {
+        zend_function *func = frame->func;
+        if (func == NULL || !ZEND_USER_CODE(func->common.type)) {
+            continue;
         }
-    }
-
-    /* Check if it's a user function */
-    if (ZEND_USER_CODE(func->common.type)) {
-        /* Try to read opline */
-        const zend_op *opline = execute_data->opline;
-        if (opline != NULL) {
-            /* Read filename and line number from user function */
-            if (func->op_array.filename != NULL) {
-                *filename = ZSTR_VAL(func->op_array.filename);
-            }
-            *lineno = opline->lineno;
-            return;
+        const zend_op *opline = frame->opline;
+        if (opline == NULL || func->op_array.filename == NULL) {
+            continue;
         }
-    }
-
-    /* Current function is internal or has no location info,
-     * try to find caller's location from previous frame */
-    zend_execute_data *prev = execute_data->prev_execute_data;
-    while (prev != NULL) {
-        zend_function *prev_func = prev->func;
-        if (prev_func != NULL && ZEND_USER_CODE(prev_func->common.type)) {
-            const zend_op *prev_opline = prev->opline;
-            if (prev_opline != NULL && prev_func->op_array.filename != NULL) {
-                *filename = ZSTR_VAL(prev_func->op_array.filename);
-                *lineno = prev_opline->lineno;
-                return;
+        filename = ZSTR_VAL(func->op_array.filename);
+        lineno = opline->lineno;
+        if (func->common.function_name != NULL) {
+            function_name = ZSTR_VAL(func->common.function_name);
+            if (func->common.scope != NULL && func->common.scope->name != NULL) {
+                class_name = ZSTR_VAL(func->common.scope->name);
             }
         }
-        prev = prev->prev_execute_data;
+        break;
     }
+
+    if (filename == NULL) {
+        length = snprintf(line, sizeof(line), "unknown location");
+    } else if (function_name == NULL) {
+        length = snprintf(line, sizeof(line), "%s:%u", filename, lineno);
+    } else if (class_name == NULL) {
+        length = snprintf(line, sizeof(line), "%s() at %s:%u", function_name, filename, lineno);
+    } else {
+        length = snprintf(line, sizeof(line), "%s::%s() at %s:%u", class_name, function_name, filename, lineno);
+    }
+    if (length < 0) {
+        return;
+    }
+    if ((size_t) length >= sizeof(line)) {
+        length = (int) sizeof(line) - 1;
+    }
+
+    /* Publish the text with a version counter, so a reader never sees a
+     * half-written snapshot */
+    cat_atomic_uint32_fetch_add(&s_watchdog->location_seq, 1);
+    memcpy(s_watchdog->location, line, (size_t) length);
+    s_watchdog->location[length] = '\0';
+    cat_atomic_uint32_fetch_add(&s_watchdog->location_seq, 1);
+}
+
+static cat_bool_t swow_watchdog_read_execute_location(swow_watchdog_t *s_watchdog, char *buffer, size_t size)
+{
+    for (int attempt = 0; attempt < 4; attempt++) {
+        uint32_t before = cat_atomic_uint32_load(&s_watchdog->location_seq);
+        if ((before & 1) != 0) {
+            continue;
+        }
+        memcpy(buffer, s_watchdog->location, size);
+        buffer[size - 1] = '\0';
+        if (cat_atomic_uint32_load(&s_watchdog->location_seq) == before) {
+            return cat_true;
+        }
+    }
+
+    return cat_false;
 }
 
 SWOW_API void swow_watchdog_alert_standard(cat_watchdog_t *watchdog)
@@ -126,20 +126,15 @@ SWOW_API void swow_watchdog_alert_standard(cat_watchdog_t *watchdog)
              * the machine performance is too bad (such as mine),
              * VM has not interrupted yet */
 
-            /* Try to read current execution location (may be inaccurate, but provides debugging clues) */
-            const char *filename = NULL;
-            uint32_t lineno = 0;
-            const char *function_name = NULL;
-            const char *class_name = NULL;
-            cat_coroutine_t *current_coroutine = watchdog->globals->current;
-
-            swow_watchdog_try_read_execute_location(
-                s_watchdog->executor_globals,
-                &filename,
-                &lineno,
-                &function_name,
-                &class_name
+            /* The watched thread captured its location; this thread only reads
+             * the captured text, never the execute stack itself */
+            char location[sizeof(s_watchdog->location)];
+            cat_bool_t has_location = swow_watchdog_read_execute_location(
+                s_watchdog,
+                location,
+                sizeof(location)
             );
+            cat_coroutine_t *current_coroutine = watchdog->globals->current;
 
             /* Output standard warning first */
             cat_watchdog_alert_standard(watchdog);
@@ -151,18 +146,9 @@ SWOW_API void swow_watchdog_alert_standard(cat_watchdog_t *watchdog)
                     current_coroutine->id, watchdog->globals->count);
             }
 
-            if (function_name != NULL) {
-                if (class_name != NULL) {
-                    fprintf(stderr, "         Function: %s::%s()\n", class_name, function_name);
-                } else {
-                    fprintf(stderr, "         Function: %s()\n", function_name);
-                }
-            }
-
-            if (filename != NULL) {
-                fprintf(stderr, "         Location: %s:%u\n", filename, lineno);
-                fprintf(stderr, "         Note: Location info may be inaccurate due to cross-thread reading\n");
-            } else if (function_name == NULL) {
+            if (has_location && location[0] != '\0') {
+                fprintf(stderr, "         Location: %s\n", location);
+            } else {
                 fprintf(stderr, "         Unable to read execute location (coroutine may be idle or in C extension)\n");
             }
 
@@ -215,15 +201,13 @@ static void swow_watchdog_call_alerter(swow_watchdog_t *s_watchdog, const char *
         fprintf(stderr, "Notice: <Watchdog> Alerter callback invoked at nearest safe execution point (not at exact blocking location)\n");
     }
 
-    zend_fcall_info fci;
+    zend_fcall_info fci = empty_fcall_info;
     zval retval, z_type;
 
+    ZVAL_UNDEF(&retval);
     fci.size = sizeof(fci);
-    ZVAL_UNDEF(&fci.function_name);
-    fci.object = NULL;
     fci.param_count = 1;
     fci.params = &z_type;
-    fci.named_params = NULL;
     fci.retval = &retval;
 
     ZVAL_STRING(&z_type, blocking_type);
@@ -263,6 +247,7 @@ static void swow_watchdog_interrupt_function(zend_execute_data *execute_data)
         }
 
         cat_atomic_bool_store(&s_watchdog->vm_interrupted, cat_true);
+        swow_watchdog_capture_execute_location(s_watchdog);
         /* re-check if current switches still equal to last_switches  */
         if (CAT_COROUTINE_G(switches) == watchdog->last_switches) {
             /* CPU blocking detected */
@@ -317,7 +302,8 @@ SWOW_API cat_bool_t swow_watchdog_run(cat_timeout_t quantum, cat_timeout_t thres
     s_watchdog = (swow_watchdog_t *) emalloc(sizeof(*s_watchdog));
     cat_atomic_bool_init(&s_watchdog->vm_interrupted, cat_false);
     s_watchdog->vm_interrupt_ptr = &EG(vm_interrupt);
-    s_watchdog->executor_globals = ZEND_GLOBALS_FAST_PTR(executor_globals);
+    cat_atomic_uint32_store(&s_watchdog->location_seq, 0);
+    s_watchdog->location[0] = '\0';
     cat_atomic_bool_init(&s_watchdog->syscall_blocked, cat_false);
     s_watchdog->delay = delay;
     s_watchdog->alerter = fcc;
