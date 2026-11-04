@@ -591,6 +591,7 @@ static PHP_METHOD(Swow_Process_ChildProcess, spawn)
             if (Z_TYPE_P(zfds) != IS_ARRAY) {
                 swow_child_process_free_argv(argv);
                 swow_child_process_free_envp(envp);
+                swow_child_process_close_spawn_fds(stdio);
                 swow_throw_exception(swow_process_exception_ce, 0, "fds must be an array");
                 RETURN_THROWS();
             }
@@ -602,12 +603,14 @@ static PHP_METHOD(Swow_Process_ChildProcess, spawn)
                 if (fd_key != NULL || child_fd < 3 || child_fd > SWOW_CHILD_PROCESS_MAX_FD) {
                     swow_child_process_free_argv(argv);
                     swow_child_process_free_envp(envp);
+                    swow_child_process_close_spawn_fds(stdio);
                     swow_throw_exception(swow_process_exception_ce, 0, "fds keys must be integers between 3 and %d", SWOW_CHILD_PROCESS_MAX_FD);
                     RETURN_THROWS();
                 }
                 if (!swow_child_process_parse_fd(fd_value, &fd)) {
                     swow_child_process_free_argv(argv);
                     swow_child_process_free_envp(envp);
+                    swow_child_process_close_spawn_fds(stdio);
                     swow_throw_exception(swow_process_exception_ce, 0, "fds values must be streams or file descriptors");
                     RETURN_THROWS();
                 }
@@ -897,12 +900,6 @@ ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO_EX(arginfo_class_Swow_Process_ChildProcess___destruct, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
-static void swow_child_process_force_close_callback(uv_handle_t *handle)
-{
-    cat_process_t *process = cat_container_of(handle, cat_process_t, u.handle);
-    cat_free(process);
-}
-
 static cat_bool_t swow_child_process_close(swow_child_process_t *s_process, cat_bool_t throw_on_error)
 {
     if (s_process->closed) {
@@ -920,8 +917,14 @@ static cat_bool_t swow_child_process_close(swow_child_process_t *s_process, cat_
             return cat_false;
         }
         s_process->process = NULL;
-        if (!uv_is_closing((uv_handle_t *) &process->u.handle)) {
-            uv_close((uv_handle_t *) &process->u.handle, swow_child_process_force_close_callback);
+        /* A running child must be reaped by the loop: closing its handle now
+         * would leave a zombie behind. cat_process_close() keeps the handle
+         * until the exit callback freed the object. */
+        if (UNEXPECTED(!cat_process_close(process))) {
+            if (throw_on_error) {
+                swow_throw_exception_with_last(swow_process_exception_ce);
+            }
+            return cat_false;
         }
     }
 
@@ -1074,6 +1077,17 @@ static const zend_function_entry swow_process_functions[] = {
 /* }}} */
 
 /* {{{ module init */
+
+zend_result swow_process_runtime_shutdown(INIT_FUNC_ARGS)
+{
+    /* A child that still runs has an unref'd handle, so the loop can end
+     * without waiting for it; the handle is closed here to let the loop close. */
+    if (!cat_process_runtime_shutdown()) {
+        return FAILURE;
+    }
+
+    return SUCCESS;
+}
 
 zend_result swow_process_module_init(INIT_FUNC_ARGS)
 {

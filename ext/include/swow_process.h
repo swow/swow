@@ -61,6 +61,8 @@ typedef struct swow_process_exit_status_s {
 
 zend_result swow_process_module_init(INIT_FUNC_ARGS);
 
+zend_result swow_process_runtime_shutdown(INIT_FUNC_ARGS);
+
 /* helper */
 
 static zend_always_inline swow_child_process_t *swow_child_process_get_from_object(zend_object *object)

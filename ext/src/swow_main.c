@@ -443,6 +443,7 @@ PHP_RSHUTDOWN_FUNCTION(swow)
         swow_curl_runtime_shutdown,
 #endif
         swow_proc_open_runtime_shutdown,
+        swow_process_runtime_shutdown,
         swow_watchdog_runtime_shutdown,
         swow_stream_runtime_shutdown,
 #ifdef ZTS
