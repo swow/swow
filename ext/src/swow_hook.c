@@ -43,6 +43,13 @@ SWOW_API cat_bool_t swow_hook_internal_function_handler_ex(const char *name, siz
     if (function == NULL) {
         return cat_false;
     }
+    if (UNEXPECTED(function->type != ZEND_INTERNAL_FUNCTION)) {
+        return cat_false;
+    }
+    /* hooking twice would cache the hook itself as the original handler */
+    if (UNEXPECTED(function->internal_function.handler == handler)) {
+        return cat_false;
+    }
     if (original_handler != NULL) {
         *original_handler = function->internal_function.handler;
     }
