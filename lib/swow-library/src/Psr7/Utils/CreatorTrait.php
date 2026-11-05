@@ -275,13 +275,18 @@ trait CreatorTrait
         $uploadedFiles = [];
         foreach ($uploadedFileEntities as $formDataName => $uploadedFileEntity) {
             $uploadedFileStream = $streamFactory->createStreamFromResource($uploadedFileEntity->tmpFile);
-            $uploadedFiles[$formDataName] = $uploadedFileFactory->createUploadedFile(
+            $uploadedFile = $uploadedFileFactory->createUploadedFile(
                 $uploadedFileStream,
                 $uploadedFileEntity->size,
                 $uploadedFileEntity->error,
                 $uploadedFileEntity->name,
                 $uploadedFileEntity->type,
             );
+            /* the parser created this storage, so the object removes it */
+            if ($uploadedFile instanceof UploadedFile) {
+                $uploadedFile->setTemporaryFile();
+            }
+            $uploadedFiles[$formDataName] = $uploadedFile;
         }
         return $uploadedFiles;
     }

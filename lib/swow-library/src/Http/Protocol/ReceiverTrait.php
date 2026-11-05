@@ -27,6 +27,7 @@ use Swow\Http\Mime\MimeType;
 use Swow\Http\Parser as HttpParser;
 use Swow\Http\ParserException;
 use Swow\Http\Status as HttpStatus;
+use Swow\Psr7\Message\UploadedFile;
 use Swow\SocketException;
 use Swow\WebSocket\WebSocket;
 use Throwable;
@@ -459,7 +460,7 @@ trait ReceiverTrait
 
                                 if ($fileName) {
                                     // TODO: make dir and prefix configurable
-                                    $tmpName = tempnam(sys_get_temp_dir(), 'swow_uploaded_file_');
+                                    $tmpName = tempnam(sys_get_temp_dir(), UploadedFile::TMP_FILE_PREFIX);
                                     $tmpFile = fopen($tmpName, 'rwb+');
                                 } else {
                                     // TODO: not hard code here?

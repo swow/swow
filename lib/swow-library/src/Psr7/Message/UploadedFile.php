@@ -43,6 +43,13 @@ use const UPLOAD_ERR_PARTIAL;
  */
 class UploadedFile implements UploadedFilePlusInterface
 {
+    /*
+     * Prefix of the temporary storage the request parser creates for an upload.
+     * It only names the file for a reader: Windows keeps the first three
+     * characters of it, so the name does not identify the storage as owned
+     */
+    public const TMP_FILE_PREFIX = 'swow_uploaded_file_';
+
     protected const ERRORS = [
         UPLOAD_ERR_OK => true,
         UPLOAD_ERR_INI_SIZE => true,
@@ -67,6 +74,9 @@ class UploadedFile implements UploadedFilePlusInterface
     protected ?string $file = null;
 
     protected bool $moved = false;
+
+    /* the file is storage the request parser created for this upload */
+    protected bool $temporary = false;
 
     /**
      * @param string|resource|StreamInterface $streamOrFile
@@ -108,11 +118,24 @@ class UploadedFile implements UploadedFilePlusInterface
         }
     }
 
+    /**
+     * Mark the file as storage that the request parser created for this upload,
+     * so that the object removes it when the object dies. A file handed in by
+     * the caller stays, whatever its location is.
+     */
+    public function setTemporaryFile(bool $temporary = true): static
+    {
+        $this->temporary = $temporary;
+
+        return $this;
+    }
+
     public function __destruct()
     {
-        if (!$this->moved && $this->file !== null) {
-            @unlink($this->file);
+        if ($this->moved || !$this->temporary || $this->file === null) {
+            return;
         }
+        @unlink($this->file);
     }
 
     /**

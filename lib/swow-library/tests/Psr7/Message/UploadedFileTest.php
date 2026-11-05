@@ -120,17 +120,36 @@ final class UploadedFileTest extends TestCase
         $file->getExtension();
     }
 
-    public function testDestructor(): void
+    public function testDestructorRemovesMarkedTemporaryFile(): void
     {
-        $tmpFile = tempnam(sys_get_temp_dir(), 'swow_uploaded_tmp_file');
+        $tmpFile = tempnam(sys_get_temp_dir(), UploadedFile::TMP_FILE_PREFIX);
         $stream = Psr7::getDefaultStreamFactory()
             ->createStreamFromFile($tmpFile, 'w+');
         $random = getRandomBytes();
         $stream->write($random);
+        /** @var UploadedFile $uploadedFile */
         $uploadedFile = Psr7::getDefaultUploadedFileFactory()
             ->createUploadedFile(stream: $stream, size: 0, clientFilename: 'filename.txt', clientMediaType: 'text/plain');
+        $uploadedFile->setTemporaryFile();
         $this->assertFileExists($tmpFile);
         unset($uploadedFile);
         $this->assertFileDoesNotExist($tmpFile);
+    }
+
+    public function testDestructorKeepsAnUnmarkedFile(): void
+    {
+        $tmpFile = tempnam(sys_get_temp_dir(), UploadedFile::TMP_FILE_PREFIX);
+        try {
+            $stream = Psr7::getDefaultStreamFactory()
+                ->createStreamFromFile($tmpFile, 'w+');
+            $uploadedFile = Psr7::getDefaultUploadedFileFactory()
+                ->createUploadedFile(stream: $stream, size: 0, clientFilename: 'filename.txt', clientMediaType: 'text/plain');
+            unset($uploadedFile);
+            clearstatcache();
+            /* the parser marks its own storage, a caller file stays */
+            $this->assertFileExists($tmpFile);
+        } finally {
+            @unlink($tmpFile);
+        }
     }
 }
