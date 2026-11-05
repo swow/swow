@@ -155,7 +155,7 @@ class Request extends AbstractMessage implements RequestPlusInterface
         if ($requestTarget === '') {
             throw new InvalidArgumentException('Invalid request target: must not be empty');
         }
-        if (preg_match('/[\x00-\x20\x7f-\xff#\\\\]/', $requestTarget)) {
+        if (preg_match('/[\x00-\x20\x7f-\xff#\\\]/', $requestTarget)) {
             throw new InvalidArgumentException("Invalid request target: {$requestTarget}");
         }
         $this->requestTarget = $requestTarget;

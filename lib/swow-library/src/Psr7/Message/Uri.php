@@ -25,6 +25,7 @@ use function preg_replace_callback;
 use function rawurlencode;
 use function sprintf;
 use function str_starts_with;
+use function strlen;
 use function strpbrk;
 use function strtolower;
 

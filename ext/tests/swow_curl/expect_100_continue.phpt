@@ -10,8 +10,8 @@ skip_if(!Swow\Extension::isBuiltWith('curl'), 'extension must be built with libc
 
 require_once __DIR__ . '/../include/bootstrap.php';
 
-use Swow\Coroutine;
 use Swow\Buffer;
+use Swow\Coroutine;
 use Swow\Socket;
 
 /*

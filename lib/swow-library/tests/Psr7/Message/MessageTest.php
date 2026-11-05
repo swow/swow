@@ -18,9 +18,9 @@ use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\MessageInterface;
+use Swow\Http\Message\ResponseEntity;
 use Swow\Psr7\Message\AbstractMessage;
 use Swow\Psr7\Message\MessagePlusInterface;
-use Swow\Http\Message\ResponseEntity;
 use Swow\Psr7\Psr7;
 
 /**
@@ -194,7 +194,7 @@ final class MessageTest extends TestCase
             $this->assertSame($target, $request->getRequestTarget());
         }
         // no form allows an empty target, a fragment, a backslash or obs-text
-        foreach (['', '/a#b', '/a\\b', "/a\x80b"] as $target) {
+        foreach (['', '/a#b', '/a\b', "/a\x80b"] as $target) {
             try {
                 $request->setRequestTarget($target);
                 $this->fail('An invalid request target must be rejected');

@@ -20,7 +20,7 @@ try {
 } catch (Exception $exception) {
     Assert::same($exception->getMessage(), 'boom');
 } catch (Throwable $exception) {
-    Assert::fail('expected the original Exception, got ' . get_class($exception) . ': ' . $exception->getMessage());
+    Assert::fail('expected the original Exception, got ' . $exception::class . ': ' . $exception->getMessage());
 }
 Assert::same($closure(), 0);
 
@@ -31,7 +31,7 @@ try {
 } catch (Error $error) {
     Assert::contains($error->getMessage(), 'undefined_function_call');
 } catch (Throwable $exception) {
-    Assert::fail('expected the original Error, got ' . get_class($exception) . ': ' . $exception->getMessage());
+    Assert::fail('expected the original Error, got ' . $exception::class . ': ' . $exception->getMessage());
 }
 Assert::same($closure(), 0);
 

@@ -16,11 +16,11 @@ namespace Swow\Tests\Psr7\Client;
 
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
+use Psr\Http\Message\RequestInterface;
+use ReflectionMethod;
 use RuntimeException;
 use Swow\Http\Protocol\ChunkedBodyState;
 use Swow\Http\Protocol\ChunkedBodyStream;
-use Psr\Http\Message\RequestInterface;
-use ReflectionMethod;
 use Swow\Psr7\Client\Client;
 use Swow\Psr7\Client\MagicClient;
 use Swow\Psr7\Message\ChunkedBodyPsrStream;

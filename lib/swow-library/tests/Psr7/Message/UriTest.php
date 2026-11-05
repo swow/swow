@@ -135,8 +135,21 @@ final class UriTest extends TestCase
         $this->assertSame([], $uri->getQueryParams());
     }
 
+    #[DataProvider('provideHostValidationCases')]
+    public function testHostValidation(string $host, bool $valid): void
+    {
+        $uri = new Uri();
+        if (!$valid) {
+            $this->expectException(InvalidArgumentException::class);
+            $uri->setHost($host);
+            return;
+        }
+        $uri->setHost($host);
+        $this->assertSame(strtolower($host), $uri->getHost());
+    }
+
     /** @return array<string, array{string, bool}> */
-    public static function hostProvider(): array
+    public static function provideHostValidationCases(): iterable
     {
         return [
             /* accepted: a reg-name, a pct-encoded name and both IP-literal forms */
@@ -151,7 +164,7 @@ final class UriTest extends TestCase
             'space' => ['exa mple', false],
             'userinfo delimiter' => ['user@example.com', false],
             'slash' => ['example.com/path', false],
-            'backslash' => ['example.com\\path', false],
+            'backslash' => ['example.com\path', false],
             'query delimiter' => ['example.com?q=1', false],
             'fragment delimiter' => ['example.com#f', false],
             'colon without port' => ['example.com:80', false],
@@ -166,21 +179,15 @@ final class UriTest extends TestCase
         ];
     }
 
-    #[DataProvider('hostProvider')]
-    public function testHostValidation(string $host, bool $valid): void
+    #[DataProvider('provideInvalidHostIsRejectedFromStringCases')]
+    public function testInvalidHostIsRejectedFromString(string $uri): void
     {
-        $uri = new Uri();
-        if (!$valid) {
-            $this->expectException(InvalidArgumentException::class);
-            $uri->setHost($host);
-            return;
-        }
-        $uri->setHost($host);
-        $this->assertSame(strtolower($host), $uri->getHost());
+        $this->expectException(InvalidArgumentException::class);
+        new Uri($uri);
     }
 
     /** @return array<string, array{string}> */
-    public static function invalidHostUriProvider(): array
+    public static function provideInvalidHostIsRejectedFromStringCases(): iterable
     {
         return [
             /* the parse_url() path has to validate the host as well */
@@ -188,13 +195,6 @@ final class UriTest extends TestCase
             'raw utf8' => ['http://例子.测试/'],
             'unbalanced literal' => ['http://exa]mple/'],
         ];
-    }
-
-    #[DataProvider('invalidHostUriProvider')]
-    public function testInvalidHostIsRejectedFromString(string $uri): void
-    {
-        $this->expectException(InvalidArgumentException::class);
-        new Uri($uri);
     }
 
     public function testValidLiteralsSurviveFromString(): void

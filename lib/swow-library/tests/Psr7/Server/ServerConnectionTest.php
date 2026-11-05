@@ -25,8 +25,8 @@ use Swow\Psr7\Server\Server;
 use Swow\Psr7\Server\ServerConnection;
 use Swow\Socket;
 use Swow\Sync\WaitReference;
-use Throwable;
 use Swow\Utils\FileSystem\FileSystem;
+use Throwable;
 
 use function array_map;
 use function file_exists;
