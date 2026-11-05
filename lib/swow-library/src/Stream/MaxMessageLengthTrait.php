@@ -18,6 +18,8 @@ use const PHP_INT_MAX;
 
 trait MaxMessageLengthTrait
 {
+    /* unlimited unless the caller sets a limit; a length-prefixed message states
+     * its own size, so a limit protects against a peer that never sends it */
     protected int $maxMessageLength = PHP_INT_MAX;
 
     public function getMaxMessageLength(): int
