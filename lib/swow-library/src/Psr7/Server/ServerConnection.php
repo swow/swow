@@ -53,6 +53,8 @@ use function strcasecmp;
 use function strlen;
 use function Swow\Debug\isStrictStringable;
 
+use const ENT_QUOTES;
+use const ENT_SUBSTITUTE;
 use const PATHINFO_EXTENSION;
 
 class ServerConnection implements ProtocolTypeInterface
@@ -311,7 +313,8 @@ class ServerConnection implements ProtocolTypeInterface
                 if ($message === '') {
                     $message = HttpStatus::getReasonPhraseOf($statusCode);
                 }
-                $message = "<html lang=\"en\"><body><h2>HTTP {$statusCode} {$message}</h2><hr><i>Powered by Swow</i></body></html>";
+                $escapedMessage = htmlspecialchars($message, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+                $message = "<html lang=\"en\"><body><h2>HTTP {$statusCode} {$escapedMessage}</h2><hr><i>Powered by Swow</i></body></html>";
                 $this->getSocket()->write([
                     Http::packResponse(
                         statusCode: $statusCode,

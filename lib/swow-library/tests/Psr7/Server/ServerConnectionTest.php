@@ -25,6 +25,7 @@ use Swow\Psr7\Server\Server;
 use Swow\Psr7\Server\ServerConnection;
 use Swow\Socket;
 use Swow\Sync\WaitReference;
+use Throwable;
 use Swow\Utils\FileSystem\FileSystem;
 
 use function array_map;
@@ -231,5 +232,43 @@ final class ServerConnectionTest extends TestCase
 
         $wr::wait($wr);
         $server->close();
+    }
+
+    public function testErrorPageEscapesTheMessage(): void
+    {
+        /* the message reaches error() from the exception text of a malformed
+         * request, so a peer controls part of it */
+        $server = new Server();
+        $server->bind('127.0.0.1')->listen();
+
+        $wr = new WaitReference();
+        Coroutine::run(static function () use ($server, $wr): void {
+            $connection = $server->acceptConnection();
+            $connection->error(400, '<script>alert(1)</script>', close: true);
+        });
+
+        $client = new Socket(Socket::TYPE_TCP);
+        $client->setReadTimeout(1000);
+        $client->connect($server->getSockAddress(), $server->getSockPort());
+        $client->send(Http::packRequest('GET', '/', [
+            'Host' => "{$server->getSockAddress()}:{$server->getSockPort()}",
+        ]));
+
+        $response = '';
+        try {
+            while (true) {
+                $response .= $client->recvString(1024);
+            }
+        } catch (Throwable) {
+            // the server closes the connection after the error page
+        }
+        $client->close();
+        $wr::wait($wr);
+        $server->close();
+
+        $this->assertStringContainsString('HTTP/1.1 400', $response);
+        // the markup is escaped, so the message can not open a tag
+        $this->assertStringContainsString('&lt;script&gt;alert(1)&lt;/script&gt;', $response);
+        $this->assertStringNotContainsString('<script>', $response);
     }
 }
