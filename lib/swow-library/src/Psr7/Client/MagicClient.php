@@ -257,7 +257,10 @@ class MagicClient implements ClientPlusInterface
             $this->connectedPort !== $port ||
             $this->connectedProxySignature !== $proxySignature;
         if (!$endpointChanged) {
-            return;
+            /* a previous exchange may have left the connection unusable */
+            if ($this->client->shouldKeepAlive()) {
+                return;
+            }
         }
 
         $this->recreateClient();
@@ -461,7 +464,9 @@ class MagicClient implements ClientPlusInterface
         }
         $uri = $request->getUri();
         if ($proxy['type'] === 'http' && strtolower($uri->getScheme()) === 'http') {
-            $request = $request->withRequestTarget((string) $uri);
+            /* An absolute-form target carries an absolute-URI, which has no
+             * fragment, so drop it before the target is built (RFC 9112 3.2.2) */
+            $request = $request->withRequestTarget((string) $uri->withFragment(''));
             $proxyAuthorization = $this->buildProxyAuthorization($proxy);
             if ($proxyAuthorization !== null) {
                 $request = $request->withHeader('Proxy-Authorization', $proxyAuthorization);

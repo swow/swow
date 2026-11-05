@@ -19,11 +19,15 @@ use PHPUnit\Framework\TestCase;
 use RuntimeException;
 use Swow\Http\Protocol\ChunkedBodyState;
 use Swow\Http\Protocol\ChunkedBodyStream;
+use Psr\Http\Message\RequestInterface;
+use ReflectionMethod;
 use Swow\Psr7\Client\Client;
+use Swow\Psr7\Client\MagicClient;
 use Swow\Psr7\Message\ChunkedBodyPsrStream;
 use Swow\Psr7\Message\Response;
 use Swow\Psr7\Psr7;
 use Swow\Socket;
+use Throwable;
 
 /** @internal */
 #[CoversClass(Client::class)]
@@ -78,6 +82,22 @@ final class ClientRecreateTest extends TestCase
         $this->assertSame('new', (string) $this->client->recvResponseEntity()->body);
     }
 
+    public function testAFailedExchangeDiscardsTheConnectionState(): void
+    {
+        // the peer sends a broken response and keeps the connection open
+        $this->peer->send("HTTP/1.1 200 OK\r\nBad Header\r\n\r\n");
+        try {
+            $this->client->recvResponseEntity();
+            $this->fail('A malformed response must not be accepted');
+        } catch (Throwable $exception) {
+            $this->assertFalse($this->client->shouldKeepAlive());
+        }
+        // a stale byte from the failed response must not become the next message
+        $this->client->recreate();
+        $this->reconnect();
+        $this->assertSame('new', (string) $this->client->recvResponseEntity()->body);
+    }
+
     public function testAnAbandonedStreamCannotReadOrCloseTheRecreatedConnection(): void
     {
         $this->client->setStreamingChunkedResponse(true);
@@ -111,5 +131,28 @@ final class ClientRecreateTest extends TestCase
         $body->close();
         $this->assertTrue($this->client->isEstablished());
         $this->assertSame('new', (string) $this->client->recvResponseEntity()->body);
+    }
+
+    public function testProxyAbsoluteFormTargetDropsTheFragment(): void
+    {
+        /* An HTTP proxy receives an absolute-form target, which is an
+         * absolute-URI and carries no fragment (RFC 9112 3.2.2). The fragment
+         * would otherwise reach setRequestTarget(), which rejects a "#". */
+        $client = new MagicClient();
+        $method = new ReflectionMethod(MagicClient::class, 'applyTransportRequest');
+        $request = Psr7::createRequest('GET', 'http://example.com/page#section');
+        /** @var RequestInterface $proxied */
+        $proxy = ['type' => 'http', 'host' => 'proxy.test', 'port' => 8080, 'username' => null, 'password' => null, 'remote_dns' => false];
+        $proxied = $method->invoke($client, $request, $proxy);
+        $this->assertSame('http://example.com/page', $proxied->getRequestTarget());
+
+        // without a fragment the target is the full URI
+        $plain = Psr7::createRequest('GET', 'http://example.com/page');
+        /** @var RequestInterface $proxiedPlain */
+        $proxiedPlain = $method->invoke($client, $plain, $proxy);
+        $this->assertSame('http://example.com/page', $proxiedPlain->getRequestTarget());
+
+        // without a proxy the request is untouched
+        $this->assertSame($plain, $method->invoke($client, $plain, null));
     }
 }

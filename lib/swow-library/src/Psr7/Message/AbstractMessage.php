@@ -15,6 +15,7 @@ declare(strict_types=1);
 namespace Swow\Psr7\Message;
 
 use Error;
+use InvalidArgumentException;
 use Psr\Http\Message\StreamInterface;
 use Swow\Object\StringableTrait;
 use Swow\Psr7\Psr7;
@@ -22,6 +23,7 @@ use Swow\Psr7\Psr7;
 use function array_merge;
 use function implode;
 use function is_array;
+use function preg_match;
 use function strpos;
 use function strtolower;
 use function substr;
@@ -30,6 +32,35 @@ use function trim;
 abstract class AbstractMessage implements MessagePlusInterface
 {
     use StringableTrait;
+
+    /* RFC 9110 token, used for header field names. \z anchors at the very end:
+     * $ would also match before a trailing LF, which a field name may not hold */
+    private const HEADER_NAME_PATTERN = '/^[!#$%&\'*+\-.^_`|~0-9A-Za-z]+\z/';
+    /* HTAB, SP, VCHAR and obs-text are the characters of a field value; every
+     * other control character is invalid (RFC 9110 5.5) */
+    private const HEADER_VALUE_CTL_PATTERN = '/[\x00-\x08\x0A-\x1F\x7F]/';
+
+    private static function assertHeaderName(string $name): void
+    {
+        if (!preg_match(self::HEADER_NAME_PATTERN, $name)) {
+            throw new InvalidArgumentException("Invalid header name: {$name}");
+        }
+    }
+
+    private static function assertHeaderValue(string $value): void
+    {
+        if (preg_match(self::HEADER_VALUE_CTL_PATTERN, $value)) {
+            throw new InvalidArgumentException('Header value must not contain a control character other than HTAB');
+        }
+    }
+
+    /** @param array<string> $values */
+    private static function assertHeaderValues(array $values): void
+    {
+        foreach ($values as $value) {
+            self::assertHeaderValue((string) $value);
+        }
+    }
 
     protected string $protocolVersion = self::DEFAULT_PROTOCOL_VERSION;
 
@@ -100,6 +131,10 @@ abstract class AbstractMessage implements MessagePlusInterface
      */
     public function setHeader(string $name, mixed $value): static
     {
+        self::assertHeaderName($name);
+        if ($value !== null) {
+            is_array($value) ? self::assertHeaderValues($value) : self::assertHeaderValue((string) $value);
+        }
         $lowercaseName = strtolower($name);
         $rawName = $this->headerNames[$lowercaseName] ?? null;
         if ($rawName !== null) {
@@ -128,6 +163,8 @@ abstract class AbstractMessage implements MessagePlusInterface
     /** @param string|array<string>|null $value */
     public function addHeader(string $name, mixed $value): static
     {
+        self::assertHeaderName($name);
+        is_array($value) ? self::assertHeaderValues($value) : self::assertHeaderValue((string) $value);
         $lowercaseName = strtolower($name);
         $rawName = $this->headerNames[$lowercaseName] ?? null;
 

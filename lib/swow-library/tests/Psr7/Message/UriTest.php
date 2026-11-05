@@ -134,4 +134,73 @@ final class UriTest extends TestCase
         $uri->applyParts(['path' => '/without-query']);
         $this->assertSame([], $uri->getQueryParams());
     }
+
+    /** @return array<string, array{string, bool}> */
+    public static function hostProvider(): array
+    {
+        return [
+            /* accepted: a reg-name, a pct-encoded name and both IP-literal forms */
+            'plain reg-name' => ['example.com', true],
+            'sub domain' => ['a.b.c.example.com', true],
+            'pct encoded' => ['exa%20mple.com', true],
+            'ipv4' => ['127.0.0.1', true],
+            'ipv6 literal' => ['[::1]', true],
+            'ipv6 literal full' => ['[2001:db8::1]', true],
+            'empty' => ['', true],
+            /* rejected: every delimiter, an invalid escape and a broken literal */
+            'space' => ['exa mple', false],
+            'userinfo delimiter' => ['user@example.com', false],
+            'slash' => ['example.com/path', false],
+            'backslash' => ['example.com\\path', false],
+            'query delimiter' => ['example.com?q=1', false],
+            'fragment delimiter' => ['example.com#f', false],
+            'colon without port' => ['example.com:80', false],
+            'bad percent escape' => ['100%', false],
+            'bad percent escape hex' => ['exa%zzmple', false],
+            'empty literal' => ['[]', false],
+            'unbalanced open' => ['[::1', false],
+            'unbalanced close' => ['::1]', false],
+            'trailing text after literal' => ['[::1]x', false],
+            'raw utf8' => ['例子.测试', false],
+            'delete character' => ["exam\x7fple", false],
+        ];
+    }
+
+    #[DataProvider('hostProvider')]
+    public function testHostValidation(string $host, bool $valid): void
+    {
+        $uri = new Uri();
+        if (!$valid) {
+            $this->expectException(InvalidArgumentException::class);
+            $uri->setHost($host);
+            return;
+        }
+        $uri->setHost($host);
+        $this->assertSame(strtolower($host), $uri->getHost());
+    }
+
+    /** @return array<string, array{string}> */
+    public static function invalidHostUriProvider(): array
+    {
+        return [
+            /* the parse_url() path has to validate the host as well */
+            'space' => ['http://exa mple/'],
+            'raw utf8' => ['http://例子.测试/'],
+            'unbalanced literal' => ['http://exa]mple/'],
+        ];
+    }
+
+    #[DataProvider('invalidHostUriProvider')]
+    public function testInvalidHostIsRejectedFromString(string $uri): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        new Uri($uri);
+    }
+
+    public function testValidLiteralsSurviveFromString(): void
+    {
+        $uri = new Uri('http://[::1]:8080/path');
+        $this->assertSame('[::1]', $uri->getHost());
+        $this->assertSame(8080, $uri->getPort());
+    }
 }

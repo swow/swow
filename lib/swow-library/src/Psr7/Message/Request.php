@@ -14,9 +14,12 @@ declare(strict_types=1);
 
 namespace Swow\Psr7\Message;
 
+use InvalidArgumentException;
 use Psr\Http\Message\UriInterface;
 use Swow\Http\Http;
 use Swow\Psr7\Psr7;
+
+use function preg_match;
 
 class Request extends AbstractMessage implements RequestPlusInterface
 {
@@ -35,6 +38,10 @@ class Request extends AbstractMessage implements RequestPlusInterface
 
     public function setMethod(string $method): static
     {
+        /* RFC 9110 9.1 method = token; \z so a trailing LF can not end the match */
+        if (!preg_match('/^[!#$%&\'*+\-.^_`|~0-9A-Za-z]+\z/', $method)) {
+            throw new InvalidArgumentException("Invalid method: {$method}");
+        }
         $this->method = $method;
 
         return $this;
@@ -141,6 +148,16 @@ class Request extends AbstractMessage implements RequestPlusInterface
 
     public function setRequestTarget(string $requestTarget): static
     {
+        /* No request-target form allows an empty value, a space, a control
+         * character, obs-text, a fragment delimiter or a backslash. The last two
+         * are left out of every form by RFC 3986 and a reader that folds them
+         * would split the request line differently. */
+        if ($requestTarget === '') {
+            throw new InvalidArgumentException('Invalid request target: must not be empty');
+        }
+        if (preg_match('/[\x00-\x20\x7f-\xff#\\\\]/', $requestTarget)) {
+            throw new InvalidArgumentException("Invalid request target: {$requestTarget}");
+        }
         $this->requestTarget = $requestTarget;
 
         return $this;

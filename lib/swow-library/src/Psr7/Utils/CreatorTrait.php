@@ -61,6 +61,7 @@ use function implode;
 use function is_resource;
 use function is_string;
 use function parse_str;
+use function preg_replace;
 use function strcasecmp;
 
 trait CreatorTrait
@@ -212,9 +213,20 @@ trait CreatorTrait
         } else {
             $bodyStream = null;
         }
+        /* Both of these values come from a peer. The parser accepts a status
+         * code outside 100..599 and octets that the message object rejects, so
+         * replace them instead of failing the whole response: a remote peer must
+         * not be able to raise a client-side exception. RFC 9110 5.5 lets a
+         * recipient replace an invalid character in a reason phrase, and HTAB is
+         * a legal reason-phrase character. */
+        $statusCode = $responseEntity->statusCode;
+        if ($statusCode < 100 || $statusCode > 599) {
+            /* 502 Bad Gateway: this party received an invalid response */
+            $statusCode = Status::BAD_GATEWAY;
+        }
         $response = $responseFactory->createResponse(
-            $responseEntity->statusCode,
-            $responseEntity->reasonPhrase
+            $statusCode,
+            preg_replace('/[\x00-\x08\x0A-\x1F\x7F]/', ' ', $responseEntity->reasonPhrase) ?? ''
         );
         if ($response instanceof ResponsePlusInterface) {
             $response->setProtocolVersion($responseEntity->protocolVersion);

@@ -20,10 +20,12 @@ use Swow\Object\StringableTrait;
 use function http_build_query;
 use function parse_str;
 use function parse_url;
+use function preg_match;
 use function preg_replace_callback;
 use function rawurlencode;
 use function sprintf;
 use function str_starts_with;
+use function strpbrk;
 use function strtolower;
 
 /**
@@ -79,7 +81,9 @@ class Uri implements UriPlusInterface
     {
         $this->scheme = isset($parts['scheme']) ? strtolower($parts['scheme']) : '';
         $this->userInfo = $parts['user'] ?? '';
-        $this->host = isset($parts['host']) ? strtolower($parts['host']) : '';
+        /* parse_url() is the main construction path, so the host is validated
+         * here too: otherwise a host with a space reaches the Host header */
+        $this->host = isset($parts['host']) ? $this->filterSchemeAndHost($parts['host']) : '';
         $this->port = isset($parts['port']) ? $this->filterPort((int) $parts['port']) : null;
         $this->path = isset($parts['path']) ? $this->filterPath($parts['path']) : '';
         $this->query = isset($parts['query']) ? $this->filterQueryAndFragment($parts['query']) : '';
@@ -94,6 +98,28 @@ class Uri implements UriPlusInterface
 
     protected function filterSchemeAndHost(string $host): string
     {
+        if ($host === '') {
+            return '';
+        }
+        /* Printable ASCII only, and none of the URI component delimiters. A
+         * backslash is not in RFC 3986 and some readers fold it into a slash. */
+        if (preg_match('/[^\x21-\x7e]/', $host) || strpbrk($host, '/?#@\\') !== false) {
+            throw new InvalidArgumentException('Invalid scheme or host: ' . $host);
+        }
+        /* A percent sign must introduce a pct-encoded octet (RFC 3986 2.1) */
+        if (preg_match('/%(?![0-9A-Fa-f]{2})/', $host)) {
+            throw new InvalidArgumentException('Invalid scheme or host: ' . $host);
+        }
+        /* An IP-literal keeps its brackets and may hold colons; any other host is
+         * a reg-name, where a colon belongs to the port (RFC 3986 3.2.2, 3.2.3) */
+        if ($host[0] === '[') {
+            if (strlen($host) < 3 || substr($host, -1) !== ']' || strpos($host, ']') !== strlen($host) - 1) {
+                throw new InvalidArgumentException('Invalid scheme or host: ' . $host);
+            }
+        } elseif (strpbrk($host, '[]:') !== false) {
+            throw new InvalidArgumentException('Invalid scheme or host: ' . $host);
+        }
+
         return strtolower($host);
     }
 
