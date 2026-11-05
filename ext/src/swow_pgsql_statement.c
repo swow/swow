@@ -499,9 +499,19 @@ stmt_retry:
         return 0;
     }
 
-    stmt->column_count = (int) PQnfields(S->result);
-    if (S->cols == NULL) {
-        S->cols = ecalloc(stmt->column_count, sizeof(pdo_pgsql_column));
+    /* A re-executed statement may return more columns than the first time, so
+     * both descriptions are resized together: S->cols here, and stmt->columns
+     * by letting PDO describe the columns again on the next fetch */
+    int column_count = (int) PQnfields(S->result);
+    if (S->cols == NULL || stmt->column_count != column_count) {
+        if (S->cols != NULL) {
+            efree(S->cols);
+        }
+        S->cols = column_count > 0
+            ? ecalloc((size_t) column_count, sizeof(pdo_pgsql_column))
+            : NULL;
+        php_pdo_stmt_set_column_count(stmt, column_count);
+        stmt->executed = 0;
     }
 
     if (status == PGRES_COMMAND_OK) {
