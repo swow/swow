@@ -37,10 +37,15 @@ foreach ([false, true] as $tls) {
             if ($operation === 'reset') {
                 $result = $results[spl_object_id($failed->handle)];
                 Assert::notSame($result, CURLE_OK);
-                // libcurl can report the incomplete body or the stream reset; PHP has no CURLE_HTTP2_STREAM constant.
-                if ($result !== CURLE_PARTIAL_FILE) {
-                    Assert::contains(strtolower(curl_strerror($result)), 'stream');
-                }
+                /*
+                 * libcurl reports the failed stream in one of three ways and the
+                 * choice depends on the libcurl version: an incomplete body, the
+                 * stream reset (92, not exported by PHP) or a framing error (16,
+                 * not exported either). Accept all three instead of matching the
+                 * error text, which differs between them.
+                 */
+                Assert::true(in_array($result, [CURLE_PARTIAL_FILE, 16, 92], true),
+                    "unexpected result for a reset stream: {$result} " . curl_strerror($result));
                 Assert::same($failed->body, '');
             } else {
                 Assert::same($results[spl_object_id($failed->handle)], CURLE_WRITE_ERROR);
