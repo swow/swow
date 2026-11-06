@@ -676,8 +676,10 @@ EOF
         [linux*], [
           SWOW_UV_CFLAGS="${SWOW_UV_CFLAGS} -D_GNU_SOURCE"
           SWOW_UV_CFLAGS="${SWOW_UV_CFLAGS} -D_POSIX_C_SOURCE=200112"
-          PHP_ADD_LIBRARY(dl)
-          PHP_ADD_LIBRARY(rt)
+          dnl glibc before 2.34 keeps shm_open() and dlopen() in their own libraries,
+          dnl and a shared object needs those on its own link line
+          PHP_ADD_LIBRARY(dl, 1, SWOW_SHARED_LIBADD)
+          PHP_ADD_LIBRARY(rt, 1, SWOW_SHARED_LIBADD)
           SWOW_ADD_SOURCES(deps/libcat/deps/libuv/src/unix,
             proctitle.c \
             linux.c \
