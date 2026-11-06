@@ -80,7 +80,8 @@ installapk()
 {
     info Installing dependencies using apk
     apk update
-    apk add --no-progress sqlite-dev libxml2-dev curl-dev nodejs alpine-sdk autoconf automake re2c bison
+    # musl-dev carries no kernel headers, and libuv and libcat need them
+    apk add --no-progress sqlite-dev libxml2-dev curl-dev nodejs alpine-sdk autoconf automake re2c bison linux-headers
 }
 
 installzypper()
