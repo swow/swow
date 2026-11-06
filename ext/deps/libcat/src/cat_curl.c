@@ -215,7 +215,12 @@ static void cat_curl_multi_socket_poll_callback(uv_poll_t *poll, int status, int
     });
 
     if (status < 0) {
-        action = CURL_CSELECT_ERR;
+        /*
+         * libuv stops watching the socket and reports a failed poll without event
+         * bits, so the data that is still buffered has to be read to observe the
+         * error that the socket holds
+         */
+        action = CURL_CSELECT_IN | CURL_CSELECT_OUT;
     } else {
         if (events & UV_READABLE) {
             action |= CURL_CSELECT_IN;
@@ -223,8 +228,16 @@ static void cat_curl_multi_socket_poll_callback(uv_poll_t *poll, int status, int
         if (events & UV_WRITABLE) {
             action |= CURL_CSELECT_OUT;
         }
-        if (events & UV_DISCONNECT) {
-            action |= CURL_CSELECT_ERR;
+        /*
+         * UV_DISCONNECT means the peer closed or the socket failed. libcurl's own
+         * poller reports a hangup on the read side as readable, so the read
+         * returns the last data and the end of file, and reports the failure on
+         * the write side. Do not turn it into CURL_CSELECT_ERR: older libcurl
+         * ends the transfer with "select/poll returned error" and drops the
+         * response that is still buffered in the socket
+         */
+        if (action == 0 && (events & UV_DISCONNECT)) {
+            action = CURL_CSELECT_IN | CURL_CSELECT_OUT;
         }
     }
 
