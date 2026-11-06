@@ -14,7 +14,7 @@ foreach ([false, true] as $tls) {
     $server = new Http2Server($tls);
     $multi = Http2Transfer::multi();
     try {
-        Http2Transfer::establish($server, $multi);
+        $session = Http2Transfer::establish($server, $multi)['session'];
         foreach (['reset', 'callback'] as $operation) {
             $path = $operation === 'reset' ? '/reset' : '/data?size=131072&id=failed';
             $path .= ($operation === 'reset' ? '?' : '&') . "group={$operation}&count=2";
@@ -34,33 +34,51 @@ foreach ([false, true] as $tls) {
             foreach ($messages as $message) {
                 $results[spl_object_id($message['handle'])] = $message['result'];
             }
+            $failedResult = $results[spl_object_id($failed->handle)];
+            $siblingResult = $results[spl_object_id($sibling->handle)];
             if ($operation === 'reset') {
-                $result = $results[spl_object_id($failed->handle)];
-                Assert::notSame($result, CURLE_OK);
+                Assert::notSame($failedResult, CURLE_OK);
                 /*
                  * libcurl reports the failed stream in one of three ways and the
-                 * choice depends on the libcurl version: an incomplete body, the
+                 * choice depends on the library version: an incomplete body, the
                  * stream reset (92, not exported by PHP) or a framing error (16,
                  * not exported either). Accept all three instead of matching the
                  * error text, which differs between them.
                  */
-                Assert::true(in_array($result, [CURLE_PARTIAL_FILE, 16, 92], true),
-                    "unexpected result for a reset stream: {$result} " . curl_strerror($result));
+                Assert::true(in_array($failedResult, [CURLE_PARTIAL_FILE, 16, 92], true),
+                    "unexpected result for a reset stream: {$failedResult} " . curl_strerror($failedResult));
                 Assert::same($failed->body, '');
             } else {
-                Assert::same($results[spl_object_id($failed->handle)], CURLE_WRITE_ERROR);
+                Assert::same($failedResult, CURLE_WRITE_ERROR);
             }
             Assert::notSame(curl_error($failed->handle), '');
-            Assert::same($results[spl_object_id($sibling->handle)], CURLE_OK);
-            $response = $sibling->response();
-            Assert::same($response['batch'], 2);
-            Assert::same($response['path'], "/barrier?group={$operation}&count=2");
+            if ($siblingResult === 16 /* CURLE_HTTP2 */) {
+                /*
+                 * nghttp2 before 1.70 reports the peer reset as an error of the
+                 * whole connection, so the sibling transfer ends the same way and
+                 * the client opens a new connection for the next request
+                 */
+                Assert::same($failedResult, 16);
+                $connectionLost = true;
+            } else {
+                Assert::same($siblingResult, CURLE_OK);
+                $response = $sibling->response();
+                Assert::same($response['batch'], 2);
+                Assert::same($response['path'], "/barrier?group={$operation}&count=2");
+                $connectionLost = false;
+            }
             $failed->remove($multi);
             $sibling->remove($multi);
             $recovery = new Http2Transfer($server, '/after-' . $operation);
             $recovery->add($multi);
             Http2Transfer::assertSuccessful(Http2Transfer::run($multi), 1);
-            Assert::same($recovery->response()['session'], $response['session']);
+            $recoverySession = $recovery->response()['session'];
+            if ($connectionLost) {
+                Assert::notSame($recoverySession, $session);
+            } else {
+                Assert::same($recoverySession, $session);
+            }
+            $session = $recoverySession;
             $recovery->remove($multi);
         }
     } finally {
