@@ -87,6 +87,7 @@ Get-ChildItem . | Sort-Object -Property Name | ForEach-Object -Process {
         $ret = Invoke-WebRequest `
             -Uri "$uploadUrl$fn" `
             -Method "POST" `
+            -UseBasicParsing `
             -ContentType "application/zip" `
             -Headers $headers `
             -InFile $fn
@@ -98,6 +99,7 @@ Get-ChildItem . | Sort-Object -Property Name | ForEach-Object -Process {
         $ret = Invoke-WebRequest `
             -Uri "$uploadUrl$pdbfn" `
             -Method "POST" `
+            -UseBasicParsing `
             -ContentType "application/zip" `
             -Headers $headers `
             -InFile $pdbfn
@@ -123,6 +125,7 @@ Get-ChildItem . | Sort-Object -Property Name | ForEach-Object -Process {
         $ret = Invoke-WebRequest `
             -Uri "$uploadUrl$zipfn" `
             -Method "POST" `
+            -UseBasicParsing `
             -ContentType "application/zip" `
             -Headers $headers `
             -InFile $zipfn
@@ -138,6 +141,7 @@ if ($AttestationBundle) {
     $ret = Invoke-WebRequest `
         -Uri "${uploadUrl}attestation.jsonl" `
         -Method "POST" `
+        -UseBasicParsing `
         -ContentType "application/json" `
         -Headers $headers `
         -InFile $AttestationBundle
