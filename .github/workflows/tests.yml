@@ -574,6 +574,19 @@ jobs:
           ext-name: swow
           deps: openssl,libcurl,libssh2,zlib,nghttp2,libpq${{ matrix.php-version != '8.1' && ',brotli,libzstd' || '' }}
 
+      - name: Disable Windows Defender for OpenCppCoverage
+        shell: powershell
+        run: |
+          Set-MpPreference `
+            -DisableRealtimeMonitoring $true `
+            -DisableBehaviorMonitoring $true `
+            -DisableScriptScanning $true
+
+          Add-MpPreference -ExclusionPath "${{ github.workspace }}"
+          Add-MpPreference -ExclusionPath "C:\OpenCppCoverage"
+          Add-MpPreference -ExclusionPath "C:\tools"
+          Add-MpPreference -ExclusionPath "C:\VSLayout"
+
       - name: Prepare coverage dependencies
         shell: powershell
         env:
