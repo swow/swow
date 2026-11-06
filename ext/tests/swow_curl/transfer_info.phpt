@@ -64,7 +64,10 @@ try {
     Assert::same(curl_getinfo($handle, CURLINFO_COOKIELIST), []);
     Assert::true(is_array(curl_getinfo($handle, CURLINFO_SSL_ENGINES)));
     Assert::false(curl_getinfo($handle, PHP_INT_MAX));
-    Assert::true(curl_upkeep($handle));
+    /* PHP registers curl_upkeep() only for libcurl 7.62.0 and later */
+    if (function_exists('curl_upkeep')) {
+        Assert::true(curl_upkeep($handle));
+    }
     Assert::same(curl_errno($handle), CURLE_OK);
     $encoded = curl_escape($handle, "\0\xff /+");
     Assert::same($encoded, '%00%FF%20%2F%2B');

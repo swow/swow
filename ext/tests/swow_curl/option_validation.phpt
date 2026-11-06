@@ -14,11 +14,24 @@ $url = 'http://' . $server->getSockAddress() . ':' . $server->getSockPort() . '/
 $handle = curl_init($url);
 $readOnly = fopen(__FILE__, 'rb');
 try {
+    /* A build can drop a protocol, and libcurl then reports the options of that
+     * protocol as unknown. RHEL keeps ftp and http only. */
+    $protocols = curl_version()['protocols'];
     foreach ([
-        CURLOPT_HTTPHEADER, CURLOPT_QUOTE, CURLOPT_HTTP200ALIASES, CURLOPT_POSTQUOTE,
-        CURLOPT_PREQUOTE, CURLOPT_TELNETOPTIONS, CURLOPT_MAIL_RCPT, CURLOPT_RESOLVE,
-        CURLOPT_PROXYHEADER, CURLOPT_CONNECT_TO,
-    ] as $option) {
+        CURLOPT_HTTPHEADER => 'http',
+        CURLOPT_QUOTE => 'ftp',
+        CURLOPT_HTTP200ALIASES => 'http',
+        CURLOPT_POSTQUOTE => 'ftp',
+        CURLOPT_PREQUOTE => 'ftp',
+        CURLOPT_TELNETOPTIONS => 'telnet',
+        CURLOPT_MAIL_RCPT => 'smtp',
+        CURLOPT_RESOLVE => null,
+        CURLOPT_PROXYHEADER => 'http',
+        CURLOPT_CONNECT_TO => null,
+    ] as $option => $protocol) {
+        if ($protocol !== null && !in_array($protocol, $protocols, true)) {
+            continue;
+        }
         Assert::throws(static function () use ($handle, $option): void {
             curl_setopt($handle, $option, 'not an array');
         }, TypeError::class, expectMessage: '/must have an array value/');
