@@ -94,10 +94,6 @@ CAT_GLOBALS_DECLARE(swow_stream);
 #  define HAVE_TLS_ALPN 1
 # endif
 
-# if OPENSSL_VERSION_NUMBER >= 0x10100000L && !defined(LIBRESSL_VERSION_NUMBER)
-#  define HAVE_SEC_LEVEL 1
-# endif
-
 /* OpenSSL 4 removed SSLv3 and its configurable disable macro. Absence of
  * OPENSSL_NO_SSL3 no longer indicates protocol support in that release. */
 # if !defined(OPENSSL_NO_SSL3) && OPENSSL_VERSION_NUMBER < 0x40000000L

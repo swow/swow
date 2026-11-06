@@ -62,11 +62,11 @@ if (PHP_SWOW != 'no') (function(){
 
     var use_ssl = 0;
     if('no' !== PHP_SWOW_SSL){
-        if (0 < SETUP_OPENSSL("swow", PHP_SWOW)) {
+        if (SETUP_OPENSSL("swow", PHP_SWOW) >= 2) {
             ADD_FLAG('CFLAGS_SWOW_COMMON', '/D CAT_HAVE_OPENSSL');
             use_ssl = 1;
         } else {
-            WARNING("Swow OpenSSL support not enabled; libraries and headers not found");
+            WARNING("Swow OpenSSL support not enabled; OpenSSL 1.1.1 or later is required");
         }
     }
 
@@ -74,7 +74,7 @@ if (PHP_SWOW != 'no') (function(){
     if('no' !== PHP_SWOW_CURL){
         if (CHECK_LIB("libcurl_a.lib;libcurl.lib", "swow", PHP_SWOW) &&
             //CHECK_HEADER_ADD_INCLUDE("curl/easy.h", "CFLAGS_SWOW") &&
-            SETUP_OPENSSL("swow", PHP_SWOW) > 0 &&
+            SETUP_OPENSSL("swow", PHP_SWOW) >= 2 &&
             CHECK_LIB("winmm.lib", "swow", PHP_SWOW) &&
             CHECK_LIB("wldap32.lib", "swow", PHP_SWOW) &&
             CHECK_LIB("zlib_a.lib;zlib.lib", "swow", PHP_SWOW) &&
@@ -102,7 +102,7 @@ if (PHP_SWOW != 'no') (function(){
     if('no' !== PHP_SWOW_PDO_PGSQL){
         if (CHECK_HEADER_ADD_INCLUDE("libpq-fe.h", "CFLAGS_SWOW", PHP_SWOW_PDO_PGSQL + "\\include;" + PHP_PHP_BUILD + "\\include\\pgsql;" + PHP_PHP_BUILD + "\\include\\libpq;") &&
             CHECK_LIB("libpq.lib", "swow", PHP_SWOW) &&
-            SETUP_OPENSSL("swow", PHP_SWOW) > 0)
+            SETUP_OPENSSL("swow", PHP_SWOW) >= 2)
             {
             ADD_FLAG("CFLAGS_SWOW_COMMON", "/D CAT_HAVE_PQ");
             if (PHP_SWOW_PDO_PGSQL != 'yes' && PHP_SWOW_PDO_PGSQL != 'no') {
