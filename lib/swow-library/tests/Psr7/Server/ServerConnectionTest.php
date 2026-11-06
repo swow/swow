@@ -26,7 +26,6 @@ use Swow\Psr7\Server\ServerConnection;
 use Swow\Socket;
 use Swow\Sync\WaitReference;
 use Swow\Utils\FileSystem\FileSystem;
-use Throwable;
 
 use function array_map;
 use function file_exists;
@@ -244,7 +243,11 @@ final class ServerConnectionTest extends TestCase
         $wr = new WaitReference();
         Coroutine::run(static function () use ($server, $wr): void {
             $connection = $server->acceptConnection();
+            /* read the request first, so the peer is ready for the response */
+            $connection->recvHttpRequest();
             $connection->error(400, '<script>alert(1)</script>', close: true);
+            /* close:true only sets the header, the peer needs the EOF */
+            $connection->close();
         });
 
         $client = new Socket(Socket::TYPE_TCP);
@@ -255,12 +258,8 @@ final class ServerConnectionTest extends TestCase
         ]));
 
         $response = '';
-        try {
-            while (true) {
-                $response .= $client->recvString(1024);
-            }
-        } catch (Throwable) {
-            // the server closes the connection after the error page
+        while (!str_contains($response, '</html>')) {
+            $response .= $client->recvString(1024);
         }
         $client->close();
         $wr::wait($wr);
