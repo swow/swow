@@ -65,6 +65,16 @@ function skip_if_function_not_exist(string $function_name): void
     skip_if(!function_exists($function_name), "{$function_name} not exist");
 }
 
+function skip_if_libcurl_before(string $version, string $reason = ''): void
+{
+    skip_if(!function_exists('curl_version'), 'libcurl is required');
+    $current = curl_version()['version'];
+    if (version_compare($current, $version, '<')) {
+        $detail = $reason !== '' ? ", {$reason}" : '';
+        skip("needs libcurl {$version} or later, now: {$current}{$detail}");
+    }
+}
+
 function skip_if_class_not_exist(string $class_name): void
 {
     skip_if(!class_exists($class_name, false), "{$class_name} not exist");

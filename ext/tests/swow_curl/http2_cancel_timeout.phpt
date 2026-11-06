@@ -5,6 +5,7 @@ swow_curl: HTTP/2 cancellation and timeout leave sibling streams and connection 
 require __DIR__ . '/../include/skipif.php';
 require __DIR__ . '/../include/autoload.php';
 Http2Server::skipIfUnavailable();
+skip_if_libcurl_before('7.76', 'cancelling a stream does not end its transfer');
 ?>
 --FILE--
 <?php

@@ -5,6 +5,7 @@ swow_curl: closing and collecting active HTTP/2 multi handles release callbacks 
 require __DIR__ . '/../include/skipif.php';
 require __DIR__ . '/../include/autoload.php';
 Http2Server::skipIfUnavailable();
+skip_if_libcurl_before('7.76', 'the handshake of a released multi handle is not reported');
 ?>
 --FILE--
 <?php

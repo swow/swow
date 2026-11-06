@@ -5,6 +5,7 @@ swow_curl: HTTP/2 GOAWAY completes accepted streams and reconnects subsequent re
 require __DIR__ . '/../include/skipif.php';
 require __DIR__ . '/../include/autoload.php';
 Http2Server::skipIfUnavailable();
+skip_if_libcurl_before('8.14', 'the transfer does not finish after GOAWAY');
 ?>
 --FILE--
 <?php

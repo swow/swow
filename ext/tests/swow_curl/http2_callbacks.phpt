@@ -5,6 +5,7 @@ swow_curl: HTTP/2 yielding callbacks preserve binary bodies and trailers across 
 require __DIR__ . '/../include/skipif.php';
 require __DIR__ . '/../include/autoload.php';
 Http2Server::skipIfUnavailable();
+skip_if_libcurl_before('8.12', 'the trailers of a streamed body are not delivered');
 ?>
 --FILE--
 <?php
