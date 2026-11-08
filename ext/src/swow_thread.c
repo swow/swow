@@ -100,7 +100,7 @@ static int swow_thread_sapi_deactivate(void)
 }
 #endif
 
-static zend_long swow_thread_id_to_long(cat_thread_t *thread);
+static zend_long swow_thread_id_to_long(cat_thread_id_t id);
 
 static cat_always_inline swow_thread_t *swow_thread_get_from_object(zend_object *object)
 {
@@ -960,7 +960,7 @@ static PHP_METHOD(Swow_Thread, runCode)
 
     s_thread->run = run;
     s_thread->thread = &run->thread;
-    s_thread->id = swow_thread_id_to_long(&run->thread);
+    s_thread->id = swow_thread_id_to_long(cat_thread_get_id(&run->thread));
     s_thread->started = cat_true;
 
     if (unlikely(!cat_sem_acquire(&run->started, -1))) {
@@ -1102,7 +1102,7 @@ static PHP_METHOD(Swow_Thread, start)
 
     s_thread->run = run;
     s_thread->thread = &run->thread;
-    s_thread->id = swow_thread_id_to_long(&run->thread);
+    s_thread->id = swow_thread_id_to_long(cat_thread_get_id(&run->thread));
     s_thread->started = cat_true;
 
     if (unlikely(!cat_sem_acquire(&run->started, timeout))) {
@@ -1327,12 +1327,12 @@ static PHP_METHOD(Swow_Thread, isStarted)
     RETURN_BOOL(s_thread->started);
 }
 
-static zend_long swow_thread_id_to_long(cat_thread_t *thread)
+static zend_long swow_thread_id_to_long(cat_thread_id_t id)
 {
 #ifdef CAT_OS_WIN
-    return (zend_long) GetThreadId((HANDLE) cat_thread_get_id(thread));
+    return (zend_long) GetThreadId((HANDLE) id);
 #else
-    return (zend_long) cat_thread_get_id(thread);
+    return (zend_long) id;
 #endif
 }
 
@@ -1424,7 +1424,9 @@ static PHP_METHOD(Swow_Thread, getCurrent)
         object_init_ex(&current, swow_thread_ce);
         s_current = swow_thread_get_from_object(Z_OBJ(current));
         s_current->thread = thread;
-        s_current->id = swow_thread_id_to_long(thread);
+        /* The child may run before thread creation writes the native ID back
+         * to its parent, so query the calling thread directly. */
+        s_current->id = swow_thread_id_to_long(cat_thread_get_current_id());
         s_current->started = cat_true;
         ZVAL_COPY_VALUE(&SWOW_G(thread.current), &current);
     }
@@ -1443,7 +1445,7 @@ static PHP_METHOD(Swow_Thread, getCurrentId)
         RETURN_LONG(0);
     }
 
-    RETURN_LONG(swow_thread_id_to_long(thread));
+    RETURN_LONG(swow_thread_id_to_long(cat_thread_get_current_id()));
 }
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Thread_getExitStatus, 0, 0, IS_LONG, 0)
