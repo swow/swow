@@ -9,7 +9,7 @@
 // Use Node's HTTP/2 implementation so tests exercise real framing, TLS and flow control.
 const http2 = require('http2');
 const fs = require('fs');
-const { NGHTTP2_CANCEL, NGHTTP2_NO_ERROR } = http2.constants;
+const { NGHTTP2_INTERNAL_ERROR, NGHTTP2_NO_ERROR } = http2.constants;
 const settings = { maxConcurrentStreams: Number(process.argv[2]) };
 const pem = process.argv[3] ? fs.readFileSync(process.argv[3]) : null;
 const server = pem
@@ -77,7 +77,9 @@ server.on('stream', (stream, headers) => {
         const respond = (batch = 1) => {
             if (stream.destroyed) return;
             if (url.pathname === '/reset') {
-                stream.close(NGHTTP2_CANCEL);
+                // A peer CANCEL can make libcurl retry the request, which would
+                // wait alone at the two-stream barrier. Test a terminal peer failure.
+                stream.close(NGHTTP2_INTERNAL_ERROR);
                 return;
             }
             metadata.batch = batch;
