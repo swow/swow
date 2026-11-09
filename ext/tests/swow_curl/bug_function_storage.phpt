@@ -6,12 +6,21 @@ require __DIR__ . '/../include/skipif.php';
 skip_if(PHP_SAPI !== 'cli', 'only for cli');
 skip_if(!Swow\Extension::isBuiltWith('curl'), 'extension must be built with libcurl');
 skip_if(PHP_OS === 'Darwin', 'curl hook is not working properly on macOS');
-require __DIR__ . '/../include/bootstrap.php';
-skip_if(!str_contains(@file_get_contents(TEST_WEBSITE1_URL), TEST_WEBSITE1_KEYWORD), 'Unable to access ' . TEST_WEBSITE1_URL);
+skip_if(!Swow\Extension::isBuiltWith('openssl'), 'extension must be built with ssl');
+skip_if(!extension_loaded('openssl'), 'openssl extension is required');
 ?>
 --FILE--
 <?php
 require_once __DIR__ . '/../include/bootstrap.php';
+
+$certificate = __DIR__ . '/bug_function_storage_server.pem';
+$ca = __DIR__ . '/bug_function_storage_ca.pem';
+$generator = new CertificateGenerator(false);
+$generator->saveCaCert($ca);
+$generator->saveNewCertAsFileWithKey('localhost', $certificate, 'prime256v1', 'IP:127.0.0.1,DNS:localhost', 'critical,serverAuth');
+$body = 'Local TLS response';
+[$server, $serverCoroutine] = createHttpTestServer($certificate, body: $body, headers: ['Date' => gmdate(DATE_RFC7231)]);
+$url = 'https://127.0.0.1:' . $server->getSockPort() . '/transfer';
 
 $testHeaderFunction = static function (CurlHandle $curl, string $headerLine): int {
     return testHeaderFunction($curl, $headerLine);
@@ -34,26 +43,44 @@ class testHeaderFunctionClass
     }
 }
 
-foreach ([$testHeaderFunction, 'testHeaderFunction', [testHeaderFunctionClass::class, 'headerFunction']] as $headerFunction) {
-    $curl = curl_init();
-    curl_setopt($curl, CURLOPT_URL, TEST_WEBSITE1_URL);
-    curl_setopt($curl, CURLOPT_HEADERFUNCTION, $headerFunction);
-    curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
-    unset($testHeaderFunction);
-    $response = curl_exec($curl);
-    Assert::contains($response, TEST_WEBSITE1_KEYWORD);
-    Assert::true(strtotime($GLOBALS['header_lines']['date']) > 0);
-    if (PHP_VERSION_ID < 80100) {
-        curl_close($curl);
+try {
+    foreach ([$testHeaderFunction, 'testHeaderFunction', [testHeaderFunctionClass::class, 'headerFunction']] as $headerFunction) {
+        $curl = curl_init();
+        curl_setopt($curl, CURLOPT_URL, $url);
+        curl_setopt_array($curl, [CURLOPT_PROXY => '', CURLOPT_TIMEOUT_MS => 5000, CURLOPT_CAINFO => $ca, CURLOPT_SSL_VERIFYPEER => true, CURLOPT_SSL_VERIFYHOST => 2]);
+        curl_setopt($curl, CURLOPT_HEADERFUNCTION, $headerFunction);
+        curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
+        unset($testHeaderFunction);
+        $response = curl_exec($curl);
+        Assert::same($response, $body);
+        Assert::true(strtotime($GLOBALS['header_lines']['date']) > 0);
+        if (PHP_VERSION_ID < 80100) {
+            curl_close($curl);
+        }
     }
+
+    $curl = curl_init();
+    curl_setopt($curl, CURLOPT_URL, $url);
+    curl_setopt_array($curl, [CURLOPT_PROXY => '', CURLOPT_TIMEOUT_MS => 5000, CURLOPT_CAINFO => $ca, CURLOPT_SSL_VERIFYPEER => true, CURLOPT_SSL_VERIFYHOST => 2]);
+    curl_setopt($curl, CURLOPT_HEADERFUNCTION, 'testHeaderFunction');
+    curl_setopt($curl, CURLOPT_HEADERFUNCTION, null);
+} finally {
+    unset($curl);
+    $server->close();
+    if ($serverCoroutine->isAlive()) {
+        $serverCoroutine->kill();
+    }
+    unlink($certificate);
+    unlink($ca);
 }
 
-$curl = curl_init();
-curl_setopt($curl, CURLOPT_URL, TEST_WEBSITE1_URL);
-curl_setopt($curl, CURLOPT_HEADERFUNCTION, 'testHeaderFunction');
-curl_setopt($curl, CURLOPT_HEADERFUNCTION, null);
-
 echo "Done\n";
+?>
+--CLEAN--
+<?php
+foreach (['bug_function_storage_server.pem', 'bug_function_storage_server.pem.cnf', 'bug_function_storage_ca.pem'] as $file) {
+    @unlink(__DIR__ . '/' . $file);
+}
 ?>
 --EXPECT--
 Done

@@ -70,13 +70,22 @@ if (extension_loaded(Swow::class) && ini_get('swow.enable')) {
 
 # functions
 
-/** @return array{Swow\Socket, Swow\Coroutine} */
-function createHttpTestServer(?string $certificate = null, ?string $certificateKey = null): array
+/**
+ * @param array<string, string> $headers
+ * @param (Closure(string): void)|null $onRequest
+ * @return array{Swow\Socket, Swow\Coroutine}
+ */
+function createHttpTestServer(?string $certificate = null, ?string $certificateKey = null, string $body = 'Done', array $headers = [], ?Closure $onRequest = null): array
 {
     $server = new Swow\Socket(Swow\Socket::TYPE_TCP);
     $server->bind('127.0.0.1', 0)->listen();
+    $response = "HTTP/1.1 200 OK\r\nContent-Length: " . strlen($body) . "\r\nConnection: close\r\n";
+    foreach ($headers as $name => $value) {
+        $response .= "{$name}: {$value}\r\n";
+    }
+    $response .= "\r\n{$body}";
     // The test owns the listener and coroutine; stop both during cleanup and close every connection in finally.
-    $coroutine = Swow\Coroutine::run(static function () use ($server, $certificate, $certificateKey): void {
+    $coroutine = Swow\Coroutine::run(static function () use ($server, $certificate, $certificateKey, $response, $onRequest): void {
         while ($server->isAvailable()) {
             try {
                 $connection = $server->accept();
@@ -103,7 +112,10 @@ function createHttpTestServer(?string $certificate = null, ?string $certificateK
                     $request .= $chunk;
                 } while (!str_contains($request, "\r\n\r\n"));
                 if ($request !== '') {
-                    $connection->send("HTTP/1.1 200 OK\r\nContent-Length: 4\r\nConnection: close\r\n\r\nDone");
+                    if ($onRequest !== null) {
+                        $onRequest($request);
+                    }
+                    $connection->send($response);
                 }
             } catch (Swow\SocketException) {
                 // Rejected connections, such as fingerprint mismatches, abort the handshake; keep accepting subsequent requests.
