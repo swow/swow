@@ -19,7 +19,7 @@ $generator = new CertificateGenerator(false);
 $generator->saveCaCert($ca);
 $generator->saveNewCertAsFileWithKey('localhost', $certificate, 'prime256v1', 'IP:127.0.0.1,DNS:localhost', 'critical,serverAuth');
 $body = 'Local TLS response';
-[$server, $serverCoroutine] = createHttpTestServer($certificate, body: $body, headers: ['Date' => gmdate(DATE_RFC7231)]);
+[$server, $serverCoroutine] = createHttpTestServer($certificate, body: $body, headers: ['Date' => gmdate('D, d M Y H:i:s \G\M\T')]);
 $url = 'https://127.0.0.1:' . $server->getSockPort() . '/transfer';
 
 $testHeaderFunction = static function (CurlHandle $curl, string $headerLine): int {
