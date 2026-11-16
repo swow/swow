@@ -26,7 +26,7 @@ Swowは、最小のCコアとほとんどのPHPコードを使用してPHPの高
 
 ### 🔎 必要条件
 
-- Linux、Windows、macOSなどの一般的なオペレーティングシステム。詳細は[libuv](https://github.com/libuv/libuv/blob/v1.x/SUPPORTED_PLATFORMS.md)を参照してください。
+- Linux、Windows、macOSなどの一般的なオペレーティングシステム。[libuv](https://github.com/libuv/libuv/blob/v1.x/SUPPORTED_PLATFORMS.md)とほぼ同じです。
 - PHP 8.0.0以上。最新バージョンを推奨します。
 
 ### 🥧 PIEを使用する
@@ -77,9 +77,12 @@ git clone https://github.com/swow/swow.git
 
 ```shell
 cd swow/ext && \
-phpize && ./configure && make && \
+phpize && ./configure && \
+make clean && make -j && \
 sudo make install
 ```
+
+詳細は[インストールドキュメント - 手動コンパイルインストール（UNIX系）](https://docs.toast.run/swow/en/install.html#manually-build-and-install-unix-like-or-cygwin-msys-wsl)を参照してください。
 
 ### Ⓜ️ 手動インストール（Windows）
 
@@ -113,10 +116,10 @@ Swowプロジェクトへのコード貢献に感謝します。皆さんのお�
 
 ## 💬 開発と議論
 
-- **Wiki**：[https://docs.toast.run/swow/en](https://docs.toast.run/swow/en)
+- **ドキュメント**：[https://docs.toast.run/swow/en](https://docs.toast.run/swow/en)
 - **ブログ（CHS）** [https://docs.toast.run/swow-blog/chs](https://docs.toast.run/swow-blog/chs)
 - **機能（CHS）** [https://docs.toast.run/swow-blog/chs/init.html](https://docs.toast.run/swow-blog/chs/init.html)
-- **APIリファレンス**：[https://docs.toast.run/swow-api/ci.html](https://docs.toast.run/swow-api/ci.html)
+- **APIリファレンス**：[https://docs.toast.run/swow-api/develop/](https://docs.toast.run/swow-api/develop/)
 - **ディスカッション**：[https://github.com/swow/swow/discussions](https://github.com/swow/swow/discussions)
 - **TODO**：[https://github.com/swow/swow/projects](https://github.com/swow/swow/projects)
 

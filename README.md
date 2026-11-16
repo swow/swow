@@ -76,15 +76,18 @@ clone the Swow (You can also import it through Composer, and then cd to `vendor/
 
 ```shell
 git clone https://github.com/swow/swow.git
-````
+```
 
 Well-known building procedure. Install to the system with root privileges:
 
 ```shell
 cd swow/ext && \
-phpize && ./configure && make && \
+phpize && ./configure && \
+make clean && make -j && \
 sudo make install
 ```
+
+See [Installation document - Manual compilation installation (UNIX-like)](https://docs.toast.run/swow/en/install.html#manually-build-and-install-unix-like-or-cygwin-msys-wsl).
 
 ### Ⓜ️ Manual installation (Windows)
 
@@ -120,10 +123,10 @@ without you there is no Swow now.
 
 ## 💬 Development & Discussion
 
-- **Wiki**：[https://docs.toast.run/swow/en](https://docs.toast.run/swow/en)
+- **Documentation**：[https://docs.toast.run/swow/en](https://docs.toast.run/swow/en)
 - **Blog (CHS)** [https://docs.toast.run/swow-blog/chs](https://docs.toast.run/swow-blog/chs)
 - **Features (CHS)** [https://docs.toast.run/swow-blog/chs/init.html](https://docs.toast.run/swow-blog/chs/init.html)
-- **API Reference**：[https://docs.toast.run/swow-api/ci.html](https://docs.toast.run/swow-api/ci.html)
+- **API Reference**：[https://docs.toast.run/swow-api/develop/](https://docs.toast.run/swow-api/develop/)
 - **Discussions**：[https://github.com/swow/swow/discussions](https://github.com/swow/swow/discussions)
 - **TODO**：[https://github.com/swow/swow/projects](https://github.com/swow/swow/projects)
 

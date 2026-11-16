@@ -26,7 +26,7 @@ Swow 致力于使用最小 C 核心及多数 PHP 代码以支持 PHP 高性能�
 
 ### 🔎 必要条件
 
-- Linux、 Windows、macOS 等常见操作系统，详见 [发布文档 - 支持的操作系统](https://docs.toast.run/swow-blog/chs/init.html#%E6%94%AF%E6%8C%81%E7%9A%84%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F)
+- Linux、Windows、macOS 等常见操作系统，与 [libuv](https://github.com/libuv/libuv/blob/v1.x/SUPPORTED_PLATFORMS.md) 支持的平台基本一致
 - PHP 8.0.0 或以上版本，推荐使用最新版本
 
 ### 🥧 使用PIE安装扩展
@@ -73,7 +73,7 @@ composer require swow/swow
 
 ```shell
 git clone https://github.com/swow/swow.git
-````
+```
 
 熟悉的构建三板斧，最后使用root权限安装到系统：
 
@@ -120,7 +120,7 @@ PHP 高性能协程网络通信引擎开发之路曲高和寡，这是一项高�
 - **文档**：[https://docs.toast.run/swow/chs](https://docs.toast.run/swow/chs)
 - **博客** [https://docs.toast.run/swow-blog/chs](https://docs.toast.run/swow-blog/chs)
 - **能力项** [https://docs.toast.run/swow-blog/chs/init.html](https://docs.toast.run/swow-blog/chs/init.html)
-- **API参考**：[https://docs.toast.run/swow-api/ci.html](https://docs.toast.run/swow-api/ci.html)
+- **API参考**：[https://docs.toast.run/swow-api/develop/](https://docs.toast.run/swow-api/develop/)
 - **讨论区**：[https://github.com/swow/swow/discussions](https://github.com/swow/swow/discussions)
 - **计划列表**：[https://github.com/swow/swow/projects](https://github.com/swow/swow/projects)
 
@@ -136,7 +136,7 @@ Swow 也包含了一些第三方库，这些库的开源协议各不相同，请
 [ci-link]: https://github.com/swow/swow/actions?query=workflow:tests
 [codecov-badge]: https://codecov.io/gh/swow/swow/branch/develop/graph/badge.svg
 [codecov-link]: https://codecov.io/gh/swow/swow
-[release-badge]: https://img.shields.io/github/release/swow/swow.svg?style=flat-square
+[release-badge]: https://img.shields.io/github/release/swow/swow.svg?include_prereleases
 [release-link]: https://github.com/swow/swow/releases
 [made-with-love-badge]: https://img.shields.io/badge/made%20with-%E2%9D%A4-f00
 [supported-php-versions-badge]: https://img.shields.io/badge/php-8.0--8.5-royalblue.svg
