@@ -633,7 +633,7 @@ static PHP_METHOD(Swow_Socket, enableCrypto)
     ZEND_PARSE_PARAMETERS_START(0, 1)
         Z_PARAM_OPTIONAL
         // TODO: Support crypto options object
-        Z_PARAM_ARRAY_HT(options_array)
+        Z_PARAM_ARRAY_HT_OR_NULL(options_array)
     ZEND_PARSE_PARAMETERS_END();
 
     cat_socket_crypto_options_init(&options, is_client);
