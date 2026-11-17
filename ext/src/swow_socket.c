@@ -29,7 +29,6 @@
 #include "zend_hash.h"
 #include "zend_types.h"
 
-#include <openssl/evp.h>
 #include <string.h>
 
 SWOW_API zend_class_entry *swow_socket_ce;
