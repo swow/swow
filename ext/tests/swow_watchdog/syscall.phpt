@@ -14,6 +14,7 @@ if (PHP_OS_FAMILY !== 'Windows') {
 require __DIR__ . '/../include/bootstrap.php';
 
 use Swow\Coroutine;
+use Swow\Sync\WaitReference;
 use Swow\Watchdog;
 
 function ffi_sleep(int $ns): void
@@ -73,7 +74,8 @@ Watchdog::run($quantum, $threshold);
 
 Assert::true(Watchdog::isRunning());
 
-$watcher = Coroutine::run(static function (): void {
+$wr = new WaitReference();
+$watcher = Coroutine::run(static function () use ($wr): void {
     Coroutine::yield();
     Watchdog::stop();
     echo "I am back\n";
@@ -83,6 +85,9 @@ $watcher = Coroutine::run(static function (): void {
 ffi_sleep($blocking_time);
 
 $watcher->resume();
+// A pending watchdog interrupt may be handled in the watcher right after it resumes, and the
+// default handling reschedules that coroutine, so wait for it before finishing the main one.
+WaitReference::wait($wr);
 
 echo "Done\n";
 
