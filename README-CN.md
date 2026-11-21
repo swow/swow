@@ -22,12 +22,21 @@ Swow 致力于使用最小 C 核心及多数 PHP 代码以支持 PHP 高性能�
 
 ## ✨ 特性
 
-- **协程**：有栈协程，配套通道、等待组等同步工具，并可完全掌控每个协程（查看、中断、杀死）
-- **阻塞调用透明协程化**：`sleep()`、文件、PHP 流、套接字、cURL、PDO、`proc_open()` 会让出给其它协程而不是阻塞进程，无需修改代码
-- **网络**：TCP、UDP、Unix 套接字、管道与 TLS，内置 HTTP 和 WebSocket 解析器，以及用 PHP 编写的兼容 PSR-7 的 HTTP、WebSocket 服务端与客户端
-- **多线程**（2.0 起，需要线程安全的 PHP 构建）：`Swow\Thread`、跨线程的通道、锁与共享内存，以及管理 Worker 线程的 `ThreadManager`
-- **进程管理**：`ChildProcess` 以及可在 Windows 上工作的 `ProcessManager`
-- **调试**：交互式调试器、检测阻塞代码的 watchdog、死锁检测与执行追踪
+**照常写阻塞风格的 PHP 代码，Swow 让它并发运行；从 2.0 起，还能用上每一个 CPU 核心。**
+
+| | 能力 | 你将得到 |
+| --- | --- | --- |
+| 🧶 | **完全可控的协程** | 有栈协程 `Coroutine`，配套通道 `Channel`、等待组 `WaitGroup`、等待引用 `WaitReference`、选择器 `Selector` 与 `Defer`。任何协程都可以随时查看、中断、杀死 |
+| 🪄 | **现有代码直接并发** | 包括但不限于以下调用，都会让出给其它协程而不是阻塞进程，无需修改代码：<br>**定时**：`sleep()`、`usleep()`、`time_nanosleep()`、`time_sleep_until()`<br>**DNS**：`gethostbyname()`<br>**文件与管道**：`fopen()`、`fread()`、`fwrite()`、`file_get_contents()`、`flock()` 等文件函数<br>**PHP 流**：TCP、UDP、Unix 套接字与 TLS，包括 `fsockopen()`、`stream_socket_client()`、`stream_socket_server()`、`stream_select()` 以及通过 HTTP(S) 的 `file_get_contents()`<br>**cURL**：`curl_exec()`、`curl_multi_*` 与 HTTP/2，因此 Guzzle 等基于 cURL 的 HTTP 客户端同样适用<br>**MySQL**：PDO MySQL 与 `mysqli`（经由 `mysqlnd`）<br>**PostgreSQL**：PDO PgSQL<br>**MongoDB** <sup>2.0</sup>：官方 `mongodb` 扩展<br>**Redis**：基于 PHP 流的客户端，例如 phpredis 与 Predis<br>**子进程**：`proc_open()`<br>**等等**：任何构建在以上能力之上的扩展或纯 PHP 库 |
+| 🌐 | **完整的网络栈** | `Socket` 覆盖 TCP、UDP、Unix 套接字、管道与 TLS，内置 HTTP 和 WebSocket 解析器，以及用 PHP 编写的兼容 PSR-7 的 HTTP、WebSocket 服务端与客户端 |
+| 🧵 | **真正的多线程** <sup>2.0</sup> | 线程 `Thread` 让 PHP 运行在系统线程上，配套跨线程通道 `Thannel`、锁 `Mutex`、信号量 `Semaphore`、`Futex`、共享内存 `SharedBuffer`，以及管理 Worker 线程的 `ThreadManager`。需要线程安全的 PHP 构建 |
+| 🏭 | **全平台的多进程** <sup>2.0</sup> | `ChildProcess` 以及会重启、重载 Worker 的 `ProcessManager`，在 Windows 上同样可用 |
+| 🍃 | **协程化的 MongoDB 驱动** <sup>2.0</sup> | 官方 `mongodb` 扩展的 I/O 异步化，不再阻塞进程。使用 `--enable-swow-mongodb` 构建 |
+| 🐞 | **SDB（Swow Debugger）** | 用 PHP 编写的交互式调试器，命令与 gdb 相仿：列出所有协程、查看调用栈与源码、设置断点、单步执行、打印变量 |
+| 🐶 | **Watchdog** | 发现长时间占用 CPU 或阻塞在系统调用中的协程。可以让它让出给其它协程，也可以交给你的回调来挂起或杀死它 |
+| 🔬 | **更多调试机制** | 死锁检测与执行追踪 |
+
+2.0 的全部新内容见 [CHANGELOG](./CHANGELOG.md)。
 
 ## 🎮 安装
 

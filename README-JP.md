@@ -22,12 +22,21 @@ Swowは、最小のCコアとほとんどのPHPコードを使用してPHPの高
 
 ## ✨ 特徴
 
-- **コルーチン**：スタックフルコルーチン。チャネルやウェイトグループなどの同期ツールを備え、すべてのコルーチンを完全に制御できます（状態の確認、割り込み、強制終了）
-- **ブロッキング呼び出しの透過的なコルーチン化**：`sleep()`、ファイル、PHPストリーム、ソケット、cURL、PDO、`proc_open()` は、プロセスをブロックせずに他のコルーチンへ制御を譲ります。コードの変更は不要です
-- **ネットワーク**：TCP、UDP、Unixソケット、パイプ、TLS。HTTPとWebSocketのパーサーを内蔵し、PHPで書かれたPSR-7互換のHTTP・WebSocketサーバーとクライアントを提供します
-- **マルチスレッド**（2.0以降、スレッドセーフなPHPビルドが必要）：`Swow\Thread`、スレッド間で使えるチャネル・ロック・共有メモリ、ワーカースレッドを管理する `ThreadManager`
-- **プロセス管理**：`ChildProcess` と、Windowsでも動作する `ProcessManager`
-- **デバッグ**：対話型デバッガー、ブロッキングコードを検出するウォッチドッグ、デッドロック検出、実行トレース
+**いつも通りブロッキングスタイルのPHPを書くだけで、Swowが並行に実行します。2.0からは、すべてのCPUコアも使えます。**
+
+| | 機能 | 得られるもの |
+| --- | --- | --- |
+| 🧶 | **完全に制御できるコルーチン** | スタックフルコルーチン `Coroutine`。チャネル `Channel`、ウェイトグループ `WaitGroup`、`WaitReference`、セレクター `Selector`、`Defer` を備え、どのコルーチンもいつでも状態の確認、割り込み、強制終了ができます |
+| 🪄 | **既存のコードがそのまま並行に** | 以下をはじめとする呼び出しは、プロセスをブロックせずに他のコルーチンへ制御を譲ります。コードの変更は不要です：<br>**タイマー**：`sleep()`、`usleep()`、`time_nanosleep()`、`time_sleep_until()`<br>**DNS**：`gethostbyname()`<br>**ファイルとパイプ**：`fopen()`、`fread()`、`fwrite()`、`file_get_contents()`、`flock()` などのファイル関数<br>**PHPストリーム**：TCP、UDP、Unixソケット、TLS。`fsockopen()`、`stream_socket_client()`、`stream_socket_server()`、`stream_select()`、HTTP(S)経由の `file_get_contents()` を含みます<br>**cURL**：`curl_exec()`、`curl_multi_*`、HTTP/2。GuzzleなどcURLベースのHTTPクライアントにも対応します<br>**MySQL**：PDO MySQLと `mysqli`（`mysqlnd` 経由）<br>**PostgreSQL**：PDO PgSQL<br>**MongoDB** <sup>2.0</sup>：公式の `mongodb` 拡張<br>**Redis**：PHPストリームを使うクライアント（phpredis、Predisなど）<br>**子プロセス**：`proc_open()`<br>**など**：上記の上に構築された拡張や純粋なPHPライブラリすべて |
+| 🌐 | **完全なネットワークスタック** | `Socket` はTCP、UDP、Unixソケット、パイプ、TLSに対応。HTTPとWebSocketのパーサーを内蔵し、PHPで書かれたPSR-7互換のHTTP・WebSocketサーバーとクライアントを提供します |
+| 🧵 | **本物のマルチスレッド** <sup>2.0</sup> | `Thread` はPHPをOSスレッド上で実行します。スレッド間チャネル `Thannel`、ロック `Mutex`、セマフォ `Semaphore`、`Futex`、共有メモリ `SharedBuffer` と、ワーカースレッドを管理する `ThreadManager` を備えます。スレッドセーフなPHPビルドが必要です |
+| 🏭 | **すべてのOSでマルチプロセス** <sup>2.0</sup> | `ChildProcess` と、ワーカーの再起動とリロードを行う `ProcessManager`。Windowsでも動作します |
+| 🍃 | **コルーチン対応のMongoDBドライバー** <sup>2.0</sup> | 公式の `mongodb` 拡張のI/Oが非同期になり、プロセスをブロックしなくなります。`--enable-swow-mongodb` を付けてビルドします |
+| 🐞 | **SDB（Swow Debugger）** | PHPで書かれた対話型デバッガー。gdb風のコマンドで、全コルーチンの一覧、バックトレースとソースの表示、ブレークポイントの設定、ステップ実行、変数の表示ができます |
+| 🐶 | **Watchdog** | CPUを長時間占有するコルーチンや、システムコールでブロックしているコルーチンを検出します。他のコルーチンへ制御を譲らせることも、コールバックに渡して中断や強制終了を行うこともできます |
+| 🔬 | **その他のデバッグ機能** | デッドロック検出と実行トレース |
+
+2.0のすべての新機能は[CHANGELOG](./CHANGELOG.md)をご覧ください。
 
 ## 🎮 インストール
 

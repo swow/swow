@@ -27,12 +27,21 @@ so as to maximize development efficiency.
 
 ## ✨ Features
 
-- **Coroutines**: stackful coroutines with channels, wait groups and other synchronization tools, and full control over every coroutine (inspect, interrupt, kill)
-- **Transparent blocking calls**: `sleep()`, files, PHP streams, sockets, cURL, PDO and `proc_open()` yield to other coroutines instead of blocking the process, without code changes
-- **Networking**: TCP, UDP, Unix sockets, pipes and TLS, with built-in HTTP and WebSocket parsers, plus PSR-7 compatible HTTP and WebSocket servers and clients written in PHP
-- **Multi-threading** (since 2.0, requires a thread-safe PHP build): `Swow\Thread`, cross-thread channels, locks and shared memory, and a `ThreadManager` for worker threads
-- **Process management**: `ChildProcess` and a `ProcessManager` that also works on Windows
-- **Debugging**: an interactive debugger, a watchdog for blocking code, deadlock detection and execution tracing
+**Write plain, blocking-style PHP. Swow makes it concurrent, and since 2.0 it runs on every CPU core.**
+
+| | Capability | What you get |
+| --- | --- | --- |
+| 🧶 | **Coroutines you fully control** | Stackful `Coroutine` with `Channel`, `WaitGroup`, `WaitReference`, `Selector` and `Defer`. Inspect, interrupt or kill any coroutine at any time |
+| 🪄 | **Your existing code, now concurrent** | All of the following, and more, yield to other coroutines instead of blocking the process. No code changes:<br>**Timers**: `sleep()`, `usleep()`, `time_nanosleep()`, `time_sleep_until()`<br>**DNS**: `gethostbyname()`<br>**Files and pipes**: `fopen()`, `fread()`, `fwrite()`, `file_get_contents()`, `flock()` and the other file functions<br>**PHP streams**: TCP, UDP, Unix sockets and TLS, including `fsockopen()`, `stream_socket_client()`, `stream_socket_server()`, `stream_select()` and `file_get_contents()` over HTTP(S)<br>**cURL**: `curl_exec()`, `curl_multi_*` and HTTP/2, which covers Guzzle and other cURL-based HTTP clients<br>**MySQL**: PDO MySQL and `mysqli`, through `mysqlnd`<br>**PostgreSQL**: PDO PgSQL<br>**MongoDB** <sup>2.0</sup>: the official `mongodb` extension<br>**Redis**: clients built on PHP streams, such as phpredis and Predis<br>**Child processes**: `proc_open()`<br>**And more**: any extension or pure-PHP library built on the above |
+| 🌐 | **A complete networking stack** | `Socket` covers TCP, UDP, Unix sockets, pipes and TLS, with built-in HTTP and WebSocket parsers, plus PSR-7 compatible HTTP and WebSocket servers and clients written in PHP |
+| 🧵 | **Real multi-threading** <sup>2.0</sup> | `Thread` runs PHP on OS threads, with `Thannel` (a cross-thread channel), `Mutex`, `Semaphore`, `Futex`, `SharedBuffer` (shared memory), and a `ThreadManager` for worker threads. Requires a thread-safe PHP build |
+| 🏭 | **Multi-processing on every OS** <sup>2.0</sup> | `ChildProcess` and a `ProcessManager` that restarts and reloads workers, on Windows too |
+| 🍃 | **Coroutine-aware MongoDB driver** <sup>2.0</sup> | The official `mongodb` extension does its I/O asynchronously and no longer blocks the process. Build with `--enable-swow-mongodb` |
+| 🐞 | **SDB, the Swow Debugger** | An interactive debugger written in PHP with gdb-style commands: list every coroutine, read backtraces and source, set breakpoints, step through code and print variables |
+| 🐶 | **Watchdog** | Catches coroutines that hog the CPU or block in a system call. It can make the offender yield to the others, or hand it to your callback to suspend or kill it |
+| 🔬 | **More debugging tools** | Deadlock detection and execution tracing |
+
+See everything new in 2.0 in the [CHANGELOG](./CHANGELOG.md).
 
 ## 🎮 Installation
 
