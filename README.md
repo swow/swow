@@ -132,10 +132,10 @@ You may contribute in the following ways:
 
 ## ❤️ Contributors
 
-Developing a high-performance coroutine network engine for PHP is a niche pursuit,
-and it is often lonely open source work.
+Building a high-performance coroutine network engine for PHP is a tune pitched so high that few can sing along.
+It is open source work where it is lonely at the top.
 
-Many thanks to the following contributors to the Swow project.
+Many thanks to the following friends for their code contributions to the Swow project.
 Without you, there would be no Swow today.
 
 [![Contributors](https://opencollective.com/swow/contributors.svg?width=890&button=false)](https://github.com/swow/swow/graphs/contributors)

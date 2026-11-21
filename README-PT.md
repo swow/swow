@@ -131,10 +131,10 @@ Você pode contribuir das seguintes formas:
 
 ## ❤️ Contribuidores
 
-Desenvolver um motor de rede de alto desempenho com corrotinas para PHP é um trabalho de nicho
-e, muitas vezes, um trabalho de código aberto solitário.
+Construir um motor de rede de alto desempenho com corrotinas para PHP é uma melodia tão elevada que poucos conseguem acompanhar.
+É um trabalho de código aberto em que o topo é solitário.
 
-Muito obrigado aos seguintes contribuidores do projeto Swow.
+Muito obrigado aos seguintes amigos pelas contribuições de código ao projeto Swow.
 Sem vocês, o Swow de hoje não existiria.
 
 [![Contributors](https://opencollective.com/swow/contributors.svg?width=890&button=false)](https://github.com/swow/swow/graphs/contributors)
