@@ -14,12 +14,17 @@ require __DIR__ . '/PDOUtil.inc';
 $pdo = PDOUtil::create();
 $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 $stringMode = $pdo->query('SHOW standard_conforming_strings')->fetchColumn();
-$warnings = $pdo->query('SHOW escape_string_warning')->fetchColumn();
+// PostgreSQL 19 removed escape_string_warning and forces standard_conforming_strings to on,
+// so the legacy string mode can only be exercised on older servers.
+$legacyStringMode = (int) $pdo->query('SHOW server_version_num')->fetchColumn() < 190000;
+$warnings = $legacyStringMode ? $pdo->query('SHOW escape_string_warning')->fetchColumn() : null;
 $encoding = $pdo->query('SHOW client_encoding')->fetchColumn();
 try {
     $pdo->exec("SET client_encoding = 'UTF8'");
-    $pdo->exec('SET escape_string_warning = off');
-    foreach (['on', 'off'] as $mode) {
+    if ($legacyStringMode) {
+        $pdo->exec('SET escape_string_warning = off');
+    }
+    foreach ($legacyStringMode ? ['on', 'off'] : ['on'] as $mode) {
         $pdo->exec('SET standard_conforming_strings = ' . $mode);
         foreach (['', "quote ' and \\ slash", "line\nbreak", 'café'] as $text) {
             $quoted = $pdo->quote($text, PDO::PARAM_STR);
@@ -45,7 +50,9 @@ try {
     Assert::same($pdo->query('SELECT 42')->fetchColumn(), 42);
 } finally {
     $pdo->exec('SET standard_conforming_strings = ' . $stringMode);
-    $pdo->exec('SET escape_string_warning = ' . $warnings);
+    if ($legacyStringMode) {
+        $pdo->exec('SET escape_string_warning = ' . $warnings);
+    }
     $pdo->exec('SET client_encoding = ' . $pdo->quote($encoding));
 }
 echo "Done\n";
