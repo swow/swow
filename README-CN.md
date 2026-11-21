@@ -20,6 +20,15 @@ Swow 致力于使用最小 C 核心及多数 PHP 代码以支持 PHP 高性能�
 
 此外，它还提供了丰富多样的调试机制与强大且低门槛的调试工具，最大程度地确保开发者免受 BUG 困扰，普通开发者也能通过工具的加持具备接近专家级别的 DEBUG 能力，从而将开发效率最大化。
 
+## ✨ 特性
+
+- **协程**：有栈协程，配套通道、等待组等同步工具，并可完全掌控每个协程（查看、中断、杀死）
+- **阻塞调用透明协程化**：`sleep()`、文件、PHP 流、套接字、cURL、PDO、`proc_open()` 会让出给其它协程而不是阻塞进程，无需修改代码
+- **网络**：TCP、UDP、Unix 套接字、管道与 TLS，内置 HTTP 和 WebSocket 解析器，以及用 PHP 编写的兼容 PSR-7 的 HTTP、WebSocket 服务端与客户端
+- **多线程**（2.0 起，需要线程安全的 PHP 构建）：`Swow\Thread`、跨线程的通道、锁与共享内存，以及管理 Worker 线程的 `ThreadManager`
+- **进程管理**：`ChildProcess` 以及可在 Windows 上工作的 `ProcessManager`
+- **调试**：交互式调试器、检测阻塞代码的 watchdog、死锁检测与执行追踪
+
 ## 🎮 安装
 
 > 和任何开源项目一样, Swow 总是在**最新的发行版**提供更佳的稳定性和更强大的功能, 请尽量保证你使用的是最新版本。
@@ -28,6 +37,7 @@ Swow 致力于使用最小 C 核心及多数 PHP 代码以支持 PHP 高性能�
 
 - Linux、Windows、macOS 等常见操作系统，与 [libuv](https://github.com/libuv/libuv/blob/v1.x/SUPPORTED_PLATFORMS.md) 支持的平台基本一致
 - PHP 8.0.0 或以上版本，推荐使用最新版本
+- 如需使用多线程设施，需要线程安全（ZTS）的 PHP 构建
 
 ### 🥧 使用PIE安装扩展
 

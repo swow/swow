@@ -2,7 +2,7 @@ English | [中文](./README-CN.md) | [日本語](./README-JP.md)
 
 <h2 align="center">
 <a href="https://github.com/swow/swow"><img width="320" height="86" alt="Swow Logo" src="https://docs.toast.run/assets/images/swow.svg" /></a><br />
-🚀 Swow is a multi-platform support and coroutine-based engine with a focus on concurrent I/O
+🚀 Swow is a multi-platform, coroutine-based engine focused on concurrent I/O
 </h2>
 
 [![license][license-badge]][license-link]
@@ -25,6 +25,15 @@ which can ensure that developers are free from the trouble of BUGs as much as po
 and ordinary developers can also have the ability to debug near the level of experts with the help of tools,
 so as to maximize development efficiency.
 
+## ✨ Features
+
+- **Coroutines**: stackful coroutines with channels, wait groups and other synchronization tools, and full control over every coroutine (inspect, interrupt, kill)
+- **Transparent blocking calls**: `sleep()`, files, PHP streams, sockets, cURL, PDO and `proc_open()` yield to other coroutines instead of blocking the process, without code changes
+- **Networking**: TCP, UDP, Unix sockets, pipes and TLS, with built-in HTTP and WebSocket parsers, plus PSR-7 compatible HTTP and WebSocket servers and clients written in PHP
+- **Multi-threading** (since 2.0, requires a thread-safe PHP build): `Swow\Thread`, cross-thread channels, locks and shared memory, and a `ThreadManager` for worker threads
+- **Process management**: `ChildProcess` and a `ProcessManager` that also works on Windows
+- **Debugging**: an interactive debugger, a watchdog for blocking code, deadlock detection and execution tracing
+
 ## 🎮 Installation
 
 > Like any open source project, Swow always provides the strongest stability and features in **the newest release**, please try to ensure that you are using the latest version.
@@ -33,6 +42,7 @@ so as to maximize development efficiency.
 
 - Common operating systems such as Linux, Windows, macOS, etc. Almost same as [libuv](https://github.com/libuv/libuv/blob/v1.x/SUPPORTED_PLATFORMS.md)
 - PHP 8.0.0 or above, the latest version is recommended
+- A thread-safe (ZTS) build of PHP if you want to use the multi-thread facilities
 
 ### 🥧 Using PIE
 
@@ -113,11 +123,11 @@ You may contribute in the following ways:
 
 ## ❤️ Contributors
 
-PHP high-performance coroutine network communication engine development road
-is too high to be popular, It's a lonely open source work at the top.
+Developing a high-performance coroutine network engine for PHP is a niche pursuit,
+and it is often lonely open source work.
 
-Thank you very much to the following partners for the contribution of the Swow project,
-without you there is no Swow now.
+Many thanks to the following contributors to the Swow project.
+Without you, there would be no Swow today.
 
 [![Contributors](https://opencollective.com/swow/contributors.svg?width=890&button=false)](https://github.com/swow/swow/graphs/contributors)
 
