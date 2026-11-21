@@ -1,4 +1,4 @@
-[English](./README.md) | 中文 | [日本語](./README-JP.md)
+[English](./README.md) | 简体中文 | [繁體中文](./README-CHT.md) | [日本語](./README-JP.md) | [Português](./README-PT.md) | [Русский](./README-RU.md)
 
 <h2 align="center">
 <a href="https://github.com/swow/swow"><img width="320" height="86" alt="Swow Logo" src="https://docs.toast.run/assets/images/swow.svg" /></a><br />
