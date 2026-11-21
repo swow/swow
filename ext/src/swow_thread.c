@@ -1260,20 +1260,16 @@ static PHP_METHOD(Swow_Thread, wait)
 ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_class_Swow_Thread_detach, 0, 0, Swow\\Thread, 0)
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_class_Swow_Thread_kill, 0, 0, Swow\\Thread, 0)
-ZEND_END_ARG_INFO()
+#define arginfo_class_Swow_Thread_kill arginfo_class_Swow_Thread_detach
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Thread_isStarted, 0, 0, _IS_BOOL, 0)
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Thread_isRunning, 0, 0, _IS_BOOL, 0)
-ZEND_END_ARG_INFO()
+#define arginfo_class_Swow_Thread_isRunning arginfo_class_Swow_Thread_isStarted
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Thread_isDetached, 0, 0, _IS_BOOL, 0)
-ZEND_END_ARG_INFO()
+#define arginfo_class_Swow_Thread_isDetached arginfo_class_Swow_Thread_isStarted
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Thread_getId, 0, 0, IS_LONG, 0)
-ZEND_END_ARG_INFO()
+#define arginfo_class_Swow_Thread_getId arginfo_class_Swow_Thread_killAll
 
 static PHP_METHOD(Swow_Thread, detach)
 {
@@ -1399,11 +1395,9 @@ static PHP_METHOD(Swow_Thread, __debugInfo)
     add_assoc_bool(return_value, "detached", s_thread->detached != cat_false);
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_class_Swow_Thread_getCurrent, 0, 0, Swow\\Thread, 0)
-ZEND_END_ARG_INFO()
+#define arginfo_class_Swow_Thread_getCurrent arginfo_class_Swow_Thread_detach
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Thread_getCurrentId, 0, 0, IS_LONG, 0)
-ZEND_END_ARG_INFO()
+#define arginfo_class_Swow_Thread_getCurrentId arginfo_class_Swow_Thread_killAll
 
 static PHP_METHOD(Swow_Thread, getCurrent)
 {
@@ -1448,8 +1442,7 @@ static PHP_METHOD(Swow_Thread, getCurrentId)
     RETURN_LONG(swow_thread_id_to_long(cat_thread_get_current_id()));
 }
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Thread_getExitStatus, 0, 0, IS_LONG, 0)
-ZEND_END_ARG_INFO()
+#define arginfo_class_Swow_Thread_getExitStatus arginfo_class_Swow_Thread_killAll
 
 static PHP_METHOD(Swow_Thread, getExitStatus)
 {

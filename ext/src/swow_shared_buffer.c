@@ -435,14 +435,11 @@ ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_SharedBuffer_getName, 0, 0, IS_STRING, 1)
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_SharedBuffer_getSharedId, 0, 0, IS_LONG, 0)
-ZEND_END_ARG_INFO()
+#define arginfo_class_Swow_SharedBuffer_getSharedId arginfo_class_Swow_SharedBuffer_getSize
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_SharedBuffer_getRefCount, 0, 0, IS_LONG, 0)
-ZEND_END_ARG_INFO()
+#define arginfo_class_Swow_SharedBuffer_getRefCount arginfo_class_Swow_SharedBuffer_getSize
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_SharedBuffer_getAlignment, 0, 0, IS_LONG, 0)
-ZEND_END_ARG_INFO()
+#define arginfo_class_Swow_SharedBuffer_getAlignment arginfo_class_Swow_SharedBuffer_getSize
 
 ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_class_Swow_SharedBuffer_slice, 0, 2, Swow\\SharedBuffer, 0)
     ZEND_ARG_TYPE_INFO(0, offset, IS_LONG, 0)
@@ -471,17 +468,9 @@ ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_SharedBuffer_viewF32,
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, endian, IS_LONG, 0, "0")
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_SharedBuffer_writeF64, 0, 2, IS_VOID, 0)
-    ZEND_ARG_TYPE_INFO(0, offsetBytes, IS_LONG, 0)
-    ZEND_ARG_TYPE_INFO(0, values, IS_ARRAY, 0)
-    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, endian, IS_LONG, 0, "0")
-ZEND_END_ARG_INFO()
+#define arginfo_class_Swow_SharedBuffer_writeF64 arginfo_class_Swow_SharedBuffer_writeF32
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_SharedBuffer_viewF64, 0, 2, IS_ARRAY, 0)
-    ZEND_ARG_TYPE_INFO(0, offsetBytes, IS_LONG, 0)
-    ZEND_ARG_TYPE_INFO(0, count, IS_LONG, 0)
-    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, endian, IS_LONG, 0, "0")
-ZEND_END_ARG_INFO()
+#define arginfo_class_Swow_SharedBuffer_viewF64 arginfo_class_Swow_SharedBuffer_viewF32
 
 #define SWOW_SHARED_BUFFER_INT_ARGINFO(name) \
     ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_SharedBuffer_write##name, 0, 2, IS_VOID, 0) \
@@ -528,8 +517,7 @@ ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_SharedBuffer___unseri
     ZEND_ARG_TYPE_INFO(0, data, IS_ARRAY, 0)
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_SharedBuffer___debugInfo, 0, 0, IS_ARRAY, 0)
-ZEND_END_ARG_INFO()
+#define arginfo_class_Swow_SharedBuffer___debugInfo arginfo_class_Swow_SharedBuffer___serialize
 
 static cat_bool_t swow_shared_buffer_check_range(
     swow_shared_buffer_t *buffer, zend_long offset, zend_long length)

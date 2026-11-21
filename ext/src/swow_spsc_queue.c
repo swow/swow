@@ -996,33 +996,25 @@ ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_SpscQueue_getCapacity, 0, 0, IS_LONG, 0)
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_SpscQueue_getMaxMessageSize, 0, 0, IS_LONG, 0)
-ZEND_END_ARG_INFO()
+#define arginfo_class_Swow_SpscQueue_getMaxMessageSize arginfo_class_Swow_SpscQueue_getCapacity
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_SpscQueue_getLength, 0, 0, IS_LONG, 0)
-ZEND_END_ARG_INFO()
+#define arginfo_class_Swow_SpscQueue_getLength arginfo_class_Swow_SpscQueue_getCapacity
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_SpscQueue_isEmpty, 0, 0, _IS_BOOL, 0)
-ZEND_END_ARG_INFO()
+#define arginfo_class_Swow_SpscQueue_isEmpty arginfo_class_Swow_SpscQueue_isClosed
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_SpscQueue_isFull, 0, 0, _IS_BOOL, 0)
-ZEND_END_ARG_INFO()
+#define arginfo_class_Swow_SpscQueue_isFull arginfo_class_Swow_SpscQueue_isClosed
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_SpscQueue_getWakeCount, 0, 0, IS_LONG, 0)
-ZEND_END_ARG_INFO()
+#define arginfo_class_Swow_SpscQueue_getWakeCount arginfo_class_Swow_SpscQueue_getCapacity
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_SpscQueue_getParkCount, 0, 0, IS_LONG, 0)
-ZEND_END_ARG_INFO()
+#define arginfo_class_Swow_SpscQueue_getParkCount arginfo_class_Swow_SpscQueue_getCapacity
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_SpscQueue___serialize, 0, 0, IS_ARRAY, 0)
-ZEND_END_ARG_INFO()
+#define arginfo_class_Swow_SpscQueue___serialize arginfo_class_Swow_SpscQueue_drain
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_SpscQueue___unserialize, 0, 1, IS_VOID, 0)
     ZEND_ARG_TYPE_INFO(0, data, IS_ARRAY, 0)
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_SpscQueue___debugInfo, 0, 0, IS_ARRAY, 0)
-ZEND_END_ARG_INFO()
+#define arginfo_class_Swow_SpscQueue___debugInfo arginfo_class_Swow_SpscQueue_drain
 
 static PHP_METHOD(Swow_SpscQueue, __construct)
 {

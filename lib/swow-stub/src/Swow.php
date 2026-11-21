@@ -677,6 +677,7 @@ namespace Swow
         public const EHP_CB_CHUNK_EXTENSION_NAME_COMPLETE = -816034;
         public const EHP_CB_CHUNK_EXTENSION_VALUE_COMPLETE = -816035;
         public const EHP_CB_RESET = -816031;
+        public const EHP_CB_PROTOCOL_COMPLETE = -816038;
         public const EHP_NOMEM = -816065;
         public const EHP_MULTIPART = -816066;
 
@@ -3586,27 +3587,28 @@ namespace Swow\Http
         public const EVENT_FLAG_DATA = 4;
         public const EVENT_NONE = 0;
         public const EVENT_MESSAGE_BEGIN = 512;
-        public const EVENT_URL = 1030;
-        public const EVENT_URL_COMPLETE = 2056;
-        public const EVENT_STATUS = 4102;
-        public const EVENT_STATUS_COMPLETE = 8200;
-        public const EVENT_HEADER_FIELD = 16388;
-        public const EVENT_HEADER_VALUE = 32772;
-        public const EVENT_HEADER_FIELD_COMPLETE = 65544;
-        public const EVENT_HEADER_VALUE_COMPLETE = 131080;
-        public const EVENT_HEADERS_COMPLETE = 262152;
-        public const EVENT_BODY = 524292;
-        public const EVENT_MESSAGE_COMPLETE = 1048584;
-        public const EVENT_CHUNK_HEADER = 2097152;
-        public const EVENT_CHUNK_COMPLETE = 4194312;
-        public const EVENT_MULTIPART_DATA_BEGIN = 8388624;
-        public const EVENT_MULTIPART_HEADER_FIELD = 16777236;
-        public const EVENT_MULTIPART_HEADER_VALUE = 33554452;
-        public const EVENT_MULTIPART_HEADERS_COMPLETE = 67108888;
-        public const EVENT_MULTIPART_BODY = 134217748;
-        public const EVENT_MULTIPART_DATA_END = 268435480;
+        public const EVENT_PROTOCOL = 1030;
+        public const EVENT_URL = 2054;
+        public const EVENT_URL_COMPLETE = 4104;
+        public const EVENT_STATUS = 8198;
+        public const EVENT_STATUS_COMPLETE = 16392;
+        public const EVENT_HEADER_FIELD = 32772;
+        public const EVENT_HEADER_VALUE = 65540;
+        public const EVENT_HEADER_FIELD_COMPLETE = 131080;
+        public const EVENT_HEADER_VALUE_COMPLETE = 262152;
+        public const EVENT_HEADERS_COMPLETE = 524296;
+        public const EVENT_BODY = 1048580;
+        public const EVENT_MESSAGE_COMPLETE = 2097160;
+        public const EVENT_CHUNK_HEADER = 4194304;
+        public const EVENT_CHUNK_COMPLETE = 8388616;
+        public const EVENT_MULTIPART_DATA_BEGIN = 16777232;
+        public const EVENT_MULTIPART_HEADER_FIELD = 33554452;
+        public const EVENT_MULTIPART_HEADER_VALUE = 67108884;
+        public const EVENT_MULTIPART_HEADERS_COMPLETE = 134217752;
+        public const EVENT_MULTIPART_BODY = 268435476;
+        public const EVENT_MULTIPART_DATA_END = 536870936;
         public const EVENTS_NONE = 0;
-        public const EVENTS_ALL = 536870430;
+        public const EVENTS_ALL = 1073741342;
 
         public function getType(): int { }
 
