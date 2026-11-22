@@ -416,6 +416,7 @@ EOF
     swow_buffer.c \
     swow_socket.c \
     swow_dns.c \
+    swow_dns_record_unix.c \
     swow_fs.c \
     swow_stream.c \
     swow_stream_wrapper.c \
@@ -891,6 +892,20 @@ EOF
     PHP_SUBST(SWOW_CAT_INCLUDES)
     PHP_SUBST(SWOW_CAT_CFLAGS)
   fi
+
+  dnl the DNS record functions call the same resolver as ext/standard (see swow_dns_private.h),
+  dnl link libresolv explicitly where it exists instead of relying on symbols loaded by PHP
+  PHP_CHECK_LIBRARY(resolv, dns_search, [
+    PHP_ADD_LIBRARY(resolv, 1, SWOW_SHARED_LIBADD)
+  ], [
+    PHP_CHECK_LIBRARY(resolv, res_nsearch, [
+      PHP_ADD_LIBRARY(resolv, 1, SWOW_SHARED_LIBADD)
+    ], [
+      PHP_CHECK_LIBRARY(resolv, __res_nsearch, [
+        PHP_ADD_LIBRARY(resolv, 1, SWOW_SHARED_LIBADD)
+      ])
+    ])
+  ])
 
   dnl swow needs libcat
   SWOW_INCLUDES="$SWOW_INCLUDES \$(SWOW_CAT_INCLUDES)"

@@ -48,7 +48,8 @@ if (PHP_SWOW != 'no') (function(){
         !CHECK_LIB('Iphlpapi.lib', 'swow', PHP_SWOW) ||
         !CHECK_LIB('Userenv.lib', 'swow', PHP_SWOW) ||
         !CHECK_LIB('Dbghelp.lib', 'swow', PHP_SWOW) ||
-        !CHECK_LIB('Synchronization.lib', 'swow', PHP_SWOW)
+        !CHECK_LIB('Synchronization.lib', 'swow', PHP_SWOW) ||
+        !CHECK_LIB('Dnsapi.lib', 'swow', PHP_SWOW)
     ){
         WARNING('Swow not enabled; libraries not found');
         return;
@@ -300,6 +301,7 @@ if (PHP_SWOW != 'no') (function(){
         'swow_buffer.c',
         'swow_socket.c',
         'swow_dns.c',
+        'swow_dns_record_win32.c',
         'swow_fs.c',
         'swow_stream.c',
         'swow_stream_wrapper.c',

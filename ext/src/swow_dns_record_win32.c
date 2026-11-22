@@ -1,0 +1,583 @@
+/*
+  +--------------------------------------------------------------------------+
+  | Swow                                                                     |
+  +--------------------------------------------------------------------------+
+  | Licensed under the Apache License, Version 2.0 (the "License");          |
+  | you may not use this file except in compliance with the License.         |
+  | You may obtain a copy of the License at                                  |
+  | http://www.apache.org/licenses/LICENSE-2.0                               |
+  | Unless required by applicable law or agreed to in writing, software      |
+  | distributed under the License is distributed on an "AS IS" BASIS,        |
+  | WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. |
+  | See the License for the specific language governing permissions and      |
+  | limitations under the License. See accompanying LICENSE file.            |
+  +--------------------------------------------------------------------------+
+  | Author: Twosee <twosee@php.net>                                          |
+  +--------------------------------------------------------------------------+
+ */
+
+// from ext/standard/dns_win32.c @ 34ea00fda3045c39e10683465ec552e64f47f4c0
+// Only DnsQuery_A() moves into the thread pool; argument handling, the query loop and the record
+// conversion are kept as in PHP so that the hooked functions return exactly the same values.
+
+#include "swow_dns_private.h"
+
+#ifdef PHP_WIN32
+
+#include "cat_work.h"
+
+#include <windows.h>
+#include <Winbase.h >
+#include <Windns.h>
+#include <Ws2tcpip.h>
+
+/* {{{ thread pool query */
+
+/* Everything a worker thread touches is owned by this job, because the waiting coroutine may
+ * give up (timeout or cancellation) while DnsQuery_A(), which cannot be interrupted, is still
+ * running; cat_work() then frees the job afterwards. */
+typedef struct swow_dns_query_job_s {
+    char *hostname;
+    WORD type;
+    /* outputs, written by the worker thread */
+    DNS_STATUS status;
+    PDNS_RECORD result; /* moved to the caller after a successful wait */
+} swow_dns_query_job_t;
+
+static void swow_dns_query_job_run(cat_data_t *data)
+{
+    swow_dns_query_job_t *job = (swow_dns_query_job_t *) data;
+
+    job->status = DnsQuery_A(job->hostname, job->type, DNS_QUERY_STANDARD, NULL, &job->result, NULL);
+}
+
+static void swow_dns_query_job_free(cat_data_t *data)
+{
+    swow_dns_query_job_t *job = (swow_dns_query_job_t *) data;
+
+    if (job->status == 0 && job->result != NULL) {
+        DnsRecordListFree(job->result, DnsFreeRecordListDeep);
+    }
+    cat_free(job->hostname);
+    cat_free(job);
+}
+
+/* Same as DnsQuery_A(hostname, type, DNS_QUERY_STANDARD, NULL, result, NULL), but only suspends
+ * the current coroutine. On success the caller frees *result as PHP does; returns false (with a
+ * warning on timeout) when the coroutine stopped waiting. */
+static bool swow_dns_query(const char *hostname, int type, DNS_STATUS *status, PDNS_RECORD *result)
+{
+    swow_dns_query_job_t *job = (swow_dns_query_job_t *) cat_malloc(sizeof(*job));
+
+    job->hostname = cat_strdup(hostname);
+    job->type = (WORD) type;
+    job->status = ERROR_INVALID_PARAMETER;
+    job->result = NULL;
+
+    if (!cat_work(CAT_WORK_KIND_SLOW_IO, swow_dns_query_job_run, swow_dns_query_job_free, job, cat_socket_get_global_dns_timeout())) {
+        /* a canceled (e.g. killed) coroutine asked to stop, only a timeout is worth reporting */
+        if (cat_get_last_error_code() != CAT_ECANCELED) {
+            php_error_docref(NULL, E_WARNING, "DNS query wait failed: %s", cat_get_last_error_message());
+        }
+        return false;
+    }
+    /* the job is freed once this coroutine yields again, take what is needed right now */
+    *status = job->status;
+    *result = job->result;
+    job->result = NULL;
+
+    return true;
+}
+/* }}} */
+
+static PHP_FUNCTION(swow_dns_get_mx) /* {{{ */
+{
+    char *hostname;
+    size_t hostname_len;
+    zval *mx_list, *weight_list = NULL;
+
+    DNS_STATUS      status;                 /* Return value of DnsQuery_A() function */
+    PDNS_RECORD     pResult, pRec;          /* Pointer to DNS_RECORD structure */
+
+    if (zend_parse_parameters(ZEND_NUM_ARGS(), "pz|z", &hostname, &hostname_len, &mx_list, &weight_list) == FAILURE) {
+        RETURN_THROWS();
+    }
+
+    if (!swow_dns_query(hostname, DNS_TYPE_MX, &status, &pResult)) {
+        RETURN_FALSE;
+    }
+
+    if (status) {
+        RETURN_FALSE;
+    }
+
+    mx_list = zend_try_array_init(mx_list);
+    if (!mx_list) {
+        goto cleanup;
+    }
+
+    if (weight_list) {
+        weight_list = zend_try_array_init(weight_list);
+        if (!weight_list) {
+            goto cleanup;
+        }
+    }
+
+    for (pRec = pResult; pRec; pRec = pRec->pNext) {
+        DNS_SRV_DATA *srv = &pRec->Data.Srv;
+
+        if (pRec->wType != DNS_TYPE_MX) {
+            continue;
+        }
+
+        add_next_index_string(mx_list, pRec->Data.MX.pNameExchange);
+        if (weight_list) {
+            add_next_index_long(weight_list, srv->wPriority);
+        }
+    }
+
+cleanup:
+    /* Free memory allocated for DNS records. */
+    DnsRecordListFree(pResult, DnsFreeRecordListDeep);
+
+    RETURN_TRUE;
+}
+/* }}} */
+
+/* {{{ Check DNS records corresponding to a given Internet host name or IP address */
+static PHP_FUNCTION(swow_dns_check_record)
+{
+    char *hostname;
+    size_t hostname_len;
+    zend_string *rectype = NULL;
+    int type = DNS_TYPE_MX;
+
+    DNS_STATUS      status;                 /* Return value of DnsQuery_A() function */
+    PDNS_RECORD     pResult;          /* Pointer to DNS_RECORD structure */
+
+    if (zend_parse_parameters(ZEND_NUM_ARGS(), "p|S", &hostname, &hostname_len, &rectype) == FAILURE) {
+        RETURN_THROWS();
+    }
+
+    if (hostname_len == 0) {
+        SWOW_DNS_HOSTNAME_EMPTY_ERROR();
+        RETURN_THROWS();
+    }
+
+    if (rectype) {
+             if (zend_string_equals_literal_ci(rectype,     "A")) type = DNS_TYPE_A;
+        else if (zend_string_equals_literal_ci(rectype,    "NS")) type = DNS_TYPE_NS;
+        else if (zend_string_equals_literal_ci(rectype,    "MX")) type = DNS_TYPE_MX;
+        else if (zend_string_equals_literal_ci(rectype,   "PTR")) type = DNS_TYPE_PTR;
+        else if (zend_string_equals_literal_ci(rectype,   "ANY")) type = DNS_TYPE_ANY;
+        else if (zend_string_equals_literal_ci(rectype,   "SOA")) type = DNS_TYPE_SOA;
+        else if (zend_string_equals_literal_ci(rectype,   "TXT")) type = DNS_TYPE_TEXT;
+        else if (zend_string_equals_literal_ci(rectype, "CNAME")) type = DNS_TYPE_CNAME;
+        else if (zend_string_equals_literal_ci(rectype,  "AAAA")) type = DNS_TYPE_AAAA;
+        else if (zend_string_equals_literal_ci(rectype,   "SRV")) type = DNS_TYPE_SRV;
+        else if (zend_string_equals_literal_ci(rectype, "NAPTR")) type = DNS_TYPE_NAPTR;
+        else if (zend_string_equals_literal_ci(rectype,    "A6")) type = DNS_TYPE_A6;
+        else {
+            zend_argument_value_error(2, "must be a valid DNS record type");
+            RETURN_THROWS();
+        }
+    }
+
+    if (!swow_dns_query(hostname, type, &status, &pResult)) {
+        RETURN_FALSE;
+    }
+
+    if (!status) {
+        DnsRecordListFree(pResult, DnsFreeRecordListDeep);
+    }
+
+    RETURN_BOOL(!status);
+}
+/* }}} */
+
+/* {{{ php_parserr */
+static void php_parserr(PDNS_RECORD pRec, int type_to_fetch, int store, bool raw, zval *subarray)
+{
+    int type;
+    u_long ttl;
+
+    type = pRec->wType;
+    ttl = pRec->dwTtl;
+
+    ZVAL_UNDEF(subarray);
+
+    if (type_to_fetch != DNS_TYPE_ANY && type != type_to_fetch) {
+        return;
+    }
+
+    if (!store) {
+        return;
+    }
+
+    array_init(subarray);
+
+    add_assoc_string(subarray, "host", pRec->pName);
+    add_assoc_string(subarray, "class", "IN");
+    add_assoc_long(subarray, "ttl", ttl);
+
+    if (raw) {
+        add_assoc_long(subarray, "type", type);
+        add_assoc_stringl(subarray, "data", (char*) &pRec->Data, (uint32_t) pRec->wDataLength);
+        return;
+    }
+
+    switch (type) {
+        case DNS_TYPE_A: {
+            IN_ADDR ipaddr;
+            char ip[INET_ADDRSTRLEN];
+            ipaddr.S_un.S_addr = (pRec->Data.A.IpAddress);
+            if (!inet_ntop(AF_INET, &ipaddr, ip, INET_ADDRSTRLEN)) {
+                ZVAL_UNDEF(subarray);
+            } else {
+                add_assoc_string(subarray, "type", "A");
+                add_assoc_string(subarray, "ip", ip);
+            }
+            break;
+        }
+
+        case DNS_TYPE_MX:
+            add_assoc_string(subarray, "type", "MX");
+            add_assoc_long(subarray, "pri", pRec->Data.Srv.wPriority);
+            /* no break; */
+
+        case DNS_TYPE_CNAME:
+            if (type == DNS_TYPE_CNAME) {
+                add_assoc_string(subarray, "type", "CNAME");
+            }
+            /* no break; */
+
+        case DNS_TYPE_NS:
+            if (type == DNS_TYPE_NS) {
+                add_assoc_string(subarray, "type", "NS");
+            }
+            /* no break; */
+
+        case DNS_TYPE_PTR:
+            if (type == DNS_TYPE_PTR) {
+                add_assoc_string(subarray, "type", "PTR");
+            }
+            add_assoc_string(subarray, "target", pRec->Data.MX.pNameExchange);
+            break;
+
+        /* Not available on windows, the query is possible but there is no DNS_HINFO_DATA structure */
+        case DNS_TYPE_HINFO:
+        case DNS_TYPE_TEXT:
+            {
+                DWORD i = 0;
+                DNS_TXT_DATA *data_txt = &pRec->Data.TXT;
+                DWORD count = data_txt->dwStringCount;
+                zend_string *txt;
+                char *txt_dst;
+                size_t txt_len = 0;
+                zval entries;
+
+                add_assoc_string(subarray, "type", "TXT");
+
+                array_init(&entries);
+
+                for (i = 0; i < count; i++) {
+                    txt_len += strlen(data_txt->pStringArray[i]);
+                }
+
+                txt = zend_string_alloc(txt_len, 0);
+                txt_dst = ZSTR_VAL(txt);
+                for (i = 0; i < count; i++) {
+                    size_t len = strlen(data_txt->pStringArray[i]);
+                    memcpy(txt_dst, data_txt->pStringArray[i], len);
+                    add_next_index_stringl(&entries, data_txt->pStringArray[i], len);
+                    txt_dst += len;
+                }
+                *txt_dst = '\0';
+                add_assoc_str(subarray, "txt", txt);
+                add_assoc_zval(subarray, "entries", &entries);
+            }
+            break;
+
+        case DNS_TYPE_SOA:
+            {
+                DNS_SOA_DATA *data_soa = &pRec->Data.Soa;
+
+                add_assoc_string(subarray, "type", "SOA");
+
+                add_assoc_string(subarray, "mname", data_soa->pNamePrimaryServer);
+                add_assoc_string(subarray, "rname", data_soa->pNameAdministrator);
+                add_assoc_long(subarray, "serial", data_soa->dwSerialNo);
+                add_assoc_long(subarray, "refresh", data_soa->dwRefresh);
+                add_assoc_long(subarray, "retry", data_soa->dwRetry);
+                add_assoc_long(subarray, "expire", data_soa->dwExpire);
+                add_assoc_long(subarray, "minimum-ttl", data_soa->dwDefaultTtl);
+            }
+            break;
+
+        case DNS_TYPE_AAAA:
+            {
+                DNS_AAAA_DATA *data_aaaa = &pRec->Data.AAAA;
+                char buf[sizeof("AAAA:AAAA:AAAA:AAAA:AAAA:AAAA:AAAA:AAAA")];
+                char *tp = buf;
+                int i;
+                unsigned short out[8];
+                int have_v6_break = 0, in_v6_break = 0;
+
+                for (i = 0; i < 4; ++i) {
+                    DWORD chunk = data_aaaa->Ip6Address.IP6Dword[i];
+                    out[i * 2]     = htons(LOWORD(chunk));
+                    out[i * 2 + 1] = htons(HIWORD(chunk));
+                }
+
+                for(i=0; i < 8; i++) {
+                    if (out[i] != 0) {
+                        if (tp > buf) {
+                            in_v6_break = 0;
+                            tp[0] = ':';
+                            tp++;
+                        }
+                        tp += snprintf((char*)tp, sizeof(buf) - (tp - (char *) buf), "%x", out[i]);
+                    } else {
+                        if (!have_v6_break) {
+                            have_v6_break = 1;
+                            in_v6_break = 1;
+                            tp[0] = ':';
+                            tp++;
+                        } else if (!in_v6_break) {
+                            tp[0] = ':';
+                            tp++;
+                            tp[0] = '0';
+                            tp++;
+                        }
+                    }
+                }
+
+                if (have_v6_break && in_v6_break) {
+                    tp[0] = ':';
+                    tp++;
+                }
+                tp[0] = '\0';
+
+                add_assoc_string(subarray, "type", "AAAA");
+                add_assoc_string(subarray, "ipv6", buf);
+            }
+            break;
+
+#if 0
+        /* Won't be implemented. A6 is deprecated. (Pierre) */
+        case DNS_TYPE_A6:
+            break;
+#endif
+
+        case DNS_TYPE_SRV:
+            {
+                DNS_SRV_DATA *data_srv = &pRec->Data.Srv;
+
+                add_assoc_string(subarray, "type", "SRV");
+                add_assoc_long(subarray, "pri", data_srv->wPriority);
+                add_assoc_long(subarray, "weight", data_srv->wWeight);
+                add_assoc_long(subarray, "port", data_srv->wPort);
+                add_assoc_string(subarray, "target", data_srv->pNameTarget);
+            }
+            break;
+
+        case DNS_TYPE_NAPTR:
+            {
+                DNS_NAPTR_DATA * data_naptr = &pRec->Data.Naptr;
+
+                add_assoc_string(subarray, "type", "NAPTR");
+                add_assoc_long(subarray, "order", data_naptr->wOrder);
+                add_assoc_long(subarray, "pref", data_naptr->wPreference);
+                add_assoc_string(subarray, "flags", data_naptr->pFlags);
+                add_assoc_string(subarray, "services", data_naptr->pService);
+                add_assoc_string(subarray, "regex", data_naptr->pRegularExpression);
+                add_assoc_string(subarray, "replacement", data_naptr->pReplacement);
+            }
+            break;
+
+        default:
+            /* unknown type */
+            ZVAL_UNDEF(subarray);
+            return;
+    }
+
+}
+/* }}} */
+
+/* {{{ Get any Resource Record corresponding to a given Internet host name */
+static PHP_FUNCTION(swow_dns_get_record)
+{
+    char *hostname;
+    size_t hostname_len;
+    zend_long type_param = PHP_DNS_ANY;
+    zval *authns = NULL, *addtl = NULL;
+    int type, type_to_fetch, first_query = 1, store_results = 1;
+    bool raw = false;
+
+    if (zend_parse_parameters(ZEND_NUM_ARGS(), "p|lz!z!b",
+            &hostname, &hostname_len, &type_param, &authns, &addtl, &raw) == FAILURE) {
+        RETURN_THROWS();
+    }
+
+    if (authns) {
+        authns = zend_try_array_init(authns);
+        if (!authns) {
+            RETURN_THROWS();
+        }
+    }
+    if (addtl) {
+        addtl = zend_try_array_init(addtl);
+        if (!addtl) {
+            RETURN_THROWS();
+        }
+    }
+
+    if (!raw) {
+        if ((type_param & ~PHP_DNS_ALL) && (type_param != PHP_DNS_ANY)) {
+            zend_argument_value_error(2, "must be a DNS_* constant");
+            RETURN_THROWS();
+        }
+    } else {
+        if ((type_param < 1) || (type_param > 0xFFFF)) {
+            zend_argument_value_error(2, "must be between 1 and 65535 when argument #5 ($raw) is true");
+            RETURN_THROWS();
+        }
+    }
+
+    /* Initialize the return array */
+    array_init(return_value);
+
+    if (raw) {
+        type = -1;
+    } else if (type_param == PHP_DNS_ANY) {
+        type = PHP_DNS_NUM_TYPES + 1;
+    } else {
+        type = 0;
+    }
+
+    for ( ;
+        type < (addtl ? (PHP_DNS_NUM_TYPES + 2) : PHP_DNS_NUM_TYPES) || first_query;
+        type++
+    ) {
+        DNS_STATUS      status;                 /* Return value of DnsQuery_A() function */
+        PDNS_RECORD     pResult, pRec;          /* Pointer to DNS_RECORD structure */
+
+        first_query = 0;
+        switch (type) {
+            case -1: /* raw */
+                type_to_fetch = type_param;
+                /* skip over the rest and go directly to additional records */
+                type = PHP_DNS_NUM_TYPES - 1;
+                break;
+            case 0:
+                type_to_fetch = type_param&PHP_DNS_A     ? DNS_TYPE_A     : 0;
+                break;
+            case 1:
+                type_to_fetch = type_param&PHP_DNS_NS    ? DNS_TYPE_NS    : 0;
+                break;
+            case 2:
+                type_to_fetch = type_param&PHP_DNS_CNAME ? DNS_TYPE_CNAME : 0;
+                break;
+            case 3:
+                type_to_fetch = type_param&PHP_DNS_SOA   ? DNS_TYPE_SOA   : 0;
+                break;
+            case 4:
+                type_to_fetch = type_param&PHP_DNS_PTR   ? DNS_TYPE_PTR   : 0;
+                break;
+            case 5:
+                type_to_fetch = type_param&PHP_DNS_HINFO ? DNS_TYPE_HINFO : 0;
+                break;
+            case 6:
+                type_to_fetch = type_param&PHP_DNS_MX    ? DNS_TYPE_MX    : 0;
+                break;
+            case 7:
+                type_to_fetch = type_param&PHP_DNS_TXT   ? DNS_TYPE_TEXT   : 0;
+                break;
+            case 8:
+                type_to_fetch = type_param&PHP_DNS_AAAA  ? DNS_TYPE_AAAA  : 0;
+                break;
+            case 9:
+                type_to_fetch = type_param&PHP_DNS_SRV   ? DNS_TYPE_SRV   : 0;
+                break;
+            case 10:
+                type_to_fetch = type_param&PHP_DNS_NAPTR ? DNS_TYPE_NAPTR : 0;
+                break;
+            case 11:
+                type_to_fetch = type_param&PHP_DNS_A6    ? DNS_TYPE_A6 : 0;
+                break;
+            case PHP_DNS_NUM_TYPES:
+                store_results = 0;
+                continue;
+            default:
+            case (PHP_DNS_NUM_TYPES + 1):
+                type_to_fetch = DNS_TYPE_ANY;
+                break;
+        }
+
+        if (type_to_fetch) {
+            if (!swow_dns_query(hostname, type_to_fetch, &status, &pResult)) {
+                zend_array_destroy(Z_ARR_P(return_value));
+                RETURN_FALSE;
+            }
+
+            if (status) {
+                if (status == DNS_INFO_NO_RECORDS || status == DNS_ERROR_RCODE_NAME_ERROR) {
+                    continue;
+                } else {
+                    php_error_docref(NULL, E_WARNING, "DNS Query failed");
+                    zend_array_destroy(Z_ARR_P(return_value));
+                    RETURN_FALSE;
+                }
+            }
+
+            for (pRec = pResult; pRec; pRec = pRec->pNext) {
+                zval retval;
+
+                if (pRec->Flags.S.Section == DnsSectionAnswer) {
+                    php_parserr(pRec, type_to_fetch, store_results, raw, &retval);
+                    if (!Z_ISUNDEF(retval) && store_results) {
+                        add_next_index_zval(return_value, &retval);
+                    }
+                }
+
+                if (authns && pRec->Flags.S.Section == DnsSectionAuthority) {
+
+                    php_parserr(pRec, type_to_fetch, 1, raw, &retval);
+                    if (!Z_ISUNDEF(retval)) {
+                        add_next_index_zval(authns, &retval);
+                    }
+                }
+
+/* Stupid typo in PSDK 6.1, WinDNS.h(1258)... */
+#ifndef DnsSectionAdditional
+# ifdef DnsSectionAddtional
+#  define DnsSectionAdditional DnsSectionAddtional
+# else
+# define DnsSectionAdditional 3
+# endif
+#endif
+                if (addtl && pRec->Flags.S.Section == DnsSectionAdditional) {
+                    php_parserr(pRec, type_to_fetch, 1, raw, &retval);
+                    if (!Z_ISUNDEF(retval)) {
+                        add_next_index_zval(addtl, &retval);
+                    }
+                }
+            }
+            /* Free memory allocated for DNS records. */
+            DnsRecordListFree(pResult, DnsFreeRecordListDeep);
+        }
+    }
+}
+/* }}} */
+
+/* handlers only: swow_dns_module_init() replaces them in place and keeps PHP's arginfo */
+const zend_function_entry swow_dns_record_functions[] = {
+    PHP_FENTRY(dns_check_record, PHP_FN(swow_dns_check_record), NULL, 0)
+    PHP_FENTRY(checkdnsrr, PHP_FN(swow_dns_check_record), NULL, 0)
+    PHP_FENTRY(dns_get_record, PHP_FN(swow_dns_get_record), NULL, 0)
+    PHP_FENTRY(dns_get_mx, PHP_FN(swow_dns_get_mx), NULL, 0)
+    PHP_FENTRY(getmxrr, PHP_FN(swow_dns_get_mx), NULL, 0)
+    PHP_FE_END
+};
+
+#endif /* PHP_WIN32 */
