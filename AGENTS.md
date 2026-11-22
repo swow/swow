@@ -27,6 +27,7 @@
 - When PHP code starts using a new C extension API, also publish a `swow/swow-extension` version containing that API. Set `required_extension_version` in `tools/versions.php` to the first extension version that provides it.
 - Do not hide missing APIs behind overly broad version constraints. For example, if an API was added after a particular alpha release, `^2.0` may still accept earlier alphas without that API.
 - Preserve synchronous behavior in the plain-filesystem `file_exists()` and `realpath()` fast paths. Adding implicit suspension can break autoloading inside `Coroutine::call()` and code that observes a coroutine's first suspension.
+- `ext/include/cat_vm.h` maps `cat_malloc`, `cat_calloc`, `cat_realloc` and `cat_free` (and helpers built on them such as `cat_strdup`) to the Zend allocator (`emalloc` and friends), which is bound to the PHP request thread. Code running on a libuv or `cat_work()` worker thread, and any buffer handed between a worker and the PHP thread, must use `cat_sys_malloc`, `cat_sys_realloc`, `cat_sys_strdup` and `cat_sys_free`; the same applies to `zend_string`, `zval` and other Zend APIs, which must stay on the PHP thread. Mixing them crashes ZTS builds and may pass unnoticed on NTS, so verify such code on a ZTS build.
 
 ## Coroutines and Multiple Processes
 
