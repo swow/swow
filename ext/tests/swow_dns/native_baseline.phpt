@@ -32,23 +32,47 @@ function normalizeDnsResult(mixed $value): mixed
 }
 
 /**
- * The authority and additional sections come from separate live queries and DNS servers choose
- * which extra records to include in each answer, so only the shape (record type and fields) of
- * those records is comparable between the two processes.
+ * The authority and additional sections come from separate live queries (the additional one is a
+ * DNS_ANY query) and DNS servers choose which extra records to include in each answer, so even the
+ * record types differ between two runs. What stays comparable is that every record follows PHP's
+ * field layout for its type; this returns the records that do not.
  *
  * @param list<array<string, mixed>> $records
- * @return list<string>
+ * @return list<array<string, mixed>>
  */
-function dnsRecordShapes(array $records): array
+function malformedDnsRecords(array $records): array
 {
-    $shapes = array_map(static function (array $record): string {
+    $fields = [
+        'A' => ['ip'],
+        'AAAA' => ['ipv6'],
+        'MX' => ['pri', 'target'],
+        'CNAME' => ['target'],
+        'NS' => ['target'],
+        'PTR' => ['target'],
+        'HINFO' => ['cpu', 'os'],
+        'CAA' => ['flags', 'tag', 'value'],
+        'TXT' => ['txt', 'entries'],
+        'SOA' => ['mname', 'rname', 'serial', 'refresh', 'retry', 'expire', 'minimum-ttl'],
+        'A6' => ['masklen', 'ipv6'],
+        'SRV' => ['pri', 'weight', 'port', 'target'],
+        'NAPTR' => ['order', 'pref', 'flags', 'services', 'regex', 'replacement'],
+    ];
+    return array_values(array_filter($records, static function (array $record) use ($fields): bool {
+        $type = $record['type'] ?? null;
+        // raw mode reports the numeric type with the undecoded data
+        $expected = is_int($type) ? ['data'] : ($fields[$type] ?? null);
+        if ($expected === null) {
+            return true;
+        }
+        $expected = [...['host', 'class', 'ttl', 'type'], ...$expected];
+        if ($type === 'A6' && array_key_exists('chain', $record)) {
+            $expected[] = 'chain';
+        }
         $keys = array_keys($record);
         sort($keys);
-        return $record['type'] . ':' . implode(',', $keys);
-    }, $records);
-    $shapes = array_values(array_unique($shapes));
-    sort($shapes);
-    return $shapes;
+        sort($expected);
+        return $keys !== $expected;
+    }));
 }
 
 /** @return array{result: mixed, warnings: list<string>, error: list<string>|null} */
@@ -109,11 +133,11 @@ function probeDns(): array
         'dns_get_record raw' => static fn() => dns_get_record('php.net', 15, raw: true),
         'dns_get_record sections' => static function (): array {
             $records = dns_get_record('php.net', DNS_MX, $authns, $addtl);
-            return ['records' => $records, 'authns' => dnsRecordShapes($authns), 'addtl' => dnsRecordShapes($addtl)];
+            return ['records' => $records, 'malformed authns' => malformedDnsRecords($authns), 'malformed addtl' => malformedDnsRecords($addtl)];
         },
         'dns_get_record raw sections' => static function (): array {
             $records = dns_get_record('php.net', 2, $authns, $addtl, true);
-            return ['records' => $records, 'authns' => dnsRecordShapes($authns), 'addtl' => dnsRecordShapes($addtl)];
+            return ['records' => $records, 'malformed authns' => malformedDnsRecords($authns), 'malformed addtl' => malformedDnsRecords($addtl)];
         },
         'dns_get_record nxdomain' => static fn() => dns_get_record('nonexistent.invalid', DNS_A),
         'dns_get_record invalid type' => static fn() => dns_get_record('php.net', 0x7),
