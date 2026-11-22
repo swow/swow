@@ -32,10 +32,10 @@ function normalizeDnsResult(mixed $value): mixed
 }
 
 /**
- * The authority and additional sections come from separate live queries (the additional one is a
- * DNS_ANY query) and DNS servers choose which extra records to include in each answer, so even the
- * record types differ between two runs. What stays comparable is that every record follows PHP's
- * field layout for its type; this returns the records that do not.
+ * DNS_ANY answers and the authority and additional sections (the additional one also comes from a
+ * DNS_ANY query) are chosen by the resolver for each query, so even the record types differ between
+ * two runs. What stays comparable is that every record follows PHP's field layout for its type;
+ * this returns the records that do not.
  *
  * @param list<array<string, mixed>> $records
  * @return list<array<string, mixed>>
@@ -128,8 +128,16 @@ function probeDns(): array
         'dns_get_record PTR' => static fn() => dns_get_record('8.8.8.8.in-addr.arpa', DNS_PTR),
         'dns_get_record SRV' => static fn() => dns_get_record('_imaps._tcp.gmail.com', DNS_SRV),
         'dns_get_record mask' => static fn() => dns_get_record('php.net', DNS_A | DNS_MX | DNS_TXT),
-        'dns_get_record ANY' => static fn() => dns_get_record('php.net', DNS_ANY),
-        'dns_get_record default' => static fn() => dns_get_record('php.net'),
+        // DNS_ANY answers are a resolver-chosen subset that changes between queries (RFC 8482),
+        // so only their record layout is comparable
+        'dns_get_record ANY' => static function (): array|false {
+            $records = dns_get_record('php.net', DNS_ANY);
+            return $records === false ? false : ['malformed' => malformedDnsRecords($records)];
+        },
+        'dns_get_record default' => static function (): array|false {
+            $records = dns_get_record('php.net');
+            return $records === false ? false : ['malformed' => malformedDnsRecords($records)];
+        },
         'dns_get_record raw' => static fn() => dns_get_record('php.net', 15, raw: true),
         'dns_get_record sections' => static function (): array {
             $records = dns_get_record('php.net', DNS_MX, $authns, $addtl);
