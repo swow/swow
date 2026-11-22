@@ -246,7 +246,7 @@ waitAll();
 * Fix TLS stream behavior: wait for the TCP connection before a blocking handshake, keep the connection timeout for manual handshakes, avoid blocking supplemental reads, and preserve verification stores across SNI selection<br>
   修复 TLS 流的行为：阻塞握手前先等待 TCP 连接完成，手动握手时保留连接超时，补充读取不再阻塞，SNI 选择后保留证书验证存储 (1e4c0cc2, 845f78a5, 552943fa, 5efef1b8, f950b534, 204bcff3) [@twosee]
 * Fix `Socket::enableCrypto()` TypeError when null options are passed explicitly<br>
-  修复显式传入 null 选项时 `Socket::enableCrypto()` 抛出 TypeError (5637bab9) [@liuyuejian]
+  修复显式传入 null 选项时 `Socket::enableCrypto()` 抛出 TypeError (5637bab9) [@PandaLIU-1111]
 * Fix the PostgreSQL hook: restore `Pdo\Pgsql`, drain unbuffered results before clearing their state, take over a running lazy fetch before buffered executes, and resize the column description of a re-executed statement<br>
   修复 PostgreSQL hook：恢复 `Pdo\Pgsql`，清理状态前先读完未缓冲的结果，缓冲执行前接管正在进行的惰性读取，重新执行语句时调整列描述的大小 (8a3b9d5b, 656922a3, 3be876a6, 7bf99f09, 8605b18e) [@dixyes] [@twosee]
 * Fix HTTP message reception in Swow Library: header fragments across receive buffers, chunk trailers, close-delimited bodies, HEAD responses, informational responses, pipelined request boundaries and repeated header values<br>
