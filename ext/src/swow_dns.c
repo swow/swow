@@ -104,7 +104,7 @@ static PHP_FUNCTION(swow_gethostbyname2)
 #ifdef SWOW_DNS_HAVE_GETHOSTBYNAMEL
 
 #ifdef HAVE_GETHOSTBYNAME_R
-// from main/network.c @ 34ea00fda3045c39e10683465ec552e64f47f4c0, with cat allocators for workers
+// from main/network.c @ 34ea00fda3045c39e10683465ec552e64f47f4c0, with the system allocator for workers
 #ifdef HAVE_FUNC_GETHOSTBYNAME_R_6
 static struct hostent *swow_gethostname_re(const char *host, struct hostent *hostbuf, char **tmphstbuf, size_t *hstbuflen)
 {
@@ -113,7 +113,7 @@ static struct hostent *swow_gethostname_re(const char *host, struct hostent *hos
 
     if (*hstbuflen == 0) {
         *hstbuflen = 1024;
-        *tmphstbuf = (char *) cat_malloc(*hstbuflen);
+        *tmphstbuf = (char *) cat_sys_malloc(*hstbuflen);
     }
 
     while ((res =
@@ -121,7 +121,7 @@ static struct hostent *swow_gethostname_re(const char *host, struct hostent *hos
         && (errno == ERANGE)) {
         /* Enlarge the buffer. */
         *hstbuflen *= 2;
-        *tmphstbuf = (char *) cat_realloc(*tmphstbuf, *hstbuflen);
+        *tmphstbuf = (char *) cat_sys_realloc(*tmphstbuf, *hstbuflen);
     }
 
     if (res != 0) {
@@ -139,7 +139,7 @@ static struct hostent *swow_gethostname_re(const char *host, struct hostent *hos
 
     if (*hstbuflen == 0) {
         *hstbuflen = 1024;
-        *tmphstbuf = (char *) cat_malloc(*hstbuflen);
+        *tmphstbuf = (char *) cat_sys_malloc(*hstbuflen);
     }
 
     while ((NULL == (hp =
@@ -147,7 +147,7 @@ static struct hostent *swow_gethostname_re(const char *host, struct hostent *hos
         && (errno == ERANGE)) {
         /* Enlarge the buffer. */
         *hstbuflen *= 2;
-        *tmphstbuf = (char *) cat_realloc(*tmphstbuf, *hstbuflen);
+        *tmphstbuf = (char *) cat_sys_realloc(*tmphstbuf, *hstbuflen);
     }
     return hp;
 }
@@ -157,11 +157,11 @@ static struct hostent *swow_gethostname_re(const char *host, struct hostent *hos
 {
     if (*hstbuflen == 0) {
         *hstbuflen = sizeof(struct hostent_data);
-        *tmphstbuf = (char *) cat_malloc(*hstbuflen);
+        *tmphstbuf = (char *) cat_sys_malloc(*hstbuflen);
     } else {
         if (*hstbuflen < sizeof(struct hostent_data)) {
             *hstbuflen = sizeof(struct hostent_data);
-            *tmphstbuf = (char *) cat_realloc(*tmphstbuf, *hstbuflen);
+            *tmphstbuf = (char *) cat_sys_realloc(*tmphstbuf, *hstbuflen);
         }
     }
     memset((void *) (*tmphstbuf), 0, *hstbuflen);
@@ -175,9 +175,10 @@ static struct hostent *swow_gethostname_re(const char *host, struct hostent *hos
 #endif
 #endif /* HAVE_GETHOSTBYNAME_R */
 
-/* Everything a worker thread touches is owned by this job, because the waiting coroutine may
- * give up (timeout or cancellation) while the resolver is still running; cat_work() then frees
- * the job afterwards. */
+/* Everything a worker thread touches is owned by this job and comes from cat_sys_malloc():
+ * cat_malloc() is emalloc() in Swow, which only the PHP thread may use. The waiting coroutine
+ * may also give up (timeout or cancellation) while the resolver is still
+ * running; cat_work() then frees the job once the worker has finished. */
 typedef struct swow_gethostbyname_job_s {
     char *hostname;
     /* outputs, written by the worker thread */
@@ -212,7 +213,7 @@ static void swow_gethostbyname_job_run(cat_data_t *data)
             }
         }
         if (count > 0) {
-            job->addresses = (struct in_addr *) cat_malloc(sizeof(*job->addresses) * count);
+            job->addresses = (struct in_addr *) cat_sys_malloc(sizeof(*job->addresses) * count);
             for (size_t i = 0; i < count; i++) {
                 struct in_addr *h_addr_entry;
                 memcpy(&h_addr_entry, &hp->h_addr_list[i], sizeof(struct in_addr *));
@@ -223,7 +224,7 @@ static void swow_gethostbyname_job_run(cat_data_t *data)
     }
 #ifdef HAVE_GETHOSTBYNAME_R
     if (buffer != NULL) {
-        cat_free(buffer);
+        cat_sys_free(buffer);
     }
 #endif
 }
@@ -232,11 +233,11 @@ static void swow_gethostbyname_job_free(cat_data_t *data)
 {
     swow_gethostbyname_job_t *job = (swow_gethostbyname_job_t *) data;
 
-    cat_free(job->hostname);
+    cat_sys_free(job->hostname);
     if (job->addresses != NULL) {
-        cat_free(job->addresses);
+        cat_sys_free(job->addresses);
     }
-    cat_free(job);
+    cat_sys_free(job);
 }
 
 /* Behaves as ext/standard gethostbynamel(), but only suspends the current coroutine */
@@ -256,8 +257,8 @@ static PHP_FUNCTION(swow_gethostbynamel)
         RETURN_FALSE;
     }
 
-    swow_gethostbyname_job_t *job = (swow_gethostbyname_job_t *) cat_malloc(sizeof(*job));
-    job->hostname = cat_strdup(hostname);
+    swow_gethostbyname_job_t *job = (swow_gethostbyname_job_t *) cat_sys_malloc(sizeof(*job));
+    job->hostname = cat_sys_strdup(hostname);
     job->found = false;
     job->count = 0;
     job->addresses = NULL;
@@ -286,7 +287,7 @@ static PHP_FUNCTION(swow_gethostbynamel)
         }
     }
     if (addresses != NULL) {
-        cat_free(addresses);
+        cat_sys_free(addresses);
     }
 }
 

@@ -33,9 +33,10 @@
 
 /* {{{ thread pool query */
 
-/* Everything a worker thread touches is owned by this job, because the waiting coroutine may
- * give up (timeout or cancellation) while DnsQuery_A(), which cannot be interrupted, is still
- * running; cat_work() then frees the job afterwards. */
+/* Everything a worker thread touches is owned by this job and comes from cat_sys_malloc():
+ * cat_malloc() is emalloc() in Swow, which only the PHP thread may use. The waiting coroutine
+ * may also give up (timeout or cancellation) while DnsQuery_A(), which cannot be interrupted, is still
+ * running; cat_work() then frees the job once the worker has finished. */
 typedef struct swow_dns_query_job_s {
     char *hostname;
     WORD type;
@@ -58,8 +59,8 @@ static void swow_dns_query_job_free(cat_data_t *data)
     if (job->status == 0 && job->result != NULL) {
         DnsRecordListFree(job->result, DnsFreeRecordListDeep);
     }
-    cat_free(job->hostname);
-    cat_free(job);
+    cat_sys_free(job->hostname);
+    cat_sys_free(job);
 }
 
 /* Same as DnsQuery_A(hostname, type, DNS_QUERY_STANDARD, NULL, result, NULL), but only suspends
@@ -67,9 +68,9 @@ static void swow_dns_query_job_free(cat_data_t *data)
  * warning on timeout) when the coroutine stopped waiting. */
 static bool swow_dns_query(const char *hostname, int type, DNS_STATUS *status, PDNS_RECORD *result)
 {
-    swow_dns_query_job_t *job = (swow_dns_query_job_t *) cat_malloc(sizeof(*job));
+    swow_dns_query_job_t *job = (swow_dns_query_job_t *) cat_sys_malloc(sizeof(*job));
 
-    job->hostname = cat_strdup(hostname);
+    job->hostname = cat_sys_strdup(hostname);
     job->type = (WORD) type;
     job->status = ERROR_INVALID_PARAMETER;
     job->result = NULL;

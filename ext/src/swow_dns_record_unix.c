@@ -154,9 +154,10 @@ static void swow_dns_free_handle(struct __res_state *res)
 }
 #endif
 
-/* Everything a worker thread touches is allocated with cat_malloc() and owned by this job,
- * because the waiting coroutine may give up (timeout or cancellation) while the resolver,
- * which cannot be interrupted, is still running; cat_work() then frees the job afterwards. */
+/* Everything a worker thread touches is owned by this job and comes from cat_sys_malloc():
+ * cat_malloc() is emalloc() in Swow, which only the PHP thread may use. The waiting coroutine
+ * may also give up (timeout or cancellation) while the resolver, which cannot be interrupted, is still
+ * running; cat_work() then frees the job once the worker has finished. */
 typedef struct swow_dns_search_job_s {
     char *hostname;
     int type;
@@ -202,11 +203,11 @@ static void swow_dns_search_job_free(cat_data_t *data)
 {
     swow_dns_search_job_t *job = (swow_dns_search_job_t *) data;
 
-    cat_free(job->hostname);
+    cat_sys_free(job->hostname);
     if (job->answer != NULL) {
-        cat_free(job->answer);
+        cat_sys_free(job->answer);
     }
-    cat_free(job);
+    cat_sys_free(job);
 }
 
 typedef enum swow_dns_search_status_e {
@@ -218,14 +219,14 @@ typedef enum swow_dns_search_status_e {
 /* Same as php_dns_search() in PHP, but only suspends the current coroutine */
 static swow_dns_search_status_t swow_dns_search(const char *hostname, int type, querybuf **answer, int *length, int *error)
 {
-    swow_dns_search_job_t *job = (swow_dns_search_job_t *) cat_malloc(sizeof(*job));
+    swow_dns_search_job_t *job = (swow_dns_search_job_t *) cat_sys_malloc(sizeof(*job));
 
-    job->hostname = cat_strdup(hostname);
+    job->hostname = cat_sys_strdup(hostname);
     job->type = type;
     job->init_failed = false;
     job->length = -1;
     job->error = 0;
-    job->answer = (querybuf *) cat_malloc(sizeof(*job->answer));
+    job->answer = (querybuf *) cat_sys_malloc(sizeof(*job->answer));
     memset(job->answer, 0, sizeof(*job->answer));
 
     if (!cat_work(CAT_WORK_KIND_SLOW_IO, swow_dns_search_job_run, swow_dns_search_job_free, job, cat_socket_get_global_dns_timeout())) {
@@ -294,12 +295,12 @@ static PHP_FUNCTION(swow_dns_check_record)
     }
 
     if (i < 0) {
-        cat_free(answer);
+        cat_sys_free(answer);
         RETURN_FALSE;
     }
     hp = (HEADER *)answer;
     RETVAL_BOOL(ntohs(hp->ancount) != 0);
-    cat_free(answer);
+    cat_sys_free(answer);
 }
 /* }}} */
 
@@ -811,7 +812,7 @@ static PHP_FUNCTION(swow_dns_get_record)
             }
 
             if (n < 0) {
-                cat_free(answer);
+                cat_sys_free(answer);
                 switch (dns_errno) {
                     case NO_DATA:
                     case HOST_NOT_FOUND:
@@ -844,7 +845,7 @@ static PHP_FUNCTION(swow_dns_get_record)
             while (qd-- > 0) {
                 n = dn_skipname(cp, end);
                 if (n < 0) {
-                    cat_free(answer);
+                    cat_sys_free(answer);
                     php_error_docref(NULL, E_WARNING, "Unable to parse DNS data received");
                     zend_array_destroy(Z_ARR_P(return_value));
                     RETURN_FALSE;
@@ -887,7 +888,7 @@ static PHP_FUNCTION(swow_dns_get_record)
                     }
                 }
             }
-            cat_free(answer);
+            cat_sys_free(answer);
         }
     }
 }
@@ -930,7 +931,7 @@ static PHP_FUNCTION(swow_dns_get_mx)
         RETURN_FALSE;
     }
     if (i < 0) {
-        cat_free(answer);
+        cat_sys_free(answer);
         RETURN_FALSE;
     }
     hp = (HEADER *)answer;
@@ -938,14 +939,14 @@ static PHP_FUNCTION(swow_dns_get_mx)
     end = answer->qb2 + i;
     for (qdc = ntohs((unsigned short)hp->qdcount); qdc--; cp += i + QFIXEDSZ) {
         if ((i = dn_skipname(cp, end)) < 0 ) {
-            cat_free(answer);
+            cat_sys_free(answer);
             RETURN_FALSE;
         }
     }
     count = ntohs((unsigned short)hp->ancount);
     while (--count >= 0 && cp < end) {
         if ((i = dn_skipname(cp, end)) < 0 ) {
-            cat_free(answer);
+            cat_sys_free(answer);
             RETURN_FALSE;
         }
         cp += i;
@@ -958,7 +959,7 @@ static PHP_FUNCTION(swow_dns_get_mx)
         }
         GETSHORT(weight, cp);
         if ((i = dn_expand(answer->qb2, end, cp, buf, sizeof(buf)-1)) < 0) {
-            cat_free(answer);
+            cat_sys_free(answer);
             RETURN_FALSE;
         }
         cp += i;
@@ -967,7 +968,7 @@ static PHP_FUNCTION(swow_dns_get_mx)
             add_next_index_long(weight_list, weight);
         }
     }
-    cat_free(answer);
+    cat_sys_free(answer);
     RETURN_BOOL(zend_hash_num_elements(Z_ARRVAL_P(mx_list)) != 0);
 }
 /* }}} */
