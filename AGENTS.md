@@ -52,6 +52,28 @@
 - `develop` is the production branch and `ci` is the development branch. Keep linear history; do not create merge commits.
 - Keep `ci` rebased on top of `develop`. The same policy applies to libcat.
 - For an authorized integration, push and validate the feature branch first. Only after its GitHub Actions checks pass, integrate it linearly into `ci`, push `ci`, and delete the local and remote feature branches. Keep the feature branch while validation or integration is incomplete; never infer push authorization from this workflow alone.
-- Release sequence: run `composer cs-fix`, commit `Fix code style`, update `tools/versions.php`, run `composer prepare-release`, commit `Release vX.Y.Z`, verify that `develop` is an ancestor of `ci`, then fast-forward `develop`.
+- Release sequence: update `tools/versions.php`, run `composer prepare-release`, commit `Release vX.Y.Z`, verify that `develop` is an ancestor of `ci`, then fast-forward `develop`. See "Release Procedure" below for the full checklist.
+- `Fix code style` is a fallback commit for style errors that slipped through. When the coding-style check is green, do not add it before a release.
 - Write commit messages as concise English imperative sentences without Conventional Commit prefixes. Common forms include `Add ...`, `Fix ...`, `Improve ...`, `Update ...`, `Remove ...`, and `Support ...`.
 - Before pushing, run `composer cs-fix` with the version of php-cs-fixer locked by the project so the coding-style check does not fail first in CI.
+
+## Release Procedure
+
+Every step that pushes a branch or tag, publishes a release, or runs `composer split` needs explicit user authorization for that step.
+
+1. Rehearse the Windows build: run the `releases` workflow through `workflow_dispatch` on the commit to be released. This builds every DLL but skips the `Upload DLLs` job, which only runs on tag pushes, so the upload itself is first exercised by the real tag.
+2. Prepare the `Release vX.Y.Z` commit on a feature branch. It contains only the new `CHANGELOG.md` entry and the generated version files (`tools/versions.php`, `ext/include/swow.h`, `lib/swow-library/src/Library.php`, `lib/swow-stub/src/Swow.php`). Review README and CHANGELOG wording in separate commits before it.
+3. Push the feature branch and wait until every check on the release commit is green, including `codecov/project`. Then fast-forward `ci` and `develop` to it.
+4. Push the lightweight tag `vX.Y.Z` on the release commit. The `releases` workflow builds the DLLs and creates a draft pre-release whose body is a "Hashes and notes" table.
+5. Edit that draft: put the CHANGELOG entry above the generated table, clear the pre-release flag for stable versions, mark it as latest, and publish it.
+6. Run `composer split`. It needs `splitsh-lite` on `PATH` and force-pushes each package repository's `develop`; compute the split hashes first and confirm that every push is a fast-forward or a no-op.
+7. Tag the split commits in the package repositories with lightweight tags and create their releases: `swow-extension`, `swow-library`, and `swow-stub` follow the Swow version, while `psr7-plus` has its own version line. The release body of a package that follows the Swow version is `See https://github.com/swow/swow/releases/tag/vX.Y.Z for detail`.
+8. Confirm that Packagist lists the new versions of `swow/swow` and the split packages.
+9. Set the next `-dev` version in `tools/versions.php`, run `composer update-version`, and commit `Back to dev` on `ci` only. `develop` stays on the release commit.
+
+Notes learned from past releases:
+
+- The `tests` workflow cancels a branch's in-progress run when a newer commit is pushed. A cancelled run uploads partial coverage, and Codecov then uses that commit as an inflated base, so the next commit can fail `codecov/project` without any real drop. Before a release, let each pushed commit finish its run instead of pushing several commits in a row.
+- Codecov keeps the comparison it computed when a commit was first processed; re-running jobs on the base or head commit does not refresh it. If the release commit is still only on an unshared feature branch, recreate it with a new hash (for example `git commit --amend --no-edit`) after the base commit has complete coverage.
+- CHANGELOG entries mention contributors by GitHub login. Verify that each login exists before publishing, because the release body turns them into mentions.
+- README translations (`README-CHS.md`, `README-CHT.md`, `README-JP.md`, `README-PT.md`, `README-RU.md`) mirror `README.md`. Change the feature table and the language switcher in all of them together, and translate by meaning rather than word for word.
