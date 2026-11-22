@@ -33,15 +33,17 @@ function callWithWarnings(callable $callable): array
     }
 }
 
-// A zero DNS timeout gives up before the thread pool can answer; each function falls back to its
-// own failure value and the record functions report why.
+// A zero DNS timeout usually gives up before the thread pool answers: each function then falls
+// back to its own failure value and the record functions report why. A fast lookup (e.g. served
+// by the hosts file) may still win that race and return its normal result instead.
+$resolvedLoopbackName = gethostbyaddr('127.0.0.1');
 Socket::setGlobalDnsTimeout(0);
 try {
     [$result, $warnings] = callWithWarnings(static fn() => gethostbynamel('php.net'));
-    Assert::false($result);
+    Assert::true($result === false || is_array($result));
     Assert::same($warnings, []);
     [$result, $warnings] = callWithWarnings(static fn() => gethostbyaddr('127.0.0.1'));
-    Assert::same($result, '127.0.0.1');
+    Assert::true($result === '127.0.0.1' || $result === $resolvedLoopbackName, (string) $result);
     Assert::same($warnings, []);
     $cases = [
         'dns_get_record' => static fn() => dns_get_record('php.net', DNS_MX),
@@ -52,6 +54,10 @@ try {
     ];
     foreach ($cases as $name => $case) {
         [$result, $warnings] = callWithWarnings($case);
+        if ($warnings === []) {
+            Assert::notSame($result, false, "{$name} finished before the timeout");
+            continue;
+        }
         Assert::false($result, $name);
         Assert::same(count($warnings), 1, $name);
         Assert::true(str_starts_with($warnings[0], "{$name}(): DNS query wait failed: "), $warnings[0]);

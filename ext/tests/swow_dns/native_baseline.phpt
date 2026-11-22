@@ -19,11 +19,36 @@ function normalizeDnsResult(mixed $value): mixed
         return $value;
     }
     unset($value['ttl']);
+    // PHP on Windows returns the in-memory DNS_RECORD data for raw queries, which holds pointers
+    // that differ in every process; only its length is comparable there
+    if (PHP_OS_FAMILY === 'Windows' && is_int($value['type'] ?? null) && is_string($value['data'] ?? null)) {
+        $value['data'] = strlen($value['data']);
+    }
     $value = array_map('normalizeDnsResult', $value);
     if (array_is_list($value)) {
         usort($value, static fn(mixed $a, mixed $b): int => strcmp(serialize($a), serialize($b)));
     }
     return $value;
+}
+
+/**
+ * The authority and additional sections come from separate live queries and DNS servers choose
+ * which extra records to include in each answer, so only the shape (record type and fields) of
+ * those records is comparable between the two processes.
+ *
+ * @param list<array<string, mixed>> $records
+ * @return list<string>
+ */
+function dnsRecordShapes(array $records): array
+{
+    $shapes = array_map(static function (array $record): string {
+        $keys = array_keys($record);
+        sort($keys);
+        return $record['type'] . ':' . implode(',', $keys);
+    }, $records);
+    $shapes = array_values(array_unique($shapes));
+    sort($shapes);
+    return $shapes;
 }
 
 /** @return array{result: mixed, warnings: list<string>, error: list<string>|null} */
@@ -84,11 +109,11 @@ function probeDns(): array
         'dns_get_record raw' => static fn() => dns_get_record('php.net', 15, raw: true),
         'dns_get_record sections' => static function (): array {
             $records = dns_get_record('php.net', DNS_MX, $authns, $addtl);
-            return [$records, $authns, $addtl];
+            return ['records' => $records, 'authns' => dnsRecordShapes($authns), 'addtl' => dnsRecordShapes($addtl)];
         },
         'dns_get_record raw sections' => static function (): array {
             $records = dns_get_record('php.net', 2, $authns, $addtl, true);
-            return [$records, $authns, $addtl];
+            return ['records' => $records, 'authns' => dnsRecordShapes($authns), 'addtl' => dnsRecordShapes($addtl)];
         },
         'dns_get_record nxdomain' => static fn() => dns_get_record('nonexistent.invalid', DNS_A),
         'dns_get_record invalid type' => static fn() => dns_get_record('php.net', 0x7),
