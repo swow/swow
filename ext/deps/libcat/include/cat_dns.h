@@ -40,6 +40,11 @@ CAT_API void cat_dns_freeaddrinfo(struct addrinfo *response);
 CAT_API cat_bool_t cat_dns_get_ip(char *buffer, size_t buffer_size, const char *name, int af);
 CAT_API cat_bool_t cat_dns_get_ip_ex(char *buffer, size_t buffer_size, const char *name, int af, cat_timeout_t timeout);
 
+/* Reverse lookup with getnameinfo(3) semantics: a NULL buffer or zero size skips host or service,
+ * a too small buffer fails with CAT_EAI_OVERFLOW */
+CAT_API cat_bool_t cat_dns_getnameinfo(const struct sockaddr *address, char *host, size_t host_size, char *service, size_t service_size, int flags);
+CAT_API cat_bool_t cat_dns_getnameinfo_ex(const struct sockaddr *address, char *host, size_t host_size, char *service, size_t service_size, int flags, cat_timeout_t timeout);
+
 #ifdef __cplusplus
 }
 #endif
