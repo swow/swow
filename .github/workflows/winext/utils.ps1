@@ -44,6 +44,12 @@ function provedir {
 
 function fetchpage {
     param ($Uri, $Headers=$null, $Method="GET", $Body=$null)
+    # Windows PowerShell encodes a string body as ISO-8859-1 and turns every other character
+    # into "?", which destroyed the non-ASCII release notes when they were posted back.
+    # Send the UTF-8 bytes instead.
+    if ($Body -is [string]) {
+        $Body = [System.Text.Encoding]::UTF8.GetBytes($Body)
+    }
     for ($i=0; $i -lt $MaxTry; $i++){
         try{
             $ret = Invoke-WebRequest -Uri $Uri -UseBasicParsing -Headers $Headers -Method $Method -Body $Body
