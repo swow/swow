@@ -1478,6 +1478,46 @@ static ssize_t swow_stdiop_fs_read(php_stream *stream, char *buf, size_t count)
     return (ssize_t) ret;
 }
 
+/* pclose() waits until the command exits, which may take as long as the command runs (a
+ * popen()ed writer closed before its child is done, or exec() of a child that closed its
+ * output early). It runs on a worker thread so that only the calling coroutine waits.
+ * libcat reaps only the children that a wait asks for, so the SIGCHLD watcher does not take
+ * the exit status away from the waitpid() inside pclose(). */
+typedef struct swow_fs_pclose_job_s {
+    FILE *file;
+    int ret;
+    int error;
+} swow_fs_pclose_job_t;
+
+static void swow_fs_pclose_job_run(cat_data_t *data)
+{
+    swow_fs_pclose_job_t *job = (swow_fs_pclose_job_t *) data;
+
+    errno = 0;
+    job->ret = pclose(job->file);
+    job->error = errno;
+}
+
+static int swow_fs_pclose(FILE *file)
+{
+    /* allocated and freed on the PHP thread, the worker only fills it */
+    swow_fs_pclose_job_t *job = (swow_fs_pclose_job_t *) cat_malloc(sizeof(*job));
+    int ret;
+
+    job->file = file;
+    job->ret = -1;
+    job->error = 0;
+    if (!cat_work(CAT_WORK_KIND_SLOW_IO, swow_fs_pclose_job_run, cat_free_function, job, CAT_TIMEOUT_FOREVER)) {
+        /* the coroutine gave up waiting; the worker still closes the pipe and reaps the child */
+        UPDATE_ERRNO_FROM_CAT();
+        return -1;
+    }
+    ret = job->ret;
+    errno = job->error;
+
+    return ret;
+}
+
 static int swow_stdiop_fs_close(php_stream *stream, int close_handle)
 {
     int ret;
@@ -1504,8 +1544,7 @@ static int swow_stdiop_fs_close(php_stream *stream, int close_handle)
     if (close_handle) {
         if (data->file) {
             if (data->is_process_pipe) {
-                errno = 0;
-                ret = pclose(data->file);
+                ret = swow_fs_pclose(data->file);
 
 #ifdef HAVE_SYS_WAIT_H
                 if (WIFEXITED(ret)) {
