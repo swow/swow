@@ -2187,8 +2187,18 @@ static int swow_stream_native_socket_set_option(php_stream *stream, int option, 
     return original->set_option(stream, option, value, ptrparam);
 }
 
+static void swow_stream_native_socket_ops_init(swow_stream_native_socket_kind_t kind, const php_stream_ops *original);
+
 SWOW_API void swow_stream_native_socket_adopt(php_stream *stream)
 {
+    /* php_stream_generic_socket_ops is not exported: its address is taken from the first
+     * generic socket stream that comes here (stream_socket_pair(), the socket descriptors of
+     * proc_open()). A stream of its own just to read the address would take a resource id,
+     * which scripts can see (STDIN would no longer be resource #1). */
+    if (swow_stream_native_socket_ops_original[SWOW_STREAM_NATIVE_SOCKET_GENERIC] == NULL &&
+        stream->ops != NULL && stream->ops->label != NULL && strcmp(stream->ops->label, "generic_socket") == 0) {
+        swow_stream_native_socket_ops_init(SWOW_STREAM_NATIVE_SOCKET_GENERIC, stream->ops);
+    }
     for (int kind = 0; kind < SWOW_STREAM_NATIVE_SOCKET_KIND_COUNT; kind++) {
         if (stream->ops == swow_stream_native_socket_ops_original[kind] && stream->ops != NULL) {
             stream->ops = &swow_stream_native_socket_ops_proxy[kind];
@@ -2213,29 +2223,13 @@ SWOW_API void swow_stream_native_socket_adopt_zval(zval *zstream)
 
 static void swow_stream_native_socket_ops_init(swow_stream_native_socket_kind_t kind, const php_stream_ops *original)
 {
-    swow_stream_native_socket_ops_original[kind] = original;
     /* keep the label, stream_get_meta_data() reports the same stream_type */
     memcpy(&swow_stream_native_socket_ops_proxy[kind], original, sizeof(*original));
     swow_stream_native_socket_ops_proxy[kind].read = swow_stream_native_socket_read;
     swow_stream_native_socket_ops_proxy[kind].write = swow_stream_native_socket_write;
     swow_stream_native_socket_ops_proxy[kind].set_option = swow_stream_native_socket_set_option;
-}
-
-/* php_stream_generic_socket_ops is not exported, read its address from a stream
- * that PHP creates; this needs a request, so it is done at the first RINIT */
-static void swow_stream_native_socket_ops_discover(void)
-{
-    php_stream *stream;
-
-    if (swow_stream_native_socket_ops_original[SWOW_STREAM_NATIVE_SOCKET_GENERIC] != NULL) {
-        return;
-    }
-    stream = php_stream_sock_open_from_socket(SOCK_ERR, NULL);
-    if (stream == NULL) {
-        return;
-    }
-    swow_stream_native_socket_ops_init(SWOW_STREAM_NATIVE_SOCKET_GENERIC, stream->ops);
-    php_stream_free(stream, PHP_STREAM_FREE_CLOSE);
+    /* set last: other threads (ZTS) use the proxy only after they see the original */
+    swow_stream_native_socket_ops_original[kind] = original;
 }
 
 static zif_handler PHP_FN(original_stream_socket_pair) = (zif_handler) -1;
@@ -3361,7 +3355,6 @@ zend_result swow_stream_runtime_init(INIT_FUNC_ARGS)
     SWOW_STREAM_G(hooking_stdio_ops) = SWOW_G(ini.async_tty) || SWOW_G(ini.async_file);
     SWOW_STREAM_G(hooking_tty) = SWOW_G(ini.async_tty);
     SWOW_STREAM_G(hooking_plain_wrapper) = SWOW_G(ini.async_file);
-    swow_stream_native_socket_ops_discover();
     zend_hash_init(&SWOW_STREAM_G(waiting_fds), 8, NULL, swow_stream_waiting_fd_dtor, 0);
     SWOW_STREAM_G(hooking_native_socket_ops) = true;
     // prepare tty sockets (FIXME: Why won't Zend bzero() it when we are in ZTS?)
