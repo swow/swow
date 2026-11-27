@@ -187,7 +187,11 @@ static void swow_dns_search_job_run(cat_data_t *data)
     job->error = h_errno;
     dns_free(handle);
 #elif defined(SWOW_DNS_USE_RES_SEARCH)
-    /* musl: no resolver handle, and h_errno belongs to this worker thread */
+    /* musl: no resolver handle, and h_errno is stored per thread. res_search() leaves h_errno
+     * untouched when it rejects the query before sending it (e.g. CAA: type 257 > 255), and PHP
+     * then acts on the value left by the previous query. Carry the h_errno of the PHP thread
+     * through the worker so that such queries behave as they do natively. */
+    h_errno = job->error;
     job->length = res_search(job->hostname, C_IN, job->type, job->answer->qb2, sizeof(*job->answer));
     job->error = h_errno;
 #else
@@ -230,7 +234,11 @@ static swow_dns_search_status_t swow_dns_search(const char *hostname, int type, 
     job->type = type;
     job->init_failed = false;
     job->length = -1;
+#ifdef SWOW_DNS_USE_RES_SEARCH
+    job->error = h_errno; /* see swow_dns_search_job_run() */
+#else
     job->error = 0;
+#endif
     job->answer = (querybuf *) cat_sys_malloc(sizeof(*job->answer));
     memset(job->answer, 0, sizeof(*job->answer));
 
@@ -249,6 +257,9 @@ static swow_dns_search_status_t swow_dns_search(const char *hostname, int type, 
     job->answer = NULL;
     *length = job->length;
     *error = job->error;
+#ifdef SWOW_DNS_USE_RES_SEARCH
+    h_errno = job->error; /* the next query of the PHP thread starts from it, as in PHP */
+#endif
 
     return SWOW_DNS_SEARCH_DONE;
 }
