@@ -54,20 +54,17 @@ CAT_API cat_pid_t cat_os_fork(void);
  * the process is not ready, and -1 on error. A wait that runs out of time
  * returns -1 with CAT_ETIMEDOUT, so a timeout is not a process state.
  *
- * A Unix-like platform reports a stopped child even when WUNTRACED is not set,
- * because the bookkeeping keeps every status it takes from the kernel. Windows
- * has no child process relation and no wait status: only a positive pid is
- * supported, the status is the exit code, and a process that the system stopped
- * is reported as an exit.
- *
- * On Windows, pid -1 and pid 0 fail with CAT_ENOTSUP. On a Unix-like platform,
- * pid -1 waits for any child and pid 0 fails with CAT_ENOTSUP.
- *
- * Do not wait for the same child with this API and with cat_process_* on a
- * Unix-like platform: the SIGCHLD handler here can take the exit status of a
- * process that uv_spawn() started, and the cat_process wait then never completes.
- * Windows waits on the process handle, so both waits can observe the same
- * process.
+ * On a Unix-like platform the pid and the options mean what they mean for
+ * wait4(2): pid -1 waits for any child, pid 0 and a negative pid wait for a
+ * process group, and WUNTRACED and WCONTINUED report stopped and continued
+ * children. Only the children that the caller asks for are reaped, so this API
+ * can be used next to code that waits by itself (pclose(), uv_spawn(), a raw
+ * waitpid()); a wait for any child (-1) can still take their children, as the
+ * system call would. Windows has no child process relation and no wait status:
+ * only a positive pid is supported (pid -1 and pid 0 fail with CAT_ENOTSUP), the
+ * status is the exit code, and a process that the system stopped is reported as
+ * an exit; Windows waits on the process handle, so this API and cat_process_*
+ * can both observe the same process.
  *
  * Read the status with cat_os_wait_status_*(), which decodes the raw wait status
  * on a Unix-like platform and the exit code on Windows.
