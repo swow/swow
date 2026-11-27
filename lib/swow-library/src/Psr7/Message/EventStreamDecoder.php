@@ -39,6 +39,9 @@ final class EventStreamDecoder
         }
 
         $lineBuffer = '';
+        /* $lineOffset 是未消费数据的起点；$scanOffset 之前的字节已确认没有换行，不再重复扫描。 */
+        $lineOffset = 0;
+        $scanOffset = 0;
         $eventName = 'message';
         $eventId = null;
         $eventRetry = null;
@@ -121,26 +124,37 @@ final class EventStreamDecoder
                 continue;
             }
             $lineBuffer .= $chunk;
+            $lineBufferLength = strlen($lineBuffer);
 
-            while ($lineBuffer !== '') {
+            while ($lineOffset < $lineBufferLength) {
                 if ($skipLineFeed) {
                     $skipLineFeed = false;
-                    if ($lineBuffer[0] === "\n") {
-                        $lineBuffer = substr($lineBuffer, 1);
+                    if ($lineBuffer[$lineOffset] === "\n") {
+                        $scanOffset = ++$lineOffset;
+                        continue;
                     }
                 }
-                $lineBreakPos = strcspn($lineBuffer, "\r\n");
-                if ($lineBreakPos === strlen($lineBuffer)) {
+                // Only search the bytes that arrived since the last scan, so a long line stays linear.
+                $lineBreakPos = $scanOffset + strcspn($lineBuffer, "\r\n", $scanOffset);
+                if ($lineBreakPos === $lineBufferLength) {
+                    $scanOffset = $lineBufferLength;
                     break;
                 }
-                $line = substr($lineBuffer, 0, $lineBreakPos);
+                $line = substr($lineBuffer, $lineOffset, $lineBreakPos - $lineOffset);
                 // A CR ends the line immediately; its optional LF can arrive in a later read.
                 $skipLineFeed = $lineBuffer[$lineBreakPos] === "\r";
-                $lineBuffer = substr($lineBuffer, $lineBreakPos + 1);
+                $lineOffset = $scanOffset = $lineBreakPos + 1;
                 $event = $consumeLine($line);
                 if ($event !== null) {
                     yield $event;
                 }
+            }
+
+            // Drop consumed bytes once per read instead of copying the remaining buffer for every line.
+            if ($lineOffset > 0) {
+                $lineBuffer = substr($lineBuffer, $lineOffset);
+                $scanOffset -= $lineOffset;
+                $lineOffset = 0;
             }
         }
 

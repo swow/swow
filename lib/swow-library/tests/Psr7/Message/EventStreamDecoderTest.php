@@ -107,6 +107,36 @@ final class EventStreamDecoderTest extends TestCase
         $this->assertSame(1500, $events[0]->retry);
     }
 
+    public function testLongLineAcrossManySmallReadsIsDecodedIntact(): void
+    {
+        $payload = str_repeat('0123456789abcdef', 16384);
+        $wire = "event: completed\ndata: {$payload}\n\ndata: next\n\n";
+        $events = iterator_to_array(Psr7::readEventStream(new BufferStream($wire), 64), false);
+        $this->assertCount(2, $events);
+        $this->assertSame('completed', $events[0]->event);
+        $this->assertSame($payload, $events[0]->data);
+        $this->assertSame('next', $events[1]->data);
+    }
+
+    #[DataProvider('provideCarriageReturnSplitFromLineFeedAcrossReadsCases')]
+    public function testCarriageReturnSplitFromLineFeedAcrossReads(int $readSize): void
+    {
+        $wire = "data: a\r\ndata: b\r\r\ndata: c\n\r\n";
+        $events = iterator_to_array(Psr7::readEventStream(new BufferStream($wire), $readSize), false);
+        $this->assertCount(2, $events);
+        $this->assertSame("a\nb", $events[0]->data);
+        $this->assertSame('c', $events[1]->data);
+    }
+
+    /** @return iterable<string, array{int}> */
+    public static function provideCarriageReturnSplitFromLineFeedAcrossReadsCases(): iterable
+    {
+        // 8 ends the first read right after the CR of "data: a\r"; the others shift the boundary around it.
+        foreach ([1, 2, 7, 8, 9, 16, 8192] as $readSize) {
+            yield "read {$readSize}" => [$readSize];
+        }
+    }
+
     public function testEventIdsPersistUntilAnExplicitReset(): void
     {
         $wire = "id: first\n\ndata: one\n\ndata: two\n\nid:\ndata: three\n\nid: invalid\0id\ndata: four\n\n";
