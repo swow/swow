@@ -93,12 +93,12 @@ namespace Swow
 {
     class Extension
     {
-        public const VERSION = '2.0.1-dev';
-        public const VERSION_ID = 20001;
+        public const VERSION = '2.1.0';
+        public const VERSION_ID = 20100;
         public const MAJOR_VERSION = 2;
-        public const MINOR_VERSION = 0;
-        public const RELEASE_VERSION = 1;
-        public const EXTRA_VERSION = 'dev';
+        public const MINOR_VERSION = 1;
+        public const RELEASE_VERSION = 0;
+        public const EXTRA_VERSION = '';
 
         /**
          * Check whether the extension was built with the library.

@@ -1,3 +1,125 @@
+# v2.1.0
+
+> Release Date: 2026-11-28 | 发布日期：2026-11-28
+
+> "There are only two hard things in Computer Science: cache invalidation and naming things." —— Phil Karlton
+>
+> 「计算机科学里只有两件难事：缓存失效和命名」 —— Phil Karlton
+
+### Version Highlights | 版本亮点
+
+**Every DNS lookup in PHP now yields to other coroutines.**
+
+**PHP 里的每一次 DNS 查询，现在都会让出给其它协程。**
+
+Swow 2.1 finishes the DNS story: besides `gethostbyname()`, the remaining blocking DNS functions of PHP now only suspend the coroutine that calls them. It also removes a quadratic slowdown in the Server-Sent Events decoder, which matters most to applications that stream large language model output.
+
+Swow 2.1 把 DNS 这一块做完整了：除了 `gethostbyname()`，PHP 其余的阻塞 DNS 函数现在也只挂起调用它的那个协程。同时消除了 Server-Sent Events 解码器中的平方级耗时，这对流式接收大模型输出的应用影响最大。
+
+| | 2.1 at a glance | 2.1 速览 |
+| --- | --- | --- |
+| 🧭 | **Coroutine-friendly DNS**: `gethostbynamel()`, `gethostbyaddr()`, `dns_get_record()`, `dns_get_mx()` and `dns_check_record()` no longer block the process | **协程化的 DNS**：`gethostbynamel()`、`gethostbyaddr()`、`dns_get_record()`、`dns_get_mx()`、`dns_check_record()` 不再阻塞进程 |
+| ⚡ | **Linear SSE decoding**: a 1 MiB event line read 64 bytes at a time decodes in about 4 ms instead of about 2.2 s | **线性耗时的 SSE 解码**：以 64 字节为单位读取 1 MiB 的事件行，解码耗时从约 2.2 秒降到约 4 毫秒 |
+
+## 🧭 Coroutine-friendly DNS | 协程化的 DNS
+
+**A slow DNS server used to stall every coroutine in the process. It no longer does.**
+
+**过去一台响应慢的 DNS 服务器会让进程内所有协程一起等待。现在不会了。**
+
+Before 2.1, only `gethostbyname()` was hooked. A mail address check with `getmxrr()`, a reverse lookup with `gethostbyaddr()` or a record query with `dns_get_record()` blocked the whole process until the resolver answered. Now these calls run in the thread pool and only suspend the calling coroutine. Your code stays the same.
+
+在 2.1 之前，只有 `gethostbyname()` 被 hook。用 `getmxrr()` 检查邮箱域名、用 `gethostbyaddr()` 做反向解析、用 `dns_get_record()` 查询记录，都会阻塞整个进程直到解析器返回。现在这些调用在线程池中执行，只挂起发起调用的协程，代码不需要任何修改。
+
+```php
+use Swow\Coroutine;
+
+use function Swow\Sync\waitAll;
+
+// The three queries are in flight at the same time.
+foreach (['php.net', 'github.com', 'packagist.org'] as $domain) {
+    Coroutine::run(static function () use ($domain): void {
+        getmxrr($domain, $hosts);
+        echo $domain, ': ', implode(', ', $hosts), "\n";
+    });
+}
+waitAll();
+```
+
+| Function | Aliases | 说明 |
+| --- | --- | --- |
+| `gethostbynamel()` | | 查询主机名对应的全部 IPv4 地址 |
+| `gethostbyaddr()` | | 反向解析 IP 地址 |
+| `dns_get_record()` | | 查询 DNS 记录 |
+| `dns_get_mx()` | `getmxrr()` | 查询 MX 记录 |
+| `dns_check_record()` | `checkdnsrr()` | 检查某类记录是否存在 |
+
+The hooked functions run the same resolver call as PHP, so arguments, warnings and results are the same as native PHP. The record functions are hooked only where PHP itself uses a thread-safe resolver (`dns_search()` or `res_nsearch()` on Unix-like systems, `DnsQuery_A()` on Windows); elsewhere they keep the native blocking behavior.
+
+被 hook 的函数执行与 PHP 相同的解析调用，参数、警告与返回结果都和原生 PHP 一致。记录查询类函数只在 PHP 自身使用线程安全解析器的平台上被 hook（类 Unix 系统上的 `dns_search()` 或 `res_nsearch()`，Windows 上的 `DnsQuery_A()`）；其它平台保持原生的阻塞行为。
+
+## ⚡ Linear SSE decoding | 线性耗时的 SSE 解码
+
+**A long event line no longer costs the square of its length.**
+
+**一行很长的事件，耗时不再随长度按平方增长。**
+
+`EventStreamDecoder` used to search the whole pending buffer for a line break after every read. A long `data:` line, such as a completion event that carries the full output, was therefore scanned again on each read, which is very slow with the small read sizes that streaming clients use to keep latency low. It now remembers how far the buffer has been scanned and only looks at the bytes that just arrived. Event parsing is unchanged.
+
+`EventStreamDecoder` 过去每次读取后都会从头在待处理缓冲区中查找换行符。一行很长的 `data:`（例如携带完整输出的 completion 事件）因此在每次读取时都被重新扫描一遍；流式客户端为了降低延迟通常使用很小的读取大小，这时会非常慢。现在它会记住缓冲区已经扫描到的位置，只查看刚到达的字节。事件解析逻辑没有变化。
+
+Decode time of 1000 short events followed by one long `data:` line, measured by [@lihq1403] with `benchmark/event_stream_decoder.php` (macOS arm64, PHP 8.4):
+
+解码 1000 个短事件加一行很长的 `data:` 的耗时，由 [@lihq1403] 使用 `benchmark/event_stream_decoder.php` 测得（macOS arm64，PHP 8.4）：
+
+| Read size 读取大小 | Long line 长行 | Before 之前 | After 之后 |
+| ---: | ---: | ---: | ---: |
+| 64 | 256 KiB | 142.26 ms | 1.64 ms |
+| 64 | 512 KiB | 554.11 ms | 2.46 ms |
+| 64 | 1024 KiB | 2244.59 ms | 4.07 ms |
+| 8192 | 1024 KiB | 19.78 ms | 1.28 ms |
+
+## ⚠️ Upgrading | 升级须知
+
+| Change | What to do | 变化 | 处理方式 |
+| --- | --- | --- | --- |
+| Swow Library requires Swow extension `^2.1.0` | Update the extension together with the library | Swow Library 要求 Swow 扩展 `^2.1.0` | 扩展与 Library 一起更新 |
+
+<details>
+<summary><b>Full changelog | 完整变更列表</b> (6 entries | 6 条)</summary>
+
+## 🐣 What's New | 什么是牛的
+
++ Hook `gethostbynamel()`, `gethostbyaddr()`, `dns_get_record()`, `dns_get_mx()` and `dns_check_record()` (with their aliases `getmxrr()` and `checkdnsrr()`), so they only suspend the calling coroutine<br>
+  Hook `gethostbynamel()`、`gethostbyaddr()`、`dns_get_record()`、`dns_get_mx()` 与 `dns_check_record()`（及其别名 `getmxrr()`、`checkdnsrr()`），使它们只挂起发起调用的协程 (0a17c3d8, 3456a3c3) [@twosee]
+
+## ✨ What's Enhanced | 加强了啥
+
++ Scan only new bytes when decoding long SSE lines in `EventStreamDecoder`, which makes the cost linear in the line length<br>
+  `EventStreamDecoder` 解码超长 SSE 行时只扫描新到达的字节，耗时与行长度成线性关系 (0facd65e, a9146ec3) [@lihq1403]
+
+## 🐛 What's Fixed | 什么修了
+
+* Fix the release notes being turned into question marks when the Windows release workflow runs again on a published release<br>
+  修复在已发布的 Release 上重新运行 Windows 发布工作流时，发布说明被替换成问号的问题 (54c2af25) [@twosee]
+
+## 👻 What's Removed | 什么移除了
+
+没有移除任何东西。
+
+## 📦 Internal | 内部
+
++ Add DNS hook tests that compare against native PHP and do not depend on live DNS variance<br>
+  新增与原生 PHP 对照、且不受线上 DNS 结果波动影响的 DNS hook 测试 (ad2b7f3b, 8c633094, 42eb2fc8) [@twosee]
++ Add `EventStreamDecoder` equivalence tests and a benchmark<br>
+  新增 `EventStreamDecoder` 等价性测试与性能基准 (f32ab0d5) [@lihq1403]
++ Document the release procedure and the worker thread allocator rule, and sync libcat dependencies<br>
+  记录发版流程与工作线程的内存分配规则，并同步 libcat 依赖 (9eec3624, 96aaa966, 3d1da1a0, 0a5ab8c0) [@twosee]
+
+</details>
+
+---
+
 # v2.0.0
 
 > Release Date: 2026-11-22 | 发布日期：2026-11-22
