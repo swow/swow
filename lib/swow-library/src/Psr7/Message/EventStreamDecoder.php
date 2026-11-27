@@ -39,7 +39,7 @@ final class EventStreamDecoder
         }
 
         $lineBuffer = '';
-        /* $lineOffset 是未消费数据的起点；$scanOffset 之前的字节已确认没有换行，不再重复扫描。 */
+        /* $lineOffset is where unconsumed data starts; bytes before $scanOffset are known to hold no line break. */
         $lineOffset = 0;
         $scanOffset = 0;
         $eventName = 'message';
