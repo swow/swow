@@ -122,7 +122,7 @@ typedef union {
 
 /* {{{ thread pool search */
 
-#ifndef HAVE_DNS_SEARCH
+#if !defined(HAVE_DNS_SEARCH) && !defined(SWOW_DNS_USE_RES_SEARCH)
 /* just a hack to free resources allocated by glibc in __res_nsend()
  * See also:
  *   res_thread_freeres() in glibc/resolv/res_init.c
@@ -162,7 +162,8 @@ typedef struct swow_dns_search_job_s {
     char *hostname;
     int type;
     /* outputs, written by the worker thread */
-    bool init_failed; /* dns_open() / res_ninit() failed, PHP returns false silently */
+    bool init_failed; /* dns_open() / res_ninit() failed, PHP returns false silently;
+                       * res_search() has no handle to initialize */
     int length;       /* search result, < 0 on failure */
     int error;        /* h_errno style error of a failed search */
     querybuf *answer; /* moved to the caller after a successful wait */
@@ -185,6 +186,10 @@ static void swow_dns_search_job_run(cat_data_t *data)
      * error kind; dns_search() is still used to resolve exactly as PHP does there */
     job->error = h_errno;
     dns_free(handle);
+#elif defined(SWOW_DNS_USE_RES_SEARCH)
+    /* musl: no resolver handle, and h_errno belongs to this worker thread */
+    job->length = res_search(job->hostname, C_IN, job->type, job->answer->qb2, sizeof(*job->answer));
+    job->error = h_errno;
 #else
     struct __res_state state;
 

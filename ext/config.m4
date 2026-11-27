@@ -893,6 +893,16 @@ EOF
     PHP_SUBST(SWOW_CAT_CFLAGS)
   fi
 
+  dnl musl has no feature test macro, so ask the toolchain. Its res_search() keeps no global
+  dnl state, which lets the DNS record functions be hooked there (see swow_dns_private.h)
+  AC_MSG_CHECKING([whether the C library is musl])
+  if $CC -dumpmachine 2>/dev/null | grep -q musl || ldd --version 2>&1 | grep -qi musl; then
+    AC_MSG_RESULT([yes])
+    AC_DEFINE([SWOW_HAVE_MUSL_LIBC], 1, [Define this if the C library is musl])
+  else
+    AC_MSG_RESULT([no])
+  fi
+
   dnl the DNS record functions call the same resolver as ext/standard (see swow_dns_private.h),
   dnl link libresolv explicitly where it exists instead of relying on symbols loaded by PHP
   PHP_CHECK_LIBRARY(resolv, dns_search, [
