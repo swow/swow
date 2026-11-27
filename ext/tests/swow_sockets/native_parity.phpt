@@ -138,6 +138,15 @@ function probe(): array
     $refused = socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
     $results['connect refused'] = call(static fn() => socket_connect($refused, '127.0.0.1', $port));
 
+    // calls that fail at once natively must not wait for an event that never comes
+    $idle = socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
+    $results['accept not listening'] = call(static fn() => socket_accept($idle));
+    $results['read not connected'] = call(static fn() => socket_read($idle, 10));
+    $results['recv not connected'] = call(static fn() => socket_recv($idle, $data, 10, 0));
+    $results['write not connected'] = call(static fn() => socket_write($idle, 'x'));
+    $results['recvfrom not connected'] = call(static fn() => socket_recvfrom($idle, $data, 10, 0, $from, $fromPort));
+    socket_close($idle);
+
     // UDP datagrams
     $udp = socket_create(AF_INET, SOCK_DGRAM, SOL_UDP);
     socket_bind($udp, '127.0.0.1', 0);
@@ -177,4 +186,4 @@ Assert::same($swow, $native, "native=\n" . json_encode($native, JSON_PRETTY_PRIN
 echo json_encode(array_values(array_diff(array_keys($swow), ['recv waitall timeout']))), "\n";
 ?>
 --EXPECT--
-["write","read line","read line cr","read line lf after cr","read binary","read rest","write length","write empty","send","recv peek","recv waitall","read timeout","recv timeout","non-blocking read","dontwait recv","read eof","recv eof","write closed","accept nothing","connect","accept","select","select timeout","select writable","blocking accepted","connect refused","sendto","recvfrom","recvfrom timeout","sendmsg","recvmsg"]
+["write","read line","read line cr","read line lf after cr","read binary","read rest","write length","write empty","send","recv peek","recv waitall","read timeout","recv timeout","non-blocking read","dontwait recv","read eof","recv eof","write closed","accept nothing","connect","accept","select","select timeout","select writable","blocking accepted","connect refused","accept not listening","read not connected","recv not connected","write not connected","recvfrom not connected","sendto","recvfrom","recvfrom timeout","sendmsg","recvmsg"]

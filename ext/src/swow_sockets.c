@@ -22,16 +22,19 @@
  * Blocking calls of ext/sockets wait on the event loop, so that only the calling coroutine
  * waits, with the results, errors and timeouts (SO_RCVTIMEO, SO_SNDTIMEO) of the native call.
  *
+ * Every call is tried without blocking first, and waits only while it would block (EAGAIN,
+ * EINPROGRESS); a call that fails at once natively, on a socket that is not connected or not
+ * listening, or with a bad argument, fails at once here too.
+ *
  * | function                          | how                                                   |
  * | --------------------------------- | ----------------------------------------------------- |
- * | socket_read, socket_recv,         | ported: wait for POLLIN/POLLOUT, then the syscall;    |
- * | socket_write, socket_send         | a stream socket gets the whole buffer as the native   |
- * |                                   | blocking call does, in pieces that never block        |
- * | socket_recvfrom, socket_recvmsg,  | wait, then the native function, whose syscall is      |
- * | socket_sendto, socket_sendmsg     | ready; on timeout the native function runs with       |
- * |                                   | O_NONBLOCK and fails with EAGAIN as a timeout does    |
- * | socket_accept, socket_connect     | the native function with O_NONBLOCK, waiting while it |
- * |                                   | reports EAGAIN or EINPROGRESS (without a warning)     |
+ * | socket_read, socket_recv,         | ported, with MSG_DONTWAIT and waits; a stream socket  |
+ * | socket_write, socket_send         | gets the whole buffer as the native blocking call     |
+ * |                                   | does, in pieces that never block                      |
+ * | socket_recvfrom, socket_recvmsg,  | the native function with O_NONBLOCK, which reports    |
+ * | socket_sendto, socket_sendmsg,    | EAGAIN or EINPROGRESS without a warning; it runs      |
+ * | socket_accept, socket_connect     | again after the wait, and after a timeout its EAGAIN  |
+ * |                                   | is the one of a timed out native call                 |
  * | socket_select                     | wait in cat_poll(), then the native select() with a   |
  * |                                   | zero timeout fills the arrays                         |
  *
@@ -196,37 +199,30 @@ static void swow_sockets_call_nonblocking(php_socket *sock, zif_handler handler,
 
 /* {{{ reads and writes */
 
-/* recv() of a blocking socket */
+/* recv() of a blocking socket. Every call is tried without blocking first and waits only for
+ * EAGAIN: a socket that is not connected or not ready for the call fails at once, as it does
+ * natively, and is never waited for. */
 static ssize_t swow_sockets_recv(php_socket *sock, char *buffer, size_t length, int flags)
 {
     php_socket_t fd = sock->bsd_socket;
+    bool wait_all = (flags & MSG_WAITALL) && !(flags & MSG_PEEK);
+    int try_flags = (wait_all ? flags & ~MSG_WAITALL : flags) | MSG_DONTWAIT;
     cat_timeout_t timeout;
     cat_msec_t start;
     size_t received = 0;
-    int ready;
 
     if ((flags & MSG_DONTWAIT) || !swow_sockets_is_blocking(sock)) {
         return recv(fd, buffer, length, flags);
     }
     timeout = swow_sockets_timeout(sock, SO_RCVTIMEO);
-    ready = swow_sockets_wait_timeout(sock, POLLIN, timeout);
-    if (ready <= 0) {
-        if (ready == 0) {
-            errno = EAGAIN;
-        }
-        return -1;
-    }
-    if (!(flags & MSG_WAITALL) || (flags & MSG_PEEK)) {
-        return recv(fd, buffer, length, flags);
-    }
-    /* MSG_WAITALL: gather the whole length, or stop at the end of the stream, an error or
-     * the timeout, returning what was received before, as the kernel does */
     start = cat_time_msec();
     for (;;) {
-        ssize_t n = recv(fd, buffer + received, length - received, (flags & ~MSG_WAITALL) | MSG_DONTWAIT);
+        ssize_t n = recv(fd, buffer + received, length - received, try_flags);
         if (n > 0) {
             received += (size_t) n;
-            if (received == length) {
+            /* MSG_WAITALL gathers the whole length, or stops at the end of the stream, an
+             * error or the timeout, returning what was received before, as Linux does */
+            if (!wait_all || received == length) {
                 return (ssize_t) received;
             }
         } else if (n == 0) {
@@ -234,7 +230,7 @@ static ssize_t swow_sockets_recv(php_socket *sock, char *buffer, size_t length, 
         } else if (errno != EAGAIN && errno != EWOULDBLOCK && errno != EINTR) {
             return received > 0 ? (ssize_t) received : -1;
         }
-        ready = swow_sockets_wait_timeout(sock, POLLIN, swow_sockets_remaining(timeout, start));
+        int ready = swow_sockets_wait_timeout(sock, POLLIN, swow_sockets_remaining(timeout, start));
         if (ready <= 0) {
             if (received > 0) {
                 return (ssize_t) received;
@@ -249,14 +245,14 @@ static ssize_t swow_sockets_recv(php_socket *sock, char *buffer, size_t length, 
 
 /* write() or send() of a blocking socket: a stream socket takes the whole buffer unless an
  * error or the timeout stops it, as the kernel does; the pieces are sized so that no send()
- * blocks (see swow_stream_fd_send_limit()) */
+ * blocks (see swow_stream_fd_send_limit()), and a datagram is sent whole or not at all */
 static ssize_t swow_sockets_send(php_socket *sock, const char *buffer, size_t length, int flags)
 {
     php_socket_t fd = sock->bsd_socket;
     cat_timeout_t timeout;
     cat_msec_t start;
-    size_t sent = 0, limit;
-    int type = SOCK_STREAM, ready;
+    size_t sent = 0, limit = 0;
+    int type = SOCK_STREAM;
     socklen_t type_length = sizeof(type);
 
     if (length == 0 || (flags & MSG_DONTWAIT) || !swow_sockets_is_blocking(sock)) {
@@ -264,21 +260,25 @@ static ssize_t swow_sockets_send(php_socket *sock, const char *buffer, size_t le
     }
     timeout = swow_sockets_timeout(sock, SO_SNDTIMEO);
     (void) getsockopt(fd, SOL_SOCKET, SO_TYPE, &type, &type_length);
-    if (type != SOCK_STREAM) {
-        /* a datagram is sent whole or not at all */
-        ready = swow_sockets_wait_timeout(sock, POLLOUT, timeout);
-        if (ready <= 0) {
-            if (ready == 0) {
-                errno = EAGAIN;
-            }
-            return -1;
-        }
-        return send(fd, buffer, length, flags);
+    if (type == SOCK_STREAM) {
+        limit = swow_stream_fd_send_limit(fd);
     }
-    limit = swow_stream_fd_send_limit(fd);
     start = cat_time_msec();
     for (;;) {
-        ready = swow_sockets_wait_timeout(sock, POLLOUT, swow_sockets_remaining(timeout, start));
+        size_t piece = length - sent;
+        if (limit > 0 && piece > limit) {
+            piece = limit;
+        }
+        ssize_t n = send(fd, buffer + sent, piece, flags | MSG_DONTWAIT);
+        if (n >= 0) {
+            sent += (size_t) n;
+            if (sent == length || type != SOCK_STREAM) {
+                return (ssize_t) sent;
+            }
+        } else if (errno != EAGAIN && errno != EWOULDBLOCK && errno != EINTR) {
+            return sent > 0 ? (ssize_t) sent : -1;
+        }
+        int ready = swow_sockets_wait_timeout(sock, POLLOUT, swow_sockets_remaining(timeout, start));
         if (ready <= 0) {
             if (sent > 0) {
                 return (ssize_t) sent;
@@ -287,21 +287,6 @@ static ssize_t swow_sockets_send(php_socket *sock, const char *buffer, size_t le
                 errno = EAGAIN;
             }
             return -1;
-        }
-        size_t piece = length - sent;
-        if (limit > 0 && piece > limit) {
-            piece = limit;
-        }
-        ssize_t n = send(fd, buffer + sent, piece, flags | MSG_DONTWAIT);
-        if (n < 0) {
-            if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR) {
-                continue;
-            }
-            return sent > 0 ? (ssize_t) sent : -1;
-        }
-        sent += (size_t) n;
-        if (sent == length) {
-            return (ssize_t) sent;
         }
     }
 }
@@ -334,14 +319,15 @@ static int swow_sockets_read_line(php_socket *sock, char *buffer, size_t maxlen)
             }
         }
         if (n < maxlen) {
-            if (!nonblock) {
+            m = (int) recv(sock->bsd_socket, (void *) t, 1, nonblock ? 0 : MSG_DONTWAIT);
+            if (m < 0 && !nonblock && (errno == EAGAIN || errno == EWOULDBLOCK)) {
                 if (swow_sockets_wait_timeout(sock, POLLIN, CAT_TIMEOUT_FOREVER) < 0) {
                     return -1;
                 }
                 /* errno is checked below whatever recv() returns, and the wait may leave one */
                 errno = 0;
+                m = (int) recv(sock->bsd_socket, (void *) t, 1, 0);
             }
-            m = (int) recv(sock->bsd_socket, (void *) t, 1, 0);
         }
         if (errno != 0 && errno != ESPIPE && errno != EAGAIN) {
             return -1;
@@ -526,22 +512,46 @@ static PHP_FUNCTION(swow_socket_send)
     RETURN_LONG((zend_long) retval);
 }
 
-/* socket_recvfrom(), socket_sendto(), socket_recvmsg() and socket_sendmsg(): wait, then the
- * native function; flags_position is the position of their flags argument */
+/* Run the native function in non-blocking mode until it succeeds, or fails with anything but
+ * EAGAIN, which it reports without a warning: the wait comes only between such attempts, so a
+ * call that fails at once natively (a socket that is not connected or not listening, a bad
+ * argument) fails at once here too. After the timeout of the socket the last attempt gives
+ * the EAGAIN of a timed out native call. */
+static void swow_sockets_call_waiting(php_socket *sock, int events, zif_handler original_handler, INTERNAL_FUNCTION_PARAMETERS)
+{
+    int sock_error = sock->error;
+    int last_error = swow_sockets_globals()->last_error;
+    cat_timeout_t timeout = swow_sockets_timeout(sock, events & POLLOUT ? SO_SNDTIMEO : SO_RCVTIMEO);
+    cat_msec_t start = cat_time_msec();
+
+    for (;;) {
+        swow_sockets_call_nonblocking(sock, original_handler, INTERNAL_FUNCTION_PARAM_PASSTHRU);
+        if (Z_TYPE_P(return_value) != IS_FALSE || EG(exception) || IS_INVALID_SOCKET(sock) ||
+            (swow_sockets_globals()->last_error != EAGAIN && swow_sockets_globals()->last_error != EWOULDBLOCK)) {
+            return;
+        }
+        if (swow_sockets_wait_timeout(sock, events, swow_sockets_remaining(timeout, start)) <= 0 || IS_INVALID_SOCKET(sock)) {
+            /* the EAGAIN of this attempt stands for the timeout */
+            return;
+        }
+        sock->error = sock_error;
+        swow_sockets_globals()->last_error = last_error;
+        zval_ptr_dtor(return_value);
+        ZVAL_UNDEF(return_value);
+    }
+}
+
+/* socket_recvfrom(), socket_sendto(), socket_recvmsg() and socket_sendmsg(); flags_position is
+ * the position of their flags argument */
 static void swow_sockets_wait_then_call(INTERNAL_FUNCTION_PARAMETERS, int events, uint32_t flags_position, zif_handler original_handler)
 {
     php_socket *sock = swow_sockets_from_args(execute_data);
 
-    if (sock != NULL && !(swow_sockets_flags_from_args(execute_data, flags_position) & MSG_DONTWAIT) && swow_sockets_is_blocking(sock)) {
-        int ready = swow_sockets_wait(sock, events);
-        /* the socket may have been closed while this coroutine waited */
-        if (ready <= 0 && !IS_INVALID_SOCKET(sock)) {
-            /* the native function then fails with EAGAIN, as after a timeout */
-            swow_sockets_call_nonblocking(sock, original_handler, INTERNAL_FUNCTION_PARAM_PASSTHRU);
-            return;
-        }
+    if (sock == NULL || (swow_sockets_flags_from_args(execute_data, flags_position) & MSG_DONTWAIT) || !swow_sockets_is_blocking(sock)) {
+        original_handler(INTERNAL_FUNCTION_PARAM_PASSTHRU);
+        return;
     }
-    original_handler(INTERNAL_FUNCTION_PARAM_PASSTHRU);
+    swow_sockets_call_waiting(sock, events, original_handler, INTERNAL_FUNCTION_PARAM_PASSTHRU);
 }
 
 static PHP_FUNCTION(swow_socket_recvfrom)
@@ -571,41 +581,23 @@ static PHP_FUNCTION(swow_socket_sendmsg)
 static PHP_FUNCTION(swow_socket_accept)
 {
     php_socket *sock = swow_sockets_from_args(execute_data);
-    int last_error;
+    int listening_flags;
 
     if (sock == NULL || !swow_sockets_is_blocking(sock)) {
         swow_original_socket_accept(INTERNAL_FUNCTION_PARAM_PASSTHRU);
         return;
     }
     /* Processes of a prefork server wait on the same listening socket, and another one may
-     * take the connection between the wake-up and the accept(): the accept() then runs in
-     * non-blocking mode, and the wait goes on after an EAGAIN, which the native function
-     * reports without a warning. */
-    last_error = swow_sockets_globals()->last_error;
-    for (;;) {
-        int ready = swow_sockets_wait(sock, POLLIN);
-        if (IS_INVALID_SOCKET(sock)) {
-            /* closed while this coroutine waited: the native function reports it */
-            swow_original_socket_accept(INTERNAL_FUNCTION_PARAM_PASSTHRU);
-            return;
+     * take the connection between the wake-up and the accept(): it is tried again then. */
+    listening_flags = fcntl(sock->bsd_socket, F_GETFL);
+    swow_sockets_call_waiting(sock, POLLIN, swow_original_socket_accept, INTERNAL_FUNCTION_PARAM_PASSTHRU);
+    if (Z_TYPE_P(return_value) == IS_OBJECT && listening_flags != -1 && !(listening_flags & O_NONBLOCK)) {
+        /* BSD systems copy O_NONBLOCK of the listening socket to the accepted one */
+        php_socket *new_sock = Z_SOCKET_P(return_value);
+        int flags = fcntl(new_sock->bsd_socket, F_GETFL);
+        if (flags != -1 && (flags & O_NONBLOCK)) {
+            (void) fcntl(new_sock->bsd_socket, F_SETFL, flags & ~O_NONBLOCK);
         }
-        swow_sockets_call_nonblocking(sock, swow_original_socket_accept, INTERNAL_FUNCTION_PARAM_PASSTHRU);
-        if (Z_TYPE_P(return_value) == IS_OBJECT) {
-            php_socket *new_sock = Z_SOCKET_P(return_value);
-            /* BSD systems copy O_NONBLOCK of the listening socket to the accepted one */
-            int flags = fcntl(new_sock->bsd_socket, F_GETFL);
-            if (flags != -1 && (flags & O_NONBLOCK)) {
-                (void) fcntl(new_sock->bsd_socket, F_SETFL, flags & ~O_NONBLOCK);
-            }
-            return;
-        }
-        if (ready <= 0 || EG(exception) || swow_sockets_globals()->last_error != EAGAIN) {
-            /* a real error, or the timeout of the socket (SO_RCVTIMEO) that ends in EAGAIN */
-            return;
-        }
-        swow_sockets_globals()->last_error = last_error;
-        zval_ptr_dtor(return_value);
-        ZVAL_UNDEF(return_value);
     }
 }
 
