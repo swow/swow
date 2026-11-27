@@ -59,6 +59,14 @@ static int swow_proc_open_rsrc_close(php_process_handle *proc)
     /* proc_open_rsrc_dtor closes childHandle. Do not close it here. */
     return wstatus;
 #else
+# if PHP_VERSION_ID >= 80300
+    /* proc_get_status() may have reaped the child already, PHP keeps its exit
+     * status for proc_close() since 8.3 (GH-10239), waiting again would get ECHILD */
+    if (proc->has_cached_exit_wait_status) {
+        wstatus = proc->cached_exit_wait_status_value;
+        return WIFEXITED(wstatus) ? WEXITSTATUS(wstatus) : wstatus;
+    }
+# endif
     wait_pid = cat_os_waitpid(proc->child, &wstatus, 0);
 
     if (wait_pid <= 0) {
