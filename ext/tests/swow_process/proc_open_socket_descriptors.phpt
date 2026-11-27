@@ -52,13 +52,15 @@ echo json_encode($swow), "\n";
 // a supervisor reads the progress of several workers at the same time
 $workers = 4;
 $outputs = [];
-$measured = SchedulerProbe::measure(static function () use ($workers, &$outputs): void {
+$arrivals = [];
+$measured = SchedulerProbe::measure(static function () use ($workers, &$outputs, &$arrivals): void {
     $wr = new WaitReference();
     for ($id = 0; $id < $workers; $id++) {
-        Coroutine::run(static function () use ($id, $wr, &$outputs): void {
+        Coroutine::run(static function () use ($id, $wr, &$outputs, &$arrivals): void {
             [$process, $pipes] = startWorker($id);
             while (($line = fgets($pipes[1])) !== false) {
                 $outputs[$id][] = trim($line);
+                $arrivals[] = $id;
             }
             Assert::same(proc_close($process), 0);
         });
@@ -69,8 +71,15 @@ ksort($outputs);
 foreach ($outputs as $id => $lines) {
     Assert::same($lines, ["job {$id} step 1", "job {$id} step 2", "job {$id} step 3"]);
 }
-// one worker takes about 300ms; serial reads would take over 1.2s
-Assert::lessThan($measured['elapsed_ms'], 1000, 'the workers must be read concurrently');
+/*
+ * Each worker prints a line every 100ms. Read concurrently, the first line of every worker
+ * arrives before any worker prints its last line; a blocking read would take all lines of
+ * one worker before the next worker is even started. Ordering is used instead of elapsed
+ * time, which depends on how loaded the machine is.
+ */
+$firstRound = array_slice($arrivals, 0, $workers);
+sort($firstRound);
+Assert::same($firstRound, range(0, $workers - 1), 'the workers must be read concurrently: ' . json_encode($arrivals));
 Assert::greaterThan($measured['ticks'], 10, 'the ticker must run while the supervisor waits');
 echo "workers: ", count($outputs), "\n";
 ?>

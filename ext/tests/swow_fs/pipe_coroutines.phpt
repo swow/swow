@@ -36,18 +36,21 @@ for ($i = 0; $i < $commands; $i++) {
     });
 }
 $file = tempnam(sys_get_temp_dir(), 'swow');
-$fileOperations = SchedulerProbe::measure(static function () use ($file): void {
+$finishedCommandsAfterFileOperations = null;
+SchedulerProbe::measure(static function () use ($file, &$results, &$finishedCommandsAfterFileOperations): void {
     usleep(50 * 1000);
     for ($n = 0; $n < 10; $n++) {
         file_put_contents($file, str_repeat('x', 4096), FILE_APPEND);
         Assert::same(strlen(file_get_contents($file)), 4096 * ($n + 1));
     }
+    $finishedCommandsAfterFileOperations = count($results);
 });
 unlink($file);
 WaitReference::wait($wr);
 ksort($results);
 Assert::same($results, array_map('strval', range(0, $commands - 1)));
-Assert::lessThan($fileOperations['elapsed_ms'], 400, 'file operations must not wait for the commands');
+// ordering rather than elapsed time, which depends on how loaded the machine is
+Assert::same($finishedCommandsAfterFileOperations, 0, 'file operations must not wait for the commands');
 echo "file operations ran while the commands were waiting\n";
 
 // every way of running a command lets the other coroutines run
