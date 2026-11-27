@@ -1274,6 +1274,14 @@ SWOW_API php_stream *_swow_stream_fopen_from_pipe(FILE *file, const char *mode S
  * PIPE_BUF bytes after POLLOUT does not block (POSIX). A descriptor in
  * non-blocking mode is called directly, as PHP does. */
 
+/* The event loop cannot poll every descriptor (kqueue of macOS refuses a FIFO opened with
+ * fopen()); such a pipe is read and written on a thread of the pool, as before. A wait that
+ * was cancelled is an error of its own. */
+static bool swow_fs_pipe_cannot_be_polled(void)
+{
+    return cat_get_last_error_code() != CAT_ECANCELED;
+}
+
 static ssize_t swow_fs_pipe_read(int fd, void *buffer, size_t size)
 {
     ssize_t ret;
@@ -1283,6 +1291,9 @@ static ssize_t swow_fs_pipe_read(int fd, void *buffer, size_t size)
         return -1;
     }
     if (swow_stream_fd_is_blocking(fd) && swow_stream_wait_fd(fd, POLLIN, CAT_TIMEOUT_FOREVER) < 0) {
+        if (swow_fs_pipe_cannot_be_polled()) {
+            return cat_fs_read(fd, buffer, size);
+        }
         cat_update_last_error_with_previous("Pipe read wait failed");
         return -1;
     }
@@ -1308,6 +1319,13 @@ static ssize_t swow_fs_pipe_write(int fd, const char *buffer, size_t length)
         size_t chunk = MIN(length - written, PIPE_BUF);
         ssize_t ret;
         if (swow_stream_wait_fd(fd, POLLOUT, CAT_TIMEOUT_FOREVER) < 0) {
+            if (swow_fs_pipe_cannot_be_polled()) {
+                ssize_t ret = cat_fs_write(fd, buffer + written, length - written);
+                if (ret < 0) {
+                    return written > 0 ? (ssize_t) written : -1;
+                }
+                return (ssize_t) (written + ret);
+            }
             cat_update_last_error_with_previous("Pipe write wait failed");
             return written > 0 ? (ssize_t) written : -1;
         }
