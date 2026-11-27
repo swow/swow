@@ -19,6 +19,7 @@
 #include "swow_proc_open.h"
 
 #include "swow_hook.h"
+#include "swow_stream.h"
 
 #include "zend_list.h"
 #include "ext/standard/proc_open.h"
@@ -100,6 +101,25 @@ PHP_FUNCTION(swow_proc_close)
 }
 /* }}} */
 
+static zif_handler PHP_FN(original_proc_open) = (zif_handler) -1;
+
+/* proc_open() wraps a ['socket'] descriptor with PHP's own blocking socket ops,
+ * let those pipes wait on the event loop as well */
+PHP_FUNCTION(swow_proc_open)
+{
+    PHP_FN(original_proc_open)(INTERNAL_FUNCTION_PARAM_PASSTHRU);
+    if (Z_TYPE_P(return_value) == IS_RESOURCE && ZEND_NUM_ARGS() >= 3) {
+        zval *zpipes = ZEND_CALL_ARG(execute_data, 3);
+        zval *zpipe;
+        ZVAL_DEREF(zpipes);
+        if (Z_TYPE_P(zpipes) == IS_ARRAY) {
+            ZEND_HASH_FOREACH_VAL(Z_ARRVAL_P(zpipes), zpipe) {
+                swow_stream_native_socket_adopt_zval(zpipe);
+            } ZEND_HASH_FOREACH_END();
+        }
+    }
+}
+
 zend_result swow_proc_open_module_init(INIT_FUNC_ARGS)
 {
     le_proc_open = zend_fetch_list_dtor_id("process");
@@ -109,6 +129,9 @@ zend_result swow_proc_open_module_init(INIT_FUNC_ARGS)
     }
 
     if (!swow_hook_internal_function_handler(ZEND_STRL("proc_close"), PHP_FN(swow_proc_close))) {
+        return FAILURE;
+    }
+    if (!swow_hook_internal_function_handler_ex(ZEND_STRL("proc_open"), PHP_FN(swow_proc_open), &PHP_FN(original_proc_open))) {
         return FAILURE;
     }
 

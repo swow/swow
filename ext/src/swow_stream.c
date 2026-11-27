@@ -28,6 +28,10 @@
 #include "cat_time.h" /* for time_tv2to() */
 #include "cat_poll.h" /* for select() */
 
+#ifndef PHP_WIN32
+# include <fcntl.h>
+#endif
+
 #include "streams/php_streams_int.h"
 #include "ext/standard/file.h"
 #include "ext/standard/url.h"
@@ -1806,6 +1810,480 @@ SWOW_API const php_stream_ops swow_stream_stdio_ops_proxy = {
     swow_stream_stdio_proxy_set_option,
 };
 
+/* {{{ waiting for a descriptor that PHP then reads or writes with a blocking call
+ *
+ * | Case                                        | Result                             |
+ * | ready at once                               | 1 without suspending               |
+ * | ready after waiting on the event loop       | 1, PHP's call then returns at once |
+ * | timed out                                   | 0                                  |
+ * | the wait was cancelled (kill, throw)        | -1                                 |
+ * | another coroutine already waits to read the | -1 with CAT_ELOCKED                |
+ * | same descriptor                             |                                    |
+ *
+ * A PHP stream computes where to put the data before it calls the read
+ * operation, so a second reader of the same stream that waited here would
+ * write to a stale position of the buffer, or to a freed one after the first
+ * reader grew it; it is refused instead, as libcat refuses a second reader of
+ * a socket. Writers use their own buffers, several of them may wait.
+ *
+ * The poll handle of libuv sets O_NONBLOCK, which is shared by every descriptor
+ * of the same open file, so the mode before the first wait is kept here and
+ * restored after the last one; swow_stream_fd_is_blocking() reports that mode
+ * while the descriptor is waited for. */
+
+typedef struct swow_stream_waiting_fd_s {
+    int flags;
+    uint32_t readers;
+    uint32_t writers;
+} swow_stream_waiting_fd_t;
+
+SWOW_API void swow_stream_fd_update_busy_error(void)
+{
+    cat_update_last_error(CAT_ELOCKED, "Descriptor is already being read by another coroutine");
+}
+
+static void swow_stream_waiting_fd_dtor(zval *zv)
+{
+    efree(Z_PTR_P(zv));
+}
+
+static zend_always_inline swow_stream_waiting_fd_t *swow_stream_waiting_fd_find(php_socket_t fd)
+{
+    return (swow_stream_waiting_fd_t *) zend_hash_index_find_ptr(&SWOW_STREAM_G(waiting_fds), (zend_ulong) fd);
+}
+
+SWOW_API bool swow_stream_fd_is_being_read(php_socket_t fd)
+{
+    swow_stream_waiting_fd_t *waiting = swow_stream_waiting_fd_find(fd);
+    return waiting != NULL && waiting->readers > 0;
+}
+
+SWOW_API bool swow_stream_fd_is_blocking(php_socket_t fd)
+{
+#ifndef PHP_WIN32
+    swow_stream_waiting_fd_t *waiting = swow_stream_waiting_fd_find(fd);
+    int flags = waiting != NULL ? waiting->flags : fcntl(fd, F_GETFL);
+    return flags != -1 && !(flags & O_NONBLOCK);
+#else
+    return true;
+#endif
+}
+
+SWOW_API int swow_stream_wait_fd(php_socket_t fd, int events, cat_timeout_t timeout)
+{
+    swow_stream_waiting_fd_t *waiting = swow_stream_waiting_fd_find(fd);
+    bool reading = !(events & POLLOUT);
+    cat_msec_t deadline;
+    int result;
+
+    if (reading && waiting != NULL && waiting->readers > 0) {
+        swow_stream_fd_update_busy_error();
+        return -1;
+    }
+    if (php_pollfd_for_ms(fd, events, 0) != 0) {
+        return 1;
+    }
+    if (timeout == 0) {
+        return 0;
+    }
+    if (waiting == NULL) {
+        waiting = (swow_stream_waiting_fd_t *) emalloc(sizeof(*waiting));
+#ifndef PHP_WIN32
+        waiting->flags = fcntl(fd, F_GETFL);
+#else
+        waiting->flags = 0;
+#endif
+        waiting->readers = 0;
+        waiting->writers = 0;
+        zend_hash_index_add_new_ptr(&SWOW_STREAM_G(waiting_fds), (zend_ulong) fd, waiting);
+    }
+    if (reading) {
+        waiting->readers++;
+    } else {
+        waiting->writers++;
+    }
+
+    deadline = timeout >= 0 ? cat_time_msec() + (cat_msec_t) timeout : 0;
+    for (;;) {
+        cat_pollfd_events_t revents;
+        cat_ret_t ret = cat_poll_one(fd, (cat_pollfd_events_t) events, &revents, timeout);
+        if (ret == CAT_RET_NONE) {
+            result = 0;
+            break;
+        }
+        if (ret != CAT_RET_OK) {
+            result = -1;
+            break;
+        }
+        /* Another coroutine woken by the same event may have taken the data or
+         * the buffer space already (through another stream of the descriptor),
+         * and the blocking call would then block the thread. Nothing else runs
+         * between this check and the call of the caller. */
+        if (php_pollfd_for_ms(fd, events, 0) != 0) {
+            result = 1;
+            break;
+        }
+        if (timeout >= 0) {
+            cat_msec_t now = cat_time_msec();
+            if (now >= deadline) {
+                result = 0;
+                break;
+            }
+            timeout = (cat_timeout_t) (deadline - now);
+        }
+    }
+
+    if (reading) {
+        waiting->readers--;
+    } else {
+        waiting->writers--;
+    }
+    if (waiting->readers == 0 && waiting->writers == 0) {
+#ifndef PHP_WIN32
+        if (waiting->flags != -1 && !(waiting->flags & O_NONBLOCK)) {
+            int current = fcntl(fd, F_GETFL);
+            if (current != -1 && (current & O_NONBLOCK)) {
+                (void) fcntl(fd, F_SETFL, current & ~O_NONBLOCK);
+            }
+        }
+#endif
+        zend_hash_index_del(&SWOW_STREAM_G(waiting_fds), (zend_ulong) fd);
+    }
+
+    return result;
+}
+/* }}} */
+
+/* {{{ native socket streams
+ * PHP wraps an existing socket with its own stream ops in a few places:
+ *
+ * | Source                                   | Ops                           |
+ * | stream_socket_pair()                     | php_stream_generic_socket_ops |
+ * | proc_open() with a ['socket'] descriptor | php_stream_generic_socket_ops |
+ * | php://fd/N when N is a socket            | php_stream_socket_ops         |
+ *
+ * Those ops wait in a blocking poll(), and php_stream_generic_socket_ops is
+ * neither exported nor writable, so the streams are adopted one by one: their
+ * ops pointer is switched to a copy whose read/write/set_option first wait for
+ * readiness on the event loop and then call PHP's own operation. PHP's poll()
+ * then returns at once, and the results, warnings and timeout flags stay PHP's.
+ * The socket itself is left as it is (it may be shared with other processes),
+ * so no O_NONBLOCK is set on it. */
+
+typedef enum swow_stream_native_socket_kind_e {
+    SWOW_STREAM_NATIVE_SOCKET_GENERIC,
+    SWOW_STREAM_NATIVE_SOCKET_TCP,
+    SWOW_STREAM_NATIVE_SOCKET_KIND_COUNT,
+} swow_stream_native_socket_kind_t;
+
+static const php_stream_ops *swow_stream_native_socket_ops_original[SWOW_STREAM_NATIVE_SOCKET_KIND_COUNT];
+static php_stream_ops swow_stream_native_socket_ops_proxy[SWOW_STREAM_NATIVE_SOCKET_KIND_COUNT];
+
+static zend_always_inline const php_stream_ops *swow_stream_native_socket_original(const php_stream *stream)
+{
+    return stream->ops == &swow_stream_native_socket_ops_proxy[SWOW_STREAM_NATIVE_SOCKET_GENERIC] ?
+        swow_stream_native_socket_ops_original[SWOW_STREAM_NATIVE_SOCKET_GENERIC] :
+        swow_stream_native_socket_ops_original[SWOW_STREAM_NATIVE_SOCKET_TCP];
+}
+
+/* Returns the socket data when the operation would block in PHP's poll() */
+static zend_always_inline php_netstream_data_t *swow_stream_native_socket_blocking_data(const php_stream *stream)
+{
+    php_netstream_data_t *sock = (php_netstream_data_t *) stream->abstract;
+
+    if (!SWOW_STREAM_G(hooking_native_socket_ops) || sock == NULL || sock->socket == SOCK_ERR || !sock->is_blocked) {
+        return NULL;
+    }
+    return sock;
+}
+
+/* 1: ready (or in error, which PHP's operation reports), 0: timed out, -1: the wait was cancelled */
+static zend_always_inline int swow_stream_native_socket_wait(const php_netstream_data_t *sock, cat_pollfd_events_t events, cat_timeout_t timeout)
+{
+    return swow_stream_wait_fd(sock->socket, events, timeout);
+}
+
+static ssize_t swow_stream_native_socket_read(php_stream *stream, char *buffer, size_t size)
+{
+    php_netstream_data_t *sock = swow_stream_native_socket_blocking_data(stream);
+
+    if (sock != NULL) {
+#if PHP_VERSION_ID >= 80300
+        bool has_buffered_data = stream->has_buffered_data;
+#else
+        bool has_buffered_data = false;
+#endif
+        bool zero_timeout = sock->timeout.tv_sec == 0 && sock->timeout.tv_usec == 0;
+        /* PHP does not wait in these two cases either */
+        if (!has_buffered_data && !zero_timeout) {
+            int ready = swow_stream_native_socket_wait(sock, POLLIN, cat_time_tv2to(&sock->timeout));
+            if (ready <= 0) {
+                /* the same result as php_sockop_read() after a timed out poll() */
+                if (ready == 0) {
+                    sock->timeout_event = 1;
+                } else if (cat_get_last_error_code() == CAT_ELOCKED && !(stream->flags & PHP_STREAM_FLAG_SUPPRESS_ERRORS)) {
+                    php_error_docref(NULL, E_NOTICE, "Read of %zu bytes failed with errno=%d %s",
+                        size, cat_orig_errno(CAT_ELOCKED), cat_get_last_error_message());
+                }
+#if PHP_VERSION_ID >= 80100
+                return -1;
+#else
+                return 0;
+#endif
+            }
+        }
+    }
+
+    return swow_stream_native_socket_original(stream)->read(stream, buffer, size);
+}
+
+/* The size that a send() is sure to queue right after POLLOUT: poll() reports a
+ * socket writable once SO_SNDLOWAT bytes are free. Some systems (macOS with
+ * AF_UNIX) block in a large send() even with MSG_DONTWAIT, so the write is cut
+ * to that size there, and the stream layer writes the rest after another wait.
+ * Linux reports 1 and honors MSG_DONTWAIT, nothing is cut there. */
+static size_t swow_stream_native_socket_send_limit(php_socket_t fd)
+{
+#if defined(SO_SNDLOWAT) && !defined(PHP_WIN32)
+    int lowat = 0;
+    socklen_t len = sizeof(lowat);
+    if (getsockopt(fd, SOL_SOCKET, SO_SNDLOWAT, &lowat, &len) == 0 && lowat > 1) {
+        return (size_t) lowat;
+    }
+#endif
+    return 0;
+}
+
+/* A whole day keeps PHP's poll() timeout in the range of an int of milliseconds */
+#define SWOW_STREAM_NATIVE_SOCKET_UNLIMITED_SEND_TIMEOUT (60 * 60 * 24)
+
+static ssize_t swow_stream_native_socket_write(php_stream *stream, const char *buffer, size_t length)
+{
+    php_netstream_data_t *sock = swow_stream_native_socket_blocking_data(stream);
+    const php_stream_ops *original = swow_stream_native_socket_original(stream);
+    struct timeval timeout;
+    ssize_t ret;
+    int ready;
+
+    if (sock == NULL) {
+        return original->write(stream, buffer, length);
+    }
+
+    timeout = sock->timeout;
+    ready = swow_stream_native_socket_wait(sock, POLLOUT, cat_time_tv2to(&timeout));
+    if (ready < 0) {
+        if (cat_get_last_error_code() == CAT_ELOCKED && !(stream->flags & PHP_STREAM_FLAG_SUPPRESS_ERRORS)) {
+            php_error_docref(NULL, E_NOTICE, "Send of %zu bytes failed with errno=%d %s",
+                length, cat_orig_errno(CAT_ELOCKED), cat_get_last_error_message());
+        }
+        return -1;
+    }
+    /*
+     * | Our wait  | PHP's timeout          | PHP's send() then                                    |
+     * | timed out | 0                      | MSG_DONTWAIT, then a zero poll() reports the timeout |
+     * | ready     | unlimited (-1) -> 1 day | MSG_DONTWAIT instead of a send() that blocks until   |
+     * |           |                        | everything is queued; the stream layer writes the    |
+     * |           |                        | rest, after we waited for the socket again           |
+     * | ready     | as it is               | MSG_DONTWAIT already                                 |
+     */
+    if (ready == 0) {
+        sock->timeout.tv_sec = 0;
+        sock->timeout.tv_usec = 0;
+    } else {
+        size_t limit = swow_stream_native_socket_send_limit(sock->socket);
+        if (limit > 0 && length > limit) {
+            length = limit;
+        }
+        if (timeout.tv_sec == -1) {
+            sock->timeout.tv_sec = SWOW_STREAM_NATIVE_SOCKET_UNLIMITED_SEND_TIMEOUT;
+            sock->timeout.tv_usec = 0;
+        }
+    }
+    ret = original->write(stream, buffer, length);
+    sock->timeout = timeout;
+
+    return ret;
+}
+
+static int swow_stream_native_socket_set_option(php_stream *stream, int option, int value, void *ptrparam)
+{
+    php_netstream_data_t *sock = (php_netstream_data_t *) stream->abstract;
+    const php_stream_ops *original = swow_stream_native_socket_original(stream);
+
+    if (!SWOW_STREAM_G(hooking_native_socket_ops) || sock == NULL || sock->socket == SOCK_ERR) {
+        return original->set_option(stream, option, value, ptrparam);
+    }
+
+    switch (option) {
+        case PHP_STREAM_OPTION_CHECK_LIVENESS: {
+            /* the same timeout and the same skip condition as php_sockop_set_option() */
+            struct timeval tv;
+            bool skip_poll;
+            if (value == -1) {
+                if (sock->timeout.tv_sec == -1) {
+                    tv.tv_sec = FG(default_socket_timeout);
+                    tv.tv_usec = 0;
+                } else {
+                    tv = sock->timeout;
+                }
+            } else {
+                tv.tv_sec = value;
+                tv.tv_usec = 0;
+            }
+            skip_poll = value == 0 &&
+#ifdef PHP_STREAM_FLAG_NO_IO
+                !(stream->flags & PHP_STREAM_FLAG_NO_IO) &&
+#endif
+                ((MSG_DONTWAIT != 0) || !sock->is_blocked);
+            if (!skip_poll && cat_time_tv2to(&tv) != 0) {
+                /* a poll() that times out leaves the stream alive */
+                if (swow_stream_native_socket_wait(sock, POLLIN | POLLPRI, cat_time_tv2to(&tv)) <= 0) {
+                    return PHP_STREAM_OPTION_RETURN_OK;
+                }
+            }
+            break;
+        }
+        case PHP_STREAM_OPTION_XPORT_API: {
+            /* stream_socket_recvfrom() and stream_socket_sendto() call recvfrom()
+             * and sendto() on a blocking socket without any timeout */
+            php_stream_xport_param *xparam = (php_stream_xport_param *) ptrparam;
+            if (sock->is_blocked) {
+                if (xparam->op == STREAM_XPORT_OP_RECV) {
+                    if (swow_stream_native_socket_wait(sock, (xparam->inputs.flags & STREAM_OOB) ? POLLPRI : POLLIN, CAT_TIMEOUT_FOREVER) < 0) {
+                        xparam->outputs.returncode = -1;
+                        return PHP_STREAM_OPTION_RETURN_OK;
+                    }
+                } else if (xparam->op == STREAM_XPORT_OP_SEND) {
+                    if (swow_stream_native_socket_wait(sock, POLLOUT, CAT_TIMEOUT_FOREVER) < 0) {
+                        xparam->outputs.returncode = -1;
+                        return PHP_STREAM_OPTION_RETURN_OK;
+                    }
+                }
+            }
+            break;
+        }
+        default:
+            break;
+    }
+
+    return original->set_option(stream, option, value, ptrparam);
+}
+
+SWOW_API void swow_stream_native_socket_adopt(php_stream *stream)
+{
+    for (int kind = 0; kind < SWOW_STREAM_NATIVE_SOCKET_KIND_COUNT; kind++) {
+        if (stream->ops == swow_stream_native_socket_ops_original[kind] && stream->ops != NULL) {
+            stream->ops = &swow_stream_native_socket_ops_proxy[kind];
+            return;
+        }
+    }
+}
+
+SWOW_API void swow_stream_native_socket_adopt_zval(zval *zstream)
+{
+    php_stream *stream;
+
+    ZVAL_DEREF(zstream);
+    if (Z_TYPE_P(zstream) != IS_RESOURCE) {
+        return;
+    }
+    stream = (php_stream *) zend_fetch_resource2(Z_RES_P(zstream), NULL, php_file_le_stream(), php_file_le_pstream());
+    if (stream != NULL) {
+        swow_stream_native_socket_adopt(stream);
+    }
+}
+
+static void swow_stream_native_socket_ops_init(swow_stream_native_socket_kind_t kind, const php_stream_ops *original)
+{
+    swow_stream_native_socket_ops_original[kind] = original;
+    /* keep the label, stream_get_meta_data() reports the same stream_type */
+    memcpy(&swow_stream_native_socket_ops_proxy[kind], original, sizeof(*original));
+    swow_stream_native_socket_ops_proxy[kind].read = swow_stream_native_socket_read;
+    swow_stream_native_socket_ops_proxy[kind].write = swow_stream_native_socket_write;
+    swow_stream_native_socket_ops_proxy[kind].set_option = swow_stream_native_socket_set_option;
+}
+
+/* php_stream_generic_socket_ops is not exported, read its address from a stream
+ * that PHP creates; this needs a request, so it is done at the first RINIT */
+static void swow_stream_native_socket_ops_discover(void)
+{
+    php_stream *stream;
+
+    if (swow_stream_native_socket_ops_original[SWOW_STREAM_NATIVE_SOCKET_GENERIC] != NULL) {
+        return;
+    }
+    stream = php_stream_sock_open_from_socket(SOCK_ERR, NULL);
+    if (stream == NULL) {
+        return;
+    }
+    swow_stream_native_socket_ops_init(SWOW_STREAM_NATIVE_SOCKET_GENERIC, stream->ops);
+    php_stream_free(stream, PHP_STREAM_FREE_CLOSE);
+}
+
+static zif_handler PHP_FN(original_stream_socket_pair) = (zif_handler) -1;
+
+static PHP_FUNCTION(swow_stream_socket_pair)
+{
+    PHP_FN(original_stream_socket_pair)(INTERNAL_FUNCTION_PARAM_PASSTHRU);
+    if (Z_TYPE_P(return_value) == IS_ARRAY) {
+        zval *zstream;
+        ZEND_HASH_FOREACH_VAL(Z_ARRVAL_P(return_value), zstream) {
+            swow_stream_native_socket_adopt_zval(zstream);
+        } ZEND_HASH_FOREACH_END();
+    }
+}
+
+/* php://fd/N gives a socket php_stream_socket_ops, adopt it after the php wrapper opened it */
+static php_stream_wrapper swow_stream_php_wrapper;
+static php_stream_wrapper_ops swow_stream_php_wrapper_ops;
+static php_stream_wrapper *swow_stream_php_wrapper_original = NULL;
+
+static php_stream *swow_stream_php_wrapper_opener(php_stream_wrapper *wrapper, const char *path, const char *mode,
+    int options, zend_string **opened_path, php_stream_context *context STREAMS_DC)
+{
+    php_stream *stream = swow_stream_php_wrapper_original->wops->stream_opener(
+        swow_stream_php_wrapper_original, path, mode, options, opened_path, context STREAMS_REL_CC
+    );
+    if (stream != NULL) {
+        swow_stream_native_socket_adopt(stream);
+    }
+    return stream;
+}
+
+static zend_result swow_stream_php_wrapper_hook(void)
+{
+    HashTable *wrappers = php_stream_get_url_stream_wrappers_hash_global();
+    php_stream_wrapper *original = (php_stream_wrapper *) zend_hash_str_find_ptr(wrappers, ZEND_STRL("php"));
+
+    if (original == NULL || original->wops->stream_opener == NULL) {
+        return SUCCESS;
+    }
+    memcpy(&swow_stream_php_wrapper_ops, original->wops, sizeof(swow_stream_php_wrapper_ops));
+    swow_stream_php_wrapper_ops.stream_opener = swow_stream_php_wrapper_opener;
+    swow_stream_php_wrapper = *original;
+    swow_stream_php_wrapper.wops = &swow_stream_php_wrapper_ops;
+    if (php_unregister_url_stream_wrapper("php") != SUCCESS) {
+        return FAILURE;
+    }
+    if (php_register_url_stream_wrapper("php", &swow_stream_php_wrapper) != SUCCESS) {
+        (void) php_register_url_stream_wrapper("php", original);
+        return FAILURE;
+    }
+    swow_stream_php_wrapper_original = original;
+
+    return SUCCESS;
+}
+
+static void swow_stream_php_wrapper_unhook(void)
+{
+    if (swow_stream_php_wrapper_original != NULL) {
+        (void) php_unregister_url_stream_wrapper("php");
+        (void) php_register_url_stream_wrapper("php", swow_stream_php_wrapper_original);
+        swow_stream_php_wrapper_original = NULL;
+    }
+}
+/* }}} */
+
 // plain wrapper proxies
 static php_stream* swow_plain_files_proxy_stream_opener(
     php_stream_wrapper *wrapper, const char *filename, const char *mode,
@@ -2787,6 +3265,13 @@ zend_result swow_stream_module_init(INIT_FUNC_ARGS)
     if (!swow_hook_internal_functions(swow_stream_functions)) {
         return FAILURE;
     }
+    swow_stream_native_socket_ops_init(SWOW_STREAM_NATIVE_SOCKET_TCP, &php_stream_socket_ops);
+    (void) swow_hook_internal_function_handler_ex(
+        ZEND_STRL("stream_socket_pair"), PHP_FN(swow_stream_socket_pair), &PHP_FN(original_stream_socket_pair)
+    );
+    if (swow_stream_php_wrapper_hook() != SUCCESS) {
+        return FAILURE;
+    }
 
     if (swow_stream_xport_register("tcp", swow_stream_socket_factory) != SUCCESS) {
         return FAILURE;
@@ -2842,6 +3327,7 @@ zend_result swow_stream_module_init(INIT_FUNC_ARGS)
 zend_result swow_stream_module_shutdown(INIT_FUNC_ARGS)
 {
     swow_rehook_stream_wrappers();
+    swow_stream_php_wrapper_unhook();
     // unhook plain wrapper
     memcpy(&php_plain_files_wrapper, &swow_plain_files_wrapper_sync, sizeof(php_plain_files_wrapper));
     // unhook std ops
@@ -2857,6 +3343,9 @@ zend_result swow_stream_runtime_init(INIT_FUNC_ARGS)
     SWOW_STREAM_G(hooking_stdio_ops) = SWOW_G(ini.async_tty) || SWOW_G(ini.async_file);
     SWOW_STREAM_G(hooking_tty) = SWOW_G(ini.async_tty);
     SWOW_STREAM_G(hooking_plain_wrapper) = SWOW_G(ini.async_file);
+    swow_stream_native_socket_ops_discover();
+    zend_hash_init(&SWOW_STREAM_G(waiting_fds), 8, NULL, swow_stream_waiting_fd_dtor, 0);
+    SWOW_STREAM_G(hooking_native_socket_ops) = true;
     // prepare tty sockets (FIXME: Why won't Zend bzero() it when we are in ZTS?)
     memset(SWOW_STREAM_G(tty_sockets), 0, sizeof(SWOW_STREAM_G(tty_sockets)));
     cat_queue_init(&SWOW_STREAM_G(persistent_streams));
@@ -2898,6 +3387,8 @@ zend_result swow_stream_runtime_shutdown(INIT_FUNC_ARGS)
             cat_socket_close(socket);
         }
     }
+    SWOW_STREAM_G(hooking_native_socket_ops) = false;
+    zend_hash_destroy(&SWOW_STREAM_G(waiting_fds));
     SWOW_STREAM_G(hooking_plain_wrapper) = false;
     SWOW_STREAM_G(hooking_tty) = false;
     SWOW_STREAM_G(hooking_stdio_ops) = false;

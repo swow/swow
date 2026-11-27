@@ -88,6 +88,20 @@ typedef struct swow_netstream_data_s {
 #endif
 } swow_netstream_data_t;
 
+/* Wait on the event loop until a blocking read (POLLIN) or write (POLLOUT) on fd
+ * will not block; returns 1 when ready (or in error), 0 on timeout, -1 when the
+ * wait was cancelled or another coroutine already waits to read fd (CAT_ELOCKED) */
+SWOW_API int swow_stream_wait_fd(php_socket_t fd, int events, cat_timeout_t timeout);
+/* Whether another coroutine waits to read fd: a read now must be refused */
+SWOW_API bool swow_stream_fd_is_being_read(php_socket_t fd);
+SWOW_API void swow_stream_fd_update_busy_error(void);
+/* The blocking mode of fd, also while a wait holds it in O_NONBLOCK (libuv) */
+SWOW_API bool swow_stream_fd_is_blocking(php_socket_t fd);
+
+/* Let a stream that PHP opened around an existing socket wait on the event loop */
+SWOW_API void swow_stream_native_socket_adopt(php_stream *stream);
+SWOW_API void swow_stream_native_socket_adopt_zval(zval *zstream);
+
 zend_result swow_stream_module_init(INIT_FUNC_ARGS);
 zend_result swow_stream_runtime_init(INIT_FUNC_ARGS);
 zend_result swow_stream_runtime_shutdown(INIT_FUNC_ARGS);
@@ -97,6 +111,10 @@ CAT_GLOBALS_STRUCT_BEGIN(swow_stream) {
     bool hooking_stdio_ops;
     bool hooking_tty;
     bool hooking_plain_wrapper;
+    /* streams that PHP opens around an existing socket, see swow_stream_native_socket_adopt() */
+    bool hooking_native_socket_ops;
+    /* descriptors that coroutines wait for in swow_stream_wait_fd() */
+    HashTable waiting_fds;
     cat_socket_t *tty_sockets[3];
     cat_queue_t persistent_streams;
 } CAT_GLOBALS_STRUCT_END(swow_stream);

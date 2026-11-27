@@ -36,6 +36,7 @@
 #include "cat_work.h"
 #include "cat_time.h"
 #include "cat_socket.h"
+#include "swow_stream.h"
 
 // from main/streams/plain_wrapper.c @ 8330ca37edb41b5f34a0934c99e70e2d2a6ead71
 
@@ -1261,6 +1262,70 @@ SWOW_API php_stream *_swow_stream_fopen_from_pipe(FILE *file, const char *mode S
     return stream;
 }
 
+#ifndef PHP_WIN32
+/* {{{ pipes
+ * A pipe (popen(), proc_open(), exec() and its family, a FIFO, STDIN fed by a pipe)
+ * waits for data or for buffer space on the event loop, instead of blocking a
+ * thread of the pool for as long as the other side takes; long running commands
+ * used to occupy the pool and delay every file operation behind them.
+ * The descriptor keeps its blocking mode, since it may be shared with other
+ * processes, so the waits come first and the system calls then return at once:
+ * a read after POLLIN returns the available data, and a write of at most
+ * PIPE_BUF bytes after POLLOUT does not block (POSIX). A descriptor in
+ * non-blocking mode is called directly, as PHP does. */
+
+static ssize_t swow_fs_pipe_read(int fd, void *buffer, size_t size)
+{
+    ssize_t ret;
+
+    if (swow_stream_fd_is_being_read(fd)) {
+        swow_stream_fd_update_busy_error();
+        return -1;
+    }
+    if (swow_stream_fd_is_blocking(fd) && swow_stream_wait_fd(fd, POLLIN, CAT_TIMEOUT_FOREVER) < 0) {
+        cat_update_last_error_with_previous("Pipe read wait failed");
+        return -1;
+    }
+    ret = read(fd, buffer, size);
+    if (ret < 0) {
+        cat_update_last_error_of_syscall("Pipe read failed");
+    }
+    return ret;
+}
+
+static ssize_t swow_fs_pipe_write(int fd, const char *buffer, size_t length)
+{
+    size_t written = 0;
+
+    if (!swow_stream_fd_is_blocking(fd)) {
+        ssize_t ret = write(fd, buffer, length);
+        if (ret < 0) {
+            cat_update_last_error_of_syscall("Pipe write failed");
+        }
+        return ret;
+    }
+    while (written < length) {
+        size_t chunk = MIN(length - written, PIPE_BUF);
+        ssize_t ret;
+        if (swow_stream_wait_fd(fd, POLLOUT, CAT_TIMEOUT_FOREVER) < 0) {
+            cat_update_last_error_with_previous("Pipe write wait failed");
+            return written > 0 ? (ssize_t) written : -1;
+        }
+        ret = write(fd, buffer + written, chunk);
+        if (ret < 0) {
+            if (errno == EINTR) {
+                continue;
+            }
+            cat_update_last_error_of_syscall("Pipe write failed");
+            return written > 0 ? (ssize_t) written : -1;
+        }
+        written += ret;
+    }
+    return (ssize_t) written;
+}
+/* }}} */
+#endif
+
 static ssize_t swow_stdiop_fs_write(php_stream *stream, const char *buf, size_t count)
 {
     swow_stdio_stream_data *data = (swow_stdio_stream_data*)stream->abstract;
@@ -1269,7 +1334,14 @@ static ssize_t swow_stdiop_fs_write(php_stream *stream, const char *buf, size_t 
     assert(data != NULL);
 
     if (data->fd >= 0) {
-        bytes_written = cat_fs_write(data->fd, buf, PLAIN_WRAP_BUF_SIZE(count));
+#ifndef PHP_WIN32
+        if (data->is_pipe || data->is_process_pipe) {
+            bytes_written = swow_fs_pipe_write(data->fd, buf, PLAIN_WRAP_BUF_SIZE(count));
+        } else
+#endif
+        {
+            bytes_written = cat_fs_write(data->fd, buf, PLAIN_WRAP_BUF_SIZE(count));
+        }
         UPDATE_ERRNO_FROM_CAT();
         if (bytes_written < 0) {
             cat_errno_t cat_errno = cat_get_last_error_code();
@@ -1340,13 +1412,24 @@ static ssize_t swow_stdiop_fs_read(php_stream *stream, char *buf, size_t count)
             }
         }
 #endif
-        ret = cat_fs_read(data->fd, buf,  PLAIN_WRAP_BUF_SIZE(count));
-
-        if (ret == -1 && cat_get_last_error_code() == CAT_EINTR) {
-            /* Read was interrupted, retry once,
-               If read still fails, giveup with feof==0
-               so script can retry if desired */
+#ifndef PHP_WIN32
+        if (data->is_pipe || data->is_process_pipe) {
+            ret = swow_fs_pipe_read(data->fd, buf, PLAIN_WRAP_BUF_SIZE(count));
+            if (ret == -1 && cat_get_last_error_code() == CAT_EINTR) {
+                /* the same single retry as below */
+                ret = swow_fs_pipe_read(data->fd, buf, PLAIN_WRAP_BUF_SIZE(count));
+            }
+        } else
+#endif
+        {
             ret = cat_fs_read(data->fd, buf,  PLAIN_WRAP_BUF_SIZE(count));
+
+            if (ret == -1 && cat_get_last_error_code() == CAT_EINTR) {
+                /* Read was interrupted, retry once,
+                   If read still fails, giveup with feof==0
+                   so script can retry if desired */
+                ret = cat_fs_read(data->fd, buf,  PLAIN_WRAP_BUF_SIZE(count));
+            }
         }
 
         UPDATE_ERRNO_FROM_CAT();
@@ -1366,7 +1449,9 @@ static ssize_t swow_stdiop_fs_read(php_stream *stream, char *buf, size_t count)
                 }
 
                 /* TODO: Remove this special-case? */
-                if (cat_errno != CAT_EBADF) {
+                /* a read refused because another coroutine reads the same pipe
+                 * says nothing about the end of the stream of that coroutine */
+                if (cat_errno != CAT_EBADF && cat_errno != CAT_ELOCKED) {
                     stream->eof = 1;
                 }
             }
