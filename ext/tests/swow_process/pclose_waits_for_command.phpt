@@ -67,7 +67,7 @@ SchedulerProbe::assertYields(static function () use ($wait): void {
     Assert::same(fgets($pipe), 'x');
     Assert::same(pclose($pipe), 0);
 }, $wait, 'pclose() of a reader');
-SchedulerProbe::assertYields(static fn () => exec(command("echo 'x'; fclose(STDOUT); usleep({$wait} * 1000);")), $wait, 'exec() of a command that closed its output');
+SchedulerProbe::assertYields(static fn() => exec(command("echo 'x'; fclose(STDOUT); usleep({$wait} * 1000);")), $wait, 'exec() of a command that closed its output');
 echo "pclose() yields\n";
 
 // file operations of other coroutines go on while a command is closed

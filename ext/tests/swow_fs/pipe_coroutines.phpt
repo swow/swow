@@ -56,8 +56,8 @@ echo "file operations ran while the commands were waiting\n";
 // every way of running a command lets the other coroutines run
 $wait = 300;
 $sleep = "usleep({$wait} * 1000);";
-SchedulerProbe::assertYields(static fn () => exec(command($sleep . 'echo "x";')), $wait, 'exec()');
-SchedulerProbe::assertYields(static fn () => shell_exec(command($sleep . 'echo "x";')), $wait, 'shell_exec()');
+SchedulerProbe::assertYields(static fn() => exec(command($sleep . 'echo "x";')), $wait, 'exec()');
+SchedulerProbe::assertYields(static fn() => shell_exec(command($sleep . 'echo "x";')), $wait, 'shell_exec()');
 SchedulerProbe::assertYields(static function () use ($sleep): void {
     ob_start();
     system(command($sleep . 'echo "x";'));
@@ -109,8 +109,8 @@ while ($reader->isAlive()) {
     usleep(10 * 1000);
 }
 proc_close($process);
-Assert::same($jobs, array_map(static fn (int $i): string => "job {$i}", range(0, 39)));
-echo "first reader: ", count($jobs), " jobs\n";
+Assert::same($jobs, array_map(static fn(int $i): string => "job {$i}", range(0, 39)));
+echo 'first reader: ', count($jobs), " jobs\n";
 var_dump($second[0], str_contains($second[1], 'Descriptor is already being read by another coroutine'));
 ?>
 --EXPECT--

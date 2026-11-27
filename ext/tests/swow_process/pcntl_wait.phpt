@@ -77,9 +77,9 @@ echo json_encode($swow), "\n";
 // a master process waits for one of its workers while its other coroutines keep serving
 $wait = 300;
 $pid = forkWorker($wait, 0);
-SchedulerProbe::assertYields(static fn () => Assert::same(pcntl_waitpid($pid, $status), $pid), $wait, 'pcntl_waitpid()');
+SchedulerProbe::assertYields(static fn() => Assert::same(pcntl_waitpid($pid, $status), $pid), $wait, 'pcntl_waitpid()');
 $pid = forkWorker($wait, 0);
-SchedulerProbe::assertYields(static fn () => Assert::same(pcntl_wait($status), $pid), $wait, 'pcntl_wait()');
+SchedulerProbe::assertYields(static fn() => Assert::same(pcntl_wait($status), $pid), $wait, 'pcntl_wait()');
 echo "the waits yield\n";
 
 /*
@@ -100,7 +100,7 @@ foreach ($workers as [$sleepMs, $exitCode]) {
 }
 WaitReference::wait($wr);
 Assert::same($reaped, [12, 13, 11]);
-echo "reaped in exit order: ", json_encode($reaped), "\n";
+echo 'reaped in exit order: ', json_encode($reaped), "\n";
 
 // a coroutine waiting for any child while another waits for a particular one
 $first = forkWorker(100, 21);
@@ -131,7 +131,7 @@ Assert::same($signals, 1);
 pcntl_signal(SIGCHLD, SIG_DFL);
 // back to the default disposition, the wait yields again
 $pid = forkWorker($wait, 0);
-SchedulerProbe::assertYields(static fn () => Assert::same(pcntl_waitpid($pid, $status), $pid), $wait, 'pcntl_waitpid() after SIG_DFL');
+SchedulerProbe::assertYields(static fn() => Assert::same(pcntl_waitpid($pid, $status), $pid), $wait, 'pcntl_waitpid() after SIG_DFL');
 echo "pcntl_signal(SIGCHLD): ok\n";
 ?>
 --EXPECT--

@@ -31,22 +31,31 @@ function probe(): array
 
     // a local pair, as a process talks to its helper
     [$a, $b] = pair(SOCK_STREAM);
-    $results['write'] = call(static fn () => socket_write($a, "hello\nline two\r\nrest"));
-    $results['read line'] = call(static fn () => socket_read($b, 100, PHP_NORMAL_READ));
-    $results['read line cr'] = call(static fn () => socket_read($b, 100, PHP_NORMAL_READ));
-    $results['read line lf after cr'] = call(static fn () => socket_read($b, 100, PHP_NORMAL_READ));
-    $results['read binary'] = call(static fn () => socket_read($b, 2));
-    $results['read rest'] = call(static fn () => socket_read($b, 100));
-    $results['write length'] = call(static fn () => socket_write($a, 'abcdef', 3));
-    $results['write empty'] = call(static fn () => socket_write($a, ''));
-    $results['send'] = call(static fn () => socket_send($a, 'xyz', 10, 0));
-    $results['recv peek'] = call(static function () use ($b) { $r = socket_recv($b, $data, 2, MSG_PEEK); return [$r, $data]; });
-    $results['recv waitall'] = call(static function () use ($b) { $r = socket_recv($b, $data, 6, MSG_WAITALL); return [$r, $data]; });
+    $results['write'] = call(static fn() => socket_write($a, "hello\nline two\r\nrest"));
+    $results['read line'] = call(static fn() => socket_read($b, 100, PHP_NORMAL_READ));
+    $results['read line cr'] = call(static fn() => socket_read($b, 100, PHP_NORMAL_READ));
+    $results['read line lf after cr'] = call(static fn() => socket_read($b, 100, PHP_NORMAL_READ));
+    $results['read binary'] = call(static fn() => socket_read($b, 2));
+    $results['read rest'] = call(static fn() => socket_read($b, 100));
+    $results['write length'] = call(static fn() => socket_write($a, 'abcdef', 3));
+    $results['write empty'] = call(static fn() => socket_write($a, ''));
+    $results['send'] = call(static fn() => socket_send($a, 'xyz', 10, 0));
+    $results['recv peek'] = call(static function () use ($b) {
+        $r = socket_recv($b, $data, 2, MSG_PEEK);
+        return [$r, $data];
+    });
+    $results['recv waitall'] = call(static function () use ($b) {
+        $r = socket_recv($b, $data, 6, MSG_WAITALL);
+        return [$r, $data];
+    });
 
     // a read timeout of the socket
     socket_set_option($b, SOL_SOCKET, SO_RCVTIMEO, ['sec' => 0, 'usec' => 100000]);
-    $results['read timeout'] = call(static fn () => socket_read($b, 10));
-    $results['recv timeout'] = call(static function () use ($b) { $r = socket_recv($b, $data, 10, 0); return [$r, $data]; });
+    $results['read timeout'] = call(static fn() => socket_read($b, 10));
+    $results['recv timeout'] = call(static function () use ($b) {
+        $r = socket_recv($b, $data, 10, 0);
+        return [$r, $data];
+    });
     /*
      * MSG_WAITALL that times out after a part of the data: Linux returns that part, macOS
      * fails with EAGAIN and leaves it in the socket. Swow gathers the data as it arrives, as
@@ -62,16 +71,22 @@ function probe(): array
 
     // a non-blocking socket without data
     socket_set_nonblock($b);
-    $results['non-blocking read'] = call(static fn () => socket_read($b, 10));
+    $results['non-blocking read'] = call(static fn() => socket_read($b, 10));
     // (PHP_NORMAL_READ on a non-blocking socket without data spins forever, natively as well)
-    $results['dontwait recv'] = call(static function () use ($a) { $r = socket_recv($a, $data, 10, MSG_DONTWAIT); return [$r, $data]; });
+    $results['dontwait recv'] = call(static function () use ($a) {
+        $r = socket_recv($a, $data, 10, MSG_DONTWAIT);
+        return [$r, $data];
+    });
     socket_set_block($b);
 
     // the peer goes away
     socket_close($a);
-    $results['read eof'] = call(static fn () => socket_read($b, 10));
-    $results['recv eof'] = call(static function () use ($b) { $r = socket_recv($b, $data, 10, 0); return [$r, $data]; });
-    $results['write closed'] = call(static fn () => socket_write($b, 'x'));
+    $results['read eof'] = call(static fn() => socket_read($b, 10));
+    $results['recv eof'] = call(static function () use ($b) {
+        $r = socket_recv($b, $data, 10, 0);
+        return [$r, $data];
+    });
+    $results['write closed'] = call(static fn() => socket_write($b, 'x'));
     socket_close($b);
 
     // TCP on the loopback
@@ -80,11 +95,11 @@ function probe(): array
     socket_listen($server);
     socket_getsockname($server, $address, $port);
     socket_set_nonblock($server);
-    $results['accept nothing'] = call(static fn () => socket_accept($server));
+    $results['accept nothing'] = call(static fn() => socket_accept($server));
     socket_set_block($server);
     $client = socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
-    $results['connect'] = call(static fn () => socket_connect($client, '127.0.0.1', $port));
-    $results['accept'] = call(static fn () => socket_accept($server) instanceof Socket);
+    $results['connect'] = call(static fn() => socket_connect($client, '127.0.0.1', $port));
+    $results['accept'] = call(static fn() => socket_accept($server) instanceof Socket);
     // a second connection, for a select on several sockets
     $second = socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
     socket_connect($second, '127.0.0.1', $port);
@@ -121,14 +136,14 @@ function probe(): array
     // connecting to a port without a listener
     socket_close($server);
     $refused = socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
-    $results['connect refused'] = call(static fn () => socket_connect($refused, '127.0.0.1', $port));
+    $results['connect refused'] = call(static fn() => socket_connect($refused, '127.0.0.1', $port));
 
     // UDP datagrams
     $udp = socket_create(AF_INET, SOCK_DGRAM, SOL_UDP);
     socket_bind($udp, '127.0.0.1', 0);
     socket_getsockname($udp, $address, $udpPort);
     $sender = socket_create(AF_INET, SOCK_DGRAM, SOL_UDP);
-    $results['sendto'] = call(static fn () => socket_sendto($sender, 'datagram', 8, 0, '127.0.0.1', $udpPort));
+    $results['sendto'] = call(static fn() => socket_sendto($sender, 'datagram', 8, 0, '127.0.0.1', $udpPort));
     $results['recvfrom'] = call(static function () use ($udp) {
         $r = socket_recvfrom($udp, $data, 100, 0, $from, $fromPort);
         return [$r, $data, $from];
@@ -141,7 +156,7 @@ function probe(): array
 
     // messages
     [$a, $b] = pair(SOCK_DGRAM);
-    $results['sendmsg'] = call(static fn () => socket_sendmsg($a, ['iov' => ['mes', 'sage']], 0));
+    $results['sendmsg'] = call(static fn() => socket_sendmsg($a, ['iov' => ['mes', 'sage']], 0));
     $results['recvmsg'] = call(static function () use ($b) {
         $message = ['buffer_size' => 100];
         $r = socket_recvmsg($b, $message, 0);

@@ -81,7 +81,7 @@ $firstRound = array_slice($arrivals, 0, $workers);
 sort($firstRound);
 Assert::same($firstRound, range(0, $workers - 1), 'the workers must be read concurrently: ' . json_encode($arrivals));
 Assert::greaterThan($measured['ticks'], 10, 'the ticker must run while the supervisor waits');
-echo "workers: ", count($outputs), "\n";
+echo 'workers: ', count($outputs), "\n";
 ?>
 --EXPECT--
 {"stream_type":"generic_socket","output":"job 0 step 1\njob 0 step 2\njob 0 step 3\n","exit":0}

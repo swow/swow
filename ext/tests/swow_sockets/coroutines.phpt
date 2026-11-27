@@ -60,7 +60,7 @@ if ($worker === 0) {
         sleep(30);
         Swow\Process\kill(getmypid(), SIGKILL);
     });
-    for (;;) {
+    while (true) {
         $connection = socket_accept($server);
         if ($connection !== false) {
             Coroutine::run('serve', $connection, 'worker');
@@ -123,9 +123,9 @@ for ($client = 0; $client < 4; $client++) {
 WaitReference::wait($wr);
 ksort($replies);
 foreach ($replies as $client => $lines) {
-    Assert::same($lines, array_map(static fn (int $line): string => "CLIENT {$client} LINE {$line} by server", range(0, 4)));
+    Assert::same($lines, array_map(static fn(int $line): string => "CLIENT {$client} LINE {$line} by server", range(0, 4)));
 }
-echo "line server: ", count($replies), " clients\n";
+echo 'line server: ', count($replies), " clients\n";
 
 // a payload far larger than the socket buffers between two coroutines of one thread
 Assert::true(socket_create_pair(AF_UNIX, SOCK_STREAM, 0, $pair));
@@ -166,11 +166,11 @@ $later = static function (callable $action) use ($wait): void {
         $action();
     });
 };
-$later(static fn () => socket_write($a, "data\n"));
-SchedulerProbe::assertYields(static fn () => Assert::same(socket_read($b, 100), "data\n"), $wait, 'socket_read()');
-$later(static fn () => socket_write($a, "line\n"));
-SchedulerProbe::assertYields(static fn () => Assert::same(socket_read($b, 100, PHP_NORMAL_READ), "line\n"), $wait, 'socket_read() of a line');
-$later(static fn () => socket_send($a, 'abcd', 4, 0));
+$later(static fn() => socket_write($a, "data\n"));
+SchedulerProbe::assertYields(static fn() => Assert::same(socket_read($b, 100), "data\n"), $wait, 'socket_read()');
+$later(static fn() => socket_write($a, "line\n"));
+SchedulerProbe::assertYields(static fn() => Assert::same(socket_read($b, 100, PHP_NORMAL_READ), "line\n"), $wait, 'socket_read() of a line');
+$later(static fn() => socket_send($a, 'abcd', 4, 0));
 SchedulerProbe::assertYields(static function () use ($b): void {
     Assert::same(socket_recv($b, $data, 4, 0), 4);
 }, $wait, 'socket_recv()');
@@ -183,7 +183,7 @@ SchedulerProbe::assertYields(static function () use ($b): void {
     Assert::same(socket_recv($b, $data, 4, MSG_WAITALL), 4);
     Assert::same($data, 'abcd');
 }, $wait, 'socket_recv() with MSG_WAITALL');
-$later(static fn () => socket_write($a, 'ready'));
+$later(static fn() => socket_write($a, 'ready'));
 SchedulerProbe::assertYields(static function () use ($b): void {
     $read = [$b];
     $write = $except = null;
@@ -209,8 +209,8 @@ socket_close($a);
 socket_close($b);
 
 [$server, $port] = listener();
-$later(static fn () => socket_close(connectTo($port)));
-SchedulerProbe::assertYields(static fn () => Assert::isInstanceOf(socket_accept($server), Socket::class), $wait, 'socket_accept()');
+$later(static fn() => socket_close(connectTo($port)));
+SchedulerProbe::assertYields(static fn() => Assert::isInstanceOf(socket_accept($server), Socket::class), $wait, 'socket_accept()');
 socket_close($server);
 
 $udp = socket_create(AF_INET, SOCK_DGRAM, SOL_UDP);

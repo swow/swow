@@ -27,14 +27,14 @@ Coroutine::run(static function () use ($peer): void {
     usleep(200 * 1000);
     fwrite($peer, "request\n");
 });
-$line = SchedulerProbe::assertYields(static fn () => fgets($inherited), 200, 'fgets() on php://fd');
+$line = SchedulerProbe::assertYields(static fn() => fgets($inherited), 200, 'fgets() on php://fd');
 echo 'read: ', $line;
 
 fwrite($inherited, "response\n");
 echo 'peer read: ', fgets($peer);
 
 stream_set_timeout($inherited, 0, 200 * 1000);
-$data = SchedulerProbe::assertYields(static fn () => fread($inherited, 1), 200, 'fread() on php://fd waiting for its timeout');
+$data = SchedulerProbe::assertYields(static fn() => fread($inherited, 1), 200, 'fread() on php://fd waiting for its timeout');
 var_dump($data === '' || $data === false, stream_get_meta_data($inherited)['timed_out']);
 ?>
 --EXPECT--

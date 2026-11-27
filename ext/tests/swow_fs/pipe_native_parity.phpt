@@ -33,7 +33,10 @@ function probe(): array
 
     // a large output through every function
     $big = command('echo str_repeat("0123456789abcdef", 65536);');
-    $results['big exec'] = md5(implode("\n", (function () use ($big) { exec($big, $o); return $o; })()));
+    $results['big exec'] = md5(implode("\n", (static function () use ($big) {
+        exec($big, $o);
+        return $o;
+    })()));
     $results['big shell_exec'] = md5(shell_exec($big));
 
     // popen in both directions

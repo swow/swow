@@ -20,7 +20,7 @@ use Swow\Coroutine;
  * child, even though their SIGCHLD arrives while the supervisor is waiting.
  */
 $php = escapeshellarg(PHP_BINARY) . ' -n -r ';
-$settle = static fn () => usleep(100 * 1000); // let SIGCHLD reach the event loop first
+$settle = static fn() => usleep(100 * 1000); // let SIGCHLD reach the event loop first
 
 $worker = proc_open([PHP_BINARY, '-n', '-r', 'usleep(1500 * 1000); exit(9);'], [], $pipes);
 $workerExitCode = null;

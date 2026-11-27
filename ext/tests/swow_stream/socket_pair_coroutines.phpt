@@ -44,7 +44,7 @@ WaitReference::wait($wr);
 Assert::same(count($received), $producers * $messagesPerProducer);
 Assert::same(count(array_unique($received)), count($received));
 Assert::greaterThan($measured['ticks'], 0, 'the ticker must run while the consumer waits');
-echo "messages: ", count($received), "\n";
+echo 'messages: ', count($received), "\n";
 
 /*
  * A payload far larger than the socket buffer: the writer fills the buffer and
@@ -68,7 +68,7 @@ echo "payload: ok\n";
 
 // a reader waiting for its read timeout lets the other coroutines run
 stream_set_timeout($consumerEnd, 0, 300 * 1000);
-$data = SchedulerProbe::assertYields(static fn () => fread($consumerEnd, 1), 300, 'fread() waiting for its timeout');
+$data = SchedulerProbe::assertYields(static fn() => fread($consumerEnd, 1), 300, 'fread() waiting for its timeout');
 Assert::true($data === '' || $data === false, 'a timed out read returns "" (PHP 8.0) or false');
 Assert::true(stream_get_meta_data($consumerEnd)['timed_out']);
 echo "timeout: ok\n";
@@ -79,7 +79,7 @@ Coroutine::run(static function () use ($producerEnd): void {
     fwrite($producerEnd, "reply\n");
 });
 stream_set_timeout($consumerEnd, 5);
-$line = SchedulerProbe::assertYields(static fn () => fgets($consumerEnd), 200, 'fgets() waiting for a late reply');
+$line = SchedulerProbe::assertYields(static fn() => fgets($consumerEnd), 200, 'fgets() waiting for a late reply');
 echo 'reply: ', $line;
 
 // the peer goes away while a reader waits
@@ -87,7 +87,7 @@ Coroutine::run(static function () use ($producerEnd): void {
     usleep(200 * 1000);
     fclose($producerEnd);
 });
-$line = SchedulerProbe::assertYields(static fn () => fgets($consumerEnd), 200, 'fgets() waiting for the peer to close');
+$line = SchedulerProbe::assertYields(static fn() => fgets($consumerEnd), 200, 'fgets() waiting for the peer to close');
 var_dump($line, feof($consumerEnd));
 ?>
 --EXPECT--
