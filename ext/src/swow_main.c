@@ -894,6 +894,8 @@ SWOW_API const char *swow_extra_version(void)
 
 static const zend_module_dep swow_module_deps[] = {
     ZEND_MOD_CONFLICTS("swoole")
+    /* functions of these modules are hooked at module init */
+    ZEND_MOD_OPTIONAL("pcntl")
 #ifdef CAT_HAVE_CURL
     ZEND_MOD_OPTIONAL("curl")
 #endif

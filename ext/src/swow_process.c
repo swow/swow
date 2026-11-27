@@ -1076,6 +1076,164 @@ static const zend_function_entry swow_process_functions[] = {
 
 /* }}} */
 
+/* {{{ pcntl_wait() and pcntl_waitpid() */
+
+#ifdef CAT_OS_UNIX_LIKE
+
+# include "swow_hook.h"
+
+# include <signal.h>
+# include <sys/wait.h>
+
+/* The blocking waits of ext/pcntl suspend only the calling coroutine: libcat waits for SIGCHLD
+ * on the event loop and reaps only the children that the call asks for, with the same pid,
+ * options and rusage as the native call.
+ *
+ * | call                                          | handled by                     |
+ * | --------------------------------------------- | ------------------------------ |
+ * | WNOHANG                                       | native (it never blocks)       |
+ * | SIGCHLD ignored, or caught by pcntl_signal()  | native, see below              |
+ * | otherwise                                     | libcat on the event loop       |
+ * | libcat finds no child, or invalid options     | native, which fails the same   |
+ * |                                               | way at once and records        |
+ * |                                               | pcntl_get_last_error()         |
+ *
+ * libuv catches SIGCHLD with its own handler and resets it to SIG_DFL once no watcher is left,
+ * so the event loop would take SIGCHLD away from a pcntl_signal() handler, and from SIG_IGN,
+ * which makes the kernel reap children by itself. PHP (pcntl and zend signals) installs its
+ * handlers with SA_SIGINFO while libuv does not, which tells them apart; the default action
+ * restored by pcntl_signal(SIGCHLD, SIG_DFL) is shareable again.
+ * pcntl_waitid() (PHP 8.4+) still blocks: libcat has no waitid() yet. */
+
+static zif_handler swow_original_pcntl_wait = NULL;
+static zif_handler swow_original_pcntl_waitpid = NULL;
+
+static bool swow_pcntl_sigchld_is_shareable(void)
+{
+    struct sigaction action;
+
+    if (sigaction(SIGCHLD, NULL, &action) != 0) {
+        return false;
+    }
+    if (action.sa_handler == SIG_DFL) {
+        return true;
+    }
+    if (action.sa_handler == SIG_IGN) {
+        return false;
+    }
+    if (action.sa_flags & SA_SIGINFO) {
+# ifdef ZEND_SIGNALS
+        /* With zend signals the OS handler always defers to SIGG(handlers), even after
+         * pcntl_signal(SIGCHLD, SIG_DFL), which leaves the default action there. An entry
+         * that pcntl never set has no flags, and the handler then belongs to someone else. */
+        const zend_signal_entry_t *entry = &SIGG(handlers)[SIGCHLD - 1];
+        return (entry->flags & SA_SIGINFO) && entry->handler == (void *) SIG_DFL;
+# else
+        return false;
+# endif
+    }
+    /* a handler without SA_SIGINFO is the one of libuv: another coroutine is waiting already */
+    return true;
+}
+
+/* same keys and order as PHP_RUSAGE_TO_ARRAY() of ext/pcntl */
+static void swow_pcntl_rusage_to_array(const struct rusage *rusage, zval *z_rusage)
+{
+# define SWOW_PCNTL_RUSAGE_PARA(field) add_assoc_long(z_rusage, #field, rusage->field)
+    SWOW_PCNTL_RUSAGE_PARA(ru_oublock);
+    SWOW_PCNTL_RUSAGE_PARA(ru_inblock);
+    SWOW_PCNTL_RUSAGE_PARA(ru_msgsnd);
+    SWOW_PCNTL_RUSAGE_PARA(ru_msgrcv);
+    SWOW_PCNTL_RUSAGE_PARA(ru_maxrss);
+    SWOW_PCNTL_RUSAGE_PARA(ru_ixrss);
+    SWOW_PCNTL_RUSAGE_PARA(ru_idrss);
+    SWOW_PCNTL_RUSAGE_PARA(ru_minflt);
+    SWOW_PCNTL_RUSAGE_PARA(ru_majflt);
+    SWOW_PCNTL_RUSAGE_PARA(ru_nsignals);
+    SWOW_PCNTL_RUSAGE_PARA(ru_nvcsw);
+    SWOW_PCNTL_RUSAGE_PARA(ru_nivcsw);
+    SWOW_PCNTL_RUSAGE_PARA(ru_nswap);
+    SWOW_PCNTL_RUSAGE_PARA(ru_utime.tv_usec);
+    SWOW_PCNTL_RUSAGE_PARA(ru_utime.tv_sec);
+    SWOW_PCNTL_RUSAGE_PARA(ru_stime.tv_usec);
+    SWOW_PCNTL_RUSAGE_PARA(ru_stime.tv_sec);
+# undef SWOW_PCNTL_RUSAGE_PARA
+}
+
+static void swow_pcntl_wait_common(INTERNAL_FUNCTION_PARAMETERS, zend_long pid, zval *z_status, zend_long options, zval *z_rusage, zif_handler original_handler)
+{
+    struct rusage rusage;
+    int status;
+    cat_pid_t child_id;
+
+    if ((options & WNOHANG) || !swow_pcntl_sigchld_is_shareable()) {
+        original_handler(INTERNAL_FUNCTION_PARAM_PASSTHRU);
+        return;
+    }
+
+    status = (int) zval_get_long(z_status);
+    if (z_rusage != NULL) {
+        z_rusage = zend_try_array_init(z_rusage);
+        if (z_rusage == NULL) {
+            RETURN_THROWS();
+        }
+        memset(&rusage, 0, sizeof(rusage));
+    }
+
+    child_id = cat_os_wait4((cat_pid_t) pid, &status, (int) options, z_rusage != NULL ? &rusage : NULL);
+    if (child_id < 0) {
+        cat_errno_t error = cat_get_last_error_code();
+        if (error == CAT_ECHILD || error == CAT_EINVAL) {
+            /* nothing ran since the kernel refused the wait */
+            original_handler(INTERNAL_FUNCTION_PARAM_PASSTHRU);
+            return;
+        }
+        /* the coroutine was cancelled (an exception may be pending): fail as an interrupted
+         * native wait does, leaving the status untouched */
+    } else if (z_rusage != NULL) {
+        swow_pcntl_rusage_to_array(&rusage, z_rusage);
+    }
+
+    ZEND_TRY_ASSIGN_REF_LONG(z_status, status);
+
+    RETURN_LONG((zend_long) child_id);
+}
+
+static PHP_FUNCTION(swow_pcntl_waitpid)
+{
+    zend_long pid, options = 0;
+    zval *z_status = NULL, *z_rusage = NULL;
+
+    ZEND_PARSE_PARAMETERS_START(2, 4)
+        Z_PARAM_LONG(pid)
+        Z_PARAM_ZVAL(z_status)
+        Z_PARAM_OPTIONAL
+        Z_PARAM_LONG(options)
+        Z_PARAM_ZVAL(z_rusage)
+    ZEND_PARSE_PARAMETERS_END();
+
+    swow_pcntl_wait_common(INTERNAL_FUNCTION_PARAM_PASSTHRU, pid, z_status, options, z_rusage, swow_original_pcntl_waitpid);
+}
+
+static PHP_FUNCTION(swow_pcntl_wait)
+{
+    zend_long options = 0;
+    zval *z_status = NULL, *z_rusage = NULL;
+
+    ZEND_PARSE_PARAMETERS_START(1, 3)
+        Z_PARAM_ZVAL(z_status)
+        Z_PARAM_OPTIONAL
+        Z_PARAM_LONG(options)
+        Z_PARAM_ZVAL(z_rusage)
+    ZEND_PARSE_PARAMETERS_END();
+
+    swow_pcntl_wait_common(INTERNAL_FUNCTION_PARAM_PASSTHRU, -1, z_status, options, z_rusage, swow_original_pcntl_wait);
+}
+
+#endif /* CAT_OS_UNIX_LIKE */
+
+/* }}} */
+
 /* {{{ module init */
 
 zend_result swow_process_runtime_shutdown(INIT_FUNC_ARGS)
@@ -1134,6 +1292,12 @@ zend_result swow_process_module_init(INIT_FUNC_ARGS)
     if (zend_register_functions(NULL, swow_process_functions, NULL, MODULE_PERSISTENT) != SUCCESS) {
         return FAILURE;
     }
+
+#ifdef CAT_OS_UNIX_LIKE
+    /* ext/pcntl is optional, and loaded before Swow when present (see swow_module_deps) */
+    (void) swow_hook_internal_function_handler_ex(ZEND_STRL("pcntl_wait"), PHP_FN(swow_pcntl_wait), &swow_original_pcntl_wait);
+    (void) swow_hook_internal_function_handler_ex(ZEND_STRL("pcntl_waitpid"), PHP_FN(swow_pcntl_waitpid), &swow_original_pcntl_waitpid);
+#endif
 
     return SUCCESS;
 }
