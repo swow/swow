@@ -41,6 +41,7 @@
 #include "swow_websocket.h"
 #include "swow_proc_open.h"
 #include "swow_process.h"
+#include "swow_sockets.h"
 #include "swow_shared_object.h"
 #include "swow_modules.h"
 #include "swow_spsc_queue.h"
@@ -296,6 +297,7 @@ PHP_MINIT_FUNCTION(swow)
         swow_websocket_module_init,
         swow_proc_open_module_init,
         swow_process_module_init,
+        swow_sockets_module_init,
 #ifdef CAT_HAVE_CURL
         swow_curl_module_init,
 #endif
@@ -896,6 +898,7 @@ static const zend_module_dep swow_module_deps[] = {
     ZEND_MOD_CONFLICTS("swoole")
     /* functions of these modules are hooked at module init */
     ZEND_MOD_OPTIONAL("pcntl")
+    ZEND_MOD_OPTIONAL("sockets")
 #ifdef CAT_HAVE_CURL
     ZEND_MOD_OPTIONAL("curl")
 #endif

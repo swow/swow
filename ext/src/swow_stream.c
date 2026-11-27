@@ -1869,23 +1869,10 @@ SWOW_API bool swow_stream_fd_is_blocking(php_socket_t fd)
 #endif
 }
 
-SWOW_API int swow_stream_wait_fd(php_socket_t fd, int events, cat_timeout_t timeout)
+SWOW_API void swow_stream_fd_wait_begin(php_socket_t fd, bool reading)
 {
     swow_stream_waiting_fd_t *waiting = swow_stream_waiting_fd_find(fd);
-    bool reading = !(events & POLLOUT);
-    cat_msec_t deadline;
-    int result;
 
-    if (reading && waiting != NULL && waiting->readers > 0) {
-        swow_stream_fd_update_busy_error();
-        return -1;
-    }
-    if (php_pollfd_for_ms(fd, events, 0) != 0) {
-        return 1;
-    }
-    if (timeout == 0) {
-        return 0;
-    }
     if (waiting == NULL) {
         waiting = (swow_stream_waiting_fd_t *) emalloc(sizeof(*waiting));
 #ifndef PHP_WIN32
@@ -1902,7 +1889,49 @@ SWOW_API int swow_stream_wait_fd(php_socket_t fd, int events, cat_timeout_t time
     } else {
         waiting->writers++;
     }
+}
 
+SWOW_API void swow_stream_fd_wait_end(php_socket_t fd, bool reading)
+{
+    swow_stream_waiting_fd_t *waiting = swow_stream_waiting_fd_find(fd);
+
+    ZEND_ASSERT(waiting != NULL);
+    if (reading) {
+        waiting->readers--;
+    } else {
+        waiting->writers--;
+    }
+    if (waiting->readers == 0 && waiting->writers == 0) {
+#ifndef PHP_WIN32
+        if (waiting->flags != -1 && !(waiting->flags & O_NONBLOCK)) {
+            int current = fcntl(fd, F_GETFL);
+            if (current != -1 && (current & O_NONBLOCK)) {
+                (void) fcntl(fd, F_SETFL, current & ~O_NONBLOCK);
+            }
+        }
+#endif
+        zend_hash_index_del(&SWOW_STREAM_G(waiting_fds), (zend_ulong) fd);
+    }
+}
+
+SWOW_API int swow_stream_wait_fd_ex(php_socket_t fd, int events, cat_timeout_t timeout, bool exclusive_reader)
+{
+    bool reading = !(events & POLLOUT);
+    cat_msec_t deadline;
+    int result;
+
+    if (exclusive_reader && reading && swow_stream_fd_is_being_read(fd)) {
+        swow_stream_fd_update_busy_error();
+        return -1;
+    }
+    if (php_pollfd_for_ms(fd, events, 0) != 0) {
+        return 1;
+    }
+    if (timeout == 0) {
+        return 0;
+    }
+
+    swow_stream_fd_wait_begin(fd, reading);
     deadline = timeout >= 0 ? cat_time_msec() + (cat_msec_t) timeout : 0;
     for (;;) {
         cat_pollfd_events_t revents;
@@ -1932,25 +1961,14 @@ SWOW_API int swow_stream_wait_fd(php_socket_t fd, int events, cat_timeout_t time
             timeout = (cat_timeout_t) (deadline - now);
         }
     }
-
-    if (reading) {
-        waiting->readers--;
-    } else {
-        waiting->writers--;
-    }
-    if (waiting->readers == 0 && waiting->writers == 0) {
-#ifndef PHP_WIN32
-        if (waiting->flags != -1 && !(waiting->flags & O_NONBLOCK)) {
-            int current = fcntl(fd, F_GETFL);
-            if (current != -1 && (current & O_NONBLOCK)) {
-                (void) fcntl(fd, F_SETFL, current & ~O_NONBLOCK);
-            }
-        }
-#endif
-        zend_hash_index_del(&SWOW_STREAM_G(waiting_fds), (zend_ulong) fd);
-    }
+    swow_stream_fd_wait_end(fd, reading);
 
     return result;
+}
+
+SWOW_API int swow_stream_wait_fd(php_socket_t fd, int events, cat_timeout_t timeout)
+{
+    return swow_stream_wait_fd_ex(fd, events, timeout, true);
 }
 /* }}} */
 
@@ -2042,7 +2060,7 @@ static ssize_t swow_stream_native_socket_read(php_stream *stream, char *buffer, 
  * AF_UNIX) block in a large send() even with MSG_DONTWAIT, so the write is cut
  * to that size there, and the stream layer writes the rest after another wait.
  * Linux reports 1 and honors MSG_DONTWAIT, nothing is cut there. */
-static size_t swow_stream_native_socket_send_limit(php_socket_t fd)
+SWOW_API size_t swow_stream_fd_send_limit(php_socket_t fd)
 {
 #if defined(SO_SNDLOWAT) && !defined(PHP_WIN32)
     int lowat = 0;
@@ -2090,7 +2108,7 @@ static ssize_t swow_stream_native_socket_write(php_stream *stream, const char *b
         sock->timeout.tv_sec = 0;
         sock->timeout.tv_usec = 0;
     } else {
-        size_t limit = swow_stream_native_socket_send_limit(sock->socket);
+        size_t limit = swow_stream_fd_send_limit(sock->socket);
         if (limit > 0 && length > limit) {
             length = limit;
         }

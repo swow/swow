@@ -428,6 +428,7 @@ EOF
     swow_http.c \
     swow_websocket.c \
     swow_proc_open.c \
+    swow_sockets.c \
     swow_process.c \
     swow_thread.c \
     swow_shared_object.c \

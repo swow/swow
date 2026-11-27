@@ -92,6 +92,14 @@ typedef struct swow_netstream_data_s {
  * will not block; returns 1 when ready (or in error), 0 on timeout, -1 when the
  * wait was cancelled or another coroutine already waits to read fd (CAT_ELOCKED) */
 SWOW_API int swow_stream_wait_fd(php_socket_t fd, int events, cat_timeout_t timeout);
+/* The same, but readers of fd that have no buffer of their own (ext/sockets) may wait together */
+SWOW_API int swow_stream_wait_fd_ex(php_socket_t fd, int events, cat_timeout_t timeout, bool exclusive_reader);
+/* Register a wait on fd made by other means (cat_poll()), so that its blocking mode, which
+ * libuv turns off while it polls, is restored once the last wait on fd ends */
+SWOW_API void swow_stream_fd_wait_begin(php_socket_t fd, bool reading);
+SWOW_API void swow_stream_fd_wait_end(php_socket_t fd, bool reading);
+/* The size that a send() on fd queues for sure after POLLOUT, 0 when the whole write does */
+SWOW_API size_t swow_stream_fd_send_limit(php_socket_t fd);
 /* Whether another coroutine waits to read fd: a read now must be refused */
 SWOW_API bool swow_stream_fd_is_being_read(php_socket_t fd);
 SWOW_API void swow_stream_fd_update_busy_error(void);
