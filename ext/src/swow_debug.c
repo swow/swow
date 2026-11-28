@@ -577,15 +577,24 @@ static int swow_debug_ext_stmt_handler(zend_execute_data *execute_data)
 static void swow_debug_ext_stmt_interrupt_function(zend_execute_data *execute_data)
 {
     bool rearm_sampler = false;
+    uint64_t delay;
 
+    /* The profiler only counts interrupts the sampler requested; the watchdog
+     * and thread kill share vm_interrupt and must not add samples. */
+    if (SWOW_G(runtime_state) == SWOW_RUNTIME_STATE_RUNNING && swow_debug_sampler_acknowledge(&delay) &&
+        swow_debug_profiler_is_running()) {
+        swow_debug_profiler_record(delay);
+        rearm_sampler = true;
+    }
     if (SWOW_G(runtime_state) == SWOW_RUNTIME_STATE_RUNNING && SWOW_DEBUG_G(sampler) != NULL &&
         !(swow_coroutine_get_current()->coroutine.flags & SWOW_COROUTINE_FLAG_DEBUGGING)) {
         /* Re-arming vm_interrupt here can re-enter the VM without executing an
          * opcode. Pause sampling while callbacks run, then wait a full interval. */
         swow_debug_sampler_set_armed(false);
         (void) swow_debug_call_extended_statement_handlers();
-        if (cat_queue_empty(&SWOW_DEBUG_G(extended_statement_handlers))) {
+        if (cat_queue_empty(&SWOW_DEBUG_G(extended_statement_handlers)) && !swow_debug_profiler_is_running()) {
             (void) swow_debug_sampler_stop();
+            rearm_sampler = false;
         } else {
             rearm_sampler = true;
         }
@@ -606,7 +615,7 @@ zend_result swow_debug_module_init(INIT_FUNC_ARGS)
     if (zend_register_functions(NULL, swow_debug_functions, NULL, type) != SUCCESS) {
         return FAILURE;
     }
-    if (swow_debug_observe_module_init(type) != SUCCESS) {
+    if (swow_debug_observe_module_init(type) != SUCCESS || swow_debug_profiler_module_init(type) != SUCCESS) {
         return FAILURE;
     }
 
@@ -631,6 +640,7 @@ zend_result swow_debug_runtime_init(INIT_FUNC_ARGS)
     cat_queue_init(&SWOW_DEBUG_G(extended_statement_handlers));
     SWOW_DEBUG_G(sampler) = NULL;
     swow_debug_observe_runtime_init();
+    swow_debug_profiler_runtime_init();
 
     /* ZEND_COMPILE_EXTENDED_INFO is set after MINIT, so we can only check it in RINIT */
     if (!is_zend_compile_extended_info_checked) {
@@ -647,6 +657,7 @@ zend_result swow_debug_runtime_init(INIT_FUNC_ARGS)
 
 zend_result swow_debug_runtime_shutdown(INIT_FUNC_ARGS)
 {
+    swow_debug_profiler_runtime_shutdown();
     (void) swow_debug_sampler_stop();
     swow_utils_handlers_release(&SWOW_DEBUG_G(extended_statement_handlers));
 

@@ -29,6 +29,7 @@ extern "C" {
 CAT_GLOBALS_STRUCT_BEGIN(swow_debug) {
     cat_queue_t extended_statement_handlers;
     struct swow_debug_sampler_s *sampler;
+    struct swow_debug_profiler_s *profiler;
 } CAT_GLOBALS_STRUCT_END(swow_debug);
 
 extern SWOW_API CAT_GLOBALS_DECLARE(swow_debug);
@@ -42,8 +43,13 @@ zend_result swow_debug_runtime_shutdown(INIT_FUNC_ARGS);
 
 /* Forced observation uses timed interrupts; callbacks remain on the PHP thread. */
 bool swow_debug_sampler_start(void);
+bool swow_debug_sampler_start_ex(uint64_t interval);
 bool swow_debug_sampler_stop(void);
 void swow_debug_sampler_set_armed(bool armed);
+/* true when the interrupt being handled was requested by the sampler, delay is
+ * how long it waited for the executor */
+bool swow_debug_sampler_acknowledge(uint64_t *delay);
+uint64_t swow_debug_sampler_get_interval(void);
 
 /* observability (swow_debug_observe.c) */
 struct swow_coroutine_s;
@@ -51,6 +57,12 @@ SWOW_API void swow_debug_get_coroutine_wait(const struct swow_coroutine_s *s_cor
 zend_result swow_debug_observe_module_init(int type);
 void swow_debug_observe_runtime_init(void);
 
+/* sampling profiler (swow_debug_profiler.c), records on sampler interrupts */
+zend_result swow_debug_profiler_module_init(int type);
+void swow_debug_profiler_runtime_init(void);
+void swow_debug_profiler_runtime_shutdown(void);
+bool swow_debug_profiler_is_running(void);
+void swow_debug_profiler_record(uint64_t delay);
 
 static zend_always_inline bool swow_debug_is_user_call(zend_execute_data *call)
 {

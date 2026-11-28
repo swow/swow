@@ -4290,3 +4290,31 @@ namespace Swow\Debug
      */
     function getThreadStatuses(): array { }
 }
+
+namespace Swow\Debug
+{
+    /**
+     * Start sampling the stack of this thread every $interval milliseconds
+     *
+     * The samples are recorded in C, no PHP code runs per sample.
+     */
+    function startProfiler(int $interval = 10, int $maxDepth = 64): void { }
+}
+
+namespace Swow\Debug
+{
+    /** Stop sampling, the stacks are kept for getProfile() */
+    function stopProfiler(): void { }
+}
+
+namespace Swow\Debug
+{
+    /**
+     * Get the sampled stacks, most frequent first, frames from the innermost call outwards
+     *
+     * Samples taken while the thread was out of the VM (waiting in the event loop or blocked) count as idleSamples.
+     *
+     * @return array{'running': bool, 'intervalNs': int, 'durationNs': int, 'samples': int, 'idleSamples': int, 'stacks': array<int, array{'count': int, 'frames': array<int, array<string, mixed>>}>}
+     */
+    function getProfile(bool $reset = false): array { }
+}
