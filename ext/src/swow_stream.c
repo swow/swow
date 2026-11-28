@@ -2123,6 +2123,11 @@ static ssize_t swow_stream_native_socket_write(php_stream *stream, const char *b
     return ret;
 }
 
+/* as in main/streams/xp_socket.c: Windows has no MSG_DONTWAIT */
+#ifndef MSG_DONTWAIT
+# define MSG_DONTWAIT 0
+#endif
+
 static int swow_stream_native_socket_set_option(php_stream *stream, int option, int value, void *ptrparam)
 {
     php_netstream_data_t *sock = (php_netstream_data_t *) stream->abstract;
