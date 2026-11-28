@@ -538,14 +538,19 @@ static CURLMcode cat_curl_multi_wait_impl(
 
     // wait for timeout or event
     context->waiter = CAT_COROUTINE_G(current);
-    if (remaining >= 0) {
-        if (remaining == 0) {
-            remaining = 1;
+    do {
+        cat_coroutine_wait_t wait;
+        cat_coroutine_wait_begin(&wait, CAT_COROUTINE_WAIT_KIND_CURL, 0, context, NULL, remaining >= 0 ? (cat_timeout_t) remaining : -1);
+        if (remaining >= 0) {
+            if (remaining == 0) {
+                remaining = 1;
+            }
+            ret = cat_time_delay((cat_timeout_t) remaining);
+        } else {
+            ret = cat_time_delay(-1);
         }
-        ret = cat_time_delay((cat_timeout_t) remaining);
-    } else {
-        ret = cat_time_delay(-1);
-    }
+        cat_coroutine_wait_end(&wait);
+    } while (0);
     context->waiter = NULL;
     if (unlikely(ret == CAT_RET_ERROR)) {
         // CAT_RET_ERROR for wait encountered errors

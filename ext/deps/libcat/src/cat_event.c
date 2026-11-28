@@ -84,8 +84,13 @@ CAT_API cat_bool_t cat_event_runtime_init(void)
         return cat_false;
     }
 
+    /* Event loop utilization: two clock reads around each poll, as Node.js does
+     * by default. It has to be set before the loop first runs. */
+    (void) uv_loop_configure(&CAT_EVENT_G(loop), UV_METRICS_IDLE_TIME);
+
     cat_queue_init(&CAT_EVENT_G(runtime_shutdown_tasks));
     cat_queue_init(&CAT_EVENT_G(io_defer_tasks));
+    CAT_EVENT_G(delay_monitor) = NULL;
 
 #ifdef CAT_THREAD_SAFE
     /* One wakeup handle for each thread. Another thread uses it to bring this
@@ -130,6 +135,10 @@ CAT_API cat_bool_t cat_event_runtime_shutdown(void)
         }
     } while (0);
 
+    if (CAT_EVENT_G(delay_monitor) != NULL) {
+        (void) cat_event_delay_monitor_stop();
+    }
+
     /* we must call run to close all handles and clear defer tasks */
     cat_event_schedule();
 
@@ -173,6 +182,160 @@ CAT_API void cat_event_schedule(void)
 CAT_API cat_event_round_t cat_event_get_round(void)
 {
     return CAT_EVENT_G(loop).round;
+}
+
+/* observability */
+
+CAT_API void cat_event_get_metrics(cat_event_metrics_t *metrics)
+{
+    uv_loop_t *loop = &CAT_EVENT_G(loop);
+    uv_metrics_t uv_metrics;
+
+    memset(metrics, 0, sizeof(*metrics));
+    metrics->round = loop->round;
+    if (uv_metrics_info(loop, &uv_metrics) == 0) {
+        metrics->loop_count = uv_metrics.loop_count;
+        metrics->events = uv_metrics.events;
+        metrics->events_waiting = uv_metrics.events_waiting;
+    }
+    metrics->idle_time_ns = uv_metrics_idle_time(loop);
+    metrics->active_handles = loop->active_handles;
+    metrics->active_requests = loop->active_reqs.count;
+}
+
+static void cat_event_count_handles_callback(uv_handle_t *handle, void *arg)
+{
+    uint32_t *counts = (uint32_t *) arg;
+
+    if (handle->type > UV_UNKNOWN_HANDLE && handle->type < UV_HANDLE_TYPE_MAX && !uv_is_closing(handle)) {
+        counts[handle->type]++;
+    }
+}
+
+CAT_API void cat_event_count_handles(uint32_t counts[UV_HANDLE_TYPE_MAX])
+{
+    memset(counts, 0, sizeof(uint32_t) * UV_HANDLE_TYPE_MAX);
+    uv_walk(&CAT_EVENT_G(loop), cat_event_count_handles_callback, counts);
+}
+
+struct cat_event_delay_monitor_s {
+    uv_timer_t timer;
+    uint64_t previous;
+    cat_event_delay_stats_t stats;
+};
+
+static void cat_event_delay_monitor_reset(cat_event_delay_monitor_t *monitor)
+{
+    uint64_t resolution_ns = monitor->stats.resolution_ns;
+
+    memset(&monitor->stats, 0, sizeof(monitor->stats));
+    monitor->stats.resolution_ns = resolution_ns;
+    monitor->stats.min_ns = UINT64_MAX;
+}
+
+static void cat_event_delay_monitor_callback(uv_timer_t *timer)
+{
+    cat_event_delay_monitor_t *monitor = cat_container_of(timer, cat_event_delay_monitor_t, timer);
+    cat_event_delay_stats_t *stats = &monitor->stats;
+    uint64_t now = uv_hrtime();
+    uint64_t elapsed = now - monitor->previous;
+    /* the part of the interval beyond the resolution is the delay */
+    uint64_t delay = elapsed > stats->resolution_ns ? elapsed - stats->resolution_ns : 0;
+    uint64_t us = delay / 1000;
+    unsigned int bucket = 0;
+
+    monitor->previous = now;
+    while (us > 1 && bucket < CAT_EVENT_DELAY_BUCKET_COUNT - 1) {
+        us >>= 1;
+        bucket++;
+    }
+    stats->buckets[bucket]++;
+    stats->count++;
+    stats->sum_ns += delay;
+    stats->last_ns = delay;
+    if (delay < stats->min_ns) {
+        stats->min_ns = delay;
+    }
+    if (delay > stats->max_ns) {
+        stats->max_ns = delay;
+    }
+}
+
+static void cat_event_delay_monitor_close_callback(uv_handle_t *handle)
+{
+    cat_event_delay_monitor_t *monitor = cat_container_of(handle, cat_event_delay_monitor_t, timer);
+    cat_free(monitor);
+}
+
+CAT_API cat_bool_t cat_event_delay_monitor_start(cat_timeout_t resolution)
+{
+    cat_event_delay_monitor_t *monitor;
+
+    if (unlikely(resolution <= 0)) {
+        cat_update_last_error(CAT_EINVAL, "Resolution must be greater than 0");
+        return cat_false;
+    }
+    if (unlikely(CAT_EVENT_G(delay_monitor) != NULL)) {
+        cat_update_last_error(CAT_EMISUSE, "Event loop delay monitor is already running");
+        return cat_false;
+    }
+    monitor = (cat_event_delay_monitor_t *) cat_malloc(sizeof(*monitor));
+#if CAT_ALLOC_HANDLE_ERRORS
+    if (unlikely(monitor == NULL)) {
+        cat_update_last_error_of_syscall("Malloc for event loop delay monitor failed");
+        return cat_false;
+    }
+#endif
+    monitor->stats.resolution_ns = (uint64_t) resolution * 1000 * 1000;
+    cat_event_delay_monitor_reset(monitor);
+    (void) uv_timer_init(&CAT_EVENT_G(loop), &monitor->timer);
+    uv_update_time(&CAT_EVENT_G(loop));
+    monitor->previous = uv_hrtime();
+    (void) uv_timer_start(&monitor->timer, cat_event_delay_monitor_callback, (uint64_t) resolution, (uint64_t) resolution);
+    /* observing the loop must neither keep it alive nor hide a deadlock */
+    uv_unref((uv_handle_t *) &monitor->timer);
+    monitor->timer.flags |= UV_HANDLE_INTERNAL;
+    CAT_EVENT_G(delay_monitor) = monitor;
+
+    return cat_true;
+}
+
+CAT_API cat_bool_t cat_event_delay_monitor_stop(void)
+{
+    cat_event_delay_monitor_t *monitor = CAT_EVENT_G(delay_monitor);
+
+    if (unlikely(monitor == NULL)) {
+        cat_update_last_error(CAT_EMISUSE, "Event loop delay monitor is not running");
+        return cat_false;
+    }
+    CAT_EVENT_G(delay_monitor) = NULL;
+    uv_close((uv_handle_t *) &monitor->timer, cat_event_delay_monitor_close_callback);
+
+    return cat_true;
+}
+
+CAT_API cat_bool_t cat_event_delay_monitor_is_running(void)
+{
+    return CAT_EVENT_G(delay_monitor) != NULL;
+}
+
+CAT_API cat_bool_t cat_event_delay_monitor_get_stats(cat_event_delay_stats_t *stats, cat_bool_t reset)
+{
+    cat_event_delay_monitor_t *monitor = CAT_EVENT_G(delay_monitor);
+
+    if (unlikely(monitor == NULL)) {
+        cat_update_last_error(CAT_EMISUSE, "Event loop delay monitor is not running");
+        return cat_false;
+    }
+    *stats = monitor->stats;
+    if (stats->count == 0) {
+        stats->min_ns = 0;
+    }
+    if (reset) {
+        cat_event_delay_monitor_reset(monitor);
+    }
+
+    return cat_true;
 }
 
 CAT_API cat_coroutine_t *cat_event_scheduler_run(cat_coroutine_t *coroutine)

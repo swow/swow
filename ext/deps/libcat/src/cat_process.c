@@ -208,7 +208,12 @@ CAT_API cat_bool_t cat_process_wait_ex(cat_process_t *process, cat_timeout_t tim
     cat_bool_t ret;
 
     cat_queue_push_back(&process->waiters, waiter);
-    ret = cat_time_wait(timeout);
+    do {
+        cat_coroutine_wait_t wait;
+        cat_coroutine_wait_begin(&wait, CAT_COROUTINE_WAIT_KIND_PROCESS, 0, process, NULL, timeout);
+        ret = cat_time_wait(timeout);
+        cat_coroutine_wait_end(&wait);
+    } while (0);
     if (unlikely(!ret)) {
         cat_update_last_error_with_previous("Process wait failed");
     } else if (!process->exited) {

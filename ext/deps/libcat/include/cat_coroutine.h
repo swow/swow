@@ -118,6 +118,72 @@ typedef uint32_t cat_coroutine_stack_size_t;
 
 typedef cat_data_t *(*cat_coroutine_function_t)(cat_data_t *data);
 
+/*
+ * What a coroutine waits for.
+ *
+ * A module that suspends the current coroutine describes the wait with a
+ * descriptor on the stack of the waiting coroutine, so the descriptor is valid
+ * for exactly as long as the wait. Nothing reads it from another thread; an
+ * observer on the same thread (a snapshot) reads it while the coroutine sleeps.
+ *
+ * | kind        | object                    | op                         | detail         |
+ * | SOCKET      | cat_socket_internal_t     | CAT_SOCKET_IO_FLAG_*       | NULL           |
+ * | POLL        | NULL (fd in data)         | poll events                | NULL           |
+ * | CHANNEL     | cat_channel_t             | PUSH / POP                 | NULL           |
+ * | DNS         | NULL                      | GETADDRINFO / GETNAMEINFO  | host name      |
+ * | FS          | uv_fs_t                   | uv_fs_type                 | operation name |
+ * | WORK        | NULL                      | cat_work_kind_t            | NULL           |
+ * | PROCESS     | cat_process_t             | 0                          | NULL           |
+ * | SIGNAL      | NULL (signum in data)     | 0                          | NULL           |
+ * | the others  | the primitive, or NULL    | 0                          | NULL           |
+ */
+#define CAT_COROUTINE_WAIT_KIND_MAP(XX) \
+    XX(NONE,          0, "none") \
+    XX(SLEEP,         1, "sleep") \
+    XX(SOCKET,        2, "socket") \
+    XX(POLL,          3, "poll") \
+    XX(CHANNEL,       4, "channel") \
+    XX(WAIT_GROUP,    5, "waitGroup") \
+    XX(THREAD_SYNC,   6, "threadSync") \
+    XX(PROCESS,       7, "process") \
+    XX(SIGNAL,        8, "signal") \
+    XX(DNS,           9, "dns") \
+    XX(FS,           10, "fs") \
+    XX(WORK,         11, "work") \
+    XX(CURL,         12, "curl") \
+    XX(USER,         13, "user") \
+
+typedef enum cat_coroutine_wait_kind_e {
+#define CAT_COROUTINE_WAIT_KIND_GEN(name, value, unused) CAT_ENUM_GEN(CAT_COROUTINE_WAIT_KIND_, name, value)
+    CAT_COROUTINE_WAIT_KIND_MAP(CAT_COROUTINE_WAIT_KIND_GEN)
+#undef CAT_COROUTINE_WAIT_KIND_GEN
+} cat_coroutine_wait_kind_t;
+
+/* op values of the kinds that have no enum of their own */
+#define CAT_COROUTINE_WAIT_OP_CHANNEL_PUSH     1
+#define CAT_COROUTINE_WAIT_OP_CHANNEL_POP      2
+#define CAT_COROUTINE_WAIT_OP_CHANNEL_SELECT   3
+#define CAT_COROUTINE_WAIT_OP_DNS_GETADDRINFO  1
+#define CAT_COROUTINE_WAIT_OP_DNS_GETNAMEINFO  2
+
+typedef struct cat_coroutine_wait_s cat_coroutine_wait_t;
+
+struct cat_coroutine_wait_s {
+    uint8_t kind;
+    uint8_t op;
+    /* kind-specific integer: fd, signal number, ... */
+    int32_t data;
+    /* owned by the waiting module, valid while waiting */
+    const void *object;
+    const char *detail;
+    /* as passed to cat_time_wait(), negative means forever */
+    cat_timeout_t timeout;
+    /* uv_hrtime() when the wait started */
+    uint64_t since;
+    /* the descriptor this one hides, restored when this wait ends */
+    const cat_coroutine_wait_t *previous;
+};
+
 typedef struct cat_coroutine_s cat_coroutine_t;
 
 struct cat_coroutine_s
@@ -156,6 +222,14 @@ struct cat_coroutine_s
     /* internal properties (readonly) */
     cat_coroutine_function_t function;
     cat_coroutine_stack_size_t stack_size;
+    /* observability (readonly) */
+    /* the coroutine that created this one, 0 for the main coroutine */
+    cat_coroutine_id_t parent_id;
+    /* the annotated wait in progress, NULL when running or not annotated */
+    const cat_coroutine_wait_t *wait;
+    /* time spent running, kept only while busy accounting is enabled */
+    uint64_t busy_ns;
+    uint64_t busy_since;
     /* internal properties (inaccessible) */
 #ifdef CAT_COROUTINE_USE_USER_STACK
     uint32_t virtual_memory_size;
@@ -227,6 +301,8 @@ CAT_GLOBALS_STRUCT_BEGIN(cat_coroutine) {
     cat_coroutine_count_t peak_count;
     /* global switches (for watchdog) */
     cat_coroutine_switches_t switches;
+    /* whether busy_ns is maintained on every switch */
+    cat_bool_t busy_accounting;
 } CAT_GLOBALS_STRUCT_END(cat_coroutine);
 
 extern CAT_API CAT_GLOBALS_DECLARE(cat_coroutine);
@@ -303,6 +379,43 @@ CAT_API cat_msec_t cat_coroutine_get_start_time(const cat_coroutine_t *coroutine
 CAT_API cat_msec_t cat_coroutine_get_end_time(const cat_coroutine_t *coroutine);
 CAT_API cat_msec_t cat_coroutine_get_elapsed(const cat_coroutine_t *coroutine);
 CAT_API char *cat_coroutine_get_elapsed_str(const cat_coroutine_t *coroutine);
+
+/* observability */
+CAT_API cat_coroutine_id_t cat_coroutine_get_parent_id(const cat_coroutine_t *coroutine);
+CAT_API const cat_coroutine_wait_t *cat_coroutine_get_wait(const cat_coroutine_t *coroutine);
+CAT_API const char *cat_coroutine_wait_kind_name(cat_coroutine_wait_kind_t kind);
+/* returns the previous setting */
+CAT_API cat_bool_t cat_coroutine_set_busy_accounting(cat_bool_t enable);
+CAT_API cat_bool_t cat_coroutine_get_busy_accounting(void);
+/* the running time including the current run, meaningful only while accounting is enabled */
+CAT_API uint64_t cat_coroutine_get_busy_ns(const cat_coroutine_t *coroutine);
+
+/*
+ * Annotate the wait of the current coroutine. The descriptor must stay on the
+ * stack until the matching end, which must run on every path out of the wait.
+ * A nested wait (a socket emulation polling an fd) hides the outer one until it
+ * ends.
+ */
+static cat_always_inline void cat_coroutine_wait_begin(
+    cat_coroutine_wait_t *wait, cat_coroutine_wait_kind_t kind, uint8_t op,
+    const void *object, const char *detail, cat_timeout_t timeout)
+{
+    cat_coroutine_t *coroutine = CAT_COROUTINE_G(current);
+    wait->kind = (uint8_t) kind;
+    wait->op = op;
+    wait->data = 0;
+    wait->object = object;
+    wait->detail = detail;
+    wait->timeout = timeout;
+    wait->since = uv_hrtime();
+    wait->previous = coroutine->wait;
+    coroutine->wait = wait;
+}
+
+static cat_always_inline void cat_coroutine_wait_end(cat_coroutine_wait_t *wait)
+{
+    CAT_COROUTINE_G(current)->wait = wait->previous;
+}
 
 /* scheduler */
 typedef void (*cat_coroutine_schedule_function_t)(void);

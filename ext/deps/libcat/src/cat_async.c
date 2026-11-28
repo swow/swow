@@ -110,7 +110,12 @@ CAT_API cat_bool_t cat_async_wait_and_close(cat_async_t *async, cat_async_cleanu
 
     if (!async->done) {
         async->coroutine = CAT_COROUTINE_G(current);
-        ret = cat_time_wait(timeout);
+        do {
+            cat_coroutine_wait_t wait;
+            cat_coroutine_wait_begin(&wait, CAT_COROUTINE_WAIT_KIND_THREAD_SYNC, 0, async, NULL, timeout);
+            ret = cat_time_wait(timeout);
+            cat_coroutine_wait_end(&wait);
+        } while (0);
         async->coroutine = NULL;
         /* we can not close it here, because thread may access it later,
          * it will be closed in notify callback */

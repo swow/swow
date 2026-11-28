@@ -490,6 +490,7 @@ CAT_API cat_bool_t cat_socket_runtime_init(void)
     CAT_SOCKET_G(options.tcp_keepalive_delay) = 60;
 
     RB_INIT(&CAT_SOCKET_G(internal_tree));
+    cat_queue_init(&CAT_SOCKET_G(registry));
 
     return cat_true;
 }
@@ -976,6 +977,13 @@ static cat_always_inline cat_socket_t *cat_socket_create_impl(cat_socket_t *sock
     socket_i->type = type;
     CAT_REF_INIT(socket_i);
     cat_queue_push_back(&socket_i->sockets, &socket->node);
+    socket_i->resource.id = socket->id;
+    socket_i->resource.created_at = uv_now(&CAT_EVENT_G(loop));
+    socket_i->resource.bytes_in = 0;
+    socket_i->resource.bytes_out = 0;
+    socket_i->resource.last_coroutine_id = 0;
+    socket_i->resource.label = NULL;
+    cat_queue_push_back(&CAT_SOCKET_G(registry), &socket_i->resource.node);
     socket_i->flags = CAT_SOCKET_INTERNAL_FLAG_NONE;
     socket_i->io_flags = CAT_SOCKET_IO_FLAG_NONE;
     memset(&socket_i->context.io.read, 0, sizeof(socket_i->context.io.read));
@@ -1756,7 +1764,12 @@ static cat_bool_t cat_socket_internal_accept(
             uv__io_start(server_i->u.stream.loop, &server_i->u.stream.io_watcher, POLLIN);
         }
 #endif
-        ret = cat_time_wait(timeout);
+        do {
+            cat_coroutine_wait_t wait;
+            cat_coroutine_wait_begin(&wait, CAT_COROUTINE_WAIT_KIND_SOCKET, CAT_SOCKET_IO_FLAG_ACCEPT, server_i, NULL, timeout);
+            ret = cat_time_wait(timeout);
+            cat_coroutine_wait_end(&wait);
+        } while (0);
 #ifdef CAT_OS_UNIX_LIKE
         if (server_i->flags & CAT_SOCKET_INTERNAL_FLAG_SERVER) {
             uv__io_stop(server_i->u.stream.loop, &server_i->u.stream.io_watcher, POLLIN);
@@ -1947,7 +1960,12 @@ static cat_bool_t cat_socket_internal_connect(
             socket_i->context.connect.data.status = CAT_ECANCELED;
             socket_i->context.connect.coroutine = CAT_COROUTINE_G(current);
             socket_i->io_flags = CAT_SOCKET_IO_FLAG_CONNECT;
-            ret = cat_time_wait(timeout);
+            do {
+                cat_coroutine_wait_t wait;
+                cat_coroutine_wait_begin(&wait, CAT_COROUTINE_WAIT_KIND_SOCKET, CAT_SOCKET_IO_FLAG_CONNECT, socket_i, NULL, timeout);
+                ret = cat_time_wait(timeout);
+                cat_coroutine_wait_end(&wait);
+            } while (0);
             socket_i->io_flags = CAT_SOCKET_IO_FLAG_NONE;
             socket_i->context.connect.coroutine = NULL;
             if (unlikely(!ret)) {
@@ -2957,7 +2975,12 @@ static int cat_socket_internal_udg_wait_readable(cat_socket_internal_t *socket_i
     }
     socket_i->context.io.read.coroutine = CAT_COROUTINE_G(current);
     socket_i->io_flags |= CAT_SOCKET_IO_FLAG_READ;
-    ret = cat_poll_one(socket_i->u.udg.readfd, POLLIN, NULL, timeout);
+    do {
+        cat_coroutine_wait_t wait;
+        cat_coroutine_wait_begin(&wait, CAT_COROUTINE_WAIT_KIND_SOCKET, CAT_SOCKET_IO_FLAG_READ, socket_i, NULL, timeout);
+        ret = cat_poll_one(socket_i->u.udg.readfd, POLLIN, NULL, timeout);
+        cat_coroutine_wait_end(&wait);
+    } while (0);
     socket_i->io_flags ^= CAT_SOCKET_IO_FLAG_READ;
     socket_i->context.io.read.coroutine = NULL;
     if (ret == CAT_RET_OK) {
@@ -3105,7 +3128,14 @@ static ssize_t cat_socket_internal_read_raw(
         } else {
             error = uv_udp_recv_start(&socket_i->u.udp, cat_socket_read_alloc_callback, cat_socket_udp_recv_callback);
         }
-        ret = error == 0 && cat_time_wait(timeout);
+        if (error == 0) {
+            cat_coroutine_wait_t wait;
+            cat_coroutine_wait_begin(&wait, CAT_COROUTINE_WAIT_KIND_SOCKET, CAT_SOCKET_IO_FLAG_READ, socket_i, NULL, timeout);
+            ret = cat_time_wait(timeout);
+            cat_coroutine_wait_end(&wait);
+        } else {
+            ret = cat_false;
+        }
         socket_i->io_flags ^= CAT_SOCKET_IO_FLAG_READ;
         socket_i->context.io.read.coroutine = NULL;
         socket_i->context.io.read.data.ptr = NULL;
@@ -3400,6 +3430,17 @@ static ssize_t cat_socket_internal_try_recv_decrypted(
 }
 #endif
 
+/*
+ * Resource counters: the coroutine id is stored before the I/O, while the
+ * internal socket is surely alive, and the bytes only after a success, which
+ * resumes this coroutine straight from the I/O callback, before anything could
+ * close and free the internal socket.
+ */
+static cat_always_inline void cat_socket_internal_resource_touch(cat_socket_internal_t *socket_i)
+{
+    socket_i->resource.last_coroutine_id = CAT_COROUTINE_G(current)->id;
+}
+
 static cat_always_inline ssize_t cat_socket_internal_read(
     cat_socket_internal_t *socket_i,
     char *buffer, size_t size,
@@ -3408,12 +3449,18 @@ static cat_always_inline ssize_t cat_socket_internal_read(
     cat_bool_t once
 )
 {
+    ssize_t ret;
+    cat_socket_internal_resource_touch(socket_i);
 #ifdef CAT_SSL
     if (socket_i->ssl != NULL) {
-        return cat_socket_internal_read_decrypted(socket_i, buffer, size, address, address_length, timeout, once);
-    }
+        ret = cat_socket_internal_read_decrypted(socket_i, buffer, size, address, address_length, timeout, once);
+    } else
 #endif
-    return cat_socket_internal_read_raw(socket_i, buffer, size, address, address_length, timeout, once);
+    ret = cat_socket_internal_read_raw(socket_i, buffer, size, address, address_length, timeout, once);
+    if (ret > 0) {
+        socket_i->resource.bytes_in += (uint64_t) ret;
+    }
+    return ret;
 }
 
 static cat_always_inline ssize_t cat_socket_internal_try_recv(
@@ -3422,12 +3469,18 @@ static cat_always_inline ssize_t cat_socket_internal_try_recv(
     cat_sockaddr_t *address, cat_socklen_t *address_length
 )
 {
+    ssize_t ret;
+    cat_socket_internal_resource_touch(socket_i);
 #ifdef CAT_SSL
     if (socket_i->ssl != NULL) {
-        return cat_socket_internal_try_recv_decrypted(socket_i, buffer, size, address, address_length);
-    }
+        ret = cat_socket_internal_try_recv_decrypted(socket_i, buffer, size, address, address_length);
+    } else
 #endif
-    return cat_socket_internal_try_recv_raw(socket_i, buffer, size, address, address_length);
+    ret = cat_socket_internal_try_recv_raw(socket_i, buffer, size, address, address_length);
+    if (ret > 0) {
+        socket_i->resource.bytes_in += (uint64_t) ret;
+    }
+    return ret;
 }
 
 CAT_STATIC_ASSERT(sizeof(cat_socket_write_vector_t) == sizeof(uv_buf_t));
@@ -3516,7 +3569,10 @@ static cat_never_inline cat_bool_t cat_socket_internal_udg_write(
         cat_bool_t can_write;
         cat_queue_push_back(queue, &CAT_COROUTINE_G(current)->waiter.node);
         CAT_TIME_WAIT_START() {
+            cat_coroutine_wait_t wait;
+            cat_coroutine_wait_begin(&wait, CAT_COROUTINE_WAIT_KIND_SOCKET, CAT_SOCKET_IO_FLAG_WRITE, socket_i, NULL, timeout);
             wait_ret = cat_time_wait(timeout);
+            cat_coroutine_wait_end(&wait);
         } CAT_TIME_WAIT_END(timeout);
         /* A canceled waiter must not take ownership from the active writer. */
         can_write = !(socket_i->io_flags & CAT_SOCKET_IO_FLAG_WRITE) &&
@@ -3554,7 +3610,10 @@ static cat_never_inline cat_bool_t cat_socket_internal_udg_write(
                     }
                 }
                 socket_i->u.udg.write_coroutine = CAT_COROUTINE_G(current);
+                cat_coroutine_wait_t wait;
+                cat_coroutine_wait_begin(&wait, CAT_COROUTINE_WAIT_KIND_SOCKET, CAT_SOCKET_IO_FLAG_WRITE, socket_i, NULL, timeout);
                 cat_ret_t poll_ret = cat_poll_one(socket_i->u.udg.writefd, POLLOUT, NULL, timeout);
+                cat_coroutine_wait_end(&wait);
                 socket_i->u.udg.write_coroutine = NULL;
                 if (poll_ret == CAT_RET_OK) {
                     continue;
@@ -3655,7 +3714,12 @@ static cat_bool_t cat_socket_internal_write_raw(
         request->u.coroutine = CAT_COROUTINE_G(current);
         socket_i->io_flags |= CAT_SOCKET_IO_FLAG_WRITE;
         cat_queue_push_back(&socket_i->context.io.write.coroutines, &CAT_COROUTINE_G(current)->waiter.node);
-        ret = cat_time_wait(timeout);
+        do {
+            cat_coroutine_wait_t wait;
+            cat_coroutine_wait_begin(&wait, CAT_COROUTINE_WAIT_KIND_SOCKET, CAT_SOCKET_IO_FLAG_WRITE, socket_i, NULL, timeout);
+            ret = cat_time_wait(timeout);
+            cat_coroutine_wait_end(&wait);
+        } while (0);
         cat_queue_remove(&CAT_COROUTINE_G(current)->waiter.node);
         request->u.coroutine = NULL;
         error = request->error;
@@ -3901,14 +3965,20 @@ static cat_always_inline cat_bool_t cat_socket_internal_write(
     cat_timeout_t timeout
 )
 {
+    cat_bool_t ret;
+    cat_socket_internal_resource_touch(socket_i);
 #ifdef CAT_SSL
     /** @thinking: shall we check and wait for previous hanging write coroutines here?
      * before previous write() are done (writable/POLLOUT), may SSL can not encrypt more data? */
     if (socket_i->ssl != NULL) {
-        return cat_socket_internal_write_encrypted(socket_i, vector, vector_count, address, address_length, timeout);
-    }
+        ret = cat_socket_internal_write_encrypted(socket_i, vector, vector_count, address, address_length, timeout);
+    } else
 #endif
-    return cat_socket_internal_write_raw(socket_i, vector, vector_count, address, address_length, NULL, timeout);
+    ret = cat_socket_internal_write_raw(socket_i, vector, vector_count, address, address_length, NULL, timeout);
+    if (ret) {
+        socket_i->resource.bytes_out += (uint64_t) cat_socket_write_vector_length(vector, vector_count);
+    }
+    return ret;
 }
 
 static cat_always_inline ssize_t cat_socket_internal_try_write(
@@ -3917,12 +3987,18 @@ static cat_always_inline ssize_t cat_socket_internal_try_write(
     const cat_sockaddr_t *address, cat_socklen_t address_length
 )
 {
+    ssize_t ret;
+    cat_socket_internal_resource_touch(socket_i);
 #ifdef CAT_SSL
     if (socket_i->ssl != NULL) {
-        return cat_socket_internal_try_write_encrypted(socket_i, vector, vector_count, address, address_length);
-    }
+        ret = cat_socket_internal_try_write_encrypted(socket_i, vector, vector_count, address, address_length);
+    } else
 #endif
-    return cat_socket_internal_try_write_raw(socket_i, vector, vector_count, address, address_length);
+    ret = cat_socket_internal_try_write_raw(socket_i, vector, vector_count, address, address_length);
+    if (ret > 0) {
+        socket_i->resource.bytes_out += (uint64_t) ret;
+    }
+    return ret;
 }
 
 #define CAT_SOCKET_INTERNAL_IO_ESTABLISHED_CHECK_FOR_STREAM_SILENT(_socket_i, _failure) do { \
@@ -4557,7 +4633,10 @@ static ssize_t cat_socket_internal_peekfrom(
                 nread = 0;
                 if (timeout != 0) {
                     /* wait for readable when timeout is not 0 */
+                    cat_coroutine_wait_t wait;
+                    cat_coroutine_wait_begin(&wait, CAT_COROUTINE_WAIT_KIND_SOCKET, CAT_SOCKET_IO_FLAG_READ, socket_i, NULL, timeout);
                     cat_ret_t ret = cat_poll_one(fd, POLLIN, NULL, timeout);
+                    cat_coroutine_wait_end(&wait);
                     if (ret == CAT_RET_OK) {
                         continue;
                     } else if (ret == CAT_RET_NONE) {
@@ -4878,7 +4957,10 @@ static cat_always_inline ssize_t cat_socket_internal_native_sendfile(cat_socket_
                 cat_ret_t ret;
                 cat_socket_internal_sendfile_wait_start(socket_i);
                 CAT_TIME_WAIT_START() {
+                    cat_coroutine_wait_t wait;
+                    cat_coroutine_wait_begin(&wait, CAT_COROUTINE_WAIT_KIND_SOCKET, CAT_SOCKET_IO_FLAG_WRITE, socket_i, NULL, timeout);
                     ret = cat_poll_one(fd, POLLOUT, NULL, timeout);
+                    cat_coroutine_wait_end(&wait);
                 } CAT_TIME_WAIT_END(timeout);
                 cat_socket_internal_sendfile_wait_end(socket_i);
                 if (unlikely(ret != CAT_RET_OK)) {
@@ -5088,6 +5170,9 @@ static void cat_socket_close_callback(uv_handle_t *handle)
     if (socket_i->cache.peername != NULL) {
         cat_free(socket_i->cache.peername);
     }
+    if (socket_i->resource.label != NULL) {
+        cat_free(socket_i->resource.label);
+    }
 
     cat_free(socket_i);
 }
@@ -5127,6 +5212,8 @@ static void cat_socket_internal_close_impl(cat_socket_internal_t *socket_i, cat_
 
     // mark socket_i as closed
     socket_i->flags |= CAT_SOCKET_INTERNAL_FLAG_CLOSED;
+    /* a closing connection is no longer a resource of the thread */
+    cat_queue_remove(&socket_i->resource.node);
 
     do {
         cat_socket_t *socket_reference;
@@ -5306,6 +5393,40 @@ static cat_always_inline void cat_socket_internal_ssl_recoverability_check(cat_s
 #endif
 
 /* getter / status / options */
+
+/* resource (observability) */
+
+CAT_API cat_bool_t cat_socket_set_label(cat_socket_t *socket, const char *label)
+{
+    CAT_SOCKET_INTERNAL_GETTER(socket, socket_i, return cat_false);
+
+    if (socket_i->resource.label != NULL) {
+        cat_free(socket_i->resource.label);
+        socket_i->resource.label = NULL;
+    }
+    if (label != NULL) {
+        socket_i->resource.label = cat_strdup(label);
+    }
+
+    return cat_true;
+}
+
+CAT_API const char *cat_socket_get_label(const cat_socket_t *socket)
+{
+    cat_socket_internal_t *socket_i = socket->internal;
+    return socket_i != NULL ? socket_i->resource.label : NULL;
+}
+
+CAT_API cat_queue_t *cat_socket_get_registry(void)
+{
+    return &CAT_SOCKET_G(registry);
+}
+
+CAT_API cat_socket_id_t cat_socket_get_resource_id(const cat_socket_t *socket)
+{
+    cat_socket_internal_t *socket_i = socket->internal;
+    return socket_i != NULL ? socket_i->resource.id : CAT_SOCKET_INVALID_ID;
+}
 
 CAT_API cat_bool_t cat_socket_is_available(const cat_socket_t *socket)
 {

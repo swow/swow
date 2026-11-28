@@ -126,9 +126,14 @@ static cat_always_inline cat_bool_t cat_channel_wait_on(cat_channel_t *channel, 
     cat_queue_node_t *waiter = &CAT_COROUTINE_G(current)->waiter.node;
     cat_bool_t ret;
 
-    (void) channel;
+    cat_coroutine_wait_t wait;
+
     cat_queue_push_back(queue, waiter);
+    cat_coroutine_wait_begin(&wait, CAT_COROUTINE_WAIT_KIND_CHANNEL,
+        queue == &channel->producers ? CAT_COROUTINE_WAIT_OP_CHANNEL_PUSH : CAT_COROUTINE_WAIT_OP_CHANNEL_POP,
+        channel, NULL, timeout);
     ret = cat_time_wait(timeout);
+    cat_coroutine_wait_end(&wait);
     cat_queue_remove(waiter);
 
     return ret;
@@ -540,7 +545,14 @@ CAT_API cat_channel_select_response_t *cat_channel_select(cat_channel_select_req
         }
     }
 
-    ret = cat_time_wait(timeout);
+    do {
+        /* object is the request array, data its length */
+        cat_coroutine_wait_t wait;
+        cat_coroutine_wait_begin(&wait, CAT_COROUTINE_WAIT_KIND_CHANNEL, CAT_COROUTINE_WAIT_OP_CHANNEL_SELECT, requests, NULL, timeout);
+        wait.data = (int32_t) count;
+        ret = cat_time_wait(timeout);
+        cat_coroutine_wait_end(&wait);
+    } while (0);
 
     /* Unlink every waiter before a response can exit early, including a closed channel. */
     for (i = 0; i < count; i++) {

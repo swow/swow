@@ -74,7 +74,12 @@ CAT_API cat_bool_t cat_work(cat_work_kind_t kind, cat_work_function_t function, 
     (void) uv_queue_work_ex(&CAT_EVENT_G(loop), &context->request.work, (uv_work_kind) kind, cat_work_callback, cat_work_after_done);
     context->status = CAT_ECANCELED;
     context->request.coroutine = CAT_COROUTINE_G(current);
-    ret = cat_time_wait(timeout);
+    do {
+        cat_coroutine_wait_t wait;
+        cat_coroutine_wait_begin(&wait, CAT_COROUTINE_WAIT_KIND_WORK, (uint8_t) kind, NULL, NULL, timeout);
+        ret = cat_time_wait(timeout);
+        cat_coroutine_wait_end(&wait);
+    } while (0);
     context->request.coroutine = NULL;
     if (unlikely(!ret)) {
         cat_update_last_error_with_previous("Work wait failed");

@@ -55,7 +55,12 @@ CAT_API cat_bool_t cat_sync_wait_group_wait(cat_sync_wait_group_t *wg, cat_timeo
     if (likely(wg->count > 0)) {
         cat_bool_t ret;
         wg->coroutine = CAT_COROUTINE_G(current);
-        ret = cat_time_wait(timeout);
+        do {
+            cat_coroutine_wait_t wait;
+            cat_coroutine_wait_begin(&wait, CAT_COROUTINE_WAIT_KIND_WAIT_GROUP, 0, wg, NULL, timeout);
+            ret = cat_time_wait(timeout);
+            cat_coroutine_wait_end(&wait);
+        } while (0);
         wg->coroutine = NULL;
         if (unlikely(!ret)) {
             cat_update_last_error_with_previous("WaitGroup waiting for completion failed");

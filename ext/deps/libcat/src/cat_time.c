@@ -256,8 +256,11 @@ static cat_always_inline cat_msec_t cat_time_msleep_impl(cat_msec_t msec)
         // even if error, the number of seconds left to sleep is always 0...
     } else {
         cat_timer_t *timer;
+        cat_coroutine_wait_t wait;
 
+        cat_coroutine_wait_begin(&wait, CAT_COROUTINE_WAIT_KIND_SLEEP, 0, NULL, NULL, (cat_timeout_t) msec);
         timer = cat_timer_wait(msec);
+        cat_coroutine_wait_end(&wait);
 
         if (unlikely(timer == NULL)) {
             return msec;

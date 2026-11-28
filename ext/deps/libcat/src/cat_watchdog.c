@@ -85,8 +85,14 @@ CAT_ATTRIBUTE_NO_TSAN static void cat_watchdog_loop(void* arg)
 
     uv_sem_post(watchdog->sem);
 
+    uint64_t window_start = 0;
+
     while (1) {
         watchdog->last_switches = watchdog->globals->switches;
+        if (watchdog->alert_count == 0) {
+            /* a block found at the end of this window started at its beginning */
+            window_start = uv_hrtime();
+        }
         uv_mutex_lock(&watchdog->mutex);
         uv_cond_timedwait(&watchdog->cond, &watchdog->mutex, watchdog->quantum);
         uv_mutex_unlock(&watchdog->mutex);
@@ -100,10 +106,14 @@ CAT_ATTRIBUTE_NO_TSAN static void cat_watchdog_loop(void* arg)
             watchdog->globals->current != watchdog->globals->scheduler &&
             watchdog->globals->count > 1
         ) {
+            if (watchdog->alert_count == 0) {
+                cat_atomic_uint64_store(&watchdog->block_start, window_start);
+            }
             watchdog->alert_count++;
             watchdog->alerter(watchdog);
         } else {
             watchdog->alert_count = 0;
+            cat_atomic_uint64_store(&watchdog->block_start, 0);
         }
     }
 }
@@ -212,6 +222,7 @@ CAT_API cat_bool_t cat_watchdog_run(cat_watchdog_t *watchdog, cat_timeout_t quan
     watchdog->pid = uv_os_getpid();
     watchdog->globals = CAT_GLOBALS_BULK(cat_coroutine);
     watchdog->last_switches = 0;
+    cat_atomic_uint64_init(&watchdog->block_start, 0);
 
     error = uv_sem_init(&sem, 0);
     if (error != 0) {
@@ -308,6 +319,13 @@ CAT_API cat_timeout_t cat_watchdog_get_quantum(void)
     return watchdog != NULL ?
             watchdog->quantum :
             -1;
+}
+
+CAT_API uint64_t cat_watchdog_get_block_start(void)
+{
+    cat_watchdog_t *watchdog = CAT_WATCH_DOG_G(watchdog);
+
+    return watchdog != NULL ? cat_atomic_uint64_load(&watchdog->block_start) : 0;
 }
 
 CAT_API cat_timeout_t cat_watchdog_get_threshold(void)

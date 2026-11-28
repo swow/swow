@@ -177,7 +177,13 @@ CAT_API cat_bool_t cat_signal_wait(int signum, cat_timeout_t timeout)
         return cat_false;
     }
     signal->coroutine = CAT_COROUTINE_G(current);
-    ret = cat_time_wait(timeout);
+    do {
+        cat_coroutine_wait_t wait;
+        cat_coroutine_wait_begin(&wait, CAT_COROUTINE_WAIT_KIND_SIGNAL, 0, NULL, NULL, timeout);
+        wait.data = signum;
+        ret = cat_time_wait(timeout);
+        cat_coroutine_wait_end(&wait);
+    } while (0);
     uv_close(&signal->handle, cat_signal_close_callback);
     if (unlikely(!ret)) {
         cat_update_last_error_with_previous("Signal(%d) wait failed", signum);

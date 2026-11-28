@@ -98,7 +98,13 @@ static cat_bool_t cat_fs_do_result(cat_fs_context_t *context, int error, const c
         return cat_false;
     }
     context->coroutine = CAT_COROUTINE_G(current);
-    ret = cat_time_wait(CAT_TIMEOUT_FOREVER);
+    do {
+        /* the path is read from the request, which lives until the wait ends */
+        cat_coroutine_wait_t wait;
+        cat_coroutine_wait_begin(&wait, CAT_COROUTINE_WAIT_KIND_FS, (uint8_t) context->fs.fs_type, &context->fs, operation, CAT_TIMEOUT_FOREVER);
+        ret = cat_time_wait(CAT_TIMEOUT_FOREVER);
+        cat_coroutine_wait_end(&wait);
+    } while (0);
     done = context->coroutine == NULL;
     context->coroutine = NULL;
     if (unlikely(!ret)) {

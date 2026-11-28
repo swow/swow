@@ -311,6 +311,7 @@ CAT_API cat_bool_t cat_coroutine_runtime_init(void)
     CAT_COROUTINE_G(count) = 0;
     CAT_COROUTINE_G(peak_count) = 0;
     CAT_COROUTINE_G(switches) = 0;
+    CAT_COROUTINE_G(busy_accounting) = cat_false;
 
     /* init main coroutine properties */
     do {
@@ -326,6 +327,10 @@ CAT_API cat_bool_t cat_coroutine_runtime_init(void)
         main_coroutine->next = NULL;
         main_coroutine->stack_size = 0;
         main_coroutine->function = NULL;
+        main_coroutine->parent_id = 0;
+        main_coroutine->wait = NULL;
+        main_coroutine->busy_ns = 0;
+        main_coroutine->busy_since = 0;
 #ifdef CAT_COROUTINE_USE_USER_STACK
         main_coroutine->virtual_memory = NULL;
         main_coroutine->virtual_memory_size = 0;
@@ -704,6 +709,11 @@ CAT_API cat_coroutine_t *cat_coroutine_create_ex(cat_coroutine_t *coroutine, cat
     coroutine->end_time = 0;
     coroutine->stack_size = (cat_coroutine_stack_size_t) stack_size;
     coroutine->function = function;
+    /* there is no current coroutine before the runtime registers its main one */
+    coroutine->parent_id = CAT_COROUTINE_G(current) != NULL ? CAT_COROUTINE_G(current)->id : 0;
+    coroutine->wait = NULL;
+    coroutine->busy_ns = 0;
+    coroutine->busy_since = 0;
 #ifdef CAT_COROUTINE_USE_USER_STACK
     coroutine->virtual_memory = virtual_memory;
     coroutine->virtual_memory_size = (uint32_t) virtual_memory_size;
@@ -821,6 +831,12 @@ CAT_API void cat_coroutine_jump_standard(cat_coroutine_t *coroutine, cat_data_t 
     CAT_COROUTINE_G(switches)++;
     /* current switches++ */
     current_coroutine->switches++;
+    /* busy accounting: one clock read per switch, only when enabled */
+    if (unlikely(CAT_COROUTINE_G(busy_accounting))) {
+        uint64_t now = uv_hrtime();
+        current_coroutine->busy_ns += now - current_coroutine->busy_since;
+        coroutine->busy_since = now;
+    }
     /* swap ptr */
     CAT_COROUTINE_G(current) = coroutine;
     /* update from */
@@ -1131,6 +1147,62 @@ CAT_API cat_msec_t cat_coroutine_get_elapsed(const cat_coroutine_t *coroutine)
 CAT_API char *cat_coroutine_get_elapsed_str(const cat_coroutine_t *coroutine)
 {
     return cat_time_format_msec(cat_coroutine_get_elapsed(coroutine));
+}
+
+/* observability */
+
+CAT_API cat_coroutine_id_t cat_coroutine_get_parent_id(const cat_coroutine_t *coroutine)
+{
+    return coroutine->parent_id;
+}
+
+CAT_API const cat_coroutine_wait_t *cat_coroutine_get_wait(const cat_coroutine_t *coroutine)
+{
+    /* a running coroutine may still point at the descriptor of a wait whose
+     * end has not run yet, but it is not waiting on it anymore */
+    if (coroutine->state != CAT_COROUTINE_STATE_WAITING) {
+        return NULL;
+    }
+    return coroutine->wait;
+}
+
+CAT_API const char *cat_coroutine_wait_kind_name(cat_coroutine_wait_kind_t kind)
+{
+    switch (kind) {
+#define CAT_COROUTINE_WAIT_KIND_NAME_GEN(name, unused, value) case CAT_COROUTINE_WAIT_KIND_##name: return value;
+        CAT_COROUTINE_WAIT_KIND_MAP(CAT_COROUTINE_WAIT_KIND_NAME_GEN)
+#undef CAT_COROUTINE_WAIT_KIND_NAME_GEN
+    }
+    return "unknown";
+}
+
+CAT_API cat_bool_t cat_coroutine_set_busy_accounting(cat_bool_t enable)
+{
+    cat_bool_t original = CAT_COROUTINE_G(busy_accounting);
+
+    if (enable && !original) {
+        /* coroutines that are waiting now get their start on the next switch-in */
+        CAT_COROUTINE_G(current)->busy_since = uv_hrtime();
+    }
+    CAT_COROUTINE_G(busy_accounting) = enable;
+
+    return original;
+}
+
+CAT_API cat_bool_t cat_coroutine_get_busy_accounting(void)
+{
+    return CAT_COROUTINE_G(busy_accounting);
+}
+
+CAT_API uint64_t cat_coroutine_get_busy_ns(const cat_coroutine_t *coroutine)
+{
+    uint64_t busy_ns = coroutine->busy_ns;
+
+    if (CAT_COROUTINE_G(busy_accounting) && coroutine == CAT_COROUTINE_G(current)) {
+        busy_ns += uv_hrtime() - coroutine->busy_since;
+    }
+
+    return busy_ns;
 }
 
 /* scheduler */

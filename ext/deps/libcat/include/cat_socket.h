@@ -463,6 +463,22 @@ struct cat_socket_internal_s
     /* bound socket objects */
     cat_queue_t sockets;
     CAT_REF_FIELD;
+    /* observability: one live connection is one resource of its thread */
+    struct {
+        /* in CAT_SOCKET_G(registry) from creation until close starts */
+        cat_queue_node_t node;
+        /* the id of the socket that created this internal */
+        cat_socket_id_t id;
+        /* loop time (ms) of the creation */
+        uint64_t created_at;
+        /* payload bytes moved by read/write calls, not counting TLS records */
+        uint64_t bytes_in;
+        uint64_t bytes_out;
+        /* the coroutine that read or wrote last */
+        cat_coroutine_id_t last_coroutine_id;
+        /* a name set by the application, cat_malloc'ed, NULL when unset */
+        char *label;
+    } resource;
     /* u must be the last one (due to dynamic alloc) */
     union {
         void *reserved;
@@ -520,6 +536,8 @@ CAT_GLOBALS_STRUCT_BEGIN(cat_socket) {
      * but currently only the internal sockets that need to be used are stored
      * e.g., server sockets for poll module. */
     struct cat_socket_internal_tree_s internal_tree;
+    /* every open internal socket of this thread, see resource.node */
+    cat_queue_t registry;
     /* dns */
     // TODO: dns_cache (we should implement lru_cache)
 } CAT_GLOBALS_STRUCT_END(cat_socket);
@@ -842,6 +860,16 @@ CAT_API const char *cat_socket_io_state_name(cat_socket_io_flags_t io_state);
 CAT_API const char *cat_socket_io_state_naming(cat_socket_io_flags_t io_state);
 
 CAT_API cat_socket_io_flags_t cat_socket_get_io_state(const cat_socket_t *socket);
+
+/* resource (observability) */
+/* the label belongs to the connection, so sockets sharing it see the same one */
+CAT_API cat_bool_t cat_socket_set_label(cat_socket_t *socket, const char *label);
+CAT_API const char *cat_socket_get_label(const cat_socket_t *socket);
+/* the open internal sockets of this thread, linked by resource.node */
+CAT_API cat_queue_t *cat_socket_get_registry(void);
+/* the resource id of a socket, which is the id of the socket that created the
+ * connection, or CAT_SOCKET_INVALID_ID when it is closed */
+CAT_API cat_socket_id_t cat_socket_get_resource_id(const cat_socket_t *socket);
 CAT_API const char *cat_socket_get_io_state_name(const cat_socket_t *socket);
 CAT_API const char *cat_socket_get_io_state_naming(const cat_socket_t *socket);
 

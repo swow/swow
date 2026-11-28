@@ -244,6 +244,21 @@ static void cat_poll_one_callback(uv_poll_t* handle, int status, uv_events_t eve
 
 CAT_API cat_poll_one_emulate_t cat_poll_one_emulate;
 
+/*
+ * Poll is the transport of other waits (a socket, curl, pq), and the caller
+ * that already described its wait knows more than an fd, so poll only
+ * describes the wait when nobody did.
+ */
+static cat_always_inline cat_bool_t cat_poll_wait_begin(cat_coroutine_wait_t *wait, int32_t fd, uint8_t events, cat_timeout_t timeout)
+{
+    if (CAT_COROUTINE_G(current)->wait != NULL) {
+        return cat_false;
+    }
+    cat_coroutine_wait_begin(wait, CAT_COROUTINE_WAIT_KIND_POLL, events, NULL, NULL, timeout);
+    wait->data = fd;
+    return cat_true;
+}
+
 static cat_ret_t cat_poll_one_impl(cat_os_socket_t fd, cat_pollfd_events_t events, cat_pollfd_events_t *revents, cat_timeout_t timeout)
 {
     CAT_POLL_ONE_EMULATE(fd, events, revents);
@@ -297,7 +312,14 @@ static cat_ret_t cat_poll_one_impl(cat_os_socket_t fd, cat_pollfd_events_t event
     poll->u.coroutine = CAT_COROUTINE_G(current);
     poll->done_task = NULL;
 
-    ret = cat_time_delay(timeout);
+    do {
+        cat_coroutine_wait_t wait;
+        cat_bool_t described = cat_poll_wait_begin(&wait, (int32_t) fd, (uint8_t) events, timeout);
+        ret = cat_time_delay(timeout);
+        if (described) {
+            cat_coroutine_wait_end(&wait);
+        }
+    } while (0);
 
     if (poll->done_task != NULL) {
         cat_event_io_defer_task_close(poll->done_task);
@@ -556,7 +578,16 @@ static int cat_poll_impl(cat_pollfd_t *fds, cat_nfds_t nfds, cat_timeout_t timeo
         ret = CAT_RET_NONE;
         CAT_ASSERT(context->done_task == NULL);
     } else {
+        cat_coroutine_wait_t wait;
+        /* several fds: data carries the count instead of an fd */
+        cat_bool_t described = cat_poll_wait_begin(&wait, -1, 0, timeout);
+        if (described) {
+            wait.data = -(int32_t) nfds;
+        }
         ret = cat_time_delay(timeout);
+        if (described) {
+            cat_coroutine_wait_end(&wait);
+        }
         if (unlikely(ret == CAT_RET_ERROR)) {
             CAT_ASSERT(context->done_task == NULL);
             cat_update_last_error_with_previous("Poll wait failed");

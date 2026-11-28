@@ -68,6 +68,10 @@ struct cat_watchdog_s
     uv_pid_t pid; /* TODO: cat_pid_t */
     CAT_GLOBALS_TYPE(cat_coroutine) *globals;
     cat_coroutine_switches_t last_switches;
+    /* uv_hrtime() of the start of the current block, 0 when not blocked.
+     * The watchdog thread writes it, the watched thread reads it, so it is
+     * atomic. The precision is one quantum. */
+    cat_atomic_uint64_t block_start;
     uv_thread_t thread;
     uv_sem_t *sem;
     uv_cond_t cond;
@@ -87,6 +91,8 @@ CAT_API void cat_watchdog_alert_standard(cat_watchdog_t *watchdog);
 CAT_API cat_bool_t cat_watchdog_is_running(void);
 CAT_API cat_timeout_t cat_watchdog_get_quantum(void);
 CAT_API cat_timeout_t cat_watchdog_get_threshold(void);
+/* uv_hrtime() of the start of the block in progress, 0 when there is none */
+CAT_API uint64_t cat_watchdog_get_block_start(void);
 
 #ifdef __cplusplus
 }

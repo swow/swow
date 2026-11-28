@@ -71,7 +71,12 @@ CAT_API struct addrinfo *cat_dns_getaddrinfo_ex(const char *hostname, const char
     }
     context->status = CAT_ECANCELED;
     context->request.coroutine = CAT_COROUTINE_G(current);
-    ret = cat_time_wait(timeout);
+    do {
+        cat_coroutine_wait_t wait;
+        cat_coroutine_wait_begin(&wait, CAT_COROUTINE_WAIT_KIND_DNS, CAT_COROUTINE_WAIT_OP_DNS_GETADDRINFO, NULL, hostname, timeout);
+        ret = cat_time_wait(timeout);
+        cat_coroutine_wait_end(&wait);
+    } while (0);
     context->request.coroutine = NULL;
     if (unlikely(!ret)) {
         cat_update_last_error_with_previous("DNS getaddrinfo wait failed");
@@ -224,7 +229,12 @@ CAT_API cat_bool_t cat_dns_getnameinfo_ex(const struct sockaddr *address, char *
     }
     context->status = CAT_ECANCELED;
     context->request.coroutine = CAT_COROUTINE_G(current);
-    ret = cat_time_wait(timeout);
+    do {
+        cat_coroutine_wait_t wait;
+        cat_coroutine_wait_begin(&wait, CAT_COROUTINE_WAIT_KIND_DNS, CAT_COROUTINE_WAIT_OP_DNS_GETNAMEINFO, NULL, NULL, timeout);
+        ret = cat_time_wait(timeout);
+        cat_coroutine_wait_end(&wait);
+    } while (0);
     context->request.coroutine = NULL;
     if (unlikely(!ret)) {
         cat_update_last_error_with_previous("DNS getnameinfo wait failed");

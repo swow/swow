@@ -232,7 +232,12 @@ static cat_bool_t cat_thread_wait_suspend(struct cat_thread_wait_park_s *park, c
         uv_ref((uv_handle_t *) handle);
     }
 
-    (void) cat_coroutine_yield(NULL, NULL);
+    do {
+        cat_coroutine_wait_t wait;
+        cat_coroutine_wait_begin(&wait, CAT_COROUTINE_WAIT_KIND_THREAD_SYNC, 0, park, NULL, timeout);
+        (void) cat_coroutine_yield(NULL, NULL);
+        cat_coroutine_wait_end(&wait);
+    } while (0);
 
     if (handle != NULL && --CAT_COROUTINE_G(parked) == 0) {
         uv_unref((uv_handle_t *) handle);
