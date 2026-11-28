@@ -803,6 +803,51 @@ namespace Swow
         /** Get unique coroutine id */
         public function getId(): int { }
 
+        /**
+         * Get the id of the coroutine that created this one
+         *
+         * @return int 0 for the main coroutine
+         */
+        public function getParentId(): int { }
+
+        /**
+         * Get the first user frame that created this coroutine
+         *
+         * @return array{'file': string, 'line': int, 'function': string|null}|null
+         */
+        public function getCreatedLocation(): ?array { }
+
+        /**
+         * Get what the coroutine waits for
+         *
+         * kind is one of none (a plain yield), sleep, socket, poll, channel, waitGroup, threadSync, process, signal, dns, fs, work, curl, user;
+         * op depends on the kind, e.g. read/write/accept/connect for a socket, push/pop/select for a channel.
+         *
+         * @return array{'kind': string, 'op': string|null, 'durationNs': int|null, 'timeoutNs': int|null, 'resourceId': string|null, 'object': array<string, mixed>|null}|null null when it is not waiting
+         */
+        public function getWait(): ?array { }
+
+        /**
+         * Get the time the coroutine has spent running, in nanoseconds
+         *
+         * @return int|null null when busy time accounting is disabled
+         * @see Coroutine::setBusyTimeAccounting()
+         */
+        public function getBusyTime(): ?int { }
+
+        /** Get the label of the coroutine, a coroutine inherits the label of its creator */
+        public function getLabel(): ?string { }
+
+        /** Set a short label (e.g. a route), the coroutines created afterwards inherit it */
+        public function setLabel(?string $label): static { }
+
+        /**
+         * Enable or disable busy time accounting, which costs a clock read on every switch
+         *
+         * @return bool the previous setting
+         */
+        public static function setBusyTimeAccounting(bool $enable): bool { }
+
         /** Get current coroutine */
         public static function getCurrent(): self|static { }
 
@@ -1119,6 +1164,14 @@ namespace Swow
          * @throws ChannelException when the channel is already closed
          */
         public function close(): void { }
+
+        /** @return int process-unique id of the channel within the thread, used as "channel:<id>" resource id */
+        public function getId(): int { }
+
+        public function getLabel(): ?string { }
+
+        /** Set a label (e.g. "pool:mysql") shown in resource listings */
+        public function setLabel(?string $label): static { }
 
         public function getCapacity(): int { }
 
@@ -2330,6 +2383,11 @@ namespace Swow
          * @return int 64-bit auto-incrementing ID, never repeat in the same process
          */
         public function getId(): int { }
+
+        public function getLabel(): ?string { }
+
+        /** Set a label (e.g. "mysql:default") of the connection, shown in resource listings */
+        public function setLabel(?string $label): static { }
 
         public function getType(): int { }
 
@@ -4138,4 +4196,70 @@ namespace Swow\Debug
      * @throws \Error when -e is missing and force is false
      */
     function registerExtendedStatementHandler(callable $handler, bool $force = false): \Swow\Utils\Handler { }
+}
+
+namespace Swow\Debug
+{
+    /**
+     * Get every coroutine of this thread without its stack
+     *
+     * @return array<int, array{'id': int, 'role': string|null, 'state': string, 'parentId': int, 'label': string|null, 'switches': int, 'startedAt': int, 'elapsedMs': int, 'busyNs': int|null, 'createdBy': array<string, mixed>|null, 'wait': array<string, mixed>|null}>
+     */
+    function getCoroutineSummaries(): array { }
+}
+
+namespace Swow\Debug
+{
+    /**
+     * Get the resources of this thread: every open connection ("socket:<id>") and channel ("channel:<id>"),
+     * with the coroutines that wait for it (waiters) and, for a connection, the coroutine that used it last (owners)
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    function getResources(): array { }
+}
+
+namespace Swow\Debug
+{
+    /**
+     * Label a resource listed by getResources(), e.g. a connection opened through a stream
+     *
+     * @throws \ValueError when the id is malformed or refers to no live resource
+     */
+    function setResourceLabel(string $resourceId, ?string $label): void { }
+}
+
+namespace Swow\Debug
+{
+    /**
+     * Get the counters of the event loop of this thread
+     *
+     * @return array{'round': int, 'loopCount': int, 'events': int, 'eventsWaiting': int, 'idleTimeNs': int, 'activeHandles': int, 'activeRequests': int, 'handlesByType': array<string, int>}
+     */
+    function getEventLoopMetrics(): array { }
+}
+
+namespace Swow\Debug
+{
+    /**
+     * Start measuring how late a repeating timer fires (like monitorEventLoopDelay() of Node.js)
+     *
+     * @param int $resolution in milliseconds
+     */
+    function startEventLoopDelayMonitor(int $resolution = 10): void { }
+}
+
+namespace Swow\Debug
+{
+    function stopEventLoopDelayMonitor(): void { }
+}
+
+namespace Swow\Debug
+{
+    /**
+     * Get the delay statistics, the percentiles are bucket bounds within a factor of two
+     *
+     * @return array{'resolutionNs': int, 'count': int, 'minNs': int, 'maxNs': int, 'meanNs': int, 'lastNs': int, 'p50Ns': int, 'p90Ns': int, 'p99Ns': int}
+     */
+    function getEventLoopDelay(bool $reset = false): array { }
 }

@@ -111,6 +111,13 @@ typedef struct swow_coroutine_s {
     /* php things... */
     int exit_status;
     swow_coroutine_executor_t *executor;
+    /* observability: a short name set by the application, inherited by the
+     * coroutines it creates, and the first user frame that created it */
+    zend_string *label;
+    zend_string *created_file;
+    zend_string *created_class;
+    zend_string *created_function;
+    uint32_t created_line;
 #ifdef SWOW_COROUTINE_MOCK_FIBER_CONTEXT
     zend_fiber_context *fiber_context;
 #endif
@@ -201,6 +208,11 @@ SWOW_API size_t swow_coroutine_set_default_c_stack_size(size_t size);
 SWOW_API swow_coroutine_t *swow_coroutine_get_current(void);
 SWOW_API swow_coroutine_t *swow_coroutine_get_main(void);
 SWOW_API swow_coroutine_t *swow_coroutine_get_scheduler(void);
+
+/* observability */
+SWOW_API void swow_coroutine_set_label(swow_coroutine_t *s_coroutine, zend_string *label);
+/* fills z_location with {file, line, function}, or null when unknown */
+SWOW_API void swow_coroutine_get_created_location(const swow_coroutine_t *s_coroutine, zval *z_location);
 
 /* debug */
 SWOW_API zend_string *swow_coroutine_get_executed_filename(const swow_coroutine_t *s_coroutine, zend_long level);

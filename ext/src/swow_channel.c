@@ -36,6 +36,9 @@ static zend_object *swow_channel_create_object(zend_class_entry *ce)
     swow_channel_t *s_channel = swow_object_alloc(swow_channel_t, ce, swow_channel_handlers);
 
     s_channel->channel.dtor = NULL;
+    cat_queue_init(&s_channel->resource_node);
+    s_channel->id = 0;
+    s_channel->label = NULL;
 
     return &s_channel->std;
 }
@@ -59,6 +62,10 @@ static void swow_channel_free_object(zend_object *object)
 
     if (EXPECTED(swow_channel_has_constructed(s_channel))) {
         cat_channel_cleanup(&s_channel->channel);
+    }
+    cat_queue_remove(&s_channel->resource_node);
+    if (s_channel->label != NULL) {
+        zend_string_release(s_channel->label);
     }
 
     zend_object_std_dtor(&s_channel->std);
@@ -115,6 +122,9 @@ static PHP_METHOD(Swow_Channel, __construct)
         swow_throw_exception_with_last(swow_channel_exception_ce);
         RETURN_THROWS();
     }
+
+    s_channel->id = ++SWOW_G(observe.last_channel_id);
+    cat_queue_push_back(&SWOW_G(observe.channels), &s_channel->resource_node);
 }
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Channel_push, 0, 1, IS_STATIC, 0)
@@ -313,12 +323,70 @@ static PHP_METHOD(Swow_Channel, __debugInfo)
     RETURN_DEBUG_INFO_WITH_PROPERTIES(&z_debug_info);
 }
 
+#define arginfo_class_Swow_Channel_getId arginfo_class_Swow_Channel_getCapacity
+
+static PHP_METHOD(Swow_Channel, getId)
+{
+    SWOW_CHANNEL_GETTER(s_channel, channel);
+    (void) channel;
+
+    ZEND_PARSE_PARAMETERS_NONE();
+
+    RETURN_LONG(s_channel->id);
+}
+
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Channel_getLabel, 0, 0, IS_STRING, 1)
+ZEND_END_ARG_INFO()
+
+static PHP_METHOD(Swow_Channel, getLabel)
+{
+    SWOW_CHANNEL_GETTER(s_channel, channel);
+    (void) channel;
+
+    ZEND_PARSE_PARAMETERS_NONE();
+
+    if (s_channel->label == NULL) {
+        RETURN_NULL();
+    }
+    RETURN_STR_COPY(s_channel->label);
+}
+
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Channel_setLabel, 0, 1, IS_STATIC, 0)
+    ZEND_ARG_TYPE_INFO(0, label, IS_STRING, 1)
+ZEND_END_ARG_INFO()
+
+static PHP_METHOD(Swow_Channel, setLabel)
+{
+    SWOW_CHANNEL_GETTER(s_channel, channel);
+    zend_string *label;
+    (void) channel;
+
+    ZEND_PARSE_PARAMETERS_START(1, 1)
+        Z_PARAM_STR_OR_NULL(label)
+    ZEND_PARSE_PARAMETERS_END();
+
+    swow_channel_set_label(s_channel, label);
+
+    RETURN_THIS();
+}
+
+SWOW_API void swow_channel_set_label(swow_channel_t *s_channel, zend_string *label)
+{
+    if (s_channel->label != NULL) {
+        zend_string_release(s_channel->label);
+    }
+    s_channel->label = label != NULL ? zend_string_copy(label) : NULL;
+}
+
 static const zend_function_entry swow_channel_methods[] = {
     PHP_ME(Swow_Channel, __construct,  arginfo_class_Swow_Channel___construct,  ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Channel, push,         arginfo_class_Swow_Channel_push,         ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Channel, pop,          arginfo_class_Swow_Channel_pop,          ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Channel, close,        arginfo_class_Swow_Channel_close,        ZEND_ACC_PUBLIC)
     /* status */
+    PHP_ME(Swow_Channel, getId,        arginfo_class_Swow_Channel_getId,        ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Channel, getLabel,     arginfo_class_Swow_Channel_getLabel,     ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Channel, setLabel,     arginfo_class_Swow_Channel_setLabel,     ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Channel, getCapacity,  arginfo_class_Swow_Channel_getCapacity,  ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Channel, getLength,    arginfo_class_Swow_Channel_getLength,    ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Channel, isAvailable,  arginfo_class_Swow_Channel_isAvailable,  ZEND_ACC_PUBLIC)

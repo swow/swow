@@ -25,6 +25,7 @@ extern "C" {
 #include "cat.h"
 
 #include "cat_atomic.h"
+#include "cat_queue.h"
 
 #define SWOW_MODULE_NAME "Swow"
 #define SWOW_MODULE_NAME_LC "swow"
@@ -86,6 +87,11 @@ ZEND_BEGIN_MODULE_GLOBALS(swow)
         zend_object *current_object;
         bool constructing;
     } closure;
+    /* observability: the constructed channels of this thread */
+    struct {
+        cat_queue_t channels;
+        zend_long last_channel_id;
+    } observe;
 #ifdef ZTS
     struct {
         bool registered;

@@ -36,6 +36,10 @@ extern SWOW_API zend_class_entry *swow_selector_exception_ce;
 
 typedef struct swow_channel_s {
     cat_channel_t channel;
+    /* observability: in SWOW_G(observe.channels) while constructed */
+    cat_queue_node_t resource_node;
+    zend_long id;
+    zend_string *label;
     zend_object std;
 } swow_channel_t;
 
@@ -56,6 +60,9 @@ typedef struct swow_selector_s {
 /* loader */
 
 zend_result swow_channel_module_init(INIT_FUNC_ARGS);
+
+/* observability */
+SWOW_API void swow_channel_set_label(swow_channel_t *s_channel, zend_string *label);
 
 /* helper*/
 

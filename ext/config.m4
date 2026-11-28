@@ -405,6 +405,7 @@ EOF
     swow_exception.c \
     swow_debug.c \
     swow_debug_sampler.c \
+    swow_debug_observe.c \
     swow_utils.c \
     swow_hook.c \
     swow_defer.c \

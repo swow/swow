@@ -123,6 +123,11 @@ static zend_object *swow_coroutine_create_object(zend_class_entry *ce)
     s_coroutine->coroutine.state = CAT_COROUTINE_STATE_NONE;
     s_coroutine->executor = NULL;
     s_coroutine->exit_status = 0;
+    s_coroutine->label = NULL;
+    s_coroutine->created_file = NULL;
+    s_coroutine->created_class = NULL;
+    s_coroutine->created_function = NULL;
+    s_coroutine->created_line = 0;
 #ifdef SWOW_COROUTINE_MOCK_FIBER_CONTEXT
     swow_coroutine_fiber_context_try_init(s_coroutine);
 #endif
@@ -164,6 +169,18 @@ static void swow_coroutine_free_object(zend_object *object)
         efree(s_coroutine->fiber_context);
     }
 #endif
+    if (s_coroutine->label != NULL) {
+        zend_string_release(s_coroutine->label);
+    }
+    if (s_coroutine->created_file != NULL) {
+        zend_string_release(s_coroutine->created_file);
+    }
+    if (s_coroutine->created_class != NULL) {
+        zend_string_release(s_coroutine->created_class);
+    }
+    if (s_coroutine->created_function != NULL) {
+        zend_string_release(s_coroutine->created_function);
+    }
 
     zend_object_std_dtor(&s_coroutine->std);
 }
@@ -340,6 +357,38 @@ static zval *swow_coroutine_function(zval *z_data)
     return NULL;
 }
 
+/*
+ * Record who created the coroutine: the label of the creator is inherited
+ * (a request label reaches the sub tasks of the request, as Go pprof labels
+ * do), and the first user frame is kept as the creation site. The strings are
+ * referenced, not copied, which costs a few refcount increments per creation.
+ */
+static void swow_coroutine_record_origin(swow_coroutine_t *s_coroutine)
+{
+    swow_coroutine_t *current = swow_coroutine_get_current();
+
+    if (current != NULL && current->label != NULL) {
+        s_coroutine->label = zend_string_copy(current->label);
+    }
+    for (zend_execute_data *frame = EG(current_execute_data); frame != NULL; frame = frame->prev_execute_data) {
+        zend_function *func = frame->func;
+        if (func == NULL || !ZEND_USER_CODE(func->common.type) || frame->opline == NULL) {
+            continue;
+        }
+        if (func->op_array.filename != NULL) {
+            s_coroutine->created_file = zend_string_copy(func->op_array.filename);
+        }
+        s_coroutine->created_line = frame->opline->lineno;
+        if (func->common.function_name != NULL) {
+            s_coroutine->created_function = zend_string_copy(func->common.function_name);
+            if (func->common.scope != NULL) {
+                s_coroutine->created_class = zend_string_copy(func->common.scope->name);
+            }
+        }
+        break;
+    }
+}
+
 static cat_bool_t swow_coroutine_construct(swow_coroutine_t *s_coroutine, zval *z_callable, size_t stack_page_size, size_t c_stack_size)
 {
     swow_coroutine_executor_t *executor;
@@ -442,6 +491,8 @@ static cat_bool_t swow_coroutine_construct(swow_coroutine_t *s_coroutine, zval *
     } while (0);
 
     s_coroutine->executor = executor;
+
+    swow_coroutine_record_origin(s_coroutine);
 
     return cat_true;
 }
@@ -1669,6 +1720,122 @@ static PHP_METHOD(Swow_Coroutine, getId)
     RETURN_LONG(getThisCoroutine()->coroutine.id);
 }
 
+/* observability */
+
+SWOW_API void swow_coroutine_set_label(swow_coroutine_t *s_coroutine, zend_string *label)
+{
+    if (s_coroutine->label != NULL) {
+        zend_string_release(s_coroutine->label);
+    }
+    s_coroutine->label = label != NULL ? zend_string_copy(label) : NULL;
+}
+
+SWOW_API void swow_coroutine_get_created_location(const swow_coroutine_t *s_coroutine, zval *z_location)
+{
+    if (s_coroutine->created_file == NULL) {
+        ZVAL_NULL(z_location);
+        return;
+    }
+    array_init_size(z_location, 3);
+    add_assoc_str(z_location, "file", zend_string_copy(s_coroutine->created_file));
+    add_assoc_long(z_location, "line", s_coroutine->created_line);
+    if (s_coroutine->created_function == NULL) {
+        add_assoc_null(z_location, "function");
+    } else if (s_coroutine->created_class == NULL) {
+        add_assoc_str(z_location, "function", zend_string_copy(s_coroutine->created_function));
+    } else {
+        add_assoc_str(z_location, "function", zend_create_member_string(s_coroutine->created_class, s_coroutine->created_function));
+    }
+}
+
+#define arginfo_class_Swow_Coroutine_getParentId arginfo_class_Swow_Coroutine_getId
+
+static PHP_METHOD(Swow_Coroutine, getParentId)
+{
+    ZEND_PARSE_PARAMETERS_NONE();
+
+    RETURN_LONG(cat_coroutine_get_parent_id(&getThisCoroutine()->coroutine));
+}
+
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Coroutine_getCreatedLocation, 0, 0, IS_ARRAY, 1)
+ZEND_END_ARG_INFO()
+
+static PHP_METHOD(Swow_Coroutine, getCreatedLocation)
+{
+    ZEND_PARSE_PARAMETERS_NONE();
+
+    swow_coroutine_get_created_location(getThisCoroutine(), return_value);
+}
+
+#define arginfo_class_Swow_Coroutine_getWait arginfo_class_Swow_Coroutine_getCreatedLocation
+
+static PHP_METHOD(Swow_Coroutine, getWait)
+{
+    ZEND_PARSE_PARAMETERS_NONE();
+
+    swow_debug_get_coroutine_wait(getThisCoroutine(), return_value);
+}
+
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Coroutine_getBusyTime, 0, 0, IS_LONG, 1)
+ZEND_END_ARG_INFO()
+
+static PHP_METHOD(Swow_Coroutine, getBusyTime)
+{
+    ZEND_PARSE_PARAMETERS_NONE();
+
+    if (!cat_coroutine_get_busy_accounting()) {
+        RETURN_NULL();
+    }
+    RETURN_LONG((zend_long) cat_coroutine_get_busy_ns(&getThisCoroutine()->coroutine));
+}
+
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Coroutine_getLabel, 0, 0, IS_STRING, 1)
+ZEND_END_ARG_INFO()
+
+static PHP_METHOD(Swow_Coroutine, getLabel)
+{
+    swow_coroutine_t *s_coroutine = getThisCoroutine();
+
+    ZEND_PARSE_PARAMETERS_NONE();
+
+    if (s_coroutine->label == NULL) {
+        RETURN_NULL();
+    }
+    RETURN_STR_COPY(s_coroutine->label);
+}
+
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Coroutine_setLabel, 0, 1, IS_STATIC, 0)
+    ZEND_ARG_TYPE_INFO(0, label, IS_STRING, 1)
+ZEND_END_ARG_INFO()
+
+static PHP_METHOD(Swow_Coroutine, setLabel)
+{
+    zend_string *label;
+
+    ZEND_PARSE_PARAMETERS_START(1, 1)
+        Z_PARAM_STR_OR_NULL(label)
+    ZEND_PARSE_PARAMETERS_END();
+
+    swow_coroutine_set_label(getThisCoroutine(), label);
+
+    RETURN_THIS();
+}
+
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Coroutine_setBusyTimeAccounting, 0, 1, _IS_BOOL, 0)
+    ZEND_ARG_TYPE_INFO(0, enable, _IS_BOOL, 0)
+ZEND_END_ARG_INFO()
+
+static PHP_METHOD(Swow_Coroutine, setBusyTimeAccounting)
+{
+    bool enable;
+
+    ZEND_PARSE_PARAMETERS_START(1, 1)
+        Z_PARAM_BOOL(enable)
+    ZEND_PARSE_PARAMETERS_END();
+
+    RETURN_BOOL(cat_coroutine_set_busy_accounting(enable));
+}
+
 #define SWOW_COROUTINE_GETTER(getter) do { \
     ZEND_PARSE_PARAMETERS_NONE(); \
     swow_coroutine_t *s_coroutine = getter; \
@@ -2275,6 +2442,13 @@ static const zend_function_entry swow_coroutine_methods[] = {
     PHP_ME(Swow_Coroutine, resume,                  arginfo_class_Swow_Coroutine_resume,                  ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Coroutine, yield,                   arginfo_class_Swow_Coroutine_yield,                   ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
     PHP_ME(Swow_Coroutine, getId,                   arginfo_class_Swow_Coroutine_getId,                   ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Coroutine, getParentId,             arginfo_class_Swow_Coroutine_getParentId,             ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Coroutine, getCreatedLocation,      arginfo_class_Swow_Coroutine_getCreatedLocation,      ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Coroutine, getWait,                 arginfo_class_Swow_Coroutine_getWait,                 ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Coroutine, getBusyTime,             arginfo_class_Swow_Coroutine_getBusyTime,             ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Coroutine, getLabel,                arginfo_class_Swow_Coroutine_getLabel,                ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Coroutine, setLabel,                arginfo_class_Swow_Coroutine_setLabel,                ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Coroutine, setBusyTimeAccounting,   arginfo_class_Swow_Coroutine_setBusyTimeAccounting,   ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
     PHP_ME(Swow_Coroutine, getCurrent,              arginfo_class_Swow_Coroutine_getCurrent,              ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
     PHP_ME(Swow_Coroutine, getMain,                 arginfo_class_Swow_Coroutine_getMain,                 ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
     PHP_ME(Swow_Coroutine, getPrevious,             arginfo_class_Swow_Coroutine_getPrevious,             ZEND_ACC_PUBLIC)

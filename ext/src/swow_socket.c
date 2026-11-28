@@ -239,6 +239,46 @@ static PHP_METHOD(Swow_Socket, getId)
     RETURN_LONG(cat_socket_get_id(socket));
 }
 
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_getLabel, 0, 0, IS_STRING, 1)
+ZEND_END_ARG_INFO()
+
+static PHP_METHOD(Swow_Socket, getLabel)
+{
+    SWOW_SOCKET_GETTER(s_socket, socket);
+    const char *label;
+
+    ZEND_PARSE_PARAMETERS_NONE();
+
+    label = cat_socket_get_label(socket);
+    if (label == NULL) {
+        RETURN_NULL();
+    }
+    RETURN_STRING(label);
+}
+
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Swow_Socket_setLabel, 0, 1, IS_STATIC, 0)
+    ZEND_ARG_TYPE_INFO(0, label, IS_STRING, 1)
+ZEND_END_ARG_INFO()
+
+/* The label names the connection (for example "mysql:default") in resource
+ * listings, so every socket sharing the connection sees it. */
+static PHP_METHOD(Swow_Socket, setLabel)
+{
+    SWOW_SOCKET_GETTER(s_socket, socket);
+    zend_string *label;
+
+    ZEND_PARSE_PARAMETERS_START(1, 1)
+        Z_PARAM_STR_OR_NULL(label)
+    ZEND_PARSE_PARAMETERS_END();
+
+    if (UNEXPECTED(!cat_socket_set_label(socket, label != NULL ? ZSTR_VAL(label) : NULL))) {
+        swow_throw_exception_with_last(swow_socket_exception_ce);
+        RETURN_THROWS();
+    }
+
+    RETURN_THIS();
+}
+
 #define arginfo_class_Swow_Socket_getType arginfo_class_Swow_Socket_getId
 
 static PHP_METHOD(Swow_Socket, getType)
@@ -1790,6 +1830,8 @@ static const zend_function_entry swow_socket_methods[] = {
     PHP_ME(Swow_Socket, __construct,               arginfo_class_Swow_Socket___construct,         ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Socket, open,                      arginfo_class_Swow_Socket_open,                ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Socket, getId,                     arginfo_class_Swow_Socket_getId,               ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Socket, getLabel,                  arginfo_class_Swow_Socket_getLabel,            ZEND_ACC_PUBLIC)
+    PHP_ME(Swow_Socket, setLabel,                  arginfo_class_Swow_Socket_setLabel,            ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Socket, getType,                   arginfo_class_Swow_Socket_getType,             ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Socket, getSimpleType,             arginfo_class_Swow_Socket_getSimpleType,       ZEND_ACC_PUBLIC)
     PHP_ME(Swow_Socket, getTypeName,               arginfo_class_Swow_Socket_getTypeName,         ZEND_ACC_PUBLIC)

@@ -606,6 +606,9 @@ zend_result swow_debug_module_init(INIT_FUNC_ARGS)
     if (zend_register_functions(NULL, swow_debug_functions, NULL, type) != SUCCESS) {
         return FAILURE;
     }
+    if (swow_debug_observe_module_init(type) != SUCCESS) {
+        return FAILURE;
+    }
 
     original_zend_interrupt_function = zend_interrupt_function;
     zend_interrupt_function = swow_debug_ext_stmt_interrupt_function;
@@ -627,6 +630,7 @@ zend_result swow_debug_runtime_init(INIT_FUNC_ARGS)
 {
     cat_queue_init(&SWOW_DEBUG_G(extended_statement_handlers));
     SWOW_DEBUG_G(sampler) = NULL;
+    swow_debug_observe_runtime_init();
 
     /* ZEND_COMPILE_EXTENDED_INFO is set after MINIT, so we can only check it in RINIT */
     if (!is_zend_compile_extended_info_checked) {

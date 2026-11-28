@@ -45,6 +45,13 @@ bool swow_debug_sampler_start(void);
 bool swow_debug_sampler_stop(void);
 void swow_debug_sampler_set_armed(bool armed);
 
+/* observability (swow_debug_observe.c) */
+struct swow_coroutine_s;
+SWOW_API void swow_debug_get_coroutine_wait(const struct swow_coroutine_s *s_coroutine, zval *z_wait);
+zend_result swow_debug_observe_module_init(int type);
+void swow_debug_observe_runtime_init(void);
+
+
 static zend_always_inline bool swow_debug_is_user_call(zend_execute_data *call)
 {
     return call && call->func && ZEND_USER_CODE(call->func->common.type);
