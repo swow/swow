@@ -91,6 +91,8 @@ ZEND_BEGIN_MODULE_GLOBALS(swow)
     struct {
         cat_queue_t channels;
         zend_long last_channel_id;
+        /* this thread's entry in the watchdog status registry */
+        struct swow_watchdog_thread_status_s *thread_status;
     } observe;
 #ifdef ZTS
     struct {

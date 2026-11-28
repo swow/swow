@@ -35,6 +35,32 @@ extern SWOW_API zend_class_entry *swow_watchdog_ce;
 
 extern SWOW_API zend_class_entry *swow_watchdog_exception_ce;
 
+/*
+ * The status of a thread runtime, readable from any thread through
+ * Swow\Debug\getThreadStatuses(): when a thread is stuck, its own debugger
+ * endpoint can not answer, but another thread can still report what the
+ * watchdog of the stuck thread saw. Only atomics and a seqlock-published text
+ * cross threads; the registry lock keeps an entry alive while it is read.
+ */
+typedef struct swow_watchdog_thread_status_s {
+    cat_queue_node_t node;
+    zend_long thread_id;
+    zend_long pid;
+    cat_bool_t is_main;
+    /* written by the owner thread */
+    cat_atomic_bool_t running;
+    cat_atomic_uint64_t quantum;
+    cat_atomic_uint64_t threshold;
+    /* written by the watchdog thread on every alert */
+    cat_atomic_uint64_t block_start;
+    cat_atomic_uint64_t last_alert_at;
+    cat_atomic_uint64_t coroutine_id;
+    cat_atomic_uint64_t alert_count;
+    cat_atomic_bool_t syscall;
+    cat_atomic_uint32_t location_seq;
+    char location[512];
+} swow_watchdog_thread_status_t;
+
 typedef struct swow_watchdog_s {
     /* Underlying watchdog handle, runs in separate thread to monitor coroutine switches */
     cat_watchdog_t watchdog;
@@ -49,11 +75,31 @@ typedef struct swow_watchdog_s {
     char location[512];
     /* Flag indicating syscall blocking was detected, will be checked when VM resumes */
     cat_atomic_bool_t syscall_blocked;
-    /* Delay scheduling time (nanoseconds) on CPU blocking, 0 means schedule immediately */
-    cat_timeout_t delay;
+    /* uv_hrtime() of the start of that syscall block, kept for the deferred
+     * event because the watchdog clears its own record once switches resume */
+    cat_atomic_uint64_t syscall_block_start;
+    /* backoff after an alert: min(backoff_max, backoff_base * 2^(count - 1)) ms,
+     * where count is the alert count of the episode; base 0 means the next
+     * round of the event loop */
+    cat_timeout_t backoff_base;
+    cat_timeout_t backoff_max;
+    /* whether a callable alerter backs off too (only when asked for) */
+    cat_bool_t backoff_with_alerter;
+    /* alerts of the same coroutine and type closer than this (ns) form one episode */
+    uint64_t episode_gap;
+    /* coroutine id -> swow_watchdog_episode_t */
+    HashTable episodes;
+    zend_long last_episode_id;
+    zend_long last_event_seq;
+    /* the latest events, at most recent_limit, oldest first */
+    zval recent;
+    zend_long recent_limit;
+    zend_long trace_depth;
+    /* this thread's entry in the status registry */
+    swow_watchdog_thread_status_t *status;
     /* User-defined alerter zval reference (for lifetime management) */
     zval z_alerter;
-    /* User-defined alerter call info cache (only used in CPU blocking scenario) */
+    /* User-defined alerter call info cache */
     zend_fcall_info_cache alerter;
 } swow_watchdog_t;
 
@@ -79,10 +125,13 @@ static zend_always_inline swow_watchdog_t *swow_watchdog_get_current(void)
 
 /* APIs */
 
-SWOW_API cat_bool_t swow_watchdog_run(cat_timeout_t quantum, cat_timeout_t threshold, zval *z_alerter);
+SWOW_API cat_bool_t swow_watchdog_run(cat_timeout_t quantum, cat_timeout_t threshold, zval *z_alerter, HashTable *options);
 SWOW_API cat_bool_t swow_watchdog_stop(void);
 
 SWOW_API void swow_watchdog_alert_standard(cat_watchdog_t *watchdog);
+
+/* fills z_statuses with the status of every thread runtime */
+SWOW_API void swow_watchdog_get_thread_statuses(zval *z_statuses);
 
 #ifdef __cplusplus
 }

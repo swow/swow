@@ -3296,18 +3296,35 @@ namespace Swow
          * @param int $quantum Nanoseconds, if the blocking time exceeds the quantum, alerter will be triggered.
          * @param int $threshold Nanoseconds, if the blocking time exceeds the threshold (means the alerter does not alleviate the CPU starvation), it is considered that the system call blocking occurred.
          * @param callable|int|float|null $alerter
-         * When it is callable, it will be called when blocking occurred, the developer can choose to suspend the coroutine or kill the coroutine;
-         * when it is numeric, Coroutine will be delayed to run with sleep() in millisecond to alleviate CPU starvation;
+         * When it is callable, it will be called with (string $blockingType, array $event) when blocking occurred, the developer can choose to suspend the coroutine or kill the coroutine;
+         * when it is numeric, Coroutine will be delayed to run with an exponential backoff starting from that many milliseconds,
+         * min(backoffMax, base * 2 ** (count - 1)) where count is the alert count of the episode, to alleviate CPU starvation;
          * when it is null, Coroutine will be delayed to run at the next round of the event loop starts to alleviate CPU starvation.
+         * Every alert is also kept as an event, see getRecentEvents().
          *
          * The watchdog samples child coroutines only. A block in the main coroutine is not reported.
+         * @param array{'backoffBase'?: int, 'backoffMax'?: int, 'episodeGap'?: int, 'recentEvents'?: int, 'traceDepth'?: int} $options
+         * backoffBase, backoffMax (default 500) and episodeGap (default 2000) are in milliseconds;
+         * a callable alerter backs off only when backoffBase is given;
+         * alerts of the same coroutine and type within episodeGap belong to one episode;
+         * recentEvents (default 32) events are kept for getRecentEvents(), traceDepth (default 64) limits their traces.
          * @return void
          */
-        public static function run(int $quantum = 0, int $threshold = 0, callable|int|float|null $alerter = null): void { }
+        public static function run(int $quantum = 0, int $threshold = 0, callable|int|float|null $alerter = null, array $options = []): void { }
 
         public static function stop(): void { }
 
         public static function isRunning(): bool { }
+
+        /**
+         * Get the latest events of the running watchdog, oldest first
+         *
+         * Each event has seq, type (cpu|syscall), delivery (immediate|deferred), at, pid, threadId, coroutineId,
+         * blockedNs, episode {id, count, startedAt}, quantumNs, thresholdNs, backoffNs, lastKnownLocation and trace.
+         *
+         * @return array<int, array<string, mixed>>
+         */
+        public static function getRecentEvents(): array { }
     }
 }
 
@@ -4262,4 +4279,14 @@ namespace Swow\Debug
      * @return array{'resolutionNs': int, 'count': int, 'minNs': int, 'maxNs': int, 'meanNs': int, 'lastNs': int, 'p50Ns': int, 'p90Ns': int, 'p99Ns': int}
      */
     function getEventLoopDelay(bool $reset = false): array { }
+}
+
+namespace Swow\Debug
+{
+    /**
+     * Get the status of every thread runtime, including the block a watchdog sees in another thread
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    function getThreadStatuses(): array { }
 }

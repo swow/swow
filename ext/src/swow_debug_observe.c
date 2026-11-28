@@ -30,6 +30,7 @@
 #include "swow_debug.h"
 #include "swow_coroutine.h"
 #include "swow_channel.h"
+#include "swow_watchdog.h"
 
 #include "cat_socket.h"
 #include "cat_channel.h"
@@ -592,6 +593,16 @@ static PHP_FUNCTION(Swow_Debug_getEventLoopDelay)
     add_assoc_long(return_value, "p99Ns", (zend_long) swow_debug_delay_percentile(&stats, 0.99));
 }
 
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_Swow_Debug_getThreadStatuses, 0, 0, IS_ARRAY, 0)
+ZEND_END_ARG_INFO()
+
+static PHP_FUNCTION(Swow_Debug_getThreadStatuses)
+{
+    ZEND_PARSE_PARAMETERS_NONE();
+
+    swow_watchdog_get_thread_statuses(return_value);
+}
+
 static const zend_function_entry swow_debug_observe_functions[] = {
     PHP_FENTRY(Swow\\Debug\\getCoroutineSummaries, PHP_FN(Swow_Debug_getCoroutineSummaries), arginfo_Swow_Debug_getCoroutineSummaries, 0)
     PHP_FENTRY(Swow\\Debug\\getResources, PHP_FN(Swow_Debug_getResources), arginfo_Swow_Debug_getResources, 0)
@@ -600,6 +611,7 @@ static const zend_function_entry swow_debug_observe_functions[] = {
     PHP_FENTRY(Swow\\Debug\\startEventLoopDelayMonitor, PHP_FN(Swow_Debug_startEventLoopDelayMonitor), arginfo_Swow_Debug_startEventLoopDelayMonitor, 0)
     PHP_FENTRY(Swow\\Debug\\stopEventLoopDelayMonitor, PHP_FN(Swow_Debug_stopEventLoopDelayMonitor), arginfo_Swow_Debug_stopEventLoopDelayMonitor, 0)
     PHP_FENTRY(Swow\\Debug\\getEventLoopDelay, PHP_FN(Swow_Debug_getEventLoopDelay), arginfo_Swow_Debug_getEventLoopDelay, 0)
+    PHP_FENTRY(Swow\\Debug\\getThreadStatuses, PHP_FN(Swow_Debug_getThreadStatuses), arginfo_Swow_Debug_getThreadStatuses, 0)
     PHP_FE_END
 };
 
