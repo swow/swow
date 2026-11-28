@@ -1500,7 +1500,10 @@ static ssize_t swow_stdiop_fs_read(php_stream *stream, char *buf, size_t count)
  * popen()ed writer closed before its child is done, or exec() of a child that closed its
  * output early). It runs on a worker thread so that only the calling coroutine waits.
  * libcat reaps only the children that a wait asks for, so the SIGCHLD watcher does not take
- * the exit status away from the waitpid() inside pclose(). */
+ * the exit status away from the waitpid() inside pclose().
+ * On Windows pclose() is PHP's own (TSRM/tsrm_win32.c) and finds the process in a table of
+ * the calling thread (TWG(process)) in ZTS builds, so it stays on the PHP thread there. */
+#ifndef PHP_WIN32
 typedef struct swow_fs_pclose_job_s {
     FILE *file;
     int ret;
@@ -1535,6 +1538,13 @@ static int swow_fs_pclose(FILE *file)
 
     return ret;
 }
+#else
+static int swow_fs_pclose(FILE *file)
+{
+    errno = 0;
+    return pclose(file);
+}
+#endif
 
 static int swow_stdiop_fs_close(php_stream *stream, int close_handle)
 {
