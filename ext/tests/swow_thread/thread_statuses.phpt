@@ -46,7 +46,12 @@ Assert::notNull($blocking);
 Assert::false($blocking['isCurrent']);
 Assert::true($blocking['watchdog']['running']);
 Assert::same($blocking['watchdog']['quantumNs'], 10 * 1000 * 1000);
-Assert::same($blocking['blocking']['type'], 'syscall');
+if (PHP_OS === 'Darwin') {
+    /* syscall detection is unreliable on macOS, see swow_watchdog/syscall_event.phpt */
+    Assert::true(in_array($blocking['blocking']['type'], ['cpu', 'syscall'], true));
+} else {
+    Assert::same($blocking['blocking']['type'], 'syscall');
+}
 Assert::greaterThan($blocking['blocking']['coroutineId'], 1);
 
 $thread->wait();

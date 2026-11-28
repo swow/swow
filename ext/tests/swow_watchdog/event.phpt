@@ -26,9 +26,10 @@ Watchdog::run($quantum, 1000 * $quantum, static function (string $type, array $e
 }, ['backoffBase' => 2, 'backoffMax' => 8, 'recentEvents' => 3]);
 
 $wr = new WaitReference();
-$burner = Coroutine::run(static function () use ($wr): void {
+$burner = Coroutine::run(static function () use ($wr, &$events): void {
+    /* burn until three alerts arrived, slow CI machines need more than a few quanta */
     $start = microtime(true);
-    while (microtime(true) - $start < 0.15) {
+    while (count($events) < 3 && microtime(true) - $start < 10) {
     }
 });
 Coroutine::run(static function () use ($wr): void {

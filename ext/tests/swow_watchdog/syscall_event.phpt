@@ -40,7 +40,10 @@ Assert::notNull($syscall);
 Assert::same($syscall['delivery'], 'deferred');
 Assert::same($syscall['coroutineId'], $blocker->getId());
 Assert::greaterThanEq($syscall['blockedNs'], 200 * 1000 * 1000);
-Assert::same($syscall['trace'][0]['function'], 'Swow\Debug\block');
+/* since PHP 8.4 (php-src #14627) the VM checks interrupts while the internal
+ * frame is still on the stack, so the blocking call itself is on top; before
+ * that the frame is already popped and the top frame is its caller */
+Assert::same($syscall['trace'][0]['function'], PHP_VERSION_ID >= 80400 ? 'Swow\Debug\block' : '{closure}');
 Assert::same($recent[count($recent) - 1]['seq'], $syscall['seq']);
 
 echo "Done\n";
