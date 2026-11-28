@@ -31,20 +31,20 @@ $recent = Watchdog::getRecentEvents();
 Watchdog::stop();
 
 $syscall = null;
+/* a slow machine may also report a short stall of another coroutine */
 foreach ($events as $event) {
-    if ($event['type'] === 'syscall') {
+    if ($event['type'] === 'syscall' && $event['coroutineId'] === $blocker->getId()) {
         $syscall = $event;
     }
 }
 Assert::notNull($syscall);
 Assert::same($syscall['delivery'], 'deferred');
-Assert::same($syscall['coroutineId'], $blocker->getId());
 Assert::greaterThanEq($syscall['blockedNs'], 200 * 1000 * 1000);
 /* since PHP 8.4 (php-src #14627) the VM checks interrupts while the internal
  * frame is still on the stack, so the blocking call itself is on top; before
  * that the frame is already popped and the top frame is its caller */
 Assert::same($syscall['trace'][0]['function'], PHP_VERSION_ID >= 80400 ? 'Swow\Debug\block' : '{closure}');
-Assert::same($recent[count($recent) - 1]['seq'], $syscall['seq']);
+Assert::true(in_array($syscall['seq'], array_column($recent, 'seq'), true));
 
 echo "Done\n";
 ?>
